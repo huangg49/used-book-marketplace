@@ -1,0 +1,480 @@
+{
+  "description": "Digests of canonical Git blobs; text line endings are normalized to LF.",
+  "files": [
+    {
+      "path": "docs/deliverables/Bao_cao_so_sanh_nghiep_vu.md",
+      "bytes": 41114,
+      "sha256": "b625e7e790b36ac2b0413f2c06f300caa8910f94302ee3cb48fd8cc5c1de2c7a"
+    },
+    {
+      "path": "docs/deliverables/Bo_Use_Case_SRS_v1.zip",
+      "bytes": 1280381,
+      "sha256": "a019cf38da971b6a29d442527e4cf463147836fd240367cdab24a4216599d73b"
+    },
+    {
+      "path": "docs/deliverables/Lat_Lai_Brand_Kit_v1.zip",
+      "bytes": 772023,
+      "sha256": "580ab71f5867549f4041922cb15b8215f86447adf57f6caafbe82db8f6c0c253"
+    },
+    {
+      "path": "docs/deliverables/Review_1_Solution.pptx",
+      "bytes": 1411160,
+      "sha256": "9e040c22a3f75f0275e7359a2598d5b9dc760238fdd67c6743ea2bc3ebfc43c3"
+    },
+    {
+      "path": "docs/deliverables/SRS_Nen_tang_sach_cu.html",
+      "bytes": 162190,
+      "sha256": "aff35f6662c7481613cd8e7ca3c073184103420ddec66511947f86e4faa485fc"
+    },
+    {
+      "path": "docs/deliverables/SRS_Nen_tang_sach_cu.md",
+      "bytes": 121621,
+      "sha256": "9af7dc8b8390f3271579217a20dd80023870378e3120833b514fe7fe08e51a93"
+    },
+    {
+      "path": "docs/deliverables/Slide_3_Solution.png",
+      "bytes": 321401,
+      "sha256": "0daee73c99721b3fb1184fa05389b9a00ba07c133657d72b123de181b5828c82"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/Huong_dan_va_quy_uoc.md",
+      "bytes": 5791,
+      "sha256": "9654584c4221db5c942c636ace3390cf7aca9d1e8138a4114e105dc064f64809"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/Ma_tran_truy_vet.md",
+      "bytes": 8636,
+      "sha256": "8e7b96889686fa3890ac6f42ae481bfb262bb3b20cb61f82609e4a10fdd38874"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/index.html",
+      "bytes": 50089,
+      "sha256": "b668dca2c956aeaf4d37fbe6bc8c291b1d65ff34e24fc1548c8815bbcf9bc795"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/plantuml/00_Tong_quan.puml",
+      "bytes": 2102,
+      "sha256": "65439b9f3427bbe99f113d2174681f41e5601428c4325967f6390362737ac402"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/plantuml/01_Tai_khoan_va_kham_pha.puml",
+      "bytes": 1734,
+      "sha256": "8a96b8aa8ef12a57548cb3758b1fdecb8bc33db2498ac66f5713a22557a04a27"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/plantuml/02_Listing_va_catalog.puml",
+      "bytes": 2014,
+      "sha256": "bfc49bb093255c7d110f6824db852c30dd509b07547fab7646b1bdb5f0dd0a89"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/plantuml/03_Mua_ban_sach.puml",
+      "bytes": 1923,
+      "sha256": "b1903c4888c1339e6a8d079e6bc83a0abc05729a4f6eb4f15ba8b242caec5672"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/plantuml/04_Trao_doi_sach.puml",
+      "bytes": 2274,
+      "sha256": "3f57ce698e99de9791373b80feb9d28eb595b2ee4a740f80a3254688b90fa43d"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/plantuml/05_Vi_va_rut_tien.puml",
+      "bytes": 1911,
+      "sha256": "93e7ce6649c9aa5aac4760b500d33d0ba149599fd4c58ba1bf32d6badd35c53f"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/plantuml/06_Tranh_chap_va_hoan_hang.puml",
+      "bytes": 2305,
+      "sha256": "3868b8453ac35a75ff2c5b2fc6917a4b88ebe6291696f4004befd0df6389e2db"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/plantuml/07_Cong_dong_va_danh_gia.puml",
+      "bytes": 2298,
+      "sha256": "8e134251b0400599df7140cfbc8ae200858131dab8fa138496cee235c16797c9"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/plantuml/08_Quan_tri_va_van_hanh.puml",
+      "bytes": 2060,
+      "sha256": "7513b431776cb44ec1a322fe93b56e3903344322438526b3386a69fc99036001"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/png/00_Tong_quan.png",
+      "bytes": 136542,
+      "sha256": "b7d2ef1b0fef5ebdcfd5902af2e156412ad3237651d8388deb69fe661ccf02a3"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/png/01_Tai_khoan_va_kham_pha.png",
+      "bytes": 93238,
+      "sha256": "3fecbfc3de1debdbc4fd33b37f0871eea0cc7d62a788eab5c5e100fe13f1a391"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/png/02_Listing_va_catalog.png",
+      "bytes": 105868,
+      "sha256": "a146a0046c7ee9cf4a3cf73c9a2d054103b7b4f74077402fd377b0a7efbc9329"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/png/03_Mua_ban_sach.png",
+      "bytes": 113784,
+      "sha256": "8375f5b96b71fe219eae886f8d279153da4221d07e041eba06ef5779e69b9379"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/png/04_Trao_doi_sach.png",
+      "bytes": 151283,
+      "sha256": "18448b6624db9867d90444bc4e94982c4f45442f0d76d433a63e0df96de66fb1"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/png/05_Vi_va_rut_tien.png",
+      "bytes": 114119,
+      "sha256": "cb8a971fc6d6add652380839ffbf4537289ce5d4edfb02aab342e7bac95d8c61"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/png/06_Tranh_chap_va_hoan_hang.png",
+      "bytes": 140115,
+      "sha256": "a9e2ea3c250c640dc4716910b6d369c12ae5beed8a215043ddecb750b856335b"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/png/07_Cong_dong_va_danh_gia.png",
+      "bytes": 143498,
+      "sha256": "1bce4ff06160a955c6648f51ddf5e9077aa34fc44776e1a73532c4d250eca59f"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/png/08_Quan_tri_va_van_hanh.png",
+      "bytes": 140397,
+      "sha256": "b5866801843ffc78eae9b566827898d5b4ca13852ec4bc3b5cda08678549fb2b"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/svg/00_Tong_quan.svg",
+      "bytes": 17817,
+      "sha256": "b38361fe1873a1734fea1621d09da153a5a6c38431e4bba47c9832bd26654cba"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/svg/01_Tai_khoan_va_kham_pha.svg",
+      "bytes": 12405,
+      "sha256": "a056fe2684c0cbec6316b0551a8ca93c0ae92ae107d8f415a9c92b6b4e22b357"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/svg/02_Listing_va_catalog.svg",
+      "bytes": 14622,
+      "sha256": "7f9f6aff619588f29abee4764d9947d596d7236f720a54179ed904e658e7dc55"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/svg/03_Mua_ban_sach.svg",
+      "bytes": 14971,
+      "sha256": "3c7b89cc1fadf78d28e5583b92cfa34dea554da08047cc875b225816e3b3e4c2"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/svg/04_Trao_doi_sach.svg",
+      "bytes": 17713,
+      "sha256": "91addf5623513c279cd51d8feb9e56fdddb328c1eff6de3228ccd953746bd6e5"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/svg/05_Vi_va_rut_tien.svg",
+      "bytes": 14696,
+      "sha256": "0d962147d4a4fab513bc24b4243cf22eded61d88a59fe8d21e5bcf985ab5c92f"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/svg/06_Tranh_chap_va_hoan_hang.svg",
+      "bytes": 19279,
+      "sha256": "05775bd42e9828d513a5b4aa5facd4907f394d5a3d7a70ba99ee1b05b2646646"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/svg/07_Cong_dong_va_danh_gia.svg",
+      "bytes": 17039,
+      "sha256": "328a28c2578f31027226092f4ae1efef231d3c369569bd0a0bc39b8b4c55402f"
+    },
+    {
+      "path": "docs/deliverables/Use_Case_Diagrams/svg/08_Quan_tri_va_van_hanh.svg",
+      "bytes": 15790,
+      "sha256": "b69fc7eeeea80b7f55b676dd3851c5b629a71e526506c85d7f26113e6f50feca"
+    },
+    {
+      "path": "docs/reference/Business_Rules_Exception_Flows.docx",
+      "bytes": 141520,
+      "sha256": "e7cd3eacd1083857b1e273810a63be788771ccb75a980e013fb55cf3ef043bac"
+    },
+    {
+      "path": "docs/reference/Review 1.pptx",
+      "bytes": 356721,
+      "sha256": "6280723e6bd5733ffa75ca666559c66bb9b8f90e769120904f2a35304f5d78f9"
+    },
+    {
+      "path": "docs/reference/proj.txt",
+      "bytes": 10618,
+      "sha256": "a6f60613bd08735d690426e183c16cd38790190f64bce407ca94f53fe1f3e84f"
+    },
+    {
+      "path": "packages/brand/README.md",
+      "bytes": 2273,
+      "sha256": "aa107efd0098a50ff60bf76d15f9b539025ec4d23cba2f13ebd6bd19e1ba9d18"
+    },
+    {
+      "path": "packages/brand/applications/bookmark.png",
+      "bytes": 46774,
+      "sha256": "5766beb8cb15a4a41ab751bbe511c2274ad334062bc505c3851f9009c2596c82"
+    },
+    {
+      "path": "packages/brand/applications/bookmark.svg",
+      "bytes": 28618,
+      "sha256": "135bc17eac348872d4cc6955a0de85f0e1fac6f29be18b036c788569132609f1"
+    },
+    {
+      "path": "packages/brand/applications/github-banner.png",
+      "bytes": 40847,
+      "sha256": "06053932ed1381ce938b271a603d5310414ec9105bda19ab7469ef4f779a003a"
+    },
+    {
+      "path": "packages/brand/applications/github-banner.svg",
+      "bytes": 31244,
+      "sha256": "e513ced2d417fb4a3c2f1b32898ed2a8122cb4852492fb3d7a220182869816a5"
+    },
+    {
+      "path": "packages/brand/applications/page-pattern.svg",
+      "bytes": 2893,
+      "sha256": "5732c4ca816715785d848eb48a4a9d87fdab2e9b88d22f58a38f1c5a9311c11f"
+    },
+    {
+      "path": "packages/brand/applications/social-cover.png",
+      "bytes": 40847,
+      "sha256": "06053932ed1381ce938b271a603d5310414ec9105bda19ab7469ef4f779a003a"
+    },
+    {
+      "path": "packages/brand/applications/social-cover.svg",
+      "bytes": 31244,
+      "sha256": "e513ced2d417fb4a3c2f1b32898ed2a8122cb4852492fb3d7a220182869816a5"
+    },
+    {
+      "path": "packages/brand/applications/splash-reference.png",
+      "bytes": 20636,
+      "sha256": "1db9fb60bf12d19a705d2392ce261701582c05d6c539520f03a6226ec7d34384"
+    },
+    {
+      "path": "packages/brand/applications/splash-reference.svg",
+      "bytes": 12499,
+      "sha256": "a06b17e810a748923cf81ad272c2afd63e580a8dc73aa64587e2fc9b05ce538d"
+    },
+    {
+      "path": "packages/brand/brand-board.png",
+      "bytes": 69988,
+      "sha256": "65db366bd06d16576c726d9839b09e45c5153850c80f29d0aaaa7d8160c19365"
+    },
+    {
+      "path": "packages/brand/brand-board.svg",
+      "bytes": 80161,
+      "sha256": "a2490352f7a698fc989b966f7ff5d17ac0f51ff3a8b218deabbc3511f64222fb"
+    },
+    {
+      "path": "packages/brand/fonts/BeVietnamPro-Bold.ttf",
+      "bytes": 140300,
+      "sha256": "7f738fe5c43c8872807b20e2d30d42163618de8a4daf7f48a939adac32c16847"
+    },
+    {
+      "path": "packages/brand/fonts/BeVietnamPro-Regular.ttf",
+      "bytes": 132948,
+      "sha256": "cd1ef6e9d7db28ad5cdb88a65ccbe693870e60d340b791f349d248342b4fe4c3"
+    },
+    {
+      "path": "packages/brand/fonts/Lora[wght].ttf",
+      "bytes": 212196,
+      "sha256": "822a6621ccbe8d97d20ac88c1c41f5615c9c2c202eaa75f272cd452aac6475a7"
+    },
+    {
+      "path": "packages/brand/fonts/SOURCES.md",
+      "bytes": 213,
+      "sha256": "c43bbd30093ea18d95c14af30c4178ce49f9704fb8eefe92e72d1f648a67c0ca"
+    },
+    {
+      "path": "packages/brand/fonts/bevietnampro-OFL.txt",
+      "bytes": 4397,
+      "sha256": "6b7f8f73609a25ea78c891e34cf37b06f8a676b7ea986e941e43b009110f2a85"
+    },
+    {
+      "path": "packages/brand/fonts/lora-OFL.txt",
+      "bytes": 4423,
+      "sha256": "1d9a970809ac804b582a6ce7f0ebc4e7fefcbfd7ff6299cad35ee656a21be716"
+    },
+    {
+      "path": "packages/brand/guidelines/Lat_Lai_Brand_Guidelines.pdf",
+      "bytes": 109004,
+      "sha256": "ce5d74dcca7b708b07a43deb47608de9e3ec5e6221242e008a89d066474d0ddb"
+    },
+    {
+      "path": "packages/brand/icons/app-icon.png",
+      "bytes": 15009,
+      "sha256": "6e31b9b18cc718395a4b9e3942b285af2dc6cb20496f28f9220502068f7c53cf"
+    },
+    {
+      "path": "packages/brand/icons/app-icon.svg",
+      "bytes": 447,
+      "sha256": "df4dafebf3ef6c11ffec8c28cbb90b82c0a49bb112cb18bb5c5705da0304f465"
+    },
+    {
+      "path": "packages/brand/icons/favicon.ico",
+      "bytes": 2949,
+      "sha256": "14c7440fb33848ad1c4d787619ef38aa7680e9bf2aac42ef7387d1e203ae421f"
+    },
+    {
+      "path": "packages/brand/icons/favicon.png",
+      "bytes": 1807,
+      "sha256": "c90e531f160a91bba523c8fcbe3edddd9c3df22f212c23a554ea73eb403a91f2"
+    },
+    {
+      "path": "packages/brand/icons/favicon.svg",
+      "bytes": 437,
+      "sha256": "079dc9c5c7dcbd4d1416010b0f688c053a1d765b4d95568a1014913100ab857f"
+    },
+    {
+      "path": "packages/brand/icons/icon-128.png",
+      "bytes": 2625,
+      "sha256": "66ee598d7415625e7cebc3cfd5a72265453c25527541ac771c0eaa531ab98bd7"
+    },
+    {
+      "path": "packages/brand/icons/icon-16.png",
+      "bytes": 418,
+      "sha256": "1e25fe7e1cf5ccbfb2296f393040b68fc74541ff1c7ae4c1fb51ee252f807211"
+    },
+    {
+      "path": "packages/brand/icons/icon-192.png",
+      "bytes": 3831,
+      "sha256": "54c99faa26cb2b73a5aea24f96d8250f78b956d18f11e84d22b83cefa40ab35f"
+    },
+    {
+      "path": "packages/brand/icons/icon-256.png",
+      "bytes": 4953,
+      "sha256": "cc445d02968f0a30ae8e35f86c47a74928db70a508e023e03518b207768f6ba0"
+    },
+    {
+      "path": "packages/brand/icons/icon-32.png",
+      "bytes": 788,
+      "sha256": "1f7e4e8c5f4d11083ba34cd79ed593ae01e32500ef3f98a4cf629416b9b7c3aa"
+    },
+    {
+      "path": "packages/brand/icons/icon-48.png",
+      "bytes": 1102,
+      "sha256": "8c5ddb240706d36f33b7c8564a914014a03e385dcdabce3d4c7b27d78404fbba"
+    },
+    {
+      "path": "packages/brand/icons/icon-512.png",
+      "bytes": 9766,
+      "sha256": "7150ab38e18d65e391f07966d4d1d4be5a628704140d88a7730328164f4dd160"
+    },
+    {
+      "path": "packages/brand/icons/icon-64.png",
+      "bytes": 1408,
+      "sha256": "accffecfca561afde48f2d5d0396aaec6505f53338a20f190bbd9c8801736d8d"
+    },
+    {
+      "path": "packages/brand/index.html",
+      "bytes": 3947,
+      "sha256": "fd326b435c26e1e599566134a4fb88a1ac100f3be84b561ce42472b114008e27"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-horizontal-ink.png",
+      "bytes": 28154,
+      "sha256": "953bd017bee01f36a89aed30b849d9756aef611009465ffc3ad215b3221460a7"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-horizontal-ink.svg",
+      "bytes": 4124,
+      "sha256": "ff595b8d398e3e71740d7c6fa019285260a248ecdc1c441fb6b1c3cc9d71f572"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-horizontal-mono.png",
+      "bytes": 28200,
+      "sha256": "99a02c73aab8d8ce2f2823603a24ad1f508b352c7e9f781cbeb1cc3ca5a54b71"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-horizontal-mono.svg",
+      "bytes": 4124,
+      "sha256": "fb508daf3bb046b567ece825c600b0bedf1dd0279fd96e289f40f51b4532b271"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-horizontal-primary.png",
+      "bytes": 29489,
+      "sha256": "ab14394b12e702414afb6e742dd1c857da21f7c883025024dbc8c2cf45852321"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-horizontal-primary.svg",
+      "bytes": 4124,
+      "sha256": "acb2e585445559f9e71df6e79f912fd5ff97df2f624c129443ecdaad06f3eaba"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-horizontal-white.png",
+      "bytes": 27401,
+      "sha256": "0354ccfc75f5d3ef23fe4008e1e13983ce0f541c7b06eeb99f875e87f3b65d06"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-horizontal-white.svg",
+      "bytes": 4124,
+      "sha256": "2377a53d5dca094304a05ba6a35853031856b0f07249435a7f44888f89c275d9"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-stacked.png",
+      "bytes": 37279,
+      "sha256": "77d96f4cd3cf8532e26bbf67dca89f2bcac04a601096154948c1d44532464184"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-stacked.svg",
+      "bytes": 10994,
+      "sha256": "07cf5243a3c7b6cc6a2e2639aee3b51793b699d8e9ba1f471e9e4ab4f7569b5f"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-symbol-ink.png",
+      "bytes": 5961,
+      "sha256": "3269e3ef6a52015836c3f20506ffbf76f9020da80f829cd5e9f16d8bee2bb694"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-symbol-ink.svg",
+      "bytes": 390,
+      "sha256": "7bdfe6e5c07db6336a4016f8d7b178b905d4598276dc204824fb86e5da011bd0"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-symbol-mono.png",
+      "bytes": 6006,
+      "sha256": "6e2dde0cf811db35eabc9abbd449b6320f3ed8f71d4344ff65e48a7899b00012"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-symbol-mono.svg",
+      "bytes": 390,
+      "sha256": "9eec4b833cbd3b7482d96eaef0153f0cf8ff8763036a4c08900f893209beaabc"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-symbol-primary.png",
+      "bytes": 7174,
+      "sha256": "f02a0eb469fd200b028dd8ed955930860b94bd597ca152fd8abf043cde340f28"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-symbol-primary.svg",
+      "bytes": 390,
+      "sha256": "27b0b8f25b4b958966a67eaf7560e732b8637816799f29dcc0581748da4ca4aa"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-symbol-white.png",
+      "bytes": 5744,
+      "sha256": "9f4c3c251c6e54a3c11d7ca7ee8001cdbce1271c9e20fec7f2084c35eef8241d"
+    },
+    {
+      "path": "packages/brand/logos/lat-lai-symbol-white.svg",
+      "bytes": 390,
+      "sha256": "9d5e2a3a4be79a047f381a78d008c3d22fbe0b751c31289de39fd9d4f5fc6d82"
+    },
+    {
+      "path": "packages/brand/tokens/brand.css",
+      "bytes": 237,
+      "sha256": "0879a8496e53d258a1ad339092c1ff7f24b8cbe6dc6e2b560ba06b03d2f5c204"
+    },
+    {
+      "path": "packages/brand/tokens/brand.tokens.json",
+      "bytes": 419,
+      "sha256": "6472fbf928b0fc3ed0099886f0cfbe5fad68b8ed12dd8b3bf09ae633445d6a17"
+    },
+    {
+      "path": "packages/brand/tokens/brand.ts",
+      "bytes": 451,
+      "sha256": "9ad6fbe3325f0249293a593251bf37b3063d52faaddc68d44be52f35bce23d37"
+    },
+    {
+      "path": "packages/brand/tokens/brand_colors.dart",
+      "bytes": 291,
+      "sha256": "17258b7503cd9254c9011ba4c0c60438e43acf725b1656195bd1f56dff4711c6"
+    }
+  ]
+}

@@ -1,0 +1,2826 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>SRS nền tảng sách cũ phiên bản 1.0</title><style>
+:root{color-scheme:light;--ink:#17202a;--muted:#586574;--line:#d9e0e7;--accent:#205072}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:28px}body{margin:0;background:#f3f5f7;color:var(--ink);font:16px/1.75 "Segoe UI",Arial,sans-serif;overflow-wrap:anywhere}
+aside{position:fixed;inset:0 auto 0 0;width:280px;background:white;border-right:1px solid var(--line);padding:26px 20px;overflow:auto}aside strong{font-size:19px}aside .meta{font-size:12px;color:var(--muted);margin:6px 0 18px}nav a{display:block;text-decoration:none;color:#35485a;padding:7px 8px;font-size:13px;line-height:1.45;border-radius:5px}nav a:hover,nav a:focus{background:#edf3f7;color:#143e5c}
+main{margin:30px 34px 60px 310px;background:white;max-width:1150px;padding:48px 54px;box-shadow:0 2px 14px #16263609;border:1px solid #e1e6eb}h1{font-size:34px;line-height:1.25;color:#000;margin:0 0 30px;letter-spacing:-.6px}h2{font-size:25px;line-height:1.4;color:#000;margin:56px 0 22px}h3{font-size:19px;line-height:1.45;color:#000;margin:32px 0 14px}p{margin:12px 0 18px}li{margin:8px 0}ul,ol{padding-left:25px}code{font-family:Consolas,monospace;font-size:.9em;background:#f1f4f7;padding:1px 4px;border-radius:3px;overflow-wrap:anywhere}
+.table-wrap{overflow-x:auto;margin:18px 0 28px}table{width:100%;border-collapse:collapse;font-size:14px;line-height:1.65}th,td{border:1px solid #d9d9d9;padding:11px 13px;text-align:left;vertical-align:middle;overflow-wrap:anywhere}th{background:#e5edf4;color:#000;font-weight:650}tbody tr:nth-child(even){background:#f8fafc}td:first-child{font-weight:500}tr:target{outline:3px solid #db9d36;outline-offset:-3px;background:#fff4d9}h2:target,h3:target{background:#fff4d9}
+.search{display:flex;gap:5px;margin:14px 0}input{min-width:0;width:100%;font:13px "Segoe UI";padding:9px;border:1px solid #b9c7d4;border-radius:4px}button{font:13px "Segoe UI";padding:8px 10px;cursor:pointer;background:white;border:1px solid #b9c7d4;border-radius:4px;white-space:nowrap;flex-shrink:0}.stats{font-size:12px;line-height:1.7;color:var(--muted)}.toolbar{display:flex;justify-content:space-between;align-items:center;margin:0 0 26px;color:var(--muted);font-size:12px}.note{color:var(--muted);font-size:12px}#lookup-status{font-size:12px;color:#854600;min-height:18px}tr[id]>td:first-child{white-space:nowrap;min-width:84px;width:90px;overflow-wrap:normal}
+@media(min-width:1550px){main{margin-left:340px}}@media(max-width:1050px){aside{position:static;width:auto;max-height:none;padding:20px}nav{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px}aside .search{max-width:420px}main{margin:18px;padding:32px;max-width:none}.stats{display:none}}@media(max-width:600px){body{font-size:15px}main{margin:10px;padding:22px 17px}h1{font-size:27px}h2{font-size:22px}nav{grid-template-columns:1fr}th,td{min-width:100px;padding:9px;font-size:13px}table{min-width:580px}aside nav{max-height:240px;overflow:auto}.toolbar{align-items:flex-start;gap:10px}}
+@media print{@page{size:A4;margin:18mm 16mm}body{background:white;font:10pt/1.5 Arial,sans-serif}aside,.toolbar{display:none}main{margin:0;border:0;box-shadow:none;padding:0;max-width:none}h1{font-size:24pt}h2{font-size:17pt;break-before:page;margin-top:0}h3{font-size:12pt;break-after:avoid}p{orphans:3;widows:3}table{font-size:8.5pt;line-height:1.45}thead{display:table-header-group}tr{break-inside:avoid}th,td{padding:6px 7px}.table-wrap{overflow:visible}h2,h3{break-after:avoid}a{color:inherit;text-decoration:none}code{font-size:8.5pt;background:none}}
+</style></head><body>
+<aside><strong>SRS nền tảng sách cũ</strong><div class="meta">SRS-BOOK-001 · Phiên bản 1.0<br>Bản đề xuất rà soát · 20/09/2026</div><div class="stats">91 yêu cầu chức năng · 47 quy tắc nghiệp vụ<br>16 use case · 50 nhóm ca nghiệm thu</div><form class="search" id="lookup"><input id="code" list="codes" placeholder="Tìm mã, ví dụ FR-X04" aria-label="Tìm mã yêu cầu"><button type="submit">Tới</button></form><datalist id="codes"><option value="POL-01"></option><option value="POL-02"></option><option value="POL-03"></option><option value="POL-04"></option><option value="POL-05"></option><option value="POL-06"></option><option value="POL-07"></option><option value="POL-08"></option><option value="POL-09"></option><option value="POL-10"></option><option value="POL-11"></option><option value="POL-12"></option><option value="POL-13"></option><option value="POL-14"></option><option value="POL-15"></option><option value="POL-16"></option><option value="POL-17"></option><option value="POL-18"></option><option value="POL-19"></option><option value="POL-20"></option><option value="POL-21"></option><option value="POL-22"></option><option value="POL-23"></option><option value="POL-24"></option><option value="POL-25"></option><option value="POL-26"></option><option value="FR-A01"></option><option value="FR-A02"></option><option value="FR-A03"></option><option value="FR-A04"></option><option value="FR-A05"></option><option value="FR-A06"></option><option value="FR-A07"></option><option value="FR-A08"></option><option value="FR-C01"></option><option value="FR-C02"></option><option value="FR-C03"></option><option value="FR-C04"></option><option value="FR-C05"></option><option value="FR-C06"></option><option value="FR-C07"></option><option value="FR-L01"></option><option value="FR-L02"></option><option value="FR-L03"></option><option value="FR-L04"></option><option value="FR-L05"></option><option value="FR-L06"></option><option value="FR-L07"></option><option value="FR-L08"></option><option value="FR-O01"></option><option value="FR-O02"></option><option value="FR-O03"></option><option value="FR-O04"></option><option value="FR-O05"></option><option value="FR-O06"></option><option value="FR-O07"></option><option value="FR-O08"></option><option value="FR-O09"></option><option value="FR-O10"></option><option value="FR-X01"></option><option value="FR-X02"></option><option value="FR-X03"></option><option value="FR-X04"></option><option value="FR-X05"></option><option value="FR-X06"></option><option value="FR-X07"></option><option value="FR-X08"></option><option value="FR-X09"></option><option value="FR-X10"></option><option value="FR-X11"></option><option value="FR-W01"></option><option value="FR-W02"></option><option value="FR-W03"></option><option value="FR-W04"></option><option value="FR-W05"></option><option value="FR-W06"></option><option value="FR-W07"></option><option value="FR-W08"></option><option value="FR-S01"></option><option value="FR-S02"></option><option value="FR-S03"></option><option value="FR-S04"></option><option value="FR-S05"></option><option value="FR-S06"></option><option value="FR-D01"></option><option value="FR-D02"></option><option value="FR-D03"></option><option value="FR-D04"></option><option value="FR-D05"></option><option value="FR-D06"></option><option value="FR-D07"></option><option value="FR-D08"></option><option value="FR-D09"></option><option value="FR-R01"></option><option value="FR-R02"></option><option value="FR-R03"></option><option value="FR-R04"></option><option value="FR-R05"></option><option value="FR-F01"></option><option value="FR-F02"></option><option value="FR-F03"></option><option value="FR-F04"></option><option value="FR-F05"></option><option value="FR-F06"></option><option value="FR-M01"></option><option value="FR-M02"></option><option value="FR-M03"></option><option value="FR-N01"></option><option value="FR-N02"></option><option value="FR-N03"></option><option value="FR-N04"></option><option value="FR-G01"></option><option value="FR-G02"></option><option value="FR-G03"></option><option value="FR-G04"></option><option value="FR-G05"></option><option value="FR-G06"></option><option value="BR-01"></option><option value="BR-02"></option><option value="BR-03"></option><option value="BR-04"></option><option value="BR-05"></option><option value="BR-06"></option><option value="BR-07"></option><option value="BR-08"></option><option value="BR-09"></option><option value="BR-10"></option><option value="BR-11"></option><option value="BR-12"></option><option value="BR-13"></option><option value="BR-14"></option><option value="BR-15"></option><option value="BR-16"></option><option value="BR-17"></option><option value="BR-18"></option><option value="BR-19"></option><option value="BR-20"></option><option value="BR-21"></option><option value="BR-22"></option><option value="BR-23"></option><option value="BR-24"></option><option value="BR-25"></option><option value="BR-26"></option><option value="BR-27"></option><option value="BR-28"></option><option value="BR-29"></option><option value="BR-30"></option><option value="BR-31"></option><option value="BR-32"></option><option value="BR-33"></option><option value="BR-34"></option><option value="BR-35"></option><option value="BR-36"></option><option value="BR-37"></option><option value="BR-38"></option><option value="BR-39"></option><option value="BR-40"></option><option value="BR-41"></option><option value="BR-42"></option><option value="BR-43"></option><option value="BR-44"></option><option value="BR-45"></option><option value="BR-46"></option><option value="BR-47"></option><option value="EF-01"></option><option value="EF-02"></option><option value="EF-03"></option><option value="EF-04"></option><option value="EF-05"></option><option value="EF-06"></option><option value="EF-07"></option><option value="EF-08"></option><option value="EF-09"></option><option value="EF-10"></option><option value="EF-11"></option><option value="EF-12"></option><option value="EF-13"></option><option value="EF-14"></option><option value="EF-15"></option><option value="EF-16"></option><option value="EF-17"></option><option value="EF-18"></option><option value="EF-19"></option><option value="EF-20"></option><option value="EF-21"></option><option value="EF-22"></option><option value="EF-23"></option><option value="EF-24"></option><option value="EF-25"></option><option value="EF-26"></option><option value="NFR-01"></option><option value="NFR-02"></option><option value="NFR-03"></option><option value="NFR-04"></option><option value="NFR-05"></option><option value="NFR-06"></option><option value="NFR-07"></option><option value="NFR-08"></option><option value="NFR-09"></option><option value="NFR-10"></option><option value="NFR-11"></option><option value="NFR-12"></option><option value="NFR-13"></option><option value="NFR-14"></option><option value="NFR-15"></option><option value="NFR-16"></option><option value="AC-01"></option><option value="AC-02"></option><option value="AC-03"></option><option value="AC-04"></option><option value="AC-05"></option><option value="AC-06"></option><option value="AC-07"></option><option value="AC-08"></option><option value="AC-09"></option><option value="AC-10"></option><option value="AC-11"></option><option value="AC-12"></option><option value="AC-13"></option><option value="AC-14"></option><option value="AC-15"></option><option value="AC-16"></option><option value="AC-17"></option><option value="AC-18"></option><option value="AC-19"></option><option value="AC-20"></option><option value="AC-21"></option><option value="AC-22"></option><option value="AC-23"></option><option value="AC-24"></option><option value="AC-25"></option><option value="AC-26"></option><option value="AC-27"></option><option value="AC-28"></option><option value="AC-29"></option><option value="AC-30"></option><option value="AC-31"></option><option value="AC-32"></option><option value="AC-33"></option><option value="AC-34"></option><option value="AC-35"></option><option value="AC-36"></option><option value="AC-37"></option><option value="AC-38"></option><option value="AC-39"></option><option value="AC-40"></option><option value="AC-41"></option><option value="AC-42"></option><option value="AC-43"></option><option value="AC-44"></option><option value="AC-45"></option><option value="AC-46"></option><option value="AC-47"></option><option value="AC-48"></option><option value="AC-49"></option><option value="AC-50"></option><option value="UC-01"></option><option value="UC-02"></option><option value="UC-03"></option><option value="UC-04"></option><option value="UC-05"></option><option value="UC-06"></option><option value="UC-07"></option><option value="UC-08"></option><option value="UC-09"></option><option value="UC-10"></option><option value="UC-11"></option><option value="UC-12"></option><option value="UC-13"></option><option value="UC-14"></option><option value="UC-15"></option><option value="UC-16"></option></datalist><div id="lookup-status" role="status"></div><nav aria-label="Mục lục"><a href="#section-1">1 Mục đích và quy ước</a><a href="#section-2">2 Tổng quan và phạm vi</a><a href="#section-3">3 Quyết định chính sách và cấu hình đề xuất</a><a href="#section-4">4 Ma trận phân quyền</a><a href="#section-5">5 Yêu cầu chức năng</a><a href="#section-6">6 Quy tắc nghiệp vụ</a><a href="#section-7">7 Mô hình trạng thái</a><a href="#section-8">8 Đặc tả use case</a><a href="#section-9">9 Mô hình tiền và các phương án quyết toán</a><a href="#section-10">10 Danh mục luồng ngoại lệ</a><a href="#section-11">11 Yêu cầu dữ liệu</a><a href="#section-12">12 Yêu cầu giao diện và hợp đồng tích hợp</a><a href="#section-13">13 Yêu cầu phi chức năng</a><a href="#section-14">14 Tự động hóa và vận hành</a><a href="#section-15">15 Bảo mật và giới hạn xử lý nghiệp vụ</a><a href="#section-16">16 Ưu tiên triển khai và phụ thuộc</a><a href="#section-17">17 Tiêu chí đầu vào và đầu ra nghiệm thu</a><a href="#section-18">18 Ma trận truy vết và ca nghiệm thu</a><a href="#section-19">19 Đối chiếu với hai tài liệu nguồn</a><a href="#section-20">20 Quản lý thay đổi và bàn giao</a></nav><p class="note">Dùng Ctrl + F để tìm nội dung.<br>Tài liệu hoạt động ngoại tuyến.</p></aside>
+<main><div class="toolbar"><span>TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM</span><button onclick="window.print()">In hoặc lưu PDF</button></div><h1>Đặc tả yêu cầu phần mềm nền tảng mua bán và trao đổi sách cũ</h1>
+<p><strong>Mã tài liệu:</strong> SRS-BOOK-001<br><strong>Phiên bản:</strong> 1.0<br><strong>Ngày:</strong> 20 tháng 09 năm 2026<br><strong>Trạng thái:</strong> Bản đặc tả đề xuất để nhóm đồ án và giảng viên rà soát<br><strong>Ngôn ngữ và tiền tệ:</strong> Tiếng Việt và VND<br><strong>Phạm vi áp dụng:</strong> Ứng dụng web phục vụ đồ án tốt nghiệp</p>
+<p>Tài liệu xác định hệ thống phải làm gì, ai được thực hiện, điều kiện chuyển bước, cách quản lý sách và tiền, cách xử lý ngoại lệ và điều kiện nghiệm thu. Trọng tâm là mua bán và trao đổi từng bản sách vật lý, có kiểm duyệt, giữ tiền, vận chuyển, khiếu nại và truy vết nghiệp vụ. Một cuốn sách không được đồng thời cam kết cho hai giao dịch; tiền chỉ được phân bổ khi có đủ điều kiện và không được ghi nhận hai lần cho cùng một sự kiện.</p>
+<p>Các quyết định chính sách ở mục 3 là <strong>đề xuất của bản SRS này, chưa phải quyết định đã được chủ đề tài phê duyệt</strong>. Chúng tạo một cấu hình nhất quán để có thể thiết kế và kiểm thử ngay. Khi nhóm chọn giá trị khác, phải cập nhật phiên bản chính sách và các trường hợp kiểm thử tương ứng trước khi chốt đặc tả.</p>
+<h2 id="section-1">1 Mục đích và quy ước</h2>
+<h3 id="section-1-1">1.1 Người sử dụng tài liệu</h3>
+<p>Nhóm phân tích dùng SRS để viết use case, thiết kế dữ liệu và giao diện. Nhóm phát triển dùng các yêu cầu có mã để triển khai. Nhóm kiểm thử dùng tiêu chí chấp nhận và ma trận truy vết. Giảng viên và hội đồng dùng phạm vi, các bất biến nghiệp vụ và tình huống ngoại lệ để đánh giá mức hoàn thiện.</p>
+<h3 id="section-1-2">1.2 Tài liệu đầu vào và cách kế thừa</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Tài liệu</th>
+<th scope="col">Phần kế thừa</th>
+</tr></thead><tbody>
+<tr>
+<td>SRC-A</td>
+<td>proj.txt, 15 nhóm chức năng</td>
+<td>Cấu trúc book/listing/forum; kiểm duyệt; mua và đổi; ví; phân quyền; vận hành và tự động hóa</td>
+</tr>
+<tr>
+<td>SRC-B</td>
+<td>Business_Rules_Exception_Flows.docx</td>
+<td>Cách mô tả BR/EF; hạn xác nhận và gửi; xử lý không nhận hàng; khóa hai sách; phí ship; bảo vệ đánh giá làm bằng chứng</td>
+</tr>
+<tr>
+<td>SRC-C</td>
+<td>Báo cáo so sánh nghiệp vụ trong cùng bộ tài liệu</td>
+<td>Các mâu thuẫn cần giải quyết; quản lý reservation; tách trạng thái tiền/hàng; đề xuất kiểm thử</td>
+</tr>
+</tbody></table></div>
+<p>Các quy tắc của SRS này thay thế cách diễn đạt mâu thuẫn trong hai tài liệu nguồn khi triển khai phạm vi phiên bản 1.0. Bảng đối chiếu ở mục 19 giải thích các thay đổi chính. SRS không tuyên bố phần mềm hiện tại đã đáp ứng yêu cầu; kết quả đó phải được xác nhận bằng kiểm thử.</p>
+<h3 id="section-1-3">1.3 Quy ước yêu cầu</h3>
+<ul>
+<li><strong>FR</strong> là yêu cầu chức năng; <strong>BR</strong> là quy tắc nghiệp vụ; <strong>UC</strong> là use case; <strong>NFR</strong> là yêu cầu phi chức năng; <strong>AC</strong> là ca nghiệm thu; <strong>POL</strong> là chính sách cấu hình.</li>
+<li><strong>M</strong> là bắt buộc trong phạm vi nghiệm thu đề xuất; <strong>E</strong> là mở rộng, không dùng để đánh trượt phạm vi M.</li>
+<li>“Phải” là hành vi bắt buộc; “có thể” là lựa chọn được phép nếu vẫn bảo đảm các bất biến.</li>
+<li>Trạng thái tiếng Anh là mã chuẩn; giao diện hiển thị nhãn tiếng Việt tương ứng. Các tên bảng là mô hình logic, không ép nhóm chọn một hệ quản trị cụ thể.</li>
+<li>Các yêu cầu độc lập với lựa chọn framework. Thiết kế API và dữ liệu ở đây là hợp đồng hành vi tối thiểu, không phải toàn bộ tài liệu thiết kế chi tiết.</li>
+</ul>
+<h3 id="section-1-4">1.4 Thuật ngữ</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Thuật ngữ</th>
+<th scope="col">Định nghĩa</th>
+</tr></thead><tbody>
+<tr>
+<td>Book</td>
+<td>Bản ghi đầu sách và ấn bản; không phải hiện vật đang bán</td>
+</tr>
+<tr>
+<td>Listing</td>
+<td>Một bản sách vật lý do một người dùng sở hữu và đăng bán/đổi</td>
+</tr>
+<tr>
+<td>Buyer và Seller</td>
+<td>Vai theo từng đơn mua; một tài khoản có thể giữ cả hai vai ở các đơn khác nhau</td>
+</tr>
+<tr>
+<td>Initiator và Recipient</td>
+<td>Người tạo và người nhận đề xuất đổi; không mặc định ai phải bù tiền</td>
+</tr>
+<tr>
+<td>Reservation</td>
+<td>Cam kết độc quyền một listing cho một giao dịch có định danh</td>
+</tr>
+<tr>
+<td>Escrow hoặc khoản giữ</td>
+<td>Khoản tiền mô phỏng bị hạn chế sử dụng cho một mục đích nghiệp vụ xác định</td>
+</tr>
+<tr>
+<td>Deposit</td>
+<td>Cọc trao đổi; tách biệt với tiền bù và nạp ví</td>
+</tr>
+<tr>
+<td>Pickup</td>
+<td>Carrier xác nhận đã nhận kiện hàng từ người gửi</td>
+</tr>
+<tr>
+<td>Delivered</td>
+<td>Có sự kiện giao/nhận hợp lệ; không đồng nghĩa đã qua hạn khiếu nại</td>
+</tr>
+<tr>
+<td>Settlement</td>
+<td>Phân bổ cuối cùng các khoản giữ thành hoàn, bồi thường, phí và tiền người bán nhận</td>
+</tr>
+<tr>
+<td>Snapshot</td>
+<td>Bản chụp dữ liệu và chính sách tại thời điểm giao kết, không sửa theo listing hiện tại</td>
+</tr>
+<tr>
+<td>Idempotency</td>
+<td>Thực hiện lại cùng một yêu cầu không phát sinh thêm tác động nghiệp vụ</td>
+</tr>
+<tr>
+<td>Dispute</td>
+<td>Hồ sơ tranh chấp gắn với một giao dịch, có thể chứa khiếu nại từ cả hai bên</td>
+</tr>
+<tr>
+<td>Custody</td>
+<td>Bên được xác minh đang giữ hiện vật; phân biệt với quyền sở hữu pháp lý</td>
+</tr>
+</tbody></table></div>
+<h2 id="section-2">2 Tổng quan và phạm vi</h2>
+<h3 id="section-2-1">2.1 Mục tiêu sản phẩm</h3>
+<p>Hệ thống giúp người dùng tìm, mua và trao đổi sách cũ với thông tin tình trạng rõ ràng; giúp người bán quản lý từng bản sách; giúp Staff kiểm duyệt và xử lý tranh chấp; giúp Admin quản lý chính sách, quyền, rút tiền mô phỏng và đối soát. Forum hỗ trợ thảo luận và tìm sách, nhưng giao dịch phải đi qua listing và quy trình có lưu vết.</p>
+<h3 id="section-2-2">2.2 Phạm vi bắt buộc</h3>
+<p>Phiên bản nghiệm thu gồm tài khoản bằng email, hồ sơ và địa chỉ; catalog và listing có kiểm duyệt; tìm kiếm; giỏ hàng; mua một listing mỗi Order; đổi một listing lấy một listing có hoặc không bù tiền; ví mô phỏng có sổ cái; nạp và rút mô phỏng; vận chuyển giả lập có đủ trạng thái; khiếu nại, trả hàng và giải quyết tiền; đánh giá hai chiều; chat, forum cơ bản, wishlist; thông báo; quản trị và nhật ký.</p>
+<p>Giỏ hàng có thể chứa listing của nhiều người bán, nhưng mỗi checkout trong phiên bản này chỉ chọn <strong>một listing</strong>. Người dùng muốn mua nhiều cuốn tạo các Order độc lập. Đây là giới hạn có chủ ý để tránh phân bổ tiền, giao hàng và hoàn một phần giữa nhiều hiện vật trong cùng đơn.</p>
+<h3 id="section-2-3">2.3 Ngoài phạm vi bắt buộc</h3>
+<p>Đăng nhập Google/Facebook/SĐT; payment gateway và ngân hàng thật; carrier thật; COD; giao dịch tiền thật; đổi nhiều cuốn cùng lúc; giao quốc tế; đấu giá; hub xác minh; miễn cọc theo điểm uy tín; định giá thị trường tự động; phát hiện nhiều tài khoản cùng một người bằng danh tính thực; xử lý bồi thường vượt nguồn tiền đang giữ; chatbot; ứng dụng di động native. Các mục này chỉ được bổ sung khi có yêu cầu thay đổi phạm vi.</p>
+<h3 id="section-2-4">2.4 Môi trường và phụ thuộc</h3>
+<p>Ứng dụng web responsive có frontend, dịch vụ nghiệp vụ, cơ sở dữ liệu, kho tệp, bộ xử lý tác vụ nền và các adapter thanh toán/vận chuyển mô phỏng. Hệ thống lưu thời gian UTC, hiển thị theo Asia/Ho_Chi_Minh. Email xác minh có thể dùng hộp thư sandbox trong môi trường trình diễn. Tài khoản người dùng thường không được truy cập màn hình phát sự kiện carrier hoặc callback thanh toán.</p>
+<p>Không sử dụng tiền, tài khoản ngân hàng hoặc dữ liệu cá nhân thật trong dữ liệu demo. Giao diện ví và vận chuyển phải ghi rõ “Mô phỏng đồ án”. Mục tiêu nghiệm thu là tính nhất quán của quy trình, không phải chứng nhận khả năng vận hành dịch vụ tài chính thực tế.</p>
+<h3 id="section-2-5">2.5 Vai trò và ranh giới trách nhiệm</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Actor</th>
+<th scope="col">Trách nhiệm</th>
+</tr></thead><tbody>
+<tr>
+<td>Guest</td>
+<td>Xem dữ liệu công khai và đăng ký</td>
+</tr>
+<tr>
+<td>Member</td>
+<td>Quản lý dữ liệu của mình, mua/bán/đổi, thảo luận, khiếu nại và đánh giá</td>
+</tr>
+<tr>
+<td>Staff</td>
+<td>Kiểm duyệt nội dung; thu thập và đánh giá bằng chứng; xử lý quyết định trong hạn mức</td>
+</tr>
+<tr>
+<td>Admin</td>
+<td>Quản trị tài khoản/quyền/chính sách, duyệt rút, giải quyết escalation và kháng nghị</td>
+</tr>
+<tr>
+<td>System</td>
+<td>Kiểm tra quyền và điều kiện; giữ sách/tiền; chạy deadline, đối soát và thông báo</td>
+</tr>
+<tr>
+<td>Payment Simulator</td>
+<td>Cung cấp kết quả nạp/chuyển tiền với mã sự kiện và khả năng mô phỏng lỗi</td>
+</tr>
+<tr>
+<td>Carrier Simulator</td>
+<td>Cung cấp sự kiện pickup, giao, thất bại, thất lạc và hoàn hàng</td>
+</tr>
+</tbody></table></div>
+<p>Staff/Admin có thể có vai Member để demo, nhưng không được kiểm duyệt listing, quyết định tranh chấp hay duyệt rút của chính mình. Nếu không có người đủ quyền độc lập, hồ sơ chờ phân công, không bỏ qua kiểm soát.</p>
+<h2 id="section-3">3 Quyết định chính sách và cấu hình đề xuất</h2>
+<h3 id="section-3-1">3.1 Lựa chọn nền tảng</h3>
+<p>SRS chọn kiểm duyệt trước khi listing xuất hiện công khai; mua theo reservation tại checkout; đổi giữ đồng thời hai cuốn khi chấp nhận; không giữ sách lúc mới Proposed; không dùng trạng thái Locked có ý nghĩa khác Reserved. Mỗi bên trao đổi cọc bằng giá trị sách mình dự kiến nhận. Không miễn cọc theo uy tín. Hai chiều vận chuyển hiển thị minh bạch, không áp dụng gửi hàng mù.</p>
+<p>Hoàn tất bình thường xảy ra sau thời hạn kiểm tra kể từ nhận/giao hợp lệ. Bấm “Đã nhận” không làm mất phần thời gian kiểm tra còn lại. Chỉ freeze tiền của giao dịch bị tranh chấp theo mặc định. Staff không sửa trực tiếp số dư; mọi thay đổi tiền có chứng từ nghiệp vụ và sổ cái.</p>
+<h3 id="section-3-2">3.2 Danh mục chính sách</h3>
+<p>Mọi giá trị dưới đây là mặc định đề xuất cho dữ liệu đồ án. Giá trị phải được chốt trước nghiệm thu; không dùng tên “X ngày” trong bản triển khai cuối.</p>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Khóa cấu hình</th>
+<th scope="col">Mặc định đề xuất</th>
+<th scope="col">Cách áp dụng</th>
+</tr></thead><tbody>
+<tr id="POL-01">
+<td>POL-01</td>
+<td>checkout_payment_minutes</td>
+<td>15 phút</td>
+<td>Từ khi reservation Order được tạo</td>
+</tr>
+<tr id="POL-02">
+<td>POL-02</td>
+<td>seller_confirm_hours</td>
+<td>48 giờ</td>
+<td>Từ khi thanh toán Order thành công</td>
+</tr>
+<tr id="POL-03">
+<td>POL-03</td>
+<td>order_pickup_hours</td>
+<td>48 giờ</td>
+<td>Từ khi Seller xác nhận</td>
+</tr>
+<tr id="POL-04">
+<td>POL-04</td>
+<td>exchange_response_hours</td>
+<td>48 giờ</td>
+<td>Từ lúc gửi phiên bản đề xuất mới</td>
+</tr>
+<tr id="POL-05">
+<td>POL-05</td>
+<td>exchange_funding_hours</td>
+<td>24 giờ</td>
+<td>Từ khi chấp nhận đề xuất</td>
+</tr>
+<tr id="POL-06">
+<td>POL-06</td>
+<td>exchange_pickup_hours</td>
+<td>72 giờ</td>
+<td>Từ khi đủ hai cọc và tiền bù</td>
+</tr>
+<tr id="POL-07">
+<td>POL-07</td>
+<td>delivery_overdue_hours</td>
+<td>240 giờ</td>
+<td>Theo từng chiều, tính từ pickup; quá hạn mở điều tra</td>
+</tr>
+<tr id="POL-08">
+<td>POL-08</td>
+<td>inspection_hours</td>
+<td>72 giờ</td>
+<td>Theo từng lần giao/nhận hợp lệ</td>
+</tr>
+<tr id="POL-09">
+<td>POL-09</td>
+<td>evidence_response_hours</td>
+<td>48 giờ</td>
+<td>Từ yêu cầu bổ sung bằng chứng</td>
+</tr>
+<tr id="POL-10">
+<td>POL-10</td>
+<td>decision_appeal_hours</td>
+<td>48 giờ</td>
+<td>Từ lúc quyết định có trong hộp thư nội bộ</td>
+</tr>
+<tr id="POL-11">
+<td>POL-11</td>
+<td>return_pickup_hours</td>
+<td>72 giờ</td>
+<td>Từ lúc quyết định trả hàng có hiệu lực</td>
+</tr>
+<tr id="POL-12">
+<td>POL-12</td>
+<td>exchange_deposit_rate</td>
+<td>100%</td>
+<td>Tính trên giá trị sách đối phương, không miễn</td>
+</tr>
+<tr id="POL-13">
+<td>POL-13</td>
+<td>order_commission_rate</td>
+<td>5%</td>
+<td>Trên tiền sách thực giữ lại sau hoàn, không tính ship</td>
+</tr>
+<tr id="POL-14">
+<td>POL-14</td>
+<td>exchange_fee</td>
+<td>0 đồng</td>
+<td>Phiên bản 1.0 chưa thu phí đổi</td>
+</tr>
+<tr id="POL-15">
+<td>POL-15</td>
+<td>min_withdrawal_amount</td>
+<td>50.000 đồng</td>
+<td>Phí rút mô phỏng bằng 0</td>
+</tr>
+<tr id="POL-16">
+<td>POL-16</td>
+<td>listing_price_limits</td>
+<td>10.000 đến 1.000.000 đồng</td>
+<td>Cho giá bán và giá trị đổi trong phạm vi M</td>
+</tr>
+<tr id="POL-17">
+<td>POL-17</td>
+<td>violation_window_threshold</td>
+<td>3 sự kiện trong 720 giờ</td>
+<td>Hạn chế giao dịch mới 168 giờ khi đủ ngưỡng</td>
+</tr>
+<tr id="POL-18">
+<td>POL-18</td>
+<td>review_submit_hours</td>
+<td>168 giờ</td>
+<td>Từ Completed</td>
+</tr>
+<tr id="POL-19">
+<td>POL-19</td>
+<td>review_edit_hours</td>
+<td>48 giờ</td>
+<td>Từ lần tạo đánh giá, không gia hạn do sửa</td>
+</tr>
+<tr id="POL-20">
+<td>POL-20</td>
+<td>staff_compensation_limit</td>
+<td>300.000 đồng</td>
+<td>Tổng tiền bồi thường/hoàn trong quyết định; vượt thì Admin</td>
+</tr>
+<tr id="POL-21">
+<td>POL-21</td>
+<td>case_initial_response_hours</td>
+<td>24 giờ</td>
+<td>Quá hạn nhắc Staff và báo Admin</td>
+</tr>
+<tr id="POL-22">
+<td>POL-22</td>
+<td>default_ship_quote</td>
+<td>30.000 đồng</td>
+<td>Một chiều Order trong simulator, snapshot tại checkout</td>
+</tr>
+<tr id="POL-23">
+<td>POL-23</td>
+<td>open_exchange_limit</td>
+<td>5 đề xuất mỗi tài khoản</td>
+<td>Chỉ tính Proposed; 1 đề xuất mở cho cùng cặp listing</td>
+</tr>
+<tr id="POL-24">
+<td>POL-24</td>
+<td>order_reservation_limit</td>
+<td>2 checkout chưa trả tiền</td>
+<td>Mỗi Buyer; đã trả không tính vào hạn này</td>
+</tr>
+<tr id="POL-25">
+<td>POL-25</td>
+<td>evidence_retention_days</td>
+<td>365 ngày</td>
+<td>Sau khi kết thúc hồ sơ, trừ hồ sơ đang giữ để điều tra</td>
+</tr>
+<tr id="POL-26">
+<td>POL-26</td>
+<td>auth_attempt_limit</td>
+<td>5 lần mỗi 15 phút</td>
+<td>Theo tài khoản và IP, có thông báo chung tránh lộ tài khoản</td>
+</tr>
+</tbody></table></div>
+<p>Tất cả deadline dùng giờ liên tục. Quyền thao tác của người dùng còn hiệu lực khi thời gian tiếp nhận hợp lệ tại máy chủ <strong>nhỏ hơn</strong> deadline; tại đúng deadline coi là hết hạn. Worker chạy trễ không kéo dài quyền. Sự kiện carrier/payment đến muộn được xử lý theo quy tắc ngoại lệ, không sửa ngược lịch sử đã quyết toán.</p>
+<p>Phiên bản chính sách mới chỉ áp dụng cho giao dịch tạo/chấp nhận sau lúc hiệu lực. Deadline cụ thể và các tỷ lệ phải được snapshot. Cấu hình bảo mật và kiểm duyệt khẩn cấp có thể có hiệu lực ngay, nhưng không tự thay đổi số tiền đã cam kết.</p>
+<h3 id="section-3-3">3.3 Những điểm cần phê duyệt khi chốt phiên bản</h3>
+<p>Nhóm cần phê duyệt phạm vi một listing/Order; mức cọc 100%; trần giá; mức hoa hồng; thời hạn tại bảng trên; thẩm quyền Staff; giới hạn bồi thường trong số tiền đang giữ; cơ chế mô phỏng thay vì tích hợp thật. Các giá trị chưa phê duyệt không được diễn đạt trong báo cáo tốt nghiệp như chính sách đã vận hành thực tế.</p>
+<h2 id="section-4">4 Ma trận phân quyền</h2>
+<p>Quyền phải kiểm tra ở máy chủ và gắn với quyền sở hữu đối tượng. Ẩn nút trên giao diện không thay thế kiểm tra quyền.</p>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Thao tác</th>
+<th scope="col">Guest</th>
+<th scope="col">Member</th>
+<th scope="col">Staff</th>
+<th scope="col">Admin</th>
+</tr></thead><tbody>
+<tr>
+<td>Xem listing và forum công khai</td>
+<td>Có</td>
+<td>Có</td>
+<td>Có</td>
+<td>Có</td>
+</tr>
+<tr>
+<td>Tạo/sửa listing</td>
+<td>Không</td>
+<td>Của mình</td>
+<td>Theo vai Member</td>
+<td>Theo vai Member</td>
+</tr>
+<tr>
+<td>Duyệt hoặc gỡ listing</td>
+<td>Không</td>
+<td>Không</td>
+<td>Có, không tự duyệt</td>
+<td>Có, không tự duyệt</td>
+</tr>
+<tr>
+<td>Mua/đổi/chat</td>
+<td>Không</td>
+<td>Giao dịch hợp lệ của mình</td>
+<td>Theo vai Member</td>
+<td>Theo vai Member</td>
+</tr>
+<tr>
+<td>Xem địa chỉ và vận đơn</td>
+<td>Không</td>
+<td>Các giao dịch có tham gia, theo nhu cầu giao hàng</td>
+<td>Hồ sơ được phân công</td>
+<td>Theo nhiệm vụ có log</td>
+</tr>
+<tr>
+<td>Đọc chat phục vụ tranh chấp</td>
+<td>Không</td>
+<td>Chat có tham gia</td>
+<td>Chỉ hồ sơ được phân công</td>
+<td>Hồ sơ được phân công/escalate</td>
+</tr>
+<tr>
+<td>Tạo ticket và nộp bằng chứng</td>
+<td>Không</td>
+<td>Giao dịch có tham gia</td>
+<td>Theo vai Member</td>
+<td>Theo vai Member</td>
+</tr>
+<tr>
+<td>Quyết định ticket</td>
+<td>Không</td>
+<td>Không</td>
+<td>Trong hạn mức, không xung đột</td>
+<td>Có, không xung đột</td>
+</tr>
+<tr>
+<td>Giải quyết kháng nghị</td>
+<td>Không</td>
+<td>Không</td>
+<td>Không</td>
+<td>Người không ra quyết định ban đầu</td>
+</tr>
+<tr>
+<td>Duyệt rút</td>
+<td>Không</td>
+<td>Không</td>
+<td>Chỉ kiểm tra và đề xuất</td>
+<td>Có, không tự duyệt</td>
+</tr>
+<tr>
+<td>Đổi số dư trực tiếp</td>
+<td>Không</td>
+<td>Không</td>
+<td>Không</td>
+<td>Không</td>
+</tr>
+<tr>
+<td>Khóa tài khoản/cấp quyền</td>
+<td>Không</td>
+<td>Không</td>
+<td>Đề nghị</td>
+<td>Có</td>
+</tr>
+<tr>
+<td>Quản lý catalog</td>
+<td>Không</td>
+<td>Đề nghị bổ sung</td>
+<td>Đề nghị/sửa bản nháp</td>
+<td>Duyệt và quản lý</td>
+</tr>
+<tr>
+<td>Quản lý chuyên mục và cấu hình</td>
+<td>Không</td>
+<td>Không</td>
+<td>Không</td>
+<td>Có</td>
+</tr>
+<tr>
+<td>Báo cáo tổng hợp và đối soát</td>
+<td>Không</td>
+<td>Số liệu của mình</td>
+<td>Phần công việc được giao</td>
+<td>Toàn hệ thống</td>
+</tr>
+<tr>
+<td>Phát sự kiện simulator</td>
+<td>Không</td>
+<td>Không</td>
+<td>Chỉ tài khoản vận hành test được cấp riêng</td>
+<td>Quyền test riêng và log</td>
+</tr>
+</tbody></table></div>
+<p>Tài khoản bị khóa hoặc hạn chế giao dịch mới được truy cập chế độ xử lý nghĩa vụ cũ: xem đơn, chat trong đơn cũ, gửi/nhận/hoàn hàng, nộp bằng chứng và xem ví. Không được mua/đổi/đăng mới hoặc tạo rút tiền mới khi account_locked. Hạn chế do vi phạm thông thường chỉ chặn đăng mới và tham gia giao dịch mới, không mặc định khóa toàn ví.</p>
+<h2 id="section-5">5 Yêu cầu chức năng</h2>
+<p>Mọi yêu cầu trong mục này là M trừ khi ghi E. Các tiêu chí AC ở mục 18 kiểm tra theo nhóm; điều kiện chi tiết tại BR và UC có hiệu lực đồng thời.</p>
+<h3 id="section-5-1">5.1 Xác thực và hồ sơ</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Yêu cầu</th>
+</tr></thead><tbody>
+<tr id="FR-A01">
+<td>FR-A01</td>
+<td>Đăng ký bằng email duy nhất sau chuẩn hóa khoảng trắng và chữ hoa/thường; mật khẩu từ 10 đến 128 ký tự; chỉ kích hoạt sau xác minh email. Không tự gộp hai địa chỉ email khác nhau.</td>
+</tr>
+<tr id="FR-A02">
+<td>FR-A02</td>
+<td>Gửi liên kết xác minh dùng một lần, hạn 30 phút; gửi lại sau ít nhất 60 giây; liên kết mới vô hiệu liên kết cũ.</td>
+</tr>
+<tr id="FR-A03">
+<td>FR-A03</td>
+<td>Đăng nhập/đăng xuất; kiểm tra trạng thái tài khoản ở mỗi thao tác quan trọng; áp giới hạn thử sai POL-26.</td>
+</tr>
+<tr id="FR-A04">
+<td>FR-A04</td>
+<td>Khôi phục mật khẩu bằng token một lần hạn 15 phút; phản hồi công khai giống nhau dù email có tồn tại; đổi mật khẩu thu hồi phiên đang hoạt động.</td>
+</tr>
+<tr id="FR-A05">
+<td>FR-A05</td>
+<td>Người dùng xem/sửa tên hiển thị, avatar và thông tin liên hệ; thay email phải xác minh địa chỉ mới. Không tự cấp vai hoặc sửa điểm uy tín.</td>
+</tr>
+<tr id="FR-A06">
+<td>FR-A06</td>
+<td>Quản lý tối đa 10 địa chỉ, đúng một địa chỉ mặc định nếu có địa chỉ; địa chỉ gồm người nhận, SĐT, tỉnh/thành, địa bàn và chi tiết. Chỉnh hồ sơ không sửa snapshot giao dịch.</td>
+</tr>
+<tr id="FR-A07">
+<td>FR-A07</td>
+<td>Admin khóa/mở tài khoản có lý do, thời điểm, người thực hiện; Staff chỉ đề nghị. Hệ thống giữ khả năng xử lý nghĩa vụ cũ.</td>
+</tr>
+<tr id="FR-A08">
+<td>FR-A08</td>
+<td>Hiển thị số giao dịch hoàn tất, điểm đánh giá và vi phạm đã xác minh dưới dạng các chỉ số riêng; không suy ra vi phạm từ khiếu nại chưa kết luận.</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-5-2">5.2 Catalog và khám phá</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Yêu cầu</th>
+</tr></thead><tbody>
+<tr id="FR-C01">
+<td>FR-C01</td>
+<td>Catalog có tên, tác giả, nhà xuất bản, năm, ngôn ngữ, ấn bản, thể loại và ISBN tùy có; cho phép sách không ISBN; chuẩn hóa và kiểm tra cấu trúc/check digit khi nhập ISBN.</td>
+</tr>
+<tr id="FR-C02">
+<td>FR-C02</td>
+<td>Member chọn catalog có sẵn hoặc gửi yêu cầu đầu sách mới; listing không thể duyệt nếu catalog liên quan chưa được xác nhận.</td>
+</tr>
+<tr id="FR-C03">
+<td>FR-C03</td>
+<td>Admin xử lý trùng catalog bằng ánh xạ/gộp có log; không mất listing, wishlist và lịch sử snapshot.</td>
+</tr>
+<tr id="FR-C04">
+<td>FR-C04</td>
+<td>Tìm theo tên/tác giả/ISBN; lọc giá bán, giá trị đổi, tình trạng và chế độ bán/đổi; có phân trang, sắp xếp mới nhất hoặc giá tăng/giảm.</td>
+</tr>
+<tr id="FR-C05">
+<td>FR-C05</td>
+<td>Kết quả giao dịch công khai chỉ gồm listing Approved, Visible, Available của chủ được phép giao dịch; thay đổi trạng thái phải vô hiệu nút giao dịch ở bước máy chủ.</td>
+</tr>
+<tr id="FR-C06">
+<td>FR-C06</td>
+<td>Trang book gom các listing đủ điều kiện; trang listing có ảnh thật, mô tả, giá, tình trạng, người đăng, đánh giá và topic liên quan được công khai.</td>
+</tr>
+<tr id="FR-C07">
+<td>FR-C07</td>
+<td>Admin quản lý banner, bộ sưu tập và thứ tự hiển thị; listing không đủ điều kiện trong bộ sưu tập tự ngừng được đề xuất mua/đổi.</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-5-3">5.3 Listing và kiểm duyệt</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Yêu cầu</th>
+</tr></thead><tbody>
+<tr id="FR-L01">
+<td>FR-L01</td>
+<td>Tạo nháp cho một bản vật lý, chọn Sale/Exchange/Both; có 1–8 ảnh thật, tình trạng, mô tả lỗi và các trường giá bắt buộc tương ứng chế độ.</td>
+</tr>
+<tr id="FR-L02">
+<td>FR-L02</td>
+<td>Bốn mức tình trạng là Như mới, Tốt, Khá, Cũ; phải khai tình trạng trang, bìa, ghi chú, thiếu trang và phụ kiện kèm. Sách không đọc được hoặc thiếu phần nội dung trọng yếu không đủ điều kiện bản M.</td>
+</tr>
+<tr id="FR-L03">
+<td>FR-L03</td>
+<td>Gửi duyệt kiểm tra đủ trường, giới hạn giá, quyền sở hữu khai báo và catalog. Staff xem checklist, phê duyệt hoặc từ chối với lý do.</td>
+</tr>
+<tr id="FR-L04">
+<td>FR-L04</td>
+<td>Đổi book/ảnh/mô tả/tình trạng/giá/chế độ sau khi duyệt phải tạo revision chờ duyệt lại; trong lúc đó listing không nhận giao dịch mới.</td>
+</tr>
+<tr id="FR-L05">
+<td>FR-L05</td>
+<td>Khi có reservation hiệu lực, Seller không sửa dữ liệu trọng yếu, ẩn chủ động hoặc xóa listing. Chỉ được trao đổi bổ sung trong chat mà không thay snapshot.</td>
+</tr>
+<tr id="FR-L06">
+<td>FR-L06</td>
+<td>Cho ẩn/mở listing chưa giữ chỗ; mở lại phải qua kiểm tra trạng thái duyệt và quyền hiện hành. Xóa là soft delete, không xóa lịch sử.</td>
+</tr>
+<tr id="FR-L07">
+<td>FR-L07</td>
+<td>Staff/Admin gỡ công khai với lý do; nếu đang giao dịch phải đồng thời tạo hồ sơ điều tra hoặc hủy trước giao theo tiến độ, không âm thầm giải phóng sách/tiền.</td>
+</tr>
+<tr id="FR-L08">
+<td>FR-L08</td>
+<td>Lưu phiên bản được duyệt và ảnh tại giao kết; quyền truy cập bản chụp giới hạn theo giao dịch. Giao diện công khai vẫn hiển thị dữ liệu live phù hợp.</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-5-4">5.4 Giỏ hàng và mua bán</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Yêu cầu</th>
+</tr></thead><tbody>
+<tr id="FR-O01">
+<td>FR-O01</td>
+<td>Member thêm/xóa listing Sale/Both trong giỏ, tối đa 50 dòng; số lượng mỗi listing luôn bằng 1; thêm giỏ không giữ chỗ.</td>
+</tr>
+<tr id="FR-O02">
+<td>FR-O02</td>
+<td>Checkout một listing: kiểm tra lại giá/phiên bản, địa chỉ, điều kiện listing, không tự mua, báo tổng tiền và tạo reservation cùng Order nguyên tử.</td>
+</tr>
+<tr id="FR-O03">
+<td>FR-O03</td>
+<td>Hiển thị hạn thanh toán, tiền sách, phí ship, phí Buyer nếu có và chính sách đã chốt. Dùng available mô phỏng thanh toán một lần; thiếu số dư cho phép nạp riêng, không kéo dài reservation.</td>
+</tr>
+<tr id="FR-O04">
+<td>FR-O04</td>
+<td>Thanh toán thành công chuyển toàn bộ tiền phải trả vào hold của Order; chờ Seller xác nhận. Buyer có thể hủy trước Seller xác nhận; lệnh đồng thời phải cho đúng một kết quả.</td>
+</tr>
+<tr id="FR-O05">
+<td>FR-O05</td>
+<td>Seller xác nhận/từ chối có lý do trong POL-02; từ chối hoặc hết hạn thì tạo hoàn, thông báo và xử lý reservation theo custody.</td>
+</tr>
+<tr id="FR-O06">
+<td>FR-O06</td>
+<td>Sau xác nhận, Seller nhập vận đơn và ảnh đóng gói; phải có pickup trong POL-03. Mã đơn thuần không thỏa điều kiện đã gửi.</td>
+</tr>
+<tr id="FR-O07">
+<td>FR-O07</td>
+<td>Hệ thống theo dõi giao hàng; Buyer xác nhận nhận được; nhận/giao hợp lệ mở cửa sổ kiểm tra POL-08, không giải ngân ngay.</td>
+</tr>
+<tr id="FR-O08">
+<td>FR-O08</td>
+<td>Hết hạn kiểm tra và không có dispute/return/hold điều tra: quyết toán phí và tiền Seller, đóng Order, listing Sold; mọi bước phải chống lặp.</td>
+</tr>
+<tr id="FR-O09">
+<td>FR-O09</td>
+<td>Buyer xin hủy sau Seller xác nhận nhưng trước pickup; Seller được đồng ý. Không đồng ý thì nghĩa vụ gửi vẫn còn; đã pickup phải dùng quy trình trả hàng/tranh chấp.</td>
+</tr>
+<tr id="FR-O10">
+<td>FR-O10</td>
+<td>Người tham gia xem lịch sử trạng thái, khoản tiền và lý do kết thúc; kết quả hủy/hoàn thể hiện riêng với tiến độ thanh toán thực thi.</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-5-5">5.5 Trao đổi</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Yêu cầu</th>
+</tr></thead><tbody>
+<tr id="FR-X01">
+<td>FR-X01</td>
+<td>Member chọn một listing Exchange/Both của mình và một listing người khác để đề xuất; kiểm tra cả hai đủ điều kiện, không cùng chủ; Proposed không giữ chỗ.</td>
+</tr>
+<tr id="FR-X02">
+<td>FR-X02</td>
+<td>Hiển thị giá trị snapshot hai sách, bên bù, số bù, hai khoản cọc, phí tự chịu và deadline. Khoản bù không được nhập tùy ý.</td>
+</tr>
+<tr id="FR-X03">
+<td>FR-X03</td>
+<td>Recipient chấp nhận, từ chối hoặc đề xuất thay listing của mình bằng một listing khác đủ điều kiện; đề xuất đối ứng tạo revision mới và đổi bên chờ phản hồi. Không thương lượng thay giá trong revision mà bỏ qua duyệt listing.</td>
+</tr>
+<tr id="FR-X04">
+<td>FR-X04</td>
+<td>Chấp nhận phải khớp revision, kiểm tra lại hai listing rồi giữ đồng thời; thất bại một bên thì không giữ bên nào. Các đề xuất cạnh tranh bị đóng với lý do Unavailable.</td>
+</tr>
+<tr id="FR-X05">
+<td>FR-X05</td>
+<td>Từng bên nộp đủ cọc; bên bù nộp thêm tiền bù. Mỗi bên funding trọn nghĩa vụ của mình trong một lần; chưa đủ toàn giao dịch thì chưa cho tạo pickup hợp lệ.</td>
+</tr>
+<tr id="FR-X06">
+<td>FR-X06</td>
+<td>Hết POL-05 khi chưa đủ funding: hủy, hoàn từng khoản đã giữ đúng người, giải phóng reservation hợp lệ. Thanh toán đến muộn không hồi sinh Exchange.</td>
+</tr>
+<tr id="FR-X07">
+<td>FR-X07</td>
+<td>Khi đủ tiền, mở hạn gửi POL-06 và hai Shipment riêng; hiển thị tiến độ cả hai chiều cho người tham gia.</td>
+</tr>
+<tr id="FR-X08">
+<td>FR-X08</td>
+<td>Mỗi bên nhận sách có hạn kiểm tra riêng; một bên nhận trước không làm hết quyền bên nhận sau; không hoàn cọc toàn giao dịch khi mới một chiều đủ điều kiện.</td>
+</tr>
+<tr id="FR-X09">
+<td>FR-X09</td>
+<td>Hoàn tất khi cả hai chiều hợp lệ, hết hai hạn kiểm tra và không tranh chấp: hoàn hai cọc, chuyển bù, đóng cả hai listing Exchanged.</td>
+</tr>
+<tr id="FR-X10">
+<td>FR-X10</td>
+<td>Không gửi, chỉ gửi một chiều, thất lạc, sai mô tả hoặc hoàn thất bại phải tạo/ghép dispute; giữ tiền và sách theo thực tế, không tự tịch thu cọc.</td>
+</tr>
+<tr id="FR-X11">
+<td>FR-X11</td>
+<td>Hủy trước funding hoặc khi funding chưa đủ và chưa pickup: bên tham gia được rút; hoàn khoản đã nộp, lưu sự kiện hủy; sau đủ funding cần cả hai đồng ý và chưa pickup, hoặc quyết định xử lý.</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-5-6">5.6 Ví và rút tiền</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Yêu cầu</th>
+</tr></thead><tbody>
+<tr id="FR-W01">
+<td>FR-W01</td>
+<td>Hiển thị available, tiền giữ giao dịch, tiền giữ rút và tổng nghĩa vụ với user; mỗi khoản giữ xem được giao dịch nguồn.</td>
+</tr>
+<tr id="FR-W02">
+<td>FR-W02</td>
+<td>Nạp mô phỏng có intent và sự kiện kết quả; chỉ ghi có khi adapter xác thực và đối chiếu đúng số tiền, VND, người nhận và intent; không tin kết quả trình duyệt tự gửi.</td>
+</tr>
+<tr id="FR-W03">
+<td>FR-W03</td>
+<td>Hold/release/refund/compensation/commission/withdrawal phải tạo bút toán cân bằng, bất biến, có business reference và khóa chống lặp.</td>
+</tr>
+<tr id="FR-W04">
+<td>FR-W04</td>
+<td>Lịch sử ví có lọc loại, ngày, mã giao dịch và số dư sau giao dịch; dữ liệu không được sửa trực tiếp từ màn hình quản trị.</td>
+</tr>
+<tr id="FR-W05">
+<td>FR-W05</td>
+<td>Yêu cầu rút ít nhất POL-15, không vượt available; snapshot thông tin nhận mô phỏng và chuyển ngay tiền vào withdrawal hold nguyên tử.</td>
+</tr>
+<tr id="FR-W06">
+<td>FR-W06</td>
+<td>Staff đối chiếu thông tin nếu được phân công; Admin duyệt/từ chối có lý do; không ai tự duyệt rút của mình.</td>
+</tr>
+<tr id="FR-W07">
+<td>FR-W07</td>
+<td>Duyệt không đồng nghĩa hoàn thành; simulator có thành công/thất bại/chưa rõ. Thành công đóng, thất bại đã xác minh hoàn hold, chưa rõ giữ Processing chờ đối soát.</td>
+</tr>
+<tr id="FR-W08">
+<td>FR-W08</td>
+<td>Worker đối soát hằng ngày và theo yêu cầu; phát hiện lệch thì mở cảnh báo và chặn quyết toán phần liên quan đến khi xác minh.</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-5-7">5.7 Vận chuyển và hoàn hàng</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Yêu cầu</th>
+</tr></thead><tbody>
+<tr id="FR-S01">
+<td>FR-S01</td>
+<td>Mỗi Order có một Shipment outbound; mỗi Exchange có hai; Return tạo Shipment mới tham chiếu chiều gốc, không ghi đè hành trình ban đầu.</td>
+</tr>
+<tr id="FR-S02">
+<td>FR-S02</td>
+<td>Vận đơn gồm carrier, tracking code, người gửi/nhận snapshot, chiều vận chuyển, ảnh đóng gói và thời điểm sự kiện; mã không được gán cho hai Shipment khác nhau.</td>
+</tr>
+<tr id="FR-S03">
+<td>FR-S03</td>
+<td>Chỉ adapter hoặc Staff có bằng chứng mới ghi nhận pickup/delivered; Member được xác nhận mình đã nhận, không được phát carrier event.</td>
+</tr>
+<tr id="FR-S04">
+<td>FR-S04</td>
+<td>Xử lý webhook có xác thực, chống lặp và sự kiện sai thứ tự; sự kiện cũ không được lùi trạng thái đã đạt hoặc mở lại tiền đã quyết toán.</td>
+</tr>
+<tr id="FR-S05">
+<td>FR-S05</td>
+<td>Quá hạn pickup/giao mở tác vụ kiểm tra; nếu có bằng chứng xung đột hoặc sự kiện đến muộn thì giữ điều tra, không tự kết luận sách ở chủ.</td>
+</tr>
+<tr id="FR-S06">
+<td>FR-S06</td>
+<td>Đơn hoàn ghi người chịu phí, deadline, địa chỉ nhận hoàn, chứng từ và kết quả; thất bại/không hợp tác quay lại dispute, không tự báo đã trả.</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-5-8">5.8 Tranh chấp và vi phạm</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Yêu cầu</th>
+</tr></thead><tbody>
+<tr id="FR-D01">
+<td>FR-D01</td>
+<td>Người tham gia tạo khiếu nại loại không gửi, không nhận, sai sách, sai tình trạng, nghi mã giả, giao thất bại hoặc hoàn hàng; mỗi giao dịch có tối đa một dispute đang mở, bổ sung các claim hai chiều vào cùng hồ sơ.</td>
+</tr>
+<tr id="FR-D02">
+<td>FR-D02</td>
+<td>Khi nhận claim hợp lệ, giữ toàn bộ tiền chưa quyết toán của giao dịch, dừng auto-complete và ghi bằng chứng đầu vào; không mặc định freeze available của đối phương.</td>
+</tr>
+<tr id="FR-D03">
+<td>FR-D03</td>
+<td>Staff xem snapshot, ảnh, lịch sử shipment, chat liên quan và tiền; phân công rõ người phụ trách, yêu cầu bổ sung trong POL-09.</td>
+</tr>
+<tr id="FR-D04">
+<td>FR-D04</td>
+<td>Không phản hồi không tự mất cọc; người xử lý dựa trên bằng chứng hiện có, lưu phần thiếu và căn cứ. Có thông báo nội bộ trước khi hết hạn.</td>
+</tr>
+<tr id="FR-D05">
+<td>FR-D05</td>
+<td>Quyết định gồm loại kết luận, tình trạng từng hiện vật, phân bổ từng khoản tiền, ai trả/nhận hoàn và hạn thực hiện; kiểm tra tổng nguồn bằng tổng đích.</td>
+</tr>
+<tr id="FR-D06">
+<td>FR-D06</td>
+<td>Vượt POL-20, xung đột lợi ích, nghi gian lận nhiều giao dịch hoặc bồi thường thiếu nguồn thì escalate Admin.</td>
+</tr>
+<tr id="FR-D07">
+<td>FR-D07</td>
+<td>Cho một lần kháng nghị mỗi bên trong POL-10; gộp cùng hồ sơ, giữ tiền; Admin độc lập xét. Quyết định cuối hết hạn kháng nghị mới có hiệu lực thực thi.</td>
+</tr>
+<tr id="FR-D08">
+<td>FR-D08</td>
+<td>Chỉ đóng dispute sau khi thực thi nghĩa vụ tiền/hàng hoặc ghi rõ phần không thể thu hồi được Admin chấp nhận trong giới hạn phạm vi; không báo đã bồi thường phần chưa có nguồn.</td>
+</tr>
+<tr id="FR-D09">
+<td>FR-D09</td>
+<td>Ghi vi phạm từ sự kiện đã xác minh, chống đếm hai lần; đạt ngưỡng thì hạn chế giao dịch mới; Admin có thể gỡ với lý do và lịch sử.</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-5-9">5.9 Đánh giá</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Yêu cầu</th>
+</tr></thead><tbody>
+<tr id="FR-R01">
+<td>FR-R01</td>
+<td>Chỉ giao dịch Completed và trong POL-18 mới được tạo đánh giá; mỗi participant có một đánh giá cho giao dịch, không tạo lại để kéo dài hạn sửa.</td>
+</tr>
+<tr id="FR-R02">
+<td>FR-R02</td>
+<td>Buyer chấm chất lượng sách và đối tác; Seller chấm đối tác; Exchange mỗi bên chấm sách nhận và đối tác. Thang 1–5 nguyên; không ép Seller chấm chất lượng sách do Buyer không gửi sách ở Order.</td>
+</tr>
+<tr id="FR-R03">
+<td>FR-R03</td>
+<td>Chỉ công bố khi cả hai đã gửi và đều hết hạn sửa/xóa, hoặc khi đã hết hạn gửi và mọi đánh giá đã gửi đều hết hạn sửa/xóa. Trước đó chỉ tác giả thấy bản mình và hệ thống có quyền đọc theo nhiệm vụ. Không cho sửa điểm sau khi đã xem đánh giá đối phương.</td>
+</tr>
+<tr id="FR-R04">
+<td>FR-R04</td>
+<td>Cho sửa/xóa công khai trong POL-19, lưu revision; không cho xóa khi được giữ làm bằng chứng. Sau hạn khóa sửa; người bị đánh giá được một phản hồi, có kiểm duyệt.</td>
+</tr>
+<tr id="FR-R05">
+<td>FR-R05</td>
+<td>Staff ẩn nội dung vi phạm có lý do; điểm tổng tính từ đánh giá công khai hợp lệ, không bao gồm bị xóa/ẩn và không cộng kép các revision.</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-5-10">5.10 Forum chat wishlist và thông báo</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Yêu cầu</th>
+</tr></thead><tbody>
+<tr id="FR-F01">
+<td>FR-F01</td>
+<td>Member tạo topic/bình luận trong chuyên mục Admin quản lý; Guest chỉ đọc nội dung công khai. Nội dung có báo cáo vi phạm và lịch sử kiểm duyệt.</td>
+</tr>
+<tr id="FR-F02">
+<td>FR-F02</td>
+<td>Topic được gắn tối đa một listing của chính tác giả và một wanted_book; card đọc trạng thái live, không dùng giá sao chép trong text để checkout.</td>
+</tr>
+<tr id="FR-F03">
+<td>FR-F03</td>
+<td>Tạo listing trong trình soạn topic đi qua cùng kiểm duyệt; card chờ duyệt không lộ ảnh/mô tả chưa duyệt cho Guest, không có nút giao dịch.</td>
+</tr>
+<tr id="FR-F04">
+<td>FR-F04</td>
+<td>Listing Sold/Exchanged/Reserved/Hidden/Removed đổi card tương ứng, khóa nút; topic được giữ lịch sử và tác giả có thể đóng bình luận.</td>
+</tr>
+<tr id="FR-F05">
+<td>FR-F05</td>
+<td>Một topic không gắn lặp cùng listing; một listing có tối đa 3 topic đang mở của tác giả; kiểm tra chống spam và giới hạn đăng 5 topic/giờ.</td>
+</tr>
+<tr id="FR-F06">
+<td>FR-F06</td>
+<td>Phát hiện thông tin liên hệ/rao bán không gắn listing thì cảnh báo và đưa nội dung nghi vấn vào kiểm duyệt; không coi bộ lọc là bằng chứng gian lận tuyệt đối.</td>
+</tr>
+<tr id="FR-M01">
+<td>FR-M01</td>
+<td>Chat riêng giữa hai Member khác nhau, có ngữ cảnh listing/giao dịch; người ngoài không đọc được bằng cách đổi ID. Nội dung chat không thay điều khoản đã chốt.</td>
+</tr>
+<tr id="FR-M02">
+<td>FR-M02</td>
+<td>Hạn 20 tin/phút/user, tối đa 2.000 ký tự/tin; cho báo cáo, chặn chat mới; chặn không làm mất kênh nghĩa vụ của giao dịch đang mở.</td>
+</tr>
+<tr id="FR-M03">
+<td>FR-M03</td>
+<td>Staff chỉ đọc đoạn chat cần thiết của hồ sơ được phân công, có log truy cập; không có màn hình đọc toàn bộ chat mọi người mặc định.</td>
+</tr>
+<tr id="FR-N01">
+<td>FR-N01</td>
+<td>Wishlist theo book hoặc listing, có wants_exchange; Member thêm/xóa và tắt thông báo matching.</td>
+</tr>
+<tr id="FR-N02">
+<td>FR-N02</td>
+<td>Thông báo có listing đủ điều kiện khớp wanted/wishlist hoặc giá giảm sau duyệt; chống gửi lặp theo user, sự kiện và đối tượng.</td>
+</tr>
+<tr id="FR-N03">
+<td>FR-N03</td>
+<td>Thông báo nội bộ cho quyết định, hạn, tiền, shipment, ticket và kiểm duyệt; realtime là kênh bổ sung, hộp thư lưu bền là nguồn chính. Email lỗi không rollback giao dịch.</td>
+</tr>
+<tr id="FR-N04">
+<td>FR-N04</td>
+<td>Người dùng xem chưa đọc/đã đọc và mở đúng đối tượng được phép truy cập; thông báo không đưa địa chỉ, OTP hoặc dữ liệu bằng chứng ra công khai.</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-5-11">5.11 Quản trị và tác vụ nền</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Yêu cầu</th>
+</tr></thead><tbody>
+<tr id="FR-G01">
+<td>FR-G01</td>
+<td>Staff có hàng đợi listing, nội dung báo cáo, dispute và nhiệm vụ quá hạn; lọc theo trạng thái, thời gian và người phụ trách.</td>
+</tr>
+<tr id="FR-G02">
+<td>FR-G02</td>
+<td>Admin quản lý Staff, catalog, thể loại, banner, chuyên mục và chính sách có phiên bản; mọi đổi quyền/chính sách có audit.</td>
+</tr>
+<tr id="FR-G03">
+<td>FR-G03</td>
+<td>Dashboard tách giá trị giao dịch, hoa hồng thực nhận, số dư giữ, tiền hoàn, giao dịch thất bại và vi phạm; cọc/nạp ví không được tính doanh thu.</td>
+</tr>
+<tr id="FR-G04">
+<td>FR-G04</td>
+<td>Worker xử lý timeout, kiểm tra giao, kết thúc cửa sổ kiểm tra, công bố review, matching, thông báo và đối soát; có retry chống lặp và hàng đợi lỗi.</td>
+</tr>
+<tr id="FR-G05">
+<td>FR-G05</td>
+<td>Nhật ký tra theo actor, entity, transaction ID, event ID, thời gian và lý do; không ghi mật khẩu/token, không cho sửa/xóa bằng API thường.</td>
+</tr>
+<tr id="FR-G06">
+<td>FR-G06</td>
+<td>Có bộ dữ liệu demo và bảng điều khiển simulator cho phép tái hiện thành công, lỗi, lặp, chậm và sai thứ tự mà không đổi trực tiếp trạng thái cơ sở dữ liệu.</td>
+</tr>
+</tbody></table></div>
+<h2 id="section-6">6 Quy tắc nghiệp vụ</h2>
+<h3 id="section-6-1">6.1 Sách và quyền giao dịch</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Quy tắc</th>
+</tr></thead><tbody>
+<tr id="BR-01">
+<td>BR-01</td>
+<td>Một listing đại diện một hiện vật; không có quantity lớn hơn 1. Một người có hai bản giống nhau phải tạo hai listing riêng với ảnh phân biệt. Hệ thống không thể tự chứng minh hai listing không chụp cùng hiện vật; nghi trùng chuyển kiểm duyệt.</td>
+</tr>
+<tr id="BR-02">
+<td>BR-02</td>
+<td>Chỉ Approved + Visible + Available và chủ đủ quyền mới tạo giao dịch mới. Mọi bước chốt kiểm tra lại điều kiện này.</td>
+</tr>
+<tr id="BR-03">
+<td>BR-03</td>
+<td>Một listing tối đa một reservation Active trên toàn bộ Order và Exchange. Ràng buộc phải ở lớp lưu trữ/giao dịch, không chỉ kiểm tra giao diện.</td>
+</tr>
+<tr id="BR-04">
+<td>BR-04</td>
+<td>Chỉ giao dịch sở hữu reservation được giải phóng nó. Từ chối một Proposed không được mở sách đang giữ cho người khác.</td>
+</tr>
+<tr id="BR-05">
+<td>BR-05</td>
+<td>Giữ hai listing Exchange là nguyên tử, dùng thứ tự khóa ổn định hoặc cơ chế tương đương để tránh giữ một nửa.</td>
+</tr>
+<tr id="BR-06">
+<td>BR-06</td>
+<td>Không tự mua hoặc đổi với chính mình; không giao dịch trên listing không thuộc participant được chỉ định.</td>
+</tr>
+<tr id="BR-07">
+<td>BR-07</td>
+<td>Snapshot giá, phí, ảnh, tình trạng, địa chỉ, policy và revision không đổi theo dữ liệu hiện tại. Thay đổi trọng yếu cần một thỏa thuận/giao dịch mới.</td>
+</tr>
+<tr id="BR-08">
+<td>BR-08</td>
+<td>Hủy giao dịch không tự đặt Available. Chỉ mở nếu không có nghĩa vụ giữ khác, đã xác minh ở chủ và đủ kiểm duyệt; return thay đổi tình trạng phải duyệt lại.</td>
+</tr>
+<tr id="BR-09">
+<td>BR-09</td>
+<td>Đầu sách/giá trị không có nguồn đáng tin phải được Staff xét, áp trần POL-16; không dùng trung bình listing cùng thể loại làm chuẩn chống gian lận. Giá bìa tự khai chỉ là thông tin tham khảo.</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-6-2">6.2 Giao dịch và thời gian</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Quy tắc</th>
+</tr></thead><tbody>
+<tr id="BR-10">
+<td>BR-10</td>
+<td>Checkout giữ một listing trong POL-01; thêm giỏ, chat và Proposed không giữ sách.</td>
+</tr>
+<tr id="BR-11">
+<td>BR-11</td>
+<td>Buyer hủy miễn phí khi AwaitingPayment hoặc PendingSellerConfirmation; sau Seller xác nhận cần đồng ý trước pickup hoặc quy trình dispute/return.</td>
+</tr>
+<tr id="BR-12">
+<td>BR-12</td>
+<td>Deadline do máy chủ tính và snapshot; thời gian trình duyệt chỉ để hiển thị. Hết hạn không phụ thuộc worker đã chạy hay chưa.</td>
+</tr>
+<tr id="BR-13">
+<td>BR-13</td>
+<td>Mọi lần chấp nhận đề xuất phải đúng revision; thay listing làm vô hiệu phiên bản cũ và chỉ bên đang chờ phản hồi được chấp nhận.</td>
+</tr>
+<tr id="BR-14">
+<td>BR-14</td>
+<td>Exchange chỉ cho gửi sau đủ toàn bộ funding. Bên gửi sớm ngoài quy trình không làm hệ thống tự kích hoạt; phải điều tra và ghi nhận rủi ro do vi phạm quy trình.</td>
+</tr>
+<tr id="BR-15">
+<td>BR-15</td>
+<td>Có tracking không đồng nghĩa pickup; có pickup không đồng nghĩa delivered; delivered không đồng nghĩa completed.</td>
+</tr>
+<tr id="BR-16">
+<td>BR-16</td>
+<td>Hạn chất lượng bắt đầu từ lần nhận hợp lệ của từng chiều. Khi có hai nguồn nhận hợp lệ, dùng mốc nhận sớm nhất đã xác minh; không cho claim tự khai ngày quá khứ để rút ngắn quyền.</td>
+</tr>
+<tr id="BR-17">
+<td>BR-17</td>
+<td>Không nhận hàng: được báo ngay khi carrier báo Delivered nhưng người nhận phủ nhận, hoặc khi vượt POL-07 từ pickup. Không chờ một mốc received không tồn tại.</td>
+</tr>
+<tr id="BR-18">
+<td>BR-18</td>
+<td>Chỉ tự hoàn tất khi hết hạn kiểm tra, không dispute đang mở, không điều tra/return và chưa quyết toán. Worker phải kiểm tra lại tất cả trong giao dịch dữ liệu.</td>
+</tr>
+<tr id="BR-19">
+<td>BR-19</td>
+<td>Với Exchange, cả hai chiều và hai cửa sổ kiểm tra phải đạt trước khi release; im lặng từ ngày gửi không đủ điều kiện.</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-6-3">6.3 Tiền</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Quy tắc</th>
+</tr></thead><tbody>
+<tr id="BR-20">
+<td>BR-20</td>
+<td>VND lưu số nguyên đồng. Hoa hồng làm tròn nửa lên tới đồng; không dùng floating point cho phép tính tiền.</td>
+</tr>
+<tr id="BR-21">
+<td>BR-21</td>
+<td>Order hold bằng tiền sách P cộng phí ship S. Seller ứng phí ship; khi giao thành công, nhận S cùng tiền sách sau phí. Ship không chịu commission.</td>
+</tr>
+<tr id="BR-22">
+<td>BR-22</td>
+<td>Tiền bù Δ bằng trị tuyệt đối chênh giá trị hai sách; bên sách giá trị thấp trả bên cao. Δ không âm và không nhập tay.</td>
+</tr>
+<tr id="BR-23">
+<td>BR-23</td>
+<td>Deposit_A = rate × V_B; Deposit_B = rate × V_A. Deposit không là doanh thu; không giảm vì uy tín ở phiên bản M.</td>
+</tr>
+<tr id="BR-24">
+<td>BR-24</td>
+<td>Cọc, bù, tiền Order, commission, refund và withdrawal hold có loại/mục đích riêng. Không sử dụng hold của giao dịch khác để bù thiếu.</td>
+</tr>
+<tr id="BR-25">
+<td>BR-25</td>
+<td>Mỗi thao tác tiền cần khóa chống lặp duy nhất theo loại nghiệp vụ và đối tượng; callback lặp trả kết quả đã xử lý.</td>
+</tr>
+<tr id="BR-26">
+<td>BR-26</td>
+<td>Không cho available âm hoặc tổng phân bổ vượt nguồn giữ. Hai thao tác chi/rút đồng thời phải kiểm tra và cập nhật nguyên tử.</td>
+</tr>
+<tr id="BR-27">
+<td>BR-27</td>
+<td>Tiền đến muộn không tạo reservation mới hoặc mở lại giao dịch cũ. Nạp ví hợp lệ vẫn ghi có available; thanh toán trực tiếp mở rộng phải hoàn/đối soát riêng.</td>
+</tr>
+<tr id="BR-28">
+<td>BR-28</td>
+<td>Quyết định hoàn không đồng nghĩa hoàn xong; giao diện phân biệt Requested, Processing, Completed, Failed/ReviewRequired.</td>
+</tr>
+<tr id="BR-29">
+<td>BR-29</td>
+<td>Chưa rõ kết quả chuyển tiền thì không được tự hoàn available và thử lại với lệnh mới; phải đối soát theo cùng tham chiếu.</td>
+</tr>
+<tr id="BR-30">
+<td>BR-30</td>
+<td>Phí của giao dịch hủy trước pickup bằng 0; hoàn P + S nếu đã thu. Hoàn một phần sau giao tính commission trên phần tiền sách Seller thực giữ.</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-6-4">6.4 Khiếu nại và quản trị</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Quy tắc</th>
+</tr></thead><tbody>
+<tr id="BR-31">
+<td>BR-31</td>
+<td>Dispute giữ tiền giao dịch, không mặc định freeze toàn ví. Freeze tài khoản vì điều tra gian lận là quyết định Admin riêng có phạm vi, lý do và thời hạn xem lại.</td>
+</tr>
+<tr id="BR-32">
+<td>BR-32</td>
+<td>Thiếu tracking/thiếu phản hồi không tự đồng nghĩa gian lận hoặc mất toàn cọc; phải xác minh và ra quyết định có căn cứ.</td>
+</tr>
+<tr id="BR-33">
+<td>BR-33</td>
+<td>Một dispute có thể chứa nhiều claim của cả hai bên; settlement cuối không được trả/bồi thường hai lần cho cùng tổn thất.</td>
+</tr>
+<tr id="BR-34">
+<td>BR-34</td>
+<td>Quyết định phải chỉ rõ custody của từng sách, tiền hoàn, bồi thường, phí hoàn, nguồn chi và số còn lại; mỗi khoản không đủ nguồn được ghi rõ, không ghi có giả.</td>
+</tr>
+<tr id="BR-35">
+<td>BR-35</td>
+<td>Staff không xử lý hồ sơ của mình; vượt thẩm quyền phải escalate. Admin giải kháng nghị không được là người ra quyết định ban đầu.</td>
+</tr>
+<tr id="BR-36">
+<td>BR-36</td>
+<td>Chỉ thực thi quyết định sau hết hạn kháng nghị hoặc có quyết định cuối của người độc lập; nghĩa vụ trả hàng bắt đầu tại thời điểm quyết định có hiệu lực.</td>
+</tr>
+<tr id="BR-37">
+<td>BR-37</td>
+<td>Không sửa/xóa chứng cứ gốc; có thể bổ sung phiên bản hoặc hạn chế hiển thị. Log ai xem/tải bằng chứng.</td>
+</tr>
+<tr id="BR-38">
+<td>BR-38</td>
+<td>Vi phạm phải có kết luận hoặc sự kiện timeout xác định không lỗi hệ thống; callback lặp không tăng đếm; khi kết luận bị đảo phải thu hồi strike liên quan.</td>
+</tr>
+<tr id="BR-39">
+<td>BR-39</td>
+<td>Sửa chính sách không hồi tố nghĩa vụ tiền/deadline; mọi ngoại lệ được phép phải là quyết định có thẩm quyền, không sửa cột dữ liệu trực tiếp.</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-6-5">6.5 Cộng đồng và đánh giá</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Quy tắc</th>
+</tr></thead><tbody>
+<tr id="BR-40">
+<td>BR-40</td>
+<td>Review chỉ từ participant của giao dịch Completed; đơn hủy không tạo review nhưng vẫn có thể ghi vi phạm xác minh.</td>
+</tr>
+<tr id="BR-41">
+<td>BR-41</td>
+<td>Một review/giao dịch/reviewer, kể cả đã xóa công khai; hạn sửa không đặt lại. Revision và bản dùng làm chứng cứ được giữ.</td>
+</tr>
+<tr id="BR-42">
+<td>BR-42</td>
+<td>Forum card live phục vụ khám phá; snapshot giao dịch phục vụ cam kết. Không sử dụng forum text/chat để thay giá thanh toán đã chốt.</td>
+</tr>
+<tr id="BR-43">
+<td>BR-43</td>
+<td>Listing gắn forum phải thuộc tác giả; wanted_book là catalog có thể không thuộc tác giả. Card Removed không tiết lộ nội dung bị gỡ.</td>
+</tr>
+<tr id="BR-44">
+<td>BR-44</td>
+<td>Nội dung liên hệ ngoài sàn được cảnh báo/kiểm duyệt, không cam kết chặn được mọi cách lách. Thông tin giao hàng hợp lệ nằm trong giao dịch riêng, không bị bộ lọc forum xóa.</td>
+</tr>
+<tr id="BR-45">
+<td>BR-45</td>
+<td>Thông báo lỗi không rollback tiền/sách. Trạng thái nghiệp vụ và hộp thư lưu bền phải khôi phục được việc gửi sau khi dịch vụ hoạt động trở lại.</td>
+</tr>
+<tr id="BR-46">
+<td>BR-46</td>
+<td>Chỉ mở địa chỉ nhận cho Seller sau khi nhận Order; chỉ mở địa chỉ hai bên Exchange khi đủ funding. Thông tin cần thiết cho carrier nằm trong Shipment, không đưa lên trang công khai.</td>
+</tr>
+<tr id="BR-47">
+<td>BR-47</td>
+<td>Đổi địa chỉ sau giao kết không tự sửa Shipment. Trước pickup, các bên xác nhận yêu cầu đổi và báo giá lại nếu có; phạm vi M chọn hủy an toàn và tạo giao dịch mới nếu địa chỉ hoặc phí thay đổi. Sau pickup phải xử lý qua hỗ trợ carrier và có audit.</td>
+</tr>
+</tbody></table></div>
+<h2 id="section-7">7 Mô hình trạng thái</h2>
+<h3 id="section-7-1">7.1 Nguyên tắc chung</h3>
+<p>Một trạng thái chỉ mô tả một khía cạnh. Không dùng trạng thái Order để suy ra thanh toán đã thực thi, hoặc trạng thái listing để suy ra sách đang ở đâu. Mỗi chuyển tiếp lưu trạng thái trước/sau, actor, event ID, timestamp, revision và lý do. Các chuyển tiếp không được liệt kê phải bị từ chối hoặc đi qua hồ sơ xử lý có thẩm quyền. Gửi lặp đúng một thao tác đã thành công trả lại kết quả cũ; không tạo transition thứ hai.</p>
+<h3 id="section-7-2">7.2 Listing</h3>
+<p>Listing có ba chiều trạng thái: <code>moderation_status</code> = Draft/PendingReview/Approved/Rejected; <code>visibility_status</code> = Visible/Hidden/Removed; <code>trade_status</code> = Available/Reserved/Sold/Exchanged/ClosedUnavailable. Khả năng giao dịch là kết quả kiểm tra cả ba chiều, không chỉ một trường. Nháp có trade_status Available nhưng không hiển thị hay giao dịch được vì chưa Approved.</p>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Trước</th>
+<th scope="col">Sự kiện và điều kiện</th>
+<th scope="col">Sau</th>
+<th scope="col">Hệ quả</th>
+</tr></thead><tbody>
+<tr>
+<td>Draft/Rejected</td>
+<td>Chủ gửi đủ dữ liệu</td>
+<td>PendingReview</td>
+<td>Chưa công khai nội dung chưa duyệt</td>
+</tr>
+<tr>
+<td>PendingReview</td>
+<td>Staff chấp thuận, không tự duyệt</td>
+<td>Approved</td>
+<td>Cho hiển thị nếu Visible và chủ đủ quyền</td>
+</tr>
+<tr>
+<td>PendingReview</td>
+<td>Staff từ chối có lý do</td>
+<td>Rejected</td>
+<td>Cho sửa và gửi lại</td>
+</tr>
+<tr>
+<td>Approved, không reserved</td>
+<td>Sửa trường trọng yếu</td>
+<td>PendingReview</td>
+<td>Tăng revision, ngừng nhận giao dịch</td>
+</tr>
+<tr>
+<td>Available, đủ điều kiện</td>
+<td>Checkout/chấp nhận Exchange thắng cạnh tranh</td>
+<td>Reserved</td>
+<td>Tạo reservation Active</td>
+</tr>
+<tr>
+<td>Reserved</td>
+<td>Hủy an toàn, có custody OwnerConfirmed, duyệt còn hiệu lực</td>
+<td>Available</td>
+<td>Chỉ giải phóng đúng reservation</td>
+</tr>
+<tr>
+<td>Reserved</td>
+<td>Order quyết toán, sách ở Buyer</td>
+<td>Sold</td>
+<td>Đóng reservation, cấm tái sử dụng listing</td>
+</tr>
+<tr>
+<td>Reserved</td>
+<td>Exchange quyết toán thành công hai chiều</td>
+<td>Exchanged</td>
+<td>Đóng hai reservation</td>
+</tr>
+<tr>
+<td>Reserved</td>
+<td>Giải quyết mất/không thể thu hồi hiện vật</td>
+<td>ClosedUnavailable</td>
+<td>Closure reason, không công khai nút giao dịch</td>
+</tr>
+<tr>
+<td>Reserved</td>
+<td>Nhận hoàn, tình trạng thay đổi</td>
+<td>Available + PendingReview</td>
+<td>Chưa giao dịch lại cho đến khi duyệt</td>
+</tr>
+<tr>
+<td>Visible</td>
+<td>Chủ ẩn, chưa reserved</td>
+<td>Hidden</td>
+<td>Không nhận giao dịch mới</td>
+</tr>
+<tr>
+<td>Hidden</td>
+<td>Chủ mở, chưa có hạn chế</td>
+<td>Visible</td>
+<td>Vẫn phải đủ duyệt và Available</td>
+</tr>
+<tr>
+<td>Visible/Hidden</td>
+<td>Staff gỡ có lý do</td>
+<td>Removed</td>
+<td>Nếu có giao dịch thì mở xử lý riêng</td>
+</tr>
+</tbody></table></div>
+<p>Custody tối thiểu có OwnerConfirmed, CarrierOutbound, CounterpartyConfirmed, CarrierReturn, Unknown, Lost. Giá trị do sự kiện/bằng chứng xác minh cập nhật, không tự do cho Member chọn. Sách đã Sold/Exchanged nếu chủ mới muốn bán lại phải tạo listing mới; lịch sử cũ không chuyển chủ và không được sửa.</p>
+<h3 id="section-7-3">7.3 Order</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Trước</th>
+<th scope="col">Sự kiện</th>
+<th scope="col">Điều kiện</th>
+<th scope="col">Sau</th>
+</tr></thead><tbody>
+<tr>
+<td>Không có</td>
+<td>Checkout</td>
+<td>Listing đủ điều kiện, giữ chỗ thành công</td>
+<td>AwaitingPayment</td>
+</tr>
+<tr>
+<td>AwaitingPayment</td>
+<td>Thanh toán ví</td>
+<td>Chưa hết hạn, đủ available, hold nguyên tử</td>
+<td>PendingSellerConfirmation</td>
+</tr>
+<tr>
+<td>AwaitingPayment</td>
+<td>Buyer hủy/hết hạn</td>
+<td>Chưa thanh toán thành công</td>
+<td>Cancelled</td>
+</tr>
+<tr>
+<td>PendingSellerConfirmation</td>
+<td>Seller nhận đơn</td>
+<td>Đúng Seller, trước deadline</td>
+<td>Preparing</td>
+</tr>
+<tr>
+<td>PendingSellerConfirmation</td>
+<td>Buyer hủy/Seller từ chối/hết hạn</td>
+<td>Chưa được xác nhận, không xung đột dữ liệu</td>
+<td>SettlementPending</td>
+</tr>
+<tr>
+<td>Preparing</td>
+<td>Pickup xác minh</td>
+<td>Funding đủ, vận đơn đúng</td>
+<td>InTransit</td>
+</tr>
+<tr>
+<td>Preparing</td>
+<td>Hủy hai bên/không pickup đã xác minh</td>
+<td>Sách chưa rời chủ, hoàn hợp lệ</td>
+<td>SettlementPending</td>
+</tr>
+<tr>
+<td>Preparing/InTransit</td>
+<td>Có nghi vấn hoặc khiếu nại hợp lệ</td>
+<td>Tạo dispute/điều tra</td>
+<td>ResolutionPending</td>
+</tr>
+<tr>
+<td>InTransit</td>
+<td>Delivered/Buyer nhận hợp lệ</td>
+<td>Gắn đúng Shipment, không có dispute</td>
+<td>Inspection</td>
+</tr>
+<tr>
+<td>Inspection</td>
+<td>Mở dispute đúng hạn</td>
+<td>Claim hợp lệ</td>
+<td>ResolutionPending</td>
+</tr>
+<tr>
+<td>Inspection</td>
+<td>Hết hạn kiểm tra</td>
+<td>Không cờ giữ/return/dispute</td>
+<td>SettlementPending</td>
+</tr>
+<tr>
+<td>ResolutionPending</td>
+<td>Quyết định cuối đã thực hiện phần hàng</td>
+<td>Đủ điều kiện phân bổ tiền</td>
+<td>SettlementPending</td>
+</tr>
+<tr>
+<td>SettlementPending</td>
+<td>Settlement thành công</td>
+<td>outcome là thành công/giữ hàng sau hoàn một phần</td>
+<td>Completed</td>
+</tr>
+<tr>
+<td>SettlementPending</td>
+<td>Settlement thành công</td>
+<td>outcome là hủy trước giao</td>
+<td>Cancelled</td>
+</tr>
+<tr>
+<td>SettlementPending</td>
+<td>Settlement thành công</td>
+<td>outcome là hoàn trả/hoàn toàn bộ theo xử lý</td>
+<td>ClosedAfterResolution</td>
+</tr>
+</tbody></table></div>
+<p><code>cancellation_reason</code>, <code>resolution_outcome</code> và <code>resume_stage</code> lưu riêng. SettlementPending phải có target outcome trước khi thực thi. Lỗi ghi sổ giữ nguyên trạng thái, mở retry/đối soát; không tạo Completed giả. Order ClosedAfterResolution không có review theo FR-R01; vi phạm và quyết định vẫn hiển thị cho participant.</p>
+<h3 id="section-7-4">7.4 Exchange</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Trước</th>
+<th scope="col">Sự kiện</th>
+<th scope="col">Điều kiện</th>
+<th scope="col">Sau</th>
+</tr></thead><tbody>
+<tr>
+<td>Không có</td>
+<td>Tạo đề xuất</td>
+<td>Hai listing đủ điều kiện</td>
+<td>Proposed</td>
+</tr>
+<tr>
+<td>Proposed</td>
+<td>CounterOffer</td>
+<td>Đúng bên phản hồi, thay listing hợp lệ</td>
+<td>Proposed với revision mới</td>
+</tr>
+<tr>
+<td>Proposed</td>
+<td>Từ chối/rút/hết hạn</td>
+<td>Đúng quyền và revision</td>
+<td>Rejected/Cancelled/Expired</td>
+</tr>
+<tr>
+<td>Proposed</td>
+<td>Chấp nhận</td>
+<td>Giữ nguyên tử hai listing</td>
+<td>AcceptedAwaitingFunding</td>
+</tr>
+<tr>
+<td>Proposed</td>
+<td>Listing không còn đủ điều kiện</td>
+<td>Giao dịch khác giữ hoặc nội dung đổi</td>
+<td>ClosedUnavailable</td>
+</tr>
+<tr>
+<td>AcceptedAwaitingFunding</td>
+<td>Đủ funding</td>
+<td>Hai cọc và Δ đều đủ</td>
+<td>Preparing</td>
+</tr>
+<tr>
+<td>AcceptedAwaitingFunding</td>
+<td>Hủy/hết hạn</td>
+<td>Không pickup hợp lệ</td>
+<td>SettlementPending</td>
+</tr>
+<tr>
+<td>Preparing</td>
+<td>Một Shipment pickup</td>
+<td>Có funding, đúng event</td>
+<td>InTransit</td>
+</tr>
+<tr>
+<td>Preparing/InTransit</td>
+<td>Thiếu pickup/quá hạn/sự cố/claim</td>
+<td>Có căn cứ mở xử lý</td>
+<td>ResolutionPending</td>
+</tr>
+<tr>
+<td>InTransit</td>
+<td>Cả hai đã nhận hợp lệ</td>
+<td>Không dispute</td>
+<td>Inspection</td>
+</tr>
+<tr>
+<td>Inspection</td>
+<td>Có claim hợp lệ</td>
+<td>Trong hạn của chiều liên quan</td>
+<td>ResolutionPending</td>
+</tr>
+<tr>
+<td>Inspection</td>
+<td>Hết cả hai hạn kiểm tra</td>
+<td>Không dispute/return/hold</td>
+<td>SettlementPending</td>
+</tr>
+<tr>
+<td>ResolutionPending</td>
+<td>Xong nghĩa vụ hàng theo quyết định</td>
+<td>Phương án tiền đã hiệu lực</td>
+<td>SettlementPending</td>
+</tr>
+<tr>
+<td>SettlementPending</td>
+<td>Settlement thành công</td>
+<td>Hai bên giữ sách đổi, giao dịch được duy trì</td>
+<td>Completed</td>
+</tr>
+<tr>
+<td>SettlementPending</td>
+<td>Settlement thành công</td>
+<td>Hủy trước pickup</td>
+<td>Cancelled</td>
+</tr>
+<tr>
+<td>SettlementPending</td>
+<td>Settlement thành công</td>
+<td>Đảo giao dịch hoặc bồi thường thay hoàn</td>
+<td>ClosedAfterResolution</td>
+</tr>
+</tbody></table></div>
+<p>Ngay khi một chiều Delivered, thời hạn kiểm tra chiều đó đã bắt đầu, dù trạng thái tổng vẫn InTransit. Claim chất lượng của chiều này được tạo trong InTransit. Các nhãn BothShipped/BothDelivered trên giao diện là dữ liệu suy ra từ Shipment, không phải điều kiện thay thế cho kiểm tra từng chiều.</p>
+<h3 id="section-7-5">7.5 Shipment và Return</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Trước</th>
+<th scope="col">Sự kiện</th>
+<th scope="col">Sau</th>
+<th scope="col">Điều kiện kiểm soát</th>
+</tr></thead><tbody>
+<tr>
+<td>Pending</td>
+<td>Tạo tracking</td>
+<td>LabelCreated</td>
+<td>Carrier + code duy nhất</td>
+</tr>
+<tr>
+<td>LabelCreated</td>
+<td>Pickup xác minh</td>
+<td>PickedUp</td>
+<td>Đã đủ tiền, đúng chiều và người gửi</td>
+</tr>
+<tr>
+<td>PickedUp</td>
+<td>Carrier bắt đầu chuyển</td>
+<td>InTransit</td>
+<td>Không lùi về LabelCreated</td>
+</tr>
+<tr>
+<td>PickedUp/InTransit</td>
+<td>Giao hợp lệ</td>
+<td>Delivered</td>
+<td>Lưu thời điểm và nguồn xác nhận</td>
+</tr>
+<tr>
+<td>InTransit</td>
+<td>Giao không thành công</td>
+<td>DeliveryFailed</td>
+<td>Không coi là Delivered; lần giao lại giữ lịch sử</td>
+</tr>
+<tr>
+<td>DeliveryFailed</td>
+<td>Thử giao lại</td>
+<td>InTransit</td>
+<td>Có event mới, tối đa 2 lần thử trong simulator</td>
+</tr>
+<tr>
+<td>PickedUp/InTransit/DeliveryFailed</td>
+<td>Carrier xác minh thất lạc</td>
+<td>Lost</td>
+<td>Tạo/ghép dispute</td>
+</tr>
+<tr>
+<td>Pending/LabelCreated</td>
+<td>Hủy trước pickup đã xác minh</td>
+<td>Cancelled</td>
+<td>Không có dữ liệu carrier mâu thuẫn</td>
+</tr>
+</tbody></table></div>
+<p>ReturnRequest: Requested → Authorized → AwaitingPickup → InTransit → Received → Inspected → Closed. Rejected dành cho yêu cầu không được chấp thuận; Overdue/Failed mở lại phần thực hiện dispute. Return Shipment dùng cùng state machine Shipment và <code>direction=Return</code>. Delivered return chưa đủ để niêm yết lại nếu chưa kiểm tra tình trạng.</p>
+<h3 id="section-7-6">7.6 Payment Refund Withdrawal và Dispute</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Đối tượng</th>
+<th scope="col">Trạng thái</th>
+<th scope="col">Nguyên tắc</th>
+</tr></thead><tbody>
+<tr>
+<td>TopupIntent</td>
+<td>Pending → Processing → Succeeded/Failed; ReviewRequired khi dữ liệu mâu thuẫn</td>
+<td>Chỉ Succeeded ghi có một lần; hết hạn UI không phủ nhận sự kiện nạp thật hợp lệ</td>
+</tr>
+<tr>
+<td>WalletPayment</td>
+<td>Created → Held hoặc Rejected</td>
+<td>Debit available và tạo hold trong một giao dịch dữ liệu; không tồn tại nửa thanh toán</td>
+</tr>
+<tr>
+<td>Refund</td>
+<td>Requested → Processing → Completed; Failed/ReviewRequired nếu thực thi lỗi</td>
+<td>Hoàn nội bộ thành công cùng bút toán; lỗi retry cùng mã</td>
+</tr>
+<tr>
+<td>Withdrawal</td>
+<td>Requested → Approved → Processing → Completed</td>
+<td>Từ Requested/Approved có thể Rejected nếu chưa gửi lệnh; Processing không hủy khi kết quả chưa rõ</td>
+</tr>
+<tr>
+<td>Withdrawal lỗi</td>
+<td>Processing → FailedVerified → Refunding → Refunded</td>
+<td>Chỉ trả available sau xác minh không chi; trạng thái Failure không tự ghi có</td>
+</tr>
+<tr>
+<td>Dispute</td>
+<td>Open → InReview → AwaitingEvidence → DecisionIssued</td>
+<td>Có thể lặp InReview/AwaitingEvidence có hạn; không xóa lịch sử</td>
+</tr>
+<tr>
+<td>Dispute kháng nghị</td>
+<td>DecisionIssued → Appealed → FinalDecisionIssued</td>
+<td>Admin độc lập; không có vòng kháng nghị tự động thứ hai</td>
+</tr>
+<tr>
+<td>Dispute thực thi</td>
+<td>DecisionIssued/FinalDecisionIssued → Executing → Closed</td>
+<td>Chờ quyết định hiệu lực; Executing có AwaitingReturn substage và settlement</td>
+</tr>
+</tbody></table></div>
+<p>Escalation là thuộc tính người/nhóm thẩm quyền và audit event, không làm mất tiến độ hồ sơ. Khi bác claim mà giao hàng vẫn đang tiếp tục, Dispute có thể Closed sau quyết định có hiệu lực; transaction quay về <code>resume_stage</code> suy ra từ Shipment, giữ escrow đến khi đủ điều kiện bình thường. Với quyết định có tiền/hoàn hàng, giữ Dispute Executing đến khi thực thi xong.</p>
+<h2 id="section-8">8 Đặc tả use case</h2>
+<p>Mỗi use case dưới đây xác định trigger, tiền điều kiện, luồng chính, ngoại lệ và hậu điều kiện. Các biểu mẫu phải hiển thị lỗi cụ thể có thể sửa, không chỉ “Thao tác thất bại”. Mọi quyền và điều kiện được kiểm tra lại ở máy chủ.</p>
+<h3 id="UC-01">UC-01 Đăng ký và xác minh</h3>
+<p><strong>Actor:</strong> Guest. <strong>Trigger:</strong> gửi biểu mẫu đăng ký. <strong>Tiền điều kiện:</strong> chưa có tài khoản cùng email chuẩn hóa.</p>
+<ol>
+<li>Guest nhập email, mật khẩu và tên hiển thị, chấp nhận quy tắc sử dụng mô phỏng.</li>
+<li>Hệ thống kiểm tra dữ liệu, tạo tài khoản Unverified và token xác minh.</li>
+<li>Hệ thống gửi email; Guest mở liên kết trong hạn.</li>
+<li>Hệ thống tiêu thụ token một lần, đặt tài khoản Active, ghi audit.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> email trùng trả hướng dẫn đăng nhập/khôi phục không tiết lộ dữ liệu; token hết hạn cho gửi lại; email lỗi giữ Unverified và có retry. <strong>Hậu điều kiện:</strong> chỉ tài khoản đã xác minh mới đăng listing/chat/giao dịch. <strong>Liên kết:</strong> FR-A01–A04, AC-01.</p>
+<h3 id="UC-02">UC-02 Đăng và duyệt listing</h3>
+<p><strong>Actor:</strong> Member, Staff. <strong>Tiền điều kiện:</strong> Member Active, không bị hạn chế giao dịch mới.</p>
+<ol>
+<li>Chọn book được xác nhận hoặc đề nghị catalog mới.</li>
+<li>Nhập chế độ, giá, tình trạng, lỗi cụ thể, ảnh; lưu Draft.</li>
+<li>Gửi duyệt; hệ thống kiểm tra dữ liệu và đặt PendingReview.</li>
+<li>Staff không xung đột lợi ích xem checklist: nội dung phù hợp, ảnh rõ, mô tả đủ, giá trong trần, catalog đúng.</li>
+<li>Staff duyệt hoặc từ chối có lý do. Khi duyệt, hệ thống công khai nếu đủ điều kiện và phát matching.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> catalog chưa duyệt giữ chờ; ảnh lỗi không gửi; giá bất thường yêu cầu chứng cứ/giải thích, không tự sửa giá thay user. <strong>Hậu điều kiện:</strong> chỉ phiên bản đã duyệt được giao dịch. <strong>Liên kết:</strong> FR-C01–C03, FR-L01–L08, AC-04–AC-06.</p>
+<h3 id="UC-03">UC-03 Tìm và checkout</h3>
+<p><strong>Actor:</strong> Buyer. <strong>Trigger:</strong> chọn mua listing từ tìm kiếm, giỏ hoặc forum card.</p>
+<ol>
+<li>Hệ thống mở listing hiện hành và kiểm tra chế độ mua.</li>
+<li>Buyer chọn một listing, địa chỉ; hệ thống hiển thị P, S, tổng và hạn dự kiến.</li>
+<li>Buyer xác nhận tạo Order. Hệ thống kiểm tra giá/revision và điều kiện listing.</li>
+<li>Trong một giao dịch dữ liệu, tạo Order snapshot, reservation Active và deadline.</li>
+<li>Hiển thị trang thanh toán đếm thời gian từ deadline máy chủ.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> giá/phiên bản đổi yêu cầu xem lại, không thu theo giá bất ngờ; bị giữ thì báo không còn khả dụng; tự mua bị từ chối; hết hạn ở tab cũ không tạo thanh toán. <strong>Hậu điều kiện:</strong> tối đa một Buyer có reservation. <strong>Liên kết:</strong> FR-O01–O03, BR-03/10, AC-07–AC-09.</p>
+<h3 id="UC-04">UC-04 Thanh toán và xác nhận Order</h3>
+<p><strong>Actor:</strong> Buyer, Seller. <strong>Tiền điều kiện:</strong> Order AwaitingPayment còn hạn.</p>
+<ol>
+<li>Buyer bấm trả bằng ví, gửi idempotency key.</li>
+<li>Hệ thống xác minh available và reservation; trừ available, tạo hold P + S và đổi trạng thái cùng một commit.</li>
+<li>Thông báo Seller; đặt hạn xác nhận từ thời điểm thanh toán thành công.</li>
+<li>Seller nhận hoặc từ chối. Nhận đơn mở hạn pickup; từ chối tạo hoàn và đóng theo tiến độ thực thi.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> thiếu số dư không ghi sổ một phần; click lặp không trừ hai lần; Buyer hủy đồng thời Seller nhận thì xử lý theo commit hợp lệ đầu tiên; quá hạn xác nhận hủy và hoàn. <strong>Hậu điều kiện:</strong> tiền chỉ ở available hoặc đúng hold, không bị mất giữa hai nơi. <strong>Liên kết:</strong> FR-O03–O05, FR-W03, AC-10–AC-12.</p>
+<h3 id="UC-05">UC-05 Giao và hoàn tất Order</h3>
+<p><strong>Actor:</strong> Seller, Carrier Simulator, Buyer, System. <strong>Tiền điều kiện:</strong> đã xác nhận và giữ đủ tiền.</p>
+<ol>
+<li>Seller tạo Shipment có mã và ảnh đóng gói; simulator xác nhận pickup.</li>
+<li>Hệ thống chuyển InTransit, cập nhật custody và thời hạn giao.</li>
+<li>Carrier báo giao hoặc Buyer xác nhận nhận hợp lệ; hệ thống mở hạn kiểm tra.</li>
+<li>Buyer xem sách và có thể tạo claim trong hạn.</li>
+<li>Hết hạn, worker kiểm tra không dispute và phân bổ tiền theo mục 9; đặt Completed và Sold.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> không pickup mở xác minh; mã giả/lost/không nhận chuyển UC-10; sai thứ tự event không lùi trạng thái; tiền quyết toán lỗi giữ SettlementPending. <strong>Hậu điều kiện:</strong> chỉ tiền đã quyết toán mới vào available Seller. <strong>Liên kết:</strong> FR-O06–O10, FR-S01–S05, AC-13–AC-16.</p>
+<h3 id="UC-06">UC-06 Đề xuất và thương lượng đổi</h3>
+<p><strong>Actor:</strong> Initiator, Recipient. <strong>Tiền điều kiện:</strong> hai listing cho đổi, khác chủ, đủ điều kiện.</p>
+<ol>
+<li>Initiator chọn sách mình và sách Recipient, xem Δ, hai cọc và điều kiện.</li>
+<li>Gửi Proposed, chưa giữ sách.</li>
+<li>Recipient từ chối, chấp nhận hoặc thay sách của mình bằng listing khác để counteroffer.</li>
+<li>Counteroffer tạo revision mới; bên kia phải phản hồi revision đó, deadline phản hồi đặt lại.</li>
+<li>Khi chấp nhận, hệ thống kiểm tra lại mọi điều kiện, giữ cả hai nguyên tử và đóng đề xuất cạnh tranh.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> một listing đã bị checkout thì accept thất bại cả hai; revision cũ trả Conflict; chủ sửa giá phải chờ duyệt lại, đề xuất cũ đóng Unavailable. <strong>Hậu điều kiện:</strong> một Exchange giữ được hai cuốn hoặc không giữ cuốn nào. <strong>Liên kết:</strong> FR-X01–X04, AC-17–AC-20.</p>
+<h3 id="UC-07">UC-07 Nộp cọc và bù tiền</h3>
+<p><strong>Actor:</strong> Hai participant. <strong>Tiền điều kiện:</strong> AcceptedAwaitingFunding còn hạn.</p>
+<ol>
+<li>Hệ thống hiển thị nghĩa vụ từng bên theo snapshot.</li>
+<li>Từng bên xác nhận nộp trọn nghĩa vụ bằng available; hệ thống tạo các hold riêng cho deposit và Δ.</li>
+<li>Khi tất cả hold đủ, mở Preparing và hai Shipment Pending, đặt deadline pickup.</li>
+<li>Nếu thiếu đến deadline hoặc hủy đúng điều kiện, tạo refund từng khoản và giải phóng reservation an toàn.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> thiếu available không nộp một phần; nộp lặp không hold thêm; bên đầu nộp nhưng bên sau im lặng được hoàn khi hết hạn; nạp ví đến sau hạn chỉ tăng available, không tự tài trợ Exchange đã hủy. <strong>Hậu điều kiện:</strong> chưa đủ funding thì chưa gửi trong hệ thống. <strong>Liên kết:</strong> FR-X05–X07/11, AC-21–AC-23.</p>
+<h3 id="UC-08">UC-08 Giao và hoàn tất trao đổi</h3>
+<p><strong>Actor:</strong> Hai participant, Carrier Simulator, System. <strong>Tiền điều kiện:</strong> đủ funding.</p>
+<ol>
+<li>Mỗi bên tạo vận đơn, ảnh và giao carrier trước hạn.</li>
+<li>Hệ thống cập nhật hai Shipment độc lập; một bên pickup là trạng thái tổng InTransit.</li>
+<li>Mỗi bên nhận tạo mốc nhận và cửa sổ kiểm tra riêng, cho claim dù bên kia chưa nhận.</li>
+<li>Cả hai cửa sổ hết hạn không dispute: hoàn hai deposit, chuyển Δ cho payee, đóng hai listing Exchanged.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> chỉ một bên gửi thì giữ toàn bộ hold, mở dispute, tổ chức hoàn; một bên nhận trước không làm hết quyền của bên nhận sau; không auto-release từ ngày gửi. <strong>Hậu điều kiện:</strong> Completed chỉ sau hai chiều và tiền đều hợp lệ. <strong>Liên kết:</strong> FR-X08–X10, AC-24–AC-26.</p>
+<h3 id="UC-09">UC-09 Hủy và xử lý quá hạn</h3>
+<p><strong>Actor:</strong> Participant, System. <strong>Tiền điều kiện:</strong> giao dịch ở trạng thái cho phép hủy hoặc đã đến deadline.</p>
+<ol>
+<li>Hệ thống đọc trạng thái, revision, event carrier và số tiền đang giữ.</li>
+<li>Nếu chưa pickup và hủy đủ quyền, tạo settlement hoàn và đánh dấu hủy đang thực thi.</li>
+<li>Nếu có pickup/bằng chứng xung đột, mở điều tra; không mở listing ngay.</li>
+<li>Hoàn tiền thành công, chỉ release reservation khi custody cho phép; ghi lý do và vi phạm nếu đủ căn cứ.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> tác vụ lặp không hoàn thêm; callback pickup muộn sau hủy được mở incident và giữ listing khỏi giao dịch mới nếu còn có thể; không tự thu hồi tiền đã hoàn từ ví khác. <strong>Hậu điều kiện:</strong> sách và tiền không bị “đảo” chỉ bằng đổi nhãn trạng thái. <strong>Liên kết:</strong> FR-G04, BR-08/12/27, AC-27–AC-29.</p>
+<h3 id="UC-10">UC-10 Mở khiếu nại</h3>
+<p><strong>Actor:</strong> Participant hoặc System phát hiện sự cố. <strong>Tiền điều kiện:</strong> giao dịch liên quan và cửa sổ/điều kiện claim phù hợp.</p>
+<ol>
+<li>Người dùng chọn loại, chiều shipment, mô tả và bằng chứng đang có.</li>
+<li>Máy chủ kiểm tra thời hạn và quyền; tạo/ghép claim vào dispute chung trong cùng commit với cờ dừng settlement.</li>
+<li>Hold liên quan tiếp tục giữ; các bên nhận thông báo và Staff được phân công.</li>
+<li>Hệ thống snapshot dữ liệu giao dịch và chứng cứ gốc; Staff có thể yêu cầu bổ sung.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> claim không nhận chưa tới điều kiện thì cho gửi yêu cầu hỗ trợ, không tịch thu tiền; claim quá hạn chuyển hỗ trợ đặc biệt có Admin xem nhưng không tự đảo settlement; upload lỗi cho giữ claim hợp lệ ở trạng thái chờ bổ sung nếu mô tả đủ. <strong>Hậu điều kiện:</strong> ticket hợp lệ không bị bỏ qua bởi worker giải ngân đồng thời. <strong>Liên kết:</strong> FR-D01–D04, AC-30–AC-32.</p>
+<h3 id="UC-11">UC-11 Quyết định và kháng nghị</h3>
+<p><strong>Actor:</strong> Staff, Admin, participant. <strong>Tiền điều kiện:</strong> dispute được phân công, không xung đột lợi ích.</p>
+<ol>
+<li>Staff tổng hợp chứng cứ hai bên và carrier; xác định nguyên nhân, custody và thiệt hại.</li>
+<li>Lập quyết định dự thảo theo một mẫu settlement được hỗ trợ, ghi khoản tiền, nguồn, đích, return và lý do.</li>
+<li>Hệ thống kiểm tra hạn mức, cân bằng và không bồi thường trùng; vượt hạn chuyển Admin.</li>
+<li>Phát DecisionIssued trong hộp thư; mở 48 giờ kháng nghị, tiền vẫn giữ.</li>
+<li>Nếu có kháng nghị, Admin độc lập rà soát và ra FinalDecisionIssued. Nếu không, quyết định có hiệu lực sau hạn.</li>
+<li>Thực thi return trước nếu quyết định yêu cầu, sau đó settlement; đóng khi đã đối chiếu.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> không phản hồi vẫn xét bằng chứng hiện có; không có người độc lập thì chờ phân công; thiếu nguồn chi thì sửa phương án hoặc ghi phần chưa bồi thường có Admin xác nhận, không ghi có giả. <strong>Hậu điều kiện:</strong> quyết định và việc thực thi có dấu vết riêng. <strong>Liên kết:</strong> FR-D05–D08, AC-33–AC-35.</p>
+<h3 id="UC-12">UC-12 Trả hàng</h3>
+<p><strong>Actor:</strong> Người đang giữ sách, người nhận hoàn, Carrier Simulator. <strong>Tiền điều kiện:</strong> quyết định hoàn có hiệu lực.</p>
+<ol>
+<li>Chốt địa chỉ, người trả phí và hạn pickup return.</li>
+<li>Người trả lập vận đơn mới, ảnh tình trạng và đóng gói; carrier pickup.</li>
+<li>Người nhận hoàn hoặc carrier xác nhận nhận; người nhận có 48 giờ kiểm tra tình trạng hoàn.</li>
+<li>Không có phản đối hợp lệ thì xác nhận nghĩa vụ hàng; chạy phân bổ tiền theo quyết định.</li>
+<li>Listing chỉ trở lại giao dịch sau xác minh custody và duyệt lại nếu tình trạng thay đổi.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> người nhận hoàn im lặng nhưng carrier có giao hợp lệ thì hết 48 giờ coi là nhận hoàn; phản đối sai sách/hư hỏng, lost hoặc không pickup mở phần xử lý thực thi của dispute, không tạo vòng kháng nghị vô hạn. <strong>Hậu điều kiện:</strong> không dùng một lời khai “đã trả” để release tiền. <strong>Liên kết:</strong> FR-S06, BR-08/34, AC-36–AC-37.</p>
+<h3 id="UC-13">UC-13 Nạp ví và rút tiền</h3>
+<p><strong>Actor:</strong> Member, Admin, Payment Simulator. <strong>Tiền điều kiện:</strong> tài khoản đủ quyền.</p>
+<ol>
+<li>Nạp: tạo intent → simulator phát kết quả → xác thực và ghi có một lần.</li>
+<li>Rút: nhập số tiền và thông tin nhận mô phỏng → hệ thống kiểm tra và chuyển available sang withdrawal hold.</li>
+<li>Admin độc lập kiểm tra, duyệt hoặc từ chối; từ chối hoàn hold.</li>
+<li>Được duyệt thì gửi lệnh simulator và chuyển Processing.</li>
+<li>Thành công ghi payout; thất bại chắc chắn hoàn; chưa rõ thì đối soát cùng tham chiếu.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> hai lệnh rút đồng thời không làm âm ví; webhook sai tiền/chữ ký vào ReviewRequired; Admin click hoàn thành không thay được chứng từ simulator. <strong>Hậu điều kiện:</strong> tổng nguồn/đích cân bằng. <strong>Liên kết:</strong> FR-W01–W08, AC-38–AC-41.</p>
+<h3 id="UC-14">UC-14 Đánh giá giao dịch</h3>
+<p><strong>Actor:</strong> Participant. <strong>Tiền điều kiện:</strong> Completed, trong 168 giờ và chưa có review.</p>
+<ol>
+<li>Chọn điểm phù hợp vai và nội dung; hệ thống gắn transaction, reviewer và đối tác.</li>
+<li>Lưu bản chưa công bố; chỉ công bố khi cả hai đã gửi và hết quyền sửa/xóa, hoặc đã hết hạn gửi và mọi review hiện có đều hết quyền sửa/xóa. Review tạo sát cuối hạn gửi có thể được công bố tối đa 48 giờ sau hạn gửi.</li>
+<li>Tác giả sửa/xóa công khai trong 48 giờ từ lúc tạo, nếu không bị giữ làm bằng chứng.</li>
+<li>Staff ẩn vi phạm; hệ thống tính lại điểm từ bản công khai hiện hành.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> đơn hủy không đánh giá; xóa không tạo quyền gửi lại; ảnh chứng cứ không tự công khai trong review. <strong>Hậu điều kiện:</strong> không cộng hai lần và không lộ đánh giá bên kia quá sớm. <strong>Liên kết:</strong> FR-R01–R05, AC-42–AC-43.</p>
+<h3 id="UC-15">UC-15 Tương tác cộng đồng</h3>
+<p><strong>Actor:</strong> Guest, Member, Staff. <strong>Tiền điều kiện:</strong> thao tác viết yêu cầu Member đủ quyền.</p>
+<ol>
+<li>Member tạo topic, gắn listing của mình và/hoặc wanted_book.</li>
+<li>Hệ thống kiểm tra nội dung, chống spam; card phản ánh trạng thái live, chưa duyệt thì placeholder.</li>
+<li>Người đọc mở mua/đổi từ card đi qua UC-03 hoặc UC-06; không giao dịch trực tiếp trong text.</li>
+<li>Wishlist/wanted khớp listing mới thì gửi một thông báo theo sự kiện.</li>
+<li>Chat và báo cáo nội dung đi qua kiểm tra participant, rate limit và kiểm duyệt.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> gắn listing người khác bị chặn; listing Removed giữ topic nhưng không lộ nội dung bị gỡ; chặn chat không chặn kênh giao dịch đang có nghĩa vụ. <strong>Hậu điều kiện:</strong> tương tác không vượt rào nghiệp vụ. <strong>Liên kết:</strong> FR-F01–F06, FR-M01–M03, FR-N01–N04, AC-44–AC-46.</p>
+<h3 id="UC-16">UC-16 Quản trị và đối soát</h3>
+<p><strong>Actor:</strong> Admin, System. <strong>Tiền điều kiện:</strong> xác thực quyền vận hành.</p>
+<ol>
+<li>Admin xem tổng hợp theo thời gian và drill-down giao dịch nguồn.</li>
+<li>Thay chính sách tạo phiên bản mới, kiểm tra miền giá trị và thời điểm hiệu lực.</li>
+<li>Worker đối soát sổ cái, hold và giao dịch; mở cảnh báo khi lệch.</li>
+<li>Người xử lý giải quyết bằng nghiệp vụ điều chỉnh có đối ứng và phê duyệt, không sửa/xóa entry cũ.</li>
+<li>Nhật ký lưu đầy đủ người, trước/sau, lý do và liên kết incident.</li>
+</ol>
+<p><strong>Ngoại lệ:</strong> cấu hình âm hoặc làm vi phạm bất biến bị chặn; mất dịch vụ thông báo không mất sự kiện; worker retry không làm lặp settlement. <strong>Hậu điều kiện:</strong> số liệu có thể kiểm chứng từ sổ cái. <strong>Liên kết:</strong> FR-G01–G06, AC-47–AC-50.</p>
+<h2 id="section-9">9 Mô hình tiền và các phương án quyết toán</h2>
+<h3 id="section-9-1">9.1 Tài khoản sổ cái và nguyên tắc cân bằng</h3>
+<p>Sổ cái có các tài khoản logic UserAvailable, OrderHold, ExchangeDepositHold, ExchangeDifferenceHold, WithdrawalHold, PlatformCommission và SimulatorClearing. Mỗi journal có ít nhất hai entry cùng tiền tệ với tổng debit bằng tổng credit. Chiều debit/credit theo thiết kế kế toán nhất quán; các mũi tên sau mô tả chuyển giá trị, không quy định hệ thống phải dùng số dư tài sản hay công nợ làm dấu dương.</p>
+<ul>
+<li>Nạp thành công: SimulatorClearing → UserAvailable.</li>
+<li>Thanh toán/cọc: UserAvailable → hold đúng mục đích và transaction.</li>
+<li>Hoàn: hold → UserAvailable của chủ nguồn, hoặc người thụ hưởng bồi thường theo quyết định.</li>
+<li>Rút yêu cầu: UserAvailable → WithdrawalHold; payout thành công: WithdrawalHold → SimulatorClearing.</li>
+<li>Phí nền tảng: hold → PlatformCommission; chỉ phí đã quyết toán được báo là doanh thu.</li>
+</ul>
+<p>Số dư cache nếu có phải đối chiếu với sổ cái. Mỗi hold lưu original_amount, remaining_amount và các settlement entry; không âm. Điều chỉnh sai sót dùng journal đảo/bù được phê duyệt, không sửa entry đã posted.</p>
+<h3 id="section-9-2">9.2 Order bình thường và hoàn một phần</h3>
+<p>Gọi P là tiền sách, S là phí ship và c là tỷ lệ commission snapshot. Buyer trả T = P + S. Khi hoàn tất bình thường: C = round(P × c); Seller nhận P − C + S; nền tảng nhận C. Seller đã ứng chi phí ship, nên S là hoàn ứng, không phải phí nền tảng.</p>
+<p>Nếu quyết định cho Buyer giữ sách và được hoàn R đồng tiền sách cùng Q đồng ship: 0 ≤ R ≤ P; 0 ≤ Q ≤ S. Khi đó C = round((P − R) × c); Buyer nhận R + Q; Seller nhận P − R − C + S − Q. Tổng phân bổ bằng P + S. Hoàn toàn bộ tiền sách làm commission bằng 0. Không tự thêm khoản ship hoàn về ngoài nguồn đã nêu.</p>
+<p><strong>Ví dụ:</strong> P = 200.000, S = 30.000, c = 5%. Bình thường Seller nhận 220.000, nền tảng 10.000. Nếu hoàn R = 50.000 và Q = 0, Buyer nhận 50.000, Seller nhận 172.500, nền tảng 7.500; tổng vẫn 230.000.</p>
+<h3 id="section-9-3">9.3 Order ngoại lệ</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Tình huống</th>
+<th scope="col">Hàng</th>
+<th scope="col">Tiền và điều kiện</th>
+</tr></thead><tbody>
+<tr>
+<td>Hủy/từ chối trước pickup</td>
+<td>Vẫn ở Seller đã xác minh</td>
+<td>Hoàn P + S; commission 0</td>
+</tr>
+<tr>
+<td>Seller khai mã nhưng chưa rõ pickup</td>
+<td>Chưa xác định</td>
+<td>Giữ hold, xác minh; không mặc định hoàn hay tịch thu</td>
+</tr>
+<tr>
+<td>Không giao được, sách đã hoàn về</td>
+<td>Seller nhận hoàn</td>
+<td>Hoàn P; S hoàn hay trả Seller tùy lỗi và phí đã phát sinh, ghi Q cụ thể</td>
+</tr>
+<tr>
+<td>Sai mô tả, Buyer giữ và nhận hoàn một phần</td>
+<td>Buyer giữ</td>
+<td>Công thức mục 9.2, cần quyết định có hiệu lực</td>
+</tr>
+<tr>
+<td>Sai mô tả, Buyer trả về</td>
+<td>Return đã nhận/kiểm tra</td>
+<td>Hoàn P và Q theo kết luận; commission 0; chi phí return xử lý riêng</td>
+</tr>
+<tr>
+<td>Carrier mất trước khi Buyer nhận</td>
+<td>Lost</td>
+<td>Mặc định hoàn P + S cho Buyer; Seller tự xử lý giá trị hiện vật và chi phí với carrier mô phỏng, không ghi thu nhập Seller từ Order chưa giao</td>
+</tr>
+<tr>
+<td>Buyer từ chối nhận không lý do đã xác minh</td>
+<td>Đang hoàn</td>
+<td>Không tự kết luận gian lận; hoàn P sau nhận hoàn, phân S và return theo chi phí có chứng cứ</td>
+</tr>
+</tbody></table></div>
+<p>Phí return do bên gây lỗi chịu; carrier mất/hư hỏng chưa đủ quy lỗi cho Member thì Admin xác định trách nhiệm theo bằng chứng. Nếu nguồn hold không đủ cho khoản phí bên có lỗi phải trả, hệ thống có thể yêu cầu khoản bổ sung riêng được user xác nhận. User không nộp thì ghi nghĩa vụ chưa thanh toán và giới hạn tài khoản có quyết định; <strong>không tự trừ ví khả dụng ngoài ủy quyền và không tạo số dư âm</strong>. Phạm vi M không bao gồm thu hồi nợ hay ứng tiền nền tảng. UI phải ghi đúng số đã hoàn và phần chưa thực hiện.</p>
+<h3 id="section-9-4">9.4 Exchange bình thường</h3>
+<p>V_A và V_B là giá trị đã chốt. Δ = |V_A − V_B|. Payer là bên có sách thấp giá; payee là bên có sách cao giá. D_A = r × V_B, D_B = r × V_A, với r = 100% trong cấu hình đề xuất. Tổng hold H = D_A + D_B + Δ. Hoàn tất bình thường hoàn D_A cho A, D_B cho B và chuyển Δ cho payee; exchange fee = 0.</p>
+<p><strong>Ví dụ:</strong> A đưa sách 100.000, B đưa sách 300.000. A cọc 300.000 và bù 200.000; B cọc 100.000. Tổng giữ 600.000. Hoàn tất trả cọc A 300.000, B 100.000, chuyển bù B 200.000. Không gọi toàn bộ 600.000 là doanh thu hoặc giá trị giao dịch đổi.</p>
+<h3 id="section-9-5">9.5 Exchange ngoại lệ và chống bồi thường trùng</h3>
+<p>Mặc định nếu trao đổi không thể hoàn thành hai chiều, ưu tiên <strong>đảo giao dịch</strong>: hoàn Δ cho payer, trả cọc chưa sử dụng và đưa mỗi sách về chủ cũ. Nếu không thể thu hồi một sách do bên nhận giữ, dùng deposit của bên giữ để bồi thường giá trị sách đó theo quyết định. Giá trị gốc bị thất lạc trong chiều chủ tự gửi nhưng chưa tới đối phương không tự tạo quyền lấy cọc đối phương; xử lý carrier và các chi phí phát sinh có căn cứ.</p>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Tình huống</th>
+<th scope="col">Phương án mặc định</th>
+<th scope="col">Tiền</th>
+</tr></thead><tbody>
+<tr>
+<td>Chưa ai pickup, không đủ funding/hủy hợp lệ</td>
+<td>Hủy</td>
+<td>Hoàn toàn bộ khoản đã giữ cho đúng người nộp</td>
+</tr>
+<tr>
+<td>A gửi, B không gửi, sách A thu hồi được</td>
+<td>Đảo giao dịch, xác minh nhận hoàn</td>
+<td>Hoàn Δ; hoàn cọc còn lại; phí phát sinh do B vi phạm lấy từ D_B trong hạn, phần thiếu ghi rõ</td>
+</tr>
+<tr>
+<td>A gửi, B không gửi, B giữ không hoàn sách A</td>
+<td>Đảo giao dịch, sách A ClosedUnavailable với lý do chuyển giao qua xử lý</td>
+<td>Hoàn Δ; bồi thường A tối đa V_A từ D_B; hoàn D_A và phần D_B còn sau nghĩa vụ hợp lệ</td>
+</tr>
+<tr>
+<td>Hai bên nhận, sai tình trạng một bên nhưng đồng ý giữ</td>
+<td>Duy trì trao đổi có điều chỉnh</td>
+<td>Chuyển Δ như cam kết, bồi thường R từ deposit bên có lỗi; hoàn deposit còn lại; không bồi thường cùng thiệt hại lần nữa</td>
+</tr>
+<tr>
+<td>Hai bên nhận, quyết định hoàn cả hai</td>
+<td>Đảo giao dịch</td>
+<td>Chờ các return; hoàn Δ, phân deposit cho phí/thiệt hại có căn cứ rồi hoàn phần dư</td>
+</tr>
+<tr>
+<td>Một sách mất trên đường, sách kia thu hồi được</td>
+<td>Đảo giao dịch</td>
+<td>Hoàn Δ; hoàn cọc sau chi phí hợp lệ; không lấy cọc bên không giữ sách để trả giá trị sách vốn mất từ carrier của chủ</td>
+</tr>
+<tr>
+<td>Cả hai sách mất, không bên nào đã nhận</td>
+<td>Đảo giao dịch, đóng hai listing Lost</td>
+<td>Hoàn Δ và cọc; từng chủ xử lý carrier của chiều mình gửi; không tự bồi thường chéo</td>
+</tr>
+</tbody></table></div>
+<p>Nếu các bên chọn một phương án khác như giữ một cuốn và chuyển thành mua, phiên bản M không tự chuyển loại giao dịch. Admin phải dùng một mẫu quyết định có phân bổ rõ, sự đồng ý được ghi nhận và giới hạn nguồn chi; giao dịch kết thúc ClosedAfterResolution, không giả ghi thành một Order mới đã thanh toán.</p>
+<p><strong>Ví dụ không bồi thường trùng:</strong> A sách 100.000, B sách 300.000; A đã gửi và B giữ sách A nhưng không gửi sách B. Trả lại A khoản Δ 200.000, trả D_A 300.000, chuyển từ D_B 100.000 cho A bù sách A. Tổng chi 600.000 bằng tiền đang giữ. Không cộng thêm 300.000 “giá trị sách B chưa gửi” cho A. Phí return chỉ tính nếu thực tế có, và không chi vượt phần nguồn còn lại.</p>
+<h3 id="section-9-6">9.6 Mẫu quyết định và điều kiện thực thi</h3>
+<p>Decision phải chứa: outcome; claim được chấp nhận/bác; lỗi đã xác minh; custody từng sách; từng source_hold; recipient; amount; purpose; return requirement; deadline; người phê duyệt; phiên bản; appeal deadline; bằng chứng; phần nghĩa vụ chưa có nguồn. Engine chỉ thực hiện phiên bản cuối đã có hiệu lực. Mỗi allocation có mã riêng chống lặp.</p>
+<p>Trước khi commit, hệ thống kiểm tra tổng allocations bằng số tiền sẽ giải phóng; phần hold còn lại có lý do; cùng tổn thất chưa có allocation bồi thường khác; không có return bắt buộc chưa đạt. Settlement là nguyên tử đối với sổ cái nội bộ. Dịch vụ ngoài mô phỏng có thể bất đồng bộ, nên tiến độ phải hiển thị riêng.</p>
+<h2 id="section-10">10 Danh mục luồng ngoại lệ</h2>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Trigger</th>
+<th scope="col">Phản ứng bắt buộc</th>
+<th scope="col">Yêu cầu liên quan</th>
+</tr></thead><tbody>
+<tr id="EF-01">
+<td>EF-01</td>
+<td>Listing bị mua/đổi cùng lúc</td>
+<td>Chỉ một reservation thắng; rollback đầy đủ bên thua</td>
+<td>FR-O02, FR-X04</td>
+</tr>
+<tr id="EF-02">
+<td>EF-02</td>
+<td>Checkout hết hạn và thanh toán đồng thời</td>
+<td>So deadline máy chủ và commit nguyên tử; không double hold</td>
+<td>FR-O03</td>
+</tr>
+<tr id="EF-03">
+<td>EF-03</td>
+<td>Chấp nhận counteroffer cũ</td>
+<td>Conflict, trả revision mới để xem lại</td>
+<td>FR-X03/04</td>
+</tr>
+<tr id="EF-04">
+<td>EF-04</td>
+<td>Một bên cọc, bên kia im lặng</td>
+<td>Hết funding hạn hoàn đúng người một lần</td>
+<td>FR-X06</td>
+</tr>
+<tr id="EF-05">
+<td>EF-05</td>
+<td>Hai cọc đủ nhưng thiếu Δ</td>
+<td>Không mở Preparing</td>
+<td>FR-X05</td>
+</tr>
+<tr id="EF-06">
+<td>EF-06</td>
+<td>Seller không nhận đơn</td>
+<td>Hủy, hoàn, ghi vi phạm nếu không lỗi hệ thống</td>
+<td>FR-O05</td>
+</tr>
+<tr id="EF-07">
+<td>EF-07</td>
+<td>Seller nhận nhưng không pickup</td>
+<td>Xác minh custody, hủy an toàn hoặc điều tra</td>
+<td>FR-O06, FR-S05</td>
+</tr>
+<tr id="EF-08">
+<td>EF-08</td>
+<td>Mã vận đơn không hợp lệ/trùng</td>
+<td>Chặn gắn trùng, yêu cầu sửa/xác minh; không tự mất cọc</td>
+<td>FR-S02</td>
+</tr>
+<tr id="EF-09">
+<td>EF-09</td>
+<td>Một chiều Exchange gửi, chiều kia không</td>
+<td>Giữ tiền, mở dispute, tổ chức thu hồi hoặc bồi thường</td>
+<td>FR-X10</td>
+</tr>
+<tr id="EF-10">
+<td>EF-10</td>
+<td>Carrier Delivered nhưng Member phủ nhận</td>
+<td>Claim không nhận hợp lệ trong hạn, dừng settlement</td>
+<td>FR-D01</td>
+</tr>
+<tr id="EF-11">
+<td>EF-11</td>
+<td>Quá hạn vận chuyển chưa có Delivered</td>
+<td>Mở điều tra, không tự completed</td>
+<td>FR-S05</td>
+</tr>
+<tr id="EF-12">
+<td>EF-12</td>
+<td>Sai sách/sai tình trạng</td>
+<td>Bằng chứng, quyết định partial/return/reject</td>
+<td>FR-D03–D05</td>
+</tr>
+<tr id="EF-13">
+<td>EF-13</td>
+<td>Không phản hồi bằng chứng</td>
+<td>Quyết định dựa trên dữ liệu, giữ quyền kháng nghị trong hạn</td>
+<td>FR-D04/07</td>
+</tr>
+<tr id="EF-14">
+<td>EF-14</td>
+<td>Ticket và auto-complete cạnh tranh</td>
+<td>Chỉ giải ngân khi không có claim được tiếp nhận hợp lệ trước hạn</td>
+<td>FR-D02, FR-O08</td>
+</tr>
+<tr id="EF-15">
+<td>EF-15</td>
+<td>Return thất lạc hoặc sai hàng</td>
+<td>Mở phần thực thi dispute, chưa đóng settlement</td>
+<td>FR-S06</td>
+</tr>
+<tr id="EF-16">
+<td>EF-16</td>
+<td>Callback lặp/sai thứ tự/sai số tiền</td>
+<td>Dedupe, không lùi trạng thái; dữ liệu sai vào ReviewRequired</td>
+<td>FR-W02, FR-S04</td>
+</tr>
+<tr id="EF-17">
+<td>EF-17</td>
+<td>Rút tiền chưa rõ kết quả</td>
+<td>Giữ Processing, đối soát cùng mã</td>
+<td>FR-W07</td>
+</tr>
+<tr id="EF-18">
+<td>EF-18</td>
+<td>Hai lệnh rút/chi cùng số dư</td>
+<td>Từ chối lệnh thiếu nguồn, không âm available</td>
+<td>FR-W05</td>
+</tr>
+<tr id="EF-19">
+<td>EF-19</td>
+<td>Listing bị gỡ khi đang giao</td>
+<td>Ngừng công khai, tạo xử lý, bảo toàn snapshot</td>
+<td>FR-L07</td>
+</tr>
+<tr id="EF-20">
+<td>EF-20</td>
+<td>Khóa tài khoản đang có nghĩa vụ</td>
+<td>Chặn mới, duy trì kênh nghĩa vụ cũ</td>
+<td>FR-A07</td>
+</tr>
+<tr id="EF-21">
+<td>EF-21</td>
+<td>Worker/service chết giữa xử lý</td>
+<td>Retry cùng event; outbox/sổ cái giữ nhất quán</td>
+<td>FR-G04</td>
+</tr>
+<tr id="EF-22">
+<td>EF-22</td>
+<td>Email/realtime gửi lỗi</td>
+<td>Lưu hộp thư và retry; không rollback nghiệp vụ</td>
+<td>FR-N03</td>
+</tr>
+<tr id="EF-23">
+<td>EF-23</td>
+<td>Không có Staff/Admin độc lập</td>
+<td>Chờ phân công và cảnh báo quá hạn; không tự duyệt</td>
+<td>FR-D06/07</td>
+</tr>
+<tr id="EF-24">
+<td>EF-24</td>
+<td>Khiếu nại sau khi hết hạn/đã quyết toán</td>
+<td>Tiếp nhận hỗ trợ có đánh dấu ngoài quy trình; Admin đánh giá, không tự đảo tiền</td>
+<td>FR-D01</td>
+</tr>
+<tr id="EF-25">
+<td>EF-25</td>
+<td>Đổi phí/chính sách khi giao dịch đang chạy</td>
+<td>Dùng snapshot cũ; không tính lại tiền đã chốt</td>
+<td>FR-G02</td>
+</tr>
+<tr id="EF-26">
+<td>EF-26</td>
+<td>Bằng chứng upload lỗi sát deadline</td>
+<td>Ghi nhận claim đủ mô tả trước hạn, cho bổ sung tệp trong hạn Staff yêu cầu</td>
+<td>FR-D01/03</td>
+</tr>
+</tbody></table></div>
+<h2 id="section-11">11 Yêu cầu dữ liệu</h2>
+<h3 id="section-11-1">11.1 Thực thể logic</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Thực thể</th>
+<th scope="col">Thuộc tính chính</th>
+<th scope="col">Ràng buộc</th>
+</tr></thead><tbody>
+<tr>
+<td>User</td>
+<td>id, email_normalized, password_hash, status, restriction_until, profile</td>
+<td>email duy nhất; không trả hash qua API</td>
+</tr>
+<tr>
+<td>RoleAssignment</td>
+<td>user_id, role, granted_by, effective_at, revoked_at</td>
+<td>Có audit; không user tự gán</td>
+</tr>
+<tr>
+<td>Address</td>
+<td>id, owner_id, contact, locality, detail, is_default</td>
+<td>Tối đa một default/user</td>
+</tr>
+<tr>
+<td>Book</td>
+<td>id, title, authors, edition, publisher, year, isbn, status</td>
+<td>ISBN nếu có chuẩn hóa; bản trùng xử lý có ánh xạ</td>
+</tr>
+<tr>
+<td>Category</td>
+<td>id, name, parent_id, active</td>
+<td>Không chu trình phân cấp</td>
+</tr>
+<tr>
+<td>Listing</td>
+<td>id, owner_id, book_id, mode, moderation, visibility, trade, custody, version</td>
+<td>Một hiện vật; quyền hiện tại tách snapshot</td>
+</tr>
+<tr>
+<td>ListingRevision</td>
+<td>listing_id, version, prices, condition, description, media, reviewed_by</td>
+<td>Phiên bản đã giao kết bất biến</td>
+</tr>
+<tr>
+<td>CartItem</td>
+<td>user_id, listing_id, added_at</td>
+<td>Unique cặp; quantity luôn 1</td>
+</tr>
+<tr>
+<td>Transaction</td>
+<td>id, type, participant_A/B, status, policy_version, created_at</td>
+<td>Loại Order/Exchange; ID chung cho hold, review, dispute</td>
+</tr>
+<tr>
+<td>OrderDetail</td>
+<td>transaction_id, listing_id, P, S, buyer_id, seller_id, deadlines, snapshot</td>
+<td>Một listing/Order</td>
+</tr>
+<tr>
+<td>ExchangeDetail</td>
+<td>transaction_id, listing_A/B, revision_id, V_A/V_B, deposits, delta, payer, deadlines</td>
+<td>Hai listing khác nhau và khác chủ</td>
+</tr>
+<tr>
+<td>ExchangeProposalRevision</td>
+<td>exchange_id, version, proposer, awaiting_user, listing snapshots, expires_at</td>
+<td>Một revision hiện hành; lịch sử không ghi đè</td>
+</tr>
+<tr>
+<td>Reservation</td>
+<td>id, listing_id, transaction_id, status, expires_at, released_reason</td>
+<td>Unique active theo listing; owner rõ ràng</td>
+</tr>
+<tr>
+<td>Shipment</td>
+<td>id, transaction_id, leg, direction, carrier, tracking, status, delivery_at, addresses</td>
+<td>Unique carrier + tracking; tối đa một outbound hiện hành mỗi leg</td>
+</tr>
+<tr>
+<td>ShipmentEvent</td>
+<td>id, provider_event_id, shipment_id, event_type, occurred_at, received_at, payload_hash</td>
+<td>Provider event duy nhất; lưu cả thời điểm xảy ra/nhận</td>
+</tr>
+<tr>
+<td>ReturnRequest</td>
+<td>id, dispute_id, original_shipment, sender, receiver, fees, deadlines, status</td>
+<td>Không ghi đè outbound</td>
+</tr>
+<tr>
+<td>WalletAccount</td>
+<td>id, owner/entity, purpose, currency</td>
+<td>Mỗi tài khoản một tiền tệ</td>
+</tr>
+<tr>
+<td>LedgerJournal</td>
+<td>id, business_type, business_ref, idempotency_key, posted_at</td>
+<td>Key duy nhất; posted bất biến</td>
+</tr>
+<tr>
+<td>LedgerEntry</td>
+<td>journal_id, account_id, debit, credit</td>
+<td>Một chiều mỗi entry, tổng journal cân bằng</td>
+</tr>
+<tr>
+<td>Hold</td>
+<td>id, owner_id, transaction/withdrawal_id, purpose, amount, remaining, status</td>
+<td>Số dư không âm; một nguồn nghiệp vụ</td>
+</tr>
+<tr>
+<td>TopupIntent</td>
+<td>id, user_id, amount, provider_ref, state</td>
+<td>Sự kiện khớp số tiền/tiền tệ/owner</td>
+</tr>
+<tr>
+<td>Refund</td>
+<td>id, source_hold, amount, recipient, reason, state, journal_id</td>
+<td>Tổng refund không vượt source được phân bổ</td>
+</tr>
+<tr>
+<td>Withdrawal</td>
+<td>id, user_id, amount, bank_snapshot, hold_id, state, approver, payout_ref</td>
+<td>Tối đa một payout thành công cho request</td>
+</tr>
+<tr>
+<td>Dispute</td>
+<td>id, transaction_id, stage, assignee, authority, deadlines, resume_stage</td>
+<td>Tối đa một dispute chưa Closed/transaction</td>
+</tr>
+<tr>
+<td>DisputeClaim</td>
+<td>id, dispute_id, claimant, shipment_leg, type, description, created_at</td>
+<td>Hai bên có thể có claim riêng</td>
+</tr>
+<tr>
+<td>Evidence</td>
+<td>id, claim_id, uploader, object_key, checksum, mime, captured_at, uploaded_at, hold_flag</td>
+<td>Bản gốc không sửa; quyền riêng tư</td>
+</tr>
+<tr>
+<td>Decision</td>
+<td>id, dispute_id, version, outcome, approver, effective_at, appeal_until, status</td>
+<td>Chỉ một final effective version</td>
+</tr>
+<tr>
+<td>DecisionAllocation</td>
+<td>decision_id, source_hold, recipient, amount, purpose, loss_reference</td>
+<td>Không bồi thường cùng loss hai lần</td>
+</tr>
+<tr>
+<td>Violation</td>
+<td>id, user_id, source_event, type, verified_at, revoked_at</td>
+<td>Unique source + type + user</td>
+</tr>
+<tr>
+<td>Review</td>
+<td>id, transaction_id, reviewer, recipient, book_score?, partner_score, submitted_at, published_at</td>
+<td>Unique transaction + reviewer kể cả soft deleted</td>
+</tr>
+<tr>
+<td>ReviewRevision</td>
+<td>review_id, version, content, scores, created_at</td>
+<td>Dùng bản hiện hành công khai tính điểm</td>
+</tr>
+<tr>
+<td>ForumThread/Post</td>
+<td>id, author, category, listing_id?, wanted_book_id?, content, status</td>
+<td>Chủ listing phải là author khi gắn</td>
+</tr>
+<tr>
+<td>Conversation/Message</td>
+<td>participants, context_id, sender, content, status, sent_at</td>
+<td>Kiểm tra participant ở mọi truy vấn</td>
+</tr>
+<tr>
+<td>Wishlist</td>
+<td>user_id, book_id/listing_id, wants_exchange, notifications</td>
+<td>Chính xác một target type</td>
+</tr>
+<tr>
+<td>Notification</td>
+<td>user_id, event_id, target, type, payload, read_at</td>
+<td>Unique user + event + type</td>
+</tr>
+<tr>
+<td>PolicyVersion</td>
+<td>version, effective_at, values, created_by</td>
+<td>Không sửa phiên bản đã dùng</td>
+</tr>
+<tr>
+<td>AuditEvent/OutboxEvent</td>
+<td>actor, entity, before/after, reason, correlation_id, sent_at</td>
+<td>Audit append-only, outbox retry an toàn</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-11-2">11.2 Quan hệ và tính toàn vẹn</h3>
+<p>User có nhiều Listing, Address, WalletAccount và vai trong Transaction. Book có nhiều Listing. Transaction có OrderDetail hoặc ExchangeDetail, không cả hai. Transaction có nhiều Hold, Shipment, Event và tối đa một Dispute đang mở. Dispute có nhiều Claim, Evidence và Decision revision. Journal có nhiều Entry và tham chiếu nghiệp vụ có thể đối soát.</p>
+<p>Foreign key hoặc cơ chế tương đương phải ngăn bản ghi mồ côi. Không cascade delete các giao dịch, sổ cái, evidence hoặc audit khi xóa tài khoản/listing. Soft delete không giải phóng unique review hoặc lịch sử thanh toán. Quy trình ẩn danh dữ liệu không xóa số liệu đối soát; phải có chính sách riêng nếu chuyển sang vận hành thật.</p>
+<p>Reservation một phần không được commit. Dữ liệu <code>transaction_type + transaction_id</code> nếu dùng nhiều bảng phải có kiểm tra tham chiếu; mô hình Transaction chung được khuyến nghị để tránh polymorphic ID không có toàn vẹn.</p>
+<h3 id="section-11-3">11.3 Kiểm tra đầu vào và tệp</h3>
+<p>Tên hiển thị 2–80 ký tự; tên sách 1–300; mô tả listing 30–5.000; topic 10–10.000; claim 30–5.000. Chuẩn hóa khoảng trắng đầu/cuối, giữ dấu tiếng Việt. Không tự loại ký tự làm đổi ý nghĩa nội dung. Dữ liệu text được encode khi hiển thị, không thực thi HTML người dùng.</p>
+<p>Ảnh listing/đóng gói nhận JPEG, PNG, WebP tối đa 10 MB/tệp; 1–8 ảnh/listing. Evidence nhận ảnh tối đa 10 MB, PDF tối đa 20 MB hoặc MP4 tối đa 100 MB; tối đa 10 tệp/claim. Kiểm tra loại thực tế, kích thước và nội dung nguy hiểm; đổi tên lưu ngẫu nhiên; không chạy macro/script. Mặc định hiển thị ảnh đã bỏ metadata vị trí ở nội dung công khai; evidence gốc giữ riêng có quyền. Video mở hộp là bằng chứng hỗ trợ, không phải điều kiện duy nhất để được khiếu nại.</p>
+<h3 id="section-11-4">11.4 Lưu giữ và truy cập</h3>
+<p>Snapshot và sổ cái giữ suốt vòng đời dữ liệu đồ án; evidence tối thiểu POL-25 sau đóng, hồ sơ đang điều tra không xóa tự động. Session/token hết hạn được thu hồi theo chính sách bảo mật. Xuất dữ liệu demo phải loại token, hash mật khẩu, địa chỉ thật và file evidence riêng. Mỗi lần Staff tải evidence có log. Sao lưu phải chứa cả dữ liệu và ánh xạ object tệp để khôi phục không mất chứng cứ.</p>
+<h2 id="section-12">12 Yêu cầu giao diện và hợp đồng tích hợp</h2>
+<h3 id="section-12-1">12.1 Danh mục màn hình</h3>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Nhóm</th>
+<th scope="col">Màn hình và thông tin bắt buộc</th>
+</tr></thead><tbody>
+<tr>
+<td>Công khai</td>
+<td>Trang chủ, tìm kiếm/lọc, book, listing, hồ sơ công khai, forum; chỉ dữ liệu được phép công khai</td>
+</tr>
+<tr>
+<td>Tài khoản</td>
+<td>Đăng ký/xác minh, đăng nhập/quên mật khẩu, hồ sơ, địa chỉ, phiên và trạng thái hạn chế</td>
+</tr>
+<tr>
+<td>Người đăng</td>
+<td>Listing của tôi, soạn/sửa, lịch sử duyệt, lý do bị từ chối, trạng thái giữ/đóng</td>
+</tr>
+<tr>
+<td>Mua</td>
+<td>Giỏ, checkout một cuốn, số tiền và deadline, chi tiết Order, vận chuyển, nhận và khiếu nại</td>
+</tr>
+<tr>
+<td>Đổi</td>
+<td>Tạo đề xuất, danh sách đến/đi, revision, nghĩa vụ tiền từng bên, hai hành trình, deadline từng chiều</td>
+</tr>
+<tr>
+<td>Ví</td>
+<td>Ba nhóm số dư, nạp/rút mô phỏng, lịch sử, chi tiết hold và tiến độ refund/payout</td>
+</tr>
+<tr>
+<td>Khiếu nại</td>
+<td>Form claim, bằng chứng, timeline, quyết định, phân bổ tiền, kháng nghị, hoàn hàng</td>
+</tr>
+<tr>
+<td>Cộng đồng</td>
+<td>Topic/card, chat, wishlist, thông báo, review và phản hồi</td>
+</tr>
+<tr>
+<td>Staff</td>
+<td>Hàng đợi duyệt/ticket, hồ sơ bằng chứng theo phân công, đề xuất quyết định</td>
+</tr>
+<tr>
+<td>Admin</td>
+<td>User/quyền, cấu hình phiên bản, catalog, rút, escalation, đối soát, báo cáo và audit</td>
+</tr>
+<tr>
+<td>Demo</td>
+<td>Bảng phát sự kiện simulator có phân quyền riêng, lịch sử event và kịch bản lỗi</td>
+</tr>
+</tbody></table></div>
+<p>Mỗi màn hình có loading, empty, lỗi và retry thích hợp. Nút có thể vô hiệu theo trạng thái nhưng máy chủ vẫn kiểm tra. Màn hình giao dịch phải thể hiện “đã nhận” và “đã hoàn tất” khác nhau; “đã duyệt hoàn” và “đã hoàn tiền” khác nhau. Countdown có giờ kết thúc cụ thể để vẫn hiểu khi realtime mất kết nối.</p>
+<h3 id="section-12-2">12.2 Hợp đồng API tối thiểu</h3>
+<p>Tên route có thể đổi trong thiết kế chi tiết; hành vi sau là bắt buộc. API ghi trả entity ID, trạng thái, version, server_time và deadline liên quan. Thao tác có tiền dùng Idempotency-Key; cập nhật theo revision dùng expected_version. Một key dùng lại với payload khác phải trả Conflict, không thực thi payload mới.</p>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Nhóm lệnh</th>
+<th scope="col">Đầu vào trọng yếu</th>
+<th scope="col">Phản hồi nghiệp vụ</th>
+</tr></thead><tbody>
+<tr>
+<td>Tạo checkout</td>
+<td>listing_id, expected_revision, address_id, key</td>
+<td>Order và reservation hoặc Unavailable/PriceChanged</td>
+</tr>
+<tr>
+<td>Pay Order</td>
+<td>order_id, expected_version, key</td>
+<td>Held hoặc InsufficientFunds/Expired</td>
+</tr>
+<tr>
+<td>Accept Order</td>
+<td>order_id, expected_version</td>
+<td>Preparing hoặc InvalidState/Expired</td>
+</tr>
+<tr>
+<td>Tạo/counter/accept Exchange</td>
+<td>listing IDs, proposal_revision, key ở accept</td>
+<td>Proposed/AcceptedAwaitingFunding hoặc Conflict</td>
+</tr>
+<tr>
+<td>Fund Exchange</td>
+<td>exchange_id, expected_version, key</td>
+<td>Nghĩa vụ bên gửi đã held; tổng trạng thái funding</td>
+</tr>
+<tr>
+<td>Tạo Shipment</td>
+<td>transaction_id, leg, carrier, tracking, media</td>
+<td>LabelCreated hoặc DuplicateTracking/InvalidState</td>
+</tr>
+<tr>
+<td>Nhận hàng</td>
+<td>shipment_id, expected_version</td>
+<td>Mốc nhận, deadline kiểm tra, không auto settlement</td>
+</tr>
+<tr>
+<td>Tạo claim</td>
+<td>transaction_id, leg, type, description, evidence refs, key</td>
+<td>Dispute/claim ID và trạng thái giữ tiền</td>
+</tr>
+<tr>
+<td>Quyết định</td>
+<td>dispute_id, version, allocations, return plan, evidence refs</td>
+<td>DecisionIssued hoặc EscalationRequired/Unbalanced</td>
+</tr>
+<tr>
+<td>Yêu cầu rút</td>
+<td>amount, recipient_snapshot, key</td>
+<td>WithdrawalRequested + hold hoặc InsufficientFunds</td>
+</tr>
+<tr>
+<td>Callback adapter</td>
+<td>event_id, reference, type, occurred_at, amount/currency nếu tiền, chữ ký</td>
+<td>Accepted/Duplicate/ReviewRequired</td>
+</tr>
+</tbody></table></div>
+<p>Lỗi 401 cho chưa xác thực; 403 cho thiếu quyền; 404 cho đối tượng không tồn tại hoặc cần tránh tiết lộ; 409 cho trạng thái/revision/duplicate khác payload; 422 cho dữ liệu nghiệp vụ sai; 429 cho rate limit. Không trả HTTP thành công rồi âm thầm không làm gì với lệnh tiền; duplicate hợp lệ trả kết quả cũ rõ ràng.</p>
+<h3 id="section-12-3">12.3 Adapter và sự kiện</h3>
+<p>Adapter payment/carrier phải tách khỏi logic nghiệp vụ để có thể thay bằng nhà cung cấp thật sau này. Simulator gửi cùng cấu trúc event và qua cùng bộ xử lý xác thực/kiểm tra trạng thái, không update thẳng DB. Có event_id duy nhất, provider, aggregate reference, occurred_at, received_at và payload checksum. Chữ ký hoặc secret test được bảo vệ, không đưa frontend Member.</p>
+<p>Các sự kiện chính: ListingApproved, ReservationCreated/Released, PaymentHeld, FundingCompleted, ShipmentPickedUp/Delivered/Failed/Lost, ClaimOpened, DecisionEffective, SettlementPosted, WithdrawalCompleted, ReviewPublished. Outbox lưu cùng commit với thay đổi nghiệp vụ; consumer có inbox/dedupe hoặc cơ chế tương đương. Gửi được ít nhất một lần nhưng tác động nghiệp vụ phải chỉ một lần.</p>
+<h3 id="section-12-4">12.4 Chính sách sự kiện muộn và mâu thuẫn</h3>
+<p>Event xảy ra trước deadline nhưng đến sau không tự đảo giao dịch đã hủy/settled. Nếu chưa có quyết toán và bằng chứng xác minh cho thấy pickup đúng hạn, Staff có thể giữ giao dịch và loại strike sai bằng quyết định. Nếu đã hoàn hoặc listing đã có giao dịch mới, mở incident Admin, ngừng giao dịch mới trên listing nếu chưa pickup; không âm thầm lấy tiền/gỡ sách của người thứ ba. Log đầy đủ thời điểm để giải thích sự khác biệt.</p>
+<h2 id="section-13">13 Yêu cầu phi chức năng</h2>
+<p>Đây là mục tiêu nghiệm thu đề xuất, chưa phải kết quả đo. Môi trường tham chiếu: server ứng dụng 4 vCPU, 8 GB RAM, DB riêng hoặc cùng máy được ghi rõ; dữ liệu 10.000 book, 30.000 listing, 5.000 user, 20.000 giao dịch; mạng thử nghiệm ổn định. Nếu nhóm dùng môi trường khác, ghi cấu hình và điều chỉnh mục tiêu có phê duyệt, không báo số liệu chưa đo.</p>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Yêu cầu đo được</th>
+<th scope="col">Cách xác nhận</th>
+</tr></thead><tbody>
+<tr id="NFR-01">
+<td>NFR-01</td>
+<td>Tìm kiếm/listing p95 ≤ 2 giây, API ghi nghiệp vụ p95 ≤ 3 giây ở 50 phiên đồng thời, loại thời gian upload và adapter ngoài</td>
+<td>Load test ít nhất 10 phút sau warmup, báo p50/p95/error rate</td>
+</tr>
+<tr id="NFR-02">
+<td>NFR-02</td>
+<td>100 yêu cầu cạnh tranh cùng listing chỉ có 1 reservation Active; 100 callback cùng ID chỉ 1 journal</td>
+<td>Test đồng thời và truy vấn invariant</td>
+</tr>
+<tr id="NFR-03">
+<td>NFR-03</td>
+<td>Đối soát tất cả journal posted cân bằng, hold/available không âm; không mất liên kết transaction</td>
+<td>Kiểm tra tự động trên toàn bộ dataset nghiệm thu</td>
+</tr>
+<tr id="NFR-04">
+<td>NFR-04</td>
+<td>Worker xử lý deadline trong 60 giây sau hạn ở tải tham chiếu; quyền thao tác vẫn hết đúng deadline dù worker trễ</td>
+<td>Test clock điều khiển và restart worker</td>
+</tr>
+<tr id="NFR-05">
+<td>NFR-05</td>
+<td>Thông báo nội bộ xuất hiện p95 ≤ 5 giây sau commit; lỗi email có retry và không mất inbox</td>
+<td>Test mất kết nối/kênh email</td>
+</tr>
+<tr id="NFR-06">
+<td>NFR-06</td>
+<td>Mật khẩu hash bằng thuật toán chuyên dụng có salt; token reset/xác minh lưu dạng bảo vệ, không log secret; phiên hết hạn sau 24 giờ, thu hồi khi đổi mật khẩu</td>
+<td>Kiểm tra cấu hình, log và test thu hồi</td>
+</tr>
+<tr id="NFR-07">
+<td>NFR-07</td>
+<td>Mọi API nhạy cảm kiểm tra vai và object ownership; HTTPS khi triển khai có mạng; bảo vệ CSRF nếu cookie và hạn chế XSS/injection</td>
+<td>Test phân quyền phủ cả đọc/ghi và kiểm tra đầu vào</td>
+</tr>
+<tr id="NFR-08">
+<td>NFR-08</td>
+<td>Private file không dùng URL công khai vĩnh viễn; URL ký hạn tối đa 10 phút; kiểm tra quyền trước cấp URL</td>
+<td>Test truy cập tệp bằng user không liên quan</td>
+</tr>
+<tr id="NFR-09">
+<td>NFR-09</td>
+<td>Retry sau crash không double debit/release; khôi phục worker không mất event đã commit</td>
+<td>Fault injection giữa commit và gửi event</td>
+</tr>
+<tr id="NFR-10">
+<td>NFR-10</td>
+<td>Backup dữ liệu và tệp hằng ngày; mục tiêu RPO 24 giờ, RTO 4 giờ trong môi trường demo</td>
+<td>Khôi phục một bản sao thử và đối chiếu dữ liệu</td>
+</tr>
+<tr id="NFR-11">
+<td>NFR-11</td>
+<td>Form có nhãn, lỗi có text, thao tác chính dùng bàn phím, trạng thái không chỉ phân biệt bằng màu</td>
+<td>Kiểm tra thủ công desktop/mobile và bàn phím</td>
+</tr>
+<tr id="NFR-12">
+<td>NFR-12</td>
+<td>Hoạt động ở viewport 360 px và 1366 px, không mất nút tiền/claim; Chrome/Edge/Firefox phiên bản nhóm kiểm thử ghi lại</td>
+<td>Ma trận trình duyệt và ảnh nghiệm thu</td>
+</tr>
+<tr id="NFR-13">
+<td>NFR-13</td>
+<td>Audit thao tác tiền, quyền, quyết định và evidence có correlation ID; không Member/Staff sửa/xóa audit qua API</td>
+<td>Test quyền và truy vết một giao dịch đầu cuối</td>
+</tr>
+<tr id="NFR-14">
+<td>NFR-14</td>
+<td>Mọi yêu cầu M có test hoặc bằng chứng review; module tiền/trạng thái có test lỗi và đồng thời, không chỉ happy path</td>
+<td>Ma trận mục 18 và báo cáo chạy</td>
+</tr>
+<tr id="NFR-15">
+<td>NFR-15</td>
+<td>Cấu hình ngoài mã nguồn; thay policy tạo version; thông báo lỗi người dùng không lộ stack trace hoặc secret</td>
+<td>Review cấu hình và kiểm thử lỗi</td>
+</tr>
+<tr id="NFR-16">
+<td>NFR-16</td>
+<td>Trạng thái unavailable và sự cố adapter hiển thị rõ; lệnh pending cho xem tiến độ, không khuyến khích bấm lại tạo lệnh mới</td>
+<td>Kịch bản mạng ngắt khi thanh toán/rút</td>
+</tr>
+</tbody></table></div>
+<p>Không cam kết SLA vận hành thương mại cho đồ án. Thời gian giải quyết Staff là mục tiêu vận hành với nhắc hạn/escalation, không tự chuyển thắng/thua cho một bên khi Staff quá hạn.</p>
+<h2 id="section-14">14 Tự động hóa và vận hành</h2>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Tác vụ</th>
+<th scope="col">Tần suất/điều kiện</th>
+<th scope="col">Kết quả và kiểm soát</th>
+</tr></thead><tbody>
+<tr>
+<td>Quét checkout hết hạn</td>
+<td>Mỗi phút</td>
+<td>Hủy checkout chưa trả; giải phóng đúng reservation; kiểm tra không có event tiền thắng trước</td>
+</tr>
+<tr>
+<td>Quét Seller confirm</td>
+<td>Mỗi phút</td>
+<td>Hủy và hoàn đơn chưa nhận; ghi vi phạm đủ điều kiện</td>
+</tr>
+<tr>
+<td>Quét proposal/funding</td>
+<td>Mỗi phút</td>
+<td>Expired proposal; hủy funding thiếu, hoàn các hold</td>
+</tr>
+<tr>
+<td>Quét pickup/delivery</td>
+<td>Mỗi phút</td>
+<td>Xác minh hoặc mở case; không tự kết luận custody không có chứng cứ</td>
+</tr>
+<tr>
+<td>Quét inspection</td>
+<td>Mỗi phút</td>
+<td>Settlement nếu toàn bộ điều kiện đạt; lock/version chống race với claim</td>
+</tr>
+<tr>
+<td>Nhắc case/bằng chứng/appeal/return</td>
+<td>Mỗi 5 phút</td>
+<td>Thông báo, escalation; không tịch thu tự động</td>
+</tr>
+<tr>
+<td>Công bố review</td>
+<td>Mỗi phút và khi bên thứ hai gửi</td>
+<td>Kiểm tra hết quyền sửa theo FR-R03, dedupe, không lộ bản bị xóa</td>
+</tr>
+<tr>
+<td>Matching</td>
+<td>Theo ListingApproved/PriceChanged</td>
+<td>Chỉ listing hiện còn đủ điều kiện, chống gửi lặp</td>
+</tr>
+<tr>
+<td>Đối soát</td>
+<td>Hằng ngày 02 giờ địa phương và theo yêu cầu</td>
+<td>So ledger/hold/payment/withdrawal; discrepancy có owner xử lý</td>
+</tr>
+<tr>
+<td>Backup</td>
+<td>Hằng ngày sau đối soát</td>
+<td>Ghi kết quả và kiểm tra khả năng đọc bản sao</td>
+</tr>
+</tbody></table></div>
+<p>Mỗi job có job_run_id, cursor hoặc batch size, retry tối đa 5 lần với backoff; vượt số lần vào hàng đợi lỗi và báo Admin. Job cần thao tác một entity trong transaction ngắn; không khóa toàn hệ thống trong lúc gửi email hoặc gọi adapter. Thử lại phải dùng cùng business key.</p>
+<p>Dashboard chỉ tính Completed/settlement posted theo định nghĩa chỉ tiêu. Giá trị mua là tổng tiền sách được ghi nhận sau điều chỉnh; phí ship tách riêng. Giá trị đổi báo V_A và V_B hoặc tổng đã ghi rõ cách đếm, không cộng cọc như doanh số. Refund đã quyết định nhưng chưa thực thi xuất hiện ở cột riêng.</p>
+<h2 id="section-15">15 Bảo mật và giới hạn xử lý nghiệp vụ</h2>
+<h3 id="section-15-1">15.1 Các hành vi lạm dụng cần kiểm soát</h3>
+<p>Giữ chỗ hàng loạt được hạn bởi POL-24 và deadline; spam đề xuất bởi POL-23; spam nội dung bởi giới hạn đăng/chat. Vi phạm lặp được đánh giá từ sự kiện đã xác minh. Các giới hạn này không chứng minh người dùng có nhiều tài khoản; hệ thống chỉ kiểm tra cùng account và tín hiệu nội bộ, không tuyên bố giải quyết toàn bộ thông đồng.</p>
+<p>Người dùng không được tự gửi số tiền cần trừ/bù/phí rồi để máy chủ tin theo. Máy chủ tính từ snapshot. ID của đối tượng, recipient payout và role trong request đều phải đối chiếu danh tính phiên. Lệnh Admin tiền cần xác thực lại mật khẩu/phiên gần đây trong 15 phút và lưu audit; tích hợp MFA là E.</p>
+<h3 id="section-15-2">15.2 Khóa và xử lý sự cố</h3>
+<p>Admin khóa tài khoản phải ghi phạm vi, lý do, điều kiện mở và hồ sơ liên quan. Khóa không xóa ví hoặc snapshot. Freeze available chỉ dùng khi có incident riêng và thẩm quyền Admin; không phát sinh chỉ vì một Member bấm khiếu nại. User được xem số tiền bị hạn chế và kênh hỗ trợ theo phạm vi dữ liệu cho phép.</p>
+<p>Nếu sổ cái lệch, dừng settlement/rút liên quan, giữ dữ liệu, mở incident và đối soát. Không sửa trực tiếp số dư để làm mất dấu chênh lệch. Nếu không thể khắc phục trong phiên demo, phải báo chưa hoàn thành, không đổi nhãn trạng thái để qua nghiệm thu.</p>
+<h3 id="section-15-3">15.3 Bảo vệ chứng cứ và quyền riêng tư</h3>
+<p>Trang công khai không lộ email đầy đủ, SĐT, địa chỉ, số tài khoản nhận hoặc chat. Staff được truy cập theo nhiệm vụ; Admin truy cập nhạy cảm có log và lý do. Evidence không được tự dùng làm ảnh marketing/review. Chỉnh sửa/xóa nội dung công khai không xóa phiên bản được giữ làm bằng chứng trong hạn lưu giữ.</p>
+<h2 id="section-16">16 Ưu tiên triển khai và phụ thuộc</h2>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Giai đoạn</th>
+<th scope="col">Kết quả cần có</th>
+<th scope="col">Phụ thuộc</th>
+</tr></thead><tbody>
+<tr>
+<td>G1</td>
+<td>Chốt policy, actor, invariant, dữ liệu logic và adapter contract</td>
+<td>Phê duyệt mục 3</td>
+</tr>
+<tr>
+<td>G2</td>
+<td>Tài khoản, catalog, listing, kiểm duyệt, reservation</td>
+<td>G1</td>
+</tr>
+<tr>
+<td>G3</td>
+<td>Ledger, ví, Order, funding Exchange và idempotency</td>
+<td>G2 và kiểm thử đồng thời</td>
+</tr>
+<tr>
+<td>G4</td>
+<td>Shipment simulator, deadline, dispute, return, settlement, withdrawal</td>
+<td>G3</td>
+</tr>
+<tr>
+<td>G5</td>
+<td>Review, forum, chat, wishlist, thông báo, dashboard</td>
+<td>Lõi trạng thái và phân quyền ổn định</td>
+</tr>
+<tr>
+<td>G6</td>
+<td>Kiểm thử end-to-end, khôi phục, hiệu năng, tài liệu và demo phản biện</td>
+<td>G2–G5</td>
+</tr>
+</tbody></table></div>
+<p>Không triển khai miễn cọc, thanh toán thật hoặc hub trước khi G4 vượt kiểm thử tiền và hiện vật. Nếu cần giảm phạm vi, thay đổi danh sách M/E bằng quyết định rõ ràng; không bỏ lỗi tiền/tranh chấp nhưng giữ dashboard để tạo cảm giác đủ tính năng.</p>
+<h2 id="section-17">17 Tiêu chí đầu vào và đầu ra nghiệm thu</h2>
+<p><strong>Đầu vào:</strong> policy phiên bản dùng để demo; danh sách tài khoản vai trò; dữ liệu seed không nhạy cảm; simulator phát được event lặp/chậm/lỗi; môi trường và phiên bản ứng dụng; test case có expected result; đồng hồ kiểm thử có thể điều khiển mà không sửa dữ liệu tùy tiện.</p>
+<p><strong>Đầu ra:</strong> tất cả FR mức M có bằng chứng; toàn bộ AC trọng yếu về tiền, giữ sách, quyền, dispute và idempotency đạt; không còn lỗi P0 làm sai tiền/bán trùng/lộ dữ liệu và không còn lỗi P1 làm kẹt luồng bắt buộc; đối soát ledger cân bằng; số dư không âm; policy và state machine đúng phiên bản demo; có báo cáo các giới hạn mô phỏng.</p>
+<p>Mức P0 là sai tiền, mất toàn vẹn reservation, vượt quyền dữ liệu riêng hoặc bỏ qua tranh chấp hợp lệ khi giải ngân. P1 là lỗi ngăn hoàn thành nghiệp vụ bắt buộc mà chưa có cách xử lý được đặc tả. P2 là lỗi hiển thị/tiện dụng không làm đổi nghĩa vụ. Việc chấp nhận P2 còn lại phải ghi rõ, không tự coi mọi test chưa chạy là đạt.</p>
+<h2 id="section-18">18 Ma trận truy vết và ca nghiệm thu</h2>
+<h3 id="section-18-1">18.1 Quy ước chạy</h3>
+<p>Mỗi dòng AC là một nhóm ca; nhóm kiểm thử triển khai đủ điều kiện biên, sai quyền và lặp request liên quan. Đối với test thời gian, đặt mốc T rồi kiểm tra T−1 ms, T và T+1 ms. Đối với test concurrency, xác minh cả phản hồi API lẫn dữ liệu/sổ cái sau commit. Các kết quả dưới đây là <strong>kỳ vọng</strong>, chưa phải test đã chạy trên ứng dụng.</p>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Mã</th>
+<th scope="col">Yêu cầu truy vết</th>
+<th scope="col">Kịch bản và kết quả kỳ vọng</th>
+</tr></thead><tbody>
+<tr id="AC-01">
+<td>AC-01</td>
+<td>FR-A01–A04</td>
+<td>Đăng ký, token cũ/lặp/hết hạn, email trùng; chỉ token hiện hành hợp lệ kích hoạt một lần; reset thu hồi phiên</td>
+</tr>
+<tr id="AC-02">
+<td>AC-02</td>
+<td>FR-A05–A07, NFR-07</td>
+<td>Đổi ID hồ sơ/địa chỉ, cấp quyền trái phép, Staff khóa user; tất cả bị chặn; giao dịch cũ vẫn dùng snapshot</td>
+</tr>
+<tr id="AC-03">
+<td>AC-03</td>
+<td>FR-A08, FR-D09</td>
+<td>Review và strike độc lập; một claim chưa kết luận không hạ chỉ số vi phạm; đảo kết luận thu hồi đúng strike</td>
+</tr>
+<tr id="AC-04">
+<td>AC-04</td>
+<td>FR-C01–C04, FR-L01–L03</td>
+<td>Book trùng/không ISBN, listing thiếu ảnh/sai giá; dữ liệu sai không gửi duyệt; tìm/lọc trả đúng tập</td>
+</tr>
+<tr id="AC-05">
+<td>AC-05</td>
+<td>FR-C05–C07, FR-L03</td>
+<td>Listing Pending/Removed/Hidden/Reserved không lọt tập có thể giao dịch; banner không cho mua listing đã đóng</td>
+</tr>
+<tr id="AC-06">
+<td>AC-06</td>
+<td>FR-L04–L08</td>
+<td>Sửa giá sau duyệt yêu cầu duyệt lại; đang reserved không sửa/xóa; Staff gỡ vẫn giữ snapshot và tạo xử lý</td>
+</tr>
+<tr id="AC-07">
+<td>AC-07</td>
+<td>FR-O01–O02</td>
+<td>Giỏ nhiều listing, checkout chọn hơn một bị chặn rõ; một listing quantity chỉ 1; tự mua bị chặn</td>
+</tr>
+<tr id="AC-08">
+<td>AC-08</td>
+<td>FR-O02, BR-03, NFR-02</td>
+<td>100 checkout đồng thời cùng listing; đúng một reservation Active và không hold bên thua</td>
+</tr>
+<tr id="AC-09">
+<td>AC-09</td>
+<td>FR-O02–O03, BR-07/12</td>
+<td>Giá/địa chỉ đổi và checkout hết hạn; yêu cầu xác nhận lại khi giá đổi; tab cũ không thanh toán sau hạn</td>
+</tr>
+<tr id="AC-10">
+<td>AC-10</td>
+<td>FR-O03–O04, FR-W03</td>
+<td>Pay đủ/thiếu số dư và click lặp; chỉ một debit + hold; thiếu không trừ một phần</td>
+</tr>
+<tr id="AC-11">
+<td>AC-11</td>
+<td>FR-O04–O05, FR-O09</td>
+<td>Buyer hủy đồng thời Seller nhận; một transition thắng, không vừa hủy vừa Preparing; hủy sau pickup đi return</td>
+</tr>
+<tr id="AC-12">
+<td>AC-12</td>
+<td>FR-O05, FR-D09</td>
+<td>Seller hết hạn confirm; hoàn P+S một lần, phí 0; strike đúng căn cứ và không đếm lại khi worker lặp</td>
+</tr>
+<tr id="AC-13">
+<td>AC-13</td>
+<td>FR-O06, FR-S01–S03</td>
+<td>Chỉ nhập tracking chưa có pickup thì chưa InTransit; mã trùng bị chặn; Member không giả phát carrier event</td>
+</tr>
+<tr id="AC-14">
+<td>AC-14</td>
+<td>FR-O07–O08</td>
+<td>Delivered mở 72 giờ; Buyer bấm nhận không rút ngắn; hết hạn không claim mới settlement</td>
+</tr>
+<tr id="AC-15">
+<td>AC-15</td>
+<td>FR-O08, FR-W03</td>
+<td>P=200.000, S=30.000, c=5%; Seller 220.000, platform 10.000, ledger tổng 230.000</td>
+</tr>
+<tr id="AC-16">
+<td>AC-16</td>
+<td>FR-S04–S05, FR-O10</td>
+<td>Event Delivered rồi event pickup cũ/lặp; không lùi trạng thái; carrier báo mất mở dispute, không Completed</td>
+</tr>
+<tr id="AC-17">
+<td>AC-17</td>
+<td>FR-X01–X02</td>
+<td>Proposed không giữ; kiểm tra cùng chủ, listing sai chế độ, tính đúng payer khi đảo giá hai bên</td>
+</tr>
+<tr id="AC-18">
+<td>AC-18</td>
+<td>FR-X03–X04</td>
+<td>Counteroffer revision cũ bị từ chối; revision mới đổi đúng bên chờ; giá không bị thay không qua duyệt</td>
+</tr>
+<tr id="AC-19">
+<td>AC-19</td>
+<td>FR-X04, BR-05</td>
+<td>Order mua A chạy đồng thời Exchange A↔B; chỉ một thắng, không để B bị giữ một mình</td>
+</tr>
+<tr id="AC-20">
+<td>AC-20</td>
+<td>FR-X04, BR-04</td>
+<td>Từ chối đề xuất lỗi thời không release reservation của giao dịch thắng khác</td>
+</tr>
+<tr id="AC-21">
+<td>AC-21</td>
+<td>FR-X05, FR-W03</td>
+<td>Một bên funding x2; chỉ giữ nghĩa vụ một lần và tách deposit/delta</td>
+</tr>
+<tr id="AC-22">
+<td>AC-22</td>
+<td>FR-X05–X06</td>
+<td>Hai cọc đủ nhưng thiếu delta thì chưa cho gửi; một bên im lặng hết funding thì hoàn đúng người</td>
+</tr>
+<tr id="AC-23">
+<td>AC-23</td>
+<td>FR-X06/11, BR-27</td>
+<td>Nạp đến sau funding hết hạn; available tăng nhưng Exchange cũ không phục hồi; hủy lặp không refund thêm</td>
+</tr>
+<tr id="AC-24">
+<td>AC-24</td>
+<td>FR-X07–X10</td>
+<td>A pickup, B không pickup; giữ tiền, tạo dispute; listing A không về Available</td>
+</tr>
+<tr id="AC-25">
+<td>AC-25</td>
+<td>FR-X08–X09</td>
+<td>A nhận trước B; từng deadline độc lập; cả hai khai gửi qua nhiều ngày nhưng chưa giao thì không release</td>
+</tr>
+<tr id="AC-26">
+<td>AC-26</td>
+<td>FR-X09, FR-W03</td>
+<td>V_A=100.000, V_B=300.000; tổng hold 600.000; hoàn cọc 300.000/100.000 và Δ 200.000 cho B đúng một lần</td>
+</tr>
+<tr id="AC-27">
+<td>AC-27</td>
+<td>BR-08, FR-S06</td>
+<td>Hủy sau pickup hoặc return chưa tới; không bán lại hiện vật chưa thu hồi</td>
+</tr>
+<tr id="AC-28">
+<td>AC-28</td>
+<td>FR-S04–S05, FR-G04</td>
+<td>Event pickup đến muộn sau hủy; mở incident, không lấy tiền người khác hoặc tự phục hồi giao dịch</td>
+</tr>
+<tr id="AC-29">
+<td>AC-29</td>
+<td>FR-G04, BR-12</td>
+<td>Worker chậm/restart; quyền hết hạn đúng giờ, xử lý sau không nhân đôi hoàn</td>
+</tr>
+<tr id="AC-30">
+<td>AC-30</td>
+<td>FR-D01–D02</td>
+<td>Claim sai người/sai hạn bị chặn; claim hợp lệ tạo đúng một hồ sơ và chỉ giữ tiền giao dịch</td>
+</tr>
+<tr id="AC-31">
+<td>AC-31</td>
+<td>FR-D02, FR-O08, BR-18</td>
+<td>Claim trước deadline cạnh tranh auto-settle; claim hợp lệ được commit thì không có journal giải ngân</td>
+</tr>
+<tr id="AC-32">
+<td>AC-32</td>
+<td>FR-D03–D04, FR-D09</td>
+<td>Bên bị khiếu nại im lặng; không tự mất cọc/strike; Staff phải có căn cứ và vẫn mở hạn appeal</td>
+</tr>
+<tr id="AC-33">
+<td>AC-33</td>
+<td>FR-D05–D06, BR-35</td>
+<td>Quyết định vượt 300.000 hoặc tự xử hồ sơ bị chặn/escalate; allocations vượt nguồn bị từ chối</td>
+</tr>
+<tr id="AC-34">
+<td>AC-34</td>
+<td>FR-D07–D08</td>
+<td>Appeal đúng hạn giữ tiền; Admin ban đầu không tự giải appeal; quyết định chưa hiệu lực không thực thi</td>
+</tr>
+<tr id="AC-35">
+<td>AC-35</td>
+<td>FR-D05, BR-33/34</td>
+<td>B giữ sách A không hoàn trong ví dụ mục 9.5; phân 600.000 đúng nguồn, không cộng bồi thường sách B chưa gửi</td>
+</tr>
+<tr id="AC-36">
+<td>AC-36</td>
+<td>FR-S06, FR-D08</td>
+<td>Return pickup/delivery/kiểm tra; chỉ sau điều kiện nhận hoàn mới settlement; sai hàng hoàn mở xử lý</td>
+</tr>
+<tr id="AC-37">
+<td>AC-37</td>
+<td>FR-L04, BR-08</td>
+<td>Sách hoàn hỏng hơn ảnh gốc phải sửa/duyệt lại; ClosedUnavailable không xuất hiện bán lại</td>
+</tr>
+<tr id="AC-38">
+<td>AC-38</td>
+<td>FR-W01–W04</td>
+<td>Nạp callback lặp/sai amount/currency; lặp ghi có một lần, sai vào ReviewRequired; lịch sử và tổng số dư khớp</td>
+</tr>
+<tr id="AC-39">
+<td>AC-39</td>
+<td>FR-W05–W06</td>
+<td>Hai rút vượt available và tự duyệt; không âm số dư, không tự duyệt; từ chối trả đúng hold</td>
+</tr>
+<tr id="AC-40">
+<td>AC-40</td>
+<td>FR-W07, BR-29</td>
+<td>Payout timeout chưa rõ; giữ Processing, không credit available và gửi lệnh mới; đối soát cùng reference</td>
+</tr>
+<tr id="AC-41">
+<td>AC-41</td>
+<td>FR-W08, NFR-03</td>
+<td>Tạo lệch qua fixture test có kiểm soát; đối soát cảnh báo và chặn phần liên quan; không sửa entry đã posted</td>
+</tr>
+<tr id="AC-42">
+<td>AC-42</td>
+<td>FR-R01–R03</td>
+<td>Review đơn hủy/sai người bị chặn; Seller không có điểm chất lượng sách Order; chưa hết quyền sửa thì chưa công bố dù hai bên đã gửi; review sát cuối hạn có đủ 48 giờ sửa</td>
+</tr>
+<tr id="AC-43">
+<td>AC-43</td>
+<td>FR-R04–R05</td>
+<td>Sửa/xóa tại 48 giờ, review evidence, Staff ẩn; không reset hạn hoặc cộng revision hai lần</td>
+</tr>
+<tr id="AC-44">
+<td>AC-44</td>
+<td>FR-F01–F06</td>
+<td>Gắn listing người khác/spam/nội dung nghi vấn; chặn hoặc kiểm duyệt; pending card không lộ nội dung chưa duyệt</td>
+</tr>
+<tr id="AC-45">
+<td>AC-45</td>
+<td>FR-M01–M03</td>
+<td>Đổi conversation ID hoặc Staff chưa phân công; không đọc được; chặn user vẫn còn kênh nghĩa vụ cũ</td>
+</tr>
+<tr id="AC-46">
+<td>AC-46</td>
+<td>FR-N01–N04</td>
+<td>Matching lặp, tắt nhận, email/realtime lỗi; không spam, hộp thư còn và retry không rollback giao dịch</td>
+</tr>
+<tr id="AC-47">
+<td>AC-47</td>
+<td>FR-G01–G03, BR-39</td>
+<td>Chính sách mới không đổi phí/deadline giao dịch cũ; dashboard không tính cọc/nạp thành doanh thu</td>
+</tr>
+<tr id="AC-48">
+<td>AC-48</td>
+<td>FR-G04–G06, NFR-09</td>
+<td>Crash giữa commit/outbox, retry job; một tác động nghiệp vụ, có audit và event phục hồi</td>
+</tr>
+<tr id="AC-49">
+<td>AC-49</td>
+<td>FR-A07, BR-31</td>
+<td>Khóa user có Order/ticket; chặn giao dịch/rút mới theo phạm vi, vẫn nộp bằng chứng và hoàn hàng được</td>
+</tr>
+<tr id="AC-50">
+<td>AC-50</td>
+<td>FR-G05, NFR-06–NFR-08, NFR-10–NFR-16</td>
+<td>Kiểm tra secret/log, tệp riêng, backup/restore, UI, quyền audit, hiệu năng và coverage; lưu bằng chứng thực đo</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-18-2">18.2 Kịch bản trình diễn tối thiểu</h3>
+<ol>
+<li>Một Order thành công từ duyệt listing tới ledger và review; nêu rõ vì sao Delivered chưa giải ngân.</li>
+<li>Hai người cùng mua hoặc một mua/một đổi cùng cuốn; chứng minh chỉ một reservation thắng.</li>
+<li>Exchange có bù; một bên cọc rồi bên kia hết hạn; chứng minh hoàn đúng khoản.</li>
+<li>Exchange chỉ một chiều gửi; chứng minh sách đang đi không bị mở bán lại và dispute quản lý hai chiều.</li>
+<li>Khiếu nại sai mô tả, hoàn một phần hoặc return; hiển thị quyết định, appeal, thực thi và tổng tiền cân bằng.</li>
+<li>Callback lặp và payout chưa rõ; chứng minh không double credit hoặc vừa hoàn vừa chuyển lại.</li>
+<li>Gỡ listing/khóa user trong lúc giao dịch; chứng minh không mất bằng chứng và không bỏ nghĩa vụ cũ.</li>
+</ol>
+<h2 id="section-19">19 Đối chiếu với hai tài liệu nguồn</h2>
+<div class="table-wrap"><table><thead><tr>
+<th scope="col">Nội dung nguồn</th>
+<th scope="col">Quyết định trong SRS</th>
+<th scope="col">Lý do</th>
+</tr></thead><tbody>
+<tr>
+<td>SRC-A mục 2/7 tách catalog, listing, forum</td>
+<td>Giữ tại FR-C, FR-L, FR-F và dữ liệu mục 11</td>
+<td>Phân biệt đầu sách và hiện vật; card live không thay snapshot</td>
+</tr>
+<tr>
+<td>SRC-A mục 3 kiểm duyệt trước Available</td>
+<td>Giữ; B trạng thái khởi tạo Available được thay bằng mô hình ba chiều</td>
+<td>Không công khai listing chưa được duyệt</td>
+</tr>
+<tr>
+<td>SRC-B BR-08/15 khóa đồng thời hai listing</td>
+<td>Giữ và thêm invariant, AC đồng thời</td>
+<td>Chống một cuốn cam kết hai nơi</td>
+</tr>
+<tr>
+<td>SRC-B Reserved nhận nhiều yêu cầu, Locked mới chốt</td>
+<td>Đổi thành Reserved độc quyền; Proposed không giữ</td>
+<td>Thống nhất ý nghĩa với luồng checkout</td>
+</tr>
+<tr>
+<td>SRC-B BR-14 Seller chọn nhiều yêu cầu mua</td>
+<td>Không dùng cho Order M; giữ chọn đề xuất cho Exchange</td>
+<td>Tránh thu/hoàn tiền của nhiều Buyer cho một cuốn</td>
+</tr>
+<tr>
+<td>SRC-A cọc biến thiên và miễn uy tín; SRC-B cọc 20–30%</td>
+<td>Một tỷ lệ đề xuất 100% giá trị nhận, không miễn</td>
+<td>Rõ phạm vi bảo đảm và dễ kiểm thử; vẫn không bảo đảm mọi phí/thiệt hại</td>
+</tr>
+<tr>
+<td>SRC-B BR-02 khung theo giá bìa/trung bình thể loại</td>
+<td>Không dùng như chuẩn tự động; Staff xét và áp trần</td>
+<td>Tránh giá tự khai và listing giả làm lệch định giá</td>
+</tr>
+<tr>
+<td>SRC-B BR-07/EF-06 release từ ngày cả hai khai gửi</td>
+<td>Thay bằng hạn sau nhận/giao hợp lệ từng chiều</td>
+<td>Không coi khai gửi là đã giao</td>
+</tr>
+<tr>
+<td>SRC-B BR-12/EF-08 hạn gửi sau Seller nhận</td>
+<td>Giữ và yêu cầu pickup xác minh</td>
+<td>Chặn Seller nhận rồi không gửi</td>
+</tr>
+<tr>
+<td>SRC-A gửi hàng mù</td>
+<td>Không dùng trong M</td>
+<td>Không chứng minh pickup, khó hỗ trợ người dùng</td>
+</tr>
+<tr>
+<td>SRC-A mất toàn cọc nếu không tracking</td>
+<td>Thay bằng xác minh và quyết định</td>
+<td>Thiếu tracking chưa đủ kết luận vi phạm</td>
+</tr>
+<tr>
+<td>SRC-A freeze available hai bên khi mở ticket</td>
+<td>Giữ tiền giao dịch; freeze rộng có incident Admin riêng</td>
+<td>Tránh lạm dụng ticket để khóa toàn ví</td>
+</tr>
+<tr>
+<td>SRC-B BR-16/17 vận chuyển thủ công/tùy chọn carrier</td>
+<td>Dùng carrier simulator đủ sự kiện trong M</td>
+<td>Có mốc pickup/delivered đáng kiểm thử; không bắt tích hợp thật</td>
+</tr>
+<tr>
+<td>SRC-B BR-18 phí ship</td>
+<td>Giữ mỗi bên tự chi chiều Exchange; Order snapshot S và Seller ứng</td>
+<td>Làm rõ ai nhận phí và hoàn phí</td>
+</tr>
+<tr>
+<td>SRC-A Admin duyệt rút; SRC-B Staff/Admin</td>
+<td>Admin duyệt, Staff hỗ trợ đối chiếu</td>
+<td>Một thẩm quyền thống nhất, chống tự duyệt</td>
+</tr>
+<tr>
+<td>SRC-A Order review một chiều; SRC-B hai chiều 48 giờ</td>
+<td>Hai chiều, thời hạn sửa 48 giờ, công bố có điều kiện</td>
+<td>Kế thừa phản hồi hai phía và giảm trả đũa</td>
+</tr>
+<tr>
+<td>SRC-B EF-05 vắng mặt mất quyền khiếu nại thêm</td>
+<td>Ra quyết định theo bằng chứng, một lần appeal có hạn</td>
+<td>Giữ quy trình xử lý im lặng nhưng có bước xem xét độc lập</td>
+</tr>
+<tr>
+<td>SRC-A nhiều tích hợp/hub/uy tín nâng cao</td>
+<td>Đưa sang E</td>
+<td>Dành công sức cho độ đúng của lõi giao dịch</td>
+</tr>
+</tbody></table></div>
+<h2 id="section-20">20 Quản lý thay đổi và bàn giao</h2>
+<p>Mỗi yêu cầu thay đổi cần mã CR, người đề nghị, vấn đề, FR/BR/POL bị ảnh hưởng, dữ liệu cần chuyển đổi, tác động đến giao dịch đang chạy và AC phải sửa. Thay đổi số tiền, cọc, thời hạn, actor hoặc điều kiện kết thúc luôn tăng phiên bản policy/SRS. Không chỉ sửa giao diện rồi để tài liệu và kiểm thử theo luật cũ.</p>
+<p>Bộ bàn giao triển khai tối thiểu gồm SRS được rà soát, sơ đồ use case và ERD phù hợp mục 11, bảng chuyển trạng thái, API contract chi tiết, script dữ liệu demo, test report theo AC, báo cáo đối soát và hướng dẫn chạy simulator/khôi phục. SRS này là đặc tả yêu cầu; các tài liệu triển khai và bằng chứng kiểm thử phải được lập trong quá trình phát triển, không được coi là đã có chỉ vì được liệt kê ở đây.</p>
+<p>Khi chốt phiên bản, nhóm điền người duyệt, ngày duyệt, các POL đã chọn, các E được đưa vào và các M được loại bằng quyết định thay đổi. Các cam kết đã chốt trong giao dịch tiếp tục dùng snapshot tương ứng, kể cả sau khi phát hành SRS mới.</p></main>
+<script>document.getElementById('lookup').addEventListener('submit',function(e){e.preventDefault();const id=document.getElementById('code').value.trim().toUpperCase();const el=document.getElementById(id);document.getElementById('lookup-status').textContent=el?'':'Không tìm thấy mã yêu cầu.';if(el){location.hash=id;el.scrollIntoView({behavior:'smooth',block:'center'});}});</script></body></html>

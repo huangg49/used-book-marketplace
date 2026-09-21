@@ -1,0 +1,61 @@
+@startuml
+left to right direction
+skinparam defaultFontName Arial
+skinparam defaultFontSize 15
+skinparam dpi 160
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam ArrowColor #425365
+skinparam ArrowThickness 1
+skinparam ActorBorderColor #273748
+skinparam ActorFontColor #162536
+skinparam UsecaseBackgroundColor #F4F8FC
+skinparam UsecaseBorderColor #54728C
+skinparam UsecaseFontColor #152B3D
+skinparam RectangleBorderColor #758594
+skinparam RectangleBackgroundColor white
+skinparam RectangleFontColor #152B3D
+skinparam NoteBackgroundColor #FFFDF5
+skinparam NoteBorderColor #C5B984
+skinparam NoteFontSize 12
+skinparam TitleFontSize 21
+skinparam TitleFontColor black
+skinparam FooterFontSize 11
+skinparam FooterFontColor #5F6B76
+skinparam nodesep 35
+skinparam ranksep 70
+hide stereotype
+
+title Administration policy and operations
+footer SRS-BOOK-001 v1.0 | 08_Quan_tri_va_van_hanh | Goal-oriented diagram; processing order is not shown
+actor "Staff" as staff
+actor "Admin" as admin
+actor "Authorized test operator" as tester
+rectangle "Used-book marketplace" as PLATFORM {
+  usecase "AD01\nView assigned\nwork queues" as AD01
+  usecase "AD02\nManage accounts\nand grant or revoke roles" as AD02
+  usecase "AD03\nLock, unlock or remove\naccount restrictions" as AD03
+  usecase "AD04\nManage genres\nand forum categories" as AD04
+  usecase "AD05\nManage banners\nand collections" as AD05
+  usecase "AD06\nChange versioned\npolicies" as AD06
+  usecase "AD07\nValidate configuration\nand save new version" as AD07
+  usecase "AD08\nView reports\nand dashboard" as AD08
+  usecase "AD09\nSearch audit logs\nand reconciliation cases" as AD09
+  usecase "AD10\nMonitor failed jobs\nand request retry" as AD10
+  usecase "AD11\nReconcile and resolve\ncontrolled discrepancies" as AD11
+  usecase "AD12\nRun simulator scenarios\nand demo data" as AD12
+}
+staff -- AD01
+admin -- AD01
+admin -- AD02
+admin -- AD03
+admin -- AD04
+admin -- AD05
+admin -- AD06
+admin -- AD08
+admin -- AD09
+admin -- AD10
+admin -- AD11
+tester -- AD12
+AD06 ..> AD07 : <<include>>
+@enduml

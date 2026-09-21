@@ -1,0 +1,22 @@
+{
+  "brand": {
+    "name": "Lật lại",
+    "tagline": "Sách cũ. Chương mới."
+  },
+  "colors": {
+    "forest": "#214B40",
+    "paper": "#F5EFDF",
+    "terracotta": "#C15A39",
+    "ink": "#202C27",
+    "leaf": "#D5DFA4"
+  },
+  "fonts": {
+    "display": "Lora",
+    "body": "Be Vietnam Pro"
+  },
+  "contrast": {
+    "#214B40 on #F5EFDF": 8.53,
+    "#FFFFFF on #214B40": 9.79,
+    "#202C27 on #F5EFDF": 12.61
+  }
+}

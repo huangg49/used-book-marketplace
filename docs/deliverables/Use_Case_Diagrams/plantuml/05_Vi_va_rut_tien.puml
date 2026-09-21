@@ -1,0 +1,60 @@
+@startuml
+left to right direction
+skinparam defaultFontName Arial
+skinparam defaultFontSize 15
+skinparam dpi 160
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam ArrowColor #425365
+skinparam ArrowThickness 1
+skinparam ActorBorderColor #273748
+skinparam ActorFontColor #162536
+skinparam UsecaseBackgroundColor #F4F8FC
+skinparam UsecaseBorderColor #54728C
+skinparam UsecaseFontColor #152B3D
+skinparam RectangleBorderColor #758594
+skinparam RectangleBackgroundColor white
+skinparam RectangleFontColor #152B3D
+skinparam NoteBackgroundColor #FFFDF5
+skinparam NoteBorderColor #C5B984
+skinparam NoteFontSize 12
+skinparam TitleFontSize 21
+skinparam TitleFontColor black
+skinparam FooterFontSize 11
+skinparam FooterFontColor #5F6B76
+skinparam nodesep 35
+skinparam ranksep 70
+hide stereotype
+
+title Wallet top-up and simulated withdrawal
+footer SRS-BOOK-001 v1.0 | 05_Vi_va_rut_tien | Goal-oriented diagram; processing order is not shown
+actor "Member" as member
+actor "Staff" as staff
+actor "Admin" as admin
+actor "Payment Simulator (simulated service)" as pay
+rectangle "Used-book marketplace" as PLATFORM {
+  usecase "WA01\nView balance, fund holds\nand wallet history" as WA01
+  usecase "WA02\nTop up simulated wallet" as WA02
+  usecase "WA03\nRecord verified\ntop-up result" as WA03
+  usecase "WA04\nRequest withdrawal" as WA04
+  usecase "WA05\nCheck balance and\nhold withdrawal funds" as WA05
+  usecase "WA06\nVerify withdrawal\nrequest details" as WA06
+  usecase "WA07\nApprove or reject\nwithdrawal request" as WA07
+  usecase "WA08\nExecute payout\nand record result" as WA08
+  usecase "WA09\nReconcile\nunknown result" as WA09
+  usecase "WA10\nView withdrawal\nand refund progress" as WA10
+}
+member -- WA01
+member -- WA02
+member -- WA04
+member -- WA10
+staff -- WA06
+admin -- WA06
+admin -- WA07
+admin -- WA09
+pay -- WA02
+pay -- WA03
+pay -- WA08
+pay -- WA09
+WA04 ..> WA05 : <<include>>
+@enduml

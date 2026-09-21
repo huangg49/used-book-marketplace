@@ -1,6 +1,22 @@
-# Used-Book Marketplace
+# Lật lại — Used-Book Marketplace
+
+**Sách cũ. Chương mới.**
+
+![Lật lại brand](packages/brand/applications/github-banner.png)
 
 One API-first platform shared by the graduation project and two mobile-development courses. Members use the Flutter or React Native application. Staff, administrators, and authorized test operators use the web operations console.
+
+## Project documents and brand
+
+- [Documentation index](docs/README.md)
+- [Detailed SRS](docs/deliverables/SRS_Nen_tang_sach_cu.md)
+- [Business comparison report](docs/deliverables/Bao_cao_so_sanh_nghiep_vu.md)
+- [Use cases and traceability](docs/deliverables/Use_Case_Diagrams/Ma_tran_truy_vet.md)
+- [Review 1 presentation](docs/deliverables/Review_1_Solution.pptx)
+- [Brand assets and integration notes](packages/brand/README.md)
+- [Brand guidelines PDF](packages/brand/guidelines/Lat_Lai_Brand_Guidelines.pdf)
+
+Current implementation is a tested project scaffold. The documents describe the target product; purchasing, exchange, wallet, and moderation workflows are not implemented yet.
 
 ## Architecture
 
@@ -37,6 +53,9 @@ The backend is the authority for permissions, state transitions, reservations, w
 
 ```bash
 cp .env.example .env
+cp apps/api/.env.example apps/api/.env
+cp apps/admin-web/.env.example apps/admin-web/.env
+cp apps/mobile-react-native/.env.example apps/mobile-react-native/.env
 pnpm install
 pnpm infra:up
 pnpm dev:api

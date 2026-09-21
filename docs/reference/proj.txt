@@ -1,0 +1,130 @@
+1. Xác thực & Tài khoản
+
+Đăng ký / đăng nhập qua email, SĐT hoặc OAuth Google/Facebook
+Quên mật khẩu + xác minh OTP/email
+Quản lý hồ sơ: thông tin, nhiều địa chỉ giao hàng (chọn mặc định), đổi mật khẩu
+Admin khoá/mở khoá tài khoản (is_locked); Staff không có quyền này
+
+2. Danh mục & Khám phá
+
+Tách 3 thực thể: book (bản ghi catalog: tên, tác giả, ISBN, ấn bản) → book_listing (một bản vật lý cụ thể của một user) → forum_post (bài thảo luận)
+Tìm kiếm theo tên/tác giả/ISBN/khoảng giá, lọc theo tình trạng; chỉ hiển thị listing Available
+Trang chi tiết listing: ảnh thật, mô tả tình trạng, điểm uy tín người bán, backlink "được thảo luận trong N topic forum"
+Trang book (catalog): gom tất cả listing đang bán/đổi của cùng đầu sách
+Bộ sưu tập nổi bật + banner (Admin cấu hình); đọc đánh giá công khai
+Guest bị chặn giỏ hàng / chat / mua / đổi / đăng forum → điều hướng đăng nhập
+
+3. Vòng đời bài đăng (BookListing)
+Draft → PendingReview → Available | Rejected → Reserved → Sold | Exchanged, thêm Hidden, Removed
+
+Seller tạo listing: tối thiểu 1 ảnh, tình trạng, giá bán, giá trị quy đổi, chọn bán / đổi / cả hai
+Gửi duyệt → Staff duyệt hoặc từ chối kèm lý do → Seller sửa và gửi lại
+Sửa giá/tình trạng sau Available → tự quay về PendingReview
+Reserved khi có đơn/yêu cầu đổi đang xử lý (chặn bán trùng); giải phóng khi đơn chết
+Thêm trạng thái kết thúc Exchanged (hoặc Sold + trường closed_via = order | exchange) để forum card hiện "Đã trao đổi" thay vì "Đã bán"
+Seller ẩn/mở lại/xoá; Staff gỡ bài vi phạm
+
+4. Giỏ hàng & Mua bán (Order) — luồng sách ↔ tiền
+PendingConfirm → Confirmed → Preparing → Shipped → Delivered → Completed, nhánh CancelledByBuyer, RejectedBySeller, Disputed → Refunded
+
+Thêm giỏ (chỉ luồng mua) → checkout → thanh toán vào escrow (cổng thanh toán hoặc ví nội bộ)
+Buyer chỉ huỷ được khi PendingConfirm
+Seller xác nhận/từ chối trong seller_confirm_timeout_days; quá hạn tự huỷ + hoàn escrow
+Seller Preparing → Shipped (bắt buộc mã vận đơn) → carrier webhook đẩy Delivered
+Buyer xác nhận nhận hàng hoặc tự Completed sau N ngày
+Escrow giải ngân cho Seller trừ order_commission_rate
+
+5. Trao đổi (Exchange) — luồng sách ↔ sách và sách ↔ sách + bù tiền
+Proposed → Accepted | Rejected | CounterOffered | Expired → AwaitingPaymentDiff → BothPreparing → BothShipped → BothDelivered → Completed, thêm Disputed → Reversed, FailedByX
+
+Initiator chọn một listing của mình (đã bật trao đổi) để đề xuất; hệ thống tự tính và hiển thị chênh lệch giá trị
+Recipient đồng ý / từ chối / đề xuất điều chỉnh; Initiator phản hồi lại
+Tự Expired nếu Recipient im lặng quá exchange_response_timeout_days
+Listing giữ Available khi mới Proposed; cả hai listing cùng chuyển Reserved khi Accepted, các đề xuất khác trên listing đó tự bị từ chối kèm thông báo
+Có bù tiền: bên bù nộp phần chênh vào escrow trước (AwaitingPaymentDiff), thu exchange_flat_fee trên phần chênh; không bù thì không thu phí
+Xác nhận gửi hàng mù hai chiều: chỉ chuyển BothShipped khi cả hai đã xác nhận, không bên nào thấy trạng thái bên kia trước
+Cả hai xác nhận nhận → cửa sổ khiếu nại N ngày → Completed → cả hai listing cùng đóng (Exchanged)
+Bên nào không ship đúng hạn → FailedByX: hàng bên kia được hoàn về bằng tiền cọc bên vi phạm, ghi strike uy tín
+
+6. Chống lừa đảo trong trao đổi
+
+Cọc bảo đảm hoàn lại: mỗi bên khoá vào escrow một khoản bằng giá trị quy đổi sách của đối phương (hoặc % theo exchange_deposit_rate), giải phóng khi Completed, dùng để bồi thường nếu ticket được chấp nhận; miễn cọc cho user uy tín cao
+Bắt buộc mã vận đơn, tích hợp carrier (GHN/GHTK/Viettel Post) để hệ thống tự flip trạng thái; không có pickup sau X ngày → tự flag và revert
+Bằng chứng hai đầu: ảnh listing → ảnh đóng gói có nhãn vận đơn → ảnh/video mở hộp; Staff đối chiếu khi có tranh chấp
+Gating theo uy tín: tài khoản mới chỉ được đổi khi có cọc; dưới ngưỡng uy tín không được đề xuất trên giá trị nhất định; lệch uy tín thì chỉ bên mới phải cọc
+Bảng xử lý tranh chấp cố định trong system_config (không tracking = mất cọc toàn bộ; sai tình trạng = hoàn một phần/toàn bộ cọc + phí hoàn hàng; hai bên đều báo không nhận = theo hồ sơ carrier)
+Đóng băng số dư khả dụng của cả hai bên khi ticket đang Open
+Chặn giao dịch ngoài sàn: cảnh báo trong app, lọc SĐT/số tài khoản trong chat và forum
+Tuỳ chọn dịch vụ "xác minh tình trạng" qua hub trung gian có phí cho sách giá trị cao
+
+7. Forum
+
+Forum chỉ để thảo luận, không bán/đổi bằng text tự do; mọi giao dịch phải đi qua listing
+forum_post có listing_id (tuỳ chọn) trỏ tới listing của chính tác giả → hiển thị card sống render từ bảng listing lúc xem, không lưu giá/trạng thái trong post; listing đổi trạng thái (Reserved / Sold / Exchanged / Hidden / Removed) thì mọi card tự cập nhật, nút mua/đổi tự khoá
+Bài rao bán: card hiện giá, nút mở checkout; bài trao đổi: card hiện "Chấp nhận trao đổi", nút mở flow đề xuất đổi
+forum_post có thêm wanted_book_id trỏ tới book (catalog) cho nửa "đang tìm"; khi có listing mới của đầu sách đó bật trao đổi → thông báo matching cho các post/wishlist đang cần
+Ràng buộc chống spam (listing_id, author_id, forum_thread_id) unique hoặc giới hạn số post/listing
+Người đăng chưa có listing → tạo listing ngay trong trình soạn bài (vào PendingReview), post đăng ngay nhưng card hiện "Listing đang chờ duyệt" tới khi Staff duyệt
+Phát hiện pattern giá/SĐT trong text → nhắc "gắn listing?" thay vì cho đăng; Staff kiểm duyệt bài forum cùng hàng đợi với đánh giá
+Khi listing đóng: không xoá post, card hiện "Đã bán / Đã trao đổi", tác giả có nút "đóng topic" một chạm; review từ giao dịch link ngược về topic
+
+8. Escrow & Ví
+
+Ví tách available_balance và escrow_balance
+Sổ cái wallet_transaction: deposit / withdraw / escrow_hold / escrow_release / refund / commission / deposit_hold / deposit_forfeit
+Dòng tiền: giữ khi đặt hàng hoặc cọc, hoàn 100% khi huỷ/từ chối/hết hạn, giải ngân trừ hoa hồng khi Completed, hoàn toàn phần/một phần khi Refunded / Reversed
+
+9. Rút tiền
+WithdrawRequested → WithdrawApproved → WithdrawCompleted hoặc WithdrawRejected
+
+Seller yêu cầu rút (trừ available ngay), tuân min_withdrawal_amount
+Admin duyệt/từ chối (từ chối hoàn lại available) → đánh dấu đã chuyển khoản
+Dashboard doanh thu: lịch sử bán/đổi, hai số dư
+
+10. Khiếu nại & Escalation
+Open → InReview → ResolvedByStaff | Escalated → ResolvedByAdmin
+
+Tạo ticket trong dispute_window_days sau khi nhận hàng (cả Order lẫn Exchange)
+Staff xem lịch sử đơn, ảnh ba giai đoạn, chat, forum liên quan; quyết định theo bảng cố định hoặc trong thẩm quyền
+Escalate lên Admin khi giá trị lớn hoặc cần khoá tài khoản
+Log đầy đủ: người xử lý, quyết định, căn cứ
+
+11. Đánh giá
+
+Chỉ sau Completed; Order 1 chiều (buyer → sách + seller), Exchange 2 chiều
+Unique (order_id, reviewer_id); 2 điểm riêng: chất lượng sách và uy tín đối tác
+Sửa/xoá trong 7 ngày rồi khoá vĩnh viễn
+Seller trả lời; Staff ẩn/gỡ vi phạm; không ai xoá được đánh giá của người khác
+
+12. Nhắn tin & Tương tác
+
+Chat buyer ↔ seller / hai bên trao đổi, có lọc thông tin liên hệ ngoài sàn
+Wishlist với cờ wants_exchange + thông báo giảm giá / có listing mới khớp
+Thông báo thời gian thực cho đơn, đề xuất đổi, ticket, forum matching
+
+13. Vận hành Staff
+
+Hàng đợi kiểm duyệt listing theo checklist (sách lậu, sách cấm, ảnh mờ, mô tả sai)
+Hàng đợi ticket khiếu nại; hỗ trợ xác minh tình trạng thực nhận trong tranh chấp đổi
+Kiểm duyệt đánh giá, bình luận, bài forum
+
+14. Vận hành Admin
+
+Quản lý user & Staff, cấp quyền, khoá/mở khoá
+Quản lý danh mục / thể loại / bộ lọc tình trạng / catalog book
+system_config: order_commission_rate, exchange_flat_fee, exchange_deposit_rate, dispute_window_days, seller_confirm_timeout_days, exchange_response_timeout_days, exchange_ship_timeout_days, min_withdrawal_amount, max_cancel_count_per_month, bảng % hoàn tranh chấp
+Duyệt rút tiền; quản lý banner + bộ sưu tập; quản lý chuyên mục forum
+Dashboard: user mới, giao dịch mua/đổi, doanh thu, vi phạm, ticket escalate, hoạt động forum
+
+15. Tự động hoá nền
+
+Timeout xác nhận Seller → tự huỷ + hoàn escrow
+Timeout phản hồi đổi → Expired; timeout ship → FailedByX
+Tự Completed sau N ngày giao không phản hồi; tự đóng cửa sổ khiếu nại
+Carrier webhook cập nhật Shipped → Delivered; không pickup → flag
+Đếm huỷ/từ chối/ship ảo so max_cancel_count_per_month → cảnh báo/khoá tạm
+Giải phóng Reserved khi đơn/đổi chết; đóng cả hai listing khi đổi xong
+Matching wishlist / forum wanted với listing mới; theo dõi giảm giá
+Quét chat và forum tìm SĐT/số tài khoản
+
+Quyết định cần chốt trước khi code: tỷ lệ hoa hồng Order và Exchange có bù; tỷ lệ cọc trao đổi và ngưỡng miễn cọc; các timeout và cửa sổ khiếu nại; ngưỡng rút tối thiểu và phí rút; ngưỡng lạm dụng huỷ đơn; bảng % hoàn cố định hay để Staff tự quyết; forum có cho phép user thường tạo chuyên mục không hay chỉ Admin.
