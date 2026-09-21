@@ -1,0 +1,39 @@
+openapi: 3.1.0
+info:
+  title: Used-Book Marketplace API
+  version: 0.1.0
+  description: Shared contract for Flutter, React Native, and the operations web.
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development
+tags:
+  - name: System
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      tags: [System]
+      summary: Check API availability
+      responses:
+        '200':
+          description: API is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status, service, timestamp]
+      properties:
+        status:
+          type: string
+          const: ok
+        service:
+          type: string
+          const: used-book-api
+        timestamp:
+          type: string
+          format: date-time

@@ -1,0 +1,26 @@
+name: API CI
+
+on:
+  pull_request:
+    paths: ["apps/api/**", "packages/api-contract/**", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
+  push:
+    branches: [main]
+    paths: ["apps/api/**", "packages/api-contract/**", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @used-books/api lint
+      - run: pnpm --filter @used-books/api typecheck
+      - run: pnpm --filter @used-books/api test
+      - run: pnpm --filter @used-books/api build

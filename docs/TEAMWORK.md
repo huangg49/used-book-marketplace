@@ -1,0 +1,36 @@
+# Team workflow
+
+## Ownership
+
+Assign one primary and one backup owner to each area. Ownership means reviewing changes and maintaining documentation, not working alone.
+
+| Area | Suggested responsibility |
+|---|---|
+| API and database | State transitions, transactions, migrations, OpenAPI |
+| Flutter | Member flows, Riverpod architecture, Flutter tests |
+| React Native | Member flows, Expo Router, React Native tests |
+| Operations web | Staff/Admin permissions, queues, reporting |
+| Quality and documentation | Acceptance tests, demo data, SRS traceability |
+
+## Branches
+
+- `main` is always reviewable and demo-ready.
+- Work in branches such as `feat/42-exchange-acceptance`.
+- Rebase or merge the latest `main` before requesting final review.
+- Delete merged branches to keep the repository readable.
+
+## Pull request rules
+
+1. The author completes the checklist and attaches screenshots or API evidence.
+2. An owner of the affected area reviews the implementation.
+3. A second reviewer is required for wallet, settlement, permissions, and disputes.
+4. CI must pass before merge.
+5. Use squash merge so one pull request becomes one clear commit on `main`.
+
+## Contract changes
+
+`packages/api-contract/openapi.yaml` is the shared contract. Change it first, review it with both client owners, then implement the API and regenerate or update clients. Breaking changes require a versioned endpoint or an agreed migration window.
+
+## Demo cadence
+
+Keep weekly tags such as `review-1`, `review-2`, and `demo-2026-10-15`. Every tag must include compatible API, web, Flutter, React Native, migration, and demo-data revisions.

@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  RESTRICTED
+  LOCKED
+  DISABLED
+}
+
+enum RoleCode {
+  MEMBER
+  STAFF
+  ADMIN
+  TEST_OPERATOR
+}
+
+model User {
+  id              String     @id @default(uuid()) @db.Uuid
+  emailNormalized String     @unique @map("email_normalized")
+  passwordHash    String     @map("password_hash")
+  displayName     String     @map("display_name")
+  status          UserStatus @default(PENDING_VERIFICATION)
+  emailVerifiedAt DateTime?  @map("email_verified_at") @db.Timestamptz(6)
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  roles           UserRole[]
+
+  @@map("users")
+}
+
+model UserRole {
+  userId    String   @map("user_id") @db.Uuid
+  role      RoleCode
+  grantedAt DateTime @default(now()) @map("granted_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, role])
+  @@map("user_roles")
+}

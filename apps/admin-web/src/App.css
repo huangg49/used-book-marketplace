@@ -1,0 +1,32 @@
+.app-shell {
+  min-height: 100vh;
+  background: #f4f7fa;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0f2a3d;
+}
+
+.brand {
+  color: white;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.content {
+  width: min(920px, calc(100% - 40px));
+  margin: 80px auto;
+}
+
+.intro {
+  max-width: 760px;
+  color: #526575;
+  font-size: 17px;
+}
+
+.actions {
+  margin-top: 24px;
+}

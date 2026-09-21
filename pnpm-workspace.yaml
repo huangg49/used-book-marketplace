@@ -1,0 +1,21 @@
+packages:
+  - apps/api
+  - apps/admin-web
+  - apps/mobile-react-native
+  - packages/*
+
+peerDependencyRules:
+  # Expo SDK 57 pins the React 19.2 type line while a transitive web-only
+  # package already advertises 19.3. Both clients are type-checked separately.
+  allowedVersions:
+    '@types/react': '19.2 || 19.3'
+
+allowBuilds:
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  argon2: true
+  esbuild: true
+  msgpackr-extract: true
+  prisma: true
+  sharp: true
+  unrs-resolver: true

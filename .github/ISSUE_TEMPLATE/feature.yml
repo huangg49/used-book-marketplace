@@ -1,0 +1,32 @@
+name: Feature
+description: Implement a reviewed product behavior
+title: "[Feature] "
+labels: [feature]
+body:
+  - type: input
+    id: requirement
+    attributes:
+      label: Requirement IDs
+      description: SRS, FR, or acceptance-criteria identifiers
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Include invalid states, permissions, and duplicate requests where relevant.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Primary area
+      options: [API, Flutter, React Native, Operations web, Infrastructure, Documentation]
+    validations:
+      required: true
