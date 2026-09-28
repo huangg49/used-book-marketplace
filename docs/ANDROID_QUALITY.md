@@ -8,6 +8,10 @@ giữ nguyên phạm vi/ngày, không được coi là đã nghiệm thu màn h�
 React Native là client ưu tiên. Export web, APK debug và kiểm thử trên điện thoại
 là ba bằng chứng khác nhau; không dùng kết quả này thay cho kết quả kia.
 
+Vòng handoff hiện hành dùng [21 ca native và phiếu kết quả](handoff/NATIVE_ACCEPTANCE.md).
+Tài liệu đó phân biệt mất kết nối API với debug APK chưa nạp được JS khi Metro
+offline; không coi checklist được viết sẵn là đã chạy trên thiết bị.
+
 ## Kiểm tra trước khi chạy
 
 Tại root, sau khi làm theo [hướng dẫn RN](REACT_NATIVE_START.md):

@@ -179,7 +179,7 @@ includes migrations and generated types. OpenAPI 0.8.0 marks 34 catalog/draft/me
 implemented. Read the [lifecycle report](features/LISTING_LIFECYCLE_REPORT.md) and the
 [catalog/draft API report](features/CATALOG_DRAFT_API_REPORT.md) and
 [command protocol](adr/0006-catalog-draft-commands.md) before extending them.
-Run `pnpm db:migrate` to apply all eight migrations, including delivery origins, the address book, role-writer lock,
+Run `pnpm db:migrate` to apply the complete repository migration history, including delivery origins, the address book, role-writer lock,
 ISBN prefix checks and media reservations. No catalog/listing seed is required; create and review books through the APIs.
 Owner media handlers, the Sharp worker and RN private draft persistence are implemented;
 live Supabase checks passed; native form/picker checks are pending. Listing

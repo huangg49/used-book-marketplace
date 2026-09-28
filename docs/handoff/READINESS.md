@@ -11,6 +11,12 @@ Clone sạch của commit này đã qua install/generate/migrate/seed/build, 127
 480 API E2E và hai suite browser; xem [REBUILD](REBUILD.md). Checkpoint
 `checkpoint/f2h-handoff-2026-09-28` chứa hồ sơ cuối, không đồng nghĩa native đã nghiệm thu.
 
+Bổ sung: operations polish đã commit `76230ca`. Bộ thực thi
+[native N01–N21](NATIVE_ACCEPTANCE.md) và [review độc lập R01–R09](INDEPENDENT_REVIEW.md)
+đã chuẩn bị, chưa có kết quả nghiệm thu/ký nhận. Preflight mới ngày 28/09 đạt
+DB/17 checksum/bucket private/readiness; RN URL localhost còn WARN, adb chưa có thiết bị.
+Chuẩn bị hướng dẫn không đóng các gate bên dưới.
+
 ## Gate 1 — Rà soát và sửa lỗi
 
 - [x] Chốt hiện trạng F2h/contract 0.20.0, 17 migration; phân biệt API và UI.
