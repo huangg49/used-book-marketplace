@@ -109,7 +109,8 @@ và tiêu chí riêng; việc lập kế hoạch không đóng gate hoặc mở 
   migrate DB riêng, build/test; ghi commit/tag/hash và kết quả vào tài liệu.
 - [x] Ghi việc còn mở theo vai trò trong START_HERE. Team chưa chỉ định tên người
   nhận từng vai trò. Chủ dự án đã yêu cầu push nhánh bàn giao; trạng thái nguồn
-  và cách xác minh remote ở SESSION_STATE. Chưa merge/release; PR không tự được duyệt.
+  và cách xác minh remote ở SESSION_STATE. Chủ dự án cho phép tích hợp trực tiếp
+  mốc nguồn này vào main; không đồng nghĩa release hoặc independent review đã qua.
 
 Không stage tất cả mù quáng hoặc sửa/xóa migration cũ để gọn lịch sử. Không trộn phần
 nghiệp vụ mới vào commit polish. Snapshot đã bao gồm baseline trước đây chưa được

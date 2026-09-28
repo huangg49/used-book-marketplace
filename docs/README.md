@@ -13,6 +13,7 @@
 - [Điểm lưu hiện tại và blocker Android](handoff/SESSION_STATE.md)
 - [Kế hoạch tiếp nhận: UI, native, Order hoàn chỉnh, Exchange, điểm và đấu giá](handoff/CONTINUATION_PLAN.md)
 - [Prompt bắt đầu và checklist cuối phiên cho người tiếp nhận](handoff/NEXT_SESSION_PROMPT.md)
+- [Bốn file env và cấu hình cần thay trên máy người nhận](handoff/ENV_HANDOFF.md)
 - [Review độc lập: đường đọc code, invariant và phiếu nhận xét](handoff/INDEPENDENT_REVIEW.md)
 
 - [Delivery overdue and Buyer non-receipt intake](features/DELIVERY_OVERDUE_REPORT.md)

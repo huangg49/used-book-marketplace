@@ -13,8 +13,8 @@ SRS1.1, phụ lục TP.HCM và ADR là nguồn nghiệp vụ; kế hoạch này 
 Ban đầu mọi gói dưới đây là TODO; A00 có blocker runtime đã ghi, chưa có fix.
 
 Mỗi gói là một hoặc vài PR nhỏ, không ghép toàn roadmap vào một lần code/merge.
-Dùng nhánh `codex/<task-id>-<topic>` từ nhánh tích hợp mà team đã xác nhận. Khi
-chưa merge bàn giao, nhánh nguồn là `codex/handoff-roadmap`, không phải main cũ.
+Dùng nhánh `codex/<task-id>-<topic>` từ main sau khi nhận mốc bàn giao được chủ dự
+án cho phép tích hợp. Nhánh `codex/handoff-roadmap` giữ lịch sử chuẩn bị bàn giao.
 Không cherry-pick riêng commit UI rồi bỏ baseline backend phía dưới.
 
 Một gói kết thúc khi code + dữ liệu/contract cần thiết + kiểm thử + tài liệu +

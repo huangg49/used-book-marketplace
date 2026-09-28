@@ -220,8 +220,10 @@ và [bằng chứng native từng ca](NATIVE_RUN_2026_09_28.md). Bundle local:
 `.tmp/latlai-handoff-roadmap.bundle` (checksum `.sha256` bên cạnh). Người nhận:
 `git clone --branch codex/handoff-roadmap ./latlai-handoff-roadmap.bundle latlai`.
 Không kèm `.env`, DB hoặc APK; các bundle/checkpoint trước giữ nguyên. Đây chưa là
-release đã nghiệm thu native. Khi nhận qua GitHub, dùng nhánh `codex/handoff-roadmap`
-và xác minh SHA bằng `git ls-remote` theo SESSION_STATE; không lấy main cũ làm mốc mới.
+release đã nghiệm thu native. Chủ dự án yêu cầu tích hợp mốc bàn giao vào main;
+khi nhận qua GitHub, clone main và xác minh SHA bằng `git ls-remote` theo SESSION_STATE.
+Bundle trên là bản dự phòng của mốc roadmap trước lần tích hợp này; dùng GitHub main
+để nhận prompt cuốn chiếu và [hướng dẫn env](ENV_HANDOFF.md) mới nhất.
 
 Nguồn F2h và lát cắt UI đã có checkpoint `beea372`. Không làm lại những gate đã có
 bằng chứng nếu code liên quan không đổi. Chia việc còn lại theo vai trò:

@@ -7,17 +7,22 @@ nhận dùng Claude. **Chỉ bàn giao nguồn; chưa chứng nhận release hay
 Kế hoạch: [CONTINUATION_PLAN](CONTINUATION_PLAN.md). Prompt:
 [NEXT_SESSION_PROMPT](NEXT_SESSION_PROMPT.md). Setup: [START_HERE](START_HERE.md).
 
-- Nhánh bàn giao: `codex/handoff-roadmap` trên remote
+- Chủ dự án yêu cầu tích hợp nhánh `codex/handoff-roadmap` vào `main` để bàn giao;
+  người nhận dùng `main` trên remote
   `https://github.com/huangg49/used-book-marketplace.git`.
 - Mốc code UI mới nhất: `7211236`; báo cáo lỗi mở lại cuối: `3808b57`.
 - Baseline nguồn F2h: `beea372`; checkpoint cũ
   `checkpoint/f2h-handoff-2026-09-28` được giữ nguyên.
 - Commit của tài liệu bàn giao: lấy bằng `git log -1`; xác minh SHA nhánh remote
   theo lệnh dưới. Không suy ra đã push chỉ từ việc file này tồn tại.
-- Không merge/main, force push, sửa tag cũ hoặc xuất `.env`/DB/APK cho người nhận.
+- Chủ dự án cho phép merge trực tiếp mốc bàn giao này, thay quy trình PR/reviewer
+  thông thường cho đúng lần tích hợp này. Không ghi đó là independent review hoặc
+  release acceptance; các gate và review cho thay đổi nghiệp vụ tiếp theo vẫn còn.
+- Không force push/sửa tag cũ. Chủ dự án chuyển env qua kênh riêng theo
+  [ENV_HANDOFF](ENV_HANDOFF.md), không commit/export secret vào gói Git.
 
 ```sh
-git ls-remote origin refs/heads/codex/handoff-roadmap
+git ls-remote origin refs/heads/main
 git rev-parse HEAD
 ```
 

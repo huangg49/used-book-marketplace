@@ -3,7 +3,7 @@
 Clone trước (không chép `.env` qua Git):
 
 ```sh
-git clone --branch codex/handoff-roadmap https://github.com/huangg49/used-book-marketplace.git
+git clone --branch main https://github.com/huangg49/used-book-marketplace.git
 cd used-book-marketplace
 git log -5 --oneline
 git status --short
@@ -15,26 +15,73 @@ Lưu lại công việc rồi tạo checkout riêng theo công cụ/môi trườ
 Copy đoạn dưới vào phiên đầu:
 
 ```text
-Tiếp nhận dự án Lật lại trên nhánh codex/handoff-roadmap. Đọc CLAUDE.md và AGENTS.md,
-docs/handoff/SESSION_STATE.md, START_HERE.md, READINESS.md, CONTINUATION_PLAN.md.
+Bạn tiếp nhận dự án Lật lại từ main và triển khai cuốn chiếu với tiêu chuẩn cao
+nhất. Hãy thực hiện công việc, không dừng ở đề xuất kế hoạch hoặc hỏi “có làm tiếp
+không?” sau mỗi bước thông thường. Không cần hoàn thành toàn roadmap trong một
+phiên; cần hoàn thành từng gói đúng dependency, có bằng chứng và điểm lưu rõ ràng.
 
-Mục tiêu: tiếp tục kế hoạch theo đúng dependency, ưu tiên React Native đẹp và dễ
-dùng, giữ bản sắc Lật lại. Backend hiện F2h/OpenAPI0.20.0; không mở rộng nghiệp vụ
-trước các gate bàn giao. Dùng SRS1.1 và phụ lục TP.HCM làm chuẩn, không tự đổi policy.
+1. Khởi động bằng git status/log và đọc CLAUDE.md, AGENTS.md, docs/handoff/
+SESSION_STATE.md, START_HERE.md, READINESS.md, CONTINUATION_PLAN.md, ENV_HANDOFF.md.
+Đối chiếu tài liệu với source và trạng thái thực tế, giữ nguyên công việc local
+của người khác. Chỉ đọc thêm ADR/feature report/test cần cho gói đang làm.
 
-Việc đầu: xác minh source/môi trường và chẩn đoán A00 (Android splash ở lần mở lại
-cuối), sau đó U02/U03 form đăng sách/địa chỉ và các ca native còn mở. Giữ công việc
-hiện có; không làm lại gate đã đóng nếu code/rủi ro liên quan không đổi.
+2. Mục tiêu ưu tiên: React Native thật đẹp, dễ thao tác, mang bản sắc Lật lại;
+cùng lúc giữ đúng nghiệp vụ, dữ liệu, tiền và quyền. Backend đang F2h/OpenAPI
+0.20.0. TP.HCM, direct shipping còn giữ, hai điểm mô phỏng, tiền/carrier mô phỏng.
+Dùng SRS1.1 và LOCAL_HANDOVER_AUCTION làm chuẩn; không tự thay policy hoặc coi
+workflow planned là implemented. Merge nguồn vào main không có nghĩa đã nghiệm
+thu native, đóng review hoặc hoàn tất mua sách.
 
-Vận hành theo từng gói có checkpoint: khảo sát → thực hiện → kiểm thử phù hợp →
-ghi evidence/giới hạn → commit. Làm tiếp gói độc lập được phép nếu task đang chặn.
-Không giả native PASS bằng web export, không gọi fixture là dữ liệu thật, không
-tự ký human review. Không reset DB, sửa migration cũ, seed lại mật khẩu, xóa work
-hoặc in secrets. Không bypass chặn công cụ đang có hiệu lực.
+3. Chọn gói đầu tiên có dependency đã đáp ứng. Trước hết kiểm A00 Android splash
+từ lần mở lại cuối: xác minh cấu hình/Metro/bundle/font/splash trước khi sửa.
+Nếu lỗi chỉ ở máy cũ thì chứng minh bằng cold start/reopen/deep link trên máy này,
+không giả tạo fix. Tiếp tục U01–U06, ưu tiên form đăng sách U02 và địa chỉ U03,
+đóng các ca Q/native còn mở. Đừng sửa lại thứ đã PASS khi không có thay đổi liên quan.
 
-Mỗi lần sắp kết thúc cập nhật SESSION_STATE với ID gói, commit, test thực chạy,
-file liên quan, blocker và đúng bước tiếp theo. Giữ nhánh main; không force push.
-Đọc kỹ CONTINUATION_PLAN trước khi chọn các gói giao dịch/Exchange/ViaPoint/auction.
+4. Chu trình cho mỗi gói: khảo sát hiện trạng → nêu vấn đề và invariant cần giữ
+ngắn gọn → triển khai một lát cắt hoàn chỉnh → chạy focused tests và gate liên
+quan → xem UI render/thao tác thật nếu là UI → sửa lỗi → cập nhật evidence và
+tài liệu → commit trên nhánh feature → chọn gói tiếp theo được mở. Không kết thúc
+phiên chỉ vì xong một bước nhỏ nếu còn việc độc lập, đủ thông tin và đủ tài nguyên.
+Không tự push/merge/deploy trong các phiên sau nếu chưa có ủy quyền cho hành động đó.
+
+5. UI: đọc UI_CODING_RULES, UI_COMPONENTS và brand v1.1. Dùng core/ui, bố cục
+mobile, vùng chạm/keyboard/safe area, ảnh và nội dung có ý nghĩa. Giữ nền giấy,
+chữ rừng, Lora/Be Vietnam Pro, dấu cam tiết chế. Không card/gradient vô cớ, rating
+giả, trust badge giả, nút chết hoặc khẩu hiệu che tác vụ. Luôn xem loading/empty/
+error/offline, tên dài, ảnh thiếu, chữ lớn, Back, focus và nội dung nhập sau lỗi.
+Fixture có nhãn và tách riêng; cải tiến presentation phải áp dụng được vào app thật.
+
+6. Logic: giữ session owner/transport/TanStack Query hiện có. Không thêm token
+store. Giữ expectedVersion, key/body khi retry mất ack, dirty guard và cache theo
+user. Contract-first, generate types; migration mới có review; transaction,
+lock order và shared command executor giữ nguyên invariant. Không reset DB,
+db push, sửa migration cũ, seed lại mật khẩu, UPDATE balance hoặc disable test.
+Auth/tiền/transaction phải có negative/race/replay/rollback phù hợp trên DB _test.
+
+7. Sau M1 và các gate, đi tiếp theo CONTINUATION_PLAN: thiết kế Delivered/receipt/
+inspection/claim/settlement → backend hoàn chỉnh → ví/Order read-only, simulator,
+checkout và fulfillment UI/ops → Exchange → ViaPoint → auction. Đọc kỹ dependency
+từng gói; không mở checkout bán hoàn chỉnh khi đường lỗi/tiền/custody còn thiếu.
+Auto auction có trần, không tự tăng vô hạn. Ưu tiên hoàn chỉnh một luồng hơn nhiều
+màn đẹp chưa hoạt động. Mốc main hiện tại không miễn human review cho thay đổi sau.
+
+8. Tự xử lý lựa chọn kỹ thuật thông thường trong phạm vi và ghi tradeoff. Chỉ hỏi
+khi thiếu quyết định nghiệp vụ/quyền truy cập bắt buộc, hành động phá hủy hoặc
+thay đổi dịch vụ/chi phí ngoài phạm vi. Nếu task bị chặn, ghi rõ lý do và chuyển
+sang task độc lập được mở. Không bypass chặn công cụ; không suy PASS từ im lặng.
+Không biến blocker thành làm lại toàn bộ test hoặc viết tài liệu vòng quanh.
+
+9. Bằng chứng phải đúng môi trường: Expo web export không là Android build;
+storage fake không là live Supabase; AI tự review không là reviewer độc lập.
+Không in/commit .env, key, token, request body hoặc PII. File env nhận riêng phải
+đặt đúng chỗ, chỉnh URL/port theo máy mới; chỉ báo tên biến thiếu, không báo giá trị.
+
+10. Cuối mỗi gói và trước khi context/credit thấp: cập nhật SESSION_STATE với ID,
+branch/SHA, file đã đổi, lệnh test thực chạy/kết quả, evidence, giới hạn, working
+tree chưa commit, blocker và đúng một bước tiếp theo. Khi tiếp tục phiên mới,
+đọc điểm lưu rồi đi tiếp; không bắt đầu lại từ đầu. Báo kết quả ngắn gọn, nói rõ
+đã làm/chưa làm, không tuyên bố toàn bộ dự án production-ready từ test xanh.
 ```
 
 Không cần đưa toàn bộ lịch sử chat vào agent. Mỗi task chuyên biệt đọc tiếp ADR,
@@ -60,6 +107,7 @@ Process cần giữ/dừng, chỉ metadata không secrets:
 
 - Link nhánh bàn giao và tài liệu này; giao vai trò owner/reviewer cho team.
 - Thông tin môi trường cần thiết qua kênh riêng: không gửi key trong prompt hoặc commit.
+  Xem danh sách chính xác và cách thay cấu hình máy ở [ENV_HANDOFF](ENV_HANDOFF.md).
 - Phản hồi UI bằng màn cụ thể/hành vi cụ thể. Các lựa chọn TP.HCM, giữ ship,
   hai điểm mô phỏng, RN trước và tiền/carrier mô phỏng đã chốt; không hỏi lại từ đầu.
 
