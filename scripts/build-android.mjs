@@ -41,7 +41,8 @@ if (process.argv.includes('--emulator')) args.push('-PreactNativeArchitectures=x
 const android = resolve(app, 'android');
 if (process.platform === 'win32') {
   // Fixed executable/arguments only; no user-controlled values are interpolated into shell code.
-  run(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', `gradlew.bat ${args.join(' ')}`], android);
+  // Explicit .\ path: cmd skips the current directory when NoDefaultCurrentDirectoryInExePath is set.
+  run(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', `.\\gradlew.bat ${args.join(' ')}`], android);
 } else run('./gradlew', args, android);
 console.log('Debug APK: apps/mobile-react-native/android/app/build/outputs/apk/debug/app-debug.apk');
 console.log('Debug builds need Metro. This is not a release/store-signed artifact or a device test.');

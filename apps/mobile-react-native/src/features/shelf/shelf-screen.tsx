@@ -15,6 +15,7 @@ import {
   SearchField,
   StatePanel,
   colors,
+  formatVnd,
   space,
   presentError,
 } from "../../core/ui";
@@ -153,10 +154,10 @@ export function ShelfScreen() {
             <AppText key={min} kind="small" color={colors.muted}>
               {label}:{" "}
               {applied[min]
-                ? `từ ${Number(applied[min]).toLocaleString("vi-VN")} ₫`
+                ? `từ ${formatVnd(Number(applied[min]))}`
                 : "không giới hạn dưới"}
               {applied[max]
-                ? ` đến ${Number(applied[max]).toLocaleString("vi-VN")} ₫`
+                ? ` đến ${formatVnd(Number(applied[max]))}`
                 : ", không giới hạn trên"}
             </AppText>
           ) : null,

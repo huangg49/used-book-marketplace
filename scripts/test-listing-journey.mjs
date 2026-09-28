@@ -22,7 +22,12 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .getByRole("button", { name: "Chọn đầu sách này", exact: true })
     .first()
     .click();
-  await click("Tiếp tục · Ảnh và tình trạng");
+  // Progress reflects entered data, not visited steps.
+  await p.getByRole("tab", { name: "Bước 1: Đầu sách, đã đủ" }).waitFor();
+  await p
+    .getByRole("tab", { name: "Bước 2: Ảnh và tình trạng, còn thiếu" })
+    .waitFor();
+  await click("Tiếp tục");
   const chooser = p.waitForEvent("filechooser");
   await click("Chọn ảnh từ thư viện");
   await (
@@ -34,7 +39,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   });
   await p
     .getByText(
-      "Ảnh đã tải lên và đang được kiểm tra. Lưu bản nháp để giữ lựa chọn ảnh.",
+      "Ảnh đã tải lên và đang được kiểm tra. Lưu nháp để giữ lựa chọn ảnh.",
       { exact: true },
     )
     .waitFor();
@@ -61,7 +66,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     await fill(field, value);
   // maxLength is UTF-16 but API limits Unicode code points, including emoji.
   await fill("Vài dòng gửi người đọc sau", "📚".repeat(5001));
-  await click("Lưu bản nháp");
+  await click("Lưu nháp");
   await p.getByText("Nhập tối đa 5.000 ký tự.", { exact: true }).waitFor();
   const incomplete = await fixture.api(
     `/me/listings/${id}`,
@@ -69,7 +74,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   );
   assert.equal(incomplete.currentRevision.content.description, "");
   await fill("Vài dòng gửi người đọc sau", "📚".repeat(5000));
-  await click("Lưu bản nháp");
+  await click("Lưu nháp");
   await p
     .getByText("Bản nháp đã lưu. Bạn có thể hoàn thiện sau.", { exact: true })
     .waitFor();
@@ -103,7 +108,10 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   await click("Có, còn đọc rõ");
   await click("Có — tôi đã mô tả trang thiếu ở trên");
   await click("Không thiếu nội dung trọng yếu");
-  await click("Tiếp tục · Bán hoặc đổi");
+  await p
+    .getByRole("tab", { name: "Bước 2: Ảnh và tình trạng, đã đủ" })
+    .waitFor();
+  await click("Tiếp tục");
   await click("Bán hoặc đổi");
   await fill("Giá bán (đồng)", "10000");
   await fill("Giá trị đổi (đồng)", "1000000");
@@ -134,7 +142,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     }
     return route.continue();
   });
-  await click("Lưu bản nháp");
+  await click("Lưu nháp");
   await click("Thử lại yêu cầu vừa gửi");
   assert.deepEqual(originRequests[0], originRequests[1]);
   await p.unroute(`**/api/v1/listings/${id}/draft`);
@@ -142,15 +150,15 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .getByText("Bản nháp đã lưu. Bạn có thể hoàn thiện sau.", { exact: true })
     .waitFor();
   await click("Về sách của tôi");
-  await click("Xem sách 1");
-  await click("Tiếp tục · Ảnh và tình trạng");
+  await click("Hoàn thiện sách 1");
+  await click("Tiếp tục");
   assert.equal(
     await p
       .getByLabel("Vài dòng gửi người đọc sau", { exact: true })
       .inputValue(),
     literal,
   );
-  await click("Tiếp tục · Bán hoặc đổi");
+  await click("Tiếp tục");
   assert.equal(
     await p.getByLabel("Giá bán (đồng)", { exact: true }).inputValue(),
     "10000",
@@ -184,7 +192,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .getByText("Nơi gửi đã được sửa hoặc xóa.", { exact: false })
     .waitFor();
   await fill("Giá bán (đồng)", "12000");
-  await click("Lưu bản nháp");
+  await click("Lưu nháp");
   await click("Kiểm tra trạng thái mới nhất");
   assert.equal(
     await p.getByLabel("Giá bán (đồng)", { exact: true }).inputValue(),
@@ -212,7 +220,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     true,
   );
   await p.setViewportSize({ width: 390, height: 844 });
-  await click("Tiếp tục · Kiểm tra");
+  await click("Tiếp tục");
   await p.screenshot({ path: path.join(artifacts, "editor-review-390.png") });
   const declaration = () =>
     p
@@ -244,14 +252,14 @@ export async function listingJourney(p, fixture, admin, artifacts) {
       { exact: true },
     )
     .waitFor();
-  await click("Về bước trước");
-  await click("Về bước trước");
+  // Step tabs replace the stacked back buttons and keep the entered data.
+  await p.getByRole("tab", { name: /^Bước 2: Ảnh và tình trạng/ }).click();
   await fill(
     "Ruột sách và trang thiếu",
     "Trang trắng sau cùng bị rời, nội dung từ trang 1 đến 120 vẫn đủ.",
   );
-  await click("Tiếp tục · Bán hoặc đổi");
-  await click("Tiếp tục · Kiểm tra");
+  await click("Tiếp tục");
+  await click("Tiếp tục");
   await declaration();
   await click("Lưu và gửi duyệt");
   await p

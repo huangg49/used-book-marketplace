@@ -72,3 +72,16 @@ Nguồn bổ sung được đóng vào `.tmp/latlai-operations-ui-source.bundle`
 Bundle cũ `latlai-f2h-source.bundle` vẫn giữ nguyên và chưa có ba sửa UI trên.
 Kiểm tra clone sạch trong REBUILD áp dụng checkpoint cũ; phần bổ sung này đã qua
 các kiểm tra liên quan ghi trên, chưa lặp toàn bộ clean-clone/native acceptance.
+
+## Bổ sung 29/09/2026 — mở lại hồ sơ hiển thị bản cũ
+
+Phát hiện khi chạy N17/N18 native: reviewer đã quyết định một bài, Member gửi bản sửa,
+reviewer quay lại hàng chờ (thấy “Bản gửi 3 · Chờ duyệt”) nhưng mở hồ sơ vẫn thấy
+bản 2 “Đã duyệt”, không có nút duyệt. Nguyên nhân: query chi tiết `staleTime: Infinity`
+giữ cache sau khi rời màn. Sửa bằng `gcTime: 0` trong `detail.tsx`: vẫn không refetch
+khi hồ sơ đang mở (ADR 0010), nhưng mở lại luôn tải bản hiện hành.
+
+Bằng chứng: `apps/admin-web/tests/browser.mjs` thêm ca từ chối → Member sửa/gửi lại qua
+API → mở lại cùng phiên phải thấy “Chờ duyệt” và nội dung mới rồi duyệt. Chạy trên code
+cũ: **FAIL** (không có form quyết định); sau sửa: **PASS**. Admin lint/typecheck, 13 unit
+PASS. Kiểm tay trên DB local: mở lại hiển thị bản gửi 4, 95.000 ₫, có nút duyệt.

@@ -45,6 +45,7 @@ khác cờ song song. Với bản xuất sẵn, từ root chạy `node scripts/p
 | `Sheet` | Modal có tên, safe area, scroll, close, Back/Escape, tránh bàn phím | Visible, onClose, children; `dismissible`, `backdropDismiss`, `footer` không cuộn |
 | `ConfirmDialog` | Câu hỏi có hậu quả, quay lại/confirm, lỗi tại chỗ | Handler, visible/busy/error; không tự đóng khi handler chạy |
 | `Screen` | Safe area, keyboard avoidance, scroll, max width, footer | Nội dung; không lồng trong một Screen khác |
+| `ActionBar` | Nhóm hành động trong `Screen.footer`: chia đều, phụ trái/chính phải, dòng trạng thái tùy chọn | Các `Button` có `key`; feature quyết định busy/disabled và mutation |
 | `BookCover` | Contain, ảnh thiếu/lỗi, phục hồi khi đổi nguồn | Source + nhãn; không có fixture, request hoặc quyền trong component |
 | `BookCondition` | Nhãn tình trạng và hình thức | Chuỗi nghiệp vụ đã ánh xạ |
 | `BookPrice` | Giá bán và giá trị đổi tách biệt, Be Vietnam Pro | Số tiền nguyên không âm; kiểm tra giới hạn nghiệp vụ ở feature/API |
@@ -105,6 +106,13 @@ không tự retry, đăng xuất, điều hướng hay hiện modal. Các hành 
 và session owner quyết định.
 
 ## Mở rộng
+
+Cập nhật 29/09: `Screen.footer` dùng cùng lề ngang và max width với nội dung nên
+nút cuối màn hình thẳng hàng với ô nhập. `ActionBar` gom cặp hành động lặp lại ở
+editor bài đăng và form địa chỉ (lưu/tiếp tục, quay lại/lưu) và giữ chúng trên bàn
+phím; `note` dùng cho trạng thái như “Có thay đổi chưa lưu.”. `/ui` nhóm Nút có ví dụ.
+Không dùng ActionBar cho hơn hai hành động hoặc hành động phá hủy; những thao tác đó
+ở trong nội dung hoặc `ConfirmDialog`.
 
 Cập nhật mobile 28/09: `Sheet.footer` nằm ngoài ScrollView; dùng cho hành động
 chính của bộ lọc. Lỗi áp dụng đặt ngay trên hành động trong footer. Nội dung dài

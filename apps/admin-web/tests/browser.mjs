@@ -240,6 +240,37 @@ try {
   });
   await p.setViewportSize({ width: 1440, height: 1000 });
   await p.addStyleTag({ content: "html{font-size:16px !important}" });
+  // The member resubmits after rejection. Reopening in this session must load the new
+  // revision, not the copy cached at the decision (ADR 0010 bars refetch only while open).
+  const rejected = await fixture.api(
+    `/me/listings/${fixture.listings[1]}`,
+    fixture.member.accessToken,
+  );
+  const corrected = await fixture.api(
+    `/listings/${fixture.listings[1]}/draft`,
+    fixture.member.accessToken,
+    {
+      expectedVersion: rejected.version,
+      content: {
+        ...rejected.currentRevision.content,
+        notes: "Đã bổ sung ảnh rõ phần trang bị gạch chân.",
+      },
+    },
+    "PUT",
+  );
+  await fixture.api(
+    `/listings/${fixture.listings[1]}/submit`,
+    fixture.member.accessToken,
+    { expectedVersion: corrected.version, ownershipDeclared: true },
+  );
+  await openListing(p, 1);
+  await p.locator(".status-label").filter({ hasText: "Chờ duyệt" }).waitFor();
+  await p.getByText("Đã bổ sung ảnh rõ phần trang bị gạch chân.").waitFor();
+  for (const checkbox of await p.getByRole("checkbox").all())
+    await checkbox.check();
+  await click(p, "Duyệt bài đăng");
+  await click(p, "Xác nhận quyết định");
+  await p.locator(".status-label").filter({ hasText: "Đã duyệt" }).waitFor();
   // Two real sessions view the same version. The second must reconcile a 409.
   const second = await page();
   await login(second, `/review/listings/${fixture.listings[2]}`);

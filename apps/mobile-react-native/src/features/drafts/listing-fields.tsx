@@ -1,6 +1,18 @@
 import { View } from "react-native";
 import { AppText, Button, Notice, TextField, space } from "../../core/ui";
 import type { Form, Errors } from "./listing-form";
+// Lets the editor scroll a validation error's field into view.
+export type Anchor = (field: keyof Errors) => (node: View | null) => void;
+const noAnchor: Anchor = () => () => {};
+// Registry of mounted field wrappers; ref callbacks fill it after render.
+export function createAnchors() {
+  const nodes = new Map<keyof Errors, View>();
+  const anchor: Anchor = (field) => (node) => {
+    if (node) nodes.set(field, node);
+    else nodes.delete(field);
+  };
+  return { anchor, get: (field: keyof Errors) => nodes.get(field) };
+}
 export function Choice<T extends string | boolean>({
   title,
   value,
@@ -38,26 +50,30 @@ export function ConditionFields({
   onChange,
   disabled,
   errors,
+  anchor = noAnchor,
 }: {
   form: Form;
   onChange: (next: Form) => void;
   disabled: boolean;
   errors: Errors;
+  anchor?: Anchor;
 }) {
   return (
     <View style={{ gap: space.xl }}>
-      <Choice
-        title="Tình trạng tổng thể"
-        value={form.condition}
-        options={[
-          { value: "LikeNew", label: "Gần như mới" },
-          { value: "Good", label: "Còn tốt" },
-          { value: "Fair", label: "Đã dùng nhiều" },
-        ]}
-        disabled={disabled}
-        error={errors.condition}
-        onChange={(condition) => onChange({ ...form, condition })}
-      />
+      <View ref={anchor("condition")}>
+        <Choice
+          title="Tình trạng tổng thể"
+          value={form.condition}
+          options={[
+            { value: "LikeNew", label: "Gần như mới" },
+            { value: "Good", label: "Còn tốt" },
+            { value: "Fair", label: "Đã dùng nhiều" },
+          ]}
+          disabled={disabled}
+          error={errors.condition}
+          onChange={(condition) => onChange({ ...form, condition })}
+        />
+      </View>
       {(
         [
           {
@@ -87,53 +103,60 @@ export function ConditionFields({
           },
         ] as const
       ).map(({ key, label, hint }) => (
-        <TextField
-          key={key}
-          label={label}
-          hint={hint}
-          multiline
-          // Validate code points on save/submit; UTF-16 maxLength would silently truncate emoji.
-          value={form[key]}
-          editable={!disabled}
-          error={errors[key]}
-          onChangeText={(v) => onChange({ ...form, [key]: v })}
-        />
+        <View key={key} ref={anchor(key)}>
+          <TextField
+            label={label}
+            hint={hint}
+            multiline
+            // Validate code points on save/submit; UTF-16 maxLength would silently truncate emoji.
+            value={form[key]}
+            editable={!disabled}
+            error={errors[key]}
+            onChangeText={(v) => onChange({ ...form, [key]: v })}
+          />
+        </View>
       ))}
-      <Choice
-        title="Nội dung có còn đọc rõ?"
-        value={form.readable}
-        options={[
-          { value: true, label: "Có, còn đọc rõ" },
-          { value: false, label: "Không" },
-        ]}
-        disabled={disabled}
-        error={errors.readable}
-        onChange={(readable) => onChange({ ...form, readable })}
-      />
-      <Choice
-        title="Sách có thiếu trang?"
-        value={form.hasMissingPages}
-        options={[
-          { value: false, label: "Không thiếu trang" },
-          { value: true, label: "Có — tôi đã mô tả trang thiếu ở trên" },
-        ]}
-        disabled={disabled}
-        error={errors.hasMissingPages}
-        onChange={(hasMissingPages) => onChange({ ...form, hasMissingPages })}
-      />
-      <Choice
-        title="Có thiếu phần nội dung trọng yếu?"
-        value={form.missingEssentialContent}
-        options={[
-          { value: false, label: "Không thiếu nội dung trọng yếu" },
-          { value: true, label: "Có thiếu" },
-        ]}
-        disabled={disabled}
-        error={errors.missingEssentialContent}
-        onChange={(missingEssentialContent) =>
-          onChange({ ...form, missingEssentialContent })
-        }
-      />
+      <View ref={anchor("readable")}>
+        <Choice
+          title="Nội dung có còn đọc rõ?"
+          value={form.readable}
+          options={[
+            { value: true, label: "Có, còn đọc rõ" },
+            { value: false, label: "Không" },
+          ]}
+          disabled={disabled}
+          error={errors.readable}
+          onChange={(readable) => onChange({ ...form, readable })}
+        />
+      </View>
+      <View ref={anchor("hasMissingPages")}>
+        <Choice
+          title="Sách có thiếu trang?"
+          value={form.hasMissingPages}
+          options={[
+            { value: false, label: "Không thiếu trang" },
+            { value: true, label: "Có — tôi đã mô tả trang thiếu ở trên" },
+          ]}
+          disabled={disabled}
+          error={errors.hasMissingPages}
+          onChange={(hasMissingPages) => onChange({ ...form, hasMissingPages })}
+        />
+      </View>
+      <View ref={anchor("missingEssentialContent")}>
+        <Choice
+          title="Có thiếu phần nội dung trọng yếu?"
+          value={form.missingEssentialContent}
+          options={[
+            { value: false, label: "Không thiếu nội dung trọng yếu" },
+            { value: true, label: "Có thiếu" },
+          ]}
+          disabled={disabled}
+          error={errors.missingEssentialContent}
+          onChange={(missingEssentialContent) =>
+            onChange({ ...form, missingEssentialContent })
+          }
+        />
+      </View>
     </View>
   );
 }
@@ -142,11 +165,13 @@ export function PricingFields({
   onChange,
   disabled,
   errors,
+  anchor = noAnchor,
 }: {
   form: Form;
   onChange: (next: Form) => void;
   disabled: boolean;
   errors: Errors;
+  anchor?: Anchor;
 }) {
   return (
     <View style={{ gap: space.xl }}>
@@ -154,41 +179,49 @@ export function PricingFields({
         Giá bán và giá trị đổi là hai thông tin riêng. Chọn cách bạn muốn chuyền
         cuốn sách này.
       </AppText>
-      <Choice
-        title="Bạn muốn bán hay đổi?"
-        value={form.mode}
-        options={[
-          { value: "Sale", label: "Bán sách" },
-          { value: "Exchange", label: "Đổi sách" },
-          { value: "Both", label: "Bán hoặc đổi" },
-        ]}
-        disabled={disabled}
-        error={errors.mode}
-        onChange={(mode) => onChange({ ...form, mode })}
-      />
-      {form.mode === "Sale" || form.mode === "Both" ? (
-        <TextField
-          label="Giá bán (đồng)"
-          hint="Từ 10.000 đến 1.000.000 đồng. Ví dụ: 125000."
-          keyboardType="number-pad"
-          value={form.salePrice}
-          editable={!disabled}
-          onChangeText={(salePrice) => onChange({ ...form, salePrice })}
-          error={errors.salePrice}
-          maxLength={12}
+      <View ref={anchor("mode")}>
+        <Choice
+          title="Bạn muốn bán hay đổi?"
+          value={form.mode}
+          options={[
+            { value: "Sale", label: "Bán sách" },
+            { value: "Exchange", label: "Đổi sách" },
+            { value: "Both", label: "Bán hoặc đổi" },
+          ]}
+          disabled={disabled}
+          error={errors.mode}
+          onChange={(mode) => onChange({ ...form, mode })}
         />
+      </View>
+      {form.mode === "Sale" || form.mode === "Both" ? (
+        <View ref={anchor("salePrice")}>
+          <TextField
+            label="Giá bán (đồng)"
+            hint="Từ 10.000 đến 1.000.000 đồng. Ví dụ: 125000."
+            keyboardType="number-pad"
+            value={form.salePrice}
+            editable={!disabled}
+            onChangeText={(salePrice) => onChange({ ...form, salePrice })}
+            error={errors.salePrice}
+            maxLength={12}
+          />
+        </View>
       ) : null}
       {form.mode === "Exchange" || form.mode === "Both" ? (
-        <TextField
-          label="Giá trị đổi (đồng)"
-          hint="Mức giá trị để đối chiếu khi đổi sách; từ 10.000 đến 1.000.000 đồng."
-          keyboardType="number-pad"
-          value={form.exchangeValue}
-          editable={!disabled}
-          onChangeText={(exchangeValue) => onChange({ ...form, exchangeValue })}
-          error={errors.exchangeValue}
-          maxLength={12}
-        />
+        <View ref={anchor("exchangeValue")}>
+          <TextField
+            label="Giá trị đổi (đồng)"
+            hint="Mức giá trị để đối chiếu khi đổi sách; từ 10.000 đến 1.000.000 đồng."
+            keyboardType="number-pad"
+            value={form.exchangeValue}
+            editable={!disabled}
+            onChangeText={(exchangeValue) =>
+              onChange({ ...form, exchangeValue })
+            }
+            error={errors.exchangeValue}
+            maxLength={12}
+          />
+        </View>
       ) : null}
     </View>
   );

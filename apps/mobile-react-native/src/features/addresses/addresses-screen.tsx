@@ -6,11 +6,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
 import { useSession } from "../../core/session/session-provider";
 import {
+  ActionBar,
   AppText,
   BackAction,
   Button,
   Checkbox,
   ConfirmDialog,
+  Icon,
   Notice,
   Screen,
   StatePanel,
@@ -179,8 +181,27 @@ export function AddressesScreen() {
   }
   const locked = busy || !!intent,
     readError = book.error || areas.error;
+  // Save and leave stay above the keyboard while the form is open.
+  const footer = editor ? (
+    <ActionBar>
+      <Button
+        key="leave"
+        title="Quay lại sổ địa chỉ"
+        secondary
+        disabled={busy}
+        onPress={discard}
+      />
+      <Button
+        key="save"
+        title="Lưu địa chỉ"
+        busy={busy}
+        disabled={!!intent || !!readError}
+        onPress={save}
+      />
+    </ActionBar>
+  ) : undefined;
   return (
-    <Screen scrollRef={scroll}>
+    <Screen scrollRef={scroll} footer={footer}>
       <BackAction
         title="Quay lại"
         disabled={busy}
@@ -194,17 +215,23 @@ export function AddressesScreen() {
           NƠI SÁCH ĐƯỢC CHUYỀN TỚI
         </AppText>
         <AppText kind="title" color={colors.forest} accessibilityRole="header">
-          Sổ địa chỉ
+          {editor
+            ? editor.id
+              ? "Chỉnh sửa địa chỉ"
+              : "Thêm địa chỉ"
+            : "Sổ địa chỉ"}
         </AppText>
         <AppText color={colors.muted}>
           Địa chỉ được lưu riêng. Chỉnh sửa không đổi thông tin đã chốt trong
           giao dịch.
         </AppText>
       </View>
-      <Notice tone="info">
-        Demo tại TP.HCM. Khu vực A/B là mô phỏng, không phải phường/xã chính
-        thức. Chưa mở giao hàng.
-      </Notice>
+      {!editor ? (
+        <Notice tone="info">
+          Demo tại TP.HCM. Khu vực A/B là mô phỏng, không phải phường/xã chính
+          thức. Chưa mở giao hàng.
+        </Notice>
+      ) : null}
       {success && !editor ? <Notice tone="success">{success}</Notice> : null}
       {error && !deleting ? <Notice tone="error">{error}</Notice> : null}
       {intent && !deleting ? (
@@ -257,87 +284,82 @@ export function AddressesScreen() {
       ) : null}
       {editor ? (
         <>
-          <AppText kind="heading">
-            {editor.id ? "Chỉnh sửa địa chỉ" : "Thêm địa chỉ"}
-          </AppText>
-          <TextField
-            label="Tên người nhận"
-            required
-            autoComplete="name"
-            value={editor.value.recipientName}
-            editable={!locked}
-            error={errors.recipientName}
-            onChangeText={(v) => editValue("recipientName", v)}
-          />
-          <TextField
-            label="Số điện thoại"
-            required
-            keyboardType="phone-pad"
-            autoComplete="tel"
-            hint="10 chữ số, bắt đầu bằng 0."
-            value={editor.value.phone}
-            editable={!locked}
-            error={errors.phone}
-            onChangeText={(v) => editValue("phone", v)}
-          />
-          <AppText kind="bold">Vùng phục vụ: TP.HCM</AppText>
-          <AppText kind="bold">Khu vực demo</AppText>
-          {areas.data?.localities.map((l) => (
-            <Button
-              key={l.code}
-              secondary
-              selected={editor.value.localityCode === l.code}
-              title={`${editor.value.localityCode === l.code ? "Đã chọn: " : ""}${l.label}`}
-              disabled={locked}
-              onPress={() => editValue("localityCode", l.code)}
+          <Group title="NGƯỜI NHẬN">
+            <TextField
+              label="Tên người nhận"
+              required
+              autoComplete="name"
+              value={editor.value.recipientName}
+              editable={!locked}
+              error={errors.recipientName}
+              onChangeText={(v) => editValue("recipientName", v)}
             />
-          ))}
-          {errors.localityCode ? (
-            <Notice tone="error">{errors.localityCode}</Notice>
-          ) : null}
-          <TextField
-            label="Địa chỉ chi tiết"
-            required
-            multiline
-            hint="Số nhà, đường và chỉ dẫn cần thiết. Dùng dữ liệu thử trong bản demo."
-            value={editor.value.detail}
-            editable={!locked}
-            error={errors.detail}
-            onChangeText={(v) => editValue("detail", v)}
-          />
-          <Checkbox
-            title="Đặt làm địa chỉ mặc định"
-            checked={editor.makeDefault}
-            disabled={
-              locked ||
-              !!book.data?.items.find((i) => i.id === editor.id)?.isDefault
-            }
-            onPress={() =>
-              setEditor({ ...editor, makeDefault: !editor.makeDefault })
-            }
-          />
-          <AppText kind="small">
-            Địa chỉ đầu tiên tự trở thành mặc định. Muốn đổi mặc định, chọn một
-            địa chỉ khác trong sổ.
-          </AppText>
-          <Button
-            title="Lưu địa chỉ"
-            busy={busy}
-            disabled={!!intent || !!readError}
-            onPress={save}
-          />
-          <Button
-            title="Quay lại sổ địa chỉ"
-            secondary
-            disabled={busy}
-            onPress={discard}
-          />
+            <TextField
+              label="Số điện thoại"
+              required
+              keyboardType="phone-pad"
+              autoComplete="tel"
+              hint="10 chữ số, bắt đầu bằng 0."
+              value={editor.value.phone}
+              editable={!locked}
+              error={errors.phone}
+              onChangeText={(v) => editValue("phone", v)}
+            />
+          </Group>
+          <Group title="KHU VỰC">
+            <AppText kind="bold">Vùng phục vụ: TP.HCM</AppText>
+            <AppText kind="small" color={colors.muted}>
+              Khu vực A/B là mô phỏng cho bản demo, không phải phường/xã chính
+              thức và không phải điểm giao sách.
+            </AppText>
+            {areas.data?.localities.map((l) => (
+              <Button
+                key={l.code}
+                secondary
+                selected={editor.value.localityCode === l.code}
+                title={`${editor.value.localityCode === l.code ? "Đã chọn: " : ""}${l.label}`}
+                disabled={locked}
+                onPress={() => editValue("localityCode", l.code)}
+              />
+            ))}
+            {errors.localityCode ? (
+              <Notice tone="error">{errors.localityCode}</Notice>
+            ) : null}
+          </Group>
+          <Group title="ĐỊA CHỈ">
+            <TextField
+              label="Địa chỉ chi tiết"
+              required
+              multiline
+              hint="Số nhà, đường và chỉ dẫn cần thiết. Dùng dữ liệu thử trong bản demo."
+              value={editor.value.detail}
+              editable={!locked}
+              error={errors.detail}
+              onChangeText={(v) => editValue("detail", v)}
+            />
+            <Checkbox
+              title="Đặt làm địa chỉ mặc định"
+              checked={editor.makeDefault}
+              disabled={
+                locked ||
+                !!book.data?.items.find((i) => i.id === editor.id)?.isDefault
+              }
+              onPress={() =>
+                setEditor({ ...editor, makeDefault: !editor.makeDefault })
+              }
+            />
+            <AppText kind="small">
+              Địa chỉ đầu tiên tự trở thành mặc định. Muốn đổi mặc định, chọn
+              một địa chỉ khác trong sổ.
+            </AppText>
+          </Group>
         </>
       ) : book.data ? (
         <>
           <AppText kind="small">{book.data.items.length}/10 địa chỉ</AppText>
           {!book.data.items.length ? (
             <StatePanel
+              icon="pin"
               title="Chưa có địa chỉ nào"
               message="Lưu nơi gửi hoặc nhận để chuẩn bị cho những lần chuyền sách."
             />
@@ -350,12 +372,35 @@ export function AddressesScreen() {
                 borderTopWidth: 1,
                 borderColor: colors.rule,
                 paddingTop: space.xl,
+                // The default address carries a visible rule and text, not colour alone.
+                ...(item.isDefault
+                  ? {
+                      borderLeftWidth: 3,
+                      borderLeftColor: colors.forest,
+                      paddingLeft: space.md,
+                    }
+                  : null),
               }}
             >
-              <AppText kind="label" color={colors.rustText}>
-                ĐỊA CHỈ {index + 1}
-                {item.isDefault ? " · MẶC ĐỊNH" : ""}
-              </AppText>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: space.xs,
+                }}
+              >
+                {item.isDefault ? (
+                  <Icon name="pin" size={16} filled color={colors.forest} />
+                ) : null}
+                <AppText
+                  kind="label"
+                  color={item.isDefault ? colors.forest : colors.rustText}
+                  style={{ flexShrink: 1 }}
+                >
+                  ĐỊA CHỈ {index + 1}
+                  {item.isDefault ? " · MẶC ĐỊNH" : ""}
+                </AppText>
+              </View>
               <AppText kind="heading">{item.recipientName}</AppText>
               <AppText>{item.phone}</AppText>
               <AppText>{item.detail}</AppText>
@@ -364,12 +409,28 @@ export function AddressesScreen() {
                   (l) => l.code === item.localityCode,
                 )?.label ?? item.localityCode}
               </AppText>
-              <Button
-                title={`Sửa địa chỉ ${index + 1}`}
-                secondary
-                disabled={locked || !!readError}
-                onPress={() => begin(item)}
-              />
+              <View style={{ flexDirection: "row", gap: space.sm }}>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title={`Sửa địa chỉ\u00a0${index + 1}`}
+                    secondary
+                    disabled={locked || !!readError}
+                    onPress={() => begin(item)}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  {/* Outlined in the list; the confirmation carries the destructive action. */}
+                  <Button
+                    title={`Xóa địa chỉ\u00a0${index + 1}`}
+                    secondary
+                    disabled={locked || !!readError}
+                    onPress={() => {
+                      setError("");
+                      setDeleting(item);
+                    }}
+                  />
+                </View>
+              </View>
               {!item.isDefault ? (
                 <Button
                   title={`Đặt địa chỉ ${index + 1} làm mặc định`}
@@ -382,16 +443,6 @@ export function AddressesScreen() {
                   }
                 />
               ) : null}
-              <Button
-                title={`Xóa địa chỉ ${index + 1}`}
-                secondary
-                destructive
-                disabled={locked || !!readError}
-                onPress={() => {
-                  setError("");
-                  setDeleting(item);
-                }}
-              />
             </View>
           ))}
           <Button
@@ -453,5 +504,25 @@ export function AddressesScreen() {
         }}
       />
     </Screen>
+  );
+}
+function Group({
+  title,
+  children,
+}: React.PropsWithChildren<{ title: string }>) {
+  return (
+    <View
+      style={{
+        gap: space.md,
+        paddingTop: space.lg,
+        borderTopWidth: 1,
+        borderColor: colors.rule,
+      }}
+    >
+      <AppText kind="label" color={colors.rustText} accessibilityRole="header">
+        {title}
+      </AppText>
+      {children}
+    </View>
   );
 }

@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { View, type ScrollView } from "react-native";
 import { Link } from "expo-router";
 import {
+  ActionBar,
   AppText,
   ActionRow,
   BackAction,
@@ -22,6 +23,7 @@ import {
   TextScale,
   colors,
   layout,
+  space,
 } from "../../core/ui";
 
 const sections = [
@@ -131,6 +133,33 @@ export function UiCatalogScreen() {
                 setNotice("Đây là thao tác mẫu, chưa gửi dữ liệu.")
               }
             />
+            <AppText kind="bold">Thanh hành động cuối màn hình</AppText>
+            <View
+              style={{
+                borderTopWidth: 1,
+                borderColor: colors.rule,
+                paddingTop: space.lg,
+              }}
+            >
+              <ActionBar note={busy ? undefined : "Có thay đổi chưa lưu."}>
+                <Button
+                  key="save"
+                  secondary
+                  title="Lưu nháp"
+                  onPress={() => setNotice("Đã lưu mẫu, chưa gửi dữ liệu.")}
+                />
+                <Button
+                  key="next"
+                  title="Tiếp tục"
+                  busy={busy}
+                  onPress={() => setNotice("Chuyển bước mẫu.")}
+                />
+              </ActionBar>
+            </View>
+            <AppText kind="small" color={colors.muted}>
+              Dùng trong Screen.footer: hành động phụ bên trái, chính bên phải,
+              luôn nằm trên bàn phím.
+            </AppText>
             <View style={layout.row}>
               <IconButton
                 name="bookmark"

@@ -38,7 +38,9 @@ After a receipt, retry performs GET only. Definitive 400/403/404/409/422 respons
 stop writes; the reviewer must read current state before starting another review.
 No automatic mutation retry or silent version advancement is permitted.
 
-Detail does not poll or refetch on focus/reconnect while a human is reviewing it.
+Detail does not poll or refetch on focus/reconnect while a human is reviewing it. Leaving a
+detail discards its cached copy (`gcTime: 0`), so reopening a record in the same session
+loads the current revision instead of the one shown at an earlier decision (fixed 29/09/2026).
 Queue refreshes every 30 seconds. An explicit detail reload resets the checklist
 and reason after confirmation, and is disabled while a command awaits reconciliation.
 Navigation, closing the tab and logout protect unsent input. These guards are

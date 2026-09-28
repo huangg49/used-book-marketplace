@@ -52,9 +52,12 @@ function DetailContent({
       kind === "listings"
         ? session.request(`/operations/listings/${id}`, listing)
         : session.request(`/operations/catalog-requests/${id}`, catalog),
+    // Never refetch under an open review (ADR 0010), but drop the copy on leave so
+    // reopening shows the latest revision, not the one decided earlier this session.
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     staleTime: Infinity,
+    gcTime: 0,
   });
   const value = result.data;
   async function reconcile() {

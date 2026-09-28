@@ -5,6 +5,7 @@ import { Icon } from "./icon";
 import { AppText } from "./text";
 import { colors } from "./theme";
 import { layout } from "./styles";
+import { formatVnd } from "./format";
 
 export function BookCover({
   source,
@@ -101,9 +102,4 @@ export function BookPrice({
       )}
     </View>
   );
-}
-export function formatVnd(amount: number) {
-  return Number.isSafeInteger(amount) && amount >= 0
-    ? `${amount.toLocaleString("vi-VN")} ₫`
-    : "Chưa có giá";
 }
