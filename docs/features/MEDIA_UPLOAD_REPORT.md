@@ -129,3 +129,16 @@ Giới hạn sản phẩm hiện tại:
 - API/worker/database chạy local phù hợp demo miễn phí; chưa phải vận hành 24/7.
 
 Các workflow point/auction/shipping/ledger vẫn planned theo SRS 1.1.
+
+## Bổ sung bàn giao 28/09/2026
+
+Phạm vi planned ở phần lịch sử trên không mô tả toàn bộ backend hiện hành;
+xem [mốc F2h](../handoff/START_HERE.md) cho Order/shipment/ledger đã triển khai.
+[Vòng Android thực tế](../handoff/NATIVE_RUN_2026_09_28.md) đã kiểm hủy picker,
+chọn JPEG → upload Supabase thật → Sharp Ready → preview → lưu/mở lại nháp.
+Session restore/API offline/logout cũng đã kiểm trong phạm vi ghi ở báo cáo.
+Còn PNG/WebP, lỗi upload/mạng, background và hành trình listing đầy đủ trên native.
+
+Đã sửa `worker:media` từ tsx sang Nest CLI để biên dịch dependency metadata trước
+startup; lệnh cũ lỗi tại DatabaseService. API lint/typecheck, 33 unit và contract
+check qua; worker đã xử lý ảnh thật. Không sửa API contract hoặc migration.

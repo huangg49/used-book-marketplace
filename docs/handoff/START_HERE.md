@@ -210,10 +210,11 @@ kết quả mong đợi và cách xử lý lỗi mà không bỏ quy tắc nghi�
 ## 7. Việc đầu tiên của người tiếp nhận
 
 Đọc [READINESS](READINESS.md), tiếp tục việc chưa đóng đầu tiên; **chưa mở F2i**.
-Gói tiếp nhận mới nhất được lưu trên nhánh `codex/handoff-acceptance-pack`, gồm
-nguồn operations `76230ca` và bộ hướng dẫn nghiệm thu/review. Bundle local:
-`.tmp/latlai-handoff-acceptance.bundle` (checksum `.sha256` bên cạnh). Người nhận:
-`git clone --branch codex/handoff-acceptance-pack ./latlai-handoff-acceptance.bundle latlai`.
+Gói tiếp nhận mới nhất được lưu trên nhánh `codex/native-handoff-qa`, tiếp nối
+`codex/handoff-acceptance-pack` (`7b40e00`), gồm sửa startup media worker và
+[bằng chứng native từng ca](NATIVE_RUN_2026_09_28.md). Bundle local:
+`.tmp/latlai-native-handoff.bundle` (checksum `.sha256` bên cạnh). Người nhận:
+`git clone --branch codex/native-handoff-qa ./latlai-native-handoff.bundle latlai`.
 Không kèm `.env`, DB hoặc APK; các bundle/checkpoint trước giữ nguyên. Đây chưa là
 release đã nghiệm thu native và chưa được push lên remote.
 
@@ -222,7 +223,7 @@ bằng chứng nếu code liên quan không đổi. Chia việc còn lại theo 
 
 | Người tiếp nhận | Việc tiếp tục | Kết quả cần ghi |
 |---|---|---|
-| RN + QA | Thực hiện [21 ca native và phiếu kết quả](NATIVE_ACCEPTANCE.md): session, picker/upload, bàn phím/Back, TalkBack, chữ OS lớn | Thiết bị/OS/commit, từng ca pass/fail, ảnh và lỗi còn lại; không thay bằng web |
+| RN + QA | Tiếp tục ca còn mở trong [vòng Android 28/09](NATIVE_RUN_2026_09_28.md), theo [21 ca native](NATIVE_ACCEPTANCE.md); session và JPEG đã có bằng chứng | Còn upload lỗi/mất mạng, background, listing đầy đủ, TalkBack và bàn phím/chữ lớn; không thay bằng web |
 | Operations + QA | Queue/detail/retry/conflict/keyboard đã hoàn tất trên nhánh `codex/operations-ui-qa`; đọc [bằng chứng](OPERATIONS_UI_QA.md), review để tích hợp | Ba lỗi UI đã sửa; chỉ lặp suite khi có thay đổi liên quan |
 | API reviewer | Dùng [gói review R01–R09](INDEPENDENT_REVIEW.md): entry point, invariant, test và phiếu nhận xét | Nhận xét hoặc xác nhận review, reviewer thứ hai cho phần tiền/quyền theo TEAMWORK |
 | Người đóng mốc | Kiểm tra báo cáo clone sạch, còn gì chưa nghiệm thu; quyết định release/PR theo workflow team | Commit/tag rõ ràng; chỉ nói remote đã có khi đã push thật |

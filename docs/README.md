@@ -7,6 +7,7 @@
 - [Clone sạch, checkpoint nguồn và cách nhận Git bundle](handoff/REBUILD.md)
 - [Checklist demo đúng phần đã triển khai](handoff/DEMO_CHECKLIST.md)
 - [Native: 21 ca thao tác và phiếu ghi bằng chứng](handoff/NATIVE_ACCEPTANCE.md)
+- [Android 28/09: session, upload JPEG thật, sửa worker và ca còn mở](handoff/NATIVE_RUN_2026_09_28.md)
 - [Review độc lập: đường đọc code, invariant và phiếu nhận xét](handoff/INDEPENDENT_REVIEW.md)
 
 - [Delivery overdue and Buyer non-receipt intake](features/DELIVERY_OVERDUE_REPORT.md)

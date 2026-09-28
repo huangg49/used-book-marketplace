@@ -72,3 +72,8 @@ phần cứng, TalkBack và font scale hệ điều hành trong lượt này; iO
 In-app Browser không mở được localhost QA (`ERR_BLOCKED_BY_CLIENT`), nên không có
 bằng chứng kiểm tra trực tiếp qua công cụ đó. Bằng chứng web ở trên đến từ bộ
 regression của repository và việc xem ảnh kết quả, không thay cho kiểm thử native.
+
+Bổ sung sau vòng này: [Android 28/09](NATIVE_RUN_2026_09_28.md) dùng AVD/Metro
+có sẵn của người dùng, đã kiểm session, picker/upload JPEG thật, Back và một phần
+form chữ OS 130%. Giới hạn Metro ở trên là lịch sử, không còn là blocker hiện tại;
+nghiệm thu native đầy đủ, TalkBack, ARM và iOS vẫn chưa hoàn tất.

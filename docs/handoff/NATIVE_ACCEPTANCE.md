@@ -1,10 +1,16 @@
 # Nghiệm thu React Native tại mốc bàn giao
 
-Ngày chuẩn bị: 28/09/2026. **Chưa chạy các ca native dưới đây.** Đây là hướng dẫn
-và phiếu ghi kết quả, không phải báo cáo PASS. Phạm vi sản phẩm giữ F2h/0.20.0;
+Ngày chuẩn bị: 28/09/2026. Đây là hướng dẫn và phiếu ghi kết quả, không phải
+báo cáo PASS. Lượt thực thi tiếp nối và trạng thái từng ca được ghi riêng trong
+[NATIVE_RUN_2026_09_28](NATIVE_RUN_2026_09_28.md); một phần ca vẫn chưa chạy.
+Phạm vi sản phẩm giữ F2h/0.20.0;
 không kiểm checkout/ví/Order bằng UI vì các màn đó chưa triển khai.
 
-## Mốc nguồn và điều kiện thực thi
+## Mốc nguồn và điều kiện lúc chuẩn bị
+
+Các thông tin chưa có thiết bị/Metro bị chặn dưới đây là lịch sử lúc lập checklist.
+Lượt thực thi liên kết ở trên đã dùng AVD và Metro có sẵn của người dùng, nối API
+bằng adb reverse; không coi các blocker cũ là trạng thái hiện tại.
 
 - Nguồn ứng dụng cần kiểm: `76230ca09e94df69157845717e4d89d49b4641a0`
   (bao gồm checkpoint F2h và sửa operations). Các thay đổi sau trong nhánh

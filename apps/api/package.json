@@ -13,7 +13,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "worker:media": "tsx src/media-worker.ts",
+    "worker:media": "nest start --entryFile media-worker",
     "media:check": "tsx src/media-check.ts",
     "media:probe": "tsx src/media-check.ts --probe",
     "doctor:local": "tsx src/local-check.ts",

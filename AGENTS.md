@@ -7,8 +7,10 @@ Handoff preparation is the current priority: freeze business scope at F2h/OpenAP
 and release gates in `docs/handoff/READINESS.md`. Finish those gates before extending
 Delivered/inspection/settlement. A passing backend suite does not close native UI
 acceptance. Source checkpoint `checkpoint/f2h-handoff-2026-09-28` has clean-clone
-verification in `docs/handoff/REBUILD.md`; native runtime and independent reviews
-remain open. Do not redo closed gates without a relevant change. Preserve local work.
+verification in `docs/handoff/REBUILD.md`. Native session and real JPEG upload have
+partial acceptance in `docs/handoff/NATIVE_RUN_2026_09_28.md`; full native acceptance
+and independent reviews remain open. Do not redo closed gates without a relevant
+change. Preserve local work.
 
 Business baseline: `docs/SRS_V1_1.md` plus `docs/features/LOCAL_HANDOVER_AUCTION.md`.
 TP.HCM only, direct shipping retained, two simulated managed points, optional
@@ -106,7 +108,9 @@ Flutter and the operations web. The implemented reference slice is auth/profile;
 read `docs/REACT_NATIVE_START.md` and ADR 0003 before adding a feature.
 Catalog requests/review/public reads and owner listing drafts have real API handlers.
 Owner media handlers, Supabase adapter, Sharp worker and RN private drafts are implemented;
-live Supabase verification passed; Android debug build/UI emulator checks passed, native picker/upload remains pending.
+live Supabase verification passed; Android debug build/UI emulator checks passed.
+Native picker cancel and JPEG upload/Ready/preview/save/reopen passed on Android 15;
+other formats, upload failures/background and full listing native acceptance remain pending.
 Listing submission/moderation, reviewer media reads and public shelf/detail/media are implemented.
 Read ADR 0011 and `docs/features/PUBLIC_SHELF_REPORT.md` before extending public reads.
 RN guest shelf is `/`, account is `/account`, book detail is `/book?id=...`.

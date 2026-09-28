@@ -1,9 +1,11 @@
 # Kiểm tra môi trường và chất lượng Android
 
 Đợt bàn giao 28/09/2026: xem [UI polish và bằng chứng mới](handoff/UI_POLISH.md).
-Build debug x86_64 với icon/splash Lật lại qua; runtime QA mới chưa thực hiện do
-automatic approval review chặn khởi động Metro. Những kết quả lịch sử bên dưới
-giữ nguyên phạm vi/ngày, không được coi là đã nghiệm thu màn hình hiện tại.
+Build debug x86_64 với icon/splash Lật lại qua. Vòng tiếp nối đã kiểm một phần
+session, picker/upload JPEG qua Supabase thật và form chữ OS 130% trên Android 15;
+xem [bằng chứng và ca còn mở](handoff/NATIVE_RUN_2026_09_28.md).
+Đã sửa lệnh dev media worker dùng Nest để sinh dependency metadata trước khi chạy.
+Những kết quả lịch sử bên dưới giữ nguyên phạm vi/ngày; chưa nghiệm thu toàn bộ native.
 
 React Native là client ưu tiên. Export web, APK debug và kiểm thử trên điện thoại
 là ba bằng chứng khác nhau; không dùng kết quả này thay cho kết quả kia.

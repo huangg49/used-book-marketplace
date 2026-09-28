@@ -13,9 +13,10 @@ Clone sạch của commit này đã qua install/generate/migrate/seed/build, 127
 
 Bổ sung: operations polish đã commit `76230ca`. Bộ thực thi
 [native N01–N21](NATIVE_ACCEPTANCE.md) và [review độc lập R01–R09](INDEPENDENT_REVIEW.md)
-đã chuẩn bị, chưa có kết quả nghiệm thu/ký nhận. Preflight mới ngày 28/09 đạt
-DB/17 checksum/bucket private/readiness; RN URL localhost còn WARN, adb chưa có thiết bị.
-Chuẩn bị hướng dẫn không đóng các gate bên dưới.
+đã chuẩn bị. [Vòng Android 28/09](NATIVE_RUN_2026_09_28.md) đã kiểm phiên,
+picker hủy/chọn JPEG, upload Supabase thật và một phần form ở chữ OS 130%.
+Đã sửa lệnh media worker không khởi động qua tsx. Native acceptance còn một phần
+chưa chạy; review độc lập chưa ký nhận. Không đóng toàn bộ các gate bên dưới.
 
 ## Gate 1 — Rà soát và sửa lỗi
 
@@ -70,7 +71,9 @@ regression mới; `/ui` có kiểm tra 320 px/chữ 135%/bàn phím. Xem [UI_POL
 cho ảnh và phạm vi cụ thể. Lát cắt operations đã đóng theo phạm vi
 [OPERATIONS_UI_QA](OPERATIONS_UI_QA.md): queue, detail, lỗi/retry/conflict và focus;
 đã sửa nhãn hai giá, skip link và focus recovery. Không thay nghiệm thu screen reader.
-Native còn mở: build APK qua nhưng runtime bị chặn khi khởi động Metro.
+Native đã chạy một phần trên Pixel_7/Android 15 với Metro có sẵn; xem
+[kết quả từng ca](NATIVE_RUN_2026_09_28.md). Còn upload lỗi/mất mạng,
+toàn hành trình listing, TalkBack và các tổ hợp bàn phím/chữ lớn chưa kiểm.
 Không mở ví/checkout/Order UI giả; chưa đóng toàn bộ Gate 3.
 
 ## Gate 4 — Đóng gói mốc bàn giao
@@ -78,8 +81,9 @@ Không mở ví/checkout/Order UI giả; chưa đóng toàn bộ Gate 3.
 - [x] Chạy lint/typecheck/unit, export và RN browser regression sau lát cắt polish;
   cập nhật báo cáo thực tế. Kiểm lại nếu có sửa tiếp.
 - [ ] Build/debug và QA native trong phạm vi được ghi rõ; không dùng export web thay thế.
-  Build debug x86_64 qua với tài nguyên thương hiệu mới. Metro bị automatic approval
-  review chặn (`blocked by policy`); runtime, ARM và iOS chưa kiểm trong lượt này.
+  Build debug x86_64 qua với tài nguyên thương hiệu mới. Vòng tiếp nối dùng Metro
+  người dùng đã chạy để kiểm native một phần; lịch sử bị chặn ở UI_POLISH vẫn giữ.
+  Xem NATIVE_RUN_2026_09_28 cho phạm vi thực thi; ARM và iOS chưa kiểm.
 - [x] Chuẩn bị [kịch bản và checklist trước demo](DEMO_CHECKLIST.md); ghi rõ
   yêu cầu storage thật, seed chỉ có một Member và giới hạn UI/API.
 - [x] Lưu nguồn/ảnh/tài liệu tại checkpoint có thể chuyển bằng Git bundle.

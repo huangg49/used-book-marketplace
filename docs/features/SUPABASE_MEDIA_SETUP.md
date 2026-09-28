@@ -55,6 +55,10 @@ pnpm dev:api
 pnpm dev:media
 pnpm dev:rn
 ```
+`dev:media` gọi Nest CLI biên dịch rồi chạy entry point `media-worker`, tương tự
+Order worker. Không thay bằng `tsx src/media-worker.ts`: đường đó thiếu constructor
+metadata cho dependency injection. Production dùng `worker:media:prod` sau API build.
+
 
 Đăng nhập Member → **Bản nháp của tôi** → tạo/mở nháp → chọn ảnh → chờ xử lý →
 **Lưu bản nháp** → quay lại và mở lại. Chưa có bước gửi duyệt trong màn hình này.

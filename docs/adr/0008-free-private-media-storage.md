@@ -103,3 +103,13 @@ This increment covers private drafts/media only. Submission, moderation and
 operations image access subsequently landed under [ADR 0009](0009-listing-submission-moderation.md).
 Public shelf/media subsequently landed under [ADR 0011](0011-public-shelf.md),
 with separate eligibility-checked signed reads. Handover evidence and auctions remain planned.
+
+## Development worker startup correction — 2026-09-28
+
+`worker:media` now uses `nest start --entryFile media-worker`, matching the Order
+worker launcher. The previous `tsx src/media-worker.ts` path did not emit the
+constructor dependency metadata required by Nest and failed in DatabaseService
+startup. Compile through Nest with the repository tsconfig; keep the production
+entry point `node dist/media-worker.js`. No storage policy or domain change.
+Real Android JPEG upload reached Ready through this worker and Supabase; see the
+[native run and remaining acceptance cases](../handoff/NATIVE_RUN_2026_09_28.md).
