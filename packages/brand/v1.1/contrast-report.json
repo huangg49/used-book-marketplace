@@ -1,0 +1,99 @@
+[
+  {
+    "foreground": "ink",
+    "background": "paper",
+    "minimum": 4.5,
+    "ratio": 12.6084,
+    "passed": true
+  },
+  {
+    "foreground": "forest",
+    "background": "paper",
+    "minimum": 4.5,
+    "ratio": 8.5285,
+    "passed": true
+  },
+  {
+    "foreground": "paper",
+    "background": "forest",
+    "minimum": 4.5,
+    "ratio": 8.5285,
+    "passed": true
+  },
+  {
+    "foreground": "leaf",
+    "background": "forest",
+    "minimum": 4.5,
+    "ratio": 6.9555,
+    "passed": true
+  },
+  {
+    "foreground": "muted",
+    "background": "paper",
+    "minimum": 4.5,
+    "ratio": 5.1437,
+    "passed": true
+  },
+  {
+    "foreground": "rustText",
+    "background": "paper",
+    "minimum": 4.5,
+    "ratio": 6.021,
+    "passed": true
+  },
+  {
+    "foreground": "ink",
+    "background": "surface",
+    "minimum": 4.5,
+    "ratio": 14.1163,
+    "passed": true
+  },
+  {
+    "foreground": "border",
+    "background": "paper",
+    "minimum": 3,
+    "ratio": 3.4097,
+    "passed": true
+  },
+  {
+    "foreground": "border",
+    "background": "surface",
+    "minimum": 3,
+    "ratio": 3.8174,
+    "passed": true
+  },
+  {
+    "foreground": "error",
+    "background": "errorSurface",
+    "minimum": 4.5,
+    "ratio": 6.1991,
+    "passed": true
+  },
+  {
+    "foreground": "success",
+    "background": "successSurface",
+    "minimum": 4.5,
+    "ratio": 6.8048,
+    "passed": true
+  },
+  {
+    "foreground": "warning",
+    "background": "warningSurface",
+    "minimum": 4.5,
+    "ratio": 6.1455,
+    "passed": true
+  },
+  {
+    "foreground": "info",
+    "background": "infoSurface",
+    "minimum": 4.5,
+    "ratio": 6.8693,
+    "passed": true
+  },
+  {
+    "foreground": "terracotta",
+    "background": "paper",
+    "ratio": 3.8201,
+    "use": "Decoration only; use rustText for small text"
+  }
+]

@@ -3,6 +3,92 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+model WalletAccount {
+  orderId  String?       @unique @map("order_id") @db.Uuid
+  order    DirectOrder?  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  id       String        @id @default(uuid()) @db.Uuid
+  ownerId  String?       @unique @map("owner_id") @db.Uuid
+  owner    User?         @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  purpose  String        @db.VarChar(40)
+  currency String        @default("VND") @db.VarChar(3)
+  entries  LedgerEntry[]
+
+  @@map("wallet_accounts")
+}
+
+model TopupIntent {
+  id        String                  @id @default(uuid()) @db.Uuid
+  ownerId   String                  @map("owner_id") @db.Uuid
+  owner     User                    @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  amount    Int
+  currency  String                  @default("VND") @db.VarChar(3)
+  state     String                  @default("Pending") @db.VarChar(40)
+  version   Int                     @default(1)
+  createdAt DateTime                @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime                @map("updated_at") @db.Timestamptz(6)
+  journal   LedgerJournal?
+  events    SimulatedPaymentEvent[]
+  receipts  MutationReceipt[]
+  audits    AuditEvent[]
+
+  @@index([ownerId, createdAt, id])
+  @@map("topup_intents")
+}
+
+model SimulatedPaymentEvent {
+  id          String          @id @db.Uuid
+  intentId    String          @map("intent_id") @db.Uuid
+  intent      TopupIntent     @relation(fields: [intentId], references: [id], onDelete: Restrict)
+  provider    String          @db.VarChar(40)
+  payloadHash String          @map("payload_hash") @db.Char(64)
+  recipientId String          @map("recipient_id") @db.Uuid
+  amount      Int
+  currency    String          @db.VarChar(3)
+  outcome     String          @db.VarChar(40)
+  disposition String          @db.VarChar(40)
+  occurredAt  DateTime        @map("occurred_at") @db.Timestamptz(6)
+  receivedAt  DateTime        @map("received_at") @db.Timestamptz(6)
+  receiptId   String          @map("receipt_id") @db.Uuid
+  receipt     MutationReceipt @relation(fields: [receiptId], references: [id], onDelete: NoAction)
+  journal     LedgerJournal?
+
+  @@index([intentId, receivedAt, id])
+  @@map("simulated_payment_events")
+}
+
+model LedgerJournal {
+  sequence  BigInt                 @unique @default(autoincrement())
+  orderId   String?                @map("order_id") @db.Uuid
+  order     DirectOrder?           @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  receiptId String?                @unique @map("receipt_id") @db.Uuid
+  receipt   MutationReceipt?       @relation(fields: [receiptId], references: [id], onDelete: NoAction)
+  id        String                 @id @default(uuid()) @db.Uuid
+  type      String                 @db.VarChar(40)
+  topupId   String?                @unique @map("topup_id") @db.Uuid
+  topup     TopupIntent?           @relation(fields: [topupId], references: [id], onDelete: Restrict)
+  eventId   String?                @unique @map("event_id") @db.Uuid
+  event     SimulatedPaymentEvent? @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  postedAt  DateTime               @map("posted_at") @db.Timestamptz(6)
+  entries   LedgerEntry[]
+
+  @@unique([orderId, type])
+  @@index([postedAt, id])
+  @@map("ledger_journals")
+}
+
+model LedgerEntry {
+  journalId String        @map("journal_id") @db.Uuid
+  journal   LedgerJournal @relation(fields: [journalId], references: [id], onDelete: Restrict)
+  accountId String        @map("account_id") @db.Uuid
+  account   WalletAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  debit     BigInt
+  credit    BigInt
+
+  @@id([journalId, accountId])
+  @@index([accountId, journalId])
+  @@map("ledger_entries")
+}
+
 datasource db {
   provider = "postgresql"
 }
@@ -23,15 +109,30 @@ enum RoleCode {
 }
 
 model User {
-  id              String     @id @default(uuid()) @db.Uuid
-  emailNormalized String     @unique @map("email_normalized")
-  passwordHash    String     @map("password_hash")
-  displayName     String     @map("display_name")
-  status          UserStatus @default(PENDING_VERIFICATION)
-  emailVerifiedAt DateTime?  @map("email_verified_at") @db.Timestamptz(6)
-  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
-  roles           UserRole[]
+  walletAccount     WalletAccount?
+  topups            TopupIntent[]
+  ordersAsBuyer     DirectOrder[]     @relation("OrderBuyer")
+  ordersAsSeller    DirectOrder[]     @relation("OrderSeller")
+  quotesAsBuyer     SaleQuote[]       @relation("QuoteBuyer")
+  quotesAsSeller    SaleQuote[]       @relation("QuoteSeller")
+  id                String            @id @default(uuid()) @db.Uuid
+  emailNormalized   String            @unique @map("email_normalized")
+  passwordHash      String            @map("password_hash")
+  displayName       String            @map("display_name")
+  status            UserStatus        @default(PENDING_VERIFICATION)
+  emailVerifiedAt   DateTime?         @map("email_verified_at") @db.Timestamptz(6)
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  roles             UserRole[]
+  sessions          AuthSession[]
+  catalogRequests   CatalogBook[]
+  catalogDecisions  CatalogDecision[]
+  addressBook       AddressBook?
+  addressIdentities AddressIdentity[]
+  listings          Listing[]
+  listingDecisions  ListingDecision[]
+  mutationReceipts  MutationReceipt[]
+  auditEvents       AuditEvent[]
 
   @@map("users")
 }
@@ -44,4 +145,769 @@ model UserRole {
 
   @@id([userId, role])
   @@map("user_roles")
+}
+
+model AuthSession {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  refreshTokenHash String    @unique @map("refresh_token_hash")
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+model LoginAttempt {
+  key       String   @id
+  attempts  Int      @default(1)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+
+  @@index([expiresAt])
+  @@map("login_attempts")
+}
+
+// Contract-first listing foundation. HTTP handlers/workers are not implemented yet.
+enum CatalogStatus {
+  Pending
+  Confirmed
+  Rejected
+}
+
+enum CatalogDecisionKind {
+  Confirm
+  Reject
+}
+
+enum ListingMode {
+  Sale
+  Exchange
+  Both
+}
+
+enum BookCondition {
+  LikeNew
+  Good
+  Fair
+  Worn
+}
+
+enum ModerationStatus {
+  Draft
+  PendingReview
+  Approved
+  Rejected
+}
+
+enum VisibilityStatus {
+  Visible
+  Hidden
+  Removed
+}
+
+enum TradeStatus {
+  Available
+  Reserved
+  Sold
+  Exchanged
+  ClosedUnavailable
+}
+
+enum ListingDecisionKind {
+  Approve
+  Reject
+}
+
+enum MediaStatus {
+  Pending
+  Processing
+  Ready
+  Failed
+}
+
+model CatalogBook {
+  id                String            @id @default(uuid()) @db.Uuid
+  requesterId       String            @map("requester_id") @db.Uuid
+  requester         User              @relation(fields: [requesterId], references: [id], onDelete: Restrict)
+  status            CatalogStatus     @default(Pending)
+  version           Int               @default(1)
+  // Filled in the creation transaction. Deferred SQL constraint checks at commit.
+  currentRevisionId String?           @map("current_revision_id") @db.Uuid
+  currentRevision   CatalogRevision?  @relation("CurrentCatalogRevision", fields: [id, currentRevisionId], references: [bookId, id], onDelete: NoAction, onUpdate: NoAction)
+  // Canonical ISBN-13 only after confirmation; Pending requests do not reserve ISBNs.
+  confirmedIsbn     String?           @unique @map("confirmed_isbn") @db.VarChar(13)
+  searchText        String            @default("") @map("search_text")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  revisions         CatalogRevision[] @relation("CatalogRevisions")
+  receipts          MutationReceipt[]
+  audits            AuditEvent[]
+  listingRevisions  ListingRevision[]
+
+  @@unique([id, currentRevisionId])
+  @@index([requesterId, updatedAt, id])
+  @@index([status, createdAt, id])
+  @@map("catalog_books")
+}
+
+model CatalogRevision {
+  workflowItems   WorkflowItem[]
+  quotes          SaleQuote[]
+  id              String           @id @default(uuid()) @db.Uuid
+  bookId          String           @map("book_id") @db.Uuid
+  book            CatalogBook      @relation("CatalogRevisions", fields: [bookId], references: [id], onDelete: Restrict)
+  currentFor      CatalogBook?     @relation("CurrentCatalogRevision")
+  number          Int
+  title           String           @db.VarChar(300)
+  authors         String[]
+  publisher       String?          @db.VarChar(200)
+  publicationYear Int?             @map("publication_year")
+  language        String           @db.VarChar(35)
+  edition         String?          @db.VarChar(200)
+  category        String           @db.VarChar(80)
+  isbn            String?          @db.VarChar(13)
+  submittedAt     DateTime         @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  decision        CatalogDecision?
+
+  @@unique([bookId, id])
+  @@unique([bookId, number])
+  @@map("catalog_revisions")
+}
+
+model CatalogDecision {
+  id         String              @id @default(uuid()) @db.Uuid
+  revisionId String              @unique @map("revision_id") @db.Uuid
+  revision   CatalogRevision     @relation(fields: [revisionId], references: [id], onDelete: Restrict)
+  reviewerId String              @map("reviewer_id") @db.Uuid
+  reviewer   User                @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+  decision   CatalogDecisionKind
+  reason     String?             @db.VarChar(1000)
+  decidedAt  DateTime            @default(now()) @map("decided_at") @db.Timestamptz(6)
+
+  @@map("catalog_decisions")
+}
+
+model Listing {
+  commitments       ExclusiveCommitment[]
+  id                String                @id @default(uuid()) @db.Uuid
+  ownerId           String                @map("owner_id") @db.Uuid
+  owner             User                  @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  version           Int                   @default(1)
+  moderation        ModerationStatus      @default(Draft)
+  visibility        VisibilityStatus      @default(Visible)
+  trade             TradeStatus           @default(Available)
+  currentRevisionId String?               @map("current_revision_id") @db.Uuid
+  currentRevision   ListingRevision?      @relation("CurrentListingRevision", fields: [id, currentRevisionId], references: [listingId, id], onDelete: NoAction, onUpdate: NoAction)
+  removalReason     String?               @map("removal_reason") @db.VarChar(1000)
+  deletedAt         DateTime?             @map("deleted_at") @db.Timestamptz(6)
+  publishedAt       DateTime?             @map("published_at") @db.Timestamptz(6)
+  createdAt         DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  revisions         ListingRevision[]     @relation("ListingRevisions")
+  media             ListingMedia[]
+  receipts          MutationReceipt[]
+  audits            AuditEvent[]
+
+  @@unique([id, currentRevisionId])
+  @@index([ownerId, updatedAt, id])
+  @@index([moderation, visibility, trade, publishedAt, id])
+  @@map("listings")
+}
+
+model ListingRevision {
+  workflowItems           WorkflowItem[]
+  quotes                  SaleQuote[]
+  originAddressId         String?          @map("origin_address_id") @db.Uuid
+  originAddressVersion    Int?             @map("origin_address_version")
+  originServiceAreaCode   String?          @map("origin_service_area_code") @db.VarChar(40)
+  originAddress           AddressIdentity? @relation(fields: [originAddressId], references: [id], onDelete: Restrict)
+  originServiceArea       ServiceArea?     @relation(fields: [originServiceAreaCode], references: [code], onDelete: Restrict)
+  id                      String           @id @default(uuid()) @db.Uuid
+  listingId               String           @map("listing_id") @db.Uuid
+  listing                 Listing          @relation("ListingRevisions", fields: [listingId], references: [id], onDelete: Restrict)
+  currentFor              Listing?         @relation("CurrentListingRevision")
+  number                  Int
+  bookId                  String?          @map("book_id") @db.Uuid
+  book                    CatalogBook?     @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  mode                    ListingMode?
+  condition               BookCondition?
+  pages                   String           @default("") @db.VarChar(1000)
+  coverNote               String           @default("") @map("cover_note") @db.VarChar(1000)
+  notes                   String           @default("") @db.VarChar(1000)
+  accessories             String           @default("") @db.VarChar(1000)
+  readable                Boolean?
+  hasMissingPages         Boolean?         @map("has_missing_pages")
+  missingEssentialContent Boolean?         @map("missing_essential_content")
+  description             String           @default("") @db.VarChar(5000)
+  salePrice               Int?             @map("sale_price")
+  exchangeValue           Int?             @map("exchange_value")
+  submittedAt             DateTime?        @map("submitted_at") @db.Timestamptz(6)
+  ownershipDeclaredAt     DateTime?        @map("ownership_declared_at") @db.Timestamptz(6)
+  createdAt               DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  media                   RevisionMedia[]
+  decision                ListingDecision?
+
+  @@unique([listingId, id])
+  @@unique([listingId, number])
+  @@index([bookId])
+  @@index([salePrice, listingId])
+  @@index([exchangeValue, listingId])
+  @@index([submittedAt, listingId])
+  @@map("listing_revisions")
+}
+
+model ListingMedia {
+  id            String              @id @default(uuid()) @db.Uuid
+  listingId     String              @map("listing_id") @db.Uuid
+  // The owning listing is the sole owner authority: no duplicate owner field to drift.
+  listing       Listing             @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  version       Int                 @default(1)
+  status        MediaStatus         @default(Pending)
+  stagingKey    String              @unique @map("staging_key")
+  pinnedKey     String?             @unique @map("pinned_key")
+  derivativeKey String?             @unique @map("derivative_key")
+  mimeType      String              @map("mime_type") @db.VarChar(30)
+  byteSize      Int                 @map("byte_size")
+  sha256        String              @db.Char(64)
+  width         Int?
+  height        Int?
+  failureCode   String?             @map("failure_code") @db.VarChar(40)
+  expiresAt     DateTime            @map("expires_at") @db.Timestamptz(6)
+  purgedAt      DateTime?           @map("purged_at") @db.Timestamptz(6)
+  // Reserved input plus at most three bounded derivatives; released after storage deletion.
+  reservedBytes Int                 @default(0) @map("reserved_bytes")
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  revisions     RevisionMedia[]
+  receipts      MutationReceipt[]
+  audits        AuditEvent[]
+  processingJob MediaProcessingJob?
+
+  @@unique([listingId, id])
+  @@index([listingId, createdAt, id])
+  @@index([status, expiresAt])
+  @@map("listing_media")
+}
+
+model RevisionMedia {
+  listingId  String          @map("listing_id") @db.Uuid
+  revisionId String          @map("revision_id") @db.Uuid
+  mediaId    String          @map("media_id") @db.Uuid
+  position   Int
+  revision   ListingRevision @relation(fields: [listingId, revisionId], references: [listingId, id], onDelete: Restrict)
+  media      ListingMedia    @relation(fields: [listingId, mediaId], references: [listingId, id], onDelete: Restrict)
+
+  @@id([revisionId, mediaId])
+  @@unique([revisionId, position])
+  @@map("revision_media")
+}
+
+model ListingDecision {
+  id         String              @id @default(uuid()) @db.Uuid
+  revisionId String              @unique @map("revision_id") @db.Uuid
+  revision   ListingRevision     @relation(fields: [revisionId], references: [id], onDelete: Restrict)
+  reviewerId String              @map("reviewer_id") @db.Uuid
+  reviewer   User                @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+  decision   ListingDecisionKind
+  // Six true checks for Approve; null for Reject. SQL checks JSON shape.
+  checklist  Json?
+  reason     String?             @db.VarChar(1000)
+  decidedAt  DateTime            @default(now()) @map("decided_at") @db.Timestamptz(6)
+
+  @@map("listing_decisions")
+}
+
+model MutationReceipt {
+  deliveryReview     OrderDeliveryReview?
+  nonReceiptReport   OrderNonReceiptReport?
+  carrierEvent       CarrierPickupEvent?
+  registeredShipment DirectShipment?
+  packagingIntent    OrderPackagingEvidence? @relation("PackagingIntentReceipt")
+  packagingUpload    OrderPackagingEvidence? @relation("PackagingUploadReceipt")
+  orderPreparation   OrderPreparation?
+  pickupReview       PickupReview?
+  journal            LedgerJournal?
+  paymentEvents      SimulatedPaymentEvent[]
+  topupId            String?                 @map("topup_id") @db.Uuid
+  topup              TopupIntent?            @relation(fields: [topupId], references: [id], onDelete: Restrict)
+  contextId          String?                 @map("context_id") @db.Uuid
+  context            WorkflowContext?        @relation(fields: [contextId], references: [id], onDelete: Restrict)
+  systemActor        String?                 @map("system_actor") @db.VarChar(40)
+  quoteId            String?                 @map("quote_id") @db.Uuid
+  quote              SaleQuote?              @relation(fields: [quoteId], references: [id], onDelete: Restrict)
+  addressBookId      String?                 @map("address_book_id") @db.Uuid
+  addressBook        AddressBook?            @relation(fields: [addressBookId], references: [ownerId], onDelete: Restrict)
+  id                 String                  @id @default(uuid()) @db.Uuid
+  actorId            String?                 @map("actor_id") @db.Uuid
+  actor              User?                   @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  operation          String                  @db.VarChar(80)
+  key                String                  @db.Uuid
+  payloadHash        String                  @map("payload_hash") @db.Char(64)
+  listingId          String?                 @map("listing_id") @db.Uuid
+  listing            Listing?                @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  bookId             String?                 @map("book_id") @db.Uuid
+  book               CatalogBook?            @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  mediaId            String?                 @map("media_id") @db.Uuid
+  media              ListingMedia?           @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  resultVersion      Int                     @map("result_version")
+  // Projection of MutationReceipt only, never request content or signed URLs.
+  result             Json
+  committedAt        DateTime                @default(now()) @map("committed_at") @db.Timestamptz(6)
+  audit              AuditEvent?
+  commitmentEvents   CommitmentEvent[]
+
+  @@unique([actorId, operation, key])
+  @@unique([systemActor, operation, key])
+  @@map("mutation_receipts")
+}
+
+model AuditEvent {
+  topupId       String?          @map("topup_id") @db.Uuid
+  topup         TopupIntent?     @relation(fields: [topupId], references: [id], onDelete: Restrict)
+  contextId     String?          @map("context_id") @db.Uuid
+  context       WorkflowContext? @relation(fields: [contextId], references: [id], onDelete: Restrict)
+  systemActor   String?          @map("system_actor") @db.VarChar(40)
+  quoteId       String?          @map("quote_id") @db.Uuid
+  quote         SaleQuote?       @relation(fields: [quoteId], references: [id], onDelete: Restrict)
+  addressBookId String?          @map("address_book_id") @db.Uuid
+  addressBook   AddressBook?     @relation(fields: [addressBookId], references: [ownerId], onDelete: Restrict)
+  id            String           @id @default(uuid()) @db.Uuid
+  actorId       String?          @map("actor_id") @db.Uuid
+  actor         User?            @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  receiptId     String?          @unique @map("receipt_id") @db.Uuid
+  receipt       MutationReceipt? @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  listingId     String?          @map("listing_id") @db.Uuid
+  listing       Listing?         @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  bookId        String?          @map("book_id") @db.Uuid
+  book          CatalogBook?     @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  mediaId       String?          @map("media_id") @db.Uuid
+  media         ListingMedia?    @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  action        String           @db.VarChar(80)
+  before        Json?
+  after         Json?
+  reason        String?          @db.VarChar(1000)
+  requestId     String           @map("request_id") @db.Uuid
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  outbox        OutboxEvent?
+
+  @@index([listingId, createdAt])
+  @@index([bookId, createdAt])
+  @@map("audit_events")
+}
+
+model OutboxEvent {
+  id          String     @id @default(uuid()) @db.Uuid
+  auditId     String     @unique @map("audit_id") @db.Uuid
+  audit       AuditEvent @relation(fields: [auditId], references: [id], onDelete: Restrict)
+  type        String     @db.VarChar(80)
+  payload     Json
+  attempts    Int        @default(0)
+  availableAt DateTime   @default(now()) @map("available_at") @db.Timestamptz(6)
+  leaseUntil  DateTime?  @map("lease_until") @db.Timestamptz(6)
+  processedAt DateTime?  @map("processed_at") @db.Timestamptz(6)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([processedAt, availableAt])
+  @@map("outbox_events")
+}
+
+model MediaProcessingJob {
+  id          String       @id @default(uuid()) @db.Uuid
+  mediaId     String       @unique @map("media_id") @db.Uuid
+  media       ListingMedia @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  attempts    Int          @default(0)
+  availableAt DateTime     @default(now()) @map("available_at") @db.Timestamptz(6)
+  leaseUntil  DateTime?    @map("lease_until") @db.Timestamptz(6)
+  finishedAt  DateTime?    @map("finished_at") @db.Timestamptz(6)
+
+  @@index([finishedAt, availableAt])
+  @@map("media_processing_jobs")
+}
+
+model ServiceArea {
+  quotes           SaleQuote[]
+  listingRevisions ListingRevision[]
+  code             String            @id @db.VarChar(40)
+  name             String            @db.VarChar(100)
+  demoOnly         Boolean           @map("demo_only")
+  localities       ServiceLocality[]
+
+  @@map("service_areas")
+}
+
+model ServiceLocality {
+  areaCode  String          @map("area_code") @db.VarChar(40)
+  code      String          @db.VarChar(40)
+  label     String          @db.VarChar(120)
+  area      ServiceArea     @relation(fields: [areaCode], references: [code], onDelete: Restrict)
+  addresses MemberAddress[]
+
+  @@id([areaCode, code])
+  @@map("service_localities")
+}
+
+model AddressBook {
+  ownerId   String            @id @map("owner_id") @db.Uuid
+  owner     User              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  version   Int               @default(0)
+  addresses MemberAddress[]
+  receipts  MutationReceipt[]
+  audits    AuditEvent[]
+
+  @@map("address_books")
+}
+
+model MemberAddress {
+  version         Int             @default(1)
+  identity        AddressIdentity @relation(fields: [id, ownerId], references: [id, ownerId], onDelete: Restrict)
+  id              String          @id @default(uuid()) @db.Uuid
+  ownerId         String          @map("owner_id") @db.Uuid
+  book            AddressBook     @relation(fields: [ownerId], references: [ownerId], onDelete: Restrict)
+  recipientName   String          @map("recipient_name") @db.VarChar(100)
+  phone           String          @db.VarChar(10)
+  serviceAreaCode String          @map("service_area_code") @db.VarChar(40)
+  localityCode    String          @map("locality_code") @db.VarChar(40)
+  locality        ServiceLocality @relation(fields: [serviceAreaCode, localityCode], references: [areaCode, code], onDelete: Restrict)
+  detail          String          @db.VarChar(300)
+  isDefault       Boolean         @default(false) @map("is_default")
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([id, ownerId])
+  @@index([ownerId, createdAt, id])
+  @@map("member_addresses")
+}
+
+// Retains only identity/ownership after the live contact is deleted.
+model AddressIdentity {
+  originQuotes      SaleQuote[]       @relation("QuoteOrigin")
+  destinationQuotes SaleQuote[]       @relation("QuoteDestination")
+  id                String            @id @db.Uuid
+  ownerId           String            @map("owner_id") @db.Uuid
+  owner             User              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  current           MemberAddress?
+  revisions         ListingRevision[]
+
+  @@unique([id, ownerId])
+  @@map("address_identities")
+}
+
+model SaleQuotePolicy {
+  code          String                    @id @db.VarChar(60)
+  shippingFee   Int                       @map("shipping_fee")
+  commissionBps Int                       @map("commission_bps")
+  ttlSeconds    Int                       @map("ttl_seconds")
+  currentFor    SaleQuotePolicySelection?
+  quotes        SaleQuote[]
+
+  @@map("sale_quote_policies")
+}
+
+model SaleQuotePolicySelection {
+  scope      String          @id @db.VarChar(40)
+  policyCode String          @unique @map("policy_code") @db.VarChar(60)
+  policy     SaleQuotePolicy @relation(fields: [policyCode], references: [code], onDelete: Restrict)
+
+  @@map("sale_quote_policy_selection")
+}
+
+model SaleQuote {
+  orders                    DirectOrder[]
+  id                        String            @id @default(uuid()) @db.Uuid
+  version                   Int               @default(1)
+  buyerId                   String            @map("buyer_id") @db.Uuid
+  buyer                     User              @relation("QuoteBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
+  sellerId                  String            @map("seller_id") @db.Uuid
+  seller                    User              @relation("QuoteSeller", fields: [sellerId], references: [id], onDelete: Restrict)
+  listingId                 String            @map("listing_id") @db.Uuid
+  listingVersion            Int               @map("listing_version")
+  listingRevisionId         String            @map("listing_revision_id") @db.Uuid
+  listingRevision           ListingRevision   @relation(fields: [listingId, listingRevisionId], references: [listingId, id], onDelete: Restrict)
+  catalogRevisionId         String            @map("catalog_revision_id") @db.Uuid
+  catalogRevision           CatalogRevision   @relation(fields: [catalogRevisionId], references: [id], onDelete: Restrict)
+  originAddressId           String            @map("origin_address_id") @db.Uuid
+  originAddressVersion      Int               @map("origin_address_version")
+  originAddress             AddressIdentity   @relation("QuoteOrigin", fields: [originAddressId, sellerId], references: [id, ownerId], onDelete: Restrict)
+  destinationAddressId      String            @map("destination_address_id") @db.Uuid
+  destinationAddressVersion Int               @map("destination_address_version")
+  destinationAddress        AddressIdentity   @relation("QuoteDestination", fields: [destinationAddressId, buyerId], references: [id, ownerId], onDelete: Restrict)
+  serviceAreaCode           String            @map("service_area_code") @db.VarChar(40)
+  serviceArea               ServiceArea       @relation(fields: [serviceAreaCode], references: [code], onDelete: Restrict)
+  policyCode                String            @map("policy_code") @db.VarChar(60)
+  policy                    SaleQuotePolicy   @relation(fields: [policyCode], references: [code], onDelete: Restrict)
+  bookPrice                 Int               @map("book_price")
+  shippingFee               Int               @map("shipping_fee")
+  commissionBps             Int               @map("commission_bps")
+  commission                Int
+  buyerTotal                Int               @map("buyer_total")
+  sellerProceeds            Int               @map("seller_proceeds")
+  createdAt                 DateTime          @map("created_at") @db.Timestamptz(6)
+  expiresAt                 DateTime          @map("expires_at") @db.Timestamptz(6)
+  receipts                  MutationReceipt[]
+  audits                    AuditEvent[]
+
+  @@index([buyerId, expiresAt])
+  @@map("sale_quotes")
+}
+
+model DirectOrder {
+  deliveryReview             OrderDeliveryReview?
+  preparation                OrderPreparation?
+  paidAt                     DateTime?            @map("paid_at") @db.Timestamptz(6)
+  sellerConfirmationDeadline DateTime?            @map("seller_confirmation_deadline") @db.Timestamptz(6)
+  cancellationRequestedAt    DateTime?            @map("cancellation_requested_at") @db.Timestamptz(6)
+  cancellationReason         String?              @map("cancellation_reason") @db.VarChar(40)
+  holdAccount                WalletAccount?
+  journals                   LedgerJournal[]
+  id                         String               @id @default(uuid()) @db.Uuid
+  buyerId                    String               @map("buyer_id") @db.Uuid
+  buyer                      User                 @relation("OrderBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
+  sellerId                   String               @map("seller_id") @db.Uuid
+  seller                     User                 @relation("OrderSeller", fields: [sellerId], references: [id], onDelete: Restrict)
+  quoteId                    String               @unique @map("quote_id") @db.Uuid
+  quote                      SaleQuote            @relation(fields: [quoteId], references: [id], onDelete: Restrict)
+  version                    Int                  @default(1)
+  state                      String               @db.VarChar(40)
+  createdAt                  DateTime             @map("created_at") @db.Timestamptz(6)
+  paymentDeadline            DateTime             @map("payment_deadline") @db.Timestamptz(6)
+  closedAt                   DateTime?            @map("closed_at") @db.Timestamptz(6)
+  context                    WorkflowContext?
+
+  @@index([buyerId, state])
+  @@index([state, paymentDeadline, id])
+  @@index([state, sellerConfirmationDeadline, id])
+  @@map("direct_orders")
+}
+
+model OrderPreparation {
+  carrierReview     CarrierPickupReview?
+  shipment          DirectShipment?
+  packagingEvidence OrderPackagingEvidence[]
+  orderId           String                   @id @map("order_id") @db.Uuid
+  order             DirectOrder              @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  acceptedAt        DateTime                 @map("accepted_at") @db.Timestamptz(6)
+  pickupDeadline    DateTime                 @map("pickup_deadline") @db.Timestamptz(6)
+  policyCode        String                   @default("ORDER-PICKUP-v1") @map("policy_code") @db.VarChar(40)
+  receiptId         String                   @unique @map("receipt_id") @db.Uuid
+  receipt           MutationReceipt          @relation(fields: [receiptId], references: [id], onDelete: NoAction)
+  pickupReview      PickupReview?
+
+  @@index([pickupDeadline, orderId])
+  @@map("order_preparations")
+}
+
+model PickupReview {
+  id          String           @id @default(uuid()) @db.Uuid
+  orderId     String           @unique @map("order_id") @db.Uuid
+  preparation OrderPreparation @relation(fields: [orderId], references: [orderId], onDelete: Restrict)
+  openedAt    DateTime         @map("opened_at") @db.Timestamptz(6)
+  reason      String           @default("PickupDeadlineExceeded") @db.VarChar(40)
+  receiptId   String           @unique @map("receipt_id") @db.Uuid
+  receipt     MutationReceipt  @relation(fields: [receiptId], references: [id], onDelete: NoAction)
+
+  @@map("pickup_reviews")
+}
+
+model OrderPackagingEvidence {
+  shipmentLinks    ShipmentPackagingEvidence[]
+  id               String                      @id @default(uuid()) @db.Uuid
+  orderId          String                      @map("order_id") @db.Uuid
+  preparation      OrderPreparation            @relation(fields: [orderId], references: [orderId], onDelete: Restrict)
+  version          Int                         @default(1)
+  status           String                      @default("Pending") @db.VarChar(16)
+  mimeType         String                      @map("mime_type") @db.VarChar(40)
+  byteSize         Int                         @map("byte_size")
+  sha256           String                      @db.Char(64)
+  reservedBytes    Int                         @map("reserved_bytes")
+  createdAt        DateTime                    @map("created_at") @db.Timestamptz(6)
+  uploadedAt       DateTime?                   @map("uploaded_at") @db.Timestamptz(6)
+  derivativeSha256 String?                     @map("derivative_sha256") @db.Char(64)
+  derivativeBytes  Int?                        @map("derivative_bytes")
+  width            Int?
+  height           Int?
+  createReceiptId  String                      @unique @map("create_receipt_id") @db.Uuid
+  createReceipt    MutationReceipt             @relation("PackagingIntentReceipt", fields: [createReceiptId], references: [id], onDelete: NoAction)
+  uploadReceiptId  String?                     @unique @map("upload_receipt_id") @db.Uuid
+  uploadReceipt    MutationReceipt?            @relation("PackagingUploadReceipt", fields: [uploadReceiptId], references: [id], onDelete: NoAction)
+
+  @@unique([orderId, sha256], map: "packaging_identity")
+  @@unique([orderId, id], map: "packaging_order_id_identity")
+  @@index([orderId, createdAt, id])
+  @@map("order_packaging_evidence")
+}
+
+model DirectShipment {
+  pickupEvents CarrierPickupEvent[]
+  id           String                      @id @default(uuid()) @db.Uuid
+  orderId      String                      @unique @map("order_id") @db.Uuid
+  preparation  OrderPreparation            @relation(fields: [orderId], references: [orderId], onDelete: Restrict)
+  version      Int                         @default(1)
+  state        String                      @default("LabelCreated") @db.VarChar(24)
+  carrier      String                      @db.VarChar(40)
+  trackingCode String                      @map("tracking_code") @db.VarChar(35)
+  direction    String                      @default("Outbound") @db.VarChar(16)
+  origin       Json
+  destination  Json
+  shippingFee  Int                         @map("shipping_fee")
+  feePolicy    String                      @default("SellerAdvanceBuyerReimbursement") @map("fee_policy") @db.VarChar(40)
+  registeredAt DateTime                    @map("registered_at") @db.Timestamptz(6)
+  receiptId    String                      @unique @map("receipt_id") @db.Uuid
+  receipt      MutationReceipt             @relation(fields: [receiptId], references: [id], onDelete: NoAction)
+  evidence     ShipmentPackagingEvidence[]
+
+  @@unique([carrier, trackingCode])
+  @@unique([orderId, id], map: "shipment_order_id_identity")
+  @@map("direct_shipments")
+}
+
+model CarrierPickupEvent {
+  deliveryReview   OrderDeliveryReview?
+  id               String               @id @db.Uuid
+  orderId          String               @map("order_id") @db.Uuid
+  shipmentId       String               @map("shipment_id") @db.Uuid
+  shipment         DirectShipment       @relation(fields: [orderId, shipmentId], references: [orderId, id], onDelete: Restrict)
+  sequence         Int
+  occurredAt       DateTime             @map("occurred_at") @db.Timestamptz(6)
+  receivedAt       DateTime             @map("received_at") @db.Timestamptz(6)
+  outcome          String               @db.VarChar(24)
+  deliveryDeadline DateTime?            @map("delivery_deadline") @db.Timestamptz(6)
+  policyCode       String               @default("CARRIER-PICKUP-v1") @map("policy_code") @db.VarChar(40)
+  payloadHash      String               @map("payload_hash") @db.Char(64)
+  signature        String               @db.Char(64)
+  receiptId        String               @unique @map("receipt_id") @db.Uuid
+  receipt          MutationReceipt      @relation(fields: [receiptId], references: [id], onDelete: NoAction)
+  review           CarrierPickupReview?
+
+  @@unique([shipmentId, sequence])
+  @@unique([orderId, id], map: "pickup_event_order_identity")
+  @@map("carrier_pickup_events")
+}
+
+model OrderDeliveryReview {
+  id            String                 @id @default(uuid()) @db.Uuid
+  orderId       String                 @unique @map("order_id") @db.Uuid
+  order         DirectOrder            @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  pickupEventId String                 @unique @map("pickup_event_id") @db.Uuid
+  pickup        CarrierPickupEvent     @relation(fields: [orderId, pickupEventId], references: [orderId, id], onDelete: Restrict)
+  openedAt      DateTime               @map("opened_at") @db.Timestamptz(6)
+  openedBy      String                 @map("opened_by") @db.VarChar(24)
+  policyCode    String                 @default("ORDER-DELIVERY-REVIEW-v1") @map("policy_code") @db.VarChar(40)
+  receiptId     String                 @unique @map("receipt_id") @db.Uuid
+  receipt       MutationReceipt        @relation(fields: [receiptId], references: [id], onDelete: NoAction)
+  buyerReport   OrderNonReceiptReport?
+
+  @@unique([orderId, pickupEventId])
+  @@index([openedAt, id])
+  @@map("order_delivery_reviews")
+}
+
+model OrderNonReceiptReport {
+  id          String              @id @default(uuid()) @db.Uuid
+  orderId     String              @unique @map("order_id") @db.Uuid
+  review      OrderDeliveryReview @relation(fields: [orderId], references: [orderId], onDelete: Restrict)
+  submittedAt DateTime            @map("submitted_at") @db.Timestamptz(6)
+  description String              @db.VarChar(2000)
+  receiptId   String              @unique @map("receipt_id") @db.Uuid
+  receipt     MutationReceipt     @relation(fields: [receiptId], references: [id], onDelete: NoAction)
+
+  @@map("order_non_receipt_reports")
+}
+
+model CarrierPickupReview {
+  id          String             @id @default(uuid()) @db.Uuid
+  orderId     String             @unique @map("order_id") @db.Uuid
+  preparation OrderPreparation   @relation(fields: [orderId], references: [orderId], onDelete: Restrict)
+  eventId     String             @unique @map("event_id") @db.Uuid
+  event       CarrierPickupEvent @relation(fields: [orderId, eventId], references: [orderId, id], onDelete: Restrict)
+  openedAt    DateTime           @map("opened_at") @db.Timestamptz(6)
+  reason      String             @db.VarChar(24)
+
+  @@unique([orderId, eventId])
+  @@map("carrier_pickup_reviews")
+}
+
+model ShipmentPackagingEvidence {
+  shipmentId String                 @map("shipment_id") @db.Uuid
+  orderId    String                 @map("order_id") @db.Uuid
+  evidenceId String                 @map("evidence_id") @db.Uuid
+  position   Int
+  shipment   DirectShipment         @relation(fields: [orderId, shipmentId], references: [orderId, id], onDelete: Restrict)
+  evidence   OrderPackagingEvidence @relation(fields: [orderId, evidenceId], references: [orderId, id], onDelete: Restrict)
+
+  @@id([shipmentId, evidenceId])
+  @@unique([shipmentId, position])
+  @@map("shipment_packaging_evidence")
+}
+
+model WorkflowContext {
+  id             String             @id @default(uuid()) @db.Uuid
+  kind           String             @db.VarChar(40)
+  orderId        String             @unique @map("order_id") @db.Uuid
+  order          DirectOrder        @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  version        Int                @default(1)
+  ownershipPhase String             @map("ownership_phase") @db.VarChar(40)
+  items          WorkflowItem[]
+  agreement      AgreementSnapshot?
+  receipts       MutationReceipt[]
+  audits         AuditEvent[]
+
+  @@map("workflow_contexts")
+}
+
+model WorkflowItem {
+  contextId         String                @map("context_id") @db.Uuid
+  context           WorkflowContext       @relation(fields: [contextId], references: [id], onDelete: Restrict)
+  listingId         String                @map("listing_id") @db.Uuid
+  listingRevisionId String                @map("listing_revision_id") @db.Uuid
+  listingRevision   ListingRevision       @relation(fields: [listingId, listingRevisionId], references: [listingId, id], onDelete: Restrict)
+  catalogRevisionId String                @map("catalog_revision_id") @db.Uuid
+  catalogRevision   CatalogRevision       @relation(fields: [catalogRevisionId], references: [id], onDelete: Restrict)
+  snapshot          Json
+  commitments       ExclusiveCommitment[]
+
+  @@id([contextId, listingId])
+  @@map("workflow_items")
+}
+
+model AgreementSnapshot {
+  contextId String          @id @map("context_id") @db.Uuid
+  context   WorkflowContext @relation(fields: [contextId], references: [id], onDelete: Restrict)
+  snapshot  Json
+
+  @@map("agreement_snapshots")
+}
+
+model ExclusiveCommitment {
+  id               String            @id @default(uuid()) @db.Uuid
+  listingId        String            @map("listing_id") @db.Uuid
+  listing          Listing           @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  currentContextId String            @map("current_context_id") @db.Uuid
+  item             WorkflowItem      @relation(fields: [currentContextId, listingId], references: [contextId, listingId], onDelete: Restrict)
+  version          Int               @default(1)
+  status           String            @db.VarChar(40)
+  acquiredAt       DateTime          @map("acquired_at") @db.Timestamptz(6)
+  endedAt          DateTime?         @map("ended_at") @db.Timestamptz(6)
+  reason           String?           @db.VarChar(40)
+  events           CommitmentEvent[]
+
+  @@index([currentContextId, listingId])
+  @@map("exclusive_commitments")
+}
+
+model CommitmentEvent {
+  id            String              @id @default(uuid()) @db.Uuid
+  commitmentId  String              @map("commitment_id") @db.Uuid
+  commitment    ExclusiveCommitment @relation(fields: [commitmentId], references: [id], onDelete: Restrict)
+  sequence      Int
+  kind          String              @db.VarChar(40)
+  beforeVersion Int                 @map("before_version")
+  afterVersion  Int                 @map("after_version")
+  receiptId     String              @map("receipt_id") @db.Uuid
+  receipt       MutationReceipt     @relation(fields: [receiptId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  occurredAt    DateTime            @map("occurred_at") @db.Timestamptz(6)
+
+  @@unique([commitmentId, sequence])
+  @@map("commitment_events")
 }

@@ -1,0 +1,22 @@
+# Isolated local QA database. This project never mounts the development data volume.
+name: used-book-marketplace-quality
+
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: usedbooks_test
+      POSTGRES_USER: usedbooks_test
+      POSTGRES_PASSWORD: local_test_only
+    ports:
+      - "127.0.0.1:${TEST_POSTGRES_PORT:-55434}:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U usedbooks_test -d usedbooks_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_test_data:

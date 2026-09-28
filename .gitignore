@@ -9,6 +9,8 @@ node_modules/
 .pnpm-store/
 dist/
 coverage/
+apps/admin-web/test-results/
+apps/mobile-react-native/test-results/
 *.tsbuildinfo
 
 # Expo / React Native
@@ -31,6 +33,8 @@ ios/Pods/
 Thumbs.db
 
 # Logs and generated files
+__pycache__/
+*.py[cod]
 *.log
 tmp/
 .tmp/

@@ -2,14 +2,30 @@ name: API CI
 
 on:
   pull_request:
-    paths: ["apps/api/**", "packages/api-contract/**", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
+    paths: ["apps/api/**", "packages/api-contract/**", "scripts/check-api-routes.mjs", "infra/docker-compose.test.yml", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/api-ci.yml"]
   push:
     branches: [main]
-    paths: ["apps/api/**", "packages/api-contract/**", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
+    paths: ["apps/api/**", "packages/api-contract/**", "scripts/check-api-routes.mjs", "infra/docker-compose.test.yml", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/api-ci.yml"]
 
 jobs:
   api:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: usedbooks
+          POSTGRES_PASSWORD: ci_only_password
+          POSTGRES_DB: usedbooks_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U usedbooks -d usedbooks_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://usedbooks:ci_only_password@localhost:5432/usedbooks_test
+      TEST_DATABASE_URL: postgresql://usedbooks:ci_only_password@localhost:5432/usedbooks_test
+      JWT_ACCESS_SECRET: ci-only-signing-key-not-for-production-000000000
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -20,7 +36,12 @@ jobs:
           node-version: 24.15.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm contract:check
+      - run: pnpm contract:routes
+      - run: pnpm db:generate
+      - run: pnpm db:migrate
       - run: pnpm --filter @used-books/api lint
       - run: pnpm --filter @used-books/api typecheck
       - run: pnpm --filter @used-books/api test
+      - run: pnpm test:api:e2e
       - run: pnpm --filter @used-books/api build

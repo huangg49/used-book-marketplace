@@ -1,0 +1,17 @@
+{
+  "name": "@used-books/api-contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/schema.ts",
+    "./openapi.yaml": "./openapi.yaml"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "check": "node scripts/generate.mjs --check"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.10.1"
+  }
+}

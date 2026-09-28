@@ -1,4 +1,19 @@
-# Lật lại - Bộ nhận diện v1.0
+# Lật lại - Nhận diện thương hiệu
+
+## Bản phát triển mới: 1.1 / Dấu chuyền tay
+
+Mở [index.html](index.html) để xem hướng nhận diện mới: câu chuyện, ngôn ngữ đồ họa,
+typography, màu, thẻ nhắn gửi và bookmark. Đọc [hướng dẫn v1.1](v1.1/README.md) cùng
+[báo cáo rà soát](../../docs/design/BRAND_AUDIT.md) để hiểu quyết định và giới hạn.
+
+Nguồn nhận diện nằm trong `v1.1/`, đã được áp dụng vào
+[nền tảng UI React Native](../../docs/design/UI_COMPONENTS.md). Các file `tokens/`
+vẫn giữ v1.0 cho client chưa chuyển đổi. Không trộn hai nguồn trong cùng UI.
+
+## Bộ gốc v1.0 (giữ để đối chiếu)
+
+Gallery gốc: [index-v1.0.html](index-v1.0.html). PDF, logo, icon, brand board và
+applications cũ bên dưới vẫn thuộc v1.0; ZIP trong docs cũng là snapshot v1.0.
 
 Tên: **Lật lại**. Tagline: **Sách cũ. Chương mới.**
 
@@ -7,7 +22,7 @@ Hướng thiết kế: hai trang sách mở và một trang lật; xanh lá tr�
 
 ## Mở và sử dụng
 
-- Mở `index.html` để xem toàn bộ bộ nhận diện offline.
+- Mở `index-v1.0.html` để xem bộ nhận diện gốc offline.
 - Đọc `guidelines/Lat_Lai_Brand_Guidelines.pdf` trước khi triển khai.
 - SVG logo đã chuyển chữ thành vector; mở được trong Figma, Illustrator hoặc Inkscape mà không cần cài font.
 - PNG logo có nền trong suốt; logo trắng chỉ nhìn thấy trên nền màu tối.
@@ -27,5 +42,5 @@ Tệp JSON là nguồn tham chiếu chung; CSS/TypeScript/Dart là các bản xu
 ## Giới hạn phạm vi
 
 Đây là concept v1.0, chưa phải xác nhận độc quyền tên hoặc logo. Chưa tra cứu nhãn hiệu hay tên miền.
-Bộ nhận diện được lưu chung trong monorepo tại `packages/brand/`; chưa tích hợp vào giao diện các ứng dụng.
+Bộ gốc được giữ để đối chiếu; trạng thái tích hợp hiện tại được ghi ở phần 1.1 phía trên.
 Font đi kèm có giấy phép SIL OFL riêng trong `fonts/`; giữ các giấy phép khi phân phối font.

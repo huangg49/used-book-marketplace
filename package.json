@@ -8,15 +8,31 @@
     "node": ">=24.15.0"
   },
   "scripts": {
+    "setup:local": "node scripts/setup-local.mjs",
+    "doctor:local": "pnpm --filter @used-books/api doctor:local",
+    "build:android": "node scripts/build-android.mjs",
+    "brand:app-icons": "node scripts/render-app-icons.mjs",
+    "contract:generate": "pnpm --filter @used-books/api-contract generate",
+    "contract:check": "pnpm --filter @used-books/api-contract check",
+    "contract:routes": "node scripts/check-api-routes.mjs",
+    "db:generate": "pnpm --filter @used-books/api prisma:generate",
+    "db:migrate": "pnpm --filter @used-books/api prisma:deploy",
+    "db:seed": "pnpm --filter @used-books/api prisma:seed",
+    "test:api:e2e": "pnpm --filter @used-books/api test:e2e",
+    "infra:test:up": "docker compose -f infra/docker-compose.test.yml up -d --wait",
+    "infra:test:stop": "docker compose -f infra/docker-compose.test.yml stop",
+    "test:public:browser": "node scripts/test-public-shelf.mjs",
     "dev:api": "pnpm --filter @used-books/api start:dev",
+    "dev:media": "pnpm --filter @used-books/api worker:media",
     "dev:admin": "pnpm --filter @used-books/admin-web dev",
     "dev:rn": "pnpm --filter @used-books/mobile-react-native start",
     "build": "pnpm -r --if-present run build",
     "lint": "pnpm -r --if-present run lint",
     "typecheck": "pnpm -r --if-present run typecheck",
     "test": "pnpm -r --if-present run test",
-    "infra:up": "docker compose -f infra/docker-compose.yml up -d",
-    "infra:down": "docker compose -f infra/docker-compose.yml down",
-    "infra:logs": "docker compose -f infra/docker-compose.yml logs -f"
+    "infra:up": "docker compose --env-file .env -f infra/docker-compose.yml up -d",
+    "infra:down": "docker compose --env-file .env -f infra/docker-compose.yml down",
+    "infra:logs": "docker compose --env-file .env -f infra/docker-compose.yml logs -f",
+    "dev:orders": "pnpm --filter @used-books/api worker:orders"
   }
 }

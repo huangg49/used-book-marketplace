@@ -1,0 +1,55 @@
+name: Operations and public shelf CI
+on:
+  pull_request:
+    paths: ["apps/admin-web/**", "apps/mobile-react-native/**", "apps/api/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "scripts/test-public-shelf.mjs", "scripts/test-listing-journey.mjs", "scripts/test-address-journey.mjs", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/operations-ci.yml"]
+  push:
+    branches: [main]
+    paths: ["apps/admin-web/**", "apps/mobile-react-native/**", "apps/api/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "scripts/test-public-shelf.mjs", "scripts/test-listing-journey.mjs", "scripts/test-address-journey.mjs", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/operations-ci.yml"]
+jobs:
+  operations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: usedbooks
+          POSTGRES_PASSWORD: ci_only_password
+          POSTGRES_DB: operations_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U usedbooks -d operations_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://usedbooks:ci_only_password@localhost:5432/operations_test
+      DATABASE_URL: postgresql://usedbooks:ci_only_password@localhost:5432/operations_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm contract:check
+      - run: pnpm --filter @used-books/api build
+      - run: pnpm --filter @used-books/admin-web lint
+      - run: pnpm --filter @used-books/admin-web typecheck
+      - run: pnpm --filter @used-books/session-client test
+      - run: pnpm --filter @used-books/admin-web test
+      - run: pnpm --filter @used-books/admin-web build
+      - run: pnpm --filter @used-books/admin-web exec playwright install --with-deps chromium
+      - run: pnpm --filter @used-books/admin-web test:browser
+      - run: pnpm --filter @used-books/mobile-react-native export:web
+        env:
+          EXPO_PUBLIC_API_BASE_URL: http://127.0.0.1:3009/api/v1
+          EXPO_PUBLIC_DESIGN_PREVIEW: '1'
+      - run: pnpm test:public:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: client-browser-evidence
+          path: |
+            apps/admin-web/test-results
+            apps/mobile-react-native/test-results

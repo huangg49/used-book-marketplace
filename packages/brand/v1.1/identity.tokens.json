@@ -1,0 +1,46 @@
+{
+  "version": "1.1",
+  "direction": "Dấu chuyền tay",
+  "status": "Adopted by React Native UI foundation; native device review pending",
+  "palette": {
+    "forest": "#214B40",
+    "paper": "#F5EFDF",
+    "terracotta": "#C15A39",
+    "ink": "#202C27",
+    "leaf": "#D5DFA4",
+    "surface": "#FFFCF4",
+    "muted": "#58685E",
+    "rustText": "#963F28",
+    "border": "#788477",
+    "rule": "#D5D8C8",
+    "error": "#A32D34",
+    "errorSurface": "#FCEDEE",
+    "success": "#255A43",
+    "successSurface": "#E8EFDF",
+    "warning": "#74520C",
+    "warningSurface": "#F9EECF",
+    "info": "#34556B",
+    "infoSurface": "#EAF0F3"
+  },
+  "typography": {
+    "display": { "family": "Lora", "weight": 600, "use": "Brand headlines and short editorial headings" },
+    "body": { "family": "Be Vietnam Pro", "weight": 400, "use": "Descriptions, navigation and form content" },
+    "label": { "family": "Be Vietnam Pro", "weight": 700, "use": "Actions, prices and brief labels" },
+    "vietnameseProof": "Ắ ằ Ặ ấ ễ ộ ớ ự · Lật lại · Nguyễn Nhật Ánh · 125.000 ₫"
+  },
+  "contrastPairs": [
+    { "foreground": "ink", "background": "paper", "minimum": 4.5 },
+    { "foreground": "forest", "background": "paper", "minimum": 4.5 },
+    { "foreground": "paper", "background": "forest", "minimum": 4.5 },
+    { "foreground": "leaf", "background": "forest", "minimum": 4.5 },
+    { "foreground": "muted", "background": "paper", "minimum": 4.5 },
+    { "foreground": "rustText", "background": "paper", "minimum": 4.5 },
+    { "foreground": "ink", "background": "surface", "minimum": 4.5 },
+    { "foreground": "border", "background": "paper", "minimum": 3 },
+    { "foreground": "border", "background": "surface", "minimum": 3 },
+    { "foreground": "error", "background": "errorSurface", "minimum": 4.5 },
+    { "foreground": "success", "background": "successSurface", "minimum": 4.5 },
+    { "foreground": "warning", "background": "warningSurface", "minimum": 4.5 },
+    { "foreground": "info", "background": "infoSurface", "minimum": 4.5 }
+  ]
+}

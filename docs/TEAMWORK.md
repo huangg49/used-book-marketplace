@@ -2,6 +2,12 @@
 
 ## Ownership
 
+Use [SRS1.1](SRS_V1_1.md) and [its normative annex](features/LOCAL_HANDOVER_AUCTION.md)
+for new business work. RN is the first Member client; the Flutter lane consumes the
+same API when needed. Current [state diagrams](features/LOCAL_TRANSACTION_DESIGN.md)
+and [acceptance matrix](features/LOCAL_TRANSACTION_ACCEPTANCE.md) supersede v1.0-only
+assumptions for point/auction flows. Do not treat mock UI or planned routes as working features.
+
 Assign one primary and one backup owner to each area. Ownership means reviewing changes and maintaining documentation, not working alone.
 
 | Area | Suggested responsibility |

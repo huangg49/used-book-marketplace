@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "outDir": "../../.tmp/order-worker-test",
+    "incremental": false,
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": ["order-worker-child.ts"],
+  "exclude": ["../../node_modules", "../../.tmp"]
+}

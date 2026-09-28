@@ -1,0 +1,20 @@
+[
+  {
+    "file": "pride.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:AUSTEN(1894)_Pride_and_prejudice_(15811958311).jpg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/9/94/AUSTEN%281894%29_Pride_and_prejudice_%2815811958311%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original",
+    "bytes": 1111914
+  },
+  {
+    "file": "alice.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Alice%27s_Adventures_in_Wonderland_cover_(1865).jpg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/a/a9/Alice%27s_Adventures_in_Wonderland_cover_%281865%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original",
+    "bytes": 1319776
+  },
+  {
+    "file": "oz.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:The_Wonderful_Wizard_of_Oz_first_edition_cover.jpg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/6/67/The_Wonderful_Wizard_of_Oz_first_edition_cover.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original",
+    "bytes": 2881601
+  }
+]

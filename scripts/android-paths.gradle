@@ -1,0 +1,16 @@
+// Keep CMake output out of pnpm's deeply nested dependency directories on Windows.
+// Applied only by build-android.mjs; does not edit generated projects or dependencies.
+gradle.beforeProject { project ->
+    ['com.android.application', 'com.android.library'].each { pluginId ->
+        project.pluginManager.withPlugin(pluginId) {
+            project.androidComponents.finalizeDsl { android ->
+                // SDK CMake bundles may still ship Ninja 1.10, including CMake 3.31.
+                def ninja = System.getenv('LATLAI_NINJA').replace('\\', '/')
+                android.defaultConfig.externalNativeBuild.cmake.arguments.add("-DCMAKE_MAKE_PROGRAM=${ninja}".toString())
+                def key = project.path.replace(':', '_')
+                android.externalNativeBuild.cmake.buildStagingDirectory =
+                    new File(rootProject.projectDir, ".native/${key}")
+            }
+        }
+    }
+}

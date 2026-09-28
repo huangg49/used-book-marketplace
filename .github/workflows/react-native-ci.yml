@@ -2,14 +2,16 @@ name: React Native CI
 
 on:
   pull_request:
-    paths: ["apps/mobile-react-native/**", "packages/api-contract/**", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
+    paths: ["apps/mobile-react-native/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/react-native-ci.yml"]
   push:
     branches: [main]
-    paths: ["apps/mobile-react-native/**", "packages/api-contract/**", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
+    paths: ["apps/mobile-react-native/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/react-native-ci.yml"]
 
 jobs:
   react-native:
     runs-on: ubuntu-latest
+    env:
+      EXPO_PUBLIC_API_BASE_URL: http://localhost:3000/api/v1
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -20,5 +22,13 @@ jobs:
           node-version: 24.15.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm contract:check
       - run: pnpm --filter @used-books/mobile-react-native lint
       - run: pnpm --filter @used-books/mobile-react-native typecheck
+      - run: pnpm --filter @used-books/session-client test
+      - run: pnpm --filter @used-books/mobile-react-native test
+      - run: pnpm --filter @used-books/mobile-react-native export:all
+      - name: Export opt-in UI review routes
+        run: pnpm --filter @used-books/mobile-react-native export:web
+        env:
+          EXPO_PUBLIC_DESIGN_PREVIEW: '1'
