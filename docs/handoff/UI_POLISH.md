@@ -53,6 +53,10 @@ lát cắt polish này. Không coi việc giữ bố cục là đã kiểm mọi
 
 Khối ảnh xanh trơn là ảnh fixture có chủ đích, không là bìa sản phẩm thật.
 
+Bổ sung 28/09: operations queue/retry/conflict/bàn phím đã được rà và sửa trên
+nhánh riêng. Xem [OPERATIONS_UI_QA](OPERATIONS_UI_QA.md) cho ảnh và kết quả mới;
+ghi chú operations chưa đóng phía trên là trạng thái trước vòng này.
+
 ## Giới hạn còn mở
 
 Android debug x86_64 được build riêng, không dùng export web để suy ra native pass.

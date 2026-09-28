@@ -75,6 +75,17 @@ try {
   };
   const click = (p, name) =>
     p.getByRole("button", { name, exact: true }).click();
+  const focused = async (locator) =>
+    assert(await locator.evaluate((node) => node === document.activeElement), `Expected focus: ${locator}`);
+  const shot = async (p, name) => {
+    await p.evaluate(() => document.fonts.ready);
+    assert.equal(
+      await p.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+      `Horizontal overflow: ${name}`,
+    );
+    await p.screenshot({ path: path.join(artifacts, name + ".png"), fullPage: true });
+  };
   const login = async (
     p,
     route = "/review/listings",
@@ -96,21 +107,66 @@ try {
     await p.getByLabel("Lý do từ chối", { exact: true }).waitFor();
   };
   const p = await page();
+  let releaseQueue;
+  const queueGate = new Promise((resolve) => { releaseQueue = resolve; });
+  await p.route("**/operations/listings?*", async (route) => {
+    await queueGate;
+    await route.abort("failed");
+  });
   await login(p);
   await p
     .getByRole("heading", { name: "Trước khi sách chuyền tay." })
     .waitFor();
+  await p.getByRole("status").filter({ hasText: "Đang tải hồ sơ" }).waitFor();
+  await shot(p, "queue-loading-1440");
+  releaseQueue();
+  await p.getByRole("alert").waitFor();
+  assert.equal(await p.getByText("Chưa có hồ sơ ở mục này.").count(), 0);
+  await shot(p, "queue-first-error-1440");
+  await p.unroute("**/operations/listings?*");
+  const retry = p.getByRole("button", { name: "Thử tải lại", exact: true });
+  await retry.focus();
+  await p.keyboard.press("Enter");
+  await p.locator(".queue-row").nth(2).waitFor();
+  assert.match(await p.locator(".queue-row").first().innerText(), /Giá bán: 125\.000/);
+  assert.match(await p.locator(".queue-row").first().innerText(), /Giá trị đổi: 150\.000/);
+  await shot(p, "queue-1440");
+  const skip = p.getByRole("link", { name: "Đến nội dung chính" });
+  await skip.focus();
+  await p.keyboard.press("Enter");
+  await focused(p.locator("#main"));
+  await p.keyboard.press("Tab");
+  await focused(p.getByRole("button", { name: "Chờ duyệt", exact: true }));
+  await p.setViewportSize({ width: 320, height: 780 });
+  await p.addStyleTag({ content: "html{font-size:21.6px !important}" });
+  await shot(p, "queue-320-large");
+  await p.setViewportSize({ width: 1440, height: 1000 });
+  await p.addStyleTag({ content: "html{font-size:16px !important}" });
   await p.getByRole("link", { name: "02 · Đầu sách", exact: true }).click();
   await p
     .locator(`a[href='/review/catalog-requests/${fixture.catalogId}']`)
     .first()
     .click();
   await click(p, "Xác nhận đầu sách");
+  await p.getByRole("dialog").waitFor();
+  await focused(p.getByRole("button", { name: "Quay lại kiểm tra", exact: true }));
+  await p.keyboard.press("Tab");
+  await focused(p.getByRole("button", { name: "Xác nhận quyết định", exact: true }));
+  await p.keyboard.press("Shift+Tab");
+  await focused(p.getByRole("button", { name: "Quay lại kiểm tra", exact: true }));
+  await p.keyboard.press("Escape");
+  await p.getByRole("dialog").waitFor({ state: "hidden" });
+  await focused(p.getByRole("button", { name: "Xác nhận đầu sách", exact: true }));
+  await p.keyboard.press("Enter");
+  await shot(p, "decision-confirm-1440");
   await click(p, "Xác nhận quyết định");
   await p.locator(".status-label").filter({ hasText: "Đã xác nhận" }).waitFor();
   await openListing(p, 0);
   await click(p, "Xem lớn ảnh 1");
+  await p.getByRole("dialog").waitFor();
+  await focused(p.getByRole("button", { name: "Đóng ảnh 1", exact: true }));
   await p.keyboard.press("Escape");
+  await focused(p.getByRole("button", { name: "Xem lớn ảnh 1", exact: true }));
   assert.equal(await p.locator("dialog[open]").count(), 0);
   assert(
     await p
@@ -118,6 +174,7 @@ try {
       .isDisabled(),
   );
   await click(p, "Từ chối có lý do");
+  await focused(p.getByLabel("Lý do từ chối", { exact: true }));
   assert.equal(
     await p
       .getByLabel("Lý do từ chối", { exact: true })
@@ -127,7 +184,12 @@ try {
   for (const checkbox of await p.getByRole("checkbox").all())
     await checkbox.check();
   await p.getByRole("link", { name: "← Về danh sách", exact: true }).click();
-  await click(p, "Ở lại hồ sơ");
+  await p.getByRole("dialog").waitFor();
+  await focused(p.getByRole("button", { name: "Ở lại hồ sơ", exact: true }));
+  await shot(p, "leave-guard-1440");
+  await p.keyboard.press("Escape");
+  await p.getByRole("dialog").waitFor({ state: "hidden" });
+  await focused(p.getByRole("link", { name: "← Về danh sách", exact: true }));
   assert.equal(await p.getByRole("checkbox", { checked: true }).count(), 6);
   await p.screenshot({
     path: path.join(artifacts, "listing-1440.png"),
@@ -145,6 +207,10 @@ try {
   });
   await click(p, "Duyệt bài đăng");
   await click(p, "Xác nhận quyết định");
+  await p.getByRole("button", { name: "Thử lại quyết định vừa gửi", exact: true }).waitFor();
+  await p.getByRole("dialog").waitFor({ state: "hidden" });
+  await focused(p.getByRole("button", { name: "Thử lại quyết định vừa gửi", exact: true }));
+  await shot(p, "decision-lost-ack-1440");
   await click(p, "Thử lại quyết định vừa gửi");
   await p.locator(".status-label").filter({ hasText: "Đã duyệt" }).waitFor();
   assert.equal(keys.length, 2);
@@ -194,6 +260,8 @@ try {
       "Hồ sơ đã thay đổi hoặc không còn đủ điều kiện. Tải lại và kiểm tra nội dung trước khi quyết định.",
     )
     .waitFor();
+  await second.getByRole("dialog").waitFor({ state: "hidden" });
+  await focused(second.getByRole("button", { name: "Tải kết quả mới nhất", exact: true }));
   await second.screenshot({
     path: path.join(artifacts, "conflict.png"),
     fullPage: true,
@@ -207,6 +275,7 @@ try {
     .getByRole("link", { name: "01 · Bài đăng sách", exact: true })
     .click();
   await p.getByRole("heading", { name: "Chưa có hồ sơ ở mục này." }).waitFor();
+  await shot(p, "queue-empty-1440");
   await click(p, "Đã từ chối");
   await p.locator(".queue-row").first().waitFor();
   let offline = true;
@@ -218,6 +287,7 @@ try {
     .getByText("Chưa kết nối được máy chủ. Kiểm tra mạng và thử lại.")
     .waitFor();
   assert((await p.locator(".queue-row").count()) > 0);
+  await shot(p, "queue-refresh-error-1440");
   offline = false;
   await click(p, "Thử tải lại");
   await p.getByRole("alert").waitFor({ state: "hidden" });

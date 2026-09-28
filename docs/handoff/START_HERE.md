@@ -216,7 +216,7 @@ bằng chứng nếu code liên quan không đổi. Chia việc còn lại theo 
 | Người tiếp nhận | Việc tiếp tục | Kết quả cần ghi |
 |---|---|---|
 | RN + QA | Native login/restore, picker/upload, bàn phím, Back, TalkBack, chữ lớn; xem launcher/splash mới | Thiết bị/OS/commit, từng ca pass/fail, ảnh và lỗi còn lại; không thay bằng web |
-| Operations + QA | Rà phần visual matrix còn thiếu: queue, retry/conflict, keyboard/focus | Ảnh đúng trạng thái; giữ đủ checklist, lý do và quyền |
+| Operations + QA | Queue/detail/retry/conflict/keyboard đã hoàn tất trên nhánh `codex/operations-ui-qa`; đọc [bằng chứng](OPERATIONS_UI_QA.md), review để tích hợp | Ba lỗi UI đã sửa; chỉ lặp suite khi có thay đổi liên quan |
 | API reviewer | Review độc lập locks, ledger, permissions và migration theo TEAMWORK | Nhận xét hoặc xác nhận review, tối thiểu hai reviewer cho phần tiền/quyền |
 | Người đóng mốc | Kiểm tra báo cáo clone sạch, còn gì chưa nghiệm thu; quyết định release/PR theo workflow team | Commit/tag rõ ràng; chỉ nói remote đã có khi đã push thật |
 

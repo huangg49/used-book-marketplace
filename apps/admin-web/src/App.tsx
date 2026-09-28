@@ -164,7 +164,7 @@ function Workspace() {
           )}
         </nav>
       )}
-      <main id="main" className="workspace">
+      <main id="main" className="workspace" tabIndex={-1}>
         {logoutError !== undefined && <ErrorNotice error={logoutError} />}
         {profile.isLoading && (
           <p role="status">Đang kiểm tra quyền truy cập…</p>

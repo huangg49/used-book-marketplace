@@ -49,6 +49,7 @@ export function DecisionForm({
   const leaveDialog = useRef<HTMLDialogElement>(null);
   const registerGuard = useContext(LeaveGuard);
   const reasonInput = useRef<HTMLTextAreaElement>(null);
+  const recoveryButton = useRef<HTMLButtonElement>(null);
   const inFlight = useRef(false);
   const dirty = !done && (!!reason || checked.size > 0 || !!intent || busy);
   const blocker = useBlocker(dirty);
@@ -68,6 +69,11 @@ export function DecisionForm({
     onPending(!!intent || busy);
     return () => onPending(false);
   }, [intent, busy, onPending]);
+  useEffect(() => {
+    // The original action is disabled while an intent needs reconciliation.
+    // After the dialog closes, keep keyboard users beside the recovery message.
+    if (error !== undefined && !busy) recoveryButton.current?.focus();
+  }, [error, busy]);
   useEffect(() => {
     if (blocker.state === "blocked") leaveDialog.current?.showModal();
     else leaveDialog.current?.close();
@@ -221,7 +227,11 @@ export function DecisionForm({
             : intent.stopped
               ? "Quyết định chưa được chấp nhận. Tải kết quả mới nhất để kiểm tra."
               : "Chưa biết máy chủ đã nhận quyết định hay chưa. Thử lại đúng yêu cầu này trước khi rời hồ sơ."}
-          <Button busy={busy} onClick={() => void send(intent)}>
+          <Button
+            ref={recoveryButton}
+            busy={busy}
+            onClick={() => void send(intent)}
+          >
             {intent.acknowledged || intent.stopped
               ? "Tải kết quả mới nhất"
               : "Thử lại quyết định vừa gửi"}

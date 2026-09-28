@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ComponentPropsWithRef, ReactNode } from "react";
 import { ApiError } from "@used-books/session-client";
 import { errorText } from "./errors";
 
@@ -7,7 +7,7 @@ export function Button({
   children,
   className = "",
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { busy?: boolean }) {
+}: ComponentPropsWithRef<"button"> & { busy?: boolean }) {
   return (
     <button
       type="button"

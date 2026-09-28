@@ -61,7 +61,9 @@ review người dùng hoặc CTA giao dịch giả. Giao diện phục vụ sác
 
 Kệ/chi tiết, tài khoản/địa chỉ, danh sách/editor và BackAction đã được chỉnh và chạy
 regression mới; `/ui` có kiểm tra 320 px/chữ 135%/bàn phím. Xem [UI_POLISH](UI_POLISH.md)
-cho ảnh và phạm vi cụ thể. Operations đã rà detail, chưa đóng toàn bộ visual matrix.
+cho ảnh và phạm vi cụ thể. Lát cắt operations đã đóng theo phạm vi
+[OPERATIONS_UI_QA](OPERATIONS_UI_QA.md): queue, detail, lỗi/retry/conflict và focus;
+đã sửa nhãn hai giá, skip link và focus recovery. Không thay nghiệm thu screen reader.
 Native còn mở: build APK qua nhưng runtime bị chặn khi khởi động Metro.
 Không mở ví/checkout/Order UI giả; chưa đóng toàn bộ Gate 3.
 

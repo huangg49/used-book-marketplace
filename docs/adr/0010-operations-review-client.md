@@ -64,3 +64,9 @@ until this work is pushed.
 Public shelf/media, approved edits/visibility/removal, notifications, transactions,
 point inspection and auctions remain separate work. RN form/picker native checks
 remain pending; JS exports are not Android/iOS device evidence.
+
+Handoff addendum (2026-09-28): operations now labels sale and exchange values
+separately in the queue. The skip link focuses main; failed decisions focus their
+recovery action after the dialog closes. Existing command/replay and permission
+semantics are unchanged. See [operations UI QA](../handoff/OPERATIONS_UI_QA.md)
+for keyboard, responsive and error-state evidence and the remaining limits.

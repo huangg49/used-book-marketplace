@@ -180,6 +180,11 @@
   color: var(--rust-text);
   align-self: start;
 }
+.queue-prices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+}
 .row-meta {
   display: flex;
   gap: 1rem;

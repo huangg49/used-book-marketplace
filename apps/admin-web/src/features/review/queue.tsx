@@ -147,14 +147,19 @@ function QueueContent({ kind }: { kind: Kind }) {
                 </Link>
               </h2>
               {"state" in item ? (
-                <p className="muted">
-                  {labels[item.currentRevision.content.mode || ""]} ·{" "}
-                  {money(
-                    item.currentRevision.content.salePrice ??
-                      item.currentRevision.content.exchangeValue,
-                  )}{" "}
-                  · {item.currentRevision.content.mediaIds.length} ảnh
-                </p>
+                <div className="queue-prices muted">
+                  {item.currentRevision.content.salePrice != null && (
+                    <span>
+                      Giá bán: {money(item.currentRevision.content.salePrice)}
+                    </span>
+                  )}
+                  {item.currentRevision.content.exchangeValue != null && (
+                    <span>
+                      Giá trị đổi: {money(item.currentRevision.content.exchangeValue)}
+                    </span>
+                  )}
+                  <span>{item.currentRevision.content.mediaIds.length} ảnh</span>
+                </div>
               ) : (
                 <p className="muted">
                   {item.currentRevision.metadata.authors.join(" · ")} ·{" "}
