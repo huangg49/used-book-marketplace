@@ -9,6 +9,7 @@
 - [Native: 21 ca thao tác và phiếu ghi bằng chứng](handoff/NATIVE_ACCEPTANCE.md)
 - [Android 28/09: session, upload JPEG thật, sửa worker và ca còn mở](handoff/NATIVE_RUN_2026_09_28.md)
 - [Cải thiện mobile: kệ, điều hướng, bộ lọc cố định và bằng chứng](handoff/MOBILE_EXPERIENCE.md)
+- [Kệ/chi tiết dùng chung, màn xem mẫu riêng và kiểm tra Android](handoff/SHELF_DETAIL_REVIEW.md)
 - [Review độc lập: đường đọc code, invariant và phiếu nhận xét](handoff/INDEPENDENT_REVIEW.md)
 
 - [Delivery overdue and Buyer non-receipt intake](features/DELIVERY_OVERDUE_REPORT.md)

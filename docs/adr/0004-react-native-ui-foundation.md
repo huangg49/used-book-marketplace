@@ -58,3 +58,16 @@ existing Expo routes and existing session guards; it is absent from dirty editor
 Shelf cards use two columns, falling back to one below 360 px or at font scale 1.3.
 Keep brand tokens and real data; no new workflow, persistence or auth policy.
 Evidence and remaining limitations: [mobile experience](../handoff/MOBILE_EXPERIENCE.md).
+
+## Shelf/detail review — 2026-09-28
+
+Extract feature-local ShelfGrid, BookPresentation and BookGallery so actual API
+screens and explicitly labelled review fixtures share presentation. Fetching,
+signed-image expiry, permissions and mutations remain with the real screen owners.
+Fixtures use existing attributed archival images and never seed public listings.
+`/showcase` and `/showcase-book` allow `__DEV__` or the existing preview flag;
+normal exports redirect to the real shelf. They have no product-navigation entry.
+The existing `/ui` and `/design` flag requirement is unchanged. This is presentation
+gating, not a security boundary or an asset exclusion guarantee.
+Shelf cards accept Android's float rounding at OS 130% using a 1.29 threshold.
+Evidence, entry points and pending acceptance: [shelf/detail review](../handoff/SHELF_DETAIL_REVIEW.md).

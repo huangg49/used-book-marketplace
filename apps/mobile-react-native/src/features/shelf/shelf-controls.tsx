@@ -66,18 +66,18 @@ export function ShelfStory() {
       style={{
         backgroundColor: colors.forest,
         borderRadius: radius.card,
-        padding: space.xl,
+        padding: space.lg,
         flexDirection: "row",
         alignItems: "center",
         gap: space.md,
       }}
     >
       <View style={{ flex: 1, gap: space.sm }}>
-        <AppText kind="heading" color={colors.paper}>
-          Sách cũ.{"\n"}Chương mới.
+        <AppText kind="card" color={colors.paper}>
+          Sách cũ. Chương mới.
         </AppText>
         <AppText kind="small" color={colors.leaf}>
-          Một cuốn đã đọc.{"\n"}Một người đang đợi.
+          Đọc xong, chuyền tay.{"\n"}Để một câu chuyện đi tiếp.
         </AppText>
       </View>
       <PageTurn small />

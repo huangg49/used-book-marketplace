@@ -124,6 +124,13 @@ Kệ công khai dùng `SearchField.onSubmitEditing` để tìm bằng phím Sear
 Feature quản lý hạn URL, refetch khi trở lại foreground, placeholder và nút thử lại;
 component không tự ký URL hoặc xác định quyền. `/ui` có mẫu tìm kiếm và lỗi tải ảnh.
 
+`ShelfGrid`, `BookPresentation` và `BookGallery` thuộc `features/shelf`, dùng chung
+giữa kệ/chi tiết thật và `features/shelf-showcase`. Chúng nhận dữ liệu và callback;
+không sở hữu session, query hoặc mutation. Ảnh ký hạn vẫn do `PublicPhoto` quản lý.
+Fixture chỉ ở showcase; không thêm vào `src/core/ui`. Hai route xem mẫu cho phép
+development hoặc cờ preview, có nhãn mẫu thường trực và không nằm trên thanh
+điều hướng sản phẩm. Xem [vòng kệ/chi tiết](../handoff/SHELF_DETAIL_REVIEW.md).
+
 Component mới cần một trường hợp dùng thật, API nhỏ, ví dụ tương tác trong `/ui`,
 kiểm tra trạng thái liên quan và hướng dẫn. Không tạo provider/store toàn cục cho
 mỗi thông báo. Hiện thông báo nhẹ có thể được dismiss tại chỗ; chưa có toast queue,

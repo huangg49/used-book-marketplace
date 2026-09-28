@@ -1,18 +1,11 @@
-import { useContext, useRef, useState } from "react";
-import {
-  Keyboard,
-  Pressable,
-  ScrollView,
-  View,
-  useWindowDimensions,
-} from "react-native";
+import { useRef, useState } from "react";
+import { Keyboard, ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import {
   AppText,
-  BookCondition,
   Button,
   Chip,
   Icon,
@@ -21,9 +14,7 @@ import {
   Screen,
   SearchField,
   StatePanel,
-  TextScale,
   colors,
-  layout,
   space,
   presentError,
 } from "../../core/ui";
@@ -38,20 +29,17 @@ import {
 } from "./filters";
 import { PublicPhoto } from "./public-photo";
 import { ShelfHeader, ShelfStory } from "./shelf-controls";
+import { ShelfGrid } from "./shelf-grid";
 import { ShelfFilterSheet } from "./shelf-filter-sheet";
 
 export function ShelfScreen() {
   const { client } = useSession();
   const active = useForeground();
-  const { width, fontScale } = useWindowDimensions();
-  const textScale = useContext(TextScale);
-  const singleColumn = width < 360 || fontScale * textScale >= 1.3;
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState(initialFilters);
   const [applied, setApplied] = useState(initialFilters);
   const [filterOpen, setFilterOpen] = useState(false);
   const [error, setError] = useState<string>();
-  const [focusedBook, setFocusedBook] = useState<string>();
   const [cursors, setCursors] = useState<string[]>([""]);
   const scroll = useRef<ScrollView>(null);
   const cursor = cursors[cursors.length - 1],
@@ -237,94 +225,24 @@ export function ShelfScreen() {
           />
         </View>
       )}
-      <View
-        style={{
-          flexDirection: "row",
-          flexWrap: "wrap",
-          columnGap: space.lg,
-          rowGap: space.xxl,
-        }}
-      >
-        {result.data?.items.map((item) => (
-          <View
-            key={item.id}
-            style={{ width: singleColumn ? "100%" : "47%", gap: space.md }}
-          >
-            <PublicPhoto
-              listingId={item.id}
-              revisionId={item.revisionId}
-              mediaId={item.photos[0].id}
-              label={`Ảnh sách ${item.book.title}`}
-              active={active && !result.isError}
-            />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Xem cuốn sách: ${item.book.title}`}
-              onFocus={() => setFocusedBook(item.id)}
-              onBlur={() => setFocusedBook(undefined)}
-              onPress={() =>
-                router.push({ pathname: "./book", params: { id: item.id } })
-              }
-              style={({ pressed }) => [
-                {
-                  gap: space.sm,
-                  paddingBottom: space.md,
-                  opacity: pressed ? 0.75 : 1,
-                },
-                focusedBook === item.id && layout.focus,
-              ]}
-            >
-              <BookCondition condition={conditions[item.condition]} />
-              <AppText
-                kind="card"
-                color={colors.forest}
-                accessibilityRole="header"
-              >
-                {item.book.title}
-              </AppText>
-              <AppText kind="small" color={colors.muted}>
-                {item.book.authors.join(" · ")}
-              </AppText>
-              {(
-                [
-                  ["Giá bán", item.salePrice],
-                  ["Giá trị đổi", item.exchangeValue],
-                ] as const
-              ).map(([label, amount]) =>
-                amount != null ? (
-                  <View key={label}>
-                    <AppText kind="small" color={colors.muted}>
-                      {label}
-                    </AppText>
-                    <AppText kind="bold" color={colors.forest}>
-                      {amount.toLocaleString("vi-VN")} ₫
-                    </AppText>
-                  </View>
-                ) : null,
-              )}
-              <AppText kind="small" color={colors.muted}>
-                Từ kệ của {item.seller.displayName}
-              </AppText>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: space.xs,
-                }}
-              >
-                <AppText
-                  kind="small"
-                  color={colors.rustText}
-                  style={{ flex: 1 }}
-                >
-                  Xem cuốn sách
-                </AppText>
-                <Icon name="arrow" size={16} color={colors.rustText} />
-              </View>
-            </Pressable>
-          </View>
-        ))}
-      </View>
+      <ShelfGrid
+        items={result.data?.items ?? []}
+        onOpen={(item) =>
+          router.push({ pathname: "./book", params: { id: item.id } })
+        }
+        renderPhoto={(item) => (
+          <PublicPhoto
+            listingId={item.id}
+            revisionId={item.revisionId}
+            mediaId={item.photos[0].id}
+            label={`Ảnh sách ${item.book.title}`}
+            active={active && !result.isError}
+            onOpen={() =>
+              router.push({ pathname: "./book", params: { id: item.id } })
+            }
+          />
+        )}
+      />
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.md }}>
         {cursors.length > 1 && (
           <Button

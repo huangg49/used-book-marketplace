@@ -210,11 +210,12 @@ kết quả mong đợi và cách xử lý lỗi mà không bỏ quy tắc nghi�
 ## 7. Việc đầu tiên của người tiếp nhận
 
 Đọc [READINESS](READINESS.md), tiếp tục việc chưa đóng đầu tiên; **chưa mở F2i**.
-Gói tiếp nhận mới nhất trên nhánh `codex/mobile-experience`, tiếp nối
-`codex/native-handoff-qa` (`97c2e6a`). Đọc [vòng cải thiện mobile](MOBILE_EXPERIENCE.md)
+Gói tiếp nhận mới nhất trên nhánh `codex/shelf-detail-showcase`, tiếp nối
+`codex/mobile-experience` (`5ad7cdd`). Đọc [vòng kệ/chi tiết](SHELF_DETAIL_REVIEW.md),
+[vòng cải thiện mobile](MOBILE_EXPERIENCE.md)
 và [bằng chứng native từng ca](NATIVE_RUN_2026_09_28.md). Bundle local:
-`.tmp/latlai-mobile-experience.bundle` (checksum `.sha256` bên cạnh). Người nhận:
-`git clone --branch codex/mobile-experience ./latlai-mobile-experience.bundle latlai`.
+`.tmp/latlai-shelf-detail-review.bundle` (checksum `.sha256` bên cạnh). Người nhận:
+`git clone --branch codex/shelf-detail-showcase ./latlai-shelf-detail-review.bundle latlai`.
 Không kèm `.env`, DB hoặc APK; các bundle/checkpoint trước giữ nguyên. Đây chưa là
 release đã nghiệm thu native và chưa được push lên remote.
 

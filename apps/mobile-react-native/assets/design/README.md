@@ -1,6 +1,7 @@
 # Design-study assets
 
-These are archival book images for the opt-in `/design` prototype, not evidence of
+These are archival book images for the opt-in `/design` prototype and the
+development/opt-in `/showcase` review screens, not evidence of
 an offered physical book. Prices, sellers and condition notes are explicit demo data.
 The fourth book is an invented long-title/no-image fixture. No generated photography
 or fabricated ratings are used.

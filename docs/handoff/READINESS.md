@@ -25,6 +25,11 @@ Bổ sung theo phản hồi người dùng: [vòng trải nghiệm mobile](MOBIL
 Browser regression qua; Android đã kiểm bộ lọc với bàn phím số và chữ OS 130%.
 Đây chưa là người dùng duyệt thẩm mỹ hoặc nghiệm thu toàn bộ form/native.
 
+Vòng tiếp nối [kệ/chi tiết](SHELF_DETAIL_REVIEW.md) dùng chung presentation giữa
+màn thật và fixture review tách riêng. Đã kiểm bìa, chi tiết, Back/modal và kệ chữ
+OS 130% trên Android; gate bản export thường chuyển route mẫu về kệ thật đã qua.
+Form dài/địa chỉ và các gate native/review còn mở không bị đánh dấu hoàn tất.
+
 - [x] Chốt hiện trạng F2h/contract 0.20.0, 17 migration; phân biệt API và UI.
 - [x] So 72 operation OpenAPI với 14 controller: thiếu/thừa/trùng bằng 0.
 - [x] Đọc các đường đi trọng yếu về auth/session, command/replay, locks, ledger,

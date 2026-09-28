@@ -226,6 +226,15 @@ try {
     .first()
     .click();
   await p.getByText("Dấu đọc còn lại", { exact: true }).waitFor();
+  const metadataToggle = p.getByRole("button", {
+    name: "Về đầu sách",
+    exact: true,
+  });
+  assert.equal(await metadataToggle.getAttribute("aria-expanded"), "false");
+  await metadataToggle.click();
+  await p.getByText("Nhà xuất bản", { exact: true }).waitFor();
+  assert.equal(await metadataToggle.getAttribute("aria-expanded"), "true");
+  await metadataToggle.click();
   let imageOffline = true;
   await p.route("**/api/v1/listings/*/media/*/read", (route) =>
     imageOffline ? route.abort("failed") : route.continue(),
@@ -502,6 +511,91 @@ try {
     true,
   );
   await p.screenshot({ path: path.join(artifacts, "ui-back-320-large.png") });
+  // Local showcase reuses production presentation without reading/writing listings.
+  const showcaseRequests = [];
+  const recordShowcase = (request) => {
+    if (
+      request.url().includes("/api/v1/listings") ||
+      request.url().includes("/api/v1/me/listings")
+    )
+      showcaseRequests.push(request.url());
+  };
+  p.on("request", recordShowcase);
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.goto(`${origin}/showcase`);
+  await p.getByText("BẢN XEM THỬ · DỮ LIỆU MẪU", { exact: true }).waitFor();
+  assert.equal(
+    await p.getByRole("button", { name: /^Xem cuốn sách:/ }).count(),
+    4,
+  );
+  await click("Đổi");
+  assert.equal(
+    await p.getByRole("button", { name: /^Xem cuốn sách:/ }).count(),
+    1,
+  );
+  await click("Tất cả");
+  // Wait for client dimensions after hydration before recording the layout.
+  await p.waitForFunction(() => {
+    const cards = [...document.querySelectorAll('[role="button"]')].filter(
+      (element) =>
+        element.getAttribute("aria-label")?.startsWith("Xem cuốn sách:"),
+    );
+    if (cards.length !== 4) return false;
+    const first = cards[0].getBoundingClientRect();
+    const second = cards[1].getBoundingClientRect();
+    return second.x > first.x + first.width && Math.abs(second.y - first.y) < 2;
+  });
+  await p.screenshot({ path: path.join(artifacts, "showcase-shelf-390.png") });
+  await p
+    .getByRole("button", {
+      name: "Mở ảnh sách Pride and Prejudice",
+      exact: true,
+    })
+    .click();
+  await p
+    .getByText("125.000 ₫", { exact: true })
+    .filter({ visible: true })
+    .waitFor();
+  await p
+    .getByText("150.000 ₫", { exact: true })
+    .filter({ visible: true })
+    .waitFor();
+  await click("Xem ảnh lớn");
+  await p.getByRole("dialog").waitFor();
+  await p.keyboard.press("Escape");
+  await p.getByRole("dialog").waitFor({ state: "hidden" });
+  await p.screenshot({ path: path.join(artifacts, "showcase-book-390.png") });
+  await click("Về kệ mẫu");
+  await click("Thử khi ảnh không tải được");
+  assert.equal(
+    await p.getByText("Chưa có ảnh bìa", { exact: true }).count(),
+    4,
+  );
+  await p.setViewportSize({ width: 320, height: 780 });
+  const longSample = p.getByRole("button", {
+    name: /^Xem cuốn sách: Những ngày/,
+  });
+  await longSample.scrollIntoViewIfNeeded();
+  assert.equal(
+    await p.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+    false,
+  );
+  await p.screenshot({
+    path: path.join(artifacts, "showcase-missing-long-320.png"),
+  });
+  await longSample.click();
+  await p
+    .getByText("1.000.000 ₫", { exact: true })
+    .filter({ visible: true })
+    .waitFor();
+  await click("Về đầu sách");
+  await p.getByText("Nhà xuất bản", { exact: true }).waitFor();
+  assert.deepEqual(
+    showcaseRequests,
+    [],
+    "Showcase never reads or writes production listings",
+  );
+  p.off("request", recordShowcase);
   assert.deepEqual(errors, []);
   console.log(
     "PASS RN export browser: shelf/detail/pagination/search/filters/images/errors, responsive large text, owner restriction, login; owner hide/reopen, approved revision with lost-ack replay, archive pending with lost-ack replay. Real HTTP/PostgreSQL; fake storage.",
