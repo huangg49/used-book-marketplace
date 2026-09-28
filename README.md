@@ -3,6 +3,9 @@
 **Sách cũ. Chương mới.**
 
 **Tiếp nhận project:** đọc [Bắt đầu ở đây — F2h](docs/handoff/START_HERE.md).
+Tiếp tục bằng Claude/agent khác: [điểm lưu](docs/handoff/SESSION_STATE.md),
+[kế hoạch triển khai](docs/handoff/CONTINUATION_PLAN.md),
+[prompt và cách clone](docs/handoff/NEXT_SESSION_PROMPT.md).
 Đang củng cố mốc **OpenAPI 0.20.0**, rà soát chất lượng và hoàn thiện giao diện hiện có
 trước khi mở nghiệp vụ mới. [Tiến độ bàn giao](docs/handoff/READINESS.md) phân biệt
 phần đã kiểm chứng, phần đang làm và điều kiện tạo commit/tag cuối cùng.

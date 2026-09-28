@@ -4,6 +4,8 @@ Cập nhật 28/09/2026. Contract **0.20.0**, 17 migration. Đây là hướng d
 mã nguồn đang chuẩn bị bàn giao; **chưa phải chứng nhận hoàn tất bàn giao**.
 Trạng thái từng việc ở [READINESS](READINESS.md), phát hiện và bằng chứng ở
 [AUDIT_F2H](AUDIT_F2H.md). Không cần đọc lại lịch sử chat để tiếp tục.
+Người tiếp nhận phiên tiếp theo: đọc [điểm lưu](SESSION_STATE.md),
+[kế hoạch chi tiết](CONTINUATION_PLAN.md) và [prompt khởi động](NEXT_SESSION_PROMPT.md).
 Nguồn đã có checkpoint `checkpoint/f2h-handoff-2026-09-28` và
 [kết quả dựng lại từ clone sạch](REBUILD.md), gồm cách nhận bằng Git bundle khi chưa push.
 
@@ -210,14 +212,16 @@ kết quả mong đợi và cách xử lý lỗi mà không bỏ quy tắc nghi�
 ## 7. Việc đầu tiên của người tiếp nhận
 
 Đọc [READINESS](READINESS.md), tiếp tục việc chưa đóng đầu tiên; **chưa mở F2i**.
-Gói tiếp nhận mới nhất trên nhánh `codex/shelf-detail-showcase`, tiếp nối
-`codex/mobile-experience` (`5ad7cdd`). Đọc [vòng kệ/chi tiết](SHELF_DETAIL_REVIEW.md),
+Gói tiếp nhận mới nhất trên nhánh `codex/handoff-roadmap`, tiếp nối
+`codex/shelf-detail-showcase` (`3808b57`). Đọc [điểm lưu](SESSION_STATE.md),
+[kế hoạch tiếp tục](CONTINUATION_PLAN.md), [vòng kệ/chi tiết](SHELF_DETAIL_REVIEW.md),
 [vòng cải thiện mobile](MOBILE_EXPERIENCE.md)
 và [bằng chứng native từng ca](NATIVE_RUN_2026_09_28.md). Bundle local:
-`.tmp/latlai-shelf-detail-review.bundle` (checksum `.sha256` bên cạnh). Người nhận:
-`git clone --branch codex/shelf-detail-showcase ./latlai-shelf-detail-review.bundle latlai`.
+`.tmp/latlai-handoff-roadmap.bundle` (checksum `.sha256` bên cạnh). Người nhận:
+`git clone --branch codex/handoff-roadmap ./latlai-handoff-roadmap.bundle latlai`.
 Không kèm `.env`, DB hoặc APK; các bundle/checkpoint trước giữ nguyên. Đây chưa là
-release đã nghiệm thu native và chưa được push lên remote.
+release đã nghiệm thu native. Khi nhận qua GitHub, dùng nhánh `codex/handoff-roadmap`
+và xác minh SHA bằng `git ls-remote` theo SESSION_STATE; không lấy main cũ làm mốc mới.
 
 Nguồn F2h và lát cắt UI đã có checkpoint `beea372`. Không làm lại những gate đã có
 bằng chứng nếu code liên quan không đổi. Chia việc còn lại theo vai trò:

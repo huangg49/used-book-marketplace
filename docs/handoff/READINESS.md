@@ -86,6 +86,12 @@ Native đã chạy một phần trên Pixel_7/Android 15 với Metro có sẵn; 
 toàn hành trình listing, TalkBack và các tổ hợp bàn phím/chữ lớn chưa kiểm.
 Không mở ví/checkout/Order UI giả; chưa đóng toàn bộ Gate 3.
 
+Điểm dở cuối: Android mở lại sau export đứng splash; chưa chẩn đoán xong. Màn UI
+trước đó có evidence nhưng không thay cold-start hiện tại. Đọc
+[SESSION_STATE](SESSION_STATE.md) và xử lý A00 trong
+[kế hoạch tiếp nhận](CONTINUATION_PLAN.md). Các tính năng sau bàn giao có dependency
+và tiêu chí riêng; việc lập kế hoạch không đóng gate hoặc mở nghiệp vụ ngay.
+
 ## Gate 4 — Đóng gói mốc bàn giao
 
 - [x] Chạy lint/typecheck/unit, export và RN browser regression sau lát cắt polish;
@@ -102,7 +108,8 @@ Không mở ví/checkout/Order UI giả; chưa đóng toàn bộ Gate 3.
 - [x] Clone/checkout mốc nguồn vào thư mục mới, install frozen lockfile, generate,
   migrate DB riêng, build/test; ghi commit/tag/hash và kết quả vào tài liệu.
 - [x] Ghi việc còn mở theo vai trò trong START_HERE. Team chưa chỉ định tên người
-  nhận từng vai trò. Chưa push/PR; không tuyên bố remote đã có nguồn này.
+  nhận từng vai trò. Chủ dự án đã yêu cầu push nhánh bàn giao; trạng thái nguồn
+  và cách xác minh remote ở SESSION_STATE. Chưa merge/release; PR không tự được duyệt.
 
 Không stage tất cả mù quáng hoặc sửa/xóa migration cũ để gọn lịch sử. Không trộn phần
 nghiệp vụ mới vào commit polish. Snapshot đã bao gồm baseline trước đây chưa được

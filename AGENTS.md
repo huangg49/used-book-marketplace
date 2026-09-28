@@ -1,5 +1,11 @@
 # Working in Lật lại
 
+Continuation handoff: read `docs/handoff/SESSION_STATE.md` for the latest saved
+state and Android startup blocker, `docs/handoff/CONTINUATION_PLAN.md` for ordered
+work packages, and `docs/handoff/NEXT_SESSION_PROMPT.md` for the receiving agent.
+`CLAUDE.md` is a thin entry point to these same instructions. The plan does not
+override the release gates or the business baseline below.
+
 ## Current scope
 
 Handoff preparation is the current priority: freeze business scope at F2h/OpenAPI

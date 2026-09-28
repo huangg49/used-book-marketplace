@@ -10,6 +10,9 @@
 - [Android 28/09: session, upload JPEG thật, sửa worker và ca còn mở](handoff/NATIVE_RUN_2026_09_28.md)
 - [Cải thiện mobile: kệ, điều hướng, bộ lọc cố định và bằng chứng](handoff/MOBILE_EXPERIENCE.md)
 - [Kệ/chi tiết dùng chung, màn xem mẫu riêng và kiểm tra Android](handoff/SHELF_DETAIL_REVIEW.md)
+- [Điểm lưu hiện tại và blocker Android](handoff/SESSION_STATE.md)
+- [Kế hoạch tiếp nhận: UI, native, Order hoàn chỉnh, Exchange, điểm và đấu giá](handoff/CONTINUATION_PLAN.md)
+- [Prompt bắt đầu và checklist cuối phiên cho người tiếp nhận](handoff/NEXT_SESSION_PROMPT.md)
 - [Review độc lập: đường đọc code, invariant và phiếu nhận xét](handoff/INDEPENDENT_REVIEW.md)
 
 - [Delivery overdue and Buyer non-receipt intake](features/DELIVERY_OVERDUE_REPORT.md)
