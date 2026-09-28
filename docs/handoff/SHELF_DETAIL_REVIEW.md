@@ -65,6 +65,13 @@ vật phẩm. Mẫu thứ tư không có ảnh, tên sách do dự án đặt đ
 - OS font_scale 1.3: chuyển một cột, tên dài/giá không cắt. Đã trả về 1.0 sau QA.
   Không build APK mới; web export không được dùng thay bằng chứng native.
 
+Sau export cuối, lần mở lại Android dừng ở splash. Metro port 8081 vẫn trả trạng
+thái running, reverse 8081/3000 còn đúng; log lỗi ReactNativeJS/AndroidRuntime đã
+đọc không có lỗi. Lệnh tiếp theo mở lại MainActivity và kiểm HTTP bundle bị bộ
+duyệt tự động chặn với lý do chung “blocked by policy”; không chạy vòng qua chặn.
+Các ảnh/ca Android phía trên được ghi trước lần mở lại này. Chưa kết luận nguyên
+nhân hoặc app đang sẵn sàng demo; người tiếp nhận cần kiểm lần khởi động hiện tại.
+
 Đây là kiểm tra UI với fixture tách biệt, không phải full native listing acceptance.
 Không chạy lại 480 API E2E vì backend/contract không đổi. TalkBack, iOS/ARM,
 upload lỗi/mất mạng/background và các ca trong [native acceptance](NATIVE_ACCEPTANCE.md)
