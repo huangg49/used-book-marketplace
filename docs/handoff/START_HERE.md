@@ -4,6 +4,8 @@ Cập nhật 28/09/2026. Contract **0.20.0**, 17 migration. Đây là hướng d
 mã nguồn đang chuẩn bị bàn giao; **chưa phải chứng nhận hoàn tất bàn giao**.
 Trạng thái từng việc ở [READINESS](READINESS.md), phát hiện và bằng chứng ở
 [AUDIT_F2H](AUDIT_F2H.md). Không cần đọc lại lịch sử chat để tiếp tục.
+Nguồn đã có checkpoint `checkpoint/f2h-handoff-2026-09-28` và
+[kết quả dựng lại từ clone sạch](REBUILD.md), gồm cách nhận bằng Git bundle khi chưa push.
 
 ## 1. Hiểu đúng bản đang nhận
 
@@ -32,6 +34,8 @@ Phạm vi nghiệp vụ chuẩn: [SRS 1.1](../SRS_V1_1.md) và
 Node theo `.nvmrc`, pnpm theo `packageManager` trong root `package.json`, Docker
 Desktop đang chạy. RN không cần cài Flutter. Đọc
 [hướng dẫn RN](../REACT_NATIVE_START.md) và [media setup](../features/SUPABASE_MEDIA_SETUP.md).
+Kiểm tra `node --version` và `pnpm --version` trước install; pnpm của repo là
+**11.19.0**, không suy ra phiên bản đang chạy chỉ từ dòng `packageManager`.
 
 Từ root:
 
@@ -189,6 +193,9 @@ gốc, rồi build lại APK. Hot reload JS không cập nhật tài nguyên nat
 
 ## 6. Demo đúng phần đã có
 
+Chuẩn bị theo [checklist demo](DEMO_CHECKLIST.md), gồm điều kiện ảnh thật, vai trò,
+kết quả mong đợi và cách xử lý lỗi mà không bỏ quy tắc nghiệp vụ.
+
 1. RN `/`: kệ thật có thể rỗng; không giả số lượng sách/người dùng để lấp đầy.
 2. `/account`: đăng nhập Member → sổ địa chỉ → sách của tôi → tạo nháp, chọn/request
    catalog, upload ảnh, mô tả tình trạng, chọn nơi gửi, lưu/gửi duyệt.
@@ -202,8 +209,17 @@ gốc, rồi build lại APK. Hot reload JS không cập nhật tài nguyên nat
 
 ## 7. Việc đầu tiên của người tiếp nhận
 
-Đọc [READINESS](READINESS.md), tiếp tục việc chưa đóng đầu tiên. Ưu tiên hiện tại là
-audit → hoàn thiện UI hiện có → kiểm chứng bàn giao → commit/tag, **chưa mở F2i**.
+Đọc [READINESS](READINESS.md), tiếp tục việc chưa đóng đầu tiên; **chưa mở F2i**.
+Nguồn F2h và lát cắt UI đã có checkpoint `beea372`. Không làm lại những gate đã có
+bằng chứng nếu code liên quan không đổi. Chia việc còn lại theo vai trò:
+
+| Người tiếp nhận | Việc tiếp tục | Kết quả cần ghi |
+|---|---|---|
+| RN + QA | Native login/restore, picker/upload, bàn phím, Back, TalkBack, chữ lớn; xem launcher/splash mới | Thiết bị/OS/commit, từng ca pass/fail, ảnh và lỗi còn lại; không thay bằng web |
+| Operations + QA | Rà phần visual matrix còn thiếu: queue, retry/conflict, keyboard/focus | Ảnh đúng trạng thái; giữ đủ checklist, lý do và quyền |
+| API reviewer | Review độc lập locks, ledger, permissions và migration theo TEAMWORK | Nhận xét hoặc xác nhận review, tối thiểu hai reviewer cho phần tiền/quyền |
+| Người đóng mốc | Kiểm tra báo cáo clone sạch, còn gì chưa nghiệm thu; quyết định release/PR theo workflow team | Commit/tag rõ ràng; chỉ nói remote đã có khi đã push thật |
+
 Khi các gate bàn giao đã đóng, bước nghiệp vụ kế tiếp mới là Delivered/Buyer receipt/
 Inspection 72h và claim tương ứng theo [transaction plan](../features/TRANSACTION_FOUNDATION_PLAN.md).
 Một người review code/SQL độc lập theo [TEAMWORK](../TEAMWORK.md); không coi AI tự

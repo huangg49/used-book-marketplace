@@ -6,7 +6,9 @@ Handoff preparation is the current priority: freeze business scope at F2h/OpenAP
 0.20.0. Start at `docs/handoff/START_HERE.md` and track the audit, existing-UI polish
 and release gates in `docs/handoff/READINESS.md`. Finish those gates before extending
 Delivered/inspection/settlement. A passing backend suite does not close native UI
-acceptance or create a portable Git checkpoint. Preserve prior uncommitted work.
+acceptance. Source checkpoint `checkpoint/f2h-handoff-2026-09-28` has clean-clone
+verification in `docs/handoff/REBUILD.md`; native runtime and independent reviews
+remain open. Do not redo closed gates without a relevant change. Preserve local work.
 
 Business baseline: `docs/SRS_V1_1.md` plus `docs/features/LOCAL_HANDOVER_AUCTION.md`.
 TP.HCM only, direct shipping retained, two simulated managed points, optional

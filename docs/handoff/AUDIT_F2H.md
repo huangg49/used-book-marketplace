@@ -74,7 +74,7 @@ dialog thì toàn bộ RN browser journey qua. Đây là sửa đồng bộ test
 | `doctor:local` | PASS cấu hình/DB/17 checksum/live private bucket/readiness; WARN RN localhost cần emulator mapping/LAN |
 | Liên kết/hygiene ban đầu | 192 local file links trong nhóm tài liệu rà soát tồn tại; danh sách file Git candidate không chứa `.env` ngoài example, `.tmp`, dist hay Prisma sinh ra. Chưa thay kiểm nội dung secrets/asset/commit cuối |
 | Native Android/iOS trong vòng này | Debug Android x86_64 build qua sau thay icon/splash; Metro bị automatic approval review chặn, chưa runtime QA mới; iOS chưa kiểm |
-| Checkout sạch từ commit cuối | Chưa có commit cuối, chưa kiểm chứng |
+| Checkout sạch | PASS nguồn `beea372`: install pnpm 11.19.0, env mới, DB mới/17 migration/seed, 127 unit, 480 API E2E, API/operations build, RN export và hai browser suites. Hồ sơ cuối ở [REBUILD](REBUILD.md) |
 
 Browser fixtures dùng Nest/PostgreSQL/Sharp thật và **storage fake**. Live bucket
 check ở doctor là đọc cấu hình/quyền bucket, không phải lần upload Supabase mới.
@@ -92,8 +92,9 @@ chỉ từ sự tồn tại của file. Lệnh tái tạo nằm trong START_HERE
 
 1. Tiếp tục từ [UI baseline đã xem](UI_BASELINE.md), rà visual và polish các màn hiện có theo UI rules; native picker/upload, bàn phím,
    Back/TalkBack và chữ lớn còn là gate riêng. RN browser pass không là native pass.
-2. Đóng gói Git và dựng checkout sạch. Kiểm secrets, file bị ignore, asset/license,
-   instruction links và toàn bộ setup không dựa vào process/dependency trên máy này.
+2. Mốc nguồn đã được commit và clone kiểm chứng; xem [REBUILD](REBUILD.md) và
+   [FILE_REVIEW](FILE_REVIEW.md). Người nhận vẫn cần dựng trên máy riêng và cấu hình
+   storage thật; bản kiểm thử không mang theo credentials hoặc database cũ.
 3. Reviewer độc lập cho SQL/money/permissions theo TEAMWORK; đây là kết quả tự kiểm.
 4. Limiter hiện tính cả login thành công, 5/account/IP/15 phút theo ADR 0003; có thể
    ảnh hưởng demo chung mạng. Không đổi chính sách ngầm trong đợt polish.

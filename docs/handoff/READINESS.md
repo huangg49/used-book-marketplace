@@ -5,9 +5,11 @@ tiếp nhận, tân trang UI hiện có rồi đóng mốc Git có thể tái d�
 phạm vi này ở mỗi lần tiếp tục. Không tự mở Delivered/inspection/settlement trong đợt này.
 
 **Hiện tại:** vòng rà soát kỹ thuật và lát cắt polish RN đã có bằng chứng;
-chưa có release/tag
-bàn giao cuối. Nhánh làm việc `codex/f2h-handoff-audit` có cả các increment trước còn
-chưa commit. Tạo nhánh không lưu được nội dung chưa commit cho người clone repo.
+chưa có release bàn giao cuối. Nguồn đã lưu tại commit `beea372` trên nhánh
+`codex/f2h-handoff-audit`, gồm các increment trước còn chưa commit và đợt audit/polish.
+Clone sạch của commit này đã qua install/generate/migrate/seed/build, 127 unit,
+480 API E2E và hai suite browser; xem [REBUILD](REBUILD.md). Checkpoint
+`checkpoint/f2h-handoff-2026-09-28` chứa hồ sơ cuối, không đồng nghĩa native đã nghiệm thu.
 
 ## Gate 1 — Rà soát và sửa lỗi
 
@@ -34,8 +36,11 @@ mọi dòng code không lỗi. SQL/money/permission vẫn cần reviewer độc 
 - [x] [START_HERE](START_HERE.md): setup, code map, lệnh QA, giới hạn và demo.
 - [x] README/docs index/AGENTS trỏ về điểm bắt đầu chung; sửa mô tả cũ về funding,
   shipment và worker; kế hoạch nghiệp vụ ghi rõ ưu tiên bàn giao.
-- [ ] Người tiếp nhận hoặc một checkout sạch thực hiện lại hướng dẫn mà không dùng
+- [x] Người tiếp nhận hoặc một checkout sạch thực hiện lại hướng dẫn mà không dùng
   `.tmp`, `.env`, DB hoặc dependency sinh ra từ máy người bàn giao.
+  Clone nằm trong thư mục QA riêng; không sao chép các file sinh sẵn. Dependency
+  được install lại từ lockfile, có dùng cache pnpm. Đây là cùng máy Windows, chưa
+  thay bằng chứng chạy trên máy người nhận; xem phạm vi trong REBUILD.
 - [x] Kiểm tra bộ file dự định commit: secrets, file bỏ sót vì ignore, artifact lớn,
   license/font/ảnh và sự khác biệt giữa archive v1.0 với nguồn hiện hành.
   Phạm vi và giới hạn quét ghi ở [FILE_REVIEW](FILE_REVIEW.md).
@@ -67,16 +72,19 @@ Không mở ví/checkout/Order UI giả; chưa đóng toàn bộ Gate 3.
 - [ ] Build/debug và QA native trong phạm vi được ghi rõ; không dùng export web thay thế.
   Build debug x86_64 qua với tài nguyên thương hiệu mới. Metro bị automatic approval
   review chặn (`blocked by policy`); runtime, ARM và iOS chưa kiểm trong lượt này.
-- [ ] Chuẩn bị kịch bản demo dùng được và checklist kiểm tra trước demo.
-- [ ] Chốt danh sách thay đổi, review, commit; tạo tag sau khi gate đã kiểm chứng.
-- [ ] Clone/checkout mốc đó vào thư mục mới, install frozen lockfile, generate,
+- [x] Chuẩn bị [kịch bản và checklist trước demo](DEMO_CHECKLIST.md); ghi rõ
+  yêu cầu storage thật, seed chỉ có một Member và giới hạn UI/API.
+- [x] Lưu nguồn/ảnh/tài liệu tại checkpoint có thể chuyển bằng Git bundle.
+  Tag này chỉ chứng nhận phạm vi nguồn và kiểm thử trong REBUILD, không là release cuối.
+- [ ] Review độc lập theo TEAMWORK, hoàn tất native/visual gates trước tag release.
+- [x] Clone/checkout mốc nguồn vào thư mục mới, install frozen lockfile, generate,
   migrate DB riêng, build/test; ghi commit/tag/hash và kết quả vào tài liệu.
-- [ ] Ghi rõ việc còn mở và người nhận phụ trách. Push/PR khi thuộc phạm vi bàn giao
-  được thực hiện; không tuyên bố remote có code chỉ vì đã tạo branch local.
+- [x] Ghi việc còn mở theo vai trò trong START_HERE. Team chưa chỉ định tên người
+  nhận từng vai trò. Chưa push/PR; không tuyên bố remote đã có nguồn này.
 
 Không stage tất cả mù quáng hoặc sửa/xóa migration cũ để gọn lịch sử. Không trộn phần
-nghiệp vụ mới vào commit polish. Snapshot cuối cần bao gồm đầy đủ baseline đang
-untracked; chỉ commit tài liệu bàn giao là chưa đủ để người khác chạy app.
+nghiệp vụ mới vào commit polish. Snapshot đã bao gồm baseline trước đây chưa được
+track; không chỉ chứa tài liệu bàn giao. Các sửa sau checkpoint nên theo từng feature.
 
 ## Sau mốc bàn giao
 

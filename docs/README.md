@@ -4,6 +4,8 @@
 - [Tiến trình bàn giao và các gate còn mở](handoff/READINESS.md)
 - [Rà soát F2h: phát hiện, sửa lỗi và bằng chứng](handoff/AUDIT_F2H.md)
 - [Hoàn thiện UI hiện có và giới hạn native](handoff/UI_POLISH.md)
+- [Clone sạch, checkpoint nguồn và cách nhận Git bundle](handoff/REBUILD.md)
+- [Checklist demo đúng phần đã triển khai](handoff/DEMO_CHECKLIST.md)
 
 - [Delivery overdue and Buyer non-receipt intake](features/DELIVERY_OVERDUE_REPORT.md)
 - [ADR0025: durable delivery review](adr/0025-delivery-overdue.md)

@@ -1,6 +1,7 @@
 # Quan sát giao diện trước đợt polish
 
 28/09/2026. Đây là ghi nhận baseline để tiếp tục Gate 3, chưa phải thiết kế đã sửa.
+Kết quả sau chỉnh và kiểm thử mới được ghi riêng ở [UI_POLISH](UI_POLISH.md).
 Đọc [UI rules](../design/UI_CODING_RULES.md), [component](../design/UI_COMPONENTS.md)
 và [brand v1.1](../../packages/brand/v1.1/README.md) trước khi thay bố cục.
 
