@@ -14,6 +14,7 @@ export function SearchField({
   placeholder,
   onSubmitEditing,
   maxLength,
+  submitLabel,
 }: {
   label: string;
   value: string;
@@ -21,6 +22,7 @@ export function SearchField({
   placeholder: string;
   onSubmitEditing?: () => void;
   maxLength?: number;
+  submitLabel?: string;
 }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -38,7 +40,15 @@ export function SearchField({
         },
       ]}
     >
-      <Icon name="search" size={20} />
+      {submitLabel && onSubmitEditing ? (
+        <IconButton
+          name="search"
+          label={submitLabel}
+          onPress={onSubmitEditing}
+        />
+      ) : (
+        <Icon name="search" size={20} />
+      )}
       <TextInput
         accessibilityLabel={label}
         value={value}
@@ -75,6 +85,7 @@ export function SearchField({
 
 export function TextField({
   label,
+  accessibilityLabel,
   hint,
   error,
   required,
@@ -102,9 +113,9 @@ export function TextField({
       <TextInput
         {...props}
         ref={inputRef}
-        accessibilityLabel={label}
+        accessibilityLabel={accessibilityLabel ?? label}
         accessibilityHint={description}
-        aria-labelledby={`${id}-label`}
+        aria-labelledby={accessibilityLabel ? undefined : `${id}-label`}
         aria-describedby={description ? `${id}-description` : undefined}
         aria-invalid={!!error}
         aria-required={required}

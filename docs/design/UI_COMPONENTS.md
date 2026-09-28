@@ -34,6 +34,7 @@ khác cờ song song. Với bản xuất sẵn, từ root chạy `node scripts/p
 | `AppText` | Các vai trò title/heading/card/body/bold/small/label/price | Nội dung và role header nếu là tiêu đề |
 | `Button` | Primary/secondary/destructive, pressed/focus/disabled/busy | `title`, `onPress`, `busy`; xử lý mutation ngoài UI |
 | `BackAction` | Quay lại: mũi tên + nhãn, vùng chạm tối thiểu 44, xuống dòng/focus/disabled | `title`, `onPress`, `disabled`; screen quyết định router và dirty guard |
+| `ActionRow` | Lối vào một mục: icon, tên, mô tả, mũi tên; vùng chạm và focus | `title`, `description`, `icon`, `onPress`; không tự điều hướng |
 | `IconButton` | Vùng chạm 44, tên, selected/disabled/focus | `name`, `label`, `onPress` |
 | `Chip` | Bộ chọn ngắn, trạng thái selected | `title`, `selected`, `onPress` |
 | `TextField` | Label, hint/error, focus, multiline, readonly | `value`, `onChangeText`, các props TextInput cần thiết |
@@ -41,7 +42,7 @@ khác cờ song song. Với bản xuất sẵn, từ root chạy `node scripts/p
 | `Checkbox` | Checked/disabled và nhãn xuống dòng | State/handler bên ngoài |
 | `Notice` | info/success/warning/error, live region, dismiss tùy chọn | Nội dung đã kiểm soát; thời điểm hiện/ẩn |
 | `StatePanel` | Loading, rỗng, lỗi vùng nội dung | Title/message/icon, action có label/handler/busy |
-| `Sheet` | Modal có tên, safe area, scroll, close, Back/Escape | Visible, onClose, children; `dismissible`, `backdropDismiss` |
+| `Sheet` | Modal có tên, safe area, scroll, close, Back/Escape, tránh bàn phím | Visible, onClose, children; `dismissible`, `backdropDismiss`, `footer` không cuộn |
 | `ConfirmDialog` | Câu hỏi có hậu quả, quay lại/confirm, lỗi tại chỗ | Handler, visible/busy/error; không tự đóng khi handler chạy |
 | `Screen` | Safe area, keyboard avoidance, scroll, max width, footer | Nội dung; không lồng trong một Screen khác |
 | `BookCover` | Contain, ảnh thiếu/lỗi, phục hồi khi đổi nguồn | Source + nhãn; không có fixture, request hoặc quyền trong component |
@@ -104,6 +105,18 @@ không tự retry, đăng xuất, điều hướng hay hiện modal. Các hành 
 và session owner quyết định.
 
 ## Mở rộng
+
+Cập nhật mobile 28/09: `Sheet.footer` nằm ngoài ScrollView; dùng cho hành động
+chính của bộ lọc. Lỗi áp dụng đặt ngay trên hành động trong footer. Nội dung dài
+cuộn độc lập, đóng/Back bỏ lựa chọn chưa áp dụng. `/ui` có ví dụ bảng dài và footer.
+`SearchField.submitLabel` biến icon tìm thành nút có tên khi có onSubmitEditing.
+`TextField.accessibilityLabel` cho tên đầy đủ trong nhóm ô có nhãn ngắn (Từ/Đến);
+không dùng placeholder làm nhãn. Các trường không truyền vẫn lấy tên từ label.
+`ActionRow` dùng ở tài khoản; mẫu tương tác nằm trong nhóm Hộp thoại của `/ui`.
+
+Thanh điều hướng ba đích thuộc `features/navigation`, không thuộc UI library:
+nó biết route/session, chỉ gắn trên kệ, account/login và danh sách sách. Không gắn
+trong editor để không bỏ qua dirty guard. Không có tab ví/chat/giao dịch giả.
 
 Kệ công khai dùng `SearchField.onSubmitEditing` để tìm bằng phím Search/Enter và
 `maxLength` để giới hạn đầu vào; feature vẫn kiểm tra độ dài Unicode theo contract.

@@ -47,3 +47,14 @@ screen-local; the marketplace study still has no persistent drafts or backend wo
 Before release, validate Android/iOS safe areas, keyboard, back navigation, image
 picker, screen-reader announcements, modal focus and large text on actual native
 runtimes. Exported JS/Hermes bundles are not native build evidence.
+
+## Mobile experience correction — 2026-09-28
+
+User review found the existing screens too document-like and filter submission
+too far down a scrolling form. Add an optional fixed Sheet footer, keyboard
+avoidance and a compact ActionRow; examples live in `/ui`. Filter edits are staged
+separately from applied/search state. A feature-owned member navigation bar uses
+existing Expo routes and existing session guards; it is absent from dirty editors.
+Shelf cards use two columns, falling back to one below 360 px or at font scale 1.3.
+Keep brand tokens and real data; no new workflow, persistence or auth policy.
+Evidence and remaining limitations: [mobile experience](../handoff/MOBILE_EXPERIENCE.md).

@@ -50,6 +50,59 @@ export function BackAction({
     </Pressable>
   );
 }
+export function ActionRow({
+  title,
+  description,
+  icon,
+  onPress,
+}: {
+  title: string;
+  description: string;
+  icon: IconName;
+  onPress: () => void;
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityHint={description}
+      onPress={onPress}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={({ pressed }) => [
+        s.row,
+        {
+          minHeight: metrics.control,
+          paddingVertical: space.lg,
+          borderBottomWidth: 1,
+          borderColor: c.rule,
+          opacity: pressed ? 0.7 : 1,
+        },
+        focused && s.focus,
+      ]}
+    >
+      <View
+        style={{
+          backgroundColor: c.successSurface,
+          padding: space.md,
+          borderRadius: 8,
+        }}
+      >
+        <Icon name={icon} />
+      </View>
+      <View style={{ flex: 1, gap: space.xs }}>
+        <T kind="bold" color={c.forest}>
+          {title}
+        </T>
+        <T kind="small" color={c.muted}>
+          {description}
+        </T>
+      </View>
+      <Icon name="arrow" size={18} />
+    </Pressable>
+  );
+}
 export function IconButton({
   name,
   label,

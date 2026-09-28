@@ -93,6 +93,9 @@ phù hợp; ví dụ catalog chỉ xóa dữ liệu minh họa trong phiên.
 - Có focus nhìn thấy khi dùng bàn phím. Sheet có tên dialog, vùng cuộn, nút đóng
   và safe area; kiểm tra focus khi mở/đóng và thao tác Tab trên web, VoiceOver/
   TalkBack trên native. Không tuyên bố đạt accessibility chỉ vì có aria props.
+- Với bảng lọc hoặc bảng lựa chọn dài, đặt hành động chính trong `Sheet.footer`
+  ngoài vùng cuộn; không bắt người dùng kéo hết danh sách để áp dụng. Giữ lựa chọn
+  tạm riêng với bộ lọc đang áp dụng; đóng bảng không thay đổi truy vấn hiện tại.
 - Tương phản chữ thường tối thiểu 4.5:1, ranh giới điều khiển 3:1. Các cặp đang
   dùng được test từ token. Divider trang trí không thay border ô nhập.
 - Không bắt người dùng xem chuyển động trang trí; sheet hiện không dùng animation.

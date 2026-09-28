@@ -1,13 +1,23 @@
-import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { AppText as T } from "./text";
 import { IconButton } from "./actions";
 import { layout as s } from "./styles";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { colors, space } from "./theme";
 export function Sheet({
   title,
   visible,
   onClose,
   children,
+  footer,
   dismissible = true,
   backdropDismiss = true,
 }: {
@@ -15,6 +25,7 @@ export function Sheet({
   visible: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  footer?: React.ReactNode;
   dismissible?: boolean;
   backdropDismiss?: boolean;
 }) {
@@ -29,7 +40,10 @@ export function Sheet({
         if (dismissible) onClose();
       }}
     >
-      <View style={s.scrim}>
+      <KeyboardAvoidingView
+        style={s.scrim}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <Pressable
           style={StyleSheet.absoluteFill}
           accessible={false}
@@ -50,8 +64,8 @@ export function Sheet({
             },
           ]}
         >
-          <View style={s.row}>
-            <T kind="heading" accessibilityRole="header" style={{ flex: 1 }}>
+          <View style={[s.row, { flexShrink: 0 }]}>
+            <T kind="card" accessibilityRole="header" style={{ flex: 1 }}>
               {title}
             </T>
             <IconButton
@@ -62,13 +76,27 @@ export function Sheet({
             />
           </View>
           <ScrollView
+            style={{ flexShrink: 1 }}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ gap: 16, paddingBottom: 24 }}
+            contentContainerStyle={{ gap: space.lg, paddingBottom: space.sm }}
           >
             {children}
           </ScrollView>
+          {footer ? (
+            <View
+              style={{
+                flexShrink: 0,
+                borderTopWidth: 1,
+                borderColor: colors.rule,
+                paddingTop: space.md,
+                gap: space.sm,
+              }}
+            >
+              {footer}
+            </View>
+          ) : null}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -50,14 +50,21 @@ export function BookScreen({ id }: { id: string }) {
     !valid || (result.error instanceof ApiError && result.error.status === 404);
   const item = unavailable ? undefined : result.data;
   return (
-    <Screen>
-      <BackAction
-        title="Về kệ sách"
-        onPress={() => {
-          if (router.canGoBack()) router.back();
-          else router.replace("/");
-        }}
-      />
+    <Screen
+      header={
+        <View
+          style={{ paddingHorizontal: space.xl, paddingVertical: space.xs }}
+        >
+          <BackAction
+            title="Về kệ sách"
+            onPress={() => {
+              if (router.canGoBack()) router.back();
+              else router.replace("/");
+            }}
+          />
+        </View>
+      }
+    >
       {unavailable ? (
         <StatePanel
           title="Cuốn sách này không còn trên kệ."
@@ -82,13 +89,22 @@ export function BookScreen({ id }: { id: string }) {
           )}
           {item && (
             <>
+              <PublicPhoto
+                key={`${item.revisionId}/${selected}`}
+                listingId={id}
+                revisionId={item.revisionId}
+                mediaId={item.photos[selected]?.id || item.photos[0].id}
+                label={`Ảnh ${selected + 1} của ${item.book.title}`}
+                active={active && !result.isError}
+                large
+              />
               <View style={{ gap: space.md }}>
                 <BookCondition
                   condition={conditions[item.condition]}
                   mode={modes[item.mode]}
                 />
                 <AppText
-                  kind="title"
+                  kind="heading"
                   accessibilityRole="header"
                   color={colors.forest}
                 >
@@ -111,15 +127,6 @@ export function BookScreen({ id }: { id: string }) {
                   exchange={item.exchangeValue ?? undefined}
                 />
               </View>
-              <PublicPhoto
-                key={`${item.revisionId}/${selected}`}
-                listingId={id}
-                revisionId={item.revisionId}
-                mediaId={item.photos[selected]?.id || item.photos[0].id}
-                label={`Ảnh ${selected + 1} của ${item.book.title}`}
-                active={active && !result.isError}
-                large
-              />
               <View
                 style={{
                   flexDirection: "row",

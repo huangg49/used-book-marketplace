@@ -3,6 +3,7 @@ import { View, type ScrollView } from "react-native";
 import { Link } from "expo-router";
 import {
   AppText,
+  ActionRow,
   BackAction,
   BookCondition,
   BookCover,
@@ -146,6 +147,7 @@ export function UiCatalogScreen() {
           <>
             <SearchField
               label="Tìm sách mẫu"
+              submitLabel="Tìm sách mẫu trên kệ"
               placeholder="Tên sách, tác giả hoặc ISBN"
               value={search}
               onChangeText={setSearch}
@@ -282,13 +284,27 @@ export function UiCatalogScreen() {
               title="Trước khi chuyền tay"
               visible={sheet}
               onClose={() => setSheet(false)}
+              footer={
+                <Button title="Đã hiểu" onPress={() => setSheet(false)} />
+              }
             >
               <AppText>
                 Chụp rõ bìa, gáy sách và những trang có ghi chú. Người đọc sau
                 cần thấy đúng tình trạng của cuốn sách.
               </AppText>
-              <Button title="Đã hiểu" onPress={() => setSheet(false)} />
+              {Array.from({ length: 8 }, (_, index) => (
+                <AppText key={index}>
+                  Mục minh họa {index + 1}: nội dung cuộn, nút Đã hiểu luôn ở
+                  cuối bảng và không cuộn theo nội dung.
+                </AppText>
+              ))}
             </Sheet>
+            <ActionRow
+              title="Dòng điều hướng mẫu"
+              description="Biểu tượng, nhãn và mô tả; đây là dữ liệu mẫu."
+              icon="book"
+              onPress={() => setSheet(true)}
+            />
             <ConfirmDialog
               title="Bỏ bản nháp mẫu?"
               message="Chỉ xóa nội dung minh họa của trang này. Bạn có thể quay lại để tiếp tục xem."

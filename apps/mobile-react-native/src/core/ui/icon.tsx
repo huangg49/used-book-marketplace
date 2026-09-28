@@ -2,6 +2,7 @@ import Svg, { Path } from "react-native-svg";
 import { colors as c } from "./theme";
 const paths = {
   search: "M21 21l-5-5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0",
+  person: "M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M4 21v-2a8 8 0 0 1 16 0v2",
   bookmark: "M6 3h12v18l-6-4-6 4V3Z",
   plus: "M12 5v14M5 12h14",
   back: "M19 12H5m6-6-6 6 6 6",

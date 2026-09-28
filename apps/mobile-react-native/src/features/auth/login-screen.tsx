@@ -15,6 +15,7 @@ import {
   space,
   type TextFieldRef,
 } from "../../core/ui";
+import { MemberNavigation } from "../navigation/member-navigation";
 
 export function LoginScreen() {
   const { client } = useSession();
@@ -46,27 +47,34 @@ export function LoginScreen() {
     }
   };
   return (
-    <Screen>
-      <BrandLogo />
-      <BackAction title="Về kệ sách" onPress={() => router.replace("/")} />
+    <Screen footer={<MemberNavigation current="/account" />}>
       <View
         style={{
-          marginVertical: space.xl,
-          paddingLeft: space.lg,
-          borderLeftWidth: 3,
-          borderLeftColor: colors.terracotta,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: space.sm,
         }}
       >
-        <AppText kind="heading" color={colors.forest}>
-          Sách cũ. Chương mới.
+        <BackAction title="Về kệ sách" onPress={() => router.navigate("/")} />
+        <BrandLogo />
+      </View>
+      <View style={{ gap: space.sm, paddingVertical: space.md }}>
+        <AppText kind="label" color={colors.rustText}>
+          GÓC CỦA BẠN
+        </AppText>
+        <AppText
+          kind="heading"
+          color={colors.forest}
+          accessibilityRole="header"
+        >
+          Chào bạn trở lại
+        </AppText>
+        <AppText color={colors.muted}>
+          Giữ những bản nháp và chuẩn bị sách cho người đọc tiếp theo.
         </AppText>
       </View>
-      <AppText kind="title" color={colors.forest} accessibilityRole="header">
-        Chào bạn trở lại
-      </AppText>
-      <AppText color={colors.muted}>
-        Đăng nhập để tiếp tục hành trình đọc của bạn.
-      </AppText>
       <TextField
         label="Email"
         inputRef={emailInput}

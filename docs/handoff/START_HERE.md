@@ -210,11 +210,11 @@ kết quả mong đợi và cách xử lý lỗi mà không bỏ quy tắc nghi�
 ## 7. Việc đầu tiên của người tiếp nhận
 
 Đọc [READINESS](READINESS.md), tiếp tục việc chưa đóng đầu tiên; **chưa mở F2i**.
-Gói tiếp nhận mới nhất được lưu trên nhánh `codex/native-handoff-qa`, tiếp nối
-`codex/handoff-acceptance-pack` (`7b40e00`), gồm sửa startup media worker và
-[bằng chứng native từng ca](NATIVE_RUN_2026_09_28.md). Bundle local:
-`.tmp/latlai-native-handoff.bundle` (checksum `.sha256` bên cạnh). Người nhận:
-`git clone --branch codex/native-handoff-qa ./latlai-native-handoff.bundle latlai`.
+Gói tiếp nhận mới nhất trên nhánh `codex/mobile-experience`, tiếp nối
+`codex/native-handoff-qa` (`97c2e6a`). Đọc [vòng cải thiện mobile](MOBILE_EXPERIENCE.md)
+và [bằng chứng native từng ca](NATIVE_RUN_2026_09_28.md). Bundle local:
+`.tmp/latlai-mobile-experience.bundle` (checksum `.sha256` bên cạnh). Người nhận:
+`git clone --branch codex/mobile-experience ./latlai-mobile-experience.bundle latlai`.
 Không kèm `.env`, DB hoặc APK; các bundle/checkpoint trước giữ nguyên. Đây chưa là
 release đã nghiệm thu native và chưa được push lên remote.
 

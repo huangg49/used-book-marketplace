@@ -25,6 +25,7 @@ import { DraftEditor } from "./draft-editor";
 import { photoError, useForeground } from "./draft-media";
 import { BookIdentity } from "./catalog-picker";
 import { moderationLabel } from "./listing-form";
+import { MemberNavigation } from "../navigation/member-navigation";
 export function DraftsScreen() {
   const { client, state } = useSession(),
     cache = useQueryClient();
@@ -99,7 +100,7 @@ export function DraftsScreen() {
       </Screen>
     );
   return (
-    <Screen>
+    <Screen footer={<MemberNavigation current="/drafts" />}>
       <BackAction
         title="Về tài khoản"
         onPress={() => router.replace("./account")}
@@ -108,8 +109,12 @@ export function DraftsScreen() {
         <AppText kind="label" color={colors.rustText}>
           TỦ SÁCH CỦA BẠN
         </AppText>
-        <AppText kind="title" color={colors.forest} accessibilityRole="header">
-          Mỗi cuốn, một chương tiếp.
+        <AppText
+          kind="heading"
+          color={colors.forest}
+          accessibilityRole="header"
+        >
+          Sách của tôi
         </AppText>
         <AppText color={colors.muted}>
           Hoàn thiện bản nháp, theo dõi duyệt bài và xem lại những cuốn bạn muốn

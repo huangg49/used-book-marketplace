@@ -6,6 +6,7 @@ import { currentUserSchema } from "../../core/api/schemas";
 import { useSession } from "../../core/session/session-provider";
 import {
   AppText,
+  ActionRow,
   BackAction,
   Button,
   Notice,
@@ -15,6 +16,7 @@ import {
   presentError,
   space,
 } from "../../core/ui";
+import { MemberNavigation } from "../navigation/member-navigation";
 
 const roleLabels = {
   MEMBER: "Bạn đọc",
@@ -43,7 +45,7 @@ export function AccountScreen() {
     }
   };
   return (
-    <Screen>
+    <Screen footer={<MemberNavigation current="/account" />}>
       <BackAction
         title="Khám phá kệ sách"
         onPress={() => router.replace("/")}
@@ -52,7 +54,11 @@ export function AccountScreen() {
         <AppText kind="label" color={colors.rustText}>
           GÓC CỦA BẠN
         </AppText>
-        <AppText kind="title" color={colors.forest} accessibilityRole="header">
+        <AppText
+          kind="heading"
+          color={colors.forest}
+          accessibilityRole="header"
+        >
           Tài khoản của bạn
         </AppText>
       </View>
@@ -76,15 +82,17 @@ export function AccountScreen() {
         <View
           style={{
             gap: space.md,
-            paddingVertical: space.xl,
-            borderTopWidth: 1,
-            borderColor: colors.rule,
+            padding: space.xl,
+            backgroundColor: colors.forest,
+            borderRadius: 6,
           }}
         >
-          <AppText kind="heading" color={colors.forest}>
+          <AppText kind="heading" color={colors.paper}>
             {profile.data.displayName}
           </AppText>
-          <AppText selectable>{profile.data.email}</AppText>
+          <AppText kind="small" color={colors.paper} selectable>
+            {profile.data.email}
+          </AppText>
           <View
             style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}
           >
@@ -119,13 +127,16 @@ export function AccountScreen() {
       {profile.data?.roles.includes("MEMBER") &&
       profile.data.status !== "LOCKED" ? (
         <View style={{ gap: space.md }}>
-          <Button
+          <ActionRow
             title="Sách của tôi"
+            description="Bản nháp, bài chờ duyệt và sách trên kệ"
+            icon="book"
             onPress={() => router.push("./drafts")}
           />
-          <Button
+          <ActionRow
             title="Sổ địa chỉ"
-            secondary
+            description="Quản lý nơi gửi và nhận sách"
+            icon="pin"
             onPress={() => router.push("./addresses")}
           />
         </View>

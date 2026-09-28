@@ -20,6 +20,11 @@ chưa chạy; review độc lập chưa ký nhận. Không đóng toàn bộ cá
 
 ## Gate 1 — Rà soát và sửa lỗi
 
+Bổ sung theo phản hồi người dùng: [vòng trải nghiệm mobile](MOBILE_EXPERIENCE.md)
+đổi bố cục kệ, điều hướng, account/login và bộ lọc có nút Áp dụng cố định.
+Browser regression qua; Android đã kiểm bộ lọc với bàn phím số và chữ OS 130%.
+Đây chưa là người dùng duyệt thẩm mỹ hoặc nghiệm thu toàn bộ form/native.
+
 - [x] Chốt hiện trạng F2h/contract 0.20.0, 17 migration; phân biệt API và UI.
 - [x] So 72 operation OpenAPI với 14 controller: thiếu/thừa/trùng bằng 0.
 - [x] Đọc các đường đi trọng yếu về auth/session, command/replay, locks, ledger,
