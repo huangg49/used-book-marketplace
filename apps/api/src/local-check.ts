@@ -1,10 +1,11 @@
 import 'dotenv/config';
-import { readFileSync, readdirSync } from 'node:fs';
-import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { parse } from 'dotenv';
 import { ConfigService } from '@nestjs/config';
+import { MongoClient } from 'mongodb';
 import { validateEnvironment } from './config/environment.js';
-import { DatabaseService } from './database/database.service.js';
+import { pendingMigrations } from './database/mongo/migrate.js';
+import { migrations } from './database/mongo/migrations/index.js';
 import { MediaStorage } from './modules/media/media-storage.js';
 
 // Read-only preflight. Never logs connection URLs, keys or provider/DB error bodies.
@@ -54,7 +55,7 @@ try {
     throw new Error();
   if (
     Object.keys(clientEnv).some((name) =>
-      /SUPABASE_STORAGE_KEY|SERVICE_ROLE|JWT_ACCESS_SECRET|PAYMENT_SIMULATOR_SECRET|DATABASE_URL/.test(
+      /SUPABASE_STORAGE_KEY|SERVICE_ROLE|JWT_ACCESS_SECRET|PAYMENT_SIMULATOR_SECRET|DATABASE_URL|MONGODB_/.test(
         name,
       ),
     )
@@ -76,50 +77,31 @@ try {
   );
 }
 if (config) {
-  const db = new DatabaseService(config);
+  const client = new MongoClient(config.get<string>('MONGODB_URL')!, {
+    serverSelectionTimeoutMS: 5000,
+  });
   try {
-    await db.$connect();
-    await db.$queryRaw`SELECT 1`;
-    pass('Configured PostgreSQL is reachable.');
-    const migrations = await db.$queryRaw<
-      {
-        migration_name: string;
-        checksum: string;
-        finished_at: Date | null;
-        rolled_back_at: Date | null;
-      }[]
-    >`SELECT migration_name, checksum, finished_at, rolled_back_at FROM _prisma_migrations`;
-    const directories = readdirSync('prisma/migrations')
-      .filter((name) => /^\d/.test(name))
-      .sort();
-    const mismatch = directories.some((name) => {
-      const hash = createHash('sha256')
-        .update(readFileSync(`prisma/migrations/${name}/migration.sql`))
-        .digest('hex');
-      return !migrations.some(
-        (m) =>
-          m.migration_name === name &&
-          m.finished_at &&
-          !m.rolled_back_at &&
-          m.checksum === hash,
-      );
-    });
-    const unresolved = migrations.some(
-      (m) => !m.finished_at && !m.rolled_back_at,
-    );
-    if (mismatch || unresolved)
+    await client.connect();
+    const db = client.db();
+    await db.command({ ping: 1 });
+    pass('Configured MongoDB is reachable as the application user.');
+    const hello = await db.command({ hello: 1 });
+    if (!hello.setName)
       fail(
-        'Migration history differs or has an unresolved migration. Review prisma migrate status; do not reset the database.',
+        'MongoDB is not a replica set member; transactions need one. Use the compose `mongo` service.',
+      );
+    const pending = await pendingMigrations(db);
+    if (pending.length)
+      fail(
+        `${pending.length} of ${migrations.length} MongoDB migrations are pending or changed. Run pnpm db:migrate; do not drop the database.`,
       );
     else
       pass(
-        `All ${directories.length} repository migrations match the database checksums.`,
+        `All ${migrations.length} repository migrations match the database checksums.`,
       );
-    const queued = await db.mediaProcessingJob.count({
-      where: {
-        finishedAt: null,
-        availableAt: { lt: new Date(Date.now() - 300000) },
-      },
+    const queued = await db.collection('media_processing_jobs').countDocuments({
+      finishedAt: null,
+      availableAt: { $lt: new Date(Date.now() - 300000) },
     });
     if (queued)
       warn(
@@ -129,10 +111,10 @@ if (config) {
       pass('No overdue media jobs. This does not prove a worker is running.');
   } catch {
     fail(
-      'Database/schema check failed. Start configured PostgreSQL, run pnpm db:migrate and retry. Existing preview processes may use a different database override.',
+      'Database check failed. Start MongoDB (pnpm infra:up), run pnpm db:bootstrap and pnpm db:migrate, then retry. Existing preview processes may use a different database override.',
     );
   } finally {
-    await db.$disconnect().catch(() => {});
+    await client.close().catch(() => {});
   }
   if (config.get<string>('SUPABASE_URL')) {
     try {

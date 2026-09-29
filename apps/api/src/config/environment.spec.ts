@@ -2,21 +2,17 @@ import { validateEnvironment } from './environment.js';
 
 describe('environment validation', () => {
   const valid = {
-    DATABASE_URL: 'postgresql://user:password@localhost:5432/books',
     MONGODB_URL: 'mongodb://user:password@localhost:27017/books?replicaSet=rs0',
     JWT_ACCESS_SECRET: 'a'.repeat(48),
   };
   it('rejects missing config, example secrets, invalid protocols and ports', () => {
-    expect(() => validateEnvironment({})).toThrow('DATABASE_URL');
+    expect(() => validateEnvironment({})).toThrow('MONGODB_URL');
     expect(() =>
       validateEnvironment({
         ...valid,
         JWT_ACCESS_SECRET: 'replace-with-at-least-32-random-characters',
       }),
     ).toThrow('JWT_ACCESS_SECRET');
-    expect(() =>
-      validateEnvironment({ ...valid, DATABASE_URL: 'https://example.com' }),
-    ).toThrow('DATABASE_URL');
     for (const MONGODB_URL of [
       '',
       'https://example.com/books',

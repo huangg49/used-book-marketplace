@@ -1,6 +1,5 @@
 import { validateEnvironment } from '../src/config/environment.js';
 const base = {
-  DATABASE_URL: 'postgresql://localhost/unused',
   MONGODB_URL: 'mongodb://localhost/unused',
   JWT_ACCESS_SECRET: 'test-only-000000000000000000000000000',
   NODE_ENV: 'development',

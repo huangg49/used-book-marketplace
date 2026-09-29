@@ -1,11 +1,4 @@
 export function validateEnvironment(env: Record<string, unknown>) {
-  const databaseUrl = String(env.DATABASE_URL ?? '');
-  try {
-    if (!['postgresql:', 'postgres:'].includes(new URL(databaseUrl).protocol))
-      throw new Error();
-  } catch {
-    throw new Error('DATABASE_URL must be a PostgreSQL connection URL.');
-  }
   const mongoUrl = String(env.MONGODB_URL ?? '');
   if (!/^mongodb(\+srv)?:\/\/[^/]+\/[^?/]+/.test(mongoUrl))
     throw new Error(
@@ -49,7 +42,6 @@ export function validateEnvironment(env: Record<string, unknown>) {
     throw new Error('Payment simulator must be disabled in production.');
   return {
     ...env,
-    DATABASE_URL: databaseUrl,
     MONGODB_URL: mongoUrl,
     JWT_ACCESS_SECRET: secret,
     PORT: port,

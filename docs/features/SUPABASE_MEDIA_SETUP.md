@@ -31,10 +31,10 @@ Upload thật sẽ báo kho ảnh chưa sẵn sàng; hệ thống không tự đ
 
 ## Kiểm tra và chạy
 
-Từ repository root, sau khi PostgreSQL đã chạy và cấu hình `DATABASE_URL` đúng:
+Từ repository root, sau khi MongoDB đã chạy và cấu hình `MONGODB_*` đúng:
 
 ```sh
-pnpm db:generate
+pnpm db:bootstrap
 pnpm db:migrate
 pnpm --filter @used-books/api media:check
 pnpm --filter @used-books/api media:probe

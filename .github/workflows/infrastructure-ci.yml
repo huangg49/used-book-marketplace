@@ -12,4 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Syntax check only; the placeholder is never used to start a database.
       - run: docker compose -f infra/docker-compose.yml config --quiet
+        env:
+          MONGO_ROOT_PASSWORD: config-check-only
+      - run: docker compose -f infra/docker-compose.mongo-test.yml --profile failover config --quiet
+      - run: docker compose -f infra/docker-compose.test.yml config --quiet

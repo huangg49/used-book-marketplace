@@ -38,5 +38,4 @@ __pycache__/
 *.log
 tmp/
 .tmp/
-apps/api/src/generated/prisma/
 apps/admin-web/src/assets/hero.png

@@ -5,21 +5,13 @@ import {
   withCredentials,
 } from './mongo/harness.js';
 
-// Only dedicated test databases may be used; E2E tests remove their own fixtures.
-const url = process.env.TEST_DATABASE_URL;
-if (!url)
-  throw new Error(
-    'TEST_DATABASE_URL is required. Use a dedicated usedbooks_test database.',
-  );
-const parsed = new URL(url);
-if (!decodeURIComponent(parsed.pathname).endsWith('_test'))
-  throw new Error('The E2E database name must end in _test.');
+// Only dedicated test databases may be used (the E2E database name must end in
+// _test, see mongo-global-setup.ts); suites remove their own fixtures.
 const mongo = process.env.MONGO_TEST_URL;
 if (!mongo)
   throw new Error('MONGO_TEST_URL is required (QA replica set root URL).');
 const root = e2eRootUrl(mongo);
 process.env.NODE_ENV = 'test';
-process.env.DATABASE_URL = url;
 // The API connects as the least-privilege app user; fixtures use the migrator.
 process.env.MONGODB_URL = withCredentials(
   root,

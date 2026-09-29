@@ -1,4 +1,4 @@
-// Browser verification of the RN export against real Nest/PostgreSQL; fake storage.
+// Browser verification of the RN export against real Nest/MongoDB; fake storage.
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
@@ -293,10 +293,7 @@ try {
     fullPage: true,
   });
   // A real owner status change hides both the fetched detail and future photos.
-  await fixture.db.user.update({
-    where: { id: fixture.member.user.id },
-    data: { status: "RESTRICTED" },
-  });
+  await fixture.setUserStatus(fixture.member.user.id, "RESTRICTED");
   await click("Cập nhật tình trạng sách");
   await p
     .getByText("Cuốn sách này không còn trên kệ.", { exact: true })
@@ -307,10 +304,7 @@ try {
   );
   await click("Về kệ sách");
   await p.getByText("Chưa gặp cuốn bạn tìm.", { exact: true }).waitFor();
-  await fixture.db.user.update({
-    where: { id: fixture.member.user.id },
-    data: { status: "ACTIVE" },
-  });
+  await fixture.setUserStatus(fixture.member.user.id, "ACTIVE");
   await click("Làm mới kệ");
   await p
     .getByRole("button", { name: /^Xem cuốn sách:/ })
@@ -414,8 +408,9 @@ try {
   assert.equal(own.state.moderation, "PendingReview");
   assert.equal(own.currentRevision.content.salePrice, 175000);
   assert.equal(
-    await fixture.db.mutationReceipt.count({
-      where: { listingId: ownerId, operation: "reviseApprovedListing" },
+    await fixture.db.collection("mutation_receipts").countDocuments({
+      listingId: ownerId,
+      operation: "reviseApprovedListing",
     }),
     1,
   );
@@ -442,8 +437,9 @@ try {
   await click("Thử lại yêu cầu này");
   await p.getByRole("heading", { name: "Sách của tôi", exact: true }).waitFor();
   assert.equal(
-    await fixture.db.mutationReceipt.count({
-      where: { listingId: ownerId, operation: "archiveListing" },
+    await fixture.db.collection("mutation_receipts").countDocuments({
+      listingId: ownerId,
+      operation: "archiveListing",
     }),
     1,
   );
@@ -451,10 +447,7 @@ try {
   await listingJourney(p, fixture, admin, artifacts);
   // Account actions must still reflect server eligibility after the layout changes.
   await click("Về kệ sách");
-  await fixture.db.user.update({
-    where: { id: fixture.member.user.id },
-    data: { status: "RESTRICTED" },
-  });
+  await fixture.setUserStatus(fixture.member.user.id, "RESTRICTED");
   // listingJourney navigates to a guest URL; browser tokens are memory-only.
   await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
   await p.getByLabel("Email", { exact: true }).fill("member@operations.test");
@@ -467,10 +460,7 @@ try {
     path: path.join(artifacts, "account-restricted-390.png"),
   });
   await click("Khám phá kệ sách");
-  await fixture.db.user.update({
-    where: { id: fixture.member.user.id },
-    data: { status: "LOCKED" },
-  });
+  await fixture.setUserStatus(fixture.member.user.id, "LOCKED");
   await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
   await p.getByText(/Tài khoản đang bị khóa/).waitFor();
   assert.equal(
@@ -600,7 +590,7 @@ try {
   p.off("request", recordShowcase);
   assert.deepEqual(errors, []);
   console.log(
-    "PASS RN export browser: shelf/detail/pagination/search/filters/images/errors, responsive large text, owner restriction, login; owner hide/reopen, approved revision with lost-ack replay, archive pending with lost-ack replay. Real HTTP/PostgreSQL; fake storage.",
+    "PASS RN export browser: shelf/detail/pagination/search/filters/images/errors, responsive large text, owner restriction, login; owner hide/reopen, approved revision with lost-ack replay, archive pending with lost-ack replay. Real HTTP/MongoDB; fake storage.",
   );
 } catch (error) {
   const p = browser?.contexts()[0]?.pages()[0];

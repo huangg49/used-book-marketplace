@@ -145,6 +145,6 @@ export async function addressJourney(p, fixture, artifacts) {
   await click("Sách của tôi");
   await p.setViewportSize({ width: 390, height: 844 });
   console.log(
-    "PASS address book RN web: validation, create lost-ack replay, second/default, stale edit retained, delete lost-ack replay/default promotion, reopen, 320px large text. Real HTTP/PostgreSQL, demo locality data; native unverified.",
+    "PASS address book RN web: validation, create lost-ack replay, second/default, stale edit retained, delete lost-ack replay/default promotion, reopen, 320px large text. Real HTTP/MongoDB, demo locality data; native unverified.",
   );
 }
