@@ -5,23 +5,7 @@ import { defineConfig } from 'vitest/config';
 // this list when they pass on MongoDB. *-migration suites test PostgreSQL SQL
 // backstops and are replaced by test/mongo/schema.mongo-spec.ts plus the
 // commit-time checks of the owning package.
-const pendingMongoPort = [
-  // MIG-05 quote/order/wallet/shipment (gated on money/permission review)
-  'test/quotes.e2e-spec.ts',
-  'test/quote-migration.e2e-spec.ts',
-  'test/orders.e2e-spec.ts',
-  'test/order-migration.e2e-spec.ts',
-  'test/obligations.e2e-spec.ts',
-  'test/order-payment.e2e-spec.ts',
-  'test/order-payment-migration.e2e-spec.ts',
-  'test/order-preparation.e2e-spec.ts',
-  'test/packaging-evidence.e2e-spec.ts',
-  'test/shipments.e2e-spec.ts',
-  'test/carrier-pickup.e2e-spec.ts',
-  'test/delivery-overdue.e2e-spec.ts',
-  'test/wallet.e2e-spec.ts',
-  'test/wallet-migration.e2e-spec.ts',
-];
+const pendingMongoPort: string[] = [];
 
 export default defineConfig({
   test: {
