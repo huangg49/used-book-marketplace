@@ -241,6 +241,90 @@
   margin: 1.5rem 0;
   flex-wrap: wrap;
 }
+.directory-filters {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.0fr) minmax(160px, 0.1fr) minmax(160px, 0.1fr) auto;
+  max-width: 900px;
+  align-items: end;
+  gap: 1rem;
+  margin: 2rem 0;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--rule);
+}
+.directory-filters .field {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  
+}
+.directory-filters input,
+.directory-filters select {
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  padding: 0.55rem 0.7rem;
+  box-sizing: border-box;
+}
+.directory-filters > .button {
+  height: 44px;
+  min-height: 44px;
+  padding-inline: 1.1rem;
+  white-space: nowrap;
+}
+.directory-table-wrap {
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+.directory-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  text-align: left;
+}
+.directory-table caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.directory-table th,
+.directory-table td {
+  padding: 1rem 0.75rem;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.directory-table thead th {
+  color: var(--rust-text);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.directory-table tbody th > span,
+.directory-table tbody th > small {
+  display: block;
+}
+.directory-table tbody th > small {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.user-status {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.status-active { border-color: var(--forest); color: var(--forest); }
+.status-restricted, .status-locked, .status-disabled { border-color: var(--terracotta); color: var(--rust-text); }
+@media (max-width: 1000px) {
+  .directory-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .tabs {
   display: flex;
   gap: 0.5rem;
@@ -583,6 +667,9 @@
   }
   .queue-toolbar > .button {
     width: 100%;
+  }
+  .directory-filters {
+    grid-template-columns: 1fr;
   }
   .tabs .button {
     padding: 0.65rem 0.75rem;

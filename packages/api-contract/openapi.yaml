@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.20.0
+  version: 0.21.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -38,6 +38,7 @@ tags:
   - name: Quotes
   - name: Orders
   - name: Wallet
+  - name: User administration
 paths:
   /health:
     get:
@@ -1482,6 +1483,76 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /operations/users:
+    get:
+      operationId: listOperationsUsers
+      tags:
+        - User administration
+      summary: List user directory
+      description: ACTIVE ADMIN only. Read-only operational directory ordered by createdAt,id DESC.
+        Searches the normalized email or display name; filters and cursors are bound to the
+        current Admin. Account state and role changes are deliberately not exposed by this API.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 2048
+          description: Opaque keyset cursor bound to filters and caller scope. Invalid or mismatched
+            cursors return 400; every page rechecks authorization.
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          description: Case-insensitive email or display-name search.
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: "#/components/schemas/ManagedUserStatus"
+        - in: query
+          name: role
+          required: false
+          schema:
+            $ref: "#/components/schemas/RoleCode"
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsUserPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
   /operations/listings/{listingId}:
     get:
       operationId: getListingReview
@@ -4344,6 +4415,84 @@ components:
         can authenticate but is limited to explicit existing-obligation endpoints.
         DISABLED/unverified cannot authenticate. Roles and ownership checks still apply; 403 does
         not invalidate the session.
+    ManagedUserStatus:
+      type: string
+      enum:
+        - PENDING_VERIFICATION
+        - ACTIVE
+        - RESTRICTED
+        - LOCKED
+        - DISABLED
+    RoleCode:
+      type: string
+      enum:
+        - MEMBER
+        - STAFF
+        - ADMIN
+        - TEST_OPERATOR
+    OperationsUser:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - email
+        - displayName
+        - status
+        - emailVerifiedAt
+        - roles
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        status:
+          $ref: "#/components/schemas/ManagedUserStatus"
+        emailVerifiedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleCode"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      description: Private operational directory entry. Returned only to an ACTIVE ADMIN; it contains
+        no credentials, session information, addresses, wallet data or transaction history.
+    OperationsUserPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          minItems: 0
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/OperationsUser"
+        nextCursor:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 2048
+            - type: "null"
+        serverTime:
+          type: string
+          format: date-time
     AuthTokens:
       type: object
       additionalProperties: false
