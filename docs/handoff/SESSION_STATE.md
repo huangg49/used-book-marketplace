@@ -1,4 +1,30 @@
-# Điểm lưu để tiếp tục — 29/09/2026
+# Điểm lưu để tiếp tục — 30/09/2026
+
+## Native finalize/submit lost ACK — điểm mới nhất
+
+- Nhánh **codex/native-finalize-submit-retry**, base **307341e**; commit subject
+  `docs(native): verify finalize and submit lost-ack recovery` (SHA xem log).
+  Chỉ evidence/tài liệu; không sửa runtime/UI, không push/merge/deploy.
+  `apps/api/src/generated/` cũ vẫn untracked, giữ nguyên.
+- [N13 thực chạy và bằng chứng](NATIVE_ACK_2026_09_30.md): Android15/API35 x86_64,
+  APK Q01 + Metro; Mongo `_test`/Supabase bucket mới hoàn toàn, API và Sharp thật.
+  Finalize4 request/cut200 cùng key/body→Processing; retry đọc trạng thái, không
+  upload/finalize thêm, worker→Ready. Submit2 cut200 +1 retry cùng key/body, save1
+  lần; PendingReview/version3, revision/thời điểm gửi/receipt giữ nguyên. PASS.
+- Assertion effect/hash/snapshot và integrity sweep PASS0 lỗi; contract/diff PASS.
+  Không phát hiện lỗi sản phẩm mới. Pilot401/token harness và giả định số retry
+  sai đã xử lý trong harness; không chạy lại full API/RN suite vì không đổi code.
+- Đầu lượt các process/container đã dừng. Đã mở lại emulator, Mongo acceptance57117
+  (dữ liệu còn) và QA57017. API3000 PID6424, Metro8081 PID1928 đang chạy; PG5433,
+  QA PG55434/failover57021–23 chưa khởi động lại. Không chạy cleanup trên acceptance.
+- QA3002/worker/proxy3102 đã dừng; đúng3 object keys, bucket/DB QA đã dọn. Khôi phục
+  backup app tạo trong lượt này; refresh200 và UI nháp N18 cũ/1ảnh. App ở Sách của
+  tôi, reverse3000/8081 bình thường. Log/secret/backup `.tmp/native-ack/` ignored;
+  không restore backup lần nữa vì sẽ rollback phiên sau refresh.
+- **Bước tiếp:** không lặp finalize/submit vừa đóng. Q01 còn ca giết app giữa upload/
+  phục hồi từ server; nếu làm dùng DB/bucket mới và backup mới. N21 cần quan sát
+  audio TalkBack; ARM/iOS và review người thật cần điều kiện tương ứng. CI remote/
+  push/merge/cutover chưa được tự mở; không mở Delivered/settlement.
 
 ## Native pricing / N20 — điểm mới nhất
 

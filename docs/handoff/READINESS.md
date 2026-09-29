@@ -12,6 +12,10 @@ JPEG/PNG/WebP, content PUT lost-ack/retry, preview lỗi/phục hồi và lưu/c
 Các lượt này dùng Supabase QA thật/cách ly; full native/TalkBack/human review/CI
 remote/cutover chính vẫn mở. Không cộng các bằng chứng hẹp thành PASS toàn app.
 
+Bổ sung30/09: [N13 native finalize/submit lost ACK](NATIVE_ACK_2026_09_30.md) PASS
+trên Android/Mongo/Supabase QA riêng; retry không thêm effect. N21/ARM/iOS/review
+người thật vẫn mở; không lặp các ca đã có evidence nếu source liên quan không đổi.
+
 Ngày 28/09/2026. Người dùng đã duyệt: dừng mở rộng nghiệp vụ, rà code, làm rõ cách
 tiếp nhận, tân trang UI hiện có rồi đóng mốc Git có thể tái dựng. Không cần hỏi lại
 phạm vi này ở mỗi lần tiếp tục. Không tự mở Delivered/inspection/settlement trong đợt này.
