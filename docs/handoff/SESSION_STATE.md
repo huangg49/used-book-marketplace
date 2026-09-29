@@ -1,5 +1,27 @@
 # Điểm lưu để tiếp tục — 29/09/2026
 
+## Live media MongoDB — điểm mới nhất
+
+- Nhánh **codex/mongodb-live-media**, base **1f5d636** (gói import Order đã commit).
+  Commit gói live: subject `test(mongo): add isolated live Supabase media acceptance`.
+  Không push/merge/deploy. Untracked Prisma generated cũ giữ nguyên.
+- Thêm script opt-in `apps/api/scripts/mongo-live-media.mjs`: Nest HTTP/Mongo app
+  user/MediaStorage/Sharp thật, tự tạo DB UUID `_test` và bucket Supabase private QA
+  riêng; không dùng keys/bucket dữ liệu nguồn. [Báo cáo](../refactor/MONGODB_LIVE_MEDIA_2026_09_29.md).
+- JPEG/PNG/WebP upload/replay/finalize→1job→Ready→signedWebP/hash original PASS;
+  người ngoài404/anonymous denied; lưu/mở draft PASS; linked retention + unlinked
+  cleanup xóa object/budget release PASS; sweep không lỗi. PASS7 checkpoints,
+  bucket/DB QA đã dọn. Script lint/prettier/diff-check PASS. Không sửa runtime/UI.
+- Gate import Order trước đó PASS43Mongo, source PG snapshot giữ nguyên; commit
+  **1f5d636**. Hai gói mới chưa chạy CI remote. 493E2E/native của ec4a9c9 vẫn là
+  evidence runtime gần nhất, không báo như đã chạy lại trong lượt chỉ thêm test.
+- **Tiếp theo:** native upload trên Mongo với bucket QA riêng (không lấy bản sao
+  media cũ để chạy cleanup), tiếp tục Q01/N20/N21 theo acceptance. Live packaging
+  nếu xét gate pipeline đó vẫn chưa chạy. Human review cần người độc lập, chưa ký.
+  Không tự push/merge/cutover DB chính. API3000/Metro8081/bản sao57117 và PG5433 giữ
+  cấu hình lượt trước; script test không thay runtime này. Log ignored
+  `.tmp/mongodb-fixes/live-media.log`; không in private config trong thư mục đó.
+
 ## Import Order MongoDB — điểm mới nhất
 
 - Nhánh **codex/mongodb-order-import**, base **ec4a9c9**; commit subject

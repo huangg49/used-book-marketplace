@@ -137,6 +137,7 @@ See [artifact-manifest.json](artifact-manifest.json) for the size and SHA-256 di
 - [Review MongoDB 29/09: lỗi đối soát ledger và lịch sử ảnh sau pickup](refactor/MONGODB_REVIEW_2026_09_29.md)
 - [Sửa MongoDB R1/R2, import bản sao local và native smoke](refactor/MONGODB_INTEGRITY_FIXES_2026_09_29.md)
 - [Import PostgreSQL có Order giữ tiền, pickup và review](refactor/MONGODB_ORDER_IMPORT_2026_09_29.md)
+- [MongoDB với upload/worker/cleanup Supabase thật trên bucket QA riêng](refactor/MONGODB_LIVE_MEDIA_2026_09_29.md)
 - [Inventory phụ thuộc PostgreSQL tại checkpoint trước refactor](refactor/POSTGRES_BASELINE_INVENTORY.md)
 - [ADR 0027: MongoDB persistence protocol](adr/0027-mongodb-persistence-protocol.md)
 - [MIG-06: chuyển dữ liệu và cutover sang MongoDB](refactor/MIG06_DATA_CUTOVER.md)

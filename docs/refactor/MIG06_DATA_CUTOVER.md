@@ -3,13 +3,13 @@
 29/09/2026, nhánh `codex/mongodb-refactor`. Cách làm: [runbook](MIG06_CUTOVER_RUNBOOK.md).
 Nền: [ADR 0027](../adr/0027-mongodb-persistence-protocol.md), [MIG-05](MIG05_QUOTE_ORDER_WALLET_SHIPMENT.md).
 
-**Cập nhật mới hơn — `codex/mongodb-integrity-fixes`:** hai lỗi toàn vẹn R1/R2 đã sửa;
+**Cập nhật lượt `codex/mongodb-integrity-fixes`:** hai lỗi toàn vẹn R1/R2 đã sửa;
 42 Mongo / 493 E2E / 33 unit PASS. Import thêm bản sao PostgreSQL local vào DB Mongo
 riêng57117 đạt count/hash/invariant; Android refresh, địa chỉ, lưu draft, ảnh Supabase
 cũ và restart PASS. [Chi tiết và evidence](MONGODB_INTEGRITY_FIXES_2026_09_29.md).
-Chưa cutover DB chính; nguồn không có Order nên paid/InTransit import vẫn chưa được
-chứng minh. Native toàn bộ, live upload/worker, CI commit mới và human review còn mở.
-Các kết quả bên dưới là lượt teammate trước review, không ghi đè trạng thái này.
+Chưa cutover DB chính. Nguồn local không có Order; fixture QA bổ sung và live media
+đã được kiểm tiếp như dưới. Native toàn bộ, CI commit mới và human review còn mở.
+Các kết quả teammate lịch sử bên dưới không ghi đè evidence mới.
 
 ## Đã làm
 
@@ -17,6 +17,10 @@ Tiếp theo ec4a9c9: [fixture import Order](MONGODB_ORDER_IMPORT_2026_09_29.md) 
 chứng minh PendingSellerConfirmation/InTransit/ResolutionPending với full hold,
 commitment và packaging; full Mongo43/43 PASS. Đây là dữ liệu QA tổng hợp với trigger
 PostgreSQL hoạt động, không thay cutover DB chính hoặc human review.
+
+[Live listing media](MONGODB_LIVE_MEDIA_2026_09_29.md): HTTP/Mongo/Sharp/Supabase
+thật, JPEG/PNG/WebP upload→Ready, replay, private read, draft persistence và cleanup
+PASS trên bucket QA riêng. Chưa là native upload hay live packaging acceptance.
 
 - **Runtime chỉ còn MongoDB**: gỡ `DatabaseService`/Prisma, yêu cầu `DATABASE_URL`,
   probe PostgreSQL ở `/health/ready`, script/config/seed Prisma và dependency
