@@ -1,177 +1,229 @@
 import { randomUUID } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
-import { PrismaPg } from '@prisma/adapter-pg';
+import {
+  applyCollectionSpecs,
+  currentCollections,
+  migrations,
+} from '../src/database/mongo/migrations/index.js';
+import {
+  CAPITAL_ACCOUNT_ID,
+  LEDGER_SEQUENCE_COUNTER,
+  OPENING_JOURNAL_ID,
+} from '../src/database/mongo/migrations/0002-reference-data.js';
+import { checkIntegrity } from '../src/integrity/integrity.js';
+import { checkListing } from '../src/modules/listings/listing-projection.js';
+import {
+  orderUpgradeDatabase,
+  populateFulfillment,
+  snapshot,
+  emptyContent,
+  upgradeAddress,
+} from './helpers/order-migration-db.js';
 
-it('upgrades wallet storage without changing historical balances, opening source, address/listing or receipts', async () => {
-  const url = process.env.TEST_DATABASE_URL!;
-  if (!decodeURIComponent(new URL(url).pathname).endsWith('_test'))
-    throw new Error('Dedicated test DB required');
-  const schema = `payment_upgrade_test_${randomUUID().replaceAll('-', '')}`;
-  const adapter = await new PrismaPg({
-    connectionString: url,
-    options: `-c search_path=${schema},public`,
-  }).connect();
-  const connection = await adapter.underlyingDriver().connect();
-  const owner = randomUUID(),
-    address = randomUUID(),
-    listing = randomUUID(),
-    revision = randomUUID(),
-    receipt = randomUUID(),
-    audit = randomUUID();
-  try {
-    await connection.query(`CREATE SCHEMA "${schema}"`);
-    const target = '20260928020000_order_wallet_payment';
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n) && n < target)
-      .sort())
-      await connection.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
-    await connection.query('BEGIN');
-    await connection.query(
-      'INSERT INTO users(id,email_normalized,password_hash,display_name,updated_at) VALUES($1,$2,$3,$4,now())',
-      [owner, `${owner}@upgrade.test`, 'unused', 'Upgrade fixture'],
+// PostgreSQL migration 20260928020000 added Order payment to populated wallet
+// storage: `wallet_accounts.order_id`, journal `order_id/receipt_id` and the
+// bigint posting sequence, with CHECKs that an OrderHold account names its
+// Order. MongoDB has no such upgrade step: those fields and rules are in the
+// baseline schema (0001) and the finite simulator capital is reference data
+// (0002, inserted only when absent). This suite re-applies the wallet/order
+// payment parts to a dedicated database holding populated history and checks
+// the same resulting guarantees: history and historical balances are not
+// rewritten, the simulator source is unchanged, and each guard holds as a
+// validator (121), an app-user privilege (13), the write protocol (W) or a
+// commit-time check (C).
+const PAYMENT_COLLECTIONS = [
+  'wallet_accounts',
+  'ledger_journals',
+  'ledger_entries',
+  'topup_intents',
+  'direct_orders',
+  'mutation_receipts',
+  'audit_events',
+];
+const HISTORY = [
+  'users',
+  'address_books',
+  'member_addresses',
+  'address_identities',
+  'listing_revisions',
+  'listings',
+  'mutation_receipts',
+  'audit_events',
+  'outbox_events',
+  'wallet_accounts',
+  'ledger_journals',
+  'ledger_entries',
+  'counters',
+];
+
+describe('order payment storage on populated wallet data (MongoDB)', () => {
+  let x: Awaited<ReturnType<typeof orderUpgradeDatabase>>;
+  beforeAll(async () => {
+    x = await orderUpgradeDatabase('order_payment');
+  }, 60000);
+  afterAll(async () => {
+    await x?.close();
+  });
+
+  it('upgrades wallet storage without changing historical balances, opening source, address/listing or receipts', async () => {
+    const { db, rootDb, mongo, owner, send } = x;
+    const { addressId, listingId } = await populateFulfillment(send);
+    const before = await snapshot(rootDb, HISTORY);
+    expect(before.mutation_receipts).toHaveLength(3);
+    // Re-apply the wallet/order payment schema (0001) and the simulator
+    // reference data (0002), as the migrator, to populated storage.
+    await applyCollectionSpecs(
+      db.client.db(),
+      currentCollections().filter((s) => PAYMENT_COLLECTIONS.includes(s.name)),
     );
-    await connection.query(
-      'INSERT INTO address_books(owner_id,version) VALUES($1,1)',
-      [owner],
-    );
-    await connection.query(
-      "INSERT INTO member_addresses(id,owner_id,recipient_name,phone,service_area_code,locality_code,detail,is_default) VALUES($1,$2,'Fixture','0900000000','HCM-DEMO-v1','DEMO-A','Test address only',true)",
-      [address, owner],
-    );
-    await connection.query(
-      'INSERT INTO listings(id,owner_id,updated_at) VALUES($1,$2,now())',
-      [listing, owner],
-    );
-    await connection.query(
-      "INSERT INTO listing_revisions(id,listing_id,number,origin_address_id,origin_address_version,origin_service_area_code) VALUES($1,$2,1,$3,1,'HCM-DEMO-v1')",
-      [revision, listing, address],
-    );
-    await connection.query(
-      'UPDATE listings SET current_revision_id=$1 WHERE id=$2',
-      [revision, listing],
-    );
-    await connection.query(
-      "INSERT INTO mutation_receipts(id,actor_id,operation,key,payload_hash,listing_id,result_version,result,committed_at) VALUES($1,$2,'createListing',$5,$3,$4,1,'{}',now())",
-      [receipt, owner, 'a'.repeat(64), listing, randomUUID()],
-    );
-    await connection.query(
-      "INSERT INTO audit_events(id,actor_id,receipt_id,listing_id,action,request_id) VALUES($1,$2,$3,$4,'createListing',$5)",
-      [audit, owner, receipt, listing, randomUUID()],
-    );
-    await connection.query('COMMIT');
-    const snapshot = async () => {
-      const tables = [
-        'member_addresses',
-        'address_identities',
-        'listing_revisions',
-        'listings',
-        'mutation_receipts',
-        'audit_events',
-        'wallet_accounts',
-        'ledger_journals',
-        'ledger_entries',
-      ];
-      const rows: Record<string, unknown> = {};
-      for (const table of tables)
-        rows[table] = (await connection.query(`SELECT * FROM ${table}`)).rows;
-      return rows;
-    };
-    const before = await snapshot();
-    await connection.query(
-      readFileSync(`prisma/migrations/${target}/migration.sql`, 'utf8'),
-    );
-    const after = await snapshot();
-    before.wallet_accounts = (before.wallet_accounts as object[]).map((r) => ({
-      ...r,
-      order_id: null,
-    }));
-    before.ledger_journals = (before.ledger_journals as object[]).map(
-      (r, i) => ({
-        ...r,
-        order_id: null,
-        receipt_id: null,
-        sequence: String(i + 1),
-      }),
-    );
-    expect(after).toEqual(before);
+    await migrations
+      .find((m) => m.id === '0002-reference-data')!
+      .up(db.client.db(), db.client);
+    expect(await snapshot(rootDb, HISTORY)).toEqual(before);
+    // The Order columns the SQL migration added are explicit nulls on the
+    // existing accounts/journal; the opening journal keeps sequence 1.
     expect(
-      (
-        await connection.query(
-          'SELECT purpose FROM wallet_accounts ORDER BY purpose',
-        )
-      ).rows,
+      await rootDb
+        .collection('wallet_accounts')
+        .find({}, { projection: { _id: 0, purpose: 1, orderId: 1 } })
+        .sort({ purpose: 1 })
+        .toArray(),
     ).toEqual([
-      { purpose: 'SimulatorCapital' },
-      { purpose: 'SimulatorClearing' },
+      { purpose: 'SimulatorCapital', orderId: null },
+      { purpose: 'SimulatorClearing', orderId: null },
     ]);
     expect(
-      (await connection.query('SELECT type FROM ledger_journals')).rows,
-    ).toEqual([{ type: 'OpeningCapital' }]);
-    expect(
-      (
-        await connection.query(
-          'SELECT sum(debit)::text debit,sum(credit)::text credit FROM ledger_entries',
+      await rootDb
+        .collection('ledger_journals')
+        .find(
+          {},
+          {
+            projection: {
+              _id: 1,
+              type: 1,
+              sequence: 1,
+              orderId: 1,
+              receiptId: 1,
+            },
+          },
         )
-      ).rows,
-    ).toEqual([{ debit: '100000000', credit: '100000000' }]);
-    expect(
-      (await connection.query('SELECT * FROM topup_intents')).rows,
-    ).toHaveLength(0);
-    await expect(
-      connection.query(
-        "UPDATE listings SET trade='Reserved',version=version+1 WHERE id=$1",
-        [listing],
-      ),
-    ).rejects.toMatchObject({ code: '23514' });
-    expect(
-      (await connection.query('SELECT * FROM sale_quotes')).rows,
-    ).toHaveLength(0);
-    expect(
-      (await connection.query('SELECT * FROM sale_quote_policies')).rows,
+        .toArray(),
     ).toEqual([
       {
-        code: 'HCM-DIRECT-v1',
-        shipping_fee: 30000,
-        commission_bps: 500,
-        ttl_seconds: 300,
+        _id: OPENING_JOURNAL_ID,
+        type: 'OpeningCapital',
+        sequence: 1,
+        orderId: null,
+        receiptId: null,
       },
     ]);
+    expect(
+      await rootDb
+        .collection('ledger_entries')
+        .aggregate([
+          {
+            $group: {
+              _id: null,
+              debit: { $sum: '$debit' },
+              credit: { $sum: '$credit' },
+            },
+          },
+          { $project: { _id: 0 } },
+        ])
+        .toArray(),
+    ).toEqual([{ debit: 100000000, credit: 100000000 }]);
+    expect(
+      await rootDb
+        .collection('counters')
+        .findOne({ _id: LEDGER_SEQUENCE_COUNTER as never }),
+    ).toEqual({ _id: LEDGER_SEQUENCE_COUNTER, value: 1 });
+    expect(await rootDb.collection('topup_intents').countDocuments()).toBe(0);
+    expect(await rootDb.collection('sale_quotes').countDocuments()).toBe(0);
+    expect(await db.c.sale_quote_policies.find({}).toArray()).toEqual([
+      {
+        _id: 'HCM-DIRECT-v1',
+        shippingFee: 30000,
+        commissionBps: 500,
+        ttlSeconds: 300,
+      },
+    ]);
+    const report = await mongo.tx((tx) => checkIntegrity(tx, 1000));
+    expect(report.failures).toEqual([]);
+
+    // Reserved without an active commitment: commit-time check (C), which
+    // aborts the transaction that attempts it.
     await expect(
-      connection.query('UPDATE listings SET version=99 WHERE id=$1', [listing]),
-    ).rejects.toMatchObject({ code: '23514' });
+      mongo.tx(async (tx) => {
+        await tx.c.listings.updateOne(
+          { _id: listingId },
+          { $set: { trade: 'Reserved' }, $inc: { version: 1, lockSeq: 1 } },
+        );
+        await checkListing(tx, listingId);
+      }),
+    ).rejects.toThrow('Listing/commitment projection mismatch');
+    const listing = (await db.c.listings.findOne({ _id: listingId }))!;
+    expect(listing.trade).toBe('Available');
+    // Listing versions only advance through a write naming the current
+    // version (W, formerly latlai_guard_aggregate).
+    await send('put', `/listings/${listingId}/draft`, {
+      expectedVersion: 99,
+      content: emptyContent,
+    }).expect(409);
+    expect((await db.c.listings.findOne({ _id: listingId }))!.version).toBe(
+      listing.version,
+    );
+    // Address content versions start at 1 (V) and advance by exactly one on
+    // a content change (W, formerly latlai_address_content_version).
     await expect(
-      connection.query('UPDATE member_addresses SET version=99 WHERE id=$1', [
-        address,
-      ]),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      connection.query('DELETE FROM mutation_receipts WHERE id=$1', [receipt]),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      connection.query('UPDATE ledger_journals SET sequence=99'),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      connection.query('UPDATE ledger_entries SET debit=debit+1'),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      connection.query(
-        "INSERT INTO wallet_accounts(id,purpose) VALUES($1,'OrderHold')",
-        [randomUUID()],
+      mongo.c.member_addresses.updateOne(
+        { _id: addressId },
+        { $set: { version: 0 } },
       ),
-    ).rejects.toMatchObject({ code: '23514' });
-    // The expanded target constraint still rejects ambiguous existing target types.
+    ).rejects.toMatchObject({ code: 121 });
+    await send('put', `/me/addresses/${addressId}`, {
+      expectedBookVersion: 1,
+      address: { ...upgradeAddress, detail: 'Changed test address only' },
+      makeDefault: false,
+    }).expect(200);
+    expect(
+      (await db.c.member_addresses.findOne({ _id: addressId }))!.version,
+    ).toBe(2);
+    // Receipts are append-only (P).
+    const receipt = (before.mutation_receipts as Record<string, unknown>[])[0];
     await expect(
-      connection.query(
-        "INSERT INTO mutation_receipts(id,actor_id,operation,key,payload_hash,listing_id,address_book_id,result_version,result,committed_at) VALUES($1,$2,'bad',$5,$3,$4,$2,1,'{}',now())",
-        [randomUUID(), owner, 'b'.repeat(64), listing, randomUUID()],
-      ),
-    ).rejects.toMatchObject({ code: '23514' });
-  } finally {
-    await connection.query('ROLLBACK');
-    await connection.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
-    connection.release();
-    await adapter.dispose();
-  }
+      mongo.c.mutation_receipts.deleteOne({ _id: receipt._id as string }),
+    ).rejects.toMatchObject({ code: 13 });
+    // Journals and entries are immutable for the application user (P,
+    // formerly latlai_wallet_immutable).
+    await expect(
+      mongo.c.ledger_journals.updateMany({}, { $set: { sequence: 99 } }),
+    ).rejects.toMatchObject({ code: 13 });
+    await expect(
+      mongo.c.ledger_entries.updateMany({}, { $inc: { debit: 1 } }),
+    ).rejects.toMatchObject({ code: 13 });
+    await expect(
+      mongo.c.wallet_accounts.deleteOne({ _id: CAPITAL_ACCOUNT_ID }),
+    ).rejects.toMatchObject({ code: 13 });
+    // An OrderHold account must name its Order (V, wallet_account_shape).
+    await expect(
+      mongo.c.wallet_accounts.insertOne({
+        _id: randomUUID(),
+        ownerId: null,
+        orderId: null,
+        purpose: 'OrderHold',
+        currency: 'VND',
+      }),
+    ).rejects.toMatchObject({ code: 121 });
+    // The expanded target rule still rejects an ambiguous target (V).
+    await expect(
+      mongo.c.mutation_receipts.insertOne({
+        ...receipt,
+        _id: randomUUID(),
+        key: randomUUID(),
+        listingId,
+        addressBookId: owner,
+      } as never),
+    ).rejects.toMatchObject({ code: 121 });
+    expect(await rootDb.collection('wallet_accounts').countDocuments()).toBe(2);
+    expect(await rootDb.collection('ledger_journals').countDocuments()).toBe(1);
+  });
 });
