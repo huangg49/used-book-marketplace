@@ -1,5 +1,25 @@
 # Điểm lưu để tiếp tục — 30/09/2026
 
+## PR tích hợp và cutover local — điểm mới nhất
+
+- Nhánh `codex/mongodb-team-handoff`, PR[#5](https://github.com/huangg49/used-book-marketplace/pull/5)
+  đã push/mở theo quyền chủ dự án; CI đang chạy, chưa merge tại điểm lưu này.
+  [Nhóm Windows](TEAM_WINDOWS.md) đã có hướng dẫn theo phần việc, Flutter vẫn scaffold.
+- [Cutover local](LOCAL_MONGO_CUTOVER_2026_09_30.md) đã thực hiện: dùng bản Mongo57117
+  có toàn bộ bản ghi PG và thay đổi QA mới. Không reimport đè, không dual-write.
+  Root/API `.env` đã cập nhật riêng; compose project trỏ volume hiện có. Nguồn PG5433
+  giữ nguyên. Nhóm dùng DB riêng, không lấy config/backup của máy này.
+- Backup ngoài repo `C:/Users/ASUS/Documents/LaiLai/backups/cutover-2026-09-30/` gồm
+  PG custom dump, Mongo archive/users/roles, config và14 objects của7media. Có hash;
+  PG list/Mongo dryRun PASS, chưa full restore drill. Chứa secret, không in/commit.
+- Integrity0 lỗi, ledger cân bằng100M,3 checksum khớp, doctor/readiness/storage PASS.
+  API3000 PID31696/media30464/order5068 dùng .env trực tiếp, Metro8081 giữ nguyên.
+  Worker order0failed; native đọc sách cũ200. Không cần launcher acceptance nữa.
+  Từ nay DB57117 là local chính, không dùng làm nơi QA cleanup tùy tiện.
+- Bước tiếp: theo CI PR5, sửa lỗi có evidence nếu có, merge khi các check cần thiết
+  đạt. Không lặp suite local/native đã đóng. Human review chưa có người, vẫn mở;
+  chưa deploy ngoài máy. Không quay .env/phiên về backup sau khi đã có ghi mới.
+
 ## Bàn giao nhóm / tích hợp MongoDB — đang thực hiện
 
 - Chủ dự án đã chốt: bàn giao cho nhóm trong6 ngày; chuyển toàn bộ dữ liệu hiện có
