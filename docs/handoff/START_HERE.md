@@ -1,19 +1,14 @@
-# Bắt đầu ở đây — bàn giao Lật lại tại F2h
+# Bắt đầu ở đây — Lật lại trên MongoDB
 
-Cập nhật lane MongoDB 29/09: HEAD hiện **OpenAPI0.21.0**, 3 migration MongoDB;
-17 migration PostgreSQL giữ làm lịch sử chỉ đọc. Đọc [SESSION_STATE](SESSION_STATE.md)
-và [review/sửa mới nhất](../refactor/MONGODB_INTEGRITY_FIXES_2026_09_29.md) trước thao tác.
-Các mốc0.20.0 bên dưới thuộc bàn giao F2h trước đó; runtime Mongo đã port nhưng
-cutover DB chính và release gates chưa hoàn tất.
+Cập nhật30/09/2026: main đã tích hợp MongoDB, contract **0.21.0**,3 migration MongoDB;
+17 migration PostgreSQL là lịch sử chỉ đọc phục vụ import. Giao dịch giữ phạm vi F2h.
+[Cutover máy chủ dự án](LOCAL_MONGO_CUTOVER_2026_09_30.md) đã xong; teammate dùng
+database riêng theo [TEAM_WINDOWS](TEAM_WINDOWS.md), không lấy config/backup của máy này.
 
-Cập nhật 28/09/2026. Contract **0.20.0**, 17 migration. Đây là hướng dẫn tiếp nhận
-mã nguồn đang chuẩn bị bàn giao; **chưa phải chứng nhận hoàn tất bàn giao**.
-Trạng thái từng việc ở [READINESS](READINESS.md), phát hiện và bằng chứng ở
-[AUDIT_F2H](AUDIT_F2H.md). Không cần đọc lại lịch sử chat để tiếp tục.
-Người tiếp nhận phiên tiếp theo: đọc [điểm lưu](SESSION_STATE.md),
-[kế hoạch chi tiết](CONTINUATION_PLAN.md) và [prompt khởi động](NEXT_SESSION_PROMPT.md).
-Nguồn đã có checkpoint `checkpoint/f2h-handoff-2026-09-28` và
-[kết quả dựng lại từ clone sạch](REBUILD.md), gồm cách nhận bằng Git bundle khi chưa push.
+Việc đang làm ở [SESSION_STATE](SESSION_STATE.md), gate phát hành ở [READINESS](READINESS.md).
+Mốc PostgreSQL/checkpoint28/09 và [REBUILD](REBUILD.md) là bằng chứng lịch sử, không
+phải hướng dẫn runtime hiện tại. Dùng [prompt tiếp nhận](NEXT_SESSION_PROMPT.md)
+nếu nối tiếp công việc bằng agent. Main đã merge không đồng nghĩa full native/review đạt.
 
 ## 1. Hiểu đúng bản đang nhận
 

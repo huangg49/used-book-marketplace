@@ -35,7 +35,7 @@ sách đã nhận hay đơn đã hoàn tất. `Cancelled` cũng không chứng m
 
 | Nền tảng đang có | Tác động bắt buộc ở increment triển khai |
 |---|---|
-| [CommandService](../../apps/api/src/modules/commands/command.service.ts): user/session lock, receipt, audit/outbox | Mở rộng typed context/receipt và system principal; không gọi lồng `run()` để tạo nhiều transaction |
+| [Command executor hiện tại](../../apps/api/src/modules/commands/mongo-command.service.ts): user/session lock, receipt, audit/outbox; thay CommandService PostgreSQL sau ADR0027 | Mở rộng typed context/receipt và system principal; không gọi lồng `run()` để tạo nhiều transaction |
 | [ListingLifecycleService](../../apps/api/src/modules/listings/listing-lifecycle.service.ts): chỉ thay Available | Acquire phải khóa cùng listing, tăng version một lần; giữ hồi quy sửa/ẩn/xóa/gỡ |
 | [PublicListingService](../../apps/api/src/modules/listings/public-listing.service.ts): predicate chung | Thêm NOT EXISTS Active commitment và custody blocker cho list/detail/media, bên cạnh trade projection |
 | Revision/ảnh đã submit bất biến | Pin revision/media trong snapshot; không dùng URL ảnh có hạn làm bằng chứng lâu dài |

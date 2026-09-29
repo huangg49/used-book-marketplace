@@ -6,6 +6,11 @@ MongoDB. Chủ dự án cho push/merge checkpoint Q01 rồi mở nhánh refactor
 
 ## Nguồn và trạng thái
 
+Cập nhật30/09: đã merge main qua PR5/PR6, CI5 nhóm PASS; cutover local và restore
+backup đã kiểm theo [báo cáo](../handoff/LOCAL_MONGO_CUTOVER_2026_09_30.md).
+Các bước/mốc bên dưới ghi tiến trình29/09; tra gate còn mở ở
+[READINESS](../handoff/READINESS.md). Contract hiện0.21.0, nghiệp vụ giao dịch giữ F2h.
+
 - Baseline PostgreSQL: `1e08969dfeb8c712a286cb2c365bdf7614906f3b` trên main,
   squash merge [PR #2](https://github.com/huangg49/used-book-marketplace/pull/2).
 - Nhánh cũ `codex/q01-native-completion` giữ commit `522191f` trên remote.
@@ -17,8 +22,8 @@ MongoDB. Chủ dự án cho push/merge checkpoint Q01 rồi mở nhánh refactor
   cursor v2, CI Mongo riêng. MIG-03 DONE: [auth + executor](MIG03_AUTH_COMMAND.md).
   MIG-04 DONE: [catalog/listing/media/địa chỉ](MIG04_CATALOG_LISTING_MEDIA.md). MIG-05 DONE:
   [quote/order/ví/vận chuyển](MIG05_QUOTE_ORDER_WALLET_SHIPMENT.md). MIG-06 cutover mã nguồn
-  DONE, [báo cáo](MIG06_DATA_CUTOVER.md): runtime chỉ còn MongoDB; còn mở cutover dữ liệu
-  thật của chủ dự án, CI trên GitHub và native acceptance.
+  DONE, [báo cáo29/09](MIG06_DATA_CUTOVER.md): runtime chỉ còn MongoDB. Cutover/CI
+  đã hoàn tất ở cập nhật30/09 phía trên; native acceptance đầy đủ vẫn mở.
 - Phạm vi chức năng giữ F2h/OpenAPI 0.20.0. Không mở Delivered/inspection/settlement.
   SRS1.1 và ADR hiện có vẫn là nguồn hành vi; các cơ chế PostgreSQL cần ADR thay thế
   có đối chiếu, không xóa lịch sử để coi như chưa có yêu cầu.

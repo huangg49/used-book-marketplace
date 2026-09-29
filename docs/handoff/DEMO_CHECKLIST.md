@@ -6,7 +6,7 @@ luồng mua sách hoàn chỉnh bằng nút giả. Setup và lệnh nằm ở [S
 ## Trước khi demo
 
 - [ ] Đúng commit bàn giao; API và cả hai worker cùng revision/migration.
-- [ ] PostgreSQL chạy; migrate/seed local thành công, không reset database dùng chung.
+- [ ] MongoDB replica set chạy; bootstrap/migrate/seed local thành công, không reset database dùng chung.
 - [ ] `doctor:local` không còn FAIL. Đã xử lý đúng URL emulator/LAN và CORS.
 - [ ] Muốn demo upload thật: bucket Supabase riêng tư sẵn sàng, media worker chạy.
   Chuẩn bị ảnh cuốn sách mình có quyền chụp, JPEG/PNG/WebP dưới 10 MB.

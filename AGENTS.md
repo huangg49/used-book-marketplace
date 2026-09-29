@@ -1,22 +1,25 @@
 # Working in Lật lại
 
 Continuation handoff: read `docs/handoff/SESSION_STATE.md` for the latest saved
-state and Android startup blocker, `docs/handoff/CONTINUATION_PLAN.md` for ordered
+state, `docs/handoff/CONTINUATION_PLAN.md` for ordered
 work packages, and `docs/handoff/NEXT_SESSION_PROMPT.md` for the receiving agent.
 `CLAUDE.md` is a thin entry point to these same instructions. The plan does not
 override the release gates or the business baseline below.
 
 ## Current scope
 
-Handoff preparation is the current priority: freeze business scope at F2h/OpenAPI
-0.20.0. Start at `docs/handoff/START_HERE.md` and track the audit, existing-UI polish
+Handoff is the current priority: freeze transaction business scope at F2h (the
+historical OpenAPI 0.20.0 milestone). Current contract is 0.21.0; MongoDB integration
+and the owner's local cutover are complete. Start at `docs/handoff/START_HERE.md` and track existing-UI polish
 and release gates in `docs/handoff/READINESS.md`. Finish those gates before extending
 Delivered/inspection/settlement. A passing backend suite does not close native UI
 acceptance. Source checkpoint `checkpoint/f2h-handoff-2026-09-28` has clean-clone
 verification in `docs/handoff/REBUILD.md`. Native session and real JPEG upload have
 partial acceptance in `docs/handoff/NATIVE_RUN_2026_09_28.md`; full native acceptance
 and independent reviews remain open. Do not redo closed gates without a relevant
-change. Preserve local work.
+change. Preserve local work. Dated feature reports and handoff HISTORY files are
+evidence at their recorded source, not the latest task status. Keep SESSION_STATE
+concise and update current facts in place instead of appending competing summaries.
 
 Business baseline: `docs/SRS_V1_1.md` plus `docs/features/LOCAL_HANDOVER_AUCTION.md`.
 TP.HCM only, direct shipping retained, two simulated managed points, optional
@@ -107,7 +110,8 @@ DirectDelivery sale quote create/read APIs are implemented in OpenAPI 0.11.0; re
 ADR 0016 and `docs/features/DIRECT_SALE_QUOTE_REPORT.md`. Quotes are immutable estimates,
 never reservations or money holds. Use the shared command executor/QuoteReceipt,
 DB decision time after locks, and pinned policy/address/listing versions.
-Member checkout UI and ViaPoint remain planned. Native address/fulfillment UI QA is pending.
+Member checkout UI and ViaPoint remain planned. Native address/fulfillment has
+scoped evidence in handoff; use READINESS for the remaining acceptance, not this historical feature summary.
 
 React Native is the first member client. Keep the shared NestJS API compatible with
 Flutter and the operations web. The implemented reference slice is auth/profile;
@@ -116,7 +120,8 @@ Catalog requests/review/public reads and owner listing drafts have real API hand
 Owner media handlers, Supabase adapter, Sharp worker and RN private drafts are implemented;
 live Supabase verification passed; Android debug build/UI emulator checks passed.
 Native picker cancel and JPEG upload/Ready/preview/save/reopen passed on Android 15;
-other formats, upload failures/background and full listing native acceptance remain pending.
+PNG/WebP and scoped upload failure/retry/background checks were added on MongoDB;
+read `docs/handoff/READINESS.md` for evidence and remaining full native acceptance.
 Listing submission/moderation, reviewer media reads and public shelf/detail/media are implemented.
 Read ADR 0011 and `docs/features/PUBLIC_SHELF_REPORT.md` before extending public reads.
 RN guest shelf is `/`, account is `/account`, book detail is `/book?id=...`.
