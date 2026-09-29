@@ -1,5 +1,25 @@
 # Điểm lưu để tiếp tục — 30/09/2026
 
+## Đã tích hợp MongoDB vào main — điểm chốt
+
+- PR[#5](https://github.com/huangg49/used-book-marketplace/pull/5) **đã merge** ngày30/09
+  theo quyền chủ dự án, merge commit **8e844dc**. Cả5 check trên head7587983 đều PASS:
+  API, React Native, admin-web, operations/public shelf, compose. Không suy kết quả
+  này thành human review hay full native acceptance; các gate đó vẫn mở.
+- Database local chính đã là Mongo57117; API/media/order dùng `.env` thật, không cần
+  launcher ignored. PostgreSQL5433 giữ nguyên; snapshot source và Mongo +14media objects
+  được backup ngoài repo theo [cutover](LOCAL_MONGO_CUTOVER_2026_09_30.md).
+- Đã restore thật cả hai archive vào database QA UUID `_test` riêng: Mongo checksum/
+  integrity PASS; PG43 tập dữ liệu/146 bản ghi khớp nguồn read-only sau toDocuments.
+  Hai DB restore đã dọn. Chưa diễn tập phục hồi Mongo credential trên host mới.
+- Hướng dẫn [nhóm Windows](TEAM_WINDOWS.md) dùng database/credential riêng, seed4
+  tài khoản; Flutter mới scaffold, member web hiện là Expo web. Chưa tự phân công
+  người hoặc mở workflow Delivered/settlement. Mốc mong muốn: bàn giao trong6 ngày.
+- Closeout tài liệu ở nhánh `codex/mongodb-handoff-closeout` từ8e844dc; không đổi code
+  sau CI. Bước tiếp dành cho nhóm: clone main và mỗi người chạy phần mình phụ trách;
+  chỉ xử lý lỗi setup thực tế hoặc công việc đã phân công. Không lặp native/suite
+  đã đạt nếu không có thay đổi liên quan. Không restore snapshot cũ đè dữ liệu đang chạy.
+
 ## PR tích hợp và cutover local — điểm mới nhất
 
 - Nhánh `codex/mongodb-team-handoff`, PR[#5](https://github.com/huangg49/used-book-marketplace/pull/5)

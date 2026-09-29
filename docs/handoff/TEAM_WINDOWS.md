@@ -7,8 +7,9 @@ không phát dump, session hay storage key cho cả nhóm qua Git.
 
 ## Thiết lập chung
 
-Theo [START_HERE](START_HERE.md) và [ENV_HANDOFF](ENV_HANDOFF.md): clone main sau khi
-PR MongoDB được merge, Node >=24.15/pnpm11.19, Docker Desktop Linux containers.
+Theo [START_HERE](START_HERE.md) và [ENV_HANDOFF](ENV_HANDOFF.md): clone main
+(MongoDB đã tích hợp qua [PR5](https://github.com/huangg49/used-book-marketplace/pull/5)),
+Node >=24.15/pnpm11.19, Docker Desktop Linux containers.
 Trong PowerShell tại root repo:
 
 ```powershell
