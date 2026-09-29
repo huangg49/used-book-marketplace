@@ -29,9 +29,12 @@ migration có credential riêng. Máy teammate tạo project/DB riêng theo TEAM
 Trong lúc API cũ dừng, đã lưu ngoài repository tại
 `C:/Users/ASUS/Documents/LaiLai/backups/cutover-2026-09-30/`:
 
-- PostgreSQL custom dump274.878 byte; `pg_restore --list` đọc được.
+- PostgreSQL custom dump274.878 byte; restore thật vào database UUID `_test` trên
+  PG QA55434, so43 tập dữ liệu/146 bản ghi sau `toDocuments` khớp nguồn read-only.
 - Mongo archive gzip28.974 byte kèm database users/roles;
-  `mongorestore --dryRun` đọc được. Đây không phải diễn tập restore đầy đủ.
+  restore dữ liệu/index/validator vào database UUID `_test` trên QA57017, migration
+  checksum và integrity PASS. Database QA của hai lượt restore đã được dọn.
+  Mongo restore dùng QA root; chưa diễn tập phục hồi credential lên host mới.
 - Root/API env và credential của container; chứa secret, không chia sẻ qua Git.
 - 14 object đang dùng bởi7 media (original pinned và preview), tổng5.118.376 byte;
   manifest riêng giữ key/hash. Lượt đầu thử đọc cả staging đã dọn của ảnh Ready nên
@@ -55,5 +58,6 @@ không cần launcher acceptance riêng nữa. PID khi kiểm:31696/30464/5068.
   WARN localhost còn phù hợp vì emulator đang dùng adb reverse3000/8081.
 
 Không chạy lại native acceptance hay full suite cho việc đổi cấu hình này. CI PR
-tích hợp chạy riêng. Backup archive được đọc/dry-run, chưa diễn tập restore vào DB
-khác; full native/TalkBack/ARM/iOS/human review vẫn mở. Nguồn PG và volume giữ nguyên.
+tích hợp chạy riêng. Hai archive đã restore vào DB QA khác; full native/TalkBack/
+ARM/iOS/human review vẫn mở. Nguồn PG và volume giữ nguyên. Pilot PG restore gọi
+createdb khi container chưa ready nên dừng trước tạo DB; chạy sau pg_isready đạt.

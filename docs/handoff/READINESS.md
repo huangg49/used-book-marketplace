@@ -1,5 +1,10 @@
 # Tiến trình chốt F2h để bàn giao
 
+Cập nhật30/09: MongoDB đã merge vào main qua [PR5](https://github.com/huangg49/used-book-marketplace/pull/5),
+5 nhóm CI trên head7587983 PASS. [Cutover local và backup](LOCAL_MONGO_CUTOVER_2026_09_30.md)
+đã hoàn tất, restore dữ liệu trên QA đã kiểm. [Nhóm Windows](TEAM_WINDOWS.md) dùng
+database riêng. Đây là mốc tích hợp để phát triển; human review/full native vẫn mở.
+
 Cập nhật29/09 lane MongoDB: [điểm lưu mới nhất](SESSION_STATE.md) và
 [bằng chứng sửa/import/native smoke](../refactor/MONGODB_INTEGRITY_FIXES_2026_09_29.md).
 493 E2E / 42 Mongo / 33 unit PASS, hai P1 đã sửa. Native chỉ thêm smoke Android
