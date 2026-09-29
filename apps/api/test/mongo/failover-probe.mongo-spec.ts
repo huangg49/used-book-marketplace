@@ -46,18 +46,16 @@ describe.skipIf(!url)('primary election (three-member replica set)', () => {
       },
       { writeConcern: { w: 'majority' } },
     );
-    await store
-      .books()
-      .insertOne(
-        {
-          _id: bookId,
-          state: 'Available',
-          version: 1,
-          deadline: null,
-          lockSeq: 0,
-        },
-        { writeConcern: { w: 'majority' } },
-      );
+    await store.books().insertOne(
+      {
+        _id: bookId,
+        state: 'Available',
+        version: 1,
+        deadline: null,
+        lockSeq: 0,
+      },
+      { writeConcern: { w: 'majority' } },
+    );
     const before = await primaryPort();
     const paused = deferred(),
       release = deferred();

@@ -1,0 +1,32 @@
+name: API MongoDB migration CI
+
+# Separate lane for the PostgreSQL -> MongoDB migration (docs/refactor/MONGODB_PLAN.md).
+# Uses the QA-only replica sets from infra/docker-compose.mongo-test.yml.
+on:
+  pull_request:
+    paths: ["apps/api/**", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "pnpm-lock.yaml", ".github/workflows/api-mongo-ci.yml"]
+  push:
+    branches: [codex/mongodb-refactor]
+
+jobs:
+  mongo:
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_ci_test?replicaSet=rs-test&authSource=admin
+      MONGO_FAILOVER_URL: mongodb://127.0.0.1:57021,127.0.0.1:57022,127.0.0.1:57023/latlai_failover_test?replicaSet=rs-failover
+      JWT_ACCESS_SECRET: ci-only-signing-key-not-for-production-000000000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
+          cache: pnpm
+      - run: docker compose -f infra/docker-compose.mongo-test.yml --profile failover up -d --wait
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @used-books/api lint
+      - run: pnpm --filter @used-books/api typecheck
+      - run: pnpm test:api:mongo

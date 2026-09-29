@@ -10,8 +10,12 @@
   [ADR 0027](../adr/0027-mongodb-persistence-protocol.md).
 - QA Mongo: `pnpm infra:mongo:test:up` (57017), `pnpm infra:mongo:failover:up`
   (57021-57023). Không dùng cho `.env` app.
-- **Bước tiếp theo**: MIG-02 — map 44 model + từng SQL backstop, migration
-  collection/index/validator có version, clock/ID/cursor/precision, CI Mongo.
+- **MIG-02 DONE**: [bản đồ 44 model/backstop](../refactor/MIG02_MODEL_MAP.md),
+  migration 0001 (validator/index/quyền) + 0002 (dữ liệu tham chiếu), runner có checksum,
+  role `latlai_app`/`latlai_migrator`, `MongoService`, keyset cursor v2, workflow
+  `api-mongo-ci.yml`. QA node Mongo giờ bật auth và dữ liệu trên tmpfs (khởi động lại = rỗng).
+  35 test Mongo PASS gồm failover; unit cũ 33 PASS.
+- **Bước tiếp theo**: MIG-03 — auth + command executor trên Mongo, negative/race/replay.
 
 ## Đọc ngay — sau merge ca16a22, lượt Codex trên Pixel_7
 

@@ -7,13 +7,38 @@ import {
   type MongoClient,
 } from 'mongodb';
 import { DomainError } from '../../modules/commands/domain-error.js';
+import {
+  bindCollections,
+  type CollectionName,
+  type Collections,
+} from './collections.js';
 
 // MongoDB transaction protocol (ADR 0027). Every multi-document business
 // decision runs through runTransaction. Contention is modelled by writing a
 // "lock" field on each document the decision depends on: a competing writer then
 // gets a WriteConflict (TransientTransactionError) instead of a stale snapshot.
 
-export type Tx = { session: ClientSession; db: Db };
+export class Tx {
+  // Session-bound collections: every operation joins this transaction.
+  readonly c: Collections;
+  constructor(
+    readonly session: ClientSession,
+    readonly db: Db,
+  ) {
+    this.c = bindCollections(db, session);
+  }
+  now(): Promise<Date> {
+    return serverNow(this);
+  }
+  // Write-lock documents of a mutable collection in sorted id order.
+  lock(name: CollectionName, ids: Iterable<string>): Promise<Set<string>> {
+    return lockDocuments(
+      this,
+      this.db.collection<Document & { _id: string }>(name),
+      ids,
+    );
+  }
+}
 
 export class TransactionBusyError extends DomainError {
   constructor(readonly attempts: number) {
@@ -74,7 +99,7 @@ export async function runTransaction<T>(
       });
       let result: T;
       try {
-        result = await fn({ session, db });
+        result = await fn(new Tx(session, db));
       } catch (error) {
         await session.abortTransaction().catch(() => undefined);
         if (isTransient(error)) {
@@ -139,11 +164,14 @@ export async function lockDocuments<S extends Document & { _id: string }>(
 
 // Server wall clock read inside the transaction. Call it only after every lock
 // the decision depends on, so it is later than any competitor's commit.
-export async function serverNow(tx: Tx): Promise<Date> {
+export async function serverNow(tx: {
+  db: Db;
+  session?: ClientSession;
+}): Promise<Date> {
   const [row] = await tx.db
     .aggregate<{ now: Date }>(
       [{ $documents: [{}] }, { $project: { _id: 0, now: '$$NOW' } }],
-      { session: tx.session },
+      tx.session ? { session: tx.session } : {},
     )
     .toArray();
   return row.now;

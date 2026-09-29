@@ -8,7 +8,7 @@ import {
   type Tx,
 } from '../../src/database/mongo/transaction.js';
 import { DomainError } from '../../src/modules/commands/domain-error.js';
-import { canonicalJson } from '../../src/modules/commands/command.service.js';
+import { canonicalJson } from '../../src/common/canonical-json.js';
 
 // MIG-01 probe: the smallest faithful copy of CommandService.executePrincipal on
 // MongoDB. It is not wired to controllers; MIG-03 ports the real executor.

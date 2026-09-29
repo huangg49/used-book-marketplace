@@ -1,0 +1,509 @@
+// Document shapes for every PostgreSQL model (MIG-02 model map). Field names
+// keep the Prisma camelCase names; `_id` is the external UUID string (never an
+// ObjectId). Natural/composite keys use deterministic string ids documented per
+// collection. `lockSeq` is the ADR 0027 write-lock counter on lockable documents.
+
+export type Json = Record<string, unknown>;
+export type UserStatus =
+  'PENDING_VERIFICATION' | 'ACTIVE' | 'RESTRICTED' | 'LOCKED' | 'DISABLED';
+export type RoleCode = 'MEMBER' | 'STAFF' | 'ADMIN' | 'TEST_OPERATOR';
+export type CatalogStatus = 'Pending' | 'Confirmed' | 'Rejected';
+export type ListingMode = 'Sale' | 'Exchange' | 'Both';
+export type BookCondition = 'LikeNew' | 'Good' | 'Fair' | 'Worn';
+export type ModerationStatus =
+  'Draft' | 'PendingReview' | 'Approved' | 'Rejected';
+export type VisibilityStatus = 'Visible' | 'Hidden' | 'Removed';
+export type TradeStatus =
+  'Available' | 'Reserved' | 'Sold' | 'Exchanged' | 'ClosedUnavailable';
+export type MediaStatus = 'Pending' | 'Processing' | 'Ready' | 'Failed';
+export type SystemActor =
+  | 'OrderExpiry'
+  | 'OrderConfirmationExpiry'
+  | 'OrderRefund'
+  | 'OrderPickupExpiry'
+  | 'OrderDeliveryExpiry';
+
+type Lockable = { lockSeq: number };
+
+// Roles are embedded so role writers write the locked user document (replaces
+// the role_mutation_lock trigger); UserRole's composite key becomes role uniqueness.
+export interface UserDoc extends Lockable {
+  _id: string;
+  emailNormalized: string;
+  passwordHash: string;
+  displayName: string;
+  status: UserStatus;
+  emailVerifiedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  roles: { role: RoleCode; grantedAt: Date }[];
+}
+export interface AuthSessionDoc extends Lockable {
+  _id: string;
+  userId: string;
+  refreshTokenHash: string;
+  expiresAt: Date;
+  revokedAt: Date | null;
+  createdAt: Date;
+}
+export interface LoginAttemptDoc {
+  _id: string; // key
+  attempts: number;
+  expiresAt: Date;
+}
+
+export interface CatalogBookDoc extends Lockable {
+  _id: string;
+  requesterId: string;
+  status: CatalogStatus;
+  version: number;
+  currentRevisionId: string | null;
+  confirmedIsbn: string | null;
+  searchText: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+export interface CatalogRevisionDoc {
+  _id: string;
+  bookId: string;
+  number: number;
+  title: string;
+  authors: string[];
+  publisher: string | null;
+  publicationYear: number | null;
+  language: string;
+  edition: string | null;
+  category: string;
+  isbn: string | null;
+  submittedAt: Date;
+}
+export interface CatalogDecisionDoc {
+  _id: string;
+  revisionId: string;
+  reviewerId: string;
+  decision: 'Confirm' | 'Reject';
+  reason: string | null;
+  decidedAt: Date;
+}
+
+export interface ListingDoc extends Lockable {
+  _id: string;
+  ownerId: string;
+  version: number;
+  moderation: ModerationStatus;
+  visibility: VisibilityStatus;
+  trade: TradeStatus;
+  currentRevisionId: string | null;
+  removalReason: string | null;
+  deletedAt: Date | null;
+  publishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+export interface ListingRevisionDoc extends Lockable {
+  _id: string;
+  listingId: string;
+  number: number;
+  bookId: string | null;
+  mode: ListingMode | null;
+  condition: BookCondition | null;
+  pages: string;
+  coverNote: string;
+  notes: string;
+  accessories: string;
+  readable: boolean | null;
+  hasMissingPages: boolean | null;
+  missingEssentialContent: boolean | null;
+  description: string;
+  salePrice: number | null;
+  exchangeValue: number | null;
+  submittedAt: Date | null;
+  ownershipDeclaredAt: Date | null;
+  createdAt: Date;
+  originAddressId: string | null;
+  originAddressVersion: number | null;
+  originServiceAreaCode: string | null;
+}
+export interface ListingMediaDoc extends Lockable {
+  _id: string;
+  listingId: string;
+  version: number;
+  status: MediaStatus;
+  stagingKey: string;
+  pinnedKey: string | null;
+  derivativeKey: string | null;
+  mimeType: string;
+  byteSize: number;
+  sha256: string;
+  width: number | null;
+  height: number | null;
+  failureCode: string | null;
+  expiresAt: Date;
+  purgedAt: Date | null;
+  reservedBytes: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+// _id = `${revisionId}:${mediaId}`
+export interface RevisionMediaDoc {
+  _id: string;
+  listingId: string;
+  revisionId: string;
+  mediaId: string;
+  position: number;
+}
+export interface ListingDecisionDoc {
+  _id: string;
+  revisionId: string;
+  reviewerId: string;
+  decision: 'Approve' | 'Reject';
+  checklist: Json | null;
+  reason: string | null;
+  decidedAt: Date;
+}
+
+// Exactly one target field is set; `principal` is the idempotency identity:
+// `user:<actorId>` or `system:<systemActor>`.
+export interface MutationReceiptDoc {
+  _id: string;
+  principal: string;
+  actorId: string | null;
+  systemActor: SystemActor | null;
+  operation: string;
+  key: string;
+  payloadHash: string;
+  listingId: string | null;
+  bookId: string | null;
+  mediaId: string | null;
+  addressBookId: string | null;
+  quoteId: string | null;
+  contextId: string | null;
+  topupId: string | null;
+  resultVersion: number;
+  result: Json;
+  committedAt: Date;
+}
+export interface AuditEventDoc {
+  _id: string;
+  actorId: string | null;
+  systemActor: SystemActor | null;
+  receiptId: string | null;
+  listingId: string | null;
+  bookId: string | null;
+  mediaId: string | null;
+  addressBookId: string | null;
+  quoteId: string | null;
+  contextId: string | null;
+  topupId: string | null;
+  action: string;
+  before: Json | null;
+  after: Json | null;
+  reason: string | null;
+  requestId: string;
+  createdAt: Date;
+}
+export interface OutboxEventDoc {
+  _id: string;
+  auditId: string;
+  type: string;
+  payload: Json;
+  attempts: number;
+  availableAt: Date;
+  leaseUntil: Date | null;
+  processedAt: Date | null;
+  createdAt: Date;
+}
+export interface MediaProcessingJobDoc {
+  _id: string;
+  mediaId: string;
+  attempts: number;
+  availableAt: Date;
+  leaseUntil: Date | null;
+  finishedAt: Date | null;
+}
+
+export interface ServiceAreaDoc {
+  _id: string; // code
+  name: string;
+  demoOnly: boolean;
+}
+// _id = `${areaCode}:${code}`
+export interface ServiceLocalityDoc {
+  _id: string;
+  areaCode: string;
+  code: string;
+  label: string;
+}
+export interface AddressBookDoc extends Lockable {
+  _id: string; // ownerId
+  version: number;
+}
+export interface MemberAddressDoc {
+  _id: string;
+  ownerId: string;
+  version: number;
+  recipientName: string;
+  phone: string;
+  serviceAreaCode: string;
+  localityCode: string;
+  detail: string;
+  isDefault: boolean;
+  createdAt: Date;
+}
+export interface AddressIdentityDoc {
+  _id: string;
+  ownerId: string;
+}
+
+export interface SaleQuotePolicyDoc {
+  _id: string; // code
+  shippingFee: number;
+  commissionBps: number;
+  ttlSeconds: number;
+}
+export interface SaleQuotePolicySelectionDoc {
+  _id: string; // scope
+  policyCode: string;
+}
+export interface SaleQuoteDoc {
+  _id: string;
+  version: number;
+  buyerId: string;
+  sellerId: string;
+  listingId: string;
+  listingVersion: number;
+  listingRevisionId: string;
+  catalogRevisionId: string;
+  originAddressId: string;
+  originAddressVersion: number;
+  destinationAddressId: string;
+  destinationAddressVersion: number;
+  serviceAreaCode: string;
+  policyCode: string;
+  bookPrice: number;
+  shippingFee: number;
+  commissionBps: number;
+  commission: number;
+  buyerTotal: number;
+  sellerProceeds: number;
+  createdAt: Date;
+  expiresAt: Date;
+}
+
+export interface DirectOrderDoc extends Lockable {
+  _id: string;
+  buyerId: string;
+  sellerId: string;
+  quoteId: string;
+  version: number;
+  state: string;
+  createdAt: Date;
+  paymentDeadline: Date;
+  closedAt: Date | null;
+  paidAt: Date | null;
+  sellerConfirmationDeadline: Date | null;
+  cancellationRequestedAt: Date | null;
+  cancellationReason: string | null;
+}
+export interface OrderPreparationDoc {
+  _id: string; // orderId
+  acceptedAt: Date;
+  pickupDeadline: Date;
+  policyCode: string;
+  receiptId: string;
+}
+export interface PickupReviewDoc {
+  _id: string;
+  orderId: string;
+  openedAt: Date;
+  reason: string;
+  receiptId: string;
+}
+export interface OrderPackagingEvidenceDoc {
+  _id: string;
+  orderId: string;
+  version: number;
+  status: 'Pending' | 'Ready';
+  mimeType: string;
+  byteSize: number;
+  sha256: string;
+  reservedBytes: number;
+  createdAt: Date;
+  uploadedAt: Date | null;
+  derivativeSha256: string | null;
+  derivativeBytes: number | null;
+  width: number | null;
+  height: number | null;
+  createReceiptId: string;
+  uploadReceiptId: string | null;
+}
+export interface DirectShipmentDoc {
+  _id: string;
+  orderId: string;
+  version: number;
+  state: 'LabelCreated';
+  carrier: string;
+  trackingCode: string;
+  direction: 'Outbound';
+  origin: Json;
+  destination: Json;
+  shippingFee: number;
+  feePolicy: string;
+  registeredAt: Date;
+  receiptId: string;
+}
+// _id = `${shipmentId}:${evidenceId}`
+export interface ShipmentPackagingEvidenceDoc {
+  _id: string;
+  shipmentId: string;
+  orderId: string;
+  evidenceId: string;
+  position: number;
+}
+export interface CarrierPickupEventDoc {
+  _id: string;
+  orderId: string;
+  shipmentId: string;
+  sequence: number;
+  occurredAt: Date;
+  receivedAt: Date;
+  outcome: 'Applied' | 'Duplicate' | 'ReviewRequired';
+  deliveryDeadline: Date | null;
+  policyCode: string;
+  payloadHash: string;
+  signature: string;
+  receiptId: string;
+}
+export interface CarrierPickupReviewDoc {
+  _id: string;
+  orderId: string;
+  eventId: string;
+  openedAt: Date;
+  reason: 'LatePickup' | 'ConflictingPickup';
+}
+export interface OrderDeliveryReviewDoc {
+  _id: string;
+  orderId: string;
+  pickupEventId: string;
+  openedAt: Date;
+  openedBy: 'DeadlineWorker' | 'BuyerReport';
+  policyCode: string;
+  receiptId: string;
+}
+export interface OrderNonReceiptReportDoc {
+  _id: string;
+  orderId: string;
+  submittedAt: Date;
+  description: string;
+  receiptId: string;
+}
+
+export interface WorkflowContextDoc extends Lockable {
+  _id: string;
+  kind: 'Order';
+  orderId: string;
+  version: number;
+  ownershipPhase: 'Holding' | 'Closed';
+}
+// _id = `${contextId}:${listingId}`
+export interface WorkflowItemDoc {
+  _id: string;
+  contextId: string;
+  listingId: string;
+  listingRevisionId: string;
+  catalogRevisionId: string;
+  snapshot: Json;
+}
+export interface AgreementSnapshotDoc {
+  _id: string; // contextId
+  snapshot: Json;
+}
+export interface ExclusiveCommitmentDoc extends Lockable {
+  _id: string;
+  listingId: string;
+  currentContextId: string;
+  version: number;
+  status: 'Active' | 'Released';
+  acquiredAt: Date;
+  endedAt: Date | null;
+  reason: string | null;
+}
+export interface CommitmentEventDoc {
+  _id: string;
+  commitmentId: string;
+  sequence: number;
+  kind: 'Acquired' | 'Released';
+  beforeVersion: number;
+  afterVersion: number;
+  receiptId: string;
+  occurredAt: Date;
+}
+
+export interface WalletAccountDoc {
+  _id: string;
+  ownerId: string | null;
+  orderId: string | null;
+  purpose:
+    'UserAvailable' | 'OrderHold' | 'SimulatorCapital' | 'SimulatorClearing';
+  currency: 'VND';
+}
+export interface TopupIntentDoc extends Lockable {
+  _id: string;
+  ownerId: string;
+  amount: number;
+  currency: 'VND';
+  state: 'Pending' | 'Processing' | 'Succeeded' | 'Failed' | 'ReviewRequired';
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+export interface SimulatedPaymentEventDoc {
+  _id: string;
+  intentId: string;
+  provider: string;
+  payloadHash: string;
+  recipientId: string;
+  amount: number;
+  currency: string;
+  outcome: 'Processing' | 'Succeeded' | 'Failed';
+  disposition: 'Applied' | 'Ignored' | 'ReviewRequired';
+  occurredAt: Date;
+  receivedAt: Date;
+  receiptId: string;
+}
+export interface LedgerJournalDoc {
+  _id: string;
+  sequence: number;
+  type: 'OpeningCapital' | 'Topup' | 'OrderPayment' | 'OrderRefund';
+  topupId: string | null;
+  eventId: string | null;
+  orderId: string | null;
+  receiptId: string | null;
+  postedAt: Date;
+}
+// _id = `${journalId}:${accountId}`
+export interface LedgerEntryDoc {
+  _id: string;
+  journalId: string;
+  accountId: string;
+  debit: number;
+  credit: number;
+}
+
+// Infrastructure collections (no PostgreSQL model).
+export interface CommandLockDoc extends Lockable {
+  _id: string;
+  expiresAt: Date;
+}
+export interface AccountLockDoc extends Lockable {
+  _id: string; // wallet account id
+}
+export interface CounterDoc {
+  _id: string;
+  value: number;
+}
+export interface MigrationDoc {
+  _id: string; // migration id
+  checksum: string;
+  appliedAt: Date;
+}

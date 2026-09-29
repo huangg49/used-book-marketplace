@@ -34,7 +34,9 @@
     "test:mongo": "vitest run --config ./vitest.config.mongo.ts",
     "worker:orders": "nest start --entryFile order-worker",
     "worker:orders:prod": "node dist/order-worker.js",
-    "wallet:check": "node dist/wallet-check.js"
+    "wallet:check": "node dist/wallet-check.js",
+    "mongo:bootstrap": "tsx src/mongo-bootstrap.ts",
+    "mongo:migrate": "tsx src/mongo-migrate.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

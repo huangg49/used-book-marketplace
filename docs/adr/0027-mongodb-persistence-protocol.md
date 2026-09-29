@@ -86,6 +86,20 @@ Implemented in `apps/api/src/database/mongo/transaction.ts` and exercised by
 7. **Topology.** Transactions require a replica set. A single-node set proves
    semantics only; failover claims need the three-member profile.
 
+## MIG-02 additions
+
+- Schema is versioned code (`src/database/mongo/migrations`), applied by
+  `pnpm --filter @used-books/api mongo:migrate` as `latlai_migrator`; the checksum of each
+  applied definition is verified. The API refuses to start with pending migrations.
+- `pnpm --filter @used-books/api mongo:bootstrap` creates `latlai_app`/`latlai_migrator`.
+  Append-only collections grant only find+insert to the app, replacing the immutability
+  triggers; no app delete except login attempts, member addresses and draft photo links.
+- Wallet accounts are append-only; postings lock `account_locks/<accountId>` instead.
+- UUIDs are lowercase strings. Client-supplied UUIDs are normalized before use.
+- Keyset cursors are v2 (millisecond precision, binary order of normalized text keys);
+  v1 PostgreSQL cursors are rejected with 400.
+- Full constraint map: [MIG02_MODEL_MAP](../refactor/MIG02_MODEL_MAP.md).
+
 ## Consequences
 
 - Contention now aborts and retries instead of queueing. Hot documents (a popular

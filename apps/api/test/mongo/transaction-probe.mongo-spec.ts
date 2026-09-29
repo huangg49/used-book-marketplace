@@ -46,15 +46,13 @@ async function member(roles = ['MEMBER']): Promise<ProbeContext> {
 
 async function book(deadline: Date | null = null) {
   const id = randomUUID();
-  await store
-    .books()
-    .insertOne({
-      _id: id,
-      state: 'Available',
-      version: 1,
-      deadline,
-      lockSeq: 0,
-    });
+  await store.books().insertOne({
+    _id: id,
+    state: 'Available',
+    version: 1,
+    deadline,
+    lockSeq: 0,
+  });
   return id;
 }
 

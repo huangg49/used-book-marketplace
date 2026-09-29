@@ -4,6 +4,7 @@ import { DatabaseService } from '../../database/database.service.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { AuthenticatedRequest } from '../auth/auth.guard.js';
 import { DomainError, type Wire } from './domain-error.js';
+import { canonicalJson } from '../../common/canonical-json.js';
 
 export type Tx = Prisma.TransactionClient;
 export type Actor = AuthenticatedRequest['auth'];
@@ -13,21 +14,7 @@ export interface CommandContext {
   key: string;
   requestId: string;
 }
-export const canonicalJson = (value: unknown): string =>
-  JSON.stringify(canonical(value));
-function canonical(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonical);
-  if (value && typeof value === 'object')
-    return Object.fromEntries(
-      Object.keys(value)
-        .sort()
-        .map((key) => [
-          key,
-          canonical((value as Record<string, unknown>)[key]),
-        ]),
-    );
-  return value;
-}
+export { canonicalJson };
 export function member(actor: CurrentActor, active = false) {
   if (!actor.roles.some((r) => r.role === 'MEMBER'))
     throw new DomainError(
