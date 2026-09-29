@@ -2139,5 +2139,28 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
         (await put(l.entityId, body, owner, key).expect(200)).body,
       ).toEqual(saved.body);
     });
+    it('gives only active Admins a filtered, credential-free user directory', async () => {
+      const pending = await reader(['MEMBER'], 'PENDING_VERIFICATION');
+      const restrictedAdmin = await reader(['ADMIN'], 'RESTRICTED');
+      const response = await get(
+        `/operations/users?q=${encodeURIComponent(pending.email)}&status=PENDING_VERIFICATION&role=MEMBER`,
+        a1,
+      ).expect(200);
+      validates('OperationsUserPage', response.body);
+      expect(response.headers['cache-control']).toContain('no-store');
+      expect(response.body.items).toEqual([
+        expect.objectContaining({
+          id: pending.id,
+          email: pending.email,
+          status: 'PENDING_VERIFICATION',
+          roles: ['MEMBER'],
+        }),
+      ]);
+      expect(response.body.items[0]).not.toHaveProperty('passwordHash');
+      expect(response.body.items[0]).not.toHaveProperty('sessions');
+      await get('/operations/users', staff).expect(403);
+      await get('/operations/users', restrictedAdmin).expect(403);
+      await get('/operations/users', m1).expect(403);
+    });
   });
 });

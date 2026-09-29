@@ -34,6 +34,7 @@ import { Button, ErrorNotice, Notice } from "./core/ui";
 import { Queue } from "./features/review/queue";
 import { Detail } from "./features/review/detail";
 import { LeaveGuard } from "./core/leave-guard";
+import { UserDirectory } from "./features/users/directory";
 import "./App.css";
 
 function Login() {
@@ -187,13 +188,12 @@ function Workspace() {
                 </NavLink>
               )}
             </div>
-            <span className="sidebar-item is-unavailable" aria-disabled="true">
-              <span className="sidebar-item-content">
+            {canReviewCatalog(user) && (
+              <NavLink to="/users">
                 <UsersRound aria-hidden="true" />
                 Quản lý người dùng
-              </span>
-              <small>Sắp triển khai</small>
-            </span>
+              </NavLink>
+            )}
             <span className="sidebar-item is-unavailable" aria-disabled="true">
               <span className="sidebar-item-content">
                 <ChartNoAxesCombined aria-hidden="true" />
@@ -265,6 +265,7 @@ const router = createBrowserRouter([
       { index: true, element: <Navigate to="/review/listings" replace /> },
       { path: "/review/:kind", element: <Queue /> },
       { path: "/review/:kind/:id", element: <Detail /> },
+      { path: "/users", element: <UserDirectory /> },
       {
         path: "*",
         element: (

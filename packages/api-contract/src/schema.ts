@@ -504,6 +504,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List user directory
+         * @description ACTIVE ADMIN only. Read-only operational directory ordered by createdAt,id DESC. Searches the normalized email or display name; filters and cursors are bound to the current Admin. Account state and role changes are deliberately not exposed by this API.
+         */
+        get: operations["listOperationsUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/listings/{listingId}": {
         parameters: {
             query?: never;
@@ -1300,6 +1320,31 @@ export interface components {
             /** @enum {string} */
             status: "ACTIVE" | "RESTRICTED" | "LOCKED";
             roles: ("MEMBER" | "STAFF" | "ADMIN" | "TEST_OPERATOR")[];
+        };
+        /** @enum {string} */
+        ManagedUserStatus: "PENDING_VERIFICATION" | "ACTIVE" | "RESTRICTED" | "LOCKED" | "DISABLED";
+        /** @enum {string} */
+        RoleCode: "MEMBER" | "STAFF" | "ADMIN" | "TEST_OPERATOR";
+        /** @description Private operational directory entry. Returned only to an ACTIVE ADMIN; it contains no credentials, session information, addresses, wallet data or transaction history. */
+        OperationsUser: {
+            /** Format: uuid */
+            id: string;
+            /** Format: email */
+            email: string;
+            displayName: string;
+            status: components["schemas"]["ManagedUserStatus"];
+            emailVerifiedAt: string | null;
+            roles: components["schemas"]["RoleCode"][];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        OperationsUserPage: {
+            items: components["schemas"]["OperationsUser"][];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
         };
         AuthTokens: {
             accessToken: string;
@@ -3383,6 +3428,40 @@ export interface operations {
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
+        };
+    };
+    listOperationsUsers: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Opaque keyset cursor bound to filters and caller scope. Invalid or mismatched cursors return 400; every page rechecks authorization. */
+                cursor?: string;
+                /** @description Case-insensitive email or display-name search. */
+                q?: string;
+                status?: components["schemas"]["ManagedUserStatus"];
+                role?: components["schemas"]["RoleCode"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsUserPage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            500: components["responses"]["Error"];
+            503: components["responses"]["Error"];
         };
     };
     getListingReview: {

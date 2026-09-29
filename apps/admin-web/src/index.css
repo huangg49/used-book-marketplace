@@ -32,7 +32,8 @@ body {
 }
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
   color: inherit;
 }
@@ -89,6 +90,7 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
+select:focus-visible,
 summary:focus-visible {
   outline: 3px solid var(--forest);
   outline-offset: 4px;
@@ -136,7 +138,8 @@ small,
   margin: 1.25rem 0 0.5rem;
 }
 input:not([type="checkbox"]),
-textarea {
+textarea,
+select {
   width: 100%;
   min-height: 52px;
   background: var(--surface);
