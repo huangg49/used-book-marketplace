@@ -9,9 +9,10 @@ MongoDB. Chủ dự án cho push/merge checkpoint Q01 rồi mở nhánh refactor
 - Baseline PostgreSQL: `1e08969dfeb8c712a286cb2c365bdf7614906f3b` trên main,
   squash merge [PR #2](https://github.com/huangg49/used-book-marketplace/pull/2).
 - Nhánh cũ `codex/q01-native-completion` giữ commit `522191f` trên remote.
-- Nhánh mới `codex/mongodb-refactor` bắt đầu từ baseline trên. Chưa đổi runtime,
-  dependency, database hoặc API. MIG-00 đã lập inventory và điều kiện kiểm chứng;
-  MIG-01 chưa triển khai. Chưa có MongoDB test PASS.
+- Nhánh mới `codex/mongodb-refactor` bắt đầu từ baseline trên (tạo lại từ main
+  `b49cc52` ngày 29/09/2026). MIG-00 đã lập inventory và điều kiện kiểm chứng.
+  MIG-01 DONE: probe giao dịch 17/17 PASS, [báo cáo](MIG01_TRANSACTION_PROBE.md),
+  [ADR 0027](../adr/0027-mongodb-persistence-protocol.md). Runtime/API chính vẫn PostgreSQL.
 - Phạm vi chức năng giữ F2h/OpenAPI 0.20.0. Không mở Delivered/inspection/settlement.
   SRS1.1 và ADR hiện có vẫn là nguồn hành vi; các cơ chế PostgreSQL cần ADR thay thế
   có đối chiếu, không xóa lịch sử để coi như chưa có yêu cầu.
@@ -73,8 +74,8 @@ không gom mọi lỗi thành retry vô hạn.
 | Gói | Trạng thái | Kết quả và điều kiện mở gói sau |
 |---|---|---|
 | MIG-00 baseline | DONE phạm vi khảo sát ban đầu | Main đã merge, branch mới, inventory có thể đối chiếu, không đổi runtime |
-| MIG-01 transaction probe | NEXT | Mongo replica set QA riêng; driver/version pinned; probe auth-before-replay, cùng key, khác body, tranh chấp, rollback, unknown commit; ghi bằng chứng và ADR lựa chọn persistence |
-| MIG-02 mô hình + hạ tầng | LOCKED sau MIG-01 | Map đủ 44 model và từng SQL backstop; versioned collection/index/validator migrations, bootstrap least privilege, clock/ID/cursor/precision; CI Mongo riêng |
+| MIG-01 transaction probe | DONE, [báo cáo](MIG01_TRANSACTION_PROBE.md) | Mongo replica set QA riêng; driver/version pinned; probe auth-before-replay, cùng key, khác body, tranh chấp, rollback, unknown commit; ghi bằng chứng và ADR lựa chọn persistence |
+| MIG-02 mô hình + hạ tầng | NEXT | Map đủ 44 model và từng SQL backstop; versioned collection/index/validator migrations, bootstrap least privilege, clock/ID/cursor/precision; CI Mongo riêng |
 | MIG-03 auth + command | LOCKED sau MIG-02 | Login/rotation/revoke/rate limit, eligibility và command executor dùng Mongo, negative/race/replay tương đương; không chuyển API chính trước khi đạt |
 | MIG-04 catalog/listing/media/address | LOCKED sau MIG-03 | Port quyền/immutable snapshot/worker/review/public reads; HTTP contracts, browser và native với storage thật theo mức ảnh hưởng |
 | MIG-05 quote/order/wallet/shipment | LOCKED sau MIG-04 và review tiền/quyền | Full hold/commitment/ledger/worker/event/review parity đến F2h; không thêm nghiệp vụ mới |

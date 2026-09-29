@@ -1,0 +1,66 @@
+# Isolated MongoDB QA replica sets for the PostgreSQL -> MongoDB migration lane.
+# Never point application .env at these services and never reuse their volumes.
+# enableTestCommands is QA-only: it allows controlled failCommand fault injection.
+name: used-book-marketplace-mongo-quality
+
+x-mongo-node: &mongo-node
+  image: mongo:8.0
+  restart: "no"
+
+services:
+  # Single-node replica set: proves transaction semantics, never failover.
+  mongo-test:
+    <<: *mongo-node
+    command:
+      [
+        "mongod", "--replSet", "rs-test", "--bind_ip_all",
+        "--port", "${TEST_MONGO_PORT:-57017}",
+        "--setParameter", "enableTestCommands=1",
+      ]
+    ports:
+      - "127.0.0.1:${TEST_MONGO_PORT:-57017}:${TEST_MONGO_PORT:-57017}"
+    volumes:
+      - mongo_test_data:/data/db
+    healthcheck:
+      # Idempotent init: the member host is the published loopback port so the
+      # host-side driver can discover it without directConnection.
+      test:
+        [
+          "CMD", "mongosh", "--quiet", "--port", "${TEST_MONGO_PORT:-57017}", "--eval",
+          "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs-test',members:[{_id:0,host:'127.0.0.1:${TEST_MONGO_PORT:-57017}'}]}).ok }",
+        ]
+      interval: 3s
+      timeout: 10s
+      retries: 20
+
+  # Three mongod processes in one container, for primary election probes only.
+  # One container keeps every member reachable as 127.0.0.1:<port> from both
+  # the members and the host-side driver. Kill/step down a member via docker exec.
+  mongo-failover:
+    <<: *mongo-node
+    profiles: [failover]
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        for p in 57021 57022 57023; do
+          mkdir -p /data/db/$$p
+          mongod --replSet rs-failover --bind_ip_all --port $$p --dbpath /data/db/$$p --setParameter enableTestCommands=1 --logpath /data/db/$$p.log --fork
+        done
+        tail -f /data/db/57021.log > /dev/null
+    ports:
+      - "127.0.0.1:57021-57023:57021-57023"
+    volumes:
+      - mongo_failover_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD", "mongosh", "--quiet", "--port", "57021", "--eval",
+          "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs-failover',members:[{_id:0,host:'127.0.0.1:57021'},{_id:1,host:'127.0.0.1:57022'},{_id:2,host:'127.0.0.1:57023'}]}).ok }",
+        ]
+      interval: 3s
+      timeout: 10s
+      retries: 30
+
+volumes:
+  mongo_test_data:
+  mongo_failover_data:

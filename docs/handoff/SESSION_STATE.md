@@ -1,5 +1,18 @@
 # Điểm lưu để tiếp tục — 29/09/2026
 
+## Lane MongoDB — nhánh `codex/mongodb-refactor` (mới nhất)
+
+- Theo [MONGODB_PLAN](../refactor/MONGODB_PLAN.md). Nhánh tạo từ main `b49cc52`.
+  Chưa push/merge. Runtime/API chính vẫn PostgreSQL; không ghi kép.
+- **MIG-01 DONE**: driver `mongodb@7.6.0`, runner/lock/clock trong
+  `apps/api/src/database/mongo/transaction.ts`, probe `apps/api/test/mongo`,
+  17/17 PASS ×5 (gồm failover ba node). [Báo cáo](../refactor/MIG01_TRANSACTION_PROBE.md),
+  [ADR 0027](../adr/0027-mongodb-persistence-protocol.md).
+- QA Mongo: `pnpm infra:mongo:test:up` (57017), `pnpm infra:mongo:failover:up`
+  (57021-57023). Không dùng cho `.env` app.
+- **Bước tiếp theo**: MIG-02 — map 44 model + từng SQL backstop, migration
+  collection/index/validator có version, clock/ID/cursor/precision, CI Mongo.
+
 ## Đọc ngay — sau merge ca16a22, lượt Codex trên Pixel_7
 
 - Đầu phiên working tree sạch; main/origin/main và remote kiểm read-only cùng
