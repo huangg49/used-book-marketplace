@@ -1,543 +1,694 @@
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { PrismaPg } from '@prisma/adapter-pg';
+import { Test } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
+import type { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { AppModule } from '../src/app.module.js';
+import { configureApp } from '../src/configure-app.js';
+import { bindCollections } from '../src/database/mongo/collections.js';
+import type {
+  MutationReceiptDoc,
+  RoleCode,
+} from '../src/database/mongo/documents.js';
+import { migrate, pendingMigrations } from '../src/database/mongo/migrate.js';
+import {
+  backfillTitleKeys,
+  titleKey,
+} from '../src/database/mongo/migrations/0003-catalog-title-key.js';
+import { MongoService } from '../src/database/mongo/mongo.service.js';
+import { isbn13 } from '../src/modules/commands/contract-input.service.js';
+import { checkListing } from '../src/modules/listings/listing-projection.js';
+import {
+  CHECKLIST,
+  failsCommitCheck,
+  ListingFixtures,
+  listingContent,
+  type ListingFixture,
+} from './helpers/media-listings.js';
+import { Gate } from './helpers/mongo-gate.js';
+import { MongoFixtures } from './helpers/mongo-fixtures.js';
 
-type Adapter = Awaited<ReturnType<PrismaPg['connect']>>;
-type Pool = ReturnType<Adapter['underlyingDriver']>;
-type Sql = Pick<Pool, 'query'>;
+type Actor = { id: string; sessionId: string; token: string };
+const rejectsWith = (promise: Promise<unknown>, code: number) =>
+  expect(promise).rejects.toMatchObject({ code });
 
-// Real PostgreSQL migration/constraint tests, not an implementation of listing APIs.
-describe('listing migrations and database invariants', () => {
-  const schema = `listing_test_${randomUUID().replaceAll('-', '')}`;
-  let adapter: Adapter;
-  let pool: Pool;
-  const owner = randomUUID();
-  const reviewer = randomUUID();
-  const reviewer2 = randomUUID();
-  const legacyUser = randomUUID();
-  const checklist = JSON.stringify({
-    catalogMatches: true,
-    photosClear: true,
-    conditionDisclosed: true,
-    readable: true,
-    pricingValid: true,
-    contentAppropriate: true,
-  });
+// PostgreSQL enforced these listing/catalog/command-history invariants with
+// CHECKs, FKs, triggers and deferred constraint triggers. On MongoDB each one
+// maps (docs/refactor/MIG02_MODEL_MAP.md) to a validator (121), a unique index
+// (11000), an app-user privilege (13), the services' write protocol (W) or a
+// commit-time check (C). W and C are application code: where a raw write can
+// still land, the test shows the next API command on the aggregate fails.
+describe('listing/catalog persistence invariants on MongoDB', () => {
+  let app: INestApplication, db: MongoFixtures, fx: ListingFixtures;
+  let mongo: MongoService;
+  let owner: Actor, reviewer: Actor, reviewer2: Actor;
+  const users: string[] = [];
+  const books: string[] = [];
+  const listings: string[] = [];
+  let confirmedBook: string;
 
-  async function transaction<T>(fn: (sql: Sql) => Promise<T>): Promise<T> {
-    const connection = await pool.connect();
-    try {
-      await connection.query('BEGIN');
-      const value = await fn(connection);
-      await connection.query('COMMIT');
-      return value;
-    } catch (error) {
-      await connection.query('ROLLBACK');
-      throw error;
-    } finally {
-      connection.release();
-    }
-  }
-  async function user(sql: Sql, id: string) {
-    await sql.query(
-      `INSERT INTO users(id,email_normalized,password_hash,display_name,status,email_verified_at,updated_at)
-      VALUES ($1,$2,'test-fixture-not-a-login-secret','Schema Reader','ACTIVE',now(),now())`,
-      [id, `${id}@schema.test`],
-    );
-  }
-  async function book(confirmed = true, isbn: string | null = null) {
-    const id = randomUUID(),
-      revision = randomUUID();
-    await transaction(async (sql) => {
-      await sql.query(
-        'INSERT INTO catalog_books(id,requester_id,updated_at) VALUES ($1,$2,now())',
-        [id, owner],
-      );
-      await sql.query(
-        `INSERT INTO catalog_revisions(id,book_id,number,title,authors,language,category,isbn)
-        VALUES ($1,$2,1,'Một cuốn sách',ARRAY['Tác giả'],'vi','Văn học',$3)`,
-        [revision, id, isbn],
-      );
-      await sql.query(
-        'UPDATE catalog_books SET current_revision_id=$2 WHERE id=$1',
-        [id, revision],
-      );
-      if (confirmed) {
-        await sql.query(
-          `INSERT INTO catalog_decisions(id,revision_id,reviewer_id,decision) VALUES ($1,$2,$3,'Confirm')`,
-          [randomUUID(), revision, reviewer],
-        );
-        await sql.query(
-          `UPDATE catalog_books SET status='Confirmed',version=2,confirmed_isbn=latlai_isbn13($2) WHERE id=$1`,
-          [id, isbn],
-        );
-      }
-    });
-    return { id, revision };
-  }
-  async function listing(pending = false, bookId?: string) {
-    const id = randomUUID(),
-      revision = randomUUID(),
-      media = randomUUID();
-    const catalog = bookId ?? (await book()).id;
-    await transaction(async (sql) => {
-      await sql.query(
-        'INSERT INTO listings(id,owner_id,updated_at) VALUES ($1,$2,now())',
-        [id, owner],
-      );
-      await sql.query(
-        `INSERT INTO listing_revisions(id,listing_id,number,book_id,mode,condition,pages,cover_note,notes,accessories,readable,has_missing_pages,missing_essential_content,description,sale_price,exchange_value)
-        VALUES ($1,$2,1,$3,'Both','Good','Đủ trang','Bìa sờn nhẹ','Không có','Không có',true,false,false,'Một cuốn sách đọc được, tình trạng đã được mô tả đầy đủ.',125000,150000)`,
-        [revision, id, catalog],
-      );
-      await sql.query(
-        'UPDATE listings SET current_revision_id=$2 WHERE id=$1',
-        [id, revision],
-      );
-      // Test factory only: no assertion that uploading/decoding was implemented.
-      await sql.query(
-        `INSERT INTO listing_media(id,listing_id,status,staging_key,pinned_key,derivative_key,mime_type,byte_size,sha256,width,height,expires_at,updated_at)
-        VALUES ($1,$2,'Ready',$3,$4,$5,'image/jpeg',1024,$6,800,1200,now()+interval '24 hours',now())`,
-        [
-          media,
-          id,
-          `${media}/stage`,
-          `${media}/pinned`,
-          `${media}/view`,
-          'a'.repeat(64),
-        ],
-      );
-      await sql.query(
-        'INSERT INTO revision_media(listing_id,revision_id,media_id,position) VALUES ($1,$2,$3,0)',
-        [id, revision, media],
-      );
-      if (pending) {
-        await sql.query(
-          'UPDATE listing_revisions SET submitted_at=now(),ownership_declared_at=now() WHERE id=$1',
-          [revision],
-        );
-        await sql.query(
-          `UPDATE listings SET moderation='PendingReview',version=2 WHERE id=$1`,
-          [id],
-        );
-      }
-    });
-    return { id, revision, media };
-  }
-  async function receipt(sql: Sql, listingId: string, key = randomUUID()) {
-    const id = randomUUID();
-    const result = {
-      id,
-      entityType: 'Listing',
-      entityId: listingId,
-      version: 1,
-      revisionId: null,
-      state: null,
-      serverTime: new Date().toISOString(),
+  async function actor(roles: RoleCode[]): Promise<Actor> {
+    const user = await db.user({ roles, displayName: 'Schema Reader' });
+    users.push(user._id);
+    const sessionId = await db.session(user._id);
+    return {
+      id: user._id,
+      sessionId,
+      token: await app
+        .get(JwtService)
+        .signAsync({ sub: user._id, sid: sessionId }),
     };
-    await sql.query(
-      `INSERT INTO mutation_receipts(id,actor_id,operation,key,payload_hash,listing_id,result_version,result) VALUES ($1,$2,'schemaProbe',$3,$4,$5,1,$6)`,
-      [id, owner, key, 'a'.repeat(64), listingId, JSON.stringify(result)],
-    );
-    return id;
   }
-  async function decision(
-    sql: Sql,
-    item: Awaited<ReturnType<typeof listing>>,
-    actor = reviewer,
-  ) {
-    await sql.query(
-      `INSERT INTO listing_decisions(id,revision_id,reviewer_id,decision,checklist) VALUES ($1,$2,$3,'Approve',$4)`,
-      [randomUUID(), item.revision, actor, checklist],
+  const send = (
+    who: Actor,
+    method: 'post' | 'put',
+    path: string,
+    body: object,
+    key = randomUUID(),
+  ) =>
+    request(app.getHttpServer())
+      [method]('/api/v1' + path)
+      .auth(who.token, { type: 'bearer' })
+      .set('Idempotency-Key', key)
+      .send(body);
+  const listing = async (pending = false, bookId = confirmedBook) => {
+    const item = await fx.listing(owner.id, bookId, pending);
+    listings.push(item.id);
+    return item;
+  };
+  const book = async (confirmed = true, isbn: string | null = null) => {
+    const b = await fx.book(owner.id, reviewer.id, confirmed, isbn);
+    books.push(b.id);
+    return b;
+  };
+  const draftContent = (item: ListingFixture, over: object = {}) => ({
+    bookId: confirmedBook,
+    ...listingContent,
+    mediaIds: [item.media],
+    ...over,
+  });
+  const save = (item: ListingFixture, version: number, over: object = {}) =>
+    send(owner, 'put', `/listings/${item.id}/draft`, {
+      expectedVersion: version,
+      content: draftContent(item, over),
+    });
+  // A listing command that runs checkListing before commit.
+  const archive = (id: string, version: number) =>
+    send(owner, 'post', `/listings/${id}/archive`, {
+      expectedVersion: version,
+    });
+  const decide = (
+    who: Actor,
+    item: ListingFixture,
+    version: number,
+    decision: 'Approve' | 'Reject' = 'Approve',
+  ) =>
+    send(
+      who,
+      'post',
+      `/operations/listings/${item.id}/decision`,
+      decision === 'Approve'
+        ? {
+            expectedVersion: version,
+            revisionId: item.revision,
+            decision,
+            checklist: CHECKLIST,
+          }
+        : {
+            expectedVersion: version,
+            revisionId: item.revision,
+            decision,
+            reason: 'Ảnh chưa đủ rõ để đối chiếu tình trạng.',
+          },
     );
-    await sql.query(
-      `UPDATE listings SET moderation='Approved',version=version+1,published_at=now() WHERE id=$1`,
-      [item.id],
-    );
-  }
-  async function expectBlocked(pid: number) {
-    const deadline = Date.now() + 3000;
-    while (Date.now() < deadline) {
-      const state = await pool.query(
-        'SELECT wait_event_type FROM pg_stat_activity WHERE pid=$1',
-        [pid],
-      );
-      if (state.rows[0]?.wait_event_type === 'Lock') return;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-    throw new Error('Second connection did not overlap at a database lock');
-  }
+  const decisions = (item: ListingFixture) =>
+    db.c.listing_decisions.countDocuments({ revisionId: item.revision });
+  const receipt = (listingId: string, key = randomUUID()) => {
+    const id = randomUUID();
+    const doc: MutationReceiptDoc = {
+      _id: id,
+      principal: `user:${owner.id}`,
+      actorId: owner.id,
+      systemActor: null,
+      operation: 'schemaProbe',
+      key,
+      payloadHash: 'a'.repeat(64),
+      listingId,
+      bookId: null,
+      mediaId: null,
+      addressBookId: null,
+      quoteId: null,
+      contextId: null,
+      topupId: null,
+      resultVersion: 1,
+      result: {
+        id,
+        entityType: 'Listing',
+        entityId: listingId,
+        version: 1,
+        revisionId: null,
+        state: null,
+        serverTime: new Date().toISOString(),
+      },
+      committedAt: new Date(),
+    };
+    return doc;
+  };
+  const audit = (receiptId: string, listingId: string) => ({
+    _id: randomUUID(),
+    actorId: owner.id,
+    systemActor: null,
+    receiptId,
+    listingId,
+    bookId: null,
+    mediaId: null,
+    addressBookId: null,
+    quoteId: null,
+    contextId: null,
+    topupId: null,
+    action: 'SchemaProbe',
+    before: null,
+    after: null,
+    reason: null,
+    requestId: randomUUID(),
+    createdAt: new Date(),
+  });
+  const outbox = (auditId: string) => ({
+    _id: randomUUID(),
+    auditId,
+    type: 'SchemaProbe',
+    payload: {},
+    attempts: 0,
+    availableAt: new Date(),
+    leaseUntil: null,
+    processedAt: null,
+    createdAt: new Date(),
+  });
 
   beforeAll(async () => {
-    const url = process.env.TEST_DATABASE_URL!;
-    if (!decodeURIComponent(new URL(url).pathname).endsWith('_test'))
-      throw new Error('Dedicated _test database required');
-    adapter = await new PrismaPg({
-      connectionString: url,
-      max: 6,
-      options: `-c search_path=${schema},public -c timezone=UTC`,
-      statement_timeout: 10000,
-    }).connect();
-    pool = adapter.underlyingDriver();
-    await pool.query(`CREATE SCHEMA "${schema}"`);
-    await pool.query(
-      readFileSync(
-        'prisma/migrations/20260924000000_auth_foundation/migration.sql',
-        'utf8',
-      ),
-    );
-    await user(pool, legacyUser);
-    await pool.query(
-      readFileSync(
-        'prisma/migrations/20260926000000_listing_contract_foundation/migration.sql',
-        'utf8',
-      ),
-    );
-    for (const id of [owner, reviewer, reviewer2]) await user(pool, id);
-  });
+    const module = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+    app = module.createNestApplication();
+    configureApp(app, { docs: false, logRequests: false });
+    await app.init();
+    mongo = app.get(MongoService);
+    db = await MongoFixtures.connect();
+    fx = new ListingFixtures(db);
+    owner = await actor(['MEMBER', 'STAFF']);
+    reviewer = await actor(['STAFF']);
+    reviewer2 = await actor(['STAFF']);
+    confirmedBook = (await book()).id;
+  }, 60000);
   afterAll(async () => {
-    // Only this run's isolated schema; never a reset/drop of the shared test DB.
-    if (pool && /^listing_test_[a-f0-9]{32}$/.test(schema))
-      await pool.query(`DROP SCHEMA "${schema}" CASCADE`);
-    await adapter?.dispose();
+    if (db) {
+      await fx.remove(listings, books, users);
+      await db.removeUsers(users);
+      await db.close();
+    }
+    await app?.close();
   });
 
-  it('upgrades the auth schema without deleting or changing the existing account', async () => {
-    const result = await pool.query(
-      'SELECT password_hash,status FROM users WHERE id=$1',
-      [legacyUser],
-    );
-    expect(result.rows[0]).toEqual({
-      password_hash: 'test-fixture-not-a-login-secret',
-      status: 'ACTIVE',
+  it('re-runs migrations without changing existing accounts and upgrades legacy catalog documents in place', async () => {
+    // PostgreSQL: applying the listing migration over the auth schema kept the
+    // existing account and created the listing tables. MongoDB: migrations are
+    // checksummed and idempotent; the one data migration backfills in place.
+    const legacy = await db.user({
+      passwordHash: 'test-fixture-not-a-login-secret',
     });
-    expect(
-      (
-        await pool.query(
-          `SELECT count(*)::int n FROM information_schema.tables WHERE table_schema=$1`,
-          [schema],
+    users.push(legacy._id);
+    const legacyBook = randomUUID(),
+      legacyRevision = randomUUID(),
+      title = 'Đất Rừng Phương Nam';
+    books.push(legacyBook);
+    const now = new Date();
+    await db.c.catalog_revisions.insertOne({
+      _id: legacyRevision,
+      bookId: legacyBook,
+      number: 1,
+      title,
+      authors: ['Đoàn Giỏi'],
+      publisher: null,
+      publicationYear: null,
+      language: 'vi',
+      edition: null,
+      category: 'Văn học',
+      isbn: null,
+      submittedAt: now,
+    });
+    // A book written before migration 0003 has no titleKey (the current
+    // validator requires it, so only a validation bypass can create one).
+    await db.client
+      .db()
+      .collection('catalog_books')
+      .insertOne(
+        {
+          _id: legacyBook,
+          requesterId: legacy._id,
+          status: 'Pending',
+          version: 1,
+          currentRevisionId: legacyRevision,
+          confirmedIsbn: null,
+          searchText: 'dat rung phuong nam',
+          createdAt: now,
+          updatedAt: now,
+          lockSeq: 0,
+        } as never,
+        { bypassDocumentValidation: true },
+      );
+    expect(await migrate(db.client, db.client.db())).toEqual([]);
+    expect(await pendingMigrations(mongo.db)).toEqual([]);
+    expect(await db.c.users.findOne({ _id: legacy._id })).toEqual(legacy);
+    await backfillTitleKeys(db.client.db());
+    expect(await db.c.catalog_books.findOne({ _id: legacyBook })).toEqual({
+      _id: legacyBook,
+      requesterId: legacy._id,
+      status: 'Pending',
+      version: 1,
+      currentRevisionId: legacyRevision,
+      confirmedIsbn: null,
+      searchText: 'dat rung phuong nam',
+      titleKey: titleKey(title),
+      createdAt: now,
+      updatedAt: now,
+      lockSeq: 0,
+    });
+    const names = new Set(
+      (await db.client.db().listCollections().toArray())
+        .filter(
+          (c) => (c as { options?: { validator?: object } }).options?.validator,
         )
-      ).rows[0].n,
-    ).toBe(16);
+        .map((c) => c.name),
+    );
+    for (const name of [
+      'users',
+      'auth_sessions',
+      'catalog_books',
+      'catalog_revisions',
+      'catalog_decisions',
+      'listings',
+      'listing_revisions',
+      'listing_media',
+      'revision_media',
+      'listing_decisions',
+      'mutation_receipts',
+      'audit_events',
+      'outbox_events',
+      'media_processing_jobs',
+    ])
+      expect(names.has(name), name).toBe(true);
   });
 
   it('rejects incomplete aggregates at commit and permits transactional construction', async () => {
+    const id = randomUUID();
+    const bare = {
+      _id: id,
+      ownerId: owner.id,
+      version: 1,
+      moderation: 'Draft' as const,
+      visibility: 'Visible' as const,
+      trade: 'Available' as const,
+      currentRevisionId: null,
+      removalReason: null,
+      deletedAt: null,
+      publishedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lockSeq: 0,
+    };
+    listings.push(id);
     await expect(
-      transaction((sql) =>
-        sql.query(
-          'INSERT INTO listings(id,owner_id,updated_at) VALUES ($1,$2,now())',
-          [randomUUID(), owner],
-        ),
-      ),
-    ).rejects.toMatchObject({ code: '23514' });
+      fx.commit((tx) => tx.c.listings.insertOne(bare), { listing: id }),
+    ).rejects.toThrow('Listing requires its own current revision');
+    expect(await db.c.listings.findOne({ _id: id })).toBeNull();
     const item = await listing();
     expect(
-      (
-        await pool.query(
-          'SELECT current_revision_id FROM listings WHERE id=$1',
-          [item.id],
-        )
-      ).rows[0].current_revision_id,
+      (await db.c.listings.findOne({ _id: item.id }))!.currentRevisionId,
     ).toBe(item.revision);
+    // The validator cannot see other documents: a raw app-user insert lands,
+    // and the next command on it fails its commit-time check.
+    await mongo.c.listings.insertOne(bare);
+    await failsCommitCheck(
+      () => archive(id, 1),
+      'Listing requires its own current revision',
+    );
+    expect(await db.c.listings.findOne({ _id: id })).toMatchObject({
+      version: 1,
+      deletedAt: null,
+    });
   });
 
   it('rejects wrong-owner revision pointers, version bypass and ownership transfer', async () => {
     const one = await listing(),
       two = await listing();
+    const pointer = {
+      $set: { currentRevisionId: two.revision },
+      $inc: { version: 1 },
+    };
     await expect(
-      pool.query(
-        'UPDATE listings SET current_revision_id=$2,version=version+1 WHERE id=$1',
-        [one.id, two.revision],
-      ),
-    ).rejects.toMatchObject({ code: '23503' });
-    await expect(
-      pool.query("UPDATE listings SET visibility='Hidden' WHERE id=$1", [
-        one.id,
-      ]),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      pool.query(
-        'UPDATE listings SET owner_id=$2,version=version+1 WHERE id=$1',
-        [one.id, reviewer],
-      ),
-    ).rejects.toMatchObject({ code: '23514' });
+      fx.commit((tx) => tx.c.listings.updateOne({ _id: one.id }, pointer), {
+        listing: one.id,
+      }),
+    ).rejects.toThrow('Listing requires its own current revision');
+    await mongo.c.listings.updateOne({ _id: one.id }, pointer);
+    await expect(mongo.tx((tx) => checkListing(tx, one.id))).rejects.toThrow(
+      'Listing requires its own current revision',
+    );
+    await failsCommitCheck(
+      () => archive(one.id, 2),
+      'Listing requires its own current revision',
+    );
+    expect(
+      (await db.c.listings.findOne({ _id: one.id }))!.deletedAt,
+    ).toBeNull();
+    // Version bypass (W): every write names the version it read and advances
+    // it by exactly one; a stale version is a conflict.
+    await save(two, 2).expect(409);
+    const saved = await save(two, 1).expect(200);
+    expect(saved.body.version).toBe(2);
+    expect((await db.c.listings.findOne({ _id: two.id }))!.version).toBe(2);
+    // Ownership transfer (W): no command input can carry an owner.
+    await send(owner, 'put', `/listings/${two.id}/draft`, {
+      expectedVersion: 2,
+      content: draftContent(two),
+      ownerId: reviewer.id,
+    }).expect(422);
+    expect((await db.c.listings.findOne({ _id: two.id }))!.ownerId).toBe(
+      owner.id,
+    );
   });
 
-  it('enforces price/mode and complete submitted-content constraints including SQL nulls', async () => {
+  it('enforces price/mode and complete submitted-content constraints including nulls', async () => {
     const item = await listing();
-    await expect(
-      pool.query('UPDATE listing_revisions SET sale_price=9999 WHERE id=$1', [
-        item.revision,
-      ]),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      pool.query('UPDATE listing_revisions SET mode=NULL WHERE id=$1', [
-        item.revision,
-      ]),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      pool.query(
-        `UPDATE listing_revisions SET submitted_at=now(),ownership_declared_at=now(),readable=false WHERE id=$1`,
-        [item.revision],
+    // Validators bind the least-privilege application user too.
+    await rejectsWith(
+      mongo.c.listing_revisions.updateOne(
+        { _id: item.revision },
+        { $set: { salePrice: 9999 } },
       ),
-    ).rejects.toMatchObject({ code: '23514' });
+      121,
+    );
+    await rejectsWith(
+      mongo.c.listing_revisions.updateOne(
+        { _id: item.revision },
+        { $set: { mode: null } },
+      ),
+      121,
+    );
+    const now = new Date();
+    await rejectsWith(
+      mongo.c.listing_revisions.updateOne(
+        { _id: item.revision },
+        {
+          $set: { submittedAt: now, ownershipDeclaredAt: now, readable: false },
+        },
+      ),
+      121,
+    );
   });
 
   it('blocks cross-listing photos and mutation of submitted content/photo order', async () => {
     const pending = await listing(true),
       other = await listing();
+    // W: a draft may only reference its own listing's photos.
+    await save(other, 1, { mediaIds: [other.media, pending.media] }).expect(
+      422,
+    );
+    // A raw link lands (revision_media is app-deletable), but submission
+    // re-verifies every photo belongs to the listing, so nothing is frozen.
+    await mongo.c.revision_media.insertOne({
+      _id: `${other.revision}:${pending.media}`,
+      listingId: other.id,
+      revisionId: other.revision,
+      mediaId: pending.media,
+      position: 1,
+    });
+    await send(owner, 'post', `/listings/${other.id}/submit`, {
+      expectedVersion: 1,
+      ownershipDeclared: true,
+    }).expect(422);
+    expect((await db.c.listings.findOne({ _id: other.id }))!.moderation).toBe(
+      'Draft',
+    );
+    // W: submitted content and photo order change only through a new
+    // revision; a draft save of a submitted revision is refused.
+    const before = await db.c.listing_revisions.findOne({
+      _id: pending.revision,
+    });
+    await save(pending, 2, {
+      description: 'replacement '.repeat(4),
+      mediaIds: [],
+    }).expect(409);
+    expect(
+      await db.c.listing_revisions.findOne({ _id: pending.revision }),
+    ).toEqual(before);
+    expect(
+      await db.c.revision_media.countDocuments({
+        revisionId: pending.revision,
+      }),
+    ).toBe(1);
+    // C: removing a submitted revision's photos is detected at commit; the
+    // next decision on the listing fails and records nothing.
+    await mongo.c.revision_media.deleteMany({ revisionId: pending.revision });
     await expect(
-      pool.query(
-        'INSERT INTO revision_media(listing_id,revision_id,media_id,position) VALUES ($1,$2,$3,1)',
-        [other.id, other.revision, pending.media],
-      ),
-    ).rejects.toMatchObject({ code: '23503' });
-    await expect(
-      pool.query(
-        `UPDATE listing_revisions SET description='replacement' WHERE id=$1`,
-        [pending.revision],
-      ),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      pool.query('UPDATE revision_media SET position=1 WHERE revision_id=$1', [
-        pending.revision,
-      ]),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      pool.query('DELETE FROM revision_media WHERE revision_id=$1', [
-        pending.revision,
-      ]),
-    ).rejects.toMatchObject({ code: '23514' });
+      mongo.tx((tx) => checkListing(tx, pending.id)),
+    ).rejects.toThrow('Submission requires 1-8 Ready photos');
+    await failsCommitCheck(
+      () => decide(reviewer, pending, 2, 'Reject'),
+      'Submission requires 1-8 Ready photos',
+    );
+    expect(await decisions(pending)).toBe(0);
   });
 
   it('requires ready photos and a decision rather than allowing direct Approved writes', async () => {
     const item = await listing();
-    await pool.query('DELETE FROM revision_media WHERE revision_id=$1', [
-      item.revision,
-    ]);
+    await db.c.revision_media.deleteMany({ revisionId: item.revision });
+    await send(owner, 'post', `/listings/${item.id}/submit`, {
+      expectedVersion: 1,
+      ownershipDeclared: true,
+    }).expect(422);
+    const now = new Date();
     await expect(
-      transaction(async (sql) => {
-        await sql.query(
-          'UPDATE listing_revisions SET submitted_at=now(),ownership_declared_at=now() WHERE id=$1',
-          [item.revision],
-        );
-        await sql.query(
-          `UPDATE listings SET moderation='PendingReview',version=2 WHERE id=$1`,
-          [item.id],
-        );
-      }),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      pool.query(
-        `UPDATE listings SET moderation='Approved',version=2 WHERE id=$1`,
-        [item.id],
+      fx.commit(
+        async (tx) => {
+          await tx.c.listing_revisions.updateOne(
+            { _id: item.revision },
+            { $set: { submittedAt: now, ownershipDeclaredAt: now } },
+          );
+          await tx.c.listings.updateOne(
+            { _id: item.id },
+            { $set: { moderation: 'PendingReview', version: 2 } },
+          );
+        },
+        { listing: item.id },
       ),
-    ).rejects.toMatchObject({ code: '23514' });
+    ).rejects.toThrow('Submission requires 1-8 Ready photos');
+    const approved = { $set: { moderation: 'Approved' as const, version: 2 } };
+    await expect(
+      fx.commit((tx) => tx.c.listings.updateOne({ _id: item.id }, approved), {
+        listing: item.id,
+      }),
+    ).rejects.toThrow('Moderation does not match current revision/decision');
+    expect(await db.c.listings.findOne({ _id: item.id })).toMatchObject({
+      moderation: 'Draft',
+      version: 1,
+    });
+    await mongo.c.listings.updateOne({ _id: item.id }, approved);
+    await failsCommitCheck(
+      () => archive(item.id, 2),
+      'Moderation does not match current revision/decision',
+    );
+    expect(
+      (await db.c.listings.findOne({ _id: item.id }))!.deletedAt,
+    ).toBeNull();
   });
 
   it('requires independent reviewers and confirmed catalog at approval', async () => {
     const pendingBook = await book(false),
       item = await listing(true, pendingBook.id);
+    const self = await decide(owner, item, 2).expect(403);
+    expect(self.body.code).toBe('SelfReviewForbidden');
+    const unconfirmed = await decide(reviewer, item, 2).expect(409);
+    expect(unconfirmed.body.code).toBe('CatalogNotConfirmed');
+    expect(await decisions(item)).toBe(0);
+    // C: a direct approval of an unconfirmed catalog fails at commit.
     await expect(
-      transaction((sql) => decision(sql, item, owner)),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      transaction((sql) => decision(sql, item)),
-    ).rejects.toMatchObject({ code: '23514' });
-    expect(
-      (
-        await pool.query(
-          'SELECT count(*)::int n FROM listing_decisions WHERE revision_id=$1',
-          [item.revision],
-        )
-      ).rows[0].n,
-    ).toBe(0);
+      fx.commit(
+        async (tx) => {
+          await tx.c.listing_decisions.insertOne({
+            _id: randomUUID(),
+            revisionId: item.revision,
+            reviewerId: reviewer.id,
+            decision: 'Approve',
+            checklist: CHECKLIST,
+            reason: null,
+            decidedAt: new Date(),
+          });
+          await tx.c.listings.updateOne(
+            { _id: item.id },
+            {
+              $set: { moderation: 'Approved', publishedAt: new Date() },
+              $inc: { version: 1 },
+            },
+          );
+        },
+        { listing: item.id },
+      ),
+    ).rejects.toThrow('Approval requires confirmed catalog');
+    expect(await decisions(item)).toBe(0);
   });
 
-  it('serializes conflicting review versions on independent connections with one winner', async () => {
+  it('serializes conflicting review versions at a listing lock with one winner', async () => {
     const item = await listing(true);
-    const first = await pool.connect(),
-      second = await pool.connect();
+    const gate = await Gate.lock(db.client, 'listings', [item.id]);
+    let pending: Promise<request.Response>[] = [];
     try {
-      await first.query('BEGIN');
-      await second.query('BEGIN');
-      await first.query('SELECT id FROM listings WHERE id=$1 FOR UPDATE', [
-        item.id,
+      pending = [
+        decide(reviewer, item, 2, 'Approve').then((r) => r),
+        decide(reviewer2, item, 2, 'Reject').then((r) => r),
+      ];
+      await gate.contended(2);
+      await gate.commit();
+      expect((await Promise.all(pending)).map((r) => r.status).sort()).toEqual([
+        200, 409,
       ]);
-      const pid = (await second.query('SELECT pg_backend_pid() pid')).rows[0]
-        .pid as number;
-      const attempt = second.query(
-        `UPDATE listings SET version=version+1 WHERE id=$1 AND version=2 AND moderation='PendingReview' RETURNING id`,
-        [item.id],
-      );
-      // Attach a rejection handler immediately so test failures never leak unhandled promises.
-      void attempt.catch(() => undefined);
-      await expectBlocked(pid);
-      await decision(first, item);
-      await first.query('COMMIT');
-      expect((await attempt).rowCount).toBe(0);
-      await second.query('ROLLBACK');
-      expect(
-        (
-          await pool.query(
-            'SELECT count(*)::int n FROM listing_decisions WHERE revision_id=$1',
-            [item.revision],
-          )
-        ).rows[0].n,
-      ).toBe(1);
+      expect(await decisions(item)).toBe(1);
+      expect((await db.c.listings.findOne({ _id: item.id }))!.version).toBe(3);
     } finally {
-      await first.query('ROLLBACK');
-      await second.query('ROLLBACK');
-      first.release();
-      second.release();
+      await gate.close();
+      await Promise.allSettled(pending);
     }
   });
 
   it('deduplicates concurrent command receipts at the database unique key', async () => {
     const item = await listing(),
       key = randomUUID();
-    const first = await pool.connect(),
-      second = await pool.connect();
+    const session = mongo.client.startSession();
     try {
-      await first.query('BEGIN');
-      await second.query('BEGIN');
-      await receipt(first, item.id, key);
-      const pid = (await second.query('SELECT pg_backend_pid() pid')).rows[0]
-        .pid as number;
-      const loser = receipt(second, item.id, key).then(
-        () => null,
-        (error) => error,
+      session.startTransaction({ writeConcern: { w: 'majority' } });
+      await bindCollections(mongo.db, session).mutation_receipts.insertOne(
+        receipt(item.id, key),
       );
-      await expectBlocked(pid);
-      await first.query('COMMIT');
-      expect(await loser).toMatchObject({ code: '23505' });
-      await second.query('ROLLBACK');
-      expect(
-        (
-          await pool.query(
-            'SELECT count(*)::int n FROM mutation_receipts WHERE key=$1',
-            [key],
-          )
-        ).rows[0].n,
-      ).toBe(1);
+      // A second writer overlaps the uncommitted key and waits for it.
+      const loser = mongo.c.mutation_receipts
+        .insertOne(receipt(item.id, key))
+        .then(
+          () => null,
+          (error: unknown) => error,
+        );
+      const early = await Promise.race([
+        loser.then(() => 'settled'),
+        new Promise((resolve) => setTimeout(() => resolve('waiting'), 300)),
+      ]);
+      expect(early).toBe('waiting');
+      await session.commitTransaction();
+      expect(await loser).toMatchObject({ code: 11000 });
     } finally {
-      await first.query('ROLLBACK');
-      await second.query('ROLLBACK');
-      first.release();
-      second.release();
+      if (session.inTransaction()) await session.abortTransaction();
+      await session.endSession();
     }
+    expect(await db.c.mutation_receipts.countDocuments({ key })).toBe(1);
   });
 
   it('rolls back receipt, audit and outbox with a failed domain transaction', async () => {
     const item = await listing(),
-      key = randomUUID(),
-      audit = randomUUID();
+      key = randomUUID();
+    let auditId = '';
     await expect(
-      transaction(async (sql) => {
-        const command = await receipt(sql, item.id, key);
-        await sql.query(
-          `INSERT INTO audit_events(id,actor_id,receipt_id,listing_id,action,request_id) VALUES ($1,$2,$3,$4,'SchemaProbe',$5)`,
-          [audit, owner, command, item.id, randomUUID()],
-        );
-        await sql.query(
-          `INSERT INTO outbox_events(id,audit_id,type,payload) VALUES ($1,$2,'SchemaProbe','{}')`,
-          [randomUUID(), audit],
-        );
+      mongo.tx(async (tx) => {
+        const command = receipt(item.id, key);
+        await tx.c.mutation_receipts.insertOne(command);
+        const event = audit(command._id, item.id);
+        auditId = event._id;
+        await tx.c.audit_events.insertOne(event);
+        await tx.c.outbox_events.insertOne(outbox(event._id));
         throw new Error('injected-before-commit');
       }),
     ).rejects.toThrow('injected-before-commit');
-    expect(
-      (
-        await pool.query(
-          'SELECT count(*)::int n FROM mutation_receipts WHERE key=$1',
-          [key],
-        )
-      ).rows[0].n,
-    ).toBe(0);
-    expect(
-      (
-        await pool.query(
-          'SELECT count(*)::int n FROM audit_events WHERE id=$1',
-          [audit],
-        )
-      ).rows[0].n,
-    ).toBe(0);
-    expect(
-      (
-        await pool.query(
-          'SELECT count(*)::int n FROM outbox_events WHERE audit_id=$1',
-          [audit],
-        )
-      ).rows[0].n,
-    ).toBe(0);
+    expect(await db.c.mutation_receipts.countDocuments({ key })).toBe(0);
+    expect(await db.c.audit_events.countDocuments({ _id: auditId })).toBe(0);
+    expect(await db.c.outbox_events.countDocuments({ auditId })).toBe(0);
   });
 
   it('preserves receipts, audit and outbox payload while permitting worker delivery metadata', async () => {
     const item = await listing(),
-      command = await receipt(pool, item.id),
-      audit = randomUUID(),
-      event = randomUUID();
-    await pool.query(
-      `INSERT INTO audit_events(id,actor_id,receipt_id,listing_id,action,request_id) VALUES ($1,$2,$3,$4,'SchemaProbe',$5)`,
-      [audit, owner, command, item.id, randomUUID()],
+      command = receipt(item.id),
+      event = audit(command._id, item.id),
+      message = outbox(event._id);
+    await mongo.c.mutation_receipts.insertOne(command);
+    await mongo.c.audit_events.insertOne(event);
+    await mongo.c.outbox_events.insertOne(message);
+    // Append-only history: the application user may not delete or rewrite it.
+    await rejectsWith(
+      mongo.c.mutation_receipts.deleteOne({ _id: command._id }),
+      13,
     );
-    await pool.query(
-      `INSERT INTO outbox_events(id,audit_id,type,payload) VALUES ($1,$2,'SchemaProbe','{}')`,
-      [event, audit],
-    );
-    await expect(
-      pool.query('DELETE FROM mutation_receipts WHERE id=$1', [command]),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      pool.query(`UPDATE audit_events SET action='rewrite' WHERE id=$1`, [
-        audit,
-      ]),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      pool.query(
-        `UPDATE outbox_events SET payload='{"changed":true}' WHERE id=$1`,
-        [event],
+    await rejectsWith(
+      mongo.c.audit_events.updateOne(
+        { _id: event._id },
+        { $set: { action: 'rewrite' } },
       ),
-    ).rejects.toMatchObject({ code: '23514' });
-    await pool.query(
-      'UPDATE outbox_events SET attempts=1,processed_at=now() WHERE id=$1',
-      [event],
+      13,
     );
+    await rejectsWith(
+      mongo.c.outbox_events.deleteOne({ _id: message._id }),
+      13,
+    );
+    // Outbox is mutable only for delivery metadata (W: the payload is never $set).
+    const processedAt = new Date();
+    await mongo.c.outbox_events.updateOne(
+      { _id: message._id },
+      { $set: { attempts: 1, processedAt } },
+    );
+    expect(await db.c.outbox_events.findOne({ _id: message._id })).toEqual({
+      ...message,
+      attempts: 1,
+      processedAt,
+    });
   });
 
   it('validates ISBN checksums and collapses ISBN-10/13 to one confirmed identity', async () => {
-    expect(
-      (await pool.query(`SELECT latlai_isbn13('0306406152') isbn`)).rows[0]
-        .isbn,
-    ).toBe('9780306406157');
-    await expect(book(false, '9780306406158')).rejects.toMatchObject({
-      code: '23514',
-    });
+    expect(isbn13('0306406152')).toBe('9780306406157');
+    await rejectsWith(book(false, '9780306406158'), 121);
     await book(true, '0306406152');
-    await expect(book(true, '9780306406157')).rejects.toMatchObject({
-      code: '23505',
-    });
+    await rejectsWith(book(true, '9780306406157'), 11000);
     await expect(book(false, '9780306406157')).resolves.toHaveProperty(
       'revision',
     );
   });
 
   it('retains reviewed media and disallows replacement or purge under a revision', async () => {
-    const item = await listing(true);
-    await expect(
-      pool.query(
-        `UPDATE listing_media SET derivative_key='replacement',version=2 WHERE id=$1`,
-        [item.media],
-      ),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      pool.query(
-        'UPDATE listing_media SET purged_at=now(),version=2 WHERE id=$1',
-        [item.media],
-      ),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      pool.query('DELETE FROM listing_media WHERE id=$1', [item.media]),
-    ).rejects.toMatchObject({ code: '23503' });
+    const item = await listing(true),
+      draft = await listing();
+    // W: a Ready photo never re-enters upload/processing through the API.
+    await send(
+      owner,
+      'post',
+      `/listings/${draft.id}/media/${draft.media}/finalize`,
+      { expectedVersion: 1 },
+    ).expect(409);
+    await request(app.getHttpServer())
+      .get(`/api/v1/listings/${draft.id}/media/${draft.media}/upload-ticket`)
+      .auth(owner.token, { type: 'bearer' })
+      .expect(409);
+    // P: the application user cannot delete a photo.
+    await rejectsWith(mongo.c.listing_media.deleteOne({ _id: item.media }), 13);
+    // C: purging a photo of a submitted revision is detected at commit and
+    // the next decision fails without recording one.
+    await mongo.c.listing_media.updateOne(
+      { _id: item.media },
+      {
+        $set: { purgedAt: new Date(), updatedAt: new Date() },
+        $inc: { version: 1 },
+      },
+    );
+    await expect(mongo.tx((tx) => checkListing(tx, item.id))).rejects.toThrow(
+      'Submission requires 1-8 Ready photos',
+    );
+    await failsCommitCheck(
+      () => decide(reviewer, item, 2, 'Reject'),
+      'Submission requires 1-8 Ready photos',
+    );
+    expect(await decisions(item)).toBe(0);
   });
 });
