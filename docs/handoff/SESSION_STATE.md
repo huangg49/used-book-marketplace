@@ -1,5 +1,29 @@
 # Điểm lưu để tiếp tục — 29/09/2026
 
+## Native pricing / N20 — điểm mới nhất
+
+- Nhánh **codex/native-pricing-acceptance**, base **56d01dc**; commit subject
+  `docs(native): record pricing and review acceptance at large text` (SHA xem log).
+  Chỉ tài liệu/4 ảnh; không sửa runtime, không push/merge/deploy. Giữ generated cũ.
+- Android 15/Pixel_7 x86_64, APK Q01 có sẵn, Metro8081/API3000/Mongo acceptance57117:
+  chữ OS130% + bàn phím số docked; giá sai hiện lỗi/scroll đúng; hai giá hợp lệ,
+  nơi gửi dài, review/checkbox/footer đọc và thao tác được. Gửi thiếu thông tin
+  quay về lỗi tình trạng; không gửi mutation HTTP. Đã bỏ thay đổi nháp qua confirm.
+  [Bằng chứng và phạm vi](Q01_NATIVE_COMPLETION_2026_09_29.md#n20--giá-nơi-gửi-và-review-trên-mongodb).
+- Không phát hiện lỗi sản phẩm mới trong nhóm này. Log đầy đủ xác định cảnh báo
+  `Error: undefined` trước đó thuộc **Cannot connect to Expo CLI**; khớp
+  `expo/src/async-require/hmrUtils.native.ts`. Chưa xác định nguyên nhân lần mất
+  kết nối; không coi đó là lỗi Mongo/upload, không sửa dependency để che warning.
+- Đã trả font_scale=1.0, handwriting override=null; app ở kệ. API/Metro/reverse
+  giữ nguyên. Không chạy worker cleanup trên acceptance copy có media keys nguồn.
+  Kiểm tra gói này: thao tác native và `git diff --check`; không chạy lại bộ API/RN
+  vì không đổi code, không gán kết quả cũ thành mới.
+- **Bước tiếp:** N13 native lost-ack finalize/submit chưa kiểm là phần tự động hóa
+  độc lập còn mở: dùng DB/bucket QA riêng, không dùng acceptance copy để cleanup.
+  N20 đã thêm nhóm pricing/origin/review, không tuyên bố full native PASS. N21 cần
+  quan sát TalkBack có audio; ARM/iOS và review người thật vẫn mở. Không lặp nhóm
+  vừa đóng nếu source không đổi; không mở Delivered/settlement hoặc tự cutover.
+
 ## Live packaging MongoDB — điểm mới nhất
 
 - Nhánh **codex/mongodb-live-packaging**, base **616d1d8**; commit subject
