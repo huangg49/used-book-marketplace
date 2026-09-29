@@ -3,26 +3,25 @@
 ## Lane MongoDB — nhánh `codex/mongodb-refactor` (mới nhất)
 
 - Theo [MONGODB_PLAN](../refactor/MONGODB_PLAN.md). Nhánh tạo từ main `b49cc52`.
-  Chưa push/merge. Runtime/API chính vẫn PostgreSQL; không ghi kép.
+  Chưa push/merge. **Runtime giờ chỉ dùng MongoDB** (MIG-06 cutover mã nguồn); không ghi kép.
 - **MIG-01 DONE**: driver `mongodb@7.6.0`, runner/lock/clock trong
-  `apps/api/src/database/mongo/transaction.ts`, probe `apps/api/test/mongo`,
-  17/17 PASS ×5 (gồm failover ba node). [Báo cáo](../refactor/MIG01_TRANSACTION_PROBE.md),
-  [ADR 0027](../adr/0027-mongodb-persistence-protocol.md).
-- QA Mongo: `pnpm infra:mongo:test:up` (57017), `pnpm infra:mongo:failover:up`
-  (57021-57023). Không dùng cho `.env` app.
-- **MIG-02 DONE**: [bản đồ 44 model/backstop](../refactor/MIG02_MODEL_MAP.md),
-  migration 0001 (validator/index/quyền) + 0002 (dữ liệu tham chiếu), runner có checksum,
-  role `latlai_app`/`latlai_migrator`, `MongoService`, keyset cursor v2, workflow
-  `api-mongo-ci.yml`. QA node Mongo giờ bật auth và dữ liệu trên tmpfs (khởi động lại = rỗng).
-  35 test Mongo PASS gồm failover; unit cũ 33 PASS.
-- **MIG-03 DONE**: [báo cáo](../refactor/MIG03_AUTH_COMMAND.md). Auth/limiter/executor/
-  admin users trên Mongo; E2E đã port 21/21 ×3. `MONGODB_URL` giờ bắt buộc: `.env` local
-  của chủ dự án chưa có nên API trên nhánh này sẽ không khởi động tới khi thêm (MIG-06).
-- **MIG-04 DONE**: [báo cáo](../refactor/MIG04_CATALOG_LISTING_MEDIA.md); 152 E2E Mongo PASS.
-- **MIG-05**: chủ dự án duyệt thiết kế tiền/quyền 29/09; toàn bộ service quote/order/
-  wallet/shipment đã chạy trên Mongo (commit f220c66), Prisma command/page đã gỡ. Đang
-  port E2E theo đợt (quotes+wallet → orders/obligations → payment/preparation/packaging/
-  shipments/carrier/delivery). Chưa có bằng chứng E2E cho MIG-05.
+  `apps/api/src/database/mongo/transaction.ts`, probe `apps/api/test/mongo`.
+  [Báo cáo](../refactor/MIG01_TRANSACTION_PROBE.md), [ADR 0027](../adr/0027-mongodb-persistence-protocol.md).
+- **MIG-02 DONE**: [bản đồ 44 model/backstop](../refactor/MIG02_MODEL_MAP.md), migration
+  0001–0003, role `latlai_app`/`latlai_migrator`, `MongoService`, cursor v2.
+- **MIG-03 DONE** [auth/executor](../refactor/MIG03_AUTH_COMMAND.md); **MIG-04 DONE**
+  [catalog/listing/media/địa chỉ](../refactor/MIG04_CATALOG_LISTING_MEDIA.md).
+- **MIG-05 DONE**: [báo cáo](../refactor/MIG05_QUOTE_ORDER_WALLET_SHIPMENT.md). Mọi suite
+  E2E F2h đã port, số test mỗi file bằng bản PostgreSQL; sửa 1 lỗi (cửa sổ upload ảnh
+  đóng gói theo giờ quyết định Order). Thiết kế tiền/quyền: chủ dự án duyệt, chưa có review độc lập.
+- **MIG-06 PARTIAL**: [báo cáo](../refactor/MIG06_DATA_CUTOVER.md), [runbook](../refactor/MIG06_CUTOVER_RUNBOOK.md).
+  Gỡ Prisma/PostgreSQL khỏi runtime, importer + `mongo:check`, setup/doctor/CI/tài liệu
+  chuyển sang Mongo, clone sạch PASS, browser suites PASS, E2E toàn bộ 493/493 PASS một lượt, suite Mongo 37/37, unit 33/33.
+  **Còn mở**: import dữ liệu dev/thật của chủ dự án (`.env` và volume PostgreSQL 5433
+  chưa đổi — API nhánh này cần thêm biến `MONGODB_*`/`MONGO_ROOT_PASSWORD` theo runbook
+  bước 2 mới chạy được), CI trên GitHub, native acceptance.
+- QA: `pnpm infra:mongo:test:up` (57017, tmpfs), `pnpm infra:mongo:failover:up`
+  (57021-57023); `MONGO_TEST_URL` như START_HERE §5. Không dùng cho `.env` app.
 
 ## Đọc ngay — sau merge ca16a22, lượt Codex trên Pixel_7
 

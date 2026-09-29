@@ -19,6 +19,12 @@
    (ví dụ `docker run --rm -v used-book-marketplace_postgres_data:/v -v "$PWD":/b alpine tar czf /b/pg-backup.tgz -C /v .`;
    file sao lưu **không** đưa vào Git).
 2. Khởi động MongoDB dev/prod (replica set có auth): `pnpm infra:up` (dịch vụ `mongo`).
+   Cài đặt đã có `.env` từ trước (setup:local không ghi đè): tự thêm vào root `.env`
+   `MONGO_ROOT_PASSWORD` (ngẫu nhiên) và `MONGO_PORT` nếu 27017 bận; vào `apps/api/.env`
+   các dòng `MONGODB_*` theo `apps/api/.env.example` với mật khẩu ngẫu nhiên riêng, cùng
+   mật khẩu root ở `MONGODB_ADMIN_URL`. Giữ `DATABASE_URL` cũ làm `SOURCE_DATABASE_URL`
+   cho bước 5; API không còn đọc `DATABASE_URL`. PostgreSQL dev giờ ở profile
+   `legacy-postgres` (`docker compose --env-file .env -f infra/docker-compose.yml --profile legacy-postgres up -d postgres`).
 3. Tạo user tối thiểu quyền: `pnpm --filter @used-books/api mongo:bootstrap`
    (`MONGODB_ADMIN_URL`, `MONGODB_DATABASE`, `MONGODB_APP_PASSWORD`, `MONGODB_MIGRATOR_PASSWORD`).
 4. Migrate: `pnpm --filter @used-books/api mongo:migrate` (`MONGODB_MIGRATOR_URL`).

@@ -15,8 +15,10 @@ MongoDB. Chủ dự án cho push/merge checkpoint Q01 rồi mở nhánh refactor
   [ADR 0027](../adr/0027-mongodb-persistence-protocol.md). MIG-02 DONE:
   [bản đồ mô hình/backstop](MIG02_MODEL_MAP.md), migration có version, role tối thiểu,
   cursor v2, CI Mongo riêng. MIG-03 DONE: [auth + executor](MIG03_AUTH_COMMAND.md).
-  MIG-04 DONE: [catalog/listing/media/địa chỉ](MIG04_CATALOG_LISTING_MEDIA.md). MIG-05:
-  service đã chuyển, đang port E2E.
+  MIG-04 DONE: [catalog/listing/media/địa chỉ](MIG04_CATALOG_LISTING_MEDIA.md). MIG-05 DONE:
+  [quote/order/ví/vận chuyển](MIG05_QUOTE_ORDER_WALLET_SHIPMENT.md). MIG-06 cutover mã nguồn
+  DONE, [báo cáo](MIG06_DATA_CUTOVER.md): runtime chỉ còn MongoDB; còn mở cutover dữ liệu
+  thật của chủ dự án, CI trên GitHub và native acceptance.
 - Phạm vi chức năng giữ F2h/OpenAPI 0.20.0. Không mở Delivered/inspection/settlement.
   SRS1.1 và ADR hiện có vẫn là nguồn hành vi; các cơ chế PostgreSQL cần ADR thay thế
   có đối chiếu, không xóa lịch sử để coi như chưa có yêu cầu.
@@ -82,8 +84,8 @@ không gom mọi lỗi thành retry vô hạn.
 | MIG-02 mô hình + hạ tầng | DONE, [bản đồ](MIG02_MODEL_MAP.md) | Map đủ 44 model và từng SQL backstop; versioned collection/index/validator migrations, bootstrap least privilege, clock/ID/cursor/precision; CI Mongo riêng |
 | MIG-03 auth + command | DONE, [báo cáo](MIG03_AUTH_COMMAND.md) | Login/rotation/revoke/rate limit, eligibility và command executor dùng Mongo, negative/race/replay tương đương; không chuyển API chính trước khi đạt |
 | MIG-04 catalog/listing/media/address | DONE, [báo cáo](MIG04_CATALOG_LISTING_MEDIA.md) | Port quyền/immutable snapshot/worker/review/public reads; HTTP contracts, browser và native với storage thật theo mức ảnh hưởng |
-| MIG-05 quote/order/wallet/shipment | Chủ dự án duyệt [thiết kế](MIG05_MONEY_PERMISSION_DESIGN.md) 29/09; mở sau MIG-04 | Full hold/commitment/ledger/worker/event/review parity đến F2h; không thêm nghiệp vụ mới |
-| MIG-06 dữ liệu + cutover | LOCKED sau MIG-05 | Dry-run import bất biến, đếm/hash/ledger reconciliation, secret-safe evidence, fresh-clone setup, CI đầy đủ và native acceptance; kế hoạch rollback và switch có chủ đích |
+| MIG-05 quote/order/wallet/shipment | DONE, [báo cáo](MIG05_QUOTE_ORDER_WALLET_SHIPMENT.md); [thiết kế](MIG05_MONEY_PERMISSION_DESIGN.md) chủ dự án duyệt 29/09 | Full hold/commitment/ledger/worker/event/review parity đến F2h; không thêm nghiệp vụ mới |
+| MIG-06 dữ liệu + cutover | PARTIAL, [báo cáo](MIG06_DATA_CUTOVER.md): import/dry-run, đối soát, fresh-clone, CI workflow, rollback DONE; chưa: import dữ liệu thật, CI GitHub, native acceptance | Dry-run import bất biến, đếm/hash/ledger reconciliation, secret-safe evidence, fresh-clone setup, CI đầy đủ và native acceptance; kế hoạch rollback và switch có chủ đích |
 
 Mỗi gói commit rõ phạm vi, cập nhật SESSION_STATE. Nhánh mới là lane migration;
 không merge implementation dở vào main. Việc chủ dự án duyệt PR #2 không là
