@@ -32,11 +32,13 @@ Dùng SRS1.1 và LOCAL_HANDOVER_AUCTION làm chuẩn; không tự thay policy ho
 workflow planned là implemented. Merge nguồn vào main không có nghĩa đã nghiệm
 thu native, đóng review hoặc hoàn tất mua sách.
 
-3. Chọn gói đầu tiên có dependency đã đáp ứng. Trước hết kiểm A00 Android splash
-từ lần mở lại cuối: xác minh cấu hình/Metro/bundle/font/splash trước khi sửa.
-Nếu lỗi chỉ ở máy cũ thì chứng minh bằng cold start/reopen/deep link trên máy này,
-không giả tạo fix. Tiếp tục U01–U06, ưu tiên form đăng sách U02 và địa chỉ U03,
-đóng các ca Q/native còn mở. Đừng sửa lại thứ đã PASS khi không có thay đổi liên quan.
+3. Chọn gói đầu tiên có dependency đã đáp ứng theo điểm lưu mới nhất. Main ca16a22
+đã có A00 và U02–U06; không tự mở lại các gói đó. Lượt Pixel_7 sau merge đang
+bổ sung Q01 và xử lý picker sau đổi cỡ chữ OS (Q01-F01); xem trạng thái cuối ở
+SESSION_STATE và Q01_NATIVE_COMPLETION_2026_09_29. Nếu Android không vào app,
+xác minh cấu hình/Metro/bundle trước khi sửa; không giả tạo fix cho lỗi môi trường.
+Đóng ca native còn mở và giữ các gate human review, không lặp phần đã PASS khi
+không có thay đổi liên quan. Kiểm branch/status vì điểm lưu local có thể chưa push.
 
 4. Chu trình cho mỗi gói: khảo sát hiện trạng → nêu vấn đề và invariant cần giữ
 ngắn gọn → triển khai một lát cắt hoàn chỉnh → chạy focused tests và gate liên

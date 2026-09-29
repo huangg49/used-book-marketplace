@@ -1,0 +1,34 @@
+{
+  "source": "ca16a22",
+  "device": "Pixel_7 Android 15 x86_64",
+  "input": {
+    "mime": "image/webp",
+    "bytes": 294722
+  },
+  "midPut": {
+    "partialRequests": 4,
+    "cutAfterAtLeastBytes": 65536,
+    "upstreamForwarded": false,
+    "uniquePutKeys": 1,
+    "manualRetryCompleteBodyMatchesInput": true,
+    "mediaBefore": 3,
+    "mediaPendingAfterCut": 1,
+    "mediaReadyAfterRetry": 4
+  },
+  "lostAck": {
+    "upstream200ResponsesDropped": 6,
+    "totalPutRequestsIncludingManualRetry": 7,
+    "uniqueKeys": 1,
+    "uniqueBodies": 1,
+    "mediaBefore": 4,
+    "mediaReadyAfterRetry": 5,
+    "createReceipts": 1,
+    "uploadReceipts": 1,
+    "finalizeReceipts": 1
+  },
+  "limitations": [
+    "Mid-PUT cut is on emulator-to-proxy hop; partial bytes are not forwarded to API.",
+    "Lost ACK covers content PUT commit; not finalize or listing submit commit.",
+    "Pilot harness failure excluded from controlled-run counts."
+  ]
+}

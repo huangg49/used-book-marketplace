@@ -71,3 +71,18 @@ The existing `/ui` and `/design` flag requirement is unchanged. This is presenta
 gating, not a security boundary or an asset exclusion guarantee.
 Shelf cards accept Android's float rounding at OS 130% using a 1.29 threshold.
 Evidence, entry points and pending acceptance: [shelf/detail review](../handoff/SHELF_DETAIL_REVIEW.md).
+
+## Android font configuration — 2026-09-29
+
+Handle `fontScale` in MainActivity via the tracked Expo config plugin. Recreating
+the Activity while retaining the React host left Expo's picker launcher unregistered
+on Android 15. Preserve OS scaling and the mounted form. Fabric also retained old
+intrinsic Text measurements after scaling; AppText recreates only its Android Text
+leaf when `useWindowDimensions().fontScale` changes. TextInput, screen state and
+session stay mounted. No dependency or generated native source is patched.
+
+Native verification covers background → OS font change → resume at 100/130%,
+unsaved data, complete button labels, picker cancel/upload, keyboard and Back.
+Dimensions reports the font change on host resume; an ADB change while remaining
+foreground is not separately accepted. Screen-reader focus, other Android devices
+and iOS remain unverified. See [Q01 evidence](../handoff/Q01_NATIVE_COMPLETION_2026_09_29.md).

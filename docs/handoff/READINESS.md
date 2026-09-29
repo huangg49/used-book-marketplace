@@ -92,6 +92,17 @@ Cập nhật 29/09 (máy tiếp nhận, AVD API 37 x86_64): U02–U06 có eviden
 N02/N07/N08/N12/N17 PASS. N13/N19/N21, WebP, iOS/ARM và review độc lập còn mở;
 U01 còn chờ phản hồi thẩm mỹ của người dùng. Gate 3 chưa đóng.
 
+Cập nhật sau merge `ca16a22`: phiếu teammate đầy đủ đã có N13 mất mạng **trước**
+gửi và N19 stale địa chỉ PASS. [Lượt Pixel_7 bổ sung](Q01_NATIVE_COMPLETION_2026_09_29.md)
+đóng N03, N11 WebP thật (byte/hash + lưu/mở lại), N13 giữa PUT/lost-ack content
+và N16 Back/keyboard/hủy/rời;
+bổ sung N20 chữ OS 130% cho hai form, sheet, dialog và checkbox. Phát hiện
+Q01-F01 picker/font sau thay đổi OS đã sửa và kiểm APK mới trên Android15;
+N18 archive bài QA riêng cũng PASS. N20 phần còn lại/N21/review người vẫn mở.
+Lost-ack finalize/submit native, N20 walkthrough rộng hơn,
+N21 TalkBack, iOS/ARM và review người vẫn mở. Dòng trạng thái cũ phía trên là
+lịch sử trước khi các bằng chứng bổ sung được đối chiếu, không phải kết luận mới.
+
 Điểm dở cũ “Android mở lại sau export đứng splash” (A00) đã được kiểm 29/09 trên
 AVD x86_64 API 37: cold start, deep link và reopen PASS; cơ chế Metro/cache ghi ở
 [A00](A00_ANDROID_STARTUP.md). Đây không đóng N01–N21. Đọc
