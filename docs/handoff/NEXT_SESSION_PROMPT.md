@@ -1,5 +1,9 @@
 # Prompt gửi cho người tiếp nhận / Claude
 
+**Nhánh MongoDB 29/09:** `codex/mongodb-refactor` đã chuyển runtime sang MongoDB
+(MIG-01…05 DONE, MIG-06 PARTIAL). Đọc mục "Lane MongoDB" trong SESSION_STATE và
+[MONGODB_PLAN](../refactor/MONGODB_PLAN.md) trước prompt lịch sử bên dưới.
+
 Clone trước (không chép `.env` qua Git):
 
 ```sh
