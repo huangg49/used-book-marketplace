@@ -5,6 +5,13 @@ Cập nhật29/09 lane MongoDB: [điểm lưu mới nhất](SESSION_STATE.md) v�
 493 E2E / 42 Mongo / 33 unit PASS, hai P1 đã sửa. Native chỉ thêm smoke Android
 trên bản sao Mongo; không đóng full native, human review hoặc cutover dữ liệu chính.
 
+Bổ sung sau đó: [import Order](../refactor/MONGODB_ORDER_IMPORT_2026_09_29.md)
+PASS43Mongo; [live media](../refactor/MONGODB_LIVE_MEDIA_2026_09_29.md) và
+[Android upload Mongo](../refactor/MONGODB_NATIVE_UPLOAD_2026_09_29.md) đã kiểm
+JPEG/PNG/WebP, content PUT lost-ack/retry, preview lỗi/phục hồi và lưu/cold start.
+Các lượt này dùng Supabase QA thật/cách ly; full native/TalkBack/human review/CI
+remote/cutover chính vẫn mở. Không cộng các bằng chứng hẹp thành PASS toàn app.
+
 Ngày 28/09/2026. Người dùng đã duyệt: dừng mở rộng nghiệp vụ, rà code, làm rõ cách
 tiếp nhận, tân trang UI hiện có rồi đóng mốc Git có thể tái dựng. Không cần hỏi lại
 phạm vi này ở mỗi lần tiếp tục. Không tự mở Delivered/inspection/settlement trong đợt này.

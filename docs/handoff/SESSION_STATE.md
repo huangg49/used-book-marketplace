@@ -1,5 +1,33 @@
 # Điểm lưu để tiếp tục — 29/09/2026
 
+## Android upload trên MongoDB — điểm mới nhất
+
+- Nhánh **codex/mongodb-native-upload**, base **1452927**. Commit gói có subject
+  `docs(mongo): record Android upload and lost-ack acceptance`; xem `git log -1`
+  để lấy SHA. Chỉ evidence/tài liệu, không sửa runtime/UI/contract, không push/merge.
+  `apps/api/src/generated/` cũ vẫn untracked, không add/xóa.
+- [Báo cáo và ảnh](../refactor/MONGODB_NATIVE_UPLOAD_2026_09_29.md): Pixel_7/API35,
+  APK Q01 có sẵn + Metro8081 preview=0, API/worker thật, DB Mongo QA UUID `_test`
+  và bucket Supabase private **riêng**. Không copy media keys nguồn vào QA.
+- PASS trong phạm vi: hủy picker không tạo media; native PNG/WebP/JPEG→Ready;
+  lost ACK sau content PUT200 năm lần, retry cùng key/body→đúng1 effect/receipt/job;
+  lưu/mở lại3 ảnh; preview503→ẩn ảnh + retry phục hồi; cold start giữ phiên/3 ảnh,
+  không đứng splash. Sweep0 lỗi,3 media/3 links/3 finished jobs. N14 không phủ
+  hết hạn URL/giết app giữa upload; log có một `Error: undefined` chưa rõ nguồn.
+- Đã khôi phục files/shared_prefs của app, reverse3000→3000/8081→8081; API3000
+  refresh200 và mở sách cũ thành công. API3002/worker QA/proxy3102 đã dừng;
+  bucket/DB QA đã xóa (cleanup lần2 thành công). API3000/Metro và bản sao57117
+  giữ như trước; PG5433, `.env`, bucket nguồn không đổi. Không chạy worker cleanup
+  trên DB acceptance vì media keys còn trỏ bucket nguồn.
+- Harness/log/private config/backup nằm `.tmp/mongodb-native/` ignored; backup
+  chứa session, không in/commit. Evidence đã lọc secret trong docs/refactor/evidence.
+  Không chạy lại493E2E/build/lint cho gói chỉ evidence; contract/diff/JSON check
+  là kiểm tra bổ sung, không đổi evidence runtime của ec4a9c9 và43Mongo của1f5d636.
+- **Tiếp theo:** N21 TalkBack thật (cần dịch vụ/audio để quan sát, không thay bằng
+  UI hierarchy); N20 còn tổ hợp chưa kiểm. Nếu bị chặn môi trường, làm live packaging
+  trên DB/bucket QA riêng. Human review tiền/quyền, CI remote và quyết định cutover
+  chính vẫn mở; không tự push/merge hoặc mở nghiệp vụ Delivered/settlement.
+
 ## Live media MongoDB — điểm mới nhất
 
 - Nhánh **codex/mongodb-live-media**, base **1f5d636** (gói import Order đã commit).

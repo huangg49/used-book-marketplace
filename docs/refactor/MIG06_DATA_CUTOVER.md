@@ -79,7 +79,10 @@ project, volume và thư mục tạm.
    `mongo:check`). Chưa import thì API trên nhánh này dùng database MongoDB rỗng.
 2. **CI chưa chạy trên GitHub** (chưa push); các workflow mới chỉ được kiểm cục bộ bằng
    chạy cùng lệnh.
-3. **Native acceptance** (Android/iOS, TalkBack, ARM) chưa chạy trên bản MongoDB; gate mở.
+3. **Native acceptance** vẫn mở: đã có Android/API35 smoke và
+   [upload Mongo với Supabase thật](MONGODB_NATIVE_UPLOAD_2026_09_29.md):
+   JPEG/PNG/WebP, content lost-ack/retry, preview lỗi/phục hồi, lưu/cold start PASS
+   trong phạm vi báo cáo. TalkBack, ARM/iOS và full native chưa hoàn tất.
 4. Review độc lập về tiền/quyền chưa có (chỉ phê duyệt của chủ dự án).
 5. Các giới hạn tầng ứng dụng/hiệu năng ở [MIG-05](MIG05_QUOTE_ORDER_WALLET_SHIPMENT.md)
    và [MIG-04](MIG04_CATALOG_LISTING_MEDIA.md).
