@@ -168,7 +168,10 @@ export class AddressesService {
           if (action === 'create') {
             addressId = randomUUID();
             // A new identity is never reused; it keeps only id/owner after deletion.
-            await tx.c.address_identities.insertOne({ _id: addressId, ownerId });
+            await tx.c.address_identities.insertOne({
+              _id: addressId,
+              ownerId,
+            });
             await tx.c.member_addresses.insertOne({
               _id: addressId,
               ownerId,
@@ -211,7 +214,9 @@ export class AddressesService {
           { $inc: { version: 1, lockSeq: 1 } },
           { returnDocument: 'after' },
         );
-        tx.check(`address-book:${ownerId}`, () => checkAddressBook(tx, ownerId));
+        tx.check(`address-book:${ownerId}`, () =>
+          checkAddressBook(tx, ownerId),
+        );
         return {
           entityType: 'AddressBook' as const,
           entityId: actor._id,

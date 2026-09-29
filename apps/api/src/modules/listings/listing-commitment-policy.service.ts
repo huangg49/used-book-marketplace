@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { CatalogService } from '../catalog/catalog.service.js';
+import { LegacyCatalogLocks } from '../catalog/legacy-catalog-locks.js';
 import type { Tx } from '../commands/command.service.js';
 import { conflict, invalidState, notFound } from '../commands/domain-error.js';
 
 @Injectable()
 export class ListingCommitmentPolicy {
-  constructor(private readonly catalog: CatalogService) {}
+  // Still PostgreSQL until the order module is ported (MIG-05).
+  constructor(private readonly catalog: LegacyCatalogLocks) {}
   async lock(tx: Tx, id: string) {
     const before = await tx.listing.findUnique({
       where: { id },

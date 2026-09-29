@@ -175,6 +175,7 @@ describe('validators replace CHECK constraints', () => {
       currentRevisionId: null,
       confirmedIsbn,
       searchText: '',
+      titleKey: '',
       createdAt: now(),
       updatedAt: now(),
       lockSeq: 0,

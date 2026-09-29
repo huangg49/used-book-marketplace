@@ -1,18 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '../../generated/prisma/client.js';
+import { randomUUID } from 'node:crypto';
+import type { Tx } from '../../database/mongo/transaction.js';
 import { CatalogService } from '../catalog/catalog.service.js';
 import {
   ListingFulfillmentService,
   originReference,
 } from './listing-fulfillment.service.js';
 import {
-  CommandService,
+  MongoCommandService,
   member,
   requireActive,
   type Actor,
-  type Tx,
   type CommandContext,
-} from '../commands/command.service.js';
+} from '../commands/mongo-command.service.js';
 import {
   conflict,
   invalidState,
@@ -20,28 +20,53 @@ import {
   invalidField,
   type Wire,
 } from '../commands/domain-error.js';
-import { PageService } from '../commands/page.service.js';
+import { MongoPageService } from '../commands/mongo-page.service.js';
 import {
-  details,
-  revisionDetails,
-  revision,
-  state,
+  checkListing,
+  loadListing,
+  loadRevisions,
   projection,
+  revision,
+  revisionContent,
+  state,
 } from './listing-projection.js';
+
+export const lowerIds = (ids: string[]) => ids.map((id) => id.toLowerCase());
+
+// Attaches photos to a revision that is still a draft (W for the
+// latlai_guard_revision_media trigger): the revision must not be frozen and
+// every photo must be an unpurged asset of the same listing, locked.
+export async function attachPhotos(
+  tx: Tx,
+  listingId: string,
+  revisionId: string,
+  mediaIds: string[],
+) {
+  if (!mediaIds.length) return;
+  const r = await tx.c.listing_revisions.findOne({ _id: revisionId });
+  if (!r || r.submittedAt)
+    throw new Error('Attach photos before freezing a revision');
+  await tx.c.revision_media.insertMany(
+    mediaIds.map((mediaId, position) => ({
+      _id: `${revisionId}:${mediaId}`,
+      listingId,
+      revisionId,
+      mediaId,
+      position,
+    })),
+  );
+}
 
 @Injectable()
 export class ListingDraftsService {
   constructor(
-    private readonly commands: CommandService,
+    private readonly commands: MongoCommandService,
     private readonly catalog: CatalogService,
-    private readonly pages: PageService,
+    private readonly pages: MongoPageService,
     private readonly fulfillment: ListingFulfillmentService,
   ) {}
   private async own(tx: Tx, id: string, ownerId: string) {
-    const listing = await tx.listing.findUnique({
-      where: { id },
-      include: details,
-    });
+    const listing = await loadListing(tx.c, id);
     if (!listing || listing.ownerId !== ownerId || listing.deletedAt)
       throw notFound();
     return listing;
@@ -55,29 +80,56 @@ export class ListingDraftsService {
         requireActive(actor);
         const origin = await this.fulfillment.prepare(
           tx,
-          actor.id,
+          actor._id,
           body.content.fulfillment,
         );
-        await this.catalog.lockForListing(tx, body.content.bookId, actor.id);
-        const l = await tx.listing.create({ data: { ownerId: actor.id } });
+        await this.catalog.lockForListing(
+          tx,
+          body.content.bookId?.toLowerCase() ?? null,
+          actor._id,
+        );
         const {
           mediaIds: _media,
           fulfillment: _fulfillment,
           ...content
         } = body.content;
-        const r = await tx.listingRevision.create({
-          data: { ...content, ...origin, listingId: l.id, number: 1 },
+        const listingId = randomUUID(),
+          revisionId = randomUUID(),
+          now = await tx.now();
+        await tx.c.listing_revisions.insertOne({
+          _id: revisionId,
+          listingId,
+          number: 1,
+          ...revisionContent(content),
+          ...origin,
+          submittedAt: null,
+          ownershipDeclaredAt: null,
+          createdAt: now,
+          lockSeq: 0,
         });
-        await tx.listing.update({
-          where: { id: l.id },
-          data: { currentRevisionId: r.id },
-        });
+        const listing = {
+          _id: listingId,
+          ownerId: actor._id,
+          version: 1,
+          moderation: 'Draft' as const,
+          visibility: 'Visible' as const,
+          trade: 'Available' as const,
+          currentRevisionId: revisionId,
+          removalReason: null,
+          deletedAt: null,
+          publishedAt: null,
+          createdAt: now,
+          updatedAt: new Date(),
+          lockSeq: 0,
+        };
+        await tx.c.listings.insertOne(listing);
+        tx.check(`listing:${listingId}`, () => checkListing(tx, listingId));
         return {
           entityType: 'Listing',
-          entityId: l.id,
+          entityId: listingId,
           version: 1,
-          revisionId: r.id,
-          state: state({ ...l, currentRevision: null, revisions: [] }),
+          revisionId,
+          state: state(listing),
         };
       },
     });
@@ -88,20 +140,24 @@ export class ListingDraftsService {
       // a later catalog decision; a new command validates the catalog under lock.
       authorize: async (tx, actor) => {
         member(actor);
-        return this.own(tx, id, actor.id);
+        return this.own(tx, id, actor._id);
       },
       mutate: async (tx, actor, before) => {
         requireActive(actor);
         const origin = await this.fulfillment.prepare(
           tx,
-          actor.id,
+          actor._id,
           body.content.fulfillment === undefined
             ? originReference(before.currentRevision!)
             : body.content.fulfillment,
         );
-        await this.catalog.lockForListing(tx, body.content.bookId, actor.id);
-        await tx.$queryRaw`SELECT id FROM listings WHERE id=${id}::uuid FOR UPDATE`;
-        const l = await this.own(tx, id, actor.id);
+        await this.catalog.lockForListing(
+          tx,
+          body.content.bookId?.toLowerCase() ?? null,
+          actor._id,
+        );
+        await tx.lock('listings', [id]);
+        const l = await this.own(tx, id, actor._id);
         if (l.version !== body.expectedVersion) throw conflict();
         if (
           !['Draft', 'Rejected'].includes(l.moderation) ||
@@ -109,74 +165,66 @@ export class ListingDraftsService {
           l.trade !== 'Available'
         )
           throw invalidState();
-        await tx.$queryRaw`SELECT id FROM listing_revisions WHERE id=${l.currentRevisionId}::uuid FOR UPDATE`;
-        const {
-          mediaIds,
-          fulfillment: _fulfillment,
-          ...content
-        } = body.content;
+        await tx.lock('listing_revisions', [l.currentRevisionId!]);
+        const { fulfillment: _fulfillment, ...rest } = body.content;
+        const mediaIds = lowerIds(rest.mediaIds);
         if (mediaIds.length) {
-          await tx.$queryRaw(
-            Prisma.sql`SELECT id FROM listing_media WHERE id IN (${Prisma.join([...mediaIds].sort().map((i) => Prisma.sql`${i}::uuid`))}) ORDER BY id FOR UPDATE`,
-          );
-          const media = await tx.listingMedia.findMany({
-            where: {
-              id: { in: mediaIds },
-              listingId: id,
-              purgedAt: null,
-              status: { in: ['Pending', 'Processing', 'Ready'] },
-            },
+          await tx.lock('listing_media', mediaIds);
+          const available = await tx.c.listing_media.countDocuments({
+            _id: { $in: mediaIds },
+            listingId: id,
+            purgedAt: null,
+            status: { $in: ['Pending', 'Processing', 'Ready'] },
           });
-          if (media.length !== mediaIds.length)
+          if (available !== mediaIds.length)
             invalidField(
               '/content/mediaIds',
               'Một hoặc nhiều ảnh không còn khả dụng cho bản sách này.',
               'Unavailable',
             );
         }
-        let r = l.currentRevision!;
-        if (l.moderation === 'Rejected')
-          r = await tx.listingRevision.create({
-            data: {
-              ...content,
-              ...origin,
-              listingId: id,
-              number: r.number + 1,
-            },
-            include: { ...revisionDetails, book: true },
+        let revisionId = l.currentRevisionId!;
+        if (l.moderation === 'Rejected') {
+          revisionId = randomUUID();
+          await tx.c.listing_revisions.insertOne({
+            _id: revisionId,
+            listingId: id,
+            number: l.currentRevision!.number + 1,
+            ...revisionContent(rest),
+            ...origin,
+            submittedAt: null,
+            ownershipDeclaredAt: null,
+            createdAt: await tx.now(),
+            lockSeq: 0,
           });
-        else {
-          await tx.revisionMedia.deleteMany({ where: { revisionId: r.id } });
-          r = await tx.listingRevision.update({
-            where: { id: r.id },
-            data: { ...content, ...origin },
-            include: { ...revisionDetails, book: true },
-          });
+        } else {
+          // Only an unsubmitted draft revision may change (latlai_guard_revision).
+          await tx.c.revision_media.deleteMany({ revisionId });
+          await tx.c.listing_revisions.updateOne(
+            { _id: revisionId, listingId: id, submittedAt: null },
+            { $set: { ...revisionContent(rest), ...origin } },
+          );
         }
-        if (mediaIds.length)
-          await tx.revisionMedia.createMany({
-            data: mediaIds.map((mediaId, position) => ({
-              listingId: id,
-              revisionId: r.id,
-              mediaId,
-              position,
-            })),
-          });
-        const next = await tx.listing.update({
-          where: { id },
-          data: {
-            currentRevisionId: r.id,
-            moderation: 'Draft',
-            version: { increment: 1 },
+        await attachPhotos(tx, id, revisionId, mediaIds);
+        const next = await tx.c.listings.findOneAndUpdate(
+          { _id: id, version: l.version },
+          {
+            $set: {
+              currentRevisionId: revisionId,
+              moderation: 'Draft',
+              updatedAt: new Date(),
+            },
+            $inc: { version: 1 },
           },
-          include: details,
-        });
+          { returnDocument: 'after' },
+        );
+        tx.check(`listing:${id}`, () => checkListing(tx, id));
         return {
           entityType: 'Listing',
           entityId: id,
-          version: next.version,
-          revisionId: r.id,
-          state: state(next),
+          version: next!.version,
+          revisionId,
+          state: state(next!),
           before: {
             version: l.version,
             revisionId: l.currentRevisionId,
@@ -189,7 +237,7 @@ export class ListingDraftsService {
   detail(auth: Actor, id: string) {
     return this.commands.read(auth, async (tx, actor) => {
       member(actor);
-      return projection(await this.own(tx, id, actor.id));
+      return projection(await this.own(tx, id, actor._id));
     });
   }
   list(auth: Actor, query: Record<string, string | number>) {
@@ -197,30 +245,37 @@ export class ListingDraftsService {
       member(actor);
       const moderation = query.moderation ?? null,
         visibility = query.visibility ?? null;
-      const page = await this.pages.select(tx, {
-        from: Prisma.sql`listings l`,
-        id: Prisma.sql`l.id`,
-        key: Prisma.sql`l.updated_at`,
-        kind: 'time',
-        ascending: false,
-        where: Prisma.sql`l.owner_id=${actor.id}::uuid AND l.deleted_at IS NULL AND (${moderation}::text IS NULL OR l.moderation::text=${moderation}) AND (${visibility}::text IS NULL OR l.visibility::text=${visibility})`,
-        scope: {
-          operation: 'listMyListings',
-          actor: actor.id,
-          moderation,
-          visibility,
+      const page = await this.pages.page(
+        tx.c.listings,
+        [
+          {
+            $match: {
+              ownerId: actor._id,
+              deletedAt: null,
+              ...(moderation ? { moderation } : {}),
+              ...(visibility ? { visibility } : {}),
+            },
+          },
+          { $project: { key: '$updatedAt' } },
+        ],
+        {
+          kind: 'time',
+          ascending: false,
+          scope: {
+            operation: 'listMyListings',
+            actor: actor._id,
+            moderation,
+            visibility,
+          },
+          limit: Number(query.limit),
+          cursor: query.cursor as string | undefined,
         },
-        limit: Number(query.limit),
-        cursor: query.cursor as string | undefined,
-      });
-      const listings = await tx.listing.findMany({
-        where: { id: { in: page.ids } },
-        include: details,
-      });
+      );
+      const items = [];
+      for (const listingId of page.ids)
+        items.push(projection((await loadListing(tx.c, listingId))!));
       return {
-        items: page.ids.map((id) =>
-          projection(listings.find((l) => l.id === id)!),
-        ),
+        items,
         nextCursor: page.nextCursor,
         serverTime: page.serverTime,
       };
@@ -229,25 +284,25 @@ export class ListingDraftsService {
   history(auth: Actor, id: string, query: Record<string, string | number>) {
     return this.commands.read(auth, async (tx, actor) => {
       member(actor);
-      await this.own(tx, id, actor.id);
-      const page = await this.pages.select(tx, {
-        from: Prisma.sql`listing_revisions r`,
-        id: Prisma.sql`r.id`,
-        key: Prisma.sql`r.number`,
-        kind: 'number',
-        ascending: false,
-        where: Prisma.sql`r.listing_id=${id}::uuid`,
-        scope: { operation: 'listMyListingRevisions', actor: actor.id, id },
-        limit: Number(query.limit),
-        cursor: query.cursor as string | undefined,
-      });
-      const revisions = await tx.listingRevision.findMany({
-        where: { id: { in: page.ids } },
-        include: revisionDetails,
-      });
+      await this.own(tx, id, actor._id);
+      const page = await this.pages.page(
+        tx.c.listing_revisions,
+        [{ $match: { listingId: id } }, { $project: { key: '$number' } }],
+        {
+          kind: 'number',
+          ascending: false,
+          scope: { operation: 'listMyListingRevisions', actor: actor._id, id },
+          limit: Number(query.limit),
+          cursor: query.cursor as string | undefined,
+        },
+      );
+      const docs = await tx.c.listing_revisions
+        .find({ _id: { $in: page.ids } })
+        .toArray();
+      const revisions = await loadRevisions(tx.c, docs);
       return {
-        items: page.ids.map((id) =>
-          revision(revisions.find((r) => r.id === id)!),
+        items: page.ids.map((rid) =>
+          revision(revisions.find((r) => r._id === rid)!),
         ),
         nextCursor: page.nextCursor,
         serverTime: page.serverTime,

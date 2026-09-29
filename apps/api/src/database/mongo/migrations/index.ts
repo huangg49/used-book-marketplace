@@ -4,6 +4,11 @@ import { canonicalJson } from '../../../common/canonical-json.js';
 import type { CollectionSpec } from '../schema-dsl.js';
 import { baselineCollections } from './0001-baseline-schema.js';
 import { insertReferenceData, referenceData } from './0002-reference-data.js';
+import {
+  backfillTitleKeys,
+  catalogTitleKey,
+  withTitleKey,
+} from './0003-catalog-title-key.js';
 
 export interface Migration {
   id: string;
@@ -59,6 +64,19 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    id: '0003-catalog-title-key',
+    definition: catalogTitleKey,
+    async up(db) {
+      await backfillTitleKeys(db);
+      await applyCollectionSpecs(
+        db,
+        baselineCollections
+          .filter((spec) => spec.name === catalogTitleKey.collection)
+          .map(withTitleKey),
+      );
+    },
+  },
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -67,4 +85,5 @@ export const checksumOf = (migration: Migration) =>
     .digest('hex');
 
 // The latest schema, for tests and for the app role privileges.
-export const currentCollections = (): CollectionSpec[] => baselineCollections;
+export const currentCollections = (): CollectionSpec[] =>
+  baselineCollections.map(withTitleKey);

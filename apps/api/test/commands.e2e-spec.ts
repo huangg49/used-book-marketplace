@@ -87,6 +87,7 @@ async function book(requesterId: string) {
     currentRevisionId: null,
     confirmedIsbn: null,
     searchText: '',
+    titleKey: '',
     createdAt: now,
     updatedAt: now,
     lockSeq: 0,

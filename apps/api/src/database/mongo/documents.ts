@@ -60,6 +60,8 @@ export interface CatalogBookDoc extends Lockable {
   currentRevisionId: string | null;
   confirmedIsbn: string | null;
   searchText: string;
+  // Normalized title of the current revision (migration 0003).
+  titleKey: string;
   createdAt: Date;
   updatedAt: Date;
 }

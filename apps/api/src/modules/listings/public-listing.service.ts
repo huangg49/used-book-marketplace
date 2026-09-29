@@ -1,121 +1,236 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '../../generated/prisma/client.js';
-import { DatabaseService } from '../../database/database.service.js';
-import { PageService } from '../commands/page.service.js';
+import type { Document } from 'mongodb';
+import type {
+  CatalogBookDoc,
+  CatalogRevisionDoc,
+  ListingDoc,
+  ListingMediaDoc,
+  ListingRevisionDoc,
+  RevisionMediaDoc,
+  UserDoc,
+} from '../../database/mongo/documents.js';
+import { MongoService } from '../../database/mongo/mongo.service.js';
+import type { Tx } from '../../database/mongo/transaction.js';
 import {
-  isbn13,
-  likeLiteral,
-  normalizeSearch,
-} from '../commands/contract-input.service.js';
+  MongoPageService,
+  regexLiteral,
+} from '../commands/mongo-page.service.js';
+import { isbn13, normalizeSearch } from '../commands/contract-input.service.js';
 import { invalidField, notFound, type Wire } from '../commands/domain-error.js';
 import { MediaStorage } from '../media/media-storage.js';
-import { originInclude, originStatus } from './listing-fulfillment.service.js';
+import { originStatus } from './listing-fulfillment.service.js';
 
-// One predicate for shelf, detail and signed reads. These are current eligibility
-// checks, not a historical approval badge. Future commitments must extend it.
-export const publicFrom = Prisma.sql`listings l
-  JOIN listing_revisions r ON r.id=l.current_revision_id AND r.listing_id=l.id
-  JOIN catalog_books b ON b.id=r.book_id
-  JOIN users u ON u.id=l.owner_id`;
-export const publicEligible = Prisma.sql`l.moderation='Approved' AND l.visibility='Visible'
-  AND l.trade='Available' AND l.deleted_at IS NULL AND l.published_at IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM exclusive_commitments ec WHERE ec.listing_id=l.id AND ec.status='Active')
-  AND r.submitted_at IS NOT NULL AND b.status='Confirmed'
-  AND u.status='ACTIVE' AND u.email_verified_at IS NOT NULL
-  AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id=u.id AND ur.role='MEMBER')
-  AND EXISTS (SELECT 1 FROM listing_decisions d WHERE d.revision_id=r.id AND d.decision='Approve')
-  AND EXISTS (SELECT 1 FROM revision_media rm WHERE rm.revision_id=r.id)
-  AND NOT EXISTS (SELECT 1 FROM revision_media rm JOIN listing_media m ON m.id=rm.media_id
-    WHERE rm.revision_id=r.id AND (m.status<>'Ready' OR m.purged_at IS NOT NULL
-      OR m.derivative_key IS NULL OR m.width IS NULL OR m.height IS NULL))`;
-const details = {
-  owner: { select: { id: true, displayName: true } },
-  currentRevision: {
-    include: {
-      originAddress: originInclude,
-      book: { include: { currentRevision: true } },
-      media: {
-        orderBy: { position: 'asc' as const },
-        include: { media: { select: { id: true, width: true, height: true } } },
+// One predicate for shelf, detail and signed reads (the PostgreSQL publicFrom +
+// publicEligible). These are current eligibility checks, not a historical
+// approval badge. Output documents carry r (revision), b (book), u (owner),
+// rm (photo links) and m (photos).
+export function publicEligibleStages(): Document[] {
+  const ready = {
+    $and: [
+      { $eq: ['$$this.status', 'Ready'] },
+      { $eq: ['$$this.purgedAt', null] },
+      { $ne: ['$$this.derivativeKey', null] },
+      { $ne: ['$$this.width', null] },
+      { $ne: ['$$this.height', null] },
+    ],
+  };
+  return [
+    {
+      $match: {
+        moderation: 'Approved',
+        visibility: 'Visible',
+        trade: 'Available',
+        deletedAt: null,
+        publishedAt: { $ne: null },
       },
     },
-  },
-} satisfies Prisma.ListingInclude;
-type Listing = Prisma.ListingGetPayload<{ include: typeof details }>;
-function projection(l: Listing): Wire['PublicListing'] {
-  const r = l.currentRevision!,
-    b = r.book!,
-    metadata = b.currentRevision!;
-  const content = {
-    fulfillment:
-      originStatus(r) === 'Current'
-        ? {
-            serviceAreaCode: 'HCM-DEMO-v1' as const,
-            name: 'TP.HCM' as const,
-            demoOnly: true as const,
-            method: 'DirectDelivery' as const,
-          }
-        : null,
-    id: l.id,
-    revisionId: r.id,
-    version: l.version,
-    book: {
-      id: b.id,
-      title: metadata.title,
-      authors: metadata.authors,
-      publisher: metadata.publisher,
-      publicationYear: metadata.publicationYear,
-      language: metadata.language,
-      edition: metadata.edition,
-      category: metadata.category,
-      isbn: metadata.isbn,
+    {
+      $lookup: {
+        from: 'exclusive_commitments',
+        localField: '_id',
+        foreignField: 'listingId',
+        pipeline: [{ $match: { status: 'Active' } }, { $limit: 1 }],
+        as: 'active',
+      },
     },
-    condition: r.condition!,
-    pages: r.pages,
-    coverNote: r.coverNote,
-    notes: r.notes,
-    accessories: r.accessories,
-    readable: true as const,
-    hasMissingPages: r.hasMissingPages!,
-    missingEssentialContent: false as const,
-    description: r.description,
-    seller: l.owner,
-    photos: r.media.map(({ media }) => ({
-      id: media.id,
-      width: media.width!,
-      height: media.height!,
-    })),
-    publishedAt: l.publishedAt!.toISOString(),
-  };
-  // Submitted/approved invariants enforce the selected mode's price requirements.
-  if (r.mode === 'Sale')
-    return {
-      ...content,
-      mode: 'Sale',
-      salePrice: r.salePrice!,
-      exchangeValue: null,
-    };
-  if (r.mode === 'Exchange')
-    return {
-      ...content,
-      mode: 'Exchange',
-      salePrice: null,
-      exchangeValue: r.exchangeValue!,
-    };
-  return {
-    ...content,
-    mode: 'Both',
-    salePrice: r.salePrice!,
-    exchangeValue: r.exchangeValue!,
-  };
+    { $match: { active: { $size: 0 } } },
+    {
+      $lookup: {
+        from: 'listing_revisions',
+        localField: 'currentRevisionId',
+        foreignField: '_id',
+        as: 'r',
+      },
+    },
+    { $unwind: '$r' },
+    {
+      $match: {
+        $expr: { $eq: ['$r.listingId', '$_id'] },
+        'r.submittedAt': { $ne: null },
+      },
+    },
+    {
+      $lookup: {
+        from: 'catalog_books',
+        localField: 'r.bookId',
+        foreignField: '_id',
+        as: 'b',
+      },
+    },
+    { $unwind: '$b' },
+    { $match: { 'b.status': 'Confirmed' } },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'ownerId',
+        foreignField: '_id',
+        as: 'u',
+      },
+    },
+    { $unwind: '$u' },
+    {
+      $match: {
+        'u.status': 'ACTIVE',
+        'u.emailVerifiedAt': { $ne: null },
+        'u.roles.role': 'MEMBER',
+      },
+    },
+    {
+      $lookup: {
+        from: 'listing_decisions',
+        localField: 'r._id',
+        foreignField: 'revisionId',
+        as: 'd',
+      },
+    },
+    { $match: { 'd.decision': 'Approve' } },
+    {
+      $lookup: {
+        from: 'revision_media',
+        localField: 'r._id',
+        foreignField: 'revisionId',
+        as: 'rm',
+      },
+    },
+    { $match: { 'rm.0': { $exists: true } } },
+    {
+      $lookup: {
+        from: 'listing_media',
+        localField: 'rm.mediaId',
+        foreignField: '_id',
+        as: 'm',
+      },
+    },
+    {
+      $match: {
+        $expr: {
+          $and: [
+            { $eq: [{ $size: '$m' }, { $size: '$rm' }] },
+            { $allElementsTrue: [{ $map: { input: '$m', in: ready } }] },
+          ],
+        },
+      },
+    },
+  ];
 }
+
+type Eligible = ListingDoc & {
+  r: ListingRevisionDoc;
+  b: CatalogBookDoc;
+  u: UserDoc;
+  rm: RevisionMediaDoc[];
+  m: ListingMediaDoc[];
+};
+
 @Injectable()
 export class PublicListingService {
   constructor(
-    private readonly db: DatabaseService,
-    private readonly pages: PageService,
+    private readonly mongo: MongoService,
+    private readonly pages: MongoPageService,
     private readonly storage: MediaStorage,
   ) {}
+
+  private async projection(
+    tx: Tx,
+    l: Eligible,
+  ): Promise<Wire['PublicListing']> {
+    const r = l.r,
+      b = l.b;
+    const metadata = (await tx.c.catalog_revisions.findOne({
+      _id: b.currentRevisionId!,
+    })) as CatalogRevisionDoc;
+    const origin = r.originAddressId
+      ? await tx.c.member_addresses.findOne({ _id: r.originAddressId })
+      : null;
+    const photos = [...l.rm]
+      .sort((x, y) => x.position - y.position)
+      .map((link) => l.m.find((m) => m._id === link.mediaId)!);
+    const content = {
+      fulfillment:
+        originStatus({
+          ...r,
+          originCurrentVersion: origin?.version ?? null,
+        }) === 'Current'
+          ? {
+              serviceAreaCode: 'HCM-DEMO-v1' as const,
+              name: 'TP.HCM' as const,
+              demoOnly: true as const,
+              method: 'DirectDelivery' as const,
+            }
+          : null,
+      id: l._id,
+      revisionId: r._id,
+      version: l.version,
+      book: {
+        id: b._id,
+        title: metadata.title,
+        authors: metadata.authors,
+        publisher: metadata.publisher,
+        publicationYear: metadata.publicationYear,
+        language: metadata.language,
+        edition: metadata.edition,
+        category: metadata.category,
+        isbn: metadata.isbn,
+      },
+      condition: r.condition!,
+      pages: r.pages,
+      coverNote: r.coverNote,
+      notes: r.notes,
+      accessories: r.accessories,
+      readable: true as const,
+      hasMissingPages: r.hasMissingPages!,
+      missingEssentialContent: false as const,
+      description: r.description,
+      seller: { id: l.u._id, displayName: l.u.displayName },
+      photos: photos.map((m) => ({
+        id: m._id,
+        width: m.width!,
+        height: m.height!,
+      })),
+      publishedAt: l.publishedAt!.toISOString(),
+    };
+    // Submitted/approved invariants enforce the selected mode's price requirements.
+    if (r.mode === 'Sale')
+      return {
+        ...content,
+        mode: 'Sale',
+        salePrice: r.salePrice!,
+        exchangeValue: null,
+      };
+    if (r.mode === 'Exchange')
+      return {
+        ...content,
+        mode: 'Exchange',
+        salePrice: null,
+        exchangeValue: r.exchangeValue!,
+      };
+    return {
+      ...content,
+      mode: 'Both',
+      salePrice: r.salePrice!,
+      exchangeValue: r.exchangeValue!,
+    };
+  }
 
   async list(
     query: Record<string, string | number>,
@@ -150,92 +265,99 @@ export class PublicListingService {
       maxExchangeValue: query.maxExchangeValue ?? null,
       sort,
     };
-    const parts = [
-      publicEligible,
-      Prisma.sql`(${q}='' OR b.search_text LIKE ${'%' + likeLiteral(q) + '%'} OR b.confirmed_isbn=${isbn})`,
-    ];
-    if (scope.bookId) parts.push(Prisma.sql`b.id=${scope.bookId}::uuid`);
-    if (query.condition)
-      parts.push(Prisma.sql`r.condition::text=${query.condition}`);
+    const match: Record<string, unknown> = {};
+    const and: Record<string, unknown>[] = [];
+    if (q)
+      and.push({
+        $or: [
+          { 'b.searchText': { $regex: regexLiteral(q) } },
+          ...(isbn ? [{ 'b.confirmedIsbn': isbn }] : []),
+        ],
+      });
+    if (scope.bookId) match['b._id'] = scope.bookId;
+    if (query.condition) match['r.condition'] = query.condition;
     if (query.mode)
-      parts.push(
-        query.mode === 'Both'
-          ? Prisma.sql`r.mode='Both'`
-          : Prisma.sql`(r.mode::text=${query.mode} OR r.mode='Both')`,
-      );
-    for (const [field, column, minimum] of [
-      ['minSalePrice', Prisma.sql`r.sale_price`, true],
-      ['maxSalePrice', Prisma.sql`r.sale_price`, false],
-      ['minExchangeValue', Prisma.sql`r.exchange_value`, true],
-      ['maxExchangeValue', Prisma.sql`r.exchange_value`, false],
+      match['r.mode'] =
+        query.mode === 'Both' ? 'Both' : { $in: [query.mode, 'Both'] };
+    for (const [field, path, op] of [
+      ['minSalePrice', 'r.salePrice', '$gte'],
+      ['maxSalePrice', 'r.salePrice', '$lte'],
+      ['minExchangeValue', 'r.exchangeValue', '$gte'],
+      ['maxExchangeValue', 'r.exchangeValue', '$lte'],
     ] as const)
       if (query[field] !== undefined)
-        parts.push(
-          Prisma.sql`${column} ${minimum ? Prisma.sql`>=` : Prisma.sql`<=`} ${Number(query[field])}`,
-        );
+        and.push({ [path]: { [op]: Number(query[field]) } });
     const key = sort.startsWith('salePrice')
-      ? Prisma.sql`r.sale_price`
+      ? '$r.salePrice'
       : sort.startsWith('exchangeValue')
-        ? Prisma.sql`r.exchange_value`
-        : Prisma.sql`l.published_at`;
-    parts.push(Prisma.sql`${key} IS NOT NULL`);
+        ? '$r.exchangeValue'
+        : '$publishedAt';
     // The ID selection and projection share one snapshot: no revision/owner change
     // between two queries can turn a selected public row into private content.
-    return this.db.$transaction(
-      async (tx) => {
-        const page = await this.pages.select(tx, {
-          from: publicFrom,
-          id: Prisma.sql`l.id`,
-          key,
+    return this.mongo.tx(async (tx) => {
+      const page = await this.pages.page(
+        tx.c.listings,
+        [
+          ...publicEligibleStages(),
+          { $match: { ...match, ...(and.length ? { $and: and } : {}) } },
+          { $project: { key } },
+          { $match: { key: { $ne: null } } },
+        ],
+        {
           kind: sort === 'newest' ? 'time' : 'number',
           ascending: sort.endsWith('Asc'),
-          where: Prisma.join(parts, ' AND '),
           scope,
           limit: Number(query.limit),
           cursor: query.cursor as string | undefined,
-        });
-        const rows = await tx.listing.findMany({
-          where: { id: { in: page.ids } },
-          include: details,
-        });
-        const byId = new Map(rows.map((row) => [row.id, row]));
-        return {
-          items: page.ids.map((id) => projection(byId.get(id)!)),
-          nextCursor: page.nextCursor,
-          serverTime: page.serverTime,
-        };
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
-    );
+        },
+      );
+      const rows = await tx.c.listings
+        .aggregate<Eligible>([
+          ...publicEligibleStages(),
+          { $match: { _id: { $in: page.ids } } },
+        ])
+        .toArray();
+      const items = [];
+      for (const id of page.ids) {
+        const row = rows.find((l) => l._id === id);
+        if (row) items.push(await this.projection(tx, row));
+      }
+      return {
+        items,
+        nextCursor: page.nextCursor,
+        serverTime: page.serverTime,
+      };
+    });
   }
   detail(id: string): Promise<Wire['PublicListing']> {
-    return this.db.$transaction(
-      async (tx) => {
-        const rows = await tx.$queryRaw<{ id: string }[]>(
-          Prisma.sql`SELECT l.id FROM ${publicFrom} WHERE ${publicEligible} AND l.id=${id}::uuid`,
-        );
-        if (!rows.length) throw notFound();
-        return projection(
-          await tx.listing.findUniqueOrThrow({
-            where: { id },
-            include: details,
-          }),
-        );
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
-    );
+    return this.mongo.tx(async (tx) => {
+      const [row] = await tx.c.listings
+        .aggregate<Eligible>([
+          { $match: { _id: id } },
+          ...publicEligibleStages(),
+        ])
+        .toArray();
+      if (!row) throw notFound();
+      return this.projection(tx, row);
+    });
   }
   async media(listingId: string, mediaId: string): Promise<Wire['MediaRead']> {
     const authorize = async () => {
-      const rows = await this.db.$queryRaw<
-        { revisionId: string; key: string; width: number; height: number }[]
-      >(Prisma.sql`
-        SELECT r.id AS "revisionId", m.derivative_key AS key, m.width, m.height
-        FROM ${publicFrom} JOIN revision_media rm ON rm.revision_id=r.id
-        JOIN listing_media m ON m.id=rm.media_id
-        WHERE ${publicEligible} AND l.id=${listingId}::uuid AND m.id=${mediaId}::uuid`);
-      if (!rows.length) throw notFound();
-      return rows[0];
+      const [row] = await this.mongo.c.listings
+        .aggregate<Eligible>([
+          { $match: { _id: listingId } },
+          ...publicEligibleStages(),
+          { $match: { 'rm.mediaId': mediaId } },
+        ])
+        .toArray();
+      const m = row?.m.find((x) => x._id === mediaId);
+      if (!row || !m) throw notFound();
+      return {
+        revisionId: row.r._id,
+        key: m.derivativeKey!,
+        width: m.width!,
+        height: m.height!,
+      };
     };
     const before = await authorize();
     await this.storage.check();

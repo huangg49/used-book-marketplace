@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, type SaleQuote } from '../../generated/prisma/client.js';
-import { CatalogService } from '../catalog/catalog.service.js';
+import { LegacyCatalogLocks } from '../catalog/legacy-catalog-locks.js';
 import {
   CommandService,
   member,
@@ -17,10 +17,7 @@ import {
   notFound,
   type Wire,
 } from '../commands/domain-error.js';
-import {
-  publicEligible,
-  publicFrom,
-} from '../listings/public-listing.service.js';
+import { publicEligible, publicFrom } from '../listings/legacy-public-sql.js';
 import { QuoteClock } from './quote-clock.js';
 import { quoteAmounts } from './quote-money.js';
 
@@ -28,7 +25,7 @@ import { quoteAmounts } from './quote-money.js';
 export class QuotesService {
   constructor(
     private readonly commands: CommandService,
-    private readonly catalog: CatalogService,
+    private readonly catalog: LegacyCatalogLocks,
     private readonly clock: QuoteClock,
   ) {}
   private async listing(tx: Tx, id: string) {

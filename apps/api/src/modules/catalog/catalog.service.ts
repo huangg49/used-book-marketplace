@@ -1,15 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, type CatalogRevision } from '../../generated/prisma/client.js';
-import { DatabaseService } from '../../database/database.service.js';
+import { randomUUID } from 'node:crypto';
+import { MongoServerError } from 'mongodb';
+import type {
+  CatalogBookDoc,
+  CatalogDecisionDoc,
+  CatalogRevisionDoc,
+} from '../../database/mongo/documents.js';
+import { MongoService } from '../../database/mongo/mongo.service.js';
+import type { Tx } from '../../database/mongo/transaction.js';
+import { titleKey } from '../../database/mongo/migrations/0003-catalog-title-key.js';
 import {
-  CommandService,
+  MongoCommandService,
   admin,
   member,
   requireActive,
   type CommandContext,
   type Actor,
-  type Tx,
-} from '../commands/command.service.js';
+} from '../commands/mongo-command.service.js';
 import {
   DomainError,
   conflict,
@@ -17,22 +24,23 @@ import {
   notFound,
   type Wire,
 } from '../commands/domain-error.js';
+import { isbn13, normalizeSearch } from '../commands/contract-input.service.js';
 import {
-  isbn13,
-  likeLiteral,
-  normalizeSearch,
-} from '../commands/contract-input.service.js';
-import { PageService } from '../commands/page.service.js';
+  MongoPageService,
+  regexLiteral,
+} from '../commands/mongo-page.service.js';
+import type {
+  BoundCollection,
+  Collections,
+} from '../../database/mongo/collections.js';
 
-const details = {
-  currentRevision: true,
-  revisions: {
-    orderBy: { number: 'asc' as const },
-    include: { decision: true },
-  },
-} satisfies Prisma.CatalogBookInclude;
-type Book = Prisma.CatalogBookGetPayload<{ include: typeof details }>;
-function metadata(r: CatalogRevision): Wire['CatalogMetadata'] {
+type Revision = CatalogRevisionDoc & { decision: CatalogDecisionDoc | null };
+export type Book = CatalogBookDoc & {
+  currentRevision: CatalogRevisionDoc | null;
+  revisions: Revision[];
+};
+
+function metadata(r: CatalogRevisionDoc): Wire['CatalogMetadata'] {
   return {
     title: r.title,
     authors: r.authors,
@@ -47,12 +55,12 @@ function metadata(r: CatalogRevision): Wire['CatalogMetadata'] {
 function privateBook(b: Book): Wire['PrivateCatalogRequest'] {
   const current = b.currentRevision!;
   return {
-    id: b.id,
+    id: b._id,
     version: b.version,
     status: b.status,
     requesterId: b.requesterId,
     currentRevision: {
-      id: current.id,
+      id: current._id,
       number: current.number,
       metadata: metadata(current),
       submittedAt: current.submittedAt.toISOString(),
@@ -61,8 +69,8 @@ function privateBook(b: Book): Wire['PrivateCatalogRequest'] {
       r.decision
         ? [
             {
-              id: r.decision.id,
-              revisionId: r.id,
+              id: r.decision._id,
+              revisionId: r._id,
               decision: r.decision.decision,
               reason: r.decision.reason,
               decidedAt: r.decision.decidedAt.toISOString(),
@@ -74,19 +82,74 @@ function privateBook(b: Book): Wire['PrivateCatalogRequest'] {
     updatedAt: b.updatedAt.toISOString(),
   };
 }
+const revisionFields = (m: Wire['CatalogMetadata']) => ({
+  title: m.title,
+  authors: m.authors,
+  publisher: m.publisher ?? null,
+  publicationYear: m.publicationYear ?? null,
+  language: m.language,
+  edition: m.edition ?? null,
+  category: m.category,
+  isbn: m.isbn ?? null,
+});
+
+// Loads a book with its current revision and every revision/decision.
+export async function loadBook(
+  c: Collections,
+  id: string,
+): Promise<Book | null> {
+  const book = await c.catalog_books.findOne({ _id: id });
+  if (!book) return null;
+  const revisions = await c.catalog_revisions
+    .find({ bookId: id }, { sort: { number: 1 } })
+    .toArray();
+  const decisions = await c.catalog_decisions
+    .find({ revisionId: { $in: revisions.map((r) => r._id) } })
+    .toArray();
+  const byRevision = new Map(decisions.map((d) => [d.revisionId, d]));
+  return {
+    ...book,
+    currentRevision:
+      revisions.find((r) => r._id === book.currentRevisionId) ?? null,
+    revisions: revisions.map((r) => ({
+      ...r,
+      decision: byRevision.get(r._id) ?? null,
+    })),
+  };
+}
+
+// Commit-time replacement for latlai_check_catalog (deferred constraint).
+export async function checkCatalog(tx: Tx, bookId: string) {
+  const b = await loadBook(tx.c, bookId);
+  if (!b) return;
+  const r = b.currentRevision;
+  if (!r) throw new Error('Catalog requires its own current revision');
+  const d = b.revisions.find((x) => x._id === r._id)!.decision?.decision;
+  if (
+    (b.status === 'Pending' && d) ||
+    (b.status === 'Confirmed' && d !== 'Confirm') ||
+    (b.status === 'Rejected' && d !== 'Reject')
+  )
+    throw new Error('Catalog state does not match current decision');
+  if (
+    b.status === 'Confirmed' &&
+    b.confirmedIsbn !== (r.isbn ? isbn13(r.isbn) : null)
+  )
+    throw new Error('Confirmed ISBN does not match reviewed revision');
+  if (b.titleKey !== titleKey(r.title))
+    throw new Error('Catalog sort key does not match current revision');
+}
+
 @Injectable()
 export class CatalogService {
   constructor(
-    private readonly db: DatabaseService,
-    private readonly commands: CommandService,
-    private readonly pages: PageService,
+    private readonly mongo: MongoService,
+    private readonly commands: MongoCommandService,
+    private readonly pages: MongoPageService,
   ) {}
   private async locked(tx: Tx, id: string) {
-    await tx.$queryRaw`SELECT id FROM catalog_books WHERE id=${id}::uuid FOR UPDATE`;
-    const book = await tx.catalogBook.findUnique({
-      where: { id },
-      include: details,
-    });
+    await tx.lock('catalog_books', [id]);
+    const book = await loadBook(tx.c, id);
     if (!book) throw notFound();
     return book;
   }
@@ -103,15 +166,15 @@ export class CatalogService {
     return bookId ? this.locked(tx, bookId) : null;
   }
   private async noDuplicate(tx: Tx, isbn: string | null) {
-    if (
-      isbn &&
-      (await tx.catalogBook.findUnique({ where: { confirmedIsbn: isbn } }))
-    )
+    if (isbn && (await tx.c.catalog_books.findOne({ confirmedIsbn: isbn })))
       throw new DomainError(
         409,
         'CatalogDuplicate',
         'Đầu sách có ISBN này đã có trong danh mục. Hãy tìm và chọn đầu sách đó.',
       );
+  }
+  private verify(tx: Tx, id: string) {
+    tx.check(`catalog:${id}`, () => checkCatalog(tx, id));
   }
   create(context: CommandContext, body: Wire['CreateCatalogRequest']) {
     return this.commands.run(context, 'createCatalogRequest', null, body, {
@@ -121,26 +184,37 @@ export class CatalogService {
       mutate: async (tx, actor) => {
         requireActive(actor);
         await this.noDuplicate(tx, body.metadata.isbn);
-        const b = await tx.catalogBook.create({
-          data: {
-            requesterId: actor.id,
-            searchText: normalizeSearch(
-              body.metadata.title + ' ' + body.metadata.authors.join(' '),
-            ),
-          },
+        const now = await tx.now();
+        const bookId = randomUUID(),
+          revisionId = randomUUID();
+        await tx.c.catalog_revisions.insertOne({
+          _id: revisionId,
+          bookId,
+          number: 1,
+          ...revisionFields(body.metadata),
+          submittedAt: now,
         });
-        const r = await tx.catalogRevision.create({
-          data: { ...body.metadata, bookId: b.id, number: 1 },
+        await tx.c.catalog_books.insertOne({
+          _id: bookId,
+          requesterId: actor._id,
+          status: 'Pending',
+          version: 1,
+          currentRevisionId: revisionId,
+          confirmedIsbn: null,
+          searchText: normalizeSearch(
+            body.metadata.title + ' ' + body.metadata.authors.join(' '),
+          ),
+          titleKey: titleKey(body.metadata.title),
+          createdAt: now,
+          updatedAt: new Date(),
+          lockSeq: 0,
         });
-        await tx.catalogBook.update({
-          where: { id: b.id },
-          data: { currentRevisionId: r.id },
-        });
+        this.verify(tx, bookId);
         return {
           entityType: 'Catalog',
-          entityId: b.id,
+          entityId: bookId,
           version: 1,
-          revisionId: r.id,
+          revisionId,
           state: 'Pending',
           event: 'CatalogRequested',
         };
@@ -156,7 +230,7 @@ export class CatalogService {
       authorize: async (tx, actor) => {
         member(actor);
         const b = await this.locked(tx, id);
-        if (b.requesterId !== actor.id) throw notFound();
+        if (b.requesterId !== actor._id) throw notFound();
         return b;
       },
       mutate: async (tx, actor, b) => {
@@ -165,29 +239,36 @@ export class CatalogService {
         if (b.status !== 'Rejected' || b.currentRevision!.number >= 1000)
           throw invalidState();
         await this.noDuplicate(tx, body.metadata.isbn);
-        const r = await tx.catalogRevision.create({
-          data: {
-            ...body.metadata,
-            bookId: id,
-            number: b.currentRevision!.number + 1,
-          },
+        const revisionId = randomUUID();
+        await tx.c.catalog_revisions.insertOne({
+          _id: revisionId,
+          bookId: id,
+          number: b.currentRevision!.number + 1,
+          ...revisionFields(body.metadata),
+          submittedAt: await tx.now(),
         });
-        await tx.catalogBook.update({
-          where: { id },
-          data: {
-            currentRevisionId: r.id,
-            status: 'Pending',
-            version: { increment: 1 },
-            searchText: normalizeSearch(
-              body.metadata.title + ' ' + body.metadata.authors.join(' '),
-            ),
+        // Version advances once; a Confirmed book is never rewritten.
+        await tx.c.catalog_books.updateOne(
+          { _id: id, version: b.version, status: { $ne: 'Confirmed' } },
+          {
+            $set: {
+              currentRevisionId: revisionId,
+              status: 'Pending',
+              updatedAt: new Date(),
+              searchText: normalizeSearch(
+                body.metadata.title + ' ' + body.metadata.authors.join(' '),
+              ),
+              titleKey: titleKey(body.metadata.title),
+            },
+            $inc: { version: 1 },
           },
-        });
+        );
+        this.verify(tx, id);
         return {
           entityType: 'Catalog',
           entityId: id,
           version: b.version + 1,
-          revisionId: r.id,
+          revisionId,
           state: 'Pending',
           before: { version: b.version, status: b.status },
           event: 'CatalogRequested',
@@ -208,13 +289,13 @@ export class CatalogService {
         body,
         {
           discover: async (tx) => {
-            const b = await tx.catalogBook.findUnique({ where: { id } });
+            const b = await tx.c.catalog_books.findOne({ _id: id });
             return b ? [b.requesterId] : [];
           },
           authorize: async (tx, actor) => {
             admin(actor);
             const b = await this.locked(tx, id);
-            if (b.requesterId === actor.id)
+            if (b.requesterId === actor._id)
               throw new DomainError(
                 403,
                 'SelfReviewForbidden',
@@ -231,27 +312,31 @@ export class CatalogService {
             if (b.status !== 'Pending') throw invalidState();
             if (body.decision === 'Confirm')
               await this.noDuplicate(tx, b.currentRevision!.isbn);
-            await tx.catalogDecision.create({
-              data: {
-                revisionId: body.revisionId,
-                reviewerId: context.auth.user.id,
-                decision: body.decision,
-                reason: body.decision === 'Reject' ? body.reason : null,
-              },
+            await tx.c.catalog_decisions.insertOne({
+              _id: randomUUID(),
+              revisionId: body.revisionId,
+              reviewerId: context.auth.user.id,
+              decision: body.decision,
+              reason: body.decision === 'Reject' ? body.reason : null,
+              decidedAt: await tx.now(),
             });
             const state =
               body.decision === 'Confirm'
                 ? ('Confirmed' as const)
                 : ('Rejected' as const);
-            await tx.catalogBook.update({
-              where: { id },
-              data: {
-                status: state,
-                version: { increment: 1 },
-                confirmedIsbn:
-                  state === 'Confirmed' ? b.currentRevision!.isbn : null,
+            await tx.c.catalog_books.updateOne(
+              { _id: id, version: b.version, status: 'Pending' },
+              {
+                $set: {
+                  status: state,
+                  updatedAt: new Date(),
+                  confirmedIsbn:
+                    state === 'Confirmed' ? b.currentRevision!.isbn : null,
+                },
+                $inc: { version: 1 },
               },
-            });
+            );
+            this.verify(tx, id);
             return {
               entityType: 'Catalog',
               entityId: id,
@@ -267,10 +352,8 @@ export class CatalogService {
         },
       );
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      )
+      // A concurrent confirmation committed the same ISBN first.
+      if (error instanceof MongoServerError && error.code === 11000)
         throw new DomainError(
           409,
           'CatalogDuplicate',
@@ -280,40 +363,55 @@ export class CatalogService {
     }
   }
   async publicDetail(id: string): Promise<Wire['PublicBook']> {
-    const b = await this.db.catalogBook.findFirst({
-      where: { id, status: 'Confirmed' },
-      include: { currentRevision: true },
+    const b = await this.mongo.c.catalog_books.findOne({
+      _id: id,
+      status: 'Confirmed',
     });
-    if (!b?.currentRevision) throw notFound();
-    return { id: b.id, ...metadata(b.currentRevision) };
+    const r =
+      b?.currentRevisionId &&
+      (await this.mongo.c.catalog_revisions.findOne({
+        _id: b.currentRevisionId,
+      }));
+    if (!b || !r) throw notFound();
+    return { id: b._id, ...metadata(r) };
   }
   async publicList(
     query: Record<string, string | number>,
   ): Promise<Wire['BookPage']> {
     const q = normalizeSearch(String(query.q ?? '')),
       isbn = isbn13(String(query.q ?? ''));
-    return this.db.$transaction(async (tx) => {
-      const page = await this.pages.select(tx, {
-        from: Prisma.sql`catalog_books b JOIN catalog_revisions r ON r.id=b.current_revision_id`,
-        id: Prisma.sql`b.id`,
-        key: Prisma.sql`replace(regexp_replace(normalize(lower(r.title), NFD), ${'[\u0300-\u036f]'}, '', 'g'),'đ','d')`,
-        kind: 'text',
-        ascending: true,
-        where: Prisma.sql`b.status='Confirmed' AND (${q}='' OR b.search_text LIKE ${'%' + likeLiteral(q) + '%'} OR b.confirmed_isbn=${isbn})`,
-        scope: { operation: 'listBooks', q, isbn },
-        limit: Number(query.limit),
-        cursor: query.cursor as string | undefined,
-      });
-      const books = await tx.catalogBook.findMany({
-        where: { id: { in: page.ids }, status: 'Confirmed' },
-        include: { currentRevision: true },
-      });
+    // One snapshot for the page selection and its projection.
+    return this.mongo.tx(async (tx) => {
+      const match: Record<string, unknown> = { status: 'Confirmed' };
+      if (q)
+        match.$or = [
+          { searchText: { $regex: regexLiteral(q) } },
+          ...(isbn ? [{ confirmedIsbn: isbn }] : []),
+        ];
+      const page = await this.pages.page(
+        tx.c.catalog_books,
+        [{ $match: match }, { $project: { key: '$titleKey' } }],
+        {
+          kind: 'text',
+          ascending: true,
+          scope: { operation: 'listBooks', q, isbn },
+          limit: Number(query.limit),
+          cursor: query.cursor as string | undefined,
+        },
+      );
+      const books = await tx.c.catalog_books
+        .find({ _id: { $in: page.ids }, status: 'Confirmed' })
+        .toArray();
+      const revisions = await tx.c.catalog_revisions
+        .find({
+          _id: { $in: books.flatMap((b) => b.currentRevisionId ?? []) },
+        })
+        .toArray();
       return {
         items: page.ids.flatMap((id) => {
-          const b = books.find((b) => b.id === id);
-          return b?.currentRevision
-            ? [{ id: b.id, ...metadata(b.currentRevision) }]
-            : [];
+          const b = books.find((x) => x._id === id);
+          const r = revisions.find((x) => x._id === b?.currentRevisionId);
+          return b && r ? [{ id: b._id, ...metadata(r) }] : [];
         }),
         nextCursor: page.nextCursor,
         serverTime: page.serverTime,
@@ -324,11 +422,8 @@ export class CatalogService {
     return this.commands.read(auth, async (tx, actor) => {
       if (operations) admin(actor);
       else member(actor);
-      const b = await tx.catalogBook.findUnique({
-        where: { id },
-        include: details,
-      });
-      if (!b || (!operations && b.requesterId !== actor.id)) throw notFound();
+      const b = await loadBook(tx.c, id);
+      if (!b || (!operations && b.requesterId !== actor._id)) throw notFound();
       return privateBook(b);
     });
   }
@@ -341,33 +436,34 @@ export class CatalogService {
       if (operations) admin(actor);
       else member(actor);
       const status = String(query.status ?? 'Pending');
-      const page = await this.pages.select(tx, {
-        from: Prisma.sql`catalog_books b`,
-        id: Prisma.sql`b.id`,
-        key: operations ? Prisma.sql`b.created_at` : Prisma.sql`b.updated_at`,
-        kind: 'time',
-        ascending: operations,
-        where: operations
-          ? Prisma.sql`b.status::text=${status}`
-          : Prisma.sql`b.requester_id=${actor.id}::uuid`,
-        scope: {
-          operation: operations
-            ? 'listCatalogReviewQueue'
-            : 'listMyCatalogRequests',
-          actor: actor.id,
-          status: operations ? status : null,
+      const page = await this.pages.page(
+        tx.c.catalog_books as BoundCollection<CatalogBookDoc>,
+        [
+          {
+            $match: operations ? { status } : { requesterId: actor._id },
+          },
+          {
+            $project: { key: operations ? '$createdAt' : '$updatedAt' },
+          },
+        ],
+        {
+          kind: 'time',
+          ascending: operations,
+          scope: {
+            operation: operations
+              ? 'listCatalogReviewQueue'
+              : 'listMyCatalogRequests',
+            actor: actor._id,
+            status: operations ? status : null,
+          },
+          limit: Number(query.limit),
+          cursor: query.cursor as string | undefined,
         },
-        limit: Number(query.limit),
-        cursor: query.cursor as string | undefined,
-      });
-      const books = await tx.catalogBook.findMany({
-        where: { id: { in: page.ids } },
-        include: details,
-      });
+      );
+      const books: Book[] = [];
+      for (const id of page.ids) books.push((await loadBook(tx.c, id))!);
       return {
-        items: page.ids.map((id) =>
-          privateBook(books.find((b) => b.id === id)!),
-        ),
+        items: books.map(privateBook),
         nextCursor: page.nextCursor,
         serverTime: page.serverTime,
       };
