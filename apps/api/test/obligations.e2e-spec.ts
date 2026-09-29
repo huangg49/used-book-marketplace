@@ -1,57 +1,30 @@
-import { hash } from 'argon2';
-import { CommandService } from '../src/modules/commands/command.service.js';
+import { MongoCommandService } from '../src/modules/commands/mongo-command.service.js';
 import { WalletService } from '../src/modules/wallet/wallet.service.js';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import type { INestApplication } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
-import {
-  PrismaClient,
-  type RoleCode,
-  type UserStatus,
-} from '../src/generated/prisma/client.js';
-import { DatabaseService } from '../src/database/database.service.js';
+import { hash } from 'argon2';
+import request from 'supertest';
+import type { components } from '@used-books/api-contract';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
+import type { RoleCode, UserStatus } from '../src/database/mongo/documents.js';
+import { contract, validates } from './helpers/contract.js';
+import { Gate } from './helpers/mongo-gate.js';
+import { MongoFixtures } from './helpers/mongo-fixtures.js';
 
-import request from 'supertest';
-import { Ajv2020 } from 'ajv/dist/2020.js';
-import addFormats from 'ajv-formats';
-import { parse } from 'yaml';
-import type { components } from '@used-books/api-contract';
-
-const contract = parse(
-  readFileSync(
-    createRequire(import.meta.url).resolve(
-      '@used-books/api-contract/openapi.yaml',
-    ),
-    'utf8',
-  ),
-);
-const ajv = new Ajv2020({ strict: false });
-addFormats.default(ajv);
-ajv.addSchema({ $id: 'api-wire', components: contract.components });
-function validates(name: string, body: unknown) {
-  const fn = ajv.compile({ $ref: `api-wire#/components/schemas/${name}` });
-  expect(fn(body), JSON.stringify(fn.errors)).toBe(true);
-}
-type Adapter = Awaited<ReturnType<PrismaPg['connect']>>;
-type Pool = ReturnType<Adapter['underlyingDriver']>;
 type Reader = { id: string; token: string; sessionId: string };
 type Event = components['schemas']['SimulatedTopupEvent'];
 
-describe('Existing obligations access: real PostgreSQL and HTTP', () => {
-  const schema = `obligation_http_test_${randomUUID().replaceAll('-', '')}`;
+describe('Existing obligations access: real MongoDB and HTTP', () => {
   let app: INestApplication,
-    db: PrismaClient,
-    adapter: Adapter,
-    pool: Pool,
+    db: MongoFixtures,
+    passwordHash: string,
     operator: Reader,
     otherOperator: Reader;
+  const users: string[] = [];
   const originalSecret = process.env.PAYMENT_SIMULATOR_SECRET;
   const get = (path: string, actor?: Reader) => {
     const call = request(app.getHttpServer()).get('/api/v1' + path);
@@ -73,38 +46,42 @@ describe('Existing obligations access: real PostgreSQL and HTTP', () => {
   async function reader(
     roles: RoleCode[] = ['MEMBER'],
     status: UserStatus = 'ACTIVE',
+    verified = true,
   ): Promise<Reader> {
-    const id = randomUUID(),
-      sessionId = randomUUID();
-    await db.user.create({
-      data: {
-        id,
-        emailNormalized: `${id}@wallet.test`,
-        passwordHash: await hash('Obligation-test-password-2026'),
-        displayName: 'Bạn đọc mô phỏng',
-        status,
-        emailVerifiedAt: new Date(),
-        roles: { create: roles.map((role) => ({ role })) },
-        sessions: {
-          create: {
-            id: sessionId,
-            refreshTokenHash: randomBytes(32).toString('hex'),
-            expiresAt: new Date(Date.now() + 86400000),
-          },
-        },
-      },
+    const email = `${randomUUID()}@wallet.test`;
+    const user = await db.user({
+      email,
+      passwordHash,
+      displayName: 'Bạn đọc mô phỏng',
+      roles,
+      status,
+      verified,
     });
+    // The login helper derives the email from the id, as the original did.
+    await db.c.users.updateOne(
+      { _id: user._id },
+      { $set: { emailNormalized: `${user._id}@wallet.test` } },
+    );
+    users.push(user._id);
+    const sessionId = await db.session(user._id);
     return {
-      id,
+      id: user._id,
       sessionId,
-      token: await app.get(JwtService).signAsync({ sub: id, sid: sessionId }),
+      token: await app
+        .get(JwtService)
+        .signAsync({ sub: user._id, sid: sessionId }),
     };
   }
+  // Direct user writes bump lockSeq like every application writer of users.
+  const setUser = (id: string, set: Record<string, unknown>) =>
+    db.c.users.updateOne(
+      { _id: id },
+      { $set: { ...set, updatedAt: new Date() }, $inc: { lockSeq: 1 } },
+    );
   async function makeApp() {
-    const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(DatabaseService)
-      .useValue(db)
-      .compile();
+    const module = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
     const a = module.createNestApplication();
     a.get(ConfigService).set(
       'PAYMENT_SIMULATOR_SECRET',
@@ -133,70 +110,71 @@ describe('Existing obligations access: real PostgreSQL and HTTP', () => {
   }
   const available = async (actor: Reader) =>
     (await get('/me/wallet', actor).expect(200)).body.available;
-  async function block(table: string, id: string) {
-    const connection = await pool.connect();
-    await connection.query('BEGIN');
-    await connection.query(`SELECT id FROM ${table} WHERE id=$1 FOR UPDATE`, [
-      id,
-    ]);
-    const pid = (await connection.query('SELECT pg_backend_pid() pid')).rows[0]
-      .pid as number;
-    return { connection, pid };
-  }
-  async function reached(gate: Awaited<ReturnType<typeof block>>) {
-    const deadline = Date.now() + 4000;
-    while (Date.now() < deadline) {
-      await gate.connection.query('SELECT pg_stat_clear_snapshot()');
-      const n = (
-        await gate.connection.query(
-          'SELECT count(*)::int n FROM pg_stat_activity WHERE $1=ANY(pg_blocking_pids(pid))',
-          [gate.pid],
-        )
-      ).rows[0].n;
-      if (n) return;
-      await new Promise((r) => setTimeout(r, 10));
-    }
-    throw new Error('Request never reached DB barrier');
-  }
+  // Holds a write lock on the user document in a transaction, like
+  // `SELECT ... FOR UPDATE` on the users row. Writes inside the gate use the
+  // lock holder's session, like the former barrier connection's UPDATEs.
+  const block = (id: string) => Gate.lockUser(db.client, id);
+  const inGate = (
+    gate: Gate,
+    collection: 'users' | 'auth_sessions',
+    id: string,
+    update: Record<string, unknown>,
+  ) =>
+    gate.db
+      .collection<{ _id: string }>(collection)
+      .updateOne({ _id: id }, update, { session: gate.session });
   async function counts(id: string) {
     return {
-      events: await db.simulatedPaymentEvent.count({ where: { intentId: id } }),
-      journals: await db.ledgerJournal.count({ where: { topupId: id } }),
-      receipts: await db.mutationReceipt.count({ where: { topupId: id } }),
-      audits: await db.auditEvent.count({ where: { topupId: id } }),
+      events: await db.c.simulated_payment_events.countDocuments({
+        intentId: id,
+      }),
+      journals: await db.c.ledger_journals.countDocuments({ topupId: id }),
+      receipts: await db.c.mutation_receipts.countDocuments({ topupId: id }),
+      audits: await db.c.audit_events.countDocuments({ topupId: id }),
     };
   }
   beforeAll(async () => {
     process.env.PAYMENT_SIMULATOR_SECRET = randomBytes(32).toString('hex');
-    const url = process.env.TEST_DATABASE_URL!;
-    if (!decodeURIComponent(new URL(url).pathname).endsWith('_test'))
-      throw new Error('Only _test databases');
-    adapter = await new PrismaPg({
-      connectionString: url,
-      max: 16,
-      options: `-c search_path=${schema},public -c timezone=UTC`,
-      statement_timeout: 15000,
-    }).connect();
-    pool = adapter.underlyingDriver();
-    await pool.query(`CREATE SCHEMA "${schema}"`);
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n))
-      .sort())
-      await pool.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
-    db = new PrismaClient({ adapter: new PrismaPg(pool, { schema }) });
-    await db.$connect();
+    passwordHash = await hash('Obligation-test-password-2026');
+    db = await MongoFixtures.connect();
     app = await makeApp();
     operator = await reader(['TEST_OPERATOR']);
     otherOperator = await reader(['TEST_OPERATOR']);
   }, 60000);
   afterAll(async () => {
+    // Removes only this suite's records. Deleting its journals and entries
+    // returns the drained simulator funds to the shared source; the opening
+    // capital journal is never touched.
+    if (db) {
+      const c = db.c;
+      const topups = (
+        await c.topup_intents.find({ ownerId: { $in: users } }).toArray()
+      ).map((t) => t._id);
+      const journals = (
+        await c.ledger_journals.find({ topupId: { $in: topups } }).toArray()
+      ).map((j) => j._id);
+      const accounts = (
+        await c.wallet_accounts.find({ ownerId: { $in: users } }).toArray()
+      ).map((a) => a._id);
+      const audits = (
+        await c.audit_events.find({ topupId: { $in: topups } }).toArray()
+      ).map((a) => a._id);
+      await c.ledger_entries.deleteMany({ journalId: { $in: journals } });
+      await c.ledger_journals.deleteMany({ _id: { $in: journals } });
+      await c.simulated_payment_events.deleteMany({
+        intentId: { $in: topups },
+      });
+      await c.outbox_events.deleteMany({ auditId: { $in: audits } });
+      await c.audit_events.deleteMany({ _id: { $in: audits } });
+      await c.mutation_receipts.deleteMany({ topupId: { $in: topups } });
+      await c.topup_intents.deleteMany({ _id: { $in: topups } });
+      await c.account_locks.deleteMany({ _id: { $in: accounts } });
+      await c.wallet_accounts.deleteMany({ _id: { $in: accounts } });
+      await c.login_attempts.deleteMany({});
+      await db.removeUsers(users);
+      await db.close();
+    }
     await app?.close();
-    await db?.$disconnect();
-    if (pool && /^obligation_http_test_[a-f0-9]{32}$/.test(schema))
-      await pool.query(`DROP SCHEMA "${schema}" CASCADE`);
-    await adapter?.dispose();
     if (originalSecret === undefined)
       delete process.env.PAYMENT_SIMULATOR_SECRET;
     else process.env.PAYMENT_SIMULATOR_SECRET = originalSecret;
@@ -214,7 +192,8 @@ describe('Existing obligations access: real PostgreSQL and HTTP', () => {
       .post('/api/v1/auth/refresh')
       .send({ refreshToken: token });
   beforeEach(async () => {
-    await db.loginAttempt.deleteMany();
+    // The test-env guard permits only databases whose names end in _test.
+    await db.c.login_attempts.deleteMany({});
   });
   it('login/restore reports LOCKED honestly, protects old data, rotates once and revokes on logout', async () => {
     const actor = await reader(['MEMBER'], 'LOCKED'),
@@ -259,10 +238,7 @@ describe('Existing obligations access: real PostgreSQL and HTTP', () => {
       outcome: 'Succeeded',
       occurredAt: new Date().toISOString(),
     }).expect(200);
-    await db.user.update({
-      where: { id: actor.id },
-      data: { status: 'LOCKED' },
-    });
+    await db.setStatus(actor.id, 'LOCKED');
     expect(await available(actor)).toBe(1000);
     validates(
       'TopupIntent',
@@ -321,10 +297,7 @@ describe('Existing obligations access: real PostgreSQL and HTTP', () => {
       await get('/auth/me', denied).expect(401);
       await get('/me/wallet', denied).expect(401);
     }
-    await db.user.update({
-      where: { id: actor.id },
-      data: { emailVerifiedAt: null },
-    });
+    await setUser(actor.id, { emailVerifiedAt: null });
     await login(actor).expect(401);
     await get('/auth/me', actor).expect(401);
   });
@@ -335,7 +308,7 @@ describe('Existing obligations access: real PostgreSQL and HTTP', () => {
       user: (await get('/auth/me', actor).expect(200)).body,
     };
     await expect(
-      app.get(CommandService).read(auth, async () => true),
+      app.get(MongoCommandService).read(auth, async () => true),
     ).rejects.toMatchObject({ status: 403 });
     await expect(
       app
@@ -365,35 +338,32 @@ describe('Existing obligations access: real PostgreSQL and HTTP', () => {
     'login rechecks %s after password verification while waiting for user lock',
     async (change) => {
       const actor = await reader(),
-        gate = await block('users', actor.id),
+        gate = await block(actor.id),
         call = login(actor).then((r) => r);
       try {
-        await reached(gate);
+        await gate.contended();
         if (change === 'unverified')
-          await gate.connection.query(
-            'UPDATE users SET email_verified_at=NULL WHERE id=$1',
-            [actor.id],
-          );
+          await inGate(gate, 'users', actor.id, {
+            $set: { emailVerifiedAt: null },
+          });
         else if (change === 'password')
-          await gate.connection.query(
-            'UPDATE users SET password_hash=$1 WHERE id=$2',
-            ['changed-test-password-hash', actor.id],
-          );
+          await inGate(gate, 'users', actor.id, {
+            $set: { passwordHash: 'changed-test-password-hash' },
+          });
         else
-          await gate.connection.query(
-            'UPDATE users SET status=$1 WHERE id=$2',
-            [change, actor.id],
-          );
+          await inGate(gate, 'users', actor.id, {
+            $set: { status: change, updatedAt: new Date() },
+          });
+        await gate.commit();
       } finally {
-        await gate.connection.query('COMMIT');
-        gate.connection.release();
+        await gate.close();
       }
       const result = await call;
       expect(result.status).toBe(change === 'LOCKED' ? 200 : 401);
       if (change === 'LOCKED') expect(result.body.user.status).toBe('LOCKED');
-      expect(await db.authSession.count({ where: { userId: actor.id } })).toBe(
-        change === 'LOCKED' ? 2 : 1,
-      );
+      expect(
+        await db.c.auth_sessions.countDocuments({ userId: actor.id }),
+      ).toBe(change === 'LOCKED' ? 2 : 1);
     },
   );
   it.each(['LOCKED', 'DISABLED', 'role', 'revoke', 'expired'] as const)(
@@ -401,36 +371,33 @@ describe('Existing obligations access: real PostgreSQL and HTTP', () => {
     async (change) => {
       const actor = await reader(),
         signed = (await login(actor).expect(200)).body;
-      const session = await db.authSession.findFirstOrThrow({
-        where: { userId: actor.id, id: { not: actor.sessionId } },
-      });
-      const gate = await block('users', actor.id),
+      const session = (await db.c.auth_sessions.findOne({
+        userId: actor.id,
+        _id: { $ne: actor.sessionId },
+      }))!;
+      const gate = await block(actor.id),
         call = refresh(signed.refreshToken).then((r) => r);
       try {
-        await reached(gate);
+        await gate.contended();
         if (change === 'role')
-          await gate.connection.query(
-            'DELETE FROM user_roles WHERE user_id=$1',
-            [actor.id],
-          );
+          await inGate(gate, 'users', actor.id, { $set: { roles: [] } });
         else if (change === 'revoke')
-          await gate.connection.query(
-            'UPDATE auth_sessions SET revoked_at=clock_timestamp() WHERE id=$1',
-            [session.id],
-          );
+          await inGate(gate, 'auth_sessions', session._id, {
+            $set: { revokedAt: new Date() },
+            $inc: { lockSeq: 1 },
+          });
         else if (change === 'expired')
-          await gate.connection.query(
-            'UPDATE auth_sessions SET expires_at=clock_timestamp() WHERE id=$1',
-            [session.id],
-          );
+          await inGate(gate, 'auth_sessions', session._id, {
+            $set: { expiresAt: new Date() },
+            $inc: { lockSeq: 1 },
+          });
         else
-          await gate.connection.query(
-            'UPDATE users SET status=$1 WHERE id=$2',
-            [change, actor.id],
-          );
+          await inGate(gate, 'users', actor.id, {
+            $set: { status: change, updatedAt: new Date() },
+          });
+        await gate.commit();
       } finally {
-        await gate.connection.query('COMMIT');
-        gate.connection.release();
+        await gate.close();
       }
       const result = await call;
       expect(result.status).toBe(
@@ -444,28 +411,24 @@ describe('Existing obligations access: real PostgreSQL and HTTP', () => {
     'wallet read rechecks %s when account changes after guard but before service',
     async (change) => {
       const actor = await reader(),
-        gate = await block('users', actor.id),
+        gate = await block(actor.id),
         call = get('/me/wallet', actor).then((r) => r);
       try {
-        await reached(gate);
+        await gate.contended();
         if (change === 'revoke')
-          await gate.connection.query(
-            'UPDATE auth_sessions SET revoked_at=clock_timestamp() WHERE id=$1',
-            [actor.sessionId],
-          );
+          await inGate(gate, 'auth_sessions', actor.sessionId, {
+            $set: { revokedAt: new Date() },
+            $inc: { lockSeq: 1 },
+          });
         else if (change === 'role')
-          await gate.connection.query(
-            'DELETE FROM user_roles WHERE user_id=$1',
-            [actor.id],
-          );
+          await inGate(gate, 'users', actor.id, { $set: { roles: [] } });
         else
-          await gate.connection.query(
-            'UPDATE users SET status=$1 WHERE id=$2',
-            [change, actor.id],
-          );
+          await inGate(gate, 'users', actor.id, {
+            $set: { status: change, updatedAt: new Date() },
+          });
+        await gate.commit();
       } finally {
-        await gate.connection.query('COMMIT');
-        gate.connection.release();
+        await gate.close();
       }
       const result = await call;
       expect(result.status).toBe(
@@ -476,20 +439,19 @@ describe('Existing obligations access: real PostgreSQL and HTTP', () => {
   );
   it('a create that passed the guard still cannot mutate after account locking wins', async () => {
     const actor = await reader(),
-      gate = await block('users', actor.id),
+      gate = await block(actor.id),
       call = post('/me/topups', { amount: 1000 }, actor).then((r) => r.status);
     try {
-      await reached(gate);
-      await gate.connection.query(
-        "UPDATE users SET status='LOCKED' WHERE id=$1",
-        [actor.id],
-      );
+      await gate.contended();
+      await inGate(gate, 'users', actor.id, {
+        $set: { status: 'LOCKED', updatedAt: new Date() },
+      });
+      await gate.commit();
     } finally {
-      await gate.connection.query('COMMIT');
-      gate.connection.release();
+      await gate.close();
     }
     expect(await call).toBe(403);
-    expect(await db.topupIntent.count({ where: { ownerId: actor.id } })).toBe(
+    expect(await db.c.topup_intents.countDocuments({ ownerId: actor.id })).toBe(
       0,
     );
   });
@@ -498,32 +460,20 @@ describe('Existing obligations access: real PostgreSQL and HTTP', () => {
       body = await event(actor),
       key = randomUUID();
     await emit(body, otherOperator, key).expect(200);
-    await db.user.update({
-      where: { id: otherOperator.id },
-      data: { status: 'LOCKED' },
-    });
+    await db.setStatus(otherOperator.id, 'LOCKED');
     await emit(body, otherOperator, key).expect(403);
     const late = await event(actor);
-    await db.user.update({
-      where: { id: actor.id },
-      data: { status: 'LOCKED' },
-    });
+    await db.setStatus(actor.id, 'LOCKED');
     await emit(late).expect(200);
     expect(await available(actor)).toBe(400000);
   });
   it('unlock restores ordinary access without replacing the session; disabling removes all protected access', async () => {
     const actor = await reader(['MEMBER'], 'LOCKED');
     await post('/me/topups', { amount: 1000 }, actor).expect(403);
-    await db.user.update({
-      where: { id: actor.id },
-      data: { status: 'ACTIVE' },
-    });
+    await db.setStatus(actor.id, 'ACTIVE');
     await intent(actor, 1000);
     await get('/auth/me', actor).expect(200);
-    await db.user.update({
-      where: { id: actor.id },
-      data: { status: 'DISABLED' },
-    });
+    await db.setStatus(actor.id, 'DISABLED');
     await get('/me/wallet', actor).expect(401);
     await get('/me/orders', actor).expect(401);
   });
