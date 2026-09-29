@@ -3,6 +3,7 @@ import { validateEnvironment } from './environment.js';
 describe('environment validation', () => {
   const valid = {
     DATABASE_URL: 'postgresql://user:password@localhost:5432/books',
+    MONGODB_URL: 'mongodb://user:password@localhost:27017/books?replicaSet=rs0',
     JWT_ACCESS_SECRET: 'a'.repeat(48),
   };
   it('rejects missing config, example secrets, invalid protocols and ports', () => {
@@ -16,6 +17,14 @@ describe('environment validation', () => {
     expect(() =>
       validateEnvironment({ ...valid, DATABASE_URL: 'https://example.com' }),
     ).toThrow('DATABASE_URL');
+    for (const MONGODB_URL of [
+      '',
+      'https://example.com/books',
+      'mongodb://localhost',
+    ])
+      expect(() => validateEnvironment({ ...valid, MONGODB_URL })).toThrow(
+        'MONGODB_URL',
+      );
     expect(() => validateEnvironment({ ...valid, PORT: 'NaN' })).toThrow(
       'PORT',
     );

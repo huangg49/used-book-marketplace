@@ -48,8 +48,8 @@ Implemented in `apps/api/src/database/mongo/transaction.ts` and exercised by
 
 1. **Runner.** `runTransaction` starts a session per attempt with read concern
    `snapshot`, write concern `majority`, primary read preference. It retries the
-   whole callback on `TransientTransactionError` up to 6 attempts with jittered
-   backoff, re-sends `commitTransaction` up to 3 times on
+   whole callback on `TransientTransactionError` with jittered backoff for at most
+   5 s of wall time (the analogue of PostgreSQL's 5 s lock wait) and 60 attempts, re-sends `commitTransaction` up to 3 times on
    `UnknownTransactionCommitResult`, then throws `CommitOutcomeUnknownError`.
    Budget exhaustion throws `TransactionBusyError`. Both are 503 `UNAVAILABLE`
    with the existing "retry the same request" message. Domain errors abort once

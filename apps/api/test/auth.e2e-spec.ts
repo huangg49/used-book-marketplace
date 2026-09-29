@@ -11,7 +11,7 @@ import addFormats from 'ajv-formats';
 import { parse } from 'yaml';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
-import { DatabaseService } from '../src/database/database.service.js';
+import { MongoFixtures } from './helpers/mongo-fixtures.js';
 import { AuthModule } from '../src/modules/auth/auth.module.js';
 import { Roles } from '../src/modules/auth/roles.guard.js';
 
@@ -47,9 +47,9 @@ const validates = (schema: string, body: unknown) => {
   expect(validate(body), JSON.stringify(validate.errors)).toBe(true);
 };
 
-describe('authentication with PostgreSQL', () => {
+describe('authentication with MongoDB', () => {
   let app: INestApplication;
-  let db: DatabaseService;
+  let db: MongoFixtures;
   const email = `auth-${randomUUID()}@example.com`;
   const password = 'Integration-test-password-42';
   let userId: string;
@@ -67,32 +67,38 @@ describe('authentication with PostgreSQL', () => {
     app = module.createNestApplication();
     configureApp(app, { logRequests: false });
     await app.init();
-    db = app.get(DatabaseService);
+    db = await MongoFixtures.connect();
     passwordHash = await hash(password);
   });
   beforeEach(async () => {
-    // The test-env guard permits only a database whose name ends in _test.
-    await db.loginAttempt.deleteMany();
-    const user = await db.user.upsert({
-      where: { emailNormalized: email },
-      update: { status: 'ACTIVE', emailVerifiedAt: new Date() },
-      create: {
-        emailNormalized: email,
-        displayName: 'Integration Reader',
-        passwordHash,
-        status: 'ACTIVE',
-        emailVerifiedAt: new Date(),
-        roles: { create: { role: 'MEMBER' } },
-      },
-    });
-    userId = user.id;
-    await db.userRole.deleteMany({ where: { userId, role: 'ADMIN' } });
-    await db.authSession.deleteMany({ where: { userId } });
+    // The test-env guard permits only databases whose names end in _test.
+    await db.c.login_attempts.deleteMany({});
+    const existing = await db.c.users.findOne({ emailNormalized: email });
+    if (existing) {
+      await db.c.users.updateOne(
+        { _id: existing._id },
+        {
+          $set: { status: 'ACTIVE', emailVerifiedAt: new Date() },
+          $pull: { roles: { role: 'ADMIN' } },
+          $inc: { lockSeq: 1 },
+        },
+      );
+      userId = existing._id;
+    } else
+      userId = (
+        await db.user({
+          email,
+          displayName: 'Integration Reader',
+          passwordHash,
+        })
+      )._id;
+    await db.c.auth_sessions.deleteMany({ userId });
   });
   afterAll(async () => {
     if (db) {
-      await db.user.deleteMany({ where: { emailNormalized: email } });
-      await db.loginAttempt.deleteMany();
+      await db.removeUsers([userId]);
+      await db.c.login_attempts.deleteMany({});
+      await db.close();
     }
     await app?.close();
   });
@@ -117,16 +123,14 @@ describe('authentication with PostgreSQL', () => {
       .get('/api/v1/test-admin/default-private')
       .auth(result.body.accessToken, { type: 'bearer' })
       .expect(200);
-    const session = await db.authSession.findFirstOrThrow({
-      where: { userId },
-    });
+    const session = (await db.c.auth_sessions.findOne({ userId }))!;
     const jwt = app.get(JwtService);
     for (const options of [
       { expiresIn: -1 },
       { audience: 'another-application' },
     ]) {
       const token = await jwt.signAsync(
-        { sub: userId, sid: session.id },
+        { sub: userId, sid: session._id },
         options,
       );
       await request(app.getHttpServer())
@@ -142,7 +146,7 @@ describe('authentication with PostgreSQL', () => {
       .send({ email: ` ${email.toUpperCase()} `, password })
       .expect(200);
     validates('AuthTokens', result.body);
-    const stored = await db.authSession.findFirstOrThrow({ where: { userId } });
+    const stored = (await db.c.auth_sessions.findOne({ userId }))!;
     expect(stored.refreshTokenHash).not.toBe(result.body.refreshToken);
     expect(stored.refreshTokenHash).toMatch(/^[0-9a-f]{64}$/);
     const me = await request(app.getHttpServer())
@@ -197,19 +201,17 @@ describe('authentication with PostgreSQL', () => {
       .get('/api/v1/test-admin')
       .auth(token, { type: 'bearer' })
       .expect(403);
-    await db.userRole.create({ data: { userId, role: 'ADMIN' } });
+    await db.addRole(userId, 'ADMIN');
     await request(app.getHttpServer())
       .get('/api/v1/test-admin')
       .auth(token, { type: 'bearer' })
       .expect(200);
-    await db.userRole.delete({
-      where: { userId_role: { userId, role: 'ADMIN' } },
-    });
+    await db.removeRole(userId, 'ADMIN');
     await request(app.getHttpServer())
       .get('/api/v1/test-admin')
       .auth(token, { type: 'bearer' })
       .expect(403);
-    await db.user.update({ where: { id: userId }, data: { status: 'LOCKED' } });
+    await db.setStatus(userId, 'LOCKED');
     const profile = await request(app.getHttpServer())
       .get('/api/v1/auth/me')
       .auth(token, { type: 'bearer' })
@@ -230,10 +232,10 @@ describe('authentication with PostgreSQL', () => {
 
   it('rejects expired sessions even if an access token is still signed correctly', async () => {
     const result = await login().expect(200);
-    await db.authSession.updateMany({
-      where: { userId },
-      data: { expiresAt: new Date(0) },
-    });
+    await db.c.auth_sessions.updateMany(
+      { userId },
+      { $set: { expiresAt: new Date(0) } },
+    );
     await request(app.getHttpServer())
       .get('/api/v1/auth/me')
       .auth(result.body.accessToken, { type: 'bearer' })

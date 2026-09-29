@@ -21,11 +21,28 @@ import {
 export class Tx {
   // Session-bound collections: every operation joins this transaction.
   readonly c: Collections;
+  private readonly checks = new Map<string, () => Promise<void>>();
   constructor(
     readonly session: ClientSession,
     readonly db: Db,
   ) {
     this.c = bindCollections(db, session);
+  }
+  // Registers a commit-time invariant check (the DEFERRABLE constraint trigger
+  // equivalent). Checks run after the callback, inside the transaction, just
+  // before commit; the same key registered twice runs once.
+  check(key: string, fn: () => Promise<void>) {
+    this.checks.set(key, fn);
+  }
+  async runChecks() {
+    // A check may register further checks (e.g. order -> listing projection).
+    const done = new Set<string>();
+    for (;;) {
+      const next = [...this.checks.entries()].find(([k]) => !done.has(k));
+      if (!next) return;
+      done.add(next[0]);
+      await next[1]();
+    }
   }
   now(): Promise<Date> {
     return serverNow(this);
@@ -66,6 +83,9 @@ export interface TransactionOptions {
   // Whole-transaction attempts on TransientTransactionError (write conflicts,
   // primary step-down). Finite on purpose; exhaustion is a 503, not a loop.
   maxAttempts?: number;
+  // Wall-clock retry budget, the analogue of PostgreSQL's lock wait (maxWait):
+  // no new attempt starts after this many milliseconds.
+  maxRetryMs?: number;
   // Extra commitTransaction attempts on UnknownTransactionCommitResult.
   commitAttempts?: number;
   maxCommitTimeMS?: number;
@@ -85,9 +105,14 @@ export async function runTransaction<T>(
   fn: (tx: Tx) => Promise<T>,
   options: TransactionOptions = {},
 ): Promise<T> {
-  const maxAttempts = options.maxAttempts ?? 6;
+  const maxAttempts = options.maxAttempts ?? 60;
   const commitAttempts = options.commitAttempts ?? 3;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  const deadline = Date.now() + (options.maxRetryMs ?? 5000);
+  for (
+    let attempt = 1;
+    attempt <= maxAttempts && (attempt === 1 || Date.now() < deadline);
+    attempt++
+  ) {
     await options.onAttempt?.(attempt);
     const session = client.startSession();
     try {
@@ -99,7 +124,9 @@ export async function runTransaction<T>(
       });
       let result: T;
       try {
-        result = await fn(new Tx(session, db));
+        const tx = new Tx(session, db);
+        result = await fn(tx);
+        await tx.runChecks();
       } catch (error) {
         await session.abortTransaction().catch(() => undefined);
         if (isTransient(error)) {
@@ -138,7 +165,7 @@ export async function runTransaction<T>(
 }
 
 function backoff(attempt: number) {
-  const ms = Math.min(200, 5 * 2 ** attempt) * (0.5 + Math.random());
+  const ms = Math.min(100, 2 * 2 ** attempt) * (0.5 + Math.random());
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 

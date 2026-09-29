@@ -18,7 +18,7 @@ Probe độc lập, chưa nối controller/API chính; PostgreSQL runtime giữ 
 docker compose -f infra/docker-compose.mongo-test.yml up -d --wait mongo-test
 docker compose -f infra/docker-compose.mongo-test.yml --profile failover up -d --wait mongo-failover
 cd apps/api
-MONGO_TEST_URL='mongodb://127.0.0.1:57017/latlai_probe_test?replicaSet=rs-test' \
+MONGO_TEST_URL='mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_probe_test?replicaSet=rs-test&authSource=admin' \
 MONGO_FAILOVER_URL='mongodb://127.0.0.1:57021,127.0.0.1:57022,127.0.0.1:57023/latlai_failover_test?replicaSet=rs-failover' \
 pnpm test:mongo
 ```

@@ -345,15 +345,13 @@ describe('Existing obligations access: real PostgreSQL and HTTP', () => {
           { amount: 1000 },
         ),
     ).rejects.toMatchObject({ status: 403 });
-    const token = await app
-      .get(JwtService)
-      .signAsync({
-        sub: actor.id,
-        sid: actor.sessionId,
-        status: 'ACTIVE',
-        roles: ['ADMIN'],
-        obligations: true,
-      });
+    const token = await app.get(JwtService).signAsync({
+      sub: actor.id,
+      sid: actor.sessionId,
+      status: 'ACTIVE',
+      roles: ['ADMIN'],
+      obligations: true,
+    });
     await post('/me/topups', { amount: 1000 }, { ...actor, token }).expect(403);
     expect(
       (await get('/auth/me', { ...actor, token }).expect(200)).body.roles,
