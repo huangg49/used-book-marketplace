@@ -5,9 +5,10 @@ Gửi link repository/nhánh và đoạn sau; không cần chép toàn bộ lị
 ```text
 Tiếp tục Lật lại. Tự khôi phục context từ repository, giao tiếp ngắn gọn bằng tiếng Việt.
 1. Kiểm git status/branch/log/remote; giữ mọi thay đổi local, không reset/clean/pull đè.
-2. Đọc AGENTS.md, SESSION_STATE.md, START_HERE.md, READINESS.md và TEAM_WINDOWS.md
-   dưới docs/handoff. Đọc CONTINUATION_PLAN khi cần chọn gói tiếp theo; không coi
-   lịch sử SESSION_HISTORY/READINESS_HISTORY là trạng thái hiện tại.
+2. Đọc AGENTS.md ở root; SESSION_STATE.md và READINESS.md dưới docs/handoff.
+   Setup/code map ở docs/handoff/START_HERE.md; máy mới theo TEAM_WINDOWS.md.
+   Cách dùng AI/skills và giao việc ở docs/AI_WORKFLOW.md. Chỉ đọc skill/ADR/feature
+   liên quan; CONTINUATION_PLAN để chọn gói, HISTORY không là trạng thái hiện tại.
 3. Runtime đã là MongoDB, contract0.21.0; business giao dịch vẫn dừng ở F2h.
    Đọc ADR0027/model map trước sửa DB; giữ SQL migrations làm lịch sử import.
    Flutter còn scaffold; không mặc định các client có tính năng tương đương RN.

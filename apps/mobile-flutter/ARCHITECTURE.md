@@ -1,5 +1,10 @@
 # Flutter architecture
 
+Target structure for future slices. The current app is a scaffold in `lib/main.dart`;
+the directories and auth flow below are not implemented merely because they are
+described here. Start with [AI workflow](../../docs/AI_WORKFLOW.md), the shared API
+contract and brand, then deliver one assigned slice with real integration.
+
 Features follow the Flutter View, ViewModel, Repository, and Service separation.
 
 ```text

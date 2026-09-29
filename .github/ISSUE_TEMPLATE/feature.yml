@@ -17,6 +17,18 @@ body:
     validations:
       required: true
   - type: textarea
+    id: scope
+    attributes:
+      label: Scope and dependencies
+      description: Affected client/module, what is outside scope, existing API/design references and blocking tasks. Do not include secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: ownership
+    attributes:
+      label: Owner and handoff
+      description: Owner, intended branch/base, reviewer or unassigned, and any authorized push/PR/merge actions. Update test evidence and next action in the PR.
+  - type: textarea
     id: acceptance
     attributes:
       label: Acceptance criteria

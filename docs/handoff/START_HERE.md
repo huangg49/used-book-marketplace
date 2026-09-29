@@ -219,37 +219,18 @@ kết quả mong đợi và cách xử lý lỗi mà không bỏ quy tắc nghi�
 
 ## 7. Việc đầu tiên của người tiếp nhận
 
-**Nguồn hiện hành sau merge 29/09:** `main` tại `ca16a22` đã chứa lượt teammate
-A00/U02–U06 và Q01 một phần. [SESSION_STATE](SESSION_STATE.md) có điểm lưu
-mới nhất; [Q01 Pixel_7](Q01_NATIVE_COMPLETION_2026_09_29.md) bổ sung WebP/Back
-và chữ lớn. Các nhánh/bundle 28/09 mô tả bên dưới là lịch sử dự phòng;
-không lấy chúng thay nguồn main mới hoặc chạy lại gate đã đóng.
+Kiểm nhánh/SHA thực tế và [SESSION_STATE](SESSION_STATE.md), rồi nhận nhiệm vụ
+cụ thể từ nhóm. [AI_WORKFLOW](../AI_WORKFLOW.md) hướng dẫn cửa vào Codex/Claude,
+quy trình theo nhiệm vụ, kiểm tra và cách lưu tiến độ khi nhiều người cùng làm.
+[TEAM_WINDOWS](TEAM_WINDOWS.md) là setup cho máy mới.
 
-Đọc [READINESS](READINESS.md), tiếp tục việc chưa đóng đầu tiên; **chưa mở F2i**.
-Gói tiếp nhận mới nhất trên nhánh `codex/handoff-roadmap`, tiếp nối
-`codex/shelf-detail-showcase` (`3808b57`). Đọc [điểm lưu](SESSION_STATE.md),
-[kế hoạch tiếp tục](CONTINUATION_PLAN.md), [vòng kệ/chi tiết](SHELF_DETAIL_REVIEW.md),
-[vòng cải thiện mobile](MOBILE_EXPERIENCE.md)
-và [bằng chứng native từng ca](NATIVE_RUN_2026_09_28.md). Bundle local:
-`.tmp/latlai-handoff-roadmap.bundle` (checksum `.sha256` bên cạnh). Người nhận:
-`git clone --branch codex/handoff-roadmap ./latlai-handoff-roadmap.bundle latlai`.
-Không kèm `.env`, DB hoặc APK; các bundle/checkpoint trước giữ nguyên. Đây chưa là
-release đã nghiệm thu native. Chủ dự án yêu cầu tích hợp mốc bàn giao vào main;
-khi nhận qua GitHub, clone main và xác minh SHA bằng `git ls-remote` theo SESSION_STATE.
-Bundle trên là bản dự phòng của mốc roadmap trước lần tích hợp này; dùng GitHub main
-để nhận prompt cuốn chiếu và [hướng dẫn env](ENV_HANDOFF.md) mới nhất.
+Chỉ tiếp tục gói đã được giao, dependency đạt và gate cho phép theo
+[READINESS](READINESS.md) / [CONTINUATION_PLAN](CONTINUATION_PLAN.md). Không tự mở
+Delivered/Buyer receipt/inspection/settlement vì main đã merge. Phần review dùng
+[INDEPENDENT_REVIEW](INDEPENDENT_REVIEW.md) và [TEAMWORK](../TEAMWORK.md);
+AI review không thay người review độc lập.
 
-Nguồn F2h và lát cắt UI đã có checkpoint `beea372`. Không làm lại những gate đã có
-bằng chứng nếu code liên quan không đổi. Chia việc còn lại theo vai trò:
-
-| Người tiếp nhận | Việc tiếp tục | Kết quả cần ghi |
-|---|---|---|
-| RN + QA | Tiếp tục ca còn mở trong [vòng Android 28/09](NATIVE_RUN_2026_09_28.md), theo [21 ca native](NATIVE_ACCEPTANCE.md); session và JPEG đã có bằng chứng | Còn upload lỗi/mất mạng, background, listing đầy đủ, TalkBack và bàn phím/chữ lớn; không thay bằng web |
-| Operations + QA | Queue/detail/retry/conflict/keyboard đã hoàn tất trên nhánh `codex/operations-ui-qa`; đọc [bằng chứng](OPERATIONS_UI_QA.md), review để tích hợp | Ba lỗi UI đã sửa; chỉ lặp suite khi có thay đổi liên quan |
-| API reviewer | Dùng [gói review R01–R09](INDEPENDENT_REVIEW.md): entry point, invariant, test và phiếu nhận xét | Nhận xét hoặc xác nhận review, reviewer thứ hai cho phần tiền/quyền theo TEAMWORK |
-| Người đóng mốc | Kiểm tra báo cáo clone sạch, còn gì chưa nghiệm thu; quyết định release/PR theo workflow team | Commit/tag rõ ràng; chỉ nói remote đã có khi đã push thật |
-
-Khi các gate bàn giao đã đóng, bước nghiệp vụ kế tiếp mới là Delivered/Buyer receipt/
-Inspection 72h và claim tương ứng theo [transaction plan](../features/TRANSACTION_FOUNDATION_PLAN.md).
-Một người review code/SQL độc lập theo [TEAMWORK](../TEAMWORK.md); không coi AI tự
-chạy test là đã có human review bắt buộc cho tiền/quyền/tranh chấp.
+Bundle, nhánh handoff-roadmap và checkpoint ngày 28–29/09 là nguồn lịch sử dự phòng,
+không phải hướng dẫn clone runtime hiện tại. Tra [SESSION_HISTORY](SESSION_HISTORY_2026_09_30.md)
+nếu thật sự cần phục hồi một mốc cũ. Không khởi động lại toàn bộ native acceptance
+khi không đổi code liên quan; dùng evidence và trạng thái gate hiện hành.

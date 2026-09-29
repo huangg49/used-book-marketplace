@@ -36,6 +36,9 @@ upload chưa chạy; không dùng bucket nguồn để thử cleanup. Media work
 
 ## Ranh giới để phân công sau
 
+Nếu dùng AI, mở tại root repo và làm theo [AI_WORKFLOW](../AI_WORKFLOW.md).
+Hướng dẫn/skills được chia sẻ qua Git; memory cá nhân và lịch sử chat không đi theo pull.
+
 | Phần | Nơi làm việc | Trạng thái và cách bắt đầu |
 | --- | --- | --- |
 | API dùng chung | `apps/api`, `packages/api-contract` | NestJS/MongoDB; contract-first, không tự đổi endpoint riêng cho từng client |

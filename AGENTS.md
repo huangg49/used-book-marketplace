@@ -1,183 +1,84 @@
 # Working in Lật lại
 
-Continuation handoff: read `docs/handoff/SESSION_STATE.md` for the latest saved
-state, `docs/handoff/CONTINUATION_PLAN.md` for ordered
-work packages, and `docs/handoff/NEXT_SESSION_PROMPT.md` for the receiving agent.
-`CLAUDE.md` is a thin entry point to these same instructions. The plan does not
-override the release gates or the business baseline below.
+## Start with the task
 
-## Current scope
+- Kiểm git status/branch/log/remote trước khi sửa; bảo toàn local work. Không reset,
+  clean, checkout đè hoặc pull khi chưa hiểu working tree. Mỗi feature một nhánh.
+- Đọc [SESSION_STATE](docs/handoff/SESSION_STATE.md) và [READINESS](docs/handoff/READINESS.md)
+  để biết việc/gate hiện tại. Máy mới theo [TEAM_WINDOWS](docs/handoff/TEAM_WINDOWS.md).
+  [START_HERE](docs/handoff/START_HERE.md) là code map và setup; chỉ đọc sâu phần cần.
+- [AI_WORKFLOW](docs/AI_WORKFLOW.md) hướng dẫn công cụ, giao việc, kiểm tra và bàn giao
+  cho cả nhóm. Claude đọc cùng file này qua CLAUDE.md; không có bộ luật riêng.
+- Tự hoàn thành công việc thông thường đã được giao. Chỉ hỏi khi thiếu quyết định
+  hoặc quyền truy cập cần thiết; không hỏi lại dữ kiện tìm được trong repo.
+- Lấy phạm vi từ yêu cầu/issue, đối chiếu code và contract. Nếu tài liệu mâu thuẫn,
+  chỉ rõ khác biệt; không tự sửa nghiệp vụ để khớp implementation bị nghi sai.
 
-Handoff is the current priority: freeze transaction business scope at F2h (the
-historical OpenAPI 0.20.0 milestone). Current contract is 0.21.0; MongoDB integration
-and the owner's local cutover are complete. Start at `docs/handoff/START_HERE.md` and track existing-UI polish
-and release gates in `docs/handoff/READINESS.md`. Finish those gates before extending
-Delivered/inspection/settlement. A passing backend suite does not close native UI
-acceptance. Source checkpoint `checkpoint/f2h-handoff-2026-09-28` has clean-clone
-verification in `docs/handoff/REBUILD.md`. Native session and real JPEG upload have
-partial acceptance in `docs/handoff/NATIVE_RUN_2026_09_28.md`; full native acceptance
-and independent reviews remain open. Do not redo closed gates without a relevant
-change. Preserve local work. Dated feature reports and handoff HISTORY files are
-evidence at their recorded source, not the latest task status. Keep SESSION_STATE
-concise and update current facts in place instead of appending competing summaries.
+## Sources and scope
 
-Business baseline: `docs/SRS_V1_1.md` plus `docs/features/LOCAL_HANDOVER_AUCTION.md`.
-TP.HCM only, direct shipping retained, two simulated managed points, optional
-ViaPoint for ordinary sales/exchanges, mandatory intake/inspection before auction.
-Read ADR 0007 and the local transaction design/acceptance documents before extending
-transaction features. Point/auction/real-carrier and completed-purchase workflows remain planned;
-do not confuse accepted requirements with implemented APIs. Preserve v1.0 snapshots.
+- Nghiệp vụ: [SRS 1.1](docs/SRS_V1_1.md) và [phụ lục TP.HCM](docs/features/LOCAL_HANDOVER_AUCTION.md).
+  TP.HCM only, direct shipping retained, two simulated managed points; optional
+  ViaPoint for ordinary sales/exchanges, mandatory intake/inspection before auction.
+  Yêu cầu được chấp nhận không có nghĩa workflow đã triển khai. Giữ snapshot v1.0.
+- ADR là quyết định kiến trúc; OpenAPI là contract; code/tests/evidence mô tả phần
+  đã hiện thực tại source được ghi. Báo cáo có ngày và HISTORY không là trạng thái mới nhất.
+- Runtime MongoDB, [ADR 0027](docs/adr/0027-mongodb-persistence-protocol.md); nghiệp vụ
+  giao dịch đóng tại F2h. Hoàn tất gate bàn giao trước mở Delivered/inspection/settlement.
+  [CONTINUATION_PLAN](docs/handoff/CONTINUATION_PLAN.md) không tự cấp quyền bỏ gate.
+- React Native là client Member ưu tiên; API chung cho RN, web và Flutter.
+  Flutter còn scaffold; Member web hiện là Expo web. Không tự tách client/framework.
 
-For commitment/checkout work, also read ADR 0013, `docs/features/COMMITMENT_DESIGN.md`,
-`docs/features/COMMITMENT_ACCEPTANCE.md` and `docs/features/TRANSACTION_FOUNDATION_PLAN.md`.
-These define the target architecture. Unpaid DirectDelivery Order backend is implemented
-in OpenAPI 0.12.0; read ADR 0017 and `docs/features/UNPAID_ORDER_REPORT.md`.
-Create/read/cancel, private pinned media and an explicit expiry worker use the shared
-command executor and Order-only exclusive commitments. The DB rejects Reserved without
-a real workflow. Checkout UI remains planned.
-Order wallet funding and pre-confirmation full refunds are implemented in OpenAPI
-0.15.0; read ADR 0020 and `docs/features/ORDER_PAYMENT_REPORT.md`. Payment holds the
-frozen P+S once, cancellation/rejection/48h expiry records SettlementPending, then
-the internal refund worker posts and releases atomically. Keep money/book held on
-refund failure. No dispatch/strike/settlement-to-seller yet.
-Order version differs from ownership/commitment version after funding. Reconciliation
-includes holds; history uses immutable posting sequence. Restart API and worker together.
-Seller acceptance and overdue pickup review are implemented in OpenAPI 0.16.0;
-read ADR 0021 and `docs/features/ORDER_PREPARATION_REPORT.md`. Only the Seller can
-accept paid obligations, including LOCKED/RESTRICTED. Preparing has an immutable
-48h pickup deadline; worker opens a durable PickupReview/ResolutionPending once.
-That is an unresolved verification task, not proof of custody, a strike or refund.
-Keep hold/commitment and never use pre-confirmation refund after acceptance.
-Shipping destination is shared only with the accepted Seller. Delivery events,
-review resolution and post-acceptance cancellation remain planned.
-DirectDelivery outbound shipment registration/read is implemented in OpenAPI 0.18.0;
-read ADR 0023 and `docs/features/DIRECT_SHIPMENT_REPORT.md`. Seller registers before
-pickup deadline with 1-8 Ready packaging images, one label per Order, global unique
-LatLaiSimulator/tracking. Snapshot contacts/fee from agreement; LabelCreated does not
-confirm pickup, extend deadline or move money/book. Reuse OrdersService fulfillment
-locks. Images are sealed at registration; no tracking edit/replacement API exists.
-Independent carrier pickup simulation is implemented in OpenAPI 0.19.0; read ADR0024
-and `docs/features/CARRIER_PICKUP_REPORT.md`. ACTIVE verified TEST_OPERATOR must be
-neither participant. Global eventId/key dedupe spans operators, with current auth
-before replay and domain-separated signatures. First timely receipt moves InTransit;
-late/conflicting events open sticky carrier review/ResolutionPending, preserving
-hold/commitment/canonical pickup. Original label remains immutable; read derives
-PickedUp from the Applied event. Pin the 240h delivery deadline/policy in that event.
-Do not use pre-confirmation refund or restock from carrier evidence. Max128 retained
-events per shipment; replay works at cap. Worker counts openCarrierReviews separately.
-Delivery overdue review and Buyer overdue non-receipt intake are implemented in
-OpenAPI 0.20.0; read ADR0025 and `docs/features/DELIVERY_OVERDUE_REPORT.md`.
-Use the Applied pickup's pinned deadline, shared command executor and full hold locks.
-Worker and Buyer share one delivery review; Buyer adds at most one immutable report.
-InTransit4 becomes ResolutionPending5; evidence on an existing review keeps version5.
-LOCKED/RESTRICTED Buyer may report; Seller/operations roles cannot report for Buyer.
-Worker OrderDeliveryExpiry scans100 without candidate locks, retries failures and logs
-deliveryRemaining/openDeliveryReviews/oldestDeliveryReviewAgeSeconds. Keep original
-review identity and pickup history; no refund/restock/custody conclusion from a report.
-Delivered/Buyer receipt/72h inspection and denial of carrier-reported delivery remain
-planned. These review tasks are intake/blockers, not a completed dispute/adjudication
-workflow. Review resolution and shipment/report UI remain planned.
-Private packaging image intents/upload/participant previews are implemented in
-OpenAPI 0.17.0; read ADR 0022 and `docs/features/PACKAGING_EVIDENCE_REPORT.md`.
-Only accepted Seller uploads, including LOCKED/RESTRICTED; late evidence does not
-prove pickup or resolve a review. Retain originals/previews outside listing cleanup.
-Both pipelines share storage budget, hourly admission and per-process upload slots.
-Packaging normalizes synchronously, retries create-only keys, rechecks auth after I/O.
-No original-download, Staff assignment, claim files or packaging UI yet.
-OpenAPI 0.14.0 implements LOCKED access to profile, participant unpaid Order
-list/read/media/cancel and owned wallet/topup history. Read ADR 0019 and
-`docs/features/LOCKED_OBLIGATIONS_REPORT.md`. Every other authenticated handler
-denies LOCKED by default. Use method-only ExistingObligation plus service checks;
-never treat login, roles or a client capability as permission for new transactions.
-0.15.0 allows LOCKED paid cancellation/rejection; 0.16.0 adds Seller acceptance.
-New payment remains denied for LOCKED.
-Chat/claim-evidence/real-carrier and Admin lock/unlock workflows remain planned.
-Simulated wallet/topup backend is implemented in OpenAPI 0.13.0; read ADR 0018 and
-`docs/features/SIMULATED_WALLET_REPORT.md`. The finite 100M VND source is journalled;
-it is not the POL-42 incident fund. Only independent TEST_OPERATOR events may credit
-an intent through the signed simulator adapter. Balance comes from immutable entries.
-No withdrawal/adjustment handlers or wallet UI exist. ReviewRequired
-is sticky; daily reconciliation and resolution remain planned. Use `wallet:check`
-after API build for read-only source/ledger reconciliation. Never refill by editing SQL.
-Member address book and authenticated HCM demo service-area directory are implemented
-in OpenAPI 0.9.0. Read ADR 0014 and `docs/features/ADDRESS_BOOK_REPORT.md`.
-DEMO-A/B are simulated locality codes, not official wards or handover points.
-Listing DirectDelivery origin selection is implemented in OpenAPI 0.10.0; read
-ADR 0015 and `docs/features/LISTING_FULFILLMENT_REPORT.md`. Address content versions
-and identity-only history protect frozen revisions when a contact is edited/deleted.
-Unconfigured listings remain readable/moderatable; no checkout eligibility is implied.
-DirectDelivery sale quote create/read APIs are implemented in OpenAPI 0.11.0; read
-ADR 0016 and `docs/features/DIRECT_SALE_QUOTE_REPORT.md`. Quotes are immutable estimates,
-never reservations or money holds. Use the shared command executor/QuoteReceipt,
-DB decision time after locks, and pinned policy/address/listing versions.
-Member checkout UI and ViaPoint remain planned. Native address/fulfillment has
-scoped evidence in handoff; use READINESS for the remaining acceptance, not this historical feature summary.
+## Read by task
 
-React Native is the first member client. Keep the shared NestJS API compatible with
-Flutter and the operations web. The implemented reference slice is auth/profile;
-read `docs/REACT_NATIVE_START.md` and ADR 0003 before adding a feature.
-Catalog requests/review/public reads and owner listing drafts have real API handlers.
-Owner media handlers, Supabase adapter, Sharp worker and RN private drafts are implemented;
-live Supabase verification passed; Android debug build/UI emulator checks passed.
-Native picker cancel and JPEG upload/Ready/preview/save/reopen passed on Android 15;
-PNG/WebP and scoped upload failure/retry/background checks were added on MongoDB;
-read `docs/handoff/READINESS.md` for evidence and remaining full native acceptance.
-Listing submission/moderation, reviewer media reads and public shelf/detail/media are implemented.
-Read ADR 0011 and `docs/features/PUBLIC_SHELF_REPORT.md` before extending public reads.
-RN guest shelf is `/`, account is `/account`, book detail is `/book?id=...`.
-Approved edits, visibility/archive/removal are implemented; read ADR 0012 and
-`docs/features/LISTING_LIFECYCLE_REPORT.md`. Completed paid transactions remain planned.
-Read `docs/features/LISTING_ACCEPTANCE_REPORT.md` for the 32-case evidence audit;
-listing native acceptance remains pending and browser storage fixtures are not live Supabase evidence.
-Operations web catalog/listing review is implemented; read ADR 0010 and
-`docs/features/OPERATIONS_REVIEW_REPORT.md` before extending it.
-RN and operations share `packages/session-client`; browser tokens remain memory-only.
-RN listing form, catalog selection/requests, submit and rejection/resubmission are implemented;
-read `docs/features/RN_LISTING_SUBMISSION_REPORT.md` for retry behavior and pending native checks.
-Read ADR 0009 and `docs/features/LISTING_REVIEW_API_REPORT.md` before extending review.
-Read ADR 0008 and `docs/features/MEDIA_UPLOAD_REPORT.md` for
-media limits; never present mocked storage tests as live-provider evidence.
-Read `docs/features/LISTING_DATA_CONTRACT.md`, `docs/features/CATALOG_DRAFT_API_REPORT.md`
-and ADRs 0005–0006 before extending them. Preserve hand-written SQL checks/triggers
-in migration history and the user/role locking protocol.
+| Nhiệm vụ | Đọc trước khi sửa |
+| --- | --- |
+| UI RN/web/admin/Flutter | [Skill UI](.agents/skills/latlai-ui/SKILL.md), UI_CODING_RULES/UI_COMPONENTS/brand v1.1 được dẫn trong skill |
+| API, permission, session, persistence | [Skill API/Mongo](.agents/skills/latlai-api-mongo/SKILL.md), phần liên quan trong [DOMAIN_RULES](docs/architecture/DOMAIN_RULES.md) và ADR/feature được dẫn |
+| Review hoặc hoàn tất một gói | [Skill verify/handoff](.agents/skills/latlai-verify-handoff/SKILL.md), [CONTRIBUTING](CONTRIBUTING.md), [TEAMWORK](docs/TEAMWORK.md) |
 
-## Architecture
+Skills là quy trình theo nhiệm vụ, không thay SRS/ADR và không mở rộng quyền thao tác.
+Không cần đọc mọi skill hoặc mọi báo cáo trong một lần sửa nhỏ.
 
-- Put API business code under `apps/api/src/modules/<feature>`.
-- Endpoints require authentication by default. Use `@Public()` only for intentionally
-  public routes and `@Roles(...)` for role restrictions. Services still check object ownership,
-  account eligibility and state transitions; hiding a button is not authorization.
-- Cross-module mutations go through explicit services. Keep database transactions
-  around atomic business operations. Never use Redis as the source of money balances.
-- React Native routes compose screens in `src/features`; reuse the transport and
-  session owner in `src/core`. Use TanStack Query for server data. Do not create
-  parallel token stores or put access tokens in persistent storage.
-- `packages/api-contract/openapi.yaml` is the contract. Change it first, then run
-  `pnpm contract:generate`; commit both YAML and generated types. Do not hand-edit generated types.
-- The database is MongoDB ([ADR 0027](docs/adr/0027-mongodb-persistence-protocol.md)).
-  Add a new numbered migration under `apps/api/src/database/mongo/migrations/` for
-  validator/index/reference-data changes; never edit an applied one (checksums stop the
-  run). Keep `apps/api/prisma/migrations` as read-only PostgreSQL history for the import.
-  Do not reset shared databases or silently change seed account passwords.
-- Every write goes through `runTransaction`/the command executor: lock documents
-  (`lockSeq`), register commit-time checks, set `updatedAt`. Access classes and
-  constraint replacements are in `docs/refactor/MIG02_MODEL_MAP.md`.
+## Architecture and invariants
 
-## Verification and handoff
+- API business code ở apps/api/src/modules/<feature>. Auth mặc định; @Public() chỉ
+  cho route cố ý public, @Roles cho role. Service vẫn kiểm owner/eligibility/state.
+  ExistingObligation chỉ ở đúng method và đi cùng kiểm tra service; login/UI không là quyền.
+- Cross-module mutation qua explicit services. Dùng command executor/runTransaction,
+  lock order/lockSeq, commit-time checks và updatedAt theo
+  [model map](docs/refactor/MIG02_MODEL_MAP.md). Auth hiện tại trước replay.
+- Giữ expectedVersion, Idempotency-Key/body và receipt. Mất phản hồi không tự đổi key
+  hoặc version để ép thành công. Không thêm write rời rạc phá tính nguyên tử.
+- Ledger bất biến là nguồn tiền; không chỉnh balance trực tiếp hay dùng Redis làm
+  số dư. Giữ hold/commitment khi review/refund chưa giải quyết. Không refund theo
+  nhánh trước acceptance sau khi seller đã nhận. Quote/label/ảnh/report không tự
+  chứng minh custody hoặc cho phép restock/settlement. Chi tiết theo DOMAIN_RULES.
+- Contract-first: sửa packages/api-contract/openapi.yaml rồi pnpm contract:generate;
+  commit cả YAML/generated types, không sửa tay generated types.
+- Mongo validator/index/reference data đổi bằng migration mới ở
+  apps/api/src/database/mongo/migrations/. Không sửa migration đã áp dụng/checksum,
+  reset DB dùng chung hay đổi mật khẩu seed ngầm. apps/api/prisma/migrations là
+  lịch sử PostgreSQL chỉ đọc cho import; không xóa khi dọn runtime.
+- RN routes compose screens trong src/features, dùng transport/session ở src/core,
+  TanStack Query cho server data. RN/web dùng packages/session-client; không tạo
+  token store thứ hai. Browser tokens memory-only; native lưu refresh token qua
+  SecureStore, không persist access token. Flutter phải giữ cùng semantics API/session.
+- UI dùng component chung và brand; giữ loading/empty/error, dữ liệu form khi lỗi,
+  keyboard/safe area/Back/chữ lớn. Không bịa rating/trust badge hoặc API để làm demo đẹp.
 
-- For React Native UI work, read `docs/design/UI_CODING_RULES.md` and
-  `docs/design/UI_COMPONENTS.md`. Reuse `src/core/ui`; update the `/ui` catalog when
-  changing shared controls. Keep fixture data outside the UI library. Review
-  field errors, loading/empty/error states, long content, large text and keyboard
-  behavior; do not use a modal for every error or invent trust signals.
+## Verify and leave a usable checkpoint
 
-- Run `pnpm contract:check`, relevant lint/typecheck/tests and build for the change.
-- Auth, permissions, sessions and transactions require negative-path and race tests.
-  API E2E uses the QA replica set (`MONGO_TEST_URL`, `pnpm infra:mongo:test:up`) and a
-  database whose name ends in `_test`.
-- An Expo web export is not evidence of a successful native Android/iOS build.
-- Update setup instructions and affected ADRs when behavior or configuration changes.
-- Keep secrets, local databases, dumps and import reports out of Git. Log request IDs,
-  not passwords, tokens or request bodies.
-- Keep one feature per branch/PR and preserve unrelated work. Report remaining limitations
-  honestly; a stub, mock response or document is not a completed business workflow.
+- Chọn kiểm tra theo [ma trận](docs/AI_WORKFLOW.md#kiểm-tra-theo-thay-đổi). Auth,
+  permission, session, transaction cần ca từ chối/replay/race liên quan. Không chạy
+  lại gate đã đạt khi không đổi source liên quan. Không sửa test để che lỗi.
+- QA dùng replica set riêng và database *_test; không chạy harness ghi/xóa trên DB
+  hoặc bucket local chính. Xem START_HERE trước chạy E2E/import/live storage tests.
+- Web export không là native PASS; storage fake không là Supabase thật; AI review
+  không là human review. Ghi rõ NOT RUN/BLOCKED/skip, không hứa hết bug.
+- Không in/commit secret, DB/dump, token, request body/PII. Log request ID hợp lệ.
+  Hướng dẫn chia sẻ đi qua Git; cấu hình riêng đi theo ENV_HANDOFF, không qua chat.
+- Cập nhật setup/ADR khi đổi hành vi hoặc cấu hình; cập nhật SESSION_STATE khi kết
+  thúc gói/phiên, giữ phần việc teammate. Issue/PR giữ chi tiết nhiệm vụ; READINESS
+  chỉ đổi khi gate có evidence mới. Không nối mãi nhiều bản tóm tắt trạng thái.
+- Commit rõ phạm vi. Push/PR/merge/deploy theo quyền đã giao cho gói đang làm;
+  không suy từ lần tích hợp trước. Quy tắc review người thật theo TEAMWORK vẫn áp dụng.

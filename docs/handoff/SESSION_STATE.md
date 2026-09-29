@@ -3,12 +3,17 @@
 ## Nguồn và việc đang làm
 
 - main đã tích hợp MongoDB và bàn giao qua [PR5](https://github.com/huangg49/used-book-marketplace/pull/5)/[PR6](https://github.com/huangg49/used-book-marketplace/pull/6), mốc1be5144.
-- Gói hiện tại: dọn điều hướng/tài liệu, nhánh codex/docs-navigation-cleanup từ1be5144.
-  Chỉ sửa docs; commit subject: docs: consolidate current handoff and archive historical status.
-  Chưa push/merge gói docs này; quyền tích hợp trước dành cho gói MongoDB.
-- README/docs index được rút gọn; SESSION/READINESS tách trạng thái với lịch sử;
-  sửa mô tả DB, contract và prompt tiếp nhận. [Phát hiện/phạm vi](DOCS_AUDIT_2026_09_30.md).
-  Kiểm: link nội bộ và diff-check; không chạy lại test/build/native vì không đổi code.
+- Gói hiện tại: hướng dẫn AI cho nhóm, nhánh codex/team-ai-handoff từ19ffb84
+  (gói dọn docs trước, nhánh codex/docs-navigation-cleanup). Hai gói chưa push/merge;
+  quyền tích hợp trước dành cho gói MongoDB. Không cherry-pick gói AI bỏ dependency docs.
+- Đã hoàn thiện [AI_WORKFLOW](../AI_WORKFLOW.md): AGENTS gọn, domain rules đọc theo
+  nhiệm vụ, ba skill nguồn chung + adapter Claude, mẫu issue/PR và docs:check/CI.
+  Commit subject: docs(ai): add shared team skills and verified onboarding workflow.
+  [Bằng chứng/phạm vi](AI_TEAM_HANDOFF_2026_09_30.md): checker 5/5, skills 6/6,
+  docs links/contract/diff-check PASS; AI mới sửa form mẫu và nhận đúng gate.
+  Không đổi app/DB. Chưa test tự nạp Claude/máy teammate hoặc chạy remote CI.
+- Gói docs trước: README/index/SESSION/READINESS rút gọn, sửa DB/contract/prompt;
+  [phạm vi](DOCS_AUDIT_2026_09_30.md). Evidence lịch sử giữ nguyên.
 
 ## Trạng thái đã chốt
 
@@ -35,7 +40,10 @@
 
 ## Bước tiếp
 
-Nhóm bắt đầu theo [TEAM_WINDOWS](TEAM_WINDOWS.md), phân công phần việc; chỉ sửa lỗi
-setup thực tế hoặc triển khai gói đã được giao. Không tự mở Delivered/settlement.
+Khi được giao tích hợp, đưa cả gói docs19ffb84 và gói AI hiện tại lên remote, review
+và chạy CI; quyền push/merge cho gói này chưa được chốt. Nhóm nhận nhánh có tài liệu
+mới, bắt đầu theo [AI_WORKFLOW](../AI_WORKFLOW.md)/[TEAM_WINDOWS](TEAM_WINDOWS.md),
+phân công phần việc và reviewer; kiểm cửa vào Codex/Claude trên máy mình. Chỉ sửa lỗi
+setup thực tế hoặc triển khai gói được giao. Không tự mở Delivered/settlement.
 Chi tiết phiên trước ở [SESSION_HISTORY](SESSION_HISTORY_2026_09_30.md); không đọc
 trạng thái “chưa merge/cutover” trong lịch sử thành việc hiện tại chưa hoàn tất.

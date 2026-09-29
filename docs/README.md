@@ -5,6 +5,7 @@
 | Bạn cần | Tài liệu chính |
 | --- | --- |
 | Dựng máy để làm cùng nhóm | [TEAM_WINDOWS](handoff/TEAM_WINDOWS.md) → [START_HERE](handoff/START_HERE.md) → [ENV_HANDOFF](handoff/ENV_HANDOFF.md) |
+| Dùng Codex/Claude/AI khác để làm việc | [AI_WORKFLOW](AI_WORKFLOW.md), [AGENTS](../AGENTS.md); chọn skill theo nhiệm vụ |
 | Nối tiếp phiên làm việc | [SESSION_STATE](handoff/SESSION_STATE.md), [prompt tiếp nhận](handoff/NEXT_SESSION_PROMPT.md) |
 | Biết gate nào còn mở | [READINESS](handoff/READINESS.md) |
 | Hiểu nghiệp vụ mục tiêu | [SRS1.1](SRS_V1_1.md), [phụ lục TP.HCM](features/LOCAL_HANDOVER_AUCTION.md) |

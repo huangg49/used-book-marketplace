@@ -2,6 +2,10 @@
 
 ## Before coding
 
+For AI-assisted work, start with [AGENTS](AGENTS.md) and the
+[shared workflow](docs/AI_WORKFLOW.md). Repo skills provide task-specific guidance;
+each contributor still owns the result and its evidence.
+
 1. Select or create an issue with acceptance criteria.
 2. Confirm the affected API contract and business rule.
 3. Create a short-lived branch from the latest `main`.

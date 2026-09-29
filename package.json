@@ -8,6 +8,7 @@
     "node": ">=24.15.0"
   },
   "scripts": {
+    "docs:check": "node scripts/check-agent-docs.mjs",
     "setup:local": "node scripts/setup-local.mjs",
     "doctor:local": "pnpm --filter @used-books/api doctor:local",
     "build:android": "node scripts/build-android.mjs",
