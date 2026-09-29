@@ -76,6 +76,17 @@ Khởi động Metro bằng `pnpm dev:rn`; cài APK qua `adb install -r <đườ
 Dùng `adb reverse tcp:8081 tcp:8081` nếu debug app kết nối Metro qua localhost.
 Không đưa Supabase server key vào RN env.
 
+**App đứng splash/màn đỏ khi mở:** `http://localhost:8081/status` trả `running`
+không chứng minh Metro bundle được. Kiểm log Metro có
+`Failed to construct transformer` / `Failed to start watch mode` không, rồi
+request đúng bundle Android (URL trong màn đỏ, thường
+`/.expo/.virtual-metro-entry.bundle?platform=android&dev=true...`) phải trả 200.
+Windows không có Watchman: watcher Metro có giới hạn khởi động 240 s, dễ vượt khi
+Gradle build song song. Khởi động Metro sau khi build xong. Sau `expo export --clear`,
+lần bundle đầu mất khoảng 100 s trên máy chậm; chờ bundle xong trước khi kết luận kẹt
+splash. Xem [A00](handoff/A00_ANDROID_STARTUP.md). Nếu `adb install` streamed lỗi
+`Broken pipe`, dùng `adb push <apk> /data/local/tmp/` rồi `adb shell pm install -r`.
+
 ## Ma trận kiểm tra
 
 | Nhóm | Cần quan sát |

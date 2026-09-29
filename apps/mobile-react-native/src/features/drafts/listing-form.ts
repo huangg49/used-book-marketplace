@@ -1,5 +1,6 @@
 import type { components } from "@used-books/api-contract";
 import type { Content, Draft, Media } from "./contracts";
+import { formatVnd } from "../../core/ui/format";
 export type Mode = NonNullable<components["schemas"]["DraftContent"]["mode"]>;
 export type Form = Omit<Content, "salePrice" | "exchangeValue"> & {
   salePrice: string;
@@ -20,7 +21,7 @@ export function price(value: string): number | null {
 export function displayPrice(value: string) {
   const amount = price(value);
   return amount !== null && Number.isFinite(amount)
-    ? `${amount.toLocaleString("vi-VN")} đồng`
+    ? formatVnd(amount)
     : "Chưa có giá hợp lệ";
 }
 export function toContent(f: Form): Content {
@@ -44,6 +45,70 @@ export const editableListing = (d: Draft) =>
   d.state.visibility !== "Removed" &&
   d.state.trade === "Available" &&
   !d.state.deletedAt;
+const tradeLabel: Record<string, string> = {
+  Reserved: "Đang giữ cho một đơn",
+  Sold: "Đã bán",
+  Exchanged: "Đã đổi",
+  ClosedUnavailable: "Đã đóng",
+};
+// List row copy: state, an explanation from real fields and the next action.
+// Never claims the book is on the shelf; shelf visibility also depends on the account.
+export function listingSummary(d: Draft, position: number) {
+  const n = position;
+  if (d.state.visibility === "Removed")
+    return {
+      status: "Đã gỡ",
+      note: d.removalReason ? `Lý do gỡ: ${d.removalReason}` : null,
+      action: `Xem sách ${n} đã gỡ`,
+    };
+  if (d.state.deletedAt)
+    return {
+      status: "Đã lưu trữ",
+      note: null,
+      action: `Xem sách ${n} đã lưu trữ`,
+    };
+  const catalogNote =
+    d.catalogStatus === "Pending" ? "Đầu sách đang chờ xác nhận." : null;
+  switch (d.state.moderation) {
+    case "Draft":
+      return {
+        status: "Bản nháp",
+        note: "Chưa gửi duyệt.",
+        action: `Hoàn thiện sách ${n}`,
+      };
+    case "PendingReview":
+      return {
+        status: "Đang chờ duyệt",
+        note: catalogNote ?? "Chưa thể sửa trong lúc chờ duyệt.",
+        action: `Xem sách ${n} đang chờ duyệt`,
+      };
+    case "Rejected":
+      return {
+        status: "Cần chỉnh sửa",
+        note: d.latestDecision?.reason
+          ? `Góp ý: ${d.latestDecision.reason}`
+          : null,
+        action: `Sửa sách ${n} theo góp ý`,
+      };
+    case "Approved":
+      return {
+        status: [
+          "Đã được duyệt",
+          d.state.visibility === "Hidden" ? "Đang ẩn" : null,
+          tradeLabel[d.state.trade] ?? null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        note:
+          d.state.visibility === "Hidden"
+            ? "Bài đang ẩn khỏi kệ; bạn có thể mở lại."
+            : null,
+        action: `Quản lý sách ${n}`,
+      };
+    default:
+      return { status: "Đang cập nhật", note: null, action: `Xem sách ${n}` };
+  }
+}
 export const moderationLabel: Record<string, string> = {
   Draft: "Bản nháp",
   PendingReview: "Đang chờ duyệt",
@@ -110,23 +175,43 @@ export function validateForm(
       "Xác nhận quyền đăng và tính trung thực của thông tin.";
   return e;
 }
+// Keeps only flagged errors the current input still fails; fixing a field clears
+// its message without surfacing fields the member has not been asked about yet.
+export function stillFailing(flagged: Errors, current: Errors): Errors {
+  const e: Errors = {};
+  for (const key of Object.keys(flagged) as (keyof Errors)[])
+    if (current[key]) e[key] = current[key];
+  return e;
+}
+// Fields per editor step, in on-screen order, so errors land on the first visible one.
+export const stepFields: readonly (readonly (keyof Errors)[])[] = [
+  ["bookId"],
+  [
+    "mediaIds",
+    "condition",
+    "pages",
+    "coverNote",
+    "notes",
+    "accessories",
+    "description",
+    "readable",
+    "hasMissingPages",
+    "missingEssentialContent",
+  ],
+  ["mode", "salePrice", "exchangeValue", "fulfillment"],
+  ["ownershipDeclared"],
+];
+export function firstError(e: Errors): keyof Errors | null {
+  for (const fields of stepFields)
+    for (const field of fields) if (e[field]) return field;
+  return null;
+}
 export function errorStep(e: Errors) {
-  if (e.bookId) return 0;
-  if (
-    [
-      "condition",
-      "pages",
-      "coverNote",
-      "notes",
-      "accessories",
-      "description",
-      "readable",
-      "hasMissingPages",
-      "missingEssentialContent",
-      "mediaIds",
-    ].some((k) => e[k as keyof Errors])
-  )
-    return 1;
-  if (e.mode || e.salePrice || e.exchangeValue || e.fulfillment) return 2;
-  return 3;
+  const field = firstError(e);
+  return field ? stepFields.findIndex((f) => f.includes(field)) : 3;
+}
+// Progress comes from the submit rules applied to what is entered now, never from step visits.
+export function stepComplete(f: Form, images: Media[], step: number): boolean {
+  const e = validateForm(f, images, true, true);
+  return !stepFields[step].some((field) => e[field]);
 }

@@ -39,9 +39,36 @@ git rev-parse HEAD
 | Native vòng UI mới nhất | Pixel_7/Android 15 x86_64: kệ, detail, modal/Back, chữ OS 130%; font đã trả về 1.0. JS qua Metro trên APK sẵn có, không build APK mới |
 | Operations | Queue/detail, nhãn giá, retry/conflict/focus đã có evidence; không cần làm lại nếu không đổi code liên quan |
 
-## Phần dở phải xử lý trước
+## Cập nhật 29/09/2026 — phiên tiếp nhận trên máy mới
 
-**A00 — Android dừng splash sau lượt export cuối.** Trước đó cùng code đã chạy
+| Mục | Trạng thái |
+|---|---|
+| Nhánh / base | `codex/a00-android-startup` từ `main` `382dda2`; chưa push/merge |
+| A00 | **DONE** trên AVD `Medium_Phone` API 37 x86_64: cold start, `/`, deep link `/showcase` (nóng và cold), Back, reopen. Cơ chế: Metro watcher quá hạn khi build song song (`/status` vẫn running, bundle 500) và bundle đầu sau xóa cache ~103 s. Nguyên nhân ở máy cũ không kết luận chắc. [Evidence](A00_ANDROID_STARTUP.md) |
+| Sửa kèm | `scripts/build-android.mjs` gọi `.\gradlew.bat` (chạy được khi `NoDefaultCurrentDirectoryInExePath=1`); ANDROID_QUALITY thêm cách kiểm bundle thật |
+| Môi trường máy mới | Node 25.0.0 (≠ `.nvmrc` 24.15.0, vẫn thỏa engines), pnpm 11.19.0, JDK 21, Docker, Ninja 1.12.1 `.tmp/`. `.env` đủ biến (không ghi giá trị). DB Compose port 5433 mới, migrate + seed. `doctor:local` PASS |
+| Test đã chạy | RN unit 61/61 PASS; `pnpm build:android --emulator` BUILD SUCCESSFUL; API `nest build` OK. Không chạy lại API E2E (backend không đổi) |
+| A01 | **DONE** 29/09: kệ Android, login Member `member@latlai.local` trên Android (profile thật), operations `pnpm dev:admin` login Staff → queue listing rỗng đúng DB mới. Bucket Supabase private PASS (doctor, read-only); upload live sẽ chạy trong U02 |
+| A02 | BLOCKED — cần reviewer người thật theo TEAMWORK; AI không ký thay |
+| U01 | BLOCKED phần DONE — cần phản hồi thẩm mỹ thực tế của user |
+| U02 | **DONE** trên `codex/u02-listing-form`: tab bước từ dữ liệu thật, footer lưu/tiếp tục trên bàn phím, cuộn tới lỗi đầu tiên, lỗi tự co khi sửa. RN 64/64, lint/typecheck, contract, browser regression 3 suite PASS; native Android create→upload thật→reject→resubmit, bàn phím, chữ 130% PASS. [Evidence](U02_LISTING_FORM.md) |
+| U03 | **DONE** trên `codex/u03-address-book`: form nhóm + footer, mặc định phân biệt, hành động gọn, editor liệt kê mặc định trước. Browser regression 3 suite PASS; Android form/bàn phím số/2 địa chỉ/picker. [Evidence](U03_ADDRESS_BOOK.md) |
+| U04 | **DONE** trên `codex/u04-my-books`: dòng sách có trạng thái, ghi chú từ dữ liệu thật và hành động kế tiếp duy nhất. RN 66/66, browser 3 suite PASS, Android list. Phát hiện: tab Sách của tôi theo session lúc login khi bị khóa sau đó (API vẫn chặn). [Evidence](U04_MY_BOOKS.md) |
+| U05 | **DONE** trên `codex/u05-action-bar`: `core/ui/ActionBar` (dùng ở editor bài đăng + form địa chỉ, ví dụ trong `/ui`, UI_COMPONENTS cập nhật); `Screen.footer` cùng lề/max width với nội dung. RN 66/66, lint/typecheck, browser 3 suite PASS; Android footer thẳng hàng (`docs/verification/u05-footer-aligned.png`) |
+| U06 | **DONE** trên `codex/u06-states-copy`: quét copy không có thuật ngữ backend; `formatVnd` một nguồn (`core/ui/format.ts`), bước Kiểm tra hiện giá như kệ. RN 68/68, browser 3 suite PASS, Android “85.000 ₫”. [Evidence](U06_STATES_COPY.md) |
+| Q01 | IN_PROGRESS trên `codex/q01-native`: 29/09 PASS N01/N02/N07/N08/N11(JPEG+PNG)/N12/N13(mất mạng trước gửi)/N14/N15/N17/N18(trừ archive)/N19; PARTIAL N03/N16/N20; NOT_RUN N21 TalkBack, WebP. Sửa lỗi operations mở lại hồ sơ cũ trên `codex/ops-detail-reopen-fresh`. [Phiếu](NATIVE_RUN_2026_09_29.md) |
+| Q02 | DONE cho phạm vi JS: không đổi native/tài nguyên nên APK `c5d55846…` (build 28–29/09 trên máy này) vẫn là artifact; Metro JS từ nhánh hiện tại. Export thường (preview=0) + `scripts/test-showcase-gate.mjs` PASS. ARM/iOS: N/A trên máy này (không có thiết bị/Mac), gate còn mở |
+| Blocker cần người | U01 phản hồi thẩm mỹ của user; A02/R01–R09 reviewer người thật (tiền/quyền cần reviewer thứ hai); N21 TalkBack (bật dịch vụ trợ năng là thay đổi cài đặt hệ thống của thiết bị, để người thử thực hiện); ARM/iOS cần thiết bị |
+| D01 | IN_PROGRESS trên `codex/d01-delivery-design`: ADR 0026 **Proposed** (actor×command, bảng chuyển trạng thái, deadline/time source, wire/dữ liệu dự kiến, ma trận test, 8 câu hỏi mở). Không code/migration. Cần reviewer tiền/quyền và chủ dự án chốt Q1–Q8 |
+| Bước tiếp theo | Chờ người: phản hồi U01, review A02/R01–R09, chốt ADR 0026 Q1–Q8, TalkBack N21. Việc agent làm được tiếp khi có quyết định: D02 nháp claim/custody hoặc T01 sau khi ADR 0026 Accepted |
+
+Process đang chạy (metadata): Postgres Compose app 5433 và test 55434 (`pnpm infra:test:stop` khi xong); API/worker từ `dist` qua
+`start:prod`/`worker:*:prod`; Metro `pnpm dev:rn` port 8081; AVD emulator-5554
+với reverse 8081/3000. Khảo sát lại trước khi dừng; không giết toàn bộ node/java.
+
+## Lịch sử: phần dở trước phiên 29/09
+
+**A00 — Android dừng splash sau lượt export cuối** (đã xử lý, xem trên). Trước đó cùng code đã chạy
 và có ảnh QA. Sau force-stop/mở lại bằng `mobilereactnative:///showcase`, app đứng
 ở logo. Metro port 8081 trả running; `adb reverse` 8081/3000 đúng. Log được đọc
 không có ReactNativeJS/AndroidRuntime error; chưa biết nguyên nhân.

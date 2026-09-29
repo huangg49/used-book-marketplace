@@ -351,7 +351,9 @@ try {
   // Continue through owner lifecycle using RN controls and real versioned commands.
   await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
   await click("Sách của tôi");
-  await p.getByRole("button", { name: "Xem sách 1", exact: true }).waitFor();
+  await p
+    .getByRole("button", { name: "Quản lý sách 1", exact: true })
+    .waitFor();
   await p.screenshot({ path: path.join(artifacts, "drafts-390.png") });
   const ownerResponse = p.waitForResponse(
     (r) =>
@@ -360,7 +362,7 @@ try {
       !r.url().includes("/media") &&
       r.status() === 200,
   );
-  await click("Xem sách 1");
+  await click("Quản lý sách 1");
   const ownerId = new URL((await ownerResponse).url()).pathname
     .split("/")
     .at(-1);
@@ -381,10 +383,10 @@ try {
     .click();
   await p.getByText("Đã mở lại bài trên kệ.", { exact: true }).waitFor();
   await click("Sửa bài đã duyệt");
-  await click("Tiếp tục · Ảnh và tình trạng");
-  await click("Tiếp tục · Bán hoặc đổi");
+  await click("Tiếp tục");
+  await click("Tiếp tục");
   await p.getByLabel("Giá bán (đồng)", { exact: true }).fill("175000");
-  await click("Tiếp tục · Kiểm tra");
+  await click("Tiếp tục");
   await p
     .getByRole("checkbox", {
       name: "Tôi có quyền đăng cuốn sách này; ảnh và mô tả phản ánh trung thực tình trạng sách.",

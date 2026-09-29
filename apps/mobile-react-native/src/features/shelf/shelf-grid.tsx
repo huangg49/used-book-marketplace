@@ -6,6 +6,7 @@ import {
   Icon,
   TextScale,
   colors,
+  formatVnd,
   layout,
   space,
 } from "../../core/ui";
@@ -86,7 +87,7 @@ export function ShelfGrid({
                       {label}
                     </AppText>
                     <AppText kind="bold" color={colors.forest}>
-                      {amount.toLocaleString("vi-VN")} ₫
+                      {formatVnd(amount)}
                     </AppText>
                   </View>
                 ) : null,

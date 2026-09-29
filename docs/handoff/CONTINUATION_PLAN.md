@@ -10,7 +10,8 @@ Hiện tại đóng tại F2h/OpenAPI 0.20.0; [READINESS](READINESS.md) là gate
 Đọc [SESSION_STATE](SESSION_STATE.md), [START_HERE](START_HERE.md), AGENTS trước.
 SRS1.1, phụ lục TP.HCM và ADR là nguồn nghiệp vụ; kế hoạch này không sửa policy.
 Đánh dấu mỗi gói `TODO / IN_PROGRESS / BLOCKED / DONE`, kèm evidence và commit.
-Ban đầu mọi gói dưới đây là TODO; A00 có blocker runtime đã ghi, chưa có fix.
+Ban đầu mọi gói dưới đây là TODO. Trạng thái hiện hành ghi ở SESSION_STATE;
+A00 **DONE** 29/09 trên AVD x86_64 API 37, xem [A00](A00_ANDROID_STARTUP.md).
 
 Mỗi gói là một hoặc vài PR nhỏ, không ghép toàn roadmap vào một lần code/merge.
 Dùng nhánh `codex/<task-id>-<topic>` từ main sau khi nhận mốc bàn giao được chủ dự
@@ -41,7 +42,7 @@ cho Member như một luồng hoàn chỉnh trước M3 và các nhánh lỗi b�
 
 ## 3. M0 — Tiếp nhận và tháo chỗ dở
 
-### A00 — Chẩn đoán Android splash
+### A00 — Chẩn đoán Android splash · DONE (29/09, [evidence](A00_ANDROID_STARTUP.md))
 
 - Đọc SESSION_STATE và SHELF_DETAIL_REVIEW; tái hiện trên nguồn hiện tại, ghi API
   base URL, reverse, build variant, thiết bị, Metro/bundle và trạng thái tải font.
@@ -93,7 +94,7 @@ card dày đặc, rating/trust badge giả hoặc khẩu hiệu vào mọi vùng
 - **DONE:** ảnh before/after 320/390, Android chữ thường/130%, missing/error/loading;
   giá bán/đổi rõ, modal Back đúng, không tràn. Có phản hồi thẩm mỹ thực tế của user.
 
-### U02 — Form đăng sách theo từng nhóm tác vụ
+### U02 — Form đăng sách theo từng nhóm tác vụ · DONE (29/09, [evidence](U02_LISTING_FORM.md); native approved-edit/conflict/lost-ack còn ở Q01)
 
 - Entry: `features/drafts/draft-editor.tsx`, `catalog-picker.tsx`, `draft-media.tsx`,
   `fulfillment-fields.tsx`, `lifecycle-command.ts`. Đọc RN_LISTING_SUBMISSION_REPORT.
@@ -106,7 +107,7 @@ card dày đặc, rating/trust badge giả hoặc khẩu hiệu vào mọi vùng
 - **DONE:** tạo nháp → reopen → submit → rejected → sửa/resubmit; approved edit,
   conflict, mất phản hồi và ảnh hỏng; native picker/keyboard/font lớn đều có evidence.
 
-### U03 — Sổ địa chỉ và chọn nơi gửi
+### U03 — Sổ địa chỉ và chọn nơi gửi · DONE (29/09, [evidence](U03_ADDRESS_BOOK.md); native stale/lost-ack còn ở Q01)
 
 - Entry: `features/addresses/{addresses-screen,address-command}.tsx/.ts` và
   fulfillment-fields. Đọc ADDRESS_BOOK_REPORT và LISTING_FULFILLMENT_REPORT.
@@ -117,7 +118,7 @@ card dày đặc, rating/trust badge giả hoặc khẩu hiệu vào mọi vùng
 - **DONE:** create/edit/delete/default, stale version, mất ack, dirty Back, keyboard
   số/địa chỉ, tên dài và chữ lớn; không lộ contact trên public listing.
 
-### U04 — Sách của tôi và tài khoản
+### U04 — Sách của tôi và tài khoản · DONE (29/09, [evidence](U04_MY_BOOKS.md))
 
 - Entry: drafts-screen, lifecycle-actions, account/auth và member-navigation.
 - Tổ chức bài theo trạng thái/hành động kế tiếp: nháp, chờ duyệt, bị từ chối,
@@ -127,7 +128,7 @@ card dày đặc, rating/trust badge giả hoặc khẩu hiệu vào mọi vùng
 - **DONE:** trạng thái rỗng/lỗi/retry, guest/Member/LOCKED/RESTRICTED, session đổi
   người xóa cache, vị trí cuộn giữ hợp lý. Không lặp suite auth nếu không đổi auth.
 
-### U05 — Hoàn thiện bộ điều khiển dùng chung
+### U05 — Hoàn thiện bộ điều khiển dùng chung · DONE (29/09: `ActionBar` + footer thẳng hàng, xem SESSION_STATE)
 
 - Chỉ bổ sung component khi có nhu cầu từ U01–U04: section header, action area,
   field summary hoặc selector. Dùng composition; không viết form engine tổng quát.
@@ -136,7 +137,7 @@ card dày đặc, rating/trust badge giả hoặc khẩu hiệu vào mọi vùng
 - **DONE:** không màu/font tùy tiện, không mất focus/mất dữ liệu khi lỗi; không
   modal hóa mọi lỗi. Component không gọi API/session hoặc chứa fixture.
 
-### U06 — Chốt nội dung, chuyển động và states
+### U06 — Chốt nội dung, chuyển động và states · DONE (29/09, [evidence](U06_STATES_COPY.md); walkthrough offline native còn ở Q01)
 
 - Rà microcopy tiếng Việt, formatting VND, loading/empty/error/offline/ảnh thiếu;
   trạng thái chờ tiền/đối soát cần chính xác hơn câu “thành công”.
@@ -145,7 +146,7 @@ card dày đặc, rating/trust badge giả hoặc khẩu hiệu vào mọi vùng
 - **DONE:** walkthrough tất cả màn hiện có; ghi ảnh/lỗi đã sửa; không còn CTA giả,
   thuật ngữ backend trong sản phẩm hoặc màn trắng khi có thể hiển thị lỗi phục hồi.
 
-### Q01–Q03 — Đóng chất lượng và bàn giao
+### Q01–Q03 — Đóng chất lượng và bàn giao · Q01 IN_PROGRESS, Q02 DONE (JS), Q03 chờ review (29/09, xem SESSION_STATE)
 
 - **Q01 Native:** tiếp tục N01–N21 còn mở: picker hủy/quyền từ chối/file lỗi,
   upload thất bại/mất mạng/retry, background/foreground, expiry session, toàn listing,
@@ -163,7 +164,7 @@ card dày đặc, rating/trust badge giả hoặc khẩu hiệu vào mọi vùng
 TRANSACTION_FOUNDATION_PLAN và SRS1.1. Chi tiết dưới là thứ tự đề xuất cho phần
 chưa triển khai; không ấn định API/state mới trước review thiết kế.
 
-### D01 — Bản thiết kế Delivered/receipt/inspection
+### D01 — Bản thiết kế Delivered/receipt/inspection · IN_PROGRESS (bản nháp [ADR 0026](../adr/0026-delivery-receipt-inspection.md) chờ review + trả lời Q1–Q8)
 
 - Lập actor × command × state × deadline; phân biệt carrier báo giao, Buyer xác
   nhận nhận và Buyer phủ nhận nhận. Hạn 72h không rút ngắn vì Buyer bấm nhận sớm.

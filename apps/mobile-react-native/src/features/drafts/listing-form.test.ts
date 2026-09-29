@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { emptyContent, type Media } from "./contracts";
+import { emptyContent, type Draft, type Media } from "./contracts";
 import {
   errorStep,
+  firstError,
   fromContent,
+  listingSummary,
+  stepComplete,
+  stillFailing,
   price,
   toContent,
   validateForm,
@@ -161,5 +165,110 @@ describe("member listing form", () => {
     expect(errorStep({ mediaIds: "pending" })).toBe(1);
     expect(errorStep({ salePrice: "bad" })).toBe(2);
     expect(errorStep({ ownershipDeclared: "missing" })).toBe(3);
+    expect(errorStep({})).toBe(3);
+  });
+  it("targets the first error in on-screen order, photos before condition", () => {
+    expect(
+      firstError({ description: "short", mediaIds: "pending", salePrice: "x" }),
+    ).toBe("mediaIds");
+    expect(firstError({ readable: "no", pages: "empty" })).toBe("pages");
+    expect(firstError({})).toBeNull();
+  });
+  it("clears fixed errors without surfacing unflagged ones", () => {
+    const flagged = { mediaIds: "old", description: "short" };
+    expect(stillFailing(flagged, { description: "still short" })).toEqual({
+      description: "still short",
+    });
+    expect(stillFailing(flagged, { pages: "empty" })).toEqual({});
+    expect(stillFailing({}, { pages: "empty" })).toEqual({});
+  });
+  it("derives step progress only from entered data", () => {
+    const f = valid();
+    expect([0, 1, 2].map((s) => stepComplete(f, ready, s))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(stepComplete({ ...f, bookId: null }, ready, 0)).toBe(false);
+    // A selected photo that is still processing does not count as done.
+    expect(
+      stepComplete(f, [{ id: "photo", status: "Processing" }] as Media[], 1),
+    ).toBe(false);
+    expect(stepComplete({ ...f, description: "ngắn" }, ready, 1)).toBe(false);
+    expect(stepComplete({ ...f, salePrice: "" }, ready, 2)).toBe(false);
+    // Other steps stay complete when only one step is missing data.
+    expect(stepComplete({ ...f, salePrice: "" }, ready, 1)).toBe(true);
+    // The ownership declaration is a submit-time confirmation, not progress.
+    expect(stepComplete(f, ready, 3)).toBe(true);
+  });
+});
+describe("my books row summary", () => {
+  const row = (state: object, extra: object = {}) =>
+    ({
+      state: {
+        moderation: "Draft",
+        visibility: "Visible",
+        trade: "Available",
+        deletedAt: null,
+        ...state,
+      },
+      latestDecision: null,
+      removalReason: null,
+      catalogStatus: null,
+      ...extra,
+    }) as unknown as Draft;
+  it("names the next action and keeps each label unique by position", () => {
+    expect(listingSummary(row({}), 1).action).toBe("Hoàn thiện sách 1");
+    expect(listingSummary(row({ moderation: "PendingReview" }), 2).action).toBe(
+      "Xem sách 2 đang chờ duyệt",
+    );
+    expect(listingSummary(row({ moderation: "Approved" }), 3).action).toBe(
+      "Quản lý sách 3",
+    );
+  });
+  it("explains state from real fields without claiming shelf presence", () => {
+    const rejected = listingSummary(
+      row(
+        { moderation: "Rejected" },
+        { latestDecision: { decision: "Reject", reason: "Ảnh mờ" } },
+      ),
+      1,
+    );
+    expect(rejected).toEqual({
+      status: "Cần chỉnh sửa",
+      note: "Góp ý: Ảnh mờ",
+      action: "Sửa sách 1 theo góp ý",
+    });
+    expect(
+      listingSummary(
+        row({ moderation: "PendingReview" }, { catalogStatus: "Pending" }),
+        1,
+      ).note,
+    ).toBe("Đầu sách đang chờ xác nhận.");
+    const hidden = listingSummary(
+      row({ moderation: "Approved", visibility: "Hidden", trade: "Reserved" }),
+      1,
+    );
+    expect(hidden.status).toBe(
+      "Đã được duyệt · Đang ẩn · Đang giữ cho một đơn",
+    );
+    expect(
+      JSON.stringify(listingSummary(row({ moderation: "Approved" }), 1)),
+    ).not.toContain("trên kệ");
+    expect(
+      listingSummary(
+        row(
+          { moderation: "Approved", visibility: "Removed" },
+          {
+            removalReason: "Vi phạm",
+          },
+        ),
+        4,
+      ),
+    ).toEqual({
+      status: "Đã gỡ",
+      note: "Lý do gỡ: Vi phạm",
+      action: "Xem sách 4 đã gỡ",
+    });
   });
 });

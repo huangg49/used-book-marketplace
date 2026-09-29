@@ -24,7 +24,7 @@ import { draftPage, emptyContent, privateDraft, receipt } from "./contracts";
 import { DraftEditor } from "./draft-editor";
 import { photoError, useForeground } from "./draft-media";
 import { BookIdentity } from "./catalog-picker";
-import { moderationLabel } from "./listing-form";
+import { listingSummary, moderationLabel } from "./listing-form";
 import { MemberNavigation } from "../navigation/member-navigation";
 export function DraftsScreen() {
   const { client, state } = useSession(),
@@ -167,36 +167,50 @@ export function DraftsScreen() {
       ) : null}
       {drafts.data?.pages
         .flatMap((p) => p.items)
-        .map((d, i) => (
-          <View
-            key={d.id}
-            style={{
-              gap: space.sm,
-              paddingVertical: space.lg,
-              borderTopWidth: 1,
-              borderColor: colors.rule,
-            }}
-          >
-            <AppText kind="label" color={colors.rustText}>
-              {d.state.visibility === "Removed"
-                ? "Đã gỡ"
-                : `${moderationLabel[d.state.moderation]}${d.state.visibility === "Hidden" ? " · Đang ẩn" : ""}`}
-            </AppText>
-            <BookIdentity id={d.currentRevision.content.bookId} />
-            <AppText>
-              {d.currentRevision.content.description ||
-                "Chưa có lời nhắn về cuốn sách."}
-            </AppText>
-            <AppText kind="small">
-              {d.currentRevision.content.mediaIds.length} ảnh đã chọn
-            </AppText>
-            <Button
-              secondary
-              title={`Xem sách ${i + 1}`}
-              onPress={() => setSelected(d.id)}
-            />
-          </View>
-        ))}
+        .map((d, i) => {
+          const summary = listingSummary(d, i + 1);
+          return (
+            <View
+              key={d.id}
+              style={{
+                gap: space.sm,
+                paddingVertical: space.lg,
+                borderTopWidth: 1,
+                borderColor: colors.rule,
+              }}
+            >
+              <AppText kind="label" color={colors.rustText}>
+                {summary.status}
+              </AppText>
+              <BookIdentity id={d.currentRevision.content.bookId} />
+              <AppText>
+                {d.currentRevision.content.description ||
+                  "Chưa có lời nhắn về cuốn sách."}
+              </AppText>
+              <AppText kind="small">
+                {d.currentRevision.content.mediaIds.length} ảnh đã chọn
+              </AppText>
+              {summary.note ? (
+                <AppText
+                  kind="small"
+                  color={
+                    d.state.moderation === "Rejected" ||
+                    d.state.visibility === "Removed"
+                      ? colors.rustText
+                      : colors.muted
+                  }
+                >
+                  {summary.note}
+                </AppText>
+              ) : null}
+              <Button
+                secondary
+                title={summary.action}
+                onPress={() => setSelected(d.id)}
+              />
+            </View>
+          );
+        })}
       {drafts.hasNextPage ? (
         <Button
           title="Xem thêm bản nháp"

@@ -7,6 +7,7 @@ import * as Crypto from "expo-crypto";
 import * as ImagePicker from "expo-image-picker";
 import { useSession } from "../../core/session/session-provider";
 import {
+  ActionBar,
   AppText,
   BackAction,
   Button,
@@ -25,6 +26,10 @@ import {
   toContent,
   validateForm,
   errorStep,
+  firstError,
+  stepComplete,
+  stillFailing,
+  stepFields,
   editableListing,
   moderationLabel,
   displayPrice,
@@ -36,13 +41,25 @@ import {
   type ListingIntent,
 } from "./listing-command";
 import { BookIdentity, CatalogPicker } from "./catalog-picker";
-import { ConditionFields, PricingFields } from "./listing-fields";
+import {
+  ConditionFields,
+  PricingFields,
+  createAnchors,
+} from "./listing-fields";
 import { photoBytes } from "./photo-bytes";
 import { uploadPhoto, type UploadAttempt } from "./upload";
 import { LifecycleActions } from "./lifecycle-actions";
 import { FulfillmentFields } from "./fulfillment-fields";
+import { StepNav } from "./step-nav";
 
-const stepCount = 4;
+const stepLabels = [
+  "Đầu sách",
+  "Ảnh và tình trạng",
+  "Bán hoặc đổi",
+  "Kiểm tra",
+] as const;
+const checkMessage =
+  "Có thông tin cần bổ sung. Kiểm tra các mục được ghi chú bên dưới.";
 const titles = [
   "Bắt đầu từ đúng cuốn sách.",
   "Những dấu đã qua tay bạn.",
@@ -65,7 +82,10 @@ export function DraftEditor({
     );
   const [step, setStep] = useState(editableListing(initial) ? 0 : 3),
     [declared, setDeclared] = useState(false),
-    [errors, setErrors] = useState<Errors>({});
+    [check, setCheck] = useState<{ errors: Errors; submit: boolean }>({
+      errors: {},
+      submit: false,
+    });
   const [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
@@ -83,6 +103,26 @@ export function DraftEditor({
     setStep(value);
     scroll.current?.scrollTo({ y: 0, animated: false });
   };
+  // Field wrappers registered by the steps; a failed check scrolls to the first error.
+  const [{ anchor, get: anchored }] = useState(createAnchors);
+  const [jump, setJump] = useState<{ field: keyof Errors } | null>(null);
+  useEffect(() => {
+    const node = jump && anchored(jump.field);
+    const view = scroll.current as
+      (ScrollView & { getInnerViewRef?: () => View | null }) | null;
+    if (!node || !view) return;
+    const frame = requestAnimationFrame(() => {
+      const inner = view.getInnerViewRef?.();
+      if (inner)
+        node.measureLayout(
+          inner,
+          (_x, y) =>
+            view.scrollTo({ y: Math.max(0, y - space.lg), animated: true }),
+          () => {},
+        );
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [jump, anchored]);
   const intent = useRef<ListingIntent | null>(null),
     attempt = useRef<UploadAttempt | null>(null),
     busyRef = useRef(false);
@@ -168,7 +208,17 @@ export function DraftEditor({
     setBase(latest.data);
     setForm(fromContent(latest.data.currentRevision.content));
     setDeclared(false);
+    // A newer server state (e.g. review result) supersedes the last action's note.
+    setMessage("");
   }
+  const photoList = photos.data ?? [];
+  const errors = stillFailing(
+    check.errors,
+    validateForm(form, photoList, declared, check.submit),
+  );
+  // The check summary belongs to the step that still has flagged fields.
+  const checkClearedHere =
+    error === checkMessage && !stepFields[step].some((k) => errors[k]);
   const reconcile = async (fresh: Draft, replaceForm: boolean) => {
     setBase(fresh);
     if (replaceForm) setForm(fromContent(fresh.currentRevision.content));
@@ -187,12 +237,12 @@ export function DraftEditor({
       return;
     if (!retry) {
       const problems = validateForm(form, photos.data ?? [], declared, submit);
-      setErrors(problems);
+      setCheck({ errors: problems, submit });
       if (Object.keys(problems).length) {
-        setError(
-          "Có thông tin cần bổ sung. Kiểm tra các mục được ghi chú bên dưới.",
-        );
+        setError(checkMessage);
         go(errorStep(problems));
+        const field = firstError(problems);
+        if (field) setJump({ field });
         return;
       }
       intent.current = listingIntent(
@@ -302,7 +352,7 @@ export function DraftEditor({
       setMessage(
         approvedEdit
           ? "Ảnh đã tải lên. Gửi bản sửa để lưu lựa chọn ảnh mới."
-          : "Ảnh đã tải lên và đang được kiểm tra. Lưu bản nháp để giữ lựa chọn ảnh.",
+          : "Ảnh đã tải lên và đang được kiểm tra. Lưu nháp để giữ lựa chọn ảnh.",
       );
     } catch (e) {
       setError(photoError(e));
@@ -328,7 +378,7 @@ export function DraftEditor({
       attempt.current = null;
       setRetryAvailable(false);
       setUncertain(false);
-      setErrors({});
+      setCheck({ errors: {}, submit: false });
       setDeclared(false);
       setError("");
       setReloadOpen(false);
@@ -345,8 +395,47 @@ export function DraftEditor({
       ? "Đã gỡ"
       : (moderationLabel[base.state.moderation] ?? "Đang cập nhật");
   const ids = form.mediaIds;
+  const navLocked = busy || uncertain || lifecyclePending;
+  const canSave = editable && !approvedEdit;
+  const hasPrimary = step < 3 || editable;
+  // Save and step actions stay above the keyboard instead of below long fields.
+  const footer =
+    hasPrimary || canSave ? (
+      <ActionBar note={canSave && dirty ? "Có thay đổi chưa lưu." : undefined}>
+        {canSave ? (
+          <Button
+            key="save"
+            secondary
+            title="Lưu nháp"
+            busy={busy}
+            disabled={locked || !dirty || retryAvailable}
+            onPress={() => void save()}
+          />
+        ) : null}
+        {step < 3 ? (
+          <Button
+            key="next"
+            title="Tiếp tục"
+            disabled={navLocked}
+            onPress={() => go(step + 1)}
+          />
+        ) : hasPrimary ? (
+          <Button
+            key="submit"
+            title={
+              approvedEdit ? "Gửi bản sửa để duyệt lại" : "Lưu và gửi duyệt"
+            }
+            disabled={locked || retryAvailable}
+            busy={busy}
+            onPress={() =>
+              approvedEdit ? setReviseConfirm(true) : void save(true)
+            }
+          />
+        ) : null}
+      </ActionBar>
+    ) : undefined;
   return (
-    <Screen scrollRef={scroll}>
+    <Screen scrollRef={scroll} footer={footer}>
       <BackAction
         title="Về sách của tôi"
         disabled={busy}
@@ -360,10 +449,19 @@ export function DraftEditor({
         <AppText kind="label" color={colors.rustText}>
           CHUẨN BỊ CHUYỀN SÁCH · {status.toLocaleUpperCase("vi")}
         </AppText>
-        <AppText kind="small">
-          {step + 1} / {stepCount} ·{" "}
-          {["Đầu sách", "Ảnh và tình trạng", "Bán hoặc đổi", "Kiểm tra"][step]}
-        </AppText>
+        <StepNav
+          labels={stepLabels}
+          current={step}
+          states={stepLabels.map((_, i) =>
+            i === 3
+              ? "review"
+              : stepComplete(form, photoList, i)
+                ? "done"
+                : "missing",
+          )}
+          disabled={navLocked}
+          onSelect={go}
+        />
         <AppText kind="title" color={colors.forest} accessibilityRole="header">
           {titles[step]}
         </AppText>
@@ -422,7 +520,9 @@ export function DraftEditor({
           Hiện bạn chỉ có thể xem thông tin đã lưu.
         </Notice>
       ) : null}
-      {error ? <Notice tone="error">{error}</Notice> : null}
+      {error && !checkClearedHere ? (
+        <Notice tone="error">{error}</Notice>
+      ) : null}
       {uncertain ? (
         <>
           <Notice tone="warning">
@@ -460,7 +560,9 @@ export function DraftEditor({
             Chụp bìa, gáy và những phần đã qua sử dụng. Giữ nguyên màu và dấu
             vết để người đọc sau hiểu đúng cuốn sách.
           </AppText>
-          <AppText kind="heading">Ảnh bản sách · {ids.length}/8</AppText>
+          <View ref={anchor("mediaIds")}>
+            <AppText kind="heading">Ảnh bản sách · {ids.length}/8</AppText>
+          </View>
           <AppText kind="small">
             JPEG, PNG hoặc WebP, tối đa 10 MB mỗi ảnh. Ảnh được chọn đầu tiên là
             ảnh bìa.
@@ -554,11 +656,25 @@ export function DraftEditor({
               />
             </View>
           ) : null}
+          <View
+            style={{
+              paddingTop: space.lg,
+              borderTopWidth: 1,
+              borderColor: colors.rule,
+              gap: space.sm,
+            }}
+          >
+            <AppText kind="heading">Tình trạng bản sách</AppText>
+            <AppText>
+              Mô tả đúng những gì người nhận sẽ thấy khi mở sách.
+            </AppText>
+          </View>
           <ConditionFields
             form={form}
             onChange={setForm}
             errors={errors}
             disabled={locked}
+            anchor={anchor}
           />
         </>
       ) : null}
@@ -569,6 +685,7 @@ export function DraftEditor({
             onChange={setForm}
             errors={errors}
             disabled={locked}
+            anchor={anchor}
           />
           <FulfillmentFields
             value={form.fulfillment}
@@ -683,56 +800,24 @@ export function DraftEditor({
           ) : null}
           {editable ? (
             <>
-              <Checkbox
-                title="Tôi có quyền đăng cuốn sách này; ảnh và mô tả phản ánh trung thực tình trạng sách."
-                checked={declared}
-                disabled={locked}
-                onPress={() => setDeclared((v) => !v)}
-              />
-              {errors.ownershipDeclared ? (
-                <Notice tone="error">{errors.ownershipDeclared}</Notice>
-              ) : null}
+              <View ref={anchor("ownershipDeclared")} style={{ gap: space.md }}>
+                <Checkbox
+                  title="Tôi có quyền đăng cuốn sách này; ảnh và mô tả phản ánh trung thực tình trạng sách."
+                  checked={declared}
+                  disabled={locked}
+                  onPress={() => setDeclared((v) => !v)}
+                />
+                {errors.ownershipDeclared ? (
+                  <Notice tone="error">{errors.ownershipDeclared}</Notice>
+                ) : null}
+              </View>
               <AppText kind="small">
                 Sau khi gửi, nội dung sẽ được giữ nguyên trong lúc kiểm duyệt.
                 Bài đăng chỉ được duyệt khi thông tin đầy đủ và đạt yêu cầu.
               </AppText>
-              <Button
-                title={
-                  approvedEdit ? "Gửi bản sửa để duyệt lại" : "Lưu và gửi duyệt"
-                }
-                disabled={locked || retryAvailable}
-                busy={busy}
-                onPress={() =>
-                  approvedEdit ? setReviseConfirm(true) : void save(true)
-                }
-              />
             </>
           ) : null}
         </>
-      ) : null}
-      {step < 3 ? (
-        <Button
-          title={`Tiếp tục · ${["", "Ảnh và tình trạng", "Bán hoặc đổi", "Kiểm tra"][step + 1]}`}
-          disabled={busy || uncertain || lifecyclePending}
-          onPress={() => go(step + 1)}
-        />
-      ) : null}
-      {step > 0 ? (
-        <Button
-          secondary
-          title="Về bước trước"
-          disabled={busy || uncertain || lifecyclePending}
-          onPress={() => go(step - 1)}
-        />
-      ) : null}
-      {editable && !approvedEdit ? (
-        <Button
-          secondary
-          title="Lưu bản nháp"
-          busy={busy}
-          disabled={locked || !dirty || retryAvailable}
-          onPress={() => void save()}
-        />
       ) : null}
       <Button
         secondary

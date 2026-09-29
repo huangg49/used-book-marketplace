@@ -18,6 +18,7 @@
 
 - [Delivery overdue and Buyer non-receipt intake](features/DELIVERY_OVERDUE_REPORT.md)
 - [ADR0025: durable delivery review](adr/0025-delivery-overdue.md)
+- [ADR0026 (Proposed, chưa triển khai): Delivered/receipt/inspection](adr/0026-delivery-receipt-inspection.md)
 - [Simulated carrier pickup and exception evidence](features/CARRIER_PICKUP_REPORT.md)
 - [ADR 0024: independent carrier pickup](adr/0024-carrier-pickup.md)
 - [DirectDelivery shipment registration and verification](features/DIRECT_SHIPMENT_REPORT.md)

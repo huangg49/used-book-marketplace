@@ -98,22 +98,25 @@ export function FulfillmentFields({
               message="Thêm địa chỉ, rồi quay lại bài đăng để chọn nơi gửi."
             />
           ) : null}
-          {book.data.items.map((a) => (
-            <Button
-              key={a.id}
-              secondary
-              selected={value?.originAddressId === a.id && current}
-              title={`${value?.originAddressId === a.id && current ? "Đã chọn" : "Chọn nơi gửi"}: ${a.recipientName} · ${a.detail}`}
-              disabled={book.isFetching}
-              onPress={() =>
-                onChange({
-                  originAddressId: a.id,
-                  originAddressVersion: a.version,
-                  method: "DirectDelivery",
-                })
-              }
-            />
-          ))}
+          {/* Default first and labelled; choosing stays explicit, never automatic. */}
+          {[...book.data.items]
+            .sort((x, y) => Number(y.isDefault) - Number(x.isDefault))
+            .map((a) => (
+              <Button
+                key={a.id}
+                secondary
+                selected={value?.originAddressId === a.id && current}
+                title={`${value?.originAddressId === a.id && current ? "Đã chọn" : "Chọn nơi gửi"}: ${a.recipientName} · ${a.detail}${a.isDefault ? " · Mặc định" : ""}`}
+                disabled={book.isFetching}
+                onPress={() =>
+                  onChange({
+                    originAddressId: a.id,
+                    originAddressVersion: a.version,
+                    method: "DirectDelivery",
+                  })
+                }
+              />
+            ))}
           {value ? (
             <Button
               secondary

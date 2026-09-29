@@ -86,9 +86,16 @@ Native đã chạy một phần trên Pixel_7/Android 15 với Metro có sẵn; 
 toàn hành trình listing, TalkBack và các tổ hợp bàn phím/chữ lớn chưa kiểm.
 Không mở ví/checkout/Order UI giả; chưa đóng toàn bộ Gate 3.
 
-Điểm dở cuối: Android mở lại sau export đứng splash; chưa chẩn đoán xong. Màn UI
-trước đó có evidence nhưng không thay cold-start hiện tại. Đọc
-[SESSION_STATE](SESSION_STATE.md) và xử lý A00 trong
+Cập nhật 29/09 (máy tiếp nhận, AVD API 37 x86_64): U02–U06 có evidence riêng
+([U02](U02_LISTING_FORM.md), [U03](U03_ADDRESS_BOOK.md), [U04](U04_MY_BOOKS.md),
+[U06](U06_STATES_COPY.md)); native thêm [lượt 29/09](NATIVE_RUN_2026_09_29.md) với
+N02/N07/N08/N12/N17 PASS. N13/N19/N21, WebP, iOS/ARM và review độc lập còn mở;
+U01 còn chờ phản hồi thẩm mỹ của người dùng. Gate 3 chưa đóng.
+
+Điểm dở cũ “Android mở lại sau export đứng splash” (A00) đã được kiểm 29/09 trên
+AVD x86_64 API 37: cold start, deep link và reopen PASS; cơ chế Metro/cache ghi ở
+[A00](A00_ANDROID_STARTUP.md). Đây không đóng N01–N21. Đọc
+[SESSION_STATE](SESSION_STATE.md) và gói tiếp theo trong
 [kế hoạch tiếp nhận](CONTINUATION_PLAN.md). Các tính năng sau bàn giao có dependency
 và tiêu chí riêng; việc lập kế hoạch không đóng gate hoặc mở nghiệp vụ ngay.
 

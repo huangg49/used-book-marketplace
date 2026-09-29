@@ -41,10 +41,20 @@ export function Screen({
             style={{
               borderTopWidth: 1,
               borderColor: colors.rule,
-              padding: space.lg,
+              paddingVertical: space.lg,
+              paddingHorizontal: space.xl,
             }}
           >
-            {footer}
+            {/* Same side padding and max width as the content, so actions line up. */}
+            <View
+              style={{
+                width: "100%",
+                maxWidth: metrics.content,
+                alignSelf: "center",
+              }}
+            >
+              {footer}
+            </View>
           </View>
         ) : null}
       </KeyboardAvoidingView>
