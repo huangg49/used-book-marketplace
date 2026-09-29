@@ -6,12 +6,6 @@ import { defineConfig } from 'vitest/config';
 // backstops and are replaced by test/mongo/schema.mongo-spec.ts plus the
 // commit-time checks of the owning package.
 const pendingMongoPort = [
-  // MIG-04 catalog/listing/media/address
-  'test/catalog-drafts.e2e-spec.ts',
-  'test/listing-review.e2e-spec.ts',
-  'test/listing-schema.e2e-spec.ts',
-  'test/media.e2e-spec.ts',
-  'test/fulfillment-migration.e2e-spec.ts',
   // MIG-05 quote/order/wallet/shipment (gated on money/permission review)
   'test/quotes.e2e-spec.ts',
   'test/quote-migration.e2e-spec.ts',

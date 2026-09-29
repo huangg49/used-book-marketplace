@@ -13,7 +13,13 @@ export class Gate {
     private readonly stop: () => void,
   ) {}
 
-  static async lockUser(client: MongoClient, userId: string) {
+  static lockUser(client: MongoClient, userId: string) {
+    return Gate.lock(client, 'users', [userId]);
+  }
+
+  // Write-locks any lockable documents (users, listings, catalog_books, ...),
+  // like SELECT ... FOR UPDATE on those rows.
+  static async lock(client: MongoClient, collection: string, ids: string[]) {
     const transactions = new Set<number>();
     const stop = onTransactionRetry((event) =>
       transactions.add(event.transactionId),
@@ -24,9 +30,10 @@ export class Gate {
       writeConcern: { w: 'majority' },
     });
     const db = client.db();
-    await db
-      .collection<{ _id: string }>('users')
-      .updateOne({ _id: userId }, { $inc: { lockSeq: 1 } }, { session });
+    for (const id of [...ids].sort())
+      await db
+        .collection<{ _id: string }>(collection)
+        .updateOne({ _id: id }, { $inc: { lockSeq: 1 } }, { session });
     return new Gate(session, db, transactions, stop);
   }
 
