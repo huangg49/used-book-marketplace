@@ -66,50 +66,138 @@
   width: 100%;
   margin-top: 1.5rem;
 }
-.topbar {
-  padding: 1.1rem 3rem;
-  border-bottom: 1px solid var(--rule);
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
+.app-shell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(238px, 280px) minmax(0, 1fr);
 }
-.topbar img {
+.sidebar {
+  min-height: 100dvh;
+  padding: 1.75rem 1rem;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0 0.75rem 1.75rem;
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+}
+.sidebar-brand img {
   display: block;
   object-fit: contain;
 }
-.workspace-label {
-  border-left: 1px solid var(--border);
-  padding-left: 1.5rem;
+.sidebar-brand span {
   color: var(--muted);
   font-size: 0.85rem;
 }
-.account {
-  margin-left: auto;
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  font-size: 0.85rem;
-}
 .workspace-nav {
-  display: flex;
-  gap: 2rem;
-  padding: 0 3rem;
-  border-bottom: 1px solid var(--border);
+  display: grid;
+  gap: 0.35rem;
+  padding: 1.5rem 0;
 }
-.workspace-nav a {
-  padding: 1rem 0;
+.sidebar-section-label,
+.sidebar-group-title {
+  margin: 0;
+  padding: 0 0.75rem;
+  color: var(--rust-text);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.sidebar-group-title,
+.sidebar-item-content {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.sidebar-group-title svg,
+.workspace-nav a svg,
+.sidebar-item-content svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke-width: 1.8;
+}
+.workspace-nav a,
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  min-height: 46px;
+  padding: 0.65rem 0.75rem;
+  border-radius: 4px;
   text-decoration: none;
   font-size: 0.875rem;
 }
 .workspace-nav a.active {
-  box-shadow: inset 0 -3px var(--forest);
+  background: var(--forest);
+  color: var(--paper);
   font-weight: 700;
+}
+.workspace-nav a:hover {
+  background: var(--paper);
+}
+.workspace-nav a.active:hover {
+  background: var(--forest);
+}
+.workspace-nav a:not(.active) svg {
+  color: var(--rust-text);
+}
+.sidebar-group {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.4rem 0;
+  padding: 0.75rem 0;
+  border-block: 1px solid var(--rule);
+}
+.sidebar-group-title {
+  margin-bottom: 0.15rem;
+}
+.sidebar-item {
+  color: var(--muted);
+}
+.sidebar-item small {
+  margin-left: auto;
+}
+.sidebar-item small {
+  color: var(--rust-text);
+  font-size: 0.65rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sidebar-account {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding: 1.25rem 0.75rem 0;
+  border-top: 1px solid var(--rule);
+  font-size: 0.8rem;
+}
+.sidebar-account .button {
+  width: 100%;
+}
+.workspace-frame {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mobile-topbar {
+  display: none;
 }
 .workspace {
   max-width: 1500px;
-  margin: auto;
+  width: 100%;
+  margin: 0 auto;
   padding: 3.5rem 3rem;
   min-height: 70vh;
+  flex: 1;
 }
 .skip-link {
   position: absolute;
@@ -396,11 +484,7 @@
   }
 }
 @media (max-width: 1000px) {
-  .workspace,
-  .topbar {
-    padding-inline: 1.5rem;
-  }
-  .workspace-nav {
+  .workspace {
     padding-inline: 1.5rem;
   }
   .detail-layout {
@@ -408,9 +492,6 @@
     grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
   }
   .edition {
-    display: none;
-  }
-  .workspace-label {
     display: none;
   }
   .facts > div {
@@ -443,25 +524,23 @@
   .login-form {
     padding: 2.5rem 1.5rem;
   }
-  .topbar {
-    flex-wrap: wrap;
-    gap: 1rem;
-    padding: 1rem;
+  .app-shell {
+    display: block;
   }
-  .topbar img {
-    width: 120px;
-  }
-  .account {
-    gap: 0.6rem;
-    flex-wrap: wrap;
-    max-width: 100%;
-  }
-  .account > span {
+  .sidebar {
     display: none;
   }
-  .workspace-nav {
-    padding-inline: 1rem;
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 1rem;
+    min-height: 70px;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 0.85rem;
+    font-weight: 700;
   }
   .workspace {
     padding: 2rem 1rem;

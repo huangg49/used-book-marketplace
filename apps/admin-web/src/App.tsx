@@ -14,6 +14,14 @@ import {
   Outlet,
   RouterProvider,
 } from "react-router-dom";
+import {
+  BookCheck,
+  BookPlus,
+  ChartNoAxesCombined,
+  ClipboardCheck,
+  LayoutDashboard,
+  UsersRound,
+} from "lucide-react";
 import { currentUserSchema } from "@used-books/session-client";
 import logo from "../../../packages/brand/logos/lat-lai-horizontal-primary.svg";
 import {
@@ -144,56 +152,102 @@ function Workspace() {
       <a className="skip-link" href="#main">
         Đến nội dung chính
       </a>
-      <header className="topbar">
-        <Link to="/review/listings" aria-label="Lật lại · Bàn kiểm duyệt">
+      <aside className="sidebar">
+        <Link
+          className="sidebar-brand"
+          to="/review/listings"
+          aria-label="Lật lại · Bàn kiểm duyệt"
+        >
           <img src={logo} alt="Lật lại" width="142" height="46" />
+          <span>Bàn quản trị</span>
         </Link>
-        <span className="workspace-label">Bàn kiểm duyệt</span>
-        <div className="account">
+        {user && canReview(user) && (
+          <nav className="workspace-nav" aria-label="Khu vực quản trị">
+            <p className="sidebar-section-label">Điều hướng</p>
+            <span className="sidebar-item is-unavailable" aria-disabled="true">
+              <span className="sidebar-item-content">
+                <LayoutDashboard aria-hidden="true" />
+                Dashboard
+              </span>
+              <small>Sắp triển khai</small>
+            </span>
+            <div className="sidebar-group">
+              <p className="sidebar-group-title">
+                <ClipboardCheck aria-hidden="true" />
+                Duyệt bài đăng
+              </p>
+              <NavLink to="/review/listings">
+                <BookCheck aria-hidden="true" />
+                Bài đăng sách
+              </NavLink>
+              {canReviewCatalog(user) && (
+                <NavLink to="/review/catalog-requests">
+                  <BookPlus aria-hidden="true" />
+                  Đầu sách
+                </NavLink>
+              )}
+            </div>
+            <span className="sidebar-item is-unavailable" aria-disabled="true">
+              <span className="sidebar-item-content">
+                <UsersRound aria-hidden="true" />
+                Quản lý người dùng
+              </span>
+              <small>Sắp triển khai</small>
+            </span>
+            <span className="sidebar-item is-unavailable" aria-disabled="true">
+              <span className="sidebar-item-content">
+                <ChartNoAxesCombined aria-hidden="true" />
+                Report
+              </span>
+              <small>Sắp triển khai</small>
+            </span>
+          </nav>
+        )}
+        <div className="sidebar-account">
           <span>{user?.displayName || state.user.displayName}</span>
           <Button busy={logoutBusy} onClick={() => void logout()}>
             Đăng xuất
           </Button>
         </div>
-      </header>
-      {user && canReview(user) && (
-        <nav className="workspace-nav" aria-label="Khu vực kiểm duyệt">
-          <NavLink to="/review/listings">01 · Bài đăng sách</NavLink>
-          {canReviewCatalog(user) && (
-            <NavLink to="/review/catalog-requests">02 · Đầu sách</NavLink>
+      </aside>
+      <div className="workspace-frame">
+        <header className="mobile-topbar">
+          <span>Bàn quản trị</span>
+          <Button busy={logoutBusy} onClick={() => void logout()}>
+            Đăng xuất
+          </Button>
+        </header>
+        <main id="main" className="workspace" tabIndex={-1}>
+          {logoutError !== undefined && <ErrorNotice error={logoutError} />}
+          {profile.isLoading && (
+            <p role="status">Đang kiểm tra quyền truy cập…</p>
           )}
-        </nav>
-      )}
-      <main id="main" className="workspace" tabIndex={-1}>
-        {logoutError !== undefined && <ErrorNotice error={logoutError} />}
-        {profile.isLoading && (
-          <p role="status">Đang kiểm tra quyền truy cập…</p>
-        )}
-        {profile.error && (
-          <ErrorNotice
-            error={profile.error}
-            retry={() => void profile.refetch()}
-            busy={profile.isFetching}
-          />
-        )}
-        {user && !canReview(user) && (
-          <Notice tone="warning">
-            Tài khoản hiện không có quyền kiểm duyệt. Cần tài khoản đang hoạt
-            động với quyền Staff hoặc Admin.
-          </Notice>
-        )}
-        {user && canReview(user) && (
-          <div inert={logoutBusy || profile.isError || undefined}>
-            <LeaveGuard.Provider value={registerGuard}>
-              <Outlet context={user} />
-            </LeaveGuard.Provider>
-          </div>
-        )}
-      </main>
-      <footer className="workspace-footer">
-        Lật lại · Hồ sơ rõ ràng, sách tiếp tục hành trình.
-        <span>Thời gian hiển thị theo TP.HCM</span>
-      </footer>
+          {profile.error && (
+            <ErrorNotice
+              error={profile.error}
+              retry={() => void profile.refetch()}
+              busy={profile.isFetching}
+            />
+          )}
+          {user && !canReview(user) && (
+            <Notice tone="warning">
+              Tài khoản hiện không có quyền kiểm duyệt. Cần tài khoản đang hoạt
+              động với quyền Staff hoặc Admin.
+            </Notice>
+          )}
+          {user && canReview(user) && (
+            <div inert={logoutBusy || profile.isError || undefined}>
+              <LeaveGuard.Provider value={registerGuard}>
+                <Outlet context={user} />
+              </LeaveGuard.Provider>
+            </div>
+          )}
+        </main>
+        <footer className="workspace-footer">
+          Lật lại · Hồ sơ rõ ràng, sách tiếp tục hành trình.
+          <span>Thời gian hiển thị theo TP.HCM</span>
+        </footer>
+      </div>
     </div>
   );
 }
