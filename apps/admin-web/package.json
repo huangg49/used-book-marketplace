@@ -19,6 +19,7 @@
     "@used-books/session-client": "workspace:*",
     "antd": "^6.6.4",
     "axios": "^1.20.0",
+    "lucide-react": "^1.48.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.88.0",
