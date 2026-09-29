@@ -1,5 +1,25 @@
 # Điểm lưu để tiếp tục — 30/09/2026
 
+## Bàn giao nhóm / tích hợp MongoDB — đang thực hiện
+
+- Chủ dự án đã chốt: bàn giao cho nhóm trong6 ngày; chuyển toàn bộ dữ liệu hiện có
+  trên máy này; mỗi thành viên Windows có Docker/Android Studio, dùng MongoDB riêng.
+  Nhóm chưa phân công web/admin/Flutter; không có teammate đang sửa hoặc reviewer.
+  **Đã cho phép push, tạo PR và merge khi kiểm tra cần thiết đạt** cho gói này.
+  Chưa có deploy ngoài máy; human review vẫn ghi chưa thực hiện.
+- Nhánh `codex/mongodb-team-handoff` từ `5fedc53`; fetch xác nhận main `b49cc52` là
+  ancestor, không có PR mở. Bao gồm teammate Mongo + hai P1 fix + import/live/native
+  evidence + cleanup. [Hướng dẫn nhóm Windows](TEAM_WINDOWS.md) nêu rõ Flutter chỉ
+  scaffold và member web hiện là Expo web, không tự thêm app/phân công tính năng.
+- Đối chiếu read-only nguồn PG5433 với acceptance57117: cùng4 users/3 listings/7media;
+  Mongo có thêm1 address book/address/identity và2 receipt/audit (39 so với37).
+  Chưa chuyển `.env` hoặc ghi đè bản nào. Cần so nội dung/snapshot và bảo toàn thay
+  đổi Mongo trước cutover; không import đè acceptance hoặc quay app về PG cũ.
+- PostgreSQL nguồn đã khởi động lại để đọc; không đụng PG5432 dự án khác. Script so
+  sánh `.tmp/handoff-compare.mjs` chỉ đọc; không commit dữ liệu/config riêng.
+- Bước tiếp: push PR tích hợp, xem CI; xử lý lỗi CI nếu có trước merge. Đồng thời
+  sao lưu nguồn và acceptance ngoài Git, xác định bản Mongo đầy đủ để chuyển cấu hình.
+
 ## Dọn phần PostgreSQL an toàn — điểm mới nhất
 
 - Chủ dự án đã cho dọn phần an toàn, giữ thành phần cần chạy/import. Nhánh
