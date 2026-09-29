@@ -536,6 +536,33 @@ describe('listing/catalog persistence invariants on MongoDB', () => {
       ),
     ).rejects.toThrow('Approval requires confirmed catalog');
     expect(await decisions(item)).toBe(0);
+    // C (latlai_guard_decision): a raw self-review fails at commit even when
+    // everything else about the approval is valid.
+    const own = await listing(true);
+    await expect(
+      fx.commit(
+        async (tx) => {
+          await tx.c.listing_decisions.insertOne({
+            _id: randomUUID(),
+            revisionId: own.revision,
+            reviewerId: owner.id,
+            decision: 'Approve',
+            checklist: CHECKLIST,
+            reason: null,
+            decidedAt: new Date(),
+          });
+          await tx.c.listings.updateOne(
+            { _id: own.id },
+            {
+              $set: { moderation: 'Approved', publishedAt: new Date() },
+              $inc: { version: 1 },
+            },
+          );
+        },
+        { listing: own.id },
+      ),
+    ).rejects.toThrow('Stale revision or self-review');
+    expect(await decisions(own)).toBe(0);
   });
 
   it('serializes conflicting review versions at a listing lock with one winner', async () => {

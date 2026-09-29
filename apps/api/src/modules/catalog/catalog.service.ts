@@ -124,7 +124,11 @@ export async function checkCatalog(tx: Tx, bookId: string) {
   if (!b) return;
   const r = b.currentRevision;
   if (!r) throw new Error('Catalog requires its own current revision');
-  const d = b.revisions.find((x) => x._id === r._id)!.decision?.decision;
+  const decision = b.revisions.find((x) => x._id === r._id)!.decision;
+  const d = decision?.decision;
+  // latlai_guard_decision: nobody reviews their own catalog request.
+  if (decision && decision.reviewerId === b.requesterId)
+    throw new Error('Stale revision or self-review');
   if (
     (b.status === 'Pending' && d) ||
     (b.status === 'Confirmed' && d !== 'Confirm') ||

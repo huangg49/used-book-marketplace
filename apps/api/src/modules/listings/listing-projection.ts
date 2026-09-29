@@ -200,8 +200,11 @@ export async function checkListing(tx: Tx, listingId: string) {
       ?.ownerId !== l.ownerId
   )
     throw new Error('Origin is not an address of the listing owner');
-  const d = (await tx.c.listing_decisions.findOne({ revisionId: r._id }))
-    ?.decision;
+  const decision = await tx.c.listing_decisions.findOne({ revisionId: r._id });
+  const d = decision?.decision;
+  // latlai_guard_decision: nobody reviews their own listing.
+  if (decision && decision.reviewerId === l.ownerId)
+    throw new Error('Stale revision or self-review');
   if (
     (l.moderation === 'Draft' && (r.submittedAt || d)) ||
     (l.moderation === 'PendingReview' && (!r.submittedAt || d)) ||
