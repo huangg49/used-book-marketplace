@@ -1,21 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { LegacyCatalogLocks } from '../catalog/legacy-catalog-locks.js';
-import type { Tx } from '../commands/command.service.js';
+import type { Tx } from '../../database/mongo/transaction.js';
+import { CatalogService } from '../catalog/catalog.service.js';
 import { conflict, invalidState, notFound } from '../commands/domain-error.js';
+import { checkListing } from './listing-projection.js';
 
 @Injectable()
 export class ListingCommitmentPolicy {
-  // Still PostgreSQL until the order module is ported (MIG-05).
-  constructor(private readonly catalog: LegacyCatalogLocks) {}
+  constructor(private readonly catalog: CatalogService) {}
+  // Catalog -> listing lock order, the same as every other listing writer.
   async lock(tx: Tx, id: string) {
-    const before = await tx.listing.findUnique({
-      where: { id },
-      include: { currentRevision: true },
-    });
-    if (!before) throw notFound();
-    await this.catalog.lockForReview(tx, before.currentRevision!.bookId);
-    await tx.$queryRaw`SELECT id FROM listings WHERE id=${id}::uuid FOR UPDATE`;
-    const current = await tx.listing.findUniqueOrThrow({ where: { id } });
+    const before = await tx.c.listings.findOne({ _id: id });
+    const revision = before?.currentRevisionId
+      ? await tx.c.listing_revisions.findOne({ _id: before.currentRevisionId })
+      : null;
+    if (!before || !revision) throw notFound();
+    await this.catalog.lockForReview(tx, revision.bookId);
+    await tx.lock('listings', [id]);
+    const current = (await tx.c.listings.findOne({ _id: id }))!;
     if (current.currentRevisionId !== before.currentRevisionId)
       throw conflict();
     return current;
@@ -27,13 +28,20 @@ export class ListingCommitmentPolicy {
     from: 'Available' | 'Reserved',
     to: 'Reserved' | 'Available',
   ) {
-    const listing = await tx.listing.findUniqueOrThrow({ where: { id } });
+    const listing = await tx.c.listings.findOne({ _id: id });
+    if (!listing) throw notFound();
     if (listing.version !== expectedVersion) throw conflict();
     if (listing.trade !== from) throw invalidState();
     // Preserve moderation, visibility, ownership and accepted revision on release.
-    return tx.listing.update({
-      where: { id },
-      data: { trade: to, version: { increment: 1 } },
-    });
+    const next = await tx.c.listings.findOneAndUpdate(
+      { _id: id, version: expectedVersion, trade: from },
+      {
+        $set: { trade: to, updatedAt: new Date() },
+        $inc: { version: 1 },
+      },
+      { returnDocument: 'after' },
+    );
+    tx.check(`listing:${id}`, () => checkListing(tx, id));
+    return { ...next!, id: next!._id };
   }
 }

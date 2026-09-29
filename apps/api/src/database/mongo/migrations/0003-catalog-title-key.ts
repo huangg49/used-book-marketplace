@@ -6,7 +6,11 @@ import { index, t, type CollectionSpec } from '../schema-dsl.js';
 // MongoDB cannot NFD-normalize, so the key is stored on the book whenever its
 // current revision changes, and indexed for the keyset order.
 export const titleKey = (title: string) =>
-  title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\u0111/g, 'd');
+  title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\u0111/g, 'd');
 
 export const catalogTitleKey = {
   collection: 'catalog_books',

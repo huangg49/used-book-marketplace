@@ -1,6 +1,9 @@
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../auth/auth.guard.js';
-import type { CommandContext, CommandService } from './command.service.js';
+import type {
+  CommandContext,
+  MongoCommandService,
+} from './mongo-command.service.js';
 import { ContractInput } from './contract-input.service.js';
 export function commandContext(
   input: ContractInput,
@@ -14,7 +17,7 @@ export function commandContext(
   };
 }
 export async function commandResponse(
-  result: ReturnType<CommandService['run']>,
+  result: ReturnType<MongoCommandService['run']>,
   response: Response,
 ) {
   const { receipt, replayed } = await result;

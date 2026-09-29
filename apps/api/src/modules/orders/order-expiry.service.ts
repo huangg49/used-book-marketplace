@@ -1,170 +1,208 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService } from '../../database/database.service.js';
+import type { Document } from 'mongodb';
+import { MongoService } from '../../database/mongo/mongo.service.js';
+import type { Tx } from '../../database/mongo/transaction.js';
 import { DomainError } from '../commands/domain-error.js';
 import { OrdersService } from './orders.service.js';
 import { OrderClock } from './order-clock.js';
-import { Prisma } from '../../generated/prisma/client.js';
 
-const deliveryCandidates = (now: Date) => Prisma.sql`
-  FROM carrier_pickup_events e JOIN direct_orders o ON o.id=e.order_id
-  WHERE e.outcome='Applied' AND e.delivery_deadline<=${now}
-    AND o.state IN ('InTransit','ResolutionPending')
-    AND NOT EXISTS(SELECT 1 FROM order_delivery_reviews r WHERE r.order_id=o.id)`;
+// Carrier pickups whose delivery deadline passed without a delivery review.
+const deliveryCandidates = (now: Date): Document[] => [
+  { $match: { outcome: 'Applied', deliveryDeadline: { $lte: now } } },
+  {
+    $lookup: {
+      from: 'direct_orders',
+      localField: 'orderId',
+      foreignField: '_id',
+      as: 'o',
+    },
+  },
+  { $match: { 'o.state': { $in: ['InTransit', 'ResolutionPending'] } } },
+  {
+    $lookup: {
+      from: 'order_delivery_reviews',
+      localField: 'orderId',
+      foreignField: 'orderId',
+      as: 'r',
+    },
+  },
+  { $match: { r: { $size: 0 } } },
+];
+// Preparing orders whose pickup deadline passed.
+const pickupCandidates = (now: Date): Document[] => [
+  { $match: { pickupDeadline: { $lte: now } } },
+  {
+    $lookup: {
+      from: 'direct_orders',
+      localField: '_id',
+      foreignField: '_id',
+      as: 'o',
+    },
+  },
+  { $match: { 'o.state': 'Preparing' } },
+];
+
 @Injectable()
 export class OrderExpiryWorker {
   constructor(
-    private readonly db: DatabaseService,
+    private readonly mongo: MongoService,
     private readonly orders: OrdersService,
     private readonly clock: OrderClock,
   ) {}
+  // Candidate discovery is a read in its own snapshot and takes no locks; each
+  // command then locks users before the Order and decides with $$NOW.
+  private scan<T>(fn: (tx: Tx, now: Date) => Promise<T>) {
+    return this.mongo.tx(async (tx) => fn(tx, await this.clock.now(tx)));
+  }
   async tick() {
-    // Candidate discovery takes no row lock. The command locks users before Order.
-    const candidates = await this.db.$transaction(async (tx) => {
-      const now = await this.clock.now(tx);
-      return tx.directOrder.findMany({
-        where: { state: 'AwaitingPayment', paymentDeadline: { lte: now } },
-        orderBy: [{ paymentDeadline: 'asc' }, { id: 'asc' }],
-        take: 100,
-        select: { id: true },
-      });
-    });
+    const candidates = await this.scan((tx, now) =>
+      tx.c.direct_orders
+        .find(
+          { state: 'AwaitingPayment', paymentDeadline: { $lte: now } },
+          { sort: { paymentDeadline: 1, _id: 1 }, limit: 100 },
+        )
+        .toArray(),
+    );
     let processed = 0,
       skipped = 0,
       failed = 0;
-    for (const o of candidates) {
+    const attempt = async (fn: () => Promise<unknown>) => {
       try {
-        await this.orders.expire(o.id);
+        await fn();
         processed++;
       } catch (e) {
         if (e instanceof DomainError && e.getStatus() === 409) skipped++;
         else failed++;
       }
-    }
+    };
+    for (const o of candidates) await attempt(() => this.orders.expire(o._id));
     // Separate bounded scans prevent a broken refund starving deadline decisions.
     // Neither scan holds an Order lock while waiting for participant locks.
     for (const phase of ['confirmation', 'refund', 'pickup'] as const) {
-      const rows = await this.db.$transaction(async (tx) => {
-        const now = await this.clock.now(tx);
-        return tx.directOrder.findMany({
-          where:
+      const ids = await this.scan(async (tx, now) => {
+        if (phase === 'pickup')
+          return (
+            await tx.c.order_preparations
+              .aggregate<{ _id: string }>([
+                ...pickupCandidates(now),
+                { $sort: { pickupDeadline: 1, _id: 1 } },
+                { $limit: 100 },
+                { $project: { _id: 1 } },
+              ])
+              .toArray()
+          ).map((row) => row._id);
+        const rows = await tx.c.direct_orders
+          .find(
             phase === 'confirmation'
               ? {
                   state: 'PendingSellerConfirmation',
-                  sellerConfirmationDeadline: { lte: now },
+                  sellerConfirmationDeadline: { $lte: now },
                 }
-              : phase === 'refund'
-                ? { state: 'SettlementPending' }
-                : {
-                    state: 'Preparing',
-                    preparation: { pickupDeadline: { lte: now } },
-                  },
-          orderBy:
-            phase === 'confirmation'
-              ? [{ sellerConfirmationDeadline: 'asc' }, { id: 'asc' }]
-              : phase === 'refund'
-                ? [{ cancellationRequestedAt: 'asc' }, { id: 'asc' }]
-                : [{ preparation: { pickupDeadline: 'asc' } }, { id: 'asc' }],
-          take: 100,
-          select: { id: true },
-        });
+              : { state: 'SettlementPending' },
+            {
+              sort:
+                phase === 'confirmation'
+                  ? { sellerConfirmationDeadline: 1, _id: 1 }
+                  : { cancellationRequestedAt: 1, _id: 1 },
+              limit: 100,
+            },
+          )
+          .toArray();
+        return rows.map((row) => row._id);
       });
-      for (const row of rows) {
-        try {
-          if (phase === 'confirmation')
-            await this.orders.expireConfirmation(row.id);
-          else if (phase === 'refund') await this.orders.refund(row.id);
-          else await this.orders.expirePickup(row.id);
-          processed++;
-        } catch (e) {
-          if (e instanceof DomainError && e.getStatus() === 409) skipped++;
-          else failed++;
-        }
-      }
+      for (const id of ids)
+        await attempt(() =>
+          phase === 'confirmation'
+            ? this.orders.expireConfirmation(id)
+            : phase === 'refund'
+              ? this.orders.refund(id)
+              : this.orders.expirePickup(id),
+        );
     }
-    const deliveries = await this.db.$transaction(async (tx) => {
-      const now = await this.clock.now(tx);
-      return tx.$queryRaw<{ orderId: string }[]>(
-        Prisma.sql`SELECT e.order_id AS "orderId" ${deliveryCandidates(now)} ORDER BY e.delivery_deadline,e.id LIMIT 100`,
+    const deliveries = await this.scan((tx, now) =>
+      tx.c.carrier_pickup_events
+        .aggregate<{ orderId: string }>([
+          ...deliveryCandidates(now),
+          { $sort: { deliveryDeadline: 1, _id: 1 } },
+          { $limit: 100 },
+          { $project: { _id: 0, orderId: 1 } },
+        ])
+        .toArray(),
+    );
+    for (const row of deliveries)
+      await attempt(() => this.orders.expireDelivery(row.orderId));
+    const backlog = await this.scan(async (tx, now) => {
+      const unpaid = {
+        state: 'AwaitingPayment',
+        paymentDeadline: { $lte: now },
+      };
+      const confirmationWhere = {
+        state: 'PendingSellerConfirmation',
+        sellerConfirmationDeadline: { $lte: now },
+      };
+      const remaining = await tx.c.direct_orders.countDocuments(unpaid);
+      const oldest = await tx.c.direct_orders.findOne(unpaid, {
+        sort: { paymentDeadline: 1 },
+      });
+      const confirmation = await tx.c.direct_orders.findOne(confirmationWhere, {
+        sort: { sellerConfirmationDeadline: 1 },
+      });
+      const refund = await tx.c.direct_orders.findOne(
+        { state: 'SettlementPending' },
+        { sort: { cancellationRequestedAt: 1 } },
       );
-    });
-    for (const row of deliveries) {
-      try {
-        await this.orders.expireDelivery(row.orderId);
-        processed++;
-      } catch (e) {
-        if (e instanceof DomainError && e.getStatus() === 409) skipped++;
-        else failed++;
-      }
-    }
-    const backlog = await this.db.$transaction(async (tx) => {
-      const now = await this.clock.now(tx),
-        where = { state: 'AwaitingPayment', paymentDeadline: { lte: now } };
-      const remaining = await tx.directOrder.count({ where });
-      const oldest = await tx.directOrder.findFirst({
-        where,
-        orderBy: { paymentDeadline: 'asc' },
-        select: { paymentDeadline: true },
-      });
-      const confirmation = await tx.directOrder.findFirst({
-        where: {
-          state: 'PendingSellerConfirmation',
-          sellerConfirmationDeadline: { lte: now },
-        },
-        orderBy: { sellerConfirmationDeadline: 'asc' },
-      });
-      const refund = await tx.directOrder.findFirst({
-        where: { state: 'SettlementPending' },
-        orderBy: { cancellationRequestedAt: 'asc' },
-      });
-      const confirmationRemaining = await tx.directOrder.count({
-        where: {
-          state: 'PendingSellerConfirmation',
-          sellerConfirmationDeadline: { lte: now },
-        },
-      });
-      const refundRemaining = await tx.directOrder.count({
-        where: { state: 'SettlementPending' },
+      const confirmationRemaining =
+        await tx.c.direct_orders.countDocuments(confirmationWhere);
+      const refundRemaining = await tx.c.direct_orders.countDocuments({
+        state: 'SettlementPending',
       });
       const deadlines = [
         oldest?.paymentDeadline,
         confirmation?.sellerConfirmationDeadline,
         refund?.cancellationRequestedAt,
       ].filter((d): d is Date => !!d);
-      const [deliveryBacklog] = await tx.$queryRaw<
-        { count: number; oldest: Date | null }[]
-      >(
-        Prisma.sql`SELECT count(*)::integer AS count,min(e.delivery_deadline) AS oldest ${deliveryCandidates(now)}`,
+      const [deliveryBacklog] = await tx.c.carrier_pickup_events
+        .aggregate<{ count: number; oldest: Date | null }>([
+          ...deliveryCandidates(now),
+          {
+            $group: {
+              _id: null,
+              count: { $sum: 1 },
+              oldest: { $min: '$deliveryDeadline' },
+            },
+          },
+        ])
+        .toArray();
+      if (deliveryBacklog?.oldest) deadlines.push(deliveryBacklog.oldest);
+      const openDeliveryReviews =
+        await tx.c.order_delivery_reviews.countDocuments();
+      const oldestDeliveryReview = await tx.c.order_delivery_reviews.findOne(
+        {},
+        { sort: { openedAt: 1, _id: 1 } },
       );
-      if (deliveryBacklog.oldest) deadlines.push(deliveryBacklog.oldest);
-      const openDeliveryReviews = await tx.orderDeliveryReview.count();
-      const oldestDeliveryReview = await tx.orderDeliveryReview.findFirst({
-        orderBy: [{ openedAt: 'asc' }, { id: 'asc' }],
-      });
-      const pickupWhere = {
-        state: 'Preparing',
-        preparation: { pickupDeadline: { lte: now } },
-      };
-      const pickupRemaining = await tx.directOrder.count({
-        where: pickupWhere,
-      });
-      const oldestPickup = await tx.orderPreparation.findFirst({
-        where: { order: pickupWhere },
-        orderBy: { pickupDeadline: 'asc' },
-      });
-      if (oldestPickup) deadlines.push(oldestPickup.pickupDeadline);
-      const openPickupReviews = await tx.pickupReview.count();
-      const openCarrierReviews = await tx.carrierPickupReview.count();
-      const oldestReview = await tx.pickupReview.findFirst({
-        orderBy: { openedAt: 'asc' },
-      });
+      const pickups = await tx.c.order_preparations
+        .aggregate<{ pickupDeadline: Date }>([
+          ...pickupCandidates(now),
+          { $sort: { pickupDeadline: 1 } },
+        ])
+        .toArray();
+      if (pickups[0]) deadlines.push(pickups[0].pickupDeadline);
+      const openPickupReviews = await tx.c.pickup_reviews.countDocuments();
+      const openCarrierReviews =
+        await tx.c.carrier_pickup_reviews.countDocuments();
+      const oldestReview = await tx.c.pickup_reviews.findOne(
+        {},
+        { sort: { openedAt: 1 } },
+      );
+      const deliveryRemaining = deliveryBacklog?.count ?? 0;
       return {
         remaining:
           remaining +
           confirmationRemaining +
           refundRemaining +
-          pickupRemaining +
-          deliveryBacklog.count,
-        deliveryRemaining: deliveryBacklog.count,
+          pickups.length +
+          deliveryRemaining,
+        deliveryRemaining,
         openDeliveryReviews,
         oldestDeliveryReviewAgeSeconds: oldestDeliveryReview
           ? Math.max(
@@ -175,7 +213,7 @@ export class OrderExpiryWorker {
               ),
             )
           : 0,
-        pickupRemaining,
+        pickupRemaining: pickups.length,
         openPickupReviews,
         openCarrierReviews,
         oldestPickupReviewAgeSeconds: oldestReview
