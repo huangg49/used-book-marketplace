@@ -1,5 +1,11 @@
 # Bắt đầu ở đây — bàn giao Lật lại tại F2h
 
+Cập nhật lane MongoDB 29/09: HEAD hiện **OpenAPI0.21.0**, 3 migration MongoDB;
+17 migration PostgreSQL giữ làm lịch sử chỉ đọc. Đọc [SESSION_STATE](SESSION_STATE.md)
+và [review/sửa mới nhất](../refactor/MONGODB_INTEGRITY_FIXES_2026_09_29.md) trước thao tác.
+Các mốc0.20.0 bên dưới thuộc bàn giao F2h trước đó; runtime Mongo đã port nhưng
+cutover DB chính và release gates chưa hoàn tất.
+
 Cập nhật 28/09/2026. Contract **0.20.0**, 17 migration. Đây là hướng dẫn tiếp nhận
 mã nguồn đang chuẩn bị bàn giao; **chưa phải chứng nhận hoàn tất bàn giao**.
 Trạng thái từng việc ở [READINESS](READINESS.md), phát hiện và bằng chứng ở

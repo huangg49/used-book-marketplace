@@ -589,7 +589,9 @@ export async function checkPackaging(tx: Tx, evidenceId: string) {
     !p ||
     !c ||
     e!.createdAt < p.acceptedAt ||
-    !['Preparing', 'ResolutionPending'].includes(o.state) ||
+    // Historical evidence survives pickup. The service still limits creation
+    // and upload to Preparing/ResolutionPending; this is not a command gate.
+    !['Preparing', 'InTransit', 'ResolutionPending'].includes(o.state) ||
     !matches(
       await chain(tx, e!.createReceiptId),
       'createPackagingEvidence',

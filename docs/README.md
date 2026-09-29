@@ -135,6 +135,7 @@ See [artifact-manifest.json](artifact-manifest.json) for the size and SHA-256 di
 - [ADR 0012: replacement, visibility, archive and removal](adr/0012-listing-lifecycle.md)
 - [MongoDB refactor: baseline, invariant và các gói chuyển đổi](refactor/MONGODB_PLAN.md)
 - [Review MongoDB 29/09: lỗi đối soát ledger và lịch sử ảnh sau pickup](refactor/MONGODB_REVIEW_2026_09_29.md)
+- [Sửa MongoDB R1/R2, import bản sao local và native smoke](refactor/MONGODB_INTEGRITY_FIXES_2026_09_29.md)
 - [Inventory phụ thuộc PostgreSQL tại checkpoint trước refactor](refactor/POSTGRES_BASELINE_INVENTORY.md)
 - [ADR 0027: MongoDB persistence protocol](adr/0027-mongodb-persistence-protocol.md)
 - [MIG-06: chuyển dữ liệu và cutover sang MongoDB](refactor/MIG06_DATA_CUTOVER.md)

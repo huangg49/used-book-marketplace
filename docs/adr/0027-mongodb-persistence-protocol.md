@@ -102,6 +102,14 @@ Implemented in `apps/api/src/database/mongo/transaction.ts` and exercised by
 
 ## Consequences
 
+Review follow-up (29/09/2026): reconciliation must scan **all entries** for missing
+journals/accounts and **all owner/hold accounts** for missing users/Orders, including
+unused accounts. Journal-first traversal and balanced global totals do not detect
+orphan postings. These read-only checks share the transaction snapshot. Historical
+packaging validation includes InTransit; command eligibility remains separate.
+See [fixes and regressions](../refactor/MONGODB_INTEGRITY_FIXES_2026_09_29.md).
+This is detection by the sweep, not a database foreign-key guarantee.
+
 - Contention now aborts and retries instead of queueing. Hot documents (a popular
   listing, the wallet source account) can exhaust the budget and return 503 where
   PostgreSQL would have waited. MIG-05 must measure the ledger source account path

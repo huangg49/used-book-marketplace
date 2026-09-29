@@ -1,5 +1,9 @@
 # Review MongoDB — 29/09/2026
 
+**Cập nhật sau review:** R1/R2 đã được sửa trên `codex/mongodb-integrity-fixes`, kèm
+regression, full suite và smoke Android. Xem [báo cáo tiếp theo](MONGODB_INTEGRITY_FIXES_2026_09_29.md).
+Nội dung dưới giữ nguyên evidence tại e860856; không áp patch cũ lên nhánh đã sửa.
+
 Review nguồn `origin/codex/mongodb-refactor` tại **e860856**, so với
 `origin/main` **b49cc52**. Fetch rồi fast-forward nhánh local; không merge vào main.
 Nhánh lưu báo cáo: `codex/mongodb-review`, cùng source sản phẩm với e860856.

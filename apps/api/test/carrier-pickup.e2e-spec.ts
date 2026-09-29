@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import { checkIntegrity } from '../src/integrity/integrity.js';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
@@ -535,6 +536,7 @@ describe('Carrier pickup: real MongoDB and HTTP', () => {
   };
   const reconcile = () =>
     app.get(MongoService).tx((tx) => app.get(LedgerService).reconcile(tx));
+  const integrity = () => app.get(MongoService).tx((tx) => checkIntegrity(tx));
 
   const accept = (
     f: PaymentFixture,
@@ -693,7 +695,14 @@ describe('Carrier pickup: real MongoDB and HTTP', () => {
     const before = await db.c.direct_shipments.findOne({
       _id: event.shipmentId,
     });
+    const pending = await reserved(f);
+    expect((await integrity()).failures).toEqual([]);
     const r = await emit(event).expect(200);
+    expect((await integrity()).failures).toEqual([]);
+    // Historical evidence remains valid; neither new intents nor pending
+    // uploads become available just because the sweep accepts InTransit.
+    await intent(f, await image(), f.f.seller, randomUUID(), 4).expect(409);
+    await upload(f, pending.id, pending.bytes).expect(409);
     validates('CarrierEventReceipt', r.body);
     expect(r.body).toMatchObject({
       entityType: 'CarrierEvent',
@@ -931,6 +940,7 @@ describe('Carrier pickup: real MongoDB and HTTP', () => {
     expect(await reviews(f.id)).toBe(1);
     await expect(app.get(OrdersService).refund(f.id)).rejects.toThrow();
     expect((await reconcile()).balanced).toBe(true);
+    expect((await integrity()).failures).toEqual([]);
   });
   it.each([false, true])(
     'late event opens review and never backdates acceptance; worker already ran=%s',

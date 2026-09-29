@@ -3,6 +3,14 @@
 29/09/2026, nhánh `codex/mongodb-refactor`. Cách làm: [runbook](MIG06_CUTOVER_RUNBOOK.md).
 Nền: [ADR 0027](../adr/0027-mongodb-persistence-protocol.md), [MIG-05](MIG05_QUOTE_ORDER_WALLET_SHIPMENT.md).
 
+**Cập nhật mới hơn — `codex/mongodb-integrity-fixes`:** hai lỗi toàn vẹn R1/R2 đã sửa;
+42 Mongo / 493 E2E / 33 unit PASS. Import thêm bản sao PostgreSQL local vào DB Mongo
+riêng57117 đạt count/hash/invariant; Android refresh, địa chỉ, lưu draft, ảnh Supabase
+cũ và restart PASS. [Chi tiết và evidence](MONGODB_INTEGRITY_FIXES_2026_09_29.md).
+Chưa cutover DB chính; nguồn không có Order nên paid/InTransit import vẫn chưa được
+chứng minh. Native toàn bộ, live upload/worker, CI commit mới và human review còn mở.
+Các kết quả bên dưới là lượt teammate trước review, không ghi đè trạng thái này.
+
 ## Đã làm
 
 - **Runtime chỉ còn MongoDB**: gỡ `DatabaseService`/Prisma, yêu cầu `DATABASE_URL`,

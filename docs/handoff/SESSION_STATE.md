@@ -1,6 +1,43 @@
 # Điểm lưu để tiếp tục — 29/09/2026
 
+## Sửa MongoDB sau review — điểm mới nhất
+
+- Nhánh **codex/mongodb-integrity-fixes**, base review **f39abb8** trên teammate
+  **e860856**; remote main **b49cc52**. Commit gói này: xem `git log -1` với subject
+  `fix(mongo): validate ledger references and preserve pickup evidence`.
+  **Chưa push/merge/deploy**. Giữ untracked `apps/api/src/generated/` cũ, không add/xóa.
+- Đã sửa **R1/P1** đối soát bỏ lọt entry thiếu journal/account và account thiếu
+  owner/Order; **R2/P1** sweep báo sai lịch sử ảnh sau pickup. Service vẫn chặn
+  tạo/upload mới ở InTransit. Không đổi migration, OpenAPI0.21.0, UI hoặc lock order.
+  [Báo cáo sửa + native + giới hạn](../refactor/MONGODB_INTEGRITY_FIXES_2026_09_29.md).
+- PASS: contract check/routes, API lint/typecheck/build, **33 unit, 42 Mongo**
+  (có PostgreSQL import + failover), **493 E2E / 24 file / 647,71s** một lượt.
+  Regression đã chạy đỏ trước sửa rồi xanh; source test giữ 5 ledger cases và
+  assertions sweep Preparing/InTransit/ResolutionPending + upload409 sau pickup.
+- Import **bản sao** PostgreSQL5433 → Mongo57117 `latlai_acceptance_20260929`:
+  0 lệch count/hash, 0 lỗi invariant, vốn100M bảo toàn. Nguồn có 4 users/21 sessions/
+  3 listings/7 media, **không có Order/topup**; không coi là proof paid/InTransit import.
+  Nguồn đọc read-only, `.env`, password, SQL/volume cũ giữ nguyên.
+- Native Pixel_7/API35/x86_64 dùng APK Q01 hiện có + Metro mới: session import
+  refresh200; thêm/lưu/mở lại địa chỉ; đọc JPEG Supabase cũ; chọn catalog và lưu draft;
+  force-stop/mở lại giữ session và dữ liệu. Không gặp splash đứng ở lượt này.
+  Chưa test upload mới, full native/TalkBack/ARM/iOS, không gọi đó human review.
+- Runtime giữ: API3000 trỏ **bản sao Mongo**, Metro8081 preview=0, adb reverse3000/8081;
+  Compose `latlai-mongo-acceptance` port57117/volume riêng, PG gốc5433, QA Mongo57017/
+  failover57021–23/PG55434. Font1.0, handwriting trả lại `null`. Không chạy media/order
+  worker bản sao, vì keys media cùng trỏ Supabase nguồn; không cleanup bucket từ clone.
+- Log/launcher/private config ở `.tmp/mongodb-fixes/` ignored. Node24.19 qua PATH
+  riêng process; `node .tmp/mongodb-fixes/acceptance.mjs api` khi3000 trống, mode
+  `check` chỉ đọc. Config có secret **không in/commit**. Không chạy lại import vào
+  đích đã nhận ghi. Refresh emulator đã rotate trên Mongo; trở lại PG cần login lại.
+- **Bước tiếp cụ thể:** bổ sung PostgreSQL import fixture có paid/InTransit/
+  ResolutionPending và chuỗi hold/receipt/evidence đúng trigger trên QA; tiếp đó kiểm
+  upload/worker với storage QA riêng, đóng native gates còn mở. Human review tiền/quyền
+  và CI GitHub cho commit mới còn thiếu; không tự merge/push/cutover chính.
+
 ## Review MongoDB của Codex — mới hơn điểm lưu teammate bên dưới
+
+Phần dưới là lịch sử tại f39abb8; hai phát hiện đã được sửa theo điểm lưu mới ở trên.
 
 - Theo yêu cầu chủ dự án: fetch origin, kiểm working tree trước khi chuyển nhánh;
   fast-forward `codex/mongodb-refactor` tới **e860856**. Remote main tại **b49cc52**,

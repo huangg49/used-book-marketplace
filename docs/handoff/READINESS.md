@@ -1,5 +1,10 @@
 # Tiến trình chốt F2h để bàn giao
 
+Cập nhật29/09 lane MongoDB: [điểm lưu mới nhất](SESSION_STATE.md) và
+[bằng chứng sửa/import/native smoke](../refactor/MONGODB_INTEGRITY_FIXES_2026_09_29.md).
+493 E2E / 42 Mongo / 33 unit PASS, hai P1 đã sửa. Native chỉ thêm smoke Android
+trên bản sao Mongo; không đóng full native, human review hoặc cutover dữ liệu chính.
+
 Ngày 28/09/2026. Người dùng đã duyệt: dừng mở rộng nghiệp vụ, rà code, làm rõ cách
 tiếp nhận, tân trang UI hiện có rồi đóng mốc Git có thể tái dựng. Không cần hỏi lại
 phạm vi này ở mỗi lần tiếp tục. Không tự mở Delivered/inspection/settlement trong đợt này.

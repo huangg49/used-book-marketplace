@@ -85,7 +85,7 @@ không gom mọi lỗi thành retry vô hạn.
 | MIG-03 auth + command | DONE, [báo cáo](MIG03_AUTH_COMMAND.md) | Login/rotation/revoke/rate limit, eligibility và command executor dùng Mongo, negative/race/replay tương đương; không chuyển API chính trước khi đạt |
 | MIG-04 catalog/listing/media/address | DONE, [báo cáo](MIG04_CATALOG_LISTING_MEDIA.md) | Port quyền/immutable snapshot/worker/review/public reads; HTTP contracts, browser và native với storage thật theo mức ảnh hưởng |
 | MIG-05 quote/order/wallet/shipment | DONE, [báo cáo](MIG05_QUOTE_ORDER_WALLET_SHIPMENT.md); [thiết kế](MIG05_MONEY_PERMISSION_DESIGN.md) chủ dự án duyệt 29/09 | Full hold/commitment/ledger/worker/event/review parity đến F2h; không thêm nghiệp vụ mới |
-| MIG-06 dữ liệu + cutover | PARTIAL, [báo cáo](MIG06_DATA_CUTOVER.md): import/dry-run, đối soát, fresh-clone, CI workflow, rollback DONE; chưa: import dữ liệu thật, CI GitHub, native acceptance | Dry-run import bất biến, đếm/hash/ledger reconciliation, secret-safe evidence, fresh-clone setup, CI đầy đủ và native acceptance; kế hoạch rollback và switch có chủ đích |
+| MIG-06 dữ liệu + cutover | PARTIAL, [báo cáo](MIG06_DATA_CUTOVER.md), [sửa R1/R2 và kiểm bản sao](MONGODB_INTEGRITY_FIXES_2026_09_29.md): import local không Order và Android smoke PASS; còn fixture import paid/InTransit, upload/worker QA riêng, full native, human review, CI commit mới và cutover chính | Dry-run import bất biến, đếm/hash/ledger reconciliation, secret-safe evidence, fresh-clone setup, CI đầy đủ và native acceptance; kế hoạch rollback và switch có chủ đích |
 
 Mỗi gói commit rõ phạm vi, cập nhật SESSION_STATE. Nhánh mới là lane migration;
 không merge implementation dở vào main. Việc chủ dự án duyệt PR #2 không là

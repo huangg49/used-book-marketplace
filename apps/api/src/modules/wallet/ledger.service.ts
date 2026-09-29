@@ -48,6 +48,8 @@ export async function checkJournal(tx: Tx, journalId: string) {
   const accounts = await tx.c.wallet_accounts
     .find({ _id: { $in: entries.map((e) => e.accountId) } })
     .toArray();
+  if (accounts.length !== entries.length)
+    throw new Error('Ledger entry references a missing account');
   const account = (id: string) => accounts.find((a) => a._id === id);
   if (j.type === 'OpeningCapital') {
     if (
@@ -124,6 +126,73 @@ export class LedgerService {
   // topup and order is checked by the commit-time rules, and simulated
   // capital must be conserved. Equal global debit/credit alone is not enough.
   async reconcile(tx: Tx) {
+    // Walk references in both directions. Starting only from journals misses
+    // orphan entries that still affect balances, even when the global totals
+    // balance. Do this before $unwind can silently discard a missing account.
+    for (const [field, target, message] of [
+      [
+        'journalId',
+        'ledger_journals',
+        'Ledger entry references a missing journal',
+      ],
+      [
+        'accountId',
+        'wallet_accounts',
+        'Ledger entry references a missing account',
+      ],
+    ] as const) {
+      const missing = await tx.c.ledger_entries
+        .aggregate([
+          {
+            $lookup: {
+              from: target,
+              localField: field,
+              foreignField: '_id',
+              as: 'reference',
+            },
+          },
+          { $match: { reference: { $size: 0 } } },
+          { $limit: 1 },
+          { $project: { _id: 1 } },
+        ])
+        .toArray();
+      if (missing.length) throw new Error(message);
+    }
+    // Unused accounts also need real owners; a journal traversal never sees them.
+    for (const [purpose, field, target, message] of [
+      [
+        'UserAvailable',
+        'ownerId',
+        'users',
+        'Wallet account references a missing owner',
+      ],
+      [
+        'OrderHold',
+        'orderId',
+        'direct_orders',
+        'Wallet account references a missing Order',
+      ],
+    ] as const) {
+      const missing = await tx.c.wallet_accounts
+        .aggregate([
+          { $match: { purpose } },
+          {
+            $lookup: {
+              from: target,
+              localField: field,
+              foreignField: '_id',
+              as: 'reference',
+            },
+          },
+          { $match: { reference: { $size: 0 } } },
+          { $limit: 1 },
+          { $project: { _id: 1 } },
+        ])
+        .toArray();
+      if (missing.length) throw new Error(message);
+    }
+    if (!(await tx.c.ledger_journals.findOne({ _id: OPENING_JOURNAL_ID })))
+      throw new Error('Opening capital journal missing');
     for (const j of await tx.c.ledger_journals.find({}).toArray())
       await checkJournal(tx, j._id);
     for (const t of await tx.c.topup_intents.find({}).toArray())

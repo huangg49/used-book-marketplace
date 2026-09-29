@@ -26,6 +26,12 @@ quyết định Order (như PostgreSQL), không phải đồng hồ máy; upload
 
 ## Bằng chứng
 
+Cập nhật sau review nguồn e860856: [R1/R2 đã sửa](MONGODB_INTEGRITY_FIXES_2026_09_29.md).
+Reconcile kiểm entry → journal/account và wallet → owner/Order cả khi chưa có entry;
+lịch sử packaging hợp lệ ở InTransit, service vẫn chặn intent/upload sau pickup.
+Regression đỏ→xanh, 42 Mongo + 493 E2E + 33 unit PASS trên nhánh sửa. Đây là backstop
+phát hiện, không khôi phục FK/trigger liên-document ở cấp MongoDB.
+
 E2E trên MongoDB (database `_test` riêng, app user tối thiểu quyền). Mỗi suite do
 subagent port chạy ≥3 lần liên tiếp PASS; lead chạy lại độc lập từng nhóm và review diff.
 Số test tính cả các trường hợp `it.each`.

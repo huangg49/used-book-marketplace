@@ -1,0 +1,290 @@
+{
+  "source": {
+    "migrations": 17
+  },
+  "collections": {
+    "users": {
+      "rows": 4,
+      "documents": 4,
+      "hash": "d44200b7ecab77ded90473dbb5d3c53b53eaa829dfb0915dd95b9b0058f3f73f",
+      "truncatedTimes": 0
+    },
+    "auth_sessions": {
+      "rows": 21,
+      "documents": 21,
+      "hash": "ed090b9e88a05b6961ef1f3761297acda8b65edc08267dcabae59f0e0b29a39c",
+      "truncatedTimes": 0
+    },
+    "login_attempts": {
+      "rows": 2,
+      "documents": 2,
+      "hash": "6102f46fb35098cd496a212684e822284cdd8008dab1bd59ceef7e9a746c11c5",
+      "truncatedTimes": 0
+    },
+    "catalog_books": {
+      "rows": 1,
+      "documents": 1,
+      "hash": "44bebde10640e13c59c85326eaecd5eb32b679e457ecfe192214947d53442879",
+      "truncatedTimes": 0
+    },
+    "catalog_revisions": {
+      "rows": 1,
+      "documents": 1,
+      "hash": "1c33bca68490b1bd1403748c3fb89a264431f6dba3cc6389aefc93f2ca99c9a7",
+      "truncatedTimes": 0
+    },
+    "catalog_decisions": {
+      "rows": 1,
+      "documents": 1,
+      "hash": "a179b1c71ea38ed913bc56278a3b93973948cfabe6374ddbb19c030624403cab",
+      "truncatedTimes": 0
+    },
+    "listings": {
+      "rows": 3,
+      "documents": 3,
+      "hash": "ce2903d32ac56fc8c436c4a1c9b61f21ff8f04c4cc8efbdecb66e960824c8a70",
+      "truncatedTimes": 0
+    },
+    "listing_revisions": {
+      "rows": 3,
+      "documents": 3,
+      "hash": "296dd37f6133bb4e6d55eb4d0b03c7845a99054c67258143f6afbc568501757b",
+      "truncatedTimes": 0
+    },
+    "listing_media": {
+      "rows": 7,
+      "documents": 7,
+      "hash": "4332804608fc43c95a165a49be479bc04e67df50e4c3cb7666ff5cc388b9be15",
+      "truncatedTimes": 0
+    },
+    "revision_media": {
+      "rows": 7,
+      "documents": 7,
+      "hash": "8a8e6e0b492362e72d5ba654f12826ee14d1fc39589faaba7d309178fd80b3d3",
+      "truncatedTimes": 0
+    },
+    "listing_decisions": {
+      "rows": 1,
+      "documents": 1,
+      "hash": "47cf12dfb3da61dd25f4a1bb643e0ebad81e27e508e91bd0d78dd808b42d81b5",
+      "truncatedTimes": 0
+    },
+    "mutation_receipts": {
+      "rows": 37,
+      "documents": 37,
+      "hash": "f3a6fc44c97525e254f8164622385e168521b7a03264e5a677269e41c8299043",
+      "truncatedTimes": 0
+    },
+    "audit_events": {
+      "rows": 37,
+      "documents": 37,
+      "hash": "034371e453861c9d9527047120f5a861c707b253fb80a226917f976741f0474d",
+      "truncatedTimes": 0
+    },
+    "outbox_events": {
+      "rows": 4,
+      "documents": 4,
+      "hash": "738a8b0a91e9d91fc2c5b293b8b8a9f605a1c9aba236ea1c75e36360b461295a",
+      "truncatedTimes": 0
+    },
+    "media_processing_jobs": {
+      "rows": 7,
+      "documents": 7,
+      "hash": "bd21a4c155f410be4247cffdf7afaec4560b1f7ce649585075bacb7671de84a6",
+      "truncatedTimes": 0
+    },
+    "service_areas": {
+      "rows": 1,
+      "documents": 1,
+      "hash": "a924ed62213ab17d853875baf94ec986cd033a7491ed1b017e1fbadb9aef501c",
+      "truncatedTimes": 0
+    },
+    "service_localities": {
+      "rows": 2,
+      "documents": 2,
+      "hash": "5dc109a4171a0b2d52df715ee6511784ca6b0438a2f2180974a733310d4c5cfb",
+      "truncatedTimes": 0
+    },
+    "address_books": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "member_addresses": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "address_identities": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "sale_quote_policies": {
+      "rows": 1,
+      "documents": 1,
+      "hash": "0f2038733b04c25fca25ee880bb542ac5f3e177b2f692844f65cb49a06d0c21f",
+      "truncatedTimes": 0
+    },
+    "sale_quote_policy_selection": {
+      "rows": 1,
+      "documents": 1,
+      "hash": "0c60ee12f2840e99d7e66d15804c9510e09bd1611c9ee61997a7f91c7e83a9dd",
+      "truncatedTimes": 0
+    },
+    "sale_quotes": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "direct_orders": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "order_preparations": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "pickup_reviews": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "order_packaging_evidence": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "direct_shipments": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "shipment_packaging_evidence": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "carrier_pickup_events": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "carrier_pickup_reviews": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "order_delivery_reviews": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "order_non_receipt_reports": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "workflow_contexts": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "workflow_items": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "agreement_snapshots": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "exclusive_commitments": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "commitment_events": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "wallet_accounts": {
+      "rows": 2,
+      "documents": 2,
+      "hash": "e7ff0bced3faa576f81f5f4128577474233a4c02ccfc9310c83a7392ce483427",
+      "truncatedTimes": 0
+    },
+    "topup_intents": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "simulated_payment_events": {
+      "rows": 0,
+      "documents": 0,
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "truncatedTimes": 0
+    },
+    "ledger_journals": {
+      "rows": 1,
+      "documents": 1,
+      "hash": "7537546aec842e67ea69ad7074fa2884e39c1155c4fb9290c37ec6ecb7b5c24a",
+      "truncatedTimes": 1
+    },
+    "ledger_entries": {
+      "rows": 2,
+      "documents": 2,
+      "hash": "518a26e6ddd3b063f815bfcc2f12f97ec5873b5d4e7b3a34f2e5180864ab0f9c",
+      "truncatedTimes": 0
+    }
+  },
+  "mismatches": [],
+  "integrity": {
+    "checked": {
+      "catalog": 1,
+      "listing": 3,
+      "addressBook": 0,
+      "journal": 1,
+      "topup": 0,
+      "order": 0,
+      "shipment": 0,
+      "packaging": 0
+    },
+    "failures": [],
+    "ledger": {
+      "demoOnly": true,
+      "balanced": true,
+      "totalDebit": 100000000,
+      "totalCredit": 100000000,
+      "memberAvailable": 0,
+      "transactionHeld": 0,
+      "sourceRemaining": 100000000,
+      "journals": 1,
+      "topups": 0
+    }
+  }
+}
