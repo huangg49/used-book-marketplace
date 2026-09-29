@@ -1,6 +1,31 @@
 # Điểm lưu để tiếp tục — 29/09/2026
 
-## Lane MongoDB — nhánh `codex/mongodb-refactor` (mới nhất)
+## Review MongoDB của Codex — mới hơn điểm lưu teammate bên dưới
+
+- Theo yêu cầu chủ dự án: fetch origin, kiểm working tree trước khi chuyển nhánh;
+  fast-forward `codex/mongodb-refactor` tới **e860856**. Remote main tại **b49cc52**,
+  đã nằm trong lịch sử nhánh MongoDB. Không pull/merge đè local, không merge/push main.
+- Nhánh lưu kết quả **codex/mongodb-review**, base e860856; commit điểm lưu xem
+  `git log -1`. Chỉ thêm báo cáo/patch tái hiện, source sản phẩm không sửa.
+  [Báo cáo review](../refactor/MONGODB_REVIEW_2026_09_29.md).
+- Hai lỗi đã tái hiện trên MongoDB QA có auth/quyền app thật: **R1/P1** ledger entry
+  không có journal vẫn tăng số dư và qua `mongo:check`/reconcile; **R2/P1** sau pickup
+  hợp lệ → InTransit, sweep báo sai `Packaging intent/receipt mismatch`. Chưa sửa.
+  Patch assertion đỏ đính kèm báo cáo, chưa áp vào test suite thường.
+- Đã chạy PASS: frozen install; contract:check; contract:routes (**0.21.0**, 73/15);
+  API lint/typecheck/build, 33 unit, 37 Mongo (bao gồm import PostgreSQL và failover).
+  API E2E toàn bộ **493/493 PASS**, 24 file, 651,64 s trên database review riêng.
+  Hai assertion bổ sung R1/R2 vẫn FAIL; suite xanh không phủ nhận các phát hiện này.
+- Docker Desktop đã khởi động; QA Mongo 57017/failover 57021–57023, PostgreSQL test
+  55434. `.env`/DB dev/Supabase không đổi, không import dữ liệu thật. Các DB review
+  đều `_test`. Thư mục Prisma generated cũ hiện untracked sau khi nhánh bỏ ignore;
+  giữ nguyên, không add/commit/delete. Log ở `.tmp/mongodb-review/` (ignored).
+- Chưa chạy lại browser/native và chưa xác minh GitHub CI trong lượt này. Review AI
+  không đóng human-review gate. Bước tiếp theo: sửa R1/R2 + regression tests, review
+  diff sửa rồi mới xét cutover và native acceptance. Báo cáo DONE của teammate bên
+  dưới không thay kết quả review hoặc đóng các gate này.
+
+## Lane MongoDB — điểm lưu teammate trước review
 
 - Theo [MONGODB_PLAN](../refactor/MONGODB_PLAN.md). Nhánh tạo từ main `b49cc52`.
   Chưa push/merge. **Runtime giờ chỉ dùng MongoDB** (MIG-06 cutover mã nguồn); không ghi kép.
