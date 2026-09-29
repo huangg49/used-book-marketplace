@@ -191,6 +191,15 @@ export async function checkListing(tx: Tx, listingId: string) {
       })
     : null;
   if (!r) throw new Error('Listing requires its own current revision');
+  // Ownership part of latlai_revision_origin_check. Address identities are
+  // append-only, so this holds for stale/deleted origins too (version currency
+  // is checked under lock by ListingFulfillmentService.prepare).
+  if (
+    r.originAddressId &&
+    (await tx.c.address_identities.findOne({ _id: r.originAddressId }))
+      ?.ownerId !== l.ownerId
+  )
+    throw new Error('Origin is not an address of the listing owner');
   const d = (await tx.c.listing_decisions.findOne({ revisionId: r._id }))
     ?.decision;
   if (
