@@ -1,5 +1,24 @@
 # Điểm lưu để tiếp tục — 30/09/2026
 
+## Rà phần PostgreSQL còn lại — yêu cầu mới nhất
+
+- Chủ dự án chuyển ưu tiên sang kiểm code PostgreSQL còn sót; dừng mở thêm ca native.
+  Nhánh `codex/postgres-cleanup-audit`, base `bb5be67`; chỉ rà source/config/artifact,
+  chưa sửa runtime hoặc xóa file, không push/merge. Không chạy lại suite.
+- API/worker dùng MongoService; không còn Prisma dependency trong manifest/lockfile.
+  `pg` chỉ được import bởi CLI import và test import (kể cả type import). Giữ
+  schema.prisma/17 SQL migrations, importer/test và legacy-postgres profile theo
+  ADR0027/runbook, không xóa như code chết khi cutover chính còn mở.
+- Chưa sạch hoàn toàn: local `src/generated/prisma` untracked có52 file/~4,57MB;
+  `dist/generated` có156 file/~3,89MB. tsconfig.build include toàn src, chưa exclude
+  generated; .gitignore cũng chưa ignore lại thư mục này. Không được add/xóa nhầm.
+- Tài liệu hiện hành còn sai: ENV_HANDOFF dùng PostgreSQL/DATABASE_URL cho setup/E2E;
+  admin-web README hướng dẫn TEST_DATABASE_URL dù fixture đã yêu cầu MONGO_TEST_URL.
+  vitest.config.e2e còn pendingMongoPort=[] và comment chuyển đổi đã hết hiệu lực.
+- Bước dọn phù hợp: exclude/ignore generated cũ mà bảo toàn local; đồng bộ hai hướng
+  dẫn env/test và bỏ cấu hình chuyển đổi rỗng. `pg` vẫn là dependency phục vụ import;
+  chỉ tách khỏi gói deploy khi tách công cụ import rõ ràng. Không xóa DB/volume/migration.
+
 ## Native finalize/submit lost ACK — điểm mới nhất
 
 - Nhánh **codex/native-finalize-submit-retry**, base **307341e**; commit subject
