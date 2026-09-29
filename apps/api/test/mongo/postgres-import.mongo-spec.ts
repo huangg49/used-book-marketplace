@@ -5,9 +5,14 @@ import { MongoClient } from 'mongodb';
 import {
   EXPECTED_POSTGRES_MIGRATIONS,
   importPostgres,
+  readSnapshot,
 } from '../../src/database/mongo/import/postgres-import.js';
 import { OPENING_JOURNAL_ID } from '../../src/database/mongo/migrations/0002-reference-data.js';
 import { prepareDatabase, testUrl } from './harness.js';
+import { postgresOrderFixture } from './postgres-order-fixture.js';
+import { runTransaction } from '../../src/database/mongo/transaction.js';
+import { balanceOf } from '../../src/modules/wallet/ledger.service.js';
+import { checkIntegrity } from '../../src/integrity/integrity.js';
 
 // MIG-06: PostgreSQL -> MongoDB import against a real schema built from the
 // 17 SQL migrations (all triggers active) and a consistent fixture. Needs the
@@ -18,6 +23,8 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
   const schema = `import_test_${randomUUID().replaceAll('-', '')}`;
   const rootUrl = testUrl('latlai_import_test');
   let source: pg.Client, mongo: MongoClient, migratorUrl: string;
+  let appUrl: string;
+  let financial: Awaited<ReturnType<typeof postgresOrderFixture>>;
   const ids = {
     member: randomUUID(),
     admin: randomUUID(),
@@ -142,10 +149,12 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
       [randomUUID(), i.audit],
     );
     await source.query('COMMIT');
-    ({ migratorUrl } = await prepareDatabase(rootUrl));
+    financial = await postgresOrderFixture(source, ids);
+    ({ migratorUrl, appUrl } = await prepareDatabase(rootUrl));
     mongo = await new MongoClient(migratorUrl).connect();
   }, 120_000);
   afterAll(async () => {
+    await source?.query('ROLLBACK');
     await source?.query(`DROP SCHEMA "${schema}" CASCADE`);
     await source?.end();
     await mongo?.db().dropDatabase();
@@ -153,13 +162,27 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
   });
 
   it('imports every table with matching counts, hashes and integrity', async () => {
+    const before = await readSnapshot(source);
     const report = await importPostgres(source, mongo, mongo.db());
+    expect(await readSnapshot(source)).toEqual(before);
     expect(report.mismatches).toEqual([]);
     expect(report.integrity?.failures).toEqual([]);
-    expect(report.integrity?.ledger?.sourceRemaining).toBe(100_000_000);
+    expect(report.integrity?.ledger).toMatchObject({
+      sourceRemaining: 99_000_000,
+      memberAvailable: 310_000,
+      transactionHeld: 690_000,
+      balanced: true,
+    });
     for (const [name, stats] of Object.entries(report.collections))
       expect(stats.documents, name).toBe(stats.rows);
-    expect(report.collections.users.rows).toBe(2);
+    expect(report.collections.users.rows).toBe(3);
+    expect(report.collections.direct_orders.rows).toBe(3);
+    expect(report.collections.ledger_journals.rows).toBe(5);
+    expect(report.collections.ledger_entries.rows).toBe(10);
+    expect(report.collections.order_packaging_evidence.rows).toBe(2);
+    expect(report.collections.shipment_packaging_evidence.rows).toBe(2);
+    expect(report.collections.carrier_pickup_events.rows).toBe(3);
+    expect(report.collections.carrier_pickup_reviews.rows).toBe(1);
     // DEFAULT now() columns carry microseconds; they are truncated to ms.
     expect(report.collections.users.truncatedTimes).toBeGreaterThan(0);
     const c = (name: string) => mongo.db().collection<{ _id: string }>(name);
@@ -186,7 +209,7 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
     expect(
       await c('address_identities').findOne({ _id: ids.address }),
     ).toMatchObject({ ownerId: ids.member });
-    expect(await c('revision_media').countDocuments({})).toBe(0);
+    expect(await c('revision_media').countDocuments({})).toBe(3);
     // The simulator's opening journal is the PostgreSQL original.
     const [{ posted_at }] = (
       await source.query<{ posted_at: Date }>(
@@ -201,8 +224,92 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
     expect(
       await c('counters').findOne({ _id: 'ledger_journal_sequence' }),
     ).toMatchObject({
-      value: 1,
+      value: 5,
     });
+  });
+
+  it('preserves paid obligations, sealed media, immutable agreement and pickup review history', async () => {
+    const c = (name: string) => mongo.db().collection<{ _id: string }>(name);
+    expect(await c('direct_orders').countDocuments()).toBe(3);
+    for (const f of financial.orders) {
+      expect(
+        await c('direct_orders').findOne({ _id: f.orderId }),
+      ).toMatchObject({
+        state: f.state,
+        version:
+          f.state === 'PendingSellerConfirmation'
+            ? 2
+            : f.state === 'InTransit'
+              ? 4
+              : 5,
+      });
+      expect(
+        await c('workflow_contexts').findOne({ _id: f.contextId }),
+      ).toMatchObject({ version: 1, ownershipPhase: 'Holding' });
+      expect(
+        await c('exclusive_commitments').findOne({ _id: f.commitmentId }),
+      ).toMatchObject({ version: 1, status: 'Active' });
+      expect(
+        await c('agreement_snapshots').findOne({ _id: f.contextId }),
+      ).toMatchObject({ snapshot: f.agreement });
+      expect(await c('listings').findOne({ _id: f.listingId })).toMatchObject({
+        trade: 'Reserved',
+      });
+      expect(
+        await runTransaction(mongo, mongo.db(), (tx) =>
+          balanceOf(tx, f.holdId),
+        ),
+      ).toBe(230_000);
+      if (f.shipmentId) {
+        expect(
+          await c('direct_shipments').findOne({ _id: f.shipmentId }),
+        ).toMatchObject({ state: 'LabelCreated', version: 1 });
+        expect(
+          await c('order_packaging_evidence').findOne({ _id: f.evidenceId! }),
+        ).toMatchObject({ status: 'Ready', version: 2 });
+        expect(
+          await c('carrier_pickup_events').findOne({ _id: f.appliedId! }),
+        ).toMatchObject({
+          outcome: 'Applied',
+          sequence: 1,
+          deliveryDeadline: new Date('2026-10-09T01:00:12.000Z'),
+        });
+      }
+      if (f.reviewId)
+        expect(
+          await c('carrier_pickup_reviews').findOne({ _id: f.reviewId }),
+        ).toMatchObject({ reason: 'ConflictingPickup', orderId: f.orderId });
+    }
+    expect(
+      await runTransaction(mongo, mongo.db(), (tx) =>
+        balanceOf(tx, financial.walletId),
+      ),
+    ).toBe(310_000);
+    const app = await new MongoClient(appUrl).connect();
+    try {
+      const sweep = await runTransaction(app, app.db(), (tx) =>
+        checkIntegrity(tx),
+      );
+      expect(sweep.failures).toEqual([]);
+      expect(sweep.ledger).toMatchObject({
+        balanced: true,
+        sourceRemaining: 99_000_000,
+        memberAvailable: 310_000,
+        transactionHeld: 690_000,
+      });
+    } finally {
+      await app.close();
+    }
+    // Failed source writes prove the fixture retained PostgreSQL backstops.
+    await expect(
+      source.query(
+        'UPDATE ledger_entries SET debit=debit+1 WHERE account_id=$1',
+        [financial.walletId],
+      ),
+    ).rejects.toMatchObject({ code: '23514' });
+    await expect(
+      source.query("UPDATE direct_shipments SET tracking_code='LL-CHANGED1'"),
+    ).rejects.toMatchObject({ code: '23514' });
   });
 
   it('refuses a non-empty target and a source with a different migration history', async () => {

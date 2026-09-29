@@ -13,6 +13,11 @@ Các kết quả bên dưới là lượt teammate trước review, không ghi �
 
 ## Đã làm
 
+Tiếp theo ec4a9c9: [fixture import Order](MONGODB_ORDER_IMPORT_2026_09_29.md) đã
+chứng minh PendingSellerConfirmation/InTransit/ResolutionPending với full hold,
+commitment và packaging; full Mongo43/43 PASS. Đây là dữ liệu QA tổng hợp với trigger
+PostgreSQL hoạt động, không thay cutover DB chính hoặc human review.
+
 - **Runtime chỉ còn MongoDB**: gỡ `DatabaseService`/Prisma, yêu cầu `DATABASE_URL`,
   probe PostgreSQL ở `/health/ready`, script/config/seed Prisma và dependency
   `@prisma/*`, `prisma`. `prisma/migrations` + `schema.prisma` giữ làm lịch sử chỉ đọc

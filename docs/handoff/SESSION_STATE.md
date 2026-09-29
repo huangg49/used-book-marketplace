@@ -1,5 +1,23 @@
 # Điểm lưu để tiếp tục — 29/09/2026
 
+## Import Order MongoDB — điểm mới nhất
+
+- Nhánh **codex/mongodb-order-import**, base **ec4a9c9**; commit subject
+  `test(mongo): verify PostgreSQL import of funded shipment obligations`.
+  Không push/merge; `apps/api/src/generated/` cũ vẫn giữ untracked.
+- Bổ sung fixture PostgreSQL QA có PendingSellerConfirmation2, InTransit4,
+  ResolutionPending5 sau pickup xung đột; mỗi đơn giữ230.000đ/sách Reserved.
+  17 SQL migration/trigger nguyên vẹn; commit từng giai đoạn, không sửa DB dev.
+- Import count/hash/invariant PASS; đối soát bằng app user PASS; nguồn99M +
+  available310k + holds690k =100M. Snapshot PG không đổi sau import. Ledger/label
+  write trái phép bị trigger23514. [Báo cáo](../refactor/MONGODB_ORDER_IMPORT_2026_09_29.md).
+- Thực chạy: targeted3/3, **full Mongo43/43**, API lint/typecheck/build,
+  contract check/routes PASS. Không lặp493E2E/native do chỉ đổi fixture/test.
+- Gate ba trạng thái import này đã kiểm. Bước tiếp: live upload/Sharp/worker trên
+  Mongo QA với bucket riêng, không cleanup bucket nguồn từ bản sao acceptance.
+  Full native, human review và CI remote cho commit mới còn mở. Runtime/secret
+  launcher của lượt trước giữ nguyên như mục dưới.
+
 ## Sửa MongoDB sau review — điểm mới nhất
 
 - Nhánh **codex/mongodb-integrity-fixes**, base review **f39abb8** trên teammate
