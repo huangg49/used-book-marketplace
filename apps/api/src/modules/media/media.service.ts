@@ -70,9 +70,10 @@ export async function reservedStorage(tx: Tx) {
   }
   return total;
 }
-// Hourly admission counts both pipelines of one seller.
-export async function recentUploads(tx: Tx, userId: string) {
-  const hourAgo = new Date(Date.now() - 3_600_000);
+// Hourly admission counts both pipelines of one seller. Listing uploads use
+// the wall clock; packaging evidence passes its Order decision time.
+export async function recentUploads(tx: Tx, userId: string, now = new Date()) {
+  const hourAgo = new Date(now.getTime() - 3_600_000);
   const [media] = await tx.c.listing_media
     .aggregate<{ n: number }>([
       { $match: { createdAt: { $gt: hourAgo } } },

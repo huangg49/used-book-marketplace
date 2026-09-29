@@ -149,7 +149,7 @@ export class PackagingEvidenceService {
           const reservedBytes = body.byteSize + 2000000;
           if (
             count >= 32 ||
-            (await recentUploads(tx, actor._id)) >= 20 ||
+            (await recentUploads(tx, actor._id, now)) >= 20 ||
             (await reservedStorage(tx)) + reservedBytes >
               this.config.get<number>('MEDIA_STORAGE_BUDGET_BYTES', 800000000)
           )

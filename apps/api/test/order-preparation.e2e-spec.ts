@@ -3,28 +3,30 @@ import { LedgerService } from '../src/modules/wallet/ledger.service.js';
 
 import { OrdersService } from '../src/modules/orders/orders.service.js';
 import { OrderExpiryWorker } from '../src/modules/orders/order-expiry.service.js';
+import { checkOrder } from '../src/modules/orders/order-invariants.js';
 
 import { randomBytes, randomUUID } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { INestApplication } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/generated/prisma/client.js';
-import type { RoleCode, UserStatus } from '../src/generated/prisma/client.js';
-import { DatabaseService } from '../src/database/database.service.js';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
 import request from 'supertest';
-import { Ajv2020 } from 'ajv/dist/2020.js';
-import addFormats from 'ajv-formats';
-import { parse } from 'yaml';
-import { hash } from 'argon2';
+import type { RoleCode, UserStatus } from '../src/database/mongo/documents.js';
+import { migrate, pendingMigrations } from '../src/database/mongo/migrate.js';
+import { MongoService } from '../src/database/mongo/mongo.service.js';
+import {
+  onTransactionRetry,
+  type Tx,
+} from '../src/database/mongo/transaction.js';
 import { MediaStorage } from '../src/modules/media/media-storage.js';
+import { validates } from './helpers/contract.js';
+import { Gate } from './helpers/mongo-gate.js';
+import { MongoFixtures } from './helpers/mongo-fixtures.js';
+import { removeOrderFixtures } from './helpers/prep-cleanup.js';
 
-// Storage signing is deliberately faked. HTTP, authorization and PostgreSQL are real.
+// Storage signing is deliberately faked. HTTP, authorization and MongoDB are real.
 const storage = {
   beforeSign: undefined as (() => Promise<void>) | undefined,
   async check() {},
@@ -37,23 +39,6 @@ const storage = {
   },
 };
 
-const contract = parse(
-  readFileSync(
-    createRequire(import.meta.url).resolve(
-      '@used-books/api-contract/openapi.yaml',
-    ),
-    'utf8',
-  ),
-);
-const ajv = new Ajv2020({ strict: false });
-addFormats.default(ajv);
-ajv.addSchema({ $id: 'api-wire', components: contract.components });
-function validates(name: string, body: unknown) {
-  const fn = ajv.compile({ $ref: `api-wire#/components/schemas/${name}` });
-  expect(fn(body), JSON.stringify(fn.errors)).toBe(true);
-}
-type Adapter = Awaited<ReturnType<PrismaPg['connect']>>;
-type Pool = ReturnType<Adapter['underlyingDriver']>;
 type Reader = { id: string; token: string; sessionId: string; email: string };
 const metadata = (title = 'Đường sách chuyền tay') => ({
   title,
@@ -81,13 +66,26 @@ const draft = (bookId: string | null = null) => ({
   exchangeValue: null,
   mediaIds: [] as string[],
 });
+// Collections the PostgreSQL upgrade test compared before/after migration.
+const upgradeCollections = [
+  'direct_orders',
+  'workflow_contexts',
+  'exclusive_commitments',
+  'agreement_snapshots',
+  'mutation_receipts',
+  'audit_events',
+  'outbox_events',
+  'wallet_accounts',
+  'ledger_journals',
+  'ledger_entries',
+] as const;
 
-describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
-  const schema = `preparation_http_test_${randomUUID().replaceAll('-', '')}`;
-  let app: INestApplication, db: PrismaClient, adapter: Adapter, pool: Pool;
-  const migration = '20260928030000_order_preparation';
+describe('Order acceptance and pickup review: real MongoDB and HTTP', () => {
+  let app: INestApplication, db: MongoFixtures;
+  const users: string[] = [];
   let upgradeBefore: Record<string, unknown>,
-    upgradeAfter: Record<string, unknown>;
+    upgradeAfter: Record<string, unknown>,
+    upgradeApplied: string[];
   let legacy: PaymentFixture;
   let m1: Reader, a1: Reader, a2: Reader, staff: Reader, operator: Reader;
   const originalSecret = process.env.PAYMENT_SIMULATOR_SECRET;
@@ -121,32 +119,31 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
     roles: RoleCode[] = ['MEMBER'],
     status: UserStatus = 'ACTIVE',
   ): Promise<Reader> {
-    const id = randomUUID(),
-      sessionId = randomUUID(),
-      email = `${id}@draft-http.test`;
-    await db.user.create({
-      data: {
-        id,
-        emailNormalized: email,
-        displayName: 'Bạn đọc thử nghiệm',
-        passwordHash: await hash('Only-a-test-password-2026'),
-        status,
-        emailVerifiedAt: new Date(),
-        roles: { create: roles.map((role) => ({ role })) },
-        sessions: {
-          create: {
-            id: sessionId,
-            refreshTokenHash: randomBytes(32).toString('hex'),
-            expiresAt: new Date(Date.now() + 86400000),
-          },
-        },
-      },
+    const email = `${randomUUID()}@draft-http.test`;
+    const user = await db.user({
+      email,
+      displayName: 'Bạn đọc thử nghiệm',
+      roles,
+      status,
     });
+    users.push(user._id);
+    const sessionId = await db.session(user._id);
     const token = await app
       .get(JwtService)
-      .signAsync({ sub: id, sid: sessionId });
-    return { id, sessionId, token, email };
+      .signAsync({ sub: user._id, sid: sessionId });
+    return { id: user._id, sessionId, token, email };
   }
+  // Direct user/session writes bump lockSeq like every application writer.
+  const setUser = (id: string, set: Record<string, unknown>) =>
+    db.c.users.updateOne(
+      { _id: id },
+      { $set: { ...set, updatedAt: new Date() }, $inc: { lockSeq: 1 } },
+    );
+  const setSession = (id: string, set: Record<string, unknown>) =>
+    db.c.auth_sessions.updateOne(
+      { _id: id },
+      { $set: set, $inc: { lockSeq: 1 } },
+    );
   async function createCatalog(actor = m1, meta = metadata()) {
     const result = await post(
       '/catalog/requests',
@@ -174,8 +171,6 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
   }
   async function makeApp() {
     const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(DatabaseService)
-      .useValue(db)
       .overrideProvider(MediaStorage)
       .useValue(storage)
       .compile();
@@ -185,106 +180,90 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
       .set('PAYMENT_SIMULATOR_SECRET', process.env.PAYMENT_SIMULATOR_SECRET);
     configureApp(next, { docs: false, logRequests: false });
     await next.init();
+    // One listening socket per app lifetime (staggered 503 retries in races).
+    await next.listen(0, '127.0.0.1');
     return next;
   }
-  async function blockedBy(
-    pid: number,
-    minimum = 1,
-    observer: Pick<Pool, 'query'> = pool,
-  ) {
-    const deadline = Date.now() + 4000;
-    while (Date.now() < deadline) {
-      // A barrier connection stays in one transaction: refresh PostgreSQL's
-      // statistics snapshot so newly opened contenders are visible.
-      await observer.query('SELECT pg_stat_clear_snapshot()');
-      const r = await observer.query(
-        'SELECT count(*)::int n FROM pg_stat_activity a WHERE $1 = ANY(pg_blocking_pids(a.pid)) OR EXISTS (SELECT 1 FROM pg_stat_activity b WHERE $1 = ANY(pg_blocking_pids(b.pid)) AND b.pid = ANY(pg_blocking_pids(a.pid)))',
-        [pid],
-      );
-      if (r.rows[0].n >= minimum) return;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-    throw new Error(
-      'HTTP mutation never reached the blocked database transaction',
-    );
+  // Observes command transactions retrying against a write lock held by
+  // another transaction (a session queued behind a PostgreSQL row lock).
+  function watchRetries() {
+    const seen = new Set<number>();
+    const stop = onTransactionRetry((event) => seen.add(event.transactionId));
+    return {
+      stop,
+      async until(n = 1) {
+        const deadline = Date.now() + 4000;
+        while (Date.now() < deadline) {
+          if (seen.size >= n) return;
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+        throw new Error('Commands did not reach the lock barrier');
+      },
+    };
   }
-  async function blockUser(id: string) {
-    const connection = await pool.connect();
-    await connection.query('BEGIN');
-    await connection.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [id]);
-    const pid = (await connection.query('SELECT pg_backend_pid() pid')).rows[0]
-      .pid as number;
-    return { connection, pid };
+  // Test-only pause of the next Order decision, inside its transaction and
+  // while it holds the user/listing/order locks. PostgreSQL granted queued
+  // row locks in FIFO order; MongoDB aborts and retries the loser, so the
+  // intended winner is made explicit by holding it here.
+  function pauseDecision(at?: Date) {
+    const clock = app.get(OrderClock),
+      original = clock.now.bind(clock);
+    let entered!: () => void, release!: () => void;
+    const reached = new Promise<void>((resolve) => (entered = resolve)),
+      released = new Promise<void>((resolve) => (release = resolve));
+    const spy = vi
+      .spyOn(clock, 'now')
+      .mockImplementationOnce(async (tx: Tx) => {
+        entered();
+        await released;
+        return at ?? original(tx);
+      });
+    return { reached, release, spy };
   }
+  // A raw write through the application's own connection that must pass the
+  // commit-time Order check (C) every command registers, the equivalent of
+  // the deferred PostgreSQL constraint triggers.
+  const checked = (fn: (tx: Tx) => Promise<unknown>, order: string) =>
+    app.get(MongoService).tx(async (tx) => {
+      await fn(tx);
+      tx.check(`order:${order}`, () => checkOrder(tx, order));
+    });
+  const snapshot = async () => {
+    const rows: Record<string, unknown> = {};
+    for (const name of upgradeCollections)
+      rows[name] = await db.client
+        .db()
+        .collection(name)
+        .find({}, { sort: { _id: 1 } })
+        .toArray();
+    return rows;
+  };
 
   beforeAll(async () => {
     process.env.PAYMENT_SIMULATOR_SECRET = randomBytes(32).toString('hex');
-    const url = process.env.TEST_DATABASE_URL!;
-    if (!decodeURIComponent(new URL(url).pathname).endsWith('_test'))
-      throw new Error('Only _test databases');
-    adapter = await new PrismaPg({
-      connectionString: url,
-      max: 16,
-      options: `-c search_path=${schema},public -c timezone=UTC`,
-      statement_timeout: 15000,
-    }).connect();
-    pool = adapter.underlyingDriver();
-    await pool.query(`CREATE SCHEMA "${schema}"`);
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n) && n < migration)
-      .sort())
-      await pool.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
-    db = new PrismaClient({ adapter: new PrismaPg(pool, { schema }) });
-    await db.$connect();
+    db = await MongoFixtures.connect();
     app = await makeApp();
     m1 = await reader();
     operator = await reader(['TEST_OPERATOR']);
     a1 = await reader(['MEMBER', 'ADMIN']);
     a2 = await reader(['ADMIN']);
     staff = await reader(['STAFF']);
-    // Exercise upgrade with a real active reservation and posted topup, built
-    // through the pre-existing APIs. Creation does not need preparation storage.
+    // Exercise the schema run with a real active reservation and posted topup,
+    // built through the pre-existing APIs. PostgreSQL applied migration
+    // 20260928030000 here; MongoDB's baseline already contains the preparation
+    // collections, so re-running the migrations must be a no-op.
     legacy = await ready();
-    const snapshot = async () => {
-      const rows: Record<string, unknown> = {};
-      for (const table of [
-        'direct_orders',
-        'workflow_contexts',
-        'exclusive_commitments',
-        'agreement_snapshots',
-        'mutation_receipts',
-        'audit_events',
-        'outbox_events',
-        'wallet_accounts',
-        'ledger_journals',
-        'ledger_entries',
-      ])
-        rows[table] = (
-          await pool.query(`SELECT * FROM ${table} ORDER BY 1`)
-        ).rows;
-      return rows;
-    };
     upgradeBefore = await snapshot();
-    await pool.query(
-      readFileSync(`prisma/migrations/${migration}/migration.sql`, 'utf8'),
-    );
+    upgradeApplied = await migrate(db.client, db.client.db());
     upgradeAfter = await snapshot();
-    // Current handlers can read additive fulfillment tables after the target upgrade.
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n) && n > migration)
-      .sort())
-      await pool.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
   }, 60000);
   afterAll(async () => {
+    storage.beforeSign = undefined;
+    if (db) {
+      await removeOrderFixtures(db, users);
+      await db.close();
+    }
     await app?.close();
-    await db?.$disconnect();
-    if (pool && /^preparation_http_test_[a-f0-9]{32}$/.test(schema))
-      await pool.query(`DROP SCHEMA "${schema}" CASCADE`);
-    await adapter?.dispose();
     if (originalSecret === undefined)
       delete process.env.PAYMENT_SIMULATOR_SECRET;
     else process.env.PAYMENT_SIMULATOR_SECRET = originalSecret;
@@ -302,24 +281,32 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
     listingId: string,
     status: 'Ready' | 'Pending' = 'Ready',
   ) {
-    const key = randomUUID();
+    const key = randomUUID(),
+      now = new Date();
     // Fixture derivative only: not proof of upload/Sharp/live-provider behavior.
-    return db.listingMedia.create({
-      data: {
-        listingId,
-        status,
-        stagingKey: key,
-        pinnedKey: status === 'Ready' ? key + '/input' : null,
-        derivativeKey: status === 'Ready' ? key + '/display.webp' : null,
-        mimeType: 'image/jpeg',
-        byteSize: 100,
-        sha256: 'a'.repeat(64),
-        width: status === 'Ready' ? 20 : null,
-        height: status === 'Ready' ? 20 : null,
-        reservedBytes: 1000,
-        expiresAt: new Date(Date.now() + 3600000),
-      },
-    });
+    const doc = {
+      _id: randomUUID(),
+      listingId,
+      version: 1,
+      status,
+      stagingKey: key,
+      pinnedKey: status === 'Ready' ? key + '/input' : null,
+      derivativeKey: status === 'Ready' ? key + '/display.webp' : null,
+      mimeType: 'image/jpeg',
+      byteSize: 100,
+      sha256: 'a'.repeat(64),
+      width: status === 'Ready' ? 20 : null,
+      height: status === 'Ready' ? 20 : null,
+      failureCode: null,
+      expiresAt: new Date(Date.now() + 3600000),
+      purgedAt: null,
+      reservedBytes: 1000,
+      createdAt: now,
+      updatedAt: now,
+      lockSeq: 0,
+    };
+    await db.c.listing_media.insertOne(doc);
+    return { ...doc, id: doc._id };
   }
   async function complete(
     actor = m1,
@@ -485,32 +472,49 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
     expect(r.headers['cache-control']).toContain('no-store');
     return r.body;
   }
+  const findOrder = async (id: string) =>
+    (await db.c.direct_orders.findOne({ _id: id }))!;
+  const preparation = async (orderId: string) =>
+    (await db.c.order_preparations.findOne({ _id: orderId }))!;
+  const preparations = (orderId: string) =>
+    db.c.order_preparations.countDocuments({ _id: orderId });
+  const pickupReviews = (orderId: string) =>
+    db.c.pickup_reviews.countDocuments({ orderId });
+  const journals = (orderId: string) =>
+    db.c.ledger_journals.countDocuments({ orderId });
   async function stateCounts(listingId: string) {
-    const contexts = await db.workflowContext.findMany({
-        where: { items: { some: { listingId } } },
-        select: { id: true },
-      }),
-      ids = contexts.map((c) => c.id);
+    const c = db.c;
+    const ids = (await c.workflow_items.find({ listingId }).toArray()).map(
+        (i) => i.contextId,
+      ),
+      orderIds = (
+        await c.workflow_contexts.find({ _id: { $in: ids } }).toArray()
+      ).map((x) => x.orderId),
+      commitments = (
+        await c.exclusive_commitments.find({ listingId }).toArray()
+      ).map((x) => x._id),
+      audits = (
+        await c.audit_events.find({ contextId: { $in: ids } }).toArray()
+      ).map((a) => a._id);
     return {
-      orders: await db.directOrder.count({
-        where: { context: { id: { in: ids } } },
+      orders: await c.direct_orders.countDocuments({ _id: { $in: orderIds } }),
+      items: await c.workflow_items.countDocuments({ contextId: { $in: ids } }),
+      agreements: await c.agreement_snapshots.countDocuments({
+        _id: { $in: ids },
       }),
-      items: await db.workflowItem.count({ where: { contextId: { in: ids } } }),
-      agreements: await db.agreementSnapshot.count({
-        where: { contextId: { in: ids } },
+      active: await c.exclusive_commitments.countDocuments({
+        listingId,
+        status: 'Active',
       }),
-      active: await db.exclusiveCommitment.count({
-        where: { listingId, status: 'Active' },
+      events: await c.commitment_events.countDocuments({
+        commitmentId: { $in: commitments },
       }),
-      events: await db.commitmentEvent.count({
-        where: { commitment: { listingId } },
+      receipts: await c.mutation_receipts.countDocuments({
+        contextId: { $in: ids },
       }),
-      receipts: await db.mutationReceipt.count({
-        where: { contextId: { in: ids } },
-      }),
-      audits: await db.auditEvent.count({ where: { contextId: { in: ids } } }),
-      outbox: await db.outboxEvent.count({
-        where: { audit: { contextId: { in: ids } } },
+      audits: audits.length,
+      outbox: await c.outbox_events.countDocuments({
+        auditId: { $in: audits },
       }),
     };
   }
@@ -564,9 +568,7 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
     return r.body;
   };
   const reconcile = () =>
-    db.$transaction((tx) => app.get(LedgerService).reconcile(tx), {
-      isolationLevel: 'RepeatableRead',
-    });
+    app.get(MongoService).tx((tx) => app.get(LedgerService).reconcile(tx));
 
   const accept = (
     f: PaymentFixture,
@@ -579,7 +581,12 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
     await pay(f).expect(200);
     return f;
   }
-  it('upgrades twelve migrations preserving real unpaid commitments, immutable snapshots, journals and receipts', async () => {
+  it('re-running migrations over real unpaid commitments preserves immutable snapshots, journals and receipts', async () => {
+    // PostgreSQL: applying 20260928030000 over twelve migrations left these
+    // tables unchanged. MongoDB: the preparation model is in the baseline and
+    // migrations are checksummed and idempotent, so nothing is pending.
+    expect(upgradeApplied).toEqual([]);
+    expect(await pendingMigrations(app.get(MongoService).db)).toEqual([]);
     expect(upgradeAfter).toEqual(upgradeBefore);
     await pay(legacy).expect(200);
     await accept(legacy).expect(200);
@@ -627,10 +634,9 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
       receipts: before.receipts + 1,
     });
     expect(
-      (await db.listing.findUniqueOrThrow({ where: { id: f.f.l.entityId } }))
-        .version,
+      (await db.c.listings.findOne({ _id: f.f.l.entityId }))!.version,
     ).toBe(f.f.l.version + 1);
-    expect(await db.ledgerJournal.count({ where: { orderId: f.id } })).toBe(1);
+    expect(await journals(f.id)).toBe(1);
     await cancelPaid(f, randomUUID(), f.f.buyer, 3).expect(409);
     await reject(f).expect(409);
     await accept(f).expect(409);
@@ -647,9 +653,7 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
       (await get('/me/orders?state=Preparing', f.f.seller).expect(200)).body
         .items[0].id,
     ).toBe(f.id);
-    const audit = await db.auditEvent.findUniqueOrThrow({
-      where: { receiptId: result.id },
-    });
+    const audit = (await db.c.audit_events.findOne({ receiptId: result.id }))!;
     expect(audit.before).toEqual({
       state: 'PendingSellerConfirmation',
       version: 2,
@@ -658,9 +662,10 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
   it('shipping uses frozen destination even after the buyer edits their address', async () => {
     const f = await paid(),
       frozen = (await orderView(f.id, f.f.buyer)).ownAddress;
-    await pool.query(
-      "UPDATE member_addresses SET detail='Edited after agreement' WHERE id=$1",
-      [f.f.destination.id],
+    // Raw content edit following the address write protocol (version +1).
+    await db.c.member_addresses.updateOne(
+      { _id: f.f.destination.id },
+      { $set: { detail: 'Edited after agreement' }, $inc: { version: 1 } },
     );
     await accept(f).expect(200);
     expect((await orderView(f.id, f.f.seller)).shippingAddress).toEqual(frozen);
@@ -689,44 +694,29 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
     if (kind === 'staff') actor = staff;
     if (kind === 'admin') actor = a2;
     if (kind === 'disabled') {
-      await db.user.update({
-        where: { id: actor.id },
-        data: { status: 'DISABLED' },
-      });
+      await setUser(actor.id, { status: 'DISABLED' });
       status = 401;
     }
     if (kind === 'unverified') {
-      await db.user.update({
-        where: { id: actor.id },
-        data: { emailVerifiedAt: null },
-      });
+      await setUser(actor.id, { emailVerifiedAt: null });
       status = 401;
     }
-    if (kind === 'role')
-      await db.userRole.deleteMany({ where: { userId: actor.id } });
+    if (kind === 'role') await setUser(actor.id, { roles: [] });
     if (kind === 'revoked') {
-      await db.authSession.update({
-        where: { id: actor.sessionId },
-        data: { revokedAt: new Date() },
-      });
+      await setSession(actor.sessionId, { revokedAt: new Date() });
       status = 401;
     }
     const before = await stateCounts(f.f.l.entityId);
     await accept(f, randomUUID(), actor).expect(status);
     expect(await stateCounts(f.f.l.entityId)).toEqual(before);
-    expect(await db.orderPreparation.count({ where: { orderId: f.id } })).toBe(
-      0,
-    );
+    expect(await preparations(f.id)).toBe(0);
   });
   it.each(['RESTRICTED', 'LOCKED'] as const)(
     '%s seller can process paid obligations even if buyer is disabled',
     async (status) => {
       const f = await paid();
-      await db.user.update({ where: { id: f.f.seller.id }, data: { status } });
-      await db.user.update({
-        where: { id: f.f.buyer.id },
-        data: { status: 'DISABLED' },
-      });
+      await db.setStatus(f.f.seller.id, status);
+      await db.setStatus(f.f.buyer.id, 'DISABLED');
       const key = randomUUID();
       await accept(f, key).expect(200);
       await accept(f, key).expect(200);
@@ -758,11 +748,10 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
     'acceptance at confirmation deadline offset %i',
     async (offset) => {
       const f = await paid(),
-        o = await db.directOrder.findUniqueOrThrow({ where: { id: f.id } }),
+        o = await findOrder(f.id),
         time = new Date(o.sellerConfirmationDeadline!.getTime() + offset);
-      await db.authSession.update({
-        where: { id: f.f.seller.sessionId },
-        data: { expiresAt: new Date(time.getTime() + 3600000) },
+      await setSession(f.f.seller.sessionId, {
+        expiresAt: new Date(time.getTime() + 3600000),
       });
       const clock = vi
         .spyOn(app.get(OrderClock), 'now')
@@ -772,39 +761,38 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
       } finally {
         clock.mockRestore();
       }
-      expect(
-        await db.orderPreparation.count({ where: { orderId: f.id } }),
-      ).toBe(offset < 0 ? 1 : 0);
+      expect(await preparations(f.id)).toBe(offset < 0 ? 1 : 0);
     },
   );
   it.each(['accept', 'cancel'] as const)(
     '%s wins against the other command with a verified database barrier',
     async (first) => {
       const f = await paid(),
-        gate = await blockUser(f.f.seller.id),
+        pause = pauseDecision(),
+        retries = watchRetries(),
         a = () => accept(f).then((r) => r),
         b = () => cancelPaid(f).then((r) => r);
       const one = first === 'accept' ? a() : b();
       let two: ReturnType<typeof a> | undefined;
       try {
-        await blockedBy(gate.pid, 1, gate.connection);
+        await pause.reached;
         two = first === 'accept' ? b() : a();
-        await blockedBy(gate.pid, 2, gate.connection);
-        await gate.connection.query('COMMIT');
+        // The loser contends for the participant locks the winner holds.
+        await retries.until(1);
+        pause.release();
         expect((await one).status).toBe(200);
         expect((await two).status).toBe(409);
       } finally {
-        await gate.connection.query('ROLLBACK');
-        gate.connection.release();
+        pause.release();
+        retries.stop();
+        pause.spy.mockRestore();
         await one;
         await two;
       }
       expect((await orderView(f.id, f.f.buyer)).state).toBe(
         first === 'accept' ? 'Preparing' : 'SettlementPending',
       );
-      expect(
-        await db.orderPreparation.count({ where: { orderId: f.id } }),
-      ).toBe(first === 'accept' ? 1 : 0);
+      expect(await preparations(f.id)).toBe(first === 'accept' ? 1 : 0);
       if (first === 'accept')
         await expect(
           app.get(OrdersService).refund(f.id),
@@ -816,74 +804,86 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
     'rechecks %s after waiting for user locks',
     async (kind) => {
       const f = await paid(),
-        o = await db.directOrder.findUniqueOrThrow({ where: { id: f.id } }),
-        gate = await blockUser(f.f.seller.id),
+        o = await findOrder(f.id),
+        gate = await Gate.lockUser(db.client, f.f.seller.id),
         clock = vi.spyOn(app.get(OrderClock), 'now'),
         call = accept(f).then((r) => r);
       try {
-        await blockedBy(gate.pid, 1, gate.connection);
+        await gate.contended();
         expect(clock).not.toHaveBeenCalled();
+        const inGate = { session: gate.session };
+        const sessions = gate.db.collection<{ _id: string }>('auth_sessions');
         if (kind === 'deadline') {
-          await gate.connection.query(
-            'UPDATE auth_sessions SET expires_at=$1 WHERE id=$2',
-            [
-              new Date(o.sellerConfirmationDeadline!.getTime() + 3600000),
-              f.f.seller.sessionId,
-            ],
+          await sessions.updateOne(
+            { _id: f.f.seller.sessionId },
+            {
+              $set: {
+                expiresAt: new Date(
+                  o.sellerConfirmationDeadline!.getTime() + 3600000,
+                ),
+              },
+              $inc: { lockSeq: 1 },
+            },
+            inGate,
           );
           clock.mockResolvedValue(o.sellerConfirmationDeadline!);
         } else if (kind === 'session') {
           const time = new Date(Date.now() + 60000);
-          await gate.connection.query(
-            'UPDATE auth_sessions SET expires_at=$1 WHERE id=$2',
-            [time, f.f.seller.sessionId],
+          await sessions.updateOne(
+            { _id: f.f.seller.sessionId },
+            { $set: { expiresAt: time }, $inc: { lockSeq: 1 } },
+            inGate,
           );
           clock.mockResolvedValue(time);
         } else if (kind === 'role')
-          await gate.connection.query(
-            "DELETE FROM user_roles WHERE user_id=$1 AND role='MEMBER'",
-            [f.f.seller.id],
-          );
+          await gate.db
+            .collection<{ _id: string }>('users')
+            .updateOne(
+              { _id: f.f.seller.id },
+              { $pull: { roles: { role: 'MEMBER' } } } as never,
+              inGate,
+            );
         else
-          await gate.connection.query(
-            'UPDATE auth_sessions SET revoked_at=clock_timestamp() WHERE id=$1',
-            [f.f.seller.sessionId],
+          await sessions.updateOne(
+            { _id: f.f.seller.sessionId },
+            { $set: { revokedAt: new Date() }, $inc: { lockSeq: 1 } },
+            inGate,
           );
-        await gate.connection.query('COMMIT');
+        await gate.commit();
         expect((await call).status).toBe(
           kind === 'deadline' ? 409 : kind === 'role' ? 403 : 401,
         );
       } finally {
-        await gate.connection.query('ROLLBACK');
-        gate.connection.release();
+        await gate.close();
         await call;
         clock.mockRestore();
       }
-      expect(
-        await db.orderPreparation.count({ where: { orderId: f.id } }),
-      ).toBe(0);
+      expect(await preparations(f.id)).toBe(0);
     },
   );
   it('concurrent same-key acceptance survives lost acknowledgments with one receipt and deadline', async () => {
     const f = await paid(),
-      gate = await blockUser(f.f.seller.id),
+      gate = await Gate.lockUser(db.client, f.f.seller.id),
       key = randomUUID(),
       calls = Array.from({ length: 20 }, () => accept(f, key).then((r) => r));
     try {
-      await blockedBy(gate.pid, 10, gate.connection);
-      await gate.connection.query('COMMIT');
+      await gate.contended(10);
+      await gate.commit();
       const results = await Promise.all(calls);
+      expect(results.every((r) => [200, 503].includes(r.status))).toBe(true);
+      // A busy answer (retry budget exhausted) is retried with the same key
+      // and must replay the one durable receipt.
+      for (let i = 0; i < results.length; i++)
+        if (results[i].status === 503)
+          results[i] = await accept(f, key).expect(200);
       expect(results.every((r) => r.status === 200)).toBe(true);
       expect(new Set(results.map((r) => r.body.id)).size).toBe(1);
     } finally {
-      await gate.connection.query('ROLLBACK');
-      gate.connection.release();
-      await Promise.all(calls);
+      await gate.close();
+      await Promise.allSettled(calls);
     }
-    expect(await db.orderPreparation.count({ where: { orderId: f.id } })).toBe(
-      1,
-    );
-  });
+    expect(await preparations(f.id)).toBe(1);
+  }, 60000);
   it.each([
     'order_preparations',
     'direct_orders',
@@ -892,24 +892,27 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
     'outbox_events',
   ] as const)(
     'acceptance failure at %s rolls back and same key retries',
-    async (table) => {
+    async (collection) => {
       const f = await paid(),
         key = randomUUID(),
         before = await stateCounts(f.f.l.entityId);
-      await pool.query(
-        `CREATE FUNCTION fail_accept() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test failpoint'; END $$; CREATE TRIGGER fail_accept BEFORE ${table === 'direct_orders' ? 'UPDATE' : 'INSERT'} ON ${table} FOR EACH ROW EXECUTE FUNCTION fail_accept()`,
-      );
-      try {
+      // Temporary validator rule rejecting the acceptance write (like the
+      // former failing BEFORE INSERT/UPDATE trigger on the table).
+      const rejectWhen = {
+        order_preparations: { _id: f.id },
+        direct_orders: { _id: f.id, state: 'Preparing' },
+        mutation_receipts: {
+          operation: 'acceptOrder',
+          contextId: f.r.contextId,
+        },
+        audit_events: { action: 'acceptOrder', contextId: f.r.contextId },
+        outbox_events: { type: 'OrderAccepted', 'payload.entityId': f.id },
+      }[collection];
+      await db.withRejectingValidator(collection, rejectWhen, async () => {
         await accept(f, key).expect(500);
-      } finally {
-        await pool.query(
-          `DROP TRIGGER fail_accept ON ${table}; DROP FUNCTION fail_accept()`,
-        );
-      }
+      });
       expect(await stateCounts(f.f.l.entityId)).toEqual(before);
-      expect(
-        await db.orderPreparation.count({ where: { orderId: f.id } }),
-      ).toBe(0);
+      expect(await preparations(f.id)).toBe(0);
       await accept(f, key).expect(200);
     },
   );
@@ -918,9 +921,7 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
     async (offset) => {
       const f = await paid();
       await accept(f).expect(200);
-      const p = await db.orderPreparation.findUniqueOrThrow({
-          where: { orderId: f.id },
-        }),
+      const p = await preparation(f.id),
         clock = vi
           .spyOn(app.get(OrderClock), 'now')
           .mockResolvedValue(new Date(p.pickupDeadline.getTime() + offset));
@@ -937,14 +938,10 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
       } finally {
         clock.mockRestore();
       }
-      expect(await db.pickupReview.count({ where: { orderId: f.id } })).toBe(
-        offset < 0 ? 0 : 1,
-      );
+      expect(await pickupReviews(f.id)).toBe(offset < 0 ? 0 : 1);
       expect((await stateCounts(f.f.l.entityId)).active).toBe(1);
       expect((await wallet(f.f.buyer)).transactionHeld).toBe(230000);
-      expect(await db.ledgerJournal.count({ where: { orderId: f.id } })).toBe(
-        1,
-      );
+      expect(await journals(f.id)).toBe(1);
       if (offset >= 0) {
         expect(
           (await orderView(f.id, f.f.buyer)).preparation.pickupReview.status,
@@ -958,88 +955,103 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
   it('pickup worker survives failures/restart and disabled participants; two commands create one unresolved review', async () => {
     const f = await paid();
     await accept(f).expect(200);
-    const p = await db.orderPreparation.findUniqueOrThrow({
-      where: { orderId: f.id },
-    });
-    await db.user.updateMany({
-      where: { id: { in: [f.f.buyer.id, f.f.seller.id] } },
-      data: { status: 'DISABLED' },
-    });
+    const p = await preparation(f.id);
+    for (const id of [f.f.buyer.id, f.f.seller.id])
+      await db.setStatus(id, 'DISABLED');
     let clock = vi
       .spyOn(app.get(OrderClock), 'now')
       .mockResolvedValue(p.pickupDeadline);
-    await pool.query(
-      `CREATE FUNCTION fail_review() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test failpoint'; END $$; CREATE TRIGGER fail_review BEFORE INSERT ON pickup_reviews FOR EACH ROW EXECUTE FUNCTION fail_review()`,
-    );
     try {
-      await expect(
-        app.get(OrdersService).expirePickup(f.id),
-      ).rejects.toBeDefined();
-    } finally {
-      await pool.query(
-        'DROP TRIGGER fail_review ON pickup_reviews; DROP FUNCTION fail_review()',
+      // Temporary validator rule (like the former failing SQL trigger).
+      await db.withRejectingValidator(
+        'pickup_reviews',
+        { orderId: f.id },
+        async () => {
+          await expect(
+            app.get(OrdersService).expirePickup(f.id),
+          ).rejects.toBeDefined();
+        },
       );
+    } finally {
       clock.mockRestore();
     }
-    expect(
-      (await db.directOrder.findUniqueOrThrow({ where: { id: f.id } })).state,
-    ).toBe('Preparing');
+    expect((await findOrder(f.id)).state).toBe('Preparing');
     await app.close();
     app = await makeApp();
     clock = vi
       .spyOn(app.get(OrderClock), 'now')
       .mockResolvedValue(p.pickupDeadline);
-    const gate = await blockUser(f.f.buyer.id),
+    const gate = await Gate.lockUser(db.client, f.f.buyer.id),
       calls = [
         app.get(OrdersService).expirePickup(f.id),
         app.get(OrdersService).expirePickup(f.id),
       ];
     try {
-      await blockedBy(gate.pid, 2, gate.connection);
-      await gate.connection.query('COMMIT');
+      await gate.contended(2);
+      await gate.commit();
       const r = await Promise.all(calls);
       expect(r[0].receipt).toEqual(r[1].receipt);
     } finally {
-      await gate.connection.query('ROLLBACK');
-      gate.connection.release();
-      await Promise.all(calls);
+      await gate.close();
+      await Promise.allSettled(calls);
       clock.mockRestore();
     }
-    expect(await db.pickupReview.count({ where: { orderId: f.id } })).toBe(1);
-    expect(await db.ledgerJournal.count({ where: { orderId: f.id } })).toBe(1);
+    expect(await pickupReviews(f.id)).toBe(1);
+    expect(await journals(f.id)).toBe(1);
     expect((await reconcile()).balanced).toBe(true);
   });
-  it('SQL refuses forged acceptance/review, changed deadlines or deleting preparation history', async () => {
+  it('commit-time checks refuse forged acceptance/review; MongoDB refuses changed deadlines or deleting preparation history', async () => {
     const f = await paid();
+    // C (formerly the deferred latlai_check_order_preparation trigger).
     await expect(
-      pool.query(
-        "UPDATE direct_orders SET state='Preparing',version=3 WHERE id=$1",
-        [f.id],
+      checked(
+        (tx) =>
+          tx.c.direct_orders.updateOne(
+            { _id: f.id },
+            { $set: { state: 'Preparing' }, $inc: { version: 1 } },
+          ),
+        f.id,
       ),
     ).rejects.toThrow('Order acceptance receipt/deadline mismatch');
     await accept(f).expect(200);
     await expect(
-      pool.query(
-        "UPDATE direct_orders SET state='ResolutionPending',version=4 WHERE id=$1",
-        [f.id],
+      checked(
+        (tx) =>
+          tx.c.direct_orders.updateOne(
+            { _id: f.id },
+            { $set: { state: 'ResolutionPending' }, $inc: { version: 1 } },
+          ),
+        f.id,
       ),
     ).rejects.toThrow('Pickup verification task mismatch');
+    expect(await findOrder(f.id)).toMatchObject({
+      state: 'Preparing',
+      version: 3,
+    });
+    const p = await preparation(f.id),
+      appDb = app.get(MongoService).c,
+      moved = {
+        $set: {
+          pickupDeadline: new Date(p.pickupDeadline.getTime() + 3600000),
+        },
+      };
+    // V: the deadline is always acceptance + 48h (the former CHECK, 23514).
     await expect(
-      pool.query(
-        "UPDATE order_preparations SET pickup_deadline=pickup_deadline+interval '1 hour' WHERE order_id=$1",
-        [f.id],
-      ),
-    ).rejects.toMatchObject({ code: '23514' });
+      db.c.order_preparations.updateOne({ _id: f.id }, moved),
+    ).rejects.toMatchObject({ code: 121 });
+    // P: preparation history is append-only for the application user.
     await expect(
-      pool.query('DELETE FROM order_preparations WHERE order_id=$1', [f.id]),
-    ).rejects.toMatchObject({ code: '23514' });
+      appDb.order_preparations.updateOne({ _id: f.id }, moved),
+    ).rejects.toMatchObject({ code: 13 });
+    await expect(
+      appDb.order_preparations.deleteOne({ _id: f.id }),
+    ).rejects.toMatchObject({ code: 13 });
+    expect(await preparation(f.id)).toEqual(p);
   });
   it('worker scans overdue preparations and reports unresolved reviews separately from executable backlog', async () => {
     const f = await paid();
     await accept(f).expect(200);
-    const p = await db.orderPreparation.findUniqueOrThrow({
-        where: { orderId: f.id },
-      }),
+    const p = await preparation(f.id),
       clock = vi
         .spyOn(app.get(OrderClock), 'now')
         .mockResolvedValue(new Date(p.pickupDeadline.getTime() + 1000));
@@ -1049,31 +1061,31 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
       expect(r.pickupRemaining).toBe(0);
       expect(r.openPickupReviews).toBeGreaterThan(0);
       expect(r.oldestPickupReviewAgeSeconds).toBeGreaterThanOrEqual(0);
-      const before = await db.pickupReview.count();
+      const before = await db.c.pickup_reviews.countDocuments();
       const again = await app.get(OrderExpiryWorker).tick();
       expect(again.openPickupReviews).toBe(before);
-      expect(await db.pickupReview.count()).toBe(before);
+      expect(await db.c.pickup_reviews.countDocuments()).toBe(before);
     } finally {
       clock.mockRestore();
     }
     expect((await orderView(f.id, f.f.buyer)).state).toBe('ResolutionPending');
     expect((await reconcile()).balanced).toBe(true);
-  });
+  }, 60000);
   it.each(['accept', 'expiry'] as const)(
     '%s wins confirmation race without refunding an accepted Order',
     async (first) => {
       const f = await paid(),
-        o = await db.directOrder.findUniqueOrThrow({ where: { id: f.id } }),
+        o = await findOrder(f.id),
         time = new Date(
           o.sellerConfirmationDeadline!.getTime() +
             (first === 'accept' ? -1 : 0),
         );
-      await db.authSession.update({
-        where: { id: f.f.seller.sessionId },
-        data: { expiresAt: new Date(time.getTime() + 3600000) },
+      await setSession(f.f.seller.sessionId, {
+        expiresAt: new Date(time.getTime() + 3600000),
       });
-      const gate = await blockUser(f.f.seller.id),
-        clock = vi.spyOn(app.get(OrderClock), 'now').mockResolvedValue(time);
+      const pause = pauseDecision(time);
+      pause.spy.mockResolvedValue(time);
+      const retries = watchRetries();
       const a = () => accept(f).then((r) => ({ status: r.status })),
         b = () =>
           app
@@ -1084,18 +1096,19 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
       const one = first === 'accept' ? a() : b();
       let two: ReturnType<typeof a> | undefined;
       try {
-        await blockedBy(gate.pid, 1, gate.connection);
+        await pause.reached;
         two = first === 'accept' ? b() : a();
-        await blockedBy(gate.pid, 2, gate.connection);
-        await gate.connection.query('COMMIT');
+        // The loser contends for the participant locks the winner holds.
+        await retries.until(1);
+        pause.release();
         expect((await one).status).toBe(200);
         expect((await two).status).toBe(409);
       } finally {
-        await gate.connection.query('ROLLBACK');
-        gate.connection.release();
+        pause.release();
+        retries.stop();
         await one;
         await two;
-        clock.mockRestore();
+        pause.spy.mockRestore();
       }
       expect((await orderView(f.id, f.f.buyer)).state).toBe(
         first === 'accept' ? 'Preparing' : 'SettlementPending',
@@ -1104,39 +1117,27 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
   );
   it('acceptance checks deadline after waiting for the hold account lock', async () => {
     const f = await paid(),
-      o = await db.directOrder.findUniqueOrThrow({ where: { id: f.id } }),
-      hold = await db.walletAccount.findUniqueOrThrow({
-        where: { orderId: f.id },
-      });
-    await db.authSession.update({
-      where: { id: f.f.seller.sessionId },
-      data: {
-        expiresAt: new Date(o.sellerConfirmationDeadline!.getTime() + 3600000),
-      },
+      o = await findOrder(f.id),
+      hold = (await db.c.wallet_accounts.findOne({ orderId: f.id }))!;
+    await setSession(f.f.seller.sessionId, {
+      expiresAt: new Date(o.sellerConfirmationDeadline!.getTime() + 3600000),
     });
-    const gate = await pool.connect();
-    await gate.query('BEGIN');
-    await gate.query('SELECT id FROM wallet_accounts WHERE id=$1 FOR UPDATE', [
-      hold.id,
-    ]);
-    const pid = (await gate.query('SELECT pg_backend_pid() pid')).rows[0].pid;
+    // The posting lock document of the hold account (ledger_entry_lock).
+    const gate = await Gate.lock(db.client, 'account_locks', [hold._id]);
     const clock = vi.spyOn(app.get(OrderClock), 'now'),
       call = accept(f).then((r) => r);
     try {
-      await blockedBy(pid, 1, gate);
+      await gate.contended();
       expect(clock).not.toHaveBeenCalled();
       clock.mockResolvedValue(o.sellerConfirmationDeadline!);
-      await gate.query('COMMIT');
+      await gate.commit();
       expect((await call).status).toBe(409);
     } finally {
-      await gate.query('ROLLBACK');
-      gate.release();
+      await gate.close();
       await call;
       clock.mockRestore();
     }
-    expect(await db.orderPreparation.count({ where: { orderId: f.id } })).toBe(
-      0,
-    );
+    expect(await preparations(f.id)).toBe(0);
   });
   it.each([
     'direct_orders',
@@ -1145,31 +1146,40 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
     'outbox_events',
   ] as const)(
     'overdue review failure at %s is atomic and retryable',
-    async (table) => {
+    async (collection) => {
       const f = await paid();
       await accept(f).expect(200);
-      const p = await db.orderPreparation.findUniqueOrThrow({
-          where: { orderId: f.id },
-        }),
+      const p = await preparation(f.id),
         before = await stateCounts(f.f.l.entityId),
         clock = vi
           .spyOn(app.get(OrderClock), 'now')
           .mockResolvedValue(p.pickupDeadline);
-      await pool.query(
-        `CREATE FUNCTION fail_overdue() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test failpoint'; END $$; CREATE TRIGGER fail_overdue BEFORE ${table === 'direct_orders' ? 'UPDATE' : 'INSERT'} ON ${table} FOR EACH ROW EXECUTE FUNCTION fail_overdue()`,
-      );
+      const rejectWhen = {
+        direct_orders: { _id: f.id, state: 'ResolutionPending' },
+        mutation_receipts: {
+          operation: 'expireOrderPickup',
+          contextId: f.r.contextId,
+        },
+        audit_events: {
+          action: 'expireOrderPickup',
+          contextId: f.r.contextId,
+        },
+        outbox_events: {
+          type: 'OrderPickupReviewOpened',
+          'payload.entityId': f.id,
+        },
+      }[collection];
       try {
-        await expect(
-          app.get(OrdersService).expirePickup(f.id),
-        ).rejects.toBeDefined();
+        await db.withRejectingValidator(collection, rejectWhen, async () => {
+          await expect(
+            app.get(OrdersService).expirePickup(f.id),
+          ).rejects.toBeDefined();
+        });
       } finally {
-        await pool.query(
-          `DROP TRIGGER fail_overdue ON ${table}; DROP FUNCTION fail_overdue()`,
-        );
         clock.mockRestore();
       }
       expect(await stateCounts(f.f.l.entityId)).toEqual(before);
-      expect(await db.pickupReview.count({ where: { orderId: f.id } })).toBe(0);
+      expect(await pickupReviews(f.id)).toBe(0);
       const retryClock = vi
         .spyOn(app.get(OrderClock), 'now')
         .mockResolvedValue(p.pickupDeadline);
@@ -1178,7 +1188,7 @@ describe('Order acceptance and pickup review: real PostgreSQL and HTTP', () => {
       } finally {
         retryClock.mockRestore();
       }
-      expect(await db.pickupReview.count({ where: { orderId: f.id } })).toBe(1);
+      expect(await pickupReviews(f.id)).toBe(1);
     },
   );
 });

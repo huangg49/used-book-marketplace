@@ -1520,7 +1520,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
         _id: randomUUID(),
         principal: 'system:FakeWorker',
         actorId: null,
-        systemActor: 'FakeWorker',
+        systemActor: 'FakeWorker' as never,
         operation: 'expireOrder',
         key: randomUUID(),
         payloadHash: 'f'.repeat(64),
