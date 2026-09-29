@@ -56,6 +56,12 @@ phải implementation thứ hai. `Notice error` cũng là adapter; code mới ư
 `radius`, `metrics`, `typography` là token. `TextScale` chỉ phục vụ stress test;
 không dùng để vô hiệu hóa font scaling của hệ điều hành.
 
+Cập nhật 29/09: Android xử lý `fontScale` qua Expo plugin để giữ Activity và
+picker khi trở lại từ cài đặt chữ. `AppText` tạo lại riêng native Text theo
+`useWindowDimensions().fontScale`, tránh Fabric giữ số đo cũ làm cắt nhãn;
+không remount form/TextInput hoặc tắt font scaling. `/ui` có hướng dẫn kiểm
+đổi cỡ chữ hệ thống trong lúc đang nhập. Xem [Q01-F01](../handoff/Q01_NATIVE_COMPLETION_2026_09_29.md).
+
 Cập nhật 27/09: `Screen.scrollRef` tùy chọn nhận ref của ScrollView, phục vụ
 cuộn đến phần tổng hợp lỗi hoặc đầu bước mới mà không unmount nội dung form.
 `Button.selected` tùy chọn công bố trạng thái qua accessibilityState/aria-pressed;

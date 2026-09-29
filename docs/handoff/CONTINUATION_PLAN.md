@@ -148,6 +148,11 @@ card dày đặc, rating/trust badge giả hoặc khẩu hiệu vào mọi vùng
 
 ### Q01–Q03 — Đóng chất lượng và bàn giao · Q01 IN_PROGRESS, Q02 DONE (JS), Q03 chờ review (29/09, xem SESSION_STATE)
 
+Bổ sung sau `ca16a22`: [Q01 Pixel_7](Q01_NATIVE_COMPLETION_2026_09_29.md) đã kiểm
+WebP thật, đăng nhập sai/đúng, Back/keyboard, N13 giữa PUT/lost-ack content và thêm
+tổ hợp chữ 130%. Picker/font sau đổi OS (Q01-F01) đã sửa và kiểm trên APK
+mới; N18 archive bài QA riêng PASS. Không chạy lại ca không bị ảnh hưởng.
+
 - **Q01 Native:** tiếp tục N01–N21 còn mở: picker hủy/quyền từ chối/file lỗi,
   upload thất bại/mất mạng/retry, background/foreground, expiry session, toàn listing,
   modal focus, TalkBack, font/keyboard. Không dùng web thay native; không đổi PASS cũ.

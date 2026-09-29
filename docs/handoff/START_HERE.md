@@ -211,6 +211,12 @@ kết quả mong đợi và cách xử lý lỗi mà không bỏ quy tắc nghi�
 
 ## 7. Việc đầu tiên của người tiếp nhận
 
+**Nguồn hiện hành sau merge 29/09:** `main` tại `ca16a22` đã chứa lượt teammate
+A00/U02–U06 và Q01 một phần. [SESSION_STATE](SESSION_STATE.md) có điểm lưu
+mới nhất; [Q01 Pixel_7](Q01_NATIVE_COMPLETION_2026_09_29.md) bổ sung WebP/Back
+và chữ lớn. Các nhánh/bundle 28/09 mô tả bên dưới là lịch sử dự phòng;
+không lấy chúng thay nguồn main mới hoặc chạy lại gate đã đóng.
+
 Đọc [READINESS](READINESS.md), tiếp tục việc chưa đóng đầu tiên; **chưa mở F2i**.
 Gói tiếp nhận mới nhất trên nhánh `codex/handoff-roadmap`, tiếp nối
 `codex/shelf-detail-showcase` (`3808b57`). Đọc [điểm lưu](SESSION_STATE.md),

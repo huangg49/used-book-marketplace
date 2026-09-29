@@ -1,6 +1,50 @@
-# Điểm lưu để tiếp tục — 28/09/2026
+# Điểm lưu để tiếp tục — 29/09/2026
 
-## Đọc ngay
+## Đọc ngay — sau merge ca16a22, lượt Codex trên Pixel_7
+
+- Đầu phiên working tree sạch; main/origin/main và remote kiểm read-only cùng
+  **ca16a22065ae67c620c4c212d953ebefef188608**, mới hơn 382dda2. Teammate đã merge
+  A00/U02–U06, Q01 một phần, operations fix và ADR0026 Proposed.
+- Nhánh **codex/q01-native-completion**, base ca16a22. Sửa lỗi picker/font Q01-F01
+  cùng evidence native; commit local xem `git log -1`. **Chưa push/merge/deploy**.
+- **Q01-F01 PASS trên Android15 x86_64**: Expo plugin thêm fontScale để tránh
+  recreate Activity làm unregister picker. AppText remount riêng native Text theo
+  OS fontScale để Fabric đo lại nhãn; không remount input/form hoặc tắt scaling.
+  /ui và UI_COMPONENTS cập nhật. Không đổi API/nghiệp vụ/migration/dependency.
+- Native lượt này: N03 sai→đúng PASS; N11 WebP Supabase/Sharp thật PASS; N13 cắt
+  giữa PUT và lost-ack content PASS phạm vi proxy; N16 keyboard/Back bài+địa chỉ
+  PASS; N18 archive bài QA riêng PASS. N20 thêm font130% với form dài, keyboard,
+  sheet/dialog/checkbox, vẫn PARTIAL cho walkthrough toàn bộ.
+  [Bằng chứng, hash APK, ảnh và giới hạn](Q01_NATIVE_COMPLETION_2026_09_29.md).
+- Bản sửa native đã build JDK21.0.11/Node24.19.0; APK SHA256 `62e7dfd6…`, cài
+  install -r giữ session/data. Đã kiểm Home→đổi font100↔130→resume, giữ nháp,
+  chữ đủ/picker mở-hủy-chọn/Ready/lưu, keyboard/Back. JDK25 build đầu thất bại ở
+  CMake; Metro cũ treo sau build, restart đúng process đã bundle6,2s và vào app.
+  Không dùng splash timeout hay sửa node_modules.
+- Kiểm thực chạy: API build, doctor (Node/DB/17 migration checksum/private bucket/
+  readiness), contract check, RN lint/typecheck/68 unit PASS. APK build PASS.
+  Web export0/gate route mẫu PASS; export1 + **3 browser suite PASS** trên DB
+  _test55434, storage fake. Lượt browser đầu dùng nhầm export0 timeout ở showcase,
+  chạy lại cấu hình đúng đã PASS; không che lần lỗi.
+  Không chạy lại full480 API E2E.
+- DB app local5433: nháp JPEG cũ giữ nguyên. Một bài QA có 6WebP đã archive qua UI
+  sau dựng Approved bằng Member/Admin API hợp lệ. Catalog QA nhãn N18 còn lại.
+  Không SQL mutate/reset/seed/migrate/đổi mật khẩu; không gọi đây là human review.
+- Runtime: API3000, media/order worker cùng build, PostgreSQL5433, Pixel_7/API35
+  emulator-5554 và reverse3000/8081. Metro8081 đã restart với preview=0 sau QA /ui; `.env` không đổi.
+  Test DB55434 đang chạy; web dist hiện là preview=1 cho browser fixture3009,
+  không dùng dist đó làm bản sản phẩm, export lại đúng env khi cần.
+  Không nhầm máy Medium_Phone/API37 của teammate. Node hệ thống24.12 thấp minimum;
+  dùng PATH riêng process tới runtime24.19 đã có. Font scale1.0, handwriting null.
+- Gate còn mở: N20 phần còn lại, N21 TalkBack, ARM/iOS; U01 phản hồi thẩm mỹ và
+  A02/R01–R09 reviewer người thật. ADR0026 vẫn Proposed, không mở D/T/C.
+- **Bước tiếp theo**: tiếp tục Q01/N20 walkthrough các màn còn lại theo
+  NATIVE_ACCEPTANCE; N21 cần người thực sự nghe/kiểm TalkBack. Không lặp
+  A00/U02–U06 khi không có thay đổi liên quan. Điểm lưu này đi cùng commit local
+  `fix(rn): preserve picker and text layout across Android font changes`; lấy SHA
+  bằng `git log -1`, kiểm working tree khi nhận.
+
+## Lịch sử bàn giao 28/09 — không dùng thay trạng thái mới nhất ở trên
 
 Chủ dự án yêu cầu lưu tiến trình, push an toàn và giao kế hoạch dài cho bạn tiếp
 nhận dùng Claude. **Chỉ bàn giao nguồn; chưa chứng nhận release hay mua sách hoàn chỉnh.**
@@ -39,7 +83,7 @@ git rev-parse HEAD
 | Native vòng UI mới nhất | Pixel_7/Android 15 x86_64: kệ, detail, modal/Back, chữ OS 130%; font đã trả về 1.0. JS qua Metro trên APK sẵn có, không build APK mới |
 | Operations | Queue/detail, nhãn giá, retry/conflict/focus đã có evidence; không cần làm lại nếu không đổi code liên quan |
 
-## Cập nhật 29/09/2026 — phiên tiếp nhận trên máy mới
+## Lịch sử 29/09/2026 — teammate tiếp nhận trên máy mới (đã merge tại ca16a22)
 
 | Mục | Trạng thái |
 |---|---|
@@ -62,7 +106,7 @@ git rev-parse HEAD
 | D01 | IN_PROGRESS trên `codex/d01-delivery-design`: ADR 0026 **Proposed** (actor×command, bảng chuyển trạng thái, deadline/time source, wire/dữ liệu dự kiến, ma trận test, 8 câu hỏi mở). Không code/migration. Cần reviewer tiền/quyền và chủ dự án chốt Q1–Q8 |
 | Bước tiếp theo | Chờ người: phản hồi U01, review A02/R01–R09, chốt ADR 0026 Q1–Q8, TalkBack N21. Việc agent làm được tiếp khi có quyết định: D02 nháp claim/custody hoặc T01 sau khi ADR 0026 Accepted |
 
-Process đang chạy (metadata): Postgres Compose app 5433 và test 55434 (`pnpm infra:test:stop` khi xong); API/worker từ `dist` qua
+Process ở cuối phiên teammate (metadata lịch sử, không phải runtime hiện tại): Postgres Compose app 5433 và test 55434 (`pnpm infra:test:stop` khi xong); API/worker từ `dist` qua
 `start:prod`/`worker:*:prod`; Metro `pnpm dev:rn` port 8081; AVD emulator-5554
 với reverse 8081/3000. Khảo sát lại trước khi dừng; không giết toàn bộ node/java.
 
@@ -91,7 +135,8 @@ Thông tin máy trước chỉ để chẩn đoán, **không hard-code khi chuy�
 
 ## Chưa làm / không được hiểu nhầm
 
-- Form đăng sách và địa chỉ vẫn cần chỉnh nhịp mobile; chưa hoàn tất thẩm mỹ toàn app.
+- Form đăng sách và địa chỉ đã có U02/U03; còn phản hồi thẩm mỹ U01 và các tổ hợp
+  native chưa kiểm. Không coi đó là yêu cầu thiết kế lại hai form từ đầu.
 - Native N01–N21 còn ca chưa chạy, TalkBack/iOS/ARM và independent R01–R09 còn mở.
 - Chưa có wallet/checkout/Order/shipment/report UI; backend có không nghĩa là UI có.
 - Chưa Delivered/Buyer receipt/inspection 72h, xử lý claim/review, trả sách,

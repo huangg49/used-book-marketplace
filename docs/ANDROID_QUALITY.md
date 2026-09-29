@@ -1,5 +1,11 @@
 # Kiểm tra môi trường và chất lượng Android
 
+Bổ sung 29/09: [Q01 Pixel_7](handoff/Q01_NATIVE_COMPLETION_2026_09_29.md) kiểm
+WebP/retry qua Supabase thật, Back/keyboard và archive. Sửa picker sau đổi chữ OS:
+plugin Expo `with-font-scale.cjs` giữ Activity; AppText đo lại native Text khi
+fontScale thay đổi. Đã build/cài APK x86_64 và kiểm đổi chữ 100↔130% qua resume.
+Native acceptance/TalkBack/review người vẫn còn mở.
+
 Đợt bàn giao 28/09/2026: xem [UI polish và bằng chứng mới](handoff/UI_POLISH.md).
 Build debug x86_64 với icon/splash Lật lại qua. Vòng tiếp nối đã kiểm một phần
 session, picker/upload JPEG qua Supabase thật và form chữ OS 130% trên Android 15;
@@ -39,6 +45,12 @@ Cài Node theo `.nvmrc`, pnpm theo `packageManager`, JDK tương thích Android 
 Plugin, Android Studio/SDK và một Android Virtual Device. Đặt `JAVA_HOME` tới JDK
 và `ANDROID_HOME` tới SDK; script tự nhận SDK mặc định Windows nếu có.
 Gradle có thể tải dependency, NDK và CMake trong lần đầu. Không cần dịch vụ build trả phí.
+
+Toolchain đã kiểm ngày 29/09 trên Pixel_7: Node 24.19.0, pnpm 11.19.0,
+JDK 21.0.11. JAVA_HOME trỏ JBR 25 của Android Studio trên máy này thất bại ở
+worklets configureCMake; đặt JAVA_HOME riêng terminal về JDK21 đã có thì build qua.
+Không thay PATH/JAVA_HOME hệ thống hoặc tự nâng dependency để chữa môi trường.
+Đóng emulator khi thiếu RAM, build xong rồi mới khởi động Metro/emulator.
 
 ```powershell
 pnpm install --frozen-lockfile

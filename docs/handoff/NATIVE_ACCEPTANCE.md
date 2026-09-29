@@ -3,7 +3,9 @@
 Ngày chuẩn bị: 28/09/2026. Đây là hướng dẫn và phiếu ghi kết quả, không phải
 báo cáo PASS. Lượt thực thi tiếp nối và trạng thái từng ca được ghi riêng trong
 [NATIVE_RUN_2026_09_28](NATIVE_RUN_2026_09_28.md) và
-[NATIVE_RUN_2026_09_29](NATIVE_RUN_2026_09_29.md); một phần ca vẫn chưa chạy.
+[NATIVE_RUN_2026_09_29](NATIVE_RUN_2026_09_29.md) và
+[Q01 bổ sung trên Pixel_7 sau merge](Q01_NATIVE_COMPLETION_2026_09_29.md);
+một phần ca vẫn chưa chạy.
 Phạm vi sản phẩm giữ F2h/0.20.0;
 không kiểm checkout/ví/Order bằng UI vì các màn đó chưa triển khai.
 
