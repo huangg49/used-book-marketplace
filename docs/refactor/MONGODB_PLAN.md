@@ -81,7 +81,7 @@ không gom mọi lỗi thành retry vô hạn.
 | MIG-02 mô hình + hạ tầng | DONE, [bản đồ](MIG02_MODEL_MAP.md) | Map đủ 44 model và từng SQL backstop; versioned collection/index/validator migrations, bootstrap least privilege, clock/ID/cursor/precision; CI Mongo riêng |
 | MIG-03 auth + command | DONE, [báo cáo](MIG03_AUTH_COMMAND.md) | Login/rotation/revoke/rate limit, eligibility và command executor dùng Mongo, negative/race/replay tương đương; không chuyển API chính trước khi đạt |
 | MIG-04 catalog/listing/media/address | NEXT | Port quyền/immutable snapshot/worker/review/public reads; HTTP contracts, browser và native với storage thật theo mức ảnh hưởng |
-| MIG-05 quote/order/wallet/shipment | LOCKED sau MIG-04 và review tiền/quyền | Full hold/commitment/ledger/worker/event/review parity đến F2h; không thêm nghiệp vụ mới |
+| MIG-05 quote/order/wallet/shipment | Chủ dự án duyệt [thiết kế](MIG05_MONEY_PERMISSION_DESIGN.md) 29/09; mở sau MIG-04 | Full hold/commitment/ledger/worker/event/review parity đến F2h; không thêm nghiệp vụ mới |
 | MIG-06 dữ liệu + cutover | LOCKED sau MIG-05 | Dry-run import bất biến, đếm/hash/ledger reconciliation, secret-safe evidence, fresh-clone setup, CI đầy đủ và native acceptance; kế hoạch rollback và switch có chủ đích |
 
 Mỗi gói commit rõ phạm vi, cập nhật SESSION_STATE. Nhánh mới là lane migration;
