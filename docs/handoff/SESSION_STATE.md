@@ -1,5 +1,28 @@
 # Điểm lưu để tiếp tục — 29/09/2026
 
+## Live packaging MongoDB — điểm mới nhất
+
+- Nhánh **codex/mongodb-live-packaging**, base **616d1d8**; commit subject
+  `test(mongo): verify live packaging recovery and fix QA cleanup` (SHA xem log).
+  Không push/merge/deploy, không sửa runtime/UI/migration. Giữ generated cũ untracked.
+- Thêm lane opt-in packaging vào live-media runner: real HTTP + Mongo app user +
+  Supabase QA bucket riêng + Sharp. JPEG/PNG/WebP/private permissions/replay PASS;
+  PNG fault sau remote original/trước DB ack→Pending→retry Ready, không ghi đè;
+  Order/hold230k/commitment không đổi, sweep0 lỗi. Lượt cuối PASS7/ok=true.
+  [Cách chạy và giới hạn](../refactor/MONGODB_LIVE_MEDIA_2026_09_29.md).
+- Hai pilot fail do harness so observation `serverTime` của Order rồi wallet;
+  đã sửa, không phải lỗi nghiệp vụ. Sửa cleanup harness: emptyBucket bất đồng bộ
+  khiến delete chạy sớm; nay remove các key đúng run rồi delete bucket. Các DB/
+  bucket QA đã dọn, kể cả bucket pilot còn lại. Không đụng bucket/DB nguồn.
+- Kiểm tra: packaging live PASS7, oxlint/prettier/contract/diff PASS. Lane listing
+  chạy lại một lần do sửa cleanup chung: PASS7/ok=true, dọn DB/bucket thành công. Không lặp
+  full493E2E/build/native vì runtime/UI không đổi. API3000/Metro8081/DB57117 như cũ.
+- **Bước tiếp:** đóng ma trận native còn thiếu (N20/N21) theo ca cụ thể; TalkBack
+  có cài nhưng chưa có kênh audio quan sát nên chưa nghiệm thu. Cảnh báo native
+  `Error: undefined` vẫn chưa rõ nguồn; cần tái hiện có stack trước khi sửa.
+  Human review tiền/quyền cần người độc lập; CI remote/cutover chính cần quyền
+  tương ứng, không tự suy từ yêu cầu tiếp tục. Không mở Delivered/settlement.
+
 ## Android upload trên MongoDB — điểm mới nhất
 
 - Nhánh **codex/mongodb-native-upload**, base **1452927**. Commit gói có subject

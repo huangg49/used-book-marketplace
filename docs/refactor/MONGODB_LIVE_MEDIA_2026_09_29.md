@@ -1,5 +1,42 @@
 # MongoDB — upload và media worker với Supabase thật
 
+## Bổ sung packaging — 29/09, sau native616d1d8
+
+Nhánh `codex/mongodb-live-packaging`: thêm `scripts/mongo-live-packaging.mjs`,
+dùng môi trường cách ly của runner bên dưới. Không sửa runtime/contract/migration.
+Chạy cùng lệnh listing bên dưới, thêm `$env:RUN_MONGO_LIVE_PACKAGING='1'` trước
+`node --env-file=.env scripts/mongo-live-media.mjs`. Khi bật, runner chỉ chạy lane
+packaging; đặt0 hoặc bỏ biến để chạy lane listing. Actor/session là fixture QA;
+catalog/listing/address/quote/Order/topup/payment/acceptance đi qua HTTP thật.
+
+- PASS JPEG/PNG/WebP: original đúng hash, preview WebP80×120 bỏ EXIF, Buyer/Seller
+  đọc được; Buyer upload404, outsider404, generic Staff/Admin/operator403,
+  anonymous401 và public storage URL bị từ chối. Replay create/upload có đúng
+  receipt, changed bytes422, metadata list không lộ keys/URL.
+- Fault PNG xảy ra **sau khi Supabase thật ghi original**, trước preview/DB ack:
+  Pending và reservation còn nguyên, chưa có upload receipt. Retry cùng bytes/key
+  qua adapter create-only→Ready, một upload receipt; original không bị ghi đè.
+  Fault chỉ bọc method để ném lỗi sau real I/O, không thay storage bằng fake.
+- Listing cleanup giữ originals packaging; Order Preparing/version3, hold230.000đ,
+  wallet và active commitment không đổi; sweep0 lỗi. Chưa kiểm native packaging
+  vì UI nghiệp vụ này chưa có, cũng không suy ra custody/delivery/settlement.
+- Tìm/sửa lỗi **harness**: so cả `serverTime` gây false failure (Order rồi wallet,
+  hai lượt chạy đầu); nay chỉ bỏ observation time, vẫn so toàn bộ business response.
+  Cleanup cũ gọi `emptyBucket` rồi xóa ngay có race vì empty được xếp hàng
+  ([Supabase API](https://supabase.com/docs/reference/self-hosting-storage)). Nay ghi
+  nhận mọi key định ghi qua adapter, remove đúng các key đó rồi delete bucket mới
+  tạo; vẫn báo thất bại nếu chưa dọn xong. Bucket còn lại của pilot đã xóa riêng.
+- Lượt cuối packaging **7 checkpoints, ok=true**, DB/bucket đã dọn. Đã kiểm lại lane
+  listing vì sửa cleanup dùng chung; kết quả ghi ở SESSION_STATE. Oxlint/prettier,
+  contract check/diff-check PASS. Không lặp493E2E hoặc build vì runtime không đổi.
+
+Gate còn mở: TalkBack/full native/N20, human review, CI remote và cutover chính.
+TalkBack có trên AVD nhưng chưa có kênh audio quan sát trong lượt này; không đánh
+dấu PASS bằng UI hierarchy. Cảnh báo RN `Error: undefined` ở lượt native trước vẫn
+chưa xác định nguồn. Không có lỗi nghiệp vụ mới được xác nhận trong gói packaging.
+
+## Listing media — bằng chứng gói1452927
+
 29/09/2026, nhánh `codex/mongodb-live-media`, base **1f5d636**. Thêm script kiểm
 opt-in `apps/api/scripts/mongo-live-media.mjs`; không đổi source runtime/API/UI.
 
