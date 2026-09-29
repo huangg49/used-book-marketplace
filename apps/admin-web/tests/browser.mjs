@@ -98,7 +98,7 @@ try {
   };
   const openListing = async (p, index) => {
     await p
-      .getByRole("link", { name: "01 · Bài đăng sách", exact: true })
+      .getByRole("link", { name: "Bài đăng sách", exact: true })
       .click();
     await p
       .locator(`a[href='/review/listings/${fixture.listings[index]}']`)
@@ -142,7 +142,7 @@ try {
   await shot(p, "queue-320-large");
   await p.setViewportSize({ width: 1440, height: 1000 });
   await p.addStyleTag({ content: "html{font-size:16px !important}" });
-  await p.getByRole("link", { name: "02 · Đầu sách", exact: true }).click();
+  await p.getByRole("link", { name: "Đầu sách", exact: true }).click();
   await p
     .locator(`a[href='/review/catalog-requests/${fixture.catalogId}']`)
     .first()
@@ -272,7 +272,7 @@ try {
     .filter({ hasText: "Đã từ chối" })
     .waitFor();
   await p
-    .getByRole("link", { name: "01 · Bài đăng sách", exact: true })
+    .getByRole("link", { name: "Bài đăng sách", exact: true })
     .click();
   await p.getByRole("heading", { name: "Chưa có hồ sơ ở mục này." }).waitFor();
   await shot(p, "queue-empty-1440");
@@ -298,7 +298,7 @@ try {
     .waitFor();
   assert.equal(
     await staff
-      .getByRole("link", { name: "02 · Đầu sách", exact: true })
+      .getByRole("link", { name: "Đầu sách", exact: true })
       .count(),
     0,
   );
@@ -334,7 +334,7 @@ try {
   await rotatedResponse;
   assert.equal(rotations, 1);
   // Catalog rejection, pagination and independent-review guard.
-  await p.getByRole("link", { name: "02 · Đầu sách", exact: true }).click();
+  await p.getByRole("link", { name: "Đầu sách", exact: true }).click();
   await p
     .locator(`a[href='/review/catalog-requests/${fixture.extraId}']`)
     .first()
@@ -362,7 +362,7 @@ try {
       title: "Hồ sơ tự gửi cần người khác duyệt",
     },
   });
-  await p.getByRole("link", { name: "02 · Đầu sách", exact: true }).click();
+  await p.getByRole("link", { name: "Đầu sách", exact: true }).click();
   await click(p, "Cập nhật danh sách");
   await p.locator(".queue-row").nth(19).waitFor();
   assert.equal(await p.locator(".queue-row").count(), 20);
@@ -387,7 +387,7 @@ try {
   // Independent removal of an approved listing, including a lost acknowledgement.
   const removal = p;
   await p
-    .getByRole("link", { name: "01 · Bài đăng sách", exact: true })
+    .getByRole("link", { name: "Bài đăng sách", exact: true })
     .click();
   await click(p, "Đã duyệt");
   await p
