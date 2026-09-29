@@ -1,58 +1,36 @@
 import { randomBytes, randomUUID } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import type { INestApplication } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
-import {
-  PrismaClient,
-  type RoleCode,
-  type UserStatus,
-} from '../src/generated/prisma/client.js';
-import { DatabaseService } from '../src/database/database.service.js';
+import request from 'supertest';
+import type { components } from '@used-books/api-contract';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
+import type { RoleCode, UserStatus } from '../src/database/mongo/documents.js';
+import { MongoService } from '../src/database/mongo/mongo.service.js';
+import { OPENING_JOURNAL_ID } from '../src/database/mongo/migrations/0002-reference-data.js';
+import { runTransaction } from '../src/database/mongo/transaction.js';
 import { PaymentSimulator } from '../src/modules/wallet/payment-simulator.js';
 import {
   CLEARING_ID,
+  checkJournal,
+  checkTopupRecord,
   LedgerService,
 } from '../src/modules/wallet/ledger.service.js';
-import request from 'supertest';
-import { Ajv2020 } from 'ajv/dist/2020.js';
-import addFormats from 'ajv-formats';
-import { parse } from 'yaml';
-import type { components } from '@used-books/api-contract';
+import { validates } from './helpers/contract.js';
+import { Gate } from './helpers/mongo-gate.js';
+import { MongoFixtures } from './helpers/mongo-fixtures.js';
 
-const contract = parse(
-  readFileSync(
-    createRequire(import.meta.url).resolve(
-      '@used-books/api-contract/openapi.yaml',
-    ),
-    'utf8',
-  ),
-);
-const ajv = new Ajv2020({ strict: false });
-addFormats.default(ajv);
-ajv.addSchema({ $id: 'api-wire', components: contract.components });
-function validates(name: string, body: unknown) {
-  const fn = ajv.compile({ $ref: `api-wire#/components/schemas/${name}` });
-  expect(fn(body), JSON.stringify(fn.errors)).toBe(true);
-}
-type Adapter = Awaited<ReturnType<PrismaPg['connect']>>;
-type Pool = ReturnType<Adapter['underlyingDriver']>;
 type Reader = { id: string; token: string; sessionId: string };
 type Event = components['schemas']['SimulatedTopupEvent'];
 
-describe('Simulated wallet: real PostgreSQL and HTTP', () => {
-  const schema = `wallet_http_test_${randomUUID().replaceAll('-', '')}`;
+describe('Simulated wallet: real MongoDB and HTTP', () => {
   let app: INestApplication,
-    db: PrismaClient,
-    adapter: Adapter,
-    pool: Pool,
+    db: MongoFixtures,
     operator: Reader,
     otherOperator: Reader;
+  const users: string[] = [];
   const originalSecret = process.env.PAYMENT_SIMULATOR_SECRET;
   const get = (path: string, actor?: Reader) => {
     const call = request(app.getHttpServer()).get('/api/v1' + path);
@@ -75,37 +53,25 @@ describe('Simulated wallet: real PostgreSQL and HTTP', () => {
     roles: RoleCode[] = ['MEMBER'],
     status: UserStatus = 'ACTIVE',
   ): Promise<Reader> {
-    const id = randomUUID(),
-      sessionId = randomUUID();
-    await db.user.create({
-      data: {
-        id,
-        emailNormalized: `${id}@wallet.test`,
-        passwordHash: 'unused-fixture',
-        displayName: 'Bạn đọc mô phỏng',
-        status,
-        emailVerifiedAt: new Date(),
-        roles: { create: roles.map((role) => ({ role })) },
-        sessions: {
-          create: {
-            id: sessionId,
-            refreshTokenHash: randomBytes(32).toString('hex'),
-            expiresAt: new Date(Date.now() + 86400000),
-          },
-        },
-      },
+    const user = await db.user({
+      roles,
+      status,
+      displayName: 'Bạn đọc mô phỏng',
     });
+    users.push(user._id);
+    const sessionId = await db.session(user._id);
     return {
-      id,
+      id: user._id,
       sessionId,
-      token: await app.get(JwtService).signAsync({ sub: id, sid: sessionId }),
+      token: await app
+        .get(JwtService)
+        .signAsync({ sub: user._id, sid: sessionId }),
     };
   }
   async function makeApp() {
-    const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(DatabaseService)
-      .useValue(db)
-      .compile();
+    const module = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
     const a = module.createNestApplication();
     a.get(ConfigService).set(
       'PAYMENT_SIMULATOR_SECRET',
@@ -113,6 +79,10 @@ describe('Simulated wallet: real PostgreSQL and HTTP', () => {
     );
     configureApp(a, { docs: false, logRequests: false });
     await a.init();
+    // One listening socket for the whole app lifetime: supertest otherwise
+    // listens/closes per request, and a close racing the staggered 503
+    // retries of the 100-request test resets in-flight connections.
+    await a.listen(0, '127.0.0.1');
     return a;
   }
   async function intent(actor: Reader, amount = 200000) {
@@ -134,70 +104,77 @@ describe('Simulated wallet: real PostgreSQL and HTTP', () => {
   }
   const available = async (actor: Reader) =>
     (await get('/me/wallet', actor).expect(200)).body.available;
-  async function block(table: string, id: string) {
-    const connection = await pool.connect();
-    await connection.query('BEGIN');
-    await connection.query(`SELECT id FROM ${table} WHERE id=$1 FOR UPDATE`, [
-      id,
-    ]);
-    const pid = (await connection.query('SELECT pg_backend_pid() pid')).rows[0]
-      .pid as number;
-    return { connection, pid };
-  }
-  async function reached(gate: Awaited<ReturnType<typeof block>>) {
-    const deadline = Date.now() + 4000;
-    while (Date.now() < deadline) {
-      await gate.connection.query('SELECT pg_stat_clear_snapshot()');
-      const n = (
-        await gate.connection.query(
-          'SELECT count(*)::int n FROM pg_stat_activity WHERE $1=ANY(pg_blocking_pids(pid))',
-          [gate.pid],
-        )
-      ).rows[0].n;
-      if (n) return;
-      await new Promise((r) => setTimeout(r, 10));
-    }
-    throw new Error('Request never reached DB barrier');
-  }
+  // Holds a write lock in a transaction, like `SELECT ... FOR UPDATE`: the
+  // participant's user document, or the funding account's posting lock
+  // (account_locks replaces the wallet_accounts row lock).
+  const block = (collection: 'users' | 'account_locks', id: string) =>
+    Gate.lock(db.client, collection, [id]);
   async function counts(id: string) {
     return {
-      events: await db.simulatedPaymentEvent.count({ where: { intentId: id } }),
-      journals: await db.ledgerJournal.count({ where: { topupId: id } }),
-      receipts: await db.mutationReceipt.count({ where: { topupId: id } }),
-      audits: await db.auditEvent.count({ where: { topupId: id } }),
+      events: await db.c.simulated_payment_events.countDocuments({
+        intentId: id,
+      }),
+      journals: await db.c.ledger_journals.countDocuments({ topupId: id }),
+      receipts: await db.c.mutation_receipts.countDocuments({ topupId: id }),
+      audits: await db.c.audit_events.countDocuments({ topupId: id }),
     };
   }
+  const intentState = async (id: string) =>
+    (await db.c.topup_intents.findOne({ _id: id }))!.state;
+  const clearingBalance = async () => {
+    const [row] = await db.c.ledger_entries
+      .aggregate<{ n: number }>([
+        { $match: { accountId: CLEARING_ID } },
+        {
+          $group: {
+            _id: null,
+            n: { $sum: { $subtract: ['$debit', '$credit'] } },
+          },
+        },
+      ])
+      .toArray();
+    return row?.n ?? 0;
+  };
   beforeAll(async () => {
     process.env.PAYMENT_SIMULATOR_SECRET = randomBytes(32).toString('hex');
-    const url = process.env.TEST_DATABASE_URL!;
-    if (!decodeURIComponent(new URL(url).pathname).endsWith('_test'))
-      throw new Error('Only _test databases');
-    adapter = await new PrismaPg({
-      connectionString: url,
-      max: 16,
-      options: `-c search_path=${schema},public -c timezone=UTC`,
-      statement_timeout: 15000,
-    }).connect();
-    pool = adapter.underlyingDriver();
-    await pool.query(`CREATE SCHEMA "${schema}"`);
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n))
-      .sort())
-      await pool.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
-    db = new PrismaClient({ adapter: new PrismaPg(pool, { schema }) });
-    await db.$connect();
+    db = await MongoFixtures.connect();
     app = await makeApp();
     operator = await reader(['TEST_OPERATOR']);
     otherOperator = await reader(['TEST_OPERATOR']);
   }, 60000);
   afterAll(async () => {
+    // Removes only this suite's records. Deleting its journals and entries
+    // returns the drained simulator funds to the shared source; the opening
+    // capital journal is never touched.
+    if (db) {
+      const c = db.c;
+      const topups = (
+        await c.topup_intents.find({ ownerId: { $in: users } }).toArray()
+      ).map((t) => t._id);
+      const journals = (
+        await c.ledger_journals.find({ topupId: { $in: topups } }).toArray()
+      ).map((j) => j._id);
+      const accounts = (
+        await c.wallet_accounts.find({ ownerId: { $in: users } }).toArray()
+      ).map((a) => a._id);
+      const audits = (
+        await c.audit_events.find({ topupId: { $in: topups } }).toArray()
+      ).map((a) => a._id);
+      await c.ledger_entries.deleteMany({ journalId: { $in: journals } });
+      await c.ledger_journals.deleteMany({ _id: { $in: journals } });
+      await c.simulated_payment_events.deleteMany({
+        intentId: { $in: topups },
+      });
+      await c.outbox_events.deleteMany({ auditId: { $in: audits } });
+      await c.audit_events.deleteMany({ _id: { $in: audits } });
+      await c.mutation_receipts.deleteMany({ topupId: { $in: topups } });
+      await c.topup_intents.deleteMany({ _id: { $in: topups } });
+      await c.account_locks.deleteMany({ _id: { $in: accounts } });
+      await c.wallet_accounts.deleteMany({ _id: { $in: accounts } });
+      await db.removeUsers(users);
+      await db.close();
+    }
     await app?.close();
-    await db?.$disconnect();
-    if (pool && /^wallet_http_test_[a-f0-9]{32}$/.test(schema))
-      await pool.query(`DROP SCHEMA "${schema}" CASCADE`);
-    await adapter?.dispose();
     if (originalSecret === undefined)
       delete process.env.PAYMENT_SIMULATOR_SECRET;
     else process.env.PAYMENT_SIMULATOR_SECRET = originalSecret;
@@ -221,11 +198,11 @@ describe('Simulated wallet: real PostgreSQL and HTTP', () => {
       paymentsEnabled: true,
       withdrawalsEnabled: false,
     });
-    const entries = await db.ledgerEntry.findMany({
-      where: { journalId: response.body.journalId },
-    });
+    const entries = await db.c.ledger_entries
+      .find({ journalId: response.body.journalId })
+      .toArray();
     expect(entries).toHaveLength(2);
-    expect(entries.reduce((n, e) => n + e.debit - e.credit, 0n)).toBe(0n);
+    expect(entries.reduce((n, e) => n + e.debit - e.credit, 0)).toBe(0);
     const history = await get('/me/wallet/history', member).expect(200);
     validates('WalletHistoryPage', history.body);
     expect(history.body.items[0]).toMatchObject({
@@ -297,13 +274,7 @@ describe('Simulated wallet: real PostgreSQL and HTTP', () => {
       });
       await emit({ ...body, eventId: randomUUID() }).expect(200);
       expect(await available(member)).toBe(0);
-      expect(
-        (
-          await db.topupIntent.findUniqueOrThrow({
-            where: { id: body.intentId },
-          })
-        ).state,
-      ).toBe('ReviewRequired');
+      expect(await intentState(body.intentId)).toBe('ReviewRequired');
     },
   );
   it.each(['Succeeded', 'Failed'] as const)(
@@ -369,10 +340,7 @@ describe('Simulated wallet: real PostgreSQL and HTTP', () => {
   it('restricted members can top up; locked members cannot access general APIs, but valid prior funds still arrive', async () => {
     const member = await reader(['MEMBER'], 'RESTRICTED'),
       body = await event(member);
-    await db.user.update({
-      where: { id: member.id },
-      data: { status: 'LOCKED' },
-    });
+    await db.setStatus(member.id, 'LOCKED');
     await emit(body).expect(200);
     const wallet = await get('/me/wallet', member).expect(200);
     expect(wallet.body).toMatchObject({
@@ -380,10 +348,7 @@ describe('Simulated wallet: real PostgreSQL and HTTP', () => {
       topupEnabled: false,
     });
     await post('/me/topups', { amount: 1000 }, member).expect(403);
-    await db.user.update({
-      where: { id: member.id },
-      data: { status: 'ACTIVE' },
-    });
+    await db.setStatus(member.id, 'ACTIVE');
     expect(await available(member)).toBe(body.amount);
   });
   it('rejects disabled simulator and invalid/tampered signed envelopes without posting', async () => {
@@ -448,52 +413,71 @@ describe('Simulated wallet: real PostgreSQL and HTTP', () => {
     const member = await reader(),
       body = await event(member),
       gate = await block('users', member.id);
-    const calls = Array.from({ length: 100 }, (_, i) =>
-      emit(body, i % 2 ? operator : otherOperator).then((r) => r.status),
-    );
+    // PostgreSQL queued all 100 on the row lock. MongoDB aborts and retries
+    // within a 5 s budget and answers 503 "retry the same request" when it is
+    // exhausted (ADR 0027, MIG05 design §5.2). A client that does exactly that
+    // must end with 100 successes; a 503 must have had no effect.
+    const settle = async (actor: Reader) => {
+      const key = randomUUID();
+      for (let attempt = 1; ; attempt++) {
+        const r = await emit(body, actor, key);
+        if (r.status !== 503 || attempt === 10) return r.status;
+      }
+    };
+    let calls: Promise<number>[] = [];
     try {
-      await reached(gate);
+      calls = Array.from({ length: 100 }, (_, i) =>
+        settle(i % 2 ? operator : otherOperator),
+      );
+      await gate.contended();
+      await gate.commit();
+      expect(await Promise.all(calls)).toEqual(Array(100).fill(200));
     } finally {
-      await gate.connection.query('COMMIT');
-      gate.connection.release();
+      await gate.close();
+      await Promise.allSettled(calls);
     }
-    expect(await Promise.all(calls)).toEqual(Array(100).fill(200));
     expect(await available(member)).toBe(body.amount);
     expect((await counts(body.intentId)).journals).toBe(1);
     expect((await counts(body.intentId)).events).toBe(1);
-  }, 30000);
+    // One receipt for the intent plus exactly one per request key.
+    expect((await counts(body.intentId)).receipts).toBe(101);
+  }, 60000);
   it('different success event IDs racing on one intent still credit once', async () => {
     const member = await reader(),
       body = await event(member),
       gate = await block('users', member.id);
-    const calls = Array.from({ length: 20 }, () =>
-      emit({ ...body, eventId: randomUUID() }).then((r) => r.status),
-    );
+    let calls: Promise<number>[] = [];
     try {
-      await reached(gate);
+      calls = Array.from({ length: 20 }, () =>
+        emit({ ...body, eventId: randomUUID() }).then((r) => r.status),
+      );
+      await gate.contended();
+      await gate.commit();
+      expect(await Promise.all(calls)).toEqual(Array(20).fill(200));
     } finally {
-      await gate.connection.query('COMMIT');
-      gate.connection.release();
+      await gate.close();
+      await Promise.allSettled(calls);
     }
-    expect(await Promise.all(calls)).toEqual(Array(20).fill(200));
     expect(await available(member)).toBe(body.amount);
     expect((await counts(body.intentId)).journals).toBe(1);
   });
   it('concurrent intent creation cannot exceed the unresolved quota', async () => {
     const member = await reader(),
       gate = await block('users', member.id);
-    const calls = Array.from({ length: 20 }, () =>
-      post('/me/topups', { amount: 1000 }, member).then((r) => r.status),
-    );
+    let calls: Promise<number>[] = [];
     try {
-      await reached(gate);
+      calls = Array.from({ length: 20 }, () =>
+        post('/me/topups', { amount: 1000 }, member).then((r) => r.status),
+      );
+      await gate.contended();
+      await gate.commit();
+      const statuses = await Promise.all(calls);
+      expect(statuses.filter((s) => s === 200)).toHaveLength(10);
+      expect(statuses.filter((s) => s === 409)).toHaveLength(10);
     } finally {
-      await gate.connection.query('COMMIT');
-      gate.connection.release();
+      await gate.close();
+      await Promise.allSettled(calls);
     }
-    const statuses = await Promise.all(calls);
-    expect(statuses.filter((s) => s === 200)).toHaveLength(10);
-    expect(statuses.filter((s) => s === 409)).toHaveLength(10);
   });
   it.each(['role', 'status', 'session'] as const)(
     'rechecks operator %s after a DB lock wait before posting/replay',
@@ -505,25 +489,34 @@ describe('Simulated wallet: real PostgreSQL and HTTP', () => {
       const gate = await block('users', op.id);
       const result = emit(body, op, key).then((r) => r.status);
       try {
-        await reached(gate);
+        await gate.contended();
+        // The change commits together with the lock holder, like the
+        // statement issued on the blocking PostgreSQL connection.
+        const inGate = { session: gate.session };
+        const usersCollection = gate.db.collection<{ _id: string }>('users');
         if (kind === 'role')
-          await gate.connection.query(
-            'DELETE FROM user_roles WHERE user_id=$1',
-            [op.id],
+          await usersCollection.updateOne(
+            { _id: op.id },
+            { $pull: { roles: { role: 'TEST_OPERATOR' } } } as never,
+            inGate,
           );
         else if (kind === 'status')
-          await gate.connection.query(
-            "UPDATE users SET status='RESTRICTED' WHERE id=$1",
-            [op.id],
+          await usersCollection.updateOne(
+            { _id: op.id },
+            { $set: { status: 'RESTRICTED' } },
+            inGate,
           );
         else
-          await gate.connection.query(
-            'UPDATE auth_sessions SET revoked_at=clock_timestamp() WHERE id=$1',
-            [op.sessionId],
-          );
+          await gate.db
+            .collection<{ _id: string }>('auth_sessions')
+            .updateOne(
+              { _id: op.sessionId },
+              { $set: { revokedAt: new Date() } },
+              inGate,
+            );
+        await gate.commit();
       } finally {
-        await gate.connection.query('COMMIT');
-        gate.connection.release();
+        await gate.close();
       }
       expect(await result).toBe(kind === 'session' ? 401 : 403);
       expect(await available(member)).toBe(0);
@@ -534,18 +527,22 @@ describe('Simulated wallet: real PostgreSQL and HTTP', () => {
     const op = await reader(['TEST_OPERATOR']),
       member = await reader(),
       body = await event(member),
-      gate = await block('wallet_accounts', CLEARING_ID);
-    await db.authSession.update({
-      where: { id: op.sessionId },
-      data: { expiresAt: new Date(Date.now() + 1200) },
-    });
-    const call = emit(body, op).then((r) => r.status);
+      gate = await block('account_locks', CLEARING_ID);
+    let call: Promise<number> | undefined;
     try {
-      await reached(gate);
+      await db.c.auth_sessions.updateOne(
+        { _id: op.sessionId },
+        {
+          $set: { expiresAt: new Date(Date.now() + 1200) },
+          $inc: { lockSeq: 1 },
+        },
+      );
+      call = emit(body, op).then((r) => r.status);
+      await gate.contended();
       await new Promise((r) => setTimeout(r, 1300));
+      await gate.commit();
     } finally {
-      await gate.connection.query('COMMIT');
-      gate.connection.release();
+      await gate.close();
     }
     expect(await call).toBe(401);
     expect(await available(member)).toBe(0);
@@ -559,104 +556,120 @@ describe('Simulated wallet: real PostgreSQL and HTTP', () => {
     'outbox_events',
   ])(
     'rolls back every effect at %s failpoint and retries the same request',
-    async (table) => {
+    async (collection) => {
       const member = await reader(),
         body = await event(member),
         key = randomUUID(),
         before = await counts(body.intentId);
-      await pool.query(
-        `CREATE FUNCTION fail_wallet() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test failpoint'; END $$; CREATE TRIGGER fail_wallet BEFORE INSERT ON ${table} FOR EACH ROW EXECUTE FUNCTION fail_wallet()`,
+      // Temporary validator rule rejecting every insert (the former failing
+      // BEFORE INSERT trigger); suites run one at a time.
+      await db.withRejectingValidator(
+        collection,
+        { _id: { $exists: true } },
+        () => emit(body, operator, key).expect(500),
       );
-      try {
-        await emit(body, operator, key).expect(500);
-      } finally {
-        await pool.query(
-          `DROP TRIGGER fail_wallet ON ${table}; DROP FUNCTION fail_wallet()`,
-        );
-      }
       expect(await counts(body.intentId)).toEqual(before);
       expect(await available(member)).toBe(0);
-      expect(
-        (
-          await db.topupIntent.findUniqueOrThrow({
-            where: { id: body.intentId },
-          })
-        ).state,
-      ).toBe('Pending');
+      expect(await intentState(body.intentId)).toBe('Pending');
       await emit(body, operator, key).expect(200);
       expect(await available(member)).toBe(body.amount);
     },
   );
-  it('SQL rejects edits/deletes, fabricated balances, orphans, and unbalanced journals', async () => {
+  it('MongoDB rejects edits/deletes; fabricated balances, orphans and unbalanced journals fail commit-time checks', async () => {
     const member = await reader(),
       body = await event(member),
       r = await emit(body).expect(200);
+    const mongo = app.get(MongoService);
+    // Posted money is append-only for the application user (P, code 13).
     await expect(
-      pool.query(
-        'UPDATE ledger_entries SET debit=debit+1 WHERE journal_id=$1 AND debit>0',
-        [r.body.journalId],
+      mongo.c.ledger_entries.updateOne(
+        { journalId: r.body.journalId, debit: { $gt: 0 } },
+        { $inc: { debit: 1 } },
       ),
-    ).rejects.toThrow('immutable');
+    ).rejects.toMatchObject({ code: 13 });
     await expect(
-      pool.query('DELETE FROM ledger_journals WHERE id=$1', [r.body.journalId]),
-    ).rejects.toThrow('immutable');
+      mongo.c.ledger_journals.deleteOne({ _id: r.body.journalId }),
+    ).rejects.toMatchObject({ code: 13 });
     await expect(
-      pool.query('DELETE FROM simulated_payment_events WHERE id=$1', [
-        body.eventId,
-      ]),
-    ).rejects.toThrow('immutable');
+      mongo.c.simulated_payment_events.deleteOne({ _id: body.eventId }),
+    ).rejects.toMatchObject({ code: 13 });
+    // Cross-document rules are commit-time checks (C): run inside the
+    // transaction that attempts the write, they abort it.
     await expect(
-      pool.query(
-        'UPDATE topup_intents SET amount=amount+1,version=version+1 WHERE id=$1',
-        [body.intentId],
-      ),
-    ).rejects.toThrow('transition');
+      mongo.tx(async (tx) => {
+        await tx.c.topup_intents.updateOne(
+          { _id: body.intentId },
+          { $inc: { amount: 1, version: 1 } },
+        );
+        await checkTopupRecord(tx, body.intentId);
+      }),
+    ).rejects.toThrow('Topup event/ledger/receipt mismatch');
+    expect(
+      await db.c.topup_intents.findOne({ _id: body.intentId }),
+    ).toMatchObject({ amount: body.amount, version: 2, state: 'Succeeded' });
+    const orphan = randomUUID();
     await expect(
-      pool.query(
-        'INSERT INTO topup_intents(id,owner_id,amount,created_at,updated_at) VALUES($1,$2,1000,now(),now())',
-        [randomUUID(), member.id],
-      ),
-    ).rejects.toThrow('mismatch');
-    const account = (
-      await db.walletAccount.findUniqueOrThrow({
-        where: { ownerId: member.id },
-      })
-    ).id;
+      mongo.tx(async (tx) => {
+        const now = await tx.now();
+        await tx.c.topup_intents.insertOne({
+          _id: orphan,
+          ownerId: member.id,
+          amount: 1000,
+          currency: 'VND',
+          state: 'Pending',
+          version: 1,
+          createdAt: now,
+          updatedAt: now,
+          lockSeq: 0,
+        });
+        await checkTopupRecord(tx, orphan);
+      }),
+    ).rejects.toThrow('Topup event/ledger/receipt mismatch');
+    expect(await db.c.topup_intents.countDocuments({ _id: orphan })).toBe(0);
+    const account = (await db.c.wallet_accounts.findOne({
+      ownerId: member.id,
+    }))!._id;
     await expect(
-      pool.query(
-        'INSERT INTO ledger_entries(journal_id,account_id,debit,credit) VALUES($1,$2,1000,0)',
-        ['00000000-0000-4000-8000-000000000003', account],
-      ),
-    ).rejects.toThrow('two balanced');
+      mongo.tx(async (tx) => {
+        await tx.c.ledger_entries.insertOne({
+          _id: `${OPENING_JOURNAL_ID}:${account}`,
+          journalId: OPENING_JOURNAL_ID,
+          accountId: account,
+          debit: 1000,
+          credit: 0,
+        });
+        await checkJournal(tx, OPENING_JOURNAL_ID);
+      }),
+    ).rejects.toThrow('Journal must have two balanced entries');
     expect(await available(member)).toBe(body.amount);
   });
   it('reconciliation validates sources and detects corruption injected only in a rolled-back test transaction', async () => {
-    const ledger = app.get(LedgerService);
-    const good = await db.$transaction((tx) => ledger.reconcile(tx), {
-      isolationLevel: 'RepeatableRead',
-    });
+    const ledger = app.get(LedgerService),
+      mongo = app.get(MongoService);
+    const good = await mongo.tx((tx) => ledger.reconcile(tx));
     expect(good.balanced).toBe(true);
-    expect(good.sourceRemaining + good.memberAvailable).toBe(100000000);
+    expect(
+      good.sourceRemaining + good.memberAvailable + good.transactionHeld,
+    ).toBe(100000000);
+    // Only a privileged writer (the migrator here, a DB owner before) can
+    // alter a posted entry; done inside a transaction that is rolled back.
     await expect(
-      db.$transaction(async (tx) => {
-        await tx.$executeRawUnsafe(
-          'ALTER TABLE ledger_entries DISABLE TRIGGER ledger_entry_immutable',
-        );
-        await tx.$executeRawUnsafe(
-          "UPDATE ledger_entries SET debit=debit-1 WHERE journal_id='00000000-0000-4000-8000-000000000003' AND debit>0",
+      runTransaction(db.client, db.client.db(), async (tx) => {
+        await tx.c.ledger_entries.updateOne(
+          { journalId: OPENING_JOURNAL_ID, debit: { $gt: 0 } },
+          { $inc: { debit: -1 } },
         );
         await ledger.reconcile(tx);
       }),
     ).rejects.toThrow();
-    const restored = await db.$transaction((tx) => ledger.reconcile(tx), {
-      isolationLevel: 'RepeatableRead',
-    });
+    const restored = await mongo.tx((tx) => ledger.reconcile(tx));
     expect(restored).toEqual(good);
     await expect(
-      pool.query(
-        "UPDATE ledger_entries SET debit=debit-1 WHERE journal_id='00000000-0000-4000-8000-000000000003' AND debit>0",
+      mongo.c.ledger_entries.updateOne(
+        { journalId: OPENING_JOURNAL_ID, debit: { $gt: 0 } },
+        { $inc: { debit: -1 } },
       ),
-    ).rejects.toThrow('immutable');
+    ).rejects.toMatchObject({ code: 13 });
   });
   it('simultaneous same HTTP key has one immutable receipt, and revoked role cannot replay it', async () => {
     const op = await reader(['TEST_OPERATOR']),
@@ -664,20 +677,21 @@ describe('Simulated wallet: real PostgreSQL and HTTP', () => {
       body = await event(member),
       key = randomUUID();
     const gate = await block('users', member.id);
-    const calls = Array.from({ length: 20 }, () =>
-      emit(body, op, key).then((r) => r),
-    );
+    let calls: Promise<request.Response>[] = [];
     try {
-      await reached(gate);
+      calls = Array.from({ length: 20 }, () =>
+        emit(body, op, key).then((r) => r),
+      );
+      await gate.contended();
+      await gate.commit();
     } finally {
-      await gate.connection.query('COMMIT');
-      gate.connection.release();
+      await gate.close();
     }
     const results = await Promise.all(calls);
     expect(results.every((r) => r.status === 200)).toBe(true);
     expect(new Set(results.map((r) => r.body.id)).size).toBe(1);
     expect(await available(member)).toBe(body.amount);
-    await db.userRole.deleteMany({ where: { userId: op.id } });
+    await db.removeRole(op.id, 'TEST_OPERATOR');
     await emit(body, op, key).expect(403);
   });
   it('cannot reuse a provider event ID to fund a different intent', async () => {
@@ -691,14 +705,7 @@ describe('Simulated wallet: real PostgreSQL and HTTP', () => {
     expect((await counts(eb.intentId)).events).toBe(0);
   });
   it('two contenders for the last source funds cannot overdraw or mint new capital', async () => {
-    const total = Number(
-      (
-        await pool.query(
-          'SELECT sum(debit-credit)::bigint n FROM ledger_entries WHERE account_id=$1',
-          [CLEARING_ID],
-        )
-      ).rows[0].n,
-    );
+    const total = await clearingBalance();
     let drain = total - 10000000;
     while (drain > 0) {
       const member = await reader();
@@ -710,34 +717,27 @@ describe('Simulated wallet: real PostgreSQL and HTTP', () => {
       b = await reader(),
       ea = await event(a, 10000000),
       eb = await event(b, 10000000),
-      gate = await block('wallet_accounts', CLEARING_ID);
-    const calls = [
-      emit(ea).then((r) => r.status),
-      emit(eb, otherOperator).then((r) => r.status),
-    ];
+      gate = await block('account_locks', CLEARING_ID);
+    let calls: Promise<number>[] = [];
     try {
-      await reached(gate);
+      calls = [
+        emit(ea).then((r) => r.status),
+        emit(eb, otherOperator).then((r) => r.status),
+      ];
+      await gate.contended();
+      await gate.commit();
     } finally {
-      await gate.connection.query('COMMIT');
-      gate.connection.release();
+      await gate.close();
     }
     expect((await Promise.all(calls)).sort()).toEqual([200, 503]);
     expect((await available(a)) + (await available(b))).toBe(10000000);
+    expect(await clearingBalance()).toBe(0);
     expect(
-      Number(
-        (
-          await pool.query(
-            'SELECT sum(debit-credit)::bigint n FROM ledger_entries WHERE account_id=$1',
-            [CLEARING_ID],
-          )
-        ).rows[0].n,
-      ),
-    ).toBe(0);
-    expect(
-      await db.ledgerJournal.count({ where: { type: 'OpeningCapital' } }),
+      await db.c.ledger_journals.countDocuments({ type: 'OpeningCapital' }),
     ).toBe(1);
-    // Bypass only the application balance check in this test: the SQL constraint
-    // must still reject a fully shaped journal that would overdraw the source.
+    // Bypass only the application balance check in this test: the commit-time
+    // journal check must still reject a fully shaped journal that would
+    // overdraw the source.
     const forged = await event(await reader(), 1000);
     const balance = vi
       .spyOn(app.get(LedgerService), 'balance')

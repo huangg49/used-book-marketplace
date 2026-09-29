@@ -339,7 +339,7 @@ export class LedgerService {
   ) {
     const from = refund ? accounts.hold : accounts.available,
       to = refund ? accounts.available : accounts.hold;
-    if ((await balanceOf(tx, from)) < amount) {
+    if ((await this.balance(tx, from)) < amount) {
       if (refund) throw invalidState();
       throw new DomainError(
         409,
@@ -375,7 +375,7 @@ export class LedgerService {
     eventId: string,
     now: Date,
   ) {
-    if ((await balanceOf(tx, CLEARING_ID)) < intent.amount)
+    if ((await this.balance(tx, CLEARING_ID)) < intent.amount)
       throw new DomainError(
         503,
         'UNAVAILABLE',
