@@ -1,39 +1,19 @@
-import { randomBytes, randomUUID } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { randomUUID } from 'node:crypto';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import type { INestApplication } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/generated/prisma/client.js';
-import type { RoleCode, UserStatus } from '../src/generated/prisma/client.js';
-import { DatabaseService } from '../src/database/database.service.js';
+import request from 'supertest';
+import { hash } from 'argon2';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
-import request from 'supertest';
-import { Ajv2020 } from 'ajv/dist/2020.js';
-import addFormats from 'ajv-formats';
-import { parse } from 'yaml';
-import { hash } from 'argon2';
+import type { RoleCode, UserStatus } from '../src/database/mongo/documents.js';
+import { onTransactionRetry } from '../src/database/mongo/transaction.js';
+import { validates } from './helpers/contract.js';
+import { Gate } from './helpers/mongo-gate.js';
+import { MongoFixtures } from './helpers/mongo-fixtures.js';
 
-const contract = parse(
-  readFileSync(
-    createRequire(import.meta.url).resolve(
-      '@used-books/api-contract/openapi.yaml',
-    ),
-    'utf8',
-  ),
-);
-const ajv = new Ajv2020({ strict: false });
-addFormats.default(ajv);
-ajv.addSchema({ $id: 'api-wire', components: contract.components });
-function validates(name: string, body: unknown) {
-  const fn = ajv.compile({ $ref: `api-wire#/components/schemas/${name}` });
-  expect(fn(body), JSON.stringify(fn.errors)).toBe(true);
-}
-type Adapter = Awaited<ReturnType<PrismaPg['connect']>>;
-type Pool = ReturnType<Adapter['underlyingDriver']>;
 type Reader = { id: string; token: string; sessionId: string; email: string };
+const PASSWORD = 'Only-a-test-password-2026';
 const metadata = (title = 'Đường sách chuyền tay') => ({
   title,
   authors: ['Người viết'],
@@ -61,9 +41,9 @@ const draft = (bookId: string | null = null) => ({
   mediaIds: [] as string[],
 });
 
-describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
-  const schema = `draft_http_test_${randomUUID().replaceAll('-', '')}`;
-  let app: INestApplication, db: PrismaClient, adapter: Adapter, pool: Pool;
+describe('catalog and listing drafts through HTTP with MongoDB', () => {
+  let app: INestApplication, db: MongoFixtures, passwordHash: string;
+  const users: string[] = [];
   let m1: Reader,
     m2: Reader,
     a1: Reader,
@@ -101,31 +81,20 @@ describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
     roles: RoleCode[] = ['MEMBER'],
     status: UserStatus = 'ACTIVE',
   ): Promise<Reader> {
-    const id = randomUUID(),
-      sessionId = randomUUID(),
-      email = `${id}@draft-http.test`;
-    await db.user.create({
-      data: {
-        id,
-        emailNormalized: email,
-        displayName: 'Bạn đọc thử nghiệm',
-        passwordHash: await hash('Only-a-test-password-2026'),
-        status,
-        emailVerifiedAt: new Date(),
-        roles: { create: roles.map((role) => ({ role })) },
-        sessions: {
-          create: {
-            id: sessionId,
-            refreshTokenHash: randomBytes(32).toString('hex'),
-            expiresAt: new Date(Date.now() + 86400000),
-          },
-        },
-      },
+    const email = `${randomUUID()}@draft-http.test`;
+    const user = await db.user({
+      email,
+      passwordHash,
+      displayName: 'Bạn đọc thử nghiệm',
+      roles,
+      status,
     });
+    users.push(user._id);
+    const sessionId = await db.session(user._id);
     const token = await app
       .get(JwtService)
-      .signAsync({ sub: id, sid: sessionId });
-    return { id, sessionId, token, email };
+      .signAsync({ sub: user._id, sid: sessionId });
+    return { id: user._id, sessionId, token, email };
   }
   async function createCatalog(actor = m1, meta = metadata()) {
     const result = await post(
@@ -153,58 +122,22 @@ describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
     return result.body;
   }
   async function makeApp() {
-    const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(DatabaseService)
-      .useValue(db)
-      .compile();
+    const module = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
     const next = module.createNestApplication();
     configureApp(next, { docs: false, logRequests: false });
     await next.init();
     return next;
   }
-  async function blockedBy(pid: number) {
-    const deadline = Date.now() + 4000;
-    while (Date.now() < deadline) {
-      const r = await pool.query(
-        'SELECT count(*)::int n FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))',
-        [pid],
-      );
-      if (r.rows[0].n > 0) return;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-    throw new Error(
-      'HTTP mutation never reached the blocked database transaction',
-    );
-  }
-  async function blockUser(id: string) {
-    const connection = await pool.connect();
-    await connection.query('BEGIN');
-    await connection.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [id]);
-    const pid = (await connection.query('SELECT pg_backend_pid() pid')).rows[0]
-      .pid as number;
-    return { connection, pid };
-  }
+  // Holds the user lock in a transaction, like `SELECT ... FOR UPDATE`.
+  const blockUser = (id: string) => Gate.lockUser(db.client, id);
+  const auditIds = async (filter: object) =>
+    (await db.c.audit_events.find(filter).toArray()).map((a) => a._id);
 
   beforeAll(async () => {
-    const url = process.env.TEST_DATABASE_URL!;
-    if (!decodeURIComponent(new URL(url).pathname).endsWith('_test'))
-      throw new Error('Only _test databases');
-    adapter = await new PrismaPg({
-      connectionString: url,
-      max: 16,
-      options: `-c search_path=${schema},public -c timezone=UTC`,
-      statement_timeout: 15000,
-    }).connect();
-    pool = adapter.underlyingDriver();
-    await pool.query(`CREATE SCHEMA "${schema}"`);
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n))
-      .sort())
-      await pool.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
-    db = new PrismaClient({ adapter: new PrismaPg(pool, { schema }) });
-    await db.$connect();
+    passwordHash = await hash(PASSWORD);
+    db = await MongoFixtures.connect();
     app = await makeApp();
     m1 = await reader();
     m2 = await reader();
@@ -215,11 +148,35 @@ describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
     restricted = await reader(['MEMBER'], 'RESTRICTED');
   }, 60000);
   afterAll(async () => {
+    if (db) {
+      const books = (
+        await db.c.catalog_books.find({ requesterId: { $in: users } }).toArray()
+      ).map((b) => b._id);
+      const revisions = (
+        await db.c.catalog_revisions.find({ bookId: { $in: books } }).toArray()
+      ).map((r) => r._id);
+      const listings = (
+        await db.c.listings.find({ ownerId: { $in: users } }).toArray()
+      ).map((l) => l._id);
+      const audits = await auditIds({ actorId: { $in: users } });
+      await db.c.outbox_events.deleteMany({ auditId: { $in: audits } });
+      await db.c.audit_events.deleteMany({ _id: { $in: audits } });
+      await db.c.mutation_receipts.deleteMany({ actorId: { $in: users } });
+      await db.c.catalog_decisions.deleteMany({
+        revisionId: { $in: revisions },
+      });
+      await db.c.catalog_revisions.deleteMany({ _id: { $in: revisions } });
+      await db.c.catalog_books.deleteMany({ _id: { $in: books } });
+      await db.c.revision_media.deleteMany({ listingId: { $in: listings } });
+      await db.c.listing_media.deleteMany({ listingId: { $in: listings } });
+      await db.c.listing_revisions.deleteMany({
+        listingId: { $in: listings },
+      });
+      await db.c.listings.deleteMany({ _id: { $in: listings } });
+      await db.removeUsers(users);
+      await db.close();
+    }
     await app?.close();
-    await db?.$disconnect();
-    if (pool && /^draft_http_test_[a-f0-9]{32}$/.test(schema))
-      await pool.query(`DROP SCHEMA "${schema}" CASCADE`);
-    await adapter?.dispose();
   });
 
   it('creates, independently confirms, searches and privately reads catalog with contract responses', async () => {
@@ -302,7 +259,7 @@ describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
     app = await makeApp();
     const login = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
-      .send({ email: m1.email, password: 'Only-a-test-password-2026' })
+      .send({ email: m1.email, password: PASSWORD })
       .expect(200);
     const fresh = { ...m1, token: login.body.accessToken };
     const result = await get(`/me/listings/${created.entityId}`, fresh).expect(
@@ -359,20 +316,14 @@ describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
     await post('/listings', { content: draft() }, restricted).expect(403);
     const member = await reader(),
       l = await createDraft(member);
-    await db.user.update({
-      where: { id: member.id },
-      data: { status: 'RESTRICTED' },
-    });
+    await db.setStatus(member.id, 'RESTRICTED');
     await get(`/me/listings/${l.entityId}`, member).expect(200);
     await put(
       l.entityId,
       { expectedVersion: 1, content: draft() },
       member,
     ).expect(403);
-    await db.user.update({
-      where: { id: member.id },
-      data: { status: 'LOCKED' },
-    });
+    await db.setStatus(member.id, 'LOCKED');
     const error = await get(`/me/listings/${l.entityId}`, member).expect(403);
     validates('ListingApiError', error.body);
   });
@@ -405,16 +356,17 @@ describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
       m1,
     ).expect(422);
     const invalidBook = await createCatalog();
+    // The catalog_isbn_valid CHECK is a collection validator rule (121).
     await expect(
-      db.catalogRevision.create({
-        data: {
-          ...metadata(),
-          bookId: invalidBook.entityId,
-          number: 2,
-          isbn: '0000000000000',
-        },
+      db.c.catalog_revisions.insertOne({
+        _id: randomUUID(),
+        ...metadata(),
+        bookId: invalidBook.entityId,
+        number: 2,
+        isbn: '0000000000000',
+        submittedAt: new Date(),
       }),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ code: 121 });
     await post(
       '/catalog/requests',
       { metadata: { ...metadata(), isbn: '9780306406158' } },
@@ -517,11 +469,11 @@ describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
     expect(replay.body).toEqual(saved.body);
     expect(replay.headers['idempotency-replayed']).toBe('true');
     await put(id, { ...save, expectedVersion: 2 }, m1, saveKey).expect(409);
-    const receipts = await db.mutationReceipt.findMany({
-      where: { listingId: id },
-    });
+    const receipts = await db.c.mutation_receipts
+      .find({ listingId: id })
+      .toArray();
     expect(receipts).toHaveLength(2);
-    expect(await db.auditEvent.count({ where: { listingId: id } })).toBe(2);
+    expect(await db.c.audit_events.countDocuments({ listingId: id })).toBe(2);
   });
 
   it('fingerprints target IDs and scopes keys by actor and operation', async () => {
@@ -567,62 +519,75 @@ describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
     expect(replay.headers['idempotency-replayed']).toBe('true');
     await put(l.entityId, { ...body, expectedVersion: 2 }, m1).expect(404);
     expect(
-      await db.auditEvent.count({ where: { listingId: l.entityId } }),
+      await db.c.audit_events.countDocuments({ listingId: l.entityId }),
     ).toBe(2);
   });
 
-  it('retries transaction serialization failures at most three times with atomic effects', async () => {
+  it('retries write conflicts within a bounded budget with atomic effects', async () => {
+    // MongoDB reports contention as TransientTransactionError (write conflict)
+    // rather than SQLSTATE 40001. A user-lock gate produces real conflicts: a
+    // command that gets through retries a few times and commits once; one kept
+    // out past the finite retry budget (ADR 0027) fails with 503 and no effects.
     const recoverable = await reader(),
       blocked = await reader();
-    await pool.query('CREATE SEQUENCE command_retry_attempt');
-    await pool.query(`CREATE FUNCTION retry_draft_audit() RETURNS trigger LANGUAGE plpgsql AS $$
-      DECLARE attempt bigint;
-      BEGIN
-        IF NEW.actor_id IN ('${recoverable.id}'::uuid,'${blocked.id}'::uuid) THEN
-          attempt := nextval('command_retry_attempt');
-          IF attempt < 3 OR NEW.actor_id='${blocked.id}'::uuid THEN
-            RAISE EXCEPTION 'test serialization failure' USING ERRCODE='40001';
-          END IF;
-        END IF;
-        RETURN NEW;
-      END $$`);
-    await pool.query(
-      'CREATE TRIGGER retry_draft_audit BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION retry_draft_audit()',
+    const attempts = new Map<number, number>();
+    const stop = onTransactionRetry(({ transactionId, attempt }) =>
+      attempts.set(
+        transactionId,
+        Math.max(attempt, attempts.get(transactionId) ?? 0),
+      ),
     );
     const failedKey = randomUUID();
     try {
-      const success = await createDraft(recoverable);
-      expect(
-        (await pool.query('SELECT last_value FROM command_retry_attempt'))
-          .rows[0].last_value,
-      ).toBe('3');
-      expect(
-        await db.listing.count({ where: { ownerId: recoverable.id } }),
-      ).toBe(1);
-      expect(
-        await db.auditEvent.count({ where: { listingId: success.entityId } }),
-      ).toBe(1);
-      const error = await post(
-        '/listings',
-        { content: draft() },
-        blocked,
-        failedKey,
-      ).expect(503);
-      validates('ListingApiError', error.body);
-      expect(
-        (await pool.query('SELECT last_value FROM command_retry_attempt'))
-          .rows[0].last_value,
-      ).toBe('6');
-      expect(await db.listing.count({ where: { ownerId: blocked.id } })).toBe(
-        0,
-      );
-      expect(
-        await db.mutationReceipt.count({ where: { key: failedKey } }),
-      ).toBe(0);
+      let gate = await blockUser(recoverable.id);
+      try {
+        const pending = post('/listings', { content: draft() }, recoverable);
+        const response = pending.then((r) => r);
+        await gate.contended();
+        // Let the command fail at least twice before the lock is released.
+        const deadline = Date.now() + 4000;
+        while (Math.max(0, ...attempts.values()) < 2 && Date.now() < deadline)
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        await gate.commit();
+        const success = await response;
+        expect(success.status).toBe(200);
+        validates('MutationReceipt', success.body);
+        expect(Math.max(...attempts.values())).toBeGreaterThanOrEqual(2);
+        expect(
+          await db.c.listings.countDocuments({ ownerId: recoverable.id }),
+        ).toBe(1);
+        expect(
+          await db.c.audit_events.countDocuments({
+            listingId: success.body.entityId,
+          }),
+        ).toBe(1);
+      } finally {
+        await gate.close();
+      }
+      attempts.clear();
+      gate = await blockUser(blocked.id);
+      try {
+        const error = await post(
+          '/listings',
+          { content: draft() },
+          blocked,
+          failedKey,
+        ).expect(503);
+        validates('ListingApiError', error.body);
+        // Bounded: the executor gives up (maxAttempts / retry budget).
+        expect(attempts.size).toBe(1);
+        expect(Math.max(...attempts.values())).toBeLessThan(60);
+        expect(
+          await db.c.listings.countDocuments({ ownerId: blocked.id }),
+        ).toBe(0);
+        expect(
+          await db.c.mutation_receipts.countDocuments({ key: failedKey }),
+        ).toBe(0);
+      } finally {
+        await gate.close();
+      }
     } finally {
-      await pool.query('DROP TRIGGER retry_draft_audit ON audit_events');
-      await pool.query('DROP FUNCTION retry_draft_audit()');
-      await pool.query('DROP SEQUENCE command_retry_attempt');
+      stop();
     }
     await post('/listings', { content: draft() }, blocked, failedKey).expect(
       200,
@@ -631,15 +596,7 @@ describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
 
   it('allows exactly one HTTP update from two sessions holding the same expectedVersion', async () => {
     const l = await createDraft();
-    const sessionId = randomUUID();
-    await db.authSession.create({
-      data: {
-        id: sessionId,
-        userId: m1.id,
-        refreshTokenHash: randomBytes(32).toString('hex'),
-        expiresAt: new Date(Date.now() + 86400000),
-      },
-    });
+    const sessionId = await db.session(m1.id);
     const secondSession = {
       ...m1,
       sessionId,
@@ -667,7 +624,7 @@ describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
     const current = await get(`/me/listings/${l.entityId}`, m1).expect(200);
     expect(current.body.version).toBe(2);
     expect(
-      await db.auditEvent.count({ where: { listingId: l.entityId } }),
+      await db.c.audit_events.countDocuments({ listingId: l.entityId }),
     ).toBe(2);
   });
 
@@ -688,57 +645,64 @@ describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
     ]);
     expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
     expect(
-      await db.catalogDecision.count({ where: { revisionId: b.revisionId } }),
+      await db.c.catalog_decisions.countDocuments({
+        revisionId: b.revisionId,
+      }),
     ).toBe(1);
-    expect(await db.auditEvent.count({ where: { bookId: b.entityId } })).toBe(
-      2,
-    );
+    const audits = await auditIds({ bookId: b.entityId });
+    expect(audits).toHaveLength(2);
     expect(
-      await db.outboxEvent.count({ where: { audit: { bookId: b.entityId } } }),
+      await db.c.outbox_events.countDocuments({ auditId: { $in: audits } }),
     ).toBe(2);
   });
 
   it('rechecks account status after the authentication guard while blocked at a transaction lock', async () => {
     const actor = await reader(),
       key = randomUUID();
-    const { connection, pid } = await blockUser(actor.id);
+    const gate = await blockUser(actor.id);
+    const pending = post('/listings', { content: draft() }, actor, key).then(
+      (r) => r,
+    );
     try {
-      const pending = post('/listings', { content: draft() }, actor, key).then(
-        (r) => r,
-      );
-      await blockedBy(pid);
-      await connection.query(
-        `UPDATE users SET status='RESTRICTED' WHERE id=$1`,
-        [actor.id],
-      );
-      await connection.query('COMMIT');
+      await gate.contended();
+      await gate.db
+        .collection<{ _id: string }>('users')
+        .updateOne(
+          { _id: actor.id },
+          { $set: { status: 'RESTRICTED' } },
+          { session: gate.session },
+        );
+      await gate.commit();
       expect((await pending).status).toBe(403);
-      expect(await db.mutationReceipt.count({ where: { key } })).toBe(0);
+      expect(await db.c.mutation_receipts.countDocuments({ key })).toBe(0);
     } finally {
-      await connection.query('ROLLBACK');
-      connection.release();
+      await gate.close();
+      await pending;
     }
   });
 
   it('rechecks session revocation after a stale guard result without committing any draft', async () => {
     const actor = await reader(),
       key = randomUUID();
-    const { connection, pid } = await blockUser(actor.id);
+    const gate = await blockUser(actor.id);
+    const pending = post('/listings', { content: draft() }, actor, key).then(
+      (r) => r,
+    );
     try {
-      const pending = post('/listings', { content: draft() }, actor, key).then(
-        (r) => r,
-      );
-      await blockedBy(pid);
-      await connection.query(
-        'UPDATE auth_sessions SET revoked_at=now() WHERE id=$1',
-        [actor.sessionId],
-      );
-      await connection.query('COMMIT');
+      await gate.contended();
+      await gate.db
+        .collection<{ _id: string }>('auth_sessions')
+        .updateOne(
+          { _id: actor.sessionId },
+          { $set: { revokedAt: new Date() } },
+          { session: gate.session },
+        );
+      await gate.commit();
       expect((await pending).status).toBe(401);
-      expect(await db.mutationReceipt.count({ where: { key } })).toBe(0);
+      expect(await db.c.mutation_receipts.countDocuments({ key })).toBe(0);
     } finally {
-      await connection.query('ROLLBACK');
-      connection.release();
+      await gate.close();
+      await pending;
     }
   });
 
@@ -751,38 +715,41 @@ describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
       revisionId: b.revisionId,
       decision: 'Confirm',
     };
-    const { connection, pid } = await blockUser(actor.id);
+    const gate = await blockUser(actor.id);
+    const pending = post(
+      `/operations/catalog-requests/${b.entityId}/decision`,
+      body,
+      actor,
+      key,
+    ).then((r) => r);
     try {
-      const pending = post(
-        `/operations/catalog-requests/${b.entityId}/decision`,
-        body,
-        actor,
-        key,
-      ).then((r) => r);
-      await blockedBy(pid);
-      await connection.query(
-        `DELETE FROM user_roles WHERE user_id=$1 AND role='ADMIN'`,
-        [actor.id],
-      );
-      await connection.query('COMMIT');
+      await gate.contended();
+      await gate.db
+        .collection<{ _id: string }>('users')
+        .updateOne(
+          { _id: actor.id },
+          { $pull: { roles: { role: 'ADMIN' } } } as never,
+          { session: gate.session },
+        );
+      await gate.commit();
       expect((await pending).status).toBe(403);
       expect(
-        await db.catalogDecision.count({ where: { revisionId: b.revisionId } }),
+        await db.c.catalog_decisions.countDocuments({
+          revisionId: b.revisionId,
+        }),
       ).toBe(0);
     } finally {
-      await connection.query('ROLLBACK');
-      connection.release();
+      await gate.close();
+      await pending;
     }
-    await db.userRole.create({ data: { userId: actor.id, role: 'ADMIN' } });
+    await db.addRole(actor.id, 'ADMIN');
     await post(
       `/operations/catalog-requests/${b.entityId}/decision`,
       body,
       actor,
       key,
     ).expect(200);
-    await db.userRole.delete({
-      where: { userId_role: { userId: actor.id, role: 'ADMIN' } },
-    });
+    await db.removeRole(actor.id, 'ADMIN');
     await post(
       `/operations/catalog-requests/${b.entityId}/decision`,
       body,
@@ -792,55 +759,55 @@ describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
   });
 
   it('makes role writers participate in the user lock used by commands', async () => {
+    // Roles are embedded in the user document (MIG02_MODEL_MAP
+    // role_mutation_lock), so any role writer must write the locked document
+    // and waits until the lock holder finishes.
     const actor = await reader();
-    const { connection, pid } = await blockUser(actor.id);
-    const writer = await pool.connect();
+    const gate = await blockUser(actor.id);
+    let settled = false;
+    const pending = db.removeRole(actor.id, 'MEMBER').finally(() => {
+      settled = true;
+    });
+    void pending.catch(() => {});
     try {
-      const pending = writer.query(
-        `DELETE FROM user_roles WHERE user_id=$1 AND role='MEMBER'`,
-        [actor.id],
-      );
-      void pending.catch(() => {});
-      await blockedBy(pid);
-      expect(
-        await db.userRole.count({
-          where: { userId: actor.id, role: 'MEMBER' },
-        }),
-      ).toBe(1);
-      await connection.query('COMMIT');
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(settled).toBe(false);
+      const user = await db.c.users.findOne({ _id: actor.id });
+      expect(user!.roles.filter((r) => r.role === 'MEMBER')).toHaveLength(1);
+      await gate.commit();
       await pending;
-      expect(await db.userRole.count({ where: { userId: actor.id } })).toBe(0);
+      expect((await db.c.users.findOne({ _id: actor.id }))!.roles).toHaveLength(
+        0,
+      );
     } finally {
-      await connection.query('ROLLBACK');
-      connection.release();
-      writer.release();
+      await gate.close();
+      await pending.catch(() => {});
     }
   });
 
   it('rolls back business data and receipt when audit insertion fails, then safely retries the same key', async () => {
-    // Test-only failure injection using a narrowly matched temporary trigger.
+    // Test-only failure injection using a narrowly matched temporary validator rule.
     const key = randomUUID(),
       actor = await reader();
-    await pool.query(
-      `CREATE FUNCTION fail_draft_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.actor_id='${actor.id}'::uuid THEN RAISE EXCEPTION 'test audit failure'; END IF; RETURN NEW; END $$`,
+    await db.withRejectingValidator(
+      'audit_events',
+      { actorId: actor.id },
+      async () => {
+        const error = await post(
+          '/listings',
+          { content: draft() },
+          actor,
+          key,
+        ).expect(500);
+        expect(JSON.stringify(error.body)).not.toContain(
+          'Document failed validation',
+        );
+        expect(await db.c.listings.countDocuments({ ownerId: actor.id })).toBe(
+          0,
+        );
+        expect(await db.c.mutation_receipts.countDocuments({ key })).toBe(0);
+      },
     );
-    await pool.query(
-      'CREATE TRIGGER fail_draft_audit BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION fail_draft_audit()',
-    );
-    try {
-      const error = await post(
-        '/listings',
-        { content: draft() },
-        actor,
-        key,
-      ).expect(500);
-      expect(JSON.stringify(error.body)).not.toContain('test audit failure');
-      expect(await db.listing.count({ where: { ownerId: actor.id } })).toBe(0);
-      expect(await db.mutationReceipt.count({ where: { key } })).toBe(0);
-    } finally {
-      await pool.query('DROP TRIGGER fail_draft_audit ON audit_events');
-      await pool.query('DROP FUNCTION fail_draft_audit()');
-    }
     await post('/listings', { content: draft() }, actor, key).expect(200);
   });
 
@@ -850,9 +817,13 @@ describe('catalog and listing drafts through HTTP with PostgreSQL', () => {
     for (let i = 0; i < 3; i++) {
       const l = await createDraft(actor);
       ids.push(l.entityId);
-      await pool.query(
-        'UPDATE listings SET updated_at=$2::timestamptz,version=version+1 WHERE id=$1',
-        [l.entityId, `2026-09-26 00:00:00.00000${i + 1}+00`],
+      // BSON dates have millisecond precision; adjacent keys 1 ms apart.
+      await db.c.listings.updateOne(
+        { _id: l.entityId },
+        {
+          $set: { updatedAt: new Date(`2026-09-26T00:00:00.00${i + 1}Z`) },
+          $inc: { version: 1, lockSeq: 1 },
+        },
       );
     }
     const first = await get('/me/listings', actor)

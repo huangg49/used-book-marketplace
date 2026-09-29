@@ -210,3 +210,37 @@ Bài QA không còn trên kệ; lịch sử/catalog QA còn theo policy. **N18 a
   TalkBack; review A02/R và U01 cần người thật. Không mở D/T/C trước gate.
 
 Q01-F01 và N18 archive đã kiểm native như trên. Q01 và READINESS vẫn **chưa đóng**.
+
+## N20 — giá, nơi gửi và review trên MongoDB
+
+Bổ sung ngày 29/09, nhánh `codex/native-pricing-acceptance`, base `56d01dc`.
+Android 15/Pixel_7 x86_64, APK Q01 SHA-256 đã ghi phía trên, Metro8081 preview=0,
+API3000 dùng bản sao acceptance Mongo57117. Không rebuild hoặc sửa UI/runtime.
+Mở nháp QA có sẵn, Home → OS font130% → resume; tạm tắt handwriting để dùng
+bàn phím số docked. Các thay đổi form chỉ trong bộ nhớ, cuối lượt xác nhận rời bỏ.
+
+| Ca thực chạy | Kết quả quan sát |
+| --- | --- |
+| Chọn bán và đổi, nhập giá bán 9999999 rồi lưu nháp | Chặn tại client, cuộn về lỗi giá; nhãn/giá/lỗi đầy đủ, footer trên keyboard |
+| Sửa giá bán 125000, giá trao đổi 150000 | Giá/lỗi cập nhật đúng; hai trường có nhãn riêng và thao tác được |
+| Chọn nơi gửi có nhãn dài và địa chỉ mặc định | Nhãn xuống dòng, thông tin địa chỉ và lưu ý vùng demo đọc đủ; có bỏ lựa chọn |
+| Qua bước kiểm tra, cuộn xuống giá/khai báo | Hai giá 125.000đ/150.000đ rõ ràng; checkbox dài xuống dòng, footer không cắt |
+| Gửi khi thiếu tình trạng và chưa xác nhận quyền sở hữu | Chặn gửi, chuyển về bước 2/lỗi tình trạng đầu tiên; không gọi mutation API |
+| Back và xác nhận rời bài đăng | Bỏ thay đổi chưa lưu; trả OS font1.0 và handwriting override=null, mở lại kệ |
+
+PASS cho nhóm **pricing/origin/review ở 130% với bàn phím số** này; không phát hiện
+lỗi sản phẩm mới. API log trong cửa sổ thao tác 19:54–19:59 không có POST/PUT/PATCH/
+DELETE. Không lưu giá/nơi gửi thử vào server, không chạy worker trên acceptance copy.
+Không suy kết quả này thành N21/TalkBack, ARM/iOS hoặc toàn bộ release gate PASS.
+
+![Lỗi giá với bàn phím số và chữ lớn](../verification/native-pricing-2026-09-29/price-error-keyboard130.png)
+![Hai giá và nơi gửi dài](../verification/native-pricing-2026-09-29/two-prices-origin130.png)
+![Review giá và khai báo quyền sở hữu](../verification/native-pricing-2026-09-29/review-prices-declaration130.png)
+![Chặn gửi và chuyển về lỗi đầu tiên](../verification/native-pricing-2026-09-29/submit-first-error130.png)
+
+Logcat đầy đủ của warning lúc 19:27:15 cho thấy `Cannot connect to Expo CLI`, URL
+dev server `10.0.2.2:8081`, rồi `Error: undefined`. Chuỗi này khớp hàm
+`getConnectionError` trong Expo cài sẵn, `src/async-require/hmrUtils.native.ts`.
+Đã xác định nguồn warning kết nối dev tooling; chưa xác định nguyên nhân mất kết
+nối lần đó. Không có căn cứ gán warning này cho MongoDB hoặc upload nghiệp vụ;
+không sửa app/silence warning hoặc nâng dependency trong gói chỉ nghiệm thu.

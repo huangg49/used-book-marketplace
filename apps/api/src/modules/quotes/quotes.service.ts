@@ -1,14 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, type SaleQuote } from '../../generated/prisma/client.js';
+import { randomUUID } from 'node:crypto';
+import type { SaleQuoteDoc } from '../../database/mongo/documents.js';
+import type { Tx } from '../../database/mongo/transaction.js';
 import { CatalogService } from '../catalog/catalog.service.js';
 import {
-  CommandService,
+  MongoCommandService,
   member,
   requireActive,
   type Actor,
   type CommandContext,
-  type Tx,
-} from '../commands/command.service.js';
+} from '../commands/mongo-command.service.js';
 import {
   conflict,
   DomainError,
@@ -17,54 +18,55 @@ import {
   notFound,
   type Wire,
 } from '../commands/domain-error.js';
-import {
-  publicEligible,
-  publicFrom,
-} from '../listings/public-listing.service.js';
+import { publicEligibleStages } from '../listings/public-listing.service.js';
 import { QuoteClock } from './quote-clock.js';
 import { quoteAmounts } from './quote-money.js';
 
+// Address rows are not locked here (PostgreSQL used FOR SHARE): every address
+// writer holds its owner's user lock, and quote/order commands lock both the
+// buyer and the seller, so address content cannot change underneath them.
+// Frozen revision photos are Ready and immutable, so they are not locked either.
 @Injectable()
 export class QuotesService {
   constructor(
-    private readonly commands: CommandService,
+    private readonly commands: MongoCommandService,
     private readonly catalog: CatalogService,
     private readonly clock: QuoteClock,
   ) {}
   private async listing(tx: Tx, id: string) {
-    const l = await tx.listing.findUnique({
-      where: { id },
-      include: { currentRevision: true },
-    });
+    const l = await tx.c.listings.findOne({ _id: id.toLowerCase() });
+    const r = l?.currentRevisionId
+      ? await tx.c.listing_revisions.findOne({ _id: l.currentRevisionId })
+      : null;
     if (!l) throw notFound();
-    return l;
+    return { ...l, currentRevision: r };
   }
   private async ownQuote(tx: Tx, id: string, buyerId: string) {
-    const q = await tx.saleQuote.findFirst({ where: { id, buyerId } });
+    const q = await tx.c.sale_quotes.findOne({
+      _id: id.toLowerCase(),
+      buyerId,
+    });
     if (!q) throw notFound();
     return q;
   }
   private async policy(tx: Tx) {
-    await tx.$queryRaw`SELECT scope FROM sale_quote_policy_selection WHERE scope='DirectSale' FOR SHARE`;
-    return (
-      await tx.saleQuotePolicySelection.findUniqueOrThrow({
-        where: { scope: 'DirectSale' },
-        include: { policy: true },
-      })
-    ).policy;
-  }
-  private async lockAddresses(tx: Tx, ids: string[]) {
-    const unique = [...new Set(ids)].sort();
-    if (unique.length)
-      await tx.$queryRaw(
-        Prisma.sql`SELECT id FROM member_addresses WHERE id IN (${Prisma.join(unique.map((id) => Prisma.sql`${id}::uuid`))}) ORDER BY id FOR SHARE`,
-      );
+    const selection = await tx.c.sale_quote_policy_selection.findOne({
+      _id: 'DirectSale',
+    });
+    return (await tx.c.sale_quote_policies.findOne({
+      _id: selection!.policyCode,
+    }))!;
   }
   private async available(tx: Tx, listingId: string) {
-    const rows = await tx.$queryRaw<{ id: string }[]>(
-      Prisma.sql`SELECT l.id FROM ${publicFrom} WHERE ${publicEligible} AND l.id=${listingId}::uuid AND r.mode IN ('Sale','Both')`,
-    );
-    return !!rows.length;
+    const [row] = await tx.c.listings
+      .aggregate([
+        { $match: { _id: listingId } },
+        ...publicEligibleStages(),
+        { $match: { 'r.mode': { $in: ['Sale', 'Both'] } } },
+        { $project: { _id: 1 } },
+      ])
+      .toArray();
+    return !!row;
   }
   private async lockListing(
     tx: Tx,
@@ -74,25 +76,15 @@ export class QuotesService {
       tx,
       before.currentRevision!.bookId,
     );
-    await tx.$queryRaw`SELECT id FROM listings WHERE id=${before.id}::uuid FOR UPDATE`;
-    const l = await this.listing(tx, before.id);
+    await tx.lock('listings', [before._id]);
+    const l = await this.listing(tx, before._id);
     if (l.currentRevisionId !== before.currentRevisionId) throw conflict();
-    await tx.$queryRaw`SELECT id FROM listing_revisions WHERE id=${l.currentRevisionId}::uuid FOR SHARE`;
-    const media = await tx.revisionMedia.findMany({
-      where: { revisionId: l.currentRevisionId! },
-      orderBy: { mediaId: 'asc' },
-    });
-    if (media.length)
-      await tx.$queryRaw(
-        Prisma.sql`SELECT id FROM listing_media WHERE id IN (${Prisma.join(media.map((m) => Prisma.sql`${m.mediaId}::uuid`))}) ORDER BY id FOR SHARE`,
-      );
+    await tx.lock('listing_revisions', [l.currentRevisionId!]);
     return { l, book };
   }
   private async timeAndSession(tx: Tx, auth: Actor) {
     const now = await this.clock.now(tx);
-    const session = await tx.authSession.findUnique({
-      where: { id: auth.sessionId },
-    });
+    const session = await tx.c.auth_sessions.findOne({ _id: auth.sessionId });
     if (!session || session.revokedAt || session.expiresAt <= now)
       throw new DomainError(
         401,
@@ -114,7 +106,7 @@ export class QuotesService {
       },
       mutate: async (tx, actor, before) => {
         requireActive(actor);
-        if (before.ownerId === actor.id)
+        if (before.ownerId === actor._id)
           throw new DomainError(
             403,
             'FORBIDDEN',
@@ -122,12 +114,9 @@ export class QuotesService {
           );
         const policy = await this.policy(tx),
           r = before.currentRevision!;
-        await this.lockAddresses(tx, [
-          body.destinationAddressId,
-          ...(r.originAddressId ? [r.originAddressId] : []),
-        ]);
-        const destination = await tx.memberAddress.findFirst({
-          where: { id: body.destinationAddressId, ownerId: actor.id },
+        const destination = await tx.c.member_addresses.findOne({
+          _id: body.destinationAddressId.toLowerCase(),
+          ownerId: actor._id,
         });
         if (!destination) throw notFound();
         if (destination.version !== body.expectedDestinationAddressVersion)
@@ -143,14 +132,15 @@ export class QuotesService {
           l.currentRevisionId !== body.expectedListingRevisionId
         )
           throw conflict();
-        if (!(await this.available(tx, listingId))) throw invalidState();
+        if (!(await this.available(tx, l._id))) throw invalidState();
         if (!r.originAddressId)
           invalidField(
             '/listingId',
             'Người đăng cần hoàn thiện nơi gửi trước khi báo giá.',
           );
-        const origin = await tx.memberAddress.findFirst({
-          where: { id: r.originAddressId!, ownerId: l.ownerId },
+        const origin = await tx.c.member_addresses.findOne({
+          _id: r.originAddressId!,
+          ownerId: l.ownerId,
         });
         if (
           !origin ||
@@ -160,8 +150,9 @@ export class QuotesService {
           throw conflict();
         const now = await this.timeAndSession(tx, context.auth);
         if (
-          (await tx.saleQuote.count({
-            where: { buyerId: actor.id, expiresAt: { gt: now } },
+          (await tx.c.sale_quotes.countDocuments({
+            buyerId: actor._id,
+            expiresAt: { $gt: now },
           })) >= 20
         )
           throw new DomainError(
@@ -169,32 +160,40 @@ export class QuotesService {
             'RATE_LIMITED',
             'Bạn có nhiều báo giá còn hiệu lực. Hãy chờ báo giá cũ hết hạn.',
           );
-        const q = await tx.saleQuote.create({
-          data: {
-            buyerId: actor.id,
-            sellerId: l.ownerId,
-            listingId,
-            listingVersion: l.version,
-            listingRevisionId: l.currentRevisionId!,
-            catalogRevisionId: book!.currentRevisionId!,
-            originAddressId: origin.id,
-            originAddressVersion: origin.version,
-            destinationAddressId: destination.id,
-            destinationAddressVersion: destination.version,
-            serviceAreaCode: destination.serviceAreaCode,
-            policyCode: policy.code,
-            ...quoteAmounts(
-              r.salePrice!,
-              policy.shippingFee,
-              policy.commissionBps,
-            ),
-            createdAt: now,
-            expiresAt: new Date(now.getTime() + policy.ttlSeconds * 1000),
-          },
-        });
+        const q: SaleQuoteDoc = {
+          _id: randomUUID(),
+          version: 1,
+          buyerId: actor._id,
+          sellerId: l.ownerId,
+          listingId: l._id,
+          listingVersion: l.version,
+          listingRevisionId: l.currentRevisionId!,
+          catalogRevisionId: book!.currentRevisionId!,
+          originAddressId: origin._id,
+          originAddressVersion: origin.version,
+          destinationAddressId: destination._id,
+          destinationAddressVersion: destination.version,
+          serviceAreaCode: destination.serviceAreaCode,
+          policyCode: policy._id,
+          ...quoteAmounts(
+            r.salePrice!,
+            policy.shippingFee,
+            policy.commissionBps,
+          ),
+          createdAt: now,
+          expiresAt: new Date(now.getTime() + policy.ttlSeconds * 1000),
+        };
+        // latlai_sale_quote_check: snapshot equals its locked sources.
+        if (
+          q.bookPrice !== r.salePrice ||
+          q.expiresAt.getTime() !==
+            q.createdAt.getTime() + policy.ttlSeconds * 1000
+        )
+          throw new Error('Quote snapshot does not match its sources');
+        await tx.c.sale_quotes.insertOne(q);
         return {
           entityType: 'SaleQuote' as const,
-          entityId: q.id,
+          entityId: q._id,
           version: 1,
           decidedAt: q.createdAt,
           expiresAt: q.expiresAt,
@@ -207,31 +206,32 @@ export class QuotesService {
       auth,
       async (tx, actor) => {
         member(actor);
-        const q = await this.ownQuote(tx, id, actor.id),
+        const q = await this.ownQuote(tx, id, actor._id),
           policy = await this.policy(tx);
         const before = await this.listing(tx, q.listingId);
-        await this.lockAddresses(tx, [
-          q.destinationAddressId,
-          q.originAddressId,
-        ]);
         const { l, book } = await this.lockListing(tx, before);
         const now = await this.timeAndSession(tx, auth);
         let assessment: Wire['SaleQuote']['assessment'] = 'Current';
         if (now >= q.expiresAt) assessment = 'Expired';
-        else if (actor.status !== 'ACTIVE' || !(await this.available(tx, l.id)))
+        else if (
+          actor.status !== 'ACTIVE' ||
+          !(await this.available(tx, l._id))
+        )
           assessment = 'Unavailable';
         else {
-          const destination = await tx.memberAddress.findFirst({
-            where: { id: q.destinationAddressId, ownerId: actor.id },
+          const destination = await tx.c.member_addresses.findOne({
+            _id: q.destinationAddressId,
+            ownerId: actor._id,
           });
-          const origin = await tx.memberAddress.findFirst({
-            where: { id: q.originAddressId, ownerId: q.sellerId },
+          const origin = await tx.c.member_addresses.findOne({
+            _id: q.originAddressId,
+            ownerId: q.sellerId,
           });
           if (
             l.version !== q.listingVersion ||
             l.currentRevisionId !== q.listingRevisionId ||
             book?.currentRevisionId !== q.catalogRevisionId ||
-            policy.code !== q.policyCode ||
+            policy._id !== q.policyCode ||
             destination?.version !== q.destinationAddressVersion ||
             origin?.version !== q.originAddressVersion
           )
@@ -247,14 +247,13 @@ export class QuotesService {
   async prepareOrder(tx: Tx, buyerId: string, body: Wire['CreateDirectOrder']) {
     const q = await this.ownQuote(tx, body.quoteId, buyerId);
     const policy = await this.policy(tx);
-    await this.lockAddresses(tx, [q.originAddressId, q.destinationAddressId]);
     const before = await this.listing(tx, q.listingId);
     const { l, book } = await this.lockListing(tx, before);
-    const origin = await tx.memberAddress.findUnique({
-      where: { id: q.originAddressId },
+    const origin = await tx.c.member_addresses.findOne({
+      _id: q.originAddressId,
     });
-    const destination = await tx.memberAddress.findUnique({
-      where: { id: q.destinationAddressId },
+    const destination = await tx.c.member_addresses.findOne({
+      _id: q.destinationAddressId,
     });
     if (
       q.version !== body.expectedQuoteVersion ||
@@ -263,7 +262,7 @@ export class QuotesService {
       l.currentRevisionId !== body.expectedListingRevisionId ||
       l.currentRevisionId !== q.listingRevisionId ||
       book?.currentRevisionId !== q.catalogRevisionId ||
-      policy.code !== q.policyCode ||
+      policy._id !== q.policyCode ||
       origin?.version !== q.originAddressVersion ||
       destination?.version !== q.destinationAddressVersion ||
       origin.ownerId !== q.sellerId ||
@@ -272,16 +271,16 @@ export class QuotesService {
       destination.serviceAreaCode !== q.serviceAreaCode
     )
       throw conflict();
-    if (!(await this.available(tx, l.id))) throw invalidState();
+    if (!(await this.available(tx, l._id))) throw invalidState();
     return { q, l, book: book!, origin, destination };
   }
   private project(
-    q: SaleQuote,
+    q: SaleQuoteDoc,
     now: Date,
     assessment: Wire['SaleQuote']['assessment'],
   ): Wire['SaleQuote'] {
     return {
-      id: q.id,
+      id: q._id,
       version: 1,
       listingId: q.listingId,
       listingVersion: q.listingVersion,

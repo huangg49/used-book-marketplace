@@ -1,96 +1,401 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, type TopupIntent } from '../../generated/prisma/client.js';
-import type { Tx } from '../commands/command.service.js';
+import { randomUUID } from 'node:crypto';
+import type {
+  LedgerJournalDoc,
+  TopupIntentDoc,
+  WalletAccountDoc,
+} from '../../database/mongo/documents.js';
+import {
+  CAPITAL_ACCOUNT_ID,
+  CLEARING_ACCOUNT_ID,
+  LEDGER_SEQUENCE_COUNTER,
+  OPENING_CAPITAL,
+  OPENING_JOURNAL_ID,
+} from '../../database/mongo/migrations/0002-reference-data.js';
+import type { Tx } from '../../database/mongo/transaction.js';
 import { DomainError, invalidState } from '../commands/domain-error.js';
+import { checkOrder } from '../orders/order-invariants.js';
 
-export const CLEARING_ID = '00000000-0000-4000-8000-000000000002';
+export const CLEARING_ID = CLEARING_ACCOUNT_ID;
+
+// Balance is always derived from immutable entries (never a stored column).
+export async function balanceOf(tx: Tx, accountId: string) {
+  const [row] = await tx.c.ledger_entries
+    .aggregate<{ amount: number }>([
+      { $match: { accountId } },
+      {
+        $group: {
+          _id: null,
+          amount: { $sum: { $subtract: ['$debit', '$credit'] } },
+        },
+      },
+    ])
+    .toArray();
+  return row?.amount ?? 0;
+}
+
+// Commit-time replacement for latlai_check_journal and
+// latlai_check_funding_journal_v1 (deferred constraint triggers).
+export async function checkJournal(tx: Tx, journalId: string) {
+  const j = await tx.c.ledger_journals.findOne({ _id: journalId });
+  if (!j) throw new Error('Journal missing');
+  const entries = await tx.c.ledger_entries.find({ journalId }).toArray();
+  if (
+    entries.length !== 2 ||
+    entries.reduce((sum, e) => sum + e.debit - e.credit, 0) !== 0
+  )
+    throw new Error('Journal must have two balanced entries');
+  const accounts = await tx.c.wallet_accounts
+    .find({ _id: { $in: entries.map((e) => e.accountId) } })
+    .toArray();
+  if (accounts.length !== entries.length)
+    throw new Error('Ledger entry references a missing account');
+  const account = (id: string) => accounts.find((a) => a._id === id);
+  if (j.type === 'OpeningCapital') {
+    if (
+      j._id !== OPENING_JOURNAL_ID ||
+      !entries.some(
+        (e) =>
+          e.accountId === CAPITAL_ACCOUNT_ID && e.credit === OPENING_CAPITAL,
+      ) ||
+      !entries.some(
+        (e) =>
+          e.accountId === CLEARING_ACCOUNT_ID && e.debit === OPENING_CAPITAL,
+      )
+    )
+      throw new Error('Invalid finite simulator capital');
+  } else if (j.type === 'Topup') {
+    const t = await tx.c.topup_intents.findOne({ _id: j.topupId! });
+    const e = await tx.c.simulated_payment_events.findOne({ _id: j.eventId! });
+    if (
+      !t ||
+      !e ||
+      !['Succeeded', 'ReviewRequired'].includes(t.state) ||
+      e.intentId !== t._id ||
+      e.recipientId !== t.ownerId ||
+      e.amount !== t.amount ||
+      e.currency !== t.currency ||
+      e.outcome !== 'Succeeded' ||
+      e.disposition !== 'Applied' ||
+      e.receivedAt.getTime() !== j.postedAt.getTime() ||
+      !entries.some(
+        (x) =>
+          account(x.accountId)?.ownerId === t.ownerId &&
+          account(x.accountId)?.purpose === 'UserAvailable' &&
+          x.debit === t.amount,
+      ) ||
+      !entries.some(
+        (x) => x.accountId === CLEARING_ACCOUNT_ID && x.credit === t.amount,
+      )
+    )
+      throw new Error('Topup journal source mismatch');
+  } else {
+    const o = await tx.c.direct_orders.findOne({ _id: j.orderId! });
+    const q = o && (await tx.c.sale_quotes.findOne({ _id: o.quoteId }));
+    const payment = j.type === 'OrderPayment';
+    if (
+      !o ||
+      !q ||
+      !entries.some(
+        (x) =>
+          account(x.accountId)?.ownerId === o.buyerId &&
+          account(x.accountId)?.purpose === 'UserAvailable' &&
+          (payment ? x.credit : x.debit) === q.buyerTotal,
+      ) ||
+      !entries.some(
+        (x) =>
+          account(x.accountId)?.orderId === o._id &&
+          account(x.accountId)?.purpose === 'OrderHold' &&
+          (payment ? x.debit : x.credit) === q.buyerTotal,
+      )
+    )
+      throw new Error('Order journal source mismatch');
+    tx.check(`order:${o._id}`, () => checkOrder(tx, o._id));
+  }
+  for (const e of entries)
+    if (
+      account(e.accountId)?.purpose !== 'SimulatorCapital' &&
+      (await balanceOf(tx, e.accountId)) < 0
+    )
+      throw new Error('Wallet balance cannot be negative');
+}
+
 @Injectable()
 export class LedgerService {
+  // Read-only reconciliation inside one snapshot transaction: every journal,
+  // topup and order is checked by the commit-time rules, and simulated
+  // capital must be conserved. Equal global debit/credit alone is not enough.
   async reconcile(tx: Tx) {
-    // Caller uses one RepeatableRead snapshot. Constraint functions also validate
-    // business sources; equal global debit/credit alone is not a reconciliation.
-    await tx.$queryRaw`SELECT latlai_check_journal(id)::text FROM ledger_journals`;
-    await tx.$queryRaw`SELECT latlai_check_topup(id)::text FROM topup_intents`;
-    await tx.$queryRaw`SELECT latlai_check_order(id)::text FROM direct_orders`;
-    const [row] = await tx.$queryRaw<
-      { debit: bigint; credit: bigint; available: bigint; held: bigint }[]
-    >`
-      SELECT COALESCE(sum(e.debit),0)::bigint AS debit, COALESCE(sum(e.credit),0)::bigint AS credit,
-        COALESCE(sum(CASE WHEN a.purpose='UserAvailable' THEN e.debit-e.credit ELSE 0 END),0)::bigint AS available,
-        COALESCE(sum(CASE WHEN a.purpose='OrderHold' THEN e.debit-e.credit ELSE 0 END),0)::bigint AS held
-      FROM ledger_entries e JOIN wallet_accounts a ON a.id=e.account_id`;
-    const sourceRemaining = await this.balance(tx, CLEARING_ID);
+    // Walk references in both directions. Starting only from journals misses
+    // orphan entries that still affect balances, even when the global totals
+    // balance. Do this before $unwind can silently discard a missing account.
+    for (const [field, target, message] of [
+      [
+        'journalId',
+        'ledger_journals',
+        'Ledger entry references a missing journal',
+      ],
+      [
+        'accountId',
+        'wallet_accounts',
+        'Ledger entry references a missing account',
+      ],
+    ] as const) {
+      const missing = await tx.c.ledger_entries
+        .aggregate([
+          {
+            $lookup: {
+              from: target,
+              localField: field,
+              foreignField: '_id',
+              as: 'reference',
+            },
+          },
+          { $match: { reference: { $size: 0 } } },
+          { $limit: 1 },
+          { $project: { _id: 1 } },
+        ])
+        .toArray();
+      if (missing.length) throw new Error(message);
+    }
+    // Unused accounts also need real owners; a journal traversal never sees them.
+    for (const [purpose, field, target, message] of [
+      [
+        'UserAvailable',
+        'ownerId',
+        'users',
+        'Wallet account references a missing owner',
+      ],
+      [
+        'OrderHold',
+        'orderId',
+        'direct_orders',
+        'Wallet account references a missing Order',
+      ],
+    ] as const) {
+      const missing = await tx.c.wallet_accounts
+        .aggregate([
+          { $match: { purpose } },
+          {
+            $lookup: {
+              from: target,
+              localField: field,
+              foreignField: '_id',
+              as: 'reference',
+            },
+          },
+          { $match: { reference: { $size: 0 } } },
+          { $limit: 1 },
+          { $project: { _id: 1 } },
+        ])
+        .toArray();
+      if (missing.length) throw new Error(message);
+    }
+    if (!(await tx.c.ledger_journals.findOne({ _id: OPENING_JOURNAL_ID })))
+      throw new Error('Opening capital journal missing');
+    for (const j of await tx.c.ledger_journals.find({}).toArray())
+      await checkJournal(tx, j._id);
+    for (const t of await tx.c.topup_intents.find({}).toArray())
+      await checkTopupRecord(tx, t._id);
+    for (const o of await tx.c.direct_orders.find({}).toArray())
+      await checkOrder(tx, o._id);
+    const [row] = await tx.c.ledger_entries
+      .aggregate<{
+        debit: number;
+        credit: number;
+        available: number;
+        held: number;
+      }>([
+        {
+          $lookup: {
+            from: 'wallet_accounts',
+            localField: 'accountId',
+            foreignField: '_id',
+            as: 'a',
+          },
+        },
+        { $unwind: '$a' },
+        {
+          $group: {
+            _id: null,
+            debit: { $sum: '$debit' },
+            credit: { $sum: '$credit' },
+            available: {
+              $sum: {
+                $cond: [
+                  { $eq: ['$a.purpose', 'UserAvailable'] },
+                  { $subtract: ['$debit', '$credit'] },
+                  0,
+                ],
+              },
+            },
+            held: {
+              $sum: {
+                $cond: [
+                  { $eq: ['$a.purpose', 'OrderHold'] },
+                  { $subtract: ['$debit', '$credit'] },
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      ])
+      .toArray();
+    const sourceRemaining = await balanceOf(tx, CLEARING_ID);
     if (
       row.debit !== row.credit ||
-      sourceRemaining + Number(row.available) + Number(row.held) !== 100000000
+      sourceRemaining + row.available + row.held !== OPENING_CAPITAL
     )
       throw new Error('Simulated capital conservation mismatch');
     return {
       demoOnly: true,
       balanced: row.debit === row.credit,
-      totalDebit: Number(row.debit),
-      totalCredit: Number(row.credit),
-      memberAvailable: Number(row.available),
-      transactionHeld: Number(row.held),
+      totalDebit: row.debit,
+      totalCredit: row.credit,
+      memberAvailable: row.available,
+      transactionHeld: row.held,
       sourceRemaining,
-      journals: await tx.ledgerJournal.count(),
-      topups: await tx.topupIntent.count(),
+      journals: await tx.c.ledger_journals.countDocuments(),
+      topups: await tx.c.topup_intents.countDocuments(),
     };
   }
-  async balance(tx: Tx, accountId: string) {
-    const [row] = await tx.$queryRaw<
-      { amount: bigint }[]
-    >`SELECT COALESCE(sum(debit-credit),0)::bigint AS amount FROM ledger_entries WHERE account_id=${accountId}::uuid`;
-    return Number(row.amount);
+  balance(tx: Tx, accountId: string) {
+    return balanceOf(tx, accountId);
   }
   async available(tx: Tx, ownerId: string) {
-    const account = await tx.walletAccount.findUnique({ where: { ownerId } });
-    return account ? this.balance(tx, account.id) : 0;
+    const account = await tx.c.wallet_accounts.findOne({ ownerId });
+    return account ? balanceOf(tx, account._id) : 0;
   }
   async held(tx: Tx, buyerId: string) {
-    const [row] = await tx.$queryRaw<{ amount: bigint }[]>`
-      SELECT COALESCE(sum(e.debit-e.credit),0)::bigint AS amount FROM ledger_entries e
-      JOIN wallet_accounts a ON a.id=e.account_id JOIN direct_orders o ON o.id=a.order_id
-      WHERE a.purpose='OrderHold' AND o.buyer_id=${buyerId}::uuid`;
-    return Number(row.amount);
+    const [row] = await tx.c.direct_orders
+      .aggregate<{ amount: number }>([
+        { $match: { buyerId } },
+        {
+          $lookup: {
+            from: 'wallet_accounts',
+            localField: '_id',
+            foreignField: 'orderId',
+            as: 'a',
+          },
+        },
+        { $unwind: '$a' },
+        { $match: { 'a.purpose': 'OrderHold' } },
+        {
+          $lookup: {
+            from: 'ledger_entries',
+            localField: 'a._id',
+            foreignField: 'accountId',
+            as: 'e',
+          },
+        },
+        { $unwind: '$e' },
+        {
+          $group: {
+            _id: null,
+            amount: { $sum: { $subtract: ['$e.debit', '$e.credit'] } },
+          },
+        },
+      ])
+      .toArray();
+    return row?.amount ?? 0;
   }
   async orderFunds(tx: Tx, orderId: string) {
-    const account = await tx.walletAccount.findUnique({ where: { orderId } });
-    const refund = await tx.ledgerJournal.findUnique({
-      where: { orderId_type: { orderId, type: 'OrderRefund' } },
-      include: { entries: true },
+    const account = await tx.c.wallet_accounts.findOne({ orderId });
+    const refund = await tx.c.ledger_journals.findOne({
+      orderId,
+      type: 'OrderRefund',
     });
+    const refundEntry = refund
+      ? await tx.c.ledger_entries.findOne({
+          journalId: refund._id,
+          debit: { $gt: 0 },
+        })
+      : null;
     return {
-      held: account ? await this.balance(tx, account.id) : 0,
-      refunded: refund
-        ? Number(refund.entries.find((e) => e.debit > 0n)!.debit)
-        : 0,
+      held: account ? await balanceOf(tx, account._id) : 0,
+      refunded: refundEntry?.debit ?? 0,
     };
+  }
+  // Accounts are append-only: created once when absent. Callers hold the
+  // owning user's lock, so two creators of the same account never race.
+  private async account(
+    tx: Tx,
+    key: { ownerId: string } | { orderId: string },
+  ): Promise<WalletAccountDoc> {
+    const existing = await tx.c.wallet_accounts.findOne(key);
+    if (existing) return existing;
+    const account: WalletAccountDoc = {
+      _id: randomUUID(),
+      ownerId: 'ownerId' in key ? key.ownerId : null,
+      orderId: 'orderId' in key ? key.orderId : null,
+      purpose: 'ownerId' in key ? 'UserAvailable' : 'OrderHold',
+      currency: 'VND',
+    };
+    await tx.c.wallet_accounts.insertOne(account);
+    return account;
+  }
+  // The ledger_entry_lock equivalent: every posting locks its accounts first,
+  // in id order, before reading balances.
+  async lockAccounts(tx: Tx, ids: string[]) {
+    for (const id of [...new Set(ids)].sort())
+      await tx.c.account_locks.updateOne(
+        { _id: id },
+        { $inc: { lockSeq: 1 } },
+        { upsert: true },
+      );
   }
   // Caller locks participants and the Order first. A hold account has a typed Order
   // owner, never a second available account or a mutable balance column.
   async lockOrder(tx: Tx, buyerId: string, orderId: string, create: boolean) {
-    const available = create
-      ? await tx.walletAccount.upsert({
-          where: { ownerId: buyerId },
-          update: {},
-          create: { ownerId: buyerId, purpose: 'UserAvailable' },
-        })
-      : await tx.walletAccount.findUniqueOrThrow({
-          where: { ownerId: buyerId },
-        });
-    const hold = create
-      ? await tx.walletAccount.upsert({
-          where: { orderId },
-          update: {},
-          create: { orderId, purpose: 'OrderHold' },
-        })
-      : await tx.walletAccount.findUniqueOrThrow({ where: { orderId } });
-    const ids = [available.id, hold.id].sort();
-    await tx.$queryRaw(
-      Prisma.sql`SELECT id FROM wallet_accounts WHERE id IN (${Prisma.join(ids.map((id) => Prisma.sql`${id}::uuid`))}) ORDER BY id FOR UPDATE`,
+    const find = async (key: { ownerId: string } | { orderId: string }) => {
+      if (create) return this.account(tx, key);
+      const found = await tx.c.wallet_accounts.findOne(key);
+      if (!found) throw new Error('Wallet account missing');
+      return found;
+    };
+    const available = await find({ ownerId: buyerId });
+    const hold = await find({ orderId });
+    await this.lockAccounts(tx, [available._id, hold._id]);
+    return { available: available._id, hold: hold._id };
+  }
+  private async journal(
+    tx: Tx,
+    fields: Omit<LedgerJournalDoc, '_id' | 'sequence'>,
+    from: string,
+    to: string,
+    amount: number,
+  ) {
+    // Posting order: accounts are locked, so the counter order is commit order.
+    const counter = await tx.c.counters.findOneAndUpdate(
+      { _id: LEDGER_SEQUENCE_COUNTER },
+      { $inc: { value: 1 } },
+      { returnDocument: 'after' },
     );
-    return { available: available.id, hold: hold.id };
+    const journal: LedgerJournalDoc = {
+      _id: randomUUID(),
+      sequence: counter!.value,
+      ...fields,
+    };
+    await tx.c.ledger_journals.insertOne(journal);
+    await tx.c.ledger_entries.insertMany([
+      {
+        _id: `${journal._id}:${from}`,
+        journalId: journal._id,
+        accountId: from,
+        debit: 0,
+        credit: amount,
+      },
+      {
+        _id: `${journal._id}:${to}`,
+        journalId: journal._id,
+        accountId: to,
+        debit: amount,
+        credit: 0,
+      },
+    ]);
+    tx.check(`journal:${journal._id}`, () => checkJournal(tx, journal._id));
+    return journal;
   }
   async postOrder(
     tx: Tx,
@@ -111,37 +416,30 @@ export class LedgerService {
         'Số dư khả dụng không đủ để thanh toán toàn bộ đơn. Bạn có thể nạp riêng; hạn thanh toán không thay đổi.',
       );
     }
-    return tx.ledgerJournal.create({
-      data: {
+    return this.journal(
+      tx,
+      {
         type: refund ? 'OrderRefund' : 'OrderPayment',
+        topupId: null,
+        eventId: null,
         orderId,
         receiptId,
         postedAt: now,
-        entries: {
-          create: [
-            { accountId: from, debit: 0n, credit: BigInt(amount) },
-            { accountId: to, debit: BigInt(amount), credit: 0n },
-          ],
-        },
       },
-    });
+      from,
+      to,
+      amount,
+    );
   }
   // Caller owns participant and intent locks; this never opens a nested transaction.
   async lockFunding(tx: Tx, ownerId: string) {
-    const account = await tx.walletAccount.upsert({
-      where: { ownerId },
-      update: {},
-      create: { ownerId, purpose: 'UserAvailable' },
-    });
-    const ids = [CLEARING_ID, account.id].sort();
-    await tx.$queryRaw(
-      Prisma.sql`SELECT id FROM wallet_accounts WHERE id IN (${Prisma.join(ids.map((id) => Prisma.sql`${id}::uuid`))}) ORDER BY id FOR UPDATE`,
-    );
-    return account.id;
+    const account = await this.account(tx, { ownerId });
+    await this.lockAccounts(tx, [CLEARING_ID, account._id]);
+    return account._id;
   }
   async postTopup(
     tx: Tx,
-    intent: TopupIntent,
+    intent: TopupIntentDoc,
     accountId: string,
     eventId: string,
     now: Date,
@@ -152,23 +450,73 @@ export class LedgerService {
         'UNAVAILABLE',
         'Nguồn tiền mô phỏng không đủ; sự kiện chưa được ghi nhận. Cần đối soát nguồn trước khi thử lại.',
       );
-    return tx.ledgerJournal.create({
-      data: {
+    return this.journal(
+      tx,
+      {
         type: 'Topup',
-        topupId: intent.id,
+        topupId: intent._id,
         eventId,
+        orderId: null,
+        receiptId: null,
         postedAt: now,
-        entries: {
-          create: [
-            {
-              accountId: CLEARING_ID,
-              debit: 0n,
-              credit: BigInt(intent.amount),
-            },
-            { accountId, debit: BigInt(intent.amount), credit: 0n },
-          ],
-        },
       },
-    });
+      CLEARING_ID,
+      accountId,
+      intent.amount,
+    );
   }
+}
+
+// Commit-time replacement for latlai_check_topup.
+export async function checkTopupRecord(tx: Tx, topupId: string) {
+  const t = await tx.c.topup_intents.findOne({ _id: topupId });
+  if (!t) throw new Error('Topup missing');
+  const journal = await tx.c.ledger_journals.findOne({ topupId });
+  const events = await tx.c.simulated_payment_events
+    .find({ intentId: topupId })
+    .toArray();
+  const chain = async (receiptId: string) => {
+    const r = await tx.c.mutation_receipts.findOne({ _id: receiptId });
+    const a = r && (await tx.c.audit_events.findOne({ receiptId }));
+    const o = a && (await tx.c.outbox_events.findOne({ auditId: a._id }));
+    return { r, a, o };
+  };
+  const creation = await tx.c.mutation_receipts.findOne({
+    topupId,
+    operation: 'createTopupIntent',
+    actorId: t.ownerId,
+    resultVersion: 1,
+  });
+  const created = creation ? await chain(creation._id) : null;
+  let bad =
+    (t.state === 'Succeeded' && !journal) ||
+    (['Pending', 'Processing', 'Failed'].includes(t.state) && !!journal) ||
+    t.version !== 1 + events.length ||
+    !created?.o ||
+    created.a?.topupId !== topupId;
+  for (const e of events) {
+    const { r, a, o } = await chain(e.receiptId);
+    if (
+      r?.topupId !== topupId ||
+      r.operation !== 'emitSimulatedTopupEvent' ||
+      a?.topupId !== topupId ||
+      !o
+    )
+      bad = true;
+    if (
+      e.disposition !== 'ReviewRequired' &&
+      (e.recipientId !== t.ownerId ||
+        e.amount !== t.amount ||
+        e.currency !== t.currency ||
+        e.occurredAt < t.createdAt ||
+        e.occurredAt.getTime() > e.receivedAt.getTime() + 300_000)
+    )
+      bad = true;
+  }
+  if (
+    events.some((e) => e.disposition === 'ReviewRequired') &&
+    t.state !== 'ReviewRequired'
+  )
+    bad = true;
+  if (bad) throw new Error('Topup event/ledger/receipt mismatch');
 }

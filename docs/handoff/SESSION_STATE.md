@@ -1,4 +1,306 @@
-# Điểm lưu để tiếp tục — 29/09/2026
+# Điểm lưu để tiếp tục — 30/09/2026
+
+## PR tích hợp và cutover local — điểm mới nhất
+
+- Nhánh `codex/mongodb-team-handoff`, PR[#5](https://github.com/huangg49/used-book-marketplace/pull/5)
+  đã push/mở theo quyền chủ dự án; CI đang chạy, chưa merge tại điểm lưu này.
+  [Nhóm Windows](TEAM_WINDOWS.md) đã có hướng dẫn theo phần việc, Flutter vẫn scaffold.
+- [Cutover local](LOCAL_MONGO_CUTOVER_2026_09_30.md) đã thực hiện: dùng bản Mongo57117
+  có toàn bộ bản ghi PG và thay đổi QA mới. Không reimport đè, không dual-write.
+  Root/API `.env` đã cập nhật riêng; compose project trỏ volume hiện có. Nguồn PG5433
+  giữ nguyên. Nhóm dùng DB riêng, không lấy config/backup của máy này.
+- Backup ngoài repo `C:/Users/ASUS/Documents/LaiLai/backups/cutover-2026-09-30/` gồm
+  PG custom dump, Mongo archive/users/roles, config và14 objects của7media. Có hash;
+  PG list/Mongo dryRun PASS, chưa full restore drill. Chứa secret, không in/commit.
+- Integrity0 lỗi, ledger cân bằng100M,3 checksum khớp, doctor/readiness/storage PASS.
+  API3000 PID31696/media30464/order5068 dùng .env trực tiếp, Metro8081 giữ nguyên.
+  Worker order0failed; native đọc sách cũ200. Không cần launcher acceptance nữa.
+  Từ nay DB57117 là local chính, không dùng làm nơi QA cleanup tùy tiện.
+- Bước tiếp: theo CI PR5, sửa lỗi có evidence nếu có, merge khi các check cần thiết
+  đạt. Không lặp suite local/native đã đóng. Human review chưa có người, vẫn mở;
+  chưa deploy ngoài máy. Không quay .env/phiên về backup sau khi đã có ghi mới.
+
+## Bàn giao nhóm / tích hợp MongoDB — đang thực hiện
+
+- Chủ dự án đã chốt: bàn giao cho nhóm trong6 ngày; chuyển toàn bộ dữ liệu hiện có
+  trên máy này; mỗi thành viên Windows có Docker/Android Studio, dùng MongoDB riêng.
+  Nhóm chưa phân công web/admin/Flutter; không có teammate đang sửa hoặc reviewer.
+  **Đã cho phép push, tạo PR và merge khi kiểm tra cần thiết đạt** cho gói này.
+  Chưa có deploy ngoài máy; human review vẫn ghi chưa thực hiện.
+- Nhánh `codex/mongodb-team-handoff` từ `5fedc53`; fetch xác nhận main `b49cc52` là
+  ancestor, không có PR mở. Bao gồm teammate Mongo + hai P1 fix + import/live/native
+  evidence + cleanup. [Hướng dẫn nhóm Windows](TEAM_WINDOWS.md) nêu rõ Flutter chỉ
+  scaffold và member web hiện là Expo web, không tự thêm app/phân công tính năng.
+- Đối chiếu read-only nguồn PG5433 với acceptance57117: cùng4 users/3 listings/7media;
+  Mongo có thêm1 address book/address/identity và2 receipt/audit (39 so với37).
+  Chưa chuyển `.env` hoặc ghi đè bản nào. Cần so nội dung/snapshot và bảo toàn thay
+  đổi Mongo trước cutover; không import đè acceptance hoặc quay app về PG cũ.
+- PostgreSQL nguồn đã khởi động lại để đọc; không đụng PG5432 dự án khác. Script so
+  sánh `.tmp/handoff-compare.mjs` chỉ đọc; không commit dữ liệu/config riêng.
+- Bước tiếp: push PR tích hợp, xem CI; xử lý lỗi CI nếu có trước merge. Đồng thời
+  sao lưu nguồn và acceptance ngoài Git, xác định bản Mongo đầy đủ để chuyển cấu hình.
+
+## Dọn phần PostgreSQL an toàn — điểm mới nhất
+
+- Chủ dự án đã cho dọn phần an toàn, giữ thành phần cần chạy/import. Nhánh
+  `codex/postgres-cleanup`, base `3aabadc`; commit subject
+  `chore: exclude legacy Prisma output and align MongoDB setup docs` (SHA xem log).
+- Ignore `apps/api/src/generated/prisma/`, exclude khỏi typecheck/build; rebuild
+  đã loại `dist/generated` (~3,89MB). 52 file generated local/4.573.831 byte vẫn còn
+  nguyên, không xóa. API/media-worker/order-worker và CLI/import module vẫn có trong dist.
+- Bỏ pendingMongoPort=[]/comment cũ; sửa ENV_HANDOFF và admin-web README sang MongoDB
+  runtime/QA; thêm prisma/README đánh dấu lịch sử chỉ đọc. Giữ schema/17 SQL migrations,
+  pg dependency/import/tests/CI và PostgreSQL containers/volumes, không đổi `.env`.
+- Thực chạy: API lint/typecheck/build, contract check, formatter, diff-check PASS;
+  discovery E2E trước/sau cùng24 file. Đây là kiểm discovery, không chạy493E2E hoặc
+  native lại. Không sửa nghiệp vụ/UI/API contract, không restart process đang chạy.
+- Không push/merge/deploy. Gói cleanup đã hoàn tất; không mở thêm native theo yêu cầu
+  mới nhất. Các gate human review/CI remote/cutover ở mục trước vẫn chưa được đóng.
+
+## Rà phần PostgreSQL còn lại — yêu cầu mới nhất
+
+- Chủ dự án chuyển ưu tiên sang kiểm code PostgreSQL còn sót; dừng mở thêm ca native.
+  Nhánh `codex/postgres-cleanup-audit`, base `bb5be67`; chỉ rà source/config/artifact,
+  chưa sửa runtime hoặc xóa file, không push/merge. Không chạy lại suite.
+- API/worker dùng MongoService; không còn Prisma dependency trong manifest/lockfile.
+  `pg` chỉ được import bởi CLI import và test import (kể cả type import). Giữ
+  schema.prisma/17 SQL migrations, importer/test và legacy-postgres profile theo
+  ADR0027/runbook, không xóa như code chết khi cutover chính còn mở.
+- Chưa sạch hoàn toàn: local `src/generated/prisma` untracked có52 file/~4,57MB;
+  `dist/generated` có156 file/~3,89MB. tsconfig.build include toàn src, chưa exclude
+  generated; .gitignore cũng chưa ignore lại thư mục này. Không được add/xóa nhầm.
+- Tài liệu hiện hành còn sai: ENV_HANDOFF dùng PostgreSQL/DATABASE_URL cho setup/E2E;
+  admin-web README hướng dẫn TEST_DATABASE_URL dù fixture đã yêu cầu MONGO_TEST_URL.
+  vitest.config.e2e còn pendingMongoPort=[] và comment chuyển đổi đã hết hiệu lực.
+- Bước dọn phù hợp: exclude/ignore generated cũ mà bảo toàn local; đồng bộ hai hướng
+  dẫn env/test và bỏ cấu hình chuyển đổi rỗng. `pg` vẫn là dependency phục vụ import;
+  chỉ tách khỏi gói deploy khi tách công cụ import rõ ràng. Không xóa DB/volume/migration.
+
+## Native finalize/submit lost ACK — điểm mới nhất
+
+- Nhánh **codex/native-finalize-submit-retry**, base **307341e**; commit subject
+  `docs(native): verify finalize and submit lost-ack recovery` (SHA xem log).
+  Chỉ evidence/tài liệu; không sửa runtime/UI, không push/merge/deploy.
+  `apps/api/src/generated/` cũ vẫn untracked, giữ nguyên.
+- [N13 thực chạy và bằng chứng](NATIVE_ACK_2026_09_30.md): Android15/API35 x86_64,
+  APK Q01 + Metro; Mongo `_test`/Supabase bucket mới hoàn toàn, API và Sharp thật.
+  Finalize4 request/cut200 cùng key/body→Processing; retry đọc trạng thái, không
+  upload/finalize thêm, worker→Ready. Submit2 cut200 +1 retry cùng key/body, save1
+  lần; PendingReview/version3, revision/thời điểm gửi/receipt giữ nguyên. PASS.
+- Assertion effect/hash/snapshot và integrity sweep PASS0 lỗi; contract/diff PASS.
+  Không phát hiện lỗi sản phẩm mới. Pilot401/token harness và giả định số retry
+  sai đã xử lý trong harness; không chạy lại full API/RN suite vì không đổi code.
+- Đầu lượt các process/container đã dừng. Đã mở lại emulator, Mongo acceptance57117
+  (dữ liệu còn) và QA57017. API3000 PID6424, Metro8081 PID1928 đang chạy; PG5433,
+  QA PG55434/failover57021–23 chưa khởi động lại. Không chạy cleanup trên acceptance.
+- QA3002/worker/proxy3102 đã dừng; đúng3 object keys, bucket/DB QA đã dọn. Khôi phục
+  backup app tạo trong lượt này; refresh200 và UI nháp N18 cũ/1ảnh. App ở Sách của
+  tôi, reverse3000/8081 bình thường. Log/secret/backup `.tmp/native-ack/` ignored;
+  không restore backup lần nữa vì sẽ rollback phiên sau refresh.
+- **Bước tiếp:** không lặp finalize/submit vừa đóng. Q01 còn ca giết app giữa upload/
+  phục hồi từ server; nếu làm dùng DB/bucket mới và backup mới. N21 cần quan sát
+  audio TalkBack; ARM/iOS và review người thật cần điều kiện tương ứng. CI remote/
+  push/merge/cutover chưa được tự mở; không mở Delivered/settlement.
+
+## Native pricing / N20 — điểm mới nhất
+
+- Nhánh **codex/native-pricing-acceptance**, base **56d01dc**; commit subject
+  `docs(native): record pricing and review acceptance at large text` (SHA xem log).
+  Chỉ tài liệu/4 ảnh; không sửa runtime, không push/merge/deploy. Giữ generated cũ.
+- Android 15/Pixel_7 x86_64, APK Q01 có sẵn, Metro8081/API3000/Mongo acceptance57117:
+  chữ OS130% + bàn phím số docked; giá sai hiện lỗi/scroll đúng; hai giá hợp lệ,
+  nơi gửi dài, review/checkbox/footer đọc và thao tác được. Gửi thiếu thông tin
+  quay về lỗi tình trạng; không gửi mutation HTTP. Đã bỏ thay đổi nháp qua confirm.
+  [Bằng chứng và phạm vi](Q01_NATIVE_COMPLETION_2026_09_29.md#n20--giá-nơi-gửi-và-review-trên-mongodb).
+- Không phát hiện lỗi sản phẩm mới trong nhóm này. Log đầy đủ xác định cảnh báo
+  `Error: undefined` trước đó thuộc **Cannot connect to Expo CLI**; khớp
+  `expo/src/async-require/hmrUtils.native.ts`. Chưa xác định nguyên nhân lần mất
+  kết nối; không coi đó là lỗi Mongo/upload, không sửa dependency để che warning.
+- Đã trả font_scale=1.0, handwriting override=null; app ở kệ. API/Metro/reverse
+  giữ nguyên. Không chạy worker cleanup trên acceptance copy có media keys nguồn.
+  Kiểm tra gói này: thao tác native và `git diff --check`; không chạy lại bộ API/RN
+  vì không đổi code, không gán kết quả cũ thành mới.
+- **Bước tiếp:** N13 native lost-ack finalize/submit chưa kiểm là phần tự động hóa
+  độc lập còn mở: dùng DB/bucket QA riêng, không dùng acceptance copy để cleanup.
+  N20 đã thêm nhóm pricing/origin/review, không tuyên bố full native PASS. N21 cần
+  quan sát TalkBack có audio; ARM/iOS và review người thật vẫn mở. Không lặp nhóm
+  vừa đóng nếu source không đổi; không mở Delivered/settlement hoặc tự cutover.
+
+## Live packaging MongoDB — điểm mới nhất
+
+- Nhánh **codex/mongodb-live-packaging**, base **616d1d8**; commit subject
+  `test(mongo): verify live packaging recovery and fix QA cleanup` (SHA xem log).
+  Không push/merge/deploy, không sửa runtime/UI/migration. Giữ generated cũ untracked.
+- Thêm lane opt-in packaging vào live-media runner: real HTTP + Mongo app user +
+  Supabase QA bucket riêng + Sharp. JPEG/PNG/WebP/private permissions/replay PASS;
+  PNG fault sau remote original/trước DB ack→Pending→retry Ready, không ghi đè;
+  Order/hold230k/commitment không đổi, sweep0 lỗi. Lượt cuối PASS7/ok=true.
+  [Cách chạy và giới hạn](../refactor/MONGODB_LIVE_MEDIA_2026_09_29.md).
+- Hai pilot fail do harness so observation `serverTime` của Order rồi wallet;
+  đã sửa, không phải lỗi nghiệp vụ. Sửa cleanup harness: emptyBucket bất đồng bộ
+  khiến delete chạy sớm; nay remove các key đúng run rồi delete bucket. Các DB/
+  bucket QA đã dọn, kể cả bucket pilot còn lại. Không đụng bucket/DB nguồn.
+- Kiểm tra: packaging live PASS7, oxlint/prettier/contract/diff PASS. Lane listing
+  chạy lại một lần do sửa cleanup chung: PASS7/ok=true, dọn DB/bucket thành công. Không lặp
+  full493E2E/build/native vì runtime/UI không đổi. API3000/Metro8081/DB57117 như cũ.
+- **Bước tiếp:** đóng ma trận native còn thiếu (N20/N21) theo ca cụ thể; TalkBack
+  có cài nhưng chưa có kênh audio quan sát nên chưa nghiệm thu. Cảnh báo native
+  `Error: undefined` vẫn chưa rõ nguồn; cần tái hiện có stack trước khi sửa.
+  Human review tiền/quyền cần người độc lập; CI remote/cutover chính cần quyền
+  tương ứng, không tự suy từ yêu cầu tiếp tục. Không mở Delivered/settlement.
+
+## Android upload trên MongoDB — điểm mới nhất
+
+- Nhánh **codex/mongodb-native-upload**, base **1452927**. Commit gói có subject
+  `docs(mongo): record Android upload and lost-ack acceptance`; xem `git log -1`
+  để lấy SHA. Chỉ evidence/tài liệu, không sửa runtime/UI/contract, không push/merge.
+  `apps/api/src/generated/` cũ vẫn untracked, không add/xóa.
+- [Báo cáo và ảnh](../refactor/MONGODB_NATIVE_UPLOAD_2026_09_29.md): Pixel_7/API35,
+  APK Q01 có sẵn + Metro8081 preview=0, API/worker thật, DB Mongo QA UUID `_test`
+  và bucket Supabase private **riêng**. Không copy media keys nguồn vào QA.
+- PASS trong phạm vi: hủy picker không tạo media; native PNG/WebP/JPEG→Ready;
+  lost ACK sau content PUT200 năm lần, retry cùng key/body→đúng1 effect/receipt/job;
+  lưu/mở lại3 ảnh; preview503→ẩn ảnh + retry phục hồi; cold start giữ phiên/3 ảnh,
+  không đứng splash. Sweep0 lỗi,3 media/3 links/3 finished jobs. N14 không phủ
+  hết hạn URL/giết app giữa upload; log có một `Error: undefined` chưa rõ nguồn.
+- Đã khôi phục files/shared_prefs của app, reverse3000→3000/8081→8081; API3000
+  refresh200 và mở sách cũ thành công. API3002/worker QA/proxy3102 đã dừng;
+  bucket/DB QA đã xóa (cleanup lần2 thành công). API3000/Metro và bản sao57117
+  giữ như trước; PG5433, `.env`, bucket nguồn không đổi. Không chạy worker cleanup
+  trên DB acceptance vì media keys còn trỏ bucket nguồn.
+- Harness/log/private config/backup nằm `.tmp/mongodb-native/` ignored; backup
+  chứa session, không in/commit. Evidence đã lọc secret trong docs/refactor/evidence.
+  Không chạy lại493E2E/build/lint cho gói chỉ evidence; contract/diff/JSON check
+  là kiểm tra bổ sung, không đổi evidence runtime của ec4a9c9 và43Mongo của1f5d636.
+- **Tiếp theo:** N21 TalkBack thật (cần dịch vụ/audio để quan sát, không thay bằng
+  UI hierarchy); N20 còn tổ hợp chưa kiểm. Nếu bị chặn môi trường, làm live packaging
+  trên DB/bucket QA riêng. Human review tiền/quyền, CI remote và quyết định cutover
+  chính vẫn mở; không tự push/merge hoặc mở nghiệp vụ Delivered/settlement.
+
+## Live media MongoDB — điểm mới nhất
+
+- Nhánh **codex/mongodb-live-media**, base **1f5d636** (gói import Order đã commit).
+  Commit gói live: subject `test(mongo): add isolated live Supabase media acceptance`.
+  Không push/merge/deploy. Untracked Prisma generated cũ giữ nguyên.
+- Thêm script opt-in `apps/api/scripts/mongo-live-media.mjs`: Nest HTTP/Mongo app
+  user/MediaStorage/Sharp thật, tự tạo DB UUID `_test` và bucket Supabase private QA
+  riêng; không dùng keys/bucket dữ liệu nguồn. [Báo cáo](../refactor/MONGODB_LIVE_MEDIA_2026_09_29.md).
+- JPEG/PNG/WebP upload/replay/finalize→1job→Ready→signedWebP/hash original PASS;
+  người ngoài404/anonymous denied; lưu/mở draft PASS; linked retention + unlinked
+  cleanup xóa object/budget release PASS; sweep không lỗi. PASS7 checkpoints,
+  bucket/DB QA đã dọn. Script lint/prettier/diff-check PASS. Không sửa runtime/UI.
+- Gate import Order trước đó PASS43Mongo, source PG snapshot giữ nguyên; commit
+  **1f5d636**. Hai gói mới chưa chạy CI remote. 493E2E/native của ec4a9c9 vẫn là
+  evidence runtime gần nhất, không báo như đã chạy lại trong lượt chỉ thêm test.
+- **Tiếp theo:** native upload trên Mongo với bucket QA riêng (không lấy bản sao
+  media cũ để chạy cleanup), tiếp tục Q01/N20/N21 theo acceptance. Live packaging
+  nếu xét gate pipeline đó vẫn chưa chạy. Human review cần người độc lập, chưa ký.
+  Không tự push/merge/cutover DB chính. API3000/Metro8081/bản sao57117 và PG5433 giữ
+  cấu hình lượt trước; script test không thay runtime này. Log ignored
+  `.tmp/mongodb-fixes/live-media.log`; không in private config trong thư mục đó.
+
+## Import Order MongoDB — điểm mới nhất
+
+- Nhánh **codex/mongodb-order-import**, base **ec4a9c9**; commit subject
+  `test(mongo): verify PostgreSQL import of funded shipment obligations`.
+  Không push/merge; `apps/api/src/generated/` cũ vẫn giữ untracked.
+- Bổ sung fixture PostgreSQL QA có PendingSellerConfirmation2, InTransit4,
+  ResolutionPending5 sau pickup xung đột; mỗi đơn giữ230.000đ/sách Reserved.
+  17 SQL migration/trigger nguyên vẹn; commit từng giai đoạn, không sửa DB dev.
+- Import count/hash/invariant PASS; đối soát bằng app user PASS; nguồn99M +
+  available310k + holds690k =100M. Snapshot PG không đổi sau import. Ledger/label
+  write trái phép bị trigger23514. [Báo cáo](../refactor/MONGODB_ORDER_IMPORT_2026_09_29.md).
+- Thực chạy: targeted3/3, **full Mongo43/43**, API lint/typecheck/build,
+  contract check/routes PASS. Không lặp493E2E/native do chỉ đổi fixture/test.
+- Gate ba trạng thái import này đã kiểm. Bước tiếp: live upload/Sharp/worker trên
+  Mongo QA với bucket riêng, không cleanup bucket nguồn từ bản sao acceptance.
+  Full native, human review và CI remote cho commit mới còn mở. Runtime/secret
+  launcher của lượt trước giữ nguyên như mục dưới.
+
+## Sửa MongoDB sau review — điểm mới nhất
+
+- Nhánh **codex/mongodb-integrity-fixes**, base review **f39abb8** trên teammate
+  **e860856**; remote main **b49cc52**. Commit gói này: xem `git log -1` với subject
+  `fix(mongo): validate ledger references and preserve pickup evidence`.
+  **Chưa push/merge/deploy**. Giữ untracked `apps/api/src/generated/` cũ, không add/xóa.
+- Đã sửa **R1/P1** đối soát bỏ lọt entry thiếu journal/account và account thiếu
+  owner/Order; **R2/P1** sweep báo sai lịch sử ảnh sau pickup. Service vẫn chặn
+  tạo/upload mới ở InTransit. Không đổi migration, OpenAPI0.21.0, UI hoặc lock order.
+  [Báo cáo sửa + native + giới hạn](../refactor/MONGODB_INTEGRITY_FIXES_2026_09_29.md).
+- PASS: contract check/routes, API lint/typecheck/build, **33 unit, 42 Mongo**
+  (có PostgreSQL import + failover), **493 E2E / 24 file / 647,71s** một lượt.
+  Regression đã chạy đỏ trước sửa rồi xanh; source test giữ 5 ledger cases và
+  assertions sweep Preparing/InTransit/ResolutionPending + upload409 sau pickup.
+- Import **bản sao** PostgreSQL5433 → Mongo57117 `latlai_acceptance_20260929`:
+  0 lệch count/hash, 0 lỗi invariant, vốn100M bảo toàn. Nguồn có 4 users/21 sessions/
+  3 listings/7 media, **không có Order/topup**; không coi là proof paid/InTransit import.
+  Nguồn đọc read-only, `.env`, password, SQL/volume cũ giữ nguyên.
+- Native Pixel_7/API35/x86_64 dùng APK Q01 hiện có + Metro mới: session import
+  refresh200; thêm/lưu/mở lại địa chỉ; đọc JPEG Supabase cũ; chọn catalog và lưu draft;
+  force-stop/mở lại giữ session và dữ liệu. Không gặp splash đứng ở lượt này.
+  Chưa test upload mới, full native/TalkBack/ARM/iOS, không gọi đó human review.
+- Runtime giữ: API3000 trỏ **bản sao Mongo**, Metro8081 preview=0, adb reverse3000/8081;
+  Compose `latlai-mongo-acceptance` port57117/volume riêng, PG gốc5433, QA Mongo57017/
+  failover57021–23/PG55434. Font1.0, handwriting trả lại `null`. Không chạy media/order
+  worker bản sao, vì keys media cùng trỏ Supabase nguồn; không cleanup bucket từ clone.
+- Log/launcher/private config ở `.tmp/mongodb-fixes/` ignored. Node24.19 qua PATH
+  riêng process; `node .tmp/mongodb-fixes/acceptance.mjs api` khi3000 trống, mode
+  `check` chỉ đọc. Config có secret **không in/commit**. Không chạy lại import vào
+  đích đã nhận ghi. Refresh emulator đã rotate trên Mongo; trở lại PG cần login lại.
+- **Bước tiếp cụ thể:** bổ sung PostgreSQL import fixture có paid/InTransit/
+  ResolutionPending và chuỗi hold/receipt/evidence đúng trigger trên QA; tiếp đó kiểm
+  upload/worker với storage QA riêng, đóng native gates còn mở. Human review tiền/quyền
+  và CI GitHub cho commit mới còn thiếu; không tự merge/push/cutover chính.
+
+## Review MongoDB của Codex — mới hơn điểm lưu teammate bên dưới
+
+Phần dưới là lịch sử tại f39abb8; hai phát hiện đã được sửa theo điểm lưu mới ở trên.
+
+- Theo yêu cầu chủ dự án: fetch origin, kiểm working tree trước khi chuyển nhánh;
+  fast-forward `codex/mongodb-refactor` tới **e860856**. Remote main tại **b49cc52**,
+  đã nằm trong lịch sử nhánh MongoDB. Không pull/merge đè local, không merge/push main.
+- Nhánh lưu kết quả **codex/mongodb-review**, base e860856; commit điểm lưu xem
+  `git log -1`. Chỉ thêm báo cáo/patch tái hiện, source sản phẩm không sửa.
+  [Báo cáo review](../refactor/MONGODB_REVIEW_2026_09_29.md).
+- Hai lỗi đã tái hiện trên MongoDB QA có auth/quyền app thật: **R1/P1** ledger entry
+  không có journal vẫn tăng số dư và qua `mongo:check`/reconcile; **R2/P1** sau pickup
+  hợp lệ → InTransit, sweep báo sai `Packaging intent/receipt mismatch`. Chưa sửa.
+  Patch assertion đỏ đính kèm báo cáo, chưa áp vào test suite thường.
+- Đã chạy PASS: frozen install; contract:check; contract:routes (**0.21.0**, 73/15);
+  API lint/typecheck/build, 33 unit, 37 Mongo (bao gồm import PostgreSQL và failover).
+  API E2E toàn bộ **493/493 PASS**, 24 file, 651,64 s trên database review riêng.
+  Hai assertion bổ sung R1/R2 vẫn FAIL; suite xanh không phủ nhận các phát hiện này.
+- Docker Desktop đã khởi động; QA Mongo 57017/failover 57021–57023, PostgreSQL test
+  55434. `.env`/DB dev/Supabase không đổi, không import dữ liệu thật. Các DB review
+  đều `_test`. Thư mục Prisma generated cũ hiện untracked sau khi nhánh bỏ ignore;
+  giữ nguyên, không add/commit/delete. Log ở `.tmp/mongodb-review/` (ignored).
+- Chưa chạy lại browser/native và chưa xác minh GitHub CI trong lượt này. Review AI
+  không đóng human-review gate. Bước tiếp theo: sửa R1/R2 + regression tests, review
+  diff sửa rồi mới xét cutover và native acceptance. Báo cáo DONE của teammate bên
+  dưới không thay kết quả review hoặc đóng các gate này.
+
+## Lane MongoDB — điểm lưu teammate trước review
+
+- Theo [MONGODB_PLAN](../refactor/MONGODB_PLAN.md). Nhánh tạo từ main `b49cc52`.
+  Chưa push/merge. **Runtime giờ chỉ dùng MongoDB** (MIG-06 cutover mã nguồn); không ghi kép.
+- **MIG-01 DONE**: driver `mongodb@7.6.0`, runner/lock/clock trong
+  `apps/api/src/database/mongo/transaction.ts`, probe `apps/api/test/mongo`.
+  [Báo cáo](../refactor/MIG01_TRANSACTION_PROBE.md), [ADR 0027](../adr/0027-mongodb-persistence-protocol.md).
+- **MIG-02 DONE**: [bản đồ 44 model/backstop](../refactor/MIG02_MODEL_MAP.md), migration
+  0001–0003, role `latlai_app`/`latlai_migrator`, `MongoService`, cursor v2.
+- **MIG-03 DONE** [auth/executor](../refactor/MIG03_AUTH_COMMAND.md); **MIG-04 DONE**
+  [catalog/listing/media/địa chỉ](../refactor/MIG04_CATALOG_LISTING_MEDIA.md).
+- **MIG-05 DONE**: [báo cáo](../refactor/MIG05_QUOTE_ORDER_WALLET_SHIPMENT.md). Mọi suite
+  E2E F2h đã port, số test mỗi file bằng bản PostgreSQL; sửa 1 lỗi (cửa sổ upload ảnh
+  đóng gói theo giờ quyết định Order). Thiết kế tiền/quyền: chủ dự án duyệt, chưa có review độc lập.
+- **MIG-06 PARTIAL**: [báo cáo](../refactor/MIG06_DATA_CUTOVER.md), [runbook](../refactor/MIG06_CUTOVER_RUNBOOK.md).
+  Gỡ Prisma/PostgreSQL khỏi runtime, importer + `mongo:check`, setup/doctor/CI/tài liệu
+  chuyển sang Mongo, clone sạch PASS, browser suites PASS, E2E toàn bộ 493/493 PASS một lượt, suite Mongo 37/37, unit 33/33.
+  **Còn mở**: import dữ liệu dev/thật của chủ dự án (`.env` và volume PostgreSQL 5433
+  chưa đổi — API nhánh này cần thêm biến `MONGODB_*`/`MONGO_ROOT_PASSWORD` theo runbook
+  bước 2 mới chạy được), CI trên GitHub, native acceptance.
+- QA: `pnpm infra:mongo:test:up` (57017, tmpfs), `pnpm infra:mongo:failover:up`
+  (57021-57023); `MONGO_TEST_URL` như START_HERE §5. Không dùng cho `.env` app.
 
 ## Đọc ngay — sau merge ca16a22, lượt Codex trên Pixel_7
 

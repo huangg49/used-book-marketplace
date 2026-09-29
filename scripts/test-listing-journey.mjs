@@ -307,7 +307,9 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   assert.equal(await p.locator('img[src="x"]').count(), 0);
   assert.equal(await p.evaluate(() => window.__listingInjection), undefined);
   assert.equal(
-    await fixture.db.listingRevision.count({ where: { listingId: id } }),
+    await fixture.db
+      .collection("listing_revisions")
+      .countDocuments({ listingId: id }),
     2,
   );
   console.log(

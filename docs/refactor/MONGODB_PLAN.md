@@ -9,9 +9,16 @@ MongoDB. Chủ dự án cho push/merge checkpoint Q01 rồi mở nhánh refactor
 - Baseline PostgreSQL: `1e08969dfeb8c712a286cb2c365bdf7614906f3b` trên main,
   squash merge [PR #2](https://github.com/huangg49/used-book-marketplace/pull/2).
 - Nhánh cũ `codex/q01-native-completion` giữ commit `522191f` trên remote.
-- Nhánh mới `codex/mongodb-refactor` bắt đầu từ baseline trên. Chưa đổi runtime,
-  dependency, database hoặc API. MIG-00 đã lập inventory và điều kiện kiểm chứng;
-  MIG-01 chưa triển khai. Chưa có MongoDB test PASS.
+- Nhánh mới `codex/mongodb-refactor` bắt đầu từ baseline trên (tạo lại từ main
+  `b49cc52` ngày 29/09/2026). MIG-00 đã lập inventory và điều kiện kiểm chứng.
+  MIG-01 DONE: probe giao dịch 17/17 PASS, [báo cáo](MIG01_TRANSACTION_PROBE.md),
+  [ADR 0027](../adr/0027-mongodb-persistence-protocol.md). MIG-02 DONE:
+  [bản đồ mô hình/backstop](MIG02_MODEL_MAP.md), migration có version, role tối thiểu,
+  cursor v2, CI Mongo riêng. MIG-03 DONE: [auth + executor](MIG03_AUTH_COMMAND.md).
+  MIG-04 DONE: [catalog/listing/media/địa chỉ](MIG04_CATALOG_LISTING_MEDIA.md). MIG-05 DONE:
+  [quote/order/ví/vận chuyển](MIG05_QUOTE_ORDER_WALLET_SHIPMENT.md). MIG-06 cutover mã nguồn
+  DONE, [báo cáo](MIG06_DATA_CUTOVER.md): runtime chỉ còn MongoDB; còn mở cutover dữ liệu
+  thật của chủ dự án, CI trên GitHub và native acceptance.
 - Phạm vi chức năng giữ F2h/OpenAPI 0.20.0. Không mở Delivered/inspection/settlement.
   SRS1.1 và ADR hiện có vẫn là nguồn hành vi; các cơ chế PostgreSQL cần ADR thay thế
   có đối chiếu, không xóa lịch sử để coi như chưa có yêu cầu.
@@ -73,12 +80,12 @@ không gom mọi lỗi thành retry vô hạn.
 | Gói | Trạng thái | Kết quả và điều kiện mở gói sau |
 |---|---|---|
 | MIG-00 baseline | DONE phạm vi khảo sát ban đầu | Main đã merge, branch mới, inventory có thể đối chiếu, không đổi runtime |
-| MIG-01 transaction probe | NEXT | Mongo replica set QA riêng; driver/version pinned; probe auth-before-replay, cùng key, khác body, tranh chấp, rollback, unknown commit; ghi bằng chứng và ADR lựa chọn persistence |
-| MIG-02 mô hình + hạ tầng | LOCKED sau MIG-01 | Map đủ 44 model và từng SQL backstop; versioned collection/index/validator migrations, bootstrap least privilege, clock/ID/cursor/precision; CI Mongo riêng |
-| MIG-03 auth + command | LOCKED sau MIG-02 | Login/rotation/revoke/rate limit, eligibility và command executor dùng Mongo, negative/race/replay tương đương; không chuyển API chính trước khi đạt |
-| MIG-04 catalog/listing/media/address | LOCKED sau MIG-03 | Port quyền/immutable snapshot/worker/review/public reads; HTTP contracts, browser và native với storage thật theo mức ảnh hưởng |
-| MIG-05 quote/order/wallet/shipment | LOCKED sau MIG-04 và review tiền/quyền | Full hold/commitment/ledger/worker/event/review parity đến F2h; không thêm nghiệp vụ mới |
-| MIG-06 dữ liệu + cutover | LOCKED sau MIG-05 | Dry-run import bất biến, đếm/hash/ledger reconciliation, secret-safe evidence, fresh-clone setup, CI đầy đủ và native acceptance; kế hoạch rollback và switch có chủ đích |
+| MIG-01 transaction probe | DONE, [báo cáo](MIG01_TRANSACTION_PROBE.md) | Mongo replica set QA riêng; driver/version pinned; probe auth-before-replay, cùng key, khác body, tranh chấp, rollback, unknown commit; ghi bằng chứng và ADR lựa chọn persistence |
+| MIG-02 mô hình + hạ tầng | DONE, [bản đồ](MIG02_MODEL_MAP.md) | Map đủ 44 model và từng SQL backstop; versioned collection/index/validator migrations, bootstrap least privilege, clock/ID/cursor/precision; CI Mongo riêng |
+| MIG-03 auth + command | DONE, [báo cáo](MIG03_AUTH_COMMAND.md) | Login/rotation/revoke/rate limit, eligibility và command executor dùng Mongo, negative/race/replay tương đương; không chuyển API chính trước khi đạt |
+| MIG-04 catalog/listing/media/address | DONE, [báo cáo](MIG04_CATALOG_LISTING_MEDIA.md) | Port quyền/immutable snapshot/worker/review/public reads; HTTP contracts, browser và native với storage thật theo mức ảnh hưởng |
+| MIG-05 quote/order/wallet/shipment | DONE, [báo cáo](MIG05_QUOTE_ORDER_WALLET_SHIPMENT.md); [thiết kế](MIG05_MONEY_PERMISSION_DESIGN.md) chủ dự án duyệt 29/09 | Full hold/commitment/ledger/worker/event/review parity đến F2h; không thêm nghiệp vụ mới |
+| MIG-06 dữ liệu + cutover | PARTIAL, [báo cáo](MIG06_DATA_CUTOVER.md): R1/R2 sửa, bản sao local/Android smoke PASS; [fixture paid/InTransit/review](MONGODB_ORDER_IMPORT_2026_09_29.md) và [live listing upload/worker QA](MONGODB_LIVE_MEDIA_2026_09_29.md) PASS. [Android upload/lost-ack QA](MONGODB_NATIVE_UPLOAD_2026_09_29.md) PASS trong phạm vi. Còn full native, human review, CI commit mới và cutover chính | Dry-run import bất biến, đếm/hash/ledger reconciliation, secret-safe evidence, fresh-clone setup, CI đầy đủ và native acceptance; kế hoạch rollback và switch có chủ đích |
 
 Mỗi gói commit rõ phạm vi, cập nhật SESSION_STATE. Nhánh mới là lane migration;
 không merge implementation dở vào main. Việc chủ dự án duyệt PR #2 không là

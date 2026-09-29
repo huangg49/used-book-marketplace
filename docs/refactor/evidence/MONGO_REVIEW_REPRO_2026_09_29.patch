@@ -1,0 +1,53 @@
+diff --git a/apps/api/test/carrier-pickup.e2e-spec.ts b/apps/api/test/carrier-pickup.e2e-spec.ts
+index b4cfe2d..bdaf9e8 100644
+--- a/apps/api/test/carrier-pickup.e2e-spec.ts
++++ b/apps/api/test/carrier-pickup.e2e-spec.ts
+@@ -1,4 +1,5 @@
+ import sharp from 'sharp';
++import { checkIntegrity } from '../src/integrity/integrity.js';
+ import { createHmac, randomBytes, randomUUID } from 'node:crypto';
+ import { Test } from '@nestjs/testing';
+ import { ConfigService } from '@nestjs/config';
+@@ -693,7 +694,11 @@ describe('Carrier pickup: real MongoDB and HTTP', () => {
+     const before = await db.c.direct_shipments.findOne({
+       _id: event.shipmentId,
+     });
++    const beforeIntegrity = await app.get(MongoService).tx((tx) => checkIntegrity(tx));
++    expect(beforeIntegrity.failures).toEqual([]);
+     const r = await emit(event).expect(200);
++    const afterIntegrity = await app.get(MongoService).tx((tx) => checkIntegrity(tx));
++    expect(afterIntegrity.failures).toEqual([]);
+     validates('CarrierEventReceipt', r.body);
+     expect(r.body).toMatchObject({
+       entityType: 'CarrierEvent',
+diff --git a/apps/api/test/mongo/review-orphan.mongo-spec.ts b/apps/api/test/mongo/review-orphan.mongo-spec.ts
+new file mode 100644
+index 0000000..133c6c4
+--- /dev/null
++++ b/apps/api/test/mongo/review-orphan.mongo-spec.ts
+@@ -0,0 +1,25 @@
++import { randomUUID } from 'node:crypto';
++import { MongoClient } from 'mongodb';
++import { prepareDatabase, testUrl } from './harness.js';
++import { runTransaction } from '../../src/database/mongo/transaction.js';
++import { checkIntegrity } from '../../src/integrity/integrity.js';
++import { LedgerService, CLEARING_ID } from '../../src/modules/wallet/ledger.service.js';
++
++it('review: reconciliation rejects ledger entries without their journal', async () => {
++  const { appUrl } = await prepareDatabase(testUrl('latlai_review_orphan_test'));
++  const client = await new MongoClient(appUrl).connect();
++  try {
++    const ownerId = randomUUID(), accountId = randomUUID(), journalId = randomUUID();
++    const db = client.db(), now = new Date();
++    await db.collection('users').insertOne({ _id: ownerId as never, emailNormalized: `${ownerId}@review.test`, passwordHash: 'test-only', displayName: 'Review fixture', status: 'ACTIVE', emailVerifiedAt: now, createdAt: now, updatedAt: now, roles: [{ role: 'MEMBER', grantedAt: now }], lockSeq: 0 });
++    await db.collection('wallet_accounts').insertOne({ _id: accountId as never, ownerId, orderId: null, purpose: 'UserAvailable', currency: 'VND' });
++    await db.collection('ledger_entries').insertMany([
++      { _id: `${journalId}:${CLEARING_ID}` as never, journalId, accountId: CLEARING_ID, debit: 0, credit: 1000 },
++      { _id: `${journalId}:${accountId}` as never, journalId, accountId, debit: 1000, credit: 0 },
++    ]);
++    const result = await runTransaction(client, db, async tx => ({ report: await checkIntegrity(tx), available: await new LedgerService().available(tx, ownerId) }));
++    console.log('REVIEW_ORPHAN', JSON.stringify(result));
++    expect(result.available).toBe(1000);
++    expect(result.report.failures.length).toBeGreaterThan(0);
++  } finally { await client.close(); }
++});

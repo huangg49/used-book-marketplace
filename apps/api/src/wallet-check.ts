@@ -1,20 +1,18 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
-import { DatabaseService } from './database/database.service.js';
+import { MongoService } from './database/mongo/mongo.service.js';
 import { LedgerService } from './modules/wallet/ledger.service.js';
 
+// Read-only reconciliation in one snapshot transaction; nothing is written, so
+// the transaction simply commits empty.
 const app = await NestFactory.createApplicationContext(AppModule, {
   logger: ['error', 'warn'],
 });
 try {
-  const result = await app.get(DatabaseService).$transaction(
-    async (tx) => {
-      await tx.$executeRaw`SET TRANSACTION READ ONLY`;
-      return app.get(LedgerService).reconcile(tx);
-    },
-    { isolationLevel: 'RepeatableRead', timeout: 30000 },
-  );
+  const result = await app
+    .get(MongoService)
+    .tx((tx) => app.get(LedgerService).reconcile(tx), { maxRetryMs: 30000 });
   console.log(JSON.stringify({ event: 'walletReconciliation', ...result }));
   if (!result.balanced) process.exitCode = 1;
 } catch {

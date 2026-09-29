@@ -1,14 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '../../generated/prisma/client.js';
+import { randomUUID } from 'node:crypto';
+import type { Collections } from '../../database/mongo/collections.js';
+import type {
+  DirectOrderDoc,
+  Json,
+  WorkflowContextDoc,
+} from '../../database/mongo/documents.js';
+import type { Tx } from '../../database/mongo/transaction.js';
 import {
-  CommandService,
+  MongoCommandService,
   member,
   requireActive,
   type Actor,
   type CommandContext,
   type OrderChange,
-  type Tx,
-} from '../commands/command.service.js';
+} from '../commands/mongo-command.service.js';
 import {
   conflict,
   DomainError,
@@ -23,11 +29,37 @@ import { ReservationsService } from '../reservations/reservations.service.js';
 import { MediaStorage } from '../media/media-storage.js';
 import { OrderClock } from './order-clock.js';
 import { LedgerService } from '../wallet/ledger.service.js';
+import { checkOrder } from './order-invariants.js';
+
+// Order with the parts every command/read needs (the Prisma include).
+export async function loadOrder(c: Collections, id: string) {
+  const o = await c.direct_orders.findOne({ _id: id.toLowerCase() });
+  if (!o) return null;
+  const context = await c.workflow_contexts.findOne({ orderId: o._id });
+  const items = context
+    ? await c.workflow_items.find({ contextId: context._id }).toArray()
+    : [];
+  const agreement = context
+    ? await c.agreement_snapshots.findOne({ _id: context._id })
+    : null;
+  const quote = (await c.sale_quotes.findOne({ _id: o.quoteId }))!;
+  const preparation = await c.order_preparations.findOne({ _id: o._id });
+  const pickupReview = preparation
+    ? await c.pickup_reviews.findOne({ orderId: o._id })
+    : null;
+  return {
+    ...o,
+    context: context ? { ...context, items, agreement } : null,
+    quote,
+    preparation: preparation ? { ...preparation, pickupReview } : null,
+  };
+}
+export type Order = NonNullable<Awaited<ReturnType<typeof loadOrder>>>;
 
 @Injectable()
 export class OrdersService {
   constructor(
-    private readonly commands: CommandService,
+    private readonly commands: MongoCommandService,
     private readonly quotes: QuotesService,
     private readonly listings: ListingCommitmentPolicy,
     private readonly reservations: ReservationsService,
@@ -37,19 +69,15 @@ export class OrdersService {
     private readonly ledger: LedgerService,
   ) {}
   private async quote(tx: Tx, id: string, buyerId: string) {
-    const q = await tx.saleQuote.findFirst({ where: { id, buyerId } });
+    const q = await tx.c.sale_quotes.findOne({
+      _id: id.toLowerCase(),
+      buyerId,
+    });
     if (!q) throw notFound();
     return q;
   }
   private async order(tx: Tx, id: string) {
-    const o = await tx.directOrder.findUnique({
-      where: { id },
-      include: {
-        context: { include: { items: true, agreement: true } },
-        quote: true,
-        preparation: { include: { pickupReview: true } },
-      },
-    });
+    const o = await loadOrder(tx.c, id);
     if (!o) throw notFound();
     return o;
   }
@@ -62,8 +90,8 @@ export class OrdersService {
   private async decision(tx: Tx, auth?: Actor) {
     const now = await this.clock.now(tx);
     if (auth) {
-      const session = await tx.authSession.findUnique({
-        where: { id: auth.sessionId },
+      const session = await tx.c.auth_sessions.findOne({
+        _id: auth.sessionId,
       });
       if (!session || session.revokedAt || session.expiresAt <= now)
         throw new DomainError(
@@ -73,6 +101,28 @@ export class OrdersService {
         );
     }
     return now;
+  }
+  // Order transitions: one version step from the expected state
+  // (latlai_guard_order_transition write protocol) plus the commit-time check.
+  async transition(
+    tx: Tx,
+    o: DirectOrderDoc,
+    set: Partial<DirectOrderDoc>,
+  ): Promise<DirectOrderDoc> {
+    const next = await tx.c.direct_orders.findOneAndUpdate(
+      { _id: o._id, version: o.version, state: o.state },
+      { $set: set, $inc: { version: 1 } },
+      { returnDocument: 'after' },
+    );
+    if (!next) throw conflict();
+    tx.check(`order:${o._id}`, () => checkOrder(tx, o._id));
+    return next;
+  }
+  private async closeContext(tx: Tx, context: WorkflowContextDoc) {
+    await tx.c.workflow_contexts.updateOne(
+      { _id: context._id, ownershipPhase: 'Holding', version: context.version },
+      { $set: { ownershipPhase: 'Closed' }, $inc: { version: 1 } },
+    );
   }
   create(context: CommandContext, body: Wire['CreateDirectOrder']) {
     return this.commands.runOrder(
@@ -86,18 +136,19 @@ export class OrdersService {
         ],
         authorize: async (tx, actor) => {
           member(actor);
-          return this.quote(tx, body.quoteId, actor.id);
+          return this.quote(tx, body.quoteId, actor._id);
         },
         mutate: async (tx, actor, _before, receiptId) => {
           requireActive(actor);
           const { q, l, book, origin, destination } =
-            await this.quotes.prepareOrder(tx, actor.id, body);
-          if (q.sellerId === actor.id) throw invalidState();
+            await this.quotes.prepareOrder(tx, actor._id, body);
+          if (q.sellerId === actor._id) throw invalidState();
           const now = await this.decision(tx, context.auth);
           if (now >= q.expiresAt) throw conflict();
           if (
-            (await tx.directOrder.count({
-              where: { buyerId: actor.id, state: 'AwaitingPayment' },
+            (await tx.c.direct_orders.countDocuments({
+              buyerId: actor._id,
+              state: 'AwaitingPayment',
             })) >= 2
           )
             throw new DomainError(
@@ -106,29 +157,41 @@ export class OrdersService {
               'Bạn đang có hai đơn chờ thanh toán. Hãy hoàn tất hoặc hủy đơn trước.',
             );
           const paymentDeadline = new Date(now.getTime() + 15 * 60 * 1000);
-          const o = await tx.directOrder.create({
-            data: {
-              buyerId: actor.id,
-              sellerId: q.sellerId,
-              quoteId: q.id,
-              state: 'AwaitingPayment',
-              createdAt: now,
-              paymentDeadline,
-            },
-          });
-          const c = await tx.workflowContext.create({
-            data: { kind: 'Order', orderId: o.id, ownershipPhase: 'Holding' },
-          });
+          const o: DirectOrderDoc = {
+            _id: randomUUID(),
+            buyerId: actor._id,
+            sellerId: q.sellerId,
+            quoteId: q._id,
+            version: 1,
+            state: 'AwaitingPayment',
+            createdAt: now,
+            paymentDeadline,
+            closedAt: null,
+            paidAt: null,
+            sellerConfirmationDeadline: null,
+            cancellationRequestedAt: null,
+            cancellationReason: null,
+            lockSeq: 0,
+          };
+          await tx.c.direct_orders.insertOne(o);
+          const c: WorkflowContextDoc = {
+            _id: randomUUID(),
+            kind: 'Order',
+            orderId: o._id,
+            version: 1,
+            ownershipPhase: 'Holding',
+            lockSeq: 0,
+          };
+          await tx.c.workflow_contexts.insertOne(c);
           const r = l.currentRevision!,
             b = book.currentRevision!;
-          const media = await tx.revisionMedia.findMany({
-            where: { revisionId: r.id },
-            orderBy: { position: 'asc' },
-          });
+          const media = await tx.c.revision_media
+            .find({ revisionId: r._id }, { sort: { position: 1 } })
+            .toArray();
           const item: Wire['OrderItemSnapshot'] = {
-            listingId: l.id,
-            listingRevisionId: r.id,
-            catalogRevisionId: b.id,
+            listingId: l._id,
+            listingRevisionId: r._id,
+            catalogRevisionId: b._id,
             metadata: {
               title: b.title,
               authors: b.authors,
@@ -151,11 +214,11 @@ export class OrdersService {
             mediaIds: media.map((m) => m.mediaId),
           };
           const contact = (a: typeof origin): Wire['OrderContact'] => ({
-            recipientName: a.recipientName,
-            phone: a.phone,
+            recipientName: a!.recipientName,
+            phone: a!.phone,
             serviceAreaCode: 'HCM-DEMO-v1',
-            localityCode: a.localityCode,
-            detail: a.detail,
+            localityCode: a!.localityCode,
+            detail: a!.detail,
           });
           const agreement: Wire['DirectOrderAgreement'] = {
             schemaVersion: 1,
@@ -180,35 +243,38 @@ export class OrdersService {
           };
           this.input.body('OrderItemSnapshot', item);
           this.input.body('DirectOrderAgreement', agreement);
-          await tx.workflowItem.create({
-            data: {
-              contextId: c.id,
-              listingId: l.id,
-              listingRevisionId: r.id,
-              catalogRevisionId: b.id,
-              snapshot: item,
-            },
+          // Snapshots are built only from the sources locked above
+          // (latlai_guard_order_snapshot) and are append-only afterwards.
+          await tx.c.workflow_items.insertOne({
+            _id: `${c._id}:${l._id}`,
+            contextId: c._id,
+            listingId: l._id,
+            listingRevisionId: r._id,
+            catalogRevisionId: b._id,
+            snapshot: item as unknown as Json,
           });
-          await tx.agreementSnapshot.create({
-            data: { contextId: c.id, snapshot: agreement },
+          await tx.c.agreement_snapshots.insertOne({
+            _id: c._id,
+            snapshot: agreement as unknown as Json,
           });
-          await this.reservations.acquire(tx, c.id, l.id, now, receiptId);
+          await this.reservations.acquire(tx, c._id, l._id, now, receiptId);
           const listing = await this.listings.project(
             tx,
-            l.id,
+            l._id,
             l.version,
             'Available',
             'Reserved',
           );
+          tx.check(`order:${o._id}`, () => checkOrder(tx, o._id));
           return {
             entityType: 'Order',
-            entityId: o.id,
-            contextId: c.id,
+            entityId: o._id,
+            contextId: c._id,
             version: 1,
             state: 'AwaitingPayment',
             decidedAt: now,
             paymentDeadline,
-            affectedListings: [{ id: l.id, version: listing.version }],
+            affectedListings: [{ id: l._id, version: listing.version }],
             event: 'ReservationCreated',
           };
         },
@@ -240,51 +306,45 @@ export class OrdersService {
         throw invalidState();
       state = 'InTransit';
     } else if (outcome === 'ReviewRequired') {
-      if (!(await tx.carrierPickupReview.findUnique({ where: { orderId } }))) {
-        const applied = await tx.carrierPickupEvent.count({
-          where: { orderId, outcome: 'Applied' },
+      if (!(await tx.c.carrier_pickup_reviews.findOne({ orderId: o._id }))) {
+        const applied = await tx.c.carrier_pickup_events.countDocuments({
+          orderId: o._id,
+          outcome: 'Applied',
         });
-        await tx.carrierPickupReview.create({
-          data: {
-            orderId,
-            eventId,
-            openedAt: now,
-            reason: applied ? 'ConflictingPickup' : 'LatePickup',
-          },
+        await tx.c.carrier_pickup_reviews.insertOne({
+          _id: randomUUID(),
+          orderId: o._id,
+          eventId,
+          openedAt: now,
+          reason: applied ? 'ConflictingPickup' : 'LatePickup',
         });
       }
       state = 'ResolutionPending';
     }
     const next =
-      state === o.state
-        ? o
-        : await tx.directOrder.update({
-            where: { id: orderId },
-            data: { state, version: { increment: 1 } },
-          });
+      state === o.state ? o : await this.transition(tx, o, { state });
+    tx.check(`order:${o._id}`, () => checkOrder(tx, o._id));
     return { orderState: state, orderVersion: next.version };
   }
   private async locked(tx: Tx, id: string) {
     const before = await this.order(tx, id);
     const listing = await this.listings.lock(tx, before.quote.listingId);
-    await tx.$queryRaw`SELECT id FROM workflow_contexts WHERE id=${before.context!.id}::uuid FOR UPDATE`;
-    await tx.$queryRaw`SELECT id FROM direct_orders WHERE id=${id}::uuid FOR UPDATE`;
+    await tx.lock('workflow_contexts', [before.context!._id]);
+    await tx.lock('direct_orders', [before._id]);
     const o = await this.order(tx, id);
     const item = o.context!.items[0];
-    await tx.$queryRaw`SELECT id FROM listing_revisions WHERE id=${item.listingRevisionId}::uuid FOR SHARE`;
-    const media = await tx.revisionMedia.findMany({
-      where: { revisionId: item.listingRevisionId },
-      orderBy: { mediaId: 'asc' },
+    // PostgreSQL took FOR SHARE on the frozen revision and its photos; the
+    // revision is locked here and Ready photos of a frozen revision are immutable.
+    await tx.lock('listing_revisions', [item.listingRevisionId]);
+    const found = await tx.c.exclusive_commitments.findOne({
+      currentContextId: o.context!._id,
     });
-    if (media.length)
-      await tx.$queryRaw(
-        Prisma.sql`SELECT id FROM listing_media WHERE id IN (${Prisma.join(media.map((m) => Prisma.sql`${m.mediaId}::uuid`))}) ORDER BY id FOR SHARE`,
-      );
-    const commitment = await tx.exclusiveCommitment.findFirstOrThrow({
-      where: { currentContextId: o.context!.id },
-    });
-    await tx.$queryRaw`SELECT id FROM exclusive_commitments WHERE id=${commitment.id}::uuid FOR UPDATE`;
-    return { o, listing, commitment };
+    if (!found) throw new Error('Order commitment missing');
+    await tx.lock('exclusive_commitments', [found._id]);
+    const commitment = (await tx.c.exclusive_commitments.findOne({
+      _id: found._id,
+    }))!;
+    return { o, listing: { ...listing, id: listing._id }, commitment };
   }
   private async close(
     tx: Tx,
@@ -307,21 +367,18 @@ export class OrdersService {
       throw conflict();
     await this.reservations.closeUnpaid(
       tx,
-      o.context!.id,
-      commitment.id,
+      o.context!._id,
+      commitment._id,
       commitment.version,
       reason,
       now,
       receiptId,
     );
-    const next = await tx.directOrder.update({
-      where: { id },
-      data: { state: reason, closedAt: now, version: { increment: 1 } },
+    const next = await this.transition(tx, o, {
+      state: reason,
+      closedAt: now,
     });
-    await tx.workflowContext.update({
-      where: { id: o.context!.id },
-      data: { ownershipPhase: 'Closed', version: { increment: 1 } },
-    });
+    await this.closeContext(tx, o.context!);
     const result = await this.listings.project(
       tx,
       listing.id,
@@ -331,8 +388,8 @@ export class OrdersService {
     );
     return {
       entityType: 'Order',
-      entityId: id,
-      contextId: o.context!.id,
+      entityId: o._id,
+      contextId: o.context!._id,
       version: next.version,
       state: reason,
       decidedAt: now,
@@ -350,12 +407,12 @@ export class OrdersService {
       },
       authorize: async (tx, actor) => {
         member(actor);
-        return this.own(tx, id, actor.id, true);
+        return this.own(tx, id, actor._id, true);
       },
       mutate: (tx, _actor, o, receiptId) =>
         this.close(
           tx,
-          o.id,
+          o._id,
           body.expectedVersion,
           'Cancelled',
           receiptId,
@@ -371,14 +428,11 @@ export class OrdersService {
       },
       authorize: (tx) => this.order(tx, id),
       mutate: (tx, o, receiptId) =>
-        this.close(tx, o.id, undefined, 'PaymentExpired', receiptId),
+        this.close(tx, o._id, undefined, 'PaymentExpired', receiptId),
     });
   }
   private async paymentSellerEligible(tx: Tx, sellerId: string) {
-    const seller = await tx.user.findUniqueOrThrow({
-      where: { id: sellerId },
-      include: { roles: true },
-    });
+    const seller = (await tx.c.users.findOne({ _id: sellerId }))!;
     return (
       !!seller.emailVerifiedAt &&
       ['ACTIVE', 'RESTRICTED'].includes(seller.status) &&
@@ -393,7 +447,7 @@ export class OrdersService {
       },
       authorize: async (tx, actor) => {
         member(actor);
-        return this.own(tx, id, actor.id, true);
+        return this.own(tx, id, actor._id, true);
       },
       mutate: async (tx, _actor, _before, receiptId) => {
         const { o } = await this.locked(tx, id);
@@ -405,30 +459,31 @@ export class OrdersService {
             'AccountIneligible',
             'Người bán hiện không đủ điều kiện nhận thanh toán. Bạn có thể hủy đơn chưa trả tiền.',
           );
-        const accounts = await this.ledger.lockOrder(tx, o.buyerId, o.id, true);
+        const accounts = await this.ledger.lockOrder(
+          tx,
+          o.buyerId,
+          o._id,
+          true,
+        );
         const now = await this.decision(tx, context.auth);
         if (now >= o.paymentDeadline) throw conflict();
         await this.ledger.postOrder(
           tx,
-          o.id,
+          o._id,
           receiptId,
           accounts,
           o.quote.buyerTotal,
           now,
         );
-        const next = await tx.directOrder.update({
-          where: { id },
-          data: {
-            state: 'PendingSellerConfirmation',
-            version: { increment: 1 },
-            paidAt: now,
-            sellerConfirmationDeadline: new Date(now.getTime() + 48 * 3600000),
-          },
+        const next = await this.transition(tx, o, {
+          state: 'PendingSellerConfirmation',
+          paidAt: now,
+          sellerConfirmationDeadline: new Date(now.getTime() + 48 * 3600000),
         });
         return {
           entityType: 'Order',
-          entityId: id,
-          contextId: o.context!.id,
+          entityId: o._id,
+          contextId: o.context!._id,
           version: next.version,
           state: 'PendingSellerConfirmation',
           decidedAt: now,
@@ -458,19 +513,15 @@ export class OrdersService {
         : now >= o.sellerConfirmationDeadline!
     )
       throw conflict();
-    const next = await tx.directOrder.update({
-      where: { id },
-      data: {
-        state: 'SettlementPending',
-        version: { increment: 1 },
-        cancellationRequestedAt: now,
-        cancellationReason: reason,
-      },
+    const next = await this.transition(tx, o, {
+      state: 'SettlementPending',
+      cancellationRequestedAt: now,
+      cancellationReason: reason,
     });
     return {
       entityType: 'Order',
-      entityId: id,
-      contextId: o.context!.id,
+      entityId: o._id,
+      contextId: o.context!._id,
       version: next.version,
       state: 'SettlementPending',
       decidedAt: now,
@@ -499,8 +550,8 @@ export class OrdersService {
         },
         authorize: async (tx, actor) => {
           member(actor);
-          const o = await this.own(tx, id, actor.id);
-          if ((seller ? o.sellerId : o.buyerId) !== actor.id) throw notFound();
+          const o = await this.own(tx, id, actor._id);
+          if ((seller ? o.sellerId : o.buyerId) !== actor._id) throw notFound();
           return o;
         },
         mutate: (tx) =>
@@ -537,8 +588,8 @@ export class OrdersService {
       },
       authorize: async (tx, actor) => {
         member(actor);
-        const o = await this.own(tx, id, actor.id);
-        if (o.sellerId !== actor.id) throw notFound();
+        const o = await this.own(tx, id, actor._id);
+        if (o.sellerId !== actor._id) throw notFound();
         return o;
       },
       mutate: async (tx, _actor, _before, receiptId) => {
@@ -547,27 +598,25 @@ export class OrdersService {
         if (o.state !== 'PendingSellerConfirmation') throw invalidState();
         // The old obligation remains even if the buyer later loses account access.
         // Lock/check its actual hold; acceptance never credits the seller.
-        await this.ledger.lockOrder(tx, o.buyerId, id, false);
-        if ((await this.ledger.orderFunds(tx, id)).held !== o.quote.buyerTotal)
+        await this.ledger.lockOrder(tx, o.buyerId, o._id, false);
+        if (
+          (await this.ledger.orderFunds(tx, o._id)).held !== o.quote.buyerTotal
+        )
           throw invalidState();
         const now = await this.decision(tx, context.auth);
         if (now >= o.sellerConfirmationDeadline!) throw conflict();
-        await tx.orderPreparation.create({
-          data: {
-            orderId: id,
-            acceptedAt: now,
-            pickupDeadline: new Date(now.getTime() + 48 * 3600000),
-            receiptId,
-          },
+        await tx.c.order_preparations.insertOne({
+          _id: o._id,
+          acceptedAt: now,
+          pickupDeadline: new Date(now.getTime() + 48 * 3600000),
+          policyCode: 'ORDER-PICKUP-v1',
+          receiptId,
         });
-        const next = await tx.directOrder.update({
-          where: { id },
-          data: { state: 'Preparing', version: { increment: 1 } },
-        });
+        const next = await this.transition(tx, o, { state: 'Preparing' });
         return {
           entityType: 'Order',
-          entityId: id,
-          contextId: o.context!.id,
+          entityId: o._id,
+          contextId: o.context!._id,
           version: next.version,
           state: 'Preparing',
           decidedAt: now,
@@ -594,17 +643,20 @@ export class OrdersService {
           const now = await this.decision(tx);
           if (now < o.preparation.pickupDeadline) throw conflict();
           // Missing carrier evidence is uncertainty, never proof of no pickup.
-          await tx.pickupReview.create({
-            data: { orderId: id, openedAt: now, receiptId },
+          await tx.c.pickup_reviews.insertOne({
+            _id: randomUUID(),
+            orderId: o._id,
+            openedAt: now,
+            reason: 'PickupDeadlineExceeded',
+            receiptId,
           });
-          const next = await tx.directOrder.update({
-            where: { id },
-            data: { state: 'ResolutionPending', version: { increment: 1 } },
+          const next = await this.transition(tx, o, {
+            state: 'ResolutionPending',
           });
           return {
             entityType: 'Order',
-            entityId: id,
-            contextId: o.context!.id,
+            entityId: o._id,
+            contextId: o.context!._id,
             version: next.version,
             state: 'ResolutionPending',
             decidedAt: now,
@@ -631,7 +683,7 @@ export class OrdersService {
       },
       authorize: async (tx, actor) => {
         member(actor);
-        await this.own(tx, id, actor.id, true);
+        await this.own(tx, id, actor._id, true);
         await this.decision(tx, context.auth);
       },
       mutate: (tx, _actor, _before, receiptId) =>
@@ -669,55 +721,54 @@ export class OrdersService {
       commitment.status !== 'Active'
     )
       throw invalidState();
-    const pickup = await tx.carrierPickupEvent.findFirst({
-      where: { orderId: id, outcome: 'Applied' },
+    const pickup = await tx.c.carrier_pickup_events.findOne({
+      orderId: o._id,
+      outcome: 'Applied',
     });
     if (!pickup?.deliveryDeadline) throw invalidState();
-    await tx.$queryRaw`SELECT id FROM direct_shipments WHERE id=${pickup.shipmentId}::uuid FOR UPDATE`;
-    await this.ledger.lockOrder(tx, o.buyerId, id, false);
-    if ((await this.ledger.orderFunds(tx, id)).held !== o.quote.buyerTotal)
+    // PostgreSQL also locked the shipment row; every shipment/carrier writer
+    // locks this order first (locked()), so the order lock serializes them.
+    await this.ledger.lockOrder(tx, o.buyerId, o._id, false);
+    if ((await this.ledger.orderFunds(tx, o._id)).held !== o.quote.buyerTotal)
       throw invalidState();
     const now = await this.decision(tx, report?.auth);
     if (now < pickup.deliveryDeadline) throw conflict();
-    const existing = await tx.orderDeliveryReview.findUnique({
-      where: { orderId: id },
+    const existing = await tx.c.order_delivery_reviews.findOne({
+      orderId: o._id,
     });
     if (!report && existing) throw conflict();
     if (
       report &&
-      (await tx.orderNonReceiptReport.findUnique({ where: { orderId: id } }))
+      (await tx.c.order_non_receipt_reports.findOne({ orderId: o._id }))
     )
       throw conflict();
     if (!existing)
-      await tx.orderDeliveryReview.create({
-        data: {
-          orderId: id,
-          pickupEventId: pickup.id,
-          openedAt: now,
-          openedBy: report ? 'BuyerReport' : 'DeadlineWorker',
-          receiptId,
-        },
+      await tx.c.order_delivery_reviews.insertOne({
+        _id: randomUUID(),
+        orderId: o._id,
+        pickupEventId: pickup._id,
+        openedAt: now,
+        openedBy: report ? 'BuyerReport' : 'DeadlineWorker',
+        policyCode: 'ORDER-DELIVERY-REVIEW-v1',
+        receiptId,
       });
     if (report)
-      await tx.orderNonReceiptReport.create({
-        data: {
-          orderId: id,
-          submittedAt: now,
-          description: report.body.description,
-          receiptId,
-        },
+      await tx.c.order_non_receipt_reports.insertOne({
+        _id: randomUUID(),
+        orderId: o._id,
+        submittedAt: now,
+        description: report.body.description,
+        receiptId,
       });
     const next =
       o.state === 'InTransit'
-        ? await tx.directOrder.update({
-            where: { id },
-            data: { state: 'ResolutionPending', version: { increment: 1 } },
-          })
+        ? await this.transition(tx, o, { state: 'ResolutionPending' })
         : o;
+    tx.check(`order:${o._id}`, () => checkOrder(tx, o._id));
     return {
       entityType: 'Order',
-      entityId: id,
-      contextId: o.context!.id,
+      entityId: o._id,
+      contextId: o.context!._id,
       version: next.version,
       state: 'ResolutionPending',
       decidedAt: now,
@@ -743,13 +794,15 @@ export class OrdersService {
           const accounts = await this.ledger.lockOrder(
             tx,
             o.buyerId,
-            id,
+            o._id,
             false,
           );
           const now = await this.decision(tx);
+          // Journal, hold release, commitment release and closure commit together;
+          // any failure keeps both the money and the book held.
           await this.ledger.postOrder(
             tx,
-            id,
+            o._id,
             receiptId,
             accounts,
             o.quote.buyerTotal,
@@ -758,24 +811,17 @@ export class OrdersService {
           );
           await this.reservations.closeRefunded(
             tx,
-            o.context!.id,
-            commitment.id,
+            o.context!._id,
+            commitment._id,
             commitment.version,
             now,
             receiptId,
           );
-          const next = await tx.directOrder.update({
-            where: { id },
-            data: {
-              state: 'Cancelled',
-              closedAt: now,
-              version: { increment: 1 },
-            },
+          const next = await this.transition(tx, o, {
+            state: 'Cancelled',
+            closedAt: now,
           });
-          await tx.workflowContext.update({
-            where: { id: o.context!.id },
-            data: { ownershipPhase: 'Closed', version: { increment: 1 } },
-          });
+          await this.closeContext(tx, o.context!);
           const result = await this.listings.project(
             tx,
             listing.id,
@@ -785,8 +831,8 @@ export class OrdersService {
           );
           return {
             entityType: 'Order',
-            entityId: id,
-            contextId: o.context!.id,
+            entityId: o._id,
+            contextId: o.context!._id,
             version: next.version,
             state: 'Cancelled',
             decidedAt: now,
@@ -806,7 +852,7 @@ export class OrdersService {
       auth,
       async (tx, actor) => {
         member(actor);
-        await this.own(tx, id, actor.id);
+        await this.own(tx, id, actor._id);
         const { o, commitment } = await this.locked(tx, id),
           now = await this.decision(tx, auth);
         const agreement = this.input.body(
@@ -817,41 +863,48 @@ export class OrdersService {
           'OrderItemSnapshot',
           o.context!.items[0].snapshot,
         );
-        const role = o.buyerId === actor.id ? 'Buyer' : 'Seller';
-        const funds = await this.ledger.orderFunds(tx, id);
+        const role = o.buyerId === actor._id ? 'Buyer' : 'Seller';
+        const funds = await this.ledger.orderFunds(tx, o._id);
         const pendingConfirmation =
           o.state === 'PendingSellerConfirmation' &&
           now < o.sellerConfirmationDeadline!;
-        const carrierReview = await tx.carrierPickupReview.findUnique({
-          where: { orderId: id },
+        const carrierReview = await tx.c.carrier_pickup_reviews.findOne({
+          orderId: o._id,
         });
-        const delivery = await tx.orderDeliveryReview.findUnique({
-          where: { orderId: id },
-          include: { pickup: true, buyerReport: true },
+        const delivery = await tx.c.order_delivery_reviews.findOne({
+          orderId: o._id,
         });
-        const pickup = await tx.carrierPickupEvent.findFirst({
-          where: { orderId: id, outcome: 'Applied' },
+        const deliveryPickup = delivery
+          ? await tx.c.carrier_pickup_events.findOne({
+              _id: delivery.pickupEventId,
+            })
+          : null;
+        const buyerReport = delivery
+          ? await tx.c.order_non_receipt_reports.findOne({ orderId: o._id })
+          : null;
+        const pickup = await tx.c.carrier_pickup_events.findOne({
+          orderId: o._id,
+          outcome: 'Applied',
         });
         return {
-          id: o.id,
+          id: o._id,
           deliveryReview: delivery
             ? {
-                id: delivery.id,
-                shipmentId: delivery.pickup.shipmentId,
+                id: delivery._id,
+                shipmentId: deliveryPickup!.shipmentId,
                 pickupEventId: delivery.pickupEventId,
                 openedAt: delivery.openedAt.toISOString(),
                 deliveryDeadline:
-                  delivery.pickup.deliveryDeadline!.toISOString(),
+                  deliveryPickup!.deliveryDeadline!.toISOString(),
                 reason: 'DeliveryDeadlineExceeded',
                 status: 'Open',
-                openedBy: delivery.openedBy as 'DeadlineWorker' | 'BuyerReport',
+                openedBy: delivery.openedBy,
                 policyCode: 'ORDER-DELIVERY-REVIEW-v1',
-                buyerReport: delivery.buyerReport
+                buyerReport: buyerReport
                   ? {
-                      id: delivery.buyerReport.id,
-                      submittedAt:
-                        delivery.buyerReport.submittedAt.toISOString(),
-                      description: delivery.buyerReport.description,
+                      id: buyerReport._id,
+                      submittedAt: buyerReport.submittedAt.toISOString(),
+                      description: buyerReport.description,
                     }
                   : null,
               }
@@ -861,18 +914,17 @@ export class OrdersService {
             ['InTransit', 'ResolutionPending'].includes(o.state) &&
             !!pickup?.deliveryDeadline &&
             now >= pickup.deliveryDeadline &&
-            !delivery?.buyerReport &&
+            !buyerReport &&
             funds.held === o.quote.buyerTotal,
           carrierReview: carrierReview
             ? {
-                id: carrierReview.id,
+                id: carrierReview._id,
                 openedAt: carrierReview.openedAt.toISOString(),
-                reason: carrierReview.reason as
-                  'LatePickup' | 'ConflictingPickup',
+                reason: carrierReview.reason,
                 status: 'Open',
               }
             : null,
-          contextId: o.context!.id,
+          contextId: o.context!._id,
           version: o.version,
           state: o.state as Wire['PrivateUnpaidOrder']['state'],
           role,
@@ -890,9 +942,9 @@ export class OrdersService {
           ownAddress:
             role === 'Buyer' ? agreement.destination : agreement.origin,
           commitment: {
-            id: commitment.id,
+            id: commitment._id,
             version: commitment.version,
-            status: commitment.status as 'Active' | 'Released',
+            status: commitment.status,
           },
           canCancel:
             role === 'Buyer' &&
@@ -922,7 +974,7 @@ export class OrdersService {
                 pickupDeadline: o.preparation.pickupDeadline.toISOString(),
                 pickupReview: o.preparation.pickupReview
                   ? {
-                      id: o.preparation.pickupReview.id,
+                      id: o.preparation.pickupReview._id,
                       openedAt:
                         o.preparation.pickupReview.openedAt.toISOString(),
                       reason: 'PickupDeadlineExceeded',
@@ -939,13 +991,11 @@ export class OrdersService {
             !!o.preparation &&
             now < o.preparation.pickupDeadline &&
             funds.held === o.quote.buyerTotal &&
-            (await tx.orderPackagingEvidence.count({
-              where: { orderId: id, status: 'Ready' },
+            (await tx.c.order_packaging_evidence.countDocuments({
+              orderId: o._id,
+              status: 'Ready',
             })) > 0 &&
-            !(await tx.directShipment.findUnique({
-              where: { orderId: id },
-              select: { id: true },
-            })),
+            !(await tx.c.direct_shipments.findOne({ orderId: o._id })),
         };
       },
       async (tx) => {
@@ -959,7 +1009,7 @@ export class OrdersService {
       auth,
       async (tx, actor) => {
         member(actor);
-        await this.own(tx, id, actor.id);
+        await this.own(tx, id, actor._id);
         const { o } = await this.locked(tx, id);
         await this.decision(tx, auth);
         const item = this.input.body(
@@ -967,7 +1017,7 @@ export class OrdersService {
           o.context!.items[0].snapshot,
         );
         if (!item.mediaIds.includes(mediaId)) throw notFound();
-        const m = await tx.listingMedia.findUnique({ where: { id: mediaId } });
+        const m = await tx.c.listing_media.findOne({ _id: mediaId });
         if (!m || m.purgedAt || m.status !== 'Ready' || !m.derivativeKey)
           throw notFound();
         return { key: m.derivativeKey, width: m.width!, height: m.height! };
@@ -997,41 +1047,45 @@ export class OrdersService {
     return this.commands.readObligation(auth, async (tx, actor) => {
       member(actor);
       const cursor = query.cursor
-        ? await this.own(tx, String(query.cursor), actor.id)
+        ? await this.own(tx, String(query.cursor), actor._id)
         : null;
-      const rows = await tx.directOrder.findMany({
-        where: {
-          AND: [
-            { OR: [{ buyerId: actor.id }, { sellerId: actor.id }] },
-            ...(query.state ? [{ state: String(query.state) }] : []),
-            ...(cursor
-              ? [
-                  {
-                    OR: [
-                      { createdAt: { lt: cursor.createdAt } },
-                      { createdAt: cursor.createdAt, id: { lt: cursor.id } },
-                    ],
-                  },
-                ]
-              : []),
-          ],
-        },
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        take: Number(query.limit) + 1,
-      });
+      const rows = await tx.c.direct_orders
+        .find(
+          {
+            $and: [
+              { $or: [{ buyerId: actor._id }, { sellerId: actor._id }] },
+              ...(query.state ? [{ state: String(query.state) }] : []),
+              ...(cursor
+                ? [
+                    {
+                      $or: [
+                        { createdAt: { $lt: cursor.createdAt } },
+                        {
+                          createdAt: cursor.createdAt,
+                          _id: { $lt: cursor._id },
+                        },
+                      ],
+                    },
+                  ]
+                : []),
+            ],
+          },
+          { sort: { createdAt: -1, _id: -1 }, limit: Number(query.limit) + 1 },
+        )
+        .toArray();
       const more = rows.length > Number(query.limit);
       if (more) rows.pop();
       return {
         items: rows.map((o) => ({
-          id: o.id,
+          id: o._id,
           version: o.version,
           state: o.state as Wire['MyOrderSummary']['state'],
-          role: o.buyerId === actor.id ? 'Buyer' : 'Seller',
+          role: o.buyerId === actor._id ? 'Buyer' : 'Seller',
           createdAt: o.createdAt.toISOString(),
           paymentDeadline: o.paymentDeadline.toISOString(),
           closedAt: o.closedAt?.toISOString() ?? null,
         })),
-        nextCursor: more ? rows.at(-1)!.id : null,
+        nextCursor: more ? rows.at(-1)!._id : null,
         serverTime: (await this.decision(tx, auth)).toISOString(),
       };
     });

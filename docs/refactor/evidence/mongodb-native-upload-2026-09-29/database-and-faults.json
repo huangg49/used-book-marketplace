@@ -1,0 +1,307 @@
+{
+  "beforeManualRetry": {
+    "counts": {
+      "listings": 1,
+      "media": 3,
+      "links": 0,
+      "jobs": 2,
+      "unfinishedJobs": 0
+    },
+    "media": [
+      {
+        "_id": "e6c0a12e-3d11-43a5-a12f-82ba617e19a5",
+        "version": 4,
+        "status": "Ready",
+        "mimeType": "image/png",
+        "byteSize": 8046730,
+        "sha256": "8a30f59232c8b300752ce769583b4168bdf73dc847d5c4521c44b647dc4a98fd",
+        "width": 1034,
+        "height": 1600
+      },
+      {
+        "_id": "b4f714ab-d27d-4eca-bcba-fa29d0c15391",
+        "version": 4,
+        "status": "Ready",
+        "mimeType": "image/webp",
+        "byteSize": 294722,
+        "sha256": "d25e0431fffb3a392b2d00ac321be00c2d040ca65b6b5452f48cd62013dec2e5",
+        "width": 800,
+        "height": 1238
+      },
+      {
+        "_id": "cf298094-3ea5-4bd3-a2dc-b4dc20e91dd3",
+        "version": 2,
+        "status": "Pending",
+        "mimeType": "image/jpeg",
+        "byteSize": 1319776,
+        "sha256": "82b3c9e8fb7b4e33536f40bd063b7a09a29cf0ee6974df54fc532008170dbdc0",
+        "width": null,
+        "height": null
+      }
+    ],
+    "receipts": [
+      {
+        "operation": "createListingUpload",
+        "mediaId": "e6c0a12e-3d11-43a5-a12f-82ba617e19a5",
+        "resultVersion": 1
+      },
+      {
+        "operation": "uploadListingContent",
+        "mediaId": "e6c0a12e-3d11-43a5-a12f-82ba617e19a5",
+        "resultVersion": 2
+      },
+      {
+        "operation": "finalizeListingUpload",
+        "mediaId": "e6c0a12e-3d11-43a5-a12f-82ba617e19a5",
+        "resultVersion": 3
+      },
+      {
+        "operation": "createListingUpload",
+        "mediaId": "b4f714ab-d27d-4eca-bcba-fa29d0c15391",
+        "resultVersion": 1
+      },
+      {
+        "operation": "uploadListingContent",
+        "mediaId": "b4f714ab-d27d-4eca-bcba-fa29d0c15391",
+        "resultVersion": 2
+      },
+      {
+        "operation": "finalizeListingUpload",
+        "mediaId": "b4f714ab-d27d-4eca-bcba-fa29d0c15391",
+        "resultVersion": 3
+      },
+      {
+        "operation": "createListingUpload",
+        "mediaId": "cf298094-3ea5-4bd3-a2dc-b4dc20e91dd3",
+        "resultVersion": 1
+      },
+      {
+        "operation": "uploadListingContent",
+        "mediaId": "cf298094-3ea5-4bd3-a2dc-b4dc20e91dd3",
+        "resultVersion": 2
+      }
+    ],
+    "report": {
+      "checked": {
+        "catalog": 0,
+        "listing": 1,
+        "addressBook": 0,
+        "journal": 1,
+        "topup": 0,
+        "order": 0,
+        "shipment": 0,
+        "packaging": 0
+      },
+      "failures": [],
+      "ledger": {
+        "demoOnly": true,
+        "balanced": true,
+        "totalDebit": 100000000,
+        "totalCredit": 100000000,
+        "memberAvailable": 0,
+        "transactionHeld": 0,
+        "sourceRemaining": 100000000,
+        "journals": 1,
+        "topups": 0
+      }
+    }
+  },
+  "afterSave": {
+    "counts": {
+      "listings": 1,
+      "media": 3,
+      "links": 3,
+      "jobs": 3,
+      "unfinishedJobs": 0
+    },
+    "media": [
+      {
+        "_id": "e6c0a12e-3d11-43a5-a12f-82ba617e19a5",
+        "version": 4,
+        "status": "Ready",
+        "mimeType": "image/png",
+        "byteSize": 8046730,
+        "sha256": "8a30f59232c8b300752ce769583b4168bdf73dc847d5c4521c44b647dc4a98fd",
+        "width": 1034,
+        "height": 1600
+      },
+      {
+        "_id": "b4f714ab-d27d-4eca-bcba-fa29d0c15391",
+        "version": 4,
+        "status": "Ready",
+        "mimeType": "image/webp",
+        "byteSize": 294722,
+        "sha256": "d25e0431fffb3a392b2d00ac321be00c2d040ca65b6b5452f48cd62013dec2e5",
+        "width": 800,
+        "height": 1238
+      },
+      {
+        "_id": "cf298094-3ea5-4bd3-a2dc-b4dc20e91dd3",
+        "version": 4,
+        "status": "Ready",
+        "mimeType": "image/jpeg",
+        "byteSize": 1319776,
+        "sha256": "82b3c9e8fb7b4e33536f40bd063b7a09a29cf0ee6974df54fc532008170dbdc0",
+        "width": 1034,
+        "height": 1600
+      }
+    ],
+    "receipts": [
+      {
+        "operation": "createListingUpload",
+        "mediaId": "e6c0a12e-3d11-43a5-a12f-82ba617e19a5",
+        "resultVersion": 1
+      },
+      {
+        "operation": "uploadListingContent",
+        "mediaId": "e6c0a12e-3d11-43a5-a12f-82ba617e19a5",
+        "resultVersion": 2
+      },
+      {
+        "operation": "finalizeListingUpload",
+        "mediaId": "e6c0a12e-3d11-43a5-a12f-82ba617e19a5",
+        "resultVersion": 3
+      },
+      {
+        "operation": "createListingUpload",
+        "mediaId": "b4f714ab-d27d-4eca-bcba-fa29d0c15391",
+        "resultVersion": 1
+      },
+      {
+        "operation": "uploadListingContent",
+        "mediaId": "b4f714ab-d27d-4eca-bcba-fa29d0c15391",
+        "resultVersion": 2
+      },
+      {
+        "operation": "finalizeListingUpload",
+        "mediaId": "b4f714ab-d27d-4eca-bcba-fa29d0c15391",
+        "resultVersion": 3
+      },
+      {
+        "operation": "createListingUpload",
+        "mediaId": "cf298094-3ea5-4bd3-a2dc-b4dc20e91dd3",
+        "resultVersion": 1
+      },
+      {
+        "operation": "uploadListingContent",
+        "mediaId": "cf298094-3ea5-4bd3-a2dc-b4dc20e91dd3",
+        "resultVersion": 2
+      },
+      {
+        "operation": "finalizeListingUpload",
+        "mediaId": "cf298094-3ea5-4bd3-a2dc-b4dc20e91dd3",
+        "resultVersion": 3
+      }
+    ],
+    "report": {
+      "checked": {
+        "catalog": 0,
+        "listing": 1,
+        "addressBook": 0,
+        "journal": 1,
+        "topup": 0,
+        "order": 0,
+        "shipment": 0,
+        "packaging": 0
+      },
+      "failures": [],
+      "ledger": {
+        "demoOnly": true,
+        "balanced": true,
+        "totalDebit": 100000000,
+        "totalCredit": 100000000,
+        "memberAvailable": 0,
+        "transactionHeld": 0,
+        "sourceRemaining": 100000000,
+        "journals": 1,
+        "topups": 0
+      }
+    }
+  },
+  "network": {
+    "contentRequests": [
+      {
+        "type": "request",
+        "mode": "lost-ack",
+        "operation": "content",
+        "bytes": 1319776,
+        "complete": true,
+        "keyHash": "62e1ff1b8d57e6e9dd0e5c432446aa4bd8b533a0b1e9f9a319682d5a8f3d8109",
+        "bodyHash": "82b3c9e8fb7b4e33536f40bd063b7a09a29cf0ee6974df54fc532008170dbdc0"
+      },
+      {
+        "type": "request",
+        "mode": "lost-ack",
+        "operation": "content",
+        "bytes": 1319776,
+        "complete": true,
+        "keyHash": "62e1ff1b8d57e6e9dd0e5c432446aa4bd8b533a0b1e9f9a319682d5a8f3d8109",
+        "bodyHash": "82b3c9e8fb7b4e33536f40bd063b7a09a29cf0ee6974df54fc532008170dbdc0"
+      },
+      {
+        "type": "request",
+        "mode": "lost-ack",
+        "operation": "content",
+        "bytes": 1319776,
+        "complete": true,
+        "keyHash": "62e1ff1b8d57e6e9dd0e5c432446aa4bd8b533a0b1e9f9a319682d5a8f3d8109",
+        "bodyHash": "82b3c9e8fb7b4e33536f40bd063b7a09a29cf0ee6974df54fc532008170dbdc0"
+      },
+      {
+        "type": "request",
+        "mode": "lost-ack",
+        "operation": "content",
+        "bytes": 1319776,
+        "complete": true,
+        "keyHash": "62e1ff1b8d57e6e9dd0e5c432446aa4bd8b533a0b1e9f9a319682d5a8f3d8109",
+        "bodyHash": "82b3c9e8fb7b4e33536f40bd063b7a09a29cf0ee6974df54fc532008170dbdc0"
+      },
+      {
+        "type": "request",
+        "mode": "lost-ack",
+        "operation": "content",
+        "bytes": 1319776,
+        "complete": true,
+        "keyHash": "62e1ff1b8d57e6e9dd0e5c432446aa4bd8b533a0b1e9f9a319682d5a8f3d8109",
+        "bodyHash": "82b3c9e8fb7b4e33536f40bd063b7a09a29cf0ee6974df54fc532008170dbdc0"
+      },
+      {
+        "type": "request",
+        "mode": "pass",
+        "operation": "content",
+        "bytes": 1319776,
+        "complete": true,
+        "keyHash": "62e1ff1b8d57e6e9dd0e5c432446aa4bd8b533a0b1e9f9a319682d5a8f3d8109",
+        "bodyHash": "82b3c9e8fb7b4e33536f40bd063b7a09a29cf0ee6974df54fc532008170dbdc0"
+      }
+    ],
+    "cuts": [
+      {
+        "type": "cut",
+        "mode": "lost-ack",
+        "upstreamStatus": 200
+      },
+      {
+        "type": "cut",
+        "mode": "lost-ack",
+        "upstreamStatus": 200
+      },
+      {
+        "type": "cut",
+        "mode": "lost-ack",
+        "upstreamStatus": 200
+      },
+      {
+        "type": "cut",
+        "mode": "lost-ack",
+        "upstreamStatus": 200
+      },
+      {
+        "type": "cut",
+        "mode": "lost-ack",
+        "upstreamStatus": 200
+      }
+    ],
+    "previewFaults": 3
+  }
+}

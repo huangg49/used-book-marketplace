@@ -1,14 +1,14 @@
 import { createHmac } from 'node:crypto';
 import { HttpException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DatabaseService } from '../../database/database.service.js';
+import { MongoService } from '../../database/mongo/mongo.service.js';
 
 const WINDOW_MS = 15 * 60 * 1000;
 
 @Injectable()
 export class LoginLimiter {
   constructor(
-    private readonly db: DatabaseService,
+    private readonly mongo: MongoService,
     private readonly config: ConfigService,
   ) {}
 
@@ -26,20 +26,25 @@ export class LoginLimiter {
           .digest('hex'),
       )
       .sort();
-    // Atomic increments survive concurrent requests and multiple API processes.
-    const counters = await this.db.$transaction(
-      keys.map((key) =>
-        this.db.loginAttempt.upsert({
-          where: { key },
-          create: { key, expiresAt },
-          update: { attempts: { increment: 1 } },
-        }),
-      ),
-    );
-    await this.db.loginAttempt.deleteMany({
-      where: { expiresAt: { lt: new Date(now) } },
+    // Both counters move in one transaction, in sorted key order: concurrent
+    // requests serialize on the first counter, so every request gets the same
+    // rank on both (as the PostgreSQL row locks guaranteed).
+    const counters = await this.mongo.tx(async (tx) => {
+      const values = [];
+      for (const key of keys)
+        values.push(
+          await tx.c.login_attempts.findOneAndUpdate(
+            { _id: key },
+            { $inc: { attempts: 1 }, $setOnInsert: { expiresAt } },
+            { upsert: true, returnDocument: 'after' },
+          ),
+        );
+      return values;
     });
-    if (counters.some((counter) => counter.attempts > 5)) {
+    await this.mongo.c.login_attempts.deleteMany({
+      expiresAt: { $lt: new Date(now) },
+    });
+    if (counters.some((counter) => (counter?.attempts ?? 0) > 5)) {
       throw new HttpException(
         {
           code: 'RATE_LIMITED',

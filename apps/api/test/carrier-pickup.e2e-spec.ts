@@ -1,36 +1,34 @@
 import sharp from 'sharp';
-import { digest } from '../src/modules/media/media-storage.js';
-
-import { OrderClock } from '../src/modules/orders/order-clock.js';
-import { LedgerService } from '../src/modules/wallet/ledger.service.js';
-
-import { OrdersService } from '../src/modules/orders/orders.service.js';
-import { CarrierSimulator } from '../src/modules/shipments/carrier-simulator.js';
-import { ShipmentsService } from '../src/modules/shipments/shipments.service.js';
-import { OrderExpiryWorker } from '../src/modules/orders/order-expiry.service.js';
-import { canonicalJson } from '../src/modules/commands/command.service.js';
-import { createHmac } from 'node:crypto';
-import type { Wire } from '../src/modules/commands/domain-error.js';
-
-import { randomBytes, randomUUID } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { checkIntegrity } from '../src/integrity/integrity.js';
+import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { INestApplication } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/generated/prisma/client.js';
-import type { RoleCode, UserStatus } from '../src/generated/prisma/client.js';
-import { DatabaseService } from '../src/database/database.service.js';
+import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
-import request from 'supertest';
-import { Ajv2020 } from 'ajv/dist/2020.js';
-import addFormats from 'ajv-formats';
-import { parse } from 'yaml';
-import { hash } from 'argon2';
-import { MediaStorage } from '../src/modules/media/media-storage.js';
+import { canonicalJson } from '../src/common/canonical-json.js';
+import type { RoleCode, UserStatus } from '../src/database/mongo/documents.js';
+import { MongoService } from '../src/database/mongo/mongo.service.js';
+import type { Tx } from '../src/database/mongo/transaction.js';
+import {
+  applyCollectionSpecs,
+  currentCollections,
+} from '../src/database/mongo/migrations/index.js';
+import { digest, MediaStorage } from '../src/modules/media/media-storage.js';
+import { OrderClock } from '../src/modules/orders/order-clock.js';
+import { OrdersService } from '../src/modules/orders/orders.service.js';
+import { checkOrder } from '../src/modules/orders/order-invariants.js';
+import { OrderExpiryWorker } from '../src/modules/orders/order-expiry.service.js';
+import { CarrierSimulator } from '../src/modules/shipments/carrier-simulator.js';
+import { ShipmentsService } from '../src/modules/shipments/shipments.service.js';
+import type { Wire } from '../src/modules/commands/domain-error.js';
+import { LedgerService } from '../src/modules/wallet/ledger.service.js';
+import { validates } from './helpers/contract.js';
+import { Gate } from './helpers/mongo-gate.js';
+import { MongoFixtures } from './helpers/mongo-fixtures.js';
+import { removeShipmentFixtures } from './helpers/ship-fixtures.js';
 
 // Storage is an explicit in-memory fake, never live-provider evidence. Sharp/HTTP/DB are real.
 const objects = new Map<string, Buffer>();
@@ -59,23 +57,6 @@ const storage = {
   },
 };
 
-const contract = parse(
-  readFileSync(
-    createRequire(import.meta.url).resolve(
-      '@used-books/api-contract/openapi.yaml',
-    ),
-    'utf8',
-  ),
-);
-const ajv = new Ajv2020({ strict: false });
-addFormats.default(ajv);
-ajv.addSchema({ $id: 'api-wire', components: contract.components });
-function validates(name: string, body: unknown) {
-  const fn = ajv.compile({ $ref: `api-wire#/components/schemas/${name}` });
-  expect(fn(body), JSON.stringify(fn.errors)).toBe(true);
-}
-type Adapter = Awaited<ReturnType<PrismaPg['connect']>>;
-type Pool = ReturnType<Adapter['underlyingDriver']>;
 type Reader = { id: string; token: string; sessionId: string; email: string };
 const metadata = (title = 'Đường sách chuyền tay') => ({
   title,
@@ -103,11 +84,22 @@ const draft = (bookId: string | null = null) => ({
   exchangeValue: null,
   mediaIds: [] as string[],
 });
+// Collections PostgreSQL migration 20260928060000 added or reshaped (0.19.0).
+const PICKUP_COLLECTIONS = [
+  'carrier_pickup_events',
+  'carrier_pickup_reviews',
+  'direct_orders',
+];
+// Lock counters are written by every reader/writer that takes the aggregate
+// lock (lock-by-write, ADR 0027); they are not business state.
+const unlocked = <T extends { lockSeq?: number }>(doc: T | null) => {
+  const { lockSeq: _, ...rest } = doc!;
+  return rest;
+};
 
-describe('Carrier pickup: real PostgreSQL and HTTP', () => {
-  const schema = `pickup_http_test_${randomUUID().replaceAll('-', '')}`;
-  let app: INestApplication, db: PrismaClient, adapter: Adapter, pool: Pool;
-  const migration = '20260928060000_carrier_pickup';
+describe('Carrier pickup: real MongoDB and HTTP', () => {
+  let app: INestApplication, db: MongoFixtures;
+  const users: string[] = [];
   let upgradeBefore: Record<string, unknown>,
     upgradeAfter: Record<string, unknown>;
   let legacy: PaymentFixture;
@@ -144,32 +136,26 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
     roles: RoleCode[] = ['MEMBER'],
     status: UserStatus = 'ACTIVE',
   ): Promise<Reader> {
-    const id = randomUUID(),
-      sessionId = randomUUID(),
-      email = `${id}@draft-http.test`;
-    await db.user.create({
-      data: {
-        id,
-        emailNormalized: email,
-        displayName: 'Bạn đọc thử nghiệm',
-        passwordHash: await hash('Only-a-test-password-2026'),
-        status,
-        emailVerifiedAt: new Date(),
-        roles: { create: roles.map((role) => ({ role })) },
-        sessions: {
-          create: {
-            id: sessionId,
-            refreshTokenHash: randomBytes(32).toString('hex'),
-            expiresAt: new Date(Date.now() + 86400000),
-          },
-        },
-      },
+    const email = `${randomUUID()}@draft-http.test`;
+    const user = await db.user({
+      email,
+      displayName: 'Bạn đọc thử nghiệm',
+      roles,
+      status,
     });
+    users.push(user._id);
+    const sessionId = await db.session(user._id);
     const token = await app
       .get(JwtService)
-      .signAsync({ sub: id, sid: sessionId });
-    return { id, sessionId, token, email };
+      .signAsync({ sub: user._id, sid: sessionId });
+    return { id: user._id, sessionId, token, email };
   }
+  // Direct session writes bump lockSeq like every application writer.
+  const setSession = (id: string, set: Record<string, unknown>) =>
+    db.c.auth_sessions.updateOne(
+      { _id: id },
+      { $set: set, $inc: { lockSeq: 1 } },
+    );
   async function createCatalog(actor = m1, meta = metadata()) {
     const result = await post(
       '/catalog/requests',
@@ -197,8 +183,6 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
   }
   async function makeApp() {
     const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(DatabaseService)
-      .useValue(db)
       .overrideProvider(MediaStorage)
       .useValue(storage)
       .compile();
@@ -208,67 +192,46 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
       .set('PAYMENT_SIMULATOR_SECRET', process.env.PAYMENT_SIMULATOR_SECRET);
     configureApp(next, { docs: false, logRequests: false });
     await next.init();
+    // One listening socket per app lifetime: supertest otherwise listens and
+    // closes per request, which can reset connections of retried requests.
+    await next.listen(0, '127.0.0.1');
     return next;
   }
-  async function blockedBy(
-    pid: number,
-    minimum = 1,
-    observer: Pick<Pool, 'query'> = pool,
+  // Under contention a command aborts and retries instead of queueing on a
+  // row lock; after its retry budget it answers 503. The client then retries
+  // with the same idempotency key and the stored receipt decides.
+  async function settle(
+    first: request.Response,
+    again: () => PromiseLike<request.Response>,
   ) {
-    const deadline = Date.now() + 4000;
-    while (Date.now() < deadline) {
-      // A barrier connection stays in one transaction: refresh PostgreSQL's
-      // statistics snapshot so newly opened contenders are visible.
-      await observer.query('SELECT pg_stat_clear_snapshot()');
-      const r = await observer.query(
-        'SELECT count(*)::int n FROM pg_stat_activity a WHERE $1 = ANY(pg_blocking_pids(a.pid)) OR EXISTS (SELECT 1 FROM pg_stat_activity b WHERE $1 = ANY(pg_blocking_pids(b.pid)) AND b.pid = ANY(pg_blocking_pids(a.pid)))',
-        [pid],
-      );
-      if (r.rows[0].n >= minimum) return;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-    throw new Error(
-      'HTTP mutation never reached the blocked database transaction',
-    );
+    let r = first;
+    for (let i = 0; r.status === 503 && i < 5; i++) r = await again();
+    return r;
   }
-  async function blockUser(id: string) {
-    const connection = await pool.connect();
-    await connection.query('BEGIN');
-    await connection.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [id]);
-    const pid = (await connection.query('SELECT pg_backend_pid() pid')).rows[0]
-      .pid as number;
-    return { connection, pid };
+  // A raw write through the application's own (least-privilege) connection
+  // that must pass the commit-time Order check (C), the replacement of the
+  // PostgreSQL pickup/order constraint triggers.
+  const checked = (fn: (tx: Tx) => Promise<unknown>, orderId: string) =>
+    app.get(MongoService).tx(async (tx) => {
+      await fn(tx);
+      tx.check(`order:${orderId}`, () => checkOrder(tx, orderId));
+    });
+  async function holdAccountLock(f: PaymentFixture) {
+    const hold = (await db.c.wallet_accounts.findOne({ orderId: f.id }))!;
+    return Gate.lock(db.client, 'account_locks', [hold._id]);
   }
 
   beforeAll(async () => {
     process.env.PAYMENT_SIMULATOR_SECRET = randomBytes(32).toString('hex');
-    const url = process.env.TEST_DATABASE_URL!;
-    if (!decodeURIComponent(new URL(url).pathname).endsWith('_test'))
-      throw new Error('Only _test databases');
-    adapter = await new PrismaPg({
-      connectionString: url,
-      max: 16,
-      options: `-c search_path=${schema},public -c timezone=UTC`,
-      statement_timeout: 15000,
-    }).connect();
-    pool = adapter.underlyingDriver();
-    await pool.query(`CREATE SCHEMA "${schema}"`);
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n) && n < migration)
-      .sort())
-      await pool.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
-    db = new PrismaClient({ adapter: new PrismaPg(pool, { schema }) });
-    await db.$connect();
+    db = await MongoFixtures.connect();
     app = await makeApp();
     m1 = await reader();
     operator = await reader(['TEST_OPERATOR']);
     a1 = await reader(['MEMBER', 'ADMIN']);
     a2 = await reader(['ADMIN']);
     staff = await reader(['STAFF']);
-    // Exercise upgrade with a real active reservation and posted topup, built
-    // through the pre-existing APIs. Creation does not need preparation storage.
+    // Populated storage with a real active reservation, posted topup and Ready
+    // evidence, built through the pre-existing APIs.
     legacy = await ready();
     await pay(legacy).expect(200);
     await accept(legacy).expect(200);
@@ -277,9 +240,7 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
     await register(legacy, shipBody([legacyEvidence.id])).expect(200);
     // Also preserve an already overdue accepted Order from 0.16/0.18.
     const overdueLegacy = await accepted();
-    const priorPreparation = await db.orderPreparation.findUniqueOrThrow({
-      where: { orderId: overdueLegacy.id },
-    });
+    const priorPreparation = await preparation(overdueLegacy);
     const priorClock = vi
       .spyOn(app.get(OrderClock), 'now')
       .mockResolvedValue(priorPreparation.pickupDeadline);
@@ -290,7 +251,7 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
     }
     const snapshot = async () => {
       const rows: Record<string, unknown> = {};
-      for (const table of [
+      for (const name of [
         'direct_shipments',
         'shipment_packaging_evidence',
         'order_packaging_evidence',
@@ -307,30 +268,29 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
         'ledger_journals',
         'ledger_entries',
       ])
-        rows[table] = (
-          await pool.query(`SELECT * FROM ${table} ORDER BY 1`)
-        ).rows;
+        rows[name] = await db.client
+          .db()
+          .collection(name)
+          .find({}, { sort: { _id: 1 } })
+          .toArray();
       return rows;
     };
     upgradeBefore = await snapshot();
-    await pool.query(
-      readFileSync(`prisma/migrations/${migration}/migration.sql`, 'utf8'),
+    // MongoDB has no incremental upgrade: the carrier pickup collections and
+    // the widened Order shape are in the baseline schema (0001). Re-apply
+    // their validators/indexes, as the migrator, to the populated database.
+    await applyCollectionSpecs(
+      db.client.db(),
+      currentCollections().filter((s) => PICKUP_COLLECTIONS.includes(s.name)),
     );
     upgradeAfter = await snapshot();
-    // Current handlers can read additive fulfillment tables after the target upgrade.
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n) && n > migration)
-      .sort())
-      await pool.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
   }, 60000);
   afterAll(async () => {
+    if (db) {
+      await removeShipmentFixtures(db, users);
+      await db.close();
+    }
     await app?.close();
-    await db?.$disconnect();
-    if (pool && /^pickup_http_test_[a-f0-9]{32}$/.test(schema))
-      await pool.query(`DROP SCHEMA "${schema}" CASCADE`);
-    await adapter?.dispose();
     if (originalSecret === undefined)
       delete process.env.PAYMENT_SIMULATOR_SECRET;
     else process.env.PAYMENT_SIMULATOR_SECRET = originalSecret;
@@ -348,24 +308,32 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
     listingId: string,
     status: 'Ready' | 'Pending' = 'Ready',
   ) {
-    const key = randomUUID();
+    const key = randomUUID(),
+      now = new Date();
     // Fixture derivative only: not proof of upload/Sharp/live-provider behavior.
-    return db.listingMedia.create({
-      data: {
-        listingId,
-        status,
-        stagingKey: key,
-        pinnedKey: status === 'Ready' ? key + '/input' : null,
-        derivativeKey: status === 'Ready' ? key + '/display.webp' : null,
-        mimeType: 'image/jpeg',
-        byteSize: 100,
-        sha256: 'a'.repeat(64),
-        width: status === 'Ready' ? 20 : null,
-        height: status === 'Ready' ? 20 : null,
-        reservedBytes: 1000,
-        expiresAt: new Date(Date.now() + 3600000),
-      },
-    });
+    const doc = {
+      _id: randomUUID(),
+      listingId,
+      version: 1,
+      status,
+      stagingKey: key,
+      pinnedKey: status === 'Ready' ? key + '/input' : null,
+      derivativeKey: status === 'Ready' ? key + '/display.webp' : null,
+      mimeType: 'image/jpeg',
+      byteSize: 100,
+      sha256: 'a'.repeat(64),
+      width: status === 'Ready' ? 20 : null,
+      height: status === 'Ready' ? 20 : null,
+      failureCode: null,
+      expiresAt: new Date(Date.now() + 3600000),
+      purgedAt: null,
+      reservedBytes: 1000,
+      createdAt: now,
+      updatedAt: now,
+      lockSeq: 0,
+    };
+    await db.c.listing_media.insertOne(doc);
+    return { ...doc, id: doc._id };
   }
   async function complete(
     actor = m1,
@@ -567,9 +535,8 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
     return r.body;
   };
   const reconcile = () =>
-    db.$transaction((tx) => app.get(LedgerService).reconcile(tx), {
-      isolationLevel: 'RepeatableRead',
-    });
+    app.get(MongoService).tx((tx) => app.get(LedgerService).reconcile(tx));
+  const integrity = () => app.get(MongoService).tx((tx) => checkIntegrity(tx));
 
   const accept = (
     f: PaymentFixture,
@@ -676,11 +643,11 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
     return { f, e, body: shipBody([e.id]) };
   }
   async function extendSession(f: PaymentFixture, now: Date) {
-    await db.authSession.updateMany({
-      where: { id: { in: [f.f.seller.sessionId, f.f.buyer.sessionId] } },
-      data: { expiresAt: new Date(now.getTime() + 86400000) },
-    });
+    for (const id of [f.f.seller.sessionId, f.f.buyer.sessionId])
+      await setSession(id, { expiresAt: new Date(now.getTime() + 86400000) });
   }
+  const preparation = async (f: PaymentFixture) =>
+    (await db.c.order_preparations.findOne({ _id: f.id }))!;
   async function labelled() {
     const { f, e, body } = await dispatchable();
     const s = (await register(f, body).expect(200)).body;
@@ -706,15 +673,18 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
   ) => post('/operations/simulator/pickup-events', event, actor, key);
   async function freeze(f: PaymentFixture, now: Date) {
     await extendSession(f, now);
-    await db.authSession.update({
-      where: { id: operator.sessionId },
-      data: { expiresAt: new Date(now.getTime() + 86400000) },
+    await setSession(operator.sessionId, {
+      expiresAt: new Date(now.getTime() + 86400000),
     });
     vi.spyOn(app.get(OrderClock), 'now').mockResolvedValue(now);
   }
   const history = (f: PaymentFixture, actor = f.f.buyer) =>
     get(`/me/orders/${f.id}/shipment/pickup-events`, actor);
-  it('upgrades fifteen migrations without rewriting labels, money, evidence or receipts', async () => {
+  const events = (filter: Record<string, unknown>) =>
+    db.c.carrier_pickup_events.countDocuments(filter);
+  const reviews = (orderId: string) =>
+    db.c.carrier_pickup_reviews.countDocuments({ orderId });
+  it('re-applying the carrier pickup schema to populated storage does not rewrite labels, money, evidence or receipts', async () => {
     expect(upgradeAfter).toEqual(upgradeBefore);
     expect((await shipment(legacy).expect(200)).body.pickup).toBeNull();
     expect((await reconcile()).balanced).toBe(true);
@@ -722,10 +692,17 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
   it('confirms authenticated timely pickup, pins factual time and retains full money and stock', async () => {
     const { f, event } = await labelled(),
       money = await wallet(f.f.buyer);
-    const before = await db.directShipment.findUnique({
-      where: { id: event.shipmentId },
+    const before = await db.c.direct_shipments.findOne({
+      _id: event.shipmentId,
     });
+    const pending = await reserved(f);
+    expect((await integrity()).failures).toEqual([]);
     const r = await emit(event).expect(200);
+    expect((await integrity()).failures).toEqual([]);
+    // Historical evidence remains valid; neither new intents nor pending
+    // uploads become available just because the sweep accepts InTransit.
+    await intent(f, await image(), f.f.seller, randomUUID(), 4).expect(409);
+    await upload(f, pending.id, pending.bytes).expect(409);
     validates('CarrierEventReceipt', r.body);
     expect(r.body).toMatchObject({
       entityType: 'CarrierEvent',
@@ -741,7 +718,7 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
       total: money.total,
     });
     expect(
-      await db.directShipment.findUnique({ where: { id: event.shipmentId } }),
+      await db.c.direct_shipments.findOne({ _id: event.shipmentId }),
     ).toEqual(before);
     const o = await orderView(f.id, f.f.seller);
     expect(o).toMatchObject({
@@ -790,13 +767,9 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
     async (side) => {
       const { f, event } = await labelled(),
         actor = f.f[side];
-      await db.userRole.create({
-        data: { userId: actor.id, role: 'TEST_OPERATOR' },
-      });
+      await db.addRole(actor.id, 'TEST_OPERATOR');
       await emit(event, actor).expect(403);
-      expect(
-        await db.carrierPickupEvent.count({ where: { orderId: f.id } }),
-      ).toBe(0);
+      expect(await events({ orderId: f.id })).toBe(0);
     },
   );
   it.each(['LOCKED', 'RESTRICTED'] as const)(
@@ -805,10 +778,8 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
       const { f, event } = await labelled(),
         op = await reader(['TEST_OPERATOR'], status);
       await emit(event, op).expect(403);
-      await db.user.updateMany({
-        where: { id: { in: [f.f.buyer.id, f.f.seller.id] } },
-        data: { status },
-      });
+      for (const id of [f.f.buyer.id, f.f.seller.id])
+        await db.setStatus(id, status);
       await emit(event).expect(200);
       for (const actor of [f.f.buyer, f.f.seller]) {
         await history(f, actor).expect(200);
@@ -852,22 +823,17 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
         event.eventId,
       ).expect(422);
     await emit(event, operator, randomUUID()).expect(422);
-    expect(
-      await db.carrierPickupEvent.count({
-        where: { shipmentId: event.shipmentId },
-      }),
-    ).toBe(0);
+    expect(await events({ shipmentId: event.shipmentId })).toBe(0);
   });
   it('rejects event before registration and in the future with no writes', async () => {
     const { event } = await labelled(),
-      s = await db.directShipment.findUniqueOrThrow({
-        where: { id: event.shipmentId },
-      });
+      s = (await db.c.direct_shipments.findOne({ _id: event.shipmentId }))!;
     for (const time of [
       new Date(s.registeredAt.getTime() - 1),
       new Date(Date.now() + 60000),
     ])
       await emit({ ...event, occurredAt: time.toISOString() }).expect(422);
+    expect(await events({ shipmentId: event.shipmentId })).toBe(0);
     await emit(event).expect(200);
   });
   it('validates HMAC and rejects payment protocol signatures, tampering and disabled simulation', async () => {
@@ -921,8 +887,9 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
       'IdempotencyConflict',
     );
     expect(
-      await db.mutationReceipt.count({
-        where: { operation: 'emitSimulatedPickupEvent', key: event.eventId },
+      await db.c.mutation_receipts.countDocuments({
+        operation: 'emitSimulatedPickupEvent',
+        key: event.eventId,
       }),
     ).toBe(1);
   });
@@ -937,9 +904,7 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
       orderState: 'InTransit',
     });
     expect((await history(f).expect(200)).body.items).toHaveLength(2);
-    expect(
-      await db.carrierPickupReview.count({ where: { orderId: f.id } }),
-    ).toBe(0);
+    expect(await reviews(f.id)).toBe(0);
   });
   it('conflicting factual time opens sticky review without overwriting canonical pickup or releasing anything', async () => {
     const { f, event } = await labelled(),
@@ -972,19 +937,16 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
     });
     expect((await emit(event).expect(200)).body).toEqual(first.body);
     expect((await orderView(f.id, f.f.buyer)).moneyHeld).toBe(230000);
-    expect(
-      await db.carrierPickupReview.count({ where: { orderId: f.id } }),
-    ).toBe(1);
+    expect(await reviews(f.id)).toBe(1);
     await expect(app.get(OrdersService).refund(f.id)).rejects.toThrow();
     expect((await reconcile()).balanced).toBe(true);
+    expect((await integrity()).failures).toEqual([]);
   });
   it.each([false, true])(
     'late event opens review and never backdates acceptance; worker already ran=%s',
     async (workerFirst) => {
       const { f, event } = await labelled(),
-        p = await db.orderPreparation.findUniqueOrThrow({
-          where: { orderId: f.id },
-        });
+        p = await preparation(f);
       await freeze(f, p.pickupDeadline);
       if (workerFirst) await app.get(OrdersService).expirePickup(f.id);
       const r = await emit(event).expect(200);
@@ -1009,9 +971,7 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
   );
   it('last millisecond before pickup deadline is accepted and timeout worker cannot override InTransit', async () => {
     const { f, event } = await labelled(),
-      p = await db.orderPreparation.findUniqueOrThrow({
-        where: { orderId: f.id },
-      });
+      p = await preparation(f);
     await freeze(f, new Date(p.pickupDeadline.getTime() - 1));
     expect((await emit(event).expect(200)).body.outcome).toBe('Applied');
     vi.mocked(app.get(OrderClock).now).mockResolvedValue(p.pickupDeadline);
@@ -1021,276 +981,296 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
   it('20 simultaneous replays across two operators create exactly one event and receipt', async () => {
     const { event } = await labelled(),
       op2 = await reader(['TEST_OPERATOR']);
-    const results = await Promise.all(
-      Array.from({ length: 20 }, (_, i) => emit(event, i % 2 ? operator : op2)),
+    const actors = Array.from({ length: 20 }, (_, i) =>
+      i % 2 ? operator : op2,
     );
+    const first = await Promise.all(
+      actors.map((actor) => emit(event, actor).then((r) => r)),
+    );
+    console.info(
+      'Pickup replay race',
+      Object.fromEntries(
+        [200, 503].map((s) => [s, first.filter((r) => r.status === s).length]),
+      ),
+    );
+    const results = [];
+    for (let i = 0; i < first.length; i++)
+      results.push(await settle(first[i], () => emit(event, actors[i])));
     expect(results.every((r) => r.status === 200)).toBe(true);
     expect(new Set(results.map((r) => r.body.id)).size).toBe(1);
     expect(
       results.filter((r) => r.headers['idempotency-replayed'] === 'false'),
     ).toHaveLength(1);
+    expect(await events({ shipmentId: event.shipmentId })).toBe(1);
     expect(
-      await db.carrierPickupEvent.count({
-        where: { shipmentId: event.shipmentId },
+      await db.c.mutation_receipts.countDocuments({
+        operation: 'emitSimulatedPickupEvent',
+        key: event.eventId,
       }),
     ).toBe(1);
   });
   it('different events racing behind a real participant lock serialize one Applied and one Duplicate', async () => {
     const { f, event } = await labelled(),
-      lock = await blockUser(f.f.buyer.id);
-    const a = emit(event).then((r) => r),
-      b = emit({ ...event, eventId: randomUUID() }).then((r) => r);
+      sent = [event, { ...event, eventId: randomUUID() }],
+      gate = await Gate.lockUser(db.client, f.f.buyer.id);
+    const contenders = sent.map((e) => emit(e).then((r) => r));
     try {
-      await blockedBy(lock.pid, 2, lock.connection);
+      await gate.contended(2);
+      await gate.close();
+      const results = await Promise.all(contenders);
+      for (let i = 0; i < 2; i++)
+        results[i] = await settle(results[i], () => emit(sent[i]));
+      expect(results.map((r) => r.status)).toEqual([200, 200]);
+      expect(results.map((r) => r.body.outcome).sort()).toEqual([
+        'Applied',
+        'Duplicate',
+      ]);
     } finally {
-      await lock.connection.query('ROLLBACK');
-      lock.connection.release();
+      await gate.close();
+      await Promise.allSettled(contenders);
     }
-    const results = await Promise.all([a, b]);
-    expect(results.map((r) => r.status)).toEqual([200, 200]);
-    expect(results.map((r) => r.body.outcome).sort()).toEqual([
-      'Applied',
-      'Duplicate',
-    ]);
   });
   it('conflicting events racing serialize an Applied fact and a sticky review', async () => {
     const { f, event } = await labelled(),
-      lock = await blockUser(f.f.buyer.id);
-    const a = emit(event).then((r) => r),
-      b = emit({
-        ...event,
-        eventId: randomUUID(),
-        occurredAt: new Date().toISOString(),
-      }).then((r) => r);
+      gate = await Gate.lockUser(db.client, f.f.buyer.id);
+    // The conflicting fact needs a different millisecond (MongoDB dates).
+    while (Date.now() <= Date.parse(event.occurredAt))
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    const sent = [
+      event,
+      { ...event, eventId: randomUUID(), occurredAt: new Date().toISOString() },
+    ];
+    expect(sent[1].occurredAt).not.toBe(event.occurredAt);
+    const contenders = sent.map((e) => emit(e).then((r) => r));
     try {
-      await blockedBy(lock.pid, 2, lock.connection);
+      await gate.contended(2);
+      await gate.close();
+      const results = await Promise.all(contenders);
+      for (let i = 0; i < 2; i++)
+        results[i] = await settle(results[i], () => emit(sent[i]));
+      expect(results.map((r) => r.status)).toEqual([200, 200]);
+      expect(results.map((r) => r.body.outcome).sort()).toEqual([
+        'Applied',
+        'ReviewRequired',
+      ]);
+      expect((await orderView(f.id, f.f.buyer)).state).toBe(
+        'ResolutionPending',
+      );
     } finally {
-      await lock.connection.query('ROLLBACK');
-      lock.connection.release();
+      await gate.close();
+      await Promise.allSettled(contenders);
     }
-    const results = await Promise.all([a, b]);
-    expect(results.map((r) => r.status)).toEqual([200, 200]);
-    expect(results.map((r) => r.body.outcome).sort()).toEqual([
-      'Applied',
-      'ReviewRequired',
-    ]);
-    expect((await orderView(f.id, f.f.buyer)).state).toBe('ResolutionPending');
   });
   it('rechecks deadline after waiting on the actual hold account lock', async () => {
     const { f, event } = await labelled(),
-      p = await db.orderPreparation.findUniqueOrThrow({
-        where: { orderId: f.id },
-      });
+      p = await preparation(f);
     await freeze(f, new Date(p.pickupDeadline.getTime() - 1));
-    const lock = await pool.connect();
-    await lock.query('BEGIN');
-    const pid = (await lock.query('SELECT pg_backend_pid() pid')).rows[0].pid;
-    await lock.query(
-      'SELECT id FROM wallet_accounts WHERE order_id=$1  FOR UPDATE',
-      [f.id],
-    );
-    const pending = emit(event).then((r) => r);
+    const gate = await holdAccountLock(f),
+      pending = emit(event).then((r) => r);
     try {
-      await blockedBy(pid, 1, lock);
+      await gate.contended();
       vi.mocked(app.get(OrderClock).now).mockResolvedValue(p.pickupDeadline);
+      await gate.close();
+      const r = await settle(await pending, () => emit(event));
+      expect(r.status).toBe(200);
+      expect(r.body.outcome).toBe('ReviewRequired');
     } finally {
-      await lock.query('ROLLBACK');
-      lock.release();
+      await gate.close();
+      await pending;
     }
-    const r = await pending;
-    expect(r.status).toBe(200);
-    expect(r.body.outcome).toBe('ReviewRequired');
   });
   it('revoked operator role is rechecked before accessing an existing global receipt', async () => {
     const { event } = await labelled(),
       op2 = await reader(['TEST_OPERATOR']);
     await emit(event).expect(200);
-    const lock = await blockUser(op2.id),
+    const gate = await Gate.lockUser(db.client, op2.id),
       pending = emit(event, op2).then((r) => r);
     try {
-      await blockedBy(lock.pid, 1, lock.connection);
-      await lock.connection.query(
-        "DELETE FROM user_roles WHERE user_id=$1 AND role='TEST_OPERATOR'",
-        [op2.id],
-      );
-      await lock.connection.query('COMMIT');
+      await gate.contended();
+      await gate.db
+        .collection<{ _id: string }>('users')
+        .updateOne(
+          { _id: op2.id },
+          { $pull: { roles: { role: 'TEST_OPERATOR' } } } as never,
+          { session: gate.session },
+        );
+      await gate.commit();
+      expect((await pending).status).toBe(403);
     } finally {
-      await lock.connection.query('ROLLBACK');
-      lock.connection.release();
+      await gate.close();
+      await pending;
     }
-    expect((await pending).status).toBe(403);
   });
   it.each(['audit', 'outbox'] as const)(
     'rolls back event, Order transition and receipt on %s failure; same-key retry succeeds',
     async (stage) => {
-      const { f, event } = await labelled(),
-        table = stage === 'audit' ? 'audit_events' : 'outbox_events',
-        condition =
-          stage === 'audit'
-            ? "NEW.action='emitSimulatedPickupEvent'"
-            : "NEW.type='CarrierPickupRecorded'";
-      await pool.query(
-        `CREATE FUNCTION fail_pickup_test() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF ${condition} THEN RAISE EXCEPTION 'test failpoint'; END IF; RETURN NEW; END $$; CREATE TRIGGER fail_pickup_test BEFORE INSERT ON ${table} FOR EACH ROW EXECUTE FUNCTION fail_pickup_test()`,
+      const { f, event } = await labelled();
+      // Temporary validator rule (the former failing BEFORE INSERT trigger).
+      await db.withRejectingValidator(
+        stage === 'audit' ? 'audit_events' : 'outbox_events',
+        stage === 'audit'
+          ? { action: 'emitSimulatedPickupEvent' }
+          : { type: 'CarrierPickupRecorded' },
+        () => emit(event).expect(500),
       );
-      try {
-        await emit(event).expect(500);
-      } finally {
-        await pool.query(
-          `DROP TRIGGER fail_pickup_test ON ${table}; DROP FUNCTION fail_pickup_test()`,
-        );
-      }
-      expect(
-        await db.carrierPickupEvent.count({ where: { orderId: f.id } }),
-      ).toBe(0);
+      expect(await events({ orderId: f.id })).toBe(0);
       expect((await orderView(f.id, f.f.buyer)).state).toBe('Preparing');
       expect(
-        await db.mutationReceipt.count({ where: { key: event.eventId } }),
+        await db.c.mutation_receipts.countDocuments({ key: event.eventId }),
       ).toBe(0);
       await emit(event).expect(200);
     },
   );
   it('database rejects fictional InTransit, event deletion/editing, and changed review evidence', async () => {
     const { f, event } = await labelled();
+    // An Order transition must match the pickup facts (C, formerly
+    // latlai_check_order_pickup).
     await expect(
-      pool.query(
-        "UPDATE direct_orders SET state='InTransit',version=4 WHERE id=$1",
-        [f.id],
+      checked(
+        (tx) =>
+          tx.c.direct_orders.updateOne(
+            { _id: f.id, version: 3, state: 'Preparing' },
+            { $set: { state: 'InTransit' }, $inc: { version: 1 } },
+          ),
+        f.id,
       ),
     ).rejects.toThrow();
+    expect(
+      unlocked(await db.c.direct_orders.findOne({ _id: f.id })),
+    ).toMatchObject({ state: 'Preparing', version: 3 });
     await emit(event).expect(200);
-    for (const sql of [
-      "UPDATE carrier_pickup_events SET outcome='Duplicate' WHERE id=$1",
-      'DELETE FROM carrier_pickup_events WHERE id=$1',
-    ])
-      await expect(pool.query(sql, [event.eventId])).rejects.toThrow();
+    // Carrier events and reviews are append-only for the app user (P).
+    const appDb = app.get(MongoService).c;
+    await expect(
+      appDb.carrier_pickup_events.updateOne(
+        { _id: event.eventId },
+        { $set: { outcome: 'Duplicate' } },
+      ),
+    ).rejects.toMatchObject({ code: 13 });
+    await expect(
+      appDb.carrier_pickup_events.deleteOne({ _id: event.eventId }),
+    ).rejects.toMatchObject({ code: 13 });
     await emit({
       ...event,
       eventId: randomUUID(),
       occurredAt: new Date().toISOString(),
     }).expect(200);
-    for (const sql of [
-      "UPDATE carrier_pickup_reviews SET reason='LatePickup' WHERE order_id=$1",
-      'DELETE FROM carrier_pickup_reviews WHERE order_id=$1',
-    ])
-      await expect(pool.query(sql, [f.id])).rejects.toThrow();
+    await expect(
+      appDb.carrier_pickup_reviews.updateOne(
+        { orderId: f.id },
+        { $set: { reason: 'LatePickup' } },
+      ),
+    ).rejects.toMatchObject({ code: 13 });
+    await expect(
+      appDb.carrier_pickup_reviews.deleteOne({ orderId: f.id }),
+    ).rejects.toMatchObject({ code: 13 });
+    expect(await reviews(f.id)).toBe(1);
     expect((await reconcile()).balanced).toBe(true);
   });
   it('pickup and expiry racing at deadline retain both facts safely with one Order transition', async () => {
     const { f, event } = await labelled(),
-      p = await db.orderPreparation.findUniqueOrThrow({
-        where: { orderId: f.id },
-      });
+      p = await preparation(f);
     await freeze(f, p.pickupDeadline);
-    const lock = await blockUser(f.f.buyer.id);
+    const gate = await Gate.lockUser(db.client, f.f.buyer.id);
     const incoming = emit(event).then((r) => r),
       expiry = app
         .get(OrdersService)
         .expirePickup(f.id)
         .catch((e) => e);
     try {
-      await blockedBy(lock.pid, 2, lock.connection);
+      await gate.contended(2);
+      await gate.close();
+      expect((await settle(await incoming, () => emit(event))).status).toBe(
+        200,
+      );
+      await expiry;
+      expect(
+        unlocked(await db.c.direct_orders.findOne({ _id: f.id })),
+      ).toMatchObject({ state: 'ResolutionPending', version: 4 });
+      expect(await reviews(f.id)).toBe(1);
+      expect((await reconcile()).balanced).toBe(true);
     } finally {
-      await lock.connection.query('ROLLBACK');
-      lock.connection.release();
+      await gate.close();
+      await incoming;
+      await expiry;
     }
-    expect((await incoming).status).toBe(200);
-    await expiry;
-    expect(
-      await db.directOrder.findUnique({ where: { id: f.id } }),
-    ).toMatchObject({ state: 'ResolutionPending', version: 4 });
-    expect(
-      await db.carrierPickupReview.count({ where: { orderId: f.id } }),
-    ).toBe(1);
-    expect((await reconcile()).balanced).toBe(true);
   });
   it('session expiry after ledger wait rejects even an otherwise valid event', async () => {
     const { f, event } = await labelled(),
       op2 = await reader(['TEST_OPERATOR']);
-    const lock = await pool.connect();
-    await lock.query('BEGIN');
-    const pid = (await lock.query('SELECT pg_backend_pid() pid')).rows[0].pid;
-    const session = await db.authSession.findUniqueOrThrow({
-      where: { id: op2.sessionId },
-    });
-    const pending = (async () => {
-      await lock.query(
-        'SELECT id FROM wallet_accounts WHERE order_id=$1 FOR UPDATE',
-        [f.id],
-      );
-      return emit(event, op2);
-    })();
+    const session = (await db.c.auth_sessions.findOne({
+      _id: op2.sessionId,
+    }))!;
+    const gate = await holdAccountLock(f),
+      pending = emit(event, op2).then((r) => r);
     try {
-      await blockedBy(pid, 1, lock);
+      await gate.contended();
       vi.spyOn(app.get(OrderClock), 'now').mockResolvedValue(session.expiresAt);
+      await gate.close();
+      expect((await pending).status).toBe(401);
+      expect(await events({ orderId: f.id })).toBe(0);
     } finally {
-      await lock.query('ROLLBACK');
-      lock.release();
+      await gate.close();
+      await pending;
     }
-    expect((await pending).status).toBe(401);
-    expect(
-      await db.carrierPickupEvent.count({ where: { orderId: f.id } }),
-    ).toBe(0);
   });
   it('late review and state both roll back if receipt persistence fails', async () => {
     const { f, event } = await labelled(),
-      p = await db.orderPreparation.findUniqueOrThrow({
-        where: { orderId: f.id },
-      });
+      p = await preparation(f);
     await freeze(f, p.pickupDeadline);
-    await pool.query(
-      `CREATE FUNCTION fail_late_test() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.operation='emitSimulatedPickupEvent' THEN RAISE EXCEPTION 'test failpoint'; END IF; RETURN NEW; END $$; CREATE TRIGGER fail_late_test BEFORE INSERT ON mutation_receipts FOR EACH ROW EXECUTE FUNCTION fail_late_test()`,
+    await db.withRejectingValidator(
+      'mutation_receipts',
+      { operation: 'emitSimulatedPickupEvent' },
+      () => emit(event).expect(500),
     );
-    try {
-      await emit(event).expect(500);
-    } finally {
-      await pool.query(
-        'DROP TRIGGER fail_late_test ON mutation_receipts; DROP FUNCTION fail_late_test()',
-      );
-    }
+    expect(await reviews(f.id)).toBe(0);
+    expect(await events({ orderId: f.id })).toBe(0);
     expect(
-      await db.carrierPickupReview.count({ where: { orderId: f.id } }),
-    ).toBe(0);
-    expect(
-      await db.carrierPickupEvent.count({ where: { orderId: f.id } }),
-    ).toBe(0);
-    expect(
-      await db.directOrder.findUnique({ where: { id: f.id } }),
+      unlocked(await db.c.direct_orders.findOne({ _id: f.id })),
     ).toMatchObject({ state: 'Preparing', version: 3 });
     await emit(event).expect(200);
   });
   it('database blocks forged events with an unrelated receipt and cross-Order review evidence', async () => {
     const one = await labelled(),
       two = await labelled();
+    const occurredAt = new Date(one.event.occurredAt);
+    // Forged inserts are rejected by the commit-time Order check (C).
     await expect(
-      db.carrierPickupEvent.create({
-        data: {
-          id: randomUUID(),
-          orderId: one.f.id,
-          shipmentId: one.event.shipmentId,
-          sequence: 1,
-          occurredAt: new Date(one.event.occurredAt),
-          receivedAt: new Date(),
-          outcome: 'Applied',
-          deliveryDeadline: new Date(
-            Date.parse(one.event.occurredAt) + 240 * 3600000,
-          ),
-          payloadHash: 'a'.repeat(64),
-          signature: 'b'.repeat(64),
-          receiptId: two.s.id,
-        },
-      }),
-    ).rejects.toThrow();
+      checked(
+        (tx) =>
+          tx.c.carrier_pickup_events.insertOne({
+            _id: randomUUID(),
+            orderId: one.f.id,
+            shipmentId: one.event.shipmentId,
+            sequence: 1,
+            occurredAt,
+            receivedAt: new Date(),
+            outcome: 'Applied',
+            deliveryDeadline: new Date(occurredAt.getTime() + 240 * 3600000),
+            policyCode: 'CARRIER-PICKUP-v1',
+            payloadHash: 'a'.repeat(64),
+            signature: 'b'.repeat(64),
+            receiptId: two.s.id,
+          }),
+        one.f.id,
+      ),
+    ).rejects.toThrow('Pickup receipt/audit/outbox mismatch');
+    expect(await events({ orderId: one.f.id })).toBe(0);
     await emit(one.event).expect(200);
     await expect(
-      db.carrierPickupReview.create({
-        data: {
-          orderId: two.f.id,
-          eventId: one.event.eventId,
-          openedAt: new Date(),
-          reason: 'LatePickup',
-        },
-      }),
-    ).rejects.toThrow();
+      checked(
+        (tx) =>
+          tx.c.carrier_pickup_reviews.insertOne({
+            _id: randomUUID(),
+            orderId: two.f.id,
+            eventId: one.event.eventId,
+            openedAt: new Date(),
+            reason: 'LatePickup',
+          }),
+        two.f.id,
+      ),
+    ).rejects.toThrow('Pickup verification task mismatch');
+    expect(await reviews(two.f.id)).toBe(0);
     expect((await reconcile()).balanced).toBe(true);
   });
   it('bounds retained history at 128 while allowing receipt replay at capacity', async () => {
@@ -1302,5 +1282,8 @@ describe('Carrier pickup: real PostgreSQL and HTTP', () => {
     expect((await emit(event).expect(200)).body).toEqual(first.body);
     expect((await history(f).expect(200)).body.items).toHaveLength(128);
     expect((await reconcile()).balanced).toBe(true);
-  }, 60000);
+    // 130 sequential commands, each running the full commit-time Order check
+    // (C) that re-verifies every earlier event's receipt chain, take ~65 s on
+    // the MongoDB replica set.
+  }, 180000);
 });

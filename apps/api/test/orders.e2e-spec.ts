@@ -3,27 +3,33 @@ import { QuoteClock } from '../src/modules/quotes/quote-clock.js';
 import { spawn } from 'node:child_process';
 import { OrdersService } from '../src/modules/orders/orders.service.js';
 import { OrderExpiryWorker } from '../src/modules/orders/order-expiry.service.js';
+import { checkOrder } from '../src/modules/orders/order-invariants.js';
+import { checkListing } from '../src/modules/listings/listing-projection.js';
 import { ReservationsService } from '../src/modules/reservations/reservations.service.js';
-import { randomBytes, randomUUID } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import type { INestApplication } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/generated/prisma/client.js';
-import type { RoleCode, UserStatus } from '../src/generated/prisma/client.js';
-import { DatabaseService } from '../src/database/database.service.js';
+import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
-import request from 'supertest';
-import { Ajv2020 } from 'ajv/dist/2020.js';
-import addFormats from 'ajv-formats';
-import { parse } from 'yaml';
-import { hash } from 'argon2';
+import type {
+  DirectOrderDoc,
+  RoleCode,
+  UserStatus,
+} from '../src/database/mongo/documents.js';
+import { MongoService } from '../src/database/mongo/mongo.service.js';
+import {
+  onTransactionRetry,
+  type Tx,
+} from '../src/database/mongo/transaction.js';
 import { MediaStorage } from '../src/modules/media/media-storage.js';
+import { validates } from './helpers/contract.js';
+import { Gate } from './helpers/mongo-gate.js';
+import { MongoFixtures } from './helpers/mongo-fixtures.js';
 
-// Storage signing is deliberately faked. HTTP, authorization and PostgreSQL are real.
+// Storage signing is deliberately faked. HTTP, authorization and MongoDB are real.
 const storage = {
   beforeSign: undefined as (() => Promise<void>) | undefined,
   async check() {},
@@ -36,23 +42,6 @@ const storage = {
   },
 };
 
-const contract = parse(
-  readFileSync(
-    createRequire(import.meta.url).resolve(
-      '@used-books/api-contract/openapi.yaml',
-    ),
-    'utf8',
-  ),
-);
-const ajv = new Ajv2020({ strict: false });
-addFormats.default(ajv);
-ajv.addSchema({ $id: 'api-wire', components: contract.components });
-function validates(name: string, body: unknown) {
-  const fn = ajv.compile({ $ref: `api-wire#/components/schemas/${name}` });
-  expect(fn(body), JSON.stringify(fn.errors)).toBe(true);
-}
-type Adapter = Awaited<ReturnType<PrismaPg['connect']>>;
-type Pool = ReturnType<Adapter['underlyingDriver']>;
 type Reader = { id: string; token: string; sessionId: string; email: string };
 const metadata = (title = 'Đường sách chuyền tay') => ({
   title,
@@ -81,9 +70,9 @@ const draft = (bookId: string | null = null) => ({
   mediaIds: [] as string[],
 });
 
-describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
-  const schema = `order_http_test_${randomUUID().replaceAll('-', '')}`;
-  let app: INestApplication, db: PrismaClient, adapter: Adapter, pool: Pool;
+describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
+  let app: INestApplication, db: MongoFixtures;
+  const users: string[] = [];
   let m1: Reader, m2: Reader, a1: Reader, a2: Reader, staff: Reader;
   const get = (path: string, actor?: Reader) => {
     const call = request(app.getHttpServer()).get('/api/v1' + path);
@@ -115,32 +104,31 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
     roles: RoleCode[] = ['MEMBER'],
     status: UserStatus = 'ACTIVE',
   ): Promise<Reader> {
-    const id = randomUUID(),
-      sessionId = randomUUID(),
-      email = `${id}@draft-http.test`;
-    await db.user.create({
-      data: {
-        id,
-        emailNormalized: email,
-        displayName: 'Bạn đọc thử nghiệm',
-        passwordHash: await hash('Only-a-test-password-2026'),
-        status,
-        emailVerifiedAt: new Date(),
-        roles: { create: roles.map((role) => ({ role })) },
-        sessions: {
-          create: {
-            id: sessionId,
-            refreshTokenHash: randomBytes(32).toString('hex'),
-            expiresAt: new Date(Date.now() + 86400000),
-          },
-        },
-      },
+    const email = `${randomUUID()}@draft-http.test`;
+    const user = await db.user({
+      email,
+      displayName: 'Bạn đọc thử nghiệm',
+      roles,
+      status,
     });
+    users.push(user._id);
+    const sessionId = await db.session(user._id);
     const token = await app
       .get(JwtService)
-      .signAsync({ sub: id, sid: sessionId });
-    return { id, sessionId, token, email };
+      .signAsync({ sub: user._id, sid: sessionId });
+    return { id: user._id, sessionId, token, email };
   }
+  // Direct user/session writes bump lockSeq like every application writer.
+  const setUser = (id: string, set: Record<string, unknown>) =>
+    db.c.users.updateOne(
+      { _id: id },
+      { $set: { ...set, updatedAt: new Date() }, $inc: { lockSeq: 1 } },
+    );
+  const setSession = (id: string, set: Record<string, unknown>) =>
+    db.c.auth_sessions.updateOne(
+      { _id: id },
+      { $set: set, $inc: { lockSeq: 1 } },
+    );
   async function createCatalog(actor = m1, meta = metadata()) {
     const result = await post(
       '/catalog/requests',
@@ -168,67 +156,74 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
   }
   async function makeApp() {
     const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(DatabaseService)
-      .useValue(db)
       .overrideProvider(MediaStorage)
       .useValue(storage)
       .compile();
     const next = module.createNestApplication();
     configureApp(next, { docs: false, logRequests: false });
     await next.init();
+    // One listening socket per app lifetime: supertest otherwise listens and
+    // closes per request, which can reset connections of the staggered 503
+    // retries in the 100-request races.
+    await next.listen(0, '127.0.0.1');
     return next;
   }
-  async function blockedBy(
-    pid: number,
-    minimum = 1,
-    observer: Pick<Pool, 'query'> = pool,
-  ) {
-    const deadline = Date.now() + 4000;
-    while (Date.now() < deadline) {
-      // A barrier connection stays in one transaction: refresh PostgreSQL's
-      // statistics snapshot so newly opened contenders are visible.
-      await observer.query('SELECT pg_stat_clear_snapshot()');
-      const r = await observer.query(
-        'SELECT count(*)::int n FROM pg_stat_activity a WHERE $1 = ANY(pg_blocking_pids(a.pid)) OR EXISTS (SELECT 1 FROM pg_stat_activity b WHERE $1 = ANY(pg_blocking_pids(b.pid)) AND b.pid = ANY(pg_blocking_pids(a.pid)))',
-        [pid],
-      );
-      if (r.rows[0].n >= minimum) return;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-    throw new Error(
-      'HTTP mutation never reached the blocked database transaction',
-    );
+  // Observes command transactions retrying against a write lock held by
+  // another transaction (a session queued behind a PostgreSQL row lock).
+  function watchRetries() {
+    const seen = new Set<number>();
+    const stop = onTransactionRetry((event) => seen.add(event.transactionId));
+    return {
+      stop,
+      async until(n = 1) {
+        const deadline = Date.now() + 4000;
+        while (Date.now() < deadline) {
+          if (seen.size >= n) return;
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+        throw new Error('Commands did not reach the lock barrier');
+      },
+    };
   }
-  async function blockUser(id: string) {
-    const connection = await pool.connect();
-    await connection.query('BEGIN');
-    await connection.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [id]);
-    const pid = (await connection.query('SELECT pg_backend_pid() pid')).rows[0]
-      .pid as number;
-    return { connection, pid };
+  // Test-only pause of the next Order decision, inside its transaction and
+  // while it holds the user/listing/order locks. PostgreSQL granted queued
+  // row locks in FIFO order; MongoDB aborts and retries the loser, so the
+  // intended winner is made explicit by holding it here.
+  function pauseDecision(at?: Date) {
+    const clock = app.get(OrderClock),
+      original = clock.now.bind(clock);
+    let entered!: () => void, release!: () => void;
+    const reached = new Promise<void>((resolve) => (entered = resolve)),
+      released = new Promise<void>((resolve) => (release = resolve));
+    const spy = vi
+      .spyOn(clock, 'now')
+      .mockImplementationOnce(async (tx: Tx) => {
+        entered();
+        await released;
+        return at ?? original(tx);
+      });
+    return { reached, release, spy };
   }
+  // A raw write through the application's own connection that must pass the
+  // commit-time order/listing checks (C) every command registers, the
+  // equivalent of the deferred PostgreSQL constraint triggers.
+  const checked = (
+    fn: (tx: Tx) => Promise<unknown>,
+    check: { order?: string; listing?: string },
+  ) =>
+    app.get(MongoService).tx(async (tx) => {
+      await fn(tx);
+      if (check.order)
+        tx.check(`order:${check.order}`, () => checkOrder(tx, check.order!));
+      if (check.listing)
+        tx.check(`listing:${check.listing}`, () =>
+          checkListing(tx, check.listing!),
+        );
+    });
 
   beforeAll(async () => {
-    const url = process.env.TEST_DATABASE_URL!;
-    if (!decodeURIComponent(new URL(url).pathname).endsWith('_test'))
-      throw new Error('Only _test databases');
-    adapter = await new PrismaPg({
-      connectionString: url,
-      max: 16,
-      options: `-c search_path=${schema},public -c timezone=UTC`,
-      statement_timeout: 15000,
-    }).connect();
-    pool = adapter.underlyingDriver();
-    await pool.query(`CREATE SCHEMA "${schema}"`);
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n))
-      .sort())
-      await pool.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
-    db = new PrismaClient({ adapter: new PrismaPg(pool, { schema }) });
-    await db.$connect();
     app = await makeApp();
+    db = await MongoFixtures.connect();
     m1 = await reader();
     m2 = await reader();
     a1 = await reader(['MEMBER', 'ADMIN']);
@@ -236,11 +231,74 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
     staff = await reader(['STAFF']);
   }, 60000);
   afterAll(async () => {
+    storage.beforeSign = undefined;
+    if (db) {
+      const c = db.c;
+      const orders = (
+        await c.direct_orders.find({ buyerId: { $in: users } }).toArray()
+      ).map((o) => o._id);
+      const contexts = (
+        await c.workflow_contexts.find({ orderId: { $in: orders } }).toArray()
+      ).map((x) => x._id);
+      const commitments = (
+        await c.exclusive_commitments
+          .find({ currentContextId: { $in: contexts } })
+          .toArray()
+      ).map((x) => x._id);
+      await c.commitment_events.deleteMany({
+        commitmentId: { $in: commitments },
+      });
+      await c.exclusive_commitments.deleteMany({ _id: { $in: commitments } });
+      await c.agreement_snapshots.deleteMany({ _id: { $in: contexts } });
+      await c.workflow_items.deleteMany({ contextId: { $in: contexts } });
+      await c.workflow_contexts.deleteMany({ _id: { $in: contexts } });
+      await c.direct_orders.deleteMany({ _id: { $in: orders } });
+      await c.sale_quotes.deleteMany({ buyerId: { $in: users } });
+      const listings = (
+        await c.listings.find({ ownerId: { $in: users } }).toArray()
+      ).map((l) => l._id);
+      const revisions = (
+        await c.listing_revisions
+          .find({ listingId: { $in: listings } })
+          .toArray()
+      ).map((r) => r._id);
+      const media = (
+        await c.listing_media.find({ listingId: { $in: listings } }).toArray()
+      ).map((m) => m._id);
+      const books = (
+        await c.catalog_books.find({ requesterId: { $in: users } }).toArray()
+      ).map((b) => b._id);
+      const bookRevisions = (
+        await c.catalog_revisions.find({ bookId: { $in: books } }).toArray()
+      ).map((r) => r._id);
+      // Worker receipts/audits carry no actor; they join through the context.
+      const history = {
+        $or: [{ actorId: { $in: users } }, { contextId: { $in: contexts } }],
+      };
+      const audits = (await c.audit_events.find(history).toArray()).map(
+        (a) => a._id,
+      );
+      await c.outbox_events.deleteMany({ auditId: { $in: audits } });
+      await c.audit_events.deleteMany({ _id: { $in: audits } });
+      await c.mutation_receipts.deleteMany(history);
+      await c.listing_decisions.deleteMany({ revisionId: { $in: revisions } });
+      await c.revision_media.deleteMany({ listingId: { $in: listings } });
+      await c.media_processing_jobs.deleteMany({ mediaId: { $in: media } });
+      await c.listing_media.deleteMany({ _id: { $in: media } });
+      await c.listing_revisions.deleteMany({ _id: { $in: revisions } });
+      await c.listings.deleteMany({ _id: { $in: listings } });
+      await c.catalog_decisions.deleteMany({
+        revisionId: { $in: bookRevisions },
+      });
+      await c.catalog_revisions.deleteMany({ _id: { $in: bookRevisions } });
+      await c.catalog_books.deleteMany({ _id: { $in: books } });
+      await c.member_addresses.deleteMany({ ownerId: { $in: users } });
+      await c.address_identities.deleteMany({ ownerId: { $in: users } });
+      await c.address_books.deleteMany({ _id: { $in: users } });
+      await db.removeUsers(users);
+      await db.close();
+    }
     await app?.close();
-    await db?.$disconnect();
-    if (pool && /^order_http_test_[a-f0-9]{32}$/.test(schema))
-      await pool.query(`DROP SCHEMA "${schema}" CASCADE`);
-    await adapter?.dispose();
   });
 
   const checklist = {
@@ -255,24 +313,32 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
     listingId: string,
     status: 'Ready' | 'Pending' = 'Ready',
   ) {
-    const key = randomUUID();
+    const key = randomUUID(),
+      now = new Date();
     // Fixture derivative only: not proof of upload/Sharp/live-provider behavior.
-    return db.listingMedia.create({
-      data: {
-        listingId,
-        status,
-        stagingKey: key,
-        pinnedKey: status === 'Ready' ? key + '/input' : null,
-        derivativeKey: status === 'Ready' ? key + '/display.webp' : null,
-        mimeType: 'image/jpeg',
-        byteSize: 100,
-        sha256: 'a'.repeat(64),
-        width: status === 'Ready' ? 20 : null,
-        height: status === 'Ready' ? 20 : null,
-        reservedBytes: 1000,
-        expiresAt: new Date(Date.now() + 3600000),
-      },
-    });
+    const doc = {
+      _id: randomUUID(),
+      listingId,
+      version: 1,
+      status,
+      stagingKey: key,
+      pinnedKey: status === 'Ready' ? key + '/input' : null,
+      derivativeKey: status === 'Ready' ? key + '/display.webp' : null,
+      mimeType: 'image/jpeg',
+      byteSize: 100,
+      sha256: 'a'.repeat(64),
+      width: status === 'Ready' ? 20 : null,
+      height: status === 'Ready' ? 20 : null,
+      failureCode: null,
+      expiresAt: new Date(Date.now() + 3600000),
+      purgedAt: null,
+      reservedBytes: 1000,
+      createdAt: now,
+      updatedAt: now,
+      lockSeq: 0,
+    };
+    await db.c.listing_media.insertOne(doc);
+    return { ...doc, id: doc._id };
   }
   async function complete(
     actor = m1,
@@ -462,32 +528,40 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
     expect(r.headers['cache-control']).toContain('no-store');
     return r.body;
   }
+  const findOrder = async (id: string) =>
+    (await db.c.direct_orders.findOne({ _id: id }))!;
   async function stateCounts(listingId: string) {
-    const contexts = await db.workflowContext.findMany({
-        where: { items: { some: { listingId } } },
-        select: { id: true },
-      }),
-      ids = contexts.map((c) => c.id);
+    const c = db.c;
+    const ids = (await c.workflow_items.find({ listingId }).toArray()).map(
+        (i) => i.contextId,
+      ),
+      orderIds = (
+        await c.workflow_contexts.find({ _id: { $in: ids } }).toArray()
+      ).map((x) => x.orderId),
+      commitments = (await c.exclusive_commitments.find({ listingId }).toArray())
+        .map((x) => x._id),
+      audits = (
+        await c.audit_events.find({ contextId: { $in: ids } }).toArray()
+      ).map((a) => a._id);
     return {
-      orders: await db.directOrder.count({
-        where: { context: { id: { in: ids } } },
+      orders: await c.direct_orders.countDocuments({ _id: { $in: orderIds } }),
+      items: await c.workflow_items.countDocuments({ contextId: { $in: ids } }),
+      agreements: await c.agreement_snapshots.countDocuments({
+        _id: { $in: ids },
       }),
-      items: await db.workflowItem.count({ where: { contextId: { in: ids } } }),
-      agreements: await db.agreementSnapshot.count({
-        where: { contextId: { in: ids } },
+      active: await c.exclusive_commitments.countDocuments({
+        listingId,
+        status: 'Active',
       }),
-      active: await db.exclusiveCommitment.count({
-        where: { listingId, status: 'Active' },
+      events: await c.commitment_events.countDocuments({
+        commitmentId: { $in: commitments },
       }),
-      events: await db.commitmentEvent.count({
-        where: { commitment: { listingId } },
+      receipts: await c.mutation_receipts.countDocuments({
+        contextId: { $in: ids },
       }),
-      receipts: await db.mutationReceipt.count({
-        where: { contextId: { in: ids } },
-      }),
-      audits: await db.auditEvent.count({ where: { contextId: { in: ids } } }),
-      outbox: await db.outboxEvent.count({
-        where: { audit: { contextId: { in: ids } } },
+      audits: audits.length,
+      outbox: await c.outbox_events.countDocuments({
+        auditId: { $in: audits },
       }),
     };
   }
@@ -530,6 +604,10 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
     );
     expect(seller).not.toHaveProperty('buyerId');
     expect(buyer).not.toHaveProperty('origin');
+    // An upper-case path id is the same Order (UUIDs are case-insensitive).
+    expect((await orderView(buyer.id.toUpperCase(), p.f.buyer)).id).toBe(
+      buyer.id,
+    );
     await get(`/listings/${p.f.l.entityId}`).expect(404);
     expect(
       (await get(`/listings?bookId=${p.f.l.book.entityId}`).expect(200)).body
@@ -545,10 +623,20 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
       ).expect(200);
       validates('MediaRead', image.body);
     }
-    const history = await db.auditEvent.findMany({
-      where: { contextId: buyer.contextId },
-      include: { receipt: true, outbox: true },
-    });
+    const audits = await db.c.audit_events
+      .find({ contextId: buyer.contextId })
+      .toArray();
+    const history = {
+      audits,
+      receipts: await db.c.mutation_receipts
+        .find({ _id: { $in: audits.map((a) => a.receiptId!) } })
+        .toArray(),
+      outbox: await db.c.outbox_events
+        .find({ auditId: { $in: audits.map((a) => a._id) } })
+        .toArray(),
+    };
+    expect(history.receipts).toHaveLength(1);
+    expect(history.outbox).toHaveLength(1);
     for (const secret of [
       addressInput.phone,
       addressInput.detail,
@@ -655,37 +743,23 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
       audits: 2,
       outbox: 2,
     });
-    await db.userRole.deleteMany({ where: { userId: p.f.buyer.id } });
+    await setUser(p.f.buyer.id, { roles: [] });
     await create(p, key).expect(403);
-    await db.userRole.create({
-      data: { userId: p.f.buyer.id, role: 'MEMBER' },
-    });
-    await db.authSession.update({
-      where: { id: p.f.buyer.sessionId },
-      data: { revokedAt: new Date() },
-    });
+    await db.addRole(p.f.buyer.id, 'MEMBER');
+    await setSession(p.f.buyer.sessionId, { revokedAt: new Date() });
     await cancel(r.entityId, p.f.buyer, ck).expect(401);
   });
   it('Restricted handles old unpaid obligations but cannot create; worker still expires after participants are disabled', async () => {
     const p = await prepared(),
       r = (await create(p).expect(200)).body;
-    await db.user.update({
-      where: { id: p.f.buyer.id },
-      data: { status: 'RESTRICTED' },
-    });
+    await db.setStatus(p.f.buyer.id, 'RESTRICTED');
     await create(p).expect(403);
     expect((await orderView(r.entityId, p.f.buyer)).canCancel).toBe(true);
     await cancel(r.entityId, p.f.buyer).expect(200);
     const p2 = await prepared(),
       r2 = (await create(p2).expect(200)).body;
-    await db.user.update({
-      where: { id: p2.f.buyer.id },
-      data: { status: 'LOCKED' },
-    });
-    await db.user.update({
-      where: { id: p2.f.seller.id },
-      data: { status: 'DISABLED' },
-    });
+    await db.setStatus(p2.f.buyer.id, 'LOCKED');
+    await db.setStatus(p2.f.seller.id, 'DISABLED');
     await get(`/me/orders/${r2.entityId}`, p2.f.buyer).expect(200);
     const clock = vi
       .spyOn(app.get(OrderClock), 'now')
@@ -714,9 +788,7 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
     'checks quote deadline at offset %i using decision clock',
     async (offset) => {
       const p = await prepared(),
-        q = await db.saleQuote.findUniqueOrThrow({
-          where: { id: p.body.quoteId },
-        });
+        q = (await db.c.sale_quotes.findOne({ _id: p.body.quoteId }))!;
       const clock = vi
         .spyOn(app.get(OrderClock), 'now')
         .mockResolvedValue(new Date(q.expiresAt.getTime() + offset));
@@ -765,13 +837,13 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
         }),
       );
     }
-    const gate = await blockUser(p.f.seller.id);
+    const gate = await Gate.lockUser(db.client, p.f.seller.id);
     const calls = Array.from({ length: 100 }, (_, i) =>
       create(preparedRequests[i % 5]).then((r) => r),
     );
     try {
-      await blockedBy(gate.pid, 2, gate.connection);
-      await gate.connection.query('COMMIT');
+      await gate.contended(2);
+      await gate.commit();
       const results = await Promise.all(calls);
       console.info(
         'Order stock race',
@@ -800,9 +872,8 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
         outbox: 1,
       });
     } finally {
-      await gate.connection.query('ROLLBACK');
-      gate.connection.release();
-      await Promise.all(calls);
+      await gate.close();
+      await Promise.allSettled(calls);
     }
   }, 120000);
   it('100 requests from one buyer cannot exceed two AwaitingPayment orders across three listings', async () => {
@@ -819,13 +890,13 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
         }),
       );
     }
-    const gate = await blockUser(first.f.buyer.id),
+    const gate = await Gate.lockUser(db.client, first.f.buyer.id),
       calls = Array.from({ length: 100 }, (_, i) =>
         create(ps[i % 3]).then((r) => r),
       );
     try {
-      await blockedBy(gate.pid, 2, gate.connection);
-      await gate.connection.query('COMMIT');
+      await gate.contended(2);
+      await gate.commit();
       const results = await Promise.all(calls);
       console.info(
         'Order quota race',
@@ -841,8 +912,9 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
         results.every((r) => [200, 409, 429, 503].includes(r.status)),
       ).toBe(true);
       expect(
-        await db.directOrder.count({
-          where: { buyerId: first.f.buyer.id, state: 'AwaitingPayment' },
+        await db.c.direct_orders.countDocuments({
+          buyerId: first.f.buyer.id,
+          state: 'AwaitingPayment',
         }),
       ).toBe(2);
       const winner = results.find((r) => r.status === 200)!.body;
@@ -857,22 +929,21 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
       )!;
       await create(unused).expect(200);
     } finally {
-      await gate.connection.query('ROLLBACK');
-      gate.connection.release();
-      await Promise.all(calls);
+      await gate.close();
+      await Promise.allSettled(calls);
     }
   }, 120000);
   it('same-key contention has one durable receipt and one replay', async () => {
     const p = await prepared(),
       key = randomUUID(),
-      gate = await blockUser(p.f.buyer.id);
+      gate = await Gate.lockUser(db.client, p.f.buyer.id);
     const calls = [
       create(p, key).then((r) => r),
       create(p, key).then((r) => r),
     ];
     try {
-      await blockedBy(gate.pid, 2, gate.connection);
-      await gate.connection.query('COMMIT');
+      await gate.contended(2);
+      await gate.commit();
       const [a, b] = await Promise.all(calls);
       expect(a.status).toBe(200);
       expect(b.status).toBe(200);
@@ -884,126 +955,140 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
         ].sort(),
       ).toEqual(['false', 'true']);
     } finally {
-      await gate.connection.query('ROLLBACK');
-      gate.connection.release();
-      await Promise.all(calls);
+      await gate.close();
+      await Promise.allSettled(calls);
     }
   });
   it.each(['role', 'hidden', 'address'] as const)(
     'rejects creation when %s mutation wins while waiting',
     async (kind) => {
       const p = await prepared(),
-        gate = await blockUser(p.f.seller.id),
+        gate = await Gate.lockUser(db.client, p.f.seller.id),
         response = create(p).then((r) => r);
       try {
-        await blockedBy(gate.pid, 1, gate.connection);
+        await gate.contended();
+        const inGate = { session: gate.session };
+        // Raw writes inside the lock holder's transaction, each following the
+        // write protocol of its collection (content version +1, lockSeq bump).
         if (kind === 'role')
-          await gate.connection.query(
-            "DELETE FROM user_roles WHERE user_id=$1 AND role='MEMBER'",
-            [p.f.seller.id],
-          );
+          await gate.db
+            .collection<{ _id: string }>('users')
+            .updateOne(
+              { _id: p.f.seller.id },
+              { $pull: { roles: { role: 'MEMBER' } } } as never,
+              inGate,
+            );
         else if (kind === 'hidden')
-          await gate.connection.query(
-            "UPDATE listings SET visibility='Hidden',version=version+1 WHERE id=$1",
-            [p.f.l.entityId],
+          await gate.db.collection<{ _id: string }>('listings').updateOne(
+            { _id: p.f.l.entityId },
+            {
+              $set: { visibility: 'Hidden', updatedAt: new Date() },
+              $inc: { version: 1, lockSeq: 1 },
+            },
+            inGate,
           );
         else
-          await gate.connection.query(
-            "UPDATE member_addresses SET detail='Updated source' WHERE id=$1",
-            [p.f.origin.id],
-          );
-        await gate.connection.query('COMMIT');
+          await gate.db
+            .collection<{ _id: string }>('member_addresses')
+            .updateOne(
+              { _id: p.f.origin.id },
+              { $set: { detail: 'Updated source' }, $inc: { version: 1 } },
+              inGate,
+            );
+        await gate.commit();
         expect((await response).status).toBe(409);
         expect((await stateCounts(p.f.l.entityId)).orders).toBe(0);
       } finally {
-        await gate.connection.query('ROLLBACK');
-        gate.connection.release();
+        await gate.close();
         await response;
       }
     },
   );
   it('creation wins before a competing lifecycle mutation, which cannot edit a reserved listing', async () => {
     const p = await prepared(),
-      gate = await blockUser(p.f.seller.id),
+      pause = pauseDecision(),
+      retries = watchRetries(),
       first = create(p).then((r) => r);
-    let second: ReturnType<typeof put> | undefined;
+    let second: Promise<request.Response> | undefined;
     try {
-      await blockedBy(gate.pid, 1, gate.connection);
+      await pause.reached;
       second = put(
         p.f.l.entityId,
         { expectedVersion: p.f.l.version, content: p.f.l.content },
         p.f.seller,
-      );
-      const pendingSecond = second.then((r) => r);
-      await blockedBy(gate.pid, 2, gate.connection);
-      await gate.connection.query('COMMIT');
+      ).then((r) => r);
+      // The draft write contends for the seller lock the creation holds.
+      await retries.until(1);
+      pause.release();
       expect((await first).status).toBe(200);
-      expect((await pendingSecond).status).toBe(409);
+      expect((await second).status).toBe(409);
     } finally {
-      await gate.connection.query('ROLLBACK');
-      gate.connection.release();
+      pause.release();
+      retries.stop();
+      pause.spy.mockRestore();
       await first;
+      await second;
     }
   });
   it.each(['buyerRole', 'buyerRestricted', 'sessionRevoked'] as const)(
     'rechecks %s after HTTP authorization while waiting for locks',
     async (kind) => {
       const p = await prepared(),
-        gate = await blockUser(p.f.buyer.id),
+        gate = await Gate.lockUser(db.client, p.f.buyer.id),
         call = create(p).then((r) => r);
       try {
-        await blockedBy(gate.pid, 1, gate.connection);
+        await gate.contended();
+        const inGate = { session: gate.session };
         if (kind === 'buyerRole')
-          await gate.connection.query(
-            "DELETE FROM user_roles WHERE user_id=$1 AND role='MEMBER'",
-            [p.f.buyer.id],
-          );
+          await gate.db
+            .collection<{ _id: string }>('users')
+            .updateOne(
+              { _id: p.f.buyer.id },
+              { $pull: { roles: { role: 'MEMBER' } } } as never,
+              inGate,
+            );
         else if (kind === 'buyerRestricted')
-          await gate.connection.query(
-            "UPDATE users SET status='RESTRICTED' WHERE id=$1",
-            [p.f.buyer.id],
-          );
+          await gate.db
+            .collection<{ _id: string }>('users')
+            .updateOne(
+              { _id: p.f.buyer.id },
+              { $set: { status: 'RESTRICTED', updatedAt: new Date() } },
+              inGate,
+            );
         else
-          await gate.connection.query(
-            'UPDATE auth_sessions SET revoked_at=now() WHERE id=$1',
-            [p.f.buyer.sessionId],
-          );
-        await gate.connection.query('COMMIT');
+          await gate.db
+            .collection<{ _id: string }>('auth_sessions')
+            .updateOne(
+              { _id: p.f.buyer.sessionId },
+              { $set: { revokedAt: new Date() }, $inc: { lockSeq: 1 } },
+              inGate,
+            );
+        await gate.commit();
         expect((await call).status).toBe(kind === 'sessionRevoked' ? 401 : 403);
         expect((await stateCounts(p.f.l.entityId)).orders).toBe(0);
       } finally {
-        await gate.connection.query('ROLLBACK');
-        gate.connection.release();
+        await gate.close();
         await call;
       }
     },
   );
   it('session expiry after a listing lock wait prevents commit', async () => {
     const p = await prepared(),
-      gate = await pool.connect();
-    await gate.query('BEGIN');
-    await gate.query('SELECT id FROM listings WHERE id=$1 FOR UPDATE', [
-      p.f.l.entityId,
-    ]);
-    const pid = (await gate.query('SELECT pg_backend_pid() pid')).rows[0].pid,
+      gate = await Gate.lock(db.client, 'listings', [p.f.l.entityId]),
       expiresAt = new Date(Date.now() + 60000);
-    await db.authSession.update({
-      where: { id: p.f.buyer.sessionId },
-      data: { expiresAt },
-    });
+    await setSession(p.f.buyer.sessionId, { expiresAt });
     const clock = vi
         .spyOn(app.get(OrderClock), 'now')
         .mockResolvedValue(expiresAt),
       response = create(p).then((r) => r);
     try {
-      await blockedBy(pid, 1, gate);
+      await gate.contended();
       expect(clock).not.toHaveBeenCalled();
-      await gate.query('COMMIT');
+      await gate.commit();
       expect((await response).status).toBe(401);
       expect((await stateCounts(p.f.l.entityId)).orders).toBe(0);
     } finally {
-      await gate.query('ROLLBACK');
-      gate.release();
+      await gate.close();
       await response;
       clock.mockRestore();
     }
@@ -1011,7 +1096,7 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
   it('two expiry commands serialize, survive restart and never release a later reservation', async () => {
     const p = await prepared(),
       r = (await create(p).expect(200)).body,
-      gate = await blockUser(p.f.buyer.id);
+      gate = await Gate.lockUser(db.client, p.f.buyer.id);
     const clock = vi
       .spyOn(app.get(OrderClock), 'now')
       .mockResolvedValue(new Date(r.paymentDeadline));
@@ -1021,16 +1106,15 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
     ];
     let receipt: unknown;
     try {
-      await blockedBy(gate.pid, 2, gate.connection);
-      await gate.connection.query('COMMIT');
+      await gate.contended(2);
+      await gate.commit();
       const results = await Promise.all(calls);
       expect(results[0].receipt).toEqual(results[1].receipt);
       receipt = results[0].receipt;
       expect((await stateCounts(p.f.l.entityId)).events).toBe(2);
     } finally {
-      await gate.connection.query('ROLLBACK');
-      gate.connection.release();
-      await Promise.all(calls);
+      await gate.close();
+      await Promise.allSettled(calls);
       clock.mockRestore();
     }
     await app.close();
@@ -1057,18 +1141,19 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
     let clock = vi
       .spyOn(app.get(OrderClock), 'now')
       .mockResolvedValue(deadline);
-    await pool.query(
-      "CREATE FUNCTION fail_expiry() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='expireOrder' THEN RAISE EXCEPTION 'test failpoint'; END IF; RETURN NEW; END $$; CREATE TRIGGER fail_expiry BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION fail_expiry()",
-    );
     try {
-      const result = await app.get(OrderExpiryWorker).tick();
-      expect(result.failed).toBeGreaterThan(0);
-      expect(result.oldestLagSeconds).toBeGreaterThanOrEqual(121);
-      expect((await stateCounts(p.f.l.entityId)).active).toBe(1);
-    } finally {
-      await pool.query(
-        'DROP TRIGGER fail_expiry ON audit_events; DROP FUNCTION fail_expiry()',
+      // Temporary validator rule (like the former failing SQL trigger).
+      await db.withRejectingValidator(
+        'audit_events',
+        { action: 'expireOrder' },
+        async () => {
+          const result = await app.get(OrderExpiryWorker).tick();
+          expect(result.failed).toBeGreaterThan(0);
+          expect(result.oldestLagSeconds).toBeGreaterThanOrEqual(121);
+          expect((await stateCounts(p.f.l.entityId)).active).toBe(1);
+        },
       );
+    } finally {
       clock.mockRestore();
     }
     await app.close();
@@ -1077,10 +1162,7 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
     try {
       await app.get(OrderExpiryWorker).tick();
       expect((await stateCounts(p.f.l.entityId)).active).toBe(0);
-      expect(
-        (await db.directOrder.findUniqueOrThrow({ where: { id: r.entityId } }))
-          .state,
-      ).toBe('PaymentExpired');
+      expect((await findOrder(r.entityId)).state).toBe('PaymentExpired');
     } finally {
       clock.mockRestore();
     }
@@ -1088,65 +1170,103 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
   it('rejects cross-context release, preserves visibility on closure and prevents Reserved without commitment', async () => {
     const p = await prepared(),
       r = (await create(p).expect(200)).body,
-      c = await db.exclusiveCommitment.findFirstOrThrow({
-        where: { currentContextId: r.contextId },
-      });
+      c = (await db.c.exclusive_commitments.findOne({
+        currentContextId: r.contextId,
+      }))!;
     const p2 = await prepared(),
       r2 = (await create(p2).expect(200)).body;
     await expect(
-      db.$transaction((tx) =>
-        app
-          .get(ReservationsService)
-          .closeUnpaid(
-            tx,
-            r2.contextId,
-            c.id,
-            c.version,
-            'Cancelled',
-            new Date(),
-            randomUUID(),
-          ),
-      ),
+      app
+        .get(MongoService)
+        .tx((tx) =>
+          app
+            .get(ReservationsService)
+            .closeUnpaid(
+              tx,
+              r2.contextId,
+              c._id,
+              c.version,
+              'Cancelled',
+              new Date(),
+              randomUUID(),
+            ),
+        ),
     ).rejects.toBeDefined();
-    await pool.query(
-      "UPDATE listings SET visibility='Hidden',version=version+1 WHERE id=$1",
-      [p.f.l.entityId],
+    await db.c.listings.updateOne(
+      { _id: p.f.l.entityId },
+      {
+        $set: { visibility: 'Hidden', updatedAt: new Date() },
+        $inc: { version: 1, lockSeq: 1 },
+      },
     );
     await cancel(r.entityId, p.f.buyer).expect(200);
-    const l = await db.listing.findUniqueOrThrow({
-      where: { id: p.f.l.entityId },
-    });
+    const l = (await db.c.listings.findOne({ _id: p.f.l.entityId }))!;
     expect(l.visibility).toBe('Hidden');
     expect(l.trade).toBe('Available');
+    // The Reserved projection must match an Active commitment (C,
+    // formerly the deferred latlai_check_commitment_projection).
+    const trade = (id: string, to: 'Reserved' | 'Available') =>
+      checked(
+        (tx) =>
+          tx.c.listings.updateOne(
+            { _id: id },
+            {
+              $set: { trade: to, updatedAt: new Date() },
+              $inc: { version: 1, lockSeq: 1 },
+            },
+          ),
+        { listing: id },
+      );
+    await expect(trade(l._id, 'Reserved')).rejects.toThrow(
+      'Listing/commitment projection mismatch',
+    );
+    await expect(trade(p2.f.l.entityId, 'Available')).rejects.toThrow(
+      'Listing/commitment projection mismatch',
+    );
+    expect((await db.c.listings.findOne({ _id: l._id }))!.trade).toBe(
+      'Available',
+    );
+    expect(
+      (await db.c.listings.findOne({ _id: p2.f.l.entityId }))!.trade,
+    ).toBe('Reserved');
+    // Snapshots and commitment history are append-only for the app user (P).
+    const appDb = app.get(MongoService).c;
     await expect(
-      pool.query(
-        "UPDATE listings SET trade='Reserved',version=version+1 WHERE id=$1",
-        [l.id],
+      appDb.workflow_items.updateOne(
+        { contextId: r.contextId },
+        { $set: { snapshot: {} } },
       ),
-    ).rejects.toMatchObject({ code: '23514' });
+    ).rejects.toMatchObject({ code: 13 });
     await expect(
-      pool.query(
-        "UPDATE listings SET trade='Available',version=version+1 WHERE id=$1",
-        [p2.f.l.entityId],
+      appDb.agreement_snapshots.updateOne(
+        { _id: r.contextId },
+        { $set: { snapshot: { schemaVersion: 1 } } },
       ),
-    ).rejects.toMatchObject({ code: '23514' });
-    for (const table of ['workflow_items', 'agreement_snapshots'])
-      await expect(
-        pool.query(`UPDATE ${table} SET snapshot='{}' WHERE context_id=$1`, [
-          r.contextId,
-        ]),
-      ).rejects.toMatchObject({ code: '23514' });
+    ).rejects.toMatchObject({ code: 13 });
     await expect(
-      pool.query('DELETE FROM commitment_events WHERE commitment_id=$1', [
-        c.id,
-      ]),
-    ).rejects.toMatchObject({ code: '23514' });
+      appDb.commitment_events.deleteMany({ commitmentId: c._id }),
+    ).rejects.toMatchObject({ code: 13 });
+    // A released commitment cannot be revived (W filters state; C rejects).
     await expect(
-      pool.query(
-        "UPDATE exclusive_commitments SET status='Active',version=1,ended_at=NULL,reason=NULL WHERE id=$1",
-        [c.id],
+      checked(
+        (tx) =>
+          tx.c.exclusive_commitments.updateOne(
+            { _id: c._id },
+            {
+              $set: {
+                status: 'Active',
+                version: 1,
+                endedAt: null,
+                reason: null,
+              },
+            },
+          ),
+        { order: r.entityId },
       ),
-    ).rejects.toMatchObject({ code: '23514' });
+    ).rejects.toThrow('Order commitment mismatch');
+    expect(
+      (await db.c.exclusive_commitments.findOne({ _id: c._id }))!.status,
+    ).toBe('Released');
   });
   it.each([
     'workflow_items',
@@ -1158,36 +1278,31 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
     'outbox_events',
   ] as const)(
     'rolls back all Order effects when %s fails and retries once',
-    async (table) => {
+    async (collection) => {
       const p = await prepared(),
         key = randomUUID();
-      await pool.query(
-        `CREATE FUNCTION fail_order() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test failpoint'; END $$; CREATE TRIGGER fail_order BEFORE INSERT ON ${table} FOR EACH ROW EXECUTE FUNCTION fail_order()`,
+      // Temporary validator rule rejecting every write (like the former
+      // failing BEFORE INSERT trigger on the table).
+      await db.withRejectingValidator(
+        collection,
+        { _id: { $exists: true } },
+        async () => {
+          await create(p, key).expect(500);
+          expect(await stateCounts(p.f.l.entityId)).toEqual({
+            orders: 0,
+            items: 0,
+            agreements: 0,
+            active: 0,
+            events: 0,
+            receipts: 0,
+            audits: 0,
+            outbox: 0,
+          });
+          expect(
+            (await db.c.listings.findOne({ _id: p.f.l.entityId }))!.trade,
+          ).toBe('Available');
+        },
       );
-      try {
-        await create(p, key).expect(500);
-        expect(await stateCounts(p.f.l.entityId)).toEqual({
-          orders: 0,
-          items: 0,
-          agreements: 0,
-          active: 0,
-          events: 0,
-          receipts: 0,
-          audits: 0,
-          outbox: 0,
-        });
-        expect(
-          (
-            await db.listing.findUniqueOrThrow({
-              where: { id: p.f.l.entityId },
-            })
-          ).trade,
-        ).toBe('Available');
-      } finally {
-        await pool.query(
-          `DROP TRIGGER fail_order ON ${table}; DROP FUNCTION fail_order()`,
-        );
-      }
       const r = (await create(p, key).expect(200)).body;
       expect((await create(p, key).expect(200)).body).toEqual(r);
     },
@@ -1213,10 +1328,12 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
       args = ['.tmp/order-worker-test/test/helpers/order-worker-child.js'],
     ) =>
       new Promise<void>((resolve, reject) => {
+        // The child connects with MONGODB_URL (the least-privilege app user
+        // on this run's dedicated *_test database) inherited from test-env.
         const child = spawn(process.execPath, args, {
           env: {
             ...process.env,
-            ORDER_WORKER_TEST_SCHEMA: schema,
+            ORDER_WORKER_TEST: '1',
             SUPABASE_URL: '',
             SUPABASE_STORAGE_KEY: '',
           },
@@ -1240,10 +1357,7 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
       'test/helpers/tsconfig.worker.json',
     ]);
     await run();
-    expect(
-      (await db.directOrder.findUniqueOrThrow({ where: { id: orderId! } }))
-        .state,
-    ).toBe('PaymentExpired');
+    expect((await findOrder(orderId!)).state).toBe('PaymentExpired');
     const before = await stateCounts(f.l.entityId);
     await run();
     expect(await stateCounts(f.l.entityId)).toEqual(before);
@@ -1253,13 +1367,11 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
     'serializes cancel/timeout with %s winning and exactly one release',
     async (winner) => {
       const p = await prepared(),
-        r = (await create(p).expect(200)).body,
-        gate = await blockUser(p.f.buyer.id);
+        r = (await create(p).expect(200)).body;
       const t = Date.parse(r.paymentDeadline),
-        clock = vi.spyOn(app.get(OrderClock), 'now');
-      clock
-        .mockResolvedValueOnce(new Date(winner === 'cancel' ? t - 1 : t))
-        .mockResolvedValue(new Date(t));
+        pause = pauseDecision(new Date(winner === 'cancel' ? t - 1 : t));
+      pause.spy.mockResolvedValue(new Date(t));
+      const retries = watchRetries();
       const cancelCall = () =>
         cancel(r.entityId, p.f.buyer).then((value) => ({
           status: value.status,
@@ -1275,15 +1387,14 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
       const first = winner === 'cancel' ? cancelCall() : expiryCall();
       let second: Promise<{ status: number }> | undefined;
       try {
-        await blockedBy(gate.pid, 1, gate.connection);
+        await pause.reached;
         second = winner === 'cancel' ? expiryCall() : cancelCall();
-        await blockedBy(gate.pid, 2, gate.connection);
-        await gate.connection.query('COMMIT');
+        // The loser contends for the participant locks the winner holds.
+        await retries.until(1);
+        pause.release();
         expect((await first).status).toBe(200);
         expect((await second).status).toBe(409);
-        const o = await db.directOrder.findUniqueOrThrow({
-          where: { id: r.entityId },
-        });
+        const o = await findOrder(r.entityId);
         expect(o.state).toBe(
           winner === 'cancel' ? 'Cancelled' : 'PaymentExpired',
         );
@@ -1298,11 +1409,11 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
           outbox: 2,
         });
       } finally {
-        await gate.connection.query('ROLLBACK');
-        gate.connection.release();
+        pause.release();
+        retries.stop();
         await first;
         await second;
-        clock.mockRestore();
+        pause.spy.mockRestore();
       }
     },
   );
@@ -1336,79 +1447,119 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
       { expectedVersion: version, reason: 'Nội dung kiểm thử bị gỡ.' },
       staff,
     ).expect(409);
-    expect((await db.listing.findUniqueOrThrow({ where: { id } })).trade).toBe(
-      'Reserved',
-    );
+    expect((await db.c.listings.findOne({ _id: id }))!.trade).toBe('Reserved');
   });
-  it('rejects orphan Orders, incomplete context cardinality and duplicate active commitments at the SQL boundary', async () => {
+  it('rejects orphan Orders, incomplete context cardinality and duplicate active commitments at the commit boundary', async () => {
     const p = await prepared(),
-      q = await db.saleQuote.findUniqueOrThrow({
-        where: { id: p.body.quoteId },
-      }),
+      q = (await db.c.sale_quotes.findOne({ _id: p.body.quoteId }))!,
       now = new Date();
-    const data = {
+    const order = (): DirectOrderDoc => ({
+      _id: randomUUID(),
       buyerId: q.buyerId,
       sellerId: q.sellerId,
-      quoteId: q.id,
+      quoteId: q._id,
+      version: 1,
       state: 'AwaitingPayment',
       createdAt: now,
       paymentDeadline: new Date(now.getTime() + 900000),
-    };
-    await expect(db.directOrder.create({ data })).rejects.toBeDefined();
+      closedAt: null,
+      paidAt: null,
+      sellerConfirmationDeadline: null,
+      cancellationRequestedAt: null,
+      cancellationReason: null,
+      lockSeq: 0,
+    });
+    const orphan = order();
     await expect(
-      db.$transaction(async (tx) => {
-        const o = await tx.directOrder.create({ data });
-        await tx.workflowContext.create({
-          data: { kind: 'Order', orderId: o.id, ownershipPhase: 'Holding' },
-        });
+      checked((tx) => tx.c.direct_orders.insertOne(orphan), {
+        order: orphan._id,
       }),
-    ).rejects.toBeDefined();
-    expect((await stateCounts(p.f.l.entityId)).orders).toBe(0);
-    const r = (await create(p).expect(200)).body,
-      c = await db.exclusiveCommitment.findFirstOrThrow({
-        where: { currentContextId: r.contextId },
-      });
+    ).rejects.toThrow('Order/context/quote mismatch');
+    const bare = order();
     await expect(
-      db.exclusiveCommitment.create({ data: { ...c, id: randomUUID() } }),
-    ).rejects.toBeDefined();
-    await expect(
-      pool.query('UPDATE workflow_contexts SET order_id=$1 WHERE id=$2', [
-        randomUUID(),
-        r.contextId,
-      ]),
-    ).rejects.toMatchObject({ code: '23514' });
-    await expect(
-      pool.query(
-        "INSERT INTO mutation_receipts(id,system_actor,operation,key,payload_hash,context_id,result_version,result) VALUES($1,'FakeWorker','expireOrder',$2,$3,$4,1,'{}')",
-        [randomUUID(), randomUUID(), 'f'.repeat(64), r.contextId],
+      checked(
+        async (tx) => {
+          await tx.c.direct_orders.insertOne(bare);
+          await tx.c.workflow_contexts.insertOne({
+            _id: randomUUID(),
+            kind: 'Order',
+            orderId: bare._id,
+            version: 1,
+            ownershipPhase: 'Holding',
+            lockSeq: 0,
+          });
+        },
+        { order: bare._id },
       ),
-    ).rejects.toMatchObject({ code: '23514' });
+    ).rejects.toThrow('Order/context/quote mismatch');
+    expect((await stateCounts(p.f.l.entityId)).orders).toBe(0);
+    expect(await db.c.direct_orders.countDocuments({ quoteId: q._id })).toBe(0);
+    const r = (await create(p).expect(200)).body,
+      c = (await db.c.exclusive_commitments.findOne({
+        currentContextId: r.contextId,
+      }))!;
+    const appDb = app.get(MongoService).c;
+    // One Active commitment per listing (partial unique index, I).
+    await expect(
+      appDb.exclusive_commitments.insertOne({ ...c, _id: randomUUID() }),
+    ).rejects.toMatchObject({ code: 11000 });
+    // A context never changes its Order (W; C rejects at commit).
+    await expect(
+      checked(
+        (tx) =>
+          tx.c.workflow_contexts.updateOne(
+            { _id: r.contextId },
+            { $set: { orderId: randomUUID() } },
+          ),
+        { order: r.entityId },
+      ),
+    ).rejects.toThrow('Order/context/quote mismatch');
+    // Only the known system principals may write system receipts (V).
+    await expect(
+      appDb.mutation_receipts.insertOne({
+        _id: randomUUID(),
+        principal: 'system:FakeWorker',
+        actorId: null,
+        systemActor: 'FakeWorker' as never,
+        operation: 'expireOrder',
+        key: randomUUID(),
+        payloadHash: 'f'.repeat(64),
+        listingId: null,
+        bookId: null,
+        mediaId: null,
+        addressBookId: null,
+        quoteId: null,
+        contextId: r.contextId,
+        topupId: null,
+        resultVersion: 1,
+        result: {},
+        committedAt: new Date(),
+      }),
+    ).rejects.toMatchObject({ code: 121 });
+    expect(
+      (await db.c.workflow_contexts.findOne({ _id: r.contextId }))!.orderId,
+    ).toBe(r.entityId);
   });
   it('rolls back snapshot and commitment if the listing projection write fails', async () => {
     const p = await prepared(),
       key = randomUUID();
-    await pool.query(
-      "CREATE FUNCTION fail_projection() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.trade='Reserved' THEN RAISE EXCEPTION 'test failpoint'; END IF; RETURN NEW; END $$; CREATE TRIGGER fail_projection BEFORE UPDATE ON listings FOR EACH ROW EXECUTE FUNCTION fail_projection()",
+    await db.withRejectingValidator(
+      'listings',
+      { _id: p.f.l.entityId, trade: 'Reserved' },
+      async () => {
+        await create(p, key).expect(500);
+        expect((await stateCounts(p.f.l.entityId)).orders).toBe(0);
+      },
     );
-    try {
-      await create(p, key).expect(500);
-      expect((await stateCounts(p.f.l.entityId)).orders).toBe(0);
-    } finally {
-      await pool.query(
-        'DROP TRIGGER fail_projection ON listings; DROP FUNCTION fail_projection()',
-      );
-    }
     await create(p, key).expect(200);
   });
   it('LOCKED participants recover orders/media and buyer cancellation without new-action or operations access', async () => {
     const p = await prepared(),
       key = randomUUID(),
       r = (await create(p, key).expect(200)).body;
-    await db.userRole.create({ data: { userId: p.f.buyer.id, role: 'ADMIN' } });
-    await db.user.updateMany({
-      where: { id: { in: [p.f.buyer.id, p.f.seller.id] } },
-      data: { status: 'LOCKED' },
-    });
+    await db.addRole(p.f.buyer.id, 'ADMIN');
+    for (const id of [p.f.buyer.id, p.f.seller.id])
+      await db.setStatus(id, 'LOCKED');
     for (const actor of [p.f.buyer, p.f.seller]) {
       const page = (await get('/me/orders', actor).expect(200)).body;
       validates('MyOrderPage', page);
@@ -1441,9 +1592,7 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
       (await cancel(r.entityId, p.f.buyer, cancelKey).expect(200)).body,
     ).toEqual(receipt);
     expect((await orderView(r.entityId, p.f.buyer)).state).toBe('Cancelled');
-    await db.userRole.deleteMany({
-      where: { userId: p.f.buyer.id, role: 'MEMBER' },
-    });
+    await db.removeRole(p.f.buyer.id, 'MEMBER');
     await get(`/me/orders/${r.entityId}`, p.f.buyer).expect(403);
     await cancel(r.entityId, p.f.buyer, cancelKey).expect(403);
   });
@@ -1473,25 +1622,25 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
   it('rechecks LOCKED access after waiting and still enforces cancellation deadline', async () => {
     const p = await prepared(),
       r = (await create(p).expect(200)).body,
-      gate = await blockUser(p.f.buyer.id);
+      gate = await Gate.lockUser(db.client, p.f.buyer.id);
     const call = cancel(r.entityId, p.f.buyer).then((v) => v.status);
     try {
-      await blockedBy(gate.pid, 1, gate.connection);
-      await gate.connection.query(
-        "UPDATE users SET status='LOCKED' WHERE id=$1",
-        [p.f.buyer.id],
-      );
+      await gate.contended();
+      await gate.db
+        .collection<{ _id: string }>('users')
+        .updateOne(
+          { _id: p.f.buyer.id },
+          { $set: { status: 'LOCKED', updatedAt: new Date() } },
+          { session: gate.session },
+        );
+      await gate.commit();
     } finally {
-      await gate.connection.query('COMMIT');
-      gate.connection.release();
+      await gate.close();
     }
     expect(await call).toBe(200);
     const late = await prepared(),
       lr = (await create(late).expect(200)).body;
-    await db.user.update({
-      where: { id: late.f.buyer.id },
-      data: { status: 'LOCKED' },
-    });
+    await db.setStatus(late.f.buyer.id, 'LOCKED');
     const clock = vi
       .spyOn(app.get(OrderClock), 'now')
       .mockResolvedValue(new Date(lr.paymentDeadline));
@@ -1510,7 +1659,7 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
       const p = await prepared(),
         r = (await create(p).expect(200)).body;
       storage.beforeSign = async () => {
-        await db.user.update({ where: { id: p.f.buyer.id }, data: { status } });
+        await db.setStatus(p.f.buyer.id, status);
       };
       try {
         await get(
@@ -1526,10 +1675,7 @@ describe('Unpaid DirectDelivery orders HTTP and PostgreSQL', () => {
     const p = await prepared(),
       r = (await create(p).expect(200)).body;
     storage.beforeSign = async () => {
-      await db.authSession.update({
-        where: { id: p.f.buyer.sessionId },
-        data: { revokedAt: new Date() },
-      });
+      await setSession(p.f.buyer.sessionId, { revokedAt: new Date() });
     };
     try {
       await get(

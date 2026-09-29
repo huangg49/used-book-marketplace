@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import type { Tx } from '../commands/command.service.js';
+import type { Tx } from '../../database/mongo/transaction.js';
+
+// Server decision clock ($$NOW) read after the caller's locks. A separate
+// provider so tests can pin decision time.
 @Injectable()
 export class OrderClock {
-  async now(tx: Tx): Promise<Date> {
-    const [row] = await tx.$queryRaw<
-      { now: Date }[]
-    >`SELECT clock_timestamp() AS now`;
-    return row.now;
+  now(tx: Tx): Promise<Date> {
+    return tx.now();
   }
 }

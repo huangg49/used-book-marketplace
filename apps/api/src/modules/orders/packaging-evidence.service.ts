@@ -2,14 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
 import { randomUUID } from 'node:crypto';
-import type { OrderPackagingEvidence } from '../../generated/prisma/client.js';
+import type { OrderPackagingEvidenceDoc } from '../../database/mongo/documents.js';
+import type { Tx } from '../../database/mongo/transaction.js';
 import {
-  CommandService,
+  MongoCommandService,
   member,
   type Actor,
   type CommandContext,
-  type Tx,
-} from '../commands/command.service.js';
+} from '../commands/mongo-command.service.js';
 import {
   conflict,
   DomainError,
@@ -20,7 +20,13 @@ import {
 import { MediaStorage, digest } from '../media/media-storage.js';
 import { processImage, ImageFailure } from '../media/image-processor.js';
 import { ImageUploadSlots } from '../media/image-upload-slots.js';
+import {
+  lockStorageBudget,
+  recentUploads,
+  reservedStorage,
+} from '../media/media.service.js';
 import { OrderClock } from './order-clock.js';
+import { checkPackaging } from './order-invariants.js';
 
 const originalKey = (id: string) => `order-evidence/${id}/original`;
 const previewKey = (id: string) => `order-evidence/${id}/preview-v1.webp`;
@@ -30,11 +36,13 @@ const quota = () =>
     'MediaQuotaExceeded',
     'Ảnh đã đạt giới hạn lưu trữ. Vui lòng thử lại sau.',
   );
-const projection = (m: OrderPackagingEvidence): Wire['PackagingEvidence'] => ({
-  id: m.id,
+const projection = (
+  m: OrderPackagingEvidenceDoc,
+): Wire['PackagingEvidence'] => ({
+  id: m._id,
   orderId: m.orderId,
   version: m.version as 1 | 2,
-  status: m.status as 'Pending' | 'Ready',
+  status: m.status,
   mimeType: m.mimeType as Wire['PackagingEvidence']['mimeType'],
   byteSize: m.byteSize,
   sha256: m.sha256,
@@ -46,12 +54,19 @@ const projection = (m: OrderPackagingEvidence): Wire['PackagingEvidence'] => ({
 @Injectable()
 export class PackagingEvidenceService {
   constructor(
-    private readonly commands: CommandService,
+    private readonly commands: MongoCommandService,
     private readonly config: ConfigService,
     private readonly storage: MediaStorage,
     private readonly slots: ImageUploadSlots,
     private readonly clock: OrderClock,
   ) {}
+  private async load(tx: Tx, orderId: string) {
+    const o = await tx.c.direct_orders.findOne({ _id: orderId });
+    if (!o) return null;
+    const context = await tx.c.workflow_contexts.findOne({ orderId });
+    const preparation = await tx.c.order_preparations.findOne({ _id: orderId });
+    return { ...o, context, preparation };
+  }
   private async own(
     tx: Tx,
     orderId: string,
@@ -59,19 +74,13 @@ export class PackagingEvidenceService {
     sellerOnly = false,
     lock = false,
   ) {
-    const o = await tx.directOrder.findUnique({
-      where: { id: orderId },
-      include: { context: true, preparation: true },
-    });
+    const o = await this.load(tx, orderId);
     if (!o || (o.sellerId !== userId && (sellerOnly || o.buyerId !== userId)))
       throw notFound();
     if (lock) {
-      await tx.$queryRaw`SELECT id FROM workflow_contexts WHERE id=${o.context!.id}::uuid FOR UPDATE`;
-      await tx.$queryRaw`SELECT id FROM direct_orders WHERE id=${orderId}::uuid FOR UPDATE`;
-      return tx.directOrder.findUniqueOrThrow({
-        where: { id: orderId },
-        include: { context: true, preparation: true },
-      });
+      await tx.lock('workflow_contexts', [o.context!._id]);
+      await tx.lock('direct_orders', [orderId]);
+      return (await this.load(tx, orderId))!;
     }
     return o;
   }
@@ -80,17 +89,15 @@ export class PackagingEvidenceService {
       throw invalidState();
   }
   private async asset(tx: Tx, orderId: string, id: string, lock = false) {
-    if (lock)
-      await tx.$queryRaw`SELECT id FROM order_packaging_evidence WHERE id=${id}::uuid FOR UPDATE`;
-    const e = await tx.orderPackagingEvidence.findUnique({ where: { id } });
+    // Evidence has no lockSeq: the order lock (taken first) serializes writers.
+    void lock;
+    const e = await tx.c.order_packaging_evidence.findOne({ _id: id });
     if (!e || e.orderId !== orderId) throw notFound();
     return e;
   }
   private async decision(tx: Tx, auth: Actor) {
     const now = await this.clock.now(tx);
-    const s = await tx.authSession.findUnique({
-      where: { id: auth.sessionId },
-    });
+    const s = await tx.c.auth_sessions.findOne({ _id: auth.sessionId });
     if (!s || s.revokedAt || s.expiresAt <= now)
       throw new DomainError(
         401,
@@ -119,7 +126,7 @@ export class PackagingEvidenceService {
         discover: this.discover(orderId, context.auth, true),
         authorize: async (tx, actor) => {
           member(actor);
-          const o = await this.own(tx, orderId, actor.id, true, true);
+          const o = await this.own(tx, orderId, actor._id, true, true);
           await this.decision(tx, context.auth);
           return o;
         },
@@ -127,60 +134,51 @@ export class PackagingEvidenceService {
           this.eligible(o);
           if (o.version !== body.expectedVersion) throw conflict();
           if (
-            await tx.orderPackagingEvidence.findUnique({
-              where: { orderId_sha256: { orderId, sha256: body.sha256 } },
+            await tx.c.order_packaging_evidence.findOne({
+              orderId,
+              sha256: body.sha256,
             })
           )
             throw conflict(); // Recover the existing intent through the private list.
-          // Same advisory budget as listing media; a reservation includes both objects.
-          await tx.$queryRaw`SELECT pg_advisory_xact_lock(781204991)::text`;
+          // Same budget lock as listing media; a reservation includes both objects.
+          await lockStorageBudget(tx);
           const now = await this.decision(tx, context.auth);
-          const since = new Date(now.getTime() - 3600000);
-          const count = await tx.orderPackagingEvidence.count({
-            where: { orderId },
-          });
-          const recent = await tx.orderPackagingEvidence.count({
-            where: {
-              preparation: { order: { sellerId: actor.id } },
-              createdAt: { gt: since },
-            },
-          });
-          const listingRecent = await tx.listingMedia.count({
-            where: { listing: { ownerId: actor.id }, createdAt: { gt: since } },
-          });
-          const listings = await tx.listingMedia.aggregate({
-            _sum: { reservedBytes: true },
-          });
-          const evidence = await tx.orderPackagingEvidence.aggregate({
-            _sum: { reservedBytes: true },
+          const count = await tx.c.order_packaging_evidence.countDocuments({
+            orderId,
           });
           const reservedBytes = body.byteSize + 2000000;
           if (
             count >= 32 ||
-            recent + listingRecent >= 20 ||
-            (listings._sum.reservedBytes ?? 0) +
-              (evidence._sum.reservedBytes ?? 0) +
-              reservedBytes >
+            (await recentUploads(tx, actor._id, now)) >= 20 ||
+            (await reservedStorage(tx)) + reservedBytes >
               this.config.get<number>('MEDIA_STORAGE_BUDGET_BYTES', 800000000)
           )
             throw quota();
-          const e = await tx.orderPackagingEvidence.create({
-            data: {
-              id: randomUUID(),
-              orderId,
-              mimeType: body.mimeType,
-              byteSize: body.byteSize,
-              sha256: body.sha256,
-              reservedBytes,
-              createdAt: now,
-              createReceiptId: receiptId,
-            },
+          const id = randomUUID();
+          await tx.c.order_packaging_evidence.insertOne({
+            _id: id,
+            orderId,
+            version: 1,
+            status: 'Pending',
+            mimeType: body.mimeType,
+            byteSize: body.byteSize,
+            sha256: body.sha256,
+            reservedBytes,
+            createdAt: now,
+            uploadedAt: null,
+            derivativeSha256: null,
+            derivativeBytes: null,
+            width: null,
+            height: null,
+            createReceiptId: receiptId,
+            uploadReceiptId: null,
           });
+          tx.check(`packaging:${id}`, () => checkPackaging(tx, id));
           return {
             entityType: 'OrderPackagingEvidence',
-            entityId: e.id,
+            entityId: id,
             orderId,
-            contextId: o.context!.id,
+            contextId: o.context!._id,
             version: 1,
             state: 'Pending',
             decidedAt: now,
@@ -193,12 +191,10 @@ export class PackagingEvidenceService {
   list(auth: Actor, orderId: string): Promise<Wire['PackagingEvidenceList']> {
     return this.commands.readObligation(auth, async (tx, actor) => {
       member(actor);
-      await this.own(tx, orderId, actor.id);
-      const items = await tx.orderPackagingEvidence.findMany({
-        where: { orderId },
-        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-        take: 32,
-      });
+      await this.own(tx, orderId, actor._id);
+      const items = await tx.c.order_packaging_evidence
+        .find({ orderId }, { sort: { createdAt: 1, _id: 1 }, limit: 32 })
+        .toArray();
       return {
         items: items.map(projection),
         serverTime: (await this.decision(tx, auth)).toISOString(),
@@ -215,7 +211,7 @@ export class PackagingEvidenceService {
       context.auth,
       async (tx, actor) => {
         member(actor);
-        const o = await this.own(tx, orderId, actor.id, true);
+        const o = await this.own(tx, orderId, actor._id, true);
         const e = await this.asset(tx, orderId, id);
         if (e.status === 'Pending') this.eligible(o);
         return e;
@@ -285,7 +281,7 @@ export class PackagingEvidenceService {
           discover: this.discover(orderId, context.auth, true),
           authorize: async (tx, actor) => {
             member(actor);
-            const o = await this.own(tx, orderId, actor.id, true, true);
+            const o = await this.own(tx, orderId, actor._id, true, true);
             const e = await this.asset(tx, orderId, id, true);
             await this.decision(tx, context.auth);
             return { o, e };
@@ -300,24 +296,29 @@ export class PackagingEvidenceService {
                 'Lượt tải ảnh quá lâu. Hãy thử lại cùng yêu cầu.',
               );
             const now = await this.decision(tx, context.auth);
-            await tx.orderPackagingEvidence.update({
-              where: { id },
-              data: {
-                status: 'Ready',
-                version: 2,
-                uploadedAt: now,
-                uploadReceiptId: receiptId,
-                derivativeBytes: image.bytes.length,
-                derivativeSha256: digest(image.bytes),
-                width: image.width,
-                height: image.height,
+            // Pending -> Ready once (latlai_guard_packaging); identity fields untouched.
+            const updated = await tx.c.order_packaging_evidence.updateOne(
+              { _id: id, status: 'Pending', version: 1 },
+              {
+                $set: {
+                  status: 'Ready',
+                  version: 2,
+                  uploadedAt: now,
+                  uploadReceiptId: receiptId,
+                  derivativeBytes: image.bytes.length,
+                  derivativeSha256: digest(image.bytes),
+                  width: image.width,
+                  height: image.height,
+                },
               },
-            });
+            );
+            if (updated.matchedCount !== 1) throw invalidState();
+            tx.check(`packaging:${id}`, () => checkPackaging(tx, id));
             return {
               entityType: 'OrderPackagingEvidence',
               entityId: id,
               orderId,
-              contextId: o.context!.id,
+              contextId: o.context!._id,
               version: 2,
               state: 'Ready',
               decidedAt: now,
@@ -339,7 +340,7 @@ export class PackagingEvidenceService {
   ): Promise<Wire['MediaRead']> {
     const authorize = async (tx: Tx, actor: Parameters<typeof member>[0]) => {
       member(actor);
-      const o = await this.own(tx, orderId, actor.id);
+      const o = await this.own(tx, orderId, actor._id);
       const m = await this.asset(tx, orderId, id);
       if (m.status !== 'Ready')
         throw new DomainError(
@@ -354,14 +355,24 @@ export class PackagingEvidenceService {
     const signed = await this.storage.signedRead(previewKey(id));
     await this.commands.readObligation(auth, async (tx, actor) => {
       const { o } = await authorize(tx, actor);
-      await tx.auditEvent.create({
-        data: {
-          actorId: actor.id,
-          contextId: o.context!.id,
-          action: 'readPackagingEvidence',
-          requestId,
-          after: { evidenceId: id, representation: 'NormalizedPreview' },
-        },
+      await tx.c.audit_events.insertOne({
+        _id: randomUUID(),
+        actorId: actor._id,
+        systemActor: null,
+        receiptId: null,
+        listingId: null,
+        bookId: null,
+        mediaId: null,
+        addressBookId: null,
+        quoteId: null,
+        contextId: o.context!._id,
+        topupId: null,
+        action: 'readPackagingEvidence',
+        before: null,
+        after: { evidenceId: id, representation: 'NormalizedPreview' },
+        reason: null,
+        requestId,
+        createdAt: await tx.now(),
       });
     });
     return { id, ...signed, width: m.width!, height: m.height! };

@@ -1,6 +1,6 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { AppService } from './app.service.js';
-import { DatabaseService } from './database/database.service.js';
+import { MongoService } from './database/mongo/mongo.service.js';
 import { Public } from './modules/auth/public.decorator.js';
 
 @Controller('health')
@@ -8,7 +8,7 @@ import { Public } from './modules/auth/public.decorator.js';
 export class AppController {
   constructor(
     private readonly appService: AppService,
-    private readonly database: DatabaseService,
+    private readonly mongo: MongoService,
   ) {}
 
   @Get()
@@ -19,7 +19,7 @@ export class AppController {
   @Get('ready')
   async readiness() {
     try {
-      await this.database.$queryRaw`SELECT 1`;
+      await this.mongo.db.command({ ping: 1 });
     } catch {
       throw new ServiceUnavailableException();
     }

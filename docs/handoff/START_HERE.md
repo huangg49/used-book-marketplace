@@ -1,5 +1,11 @@
 # Bắt đầu ở đây — bàn giao Lật lại tại F2h
 
+Cập nhật lane MongoDB 29/09: HEAD hiện **OpenAPI0.21.0**, 3 migration MongoDB;
+17 migration PostgreSQL giữ làm lịch sử chỉ đọc. Đọc [SESSION_STATE](SESSION_STATE.md)
+và [review/sửa mới nhất](../refactor/MONGODB_INTEGRITY_FIXES_2026_09_29.md) trước thao tác.
+Các mốc0.20.0 bên dưới thuộc bàn giao F2h trước đó; runtime Mongo đã port nhưng
+cutover DB chính và release gates chưa hoàn tất.
+
 Cập nhật 28/09/2026. Contract **0.20.0**, 17 migration. Đây là hướng dẫn tiếp nhận
 mã nguồn đang chuẩn bị bàn giao; **chưa phải chứng nhận hoàn tất bàn giao**.
 Trạng thái từng việc ở [READINESS](READINESS.md), phát hiện và bằng chứng ở
@@ -13,8 +19,10 @@ Nguồn đã có checkpoint `checkpoint/f2h-handoff-2026-09-28` và
 
 React Native là client Member ưu tiên. Operations web phục vụ duyệt catalog/listing.
 Flutter còn là khung riêng, không có tính năng ngang RN. API dùng chung NestJS và
-PostgreSQL; ảnh riêng tư dùng Supabase Storage, xử lý bằng Sharp. Hai worker hiện
-tại chạy thành process riêng và dùng hàng đợi/trạng thái bền vững trong PostgreSQL.
+MongoDB 8 (replica set, [ADR 0027](../adr/0027-mongodb-persistence-protocol.md); đã
+chuyển từ PostgreSQL theo [kế hoạch](../refactor/MONGODB_PLAN.md)); ảnh riêng tư dùng
+Supabase Storage, xử lý bằng Sharp. Hai worker hiện tại chạy thành process riêng và
+dùng hàng đợi/trạng thái bền vững trong MongoDB.
 Redis/BullMQ có dependency/hạ tầng nhưng không là nguồn số dư hoặc bộ chạy hai worker này.
 
 | Phần | Đã có | Chưa có ở mốc này |
@@ -46,16 +54,21 @@ pnpm install --frozen-lockfile
 pnpm setup:local
 ```
 
-`setup:local` chỉ tạo file chưa tồn tại và sinh khóa local, không ghi đè `.env` đã có.
-Nếu port 5432 bận, đặt `POSTGRES_PORT` ở root `.env` và sửa port `DATABASE_URL` ở
-`apps/api/.env` tương ứng. Không chép `.env`, database hoặc khóa của người bàn giao.
+`setup:local` chỉ tạo file chưa tồn tại và sinh khóa local (JWT, simulator, mật khẩu
+MongoDB root/app/migrator dùng chung cho root `.env` và `apps/api/.env`), không ghi đè
+`.env` đã có. Nếu port 27017 bận, đặt `MONGO_PORT` ở root `.env` và sửa port trong các
+URL `MONGODB_*` ở `apps/api/.env`. Không chép `.env`, database hoặc khóa của người bàn giao.
 
 ```sh
-docker compose --env-file .env -f infra/docker-compose.yml up -d --wait postgres
-pnpm db:generate
+docker compose --env-file .env -f infra/docker-compose.yml up -d --wait mongo
+pnpm db:bootstrap
 pnpm db:migrate
 pnpm db:seed
 ```
+
+`db:bootstrap` tạo user `latlai_app` (quyền tối thiểu) và `latlai_migrator`; API từ chối
+khởi động khi còn migration chưa áp dụng. Dữ liệu PostgreSQL cũ chỉ chuyển một lần theo
+[runbook cutover](../refactor/MIG06_CUTOVER_RUNBOOK.md).
 
 Seed chỉ cho local, không tự đổi mật khẩu account đã tồn tại. Xem tài khoản mẫu ở
 [hướng dẫn RN](../REACT_NATIVE_START.md); mật khẩu theo cấu hình local của người nhận.
@@ -100,7 +113,7 @@ Các đường dẫn trong bảng tính từ root repo.
 | Ví/giữ/hoàn tiền | `apps/api/src/modules/wallet/`; `orders/orders.service.ts` | ADR 0018/0020; wallet/order-payment E2E; `wallet:check` |
 | Preparing, ảnh đóng gói, pickup | `orders/`, `shipments/` | ADR 0021–0024; preparation/packaging/shipments/carrier-pickup E2E |
 | Delivery overdue | `orders/orders.service.ts`, `order-expiry.service.ts`; `src/order-worker.ts` | ADR 0025; `delivery-overdue.e2e-spec.ts` |
-| Schema/DB bất biến | `apps/api/prisma/schema.prisma`, `prisma/migrations/` | SQL checks/triggers là một phần logic; Prisma schema không biểu diễn hết |
+| Schema/DB bất biến | `apps/api/src/database/mongo/` (migrations, `transaction.ts`), `*-invariants`/`check*` trong module, `src/integrity/` | Validator/index/quyền/kiểm lúc commit là một phần logic ([bản đồ](../refactor/MIG02_MODEL_MAP.md)); `prisma/migrations/` chỉ là lịch sử PostgreSQL cho import |
 
 Tên schema/receipt lịch sử có thể vẫn chứa `Unpaid` dù projection hỗ trợ paid Order.
 Đọc contract hiện tại; không suy quyền từ tên type và không đổi tên hàng loạt trước bàn giao.
@@ -125,14 +138,16 @@ Tên schema/receipt lịch sử có thể vẫn chứa `Unpaid` dù projection h
 
 ## 5. Chạy kiểm thử mà không dùng database của app
 
-Đã bổ sung Compose **riêng** `infra/docker-compose.test.yml`, project/volume riêng,
-port mặc định `127.0.0.1:55434`. Tài khoản trong file là credential local-test công khai,
-không dùng cho môi trường khác. Nếu port bận, đặt `TEST_POSTGRES_PORT` và cập nhật
-URL bên dưới cùng giá trị. Dừng bằng `pnpm infra:test:stop`, không xóa volume app.
+Compose **riêng** `infra/docker-compose.mongo-test.yml` chạy replica set QA
+`127.0.0.1:57017` (auth, dữ liệu trên tmpfs — khởi động lại là rỗng). Tài khoản
+`latlai_qa_root/local_test_only` là credential local-test công khai, không dùng cho môi
+trường khác. Mỗi lần chạy E2E xóa và dựng lại database `MONGO_E2E_DATABASE` (mặc định
+`latlai_e2e_test`, bắt buộc kết thúc `_test`). Dừng bằng `pnpm infra:mongo:test:stop`.
+Compose PostgreSQL test (`infra/docker-compose.test.yml`, port 55434) chỉ còn cần cho
+test import PostgreSQL → MongoDB; thiếu `TEST_DATABASE_URL` thì test đó tự bỏ qua.
 
 ```sh
-pnpm infra:test:up
-pnpm db:generate
+pnpm infra:mongo:test:up
 pnpm contract:check
 pnpm contract:routes
 pnpm lint
@@ -144,18 +159,15 @@ pnpm build
 PowerShell, trong terminal QA riêng:
 
 ```powershell
-$oldDatabaseUrl = $env:DATABASE_URL
-$oldTestUrl = $env:TEST_DATABASE_URL
+$oldMongoUrl = $env:MONGO_TEST_URL
 try {
-  $env:TEST_DATABASE_URL = 'postgresql://usedbooks_test:local_test_only@127.0.0.1:55434/usedbooks_test'
-  $env:DATABASE_URL = $env:TEST_DATABASE_URL
-  pnpm db:migrate
-  if ($LASTEXITCODE -ne 0) { throw 'Test migration failed' }
+  $env:MONGO_TEST_URL = 'mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_probe_test?replicaSet=rs-test&authSource=admin'
+  pnpm test:api:mongo
+  if ($LASTEXITCODE -ne 0) { throw 'MongoDB suite failed' }
   pnpm test:api:e2e
   if ($LASTEXITCODE -ne 0) { throw 'API E2E failed' }
 } finally {
-  $env:DATABASE_URL = $oldDatabaseUrl
-  $env:TEST_DATABASE_URL = $oldTestUrl
+  $env:MONGO_TEST_URL = $oldMongoUrl
 }
 ```
 
@@ -163,19 +175,20 @@ Bash/zsh:
 
 ```sh
 (
-  export TEST_DATABASE_URL=postgresql://usedbooks_test:local_test_only@127.0.0.1:55434/usedbooks_test
-  export DATABASE_URL="$TEST_DATABASE_URL"
-  pnpm db:migrate && pnpm test:api:e2e
+  export MONGO_TEST_URL='mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_probe_test?replicaSet=rs-test&authSource=admin'
+  pnpm test:api:mongo && pnpm test:api:e2e
 )
 ```
 
+Global setup tự bootstrap user và migrate database E2E; không cần `db:migrate` riêng.
+
 Chạy một suite: `pnpm --filter @used-books/api exec vitest run --config vitest.config.e2e.ts test/orders.e2e-spec.ts`.
 Không thêm `--` trước file khi gọi script pnpm vì có thể chạy toàn bộ thay vì lọc.
-DB phải kết thúc `_test`; auth suite sửa fixture ở public schema và xóa login counters
-trong DB test, nên chỉ dùng DB chuyên dụng, không chạy hai full suite cùng lúc trên cùng DB.
+DB phải kết thúc `_test`; mỗi lần chạy xóa database E2E rồi dựng lại, nên không chạy hai
+lần cùng lúc với cùng `MONGO_E2E_DATABASE` (chạy song song thì đặt tên khác nhau).
 
 Browser regression dùng API/DB thật và storage fake. Sau API/admin build, trong terminal
-có `TEST_DATABASE_URL` trỏ DB test ở trên:
+có `MONGO_TEST_URL` ở trên (mỗi lần chạy tạo rồi xóa database `ops_browser_*_test` riêng):
 
 ```sh
 pnpm --filter @used-books/admin-web exec playwright install chromium

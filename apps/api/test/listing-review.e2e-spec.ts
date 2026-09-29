@@ -1,24 +1,26 @@
-import { randomBytes, randomUUID } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { randomUUID } from 'node:crypto';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import type { INestApplication } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/generated/prisma/client.js';
-import type { RoleCode, UserStatus } from '../src/generated/prisma/client.js';
-import { DatabaseService } from '../src/database/database.service.js';
+import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
-import request from 'supertest';
-import { Ajv2020 } from 'ajv/dist/2020.js';
-import addFormats from 'ajv-formats';
-import { parse } from 'yaml';
-import { hash } from 'argon2';
+import type {
+  RoleCode,
+  UserStatus,
+  ListingDoc,
+} from '../src/database/mongo/documents.js';
+import { MongoService } from '../src/database/mongo/mongo.service.js';
+import { onTransactionRetry } from '../src/database/mongo/transaction.js';
 import { MediaStorage } from '../src/modules/media/media-storage.js';
-import { PageService } from '../src/modules/commands/page.service.js';
+import { MongoCommandService } from '../src/modules/commands/mongo-command.service.js';
+import { MongoPageService } from '../src/modules/commands/mongo-page.service.js';
+import { checkListing } from '../src/modules/listings/listing-projection.js';
+import { validates } from './helpers/contract.js';
+import { Gate } from './helpers/mongo-gate.js';
+import { MongoFixtures } from './helpers/mongo-fixtures.js';
 
-// Storage signing is deliberately faked. HTTP, authorization and PostgreSQL are real.
+// Storage signing is deliberately faked. HTTP, authorization and MongoDB are real.
 const storage = {
   beforeSign: undefined as (() => Promise<void>) | undefined,
   async check() {},
@@ -31,23 +33,6 @@ const storage = {
   },
 };
 
-const contract = parse(
-  readFileSync(
-    createRequire(import.meta.url).resolve(
-      '@used-books/api-contract/openapi.yaml',
-    ),
-    'utf8',
-  ),
-);
-const ajv = new Ajv2020({ strict: false });
-addFormats.default(ajv);
-ajv.addSchema({ $id: 'api-wire', components: contract.components });
-function validates(name: string, body: unknown) {
-  const fn = ajv.compile({ $ref: `api-wire#/components/schemas/${name}` });
-  expect(fn(body), JSON.stringify(fn.errors)).toBe(true);
-}
-type Adapter = Awaited<ReturnType<PrismaPg['connect']>>;
-type Pool = ReturnType<Adapter['underlyingDriver']>;
 type Reader = { id: string; token: string; sessionId: string; email: string };
 const metadata = (title = 'Đường sách chuyền tay') => ({
   title,
@@ -76,9 +61,9 @@ const draft = (bookId: string | null = null) => ({
   mediaIds: [] as string[],
 });
 
-describe('listing submission and moderation through HTTP with PostgreSQL', () => {
-  const schema = `review_http_test_${randomUUID().replaceAll('-', '')}`;
-  let app: INestApplication, db: PrismaClient, adapter: Adapter, pool: Pool;
+describe('listing submission and moderation through HTTP with MongoDB', () => {
+  let app: INestApplication, db: MongoFixtures;
+  const users: string[] = [];
   let m1: Reader,
     m2: Reader,
     a1: Reader,
@@ -116,31 +101,19 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
     roles: RoleCode[] = ['MEMBER'],
     status: UserStatus = 'ACTIVE',
   ): Promise<Reader> {
-    const id = randomUUID(),
-      sessionId = randomUUID(),
-      email = `${id}@draft-http.test`;
-    await db.user.create({
-      data: {
-        id,
-        emailNormalized: email,
-        displayName: 'Bạn đọc thử nghiệm',
-        passwordHash: await hash('Only-a-test-password-2026'),
-        status,
-        emailVerifiedAt: new Date(),
-        roles: { create: roles.map((role) => ({ role })) },
-        sessions: {
-          create: {
-            id: sessionId,
-            refreshTokenHash: randomBytes(32).toString('hex'),
-            expiresAt: new Date(Date.now() + 86400000),
-          },
-        },
-      },
+    const email = `${randomUUID()}@draft-http.test`;
+    const user = await db.user({
+      email,
+      displayName: 'Bạn đọc thử nghiệm',
+      roles,
+      status,
     });
+    users.push(user._id);
+    const sessionId = await db.session(user._id);
     const token = await app
       .get(JwtService)
-      .signAsync({ sub: id, sid: sessionId });
-    return { id, sessionId, token, email };
+      .signAsync({ sub: user._id, sid: sessionId });
+    return { id: user._id, sessionId, token, email };
   }
   async function createCatalog(actor = m1, meta = metadata()) {
     const result = await post(
@@ -167,62 +140,102 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
     validates('MutationReceipt', result.body);
     return result.body;
   }
-  async function makeApp() {
+  // Direct user writes bump lockSeq like every application writer of users.
+  const setUser = (id: string, set: Record<string, unknown>) =>
+    db.c.users.updateOne(
+      { _id: id },
+      { $set: { ...set, updatedAt: new Date() }, $inc: { lockSeq: 1 } },
+    );
+  const dropRoles = (id: string) =>
+    db.c.users.updateOne(
+      { _id: id },
+      { $set: { roles: [] }, $inc: { lockSeq: 1 } },
+    );
+  // A raw listing state change, like the former `db.listing.update` fixture.
+  const changeListing = (id: string, set: Partial<ListingDoc>) =>
+    db.c.listings.findOneAndUpdate(
+      { _id: id },
+      { $set: set, $inc: { version: 1, lockSeq: 1 } },
+      { returnDocument: 'after' },
+    );
+  // Observes command transactions retrying against a held write lock (the
+  // MongoDB analogue of a session queued behind a PostgreSQL row lock).
+  function watchRetries() {
+    const seen = new Set<number>();
+    const stop = onTransactionRetry((event) => seen.add(event.transactionId));
+    return {
+      stop,
+      async until(n = 1) {
+        const deadline = Date.now() + 4000;
+        while (Date.now() < deadline) {
+          if (seen.size >= n) return;
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+        throw new Error('Commands did not reach the lock barrier');
+      },
+    };
+  }
+  // Test-only pause of the first `operation` command after its mutation, inside
+  // its transaction and while it holds every lock it took (replaces the former
+  // advisory-lock trigger on audit/outbox insertion). No production failpoint.
+  function pauseCommand(operation: string) {
+    const commands = app.get(MongoCommandService);
+    const original = commands.run.bind(commands);
+    let entered!: () => void, release!: () => void;
+    const reached = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let paused = false;
+    const spy = vi.spyOn(commands, 'run').mockImplementation(((
+      context: any,
+      op: string,
+      target: any,
+      body: any,
+      options: any,
+    ) =>
+      original(
+        context,
+        op,
+        target,
+        body,
+        op !== operation
+          ? options
+          : {
+              ...options,
+              mutate: async (...args: any[]) => {
+                const change = await options.mutate(...args);
+                if (!paused) {
+                  paused = true;
+                  entered();
+                  await released;
+                }
+                return change;
+              },
+            },
+      )) as any);
+    return {
+      reached,
+      release: () => release(),
+      restore: () => {
+        release();
+        spy.mockRestore();
+      },
+    };
+  }
+  const block = (actor: { id: string }) => Gate.lockUser(db.client, actor.id);
+
+  beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(DatabaseService)
-      .useValue(db)
       .overrideProvider(MediaStorage)
       .useValue(storage)
       .compile();
-    const next = module.createNestApplication();
-    configureApp(next, { docs: false, logRequests: false });
-    await next.init();
-    return next;
-  }
-  async function blockedBy(pid: number, minimum = 1) {
-    const deadline = Date.now() + 4000;
-    while (Date.now() < deadline) {
-      const r = await pool.query(
-        'SELECT count(*)::int n FROM pg_stat_activity a WHERE $1 = ANY(pg_blocking_pids(a.pid)) OR EXISTS (SELECT 1 FROM pg_stat_activity b WHERE $1 = ANY(pg_blocking_pids(b.pid)) AND b.pid = ANY(pg_blocking_pids(a.pid)))',
-        [pid],
-      );
-      if (r.rows[0].n >= minimum) return;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-    throw new Error(
-      'HTTP mutation never reached the blocked database transaction',
-    );
-  }
-  async function blockUser(id: string) {
-    const connection = await pool.connect();
-    await connection.query('BEGIN');
-    await connection.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [id]);
-    const pid = (await connection.query('SELECT pg_backend_pid() pid')).rows[0]
-      .pid as number;
-    return { connection, pid };
-  }
-
-  beforeAll(async () => {
-    const url = process.env.TEST_DATABASE_URL!;
-    if (!decodeURIComponent(new URL(url).pathname).endsWith('_test'))
-      throw new Error('Only _test databases');
-    adapter = await new PrismaPg({
-      connectionString: url,
-      max: 16,
-      options: `-c search_path=${schema},public -c timezone=UTC`,
-      statement_timeout: 15000,
-    }).connect();
-    pool = adapter.underlyingDriver();
-    await pool.query(`CREATE SCHEMA "${schema}"`);
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n))
-      .sort())
-      await pool.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
-    db = new PrismaClient({ adapter: new PrismaPg(pool, { schema }) });
-    await db.$connect();
-    app = await makeApp();
+    app = module.createNestApplication();
+    configureApp(app, { docs: false, logRequests: false });
+    await app.init();
+    db = await MongoFixtures.connect();
     m1 = await reader();
     m2 = await reader();
     a1 = await reader(['MEMBER', 'ADMIN']);
@@ -232,11 +245,49 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
     restricted = await reader(['MEMBER'], 'RESTRICTED');
   }, 60000);
   afterAll(async () => {
+    if (db) {
+      const c = db.c;
+      const listings = (
+        await c.listings.find({ ownerId: { $in: users } }).toArray()
+      ).map((l) => l._id);
+      const revisions = (
+        await c.listing_revisions
+          .find({ listingId: { $in: listings } })
+          .toArray()
+      ).map((r) => r._id);
+      const media = (
+        await c.listing_media.find({ listingId: { $in: listings } }).toArray()
+      ).map((m) => m._id);
+      const books = (
+        await c.catalog_books.find({ requesterId: { $in: users } }).toArray()
+      ).map((b) => b._id);
+      const bookRevisions = (
+        await c.catalog_revisions.find({ bookId: { $in: books } }).toArray()
+      ).map((r) => r._id);
+      const audits = (
+        await c.audit_events.find({ actorId: { $in: users } }).toArray()
+      ).map((a) => a._id);
+      await c.outbox_events.deleteMany({ auditId: { $in: audits } });
+      await c.audit_events.deleteMany({ _id: { $in: audits } });
+      await c.mutation_receipts.deleteMany({ actorId: { $in: users } });
+      await c.listing_decisions.deleteMany({ revisionId: { $in: revisions } });
+      await c.revision_media.deleteMany({ listingId: { $in: listings } });
+      await c.media_processing_jobs.deleteMany({ mediaId: { $in: media } });
+      await c.listing_media.deleteMany({ _id: { $in: media } });
+      await c.listing_revisions.deleteMany({ _id: { $in: revisions } });
+      await c.listings.deleteMany({ _id: { $in: listings } });
+      await c.catalog_decisions.deleteMany({
+        revisionId: { $in: bookRevisions },
+      });
+      await c.catalog_revisions.deleteMany({ _id: { $in: bookRevisions } });
+      await c.catalog_books.deleteMany({ _id: { $in: books } });
+      await c.member_addresses.deleteMany({ ownerId: { $in: users } });
+      await c.address_identities.deleteMany({ ownerId: { $in: users } });
+      await c.address_books.deleteMany({ _id: { $in: users } });
+      await db.removeUsers(users);
+      await db.close();
+    }
     await app?.close();
-    await db?.$disconnect();
-    if (pool && /^review_http_test_[a-f0-9]{32}$/.test(schema))
-      await pool.query(`DROP SCHEMA "${schema}" CASCADE`);
-    await adapter?.dispose();
   });
 
   const checklist = {
@@ -251,24 +302,32 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
     listingId: string,
     status: 'Ready' | 'Pending' = 'Ready',
   ) {
-    const key = randomUUID();
+    const key = randomUUID(),
+      now = new Date();
     // Fixture derivative only: not proof of upload/Sharp/live-provider behavior.
-    return db.listingMedia.create({
-      data: {
-        listingId,
-        status,
-        stagingKey: key,
-        pinnedKey: status === 'Ready' ? key + '/input' : null,
-        derivativeKey: status === 'Ready' ? key + '/display.webp' : null,
-        mimeType: 'image/jpeg',
-        byteSize: 100,
-        sha256: 'a'.repeat(64),
-        width: status === 'Ready' ? 20 : null,
-        height: status === 'Ready' ? 20 : null,
-        reservedBytes: 1000,
-        expiresAt: new Date(Date.now() + 3600000),
-      },
-    });
+    const doc = {
+      _id: randomUUID(),
+      listingId,
+      version: 1,
+      status,
+      stagingKey: key,
+      pinnedKey: status === 'Ready' ? key + '/input' : null,
+      derivativeKey: status === 'Ready' ? key + '/display.webp' : null,
+      mimeType: 'image/jpeg',
+      byteSize: 100,
+      sha256: 'a'.repeat(64),
+      width: status === 'Ready' ? 20 : null,
+      height: status === 'Ready' ? 20 : null,
+      failureCode: null,
+      expiresAt: new Date(Date.now() + 3600000),
+      purgedAt: null,
+      reservedBytes: 1000,
+      createdAt: now,
+      updatedAt: now,
+      lockSeq: 0,
+    };
+    await db.c.listing_media.insertOne(doc);
+    return { ...doc, id: doc._id };
   }
   async function complete(
     actor = m1,
@@ -335,20 +394,35 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
     const result = await submit(l, actor).expect(200);
     return { ...l, ...result.body };
   }
+  const revisionIds = async (listingId: string) =>
+    (await db.c.listing_revisions.find({ listingId }).toArray()).map(
+      (r) => r._id,
+    );
+  const decisionCount = async (listingId: string) =>
+    db.c.listing_decisions.countDocuments({
+      revisionId: { $in: await revisionIds(listingId) },
+    });
+  // Outbox events carry no listing id; they join through their audit event.
+  async function outbox(listingId: string, actions?: string[]) {
+    const audits = await db.c.audit_events
+      .find({ listingId, ...(actions ? { action: { $in: actions } } : {}) })
+      .toArray();
+    return db.c.outbox_events
+      .find({ auditId: { $in: audits.map((a) => a._id) } })
+      .toArray();
+  }
   async function effectCounts(id: string) {
     return {
-      decisions: await db.listingDecision.count({
-        where: { revision: { listingId: id } },
+      decisions: await decisionCount(id),
+      receipts: await db.c.mutation_receipts.countDocuments({
+        listingId: id,
+        operation: 'decideListing',
       }),
-      receipts: await db.mutationReceipt.count({
-        where: { listingId: id, operation: 'decideListing' },
+      audits: await db.c.audit_events.countDocuments({
+        listingId: id,
+        action: 'decideListing',
       }),
-      audits: await db.auditEvent.count({
-        where: { listingId: id, action: 'decideListing' },
-      }),
-      events: await db.outboxEvent.count({
-        where: { audit: { listingId: id, action: 'decideListing' } },
-      }),
+      events: (await outbox(id, ['decideListing'])).length,
     };
   }
   it('freezes saved content, exposes the submitted queue, approves once with audit/outbox and replay', async () => {
@@ -392,19 +466,12 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
       audits: 1,
       events: 1,
     });
-    const listing = await db.listing.findUniqueOrThrow({
-      where: { id: l.entityId },
-    });
-    expect(listing.publishedAt).not.toBeNull();
-    expect(
-      (
-        await db.outboxEvent.findMany({
-          where: { audit: { listingId: l.entityId } },
-        })
-      )
-        .map((e) => e.type)
-        .sort(),
-    ).toEqual(['ListingApproved', 'ListingSubmitted']);
+    const listing = await db.c.listings.findOne({ _id: l.entityId });
+    expect(listing!.publishedAt).not.toBeNull();
+    expect((await outbox(l.entityId)).map((e) => e.type).sort()).toEqual([
+      'ListingApproved',
+      'ListingSubmitted',
+    ]);
   });
   it('rejects incomplete saved content and unfinished images without freezing or emitting effects', async () => {
     const empty = await createDraft();
@@ -417,13 +484,12 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
     ).toBe(true);
     const l = await complete(m1, true, 'Pending');
     expect((await submit(l).expect(422)).body.code).toBe('MediaNotReady');
-    const r = await db.listingRevision.findUniqueOrThrow({
-      where: { id: l.revisionId },
-    });
-    expect(r.submittedAt).toBeNull();
+    const r = await db.c.listing_revisions.findOne({ _id: l.revisionId });
+    expect(r!.submittedAt).toBeNull();
     expect(
-      await db.auditEvent.count({
-        where: { listingId: l.entityId, action: 'submitListing' },
+      await db.c.audit_events.countDocuments({
+        listingId: l.entityId,
+        action: 'submitListing',
       }),
     ).toBe(0);
     await post(
@@ -489,12 +555,10 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
     ).expect(200);
     validates('MediaRead', read.body);
     expect(
-      await db.auditEvent.count({
-        where: {
-          mediaId: l.image.id,
-          actorId: staff.id,
-          action: 'getReviewMediaRead',
-        },
+      await db.c.audit_events.countDocuments({
+        mediaId: l.image.id,
+        actorId: staff.id,
+        action: 'getReviewMediaRead',
       }),
     ).toBe(1);
     await submit(saved.body).expect(200);
@@ -506,29 +570,14 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
     await get('/operations/listings').expect(401);
     for (const actor of [m1, tester, restricted])
       await get('/operations/listings', actor).expect(403);
-    const restrictedOwner = await complete(await reader());
-    const ownerId = (
-      await db.listing.findUniqueOrThrow({
-        where: { id: restrictedOwner.entityId },
-      })
-    ).ownerId;
-    const owner = await db.user.findUniqueOrThrow({
-      where: { id: ownerId },
-      include: { sessions: true },
+    const owner = await reader();
+    const restrictedOwner = await complete(owner);
+    const stored = await db.c.listings.findOne({
+      _id: restrictedOwner.entityId,
     });
-    await db.user.update({
-      where: { id: ownerId },
-      data: { status: 'RESTRICTED' },
-    });
-    const ownerToken = await app
-      .get(JwtService)
-      .signAsync({ sub: owner.id, sid: owner.sessions[0].id });
-    await submit(restrictedOwner, {
-      id: owner.id,
-      token: ownerToken,
-      sessionId: owner.sessions[0].id,
-      email: owner.emailNormalized,
-    }).expect(403);
+    expect(stored!.ownerId).toBe(owner.id);
+    await setUser(owner.id, { status: 'RESTRICTED' });
+    await submit(restrictedOwner, owner).expect(403);
     const self = await pending(a1);
     expect((await decide(self, 'Approve', a1).expect(403)).body.code).toBe(
       'SelfReviewForbidden',
@@ -592,7 +641,7 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
     const actor = await reader(['STAFF']);
     const l = await pending();
     storage.beforeSign = async () => {
-      await db.userRole.deleteMany({ where: { userId: actor.id } });
+      await dropRoles(actor.id);
     };
     try {
       const result = await get(
@@ -606,18 +655,20 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
   });
   it('serializes two reviewers at a real lock barrier and commits exactly one decision', async () => {
     const l = await pending();
-    const { connection, pid } = await blockUser(m1.id);
-    const first = decide(l, 'Approve', staff).then((r) => r);
-    const second = decide(l, 'Reject', a2).then((r) => r);
+    const gate = await block(m1);
+    let first: Promise<request.Response> | undefined,
+      second: Promise<request.Response> | undefined;
     try {
-      await blockedBy(pid, 2);
-      await connection.query('COMMIT');
+      first = decide(l, 'Approve', staff).then((r) => r);
+      second = decide(l, 'Reject', a2).then((r) => r);
+      await gate.contended(2);
+      await gate.commit();
+      const results = await Promise.all([first, second]);
+      expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
     } finally {
-      await connection.query('ROLLBACK');
-      connection.release();
+      await gate.close();
+      await Promise.allSettled([first, second]);
     }
-    const results = await Promise.all([first, second]);
-    expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
     expect(await effectCounts(l.entityId)).toEqual({
       decisions: 1,
       receipts: 1,
@@ -630,31 +681,36 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
     async (change) => {
       const owner = await reader();
       const l = await pending(owner);
-      const { connection, pid } = await blockUser(owner.id);
+      const gate = await block(owner);
       const response = decide(l).then((r) => r);
       try {
-        await blockedBy(pid);
+        await gate.contended();
+        const users = gate.db.collection<{ _id: string }>('users');
+        const inGate = { session: gate.session };
         if (change === 'restrict')
-          await connection.query(
-            "UPDATE users SET status='RESTRICTED' WHERE id=$1",
-            [owner.id],
+          await users.updateOne(
+            { _id: owner.id },
+            { $set: { status: 'RESTRICTED' } },
+            inGate,
           );
         if (change === 'role')
-          await connection.query(
-            "DELETE FROM user_roles WHERE user_id=$1 AND role='MEMBER'",
-            [owner.id],
+          await users.updateOne(
+            { _id: owner.id },
+            { $pull: { roles: { role: 'MEMBER' } } } as never,
+            inGate,
           );
         if (change === 'verified')
-          await connection.query(
-            'UPDATE users SET email_verified_at=NULL WHERE id=$1',
-            [owner.id],
+          await users.updateOne(
+            { _id: owner.id },
+            { $set: { emailVerifiedAt: null } },
+            inGate,
           );
-        await connection.query('COMMIT');
+        await gate.commit();
+        expect((await response).status).toBe(403);
       } finally {
-        await connection.query('ROLLBACK');
-        connection.release();
+        await gate.close();
+        await response;
       }
-      expect((await response).status).toBe(403);
       expect(await effectCounts(l.entityId)).toEqual({
         decisions: 0,
         receipts: 0,
@@ -667,55 +723,53 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
   it('rechecks member eligibility after lock wait at submission', async () => {
     const owner = await reader();
     const l = await complete(owner);
-    const { connection, pid } = await blockUser(owner.id);
+    const gate = await block(owner);
     const response = submit(l, owner).then((r) => r);
     try {
-      await blockedBy(pid);
-      await connection.query(
-        "UPDATE users SET status='RESTRICTED' WHERE id=$1",
-        [owner.id],
-      );
-      await connection.query('COMMIT');
+      await gate.contended();
+      await gate.db
+        .collection<{ _id: string }>('users')
+        .updateOne(
+          { _id: owner.id },
+          { $set: { status: 'RESTRICTED' } },
+          { session: gate.session },
+        );
+      await gate.commit();
+      expect((await response).status).toBe(403);
     } finally {
-      await connection.query('ROLLBACK');
-      connection.release();
+      await gate.close();
+      await response;
     }
-    expect((await response).status).toBe(403);
     expect(
-      (
-        await db.listingRevision.findUniqueOrThrow({
-          where: { id: l.revisionId },
-        })
-      ).submittedAt,
+      (await db.c.listing_revisions.findOne({ _id: l.revisionId }))!
+        .submittedAt,
     ).toBeNull();
   });
   it('deduplicates simultaneous same-key submission and rejects altered replay or a revoked session', async () => {
     const owner = await reader();
     const l = await complete(owner);
     const key = randomUUID();
-    const { connection, pid } = await blockUser(owner.id);
-    const first = submit(l, owner, key).then((r) => r);
-    const second = submit(l, owner, key).then((r) => r);
+    const gate = await block(owner);
+    let first: Promise<request.Response> | undefined,
+      second: Promise<request.Response> | undefined;
     try {
-      await blockedBy(pid, 2);
-      await connection.query('COMMIT');
+      first = submit(l, owner, key).then((r) => r);
+      second = submit(l, owner, key).then((r) => r);
+      await gate.contended(2);
+      await gate.commit();
+      const results = await Promise.all([first, second]);
+      expect(results.map((r) => r.status)).toEqual([200, 200]);
+      expect(results[0].body).toEqual(results[1].body);
     } finally {
-      await connection.query('ROLLBACK');
-      connection.release();
+      await gate.close();
+      await Promise.allSettled([first, second]);
     }
-    const results = await Promise.all([first, second]);
-    expect(results.map((r) => r.status)).toEqual([200, 200]);
-    expect(results[0].body).toEqual(results[1].body);
-    expect(
-      await db.outboxEvent.count({
-        where: { audit: { listingId: l.entityId, action: 'submitListing' } },
-      }),
-    ).toBe(1);
+    expect(await outbox(l.entityId, ['submitListing'])).toHaveLength(1);
     await submit({ ...l, version: l.version + 1 }, owner, key).expect(409);
-    await db.authSession.update({
-      where: { id: owner.sessionId },
-      data: { revokedAt: new Date() },
-    });
+    await db.c.auth_sessions.updateOne(
+      { _id: owner.sessionId },
+      { $set: { revokedAt: new Date() }, $inc: { lockSeq: 1 } },
+    );
     await submit(l, owner, key).expect(401);
   });
   it.each(['role', 'session', 'restricted'] as const)(
@@ -723,30 +777,37 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
     async (change) => {
       const actor = await reader(['STAFF']);
       const l = await pending();
-      const { connection, pid } = await blockUser(actor.id);
+      const gate = await block(actor);
       const response = decide(l, 'Approve', actor).then((r) => r);
       try {
-        await blockedBy(pid);
+        await gate.contended();
+        const inGate = { session: gate.session };
         if (change === 'role')
-          await connection.query('DELETE FROM user_roles WHERE user_id=$1', [
-            actor.id,
-          ]);
+          await gate.db
+            .collection<{ _id: string }>('users')
+            .updateOne({ _id: actor.id }, { $set: { roles: [] } }, inGate);
         if (change === 'session')
-          await connection.query(
-            'UPDATE auth_sessions SET revoked_at=now() WHERE id=$1',
-            [actor.sessionId],
-          );
+          await gate.db
+            .collection<{ _id: string }>('auth_sessions')
+            .updateOne(
+              { _id: actor.sessionId },
+              { $set: { revokedAt: new Date() } },
+              inGate,
+            );
         if (change === 'restricted')
-          await connection.query(
-            "UPDATE users SET status='RESTRICTED' WHERE id=$1",
-            [actor.id],
-          );
-        await connection.query('COMMIT');
+          await gate.db
+            .collection<{ _id: string }>('users')
+            .updateOne(
+              { _id: actor.id },
+              { $set: { status: 'RESTRICTED' } },
+              inGate,
+            );
+        await gate.commit();
+        expect((await response).status).toBe(change === 'session' ? 401 : 403);
       } finally {
-        await connection.query('ROLLBACK');
-        connection.release();
+        await gate.close();
+        await response;
       }
-      expect((await response).status).toBe(change === 'session' ? 401 : 403);
       expect(await effectCounts(l.entityId)).toEqual({
         decisions: 0,
         receipts: 0,
@@ -758,24 +819,28 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
   it('holds owner eligibility until approval commits when approval wins the lock order', async () => {
     const owner = await reader();
     const l = await pending(owner);
-    const gate = await pool.connect();
-    await gate.query('BEGIN');
-    await gate.query('SELECT pg_advisory_xact_lock(912773)');
-    const pid = (await gate.query('SELECT pg_backend_pid() pid')).rows[0]
-      .pid as number;
-    await pool.query(
-      "CREATE FUNCTION pause_approval() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.type='ListingApproved' THEN PERFORM pg_advisory_xact_lock(912773); END IF; RETURN NEW; END $$; CREATE TRIGGER pause_approval BEFORE INSERT ON outbox_events FOR EACH ROW EXECUTE FUNCTION pause_approval()",
-    );
+    // The approval pauses inside its transaction holding the owner lock; a
+    // concurrent owner restriction must wait for (retry after) its commit.
+    const pause = pauseCommand('decideListing');
+    const retries = watchRetries();
     const approval = decide(l).then((r) => r);
     let restriction: Promise<unknown> | undefined;
     try {
-      await blockedBy(pid);
-      restriction = pool.query(
-        "UPDATE users SET status='RESTRICTED' WHERE id=$1",
-        [owner.id],
+      await pause.reached;
+      restriction = app.get(MongoService).tx((tx) =>
+        tx.c.users.updateOne(
+          { _id: owner.id },
+          {
+            $set: { status: 'RESTRICTED', updatedAt: new Date() },
+            $inc: { lockSeq: 1 },
+          },
+        ),
       );
-      await blockedBy(pid, 2);
-      await gate.query('COMMIT');
+      await retries.until(1);
+      expect((await db.c.users.findOne({ _id: owner.id }))!.status).toBe(
+        'ACTIVE',
+      );
+      pause.release();
       expect((await approval).status).toBe(200);
       await restriction;
       expect(await effectCounts(l.entityId)).toEqual({
@@ -784,16 +849,13 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
         audits: 1,
         events: 1,
       });
-      expect(
-        (await db.user.findUniqueOrThrow({ where: { id: owner.id } })).status,
-      ).toBe('RESTRICTED');
-    } finally {
-      await gate.query('ROLLBACK');
-      gate.release();
-      await Promise.allSettled([approval, restriction]);
-      await pool.query(
-        'DROP TRIGGER pause_approval ON outbox_events; DROP FUNCTION pause_approval()',
+      expect((await db.c.users.findOne({ _id: owner.id }))!.status).toBe(
+        'RESTRICTED',
       );
+    } finally {
+      retries.stop();
+      pause.restore();
+      await Promise.allSettled([approval, restriction]);
     }
   });
   it('blocks removed/deleted/unavailable listings and rejects replay after reviewer role loss', async () => {
@@ -806,11 +868,8 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
       { trade: 'Sold' as const },
     ]) {
       const l = await pending();
-      const changed = await db.listing.update({
-        where: { id: l.entityId },
-        data: { ...data, version: { increment: 1 } },
-      });
-      await decide({ ...l, version: changed.version }).expect(
+      const changed = await changeListing(l.entityId, data);
+      await decide({ ...l, version: changed!.version }).expect(
         'deletedAt' in data ? 404 : 409,
       );
       expect(await effectCounts(l.entityId)).toEqual({
@@ -832,43 +891,39 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
     const key = randomUUID();
     await decide(l, 'Approve', actor, key).expect(200);
     await decide(l, 'Reject', actor, key).expect(409);
-    await db.userRole.deleteMany({ where: { userId: actor.id } });
+    await dropRoles(actor.id);
     await decide(l, 'Approve', actor, key).expect(403);
   });
   it('rolls back revision freeze, decision, receipt and audit when durable event insertion fails', async () => {
-    // Isolated schema, test-only failpoint. No runtime failpoint or HTTP endpoint.
-    await pool.query(
-      "CREATE FUNCTION reject_review_event() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.type IN ('ListingSubmitted','ListingApproved') THEN RAISE EXCEPTION 'Injected outbox fault'; END IF; RETURN NEW; END $$; CREATE TRIGGER reject_review_event BEFORE INSERT ON outbox_events FOR EACH ROW EXECUTE FUNCTION reject_review_event()",
-    );
+    // Test-only failpoint: a temporary validator rule (the former failing SQL
+    // trigger) scoped to this listing. No runtime failpoint or HTTP endpoint.
     const l = await complete();
     const key = randomUUID();
-    try {
+    const rejectEvents = {
+      type: { $in: ['ListingSubmitted', 'ListingApproved'] },
+      'payload.entityId': l.entityId,
+    };
+    await db.withRejectingValidator('outbox_events', rejectEvents, async () => {
       await submit(l, m1, key).expect(500);
       expect(
-        (
-          await db.listingRevision.findUniqueOrThrow({
-            where: { id: l.revisionId },
-          })
-        ).submittedAt,
+        (await db.c.listing_revisions.findOne({ _id: l.revisionId }))!
+          .submittedAt,
       ).toBeNull();
       expect(
-        await db.mutationReceipt.count({
-          where: { listingId: l.entityId, operation: 'submitListing' },
+        await db.c.mutation_receipts.countDocuments({
+          listingId: l.entityId,
+          operation: 'submitListing',
         }),
       ).toBe(0);
       expect(
-        await db.auditEvent.count({
-          where: { listingId: l.entityId, action: 'submitListing' },
+        await db.c.audit_events.countDocuments({
+          listingId: l.entityId,
+          action: 'submitListing',
         }),
       ).toBe(0);
-    } finally {
-      await pool.query('DROP TRIGGER reject_review_event ON outbox_events');
-    }
+    });
     const submitted = await submit(l, m1, key).expect(200);
-    await pool.query(
-      'CREATE TRIGGER reject_review_event BEFORE INSERT ON outbox_events FOR EACH ROW EXECUTE FUNCTION reject_review_event()',
-    );
-    try {
+    await db.withRejectingValidator('outbox_events', rejectEvents, async () => {
       await decide(submitted.body).expect(500);
       expect(await effectCounts(l.entityId)).toEqual({
         decisions: 0,
@@ -877,14 +932,9 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
         events: 0,
       });
       expect(
-        (await db.listing.findUniqueOrThrow({ where: { id: l.entityId } }))
-          .moderation,
+        (await db.c.listings.findOne({ _id: l.entityId }))!.moderation,
       ).toBe('PendingReview');
-    } finally {
-      await pool.query(
-        'DROP TRIGGER reject_review_event ON outbox_events; DROP FUNCTION reject_review_event()',
-      );
-    }
+    });
     await decide(submitted.body).expect(200);
   });
   describe('listing lifecycle commands', () => {
@@ -907,31 +957,21 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
               : await pending();
         const actions = [...new Set([winner, loser])];
         const before = {
-          audits: await db.auditEvent.count({
-            where: { listingId: l.entityId },
+          audits: await db.c.audit_events.countDocuments({
+            listingId: l.entityId,
           }),
-          receipts: await db.mutationReceipt.count({
-            where: { listingId: l.entityId },
+          receipts: await db.c.mutation_receipts.countDocuments({
+            listingId: l.entityId,
           }),
-          revisions: await db.listingRevision.count({
-            where: { listingId: l.entityId },
+          revisions: await db.c.listing_revisions.countDocuments({
+            listingId: l.entityId,
           }),
-          decisions: await db.listingDecision.count({
-            where: { revision: { listingId: l.entityId } },
-          }),
+          decisions: await decisionCount(l.entityId),
         };
-        const gate = await pool.connect();
-        await gate.query('BEGIN');
-        await gate.query('SELECT pg_advisory_xact_lock(941207)');
-        const pid = (await gate.query('SELECT pg_backend_pid() pid')).rows[0]
-          .pid as number;
-        await pool.query(
-          'CREATE FUNCTION pause_lifecycle_commit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action=TG_ARGV[0] THEN PERFORM pg_advisory_xact_lock(941207); END IF; RETURN NEW; END $$',
-        );
-        // Action names above are test literals, never request input; no production failpoint.
-        await pool.query(
-          `CREATE TRIGGER pause_lifecycle_commit BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION pause_lifecycle_commit('${winner}')`,
-        );
+        // The winner pauses inside its transaction after its mutation, holding
+        // its locks (the former advisory-lock trigger on audit insertion).
+        const pause = pauseCommand(winner);
+        const retries = watchRetries();
         const command = (action: string, marker: string) =>
           action === 'archiveListing'
             ? archive(l)
@@ -952,44 +992,36 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
         const first = command(winner, 'Winning edit').then((r) => r);
         let second: Promise<request.Response> | undefined;
         try {
-          await blockedBy(pid);
+          await pause.reached;
           second = command(loser, 'Losing edit').then((r) => r);
-          await blockedBy(pid, 2);
-          await gate.query('COMMIT');
+          await retries.until(1);
+          pause.release();
           expect((await first).status).toBe(200);
           expect([404, 409]).toContain((await second).status);
-          const final = await db.listing.findUniqueOrThrow({
-            where: { id: l.entityId },
-            include: { currentRevision: true },
-          });
+          const final = (await db.c.listings.findOne({ _id: l.entityId }))!;
+          const current = (await db.c.listing_revisions.findOne({
+            _id: final.currentRevisionId!,
+          }))!;
           expect(final.version).toBe(l.version + 1);
           expect(
-            await db.auditEvent.count({ where: { listingId: l.entityId } }),
+            await db.c.audit_events.countDocuments({ listingId: l.entityId }),
           ).toBe(before.audits + 1);
           expect(
-            await db.mutationReceipt.count({
-              where: { listingId: l.entityId },
+            await db.c.mutation_receipts.countDocuments({
+              listingId: l.entityId,
             }),
           ).toBe(before.receipts + 1);
           expect(
-            await db.listingRevision.count({
-              where: { listingId: l.entityId },
+            await db.c.listing_revisions.countDocuments({
+              listingId: l.entityId,
             }),
           ).toBe(
             before.revisions + (winner === 'reviseApprovedListing' ? 1 : 0),
           );
-          expect(
-            await db.listingDecision.count({
-              where: { revision: { listingId: l.entityId } },
-            }),
-          ).toBe(before.decisions + (winner === 'decideListing' ? 1 : 0));
-          expect(
-            await db.outboxEvent.count({
-              where: {
-                audit: { listingId: l.entityId, action: { in: actions } },
-              },
-            }),
-          ).toBe(
+          expect(await decisionCount(l.entityId)).toBe(
+            before.decisions + (winner === 'decideListing' ? 1 : 0),
+          );
+          expect(await outbox(l.entityId, actions)).toHaveLength(
             [
               'decideListing',
               'removeListing',
@@ -999,7 +1031,7 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
               : 0,
           );
           if (winner === 'saveListingDraft')
-            expect(final.currentRevision!.notes).toBe('Winning edit');
+            expect(current.notes).toBe('Winning edit');
           if (winner === 'archiveListing')
             expect(final.deletedAt).not.toBeNull();
           if (winner === 'removeListing')
@@ -1009,59 +1041,50 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
           if (winner === 'reviseApprovedListing')
             expect(final.moderation).toBe('PendingReview');
         } finally {
-          await gate.query('ROLLBACK');
-          gate.release();
+          retries.stop();
+          pause.restore();
           await Promise.allSettled([first, second]);
-          await pool.query(
-            'DROP TRIGGER pause_lifecycle_commit ON audit_events; DROP FUNCTION pause_lifecycle_commit()',
-          );
         }
       },
     );
     it('rolls back revision, archive, visibility and removal when their audit cannot commit', async () => {
       const l = await approved();
-      await pool.query(
-        "CREATE FUNCTION reject_lifecycle_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action IN ('reviseApprovedListing','archiveListing','setListingVisibility','removeListing') THEN RAISE EXCEPTION 'Injected lifecycle audit fault'; END IF; RETURN NEW; END $$; CREATE TRIGGER reject_lifecycle_audit BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION reject_lifecycle_audit()",
-      );
-      try {
-        await revise(l).expect(500);
-        await archive(l).expect(500);
-        await visibility(l).expect(500);
-        await remove(l).expect(500);
-        const final = await db.listing.findUniqueOrThrow({
-          where: { id: l.entityId },
-        });
-        expect(final).toMatchObject({
-          version: l.version,
-          currentRevisionId: l.revisionId,
-          visibility: 'Visible',
-          moderation: 'Approved',
-          deletedAt: null,
-          removalReason: null,
-        });
-        expect(
-          await db.listingRevision.count({ where: { listingId: l.entityId } }),
-        ).toBe(1);
-        expect(
-          await db.mutationReceipt.count({
-            where: {
+      const operations = [
+        'reviseApprovedListing',
+        'archiveListing',
+        'setListingVisibility',
+        'removeListing',
+      ];
+      await db.withRejectingValidator(
+        'audit_events',
+        { action: { $in: operations }, listingId: l.entityId },
+        async () => {
+          await revise(l).expect(500);
+          await archive(l).expect(500);
+          await visibility(l).expect(500);
+          await remove(l).expect(500);
+          const final = await db.c.listings.findOne({ _id: l.entityId });
+          expect(final).toMatchObject({
+            version: l.version,
+            currentRevisionId: l.revisionId,
+            visibility: 'Visible',
+            moderation: 'Approved',
+            deletedAt: null,
+            removalReason: null,
+          });
+          expect(
+            await db.c.listing_revisions.countDocuments({
               listingId: l.entityId,
-              operation: {
-                in: [
-                  'reviseApprovedListing',
-                  'archiveListing',
-                  'setListingVisibility',
-                  'removeListing',
-                ],
-              },
-            },
-          }),
-        ).toBe(0);
-      } finally {
-        await pool.query(
-          'DROP TRIGGER reject_lifecycle_audit ON audit_events; DROP FUNCTION reject_lifecycle_audit()',
-        );
-      }
+            }),
+          ).toBe(1);
+          expect(
+            await db.c.mutation_receipts.countDocuments({
+              listingId: l.entityId,
+              operation: { $in: operations },
+            }),
+          ).toBe(0);
+        },
+      );
     });
     async function approved(actor = m1) {
       const l = await pending(actor);
@@ -1142,11 +1165,9 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
       expect(publicBook.photos.map((i: any) => i.id)).toEqual([replacement.id]);
       await get(`/listings/${l.entityId}/media/${l.image.id}/read`).expect(404);
       expect(
-        await db.outboxEvent.count({
-          where: {
-            type: 'ListingSubmitted',
-            payload: { path: ['revisionId'], equals: r.body.revisionId },
-          },
+        await db.c.outbox_events.countDocuments({
+          type: 'ListingSubmitted',
+          'payload.revisionId': r.body.revisionId,
         }),
       ).toBe(1);
     });
@@ -1170,10 +1191,7 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
       await visibility(l, 'Hidden', m2).expect(404);
       await archive(l, m2).expect(404);
       await revise(l, m2).expect(404);
-      await db.user.update({
-        where: { id: owner.id },
-        data: { status: 'RESTRICTED' },
-      });
+      await setUser(owner.id, { status: 'RESTRICTED' });
       await revise(l, owner).expect(403);
       const h = await visibility(l, 'Hidden', owner).expect(200);
       await visibility({ ...l, ...h.body }, 'Visible', owner).expect(403);
@@ -1197,11 +1215,12 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
           404,
         );
       expect(
-        await db.listingRevision.count({ where: { listingId: l.entityId } }),
+        await db.c.listing_revisions.countDocuments({ listingId: l.entityId }),
       ).toBe(1);
       expect(
-        await db.mutationReceipt.count({
-          where: { listingId: l.entityId, operation: 'archiveListing' },
+        await db.c.mutation_receipts.countDocuments({
+          listingId: l.entityId,
+          operation: 'archiveListing',
         }),
       ).toBe(1);
       await post(
@@ -1243,11 +1262,9 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
       const draftOnly = await complete();
       await remove(draftOnly).expect(404);
       expect(
-        await db.outboxEvent.count({
-          where: {
-            type: 'ListingRemoved',
-            payload: { path: ['entityId'], equals: l.entityId },
-          },
+        await db.c.outbox_events.countDocuments({
+          type: 'ListingRemoved',
+          'payload.entityId': l.entityId,
         }),
       ).toBe(1);
     });
@@ -1255,19 +1272,15 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
       'rejects lifecycle mutation for %s without touching trade',
       async (trade) => {
         const l = await approved();
-        await db.listing.update({
-          where: { id: l.entityId },
-          data: { trade, version: { increment: 1 } },
-        });
+        await changeListing(l.entityId, { trade });
         l.version++;
         await revise(l).expect(409);
         await visibility(l).expect(409);
         await archive(l).expect(409);
         await remove(l).expect(409);
-        expect(
-          (await db.listing.findUniqueOrThrow({ where: { id: l.entityId } }))
-            .trade,
-        ).toBe(trade);
+        expect((await db.c.listings.findOne({ _id: l.entityId }))!.trade).toBe(
+          trade,
+        );
       },
     );
     it('validates declaration, complete content, media ownership/readiness and stale version', async () => {
@@ -1305,9 +1318,7 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
       expect(
         responses.filter((r) => [404, 409].includes(r.status)),
       ).toHaveLength(1);
-      const final = await db.listing.findUniqueOrThrow({
-        where: { id: l.entityId },
-      });
+      const final = (await db.c.listings.findOne({ _id: l.entityId }))!;
       expect(final.version).toBe(l.version + 1);
       expect(
         final.deletedAt
@@ -1328,36 +1339,35 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
       expect(duplicate.map((r) => r.status)).toEqual([200, 200]);
       expect(duplicate[0].body).toEqual(duplicate[1].body);
       expect(
-        await db.auditEvent.count({
-          where: {
-            listingId: another.entityId,
-            action: 'setListingVisibility',
-          },
+        await db.c.audit_events.countDocuments({
+          listingId: another.entityId,
+          action: 'setListingVisibility',
         }),
       ).toBe(1);
     });
     it('rechecks role and active status after lock waits before revising and replaying', async () => {
       const owner = await reader(),
         l = await approved(owner);
-      const { connection, pid } = await blockUser(owner.id);
+      const gate = await block(owner);
       const response = revise(l, owner).then((r) => r);
       try {
-        await blockedBy(pid);
-        await connection.query(
-          "UPDATE users SET status='RESTRICTED' WHERE id=$1",
-          [owner.id],
-        );
-        await connection.query('COMMIT');
+        await gate.contended();
+        await gate.db
+          .collection<{ _id: string }>('users')
+          .updateOne(
+            { _id: owner.id },
+            { $set: { status: 'RESTRICTED' } },
+            { session: gate.session },
+          );
+        await gate.commit();
+        expect((await response).status).toBe(403);
       } finally {
-        await connection.query('ROLLBACK');
-        connection.release();
+        await gate.close();
+        await response;
       }
-      expect((await response).status).toBe(403);
       const key = randomUUID();
       await archive(l, owner, key).expect(200);
-      await db.userRole.deleteMany({
-        where: { userId: owner.id, role: 'MEMBER' },
-      });
+      await db.removeRole(owner.id, 'MEMBER');
       await archive(l, owner, key).expect(403);
     });
   });
@@ -1437,10 +1447,7 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
       'excludes a previously approved listing after state change: %j',
       async (data) => {
         const l = await published();
-        await db.listing.update({
-          where: { id: l.entityId },
-          data: { ...data, version: { increment: 1 } } as any,
-        });
+        await changeListing(l.entityId, data as Partial<ListingDoc>);
         await get(`/listings/${l.entityId}`).expect(404);
         await get(`/listings/${l.entityId}`, m1).expect(404);
         await get(`/listings/${l.entityId}/media/${l.image.id}/read`).expect(
@@ -1498,7 +1505,7 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
       async (status) => {
         const owner = await reader(),
           l = await published(owner);
-        await db.user.update({ where: { id: owner.id }, data: { status } });
+        await db.setStatus(owner.id, status);
         await get(`/listings/${l.entityId}`).expect(404);
         await get(`/listings/${l.entityId}/media/${l.image.id}/read`).expect(
           404,
@@ -1512,18 +1519,10 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
     it('rechecks owner verification and MEMBER role even though historical approval exists', async () => {
       const owner = await reader(),
         l = await published(owner);
-      await db.user.update({
-        where: { id: owner.id },
-        data: { emailVerifiedAt: null },
-      });
+      await setUser(owner.id, { emailVerifiedAt: null });
       await get(`/listings/${l.entityId}`).expect(404);
-      await db.user.update({
-        where: { id: owner.id },
-        data: { emailVerifiedAt: new Date() },
-      });
-      await db.userRole.deleteMany({
-        where: { userId: owner.id, role: 'MEMBER' },
-      });
+      await setUser(owner.id, { emailVerifiedAt: new Date() });
+      await db.removeRole(owner.id, 'MEMBER');
       await get(`/listings/${l.entityId}/media/${l.image.id}/read`).expect(404);
       expect(
         (await get(`/listings?bookId=${l.book.entityId}`).expect(200)).body
@@ -1631,16 +1630,13 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
     });
     it('uses one read snapshot when eligibility changes between page selection and projection', async () => {
       const l = await published();
-      const service = app.get(PageService),
-        original = service.select.bind(service);
+      const service = app.get(MongoPageService),
+        original = service.page.bind(service);
       const spy = vi
-        .spyOn(service, 'select')
-        .mockImplementationOnce(async (tx, options) => {
-          const selected = await original(tx, options);
-          await db.listing.update({
-            where: { id: l.entityId },
-            data: { visibility: 'Hidden', version: { increment: 1 } },
-          });
+        .spyOn(service, 'page')
+        .mockImplementationOnce(async (collection, pipeline, options) => {
+          const selected = await original(collection, pipeline, options);
+          await changeListing(l.entityId, { visibility: 'Hidden' });
           return selected;
         });
       try {
@@ -1673,9 +1669,7 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
       ).then((r) => r);
       try {
         await signing;
-        await db.userRole.deleteMany({
-          where: { userId: owner.id, role: 'MEMBER' },
-        });
+        await db.removeRole(owner.id, 'MEMBER');
         release();
         expect((await response).status).toBe(404);
       } finally {
@@ -1792,9 +1786,9 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
         (await get(`/me/listings/${id}`, owner)).body.currentRevision
           .fulfillmentStatus,
       ).toBe('NotConfigured');
-      expect(await db.mutationReceipt.count({ where: { listingId: id } })).toBe(
-        3,
-      );
+      expect(
+        await db.c.mutation_receipts.countDocuments({ listingId: id }),
+      ).toBe(3);
     });
     it('publishes only region/method and never contact references; legacy listings remain readable', async () => {
       const owner = await reader(),
@@ -1822,12 +1816,12 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
         ])
           expect(JSON.stringify(view)).not.toContain(secret);
       expect(JSON.stringify(pub)).not.toContain(l.fulfillment.originAddressId);
-      const receipts = await db.mutationReceipt.findMany({
-          where: { listingId: l.entityId },
-        }),
-        audits = await db.auditEvent.findMany({
-          where: { listingId: l.entityId },
-        });
+      const receipts = await db.c.mutation_receipts
+          .find({ listingId: l.entityId })
+          .toArray(),
+        audits = await db.c.audit_events
+          .find({ listingId: l.entityId })
+          .toArray();
       for (const secret of [
         contact.recipientName,
         contact.phone,
@@ -1880,8 +1874,8 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
           l = await configured(owner),
           sent = (await submit(l, owner).expect(200)).body;
         await decide(sent).expect(200);
-        const old = await db.listingRevision.findUniqueOrThrow({
-          where: { id: sent.revisionId },
+        const old = await db.c.listing_revisions.findOne({
+          _id: sent.revisionId,
         });
         await changeAddress(owner, l.fulfillment, remove);
         const own = (await get(`/me/listings/${l.entityId}`, owner).expect(200))
@@ -1889,24 +1883,22 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
         expect(own.currentRevision.fulfillmentStatus).toBe('NeedsUpdate');
         expect(own.currentRevision.content.fulfillment).toEqual(l.fulfillment);
         expect(
-          await db.listingRevision.findUniqueOrThrow({
-            where: { id: sent.revisionId },
-          }),
+          await db.c.listing_revisions.findOne({ _id: sent.revisionId }),
         ).toEqual(old);
         expect(
           (await get(`/listings/${l.entityId}`).expect(200)).body.fulfillment,
         ).toBeNull();
         if (remove) {
           expect(
-            await db.memberAddress.findUnique({
-              where: { id: l.fulfillment.originAddressId },
+            await db.c.member_addresses.findOne({
+              _id: l.fulfillment.originAddressId,
             }),
           ).toBeNull();
           expect(
-            await db.addressIdentity.findUnique({
-              where: { id: l.fulfillment.originAddressId },
+            await db.c.address_identities.findOne({
+              _id: l.fulfillment.originAddressId,
             }),
-          ).toEqual({ id: l.fulfillment.originAddressId, ownerId: owner.id });
+          ).toEqual({ _id: l.fulfillment.originAddressId, ownerId: owner.id });
         }
       },
     );
@@ -1975,33 +1967,36 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
       expect(replay.body).toEqual(replacement);
       expect(replay.headers['idempotency-replayed']).toBe('true');
       expect(
-        await db.listingRevision.count({ where: { listingId: l.entityId } }),
+        await db.c.listing_revisions.countDocuments({ listingId: l.entityId }),
       ).toBe(2);
     });
     it('rechecks a changed origin after a real owner-lock barrier and rolls back the losing save', async () => {
       const owner = await reader(),
         l = await configured(owner),
-        b = await blockUser(owner.id);
+        gate = await block(owner);
       const response = put(
         l.entityId,
         { expectedVersion: l.version, content: l.content },
         owner,
       ).then((r) => r);
       try {
-        await blockedBy(b.pid);
-        await b.connection.query(
-          'UPDATE member_addresses SET detail=$1 WHERE id=$2',
-          ['Địa chỉ mới tại gate', l.fulfillment.originAddressId],
-        );
-        await b.connection.query('COMMIT');
+        await gate.contended();
+        // A contact edit under the owner lock; the address writer advances the
+        // content version (formerly the latlai_address_content_version trigger).
+        await gate.db
+          .collection<{ _id: string }>('member_addresses')
+          .updateOne(
+            { _id: l.fulfillment.originAddressId },
+            { $set: { detail: 'Địa chỉ mới tại gate' }, $inc: { version: 1 } },
+            { session: gate.session },
+          );
+        await gate.commit();
         expect((await response).status).toBe(409);
         expect(
-          (await db.listing.findUniqueOrThrow({ where: { id: l.entityId } }))
-            .version,
+          (await db.c.listings.findOne({ _id: l.entityId }))!.version,
         ).toBe(l.version);
       } finally {
-        await b.connection.query('ROLLBACK');
-        b.connection.release();
+        await gate.close();
         await response;
       }
     });
@@ -2009,14 +2004,17 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
       const owner = await reader(),
         l = await configured(owner),
         sent = (await submit(l, owner).expect(200)).body,
-        b = await blockUser(owner.id);
+        gate = await block(owner);
       const response = decide(sent).then((r) => r);
       try {
-        await blockedBy(b.pid);
-        await b.connection.query('DELETE FROM member_addresses WHERE id=$1', [
-          l.fulfillment.originAddressId,
-        ]);
-        await b.connection.query('COMMIT');
+        await gate.contended();
+        await gate.db
+          .collection<{ _id: string }>('member_addresses')
+          .deleteOne(
+            { _id: l.fulfillment.originAddressId },
+            { session: gate.session },
+          );
+        await gate.commit();
         expect((await response).status).toBe(404);
         expect(await effectCounts(l.entityId)).toEqual({
           decisions: 0,
@@ -2025,90 +2023,96 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
           events: 0,
         });
       } finally {
-        await b.connection.query('ROLLBACK');
-        b.connection.release();
+        await gate.close();
         await response;
       }
     });
     it('approval winning the real lock precedes deletion; history stays approved and public choice becomes unavailable', async () => {
       const owner = await reader(),
         l = await configured(owner),
-        sent = (await submit(l, owner).expect(200)).body,
-        b = await blockUser(owner.id);
+        sent = (await submit(l, owner).expect(200)).body;
+      // MongoDB retries instead of queueing, so "approval first" is made
+      // explicit: the approval pauses holding the owner lock, the deletion
+      // provably contends, then the approval commits first.
+      const pause = pauseCommand('decideListing');
+      const retries = watchRetries();
       const response = decide(sent).then((r) => r);
-      let deletion: Promise<any> | undefined;
+      let deletion: Promise<request.Response> | undefined;
       try {
-        await blockedBy(b.pid);
-        const version = (
-          await db.addressBook.findUniqueOrThrow({
-            where: { ownerId: owner.id },
-          })
-        ).version;
+        await pause.reached;
+        const version = (await db.c.address_books.findOne({ _id: owner.id }))!
+          .version;
         deletion = post(
           `/me/addresses/${l.fulfillment.originAddressId}/archive`,
           { expectedBookVersion: version },
           owner,
         ).then((r) => r);
-        await blockedBy(b.pid, 2);
-        await b.connection.query('COMMIT');
+        await retries.until(1);
+        pause.release();
         expect((await response).status).toBe(200);
         expect((await deletion).status).toBe(200);
         expect(
           (await get(`/listings/${l.entityId}`).expect(200)).body.fulfillment,
         ).toBeNull();
       } finally {
-        await b.connection.query('ROLLBACK');
-        b.connection.release();
-        await response;
-        await deletion;
+        retries.stop();
+        pause.restore();
+        await Promise.allSettled([response, deletion]);
       }
     });
-    it('SQL backstops forbid cross-owner, partial, forged version, reused identities and frozen origin rewrites', async () => {
+    it('database backstops forbid partial origins and reused/rewritten identities; cross-owner origins fail the commit-time check', async () => {
       const owner = await reader(),
         other = await reader(),
         l = await configured(owner),
         foreign = await origin(other);
+      // Partial origin: listing_revisions validator (revision_fulfillment_complete).
       await expect(
-        pool.query(
-          'UPDATE listing_revisions SET origin_address_id=$1 WHERE id=$2',
-          [foreign.originAddressId, l.revisionId],
+        db.c.listing_revisions.updateOne(
+          { _id: l.revisionId },
+          { $set: { originAddressVersion: null } },
         ),
-      ).rejects.toMatchObject({ code: '23514' });
+      ).rejects.toMatchObject({ code: 121 });
+      // PostgreSQL's latlai_revision_origin_check rejected a foreign origin in
+      // the database. MongoDB cannot (cross-document): a raw privileged write
+      // succeeds and the listing commit-time check detects it (MIG02_MODEL_MAP).
+      await db.c.listing_revisions.updateOne(
+        { _id: l.revisionId },
+        { $set: { originAddressId: foreign.originAddressId } },
+      );
+      const mongo = app.get(MongoService);
       await expect(
-        pool.query(
-          'UPDATE listing_revisions SET origin_address_version=NULL WHERE id=$1',
-          [l.revisionId],
-        ),
-      ).rejects.toBeDefined();
-      await expect(
-        pool.query('UPDATE member_addresses SET version=99 WHERE id=$1', [
-          l.fulfillment.originAddressId,
-        ]),
-      ).rejects.toMatchObject({ code: '23514' });
+        mongo.tx((tx) => checkListing(tx, l.entityId)),
+      ).rejects.toThrow('Origin is not an address of the listing owner');
+      await db.c.listing_revisions.updateOne(
+        { _id: l.revisionId },
+        { $set: { originAddressId: l.fulfillment.originAddressId } },
+      );
+      await mongo.tx((tx) => checkListing(tx, l.entityId));
       const sent = (await submit(l, owner).expect(200)).body;
-      await expect(
-        pool.query(
-          'UPDATE listing_revisions SET origin_address_id=NULL, origin_address_version=NULL, origin_service_area_code=NULL WHERE id=$1',
-          [sent.revisionId],
-        ),
-      ).rejects.toMatchObject({ code: '23514' });
+      expect(sent.revisionId).toBe(l.revisionId);
       await changeAddress(other, foreign, true);
+      // A deleted identity is never reused: identities are unique and the
+      // application user can neither rewrite nor delete them (append-only).
       await expect(
-        db.memberAddress.create({
-          data: {
-            id: foreign.originAddressId,
-            ownerId: other.id,
-            ...contact,
-            isDefault: true,
-          },
+        db.c.address_identities.insertOne({
+          _id: foreign.originAddressId,
+          ownerId: other.id,
         }),
-      ).rejects.toBeDefined();
+      ).rejects.toMatchObject({ code: 11000 });
+      const appDb = app.get(MongoService).db;
       await expect(
-        pool.query('UPDATE address_identities SET owner_id=$1 WHERE id=$2', [
-          owner.id,
-          foreign.originAddressId,
-        ]),
-      ).rejects.toMatchObject({ code: '23514' });
+        appDb
+          .collection<{ _id: string }>('address_identities')
+          .updateOne(
+            { _id: foreign.originAddressId },
+            { $set: { ownerId: owner.id } },
+          ),
+      ).rejects.toMatchObject({ code: 13 });
+      await expect(
+        appDb
+          .collection<{ _id: string }>('address_identities')
+          .deleteOne({ _id: foreign.originAddressId }),
+      ).rejects.toMatchObject({ code: 13 });
     });
     it('audit failure rolls back a delivery edit and identical retry applies it once', async () => {
       const owner = await reader(),
@@ -2119,20 +2123,18 @@ describe('listing submission and moderation through HTTP with PostgreSQL', () =>
           expectedVersion: l.version,
           content: { ...l.content, fulfillment: next },
         };
-      await pool.query(
-        `CREATE FUNCTION fail_origin_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.listing_id='${l.entityId}'::uuid THEN RAISE EXCEPTION 'test failpoint'; END IF; RETURN NEW; END $$; CREATE TRIGGER fail_origin_audit BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION fail_origin_audit()`,
+      // Test-only failpoint: temporary validator rule scoped to this listing.
+      await db.withRejectingValidator(
+        'audit_events',
+        { listingId: l.entityId },
+        async () => {
+          await put(l.entityId, body, owner, key).expect(500);
+          expect(
+            (await get(`/me/listings/${l.entityId}`, owner)).body
+              .currentRevision.content.fulfillment,
+          ).toEqual(l.fulfillment);
+        },
       );
-      try {
-        await put(l.entityId, body, owner, key).expect(500);
-        expect(
-          (await get(`/me/listings/${l.entityId}`, owner)).body.currentRevision
-            .content.fulfillment,
-        ).toEqual(l.fulfillment);
-      } finally {
-        await pool.query(
-          'DROP TRIGGER fail_origin_audit ON audit_events; DROP FUNCTION fail_origin_audit()',
-        );
-      }
       const saved = await put(l.entityId, body, owner, key).expect(200);
       expect(saved.body.version).toBe(l.version + 1);
       expect(

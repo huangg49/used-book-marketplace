@@ -12,6 +12,8 @@ coverage/
 apps/admin-web/test-results/
 apps/mobile-react-native/test-results/
 *.tsbuildinfo
+# Legacy Prisma output may remain on existing checkouts; MongoDB does not use it.
+apps/api/src/generated/prisma/
 
 # Expo / React Native
 .expo/
@@ -38,5 +40,4 @@ __pycache__/
 *.log
 tmp/
 .tmp/
-apps/api/src/generated/prisma/
 apps/admin-web/src/assets/hero.png

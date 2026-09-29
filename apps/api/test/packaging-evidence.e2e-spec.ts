@@ -6,26 +6,32 @@ import { OrderClock } from '../src/modules/orders/order-clock.js';
 import { LedgerService } from '../src/modules/wallet/ledger.service.js';
 
 import { OrdersService } from '../src/modules/orders/orders.service.js';
+import { checkPackaging } from '../src/modules/orders/order-invariants.js';
 
 import { randomBytes, randomUUID } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { INestApplication } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/generated/prisma/client.js';
-import type { RoleCode, UserStatus } from '../src/generated/prisma/client.js';
-import { DatabaseService } from '../src/database/database.service.js';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
 import request from 'supertest';
-import { Ajv2020 } from 'ajv/dist/2020.js';
-import addFormats from 'ajv-formats';
-import { parse } from 'yaml';
-import { hash } from 'argon2';
+import type {
+  OrderPackagingEvidenceDoc,
+  RoleCode,
+  UserStatus,
+} from '../src/database/mongo/documents.js';
+import { migrate, pendingMigrations } from '../src/database/mongo/migrate.js';
+import { MongoService } from '../src/database/mongo/mongo.service.js';
+import {
+  onTransactionRetry,
+  type Tx,
+} from '../src/database/mongo/transaction.js';
 import { MediaStorage } from '../src/modules/media/media-storage.js';
+import { validates } from './helpers/contract.js';
+import { Gate } from './helpers/mongo-gate.js';
+import { MongoFixtures } from './helpers/mongo-fixtures.js';
+import { removeOrderFixtures } from './helpers/prep-cleanup.js';
 
 // Storage is an explicit in-memory fake, never live-provider evidence. Sharp/HTTP/DB are real.
 const objects = new Map<string, Buffer>();
@@ -54,23 +60,6 @@ const storage = {
   },
 };
 
-const contract = parse(
-  readFileSync(
-    createRequire(import.meta.url).resolve(
-      '@used-books/api-contract/openapi.yaml',
-    ),
-    'utf8',
-  ),
-);
-const ajv = new Ajv2020({ strict: false });
-addFormats.default(ajv);
-ajv.addSchema({ $id: 'api-wire', components: contract.components });
-function validates(name: string, body: unknown) {
-  const fn = ajv.compile({ $ref: `api-wire#/components/schemas/${name}` });
-  expect(fn(body), JSON.stringify(fn.errors)).toBe(true);
-}
-type Adapter = Awaited<ReturnType<PrismaPg['connect']>>;
-type Pool = ReturnType<Adapter['underlyingDriver']>;
 type Reader = { id: string; token: string; sessionId: string; email: string };
 const metadata = (title = 'Đường sách chuyền tay') => ({
   title,
@@ -98,13 +87,29 @@ const draft = (bookId: string | null = null) => ({
   exchangeValue: null,
   mediaIds: [] as string[],
 });
+// Collections the PostgreSQL upgrade test compared before/after migration.
+const upgradeCollections = [
+  'direct_orders',
+  'workflow_contexts',
+  'exclusive_commitments',
+  'agreement_snapshots',
+  'mutation_receipts',
+  'audit_events',
+  'outbox_events',
+  'wallet_accounts',
+  'ledger_journals',
+  'ledger_entries',
+] as const;
+// Global serialization point of the shared storage budget (the former
+// pg_advisory_xact_lock(781204991)); see lockStorageBudget.
+const BUDGET_LOCK = 'media-storage-budget-lock';
 
-describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
-  const schema = `packaging_http_test_${randomUUID().replaceAll('-', '')}`;
-  let app: INestApplication, db: PrismaClient, adapter: Adapter, pool: Pool;
-  const migration = '20260928040000_order_packaging_evidence';
+describe('Private packaging evidence: real MongoDB, HTTP and Sharp', () => {
+  let app: INestApplication, db: MongoFixtures;
+  const users: string[] = [];
   let upgradeBefore: Record<string, unknown>,
-    upgradeAfter: Record<string, unknown>;
+    upgradeAfter: Record<string, unknown>,
+    upgradeApplied: string[];
   let legacy: PaymentFixture;
   let m1: Reader, a1: Reader, a2: Reader, staff: Reader, operator: Reader;
   const originalSecret = process.env.PAYMENT_SIMULATOR_SECRET;
@@ -138,32 +143,31 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
     roles: RoleCode[] = ['MEMBER'],
     status: UserStatus = 'ACTIVE',
   ): Promise<Reader> {
-    const id = randomUUID(),
-      sessionId = randomUUID(),
-      email = `${id}@draft-http.test`;
-    await db.user.create({
-      data: {
-        id,
-        emailNormalized: email,
-        displayName: 'Bạn đọc thử nghiệm',
-        passwordHash: await hash('Only-a-test-password-2026'),
-        status,
-        emailVerifiedAt: new Date(),
-        roles: { create: roles.map((role) => ({ role })) },
-        sessions: {
-          create: {
-            id: sessionId,
-            refreshTokenHash: randomBytes(32).toString('hex'),
-            expiresAt: new Date(Date.now() + 86400000),
-          },
-        },
-      },
+    const email = `${randomUUID()}@draft-http.test`;
+    const user = await db.user({
+      email,
+      displayName: 'Bạn đọc thử nghiệm',
+      roles,
+      status,
     });
+    users.push(user._id);
+    const sessionId = await db.session(user._id);
     const token = await app
       .get(JwtService)
-      .signAsync({ sub: id, sid: sessionId });
-    return { id, sessionId, token, email };
+      .signAsync({ sub: user._id, sid: sessionId });
+    return { id: user._id, sessionId, token, email };
   }
+  // Direct user/session writes bump lockSeq like every application writer.
+  const setUser = (id: string, set: Record<string, unknown>) =>
+    db.c.users.updateOne(
+      { _id: id },
+      { $set: { ...set, updatedAt: new Date() }, $inc: { lockSeq: 1 } },
+    );
+  const setSession = (id: string, set: Record<string, unknown>) =>
+    db.c.auth_sessions.updateOne(
+      { _id: id },
+      { $set: set, $inc: { lockSeq: 1 } },
+    );
   async function createCatalog(actor = m1, meta = metadata()) {
     const result = await post(
       '/catalog/requests',
@@ -191,8 +195,6 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
   }
   async function makeApp() {
     const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(DatabaseService)
-      .useValue(db)
       .overrideProvider(MediaStorage)
       .useValue(storage)
       .compile();
@@ -202,108 +204,103 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
       .set('PAYMENT_SIMULATOR_SECRET', process.env.PAYMENT_SIMULATOR_SECRET);
     configureApp(next, { docs: false, logRequests: false });
     await next.init();
+    // One listening socket per app lifetime (staggered 503 retries in races).
+    await next.listen(0, '127.0.0.1');
     return next;
   }
-  async function blockedBy(
-    pid: number,
-    minimum = 1,
-    observer: Pick<Pool, 'query'> = pool,
-  ) {
-    const deadline = Date.now() + 4000;
-    while (Date.now() < deadline) {
-      // A barrier connection stays in one transaction: refresh PostgreSQL's
-      // statistics snapshot so newly opened contenders are visible.
-      await observer.query('SELECT pg_stat_clear_snapshot()');
-      const r = await observer.query(
-        'SELECT count(*)::int n FROM pg_stat_activity a WHERE $1 = ANY(pg_blocking_pids(a.pid)) OR EXISTS (SELECT 1 FROM pg_stat_activity b WHERE $1 = ANY(pg_blocking_pids(b.pid)) AND b.pid = ANY(pg_blocking_pids(a.pid)))',
-        [pid],
-      );
-      if (r.rows[0].n >= minimum) return;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-    throw new Error(
-      'HTTP mutation never reached the blocked database transaction',
+  // Holds the storage budget lock document in an open transaction, like the
+  // former barrier connection holding the advisory lock. Contenders then
+  // conflict on it and retry (observable) until the gate commits.
+  async function budgetGate() {
+    const transactions = new Set<number>();
+    const stop = onTransactionRetry((event) =>
+      transactions.add(event.transactionId),
     );
+    const session = db.client.startSession();
+    session.startTransaction({
+      readConcern: { level: 'snapshot' },
+      writeConcern: { w: 'majority' },
+    });
+    await db.client
+      .db()
+      .collection<{ _id: string; value: number }>('counters')
+      .updateOne(
+        { _id: BUDGET_LOCK },
+        { $inc: { value: 1 } },
+        { upsert: true, session },
+      );
+    const close = async () => {
+      stop();
+      if (session.inTransaction())
+        await session.abortTransaction().catch(() => undefined);
+      await session.endSession();
+    };
+    return {
+      async contended(n = 1) {
+        const until = Date.now() + 4000;
+        while (Date.now() < until) {
+          if (transactions.size >= n) return;
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+        throw new Error('Commands did not reach the lock barrier');
+      },
+      async commit() {
+        try {
+          await session.commitTransaction();
+        } finally {
+          await close();
+        }
+      },
+      close,
+    };
   }
-  async function blockUser(id: string) {
-    const connection = await pool.connect();
-    await connection.query('BEGIN');
-    await connection.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [id]);
-    const pid = (await connection.query('SELECT pg_backend_pid() pid')).rows[0]
-      .pid as number;
-    return { connection, pid };
-  }
+  // A raw write through the application's own connection that must pass the
+  // commit-time packaging check (C, the former latlai_packaging_consistency).
+  const checked = (fn: (tx: Tx) => Promise<unknown>, evidenceId: string) =>
+    app.get(MongoService).tx(async (tx) => {
+      await fn(tx);
+      tx.check(`packaging:${evidenceId}`, () => checkPackaging(tx, evidenceId));
+    });
+  const snapshot = async () => {
+    const rows: Record<string, unknown> = {};
+    for (const name of upgradeCollections)
+      rows[name] = await db.client
+        .db()
+        .collection(name)
+        .find({}, { sort: { _id: 1 } })
+        .toArray();
+    return rows;
+  };
 
   beforeAll(async () => {
     process.env.PAYMENT_SIMULATOR_SECRET = randomBytes(32).toString('hex');
-    const url = process.env.TEST_DATABASE_URL!;
-    if (!decodeURIComponent(new URL(url).pathname).endsWith('_test'))
-      throw new Error('Only _test databases');
-    adapter = await new PrismaPg({
-      connectionString: url,
-      max: 16,
-      options: `-c search_path=${schema},public -c timezone=UTC`,
-      statement_timeout: 15000,
-    }).connect();
-    pool = adapter.underlyingDriver();
-    await pool.query(`CREATE SCHEMA "${schema}"`);
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n) && n < migration)
-      .sort())
-      await pool.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
-    db = new PrismaClient({ adapter: new PrismaPg(pool, { schema }) });
-    await db.$connect();
+    db = await MongoFixtures.connect();
     app = await makeApp();
     m1 = await reader();
     operator = await reader(['TEST_OPERATOR']);
     a1 = await reader(['MEMBER', 'ADMIN']);
     a2 = await reader(['ADMIN']);
     staff = await reader(['STAFF']);
-    // Exercise upgrade with a real active reservation and posted topup, built
-    // through the pre-existing APIs. Creation does not need preparation storage.
+    // Exercise the schema run with a real accepted Order, hold and posted
+    // topup, built through the pre-existing APIs. PostgreSQL applied migration
+    // 20260928040000 here; MongoDB's baseline already contains the packaging
+    // collection, so re-running the migrations must be a no-op.
     legacy = await ready();
     await pay(legacy).expect(200);
     await accept(legacy).expect(200);
-    const snapshot = async () => {
-      const rows: Record<string, unknown> = {};
-      for (const table of [
-        'direct_orders',
-        'workflow_contexts',
-        'exclusive_commitments',
-        'agreement_snapshots',
-        'mutation_receipts',
-        'audit_events',
-        'outbox_events',
-        'wallet_accounts',
-        'ledger_journals',
-        'ledger_entries',
-      ])
-        rows[table] = (
-          await pool.query(`SELECT * FROM ${table} ORDER BY 1`)
-        ).rows;
-      return rows;
-    };
     upgradeBefore = await snapshot();
-    await pool.query(
-      readFileSync(`prisma/migrations/${migration}/migration.sql`, 'utf8'),
-    );
+    upgradeApplied = await migrate(db.client, db.client.db());
     upgradeAfter = await snapshot();
-    // Current handlers can read additive fulfillment tables after the target upgrade.
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n) && n > migration)
-      .sort())
-      await pool.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
   }, 60000);
   afterAll(async () => {
+    storage.afterPut = undefined;
+    storage.beforeSign = undefined;
+    storage.failCheck = false;
+    if (db) {
+      await removeOrderFixtures(db, users);
+      await db.close();
+    }
     await app?.close();
-    await db?.$disconnect();
-    if (pool && /^packaging_http_test_[a-f0-9]{32}$/.test(schema))
-      await pool.query(`DROP SCHEMA "${schema}" CASCADE`);
-    await adapter?.dispose();
     if (originalSecret === undefined)
       delete process.env.PAYMENT_SIMULATOR_SECRET;
     else process.env.PAYMENT_SIMULATOR_SECRET = originalSecret;
@@ -321,24 +318,32 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
     listingId: string,
     status: 'Ready' | 'Pending' = 'Ready',
   ) {
-    const key = randomUUID();
+    const key = randomUUID(),
+      now = new Date();
     // Fixture derivative only: not proof of upload/Sharp/live-provider behavior.
-    return db.listingMedia.create({
-      data: {
-        listingId,
-        status,
-        stagingKey: key,
-        pinnedKey: status === 'Ready' ? key + '/input' : null,
-        derivativeKey: status === 'Ready' ? key + '/display.webp' : null,
-        mimeType: 'image/jpeg',
-        byteSize: 100,
-        sha256: 'a'.repeat(64),
-        width: status === 'Ready' ? 20 : null,
-        height: status === 'Ready' ? 20 : null,
-        reservedBytes: 1000,
-        expiresAt: new Date(Date.now() + 3600000),
-      },
-    });
+    const doc = {
+      _id: randomUUID(),
+      listingId,
+      version: 1,
+      status,
+      stagingKey: key,
+      pinnedKey: status === 'Ready' ? key + '/input' : null,
+      derivativeKey: status === 'Ready' ? key + '/display.webp' : null,
+      mimeType: 'image/jpeg',
+      byteSize: 100,
+      sha256: 'a'.repeat(64),
+      width: status === 'Ready' ? 20 : null,
+      height: status === 'Ready' ? 20 : null,
+      failureCode: null,
+      expiresAt: new Date(Date.now() + 3600000),
+      purgedAt: null,
+      reservedBytes: 1000,
+      createdAt: now,
+      updatedAt: now,
+      lockSeq: 0,
+    };
+    await db.c.listing_media.insertOne(doc);
+    return { ...doc, id: doc._id };
   }
   async function complete(
     actor = m1,
@@ -540,9 +545,7 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
     return r.body;
   };
   const reconcile = () =>
-    db.$transaction((tx) => app.get(LedgerService).reconcile(tx), {
-      isolationLevel: 'RepeatableRead',
-    });
+    app.get(MongoService).tx((tx) => app.get(LedgerService).reconcile(tx));
 
   const accept = (
     f: PaymentFixture,
@@ -623,14 +626,24 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
     validates('PackagingEvidenceReceipt', r.body);
     return { bytes, id: r.body.entityId as string, receipt: r.body };
   }
-  const budgetTotal = async () =>
-    (await db.listingMedia.aggregate({ _sum: { reservedBytes: true } }))._sum
-      .reservedBytes! +
-    ((
-      await db.orderPackagingEvidence.aggregate({
-        _sum: { reservedBytes: true },
-      })
-    )._sum.reservedBytes ?? 0);
+  const evidence = async (id: string) =>
+    (await db.c.order_packaging_evidence.findOne({ _id: id }))!;
+  const preparation = async (orderId: string) =>
+    (await db.c.order_preparations.findOne({ _id: orderId }))!;
+  const readAudits = (contextId: string, action: string) =>
+    db.c.audit_events.countDocuments({ contextId, action });
+  const budgetTotal = async () => {
+    let total = 0;
+    for (const name of ['listing_media', 'order_packaging_evidence'] as const) {
+      const [row] = await db.c[name]
+        .aggregate<{ total: number }>([
+          { $group: { _id: null, total: { $sum: '$reservedBytes' } } },
+        ])
+        .toArray();
+      total += row?.total ?? 0;
+    }
+    return total;
+  };
   afterEach(() => {
     storage.afterPut = undefined;
     storage.beforeSign = undefined;
@@ -638,7 +651,12 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
     vi.restoreAllMocks();
     app.get(ConfigService).set('MEDIA_STORAGE_BUDGET_BYTES', 800000000);
   });
-  it('upgrades thirteen migrations without changing accepted Orders, reservations or ledger', async () => {
+  it('re-running migrations does not change accepted Orders, reservations or ledger', async () => {
+    // PostgreSQL: applying 20260928040000 over thirteen migrations left these
+    // tables unchanged. MongoDB: the packaging model is in the baseline and
+    // migrations are checksummed and idempotent, so nothing is pending.
+    expect(upgradeApplied).toEqual([]);
+    expect(await pendingMigrations(app.get(MongoService).db)).toEqual([]);
     expect(upgradeAfter).toEqual(upgradeBefore);
     const e = await reserved(legacy);
     await upload(legacy, e.id, e.bytes).expect(200);
@@ -681,11 +699,7 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
       expect(r.body.url).toContain('preview-v1.webp');
       expect(r.headers['cache-control']).toContain('no-store');
     }
-    expect(
-      await db.auditEvent.count({
-        where: { contextId: f.r.contextId, action: 'readPackagingEvidence' },
-      }),
-    ).toBe(2);
+    expect(await readAudits(f.r.contextId, 'readPackagingEvidence')).toBe(2);
     const after = await orderView(f.id, f.f.buyer);
     expect(after.version).toBe(before.version);
     expect(after.state).toBe('Preparing');
@@ -694,8 +708,9 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
       money.transactionHeld,
     );
     expect(
-      await db.exclusiveCommitment.count({
-        where: { currentContextId: f.r.contextId, status: 'Active' },
+      await db.c.exclusive_commitments.countDocuments({
+        currentContextId: f.r.contextId,
+        status: 'Active',
       }),
     ).toBe(1);
     expect((await reconcile()).balanced).toBe(true);
@@ -745,10 +760,8 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
     'allows %s seller existing evidence and participant reads without enabling payment',
     async (status) => {
       const f = await accepted();
-      await db.user.updateMany({
-        where: { id: { in: [f.f.seller.id, f.f.buyer.id] } },
-        data: { status },
-      });
+      for (const id of [f.f.seller.id, f.f.buyer.id])
+        await db.setStatus(id, status);
       const e = await reserved(f);
       await upload(f, e.id, e.bytes).expect(200);
       await listing(f).expect(200);
@@ -760,19 +773,15 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
   it('preserves server time and hold when upload arrives after overdue pickup review', async () => {
     const f = await accepted(),
       e = await reserved(f);
-    const p = await db.orderPreparation.findUniqueOrThrow({
-      where: { orderId: f.id },
-    });
-    await db.authSession.updateMany({
-      where: { id: { in: [f.f.seller.sessionId, f.f.buyer.sessionId] } },
-      data: { expiresAt: new Date(p.pickupDeadline.getTime() + 86400000) },
-    });
+    const p = await preparation(f.id);
+    for (const id of [f.f.seller.sessionId, f.f.buyer.sessionId])
+      await setSession(id, {
+        expiresAt: new Date(p.pickupDeadline.getTime() + 86400000),
+      });
     vi.spyOn(app.get(OrderClock), 'now').mockResolvedValue(p.pickupDeadline);
     await app.get(OrdersService).expirePickup(f.id);
     await upload(f, e.id, e.bytes).expect(200);
-    const m = await db.orderPackagingEvidence.findUniqueOrThrow({
-      where: { id: e.id },
-    });
+    const m = await evidence(e.id);
     expect(m.uploadedAt).toEqual(p.pickupDeadline);
     expect((await orderView(f.id, f.f.buyer)).state).toBe('ResolutionPending');
     await intent(f, await image(), f.f.seller, randomUUID(), 4).expect(200);
@@ -797,11 +806,7 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
     expect(replay.body).toEqual(sent.body);
     expect(replay.headers['idempotency-replayed']).toBe('true');
     await upload(f, id, bytes).expect(409);
-    expect(
-      await db.auditEvent.count({
-        where: { contextId: f.r.contextId, action: 'uploadPackagingEvidence' },
-      }),
-    ).toBe(1);
+    expect(await readAudits(f.r.contextId, 'uploadPackagingEvidence')).toBe(1);
   });
   it('does not overwrite an immutable intent with changed bytes, oversized or mismatched MIME', async () => {
     const f = await accepted(),
@@ -862,25 +867,12 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
       e = await reserved(f),
       key = randomUUID();
     storage.afterPut = async (path) => {
-      if (path.endsWith('.webp'))
-        await db.user.update({
-          where: { id: f.f.seller.id },
-          data: { status: 'DISABLED' },
-        });
+      if (path.endsWith('.webp')) await db.setStatus(f.f.seller.id, 'DISABLED');
     };
     await upload(f, e.id, e.bytes, f.f.seller, key).expect(401);
-    expect(
-      (
-        await db.orderPackagingEvidence.findUniqueOrThrow({
-          where: { id: e.id },
-        })
-      ).status,
-    ).toBe('Pending');
+    expect((await evidence(e.id)).status).toBe('Pending');
     storage.afterPut = undefined;
-    await db.user.update({
-      where: { id: f.f.seller.id },
-      data: { status: 'ACTIVE' },
-    });
+    await db.setStatus(f.f.seller.id, 'ACTIVE');
     await upload(f, e.id, e.bytes, f.f.seller, key).expect(200);
   });
   it('does not issue a preview or successful read audit when participant access changes during signing', async () => {
@@ -888,17 +880,10 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
       e = await reserved(f);
     await upload(f, e.id, e.bytes).expect(200);
     storage.beforeSign = async () => {
-      await db.user.update({
-        where: { id: f.f.buyer.id },
-        data: { status: 'DISABLED' },
-      });
+      await db.setStatus(f.f.buyer.id, 'DISABLED');
     };
     await preview(f, e.id).expect(401);
-    expect(
-      await db.auditEvent.count({
-        where: { contextId: f.r.contextId, action: 'readPackagingEvidence' },
-      }),
-    ).toBe(0);
+    expect(await readAudits(f.r.contextId, 'readPackagingEvidence')).toBe(0);
   });
   it('does not confuse listing media or another Order evidence with this Order evidence', async () => {
     const f = await accepted(),
@@ -926,30 +911,20 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
     const f = await accepted(),
       e = await reserved(f),
       key = randomUUID();
-    await pool.query(
-      `CREATE FUNCTION packaging_fail_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='uploadPackagingEvidence' THEN RAISE EXCEPTION 'test audit failure'; END IF; RETURN NEW; END $$; CREATE TRIGGER packaging_test_fail BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION packaging_fail_audit()`,
+    // Temporary validator rule (like the former failing SQL trigger).
+    await db.withRejectingValidator(
+      'audit_events',
+      { action: 'uploadPackagingEvidence' },
+      async () => {
+        await upload(f, e.id, e.bytes, f.f.seller, key).expect(500);
+      },
     );
-    try {
-      await upload(f, e.id, e.bytes, f.f.seller, key).expect(500);
-    } finally {
-      await pool.query(
-        'DROP TRIGGER packaging_test_fail ON audit_events; DROP FUNCTION packaging_fail_audit()',
-      );
-    }
+    expect((await evidence(e.id)).status).toBe('Pending');
     expect(
-      (
-        await db.orderPackagingEvidence.findUniqueOrThrow({
-          where: { id: e.id },
-        })
-      ).status,
-    ).toBe('Pending');
-    expect(
-      await db.mutationReceipt.count({
-        where: {
-          actorId: f.f.seller.id,
-          operation: 'uploadPackagingEvidence',
-          key,
-        },
+      await db.c.mutation_receipts.countDocuments({
+        actorId: f.f.seller.id,
+        operation: 'uploadPackagingEvidence',
+        key,
       }),
     ).toBe(0);
     await upload(f, e.id, e.bytes, f.f.seller, key).expect(200);
@@ -961,6 +936,12 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
     const results = await Promise.all(
       Array.from({ length: 20 }, () => intent(f, bytes, f.f.seller, key)),
     );
+    // A busy answer (retry budget exhausted) is retried with the same key and
+    // must replay the one durable receipt.
+    expect(results.every((r) => [200, 503].includes(r.status))).toBe(true);
+    for (let i = 0; i < results.length; i++)
+      if (results[i].status === 503)
+        results[i] = await intent(f, bytes, f.f.seller, key);
     expect(results.map((r) => r.status)).toEqual(Array(20).fill(200));
     expect(new Set(results.map((r) => r.body.entityId)).size).toBe(1);
     const id = results[0].body.entityId,
@@ -972,9 +953,9 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
     expect(uploaded.map((r) => r.status)).toEqual([200, 200]);
     expect(uploaded[0].body).toEqual(uploaded[1].body);
     expect(
-      await db.orderPackagingEvidence.count({ where: { orderId: f.id } }),
+      await db.c.order_packaging_evidence.countDocuments({ orderId: f.id }),
     ).toBe(1);
-  });
+  }, 60000);
   it('shares two upload slots with listing uploads and releases them on validation failure', async () => {
     const f = await accepted(),
       e = await reserved(f),
@@ -1000,25 +981,29 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
         'MEDIA_STORAGE_BUDGET_BYTES',
         (await budgetTotal()) + bytes.length + 2000000,
       );
-    const blocker = await pool.connect();
-    await blocker.query('BEGIN');
-    await blocker.query('SELECT pg_advisory_xact_lock(781204991)');
-    const pid = (await blocker.query('SELECT pg_backend_pid() pid')).rows[0]
-      .pid;
+    const keys = [randomUUID(), randomUUID()];
+    const blocker = await budgetGate();
     const contenders = [
-      intent(f, bytes).then((r) => r),
-      intent(g, bytes).then((r) => r),
+      intent(f, bytes, f.f.seller, keys[0]).then((r) => r),
+      intent(g, bytes, g.f.seller, keys[1]).then((r) => r),
     ];
     try {
-      await blockedBy(pid, 2, blocker);
-      await blocker.query('COMMIT');
+      await blocker.contended(2);
+      await blocker.commit();
     } finally {
-      await blocker.query('ROLLBACK');
-      blocker.release();
+      await blocker.close();
     }
-    expect((await Promise.all(contenders)).map((r) => r.status).sort()).toEqual(
-      [200, 429],
-    );
+    const results = await Promise.all(contenders);
+    // A busy answer is retried with the same key; the decision must stand.
+    for (let i = 0; i < results.length; i++)
+      if (results[i].status === 503)
+        results[i] = await intent(
+          [f, g][i],
+          bytes,
+          [f, g][i].f.seller,
+          keys[i],
+        );
+    expect(results.map((r) => r.status).sort()).toEqual([200, 429]);
   });
   it('listing uploads count the evidence reservation against the same budget', async () => {
     const f = await accepted();
@@ -1045,25 +1030,20 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
   it('checks session expiry after waiting for the global reservation lock', async () => {
     const f = await accepted(),
       bytes = await image();
-    const blocker = await pool.connect();
-    await blocker.query('BEGIN');
-    await blocker.query('SELECT pg_advisory_xact_lock(781204991)');
-    const pid = (await blocker.query('SELECT pg_backend_pid() pid')).rows[0]
-      .pid;
+    const blocker = await budgetGate();
     const contender = intent(f, bytes).then((r) => r);
     try {
-      await blockedBy(pid, 1, blocker);
+      await blocker.contended(1);
       vi.spyOn(app.get(OrderClock), 'now').mockResolvedValue(
         new Date(Date.now() + 2 * 86400000),
       );
-      await blocker.query('COMMIT');
+      await blocker.commit();
     } finally {
-      await blocker.query('ROLLBACK');
-      blocker.release();
+      await blocker.close();
     }
     expect((await contender).status).toBe(401);
     expect(
-      await db.orderPackagingEvidence.count({ where: { orderId: f.id } }),
+      await db.c.order_packaging_evidence.countDocuments({ orderId: f.id }),
     ).toBe(0);
   });
   it('rechecks role changes while waiting for the participant lock, even on receipt replay', async () => {
@@ -1071,17 +1051,20 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
       bytes = await image(),
       key = randomUUID();
     await intent(f, bytes, f.f.seller, key).expect(200);
-    const { connection, pid } = await blockUser(f.f.seller.id);
+    const gate = await Gate.lockUser(db.client, f.f.seller.id);
     const contender = intent(f, bytes, f.f.seller, key).then((r) => r);
     try {
-      await blockedBy(pid, 1, connection);
-      await connection.query('DELETE FROM user_roles WHERE user_id=$1', [
-        f.f.seller.id,
-      ]);
-      await connection.query('COMMIT');
+      await gate.contended();
+      await gate.db
+        .collection<{ _id: string }>('users')
+        .updateOne(
+          { _id: f.f.seller.id },
+          { $set: { roles: [], updatedAt: new Date() } },
+          { session: gate.session },
+        );
+      await gate.commit();
     } finally {
-      await connection.query('ROLLBACK');
-      connection.release();
+      await gate.close();
     }
     expect((await contender).status).toBe(403);
   });
@@ -1102,7 +1085,7 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
       },
       f.f.seller,
     ).expect(429);
-  });
+  }, 60000);
   it('enforces the lifetime Order bound even when the hourly window advances', async () => {
     const f = await accepted();
     const realNow = Date.now();
@@ -1114,16 +1097,13 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
     for (let i = 0; i < 12; i++) await intent(f, await image()).expect(200);
     await intent(f, await image()).expect(429);
     expect((await listing(f).expect(200)).body.items).toHaveLength(32);
-  });
+  }, 60000);
   it('allows accepted evidence submission racing pickup expiry without moving money or reopening the Order', async () => {
     const f = await accepted(),
       e = await reserved(f);
-    const p = await db.orderPreparation.findUniqueOrThrow({
-      where: { orderId: f.id },
-    });
-    await db.authSession.update({
-      where: { id: f.f.seller.sessionId },
-      data: { expiresAt: new Date(p.pickupDeadline.getTime() + 86400000) },
+    const p = await preparation(f.id);
+    await setSession(f.f.seller.sessionId, {
+      expiresAt: new Date(p.pickupDeadline.getTime() + 86400000),
     });
     // Network barrier: expiry commits while upload holds no database lock.
     storage.afterPut = async (key) => {
@@ -1132,38 +1112,24 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
       await app.get(OrdersService).expirePickup(f.id);
     };
     await upload(f, e.id, e.bytes).expect(200);
-    expect(
-      (await db.directOrder.findUniqueOrThrow({ where: { id: f.id } })).state,
-    ).toBe('ResolutionPending');
-    expect(
-      (
-        await db.orderPackagingEvidence.findUniqueOrThrow({
-          where: { id: e.id },
-        })
-      ).status,
-    ).toBe('Ready');
+    expect((await db.c.direct_orders.findOne({ _id: f.id }))!.state).toBe(
+      'ResolutionPending',
+    );
+    expect((await evidence(e.id)).status).toBe('Ready');
     expect((await reconcile()).balanced).toBe(true);
   });
   it('keeps submitted evidence when expiry happens after its acknowledgement', async () => {
     const f = await accepted(),
       e = await reserved(f);
     await upload(f, e.id, e.bytes).expect(200);
-    const before = await db.orderPackagingEvidence.findUniqueOrThrow({
-      where: { id: e.id },
-    });
-    const p = await db.orderPreparation.findUniqueOrThrow({
-      where: { orderId: f.id },
-    });
+    const before = await evidence(e.id);
+    const p = await preparation(f.id);
     vi.spyOn(app.get(OrderClock), 'now').mockResolvedValue(p.pickupDeadline);
     await app.get(OrdersService).expirePickup(f.id);
-    expect(
-      await db.orderPackagingEvidence.findUniqueOrThrow({
-        where: { id: e.id },
-      }),
-    ).toEqual(before);
-    expect(
-      (await db.directOrder.findUniqueOrThrow({ where: { id: f.id } })).state,
-    ).toBe('ResolutionPending');
+    expect(await evidence(e.id)).toEqual(before);
+    expect((await db.c.direct_orders.findOne({ _id: f.id }))!.state).toBe(
+      'ResolutionPending',
+    );
     expect((await reconcile()).balanced).toBe(true);
   });
   it('does not replay evidence receipts to revoked or unverified accounts', async () => {
@@ -1171,51 +1137,101 @@ describe('Private packaging evidence: real PostgreSQL, HTTP and Sharp', () => {
       bytes = await image(),
       key = randomUUID();
     await intent(f, bytes, f.f.seller, key).expect(200);
-    await db.user.update({
-      where: { id: f.f.seller.id },
-      data: { emailVerifiedAt: null },
-    });
+    await setUser(f.f.seller.id, { emailVerifiedAt: null });
     await intent(f, bytes, f.f.seller, key).expect(401);
-    await db.user.update({
-      where: { id: f.f.seller.id },
-      data: { emailVerifiedAt: new Date() },
-    });
-    await db.authSession.update({
-      where: { id: f.f.seller.sessionId },
-      data: { revokedAt: new Date() },
-    });
+    await setUser(f.f.seller.id, { emailVerifiedAt: new Date() });
+    await setSession(f.f.seller.sessionId, { revokedAt: new Date() });
     await intent(f, bytes, f.f.seller, key).expect(401);
   });
-  it('SQL guards reject deletion, original edits, forged Ready and forged intent without receipts', async () => {
+  it('MongoDB rejects deletion, forged Ready and forged intents without receipts; originals change only through the upload command', async () => {
     const f = await accepted(),
-      e = await reserved(f);
+      e = await reserved(f),
+      appDb = app.get(MongoService).c,
+      pending = await evidence(e.id);
+    // P: evidence is never deletable by the application user.
     await expect(
-      pool.query('DELETE FROM order_packaging_evidence WHERE id=$1', [e.id]),
-    ).rejects.toThrow();
+      appDb.order_packaging_evidence.deleteOne({ _id: e.id }),
+    ).rejects.toMatchObject({ code: 13 });
+    // V: Ready requires every upload field (the former packaging_shape).
     await expect(
-      pool.query('UPDATE order_packaging_evidence SET sha256=$2 WHERE id=$1', [
+      appDb.order_packaging_evidence.updateOne(
+        { _id: e.id },
+        { $set: { status: 'Ready', version: 2 } },
+      ),
+    ).rejects.toMatchObject({ code: 121 });
+    // I: one intent per Order and hash, so an identity edit cannot collide.
+    const other = await reserved(f);
+    await expect(
+      appDb.order_packaging_evidence.updateOne(
+        { _id: e.id },
+        { $set: { sha256: (await evidence(other.id)).sha256 } },
+      ),
+    ).rejects.toMatchObject({ code: 11000 });
+    // C: an intent or a Ready transition needs its own receipt chain.
+    const forged: OrderPackagingEvidenceDoc = {
+      _id: randomUUID(),
+      orderId: f.id,
+      version: 1,
+      status: 'Pending',
+      mimeType: 'image/png',
+      byteSize: 1,
+      sha256: 'f'.repeat(64),
+      reservedBytes: 2000001,
+      createdAt: new Date(),
+      uploadedAt: null,
+      derivativeSha256: null,
+      derivativeBytes: null,
+      width: null,
+      height: null,
+      createReceiptId: randomUUID(),
+      uploadReceiptId: null,
+    };
+    await expect(
+      checked(
+        (tx) => tx.c.order_packaging_evidence.insertOne(forged),
+        forged._id,
+      ),
+    ).rejects.toThrow('Packaging intent/receipt mismatch');
+    await expect(
+      checked(
+        (tx) =>
+          tx.c.order_packaging_evidence.updateOne(
+            { _id: e.id, status: 'Pending' },
+            {
+              $set: {
+                status: 'Ready',
+                version: 2,
+                uploadedAt: new Date(),
+                uploadReceiptId: randomUUID(),
+                derivativeSha256: 'c'.repeat(64),
+                derivativeBytes: 10,
+                width: 12,
+                height: 12,
+              },
+            },
+          ),
         e.id,
-        'b'.repeat(64),
-      ]),
-    ).rejects.toThrow();
-    await expect(
-      pool.query(
-        "UPDATE order_packaging_evidence SET status='Ready',version=2 WHERE id=$1",
-        [e.id],
       ),
-    ).rejects.toThrow();
-    await expect(
-      pool.query(
-        "INSERT INTO order_packaging_evidence(id,order_id,mime_type,byte_size,sha256,reserved_bytes,created_at,create_receipt_id) VALUES ($1,$2,'image/png',1,$3,2000001,clock_timestamp(),$4)",
-        [randomUUID(), f.id, 'f'.repeat(64), randomUUID()],
-      ),
-    ).rejects.toThrow();
+    ).rejects.toThrow('Packaging upload/receipt mismatch');
+    expect(await evidence(e.id)).toEqual(pending);
+    expect(
+      await db.c.order_packaging_evidence.countDocuments({ _id: forged._id }),
+    ).toBe(0);
     await upload(f, e.id, e.bytes).expect(200);
-    await expect(
-      pool.query('UPDATE order_packaging_evidence SET width=12 WHERE id=$1', [
-        e.id,
-      ]),
-    ).rejects.toThrow();
+    const ready = await evidence(e.id);
+    // W: the upload command is the only writer; it keeps identity fields and
+    // a Ready image never re-enters upload (new key conflicts, bytes kept).
+    expect(ready).toMatchObject({
+      orderId: pending.orderId,
+      mimeType: pending.mimeType,
+      byteSize: pending.byteSize,
+      sha256: pending.sha256,
+      reservedBytes: pending.reservedBytes,
+      createdAt: pending.createdAt,
+      createReceiptId: pending.createReceiptId,
+    });
+    await upload(f, e.id, e.bytes).expect(409);
+    expect(await evidence(e.id)).toEqual(ready);
     expect((await reconcile()).balanced).toBe(true);
   });
 });

@@ -33,14 +33,16 @@ Run these commands from the repository root (PowerShell, bash and zsh):
 ```sh
 pnpm install --frozen-lockfile
 pnpm setup:local
-docker compose --env-file .env -f infra/docker-compose.yml up -d --wait postgres
-pnpm db:generate
+docker compose --env-file .env -f infra/docker-compose.yml up -d --wait mongo
+pnpm db:bootstrap
 pnpm db:migrate
 pnpm db:seed
 pnpm dev:api
 ```
 
-`setup:local` generates a random signing secret and never overwrites an existing env file.
+`setup:local` generates a random signing secret and the MongoDB root/app/migrator
+passwords, and never overwrites an existing env file. `db:bootstrap` creates the
+least-privilege app and migrator users; the API refuses to start with pending migrations.
 If you previously copied the placeholder secret, replace it with a random value of at least
 32 characters in `apps/api/.env`. The API deliberately refuses placeholder secrets.
 
@@ -56,17 +58,15 @@ The seed also creates `staff@latlai.local`, `admin@latlai.local` and
 `test_operator@latlai.local`. Rerunning the seed does not reset existing credentials or roles.
 The seed refuses production mode. These accounts are for local demo only.
 
-Run `pnpm doctor:local` before starting the clients. PostgreSQL must match the
+Run `pnpm doctor:local` before starting the clients. MongoDB must match the
 host/port/database in `apps/api/.env`; an isolated `_test` database passing E2E
 does not prove the demo database is running. Keep test and demo configuration separate.
 
-If port 5432 belongs to another project, keep that database running. Set
-`POSTGRES_PORT=5433` (or another free port) in the root `.env`, and change only the
-port in `DATABASE_URL` in `apps/api/.env` and the root `.env` to match. Run Compose
-from the repository root with `--env-file .env` as above, then migrate the Lật lại database.
-The container still uses port 5432 internally. A new Docker volume starts empty;
-it does not import data from earlier test or preview databases. Test connection
-URLs below must also use the selected host port when using this Compose instance.
+If port 27017 belongs to another project, set `MONGO_PORT=27018` (or another free
+port) in the root `.env`, and change only the port in the `MONGODB_*` URLs in
+`apps/api/.env` to match. Run Compose from the repository root with `--env-file .env`
+as above. A new Docker volume starts empty; existing PostgreSQL data is moved once
+with the [cutover runbook](refactor/MIG06_CUTOVER_RUNBOOK.md).
 
 ## Reach the API from your device
 
@@ -81,9 +81,10 @@ Edit `apps/mobile-react-native/.env`, then restart Expo:
 
 The API listens on all interfaces for local device testing. Allow port 3000 only on
 the trusted development network. Production requires HTTPS and deployment configuration.
-If Docker cannot run on a developer's machine, an existing PostgreSQL 17 instance
-also works: set `DATABASE_URL` in `apps/api/.env` to its development database, then
-run the same generate/migrate/seed commands. Keep the test database separate.
+If Docker cannot run on a developer's machine, an existing MongoDB 8 replica set
+(transactions need one) also works: point the `MONGODB_*` values in `apps/api/.env`
+at its development database, then run the same bootstrap/migrate/seed commands.
+Keep the test database separate.
 For browser preview, `pnpm --filter @used-books/mobile-react-native web`; browser
 refresh signs out because web tokens are deliberately memory-only.
 
@@ -105,42 +106,25 @@ The root build covers API/admin. The explicit export checks JavaScript bundling 
 Android, iOS and web; it is not a native Android/iOS build. Complete the device
 checklist below before claiming native readiness.
 
-For a new handoff environment, prefer the dedicated Compose project and exact
-commands in [START_HERE §5](handoff/START_HERE.md#5-chạy-kiểm-thử-mà-không-dùng-database-của-app).
-It uses its own volume and loopback port 55434 and does not require the previous
-developer's temporary PostgreSQL tooling. The alternative below assumes you
-already use the application PostgreSQL server on port 5432; match your actual port.
-
-For E2E on that existing local server, create a separate database:
+API E2E and the MongoDB suites use the dedicated QA replica set; follow the exact
+commands in [START_HERE §5](handoff/START_HERE.md#5-chạy-kiểm-thử-mà-không-dùng-database-của-app):
 
 ```sh
-docker compose --env-file .env -f infra/docker-compose.yml exec postgres createdb -U usedbooks usedbooks_test
-```
-
-PowerShell:
-
-```powershell
-$env:TEST_DATABASE_URL = 'postgresql://usedbooks:usedbooks_dev@localhost:5432/usedbooks_test'
-$env:DATABASE_URL = $env:TEST_DATABASE_URL
-pnpm db:migrate
-pnpm test:api:e2e
-Remove-Item Env:DATABASE_URL
-Remove-Item Env:TEST_DATABASE_URL
+pnpm infra:mongo:test:up
 ```
 
 bash/zsh:
 
 ```sh
-DATABASE_URL=postgresql://usedbooks:usedbooks_dev@localhost:5432/usedbooks_test pnpm db:migrate
-TEST_DATABASE_URL=postgresql://usedbooks:usedbooks_dev@localhost:5432/usedbooks_test pnpm test:api:e2e
+export MONGO_TEST_URL='mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_probe_test?replicaSet=rs-test&authSource=admin'
+pnpm test:api:mongo && pnpm test:api:e2e
 ```
 
-E2E requires a database name ending in `_test`; it removes fixture users and login-limit
-counters there. CI provisions PostgreSQL, applies migrations and runs the suite automatically.
-Never point it at a shared development or production database.
-Catalog/draft HTTP tests create and remove only their own `draft_http_test_<uuid>`
-schema, apply the full migration history there and restart the API against the same
-data. The database test role needs permission to create schemas/functions/triggers.
+The E2E global setup drops, bootstraps and migrates its own database
+(`MONGO_E2E_DATABASE`, default `latlai_e2e_test`; the name must end in `_test`).
+The QA replica set keeps data in memory and is never the development database.
+CI provisions it and runs the suites automatically. Never point tests at a shared
+development or production database.
 
 ## Device smoke test
 
@@ -179,8 +163,8 @@ includes migrations and generated types. OpenAPI 0.8.0 marks 34 catalog/draft/me
 implemented. Read the [lifecycle report](features/LISTING_LIFECYCLE_REPORT.md) and the
 [catalog/draft API report](features/CATALOG_DRAFT_API_REPORT.md) and
 [command protocol](adr/0006-catalog-draft-commands.md) before extending them.
-Run `pnpm db:migrate` to apply the complete repository migration history, including delivery origins, the address book, role-writer lock,
-ISBN prefix checks and media reservations. No catalog/listing seed is required; create and review books through the APIs.
+Run `pnpm db:migrate` to apply the MongoDB migrations (validators, indexes and reference data
+for every collection, including delivery origins, the address book, ISBN checks and media reservations). No catalog/listing seed is required; create and review books through the APIs.
 Owner media handlers, the Sharp worker and RN private draft persistence are implemented;
 live Supabase checks passed; native form/picker checks are pending. Listing
 submit/moderation and operations catalog/listing review are implemented. The public

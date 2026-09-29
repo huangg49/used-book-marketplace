@@ -1,6 +1,6 @@
-// Isolated HTTP/PostgreSQL fixture. Storage is local and fake; Sharp is real.
+// Isolated HTTP/MongoDB fixture: a disposable *_test database on the QA replica
+// set with its own least-privilege users. Storage is local and fake; Sharp is real.
 import { randomBytes, randomUUID, createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
@@ -9,14 +9,35 @@ const req = createRequire(path.join(root, "apps/api/package.json"));
 export const origin = "http://127.0.0.1:5174";
 export const base = "http://127.0.0.1:3009/api/v1";
 export const password = "Operations-test-only-2026!";
-export async function createTestApi({ corsOrigin = origin, listingCount = 3 } = {}) {
-  const url = process.env.TEST_DATABASE_URL;
-  if (!url || !new URL(url).pathname.endsWith("_test"))
+const withCredentials = (url, database, user, secret) => {
+  const match =
+    /^(mongodb(?:\+srv)?:\/\/)(?:[^@/]*@)?([^/]+)\/[^?]*(?:\?(.*))?$/.exec(url);
+  if (!match) throw new Error("Unsupported MongoDB URL.");
+  const params = new URLSearchParams(match[3] ?? "");
+  params.set("authSource", database);
+  return `${match[1]}${user}:${secret}@${match[2]}/${database}?${params}`;
+};
+export async function createTestApi({
+  corsOrigin = origin,
+  listingCount = 3,
+} = {}) {
+  const rootUrl = process.env.MONGO_TEST_URL;
+  if (!rootUrl)
     throw new Error(
-      "TEST_DATABASE_URL must name a dedicated database ending in _test.",
+      "MONGO_TEST_URL must name the QA replica set (pnpm infra:mongo:test:up).",
     );
+  const database = `ops_browser_${randomBytes(8).toString("hex")}_test`;
+  const credentials = {
+    app: randomBytes(24).toString("hex"),
+    migrator: randomBytes(24).toString("hex"),
+  };
   Object.assign(process.env, {
-    DATABASE_URL: url,
+    MONGODB_URL: withCredentials(
+      rootUrl,
+      database,
+      "latlai_app",
+      credentials.app,
+    ),
     JWT_ACCESS_SECRET: "operations-browser-test-only-key-0000000000",
     NODE_ENV: "test",
     CORS_ORIGINS: corsOrigin,
@@ -25,15 +46,11 @@ export async function createTestApi({ corsOrigin = origin, listingCount = 3 } = 
   });
   const load = (p) =>
     import(pathToFileURL(path.join(root, "apps/api/dist", p)).href);
-  const { PrismaPg } = req("@prisma/adapter-pg");
-  const { PrismaClient } = await load("generated/prisma/client.js");
-  const schema = `ops_browser_${randomBytes(8).toString("hex")}`;
-  const adapter = await new PrismaPg({
-    connectionString: url,
-    options: `-c search_path=${schema},public -c timezone=UTC`,
-  }).connect();
-  const pool = adapter.underlyingDriver();
-  let app, db, images;
+  const { MongoClient } = req("mongodb");
+  const { bootstrapRoles } = await load("database/mongo/roles.js"),
+    { migrate } = await load("database/mongo/migrate.js");
+  const admin = new MongoClient(rootUrl);
+  let app, migrator, images;
   const close = async () => {
     try {
       await app?.close();
@@ -41,26 +58,32 @@ export async function createTestApi({ corsOrigin = origin, listingCount = 3 } = 
       try {
         if (images?.listening)
           await new Promise((resolve) => images.close(resolve));
-        await db?.$disconnect();
+        await migrator?.close();
       } finally {
         try {
-          await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+          const disposable = admin.db(database);
+          await disposable.dropDatabase();
+          await disposable.command({ dropAllUsersFromDatabase: 1 });
+          await disposable.command({ dropAllRolesFromDatabase: 1 });
         } finally {
-          await adapter.dispose();
+          await admin.close();
         }
       }
     }
   };
   try {
-    await pool.query(`CREATE SCHEMA "${schema}"`);
-    const migrations = path.join(root, "apps/api/prisma/migrations");
-    for (const name of readdirSync(migrations)
-      .filter((name) => /^\d/.test(name))
-      .sort())
-      await pool.query(
-        readFileSync(path.join(migrations, name, "migration.sql"), "utf8"),
-      );
-    db = new PrismaClient({ adapter: new PrismaPg(pool, { schema }) });
+    await admin.connect();
+    await bootstrapRoles(admin.db(database), credentials);
+    migrator = await new MongoClient(
+      withCredentials(
+        rootUrl,
+        database,
+        "latlai_migrator",
+        credentials.migrator,
+      ),
+    ).connect();
+    await migrate(migrator, migrator.db());
+    const db = migrator.db();
     const objects = new Map();
     const storage = {
       async check() {},
@@ -96,13 +119,10 @@ export async function createTestApi({ corsOrigin = origin, listingCount = 3 } = 
     });
     const { Test } = req("@nestjs/testing");
     const { AppModule } = await load("app.module.js"),
-      { DatabaseService } = await load("database/database.service.js"),
       { MediaStorage } = await load("modules/media/media-storage.js"),
       { MediaWorker } = await load("modules/media/media-worker.service.js"),
       { configureApp } = await load("configure-app.js");
     const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(DatabaseService)
-      .useValue(db)
       .overrideProvider(MediaStorage)
       .useValue(storage)
       .compile();
@@ -114,15 +134,17 @@ export async function createTestApi({ corsOrigin = origin, listingCount = 3 } = 
       ["admin@operations.test", ["ADMIN", "STAFF", "MEMBER"]],
       ["staff@operations.test", ["STAFF"]],
     ])
-      await db.user.create({
-        data: {
-          emailNormalized: email,
-          displayName: "Tài khoản kiểm thử",
-          passwordHash: await req("argon2").hash(password),
-          status: "ACTIVE",
-          emailVerifiedAt: new Date(),
-          roles: { create: roles.map((role) => ({ role })) },
-        },
+      await db.collection("users").insertOne({
+        _id: randomUUID(),
+        emailNormalized: email,
+        displayName: "Tài khoản kiểm thử",
+        passwordHash: await req("argon2").hash(password),
+        status: "ACTIVE",
+        emailVerifiedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        roles: roles.map((role) => ({ role, grantedAt: new Date() })),
+        lockSeq: 0,
       });
     const api = async (
       route,
@@ -234,12 +256,20 @@ export async function createTestApi({ corsOrigin = origin, listingCount = 3 } = 
       });
       listings.push(id);
     }
-    // Login throttling is tested by API E2E. Browser fixtures clear only their own schema.
-    await db.loginAttempt.deleteMany();
+    // Login throttling is tested by API E2E. Browser fixtures clear only their own database.
+    await db.collection("login_attempts").deleteMany({});
     return {
       close,
       api,
       db,
+      // Owner status changes follow the write protocol (lock sequence, updatedAt).
+      setUserStatus: (id, status) =>
+        db
+          .collection("users")
+          .updateOne(
+            { _id: id },
+            { $set: { status, updatedAt: new Date() }, $inc: { lockSeq: 1 } },
+          ),
       member,
       metadata,
       catalogId: catalog.entityId,

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { canonicalJson } from '../commands/command.service.js';
+import { canonicalJson } from '../../common/canonical-json.js';
 import { DomainError, type Wire } from '../commands/domain-error.js';
 
 // No network callback is exposed. The operator adapter uses this verifier too;

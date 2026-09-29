@@ -1,0 +1,58 @@
+# Nhóm Windows — bắt đầu phát triển trên MongoDB
+
+Mục tiêu chốt với chủ dự án ngày30/09/2026: bàn giao trong6 ngày, mỗi thành viên
+chạy database riêng bằng Docker. Chưa phân công người; bảng dưới là ranh giới code,
+không phải tính năng đã hoàn thành. Dữ liệu trên máy chủ dự án được bảo toàn riêng,
+không phát dump, session hay storage key cho cả nhóm qua Git.
+
+## Thiết lập chung
+
+Theo [START_HERE](START_HERE.md) và [ENV_HANDOFF](ENV_HANDOFF.md): clone main sau khi
+PR MongoDB được merge, Node >=24.15/pnpm11.19, Docker Desktop Linux containers.
+Trong PowerShell tại root repo:
+
+```powershell
+pnpm install --frozen-lockfile
+pnpm setup:local
+docker compose --env-file .env -f infra/docker-compose.yml up -d --wait mongo
+pnpm db:bootstrap
+pnpm db:migrate
+pnpm db:seed
+pnpm --filter @used-books/api build
+pnpm dev:api
+```
+
+Nếu port27017 bận, sửa `MONGO_PORT` và port trong các URL Mongo của API cho khớp.
+Không dùng database acceptance hay URL của máy chủ dự án. Seed hiện tạo4 tài khoản
+local theo `DEV_SEED_PASSWORD`, không có sẵn kệ sách demo. Tạo dữ liệu sách qua API/UI;
+không tự thêm số dư, role hoặc trạng thái duyệt bằng database editor.
+API/worker dùng app user, migration dùng migrator, không chạy API bằng root.
+
+Storage là bước cấu hình riêng: bucket dev riêng của thành viên, cấu hình backend
+theo [Supabase media](../features/SUPABASE_MEDIA_SETUP.md). Chưa có storage thì ghi rõ
+upload chưa chạy; không dùng bucket nguồn để thử cleanup. Media worker chạy bằng
+`pnpm dev:media` trong terminal riêng sau khi đã cấu hình đúng bucket/database.
+
+## Ranh giới để phân công sau
+
+| Phần | Nơi làm việc | Trạng thái và cách bắt đầu |
+| --- | --- | --- |
+| API dùng chung | `apps/api`, `packages/api-contract` | NestJS/MongoDB; contract-first, không tự đổi endpoint riêng cho từng client |
+| Admin web | `apps/admin-web` | Có catalog/listing review và quản lý user; `pnpm dev:admin`, xem README của app |
+| Web cho thành viên | `apps/mobile-react-native` hiện có Expo web | Chưa có app member-web riêng. Dùng `pnpm --filter @used-books/mobile-react-native web` để xem client hiện tại; việc tách app/framework cần chốt riêng |
+| React Native | `apps/mobile-react-native` | Client thành viên chính, Android emulator; `pnpm dev:rn`, xem REACT_NATIVE_START và ANDROID_QUALITY |
+| Flutter | `apps/mobile-flutter` | Hiện chỉ scaffold `lib/main.dart`, chưa có auth/API feature. `flutter pub get`, `flutter run` trong app; không coi chạy màn scaffold là parity với RN |
+
+Mỗi feature một nhánh `codex/...` hoặc prefix nhóm thống nhất. Trước sửa API, thống nhất
+contract với người làm client. Không tự mở Delivered/settlement khi release gate còn mở.
+Không cần mỗi người chạy mọi client/worker; chỉ phần đang phát triển và dependency thật.
+
+## Tiêu chí nhận bàn giao
+
+- Thành viên tự bootstrap/migrate/seed local, API ready và đăng nhập bằng seed local.
+- Chạy được client mình phụ trách; ghi rõ feature nào hiện thực, feature nào scaffold.
+- Thay đổi permission/session/transaction có negative/race test tương ứng.
+- QA dùng replica set riêng `pnpm infra:mongo:test:up` và `MONGO_TEST_URL`; không chạy
+  E2E trên database dev. Xem START_HERE cho PowerShell và test import PostgreSQL riêng.
+- CI xanh là điều kiện tích hợp code; không đồng nghĩa human review, native toàn diện
+  hoặc cutover dữ liệu chính đã hoàn tất. Nhóm hiện chưa có reviewer độc lập được chỉ định.

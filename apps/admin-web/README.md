@@ -30,16 +30,19 @@ pnpm test
 pnpm build
 ```
 
-For the HTTP/PostgreSQL browser suite, set a dedicated `TEST_DATABASE_URL` ending
-in `_test`, then run from the repository root:
+For the HTTP/MongoDB browser suite, start the QA replica set and set
+`MONGO_TEST_URL` as described in [START_HERE](../../docs/handoff/START_HERE.md).
+Run from the repository root:
 
 ```bash
+pnpm infra:mongo:test:up
 pnpm --filter @used-books/api build
 pnpm --filter @used-books/admin-web exec playwright install chromium
 pnpm --filter @used-books/admin-web test:browser
 ```
 
-The suite owns temporary schema/server resources on ports 3009/3010/5174, uses
+The suite creates its own temporary `_test` database and least-privilege users
+on the QA replica set, owns servers on ports 3009/3010/5174, uses
 local fake storage and real Sharp, and cleans up after itself. Set
 `PLAYWRIGHT_CHANNEL=msedge` to use installed Edge instead. Details and limitations:
 [verification](../../docs/features/OPERATIONS_REVIEW_REPORT.md),

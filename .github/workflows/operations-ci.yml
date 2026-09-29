@@ -1,27 +1,16 @@
 name: Operations and public shelf CI
 on:
   pull_request:
-    paths: ["apps/admin-web/**", "apps/mobile-react-native/**", "apps/api/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "scripts/test-public-shelf.mjs", "scripts/test-listing-journey.mjs", "scripts/test-address-journey.mjs", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/operations-ci.yml"]
+    paths: ["apps/admin-web/**", "apps/mobile-react-native/**", "apps/api/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "scripts/test-public-shelf.mjs", "scripts/test-listing-journey.mjs", "scripts/test-address-journey.mjs", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/operations-ci.yml"]
   push:
     branches: [main]
-    paths: ["apps/admin-web/**", "apps/mobile-react-native/**", "apps/api/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "scripts/test-public-shelf.mjs", "scripts/test-listing-journey.mjs", "scripts/test-address-journey.mjs", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/operations-ci.yml"]
+    paths: ["apps/admin-web/**", "apps/mobile-react-native/**", "apps/api/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "scripts/test-public-shelf.mjs", "scripts/test-listing-journey.mjs", "scripts/test-address-journey.mjs", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/operations-ci.yml"]
 jobs:
   operations:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: usedbooks
-          POSTGRES_PASSWORD: ci_only_password
-          POSTGRES_DB: operations_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U usedbooks -d operations_test"
-          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      TEST_DATABASE_URL: postgresql://usedbooks:ci_only_password@localhost:5432/operations_test
-      DATABASE_URL: postgresql://usedbooks:ci_only_password@localhost:5432/operations_test
+      # Each browser run creates and drops its own *_test database on the QA replica set.
+      MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/admin?replicaSet=rs-test&authSource=admin
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -31,6 +20,7 @@ jobs:
         with:
           node-version: 24.15.0
           cache: pnpm
+      - run: docker compose -f infra/docker-compose.mongo-test.yml up -d --wait mongo-test
       - run: pnpm install --frozen-lockfile
       - run: pnpm contract:check
       - run: pnpm --filter @used-books/api build

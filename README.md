@@ -28,7 +28,9 @@ One API-first platform shared by the graduation project and two mobile-developme
 - [Brand guidelines PDF](packages/brand/guidelines/Lat_Lai_Brand_Guidelines.pdf)
 
 Current implementation includes React Native auth/profile/listing submission and real
-catalog/draft/media and listing submission/moderation APIs backed by PostgreSQL,
+catalog/draft/media and listing submission/moderation APIs backed by MongoDB
+([ADR 0027](docs/adr/0027-mongodb-persistence-protocol.md); migrated from PostgreSQL, see
+[MongoDB plan](docs/refactor/MONGODB_PLAN.md)),
 with a Supabase Storage adapter and Sharp worker. Live Supabase and Android debug/UI
 emulator checks passed; native picker/upload still needs verification. See the
 [media report](docs/features/MEDIA_UPLOAD_REPORT.md) and [review API report](docs/features/LISTING_REVIEW_API_REPORT.md).
@@ -83,9 +85,9 @@ the delivery deadline pinned at pickup. Delivered, inspection and dispute resolu
 
 ```text
 Flutter app ──────────────┐
-React Native app ─────────┼── NestJS REST API ── PostgreSQL
+React Native app ─────────┼── NestJS REST API ── MongoDB 8 (replica set)
 Staff/Admin web ──────────┘          │
-                                     ├── PostgreSQL-backed media / Order workers
+                                     ├── MongoDB-backed media / Order workers
                                      ├── Supabase Storage (private images, Free)
                                      └── Mailpit development email
 ```
@@ -100,7 +102,7 @@ responsibilities; their completion APIs are not implemented at F2h.
 
 | Path | Purpose | Main technology |
 |---|---|---|
-| `apps/api` | Shared business API and workers | NestJS, TypeScript, Prisma, PostgreSQL |
+| `apps/api` | Shared business API and workers | NestJS, TypeScript, MongoDB Node driver |
 | `apps/admin-web` | Staff/Admin/Test Operator console | React, Vite, Ant Design |
 | `apps/mobile-flutter` | Flutter course and member app | Flutter, Riverpod, Dio, GoRouter |
 | `apps/mobile-react-native` | React Native course and member app | Expo, Expo Router, TanStack Query |
@@ -119,8 +121,8 @@ responsibilities; their completion APIs are not implemented at F2h.
 ```bash
 pnpm install
 pnpm setup:local
-docker compose --env-file .env -f infra/docker-compose.yml up -d --wait postgres
-pnpm db:generate
+docker compose --env-file .env -f infra/docker-compose.yml up -d --wait mongo
+pnpm db:bootstrap
 pnpm db:migrate
 pnpm db:seed
 pnpm dev:api
@@ -137,6 +139,12 @@ cd apps/mobile-flutter && flutter pub get && flutter run
 ```
 
 Local services:
+
+`db:bootstrap` creates the least-privilege app and migrator users (idempotent);
+`db:migrate` applies the MongoDB migrations; the API refuses to start while any are
+pending. Existing PostgreSQL data is moved once with the
+[cutover runbook](docs/refactor/MIG06_CUTOVER_RUNBOOK.md); PostgreSQL stays only as
+the legacy import source (`legacy-postgres` compose profile).
 
 Apply migrations and rebuild/restart both API and Order worker for payment changes.
 The worker processes expiry and refund every minute; the API alone does not run it.

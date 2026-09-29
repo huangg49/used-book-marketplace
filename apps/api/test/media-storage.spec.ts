@@ -12,18 +12,16 @@ describe('Supabase adapter boundary (HTTP mocked, not live)', () => {
       }),
     );
   it('refuses public/unbounded buckets and missing config', async () => {
-    const mock = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            id: 'latlai-media',
-            public: true,
-            file_size_limit: 10000000,
-          }),
-          { status: 200 },
-        ),
-      );
+    const mock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: 'latlai-media',
+          public: true,
+          file_size_limit: 10000000,
+        }),
+        { status: 200 },
+      ),
+    );
     vi.stubGlobal('fetch', mock);
     await expect(store().check()).rejects.toMatchObject({ status: 503 });
     await expect(
@@ -31,13 +29,11 @@ describe('Supabase adapter boundary (HTTP mocked, not live)', () => {
     ).rejects.toMatchObject({ status: 503 });
   });
   it('writes create-only using server credentials and never accepts differing duplicate bytes', async () => {
-    const mock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ Key: 'latlai-media/media/id/input' }), {
-          status: 200,
-        }),
-      );
+    const mock = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ Key: 'latlai-media/media/id/input' }), {
+        status: 200,
+      }),
+    );
     vi.stubGlobal('fetch', mock);
     const s = store();
     await s.put('media/id/input', Buffer.from('abc'), 'image/png');

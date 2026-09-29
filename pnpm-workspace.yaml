@@ -11,11 +11,9 @@ peerDependencyRules:
     '@types/react': '19.2 || 19.3'
 
 allowBuilds:
-  '@prisma/engines': true
   '@scarf/scarf': false
   argon2: true
   esbuild: true
   msgpackr-extract: true
-  prisma: true
   sharp: true
   unrs-resolver: true

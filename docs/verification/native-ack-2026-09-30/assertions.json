@@ -1,0 +1,50 @@
+{
+  "device": "Pixel_7 Android15 API35 x86_64",
+  "date": "2026-09-30",
+  "sourceBase": "307341e",
+  "finalize": {
+    "requests": 4,
+    "cutsAfter200": 4,
+    "keyHashes": [
+      "12b34659236e025d98f5a5681fe2d185c1033577b791b8c900f454e9cd7f6787"
+    ],
+    "bodyHashes": [
+      "e536fae58ba67ae8034d261c65ac17b5fef0de1670b877182dd111010c638223"
+    ],
+    "beforeRetry": {
+      "status": "Processing",
+      "version": 3,
+      "jobs": 1
+    },
+    "retryChangedDatabase": false,
+    "contentPuts": 1,
+    "creates": 1
+  },
+  "submit": {
+    "requests": 3,
+    "cutsAfter200": 2,
+    "keyHashes": [
+      "21f6dffb7057909d8f6b5f8c10042323501a7c84a8734e19895ffe30a90cf75a"
+    ],
+    "bodyHashes": [
+      "f00d48d8e8eecbf8da5b4014f0f41545e0078ba3d62ffdd048a19825e800eaac"
+    ],
+    "saveRequests": 1,
+    "retryChangedDatabase": false
+  },
+  "final": {
+    "media": 1,
+    "status": "Ready",
+    "jobs": 1,
+    "unfinishedJobs": 0,
+    "links": 1,
+    "revisions": 1,
+    "moderation": "PendingReview",
+    "listingVersion": 3,
+    "finalizeReceipts": 1,
+    "saveReceipts": 1,
+    "submitReceipts": 1
+  },
+  "integrityFailures": [],
+  "assertions": "PASS"
+}

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { ListingRevision } from '../../generated/prisma/client.js';
-import type { Tx } from '../commands/command.service.js';
+import type { ListingRevisionDoc } from '../../database/mongo/documents.js';
+import type { Tx } from '../../database/mongo/transaction.js';
 import {
   conflict,
   invalidField,
@@ -8,11 +8,8 @@ import {
   type Wire,
 } from '../commands/domain-error.js';
 
-export const originInclude = {
-  select: { current: { select: { version: true } } },
-} as const;
 export function originReference(
-  r: ListingRevision,
+  r: ListingRevisionDoc,
 ): Wire['ListingFulfillment'] | null {
   return r.originAddressId
     ? {
@@ -23,19 +20,19 @@ export function originReference(
     : null;
 }
 export function originStatus(
-  r: ListingRevision & {
-    originAddress: { current: { version: number } | null } | null;
-  },
+  r: ListingRevisionDoc & { originCurrentVersion: number | null },
 ): Wire['ListingRevision']['fulfillmentStatus'] {
   if (!r.originAddressId) return 'NotConfigured';
-  return r.originAddress?.current?.version === r.originAddressVersion
+  return r.originCurrentVersion === r.originAddressVersion
     ? 'Current'
     : 'NeedsUpdate';
 }
 
 @Injectable()
 export class ListingFulfillmentService {
-  // Call after user/session locks, before catalog/listing locks. No nested transaction.
+  // Call after user/session locks, before catalog/listing locks. Address
+  // writers lock the same owner user (the executor locked it), which replaces
+  // the PostgreSQL FOR SHARE on the address row (latlai_revision_origin_check).
   async prepare(
     tx: Tx,
     ownerId: string,
@@ -47,9 +44,9 @@ export class ListingFulfillmentService {
         originAddressVersion: null,
         originServiceAreaCode: null,
       };
-    await tx.$queryRaw`SELECT id FROM member_addresses WHERE id=${input.originAddressId}::uuid AND owner_id=${ownerId}::uuid FOR SHARE`;
-    const address = await tx.memberAddress.findFirst({
-      where: { id: input.originAddressId, ownerId },
+    const address = await tx.c.member_addresses.findOne({
+      _id: input.originAddressId.toLowerCase(),
+      ownerId,
     });
     if (!address) throw notFound();
     if (address.version !== input.originAddressVersion) throw conflict();
@@ -59,7 +56,7 @@ export class ListingFulfillmentService {
         'Chọn nơi gửi trong vùng phục vụ TP.HCM.',
       );
     return {
-      originAddressId: address.id,
+      originAddressId: address._id,
       originAddressVersion: address.version,
       originServiceAreaCode: address.serviceAreaCode,
     };

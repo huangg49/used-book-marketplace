@@ -149,8 +149,14 @@ in migration history and the user/role locking protocol.
   parallel token stores or put access tokens in persistent storage.
 - `packages/api-contract/openapi.yaml` is the contract. Change it first, then run
   `pnpm contract:generate`; commit both YAML and generated types. Do not hand-edit generated types.
-- Add reviewed Prisma migrations for schema changes. Do not replace migration history
-  with `db push`, reset shared databases, or silently change seed account passwords.
+- The database is MongoDB ([ADR 0027](docs/adr/0027-mongodb-persistence-protocol.md)).
+  Add a new numbered migration under `apps/api/src/database/mongo/migrations/` for
+  validator/index/reference-data changes; never edit an applied one (checksums stop the
+  run). Keep `apps/api/prisma/migrations` as read-only PostgreSQL history for the import.
+  Do not reset shared databases or silently change seed account passwords.
+- Every write goes through `runTransaction`/the command executor: lock documents
+  (`lockSeq`), register commit-time checks, set `updatedAt`. Access classes and
+  constraint replacements are in `docs/refactor/MIG02_MODEL_MAP.md`.
 
 ## Verification and handoff
 
@@ -162,10 +168,11 @@ in migration history and the user/role locking protocol.
 
 - Run `pnpm contract:check`, relevant lint/typecheck/tests and build for the change.
 - Auth, permissions, sessions and transactions require negative-path and race tests.
-  API E2E uses a dedicated `TEST_DATABASE_URL` whose database name ends in `_test`.
+  API E2E uses the QA replica set (`MONGO_TEST_URL`, `pnpm infra:mongo:test:up`) and a
+  database whose name ends in `_test`.
 - An Expo web export is not evidence of a successful native Android/iOS build.
 - Update setup instructions and affected ADRs when behavior or configuration changes.
-- Keep secrets, local databases and generated Prisma files out of Git. Log request IDs,
+- Keep secrets, local databases, dumps and import reports out of Git. Log request IDs,
   not passwords, tokens or request bodies.
 - Keep one feature per branch/PR and preserve unrelated work. Report remaining limitations
   honestly; a stub, mock response or document is not a completed business workflow.

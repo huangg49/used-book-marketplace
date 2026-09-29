@@ -1,17 +1,34 @@
 import { randomUUID } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
-import { PrismaPg } from '@prisma/adapter-pg';
+import { MongoClient, type Db } from 'mongodb';
+import { bindCollections } from '../src/database/mongo/collections.js';
+import { migrate } from '../src/database/mongo/migrate.js';
+import { migrations } from '../src/database/mongo/migrations/index.js';
+import {
+  LEDGER_SEQUENCE_COUNTER,
+  OPENING_JOURNAL_ID,
+} from '../src/database/mongo/migrations/0002-reference-data.js';
+import { bootstrapRoles } from '../src/database/mongo/roles.js';
+import { runTransaction } from '../src/database/mongo/transaction.js';
+import { checkListing } from '../src/modules/listings/listing-projection.js';
+import { E2E_DATABASE } from './mongo-global-setup.js';
+import {
+  TEST_APP_PASSWORD,
+  TEST_MIGRATOR_PASSWORD,
+  testUrl,
+  withCredentials,
+} from './mongo/harness.js';
 
-it('upgrades ten migrations without changing existing address/listing/receipt history and journals finite capital', async () => {
-  const url = process.env.TEST_DATABASE_URL!;
-  if (!decodeURIComponent(new URL(url).pathname).endsWith('_test'))
-    throw new Error('Dedicated test DB required');
-  const schema = `wallet_upgrade_test_${randomUUID().replaceAll('-', '')}`;
-  const adapter = await new PrismaPg({
-    connectionString: url,
-    options: `-c search_path=${schema},public`,
-  }).connect();
-  const connection = await adapter.underlyingDriver().connect();
+// PostgreSQL applied every migration before 20260928010000_simulated_wallet,
+// wrote history, then applied the wallet migration. The MongoDB equivalent of
+// the wallet migration is 0002-reference-data (finite simulator capital, its
+// opening journal and the posting sequence counter; the wallet collections
+// and receipt/audit `topupId` already exist in the 0001 baseline). This suite
+// upgrades a dedicated database from 0001 to the latest migration with
+// existing history in place.
+it('upgrades from the baseline without changing existing address/listing/receipt history and journals finite capital', async () => {
+  const url = testUrl(`${E2E_DATABASE.replace(/_test$/, '')}_upgrade_test`);
+  const root = await new MongoClient(url).connect();
+  let migrator: MongoClient | undefined, app: MongoClient | undefined;
   const owner = randomUUID(),
     address = randomUUID(),
     listing = randomUUID(),
@@ -19,137 +36,254 @@ it('upgrades ten migrations without changing existing address/listing/receipt hi
     receipt = randomUUID(),
     audit = randomUUID();
   try {
-    await connection.query(`CREATE SCHEMA "${schema}"`);
-    const target = '20260928010000_simulated_wallet';
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n) && n < target)
-      .sort())
-      await connection.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
-    await connection.query('BEGIN');
-    await connection.query(
-      'INSERT INTO users(id,email_normalized,password_hash,display_name,updated_at) VALUES($1,$2,$3,$4,now())',
-      [owner, `${owner}@upgrade.test`, 'unused', 'Upgrade fixture'],
+    const rootDb = root.db();
+    await rootDb.dropDatabase();
+    await bootstrapRoles(rootDb, {
+      app: TEST_APP_PASSWORD,
+      migrator: TEST_MIGRATOR_PASSWORD,
+    });
+    migrator = await new MongoClient(
+      withCredentials(url, 'latlai_migrator', TEST_MIGRATOR_PASSWORD),
+    ).connect();
+    const target = '0002-reference-data';
+    const before0002 = migrations.slice(
+      0,
+      migrations.findIndex((m) => m.id === target),
     );
-    await connection.query(
-      'INSERT INTO address_books(owner_id,version) VALUES($1,1)',
-      [owner],
-    );
-    await connection.query(
-      "INSERT INTO member_addresses(id,owner_id,recipient_name,phone,service_area_code,locality_code,detail,is_default) VALUES($1,$2,'Fixture','0900000000','HCM-DEMO-v1','DEMO-A','Test address only',true)",
-      [address, owner],
-    );
-    await connection.query(
-      'INSERT INTO listings(id,owner_id,updated_at) VALUES($1,$2,now())',
-      [listing, owner],
-    );
-    await connection.query(
-      "INSERT INTO listing_revisions(id,listing_id,number,origin_address_id,origin_address_version,origin_service_area_code) VALUES($1,$2,1,$3,1,'HCM-DEMO-v1')",
-      [revision, listing, address],
-    );
-    await connection.query(
-      'UPDATE listings SET current_revision_id=$1 WHERE id=$2',
-      [revision, listing],
-    );
-    await connection.query(
-      "INSERT INTO mutation_receipts(id,actor_id,operation,key,payload_hash,listing_id,result_version,result,committed_at) VALUES($1,$2,'createListing',$5,$3,$4,1,'{}',now())",
-      [receipt, owner, 'a'.repeat(64), listing, randomUUID()],
-    );
-    await connection.query(
-      "INSERT INTO audit_events(id,actor_id,receipt_id,listing_id,action,request_id) VALUES($1,$2,$3,$4,'createListing',$5)",
-      [audit, owner, receipt, listing, randomUUID()],
-    );
-    await connection.query('COMMIT');
-    const snapshot = async () => {
-      const tables = [
+    expect(await migrate(migrator, migrator.db(), before0002)).toEqual([
+      '0001-baseline-schema',
+    ]);
+    // Existing history, written by the migrator under the baseline validators.
+    const c = bindCollections(migrator.db());
+    const now = new Date();
+    await c.users.insertOne({
+      _id: owner,
+      emailNormalized: `${owner}@upgrade.test`,
+      passwordHash: 'unused',
+      displayName: 'Upgrade fixture',
+      status: 'ACTIVE',
+      emailVerifiedAt: null,
+      createdAt: now,
+      updatedAt: now,
+      roles: [{ role: 'MEMBER', grantedAt: now }],
+      lockSeq: 0,
+    });
+    await c.address_books.insertOne({ _id: owner, version: 1, lockSeq: 0 });
+    await c.member_addresses.insertOne({
+      _id: address,
+      ownerId: owner,
+      version: 1,
+      recipientName: 'Fixture',
+      phone: '0900000000',
+      serviceAreaCode: 'HCM-DEMO-v1',
+      localityCode: 'DEMO-A',
+      detail: 'Test address only',
+      isDefault: true,
+      createdAt: now,
+    });
+    await c.address_identities.insertOne({ _id: address, ownerId: owner });
+    await c.listing_revisions.insertOne({
+      _id: revision,
+      listingId: listing,
+      number: 1,
+      bookId: null,
+      mode: null,
+      condition: null,
+      pages: '',
+      coverNote: '',
+      notes: '',
+      accessories: '',
+      readable: null,
+      hasMissingPages: null,
+      missingEssentialContent: null,
+      description: '',
+      salePrice: null,
+      exchangeValue: null,
+      submittedAt: null,
+      ownershipDeclaredAt: null,
+      createdAt: now,
+      originAddressId: address,
+      originAddressVersion: 1,
+      originServiceAreaCode: 'HCM-DEMO-v1',
+      lockSeq: 0,
+    });
+    await c.listings.insertOne({
+      _id: listing,
+      ownerId: owner,
+      version: 1,
+      moderation: 'Draft',
+      visibility: 'Visible',
+      trade: 'Available',
+      currentRevisionId: revision,
+      removalReason: null,
+      deletedAt: null,
+      publishedAt: null,
+      createdAt: now,
+      updatedAt: now,
+      lockSeq: 0,
+    });
+    const targets = {
+      listingId: listing,
+      bookId: null,
+      mediaId: null,
+      addressBookId: null,
+      quoteId: null,
+      contextId: null,
+      topupId: null,
+    };
+    await c.mutation_receipts.insertOne({
+      _id: receipt,
+      principal: `user:${owner}`,
+      actorId: owner,
+      systemActor: null,
+      operation: 'createListing',
+      key: randomUUID(),
+      payloadHash: 'a'.repeat(64),
+      ...targets,
+      resultVersion: 1,
+      result: {},
+      committedAt: now,
+    });
+    await c.audit_events.insertOne({
+      _id: audit,
+      actorId: owner,
+      systemActor: null,
+      receiptId: receipt,
+      ...targets,
+      action: 'createListing',
+      before: null,
+      after: null,
+      reason: null,
+      requestId: randomUUID(),
+      createdAt: now,
+    });
+    const snapshot = async (db: Db) => {
+      const rows: Record<string, unknown> = {};
+      for (const name of [
+        'users',
+        'address_books',
         'member_addresses',
         'address_identities',
         'listing_revisions',
         'listings',
         'mutation_receipts',
         'audit_events',
-      ];
-      const rows: Record<string, unknown> = {};
-      for (const table of tables)
-        rows[table] = (await connection.query(`SELECT * FROM ${table}`)).rows;
+      ])
+        rows[name] = await db
+          .collection(name)
+          .find()
+          .sort({ _id: 1 })
+          .toArray();
       return rows;
     };
-    const before = await snapshot();
-    await connection.query(
-      readFileSync(`prisma/migrations/${target}/migration.sql`, 'utf8'),
+    const before = await snapshot(rootDb);
+    expect(await migrate(migrator, migrator.db())).toEqual(
+      migrations.slice(before0002.length).map((m) => m.id),
     );
-    const after = await snapshot();
-    for (const table of ['mutation_receipts', 'audit_events'])
-      before[table] = (before[table] as object[]).map((row) => ({
-        ...row,
-        topup_id: null,
-      }));
-    expect(after).toEqual(before);
+    // Receipts/audits already carry `topupId: null` in the baseline, so unlike
+    // the PostgreSQL column addition no field is expected to appear.
+    expect(await snapshot(rootDb)).toEqual(before);
     expect(
-      (
-        await connection.query(
-          'SELECT purpose FROM wallet_accounts ORDER BY purpose',
-        )
-      ).rows,
+      await rootDb
+        .collection('wallet_accounts')
+        .find({}, { projection: { _id: 0, purpose: 1 } })
+        .sort({ purpose: 1 })
+        .toArray(),
     ).toEqual([
       { purpose: 'SimulatorCapital' },
       { purpose: 'SimulatorClearing' },
     ]);
     expect(
-      (await connection.query('SELECT type FROM ledger_journals')).rows,
-    ).toEqual([{ type: 'OpeningCapital' }]);
+      await rootDb
+        .collection('ledger_journals')
+        .find({}, { projection: { _id: 1, type: 1, sequence: 1 } })
+        .toArray(),
+    ).toEqual([
+      { _id: OPENING_JOURNAL_ID, type: 'OpeningCapital', sequence: 1 },
+    ]);
     expect(
-      (
-        await connection.query(
-          'SELECT sum(debit)::text debit,sum(credit)::text credit FROM ledger_entries',
-        )
-      ).rows,
-    ).toEqual([{ debit: '100000000', credit: '100000000' }]);
+      await rootDb
+        .collection('ledger_entries')
+        .aggregate([
+          {
+            $group: {
+              _id: null,
+              debit: { $sum: '$debit' },
+              credit: { $sum: '$credit' },
+            },
+          },
+          { $project: { _id: 0 } },
+        ])
+        .toArray(),
+    ).toEqual([{ debit: 100000000, credit: 100000000 }]);
+    // Posting order continues after the opening journal (the bigint sequence).
     expect(
-      (await connection.query('SELECT * FROM topup_intents')).rows,
-    ).toHaveLength(0);
-    await expect(
-      connection.query(
-        "UPDATE listings SET trade='Reserved',version=version+1 WHERE id=$1",
-        [listing],
-      ),
-    ).rejects.toMatchObject({ code: '23514' });
+      await rootDb
+        .collection('counters')
+        .findOne({ _id: LEDGER_SEQUENCE_COUNTER as never }),
+    ).toEqual({ _id: LEDGER_SEQUENCE_COUNTER, value: 1 });
+    expect(await rootDb.collection('topup_intents').countDocuments()).toBe(0);
+    expect(await rootDb.collection('sale_quotes').countDocuments()).toBe(0);
     expect(
-      (await connection.query('SELECT * FROM sale_quotes')).rows,
-    ).toHaveLength(0);
-    expect(
-      (await connection.query('SELECT * FROM sale_quote_policies')).rows,
+      await rootDb.collection('sale_quote_policies').find().toArray(),
     ).toEqual([
       {
-        code: 'HCM-DIRECT-v1',
-        shipping_fee: 30000,
-        commission_bps: 500,
-        ttl_seconds: 300,
+        _id: 'HCM-DIRECT-v1',
+        shippingFee: 30000,
+        commissionBps: 500,
+        ttlSeconds: 300,
       },
     ]);
+
+    // The guards still hold for the least-privilege application user.
+    app = await new MongoClient(
+      withCredentials(url, 'latlai_app', TEST_APP_PASSWORD),
+    ).connect();
+    const appDb = app.db(),
+      a = bindCollections(appDb);
+    // Reserved without an active commitment: commit-time check (C), which
+    // aborts the transaction that attempts it.
     await expect(
-      connection.query('UPDATE listings SET version=99 WHERE id=$1', [listing]),
-    ).rejects.toMatchObject({ code: '23514' });
+      runTransaction(app, appDb, async (tx) => {
+        await tx.c.listings.updateOne(
+          { _id: listing },
+          { $set: { trade: 'Reserved' }, $inc: { version: 1 } },
+        );
+        await checkListing(tx, listing);
+      }),
+    ).rejects.toThrow('Listing/commitment projection mismatch');
+    expect(await a.listings.findOne({ _id: listing })).toMatchObject({
+      trade: 'Available',
+      version: 1,
+    });
+    // Receipts are append-only (P).
     await expect(
-      connection.query('UPDATE member_addresses SET version=99 WHERE id=$1', [
-        address,
-      ]),
-    ).rejects.toMatchObject({ code: '23514' });
+      a.mutation_receipts.deleteOne({ _id: receipt }),
+    ).rejects.toMatchObject({ code: 13 });
+    // A receipt still names exactly one target (V).
     await expect(
-      connection.query('DELETE FROM mutation_receipts WHERE id=$1', [receipt]),
-    ).rejects.toMatchObject({ code: '23514' });
-    // The expanded target constraint still rejects ambiguous existing target types.
-    await expect(
-      connection.query(
-        "INSERT INTO mutation_receipts(id,actor_id,operation,key,payload_hash,listing_id,address_book_id,result_version,result,committed_at) VALUES($1,$2,'bad',$5,$3,$4,$2,1,'{}',now())",
-        [randomUUID(), owner, 'b'.repeat(64), listing, randomUUID()],
-      ),
-    ).rejects.toMatchObject({ code: '23514' });
+      a.mutation_receipts.insertOne({
+        _id: randomUUID(),
+        principal: `user:${owner}`,
+        actorId: owner,
+        systemActor: null,
+        operation: 'bad',
+        key: randomUUID(),
+        payloadHash: 'b'.repeat(64),
+        ...targets,
+        addressBookId: owner,
+        resultVersion: 1,
+        result: {},
+        committedAt: new Date(),
+      }),
+    ).rejects.toMatchObject({ code: 121 });
   } finally {
-    await connection.query('ROLLBACK');
-    await connection.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
-    connection.release();
-    await adapter.dispose();
+    await app?.close();
+    await migrator?.close();
+    const db = root.db();
+    await db.dropDatabase();
+    await db.command({ dropAllUsersFromDatabase: 1 });
+    await db.command({ dropAllRolesFromDatabase: 1 });
+    await root.close();
   }
 });

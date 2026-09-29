@@ -7,11 +7,15 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import type { components } from '@used-books/api-contract';
-import type { Prisma } from '../../generated/prisma/client.js';
-import { DatabaseService } from '../../database/database.service.js';
+import { randomUUID } from 'node:crypto';
+import type {
+  AuthSessionDoc,
+  UserDoc,
+} from '../../database/mongo/documents.js';
+import { MongoService } from '../../database/mongo/mongo.service.js';
 import { LoginLimiter } from './login-limiter.service.js';
 
-type UserWithRoles = Prisma.UserGetPayload<{ include: { roles: true } }>;
+type UserWithRoles = UserDoc;
 export type CurrentUser = components['schemas']['CurrentUser'];
 const ACCESS_SECONDS = 900;
 const SESSION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -27,7 +31,7 @@ const invalidSession = () =>
 export class AuthService implements OnModuleInit {
   private dummyHash: string;
   constructor(
-    private readonly db: DatabaseService,
+    private readonly mongo: MongoService,
     private readonly jwt: JwtService,
     private readonly limiter: LoginLimiter,
   ) {}
@@ -45,7 +49,7 @@ export class AuthService implements OnModuleInit {
 
   private publicUser(user: UserWithRoles): CurrentUser {
     return {
-      id: user.id,
+      id: user._id,
       email: user.emailNormalized,
       displayName: user.displayName,
       status: user.status as CurrentUser['status'],
@@ -59,7 +63,7 @@ export class AuthService implements OnModuleInit {
     refreshToken: string,
   ): Promise<components['schemas']['AuthTokens']> {
     const accessToken = await this.jwt.signAsync({
-      sub: user.id,
+      sub: user._id,
       sid: sessionId,
     });
     return {
@@ -72,10 +76,7 @@ export class AuthService implements OnModuleInit {
 
   async login(email: string, password: string, ip: string) {
     await this.limiter.consume(email, ip);
-    const user = await this.db.user.findUnique({
-      where: { emailNormalized: email },
-      include: { roles: true },
-    });
+    const user = await this.mongo.c.users.findOne({ emailNormalized: email });
     const valid = await argon2.verify(
       user?.passwordHash ?? this.dummyHash,
       password,
@@ -87,74 +88,71 @@ export class AuthService implements OnModuleInit {
           'Email hoặc mật khẩu không đúng, hoặc tài khoản chưa được phép đăng nhập.',
       });
     }
-    return this.db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM users WHERE id=${user.id}::uuid FOR UPDATE`;
-      const current = await tx.user.findUnique({
-        where: { id: user.id },
-        include: { roles: true },
-      });
+    return this.mongo.tx(async (tx) => {
+      // Lock, then re-read: a concurrent password/status change wins or waits.
+      await tx.lock('users', [user._id]);
+      const current = await tx.c.users.findOne({ _id: user._id });
       if (!this.allowed(current) || current.passwordHash !== user.passwordHash)
         throw invalidSession();
-      const [clock] = await tx.$queryRaw<
-        { now: Date }[]
-      >`SELECT clock_timestamp() AS now`;
+      const now = await tx.now();
       const refreshToken = randomBytes(32).toString('base64url');
-      const session = await tx.authSession.create({
-        data: {
-          userId: current.id,
-          refreshTokenHash: tokenHash(refreshToken),
-          expiresAt: new Date(clock.now.getTime() + SESSION_MS),
-        },
-      });
-      return this.tokens(current, session.id, refreshToken);
+      const session: AuthSessionDoc = {
+        _id: randomUUID(),
+        userId: current._id,
+        refreshTokenHash: tokenHash(refreshToken),
+        expiresAt: new Date(now.getTime() + SESSION_MS),
+        revokedAt: null,
+        createdAt: now,
+        lockSeq: 0,
+      };
+      await tx.c.auth_sessions.insertOne(session);
+      return this.tokens(current, session._id, refreshToken);
     });
   }
 
   async refresh(refreshToken: string) {
     const hash = tokenHash(refreshToken);
-    const session = await this.db.authSession.findUnique({
-      where: { refreshTokenHash: hash },
-      include: { user: { include: { roles: true } } },
+    const session = await this.mongo.c.auth_sessions.findOne({
+      refreshTokenHash: hash,
     });
+    const owner =
+      session && (await this.mongo.c.users.findOne({ _id: session.userId }));
     if (
       !session ||
       session.revokedAt ||
       session.expiresAt <= new Date() ||
-      !this.allowed(session.user)
+      !this.allowed(owner ?? null)
     )
       throw invalidSession();
-    return this.db.$transaction(async (tx) => {
+    return this.mongo.tx(async (tx) => {
       // Same user -> session order as feature commands; recheck after all waits.
-      await tx.$queryRaw`SELECT id FROM users WHERE id=${session.userId}::uuid FOR UPDATE`;
-      await tx.$queryRaw`SELECT id FROM auth_sessions WHERE id=${session.id}::uuid FOR UPDATE`;
-      const current = await tx.user.findUnique({
-        where: { id: session.userId },
-        include: { roles: true },
-      });
+      await tx.lock('users', [session.userId]);
+      await tx.lock('auth_sessions', [session._id]);
+      const current = await tx.c.users.findOne({ _id: session.userId });
       if (!this.allowed(current)) throw invalidSession();
-      const [clock] = await tx.$queryRaw<
-        { now: Date }[]
-      >`SELECT clock_timestamp() AS now`;
+      const now = await tx.now();
       const replacement = randomBytes(32).toString('base64url');
-      const result = await tx.authSession.updateMany({
-        where: {
-          id: session.id,
+      const result = await tx.c.auth_sessions.updateOne(
+        {
+          _id: session._id,
           refreshTokenHash: hash,
           revokedAt: null,
-          expiresAt: { gt: clock.now },
+          expiresAt: { $gt: now },
         },
-        data: { refreshTokenHash: tokenHash(replacement) },
-      });
-      if (result.count !== 1) throw invalidSession();
-      return this.tokens(current, session.id, replacement);
+        { $set: { refreshTokenHash: tokenHash(replacement) } },
+      );
+      if (result.matchedCount !== 1) throw invalidSession();
+      return this.tokens(current, session._id, replacement);
     });
   }
 
   async logout(refreshToken: string) {
-    await this.db.authSession.updateMany({
-      where: { refreshTokenHash: tokenHash(refreshToken), revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    // A plain write to the session document: it waits for, or conflicts with,
+    // any command holding that session's lock (ADR 0027).
+    await this.mongo.c.auth_sessions.updateOne(
+      { refreshTokenHash: tokenHash(refreshToken), revokedAt: null },
+      { $set: { revokedAt: new Date() } },
+    );
   }
 
   async authenticate(accessToken: string) {
@@ -174,16 +172,30 @@ export class AuthService implements OnModuleInit {
       )
     )
       throw invalidSession();
-    const session = await this.db.authSession.findFirst({
-      where: {
-        id: claims.sid,
-        userId: claims.sub,
-        revokedAt: null,
-        expiresAt: { gt: new Date() },
-      },
-      include: { user: { include: { roles: true } } },
-    });
-    if (!session || !this.allowed(session.user)) throw invalidSession();
-    return { sessionId: session.id, user: this.publicUser(session.user) };
+    // One aggregate reads session and user from the same snapshot.
+    const [session] = await this.mongo.c.auth_sessions
+      .aggregate<AuthSessionDoc & { users: UserDoc[] }>([
+        {
+          $match: {
+            _id: claims.sid.toLowerCase(),
+            userId: claims.sub.toLowerCase(),
+            revokedAt: null,
+            expiresAt: { $gt: new Date() },
+          },
+        },
+        { $limit: 1 },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'users',
+          },
+        },
+      ])
+      .toArray();
+    const sessionUser = session?.users[0] ?? null;
+    if (!session || !this.allowed(sessionUser)) throw invalidSession();
+    return { sessionId: session._id, user: this.publicUser(sessionUser) };
   }
 }

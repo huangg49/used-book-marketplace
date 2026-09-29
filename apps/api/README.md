@@ -5,7 +5,8 @@ NestJS modular monolith shared by every client. The API owns permissions, state 
 ```bash
 # From repository root:
 pnpm setup:local
-pnpm db:generate
+pnpm infra:up
+pnpm db:bootstrap
 pnpm db:migrate
 pnpm db:seed
 pnpm dev:api
@@ -17,8 +18,16 @@ pnpm dev:api
 
 Add modules under `src/modules/<business-area>`. Keep cross-module changes behind explicit services or events and use database transactions for business operations that must commit atomically.
 
-See [team setup and E2E instructions](../../docs/REACT_NATIVE_START.md). PostgreSQL must
-be running before migration or API startup. Environment variables are validated at startup.
+See [team setup and E2E instructions](../../docs/REACT_NATIVE_START.md). MongoDB (a replica
+set; `infra/docker-compose.yml` service `mongo`) must be running and migrated before API
+startup; the API refuses to start with pending migrations. Persistence rules are in
+[ADR 0027](../../docs/adr/0027-mongodb-persistence-protocol.md) and the
+[model map](../../docs/refactor/MIG02_MODEL_MAP.md).
+
+> **Historical notes below.** Sections dated before 2026-09-29 describe the PostgreSQL/Prisma
+> implementation (migrations, `db:generate`, SQL triggers). The same guarantees now live in
+> MongoDB validators, indexes, least-privilege roles and commit-time checks; follow the
+> MongoDB commands above and read `docs/refactor/MIG0*_*.md` for the mapping. Environment variables are validated at startup.
 `AuthModule` installs global authentication and role guards. Endpoints require login
 unless explicitly marked `@Public()`. Use `@Roles(...)` for role restrictions. Feature endpoints must
 also check object ownership and account eligibility for their business action.

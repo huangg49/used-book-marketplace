@@ -453,8 +453,9 @@ try {
     })
     .waitFor();
   assert.equal(
-    await fixture.db.mutationReceipt.count({
-      where: { listingId: fixture.listings[0], operation: "removeListing" },
+    await fixture.db.collection("mutation_receipts").countDocuments({
+      listingId: fixture.listings[0],
+      operation: "removeListing",
     }),
     1,
   );

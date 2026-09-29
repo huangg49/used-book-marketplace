@@ -3,28 +3,33 @@ import { LedgerService } from '../src/modules/wallet/ledger.service.js';
 
 import { OrdersService } from '../src/modules/orders/orders.service.js';
 import { OrderExpiryWorker } from '../src/modules/orders/order-expiry.service.js';
+import { checkOrder } from '../src/modules/orders/order-invariants.js';
 
 import { randomBytes, randomUUID } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { INestApplication } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/generated/prisma/client.js';
-import type { RoleCode, UserStatus } from '../src/generated/prisma/client.js';
-import { DatabaseService } from '../src/database/database.service.js';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
 import request from 'supertest';
-import { Ajv2020 } from 'ajv/dist/2020.js';
-import addFormats from 'ajv-formats';
-import { parse } from 'yaml';
-import { hash } from 'argon2';
+import type {
+  LedgerJournalDoc,
+  RoleCode,
+  UserStatus,
+} from '../src/database/mongo/documents.js';
+import { MongoService } from '../src/database/mongo/mongo.service.js';
+import {
+  onTransactionRetry,
+  TransactionBusyError,
+  type Tx,
+} from '../src/database/mongo/transaction.js';
 import { MediaStorage } from '../src/modules/media/media-storage.js';
+import { validates } from './helpers/contract.js';
+import { Gate } from './helpers/mongo-gate.js';
+import { MongoFixtures } from './helpers/mongo-fixtures.js';
 
-// Storage signing is deliberately faked. HTTP, authorization and PostgreSQL are real.
+// Storage signing is deliberately faked. HTTP, authorization and MongoDB are real.
 const storage = {
   beforeSign: undefined as (() => Promise<void>) | undefined,
   async check() {},
@@ -37,23 +42,6 @@ const storage = {
   },
 };
 
-const contract = parse(
-  readFileSync(
-    createRequire(import.meta.url).resolve(
-      '@used-books/api-contract/openapi.yaml',
-    ),
-    'utf8',
-  ),
-);
-const ajv = new Ajv2020({ strict: false });
-addFormats.default(ajv);
-ajv.addSchema({ $id: 'api-wire', components: contract.components });
-function validates(name: string, body: unknown) {
-  const fn = ajv.compile({ $ref: `api-wire#/components/schemas/${name}` });
-  expect(fn(body), JSON.stringify(fn.errors)).toBe(true);
-}
-type Adapter = Awaited<ReturnType<PrismaPg['connect']>>;
-type Pool = ReturnType<Adapter['underlyingDriver']>;
 type Reader = { id: string; token: string; sessionId: string; email: string };
 const metadata = (title = 'Đường sách chuyền tay') => ({
   title,
@@ -82,9 +70,9 @@ const draft = (bookId: string | null = null) => ({
   mediaIds: [] as string[],
 });
 
-describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL', () => {
-  const schema = `payment_http_test_${randomUUID().replaceAll('-', '')}`;
-  let app: INestApplication, db: PrismaClient, adapter: Adapter, pool: Pool;
+describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', () => {
+  let app: INestApplication, db: MongoFixtures;
+  const users: string[] = [];
   let m1: Reader, a1: Reader, a2: Reader, staff: Reader, operator: Reader;
   const originalSecret = process.env.PAYMENT_SIMULATOR_SECRET;
   const get = (path: string, actor?: Reader) => {
@@ -117,32 +105,31 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
     roles: RoleCode[] = ['MEMBER'],
     status: UserStatus = 'ACTIVE',
   ): Promise<Reader> {
-    const id = randomUUID(),
-      sessionId = randomUUID(),
-      email = `${id}@draft-http.test`;
-    await db.user.create({
-      data: {
-        id,
-        emailNormalized: email,
-        displayName: 'Bạn đọc thử nghiệm',
-        passwordHash: await hash('Only-a-test-password-2026'),
-        status,
-        emailVerifiedAt: new Date(),
-        roles: { create: roles.map((role) => ({ role })) },
-        sessions: {
-          create: {
-            id: sessionId,
-            refreshTokenHash: randomBytes(32).toString('hex'),
-            expiresAt: new Date(Date.now() + 86400000),
-          },
-        },
-      },
+    const email = `${randomUUID()}@draft-http.test`;
+    const user = await db.user({
+      email,
+      displayName: 'Bạn đọc thử nghiệm',
+      roles,
+      status,
     });
+    users.push(user._id);
+    const sessionId = await db.session(user._id);
     const token = await app
       .get(JwtService)
-      .signAsync({ sub: id, sid: sessionId });
-    return { id, sessionId, token, email };
+      .signAsync({ sub: user._id, sid: sessionId });
+    return { id: user._id, sessionId, token, email };
   }
+  // Direct user/session writes bump lockSeq like every application writer.
+  const setUser = (ids: string[], set: Record<string, unknown>) =>
+    db.c.users.updateMany(
+      { _id: { $in: ids } },
+      { $set: { ...set, updatedAt: new Date() }, $inc: { lockSeq: 1 } },
+    );
+  const setSession = (id: string, set: Record<string, unknown>) =>
+    db.c.auth_sessions.updateOne(
+      { _id: id },
+      { $set: set, $inc: { lockSeq: 1 } },
+    );
   async function createCatalog(actor = m1, meta = metadata()) {
     const result = await post(
       '/catalog/requests',
@@ -170,8 +157,6 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
   }
   async function makeApp() {
     const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(DatabaseService)
-      .useValue(db)
       .overrideProvider(MediaStorage)
       .useValue(storage)
       .compile();
@@ -181,59 +166,79 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
       .set('PAYMENT_SIMULATOR_SECRET', process.env.PAYMENT_SIMULATOR_SECRET);
     configureApp(next, { docs: false, logRequests: false });
     await next.init();
+    // One listening socket per app lifetime: supertest otherwise listens and
+    // closes per request, which can reset connections of the staggered 503
+    // retries in the 100-request race.
+    await next.listen(0, '127.0.0.1');
     return next;
   }
-  async function blockedBy(
-    pid: number,
-    minimum = 1,
-    observer: Pick<Pool, 'query'> = pool,
-  ) {
-    const deadline = Date.now() + 4000;
-    while (Date.now() < deadline) {
-      // A barrier connection stays in one transaction: refresh PostgreSQL's
-      // statistics snapshot so newly opened contenders are visible.
-      await observer.query('SELECT pg_stat_clear_snapshot()');
-      const r = await observer.query(
-        'SELECT count(*)::int n FROM pg_stat_activity a WHERE $1 = ANY(pg_blocking_pids(a.pid)) OR EXISTS (SELECT 1 FROM pg_stat_activity b WHERE $1 = ANY(pg_blocking_pids(b.pid)) AND b.pid = ANY(pg_blocking_pids(a.pid)))',
-        [pid],
-      );
-      if (r.rows[0].n >= minimum) return;
-      await new Promise((resolve) => setTimeout(resolve, 10));
+  // Observes command transactions retrying against a write lock held by
+  // another transaction (a session queued behind a PostgreSQL row lock).
+  function watchRetries() {
+    const seen = new Set<number>();
+    const stop = onTransactionRetry((event) => seen.add(event.transactionId));
+    return {
+      stop,
+      async until(n = 1) {
+        const deadline = Date.now() + 4000;
+        while (Date.now() < deadline) {
+          if (seen.size >= n) return;
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+        throw new Error('Commands did not reach the lock barrier');
+      },
+    };
+  }
+  // Test-only pause of the next Order decision, inside its transaction and
+  // while it holds the user/listing/order (and ledger) locks. PostgreSQL
+  // granted queued row locks in FIFO order; MongoDB aborts and retries the
+  // loser, so the intended winner is made explicit by holding it here.
+  function pauseDecision(at?: Date) {
+    const clock = app.get(OrderClock),
+      original = clock.now.bind(clock);
+    let entered!: () => void, release!: () => void;
+    const reached = new Promise<void>((resolve) => (entered = resolve)),
+      released = new Promise<void>((resolve) => (release = resolve));
+    const spy = vi
+      .spyOn(clock, 'now')
+      .mockImplementationOnce(async (tx: Tx) => {
+        entered();
+        await released;
+        return at ?? original(tx);
+      });
+    return { reached, release, spy };
+  }
+  // Under contention MongoDB answers 503 "retry the same request" once the
+  // retry budget is exhausted (ADR 0027). A 503 is accepted only when the same
+  // request (same idempotency key) is then retried to its final outcome.
+  async function settle(send: () => PromiseLike<request.Response>) {
+    for (let attempt = 1; ; attempt++) {
+      const r = await send();
+      if (r.status !== 503 || attempt === 10) return r;
     }
-    throw new Error(
-      'HTTP mutation never reached the blocked database transaction',
-    );
   }
-  async function blockUser(id: string) {
-    const connection = await pool.connect();
-    await connection.query('BEGIN');
-    await connection.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [id]);
-    const pid = (await connection.query('SELECT pg_backend_pid() pid')).rows[0]
-      .pid as number;
-    return { connection, pid };
+  // Same for the internal workers: their key is the Order id.
+  async function settleWorker<T>(fn: () => Promise<T>): Promise<T> {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await fn();
+      } catch (e) {
+        if (!(e instanceof TransactionBusyError) || attempt === 10) throw e;
+      }
+    }
   }
+  // A raw write through the application's own connection that must pass the
+  // commit-time Order checks (C) every command registers, the equivalent of
+  // the deferred PostgreSQL constraint triggers.
+  const checked = (fn: (tx: Tx) => Promise<unknown>, orderId: string) =>
+    app.get(MongoService).tx(async (tx) => {
+      await fn(tx);
+      tx.check(`order:${orderId}`, () => checkOrder(tx, orderId));
+    });
 
   beforeAll(async () => {
     process.env.PAYMENT_SIMULATOR_SECRET = randomBytes(32).toString('hex');
-    const url = process.env.TEST_DATABASE_URL!;
-    if (!decodeURIComponent(new URL(url).pathname).endsWith('_test'))
-      throw new Error('Only _test databases');
-    adapter = await new PrismaPg({
-      connectionString: url,
-      max: 16,
-      options: `-c search_path=${schema},public -c timezone=UTC`,
-      statement_timeout: 15000,
-    }).connect();
-    pool = adapter.underlyingDriver();
-    await pool.query(`CREATE SCHEMA "${schema}"`);
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n))
-      .sort())
-      await pool.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
-    db = new PrismaClient({ adapter: new PrismaPg(pool, { schema }) });
-    await db.$connect();
+    db = await MongoFixtures.connect();
     app = await makeApp();
     m1 = await reader();
     operator = await reader(['TEST_OPERATOR']);
@@ -242,11 +247,105 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
     staff = await reader(['STAFF']);
   }, 60000);
   afterAll(async () => {
+    storage.beforeSign = undefined;
+    if (db) {
+      const c = db.c;
+      const orders = (
+        await c.direct_orders.find({ buyerId: { $in: users } }).toArray()
+      ).map((o) => o._id);
+      const contexts = (
+        await c.workflow_contexts.find({ orderId: { $in: orders } }).toArray()
+      ).map((x) => x._id);
+      const commitments = (
+        await c.exclusive_commitments
+          .find({ currentContextId: { $in: contexts } })
+          .toArray()
+      ).map((x) => x._id);
+      const topups = (
+        await c.topup_intents.find({ ownerId: { $in: users } }).toArray()
+      ).map((t) => t._id);
+      // Removing this suite's order and topup journals together returns the
+      // drained simulator funds to the shared source (capital is conserved).
+      const journals = (
+        await c.ledger_journals
+          .find({
+            $or: [{ orderId: { $in: orders } }, { topupId: { $in: topups } }],
+          })
+          .toArray()
+      ).map((j) => j._id);
+      const accounts = (
+        await c.wallet_accounts
+          .find({
+            $or: [{ ownerId: { $in: users } }, { orderId: { $in: orders } }],
+          })
+          .toArray()
+      ).map((a) => a._id);
+      await c.ledger_entries.deleteMany({ journalId: { $in: journals } });
+      await c.ledger_journals.deleteMany({ _id: { $in: journals } });
+      await c.simulated_payment_events.deleteMany({
+        intentId: { $in: topups },
+      });
+      await c.topup_intents.deleteMany({ _id: { $in: topups } });
+      await c.account_locks.deleteMany({ _id: { $in: accounts } });
+      await c.wallet_accounts.deleteMany({ _id: { $in: accounts } });
+      await c.commitment_events.deleteMany({
+        commitmentId: { $in: commitments },
+      });
+      await c.exclusive_commitments.deleteMany({ _id: { $in: commitments } });
+      await c.agreement_snapshots.deleteMany({ _id: { $in: contexts } });
+      await c.workflow_items.deleteMany({ contextId: { $in: contexts } });
+      await c.workflow_contexts.deleteMany({ _id: { $in: contexts } });
+      await c.direct_orders.deleteMany({ _id: { $in: orders } });
+      await c.sale_quotes.deleteMany({ buyerId: { $in: users } });
+      const listings = (
+        await c.listings.find({ ownerId: { $in: users } }).toArray()
+      ).map((l) => l._id);
+      const revisions = (
+        await c.listing_revisions
+          .find({ listingId: { $in: listings } })
+          .toArray()
+      ).map((r) => r._id);
+      const media = (
+        await c.listing_media.find({ listingId: { $in: listings } }).toArray()
+      ).map((m) => m._id);
+      const books = (
+        await c.catalog_books.find({ requesterId: { $in: users } }).toArray()
+      ).map((b) => b._id);
+      const bookRevisions = (
+        await c.catalog_revisions.find({ bookId: { $in: books } }).toArray()
+      ).map((r) => r._id);
+      // Worker receipts/audits carry no actor; they join through the context.
+      const history = {
+        $or: [
+          { actorId: { $in: users } },
+          { contextId: { $in: contexts } },
+          { topupId: { $in: topups } },
+        ],
+      };
+      const audits = (await c.audit_events.find(history).toArray()).map(
+        (a) => a._id,
+      );
+      await c.outbox_events.deleteMany({ auditId: { $in: audits } });
+      await c.audit_events.deleteMany({ _id: { $in: audits } });
+      await c.mutation_receipts.deleteMany(history);
+      await c.listing_decisions.deleteMany({ revisionId: { $in: revisions } });
+      await c.revision_media.deleteMany({ listingId: { $in: listings } });
+      await c.media_processing_jobs.deleteMany({ mediaId: { $in: media } });
+      await c.listing_media.deleteMany({ _id: { $in: media } });
+      await c.listing_revisions.deleteMany({ _id: { $in: revisions } });
+      await c.listings.deleteMany({ _id: { $in: listings } });
+      await c.catalog_decisions.deleteMany({
+        revisionId: { $in: bookRevisions },
+      });
+      await c.catalog_revisions.deleteMany({ _id: { $in: bookRevisions } });
+      await c.catalog_books.deleteMany({ _id: { $in: books } });
+      await c.member_addresses.deleteMany({ ownerId: { $in: users } });
+      await c.address_identities.deleteMany({ ownerId: { $in: users } });
+      await c.address_books.deleteMany({ _id: { $in: users } });
+      await db.removeUsers(users);
+      await db.close();
+    }
     await app?.close();
-    await db?.$disconnect();
-    if (pool && /^payment_http_test_[a-f0-9]{32}$/.test(schema))
-      await pool.query(`DROP SCHEMA "${schema}" CASCADE`);
-    await adapter?.dispose();
     if (originalSecret === undefined)
       delete process.env.PAYMENT_SIMULATOR_SECRET;
     else process.env.PAYMENT_SIMULATOR_SECRET = originalSecret;
@@ -264,24 +363,32 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
     listingId: string,
     status: 'Ready' | 'Pending' = 'Ready',
   ) {
-    const key = randomUUID();
+    const key = randomUUID(),
+      now = new Date();
     // Fixture derivative only: not proof of upload/Sharp/live-provider behavior.
-    return db.listingMedia.create({
-      data: {
-        listingId,
-        status,
-        stagingKey: key,
-        pinnedKey: status === 'Ready' ? key + '/input' : null,
-        derivativeKey: status === 'Ready' ? key + '/display.webp' : null,
-        mimeType: 'image/jpeg',
-        byteSize: 100,
-        sha256: 'a'.repeat(64),
-        width: status === 'Ready' ? 20 : null,
-        height: status === 'Ready' ? 20 : null,
-        reservedBytes: 1000,
-        expiresAt: new Date(Date.now() + 3600000),
-      },
-    });
+    const doc = {
+      _id: randomUUID(),
+      listingId,
+      version: 1,
+      status,
+      stagingKey: key,
+      pinnedKey: status === 'Ready' ? key + '/input' : null,
+      derivativeKey: status === 'Ready' ? key + '/display.webp' : null,
+      mimeType: 'image/jpeg',
+      byteSize: 100,
+      sha256: 'a'.repeat(64),
+      width: status === 'Ready' ? 20 : null,
+      height: status === 'Ready' ? 20 : null,
+      failureCode: null,
+      expiresAt: new Date(Date.now() + 3600000),
+      purgedAt: null,
+      reservedBytes: 1000,
+      createdAt: now,
+      updatedAt: now,
+      lockSeq: 0,
+    };
+    await db.c.listing_media.insertOne(doc);
+    return { ...doc, id: doc._id };
   }
   async function complete(
     actor = m1,
@@ -449,35 +556,51 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
     expect(r.headers['cache-control']).toContain('no-store');
     return r.body;
   }
+  const findOrder = async (id: string) =>
+    (await db.c.direct_orders.findOne({ _id: id }))!;
   async function stateCounts(listingId: string) {
-    const contexts = await db.workflowContext.findMany({
-        where: { items: { some: { listingId } } },
-        select: { id: true },
-      }),
-      ids = contexts.map((c) => c.id);
+    const c = db.c;
+    const ids = (await c.workflow_items.find({ listingId }).toArray()).map(
+        (i) => i.contextId,
+      ),
+      orderIds = (
+        await c.workflow_contexts.find({ _id: { $in: ids } }).toArray()
+      ).map((x) => x.orderId),
+      commitments = (
+        await c.exclusive_commitments.find({ listingId }).toArray()
+      ).map((x) => x._id),
+      audits = (
+        await c.audit_events.find({ contextId: { $in: ids } }).toArray()
+      ).map((a) => a._id);
     return {
-      orders: await db.directOrder.count({
-        where: { context: { id: { in: ids } } },
+      orders: await c.direct_orders.countDocuments({ _id: { $in: orderIds } }),
+      items: await c.workflow_items.countDocuments({ contextId: { $in: ids } }),
+      agreements: await c.agreement_snapshots.countDocuments({
+        _id: { $in: ids },
       }),
-      items: await db.workflowItem.count({ where: { contextId: { in: ids } } }),
-      agreements: await db.agreementSnapshot.count({
-        where: { contextId: { in: ids } },
+      active: await c.exclusive_commitments.countDocuments({
+        listingId,
+        status: 'Active',
       }),
-      active: await db.exclusiveCommitment.count({
-        where: { listingId, status: 'Active' },
+      events: await c.commitment_events.countDocuments({
+        commitmentId: { $in: commitments },
       }),
-      events: await db.commitmentEvent.count({
-        where: { commitment: { listingId } },
+      receipts: await c.mutation_receipts.countDocuments({
+        contextId: { $in: ids },
       }),
-      receipts: await db.mutationReceipt.count({
-        where: { contextId: { in: ids } },
-      }),
-      audits: await db.auditEvent.count({ where: { contextId: { in: ids } } }),
-      outbox: await db.outboxEvent.count({
-        where: { audit: { contextId: { in: ids } } },
+      audits: audits.length,
+      outbox: await c.outbox_events.countDocuments({
+        auditId: { $in: audits },
       }),
     };
   }
+  const journals = (
+    orderId: string | { $in: string[] },
+    type?: LedgerJournalDoc['type'],
+  ) =>
+    db.c.ledger_journals.countDocuments({ orderId, ...(type ? { type } : {}) });
+  const holdAccounts = (orderId: string) =>
+    db.c.wallet_accounts.countDocuments({ orderId });
   async function fund(actor: Reader, amount = 500000) {
     const intent = (await post('/me/topups', { amount }, actor).expect(200))
       .body;
@@ -520,17 +643,16 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
       actor,
       key,
     );
-  const reject = (f: PaymentFixture, actor = f.f.seller) =>
-    post(`/orders/${f.id}/reject`, { expectedVersion: 2 }, actor);
+  const reject = (f: PaymentFixture, actor = f.f.seller, key = randomUUID()) =>
+    post(`/orders/${f.id}/reject`, { expectedVersion: 2 }, actor, key);
   const wallet = async (actor: Reader) => {
     const r = await get('/me/wallet', actor).expect(200);
     validates('WalletSummary', r.body);
     return r.body;
   };
+  // One snapshot transaction, like the former REPEATABLE READ reconciliation.
   const reconcile = () =>
-    db.$transaction((tx) => app.get(LedgerService).reconcile(tx), {
-      isolationLevel: 'RepeatableRead',
-    });
+    app.get(MongoService).tx((tx) => app.get(LedgerService).reconcile(tx));
 
   it('moves full frozen P+S exactly once into a typed hold, keeps reservation and private contacts, with 48h deadline', async () => {
     const f = await ready(),
@@ -571,18 +693,15 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
       receipts: before.receipts + 1,
     });
     expect(
-      (await db.listing.findUniqueOrThrow({ where: { id: f.f.l.entityId } }))
-        .version,
+      (await db.c.listings.findOne({ _id: f.f.l.entityId }))!.version,
     ).toBe(f.f.l.version + 1);
     const replay = await pay(f, key).expect(200);
     expect(replay.body).toEqual(paid);
     expect(replay.headers['idempotency-replayed']).toBe('true');
     await pay(f).expect(409);
     await cancel(f.id, f.f.buyer).expect(409);
-    expect(await db.ledgerJournal.count({ where: { orderId: f.id } })).toBe(1);
-    const audit = await db.auditEvent.findUniqueOrThrow({
-      where: { receiptId: paid.id },
-    });
+    expect(await journals(f.id)).toBe(1);
+    const audit = (await db.c.audit_events.findOne({ receiptId: paid.id }))!;
     expect(audit.action).toBe('payOrder');
     expect((await reconcile()).balanced).toBe(true);
   });
@@ -591,7 +710,7 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
       key = randomUUID(),
       before = await stateCounts(f.f.l.entityId);
     await pay(f, key).expect(409);
-    expect(await db.walletAccount.count({ where: { orderId: f.id } })).toBe(0);
+    expect(await holdAccounts(f.id)).toBe(0);
     expect(await stateCounts(f.f.l.entityId)).toEqual(before);
     expect((await wallet(f.f.buyer)).available).toBe(1000);
     await fund(f.f.buyer, 300000);
@@ -674,28 +793,17 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
     await pay(f).expect(200);
     await reject(f, f.f.buyer).expect(404);
     await cancelPaid(f, randomUUID(), f.f.seller).expect(404);
-    await db.user.update({
-      where: { id: f.f.seller.id },
-      data: { status: 'LOCKED' },
-    });
+    await db.setStatus(f.f.seller.id, 'LOCKED');
     await reject(f).expect(200);
     expect((await orderView(f.id, f.f.seller)).cancellationReason).toBe(
       'SellerRejected',
     );
-    await db.user.update({
-      where: { id: f.f.buyer.id },
-      data: { status: 'DISABLED' },
-    });
+    await db.setStatus(f.f.buyer.id, 'DISABLED');
     await app.get(OrdersService).refund(f.id);
-    expect(
-      (await db.directOrder.findUniqueOrThrow({ where: { id: f.id } })).state,
-    ).toBe('Cancelled');
+    expect((await findOrder(f.id)).state).toBe('Cancelled');
     const other = await ready();
     await pay(other).expect(200);
-    await db.user.update({
-      where: { id: other.f.buyer.id },
-      data: { status: 'LOCKED' },
-    });
+    await db.setStatus(other.f.buyer.id, 'LOCKED');
     const key = randomUUID();
     await cancelPaid(other, key).expect(200);
     await cancelPaid(other, key).expect(200);
@@ -724,36 +832,22 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
       status = 404;
     }
     if (kind === 'locked' || kind === 'disabled') {
-      await db.user.update({
-        where: { id: actor.id },
-        data: { status: kind === 'locked' ? 'LOCKED' : 'DISABLED' },
-      });
+      await db.setStatus(actor.id, kind === 'locked' ? 'LOCKED' : 'DISABLED');
       status = kind === 'locked' ? 403 : 401;
     }
     if (kind === 'unverified') {
-      await db.user.update({
-        where: { id: actor.id },
-        data: { emailVerifiedAt: null },
-      });
+      await setUser([actor.id], { emailVerifiedAt: null });
       status = 401;
     }
     if (kind === 'revoked') {
-      await db.authSession.update({
-        where: { id: actor.sessionId },
-        data: { revokedAt: new Date() },
-      });
+      await setSession(actor.sessionId, { revokedAt: new Date() });
       status = 401;
     }
-    if (kind === 'role')
-      await db.userRole.deleteMany({ where: { userId: actor.id } });
-    if (kind === 'sellerLocked')
-      await db.user.update({
-        where: { id: f.f.seller.id },
-        data: { status: 'LOCKED' },
-      });
+    if (kind === 'role') await setUser([actor.id], { roles: [] });
+    if (kind === 'sellerLocked') await db.setStatus(f.f.seller.id, 'LOCKED');
     await pay(f, randomUUID(), actor).expect(status);
-    expect(await db.ledgerJournal.count({ where: { orderId: f.id } })).toBe(0);
-    expect(await db.walletAccount.count({ where: { orderId: f.id } })).toBe(0);
+    expect(await journals(f.id)).toBe(0);
+    expect(await holdAccounts(f.id)).toBe(0);
   });
   it('restricted buyer/seller can fund an existing order; guest, wrong version, extra amounts and reused key are rejected', async () => {
     const f = await ready();
@@ -767,10 +861,7 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
       { expectedVersion: 1, amount: 1 },
       f.f.buyer,
     ).expect(422);
-    await db.user.updateMany({
-      where: { id: { in: [f.f.buyer.id, f.f.seller.id] } },
-      data: { status: 'RESTRICTED' },
-    });
+    await setUser([f.f.buyer.id, f.f.seller.id], { status: 'RESTRICTED' });
     const key = randomUUID();
     await pay(f, key).expect(200);
     await pay(f, key, f.f.buyer, 2).expect(409);
@@ -786,9 +877,7 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
       } finally {
         clock.mockRestore();
       }
-      expect(await db.ledgerJournal.count({ where: { orderId: f.id } })).toBe(
-        offset < 0 ? 1 : 0,
-      );
+      expect(await journals(f.id)).toBe(offset < 0 ? 1 : 0);
     },
   );
   it.each([
@@ -800,29 +889,37 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
     'waiting payment rechecks %s at a verified DB barrier',
     async (kind) => {
       const f = await ready(),
-        gate = await blockUser(
-          kind === 'lockSeller' ? f.f.seller.id : f.f.buyer.id,
-        );
+        target = kind === 'lockSeller' ? f.f.seller.id : f.f.buyer.id,
+        gate = await Gate.lockUser(db.client, target);
       const clock = vi.spyOn(app.get(OrderClock), 'now');
       const pending = pay(f).then((r) => r);
       try {
-        await blockedBy(gate.pid, 1, gate.connection);
+        await gate.contended();
         expect(clock).not.toHaveBeenCalled();
+        // Changes commit together with the lock holder, like the statements
+        // issued on the blocking PostgreSQL connection.
+        const inGate = { session: gate.session };
         if (kind === 'paymentDeadline')
           clock.mockResolvedValue(new Date(f.r.paymentDeadline));
         else if (kind === 'sessionDeadline') {
           const deadline = new Date(Date.now() + 30000);
-          await gate.connection.query(
-            'UPDATE auth_sessions SET expires_at=$1 WHERE id=$2',
-            [deadline, f.f.buyer.sessionId],
-          );
+          await gate.db
+            .collection<{ _id: string }>('auth_sessions')
+            .updateOne(
+              { _id: f.f.buyer.sessionId },
+              { $set: { expiresAt: deadline }, $inc: { lockSeq: 1 } },
+              inGate,
+            );
           clock.mockResolvedValue(deadline);
         } else
-          await gate.connection.query(
-            "UPDATE users SET status='LOCKED' WHERE id=$1",
-            [kind === 'lockSeller' ? f.f.seller.id : f.f.buyer.id],
-          );
-        await gate.connection.query('COMMIT');
+          await gate.db
+            .collection<{ _id: string }>('users')
+            .updateOne(
+              { _id: target },
+              { $set: { status: 'LOCKED', updatedAt: new Date() } },
+              inGate,
+            );
+        await gate.commit();
         expect((await pending).status).toBe(
           kind === 'paymentDeadline'
             ? 409
@@ -830,12 +927,9 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
               ? 401
               : 403,
         );
-        expect(await db.ledgerJournal.count({ where: { orderId: f.id } })).toBe(
-          0,
-        );
+        expect(await journals(f.id)).toBe(0);
       } finally {
-        await gate.connection.query('ROLLBACK');
-        gate.connection.release();
+        await gate.close();
         await pending;
         clock.mockRestore();
       }
@@ -845,108 +939,114 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
     '%s wins against the other unpaid command under a DB barrier',
     async (first) => {
       const f = await ready(),
-        gate = await blockUser(f.f.buyer.id);
-      const a = () => pay(f).then((r) => r),
-        b = () => cancel(f.id, f.f.buyer).then((r) => r);
-      const one = first === 'pay' ? a() : b();
+        payKey = randomUUID(),
+        cancelKey = randomUUID();
+      const a = () => settle(() => pay(f, payKey)),
+        b = () => settle(() => cancel(f.id, f.f.buyer, cancelKey));
+      const pause = pauseDecision(),
+        retries = watchRetries(),
+        one = first === 'pay' ? a() : b();
       let two: ReturnType<typeof a> | undefined;
       try {
-        await blockedBy(gate.pid, 1, gate.connection);
+        await pause.reached;
         two = first === 'pay' ? b() : a();
-        await blockedBy(gate.pid, 2, gate.connection);
-        await gate.connection.query('COMMIT');
+        // The loser contends for the participant locks the winner holds.
+        await retries.until(1);
+        pause.release();
         expect((await one).status).toBe(200);
         expect((await two).status).toBe(409);
-        expect(await db.ledgerJournal.count({ where: { orderId: f.id } })).toBe(
-          first === 'pay' ? 1 : 0,
-        );
+        expect(await journals(f.id)).toBe(first === 'pay' ? 1 : 0);
       } finally {
-        await gate.connection.query('ROLLBACK');
-        gate.connection.release();
+        pause.release();
+        retries.stop();
         await one;
         await two;
+        pause.spy.mockRestore();
       }
     },
   );
   it('payment before deadline beats stale expiry; expiry at deadline beats payment and late topup never reopens order', async () => {
     const f = await ready(),
-      gate = await blockUser(f.f.buyer.id),
-      clock = vi
-        .spyOn(app.get(OrderClock), 'now')
-        .mockResolvedValue(
-          new Date(new Date(f.r.paymentDeadline).getTime() - 1),
-        );
-    const paid = pay(f).then((r) => r);
+      t = Date.parse(f.r.paymentDeadline),
+      pause = pauseDecision(new Date(t - 1));
+    pause.spy.mockResolvedValue(new Date(t - 1));
+    const retries = watchRetries(),
+      payKey = randomUUID();
+    const paid = settle(() => pay(f, payKey));
     let expired: Promise<unknown> | undefined;
     try {
-      await blockedBy(gate.pid, 1, gate.connection);
-      expired = app
-        .get(OrdersService)
-        .expire(f.id)
-        .catch((e) => e);
-      await blockedBy(gate.pid, 2, gate.connection);
-      await gate.connection.query('COMMIT');
+      await pause.reached;
+      expired = settleWorker(() => app.get(OrdersService).expire(f.id)).catch(
+        (e) => e,
+      );
+      await retries.until(1);
+      pause.release();
       expect((await paid).status).toBe(200);
       expect(await expired).toHaveProperty('status', 409);
     } finally {
-      await gate.connection.query('ROLLBACK');
-      gate.connection.release();
+      pause.release();
+      retries.stop();
       await paid;
       await expired;
-      clock.mockRestore();
+      pause.spy.mockRestore();
     }
     const g = await ready(),
-      gate2 = await blockUser(g.f.buyer.id),
-      clock2 = vi
-        .spyOn(app.get(OrderClock), 'now')
-        .mockResolvedValue(new Date(g.r.paymentDeadline));
-    const first = app.get(OrdersService).expire(g.id);
-    let second: Promise<any> | undefined;
+      tg = Date.parse(g.r.paymentDeadline),
+      pause2 = pauseDecision(new Date(tg));
+    pause2.spy.mockResolvedValue(new Date(tg));
+    const retries2 = watchRetries(),
+      key2 = randomUUID();
+    const first = settleWorker(() => app.get(OrdersService).expire(g.id));
+    let second: Promise<request.Response> | undefined;
     try {
-      await blockedBy(gate2.pid, 1, gate2.connection);
-      second = pay(g).then((r) => r);
-      await blockedBy(gate2.pid, 2, gate2.connection);
-      await gate2.connection.query('COMMIT');
+      await pause2.reached;
+      second = settle(() => pay(g, key2));
+      await retries2.until(1);
+      pause2.release();
       expect((await first).receipt.state).toBe('PaymentExpired');
       expect((await second).status).toBe(409);
     } finally {
-      await gate2.connection.query('ROLLBACK');
-      gate2.connection.release();
+      pause2.release();
+      retries2.stop();
       await first;
       await second;
-      clock2.mockRestore();
+      pause2.spy.mockRestore();
     }
     await fund(g.f.buyer, 1000);
     await pay(g).expect(409);
-    expect(await db.ledgerJournal.count({ where: { orderId: g.id } })).toBe(0);
+    expect(await journals(g.id)).toBe(0);
   });
   it('two orders cannot spend the same available money; concurrent same-key pay posts one journal', async () => {
     const f = await ready(250000),
       g = await ready(0, await setup(200000, 'Sale', f.f.buyer)),
-      gate = await blockUser(f.f.buyer.id),
-      key = randomUUID();
-    const calls = [
-      pay(f, key).then((r) => r),
-      pay(f, key).then((r) => r),
-      pay(g).then((r) => r),
-    ];
+      key = randomUUID(),
+      otherKey = randomUUID();
+    // PostgreSQL queued all three on the buyer row lock and granted it in
+    // arrival order; here the first payment is held inside its transaction
+    // while the other two provably contend, then released.
+    const pause = pauseDecision(),
+      retries = watchRetries();
+    const calls = [settle(() => pay(f, key))];
     try {
-      await blockedBy(gate.pid, 3, gate.connection);
-      await gate.connection.query('COMMIT');
+      await pause.reached;
+      calls.push(
+        settle(() => pay(f, key)),
+        settle(() => pay(g, otherKey)),
+      );
+      await retries.until(2);
+      pause.release();
       const results = await Promise.all(calls);
       expect(results[0].status).toBe(200);
+      expect(results[1].status).toBe(200);
       expect(results[1].body).toEqual(results[0].body);
       expect(results[2].status).toBe(409);
       expect((await wallet(f.f.buyer)).available).toBeGreaterThanOrEqual(0);
-      expect(
-        await db.ledgerJournal.count({
-          where: { orderId: { in: [f.id, g.id] } },
-        }),
-      ).toBe(1);
+      expect(await journals({ $in: [f.id, g.id] })).toBe(1);
     } finally {
-      await gate.connection.query('ROLLBACK');
-      gate.connection.release();
-      await Promise.all(calls);
+      pause.release();
+      retries.stop();
+      await Promise.allSettled(calls);
+      pause.spy.mockRestore();
     }
   });
   it.each([-1, 0, 1])(
@@ -954,15 +1054,10 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
     async (offset) => {
       const f = await ready();
       await pay(f).expect(200);
-      const o = await db.directOrder.findUniqueOrThrow({ where: { id: f.id } });
+      const o = await findOrder(f.id);
       // Worker has no session dependency. Keep test member session valid for the HTTP edge test.
-      await db.authSession.update({
-        where: { id: f.f.seller.sessionId },
-        data: {
-          expiresAt: new Date(
-            o.sellerConfirmationDeadline!.getTime() + 3600000,
-          ),
-        },
+      await setSession(f.f.seller.sessionId, {
+        expiresAt: new Date(o.sellerConfirmationDeadline!.getTime() + 3600000),
       });
       const clock = vi
         .spyOn(app.get(OrderClock), 'now')
@@ -973,8 +1068,8 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
         await reject(f).expect(offset < 0 ? 200 : 409);
         if (offset >= 0) {
           const results = await Promise.all([
-            app.get(OrdersService).expireConfirmation(f.id),
-            app.get(OrdersService).expireConfirmation(f.id),
+            settleWorker(() => app.get(OrdersService).expireConfirmation(f.id)),
+            settleWorker(() => app.get(OrdersService).expireConfirmation(f.id)),
           ]);
           expect(results[0].receipt).toEqual(results[1].receipt);
         }
@@ -986,11 +1081,7 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
         available: 500000,
         transactionHeld: 0,
       });
-      expect(
-        await db.ledgerJournal.count({
-          where: { orderId: f.id, type: 'OrderRefund' },
-        }),
-      ).toBe(1);
+      expect(await journals(f.id, 'OrderRefund')).toBe(1);
     },
   );
   it.each([
@@ -1000,25 +1091,20 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
     'outbox_events',
   ] as const)(
     'payment failure at %s rolls back every effect, same key can retry',
-    async (table) => {
+    async (collection) => {
       const f = await ready(),
         key = randomUUID(),
         before = await stateCounts(f.f.l.entityId);
-      await pool.query(
-        `CREATE FUNCTION fail_payment() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test failpoint'; END $$; CREATE TRIGGER fail_payment BEFORE INSERT ON ${table} FOR EACH ROW EXECUTE FUNCTION fail_payment()`,
+      // Temporary validator rule rejecting every insert (the former failing
+      // BEFORE INSERT trigger on the table).
+      await db.withRejectingValidator(
+        collection,
+        { _id: { $exists: true } },
+        () => pay(f, key).expect(500),
       );
-      try {
-        await pay(f, key).expect(500);
-      } finally {
-        await pool.query(
-          `DROP TRIGGER fail_payment ON ${table}; DROP FUNCTION fail_payment()`,
-        );
-      }
       expect(await stateCounts(f.f.l.entityId)).toEqual(before);
       expect((await wallet(f.f.buyer)).available).toBe(500000);
-      expect(await db.walletAccount.count({ where: { orderId: f.id } })).toBe(
-        0,
-      );
+      expect(await holdAccounts(f.id)).toBe(0);
       await pay(f, key).expect(200);
     },
   );
@@ -1026,39 +1112,35 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
     const f = await ready();
     await pay(f).expect(200);
     await cancelPaid(f).expect(200);
-    await pool.query(
-      `CREATE FUNCTION fail_refund() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.type='OrderRefund' THEN RAISE EXCEPTION 'test failpoint'; END IF; RETURN NEW; END $$; CREATE TRIGGER fail_refund BEFORE INSERT ON ledger_journals FOR EACH ROW EXECUTE FUNCTION fail_refund()`,
+    await db.withRejectingValidator(
+      'ledger_journals',
+      { type: 'OrderRefund' },
+      async () => {
+        const result = await app.get(OrderExpiryWorker).tick();
+        expect(result.failed).toBeGreaterThan(0);
+        expect(result.refundRemaining).toBeGreaterThan(0);
+        expect(await orderView(f.id, f.f.buyer)).toMatchObject({
+          state: 'SettlementPending',
+          refundedAmount: 0,
+          commitment: { status: 'Active' },
+        });
+      },
     );
-    try {
-      const result = await app.get(OrderExpiryWorker).tick();
-      expect(result.failed).toBeGreaterThan(0);
-      expect(result.refundRemaining).toBeGreaterThan(0);
-      expect(await orderView(f.id, f.f.buyer)).toMatchObject({
-        state: 'SettlementPending',
-        refundedAmount: 0,
-        commitment: { status: 'Active' },
-      });
-    } finally {
-      await pool.query(
-        'DROP TRIGGER fail_refund ON ledger_journals; DROP FUNCTION fail_refund()',
-      );
-    }
     await app.close();
     app = await makeApp();
-    const gate = await blockUser(f.f.buyer.id),
+    const gate = await Gate.lockUser(db.client, f.f.buyer.id),
       calls = [
-        app.get(OrdersService).refund(f.id),
-        app.get(OrdersService).refund(f.id),
+        settleWorker(() => app.get(OrdersService).refund(f.id)),
+        settleWorker(() => app.get(OrdersService).refund(f.id)),
       ];
     try {
-      await blockedBy(gate.pid, 2, gate.connection);
-      await gate.connection.query('COMMIT');
+      await gate.contended(2);
+      await gate.commit();
       const results = await Promise.all(calls);
       expect(results[0].receipt).toEqual(results[1].receipt);
     } finally {
-      await gate.connection.query('ROLLBACK');
-      gate.connection.release();
-      await Promise.all(calls);
+      await gate.close();
+      await Promise.allSettled(calls);
     }
     expect(await wallet(f.f.buyer)).toMatchObject({
       available: 500000,
@@ -1066,41 +1148,83 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
     });
     expect((await stateCounts(f.f.l.entityId)).events).toBe(2);
   });
-  it('raw SQL cannot pay without a journal, forge refund decision, release funded stock or mutate journal/hold history', async () => {
+  it('raw writes cannot pay without a journal, forge refund decision, release funded stock or mutate journal/hold history', async () => {
     const f = await ready();
+    // Cross-document rules are commit-time checks (C): a raw write in the
+    // application's transaction that registers them is aborted.
     await expect(
-      pool.query(
-        "UPDATE direct_orders SET state='PendingSellerConfirmation',version=2,paid_at=statement_timestamp(),seller_confirmation_deadline=statement_timestamp()+interval '48 hours' WHERE id=$1",
-        [f.id],
-      ),
+      checked(async (tx) => {
+        const now = await tx.now();
+        await tx.c.direct_orders.updateOne(
+          { _id: f.id },
+          {
+            $set: {
+              state: 'PendingSellerConfirmation',
+              paidAt: now,
+              sellerConfirmationDeadline: new Date(
+                now.getTime() + 48 * 3600000,
+              ),
+            },
+            $inc: { version: 1 },
+          },
+        );
+      }, f.id),
     ).rejects.toThrow('Order funding/hold projection mismatch');
     await pay(f).expect(200);
     await expect(
-      pool.query(
-        "UPDATE direct_orders SET state='SettlementPending',version=3,cancellation_requested_at=clock_timestamp(),cancellation_reason='BuyerCancelled' WHERE id=$1",
-        [f.id],
+      checked(async (tx) => {
+        await tx.c.direct_orders.updateOne(
+          { _id: f.id },
+          {
+            $set: {
+              state: 'SettlementPending',
+              cancellationRequestedAt: await tx.now(),
+              cancellationReason: 'BuyerCancelled',
+            },
+            $inc: { version: 1 },
+          },
+        );
+      }, f.id),
+    ).rejects.toThrow('Missing authorized refund decision');
+    await expect(
+      checked(async (tx) => {
+        await tx.c.exclusive_commitments.updateOne(
+          { currentContextId: f.r.contextId },
+          {
+            $set: {
+              status: 'Released',
+              version: 2,
+              endedAt: await tx.now(),
+              reason: 'Cancelled',
+            },
+          },
+        );
+      }, f.id),
+    ).rejects.toThrow('Order commitment mismatch');
+    // Hold accounts and posted money are append-only for the app user (P).
+    const appDb = app.get(MongoService).c;
+    await expect(
+      appDb.wallet_accounts.updateOne(
+        { orderId: f.id },
+        { $set: { orderId: null } },
       ),
-    ).rejects.toBeDefined();
+    ).rejects.toMatchObject({ code: 13 });
+    const journal = (await db.c.ledger_journals.findOne({ orderId: f.id }))!;
     await expect(
-      pool.query(
-        "UPDATE exclusive_commitments SET status='Released',version=2,ended_at=clock_timestamp(),reason='Cancelled' WHERE current_context_id=$1",
-        [f.r.contextId],
+      appDb.ledger_entries.updateMany(
+        { journalId: journal._id },
+        { $inc: { debit: 1 } },
       ),
-    ).rejects.toBeDefined();
+    ).rejects.toMatchObject({ code: 13 });
     await expect(
-      pool.query('UPDATE wallet_accounts SET order_id=NULL WHERE order_id=$1', [
-        f.id,
-      ]),
-    ).rejects.toBeDefined();
-    await expect(
-      pool.query(
-        'UPDATE ledger_entries SET debit=debit+1 WHERE journal_id IN (SELECT id FROM ledger_journals WHERE order_id=$1)',
-        [f.id],
-      ),
-    ).rejects.toBeDefined();
-    await expect(
-      pool.query('DELETE FROM ledger_journals WHERE order_id=$1', [f.id]),
-    ).rejects.toBeDefined();
+      appDb.ledger_journals.deleteMany({ orderId: f.id }),
+    ).rejects.toMatchObject({ code: 13 });
+    expect(await findOrder(f.id)).toMatchObject({
+      state: 'PendingSellerConfirmation',
+      version: 2,
+    });
+    expect(await holdAccounts(f.id)).toBe(1);
+    expect(await journals(f.id)).toBe(1);
     expect((await reconcile()).balanced).toBe(true);
   });
   it.each(['cancel', 'reject'] as const)(
@@ -1108,23 +1232,27 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
     async (first) => {
       const f = await ready();
       await pay(f).expect(200);
-      const gate = await blockUser(f.f.buyer.id);
-      const a = () => cancelPaid(f).then((r) => r),
-        b = () => reject(f).then((r) => r);
-      const one = first === 'cancel' ? a() : b();
+      const cancelKey = randomUUID(),
+        rejectKey = randomUUID();
+      const a = () => settle(() => cancelPaid(f, cancelKey)),
+        b = () => settle(() => reject(f, f.f.seller, rejectKey));
+      const pause = pauseDecision(),
+        retries = watchRetries(),
+        one = first === 'cancel' ? a() : b();
       let two: ReturnType<typeof a> | undefined;
       try {
-        await blockedBy(gate.pid, 1, gate.connection);
+        await pause.reached;
         two = first === 'cancel' ? b() : a();
-        await blockedBy(gate.pid, 2, gate.connection);
-        await gate.connection.query('COMMIT');
+        await retries.until(1);
+        pause.release();
         expect((await one).status).toBe(200);
         expect((await two).status).toBe(409);
       } finally {
-        await gate.connection.query('ROLLBACK');
-        gate.connection.release();
+        pause.release();
+        retries.stop();
         await one;
         await two;
+        pause.spy.mockRestore();
       }
       const view = await orderView(f.id, f.f.buyer);
       expect(view.cancellationReason).toBe(
@@ -1136,26 +1264,26 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
   );
   it('100 concurrent payment requests with one key have one economic effect and identical receipts', async () => {
     const f = await ready(),
-      gate = await blockUser(f.f.buyer.id),
-      key = randomUUID(),
-      calls = Array.from({ length: 100 }, () => pay(f, key).then((r) => r));
+      gate = await Gate.lockUser(db.client, f.f.buyer.id),
+      key = randomUUID();
+    // PostgreSQL queued all 100 on the row lock. MongoDB aborts and retries
+    // within a 5 s budget and answers 503 "retry the same request" when it is
+    // exhausted; a client that does exactly that must end with 100 identical
+    // receipts.
+    let calls: Promise<request.Response>[] = [];
     try {
-      await blockedBy(gate.pid, 10, gate.connection);
-      await gate.connection.query('COMMIT');
+      calls = Array.from({ length: 100 }, () => settle(() => pay(f, key)));
+      await gate.contended(10);
+      await gate.commit();
       const results = await Promise.all(calls);
       expect(results.every((r) => r.status === 200)).toBe(true);
       expect(new Set(results.map((r) => r.body.id)).size).toBe(1);
-      expect(
-        await db.ledgerJournal.count({
-          where: { orderId: f.id, type: 'OrderPayment' },
-        }),
-      ).toBe(1);
+      expect(await journals(f.id, 'OrderPayment')).toBe(1);
     } finally {
-      await gate.connection.query('ROLLBACK');
-      gate.connection.release();
-      await Promise.all(calls);
+      await gate.close();
+      await Promise.allSettled(calls);
     }
-  }, 30000);
+  }, 120000);
   it.each(['wrongRecipient', 'wrongAmount'] as const)(
     'database rejects %s even if a service produces balanced payment entries',
     async (kind) => {
@@ -1164,9 +1292,23 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
         original = ledger.postOrder.bind(ledger);
       const foreign = await reader();
       await fund(foreign, 1000);
-      const account = await db.walletAccount.findUniqueOrThrow({
-        where: { ownerId: foreign.id },
-      });
+      const account = (await db.c.wallet_accounts.findOne({
+        ownerId: foreign.id,
+      }))!;
+      // A faulty service still writes through the ledger's journal writer
+      // (write protocol W), whose commit-time journal check (C, formerly the
+      // deferred latlai_check_journal trigger) must reject it.
+      const writeJournal = (
+        ledger as unknown as {
+          journal: (
+            tx: Tx,
+            fields: Omit<LedgerJournalDoc, '_id' | 'sequence'>,
+            from: string,
+            to: string,
+            amount: number,
+          ) => Promise<LedgerJournalDoc>;
+        }
+      ).journal.bind(ledger);
       const mock = vi
         .spyOn(ledger, 'postOrder')
         .mockImplementation(
@@ -1181,28 +1323,20 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
                 now,
                 refund,
               );
-            return tx.ledgerJournal.create({
-              data: {
+            return writeJournal(
+              tx,
+              {
                 type: 'OrderPayment',
+                topupId: null,
+                eventId: null,
                 orderId: id,
                 receiptId: receipt,
                 postedAt: now,
-                entries: {
-                  create: [
-                    {
-                      accountId: account.id,
-                      credit: BigInt(amount),
-                      debit: 0n,
-                    },
-                    {
-                      accountId: accounts.hold,
-                      credit: 0n,
-                      debit: BigInt(amount),
-                    },
-                  ],
-                },
               },
-            });
+              account._id,
+              accounts.hold,
+              amount,
+            );
           },
         );
       try {
@@ -1210,10 +1344,9 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
       } finally {
         mock.mockRestore();
       }
-      expect(await db.ledgerJournal.count({ where: { orderId: f.id } })).toBe(
-        0,
-      );
+      expect(await journals(f.id)).toBe(0);
       expect((await wallet(f.f.buyer)).available).toBe(500000);
+      expect((await wallet(foreign)).available).toBe(1000);
     },
   );
   it.each([
@@ -1225,28 +1358,28 @@ describe('Order wallet payment and pre-confirmation refund HTTP and PostgreSQL',
     'outbox_events',
   ] as const)(
     'refund failure at %s preserves the prior decision and is retryable',
-    async (table) => {
+    async (collection) => {
       const f = await ready();
       await pay(f).expect(200);
       await cancelPaid(f).expect(200);
       const before = await stateCounts(f.f.l.entityId);
-      const action = ['exclusive_commitments', 'direct_orders'].includes(table)
-        ? 'UPDATE'
-        : 'INSERT';
-      await pool.query(
-        `CREATE FUNCTION fail_close() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test failpoint'; END $$; CREATE TRIGGER fail_close BEFORE ${action} ON ${table} FOR EACH ROW EXECUTE FUNCTION fail_close()`,
+      // Temporary validator rule (the former failing trigger): inserts are
+      // rejected outright; for the two updated collections only the refund's
+      // closing update is rejected (BEFORE UPDATE; lock writes are not
+      // updates in PostgreSQL).
+      const rule =
+        collection === 'exclusive_commitments'
+          ? { status: 'Released' }
+          : collection === 'direct_orders'
+            ? { state: 'Cancelled' }
+            : { _id: { $exists: true } };
+      await db.withRejectingValidator(collection, rule, () =>
+        expect(app.get(OrdersService).refund(f.id)).rejects.toMatchObject({
+          code: 121,
+        }),
       );
-      try {
-        await expect(app.get(OrdersService).refund(f.id)).rejects.toBeDefined();
-      } finally {
-        await pool.query(
-          `DROP TRIGGER fail_close ON ${table}; DROP FUNCTION fail_close()`,
-        );
-      }
       expect(await stateCounts(f.f.l.entityId)).toEqual(before);
-      expect(await db.ledgerJournal.count({ where: { orderId: f.id } })).toBe(
-        1,
-      );
+      expect(await journals(f.id)).toBe(1);
       expect((await orderView(f.id, f.f.buyer)).state).toBe(
         'SettlementPending',
       );
