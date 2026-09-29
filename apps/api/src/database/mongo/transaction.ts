@@ -34,6 +34,10 @@ export class Tx {
   check(key: string, fn: () => Promise<void>) {
     this.checks.set(key, fn);
   }
+  // For read-only sweeps that already ran every check directly.
+  discardChecks() {
+    this.checks.clear();
+  }
   async runChecks() {
     // A check may register further checks (e.g. order -> listing projection).
     const done = new Set<string>();

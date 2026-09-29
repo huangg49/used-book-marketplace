@@ -1,7 +1,31 @@
 name: used-book-marketplace
 
 services:
+  # Primary database (ADR 0027). Single-node replica set with auth; the root
+  # password comes from the root .env (pnpm setup:local generates it).
+  mongo:
+    image: mongo:8.0
+    entrypoint: ["bash", "/scripts/node.sh"]
+    environment:
+      MONGO_PORT: "27017"
+      MONGO_REPLSET: rs-dev
+      MONGO_ROOT_USER: latlai_root
+      MONGO_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env (pnpm setup:local)}
+    ports:
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./mongo:/scripts:ro
+    healthcheck:
+      test: ["CMD", "bash", "/scripts/health.sh"]
+      interval: 3s
+      timeout: 15s
+      retries: 30
+
+  # Legacy source for the one-time import (pnpm --filter @used-books/api
+  # mongo:import-postgres). Kept under a profile; its volume is never removed.
   postgres:
+    profiles: [legacy-postgres]
     image: postgres:17-alpine
     environment:
       POSTGRES_DB: usedbooks
@@ -51,6 +75,7 @@ services:
       - "8025:8025"
 
 volumes:
+  mongo_data:
   postgres_data:
   redis_data:
   minio_data:

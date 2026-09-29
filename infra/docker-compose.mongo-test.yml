@@ -12,9 +12,14 @@ services:
   # least-privilege roles, never failover. Root user: latlai_qa_root (QA only).
   mongo-test:
     <<: *mongo-node
-    entrypoint: ["bash", "/qa/qa-node.sh"]
+    entrypoint: ["bash", "/scripts/node.sh"]
     environment:
-      TEST_MONGO_PORT: "${TEST_MONGO_PORT:-57017}"
+      MONGO_PORT: "${TEST_MONGO_PORT:-57017}"
+      MONGO_REPLSET: rs-test
+      MONGO_TEST_COMMANDS: "1"
+      # QA-only credentials; never used for development or production data.
+      MONGO_ROOT_USER: latlai_qa_root
+      MONGO_ROOT_PASSWORD: local_test_only
     ports:
       - "127.0.0.1:${TEST_MONGO_PORT:-57017}:${TEST_MONGO_PORT:-57017}"
     # Disposable QA data lives in memory: fast collection/index builds, and a
@@ -22,9 +27,9 @@ services:
     tmpfs:
       - /data/db:rw,size=2g
     volumes:
-      - ./mongo:/qa:ro
+      - ./mongo:/scripts:ro
     healthcheck:
-      test: ["CMD", "bash", "/qa/qa-health.sh"]
+      test: ["CMD", "bash", "/scripts/health.sh"]
       interval: 3s
       timeout: 15s
       retries: 30
