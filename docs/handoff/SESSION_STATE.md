@@ -18,7 +18,11 @@
 - **MIG-03 DONE**: [báo cáo](../refactor/MIG03_AUTH_COMMAND.md). Auth/limiter/executor/
   admin users trên Mongo; E2E đã port 21/21 ×3. `MONGODB_URL` giờ bắt buộc: `.env` local
   của chủ dự án chưa có nên API trên nhánh này sẽ không khởi động tới khi thêm (MIG-06).
-- **Bước tiếp theo**: MIG-04 — catalog/listing/media/address trên Mongo + kiểm commit-time.
+- **MIG-04 DONE**: [báo cáo](../refactor/MIG04_CATALOG_LISTING_MEDIA.md); 152 E2E Mongo PASS.
+- **MIG-05**: chủ dự án duyệt thiết kế tiền/quyền 29/09; toàn bộ service quote/order/
+  wallet/shipment đã chạy trên Mongo (commit f220c66), Prisma command/page đã gỡ. Đang
+  port E2E theo đợt (quotes+wallet → orders/obligations → payment/preparation/packaging/
+  shipments/carrier/delivery). Chưa có bằng chứng E2E cho MIG-05.
 
 ## Đọc ngay — sau merge ca16a22, lượt Codex trên Pixel_7
 
