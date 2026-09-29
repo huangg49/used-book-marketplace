@@ -99,6 +99,16 @@ const hasLabel = (error: unknown, label: string) =>
 export const isTransient = (error: unknown) =>
   hasLabel(error, 'TransientTransactionError');
 
+// Observers of transient retries (diagnostics and deterministic tests: a test
+// can wait until a command is provably contending for a lock it holds).
+export type RetryEvent = { transactionId: number; attempt: number };
+const retryListeners = new Set<(event: RetryEvent) => void>();
+export function onTransactionRetry(listener: (event: RetryEvent) => void) {
+  retryListeners.add(listener);
+  return () => void retryListeners.delete(listener);
+}
+let transactionSequence = 0;
+
 export async function runTransaction<T>(
   client: MongoClient,
   db: Db,
@@ -108,6 +118,11 @@ export async function runTransaction<T>(
   const maxAttempts = options.maxAttempts ?? 60;
   const commitAttempts = options.commitAttempts ?? 3;
   const deadline = Date.now() + (options.maxRetryMs ?? 5000);
+  const transactionId = ++transactionSequence;
+  const retried = (attempt: number) => {
+    for (const listener of retryListeners) listener({ transactionId, attempt });
+    return backoff(attempt);
+  };
   for (
     let attempt = 1;
     attempt <= maxAttempts && (attempt === 1 || Date.now() < deadline);
@@ -130,7 +145,7 @@ export async function runTransaction<T>(
       } catch (error) {
         await session.abortTransaction().catch(() => undefined);
         if (isTransient(error)) {
-          await backoff(attempt);
+          await retried(attempt);
           continue;
         }
         throw error;
@@ -154,7 +169,7 @@ export async function runTransaction<T>(
         }
       }
       if (retryWhole) {
-        await backoff(attempt);
+        await retried(attempt);
         continue;
       }
     } finally {

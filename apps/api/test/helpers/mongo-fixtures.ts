@@ -1,5 +1,5 @@
-import { randomUUID } from 'node:crypto';
-import { MongoClient } from 'mongodb';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { MongoClient, type Document } from 'mongodb';
 import {
   bindCollections,
   type Collections,
@@ -71,6 +71,41 @@ export class MongoFixtures {
       { _id: userId },
       { $set: { status, updatedAt: new Date() }, $inc: { lockSeq: 1 } },
     );
+  }
+  async session(userId: string) {
+    const id = randomUUID();
+    await this.c.auth_sessions.insertOne({
+      _id: id,
+      userId,
+      refreshTokenHash: randomBytes(32).toString('hex'),
+      expiresAt: new Date(Date.now() + 86_400_000),
+      revokedAt: null,
+      createdAt: new Date(),
+      lockSeq: 0,
+    });
+    return id;
+  }
+  // Fault injection, the equivalent of a temporary failing SQL trigger: adds a
+  // rule to a collection validator for the duration of `fn`, then restores it.
+  async withRejectingValidator<T>(
+    collection: string,
+    rejectWhen: Document,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    const db = this.client.db();
+    const [info] = (await db
+      .listCollections({ name: collection })
+      .toArray()) as { options?: { validator?: Document } }[];
+    const original = info.options!.validator!;
+    await db.command({
+      collMod: collection,
+      validator: { $and: [original, { $nor: [rejectWhen] }] },
+    });
+    try {
+      return await fn();
+    } finally {
+      await db.command({ collMod: collection, validator: original });
+    }
   }
   async removeUsers(ids: string[]) {
     await this.c.auth_sessions.deleteMany({ userId: { $in: ids } });

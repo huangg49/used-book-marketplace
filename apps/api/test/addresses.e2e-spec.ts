@@ -1,34 +1,17 @@
-import { randomBytes, randomUUID } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import type { INestApplication } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
-import {
-  PrismaClient,
-  type RoleCode,
-  type UserStatus,
-} from '../src/generated/prisma/client.js';
-import { DatabaseService } from '../src/database/database.service.js';
+import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
-import request from 'supertest';
-import { Ajv2020 } from 'ajv/dist/2020.js';
-import addFormats from 'ajv-formats';
-import { parse } from 'yaml';
+import type { RoleCode, UserStatus } from '../src/database/mongo/documents.js';
+import { MongoService } from '../src/database/mongo/mongo.service.js';
+import { checkAddressBook } from '../src/modules/addresses/addresses.service.js';
+import { validates } from './helpers/contract.js';
+import { Gate } from './helpers/mongo-gate.js';
+import { MongoFixtures } from './helpers/mongo-fixtures.js';
 
-const contract = parse(
-  readFileSync('../../packages/api-contract/openapi.yaml', 'utf8'),
-);
-const ajv = new Ajv2020({ strict: false });
-addFormats.default(ajv);
-ajv.addSchema({ $id: 'address-wire', components: contract.components });
-function validates(name: string, body: unknown) {
-  const f = ajv.compile({ $ref: `address-wire#/components/schemas/${name}` });
-  expect(f(body), JSON.stringify(f.errors)).toBe(true);
-}
-type Adapter = Awaited<ReturnType<PrismaPg['connect']>>;
-type Pool = ReturnType<Adapter['underlyingDriver']>;
 type Reader = { id: string; sessionId: string; token: string };
 const address = {
   recipientName: 'Bạn đọc kiểm thử',
@@ -37,9 +20,9 @@ const address = {
   localityCode: 'DEMO-A',
   detail: 'Bàn demo riêng tư — không giao thật',
 };
-describe('private member address book HTTP/PostgreSQL', () => {
-  const schema = `address_test_${randomUUID().replaceAll('-', '')}`;
-  let app: INestApplication, db: PrismaClient, adapter: Adapter, pool: Pool;
+describe('private member address book HTTP/MongoDB', () => {
+  let app: INestApplication, db: MongoFixtures;
+  const users: string[] = [];
   const get = (path: string, actor?: Reader) => {
     const c = request(app.getHttpServer()).get('/api/v1' + path);
     return actor ? c.set('Authorization', `Bearer ${actor.token}`) : c;
@@ -59,31 +42,16 @@ describe('private member address book HTTP/PostgreSQL', () => {
   async function reader(
     roles: RoleCode[] = ['MEMBER'],
     status: UserStatus = 'ACTIVE',
-  ) {
-    const id = randomUUID(),
-      sessionId = randomUUID();
-    await db.user.create({
-      data: {
-        id,
-        emailNormalized: `${id}@address.test`,
-        passwordHash: 'unused-no-login',
-        displayName: 'Test reader',
-        status,
-        emailVerifiedAt: new Date(),
-        roles: { create: roles.map((role) => ({ role })) },
-        sessions: {
-          create: {
-            id: sessionId,
-            refreshTokenHash: randomBytes(32).toString('hex'),
-            expiresAt: new Date(Date.now() + 86400000),
-          },
-        },
-      },
-    });
+  ): Promise<Reader> {
+    const user = await db.user({ roles, status });
+    users.push(user._id);
+    const sessionId = await db.session(user._id);
     return {
-      id,
+      id: user._id,
       sessionId,
-      token: await app.get(JwtService).signAsync({ sub: id, sid: sessionId }),
+      token: await app
+        .get(JwtService)
+        .signAsync({ sub: user._id, sid: sessionId }),
     };
   }
   async function create(actor: Reader, version = 0, makeDefault = false) {
@@ -100,58 +68,26 @@ describe('private member address book HTTP/PostgreSQL', () => {
     validates('AddressBook', r.body);
     return r.body;
   }
-  async function block(actor: Reader) {
-    const c = await pool.connect();
-    await c.query('BEGIN');
-    await c.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [actor.id]);
-    return {
-      c,
-      pid: (await c.query('SELECT pg_backend_pid() pid')).rows[0].pid,
-    };
-  }
-  async function waiting(pid: number, n = 1) {
-    const until = Date.now() + 4000;
-    while (Date.now() < until) {
-      const r = await pool.query(
-        'SELECT count(*)::int n FROM pg_stat_activity a WHERE $1 = ANY(pg_blocking_pids(a.pid)) OR EXISTS (SELECT 1 FROM pg_stat_activity b WHERE $1 = ANY(pg_blocking_pids(b.pid)) AND b.pid = ANY(pg_blocking_pids(a.pid)))',
-        [pid],
-      );
-      if (r.rows[0].n >= n) return;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-    throw new Error('Commands did not reach real lock barrier');
-  }
+  // Holds the owner lock in a transaction, like `SELECT ... FOR UPDATE`.
+  const block = (actor: Reader) => Gate.lockUser(db.client, actor.id);
   beforeAll(async () => {
-    const url = process.env.TEST_DATABASE_URL!;
-    if (!new URL(url).pathname.endsWith('_test'))
-      throw new Error('Test DB only');
-    adapter = await new PrismaPg({
-      connectionString: url,
-      max: 12,
-      options: `-c search_path=${schema},public -c timezone=UTC`,
-    }).connect();
-    pool = adapter.underlyingDriver();
-    await pool.query(`CREATE SCHEMA "${schema}"`);
-    for (const name of readdirSync('prisma/migrations')
-      .filter((n) => /^\d/.test(n))
-      .sort())
-      await pool.query(
-        readFileSync(`prisma/migrations/${name}/migration.sql`, 'utf8'),
-      );
-    db = new PrismaClient({ adapter: new PrismaPg(pool, { schema }) });
-    const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(DatabaseService)
-      .useValue(db)
-      .compile();
+    const module = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
     app = module.createNestApplication();
     configureApp(app, { docs: false, logRequests: false });
     await app.init();
+    db = await MongoFixtures.connect();
   }, 60000);
   afterAll(async () => {
+    await db.c.mutation_receipts.deleteMany({ addressBookId: { $in: users } });
+    await db.c.audit_events.deleteMany({ addressBookId: { $in: users } });
+    await db.c.member_addresses.deleteMany({ ownerId: { $in: users } });
+    await db.c.address_identities.deleteMany({ ownerId: { $in: users } });
+    await db.c.address_books.deleteMany({ _id: { $in: users } });
+    await db.removeUsers(users);
+    await db.close();
     await app?.close();
-    await db?.$disconnect();
-    if (pool) await pool.query(`DROP SCHEMA "${schema}" CASCADE`);
-    await adapter?.dispose();
   });
   it('exposes only labeled demo area codes to authenticated members', async () => {
     await get('/service-areas').expect(401);
@@ -192,10 +128,23 @@ describe('private member address book HTTP/PostgreSQL', () => {
     expect(b.items[1]).toMatchObject({
       isDefault: true,
       detail: 'Địa chỉ đã sửa',
+      version: 2,
     });
+    // Saving identical content does not advance the address content version.
     await command(
       a,
-      { expectedBookVersion: 4 },
+      {
+        expectedBookVersion: 4,
+        address: { ...address, detail: 'Địa chỉ đã sửa' },
+        makeDefault: false,
+      },
+      `/me/addresses/${second.addressId}`,
+      'put',
+    ).expect(200);
+    expect((await book(a)).items[1].version).toBe(2);
+    await command(
+      a,
+      { expectedBookVersion: 5 },
       `/me/addresses/${second.addressId}/archive`,
     ).expect(200);
     b = await book(a);
@@ -203,11 +152,15 @@ describe('private member address book HTTP/PostgreSQL', () => {
     expect(b.items[0].isDefault).toBe(true);
     await command(
       a,
-      { expectedBookVersion: 5 },
+      { expectedBookVersion: 6 },
       `/me/addresses/${first.addressId}/archive`,
     ).expect(200);
-    expect(await book(a)).toEqual({ version: 6, items: [] });
-    await create(a, 6);
+    expect(await book(a)).toEqual({ version: 7, items: [] });
+    // Deleted contacts keep only their identity (id/owner) for frozen history.
+    expect(
+      await db.c.address_identities.countDocuments({ ownerId: a.id }),
+    ).toBe(2);
+    await create(a, 7);
     expect((await book(a)).items[0].isDefault).toBe(true);
   });
   it('keeps recipient data out of receipts/audits and isolates owners, staff and guests', async () => {
@@ -230,10 +183,16 @@ describe('private member address book HTTP/PostgreSQL', () => {
       `/me/addresses/${saved.addressId}`,
       'put',
     ).expect(404);
+    // An upper-case path id is the same address (UUIDs are case-insensitive).
+    await command(
+      a,
+      { expectedBookVersion: 1 },
+      `/me/addresses/${saved.addressId.toUpperCase()}/default`,
+    ).expect(200);
     const records = JSON.stringify([
       saved,
-      await db.mutationReceipt.findMany({ where: { addressBookId: a.id } }),
-      await db.auditEvent.findMany({ where: { addressBookId: a.id } }),
+      await db.c.mutation_receipts.find({ addressBookId: a.id }).toArray(),
+      await db.c.audit_events.find({ addressBookId: a.id }).toArray(),
     ]);
     for (const pii of [address.phone, address.recipientName, address.detail])
       expect(records).not.toContain(pii);
@@ -289,10 +248,10 @@ describe('private member address book HTTP/PostgreSQL', () => {
       undefined,
       key,
     ).expect(409);
-    await db.authSession.update({
-      where: { id: a.sessionId },
-      data: { revokedAt: new Date() },
-    });
+    await db.c.auth_sessions.updateOne(
+      { _id: a.sessionId },
+      { $set: { revokedAt: new Date() }, $inc: { lockSeq: 1 } },
+    );
     await command(a, body, undefined, undefined, key).expect(401);
   });
   it('serializes two defaults at a real owner lock and rejects stale book version', async () => {
@@ -309,8 +268,8 @@ describe('private member address book HTTP/PostgreSQL', () => {
           `/me/addresses/${v.addressId}/default`,
         ).then((r) => r),
       );
-      await waiting(gate.pid, 2);
-      await gate.c.query('COMMIT');
+      await gate.contended(2);
+      await gate.commit();
       expect((await Promise.all(pending)).map((r) => r.status).sort()).toEqual([
         200, 409,
       ]);
@@ -320,8 +279,7 @@ describe('private member address book HTTP/PostgreSQL', () => {
         b.items.filter((i: { isDefault: boolean }) => i.isDefault),
       ).toHaveLength(1);
     } finally {
-      await gate.c.query('ROLLBACK');
-      gate.c.release();
+      await gate.close();
       await Promise.allSettled(pending);
     }
   });
@@ -338,8 +296,8 @@ describe('private member address book HTTP/PostgreSQL', () => {
           makeDefault: false,
         }).then((r) => r),
       );
-      await waiting(gate.pid, 2);
-      await gate.c.query('COMMIT');
+      await gate.contended(2);
+      await gate.commit();
       expect((await Promise.all(pending)).map((r) => r.status).sort()).toEqual([
         200, 409,
       ]);
@@ -350,8 +308,7 @@ describe('private member address book HTTP/PostgreSQL', () => {
         makeDefault: false,
       }).expect(429);
     } finally {
-      await gate.c.query('ROLLBACK');
-      gate.c.release();
+      await gate.close();
       await Promise.allSettled(pending);
     }
   });
@@ -365,18 +322,17 @@ describe('private member address book HTTP/PostgreSQL', () => {
       pending = [0, 1].map(() =>
         command(a, body, undefined, undefined, key).then((r) => r),
       );
-      await waiting(gate.pid, 2);
-      await gate.c.query('COMMIT');
+      await gate.contended(2);
+      await gate.commit();
       const [x, y] = await Promise.all(pending);
       expect(x.status).toBe(200);
       expect(y.body).toEqual(x.body);
       expect((await book(a)).items).toHaveLength(1);
       expect(
-        await db.auditEvent.count({ where: { addressBookId: a.id } }),
+        await db.c.audit_events.countDocuments({ addressBookId: a.id }),
       ).toBe(1);
     } finally {
-      await gate.c.query('ROLLBACK');
-      gate.c.release();
+      await gate.close();
       await Promise.allSettled(pending);
     }
   });
@@ -399,8 +355,8 @@ describe('private member address book HTTP/PostgreSQL', () => {
           `/me/addresses/${second.addressId}/default`,
         ).then((r) => r),
       ];
-      await waiting(gate.pid, 2);
-      await gate.c.query('COMMIT');
+      await gate.contended(2);
+      await gate.commit();
       expect((await Promise.all(pending)).map((r) => r.status).sort()).toEqual([
         200, 409,
       ]);
@@ -413,11 +369,10 @@ describe('private member address book HTTP/PostgreSQL', () => {
         second.addressId,
       );
       expect(
-        await db.mutationReceipt.count({ where: { addressBookId: a.id } }),
+        await db.c.mutation_receipts.countDocuments({ addressBookId: a.id }),
       ).toBe(3);
     } finally {
-      await gate.c.query('ROLLBACK');
-      gate.c.release();
+      await gate.close();
       await Promise.allSettled(pending);
     }
   });
@@ -432,29 +387,36 @@ describe('private member address book HTTP/PostgreSQL', () => {
         makeDefault: false,
       }).then((r) => r);
       try {
-        await waiting(gate.pid);
+        await gate.contended();
+        const inGate = { session: gate.session };
+        const usersCollection = gate.db.collection<{ _id: string }>('users');
         if (kind === 'role')
-          await gate.c.query(
-            "DELETE FROM user_roles WHERE user_id=$1 AND role='MEMBER'",
-            [a.id],
+          await usersCollection.updateOne(
+            { _id: a.id },
+            { $pull: { roles: { role: 'MEMBER' } } } as never,
+            inGate,
           );
         else if (kind === 'session')
-          await gate.c.query(
-            'UPDATE auth_sessions SET revoked_at=now() WHERE id=$1',
-            [a.sessionId],
-          );
+          await gate.db
+            .collection<{ _id: string }>('auth_sessions')
+            .updateOne(
+              { _id: a.sessionId },
+              { $set: { revokedAt: new Date() } },
+              inGate,
+            );
         else
-          await gate.c.query("UPDATE users SET status='LOCKED' WHERE id=$1", [
-            a.id,
-          ]);
-        await gate.c.query('COMMIT');
+          await usersCollection.updateOne(
+            { _id: a.id },
+            { $set: { status: 'LOCKED' } },
+            inGate,
+          );
+        await gate.commit();
         expect((await pending).status).toBe(kind === 'session' ? 401 : 403);
-        expect(await db.memberAddress.count({ where: { ownerId: a.id } })).toBe(
-          0,
-        );
+        expect(
+          await db.c.member_addresses.countDocuments({ ownerId: a.id }),
+        ).toBe(0);
       } finally {
-        await gate.c.query('ROLLBACK');
-        gate.c.release();
+        await gate.close();
         await pending;
       }
     },
@@ -464,24 +426,22 @@ describe('private member address book HTTP/PostgreSQL', () => {
     await create(a);
     const next = await create(a, 1);
     const key = randomUUID();
-    await pool.query(
-      "CREATE FUNCTION fail_address_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.address_book_id IS NOT NULL THEN RAISE EXCEPTION 'injected'; END IF; RETURN NEW; END $$; CREATE TRIGGER fail_address_audit BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION fail_address_audit()",
+    // Temporary validator rule (like the former failing SQL trigger).
+    await db.withRejectingValidator(
+      'audit_events',
+      { addressBookId: a.id },
+      async () => {
+        await command(
+          a,
+          { expectedBookVersion: 2 },
+          `/me/addresses/${next.addressId}/default`,
+          'post',
+          key,
+        ).expect(500);
+        expect((await book(a)).version).toBe(2);
+        expect((await book(a)).items[0].isDefault).toBe(true);
+      },
     );
-    try {
-      await command(
-        a,
-        { expectedBookVersion: 2 },
-        `/me/addresses/${next.addressId}/default`,
-        'post',
-        key,
-      ).expect(500);
-      expect((await book(a)).version).toBe(2);
-      expect((await book(a)).items[0].isDefault).toBe(true);
-    } finally {
-      await pool.query(
-        'DROP TRIGGER fail_address_audit ON audit_events; DROP FUNCTION fail_address_audit()',
-      );
-    }
     await command(
       a,
       { expectedBookVersion: 2 },
@@ -490,34 +450,52 @@ describe('private member address book HTTP/PostgreSQL', () => {
       key,
     ).expect(200);
   });
-  it('database rejects no default, duplicate default, foreign locality and raw quota overflow', async () => {
+  it('database rejects a duplicate default; other cross-document rules are commit-time checks', async () => {
     const a = await reader();
     const saved = await create(a);
     await create(a, 1);
+    // DB backstops: partial unique index and validator, as in PostgreSQL.
     await expect(
-      db.memberAddress.updateMany({
-        where: { ownerId: a.id },
-        data: { isDefault: false },
-      }),
-    ).rejects.toThrow();
+      db.c.member_addresses.updateMany(
+        { ownerId: a.id },
+        { $set: { isDefault: true } },
+      ),
+    ).rejects.toMatchObject({ code: 11000 });
     await expect(
-      db.memberAddress.updateMany({
-        where: { ownerId: a.id },
-        data: { isDefault: true },
-      }),
-    ).rejects.toThrow();
-    await expect(
-      db.memberAddress.update({
-        where: { id: saved.addressId },
-        data: { localityCode: 'OUTSIDE' },
-      }),
-    ).rejects.toThrow();
+      db.c.member_addresses.updateOne(
+        { _id: saved.addressId },
+        { $set: { phone: '+84900000000' } },
+      ),
+    ).rejects.toMatchObject({ code: 121 });
+    // PostgreSQL also rejected "no default", a foreign locality and quota
+    // overflow inside the database. MongoDB cannot: a raw privileged write
+    // succeeds, the commit-time check detects it, and the next command on the
+    // book fails instead of compounding the damage (MIG02_MODEL_MAP).
+    const mongo = app.get(MongoService);
+    await db.c.member_addresses.updateMany(
+      { ownerId: a.id },
+      { $set: { isDefault: false } },
+    );
+    await expect(mongo.tx((tx) => checkAddressBook(tx, a.id))).rejects.toThrow(
+      'Address quota or default invariant',
+    );
+    await command(a, {
+      expectedBookVersion: 2,
+      address,
+      makeDefault: false,
+    }).expect(500);
+    await db.c.member_addresses.updateOne(
+      { _id: saved.addressId },
+      { $set: { isDefault: true, localityCode: 'OUTSIDE' } },
+    );
+    await expect(mongo.tx((tx) => checkAddressBook(tx, a.id))).rejects.toThrow(
+      'Address locality or identity invariant',
+    );
+    await db.c.member_addresses.updateOne(
+      { _id: saved.addressId },
+      { $set: { localityCode: 'DEMO-A' } },
+    );
     for (let i = 2; i < 10; i++) await create(a, i);
-    await expect(
-      db.memberAddress.create({
-        data: { ...address, ownerId: a.id, isDefault: false },
-      }),
-    ).rejects.toThrow();
     expect((await book(a)).items).toHaveLength(10);
   });
 });

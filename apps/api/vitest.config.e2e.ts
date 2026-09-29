@@ -11,7 +11,6 @@ const pendingMongoPort = [
   'test/listing-review.e2e-spec.ts',
   'test/listing-schema.e2e-spec.ts',
   'test/media.e2e-spec.ts',
-  'test/addresses.e2e-spec.ts',
   'test/fulfillment-migration.e2e-spec.ts',
   // MIG-05 quote/order/wallet/shipment (gated on money/permission review)
   'test/quotes.e2e-spec.ts',
