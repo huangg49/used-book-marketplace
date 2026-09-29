@@ -133,3 +133,5 @@ See [artifact-manifest.json](artifact-manifest.json) for the size and SHA-256 di
 - [ADR 0011: public eligibility, read snapshots and signed images](adr/0011-public-shelf.md)
 - [Listing lifecycle implementation and verification](features/LISTING_LIFECYCLE_REPORT.md)
 - [ADR 0012: replacement, visibility, archive and removal](adr/0012-listing-lifecycle.md)
+- [MongoDB refactor: baseline, invariant và các gói chuyển đổi](refactor/MONGODB_PLAN.md)
+- [Inventory phụ thuộc PostgreSQL tại checkpoint trước refactor](refactor/POSTGRES_BASELINE_INVENTORY.md)

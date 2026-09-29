@@ -8,7 +8,16 @@ override the release gates or the business baseline below.
 
 ## Current scope
 
-Handoff preparation is the current priority: freeze business scope at F2h/OpenAPI
+Priority update 2026-09-29: the owner confirmed the instructor accepts NestJS but
+requires MongoDB, and authorized starting the database refactor after merging Q01.
+Read `docs/refactor/MONGODB_PLAN.md` and the latest SESSION_STATE first. Preserve
+F2h/OpenAPI 0.20.0 behavior, PostgreSQL data/migration history and existing clients.
+The refactor is authorized before the remaining handoff gates close; this does not
+authorize new business scope, weaken invariants, certify release, or merge future
+refactor changes automatically. PostgreSQL remains the runtime until an explicitly
+verified cutover; MongoDB design/probes are not a completed migration.
+
+Existing handoff baseline: freeze business scope at F2h/OpenAPI
 0.20.0. Start at `docs/handoff/START_HERE.md` and track the audit, existing-UI polish
 and release gates in `docs/handoff/READINESS.md`. Finish those gates before extending
 Delivered/inspection/settlement. A passing backend suite does not close native UI

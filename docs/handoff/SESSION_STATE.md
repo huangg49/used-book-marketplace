@@ -1,6 +1,42 @@
-# Điểm lưu để tiếp tục — 29/09/2026
+# Điểm lưu để tiếp tục — MongoDB refactor, 29/09/2026
 
-## Đọc ngay — sau merge ca16a22, lượt Codex trên Pixel_7
+## Đọc ngay
+
+- Chủ dự án xác nhận **NestJS được phép, MongoDB bắt buộc** và yêu cầu push
+  checkpoint hiện tại, gộp main, rồi tạo nhánh hoàn toàn mới để bắt đầu refactor.
+  Đây là ưu tiên mới thay công việc native đang chờ, không đổi scope nghiệp vụ F2h.
+- Đã push `codex/q01-native-completion` tại `522191f`.
+  [PR #2](https://github.com/huangg49/used-book-marketplace/pull/2) **đã squash merge**
+  thành **1e08969dfeb8c712a286cb2c365bdf7614906f3b** trên main.
+  React Native CI và Operations/public shelf CI đều **SUCCESS trước merge**.
+  Một lần gọi merge lỗi kết nối; đã đọc lại PR/main để biết chưa merge trước retry.
+  Không force push; nhánh Q01 vẫn giữ trên remote.
+- Đã fetch, fast-forward local main, tạo **codex/mongodb-refactor** từ 1e08969.
+  Gói đầu **MIG-00 DONE phạm vi inventory/plan**: 44 model,17 migration,27 file
+  source coupling (25 raw SQL,22 trong modules); đọc command/auth/ledger và ADR
+  liên quan. Xem [kế hoạch](../refactor/MONGODB_PLAN.md),
+  [inventory](../refactor/POSTGRES_BASELINE_INVENTORY.md).
+- Commit khởi tạo refactor mang tên `docs(refactor): establish MongoDB migration baseline and gates`;
+  lấy SHA bằng git log. Kế hoạch/thư viện/giao thức còn phải chứng minh ở MIG-01.
+  Không đổi dependencies, schema, migration, .env, API, UI hay runtime ở MIG-00.
+  **Chưa có MongoDB chạy hoặc test MongoDB PASS.** PostgreSQL vẫn là backend thật.
+- Kiểm lượt Git/MIG-00: working tree sạch trước chuyển nhánh; diff-check và liên kết
+  tài liệu; inventory đọc source. Không chạy lại test sản phẩm cho thay đổi tài liệu.
+  Kết quả Q01 và CI PR2 là evidence cho checkpoint cũ, không chứng minh MongoDB.
+- **Bước tiếp theo duy nhất: MIG-01 transaction probe** theo MONGODB_PLAN: replica
+  set QA riêng, thử driver độc lập, barrier tests cho auth-before-replay, idempotency,
+  tranh chấp/rollback/DB clock và lost ACK. Chưa đổi app DATABASE_URL. Không mở
+  module nghiệp vụ tiếp theo trước khi chứng minh giao thức và chốt ADR.
+- Giữ PostgreSQL5433 và dữ liệu cũ, các process API/media/order/Metro của Q01; kiểm
+  PID/owner khi tiếp tục, không coi danh sách lịch sử là chứng minh process còn sống.
+  Node hệ thống24.12 không đạt minimum; dùng runtime24.19 qua PATH riêng process.
+- Gate cũ vẫn mở: native walkthrough/TalkBack/ARM/iOS, U01 thẩm mỹ, A02/R reviewer
+  người thật. Được phép bắt đầu refactor theo lệnh mới, không được tuyên bố release
+  hay review tiền/quyền đã qua. ADR0026 vẫn Proposed; không mở Delivered/settlement.
+- User đã cho phép merge **checkpoint Q01 lần này**. Không suy thành quyền tự merge
+  hoặc deploy các implementation MongoDB tương lai. Không reset DB hoặc xóa SQL history.
+
+## Lịch sử Q01 — trước khi push/merge PR #2
 
 - Đầu phiên working tree sạch; main/origin/main và remote kiểm read-only cùng
   **ca16a22065ae67c620c4c212d953ebefef188608**, mới hơn 382dda2. Teammate đã merge

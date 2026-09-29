@@ -1,5 +1,12 @@
 # Prompt gửi cho người tiếp nhận / Claude
 
+**Ưu tiên mới 29/09:** chủ dự án yêu cầu giữ NestJS nhưng chuyển MongoDB. PR #2
+đã merge main tại `1e08969`; nhánh làm việc mới `codex/mongodb-refactor`.
+Đọc SESSION_STATE và [MONGODB_PLAN](../refactor/MONGODB_PLAN.md) trước prompt
+lịch sử bên dưới. Tiếp tục MIG-01; không tự quay lại polish hoặc mở nghiệp vụ mới.
+PostgreSQL vẫn là runtime cho tới cutover được kiểm chứng. Native/human review
+gates còn mở; việc chuyển MongoDB không tự đóng chúng.
+
 Clone trước (không chép `.env` qua Git):
 
 ```sh
