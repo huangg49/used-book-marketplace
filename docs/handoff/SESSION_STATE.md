@@ -1,5 +1,22 @@
 # Điểm lưu để tiếp tục — 30/09/2026
 
+## Dọn phần PostgreSQL an toàn — điểm mới nhất
+
+- Chủ dự án đã cho dọn phần an toàn, giữ thành phần cần chạy/import. Nhánh
+  `codex/postgres-cleanup`, base `3aabadc`; commit subject
+  `chore: exclude legacy Prisma output and align MongoDB setup docs` (SHA xem log).
+- Ignore `apps/api/src/generated/prisma/`, exclude khỏi typecheck/build; rebuild
+  đã loại `dist/generated` (~3,89MB). 52 file generated local/4.573.831 byte vẫn còn
+  nguyên, không xóa. API/media-worker/order-worker và CLI/import module vẫn có trong dist.
+- Bỏ pendingMongoPort=[]/comment cũ; sửa ENV_HANDOFF và admin-web README sang MongoDB
+  runtime/QA; thêm prisma/README đánh dấu lịch sử chỉ đọc. Giữ schema/17 SQL migrations,
+  pg dependency/import/tests/CI và PostgreSQL containers/volumes, không đổi `.env`.
+- Thực chạy: API lint/typecheck/build, contract check, formatter, diff-check PASS;
+  discovery E2E trước/sau cùng24 file. Đây là kiểm discovery, không chạy493E2E hoặc
+  native lại. Không sửa nghiệp vụ/UI/API contract, không restart process đang chạy.
+- Không push/merge/deploy. Gói cleanup đã hoàn tất; không mở thêm native theo yêu cầu
+  mới nhất. Các gate human review/CI remote/cutover ở mục trước vẫn chưa được đóng.
+
 ## Rà phần PostgreSQL còn lại — yêu cầu mới nhất
 
 - Chủ dự án chuyển ưu tiên sang kiểm code PostgreSQL còn sót; dừng mở thêm ca native.
