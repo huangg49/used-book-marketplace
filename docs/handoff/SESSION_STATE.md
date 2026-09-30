@@ -3,10 +3,10 @@
 ## Nguồn và việc đang làm
 
 - main đã tích hợp MongoDB và bàn giao qua [PR5](https://github.com/huangg49/used-book-marketplace/pull/5)/[PR6](https://github.com/huangg49/used-book-marketplace/pull/6), mốc1be5144.
-- Gói hiện tại: H01b InTransit, nhánh codex/h01-intransit-scenarios từ274d100;
+- Gói hiện tại: chuẩn bị bàn giao H01, nhánh codex/h01-handoff từd4f8220;
   working tree sạch lúc mở nhánh. Fetch origin30/09 vẫn main1be5144, không có
   commit main mới cần tích hợp; không pull/reset/clean, giữ local work.
-  Stack docs/AI/plan19ffb84 →0182e40 →e2e7f21 →b9026a5 →46f988d →ae0f1d9 →428cafd →274d100
+  Stack docs/AI/plan19ffb84 →0182e40 →e2e7f21 →b9026a5 →46f988d →ae0f1d9 →428cafd →274d100 →d4f8220
   chưa push/merge. Không cherry-pick code bỏ dependency docs; tích hợp theo mốc trưa.
 - Đã hoàn thiện [AI_WORKFLOW](../AI_WORKFLOW.md): AGENTS gọn, domain rules đọc theo
   nhiệm vụ, ba skill nguồn chung + adapter Claude, mẫu issue/PR và docs:check/CI.
@@ -25,16 +25,15 @@
   | H01a | ae0f1d9: demo:books init/run/serve; catalog/media/listing/review/public shelf |
   | Funding | 428cafd: demo:funding; Buyer1M qua operator độc lập, nguồn99M |
   | Order | 274d100: demo:orders; unpaid/paid/Preparing,40 receipts |
-  | InTransit | Gói hiện tại: init thêm --in-transit; giữ3 mẫu cũ + Order thứ tư, packaging/label/pickup;57 receipts |
+  | InTransit | d4f8220: init thêm --in-transit; giữ3 mẫu cũ + Order thứ tư, packaging/label/pickup;57 receipts |
 
-- Gói InTransit có subject
-  `feat(demo): add isolated packaging and carrier pickup scenarios`.
+- Gói InTransit đã commit d4f8220 trên codex/h01-intransit-scenarios.
   Ảnh packaging do tool tạo, có nhãn DEMO; không chứng minh kiện sách thật/custody.
   Seller reserve/PUT/label không đổi Order3, deadline hay tiền; operator độc lập
   gửi PickedUp với key=eventId, thời gian từ API server; Applied → InTransit4.
   Snapshot checkOrder/checkShipment/checkPackaging và ledger chỉ đọc khớp:
   available535K/held465K/source99M/seller0, commitment vẫn Active/version1.
-- Checks thực chạy trên gói hiện tại: unit14/14; test:demo:transit HTTP/Nest/Mongo/
+- Checks thực chạy trên source d4f8220: unit14/14; test:demo:transit HTTP/Nest/Mongo/
   Sharp FAKE PASS: upload/label/pickup lost-ack sau commit3 lần, API restart bằng
   session memory; actual concurrent identical pickup chỉ1 Applied; rerun57 intents/
   receipts,4 Orders/commitments,2 preparations,1 evidence/label/pickup,5 journals/
@@ -90,8 +89,19 @@
 
 ## Bước tiếp
 
-H01a/H01b tooling đã đủ local. Bước tiếp: chuẩn bị PR bàn giao trưa chứa đủ stack
-docs/AI/code phụ thuộc, kiểm remote CI và chọn reviewer người thật theo TEAMWORK.
+H01a/H01b tooling đã đủ local. Đã chuẩn bị nội dung PR theo template trong
+`.tmp/handoff-h01/pr-body.md` (local, không có secret) và đường đọc H02 trong
+DEMO_SCENARIOS. Nhánh bàn giao chứa đủ stack docs/AI/code từ main1be5144;
+Checkpoint subject `fix(ci): run demo units before explicit frozen install`.
+Preflight source riêng không có node_modules: pnpm run kích hoạt implicit install;
+fixture đầu thiếu workspace manifests nên install bị từ chối. Job unit đổi sang
+Node trực tiếp để không cài ngầm trước pnpm install --frozen-lockfile; không đổi
+unit/API source. Source riêng không node_modules:14/14 PASS bằng Node24.19.0;
+docs checker5/5, docs157/1132links/3adapters, YAML/order/format/diff PASS.
+Scan diff60 file đúng scope, không private config/credential-shaped literals;
+scan có giới hạn, không bảo đảm tuyệt đối hết secret. Không chạy lại API/native.
+Mốc push vẫn trưa30/09, chưa push/tạo PR. Khi tới mốc: push nhánh này, tạo PR
+từ body đã chuẩn bị, kiểm CI đúng head và chọn reviewer người thật theo TEAMWORK.
 Bảo tiếp H02 review/debug nền/source và giới hạn recovery đã ghi; ba lane UI
 làm tính năng hiện có. C01/C02 giữ dependency, không tự mở Delivered/settlement.
 Tích hợp dự kiến khi bàn giao trưa: cả docs19ffb84 và AI0182e40 cùng gói code đủ

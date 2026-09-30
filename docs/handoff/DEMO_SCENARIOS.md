@@ -338,3 +338,30 @@ Harness ban đầu giữ tham chiếu mutable khi so snapshot intent và đếm5
 hiện lỗi backend mới trong phạm vi này; kết quả không bảo đảm mọi source đều hết bug.
 H01a/H01b **tooling đã đủ local** để bàn giao review. Human/native gates vẫn mở;
 không mở Member checkout/shipping UI, Delivered/inspection/settlement từ evidence này.
+
+## Đường đọc H02 cho gói bàn giao H01
+
+Review gói H01 lấy base main1be5144, implementation head d4f8220; nhánh
+`codex/h01-handoff` giữ cả docs/AI/plan và code phụ thuộc. Không chỉ đọc commit
+InTransit cuối. Nhận xét phải gắn source, invariant và ca tái hiện; findings của
+AI không thay ký nhận người thật theo [TEAMWORK](../TEAMWORK.md).
+
+| Phần cần đọc | Điểm vào | Câu cần kiểm chứng |
+| --- | --- | --- |
+| Tiếp nhận AI và tài liệu | [AI_WORKFLOW](../AI_WORKFLOW.md), [AGENTS](../../AGENTS.md), [checker](../../scripts/check-agent-docs.mjs) | Có phân biệt hướng dẫn/contract/implementation/evidence và giữ release gates không? Teammate nhận đủ dependency trên cùng SHA không? |
+| Target/accounts/storage | [sandbox](../../scripts/demo/sandbox.mjs) | Chỉ QA57017/rs-test, random *_test/bucket riêng; SANDBOX_LOST chặn replay vào DB rỗng; role tách biệt, không đổi account cũ? |
+| Intent và transport | [journal](../../scripts/demo/journal.mjs), [HTTP](../../scripts/demo/http.mjs) | Intent lưu trước request, không đổi key/body/version/bytes sau mất ack; rejected command dừng, token chỉ ở memory và lỗi không in payload riêng? |
+| Tiền và Order | [funding](../../scripts/demo/funding.mjs), [orders](../../scripts/demo/orders.mjs) | Mọi mutation qua API; source hữu hạn, ledger/hold/commitment/deadline khớp quote và projection, replay/race không nhân đôi? |
+| Packaging và pickup | [transit](../../scripts/demo/transit.mjs), [focused QA](../../scripts/test-demo-transit.mjs) | Label không tự chuyển InTransit; operator độc lập, key=eventId; conflict giữ canonical pickup/hold; preview private, ảnh DEMO không là custody proof? |
+
+Đối chiếu bảng evidence phía trên trước chọn test; không chạy lại mọi backend/
+native baseline. Nếu sửa findings, chạy ca liên quan và cập nhật source/evidence;
+giữ full CLI crash/lost-ack live và giới hạn login/deadline là phần chưa nghiệm thu.
+Owner/reviewer thứ hai chưa được chỉ định; chưa có human sign-off hoặc remote CI.
+
+Preflight bàn giao trên source d4f8220 riêng không node_modules: Node24.19.0 chạy
+14/14 unit PASS không cần install. pnpm11.19.0 run trên source chưa cài kích hoạt
+implicit install (fixture đầu thiếu workspace manifests nên bị từ chối). Job unit
+trong demo CI chuyển sang `node --test scripts/demo/*.test.mjs`, sau đó mới cài
+dependency bằng `pnpm install --frozen-lockfile`. YAML parse/order/format và docs
+checker5/5 PASS local; không thay kết quả CI trên GitHub hoặc kiểm thử backend.

@@ -51,7 +51,9 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm test:demo
+      # These units use built-ins only. pnpm run on a fresh checkout may trigger
+      # an implicit install before the explicit frozen-lockfile step below.
+      - run: node --test scripts/demo/*.test.mjs
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @used-books/api exec oxlint $GITHUB_WORKSPACE/scripts/demo $GITHUB_WORKSPACE/scripts/demo-books.mjs $GITHUB_WORKSPACE/scripts/demo-funding.mjs $GITHUB_WORKSPACE/scripts/demo-orders.mjs $GITHUB_WORKSPACE/scripts/test-demo-books.mjs $GITHUB_WORKSPACE/scripts/test-demo-funding.mjs $GITHUB_WORKSPACE/scripts/test-demo-orders.mjs $GITHUB_WORKSPACE/scripts/test-demo-transit.mjs
       - run: docker compose -f infra/docker-compose.mongo-test.yml up -d --wait mongo-test
