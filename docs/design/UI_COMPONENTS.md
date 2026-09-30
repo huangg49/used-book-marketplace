@@ -78,6 +78,11 @@ Gallery chi tiết dùng cột40%, gap16; `PublicPhoto compact` và showcase dù
 khung2:3 nền giấy, `contain` giữ ảnh nguyên vẹn. Không đổi cover mặc định của kệ.
 Status mẫu/chi tiết: “Tiệm chưa nhận đơn ở bản này.”, giữ font scaling tự nhiên.
 
+Tinh chỉnh giá: `BookTradeBar` dùng `BookPrice reading columns`, hai nhóm nhãn/giá
+co giãn theo nội dung, gap tối thiểu32px; thiếu chỗ thì wrap cả nhóm. Khoảng cách
+đến slot trạng thái8px. `BookPrice` mặc định và kệ giữ nguyên; `/ui` nhóm Sách có
+footer dùng cùng component để kiểm mẫu giá. Không ép giá vào cột hẹp hay thu nhỏ chữ.
+
 Cập nhật 29/09: Android xử lý `fontScale` qua Expo plugin để giữ Activity và
 picker khi trở lại từ cài đặt chữ. `AppText` tạo lại riêng native Text theo
 `useWindowDimensions().fontScale`, tránh Fabric giữ số đo cũ làm cắt nhãn;

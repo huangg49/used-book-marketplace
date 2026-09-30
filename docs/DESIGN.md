@@ -100,6 +100,9 @@ này.”** Đây là lời chỉ dẫn bình thường, không phải lỗi ho�
 Khi API không cập nhật được dữ liệu, không trình bày giá cũ như giá hiện hành.
 
 Footer gọn, không absolute overlay, không khóa chiều cao hoặc ép chữ một dòng.
+Hai mức giá phải đọc thành hai nhóm nhãn/giá rõ: cột co giãn, khoảng cách tối
+thiểu32px giữa nhóm,8px tới trạng thái. Thiếu chỗ thì xuống hàng cả nhóm;
+không hy sinh khoảng cách để cố nhét mọi số tiền trên một hàng.
 Ở 390px/font 100% thấy bìa, tên, tình trạng, giá và trạng thái ngay viewport đầu.
 Ở font 130%, ưu tiên đọc đủ và cuộn đến nội dung cuối không bị footer che; câu
 trạng thái được xuống dòng nếu cần, không thu nhỏ chữ để giữ một dòng vật lý.

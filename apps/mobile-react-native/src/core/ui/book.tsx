@@ -107,10 +107,12 @@ export function BookPrice({
   sale,
   exchange,
   reading = false,
+  columns = false,
 }: {
   sale?: number;
   exchange?: number;
   reading?: boolean;
+  columns?: boolean;
 }) {
   return (
     <View
@@ -119,7 +121,7 @@ export function BookPrice({
         {
           flexWrap: "wrap",
           alignItems: "flex-start",
-          gap: reading ? space.md : space.xxl,
+          gap: columns ? space.section : reading ? space.md : space.xxl,
         },
       ]}
     >
@@ -128,7 +130,13 @@ export function BookPrice({
         ["Giá trị đổi", exchange],
       ].map(([label, amount]) =>
         typeof amount === "number" ? (
-          <View key={label} style={reading ? { maxWidth: "100%" } : undefined}>
+          <View
+            key={label}
+            style={[
+              reading && { maxWidth: "100%" },
+              columns && { flexGrow: 1, flexBasis: "auto", maxWidth: "100%" },
+            ]}
+          >
             <AppText
               kind={reading ? "annotation" : "small"}
               color={colors.muted}
@@ -156,8 +164,8 @@ export function BookTradeBar({
   children: ReactNode;
 }) {
   return (
-    <View style={{ gap: space.xs }}>
-      <BookPrice sale={sale} exchange={exchange} reading />
+    <View style={{ gap: space.sm }}>
+      <BookPrice sale={sale} exchange={exchange} reading columns />
       {children}
     </View>
   );

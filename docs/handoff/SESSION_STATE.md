@@ -2,7 +2,17 @@
 
 ## Nguồn và việc đang làm
 
-- **UI-1 — hướng A được chủ dự án duyệt; tinh chỉnh màn chuẩn03 XONG, CHỜ DUYỆT ẢNH.**
+- **UI-1 — sửa khoảng cách giá trên màn chuẩn03 XONG, CHỜ DUYỆT ẢNH.**
+  Chủ dự án chỉ ra hai giá quá sát và yêu cầu sửa. Từ192b0cf: BookTradeBar dùng
+  cột giá co giãn/gap32px, cách trạng thái8px, BookPrice mặc định giữ nguyên.
+  [So sánh mới nhất](../ui/detail-price-spacing.html), phần cập nhật trong
+  [evidence](../ui/DETAIL_STANDARD_03.md):8 ảnh mới cùng4 listing QA,390dp/100%–130%;
+  đã xem hai mức giá dài/ngắn, một mức giá130%, cuối màn không bị che.
+  RN91/91, lint/typecheck/Prettier/docs:check/diff-check PASS mới. Không đổi
+  contract/query/navigation/nghiệp vụ; không chạy lại gate không liên quan.
+  App snapshot/font/density/reverse phục hồi; API/media/emulator dừng, giữ
+  Metro/Docker/preview người dùng. Local notes .tmp/ui-price; QA vẫn run ui-refine.
+  Checkpoint `fix(rn): separate book trade price groups`; chưa push/merge.
   **C01 đã merge (PR11/PR12); C02 TẠM HOÃN để làm đợt định hướng giao diện
   (UI-1); gate review người thật/native/release vẫn mở.** Nhánh `codex/ui-direction`,
   nền main4273f10, nối tiếp màn chuẩn02 tại25c8319. Bìa rộng40%/khung2:3 nền giấy,
@@ -10,7 +20,7 @@
   Bán/Đổi/Bán hoặc đổi viết rõ dưới dấu. Footer rút thành “Tiệm chưa nhận đơn ở
   bản này.”, một dòng ở390dp/font130%. DESIGN/UI_COMPONENTS/ví dụ dùng chung cập nhật.
   Không đổi API/contract/session/query/navigation/logic nghiệp vụ; chưa mở C04.
-  [So sánh màn chuẩn03](../ui/detail-standard-03.html),
+  [So sánh trước lần sửa khoảng cách](../ui/detail-standard-03.html),
   [kiểm chứng](../ui/DETAIL_STANDARD_03.md):8 ảnh native mới của4 bản DEMO,
   LikeNew/Good/Fair/Worn, tên ngắn/dài, Sale/Exchange/Both ở100%/130%.
   Ảnh trước tái sử dụng bộ Sau25c8319. QA tmpfs cũ mất dữ liệu khi Docker dừng;

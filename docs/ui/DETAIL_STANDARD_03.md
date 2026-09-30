@@ -5,6 +5,26 @@ Checkpoint: `feat(rn): refine book cover and trade labels`.
 Chủ dự án duyệt hướng A, yêu cầu tinh chỉnh bìa/dấu/hình thức/lời nhắn và dừng
 chờ duyệt lại. [So sánh trước/sau](detail-standard-03.html).
 
+**Cập nhật sau phản hồi giá quá sát:** đã sửa riêng thanh đáy từ base192b0cf;
+[so sánh mới nhất](detail-price-spacing.html). `BookTradeBar` bật `BookPrice columns`,
+cột co giãn theo nội dung với gap tối thiểu32px (cũ12px), khoảng cách tới trạng
+thái8px (cũ4px). Các consumer BookPrice mặc định giữ nguyên. Hai nhóm có thể wrap
+khi thiếu chỗ, không ép thu nhỏ/cắt số tiền. Lượt này không đổi logic hoặc màn khác.
+
+Chụp8 ảnh mới trên cùng4 listing QA/run ui-refine và cấu hình Android bên dưới,
+không tạo lại dữ liệu. Đã xem các trường hợp hai giá35K/45K,125K/150K ở130% và
+125K/150K ở100%; cả trường hợp chỉ bán/chỉ đổi ở130% vẫn thẳng lề trái.
+[Cuối màn130%](evidence/ui-1-price/bottom-130.png) còn trọn nút cuối; footer chỉ
+tăng4dp chiều cao, trạng thái vẫn một dòng. Ảnh trước lấy từ192b0cf, ảnh sau ở
+`evidence/ui-1-price/`. Chụp lần đầu quá sớm khi app còn tải Metro nên chưa có
+tiêu đề; loại ảnh đó và chụp lại sau khi UI đã lên. Không tính lần lỗi này là PASS.
+
+PASS mới: RN91/91 (12 files), lint/typecheck, Prettier, docs:check, diff-check.
+Contract/query/navigation không đổi, không chạy lại các gate tương ứng đã kiểm.
+Snapshot/font/density/reverse phục hồi, API/media/emulator đã dừng; giữ Metro,
+Docker và preview8089. Checkpoint `fix(rn): separate book trade price groups`.
+**Chờ chủ dự án duyệt khoảng cách mới; chưa push/merge hoặc mở rộng màn chuẩn.**
+
 - Cột bìa34%→40%, khoảng cách tới tên20→16px. Khung2:3 nền giấy thay nền trắng,
   vẫn contain: không crop, không tẩy nền có trong ảnh người đăng. Bìa DEMO rộng
   khoảng140dp thay119dp; ảnh tư liệu vuông cũng giữ nguyên nội dung.
