@@ -2,6 +2,18 @@
 
 ## Nguồn và việc đang làm
 
+- **Phản hồi màn chuẩn tại `c51b0ee`: chưa được duyệt, cần cân bằng lại tín hiệu
+  giao dịch.** Chủ dự án nhận xét giống app đọc báo; yêu cầu chỉ phân tích/đề xuất
+  và dừng, chưa sửa code hoặc DESIGN. Đã đọc lại source và ảnh 390px/100%–130%:
+  BookScreen không có hành động mua/đổi, chỉ refresh; thông báo giao dịch chưa mở
+  nằm cuối BookPresentation. C04 và các gate liên quan vẫn chưa mở, không được
+  thêm checkout/nút mua giả trong UI-1. Ba hướng đang đề xuất: (1) cụm nhận diện
+  sách gọn + vùng giao dịch cố định bằng Screen.footer (khuyến nghị), (2) vùng
+  giao dịch trong nội dung ngay dưới bìa/tên/giá, (3) bìa lớn trước + footer cố
+  định. Với phạm vi hiện tại chỉ thể hiện rõ mua/đổi chưa mở, không thể đạt tiêu
+  chí thực sự mua/đổi được. Đề xuất DESIGN phải nêu rõ giảm thúc ép không giảm
+  tín hiệu giao dịch; hai khoảnh khắc đặc trưng không độc quyền phân cấp thị giác.
+  **Bước kế tiếp: chờ chủ dự án chọn hướng; chưa áp sang màn khác hoặc C02.**
 - **UI-1 — đã triển khai màn chuẩn chi tiết sách, CHỜ DUYỆT TRƯỚC KHI ÁP SANG MÀN KHÁC.**
   **C01 đã merge (PR11/PR12); C02 TẠM HOÃN để làm đợt định hướng giao diện
   (UI-1); gate review người thật/native/release vẫn mở.** Nhánh `codex/ui-direction`
