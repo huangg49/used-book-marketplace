@@ -48,7 +48,8 @@
 Gói ưu tiên đề xuất sáng30/09: H01a bộ dựng hành trình sách qua API trên môi trường
 riêng, không chỉ seed dữ liệu thẳng. H01b bổ sung kịch bản giao dịch F2h/money/auth
 chỉ sau H01a đủ dùng, không bắt buộc xong trưa. Chưa implementation; acceptance và
-guardrails ở DEMO_PLAN. Bảo nhận H02 review/debug phần khó sau bàn giao; ba lane UI
+guardrails ở DEMO_PLAN. Bạn làm khung intent/recovery/isolation và H01a trước; Bảo
+nhận H01b còn lại cùng H02 review/debug sau bàn giao; ba lane UI
 làm tính năng hiện có. C01/C02 giữ dependency, không tự mở Delivered/settlement.
 Tích hợp dự kiến khi bàn giao trưa: cả docs19ffb84 và AI0182e40 cùng gói code đủ
 điều kiện, qua PR/checks/review; chưa thực hiện push/merge hay remote CI.
