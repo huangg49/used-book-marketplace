@@ -26,6 +26,9 @@
   không còn là thời điểm bắt đầu bàn giao. Mọi thành viên Windows có Docker/
   Android Studio, dùng DB riêng; chưa phân công web/admin/Flutter, chưa có reviewer.
   Không mở thêm ca native chỉ để tăng coverage khi không có thay đổi liên quan.
+- Nhóm5 người: bạn và Bảo nhận phần khó; ba bạn còn lại chưa chọn tên/phân công.
+  Ưu tiên web/admin/RN tới demo thứ Ba06/10, Flutter hoãn. Kế hoạch hiện hành:
+  [DEMO_PLAN](DEMO_PLAN_2026_10_06.md); giờ demo chưa được cung cấp.
 
 ## Môi trường máy này
 
@@ -42,9 +45,11 @@
 
 ## Bước tiếp
 
-Lập kế hoạch buổi sáng: chọn một gói nhỏ giúp nhóm dùng baseline hiện có; đề xuất
-công cụ tạo dữ liệu demo qua API trên môi trường riêng (seed hiện chưa có sách),
-chưa bắt đầu implementation. Chốt phạm vi trước code, không mở Delivered/settlement.
+Gói ưu tiên đề xuất sáng30/09: H01a bộ dựng hành trình sách qua API trên môi trường
+riêng, không chỉ seed dữ liệu thẳng. H01b bổ sung kịch bản giao dịch F2h/money/auth
+chỉ sau H01a đủ dùng, không bắt buộc xong trưa. Chưa implementation; acceptance và
+guardrails ở DEMO_PLAN. Bảo nhận H02 review/debug phần khó sau bàn giao; ba lane UI
+làm tính năng hiện có. C01/C02 giữ dependency, không tự mở Delivered/settlement.
 Tích hợp dự kiến khi bàn giao trưa: cả docs19ffb84 và AI0182e40 cùng gói code đủ
 điều kiện, qua PR/checks/review; chưa thực hiện push/merge hay remote CI.
 Nhóm bắt đầu theo [AI_WORKFLOW](../AI_WORKFLOW.md)/[TEAM_WINDOWS](TEAM_WINDOWS.md),

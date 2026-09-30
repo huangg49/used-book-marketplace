@@ -13,6 +13,7 @@
 | Sửa kiến trúc / database | [Kiến trúc](architecture/README.md), [ADR0027](adr/0027-mongodb-persistence-protocol.md), [model map MongoDB](refactor/MIG02_MODEL_MAP.md) |
 | Sửa giao diện | [UI rules](design/UI_CODING_RULES.md), [components](design/UI_COMPONENTS.md), [brand1.1](../packages/brand/v1.1/README.md) |
 | Lập công việc tiếp theo | [CONTINUATION_PLAN](handoff/CONTINUATION_PLAN.md), chỉ mở gói khi dependency/gate đạt |
+| Nhóm 5 người chuẩn bị demo 06/10 | [DEMO_PLAN](handoff/DEMO_PLAN_2026_10_06.md), ưu tiên sáng 30/09 và phân lane web/admin/RN |
 | Tìm báo cáo hoặc bằng chứng cũ | [Danh mục chi tiết](CATALOG.md) |
 
 ## Nguồn nào quyết định điều gì?
