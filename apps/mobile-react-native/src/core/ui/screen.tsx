@@ -6,10 +6,12 @@ export function Screen({
   children,
   header,
   footer,
+  compactFooter = false,
   scrollRef,
 }: React.PropsWithChildren<{
   header?: React.ReactNode;
   footer?: React.ReactNode;
+  compactFooter?: boolean;
   scrollRef?: React.Ref<ScrollView>;
 }>) {
   return (
@@ -41,7 +43,7 @@ export function Screen({
             style={{
               borderTopWidth: 1,
               borderColor: colors.rule,
-              paddingVertical: space.lg,
+              paddingVertical: compactFooter ? space.sm : space.lg,
               paddingHorizontal: space.xl,
             }}
           >

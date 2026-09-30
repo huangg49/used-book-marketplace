@@ -63,6 +63,15 @@ thêm nhãn tình trạng có viền và tách hình thức giao dịch; không 
 giữ nguyên. `/ui` nhóm Sách có ví dụ. Không tự áp token thử nghiệm sang màn khác
 trước khi chủ dự án duyệt màn chuẩn theo [DESIGN](../DESIGN.md).
 
+UI-1 hướng A: `BookTradeBar` chỉ trình bày giá bán/giá trị đổi bằng `BookPrice`
+và một slot `children` cho trạng thái hoặc hành động do caller quản lý. Không có
+logic checkout/quyền trong component. `Screen compactFooter` giảm padding dọc
+footer xuống 8px (mặc định vẫn 16px), giữ footer ngoài ScrollView/trong safe area,
+không overlay hoặc khóa chiều cao. `/ui` nhóm Sách có footer mẫu và chế độ chữ lớn.
+Chi tiết thật chỉ hiện footer khi có listing khả dụng và không lỗi refetch; không
+đưa giá đã cũ vào vùng giao dịch. C04 sau này phải cấp hành động thật qua slot và
+kiểm lại quyền/navigation; không chỉ bật một cờ UI để mở giao dịch.
+
 Cập nhật 29/09: Android xử lý `fontScale` qua Expo plugin để giữ Activity và
 picker khi trở lại từ cài đặt chữ. `AppText` tạo lại riêng native Text theo
 `useWindowDimensions().fontScale`, tránh Fabric giữ số đo cũ làm cắt nhãn;

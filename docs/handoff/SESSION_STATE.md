@@ -2,49 +2,36 @@
 
 ## Nguồn và việc đang làm
 
-- **Phản hồi màn chuẩn tại `c51b0ee`: chưa được duyệt, cần cân bằng lại tín hiệu
-  giao dịch.** Chủ dự án nhận xét giống app đọc báo; yêu cầu chỉ phân tích/đề xuất
-  và dừng, chưa sửa code hoặc DESIGN. Đã đọc lại source và ảnh 390px/100%–130%:
-  BookScreen không có hành động mua/đổi, chỉ refresh; thông báo giao dịch chưa mở
-  nằm cuối BookPresentation. C04 và các gate liên quan vẫn chưa mở, không được
-  thêm checkout/nút mua giả trong UI-1. Ba hướng đang đề xuất: (1) cụm nhận diện
-  sách gọn + vùng giao dịch cố định bằng Screen.footer (khuyến nghị), (2) vùng
-  giao dịch trong nội dung ngay dưới bìa/tên/giá, (3) bìa lớn trước + footer cố
-  định. Với phạm vi hiện tại chỉ thể hiện rõ mua/đổi chưa mở, không thể đạt tiêu
-  chí thực sự mua/đổi được. Đề xuất DESIGN phải nêu rõ giảm thúc ép không giảm
-  tín hiệu giao dịch; hai khoảnh khắc đặc trưng không độc quyền phân cấp thị giác.
-  **Bước kế tiếp: chờ chủ dự án chọn hướng; chưa áp sang màn khác hoặc C02.**
-- **UI-1 — đã triển khai màn chuẩn chi tiết sách, CHỜ DUYỆT TRƯỚC KHI ÁP SANG MÀN KHÁC.**
+- **UI-1 — hướng A đã triển khai; DỪNG CHỜ DUYỆT ẢNH MÀN CHUẨN 02.**
   **C01 đã merge (PR11/PR12); C02 TẠM HOÃN để làm đợt định hướng giao diện
-  (UI-1); gate review người thật/native/release vẫn mở.** Nhánh `codex/ui-direction`
-  từ main/origin main `4273f10`, sạch trước khi làm. Checkpoint phê bình `33385b8`.
-  Chủ dự án đã duyệt ba vấn đề + chi tiết sách làm màn chuẩn; yêu cầu thêm khoảnh
-  khắc đặc trưng/phép thử bỏ logo và 3–5 bản QA, chỉ chụp 390px/chữ 100%–130%.
-  [DESIGN](../DESIGN.md) đã bổ sung: dấu tình trạng + phiếu mô tả là hai điểm nhấn;
-  màn phải gợi sách cũ có lý lịch ngay khi bỏ logo/khẩu hiệu. Không giả lịch sử.
-  Đã sửa trình bày chi tiết: tên/tác giả trước, ảnh cạnh tình trạng/giá, phiếu
-  người đăng mô tả có lề, chữ 16/14px và giữ nguyên dữ liệu/cảnh báo. Theme có role
-  opt-in, BookCondition stamp/BookPrice reading; consumer mặc định giữ kiểu cũ.
-  `/ui` và showcase dùng chung chi tiết đồng bộ; không thiết kế lại kệ/form.
-  Không đổi API/contract/quyền/session/query/callback/migration hoặc logic nghiệp vụ.
-  [Báo cáo màn chuẩn](../ui/DETAIL_STANDARD_01.md),
-  [so sánh trực quan](../ui/detail-standard-01.html): 20 ảnh native mới, bốn bản QA
-  LikeNew/Good/Fair/Worn, tên ngắn/dài, đủ Sale/Exchange/Both; trước/sau cùng dữ
-  liệu Pixel_7/API35/x86_64, 1080×2400/density443 (~390dp), font1.0/1.3.
-  QA riêng `.tmp/demo/ui-standard`, random *_test/57017, Nest/Mongo thật;
-  catalog/listing/upload/duyệt qua API, bìa DEMO có nhãn, storage fixture FAKE.
-  Đã kiểm xem ảnh lớn/Back, về kệ, mở ấn bản, ảnh lỗi/tải lại, API lỗi giữ nội
-  dung/retry phục hồi; không tác động tiền/đơn hàng hoặc DB/bucket chính.
-  PASS: RN 91/91 (12 files), lint/typecheck, contract:check, Prettier,
-  docs:check và diff-check. Node24.19.0/pnpm11.19.0. Không chạy lại API E2E/export/
-  native build hoặc đóng gate TalkBack/ARM/iOS/web; đây là kiểm tra màn chuẩn.
-  Đã phục hồi app snapshot mới/font/density/reverse, dừng emulator/API3046/media3047.
-  Metro8081/preview8087 cũ giữ nguyên. Trang so sánh read-only tại
-  `http://127.0.0.1:8089/detail-standard-01.html` chỉ serve docs/ui; PID local trong
-  `.tmp/ui-standard/preview.pid`, có thể dừng khi xem xong. QA data giữ lại.
-  Checkpoint subject `feat(rn): shape book detail around its condition record`.
-  Chưa push/PR/merge. **Bước tiếp: chờ chủ dự án duyệt màn chuẩn từ ảnh trước/sau;
-  không tự mở màn khác hoặc C02.** Nhận định thiết kế không thay review người thật.
+  (UI-1); gate review người thật/native/release vẫn mở.** Nhánh `codex/ui-direction`,
+  nền main/origin main4273f10; nối tiếp c51b0ee/cacf3a0. Chủ dự án duyệt hướng A:
+  nhận diện cạnh bìa và footer gọn gồm giá/hình thức/trạng thái trung thực.
+  [DESIGN](../DESIGN.md) đã cân bằng câu chuyện tiệm sách với tín hiệu giao dịch;
+  dấu mộc/phiếu không lấn át tên/giá. Footer dùng Screen/BookPrice, slot trạng thái
+  “Tiệm chưa nhận đơn trong phiên bản này” để C04 nối hành động thật sau này.
+  Không thêm mua/đổi giả; không đổi API/contract/session/query/callback/DB/tiền.
+  /ui và showcase đồng bộ component, chưa thiết kế lại màn sản phẩm khác.
+  [So sánh màn chuẩn 02](../ui/detail-standard-02.html),
+  [evidence và giới hạn](../ui/DETAIL_STANDARD_02.md): tám ảnh đầu màn mới ở390dp,
+  font100%/130%, đủ LikeNew/Good/Fair/Worn, Sale/Exchange/Both và tên dài.
+  Ảnh trước tái sử dụng bộ Sau tại c51b0ee; không chụp lại. QA mới cùng nội dung,
+  khác ID vì dữ liệu tmpfs cũ đã mất. QA riêng57017/*_test/API3046/media3047,
+  bìa DEMO, Nest/Mongo thật, storage fixture FAKE. Không đụng DB/bucket chính.
+  Đã xem 8 ảnh, cuối màn130% không bị footer che; mở ảnh lớn/Back/về kệ;
+  refetch lỗi giữ nội dung + ẩn footer giá, retry phục hồi. Showcase130% đã xem;
+  /ui redirect đúng vì DESIGN_PREVIEW=0, không nghiệm thu native catalog.
+  PASS: RN91/91 (12 files), lint/typecheck, contract:check, Prettier, docs:check,
+  diff-check. Node24.19.0/pnpm11.19.0. Không chạy lại API E2E/export/native build;
+  không đóng TalkBack/ARM/iOS/web/human review/release. Metro khởi động bị công cụ
+  chặn; người dùng đã mở thủ công và Android chạy bình thường.
+  App snapshot mới/font/density/reverse đã phục hồi; API/media QA và emulator
+  do agent mở đã dừng. Giữ Metro người dùng và Mongo QA chạy để giữ dữ liệu tmpfs.
+  Trang so sánh read-only8089 phục vụ docs/ui; PID/notes trong .tmp/ui-commerce.
+  Checkpoint subject `feat(rn): keep book trade information visible on detail`.
+  Chưa push/PR/merge. **Bước tiếp: chủ dự án xem ảnh và duyệt hoặc yêu cầu sửa;
+  chưa áp sang màn khác, chưa mở C02/C04.** Màn chuẩn01 và phê bình cũ lưu ở
+  [DETAIL_STANDARD_01](../ui/DETAIL_STANDARD_01.md)/[CRITIQUE_01](../ui/CRITIQUE_01.md).
 - **C01 đã squash merge** qua [PR11](https://github.com/huangg49/used-book-marketplace/pull/11)
   vào main **6361e57**, base10a461c, head đã kiểm4e4851e; tree sau squash giống
   head đã kiểm. Code gốc d45b7c7 `feat(rn): add opt-in read-only wallet`.

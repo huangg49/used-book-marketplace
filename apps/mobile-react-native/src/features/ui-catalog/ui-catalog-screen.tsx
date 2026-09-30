@@ -9,6 +9,7 @@ import {
   BookCondition,
   BookCover,
   BookPrice,
+  BookTradeBar,
   Button,
   Checkbox,
   Chip,
@@ -52,7 +53,19 @@ export function UiCatalogScreen() {
   const [state, setState] = useState<"loading" | "empty" | "error">("empty");
   return (
     <TextScale.Provider value={large ? 1.35 : 1}>
-      <Screen scrollRef={scroll}>
+      <Screen
+        scrollRef={scroll}
+        compactFooter
+        footer={
+          section === "Sách" ? (
+            <BookTradeBar sale={125000} exchange={150000}>
+              <AppText kind="annotation" color={colors.muted}>
+                Tiệm chưa nhận đơn trong phiên bản này
+              </AppText>
+            </BookTradeBar>
+          ) : undefined
+        }
+      >
         <AppText kind="label" color={colors.rustText}>
           LẬT LẠI / THƯ VIỆN GIAO DIỆN
         </AppText>

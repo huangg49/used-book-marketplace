@@ -30,7 +30,7 @@ export function BookGallery({
           alignItems: "flex-start",
         }}
       >
-        <View style={{ width: summary ? "40%" : "100%", gap: space.sm }}>
+        <View style={{ width: summary ? "34%" : "100%", gap: space.sm }}>
           {photo}
           <View
             style={{

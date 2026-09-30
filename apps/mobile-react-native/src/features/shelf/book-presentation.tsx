@@ -3,7 +3,6 @@ import { Pressable, View } from "react-native";
 import {
   AppText,
   BookCondition,
-  BookPrice,
   Icon,
   Notice,
   colors,
@@ -12,7 +11,7 @@ import {
   radius,
   space,
 } from "../../core/ui";
-import { conditions, modes, type Listing } from "./contracts";
+import { conditions, type Listing } from "./contracts";
 
 // Display only. Reads, eligibility and signed images stay in the calling screen.
 export function BookPresentation({
@@ -28,30 +27,19 @@ export function BookPresentation({
   const [focused, setFocused] = useState(false);
   return (
     <>
-      <View style={{ gap: space.sm }}>
-        <AppText
-          kind="bookTitle"
-          accessibilityRole="header"
-          color={colors.forest}
-        >
-          {item.book.title}
-        </AppText>
-        <AppText kind="reading" color={colors.muted}>
-          {item.book.authors.join(" · ")}
-        </AppText>
-      </View>
       {gallery(
-        <View style={{ gap: space.lg }}>
-          <BookCondition
-            stamp
-            condition={conditions[item.condition]}
-            mode={modes[item.mode]}
-          />
-          <BookPrice
-            reading
-            sale={item.salePrice ?? undefined}
-            exchange={item.exchangeValue ?? undefined}
-          />
+        <View style={{ gap: space.md }}>
+          <AppText
+            kind="bookTitle"
+            accessibilityRole="header"
+            color={colors.forest}
+          >
+            {item.book.title}
+          </AppText>
+          <AppText kind="annotation" color={colors.muted}>
+            {item.book.authors.join(" · ")}
+          </AppText>
+          <BookCondition stamp condition={conditions[item.condition]} />
         </View>,
       )}
       <View

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { View, type StyleProp, type ViewStyle } from "react-native";
 import { Image, type ImageSource } from "expo-image";
 import { Icon } from "./icon";
@@ -140,6 +140,24 @@ export function BookPrice({
           </View>
         ) : null,
       )}
+    </View>
+  );
+}
+
+// Presentation only: the caller owns availability and any future transaction actions.
+export function BookTradeBar({
+  sale,
+  exchange,
+  children,
+}: {
+  sale?: number;
+  exchange?: number;
+  children: ReactNode;
+}) {
+  return (
+    <View style={{ gap: space.xs }}>
+      <BookPrice sale={sale} exchange={exchange} reading />
+      {children}
     </View>
   );
 }

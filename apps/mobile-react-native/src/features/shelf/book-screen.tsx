@@ -8,6 +8,7 @@ import { useForeground } from "../../core/hooks/use-foreground";
 import {
   AppText,
   BackAction,
+  BookTradeBar,
   Button,
   Notice,
   Screen,
@@ -50,6 +51,19 @@ export function BookScreen({ id }: { id: string }) {
   const item = unavailable ? undefined : result.data;
   return (
     <Screen
+      compactFooter
+      footer={
+        item && !result.isError ? (
+          <BookTradeBar
+            sale={item.salePrice ?? undefined}
+            exchange={item.exchangeValue ?? undefined}
+          >
+            <AppText kind="annotation" color={colors.muted}>
+              Tiệm chưa nhận đơn trong phiên bản này
+            </AppText>
+          </BookTradeBar>
+        ) : undefined
+      }
       header={
         <View
           style={{ paddingHorizontal: space.xl, paddingVertical: space.xs }}

@@ -24,12 +24,15 @@ Lật lại là một tiệm sách có người yêu sách đứng sau quầy, n
 độ tuổi thong thả tìm một cuốn sách đã qua tay người khác. Mỗi bản sách có một
 “lý lịch” nhìn thấy được qua tình trạng thật, ảnh và những ghi chú người bán đã
 cung cấp; dấu vết thời gian giúp hiểu cuốn sách, không bị che đi để dễ bán.
-Giao diện tạo cảm giác được chỉ dẫn tận tình, để cuốn sách sẵn sàng gặp người đọc tiếp theo.
+Đây là một tiệm sách để chọn và giao dịch: giao diện chỉ dẫn tận tình để người
+xem biết cuốn nào, tình trạng gì, giá bao nhiêu và bước mua/đổi tiếp theo — hoặc
+lý do hiện chưa thể giao dịch.
 
 ## Cảm giác cần tạo
 
 - **Gần gũi**: lời nói tự nhiên, cụ thể, như người trông tiệm đang giúp bạn.
-- **Thư thái**: có khoảng thở, ít tiếng gọi chú ý, không thúc ép mua.
+- **Thư thái**: không gây áp lực mua; giá và hành động vẫn rõ, dễ tìm. Giảm
+  thúc giục, khan hiếm giả và trang trí ồn ào không có nghĩa giảm tín hiệu giao dịch.
 - **Có dấu vết**: từng bản sách có đặc điểm riêng từ dữ liệu và ảnh thật.
 - **Chân thật**: tình trạng cũ/hỏng, giới hạn và tiền mô phỏng đều nói rõ.
 - **Tinh tế**: chi tiết ấm có chủ đích; nền và tác vụ vẫn gọn, dễ dùng.
@@ -39,7 +42,8 @@ Không muốn: **lạnh lẽo**, **đại trà**, **làm màu**.
 ## Nguyên tắc luôn ưu tiên
 
 1. **Cuốn sách là nhân vật chính.** Trên kệ và chi tiết, bìa, tên, tình trạng và
-   giá giúp người đọc quyết định trước khi gặp trang trí/khẩu hiệu. Giữ nguyên
+   giá cùng hành động/trạng thái giao dịch giúp người đọc quyết định trong khoảng
+   năm giây, trước khi gặp trang trí/khẩu hiệu. Giữ nguyên
    ảnh và màu bìa; ảnh thiếu có trạng thái thật, không thay bằng bìa tưởng tượng.
 2. **Một bản sách, một lý lịch có căn cứ.** Chuyển dữ liệu hiện có thành cách
    trình bày dễ đọc: nhãn tình trạng như dấu mộc, mô tả như thẻ thư viện, ảnh gáy/
@@ -71,7 +75,8 @@ không cần giả lịch sử để kể câu chuyện. Không dùng font viế
 
 ## Khoảnh khắc đặc trưng
 
-Chỉ hai vị trí trên chi tiết sách được phép nổi bật hơn nền giao diện:
+Hai vị trí tạo điểm nhấn bản sắc trên chi tiết sách; chúng không độc quyền
+phân cấp thị giác và **không được lấn át tên sách, giá hoặc vùng giao dịch**:
 
 1. **Dấu tình trạng cạnh nhận diện bản sách:** viền đất nung, chữ thật rõ,
    mức tình trạng đúng dữ liệu (kể cả “Cũ nhiều”). Như dấu mộc trên phiếu sách,
@@ -80,12 +85,31 @@ Chỉ hai vị trí trên chi tiết sách được phép nổi bật hơn nền
    “Người đăng mô tả”; bìa/gáy, ruột sách, ghi chú, phụ kiện và trang thiếu
    được đọc liền mạch. Đây là điểm ấm chính, không thêm lớp card trang trí.
 
-Hai vị trí tạo thành một câu chuyện về **bản sách cụ thể**. Các vùng giá, giao
-nhận, lỗi và điều khiển giữ gọn; không rải dấu mộc sang chúng.
+Hai vị trí tạo thành một câu chuyện về **bản sách cụ thể**, giúp người đọc quyết
+định. Giá, hình thức bán/đổi và bước tiếp theo luôn rõ; không rải dấu mộc sang
+điều khiển, lỗi hoặc thông tin giao nhận.
+
+### Vùng giao dịch của màn chuẩn — hướng A
+
+Giá và hình thức giao dịch ở footer cố định trong layout, ngoài vùng cuộn và
+trong safe area. Dùng nhãn “Giá bán”/“Giá trị đổi” sát đúng số tiền, đủ phân biệt khi
+listing hỗ trợ cả hai. Chỉ một câu trạng thái ngắn: **“Tiệm chưa nhận đơn trong
+phiên bản này”**. Đây là lời chỉ dẫn bình thường, không phải lỗi hoặc nút giả.
+Khi API không cập nhật được dữ liệu, không trình bày giá cũ như giá hiện hành.
+
+Footer gọn, không absolute overlay, không khóa chiều cao hoặc ép chữ một dòng.
+Ở 390px/font 100% thấy bìa, tên, tình trạng, giá và trạng thái ngay viewport đầu.
+Ở font 130%, ưu tiên đọc đủ và cuộn đến nội dung cuối không bị footer che; câu
+trạng thái được xuống dòng nếu cần, không thu nhỏ chữ để giữ một dòng vật lý.
+
+Tách slot trạng thái khỏi phần giá: khi C04 đủ điều kiện, caller có thể thay
+trạng thái bằng hành động thật mà không thiết kế lại bố cục. Gói đó vẫn phải xử
+lý quyền, session, navigation và command protocol; UI-1 không mở checkout.
 
 **Phép thử che nhận diện:** che logo và khẩu hiệu, màn chi tiết vẫn phải gợi
-“sách cũ có lý lịch” qua dấu tình trạng và phiếu mô tả thật; không chỉ còn ảnh,
-tên, giá như trang sản phẩm marketplace. Đánh giá trên 3–5 bản sách QA có bìa
+“sách cũ có lý lịch” qua dấu tình trạng và phiếu mô tả thật, đồng thời nhận ra
+đây là nơi mua bán/trao đổi qua giá, hình thức và bước tiếp theo rõ ràng. Không
+bịa dữ liệu, chứng nhận hoặc hành động chưa triển khai. Đánh giá trên 3–5 bản sách QA có bìa
 DEMO, tên ngắn/dài và tình trạng khác nhau. Không lấy chữ DEMO trên bìa, logo
 hay câu kể thương hiệu làm bằng chứng đạt. Chủ dự án duyệt cảm nhận từ ảnh
 trước/sau; tự đánh giá của AI không thay thế bước duyệt này.
