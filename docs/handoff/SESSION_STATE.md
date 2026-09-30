@@ -2,9 +2,9 @@
 
 ## Nguồn và việc đang làm
 
-- **C01 code/checks hoàn tất** trên `codex/c01-member-wallet`, base main10a461c;
-  code commit **d45b7c7** `feat(rn): add opt-in read-only wallet` đã push;
-  [PR11 draft](https://github.com/huangg49/used-book-marketplace/pull/11) mở vào main.
+- **C01 đã squash merge** qua [PR11](https://github.com/huangg49/used-book-marketplace/pull/11)
+  vào main **6361e57**, base10a461c, head đã kiểm4e4851e; tree sau squash giống
+  head đã kiểm. Code gốc d45b7c7 `feat(rn): add opt-in read-only wallet`.
   Chủ dự án duyệt30/09 mở C01/C02 **chỉ đọc, dùng nội bộ** trước full M1;
   đã cập nhật ngoại lệ trong CONTINUATION_PLAN/DEMO_PLAN. Release/human review,
   Delivered/inspection/settlement vẫn giữ gate. C02 chưa bắt đầu.
@@ -23,10 +23,15 @@
   App snapshot mới/font100%/reverse đã restore, emulator/API/proxy QA đã dừng;
   preview web trước đó khôi phục. Metro người dùng8081 còn chạy, có thể đóng khi
   xong; API3046 hiện dừng. Config/DB chính và nhánh teammate giữ nguyên.
-  CI/review xem trực tiếp trên đúng head PR11, không dùng checks head cũ. Human
-  review NOT RUN; chưa merge. Checkpoint sau code chỉ cập nhật docs nguồn/PR;
-  source UI vẫn d45b7c7, subject `feat(rn): add opt-in read-only wallet`.
-  READINESS giữ nguyên; không suy quyền merge từ gói condition/H01 trước.
+  CI PR11 trên đúng head4e4851e: **docs/react-native/operations PASS**, không skip.
+  API/demo/Flutter không trigger cho diff này; không gọi đó là CI mới cho ba lane.
+  Chủ dự án trực tiếp yêu cầu merge C01 ngày30/09; ngoại lệ tích hợp riêng gói
+  này, human review NOT RUN, không có hai reviewer theo TEAMWORK. READINESS giữ
+  nguyên; không đóng review/native/release hoặc cấp quyền merge/deploy C02.
+  Điểm lưu sau merge trên `codex/c01-merge-checkpoint` từ6361e57; subject
+  `docs(handoff): record merged C01 source and checks`. Chỉ đổi SESSION_STATE và
+  báo cáo C01; docs:check PASS158/1148links/3adapters, diff-check PASS. Docs CI
+  xem trên PR checkpoint; không chạy lại API/native đã đạt.
 - Gói RN condition đã push/squash merge qua [PR9](https://github.com/huangg49/used-book-marketplace/pull/9)
   vào main **fe7b577**, base b0e30fd, head kiểm e4e08e0.
   Chủ dự án trực tiếp yêu cầu merge nhánh này30/09; human review NOT RUN, không
@@ -170,12 +175,13 @@
 
 ## Bước tiếp
 
-C01 đã có ví/history nội bộ chỉ đọc và evidence. Hoàn tất PR/checks/review người
-thật theo TEAMWORK trước tích hợp; ngoại lệ30/09 chỉ cho phát triển nội bộ trước
-full M1, không miễn release/review hoặc mở giao dịch mới. Tiếp C02 trên nhánh riêng:
+C01 đã tích hợp vào main6361e57 với CI/evidence trên head4e4851e. Chủ dự án trực
+tiếp yêu cầu merge riêng C01; human review NOT RUN, full M1/release vẫn còn gate.
+Tiếp C02 trên nhánh riêng theo ngoại lệ phát triển nội bộ30/09:
 đọc list/detail Order bằng API hiện có, cùng cờ opt-in, server snapshot/deadline,
 pagination/owner isolation/LOCKED; không nút mua/Delivered/settlement giả.
-Main vẫn10a461c; condition/H01 đã tích hợp, nhánh upload-recovery vẫn giữ riêng.
+Lấy SHA bàn giao mới nhất từ origin/main sau checkpoint; condition/H01 đã tích
+hợp, nhánh upload-recovery vẫn giữ riêng. Chưa có quyền merge/deploy C02.
 Không kiểm lại gate đã đạt khi source không đổi; chưa phân công thêm teammate.
 
 H01a/H01b và docs/AI đã tích hợp; nhóm có thể nhận main. Đường đọc/test/giới hạn
