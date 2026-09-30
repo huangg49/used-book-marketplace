@@ -2,6 +2,31 @@
 
 ## Nguồn và việc đang làm
 
+- **C01 code/checks hoàn tất** trên `codex/c01-member-wallet`, base main10a461c;
+  code commit **d45b7c7** `feat(rn): add opt-in read-only wallet` đã push;
+  [PR11 draft](https://github.com/huangg49/used-book-marketplace/pull/11) mở vào main.
+  Chủ dự án duyệt30/09 mở C01/C02 **chỉ đọc, dùng nội bộ** trước full M1;
+  đã cập nhật ngoại lệ trong CONTINUATION_PLAN/DEMO_PLAN. Release/human review,
+  Delivered/inspection/settlement vẫn giữ gate. C02 chưa bắt đầu.
+  C01 dùng GET wallet/history hiện có, component/session chung; cờ
+  `EXPO_PUBLIC_INTERNAL_MEMBER_VIEWS=1` mới hiện lối vào/route ví, mặc định ẩn.
+  Không đổi API/contract/persistence hoặc thêm thao tác tiền.
+  RN91/91 (12 ca ví), lint không warning/typecheck/Prettier/contract và export
+  Android/iOS/web PASS. Docs:check PASS158 files/1148links/3adapters, diff-check PASS.
+  Android Pixel_7/API35/x86_64 và IAB320/390px: số dư/held700K/310K, history10+3,
+  lỗi/refresh/pagination retry/403/Back/font130% và đổi buyer→LOCKED0/rỗng đã kiểm.
+  Đã sửa nhãn xuống dòng, lỗi tải thêm xa nút và Account cắt chữ sau đổi font ở
+  màn sau; chỉ remount presentation read-only, giữ session/query/logout state.
+  [Evidence và giới hạn](C01_WALLET_2026_09_30.md): QA3046/DB random *_test57017,
+  storage fixture; khoản tiền tạo qua API, không seed balance/state.503/403 dùng
+  proxy lỗi có kiểm soát; LOCKED đọc API thật. Không là full native/release PASS.
+  App snapshot mới/font100%/reverse đã restore, emulator/API/proxy QA đã dừng;
+  preview web trước đó khôi phục. Metro người dùng8081 còn chạy, có thể đóng khi
+  xong; API3046 hiện dừng. Config/DB chính và nhánh teammate giữ nguyên.
+  CI/review xem trực tiếp trên đúng head PR11, không dùng checks head cũ. Human
+  review NOT RUN; chưa merge. Checkpoint sau code chỉ cập nhật docs nguồn/PR;
+  source UI vẫn d45b7c7, subject `feat(rn): add opt-in read-only wallet`.
+  READINESS giữ nguyên; không suy quyền merge từ gói condition/H01 trước.
 - Gói RN condition đã push/squash merge qua [PR9](https://github.com/huangg49/used-book-marketplace/pull/9)
   vào main **fe7b577**, base b0e30fd, head kiểm e4e08e0.
   Chủ dự án trực tiếp yêu cầu merge nhánh này30/09; human review NOT RUN, không
@@ -145,12 +170,13 @@
 
 ## Bước tiếp
 
-Gói condition đã tích hợp qua PR9, RN/web dùng đủ bốn mức theo contract. Nhóm
-nhận main mới nhất theo Git/PR, không dùng SHA nhánh trước squash làm điểm bàn giao.
-Không chạy lại các ca đã đạt nếu source liên quan không đổi. Nhánh upload-recovery
-vẫn riêng; chọn gói tiếp từ khoảng trống sản phẩm/API và dependency, không lặp
-polish hoặc bật ví/Order trước M1. Human review/release gates giữ nguyên, chưa
-phân công thêm người. Yêu cầu merge30/09 chỉ áp dụng gói condition và điểm lưu này.
+C01 đã có ví/history nội bộ chỉ đọc và evidence. Hoàn tất PR/checks/review người
+thật theo TEAMWORK trước tích hợp; ngoại lệ30/09 chỉ cho phát triển nội bộ trước
+full M1, không miễn release/review hoặc mở giao dịch mới. Tiếp C02 trên nhánh riêng:
+đọc list/detail Order bằng API hiện có, cùng cờ opt-in, server snapshot/deadline,
+pagination/owner isolation/LOCKED; không nút mua/Delivered/settlement giả.
+Main vẫn10a461c; condition/H01 đã tích hợp, nhánh upload-recovery vẫn giữ riêng.
+Không kiểm lại gate đã đạt khi source không đổi; chưa phân công thêm teammate.
 
 H01a/H01b và docs/AI đã tích hợp; nhóm có thể nhận main. Đường đọc/test/giới hạn
 H02 ở DEMO_SCENARIOS; nội dung/checks/integration ở PR7. Preflight source riêng

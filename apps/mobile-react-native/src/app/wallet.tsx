@@ -1,0 +1,40 @@
+import { Redirect, router } from "expo-router";
+import { internalMemberViewsEnabled } from "../core/config/internal-member-views";
+import { useSession } from "../core/session/session-provider";
+import { BackAction, Screen, StatePanel } from "../core/ui";
+import { WalletScreen } from "../features/wallet/wallet-screen";
+
+export default function WalletRoute() {
+  const { client, state } = useSession();
+  if (!internalMemberViewsEnabled || state.status === "anonymous")
+    return <Redirect href="./account" />;
+  if (state.status !== "authenticated")
+    return (
+      <Screen>
+        <BackAction
+          title="Về tài khoản"
+          onPress={() => router.replace("./account")}
+        />
+        <StatePanel
+          loading={state.status === "loading"}
+          title={
+            state.status === "loading"
+              ? "Đang khôi phục phiên"
+              : "Chưa kết nối được"
+          }
+          message={state.status === "unavailable" ? state.message : undefined}
+          action={
+            state.status === "unavailable"
+              ? {
+                  label: "Thử kết nối lại",
+                  onPress: () => void client.restore(),
+                }
+              : undefined
+          }
+        />
+      </Screen>
+    );
+  if (!state.user.roles.includes("MEMBER"))
+    return <Redirect href="./account" />;
+  return <WalletScreen key={state.user.id} ownerId={state.user.id} />;
+}

@@ -77,9 +77,9 @@ export function UiCatalogScreen() {
           onPress={() => setLarge((v) => !v)}
         />
         <AppText kind="small" color={colors.muted}>
-          Kiểm Android: nhập ở nhóm Nhập liệu, đổi cỡ chữ trong cài đặt hệ
-          thống rồi trở lại. Nội dung phải còn, nhãn nút phải hiện đầy đủ.
-          Chế độ 135% ở đây không thay cho kiểm cỡ chữ hệ thống.
+          Kiểm Android: nhập ở nhóm Nhập liệu, đổi cỡ chữ trong cài đặt hệ thống
+          rồi trở lại. Nội dung phải còn, nhãn nút phải hiện đầy đủ. Chế độ 135%
+          ở đây không thay cho kiểm cỡ chữ hệ thống.
         </AppText>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {sections.map((item) => (
@@ -334,9 +334,9 @@ export function UiCatalogScreen() {
               ))}
             </Sheet>
             <ActionRow
-              title="Dòng điều hướng mẫu"
+              title="Ví mô phỏng — dòng điều hướng mẫu"
               description="Biểu tượng, nhãn và mô tả; đây là dữ liệu mẫu."
-              icon="book"
+              icon="wallet"
               onPress={() => setSheet(true)}
             />
             <ConfirmDialog

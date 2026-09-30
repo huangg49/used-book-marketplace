@@ -40,7 +40,10 @@ test để che lỗi. Tự quyết định chi tiết triển khai trong scope, 
 
 M0/M1 không cần làm lại các test đã đóng nếu nguồn liên quan không đổi. M2 chỉ
 triển khai nghiệp vụ sau khi đóng gate bàn giao; có thể đọc SRS/lập câu hỏi từ sớm.
-Các màn C01/C02 có thể làm dưới cờ nội bộ sau M1 với API hiện có. Chưa mở nút mua
+Điều chỉnh được chủ dự án duyệt30/09/2026: C01/C02 được phát triển dưới cờ nội bộ
+với API đọc hiện có trước khi M1 đóng đầy đủ. Chỉ mở màn chỉ đọc; không coi đây là
+M1/release PASS hoặc thay review người thật. Các dependency nghiệp vụ khác giữ nguyên.
+Chưa mở nút mua
 cho Member như một luồng hoàn chỉnh trước M3 và các nhánh lỗi bắt buộc.
 
 ## 3. M0 — Tiếp nhận và tháo chỗ dở
@@ -255,7 +258,7 @@ chưa có API chỉ được là fixture có nhãn, không tính là hoàn thàn
 
 ### C02 — Danh sách/chi tiết Order và việc cần làm
 
-- Phụ thuộc M1: render snapshot trạng thái/backend thật, deadline theo server,
+- Theo ngoại lệ phát triển nội bộ30/09 ở phần2: render snapshot trạng thái/backend thật, deadline theo server,
   receipt khác projection mới nhất, pinned private images/contact đúng người.
 - Có thể bắt đầu read-only trước M3; mutation chỉ mở khi có contract/handler/test
   và path xử lý lỗi đầy đủ. Không có nút “hoàn tất review” khi API chưa hỗ trợ.
