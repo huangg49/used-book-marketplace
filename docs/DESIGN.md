@@ -57,7 +57,9 @@ Không muốn: **lạnh lẽo**, **đại trà**, **làm màu**.
    tiền ưu tiên độ rõ. Không biến mỗi ô nhập thành một món đồ trang trí.
 4. **Như người trông tiệm, không như bảng quản trị.** Tên hành động cụ thể;
    giải thích vừa đủ ngay nơi cần. Không nhân cách hóa lỗi hoặc viết thơ thay
-   hướng dẫn. Nội dung dài được xuống dòng, không cắt dữ kiện để giữ bố cục đẹp.
+   hướng dẫn. Nội dung dài được xuống dòng. Riêng bản tóm tắt trên kệ được rút
+   gọn tên/tác giả theo quy tắc bên dưới, có lối xem đầy đủ; không cắt tình trạng,
+   số tiền hoặc dữ kiện giao dịch để giữ bố cục đẹp.
 5. **Thẩm mỹ phải sống cùng hành vi thật.** Giữ thứ tự tác vụ, trạng thái tải/
    rỗng/lỗi, dữ liệu form, Back, bàn phím, safe area, accessibility và quyền API.
    Dùng component chung; đổi theme trước màn hình, kiểm consumer bị ảnh hưởng.
@@ -135,12 +137,23 @@ Sau vòng kệ01, chủ dự án từ chối bố cục một hàng với cột 
 quyền quyết định thiết kế cho agent. Kệ ưu tiên nhịp bìa và khả năng so sánh:
 hai cột ở chiều rộng từ360dp/chữ thường. Không rải phiếu tình trạng đầy đủ hoặc
 tên người bán lên từng mục; các dữ kiện đó vẫn ở màn chi tiết và nhãn accessible.
-Tên sách không cắt dòng, tình trạng dùng một nét đất nung nhỏ. Dòng “Bán”/“Đổi”
-đi cùng đúng số tiền; nếu có cả hai phải hiện cả hai, không chọn giá rẻ hơn để nhấn.
+Trên kệ, tên sách hiển thị tối đa ba dòng và tác giả một dòng, dùng dấu “…” khi
+vượt giới hạn. Tên và tác giả đầy đủ luôn có ở màn chi tiết và nhãn accessibility.
+Các thẻ cùng hàng căn thẳng vùng bìa, tên, tình trạng và giá, có cùng chiều cao.
+Vùng giá dành chỗ cho hai mức; chỉ có một giá thì để khoảng trống, không thêm
+giá hoặc ký hiệu giả. Tình trạng dùng một nét đất nung nhỏ. Dòng “Bán”/“Đổi” đi
+cùng đúng số tiền; nếu có cả hai phải hiện cả hai, không chọn giá rẻ hơn để nhấn.
+Không rút gọn tình trạng, số tiền hoặc ẩn một hình thức giao dịch để cân bố cục.
+
+Chủ dự án đã duyệt nguyên tắc căn hàng/rút gọn. Ba dòng là phương án hiện tại;
+đang so ảnh native hai dòng và ba dòng trên cùng QA ở chữ100%/130% để chủ dự án
+chọn giới hạn cuối cùng. Không áp giới hạn này vào màn chi tiết.
 
 Ở chữ130% hoặc màn hẹp, chuyển một cột: bìa cạnh tên/tác giả/tình trạng, cụm giá
 chiếm chiều rộng riêng phía dưới. Không để giá kéo dài cột bên phải và tạo hố
-trống dưới bìa. Khi số tiền dài, cả nhóm được wrap; không thu nhỏ font hoặc cắt số.
+trống dưới bìa. Khi số tiền dài, cả nhóm được wrap, vùng giá được tăng chiều cao;
+không thu nhỏ font, cắt số hoặc khóa chiều cao toàn thẻ. Chiều cao dành cho tên/
+tác giả theo cỡ chữ thực tế, không cố định cho mọi mức font.
 Ảnh contain trong khung giấy cao180dp, không sửa dữ liệu ảnh. Đây là quyết định
 trình bày, không đổi quyền truy cập ảnh, query, filter, navigation hay nghiệp vụ.
 Không dùng kết quả tests làm bằng chứng thiết kế đẹp; xem cả QA tên dài và ảnh

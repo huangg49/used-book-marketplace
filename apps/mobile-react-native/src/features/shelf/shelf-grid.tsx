@@ -10,8 +10,12 @@ import {
   layout,
   metrics,
   space,
+  typography,
 } from "../../core/ui";
 import { conditions, modes, type Listing } from "./contracts";
+
+// Three lines remain the candidate until the owner chooses from native evidence.
+const shelfTitleLines = 3;
 
 export function ShelfGrid({
   items,
@@ -25,6 +29,7 @@ export function ShelfGrid({
   const { width, fontScale } = useWindowDimensions();
   const scale = useContext(TextScale);
   const singleColumn = width < 360 || fontScale * scale >= 1.29;
+  const textScale = fontScale * scale;
   const [focused, setFocused] = useState<string>();
   return (
     <View
@@ -45,6 +50,7 @@ export function ShelfGrid({
               flexDirection: singleColumn ? "row" : "column",
               alignItems: "flex-start",
               gap: space.md,
+              ...(!singleColumn && { flex: 1 }),
             }}
           >
             <View
@@ -79,7 +85,7 @@ export function ShelfGrid({
                   gap: space.sm,
                   ...(singleColumn
                     ? { flex: 1, minWidth: 0 }
-                    : { width: "100%" }),
+                    : { width: "100%", flex: 1 }),
                   paddingBottom: space.md,
                   opacity: pressed ? 0.75 : 1,
                 },
@@ -90,10 +96,25 @@ export function ShelfGrid({
                 kind="shelfTitle"
                 color={colors.forest}
                 accessibilityRole="header"
+                numberOfLines={shelfTitleLines}
+                ellipsizeMode="tail"
+                style={{
+                  paddingRight: space.xs,
+                  ...(!singleColumn && {
+                    minHeight:
+                      typography.shelfTitle[1] * textScale * shelfTitleLines,
+                  }),
+                }}
               >
                 {item.book.title}
               </AppText>
-              <AppText kind="annotation" color={colors.muted}>
+              <AppText
+                kind="annotation"
+                color={colors.muted}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={{ minHeight: typography.annotation[1] * textScale }}
+              >
                 {item.book.authors.join(" · ")}
               </AppText>
               <View
@@ -101,6 +122,7 @@ export function ShelfGrid({
                   borderLeftWidth: 2,
                   borderColor: colorRoles.bookStamp,
                   paddingLeft: space.sm,
+                  minHeight: typography.stamp[1] * textScale,
                 }}
               >
                 <AppText
@@ -112,10 +134,18 @@ export function ShelfGrid({
                 </AppText>
               </View>
               {!singleColumn && (
-                <BookOffer
-                  sale={item.salePrice ?? undefined}
-                  exchange={item.exchangeValue ?? undefined}
-                />
+                <View
+                  style={{
+                    flexGrow: 1,
+                    minHeight:
+                      typography.shelfPrice[1] * textScale * 2 + space.xs,
+                  }}
+                >
+                  <BookOffer
+                    sale={item.salePrice ?? undefined}
+                    exchange={item.exchangeValue ?? undefined}
+                  />
+                </View>
               )}
             </Pressable>
           </View>

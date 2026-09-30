@@ -100,9 +100,18 @@ hàng đủ chiều rộng bên dưới; vùng giá mở cùng chi tiết, khôn
 và showcase cùng contain, không crop. `BookOffer` là bản tóm tắt giá dùng ở kệ:
 nhãn Bán/Đổi sát số tiền (shelfPrice18/25), `horizontal` cho hàng rộng; wrap khi
 thiếu chỗ. Không thay `BookPrice`/footer chi tiết. `/ui` nhóm Sách có ví dụ.
-Tên/tác giả giữ nguyên; người bán chuyển khỏi phần nhìn thấy của kệ, vẫn có ở
+Ở vòng02, tên/tác giả giữ nguyên; người bán chuyển khỏi phần nhìn thấy của kệ, vẫn có ở
 nhãn accessible và chi tiết. Kệ dùng compactFooter hiện có, gom đầu màn để bìa
 lên sớm; không có animation mới.
+
+Lượt căn hàng sau vòng02: `ShelfGrid` giới hạn tên ba dòng, tác giả một dòng bằng
+`AppText numberOfLines`/`ellipsizeMode="tail"`; nhãn accessible giữ nguyên dữ liệu.
+Chiều cao tối thiểu của các vùng chữ tính từ typography và fontScale×TextScale.
+Hai cột stretch theo hàng; vùng giá dành tối thiểu hai dòng, không thêm giá giả
+cho listing chỉ có một giá. Nội dung giá vẫn được wrap/tăng chiều cao. Một cột
+ở chữ130%/màn hẹp vẫn có vùng giá riêng, không khóa chiều cao toàn thẻ.
+Ba dòng là bản tạm để chờ chủ dự án chọn từ ảnh Android hai/ba dòng, cùng dữ liệu.
+Không đổi AppText/BookOffer toàn cục hoặc áp ellipsis vào màn chi tiết.
 
 Cập nhật 29/09: Android xử lý `fontScale` qua Expo plugin để giữ Activity và
 picker khi trở lại từ cài đặt chữ. `AppText` tạo lại riêng native Text theo
