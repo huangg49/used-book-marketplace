@@ -2,13 +2,22 @@
 
 ## Nguồn và việc đang làm
 
-- Gói hiện tại: `codex/rn-book-condition` từ main/origin/main **b0e30fd**.
-  Commit chứa điểm lưu có subject `fix(rn): support all contract book conditions`;
-  chưa push/PR/merge. RN schema thiếu `Worn` khiến một bản nháp hợp lệ làm lỗi
+- Gói RN condition đã push/squash merge qua [PR9](https://github.com/huangg49/used-book-marketplace/pull/9)
+  vào main **fe7b577**, base b0e30fd, head kiểm e4e08e0.
+  Chủ dự án trực tiếp yêu cầu merge nhánh này30/09; human review NOT RUN, không
+  đóng gate review/native/release hoặc cấp quyền tích hợp gói khác.
+  RN schema thiếu `Worn` khiến một bản nháp hợp lệ làm lỗi
   cả trang Sách của tôi. Đã đồng bộ schema, lựa chọn và màn kiểm tra đủ bốn mức
   theo OpenAPI; `Worn` hiển thị **Cũ nhiều**. Dùng component chung, không đổi API,
   migration, session hay command protocol.
-- Checks source này: RN test **79/79** (11 file, gồm 11 ca condition mới), lint,
+- CI PR9 trên đúng head e4e08e0: **docs/react-native/operations PASS**, không skip;
+  gồm contract/lint/typecheck/session/RN tests, export ba nền tảng và browser suites
+  theo workflow. Tree code sau squash giống head đã kiểm. API/demo/Flutter không
+  được trigger cho diff này; giữ evidence H01, không gọi đó là CI mới cho ba lane.
+- Điểm lưu sau merge: nhánh `codex/rn-condition-merge-checkpoint` từ SHA squash
+  PR9; subject `docs(handoff): record merged RN condition fix`. Chỉ đổi SESSION_STATE;
+  docs:check/diff-check và docs CI, không chạy lại API/native hoặc đóng thêm gate.
+- Checks local source condition: RN test **79/79** (11 file, gồm 11 ca condition mới), lint,
   typecheck, contract:check, Prettier và export:web PASS. Focused condition/form/
   command 33/33. Regression gồm đọc/lưu bốn mức, trang trộn Good/Worn, null và
   từ chối giá trị ngoài contract; không chạy lại toàn bộ API E2E/native gates.
@@ -103,7 +112,8 @@
 
 - API/worker: MongoDB, OpenAPI0.21.0,3 migrations; nghiệp vụ giao dịch đóng tại F2h.
   Admin có list user, chưa lock/unlock. Flutter chỉ scaffold; Member web là Expo web.
-- CI mới nhất của head9c430ac trong PR7: demo/docs/API/RN/operations/Flutter PASS.
+- CI PR9 head e4e08e0: docs/RN/operations PASS. CI head9c430ac trong PR7:
+  demo/docs/API/RN/operations/Flutter PASS cho source H01.
   CI lịch sử head7587983 trong PR5 giữ evidence riêng. Các gate độc
   lập/full native còn mở ở [READINESS](READINESS.md), không suy từ merge thành release.
 - Yêu cầu mới30/09: tiếp tục code buổi sáng, dự kiến bàn giao/merge main vào trưa
@@ -135,13 +145,12 @@
 
 ## Bước tiếp
 
-Gói condition đã triển khai/kiểm đúng phạm vi và chốt local; bước tiếp là review
-diff/ảnh ở nhánh codex/rn-book-condition rồi tích hợp theo quyền của gói và TEAMWORK.
-Chưa có human sign-off hoặc CI remote cho gói này. Không suy ngoại lệ H01 thành
-miễn review gói mới. Sau tích hợp, RN/web dùng đủ bốn mức condition; không cần
-chạy lại các ca đã đạt nếu source liên quan không đổi. Nhánh upload-recovery vẫn
-riêng; cần quyết định chọn gói tiếp từ khoảng trống sản phẩm/API và dependency,
-không lặp polish hoặc bật ví/Order trước M1. Chưa phân công thêm người.
+Gói condition đã tích hợp qua PR9, RN/web dùng đủ bốn mức theo contract. Nhóm
+nhận main mới nhất theo Git/PR, không dùng SHA nhánh trước squash làm điểm bàn giao.
+Không chạy lại các ca đã đạt nếu source liên quan không đổi. Nhánh upload-recovery
+vẫn riêng; chọn gói tiếp từ khoảng trống sản phẩm/API và dependency, không lặp
+polish hoặc bật ví/Order trước M1. Human review/release gates giữ nguyên, chưa
+phân công thêm người. Yêu cầu merge30/09 chỉ áp dụng gói condition và điểm lưu này.
 
 H01a/H01b và docs/AI đã tích hợp; nhóm có thể nhận main. Đường đọc/test/giới hạn
 H02 ở DEMO_SCENARIOS; nội dung/checks/integration ở PR7. Preflight source riêng
