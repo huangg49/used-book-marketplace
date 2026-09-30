@@ -3,7 +3,8 @@
 ## Nguồn và việc đang làm
 
 - **C01 code/checks hoàn tất** trên `codex/c01-member-wallet`, base main10a461c;
-  commit subject `feat(rn): add opt-in read-only wallet`.
+  code commit **d45b7c7** `feat(rn): add opt-in read-only wallet` đã push;
+  [PR11 draft](https://github.com/huangg49/used-book-marketplace/pull/11) mở vào main.
   Chủ dự án duyệt30/09 mở C01/C02 **chỉ đọc, dùng nội bộ** trước full M1;
   đã cập nhật ngoại lệ trong CONTINUATION_PLAN/DEMO_PLAN. Release/human review,
   Delivered/inspection/settlement vẫn giữ gate. C02 chưa bắt đầu.
@@ -22,8 +23,9 @@
   App snapshot mới/font100%/reverse đã restore, emulator/API/proxy QA đã dừng;
   preview web trước đó khôi phục. Metro người dùng8081 còn chạy, có thể đóng khi
   xong; API3046 hiện dừng. Config/DB chính và nhánh teammate giữ nguyên.
-  Chuẩn bị commit/push/draft PR; chưa merge và human review NOT RUN. READINESS giữ
-  nguyên. Không tự suy quyền merge từ gói condition/H01 trước.
+  CI PR11 đang chạy, human review NOT RUN; chưa merge. Checkpoint sau code chỉ đổi
+  SESSION_STATE, subject `docs(handoff): record C01 branch and pull request`.
+  READINESS giữ nguyên; không suy quyền merge từ gói condition/H01 trước.
 - Gói RN condition đã push/squash merge qua [PR9](https://github.com/huangg49/used-book-marketplace/pull/9)
   vào main **fe7b577**, base b0e30fd, head kiểm e4e08e0.
   Chủ dự án trực tiếp yêu cầu merge nhánh này30/09; human review NOT RUN, không
