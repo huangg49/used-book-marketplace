@@ -2,6 +2,26 @@
 
 ## Nguồn và việc đang làm
 
+- **UI-1 — định hướng giao diện, tạm dừng lộ trình tính năng theo yêu cầu mới.**
+  **C01 đã merge (PR11/PR12); C02 TẠM HOÃN để làm đợt định hướng giao diện
+  (UI-1); gate review người thật/native/release vẫn mở.** Đã fetch và xác nhận
+  main local/remote cùng4273f10, working tree sạch trước khi tạo nhánh
+  `codex/ui-direction` từ main. Mọi thay đổi UI-1 nằm trên nhánh này.
+  Hiện chỉ cập nhật điểm lưu, chưa sửa code; đã hỏi chủ dự án 5 câu về người dùng,
+  cảm xúc, phong cách tiệm sách, nét riêng và điều cần tránh; đang chờ câu trả lời.
+  Sau câu trả lời mới viết docs/DESIGN.md làm nguồn sự thật về trình bày của UI-1,
+  ưu tiên hơn giao diện/brand cũ nếu mâu thuẫn. Không đổi logic nghiệp vụ, API,
+  contract hay hành vi các màn đã merge; giữ nguyên các yêu cầu accessibility.
+  Sau đó chụp màn hình chính trên emulator khoảng390px, gồm rỗng/lỗi khi áp dụng;
+  chấm5 tiêu chí theo DESIGN, chọn tối đa3 vấn đề lớn và hướng sửa cụ thể, lưu
+  docs/ui/CRITIQUE_01.md rồi **DỪNG chờ chủ dự án duyệt**, không sửa code trong
+  lượt phê bình. Chưa tạo hai tài liệu này khi chưa có đầu vào/bằng chứng.
+  Khi được duyệt mới đổi token/theme rồi sửa đúng3 vấn đề trên **một màn chuẩn**;
+  chụp trước/sau và chờ duyệt trước khi áp dụng các màn khác. Test/lint/typecheck
+  phải tiếp tục PASS. Chưa có quyền push/merge/deploy UI-1 từ lần tích hợp C01.
+  Checkpoint `docs(handoff): pause C02 for UI direction`: chỉ đổi SESSION_STATE;
+  docs:check PASS158/1148links/3adapters, diff-check PASS. Không chạy lại test/lint/
+  typecheck app vì chưa sửa source; evidence C01 giữ nguyên tại head đã ghi.
 - **C01 đã squash merge** qua [PR11](https://github.com/huangg49/used-book-marketplace/pull/11)
   vào main **6361e57**, base10a461c, head đã kiểm4e4851e; tree sau squash giống
   head đã kiểm. Code gốc d45b7c7 `feat(rn): add opt-in read-only wallet`.
@@ -177,11 +197,12 @@
 
 C01 đã tích hợp vào main6361e57 với CI/evidence trên head4e4851e. Chủ dự án trực
 tiếp yêu cầu merge riêng C01; human review NOT RUN, full M1/release vẫn còn gate.
-Tiếp C02 trên nhánh riêng theo ngoại lệ phát triển nội bộ30/09:
-đọc list/detail Order bằng API hiện có, cùng cờ opt-in, server snapshot/deadline,
-pagination/owner isolation/LOCKED; không nút mua/Delivered/settlement giả.
-Lấy SHA bàn giao mới nhất từ origin/main sau checkpoint; condition/H01 đã tích
-hợp, nhánh upload-recovery vẫn giữ riêng. Chưa có quyền merge/deploy C02.
+C02 **TẠM HOÃN** theo yêu cầu UI-1 mới, không bắt đầu danh sách/chi tiết Order.
+Trên `codex/ui-direction`, chờ5 câu trả lời rồi viết docs/DESIGN.md, khảo sát
+emulator và lập docs/ui/CRITIQUE_01.md; dừng chờ duyệt trước sửa code. Định hướng
+cũ trong kế hoạch không cấp quyền tiếp tục C02 khi yêu cầu này còn hiệu lực.
+Main local/remote4273f10; condition/H01/C01 đã tích hợp, nhánh upload-recovery
+vẫn giữ riêng. Chưa có quyền merge/deploy UI-1 hoặc C02.
 Không kiểm lại gate đã đạt khi source không đổi; chưa phân công thêm teammate.
 
 H01a/H01b và docs/AI đã tích hợp; nhóm có thể nhận main. Đường đọc/test/giới hạn
