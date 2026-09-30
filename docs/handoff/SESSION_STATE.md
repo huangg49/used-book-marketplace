@@ -2,12 +2,15 @@
 
 ## Nguồn và việc đang làm
 
-- main đã tích hợp MongoDB và bàn giao qua [PR5](https://github.com/huangg49/used-book-marketplace/pull/5)/[PR6](https://github.com/huangg49/used-book-marketplace/pull/6), mốc1be5144.
-- Gói hiện tại: tích hợp H01, nhánh codex/h01-handoff từd4f8220;
-  working tree sạch lúc mở nhánh. Fetch origin30/09 vẫn main1be5144, không có
-  commit main mới cần tích hợp; không pull/reset/clean, giữ local work.
-  Stack docs/AI/plan19ffb84 →0182e40 →e2e7f21 →b9026a5 →46f988d →ae0f1d9 →428cafd →274d100 →d4f8220
-  cùng CI fix d47d3bf nằm trong nhánh bàn giao. Không cherry-pick code bỏ dependency docs.
+- main đã tích hợp MongoDB qua [PR5](https://github.com/huangg49/used-book-marketplace/pull/5)/[PR6](https://github.com/huangg49/used-book-marketplace/pull/6), baseline1be5144.
+- Docs/AI/plan và toàn bộ H01 đã push/squash merge qua
+  [PR7](https://github.com/huangg49/used-book-marketplace/pull/7) vào mainf875df9.
+  Head được kiểm9c430ac; cả6 job demo/docs/API/RN/operations/Flutter PASS, không
+  skip. Tree f875df9 giống đúng head9c430ac. Main local đã fast-forward; local
+  work/config/DB giữ nguyên, không reset/clean/pull đè hoặc đổi branch protection.
+- Gói hiện tại chỉ ghi điểm lưu sau merge: nhánh codex/h01-merge-checkpoint từ
+  f875df9; subject `docs(handoff): record merged H01 source and CI evidence`.
+  Không đổi API/contract/migration/UI; checks docs-only, không chạy lại API/native.
 - Chủ dự án đã cho phép push/tạo PR/merge H01 ngay sau checks cần thiết, miễn
   human review cho riêng gói này (yêu cầu trực tiếp30/09). Không có human sign-off;
   không đóng gate review/native/release hoặc mở nghiệp vụ sau F2h từ ngoại lệ này.
@@ -16,8 +19,8 @@
   Commit0182e40: docs(ai): add shared team skills and verified onboarding workflow.
   [Bằng chứng/phạm vi](AI_TEAM_HANDOFF_2026_09_30.md): checker 5/5, skills 6/6,
   docs links/contract/diff-check PASS; AI mới sửa form mẫu và nhận đúng gate.
-  Không đổi app/DB. Chưa test tự nạp Claude/máy teammate hoặc chạy remote CI.
-- H01 tooling đã đủ local để bàn giao review; API/contract/migration/UI product
+  Không đổi app/DB. Chưa test tự nạp Claude/máy teammate; remote CI đã đạt ở PR7.
+- H01 tooling đã lên main để nhóm nhận; API/contract/migration/UI product
   không đổi. Accounts fixture tách role, DB random *_test trên QA57017/rs-test,
   private bucket riêng; mọi command nghiệp vụ qua API, không seed tiền/state.
   Durable key/body/version/receipt, run lock, binding và chặn SANDBOX_LOST.
@@ -50,7 +53,8 @@
   API đã tải/xem, chỉ lưu ảnh, không URL/token. IAB Member web riêng với API3030:
   seller →4 Reserved, không thêm UI Order/shipping; ảnh trong .tmp/demo/transit-live/.
   Đây không là native PASS. Evidence H01a/Order live trước giữ ở DEMO_SCENARIOS.
-- Full CLI crash/lost-ack live, remote CI và human review NOT RUN. Login4 actor có
+- Full CLI crash/lost-ack live và human review NOT RUN. Remote CI của PR7 PASS;
+  không coi CI/export là native acceptance. Login4 actor có
   thể429 khi restart trong cùng cửa sổ5 login/IP/15 phút; không persist token/nới
   guard/xóa login attempts. Deadline thật; run quá hạn dừng, không đổi clock/DB.
   Các manifest là evidence tại thời gian/source ghi, không thay outcome mới nhất.
@@ -61,7 +65,8 @@
 
 - API/worker: MongoDB, OpenAPI0.21.0,3 migrations; nghiệp vụ giao dịch đóng tại F2h.
   Admin có list user, chưa lock/unlock. Flutter chỉ scaffold; Member web là Expo web.
-- CI của head7587983 trong PR5: API/RN/admin/operations/compose PASS. Các gate độc
+- CI mới nhất của head9c430ac trong PR7: demo/docs/API/RN/operations/Flutter PASS.
+  CI lịch sử head7587983 trong PR5 giữ evidence riêng. Các gate độc
   lập/full native còn mở ở [READINESS](READINESS.md), không suy từ merge thành release.
 - Yêu cầu mới30/09: tiếp tục code buổi sáng, dự kiến bàn giao/merge main vào trưa
   cùng ngày để nhóm pull và phát triển. Mốc còn6 ngày là thời gian dự án đã nêu,
@@ -92,25 +97,17 @@
 
 ## Bước tiếp
 
-H01a/H01b tooling đã đủ local. Đã chuẩn bị nội dung PR theo template trong
-`.tmp/handoff-h01/pr-body.md` (local, không có secret) và đường đọc H02 trong
-DEMO_SCENARIOS. Nhánh bàn giao chứa đủ stack docs/AI/code từ main1be5144;
-Checkpoint subject `fix(ci): run demo units before explicit frozen install`.
-Preflight source riêng không có node_modules: pnpm run kích hoạt implicit install;
-fixture đầu thiếu workspace manifests nên install bị từ chối. Job unit đổi sang
-Node trực tiếp để không cài ngầm trước pnpm install --frozen-lockfile; không đổi
-unit/API source. Source riêng không node_modules:14/14 PASS bằng Node24.19.0;
-docs checker5/5, docs157/1132links/3adapters, YAML/order/format/diff PASS.
-Scan diff60 file đúng scope, không private config/credential-shaped literals;
-scan có giới hạn, không bảo đảm tuyệt đối hết secret. Không chạy lại API/native.
-Chủ dự án đã thay mốc trưa bằng yêu cầu merge hiện tại, miễn review cho gói H01.
-Checkpoint ủy quyền subject `docs(handoff): record approved H01 integration`.
-Tiến hành push nhánh, tạo PR từ body đã chuẩn bị, chỉ squash merge khi CI đúng
-head đạt; không bypass check hoặc đổi branch protection. Human review NOT RUN.
+H01a/H01b và docs/AI đã tích hợp; nhóm có thể nhận main. Đường đọc/test/giới hạn
+H02 ở DEMO_SCENARIOS; nội dung/checks/integration ở PR7. Preflight source riêng
+không node_modules14/14, checker5/5, YAML/order/format/diff PASS; unit CI gọi Node
+trước explicit frozen install. Scan diff60 file đúng scope/không credential-shaped
+literals có giới hạn; không bảo đảm mọi secret hoặc bug đều được phát hiện.
+Checkpoint sau merge chỉ đổi docs: docs:check/diff phải đạt, remote docs CI kiểm
+trên PR checkpoint trước squash merge. Không kiểm lại source nghiệp vụ/UI đã đạt.
 Bảo tiếp H02 review/debug nền/source và giới hạn recovery đã ghi; ba lane UI
 làm tính năng hiện có. C01/C02 giữ dependency, không tự mở Delivered/settlement.
-Gói tích hợp giữ cả docs19ffb84 và AI0182e40 cùng code/checks; trạng thái remote
-CI/merge cần đọc tại PR trước khi ghi kết luận. Baseline release gate không đổi.
+Chủ dự án đã cho phép miễn review riêng gói tích hợp H01; human review NOT RUN,
+baseline release gate không đổi. Không suy quyền merge/deploy gói mới từ PR7.
 Nhóm bắt đầu theo [AI_WORKFLOW](../AI_WORKFLOW.md)/[TEAM_WINDOWS](TEAM_WINDOWS.md),
 phân công phần việc và reviewer; kiểm cửa vào Codex/Claude trên máy mình.
 Chi tiết phiên trước ở [SESSION_HISTORY](SESSION_HISTORY_2026_09_30.md); không đọc

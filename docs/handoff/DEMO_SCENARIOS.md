@@ -341,6 +341,11 @@ không mở Member checkout/shipping UI, Delivered/inspection/settlement từ ev
 
 ## Đường đọc H02 cho gói bàn giao H01
 
+Đã tích hợp qua [PR7](https://github.com/huangg49/used-book-marketplace/pull/7):
+mainf875df9, CI6/6 job PASS trên head9c430ac; tree merge giống head được kiểm.
+Code/source bên dưới giữ SHA trước squash để truy vết từng increment. CI không
+đóng full CLI crash/native/human release gates; ngoại lệ review chỉ cho tích hợp này.
+
 Review gói H01 lấy base main1be5144, implementation head d4f8220; nhánh
 `codex/h01-handoff` giữ cả docs/AI/plan và code phụ thuộc. Không chỉ đọc commit
 InTransit cuối. Nhận xét phải gắn source, invariant và ca tái hiện; findings của
@@ -357,7 +362,8 @@ AI không thay ký nhận người thật theo [TEAMWORK](../TEAMWORK.md).
 Đối chiếu bảng evidence phía trên trước chọn test; không chạy lại mọi backend/
 native baseline. Nếu sửa findings, chạy ca liên quan và cập nhật source/evidence;
 giữ full CLI crash/lost-ack live và giới hạn login/deadline là phần chưa nghiệm thu.
-Owner/reviewer thứ hai chưa được chỉ định; chưa có human sign-off hoặc remote CI.
+Owner/reviewer thứ hai chưa được chỉ định; chưa có human sign-off. Remote CI đã
+đạt tại PR7 trên source9c430ac, không phải kết quả tại increment d4f8220 lịch sử.
 
 Ngoại lệ tích hợp30/09: chủ dự án yêu cầu merge gói H01 khi checks cần thiết đạt,
 không yêu cầu human review cho riêng PR này. Human review vẫn NOT RUN, không là
