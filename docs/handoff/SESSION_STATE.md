@@ -23,8 +23,9 @@
   App snapshot mới/font100%/reverse đã restore, emulator/API/proxy QA đã dừng;
   preview web trước đó khôi phục. Metro người dùng8081 còn chạy, có thể đóng khi
   xong; API3046 hiện dừng. Config/DB chính và nhánh teammate giữ nguyên.
-  CI PR11 đang chạy, human review NOT RUN; chưa merge. Checkpoint sau code chỉ đổi
-  SESSION_STATE, subject `docs(handoff): record C01 branch and pull request`.
+  CI/review xem trực tiếp trên đúng head PR11, không dùng checks head cũ. Human
+  review NOT RUN; chưa merge. Checkpoint sau code chỉ cập nhật docs nguồn/PR;
+  source UI vẫn d45b7c7, subject `feat(rn): add opt-in read-only wallet`.
   READINESS giữ nguyên; không suy quyền merge từ gói condition/H01 trước.
 - Gói RN condition đã push/squash merge qua [PR9](https://github.com/huangg49/used-book-marketplace/pull/9)
   vào main **fe7b577**, base b0e30fd, head kiểm e4e08e0.
