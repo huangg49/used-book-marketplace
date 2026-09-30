@@ -88,6 +88,34 @@ export function validateConfig(config) {
       "INVALID_CONFIG",
       "Invalid private funding simulator configuration.",
     );
+  if (config.orders !== undefined) {
+    if (
+      !config.fundingSecret ||
+      config.orders?.schema !== 1 ||
+      !config.orders.addresses
+    )
+      throw new ScenarioError(
+        "INVALID_CONFIG",
+        "Orders require a new opt-in simulator sandbox.",
+      );
+    for (const actor of ["seller", "buyer"]) {
+      const address = config.orders.addresses[actor];
+      if (
+        !address ||
+        typeof address.recipientName !== "string" ||
+        !address.recipientName.startsWith("DỮ LIỆU DEMO") ||
+        address.phone !== "0900000000" ||
+        typeof address.detail !== "string" ||
+        !address.detail.startsWith("MÔ PHỎNG") ||
+        address.serviceAreaCode !== "HCM-DEMO-v1" ||
+        !["DEMO-A", "DEMO-B"].includes(address.localityCode)
+      )
+        throw new ScenarioError(
+          "INVALID_CONFIG",
+          "Orders only accept explicitly simulated contact inputs.",
+        );
+    }
+  }
   if (
     config.storage === "live" &&
     !/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config.project)
@@ -115,7 +143,7 @@ export async function readConfig(directory) {
 
 export async function initialize(
   directory,
-  { fixture = false, port = 3012, funding = false } = {},
+  { fixture = false, port = 3012, funding = false, orders = false } = {},
 ) {
   const id = randomBytes(8).toString("hex");
   const accounts = Object.fromEntries(
@@ -143,7 +171,28 @@ export async function initialize(
     jwt: randomBytes(32).toString("hex"),
     accounts,
     provisioned: false,
-    ...(funding ? { fundingSecret: randomBytes(32).toString("hex") } : {}),
+    ...(funding || orders
+      ? { fundingSecret: randomBytes(32).toString("hex") }
+      : {}),
+    ...(orders
+      ? {
+          orders: {
+            schema: 1,
+            addresses: Object.fromEntries(
+              ["seller", "buyer"].map((actor, i) => [
+                actor,
+                {
+                  recipientName: `DỮ LIỆU DEMO — ${actor}`,
+                  phone: "0900000000",
+                  detail: `MÔ PHỎNG — không giao hàng thật — ${id}`,
+                  serviceAreaCode: "HCM-DEMO-v1",
+                  localityCode: i === 0 ? "DEMO-A" : "DEMO-B",
+                },
+              ]),
+            ),
+          },
+        }
+      : {}),
   });
   // Exclusive create: initializing twice cannot rotate identities or rewrite intents.
   await writeFile(
@@ -168,6 +217,13 @@ export function bindingFor(config) {
           value.id,
         ]),
         ...(config.fundingSecret ? { funding: true } : {}),
+        ...(config.orders
+          ? {
+              orderInputs: createHash("sha256")
+                .update(JSON.stringify(config.orders))
+                .digest("hex"),
+            }
+          : {}),
       }),
     )
     .digest("hex");
@@ -398,6 +454,7 @@ export async function createSandbox(config, directory) {
     await app.listen(config.port, "127.0.0.1");
     const { MongoService } = await load("database/mongo/mongo.service.js"),
       { LedgerService } = await load("modules/wallet/ledger.service.js");
+    const { checkOrder } = await load("modules/orders/order-invariants.js");
     return {
       base: `http://127.0.0.1:${config.port}/api/v1`,
       close,
@@ -405,6 +462,7 @@ export async function createSandbox(config, directory) {
       processMedia: () => app.get(MediaWorker).tick(),
       reconcileMoney: () =>
         app.get(MongoService).tx((tx) => app.get(LedgerService).reconcile(tx)),
+      checkOrder: (id) => app.get(MongoService).tx((tx) => checkOrder(tx, id)),
       // Exposed to focused QA only. Orchestration never writes business documents.
       inspect: (collection) => db.collection(collection),
     };

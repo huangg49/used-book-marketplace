@@ -3,9 +3,9 @@
 ## Nguồn và việc đang làm
 
 - main đã tích hợp MongoDB và bàn giao qua [PR5](https://github.com/huangg49/used-book-marketplace/pull/5)/[PR6](https://github.com/huangg49/used-book-marketplace/pull/6), mốc1be5144.
-- Gói hiện tại: funding đầu H01b, nhánh codex/h01-f2h-scenarios từae0f1d9 (H01a,
-  nhánh codex/h01-demo-scenarios từ46f988d). Working tree sạch lúc mở mỗi nhánh.
-  Stack docs/AI/plan19ffb84 →0182e40 →e2e7f21 →b9026a5 →46f988d →ae0f1d9
+- Gói hiện tại: H01b Order, nhánh codex/h01-order-scenarios từ428cafd (funding từae0f1d9,
+  H01a từ46f988d). Working tree sạch lúc mở mỗi nhánh; local work được giữ nguyên.
+  Stack docs/AI/plan19ffb84 →0182e40 →e2e7f21 →b9026a5 →46f988d →ae0f1d9 →428cafd
   chưa push/merge. Không cherry-pick code bỏ dependency docs; tích hợp theo mốc trưa.
 - Đã hoàn thiện [AI_WORKFLOW](../AI_WORKFLOW.md): AGENTS gọn, domain rules đọc theo
   nhiệm vụ, ba skill nguồn chung + adapter Claude, mẫu issue/PR và docs:check/CI.
@@ -37,7 +37,27 @@
   Unit9/9 và focused real HTTP/Mongo PASS (credit lost-ack ba lần, restart API/rerun
   không posting trùng;403 Member event; disabled/same-recipient chặn). CLI fixture
   init/run/rerun PASS: available1M/source99M. H01a API regression/oxlint/docs/diff
-  PASS. Không dựng Order, không mở ví UI, không đóng human/native/remote CI gate.
+  PASS. Gói funding này không dựng Order hoặc mở ví UI; gates giữ nguyên.
+- H01b Order đã hiện thực `demo:orders init/run/serve`: address mô phỏng qua API,
+  fulfillment/media/submit/review cho3 sách, quote server → AwaitingPayment /
+  PendingSellerConfirmation / Preparing. Shared journal, contact ref/hash, receipt
+  recovery không cần sách Reserved còn public; hold/commitment/ledger snapshot khớp.
+  Subject: `feat(demo): build recoverable F2h order scenarios through existing APIs`.
+  [Chi tiết/evidence](DEMO_SCENARIOS.md). API/contract/migrations/UI không đổi.
+  Unit11/11, test:demo:orders real HTTP/Nest/Mongo/Sharp FAKE PASS: mất ack ba lần
+  sau commit ở quote/create/pay/accept, restart API bằng session memory rồi resume/
+  rerun không duplicate;40 receipts,3 orders/contexts/commitments,1 preparation,
+  4 journals/8 entries. Actor sai/conflicting create bị từ chối; không leak contact/
+  secret. Transport projection quá deadline bị chặn, không đổi clock/DB.
+  H01a/funding regression/oxlint/format/docs/diff PASS. Node24.19.0/pnpm11.19.0.
+- Order CLI live `order-live` (API3024, dedicated Supabase private random bucket/QA
+  DB) init/run PASS: available690K/held310K/source99M, seller0;3 media pipeline thật.
+  Expo web export riêng .tmp/demo/order-member-web, IAB thật: Reserved không trên
+  public shelf; seller địa chỉ → Back →3 sách giữ chỗ → quản lý/ảnh live/input
+  disabled PASS. Screenshot .tmp/demo/order-live/member-reserved.jpg. Không là native.
+  Full CLI crash recovery/live lost-ack/human review/remote CI NOT RUN. Login4 actor
+  có thể gặp429 khi restart CLI trong cùng cửa sổ5 login/IP/15 phút; không persist
+  token/nới guard. Run quá deadline bị BLOCKED, không nạp bù/refund/restock.
 - Gói docs trước: README/index/SESSION/READINESS rút gọn, sửa DB/contract/prompt;
   [phạm vi](DOCS_AUDIT_2026_09_30.md). Evidence lịch sử giữ nguyên.
 
@@ -75,11 +95,10 @@
 
 ## Bước tiếp
 
-H01a và funding H01b đã đủ dùng. Tiếp H01b Order: address/fulfillment qua API,
-revision mới submit/review; quote server → AwaitingPayment → pay/accept, đối chiếu
-hold/commitment/payment ledger. Giữ intent cả quote bị hết hạn, không tự đổi key.
-InTransit cần packaging/label/carrier event thật trong mô phỏng, không gán state.
-Chưa có Order do tool tạo. H01b không bắt buộc xong trưa. Bảo nhận H01b còn lại
+H01a, funding và ba trạng thái Order H01b đã đủ dùng local. Tiếp H01b InTransit:
+đọc packaging/label/carrier API và invariant; dùng evidence/event thật trong mô phỏng,
+không gán state. Giữ intent/reconciliation, không sửa deadline hoặc mở hậu F2h.
+H01b không bắt buộc xong trưa. Bảo nhận H01b còn lại
 cùng H02 review/debug sau bàn giao; ba lane UI
 làm tính năng hiện có. C01/C02 giữ dependency, không tự mở Delivered/settlement.
 Tích hợp dự kiến khi bàn giao trưa: cả docs19ffb84 và AI0182e40 cùng gói code đủ

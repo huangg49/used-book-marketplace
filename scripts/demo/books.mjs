@@ -29,9 +29,18 @@ export async function runBooks(
   config,
   directory,
   sandbox,
-  { onStep = () => {}, fetcher = fetch } = {},
+  {
+    onStep = () => {},
+    fetcher = fetch,
+    journal: sharedJournal,
+    prefix = "",
+    fulfillment,
+  } = {},
 ) {
-  const journal = await openJournal(directory, bindingFor(config));
+  if (prefix && !/^orders\.(awaiting|paid|preparing)\.book$/.test(prefix))
+    throw new ScenarioError("INVALID_SCOPE", "Unknown book scenario scope.");
+  const journal =
+    sharedJournal ?? (await openJournal(directory, bindingFor(config)));
   const tokens = sandbox.tokens;
   const http = createHttp(sandbox.base, tokens, { fetcher });
   const photo = await demoPhoto(directory);
@@ -82,13 +91,16 @@ export async function runBooks(
     });
   });
   const command = async (name, actor, route, build, method = "POST", kind) => {
-    const result = await commands.execute(name, async () => ({
-      actor,
-      route,
-      method,
-      body: await build(),
-      ...(kind ? { kind } : {}),
-    }));
+    const result = await commands.execute(
+      prefix ? `${prefix}.${name}` : name,
+      async () => ({
+        actor,
+        route,
+        method,
+        body: await build(),
+        ...(kind ? { kind } : {}),
+      }),
+    );
     onStep(name, result.state);
     return result;
   };
@@ -145,6 +157,7 @@ export async function runBooks(
     salePrice: 125000,
     exchangeValue: 150000,
     mediaIds: [],
+    ...(fulfillment ? { fulfillment } : {}),
   };
   const listing = await command("listing.draft", "seller", "/listings", () => ({
     content,
@@ -301,10 +314,16 @@ export async function runBooks(
       reviewer: config.accounts.reviewer.id,
     },
     steps: Object.fromEntries(
-      Object.entries(journal.data.steps).map(([name, intent]) => [
-        name,
-        { status: intent.state, receipt: intent.receipt },
-      ]),
+      Object.entries(journal.data.steps)
+        .filter(([name]) =>
+          prefix
+            ? name.startsWith(prefix + ".")
+            : !name.startsWith("orders.") && !name.startsWith("funding."),
+        )
+        .map(([name, intent]) => [
+          name,
+          { status: intent.state, receipt: intent.receipt },
+        ]),
     ),
     limitations: [
       "Isolated demo data, not production data",
@@ -312,6 +331,12 @@ export async function runBooks(
       "No transaction or native/human-review gate closed",
     ],
   };
-  await writeJson(path.join(directory, "manifest.json"), manifest);
+  await writeJson(
+    path.join(
+      directory,
+      prefix ? `manifest-${prefix.replaceAll(".", "-")}.json` : "manifest.json",
+    ),
+    manifest,
+  );
   return manifest;
 }

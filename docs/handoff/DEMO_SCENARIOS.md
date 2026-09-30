@@ -103,6 +103,8 @@ pnpm test:demo
 pnpm infra:mongo:test:up
 pnpm --filter @used-books/api build
 pnpm test:demo:api
+pnpm test:demo:funding
+pnpm test:demo:orders
 ```
 
 Test API tạo namespace riêng, giữ artifact trong `.tmp/demo/qa-<id>`, không chạm
@@ -114,7 +116,7 @@ kiểm riêng bằng cấu hình private, không đưa service key vào workflow
 Code ở `scripts/demo/`: sandbox quản lý target/accounts, journal quản lý intent,
 HTTP giữ auth ở memory, books điều phối API. `Commands` nhận `projectReceipt` khi
 mở rộng sang kiểu receipt khác; mặc định là MutationReceipt cho sách. H01b đã có
-bước funding bên dưới; các kịch bản Order chưa triển khai. Bảo tiếp phần còn lại
+funding và ba trạng thái Order bên dưới. Bảo tiếp InTransit còn lại
 theo [DEMO_PLAN](DEMO_PLAN_2026_10_06.md),
 không ghi ledger/balance/state trực tiếp. H01a không đóng native/human review hoặc
 gates cho Delivered/settlement.
@@ -177,8 +179,85 @@ và operator trùng recipient bị chặn; không phát sinh posting. CLI init/r
 `h01-funding` PASS. H01a API test chạy lại PASS vì sandbox dùng chung thay đổi.
 Oxlint/docs/diff checks PASS; remote CI/human review NOT RUN.
 
-Phần tiếp cụ thể: địa chỉ mô phỏng qua API (giữ contact ngoài manifest), fulfillment
-revision/submit/review, server quote, AwaitingPayment và pay/accept theo version đã
-đọc; giữ hold/commitment, đối chiếu payment posting. InTransit cần label/packaging
-evidence và carrier event đúng API, không gán state/fast-forward deadline. Chưa có
-Order nào được tạo bởi tooling này; không gọi đây là H01b hoàn tất hoặc mở ví UI.
+## H01b — Order chưa thanh toán, đã trả tiền và Preparing
+
+```powershell
+pnpm demo:orders init demo-don --fixture-storage
+pnpm demo:orders run demo-don
+pnpm demo:orders serve demo-don
+pnpm test:demo:orders
+```
+
+Port mặc định3020; `--port` chỉ ở init. Để dùng Supabase thật, nạp private env như
+H01a và bỏ `--fixture-storage`. Không repurpose run books/funding cũ: Order cần
+namespace mới, simulator opt-in và hai địa chỉ ghi rõ mô phỏng ở `private.json`.
+Không điền contact thật. Journal chỉ lưu actor/ref/hash; lúc gửi request, tool đọc
+lại private input đúng digest. Binding giữ hash cấu hình Order; sửa đầu vào sẽ
+fail closed trước replay, không đổi contact dưới key cũ.
+
+Tool tạo địa chỉ qua API, nạp1M qua operator độc lập rồi lần lượt tạo ba sách với
+fulfillment DirectDelivery, media/submit/review thật. Buyer lấy quote server cho
+mỗi sách; amount/deadline/version không tự tính hoặc gán trong DB. Thứ tự tạo tuân
+theo giới hạn hai đơn unpaid đồng thời:
+
+| Slot trong manifest | Trạng thái | Tiền/sách |
+| --- | --- | --- |
+| `awaiting` | AwaitingPayment | Chưa debit; commitment Active, sách Reserved |
+| `paid` | PendingSellerConfirmation | Buyer payment một lần, OrderHold=P+S |
+| `preparing` | Preparing | Seller acceptance, hold vẫn giữ, pickup deadline cố định; seller chưa nhận tiền |
+
+Tool đọc projection cả hai participant, private listing Reserved và kiểm invariant
+Order trong Mongo snapshot chỉ đọc. Wallet history đối chiếu **debit âm** đúng Order;
+ledger cân bằng, nguồn99M, tổng available+held1M. Với policy hiện tại: available690K,
+held310K; số trả lấy từ quote, không hardcode trong command. Seller=0.
+
+Intent quote/create/pay/accept ghi trước request. Nếu create có intent, tool phục
+hồi receipt trước, không đòi sách đã Reserved phải còn public. Books/funding/orders
+dùng chung một journal trong tiến trình để không ghi đè bước của nhau. Payment/
+acceptance không tự nâng version của listing hoặc commitment.
+
+`orders-manifest.json` chứa Order/quote/context/listing IDs, amount/deadline, receipt
+và reconciliation. `orders-outcome.json` là lần chạy gần nhất; PASS cũ không thay
+kết quả mới. `manifest-orders-<slot>-book.json` là evidence sách lúc approved,
+trước reservation, không là visibility hiện tại. Manifest không contact/token/URL ký.
+
+Deadline thật: unpaid15 phút, seller confirmation/pickup48 giờ. Run quá deadline
+hoặc projection khác state yêu cầu bị BLOCKED; giữ đơn/hold/intent để điều tra,
+không sửa clock, restock, refund hoặc quay lại phiên bản cũ. Dựng run mới sát demo.
+Tool không tự tick OrderWorker; khi thử expiry/carrier workflow phải dùng worker/
+API thực trong sandbox. AwaitingPayment quá hạn không là ca demo hợp lệ.
+
+Order dùng bốn login ở lần đầu. Restart **toàn bộ CLI** ngay có thể gặp429 do
+limit5 login/IP trong cửa sổ15 phút; chờ cửa sổ thật có thể vượt unpaid deadline.
+Không persist token, xóa login attempts hoặc nới guard. Evidence restart bên dưới
+chỉ là restart API, giữ session trong memory của test process; chưa chứng nhận
+phục hồi toàn bộ CLI sau crash. Journal vẫn bảo toàn intent khi bị chặn.
+
+Bằng chứng local30/09: nhánh `codex/h01-order-scenarios`, base428cafd; subject
+`feat(demo): build recoverable F2h order scenarios through existing APIs`.
+
+- Unit11/11; focused HTTP/Nest/Mongo/Sharp Order test PASS, storage **FAKE**: mất
+  ack ba lần sau commit ở quote/create/pay/accept, restart API giữa các điểm rồi
+  resume bằng session memory. Giữ key/body/receipt/deadline; rerun không thêm dữ
+  liệu:40 receipts,3 orders/contexts/commitments,1 preparation,4 journals/8 entries.
+  Actor sai, replay sai actor và create mới từ quote đã Reserved bị từ chối. Kiểm
+  journal/manifest không có secret/contact; transport projection deadline giả lập
+  quá hạn bị tool chặn, không chỉnh DB/clock server.
+- `test:demo:api` và `test:demo:funding` PASS vì books/funding/sandbox dùng chung đổi;
+  oxlint/format/docs/diff checks PASS. Node24.19.0/pnpm11.19.0.
+- CLI `order-live` init/run PASS trên Supabase thật, dedicated private random
+  bucket/QA DB, ba pipeline ảnh thật và ledger khớp. Live lost-ack/restart chưa
+  chạy; ca này kiểm bằng fixture API thật. Không dùng bucket/DB chính.
+- Member web export riêng `.tmp/demo/order-member-web`, API3024; IAB thật: kệ
+  public trống vì3 sách Reserved; seller login → địa chỉ → Back → Sách của tôi
+  thấy3 “Đang giữ cho một đơn” → quản lý sách, ảnh live và input disabled đúng
+  trạng thái. Screenshot `.tmp/demo/order-live/member-reserved.jpg`. Không đổi UI.
+
+Trong phát triển có lỗi tool dùng tên trường hold/commitment version chưa đúng,
+so payment history với amount dương và test đếm nhầm tên collection. Đã sửa theo
+contract/code/ledger rồi chạy lại; không đổi backend hoặc hạ invariant để test xanh.
+API/contract/migration và dữ liệu chính không đổi. Remote CI, full CLI crash
+recovery, Android và human review NOT RUN; READINESS giữ nguyên.
+
+Phần tiếp là InTransit: packaging evidence/label/carrier event đúng API, chưa chạy.
+Không gọi H01b hoàn tất, mở ví/Order UI hay Delivered/settlement từ evidence này.

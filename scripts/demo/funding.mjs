@@ -60,7 +60,7 @@ export async function runFunding(
   config,
   directory,
   sandbox,
-  { fetcher = fetch } = {},
+  { fetcher = fetch, journal: sharedJournal } = {},
 ) {
   if (!config.fundingSecret)
     throw new ScenarioError(
@@ -87,7 +87,8 @@ export async function runFunding(
       "Funding actor differs from the sandbox identity.",
     );
   }
-  const journal = await openJournal(directory, bindingFor(config));
+  const journal =
+    sharedJournal ?? (await openJournal(directory, bindingFor(config)));
   const commands = new Commands(
     journal,
     (intent) =>
