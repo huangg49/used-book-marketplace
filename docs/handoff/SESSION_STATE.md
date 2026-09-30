@@ -2,7 +2,12 @@
 
 ## Nguồn và việc đang làm
 
-- **UI-1 — sửa khoảng cách giá trên màn chuẩn03 XONG, CHỜ DUYỆT ẢNH.**
+- **UI-1 — MÀN CHUẨN CHI TIẾT ĐÃ ĐƯỢC CHỦ DỰ ÁN DUYỆT tại a70e5a3.**
+  Ghi nhận ba điểm xem lại khi có bìa sách thật: bìa còn nhỏ, dấu tình trạng
+  khiêm tốn, hàng số ảnh1/1 + kính lúp chiếm chỗ. Chưa sửa thêm từ các ghi nhận
+  này. Duyệt thẩm mỹ màn chuẩn không đóng gate native/review độc lập/release.
+  Đang chờ chủ dự án chọn thứ tự giữa áp hướng thiết kế sang kệ và chuyển động
+  mở ảnh lớn; đề xuất kệ trước, chuyển động sau. Chưa được bắt đầu code bước mới.
   Chủ dự án chỉ ra hai giá quá sát và yêu cầu sửa. Từ192b0cf: BookTradeBar dùng
   cột giá co giãn/gap32px, cách trạng thái8px, BookPrice mặc định giữ nguyên.
   [So sánh mới nhất](../ui/detail-price-spacing.html), phần cập nhật trong
@@ -32,12 +37,12 @@
   PASS: RN91/91 (12 files), lint/typecheck, contract:check, Prettier, docs:check,
   diff-check; Node24.19.0/pnpm11.19.0. Không chạy lại API E2E/export/native build.
   Chưa kiểm mới /ui native (DESIGN_PREVIEW=0),320px/Expo web/TalkBack/ARM/iOS;
-  không đóng human review/release. Cảm nhận thẩm mỹ vẫn do chủ dự án duyệt.
+  không đóng human review/release. Chủ dự án đã duyệt thẩm mỹ màn chuẩn sau sửa giá.
   Người dùng đã mở lại Metro/Docker. Đã phục hồi app snapshot/font/density/reverse,
   dừng API/media QA/emulator do agent mở; giữ Metro/Docker người dùng và preview8089.
   PID/notes ở .tmp/ui-refine; QA giữ lại, không reset DB/bucket/config chính.
   Checkpoint subject `feat(rn): refine book cover and trade labels`.
-  Chưa push/PR/merge. **Dừng chờ duyệt màn chuẩn03 trước khi áp sang màn khác.**
+  Chưa push/PR/merge. **Dừng chờ chọn bước tiếp trước khi áp sang màn khác.**
   Lịch sử: [màn chuẩn02](../ui/DETAIL_STANDARD_02.md),
   [màn chuẩn01](../ui/DETAIL_STANDARD_01.md), [phê bình](../ui/CRITIQUE_01.md).
 - **C01 đã squash merge** qua [PR11](https://github.com/huangg49/used-book-marketplace/pull/11)
@@ -218,23 +223,26 @@ tiếp yêu cầu merge riêng C01; human review NOT RUN, full M1/release vẫn 
 C02 **TẠM HOÃN** theo yêu cầu UI-1 mới, không bắt đầu danh sách/chi tiết Order.
 Trên `codex/ui-direction`, màn chuẩn chi tiết đã sửa tới `a70e5a3` (khoảng cách giá).
 Xem [so sánh mới nhất](../ui/detail-price-spacing.html) và
-[evidence màn chuẩn03](../ui/DETAIL_STANDARD_03.md); **chờ chủ dự án duyệt màn chuẩn**.
-Thứ tự chủ dự án chốt sau khi bàn về chuyển động:
+[evidence màn chuẩn03](../ui/DETAIL_STANDARD_03.md); **chủ dự án đã duyệt màn chuẩn**.
+Yêu cầu mới thay điểm chờ cũ: đề xuất thứ tự giữa kệ sách và chuyển động mở ảnh,
+chưa sửa code, chờ chủ dự án chọn. Đề xuất hiện tại: kệ trước để hoàn thiện ấn
+tượng đầu và tính nhất quán kệ → chi tiết; chuyển động mở ảnh sau. Đây mới là đề
+xuất, chưa phải quyền triển khai. Các bước và ranh giới còn lại:
 
-1. Hoàn tất vòng màn chuẩn trước; hiện đã có ảnh Android trước/sau390dp,100%/130%.
-   Lượt chốt thứ tự chỉ xem lại evidence và cập nhật điểm lưu, không đổi UI hoặc
-   chụp/chạy lại native vì source không đổi. Chưa có duyệt thẩm mỹ cuối cùng.
-2. Chỉ sau khi duyệt màn chuẩn, làm hướng1: chuyển động nhẹ khi mở ảnh lớn,
+1. Màn chuẩn đã duyệt; ảnh Android trước/sau390dp,100%/130% vẫn là evidence hiện
+   hành. Khi có bìa thật, xem lại kích thước bìa, độ nổi dấu tình trạng và diện
+   tích hàng1/1 + kính lúp. Không tự sửa lại màn đã duyệt trong lượt này.
+2. Hướng1: chuyển động nhẹ khi mở ảnh lớn, chờ chọn thứ tự với màn kệ,
    kèm bổ sung DESIGN.md về chuyển động. Quay trước/sau rồi dừng chờ duyệt;
    chưa triển khai hoặc sửa DESIGN.md trong lượt chốt thứ tự này.
 3. Hướng2 (vuốt ảnh): khảo sát số ảnh/listing trong QA/API rồi báo để chủ dự án
    quyết định. Phân biệt mẫu QA được tạo chủ đích với phân bố dữ liệu sử dụng;
    chưa khảo sát, chưa cấp quyền triển khai gesture.
 4. Hướng3 (bìa nối từ kệ sang chi tiết) hoãn. Không áp màn chuẩn sang màn khác
-   hoặc bắt đầu C02 từ việc duyệt kế hoạch này.
+   khi chưa được chọn triển khai; C02 tiếp tục hoãn.
 
 Mỗi bước có ảnh/video hoặc báo cáo tương ứng và dừng chờ chủ dự án duyệt.
-Checkpoint docs: `docs(handoff): record staged motion approval plan`;
+Checkpoint docs: `docs(handoff): record detail approval and shelf priority proposal`;
 docs:check và diff-check PASS. Không chạy lại tests/native của source `a70e5a3`.
 Main local/remote4273f10; condition/H01/C01 đã tích hợp, nhánh upload-recovery
 vẫn giữ riêng. Chưa có quyền merge/deploy UI-1 hoặc C02.
