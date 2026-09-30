@@ -88,6 +88,21 @@ Khởi động Metro bằng `pnpm dev:rn`; cài APK qua `adb install -r <đườ
 Dùng `adb reverse tcp:8081 tcp:8081` nếu debug app kết nối Metro qua localhost.
 Không đưa Supabase server key vào RN env.
 
+Nếu `--localhost` trên Windows chỉ listen `::1`, ADB reverse có thể không nối
+được dù `/status` trên máy tính trả running. Kiểm bằng
+`Get-NetTCPConnection -State Listen -LocalPort 8081`; dừng Metro rồi chạy từ
+`apps/mobile-react-native`:
+
+```powershell
+node --dns-result-order=ipv4first node_modules/expo/bin/cli start --dev-client --localhost --port 8081
+```
+
+Giữ terminal mở, kiểm listen IPv4 và reverse8081; trong debug menu dùng Bundle
+Location `127.0.0.1:8081`, rồi reload/restart app. API base URL và reverse API vẫn
+phải trỏ đúng môi trường đang thử. Không cần sửa .env hay rebuild APK cho lỗi
+binding này. Ca30/09 đã vào app sau xử lý trên; đây không là bằng chứng mọi nguyên
+nhân splash đều giống nhau.
+
 **App đứng splash/màn đỏ khi mở:** `http://localhost:8081/status` trả `running`
 không chứng minh Metro bundle được. Kiểm log Metro có
 `Failed to construct transformer` / `Failed to start watch mode` không, rồi

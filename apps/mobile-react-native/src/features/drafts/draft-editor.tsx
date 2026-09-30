@@ -51,6 +51,7 @@ import { uploadPhoto, type UploadAttempt } from "./upload";
 import { LifecycleActions } from "./lifecycle-actions";
 import { FulfillmentFields } from "./fulfillment-fields";
 import { StepNav } from "./step-nav";
+import { conditionLabels } from "./book-condition";
 
 const stepLabels = [
   "Đầu sách",
@@ -732,13 +733,7 @@ export function DraftEditor({
             {[
               [
                 "Tình trạng",
-                form.condition
-                  ? {
-                      LikeNew: "Gần như mới",
-                      Good: "Còn tốt",
-                      Fair: "Đã dùng nhiều",
-                    }[form.condition]
-                  : "Chưa chọn",
+                form.condition ? conditionLabels[form.condition] : "Chưa chọn",
               ],
               ["Ruột sách", form.pages],
               ["Bìa và gáy", form.coverNote],

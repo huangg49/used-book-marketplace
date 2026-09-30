@@ -2,6 +2,43 @@
 
 ## Nguồn và việc đang làm
 
+- Gói hiện tại: `codex/rn-book-condition` từ main/origin/main **b0e30fd**.
+  Commit chứa điểm lưu có subject `fix(rn): support all contract book conditions`;
+  chưa push/PR/merge. RN schema thiếu `Worn` khiến một bản nháp hợp lệ làm lỗi
+  cả trang Sách của tôi. Đã đồng bộ schema, lựa chọn và màn kiểm tra đủ bốn mức
+  theo OpenAPI; `Worn` hiển thị **Cũ nhiều**. Dùng component chung, không đổi API,
+  migration, session hay command protocol.
+- Checks source này: RN test **79/79** (11 file, gồm 11 ca condition mới), lint,
+  typecheck, contract:check, Prettier và export:web PASS. Focused condition/form/
+  command 33/33. Regression gồm đọc/lưu bốn mức, trang trộn Good/Worn, null và
+  từ chối giá trị ngoài contract; không chạy lại toàn bộ API E2E/native gates.
+- HTTP QA dùng shared SessionClient/schema/command RN với Nest/Mongo thật tại
+  API3046, DB random *_test trên QA57017/rs-test. Đọc bốn bản nháp qua hai trang,
+  lưu Worn version2 và đọc lại acknowledged intent giữ version2; không phải
+  kiểm lost-ack mới. Storage fixture, không thử pipeline/live Supabase.
+- UI thực: Expo web Chromium390/320px nhận trang đủ bốn mức, chọn Good → Worn,
+  xem nhãn, sửa ghi chú/lưu/mở lại, không tràn ngang. Android Pixel_7/API35/x86_64
+  với APK debug hiện có và Metro source mới: đăng nhập QA, mở Worn, lưu Good rồi
+  Worn, quay về danh sách/mở lại; chữ OS130%, bàn phím/Back giữ lựa chọn và màn
+  kiểm tra hiển thị đúng. Đọc lại API sau UI: Worn version5, ba bản nháp còn lại
+  giữ condition, giá/ruột sách/ghi chú giữ nguyên. Ảnh đã xem, chỉ dữ liệu DEMO:
+  [Android](../verification/condition-worn-android.png),
+  [mở lại/chữ130%](../verification/condition-worn-font130.png),
+  [web320px](../verification/condition-worn-web320.png).
+- Vướng môi trường đã xử lý: terminal Metro từng bị người dùng đóng; lần mở lại
+  chỉ listen ::1, chạy ưu tiên IPv4 rồi restart app thì nạp được. Browser QA ban
+  đầu mở export cũ, rồi origin mới không khớp CORS; dùng source mới/origin cho
+  phép thì PASS. Harness từng sai cwd/TSX load Nest metadata và login payload;
+  sửa harness local, không sửa backend/test để che lỗi. Log/config/snapshot riêng
+  giữ ignored trong .tmp/rn-book-condition/, không commit credential.
+- Sau QA đã khôi phục snapshot app mới chụp đầu gói, font100% và reverse ban đầu;
+  dừng emulator/API QA, phục hồi preview web trước đó. Metro do người dùng mở còn
+  chạy, có thể đóng terminal khi xong QA. DB/config/bucket local chính giữ nguyên.
+  TalkBack/ARM/iOS/human review và M1 vẫn OPEN/PARTIAL, không mở C01/C02 từ ca này.
+- Nhánh cũ `codex/rn-upload-recovery` giữ nguyên: 1546368 (Notice upload gián đoạn,
+  unit28/lint/typecheck PASS, native NOT RUN) và 2c89f9a (khảo sát khoảng trống).
+  Hai commit này chưa push/merge và không nằm trong gói condition. Theo yêu cầu
+  hiện tại chưa giao thêm task cho teammate.
 - main đã tích hợp MongoDB qua [PR5](https://github.com/huangg49/used-book-marketplace/pull/5)/[PR6](https://github.com/huangg49/used-book-marketplace/pull/6), baseline1be5144.
 - Docs/AI/plan và toàn bộ H01 đã push/squash merge qua
   [PR7](https://github.com/huangg49/used-book-marketplace/pull/7) vào mainf875df9.
@@ -98,13 +135,21 @@
 
 ## Bước tiếp
 
+Gói condition đã triển khai/kiểm đúng phạm vi và chốt local; bước tiếp là review
+diff/ảnh ở nhánh codex/rn-book-condition rồi tích hợp theo quyền của gói và TEAMWORK.
+Chưa có human sign-off hoặc CI remote cho gói này. Không suy ngoại lệ H01 thành
+miễn review gói mới. Sau tích hợp, RN/web dùng đủ bốn mức condition; không cần
+chạy lại các ca đã đạt nếu source liên quan không đổi. Nhánh upload-recovery vẫn
+riêng; cần quyết định chọn gói tiếp từ khoảng trống sản phẩm/API và dependency,
+không lặp polish hoặc bật ví/Order trước M1. Chưa phân công thêm người.
+
 H01a/H01b và docs/AI đã tích hợp; nhóm có thể nhận main. Đường đọc/test/giới hạn
 H02 ở DEMO_SCENARIOS; nội dung/checks/integration ở PR7. Preflight source riêng
 không node_modules14/14, checker5/5, YAML/order/format/diff PASS; unit CI gọi Node
 trước explicit frozen install. Scan diff60 file đúng scope/không credential-shaped
 literals có giới hạn; không bảo đảm mọi secret hoặc bug đều được phát hiện.
 Checkpoint sau merge chỉ đổi docs: docs:check PASS157/1132links/3adapters,
-diff-check PASS. PR8 chỉ cần docs CI đúng head trước squash merge; không kiểm lại
+diff-check PASS. PR8 đã squash merge vào b0e30fd; không kiểm lại
 source nghiệp vụ/UI đã đạt. Lấy SHA bàn giao mới nhất từ main, không từ nhánh H01
 trước squash hoặc SHA/PID lịch sử.
 Bảo tiếp H02 review/debug nền/source và giới hạn recovery đã ghi; ba lane UI
