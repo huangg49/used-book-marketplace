@@ -91,8 +91,9 @@ export function BookScreen({ id }: { id: string }) {
               <BookPresentation
                 key={item.revisionId}
                 item={item}
-                gallery={
+                gallery={(summary) => (
                   <BookGallery
+                    summary={summary}
                     count={item.photos.length}
                     selected={selected}
                     onSelect={setSelected}
@@ -108,10 +109,11 @@ export function BookScreen({ id }: { id: string }) {
                         label={`Ảnh ${selected + 1} của ${item.book.title}`}
                         active={active && !result.isError}
                         large
+                        compact
                       />
                     }
                   />
-                }
+                )}
               >
                 <Button
                   title="Cập nhật tình trạng sách"

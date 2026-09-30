@@ -3,7 +3,7 @@ import { View, type StyleProp, type ViewStyle } from "react-native";
 import { Image, type ImageSource } from "expo-image";
 import { Icon } from "./icon";
 import { AppText } from "./text";
-import { colors } from "./theme";
+import { colors, colorRoles, radius, space } from "./theme";
 import { layout } from "./styles";
 import { formatVnd } from "./format";
 
@@ -62,10 +62,39 @@ export function BookCover({
 export function BookCondition({
   condition,
   mode,
+  stamp = false,
 }: {
   condition: string;
   mode?: string;
+  stamp?: boolean;
 }) {
+  if (stamp)
+    return (
+      <View style={{ gap: space.sm, alignItems: "flex-start" }}>
+        <AppText kind="annotation" color={colors.muted}>
+          Tình trạng
+        </AppText>
+        <View
+          style={{
+            borderColor: colorRoles.bookStamp,
+            borderWidth: 1,
+            borderRadius: radius.record,
+            paddingHorizontal: space.md,
+            paddingVertical: space.xs,
+            maxWidth: "100%",
+          }}
+        >
+          <AppText kind="stamp" color={colorRoles.bookStamp}>
+            {condition}
+          </AppText>
+        </View>
+        {mode && (
+          <AppText kind="annotation" color={colors.muted}>
+            {mode}
+          </AppText>
+        )}
+      </View>
+    );
   return (
     <AppText kind="label" color={colors.rustText}>
       {condition.toLocaleUpperCase("vi-VN")}
@@ -76,15 +105,21 @@ export function BookCondition({
 export function BookPrice({
   sale,
   exchange,
+  reading = false,
 }: {
   sale?: number;
   exchange?: number;
+  reading?: boolean;
 }) {
   return (
     <View
       style={[
         layout.row,
-        { flexWrap: "wrap", alignItems: "flex-start", gap: 24 },
+        {
+          flexWrap: "wrap",
+          alignItems: "flex-start",
+          gap: reading ? space.md : space.xxl,
+        },
       ]}
     >
       {[
@@ -92,11 +127,16 @@ export function BookPrice({
         ["Giá trị đổi", exchange],
       ].map(([label, amount]) =>
         typeof amount === "number" ? (
-          <View key={label}>
-            <AppText kind="small" color={colors.muted}>
+          <View key={label} style={reading ? { maxWidth: "100%" } : undefined}>
+            <AppText
+              kind={reading ? "annotation" : "small"}
+              color={colors.muted}
+            >
               {label}
             </AppText>
-            <AppText kind="price">{formatVnd(amount)}</AppText>
+            <AppText kind={reading ? "bookPrice" : "price"}>
+              {formatVnd(amount)}
+            </AppText>
           </View>
         ) : null,
       )}

@@ -10,6 +10,7 @@ import {
   space,
   presentError,
   layout,
+  radius,
 } from "../../core/ui";
 import { publicMedia } from "./contracts";
 export function PublicPhoto({
@@ -21,6 +22,7 @@ export function PublicPhoto({
   large = false,
   onOpen,
   expanded = false,
+  compact = false,
 }: {
   listingId: string;
   mediaId: string;
@@ -30,6 +32,7 @@ export function PublicPhoto({
   large?: boolean;
   onOpen?: () => void;
   expanded?: boolean;
+  compact?: boolean;
 }) {
   const { client } = useSession();
   const [expired, setExpired] = useState("");
@@ -68,7 +71,11 @@ export function PublicPhoto({
       missing={!available}
       cachePolicy="none"
       onError={() => setFailed(photo.data?.url)}
-      style={{ width: "100%", height: expanded ? 420 : large ? 286 : 210 }}
+      style={{
+        width: "100%",
+        height: expanded ? 420 : compact ? 184 : large ? 286 : 210,
+        ...(compact ? { borderRadius: radius.book } : {}),
+      }}
     />
   );
   return (

@@ -375,6 +375,12 @@ export function UiCatalogScreen() {
               hình chi tiết trong bản mẫu.
             </AppText>
             <BookCondition condition="Tốt" mode="Bán hoặc đổi" />
+            <BookCondition stamp condition="Cũ nhiều" mode="Bán hoặc đổi" />
+            <AppText kind="bookTitle">Phiếu sách · màn chuẩn UI-1</AppText>
+            <AppText kind="reading">
+              Gáy có nếp đọc, trang ngả vàng. Nội dung mẫu để kiểm chữ lớn.
+            </AppText>
+            <BookPrice reading sale={1000000} exchange={125000} />
             <AppText kind="card">
               Những ngày đi bộ qua thành phố và những câu chuyện còn ở lại trong
               một cuốn sổ

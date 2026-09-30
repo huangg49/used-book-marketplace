@@ -7,6 +7,7 @@ import {
   Icon,
   Notice,
   colors,
+  colorRoles,
   layout,
   radius,
   space,
@@ -20,115 +21,105 @@ export function BookPresentation({
   children,
 }: {
   item: Listing;
-  gallery: ReactNode;
+  gallery: (summary: ReactNode) => ReactNode;
   children?: ReactNode;
 }) {
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   return (
     <>
-      {gallery}
       <View style={{ gap: space.sm }}>
-        <BookCondition
-          condition={conditions[item.condition]}
-          mode={modes[item.mode]}
-        />
         <AppText
-          kind="heading"
+          kind="bookTitle"
           accessibilityRole="header"
           color={colors.forest}
         >
           {item.book.title}
         </AppText>
-        <AppText color={colors.muted}>{item.book.authors.join(" · ")}</AppText>
+        <AppText kind="reading" color={colors.muted}>
+          {item.book.authors.join(" · ")}
+        </AppText>
       </View>
-      <View
-        style={{
-          borderTopWidth: 1,
-          borderBottomWidth: 1,
-          borderColor: colors.rule,
-          paddingVertical: space.lg,
-        }}
-      >
-        <BookPrice
-          sale={item.salePrice ?? undefined}
-          exchange={item.exchangeValue ?? undefined}
-        />
-      </View>
-      <View
-        style={{ flexDirection: "row", alignItems: "center", gap: space.md }}
-      >
-        <View
-          style={{
-            padding: space.md,
-            backgroundColor: colors.successSurface,
-            borderRadius: radius.pill,
-          }}
-        >
-          <Icon name="person" size={22} />
-        </View>
-        <View style={{ flex: 1, gap: space.xs }}>
-          <AppText kind="label" color={colors.rustText}>
-            TỪ KỆ CỦA
-          </AppText>
-          <AppText kind="bold" color={colors.forest}>
-            {item.seller.displayName}
-          </AppText>
-        </View>
-      </View>
-      <AppText>{item.description}</AppText>
+      {gallery(
+        <View style={{ gap: space.lg }}>
+          <BookCondition
+            stamp
+            condition={conditions[item.condition]}
+            mode={modes[item.mode]}
+          />
+          <BookPrice
+            reading
+            sale={item.salePrice ?? undefined}
+            exchange={item.exchangeValue ?? undefined}
+          />
+        </View>,
+      )}
       <View
         style={{
           backgroundColor: colors.surface,
+          borderRadius: radius.record,
+          borderTopWidth: 2,
+          borderTopColor: colorRoles.bookStamp,
           padding: space.lg,
-          borderRadius: radius.card,
           gap: space.lg,
         }}
       >
         <View style={{ gap: space.xs }}>
           <AppText
-            kind="heading"
+            kind="bookHeading"
             accessibilityRole="header"
             color={colors.forest}
           >
-            Dấu đọc còn lại
+            Phiếu tình trạng
           </AppText>
-          <AppText kind="small" color={colors.muted}>
-            Những điều cần biết về chính bản sách này.
+          <AppText kind="annotation" color={colors.muted}>
+            Người đăng mô tả
+          </AppText>
+          <AppText kind="stamp" color={colors.ink}>
+            {item.seller.displayName}
           </AppText>
         </View>
-        {(
-          [
-            ["Ruột sách", item.pages],
-            ["Bìa và gáy", item.coverNote],
-            ["Ghi chú / đánh dấu", item.notes],
-            ["Phụ kiện", item.accessories],
+        <View
+          style={{
+            borderLeftWidth: 1,
+            borderColor: colorRoles.bookStamp,
+            paddingLeft: space.lg,
+            gap: space.lg,
+          }}
+        >
+          {(
             [
-              "Trang thiếu",
-              item.hasMissingPages
-                ? "Người đăng khai báo có thiếu trang; xem mô tả ruột sách."
-                : "Người đăng khai báo không thiếu trang.",
-            ],
-          ] as const
-        ).map(([label, value]) => (
-          <View
-            key={label}
-            style={{
-              borderTopWidth: 1,
-              borderColor: colors.rule,
-              paddingTop: space.md,
-              gap: space.xs,
-            }}
-          >
-            <AppText kind="bold">{label}</AppText>
-            <AppText color={colors.muted}>{value}</AppText>
-          </View>
-        ))}
+              ["Ruột sách", item.pages],
+              ["Bìa và gáy", item.coverNote],
+              ["Ghi chú / đánh dấu", item.notes],
+              ["Phụ kiện", item.accessories],
+              [
+                "Trang thiếu",
+                item.hasMissingPages
+                  ? "Người đăng khai báo có thiếu trang; xem mô tả ruột sách."
+                  : "Người đăng khai báo không thiếu trang.",
+              ],
+            ] as const
+          ).map(([label, value]) => (
+            <View
+              key={label}
+              style={{
+                gap: space.xs,
+              }}
+            >
+              <AppText kind="annotation" color={colors.muted}>
+                {label}
+              </AppText>
+              <AppText kind="reading">{value}</AppText>
+            </View>
+          ))}
+        </View>
       </View>
       <Notice tone="info">
         Người đăng khai báo sách còn đọc được và không thiếu nội dung trọng yếu.
         Hãy đối chiếu ảnh và mô tả tình trạng.
       </Notice>
+      <AppText kind="reading">{item.description}</AppText>
       <View
         style={{
           borderTopWidth: 1,
@@ -157,10 +148,10 @@ export function BookPresentation({
           ]}
         >
           <View style={{ flex: 1, gap: space.xs }}>
-            <AppText kind="card" color={colors.forest}>
+            <AppText kind="bookHeading" color={colors.forest}>
               Về đầu sách
             </AppText>
-            <AppText kind="small" color={colors.muted}>
+            <AppText kind="annotation" color={colors.muted}>
               Ấn bản, nhà xuất bản và ngôn ngữ
             </AppText>
           </View>
@@ -179,25 +170,29 @@ export function BookPresentation({
               ] as const
             ).map(([label, value]) => (
               <View key={label} style={{ gap: space.xs }}>
-                <AppText kind="small" color={colors.muted}>
+                <AppText kind="annotation" color={colors.muted}>
                   {label}
                 </AppText>
-                <AppText>{value || "Chưa cung cấp"}</AppText>
+                <AppText kind="reading">{value || "Chưa cung cấp"}</AppText>
               </View>
             ))}
           </View>
         )}
       </View>
       <View style={{ gap: space.sm }}>
-        <AppText kind="card" accessibilityRole="header" color={colors.forest}>
+        <AppText
+          kind="bookHeading"
+          accessibilityRole="header"
+          color={colors.forest}
+        >
           Cách sách đến tay bạn
         </AppText>
-        <AppText>
+        <AppText kind="reading">
           {item.fulfillment
             ? "Người đăng chọn giao trực tiếp trong TP.HCM. Vùng phục vụ đang dùng dữ liệu mô phỏng."
             : "Người đăng chưa hoàn thiện thông tin giao nhận."}
         </AppText>
-        <AppText kind="small" color={colors.muted}>
+        <AppText kind="annotation" color={colors.muted}>
           Lật lại phục vụ TP.HCM. Đặt mua, đề nghị đổi và giao nhận chưa mở
           trong phiên bản này.
         </AppText>

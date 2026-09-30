@@ -2,38 +2,37 @@
 
 ## Nguồn và việc đang làm
 
-- **UI-1 — định hướng giao diện, tạm dừng lộ trình tính năng theo yêu cầu mới.**
+- **UI-1 — đã triển khai màn chuẩn chi tiết sách, CHỜ DUYỆT TRƯỚC KHI ÁP SANG MÀN KHÁC.**
   **C01 đã merge (PR11/PR12); C02 TẠM HOÃN để làm đợt định hướng giao diện
-  (UI-1); gate review người thật/native/release vẫn mở.** Đã fetch và xác nhận
-  main local/remote cùng `4273f10`, working tree sạch trước khi tạo nhánh
-  `codex/ui-direction` từ main. Mọi thay đổi UI-1 nằm trên nhánh này.
-  Đã nhận đủ 5 câu trả lời: người mê đọc nhiều độ tuổi; gần gũi/thư thái; nền gọn
-  hiện đại pha chi tiết ấm chọn lọc; câu chuyện chuyền tay; tránh lạnh lẽo. Mỗi
-  bản sách có “lý lịch” từ condition/ảnh/ghi chú thật, không bịa lịch sử chủ sách.
-  Đã viết [DESIGN](../DESIGN.md) làm nguồn sự thật về trình bày UI-1 và dẫn từ
-  UI_CODING_RULES; ưu tiên hơn giao diện/brand cũ nếu mâu thuẫn. Token còn là đề
-  xuất; không đổi source app, logic nghiệp vụ, API, contract hay hành vi đã merge.
-  Đã chụp/xem 18 ảnh mới trên Pixel_7/API35/x86_64,1080×2400/density443 (~390dp),
-  font 100%, gồm màn chính/rỗng/lỗi. [CRITIQUE_01](../ui/CRITIQUE_01.md) có điểm 5
-  tiêu chí/màn và đúng 3 vấn đề: phần giới thiệu lấn sách/tác vụ; lý lịch chưa có
-  hình thức riêng; thang chữ/trọng lượng điều khiển chưa đúng vai trò. Đề xuất
-  **chi tiết cuốn sách** làm màn chuẩn. **ĐÃ DỪNG CHỜ CHỦ DỰ ÁN DUYỆT** trước
-  sửa code; không coi “tiếp tục việc dở” là duyệt triển khai giao diện.
-  QA mới `.tmp/demo/ui-direction`: Nest/Mongo thật, random *_test trên57017,
-  storage fixture/ảnh DEMO. H01a qua API tạo listing Approved; UI tạo một nháp
-  QA, chưa lưu lựa chọn Worn, không gửi duyệt/thao tác tiền. Kệ lỗi bằng tạm bỏ
-  reverse3046 rồi nối lại/retry; lỗi địa chỉ bằng validation form rỗng.
-  Đã đăng xuất QA, restore snapshot mới/font/density/reverse, dừng emulator và
-  API/media3046/3047 do lượt này mở; Metro8081/preview8087 giữ nguyên. Config/DB
-  chính không đổi. Không chụp lại full native/130%/TalkBack/ARM/iOS/web; giới hạn
-  một bìa DEMO và các trạng thái chưa xem ghi trong báo cáo, READINESS không đổi.
-  Khi được duyệt mới đổi token/theme rồi sửa đúng 3 vấn đề trên **một màn chuẩn**;
-  chụp trước/sau và chờ duyệt trước khi áp dụng các màn khác. Test/lint/typecheck
-  phải tiếp tục PASS. Chưa có quyền push/merge/deploy UI-1 từ lần tích hợp C01.
-  Checkpoint trước `3f70caf` `docs(handoff): pause C02 for UI direction`; checkpoint
-  hiện tại subject `docs(ui): define direction and record native critique` chỉ
-  gồm docs/ảnh. Docs:check và diff-check PASS; không chạy lại test/lint/typecheck
-  app vì source không đổi; evidence C01 giữ nguyên tại head đã ghi. Chưa push.
+  (UI-1); gate review người thật/native/release vẫn mở.** Nhánh `codex/ui-direction`
+  từ main/origin main `4273f10`, sạch trước khi làm. Checkpoint phê bình `33385b8`.
+  Chủ dự án đã duyệt ba vấn đề + chi tiết sách làm màn chuẩn; yêu cầu thêm khoảnh
+  khắc đặc trưng/phép thử bỏ logo và 3–5 bản QA, chỉ chụp 390px/chữ 100%–130%.
+  [DESIGN](../DESIGN.md) đã bổ sung: dấu tình trạng + phiếu mô tả là hai điểm nhấn;
+  màn phải gợi sách cũ có lý lịch ngay khi bỏ logo/khẩu hiệu. Không giả lịch sử.
+  Đã sửa trình bày chi tiết: tên/tác giả trước, ảnh cạnh tình trạng/giá, phiếu
+  người đăng mô tả có lề, chữ 16/14px và giữ nguyên dữ liệu/cảnh báo. Theme có role
+  opt-in, BookCondition stamp/BookPrice reading; consumer mặc định giữ kiểu cũ.
+  `/ui` và showcase dùng chung chi tiết đồng bộ; không thiết kế lại kệ/form.
+  Không đổi API/contract/quyền/session/query/callback/migration hoặc logic nghiệp vụ.
+  [Báo cáo màn chuẩn](../ui/DETAIL_STANDARD_01.md),
+  [so sánh trực quan](../ui/detail-standard-01.html): 20 ảnh native mới, bốn bản QA
+  LikeNew/Good/Fair/Worn, tên ngắn/dài, đủ Sale/Exchange/Both; trước/sau cùng dữ
+  liệu Pixel_7/API35/x86_64, 1080×2400/density443 (~390dp), font1.0/1.3.
+  QA riêng `.tmp/demo/ui-standard`, random *_test/57017, Nest/Mongo thật;
+  catalog/listing/upload/duyệt qua API, bìa DEMO có nhãn, storage fixture FAKE.
+  Đã kiểm xem ảnh lớn/Back, về kệ, mở ấn bản, ảnh lỗi/tải lại, API lỗi giữ nội
+  dung/retry phục hồi; không tác động tiền/đơn hàng hoặc DB/bucket chính.
+  PASS: RN 91/91 (12 files), lint/typecheck, contract:check, Prettier,
+  docs:check và diff-check. Node24.19.0/pnpm11.19.0. Không chạy lại API E2E/export/
+  native build hoặc đóng gate TalkBack/ARM/iOS/web; đây là kiểm tra màn chuẩn.
+  Đã phục hồi app snapshot mới/font/density/reverse, dừng emulator/API3046/media3047.
+  Metro8081/preview8087 cũ giữ nguyên. Trang so sánh read-only tại
+  `http://127.0.0.1:8089/detail-standard-01.html` chỉ serve docs/ui; PID local trong
+  `.tmp/ui-standard/preview.pid`, có thể dừng khi xem xong. QA data giữ lại.
+  Checkpoint subject `feat(rn): shape book detail around its condition record`.
+  Chưa push/PR/merge. **Bước tiếp: chờ chủ dự án duyệt màn chuẩn từ ảnh trước/sau;
+  không tự mở màn khác hoặc C02.** Nhận định thiết kế không thay review người thật.
 - **C01 đã squash merge** qua [PR11](https://github.com/huangg49/used-book-marketplace/pull/11)
   vào main **6361e57**, base10a461c, head đã kiểm4e4851e; tree sau squash giống
   head đã kiểm. Code gốc d45b7c7 `feat(rn): add opt-in read-only wallet`.
@@ -210,9 +209,9 @@
 C01 đã tích hợp vào main6361e57 với CI/evidence trên head4e4851e. Chủ dự án trực
 tiếp yêu cầu merge riêng C01; human review NOT RUN, full M1/release vẫn còn gate.
 C02 **TẠM HOÃN** theo yêu cầu UI-1 mới, không bắt đầu danh sách/chi tiết Order.
-Trên `codex/ui-direction`, DESIGN và CRITIQUE_01 đã xong; chờ chủ dự án duyệt3
-vấn đề và màn chuẩn chi tiết sách trước đổi token/theme hoặc sửa code. Định hướng
-cũ trong kế hoạch không cấp quyền tiếp tục C02 khi yêu cầu này còn hiệu lực.
+Trên `codex/ui-direction`, ba vấn đề đã được duyệt và màn chi tiết sách đã sửa.
+Xem DETAIL_STANDARD_01 và ảnh trước/sau; **chờ chủ dự án duyệt màn chuẩn** trước
+khi áp sang màn khác. Định hướng cũ không cấp quyền tiếp tục C02.
 Main local/remote4273f10; condition/H01/C01 đã tích hợp, nhánh upload-recovery
 vẫn giữ riêng. Chưa có quyền merge/deploy UI-1 hoặc C02.
 Không kiểm lại gate đã đạt khi source không đổi; chưa phân công thêm teammate.

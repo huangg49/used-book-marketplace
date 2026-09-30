@@ -56,6 +56,13 @@ phải implementation thứ hai. `Notice error` cũng là adapter; code mới ư
 `radius`, `metrics`, `typography` là token. `TextScale` chỉ phục vụ stress test;
 không dùng để vô hiệu hóa font scaling của hệ điều hành.
 
+UI-1: màn chi tiết sách thử các role `bookTitle`, `bookHeading`, `reading`,
+`annotation`, `stamp`, `bookPrice` trong theme dùng chung. `BookCondition stamp`
+thêm nhãn tình trạng có viền và tách hình thức giao dịch; không là huy hiệu kiểm
+định. `BookPrice reading` dùng nhãn 14px/giá 20px; mặc định của các consumer cũ
+giữ nguyên. `/ui` nhóm Sách có ví dụ. Không tự áp token thử nghiệm sang màn khác
+trước khi chủ dự án duyệt màn chuẩn theo [DESIGN](../DESIGN.md).
+
 Cập nhật 29/09: Android xử lý `fontScale` qua Expo plugin để giữ Activity và
 picker khi trở lại từ cài đặt chữ. `AppText` tạo lại riêng native Text theo
 `useWindowDimensions().fontScale`, tránh Fabric giữ số đo cũ làm cắt nhãn;

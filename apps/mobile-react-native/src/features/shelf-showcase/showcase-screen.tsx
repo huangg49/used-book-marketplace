@@ -185,8 +185,9 @@ export function BookShowcase({
         <>
           <BookPresentation
             item={sample.listing}
-            gallery={
+            gallery={(summary) => (
               <BookGallery
+                summary={summary}
                 count={1}
                 selected={0}
                 onSelect={() => {}}
@@ -197,11 +198,11 @@ export function BookShowcase({
                     source={sample.cover}
                     missing={missing}
                     label={`Ảnh tư liệu ${sample.listing.book.title}`}
-                    style={{ width: "100%", height: 286 }}
+                    style={{ width: "100%", height: 184 }}
                   />
                 }
               />
-            }
+            )}
           />
           <View
             style={{

@@ -2,7 +2,7 @@
 
 UI-1 (30/09/2026): [DESIGN.md](../DESIGN.md) là nguồn sự thật về định hướng trình
 bày mới, ưu tiên khi mâu thuẫn với quyết định thẩm mỹ cũ bên dưới hoặc brand v1.1.
-Token mới còn là đề xuất, chờ duyệt lượt phê bình trước khi sửa code. Quy tắc về
+Đã duyệt thử token và ba hướng sửa trên chi tiết sách; chưa áp sang màn khác. Quy tắc về
 nghiệp vụ, component chung, accessibility và bảo toàn dữ liệu vẫn giữ hiệu lực.
 
 Áp dụng cho React Native. Bản đầu: 25/09/2026. Đọc cùng

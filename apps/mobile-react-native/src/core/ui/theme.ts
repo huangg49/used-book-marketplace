@@ -10,6 +10,7 @@ export const colorRoles = {
   action: colors.forest,
   onAction: colors.paper,
   accentText: colors.rustText,
+  bookStamp: colors.rustText,
   decorativeAccent: colors.terracotta,
   inputBorder: colors.border,
   divider: colors.rule,
@@ -27,6 +28,8 @@ export const space = {
   page: 40,
 } as const;
 export const radius = {
+  book: 2,
+  record: 4,
   small: 4,
   card: 6,
   control: 8,
@@ -40,6 +43,13 @@ export const metrics = {
   sheet: 520,
 } as const;
 export const typography = {
+  // UI-1 reading roles are opt-in while the detail screen is being reviewed.
+  bookTitle: [22, 30, "LoraSemi"],
+  bookHeading: [20, 28, "LoraSemi"],
+  reading: [16, 25, "BeRegular"],
+  annotation: [14, 21, "BeRegular"],
+  stamp: [14, 21, "BeBold"],
+  bookPrice: [20, 28, "BeBold"],
   body: [15, 24, "BeRegular"],
   small: [12, 19, "BeRegular"],
   label: [11, 17, "BeBold"],

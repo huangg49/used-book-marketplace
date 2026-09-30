@@ -10,6 +10,7 @@ export function BookGallery({
   onEnlarge,
   disabled = false,
   caption,
+  summary,
 }: {
   photo: ReactNode;
   count: number;
@@ -18,22 +19,43 @@ export function BookGallery({
   onEnlarge: () => void;
   disabled?: boolean;
   caption: string;
+  summary?: ReactNode;
 }) {
   return (
     <View style={{ gap: space.sm }}>
-      {photo}
       <View
-        style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}
+        style={{
+          flexDirection: "row",
+          gap: space.xl,
+          alignItems: "flex-start",
+        }}
       >
-        <AppText kind="label" color={colors.muted} style={{ flex: 1 }}>
-          ẢNH {selected + 1} / {count}
-        </AppText>
-        <IconButton
-          name="search"
-          label="Xem ảnh lớn"
-          disabled={disabled}
-          onPress={onEnlarge}
-        />
+        <View style={{ width: summary ? "40%" : "100%", gap: space.sm }}>
+          {photo}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: space.sm,
+            }}
+          >
+            <AppText
+              kind="annotation"
+              color={colors.muted}
+              accessibilityLabel={`Ảnh ${selected + 1} / ${count}`}
+              style={{ flex: 1 }}
+            >
+              {selected + 1} / {count}
+            </AppText>
+            <IconButton
+              name="search"
+              label="Xem ảnh lớn"
+              disabled={disabled}
+              onPress={onEnlarge}
+            />
+          </View>
+        </View>
+        {summary && <View style={{ flex: 1, minWidth: 0 }}>{summary}</View>}
       </View>
       {count > 1 && (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
@@ -47,7 +69,7 @@ export function BookGallery({
           ))}
         </View>
       )}
-      <AppText kind="small" color={colors.muted}>
+      <AppText kind="annotation" color={colors.muted}>
         {caption}
       </AppText>
     </View>

@@ -8,8 +8,9 @@ Tài liệu này là **nguồn sự thật về định hướng trình bày UI-
 trực tiếp của chủ dự án: người mê đọc nhiều độ tuổi; gần gũi, thư thái; nền gọn
 hiện đại pha chi tiết ấm; câu chuyện chuyền tay; tránh tối giản lạnh lẽo.
 Nếu UI cũ, brand v1.1 hoặc quyết định thẩm mỹ trong tài liệu cũ mâu thuẫn, sửa lớp
-trình bày theo tài liệu này; không giữ vì đã có sẵn. Token dưới đây là **đề xuất**,
-chưa được áp dụng vào code. Việc triển khai chờ chủ dự án duyệt lượt phê bình.
+trình bày theo tài liệu này; không giữ vì đã có sẵn. Chủ dự án đã duyệt ba vấn đề
+trong CRITIQUE_01 và **chi tiết sách** làm màn chuẩn. Token được thử trên màn này;
+chưa duyệt áp dụng sang màn khác.
 
 SRS/ADR/OpenAPI vẫn quyết định nghiệp vụ, quyền, dữ liệu và hành vi. UI-1 chỉ đổi
 màu, font, spacing, bố cục, microcopy, icon và chuyển động; không thêm endpoint,
@@ -67,6 +68,27 @@ Không muốn: **lạnh lẽo**, **đại trà**, **làm màu**.
 “Dấu mộc” là hình thức của **nhãn tình trạng**, không phải huy hiệu xác thực.
 Chất chuyền tay còn có thể đến từ cách nói và sự trân trọng một bản sách cũ;
 không cần giả lịch sử để kể câu chuyện. Không dùng font viết tay giả lời người bán.
+
+## Khoảnh khắc đặc trưng
+
+Chỉ hai vị trí trên chi tiết sách được phép nổi bật hơn nền giao diện:
+
+1. **Dấu tình trạng cạnh nhận diện bản sách:** viền đất nung, chữ thật rõ,
+   mức tình trạng đúng dữ liệu (kể cả “Cũ nhiều”). Như dấu mộc trên phiếu sách,
+   không nghiêng chữ, giả mực lem hoặc gợi chứng nhận kiểm định.
+2. **Phiếu tình trạng:** một cụm có lề và nhịp đọc như thẻ thư viện, ghi rõ
+   “Người đăng mô tả”; bìa/gáy, ruột sách, ghi chú, phụ kiện và trang thiếu
+   được đọc liền mạch. Đây là điểm ấm chính, không thêm lớp card trang trí.
+
+Hai vị trí tạo thành một câu chuyện về **bản sách cụ thể**. Các vùng giá, giao
+nhận, lỗi và điều khiển giữ gọn; không rải dấu mộc sang chúng.
+
+**Phép thử che nhận diện:** che logo và khẩu hiệu, màn chi tiết vẫn phải gợi
+“sách cũ có lý lịch” qua dấu tình trạng và phiếu mô tả thật; không chỉ còn ảnh,
+tên, giá như trang sản phẩm marketplace. Đánh giá trên 3–5 bản sách QA có bìa
+DEMO, tên ngắn/dài và tình trạng khác nhau. Không lấy chữ DEMO trên bìa, logo
+hay câu kể thương hiệu làm bằng chứng đạt. Chủ dự án duyệt cảm nhận từ ảnh
+trước/sau; tự đánh giá của AI không thay thế bước duyệt này.
 
 ## Design tokens đề xuất
 
