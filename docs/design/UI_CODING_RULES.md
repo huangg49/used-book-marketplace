@@ -1,5 +1,10 @@
 # Luật giao diện Lật lại
 
+UI-1 (30/09/2026): [DESIGN.md](../DESIGN.md) là nguồn sự thật về định hướng trình
+bày mới, ưu tiên khi mâu thuẫn với quyết định thẩm mỹ cũ bên dưới hoặc brand v1.1.
+Token mới còn là đề xuất, chờ duyệt lượt phê bình trước khi sửa code. Quy tắc về
+nghiệp vụ, component chung, accessibility và bảo toàn dữ liệu vẫn giữ hiệu lực.
+
 Áp dụng cho React Native. Bản đầu: 25/09/2026. Đọc cùng
 [component và cách dùng](UI_COMPONENTS.md), [nghiên cứu màn hình](SCREEN_STUDY.md)
 và [nhận diện Dấu chuyền tay](../../packages/brand/v1.1/README.md).

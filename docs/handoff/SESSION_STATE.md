@@ -5,23 +5,35 @@
 - **UI-1 — định hướng giao diện, tạm dừng lộ trình tính năng theo yêu cầu mới.**
   **C01 đã merge (PR11/PR12); C02 TẠM HOÃN để làm đợt định hướng giao diện
   (UI-1); gate review người thật/native/release vẫn mở.** Đã fetch và xác nhận
-  main local/remote cùng4273f10, working tree sạch trước khi tạo nhánh
+  main local/remote cùng `4273f10`, working tree sạch trước khi tạo nhánh
   `codex/ui-direction` từ main. Mọi thay đổi UI-1 nằm trên nhánh này.
-  Hiện chỉ cập nhật điểm lưu, chưa sửa code; đã hỏi chủ dự án 5 câu về người dùng,
-  cảm xúc, phong cách tiệm sách, nét riêng và điều cần tránh; đang chờ câu trả lời.
-  Sau câu trả lời mới viết docs/DESIGN.md làm nguồn sự thật về trình bày của UI-1,
-  ưu tiên hơn giao diện/brand cũ nếu mâu thuẫn. Không đổi logic nghiệp vụ, API,
-  contract hay hành vi các màn đã merge; giữ nguyên các yêu cầu accessibility.
-  Sau đó chụp màn hình chính trên emulator khoảng390px, gồm rỗng/lỗi khi áp dụng;
-  chấm5 tiêu chí theo DESIGN, chọn tối đa3 vấn đề lớn và hướng sửa cụ thể, lưu
-  docs/ui/CRITIQUE_01.md rồi **DỪNG chờ chủ dự án duyệt**, không sửa code trong
-  lượt phê bình. Chưa tạo hai tài liệu này khi chưa có đầu vào/bằng chứng.
-  Khi được duyệt mới đổi token/theme rồi sửa đúng3 vấn đề trên **một màn chuẩn**;
+  Đã nhận đủ 5 câu trả lời: người mê đọc nhiều độ tuổi; gần gũi/thư thái; nền gọn
+  hiện đại pha chi tiết ấm chọn lọc; câu chuyện chuyền tay; tránh lạnh lẽo. Mỗi
+  bản sách có “lý lịch” từ condition/ảnh/ghi chú thật, không bịa lịch sử chủ sách.
+  Đã viết [DESIGN](../DESIGN.md) làm nguồn sự thật về trình bày UI-1 và dẫn từ
+  UI_CODING_RULES; ưu tiên hơn giao diện/brand cũ nếu mâu thuẫn. Token còn là đề
+  xuất; không đổi source app, logic nghiệp vụ, API, contract hay hành vi đã merge.
+  Đã chụp/xem 18 ảnh mới trên Pixel_7/API35/x86_64,1080×2400/density443 (~390dp),
+  font 100%, gồm màn chính/rỗng/lỗi. [CRITIQUE_01](../ui/CRITIQUE_01.md) có điểm 5
+  tiêu chí/màn và đúng 3 vấn đề: phần giới thiệu lấn sách/tác vụ; lý lịch chưa có
+  hình thức riêng; thang chữ/trọng lượng điều khiển chưa đúng vai trò. Đề xuất
+  **chi tiết cuốn sách** làm màn chuẩn. **ĐÃ DỪNG CHỜ CHỦ DỰ ÁN DUYỆT** trước
+  sửa code; không coi “tiếp tục việc dở” là duyệt triển khai giao diện.
+  QA mới `.tmp/demo/ui-direction`: Nest/Mongo thật, random *_test trên57017,
+  storage fixture/ảnh DEMO. H01a qua API tạo listing Approved; UI tạo một nháp
+  QA, chưa lưu lựa chọn Worn, không gửi duyệt/thao tác tiền. Kệ lỗi bằng tạm bỏ
+  reverse3046 rồi nối lại/retry; lỗi địa chỉ bằng validation form rỗng.
+  Đã đăng xuất QA, restore snapshot mới/font/density/reverse, dừng emulator và
+  API/media3046/3047 do lượt này mở; Metro8081/preview8087 giữ nguyên. Config/DB
+  chính không đổi. Không chụp lại full native/130%/TalkBack/ARM/iOS/web; giới hạn
+  một bìa DEMO và các trạng thái chưa xem ghi trong báo cáo, READINESS không đổi.
+  Khi được duyệt mới đổi token/theme rồi sửa đúng 3 vấn đề trên **một màn chuẩn**;
   chụp trước/sau và chờ duyệt trước khi áp dụng các màn khác. Test/lint/typecheck
   phải tiếp tục PASS. Chưa có quyền push/merge/deploy UI-1 từ lần tích hợp C01.
-  Checkpoint `docs(handoff): pause C02 for UI direction`: chỉ đổi SESSION_STATE;
-  docs:check PASS158/1148links/3adapters, diff-check PASS. Không chạy lại test/lint/
-  typecheck app vì chưa sửa source; evidence C01 giữ nguyên tại head đã ghi.
+  Checkpoint trước `3f70caf` `docs(handoff): pause C02 for UI direction`; checkpoint
+  hiện tại subject `docs(ui): define direction and record native critique` chỉ
+  gồm docs/ảnh. Docs:check và diff-check PASS; không chạy lại test/lint/typecheck
+  app vì source không đổi; evidence C01 giữ nguyên tại head đã ghi. Chưa push.
 - **C01 đã squash merge** qua [PR11](https://github.com/huangg49/used-book-marketplace/pull/11)
   vào main **6361e57**, base10a461c, head đã kiểm4e4851e; tree sau squash giống
   head đã kiểm. Code gốc d45b7c7 `feat(rn): add opt-in read-only wallet`.
@@ -198,8 +210,8 @@
 C01 đã tích hợp vào main6361e57 với CI/evidence trên head4e4851e. Chủ dự án trực
 tiếp yêu cầu merge riêng C01; human review NOT RUN, full M1/release vẫn còn gate.
 C02 **TẠM HOÃN** theo yêu cầu UI-1 mới, không bắt đầu danh sách/chi tiết Order.
-Trên `codex/ui-direction`, chờ5 câu trả lời rồi viết docs/DESIGN.md, khảo sát
-emulator và lập docs/ui/CRITIQUE_01.md; dừng chờ duyệt trước sửa code. Định hướng
+Trên `codex/ui-direction`, DESIGN và CRITIQUE_01 đã xong; chờ chủ dự án duyệt3
+vấn đề và màn chuẩn chi tiết sách trước đổi token/theme hoặc sửa code. Định hướng
 cũ trong kế hoạch không cấp quyền tiếp tục C02 khi yêu cầu này còn hiệu lực.
 Main local/remote4273f10; condition/H01/C01 đã tích hợp, nhánh upload-recovery
 vẫn giữ riêng. Chưa có quyền merge/deploy UI-1 hoặc C02.
