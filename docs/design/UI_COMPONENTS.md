@@ -89,9 +89,20 @@ callback nhưng trình bày từng hàng, bìa34% bên trái, tên/tình trạng
 bên phải. `shelfTitle` dùng Lora18/26; nhãn và tác giả dùng annotation14/21.
 `BookPrice reading stacked` xếp hai nhóm nhãn/giá theo chiều dọc, gap12px, tránh
 dí hai giá vào một cột hẹp; mặc định và footer chi tiết giữ nguyên. `/ui` có ví dụ.
-Kệ thật dùng `PublicPhoto compact`; showcase dùng cùng khung2:3 nền giấy. Bỏ
+Ở vòng01, kệ thật dùng `PublicPhoto compact`; showcase dùng cùng khung2:3 nền giấy. Bỏ
 banner khẩu hiệu/ảnh trang trí để sách lên sớm hơn. Không đổi query/filter/cursor,
-navigation hoặc thêm chuyển động. Màn kệ mới chờ duyệt ảnh trước/sau.
+navigation hoặc thêm chuyển động. Chủ dự án đã từ chối bố cục vòng01.
+
+Kệ vòng02: `ShelfGrid` trở lại hai cột ở chữ thường, một cột khi width<360dp hoặc
+fontScale×TextScale>=1.29. Ở một cột, bìa38% cạnh tên/tình trạng, giá tách thành
+hàng đủ chiều rộng bên dưới; vùng giá mở cùng chi tiết, không là nút mua.
+`PublicPhoto shelf` chỉ chọn khung180dp/nền giấy, giữ query/expiry/retry; ảnh thật
+và showcase cùng contain, không crop. `BookOffer` là bản tóm tắt giá dùng ở kệ:
+nhãn Bán/Đổi sát số tiền (shelfPrice18/25), `horizontal` cho hàng rộng; wrap khi
+thiếu chỗ. Không thay `BookPrice`/footer chi tiết. `/ui` nhóm Sách có ví dụ.
+Tên/tác giả giữ nguyên; người bán chuyển khỏi phần nhìn thấy của kệ, vẫn có ở
+nhãn accessible và chi tiết. Kệ dùng compactFooter hiện có, gom đầu màn để bìa
+lên sớm; không có animation mới.
 
 Cập nhật 29/09: Android xử lý `fontScale` qua Expo plugin để giữ Activity và
 picker khi trở lại từ cài đặt chữ. `AppText` tạo lại riêng native Text theo

@@ -87,62 +87,71 @@ export function ShelfScreen() {
       scrollRef={scroll}
       header={<ShelfHeader />}
       footer={<MemberNavigation current="/" />}
+      compactFooter
     >
-      <View
-        style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}
-      >
-        <View style={{ flex: 1 }}>
-          <SearchField
-            label="Tìm sách"
-            submitLabel="Tìm trên kệ"
-            placeholder="Tên, tác giả, ISBN"
-            maxLength={400}
-            onSubmitEditing={() => apply({ ...applied, q: search })}
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
-        <IconButton
-          name="tune"
-          label={`Lọc và sắp xếp${filterCount ? `, ${filterCount} mục đang áp dụng` : ""}`}
-          onPress={openFilters}
-        />
-      </View>
-      {error && !filterOpen ? <Notice tone="error">{error}</Notice> : null}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: space.sm }}
-      >
-        {Object.entries({ "": "Tất cả", ...modes }).map(([key, title]) => (
-          <Chip
-            key={key}
-            title={title}
-            selected={applied.mode === key}
-            onPress={() => apply({ ...applied, q: search, mode: key })}
-          />
-        ))}
-      </ScrollView>
-      <View style={{ gap: space.sm }}>
+      <View style={{ gap: space.md }}>
         <View
           style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}
+        >
+          <View style={{ flex: 1 }}>
+            <SearchField
+              label="Tìm sách"
+              submitLabel="Tìm trên kệ"
+              placeholder="Tên, tác giả, ISBN"
+              maxLength={400}
+              onSubmitEditing={() => apply({ ...applied, q: search })}
+              value={search}
+              onChangeText={setSearch}
+            />
+          </View>
+          <IconButton
+            name="tune"
+            label={`Lọc và sắp xếp${filterCount ? `, ${filterCount} mục đang áp dụng` : ""}`}
+            onPress={openFilters}
+          />
+        </View>
+        {error && !filterOpen ? <Notice tone="error">{error}</Notice> : null}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: space.sm }}
+        >
+          {Object.entries({ "": "Tất cả", ...modes }).map(([key, title]) => (
+            <Chip
+              key={key}
+              title={title}
+              selected={applied.mode === key}
+              onPress={() => apply({ ...applied, q: search, mode: key })}
+            />
+          ))}
+        </ScrollView>
+      </View>
+      <View style={{ gap: space.sm }}>
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            columnGap: space.sm,
+            rowGap: space.xs,
+          }}
         >
           <AppText
             kind="bookHeading"
             color={colors.forest}
             accessibilityRole="header"
-            style={{ flex: 1 }}
           >
             {applied.q ? `Kết quả cho “${applied.q}”` : "Trên kệ hôm nay"}
           </AppText>
+          <AppText kind="small" color={colors.muted}>
+            {sorts[applied.sort]}
+            {applied.condition
+              ? ` · ${conditions[applied.condition as keyof typeof conditions]}`
+              : ""}{" "}
+            · Trang {cursors.length}
+          </AppText>
         </View>
-        <AppText kind="annotation" color={colors.muted}>
-          {sorts[applied.sort]}
-          {applied.condition
-            ? ` · ${conditions[applied.condition as keyof typeof conditions]}`
-            : ""}{" "}
-          · Trang {cursors.length}
-        </AppText>
         {(
           [
             ["minSalePrice", "maxSalePrice", "Giá bán"],
@@ -237,7 +246,7 @@ export function ShelfScreen() {
             mediaId={item.photos[0].id}
             label={`Ảnh sách ${item.book.title}`}
             active={active && !result.isError}
-            compact
+            shelf
             onOpen={() =>
               router.push({ pathname: "./book", params: { id: item.id } })
             }

@@ -21,7 +21,13 @@ export { TextField, SearchField, Checkbox } from "./field";
 export type { TextFieldRef } from "./field";
 export { Sheet } from "./sheet";
 export { Notice, ErrorNotice, StatePanel, ConfirmDialog } from "./feedback";
-export { BookCover, BookCondition, BookPrice, BookTradeBar } from "./book";
+export {
+  BookCover,
+  BookCondition,
+  BookPrice,
+  BookOffer,
+  BookTradeBar,
+} from "./book";
 export { formatVnd } from "./format";
 export { BrandProvider } from "./provider";
 export { Screen } from "./screen";

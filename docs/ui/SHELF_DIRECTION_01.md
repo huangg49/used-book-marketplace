@@ -5,6 +5,10 @@ Checkpoint: `feat(rn): bring approved book direction to shelf`.
 Chủ dự án duyệt màn chi tiết và chọn kệ trước, chuyển động mở ảnh sau.
 [Ảnh trước/sau390dp,100%/130%](shelf-direction-01.html). **Chờ duyệt kệ.**
 
+**Cập nhật:** chủ dự án đã từ chối bố cục vòng01 vì bìa nhỏ, cột chữ dài và
+không còn cảm giác dạo kệ. Checks bên dưới vẫn là evidence kỹ thuật tại source
+cũ, không là duyệt thẩm mỹ. Bản thay thế: [vòng02](SHELF_DIRECTION_02.md).
+
 ## Thay đổi và đánh đổi
 
 - Bỏ banner khẩu hiệu/ảnh trang trí; đưa sách lên sớm hơn. Giữ logo gốc,

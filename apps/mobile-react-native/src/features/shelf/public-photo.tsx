@@ -23,6 +23,7 @@ export function PublicPhoto({
   onOpen,
   expanded = false,
   compact = false,
+  shelf = false,
 }: {
   listingId: string;
   mediaId: string;
@@ -33,6 +34,7 @@ export function PublicPhoto({
   onOpen?: () => void;
   expanded?: boolean;
   compact?: boolean;
+  shelf?: boolean;
 }) {
   const { client } = useSession();
   const [expired, setExpired] = useState("");
@@ -73,10 +75,18 @@ export function PublicPhoto({
       onError={() => setFailed(photo.data?.url)}
       style={{
         width: "100%",
-        height: expanded ? 420 : compact ? undefined : large ? 286 : 210,
-        ...(compact
+        height: expanded
+          ? 420
+          : shelf
+            ? 180
+            : compact
+              ? undefined
+              : large
+                ? 286
+                : 210,
+        ...(compact || shelf
           ? {
-              aspectRatio: 2 / 3,
+              ...(compact && !shelf ? { aspectRatio: 2 / 3 } : {}),
               backgroundColor: colors.paper,
               borderRadius: radius.book,
             }

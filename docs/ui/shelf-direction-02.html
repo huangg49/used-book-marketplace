@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="vi">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lật lại · Kệ sách mới</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #e8e6de;
+      color: #202c27;
+      font:
+        16px/1.6 system-ui,
+        sans-serif;
+    }
+    main {
+      max-width: 840px;
+      margin: auto;
+    }
+    h1 {
+      font:
+        600 30px/1.3 Georgia,
+        serif;
+      color: #214b40;
+      margin: 0 0 12px;
+    }
+    p {
+      max-width: 700px;
+    }
+    nav {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    label {
+      display: grid;
+      gap: 4px;
+    }
+    select {
+      font: inherit;
+      padding: 8px 12px;
+      min-height: 44px;
+      color: #202c27;
+      background: #fffcf4;
+      border: 1px solid #788477;
+    }
+    .pair {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    figure {
+      margin: 0;
+      width: min(390px, 100%);
+    }
+    figcaption {
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    a {
+      color: #214b40;
+    }
+    footer {
+      border-top: 1px solid #788477;
+      margin-top: 24px;
+      padding-top: 12px;
+    }
+    details {
+      margin-top: 24px;
+    }
+    summary {
+      cursor: pointer;
+      padding: 12px 0;
+    }
+    [hidden] {
+      display: none;
+    }
+    @media (max-width: 600px) {
+      body {
+        padding: 16px;
+      }
+    }
+  </style>
+  <main>
+    <h1>Trở lại một kệ sách để lựa.</h1>
+    <p>
+      Hai cuốn cạnh nhau ở chữ thường. Bìa nổi bật, tình trạng gọn, giá bán/đổi
+      rõ. Khi chữ lớn, giá có hàng riêng dưới cụm bìa và tên — không kéo dài một
+      cột bên phải.
+    </p>
+    <nav aria-label="Xem ảnh Android">
+      <label
+        >Hiển thị<select id="view">
+          <option value="after">Bản mới</option>
+          <option value="compare">So với bản đã loại</option>
+        </select></label
+      >
+      <label
+        >Cỡ chữ Android<select id="scale">
+          <option value="100">100%</option>
+          <option value="130">130%</option>
+        </select></label
+      >
+    </nav>
+    <div class="pair">
+      <figure id="old" hidden>
+        <figcaption>Trước · ead610b · đã loại</figcaption>
+        <a id="beforeLink"
+          ><img id="before" alt="Kệ cũ với cột thông tin dài"
+        /></a>
+      </figure>
+      <figure>
+        <figcaption>Bản mới · ứng dụng Android</figcaption>
+        <a id="afterLink"
+          ><img id="after" alt="Kệ mới, bìa và thông tin giao dịch rõ"
+        /></a>
+      </figure>
+    </div>
+    <p>
+      Ảnh chụp nguyên bản ở ~390dp, không chỉnh ảnh. Cùng bốn listing QA có bìa
+      DEMO. API/Mongo thật, storage fixture. Bấm ảnh để xem đầy đủ.
+    </p>
+    <details>
+      <summary>Xem cùng bố cục với ảnh bìa tư liệu</summary>
+      <p>
+        Ảnh có sẵn trong showcase, không phải sách đang rao bán. Dùng chung
+        ShelfGrid/BookOffer với kệ thật; banner dữ liệu mẫu luôn hiện.
+      </p>
+      <div class="pair">
+        <figure>
+          <a id="sampleLink"
+            ><img
+              id="sample"
+              alt="Bố cục mới với bìa tư liệu, có nhãn dữ liệu mẫu"
+          /></a>
+        </figure>
+      </div>
+    </details>
+    <footer>
+      <p>
+        <a href="evidence/ui-1-shelf-v2/narrow-scroll-130.png"
+          >320dp · chữ 130%</a
+        >
+        · <a href="evidence/ui-1-shelf-v2/bottom-130.png">Cuối kệ</a> ·
+        <a href="evidence/ui-1-shelf-v2/error-130.png">Lỗi tải</a> ·
+        <a href="SHELF_DIRECTION_02.md">Kiểm chứng và giới hạn</a>
+      </p>
+      <p>
+        Màn chi tiết đã duyệt giữ nguyên. Chưa thêm chuyển động hoặc chức năng
+        giao dịch.
+      </p>
+    </footer>
+  </main>
+  <script>
+    const scale = document.getElementById("scale");
+    const view = document.getElementById("view");
+    function render() {
+      const files = {
+        before: `evidence/ui-1-shelf/after-${scale.value}.png`,
+        after: `evidence/ui-1-shelf-v2/after-${scale.value}.png`,
+        sample: `evidence/ui-1-shelf-v2/showcase-${scale.value}.png`,
+      };
+      for (const [key, src] of Object.entries(files)) {
+        document.getElementById(key).src = src;
+        document.getElementById(key + "Link").href = src;
+      }
+      document.getElementById("old").hidden = view.value !== "compare";
+    }
+    scale.addEventListener("change", render);
+    view.addEventListener("change", render);
+    render();
+  </script>
+</html>

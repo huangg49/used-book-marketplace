@@ -2,19 +2,23 @@
 
 ## Nguồn và việc đang làm
 
-- **UI-1 — KỆ SÁCH VÒNG01 XONG, CHỜ DUYỆT ẢNH.** Chủ dự án chọn áp hướng đã
-  duyệt sang kệ trước, chuyển động mở ảnh sau. Bỏ banner, mỗi sách một hàng:
-  bìa34% nền giấy, tên Lora18/26, dấu tình trạng/hình thức, hai giá xếp dọc.
-  Component chung và showcase đồng bộ; không đổi query/API/navigation/nghiệp vụ.
-  [So sánh390dp/100%–130%](../ui/shelf-direction-01.html),
-  [evidence/giới hạn](../ui/SHELF_DIRECTION_01.md): tìm/rỗng/bỏ lọc/Bán/Back,
-  lỗi cập nhật và retry, cuối kệ,320dp/130%, showcase ảnh vuông đã kiểm Android.
-  RN91/91, lint/typecheck/Prettier/docs/diff-check PASS; không kiểm lại API gates.
-  QA cũ ui-refine, Mongo/API thật/storage fixture FAKE; chưa kiểm TalkBack/ARM/
-  FPS/iOS/Expo web hoặc native `/ui`. Không đóng review/native/release.
-  Checkpoint `feat(rn): bring approved book direction to shelf`; chưa push/merge.
-  Môi trường QA phục hồi/dừng theo SHELF_DIRECTION_01, ghi chú `.tmp/ui-shelf`.
-  **Dừng chờ duyệt kệ; chưa làm chuyển động hoặc khảo sát hướng2.**
+- **UI-1 — KỆ SÁCH VÒNG02, THAY BẢN VÒNG01 ĐÃ BỊ TỪ CHỐI.** Chủ dự án
+  không chấp nhận vòng01 ead610b (bìa nhỏ/cột chữ dài), sau đó giao quyền quyết
+  định thiết kế, yêu cầu kết quả đẹp và dễ dùng. Không dùng tests xanh làm duyệt UX.
+  Bản mới: hai cột chữ thường; ở130%/màn hẹp, bìa cạnh tên và giá có hàng riêng
+  đủ chiều rộng. BookOffer Bán/Đổi ngắn rõ, nhãn tình trạng một nét đất nung;
+  bỏ người bán khỏi phần nhìn thấy của kệ, vẫn giữ ở chi tiết/accessibility label.
+  Bìa contain180dp/nền giấy; gom đầu màn và dùng compactFooter có sẵn. Không đổi
+  query/API/session/navigation/nghiệp vụ hoặc màn chi tiết đã duyệt.
+  [Ảnh mới/so sánh](../ui/shelf-direction-02.html),
+  [evidence/giới hạn](../ui/SHELF_DIRECTION_02.md):390dp/100%–130%,320dp/130%,
+  ảnh tư liệu showcase, tìm/rỗng/bỏ lọc/Bán/Back/lỗi-retry/cuối kệ đã xem Android.
+  RN91/91, lint/typecheck/Prettier/docs/diff-check PASS; không chạy lại API gates.
+  QA ui-refine giữ data cũ, Mongo/API thật/storage fixture FAKE; chưa nghiệm thu
+  TalkBack/ARM/FPS/iOS/Expo web hoặc native `/ui`. Không đóng review/native/release.
+  Checkpoint `feat(rn): restore browsable shelf with adaptive book offers`;
+  chưa push/merge. QA phục hồi/dừng theo SHELF_DIRECTION_02, notes `.tmp/ui-shelf-v2`.
+  Vòng01 là lịch sử bị loại; không áp nó sang màn khác. Chưa thêm chuyển động.
 - **UI-1 — MÀN CHUẨN CHI TIẾT ĐÃ ĐƯỢC CHỦ DỰ ÁN DUYỆT tại a70e5a3.**
   Ghi nhận ba điểm xem lại khi có bìa sách thật: bìa còn nhỏ, dấu tình trạng
   khiêm tốn, hàng số ảnh1/1 + kính lúp chiếm chỗ. Chưa sửa thêm từ các ghi nhận
@@ -236,25 +240,28 @@ C02 **TẠM HOÃN** theo yêu cầu UI-1 mới, không bắt đầu danh sách/c
 Trên `codex/ui-direction`, màn chuẩn chi tiết đã sửa tới `a70e5a3` (khoảng cách giá).
 Xem [so sánh mới nhất](../ui/detail-price-spacing.html) và
 [evidence màn chuẩn03](../ui/DETAIL_STANDARD_03.md); **chủ dự án đã duyệt màn chuẩn**.
-Chủ dự án đã chọn kệ trước, chuyển động mở ảnh sau. Lượt kệ vòng01 hoàn tất;
-**xem SHELF_DIRECTION_01 và dừng chờ duyệt kệ**, không tự bắt đầu chuyển động.
+Chủ dự án đã chọn kệ trước, chuyển động mở ảnh sau; đã từ chối vòng01 và giao
+quyền tự quyết thiết kế. **Vòng02 là bản hiện tại, xem SHELF_DIRECTION_02**.
+Đợt này chỉ hoàn thiện kệ và gửi kết quả; chưa mở chuyển động. Không ghi thành
+chủ dự án đã duyệt vòng02 khi chưa có phản hồi đó.
 Các bước và ranh giới còn lại:
 
 1. Màn chuẩn đã duyệt; ảnh Android trước/sau390dp,100%/130% vẫn là evidence hiện
    hành. Khi có bìa thật, xem lại kích thước bìa, độ nổi dấu tình trạng và diện
    tích hàng1/1 + kính lúp. Không tự sửa lại màn đã duyệt trong lượt này.
-2. Hướng1: chuyển động nhẹ khi mở ảnh lớn, chỉ làm sau khi kệ được duyệt,
-   kèm bổ sung DESIGN.md về chuyển động. Quay trước/sau rồi dừng chờ duyệt;
-   chưa triển khai hoặc sửa DESIGN.md trong lượt chốt thứ tự này.
+2. Bước kế theo thứ tự đã chọn: hướng1 chuyển động nhẹ khi mở ảnh lớn, sau đợt
+   chỉnh kệ; nếu có phản hồi mới về kệ thì xử lý trước. Kèm bổ sung DESIGN.md
+   về chuyển động và video trước/sau. Chưa triển khai chuyển động trong vòng02.
 3. Hướng2 (vuốt ảnh): khảo sát số ảnh/listing trong QA/API rồi báo để chủ dự án
    quyết định. Phân biệt mẫu QA được tạo chủ đích với phân bố dữ liệu sử dụng;
    chưa khảo sát, chưa cấp quyền triển khai gesture.
 4. Hướng3 (bìa nối từ kệ sang chi tiết) hoãn. Không áp màn chuẩn sang màn khác
    khi chưa được chọn triển khai; C02 tiếp tục hoãn.
 
-Mỗi bước có ảnh/video hoặc báo cáo tương ứng và dừng chờ chủ dự án duyệt.
-Checkpoint kệ: `feat(rn): bring approved book direction to shelf`; checks/evidence
-ở SHELF_DIRECTION_01. Không chạy lại gate API đã đạt khi source không đổi.
+Mỗi bước có ảnh/video hoặc báo cáo tương ứng. Chủ dự án giao agent tự quyết
+thiết kế, không yêu cầu họ chọn chi tiết bố cục; không suy thành quyền đổi nghiệp vụ.
+Checkpoint kệ: `feat(rn): restore browsable shelf with adaptive book offers`;
+checks/evidence ở SHELF_DIRECTION_02. Không chạy lại gate API khi source không đổi.
 Main local/remote4273f10; condition/H01/C01 đã tích hợp, nhánh upload-recovery
 vẫn giữ riêng. Chưa có quyền merge/deploy UI-1 hoặc C02.
 Không kiểm lại gate đã đạt khi source không đổi; chưa phân công thêm teammate.

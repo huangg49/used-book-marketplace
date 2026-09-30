@@ -11,7 +11,9 @@ Nếu UI cũ, brand v1.1 hoặc quyết định thẩm mỹ trong tài liệu c�
 trình bày theo tài liệu này; không giữ vì đã có sẵn. Chủ dự án đã duyệt ba vấn đề
 trong CRITIQUE_01 và **chi tiết sách** làm màn chuẩn. Token được thử trên màn này;
 đã được chủ dự án duyệt tại a70e5a3. Chủ dự án cho phép áp hướng này sang kệ
-sách trước, chụp trước/sau và dừng duyệt; chuyển động mở ảnh lớn làm sau lượt kệ.
+sách trước; chuyển động mở ảnh lớn làm sau lượt kệ. Sau khi từ chối kệ vòng01,
+chủ dự án giao quyền quyết định thiết kế và yêu cầu agent tự hoàn thiện kết quả.
+Giữ ảnh trước/sau và kiểm tra thực tế; quyền này không mở nghiệp vụ hoặc merge/deploy.
 
 SRS/ADR/OpenAPI vẫn quyết định nghiệp vụ, quyền, dữ liệu và hành vi. UI-1 chỉ đổi
 màu, font, spacing, bố cục, microcopy, icon và chuyển động; không thêm endpoint,
@@ -126,6 +128,23 @@ hay câu kể thương hiệu làm bằng chứng đạt. Chủ dự án duyệt
 trước/sau; tự đánh giá của AI không thay thế bước duyệt này.
 
 ## Design tokens đề xuất
+
+### Kệ sách: chọn giữa nhiều cuốn, không phải chi tiết thu nhỏ
+
+Sau vòng kệ01, chủ dự án từ chối bố cục một hàng với cột chữ kéo dài và giao
+quyền quyết định thiết kế cho agent. Kệ ưu tiên nhịp bìa và khả năng so sánh:
+hai cột ở chiều rộng từ360dp/chữ thường. Không rải phiếu tình trạng đầy đủ hoặc
+tên người bán lên từng mục; các dữ kiện đó vẫn ở màn chi tiết và nhãn accessible.
+Tên sách không cắt dòng, tình trạng dùng một nét đất nung nhỏ. Dòng “Bán”/“Đổi”
+đi cùng đúng số tiền; nếu có cả hai phải hiện cả hai, không chọn giá rẻ hơn để nhấn.
+
+Ở chữ130% hoặc màn hẹp, chuyển một cột: bìa cạnh tên/tác giả/tình trạng, cụm giá
+chiếm chiều rộng riêng phía dưới. Không để giá kéo dài cột bên phải và tạo hố
+trống dưới bìa. Khi số tiền dài, cả nhóm được wrap; không thu nhỏ font hoặc cắt số.
+Ảnh contain trong khung giấy cao180dp, không sửa dữ liệu ảnh. Đây là quyết định
+trình bày, không đổi quyền truy cập ảnh, query, filter, navigation hay nghiệp vụ.
+Không dùng kết quả tests làm bằng chứng thiết kế đẹp; xem cả QA tên dài và ảnh
+tư liệu có sẵn, phân biệt rõ tư liệu với listing thật.
 
 ### Năm màu cốt lõi
 

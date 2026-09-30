@@ -157,6 +157,57 @@ export function BookPrice({
 }
 
 // Presentation only: the caller owns availability and any future transaction actions.
+export function BookOffer({
+  sale,
+  exchange,
+  horizontal = false,
+}: {
+  sale?: number;
+  exchange?: number;
+  horizontal?: boolean;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: horizontal ? "row" : "column",
+        flexWrap: "wrap",
+        columnGap: space.xxl,
+        rowGap: space.xs,
+      }}
+    >
+      {(
+        [
+          ["Bán", sale],
+          ["Đổi", exchange],
+        ] as const
+      ).map(([label, amount]) =>
+        typeof amount === "number" ? (
+          <View
+            key={label}
+            style={{
+              flexDirection: "row",
+              alignItems: "baseline",
+              flexWrap: "wrap",
+              columnGap: space.sm,
+              maxWidth: "100%",
+            }}
+          >
+            <AppText kind="annotation" color={colors.muted}>
+              {label}
+            </AppText>
+            <AppText
+              kind="shelfPrice"
+              accessibilityLabel={`${label === "Bán" ? "Giá bán" : "Giá trị đổi"}: ${formatVnd(amount)}`}
+            >
+              {formatVnd(amount)}
+            </AppText>
+          </View>
+        ) : null,
+      )}
+    </View>
+  );
+}
+
 export function BookTradeBar({
   sale,
   exchange,
