@@ -359,6 +359,11 @@ native baseline. Nếu sửa findings, chạy ca liên quan và cập nhật sou
 giữ full CLI crash/lost-ack live và giới hạn login/deadline là phần chưa nghiệm thu.
 Owner/reviewer thứ hai chưa được chỉ định; chưa có human sign-off hoặc remote CI.
 
+Ngoại lệ tích hợp30/09: chủ dự án yêu cầu merge gói H01 khi checks cần thiết đạt,
+không yêu cầu human review cho riêng PR này. Human review vẫn NOT RUN, không là
+PASS của gate review độc lập trong READINESS. Không bypass CI hoặc mở release/
+nghiệp vụ sau F2h; không thay quy tắc TEAMWORK cho thay đổi khác.
+
 Preflight bàn giao trên source d4f8220 riêng không node_modules: Node24.19.0 chạy
 14/14 unit PASS không cần install. pnpm11.19.0 run trên source chưa cài kích hoạt
 implicit install (fixture đầu thiếu workspace manifests nên bị từ chối). Job unit

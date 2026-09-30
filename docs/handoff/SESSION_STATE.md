@@ -3,11 +3,14 @@
 ## Nguồn và việc đang làm
 
 - main đã tích hợp MongoDB và bàn giao qua [PR5](https://github.com/huangg49/used-book-marketplace/pull/5)/[PR6](https://github.com/huangg49/used-book-marketplace/pull/6), mốc1be5144.
-- Gói hiện tại: chuẩn bị bàn giao H01, nhánh codex/h01-handoff từd4f8220;
+- Gói hiện tại: tích hợp H01, nhánh codex/h01-handoff từd4f8220;
   working tree sạch lúc mở nhánh. Fetch origin30/09 vẫn main1be5144, không có
   commit main mới cần tích hợp; không pull/reset/clean, giữ local work.
   Stack docs/AI/plan19ffb84 →0182e40 →e2e7f21 →b9026a5 →46f988d →ae0f1d9 →428cafd →274d100 →d4f8220
-  chưa push/merge. Không cherry-pick code bỏ dependency docs; tích hợp theo mốc trưa.
+  cùng CI fix d47d3bf nằm trong nhánh bàn giao. Không cherry-pick code bỏ dependency docs.
+- Chủ dự án đã cho phép push/tạo PR/merge H01 ngay sau checks cần thiết, miễn
+  human review cho riêng gói này (yêu cầu trực tiếp30/09). Không có human sign-off;
+  không đóng gate review/native/release hoặc mở nghiệp vụ sau F2h từ ngoại lệ này.
 - Đã hoàn thiện [AI_WORKFLOW](../AI_WORKFLOW.md): AGENTS gọn, domain rules đọc theo
   nhiệm vụ, ba skill nguồn chung + adapter Claude, mẫu issue/PR và docs:check/CI.
   Commit0182e40: docs(ai): add shared team skills and verified onboarding workflow.
@@ -100,12 +103,14 @@ unit/API source. Source riêng không node_modules:14/14 PASS bằng Node24.19.0
 docs checker5/5, docs157/1132links/3adapters, YAML/order/format/diff PASS.
 Scan diff60 file đúng scope, không private config/credential-shaped literals;
 scan có giới hạn, không bảo đảm tuyệt đối hết secret. Không chạy lại API/native.
-Mốc push vẫn trưa30/09, chưa push/tạo PR. Khi tới mốc: push nhánh này, tạo PR
-từ body đã chuẩn bị, kiểm CI đúng head và chọn reviewer người thật theo TEAMWORK.
+Chủ dự án đã thay mốc trưa bằng yêu cầu merge hiện tại, miễn review cho gói H01.
+Checkpoint ủy quyền subject `docs(handoff): record approved H01 integration`.
+Tiến hành push nhánh, tạo PR từ body đã chuẩn bị, chỉ squash merge khi CI đúng
+head đạt; không bypass check hoặc đổi branch protection. Human review NOT RUN.
 Bảo tiếp H02 review/debug nền/source và giới hạn recovery đã ghi; ba lane UI
 làm tính năng hiện có. C01/C02 giữ dependency, không tự mở Delivered/settlement.
-Tích hợp dự kiến khi bàn giao trưa: cả docs19ffb84 và AI0182e40 cùng gói code đủ
-điều kiện, qua PR/checks/review; chưa thực hiện push/merge hay remote CI.
+Gói tích hợp giữ cả docs19ffb84 và AI0182e40 cùng code/checks; trạng thái remote
+CI/merge cần đọc tại PR trước khi ghi kết luận. Baseline release gate không đổi.
 Nhóm bắt đầu theo [AI_WORKFLOW](../AI_WORKFLOW.md)/[TEAM_WINDOWS](TEAM_WINDOWS.md),
 phân công phần việc và reviewer; kiểm cửa vào Codex/Claude trên máy mình.
 Chi tiết phiên trước ở [SESSION_HISTORY](SESSION_HISTORY_2026_09_30.md); không đọc
