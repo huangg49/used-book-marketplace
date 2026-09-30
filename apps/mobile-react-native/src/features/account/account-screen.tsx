@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { View } from "react-native";
-import { router } from "expo-router";
+import { View, useWindowDimensions } from "react-native";
+import { router, useFocusEffect } from "expo-router";
 import { currentUserSchema } from "../../core/api/schemas";
 import { useSession } from "../../core/session/session-provider";
 import {
@@ -17,6 +17,7 @@ import {
   space,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
+import { internalMemberViewsEnabled } from "../../core/config/internal-member-views";
 
 const roleLabels = {
   MEMBER: "Bạn đọc",
@@ -26,6 +27,13 @@ const roleLabels = {
 };
 export function AccountScreen() {
   const { client } = useSession();
+  const { fontScale } = useWindowDimensions();
+  const [presentationVersion, setPresentationVersion] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      setPresentationVersion((version) => version + 1);
+    }, []),
+  );
   const profile = useQuery({
     queryKey: ["me"],
     queryFn: () => client.request("/auth/me", currentUserSchema),
@@ -45,7 +53,13 @@ export function AccountScreen() {
     }
   };
   return (
-    <Screen footer={<MemberNavigation current="/account" />}>
+    // Fabric can retain old parent text constraints while this route is behind
+    // another screen, before Dimensions catches up. Remeasure this read-only
+    // presentation on focus; keep query/session and logout state here.
+    <Screen
+      key={`${fontScale}:${presentationVersion}`}
+      footer={<MemberNavigation current="/account" />}
+    >
       <BackAction
         title="Khám phá kệ sách"
         onPress={() => router.replace("/")}
@@ -124,6 +138,14 @@ export function AccountScreen() {
         </View>
       ) : null}
       {error ? <Notice tone="error">{error}</Notice> : null}
+      {internalMemberViewsEnabled && profile.data?.roles.includes("MEMBER") ? (
+        <ActionRow
+          title="Ví của bạn"
+          description="Số dư mô phỏng và lịch sử ghi nhận"
+          icon="wallet"
+          onPress={() => router.push("./wallet")}
+        />
+      ) : null}
       {profile.data?.roles.includes("MEMBER") &&
       profile.data.status !== "LOCKED" ? (
         <View style={{ gap: space.md }}>

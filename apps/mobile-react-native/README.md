@@ -9,6 +9,21 @@ pnpm start
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) before adding features.
 
+## Internal read-only wallet
+
+Set `EXPO_PUBLIC_INTERNAL_MEMBER_VIEWS=1` before starting Expo to show **Ví của bạn**
+under `/account` and enable `/wallet` for Members. Restart Metro with `--clear`
+when changing the flag; it is bundled at build time. The default is hidden.
+This flag controls visibility only: the API still owns permission, including
+LOCKED Members' existing access. Use your own configured API and isolated QA data.
+
+The screen reads `/me/wallet` and cursor-based `/me/wallet/history`. It labels
+simulated money, uses server balances and the shared session, and offers refresh
+and pagination only. It does not implement topup, withdrawal, checkout or
+settlement. C01/C02 internal development is allowed by the dated exception in
+[the continuation plan](../../docs/handoff/CONTINUATION_PLAN.md); M1 and release
+gates remain open. See [C01 evidence](../../docs/handoff/C01_WALLET_2026_09_30.md).
+
 Start with [the team guide](../../docs/REACT_NATIVE_START.md) for database/seed setup,
 demo login, phone/emulator networking and tests. Login and account screens use the
 shared API contract. Native refresh tokens use SecureStore; access tokens stay in memory.
@@ -52,9 +67,13 @@ Lint rejects direct native Text/TextInput/Button/Modal imports and literal color
 in features/routes. The library is ready for implementation review; native keyboard,
 safe-area and assistive-technology validation are still required before release.
 
-Account now links to /addresses for the private address book. Apply the address-book API migration first; see [setup and verification](../../docs/features/ADDRESS_BOOK_REPORT.md). DEMO-A/B are simulated areas, not official wards or delivery points. Native feature QA remains pending.
+Account links to /addresses for the private address book. Apply the current MongoDB
+migrations using [START_HERE](../../docs/handoff/START_HERE.md); the
+[address-book report](../../docs/features/ADDRESS_BOOK_REPORT.md) records its original
+milestone. DEMO-A/B are simulated areas, not official wards or delivery points.
+Current native gates are in [READINESS](../../docs/handoff/READINESS.md).
 
 Listing forms now select a private delivery origin and DirectDelivery preference.
-Apply all eight migrations before using OpenAPI 0.10.0. Changed/deleted addresses
+Use the current MongoDB runtime and OpenAPI contract from START_HERE. Changed/deleted addresses
 require explicit reselection; approved replacements still need review. Public detail
 only shows safe region/method information. See [fulfillment evidence](../../docs/features/LISTING_FULFILLMENT_REPORT.md).

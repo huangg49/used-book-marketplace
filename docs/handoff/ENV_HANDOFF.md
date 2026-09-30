@@ -9,7 +9,7 @@ file/biến; không chứa giá trị cấu hình thật. Hướng dẫn cập n
 |---|---|---|
 | `.env` | Docker Compose/local port và cấu hình root | `MONGO_PORT` và `MONGO_ROOT_PASSWORD` phải khớp port/credential trong URL admin của API; `POSTGRES_PORT` chỉ dành cho import legacy |
 | `apps/api/.env` | API, worker, bootstrap/migrate/seed; có Supabase server key và secret simulator/JWT | Đối chiếu `MONGODB_URL`, `MONGODB_MIGRATOR_URL`, `MONGODB_ADMIN_URL`, database/password bootstrap, CORS và key backend với `.env.example` |
-| `apps/mobile-react-native/.env` | URL API của RN, cờ preview | Chỉnh EXPO_PUBLIC_API_BASE_URL theo emulator/điện thoại; chỉ chứa cấu hình public |
+| `apps/mobile-react-native/.env` | URL API của RN, cờ preview/nội bộ | Chỉnh EXPO_PUBLIC_API_BASE_URL theo emulator/điện thoại; chỉ cấu hình public. C01 opt-in theo [README RN](../../apps/mobile-react-native/README.md); default ẩn ví, không là quyền API |
 | `apps/admin-web/.env` | URL API operations web | Chỉnh VITE_API_BASE_URL theo máy chạy API; chỉ chứa cấu hình public |
 
 Không có `apps/mobile-flutter/.env` trên máy này; Flutter chưa là ưu tiên.
