@@ -8,6 +8,9 @@
     "node": ">=24.15.0"
   },
   "scripts": {
+    "demo:books": "node scripts/demo-books.mjs",
+    "test:demo": "node --test scripts/demo/*.test.mjs",
+    "test:demo:api": "node scripts/test-demo-books.mjs",
     "docs:check": "node scripts/check-agent-docs.mjs",
     "setup:local": "node scripts/setup-local.mjs",
     "doctor:local": "pnpm --filter @used-books/api doctor:local",

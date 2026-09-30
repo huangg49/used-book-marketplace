@@ -3,15 +3,32 @@
 ## Nguồn và việc đang làm
 
 - main đã tích hợp MongoDB và bàn giao qua [PR5](https://github.com/huangg49/used-book-marketplace/pull/5)/[PR6](https://github.com/huangg49/used-book-marketplace/pull/6), mốc1be5144.
-- Gói hiện tại: hướng dẫn AI cho nhóm, nhánh codex/team-ai-handoff từ19ffb84
-  (gói dọn docs trước, nhánh codex/docs-navigation-cleanup). Hai gói chưa push/merge;
-  quyền tích hợp trước dành cho gói MongoDB. Không cherry-pick gói AI bỏ dependency docs.
+- Gói hiện tại: H01a, nhánh codex/h01-demo-scenarios từ46f988d; working tree lúc
+  mở nhánh sạch. Stack docs/AI/plan19ffb84 →0182e40 →e2e7f21 →b9026a5 →46f988d
+  chưa push/merge. Không cherry-pick code bỏ dependency docs; tích hợp theo mốc trưa.
 - Đã hoàn thiện [AI_WORKFLOW](../AI_WORKFLOW.md): AGENTS gọn, domain rules đọc theo
   nhiệm vụ, ba skill nguồn chung + adapter Claude, mẫu issue/PR và docs:check/CI.
   Commit0182e40: docs(ai): add shared team skills and verified onboarding workflow.
   [Bằng chứng/phạm vi](AI_TEAM_HANDOFF_2026_09_30.md): checker 5/5, skills 6/6,
   docs links/contract/diff-check PASS; AI mới sửa form mẫu và nhận đúng gate.
   Không đổi app/DB. Chưa test tự nạp Claude/máy teammate hoặc chạy remote CI.
+- H01a đã hiện thực: `demo:books init/run/serve`, API loopback quản lý riêng,
+  QA57017/rs-test + DB random *_test/roles riêng; seed chỉ account, toàn bộ hành
+  trình catalog/media/listing/review qua API. Durable key/body/version + receipt,
+  bounded retry, run lock, fingerprint và chặn DB đã mất. Cấu hình/intent/ảnh nằm
+  trong .tmp/demo, không sửa .env hoặc DB/bucket chính. Subject điểm lưu:
+  `feat(demo): orchestrate recoverable book scenarios on isolated API`.
+  [Cách dùng và evidence](DEMO_SCENARIOS.md). H01b chưa implementation.
+- Checks H01a thực chạy: API build; test:demo8/8; test:demo:api real Nest/Mongo/Sharp
+  với storage FAKE (upload lost-ack sau commit, restart API, rerun không duplicate,
+  secret-free manifest, SANDBOX_LOST); oxlint; docs:check/diff-check PASS.
+  Live Supabase trên bucket private random riêng: init/run/rerun PASS,9 receipts
+  không đổi key/IDs. Member web export tách ở .tmp/demo/member-web và IAB thật:
+  shelf → detail/ảnh live → Back PASS; ảnh .tmp/demo/h01-live/member-detail.jpg.
+  Không gọi web là native PASS. Remote CI/human review NOT RUN; READINESS không đổi.
+- Trong phát triển tool có lỗi parser receipt chưa nhận ListingState object và
+  HTTP429 khi test login lặp. Đã sửa parser và dùng lại phiên memory cùng tiến
+  trình; không sửa contract/guard hoặc xóa login attempts. Test cuối PASS.
 - Gói docs trước: README/index/SESSION/READINESS rút gọn, sửa DB/contract/prompt;
   [phạm vi](DOCS_AUDIT_2026_09_30.md). Evidence lịch sử giữ nguyên.
 
@@ -42,14 +59,16 @@
   kiểm port/process trước khi dừng/chạy lại. Android Pixel_7/API35; reverse3000/8081.
 - .tmp/ có log/harness/backup phiên; generated Prisma cũ ignored, không tham gia build.
   Giữ local, không reset/clean/xóa hàng loạt. QA57017 dùng DB *_test riêng.
+- H01 QA đang chạy trên container used-book-marketplace-mongo-quality-mongo-test-1.
+  Đây là tmpfs: restart mất dữ liệu, phải init run tên mới. Run live kiểm cuối:
+  .tmp/demo/h01-acceptance (port3016); private.json không được chia sẻ. Run đầu
+  h01-live dùng để xem UI; demo data/bucket giữ riêng, không phải app local chính.
 
 ## Bước tiếp
 
-Gói ưu tiên đề xuất sáng30/09: H01a bộ dựng hành trình sách qua API trên môi trường
-riêng, không chỉ seed dữ liệu thẳng. H01b bổ sung kịch bản giao dịch F2h/money/auth
-chỉ sau H01a đủ dùng, không bắt buộc xong trưa. Chưa implementation; acceptance và
-guardrails ở DEMO_PLAN. Bạn làm khung intent/recovery/isolation và H01a trước; Bảo
-nhận H01b còn lại cùng H02 review/debug sau bàn giao; ba lane UI
+H01a đã đủ dùng; tiếp gói được mở trên khung này. H01b bổ sung kịch bản giao dịch
+F2h/money/auth theo DEMO_PLAN, không bắt buộc xong trưa. Bảo nhận H01b còn lại
+cùng H02 review/debug sau bàn giao; ba lane UI
 làm tính năng hiện có. C01/C02 giữ dependency, không tự mở Delivered/settlement.
 Tích hợp dự kiến khi bàn giao trưa: cả docs19ffb84 và AI0182e40 cùng gói code đủ
 điều kiện, qua PR/checks/review; chưa thực hiện push/merge hay remote CI.

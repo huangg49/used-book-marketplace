@@ -1,0 +1,49 @@
+name: Demo scenario CI
+on:
+  pull_request:
+    paths:
+      [
+        "scripts/demo/**",
+        "scripts/demo-books.mjs",
+        "scripts/test-demo-books.mjs",
+        "apps/api/**",
+        "packages/api-contract/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "infra/docker-compose.mongo-test.yml",
+        "infra/mongo/**",
+        ".github/workflows/demo-ci.yml",
+      ]
+  push:
+    branches: [main]
+    paths:
+      [
+        "scripts/demo/**",
+        "scripts/demo-books.mjs",
+        "scripts/test-demo-books.mjs",
+        "apps/api/**",
+        "packages/api-contract/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "infra/docker-compose.mongo-test.yml",
+        "infra/mongo/**",
+        ".github/workflows/demo-ci.yml",
+      ]
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm test:demo
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @used-books/api exec oxlint $GITHUB_WORKSPACE/scripts/demo $GITHUB_WORKSPACE/scripts/demo-books.mjs $GITHUB_WORKSPACE/scripts/test-demo-books.mjs
+      - run: docker compose -f infra/docker-compose.mongo-test.yml up -d --wait mongo-test
+      - run: pnpm --filter @used-books/api build
+      - run: pnpm test:demo:api
