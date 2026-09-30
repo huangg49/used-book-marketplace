@@ -216,9 +216,26 @@
 C01 đã tích hợp vào main6361e57 với CI/evidence trên head4e4851e. Chủ dự án trực
 tiếp yêu cầu merge riêng C01; human review NOT RUN, full M1/release vẫn còn gate.
 C02 **TẠM HOÃN** theo yêu cầu UI-1 mới, không bắt đầu danh sách/chi tiết Order.
-Trên `codex/ui-direction`, ba vấn đề đã được duyệt và màn chi tiết sách đã sửa.
-Xem DETAIL_STANDARD_01 và ảnh trước/sau; **chờ chủ dự án duyệt màn chuẩn** trước
-khi áp sang màn khác. Định hướng cũ không cấp quyền tiếp tục C02.
+Trên `codex/ui-direction`, màn chuẩn chi tiết đã sửa tới `a70e5a3` (khoảng cách giá).
+Xem [so sánh mới nhất](../ui/detail-price-spacing.html) và
+[evidence màn chuẩn03](../ui/DETAIL_STANDARD_03.md); **chờ chủ dự án duyệt màn chuẩn**.
+Thứ tự chủ dự án chốt sau khi bàn về chuyển động:
+
+1. Hoàn tất vòng màn chuẩn trước; hiện đã có ảnh Android trước/sau390dp,100%/130%.
+   Lượt chốt thứ tự chỉ xem lại evidence và cập nhật điểm lưu, không đổi UI hoặc
+   chụp/chạy lại native vì source không đổi. Chưa có duyệt thẩm mỹ cuối cùng.
+2. Chỉ sau khi duyệt màn chuẩn, làm hướng1: chuyển động nhẹ khi mở ảnh lớn,
+   kèm bổ sung DESIGN.md về chuyển động. Quay trước/sau rồi dừng chờ duyệt;
+   chưa triển khai hoặc sửa DESIGN.md trong lượt chốt thứ tự này.
+3. Hướng2 (vuốt ảnh): khảo sát số ảnh/listing trong QA/API rồi báo để chủ dự án
+   quyết định. Phân biệt mẫu QA được tạo chủ đích với phân bố dữ liệu sử dụng;
+   chưa khảo sát, chưa cấp quyền triển khai gesture.
+4. Hướng3 (bìa nối từ kệ sang chi tiết) hoãn. Không áp màn chuẩn sang màn khác
+   hoặc bắt đầu C02 từ việc duyệt kế hoạch này.
+
+Mỗi bước có ảnh/video hoặc báo cáo tương ứng và dừng chờ chủ dự án duyệt.
+Checkpoint docs: `docs(handoff): record staged motion approval plan`;
+docs:check và diff-check PASS. Không chạy lại tests/native của source `a70e5a3`.
 Main local/remote4273f10; condition/H01/C01 đã tích hợp, nhánh upload-recovery
 vẫn giữ riêng. Chưa có quyền merge/deploy UI-1 hoặc C02.
 Không kiểm lại gate đã đạt khi source không đổi; chưa phân công thêm teammate.
