@@ -80,7 +80,9 @@ phân cấp thị giác và **không được lấn át tên sách, giá hoặc 
 
 1. **Dấu tình trạng cạnh nhận diện bản sách:** viền đất nung, chữ thật rõ,
    mức tình trạng đúng dữ liệu (kể cả “Cũ nhiều”). Như dấu mộc trên phiếu sách,
-   không nghiêng chữ, giả mực lem hoặc gợi chứng nhận kiểm định.
+   không nghiêng chữ, giả mực lem hoặc gợi chứng nhận kiểm định. Không cần lặp
+   nhãn nhìn thấy “Tình trạng” phía trên dấu; giữ nghĩa này trong accessibility
+   label. Hình thức “Bán”/“Đổi”/“Bán hoặc đổi” viết rõ ở cụm đầu theo dữ liệu.
 2. **Phiếu tình trạng:** một cụm có lề và nhịp đọc như thẻ thư viện, ghi rõ
    “Người đăng mô tả”; bìa/gáy, ruột sách, ghi chú, phụ kiện và trang thiếu
    được đọc liền mạch. Đây là điểm ấm chính, không thêm lớp card trang trí.
@@ -93,14 +95,19 @@ Hai vị trí tạo thành một câu chuyện về **bản sách cụ thể**, 
 
 Giá và hình thức giao dịch ở footer cố định trong layout, ngoài vùng cuộn và
 trong safe area. Dùng nhãn “Giá bán”/“Giá trị đổi” sát đúng số tiền, đủ phân biệt khi
-listing hỗ trợ cả hai. Chỉ một câu trạng thái ngắn: **“Tiệm chưa nhận đơn trong
-phiên bản này”**. Đây là lời chỉ dẫn bình thường, không phải lỗi hoặc nút giả.
+listing hỗ trợ cả hai. Chỉ một câu trạng thái ngắn: **“Tiệm chưa nhận đơn ở bản
+này.”** Đây là lời chỉ dẫn bình thường, không phải lỗi hoặc nút giả.
 Khi API không cập nhật được dữ liệu, không trình bày giá cũ như giá hiện hành.
 
 Footer gọn, không absolute overlay, không khóa chiều cao hoặc ép chữ một dòng.
 Ở 390px/font 100% thấy bìa, tên, tình trạng, giá và trạng thái ngay viewport đầu.
 Ở font 130%, ưu tiên đọc đủ và cuộn đến nội dung cuối không bị footer che; câu
 trạng thái được xuống dòng nếu cần, không thu nhỏ chữ để giữ một dòng vật lý.
+
+Bìa ở cụm đầu cần đủ lớn để nhận ra cuốn sách; khung ảnh hòa vào nền giấy,
+không thêm mảng trắng quanh ảnh. Giữ toàn bộ ảnh bằng contain, không crop hoặc
+tẩy nền nằm trong ảnh người đăng. Màn chuẩn thử cột ảnh40%, cách tên16px và
+khung tỉ lệ2:3; tên dài vẫn đọc đủ, không nhường toàn bộ trọng tâm cho dấu/phiếu.
 
 Tách slot trạng thái khỏi phần giá: khi C04 đủ điều kiện, caller có thể thay
 trạng thái bằng hành động thật mà không thiết kế lại bố cục. Gói đó vẫn phải xử

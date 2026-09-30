@@ -71,9 +71,6 @@ export function BookCondition({
   if (stamp)
     return (
       <View style={{ gap: space.sm, alignItems: "flex-start" }}>
-        <AppText kind="annotation" color={colors.muted}>
-          Tình trạng
-        </AppText>
         <View
           style={{
             borderColor: colorRoles.bookStamp,
@@ -84,7 +81,11 @@ export function BookCondition({
             maxWidth: "100%",
           }}
         >
-          <AppText kind="stamp" color={colorRoles.bookStamp}>
+          <AppText
+            kind="stamp"
+            color={colorRoles.bookStamp}
+            accessibilityLabel={`Tình trạng: ${condition}`}
+          >
             {condition}
           </AppText>
         </View>

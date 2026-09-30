@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="vi">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lật lại · Màn chuẩn 03 — bìa và giao dịch</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #eeeae2;
+      color: #202c27;
+      font:
+        16px/1.5 system-ui,
+        sans-serif;
+    }
+    main {
+      max-width: 840px;
+      margin: auto;
+    }
+    h1 {
+      font:
+        600 28px/1.25 Georgia,
+        serif;
+      margin: 0 0 12px;
+    }
+    p {
+      max-width: 760px;
+    }
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin: 24px 0;
+    }
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+    }
+    select {
+      min-height: 44px;
+      padding: 8px;
+      border: 1px solid #788477;
+      border-radius: 4px;
+      background: #fffcf4;
+      color: #202c27;
+      font: inherit;
+      max-width: 100%;
+    }
+    .pair {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 390px));
+      gap: 24px;
+    }
+    figure {
+      margin: 0;
+    }
+    figcaption {
+      font-weight: 700;
+      margin: 0 0 8px;
+    }
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid #d5d8c8;
+    }
+    small {
+      display: block;
+      margin: 16px 0;
+      color: #58685e;
+    }
+    a {
+      color: #214b40;
+    }
+    footer {
+      margin-top: 24px;
+      border-top: 1px solid #788477;
+      padding-top: 12px;
+    }
+    @media (max-width: 600px) {
+      body {
+        padding: 16px;
+      }
+      .pair {
+        gap: 12px;
+      }
+      h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+  <main>
+    <h1>Bìa rõ hơn. Bán hay đổi, nói ngay từ đầu.</h1>
+    <p>
+      Tinh chỉnh hướng A đã duyệt: bìa lớn hơn trên nền giấy, dấu mộc gọn, hình
+      thức bán/đổi ở cụm đầu và lời nhắn thanh đáy ngắn hơn. Ảnh Android khoảng
+      390px, chữ hệ thống100%/130%.
+    </p>
+    <nav aria-label="Chọn ảnh so sánh">
+      <label
+        >Bản sách<select id="book">
+          <option value="worn">Cũ nhiều · tên dài</option>
+          <option value="good">Còn tốt · bán hoặc đổi</option>
+          <option value="fair">Đã dùng nhiều · chỉ đổi</option>
+          <option value="new">Như mới · tên ngắn</option>
+        </select></label
+      >
+      <label
+        >Cỡ chữ Android<select id="scale">
+          <option value="100">100%</option>
+          <option value="130">130%</option>
+        </select></label
+      >
+    </nav>
+    <div class="pair">
+      <figure>
+        <figcaption>Trước · màn chuẩn 02 (25c8319)</figcaption>
+        <a id="beforeLink"
+          ><img id="before" alt="Màn chi tiết trước khi sửa"
+        /></a>
+      </figure>
+      <figure>
+        <figcaption>Sau · màn chuẩn 03, chờ duyệt</figcaption>
+        <a id="afterLink"><img id="after" alt="Màn chi tiết sau khi sửa" /></a>
+      </figure>
+    </div>
+    <small
+      >Ảnh nguyên bản 1080×2400, density443. Bấm ảnh để mở đầy đủ. Ảnh trước
+      dùng lại bằng chứng màn chuẩn 02; ảnh sau chụp mới với cùng nội dung QA,
+      khác ID listing. 130% là cỡ chữ hệ thống Android.</small
+    >
+    <footer>
+      <p>
+        <strong>Phép thử bỏ nhận diện:</strong> màn này không có logo hoặc khẩu
+        hiệu. Che chữ DEMO trên bìa: có nhận ra sách cũ có lý lịch, đồng thời
+        đây là nơi mua bán? Trong 5 giây có thấy cuốn nào, tình trạng, giá và vì
+        sao chưa nhận đơn?
+      </p>
+      <p>
+        Chờ chủ dự án duyệt; chưa áp dụng sang các màn khác. Bìa và mô tả là dữ
+        liệu mô phỏng. Storage fixture, API/Mongo QA thật; không là nghiệm thu
+        native/release toàn bộ.
+      </p>
+      <p><a href="DETAIL_STANDARD_03.md">Báo cáo và phạm vi kiểm chứng</a></p>
+    </footer>
+  </main>
+  <script>
+    const book = document.querySelector("#book"),
+      scale = document.querySelector("#scale");
+    function update() {
+      for (const phase of ["before", "after"]) {
+        const directory = phase === "before" ? "ui-1-commerce" : "ui-1-refine";
+        const src =
+          "evidence/" +
+          directory +
+          "/after-" +
+          book.value +
+          "-" +
+          scale.value +
+          ".png";
+        document.getElementById(phase).src = src;
+        document.getElementById(phase + "Link").href = src;
+      }
+    }
+    for (const input of [book, scale]) input.addEventListener("change", update);
+    update();
+  </script>
+</html>

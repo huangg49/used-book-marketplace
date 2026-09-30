@@ -11,7 +11,7 @@ import {
   radius,
   space,
 } from "../../core/ui";
-import { conditions, type Listing } from "./contracts";
+import { conditions, modes, type Listing } from "./contracts";
 
 // Display only. Reads, eligibility and signed images stay in the calling screen.
 export function BookPresentation({
@@ -39,7 +39,11 @@ export function BookPresentation({
           <AppText kind="annotation" color={colors.muted}>
             {item.book.authors.join(" · ")}
           </AppText>
-          <BookCondition stamp condition={conditions[item.condition]} />
+          <BookCondition
+            stamp
+            condition={conditions[item.condition]}
+            mode={modes[item.mode]}
+          />
         </View>,
       )}
       <View

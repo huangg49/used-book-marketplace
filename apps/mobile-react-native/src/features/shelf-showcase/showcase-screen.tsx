@@ -212,7 +212,11 @@ export function BookShowcase({
                     source={sample.cover}
                     missing={missing}
                     label={`Ảnh tư liệu ${sample.listing.book.title}`}
-                    style={{ width: "100%", height: 184 }}
+                    style={{
+                      width: "100%",
+                      aspectRatio: 2 / 3,
+                      backgroundColor: colors.paper,
+                    }}
                   />
                 }
               />

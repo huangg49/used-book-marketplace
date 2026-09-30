@@ -72,6 +72,12 @@ Chi tiết thật chỉ hiện footer khi có listing khả dụng và không l�
 đưa giá đã cũ vào vùng giao dịch. C04 sau này phải cấp hành động thật qua slot và
 kiểm lại quyền/navigation; không chỉ bật một cờ UI để mở giao dịch.
 
+Tinh chỉnh màn chuẩn03: `BookCondition stamp` bỏ nhãn nhìn thấy “Tình trạng”
+nhưng giữ accessibility label “Tình trạng: …”; `mode` vẫn viết rõ dưới dấu.
+Gallery chi tiết dùng cột40%, gap16; `PublicPhoto compact` và showcase dùng
+khung2:3 nền giấy, `contain` giữ ảnh nguyên vẹn. Không đổi cover mặc định của kệ.
+Status mẫu/chi tiết: “Tiệm chưa nhận đơn ở bản này.”, giữ font scaling tự nhiên.
+
 Cập nhật 29/09: Android xử lý `fontScale` qua Expo plugin để giữ Activity và
 picker khi trở lại từ cài đặt chữ. `AppText` tạo lại riêng native Text theo
 `useWindowDimensions().fontScale`, tránh Fabric giữ số đo cũ làm cắt nhãn;

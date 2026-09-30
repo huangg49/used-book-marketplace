@@ -73,8 +73,14 @@ export function PublicPhoto({
       onError={() => setFailed(photo.data?.url)}
       style={{
         width: "100%",
-        height: expanded ? 420 : compact ? 184 : large ? 286 : 210,
-        ...(compact ? { borderRadius: radius.book } : {}),
+        height: expanded ? 420 : compact ? undefined : large ? 286 : 210,
+        ...(compact
+          ? {
+              aspectRatio: 2 / 3,
+              backgroundColor: colors.paper,
+              borderRadius: radius.book,
+            }
+          : {}),
       }}
     />
   );

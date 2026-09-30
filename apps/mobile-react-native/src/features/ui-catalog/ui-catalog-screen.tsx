@@ -60,7 +60,7 @@ export function UiCatalogScreen() {
           section === "Sách" ? (
             <BookTradeBar sale={125000} exchange={150000}>
               <AppText kind="annotation" color={colors.muted}>
-                Tiệm chưa nhận đơn trong phiên bản này
+                Tiệm chưa nhận đơn ở bản này.
               </AppText>
             </BookTradeBar>
           ) : undefined

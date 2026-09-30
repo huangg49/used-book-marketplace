@@ -26,11 +26,11 @@ export function BookGallery({
       <View
         style={{
           flexDirection: "row",
-          gap: space.xl,
+          gap: space.lg,
           alignItems: "flex-start",
         }}
       >
-        <View style={{ width: summary ? "34%" : "100%", gap: space.sm }}>
+        <View style={{ width: summary ? "40%" : "100%", gap: space.sm }}>
           {photo}
           <View
             style={{

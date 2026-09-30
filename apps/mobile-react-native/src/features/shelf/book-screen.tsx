@@ -59,7 +59,7 @@ export function BookScreen({ id }: { id: string }) {
             exchange={item.exchangeValue ?? undefined}
           >
             <AppText kind="annotation" color={colors.muted}>
-              Tiệm chưa nhận đơn trong phiên bản này
+              Tiệm chưa nhận đơn ở bản này.
             </AppText>
           </BookTradeBar>
         ) : undefined
