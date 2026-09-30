@@ -8,8 +8,9 @@
   Head được kiểm9c430ac; cả6 job demo/docs/API/RN/operations/Flutter PASS, không
   skip. Tree f875df9 giống đúng head9c430ac. Main local đã fast-forward; local
   work/config/DB giữ nguyên, không reset/clean/pull đè hoặc đổi branch protection.
-- Gói hiện tại chỉ ghi điểm lưu sau merge: nhánh codex/h01-merge-checkpoint từ
-  f875df9; subject `docs(handoff): record merged H01 source and CI evidence`.
+- Điểm lưu sau merge được giữ trong [PR8](https://github.com/huangg49/used-book-marketplace/pull/8):
+  nhánh codex/h01-merge-checkpoint từf875df9; subject
+  `docs(handoff): record merged H01 source and CI evidence`.
   Không đổi API/contract/migration/UI; checks docs-only, không chạy lại API/native.
 - Chủ dự án đã cho phép push/tạo PR/merge H01 ngay sau checks cần thiết, miễn
   human review cho riêng gói này (yêu cầu trực tiếp30/09). Không có human sign-off;
@@ -102,8 +103,10 @@ H02 ở DEMO_SCENARIOS; nội dung/checks/integration ở PR7. Preflight source 
 không node_modules14/14, checker5/5, YAML/order/format/diff PASS; unit CI gọi Node
 trước explicit frozen install. Scan diff60 file đúng scope/không credential-shaped
 literals có giới hạn; không bảo đảm mọi secret hoặc bug đều được phát hiện.
-Checkpoint sau merge chỉ đổi docs: docs:check/diff phải đạt, remote docs CI kiểm
-trên PR checkpoint trước squash merge. Không kiểm lại source nghiệp vụ/UI đã đạt.
+Checkpoint sau merge chỉ đổi docs: docs:check PASS157/1132links/3adapters,
+diff-check PASS. PR8 chỉ cần docs CI đúng head trước squash merge; không kiểm lại
+source nghiệp vụ/UI đã đạt. Lấy SHA bàn giao mới nhất từ main, không từ nhánh H01
+trước squash hoặc SHA/PID lịch sử.
 Bảo tiếp H02 review/debug nền/source và giới hạn recovery đã ghi; ba lane UI
 làm tính năng hiện có. C01/C02 giữ dependency, không tự mở Delivered/settlement.
 Chủ dự án đã cho phép miễn review riêng gói tích hợp H01; human review NOT RUN,
