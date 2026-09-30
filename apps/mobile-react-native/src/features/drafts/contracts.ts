@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { bookCondition } from "./book-condition";
 const uuid = z.string().uuid();
 export const draftContent = z.object({
   fulfillment: z
@@ -11,7 +12,7 @@ export const draftContent = z.object({
     .optional(),
   bookId: uuid.nullable(),
   mode: z.enum(["Sale", "Exchange", "Both"]).nullable(),
-  condition: z.enum(["LikeNew", "Good", "Fair"]).nullable(),
+  condition: bookCondition.nullable(),
   pages: z.string(),
   coverNote: z.string(),
   notes: z.string(),

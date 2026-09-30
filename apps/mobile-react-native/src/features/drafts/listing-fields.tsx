@@ -1,6 +1,7 @@
 import { View } from "react-native";
 import { AppText, Button, Notice, TextField, space } from "../../core/ui";
 import type { Form, Errors } from "./listing-form";
+import { conditionOptions } from "./book-condition";
 // Lets the editor scroll a validation error's field into view.
 export type Anchor = (field: keyof Errors) => (node: View | null) => void;
 const noAnchor: Anchor = () => () => {};
@@ -64,11 +65,7 @@ export function ConditionFields({
         <Choice
           title="Tình trạng tổng thể"
           value={form.condition}
-          options={[
-            { value: "LikeNew", label: "Gần như mới" },
-            { value: "Good", label: "Còn tốt" },
-            { value: "Fair", label: "Đã dùng nhiều" },
-          ]}
+          options={conditionOptions}
           disabled={disabled}
           error={errors.condition}
           onChange={(condition) => onChange({ ...form, condition })}
