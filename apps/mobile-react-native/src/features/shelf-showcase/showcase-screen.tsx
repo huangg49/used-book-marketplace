@@ -18,7 +18,7 @@ import {
 import { ShelfGrid } from "../shelf/shelf-grid";
 import { BookPresentation } from "../shelf/book-presentation";
 import { BookGallery } from "../shelf/book-gallery";
-import { ShelfHeader, ShelfStory } from "../shelf/shelf-controls";
+import { ShelfHeader } from "../shelf/shelf-controls";
 import { modes } from "../shelf/contracts";
 import { showcaseBooks } from "./fixtures";
 
@@ -87,7 +87,6 @@ export function ShelfShowcase() {
         onSubmitEditing={() => setQuery(search)}
         maxLength={200}
       />
-      {!query && !mode && <ShelfStory />}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
         {Object.entries({ "": "Tất cả", ...modes }).map(([key, title]) => (
           <Chip
@@ -100,11 +99,11 @@ export function ShelfShowcase() {
       </View>
       <View style={{ gap: space.sm }}>
         <AppText
-          kind="heading"
+          kind="bookHeading"
           color={colors.forest}
           accessibilityRole="header"
         >
-          Một cuốn. Một lần gặp.
+          Trên kệ mẫu
         </AppText>
         <AppText kind="small" color={colors.muted}>
           {items.length} mẫu để xem bố cục · chạm bìa để mở
@@ -125,7 +124,11 @@ export function ShelfShowcase() {
               }
               missing={missing}
               label={`Ảnh tư liệu ${item.book.title}`}
-              style={{ width: "100%", height: 210 }}
+              style={{
+                width: "100%",
+                aspectRatio: 2 / 3,
+                backgroundColor: colors.paper,
+              }}
             />
           </Pressable>
         )}

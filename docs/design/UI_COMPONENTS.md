@@ -75,13 +75,23 @@ kiểm lại quyền/navigation; không chỉ bật một cờ UI để mở gia
 Tinh chỉnh màn chuẩn03: `BookCondition stamp` bỏ nhãn nhìn thấy “Tình trạng”
 nhưng giữ accessibility label “Tình trạng: …”; `mode` vẫn viết rõ dưới dấu.
 Gallery chi tiết dùng cột40%, gap16; `PublicPhoto compact` và showcase dùng
-khung2:3 nền giấy, `contain` giữ ảnh nguyên vẹn. Không đổi cover mặc định của kệ.
+khung2:3 nền giấy, `contain` giữ ảnh nguyên vẹn. Lượt màn chuẩn03 chưa đổi kệ;
+lượt áp dụng sang kệ được mô tả bên dưới.
 Status mẫu/chi tiết: “Tiệm chưa nhận đơn ở bản này.”, giữ font scaling tự nhiên.
 
 Tinh chỉnh giá: `BookTradeBar` dùng `BookPrice reading columns`, hai nhóm nhãn/giá
 co giãn theo nội dung, gap tối thiểu32px; thiếu chỗ thì wrap cả nhóm. Khoảng cách
 đến slot trạng thái8px. `BookPrice` mặc định và kệ giữ nguyên; `/ui` nhóm Sách có
 footer dùng cùng component để kiểm mẫu giá. Không ép giá vào cột hẹp hay thu nhỏ chữ.
+
+UI-1 kệ sách (sau khi chủ dự án duyệt chi tiết): `ShelfGrid` giữ tên export và
+callback nhưng trình bày từng hàng, bìa34% bên trái, tên/tình trạng/hình thức/giá
+bên phải. `shelfTitle` dùng Lora18/26; nhãn và tác giả dùng annotation14/21.
+`BookPrice reading stacked` xếp hai nhóm nhãn/giá theo chiều dọc, gap12px, tránh
+dí hai giá vào một cột hẹp; mặc định và footer chi tiết giữ nguyên. `/ui` có ví dụ.
+Kệ thật dùng `PublicPhoto compact`; showcase dùng cùng khung2:3 nền giấy. Bỏ
+banner khẩu hiệu/ảnh trang trí để sách lên sớm hơn. Không đổi query/filter/cursor,
+navigation hoặc thêm chuyển động. Màn kệ mới chờ duyệt ảnh trước/sau.
 
 Cập nhật 29/09: Android xử lý `fontScale` qua Expo plugin để giữ Activity và
 picker khi trở lại từ cài đặt chữ. `AppText` tạo lại riêng native Text theo

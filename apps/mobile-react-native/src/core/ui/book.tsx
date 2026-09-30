@@ -108,11 +108,13 @@ export function BookPrice({
   exchange,
   reading = false,
   columns = false,
+  stacked = false,
 }: {
   sale?: number;
   exchange?: number;
   reading?: boolean;
   columns?: boolean;
+  stacked?: boolean;
 }) {
   return (
     <View
@@ -120,6 +122,7 @@ export function BookPrice({
         layout.row,
         {
           flexWrap: "wrap",
+          flexDirection: stacked ? "column" : "row",
           alignItems: "flex-start",
           gap: columns ? space.section : reading ? space.md : space.xxl,
         },

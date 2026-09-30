@@ -10,7 +10,8 @@ hiện đại pha chi tiết ấm; câu chuyện chuyền tay; tránh tối gi�
 Nếu UI cũ, brand v1.1 hoặc quyết định thẩm mỹ trong tài liệu cũ mâu thuẫn, sửa lớp
 trình bày theo tài liệu này; không giữ vì đã có sẵn. Chủ dự án đã duyệt ba vấn đề
 trong CRITIQUE_01 và **chi tiết sách** làm màn chuẩn. Token được thử trên màn này;
-chưa duyệt áp dụng sang màn khác.
+đã được chủ dự án duyệt tại a70e5a3. Chủ dự án cho phép áp hướng này sang kệ
+sách trước, chụp trước/sau và dừng duyệt; chuyển động mở ảnh lớn làm sau lượt kệ.
 
 SRS/ADR/OpenAPI vẫn quyết định nghiệp vụ, quyền, dữ liệu và hành vi. UI-1 chỉ đổi
 màu, font, spacing, bố cục, microcopy, icon và chuyển động; không thêm endpoint,

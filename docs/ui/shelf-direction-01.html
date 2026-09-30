@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="vi">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lật lại · Kệ sách — vòng 01</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #f5efdf;
+      color: #202c27;
+      font:
+        16px/1.6 system-ui,
+        sans-serif;
+    }
+    main {
+      max-width: 840px;
+      margin: auto;
+    }
+    h1 {
+      font:
+        600 30px/1.3 Georgia,
+        serif;
+      color: #214b40;
+    }
+    select {
+      font: inherit;
+      padding: 8px 12px;
+      min-height: 44px;
+      color: #202c27;
+      background: #fffcf4;
+      border: 1px solid #788477;
+    }
+    .pair {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 390px));
+      gap: 24px;
+      margin: 24px 0;
+    }
+    figure {
+      margin: 0;
+    }
+    figcaption {
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    a {
+      color: #214b40;
+    }
+    footer {
+      border-top: 1px solid #788477;
+      margin-top: 24px;
+      padding-top: 12px;
+    }
+    @media (max-width: 600px) {
+      body {
+        padding: 12px;
+      }
+      .pair {
+        gap: 12px;
+      }
+    }
+  </style>
+  <main>
+    <h1>Kệ sách: nhìn rõ từng bản sách.</h1>
+    <p>
+      Bỏ banner khẩu hiệu, đặt bìa cạnh tên và dấu tình trạng. Hình thức bán/đổi
+      viết rõ; hai nhóm giá xếp dọc để không chen nhau. Giữ nguyên tìm kiếm, bộ
+      lọc và đường vào chi tiết.
+    </p>
+    <p>
+      Đánh đổi: ít bìa trên một màn hơn lưới hai cột, nhưng không phải cuộn qua
+      bìa mới gặp tên và giá. Chưa thêm chuyển động.
+    </p>
+    <label
+      >Cỡ chữ Android
+      <select id="scale">
+        <option value="100">100%</option>
+        <option value="130">130%</option>
+      </select></label
+    >
+    <div class="pair">
+      <figure>
+        <figcaption>Trước · d5c0f34</figcaption>
+        <a id="beforeLink"><img id="before" alt="Kệ trước khi chỉnh" /></a>
+      </figure>
+      <figure>
+        <figcaption>Sau · chờ duyệt</figcaption>
+        <a id="afterLink"><img id="after" alt="Kệ sau khi chỉnh" /></a>
+      </figure>
+    </div>
+    <p>
+      Ảnh Android nguyên bản 1080×2400, density443 (~390dp), chữ hệ thống
+      100%/130%. Cùng bốn bản sách DEMO, cùng thứ tự. Bấm ảnh để xem đầy đủ.
+    </p>
+    <footer>
+      <p>
+        <a href="evidence/ui-1-shelf/bottom-130.png">Cuối kệ · 130%</a> ·
+        <a href="evidence/ui-1-shelf/empty-130.png">Tìm không có kết quả</a> ·
+        <a href="evidence/ui-1-shelf/error-130.png">Lỗi cập nhật</a> ·
+        <a href="evidence/ui-1-shelf/narrow-130.png">Màn hẹp 320dp · 130%</a>
+      </p>
+      <p>
+        <a href="SHELF_DIRECTION_01.md">Báo cáo và giới hạn kiểm chứng</a>.
+        API/Mongo QA thật, storage fixture FAKE. Không phải nghiệm thu TalkBack,
+        máy yếu hay release.
+      </p>
+      <p>Dừng chờ chủ dự án duyệt kệ trước khi làm chuyển động mở ảnh lớn.</p>
+    </footer>
+  </main>
+  <script>
+    const scale = document.getElementById("scale");
+    function render() {
+      for (const phase of ["before", "after"]) {
+        const src = `evidence/ui-1-shelf/${phase}-${scale.value}.png`;
+        document.getElementById(phase).src = src;
+        document.getElementById(phase + "Link").href = src;
+      }
+    }
+    scale.addEventListener("change", render);
+    render();
+  </script>
+</html>

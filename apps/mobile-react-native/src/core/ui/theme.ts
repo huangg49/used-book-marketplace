@@ -43,9 +43,10 @@ export const metrics = {
   sheet: 520,
 } as const;
 export const typography = {
-  // UI-1 reading roles are opt-in while the detail screen is being reviewed.
+  // UI-1 reading roles: approved detail direction, now applied to the shelf.
   bookTitle: [22, 30, "LoraSemi"],
   bookHeading: [20, 28, "LoraSemi"],
+  shelfTitle: [18, 26, "LoraSemi"],
   reading: [16, 25, "BeRegular"],
   annotation: [14, 21, "BeRegular"],
   stamp: [14, 21, "BeBold"],

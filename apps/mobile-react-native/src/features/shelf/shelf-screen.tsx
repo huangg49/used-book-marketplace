@@ -29,7 +29,7 @@ import {
   type Filters,
 } from "./filters";
 import { PublicPhoto } from "./public-photo";
-import { ShelfHeader, ShelfStory } from "./shelf-controls";
+import { ShelfHeader } from "./shelf-controls";
 import { ShelfGrid } from "./shelf-grid";
 import { ShelfFilterSheet } from "./shelf-filter-sheet";
 
@@ -95,7 +95,7 @@ export function ShelfScreen() {
           <SearchField
             label="Tìm sách"
             submitLabel="Tìm trên kệ"
-            placeholder="Tên sách, tác giả, ISBN"
+            placeholder="Tên, tác giả, ISBN"
             maxLength={400}
             onSubmitEditing={() => apply({ ...applied, q: search })}
             value={search}
@@ -109,7 +109,6 @@ export function ShelfScreen() {
         />
       </View>
       {error && !filterOpen ? <Notice tone="error">{error}</Notice> : null}
-      {!hasCriteria && <ShelfStory />}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -129,7 +128,7 @@ export function ShelfScreen() {
           style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}
         >
           <AppText
-            kind="heading"
+            kind="bookHeading"
             color={colors.forest}
             accessibilityRole="header"
             style={{ flex: 1 }}
@@ -137,7 +136,7 @@ export function ShelfScreen() {
             {applied.q ? `Kết quả cho “${applied.q}”` : "Trên kệ hôm nay"}
           </AppText>
         </View>
-        <AppText kind="small" color={colors.muted}>
+        <AppText kind="annotation" color={colors.muted}>
           {sorts[applied.sort]}
           {applied.condition
             ? ` · ${conditions[applied.condition as keyof typeof conditions]}`
@@ -238,6 +237,7 @@ export function ShelfScreen() {
             mediaId={item.photos[0].id}
             label={`Ảnh sách ${item.book.title}`}
             active={active && !result.isError}
+            compact
             onOpen={() =>
               router.push({ pathname: "./book", params: { id: item.id } })
             }
