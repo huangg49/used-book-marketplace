@@ -3,8 +3,9 @@
 ## Nguồn và việc đang làm
 
 - main đã tích hợp MongoDB và bàn giao qua [PR5](https://github.com/huangg49/used-book-marketplace/pull/5)/[PR6](https://github.com/huangg49/used-book-marketplace/pull/6), mốc1be5144.
-- Gói hiện tại: H01a, nhánh codex/h01-demo-scenarios từ46f988d; working tree lúc
-  mở nhánh sạch. Stack docs/AI/plan19ffb84 →0182e40 →e2e7f21 →b9026a5 →46f988d
+- Gói hiện tại: funding đầu H01b, nhánh codex/h01-f2h-scenarios từae0f1d9 (H01a,
+  nhánh codex/h01-demo-scenarios từ46f988d). Working tree sạch lúc mở mỗi nhánh.
+  Stack docs/AI/plan19ffb84 →0182e40 →e2e7f21 →b9026a5 →46f988d →ae0f1d9
   chưa push/merge. Không cherry-pick code bỏ dependency docs; tích hợp theo mốc trưa.
 - Đã hoàn thiện [AI_WORKFLOW](../AI_WORKFLOW.md): AGENTS gọn, domain rules đọc theo
   nhiệm vụ, ba skill nguồn chung + adapter Claude, mẫu issue/PR và docs:check/CI.
@@ -18,7 +19,7 @@
   bounded retry, run lock, fingerprint và chặn DB đã mất. Cấu hình/intent/ảnh nằm
   trong .tmp/demo, không sửa .env hoặc DB/bucket chính. Subject điểm lưu:
   `feat(demo): orchestrate recoverable book scenarios on isolated API`.
-  [Cách dùng và evidence](DEMO_SCENARIOS.md). H01b chưa implementation.
+  [Cách dùng và evidence](DEMO_SCENARIOS.md). Commitae0f1d9; H01a hoàn tất local.
 - Checks H01a thực chạy: API build; test:demo8/8; test:demo:api real Nest/Mongo/Sharp
   với storage FAKE (upload lost-ack sau commit, restart API, rerun không duplicate,
   secret-free manifest, SANDBOX_LOST); oxlint; docs:check/diff-check PASS.
@@ -29,6 +30,14 @@
 - Trong phát triển tool có lỗi parser receipt chưa nhận ListingState object và
   HTTP429 khi test login lặp. Đã sửa parser và dùng lại phiên memory cùng tiến
   trình; không sửa contract/guard hoặc xóa login attempts. Test cuối PASS.
+- Funding đầu H01b đã hiện thực: `demo:funding init/run`, simulator secret opt-in
+  ở namespace mới; Buyer tạo topup1M, operator độc lập qua adapter API; intent event
+  bền vững và wallet/history/topup + ledger snapshot reconciliation. Không seed tiền.
+  Subject: `feat(demo): add finite funding scenario with ledger reconciliation`.
+  Unit9/9 và focused real HTTP/Mongo PASS (credit lost-ack ba lần, restart API/rerun
+  không posting trùng;403 Member event; disabled/same-recipient chặn). CLI fixture
+  init/run/rerun PASS: available1M/source99M. H01a API regression/oxlint/docs/diff
+  PASS. Không dựng Order, không mở ví UI, không đóng human/native/remote CI gate.
 - Gói docs trước: README/index/SESSION/READINESS rút gọn, sửa DB/contract/prompt;
   [phạm vi](DOCS_AUDIT_2026_09_30.md). Evidence lịch sử giữ nguyên.
 
@@ -66,8 +75,11 @@
 
 ## Bước tiếp
 
-H01a đã đủ dùng; tiếp gói được mở trên khung này. H01b bổ sung kịch bản giao dịch
-F2h/money/auth theo DEMO_PLAN, không bắt buộc xong trưa. Bảo nhận H01b còn lại
+H01a và funding H01b đã đủ dùng. Tiếp H01b Order: address/fulfillment qua API,
+revision mới submit/review; quote server → AwaitingPayment → pay/accept, đối chiếu
+hold/commitment/payment ledger. Giữ intent cả quote bị hết hạn, không tự đổi key.
+InTransit cần packaging/label/carrier event thật trong mô phỏng, không gán state.
+Chưa có Order do tool tạo. H01b không bắt buộc xong trưa. Bảo nhận H01b còn lại
 cùng H02 review/debug sau bàn giao; ba lane UI
 làm tính năng hiện có. C01/C02 giữ dependency, không tự mở Delivered/settlement.
 Tích hợp dự kiến khi bàn giao trưa: cả docs19ffb84 và AI0182e40 cùng gói code đủ

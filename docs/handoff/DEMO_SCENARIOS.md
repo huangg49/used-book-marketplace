@@ -113,8 +113,9 @@ kiểm riêng bằng cấu hình private, không đưa service key vào workflow
 
 Code ở `scripts/demo/`: sandbox quản lý target/accounts, journal quản lý intent,
 HTTP giữ auth ở memory, books điều phối API. `Commands` nhận `projectReceipt` khi
-mở rộng sang kiểu receipt khác; mặc định là MutationReceipt cho sách. H01b chưa
-triển khai: Bảo tiếp kịch bản tiền/order hiện có theo [DEMO_PLAN](DEMO_PLAN_2026_10_06.md),
+mở rộng sang kiểu receipt khác; mặc định là MutationReceipt cho sách. H01b đã có
+bước funding bên dưới; các kịch bản Order chưa triển khai. Bảo tiếp phần còn lại
+theo [DEMO_PLAN](DEMO_PLAN_2026_10_06.md),
 không ghi ledger/balance/state trực tiếp. H01a không đóng native/human review hoặc
 gates cho Delivered/settlement.
 
@@ -141,3 +142,43 @@ Một lệnh lint ban đầu dùng path chứa `..` bị oxlint từ chối; ch�
 PASS. Đây là lỗi triển khai/tool invocation đã xử lý, không phải bug backend mới.
 CI workflow đã thêm nhưng remote CI NOT RUN; native/human review NOT RUN. QA data
 là disposable tmpfs; artifact/screenshot private bị ignore, không có trong clone mới.
+
+## H01b — nguồn tiền mô phỏng (increment đầu)
+
+```powershell
+pnpm demo:funding init demo-tien --fixture-storage
+pnpm demo:funding run demo-tien
+pnpm test:demo:funding
+```
+
+Port mặc định3016; đặt `--port` khi init nếu bận. Init sinh simulator secret riêng,
+opt-in chỉ cho namespace mới; các run H01a cũ vẫn tắt simulator. Có thể chạy live
+storage bằng cấu hình private như H01a; bản thân funding không có media và không
+kiểm storage. `--fixture-storage` chỉ chọn backend storage giả, không giả API/tiền.
+
+Buyer tạo topup1M qua `/me/topups`; TEST_OPERATOR độc lập gửi sự kiện Succeeded qua
+adapter đã có. Event ID/amount/recipient/occurredAt/key được giữ trong intent; thời
+gian lấy từ intent server, không chỉnh clock. Adapter ký/kiểm HMAC ở server. Secret
+không xuất hiện trong request, journal hoặc manifest. Tool không ghi ledger/balance.
+Chỉ có một topup trong run; không nạp bù khi reconciliation lệch.
+
+Đối chiếu topup/receipt/wallet/history qua API và `LedgerService.reconcile` chỉ đọc
+trong snapshot transaction trên sandbox: nguồn còn99M, Member available/held tổng1M,
+debit/credit cân bằng. `funding-manifest.json` chứa IDs/receipts/số liệu mô phỏng;
+`funding-outcome.json` ghi lần chạy gần nhất. Không dùng manifest sách để suy kết
+quả tiền, hoặc kết quả funding để suy Order đã được dựng.
+
+Bằng chứng local: nhánh `codex/h01-f2h-scenarios` từae0f1d9; subject
+`feat(demo): add finite funding scenario with ledger reconciliation`.
+Unit9/9, focused funding HTTP/Mongo test PASS: mất ack sau khi credit ba lần,
+restart API rồi resume/rerun cùng event/key/body; vẫn1topup,1event,2journals gồm
+opening,4entries,2receipts. Member gửi operator event bị403, simulator không opt-in
+và operator trùng recipient bị chặn; không phát sinh posting. CLI init/run/rerun
+`h01-funding` PASS. H01a API test chạy lại PASS vì sandbox dùng chung thay đổi.
+Oxlint/docs/diff checks PASS; remote CI/human review NOT RUN.
+
+Phần tiếp cụ thể: địa chỉ mô phỏng qua API (giữ contact ngoài manifest), fulfillment
+revision/submit/review, server quote, AwaitingPayment và pay/accept theo version đã
+đọc; giữ hold/commitment, đối chiếu payment posting. InTransit cần label/packaging
+evidence và carrier event đúng API, không gán state/fast-forward deadline. Chưa có
+Order nào được tạo bởi tooling này; không gọi đây là H01b hoàn tất hoặc mở ví UI.

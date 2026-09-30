@@ -5,6 +5,7 @@ import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { root, initialize, createSandbox } from "./demo/sandbox.mjs";
 import { runBooks } from "./demo/books.mjs";
+import { createHttp } from "./demo/http.mjs";
 
 const directory = path.join(
   root,
@@ -47,6 +48,14 @@ try {
   sandbox = await createSandbox(config, directory);
   const manifest = await runBooks(config, directory, sandbox);
   assert.equal(manifest.status, "PASS");
+  assert.equal(
+    (
+      await createHttp(sandbox.base, sandbox.tokens)("/me/wallet", {
+        actor: "seller",
+      })
+    ).topupEnabled,
+    false,
+  );
   assert.match(manifest.storage, /FAKE/);
   assert.equal(Object.keys(manifest.steps).length, 9);
   const counts = async () =>

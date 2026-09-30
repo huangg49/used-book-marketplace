@@ -81,6 +81,14 @@ export function validateConfig(config) {
         "Invalid demo account configuration.",
       );
   if (
+    config.fundingSecret !== undefined &&
+    !/^[a-f0-9]{64}$/.test(config.fundingSecret)
+  )
+    throw new ScenarioError(
+      "INVALID_CONFIG",
+      "Invalid private funding simulator configuration.",
+    );
+  if (
     config.storage === "live" &&
     !/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config.project)
   )
@@ -107,7 +115,7 @@ export async function readConfig(directory) {
 
 export async function initialize(
   directory,
-  { fixture = false, port = 3012 } = {},
+  { fixture = false, port = 3012, funding = false } = {},
 ) {
   const id = randomBytes(8).toString("hex");
   const accounts = Object.fromEntries(
@@ -135,6 +143,7 @@ export async function initialize(
     jwt: randomBytes(32).toString("hex"),
     accounts,
     provisioned: false,
+    ...(funding ? { fundingSecret: randomBytes(32).toString("hex") } : {}),
   });
   // Exclusive create: initializing twice cannot rotate identities or rewrite intents.
   await writeFile(
@@ -158,6 +167,7 @@ export function bindingFor(config) {
           role,
           value.id,
         ]),
+        ...(config.fundingSecret ? { funding: true } : {}),
       }),
     )
     .digest("hex");
@@ -364,7 +374,7 @@ export async function createSandbox(config, directory) {
         config.storage === "live" ? process.env.DEMO_SUPABASE_STORAGE_KEY : "",
       SUPABASE_MEDIA_BUCKET: config.bucket,
       MEDIA_STORAGE_BUDGET_BYTES: "50000000",
-      PAYMENT_SIMULATOR_SECRET: "",
+      PAYMENT_SIMULATOR_SECRET: config.fundingSecret ?? "",
     });
     const { AppModule } = await load("app.module.js"),
       { configureApp } = await load("configure-app.js"),
@@ -386,11 +396,15 @@ export async function createSandbox(config, directory) {
     }
     configureApp(app, { docs: false, logRequests: false });
     await app.listen(config.port, "127.0.0.1");
+    const { MongoService } = await load("database/mongo/mongo.service.js"),
+      { LedgerService } = await load("modules/wallet/ledger.service.js");
     return {
       base: `http://127.0.0.1:${config.port}/api/v1`,
       close,
       tokens: {},
       processMedia: () => app.get(MediaWorker).tick(),
+      reconcileMoney: () =>
+        app.get(MongoService).tx((tx) => app.get(LedgerService).reconcile(tx)),
       // Exposed to focused QA only. Orchestration never writes business documents.
       inspect: (collection) => db.collection(collection),
     };
