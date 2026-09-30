@@ -37,7 +37,10 @@ export async function runBooks(
     fulfillment,
   } = {},
 ) {
-  if (prefix && !/^orders\.(awaiting|paid|preparing)\.book$/.test(prefix))
+  if (
+    prefix &&
+    !/^orders\.(awaiting|paid|preparing|intransit)\.book$/.test(prefix)
+  )
     throw new ScenarioError("INVALID_SCOPE", "Unknown book scenario scope.");
   const journal =
     sharedJournal ?? (await openJournal(directory, bindingFor(config)));

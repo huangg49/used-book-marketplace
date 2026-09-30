@@ -3,9 +3,10 @@
 ## Nguồn và việc đang làm
 
 - main đã tích hợp MongoDB và bàn giao qua [PR5](https://github.com/huangg49/used-book-marketplace/pull/5)/[PR6](https://github.com/huangg49/used-book-marketplace/pull/6), mốc1be5144.
-- Gói hiện tại: H01b Order, nhánh codex/h01-order-scenarios từ428cafd (funding từae0f1d9,
-  H01a từ46f988d). Working tree sạch lúc mở mỗi nhánh; local work được giữ nguyên.
-  Stack docs/AI/plan19ffb84 →0182e40 →e2e7f21 →b9026a5 →46f988d →ae0f1d9 →428cafd
+- Gói hiện tại: H01b InTransit, nhánh codex/h01-intransit-scenarios từ274d100;
+  working tree sạch lúc mở nhánh. Fetch origin30/09 vẫn main1be5144, không có
+  commit main mới cần tích hợp; không pull/reset/clean, giữ local work.
+  Stack docs/AI/plan19ffb84 →0182e40 →e2e7f21 →b9026a5 →46f988d →ae0f1d9 →428cafd →274d100
   chưa push/merge. Không cherry-pick code bỏ dependency docs; tích hợp theo mốc trưa.
 - Đã hoàn thiện [AI_WORKFLOW](../AI_WORKFLOW.md): AGENTS gọn, domain rules đọc theo
   nhiệm vụ, ba skill nguồn chung + adapter Claude, mẫu issue/PR và docs:check/CI.
@@ -13,51 +14,44 @@
   [Bằng chứng/phạm vi](AI_TEAM_HANDOFF_2026_09_30.md): checker 5/5, skills 6/6,
   docs links/contract/diff-check PASS; AI mới sửa form mẫu và nhận đúng gate.
   Không đổi app/DB. Chưa test tự nạp Claude/máy teammate hoặc chạy remote CI.
-- H01a đã hiện thực: `demo:books init/run/serve`, API loopback quản lý riêng,
-  QA57017/rs-test + DB random *_test/roles riêng; seed chỉ account, toàn bộ hành
-  trình catalog/media/listing/review qua API. Durable key/body/version + receipt,
-  bounded retry, run lock, fingerprint và chặn DB đã mất. Cấu hình/intent/ảnh nằm
-  trong .tmp/demo, không sửa .env hoặc DB/bucket chính. Subject điểm lưu:
-  `feat(demo): orchestrate recoverable book scenarios on isolated API`.
-  [Cách dùng và evidence](DEMO_SCENARIOS.md). Commitae0f1d9; H01a hoàn tất local.
-- Checks H01a thực chạy: API build; test:demo8/8; test:demo:api real Nest/Mongo/Sharp
-  với storage FAKE (upload lost-ack sau commit, restart API, rerun không duplicate,
-  secret-free manifest, SANDBOX_LOST); oxlint; docs:check/diff-check PASS.
-  Live Supabase trên bucket private random riêng: init/run/rerun PASS,9 receipts
-  không đổi key/IDs. Member web export tách ở .tmp/demo/member-web và IAB thật:
-  shelf → detail/ảnh live → Back PASS; ảnh .tmp/demo/h01-live/member-detail.jpg.
-  Không gọi web là native PASS. Remote CI/human review NOT RUN; READINESS không đổi.
-- Trong phát triển tool có lỗi parser receipt chưa nhận ListingState object và
-  HTTP429 khi test login lặp. Đã sửa parser và dùng lại phiên memory cùng tiến
-  trình; không sửa contract/guard hoặc xóa login attempts. Test cuối PASS.
-- Funding đầu H01b đã hiện thực: `demo:funding init/run`, simulator secret opt-in
-  ở namespace mới; Buyer tạo topup1M, operator độc lập qua adapter API; intent event
-  bền vững và wallet/history/topup + ledger snapshot reconciliation. Không seed tiền.
-  Subject: `feat(demo): add finite funding scenario with ledger reconciliation`.
-  Unit9/9 và focused real HTTP/Mongo PASS (credit lost-ack ba lần, restart API/rerun
-  không posting trùng;403 Member event; disabled/same-recipient chặn). CLI fixture
-  init/run/rerun PASS: available1M/source99M. H01a API regression/oxlint/docs/diff
-  PASS. Gói funding này không dựng Order hoặc mở ví UI; gates giữ nguyên.
-- H01b Order đã hiện thực `demo:orders init/run/serve`: address mô phỏng qua API,
-  fulfillment/media/submit/review cho3 sách, quote server → AwaitingPayment /
-  PendingSellerConfirmation / Preparing. Shared journal, contact ref/hash, receipt
-  recovery không cần sách Reserved còn public; hold/commitment/ledger snapshot khớp.
-  Subject: `feat(demo): build recoverable F2h order scenarios through existing APIs`.
-  [Chi tiết/evidence](DEMO_SCENARIOS.md). API/contract/migrations/UI không đổi.
-  Unit11/11, test:demo:orders real HTTP/Nest/Mongo/Sharp FAKE PASS: mất ack ba lần
-  sau commit ở quote/create/pay/accept, restart API bằng session memory rồi resume/
-  rerun không duplicate;40 receipts,3 orders/contexts/commitments,1 preparation,
-  4 journals/8 entries. Actor sai/conflicting create bị từ chối; không leak contact/
-  secret. Transport projection quá deadline bị chặn, không đổi clock/DB.
-  H01a/funding regression/oxlint/format/docs/diff PASS. Node24.19.0/pnpm11.19.0.
-- Order CLI live `order-live` (API3024, dedicated Supabase private random bucket/QA
-  DB) init/run PASS: available690K/held310K/source99M, seller0;3 media pipeline thật.
-  Expo web export riêng .tmp/demo/order-member-web, IAB thật: Reserved không trên
-  public shelf; seller địa chỉ → Back →3 sách giữ chỗ → quản lý/ảnh live/input
-  disabled PASS. Screenshot .tmp/demo/order-live/member-reserved.jpg. Không là native.
-  Full CLI crash recovery/live lost-ack/human review/remote CI NOT RUN. Login4 actor
-  có thể gặp429 khi restart CLI trong cùng cửa sổ5 login/IP/15 phút; không persist
-  token/nới guard. Run quá deadline bị BLOCKED, không nạp bù/refund/restock.
+- H01 tooling đã đủ local để bàn giao review; API/contract/migration/UI product
+  không đổi. Accounts fixture tách role, DB random *_test trên QA57017/rs-test,
+  private bucket riêng; mọi command nghiệp vụ qua API, không seed tiền/state.
+  Durable key/body/version/receipt, run lock, binding và chặn SANDBOX_LOST.
+  Cách chạy/phạm vi/test/lỗi harness cụ thể ở [DEMO_SCENARIOS](DEMO_SCENARIOS.md).
+
+  | Increment | Source / đầu ra |
+  | --- | --- |
+  | H01a | ae0f1d9: demo:books init/run/serve; catalog/media/listing/review/public shelf |
+  | Funding | 428cafd: demo:funding; Buyer1M qua operator độc lập, nguồn99M |
+  | Order | 274d100: demo:orders; unpaid/paid/Preparing,40 receipts |
+  | InTransit | Gói hiện tại: init thêm --in-transit; giữ3 mẫu cũ + Order thứ tư, packaging/label/pickup;57 receipts |
+
+- Gói InTransit có subject
+  `feat(demo): add isolated packaging and carrier pickup scenarios`.
+  Ảnh packaging do tool tạo, có nhãn DEMO; không chứng minh kiện sách thật/custody.
+  Seller reserve/PUT/label không đổi Order3, deadline hay tiền; operator độc lập
+  gửi PickedUp với key=eventId, thời gian từ API server; Applied → InTransit4.
+  Snapshot checkOrder/checkShipment/checkPackaging và ledger chỉ đọc khớp:
+  available535K/held465K/source99M/seller0, commitment vẫn Active/version1.
+- Checks thực chạy trên gói hiện tại: unit14/14; test:demo:transit HTTP/Nest/Mongo/
+  Sharp FAKE PASS: upload/label/pickup lost-ack sau commit3 lần, API restart bằng
+  session memory; actual concurrent identical pickup chỉ1 Applied; rerun57 intents/
+  receipts,4 Orders/commitments,2 preparations,1 evidence/label/pickup,5 journals/
+  10 entries. Wrong actor/key/payload/bytes bị từ chối; secret/contact không có
+  trong manifest/journal. Ca API riêng duplicate/conflict giữ canonical pickup,
+  hold/commitment; conflict → ResolutionPending5, tool dừng, không refund/restock.
+  H01a/funding/Order regression, oxlint/format/docs/diff PASS. Node24.19.0/pnpm11.19.0.
+- Supabase live `transit-live` trên dedicated private random bucket/QA DB: init/run
+  và acknowledged rerun bằng CLI process mới sau cửa sổ login thật PASS; keys/IDs/
+  counts/deadline/ledger không đổi. Preview packaging WebP800×600 qua participant
+  API đã tải/xem, chỉ lưu ảnh, không URL/token. IAB Member web riêng với API3030:
+  seller →4 Reserved, không thêm UI Order/shipping; ảnh trong .tmp/demo/transit-live/.
+  Đây không là native PASS. Evidence H01a/Order live trước giữ ở DEMO_SCENARIOS.
+- Full CLI crash/lost-ack live, remote CI và human review NOT RUN. Login4 actor có
+  thể429 khi restart trong cùng cửa sổ5 login/IP/15 phút; không persist token/nới
+  guard/xóa login attempts. Deadline thật; run quá hạn dừng, không đổi clock/DB.
+  Các manifest là evidence tại thời gian/source ghi, không thay outcome mới nhất.
 - Gói docs trước: README/index/SESSION/READINESS rút gọn, sửa DB/contract/prompt;
   [phạm vi](DOCS_AUDIT_2026_09_30.md). Evidence lịch sử giữ nguyên.
 
@@ -90,16 +84,15 @@
   Giữ local, không reset/clean/xóa hàng loạt. QA57017 dùng DB *_test riêng.
 - H01 QA đang chạy trên container used-book-marketplace-mongo-quality-mongo-test-1.
   Đây là tmpfs: restart mất dữ liệu, phải init run tên mới. Run live kiểm cuối:
-  .tmp/demo/h01-acceptance (port3016); private.json không được chia sẻ. Run đầu
-  h01-live dùng để xem UI; demo data/bucket giữ riêng, không phải app local chính.
+  .tmp/demo/transit-live (API3030); private.json không được chia sẻ. Run cũ
+  h01-live/order-live giữ evidence riêng; kiểm port/process thực tế trước serve.
+  API3030 và preview web8081 đã dừng sau QA để trả port Metro; chỉ giữ artifact.
 
 ## Bước tiếp
 
-H01a, funding và ba trạng thái Order H01b đã đủ dùng local. Tiếp H01b InTransit:
-đọc packaging/label/carrier API và invariant; dùng evidence/event thật trong mô phỏng,
-không gán state. Giữ intent/reconciliation, không sửa deadline hoặc mở hậu F2h.
-H01b không bắt buộc xong trưa. Bảo nhận H01b còn lại
-cùng H02 review/debug sau bàn giao; ba lane UI
+H01a/H01b tooling đã đủ local. Bước tiếp: chuẩn bị PR bàn giao trưa chứa đủ stack
+docs/AI/code phụ thuộc, kiểm remote CI và chọn reviewer người thật theo TEAMWORK.
+Bảo tiếp H02 review/debug nền/source và giới hạn recovery đã ghi; ba lane UI
 làm tính năng hiện có. C01/C02 giữ dependency, không tự mở Delivered/settlement.
 Tích hợp dự kiến khi bàn giao trưa: cả docs19ffb84 và AI0182e40 cùng gói code đủ
 điều kiện, qua PR/checks/review; chưa thực hiện push/merge hay remote CI.

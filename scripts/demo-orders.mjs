@@ -9,6 +9,7 @@ import {
 } from "./demo/sandbox.mjs";
 import { ScenarioError, lockRun, writeJson } from "./demo/journal.mjs";
 import { runOrders } from "./demo/orders.mjs";
+import { runTransit } from "./demo/transit.mjs";
 
 let sandbox, unlock, directory, action;
 try {
@@ -16,6 +17,7 @@ try {
     allowPositionals: true,
     options: {
       "fixture-storage": { type: "boolean", default: false },
+      "in-transit": { type: "boolean", default: false },
       port: { type: "string", default: "3020" },
     },
   });
@@ -28,11 +30,13 @@ try {
   )
     throw new ScenarioError(
       "USAGE",
-      "Usage: pnpm demo:orders <init|run|serve> <name> [--fixture-storage] [--port 3020]",
+      "Usage: pnpm demo:orders <init|run|serve> <name> [--fixture-storage] [--in-transit] [--port 3020]",
     );
   if (
     action !== "init" &&
-    (values["fixture-storage"] || values.port !== "3020")
+    (values["fixture-storage"] ||
+      values["in-transit"] ||
+      values.port !== "3020")
   )
     throw new ScenarioError(
       "USAGE",
@@ -46,6 +50,7 @@ try {
       fixture: values["fixture-storage"],
       port: Number(values.port),
       orders: true,
+      transit: values["in-transit"],
     });
     console.log(
       `Order scenario initialized: ${name}. Keep private.json local; contacts are explicitly simulated.`,
@@ -64,16 +69,21 @@ try {
       });
     sandbox = await createSandbox(config, directory);
     if (action === "run") {
-      const manifest = await runOrders(config, directory, sandbox, {
-        onStep: (name, state) => console.log(`${name}: ${state}`),
-      });
+      const manifest = await (config.orders.transit ? runTransit : runOrders)(
+        config,
+        directory,
+        sandbox,
+        {
+          onStep: (name, state) => console.log(`${name}: ${state}`),
+        },
+      );
       await writeJson(path.join(directory, "orders-outcome.json"), {
         status: "PASS",
         at: manifest.completedAt,
         storage: manifest.storage,
       });
       console.log(
-        `H01b Order PASS: AwaitingPayment / PendingSellerConfirmation / Preparing; available=${manifest.wallet.available}, held=${manifest.wallet.held} VND simulated. ${manifest.storage}.`,
+        `H01b Order PASS: AwaitingPayment / PendingSellerConfirmation / Preparing${config.orders.transit ? " / InTransit" : ""}; available=${manifest.wallet.available}, held=${manifest.wallet.held} VND simulated. ${manifest.storage}.`,
       );
     } else {
       console.log(

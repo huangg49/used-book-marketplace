@@ -184,7 +184,18 @@ export class Commands {
     let intent = this.journal.data.steps[name];
     if (!intent) {
       const request = await build();
-      intent = { ...request, key: randomUUID(), state: "pending" };
+      const key = request.key ?? randomUUID();
+      if (
+        typeof key !== "string" ||
+        !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(
+          key,
+        )
+      )
+        throw new ScenarioError(
+          "INVALID_INTENT",
+          "Command key must be a lowercase UUID.",
+        );
+      intent = { ...request, key, state: "pending" };
       intent.fingerprint = fingerprint(intent, this.journal.data.binding);
       this.journal.data.steps[name] = intent;
       await this.journal.save(); // The request must survive a crash before any write.

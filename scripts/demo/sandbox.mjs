@@ -92,7 +92,8 @@ export function validateConfig(config) {
     if (
       !config.fundingSecret ||
       config.orders?.schema !== 1 ||
-      !config.orders.addresses
+      !config.orders.addresses ||
+      (config.orders.transit !== undefined && config.orders.transit !== true)
     )
       throw new ScenarioError(
         "INVALID_CONFIG",
@@ -143,7 +144,13 @@ export async function readConfig(directory) {
 
 export async function initialize(
   directory,
-  { fixture = false, port = 3012, funding = false, orders = false } = {},
+  {
+    fixture = false,
+    port = 3012,
+    funding = false,
+    orders = false,
+    transit = false,
+  } = {},
 ) {
   const id = randomBytes(8).toString("hex");
   const accounts = Object.fromEntries(
@@ -171,13 +178,14 @@ export async function initialize(
     jwt: randomBytes(32).toString("hex"),
     accounts,
     provisioned: false,
-    ...(funding || orders
+    ...(funding || orders || transit
       ? { fundingSecret: randomBytes(32).toString("hex") }
       : {}),
-    ...(orders
+    ...(orders || transit
       ? {
           orders: {
             schema: 1,
+            ...(transit ? { transit: true } : {}),
             addresses: Object.fromEntries(
               ["seller", "buyer"].map((actor, i) => [
                 actor,
@@ -233,7 +241,11 @@ async function fixtureStorage(directory, port) {
   const folder = path.join(directory, "fixture-objects");
   await mkdir(folder, { recursive: true });
   const locate = (key) => {
-    if (!/^media\/[a-f0-9-]{36}\/(input|render-[1-3]\.webp)$/.test(key))
+    if (
+      !/^(media\/[a-f0-9-]{36}\/(input|render-[1-3]\.webp)|order-evidence\/[a-f0-9-]{36}\/(original|preview-v1\.webp))$/.test(
+        key,
+      )
+    )
       throw new ScenarioError(
         "INVALID_STORAGE_KEY",
         "Unexpected fixture object key.",
@@ -243,6 +255,10 @@ async function fixtureStorage(directory, port) {
   const images = createServer(async (request, response) => {
     try {
       const key = decodeURIComponent(request.url.slice(1));
+      if (!key.endsWith(".webp")) {
+        response.writeHead(404).end();
+        return;
+      }
       response
         .writeHead(200, { "Content-Type": "image/webp" })
         .end(await readFile(locate(key)));
@@ -454,7 +470,9 @@ export async function createSandbox(config, directory) {
     await app.listen(config.port, "127.0.0.1");
     const { MongoService } = await load("database/mongo/mongo.service.js"),
       { LedgerService } = await load("modules/wallet/ledger.service.js");
-    const { checkOrder } = await load("modules/orders/order-invariants.js");
+    const { checkOrder, checkShipment, checkPackaging } = await load(
+      "modules/orders/order-invariants.js",
+    );
     return {
       base: `http://127.0.0.1:${config.port}/api/v1`,
       close,
@@ -463,6 +481,10 @@ export async function createSandbox(config, directory) {
       reconcileMoney: () =>
         app.get(MongoService).tx((tx) => app.get(LedgerService).reconcile(tx)),
       checkOrder: (id) => app.get(MongoService).tx((tx) => checkOrder(tx, id)),
+      checkShipment: (id) =>
+        app.get(MongoService).tx((tx) => checkShipment(tx, id)),
+      checkPackaging: (id) =>
+        app.get(MongoService).tx((tx) => checkPackaging(tx, id)),
       // Exposed to focused QA only. Orchestration never writes business documents.
       inspect: (collection) => db.collection(collection),
     };

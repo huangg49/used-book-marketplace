@@ -105,6 +105,7 @@ pnpm --filter @used-books/api build
 pnpm test:demo:api
 pnpm test:demo:funding
 pnpm test:demo:orders
+pnpm test:demo:transit
 ```
 
 Test API tạo namespace riêng, giữ artifact trong `.tmp/demo/qa-<id>`, không chạm
@@ -116,7 +117,7 @@ kiểm riêng bằng cấu hình private, không đưa service key vào workflow
 Code ở `scripts/demo/`: sandbox quản lý target/accounts, journal quản lý intent,
 HTTP giữ auth ở memory, books điều phối API. `Commands` nhận `projectReceipt` khi
 mở rộng sang kiểu receipt khác; mặc định là MutationReceipt cho sách. H01b đã có
-funding và ba trạng thái Order bên dưới. Bảo tiếp InTransit còn lại
+funding và bốn trạng thái Order bên dưới. Bảo tiếp review/debug H02
 theo [DEMO_PLAN](DEMO_PLAN_2026_10_06.md),
 không ghi ledger/balance/state trực tiếp. H01a không đóng native/human review hoặc
 gates cho Delivered/settlement.
@@ -259,5 +260,81 @@ contract/code/ledger rồi chạy lại; không đổi backend hoặc hạ invar
 API/contract/migration và dữ liệu chính không đổi. Remote CI, full CLI crash
 recovery, Android và human review NOT RUN; READINESS giữ nguyên.
 
-Phần tiếp là InTransit: packaging evidence/label/carrier event đúng API, chưa chạy.
-Không gọi H01b hoàn tất, mở ví/Order UI hay Delivered/settlement từ evidence này.
+## H01b — InTransit bằng packaging, label và carrier simulator
+
+```powershell
+pnpm demo:orders init demo-ship --in-transit --fixture-storage --port 3026
+pnpm demo:orders run demo-ship
+pnpm demo:orders serve demo-ship
+pnpm test:demo:transit
+```
+
+`--in-transit` chỉ ở init và nằm trong binding của run; không sửa `private.json`
+để thêm flag vào run cũ. Live Supabase dùng private env như trên, bỏ fixture flag.
+CLI vẫn ghi kết quả gần nhất vào `orders-outcome.json`. Xem `transit-manifest.json`
+cho **toàn bộ** hành trình; `orders-manifest.json` chỉ là checkpoint trước shipping.
+PASS ở checkpoint không thay kết quả shipping BLOCKED hoặc outcome mới hơn.
+
+Tool giữ ba mẫu unpaid/paid/Preparing và thêm một Order thứ tư cho InTransit:
+
+1. Tạo sách/fulfillment/review/quote/pay/accept qua cùng API; giữ unpaid cap.
+2. Seller reserve packaging bằng Order version hiện tại rồi PUT cùng bytes/key.
+   Đây là ảnh carton **do tool tạo, có nhãn DEMO** để kiểm pipeline, không phải ảnh
+   kiện sách thật hay xác nhận quyền sở hữu/custody. Sharp chuẩn hóa đồng bộ, original
+   giữ private; participant GET preview qua API. Không tái dùng ảnh listing làm evidence.
+3. Seller đăng ký một label LatLaiSimulator với tracking mô phỏng và một Ready
+   evidence thuộc đúng Order. Receipt version1 là Shipment; Order vẫn Preparing3,
+   pickupConfirmed=false, không thay tiền/commitment/deadline.
+4. TEST_OPERATOR độc lập gửi PickedUp; **Idempotency-Key=eventId** ghi bền vững trước
+   request. `occurredAt` lấy từ serverTime của API sau đăng ký label, không dùng
+   clock client hay chỉnh DB. Adapter ký/kiểm domain carrier ở server bằng secret
+   simulator đã opt-in; client không gửi signature/secret hoặc tự chọn actor override.
+5. Chỉ Applied event kịp hạn mới cho Order InTransit4, Shipment view PickedUp2;
+   delivery deadline cố định240h từ occurredAt. Label registration/ảnh không tự chứng
+   minh dispatch. Đối chiếu canonical event/history, Order/Shipment/Packaging invariant
+   và ledger snapshot chỉ đọc. API/contract/migration/UI product không đổi.
+
+Với input/policy demo hiện tại: available535K, held465K, nguồn99M, seller0. Số tiền
+được lấy từ quotes; packaging/label/pickup không thêm posting hay release commitment.
+Receipt versions của evidence/Shipment/event độc lập với Order. Preview URL chỉ ở
+memory; manifest giữ IDs/time/hash/amount/dimensions, không contact/tracking/signature/
+token/URL ký. Journal có tracking **mô phỏng** để replay nhưng không contact/secret.
+Target preview bị giới hạn đúng project/bucket/object; fixture HTTP không phục vụ original.
+
+Nếu pickup pending đã commit, resume chấp nhận đọc InTransit hiện tại, phục hồi đúng
+receipt, không ép Preparing lại. ReviewRequired/projection khác mẫu thì dừng và giữ
+hold/evidence, không refund/restock, sửa deadline hoặc tự giải quyết carrier review.
+Throttling và giới hạn full CLI crash recovery ở phần trước vẫn áp dụng.
+
+Bằng chứng local30/09: nhánh `codex/h01-intransit-scenarios`, base274d100; subject
+`feat(demo): add isolated packaging and carrier pickup scenarios`.
+
+- Unit14/14 và `test:demo:transit` real HTTP/Nest/Mongo/Sharp **FAKE** PASS: mất ack
+  ba lần sau commit tại packaging PUT/label/pickup, restart API bằng session memory;
+  giữ key/body/bytes/receipt/deadline. Hai pickup request cùng event/key chạy đồng thời
+  ngay lần apply đầu: chỉ1 Applied event. Rerun giữ57 intents/receipts:40 bước gói cũ
+  +13 cho Order thứ tư +4 shipping;4 Orders/commitments,2 preparations,1 evidence/
+  label/pickup,5 journals/10 entries. Không tăng ledger/commitment version tại pickup.
+- Thay bytes dưới upload key cũ bị tool chặn. Actor sai, carrier key/eventId lệch,
+  payload đổi dưới event cũ và tracking không khớp bị từ chối. Preview original ở
+  fixture bị404; journal/manifest không có secret/contact. Ca API riêng sau baseline:
+  event ID mới cùng occurredAt → Duplicate; thời gian mâu thuẫn → ReviewRequired/
+  ResolutionPending5. Canonical pickup, hold và commitment giữ nguyên; tool chặn run
+  không còn đúng mẫu. Đây là exception intake, không là kết luận custody/human review.
+- Regression `test:demo:api`, `test:demo:funding`, `test:demo:orders`, oxlint/format,
+  docs/diff checks PASS. Node24.19.0/pnpm11.19.0. Không chạy lại full backend/native
+  baseline vì source nghiệp vụ/UI không đổi; remote CI NOT RUN.
+- `transit-live` init/run và **rerun bằng CLI process mới sau cửa sổ login thật** PASS
+  trên Supabase dedicated private random bucket + QA DB;57 keys/receipts/IDs và business
+  counts/deadlines/ledger không đổi. Đây là acknowledged rerun, chưa là CLI crash/lost-ack
+  live acceptance. Packaging preview qua participant API đã tải/xem WebP800×600, chỉ
+  lưu ảnh ở `.tmp/demo/transit-live/packaging-preview.webp`, không lưu URL/token.
+- Expo web export riêng `.tmp/demo/transit-member-web`, API3030; IAB thật seller login
+  → Sách của tôi thấy4 Reserved (kể cả InTransit), không có UI shipping/Order mới.
+  Screenshot `.tmp/demo/transit-live/member-reserved.jpg`. Không suy thành native PASS.
+
+Harness ban đầu giữ tham chiếu mutable khi so snapshot intent và đếm58 thay vì57;
+đã sửa cách chụp snapshot/phép cộng, đối chiếu counts thật rồi chạy lại. Không phát
+hiện lỗi backend mới trong phạm vi này; kết quả không bảo đảm mọi source đều hết bug.
+H01a/H01b **tooling đã đủ local** để bàn giao review. Human/native gates vẫn mở;
+không mở Member checkout/shipping UI, Delivered/inspection/settlement từ evidence này.

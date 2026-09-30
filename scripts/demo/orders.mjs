@@ -130,7 +130,11 @@ export async function runOrders(
     journal,
   });
   const orders = {};
-  for (const [slot, expectedState] of Object.entries(ORDER_STATES)) {
+  const states = {
+    ...ORDER_STATES,
+    ...(config.orders.transit ? { intransit: "Preparing" } : {}),
+  };
+  for (const [slot, expectedState] of Object.entries(states)) {
     const scope = `orders.${slot}`,
       prefix = `${scope}.book`;
     // A create intent precedes any reservation. Its presence permits receipt recovery
@@ -197,7 +201,7 @@ export async function runOrders(
           .version,
       }));
     }
-    if (slot === "preparing") {
+    if (["preparing", "intransit"].includes(slot)) {
       await command(
         `${scope}.accept`,
         "seller",
@@ -211,8 +215,11 @@ export async function runOrders(
     const buyer = await http(`/me/orders/${id}`, { actor: "buyer" });
     const seller = await http(`/me/orders/${id}`, { actor: "seller" });
     check(
-      buyer.state === expectedState &&
-        seller.state === expectedState &&
+      (buyer.state === expectedState ||
+        (slot === "intransit" &&
+          journal.data.steps["transit.pickup"] &&
+          buyer.state === "InTransit")) &&
+        seller.state === buyer.state &&
         buyer.role === "Buyer" &&
         seller.role === "Seller" &&
         buyer.quoteId === quoted.entityId &&
@@ -235,7 +242,7 @@ export async function runOrders(
       "Order money/commitment projection is inconsistent.",
     );
     check(
-      slot === "preparing"
+      ["preparing", "intransit"].includes(slot)
         ? seller.shippingAddress !== null && buyer.preparation !== null
         : seller.shippingAddress === null && buyer.preparation === null,
       "Shipping contact or preparation was exposed before seller acceptance.",
@@ -245,7 +252,10 @@ export async function runOrders(
         ? buyer.paymentDeadline
         : slot === "paid"
           ? buyer.sellerConfirmationDeadline
-          : buyer.preparation.pickupDeadline;
+          : slot === "intransit" && buyer.state === "InTransit"
+            ? (await http(`/me/orders/${id}/shipment`, { actor: "buyer" }))
+                .pickup?.deliveryDeadline
+            : buyer.preparation.pickupDeadline;
     check(
       Number.isFinite(Date.parse(activeDeadline)) &&
         Date.parse(activeDeadline) > Date.now(),
@@ -290,7 +300,7 @@ export async function runOrders(
   const buyerWallet = await http("/me/wallet", { actor: "buyer" }),
     sellerWallet = await http("/me/wallet", { actor: "seller" });
   const history = await http("/me/wallet/history", { actor: "buyer" });
-  for (const slot of ["paid", "preparing"])
+  for (const slot of Object.keys(states).filter((slot) => slot !== "awaiting"))
     check(
       history.items.filter(
         (item) =>
@@ -351,7 +361,9 @@ export async function runOrders(
     ),
     limitations: [
       "Simulated data only",
-      "InTransit/Delivered/settlement not performed",
+      config.orders.transit
+        ? "Shipment scenario is verified separately in transit-manifest.json; Delivered/settlement not performed"
+        : "InTransit/Delivered/settlement not performed",
       "No native or human-review gate closed",
     ],
   };
