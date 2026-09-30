@@ -28,7 +28,7 @@ Tại root, sau khi làm theo [hướng dẫn RN](REACT_NATIVE_START.md):
 pnpm doctor:local
 ```
 
-Lệnh chỉ đọc: kiểm tra cấu hình API/RN, phiên bản Node, kết nối PostgreSQL trong
+Lệnh chỉ đọc: kiểm tra cấu hình API/RN, phiên bản Node, kết nối MongoDB trong
 cấu hình hiện hành, checksum từng migration, hàng đợi ảnh quá hạn, bucket riêng tư
 và readiness của API. Không in URL database, khóa hay nội dung lỗi từ provider.
 FAIL trả exit code 1; WARN cần đọc và xử lý theo tình huống. Không có job quá hạn

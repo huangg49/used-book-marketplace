@@ -2,8 +2,11 @@
 
 Ngày 28/09/2026. Đây là backlog có thứ tự và điều kiện mở, không là danh sách tính
 năng đã triển khai. Chủ dự án đã yêu cầu kế hoạch đủ dài cho người tiếp nhận làm
-liên tục, ưu tiên RN và UI có bản sắc. Không có deadline ép bỏ qua chất lượng.
-Hiện tại đóng tại F2h/OpenAPI 0.20.0; [READINESS](READINESS.md) là gate trước nghiệp vụ mới.
+liên tục, ưu tiên RN và UI có bản sắc. Thời hạn/phân công hiện tại xem SESSION_STATE;
+deadline không cho phép bỏ qua gate chất lượng.
+Mốc thiết kế này đóng tại F2h/OpenAPI0.20.0. Contract hiện0.21.0 và MongoDB đã merge;
+trạng thái gói hiện hành xem [SESSION_STATE](SESSION_STATE.md), không suy từ TODO
+lúc lập kế hoạch. [READINESS](READINESS.md) vẫn là gate trước nghiệp vụ mới.
 
 ## 1. Cách chọn việc và chia nhánh
 

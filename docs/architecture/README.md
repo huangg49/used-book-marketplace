@@ -41,9 +41,11 @@ Delivered/inspection, dispute resolution and settlement remain planned.
 - Mobile apps serve Member workflows.
 - The web console serves Staff, Admin, and authorized Test Operator workflows.
 - The API owns authorization, business state, transaction integrity, and audit records.
-- PostgreSQL is the source of truth.
-- Redis stores queue state and short-lived coordination data, never authoritative balances.
-- Supabase Storage Free stores private listing images; PostgreSQL stores metadata and access rules.
+- MongoDB is the source of truth ([ADR0027](../adr/0027-mongodb-persistence-protocol.md));
+  PostgreSQL is retained only as read-only import history/source.
+- Implemented media/Order queues and leases are in MongoDB. Redis/BullMQ remain
+  available dependencies, not the execution engine or source of balances.
+- Supabase Storage Free stores private images; MongoDB stores metadata and access rules.
   Listing Sharp runs in a separate worker; Order packaging evidence is normalized
   synchronously and retained separately. Claim evidence workflows remain planned. Read
   [ADR 0008](../adr/0008-free-private-media-storage.md) and [setup](../features/SUPABASE_MEDIA_SETUP.md).
@@ -52,16 +54,21 @@ Delivered/inspection, dispute resolution and settlement remain planned.
 ## Backend modules
 
 ```text
-auth users catalog listings orders exchanges wallet shipments
-disputes reviews community notifications administration audit
-service-area points custody inspections auctions
+addresses auth catalog commands listings media orders quotes
+reservations shipments users wallet
 ```
 
-Modules may read other modules through explicit services and events. They must not update another module's tables through ad-hoc repository access.
+These are the current directories under apps/api/src/modules. Exchanges, disputes,
+community, managed points, custody/inspection and auctions remain target domains.
+Modules use explicit services for cross-module mutations and MongoDB transactions
+with the shared locking/commit-check protocol; see ADR0027 and the model map.
 
 ## Client architecture
 
-Flutter follows View, ViewModel, Repository, and Service separation. React Native groups routes in `src/app` and feature code outside the route directory. Both clients treat server state separately from local interface state.
+Flutter currently has only a scaffold; its proposed architecture follows View,
+ViewModel, Repository, and Service separation. React Native groups routes in
+`src/app` and feature code outside the route directory, with shared session transport
+and TanStack Query for server state. Flutter has not implemented equivalent flows yet.
 
 Operations review uses feature modules, TanStack Query and shared session transport
 with RN. See [ADR 0010](../adr/0010-operations-review-client.md); other operations
