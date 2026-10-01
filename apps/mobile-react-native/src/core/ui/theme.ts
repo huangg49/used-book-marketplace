@@ -46,7 +46,7 @@ export const typography = {
   // UI-1 reading roles: approved detail direction, now applied to the shelf.
   bookTitle: [22, 30, "LoraSemi"],
   bookHeading: [20, 28, "LoraSemi"],
-  shelfTitle: [18, 26, "LoraSemi"],
+  shelfTitle: [16, 23, "BeBold"],
   shelfPrice: [18, 25, "BeBold"],
   reading: [16, 25, "BeRegular"],
   annotation: [14, 21, "BeRegular"],

@@ -66,13 +66,13 @@ Không muốn: **lạnh lẽo**, **đại trà**, **làm màu**.
 
 ## “Lý lịch” cuốn sách: dữ liệu nào, hình thức nào
 
-| Dữ liệu hiện có | Hướng trình bày | Ranh giới |
-| --- | --- | --- |
-| Condition, gồm `Worn` → “Cũ nhiều” | Nhãn một nét viền, chữ rõ như dấu đóng lên thẻ; giữ tên mức tình trạng | Không biến thành chứng nhận đã kiểm định; không che mức cũ bằng tên mỹ miều |
-| Ghi chú tình trạng của người bán | Một vùng giống thẻ thư viện: lề nhỏ, nhãn nguồn, nội dung nguyên nghĩa | Không tự viết dấu vết, bút tích hoặc lời nhắn thay người bán |
-| Ảnh bìa/gáy/trang và chi tiết hư hại | Ảnh thật làm bằng chứng ngay cạnh thông tin liên quan | Không texture che ảnh, tẩy hư hại, dùng ảnh sinh thay ảnh listing |
-| Tên sách, tác giả, ấn bản và thông tin đã có | Phân cấp như một phiếu sách ngắn; chỉ hiển thị trường API đã cung cấp | Không bổ sung trường nhập liệu hoặc dữ liệu giả để đủ bố cục |
-| Lịch sử chuyền tay | Hiện chưa có dữ liệu hành trình được xác minh để trình bày | Không số đời chủ, timeline, ngày chuyển tay, địa danh, chữ ký, tem “đã chuyền” giả; không dựng timeline rỗng để gợi một tính năng chưa có |
+| Dữ liệu hiện có                              | Hướng trình bày                                                        | Ranh giới                                                                                                                                 |
+| -------------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Condition, gồm `Worn` → “Cũ nhiều”           | Nhãn một nét viền, chữ rõ như dấu đóng lên thẻ; giữ tên mức tình trạng | Không biến thành chứng nhận đã kiểm định; không che mức cũ bằng tên mỹ miều                                                               |
+| Ghi chú tình trạng của người bán             | Một vùng giống thẻ thư viện: lề nhỏ, nhãn nguồn, nội dung nguyên nghĩa | Không tự viết dấu vết, bút tích hoặc lời nhắn thay người bán                                                                              |
+| Ảnh bìa/gáy/trang và chi tiết hư hại         | Ảnh thật làm bằng chứng ngay cạnh thông tin liên quan                  | Không texture che ảnh, tẩy hư hại, dùng ảnh sinh thay ảnh listing                                                                         |
+| Tên sách, tác giả, ấn bản và thông tin đã có | Phân cấp như một phiếu sách ngắn; chỉ hiển thị trường API đã cung cấp  | Không bổ sung trường nhập liệu hoặc dữ liệu giả để đủ bố cục                                                                              |
+| Lịch sử chuyền tay                           | Hiện chưa có dữ liệu hành trình được xác minh để trình bày             | Không số đời chủ, timeline, ngày chuyển tay, địa danh, chữ ký, tem “đã chuyền” giả; không dựng timeline rỗng để gợi một tính năng chưa có |
 
 “Dấu mộc” là hình thức của **nhãn tình trạng**, không phải huy hiệu xác thực.
 Chất chuyền tay còn có thể đến từ cách nói và sự trân trọng một bản sách cũ;
@@ -145,29 +145,46 @@ giá hoặc ký hiệu giả. Tình trạng dùng một nét đất nung nhỏ. 
 cùng đúng số tiền; nếu có cả hai phải hiện cả hai, không chọn giá rẻ hơn để nhấn.
 Không rút gọn tình trạng, số tiền hoặc ẩn một hình thức giao dịch để cân bố cục.
 
-Chủ dự án đã duyệt nguyên tắc căn hàng/rút gọn. Ba dòng là phương án hiện tại;
-đang so ảnh native hai dòng và ba dòng trên cùng QA ở chữ100%/130% để chủ dự án
-chọn giới hạn cuối cùng. Không áp giới hạn này vào màn chi tiết.
+Ngày01/10, chủ dự án chốt tối đa ba dòng sau ảnh so sánh hai/ba dòng ở100%/130%.
+Không áp giới hạn này vào màn chi tiết. Kệ ưu tiên nhận diện, so sánh và chọn bản
+sách: tên dùng Be Vietnam Pro16/23, giá18/25 đậm và có vị trí ổn định. Lora tạo
+bản sắc ở tiêu đề khu vực và điểm kể chuyện, không bắt buộc ở tên từng cuốn trên
+kệ. Cho phép nền sáng nhẹ để nhóm từng bản sách, không bóng đổ/card lồng nhau.
+Sự thư thái đến từ phân cấp rõ và lời chỉ dẫn hữu ích, không từ giãn mọi thành phần.
 
 Ở chữ130% hoặc màn hẹp, chuyển một cột: bìa cạnh tên/tác giả/tình trạng, cụm giá
 chiếm chiều rộng riêng phía dưới. Không để giá kéo dài cột bên phải và tạo hố
 trống dưới bìa. Khi số tiền dài, cả nhóm được wrap, vùng giá được tăng chiều cao;
 không thu nhỏ font, cắt số hoặc khóa chiều cao toàn thẻ. Chiều cao dành cho tên/
 tác giả theo cỡ chữ thực tế, không cố định cho mọi mức font.
-Ảnh contain trong khung giấy cao180dp, không sửa dữ liệu ảnh. Đây là quyết định
+Ảnh contain trong khung sáng cao180dp cùng nền mục sách, không sửa dữ liệu ảnh. Đây là quyết định
 trình bày, không đổi quyền truy cập ảnh, query, filter, navigation hay nghiệp vụ.
 Không dùng kết quả tests làm bằng chứng thiết kế đẹp; xem cả QA tên dài và ảnh
 tư liệu có sẵn, phân biệt rõ tư liệu với listing thật.
 
+### Biển nhỏ của tiệm trên kệ
+
+Một banner biên tập sau hai cuốn đầu tiên, cuộn cùng nội dung. Không đặt trước
+bìa đầu, không sticky/overlay, tự thu gọn hoặc chỉ hiện một lần rồi mất. Chỉ có
+ở trang đầu của kệ mặc định, khi đủ hai cuốn và không có lỗi tải; ẩn khi tìm/lọc/
+đổi sắp xếp. Không chèn lặp ở trang kế hoặc thay trạng thái rỗng/lỗi.
+
+Nền xanh rừng phẳng, chữ màu giấy, minh họa gáy sách/dấu trang với một điểm đất
+nung. Tiêu đề **“Đọc xong. Chuyền tay.”**, câu phụ **“Xem bìa, đọc tình trạng,
+chọn cuốn hợp mình.”** là lời biên tập, không phải khuyến mãi, cam kết kiểm định
+hay lịch sử một listing. Không có nút giả. Tầm110–130dp ở chữ thường là mục tiêu
+thử, không khóa chiều cao. Chữ lớn/màn hẹp ưu tiên nội dung, có thể bỏ minh họa
+thuần trang trí; text thật tiếp tục scale, không tự chạy carousel/animation.
+
 ### Năm màu cốt lõi
 
-| Token ý nghĩa | Giá trị đề xuất | Cách dùng |
-| --- | --- | --- |
-| `paper` | `#F5EFDF` | Nền giấy ấm, phẳng, không giả giấy ố |
-| `surface` | `#FFFCF4` | Vùng nhập liệu hoặc phiếu sách; không bọc mọi phần vào card |
-| `ink` | `#202C27` | Nội dung, giá, thông tin quan trọng |
-| `forest` | `#214B40` | Hành động chính, tiêu đề chọn lọc, trạng thái đang chọn |
-| `stamp` | `#963F28` | Màu nhấn riêng: tình trạng, lề phiếu sách, chi tiết chuyền tay có thật |
+| Token ý nghĩa | Giá trị đề xuất | Cách dùng                                                              |
+| ------------- | --------------- | ---------------------------------------------------------------------- |
+| `paper`       | `#F5EFDF`       | Nền giấy ấm, phẳng, không giả giấy ố                                   |
+| `surface`     | `#FFFCF4`       | Vùng nhập liệu hoặc phiếu sách; không bọc mọi phần vào card            |
+| `ink`         | `#202C27`       | Nội dung, giá, thông tin quan trọng                                    |
+| `forest`      | `#214B40`       | Hành động chính, tiêu đề chọn lọc, trạng thái đang chọn                |
+| `stamp`       | `#963F28`       | Màu nhấn riêng: tình trạng, lề phiếu sách, chi tiết chuyền tay có thật |
 
 Giữ các màu giấy/mực/rừng vì phù hợp hướng đã chọn, không vì code cũ dùng chúng.
 Chọn sắc đất nung đậm cho chữ/nhãn thay cam sáng khó đọc. Logo gốc giữ nguyên hình
@@ -178,17 +195,17 @@ Màu chữ thường phải đạt 4.5:1, viền điều khiển 3:1; không dù
 
 ### Chữ, khoảng cách và hình khối
 
-| Hạng mục | Đề xuất | Lý do/ràng buộc |
-| --- | --- | --- |
-| Tiêu đề/tên sách | **Lora 600**, title 28/38, section 22/30, book 18/26 (cỡ chữ/line-height) | Có chất sách in, dễ đọc; không dùng serif cho mọi nhãn |
-| Nội dung/điều khiển | **Be Vietnam Pro 400/700**, body 16/25, secondary 14/21, button 16/24 | Dấu tiếng Việt rõ, hợp nhiều độ tuổi; không dùng nhãn 11 px cho thông tin cần quyết định |
-| Giá/số liệu | Be Vietnam Pro 700, 20/28; đơn vị đồng cùng font | Font Lora đang có thiếu glyph `₫`; không dựa vào fallback |
-| Font loading | Font local có license, theo BrandProvider hiện có | Không CDN, không giả weight chưa có; giữ font scaling của hệ điều hành |
-| Spacing | 4,8,12,16,24,32,48; lề màn 20; cách nhóm 24–32 | Nhịp 4 px, gom dữ kiện liên quan và tách nhóm có ý nghĩa |
-| Radius | Bìa 2; nhãn/phiếu 4; điều khiển 8; sheet 20 | Phân biệt sách/phiếu với control; tránh mọi khối cùng một bo góc |
-| Vùng chạm | Tối thiểu 44×44; nút/input tối thiểu 52 cao, không khóa chiều cao chữ | Chữ lớn vẫn dùng được; icon nhỏ nằm trong vùng chạm đủ lớn |
-| Icon | SVG nét thống nhất, chủ yếu 20–24; control có tên accessible | Dùng hệ icon chung, không emoji, không icon chỉ để lấp khoảng trống |
-| Chuyển động | Nếu cần, phản hồi opacity/translate nhỏ 120–180 ms | Chỉ hỗ trợ hiểu thao tác, tôn trọng reduced motion; không đổi timing nghiệp vụ hoặc tự đóng thông báo quan trọng |
+| Hạng mục            | Đề xuất                                                                    | Lý do/ràng buộc                                                                                                  |
+| ------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Tiêu đề và tên sách | **Lora 600** cho tiêu đề/chi tiết; tên trên kệ **Be Vietnam Pro700,16/23** | Kệ gọn để chọn; chi tiết giữ chất đọc, không dùng serif cho mọi tên                                              |
+| Nội dung/điều khiển | **Be Vietnam Pro 400/700**, body 16/25, secondary 14/21, button 16/24      | Dấu tiếng Việt rõ, hợp nhiều độ tuổi; không dùng nhãn 11 px cho thông tin cần quyết định                         |
+| Giá/số liệu         | Be Vietnam Pro 700, 20/28; đơn vị đồng cùng font                           | Font Lora đang có thiếu glyph `₫`; không dựa vào fallback                                                        |
+| Font loading        | Font local có license, theo BrandProvider hiện có                          | Không CDN, không giả weight chưa có; giữ font scaling của hệ điều hành                                           |
+| Spacing             | 4,8,12,16,24,32,48; lề màn 20; cách nhóm 24–32                             | Nhịp 4 px, gom dữ kiện liên quan và tách nhóm có ý nghĩa                                                         |
+| Radius              | Bìa 2; nhãn/phiếu 4; điều khiển 8; sheet 20                                | Phân biệt sách/phiếu với control; tránh mọi khối cùng một bo góc                                                 |
+| Vùng chạm           | Tối thiểu 44×44; nút/input tối thiểu 52 cao, không khóa chiều cao chữ      | Chữ lớn vẫn dùng được; icon nhỏ nằm trong vùng chạm đủ lớn                                                       |
+| Icon                | SVG nét thống nhất, chủ yếu 20–24; control có tên accessible               | Dùng hệ icon chung, không emoji, không icon chỉ để lấp khoảng trống                                              |
+| Chuyển động         | Nếu cần, phản hồi opacity/translate nhỏ 120–180 ms                         | Chỉ hỗ trợ hiểu thao tác, tôn trọng reduced motion; không đổi timing nghiệp vụ hoặc tự đóng thông báo quan trọng |
 
 Chữ và spacing là đề xuất để thử trên một màn chuẩn; không đồng nghĩa đã kiểm
 native. Palette/theme cần một nguồn chung khi được duyệt; không đặt hex/font

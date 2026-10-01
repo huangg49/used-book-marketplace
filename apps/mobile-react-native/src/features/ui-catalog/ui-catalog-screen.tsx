@@ -10,6 +10,7 @@ import {
   BookCover,
   BookPrice,
   BookOffer,
+  BookshopNote,
   BookTradeBar,
   Button,
   Checkbox,
@@ -391,6 +392,7 @@ export function UiCatalogScreen() {
             <BookCondition condition="Tốt" mode="Bán hoặc đổi" />
             <BookCondition stamp condition="Cũ nhiều" mode="Bán hoặc đổi" />
             <AppText kind="shelfTitle">Tên sách trên kệ · UI-1</AppText>
+            <BookshopNote />
             <BookOffer sale={125000} exchange={150000} />
             <BookPrice reading stacked sale={125000} exchange={150000} />
             <AppText kind="bookTitle">Phiếu sách · màn chuẩn UI-1</AppText>

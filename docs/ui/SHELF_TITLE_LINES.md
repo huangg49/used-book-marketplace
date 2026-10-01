@@ -2,7 +2,8 @@
 
 30/09/2026 · `codex/ui-direction` · base f13a1c1.
 Checkpoint: `fix(rn): align shelf cards and compare title limits`.
-[Xem hai phương án](shelf-title-lines.html). DỪNG chờ chủ dự án chọn số dòng.
+[Xem hai phương án](shelf-title-lines.html). Tại thời điểm chụp: chờ chọn số dòng.
+Ngày01/10 đã chốt ba dòng; lượt kế tiếp ở [SHELF_STOREFRONT_01](SHELF_STOREFRONT_01.md).
 
 ## Phạm vi và kết quả
 
@@ -28,12 +29,12 @@ font_scale1.0/1.3. Kiểm thêm density540~320dp/font1.3. API3046/Mongo QA57017 
 storage fixture FAKE, run ui-refine trên database riêng *_test. Không tạo/sửa DB
 hoặc listing trong lượt này. Cùng bốn bản DEMO và thứ tự, đủ Worn/Fair/Good/LikeNew:
 
-| Mẫu | Hình thức và giá |
-| --- | --- |
-| Những con đường nhỏ, những mùa mưa và một cuốn sách ở lại | Bán35K/Đổi45K |
-| Người giữ những trang sách cũ | Chỉ đổi60K |
-| Những buổi chiều bên cửa sổ | Bán125K/Đổi150K |
-| Mùa đọc | Chỉ bán85K |
+| Mẫu                                                       | Hình thức và giá |
+| --------------------------------------------------------- | ---------------- |
+| Những con đường nhỏ, những mùa mưa và một cuốn sách ở lại | Bán35K/Đổi45K    |
+| Người giữ những trang sách cũ                             | Chỉ đổi60K       |
+| Những buổi chiều bên cửa sổ                               | Bán125K/Đổi150K  |
+| Mùa đọc                                                   | Chỉ bán85K       |
 
 12 ảnh native trong evidence/ui-1-shelf-lines: hai giới hạn×hai font×đầu/giữa/cuối
 kệ. Khi chụp2 dòng chỉ tạm đổi hằng shelfTitleLines3→2, giữ mọi thứ khác, sau đó

@@ -1,25 +1,26 @@
-# Điểm lưu hiện tại — 30/09/2026
+# Điểm lưu hiện tại — 01/10/2026
 
 ## Nguồn và việc đang làm
 
-- **UI-1 — CĂN THẺ KỆ / CHỜ CHỌN TÊN HAI HAY BA DÒNG.** Chủ dự án đã duyệt
-  căn hàng, ellipsis cho tên/tác giả và sửa DESIGN; yêu cầu ảnh cùng QA ở100%/130%
-  cho cả hai phương án rồi DỪNG, chưa áp màn khác. Nhánh `codex/ui-direction`,
-  base f13a1c1; checkpoint `fix(rn): align shelf cards and compare title limits`.
-  `ShelfGrid` dành vùng tên/tác giả/tình trạng và tối thiểu hai giá ở hai cột;
-  thẻ stretch theo hàng. Tên tối đa3 dòng, tác giả1 dòng; accessible label và
-  chi tiết giữ đủ. Một cột130% không chừa ba dòng rỗng cho tên ngắn, không khóa
-  chiều cao giá. Chỉ thay presentation; không đổi BookOffer/AppText toàn cục,
-  API/navigation/session/nghiệp vụ hoặc màn chi tiết.
-  [So sánh hai/ba dòng](../ui/shelf-title-lines.html),
-  [evidence và giới hạn](../ui/SHELF_TITLE_LINES.md).
-  Source giữ3 dòng tạm;2 dòng chỉ thay hằng số lúc chụp native rồi phục hồi.
-  Android390dp100%/130%:12 ảnh hai phương án, tên ngắn/dài và một/hai giá;
-  chạm tên dài mở đủ tên ở chi tiết/Back, kiểm thêm320dp130%. RN91/91,
-  lint/typecheck/Prettier/docs/diff-check PASS. TalkBack/ARM/iOS/web chưa kiểm mới.
-  Đã phục hồi snapshot app/font/density/reverse, dừng API/media QA và emulator
-  do agent mở; giữ Metro8081/Docker57017/preview8089. Harness ignored .tmp/ui-shelf-lines.
-  Chờ chủ dự án chọn giới hạn; chưa thêm motion, chưa push/merge, không đóng gate.
+- **UI-1 — KỆ CÓ TÍN HIỆU CỬA HÀNG / CHỜ XEM ẢNH.** Chủ dự án duyệt ba dòng
+  và bước1 của hướng cửa hàng, kèm banner biên tập sau hai cuốn đầu. Nhánh
+  `codex/ui-direction`, base3a35355; checkpoint
+  `feat(rn): clarify shelf offers and add editorial bookshop banner`.
+  Tên Be Vietnam Pro16/23, giá18/25, nền sáng nhẹ; giữ căn hàng và một cột130%.
+  Banner “Đọc xong. Chuyền tay.” chỉ ở kệ mặc định trang1/đủ2cuốn/không lỗi,
+  cuộn cùng kệ, bỏ hình trang trí khi chữ lớn. DESIGN/UI_COMPONENTS đã đồng bộ.
+  [So sánh mới](../ui/shelf-storefront-01.html),
+  [kiểm chứng/giới hạn](../ui/SHELF_STOREFRONT_01.md).
+  Android390dp100%/130%: đầu/cuối kệ, tên ngắn/dài, một/hai giá, banner;
+  thêm320dp130%, mở chi tiết/Back, tìm/lọc, mất API/phục hồi tự động.
+  RN91/91, lint/typecheck/Prettier/docs/diff-check PASS.
+  TalkBack/ARM/iOS/web/native catalog/showcase chưa kiểm mới; không đóng gate.
+  Windows chặn bind57017: QA compose riêng latlai-ui-storefront/37017,
+  DB random *_test; API3046/media3047 thật, storage FAKE. Guard/config chính giữ nguyên.
+  Harness ignored .tmp/ui-storefront; snapshot app/font/density/reverse phục hồi,
+  dừng QA/emulator của agent, giữ Metro người dùng/Docker Desktop/preview8089.
+  Không đổi API/session/nghiệp vụ/màn chi tiết. Chưa push/merge; chờ phản hồi
+  trước bước tiếp, chưa đổi bộ lọc/điều hướng, chưa motion/C02/C04.
 - **UI-1 — KỆ SÁCH VÒNG02, THAY BẢN VÒNG01 ĐÃ BỊ TỪ CHỐI.** Chủ dự án
   không chấp nhận vòng01 ead610b (bìa nhỏ/cột chữ dài), sau đó giao quyền quyết
   định thiết kế, yêu cầu kết quả đẹp và dễ dùng. Không dùng tests xanh làm duyệt UX.
@@ -180,11 +181,11 @@
   Durable key/body/version/receipt, run lock, binding và chặn SANDBOX_LOST.
   Cách chạy/phạm vi/test/lỗi harness cụ thể ở [DEMO_SCENARIOS](DEMO_SCENARIOS.md).
 
-  | Increment | Source / đầu ra |
-  | --- | --- |
-  | H01a | ae0f1d9: demo:books init/run/serve; catalog/media/listing/review/public shelf |
-  | Funding | 428cafd: demo:funding; Buyer1M qua operator độc lập, nguồn99M |
-  | Order | 274d100: demo:orders; unpaid/paid/Preparing,40 receipts |
+  | Increment | Source / đầu ra                                                                                 |
+  | --------- | ----------------------------------------------------------------------------------------------- |
+  | H01a      | ae0f1d9: demo:books init/run/serve; catalog/media/listing/review/public shelf                   |
+  | Funding   | 428cafd: demo:funding; Buyer1M qua operator độc lập, nguồn99M                                   |
+  | Order     | 274d100: demo:orders; unpaid/paid/Preparing,40 receipts                                         |
   | InTransit | d4f8220: init thêm --in-transit; giữ3 mẫu cũ + Order thứ tư, packaging/label/pickup;57 receipts |
 
 - Gói InTransit đã commit d4f8220 trên codex/h01-intransit-scenarios.
@@ -259,9 +260,9 @@ Trên `codex/ui-direction`, màn chuẩn chi tiết đã sửa tới `a70e5a3` (
 Xem [so sánh mới nhất](../ui/detail-price-spacing.html) và
 [evidence màn chuẩn03](../ui/DETAIL_STANDARD_03.md); **chủ dự án đã duyệt màn chuẩn**.
 Chủ dự án đã chọn kệ trước, chuyển động mở ảnh sau; đã từ chối vòng01 và giao
-quyền tự quyết thiết kế. Sau vòng02, đã duyệt sửa căn hàng và rút gọn tên; yêu cầu
-**so ảnh hai/ba dòng rồi dừng chờ chọn**, xem SHELF_TITLE_LINES. Không mở chuyển
-động hoặc màn khác trong khi chờ quyết định này.
+quyền tự quyết thiết kế. Đã chốt ba dòng và duyệt bước1 hướng cửa hàng kèm banner.
+Bản mới ở SHELF_STOREFRONT_01, chờ phản hồi ảnh trước bước tiếp. Chưa đổi bộ lọc/
+điều hướng, chuyển động hoặc màn khác.
 Các bước và ranh giới còn lại:
 
 1. Màn chuẩn đã duyệt; ảnh Android trước/sau390dp,100%/130% vẫn là evidence hiện
@@ -277,9 +278,9 @@ Các bước và ranh giới còn lại:
    khi chưa được chọn triển khai; C02 tiếp tục hoãn.
 
 Mỗi bước có ảnh/video hoặc báo cáo tương ứng. Chủ dự án giao agent tự quyết thiết
-kế, nhưng riêng lượt tên sách yêu cầu chờ họ chọn hai/ba dòng sau ảnh so sánh.
-Checkpoint kệ: `fix(rn): align shelf cards and compare title limits`;
-checks/evidence ở SHELF_TITLE_LINES. Không chạy lại gate API khi source không đổi.
+kế; lượt cửa hàng này dừng ở ảnh để nhận phản hồi.
+Checkpoint kệ: `feat(rn): clarify shelf offers and add editorial bookshop banner`;
+checks/evidence ở SHELF_STOREFRONT_01. Không chạy lại gate API khi source không đổi.
 Main local/remote4273f10; condition/H01/C01 đã tích hợp, nhánh upload-recovery
 vẫn giữ riêng. Chưa có quyền merge/deploy UI-1 hoặc C02.
 Không kiểm lại gate đã đạt khi source không đổi; chưa phân công thêm teammate.

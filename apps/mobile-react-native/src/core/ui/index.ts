@@ -33,4 +33,5 @@ export { BrandProvider } from "./provider";
 export { Screen } from "./screen";
 export { ActionBar } from "./action-bar";
 export { BrandLogo } from "./brand-logo";
+export { BookshopNote } from "./bookshop-note";
 export { presentError, type ErrorPresentation } from "./error-presentation";

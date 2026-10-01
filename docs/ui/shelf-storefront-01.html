@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="vi">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  />
+  <title>Lật lại · Kệ và biển nhỏ của tiệm</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #e8e6de;
+      color: #202c27;
+      font:
+        16px/1.6 system-ui,
+        sans-serif;
+    }
+    main {
+      max-width: 840px;
+      margin: auto;
+    }
+    h1 {
+      font:
+        600 30px/1.3 Georgia,
+        serif;
+      color: #214b40;
+      margin: 0 0 12px;
+    }
+    nav {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    label {
+      display: grid;
+      gap: 4px;
+    }
+    select {
+      font: inherit;
+      padding: 8px 12px;
+      min-height: 44px;
+      color: #202c27;
+      background: #fffcf4;
+      border: 1px solid #788477;
+    }
+    .pair {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    figure {
+      margin: 0;
+      width: min(390px, 100%);
+    }
+    figcaption {
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    a {
+      color: #214b40;
+    }
+    footer {
+      border-top: 1px solid #788477;
+      margin-top: 24px;
+      padding-top: 12px;
+    }
+    [hidden] {
+      display: none;
+    }
+    @media (max-width: 600px) {
+      body {
+        padding: 16px;
+      }
+    }
+  </style>
+  <main>
+    <h1>Sách để lựa. Một lời từ tiệm.</h1>
+    <p>
+      Tên Be Vietnam Pro tối đa ba dòng, giá rõ và từng bản sách có nền sáng
+      nhẹ. Banner biên tập nằm sau hai cuốn đầu, cuộn cùng kệ; không xuất hiện
+      trong kết quả tìm/lọc.
+    </p>
+    <nav aria-label="Xem ảnh Android">
+      <label
+        >Cỡ chữ Android<select id="scale">
+          <option value="100">100%</option>
+          <option value="130">130%</option>
+        </select></label
+      >
+      <label
+        >Hiển thị<select id="view">
+          <option value="new">Kệ mới và banner</option>
+          <option value="compare">Trước / sau · đầu kệ</option>
+          <option value="bottom">Trước / sau · tên ngắn, một/hai giá</option>
+        </select></label
+      >
+    </nav>
+    <div class="pair">
+      <figure>
+        <figcaption id="leftCaption">Bản mới · đầu kệ</figcaption>
+        <a id="leftLink"
+          ><img id="left" alt="Đầu kệ với tên ba dòng, tình trạng và giá"
+        /></a>
+      </figure>
+      <figure>
+        <figcaption id="rightCaption">Bản mới · cuộn đến banner</figcaption>
+        <a id="rightLink"
+          ><img id="right" alt="Banner biên tập sau hai cuốn đầu"
+        /></a>
+      </figure>
+    </div>
+    <p>
+      Ảnh Android nguyên bản ~390dp; chữ 130% là cài đặt hệ điều hành. Ảnh trước
+      tại3a35355; ảnh sau cùng nội dung bốn bản QA DEMO, tạo lại qua API nên
+      khác ID. API/Mongo thật, storage fixture FAKE. Bấm ảnh xem kích thước gốc.
+    </p>
+    <footer>
+      <p>
+        <a href="evidence/ui-1-storefront/narrow-banner-130.png"
+          >Banner320dp/130%</a
+        >
+        ·
+        <a href="evidence/ui-1-storefront/detail-130.png"
+          >Chi tiết vẫn đủ tên</a
+        >
+        ·
+        <a href="evidence/ui-1-storefront/filtered-130.png"
+          >Lọc không có banner</a
+        >
+        · <a href="SHELF_STOREFRONT_01.md">Bằng chứng và giới hạn</a>
+      </p>
+      <p>
+        Chưa đổi thanh điều hướng/cách lọc, chưa thêm chuyển động hoặc chức năng
+        giao dịch. Chờ phản hồi thẩm mỹ; chưa push/merge.
+      </p>
+    </footer>
+  </main>
+  <script>
+    const scale = document.getElementById("scale"),
+      view = document.getElementById("view");
+    function render() {
+      const s = scale.value,
+        newView = view.value === "new",
+        bottom = view.value === "bottom";
+      const paths = newView
+        ? [
+            `evidence/ui-1-storefront/after-${s}.png`,
+            `evidence/ui-1-storefront/banner-${s}.png`,
+          ]
+        : [
+            `evidence/ui-1-shelf-lines/lines-3-${s}-${bottom ? "bottom" : "top"}.png`,
+            `evidence/ui-1-storefront/${bottom ? "bottom" : "after"}-${s}.png`,
+          ];
+      const captions = newView
+        ? ["Bản mới · đầu kệ", "Bản mới · cuộn đến banner"]
+        : ["Trước · 3a35355", "Sau · hướng cửa hàng"];
+      for (const [i, id] of ["left", "right"].entries()) {
+        document.getElementById(id).src = paths[i];
+        document.getElementById(id).alt = captions[i];
+        document.getElementById(id + "Link").href = paths[i];
+        document.getElementById(id + "Caption").textContent = captions[i];
+      }
+    }
+    scale.addEventListener("change", render);
+    view.addEventListener("change", render);
+    render();
+  </script>
+</html>

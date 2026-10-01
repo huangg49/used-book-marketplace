@@ -27,28 +27,28 @@ khác cờ song song. Với bản xuất sẵn, từ root chạy `node scripts/p
 
 ## Thành phần và hợp đồng
 
-| API | Trách nhiệm | Chủ màn hình cần cung cấp |
-|---|---|---|
-| `BrandProvider` | Load font một lần, màn hình chờ/lỗi và retry font | Đặt dưới SafeAreaProvider, trên các màn hình |
-| `BrandLogo` | Logo gốc, tỷ lệ và nhãn | Không tự gõ lại wordmark |
-| `AppText` | Các vai trò title/heading/card/body/bold/small/label/price | Nội dung và role header nếu là tiêu đề |
-| `Button` | Primary/secondary/destructive, pressed/focus/disabled/busy | `title`, `onPress`, `busy`; xử lý mutation ngoài UI |
-| `BackAction` | Quay lại: mũi tên + nhãn, vùng chạm tối thiểu 44, xuống dòng/focus/disabled | `title`, `onPress`, `disabled`; screen quyết định router và dirty guard |
-| `ActionRow` | Lối vào một mục: icon, tên, mô tả, mũi tên; vùng chạm và focus | `title`, `description`, `icon`, `onPress`; không tự điều hướng |
-| `IconButton` | Vùng chạm 44, tên, selected/disabled/focus | `name`, `label`, `onPress` |
-| `Chip` | Bộ chọn ngắn, trạng thái selected | `title`, `selected`, `onPress` |
-| `TextField` | Label, hint/error, focus, multiline, readonly | `value`, `onChangeText`, các props TextInput cần thiết |
-| `SearchField` | Tìm kiếm có icon và xóa từ khóa | Label có nghĩa, query và handler |
-| `Checkbox` | Checked/disabled và nhãn xuống dòng | State/handler bên ngoài |
-| `Notice` | info/success/warning/error, live region, dismiss tùy chọn | Nội dung đã kiểm soát; thời điểm hiện/ẩn |
-| `StatePanel` | Loading, rỗng, lỗi vùng nội dung | Title/message/icon, action có label/handler/busy |
-| `Sheet` | Modal có tên, safe area, scroll, close, Back/Escape, tránh bàn phím | Visible, onClose, children; `dismissible`, `backdropDismiss`, `footer` không cuộn |
-| `ConfirmDialog` | Câu hỏi có hậu quả, quay lại/confirm, lỗi tại chỗ | Handler, visible/busy/error; không tự đóng khi handler chạy |
-| `Screen` | Safe area, keyboard avoidance, scroll, max width, footer | Nội dung; không lồng trong một Screen khác |
-| `ActionBar` | Nhóm hành động trong `Screen.footer`: chia đều, phụ trái/chính phải, dòng trạng thái tùy chọn | Các `Button` có `key`; feature quyết định busy/disabled và mutation |
-| `BookCover` | Contain, ảnh thiếu/lỗi, phục hồi khi đổi nguồn | Source + nhãn; không có fixture, request hoặc quyền trong component |
-| `BookCondition` | Nhãn tình trạng và hình thức | Chuỗi nghiệp vụ đã ánh xạ |
-| `BookPrice` | Giá bán và giá trị đổi tách biệt, Be Vietnam Pro | Số tiền nguyên không âm; kiểm tra giới hạn nghiệp vụ ở feature/API |
+| API             | Trách nhiệm                                                                                   | Chủ màn hình cần cung cấp                                                         |
+| --------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `BrandProvider` | Load font một lần, màn hình chờ/lỗi và retry font                                             | Đặt dưới SafeAreaProvider, trên các màn hình                                      |
+| `BrandLogo`     | Logo gốc, tỷ lệ và nhãn                                                                       | Không tự gõ lại wordmark                                                          |
+| `AppText`       | Các vai trò title/heading/card/body/bold/small/label/price                                    | Nội dung và role header nếu là tiêu đề                                            |
+| `Button`        | Primary/secondary/destructive, pressed/focus/disabled/busy                                    | `title`, `onPress`, `busy`; xử lý mutation ngoài UI                               |
+| `BackAction`    | Quay lại: mũi tên + nhãn, vùng chạm tối thiểu 44, xuống dòng/focus/disabled                   | `title`, `onPress`, `disabled`; screen quyết định router và dirty guard           |
+| `ActionRow`     | Lối vào một mục: icon, tên, mô tả, mũi tên; vùng chạm và focus                                | `title`, `description`, `icon`, `onPress`; không tự điều hướng                    |
+| `IconButton`    | Vùng chạm 44, tên, selected/disabled/focus                                                    | `name`, `label`, `onPress`                                                        |
+| `Chip`          | Bộ chọn ngắn, trạng thái selected                                                             | `title`, `selected`, `onPress`                                                    |
+| `TextField`     | Label, hint/error, focus, multiline, readonly                                                 | `value`, `onChangeText`, các props TextInput cần thiết                            |
+| `SearchField`   | Tìm kiếm có icon và xóa từ khóa                                                               | Label có nghĩa, query và handler                                                  |
+| `Checkbox`      | Checked/disabled và nhãn xuống dòng                                                           | State/handler bên ngoài                                                           |
+| `Notice`        | info/success/warning/error, live region, dismiss tùy chọn                                     | Nội dung đã kiểm soát; thời điểm hiện/ẩn                                          |
+| `StatePanel`    | Loading, rỗng, lỗi vùng nội dung                                                              | Title/message/icon, action có label/handler/busy                                  |
+| `Sheet`         | Modal có tên, safe area, scroll, close, Back/Escape, tránh bàn phím                           | Visible, onClose, children; `dismissible`, `backdropDismiss`, `footer` không cuộn |
+| `ConfirmDialog` | Câu hỏi có hậu quả, quay lại/confirm, lỗi tại chỗ                                             | Handler, visible/busy/error; không tự đóng khi handler chạy                       |
+| `Screen`        | Safe area, keyboard avoidance, scroll, max width, footer                                      | Nội dung; không lồng trong một Screen khác                                        |
+| `ActionBar`     | Nhóm hành động trong `Screen.footer`: chia đều, phụ trái/chính phải, dòng trạng thái tùy chọn | Các `Button` có `key`; feature quyết định busy/disabled và mutation               |
+| `BookCover`     | Contain, ảnh thiếu/lỗi, phục hồi khi đổi nguồn                                                | Source + nhãn; không có fixture, request hoặc quyền trong component               |
+| `BookCondition` | Nhãn tình trạng và hình thức                                                                  | Chuỗi nghiệp vụ đã ánh xạ                                                         |
+| `BookPrice`     | Giá bán và giá trị đổi tách biệt, Be Vietnam Pro                                              | Số tiền nguyên không âm; kiểm tra giới hạn nghiệp vụ ở feature/API                |
 
 `ActionButton` và `ErrorNotice` là alias/adapter tương thích cho code cũ, không
 phải implementation thứ hai. `Notice error` cũng là adapter; code mới ưu tiên
@@ -110,8 +110,16 @@ Chiều cao tối thiểu của các vùng chữ tính từ typography và fontS
 Hai cột stretch theo hàng; vùng giá dành tối thiểu hai dòng, không thêm giá giả
 cho listing chỉ có một giá. Nội dung giá vẫn được wrap/tăng chiều cao. Một cột
 ở chữ130%/màn hẹp vẫn có vùng giá riêng, không khóa chiều cao toàn thẻ.
-Ba dòng là bản tạm để chờ chủ dự án chọn từ ảnh Android hai/ba dòng, cùng dữ liệu.
+Chủ dự án đã chọn ba dòng ngày01/10 sau ảnh Android hai/ba dòng, cùng dữ liệu.
 Không đổi AppText/BookOffer toàn cục hoặc áp ellipsis vào màn chi tiết.
+
+Lượt cửa hàng01/10: `shelfTitle` BeBold16/23, màu mực; nền surface/padding8px
+nhóm bản sách, bìa shelf cùng nền surface, contain180dp. Giá giữ18/25 và đủ nhãn.
+`ShelfGrid.afterFirstPair` nhận slot trình bày, chỉ chèn sau mục thứ hai. Caller
+quyết định điều kiện: kệ mặc định/trang đầu/không lỗi, không thêm truy vấn hay state.
+`BookshopNote` là lời biên tập cố định trên nền forest, minh họa SVG trang trí
+ẩn với accessibility; bỏ minh họa ở130% hoặc width<360dp để chữ có đủ chỗ.
+Không khóa chiều cao, không CTA giả/animation. `/ui` nhóm Sách có ví dụ mới.
 
 Cập nhật 29/09: Android xử lý `fontScale` qua Expo plugin để giữ Activity và
 picker khi trở lại từ cài đặt chữ. `AppText` tạo lại riêng native Text theo

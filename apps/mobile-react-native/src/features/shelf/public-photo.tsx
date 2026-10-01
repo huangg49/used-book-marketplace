@@ -87,7 +87,7 @@ export function PublicPhoto({
         ...(compact || shelf
           ? {
               ...(compact && !shelf ? { aspectRatio: 2 / 3 } : {}),
-              backgroundColor: colors.paper,
+              backgroundColor: shelf ? colors.surface : colors.paper,
               borderRadius: radius.book,
             }
           : {}),

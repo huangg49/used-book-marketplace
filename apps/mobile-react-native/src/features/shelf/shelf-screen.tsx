@@ -6,6 +6,7 @@ import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import {
   AppText,
+  BookshopNote,
   Button,
   Chip,
   Icon,
@@ -236,6 +237,11 @@ export function ShelfScreen() {
       )}
       <ShelfGrid
         items={result.data?.items ?? []}
+        afterFirstPair={
+          !hasCriteria && cursors.length === 1 && !result.isError ? (
+            <BookshopNote />
+          ) : undefined
+        }
         onOpen={(item) =>
           router.push({ pathname: "./book", params: { id: item.id } })
         }

@@ -127,7 +127,7 @@ export function ShelfShowcase() {
               style={{
                 width: "100%",
                 height: 180,
-                backgroundColor: colors.paper,
+                backgroundColor: colors.surface,
               }}
             />
           </Pressable>
