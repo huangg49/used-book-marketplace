@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lật lại · Mẫu kệ</title>
+    <link rel="stylesheet" href="study.css" />
+  </head>
+  <body class="phone">
+    <div class="status" aria-hidden="true">
+      <b>9:41</b><span>▰ &nbsp; ● &nbsp; ▰</span>
+    </div>
+    <header class="app-header">
+      <img class="brand" src="assets/logo.svg" alt="Lật lại" /><span
+        class="location"
+        ><svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" />
+          <circle cx="12" cy="10" r="2" /></svg
+        >TP. Hồ Chí Minh</span
+      >
+    </header>
+    <main class="phone-scroll" id="scroll">
+      <div class="search-wrap">
+        <label class="search"
+          ><svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="10" cy="10" r="6.5" />
+            <path d="m15 15 5 5" /></svg
+          ><input
+            id="query"
+            placeholder="Tên sách, tác giả…"
+            aria-label="Tìm trong sáu cuốn mẫu"
+            type="search"
+        /></label>
+      </div>
+      <div class="modes" aria-label="Hình thức giao dịch">
+        <button data-mode="all" aria-pressed="true">Tất cả</button
+        ><button data-mode="sale" aria-pressed="false">Bán</button
+        ><button data-mode="exchange" aria-pressed="false">Đổi</button
+        ><button data-mode="both" aria-pressed="false">Bán hoặc đổi</button>
+      </div>
+      <div id="shelf"></div>
+      <p class="sample-end">
+        Hết 6 cuốn mẫu · Ảnh tư liệu, không phải bản sách đang bán.
+      </p>
+    </main>
+    <nav
+      class="bottom-nav"
+      aria-label="Minh họa thanh điều hướng — không tương tác"
+    >
+      <span aria-current="page"
+        ><svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M3 4c3-1 6 0 9 2 3-2 6-3 9-2v15c-3-1-6 0-9 2-3-2-6-3-9-2Z M12 6v15"
+          /></svg
+        >Khám phá</span
+      ><span
+        ><svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 3h12v18l-6-4-6 4Z" /></svg
+        >Sách của tôi</span
+      ><span
+        ><svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="7" r="4" />
+          <path d="M4 22v-3a8 8 0 0 1 16 0v3" /></svg
+        >Tài khoản</span
+      >
+    </nav>
+    <div class="home-indicator" aria-hidden="true"><i></i></div>
+    <dialog id="book-dialog" aria-labelledby="dialog-title">
+      <button class="close" aria-label="Đóng phiếu sách">×</button>
+      <div id="detail"></div>
+    </dialog>
+    <script src="phone.js"></script>
+  </body>
+</html>

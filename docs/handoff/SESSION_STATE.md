@@ -2,7 +2,19 @@
 
 ## Nguồn và việc đang làm
 
-- **UI-1 — KỆ CÓ TÍN HIỆU CỬA HÀNG / CHỜ XEM ẢNH.** Chủ dự án duyệt ba dòng
+- **UI-1 — BA HƯỚNG KỆ ĐỘC LẬP / CHỜ CHỌN BẰNG MẮT.** Chủ dự án đồng ý
+  chẩn đoán kệ trước quá trầm, yêu cầu2–3hướng thật sự khác nhau với bìa nhiều màu.
+  Nhánh mới `codex/shelf-visual-directions`, basefd2947d; checkpoint
+  `design: explore three distinct shelf directions`. App/main/nhánh UI cũ giữ nguyên.
+  [Ba mẫu HTML và bàn giao](../ui/shelf-directions/README.md), preview8090:
+  A lưới cửa hàng sáng; B hàng bìa cuộn ngang/mặt tiền rừng; C quầy sách với phiếu.
+  Cùng6tác phẩm có bìa Standard Ebooks và nguồn/license; giá/tình trạng/ghi chú mẫu,
+  không vào API. Imagegen hết hạn mức, không có ảnh AI và không dùng API key thay thế.
+  Đã xem browser390×844/100%–130%, tìm/lọc/rỗng, nút qua cuốn, mở/đóng phiếu tên dài.
+  Lưu8ảnh; chữ lớn chỉ mô phỏng CSS, không native PASS. Syntax/format/docs/diff-check
+  PASS; không chạy lại RN/API tests vì không đổi runtime. Không đổi DESIGN.md,
+  không push/merge. DỪNG chờ chủ dự án chọn hướng rồi mới port vào app.
+- **UI-1 — KỆ CÓ TÍN HIỆU CỬA HÀNG / BẢN TRƯỚC VÒNG KHẢO SÁT MỚI.** Chủ dự án duyệt ba dòng
   và bước1 của hướng cửa hàng, kèm banner biên tập sau hai cuốn đầu. Nhánh
   `codex/ui-direction`, base3a35355; checkpoint
   `feat(rn): clarify shelf offers and add editorial bookshop banner`.
@@ -261,8 +273,10 @@ Xem [so sánh mới nhất](../ui/detail-price-spacing.html) và
 [evidence màn chuẩn03](../ui/DETAIL_STANDARD_03.md); **chủ dự án đã duyệt màn chuẩn**.
 Chủ dự án đã chọn kệ trước, chuyển động mở ảnh sau; đã từ chối vòng01 và giao
 quyền tự quyết thiết kế. Đã chốt ba dòng và duyệt bước1 hướng cửa hàng kèm banner.
-Bản mới ở SHELF_STOREFRONT_01, chờ phản hồi ảnh trước bước tiếp. Chưa đổi bộ lọc/
-điều hướng, chuyển động hoặc màn khác.
+Sau fd2947d/SHELF_STOREFRONT_01, chủ dự án vẫn thấy quá trầm và yêu cầu khảo sát
+lại bằng ba hướng khác nhau. Hiện xem [bảng A/B/C](../ui/shelf-directions/index.html)
+trên `codex/shelf-visual-directions`; chỉ là HTML nghiên cứu. Chờ chọn hướng,
+rồi mới sửa DESIGN.md và port vào RN. Chưa đổi bộ lọc/điều hướng, motion hay màn khác.
 Các bước và ranh giới còn lại:
 
 1. Màn chuẩn đã duyệt; ảnh Android trước/sau390dp,100%/130% vẫn là evidence hiện
@@ -278,9 +292,10 @@ Các bước và ranh giới còn lại:
    khi chưa được chọn triển khai; C02 tiếp tục hoãn.
 
 Mỗi bước có ảnh/video hoặc báo cáo tương ứng. Chủ dự án giao agent tự quyết thiết
-kế; lượt cửa hàng này dừng ở ảnh để nhận phản hồi.
-Checkpoint kệ: `feat(rn): clarify shelf offers and add editorial bookshop banner`;
-checks/evidence ở SHELF_STOREFRONT_01. Không chạy lại gate API khi source không đổi.
+kế; lượt khảo sát hiện tại dừng chờ chọn A/B/C.
+Checkpoint nghiên cứu: `design: explore three distinct shelf directions`;
+checks/evidence ở docs/ui/shelf-directions/README.md. Runtime vẫn tại fd2947d.
+Không chạy lại gate API khi source không đổi.
 Main local/remote4273f10; condition/H01/C01 đã tích hợp, nhánh upload-recovery
 vẫn giữ riêng. Chưa có quyền merge/deploy UI-1 hoặc C02.
 Không kiểm lại gate đã đạt khi source không đổi; chưa phân công thêm teammate.
