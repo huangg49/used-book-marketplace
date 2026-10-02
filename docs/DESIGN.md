@@ -1,6 +1,6 @@
 # Lật lại — Định hướng giao diện UI-1
 
-Ngày 02/10/2026 · Nhánh `codex/shelf-b-native` · Base `21d988e`.
+Ngày 02/10/2026 · Nhánh `codex/ui-motion` · Base `053c87e` (kệ B).
 UI-1 bắt đầu từ nền sản phẩm main `4273f10`; các gói UI sau chưa merge.
 
 ## Nguồn sự thật và phạm vi
@@ -148,8 +148,9 @@ Mỗi hàng gồm tối đa **ba cuốn liên tiếp theo thứ tự API**; số
 đếm từ trang đã tải, không gợi danh mục tuyển chọn hoặc tổng tồn kho. Cuộn ngang
 để xem cuốn còn khuất; có nút trước/tiếp vùng chạm44px cho người không dùng vuốt.
 Không tự chạy, không coverflow/3D và không chiếm gesture Back từ mép hệ thống.
-Nút qua cuốn chuyển ngay, không animation mới; thay tìm/lọc/trang thì bắt đầu lại
-hàng ngang, mở chi tiết/Back hoặc refetch cùng trang giữ vị trí đang xem.
+Nút qua cuốn cuộn nhẹ bằng cơ chế native; reduced motion chuyển ngay. Focus và
+thay tìm/lọc/trang vẫn chuyển ngay; mở chi tiết/Back hoặc refetch không thay nhóm/
+thứ tự cuốn giữ vị trí đang xem. Không cam kết giữ vị trí khi nhóm sách thay đổi.
 
 Tên dùng Be Vietnam Pro700,16/23, tối đa **ba dòng**; tác giả một dòng, “…” khi
 quá dài. Màn chi tiết và nhãn accessibility giữ đủ. Các cuốn cùng hàng căn vùng
@@ -208,6 +209,34 @@ Chữ và spacing là đề xuất để thử trên một màn chuẩn; không 
 native. Palette/theme cần một nguồn chung khi được duyệt; không đặt hex/font
 riêng lẻ vào từng feature. Các trạng thái và API component theo
 [UI_COMPONENTS](design/UI_COMPONENTS.md).
+
+## Chuyển động: giúp xem và chọn sách
+
+Chủ dự án duyệt gói này ngày02/10: ảnh tải ổn định, nút qua cuốn dễ theo dõi,
+mở ảnh lớn. Chuyển động chỉ là phản hồi thao tác; không che tên, tình trạng, giá
+hoặc vùng giao dịch, không làm người dùng chờ mới xử lý hành động.
+
+- Giữ khung bìa khi tải metadata và ảnh thật; phản hồi tải nằm trong khung,
+  không thêm một dòng làm kệ nhảy cao. Ảnh mới có fade160ms; ảnh lỗi/không còn
+  khả dụng được gỡ ngay. Không giữ ảnh hết hạn để làm transition, đổi cache hoặc
+  che lỗi bằng bìa giả. Không shimmer/spinner tự chạy trên toàn kệ.
+- Nút trước/tiếp dùng cuộn native, không thêm engine gesture hay tự chạy carousel.
+  Focus và reset tức thì; chữ130% dùng chiều rộng thẻ thật. Không animate giá,
+  stamp, chiều cao chữ hoặc layout mỗi frame.
+- **Mở ảnh lớn là khoảnh khắc đặc trưng của chuyển động:** nền tối hiện nhẹ,
+  nội dung dịch tối đa12dp và hiện trong160ms, để xem dấu vết cuốn sách rõ hơn.
+  Header/nút đóng đứng yên. Đóng ngay để Back phản hồi và vòng đời ảnh vẫn do
+  màn hình sở hữu; không giữ Modal/ảnh cũ để fade-out. Các Sheet khác mặc định
+  không chuyển động. Không thêm shared element kệ→chi tiết, lật trang hoặc3D.
+- Theo setting reduced motion của OS ngay cả khi app đang mở; chưa đọc được
+  setting thì coi là bật. Bỏ fade/translate/cuộn có animation khi bật; thông tin,
+  nút và thao tác vẫn đầy đủ. Không thay gesture Back từ mép hệ thống, vẫn có
+  nút cho người dùng TalkBack/keyboard và kiểm focus khi mở/đóng.
+
+160ms/12dp là token trình bày chung, không phải thời gian request hay timeout.
+Đánh giá trên Android100%/130%, tải chậm/lỗi/thử lại và reduced motion. Đo hiệu
+năng trên bản release/máy phổ thông trước khi tuyên bố mượt; video emulator debug
+chỉ chứng minh thao tác đã quan sát, không đóng gate FPS/TalkBack/native/release.
 
 ## Điều cấm
 

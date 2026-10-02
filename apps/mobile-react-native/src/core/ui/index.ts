@@ -7,6 +7,7 @@ export {
   typography,
 } from "./theme";
 export { layout } from "./styles";
+export { motion, useReducedMotion } from "./motion";
 export { AppText, TextScale } from "./text";
 export {
   BackAction,

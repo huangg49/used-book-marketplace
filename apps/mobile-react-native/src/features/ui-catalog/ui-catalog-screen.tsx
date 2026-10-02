@@ -51,6 +51,7 @@ export function UiCatalogScreen() {
   const [checked, setChecked] = useState(false);
   const [notice, setNotice] = useState("");
   const [sheet, setSheet] = useState(false);
+  const [photoSheet, setPhotoSheet] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [fail, setFail] = useState(false);
   const [error, setError] = useState("");
@@ -318,6 +319,27 @@ export function UiCatalogScreen() {
               secondary
               onPress={() => setSheet(true)}
             />
+            <Button
+              title="Thử mở ảnh lớn"
+              secondary
+              onPress={() => setPhotoSheet(true)}
+            />
+            <Sheet
+              title="Ảnh minh họa — chuyển động nhẹ"
+              motion="photo"
+              visible={photoSheet}
+              onClose={() => setPhotoSheet(false)}
+            >
+              <AppText>
+                Ảnh tư liệu để thử mở ảnh, chữ lớn và Back. Khi bật giảm chuyển
+                động, ảnh hiện ngay; đóng bảng luôn có hiệu lực ngay.
+              </AppText>
+              <BookCover
+                source={require("../../../assets/design/pride.jpg")}
+                label="Bìa tư liệu Pride and Prejudice — không là ảnh bản sách đang bán"
+                style={{ height: 320, width: "100%" }}
+              />
+            </Sheet>
             <Checkbox
               title="Mô phỏng lần xác nhận đầu thất bại"
               checked={fail}

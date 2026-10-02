@@ -131,9 +131,11 @@ không cắt tình trạng/giá. Chiều cao chữ dự trữ theo fontScale×Te
 stretch cùng hàng; nhóm giá ở đáy thông tin, nội dung dài tự tăng chiều cao.
 `PublicPhoto rail` chỉ đổi khung/nền; `onCoverFocus` cho rail đưa cuốn được focus
 vào vùng nhìn thấy, không đổi expiry/cache/query/retry. Showcase dùng cùng callback.
-Nút trước/tiếp dùng `IconButton`44px, scrollTo không animation; vị trí lưu trong
+Nút trước/tiếp dùng `IconButton`44px, cuộn native có animation khi OS cho phép;
+focus/reset luôn chuyển ngay. Vị trí lưu trong
 ref, state chỉ đổi ở biên nên không render lại toàn hàng mỗi frame cuộn. Caller
-key theo query/cursor để reset khi tìm/lọc/trang, giữ vị trí Back/refetch cùng trang.
+key theo query/cursor để reset khi tìm/lọc/trang, giữ vị trí Back/refetch khi nhóm/
+thứ tự sách không đổi. Không cam kết giữ vị trí khi API làm thay nhóm sách.
 Không dùng `ShelfGrid`/banner cũ trong kệ thật/showcase; component cũ còn để đọc
 lịch sử và ví dụ `BookshopNote` riêng, không là định hướng kệ hiện hành.
 
@@ -215,9 +217,23 @@ trong editor để không bỏ qua dirty guard. Không có tab ví/chat/giao d�
 
 Kệ công khai dùng `SearchField.onSubmitEditing` để tìm bằng phím Search/Enter và
 `maxLength` để giới hạn đầu vào; feature vẫn kiểm tra độ dài Unicode theo contract.
-`BookCover` hỗ trợ `cachePolicy` và `onError`; ảnh ký dùng `cachePolicy="none"`.
+`BookCover` hỗ trợ `cachePolicy`, `onError`, `onLoad`, `loading` và opt-in `fadeIn`;
+ảnh ký dùng `cachePolicy="none"`. `PublicPhoto` bật fade160ms, phản hồi tải URL/
+bytes nằm trong khung bìa, không thêm dòng làm thay chiều cao. Child theo source
+gỡ ngay khi ảnh không khả dụng; bỏ callback sau unmount để lỗi request cũ không
+làm hỏng lần thử mới. Các consumer không bật `fadeIn` giữ trình bày mặc định.
 Feature quản lý hạn URL, refetch khi trở lại foreground, placeholder và nút thử lại;
 component không tự ký URL hoặc xác định quyền. `/ui` có mẫu tìm kiếm và lỗi tải ảnh.
+
+`Sheet motion="photo"` là opt-in cho ảnh lớn: scrim và body hiện nhẹ160ms,
+translate12dp; header/nút đóng không chuyển động. Đóng ngay, không giữ Modal hoặc
+ảnh để fade-out. Sheet khác/ConfirmDialog mặc định không animation. `/ui` nhóm
+Hộp thoại có ví dụ xem ảnh từ asset catalog hiện có.
+
+`useReducedMotion` dùng một subscription OS chung, cập nhật nóng; chưa đọc được
+preference hoặc SSR thì coi là bật. Tắt fade/translate và cuộn bằng nút có
+animation; focus/reset vẫn tức thì. Token `motion` chung là160ms/12dp, không đổi
+timing request/timeout. Không thêm dependency hoặc engine gesture.
 
 `ShelfGrid`, `BookPresentation` và `BookGallery` thuộc `features/shelf`, dùng chung
 giữa kệ/chi tiết thật và `features/shelf-showcase`. Chúng nhận dữ liệu và callback;

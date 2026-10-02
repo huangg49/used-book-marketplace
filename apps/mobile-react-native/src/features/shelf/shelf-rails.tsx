@@ -13,6 +13,7 @@ import {
   metrics,
   space,
   typography,
+  useReducedMotion,
 } from "../../core/ui";
 import { conditions, modes, type Listing } from "./contracts";
 
@@ -49,6 +50,7 @@ function ShelfRail({
 }: Props & { rowNumber: number }) {
   const { width, fontScale } = useWindowDimensions();
   const scale = useContext(TextScale) * fontScale;
+  const reducedMotion = useReducedMotion();
   const viewport = Math.min(width - space.xl * 2, metrics.content);
   const cardWidth = Math.min(viewport, scale >= 1.29 ? 224 : 160);
   const step = cardWidth + space.lg;
@@ -56,11 +58,15 @@ function ShelfRail({
   const offset = useRef(0);
   const [edges, setEdges] = useState({ before: false, after: true });
   const maxOffset = Math.max(0, items.length * step - space.lg - viewport);
-  const move = (next: number) =>
+  const move = (next: number, animate = false) =>
     scroll.current?.scrollTo({
       x: Math.max(0, Math.min(maxOffset, next)),
-      animated: false,
+      animated: animate && !reducedMotion,
     });
+  useEffect(() => {
+    if (reducedMotion)
+      scroll.current?.scrollTo({ x: offset.current, animated: false });
+  }, [reducedMotion]);
   useEffect(() => {
     const x = Math.min(offset.current, maxOffset);
     scroll.current?.scrollTo({ x, animated: false });
@@ -91,13 +97,13 @@ function ShelfRail({
               name="back"
               label={`Cuốn trước, hàng ${rowNumber}`}
               disabled={!edges.before}
-              onPress={() => move(offset.current - step)}
+              onPress={() => move(offset.current - step, true)}
             />
             <IconButton
               name="arrow"
               label={`Cuốn tiếp theo, hàng ${rowNumber}`}
               disabled={!edges.after}
-              onPress={() => move(offset.current + step)}
+              onPress={() => move(offset.current + step, true)}
             />
           </View>
         )}

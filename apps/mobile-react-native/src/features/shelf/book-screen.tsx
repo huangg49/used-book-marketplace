@@ -137,6 +137,7 @@ export function BookScreen({ id }: { id: string }) {
                 />
               </BookPresentation>
               <Sheet
+                motion="photo"
                 visible={large && !result.isError}
                 title={`Ảnh ${selected + 1} / ${item.photos.length}`}
                 onClose={() => setLarge(false)}

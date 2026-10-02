@@ -71,14 +71,18 @@ export function PublicPhoto({
   }, [photo.data]);
   const available =
     active && !photo.error && photo.data && photo.data.expiresAt !== expired;
+  const requestKey = `${photo.data?.url}/${attempt}`;
   const cover = (
     <BookCover
-      key={`${photo.data?.url}/${attempt}`}
+      key={attempt}
       source={available ? { uri: photo.data.url } : undefined}
       label={label}
       missing={!available}
       cachePolicy="none"
-      onError={() => setFailed(photo.data?.url)}
+      loading={active && photo.isPending}
+      fadeIn
+      onError={() => setFailed(requestKey)}
+      onLoad={() => setFailed(undefined)}
       style={{
         width: "100%",
         height: expanded
@@ -128,18 +132,13 @@ export function PublicPhoto({
       ) : (
         cover
       )}
-      {photo.isPending && (
-        <AppText kind="small" color={colors.muted}>
-          Đang tải ảnh…
-        </AppText>
-      )}
-      {photo.error || (failed && failed === photo.data?.url) ? (
+      {photo.error || failed === requestKey ? (
         <>
-          <AppText kind="small" color={colors.muted}>
-            {photo.error
-              ? presentError(photo.error).message
-              : "Ảnh chưa tải được."}
-          </AppText>
+          {photo.error && (
+            <AppText kind="small" color={colors.muted}>
+              {presentError(photo.error).message}
+            </AppText>
+          )}
           <Button
             secondary
             title="Tải lại ảnh"

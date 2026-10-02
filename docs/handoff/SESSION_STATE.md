@@ -2,35 +2,33 @@
 
 ## Nguồn và việc đang làm
 
-- **UI-1 — HƯỚNG B ĐÃ VÀO KỆ RN / CHỜ DUYỆT THẨM MỸ.** Chủ dự án chọn B
-  ngày 02/10 từ ba mẫu HTML ở21d988e. Nhánh `codex/shelf-b-native`, base `21d988e`;
-  checkpoint `feat(rn): bring forest storefront and browsable book rails to shelf`.
-  Chưa push/PR/merge; main giữ nguyên trong gói này. Mặt tiền forest/logo trắng
-  gốc, nền kệ sáng ngả xanh, tối đa 3 cuốn liên tiếp mỗi hàng theo API, nút qua cuốn
-  44dp và vuốt ngang; không animation mới. Thẻ 160/224dp theo font scale; bìa
-  contain 196dp. Tên 3 dòng/tác giả 1 dòng có “…”, stamp/giá đọc đủ; cả hai giá và căn
-  hàng giữ nguyên. Kệ thật/showcase dùng ShelfRails; catalog có ví dụ mới.
-  Screen/BrandLogo/PublicPhoto có tùy chọn riêng, mặc định consumer cũ giữ nguyên.
-  DESIGN/UI_COMPONENTS đồng bộ hướng B, thay bố cục/banner cũ. Không đổi API,
-  query/filter/cursor/retry/session/navigation/nghiệp vụ hoặc chi tiết đã duyệt.
-  [Ảnh mẫu→Android](../ui/shelf-b-native.html), [kiểm chứng](../ui/SHELF_B_NATIVE.md):
-  390dp / 100% thấy hai giá ở đầu;130% mở rộng thẻ/cuộn đọc đủ; tên dài/Worn/1M,
-  hàng cuối 1 cuốn, mở chi tiết/Back giữ vị trí/màu status bar, refetch cuối kệ,
-  tìm/rỗng/bỏ lọc/Bán/sheet/keyboard, mất API/phục hồi tự động đã xem Android.
-  RN 91/91, lint/typecheck, export:web PASS. Prettier/docs:check/diff-check PASS. Showcase native 130% đã xem; catalog native chưa chạy (cờ0).
-  TalkBack/ARM/FPS/iOS/320dp mới/cursor trang 2/live Supabase NOT RUN; không đóng
-  human review/native/release. AI đọc diff không thay review người thật.
-  QA mới7 listing có6 bìa Standard Ebooks cùng bộ mẫu, thêm 1 tên Việt dài;[QA],
-  giá/tình trạng mô phỏng; tạo/duyệt/ảnh qua API thật. Compose riêng latlai-ui-shelf-b
-  port37017/rs-test/random *_test, API 3046/media 3047, storage FAKE. Harness/snapshot
-  ignored .tmp/ui-shelf-b. Đã phục hồi app/font/density/reverse và dừng
-  QA/emulator của agent; giữ Metro/Docker Desktop người dùng và preview 8089.
-  Bước tiếp: chủ dự án xem và duyệt B native; chỉ sửa phản hồi trên kệ nếu có.
-  Chuyển động mở ảnh vẫn chưa làm; không áp sang màn khác trước duyệt.
-  Tham khảo motion02/10 (chỉ nghiên cứu, chưa sửa runtime/DESIGN): ưu tiên ảnh
-  tải ổn định, nút qua cuốn chuyển nhẹ, mở ảnh lớn; dùng thư viện đang có.
-  Shared element của Reanimated còn experimental, chưa chọn cho sản phẩm.
-  Chưa đo FPS/release hoặc nghiệm thu reduced motion/TalkBack; kệ B vẫn chờ duyệt.
+- **UI-1 — CHUYỂN ĐỘNG XEM SÁCH ĐÃ LÀM / CHỜ DUYỆT CẢM NHẬN.** Chủ dự án
+  duyệt ba ưu tiên ngày02/10. Nhánh `codex/ui-motion`, base `053c87e` (kệ B tại304c0a2);
+  checkpoint `feat(rn): add restrained motion to browsing and book photos`.
+  Chưa push/PR/merge; main giữ nguyên. Ảnh tải URL/bytes có phản hồi trong khung,
+  fade160ms native driver, chặn callback nguồn/attempt cũ và terminal success/error;
+  nút qua cuốn cuộn native, focus/reset tức thì. Sheet ảnh lớn opt-in mở160ms/
+  translate12dp, header/close đứng yên, đóng ngay. Reduced motion dùng một OS
+  subscription cập nhật nóng, unknown thì giảm; không replay ảnh/Sheet đã mở.
+  Không đổi API/contract/session/nghiệp vụ/navigation/expiry/cache/query/retry,
+  không thêm dependency hoặc mở swipe gallery/shared element/3D/C02/C04.
+  DESIGN/UI rules/components/catalog đồng bộ. [Video/ảnh100%–130%](../ui/motion-01.html),
+  [kiểm chứng và giới hạn](../ui/MOTION_01.md): RN96/96 (13 file), lint/typecheck,
+  export:web12 routes, Prettier/docs:check/diff PASS. Android390dp/100%–130%,
+  trước/tiếp/mởảnh/Back/Đóng/mởlại, tên dài/Worn/giá1M+999K, byte-loading10s/
+  lỗi503/retry phục hồi, foreground khi ảnh đang tải, reduced motion0→1 trong
+  app đang mở đã xem; đã sửa lỗi thông báo ảnh bị lặp. Before cùng5QA tại053c87e.
+  QA mới riêng latlai-ui-motion/Mongo37017/random *_test, API3046/media3047,
+  storageFAKE;5listing tạo/duyệt/upload quaAPI, mỗi listing1ảnh (không suy ra dữ
+  liệu thật). Emulator GUI tự thoát; khôi phục headlessSwiftShader, không FPS PASS.
+  Warning kết nối ExpoCLI khi foreground đã xác định/phục hồi devclient127;
+  không che warning bằng code. Đã phục hồi app/font/density/animation/reverse,
+  dừng own QA/emulator; giữ Metro/Docker người dùng và preview8089.
+  TalkBack/audio/focus thật/ARM/FPS/release/iOS/web interaction/320dp mới/native
+  catalog/live Supabase NOT RUN. AI review không là human review; gate vẫn mở.
+  Bước tiếp: chủ dự án xem video và duyệt cảm nhận; chỉ sửa phản hồi gói này,
+  không áp sang màn khác trước duyệt. Nền kệ B: [mẫu→Android](../ui/shelf-b-native.html),
+  [evidence304c0a2](../ui/SHELF_B_NATIVE.md); giới hạn thẩm mỹ/native theo evidence.
   **C01 đã merge (PR11/PR12); C02 TẠM HOÃN để làm UI-1; gate review người thật/
   native/release vẫn mở.**
 - Nền UI trước B: [ba mẫu A/B/C](../ui/shelf-directions/README.md) ở21d988e
