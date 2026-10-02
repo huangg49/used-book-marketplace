@@ -8,7 +8,7 @@ import {
 } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
 import { canReviewCatalog, session } from "../../core/session";
-import { Button, ErrorNotice } from "../../core/ui";
+import { Button, CursorPagination, ErrorNotice } from "../../core/ui";
 import {
   book,
   catalog,
@@ -55,28 +55,6 @@ function QueueContent({ kind }: { kind: Kind }) {
     result.data?.pages.flatMap<Listing | Catalog>((page) => page.items) || [];
   return (
     <>
-      <header className="page-heading">
-        <div>
-          <p className="eyebrow">
-            Bàn kiểm duyệt / {kind === "listings" ? "01" : "02"}
-          </p>
-          <h1>
-            {kind === "listings"
-              ? "Trước khi sách chuyền tay."
-              : "Bắt đầu từ đúng đầu sách."}
-          </h1>
-          <p className="intro">
-            {kind === "listings"
-              ? "Đọc mô tả, đối chiếu ảnh và ghi lại một quyết định rõ ràng cho người đăng."
-              : "Kiểm tra tên sách, tác giả và thông tin xuất bản trước khi đưa vào danh mục dùng chung."}
-          </p>
-        </div>
-        <span className="edition">
-          LẬT LẠI
-          <br />
-          VẬN HÀNH · TP.HCM
-        </span>
-      </header>
       <div className="queue-toolbar">
         <div className="tabs" aria-label="Lọc trạng thái">
           {filters.map((value) => (
@@ -178,14 +156,13 @@ function QueueContent({ kind }: { kind: Kind }) {
           </article>
         ))}
       </div>
-      {result.hasNextPage && (
-        <Button
-          busy={result.isFetchingNextPage}
-          onClick={() => void result.fetchNextPage()}
-        >
-          Xem thêm hồ sơ
-        </Button>
-      )}
+      <CursorPagination
+        pageCount={result.data?.pages.length ?? 0}
+        hasNextPage={result.hasNextPage}
+        isFetchingNextPage={result.isFetchingNextPage}
+        onNextPage={() => void result.fetchNextPage()}
+        nextLabel="Xem thêm hồ sơ"
+      />
     </>
   );
 }

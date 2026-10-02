@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { components } from "@used-books/api-contract";
 import { dateText } from "../../core/format";
 import { session } from "../../core/session";
-import { Button, ErrorNotice, Notice } from "../../core/ui";
+import { Button, CursorPagination, ErrorNotice, Notice } from "../../core/ui";
 
 type User = components["schemas"]["OperationsUser"];
 const user = z.object({
@@ -80,17 +80,6 @@ export function UserDirectory() {
   const applySearch = () => setQuery(search.trim());
   return (
     <>
-      <header className="page-heading">
-        <div>
-          <p className="eyebrow">Quản trị tài khoản</p>
-          <h1>Người dùng</h1>
-          <p className="intro">
-            Tra cứu tài khoản và quyền hiện tại để hỗ trợ vận hành. Danh sách này
-            không hiển thị mật khẩu, phiên đăng nhập, địa chỉ hoặc số dư.
-          </p>
-        </div>
-        <p className="edition">CHỈ ĐỌC · ADMIN</p>
-      </header>
       <form
         className="directory-filters"
         onSubmit={(event) => {
@@ -186,11 +175,13 @@ export function UserDirectory() {
           khóa hoặc đổi quyền chưa được cung cấp vì cần quy trình kiểm soát riêng.
         </Notice>
       )}
-      {result.hasNextPage && (
-        <Button busy={result.isFetchingNextPage} onClick={() => void result.fetchNextPage()}>
-          Xem thêm người dùng
-        </Button>
-      )}
+      <CursorPagination
+        pageCount={result.data?.pages.length ?? 0}
+        hasNextPage={result.hasNextPage}
+        isFetchingNextPage={result.isFetchingNextPage}
+        onNextPage={() => void result.fetchNextPage()}
+        nextLabel="Xem thêm người dùng"
+      />
     </>
   );
 }
