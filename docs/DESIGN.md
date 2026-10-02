@@ -178,8 +178,12 @@ acceptance hay duyệt thẩm mỹ.
 
 Chủ dự án chọn hướng này ngày02/10: một dải xanh rừng, mục đang chọn nằm trên
 nền kem bo8px, icon và nhãn xanh; mục còn lại có icon và nhãn giấy. Nhãn dùng
-Be Vietnam Pro700,12/18, luôn hiện và được xuống dòng theo cỡ chữ. Giữ ba đích
-Khám phá/Sách của tôi/Tài khoản và điều kiện quyền hiện có; khi chỉ còn hai đích,
+Be Vietnam Pro700,12/18, luôn hiện và được xuống dòng theo cỡ chữ. Nhãn nhìn thấy
+là Khám phá/Sách tôi/Tài khoản; “Sách tôi” có tên accessible “Sách của tôi”. Dùng
+microcopy gọn và đệm ngang4px để ở320/390dp, chữ130% không có một từ lẻ làm
+phình cả navbar. Không thu nhỏ chữ, tắt font scaling hoặc cắt nhãn để ép một dòng;
+cỡ chữ lớn hơn vẫn được xuống dòng khi cần. Giữ ba đích và điều kiện quyền hiện có;
+khi chỉ còn hai đích,
 chia đều hai vùng chạm, không chừa một ô giả. Không thêm nút nổi, dấu mộc tình
 trạng lên điều hướng, glass/bóng hoặc chuyển động trượt trang trí.
 
@@ -189,6 +193,14 @@ ba nút hệ thống đều nằm dưới navbar app, không cộng bottom inset
 hoặc khóa chiều cao bằng số đo của một máy. Giữ nền sáng tại vùng nút hệ thống
 để các biểu tượng Android còn tương phản; dải xanh kết thúc ở mép footer app.
 Không giả thanh gesture hay tự vẽ nút Back/Home/Recents trong sản phẩm.
+
+App hiện chỉ có một bảng màu sáng. `expo-navigation-bar` đặt nút Android màu
+tối trên vùng safe area sáng, gồm cấu hình startup và component ở root. Với
+SDK57, style `dark` là màu nút theo implementation; bỏ scrim tự động bằng
+`enforceContrast:false` để app chịu trách nhiệm cặp màu rõ ràng. Cần build lại
+binary; không đổi chế độ tối của điện thoại, iOS/web không có navbar hệ thống
+này. Không vá bằng nền inset đoán theo OS theme. Khi có dark theme thật, phải
+đổi đồng bộ nền safe area và màu nút, kiểm cold launch/đổi nóng/resume/Modal.
 
 Áp cùng một component trình bày cho những màn đã có MemberNavigation; không gắn
 thêm vào editor có dirty guard hoặc thay footer giao dịch/form. Trạng thái chọn

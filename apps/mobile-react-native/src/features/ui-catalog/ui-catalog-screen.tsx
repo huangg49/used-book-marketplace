@@ -77,7 +77,12 @@ export function UiCatalogScreen() {
               current={destination}
               destinations={[
                 { key: "discover", title: "Khám phá", icon: "book" },
-                { key: "books", title: "Sách của tôi", icon: "bookmark" },
+                {
+                  key: "books",
+                  title: "Sách tôi",
+                  accessibilityLabel: "Sách của tôi",
+                  icon: "bookmark",
+                },
                 { key: "account", title: "Tài khoản", icon: "person" },
               ]}
               onSelect={setDestination}

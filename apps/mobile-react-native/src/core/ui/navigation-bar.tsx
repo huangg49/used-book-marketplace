@@ -7,6 +7,7 @@ import { colorRoles, metrics, radius, space } from "./theme";
 type Destination<Key extends string> = {
   key: Key;
   title: string;
+  accessibilityLabel?: string;
   icon: IconName;
 };
 
@@ -23,7 +24,7 @@ export function NavigationBar<Key extends string>({
 }) {
   const [focused, setFocused] = useState<Key>();
   return (
-    <View style={{ flexDirection: "row", gap: space.sm }}>
+    <View style={{ flexDirection: "row", gap: space.xs }}>
       {destinations.map((destination) => {
         const selected = destination.key === current;
         const foreground = selected
@@ -33,7 +34,9 @@ export function NavigationBar<Key extends string>({
           <Pressable
             key={destination.key}
             accessibilityRole="tab"
-            accessibilityLabel={destination.title}
+            accessibilityLabel={
+              destination.accessibilityLabel ?? destination.title
+            }
             accessibilityState={{ selected }}
             aria-selected={selected}
             onFocus={() => setFocused(destination.key)}
@@ -48,7 +51,7 @@ export function NavigationBar<Key extends string>({
               alignItems: "center",
               justifyContent: "center",
               gap: space.xs,
-              paddingHorizontal: space.sm,
+              paddingHorizontal: space.xs,
               paddingVertical: space.sm,
               borderRadius: radius.control,
               borderWidth: 2,

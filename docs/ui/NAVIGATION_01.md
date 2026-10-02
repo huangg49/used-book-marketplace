@@ -2,8 +2,10 @@
 
 Nhánh `codex/ui-forest-navigation`, base `f35fb16` (kệ B và chuyển động).
 Chủ dự án duyệt hướng Quầy xanh rừng, yêu cầu kiểm cả gesture và ba nút Android.
-Checkpoint `feat(rn): add forest member navigation`. Chưa push/PR/merge.
-**Đã triển khai; nghiệm thu Android đang chờ Metro8081, chưa chốt gói.**
+Source UI `6c6b8cd` + checkpoint
+`fix(rn): compact navigation labels and configure system buttons`. Chưa push/PR/merge.
+**Bố cục đã kiểm Android; nhãn130% đang hoàn thiện theo phản hồi. APK có module
+thanh hệ thống mới đang chờ Metro khởi động lại để kiểm cuối. Chưa chốt gói.**
 
 ## Thay đổi
 
@@ -19,7 +21,14 @@ Checkpoint `feat(rn): add forest member navigation`. Chưa push/PR/merge.
   Vùng nút hệ thống giữ nền sáng; không tự vẽ handle/Back/Home/Recents.
 - Footer giao dịch/form/showcase mặc định giữ nền cũ và lề20. Không gắn navbar
   vào editor có dirty guard/chi tiết hoặc thêm đích nghiệp vụ mới. Không đổi API,
-  contract, query, permission/session, command hoặc thêm dependency/native config.
+  contract, query, permission/session, command hoặc thêm dependency.
+- Nhãn nhìn thấy đổi thành “Sách tôi”, accessibilityLabel giữ “Sách của tôi”;
+  đệm ngang4px/gap4px, không cắt nhãn/thu nhỏ font/khóa chiều cao. Catalog dùng
+  cùng primitive. 390dp/130% đã thấy một dòng; web320px/135% ba nhãn đều một dòng.
+- Qua kiểm thật phát hiện nút Android khi OS dark bị nhạt trên nền sáng. Thêm
+  `expo-navigation-bar~57.0.3`, plugin enforceContrast:false/style:dark và root
+  SystemNavigationBar style="dark". Source SDK57 dùng dark cho màu nút tối trên
+  nền sáng. Cần binary mới; không sửa generated Android bằng tay hoặc theme OS.
 - DESIGN/UI_COMPONENTS và `/ui` nhóm Điều hướng cập nhật cùng primitive.
 
 ## Kiểm tra đã chạy
@@ -50,26 +59,58 @@ không thay review người thật.
 - [Focus bàn phím](navigation-01/web-focus-390-135.jpg)
 - [Hai mục thật theo vai trò QA](navigation-01/web-two-tabs-390.jpg)
 
-## Phần còn chờ và bước tiếp
+## Android đã kiểm và lỗi phát hiện
 
-**BLOCKED runtime:** Metro8081 không listen khi kiểm; đã gửi lệnh cho chủ dự án
-khởi động. Các lượt trước lệnh start Metro của agent bị duyệt tự động chặn với
-“blocked by policy”; chưa có native evidence mới. Không suy safe area PASS từ JSX.
+QA riêng `latlai-ui-quay`, Mongo37017/random *_test, API3046/media3047; storage
+fixture FAKE. Giữ nguyên5listing qua API, bìa theo bộ [kệ B](SHELF_B_NATIVE.md).
+Không reset/seed lại DB hoặc đụng bucket/config chính. Headless Pixel_7/API35/
+x86_64,1080×2400/density443 ≈390dp. Phiên nối tiếp tạo snapshot mới của app/APK/
+font/density/nav overlay/night/animation/reverses ở ignored `.tmp/ui-quay-native-02`;
+không phục hồi snapshot cũ `.tmp/ui-quay` đè trạng thái mới của người dùng.
 
-QA đã dựng riêng: `latlai-ui-quay`, Mongo37017/random *_test, API3046/media3047,
-storage fixture FAKE;5listing upload/process/duyệt qua API, bìa có nguồn như bộ
-[kệ B](SHELF_B_NATIVE.md). Không đụng DB/bucket/config chính. Headless Pixel_7/API35/
-x86_64,1080×2400/density443 ≈390dp đã snapshot app/font/density/nav overlay/night/
-animation/reverses tại ignored `.tmp/ui-quay`; own QA/emulator giữ sẵn chờ Metro.
+Trên source6c6b8cd/binary cũ, đã thao tác và xem ảnh:
 
-Khi Metro chạy: chụp Android100%/130% ×gesture/ba nút; kiểm chạm Back/Home/Recents,
-nhãn/navbar trên vùng hệ thống, cuối kệ/đổi tab, keyboard search/login và Back;
-kiểm320dp/130% và dark OS nếu phù hợp, phục hồi settings/app snapshot sau QA.
-Ảnh Before gesture có thể tái sử dụng bộ f35fb16 trong
-[motion01](MOTION_01.md); ghi rõ nguồn, không giả Before ba nút hoặc so web với
-native như cùng một phép thử. Cập nhật báo cáo này và SESSION_STATE bằng kết quả
-thực, chụp trước/sau rồi chờ chủ dự án duyệt thẩm mỹ; chưa push/merge.
+- Gesture/ba nút ×100%/130%: navbar ngoài cuộn và trên vùng hệ thống, không đè
+  tab/nhãn. Ở130%, “Sách của tôi” xuống hai dòng đầy đủ, cả hàng tăng chiều cao.
+  Bounds ba nút: tab y2067–2245(100%)/1997–2245(130%), hệ thống y2267–2400.
+- 320dp/130%: ba nhãn hiện đủ hai dòng; chạm “Sách của tôi” khi anonymous mở
+  login theo gate hiện có. Không coi đây là nghiệm thu draft của Member.
+- Login có IME thật; Back ẩn bàn phím, giữ nội dung “qa”. Tìm `qa-no-match` có
+  bàn phím, Search/Enter đến rỗng, bỏ lọc phục hồi5cuốn. Cuối kệ tên dài/Worn/
+  giá1M+999K, thông báo/nút cập nhật vẫn cuộn xem đủ trên navbar.
+- Chạm thật Back từ login về kệ, Home đến launcher, Recents đến app card.
+  Khi trở lại có warning devclient ExpoCLI10.0.2.2:8081; cold launch URL127 đã
+  phục hồi. Không sửa product để giấu warning hoặc dùng ảnh toast làm ảnh chuẩn.
+- OS dark cold launch: gesture rõ, nhưng ba nút chỉ khoảng **2.04:1** với nền;
+  đây là lỗi thực, không ghi PASS. Patch paint bottom inset theo useColorScheme
+  đạt lúc cold nhưng đổi nóng có ca **1.44:1**; override JS sau startup cũng chưa
+  sửa được cold launch. Cả hai thử nghiệm đã bỏ, Screen/root JS trở về6c6b8cd.
 
-NOT RUN: native các ca trên, TalkBack/audio/focus thật, ARM/FPS/release/iOS và
-API E2E/live Supabase không liên quan. Human review/native/release gate vẫn mở;
-C02/C04 chưa bắt đầu.
+## Cấu hình Android và phần còn chờ
+
+Thử android.userInterfaceStyle=light và build4m23s thành công nhưng nút OS dark
+vẫn nhạt trên APK thật; đã bỏ config này. Phương án hiện tại dùng module chính
+thức Expo, vì cần đặt màu nút trực tiếp thay vì đoán theo Appearance.
+`node scripts/build-android.mjs --emulator` với Node24.19/JDK21.0.11/Ninja1.12.1
+PASS4m46s,338tasks, APK debug x86_64; cài-r QA. Có warning deprecated/Windows
+object path nhưng exit0. Generated styles xác nhận windowLightNavigationBar=true
+và enforceNavigationBarContrast=false. Đã backuporiginalAPK/app; không commit APK.
+RN96/96/typecheck/lint PASS; web export12routes PASS và IAB320px/135%/Enter/selected
+đã xem trên nhãn mới. [Ảnh web nhãn gọn](navigation-01/web-compact-320-135.jpg).
+
+**BLOCKED runtime:** Metro process còn nhưng /status timeout10s sau cập nhật
+dependency; app chờ splash. Đã gửi yêu cầu restart --clear cho chủ dự án. Lệnh
+start Metro của agent các lượt trước bị duyệt tự động chặn “blocked by policy”.
+QA API/media/Mongo/emulator giữ sẵn; chưa lấy ảnh splash làm nghiệm thu.
+
+Bước tiếp: khi Metro online, kiểm chính binary mới ở OS dark cold/hot/resume,
+gesture/ba nút; chụp6ảnh cuối100%/130%, kiểm320dp nếu cần. Before gesture tái sử
+dụng f35fb16 trong [motion01](MOTION_01.md); không có Before ba nút. Gallery đã
+dựng tại `navigation-01.html` nhưng chưa mở duyệt vì ảnh cuối chưa đủ. Sau kiểm,
+phục hồi app/settings/reverses, dừng own QA/emulator, cập nhật evidence và
+SESSION_STATE, commit checkpoint rồi chờ chủ dự án duyệt thẩm mỹ. Chưa push/merge.
+Giữ binary có module mới để tương thích source; original APK đã backup riêng.
+
+NOT RUN: nghiệm thu APK mới/các ca trên, TalkBack/audio/focus thật, ARM/FPS/
+release/iOS và API E2E/live Supabase không liên quan. Human review/native/release
+gate vẫn mở; C02/C04 chưa bắt đầu.

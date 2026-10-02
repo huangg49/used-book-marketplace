@@ -2,10 +2,11 @@
 
 ## Nguồn và việc đang làm
 
-- **UI-1 — QUẦY XANH RỪNG ĐÃ CODE / CHỜ KIỂM ANDROID.** Chủ dự án duyệt
+- **UI-1 — QUẦY XANH RỪNG ĐÃ KIỂM BỐ CỤC / CHỜ KIỂM APK SỬA OS DARK.** Chủ dự án duyệt
   hướng navbar và yêu cầu tránh cả gesture/ba nút Android ngày02/10. Nhánh
   `codex/ui-forest-navigation`, base `f35fb16`; checkpoint
-  `feat(rn): add forest member navigation`. Chưa push/PR/merge, main giữ nguyên.
+  `6c6b8cd` + checkpoint `fix(rn): compact navigation labels and configure system buttons`.
+  Chưa push/PR/merge, main giữ nguyên.
   NavigationBar trình bày chung, MemberNavigation giữ route/session/filter quyền;
   footer xanh opt-in5consumer, nhãn12/18/bo8/focus, SafeAreaView sở hữu inset một
   lần, vùng nút hệ thống sáng. Form/chi tiết/editor giữ footer cũ/dirty guard.
@@ -14,13 +15,28 @@
   export:web12routes PASS; web320/390px/catalog135%,Tab/Enter/selected/focus,
   hai mục QA TEST_OPERATOR và đăng xuất về ba mục đã xem. Đã sửa aria-selected
   sau kiểm web; origin8093 chỉ bổ sung vào ignored QA harness, không backend product.
-  **Metro8081 chưa chạy**: đã gửi lệnh thủ công; native100/130%×gesture/ba nút,
-  keyboard/Back/cuối màn và320dp/TalkBack vẫn chưa kiểm, không nhận native PASS.
-  QA riêng latlai-ui-quay/Mongo37017/random *_test, API3046/media3047/storageFAKE,
-  5listing quaAPI, ownemulator đãsnapshot app/settings/nav/night/reverses, giữsẵn
-  chờMetro; notesignored `.tmp/ui-quay`. Bước tiếp khiMetroonline: kiểm/chụp các
-  ca Android trên, sửa nếu lỗi, restore/dừngownQA, cập nhật evidence/SESSION rồi
-  chờ chủ dự án duyệt ảnh. Không mở C02/C04 hoặc đóng human/native/release gate.
+  Android390dp×100/130%×gesture/ba nút,320dp/130%, cuối kệ, search/rỗng/bỏ lọc,
+  loginIME/Back giữ dữ liệu, chạmOSBack/Home/Recents đã xem. **Có lỗi OS dark**:
+  ba nút nhạt2.04:1; thử paint inset đạt cold nhưng failhot1.44:1, JSoverride
+  cũng failcold, cả hai đã bỏ. Androidlight nativeconfig thử tiếp vẫn faildark,
+  đã bỏ. Hiện thêm expo-navigation-bar57.0.3 + plugin enforceContrastfalse/dark,
+  rootSystemNavigationBar dark; build debug x86_64/JDK21 PASS4m46s/338tasks/cài-rQA.
+  BackuporiginalAPK/app đầy đủ; cần binary mới có module để chạy source hiện tại.
+  Theo phản hồi130%, đổi nhãn nhìn thấy thành “Sách tôi”, tên accessible vẫn
+  “Sách của tôi”, đệm ngang/gap4px. 390dp/130% thấy một dòng; web320/135% cả3nhãn
+  một dòng/Enter/selectedPASS. RN96/lint/types/export12PASS, catalog cập nhật.
+  **Metro8081 /status timeout10s sau đổi dependency**: app chờ splash; đã gửi
+  lệnh restart --clear. Chưa kiểm APK module mới/khôngPASS. QA riêng latlai-ui-quay/Mongo37017/random
+  *_test, API3046/media3047/storageFAKE/5listing giữ nguyên; ownemulator snapshot
+  MỚI tại `.tmp/ui-quay-native-02`, chưa restore/stop, không dùng snapshot cũ.
+  KhiMetroonline: kiểmAPK mới cold/hot/resume OSdark và6ảnh gesture/ba nút100/130%;
+  copyảnhfinal/mởgallery, restoreapp/settings/reverses/dừngownQA, cập nhật
+  evidence/SESSION/commit rồi chờ chủ dự án duyệt thẩm mỹ. Nativeconfig cần binary
+  mới; giữ APK có expo-navigation-bar để chạy code mới (APK cũ đã backup, không
+  downgrade rồi chạy source yêu cầu module mới). Metro reload không thay resource APK.
+  Gallery `docs/ui/navigation-01.html` còn working copy chưa đủ6PNG cuối; chưa mở
+  duyệt/chưa commit gallery. TalkBack/ARM/iOS/releaseNOTRUN;
+  không mở C02/C04 hoặc đóng human/native/release gate.
 - **UI-1 — CHUYỂN ĐỘNG XEM SÁCH ĐÃ LÀM / CHỜ DUYỆT CẢM NHẬN.** Chủ dự án
   duyệt ba ưu tiên ngày02/10. Nhánh `codex/ui-motion`, base `053c87e` (kệ B tại304c0a2);
   checkpoint `feat(rn): add restrained motion to browsing and book photos`.

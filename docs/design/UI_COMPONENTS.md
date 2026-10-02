@@ -212,10 +212,12 @@ không dùng placeholder làm nhãn. Các trường không truyền vẫn lấy 
 `ActionRow` dùng ở tài khoản; mẫu tương tác nằm trong nhóm Hộp thoại của `/ui`.
 
 `NavigationBar` trong UI library là component trình bày: nhận `destinations`
-(key/title/icon), `current` và `onSelect`; không đọc session hoặc tự điều hướng.
+(key/title/icon, accessibilityLabel tùy chọn), `current` và `onSelect`; không đọc session hoặc tự điều hướng.
 Nền xanh rừng được cấp bởi `Screen footerAppearance="navigation"`, nằm ngoài
 ScrollView. Mục chọn có nền surface/bo8, icon và nhãn rừng; mục còn lại màu giấy.
-Nhãn `navigationLabel` BeBold12/18 được xuống dòng; các vùng chạm chia đều theo
+Nhãn `navigationLabel` BeBold12/18 được xuống dòng; “Sách tôi” giữ tên accessible
+“Sách của tôi”, đệm ngang4px giúp ba nhãn gọn ở130%. Không ép font nhỏ/cắt nhãn.
+Các vùng chạm chia đều theo
 số đích thật, không khóa chiều cao hoặc cắt nhãn. Focus dùng viền rừng trên nền
 kem, lá non trên nền xanh. `/ui` nhóm Điều hướng có mẫu đổi chọn và thử chữ lớn.
 
@@ -225,6 +227,11 @@ chỉ đọc và danh sách sách; không gắn trong editor để bỏ qua dirt
 thêm tab ví/chat/giao dịch giả. Screen mặc định giữ footer giấy cho form/giao dịch.
 SafeAreaView sở hữu inset một lần; navbar không tự cộng bottom padding. Vùng nút
 Android giữ nền sáng và nằm dưới footer app, kiểm cả gesture/ba nút hệ thống.
+`expo-navigation-bar` SDK57 ở root dùng alias `SystemNavigationBar`, khác primitive
+navbar của app. Plugin `enforceContrast:false/style:dark` và root `style="dark"`
+đặt nút Android tối trên safe area sáng; cần binary có module/config mới. Giữ
+font scaling, gesture và visibility hệ thống. Không thêm padding/paint nền inset
+hoặc đổi theme điện thoại. Dark theme sau này cần đổi đồng bộ nền và màu nút.
 
 Kệ công khai dùng `SearchField.onSubmitEditing` để tìm bằng phím Search/Enter và
 `maxLength` để giới hạn đầu vào; feature vẫn kiểm tra độ dài Unicode theo contract.

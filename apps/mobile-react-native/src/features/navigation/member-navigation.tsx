@@ -4,7 +4,7 @@ import { NavigationBar } from "../../core/ui";
 
 const destinations = [
   { href: "/", title: "Khám phá", icon: "book" },
-  { href: "/drafts", title: "Sách của tôi", icon: "bookmark" },
+  { href: "/drafts", title: "Sách tôi", icon: "bookmark" },
   { href: "/account", title: "Tài khoản", icon: "person" },
 ] as const;
 
@@ -29,6 +29,8 @@ export function MemberNavigation({
         .map((item) => ({
           key: item.href,
           title: item.title,
+          accessibilityLabel:
+            item.href === "/drafts" ? "Sách của tôi" : item.title,
           icon: item.icon,
         }))}
       onSelect={(href) => router.navigate(href)}
