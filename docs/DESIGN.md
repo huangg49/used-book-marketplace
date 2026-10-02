@@ -154,10 +154,11 @@ thứ tự cuốn giữ vị trí đang xem. Không cam kết giữ vị trí kh
 
 Tên dùng Be Vietnam Pro700,16/23, tối đa **ba dòng**; tác giả một dòng, “…” khi
 quá dài. Màn chi tiết và nhãn accessibility giữ đủ. Các cuốn cùng hàng căn vùng
-bìa, đầu tên, dấu và giá. Tên và tác giả cách nhau4dp, đi liền thành một cụm;
-chiều cao cụm bằng cuốn cao nhất trong hàng, đo theo chữ thực tế và tối đa ba
-dòng tên. Hàng toàn tên ngắn không giữ ba dòng trống; phần đệm căn hàng nằm sau
-tác giả, không chen giữa tên và tác giả. Giá một mức để chỗ
+bìa, đầu tên và vùng giá ở đáy thẻ. Tên và tác giả cách nhau 4dp, dấu tình trạng
+cách tác giả 8dp; cả ba đi liền theo chiều cao tự nhiên của từng cuốn. Không đo
+hoặc chừa chiều cao theo tên cuốn khác để căn dấu. Dấu giữa các cuốn được phép
+lệch cao độ. Phần đệm để căn giá nằm sau dấu tình trạng; không chen giữa tác giả
+và dấu. Tên vẫn tối đa ba dòng. Giá một mức để chỗ
 cho mức thứ hai, không thêm dữ liệu giả. Tình trạng, nhãn Bán/Đổi và số tiền
 không bị cắt hoặc thu nhỏ. Cả hai hình thức phải hiện đúng giá, không chọn giá
 rẻ hơn làm đại diện. Người bán và phiếu mô tả đầy đủ ở chi tiết.

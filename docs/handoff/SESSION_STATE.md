@@ -2,25 +2,29 @@
 
 ## Nguồn và việc đang làm
 
-- **UI-1 — GIÃN CÁCH KHÁM PHÁ ĐÃ CHỈNH / CHỜ DUYỆT ẢNH.** Nhánh
-  `codex/ui-shelf-spacing`, base `0ec35c1`; checkpoint
-  `fix(rn): refine discovery spacing and book metadata alignment`. Chưa push/merge.
-  Gộp sắp xếp/trang với điều khiển hàng đầu, bỏ tiêu đề Hàng sách1 lặp;
-  nhóm khoảng cách8/12/16/24dp và bỏ vùng phân trang rỗng. Tên+tác giả đi liền,
-  đo chiều cao cụm theo cuốn cao nhất của hàng; tên tối đa3dòng, dấu/giá thẳng
-  hàng, không thu nhỏ font. Không đổi API/query/order/navigation, màn chi tiết
-  hoặc navbar. DESIGN đã cập nhật; [ảnh trước/sau](../ui/shelf-spacing.html).
-  RN96/96tests, lint/typecheck và webexport12routesPASS. Android390dp100/130%,
-  ba nút130%, chạm qua cuốn/scroll hàng cuối/tên dài/Cũ nhiều/giá1M+999K đã xem.
-  Web390px đo cùng hàng dấu/giá thẳng nhau; tìmGatsby một cuốn thu cụm tên+tác
-  giả còn71px. Chưa hoàn tất vòng rỗng/lỗi/keyboard/Back của gói này.
-  Sau ngắt phiên, API QA3046 báoSANDBOX_LOST: sandbox cũ thiếu identity sau
-  container restart; không reset/replay vào cấu hình cũ. Ảnh và kiểm tra trên
-  thực hiện trước gián đoạn; cần sandbox mới có tên riêng khi kiểm tiếp.
-  Snapshot `.tmp/ui-shelf-spacing` đãrestoreapp/font/density/nav/night/reverse;
-  giữMetro của người dùng. Bước tiếp: duyệt ảnh; nếu cần sửa tiếp, tạoQA mới
-  theoSTART_HERE, giữ journal/config cũ để đối chiếu. Lỗi nútOSdark/API35 từ
-  gói trước, TalkBack/ARM/iOS/human/native/release gates vẫn mở; C02/C04 hoãn.
+- **UI-1 — DẤU TÌNH TRẠNG ĐI SÁT TÁC GIẢ / CHỜ DUYỆT ẢNH.** Nhánh
+  `codex/ui-shelf-spacing`, base `0ec35c1`; vòng giãn cách `09be958`, bổ sung
+  `fix(rn): keep condition stamps beside book metadata`. Chưa push/merge.
+  Chủ dự án duyệt bỏ căn dấu theo cuốn tên dài: tên+tác giả+dấu theo chiều cao
+  tự nhiên, dấu cách tác giả 8dp, chỉ vùng giá căn đáy cùng hàng. Đã bỏ state/
+  onLayout đo tên chung; tên vẫn tối đa ba dòng, đầy đủ ở chi tiết/accessibility.
+  Giữ nhịp 8/12/16/24dp, tiêu đề gọn từ vòng trước; không đổi nghiệp vụ/API/
+  query/navigation hoặc navbar. DESIGN đã đồng bộ;
+  [ảnh trước/sau 100%/130%](../ui/shelf-stamp-flow.html).
+  RN 96/96 tests, lint/typecheck và web export12routes PASS. Android390dp100/130%,
+  ba nút130%, chạm qua cuốn/cuộn hàng cuối/tên dài/Cũ nhiều/giá1M+999K đã xem;
+  mở chi tiết tên đầy đủ rồi Back giữ vị trí. Web390px đo năm cuốn: dấu cách
+  metadata8px, giá thẳng cùng hàng. Không chạy lại toàn bộ empty/error/keyboard
+  của màn vì lần này chỉ bỏ khoảng đệm và state đo chiều cao trong thẻ.
+  Đã phục hồi QA bằng run mới `.tmp/demo/ui-stamp-flow`, database ngẫu nhiên
+  `*_test` trên replica37017; năm listing tạo/duyệt qua API, storageFAKE.
+  Run cũ `.tmp/demo/ui-quay` giữ nguyên sau SANDBOX_LOST (QA tmpfs mất dữ liệu
+  khi container restart). Không reset hoặc replay journal cũ vào database rỗng.
+  Snapshot `.tmp/ui-stamp-flow` đã restore app/settings/nav/night/reverse;
+  own emulator/API/media/preview8093 đã dừng, giữ Metro/Docker/ảnh8089.
+  Bước tiếp: chủ dự án duyệt ảnh; dùng run QA mới
+  nếu container chưa restart, nếu đã restart thì initialize tên mới theo START_HERE.
+  Lỗi nútOSdark/API35, TalkBack/ARM/iOS/human/native/release vẫn mở; C02/C04 hoãn.
 
 - **UI-1 — QUẦY XANH RỪNG / NHÃN130% ĐÃ SỬA, CHỜ DUYỆT ẢNH.** Chủ dự án duyệt
   hướng navbar và yêu cầu tránh cả gesture/ba nút Android ngày02/10. Nhánh

@@ -55,27 +55,6 @@ function ShelfRail({
   const reducedMotion = useReducedMotion();
   const viewport = Math.min(width - space.xl * 2, metrics.content);
   const cardWidth = Math.min(viewport, scale >= 1.29 ? 224 : 160);
-  // Measure the natural title + author group, never the shared-height wrapper. A row
-  // of short titles need not reserve a third line. Reflow invalidates measurements
-  // without remounting the rail or losing its horizontal scroll position.
-  const titleKey = JSON.stringify([
-    cardWidth,
-    scale,
-    items.map((item) => [item.id, item.book.title, item.book.authors]),
-  ]);
-  const [titles, setTitles] = useState<{
-    key: string;
-    heights: Record<string, number>;
-  }>({ key: titleKey, heights: {} });
-  const titleHeight =
-    titles.key === titleKey ? Math.max(0, ...Object.values(titles.heights)) : 0;
-  const measureTitle = (id: string, height: number) => {
-    setTitles((previous) => {
-      const heights = previous.key === titleKey ? previous.heights : {};
-      if (heights[id] === height) return previous;
-      return { key: titleKey, heights: { ...heights, [id]: height } };
-    });
-  };
   const step = cardWidth + space.lg;
   const scroll = useRef<ScrollView>(null);
   const offset = useRef(0);
@@ -172,9 +151,6 @@ function ShelfRail({
             item={item}
             cardWidth={cardWidth}
             scale={scale}
-            titleHeight={titleHeight}
-            measurementKey={titleKey}
-            onTitleLayout={(height) => measureTitle(item.id, height)}
             renderPhoto={renderPhoto}
             onOpen={onOpen}
             focusBook={() => move(index * step)}
@@ -189,9 +165,6 @@ function RailBook({
   item,
   cardWidth,
   scale,
-  titleHeight,
-  measurementKey,
-  onTitleLayout,
   renderPhoto,
   onOpen,
   focusBook,
@@ -199,9 +172,6 @@ function RailBook({
   item: Listing;
   cardWidth: number;
   scale: number;
-  titleHeight: number;
-  measurementKey: string;
-  onTitleLayout: (height: number) => void;
   renderPhoto: Props["renderPhoto"];
   onOpen: Props["onOpen"];
   focusBook: () => void;
@@ -251,29 +221,25 @@ function RailBook({
           focused && layout.focus,
         ]}
       >
-        <View style={{ minHeight: titleHeight }}>
-          <View
-            key={measurementKey}
-            style={{ gap: space.xs }}
-            onLayout={(event) => onTitleLayout(event.nativeEvent.layout.height)}
+        <View style={{ gap: space.xs }}>
+          <AppText kind="shelfTitle" numberOfLines={3} ellipsizeMode="tail">
+            {item.book.title}
+          </AppText>
+          <AppText
+            kind="annotation"
+            color={colors.muted}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={{ minHeight: typography.annotation[1] * scale }}
           >
-            <AppText kind="shelfTitle" numberOfLines={3} ellipsizeMode="tail">
-              {item.book.title}
-            </AppText>
-            <AppText
-              kind="annotation"
-              color={colors.muted}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              style={{ minHeight: typography.annotation[1] * scale }}
-            >
-              {item.book.authors.join(" · ")}
-            </AppText>
-          </View>
+            {item.book.authors.join(" · ")}
+          </AppText>
         </View>
         <BookCondition stamp condition={conditions[item.condition]} />
         <View
           style={{
+            // Only offers align across the rail. Keep the condition stamp with
+            // its own book; extra space belongs between that group and prices.
             marginTop: "auto",
             minHeight: typography.shelfPrice[1] * scale * 2 + space.sm,
           }}
