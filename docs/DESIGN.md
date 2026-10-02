@@ -154,7 +154,10 @@ thứ tự cuốn giữ vị trí đang xem. Không cam kết giữ vị trí kh
 
 Tên dùng Be Vietnam Pro700,16/23, tối đa **ba dòng**; tác giả một dòng, “…” khi
 quá dài. Màn chi tiết và nhãn accessibility giữ đủ. Các cuốn cùng hàng căn vùng
-bìa, tên, dấu và giá; chiều cao tên dự trữ theo cỡ chữ thật, giá một mức để chỗ
+bìa, đầu tên, dấu và giá. Tên và tác giả cách nhau4dp, đi liền thành một cụm;
+chiều cao cụm bằng cuốn cao nhất trong hàng, đo theo chữ thực tế và tối đa ba
+dòng tên. Hàng toàn tên ngắn không giữ ba dòng trống; phần đệm căn hàng nằm sau
+tác giả, không chen giữa tên và tác giả. Giá một mức để chỗ
 cho mức thứ hai, không thêm dữ liệu giả. Tình trạng, nhãn Bán/Đổi và số tiền
 không bị cắt hoặc thu nhỏ. Cả hai hình thức phải hiện đúng giá, không chọn giá
 rẻ hơn làm đại diện. Người bán và phiếu mô tả đầy đủ ở chi tiết.
@@ -166,6 +169,13 @@ chiều rộng theo viewport; giá được wrap và chiều cao tăng tự nhi�
 390dp/100%–130%, tên dài, một/hai giá và hàng cuối không đủ ba cuốn; ảnh tư liệu
 QA phải phân biệt với listing thật. Không coi ảnh HTML hoặc tests xanh là native
 acceptance hay duyệt thẩm mỹ.
+
+Nhịp khoảng cách của Khám phá:12dp từ mặt tiền tới bộ lọc;16dp giữa bộ lọc và
+khu sách;8dp trong cụm tiêu đề/điều khiển;12dp từ điều khiển tới bìa;24dp giữa
+hai hàng. Tình trạng và giá cách cụm liền trước8dp. Hàng đầu dùng ngay tiêu đề
+khu sách và gộp thông tin sắp xếp/trang với số cuốn, không thêm “Hàng sách1”.
+Không giữ hàng phân trang rỗng khi chưa có trang trước/tiếp. Dùng spacing tokens,
+không nén vùng chạm hoặc thu nhỏ chữ để lấy thêm chỗ.
 
 ### Token bổ trợ cho mặt tiền B
 

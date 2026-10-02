@@ -76,6 +76,7 @@ export function ShelfScreen() {
     Number(!!(applied.minSalePrice || applied.maxSalePrice)) +
     Number(!!(applied.minExchangeValue || applied.maxExchangeValue));
   const hasCriteria = !!applied.q || filterCount > 0;
+  const shelfSummary = `${sorts[applied.sort]}${applied.condition ? ` · ${conditions[applied.condition as keyof typeof conditions]}` : ""} · Trang ${cursors.length}`;
   const openFilters = () => {
     Keyboard.dismiss();
     setDraft({ ...applied, q: search });
@@ -91,218 +92,230 @@ export function ShelfScreen() {
       footerAppearance="navigation"
       compactFooter
     >
-      <View style={{ gap: space.md }}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: space.sm,
-            backgroundColor: colors.forest,
-            marginHorizontal: -space.xl,
-            marginTop: -space.lg,
-            paddingHorizontal: space.xl,
-            paddingBottom: space.lg,
-          }}
-        >
-          <View style={{ flex: 1 }}>
-            <SearchField
-              label="Tìm sách"
-              submitLabel="Tìm trên kệ"
-              placeholder="Tên, tác giả, ISBN"
-              maxLength={400}
-              onSubmitEditing={() => apply({ ...applied, q: search })}
-              value={search}
-              onChangeText={setSearch}
-            />
-          </View>
-          <IconButton
-            name="tune"
-            label={`Lọc và sắp xếp${filterCount ? `, ${filterCount} mục đang áp dụng` : ""}`}
-            onPress={openFilters}
-          />
-        </View>
-        {error && !filterOpen ? <Notice tone="error">{error}</Notice> : null}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: space.sm }}
-        >
-          {Object.entries({ "": "Tất cả", ...modes }).map(([key, title]) => (
-            <Chip
-              key={key}
-              title={title}
-              selected={applied.mode === key}
-              onPress={() => apply({ ...applied, q: search, mode: key })}
-            />
-          ))}
-        </ScrollView>
-      </View>
-      <View style={{ gap: space.sm }}>
-        <View
-          style={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            alignItems: "baseline",
-            justifyContent: "space-between",
-            columnGap: space.sm,
-            rowGap: space.xs,
-          }}
-        >
-          <AppText
-            kind="bookHeading"
-            color={colors.forest}
-            accessibilityRole="header"
-          >
-            {applied.q
-              ? `Kết quả cho “${applied.q}”`
-              : "Một kệ sách, nhiều sắc màu."}
-          </AppText>
-          <AppText kind="small" color={colors.muted}>
-            {sorts[applied.sort]}
-            {applied.condition
-              ? ` · ${conditions[applied.condition as keyof typeof conditions]}`
-              : ""}{" "}
-            · Trang {cursors.length}
-          </AppText>
-        </View>
-        {(
-          [
-            ["minSalePrice", "maxSalePrice", "Giá bán"],
-            ["minExchangeValue", "maxExchangeValue", "Giá trị đổi"],
-          ] as const
-        ).map(([min, max, label]) =>
-          applied[min] || applied[max] ? (
-            <AppText key={min} kind="small" color={colors.muted}>
-              {label}:{" "}
-              {applied[min]
-                ? `từ ${formatVnd(Number(applied[min]))}`
-                : "không giới hạn dưới"}
-              {applied[max]
-                ? ` đến ${formatVnd(Number(applied[max]))}`
-                : ", không giới hạn trên"}
-            </AppText>
-          ) : null,
-        )}
-        {hasCriteria && (
-          <View style={{ alignSelf: "flex-start" }}>
-            <Chip
-              title="Bỏ bộ lọc"
-              selected={false}
-              onPress={() => apply(initialFilters)}
-            />
-          </View>
-        )}
-      </View>
-      {result.isPending && <StatePanel loading title="Đang xếp sách lên kệ" />}
-      {result.error && (
-        <>
-          <Notice tone="error">
-            {result.data
-              ? "Chưa cập nhật được kệ. Danh sách dưới đây là lần tải trước; sách có thể không còn khả dụng. "
-              : ""}
-            {presentError(result.error).message}
-          </Notice>
-          <Button
-            title={cursor ? "Tải lại từ trang đầu" : "Thử tải lại kệ"}
-            secondary
-            busy={result.isFetching}
-            onPress={() => {
-              if (cursor) setCursors([""]);
-              else void result.refetch();
+      <View style={{ gap: space.lg }}>
+        <View style={{ gap: space.md }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: space.sm,
+              backgroundColor: colors.forest,
+              marginHorizontal: -space.xl,
+              marginTop: -space.lg,
+              paddingHorizontal: space.xl,
+              paddingBottom: space.lg,
             }}
-          />
-        </>
-      )}
-      {result.data?.items.length === 0 && !result.error && (
-        <View
-          style={{
-            paddingVertical: space.xl,
-            borderTopWidth: 1,
-            borderColor: colors.rule,
-            gap: space.md,
-          }}
-        >
-          <Icon name="book" size={32} />
-          <AppText kind="card" color={colors.forest}>
-            {hasCriteria
-              ? "Chưa gặp cuốn bạn tìm."
-              : "Kệ đang đợi những cuốn sách đầu tiên."}
-          </AppText>
-          <AppText kind="small" color={colors.muted}>
-            {hasCriteria
-              ? "Thử tên tác giả, một từ khóa ngắn hơn hoặc bỏ bớt bộ lọc."
-              : "Bạn có sách đã đọc xong? Hãy chuẩn bị một bản nháp để gửi đến người đọc tiếp theo."}
-          </AppText>
-          {!hasCriteria && (
-            <Button
-              title="Mở sách của tôi"
-              onPress={() => router.navigate("/drafts")}
+          >
+            <View style={{ flex: 1 }}>
+              <SearchField
+                label="Tìm sách"
+                submitLabel="Tìm trên kệ"
+                placeholder="Tên, tác giả, ISBN"
+                maxLength={400}
+                onSubmitEditing={() => apply({ ...applied, q: search })}
+                value={search}
+                onChangeText={setSearch}
+              />
+            </View>
+            <IconButton
+              name="tune"
+              label={`Lọc và sắp xếp${filterCount ? `, ${filterCount} mục đang áp dụng` : ""}`}
+              onPress={openFilters}
             />
+          </View>
+          {error && !filterOpen ? <Notice tone="error">{error}</Notice> : null}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: space.sm }}
+          >
+            {Object.entries({ "": "Tất cả", ...modes }).map(([key, title]) => (
+              <Chip
+                key={key}
+                title={title}
+                selected={applied.mode === key}
+                onPress={() => apply({ ...applied, q: search, mode: key })}
+              />
+            ))}
+          </ScrollView>
+        </View>
+        <View style={{ gap: space.sm }}>
+          <View style={{ gap: space.sm }}>
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                columnGap: space.sm,
+                rowGap: space.xs,
+              }}
+            >
+              <AppText
+                kind="bookHeading"
+                color={colors.forest}
+                accessibilityRole="header"
+              >
+                {applied.q
+                  ? `Kết quả cho “${applied.q}”`
+                  : "Một kệ sách, nhiều sắc màu."}
+              </AppText>
+              {!result.data?.items.length && (
+                <AppText kind="small" color={colors.muted}>
+                  {shelfSummary}
+                </AppText>
+              )}
+            </View>
+            {(
+              [
+                ["minSalePrice", "maxSalePrice", "Giá bán"],
+                ["minExchangeValue", "maxExchangeValue", "Giá trị đổi"],
+              ] as const
+            ).map(([min, max, label]) =>
+              applied[min] || applied[max] ? (
+                <AppText key={min} kind="small" color={colors.muted}>
+                  {label}:{" "}
+                  {applied[min]
+                    ? `từ ${formatVnd(Number(applied[min]))}`
+                    : "không giới hạn dưới"}
+                  {applied[max]
+                    ? ` đến ${formatVnd(Number(applied[max]))}`
+                    : ", không giới hạn trên"}
+                </AppText>
+              ) : null,
+            )}
+            {hasCriteria && (
+              <View style={{ alignSelf: "flex-start" }}>
+                <Chip
+                  title="Bỏ bộ lọc"
+                  selected={false}
+                  onPress={() => apply(initialFilters)}
+                />
+              </View>
+            )}
+          </View>
+          {result.isPending && (
+            <StatePanel loading title="Đang xếp sách lên kệ" />
           )}
+          {result.error && (
+            <>
+              <Notice tone="error">
+                {result.data
+                  ? "Chưa cập nhật được kệ. Danh sách dưới đây là lần tải trước; sách có thể không còn khả dụng. "
+                  : ""}
+                {presentError(result.error).message}
+              </Notice>
+              <Button
+                title={cursor ? "Tải lại từ trang đầu" : "Thử tải lại kệ"}
+                secondary
+                busy={result.isFetching}
+                onPress={() => {
+                  if (cursor) setCursors([""]);
+                  else void result.refetch();
+                }}
+              />
+            </>
+          )}
+          {result.data?.items.length === 0 && !result.error && (
+            <View
+              style={{
+                paddingVertical: space.xl,
+                borderTopWidth: 1,
+                borderColor: colors.rule,
+                gap: space.md,
+              }}
+            >
+              <Icon name="book" size={32} />
+              <AppText kind="card" color={colors.forest}>
+                {hasCriteria
+                  ? "Chưa gặp cuốn bạn tìm."
+                  : "Kệ đang đợi những cuốn sách đầu tiên."}
+              </AppText>
+              <AppText kind="small" color={colors.muted}>
+                {hasCriteria
+                  ? "Thử tên tác giả, một từ khóa ngắn hơn hoặc bỏ bớt bộ lọc."
+                  : "Bạn có sách đã đọc xong? Hãy chuẩn bị một bản nháp để gửi đến người đọc tiếp theo."}
+              </AppText>
+              {!hasCriteria && (
+                <Button
+                  title="Mở sách của tôi"
+                  onPress={() => router.navigate("/drafts")}
+                />
+              )}
+              <Button
+                title="Làm mới kệ"
+                secondary
+                busy={result.isFetching}
+                onPress={() => void result.refetch()}
+              />
+            </View>
+          )}
+          <ShelfRails
+            summary={shelfSummary}
+            key={`${query}:${cursor}`}
+            items={result.data?.items ?? []}
+            onOpen={(item) =>
+              router.push({ pathname: "./book", params: { id: item.id } })
+            }
+            renderPhoto={(item, onFocus) => (
+              <PublicPhoto
+                listingId={item.id}
+                revisionId={item.revisionId}
+                mediaId={item.photos[0].id}
+                label={`Ảnh sách ${item.book.title}`}
+                active={active && !result.isError}
+                rail
+                onCoverFocus={onFocus}
+                onOpen={() =>
+                  router.push({ pathname: "./book", params: { id: item.id } })
+                }
+              />
+            )}
+          />
+        </View>
+        {(cursors.length > 1 || (result.data?.nextCursor && !result.error)) && (
+          <View
+            style={{ flexDirection: "row", flexWrap: "wrap", gap: space.md }}
+          >
+            {cursors.length > 1 && (
+              <Button
+                title="Trang trước"
+                secondary
+                disabled={result.isFetching}
+                onPress={() => {
+                  setCursors((previous) => previous.slice(0, -1));
+                  scroll.current?.scrollTo({ y: 0, animated: false });
+                }}
+              />
+            )}
+            {result.data?.nextCursor && !result.error && (
+              <Button
+                title="Trang sách tiếp"
+                busy={result.isFetching}
+                onPress={() => {
+                  setCursors((previous) => [
+                    ...previous,
+                    result.data!.nextCursor!,
+                  ]);
+                  scroll.current?.scrollTo({ y: 0, animated: false });
+                }}
+              />
+            )}
+          </View>
+        )}
+        {!!result.data?.items.length && (
           <Button
-            title="Làm mới kệ"
+            title="Cập nhật kệ"
             secondary
             busy={result.isFetching}
             onPress={() => void result.refetch()}
           />
-        </View>
-      )}
-      <ShelfRails
-        key={`${query}:${cursor}`}
-        items={result.data?.items ?? []}
-        onOpen={(item) =>
-          router.push({ pathname: "./book", params: { id: item.id } })
-        }
-        renderPhoto={(item, onFocus) => (
-          <PublicPhoto
-            listingId={item.id}
-            revisionId={item.revisionId}
-            mediaId={item.photos[0].id}
-            label={`Ảnh sách ${item.book.title}`}
-            active={active && !result.isError}
-            rail
-            onCoverFocus={onFocus}
-            onOpen={() =>
-              router.push({ pathname: "./book", params: { id: item.id } })
-            }
-          />
         )}
-      />
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.md }}>
-        {cursors.length > 1 && (
-          <Button
-            title="Trang trước"
-            secondary
-            disabled={result.isFetching}
-            onPress={() => {
-              setCursors((previous) => previous.slice(0, -1));
-              scroll.current?.scrollTo({ y: 0, animated: false });
-            }}
-          />
-        )}
-        {result.data?.nextCursor && !result.error && (
-          <Button
-            title="Trang sách tiếp"
-            busy={result.isFetching}
-            onPress={() => {
-              setCursors((previous) => [...previous, result.data!.nextCursor!]);
-              scroll.current?.scrollTo({ y: 0, animated: false });
-            }}
-          />
-        )}
+        <AppText kind="small" color={colors.muted}>
+          Ảnh và tình trạng do người đăng cung cấp. Hãy đọc kỹ trước khi trao
+          sách. Chức năng giao dịch đang được chuẩn bị.
+        </AppText>
       </View>
-      {!!result.data?.items.length && (
-        <Button
-          title="Cập nhật kệ"
-          secondary
-          busy={result.isFetching}
-          onPress={() => void result.refetch()}
-        />
-      )}
-      <AppText kind="small" color={colors.muted}>
-        Ảnh và tình trạng do người đăng cung cấp. Hãy đọc kỹ trước khi trao
-        sách. Chức năng giao dịch đang được chuẩn bị.
-      </AppText>
       <ShelfFilterSheet
         visible={filterOpen}
         value={draft}

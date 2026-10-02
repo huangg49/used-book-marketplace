@@ -18,6 +18,7 @@ import {
 import { conditions, modes, type Listing } from "./contracts";
 
 type Props = {
+  summary?: string;
   items: Listing[];
   onOpen: (item: Listing) => void;
   renderPhoto: (item: Listing, onFocus: () => void) => ReactNode;
@@ -29,7 +30,7 @@ export function ShelfRails({ items, ...props }: Props) {
   for (let start = 0; start < items.length; start += 3)
     rows.push(items.slice(start, start + 3));
   return (
-    <View style={{ gap: space.section }}>
+    <View style={{ gap: space.xxl }}>
       {rows.map((row, index) => (
         <ShelfRail
           key={row[0].id}
@@ -43,6 +44,7 @@ export function ShelfRails({ items, ...props }: Props) {
 }
 
 function ShelfRail({
+  summary,
   items,
   renderPhoto,
   onOpen,
@@ -53,6 +55,27 @@ function ShelfRail({
   const reducedMotion = useReducedMotion();
   const viewport = Math.min(width - space.xl * 2, metrics.content);
   const cardWidth = Math.min(viewport, scale >= 1.29 ? 224 : 160);
+  // Measure the natural title + author group, never the shared-height wrapper. A row
+  // of short titles need not reserve a third line. Reflow invalidates measurements
+  // without remounting the rail or losing its horizontal scroll position.
+  const titleKey = JSON.stringify([
+    cardWidth,
+    scale,
+    items.map((item) => [item.id, item.book.title, item.book.authors]),
+  ]);
+  const [titles, setTitles] = useState<{
+    key: string;
+    heights: Record<string, number>;
+  }>({ key: titleKey, heights: {} });
+  const titleHeight =
+    titles.key === titleKey ? Math.max(0, ...Object.values(titles.heights)) : 0;
+  const measureTitle = (id: string, height: number) => {
+    setTitles((previous) => {
+      const heights = previous.key === titleKey ? previous.heights : {};
+      if (heights[id] === height) return previous;
+      return { key: titleKey, heights: { ...heights, [id]: height } };
+    });
+  };
   const step = cardWidth + space.lg;
   const scroll = useRef<ScrollView>(null);
   const offset = useRef(0);
@@ -74,7 +97,7 @@ function ShelfRail({
     setEdges({ before: x > 1, after: x < maxOffset - 1 });
   }, [maxOffset]);
   return (
-    <View style={{ gap: space.sm }}>
+    <View style={{ gap: space.md }}>
       <View
         style={{
           flexDirection: "row",
@@ -84,9 +107,20 @@ function ShelfRail({
         }}
       >
         <View style={{ flex: 1, minWidth: 0 }}>
-          <AppText kind="bold" color={colors.forest} accessibilityRole="header">
-            Hàng sách {rowNumber}
-          </AppText>
+          {rowNumber === 1 && summary && (
+            <AppText kind="small" color={colors.muted}>
+              {summary}
+            </AppText>
+          )}
+          {rowNumber > 1 && (
+            <AppText
+              kind="bold"
+              color={colors.forest}
+              accessibilityRole="header"
+            >
+              Hàng sách {rowNumber}
+            </AppText>
+          )}
           <AppText kind="small" color={colors.muted}>
             {items.length} cuốn{maxOffset > 0 ? " · kéo ngang để xem" : ""}
           </AppText>
@@ -138,6 +172,9 @@ function ShelfRail({
             item={item}
             cardWidth={cardWidth}
             scale={scale}
+            titleHeight={titleHeight}
+            measurementKey={titleKey}
+            onTitleLayout={(height) => measureTitle(item.id, height)}
             renderPhoto={renderPhoto}
             onOpen={onOpen}
             focusBook={() => move(index * step)}
@@ -152,6 +189,9 @@ function RailBook({
   item,
   cardWidth,
   scale,
+  titleHeight,
+  measurementKey,
+  onTitleLayout,
   renderPhoto,
   onOpen,
   focusBook,
@@ -159,6 +199,9 @@ function RailBook({
   item: Listing;
   cardWidth: number;
   scale: number;
+  titleHeight: number;
+  measurementKey: string;
+  onTitleLayout: (height: number) => void;
   renderPhoto: Props["renderPhoto"];
   onOpen: Props["onOpen"];
   focusBook: () => void;
@@ -200,7 +243,7 @@ function RailBook({
         style={({ pressed }) => [
           {
             flex: 1,
-            gap: space.xs,
+            gap: space.sm,
             minHeight: metrics.touch,
             opacity: pressed ? 0.75 : 1,
             paddingHorizontal: space.xs,
@@ -208,28 +251,30 @@ function RailBook({
           focused && layout.focus,
         ]}
       >
-        <AppText
-          kind="shelfTitle"
-          numberOfLines={3}
-          ellipsizeMode="tail"
-          style={{ minHeight: typography.shelfTitle[1] * scale * 3 }}
-        >
-          {item.book.title}
-        </AppText>
-        <AppText
-          kind="annotation"
-          color={colors.muted}
-          numberOfLines={1}
-          ellipsizeMode="tail"
-          style={{ minHeight: typography.annotation[1] * scale }}
-        >
-          {item.book.authors.join(" · ")}
-        </AppText>
+        <View style={{ minHeight: titleHeight }}>
+          <View
+            key={measurementKey}
+            style={{ gap: space.xs }}
+            onLayout={(event) => onTitleLayout(event.nativeEvent.layout.height)}
+          >
+            <AppText kind="shelfTitle" numberOfLines={3} ellipsizeMode="tail">
+              {item.book.title}
+            </AppText>
+            <AppText
+              kind="annotation"
+              color={colors.muted}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={{ minHeight: typography.annotation[1] * scale }}
+            >
+              {item.book.authors.join(" · ")}
+            </AppText>
+          </View>
+        </View>
         <BookCondition stamp condition={conditions[item.condition]} />
         <View
           style={{
             marginTop: "auto",
-            paddingTop: space.xs,
             minHeight: typography.shelfPrice[1] * scale * 2 + space.sm,
           }}
         >
