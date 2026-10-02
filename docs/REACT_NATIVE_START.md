@@ -8,7 +8,7 @@ Current listing increment: **Account → Sách của tôi** creates/opens listin
 selects/requests catalog books, uploads photos, edits condition/prices and submits
 for review. Pending listings are read-only; rejected listings show the reason and
 can be edited/resubmitted. Follow [Supabase Free setup](features/SUPABASE_MEDIA_SETUP.md)
-and run `pnpm dev:media` separately. Provider credentials are server-only. Read
+and configure the media worker included by `pnpm dev:api`. Provider credentials are server-only. Read
 [the media report](features/MEDIA_UPLOAD_REPORT.md) for passed live-storage and pending native checks.
 
 The shared API also supports [listing submission/moderation](features/LISTING_REVIEW_API_REPORT.md).
@@ -51,6 +51,11 @@ In another terminal:
 ```sh
 pnpm dev:rn
 ```
+
+This launcher supports A for the installed Android development APK and W for
+Member web, selecting the public API URL by platform. Follow
+[DEVELOPMENT](DEVELOPMENT.md) for one-time APK setup. `dev:api` starts both workers;
+do not start duplicate media/order workers in extra terminals.
 
 Use the member account `member@latlai.local`. The local seed password is the value
 of `DEV_SEED_PASSWORD` in `apps/api/.env` (the development example is `LatLai-Local-2026!`).
@@ -128,7 +133,8 @@ development or production database.
 
 ## Device smoke test
 
-Run `pnpm doctor:local` before starting the three API/worker/RN processes. For a
+Use `pnpm doctor:local` to diagnose readiness. The daily API/worker and RN bundles
+use two terminals. For a
 local debug APK, run `pnpm build:android --emulator` (x86_64 AVD). Read the
 [Android quality guide](ANDROID_QUALITY.md) for prerequisites, Windows path handling,
 the device matrix and the distinction between automated and device evidence.

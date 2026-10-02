@@ -7,7 +7,9 @@ import {
   type PropsWithChildren,
 } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Platform } from "react-native";
 import { SessionClient } from "../api/session-client";
+import { apiBaseUrl } from "../api/api-base-url";
 import { tokenStorage } from "./token-storage";
 
 const SessionContext = createContext<SessionClient | null>(null);
@@ -17,11 +19,12 @@ export function SessionProvider({ children }: PropsWithChildren) {
     () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
   );
   const [session] = useState(() => {
-    const url = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
-    if (!url)
-      throw new Error(
-        "Set EXPO_PUBLIC_API_BASE_URL in apps/mobile-react-native/.env. See README.",
-      );
+    const url = apiBaseUrl(Platform.OS, {
+      shared: process.env.EXPO_PUBLIC_API_BASE_URL,
+      android: process.env.EXPO_PUBLIC_API_BASE_URL_ANDROID,
+      web: process.env.EXPO_PUBLIC_API_BASE_URL_WEB,
+      ios: process.env.EXPO_PUBLIC_API_BASE_URL_IOS,
+    });
     return new SessionClient(url, tokenStorage);
   });
   useEffect(() => {

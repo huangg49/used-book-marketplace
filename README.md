@@ -45,8 +45,12 @@ pnpm dev:api
 
 Mỗi người dùng database/credential riêng. Seed tạo4 tài khoản local, không tạo sẵn
 sách. Chạy client phụ trách ở terminal khác: pnpm dev:rn hoặc pnpm dev:admin.
-Upload cần cấu hình [Supabase](docs/features/SUPABASE_MEDIA_SETUP.md) và pnpm dev:media;
-Order expiry/refund cần pnpm dev:orders. Xem TEAM_WINDOWS cho Flutter và Android.
+Chạy hằng ngày bằng hai terminal: `pnpm dev:api` (Mongo/API/hai worker) và
+`pnpm dev:rn` (bấm A mở Android development APK, W mở Member web), hoặc
+`pnpm dev:admin` cho người làm admin. Upload cần cấu hình
+[Supabase](docs/features/SUPABASE_MEDIA_SETUP.md). Xem
+[hướng dẫn chạy](docs/DEVELOPMENT.md) để phân biệt setup một lần, build APK và
+chạy hằng ngày. Launcher không tự seed/migrate/reset dữ liệu.
 
 API: http://localhost:3000/api/v1 · Swagger: http://localhost:3000/docs · Admin: http://localhost:5173.
 

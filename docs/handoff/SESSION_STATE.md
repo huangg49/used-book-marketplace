@@ -2,95 +2,68 @@
 
 ## Nguồn và việc đang làm
 
-- **UI-1 — THẺ LISTING / GIÁ SÁT DẤU ĐÃ LÀM, CHỜ DUYỆT ẢNH.** Nhánh
-  `codex/ui-shelf-spacing`, base `0ec35c1`; vòng trước `09be958`/`087bf4c`,
-  checkpoint `fix(rn): group shelf listings on subtle card surfaces`. Chưa push/merge.
-  Chủ dự án duyệt nền trắng ấm/viền nhẹ để phân biệt listing và bỏ căn giá đáy.
-  Thẻ surface/rule/bo6/đệm8, bỏ nét đỡ bìa; nền ảnh rail cùng surface. Tên+tác
-  giả+dấu+giá đi liền, dấu→giá8dp, phần dư nằm cuối thẻ. Khung cùng hàng vẫn đều;
-  không đổi API/query/session/navigation hoặc navbar. DESIGN đã đồng bộ.
-  [Ảnh trước/sau100/130%](../ui/listing-surface.html). RN96/96tests, lint/typecheck,
-  Expo webexport12routesPASS. Android390dp100/130%, ba nút130%, tên dài/Cũ nhiều/
-  một-hai giá/1M+999K, cuộn cuối/chạm qua cuốn/mở chi tiết/Back giữ vị trí đã xem.
-  Web390px đo năm cuốn: metadata→dấu và dấu→giá đều8px; thẻ trong cùng hàng cao
-  bằng nhau (417px hàng1,438px hàng2). Chưa nghiệm thu TalkBack/ARM/iOS/human/release.
-  QA dùng run `.tmp/demo/ui-stamp-flow` trên Mongo37017/random*_test/storageFAKE;
-  run cũ ui-quay giữ nguyên sauSANDBOX_LOST. Mongo QA dùng tmpfs: nếu restart,
-  tạo run tên mới, không reset/replay journal cũ vào DB rỗng. Helper/snapshot
-  mới `.tmp/ui-listing-surface`; đã khôi phục app/settings/nav/night/reverse.
-  Emulator/API/media/web8093 của lượt QA đã dừng; giữ Metro/Docker/preview8089.
-  Bước tiếp: chủ dự án duyệt ảnh. Không mởC02/C04; lỗi nútOSdark/API35 vẫn mở.
-
-- **UI-1 — QUẦY XANH RỪNG / NHÃN130% ĐÃ SỬA, CHỜ DUYỆT ẢNH.** Chủ dự án duyệt
-  hướng navbar và yêu cầu tránh cả gesture/ba nút Android ngày02/10. Nhánh
-  `codex/ui-forest-navigation`, base `f35fb16`; checkpoint
-  source `92034c1`; checkpoint ảnh `docs(ui): record compact navigation native evidence`.
-  Chưa push/PR/merge, main giữ nguyên.
-  NavigationBar trình bày chung, MemberNavigation giữ route/session/filter quyền;
-  footer xanh opt-in5consumer, nhãn12/18/bo8/focus, SafeAreaView sở hữu inset một
-  lần, vùng nút hệ thống sáng. Form/chi tiết/editor giữ footer cũ/dirty guard.
-  DESIGN/UI_COMPONENTS/catalog đồng bộ; không đổi API/nghiệp vụ.
-  [Evidence và bước tiếp](../ui/NAVIGATION_01.md): RN96/96,lint/typecheck và
-  export:web12routes PASS; web320/390px/catalog135%,Tab/Enter/selected/focus,
-  hai mục QA TEST_OPERATOR và đăng xuất về ba mục đã xem. Đã sửa aria-selected
-  sau kiểm web; origin8093 chỉ bổ sung vào ignored QA harness, không backend product.
-  Android390dp×100/130%×gesture/ba nút,320dp/130%, cuối kệ, search/rỗng/bỏ lọc,
-  loginIME/Back giữ dữ liệu, chạmOSBack/Home/Recents đã xem. **Có lỗi OS dark**:
-  ba nút nhạt2.04:1; thử paint inset đạt cold nhưng failhot1.44:1, JSoverride
-  cũng failcold, cả hai đã bỏ. Androidlight nativeconfig thử tiếp vẫn faildark,
-  đã bỏ. Hiện thêm expo-navigation-bar57.0.3 + plugin enforceContrastfalse/dark,
-  rootSystemNavigationBar dark; build debug x86_64/JDK21 PASS4m46s/338tasks/cài-rQA.
-  BackuporiginalAPK/app đầy đủ; cần binary mới có module để chạy source hiện tại.
-  Theo phản hồi130%, đổi nhãn nhìn thấy thành “Sách tôi”, tên accessible vẫn
-  “Sách của tôi”, đệm ngang/gap4px. Android320/390dp130% cả3nhãn một dòng;
-  tab390/130 giảm248→188px (~21.7dp), không thu nhỏ font/khóa chiều cao. Web320/135% cả3nhãn
-  một dòng/Enter/selectedPASS. RN96/lint/types/export12PASS, catalog cập nhật.
-  Metrotimeout sau đổi dependency đã phục hồi bằng userrestart--clear. APK mới
-  đã kiểm/chụp6ảnh390/100/130/gesture/ba nút/OSdark, thêm320/130. ChạmSách tôi→login/
-  Back→kệ đã kiểm lại. **OSdark ba nút còn FAIL tương phản trên emulatorAPI35**,
-  dù dumpsysLIGHT_NAVIGATION_BARS; Expo có ghi nhận lỗiemulator15 tương ứng.
-  Không coi là mọi máy thật đạt: cần thiết bị thật hoặc API khác trước đóng gate.
-  QA riênglatlai-ui-quay/Mongo37017/random*_test/storageFAKE/5listing giữ nguyên.
-  Snapshotmới `.tmp/ui-quay-native-02` đãrestoreapp/settings/nav/night/reverses;
-  ownemulator/API/media đãdừng, giữuserMetro/Docker/preview8089. Nativeconfig cần binary
-  mới; giữ APK có expo-navigation-bar để chạy code mới (APK cũ đã backup, không
-  downgrade rồi chạy source yêu cầu module mới). Metro reload không thay resource APK.
-  [Gallery trước/sau](../ui/navigation-01.html) có so sánh riêng nhãn130% từ6c6b8cd,
-  Beforegesture từf35fb16, ảnhdark ghi rõFAIL. Bước tiếp: chủ dự án duyệt thẩm mỹ;
-  kiểmOSdark riêng trênthiếtbị/APIkhác. TalkBack/ARM/iOS/releaseNOTRUN;
-  không mở C02/C04 hoặc đóng human/native/release gate.
-- **UI-1 — CHUYỂN ĐỘNG XEM SÁCH ĐÃ LÀM / CHỜ DUYỆT CẢM NHẬN.** Chủ dự án
-  duyệt ba ưu tiên ngày02/10. Nhánh `codex/ui-motion`, base `053c87e` (kệ B tại304c0a2);
-  checkpoint `feat(rn): add restrained motion to browsing and book photos`.
-  Chưa push/PR/merge; main giữ nguyên. Ảnh tải URL/bytes có phản hồi trong khung,
-  fade160ms native driver, chặn callback nguồn/attempt cũ và terminal success/error;
-  nút qua cuốn cuộn native, focus/reset tức thì. Sheet ảnh lớn opt-in mở160ms/
-  translate12dp, header/close đứng yên, đóng ngay. Reduced motion dùng một OS
-  subscription cập nhật nóng, unknown thì giảm; không replay ảnh/Sheet đã mở.
-  Không đổi API/contract/session/nghiệp vụ/navigation/expiry/cache/query/retry,
-  không thêm dependency hoặc mở swipe gallery/shared element/3D/C02/C04.
-  DESIGN/UI rules/components/catalog đồng bộ. [Video/ảnh100%–130%](../ui/motion-01.html),
-  [kiểm chứng và giới hạn](../ui/MOTION_01.md): RN96/96 (13 file), lint/typecheck,
-  export:web12 routes, Prettier/docs:check/diff PASS. Android390dp/100%–130%,
-  trước/tiếp/mởảnh/Back/Đóng/mởlại, tên dài/Worn/giá1M+999K, byte-loading10s/
-  lỗi503/retry phục hồi, foreground khi ảnh đang tải, reduced motion0→1 trong
-  app đang mở đã xem; đã sửa lỗi thông báo ảnh bị lặp. Before cùng5QA tại053c87e.
-  QA mới riêng latlai-ui-motion/Mongo37017/random *_test, API3046/media3047,
-  storageFAKE;5listing tạo/duyệt/upload quaAPI, mỗi listing1ảnh (không suy ra dữ
-  liệu thật). Emulator GUI tự thoát; khôi phục headlessSwiftShader, không FPS PASS.
-  Warning kết nối ExpoCLI khi foreground đã xác định/phục hồi devclient127;
-  không che warning bằng code. Đã phục hồi app/font/density/animation/reverse,
-  dừng own QA/emulator; giữ Metro/Docker người dùng và preview8089.
-  TalkBack/audio/focus thật/ARM/FPS/release/iOS/web interaction/320dp mới/native
-  catalog/live Supabase NOT RUN. AI review không là human review; gate vẫn mở.
-  Bước tiếp: chủ dự án xem video và duyệt cảm nhận; chỉ sửa phản hồi gói này,
-  không áp sang màn khác trước duyệt. Nền kệ B: [mẫu→Android](../ui/shelf-b-native.html),
-  [evidence304c0a2](../ui/SHELF_B_NATIVE.md); giới hạn thẩm mỹ/native theo evidence.
-  **C01 đã merge (PR11/PR12); C02 TẠM HOÃN để làm UI-1; gate review người thật/
-  native/release vẫn mở.**
-- Nền UI trước B: [ba mẫu A/B/C](../ui/shelf-directions/README.md) ở21d988e
-  (HTML, không native); [storefront01](../ui/SHELF_STOREFRONT_01.md) ởfd2947d
-  đã bị thay bố cục/banner trong lượt B. Bìa mẫu có nguồn/license, không runtime data.
+- **Gói UI-1 + luồng dev hai terminal + sửa CI: đã kiểm local, chuẩn bị push/PR.**
+  Nhánh `codex/dev-workflow` từ UI checkpoint `d4b65f4`; đã merge
+  `origin/main`/`03b85ca` bằng `a3e1cf0`, giữ dashboard mock và cursor
+  pagination của teammate. Sửa admin `0dddd05`, sửa SSR RN `d954ac5`;
+  checkpoint mới có subject `feat(dev): simplify daily API and Expo startup`.
+  Chủ dự án đã cho phép push/PR/merge gói hiện tại; chờ CI remote đạt trước squash.
+  Các dòng “chưa push/merge” dưới phần lịch sử mô tả thời điểm cũ, không là trạng thái
+  tích hợp hiện tại. Không mở thêm C02/C04 hoặc tính năng mới.
+- **C01 đã merge (PR11/PR12); C02 TẠM HOÃN để làm UI-1; gate review người thật/
+  native/release vẫn mở.** UI tích hợp gồm chi tiết đã duyệt, kệ B hai rail kéo ngang,
+  chuyển động ảnh có reduced motion, navbar quầy xanh rừng/nhãn “Sách tôi”, thẻ
+  surface nhẹ với tên+tác giả+dấu+giá sát nhau. Không đổi nghiệp vụ/API/contract.
+  [Ảnh thẻ100/130%](../ui/listing-surface.html),
+  [navbar và lỗi OS dark](../ui/NAVIGATION_01.md),
+  [chuyển động](../ui/MOTION_01.md), [kệ B](../ui/SHELF_B_NATIVE.md).
+  Ba ghi nhận chi tiết vẫn để xem lại khi có bìa thật: bìa nhỏ, dấu khiêm tốn,
+  hàng số ảnh/kính lúp chiếm chỗ. Những evidence này không được nâng thành native
+  acceptance toàn bộ hoặc human review.
+- **CI main03b85ca FAIL có nguyên nhân cụ thể:** run36951134001/job110664118221
+  dừng ở heading review bị mất. Login cũng ép deep link sang dashboard, sidebar
+  biến mất trên mobile. Đã giữ pathname/query/hash, phục hồi H1/introduction và
+  navigation responsive/keyboard; dashboard mock vẫn ghi rõ chưa dùng API.
+  Browser test thêm root→dashboard, deep link và Tab/Enter320px135%.
+  [Queue320px](../ui/dev-workflow-evidence/admin-queue-320.png),
+  [Users320px](../ui/dev-workflow-evidence/admin-users-320.png).
+- Full public browser phát hiện thêm React418 ở showcase: SSR/client dùng viewport
+  khác nhau. Đã đồng bộ lần render đầu bằng hydration guard, không suppress warning
+  hoặc bỏ assertion pageerror. Cập nhật hai assertion heading chi tiết thành
+  “Phiếu tình trạng” đã được duyệt, giữ kiểm dữ liệu bị gỡ/quyền.
+- **Chạy hằng ngày:** root `pnpm dev:api` ở terminal1; terminal2
+  `pnpm dev:rn` rồi A (Android) / W (Member web), hoặc `pnpm dev:admin`.
+  [DEVELOPMENT](../DEVELOPMENT.md) là hướng dẫn chuẩn; TEAM_WINDOWS/START_HERE/RN
+  đồng bộ. API launcher bật Mongo cùng config local, một Nest compiler, media/order
+  worker sau readiness; không migrate/seed ngầm hoặc giết process chiếm cổng.
+  Expo dev client mới cần build/cài APK một lần. Sau sửa worker phải restart dev:api.
+- **Checks thực chạy:** API build; admin lint/typecheck/build/13 tests + full
+  browser; RN lint/typecheck/99 tests/14 files + web export12routes + full public
+  browser (listing/address/lost ack/upload/review/search/filter/photos/SSR) PASS.
+  Browser dùng API/Mongo/Sharp thật, database random `*_test` trên replica set
+  QA37017/storageFAKE; không ghi/xóa DB chính. Launcher15/15 WindowsNode24.19,
+  session-client20/20, contract:check, docs:check, diff-check, Compose config PASS;
+  CI mới kiểm launcher Windows/Ubuntu.
+  Android debug x86_64/API35/JDK21 build PASS8m56s/475tasks; cài-r APK rồi thực sự
+  bấm A, qua Expo onboarding, thấy kệ rỗng từ API3000, mở Tài khoản/OSBack;
+  W mở web cùng Metro, tải kệ và mở account. Thiết bị390dp/font130%/ba nút.
+  [Android qua phím A](../ui/dev-workflow-evidence/android-a-shelf.png).
+  Dừng launcher: API/Metro/worker không còn listen, Docker/data và preview8089 giữ.
+  Windows pnpm wrapper trả exit1 khi Ctrl+C; lock PID chết được acquire/release
+  phục hồi, không giết chương trình khác. Unit test kiểm signal/process tree riêng.
+- **Cấu hình riêng máy này:** Windows reserved56794–57393 chặn Mongo57117.
+  Đã đổi rootMONGO_PORT và ba API Mongo URL sang37018, giữ Compose project/volume/
+  database/credential, không seed/migrate/reset. Backup env/APK/app private ở
+  `.tmp/dev-workflow-native` (ignored). Node hệ thống24.12 quá cũ; settings VSCode
+  local ignored chọn Node24.19 đã có, cần mở terminal mới; không đổi PATH hệ thống.
+  Giữ APK mới có expo-dev-client/expo-navigation-bar. Restore app/font/density/
+  adb reverse rồi dừng emulator do agent tạo; giữ Mongo chính37018, QA37017 và
+  Docker khác. Không commit env/settings/private snapshots.
+- **Còn mở:** OS dark/AndroidAPI35 ba nút FAIL tương phản theo NAVIGATION_01;
+  cần máy thật hoặc API khác. TalkBack/ARM/FPS/iOS/release và Supabase thật NOT RUN
+  trong gói này. Không sửa READINESS để đóng gate. Bước tiếp: chờ tất cả checks PR
+  đạt, squash main theo quyền đã giao, cập nhật điểm lưu với PR/SHA thực tế; sau đó
+  nhóm dùng DEVELOPMENT và chia việc, không tự mở lại lộ trình tính năng.
 
 ## Nền kế thừa và bằng chứng trước đợt B
 

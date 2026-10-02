@@ -35,7 +35,8 @@ FAIL trả exit code 1; WARN cần đọc và xử lý theo tình huống. Khôn
 không chứng minh worker đang chạy; API cũ đang trả lời không chứng minh database
 trong `.env` mới truy cập được.
 
-Mở ba terminal riêng: `pnpm dev:api`, `pnpm dev:media`, `pnpm dev:rn`.
+Mở hai terminal riêng: `pnpm dev:api` (API/hai worker) và `pnpm dev:rn` (A/W).
+Build/cài development APK có expo-dev-client một lần theo [DEVELOPMENT](DEVELOPMENT.md).
 Database phải chạy và `pnpm db:migrate` phải thành công trước API/worker.
 Không dựa vào process cũ hoặc database tạm của người khác để bàn giao.
 
