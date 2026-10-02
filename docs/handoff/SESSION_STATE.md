@@ -27,6 +27,10 @@
   QA/emulator của agent; giữ Metro/Docker Desktop người dùng và preview 8089.
   Bước tiếp: chủ dự án xem và duyệt B native; chỉ sửa phản hồi trên kệ nếu có.
   Chuyển động mở ảnh vẫn chưa làm; không áp sang màn khác trước duyệt.
+  Tham khảo motion02/10 (chỉ nghiên cứu, chưa sửa runtime/DESIGN): ưu tiên ảnh
+  tải ổn định, nút qua cuốn chuyển nhẹ, mở ảnh lớn; dùng thư viện đang có.
+  Shared element của Reanimated còn experimental, chưa chọn cho sản phẩm.
+  Chưa đo FPS/release hoặc nghiệm thu reduced motion/TalkBack; kệ B vẫn chờ duyệt.
   **C01 đã merge (PR11/PR12); C02 TẠM HOÃN để làm UI-1; gate review người thật/
   native/release vẫn mở.**
 - Nền UI trước B: [ba mẫu A/B/C](../ui/shelf-directions/README.md) ở21d988e
