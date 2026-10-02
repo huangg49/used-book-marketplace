@@ -13,6 +13,7 @@ import {
   NavLink,
   Outlet,
   RouterProvider,
+  useNavigate,
 } from "react-router-dom";
 import {
   BookCheck,
@@ -35,11 +36,13 @@ import { Queue } from "./features/review/queue";
 import { Detail } from "./features/review/detail";
 import { LeaveGuard } from "./core/leave-guard";
 import { UserDirectory } from "./features/users/directory";
+import { DashboardMock } from "./features/dashboard/mock";
 import "./App.css";
 
 function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
+  const navigate = useNavigate();
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
@@ -51,6 +54,7 @@ function Login() {
         email: String(data.get("email")).trim(),
         password: String(data.get("password")),
       });
+      navigate("/dashboard", { replace: true });
     } catch (cause) {
       setError(cause);
     } finally {
@@ -156,7 +160,7 @@ function Workspace() {
       <aside className="sidebar">
         <Link
           className="sidebar-brand"
-          to="/review/listings"
+          to="/dashboard"
           aria-label="Lật lại · Bàn kiểm duyệt"
         >
           <img src={logo} alt="Lật lại" width="142" height="46" />
@@ -165,13 +169,11 @@ function Workspace() {
         {user && canReview(user) && (
           <nav className="workspace-nav" aria-label="Khu vực quản trị">
             <p className="sidebar-section-label">Điều hướng</p>
-            <span className="sidebar-item is-unavailable" aria-disabled="true">
-              <span className="sidebar-item-content">
-                <LayoutDashboard aria-hidden="true" />
-                Dashboard
-              </span>
-              <small>Sắp triển khai</small>
-            </span>
+            <NavLink to="/dashboard">
+              <LayoutDashboard aria-hidden="true" />
+              Dashboard
+              <small className="mock-nav-label">Mock</small>
+            </NavLink>
             <div className="sidebar-group">
               <p className="sidebar-group-title">
                 <ClipboardCheck aria-hidden="true" />
@@ -262,7 +264,8 @@ const router = createBrowserRouter([
       </main>
     ),
     children: [
-      { index: true, element: <Navigate to="/review/listings" replace /> },
+      { index: true, element: <Navigate to="/dashboard" replace /> },
+      { path: "/dashboard", element: <DashboardMock /> },
       { path: "/review/:kind", element: <Queue /> },
       { path: "/review/:kind/:id", element: <Detail /> },
       { path: "/users", element: <UserDirectory /> },

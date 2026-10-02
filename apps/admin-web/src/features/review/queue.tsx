@@ -55,28 +55,6 @@ function QueueContent({ kind }: { kind: Kind }) {
     result.data?.pages.flatMap<Listing | Catalog>((page) => page.items) || [];
   return (
     <>
-      <header className="page-heading">
-        <div>
-          <p className="eyebrow">
-            Bàn kiểm duyệt / {kind === "listings" ? "01" : "02"}
-          </p>
-          <h1>
-            {kind === "listings"
-              ? "Trước khi sách chuyền tay."
-              : "Bắt đầu từ đúng đầu sách."}
-          </h1>
-          <p className="intro">
-            {kind === "listings"
-              ? "Đọc mô tả, đối chiếu ảnh và ghi lại một quyết định rõ ràng cho người đăng."
-              : "Kiểm tra tên sách, tác giả và thông tin xuất bản trước khi đưa vào danh mục dùng chung."}
-          </p>
-        </div>
-        <span className="edition">
-          LẬT LẠI
-          <br />
-          VẬN HÀNH · TP.HCM
-        </span>
-      </header>
       <div className="queue-toolbar">
         <div className="tabs" aria-label="Lọc trạng thái">
           {filters.map((value) => (
