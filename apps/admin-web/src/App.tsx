@@ -13,6 +13,7 @@ import {
   NavLink,
   Outlet,
   RouterProvider,
+  useLocation,
   useNavigate,
 } from "react-router-dom";
 import {
@@ -43,6 +44,7 @@ function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const navigate = useNavigate();
+  const location = useLocation();
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
@@ -54,7 +56,8 @@ function Login() {
         email: String(data.get("email")).trim(),
         password: String(data.get("password")),
       });
-      navigate("/dashboard", { replace: true });
+      // A protected deep link stays in place when the authenticated workspace opens.
+      if (location.pathname === "/") navigate("/dashboard", { replace: true });
     } catch (cause) {
       setError(cause);
     } finally {
@@ -157,6 +160,12 @@ function Workspace() {
       <a className="skip-link" href="#main">
         Đến nội dung chính
       </a>
+      <header className="mobile-topbar">
+        <span>Bàn quản trị</span>
+        <Button busy={logoutBusy} onClick={() => void logout()}>
+          Đăng xuất
+        </Button>
+      </header>
       <aside className="sidebar">
         <Link
           className="sidebar-brand"
@@ -213,12 +222,6 @@ function Workspace() {
         </div>
       </aside>
       <div className="workspace-frame">
-        <header className="mobile-topbar">
-          <span>Bàn quản trị</span>
-          <Button busy={logoutBusy} onClick={() => void logout()}>
-            Đăng xuất
-          </Button>
-        </header>
         <main id="main" className="workspace" tabIndex={-1}>
           {logoutError !== undefined && <ErrorNotice error={logoutError} />}
           {profile.isLoading && (
