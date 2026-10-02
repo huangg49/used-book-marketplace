@@ -4,8 +4,8 @@ Nhánh `codex/ui-forest-navigation`, base `f35fb16` (kệ B và chuyển động
 Chủ dự án duyệt hướng Quầy xanh rừng, yêu cầu kiểm cả gesture và ba nút Android.
 Source UI `6c6b8cd` + checkpoint
 `fix(rn): compact navigation labels and configure system buttons`. Chưa push/PR/merge.
-**Bố cục đã kiểm Android; nhãn130% đang hoàn thiện theo phản hồi. APK có module
-thanh hệ thống mới đang chờ Metro khởi động lại để kiểm cuối. Chưa chốt gói.**
+**Nhãn gọn đã kiểm Android320/390dp ở130%, có ảnh cuối tại92034c1.
+Ba nút Android15 khi OS dark vẫn chưa đạt tương phản; gate này giữ mở.**
 
 ## Thay đổi
 
@@ -98,19 +98,27 @@ và enforceNavigationBarContrast=false. Đã backuporiginalAPK/app; không commi
 RN96/96/typecheck/lint PASS; web export12routes PASS và IAB320px/135%/Enter/selected
 đã xem trên nhãn mới. [Ảnh web nhãn gọn](navigation-01/web-compact-320-135.jpg).
 
-**BLOCKED runtime:** Metro process còn nhưng /status timeout10s sau cập nhật
-dependency; app chờ splash. Đã gửi yêu cầu restart --clear cho chủ dự án. Lệnh
-start Metro của agent các lượt trước bị duyệt tự động chặn “blocked by policy”.
-QA API/media/Mongo/emulator giữ sẵn; chưa lấy ảnh splash làm nghiệm thu.
+Metro bị timeout sau đổi dependency, chủ dự án restart --clear đã phục hồi.
+Trên APK mới/source92034c1 đã chụp gesture/ba nút100%/130%, OS dark130% và
+320dp/130%. Cả ba nhãn một dòng ở320/390dp; không thu nhỏ font. 390dp/130% tab
+cao188px thay248px trước, giảm khoảng21.7dp. Vùng chạm vẫn lớn hơn44dp và nằm
+trên nút hệ thống. Chạm “Sách tôi” đến login theo gate, Back về kệ đã kiểm lại.
 
-Bước tiếp: khi Metro online, kiểm chính binary mới ở OS dark cold/hot/resume,
-gesture/ba nút; chụp6ảnh cuối100%/130%, kiểm320dp nếu cần. Before gesture tái sử
-dụng f35fb16 trong [motion01](MOTION_01.md); không có Before ba nút. Gallery đã
-dựng tại `navigation-01.html` nhưng chưa mở duyệt vì ảnh cuối chưa đủ. Sau kiểm,
-phục hồi app/settings/reverses, dừng own QA/emulator, cập nhật evidence và
-SESSION_STATE, commit checkpoint rồi chờ chủ dự án duyệt thẩm mỹ. Chưa push/merge.
-Giữ binary có module mới để tương thích source; original APK đã backup riêng.
+OS light: ba nút tối rõ trên nền sáng. **OS dark ba nút vẫn FAIL tương phản**
+trên emulator API35 dù dumpsys ghi LIGHT_NAVIGATION_BARS; gesture vẫn rõ.
+[Expo ghi nhận lỗi Android15 emulator](https://docs.expo.dev/versions/latest/sdk/navigation-bar/)
+có thể làm style không hiệu lực. Đây là dấu hiệu phù hợp với lỗi môi trường,
+chưa đủ để khẳng định mọi máy thật đều đạt. Cần kiểm thiết bị thật hoặc emulator
+API khác trước đóng gate tương phản; không thêm cách vá màu theo ảnh emulator.
 
-NOT RUN: nghiệm thu APK mới/các ca trên, TalkBack/audio/focus thật, ARM/FPS/
+[Gallery trước/sau](navigation-01.html) gồm nguồnBefore gesture f35fb16;
+riêng so sánh nhãn130% dùng Before6c6b8cd/After92034c1. Có nhãn rõ ca dark FAIL,
+không lấy build/web export/hierarchy thay native acceptance.
+Giữ binary mới tương thích source; originalAPK đã backup riêng. Bước tiếp là
+chủ dự án xem nhãn/navbar và duyệt thẩm mỹ; ca OS dark kiểm riêng như trên.
+Đã phục hồi app/settings/nav/night/reverses từ snapshot mới và dừng own emulator;
+giữ Metro/Docker người dùng cùng preview8089. QA dataset giữ lại, không xóa DB.
+
+NOT RUN: TalkBack/audio/focus thật, ARM/FPS/
 release/iOS và API E2E/live Supabase không liên quan. Human review/native/release
 gate vẫn mở; C02/C04 chưa bắt đầu.
