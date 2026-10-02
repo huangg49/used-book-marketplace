@@ -15,6 +15,7 @@ import {
   useReducedMotion,
 } from "../../core/ui";
 import { conditions, modes, type Listing } from "./contracts";
+import { useHydratedViewport } from "../../core/ui/hydration";
 
 type Props = {
   summary?: string;
@@ -50,9 +51,14 @@ function ShelfRail({
   rowNumber,
 }: Props & { rowNumber: number }) {
   const { width, fontScale } = useWindowDimensions();
+  const hydrated = useHydratedViewport();
   const scale = useContext(TextScale) * fontScale;
   const reducedMotion = useReducedMotion();
-  const viewport = Math.min(width - space.xl * 2, metrics.content);
+  // Use a real, stable shelf width until web hydration knows its viewport.
+  // Otherwise the static export has negative card widths and different controls.
+  const viewport = hydrated
+    ? Math.min(Math.max(0, width - space.xl * 2), metrics.content)
+    : metrics.content;
   const cardWidth = Math.min(viewport, scale >= 1.29 ? 224 : 160);
   const step = cardWidth + space.lg;
   const scroll = useRef<ScrollView>(null);

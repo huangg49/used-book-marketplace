@@ -3,12 +3,14 @@ import { View, useWindowDimensions } from "react-native";
 import Svg, { Path, Rect } from "react-native-svg";
 import { AppText, TextScale } from "./text";
 import { colors, radius, space } from "./theme";
+import { useHydratedViewport } from "./hydration";
 
 /** Editorial copy, not a promotion or a claim about any listing. */
 export function BookshopNote() {
   const { width, fontScale } = useWindowDimensions();
   const scale = useContext(TextScale);
-  const showIllustration = width >= 360 && fontScale * scale < 1.29;
+  const hydrated = useHydratedViewport();
+  const showIllustration = hydrated && width >= 360 && fontScale * scale < 1.29;
   return (
     <View
       style={{
