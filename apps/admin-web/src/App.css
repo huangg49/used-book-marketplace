@@ -677,6 +677,8 @@
   .dashboard-summary { grid-template-columns: 1fr; }
   .mock-banner { align-items: flex-start; flex-direction: column; gap: 0.25rem; }
   .dashboard-panel { padding: 1.25rem; }
+  .cursor-pagination { align-items: stretch; flex-direction: column; }
+  .cursor-pagination .button { width: 100%; }
   .login {
     grid-template-columns: 1fr;
   }

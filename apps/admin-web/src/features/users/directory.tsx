@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { components } from "@used-books/api-contract";
 import { dateText } from "../../core/format";
 import { session } from "../../core/session";
-import { Button, ErrorNotice, Notice } from "../../core/ui";
+import { Button, CursorPagination, ErrorNotice, Notice } from "../../core/ui";
 
 type User = components["schemas"]["OperationsUser"];
 const user = z.object({
@@ -175,11 +175,13 @@ export function UserDirectory() {
           khóa hoặc đổi quyền chưa được cung cấp vì cần quy trình kiểm soát riêng.
         </Notice>
       )}
-      {result.hasNextPage && (
-        <Button busy={result.isFetchingNextPage} onClick={() => void result.fetchNextPage()}>
-          Xem thêm người dùng
-        </Button>
-      )}
+      <CursorPagination
+        pageCount={result.data?.pages.length ?? 0}
+        hasNextPage={result.hasNextPage}
+        isFetchingNextPage={result.isFetchingNextPage}
+        onNextPage={() => void result.fetchNextPage()}
+        nextLabel="Xem thêm người dùng"
+      />
     </>
   );
 }
