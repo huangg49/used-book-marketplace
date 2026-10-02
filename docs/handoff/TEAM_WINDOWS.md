@@ -19,7 +19,6 @@ docker compose --env-file .env -f infra/docker-compose.yml up -d --wait mongo
 pnpm db:bootstrap
 pnpm db:migrate
 pnpm db:seed
-pnpm --filter @used-books/api build
 pnpm dev:api
 ```
 
@@ -32,7 +31,10 @@ API/worker dùng app user, migration dùng migrator, không chạy API bằng ro
 Storage là bước cấu hình riêng: bucket dev riêng của thành viên, cấu hình backend
 theo [Supabase media](../features/SUPABASE_MEDIA_SETUP.md). Chưa có storage thì ghi rõ
 upload chưa chạy; không dùng bucket nguồn để thử cleanup. Media worker chạy bằng
-`pnpm dev:media` trong terminal riêng sau khi đã cấu hình đúng bucket/database.
+launcher `pnpm dev:api` sau khi đã cấu hình đúng bucket/database; không mở thêm
+worker trùng. Chạy hằng ngày chỉ cần `dev:api` và `dev:rn` (A Android/W web),
+hoặc `dev:admin`. Build/cài development APK một lần và xử lý môi trường theo
+[DEVELOPMENT](../DEVELOPMENT.md).
 
 ## Ranh giới để phân công sau
 
@@ -43,7 +45,7 @@ Hướng dẫn/skills được chia sẻ qua Git; memory cá nhân và lịch s�
 | --- | --- | --- |
 | API dùng chung | `apps/api`, `packages/api-contract` | NestJS/MongoDB; contract-first, không tự đổi endpoint riêng cho từng client |
 | Admin web | `apps/admin-web` | Có catalog/listing review và quản lý user; `pnpm dev:admin`, xem README của app |
-| Web cho thành viên | `apps/mobile-react-native` hiện có Expo web | Chưa có app member-web riêng. Dùng `pnpm --filter @used-books/mobile-react-native web` để xem client hiện tại; việc tách app/framework cần chốt riêng |
+| Web cho thành viên | `apps/mobile-react-native` hiện có Expo web | Chưa có app member-web riêng. `pnpm dev:rn` rồi W; việc tách app/framework cần chốt riêng |
 | React Native | `apps/mobile-react-native` | Client thành viên chính, Android emulator; `pnpm dev:rn`, xem REACT_NATIVE_START và ANDROID_QUALITY |
 | Flutter | `apps/mobile-flutter` | Hiện chỉ scaffold `lib/main.dart`, chưa có auth/API feature. `flutter pub get`, `flutter run` trong app; không coi chạy màn scaffold là parity với RN |
 

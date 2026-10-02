@@ -10,6 +10,8 @@ import {
   space,
   presentError,
   layout,
+  radius,
+  metrics,
 } from "../../core/ui";
 import { publicMedia } from "./contracts";
 export function PublicPhoto({
@@ -21,6 +23,10 @@ export function PublicPhoto({
   large = false,
   onOpen,
   expanded = false,
+  compact = false,
+  shelf = false,
+  rail = false,
+  onCoverFocus,
 }: {
   listingId: string;
   mediaId: string;
@@ -30,6 +36,10 @@ export function PublicPhoto({
   large?: boolean;
   onOpen?: () => void;
   expanded?: boolean;
+  compact?: boolean;
+  shelf?: boolean;
+  rail?: boolean;
+  onCoverFocus?: () => void;
 }) {
   const { client } = useSession();
   const [expired, setExpired] = useState("");
@@ -60,15 +70,39 @@ export function PublicPhoto({
   }, [photo.data]);
   const available =
     active && !photo.error && photo.data && photo.data.expiresAt !== expired;
+  const requestKey = `${photo.data?.url}/${attempt}`;
   const cover = (
     <BookCover
-      key={`${photo.data?.url}/${attempt}`}
+      key={attempt}
       source={available ? { uri: photo.data.url } : undefined}
       label={label}
       missing={!available}
       cachePolicy="none"
-      onError={() => setFailed(photo.data?.url)}
-      style={{ width: "100%", height: expanded ? 420 : large ? 286 : 210 }}
+      loading={active && photo.isPending}
+      fadeIn
+      onError={() => setFailed(requestKey)}
+      onLoad={() => setFailed(undefined)}
+      style={{
+        width: "100%",
+        height: expanded
+          ? 420
+          : rail
+            ? metrics.shelfCover
+            : shelf
+              ? 180
+              : compact
+                ? undefined
+                : large
+                  ? 286
+                  : 210,
+        ...(compact || shelf || rail
+          ? {
+              ...(compact && !shelf && !rail ? { aspectRatio: 2 / 3 } : {}),
+              backgroundColor: rail || shelf ? colors.surface : colors.paper,
+              borderRadius: radius.book,
+            }
+          : {}),
+      }}
     />
   );
   return (
@@ -78,7 +112,10 @@ export function PublicPhoto({
           accessibilityRole="button"
           accessibilityLabel={`Mở ${label}`}
           onPress={onOpen}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            setFocused(true);
+            onCoverFocus?.();
+          }}
           onBlur={() => setFocused(false)}
           style={({ pressed }) => [
             focused && layout.focus,
@@ -90,18 +127,13 @@ export function PublicPhoto({
       ) : (
         cover
       )}
-      {photo.isPending && (
-        <AppText kind="small" color={colors.muted}>
-          Đang tải ảnh…
-        </AppText>
-      )}
-      {photo.error || (failed && failed === photo.data?.url) ? (
+      {photo.error || failed === requestKey ? (
         <>
-          <AppText kind="small" color={colors.muted}>
-            {photo.error
-              ? presentError(photo.error).message
-              : "Ảnh chưa tải được."}
-          </AppText>
+          {photo.error && (
+            <AppText kind="small" color={colors.muted}>
+              {presentError(photo.error).message}
+            </AppText>
+          )}
           <Button
             secondary
             title="Tải lại ảnh"

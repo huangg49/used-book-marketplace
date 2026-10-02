@@ -5,6 +5,7 @@ import {
   AppText,
   BackAction,
   BookCover,
+  BookTradeBar,
   Button,
   Chip,
   Notice,
@@ -12,12 +13,14 @@ import {
   SearchField,
   Sheet,
   colors,
+  colorRoles,
+  metrics,
   space,
 } from "../../core/ui";
-import { ShelfGrid } from "../shelf/shelf-grid";
+import { ShelfRails } from "../shelf/shelf-rails";
 import { BookPresentation } from "../shelf/book-presentation";
 import { BookGallery } from "../shelf/book-gallery";
-import { ShelfHeader, ShelfStory } from "../shelf/shelf-controls";
+import { ShelfHeader } from "../shelf/shelf-controls";
 import { modes } from "../shelf/contracts";
 import { showcaseBooks } from "./fixtures";
 
@@ -66,11 +69,12 @@ export function ShelfShowcase() {
     });
   return (
     <Screen
+      appearance="shelf"
       scrollRef={scroll}
       header={
         <>
           <DemoBanner />
-          <ShelfHeader />
+          <ShelfHeader inverse />
         </>
       }
       footer={
@@ -86,7 +90,6 @@ export function ShelfShowcase() {
         onSubmitEditing={() => setQuery(search)}
         maxLength={200}
       />
-      {!query && !mode && <ShelfStory />}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
         {Object.entries({ "": "Tất cả", ...modes }).map(([key, title]) => (
           <Chip
@@ -99,24 +102,26 @@ export function ShelfShowcase() {
       </View>
       <View style={{ gap: space.sm }}>
         <AppText
-          kind="heading"
+          kind="bookHeading"
           color={colors.forest}
           accessibilityRole="header"
         >
-          Một cuốn. Một lần gặp.
+          Trên kệ mẫu
         </AppText>
         <AppText kind="small" color={colors.muted}>
           {items.length} mẫu để xem bố cục · chạm bìa để mở
         </AppText>
       </View>
-      <ShelfGrid
+      <ShelfRails
+        key={`${query}:${mode}`}
         items={items.map((x) => x.listing)}
         onOpen={(item) => open(item.id)}
-        renderPhoto={(item) => (
+        renderPhoto={(item, onFocus) => (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Mở ảnh sách ${item.book.title}`}
             onPress={() => open(item.id)}
+            onFocus={onFocus}
           >
             <BookCover
               source={
@@ -124,7 +129,11 @@ export function ShelfShowcase() {
               }
               missing={missing}
               label={`Ảnh tư liệu ${item.book.title}`}
-              style={{ width: "100%", height: 210 }}
+              style={{
+                width: "100%",
+                height: metrics.shelfCover,
+                backgroundColor: colorRoles.shelfCanvas,
+              }}
             />
           </Pressable>
         )}
@@ -172,6 +181,19 @@ export function BookShowcase({
   };
   return (
     <Screen
+      compactFooter
+      footer={
+        sample ? (
+          <BookTradeBar
+            sale={sample.listing.salePrice ?? undefined}
+            exchange={sample.listing.exchangeValue ?? undefined}
+          >
+            <AppText kind="annotation" color={colors.muted}>
+              Dữ liệu mẫu · không nhận đơn
+            </AppText>
+          </BookTradeBar>
+        ) : undefined
+      }
       header={
         <>
           <DemoBanner />
@@ -185,8 +207,9 @@ export function BookShowcase({
         <>
           <BookPresentation
             item={sample.listing}
-            gallery={
+            gallery={(summary) => (
               <BookGallery
+                summary={summary}
                 count={1}
                 selected={0}
                 onSelect={() => {}}
@@ -197,11 +220,15 @@ export function BookShowcase({
                     source={sample.cover}
                     missing={missing}
                     label={`Ảnh tư liệu ${sample.listing.book.title}`}
-                    style={{ width: "100%", height: 286 }}
+                    style={{
+                      width: "100%",
+                      aspectRatio: 2 / 3,
+                      backgroundColor: colors.paper,
+                    }}
                   />
                 }
               />
-            }
+            )}
           />
           <View
             style={{

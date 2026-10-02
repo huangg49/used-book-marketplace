@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="vi">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lật lại · So sánh tên 3 dòng và 2 dòng</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #e8e6de;
+      color: #202c27;
+      font:
+        16px/1.6 system-ui,
+        sans-serif;
+    }
+    main {
+      max-width: 840px;
+      margin: auto;
+    }
+    h1 {
+      font:
+        600 30px/1.3 Georgia,
+        serif;
+      color: #214b40;
+      margin: 0 0 12px;
+    }
+    nav {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    label {
+      display: grid;
+      gap: 4px;
+    }
+    select {
+      font: inherit;
+      padding: 8px 12px;
+      min-height: 44px;
+      color: #202c27;
+      background: #fffcf4;
+      border: 1px solid #788477;
+    }
+    .pair {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    figure {
+      margin: 0;
+      width: min(390px, 100%);
+    }
+    figcaption {
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    a {
+      color: #214b40;
+    }
+    footer {
+      border-top: 1px solid #788477;
+      margin-top: 24px;
+      padding-top: 12px;
+    }
+    @media (max-width: 600px) {
+      body {
+        padding: 16px;
+      }
+    }
+  </style>
+  <main>
+    <h1>Tên 3 dòng hay 2 dòng?</h1>
+    <p>
+      Cùng bốn cuốn QA, cùng bố cục căn hàng. Chỉ thay số dòng tên. Bấm ảnh để
+      xem nguyên bản; cỡ chữ bên dưới là cài đặt Android, không phải phóng ảnh.
+    </p>
+    <nav aria-label="So sánh ảnh Android">
+      <label
+        >Cỡ chữ Android<select id="scale">
+          <option value="100">100%</option>
+          <option value="130">130%</option>
+        </select></label
+      >
+      <label
+        >Vị trí trên kệ<select id="position">
+          <option value="top">Đầu kệ · tên dài, hai giá và chỉ đổi</option>
+          <option value="middle">Giữa kệ · xem tiếp các cuốn</option>
+          <option value="bottom">Cuối kệ · tên ngắn, chỉ bán và hai giá</option>
+        </select></label
+      >
+    </nav>
+    <div class="pair">
+      <figure>
+        <figcaption>3 dòng · bản hiện tại, chờ chọn</figcaption>
+        <a id="threeLink"
+          ><img id="three" alt="Kệ sách giới hạn tên ba dòng"
+        /></a>
+      </figure>
+      <figure>
+        <figcaption>2 dòng · phương án so sánh</figcaption>
+        <a id="twoLink"><img id="two" alt="Kệ sách giới hạn tên hai dòng" /></a>
+      </figure>
+    </div>
+    <p>
+      Ảnh Android ~390dp chụp trực tiếp, không chỉnh PNG. API/Mongo QA thật,
+      storage fixture FAKE. Mọi cuốn đều có nhãn DEMO; không thay dữ liệu giữa
+      hai phương án. Ở 130% kệ tự chuyển một cột, giá nằm riêng bên dưới.
+    </p>
+    <footer>
+      <p>
+        Tên/tác giả đầy đủ vẫn ở chi tiết và nhãn accessibility. Tình trạng và
+        số tiền không bị rút gọn. Ba dòng giữ nhiều thông tin nhận diện hơn; hai
+        dòng gọn hơn nhưng một số tên mất nhiều phần phân biệt.
+      </p>
+      <p>
+        <a href="evidence/ui-1-shelf-lines/detail-130.png"
+          >Tên đầy đủ trên chi tiết · 130%</a
+        >
+        ·
+        <a href="evidence/ui-1-shelf-lines/narrow-130.png"
+          >Kiểm thêm 320dp · 130%</a
+        >
+        · <a href="SHELF_TITLE_LINES.md">Bằng chứng và giới hạn</a>
+      </p>
+      <p>
+        Đã dừng để chủ dự án chọn. Chưa áp sang màn khác, chưa thêm chuyển động,
+        chưa push/merge.
+      </p>
+    </footer>
+  </main>
+  <script>
+    const scale = document.getElementById("scale"),
+      position = document.getElementById("position");
+    function render() {
+      for (const [id, lines] of [
+        ["three", 3],
+        ["two", 2],
+      ]) {
+        const src = `evidence/ui-1-shelf-lines/lines-${lines}-${scale.value}-${position.value}.png`;
+        document.getElementById(id).src = src;
+        document.getElementById(id + "Link").href = src;
+      }
+    }
+    scale.addEventListener("change", render);
+    position.addEventListener("change", render);
+    render();
+  </script>
+</html>

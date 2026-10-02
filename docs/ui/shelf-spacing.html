@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lật lại — Nhịp bố cục Khám phá</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;background:#f6f8f3;color:#203d34;font:16px/1.6 system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:24px}h1{font-size:28px;margin:0 0 12px}h2{font-size:22px;margin-top:36px}p{max-width:800px}.pair{display:grid;grid-template-columns:repeat(2,minmax(0,390px));gap:24px;align-items:start}figure{margin:0}figcaption{padding:12px 0;font-weight:650}img{display:block;width:100%;height:auto;border:1px solid #bac7bb}.note{font-size:14px;color:#526359}a{color:inherit}details{margin:24px 0}summary{cursor:pointer} @media(max-width:600px){main{padding:16px}.pair{gap:12px}figcaption{font-size:13px}}
+</style>
+<main>
+<h1>Khám phá — nhịp bố cục rõ hơn</h1>
+<p>Gộp sắp xếp/trang với điều khiển hàng đầu; tên và tác giả đi liền thành một cụm. Dấu tình trạng và giá tiếp tục thẳng hàng, khoảng cách giữa các hàng sách giảm từ32 xuống24dp.</p>
+<p class="note">Ảnh Android thật, Pixel7/API35, viewport khoảng390dp. Dữ liệu QA mô phỏng, bìa tư liệu; API/Mongo thật trong môi trường riêng, storageFAKE. Không thay API, hành vi tìm/lọc, thứ tự sách hay màn chi tiết.</p>
+<h2>100% — điều hướng cử chỉ</h2>
+<div class="pair">
+<figure><figcaption>Trước · 0ec35c1</figcaption><img src="shelf-spacing/before-100.png" alt="Khám phá trước khi chỉnh khoảng cách, chữ100%"></figure>
+<figure><figcaption>Sau · bản sửa chờ duyệt</figcaption><img src="shelf-spacing/after-100.png" alt="Khám phá sau khi chỉnh khoảng cách, chữ100%"></figure>
+</div>
+<h2>130% — ba nút Android</h2>
+<div class="pair">
+<figure><figcaption>Trước · source92034c1, giao diện như0ec35c1</figcaption><img src="navigation-01/after-buttons-130.png" alt="Khám phá trước khi chỉnh, chữ130%, ba nút Android"></figure>
+<figure><figcaption>Sau · không chồng lên vùng nút hệ thống</figcaption><img src="shelf-spacing/after-buttons-130.png" alt="Khám phá sau khi chỉnh, chữ130%, ba nút Android"></figure>
+</div>
+<p>Chữ130% cần cuộn để đọc đủ giá. Tên dài tối đa ba dòng; tên đầy đủ ở chi tiết và nhãn accessibility. Khoảng đệm sau tác giả của cuốn tên ngắn dùng để căn dấu/giá với cuốn dài nhất cùng hàng, không phải lỗi mất nội dung.</p>
+<details><summary>Tên dài, “Cũ nhiều” và hai giá ở cuối kệ</summary>
+<figure style="max-width:390px"><figcaption>130% · cuộn cuối kệ, QA một triệu đồng</figcaption><img src="shelf-spacing/long-title-130.png" alt="Tên dài rút gọn, dấu Cũ nhiều, giá bán1000000 và giá trị đổi999000 đọc đủ"></figure>
+<p class="note">Ảnh kiểm nội dung này chụp trước thay đổi cuối cùng32→24dp giữa hai hàng; viewport cuối không hiển thị khoảng cách đó. Hai cặp trước/sau bên trên dùng source cuối.</p></details>
+<details><summary>Kiểm tra và giới hạn · 02/10/2026</summary>
+<p>RN96/96tests, lint/typecheckPASS; Expo web export12routesPASS (warningNO_COLOR và forced exit0). Android đã chạm qua các cuốn, cuộn hàng cuối; giá lớn/tên dài/ba nút130% đã xem. Web390px đã đo dấu và giá cùng hàng thẳng nhau; tìmGatsby chỉ một cuốn thu gọn cụm tên+tác giả còn71px, không giữ dòng thứ ba thừa.</p>
+<p>Sau ngắt phiên, QA Mongo báoSANDBOX_LOST (thiếu các identity của sandbox đã khởi tạo). Không reset hoặc provision lại trên cấu hình cũ; ảnh ở đây được chụp trước gián đoạn. Chưa hoàn tất vòng kiểm lại trạng thái rỗng/lỗi/keyboard/Back cho gói này. TalkBack, ARM, iOS và review người thật vẫn mở. Lỗi tương phản nút hệ thốngOSdark/API35 từ gói navbar vẫn mở, không liên quan thay đổi giãn cách.</p>
+<p>Nhánhcodex/ui-shelf-spacing, base0ec35c1; checkpoint <code>fix(rn): refine discovery spacing and book metadata alignment</code>. Chưa push/merge. Xem <a href="../DESIGN.md">DESIGN</a> và <a href="../handoff/SESSION_STATE.md">điểm lưu</a>.</p>
+</details>
+</main>
+</html>

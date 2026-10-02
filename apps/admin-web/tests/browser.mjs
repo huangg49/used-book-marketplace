@@ -95,6 +95,7 @@ try {
     await p.getByLabel("Email", { exact: true }).fill(email);
     await p.getByLabel("Mật khẩu", { exact: true }).fill(password);
     await click(p, "Đăng nhập");
+    await p.waitForURL(origin + (route === "/" ? "/dashboard" : route));
   };
   const openListing = async (p, index) => {
     await p
@@ -113,7 +114,11 @@ try {
     await queueGate;
     await route.abort("failed");
   });
-  await login(p);
+  await login(p, "/");
+  await p
+    .getByText("Dashboard này chưa truy vấn API và không hỗ trợ thao tác vận hành.")
+    .waitFor();
+  await p.getByRole("link", { name: "Bài đăng sách", exact: true }).click();
   await p
     .getByRole("heading", { name: "Trước khi sách chuyền tay." })
     .waitFor();
@@ -140,6 +145,25 @@ try {
   await p.setViewportSize({ width: 320, height: 780 });
   await p.addStyleTag({ content: "html{font-size:21.6px !important}" });
   await shot(p, "queue-320-large");
+  assert(
+    await p.locator(".mock-nav-label").evaluate((badge) => {
+      const label = badge.getBoundingClientRect();
+      const link = badge.closest("a").getBoundingClientRect();
+      return label.left >= link.left && label.right <= link.right;
+    }),
+    "Dashboard sample label must stay inside its navigation link",
+  );
+  const userLink = p.getByRole("link", { name: "Quản lý người dùng", exact: true });
+  assert(await userLink.isVisible(), "Admin navigation remains available at 320px");
+  await userLink.focus();
+  await focused(userLink);
+  await p.keyboard.press("Enter");
+  await p.getByRole("heading", { name: "Người dùng", level: 1 }).waitFor();
+  await shot(p, "users-320-large");
+  const listingLink = p.getByRole("link", { name: "Bài đăng sách", exact: true });
+  await listingLink.focus();
+  await p.keyboard.press("Enter");
+  await p.getByRole("heading", { name: "Trước khi sách chuyền tay.", level: 1 }).waitFor();
   await p.setViewportSize({ width: 1440, height: 1000 });
   await p.addStyleTag({ content: "html{font-size:16px !important}" });
   await p.getByRole("link", { name: "Đầu sách", exact: true }).click();
@@ -273,7 +297,7 @@ try {
   await p.locator(".status-label").filter({ hasText: "Đã duyệt" }).waitFor();
   // Two real sessions view the same version. The second must reconcile a 409.
   const second = await page();
-  await login(second, `/review/listings/${fixture.listings[2]}`);
+  await login(second, `/review/listings/${fixture.listings[2]}?source=handoff#main`);
   await second.getByRole("checkbox").first().waitFor();
   for (const checkbox of await second.getByRole("checkbox").all())
     await checkbox.check();

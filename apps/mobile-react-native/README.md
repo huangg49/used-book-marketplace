@@ -7,6 +7,9 @@ cp .env.example .env
 pnpm start
 ```
 
+For daily development from the repo root, use `pnpm dev:api` and `pnpm dev:rn`,
+then A for Android or W for web. See [DEVELOPMENT](../../docs/DEVELOPMENT.md) for
+one-time development APK installation and platform API URLs.
 See [ARCHITECTURE.md](ARCHITECTURE.md) before adding features.
 
 ## Internal read-only wallet

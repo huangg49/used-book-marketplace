@@ -80,6 +80,14 @@ export function UserDirectory() {
   const applySearch = () => setQuery(search.trim());
   return (
     <>
+      <header className="page-heading">
+        <p className="eyebrow">Quản trị tài khoản · Chỉ đọc</p>
+        <h1>Người dùng</h1>
+        <p className="intro">
+          Tra cứu tài khoản và quyền hiện tại để hỗ trợ vận hành. Danh sách này
+          không hiển thị mật khẩu, phiên đăng nhập, địa chỉ hoặc số dư.
+        </p>
+      </header>
       <form
         className="directory-filters"
         onSubmit={(event) => {

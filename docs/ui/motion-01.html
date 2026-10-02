@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lật lại · Chuyển động nhẹ trên Android</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --forest: #214b40;
+        --ink: #202c27;
+        --paper: #f6f8f3;
+        --surface: #fffcf4;
+        --rust: #963f28;
+        --rule: #c9d3c6;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--paper);
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+      }
+      header {
+        padding: 30px max(24px, calc((100vw - 1120px) / 2));
+        color: var(--surface);
+        background: var(--forest);
+      }
+      header .eyebrow {
+        margin: 0;
+        font-size: 13px;
+        letter-spacing: 0.12em;
+      }
+      h1 {
+        margin: 10px 0 12px;
+        font:
+          600 clamp(27px, 4vw, 40px)/1.2 Georgia,
+          serif;
+      }
+      header p {
+        max-width: 800px;
+        margin: 0;
+      }
+      main {
+        max-width: 1168px;
+        margin: auto;
+        padding: 24px;
+      }
+      h2 {
+        margin: 30px 0 8px;
+        font:
+          600 24px/1.35 Georgia,
+          serif;
+      }
+      p {
+        max-width: 900px;
+      }
+      .controls {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin: 20px 0;
+      }
+      .controls strong {
+        margin-right: 4px;
+      }
+      button {
+        min-height: 44px;
+        padding: 10px 20px;
+        border: 1px solid var(--forest);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--forest);
+        font: inherit;
+        cursor: pointer;
+      }
+      button[aria-pressed="true"] {
+        background: var(--forest);
+        color: var(--surface);
+      }
+      button:focus-visible,
+      a:focus-visible,
+      video:focus-visible {
+        outline: 3px solid var(--rust);
+        outline-offset: 4px;
+      }
+      a {
+        color: var(--forest);
+        text-underline-offset: 3px;
+      }
+      .compare {
+        max-width: 828px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 390px));
+        gap: 24px;
+        align-items: start;
+      }
+      .evidence-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+        gap: 24px;
+        align-items: start;
+        margin: 20px 0;
+      }
+      figure {
+        margin: 0;
+      }
+      figcaption {
+        margin: 0 0 10px;
+        font-weight: 650;
+      }
+      img,
+      video {
+        display: block;
+        width: 100%;
+        height: auto;
+        max-width: 390px;
+        border: 1px solid var(--rule);
+        background: var(--surface);
+      }
+      figure p {
+        margin: 8px 0;
+        font-size: 14px;
+      }
+      .note {
+        padding-left: 16px;
+        border-left: 3px solid var(--rust);
+      }
+      .checks {
+        max-width: 900px;
+        padding: 16px 20px;
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .checks p {
+        margin: 6px 0;
+      }
+      .small {
+        font-size: 14px;
+      }
+      footer {
+        max-width: 900px;
+        margin: 30px 0 12px;
+        padding-top: 16px;
+        border-top: 1px solid var(--rule);
+      }
+      @media (max-width: 680px) {
+        .compare {
+          grid-template-columns: minmax(0, 390px);
+        }
+        main {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <p class="eyebrow">LẬT LẠI / UI-1 · ANDROID</p>
+      <h1>Xem sách, thao tác liền mạch hơn.</h1>
+      <p>
+        Ảnh xuất hiện nhẹ, nút qua cuốn cuộn liền mạch, mở ảnh lớn có chuyển
+        động ngắn. Giữ bố cục và thông tin giao dịch; trạng thái tải ảnh nằm
+        trong khung bìa thay vì thêm một hàng bên ngoài.
+      </p>
+    </header>
+    <main>
+      <div class="controls" role="group" aria-label="Cỡ chữ Android">
+        <strong>Cỡ chữ hệ thống</strong>
+        <button type="button" data-scale="100" aria-pressed="true">100%</button>
+        <button type="button" data-scale="130" aria-pressed="false">
+          130%
+        </button>
+      </div>
+      <p class="note">
+        Mỗi lựa chọn dùng ảnh và video được ghi riêng với cỡ chữ Android tương
+        ứng, không phóng ảnh bằng CSS. Ảnh tĩnh để so bố cục; mở video để xem
+        chuyển động.
+      </p>
+      <h2>So thao tác trước / sau</h2>
+      <p>
+        Video được dừng sẵn. Nhấn phát từng bên để xem; có thể tải về để tua và
+        đối chiếu.
+      </p>
+      <div class="compare">
+        <figure>
+          <figcaption>Trước · 053c87e</figcaption>
+          <video
+            id="before-video"
+            controls
+            playsinline
+            preload="metadata"
+            poster="motion-01/before-shelf-100.png"
+            src="motion-01/before-100.mp4"
+            aria-label="Video Android trước thay đổi, chữ 100 phần trăm"
+          ></video>
+          <p>
+            <a id="before-download" href="motion-01/before-100.mp4" download
+              >Tải video trước</a
+            >
+          </p>
+        </figure>
+        <figure>
+          <figcaption>Sau · codex/ui-motion · chờ duyệt</figcaption>
+          <video
+            id="after-video"
+            controls
+            playsinline
+            preload="metadata"
+            poster="motion-01/after-shelf-100.png"
+            src="motion-01/after-100.mp4"
+            aria-label="Video Android sau thay đổi, chữ 100 phần trăm"
+          ></video>
+          <p>
+            <a id="after-download" href="motion-01/after-100.mp4" download
+              >Tải video sau</a
+            >
+          </p>
+        </figure>
+      </div>
+      <h2>So bố cục và thông tin giao dịch</h2>
+      <div class="controls" role="group" aria-label="Màn hình so sánh">
+        <button type="button" data-screen="shelf" aria-pressed="true">
+          Kệ sách
+        </button>
+        <button type="button" data-screen="detail" aria-pressed="false">
+          Chi tiết sách
+        </button>
+        <button type="button" data-screen="large" aria-pressed="false">
+          Ảnh lớn
+        </button>
+      </div>
+      <div class="compare">
+        <figure>
+          <figcaption id="before-caption">
+            Trước · Kệ sách · chữ 100%
+          </figcaption>
+          <a
+            id="before-full"
+            href="motion-01/before-shelf-100.png"
+            target="_blank"
+            rel="noopener"
+          >
+            <img
+              id="before-image"
+              src="motion-01/before-shelf-100.png"
+              alt="Kệ sách Android trước thay đổi, cỡ chữ 100 phần trăm"
+            />
+          </a>
+        </figure>
+        <figure>
+          <figcaption id="after-caption">Sau · Kệ sách · chữ 100%</figcaption>
+          <a
+            id="after-full"
+            href="motion-01/after-shelf-100.png"
+            target="_blank"
+            rel="noopener"
+          >
+            <img
+              id="after-image"
+              src="motion-01/after-shelf-100.png"
+              alt="Kệ sách Android sau thay đổi, cỡ chữ 100 phần trăm"
+            />
+          </a>
+        </figure>
+      </div>
+      <h2>Tải ảnh, lỗi và phục hồi</h2>
+      <p>
+        QA cố ý làm ảnh tải chậm hoặc lỗi để xem phản hồi và thao tác tải lại.
+        Các ảnh bên dưới ghi rõ cỡ chữ riêng, không đổi theo bộ chọn ở trên.
+      </p>
+      <div class="evidence-gallery">
+        <figure>
+          <figcaption>Đang tải ảnh · 100%</figcaption>
+          <a
+            href="motion-01/after-image-loading-100.png"
+            target="_blank"
+            rel="noopener"
+            ><img
+              src="motion-01/after-image-loading-100.png"
+              alt="Ảnh lớn đang tải trên Android, cỡ chữ 100%"
+              loading="lazy"
+          /></a>
+        </figure>
+        <figure>
+          <figcaption>Lỗi ảnh, có tải lại · 100%</figcaption>
+          <a
+            href="motion-01/after-image-error-100.png"
+            target="_blank"
+            rel="noopener"
+            ><img
+              src="motion-01/after-image-error-100.png"
+              alt="Ảnh lỗi và nút tải lại trên Android, cỡ chữ 100%"
+              loading="lazy"
+          /></a>
+        </figure>
+        <figure>
+          <figcaption>Ảnh đã phục hồi · 100%</figcaption>
+          <a
+            href="motion-01/after-image-recovered-100.png"
+            target="_blank"
+            rel="noopener"
+            ><img
+              src="motion-01/after-image-recovered-100.png"
+              alt="Ảnh lớn đã tải lại thành công trên Android, cỡ chữ 100%"
+              loading="lazy"
+          /></a>
+        </figure>
+        <figure>
+          <figcaption>Đang tải ảnh · 130%</figcaption>
+          <a
+            href="motion-01/after-image-loading-130.png"
+            target="_blank"
+            rel="noopener"
+            ><img
+              src="motion-01/after-image-loading-130.png"
+              alt="Ảnh lớn đang tải trên Android, cỡ chữ 130%"
+              loading="lazy"
+          /></a>
+        </figure>
+        <figure>
+          <figcaption>Tên dài ở chi tiết · 130%</figcaption>
+          <a
+            href="motion-01/after-long-detail-130.png"
+            target="_blank"
+            rel="noopener"
+            ><img
+              src="motion-01/after-long-detail-130.png"
+              alt="Chi tiết bản sách QA tên dài trên Android, cỡ chữ 130%"
+              loading="lazy"
+          /></a>
+        </figure>
+        <figure>
+          <figcaption>Tên dài và ảnh lớn · 130%</figcaption>
+          <a
+            href="motion-01/after-long-large-130.png"
+            target="_blank"
+            rel="noopener"
+            ><img
+              src="motion-01/after-long-large-130.png"
+              alt="Ảnh lớn của bản sách QA tên dài trên Android, cỡ chữ 130%"
+              loading="lazy"
+          /></a>
+        </figure>
+      </div>
+      <h2>Khi bật giảm chuyển động</h2>
+      <p>
+        Android chữ 130%, animator_duration_scale=0. Đổi thiết lập trên app đang
+        chạy, không khởi động lại app. Video được dừng sẵn để bạn chủ động xem.
+      </p>
+      <div class="compare">
+        <figure>
+          <figcaption>Giảm chuyển động · video 130%</figcaption>
+          <video
+            controls
+            playsinline
+            preload="metadata"
+            poster="motion-01/after-live-reduced-130.png"
+            src="motion-01/after-reduced.mp4"
+            aria-label="Video Android khi bật giảm chuyển động, cỡ chữ 130%"
+          ></video>
+          <p>
+            <a href="motion-01/after-reduced.mp4" download
+              >Tải video giảm chuyển động</a
+            >
+          </p>
+        </figure>
+        <figure>
+          <figcaption>Ảnh lớn sau đổi thiết lập · 130%</figcaption>
+          <a
+            href="motion-01/after-live-reduced-130.png"
+            target="_blank"
+            rel="noopener"
+            ><img
+              src="motion-01/after-live-reduced-130.png"
+              alt="Ảnh lớn sau đổi thiết lập giảm chuyển động trên Android đang chạy, cỡ chữ 130%"
+              loading="lazy"
+          /></a>
+        </figure>
+      </div>
+      <h2>Phạm vi chuyển động</h2>
+      <div class="checks">
+        <p>
+          <strong>Ảnh:</strong> khung không đổi khi tải; chỉ ảnh hiện nhẹ, không
+          sửa tình trạng hoặc màu bìa. URL hết hạn/lỗi vẫn bị thu hồi theo cơ
+          chế cũ.
+        </p>
+        <p>
+          <strong>Kệ:</strong> chỉ nút qua cuốn dùng cuộn native. Không tự chạy,
+          không thay thứ tự API; focus và thay bộ lọc vẫn chuyển trực tiếp.
+        </p>
+        <p>
+          <strong>Ảnh lớn:</strong> nền tối và nội dung mở trong 160 ms;
+          header/nút đóng đứng yên. Đóng ngay để Back và vòng đời ảnh có hiệu
+          lực ngay, không giữ ảnh cũ để làm hiệu ứng thoát.
+        </p>
+        <p>
+          <strong>Giảm chuyển động:</strong> theo tùy chọn hệ điều hành, cập
+          nhật trực tiếp; chưa biết tùy chọn thì mặc định giảm. Không có chuyển
+          bìa giữa hai màn hoặc hiệu ứng 3D.
+        </p>
+      </div>
+      <footer>
+        <p class="small">
+          Bộ dữ liệu QA riêng gồm 5 bản sách, dùng cùng dữ liệu cho trước/sau.
+          Ảnh tư liệu chỉ dùng làm bìa QA, không chứng minh tình trạng bản sách
+          thật. Mongo/API thật; storage fixture FAKE.
+        </p>
+        <p class="small">
+          Pixel 7 · API 35 · x86_64 · khoảng 390 dp, bản debug qua Metro. Bản
+          sau và bản trước 130% ghi trên emulator headless dùng SwiftShader; môi
+          trường dựng hình có thể khác bản trước 100%. Video không là phép đo
+          FPS hoặc nghiệm thu hiệu năng trên điện thoại phổ thông.
+        </p>
+        <p class="small">
+          Chưa push/merge; review người thật, TalkBack, ARM, iOS và release vẫn
+          là gate riêng.
+        </p>
+        <p>
+          <a href="MOTION_01.md">Đọc kiểm chứng và giới hạn của lượt này</a>
+        </p>
+      </footer>
+    </main>
+    <script>
+      let scale = "100";
+      let screen = "shelf";
+      const labels = {
+        shelf: "Kệ sách",
+        detail: "Chi tiết sách",
+        large: "Ảnh lớn",
+      };
+      function imagePath(side) {
+        return screen === "large"
+          ? `motion-01/${side}-${scale}-large.png`
+          : `motion-01/${side}-${screen}-${scale}.png`;
+      }
+      function updateImages() {
+        for (const side of ["before", "after"]) {
+          const path = imagePath(side);
+          document.getElementById(`${side}-image`).src = path;
+          document.getElementById(`${side}-image`).alt =
+            `${labels[screen]} Android ${side === "before" ? "trước" : "sau"} thay đổi, cỡ chữ ${scale} phần trăm`;
+          document.getElementById(`${side}-full`).href = path;
+          document.getElementById(`${side}-caption`).textContent =
+            `${side === "before" ? "Trước" : "Sau"} · ${labels[screen]} · chữ ${scale}%`;
+        }
+      }
+      document.querySelectorAll("[data-scale]").forEach((button) =>
+        button.addEventListener("click", () => {
+          if (scale === button.dataset.scale) return;
+          scale = button.dataset.scale;
+          document
+            .querySelectorAll("[data-scale]")
+            .forEach((item) =>
+              item.setAttribute(
+                "aria-pressed",
+                String(item.dataset.scale === scale),
+              ),
+            );
+          for (const side of ["before", "after"]) {
+            const video = document.getElementById(`${side}-video`);
+            video.pause();
+            video.src = `motion-01/${side}-${scale}.mp4`;
+            video.poster = `motion-01/${side}-shelf-${scale}.png`;
+            video.setAttribute(
+              "aria-label",
+              `Video Android ${side === "before" ? "trước" : "sau"} thay đổi, chữ ${scale} phần trăm`,
+            );
+            video.load();
+            document.getElementById(`${side}-download`).href =
+              video.getAttribute("src");
+          }
+          updateImages();
+        }),
+      );
+      document.querySelectorAll("[data-screen]").forEach((button) =>
+        button.addEventListener("click", () => {
+          screen = button.dataset.screen;
+          document
+            .querySelectorAll("[data-screen]")
+            .forEach((item) =>
+              item.setAttribute(
+                "aria-pressed",
+                String(item.dataset.screen === screen),
+              ),
+            );
+          updateImages();
+        }),
+      );
+    </script>
+  </body>
+</html>

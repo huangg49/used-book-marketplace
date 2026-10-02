@@ -225,7 +225,7 @@ try {
     .getByRole("button", { name: /^Xem cuốn sách:/ })
     .first()
     .click();
-  await p.getByText("Dấu đọc còn lại", { exact: true }).waitFor();
+  await p.getByRole("heading", { name: "Phiếu tình trạng", exact: true }).waitFor();
   const metadataToggle = p.getByRole("button", {
     name: "Về đầu sách",
     exact: true,
@@ -299,7 +299,7 @@ try {
     .getByText("Cuốn sách này không còn trên kệ.", { exact: true })
     .waitFor();
   assert.equal(
-    await p.getByText("Dấu đọc còn lại", { exact: true }).count(),
+    await p.getByRole("heading", { name: "Phiếu tình trạng", exact: true }).count(),
     0,
   );
   await click("Về kệ sách");

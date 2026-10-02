@@ -9,12 +9,17 @@ import {
   BookCondition,
   BookCover,
   BookPrice,
+  BookOffer,
+  BookshopNote,
+  BookTradeBar,
+  BrandLogo,
   Button,
   Checkbox,
   Chip,
   ConfirmDialog,
   IconButton,
   Notice,
+  NavigationBar,
   Screen,
   SearchField,
   Sheet,
@@ -22,6 +27,7 @@ import {
   TextField,
   TextScale,
   colors,
+  colorRoles,
   layout,
   space,
 } from "../../core/ui";
@@ -33,6 +39,7 @@ const sections = [
   "Hộp thoại",
   "Sách",
   "Chữ",
+  "Điều hướng",
 ] as const;
 type Section = (typeof sections)[number];
 export function UiCatalogScreen() {
@@ -46,13 +53,43 @@ export function UiCatalogScreen() {
   const [checked, setChecked] = useState(false);
   const [notice, setNotice] = useState("");
   const [sheet, setSheet] = useState(false);
+  const [photoSheet, setPhotoSheet] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [fail, setFail] = useState(false);
   const [error, setError] = useState("");
   const [state, setState] = useState<"loading" | "empty" | "error">("empty");
+  const [destination, setDestination] = useState("discover");
   return (
     <TextScale.Provider value={large ? 1.35 : 1}>
-      <Screen scrollRef={scroll}>
+      <Screen
+        scrollRef={scroll}
+        compactFooter
+        footerAppearance={section === "Điều hướng" ? "navigation" : "paper"}
+        footer={
+          section === "Sách" ? (
+            <BookTradeBar sale={125000} exchange={150000}>
+              <AppText kind="annotation" color={colors.muted}>
+                Tiệm chưa nhận đơn ở bản này.
+              </AppText>
+            </BookTradeBar>
+          ) : section === "Điều hướng" ? (
+            <NavigationBar
+              current={destination}
+              destinations={[
+                { key: "discover", title: "Khám phá", icon: "book" },
+                {
+                  key: "books",
+                  title: "Sách tôi",
+                  accessibilityLabel: "Sách của tôi",
+                  icon: "bookmark",
+                },
+                { key: "account", title: "Tài khoản", icon: "person" },
+              ]}
+              onSelect={setDestination}
+            />
+          ) : undefined
+        }
+      >
         <AppText kind="label" color={colors.rustText}>
           LẬT LẠI / THƯ VIỆN GIAO DIỆN
         </AppText>
@@ -301,6 +338,27 @@ export function UiCatalogScreen() {
               secondary
               onPress={() => setSheet(true)}
             />
+            <Button
+              title="Thử mở ảnh lớn"
+              secondary
+              onPress={() => setPhotoSheet(true)}
+            />
+            <Sheet
+              title="Ảnh minh họa — chuyển động nhẹ"
+              motion="photo"
+              visible={photoSheet}
+              onClose={() => setPhotoSheet(false)}
+            >
+              <AppText>
+                Ảnh tư liệu để thử mở ảnh, chữ lớn và Back. Khi bật giảm chuyển
+                động, ảnh hiện ngay; đóng bảng luôn có hiệu lực ngay.
+              </AppText>
+              <BookCover
+                source={require("../../../assets/design/pride.jpg")}
+                label="Bìa tư liệu Pride and Prejudice — không là ảnh bản sách đang bán"
+                style={{ height: 320, width: "100%" }}
+              />
+            </Sheet>
             <Checkbox
               title="Mô phỏng lần xác nhận đầu thất bại"
               checked={fail}
@@ -364,6 +422,23 @@ export function UiCatalogScreen() {
           </>
         ) : section === "Sách" ? (
           <>
+            <View style={{ backgroundColor: colors.forest, padding: space.lg }}>
+              <BrandLogo inverse />
+              <AppText color={colors.paper}>Mặt tiền kệ · hướng B</AppText>
+            </View>
+            <View
+              style={{
+                backgroundColor: colorRoles.shelfCanvas,
+                padding: space.lg,
+                gap: space.sm,
+              }}
+            >
+              <AppText kind="shelfTitle">
+                Nền kệ sáng, dấu tình trạng thật
+              </AppText>
+              <BookCondition stamp condition="Cũ nhiều" />
+              <BookOffer sale={1000000} exchange={999000} />
+            </View>
             <BookCover
               source={require("../../../assets/design/pride.jpg")}
               label="Bìa lưu trữ Pride and Prejudice"
@@ -375,6 +450,16 @@ export function UiCatalogScreen() {
               hình chi tiết trong bản mẫu.
             </AppText>
             <BookCondition condition="Tốt" mode="Bán hoặc đổi" />
+            <BookCondition stamp condition="Cũ nhiều" mode="Bán hoặc đổi" />
+            <AppText kind="shelfTitle">Tên sách trên kệ · UI-1</AppText>
+            <BookshopNote />
+            <BookOffer sale={125000} exchange={150000} />
+            <BookPrice reading stacked sale={125000} exchange={150000} />
+            <AppText kind="bookTitle">Phiếu sách · màn chuẩn UI-1</AppText>
+            <AppText kind="reading">
+              Gáy có nếp đọc, trang ngả vàng. Nội dung mẫu để kiểm chữ lớn.
+            </AppText>
+            <BookPrice reading sale={1000000} exchange={125000} />
             <AppText kind="card">
               Những ngày đi bộ qua thành phố và những câu chuyện còn ở lại trong
               một cuốn sổ
@@ -395,6 +480,12 @@ export function UiCatalogScreen() {
               style={{ height: 160 }}
             />
           </>
+        ) : section === "Điều hướng" ? (
+          <AppText>
+            Chọn một mục ở thanh dưới để xem trạng thái. Mẫu này chỉ đổi lựa
+            chọn trong phiên, không mở màn hình khác. Thử chữ lớn và Tab để kiểm
+            tra nhãn, focus cùng vùng tránh nút điều hướng Android.
+          </AppText>
         ) : (
           <>
             <AppText kind="title" color={colors.forest}>

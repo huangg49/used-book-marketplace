@@ -5,6 +5,7 @@ services:
   # password comes from the root .env (pnpm setup:local generates it).
   mongo:
     image: mongo:8.0
+    restart: unless-stopped
     entrypoint: ["bash", "/scripts/node.sh"]
     environment:
       MONGO_PORT: "27017"
@@ -42,6 +43,7 @@ services:
       retries: 10
 
   redis:
+    profiles: [optional-redis]
     image: redis:8-alpine
     command: ["redis-server", "--appendonly", "yes"]
     ports:
@@ -69,6 +71,7 @@ services:
       - minio_data:/data
 
   mailpit:
+    profiles: [optional-mail]
     image: axllent/mailpit:latest
     ports:
       - "1025:1025"

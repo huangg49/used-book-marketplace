@@ -8,6 +8,7 @@ import { useForeground } from "../../core/hooks/use-foreground";
 import {
   AppText,
   BackAction,
+  BookTradeBar,
   Button,
   Notice,
   Screen,
@@ -50,6 +51,19 @@ export function BookScreen({ id }: { id: string }) {
   const item = unavailable ? undefined : result.data;
   return (
     <Screen
+      compactFooter
+      footer={
+        item && !result.isError ? (
+          <BookTradeBar
+            sale={item.salePrice ?? undefined}
+            exchange={item.exchangeValue ?? undefined}
+          >
+            <AppText kind="annotation" color={colors.muted}>
+              Tiệm chưa nhận đơn ở bản này.
+            </AppText>
+          </BookTradeBar>
+        ) : undefined
+      }
       header={
         <View
           style={{ paddingHorizontal: space.xl, paddingVertical: space.xs }}
@@ -91,8 +105,9 @@ export function BookScreen({ id }: { id: string }) {
               <BookPresentation
                 key={item.revisionId}
                 item={item}
-                gallery={
+                gallery={(summary) => (
                   <BookGallery
+                    summary={summary}
                     count={item.photos.length}
                     selected={selected}
                     onSelect={setSelected}
@@ -108,10 +123,11 @@ export function BookScreen({ id }: { id: string }) {
                         label={`Ảnh ${selected + 1} của ${item.book.title}`}
                         active={active && !result.isError}
                         large
+                        compact
                       />
                     }
                   />
-                }
+                )}
               >
                 <Button
                   title="Cập nhật tình trạng sách"
@@ -121,6 +137,7 @@ export function BookScreen({ id }: { id: string }) {
                 />
               </BookPresentation>
               <Sheet
+                motion="photo"
                 visible={large && !result.isError}
                 title={`Ảnh ${selected + 1} / ${item.photos.length}`}
                 onClose={() => setLarge(false)}

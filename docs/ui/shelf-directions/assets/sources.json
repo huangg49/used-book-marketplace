@@ -1,0 +1,44 @@
+[
+  {
+    "file": "dalloway.svg",
+    "repo": "virginia-woolf_mrs-dalloway",
+    "source": "https://github.com/standardebooks/virginia-woolf_mrs-dalloway/blob/master/src/epub/images/cover.svg",
+    "download": "https://raw.githubusercontent.com/standardebooks/virginia-woolf_mrs-dalloway/master/src/epub/images/cover.svg",
+    "sha": "fb74291fb38d37719ac4b9b55ebe5c1e1ef0d34f"
+  },
+  {
+    "file": "jekyll.svg",
+    "repo": "robert-louis-stevenson_the-strange-case-of-dr-jekyll-and-mr-hyde",
+    "source": "https://github.com/standardebooks/robert-louis-stevenson_the-strange-case-of-dr-jekyll-and-mr-hyde/blob/master/src/epub/images/cover.svg",
+    "download": "https://raw.githubusercontent.com/standardebooks/robert-louis-stevenson_the-strange-case-of-dr-jekyll-and-mr-hyde/master/src/epub/images/cover.svg",
+    "sha": "9ae83651ec2991c72c235ff8b60a3ee572a93629"
+  },
+  {
+    "file": "siddhartha.svg",
+    "repo": "hermann-hesse_siddhartha_various-translators",
+    "source": "https://github.com/standardebooks/hermann-hesse_siddhartha_various-translators/blob/master/src/epub/images/cover.svg",
+    "download": "https://raw.githubusercontent.com/standardebooks/hermann-hesse_siddhartha_various-translators/master/src/epub/images/cover.svg",
+    "sha": "a335c22b22b7c186991e44ae672e7f78a342665b"
+  },
+  {
+    "file": "gatsby.svg",
+    "repo": "f-scott-fitzgerald_the-great-gatsby",
+    "source": "https://github.com/standardebooks/f-scott-fitzgerald_the-great-gatsby/blob/master/src/epub/images/cover.svg",
+    "download": "https://raw.githubusercontent.com/standardebooks/f-scott-fitzgerald_the-great-gatsby/master/src/epub/images/cover.svg",
+    "sha": "14cb120da9e6c7a12134a9083d4948a650dc69b4"
+  },
+  {
+    "file": "garden.svg",
+    "repo": "frances-hodgson-burnett_the-secret-garden",
+    "source": "https://github.com/standardebooks/frances-hodgson-burnett_the-secret-garden/blob/master/src/epub/images/cover.svg",
+    "download": "https://raw.githubusercontent.com/standardebooks/frances-hodgson-burnett_the-secret-garden/master/src/epub/images/cover.svg",
+    "sha": "cf4b1dd1c5f71aa2beb411156c1aa61d32559bac"
+  },
+  {
+    "file": "alice.svg",
+    "repo": "lewis-carroll_alices-adventures-in-wonderland",
+    "source": "https://github.com/standardebooks/lewis-carroll_alices-adventures-in-wonderland_john-tenniel/blob/master/src/epub/images/cover.svg",
+    "download": "https://raw.githubusercontent.com/standardebooks/lewis-carroll_alices-adventures-in-wonderland_john-tenniel/master/src/epub/images/cover.svg",
+    "sha": "25b2a274493d3e4c65ccd203ad8958f65ab6d90f"
+  }
+]

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lật lại — Dấu tình trạng đi cùng cuốn sách</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f6f8f3;color:#203d34;font:16px/1.6 system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:24px}h1{font-size:28px;margin:0 0 12px}h2{font-size:22px;margin-top:36px}p{max-width:800px}.pair{display:grid;grid-template-columns:repeat(2,minmax(0,390px));gap:24px;align-items:start}figure{margin:0}figcaption{padding:12px 0;font-weight:650}img{display:block;width:100%;height:auto;border:1px solid #bac7bb}.note{font-size:14px;color:#526359}a{color:inherit}details{margin:24px 0}summary{cursor:pointer}@media(max-width:600px){main{padding:16px}.pair{gap:12px}figcaption{font-size:13px}}
+</style>
+<main>
+<h1>Dấu tình trạng đi cùng cuốn sách</h1>
+<p>Tên, tác giả và dấu mộc là một cụm liền mạch. Dấu cách tác giả 8dp, không còn bị đẩy xuống theo tên dài của cuốn khác. Chỉ vùng giá căn thẳng ở đáy các thẻ trong cùng hàng.</p>
+<p class="note">Ảnh Android thật ở khoảng 390dp, cùng bộ năm nội dung QA và bìa tư liệu. Trước: 09be958. Sau: checkpoint <code>fix(rn): keep condition stamps beside book metadata</code> trên nhánh <code>codex/ui-shelf-spacing</code>. Chưa push/merge.</p>
+<h2>100% — điều hướng cử chỉ</h2>
+<div class="pair">
+<figure><figcaption>Trước · khoảng trắng trước dấu</figcaption><img src="shelf-spacing/after-100.png" alt="Trước, tác giả cách xa dấu tình trạng, chữ100%"></figure>
+<figure><figcaption>Sau · tác giả và dấu đi liền</figcaption><img src="shelf-stamp-flow/after-100.png" alt="Sau, dấu tình trạng nằm sát tác giả, chữ100%"></figure>
+</div>
+<h2>130% — ba nút Android</h2>
+<div class="pair">
+<figure><figcaption>Trước</figcaption><img src="shelf-spacing/after-buttons-130.png" alt="Trước, khoảng trắng sau tác giả ở chữ130%"></figure>
+<figure><figcaption>Sau</figcaption><img src="shelf-stamp-flow/after-buttons-130.png" alt="Sau, dấu theo chiều cao riêng của từng tên sách ở chữ130%"></figure>
+</div>
+<p>Cuốn tên ngắn vẫn có khoảng trống <strong>sau dấu, trước giá</strong> để căn giá với cuốn dài nhất. Dấu mộc được phép khác cao độ. Tên trên kệ tối đa ba dòng; tên đầy đủ giữ ở chi tiết và nhãn accessibility.</p>
+<details><summary>Tên dài, Cũ nhiều và hai giá ở 130%</summary>
+<figure style="max-width:390px"><img src="shelf-stamp-flow/end-130.png" alt="Cuốn tên dài, dấu Cũ nhiều và hai giá một triệu,999000 đồng hiển thị đủ ở chữ130%"></figure></details>
+<details><summary>Kiểm tra và giới hạn · 02/10/2026</summary>
+<p>RN 96/96 tests, lint/typecheck, Expo web export 12 routes PASS; export có warning NO_COLOR và forced exit0. Android Pixel7/API35: 390dp/100% và 130%, ba nút hệ thống, chạm qua cuốn, cuộn hàng cuối, mở chi tiết rồi Back về vị trí đang xem. Web390px: đo cả năm cuốn, khoảng metadata→dấu đều8px; giá hàng1 cùng y645, hàng2 cùng y1137.</p>
+<p>Không thêm dependency hoặc đổi API/query/session/navigation. Bỏ cơ chế đo chiều cao tên dùng chung, dùng flex layout hiện có. QA mới tại Mongo37017, database ngẫu nhiên kết thúc_test; năm listing được tạo/duyệt qua API. StorageFAKE, không phải Supabase thật. Sandbox cũ được giữ nguyên sau SANDBOX_LOST.</p>
+<p>Chưa nghiệm thu TalkBack/ARM/iOS/release và review người thật. Lỗi tương phản ba nút Android15 khi OSdark từ gói navbar vẫn mở. Không chạy lại toàn bộ các gate không liên quan. <a href="shelf-spacing.html">Vòng giãn cách trước</a>.</p>
+</details>
+</main>
+</html>

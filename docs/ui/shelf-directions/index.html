@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lật lại · Ba cách mở cửa tiệm</title>
+    <link rel="stylesheet" href="study.css" />
+  </head>
+  <body class="studio">
+    <header class="study-header">
+      <div class="study-eyebrow">LẬT LẠI / THỬ HƯỚNG KỆ / 01.10.2026</div>
+      <h1>Ba cách mở cửa tiệm.</h1>
+      <p>
+        Cùng sáu cuốn sách. Ba cách lựa khác nhau. Bìa mang màu sắc; giao diện
+        giúp chọn.
+      </p>
+      <div class="study-controls">
+        <label
+          >Xem hướng
+          <select id="direction">
+            <option value="all">Cả ba cạnh nhau</option>
+            <option value="a">A · Cửa hàng sáng</option>
+            <option value="b">B · Dạo giữa những bìa sách</option>
+            <option value="c">C · Quầy sách có ghi chú</option>
+          </select></label
+        >
+        <label
+          >Chữ mẫu
+          <select id="scale">
+            <option value="100">100%</option>
+            <option value="130">130%</option>
+          </select></label
+        >
+        <button id="reset" type="button">Về đầu cả ba kệ</button>
+      </div>
+      <p class="disclosure">
+        Mẫu HTML để chọn hướng, chưa áp vào app. Bìa tư liệu; giá, tình trạng và
+        ghi chú đều là dữ liệu thử. Chữ 130% mô phỏng trên web, chưa phải kiểm
+        Android.
+      </p>
+    </header>
+    <section
+      class="overview"
+      aria-label="Ảnh tổng quan ba hướng cùng kích thước"
+    >
+      <button data-open="a">
+        <span
+          ><b>A · Cửa hàng sáng</b
+          ><small>Ưu tiên chọn nhanh, so giá.</small></span
+        ><img
+          src="evidence/a-100.png"
+          alt="Hướng A: nền sáng, lưới sách hai cột, giá và tình trạng rõ"
+        /><span class="overview-note">Mở bản tương tác A ↗</span>
+      </button>
+      <button data-open="b">
+        <span><b>B · Dạo kệ</b><small>Ưu tiên cảm giác khám phá.</small></span
+        ><img
+          src="evidence/b-100.png"
+          alt="Hướng B: đầu trang xanh rừng, các hàng bìa cuộn ngang"
+        /><span class="overview-note">Mở bản tương tác B ↗</span>
+      </button>
+      <button data-open="c">
+        <span
+          ><b>C · Quầy có ghi chú</b
+          ><small>Ưu tiên lý lịch bản sách.</small></span
+        ><img
+          src="evidence/c-100.png"
+          alt="Hướng C: cuốn mở đầu lớn, phiếu tình trạng và ghi chú cạnh sách"
+        /><span class="overview-note">Mở bản tương tác C ↗</span>
+      </button>
+    </section>
+    <main class="directions" hidden>
+      <section class="direction" data-direction="a">
+        <div class="direction-heading">
+          <span>A</span>
+          <div>
+            <h2>Cửa hàng sáng</h2>
+            <p>Nhìn bìa → so giá → mở cuốn.</p>
+          </div>
+        </div>
+        <iframe
+          title="Hướng A — cửa hàng sáng"
+          src="phone.html?direction=a"
+        ></iframe>
+        <div class="verdict">
+          <b>Ưu tiên chọn nhanh</b>
+          <p>
+            Hai cột trên nền trắng ấm. Giá và dấu tình trạng luôn ở cùng vị trí.
+            Phiếu chi tiết giữ câu chuyện của bản sách.
+          </p>
+          <p class="tradeoff">
+            Dễ chuyển từ code hiện tại nhất. Cá tính phụ thuộc nhiều vào bìa
+            thật; không thêm banner lớn để bù.
+          </p>
+        </div>
+      </section>
+      <section class="direction" data-direction="b">
+        <div class="direction-heading">
+          <span>B</span>
+          <div>
+            <h2>Dạo giữa những bìa sách</h2>
+            <p>Lướt một hàng → dừng ở cuốn hợp mình.</p>
+          </div>
+        </div>
+        <iframe
+          title="Hướng B — dạo giữa những bìa sách"
+          src="phone.html?direction=b"
+        ></iframe>
+        <div class="verdict">
+          <b>Ưu tiên cảm giác dạo tiệm</b>
+          <p>
+            Mặt tiền xanh rừng, từng hàng bìa cuộn ngang có nút qua cuốn. Giá
+            bán/đổi nằm ngay dưới mỗi sách.
+          </p>
+          <p class="tradeoff">
+            Nhiều nhịp điệu hơn, nhưng so nhiều giá chậm hơn. Cần kiểm cuộn
+            ngang, TalkBack và trả vị trí khi Back trên RN.
+          </p>
+        </div>
+      </section>
+      <section class="direction" data-direction="c">
+        <div class="direction-heading">
+          <span>C</span>
+          <div>
+            <h2>Quầy sách có ghi chú</h2>
+            <p>Thấy bản sách → đọc dấu vết → cân nhắc giá.</p>
+          </div>
+        </div>
+        <iframe
+          title="Hướng C — quầy sách có ghi chú"
+          src="phone.html?direction=c"
+        ></iframe>
+        <div class="verdict">
+          <b>Ưu tiên lý lịch và độ tin cậy</b>
+          <p>
+            Một cuốn mở đầu lớn, tiếp theo là các phiếu ngang gọn. Lời người
+            đăng giúp hiểu vì sao bản sách được xếp tình trạng đó.
+          </p>
+          <p class="tradeoff">
+            Khác biệt nhất, nhưng ít sách trên màn hơn A. Chỉ hiện ghi chú khi
+            có dữ liệu thật; không tự suy diễn hoặc viết thay.
+          </p>
+        </div>
+      </section>
+    </main>
+    <footer class="study-footer">
+      <p>
+        <b>Cách xem:</b> cuộn trong từng khung, thử tìm/lọc, chạm bìa hoặc tên
+        để mở phiếu. Các thao tác chỉ chạy trên dữ liệu mẫu, không gửi API.
+        Thanh điều hướng dưới chỉ thể hiện vị trí, chưa phải luồng app.
+      </p>
+      <p>
+        Mình nghiêng về <b>A làm nền phát triển</b>; B đáng chọn nếu bạn thích
+        khám phá bằng bìa. C cho thấy chất riêng rõ nhất nhưng cần dữ liệu tình
+        trạng tốt.
+      </p>
+      <details>
+        <summary>Bộ sách, nguồn ảnh và giới hạn</summary>
+        <div id="sources"></div>
+        <p>
+          Ảnh bìa lấy nguyên bản từ Standard Ebooks, không minh chứng tình trạng
+          một bản sách rao bán. Tên hiển thị là tên tác phẩm tiếng Anh để khớp
+          bìa. Giá và ghi chú dùng chung ở cả ba hướng; không có khuyến mãi,
+          rating hoặc lượt bán giả.
+        </p>
+        <p>
+          Không thay DESIGN.md khi chưa chọn hướng. Chưa có bằng chứng
+          native/TalkBack/FPS; những bản này chỉ để duyệt bố cục và sắc thái.
+        </p>
+      </details>
+    </footer>
+    <script src="study.js"></script>
+  </body>
+</html>

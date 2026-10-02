@@ -1,5 +1,10 @@
 # Luật giao diện Lật lại
 
+UI-1 (30/09/2026): [DESIGN.md](../DESIGN.md) là nguồn sự thật về định hướng trình
+bày mới, ưu tiên khi mâu thuẫn với quyết định thẩm mỹ cũ bên dưới hoặc brand v1.1.
+Đã duyệt màn chuẩn chi tiết; cho phép áp sang kệ sách, chờ duyệt ảnh kệ. Quy tắc về
+nghiệp vụ, component chung, accessibility và bảo toàn dữ liệu vẫn giữ hiệu lực.
+
 Áp dụng cho React Native. Bản đầu: 25/09/2026. Đọc cùng
 [component và cách dùng](UI_COMPONENTS.md), [nghiên cứu màn hình](SCREEN_STUDY.md)
 và [nhận diện Dấu chuyền tay](../../packages/brand/v1.1/README.md).
@@ -56,16 +61,16 @@ một tab điều hướng của app dành cho bạn đọc.
 
 ## 4. Phản hồi đúng nơi, đúng mức
 
-| Tình huống | Thành phần | Hành vi bắt buộc |
-|---|---|---|
-| Sai dữ liệu một ô | `TextField error` | Nhãn vẫn còn; nói cách sửa; giữ giá trị; không chỉ đổi màu viền |
-| Lỗi gửi form | `Notice tone="error"` trong form | Giữ dữ liệu; cho thử lại khi phù hợp; không thông báo thành công trước phản hồi server |
-| Lỗi tải lần đầu | `StatePanel` + hành động | Phân biệt với dữ liệu rỗng; nút retry có trạng thái busy |
-| Refresh lỗi nhưng có dữ liệu | `Notice` cạnh dữ liệu hiện có | Giữ dữ liệu cũ, nói rõ chưa cập nhật; không thay bằng màn hình rỗng |
-| Thành công nhẹ | `Notice tone="success"` hoặc trạng thái điều khiển | Không yêu cầu đóng modal; thông tin quan trọng không tự biến mất theo timer |
-| Cảnh báo không chặn xem | `Notice tone="warning"` | Nói rõ thao tác nào bị hạn chế |
-| Người dùng cần quyết định | `ConfirmDialog` | Nêu hậu quả; hủy dễ thấy; lỗi ở trong dialog; chỉ đóng sau khi thành công |
-| Xem thông tin/chọn tùy chọn | `Sheet` | Có tên, nút đóng, nội dung cuộn được; hỗ trợ Back/Escape |
+| Tình huống                   | Thành phần                                         | Hành vi bắt buộc                                                                       |
+| ---------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Sai dữ liệu một ô            | `TextField error`                                  | Nhãn vẫn còn; nói cách sửa; giữ giá trị; không chỉ đổi màu viền                        |
+| Lỗi gửi form                 | `Notice tone="error"` trong form                   | Giữ dữ liệu; cho thử lại khi phù hợp; không thông báo thành công trước phản hồi server |
+| Lỗi tải lần đầu              | `StatePanel` + hành động                           | Phân biệt với dữ liệu rỗng; nút retry có trạng thái busy                               |
+| Refresh lỗi nhưng có dữ liệu | `Notice` cạnh dữ liệu hiện có                      | Giữ dữ liệu cũ, nói rõ chưa cập nhật; không thay bằng màn hình rỗng                    |
+| Thành công nhẹ               | `Notice tone="success"` hoặc trạng thái điều khiển | Không yêu cầu đóng modal; thông tin quan trọng không tự biến mất theo timer            |
+| Cảnh báo không chặn xem      | `Notice tone="warning"`                            | Nói rõ thao tác nào bị hạn chế                                                         |
+| Người dùng cần quyết định    | `ConfirmDialog`                                    | Nêu hậu quả; hủy dễ thấy; lỗi ở trong dialog; chỉ đóng sau khi thành công              |
+| Xem thông tin/chọn tùy chọn  | `Sheet`                                            | Có tên, nút đóng, nội dung cuộn được; hỗ trợ Back/Escape                               |
 
 `presentError` ánh xạ lỗi transport thành lời giải thích được kiểm soát. Không
 render `error.message`, stack trace hoặc response body tùy ý. Request ID hợp lệ
@@ -98,8 +103,9 @@ phù hợp; ví dụ catalog chỉ xóa dữ liệu minh họa trong phiên.
   tạm riêng với bộ lọc đang áp dụng; đóng bảng không thay đổi truy vấn hiện tại.
 - Tương phản chữ thường tối thiểu 4.5:1, ranh giới điều khiển 3:1. Các cặp đang
   dùng được test từ token. Divider trang trí không thay border ô nhập.
-- Không bắt người dùng xem chuyển động trang trí; sheet hiện không dùng animation.
-  Nếu thêm chuyển động sau này, phải hỗ trợ giảm chuyển động và giải thích mục đích.
+- Không bắt người dùng xem chuyển động trang trí. Sheet mặc định không animation;
+  `motion="photo"` chỉ dùng cho xem ảnh lớn theo DESIGN, đóng ngay. Chuyển động
+  hỗ trợ reduced motion cập nhật trực tiếp, không che giá hoặc trì hoãn thao tác.
 
 ## 6. Cách team triển khai một màn hình
 

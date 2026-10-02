@@ -1,0 +1,22 @@
+name: Developer startup CI
+
+on:
+  pull_request:
+    paths: ["scripts/dev-*.mjs", "package.json", ".github/workflows/developer-ci.yml"]
+  push:
+    branches: [main]
+    paths: ["scripts/dev-*.mjs", "package.json", ".github/workflows/developer-ci.yml"]
+
+jobs:
+  startup:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      # Isolated process/port fixtures; no app database, Docker or secrets needed.
+      - run: node --test scripts/dev-*.test.mjs

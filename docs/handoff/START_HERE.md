@@ -69,15 +69,17 @@ Seed chỉ cho local, không tự đổi mật khẩu account đã tồn tại. 
 [hướng dẫn RN](../REACT_NATIVE_START.md); mật khẩu theo cấu hình local của người nhận.
 Không cần seed đơn hàng hoặc sửa số dư SQL để chứng minh backend hoạt động.
 
-Mở terminal riêng cho mỗi lệnh:
+Chạy hằng ngày theo [DEVELOPMENT](../DEVELOPMENT.md): hai terminal cho backend
+và client phụ trách. `dev:api` bật Mongo/API/media+order worker; không bật worker trùng.
+
+Terminal backend:
 
 ```sh
 pnpm dev:api
-pnpm dev:media
-pnpm dev:orders
-pnpm dev:rn
-pnpm dev:admin
 ```
+
+Terminal client: chọn `pnpm dev:rn` (bấm A cho Android, W cho Member web) hoặc
+`pnpm dev:admin` nếu làm operations. Không cần chạy cả hai client.
 
 API `http://localhost:3000/api/v1`; Swagger `http://localhost:3000/docs`;
 operations `http://localhost:5173`; RN theo URL Metro in ra. `CORS_ORIGINS` phải

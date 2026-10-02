@@ -1,7 +1,131 @@
-# Điểm lưu hiện tại — 30/09/2026
+# Điểm lưu hiện tại — 02/10/2026
 
 ## Nguồn và việc đang làm
 
+- **Gói UI-1 + luồng dev hai terminal + sửa CI: đã kiểm local, chuẩn bị push/PR.**
+  Nhánh `codex/dev-workflow` từ UI checkpoint `d4b65f4`; đã merge
+  `origin/main`/`03b85ca` bằng `a3e1cf0`, giữ dashboard mock và cursor
+  pagination của teammate. Sửa admin `0dddd05`, sửa SSR RN `d954ac5`;
+  checkpoint mới có subject `feat(dev): simplify daily API and Expo startup`.
+  Chủ dự án đã cho phép push/PR/merge gói hiện tại; chờ CI remote đạt trước squash.
+  Các dòng “chưa push/merge” dưới phần lịch sử mô tả thời điểm cũ, không là trạng thái
+  tích hợp hiện tại. Không mở thêm C02/C04 hoặc tính năng mới.
+- **C01 đã merge (PR11/PR12); C02 TẠM HOÃN để làm UI-1; gate review người thật/
+  native/release vẫn mở.** UI tích hợp gồm chi tiết đã duyệt, kệ B hai rail kéo ngang,
+  chuyển động ảnh có reduced motion, navbar quầy xanh rừng/nhãn “Sách tôi”, thẻ
+  surface nhẹ với tên+tác giả+dấu+giá sát nhau. Không đổi nghiệp vụ/API/contract.
+  [Ảnh thẻ100/130%](../ui/listing-surface.html),
+  [navbar và lỗi OS dark](../ui/NAVIGATION_01.md),
+  [chuyển động](../ui/MOTION_01.md), [kệ B](../ui/SHELF_B_NATIVE.md).
+  Ba ghi nhận chi tiết vẫn để xem lại khi có bìa thật: bìa nhỏ, dấu khiêm tốn,
+  hàng số ảnh/kính lúp chiếm chỗ. Những evidence này không được nâng thành native
+  acceptance toàn bộ hoặc human review.
+- **CI main03b85ca FAIL có nguyên nhân cụ thể:** run36951134001/job110664118221
+  dừng ở heading review bị mất. Login cũng ép deep link sang dashboard, sidebar
+  biến mất trên mobile. Đã giữ pathname/query/hash, phục hồi H1/introduction và
+  navigation responsive/keyboard; dashboard mock vẫn ghi rõ chưa dùng API.
+  Browser test thêm root→dashboard, deep link và Tab/Enter320px135%.
+  [Queue320px](../ui/dev-workflow-evidence/admin-queue-320.png),
+  [Users320px](../ui/dev-workflow-evidence/admin-users-320.png).
+- Full public browser phát hiện thêm React418 ở showcase: SSR/client dùng viewport
+  khác nhau. Đã đồng bộ lần render đầu bằng hydration guard, không suppress warning
+  hoặc bỏ assertion pageerror. Cập nhật hai assertion heading chi tiết thành
+  “Phiếu tình trạng” đã được duyệt, giữ kiểm dữ liệu bị gỡ/quyền.
+- **Chạy hằng ngày:** root `pnpm dev:api` ở terminal1; terminal2
+  `pnpm dev:rn` rồi A (Android) / W (Member web), hoặc `pnpm dev:admin`.
+  [DEVELOPMENT](../DEVELOPMENT.md) là hướng dẫn chuẩn; TEAM_WINDOWS/START_HERE/RN
+  đồng bộ. API launcher bật Mongo cùng config local, một Nest compiler, media/order
+  worker sau readiness; không migrate/seed ngầm hoặc giết process chiếm cổng.
+  Expo dev client mới cần build/cài APK một lần. Sau sửa worker phải restart dev:api.
+- **Checks thực chạy:** API build; admin lint/typecheck/build/13 tests + full
+  browser; RN lint/typecheck/99 tests/14 files + web export12routes + full public
+  browser (listing/address/lost ack/upload/review/search/filter/photos/SSR) PASS.
+  Browser dùng API/Mongo/Sharp thật, database random `*_test` trên replica set
+  QA37017/storageFAKE; không ghi/xóa DB chính. Launcher15/15 WindowsNode24.19,
+  session-client20/20, contract:check, docs:check, diff-check, Compose config PASS;
+  CI mới kiểm launcher Windows/Ubuntu.
+  Android debug x86_64/API35/JDK21 build PASS8m56s/475tasks; cài-r APK rồi thực sự
+  bấm A, qua Expo onboarding, thấy kệ rỗng từ API3000, mở Tài khoản/OSBack;
+  W mở web cùng Metro, tải kệ và mở account. Thiết bị390dp/font130%/ba nút.
+  [Android qua phím A](../ui/dev-workflow-evidence/android-a-shelf.png).
+  Dừng launcher: API/Metro/worker không còn listen, Docker/data và preview8089 giữ.
+  Windows pnpm wrapper trả exit1 khi Ctrl+C; lock PID chết được acquire/release
+  phục hồi, không giết chương trình khác. Unit test kiểm signal/process tree riêng.
+- **Cấu hình riêng máy này:** Windows reserved56794–57393 chặn Mongo57117.
+  Đã đổi rootMONGO_PORT và ba API Mongo URL sang37018, giữ Compose project/volume/
+  database/credential, không seed/migrate/reset. Backup env/APK/app private ở
+  `.tmp/dev-workflow-native` (ignored). Node hệ thống24.12 quá cũ; settings VSCode
+  local ignored chọn Node24.19 đã có, cần mở terminal mới; không đổi PATH hệ thống.
+  Giữ APK mới có expo-dev-client/expo-navigation-bar. Restore app/font/density/
+  adb reverse rồi dừng emulator do agent tạo; giữ Mongo chính37018, QA37017 và
+  Docker khác. Không commit env/settings/private snapshots.
+- **Còn mở:** OS dark/AndroidAPI35 ba nút FAIL tương phản theo NAVIGATION_01;
+  cần máy thật hoặc API khác. TalkBack/ARM/FPS/iOS/release và Supabase thật NOT RUN
+  trong gói này. Không sửa READINESS để đóng gate. Bước tiếp: chờ tất cả checks PR
+  đạt, squash main theo quyền đã giao, cập nhật điểm lưu với PR/SHA thực tế; sau đó
+  nhóm dùng DEVELOPMENT và chia việc, không tự mở lại lộ trình tính năng.
+
+## Nền kế thừa và bằng chứng trước đợt B
+
+- **UI-1 — KỆ SÁCH VÒNG02, THAY BẢN VÒNG01 ĐÃ BỊ TỪ CHỐI.** Chủ dự án
+  không chấp nhận vòng01 ead610b (bìa nhỏ/cột chữ dài), sau đó giao quyền quyết
+  định thiết kế, yêu cầu kết quả đẹp và dễ dùng. Không dùng tests xanh làm duyệt UX.
+  Bản mới: hai cột chữ thường; ở130%/màn hẹp, bìa cạnh tên và giá có hàng riêng
+  đủ chiều rộng. BookOffer Bán/Đổi ngắn rõ, nhãn tình trạng một nét đất nung;
+  bỏ người bán khỏi phần nhìn thấy của kệ, vẫn giữ ở chi tiết/accessibility label.
+  Bìa contain180dp/nền giấy; gom đầu màn và dùng compactFooter có sẵn. Không đổi
+  query/API/session/navigation/nghiệp vụ hoặc màn chi tiết đã duyệt.
+  [Ảnh mới/so sánh](../ui/shelf-direction-02.html),
+  [evidence/giới hạn](../ui/SHELF_DIRECTION_02.md):390dp/100%–130%,320dp/130%,
+  ảnh tư liệu showcase, tìm/rỗng/bỏ lọc/Bán/Back/lỗi-retry/cuối kệ đã xem Android.
+  RN91/91, lint/typecheck/Prettier/docs/diff-check PASS; không chạy lại API gates.
+  QA ui-refine giữ data cũ, Mongo/API thật/storage fixture FAKE; chưa nghiệm thu
+  TalkBack/ARM/FPS/iOS/Expo web hoặc native `/ui`. Không đóng review/native/release.
+  Checkpoint `feat(rn): restore browsable shelf with adaptive book offers`;
+  chưa push/merge. QA phục hồi/dừng theo SHELF_DIRECTION_02, notes `.tmp/ui-shelf-v2`.
+  Vòng01 là lịch sử bị loại; không áp nó sang màn khác. Chưa thêm chuyển động.
+- **UI-1 — MÀN CHUẨN CHI TIẾT ĐÃ ĐƯỢC CHỦ DỰ ÁN DUYỆT tại a70e5a3.**
+  Ghi nhận ba điểm xem lại khi có bìa sách thật: bìa còn nhỏ, dấu tình trạng
+  khiêm tốn, hàng số ảnh1/1 + kính lúp chiếm chỗ. Chưa sửa thêm từ các ghi nhận
+  này. Duyệt thẩm mỹ màn chuẩn không đóng gate native/review độc lập/release.
+  Chủ dự án đã chọn kệ trước, chuyển động mở ảnh lớn sau; lượt kệ ở trên.
+  Chủ dự án chỉ ra hai giá quá sát và yêu cầu sửa. Từ192b0cf: BookTradeBar dùng
+  cột giá co giãn/gap32px, cách trạng thái8px, BookPrice mặc định giữ nguyên.
+  [So sánh mới nhất](../ui/detail-price-spacing.html), phần cập nhật trong
+  [evidence](../ui/DETAIL_STANDARD_03.md):8 ảnh mới cùng4 listing QA,390dp/100%–130%;
+  đã xem hai mức giá dài/ngắn, một mức giá130%, cuối màn không bị che.
+  RN91/91, lint/typecheck/Prettier/docs:check/diff-check PASS mới. Không đổi
+  contract/query/navigation/nghiệp vụ; không chạy lại gate không liên quan.
+  App snapshot/font/density/reverse phục hồi; API/media/emulator dừng, giữ
+  Metro/Docker/preview người dùng. Local notes .tmp/ui-price; QA vẫn run ui-refine.
+  Checkpoint `fix(rn): separate book trade price groups`; chưa push/merge.
+  **C01 đã merge (PR11/PR12); C02 TẠM HOÃN để làm đợt định hướng giao diện
+  (UI-1); gate review người thật/native/release vẫn mở.** Nhánh `codex/ui-direction`,
+  nền main4273f10, nối tiếp màn chuẩn02 tại25c8319. Bìa rộng40%/khung2:3 nền giấy,
+  contain không crop; bỏ nhãn Tình trạng nhìn thấy, giữ accessibility label;
+  Bán/Đổi/Bán hoặc đổi viết rõ dưới dấu. Footer rút thành “Tiệm chưa nhận đơn ở
+  bản này.”, một dòng ở390dp/font130%. DESIGN/UI_COMPONENTS/ví dụ dùng chung cập nhật.
+  Không đổi API/contract/session/query/navigation/logic nghiệp vụ; chưa mở C04.
+  [So sánh trước lần sửa khoảng cách](../ui/detail-standard-03.html),
+  [kiểm chứng](../ui/DETAIL_STANDARD_03.md):8 ảnh native mới của4 bản DEMO,
+  LikeNew/Good/Fair/Worn, tên ngắn/dài, Sale/Exchange/Both ở100%/130%.
+  Ảnh trước tái sử dụng bộ Sau25c8319. QA tmpfs cũ mất dữ liệu khi Docker dừng;
+  tạo4 bản mới qua API, cùng nội dung nhưng khác ID. Run .tmp/demo/ui-refine,
+  random *_test/57017, API3046/media3047; Nest/Mongo/Sharp thật, storage fixture FAKE.
+  Đã xem đủ8 ảnh, ảnh vuông showcase; mở ảnh lớn/Back; cuối màn130% không bị
+  footer che; ảnh không khả dụng khi refetch lỗi và retry phục hồi. Nhãn tình
+  trạng có trong hierarchy, không đồng nghĩa nghiệm thu TalkBack.
+  PASS: RN91/91 (12 files), lint/typecheck, contract:check, Prettier, docs:check,
+  diff-check; Node24.19.0/pnpm11.19.0. Không chạy lại API E2E/export/native build.
+  Chưa kiểm mới /ui native (DESIGN_PREVIEW=0),320px/Expo web/TalkBack/ARM/iOS;
+  không đóng human review/release. Chủ dự án đã duyệt thẩm mỹ màn chuẩn sau sửa giá.
+  Người dùng đã mở lại Metro/Docker. Đã phục hồi app snapshot/font/density/reverse,
+  dừng API/media QA/emulator do agent mở; giữ Metro/Docker người dùng và preview8089.
+  PID/notes ở .tmp/ui-refine; QA giữ lại, không reset DB/bucket/config chính.
+  Checkpoint subject `feat(rn): refine book cover and trade labels`.
+  Chưa push/PR/merge. Màn chi tiết giữ nguyên trong lượt áp hướng sang kệ.
+  Lịch sử: [màn chuẩn02](../ui/DETAIL_STANDARD_02.md),
+  [màn chuẩn01](../ui/DETAIL_STANDARD_01.md), [phê bình](../ui/CRITIQUE_01.md).
 - **C01 đã squash merge** qua [PR11](https://github.com/huangg49/used-book-marketplace/pull/11)
   vào main **6361e57**, base10a461c, head đã kiểm4e4851e; tree sau squash giống
   head đã kiểm. Code gốc d45b7c7 `feat(rn): add opt-in read-only wallet`.
@@ -103,11 +227,11 @@
   Durable key/body/version/receipt, run lock, binding và chặn SANDBOX_LOST.
   Cách chạy/phạm vi/test/lỗi harness cụ thể ở [DEMO_SCENARIOS](DEMO_SCENARIOS.md).
 
-  | Increment | Source / đầu ra |
-  | --- | --- |
-  | H01a | ae0f1d9: demo:books init/run/serve; catalog/media/listing/review/public shelf |
-  | Funding | 428cafd: demo:funding; Buyer1M qua operator độc lập, nguồn99M |
-  | Order | 274d100: demo:orders; unpaid/paid/Preparing,40 receipts |
+  | Increment | Source / đầu ra                                                                                 |
+  | --------- | ----------------------------------------------------------------------------------------------- |
+  | H01a      | ae0f1d9: demo:books init/run/serve; catalog/media/listing/review/public shelf                   |
+  | Funding   | 428cafd: demo:funding; Buyer1M qua operator độc lập, nguồn99M                                   |
+  | Order     | 274d100: demo:orders; unpaid/paid/Preparing,40 receipts                                         |
   | InTransit | d4f8220: init thêm --in-transit; giữ3 mẫu cũ + Order thứ tư, packaging/label/pickup;57 receipts |
 
 - Gói InTransit đã commit d4f8220 trên codex/h01-intransit-scenarios.
@@ -177,11 +301,37 @@
 
 C01 đã tích hợp vào main6361e57 với CI/evidence trên head4e4851e. Chủ dự án trực
 tiếp yêu cầu merge riêng C01; human review NOT RUN, full M1/release vẫn còn gate.
-Tiếp C02 trên nhánh riêng theo ngoại lệ phát triển nội bộ30/09:
-đọc list/detail Order bằng API hiện có, cùng cờ opt-in, server snapshot/deadline,
-pagination/owner isolation/LOCKED; không nút mua/Delivered/settlement giả.
-Lấy SHA bàn giao mới nhất từ origin/main sau checkpoint; condition/H01 đã tích
-hợp, nhánh upload-recovery vẫn giữ riêng. Chưa có quyền merge/deploy C02.
+C02 **TẠM HOÃN** theo yêu cầu UI-1 mới, không bắt đầu danh sách/chi tiết Order.
+Trên `codex/ui-direction`, màn chuẩn chi tiết đã sửa tới `a70e5a3` (khoảng cách giá).
+Xem [so sánh mới nhất](../ui/detail-price-spacing.html) và
+[evidence màn chuẩn03](../ui/DETAIL_STANDARD_03.md); **chủ dự án đã duyệt màn chuẩn**.
+Chủ dự án đã chọn kệ trước, chuyển động mở ảnh sau; đã từ chối vòng01 và giao
+quyền tự quyết thiết kế. Đã chốt ba dòng và duyệt bước1 hướng cửa hàng kèm banner.
+Sau fd2947d/SHELF_STOREFRONT_01, chủ dự án vẫn thấy quá trầm và yêu cầu khảo sát
+lại bằng ba hướng khác nhau. Hiện xem [bảng A/B/C](../ui/shelf-directions/index.html)
+trên `codex/shelf-visual-directions`; chỉ là HTML nghiên cứu. Chờ chọn hướng,
+rồi mới sửa DESIGN.md và port vào RN. Chưa đổi bộ lọc/điều hướng, motion hay màn khác.
+Các bước và ranh giới còn lại:
+
+1. Màn chuẩn đã duyệt; ảnh Android trước/sau390dp,100%/130% vẫn là evidence hiện
+   hành. Khi có bìa thật, xem lại kích thước bìa, độ nổi dấu tình trạng và diện
+   tích hàng1/1 + kính lúp. Không tự sửa lại màn đã duyệt trong lượt này.
+2. Bước kế theo thứ tự đã chọn: hướng1 chuyển động nhẹ khi mở ảnh lớn, sau đợt
+   chỉnh kệ; nếu có phản hồi mới về kệ thì xử lý trước. Kèm bổ sung DESIGN.md
+   về chuyển động và video trước/sau. Chưa triển khai chuyển động trong vòng02.
+3. Hướng2 (vuốt ảnh): khảo sát số ảnh/listing trong QA/API rồi báo để chủ dự án
+   quyết định. Phân biệt mẫu QA được tạo chủ đích với phân bố dữ liệu sử dụng;
+   chưa khảo sát, chưa cấp quyền triển khai gesture.
+4. Hướng3 (bìa nối từ kệ sang chi tiết) hoãn. Không áp màn chuẩn sang màn khác
+   khi chưa được chọn triển khai; C02 tiếp tục hoãn.
+
+Mỗi bước có ảnh/video hoặc báo cáo tương ứng. Chủ dự án giao agent tự quyết thiết
+kế; lượt khảo sát hiện tại dừng chờ chọn A/B/C.
+Checkpoint nghiên cứu: `design: explore three distinct shelf directions`;
+checks/evidence ở docs/ui/shelf-directions/README.md. Runtime vẫn tại fd2947d.
+Không chạy lại gate API khi source không đổi.
+Main local/remote4273f10; condition/H01/C01 đã tích hợp, nhánh upload-recovery
+vẫn giữ riêng. Chưa có quyền merge/deploy UI-1 hoặc C02.
 Không kiểm lại gate đã đạt khi source không đổi; chưa phân công thêm teammate.
 
 H01a/H01b và docs/AI đã tích hợp; nhóm có thể nhận main. Đường đọc/test/giới hạn

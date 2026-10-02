@@ -100,7 +100,10 @@ export function DraftsScreen() {
       </Screen>
     );
   return (
-    <Screen footer={<MemberNavigation current="/drafts" />}>
+    <Screen
+      footer={<MemberNavigation current="/drafts" />}
+      footerAppearance="navigation"
+    >
       <BackAction
         title="Về tài khoản"
         onPress={() => router.replace("./account")}

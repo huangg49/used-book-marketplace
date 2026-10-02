@@ -106,6 +106,11 @@ function DetailContent({
                 {kind === "listings" ? "Hồ sơ bài đăng" : "Hồ sơ đầu sách"} /{" "}
                 {id.slice(0, 8)}
               </p>
+              <h1>
+                {"state" in value
+                  ? "Đọc kỹ một bản sách."
+                  : value.currentRevision.metadata.title}
+              </h1>
               <p>
                 Bản gửi {value.currentRevision.number} ·{" "}
                 {dateText(value.currentRevision.submittedAt)}

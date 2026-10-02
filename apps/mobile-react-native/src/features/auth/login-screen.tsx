@@ -47,7 +47,10 @@ export function LoginScreen() {
     }
   };
   return (
-    <Screen footer={<MemberNavigation current="/account" />}>
+    <Screen
+      footer={<MemberNavigation current="/account" />}
+      footerAppearance="navigation"
+    >
       <View
         style={{
           flexDirection: "row",
