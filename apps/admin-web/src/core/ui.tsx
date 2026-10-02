@@ -21,6 +21,29 @@ export function Button({
     </button>
   );
 }
+export function CursorPagination({
+  pageCount,
+  hasNextPage,
+  isFetchingNextPage,
+  onNextPage,
+  nextLabel,
+}: {
+  pageCount: number;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  onNextPage: () => void;
+  nextLabel: string;
+}) {
+  if (!hasNextPage) return null;
+  return (
+    <nav className="cursor-pagination" aria-label="Phân trang">
+      <p aria-live="polite">Đã tải {pageCount} trang.</p>
+      <Button busy={isFetchingNextPage} onClick={onNextPage}>
+        {nextLabel}
+      </Button>
+    </nav>
+  );
+}
 export function Notice({
   children,
   tone = "info",

@@ -2,7 +2,7 @@ import { dateText, money } from "../../core/format";
 import { useEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { session } from "../../core/session";
-import { Button, ErrorNotice, Notice } from "../../core/ui";
+import { Button, CursorPagination, ErrorNotice, Notice } from "../../core/ui";
 import {
   book,
   catalog,
@@ -359,14 +359,13 @@ export function History({
             <HistoryContent item={item} listingId={listingId} />
           </details>
         ))}
-      {result.hasNextPage && (
-        <Button
-          busy={result.isFetchingNextPage}
-          onClick={() => void result.fetchNextPage()}
-        >
-          Xem thêm lịch sử
-        </Button>
-      )}
+      <CursorPagination
+        pageCount={result.data?.pages.length ?? 0}
+        hasNextPage={result.hasNextPage}
+        isFetchingNextPage={result.isFetchingNextPage}
+        onNextPage={() => void result.fetchNextPage()}
+        nextLabel="Xem thêm lịch sử"
+      />
     </section>
   );
 }

@@ -184,6 +184,20 @@ textarea[aria-invalid="true"] {
 .button.primary:hover:not(:disabled) {
   background: var(--ink);
 }
+.cursor-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+.cursor-pagination p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
 .actions {
   display: flex;
   gap: 0.75rem;

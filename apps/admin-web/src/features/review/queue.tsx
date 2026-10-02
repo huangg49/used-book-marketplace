@@ -8,7 +8,7 @@ import {
 } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
 import { canReviewCatalog, session } from "../../core/session";
-import { Button, ErrorNotice } from "../../core/ui";
+import { Button, CursorPagination, ErrorNotice } from "../../core/ui";
 import {
   book,
   catalog,
@@ -156,14 +156,13 @@ function QueueContent({ kind }: { kind: Kind }) {
           </article>
         ))}
       </div>
-      {result.hasNextPage && (
-        <Button
-          busy={result.isFetchingNextPage}
-          onClick={() => void result.fetchNextPage()}
-        >
-          Xem thêm hồ sơ
-        </Button>
-      )}
+      <CursorPagination
+        pageCount={result.data?.pages.length ?? 0}
+        hasNextPage={result.hasNextPage}
+        isFetchingNextPage={result.isFetchingNextPage}
+        onNextPage={() => void result.fetchNextPage()}
+        nextLabel="Xem thêm hồ sơ"
+      />
     </>
   );
 }
