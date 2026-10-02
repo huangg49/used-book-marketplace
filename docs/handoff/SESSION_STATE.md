@@ -2,12 +2,17 @@
 
 ## Nguồn và việc đang làm
 
-- **Gói UI-1 + luồng dev hai terminal + sửa CI: đã kiểm local, chuẩn bị push/PR.**
+- **Gói UI-1 + luồng dev hai terminal + sửa CI: ĐÃ MERGE MAIN qua
+  [PR15](https://github.com/huangg49/used-book-marketplace/pull/15), commit `222935c`.**
   Nhánh `codex/dev-workflow` từ UI checkpoint `d4b65f4`; đã merge
   `origin/main`/`03b85ca` bằng `a3e1cf0`, giữ dashboard mock và cursor
   pagination của teammate. Sửa admin `0dddd05`, sửa SSR RN `d954ac5`;
-  checkpoint mới có subject `feat(dev): simplify daily API and Expo startup`.
-  Chủ dự án đã cho phép push/PR/merge gói hiện tại; chờ CI remote đạt trước squash.
+  Startup commit `79c5370`; toàn bộ 8 workflow/9 jobs CI trên head này PASS trước
+  squash merge (API, RN, admin, operations/public browser, demo, docs, Compose,
+  launcher Windows/Ubuntu). Source main222935c giống hệt branch đã kiểm.
+  Main local đã fast-forward, sạch và khớp origin/main222935c trước checkpoint
+  docs trên `codex/dev-workflow-handoff`, subject `docs(handoff): record merged UI and development workflow`.
+  Chủ dự án đã cho phép push/PR/merge gói hiện tại; không deploy.
   Các dòng “chưa push/merge” dưới phần lịch sử mô tả thời điểm cũ, không là trạng thái
   tích hợp hiện tại. Không mở thêm C02/C04 hoặc tính năng mới.
 - **C01 đã merge (PR11/PR12); C02 TẠM HOÃN để làm UI-1; gate review người thật/
@@ -61,9 +66,12 @@
   Docker khác. Không commit env/settings/private snapshots.
 - **Còn mở:** OS dark/AndroidAPI35 ba nút FAIL tương phản theo NAVIGATION_01;
   cần máy thật hoặc API khác. TalkBack/ARM/FPS/iOS/release và Supabase thật NOT RUN
-  trong gói này. Không sửa READINESS để đóng gate. Bước tiếp: chờ tất cả checks PR
-  đạt, squash main theo quyền đã giao, cập nhật điểm lưu với PR/SHA thực tế; sau đó
-  nhóm dùng DEVELOPMENT và chia việc, không tự mở lại lộ trình tính năng.
+  trong gói này. Không sửa READINESS để đóng gate. Bước tiếp: nhóm dùng DEVELOPMENT
+  và chia việc; xử lý nghiệm thu còn mở khi có thiết bị/người phù hợp, không tự mở
+  lại lộ trình tính năng. [Operations CI push main222935c](https://github.com/huangg49/used-book-marketplace/actions/runs/37012090815)
+  **PASS**, đã xác nhận lỗi CI được sửa sau merge. Các workflow PR đã PASS tại
+  source ghi ở đầu file; trạng thái push khác xem GitHub theo SHA222935c. Không
+  cộng các lần chạy lại thành thêm gate native.
 
 ## Nền kế thừa và bằng chứng trước đợt B
 
