@@ -14,8 +14,8 @@ $env:EXPO_PUBLIC_DESIGN_PREVIEW = '1'
 pnpm exec expo start --web --clear --port 8082
 ```
 
-Mở `http://127.0.0.1:8082/ui`. Sáu nhóm: nút, nhập liệu, phản hồi, hộp thoại,
-sách và chữ; có chế độ chữ 135%. `/design` dùng cùng bộ UI trong ba màn hình mẫu.
+Mở `http://127.0.0.1:8082/ui`. Các nhóm: nút, nhập liệu, phản hồi, hộp thoại,
+sách, chữ và điều hướng; có chế độ chữ 135%. `/design` dùng cùng bộ UI trong ba màn hình mẫu.
 Cả hai route chuyển về `/` khi flag không bằng `1`; flag đóng vào bundle khi build,
 không phải biện pháp bảo mật. Auth/profile ở `/account` dùng cùng bộ UI ở cấu hình thường.
 
@@ -211,9 +211,20 @@ cuộn độc lập, đóng/Back bỏ lựa chọn chưa áp dụng. `/ui` có v
 không dùng placeholder làm nhãn. Các trường không truyền vẫn lấy tên từ label.
 `ActionRow` dùng ở tài khoản; mẫu tương tác nằm trong nhóm Hộp thoại của `/ui`.
 
-Thanh điều hướng ba đích thuộc `features/navigation`, không thuộc UI library:
-nó biết route/session, chỉ gắn trên kệ, account/login và danh sách sách. Không gắn
-trong editor để không bỏ qua dirty guard. Không có tab ví/chat/giao dịch giả.
+`NavigationBar` trong UI library là component trình bày: nhận `destinations`
+(key/title/icon), `current` và `onSelect`; không đọc session hoặc tự điều hướng.
+Nền xanh rừng được cấp bởi `Screen footerAppearance="navigation"`, nằm ngoài
+ScrollView. Mục chọn có nền surface/bo8, icon và nhãn rừng; mục còn lại màu giấy.
+Nhãn `navigationLabel` BeBold12/18 được xuống dòng; các vùng chạm chia đều theo
+số đích thật, không khóa chiều cao hoặc cắt nhãn. Focus dùng viền rừng trên nền
+kem, lá non trên nền xanh. `/ui` nhóm Điều hướng có mẫu đổi chọn và thử chữ lớn.
+
+`MemberNavigation` thuộc `features/navigation`, giữ route/session/filter quyền
+và `router.navigate` hiện có. Nó compose primitive trên kệ, account/login, ví
+chỉ đọc và danh sách sách; không gắn trong editor để bỏ qua dirty guard hoặc
+thêm tab ví/chat/giao dịch giả. Screen mặc định giữ footer giấy cho form/giao dịch.
+SafeAreaView sở hữu inset một lần; navbar không tự cộng bottom padding. Vùng nút
+Android giữ nền sáng và nằm dưới footer app, kiểm cả gesture/ba nút hệ thống.
 
 Kệ công khai dùng `SearchField.onSubmitEditing` để tìm bằng phím Search/Enter và
 `maxLength` để giới hạn đầu vào; feature vẫn kiểm tra độ dài Unicode theo contract.

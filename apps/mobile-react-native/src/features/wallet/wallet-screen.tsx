@@ -47,7 +47,10 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
     void history.refetch();
   };
   return (
-    <Screen footer={<MemberNavigation current="/account" />}>
+    <Screen
+      footer={<MemberNavigation current="/account" />}
+      footerAppearance="navigation"
+    >
       <BackAction
         title="Về tài khoản"
         onPress={() => router.replace("./account")}

@@ -59,6 +59,7 @@ export function AccountScreen() {
     <Screen
       key={`${fontScale}:${presentationVersion}`}
       footer={<MemberNavigation current="/account" />}
+      footerAppearance="navigation"
     >
       <BackAction
         title="Khám phá kệ sách"

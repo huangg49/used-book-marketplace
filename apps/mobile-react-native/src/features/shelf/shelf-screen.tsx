@@ -88,6 +88,7 @@ export function ShelfScreen() {
       scrollRef={scroll}
       header={<ShelfHeader inverse />}
       footer={<MemberNavigation current="/" />}
+      footerAppearance="navigation"
       compactFooter
     >
       <View style={{ gap: space.md }}>

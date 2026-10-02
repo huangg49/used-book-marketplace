@@ -32,6 +32,7 @@ export {
 export { formatVnd } from "./format";
 export { BrandProvider } from "./provider";
 export { Screen } from "./screen";
+export { NavigationBar } from "./navigation-bar";
 export { ActionBar } from "./action-bar";
 export { BrandLogo } from "./brand-logo";
 export { BookshopNote } from "./bookshop-note";

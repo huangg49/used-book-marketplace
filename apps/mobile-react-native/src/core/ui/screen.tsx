@@ -11,18 +11,21 @@ export function Screen({
   header,
   footer,
   compactFooter = false,
+  footerAppearance = "paper",
   scrollRef,
   appearance = "paper",
 }: React.PropsWithChildren<{
   header?: React.ReactNode;
   footer?: React.ReactNode;
   compactFooter?: boolean;
+  footerAppearance?: "paper" | "navigation";
   scrollRef?: React.Ref<ScrollView>;
   appearance?: "paper" | "shelf";
 }>) {
   const inset = useSafeAreaInsets();
   const shelf = appearance === "shelf";
   const canvas = shelf ? colorRoles.shelfCanvas : colors.paper;
+  const navigationFooter = footerAppearance === "navigation";
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: canvas }}>
       <StatusBar style={shelf ? "light" : "dark"} />
@@ -68,13 +71,19 @@ export function Screen({
         {footer ? (
           <View
             style={{
-              borderTopWidth: 1,
+              backgroundColor: navigationFooter
+                ? colorRoles.navigationBackground
+                : canvas,
+              borderTopWidth: navigationFooter ? 0 : 1,
               borderColor: colors.rule,
-              paddingVertical: compactFooter ? space.sm : space.lg,
-              paddingHorizontal: space.xl,
+              paddingVertical:
+                compactFooter || navigationFooter ? space.sm : space.lg,
+              paddingHorizontal: navigationFooter ? space.md : space.xl,
             }}
           >
-            {/* Same side padding and max width as the content, so actions line up. */}
+            {/* SafeAreaView owns the system inset once, with a light canvas for
+                Android gesture/three-button controls. The footer never overlays
+                content; action footers keep the same side padding as the form. */}
             <View
               style={{
                 width: "100%",

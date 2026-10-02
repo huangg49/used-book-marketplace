@@ -1,6 +1,6 @@
 # Lật lại — Định hướng giao diện UI-1
 
-Ngày 02/10/2026 · Nhánh `codex/ui-motion` · Base `053c87e` (kệ B).
+Ngày 02/10/2026 · Nhánh `codex/ui-forest-navigation` · Base `f35fb16` (kệ B và chuyển động).
 UI-1 bắt đầu từ nền sản phẩm main `4273f10`; các gói UI sau chưa merge.
 
 ## Nguồn sự thật và phạm vi
@@ -173,6 +173,28 @@ acceptance hay duyệt thẩm mỹ.
 - `shelfEdge` = `#B5C3AC`: nét đỡ bìa thuần trang trí, không là viền control.
 - Logo trắng là asset gốc brand v1.1; chữ trạng thái hệ thống sáng trên mặt tiền
   rừng và tối trên nền giấy, theo màn đang mở.
+
+### Thanh điều hướng — Quầy xanh rừng
+
+Chủ dự án chọn hướng này ngày02/10: một dải xanh rừng, mục đang chọn nằm trên
+nền kem bo8px, icon và nhãn xanh; mục còn lại có icon và nhãn giấy. Nhãn dùng
+Be Vietnam Pro700,12/18, luôn hiện và được xuống dòng theo cỡ chữ. Giữ ba đích
+Khám phá/Sách của tôi/Tài khoản và điều kiện quyền hiện có; khi chỉ còn hai đích,
+chia đều hai vùng chạm, không chừa một ô giả. Không thêm nút nổi, dấu mộc tình
+trạng lên điều hướng, glass/bóng hoặc chuyển động trượt trang trí.
+
+Thanh nằm ngoài vùng cuộn trong footer thật, không overlay lên sách hoặc giá.
+Một lớp safe area sở hữu khoảng tránh thanh điều hướng Android: cả gesture và
+ba nút hệ thống đều nằm dưới navbar app, không cộng bottom inset lần thứ hai
+hoặc khóa chiều cao bằng số đo của một máy. Giữ nền sáng tại vùng nút hệ thống
+để các biểu tượng Android còn tương phản; dải xanh kết thúc ở mép footer app.
+Không giả thanh gesture hay tự vẽ nút Back/Home/Recents trong sản phẩm.
+
+Áp cùng một component trình bày cho những màn đã có MemberNavigation; không gắn
+thêm vào editor có dirty guard hoặc thay footer giao dịch/form. Trạng thái chọn
+có nền, icon và nhãn accessible; focus có tương phản trên cả xanh và kem. Giữ
+keyboard avoidance/Back hiện có và kiểm lại100%/130%,320/390dp, nội dung cuối,
+cả hai chế độ điều hướng Android trước khi ghi nhận bằng chứng.
 
 ### Năm màu cốt lõi
 

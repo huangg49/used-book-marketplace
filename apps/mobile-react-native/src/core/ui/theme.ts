@@ -18,6 +18,11 @@ export const colorRoles = {
   scrim: "rgba(20,36,28,.45)",
   shelfCanvas: "#F6F8F3",
   shelfEdge: "#B5C3AC",
+  navigationBackground: colors.forest,
+  navigationText: colors.paper,
+  navigationSelected: colors.surface,
+  navigationSelectedText: colors.forest,
+  navigationFocus: colors.leaf,
 } as const;
 export const space = {
   xs: 4,
@@ -58,6 +63,7 @@ export const typography = {
   body: [15, 24, "BeRegular"],
   small: [12, 19, "BeRegular"],
   label: [11, 17, "BeBold"],
+  navigationLabel: [12, 18, "BeBold"],
   title: [32, 43, "LoraSemi"],
   heading: [23, 32, "LoraSemi"],
   card: [17, 24, "LoraSemi"],

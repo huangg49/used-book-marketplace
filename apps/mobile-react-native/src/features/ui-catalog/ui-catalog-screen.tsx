@@ -19,6 +19,7 @@ import {
   ConfirmDialog,
   IconButton,
   Notice,
+  NavigationBar,
   Screen,
   SearchField,
   Sheet,
@@ -38,6 +39,7 @@ const sections = [
   "Hộp thoại",
   "Sách",
   "Chữ",
+  "Điều hướng",
 ] as const;
 type Section = (typeof sections)[number];
 export function UiCatalogScreen() {
@@ -56,11 +58,13 @@ export function UiCatalogScreen() {
   const [fail, setFail] = useState(false);
   const [error, setError] = useState("");
   const [state, setState] = useState<"loading" | "empty" | "error">("empty");
+  const [destination, setDestination] = useState("discover");
   return (
     <TextScale.Provider value={large ? 1.35 : 1}>
       <Screen
         scrollRef={scroll}
         compactFooter
+        footerAppearance={section === "Điều hướng" ? "navigation" : "paper"}
         footer={
           section === "Sách" ? (
             <BookTradeBar sale={125000} exchange={150000}>
@@ -68,6 +72,16 @@ export function UiCatalogScreen() {
                 Tiệm chưa nhận đơn ở bản này.
               </AppText>
             </BookTradeBar>
+          ) : section === "Điều hướng" ? (
+            <NavigationBar
+              current={destination}
+              destinations={[
+                { key: "discover", title: "Khám phá", icon: "book" },
+                { key: "books", title: "Sách của tôi", icon: "bookmark" },
+                { key: "account", title: "Tài khoản", icon: "person" },
+              ]}
+              onSelect={setDestination}
+            />
           ) : undefined
         }
       >
@@ -461,6 +475,12 @@ export function UiCatalogScreen() {
               style={{ height: 160 }}
             />
           </>
+        ) : section === "Điều hướng" ? (
+          <AppText>
+            Chọn một mục ở thanh dưới để xem trạng thái. Mẫu này chỉ đổi lựa
+            chọn trong phiên, không mở màn hình khác. Thử chữ lớn và Tab để kiểm
+            tra nhãn, focus cùng vùng tránh nút điều hướng Android.
+          </AppText>
         ) : (
           <>
             <AppText kind="title" color={colors.forest}>

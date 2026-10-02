@@ -2,6 +2,25 @@
 
 ## Nguồn và việc đang làm
 
+- **UI-1 — QUẦY XANH RỪNG ĐÃ CODE / CHỜ KIỂM ANDROID.** Chủ dự án duyệt
+  hướng navbar và yêu cầu tránh cả gesture/ba nút Android ngày02/10. Nhánh
+  `codex/ui-forest-navigation`, base `f35fb16`; checkpoint
+  `feat(rn): add forest member navigation`. Chưa push/PR/merge, main giữ nguyên.
+  NavigationBar trình bày chung, MemberNavigation giữ route/session/filter quyền;
+  footer xanh opt-in5consumer, nhãn12/18/bo8/focus, SafeAreaView sở hữu inset một
+  lần, vùng nút hệ thống sáng. Form/chi tiết/editor giữ footer cũ/dirty guard.
+  DESIGN/UI_COMPONENTS/catalog đồng bộ; không thêm dependency/API/nghiệp vụ.
+  [Evidence và bước tiếp](../ui/NAVIGATION_01.md): RN96/96,lint/typecheck và
+  export:web12routes PASS; web320/390px/catalog135%,Tab/Enter/selected/focus,
+  hai mục QA TEST_OPERATOR và đăng xuất về ba mục đã xem. Đã sửa aria-selected
+  sau kiểm web; origin8093 chỉ bổ sung vào ignored QA harness, không backend product.
+  **Metro8081 chưa chạy**: đã gửi lệnh thủ công; native100/130%×gesture/ba nút,
+  keyboard/Back/cuối màn và320dp/TalkBack vẫn chưa kiểm, không nhận native PASS.
+  QA riêng latlai-ui-quay/Mongo37017/random *_test, API3046/media3047/storageFAKE,
+  5listing quaAPI, ownemulator đãsnapshot app/settings/nav/night/reverses, giữsẵn
+  chờMetro; notesignored `.tmp/ui-quay`. Bước tiếp khiMetroonline: kiểm/chụp các
+  ca Android trên, sửa nếu lỗi, restore/dừngownQA, cập nhật evidence/SESSION rồi
+  chờ chủ dự án duyệt ảnh. Không mở C02/C04 hoặc đóng human/native/release gate.
 - **UI-1 — CHUYỂN ĐỘNG XEM SÁCH ĐÃ LÀM / CHỜ DUYỆT CẢM NHẬN.** Chủ dự án
   duyệt ba ưu tiên ngày02/10. Nhánh `codex/ui-motion`, base `053c87e` (kệ B tại304c0a2);
   checkpoint `feat(rn): add restrained motion to browsing and book photos`.

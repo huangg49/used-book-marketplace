@@ -26,6 +26,15 @@ it("keeps actual text/control color combinations above their contrast thresholds
     contrast(colorRoles.onAction, colorRoles.action),
   ).toBeGreaterThanOrEqual(4.5);
   expect(contrast(colors.paper, colors.error)).toBeGreaterThanOrEqual(4.5);
+  expect(
+    contrast(colorRoles.navigationText, colorRoles.navigationBackground),
+  ).toBeGreaterThanOrEqual(4.5);
+  expect(
+    contrast(colorRoles.navigationSelectedText, colorRoles.navigationSelected),
+  ).toBeGreaterThanOrEqual(4.5);
+  expect(
+    contrast(colorRoles.navigationFocus, colorRoles.navigationBackground),
+  ).toBeGreaterThanOrEqual(3);
   expect(contrast(colors.paper, colors.terracotta)).toBeLessThan(4.5);
 });
 it("preserves minimum target sizes even for compact controls", () => {
