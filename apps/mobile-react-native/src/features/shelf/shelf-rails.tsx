@@ -7,12 +7,11 @@ import {
   IconButton,
   TextScale,
   colors,
-  colorRoles,
   formatVnd,
   layout,
   metrics,
+  radius,
   space,
-  typography,
   useReducedMotion,
 } from "../../core/ui";
 import { conditions, modes, type Listing } from "./contracts";
@@ -150,7 +149,6 @@ function ShelfRail({
             key={item.id}
             item={item}
             cardWidth={cardWidth}
-            scale={scale}
             renderPhoto={renderPhoto}
             onOpen={onOpen}
             focusBook={() => move(index * step)}
@@ -164,14 +162,12 @@ function ShelfRail({
 function RailBook({
   item,
   cardWidth,
-  scale,
   renderPhoto,
   onOpen,
   focusBook,
 }: {
   item: Listing;
   cardWidth: number;
-  scale: number;
   renderPhoto: Props["renderPhoto"];
   onOpen: Props["onOpen"];
   focusBook: () => void;
@@ -191,16 +187,18 @@ function RailBook({
     .filter(Boolean)
     .join(". ");
   return (
-    <View style={{ width: cardWidth, gap: space.sm }}>
-      <View
-        style={{
-          borderBottomWidth: 2,
-          borderColor: colorRoles.shelfEdge,
-          paddingBottom: space.xs,
-        }}
-      >
-        {renderPhoto(item, focusBook)}
-      </View>
+    <View
+      style={{
+        width: cardWidth,
+        gap: space.sm,
+        padding: space.sm,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.rule,
+        borderRadius: radius.card,
+      }}
+    >
+      {renderPhoto(item, focusBook)}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -216,7 +214,6 @@ function RailBook({
             gap: space.sm,
             minHeight: metrics.touch,
             opacity: pressed ? 0.75 : 1,
-            paddingHorizontal: space.xs,
           },
           focused && layout.focus,
         ]}
@@ -230,25 +227,17 @@ function RailBook({
             color={colors.muted}
             numberOfLines={1}
             ellipsizeMode="tail"
-            style={{ minHeight: typography.annotation[1] * scale }}
           >
             {item.book.authors.join(" · ")}
           </AppText>
         </View>
         <BookCondition stamp condition={conditions[item.condition]} />
-        <View
-          style={{
-            // Only offers align across the rail. Keep the condition stamp with
-            // its own book; extra space belongs between that group and prices.
-            marginTop: "auto",
-            minHeight: typography.shelfPrice[1] * scale * 2 + space.sm,
-          }}
-        >
-          <BookOffer
-            sale={item.salePrice ?? undefined}
-            exchange={item.exchangeValue ?? undefined}
-          />
-        </View>
+        {/* The stretched card leaves surplus space after the complete offer,
+            never between the book's metadata, condition and prices. */}
+        <BookOffer
+          sale={item.salePrice ?? undefined}
+          exchange={item.exchangeValue ?? undefined}
+        />
       </Pressable>
     </View>
   );

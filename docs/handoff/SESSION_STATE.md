@@ -2,29 +2,24 @@
 
 ## Nguồn và việc đang làm
 
-- **UI-1 — DẤU TÌNH TRẠNG ĐI SÁT TÁC GIẢ / CHỜ DUYỆT ẢNH.** Nhánh
-  `codex/ui-shelf-spacing`, base `0ec35c1`; vòng giãn cách `09be958`, bổ sung
-  `fix(rn): keep condition stamps beside book metadata`. Chưa push/merge.
-  Chủ dự án duyệt bỏ căn dấu theo cuốn tên dài: tên+tác giả+dấu theo chiều cao
-  tự nhiên, dấu cách tác giả 8dp, chỉ vùng giá căn đáy cùng hàng. Đã bỏ state/
-  onLayout đo tên chung; tên vẫn tối đa ba dòng, đầy đủ ở chi tiết/accessibility.
-  Giữ nhịp 8/12/16/24dp, tiêu đề gọn từ vòng trước; không đổi nghiệp vụ/API/
-  query/navigation hoặc navbar. DESIGN đã đồng bộ;
-  [ảnh trước/sau 100%/130%](../ui/shelf-stamp-flow.html).
-  RN 96/96 tests, lint/typecheck và web export12routes PASS. Android390dp100/130%,
-  ba nút130%, chạm qua cuốn/cuộn hàng cuối/tên dài/Cũ nhiều/giá1M+999K đã xem;
-  mở chi tiết tên đầy đủ rồi Back giữ vị trí. Web390px đo năm cuốn: dấu cách
-  metadata8px, giá thẳng cùng hàng. Không chạy lại toàn bộ empty/error/keyboard
-  của màn vì lần này chỉ bỏ khoảng đệm và state đo chiều cao trong thẻ.
-  Đã phục hồi QA bằng run mới `.tmp/demo/ui-stamp-flow`, database ngẫu nhiên
-  `*_test` trên replica37017; năm listing tạo/duyệt qua API, storageFAKE.
-  Run cũ `.tmp/demo/ui-quay` giữ nguyên sau SANDBOX_LOST (QA tmpfs mất dữ liệu
-  khi container restart). Không reset hoặc replay journal cũ vào database rỗng.
-  Snapshot `.tmp/ui-stamp-flow` đã restore app/settings/nav/night/reverse;
-  own emulator/API/media/preview8093 đã dừng, giữ Metro/Docker/ảnh8089.
-  Bước tiếp: chủ dự án duyệt ảnh; dùng run QA mới
-  nếu container chưa restart, nếu đã restart thì initialize tên mới theo START_HERE.
-  Lỗi nútOSdark/API35, TalkBack/ARM/iOS/human/native/release vẫn mở; C02/C04 hoãn.
+- **UI-1 — THẺ LISTING / GIÁ SÁT DẤU ĐÃ LÀM, CHỜ DUYỆT ẢNH.** Nhánh
+  `codex/ui-shelf-spacing`, base `0ec35c1`; vòng trước `09be958`/`087bf4c`,
+  checkpoint `fix(rn): group shelf listings on subtle card surfaces`. Chưa push/merge.
+  Chủ dự án duyệt nền trắng ấm/viền nhẹ để phân biệt listing và bỏ căn giá đáy.
+  Thẻ surface/rule/bo6/đệm8, bỏ nét đỡ bìa; nền ảnh rail cùng surface. Tên+tác
+  giả+dấu+giá đi liền, dấu→giá8dp, phần dư nằm cuối thẻ. Khung cùng hàng vẫn đều;
+  không đổi API/query/session/navigation hoặc navbar. DESIGN đã đồng bộ.
+  [Ảnh trước/sau100/130%](../ui/listing-surface.html). RN96/96tests, lint/typecheck,
+  Expo webexport12routesPASS. Android390dp100/130%, ba nút130%, tên dài/Cũ nhiều/
+  một-hai giá/1M+999K, cuộn cuối/chạm qua cuốn/mở chi tiết/Back giữ vị trí đã xem.
+  Web390px đo năm cuốn: metadata→dấu và dấu→giá đều8px; thẻ trong cùng hàng cao
+  bằng nhau (417px hàng1,438px hàng2). Chưa nghiệm thu TalkBack/ARM/iOS/human/release.
+  QA dùng run `.tmp/demo/ui-stamp-flow` trên Mongo37017/random*_test/storageFAKE;
+  run cũ ui-quay giữ nguyên sauSANDBOX_LOST. Mongo QA dùng tmpfs: nếu restart,
+  tạo run tên mới, không reset/replay journal cũ vào DB rỗng. Helper/snapshot
+  mới `.tmp/ui-listing-surface`; đã khôi phục app/settings/nav/night/reverse.
+  Emulator/API/media/web8093 của lượt QA đã dừng; giữ Metro/Docker/preview8089.
+  Bước tiếp: chủ dự án duyệt ảnh. Không mởC02/C04; lỗi nútOSdark/API35 vẫn mở.
 
 - **UI-1 — QUẦY XANH RỪNG / NHÃN130% ĐÃ SỬA, CHỜ DUYỆT ẢNH.** Chủ dự án duyệt
   hướng navbar và yêu cầu tránh cả gesture/ba nút Android ngày02/10. Nhánh

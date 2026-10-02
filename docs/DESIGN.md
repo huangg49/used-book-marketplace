@@ -142,7 +142,10 @@ lưới/một cột và banner sau hai cuốn của lượt trước; màn chi t
 Bộ lọc giữ nhãn/hành vi hiện có. Câu biên tập “Một kệ sách, nhiều sắc màu.” nằm
 trong tiêu đề khu vực, không là banner lớn đẩy bìa xuống, không phải số liệu hay
 khuyến mãi. Nền kệ sáng ngả xanh nhẹ; sắc ấm tập trung ở dấu tình trạng và bìa.
-Không phủ nền giấy cũ lên toàn bộ cửa hàng, không thêm card nổi/gradient/texture.
+Không phủ nền giấy cũ lên toàn bộ cửa hàng, không thêm gradient/texture hoặc
+card nổi với bóng đậm. Cho phép nền trắng ấm và viền nhẹ để nhận biết từng
+listing: dùng surface/rule, viền1dp, bo6dp, đệm8dp. Không chồng thêm nét đỡ bìa
+bên trong thẻ; sắc rừng và dấu đất nung vẫn là điểm nhận diện.
 
 Mỗi hàng gồm tối đa **ba cuốn liên tiếp theo thứ tự API**; số hàng và số cuốn là
 đếm từ trang đã tải, không gợi danh mục tuyển chọn hoặc tổng tồn kho. Cuộn ngang
@@ -154,16 +157,16 @@ thứ tự cuốn giữ vị trí đang xem. Không cam kết giữ vị trí kh
 
 Tên dùng Be Vietnam Pro700,16/23, tối đa **ba dòng**; tác giả một dòng, “…” khi
 quá dài. Màn chi tiết và nhãn accessibility giữ đủ. Các cuốn cùng hàng căn vùng
-bìa, đầu tên và vùng giá ở đáy thẻ. Tên và tác giả cách nhau 4dp, dấu tình trạng
-cách tác giả 8dp; cả ba đi liền theo chiều cao tự nhiên của từng cuốn. Không đo
-hoặc chừa chiều cao theo tên cuốn khác để căn dấu. Dấu giữa các cuốn được phép
-lệch cao độ. Phần đệm để căn giá nằm sau dấu tình trạng; không chen giữa tác giả
-và dấu. Tên vẫn tối đa ba dòng. Giá một mức để chỗ
-cho mức thứ hai, không thêm dữ liệu giả. Tình trạng, nhãn Bán/Đổi và số tiền
+bìa và đầu tên. Tên và tác giả cách nhau 4dp, dấu cách tác giả 8dp, giá cách dấu
+8dp; nội dung đi liền theo chiều cao tự nhiên của từng cuốn. Không đo hoặc chừa
+chiều cao theo cuốn khác để căn dấu/giá. Dấu và giá được phép lệch cao độ.
+Khung thẻ cùng hàng cao bằng nhau; toàn bộ phần dư nằm cuối thẻ sau giá,
+không chen giữa các phần thông tin. Tên vẫn tối đa ba dòng. Không giữ riêng
+một dòng giá trống ở cuốn chỉ có một hình thức. Tình trạng, nhãn Bán/Đổi và số tiền
 không bị cắt hoặc thu nhỏ. Cả hai hình thức phải hiện đúng giá, không chọn giá
 rẻ hơn làm đại diện. Người bán và phiếu mô tả đầy đủ ở chi tiết.
 
-Bìa contain trong khung196dp hòa cùng nền kệ; không crop hay sửa ảnh người đăng.
+Bìa contain trong khung196dp hòa cùng nền thẻ; không crop hay sửa ảnh người đăng.
 Cuốn rộng160dp ở chữ thường; chữ130% tăng lên224dp để giá/tình trạng dễ đọc,
 vẫn cùng một kiểu hàng sách, không chuyển thành cột mô tả dài. Màn hẹp giới hạn
 chiều rộng theo viewport; giá được wrap và chiều cao tăng tự nhiên. Kiểm thực tế

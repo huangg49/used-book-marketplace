@@ -7,7 +7,6 @@ import {
   BookCover,
   Button,
   colors,
-  colorRoles,
   space,
   presentError,
   layout,
@@ -99,11 +98,7 @@ export function PublicPhoto({
         ...(compact || shelf || rail
           ? {
               ...(compact && !shelf && !rail ? { aspectRatio: 2 / 3 } : {}),
-              backgroundColor: rail
-                ? colorRoles.shelfCanvas
-                : shelf
-                  ? colors.surface
-                  : colors.paper,
+              backgroundColor: rail || shelf ? colors.surface : colors.paper,
               borderRadius: radius.book,
             }
           : {}),
