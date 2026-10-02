@@ -7,10 +7,12 @@ import {
   BookCover,
   Button,
   colors,
+  colorRoles,
   space,
   presentError,
   layout,
   radius,
+  metrics,
 } from "../../core/ui";
 import { publicMedia } from "./contracts";
 export function PublicPhoto({
@@ -24,6 +26,8 @@ export function PublicPhoto({
   expanded = false,
   compact = false,
   shelf = false,
+  rail = false,
+  onCoverFocus,
 }: {
   listingId: string;
   mediaId: string;
@@ -35,6 +39,8 @@ export function PublicPhoto({
   expanded?: boolean;
   compact?: boolean;
   shelf?: boolean;
+  rail?: boolean;
+  onCoverFocus?: () => void;
 }) {
   const { client } = useSession();
   const [expired, setExpired] = useState("");
@@ -77,17 +83,23 @@ export function PublicPhoto({
         width: "100%",
         height: expanded
           ? 420
-          : shelf
-            ? 180
-            : compact
-              ? undefined
-              : large
-                ? 286
-                : 210,
-        ...(compact || shelf
+          : rail
+            ? metrics.shelfCover
+            : shelf
+              ? 180
+              : compact
+                ? undefined
+                : large
+                  ? 286
+                  : 210,
+        ...(compact || shelf || rail
           ? {
-              ...(compact && !shelf ? { aspectRatio: 2 / 3 } : {}),
-              backgroundColor: shelf ? colors.surface : colors.paper,
+              ...(compact && !shelf && !rail ? { aspectRatio: 2 / 3 } : {}),
+              backgroundColor: rail
+                ? colorRoles.shelfCanvas
+                : shelf
+                  ? colors.surface
+                  : colors.paper,
               borderRadius: radius.book,
             }
           : {}),
@@ -101,7 +113,10 @@ export function PublicPhoto({
           accessibilityRole="button"
           accessibilityLabel={`Mở ${label}`}
           onPress={onOpen}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            setFocused(true);
+            onCoverFocus?.();
+          }}
           onBlur={() => setFocused(false)}
           style={({ pressed }) => [
             focused && layout.focus,

@@ -1,7 +1,11 @@
-# Ba hướng kệ — nghiên cứu thị giác, chưa áp vào app
+# Ba hướng kệ — tài liệu vòng khảo sát thị giác
 
 01/10/2026 · `codex/shelf-visual-directions`, base `fd2947d`.
 Checkpoint: `design: explore three distinct shelf directions`.
+
+**Quyết định mới 02/10:** chủ dự án đã chọn B. Bản RN và kiểm chứng theo
+[kệ B native](../SHELF_B_NATIVE.md); DESIGN.md đã cập nhật. Các mẫu HTML ở đây
+được giữ làm tham chiếu của vòng khảo sát, không là trạng thái app hiện tại.
 
 Chủ dự án đồng ý chẩn đoán bản kệ trước quá trầm và ít sức hút cửa hàng, yêu cầu
 2–3 hướng thật sự khác nhau, bìa nhiều màu và tên dài/ngắn, rồi dừng chờ chọn.
@@ -22,7 +26,7 @@ cuốn, bỏ tìm/lọc ở cả ba mẫu. Thanh điều hướng dưới chỉ 
 | B · Dạo kệ          | Mặt tiền xanh rừng, hai hàng bìa cuộn ngang, nút qua cuốn; giá/tình trạng theo từng bìa  | Có nhịp dạo tiệm rõ hơn. Cần nhiều thao tác để so giá; ở130% phải cuộn để thấy đủ cụm thông tin. Chưa được phép thêm gesture vào app |
 | C · Quầy có ghi chú | Cuốn đầu như phiếu lớn; các cuốn sau thành hàng ngang kèm lời người đăng                 | “Sách cũ có lý lịch” rõ nhất. Ít sách/viewport; ghi chú cần dữ liệu thật, không suy diễn từ condition hoặc ảnh bìa                   |
 
-Đề xuất A làm nền phát triển vì cân bằng bìa, giá và mật độ. Quyết định còn chờ
+Đề xuất ban đầu là A làm nền phát triển vì cân bằng bìa, giá và mật độ. Tại thời điểm khảo sát, quyết định còn chờ
 chủ dự án; không tự trộn cả ba rồi triển khai. Bỏ mẫu nào không hợp sau khi xem.
 Các thử nghiệm về nền, bố cục, banner và chữ ở đây chưa thay các quy tắc đã duyệt
 trong DESIGN.md. Sau chọn mới đề xuất cập nhật nguồn sự thật và port vào component RN.

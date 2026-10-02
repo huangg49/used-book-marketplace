@@ -1,6 +1,10 @@
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, metrics, space } from "./theme";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { colors, colorRoles, metrics, space } from "./theme";
 
 export function Screen({
   children,
@@ -8,14 +12,33 @@ export function Screen({
   footer,
   compactFooter = false,
   scrollRef,
+  appearance = "paper",
 }: React.PropsWithChildren<{
   header?: React.ReactNode;
   footer?: React.ReactNode;
   compactFooter?: boolean;
   scrollRef?: React.Ref<ScrollView>;
+  appearance?: "paper" | "shelf";
 }>) {
+  const inset = useSafeAreaInsets();
+  const shelf = appearance === "shelf";
+  const canvas = shelf ? colorRoles.shelfCanvas : colors.paper;
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.paper }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: canvas }}>
+      <StatusBar style={shelf ? "light" : "dark"} />
+      {shelf && (
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: inset.top,
+            backgroundColor: colors.forest,
+          }}
+        />
+      )}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -25,14 +48,18 @@ export function Screen({
           ref={scrollRef}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, padding: space.xl }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingHorizontal: space.xl,
+            paddingVertical: shelf ? space.lg : space.xl,
+          }}
         >
           <View
             style={{
               width: "100%",
               maxWidth: metrics.content,
               alignSelf: "center",
-              gap: space.xl,
+              gap: shelf ? space.sm : space.xl,
             }}
           >
             {children}

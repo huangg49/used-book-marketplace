@@ -12,6 +12,7 @@ import {
   BookOffer,
   BookshopNote,
   BookTradeBar,
+  BrandLogo,
   Button,
   Checkbox,
   Chip,
@@ -25,6 +26,7 @@ import {
   TextField,
   TextScale,
   colors,
+  colorRoles,
   layout,
   space,
 } from "../../core/ui";
@@ -379,6 +381,23 @@ export function UiCatalogScreen() {
           </>
         ) : section === "Sách" ? (
           <>
+            <View style={{ backgroundColor: colors.forest, padding: space.lg }}>
+              <BrandLogo inverse />
+              <AppText color={colors.paper}>Mặt tiền kệ · hướng B</AppText>
+            </View>
+            <View
+              style={{
+                backgroundColor: colorRoles.shelfCanvas,
+                padding: space.lg,
+                gap: space.sm,
+              }}
+            >
+              <AppText kind="shelfTitle">
+                Nền kệ sáng, dấu tình trạng thật
+              </AppText>
+              <BookCondition stamp condition="Cũ nhiều" />
+              <BookOffer sale={1000000} exchange={999000} />
+            </View>
             <BookCover
               source={require("../../../assets/design/pride.jpg")}
               label="Bìa lưu trữ Pride and Prejudice"

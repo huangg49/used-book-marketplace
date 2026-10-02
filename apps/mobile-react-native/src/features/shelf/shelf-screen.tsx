@@ -6,7 +6,6 @@ import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import {
   AppText,
-  BookshopNote,
   Button,
   Chip,
   Icon,
@@ -31,7 +30,7 @@ import {
 } from "./filters";
 import { PublicPhoto } from "./public-photo";
 import { ShelfHeader } from "./shelf-controls";
-import { ShelfGrid } from "./shelf-grid";
+import { ShelfRails } from "./shelf-rails";
 import { ShelfFilterSheet } from "./shelf-filter-sheet";
 
 export function ShelfScreen() {
@@ -85,14 +84,24 @@ export function ShelfScreen() {
   };
   return (
     <Screen
+      appearance="shelf"
       scrollRef={scroll}
-      header={<ShelfHeader />}
+      header={<ShelfHeader inverse />}
       footer={<MemberNavigation current="/" />}
       compactFooter
     >
       <View style={{ gap: space.md }}>
         <View
-          style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: space.sm,
+            backgroundColor: colors.forest,
+            marginHorizontal: -space.xl,
+            marginTop: -space.lg,
+            paddingHorizontal: space.xl,
+            paddingBottom: space.lg,
+          }}
         >
           <View style={{ flex: 1 }}>
             <SearchField
@@ -143,7 +152,9 @@ export function ShelfScreen() {
             color={colors.forest}
             accessibilityRole="header"
           >
-            {applied.q ? `Kết quả cho “${applied.q}”` : "Trên kệ hôm nay"}
+            {applied.q
+              ? `Kết quả cho “${applied.q}”`
+              : "Một kệ sách, nhiều sắc màu."}
           </AppText>
           <AppText kind="small" color={colors.muted}>
             {sorts[applied.sort]}
@@ -235,24 +246,21 @@ export function ShelfScreen() {
           />
         </View>
       )}
-      <ShelfGrid
+      <ShelfRails
+        key={`${query}:${cursor}`}
         items={result.data?.items ?? []}
-        afterFirstPair={
-          !hasCriteria && cursors.length === 1 && !result.isError ? (
-            <BookshopNote />
-          ) : undefined
-        }
         onOpen={(item) =>
           router.push({ pathname: "./book", params: { id: item.id } })
         }
-        renderPhoto={(item) => (
+        renderPhoto={(item, onFocus) => (
           <PublicPhoto
             listingId={item.id}
             revisionId={item.revisionId}
             mediaId={item.photos[0].id}
             label={`Ảnh sách ${item.book.title}`}
             active={active && !result.isError}
-            shelf
+            rail
+            onCoverFocus={onFocus}
             onOpen={() =>
               router.push({ pathname: "./book", params: { id: item.id } })
             }

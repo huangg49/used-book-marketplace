@@ -16,6 +16,8 @@ export const colorRoles = {
   divider: colors.rule,
   focus: colors.forest,
   scrim: "rgba(20,36,28,.45)",
+  shelfCanvas: "#F6F8F3",
+  shelfEdge: "#B5C3AC",
 } as const;
 export const space = {
   xs: 4,
@@ -40,6 +42,7 @@ export const metrics = {
   touch: 44,
   control: 52,
   content: 480,
+  shelfCover: 196,
   sheet: 520,
 } as const;
 export const typography = {

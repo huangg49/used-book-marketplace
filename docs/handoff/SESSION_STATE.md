@@ -1,38 +1,40 @@
-# Điểm lưu hiện tại — 01/10/2026
+# Điểm lưu hiện tại — 02/10/2026
 
 ## Nguồn và việc đang làm
 
-- **UI-1 — BA HƯỚNG KỆ ĐỘC LẬP / CHỜ CHỌN BẰNG MẮT.** Chủ dự án đồng ý
-  chẩn đoán kệ trước quá trầm, yêu cầu2–3hướng thật sự khác nhau với bìa nhiều màu.
-  Nhánh mới `codex/shelf-visual-directions`, basefd2947d; checkpoint
-  `design: explore three distinct shelf directions`. App/main/nhánh UI cũ giữ nguyên.
-  [Ba mẫu HTML và bàn giao](../ui/shelf-directions/README.md), preview8090:
-  A lưới cửa hàng sáng; B hàng bìa cuộn ngang/mặt tiền rừng; C quầy sách với phiếu.
-  Cùng6tác phẩm có bìa Standard Ebooks và nguồn/license; giá/tình trạng/ghi chú mẫu,
-  không vào API. Imagegen hết hạn mức, không có ảnh AI và không dùng API key thay thế.
-  Đã xem browser390×844/100%–130%, tìm/lọc/rỗng, nút qua cuốn, mở/đóng phiếu tên dài.
-  Lưu8ảnh; chữ lớn chỉ mô phỏng CSS, không native PASS. Syntax/format/docs/diff-check
-  PASS; không chạy lại RN/API tests vì không đổi runtime. Không đổi DESIGN.md,
-  không push/merge. DỪNG chờ chủ dự án chọn hướng rồi mới port vào app.
-- **UI-1 — KỆ CÓ TÍN HIỆU CỬA HÀNG / BẢN TRƯỚC VÒNG KHẢO SÁT MỚI.** Chủ dự án duyệt ba dòng
-  và bước1 của hướng cửa hàng, kèm banner biên tập sau hai cuốn đầu. Nhánh
-  `codex/ui-direction`, base3a35355; checkpoint
-  `feat(rn): clarify shelf offers and add editorial bookshop banner`.
-  Tên Be Vietnam Pro16/23, giá18/25, nền sáng nhẹ; giữ căn hàng và một cột130%.
-  Banner “Đọc xong. Chuyền tay.” chỉ ở kệ mặc định trang1/đủ2cuốn/không lỗi,
-  cuộn cùng kệ, bỏ hình trang trí khi chữ lớn. DESIGN/UI_COMPONENTS đã đồng bộ.
-  [So sánh mới](../ui/shelf-storefront-01.html),
-  [kiểm chứng/giới hạn](../ui/SHELF_STOREFRONT_01.md).
-  Android390dp100%/130%: đầu/cuối kệ, tên ngắn/dài, một/hai giá, banner;
-  thêm320dp130%, mở chi tiết/Back, tìm/lọc, mất API/phục hồi tự động.
-  RN91/91, lint/typecheck/Prettier/docs/diff-check PASS.
-  TalkBack/ARM/iOS/web/native catalog/showcase chưa kiểm mới; không đóng gate.
-  Windows chặn bind57017: QA compose riêng latlai-ui-storefront/37017,
-  DB random *_test; API3046/media3047 thật, storage FAKE. Guard/config chính giữ nguyên.
-  Harness ignored .tmp/ui-storefront; snapshot app/font/density/reverse phục hồi,
-  dừng QA/emulator của agent, giữ Metro người dùng/Docker Desktop/preview8089.
-  Không đổi API/session/nghiệp vụ/màn chi tiết. Chưa push/merge; chờ phản hồi
-  trước bước tiếp, chưa đổi bộ lọc/điều hướng, chưa motion/C02/C04.
+- **UI-1 — HƯỚNG B ĐÃ VÀO KỆ RN / CHỜ DUYỆT THẨM MỸ.** Chủ dự án chọn B
+  ngày 02/10 từ ba mẫu HTML ở21d988e. Nhánh `codex/shelf-b-native`, base `21d988e`;
+  checkpoint `feat(rn): bring forest storefront and browsable book rails to shelf`.
+  Chưa push/PR/merge; main giữ nguyên trong gói này. Mặt tiền forest/logo trắng
+  gốc, nền kệ sáng ngả xanh, tối đa 3 cuốn liên tiếp mỗi hàng theo API, nút qua cuốn
+  44dp và vuốt ngang; không animation mới. Thẻ 160/224dp theo font scale; bìa
+  contain 196dp. Tên 3 dòng/tác giả 1 dòng có “…”, stamp/giá đọc đủ; cả hai giá và căn
+  hàng giữ nguyên. Kệ thật/showcase dùng ShelfRails; catalog có ví dụ mới.
+  Screen/BrandLogo/PublicPhoto có tùy chọn riêng, mặc định consumer cũ giữ nguyên.
+  DESIGN/UI_COMPONENTS đồng bộ hướng B, thay bố cục/banner cũ. Không đổi API,
+  query/filter/cursor/retry/session/navigation/nghiệp vụ hoặc chi tiết đã duyệt.
+  [Ảnh mẫu→Android](../ui/shelf-b-native.html), [kiểm chứng](../ui/SHELF_B_NATIVE.md):
+  390dp / 100% thấy hai giá ở đầu;130% mở rộng thẻ/cuộn đọc đủ; tên dài/Worn/1M,
+  hàng cuối 1 cuốn, mở chi tiết/Back giữ vị trí/màu status bar, refetch cuối kệ,
+  tìm/rỗng/bỏ lọc/Bán/sheet/keyboard, mất API/phục hồi tự động đã xem Android.
+  RN 91/91, lint/typecheck, export:web PASS. Prettier/docs:check/diff-check PASS. Showcase native 130% đã xem; catalog native chưa chạy (cờ0).
+  TalkBack/ARM/FPS/iOS/320dp mới/cursor trang 2/live Supabase NOT RUN; không đóng
+  human review/native/release. AI đọc diff không thay review người thật.
+  QA mới7 listing có6 bìa Standard Ebooks cùng bộ mẫu, thêm 1 tên Việt dài;[QA],
+  giá/tình trạng mô phỏng; tạo/duyệt/ảnh qua API thật. Compose riêng latlai-ui-shelf-b
+  port37017/rs-test/random *_test, API 3046/media 3047, storage FAKE. Harness/snapshot
+  ignored .tmp/ui-shelf-b. Đã phục hồi app/font/density/reverse và dừng
+  QA/emulator của agent; giữ Metro/Docker Desktop người dùng và preview 8089.
+  Bước tiếp: chủ dự án xem và duyệt B native; chỉ sửa phản hồi trên kệ nếu có.
+  Chuyển động mở ảnh vẫn chưa làm; không áp sang màn khác trước duyệt.
+  **C01 đã merge (PR11/PR12); C02 TẠM HOÃN để làm UI-1; gate review người thật/
+  native/release vẫn mở.**
+- Nền UI trước B: [ba mẫu A/B/C](../ui/shelf-directions/README.md) ở21d988e
+  (HTML, không native); [storefront01](../ui/SHELF_STOREFRONT_01.md) ởfd2947d
+  đã bị thay bố cục/banner trong lượt B. Bìa mẫu có nguồn/license, không runtime data.
+
+## Nền kế thừa và bằng chứng trước đợt B
+
 - **UI-1 — KỆ SÁCH VÒNG02, THAY BẢN VÒNG01 ĐÃ BỊ TỪ CHỐI.** Chủ dự án
   không chấp nhận vòng01 ead610b (bìa nhỏ/cột chữ dài), sau đó giao quyền quyết
   định thiết kế, yêu cầu kết quả đẹp và dễ dùng. Không dùng tests xanh làm duyệt UX.

@@ -113,13 +113,29 @@ cho listing chỉ có một giá. Nội dung giá vẫn được wrap/tăng chi�
 Chủ dự án đã chọn ba dòng ngày01/10 sau ảnh Android hai/ba dòng, cùng dữ liệu.
 Không đổi AppText/BookOffer toàn cục hoặc áp ellipsis vào màn chi tiết.
 
-Lượt cửa hàng01/10: `shelfTitle` BeBold16/23, màu mực; nền surface/padding8px
+Lượt cửa hàng01/10 (bố cục cũ, thay bằng hướng B bên dưới): `shelfTitle` BeBold16/23, màu mực; nền surface/padding8px
 nhóm bản sách, bìa shelf cùng nền surface, contain180dp. Giá giữ18/25 và đủ nhãn.
 `ShelfGrid.afterFirstPair` nhận slot trình bày, chỉ chèn sau mục thứ hai. Caller
 quyết định điều kiện: kệ mặc định/trang đầu/không lỗi, không thêm truy vấn hay state.
 `BookshopNote` là lời biên tập cố định trên nền forest, minh họa SVG trang trí
 ẩn với accessibility; bỏ minh họa ở130% hoặc width<360dp để chữ có đủ chỗ.
 Không khóa chiều cao, không CTA giả/animation. `/ui` nhóm Sách có ví dụ mới.
+
+Hướng B02/10: `Screen appearance="shelf"` chọn nền `shelfCanvas`, safe area đầu
+forest và status bar sáng; mặc định paper giữ nguyên. `ShelfHeader inverse` dùng
+`BrandLogo inverse` (asset trắng gốc), nền forest và chữ địa bàn màu giấy.
+`ShelfRails` dùng chung kệ thật/showcase: chia tối đa3cuốn liên tiếp theo API,
+không sở hữu query/session. Mỗi cuốn160dp; ở130% tăng224dp, giới hạn theo viewport.
+Bìa contain196dp/nền kệ, tên ba dòng/tác giả một dòng, stamp và `BookOffer`
+không cắt tình trạng/giá. Chiều cao chữ dự trữ theo fontScale×TextScale, các cuốn
+stretch cùng hàng; nhóm giá ở đáy thông tin, nội dung dài tự tăng chiều cao.
+`PublicPhoto rail` chỉ đổi khung/nền; `onCoverFocus` cho rail đưa cuốn được focus
+vào vùng nhìn thấy, không đổi expiry/cache/query/retry. Showcase dùng cùng callback.
+Nút trước/tiếp dùng `IconButton`44px, scrollTo không animation; vị trí lưu trong
+ref, state chỉ đổi ở biên nên không render lại toàn hàng mỗi frame cuộn. Caller
+key theo query/cursor để reset khi tìm/lọc/trang, giữ vị trí Back/refetch cùng trang.
+Không dùng `ShelfGrid`/banner cũ trong kệ thật/showcase; component cũ còn để đọc
+lịch sử và ví dụ `BookshopNote` riêng, không là định hướng kệ hiện hành.
 
 Cập nhật 29/09: Android xử lý `fontScale` qua Expo plugin để giữ Activity và
 picker khi trở lại từ cài đặt chữ. `AppText` tạo lại riêng native Text theo

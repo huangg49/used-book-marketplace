@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lật lại · Kệ B trên Android</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --forest: #214b40;
+        --paper: #f6f8f3;
+        --rust: #963f28;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: #202c27;
+        font-family: system-ui, sans-serif;
+        line-height: 1.55;
+      }
+      header {
+        background: var(--forest);
+        color: #fffcf4;
+        padding: 28px max(24px, calc((100vw - 1120px) / 2));
+      }
+      h1 {
+        font:
+          600 clamp(26px, 4vw, 38px)/1.2 Georgia,
+          serif;
+        margin: 8px 0 12px;
+      }
+      header p {
+        max-width: 780px;
+        margin: 0;
+      }
+      main {
+        max-width: 1168px;
+        margin: auto;
+        padding: 24px;
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+      button {
+        min-height: 44px;
+        padding: 10px 20px;
+        border: 1px solid var(--forest);
+        border-radius: 8px;
+        font: inherit;
+        color: var(--forest);
+        background: transparent;
+        cursor: pointer;
+      }
+      button[aria-pressed="true"] {
+        background: var(--forest);
+        color: white;
+      }
+      button:focus-visible,
+      a:focus-visible {
+        outline: 3px solid var(--rust);
+        outline-offset: 4px;
+      }
+      a {
+        color: var(--forest);
+      }
+      .compare,
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+        gap: 24px;
+        align-items: start;
+      }
+      .compare {
+        max-width: 828px;
+      }
+      figure {
+        margin: 0;
+      }
+      figcaption {
+        margin-bottom: 10px;
+        font-weight: 650;
+      }
+      figure img {
+        display: block;
+        width: 100%;
+        max-width: 390px;
+        height: auto;
+        border: 1px solid #d1d8cb;
+      }
+      .note {
+        max-width: 860px;
+        border-left: 3px solid var(--rust);
+        padding-left: 16px;
+      }
+      h2 {
+        margin: 36px 0 16px;
+        font-size: 21px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span>LẬT LẠI · UI-1 · 02/10/2026</span>
+      <h1>Kệ B đã vào app.</h1>
+      <p>
+        Mặt tiền xanh rừng, bìa nhiều màu, dấu tình trạng và giá thật từ API QA.
+        Đối chiếu mẫu đã duyệt với ảnh chụp Android; dừng ở kệ để duyệt thẩm mỹ.
+      </p>
+    </header>
+    <main>
+      <nav aria-label="Cỡ chữ so sánh">
+        <button data-scale="100" aria-pressed="true">Chữ 100%</button>
+        <button data-scale="130" aria-pressed="false">Chữ 130%</button>
+      </nav>
+      <section class="compare" data-panel="100">
+        <figure>
+          <figcaption>Mẫu B đã duyệt · HTML 390×844</figcaption>
+          <img
+            src="shelf-directions/evidence/b-100.png"
+            alt="Mẫu B trên browser trước khi đưa vào app"
+          />
+        </figure>
+        <figure>
+          <figcaption>App Android · khoảng 390dp · 100%</figcaption>
+          <img
+            src="shelf-b-native/refined-100.png"
+            alt="Kệ thật trên Android: hai cuốn, tình trạng, giá bán và đổi đều nhìn thấy"
+          />
+        </figure>
+      </section>
+      <section class="compare" data-panel="130" hidden>
+        <figure>
+          <figcaption>Mẫu B · CSS mô phỏng 130%</figcaption>
+          <img
+            src="shelf-directions/evidence/b-130.png"
+            alt="Mẫu B chữ lớn trên browser"
+          />
+        </figure>
+        <figure>
+          <figcaption>App Android · chữ hệ thống 130%</figcaption>
+          <img
+            src="shelf-b-native/first-130.png"
+            alt="Kệ Android chữ 130%, thẻ rộng hơn và cuốn kế lộ một phần để cuộn ngang"
+          />
+        </figure>
+      </section>
+      <p class="note">
+        Hai cột so sánh là <strong>mẫu HTML và app Android</strong>, không phải
+        hai bản native cùng viewport. Android Pixel_7 có chiều cao khoảng 867dp.
+        Cùng sáu bìa tư liệu; listing QA thêm tiền tố [QA], dữ liệu giá/tình
+        trạng mô phỏng. Bìa tư liệu không là ảnh một bản sách thật. Ở 130% cần
+        cuộn dọc để xem đủ hai giá.
+      </p>
+      <h2>Cuốn thứ ba, giá và tên dài</h2>
+      <div class="gallery">
+        <figure>
+          <figcaption>Cuốn thứ ba · 100%</figcaption>
+          <img
+            loading="lazy"
+            src="shelf-b-native/third-100.png"
+            alt="Cuốn Cũ nhiều có tên ba dòng, giá bán 35.000 và đổi 45.000 đồng"
+          />
+        </figure>
+        <figure>
+          <figcaption>Cuốn thứ ba · 130% · đã cuộn</figcaption>
+          <img
+            loading="lazy"
+            src="shelf-b-native/third-full-130.png"
+            alt="Cũ nhiều và hai mức giá đầy đủ ở chữ hệ thống 130%"
+          />
+        </figure>
+        <figure>
+          <figcaption>Hàng cuối · 130% · giá tối đa hợp lệ</figcaption>
+          <img
+            loading="lazy"
+            src="shelf-b-native/end-130.png"
+            alt="Tên sách dài rút gọn bằng dấu ba chấm; giá bán 1.000.000 đồng và đổi 999.000 đồng không bị cắt"
+          />
+        </figure>
+      </div>
+      <h2>Bìa khác màu và trạng thái rỗng</h2>
+      <div class="gallery">
+        <figure>
+          <figcaption>Hàng tiếp · chỉ đổi / chỉ bán</figcaption>
+          <img
+            loading="lazy"
+            src="shelf-b-native/second-100.png"
+            alt="Bìa vàng và đỏ; một cuốn đổi 70.000 đồng, một cuốn bán 50.000 đồng"
+          />
+        </figure>
+        <figure>
+          <figcaption>Tìm không có kết quả · 130%</figcaption>
+          <img
+            loading="lazy"
+            src="shelf-b-native/empty-130.png"
+            alt="Kệ rỗng với từ khóa thật, nút bỏ bộ lọc và làm mới"
+          />
+        </figure>
+      </div>
+      <p>
+        <a href="SHELF_B_NATIVE.md"
+          >Kiểm chứng, nguồn dữ liệu và phần chưa nghiệm thu</a
+        >
+      </p>
+    </main>
+    <script>
+      document.querySelectorAll("[data-scale]").forEach((button) =>
+        button.addEventListener("click", () => {
+          document
+            .querySelectorAll("[data-scale]")
+            .forEach((other) =>
+              other.setAttribute("aria-pressed", String(other === button)),
+            );
+          document.querySelectorAll("[data-panel]").forEach((panel) => {
+            panel.hidden = panel.dataset.panel !== button.dataset.scale;
+          });
+        }),
+      );
+    </script>
+  </body>
+</html>

@@ -1,6 +1,7 @@
 # Lật lại — Định hướng giao diện UI-1
 
-Ngày 30/09/2026 · Nhánh `codex/ui-direction` · Nền sản phẩm main `4273f10`.
+Ngày 02/10/2026 · Nhánh `codex/shelf-b-native` · Base `21d988e`.
+UI-1 bắt đầu từ nền sản phẩm main `4273f10`; các gói UI sau chưa merge.
 
 ## Nguồn sự thật và phạm vi
 
@@ -133,48 +134,44 @@ trước/sau; tự đánh giá của AI không thay thế bước duyệt này.
 
 ### Kệ sách: chọn giữa nhiều cuốn, không phải chi tiết thu nhỏ
 
-Sau vòng kệ01, chủ dự án từ chối bố cục một hàng với cột chữ kéo dài và giao
-quyền quyết định thiết kế cho agent. Kệ ưu tiên nhịp bìa và khả năng so sánh:
-hai cột ở chiều rộng từ360dp/chữ thường. Không rải phiếu tình trạng đầy đủ hoặc
-tên người bán lên từng mục; các dữ kiện đó vẫn ở màn chi tiết và nhãn accessible.
-Trên kệ, tên sách hiển thị tối đa ba dòng và tác giả một dòng, dùng dấu “…” khi
-vượt giới hạn. Tên và tác giả đầy đủ luôn có ở màn chi tiết và nhãn accessibility.
-Các thẻ cùng hàng căn thẳng vùng bìa, tên, tình trạng và giá, có cùng chiều cao.
-Vùng giá dành chỗ cho hai mức; chỉ có một giá thì để khoảng trống, không thêm
-giá hoặc ký hiệu giả. Tình trạng dùng một nét đất nung nhỏ. Dòng “Bán”/“Đổi” đi
-cùng đúng số tiền; nếu có cả hai phải hiện cả hai, không chọn giá rẻ hơn để nhấn.
-Không rút gọn tình trạng, số tiền hoặc ẩn một hình thức giao dịch để cân bố cục.
+Ngày02/10, chủ dự án chọn **B: mặt tiền xanh rừng và hàng bìa cuộn ngang**
+trong [ba hướng kệ](ui/shelf-directions/README.md). Quyết định này thay bố cục
+lưới/một cột và banner sau hai cuốn của lượt trước; màn chi tiết đã duyệt giữ nguyên.
 
-Ngày01/10, chủ dự án chốt tối đa ba dòng sau ảnh so sánh hai/ba dòng ở100%/130%.
-Không áp giới hạn này vào màn chi tiết. Kệ ưu tiên nhận diện, so sánh và chọn bản
-sách: tên dùng Be Vietnam Pro16/23, giá18/25 đậm và có vị trí ổn định. Lora tạo
-bản sắc ở tiêu đề khu vực và điểm kể chuyện, không bắt buộc ở tên từng cuốn trên
-kệ. Cho phép nền sáng nhẹ để nhóm từng bản sách, không bóng đổ/card lồng nhau.
-Sự thư thái đến từ phân cấp rõ và lời chỉ dẫn hữu ích, không từ giãn mọi thành phần.
+Đầu màn là logo gốc phiên bản trắng trên nền rừng, địa bàn và ô tìm sách thật.
+Bộ lọc giữ nhãn/hành vi hiện có. Câu biên tập “Một kệ sách, nhiều sắc màu.” nằm
+trong tiêu đề khu vực, không là banner lớn đẩy bìa xuống, không phải số liệu hay
+khuyến mãi. Nền kệ sáng ngả xanh nhẹ; sắc ấm tập trung ở dấu tình trạng và bìa.
+Không phủ nền giấy cũ lên toàn bộ cửa hàng, không thêm card nổi/gradient/texture.
 
-Ở chữ130% hoặc màn hẹp, chuyển một cột: bìa cạnh tên/tác giả/tình trạng, cụm giá
-chiếm chiều rộng riêng phía dưới. Không để giá kéo dài cột bên phải và tạo hố
-trống dưới bìa. Khi số tiền dài, cả nhóm được wrap, vùng giá được tăng chiều cao;
-không thu nhỏ font, cắt số hoặc khóa chiều cao toàn thẻ. Chiều cao dành cho tên/
-tác giả theo cỡ chữ thực tế, không cố định cho mọi mức font.
-Ảnh contain trong khung sáng cao180dp cùng nền mục sách, không sửa dữ liệu ảnh. Đây là quyết định
-trình bày, không đổi quyền truy cập ảnh, query, filter, navigation hay nghiệp vụ.
-Không dùng kết quả tests làm bằng chứng thiết kế đẹp; xem cả QA tên dài và ảnh
-tư liệu có sẵn, phân biệt rõ tư liệu với listing thật.
+Mỗi hàng gồm tối đa **ba cuốn liên tiếp theo thứ tự API**; số hàng và số cuốn là
+đếm từ trang đã tải, không gợi danh mục tuyển chọn hoặc tổng tồn kho. Cuộn ngang
+để xem cuốn còn khuất; có nút trước/tiếp vùng chạm44px cho người không dùng vuốt.
+Không tự chạy, không coverflow/3D và không chiếm gesture Back từ mép hệ thống.
+Nút qua cuốn chuyển ngay, không animation mới; thay tìm/lọc/trang thì bắt đầu lại
+hàng ngang, mở chi tiết/Back hoặc refetch cùng trang giữ vị trí đang xem.
 
-### Biển nhỏ của tiệm trên kệ
+Tên dùng Be Vietnam Pro700,16/23, tối đa **ba dòng**; tác giả một dòng, “…” khi
+quá dài. Màn chi tiết và nhãn accessibility giữ đủ. Các cuốn cùng hàng căn vùng
+bìa, tên, dấu và giá; chiều cao tên dự trữ theo cỡ chữ thật, giá một mức để chỗ
+cho mức thứ hai, không thêm dữ liệu giả. Tình trạng, nhãn Bán/Đổi và số tiền
+không bị cắt hoặc thu nhỏ. Cả hai hình thức phải hiện đúng giá, không chọn giá
+rẻ hơn làm đại diện. Người bán và phiếu mô tả đầy đủ ở chi tiết.
 
-Một banner biên tập sau hai cuốn đầu tiên, cuộn cùng nội dung. Không đặt trước
-bìa đầu, không sticky/overlay, tự thu gọn hoặc chỉ hiện một lần rồi mất. Chỉ có
-ở trang đầu của kệ mặc định, khi đủ hai cuốn và không có lỗi tải; ẩn khi tìm/lọc/
-đổi sắp xếp. Không chèn lặp ở trang kế hoặc thay trạng thái rỗng/lỗi.
+Bìa contain trong khung196dp hòa cùng nền kệ; không crop hay sửa ảnh người đăng.
+Cuốn rộng160dp ở chữ thường; chữ130% tăng lên224dp để giá/tình trạng dễ đọc,
+vẫn cùng một kiểu hàng sách, không chuyển thành cột mô tả dài. Màn hẹp giới hạn
+chiều rộng theo viewport; giá được wrap và chiều cao tăng tự nhiên. Kiểm thực tế
+390dp/100%–130%, tên dài, một/hai giá và hàng cuối không đủ ba cuốn; ảnh tư liệu
+QA phải phân biệt với listing thật. Không coi ảnh HTML hoặc tests xanh là native
+acceptance hay duyệt thẩm mỹ.
 
-Nền xanh rừng phẳng, chữ màu giấy, minh họa gáy sách/dấu trang với một điểm đất
-nung. Tiêu đề **“Đọc xong. Chuyền tay.”**, câu phụ **“Xem bìa, đọc tình trạng,
-chọn cuốn hợp mình.”** là lời biên tập, không phải khuyến mãi, cam kết kiểm định
-hay lịch sử một listing. Không có nút giả. Tầm110–130dp ở chữ thường là mục tiêu
-thử, không khóa chiều cao. Chữ lớn/màn hẹp ưu tiên nội dung, có thể bỏ minh họa
-thuần trang trí; text thật tiếp tục scale, không tự chạy carousel/animation.
+### Token bổ trợ cho mặt tiền B
+
+- `shelfCanvas` = `#F6F8F3`: nền sáng ngả xanh dành cho kệ; form/chi tiết giữ nền giấy.
+- `shelfEdge` = `#B5C3AC`: nét đỡ bìa thuần trang trí, không là viền control.
+- Logo trắng là asset gốc brand v1.1; chữ trạng thái hệ thống sáng trên mặt tiền
+  rừng và tối trên nền giấy, theo màn đang mở.
 
 ### Năm màu cốt lõi
 

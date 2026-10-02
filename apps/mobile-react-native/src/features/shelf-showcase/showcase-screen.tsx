@@ -13,9 +13,11 @@ import {
   SearchField,
   Sheet,
   colors,
+  colorRoles,
+  metrics,
   space,
 } from "../../core/ui";
-import { ShelfGrid } from "../shelf/shelf-grid";
+import { ShelfRails } from "../shelf/shelf-rails";
 import { BookPresentation } from "../shelf/book-presentation";
 import { BookGallery } from "../shelf/book-gallery";
 import { ShelfHeader } from "../shelf/shelf-controls";
@@ -67,11 +69,12 @@ export function ShelfShowcase() {
     });
   return (
     <Screen
+      appearance="shelf"
       scrollRef={scroll}
       header={
         <>
           <DemoBanner />
-          <ShelfHeader />
+          <ShelfHeader inverse />
         </>
       }
       footer={
@@ -109,14 +112,16 @@ export function ShelfShowcase() {
           {items.length} mẫu để xem bố cục · chạm bìa để mở
         </AppText>
       </View>
-      <ShelfGrid
+      <ShelfRails
+        key={`${query}:${mode}`}
         items={items.map((x) => x.listing)}
         onOpen={(item) => open(item.id)}
-        renderPhoto={(item) => (
+        renderPhoto={(item, onFocus) => (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Mở ảnh sách ${item.book.title}`}
             onPress={() => open(item.id)}
+            onFocus={onFocus}
           >
             <BookCover
               source={
@@ -126,8 +131,8 @@ export function ShelfShowcase() {
               label={`Ảnh tư liệu ${item.book.title}`}
               style={{
                 width: "100%",
-                height: 180,
-                backgroundColor: colors.surface,
+                height: metrics.shelfCover,
+                backgroundColor: colorRoles.shelfCanvas,
               }}
             />
           </Pressable>
