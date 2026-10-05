@@ -33,8 +33,9 @@ class FakeModel extends PriceModel {
       this.mode === 'invalid'
         ? { low: 1, high: 2, factors: [], missing: [], confidence: 0.9 }
         : {
-            low: data.bounds.low + 20_000,
-            high: data.bounds.low + 40_000,
+            // Inside the condition band, as a well-behaved model would.
+            low: data.bounds.low + 5_000,
+            high: data.bounds.high - 5_000,
             factors: [
               { text: 'Dựa trên giá bìa và tình trạng.', sourceRefs: ['s1', 'condition'] },
             ],

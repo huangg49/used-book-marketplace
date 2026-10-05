@@ -14,6 +14,18 @@ const STALE_MONTHS = { CoverPrice: 36, other: 24 } as const;
 const FRESH_MONTHS = 12;
 const MAX_SOURCES = 20;
 
+// Policy: what a used copy sells for, as a share of the new-book price, by
+// condition. The range comes from this band, not from the model; the
+// owner adjusts these numbers (ADR 0028). Missing pages cap it at Fair.
+export const CONDITION_BANDS = {
+  LikeNew: [0.55, 0.75],
+  Good: [0.4, 0.6],
+  Fair: [0.25, 0.45],
+  Worn: [0.15, 0.3],
+} as const satisfies Record<Condition, readonly [number, number]>;
+// Sources that state a new-book price; the band is applied to their median.
+const NEW_PRICE_KINDS: ReadonlySet<SourceKind> = new Set(['CoverPrice']);
+
 export type Condition = Wire['BookCondition'];
 export type SourceKind = Wire['PriceSourceKind'];
 
@@ -199,9 +211,23 @@ export function evaluate(
   }
   if (missing.length) return answer('NeedsMoreData', 'Insufficient');
 
-  const amounts = used.map((s) => s.amount);
-  const low = Math.max(SALE_MIN, roundTo(Math.min(...amounts) * 0.3));
-  const high = Math.min(SALE_MAX, roundTo(Math.max(...amounts) * 1.1));
+  // With a new-book price, the condition band sets the range. Without one,
+  // the bounds come from the used-copy prices (editorial, completed sales).
+  const newPrices = used.filter((s) => NEW_PRICE_KINDS.has(s.kind));
+  let low: number;
+  let high: number;
+  if (newPrices.length) {
+    const band = CONDITION_BANDS[bandCondition(input)];
+    const reference = median(newPrices.map((s) => s.amount));
+    rules.push(`R-BAND-${bandCondition(input).toUpperCase()}`);
+    low = Math.max(SALE_MIN, roundTo(reference * band[0]));
+    high = Math.min(SALE_MAX, roundTo(reference * band[1]));
+  } else {
+    rules.push('R-BAND-USED-PRICES');
+    const amounts = used.map((s) => s.amount);
+    low = Math.max(SALE_MIN, roundTo(Math.min(...amounts) * 0.3));
+    high = Math.min(SALE_MAX, roundTo(Math.max(...amounts) * 1.1));
+  }
   if (high < SALE_MIN) {
     rules.push('R-REFUSE-BELOW-MIN');
     missing.push('Giá tham chiếu thấp hơn mức bán tối thiểu 10.000 đồng.');
@@ -219,12 +245,17 @@ export function evaluate(
   const fresh =
     now.getTime() - used[0].observedAt.getTime() <= FRESH_MONTHS * MONTH_MS;
   const editionUnverified = !book.isbn && !book.edition;
+  // Strong needs a new-book price to band from and a used-copy price from
+  // an independent source to place the range inside it.
   let strong = true;
-  if (used.length < 3 || independent.size < 2) {
+  if (used.length < 2 || independent.size < 2) {
     rules.push('R-LIMITED-FEW-SOURCES');
     strong = false;
   }
-  if (used.every((s) => s.kind === 'CoverPrice')) {
+  if (!newPrices.length) {
+    rules.push('R-LIMITED-NO-NEW-PRICE');
+    strong = false;
+  } else if (newPrices.length === used.length) {
     rules.push('R-LIMITED-COVER-ONLY');
     strong = false;
   }
@@ -245,6 +276,13 @@ export function evaluate(
   }
   if (strong) rules.push('R-STRONG');
   return answer('Proceed', strong ? 'Strong' : 'Limited', { low, high });
+}
+
+// Missing pages cap the band at Fair whatever condition was chosen.
+function bandCondition(input: PriceInput): Condition {
+  const condition = input.condition!;
+  if (!input.hasMissingPages) return condition;
+  return condition === 'Worn' ? 'Worn' : 'Fair';
 }
 
 export function fingerprint(
