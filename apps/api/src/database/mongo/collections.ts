@@ -72,6 +72,7 @@ export interface CollectionTypes {
   command_locks: D.CommandLockDoc;
   account_locks: D.AccountLockDoc;
   counters: D.CounterDoc;
+  wishlist_items: D.WishlistItemDoc;
 }
 export type CollectionName = keyof CollectionTypes;
 
@@ -199,6 +200,7 @@ const NAMES: CollectionName[] = [
   'command_locks',
   'account_locks',
   'counters',
+  'wishlist_items',
 ];
 export const COLLECTION_NAMES: readonly CollectionName[] = NAMES;
 
