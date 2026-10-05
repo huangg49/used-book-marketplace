@@ -79,7 +79,13 @@ export function validatePriceAssist(env: Record<string, unknown>) {
   const apiKey = String(env.PRICE_ASSIST_API_KEY ?? '');
   if (apiKey && apiKey.startsWith('replace-'))
     throw new Error('PRICE_ASSIST_API_KEY still holds the example value.');
-  const model = String(env.PRICE_ASSIST_MODEL || 'claude-opus-5-5');
+  const provider = String(env.PRICE_ASSIST_PROVIDER || 'anthropic');
+  if (!['anthropic', 'gemini'].includes(provider))
+    throw new Error('PRICE_ASSIST_PROVIDER must be anthropic or gemini.');
+  const model = String(
+    env.PRICE_ASSIST_MODEL ||
+      (provider === 'gemini' ? 'gemini-2.5-flash' : 'claude-opus-5-5'),
+  );
   if (!/^[a-z0-9][a-z0-9.-]{2,79}$/.test(model))
     throw new Error('PRICE_ASSIST_MODEL is invalid.');
   const effort = String(env.PRICE_ASSIST_EFFORT || 'low');
@@ -91,6 +97,7 @@ export function validatePriceAssist(env: Record<string, unknown>) {
   return {
     PRICE_ASSIST_ENABLED: enabled,
     PRICE_ASSIST_API_KEY: apiKey,
+    PRICE_ASSIST_PROVIDER: provider,
     PRICE_ASSIST_MODEL: model,
     PRICE_ASSIST_EFFORT: effort,
     PRICE_ASSIST_TIMEOUT_MS: intIn(env.PRICE_ASSIST_TIMEOUT_MS, 20_000, 2_000, 60_000, 'PRICE_ASSIST_TIMEOUT_MS'),

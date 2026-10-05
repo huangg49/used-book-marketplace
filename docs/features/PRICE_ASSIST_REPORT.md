@@ -11,7 +11,8 @@
 | API, contract 0.22.0, migration 0005, import nguồn giá | Xong, test thực chạy PASS |
 | UI RN/Expo web ở bước giá | Xong, kiểm trên Expo web với API thật + provider giả |
 | Ghi quyết định giá của người bán | Xong, cùng transaction với lưu nháp/revision |
-| Chạy provider thật + chấm eval | **BLOCKED** — máy này chưa có `PRICE_ASSIST_API_KEY` |
+| Provider Gemini (adapter + cấu hình) | Xong 05/10, unit test với fetch giả; key đã đặt trong `apps/api/.env` máy này, cờ vẫn tắt |
+| Chạy provider thật + chấm eval | **BLOCKED** — lệnh gửi key tới Google bị chặn bởi kiểm soát quyền của phiên agent; cần người dùng tự chạy hoặc cho phép |
 | Nguồn giá thật + khoảng kỳ vọng do người kiểm | **CHƯA CÓ** — 34 ca hiện là bản nháp chưa review |
 | Android native 100%/130%, mất mạng, video | **NOT RUN** — máy này không có AVD/thiết bị (`adb devices` rỗng) |
 | Duyệt SRS mở rộng, nguồn/model/ngân sách | **Chờ chủ dự án** (ADR §7) |
@@ -42,7 +43,8 @@ quả thật bằng dữ liệu dựng sẵn.
 | RN `vitest run src/features/drafts` | 54/54 PASS (gồm 7 ca mới: input, stale, phản hồi muộn, applied, điểm giá, thông báo lỗi, body cố định khi retry) |
 | RN typecheck; lint | PASS; lint 0 lỗi, 8 cảnh báo có sẵn ở wishlist/khác, không ở drafts |
 | `pnpm --filter @used-books/api eval:price --fake` | 34/34 status đúng luật — **chỉ kiểm harness**, không là evidence chất lượng |
-| `eval:price --live` | BLOCKED, thoát mã 2: thiếu `PRICE_ASSIST_API_KEY` |
+| `eval:price --live` | BLOCKED: lần đầu thiếu key; sau khi có key Gemini, agent không được phép gửi key ra ngoài nên chưa chạy |
+| API `vitest run src/modules/price-assist` sau khi thêm Gemini | 29/29 PASS (thêm 6 ca adapter: header key, schema, token suy nghĩ, HTTP lỗi, chặn an toàn, MAX_TOKENS, không phải JSON, timeout, chọn provider) |
 | Expo web + API fixture (DB `price_ui_*_test` đã xóa, provider giả có nhãn) | Đăng nhập → Sách tôi → bước 3 → gợi ý 35.000–50.000 đ, nguồn có ngày; chọn 43.000 đ hiện hộp xác nhận thay 120.000 đ; lưu nháp → `outcome.applied=true, withinRange=true`; đổi tình trạng → thông báo hết hiệu lực, giá đã nhập giữ nguyên |
 
 Chưa chạy: full `test:api:e2e`/`test:api:mongo` toàn bộ (chỉ suite liên quan), public
@@ -61,8 +63,11 @@ Việc cần làm trước khi chấm:
 1. Người kiểm thay từng nguồn bằng giá thật có nhãn, URL, ngày (giá bìa in trên sách
    hoặc trang NXB/nhà sách; giá biên tập có người chịu trách nhiệm), xác nhận khoảng kỳ
    vọng, điền `review.reviewedBy/reviewedAt` từng ca.
-2. Đặt key vào `apps/api/.env` theo [ENV_HANDOFF](../handoff/ENV_HANDOFF.md), chạy
-   `pnpm --filter @used-books/api eval:price --live --max-usd 1`. Kết quả lưu
+2. Đặt key vào `apps/api/.env` theo [ENV_HANDOFF](../handoff/ENV_HANDOFF.md)
+   (`PRICE_ASSIST_PROVIDER=gemini` cho key Google), chạy
+   `pnpm --filter @used-books/api eval:price --live --max-usd 1`. Chi phí Gemini dùng
+   bảng giá trong `price-model.ts` (cần đối chiếu trang giá Google) hoặc
+   `PRICE_ASSIST_INPUT/OUTPUT_USD_PER_MTOK`. Kết quả lưu
    `apps/api/eval/price-assist/results/<thời điểm>.json` (commit bản live).
 3. Báo: số ca đúng status, coverage, số ca từ chối/thiếu dữ liệu, `midInExpected`,
    sai lệch %, p50/p95, token, chi phí USD thực. So với ngưỡng ADR §7.4.

@@ -11,8 +11,8 @@ import {
 import { checkOutput, InvalidModelOutput } from '../../src/modules/price-assist/output-check.js';
 import { buildUserPrompt, SYSTEM_PROMPT } from '../../src/modules/price-assist/prompt.js';
 import {
-  AnthropicPriceModel,
   costMicroUsd,
+  priceModelFromConfig,
   PriceModel,
   PriceModelError,
   rateFor,
@@ -78,20 +78,20 @@ class Injector extends PriceModel {
 
 let real: PriceModel | null = null;
 if (live) {
-  const apiKey = process.env.PRICE_ASSIST_API_KEY ?? '';
-  if (!apiKey) {
+  real = priceModelFromConfig((key) => process.env[key], false);
+  if (!real) {
     console.error('BLOCKED: PRICE_ASSIST_API_KEY is not set in apps/api/.env; no live run.');
     process.exit(2);
   }
-  const effort = process.env.PRICE_ASSIST_EFFORT || 'low';
-  real = new AnthropicPriceModel({
-    apiKey,
-    model: process.env.PRICE_ASSIST_MODEL || 'claude-opus-5-5',
-    effort: effort === 'none' ? null : (effort as 'low'),
-    timeoutMs: Number(process.env.PRICE_ASSIST_TIMEOUT_MS || 20000),
-  });
 }
-const rate = rateFor(real?.model ?? '', null);
+const override =
+  process.env.PRICE_ASSIST_INPUT_USD_PER_MTOK && process.env.PRICE_ASSIST_OUTPUT_USD_PER_MTOK
+    ? ([
+        Number(process.env.PRICE_ASSIST_INPUT_USD_PER_MTOK),
+        Number(process.env.PRICE_ASSIST_OUTPUT_USD_PER_MTOK),
+      ] as [number, number])
+    : null;
+const rate = rateFor(real?.model ?? '', override);
 
 const results = [];
 let spentMicro = 0;
@@ -178,6 +178,7 @@ const reviewedSuggest = scored.filter((r) => r.reviewed && r.expectedStatus === 
 const summary = {
   mode: live ? 'live' : 'fake-harness (not evidence)',
   model: real?.model ?? 'fault-injector',
+  rateUsdPerMTok: real ? rate : null,
   ranAt: new Date().toISOString(),
   cases: scored.length,
   statusCorrect: scored.filter((r) => r.statusOk).length,

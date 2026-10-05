@@ -53,9 +53,13 @@ chứng được và dễ bị nhầm là giá đã xác minh.
    và có nằm trong khoảng không). Id của người/listing khác hoặc gợi ý thất bại → 422.
    Giá thật vẫn chỉ là `salePrice`; không đổi listing revision schema. Đổi giá sau duyệt
    vẫn qua revision/duyệt lại như cũ.
-7. Provider: adapter `PriceModel`; triển khai `AnthropicPriceModel` bằng SDK chính thức,
-   `maxRetries: 0`, timeout 20 s, `max_tokens` 4000, effort `low`. Model mặc định
-   `claude-opus-5-5`, đổi qua `PRICE_ASSIST_MODEL`. Không bật server-side fallback khi
+7. Provider: adapter `PriceModel`, chọn bằng `PRICE_ASSIST_PROVIDER`.
+   `anthropic`: SDK chính thức, `maxRetries: 0`, timeout 20 s, `max_tokens` 4000, effort
+   `low`, model mặc định `claude-opus-5-5`. `gemini` (05/10, theo key người giao việc
+   cung cấp): REST `generateContent`, key trong header `x-goog-api-key` (không ở URL),
+   `responseSchema` JSON, `maxOutputTokens` 4000, temperature 0.2, timeout bằng
+   AbortController, không retry; token suy nghĩ tính vào output; model mặc định
+   `gemini-2.5-flash`. Cả hai đều qua cùng `output-check.ts`. Không bật server-side fallback khi
    model từ chối: từ chối chỉ chuyển sang nhập tay. Fake provider chỉ dùng cho test lỗi/
    adapter và UI fixture, không là evidence chất lượng.
 
@@ -69,7 +73,7 @@ khác → hỏi xác nhận. Gợi ý không chặn rời màn (không phải mu
 ## 4. Cấu hình
 
 `PRICE_ASSIST_ENABLED` (mặc định false), `PRICE_ASSIST_API_KEY` (chỉ backend `.env`),
-`PRICE_ASSIST_MODEL`, `PRICE_ASSIST_EFFORT`, `PRICE_ASSIST_TIMEOUT_MS`,
+`PRICE_ASSIST_PROVIDER` (`anthropic`|`gemini`), `PRICE_ASSIST_MODEL`, `PRICE_ASSIST_EFFORT`, `PRICE_ASSIST_TIMEOUT_MS`,
 `PRICE_ASSIST_USER_DAILY_LIMIT`, `PRICE_ASSIST_DAILY_BUDGET_USD`, tùy chọn
 `PRICE_ASSIST_INPUT/OUTPUT_USD_PER_MTOK`. Tắt hoặc thiếu key: luật vẫn trả
 NeedsMoreData/Refused, lời gọi model trả 503.
