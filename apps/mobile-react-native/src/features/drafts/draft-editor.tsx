@@ -733,6 +733,7 @@ export function DraftEditor({
               state={assist}
               currentKey={assistKey}
               disabled={locked}
+              hasPhoto={photoList.some((m) => m.status === "Ready")}
               onAsk={() => void askPrice()}
               onApply={(amount) => {
                 setForm((f) => ({ ...f, salePrice: String(amount) }));

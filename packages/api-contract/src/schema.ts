@@ -455,7 +455,7 @@ export interface paths {
         put?: never;
         /**
          * requestPriceSuggestion
-         * @description ACTIVE owner; Draft/Rejected, or Approved and Available (approved edit). Advisory sale-price range from sourced price references only; never a verified or reference price and never written to the listing. Input is the unsaved form; server checks the catalog book (confirmed, or the caller's own pending request). Evidence level and refusal are decided by fixed rules; the model only drafts range/factors, which are checked against the evidence and POL-16. Same listing + input + reference set returns the stored suggestion (cached=true) without a new model call. Idempotency-Key is one per ask: a retry with the same key and body returns that request's suggestion (cached=true) or its stored failure (503); same key with another listing/body is 409 IdempotencyConflict. 429 per-user/per-listing limits or a request still running; 503 when the assistant is disabled, over budget, times out or returns invalid output. Clients keep manual pricing in every failure. No address, account, session or token data is sent to the provider.
+         * @description ACTIVE owner; Draft/Rejected, or Approved and Available (approved edit). Advisory sale-price range from sourced price references only; never a verified or reference price and never written to the listing. Input is the unsaved form; server checks the catalog book (confirmed, or the caller's own pending request). A listing with no Ready photo gets NeedsMoreData (R-NEED-PHOTO) without a model call. Evidence level and refusal are decided by fixed rules; the model only drafts range/factors, which are checked against the evidence and POL-16. Same listing + input + reference set returns the stored suggestion (cached=true) without a new model call. Idempotency-Key is one per ask: a retry with the same key and body returns that request's suggestion (cached=true) or its stored failure (503); same key with another listing/body is 409 IdempotencyConflict. 429 per-user/per-listing limits or a request still running; 503 when the assistant is disabled, over budget, times out or returns invalid output. Clients keep manual pricing in every failure. No address, account, session or token data is sent to the provider.
          */
         post: operations["requestPriceSuggestion"];
         delete?: never;
@@ -1731,7 +1731,7 @@ export interface components {
             ownershipDeclared: true;
             priceAssist?: components["schemas"]["PriceAssistDecision"];
         };
-        /** @description Optional record of the seller's decision about a price suggestion for this listing. Stored with the suggestion in the same transaction as the save; the listing price stays the seller's salePrice. Unknown, foreign or failed suggestion ids are rejected with 422 at /priceAssist/suggestionId. */
+        /** @description Optional record of the seller's decision about a price suggestion for this listing. Stored with the suggestion in the same transaction as the save; the listing price stays the seller's salePrice. Rejected with 422 at /priceAssist/suggestionId when the suggestion is unknown, foreign, not Suggested, expired, or was made for another book, condition or condition answers than the content being saved. */
         PriceAssistDecision: {
             /** Format: uuid */
             suggestionId: string;
@@ -1763,8 +1763,8 @@ export interface components {
             /** Format: date-time */
             observedAt: string;
             url: string | null;
-            /** @description Why this source was shown but not used; null when used. */
-            excluded: ("Outlier" | "Stale" | "OtherEdition") | null;
+            /** @description Why this source was shown but not used; null when used. AskingPrice marks other sellers' asking prices, which are shown for reference but never set the range. */
+            excluded: ("Outlier" | "Stale" | "OtherEdition" | "AskingPrice") | null;
         };
         PriceFactor: {
             text: string;

@@ -215,7 +215,7 @@ export class ListingDraftsService {
             id,
             revisionId,
             body.priceAssist,
-            rest.salePrice ?? null,
+            revisionContent(rest),
           );
         const next = await tx.c.listings.findOneAndUpdate(
           { _id: id, version: l.version },

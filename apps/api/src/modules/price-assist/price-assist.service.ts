@@ -36,6 +36,16 @@ import {
   type ModelFailure,
 } from './price-model.js';
 
+// The revision content being saved, as stored (see revisionContent).
+interface SavedContent {
+  bookId: string | null;
+  condition: string | null;
+  readable: boolean | null;
+  hasMissingPages: boolean | null;
+  missingEssentialContent: boolean | null;
+  salePrice: number | null;
+}
+
 const DAY_MS = 86_400_000;
 const SUGGESTION_TTL_MS = DAY_MS;
 const LISTING_WINDOW_MS = 60_000;
@@ -154,8 +164,17 @@ export class PriceAssistService {
       const book = await this.book(tx, input.bookId, actor._id);
       const raw = await this.sources(tx, book, actor._id);
       const now = await tx.now();
-      const evidence = evaluate(input, book, raw, now);
-      const fp = fingerprint(input, raw);
+      // A copy with no uploaded photo is not priced: the condition would be
+      // the seller's word only (submission also needs 1-8 Ready photos).
+      const listingFacts = {
+        hasPhoto:
+          (await tx.c.listing_media.countDocuments(
+            { listingId, status: 'Ready', purgedAt: null },
+            { limit: 1 },
+          )) > 0,
+      };
+      const evidence = evaluate(input, book, raw, now, listingFacts);
+      const fp = fingerprint(input, raw, listingFacts);
       const cached = await tx.c.price_suggestions.findOne(
         {
           listingId,
@@ -174,6 +193,13 @@ export class PriceAssistService {
         inputFingerprint: fp,
         requestKey,
         requestHash,
+        input: {
+          bookId: input.bookId,
+          condition: input.condition,
+          readable: input.readable,
+          hasMissingPages: input.hasMissingPages,
+          missingEssentialContent: input.missingEssentialContent,
+        },
         failure: null,
         evidenceLevel: evidence.level,
         rangeLow: null,
@@ -421,16 +447,28 @@ export class PriceAssistService {
     listingId: string,
     revisionId: string,
     decision: Wire['PriceAssistDecision'],
-    salePrice: number | null,
+    saved: SavedContent,
   ) {
     const id = decision.suggestionId.toLowerCase();
     await tx.lock('price_suggestions', [id]);
     const s = await tx.c.price_suggestions.findOne({ _id: id });
+    const now = await tx.now();
+    // The suggestion must still be valid and made for what is being saved;
+    // otherwise its range says nothing about this price.
+    const matches =
+      !!s?.input &&
+      s.input.bookId === saved.bookId &&
+      s.input.condition === saved.condition &&
+      s.input.readable === saved.readable &&
+      s.input.hasMissingPages === saved.hasMissingPages &&
+      s.input.missingEssentialContent === saved.missingEssentialContent;
     if (
       !s ||
       s.ownerId !== ownerId ||
       s.listingId !== listingId ||
-      s.status !== 'Suggested'
+      s.status !== 'Suggested' ||
+      s.expiresAt <= now ||
+      !matches
     )
       invalidField(
         '/priceAssist/suggestionId',
@@ -444,12 +482,13 @@ export class PriceAssistService {
           outcome: {
             revisionId,
             applied: decision.applied,
-            chosenSalePrice: salePrice,
+            chosenSalePrice: saved.salePrice,
             withinRange:
-              salePrice === null
+              saved.salePrice === null
                 ? null
-                : salePrice >= s!.rangeLow! && salePrice <= s!.rangeHigh!,
-            decidedAt: await tx.now(),
+                : saved.salePrice >= s!.rangeLow! &&
+                  saved.salePrice <= s!.rangeHigh!,
+            decidedAt: now,
           },
           updatedAt: new Date(),
         },

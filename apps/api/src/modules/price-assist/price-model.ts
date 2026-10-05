@@ -136,6 +136,18 @@ type GeminiBody = {
   modelVersion?: string;
 };
 
+const RETRYABLE = new Set([429, 503]);
+const RETRY_DELAY_MS = 1_500;
+const RETRY_MIN_LEFT_MS = 8_000;
+const delay = (ms: number, signal: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    const t = setTimeout(resolve, ms);
+    signal.addEventListener('abort', () => {
+      clearTimeout(t);
+      reject(new Error('aborted'));
+    });
+  });
+
 // Google's own error status and message (e.g. "INVALID_ARGUMENT: ..."), for
 // the server log. Never contains the key; cut short so it cannot carry much.
 async function geminiErrorDetail(response: Response): Promise<string> {
@@ -168,29 +180,19 @@ export class GeminiPriceModel extends PriceModel {
   async draft(system: string, user: string): Promise<ModelDraft> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.options.timeoutMs);
+    const deadline = Date.now() + this.options.timeoutMs;
     let body: GeminiBody;
     try {
-      const response = await (this.options.fetcher ?? fetch)(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.options.model)}:generateContent`,
-        {
-          method: 'POST',
-          signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': this.options.apiKey,
-          },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: system }] },
-            contents: [{ role: 'user', parts: [{ text: user }] }],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              responseSchema: GEMINI_SCHEMA,
-              maxOutputTokens: 4000,
-              temperature: 0.2,
-            },
-          }),
-        },
-      );
+      let response = await this.post(system, user, controller.signal);
+      // One retry for a busy provider (503/429), only with time to spare; the
+      // timeout above still covers both attempts and a failed try is unbilled.
+      if (
+        RETRYABLE.has(response.status) &&
+        deadline - Date.now() >= RETRY_MIN_LEFT_MS
+      ) {
+        await delay(RETRY_DELAY_MS, controller.signal);
+        response = await this.post(system, user, controller.signal);
+      }
       if (!response.ok)
         throw new PriceModelError(
           'ProviderError',
@@ -205,6 +207,34 @@ export class GeminiPriceModel extends PriceModel {
     } finally {
       clearTimeout(timer);
     }
+    return this.read(body);
+  }
+
+  private post(system: string, user: string, signal: AbortSignal) {
+    return (this.options.fetcher ?? fetch)(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.options.model)}:generateContent`,
+      {
+        method: 'POST',
+        signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': this.options.apiKey,
+        },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: [{ role: 'user', parts: [{ text: user }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: GEMINI_SCHEMA,
+            maxOutputTokens: 4000,
+            temperature: 0.2,
+          },
+        }),
+      },
+    );
+  }
+
+  private read(body: GeminiBody): ModelDraft {
     const meta = body.usageMetadata ?? {};
     // Thinking tokens are billed as output.
     const usage = {

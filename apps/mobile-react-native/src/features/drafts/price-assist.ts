@@ -17,7 +17,9 @@ const source = z.object({
   condition: bookCondition.nullable(),
   observedAt: z.string(),
   url: z.string().nullable(),
-  excluded: z.enum(["Outlier", "Stale", "OtherEdition"]).nullable(),
+  excluded: z
+    .enum(["Outlier", "Stale", "OtherEdition", "AskingPrice"])
+    .nullable(),
 });
 export const priceSuggestion = z.object({
   id: uuid,
@@ -173,4 +175,5 @@ export const excludedLabel = {
   Outlier: "không dùng: chênh lệch bất thường",
   Stale: "không dùng: dữ liệu cũ",
   OtherEdition: "không dùng: ấn bản khác",
+  AskingPrice: "chỉ để tham khảo, không dùng tính khoảng giá",
 } as const;

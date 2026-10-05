@@ -139,9 +139,37 @@ describe('price suggestions through HTTP with MongoDB', () => {
     books.push(created.body.entityId);
     return created.body.entityId as string;
   }
-  async function listing(actor = m1, book = bookId) {
+  // Listings get one Ready photo by default: the assistant prices only a
+  // copy the seller has photographed (R-NEED-PHOTO otherwise).
+  async function listing(actor = m1, book = bookId, photo = true) {
     const res = await post('/listings', { content: draft(book) }, actor).expect(200);
-    return res.body as { entityId: string; version: number };
+    const created = res.body as { entityId: string; version: number };
+    if (photo) {
+      const id = randomUUID();
+      const now = new Date();
+      await db.c.listing_media.insertOne({
+        _id: id,
+        listingId: created.entityId,
+        version: 1,
+        status: 'Ready',
+        stagingKey: `e2e/staging/${id}`,
+        pinnedKey: `e2e/pinned/${id}`,
+        derivativeKey: `e2e/derived/${id}`,
+        mimeType: 'image/jpeg',
+        byteSize: 1000,
+        sha256: 'a'.repeat(64),
+        width: 800,
+        height: 600,
+        failureCode: null,
+        expiresAt: new Date(now.getTime() + 86_400_000),
+        purgedAt: null,
+        reservedBytes: 0,
+        createdAt: now,
+        updatedAt: now,
+        lockSeq: 0,
+      });
+    }
+    return created;
   }
   const reference = (book: string, amount: number, kind = 'EditorialReference', label = 'Biên tập') => ({
     _id: randomUUID(),
@@ -199,6 +227,7 @@ describe('price suggestions through HTTP with MongoDB', () => {
       await db.c.price_suggestions.deleteMany({ ownerId: { $in: users } });
       await db.c.price_references.deleteMany({ bookId: { $in: books } });
       await db.c.price_assist_usage.deleteMany({});
+      await db.c.listing_media.deleteMany({ listingId: { $in: listings } });
       await db.c.listing_revisions.deleteMany({ listingId: { $in: listings } });
       await db.c.listings.deleteMany({ _id: { $in: listings } });
       const revisions = (await db.c.catalog_revisions.find({ bookId: { $in: books } }).toArray()).map((r) => r._id);
@@ -234,6 +263,10 @@ describe('price suggestions through HTTP with MongoDB', () => {
     const l2 = await listing();
     const refused = await ask(l2.entityId, m1, { readable: false }).expect(200);
     expect(refused.body).toMatchObject({ status: 'Refused', range: null });
+    const bare = await listing(m1, bookId, false);
+    const noPhoto = await ask(bare.entityId, m1).expect(200);
+    expect(noPhoto.body).toMatchObject({ status: 'NeedsMoreData', range: null, model: null });
+    expect(noPhoto.body.rules).toContain('R-NEED-PHOTO');
     expect(fake.calls).toBe(0);
   });
 
@@ -365,6 +398,29 @@ describe('price suggestions through HTTP with MongoDB', () => {
     expect(denied.body.fieldErrors[0].path).toBe('/priceAssist/suggestionId');
     const untouched = await db.c.listings.findOne({ _id: other.entityId });
     expect(untouched!.version).toBe(other.version);
+  });
+
+  it('rejects a decision for other inputs than the saved content or after expiry', async () => {
+    const l = await listing();
+    const s = (await ask(l.entityId, m1, { conditionNote: 'mismatch' }).expect(200)).body;
+    const save = (content: object) =>
+      put(`/listings/${l.entityId}/draft`, {
+        expectedVersion: l.version,
+        content,
+        priceAssist: { suggestionId: s.id, applied: true },
+      }, m1);
+    // Suggested for "Good"; saving "Worn" must not record it as applied.
+    const worn = await save({ ...draft(bookId, s.range.low), condition: 'Worn' }).expect(422);
+    expect(worn.body.fieldErrors[0].path).toBe('/priceAssist/suggestionId');
+    const pages = await save({ ...draft(bookId, s.range.low), hasMissingPages: true }).expect(422);
+    expect(pages.body.fieldErrors[0].path).toBe('/priceAssist/suggestionId');
+    await db.c.price_suggestions.updateOne(
+      { _id: s.id },
+      { $set: { expiresAt: new Date(Date.now() - 1000) } },
+    );
+    await save(draft(bookId, s.range.low)).expect(422);
+    expect((await db.c.price_suggestions.findOne({ _id: s.id }))!.outcome).toBeNull();
+    expect((await db.c.listings.findOne({ _id: l.entityId }))!.version).toBe(l.version);
   });
 
   it('rejects requests on listings that are not editable', async () => {

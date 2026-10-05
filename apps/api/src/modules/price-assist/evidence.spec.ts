@@ -83,27 +83,18 @@ describe('price evidence rules', () => {
       [
         src('a', 90_000, { kind: 'CoverPrice', label: 'Kim Đồng' }),
         src('b', 60_000, { label: 'Biên tập A' }),
-        src('c', 55_000, { kind: 'InternalAsking', label: 'Giá rao trên Lật lại' }),
+        src('d', 58_000, { label: 'Biên tập B' }),
+        src('c', 5_000, { kind: 'InternalAsking', label: 'Giá rao trên Lật lại' }),
       ],
       now,
     );
     expect(strong.level).toBe('Strong');
+    // The asking price is shown but neither lowers the range nor counts.
     expect(strong.bounds).toEqual({ low: 17_000, high: 99_000 });
-    const asking = evaluate(
-      input,
-      book,
-      [1, 2, 3].map((i) =>
-        src(`x${i}`, 50_000 + i * 1000, {
-          kind: 'InternalAsking',
-          label: 'Giá rao trên Lật lại',
-        }),
-      ),
-      now,
+    expect(strong.sources.find((s) => s.label === 'Giá rao trên Lật lại')?.excluded).toBe(
+      'AskingPrice',
     );
-    expect(asking.level).toBe('Limited');
-    expect(asking.rules).toEqual(
-      expect.arrayContaining(['R-LIMITED-FEW-SOURCES', 'R-LIMITED-ASKING-ONLY']),
-    );
+    expect(strong.rules).toContain('R-EXCLUDED-ASKING');
   });
 
   it('excludes other editions, stale data and outliers and reports them', () => {
@@ -148,15 +139,35 @@ describe('price evidence rules', () => {
     );
   });
 
-  it('does not estimate from a single asking price', () => {
+  it('does not estimate from asking prices alone, however many', () => {
     const e = evaluate(
       input,
       book,
-      [src('a', 900_000, { kind: 'InternalAsking', label: 'Giá rao trên Lật lại' })],
+      [1, 2, 3].map((i) =>
+        src(`x${i}`, 50_000 + i * 1000, {
+          kind: 'InternalAsking',
+          label: `Giá rao ${i}`,
+        }),
+      ),
       now,
     );
     expect(e.status).toBe('NeedsMoreData');
-    expect(e.rules).toContain('R-NEED-MORE-THAN-ONE-ASKING');
+    expect(e.bounds).toBeNull();
+    expect(e.rules).toEqual(
+      expect.arrayContaining(['R-NEED-SOURCES', 'R-EXCLUDED-ASKING']),
+    );
+    expect(e.missing.join(' ')).toContain('Chỉ có giá rao');
+  });
+
+  it('asks for a photo before pricing and keys the cache on it', () => {
+    const raw = [src('a', 60_000, { kind: 'CoverPrice' })];
+    const e = evaluate(input, book, raw, now, { hasPhoto: false });
+    expect(e.status).toBe('NeedsMoreData');
+    expect(e.rules).toContain('R-NEED-PHOTO');
+    expect(evaluate(input, book, raw, now, { hasPhoto: true }).status).toBe('Proceed');
+    expect(fingerprint(input, raw, { hasPhoto: false })).not.toBe(
+      fingerprint(input, raw, { hasPhoto: true }),
+    );
   });
 
   it('refuses when sourced prices fall outside POL-16', () => {

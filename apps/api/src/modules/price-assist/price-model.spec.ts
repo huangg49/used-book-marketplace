@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   GeminiPriceModel,
   PriceModelError,
@@ -60,6 +60,50 @@ describe('Gemini adapter', () => {
     ['not JSON', reply({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'khoảng 50k' }] } }] }), 'InvalidOutput'],
   ])('maps %s to %s', async (_name, fetcher, kind) => {
     await expect(model(fetcher).draft('s', 'u')).rejects.toMatchObject({ kind });
+  });
+
+  it('retries once when the provider is busy and time allows', async () => {
+    vi.useFakeTimers();
+    try {
+      const statuses = [503, 200];
+      let calls = 0;
+      const busyThenOk = (async () => {
+        const status = statuses[calls++];
+        return new Response(
+          JSON.stringify(status === 200 ? ok : { error: { status: 'UNAVAILABLE' } }),
+          { status },
+        );
+      }) as unknown as typeof fetch;
+      const pending = model(busyThenOk, 20_000).draft('s', 'u');
+      await vi.advanceTimersByTimeAsync(1_500);
+      await expect(pending).resolves.toMatchObject({ inputTokens: 800 });
+      expect(calls).toBe(2);
+
+      calls = 0;
+      statuses.splice(0, 2, 503, 503);
+      const twice = model(busyThenOk, 20_000).draft('s', 'u').catch((e) => e);
+      await vi.advanceTimersByTimeAsync(1_500);
+      expect(await twice).toMatchObject({ kind: 'ProviderError' });
+      expect(calls).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not retry without time to spare or on other errors', async () => {
+    let calls = 0;
+    const counted = (status: number) =>
+      (async () => {
+        calls++;
+        return new Response('{}', { status });
+      }) as unknown as typeof fetch;
+    await expect(model(counted(503), 5_000).draft('s', 'u')).rejects.toMatchObject({
+      kind: 'ProviderError',
+    });
+    await expect(model(counted(400), 20_000).draft('s', 'u')).rejects.toMatchObject({
+      kind: 'ProviderError',
+    });
+    expect(calls).toBe(2);
   });
 
   it('times out instead of waiting on a slow provider', async () => {

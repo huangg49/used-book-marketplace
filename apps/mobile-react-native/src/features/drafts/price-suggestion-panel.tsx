@@ -30,6 +30,7 @@ export function PriceSuggestionPanel({
   state,
   currentKey,
   disabled,
+  hasPhoto,
   onAsk,
   onApply,
 }: {
@@ -37,6 +38,8 @@ export function PriceSuggestionPanel({
   state: AssistState;
   currentKey: string;
   disabled: boolean;
+  // The server prices only a photographed copy; asking earlier is pointless.
+  hasPhoto: boolean;
   onAsk: () => void;
   onApply: (amount: number) => void;
 }) {
@@ -70,6 +73,11 @@ export function PriceSuggestionPanel({
         <AppText kind="small">
           Chọn đầu sách ở bước đầu tiên để xem gợi ý.
         </AppText>
+      ) : !hasPhoto ? (
+        <AppText kind="small">
+          Thêm ít nhất 1 ảnh của bản sách ở bước Ảnh và tình trạng để xem gợi
+          ý giá.
+        </AppText>
       ) : null}
       {stale ? (
         <Notice tone="warning">
@@ -90,7 +98,7 @@ export function PriceSuggestionPanel({
             : "Xem gợi ý giá"
         }
         busy={loading}
-        disabled={disabled || !form.bookId || loading}
+        disabled={disabled || !form.bookId || !hasPhoto || loading}
         onPress={onAsk}
       />
       {ready && ready.status !== "Suggested" ? (

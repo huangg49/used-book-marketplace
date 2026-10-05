@@ -542,6 +542,13 @@ export interface PriceSuggestionOutcome {
   withinRange: boolean | null;
   decidedAt: Date;
 }
+export interface PriceSuggestionInput {
+  bookId: string;
+  condition: 'LikeNew' | 'Good' | 'Fair' | 'Worn' | null;
+  readable: boolean | null;
+  hasMissingPages: boolean | null;
+  missingEssentialContent: boolean | null;
+}
 export interface PriceSuggestionDoc {
   _id: string;
   ownerId: string;
@@ -563,6 +570,8 @@ export interface PriceSuggestionDoc {
   costMicroUsd: number | null;
   latencyMs: number | null;
   outcome: PriceSuggestionOutcome | null;
+  // Inputs the suggestion was made for; null on records before 0006.
+  input: PriceSuggestionInput | null;
   createdAt: Date;
   expiresAt: Date;
   updatedAt: Date;

@@ -83,11 +83,17 @@ const median = (values: number[]) => {
 const roundTo = (value: number, step = 1000) =>
   Math.round(value / step) * step;
 
+// What the rules need to know about the listing besides the request body.
+export interface ListingFacts {
+  hasPhoto: boolean;
+}
+
 export function evaluate(
   input: PriceInput,
   book: BookFacts,
   raw: RawSource[],
   now: Date,
+  listing: ListingFacts = { hasPhoto: true },
 ): Evidence {
   const rules: string[] = [];
   const missing: string[] = [];
@@ -113,7 +119,15 @@ export function evaluate(
       condition: s.condition,
       observedAt: s.observedAt,
       url: s.url,
-      excluded: otherEdition ? 'OtherEdition' : stale ? 'Stale' : null,
+      // Other sellers' asking prices are shown but never set the range: a
+      // few coordinated listings could otherwise move every suggestion.
+      excluded: otherEdition
+        ? 'OtherEdition'
+        : stale
+          ? 'Stale'
+          : s.kind === 'InternalAsking'
+            ? 'AskingPrice'
+            : null,
     };
   });
   // Outliers are judged only when enough sources remain to have a centre.
@@ -128,6 +142,8 @@ export function evaluate(
   if (sources.some((s) => s.excluded === 'Stale')) rules.push('R-EXCLUDED-STALE');
   if (sources.some((s) => s.excluded === 'Outlier'))
     rules.push('R-EXCLUDED-OUTLIER');
+  if (sources.some((s) => s.excluded === 'AskingPrice'))
+    rules.push('R-EXCLUDED-ASKING');
   const used = sources.filter((s) => !s.excluded);
   const dataAsOf = used.length ? used[0].observedAt : null;
   const answer = (
@@ -156,6 +172,10 @@ export function evaluate(
     );
     return answer('Refused', 'Insufficient');
   }
+  if (!listing.hasPhoto) {
+    rules.push('R-NEED-PHOTO');
+    missing.push('Thêm ít nhất 1 ảnh của bản sách ở bước Ảnh và tình trạng.');
+  }
   if (!input.condition) {
     rules.push('R-NEED-CONDITION');
     missing.push('Chọn tình trạng bản sách ở bước Ảnh và tình trạng.');
@@ -172,14 +192,9 @@ export function evaluate(
   if (!used.length) {
     rules.push('R-NEED-SOURCES');
     missing.push(
-      'Chưa có dữ liệu giá có nguồn cho đầu sách này.',
-    );
-  }
-  // One asking price is not evidence of value: it may be the outlier itself.
-  if (used.length === 1 && used[0].kind === 'InternalAsking') {
-    rules.push('R-NEED-MORE-THAN-ONE-ASKING');
-    missing.push(
-      'Chỉ có một giá rao để so sánh.',
+      sources.some((s) => s.excluded === 'AskingPrice')
+        ? 'Chỉ có giá rao của người bán khác; chưa có giá có nguồn để so sánh.'
+        : 'Chưa có dữ liệu giá có nguồn cho đầu sách này.',
     );
   }
   if (missing.length) return answer('NeedsMoreData', 'Insufficient');
@@ -201,7 +216,6 @@ export function evaluate(
   }
 
   const independent = new Set(used.map((s) => s.label.trim().toLowerCase()));
-  const nonAsking = used.filter((s) => s.kind !== 'InternalAsking');
   const fresh =
     now.getTime() - used[0].observedAt.getTime() <= FRESH_MONTHS * MONTH_MS;
   const editionUnverified = !book.isbn && !book.edition;
@@ -210,10 +224,7 @@ export function evaluate(
     rules.push('R-LIMITED-FEW-SOURCES');
     strong = false;
   }
-  if (!nonAsking.length) {
-    rules.push('R-LIMITED-ASKING-ONLY');
-    strong = false;
-  } else if (nonAsking.every((s) => s.kind === 'CoverPrice') && used.length === nonAsking.length) {
+  if (used.every((s) => s.kind === 'CoverPrice')) {
     rules.push('R-LIMITED-COVER-ONLY');
     strong = false;
   }
@@ -236,11 +247,16 @@ export function evaluate(
   return answer('Proceed', strong ? 'Strong' : 'Limited', { low, high });
 }
 
-export function fingerprint(input: PriceInput, raw: RawSource[]) {
+export function fingerprint(
+  input: PriceInput,
+  raw: RawSource[],
+  listing: ListingFacts = { hasPhoto: true },
+) {
   return createHash('sha256')
     .update(
       canonicalJson({
         input: { ...input, conditionNote: sanitizeNote(input.conditionNote) },
+        listing,
         sources: raw
           .map((s) => ({
             id: s.id,
