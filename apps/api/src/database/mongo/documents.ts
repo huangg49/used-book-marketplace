@@ -514,6 +514,64 @@ export interface WishlistItemDoc {
   createdAt: Date;
   updatedAt: Date;
 }
+export type PriceSourceKind =
+  | 'CoverPrice'
+  | 'EditorialReference'
+  | 'InternalAsking'
+  | 'CompletedSale';
+// Curated, sourced price facts. Written only by the migrator-role import tool.
+export interface PriceReferenceDoc {
+  _id: string;
+  bookId: string;
+  isbn: string | null;
+  kind: Exclude<PriceSourceKind, 'InternalAsking'>;
+  amount: number;
+  condition: 'LikeNew' | 'Good' | 'Fair' | 'Worn' | null;
+  sourceLabel: string;
+  sourceUrl: string | null;
+  observedAt: Date;
+  enteredBy: string;
+  rightsNote: string;
+  retiredAt: Date | null;
+  createdAt: Date;
+}
+export interface PriceSuggestionOutcome {
+  revisionId: string;
+  applied: boolean;
+  chosenSalePrice: number | null;
+  withinRange: boolean | null;
+  decidedAt: Date;
+}
+export interface PriceSuggestionDoc {
+  _id: string;
+  ownerId: string;
+  listingId: string;
+  bookId: string;
+  inputFingerprint: string;
+  status: 'Pending' | 'Suggested' | 'NeedsMoreData' | 'Refused' | 'Failed';
+  failure: 'Timeout' | 'InvalidOutput' | 'ProviderError' | 'Refusal' | null;
+  evidenceLevel: 'Strong' | 'Limited' | 'Insufficient';
+  rangeLow: number | null;
+  rangeHigh: number | null;
+  // Full API projection (without id/cached) for replay of a cached answer.
+  response: Record<string, unknown> | null;
+  model: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  costMicroUsd: number | null;
+  latencyMs: number | null;
+  outcome: PriceSuggestionOutcome | null;
+  createdAt: Date;
+  expiresAt: Date;
+  updatedAt: Date;
+  lockSeq: number;
+}
+export interface PriceAssistUsageDoc {
+  _id: string;
+  calls: number;
+  costMicroUsd: number;
+  expiresAt: Date;
+}
 export interface MigrationDoc {
   _id: string; // migration id
   checksum: string;

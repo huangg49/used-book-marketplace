@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.21.0
+  version: 0.22.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -23,7 +23,9 @@ info:
     resolution and settlement remain planned. Delivery overdue worker and Buyer non-receipt
     reporting after the pinned delivery deadline are implemented. They open or supplement a durable
     delivery review and retain full Order hold/commitment. Delivered, inspection, dispute
-    adjudication and settlement remain planned."
+    adjudication and settlement remain planned. Owner-only advisory sale-price suggestions from
+    sourced price references are implemented behind a server flag; they never set or verify a
+    price."
 servers:
   - url: http://localhost:3000/api/v1
 tags:
@@ -1280,6 +1282,67 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/EditApproved"
+  /listings/{listingId}/price-suggestions:
+    post:
+      operationId: requestPriceSuggestion
+      tags:
+        - Listings
+      summary: requestPriceSuggestion
+      description: "ACTIVE owner; Draft/Rejected, or Approved and Available (approved edit). Advisory sale-price
+        range from sourced price references only; never a verified or reference price and never
+        written to the listing. Input is the unsaved form; server checks the catalog book (confirmed,
+        or the caller's own pending request). Evidence level and refusal are decided by fixed rules;
+        the model only drafts range/factors, which are checked against the evidence and POL-16.
+        Same listing + input + reference set returns the stored suggestion (cached=true) without a
+        new model call. 429 per-user/per-listing limits; 503 when the assistant is disabled, over
+        budget, times out or returns invalid output. Clients keep manual pricing in every failure.
+        No address, account, session or token data is sent to the provider."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: listingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PriceSuggestionRequest"
+      responses:
+        "200":
+          description: Suggestion, rule-based refusal or missing-data answer.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceSuggestion"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /listings/{listingId}/visibility:
     put:
       operationId: setListingVisibility
@@ -5646,6 +5709,8 @@ components:
           maximum: 2147483647
         content:
           $ref: "#/components/schemas/DraftContent"
+        priceAssist:
+          $ref: "#/components/schemas/PriceAssistDecision"
     SubmitListing:
       type: object
       additionalProperties: false
@@ -5677,6 +5742,242 @@ components:
         ownershipDeclared:
           type: boolean
           const: true
+        priceAssist:
+          $ref: "#/components/schemas/PriceAssistDecision"
+    PriceAssistDecision:
+      type: object
+      additionalProperties: false
+      description: Optional record of the seller's decision about a price suggestion for this listing.
+        Stored with the suggestion in the same transaction as the save; the listing price stays the
+        seller's salePrice. Unknown, foreign or failed suggestion ids are rejected with 422 at
+        /priceAssist/suggestionId.
+      required:
+        - suggestionId
+        - applied
+      properties:
+        suggestionId:
+          type: string
+          format: uuid
+        applied:
+          type: boolean
+          description: true when the seller used the suggested range; false when they priced manually.
+    PriceSuggestionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - bookId
+        - condition
+        - readable
+        - hasMissingPages
+        - missingEssentialContent
+      properties:
+        bookId:
+          type: string
+          format: uuid
+        condition:
+          anyOf:
+            - $ref: "#/components/schemas/BookCondition"
+            - type: "null"
+        readable:
+          anyOf:
+            - type: boolean
+            - type: "null"
+        hasMissingPages:
+          anyOf:
+            - type: boolean
+            - type: "null"
+        missingEssentialContent:
+          anyOf:
+            - type: boolean
+            - type: "null"
+        conditionNote:
+          type: string
+          maxLength: 600
+          description: Optional condition text. Treated as data; contact-like text is removed before any
+            provider call.
+    PriceSuggestionStatus:
+      type: string
+      enum:
+        - Suggested
+        - NeedsMoreData
+        - Refused
+    PriceEvidenceLevel:
+      type: string
+      enum:
+        - Strong
+        - Limited
+        - Insufficient
+    PriceSourceKind:
+      type: string
+      enum:
+        - CoverPrice
+        - EditorialReference
+        - InternalAsking
+        - CompletedSale
+    PriceSource:
+      type: object
+      additionalProperties: false
+      required:
+        - ref
+        - kind
+        - label
+        - amount
+        - condition
+        - observedAt
+        - url
+        - excluded
+      properties:
+        ref:
+          type: string
+          pattern: ^s[0-9]{1,2}$
+        kind:
+          $ref: "#/components/schemas/PriceSourceKind"
+        label:
+          type: string
+          minLength: 1
+          maxLength: 160
+        amount:
+          type: integer
+          minimum: 1000
+          maximum: 10000000
+        condition:
+          anyOf:
+            - $ref: "#/components/schemas/BookCondition"
+            - type: "null"
+        observedAt:
+          type: string
+          format: date-time
+        url:
+          anyOf:
+            - type: string
+              format: uri
+              maxLength: 500
+            - type: "null"
+        excluded:
+          anyOf:
+            - type: string
+              enum:
+                - Outlier
+                - Stale
+                - OtherEdition
+            - type: "null"
+          description: Why this source was shown but not used; null when used.
+    PriceFactor:
+      type: object
+      additionalProperties: false
+      required:
+        - text
+        - sourceRefs
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 240
+        sourceRefs:
+          type: array
+          maxItems: 12
+          items:
+            type: string
+            pattern: ^(s[0-9]{1,2}|condition)$
+    PriceSuggestion:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - listingId
+        - bookId
+        - inputFingerprint
+        - status
+        - evidenceLevel
+        - rules
+        - range
+        - factors
+        - sources
+        - missing
+        - dataAsOf
+        - generatedAt
+        - expiresAt
+        - model
+        - cached
+      properties:
+        id:
+          type: string
+          format: uuid
+        listingId:
+          type: string
+          format: uuid
+        bookId:
+          type: string
+          format: uuid
+        inputFingerprint:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+          description: Hash of book/condition inputs and the reference set. Clients drop a response whose
+            listingId or fingerprint no longer matches the form.
+        status:
+          $ref: "#/components/schemas/PriceSuggestionStatus"
+        evidenceLevel:
+          $ref: "#/components/schemas/PriceEvidenceLevel"
+        rules:
+          type: array
+          maxItems: 12
+          items:
+            type: string
+            pattern: ^[A-Z0-9-]{2,40}$
+          description: Fixed rule ids that decided the evidence level or refusal.
+        range:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required:
+                - low
+                - high
+              properties:
+                low:
+                  type: integer
+                  minimum: 10000
+                  maximum: 1000000
+                high:
+                  type: integer
+                  minimum: 10000
+                  maximum: 1000000
+            - type: "null"
+        factors:
+          type: array
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/PriceFactor"
+        sources:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/PriceSource"
+        missing:
+          type: array
+          maxItems: 6
+          items:
+            type: string
+            minLength: 1
+            maxLength: 240
+        dataAsOf:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        generatedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        model:
+          anyOf:
+            - type: string
+              maxLength: 80
+            - type: "null"
+          description: Provider model id when a model drafted the range; null for rule-only answers.
+        cached:
+          type: boolean
     SetVisibility:
       type: object
       additionalProperties: false

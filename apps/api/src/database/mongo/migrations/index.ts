@@ -10,6 +10,7 @@ import {
   withTitleKey,
 } from './0003-catalog-title-key.js';
 import { wishlistMigration, wishlistSpec } from './0004-wishlist.js';
+import { priceAssistMigration, priceAssistSpecs } from './0005-price-assist.js';
 
 export interface Migration {
   id: string;
@@ -79,6 +80,7 @@ export const migrations: Migration[] = [
     },
   },
   wishlistMigration,
+  priceAssistMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -88,4 +90,8 @@ export const checksumOf = (migration: Migration) =>
 
 // The latest schema, for tests and for the app role privileges.
 export const currentCollections = (): CollectionSpec[] =>
-  [...baselineCollections.map(withTitleKey), wishlistSpec];
+  [
+    ...baselineCollections.map(withTitleKey),
+    wishlistSpec,
+    ...priceAssistSpecs,
+  ];

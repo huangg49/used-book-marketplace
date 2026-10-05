@@ -21,6 +21,7 @@ import {
   type Wire,
 } from '../commands/domain-error.js';
 import { MongoPageService } from '../commands/mongo-page.service.js';
+import { PriceAssistService } from '../price-assist/price-assist.service.js';
 import {
   checkListing,
   loadListing,
@@ -64,6 +65,7 @@ export class ListingDraftsService {
     private readonly catalog: CatalogService,
     private readonly pages: MongoPageService,
     private readonly fulfillment: ListingFulfillmentService,
+    private readonly priceAssist: PriceAssistService,
   ) {}
   private async own(tx: Tx, id: string, ownerId: string) {
     const listing = await loadListing(tx.c, id);
@@ -206,6 +208,15 @@ export class ListingDraftsService {
           );
         }
         await attachPhotos(tx, id, revisionId, mediaIds);
+        if (body.priceAssist)
+          await this.priceAssist.recordDecision(
+            tx,
+            actor._id,
+            id,
+            revisionId,
+            body.priceAssist,
+            rest.salePrice ?? null,
+          );
         const next = await tx.c.listings.findOneAndUpdate(
           { _id: id, version: l.version },
           {

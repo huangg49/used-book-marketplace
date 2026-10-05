@@ -29,6 +29,7 @@ import {
   type Listing,
 } from './listing-projection.js';
 import { attachPhotos, lowerIds } from './listing-drafts.service.js';
+import { PriceAssistService } from '../price-assist/price-assist.service.js';
 
 @Injectable()
 export class ListingLifecycleService {
@@ -36,6 +37,7 @@ export class ListingLifecycleService {
     private readonly commands: MongoCommandService,
     private readonly catalog: CatalogService,
     private readonly fulfillment: ListingFulfillmentService,
+    private readonly priceAssist: PriceAssistService,
   ) {}
 
   // Deleted state is intentionally readable only inside receipt authorization.
@@ -148,6 +150,15 @@ export class ListingLifecycleService {
         });
         // Attach before freezing: submitted revision contents/order are immutable.
         await attachPhotos(tx, id, revisionId, mediaIds);
+        if (body.priceAssist)
+          await this.priceAssist.recordDecision(
+            tx,
+            actor._id,
+            id,
+            revisionId,
+            body.priceAssist,
+            rest.salePrice ?? null,
+          );
         const now = new Date();
         await tx.c.listing_revisions.updateOne(
           { _id: revisionId, submittedAt: null },
