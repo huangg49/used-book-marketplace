@@ -40,8 +40,10 @@ export function validateEnvironment(env: Record<string, unknown>) {
     );
   if (simulatorSecret && nodeEnv === 'production')
     throw new Error('Payment simulator must be disabled in production.');
+  const priceAssist = validatePriceAssist(env);
   return {
     ...env,
+    ...priceAssist,
     MONGODB_URL: mongoUrl,
     JWT_ACCESS_SECRET: secret,
     PORT: port,
@@ -51,5 +53,57 @@ export function validateEnvironment(env: Record<string, unknown>) {
     SUPABASE_STORAGE_KEY: storageKey,
     SUPABASE_MEDIA_BUCKET: bucket,
     MEDIA_STORAGE_BUDGET_BYTES: budget,
+  };
+}
+
+const intIn = (raw: unknown, fallback: number, min: number, max: number, name: string) => {
+  const value = raw === undefined || raw === '' ? fallback : Number(raw);
+  if (!Number.isInteger(value) || value < min || value > max)
+    throw new Error(`${name} must be an integer ${min}..${max}.`);
+  return value;
+};
+const rateOf = (raw: unknown, name: string) => {
+  if (raw === undefined || raw === '') return '';
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0 || value > 1000)
+    throw new Error(`${name} must be a positive USD per million tokens rate.`);
+  return String(value);
+};
+
+// Price assistant (ADR 0028): off unless explicitly enabled. The provider key
+// is read only by the API process and never logged or returned.
+export function validatePriceAssist(env: Record<string, unknown>) {
+  const enabled = String(env.PRICE_ASSIST_ENABLED ?? 'false');
+  if (!['true', 'false'].includes(enabled))
+    throw new Error('PRICE_ASSIST_ENABLED must be true or false.');
+  const apiKey = String(env.PRICE_ASSIST_API_KEY ?? '');
+  if (apiKey && apiKey.startsWith('replace-'))
+    throw new Error('PRICE_ASSIST_API_KEY still holds the example value.');
+  const provider = String(env.PRICE_ASSIST_PROVIDER || 'anthropic');
+  if (!['anthropic', 'gemini'].includes(provider))
+    throw new Error('PRICE_ASSIST_PROVIDER must be anthropic or gemini.');
+  const model = String(
+    env.PRICE_ASSIST_MODEL ||
+      (provider === 'gemini' ? 'gemini-2.5-flash' : 'claude-opus-5-5'),
+  );
+  if (!/^[a-z0-9][a-z0-9.-]{2,79}$/.test(model))
+    throw new Error('PRICE_ASSIST_MODEL is invalid.');
+  const effort = String(env.PRICE_ASSIST_EFFORT || 'low');
+  if (!['low', 'medium', 'high', 'none'].includes(effort))
+    throw new Error('PRICE_ASSIST_EFFORT must be low, medium, high or none.');
+  const budget = Number(env.PRICE_ASSIST_DAILY_BUDGET_USD ?? 2);
+  if (!Number.isFinite(budget) || budget < 0 || budget > 100)
+    throw new Error('PRICE_ASSIST_DAILY_BUDGET_USD must be 0..100.');
+  return {
+    PRICE_ASSIST_ENABLED: enabled,
+    PRICE_ASSIST_API_KEY: apiKey,
+    PRICE_ASSIST_PROVIDER: provider,
+    PRICE_ASSIST_MODEL: model,
+    PRICE_ASSIST_EFFORT: effort,
+    PRICE_ASSIST_TIMEOUT_MS: intIn(env.PRICE_ASSIST_TIMEOUT_MS, 20_000, 2_000, 60_000, 'PRICE_ASSIST_TIMEOUT_MS'),
+    PRICE_ASSIST_USER_DAILY_LIMIT: intIn(env.PRICE_ASSIST_USER_DAILY_LIMIT, 20, 1, 500, 'PRICE_ASSIST_USER_DAILY_LIMIT'),
+    PRICE_ASSIST_DAILY_BUDGET_USD: budget,
+    PRICE_ASSIST_INPUT_USD_PER_MTOK: rateOf(env.PRICE_ASSIST_INPUT_USD_PER_MTOK, 'PRICE_ASSIST_INPUT_USD_PER_MTOK'),
+    PRICE_ASSIST_OUTPUT_USD_PER_MTOK: rateOf(env.PRICE_ASSIST_OUTPUT_USD_PER_MTOK, 'PRICE_ASSIST_OUTPUT_USD_PER_MTOK'),
   };
 }

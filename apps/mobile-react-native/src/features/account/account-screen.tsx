@@ -157,6 +157,12 @@ export function AccountScreen() {
             onPress={() => router.push("./drafts")}
           />
           <ActionRow
+            title="Sách đã lưu"
+            description="Quản lý sách và bài đăng quan tâm"
+            icon="bookmark"
+            onPress={() => router.push("./wishlist")}
+          />
+          <ActionRow
             title="Sổ địa chỉ"
             description="Quản lý nơi gửi và nhận sách"
             icon="pin"
