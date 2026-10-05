@@ -16,6 +16,8 @@
 | Nguồn giá thật + khoảng kỳ vọng do người kiểm | **CHƯA CÓ** — 34 ca hiện là bản nháp chưa review |
 | Android native 100%/130%, mất mạng, video | **Đã chạy 05/10** trên emulator (xem mục Android) với API thật + provider giả; video chưa đưa vào Git |
 | Duyệt SRS mở rộng, nguồn/model/ngân sách | **Chờ chủ dự án** (ADR §7) |
+| v2: băng theo tình trạng, cần ảnh, giá rao chỉ tham khảo, kiểm gợi ý khi lưu, Staff thấy gợi ý | Xong 06/10 ([ADR 0028 §8](../adr/0028-listing-price-assistant.md)); test thực chạy PASS |
+| v2: tra giá sách mới trực tuyến ([ADR 0029](../adr/0029-online-price-lookup.md)) | Code + test (fake search/trang) PASS; **chạy thật BLOCKED**: key Gemini hiện tại bị Google trả `429 RESOURCE_EXHAUSTED` cho Google Search grounding — cần bật billing/hạn mức |
 
 Không bật trợ lý cho demo khi hai dòng BLOCKED/CHƯA CÓ ở trên còn mở. Không thay kết
 quả thật bằng dữ liệu dựng sẵn.
@@ -46,6 +48,9 @@ quả thật bằng dữ liệu dựng sẵn.
 | RN `vitest run src/features/drafts` (bản đầu) | 54/54 PASS (gồm 7 ca mới: input, stale, phản hồi muộn, applied, điểm giá, thông báo lỗi, body cố định khi retry) |
 | RN typecheck; lint | PASS; lint 0 lỗi, 8 cảnh báo có sẵn ở wishlist/khác, không ở drafts |
 | `pnpm --filter @used-books/api eval:price --fake` | 34/34 status đúng luật — **chỉ kiểm harness**, không là evidence chất lượng |
+| v2 06/10: API unit / price-assist e2e / listing+catalog+media e2e / admin / RN drafts | 83/83, 11/11, 116/116, 15/15, 55/55 PASS; Mongo schema 16/16; eval harness 34/34 status đúng luật; typecheck, lint, `contract:check`, `contract:routes` |
+| v2 06/10: tra giá trực tuyến với Gemini thật (DB `price_ui_*_test`, sách “Dế Mèn phiêu lưu ký”) | Lần 1 trả `R-LOOKUP-PENDING`; Google trả `429 RESOURCE_EXHAUSTED` (quota/billing của key) cho request có Google Search; lookup ghi `Failed`, thử lại sau 24 giờ; lần sau trả `R-NEED-SOURCES`, người bán vẫn nhập tay. **Chưa có evidence giá trực tuyến thật** |
+| v2 06/10: Android emulator cho nút cần ảnh, link “Mở trang”, khối Staff trên admin | NOT RUN trên thiết bị; chỉ có typecheck/test RN và test render admin |
 | `eval:price --live` | CHƯA CHẠY: 34 ca còn là bản nháp chưa review, chấm trên đó không có ý nghĩa |
 | Gemini thật trên Android emulator (05/10, DB `price_ui_*_test`, nguồn giá **giả lập có nhãn**) | `gemini-2.5-flash` → 404 NOT_FOUND (đã đổi model); `gemini-3.8-flash` lần 1 → 503 UNAVAILABLE "high demand" (app hiện lỗi, giữ nhập tay); lần 2 → 25.000–38.000 đ, `Limited`, 2 lý do tiếng Việt trích nguồn; 753/588 token, ~4,9 s, ghi 5.540 micro-USD theo giá 2027; chọn 32.000 đ → `outcome.applied=true, withinRange=true`. Chỉ chứng minh kết nối, không chứng minh độ đúng giá |
 | API `vitest run src/modules/price-assist` sau khi thêm Gemini | 29/29 PASS (thêm 6 ca adapter: header key, schema, token suy nghĩ, HTTP lỗi, chặn an toàn, MAX_TOKENS, không phải JSON, timeout, chọn provider) |

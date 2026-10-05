@@ -150,7 +150,7 @@ const delay = (ms: number, signal: AbortSignal) =>
 
 // Google's own error status and message (e.g. "INVALID_ARGUMENT: ..."), for
 // the server log. Never contains the key; cut short so it cannot carry much.
-async function geminiErrorDetail(response: Response): Promise<string> {
+export async function geminiErrorDetail(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as {
       error?: { status?: string; message?: string };

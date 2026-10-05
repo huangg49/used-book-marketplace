@@ -1,3 +1,5 @@
+import { geminiErrorDetail } from '../price-model.js';
+
 // Finds candidate product pages for a book on the allowed shops (ADR 0029).
 // The search model only proposes URLs; prices are read from the pages by
 // page-check.ts. Only catalog facts (title, authors, publisher, year, ISBN)
@@ -79,7 +81,10 @@ export class GeminiPriceFinder extends PriceFinder {
         response = await this.post(prompt, data, controller.signal);
       }
       if (!response.ok)
-        throw new FinderError('ProviderError', `Search error ${response.status}`);
+        throw new FinderError(
+          'ProviderError',
+          `Search error ${response.status}${await geminiErrorDetail(response)}`,
+        );
       body = (await response.json()) as GeminiSearchBody;
     } catch (e) {
       if (e instanceof FinderError) throw e;
