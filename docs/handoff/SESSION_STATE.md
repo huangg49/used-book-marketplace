@@ -2,6 +2,8 @@
 
 ## Nguồn và việc đang làm
 
+- **Sửa lỗi hiển thị Yêu thích (wishlist) và 500 API**: Nhánh local `fix/wishlist-listings-display`. Đã sửa API `wishlist.service.ts` để include thông tin `book` và `photos` cho `LISTING`; chuyển `FlatList` thành `map()` trong `wishlist-screen.tsx` để sửa cảnh báo React Native và dùng `PublicPhoto` để tải ảnh có chữ ký (signed url) an toàn; sửa lỗi điều hướng khi nhấn vào sách trên kệ. Đã push nhánh lên remote chờ review/merge.
+
 - **05/10 — gói Bảo “đăng sách + AI gợi ý giá”: nhánh local
   `codex/bao-listing-price-assist` từ main `efc6f09`, đã push và mở
   [PR18](https://github.com/huangg49/used-book-marketplace/pull/18); chưa merge.** API

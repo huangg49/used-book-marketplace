@@ -48,6 +48,8 @@ export class ApiExceptionFilter implements ExceptionFilter {
           method: request.method,
           path: request.path,
           status,
+          error: exception instanceof Error ? exception.message : 'Unknown error',
+          stack: exception instanceof Error ? exception.stack : undefined,
         }),
       );
     }
