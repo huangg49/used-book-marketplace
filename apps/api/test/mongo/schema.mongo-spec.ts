@@ -51,7 +51,7 @@ const rejectsUnauthorized = (promise: Promise<unknown>) =>
 const now = () => new Date();
 
 describe('migrations', () => {
-  it('create every mapped collection with a validator; 44 models accounted for', async () => {
+  it('create every mapped collection with a validator; 45 models accounted for', async () => {
     const infos = await rootDb.listCollections().toArray();
     const byName = new Map(infos.map((c) => [c.name, c]));
     for (const name of COLLECTION_NAMES) {
