@@ -1453,7 +1453,7 @@ export const baselineCollections: CollectionSpec[] = [
 ];
 
 // Guard against silently dropping or adding a model.
-export const POSTGRES_MODEL_COUNT = 44;
+export const POSTGRES_MODEL_COUNT = 45;
 export const EMBEDDED_MODELS = ['UserRole'];
 export const INFRASTRUCTURE_COLLECTIONS = [
   'command_locks',

@@ -22,6 +22,7 @@ import { publicListing } from "./contracts";
 import { BookPresentation } from "./book-presentation";
 import { BookGallery } from "./book-gallery";
 import { PublicPhoto } from "./public-photo";
+import { WishlistButton } from "../wishlist/wishlist-button";
 
 export function BookScreen({ id }: { id: string }) {
   const { client } = useSession(),
@@ -129,6 +130,7 @@ export function BookScreen({ id }: { id: string }) {
                   />
                 )}
               >
+                <WishlistButton subjectType="LISTING" subjectId={id} />
                 <Button
                   title="Cập nhật tình trạng sách"
                   secondary

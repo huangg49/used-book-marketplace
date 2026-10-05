@@ -504,6 +504,16 @@ export interface CounterDoc {
   _id: string;
   value: number;
 }
+export interface WishlistItemDoc {
+  _id: string;
+  userId: string;
+  subjectType: 'CATALOG_BOOK' | 'LISTING';
+  subjectId: string;
+  wantsToExchange: boolean;
+  receiveNotifications: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 export interface MigrationDoc {
   _id: string; // migration id
   checksum: string;

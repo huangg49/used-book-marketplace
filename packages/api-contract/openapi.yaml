@@ -39,6 +39,7 @@ tags:
   - name: Orders
   - name: Wallet
   - name: User administration
+  - name: Wishlist
 paths:
   /health:
     get:
@@ -2412,6 +2413,173 @@ paths:
         "409":
           $ref: "#/components/responses/Error"
         "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/wishlist:
+    get:
+      operationId: getMyWishlist
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: subjectType
+          in: query
+          schema:
+            type: string
+            enum: [CATALOG_BOOK, LISTING]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WishlistPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/wishlist/catalog-books/{bookId}:
+    put:
+      operationId: saveBookToWishlist
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveWishlistRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WishlistItem"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+    delete:
+      operationId: removeBookFromWishlist
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Removed
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/wishlist/listings/{listingId}:
+    put:
+      operationId: saveListingToWishlist
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: listingId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveWishlistRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WishlistItem"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+    delete:
+      operationId: removeListingFromWishlist
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: listingId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Removed
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
           $ref: "#/components/responses/Error"
         "429":
           $ref: "#/components/responses/Error"
@@ -7909,4 +8077,70 @@ components:
         buyerReport:
           anyOf:
             - $ref: "#/components/schemas/OrderNonReceiptReport"
+            - type: "null"
+
+    WishlistSubjectType:
+      type: string
+      enum:
+        - CATALOG_BOOK
+        - LISTING
+    WishlistItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - subjectType
+        - subjectId
+        - wantsToExchange
+        - receiveNotifications
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        subjectType:
+          $ref: "#/components/schemas/WishlistSubjectType"
+        subjectId:
+          type: string
+          format: uuid
+        wantsToExchange:
+          type: boolean
+        receiveNotifications:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        book:
+          $ref: "#/components/schemas/PublicBook"
+        listing:
+          $ref: "#/components/schemas/PublicListing"
+    SaveWishlistRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - wantsToExchange
+        - receiveNotifications
+      properties:
+        wantsToExchange:
+          type: boolean
+        receiveNotifications:
+          type: boolean
+    WishlistPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WishlistItem"
+        nextCursor:
+          anyOf:
+            - type: string
             - type: "null"
