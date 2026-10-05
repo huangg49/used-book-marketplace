@@ -83,10 +83,16 @@ describe('price suggestions through HTTP with MongoDB', () => {
       .set('Authorization', `Bearer ${actor.token}`)
       .set('Idempotency-Key', key)
       .send(body);
-  const ask = (listingId: string, actor: Reader, over: object = {}) =>
+  const ask = (
+    listingId: string,
+    actor: Reader,
+    over: object = {},
+    key: string = randomUUID(),
+  ) =>
     request(app.getHttpServer())
       .post(`/api/v1/listings/${listingId}/price-suggestions`)
       .set('Authorization', `Bearer ${actor.token}`)
+      .set('Idempotency-Key', key)
       .send({
         bookId,
         condition: 'Good',
@@ -250,7 +256,9 @@ describe('price suggestions through HTTP with MongoDB', () => {
     const again = await ask(l.entityId, m1, {
       conditionNote: 'Gáy hơi sờn. Liên hệ 0901234567 hoặc x@y.vn',
     }).expect(200);
-    expect(again.body).toMatchObject({ id: first.body.id, cached: true });
+    // A new key for the same input reuses the answer under its own id.
+    expect(again.body).toMatchObject({ cached: true, range: first.body.range });
+    expect(again.body.id).not.toBe(first.body.id);
     expect(fake.calls).toBe(calls);
     const fair = await ask(l.entityId, m1, { condition: 'Fair' }).expect(200);
     expect(fair.body.inputFingerprint).not.toBe(first.body.inputFingerprint);
@@ -258,6 +266,35 @@ describe('price suggestions through HTTP with MongoDB', () => {
     const usage = await db.c.price_assist_usage.findOne({ _id: `user:${m1.id}:${today()}` });
     expect(usage).toMatchObject({ calls: 2 });
     expect(usage!.costMicroUsd).toBeGreaterThan(0);
+  });
+
+  it('replays by Idempotency-Key and rejects a key reused for another body', async () => {
+    const l = await listing();
+    const key = randomUUID();
+    const first = await ask(l.entityId, m1, { condition: 'LikeNew', conditionNote: 'k' }, key).expect(200);
+    const calls = fake.calls;
+    const replay = await ask(l.entityId, m1, { condition: 'LikeNew', conditionNote: 'k' }, key).expect(200);
+    expect(replay.body).toMatchObject({ id: first.body.id, cached: true });
+    expect(fake.calls).toBe(calls);
+    const conflict = await ask(l.entityId, m1, { condition: 'Fair', conditionNote: 'k' }, key).expect(409);
+    expect(conflict.body.code).toBe('IdempotencyConflict');
+    // Keys are scoped by member: another member's key space is separate.
+    const other = await listing(m2);
+    await ask(other.entityId, m2, { condition: 'LikeNew', conditionNote: 'k' }, key).expect(200);
+    // Missing key is a contract error, never a silent new request.
+    await request(app.getHttpServer())
+      .post(`/api/v1/listings/${l.entityId}/price-suggestions`)
+      .set('Authorization', `Bearer ${m1.token}`)
+      .send({ bookId, condition: 'Good', readable: true, hasMissingPages: false, missingEssentialContent: false })
+      .expect(400);
+    // A failed request replays its failure under the same key.
+    fake.mode = 'invalid';
+    const failKey = randomUUID();
+    await ask(l.entityId, m1, { condition: 'Worn', conditionNote: 'f' }, failKey).expect(503);
+    fake.mode = 'ok';
+    const failCalls = fake.calls;
+    await ask(l.entityId, m1, { condition: 'Worn', conditionNote: 'f' }, failKey).expect(503);
+    expect(fake.calls).toBe(failCalls);
   });
 
   it('returns 503 for invalid output or timeout and records the failure', async () => {

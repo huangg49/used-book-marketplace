@@ -46,7 +46,9 @@ chứng được và dễ bị nhầm là giá đã xác minh.
    transaction 2 ghi kết quả/chi phí. Một yêu cầu `Pending` mỗi thành viên; tối đa 3
    lần gọi model/listing/phút; mặc định 20 lần/người/ngày; ngân sách ngày toàn hệ thống
    (mặc định 2 USD). Cùng listing + input + bộ nguồn trong 24 giờ trả bản đã lưu
-   (`cached=true`), không gọi lại.
+   (`cached=true`), không gọi lại. Mỗi lần hỏi có `Idempotency-Key` riêng (bắt buộc như
+   mọi lệnh không phải GET): cùng key + cùng body trả lại đúng kết quả/lỗi đã lưu, cùng
+   key khác body → 409 `IdempotencyConflict`; key theo từng thành viên.
 6. Quyết định của người bán: `priceAssist {suggestionId, applied}` tùy chọn trên
    `PUT /listings/{id}/draft` và `POST /listings/{id}/revision`, ghi vào
    `price_suggestions.outcome` **trong cùng transaction** với lần lưu (kèm giá đã chọn

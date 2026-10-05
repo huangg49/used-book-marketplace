@@ -548,6 +548,8 @@ export interface PriceSuggestionDoc {
   listingId: string;
   bookId: string;
   inputFingerprint: string;
+  requestKey: string;
+  requestHash: string;
   status: 'Pending' | 'Suggested' | 'NeedsMoreData' | 'Refused' | 'Failed';
   failure: 'Timeout' | 'InvalidOutput' | 'ProviderError' | 'Refusal' | null;
   evidenceLevel: 'Strong' | 'Limited' | 'Insufficient';

@@ -11,6 +11,7 @@ import {
   notNull,
   or,
   t,
+  unique,
   type CollectionSpec,
 } from '../schema-dsl.js';
 
@@ -54,6 +55,10 @@ export const priceSuggestionSpec: CollectionSpec = {
     listingId: t.uuid(),
     bookId: t.uuid(),
     inputFingerprint: t.sha(),
+    // Idempotency-Key of the request that created this record, and the hash
+    // of its listing + body; a replay must match both.
+    requestKey: t.uuid(),
+    requestHash: t.sha(),
     status: t.enum('Pending', 'Suggested', 'NeedsMoreData', 'Refused', 'Failed'),
     failure: t.nenum('Timeout', 'InvalidOutput', 'ProviderError', 'Refusal'),
     evidenceLevel: t.enum('Strong', 'Limited', 'Insufficient'),
@@ -91,6 +96,7 @@ export const priceSuggestionSpec: CollectionSpec = {
     or(isNull('outcome'), eq(f('status'), 'Suggested')),
   ),
   indexes: [
+    unique({ ownerId: 1, requestKey: 1 }, 'price_suggestions_owner_request_key_idx'),
     index({ ownerId: 1, createdAt: -1 }, 'price_suggestions_owner_created_idx'),
     index(
       { listingId: 1, inputFingerprint: 1, createdAt: -1 },

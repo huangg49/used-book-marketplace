@@ -239,7 +239,11 @@ export function DraftEditor({
       const result = await client.request(
         `/listings/${base.id}/price-suggestions`,
         priceSuggestion,
-        { method: "POST", body: JSON.stringify(input) },
+        {
+          method: "POST",
+          headers: { "Idempotency-Key": Crypto.randomUUID() },
+          body: JSON.stringify(input),
+        },
         30000,
       );
       setAssist((s) => finishLoading(s, token, base.id, result));

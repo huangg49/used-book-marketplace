@@ -23,6 +23,7 @@ export class PriceAssistController {
     return this.service.suggest(
       req.auth,
       this.input.uuid(listingId),
+      this.input.uuid(req.headers['idempotency-key']),
       this.input.body('PriceSuggestionRequest', body),
     );
   }

@@ -1,6 +1,7 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { canonicalJson } from '../../common/canonical-json.js';
 import type { PriceSuggestionDoc } from '../../database/mongo/documents.js';
 import { MongoService } from '../../database/mongo/mongo.service.js';
 import type { Tx } from '../../database/mongo/transaction.js';
@@ -99,6 +100,7 @@ export class PriceAssistService {
   async suggest(
     auth: Actor,
     listingId: string,
+    requestKey: string,
     body: Wire['PriceSuggestionRequest'],
   ): Promise<Wire['PriceSuggestion']> {
     const input: PriceInput = {
@@ -109,11 +111,33 @@ export class PriceAssistService {
       missingEssentialContent: body.missingEssentialContent,
       conditionNote: body.conditionNote ?? '',
     };
+    const requestHash = createHash('sha256')
+      .update(canonicalJson({ listingId, input }))
+      .digest('hex');
     // Authorization, rules, cache lookup and quota reservation commit together;
     // the provider call happens after commit (no side effects in a retried tx).
     const prepared = await this.commands.read<Prepared>(auth, async (tx, actor) => {
       member(actor);
       requireActive(actor);
+      // Replay by key first, after current authorization (the user lock above
+      // serializes concurrent requests that share a key).
+      const replay = await tx.c.price_suggestions.findOne({
+        ownerId: actor._id,
+        requestKey,
+      });
+      if (replay) {
+        if (replay.requestHash !== requestHash)
+          throw new DomainError(
+            409,
+            'IdempotencyConflict',
+            'Mã yêu cầu đã được dùng cho nội dung khác.',
+          );
+        if (replay.status === 'Pending')
+          throw rateLimited('Gợi ý này đang được tạo. Thử lại sau giây lát.');
+        if (replay.status === 'Failed')
+          throw unavailable(failureCopy[replay.failure ?? 'ProviderError']);
+        return { kind: 'done', doc: replay, cached: true };
+      }
       const listing = await tx.c.listings.findOne({ _id: listingId });
       if (!listing || listing.ownerId !== actor._id || listing.deletedAt)
         throw notFound();
@@ -140,7 +164,6 @@ export class PriceAssistService {
         },
         { sort: { createdAt: -1 } },
       );
-      if (cached) return { kind: 'done', doc: cached, cached: true };
       const id = randomUUID();
       const base = {
         _id: id,
@@ -148,6 +171,8 @@ export class PriceAssistService {
         listingId,
         bookId: input.bookId,
         inputFingerprint: fp,
+        requestKey,
+        requestHash,
         failure: null,
         evidenceLevel: evidence.level,
         rangeLow: null,
@@ -163,6 +188,28 @@ export class PriceAssistService {
         updatedAt: now,
         lockSeq: 0,
       };
+      if (cached) {
+        // Same input already answered: store this key's own record so a
+        // replay of this key is stable, and return the earlier answer.
+        const doc: PriceSuggestionDoc = {
+          ...cached,
+          _id: id,
+          requestKey,
+          requestHash,
+          outcome: null,
+          // No provider call for this record (keeps rate/cost counters exact).
+          model: null,
+          inputTokens: null,
+          outputTokens: null,
+          costMicroUsd: null,
+          latencyMs: null,
+          createdAt: now,
+          updatedAt: now,
+          lockSeq: 0,
+        };
+        await tx.c.price_suggestions.insertOne(doc);
+        return { kind: 'done', doc, cached: true };
+      }
       if (evidence.status !== 'Proceed') {
         const doc: PriceSuggestionDoc = {
           ...base,

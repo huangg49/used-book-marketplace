@@ -455,7 +455,7 @@ export interface paths {
         put?: never;
         /**
          * requestPriceSuggestion
-         * @description ACTIVE owner; Draft/Rejected, or Approved and Available (approved edit). Advisory sale-price range from sourced price references only; never a verified or reference price and never written to the listing. Input is the unsaved form; server checks the catalog book (confirmed, or the caller's own pending request). Evidence level and refusal are decided by fixed rules; the model only drafts range/factors, which are checked against the evidence and POL-16. Same listing + input + reference set returns the stored suggestion (cached=true) without a new model call. 429 per-user/per-listing limits; 503 when the assistant is disabled, over budget, times out or returns invalid output. Clients keep manual pricing in every failure. No address, account, session or token data is sent to the provider.
+         * @description ACTIVE owner; Draft/Rejected, or Approved and Available (approved edit). Advisory sale-price range from sourced price references only; never a verified or reference price and never written to the listing. Input is the unsaved form; server checks the catalog book (confirmed, or the caller's own pending request). Evidence level and refusal are decided by fixed rules; the model only drafts range/factors, which are checked against the evidence and POL-16. Same listing + input + reference set returns the stored suggestion (cached=true) without a new model call. Idempotency-Key is one per ask: a retry with the same key and body returns that request's suggestion (cached=true) or its stored failure (503); same key with another listing/body is 409 IdempotencyConflict. 429 per-user/per-listing limits or a request still running; 503 when the assistant is disabled, over budget, times out or returns invalid output. Clients keep manual pricing in every failure. No address, account, session or token data is sent to the provider.
          */
         post: operations["requestPriceSuggestion"];
         delete?: never;
@@ -3479,7 +3479,10 @@ export interface operations {
     requestPriceSuggestion: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description One key per suggestion request; scoped by actor. Same key and body replays the stored outcome; a different listing or body with the same key is 409. */
+                "Idempotency-Key": string;
+            };
             path: {
                 listingId: string;
             };

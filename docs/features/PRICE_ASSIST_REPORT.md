@@ -36,6 +36,8 @@ quả thật bằng dữ liệu dựng sẵn.
 | Lệnh | Kết quả |
 | --- | --- |
 | API `vitest run src/modules/price-assist` | 20/20 PASS — luật, loại nguồn, POL-16, lọc liên hệ, fingerprint, 11 ca output sai |
+| API full unit `pnpm --filter @used-books/api test` (sau sửa CI PR18: thiếu `Idempotency-Key`) | 64/64 PASS |
+| API E2E `test/price-assist.e2e-spec.ts` sau sửa | 9/9 PASS — thêm replay cùng key, 409 key dùng cho body khác, key theo thành viên, thiếu key → 400, lỗi được replay |
 | API E2E `test/price-assist.e2e-spec.ts` (QA replica set, DB `_test`, provider giả) | 8/8 PASS — 404 người khác/403 STAFF/403 RESTRICTED/422 sách; luật không gọi model; cache; đổi input gọi lại; prompt không chứa email/id/số điện thoại; 503 invalid/timeout ghi `Failed`; 429 hạn mức người dùng không rò tăng đếm; 503 hết ngân sách; hai request song song cùng người → 200 + 429, đúng 1 lần gọi model; ghi quyết định + replay cùng key + 422 id của người khác không đổi listing; 409 listing không sửa được |
 | API mongo `schema.mongo-spec.ts` | 16/16 PASS |
 | API E2E hồi quy `catalog-drafts`, `listing-review`, `listing-schema` | 103/103 PASS |
