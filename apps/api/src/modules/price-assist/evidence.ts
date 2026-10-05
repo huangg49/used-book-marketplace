@@ -146,11 +146,13 @@ export function evaluate(
   });
 
   // Refusals first: the copy cannot be priced as a readable used book.
+  // `missing` holds only the reason; clients add the lead-in and the
+  // manual-pricing line, so neither is repeated here.
   if (input.readable === false) rules.push('R-REFUSE-UNREADABLE');
   if (input.missingEssentialContent === true) rules.push('R-REFUSE-ESSENTIAL');
   if (rules.some((r) => r.startsWith('R-REFUSE'))) {
     missing.push(
-      'Sách không còn đọc rõ hoặc thiếu nội dung trọng yếu; trợ lý không ước lượng giá cho trường hợp này.',
+      'Sách không còn đọc rõ hoặc thiếu nội dung trọng yếu.',
     );
     return answer('Refused', 'Insufficient');
   }
@@ -170,14 +172,14 @@ export function evaluate(
   if (!used.length) {
     rules.push('R-NEED-SOURCES');
     missing.push(
-      'Chưa có dữ liệu giá có nguồn cho đầu sách này. Hãy tự nhập giá bán.',
+      'Chưa có dữ liệu giá có nguồn cho đầu sách này.',
     );
   }
   // One asking price is not evidence of value: it may be the outlier itself.
   if (used.length === 1 && used[0].kind === 'InternalAsking') {
     rules.push('R-NEED-MORE-THAN-ONE-ASKING');
     missing.push(
-      'Chỉ có một giá rao để so sánh; chưa đủ căn cứ. Hãy tự nhập giá bán.',
+      'Chỉ có một giá rao để so sánh.',
     );
   }
   if (missing.length) return answer('NeedsMoreData', 'Insufficient');
