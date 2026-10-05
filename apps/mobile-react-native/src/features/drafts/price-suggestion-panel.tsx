@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View } from "react-native";
+import { Linking, View } from "react-native";
 import {
   AppText,
   Button,
@@ -156,6 +156,17 @@ export function PriceSuggestionPanel({
               {s.label} · {sourceKindLabel[s.kind]} · {formatVnd(s.amount)} ·{" "}
               {day(s.observedAt)}
               {s.excluded ? ` · ${excludedLabel[s.excluded]}` : ""}
+              {s.url ? (
+                <AppText
+                  kind="small"
+                  color={colors.forest}
+                  accessibilityRole="link"
+                  onPress={() => void Linking.openURL(s.url!)}
+                >
+                  {" "}
+                  · Mở trang
+                </AppText>
+              ) : null}
             </AppText>
           ))}
           {ready.dataAsOf ? (

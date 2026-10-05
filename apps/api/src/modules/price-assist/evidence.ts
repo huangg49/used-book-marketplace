@@ -10,7 +10,8 @@ export const SALE_MIN = 10_000;
 export const SALE_MAX = 1_000_000;
 export const MAX_WIDTH_RATIO = 2.5;
 const MONTH_MS = 30 * 24 * 3_600_000;
-const STALE_MONTHS = { CoverPrice: 36, other: 24 } as const;
+// Online shop prices change often; the lookup refreshes them monthly.
+const STALE_MONTHS = { CoverPrice: 36, OnlineRetail: 3, other: 24 } as const;
 const FRESH_MONTHS = 12;
 const MAX_SOURCES = 20;
 
@@ -24,7 +25,8 @@ export const CONDITION_BANDS = {
   Worn: [0.15, 0.3],
 } as const satisfies Record<Condition, readonly [number, number]>;
 // Sources that state a new-book price; the band is applied to their median.
-const NEW_PRICE_KINDS: ReadonlySet<SourceKind> = new Set(['CoverPrice']);
+// Staff-entered cover prices win over prices found online when both exist.
+const NEW_PRICE_KINDS: ReadonlySet<SourceKind> = new Set(['CoverPrice', 'OnlineRetail']);
 
 export type Condition = Wire['BookCondition'];
 export type SourceKind = Wire['PriceSourceKind'];
@@ -98,6 +100,8 @@ const roundTo = (value: number, step = 1000) =>
 // What the rules need to know about the listing besides the request body.
 export interface ListingFacts {
   hasPhoto: boolean;
+  // An online lookup for this book is running (ADR 0029).
+  lookupPending?: boolean;
 }
 
 export function evaluate(
@@ -122,7 +126,11 @@ export function evaluate(
       !!s.isbn && !!book.isbn && s.isbn.toUpperCase() !== book.isbn.toUpperCase();
     const stale =
       months >
-      (s.kind === 'CoverPrice' ? STALE_MONTHS.CoverPrice : STALE_MONTHS.other);
+      (s.kind === 'CoverPrice'
+        ? STALE_MONTHS.CoverPrice
+        : s.kind === 'OnlineRetail'
+          ? STALE_MONTHS.OnlineRetail
+          : STALE_MONTHS.other);
     return {
       ref: `s${i + 1}`,
       kind: s.kind,
@@ -202,9 +210,11 @@ export function evaluate(
     missing.push('Cho biết sách có thiếu nội dung trọng yếu hay không.');
   }
   if (!used.length) {
-    rules.push('R-NEED-SOURCES');
+    rules.push(listing.lookupPending ? 'R-LOOKUP-PENDING' : 'R-NEED-SOURCES');
     missing.push(
-      sources.some((s) => s.excluded === 'AskingPrice')
+      listing.lookupPending
+        ? 'Đang tìm giá trên các nhà sách trực tuyến; thử lại sau ít phút.'
+        : sources.some((s) => s.excluded === 'AskingPrice')
         ? 'Chỉ có giá rao của người bán khác; chưa có giá có nguồn để so sánh.'
         : 'Chưa có dữ liệu giá có nguồn cho đầu sách này.',
     );
@@ -218,7 +228,8 @@ export function evaluate(
   let high: number;
   if (newPrices.length) {
     const band = CONDITION_BANDS[bandCondition(input)];
-    const reference = median(newPrices.map((s) => s.amount));
+    const staff = newPrices.filter((s) => s.kind === 'CoverPrice');
+    const reference = median((staff.length ? staff : newPrices).map((s) => s.amount));
     rules.push(`R-BAND-${bandCondition(input).toUpperCase()}`);
     low = Math.max(SALE_MIN, roundTo(reference * band[0]));
     high = Math.min(SALE_MAX, roundTo(reference * band[1]));

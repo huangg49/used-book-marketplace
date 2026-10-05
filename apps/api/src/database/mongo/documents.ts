@@ -518,13 +518,14 @@ export type PriceSourceKind =
   | 'CoverPrice'
   | 'EditorialReference'
   | 'InternalAsking'
-  | 'CompletedSale';
+  | 'CompletedSale'
+  | 'OnlineRetail';
 // Curated, sourced price facts. Written only by the migrator-role import tool.
 export interface PriceReferenceDoc {
   _id: string;
   bookId: string;
   isbn: string | null;
-  kind: Exclude<PriceSourceKind, 'InternalAsking'>;
+  kind: Exclude<PriceSourceKind, 'InternalAsking' | 'OnlineRetail'>;
   amount: number;
   condition: 'LikeNew' | 'Good' | 'Fair' | 'Worn' | null;
   sourceLabel: string;
@@ -587,4 +588,36 @@ export interface MigrationDoc {
   _id: string; // migration id
   checksum: string;
   appliedAt: Date;
+}
+
+// Online price lookup (ADR 0029, migration 0007). _id = catalog book id.
+export interface PriceLookupDoc {
+  _id: string;
+  status: 'Running' | 'Done' | 'Failed';
+  runId: string;
+  leaseUntil: Date;
+  nextAt: Date;
+  lastRunAt: Date;
+  offersFound: number;
+  failure: string | null;
+  model: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  searches: number;
+  costMicroUsd: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+export interface OnlinePriceOfferDoc {
+  _id: string;
+  bookId: string;
+  runId: string;
+  shop: string;
+  url: string;
+  amount: number;
+  isbnMatched: boolean;
+  pageTitle: string | null;
+  observedAt: Date;
+  retiredAt: Date | null;
+  createdAt: Date;
 }

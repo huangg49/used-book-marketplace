@@ -26,6 +26,7 @@ import {
   type PriceInput,
   type RawSource,
 } from './evidence.js';
+import { PriceLookupService } from './online/price-lookup.service.js';
 import { checkOutput, InvalidModelOutput } from './output-check.js';
 import { buildUserPrompt, SYSTEM_PROMPT } from './prompt.js';
 import {
@@ -88,6 +89,9 @@ export class PriceAssistService {
     private readonly commands: MongoCommandService,
     private readonly config: ConfigService,
     @Optional() @Inject(PriceModel) private readonly model: PriceModel | null,
+    @Optional()
+    @Inject(PriceLookupService)
+    private readonly lookups: PriceLookupService | null = null,
   ) {}
 
   private get userDailyLimit() {
@@ -166,12 +170,19 @@ export class PriceAssistService {
       const now = await tx.now();
       // A copy with no uploaded photo is not priced: the condition would be
       // the seller's word only (submission also needs 1-8 Ready photos).
+      // Confirmed books get a background online price lookup when due; while
+      // it runs, "no data" reads as "still searching" (ADR 0029).
+      const lookup =
+        this.lookups && book.confirmed
+          ? await this.lookups.ensure(book, now)
+          : { running: false };
       const listingFacts = {
         hasPhoto:
           (await tx.c.listing_media.countDocuments(
             { listingId, status: 'Ready', purgedAt: null },
             { limit: 1 },
           )) > 0,
+        lookupPending: lookup.running,
       };
       const evidence = evaluate(input, book, raw, now, listingFacts);
       const fp = fingerprint(input, raw, listingFacts);
@@ -405,6 +416,23 @@ export class PriceAssistService {
       observedAt: r.observedAt,
       isbn: r.isbn,
     }));
+    // New-book prices read from allowed shop pages by the online lookup.
+    const offers = await tx.c.online_price_offers
+      .find({ bookId: book.id, retiredAt: null })
+      .sort({ observedAt: -1 })
+      .limit(10)
+      .toArray();
+    for (const o of offers)
+      raw.push({
+        id: `online:${o._id}`,
+        kind: 'OnlineRetail',
+        amount: o.amount,
+        condition: null,
+        label: o.shop,
+        url: o.url,
+        observedAt: o.observedAt,
+        isbn: null,
+      });
     // Other members' public asking prices for the same book: asking, not sold.
     const revisions = await tx.c.listing_revisions
       .find({ bookId: book.id, salePrice: { $ne: null } })

@@ -12,6 +12,10 @@ import {
   PriceModelError,
   type ModelDraft,
 } from '../src/modules/price-assist/price-model.js';
+import { ConfigService } from '@nestjs/config';
+import { PriceFinder, type FinderResult } from '../src/modules/price-assist/online/price-finder.js';
+import { PageFetcher } from '../src/modules/price-assist/online/price-lookup.service.js';
+import { FetchRejected } from '../src/modules/price-assist/online/safe-fetch.js';
 import { validates } from './helpers/contract.js';
 import { MongoFixtures } from './helpers/mongo-fixtures.js';
 
@@ -64,9 +68,38 @@ const draft = (bookId: string | null, salePrice: number | null = null) => ({
   mediaIds: [] as string[],
 });
 
+// Fake search and pages for the online lookup (ADR 0029): no network.
+class FakeFinder extends PriceFinder {
+  readonly model = 'fake-finder';
+  calls = 0;
+  urls: string[] = [];
+  gate: Promise<void> | null = null;
+  async find(): Promise<FinderResult> {
+    this.calls++;
+    if (this.gate) await this.gate;
+    return { urls: this.urls, inputTokens: 100, outputTokens: 20, searches: 1 };
+  }
+}
+class FakePages extends PageFetcher {
+  pages: Record<string, string> = {};
+  async fetch(url: string) {
+    if (!(url in this.pages)) throw new FetchRejected('Http404');
+    return { url, html: this.pages[url] };
+  }
+}
+const shopPage = (isbn: string, price: number) =>
+  `<script type="application/ld+json">${JSON.stringify({
+    '@type': 'Book',
+    name: 'Sách tìm giá trực tuyến',
+    isbn,
+    offers: { price, priceCurrency: 'VND' },
+  })}</script>`;
+
 describe('price suggestions through HTTP with MongoDB', () => {
   let app: INestApplication, db: MongoFixtures, passwordHash: string;
   const fake = new FakeModel();
+  const finder = new FakeFinder();
+  const pages = new FakePages();
   const users: string[] = [];
   const books: string[] = [];
   let m1: Reader, m2: Reader, admin: Reader, staff: Reader, restricted: Reader;
@@ -201,6 +234,10 @@ describe('price suggestions through HTTP with MongoDB', () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PriceModel)
       .useValue(fake)
+      .overrideProvider(PriceFinder)
+      .useValue(finder)
+      .overrideProvider(PageFetcher)
+      .useValue(pages)
       .compile();
     app = module.createNestApplication();
     configureApp(app, { docs: false, logRequests: false });
@@ -227,6 +264,8 @@ describe('price suggestions through HTTP with MongoDB', () => {
       await db.c.mutation_receipts.deleteMany({ actorId: { $in: users } });
       await db.c.price_suggestions.deleteMany({ ownerId: { $in: users } });
       await db.c.price_references.deleteMany({ bookId: { $in: books } });
+      await db.c.online_price_offers.deleteMany({ bookId: { $in: books } });
+      await db.c.price_lookups.deleteMany({ _id: { $in: books } });
       await db.c.price_assist_usage.deleteMany({});
       await db.c.listing_media.deleteMany({ listingId: { $in: listings } });
       await db.c.listing_revisions.deleteMany({ listingId: { $in: listings } });
@@ -422,6 +461,57 @@ describe('price suggestions through HTTP with MongoDB', () => {
     await save(draft(bookId, s.range.low)).expect(422);
     expect((await db.c.price_suggestions.findOne({ _id: s.id }))!.outcome).toBeNull();
     expect((await db.c.listings.findOne({ _id: l.entityId }))!.version).toBe(l.version);
+  });
+
+  it('looks up online prices once per book in the background and prices from checked pages', async () => {
+    const config = app.get(ConfigService);
+    config.set('PRICE_LOOKUP_ENABLED', 'true');
+    try {
+      const isbn = isbn13();
+      const book = await confirmedBook('Sách tìm giá trực tuyến', isbn);
+      pages.pages = {
+        'https://fahasa.com/a': shopPage(isbn, 100_000),
+        'https://tiki.vn/b': shopPage(isbn, 110_000),
+        'https://fahasa.com/other': shopPage('9780000000002', 20_000),
+      };
+      finder.urls = Object.keys(pages.pages);
+      let release!: () => void;
+      finder.gate = new Promise((r) => (release = r));
+      const l = await listing(m1, book);
+      const [first, second] = await Promise.all([
+        ask(l.entityId, m1, { bookId: book }).expect(200),
+        ask(l.entityId, m1, { bookId: book, conditionNote: 'lần hai' }).expect(200),
+      ]);
+      for (const r of [first, second]) {
+        expect(r.body).toMatchObject({ status: 'NeedsMoreData', model: null });
+        expect(r.body.rules).toContain('R-LOOKUP-PENDING');
+      }
+      expect(finder.calls).toBe(1);
+      release();
+      for (let i = 0; i < 50; i++) {
+        if ((await db.c.price_lookups.findOne({ _id: book }))?.status !== 'Running') break;
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      const lookup = await db.c.price_lookups.findOne({ _id: book });
+      expect(lookup).toMatchObject({ status: 'Done', offersFound: 2, searches: 1 });
+      expect(lookup!.costMicroUsd).toBeGreaterThan(0);
+      const offers = await db.c.online_price_offers.find({ bookId: book, retiredAt: null }).toArray();
+      expect(offers.map((o) => o.amount).sort()).toEqual([100_000, 110_000]);
+
+      const priced = await ask(l.entityId, m1, { bookId: book }).expect(200);
+      validates('PriceSuggestion', priced.body);
+      expect(priced.body.status).toBe('Suggested');
+      // Good: 40-60% of the 105.000 d median new-book price.
+      expect(priced.body.rules).toContain('R-BAND-GOOD');
+      expect(priced.body.range.low).toBeGreaterThanOrEqual(42_000);
+      expect(priced.body.range.high).toBeLessThanOrEqual(63_000);
+      const online = priced.body.sources.filter((s: { kind: string }) => s.kind === 'OnlineRetail');
+      expect(online.map((s: { url: string }) => s.url).sort()).toEqual(['https://fahasa.com/a', 'https://tiki.vn/b']);
+      expect(finder.calls).toBe(1);
+    } finally {
+      config.set('PRICE_LOOKUP_ENABLED', 'false');
+      finder.gate = null;
+    }
   });
 
   it('rejects requests on listings that are not editable', async () => {

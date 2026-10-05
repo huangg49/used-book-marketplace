@@ -1292,7 +1292,9 @@ paths:
         range from sourced price references only; never a verified or reference price and never
         written to the listing. Input is the unsaved form; server checks the catalog book (confirmed,
         or the caller's own pending request). A listing with no Ready photo gets NeedsMoreData
-        (R-NEED-PHOTO) without a model call. Evidence level and refusal are decided by fixed rules;
+        (R-NEED-PHOTO) without a model call. A book without a recent online price starts one
+        background lookup; while it runs and no other source exists the answer is NeedsMoreData
+        (R-LOOKUP-PENDING). Evidence level and refusal are decided by fixed rules;
         the model only drafts range/factors, which are checked against the evidence and POL-16.
         Same listing + input + reference set returns the stored suggestion (cached=true) without a
         new model call. Idempotency-Key is one per ask: a retry with the same key and body returns
@@ -5827,6 +5829,9 @@ components:
         - EditorialReference
         - InternalAsking
         - CompletedSale
+        - OnlineRetail
+      description: OnlineRetail is a new-book price read from an allowed shop's product page by the
+        online lookup (URL and date kept); CoverPrice and EditorialReference are staff-entered.
     PriceSource:
       type: object
       additionalProperties: false

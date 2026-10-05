@@ -15,6 +15,10 @@ import {
   priceAssistSpecsV2,
   priceSuggestionInputMigration,
 } from './0006-price-suggestion-input.js';
+import {
+  onlinePriceLookupMigration,
+  onlinePriceSpecs,
+} from './0007-online-price-lookup.js';
 
 export interface Migration {
   id: string;
@@ -86,6 +90,7 @@ export const migrations: Migration[] = [
   wishlistMigration,
   priceAssistMigration,
   priceSuggestionInputMigration,
+  onlinePriceLookupMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -99,4 +104,5 @@ export const currentCollections = (): CollectionSpec[] =>
     ...baselineCollections.map(withTitleKey),
     wishlistSpec,
     ...priceAssistSpecsV2,
+    ...onlinePriceSpecs,
   ];
