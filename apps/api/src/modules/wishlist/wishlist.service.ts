@@ -54,16 +54,38 @@ export class WishlistService {
         if (doc && doc.currentRevisionId) {
           const rev = await this.db.c.listing_revisions.findOne({ _id: doc.currentRevisionId });
           if (rev) {
+            const bookDoc = rev.bookId ? await this.db.c.catalog_books.findOne({ _id: rev.bookId }) : null;
+            let listingBook: Wire['PublicBook'] | undefined;
+            if (bookDoc && bookDoc.currentRevisionId) {
+               const bookRev = await this.db.c.catalog_revisions.findOne({ _id: bookDoc.currentRevisionId });
+               if (bookRev) {
+                  listingBook = {
+                    id: bookDoc._id,
+                    title: bookRev.title,
+                    authors: bookRev.authors,
+                    publisher: bookRev.publisher,
+                    publicationYear: bookRev.publicationYear,
+                    language: bookRev.language,
+                    edition: bookRev.edition,
+                    category: bookRev.category,
+                    isbn: bookRev.isbn,
+                  } as unknown as Wire['PublicBook'];
+               }
+            }
+            const revMedia = await this.db.c.revision_media.findOne({ revisionId: doc.currentRevisionId, position: 0 });
+            const photos = revMedia ? [{ id: revMedia.mediaId }] : [];
+
             listing = {
               id: doc._id,
               revisionId: doc.currentRevisionId,
               version: doc.version,
-              bookId: rev.bookId,
+              book: listingBook,
+              photos: photos,
               mode: rev.mode,
               price: rev.salePrice || rev.exchangeValue || 0,
               condition: rev.condition,
               sellerId: doc.ownerId,
-            } as unknown as Wire['PublicListing']; // Coerce for simplicity, full public listing mapping needed in real apps
+            } as unknown as Wire['PublicListing'];
           }
         }
       }
