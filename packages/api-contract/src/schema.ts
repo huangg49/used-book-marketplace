@@ -1611,6 +1611,8 @@ export interface components {
             state: components["schemas"]["ListingState"];
             currentRevision: components["schemas"]["ListingRevision"];
             latestDecision: components["schemas"]["ReviewDecision"] | null;
+            /** @description Present only on the Staff/Admin review detail. The price suggestion the seller decided on with the revision under review (null when none), so the reviewer can tell a suggested price from the seller's own. */
+            priceAssist?: components["schemas"]["PriceAssistReview"] | null;
             removalReason: string | null;
             catalogStatus: components["schemas"]["CatalogStatus"] | null;
             /** Format: date-time */
@@ -1737,6 +1739,29 @@ export interface components {
             suggestionId: string;
             /** @description true when the seller used the suggested range; false when they priced manually. */
             applied: boolean;
+        };
+        PriceAssistReview: {
+            /** Format: uuid */
+            suggestionId: string;
+            range: {
+                low: number;
+                high: number;
+            };
+            evidenceLevel: components["schemas"]["PriceEvidenceLevel"];
+            model: string | null;
+            /** @description What the seller declared when the suggestion was made. */
+            input: {
+                condition: components["schemas"]["BookCondition"] | null;
+                readable: boolean | null;
+                hasMissingPages: boolean | null;
+                missingEssentialContent: boolean | null;
+            };
+            applied: boolean;
+            chosenSalePrice: number | null;
+            withinRange: boolean | null;
+            /** Format: date-time */
+            decidedAt: string;
+            sources: components["schemas"]["PriceSource"][];
         };
         PriceSuggestionRequest: {
             /** Format: uuid */

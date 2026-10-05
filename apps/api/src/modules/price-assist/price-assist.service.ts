@@ -553,6 +553,39 @@ function wireBody(
   };
 }
 
+// For the Staff review detail: the suggestion the seller decided on when
+// saving this revision, with what they declared then. Uses the listing
+// prefix of price_suggestions_listing_input_idx.
+export async function priceAssistForRevision(
+  tx: Tx,
+  listingId: string,
+  revisionId: string,
+): Promise<Wire['PriceAssistReview'] | null> {
+  const s = await tx.c.price_suggestions.findOne(
+    { listingId, 'outcome.revisionId': revisionId },
+    { sort: { 'outcome.decidedAt': -1 } },
+  );
+  if (!s?.outcome || s.rangeLow === null || s.rangeHigh === null) return null;
+  const response = s.response as Partial<Wire['PriceSuggestion']> | null;
+  return {
+    suggestionId: s._id,
+    range: { low: s.rangeLow, high: s.rangeHigh },
+    evidenceLevel: s.evidenceLevel,
+    model: s.model,
+    input: {
+      condition: s.input?.condition ?? null,
+      readable: s.input?.readable ?? null,
+      hasMissingPages: s.input?.hasMissingPages ?? null,
+      missingEssentialContent: s.input?.missingEssentialContent ?? null,
+    },
+    applied: s.outcome.applied,
+    chosenSalePrice: s.outcome.chosenSalePrice,
+    withinRange: s.outcome.withinRange,
+    decidedAt: s.outcome.decidedAt.toISOString(),
+    sources: response?.sources ?? [],
+  };
+}
+
 function toWire(doc: PriceSuggestionDoc, cached: boolean): Wire['PriceSuggestion'] {
   return {
     ...(doc.response as Omit<Wire['PriceSuggestion'], 'id' | 'cached'>),

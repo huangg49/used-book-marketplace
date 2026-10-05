@@ -428,6 +428,46 @@ describe('price suggestions through HTTP with MongoDB', () => {
       withinRange: true,
       revisionId: saved.body.revisionId,
     });
+    // Staff reviewing that revision see the suggestion and what the seller
+    // declared; the seller's own view is unchanged. (Submission is simulated
+    // in the database: this suite has no complete submittable draft.)
+    await db.c.listing_revisions.updateOne(
+      { _id: saved.body.revisionId },
+      {
+        $set: {
+          pages: 'Đủ trang.',
+          coverNote: 'Bìa sạch.',
+          notes: 'Không có.',
+          accessories: 'Không có.',
+          description: 'Bản kiểm thử cho màn duyệt, đủ ba mươi ký tự.',
+          submittedAt: new Date(),
+          ownershipDeclaredAt: new Date(),
+        },
+      },
+    );
+    const review = await request(app.getHttpServer())
+      .get(`/api/v1/operations/listings/${l.entityId}`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(200);
+    validates('PrivateListing', review.body);
+    expect(review.body.priceAssist).toMatchObject({
+      suggestionId: s.id,
+      range: s.range,
+      applied: true,
+      chosenSalePrice: price,
+      withinRange: true,
+      input: { condition: 'Good', readable: true, hasMissingPages: false, missingEssentialContent: false },
+    });
+    expect(review.body.priceAssist.sources.length).toBeGreaterThan(0);
+    const own = await request(app.getHttpServer())
+      .get(`/api/v1/me/listings/${l.entityId}`)
+      .set('Authorization', `Bearer ${m1.token}`)
+      .expect(200);
+    expect(own.body.priceAssist).toBeUndefined();
+    await request(app.getHttpServer())
+      .get(`/api/v1/operations/listings/${l.entityId}`)
+      .set('Authorization', `Bearer ${m1.token}`)
+      .expect(403);
     // Another member's listing cannot claim this suggestion; nothing is saved.
     const other = await listing(m2);
     const denied = await put(

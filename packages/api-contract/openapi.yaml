@@ -5399,6 +5399,13 @@ components:
           anyOf:
             - $ref: "#/components/schemas/ReviewDecision"
             - type: "null"
+        priceAssist:
+          anyOf:
+            - $ref: "#/components/schemas/PriceAssistReview"
+            - type: "null"
+          description: Present only on the Staff/Admin review detail. The price suggestion the seller
+            decided on with the revision under review (null when none), so the reviewer can tell a
+            suggested price from the seller's own.
         removalReason:
           anyOf:
             - type: string
@@ -5776,6 +5783,86 @@ components:
         applied:
           type: boolean
           description: true when the seller used the suggested range; false when they priced manually.
+    PriceAssistReview:
+      type: object
+      additionalProperties: false
+      required:
+        - suggestionId
+        - range
+        - evidenceLevel
+        - model
+        - input
+        - applied
+        - chosenSalePrice
+        - withinRange
+        - decidedAt
+        - sources
+      properties:
+        suggestionId:
+          type: string
+          format: uuid
+        range:
+          type: object
+          additionalProperties: false
+          required:
+            - low
+            - high
+          properties:
+            low:
+              type: integer
+            high:
+              type: integer
+        evidenceLevel:
+          $ref: "#/components/schemas/PriceEvidenceLevel"
+        model:
+          anyOf:
+            - type: string
+              maxLength: 80
+            - type: "null"
+        input:
+          type: object
+          additionalProperties: false
+          description: What the seller declared when the suggestion was made.
+          required:
+            - condition
+            - readable
+            - hasMissingPages
+            - missingEssentialContent
+          properties:
+            condition:
+              anyOf:
+                - $ref: "#/components/schemas/BookCondition"
+                - type: "null"
+            readable:
+              type:
+                - boolean
+                - "null"
+            hasMissingPages:
+              type:
+                - boolean
+                - "null"
+            missingEssentialContent:
+              type:
+                - boolean
+                - "null"
+        applied:
+          type: boolean
+        chosenSalePrice:
+          anyOf:
+            - type: integer
+            - type: "null"
+        withinRange:
+          anyOf:
+            - type: boolean
+            - type: "null"
+        decidedAt:
+          type: string
+          format: date-time
+        sources:
+          type: array
+          maxItems: 40
+          items:
+            $ref: "#/components/schemas/PriceSource"
     PriceSuggestionRequest:
       type: object
       additionalProperties: false
