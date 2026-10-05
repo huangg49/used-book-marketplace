@@ -52,6 +52,16 @@ import { LifecycleActions } from "./lifecycle-actions";
 import { FulfillmentFields } from "./fulfillment-fields";
 import { StepNav } from "./step-nav";
 import { conditionLabels } from "./book-condition";
+import {
+  acceptResponse,
+  assistError,
+  decisionFor,
+  priceSuggestion,
+  suggestionInput,
+  suggestionKey,
+  type AssistState,
+} from "./price-assist";
+import { PriceSuggestionPanel } from "./price-suggestion-panel";
 
 const stepLabels = [
   "Đầu sách",
@@ -100,6 +110,10 @@ export function DraftEditor({
     [lifecyclePending, setLifecyclePending] = useState(false);
   const scroll = useRef<ScrollView>(null);
   const [catalogDirty, setCatalogDirty] = useState(false);
+  // Price suggestion lives here so it survives step changes; it is advisory and
+  // never part of the saved form except as the optional decision record.
+  const [assist, setAssist] = useState<AssistState>({ status: "idle" });
+  const assistToken = useRef(0);
   const go = (value: number) => {
     setStep(value);
     scroll.current?.scrollTo({ y: 0, animated: false });
@@ -213,6 +227,32 @@ export function DraftEditor({
     setMessage("");
   }
   const photoList = photos.data ?? [];
+  const assistKey = suggestionKey(base.id, form);
+  const askPrice = async () => {
+    const input = suggestionInput(form);
+    if (!input.bookId) return;
+    const token = ++assistToken.current;
+    setAssist({ status: "loading", key: assistKey, token });
+    try {
+      const result = await client.request(
+        `/listings/${base.id}/price-suggestions`,
+        priceSuggestion,
+        { method: "POST", body: JSON.stringify(input) },
+        30000,
+      );
+      setAssist((s) =>
+        acceptResponse(s, token, base.id, result) && s.status === "loading"
+          ? { status: "ready", key: s.key, suggestion: result, appliedPrice: null }
+          : s,
+      );
+    } catch (e) {
+      setAssist((s) =>
+        s.status === "loading" && s.token === token
+          ? { status: "error", key: s.key, message: assistError(e) }
+          : s,
+      );
+    }
+  };
   const errors = stillFailing(
     check.errors,
     validateForm(form, photoList, declared, check.submit),
@@ -253,6 +293,7 @@ export function DraftEditor({
         submit,
         Crypto.randomUUID,
         approvedEdit,
+        decisionFor(assist, assistKey, form),
       );
     }
     if (!intent.current) return;
@@ -688,6 +729,21 @@ export function DraftEditor({
             disabled={locked}
             anchor={anchor}
           />
+          {editable && (form.mode === "Sale" || form.mode === "Both") ? (
+            <PriceSuggestionPanel
+              form={form}
+              state={assist}
+              currentKey={assistKey}
+              disabled={locked}
+              onAsk={() => void askPrice()}
+              onApply={(amount) => {
+                setForm((f) => ({ ...f, salePrice: String(amount) }));
+                setAssist((s) =>
+                  s.status === "ready" ? { ...s, appliedPrice: amount } : s,
+                );
+              }}
+            />
+          ) : null}
           <FulfillmentFields
             value={form.fulfillment}
             disabled={locked}
