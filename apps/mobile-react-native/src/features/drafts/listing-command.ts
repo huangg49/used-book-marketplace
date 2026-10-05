@@ -21,6 +21,7 @@ export function listingIntent(
   submit: boolean,
   key: () => string,
   approved = false,
+  priceAssist?: { suggestionId: string; applied: boolean },
 ): ListingIntent {
   return {
     id,
@@ -28,6 +29,7 @@ export function listingIntent(
       expectedVersion: version,
       content,
       ...(approved ? { ownershipDeclared: true } : {}),
+      ...(priceAssist ? { priceAssist } : {}),
     }),
     saveKey: key(),
     submitKey: key(),

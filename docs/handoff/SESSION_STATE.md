@@ -2,6 +2,16 @@
 
 ## Nguồn và việc đang làm
 
+- **05/10 — gói Bảo “đăng sách + AI gợi ý giá”: nhánh local
+  `codex/bao-listing-price-assist` từ main `efc6f09`, đã push và mở
+  [PR18](https://github.com/huangg49/used-book-marketplace/pull/18); chưa merge.** API
+  `POST /listings/{id}/price-suggestions` (contract 0.22.0, migration
+  `0005-price-assist`), panel RN ở bước giá, ghi quyết định giá cùng transaction lưu.
+  Thiết kế [ADR 0028](../adr/0028-listing-price-assistant.md) **Proposed**, cần chủ dự
+  án duyệt mở rộng SRS/nguồn/model/ngân sách. Evidence và phần BLOCKED (provider thật,
+  nguồn giá đã kiểm) và kết quả Android emulator ở [PRICE_ASSIST_REPORT](../features/PRICE_ASSIST_REPORT.md).
+  Cờ `PRICE_ASSIST_ENABLED` tắt mặc định; không bật cho demo khi eval chưa đạt.
+
 - **Gói UI-1 + luồng dev hai terminal + sửa CI: ĐÃ MERGE MAIN qua
   [PR15](https://github.com/huangg49/used-book-marketplace/pull/15), commit `222935c`.**
   Nhánh `codex/dev-workflow` từ UI checkpoint `d4b65f4`; đã merge

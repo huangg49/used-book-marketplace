@@ -13,8 +13,15 @@ import { DatabaseModule } from '../../database/database.module.js';
 import { ListingLifecycleService } from './listing-lifecycle.service.js';
 import { ListingLifecycleController } from './listing-lifecycle.controller.js';
 import { ListingFulfillmentService } from './listing-fulfillment.service.js';
+import { PriceAssistModule } from '../price-assist/price-assist.module.js';
 @Module({
-  imports: [CommandsModule, CatalogModule, MediaModule, DatabaseModule],
+  imports: [
+    CommandsModule,
+    CatalogModule,
+    MediaModule,
+    DatabaseModule,
+    PriceAssistModule,
+  ],
   providers: [
     ListingCommitmentPolicy,
     ListingFulfillmentService,

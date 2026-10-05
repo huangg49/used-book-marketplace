@@ -37,6 +37,12 @@ node_modules, Expo cache, build output, DB dump hoặc các fixture test.
 5. Nếu tách môi trường storage, dùng bucket dev riêng đã tạo/cấu hình đúng và
    sửa SUPABASE_MEDIA_BUCKET. Dùng chung project/bucket nghĩa là chia sẻ tài nguyên
    và quyền truy cập; phối hợp worker/cleanup, không chạy cleanup thử trên ảnh của nhau.
+6. Trợ lý gợi ý giá ([ADR 0028](../adr/0028-listing-price-assistant.md)) tắt mặc định.
+   Người giữ key provider đặt `PRICE_ASSIST_ENABLED=true` và `PRICE_ASSIST_API_KEY`
+   trong `apps/api/.env` của máy chạy API; giữ `PRICE_ASSIST_DAILY_BUDGET_USD` và
+   `PRICE_ASSIST_USER_DAILY_LIMIT` ở mức đã thống nhất. Key chỉ ở backend, không đưa
+   vào EXPO_PUBLIC_*/VITE_*, không gửi qua chat. Thiếu key thì lời gọi model trả 503,
+   người bán vẫn nhập giá tay.
 
 ## Các giá trị phụ thuộc máy
 

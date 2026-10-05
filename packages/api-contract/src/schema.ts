@@ -444,6 +444,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/listings/{listingId}/price-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * requestPriceSuggestion
+         * @description ACTIVE owner; Draft/Rejected, or Approved and Available (approved edit). Advisory sale-price range from sourced price references only; never a verified or reference price and never written to the listing. Input is the unsaved form; server checks the catalog book (confirmed, or the caller's own pending request). Evidence level and refusal are decided by fixed rules; the model only drafts range/factors, which are checked against the evidence and POL-16. Same listing + input + reference set returns the stored suggestion (cached=true) without a new model call. Idempotency-Key is one per ask: a retry with the same key and body returns that request's suggestion (cached=true) or its stored failure (503); same key with another listing/body is 409 IdempotencyConflict. 429 per-user/per-listing limits or a request still running; 503 when the assistant is disabled, over budget, times out or returns invalid output. Clients keep manual pricing in every failure. No address, account, session or token data is sent to the provider.
+         */
+        post: operations["requestPriceSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/listings/{listingId}/visibility": {
         parameters: {
             query?: never;
@@ -1697,6 +1717,7 @@ export interface components {
         SaveDraft: {
             expectedVersion: number;
             content: components["schemas"]["DraftContent"];
+            priceAssist?: components["schemas"]["PriceAssistDecision"];
         };
         SubmitListing: {
             expectedVersion: number;
@@ -1708,6 +1729,75 @@ export interface components {
             content: components["schemas"]["SubmittedContent"];
             /** @constant */
             ownershipDeclared: true;
+            priceAssist?: components["schemas"]["PriceAssistDecision"];
+        };
+        /** @description Optional record of the seller's decision about a price suggestion for this listing. Stored with the suggestion in the same transaction as the save; the listing price stays the seller's salePrice. Unknown, foreign or failed suggestion ids are rejected with 422 at /priceAssist/suggestionId. */
+        PriceAssistDecision: {
+            /** Format: uuid */
+            suggestionId: string;
+            /** @description true when the seller used the suggested range; false when they priced manually. */
+            applied: boolean;
+        };
+        PriceSuggestionRequest: {
+            /** Format: uuid */
+            bookId: string;
+            condition: components["schemas"]["BookCondition"] | null;
+            readable: boolean | null;
+            hasMissingPages: boolean | null;
+            missingEssentialContent: boolean | null;
+            /** @description Optional condition text. Treated as data; contact-like text is removed before any provider call. */
+            conditionNote?: string;
+        };
+        /** @enum {string} */
+        PriceSuggestionStatus: "Suggested" | "NeedsMoreData" | "Refused";
+        /** @enum {string} */
+        PriceEvidenceLevel: "Strong" | "Limited" | "Insufficient";
+        /** @enum {string} */
+        PriceSourceKind: "CoverPrice" | "EditorialReference" | "InternalAsking" | "CompletedSale";
+        PriceSource: {
+            ref: string;
+            kind: components["schemas"]["PriceSourceKind"];
+            label: string;
+            amount: number;
+            condition: components["schemas"]["BookCondition"] | null;
+            /** Format: date-time */
+            observedAt: string;
+            url: string | null;
+            /** @description Why this source was shown but not used; null when used. */
+            excluded: ("Outlier" | "Stale" | "OtherEdition") | null;
+        };
+        PriceFactor: {
+            text: string;
+            sourceRefs: string[];
+        };
+        PriceSuggestion: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            listingId: string;
+            /** Format: uuid */
+            bookId: string;
+            /** @description Hash of book/condition inputs and the reference set. Clients drop a response whose listingId or fingerprint no longer matches the form. */
+            inputFingerprint: string;
+            status: components["schemas"]["PriceSuggestionStatus"];
+            evidenceLevel: components["schemas"]["PriceEvidenceLevel"];
+            /** @description Fixed rule ids that decided the evidence level or refusal. */
+            rules: string[];
+            range: {
+                low: number;
+                high: number;
+            } | null;
+            factors: components["schemas"]["PriceFactor"][];
+            sources: components["schemas"]["PriceSource"][];
+            missing: string[];
+            dataAsOf: string | null;
+            /** Format: date-time */
+            generatedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** @description Provider model id when a model drafted the range; null for rule-only answers. */
+            model: string | null;
+            cached: boolean;
         };
         SetVisibility: {
             expectedVersion: number;
@@ -3373,6 +3463,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MutationReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    requestPriceSuggestion: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per suggestion request; scoped by actor. Same key and body replays the stored outcome; a different listing or body with the same key is 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                listingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PriceSuggestionRequest"];
+            };
+        };
+        responses: {
+            /** @description Suggestion, rule-based refusal or missing-data answer. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceSuggestion"];
                 };
             };
             400: components["responses"]["ListingError"];
