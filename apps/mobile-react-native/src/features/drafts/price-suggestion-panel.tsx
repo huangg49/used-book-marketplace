@@ -77,7 +77,9 @@ export function PriceSuggestionPanel({
           dụng.
         </Notice>
       ) : null}
-      {state.status === "error" && !stale ? (
+      {(state.status === "error" || state.status === "ready") &&
+      state.message &&
+      !stale ? (
         <Notice tone="warning">{state.message}</Notice>
       ) : null}
       <Button

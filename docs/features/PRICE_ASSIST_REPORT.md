@@ -14,7 +14,7 @@
 | Provider Gemini (adapter + cấu hình) | Xong 05/10, unit test với fetch giả; key đã đặt trong `apps/api/.env` máy này, cờ vẫn tắt |
 | Chạy provider thật + chấm eval | **BLOCKED** — lệnh gửi key tới Google bị chặn bởi kiểm soát quyền của phiên agent; cần người dùng tự chạy hoặc cho phép |
 | Nguồn giá thật + khoảng kỳ vọng do người kiểm | **CHƯA CÓ** — 34 ca hiện là bản nháp chưa review |
-| Android native 100%/130%, mất mạng, video | **NOT RUN** — máy này không có AVD/thiết bị (`adb devices` rỗng) |
+| Android native 100%/130%, mất mạng, video | **Đã chạy 05/10** trên emulator (xem mục Android) với API thật + provider giả; video chưa đưa vào Git |
 | Duyệt SRS mở rộng, nguồn/model/ngân sách | **Chờ chủ dự án** (ADR §7) |
 
 Không bật trợ lý cho demo khi hai dòng BLOCKED/CHƯA CÓ ở trên còn mở. Không thay kết
@@ -40,12 +40,36 @@ quả thật bằng dữ liệu dựng sẵn.
 | API mongo `schema.mongo-spec.ts` | 16/16 PASS |
 | API E2E hồi quy `catalog-drafts`, `listing-review`, `listing-schema` | 103/103 PASS |
 | API lint, typecheck, build; `contract:check`; `contract:routes` (79 ops/17 controllers) | PASS |
-| RN `vitest run src/features/drafts` | 54/54 PASS (gồm 7 ca mới: input, stale, phản hồi muộn, applied, điểm giá, thông báo lỗi, body cố định khi retry) |
+| RN `vitest run src/features/drafts` (sau sửa giữ gợi ý khi lỗi) | 55/55 PASS |
+| RN `vitest run src/features/drafts` (bản đầu) | 54/54 PASS (gồm 7 ca mới: input, stale, phản hồi muộn, applied, điểm giá, thông báo lỗi, body cố định khi retry) |
 | RN typecheck; lint | PASS; lint 0 lỗi, 8 cảnh báo có sẵn ở wishlist/khác, không ở drafts |
 | `pnpm --filter @used-books/api eval:price --fake` | 34/34 status đúng luật — **chỉ kiểm harness**, không là evidence chất lượng |
 | `eval:price --live` | BLOCKED: lần đầu thiếu key; sau khi có key Gemini, agent không được phép gửi key ra ngoài nên chưa chạy |
 | API `vitest run src/modules/price-assist` sau khi thêm Gemini | 29/29 PASS (thêm 6 ca adapter: header key, schema, token suy nghĩ, HTTP lỗi, chặn an toàn, MAX_TOKENS, không phải JSON, timeout, chọn provider) |
 | Expo web + API fixture (DB `price_ui_*_test` đã xóa, provider giả có nhãn) | Đăng nhập → Sách tôi → bước 3 → gợi ý 35.000–50.000 đ, nguồn có ngày; chọn 43.000 đ hiện hộp xác nhận thay 120.000 đ; lưu nháp → `outcome.applied=true, withinRange=true`; đổi tình trạng → thông báo hết hiệu lực, giá đã nhập giữ nguyên |
+
+## Android (05/10/2026)
+
+Emulator `sdk_gphone16k_x86_64`, Android 17, 1080×2340. APK debug dev-client mới
+build bằng `pnpm build:android --emulator` (BUILD SUCCESSFUL 21m9s, 475 task) vì APK
+28/09 thiếu native module `ExpoNavigationBar`. Metro từ working tree nhánh này; API là
+fixture cô lập (DB `price_ui_*_test` đã xóa) với provider giả có nhãn “giả lập UI”.
+
+| Ca | Kết quả | Ảnh |
+| --- | --- | --- |
+| Gợi ý ở bước giá, chữ 100% | PASS — khoảng, căn cứ, chip giá, lý do có nguồn, nguồn có ngày | [06](../ui/price-assist-evidence/android-06-suggested.png) |
+| Bàn phím số trên ô giá | PASS — ô giá và thanh Lưu/Tiếp tục nằm trên bàn phím | [07](../ui/price-assist-evidence/android-07-keyboard.png) |
+| Chọn giá khi đã có giá khác | PASS — hộp “Thay giá đang nhập?”; Back hủy, giá giữ 120000; xác nhận → 43000 | [08](../ui/price-assist-evidence/android-08-confirm.png) |
+| Back khi có thay đổi chưa lưu | PASS — hộp “Rời bài đăng?” có sẵn vẫn chặn | [10](../ui/price-assist-evidence/android-10-leave-guard.png) |
+| Mất mạng khi xin gợi ý | PASS — cảnh báo, giá nhập tay giữ nguyên, vẫn lưu được | [11](../ui/price-assist-evidence/android-11-offline.png) |
+| Lưu khi mất mạng rồi thử lại | PASS — giữ yêu cầu; có mạng lại bấm thử lại: listing version 1→2, đúng 1 receipt `saveListingDraft`, giá 43000 | — |
+| Chữ 130% | PASS — tiêu đề, chip, lý do, nguồn xuống dòng, không cắt chữ; ký hiệu đồng đúng font | [15](../ui/price-assist-evidence/android-15-130-suggested.png), [16](../ui/price-assist-evidence/android-16-130-sources.png) |
+| Làm mới khi mất mạng sau khi đã có gợi ý | **Lỗi tìm thấy rồi sửa**: bản đầu xóa gợi ý cũ nên lần lưu sau không ghi quyết định. Sửa: giữ gợi ý cũ (và mức đã chọn) kèm cảnh báo. Kiểm lại trên emulator: PASS; lưu sau đó ghi `applied=true, chosenSalePrice=35000, withinRange=true`, version 2→3 | [17](../ui/price-assist-evidence/android-17-offline-keeps.png) |
+
+Ghi nhận chưa sửa: hai lần, cú chạm đầu tiên vào “Xem lại gợi ý giá” ngay sau khi chạm
+chip giá/ô giá không có tác dụng, chạm lần hai mới chạy (có thể do ô giá còn focus). Cần
+người kiểm trên máy thật xác nhận. Video ghi màn hình 170 s (3,7 MB) được gửi riêng cho
+người giao việc, không commit vào Git. Chưa kiểm TalkBack, máy ARM, máy thật.
 
 Chưa chạy: full `test:api:e2e`/`test:api:mongo` toàn bộ (chỉ suite liên quan), public
 browser runner, CI. Web emulation mobile trong browser pane không nhận gõ phím nên phần

@@ -53,9 +53,11 @@ import { FulfillmentFields } from "./fulfillment-fields";
 import { StepNav } from "./step-nav";
 import { conditionLabels } from "./book-condition";
 import {
-  acceptResponse,
   assistError,
   decisionFor,
+  failLoading,
+  finishLoading,
+  startLoading,
   priceSuggestion,
   suggestionInput,
   suggestionKey,
@@ -232,7 +234,7 @@ export function DraftEditor({
     const input = suggestionInput(form);
     if (!input.bookId) return;
     const token = ++assistToken.current;
-    setAssist({ status: "loading", key: assistKey, token });
+    setAssist((s) => startLoading(s, assistKey, token));
     try {
       const result = await client.request(
         `/listings/${base.id}/price-suggestions`,
@@ -240,17 +242,9 @@ export function DraftEditor({
         { method: "POST", body: JSON.stringify(input) },
         30000,
       );
-      setAssist((s) =>
-        acceptResponse(s, token, base.id, result) && s.status === "loading"
-          ? { status: "ready", key: s.key, suggestion: result, appliedPrice: null }
-          : s,
-      );
+      setAssist((s) => finishLoading(s, token, base.id, result));
     } catch (e) {
-      setAssist((s) =>
-        s.status === "loading" && s.token === token
-          ? { status: "error", key: s.key, message: assistError(e) }
-          : s,
-      );
+      setAssist((s) => failLoading(s, token, assistError(e)));
     }
   };
   const errors = stillFailing(

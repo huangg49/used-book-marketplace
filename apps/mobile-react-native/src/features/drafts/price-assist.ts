@@ -59,16 +59,53 @@ export function suggestionInput(form: Form) {
 export const suggestionKey = (listingId: string, form: Form) =>
   JSON.stringify({ listingId, ...suggestionInput(form) });
 
+type Ready = {
+  status: "ready";
+  key: string;
+  suggestion: PriceSuggestion;
+  appliedPrice: number | null;
+  // A later refresh failed; the suggestion shown is still the current one.
+  message?: string;
+};
 export type AssistState =
   | { status: "idle" }
-  | { status: "loading"; key: string; token: number }
+  | { status: "loading"; key: string; token: number; previous?: Ready }
   | { status: "error"; key: string; message: string }
-  | {
-      status: "ready";
-      key: string;
-      suggestion: PriceSuggestion;
-      appliedPrice: number | null;
-    };
+  | Ready;
+
+// A refresh for unchanged inputs keeps the delivered suggestion (and the
+// seller's pick) as a fallback if the refresh fails.
+export function startLoading(state: AssistState, key: string, token: number): AssistState {
+  const previous =
+    state.status === "ready" && state.key === key
+      ? state
+      : state.status === "loading" && state.key === key
+        ? state.previous
+        : undefined;
+  return { status: "loading", key, token, previous };
+}
+export function finishLoading(
+  state: AssistState,
+  token: number,
+  listingId: string,
+  suggestion: PriceSuggestion,
+): AssistState {
+  if (!acceptResponse(state, token, listingId, suggestion) || state.status !== "loading")
+    return state;
+  const same = state.previous?.suggestion.id === suggestion.id;
+  return {
+    status: "ready",
+    key: state.key,
+    suggestion,
+    appliedPrice: same ? state.previous!.appliedPrice : null,
+  };
+}
+export function failLoading(state: AssistState, token: number, message: string): AssistState {
+  if (state.status !== "loading" || state.token !== token) return state;
+  return state.previous
+    ? { ...state.previous, message }
+    : { status: "error", key: state.key, message };
+}
 
 // A late response for another listing or an older form state is dropped.
 export function acceptResponse(

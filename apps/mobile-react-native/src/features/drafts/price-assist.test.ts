@@ -7,7 +7,10 @@ import {
   acceptResponse,
   assistError,
   decisionFor,
+  failLoading,
+  finishLoading,
   isStale,
+  startLoading,
   pricePoints,
   suggestionInput,
   suggestionKey,
@@ -106,6 +109,34 @@ describe("price suggestion client rules", () => {
       ),
     ).toBeUndefined();
     expect(decisionFor(ready(50000), key, { ...form, mode: "Exchange" })).toBeUndefined();
+  });
+
+  it("keeps the delivered suggestion and the seller's pick when a refresh fails", () => {
+    const key = suggestionKey(listing, form);
+    const ready: AssistState = { status: "ready", key, suggestion: suggestion(), appliedPrice: 43000 };
+    const loading = startLoading(ready, key, 5);
+    const failed = failLoading(loading, 5, "offline");
+    expect(failed).toMatchObject({ status: "ready", appliedPrice: 43000, message: "offline" });
+    expect(decisionFor(failed, key, { ...form, salePrice: "43000" })).toEqual({
+      suggestionId: suggestion().id,
+      applied: true,
+    });
+    // A cached answer with the same id keeps the pick; a new one resets it.
+    expect(finishLoading(startLoading(ready, key, 6), 6, listing, suggestion())).toMatchObject({
+      appliedPrice: 43000,
+    });
+    expect(
+      finishLoading(startLoading(ready, key, 7), 7, listing, suggestion({ id: other })),
+    ).toMatchObject({ appliedPrice: null });
+    // Changed inputs never carry an old suggestion forward.
+    const changed = startLoading(ready, "other-key", 8);
+    expect(failLoading(changed, 8, "offline")).toEqual({
+      status: "error",
+      key: "other-key",
+      message: "offline",
+    });
+    // A stale token cannot overwrite a newer request.
+    expect(failLoading(startLoading(ready, key, 9), 4, "late")).toMatchObject({ status: "loading" });
   });
 
   it("offers low/middle/high picks rounded to 1000 without duplicates", () => {
