@@ -2,9 +2,10 @@
 
 ## Nguồn và việc đang làm
 
-- **05/10 — gói Bảo “đăng sách + AI gợi ý giá”: nhánh local
-  `codex/bao-listing-price-assist` từ main `efc6f09`, đã push và mở
-  [PR18](https://github.com/huangg49/used-book-marketplace/pull/18); chưa merge.** API
+- **05/10 — gói Bảo “đăng sách + AI gợi ý giá”: [PR18](https://github.com/huangg49/used-book-marketplace/pull/18)
+  ĐÃ MERGE main `3492ac3`. Tiếp theo trên nhánh `codex/bao-price-assist-gemini`:
+  bỏ câu lặp khi từ chối, Gemini mặc định `gemini-3.8-flash`, log WARN lỗi provider;
+  một lần gọi Gemini thật PASS trên emulator (nguồn giá giả lập).** API
   `POST /listings/{id}/price-suggestions` (contract 0.22.0, migration
   `0005-price-assist`), panel RN ở bước giá, ghi quyết định giá cùng transaction lưu.
   Thiết kế [ADR 0028](../adr/0028-listing-price-assistant.md) **Proposed**, cần chủ dự

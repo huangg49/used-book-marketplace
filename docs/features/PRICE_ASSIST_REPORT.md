@@ -11,8 +11,8 @@
 | API, contract 0.22.0, migration 0005, import nguồn giá | Xong, test thực chạy PASS |
 | UI RN/Expo web ở bước giá | Xong, kiểm trên Expo web với API thật + provider giả |
 | Ghi quyết định giá của người bán | Xong, cùng transaction với lưu nháp/revision |
-| Provider Gemini (adapter + cấu hình) | Xong 05/10, unit test với fetch giả; key đã đặt trong `apps/api/.env` máy này, cờ vẫn tắt |
-| Chạy provider thật + chấm eval | **BLOCKED** — lệnh gửi key tới Google bị chặn bởi kiểm soát quyền của phiên agent; cần người dùng tự chạy hoặc cho phép |
+| Provider Gemini (adapter + cấu hình) | Xong 05/10; mặc định `gemini-3.8-flash` (Google trả 404 cho `gemini-2.5-flash` với người dùng API mới); lỗi provider ghi log WARN kèm mã/thông điệp ngắn của Google |
+| Chạy provider thật + chấm eval | **Một lần gọi thật PASS** 05/10 (mục Kiểm tra); **eval 34 ca live CHƯA CHẠY** — cần nguồn giá thật đã review |
 | Nguồn giá thật + khoảng kỳ vọng do người kiểm | **CHƯA CÓ** — 34 ca hiện là bản nháp chưa review |
 | Android native 100%/130%, mất mạng, video | **Đã chạy 05/10** trên emulator (xem mục Android) với API thật + provider giả; video chưa đưa vào Git |
 | Duyệt SRS mở rộng, nguồn/model/ngân sách | **Chờ chủ dự án** (ADR §7) |
@@ -46,7 +46,8 @@ quả thật bằng dữ liệu dựng sẵn.
 | RN `vitest run src/features/drafts` (bản đầu) | 54/54 PASS (gồm 7 ca mới: input, stale, phản hồi muộn, applied, điểm giá, thông báo lỗi, body cố định khi retry) |
 | RN typecheck; lint | PASS; lint 0 lỗi, 8 cảnh báo có sẵn ở wishlist/khác, không ở drafts |
 | `pnpm --filter @used-books/api eval:price --fake` | 34/34 status đúng luật — **chỉ kiểm harness**, không là evidence chất lượng |
-| `eval:price --live` | BLOCKED: lần đầu thiếu key; sau khi có key Gemini, agent không được phép gửi key ra ngoài nên chưa chạy |
+| `eval:price --live` | CHƯA CHẠY: 34 ca còn là bản nháp chưa review, chấm trên đó không có ý nghĩa |
+| Gemini thật trên Android emulator (05/10, DB `price_ui_*_test`, nguồn giá **giả lập có nhãn**) | `gemini-2.5-flash` → 404 NOT_FOUND (đã đổi model); `gemini-3.8-flash` lần 1 → 503 UNAVAILABLE "high demand" (app hiện lỗi, giữ nhập tay); lần 2 → 25.000–38.000 đ, `Limited`, 2 lý do tiếng Việt trích nguồn; 753/588 token, ~4,9 s, ghi 5.540 micro-USD theo giá 2027; chọn 32.000 đ → `outcome.applied=true, withinRange=true`. Chỉ chứng minh kết nối, không chứng minh độ đúng giá |
 | API `vitest run src/modules/price-assist` sau khi thêm Gemini | 29/29 PASS (thêm 6 ca adapter: header key, schema, token suy nghĩ, HTTP lỗi, chặn an toàn, MAX_TOKENS, không phải JSON, timeout, chọn provider) |
 | Expo web + API fixture (DB `price_ui_*_test` đã xóa, provider giả có nhãn) | Đăng nhập → Sách tôi → bước 3 → gợi ý 35.000–50.000 đ, nguồn có ngày; chọn 43.000 đ hiện hộp xác nhận thay 120.000 đ; lưu nháp → `outcome.applied=true, withinRange=true`; đổi tình trạng → thông báo hết hiệu lực, giá đã nhập giữ nguyên |
 
@@ -92,7 +93,8 @@ Việc cần làm trước khi chấm:
 2. Đặt key vào `apps/api/.env` theo [ENV_HANDOFF](../handoff/ENV_HANDOFF.md)
    (`PRICE_ASSIST_PROVIDER=gemini` cho key Google), chạy
    `pnpm --filter @used-books/api eval:price --live --max-usd 1`. Chi phí Gemini dùng
-   bảng giá trong `price-model.ts` (cần đối chiếu trang giá Google) hoặc
+   bảng giá trong `price-model.ts` (`gemini-3.8-flash` tính theo giá niêm yết từ
+   01/01/2027 là 1,5/7,5 USD mỗi triệu token, cao hơn giá đến hết 2026) hoặc
    `PRICE_ASSIST_INPUT/OUTPUT_USD_PER_MTOK`. Kết quả lưu
    `apps/api/eval/price-assist/results/<thời điểm>.json` (commit bản live).
 3. Báo: số ca đúng status, coverage, số ca từ chối/thiếu dữ liệu, `midInExpected`,
