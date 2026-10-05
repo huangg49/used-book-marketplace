@@ -1,4 +1,4 @@
-import { View, FlatList, TouchableOpacity } from "react-native";
+import { View, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
@@ -19,6 +19,7 @@ import {
 } from "../../core/ui";
 import { wishlistOptions, useSaveWishlist } from "./wishlist-model";
 import type { WishlistItem } from "./contracts";
+import { PublicPhoto } from "../shelf/public-photo";
 
 export function WishlistScreen() {
   const { client } = useSession();
@@ -75,12 +76,10 @@ export function WishlistScreen() {
           icon="bookmark"
         />
       ) : (
-        <FlatList
-          data={entries}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ gap: space.lg, paddingVertical: space.lg }}
-          renderItem={({ item }) => (
+        <View style={{ gap: space.lg, paddingVertical: space.lg }}>
+          {entries.map((item) => (
             <WishlistItemCard
+              key={item.id}
               item={item}
               onToggleExchange={(val) => {
                 saveMutation.mutate({
@@ -99,21 +98,18 @@ export function WishlistScreen() {
                 });
               }}
             />
+          ))}
+          {query.isFetchingNextPage && (
+            <AppText color={colors.muted} style={{ textAlign: "center", marginVertical: space.md }}>
+              Đang tải thêm...
+            </AppText>
           )}
-          onEndReached={() => {
-            if (query.hasNextPage && !query.isFetchingNextPage) {
-              query.fetchNextPage();
-            }
-          }}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={
-            query.isFetchingNextPage ? (
-              <AppText color={colors.muted} style={{ textAlign: "center", marginVertical: space.md }}>
-                Đang tải thêm...
-              </AppText>
-            ) : null
-          }
-        />
+          {query.hasNextPage && !query.isFetchingNextPage && (
+            <TouchableOpacity onPress={() => query.fetchNextPage()} style={{ padding: space.md, alignItems: "center" }}>
+              <AppText color={colors.forest}>Tải thêm</AppText>
+            </TouchableOpacity>
+          )}
+        </View>
       )}
     </Screen>
   );
@@ -129,9 +125,8 @@ function WishlistItemCard({
   onToggleNotifications: (val: boolean) => void;
 }) {
   const isBook = item.subjectType === "CATALOG_BOOK";
-  const title = isBook ? item.book?.title : "Bài đăng người dùng";
-  const authors = isBook ? item.book?.authors?.join(", ") : "";
-  const coverUrl = isBook ? (item.book?.coverMediaIds?.[0] ? `/media/${item.book.coverMediaIds[0]}` : undefined) : undefined; // Simplified url for demo
+  const title = isBook ? item.book?.title : item.listing?.book?.title;
+  const authors = isBook ? item.book?.authors?.join(", ") : item.listing?.book?.authors?.join(", ");
 
   return (
     <View style={{ gap: space.md, padding: space.md, backgroundColor: colors.surface, borderRadius: radius.card }}>
@@ -139,14 +134,27 @@ function WishlistItemCard({
         style={{ flexDirection: "row", gap: space.md }}
         onPress={() => {
           if (isBook && item.book) {
-            router.push(`/showcase-book?id=${item.book.bookId}` as any);
+            router.push(`/showcase-book?id=${item.book.id}` as any);
           } else if (item.listing) {
-            router.push(`/book?id=${item.listing.listingId}` as any);
+            router.push(`/book?id=${item.listing.id}` as any);
           }
         }}
         accessibilityRole="button"
       >
-        <BookCover source={coverUrl ? { uri: coverUrl } : undefined} label={title || ""} missing={!coverUrl} style={{ width: 60, height: 80 }} />
+        {isBook || !item.listing?.photos?.[0] ? (
+          <BookCover label={title || ""} missing={true} style={{ width: 60, height: 80 }} />
+        ) : (
+          <View style={{ width: 60, height: 80 }}>
+            <PublicPhoto
+              listingId={item.listing.id}
+              revisionId={item.listing.revisionId}
+              mediaId={item.listing.photos[0].id}
+              label={title || ""}
+              active={true}
+              compact
+            />
+          </View>
+        )}
         <View style={{ flex: 1, gap: space.xs }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
             <Icon name={isBook ? "book" : "bookmark"} size={16} color={colors.rustText} />
