@@ -82,7 +82,7 @@ describe('Gemini adapter', () => {
       cfg({ PRICE_ASSIST_API_KEY: 'k', PRICE_ASSIST_PROVIDER: 'gemini', PRICE_ASSIST_ENABLED: 'true' }),
     );
     expect(gemini).toBeInstanceOf(GeminiPriceModel);
-    expect(gemini!.model).toBe('gemini-2.5-flash');
+    expect(gemini!.model).toBe('gemini-3.8-flash');
     expect(
       priceModelFromConfig(cfg({ PRICE_ASSIST_API_KEY: 'k', PRICE_ASSIST_ENABLED: 'true' })),
     ).toBeInstanceOf(AnthropicPriceModel);

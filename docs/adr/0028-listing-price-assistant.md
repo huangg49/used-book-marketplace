@@ -61,7 +61,8 @@ chứng được và dễ bị nhầm là giá đã xác minh.
    cung cấp): REST `generateContent`, key trong header `x-goog-api-key` (không ở URL),
    `responseSchema` JSON, `maxOutputTokens` 4000, temperature 0.2, timeout bằng
    AbortController, không retry; token suy nghĩ tính vào output; model mặc định
-   `gemini-2.5-flash`. Cả hai đều qua cùng `output-check.ts`. Không bật server-side fallback khi
+   `gemini-3.8-flash` (05/10: Google trả 404 cho `gemini-2.5-flash` với người dùng API mới).
+   Cả hai đều qua cùng `output-check.ts`. Không bật server-side fallback khi
    model từ chối: từ chối chỉ chuyển sang nhập tay. Fake provider chỉ dùng cho test lỗi/
    adapter và UI fixture, không là evidence chất lượng.
 

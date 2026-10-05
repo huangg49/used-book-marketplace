@@ -84,7 +84,7 @@ export function validatePriceAssist(env: Record<string, unknown>) {
     throw new Error('PRICE_ASSIST_PROVIDER must be anthropic or gemini.');
   const model = String(
     env.PRICE_ASSIST_MODEL ||
-      (provider === 'gemini' ? 'gemini-2.5-flash' : 'claude-opus-5-5'),
+      (provider === 'gemini' ? 'gemini-3.8-flash' : 'claude-opus-5-5'),
   );
   if (!/^[a-z0-9][a-z0-9.-]{2,79}$/.test(model))
     throw new Error('PRICE_ASSIST_MODEL is invalid.');

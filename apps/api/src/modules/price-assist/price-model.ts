@@ -136,6 +136,21 @@ type GeminiBody = {
   modelVersion?: string;
 };
 
+// Google's own error status and message (e.g. "INVALID_ARGUMENT: ..."), for
+// the server log. Never contains the key; cut short so it cannot carry much.
+async function geminiErrorDetail(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as {
+      error?: { status?: string; message?: string };
+    };
+    const status = body.error?.status ?? '';
+    const message = (body.error?.message ?? '').slice(0, 300);
+    return status || message ? ` ${status}: ${message}` : '';
+  } catch {
+    return '';
+  }
+}
+
 export interface GeminiOptions {
   apiKey: string;
   model: string;
@@ -179,7 +194,7 @@ export class GeminiPriceModel extends PriceModel {
       if (!response.ok)
         throw new PriceModelError(
           'ProviderError',
-          `Provider error ${response.status}`,
+          `Provider error ${response.status}${await geminiErrorDetail(response)}`,
         );
       body = (await response.json()) as GeminiBody;
     } catch (e) {
@@ -234,7 +249,7 @@ export function priceModelFromConfig(
   if (provider === 'gemini')
     return new GeminiPriceModel({
       apiKey,
-      model: get('PRICE_ASSIST_MODEL') || 'gemini-2.5-flash',
+      model: get('PRICE_ASSIST_MODEL') || 'gemini-3.8-flash',
       timeoutMs,
     });
   const effort = get('PRICE_ASSIST_EFFORT') || 'low';
@@ -249,10 +264,13 @@ export function priceModelFromConfig(
 // USD per million tokens (input, output); tokens x rate = micro-USD.
 // Gemini rows are paid-tier list prices as last known; confirm on Google's
 // pricing page or set PRICE_ASSIST_INPUT/OUTPUT_USD_PER_MTOK.
+// gemini-3.8-flash: the list price from 2027-01-01 (0.75/3.75 until then), so
+// the budget cap never under-counts. 2.5 models are closed to new API users.
 const KNOWN_RATES: Record<string, [number, number]> = {
   'claude-opus-5-5': [4, 20],
   'claude-sonnet-5-5': [2, 10],
   'claude-haiku-4-5': [1, 5],
+  'gemini-3.8-flash': [1.5, 7.5],
   'gemini-2.5-flash': [0.3, 2.5],
   'gemini-2.5-flash-lite': [0.1, 0.4],
   'gemini-2.5-pro': [1.25, 10],

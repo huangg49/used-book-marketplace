@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomUUID } from 'node:crypto';
 import { canonicalJson } from '../../common/canonical-json.js';
@@ -72,6 +72,7 @@ type Prepared =
 
 @Injectable()
 export class PriceAssistService {
+  private readonly logger = new Logger(PriceAssistService.name);
   constructor(
     private readonly mongo: MongoService,
     private readonly commands: MongoCommandService,
@@ -292,6 +293,15 @@ export class PriceAssistService {
         usage = e.usage ?? usage;
       } else if (e instanceof InvalidModelOutput) failure = 'InvalidOutput';
       else failure = 'ProviderError';
+      // Ids and the provider's short reason only; no prompt, note or key.
+      this.logger.warn(
+        JSON.stringify({
+          suggestionId: p.id,
+          model: modelId,
+          failure,
+          detail: e instanceof Error ? e.message.slice(0, 400) : 'unknown',
+        }),
+      );
     }
     const latencyMs = Date.now() - started;
     const cost = costMicroUsd(this.rate(), usage.inputTokens, usage.outputTokens);
