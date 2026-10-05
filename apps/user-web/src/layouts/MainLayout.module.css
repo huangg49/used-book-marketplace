@@ -1,0 +1,324 @@
+/* ===== Design tokens (các module con kế thừa qua var(--...)) ===== */
+.root {
+  --paper: #fdfbf7;
+  --ink: #2a2622;
+  --ink-muted: #5f4f40; /* đạt tương phản AA trên nền giấy */
+  --leather: #4a3728;
+  --gold: #b08d57; /* chỉ dùng cho trang trí, viền, icon lớn */
+  --gold-strong: #8a6a36; /* dùng cho chữ và nút (đạt AA) */
+  --gold-strong-hover: #6f5429;
+  --sepia: #e8dfd0;
+  --line: rgba(42, 38, 34, 0.15);
+  
+  /* Trạng thái dùng chung */
+  --status-green: #2d6a4f;
+  --status-green-bg: rgba(45, 106, 79, 0.08);
+  --status-red: #b91c1c;
+  --status-red-bg: rgba(185, 28, 28, 0.08);
+  --status-blue: #1d4ed8;
+  --status-blue-bg: rgba(37, 99, 235, 0.08);
+
+  --font-serif: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+.root a,
+.root button {
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.root :focus-visible {
+  outline: 3px solid var(--gold-strong);
+  outline-offset: 2px;
+}
+
+.main {
+  flex: 1;
+}
+
+.skipLink {
+  position: absolute;
+  left: 16px;
+  top: -60px;
+  z-index: 100;
+  padding: 10px 16px;
+  background: var(--leather);
+  color: #fff;
+  border-radius: 4px;
+}
+
+.skipLink:focus {
+  top: 12px;
+}
+
+/* ===== Header ===== */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(253, 251, 247, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.headerInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 14px 24px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.logoIcon {
+  color: var(--gold);
+}
+
+.logoText {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.desktopNav {
+  display: none;
+  align-items: center;
+  gap: 32px;
+}
+
+.navLink {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 6px 0;
+  border-bottom: 2px solid transparent;
+}
+
+.navLink:hover,
+.navLinkActive {
+  color: var(--gold-strong);
+  border-bottom-color: var(--gold);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.loginLink {
+  display: none;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.loginLink:hover {
+  color: var(--gold-strong);
+}
+
+.joinButton {
+  display: inline-block;
+  padding: 10px 18px;
+  background: var(--leather);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 2px;
+  text-decoration: none;
+}
+
+.joinButton:hover {
+  background: var(--ink);
+}
+
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.mobileNav {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 24px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.mobileNavLink {
+  padding: 12px 0;
+  color: var(--ink);
+  font-size: 16px;
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+}
+
+.mobileNavLink:hover,
+.mobileNavLinkActive {
+  color: var(--gold-strong);
+}
+
+@media (min-width: 768px) {
+  .desktopNav {
+    display: flex;
+  }
+  .loginLink {
+    display: inline;
+  }
+  .menuButton,
+  .mobileNav {
+    display: none;
+  }
+  .headerInner {
+    padding: 16px 48px;
+  }
+}
+
+/* ===== Footer ===== */
+.footer {
+  background: var(--ink);
+  color: var(--sepia);
+  border-top: 8px solid var(--gold);
+}
+
+.footerInner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 64px 24px 32px;
+}
+
+.footerGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+  margin-bottom: 48px;
+}
+
+.footerLogo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.footerLogoText {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.footerAbout {
+  max-width: 440px;
+  margin: 0 0 24px;
+  line-height: 1.7;
+  color: rgba(232, 223, 208, 0.8);
+}
+
+.footerSocial {
+  display: flex;
+  gap: 12px;
+}
+
+.socialIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+}
+
+.footerHeading {
+  margin: 0 0 20px;
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.footerList {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+}
+
+.footerLink {
+  color: rgba(232, 223, 208, 0.8);
+  text-decoration: none;
+}
+
+.footerLink:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.footerPlaceholder {
+  color: rgba(232, 223, 208, 0.8);
+}
+
+.footerBottom {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+  color: rgba(232, 223, 208, 0.7);
+}
+
+@media (min-width: 768px) {
+  .footerInner {
+    padding: 64px 48px 32px;
+  }
+  .footerGrid {
+    grid-template-columns: 2fr 1fr 1fr;
+  }
+  .footerBottom {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root a,
+  .root button {
+    transition: none;
+  }
+}

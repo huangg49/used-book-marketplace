@@ -1,0 +1,136 @@
+.card {
+    background: #fff;
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.cardTitle {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 16px;
+    color: var(--ink);
+}
+
+.instructions {
+    font-size: 14px;
+    color: rgba(74, 55, 40, 0.8);
+    margin: 0 0 24px;
+    line-height: 1.5;
+}
+
+.btnRow {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+@media (min-width: 640px) {
+    .btnRow {
+        flex-direction: row;
+    }
+}
+
+.btnPrimary {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    background: var(--gold-strong);
+    color: #fff;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 14px;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+.btnPrimary:hover:not(:disabled) {
+    background: #9a7b4c;
+}
+.btnPrimary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.btnSecondary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 24px;
+    background: transparent;
+    border: 2px solid var(--leather);
+    color: var(--leather);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 14px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btnSecondary:hover:not(:disabled) {
+    background: var(--leather);
+    color: #fff;
+}
+.btnSecondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btnWrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.todoMsg {
+    font-size: 11px;
+    color: var(--ink-muted);
+    font-style: italic;
+    text-align: center;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.select, .textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--ink);
+    background: #fff;
+}
+
+.select:focus, .textarea:focus {
+    outline: none;
+    border-color: var(--gold-strong);
+    box-shadow: 0 0 0 1px var(--gold-strong);
+}
+
+.textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.errorText {
+    color: var(--status-red, #b91c1c);
+    font-size: 12px;
+    margin: 0;
+}

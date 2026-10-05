@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 250" fill="none">
+  <!-- Shelf -->
+  <rect x="10" y="210" width="180" height="15" rx="2" fill="#b08d57" />
+  <rect x="15" y="225" width="170" height="10" rx="2" fill="#4a3728" />
+  
+  <!-- Book 1 (standing straight) -->
+  <rect x="30" y="80" width="35" height="130" rx="3" fill="#4a3728" />
+  <line x1="30" y1="100" x2="65" y2="100" stroke="#b08d57" stroke-width="4" />
+  <line x1="30" y1="110" x2="65" y2="110" stroke="#b08d57" stroke-width="4" />
+  
+  <!-- Book 2 (standing straight) -->
+  <rect x="68" y="60" width="40" height="150" rx="4" fill="#5d6b4a" />
+  <rect x="75" y="80" width="26" height="40" rx="2" fill="#e8dfd0" />
+  
+  <!-- Book 3 (leaning right) -->
+  <g transform="rotate(15 110 210)">
+    <rect x="112" y="90" width="30" height="120" rx="2" fill="#e8dfd0" />
+    <rect x="117" y="110" width="20" height="80" rx="2" fill="#4a3728" />
+  </g>
+  
+  <!-- Book 4 (leaning more) -->
+  <g transform="rotate(25 130 210)">
+    <rect x="132" y="100" width="35" height="110" rx="3" fill="#b08d57" />
+    <circle cx="149" cy="120" r="8" fill="#4a3728" />
+  </g>
+</svg>
