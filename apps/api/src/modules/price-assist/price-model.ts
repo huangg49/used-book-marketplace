@@ -136,6 +136,33 @@ type GeminiBody = {
   modelVersion?: string;
 };
 
+const RETRYABLE = new Set([429, 503]);
+const RETRY_DELAY_MS = 1_500;
+const RETRY_MIN_LEFT_MS = 8_000;
+const delay = (ms: number, signal: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    const t = setTimeout(resolve, ms);
+    signal.addEventListener('abort', () => {
+      clearTimeout(t);
+      reject(new Error('aborted'));
+    });
+  });
+
+// Google's own error status and message (e.g. "INVALID_ARGUMENT: ..."), for
+// the server log. Never contains the key; cut short so it cannot carry much.
+export async function geminiErrorDetail(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as {
+      error?: { status?: string; message?: string };
+    };
+    const status = body.error?.status ?? '';
+    const message = (body.error?.message ?? '').slice(0, 300);
+    return status || message ? ` ${status}: ${message}` : '';
+  } catch {
+    return '';
+  }
+}
+
 export interface GeminiOptions {
   apiKey: string;
   model: string;
@@ -153,33 +180,23 @@ export class GeminiPriceModel extends PriceModel {
   async draft(system: string, user: string): Promise<ModelDraft> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.options.timeoutMs);
+    const deadline = Date.now() + this.options.timeoutMs;
     let body: GeminiBody;
     try {
-      const response = await (this.options.fetcher ?? fetch)(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.options.model)}:generateContent`,
-        {
-          method: 'POST',
-          signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': this.options.apiKey,
-          },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: system }] },
-            contents: [{ role: 'user', parts: [{ text: user }] }],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              responseSchema: GEMINI_SCHEMA,
-              maxOutputTokens: 4000,
-              temperature: 0.2,
-            },
-          }),
-        },
-      );
+      let response = await this.post(system, user, controller.signal);
+      // One retry for a busy provider (503/429), only with time to spare; the
+      // timeout above still covers both attempts and a failed try is unbilled.
+      if (
+        RETRYABLE.has(response.status) &&
+        deadline - Date.now() >= RETRY_MIN_LEFT_MS
+      ) {
+        await delay(RETRY_DELAY_MS, controller.signal);
+        response = await this.post(system, user, controller.signal);
+      }
       if (!response.ok)
         throw new PriceModelError(
           'ProviderError',
-          `Provider error ${response.status}`,
+          `Provider error ${response.status}${await geminiErrorDetail(response)}`,
         );
       body = (await response.json()) as GeminiBody;
     } catch (e) {
@@ -190,6 +207,34 @@ export class GeminiPriceModel extends PriceModel {
     } finally {
       clearTimeout(timer);
     }
+    return this.read(body);
+  }
+
+  private post(system: string, user: string, signal: AbortSignal) {
+    return (this.options.fetcher ?? fetch)(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.options.model)}:generateContent`,
+      {
+        method: 'POST',
+        signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': this.options.apiKey,
+        },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: [{ role: 'user', parts: [{ text: user }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: GEMINI_SCHEMA,
+            maxOutputTokens: 4000,
+            temperature: 0.2,
+          },
+        }),
+      },
+    );
+  }
+
+  private read(body: GeminiBody): ModelDraft {
     const meta = body.usageMetadata ?? {};
     // Thinking tokens are billed as output.
     const usage = {
@@ -234,7 +279,7 @@ export function priceModelFromConfig(
   if (provider === 'gemini')
     return new GeminiPriceModel({
       apiKey,
-      model: get('PRICE_ASSIST_MODEL') || 'gemini-2.5-flash',
+      model: get('PRICE_ASSIST_MODEL') || 'gemini-3.8-flash',
       timeoutMs,
     });
   const effort = get('PRICE_ASSIST_EFFORT') || 'low';
@@ -249,10 +294,13 @@ export function priceModelFromConfig(
 // USD per million tokens (input, output); tokens x rate = micro-USD.
 // Gemini rows are paid-tier list prices as last known; confirm on Google's
 // pricing page or set PRICE_ASSIST_INPUT/OUTPUT_USD_PER_MTOK.
+// gemini-3.8-flash: the list price from 2027-01-01 (0.75/3.75 until then), so
+// the budget cap never under-counts. 2.5 models are closed to new API users.
 const KNOWN_RATES: Record<string, [number, number]> = {
   'claude-opus-5-5': [4, 20],
   'claude-sonnet-5-5': [2, 10],
   'claude-haiku-4-5': [1, 5],
+  'gemini-3.8-flash': [1.5, 7.5],
   'gemini-2.5-flash': [0.3, 2.5],
   'gemini-2.5-flash-lite': [0.1, 0.4],
   'gemini-2.5-pro': [1.25, 10],

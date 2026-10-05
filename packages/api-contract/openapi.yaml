@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.22.0
+  version: 0.23.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -1291,7 +1291,10 @@ paths:
       description: "ACTIVE owner; Draft/Rejected, or Approved and Available (approved edit). Advisory sale-price
         range from sourced price references only; never a verified or reference price and never
         written to the listing. Input is the unsaved form; server checks the catalog book (confirmed,
-        or the caller's own pending request). Evidence level and refusal are decided by fixed rules;
+        or the caller's own pending request). A listing with no Ready photo gets NeedsMoreData
+        (R-NEED-PHOTO) without a model call. A book without a recent online price starts one
+        background lookup; while it runs and no other source exists the answer is NeedsMoreData
+        (R-LOOKUP-PENDING). Evidence level and refusal are decided by fixed rules;
         the model only drafts range/factors, which are checked against the evidence and POL-16.
         Same listing + input + reference set returns the stored suggestion (cached=true) without a
         new model call. Idempotency-Key is one per ask: a retry with the same key and body returns
@@ -5396,6 +5399,13 @@ components:
           anyOf:
             - $ref: "#/components/schemas/ReviewDecision"
             - type: "null"
+        priceAssist:
+          anyOf:
+            - $ref: "#/components/schemas/PriceAssistReview"
+            - type: "null"
+          description: Present only on the Staff/Admin review detail. The price suggestion the seller
+            decided on with the revision under review (null when none), so the reviewer can tell a
+            suggested price from the seller's own.
         removalReason:
           anyOf:
             - type: string
@@ -5760,8 +5770,9 @@ components:
       additionalProperties: false
       description: Optional record of the seller's decision about a price suggestion for this listing.
         Stored with the suggestion in the same transaction as the save; the listing price stays the
-        seller's salePrice. Unknown, foreign or failed suggestion ids are rejected with 422 at
-        /priceAssist/suggestionId.
+        seller's salePrice. Rejected with 422 at /priceAssist/suggestionId when the suggestion is
+        unknown, foreign, not Suggested, expired, or was made for another book, condition or
+        condition answers than the content being saved.
       required:
         - suggestionId
         - applied
@@ -5772,6 +5783,86 @@ components:
         applied:
           type: boolean
           description: true when the seller used the suggested range; false when they priced manually.
+    PriceAssistReview:
+      type: object
+      additionalProperties: false
+      required:
+        - suggestionId
+        - range
+        - evidenceLevel
+        - model
+        - input
+        - applied
+        - chosenSalePrice
+        - withinRange
+        - decidedAt
+        - sources
+      properties:
+        suggestionId:
+          type: string
+          format: uuid
+        range:
+          type: object
+          additionalProperties: false
+          required:
+            - low
+            - high
+          properties:
+            low:
+              type: integer
+            high:
+              type: integer
+        evidenceLevel:
+          $ref: "#/components/schemas/PriceEvidenceLevel"
+        model:
+          anyOf:
+            - type: string
+              maxLength: 80
+            - type: "null"
+        input:
+          type: object
+          additionalProperties: false
+          description: What the seller declared when the suggestion was made.
+          required:
+            - condition
+            - readable
+            - hasMissingPages
+            - missingEssentialContent
+          properties:
+            condition:
+              anyOf:
+                - $ref: "#/components/schemas/BookCondition"
+                - type: "null"
+            readable:
+              type:
+                - boolean
+                - "null"
+            hasMissingPages:
+              type:
+                - boolean
+                - "null"
+            missingEssentialContent:
+              type:
+                - boolean
+                - "null"
+        applied:
+          type: boolean
+        chosenSalePrice:
+          anyOf:
+            - type: integer
+            - type: "null"
+        withinRange:
+          anyOf:
+            - type: boolean
+            - type: "null"
+        decidedAt:
+          type: string
+          format: date-time
+        sources:
+          type: array
+          maxItems: 40
+          items:
+            $ref: "#/components/schemas/PriceSource"
     PriceSuggestionRequest:
       type: object
       additionalProperties: false
@@ -5825,6 +5916,9 @@ components:
         - EditorialReference
         - InternalAsking
         - CompletedSale
+        - OnlineRetail
+      description: OnlineRetail is a new-book price read from an allowed shop's product page by the
+        online lookup (URL and date kept); CoverPrice and EditorialReference are staff-entered.
     PriceSource:
       type: object
       additionalProperties: false
@@ -5871,8 +5965,10 @@ components:
                 - Outlier
                 - Stale
                 - OtherEdition
+                - AskingPrice
             - type: "null"
-          description: Why this source was shown but not used; null when used.
+          description: Why this source was shown but not used; null when used. AskingPrice marks
+            other sellers' asking prices, which are shown for reference but never set the range.
     PriceFactor:
       type: object
       additionalProperties: false

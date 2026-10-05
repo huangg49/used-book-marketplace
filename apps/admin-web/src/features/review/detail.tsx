@@ -8,6 +8,7 @@ import { Button, ErrorNotice, Notice } from "../../core/ui";
 import { catalog, labels, listing, type Kind } from "./contracts";
 import { BookReference, ContentView, History, MetadataView } from "./readers";
 import { DecisionForm } from "./decision-form";
+import { PriceAssistView } from "./price-assist-view";
 
 export function Detail() {
   const { kind, id } = useParams();
@@ -133,6 +134,9 @@ function DetailContent({
                     listingId={id}
                     onPhotoReady={onPhotoReady}
                   />
+                  {value.priceAssist && (
+                    <PriceAssistView value={value.priceAssist} />
+                  )}
                   {value.latestDecision && (
                     <Notice
                       tone={

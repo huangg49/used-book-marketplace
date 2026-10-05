@@ -97,6 +97,44 @@ export const revision = z.object({
   ownershipDeclaredAt: time.nullable(),
   decision: reviewDecision.nullable(),
 }) satisfies z.ZodType<Schema["ListingRevision"]>;
+// The price suggestion the seller decided on with this revision (ADR 0028).
+export const priceAssistReview = z.object({
+  suggestionId: uuid,
+  range: z.object({ low: z.number().int(), high: z.number().int() }),
+  evidenceLevel: z.enum(["Strong", "Limited", "Insufficient"]),
+  model: z.string().nullable(),
+  input: z.object({
+    condition: z.enum(["LikeNew", "Good", "Fair", "Worn"]).nullable(),
+    readable: z.boolean().nullable(),
+    hasMissingPages: z.boolean().nullable(),
+    missingEssentialContent: z.boolean().nullable(),
+  }),
+  applied: z.boolean(),
+  chosenSalePrice: z.number().int().nullable(),
+  withinRange: z.boolean().nullable(),
+  decidedAt: time,
+  sources: z.array(
+    z.object({
+      ref: z.string(),
+      kind: z.enum([
+        "CoverPrice",
+        "EditorialReference",
+        "InternalAsking",
+        "CompletedSale",
+        "OnlineRetail",
+      ]),
+      label: z.string(),
+      amount: z.number().int(),
+      condition: z.enum(["LikeNew", "Good", "Fair", "Worn"]).nullable(),
+      observedAt: time,
+      url: z.string().nullable(),
+      excluded: z
+        .enum(["Outlier", "Stale", "OtherEdition", "AskingPrice"])
+        .nullable(),
+    }),
+  ),
+});
+export type PriceAssistReview = z.infer<typeof priceAssistReview>;
 export const listing = z.object({
   id: uuid,
   ownerId: uuid,
@@ -115,6 +153,7 @@ export const listing = z.object({
   }),
   currentRevision: revision,
   latestDecision: reviewDecision.nullable(),
+  priceAssist: priceAssistReview.nullable().optional(),
   removalReason: z.string().nullable(),
   catalogStatus: z.enum(["Pending", "Confirmed", "Rejected"]).nullable(),
   createdAt: time,

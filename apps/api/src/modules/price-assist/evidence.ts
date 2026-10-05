@@ -10,9 +10,23 @@ export const SALE_MIN = 10_000;
 export const SALE_MAX = 1_000_000;
 export const MAX_WIDTH_RATIO = 2.5;
 const MONTH_MS = 30 * 24 * 3_600_000;
-const STALE_MONTHS = { CoverPrice: 36, other: 24 } as const;
+// Online shop prices change often; the lookup refreshes them monthly.
+const STALE_MONTHS = { CoverPrice: 36, OnlineRetail: 3, other: 24 } as const;
 const FRESH_MONTHS = 12;
 const MAX_SOURCES = 20;
+
+// Policy: what a used copy sells for, as a share of the new-book price, by
+// condition. The range comes from this band, not from the model; the
+// owner adjusts these numbers (ADR 0028). Missing pages cap it at Fair.
+export const CONDITION_BANDS = {
+  LikeNew: [0.55, 0.75],
+  Good: [0.4, 0.6],
+  Fair: [0.25, 0.45],
+  Worn: [0.15, 0.3],
+} as const satisfies Record<Condition, readonly [number, number]>;
+// Sources that state a new-book price; the band is applied to their median.
+// Staff-entered cover prices win over prices found online when both exist.
+const NEW_PRICE_KINDS: ReadonlySet<SourceKind> = new Set(['CoverPrice', 'OnlineRetail']);
 
 export type Condition = Wire['BookCondition'];
 export type SourceKind = Wire['PriceSourceKind'];
@@ -83,11 +97,19 @@ const median = (values: number[]) => {
 const roundTo = (value: number, step = 1000) =>
   Math.round(value / step) * step;
 
+// What the rules need to know about the listing besides the request body.
+export interface ListingFacts {
+  hasPhoto: boolean;
+  // An online lookup for this book is running (ADR 0029).
+  lookupPending?: boolean;
+}
+
 export function evaluate(
   input: PriceInput,
   book: BookFacts,
   raw: RawSource[],
   now: Date,
+  listing: ListingFacts = { hasPhoto: true },
 ): Evidence {
   const rules: string[] = [];
   const missing: string[] = [];
@@ -104,7 +126,11 @@ export function evaluate(
       !!s.isbn && !!book.isbn && s.isbn.toUpperCase() !== book.isbn.toUpperCase();
     const stale =
       months >
-      (s.kind === 'CoverPrice' ? STALE_MONTHS.CoverPrice : STALE_MONTHS.other);
+      (s.kind === 'CoverPrice'
+        ? STALE_MONTHS.CoverPrice
+        : s.kind === 'OnlineRetail'
+          ? STALE_MONTHS.OnlineRetail
+          : STALE_MONTHS.other);
     return {
       ref: `s${i + 1}`,
       kind: s.kind,
@@ -113,7 +139,15 @@ export function evaluate(
       condition: s.condition,
       observedAt: s.observedAt,
       url: s.url,
-      excluded: otherEdition ? 'OtherEdition' : stale ? 'Stale' : null,
+      // Other sellers' asking prices are shown but never set the range: a
+      // few coordinated listings could otherwise move every suggestion.
+      excluded: otherEdition
+        ? 'OtherEdition'
+        : stale
+          ? 'Stale'
+          : s.kind === 'InternalAsking'
+            ? 'AskingPrice'
+            : null,
     };
   });
   // Outliers are judged only when enough sources remain to have a centre.
@@ -128,6 +162,8 @@ export function evaluate(
   if (sources.some((s) => s.excluded === 'Stale')) rules.push('R-EXCLUDED-STALE');
   if (sources.some((s) => s.excluded === 'Outlier'))
     rules.push('R-EXCLUDED-OUTLIER');
+  if (sources.some((s) => s.excluded === 'AskingPrice'))
+    rules.push('R-EXCLUDED-ASKING');
   const used = sources.filter((s) => !s.excluded);
   const dataAsOf = used.length ? used[0].observedAt : null;
   const answer = (
@@ -146,13 +182,19 @@ export function evaluate(
   });
 
   // Refusals first: the copy cannot be priced as a readable used book.
+  // `missing` holds only the reason; clients add the lead-in and the
+  // manual-pricing line, so neither is repeated here.
   if (input.readable === false) rules.push('R-REFUSE-UNREADABLE');
   if (input.missingEssentialContent === true) rules.push('R-REFUSE-ESSENTIAL');
   if (rules.some((r) => r.startsWith('R-REFUSE'))) {
     missing.push(
-      'Sách không còn đọc rõ hoặc thiếu nội dung trọng yếu; trợ lý không ước lượng giá cho trường hợp này.',
+      'Sách không còn đọc rõ hoặc thiếu nội dung trọng yếu.',
     );
     return answer('Refused', 'Insufficient');
+  }
+  if (!listing.hasPhoto) {
+    rules.push('R-NEED-PHOTO');
+    missing.push('Thêm ít nhất 1 ảnh của bản sách ở bước Ảnh và tình trạng.');
   }
   if (!input.condition) {
     rules.push('R-NEED-CONDITION');
@@ -168,23 +210,35 @@ export function evaluate(
     missing.push('Cho biết sách có thiếu nội dung trọng yếu hay không.');
   }
   if (!used.length) {
-    rules.push('R-NEED-SOURCES');
+    rules.push(listing.lookupPending ? 'R-LOOKUP-PENDING' : 'R-NEED-SOURCES');
     missing.push(
-      'Chưa có dữ liệu giá có nguồn cho đầu sách này. Hãy tự nhập giá bán.',
-    );
-  }
-  // One asking price is not evidence of value: it may be the outlier itself.
-  if (used.length === 1 && used[0].kind === 'InternalAsking') {
-    rules.push('R-NEED-MORE-THAN-ONE-ASKING');
-    missing.push(
-      'Chỉ có một giá rao để so sánh; chưa đủ căn cứ. Hãy tự nhập giá bán.',
+      listing.lookupPending
+        ? 'Đang tìm giá trên các nhà sách trực tuyến; thử lại sau ít phút.'
+        : sources.some((s) => s.excluded === 'AskingPrice')
+        ? 'Chỉ có giá rao của người bán khác; chưa có giá có nguồn để so sánh.'
+        : 'Chưa có dữ liệu giá có nguồn cho đầu sách này.',
     );
   }
   if (missing.length) return answer('NeedsMoreData', 'Insufficient');
 
-  const amounts = used.map((s) => s.amount);
-  const low = Math.max(SALE_MIN, roundTo(Math.min(...amounts) * 0.3));
-  const high = Math.min(SALE_MAX, roundTo(Math.max(...amounts) * 1.1));
+  // With a new-book price, the condition band sets the range. Without one,
+  // the bounds come from the used-copy prices (editorial, completed sales).
+  const newPrices = used.filter((s) => NEW_PRICE_KINDS.has(s.kind));
+  let low: number;
+  let high: number;
+  if (newPrices.length) {
+    const band = CONDITION_BANDS[bandCondition(input)];
+    const staff = newPrices.filter((s) => s.kind === 'CoverPrice');
+    const reference = median((staff.length ? staff : newPrices).map((s) => s.amount));
+    rules.push(`R-BAND-${bandCondition(input).toUpperCase()}`);
+    low = Math.max(SALE_MIN, roundTo(reference * band[0]));
+    high = Math.min(SALE_MAX, roundTo(reference * band[1]));
+  } else {
+    rules.push('R-BAND-USED-PRICES');
+    const amounts = used.map((s) => s.amount);
+    low = Math.max(SALE_MIN, roundTo(Math.min(...amounts) * 0.3));
+    high = Math.min(SALE_MAX, roundTo(Math.max(...amounts) * 1.1));
+  }
   if (high < SALE_MIN) {
     rules.push('R-REFUSE-BELOW-MIN');
     missing.push('Giá tham chiếu thấp hơn mức bán tối thiểu 10.000 đồng.');
@@ -199,19 +253,20 @@ export function evaluate(
   }
 
   const independent = new Set(used.map((s) => s.label.trim().toLowerCase()));
-  const nonAsking = used.filter((s) => s.kind !== 'InternalAsking');
   const fresh =
     now.getTime() - used[0].observedAt.getTime() <= FRESH_MONTHS * MONTH_MS;
   const editionUnverified = !book.isbn && !book.edition;
+  // Strong needs a new-book price to band from and a used-copy price from
+  // an independent source to place the range inside it.
   let strong = true;
-  if (used.length < 3 || independent.size < 2) {
+  if (used.length < 2 || independent.size < 2) {
     rules.push('R-LIMITED-FEW-SOURCES');
     strong = false;
   }
-  if (!nonAsking.length) {
-    rules.push('R-LIMITED-ASKING-ONLY');
+  if (!newPrices.length) {
+    rules.push('R-LIMITED-NO-NEW-PRICE');
     strong = false;
-  } else if (nonAsking.every((s) => s.kind === 'CoverPrice') && used.length === nonAsking.length) {
+  } else if (newPrices.length === used.length) {
     rules.push('R-LIMITED-COVER-ONLY');
     strong = false;
   }
@@ -234,11 +289,23 @@ export function evaluate(
   return answer('Proceed', strong ? 'Strong' : 'Limited', { low, high });
 }
 
-export function fingerprint(input: PriceInput, raw: RawSource[]) {
+// Missing pages cap the band at Fair whatever condition was chosen.
+function bandCondition(input: PriceInput): Condition {
+  const condition = input.condition!;
+  if (!input.hasMissingPages) return condition;
+  return condition === 'Worn' ? 'Worn' : 'Fair';
+}
+
+export function fingerprint(
+  input: PriceInput,
+  raw: RawSource[],
+  listing: ListingFacts = { hasPhoto: true },
+) {
   return createHash('sha256')
     .update(
       canonicalJson({
         input: { ...input, conditionNote: sanitizeNote(input.conditionNote) },
+        listing,
         sources: raw
           .map((s) => ({
             id: s.id,

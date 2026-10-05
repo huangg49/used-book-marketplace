@@ -16,6 +16,7 @@ import {
   OPENING_JOURNAL_ID,
 } from '../../src/database/mongo/migrations/0002-reference-data.js';
 import { priceAssistSpecs } from '../../src/database/mongo/migrations/0005-price-assist.js';
+import { onlinePriceSpecs } from '../../src/database/mongo/migrations/0007-online-price-lookup.js';
 import {
   currentCollections,
   migrations,
@@ -64,7 +65,8 @@ describe('migrations', () => {
       currentCollections().length -
         INFRASTRUCTURE_COLLECTIONS.length -
         // MongoDB-native collections with no PostgreSQL model (ADR 0028).
-        priceAssistSpecs.length +
+        priceAssistSpecs.length -
+        onlinePriceSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });

@@ -33,6 +33,7 @@ import {
   state,
   type Listing,
 } from './listing-projection.js';
+import { priceAssistForRevision } from '../price-assist/price-assist.service.js';
 import { attachPhotos } from './listing-drafts.service.js';
 
 @Injectable()
@@ -274,7 +275,10 @@ export class ListingReviewService {
       reviewer(actor);
       const l = await this.listing(tx, id);
       if (!l.currentRevision?.submittedAt) throw notFound();
-      return projection(l);
+      return {
+        ...projection(l),
+        priceAssist: await priceAssistForRevision(tx, l._id, l.currentRevisionId!),
+      };
     });
   }
   list(auth: Actor, query: Record<string, string | number>) {

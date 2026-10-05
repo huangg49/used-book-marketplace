@@ -1752,14 +1752,11 @@
         }
       ],
       "expected": {
-        "status": "Suggested",
-        "range": [
-          38000,
-          55000
-        ]
+        "status": "NeedsMoreData",
+        "range": null
       },
       "inject": null,
-      "note": "",
+      "note": "Chỉ có giá rao của người bán khác: hiển thị để tham khảo nhưng không dùng tính khoảng giá (R-EXCLUDED-ASKING), nên thiếu dữ liệu.",
       "review": {
         "reviewedBy": null,
         "reviewedAt": null

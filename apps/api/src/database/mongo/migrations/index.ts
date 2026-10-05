@@ -10,7 +10,15 @@ import {
   withTitleKey,
 } from './0003-catalog-title-key.js';
 import { wishlistMigration, wishlistSpec } from './0004-wishlist.js';
-import { priceAssistMigration, priceAssistSpecs } from './0005-price-assist.js';
+import { priceAssistMigration } from './0005-price-assist.js';
+import {
+  priceAssistSpecsV2,
+  priceSuggestionInputMigration,
+} from './0006-price-suggestion-input.js';
+import {
+  onlinePriceLookupMigration,
+  onlinePriceSpecs,
+} from './0007-online-price-lookup.js';
 
 export interface Migration {
   id: string;
@@ -81,6 +89,8 @@ export const migrations: Migration[] = [
   },
   wishlistMigration,
   priceAssistMigration,
+  priceSuggestionInputMigration,
+  onlinePriceLookupMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -93,5 +103,6 @@ export const currentCollections = (): CollectionSpec[] =>
   [
     ...baselineCollections.map(withTitleKey),
     wishlistSpec,
-    ...priceAssistSpecs,
+    ...priceAssistSpecsV2,
+    ...onlinePriceSpecs,
   ];

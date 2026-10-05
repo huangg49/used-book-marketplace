@@ -11,13 +11,16 @@ const source = z.object({
     "EditorialReference",
     "InternalAsking",
     "CompletedSale",
+    "OnlineRetail",
   ]),
   label: z.string(),
   amount: z.number().int(),
   condition: bookCondition.nullable(),
   observedAt: z.string(),
   url: z.string().nullable(),
-  excluded: z.enum(["Outlier", "Stale", "OtherEdition"]).nullable(),
+  excluded: z
+    .enum(["Outlier", "Stale", "OtherEdition", "AskingPrice"])
+    .nullable(),
 });
 export const priceSuggestion = z.object({
   id: uuid,
@@ -168,9 +171,11 @@ export const sourceKindLabel: Record<PriceSuggestion["sources"][number]["kind"],
   EditorialReference: "Giá tham khảo do nhóm biên tập kiểm",
   InternalAsking: "Giá đang rao (chưa phải giá đã bán)",
   CompletedSale: "Giá đã bán",
+  OnlineRetail: "Giá sách mới tại nhà sách trực tuyến",
 };
 export const excludedLabel = {
   Outlier: "không dùng: chênh lệch bất thường",
   Stale: "không dùng: dữ liệu cũ",
   OtherEdition: "không dùng: ấn bản khác",
+  AskingPrice: "chỉ để tham khảo, không dùng tính khoảng giá",
 } as const;
