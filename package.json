@@ -39,6 +39,7 @@
     "dev:media": "pnpm --filter @used-books/api worker:media",
     "dev:admin": "pnpm --filter @used-books/admin-web dev",
     "dev:rn": "node scripts/dev-rn.mjs",
+    "dev:user": "pnpm --filter @used-books/user-web dev",
     "test:dev": "node --test scripts/dev-*.test.mjs",
     "build": "pnpm -r --if-present run build",
     "lint": "pnpm -r --if-present run lint",

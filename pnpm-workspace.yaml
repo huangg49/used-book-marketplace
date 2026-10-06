@@ -1,6 +1,7 @@
 packages:
   - apps/api
   - apps/admin-web
+  - apps/user-web
   - apps/mobile-react-native
   - packages/*
 

@@ -1,7 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ROUTES } from '../lib/routes';
-import { useSession } from '../hooks/useSession';
 import {
     getExchangeDetail,
     getMessages,
@@ -22,7 +21,6 @@ import styles from './ExchangeDetailPage.module.css';
 
 export function ExchangeDetailPage() {
     const { id } = useParams<{ id: string }>();
-    const sessionState = useSession();
     const queryClient = useQueryClient();
 
     const {

@@ -2,6 +2,15 @@
 
 ## Nguồn và việc đang làm
 
+- **05/10 — gói User Web "Chi tiết giao dịch trao đổi": nhánh local `feature/exchange-detail-page` từ main, đã merge `origin/main` (commit `cf47ffe`).**
+  - Hoàn thiện UI trang `ExchangeDetailPage` (`/exchange/:id`) với bố cục lưới `7fr/5fr`, bao gồm `ProgressStepper`, `BookInfoCard`, `ActionCard`, `SafetyTipsCard`, và `ChatPanel` bám sát bản thiết kế.
+  - Sử dụng toàn bộ CSS Modules, biến CSS `--gold`, `--paper`, icon `lucide-react`, không dùng dependency mới.
+  - Đã xử lý toàn bộ lỗi Typescript (100% typecheck và lint PASS) và khớp mock schema của `ExchangeDetail` với giao diện. 
+  - Khắc phục lỗi điều hướng từ `ExchangeMinePage` (bằng cách sửa tạm API mock ánh xạ các giao dịch `ex_1..ex_4` về bản chi tiết chuẩn).
+  - Tạm thời tắt `sessionState.status === 'anonymous'` ở trang Detail để phục vụ UI test không cần đăng nhập. 
+  - Đã test thành công trên môi trường Vite dev (`npm run dev`) của `user-web`. Chưa có native test do đây là app React thuần túy.
+
+
 - **05/10 — gói Bảo “đăng sách + AI gợi ý giá”: nhánh local
   `codex/bao-listing-price-assist` từ main `efc6f09`, đã push và mở
   [PR18](https://github.com/huangg49/used-book-marketplace/pull/18); chưa merge.** API
