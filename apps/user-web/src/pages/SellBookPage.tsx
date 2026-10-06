@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { Sparkles, CheckCircle, Clock, BookOpen, Tag, ShieldCheck, Image as ImageIcon, Upload, Info, ChevronRight, ChevronLeft, ArrowRight, List } from 'lucide-react';
+import { submitListing } from '../services/listing-submission';
+import { Sparkles, CheckCircle, Clock, BookOpen, Tag, Image as ImageIcon, Upload, Info, ChevronRight, ChevronLeft, ArrowRight, List } from 'lucide-react';
 
 export function SellBookPage() {
   const [step, setStep] = useState(1);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string>();
+  const [submitting, setSubmitting] = useState(false);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   
   const [formData, setFormData] = useState({
     // Step 1
@@ -47,15 +51,38 @@ export function SellBookPage() {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      // Fake image upload
+      // Keep the local preview while retaining the original file for the API upload.
       const fakeUrl = URL.createObjectURL(e.target.files[0]);
       setFormData(prev => ({ ...prev, images: [...prev.images, fakeUrl] }));
+      setImageFiles((files) => [...files, e.target.files![0]]);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setStep(5); // Chờ duyệt
+  const handleSubmit = async () => {
+    if (submitting) return;
+    const missing = [
+      !formData.title.trim() && 'tên sách',
+      !formData.author.trim() && 'tác giả',
+      !formData.pages.trim() && 'mô tả ruột sách',
+      !formData.coverNote.trim() && 'mô tả bìa và gáy',
+      !formData.notes.trim() && 'ghi chú và đánh dấu',
+      !formData.accessories.trim() && 'phụ kiện',
+      formData.description.trim().length < 30 && 'mô tả chung (ít nhất 30 ký tự)',
+      imageFiles.length === 0 && 'ít nhất một ảnh',
+    ].filter(Boolean);
+    const sale = Number(formData.salePrice);
+    const exchange = Number(formData.exchangeValue);
+    if (formData.mode !== 'Exchange' && (!Number.isInteger(sale) || sale < 10_000 || sale > 1_000_000)) missing.push('giá bán từ 10.000đ đến 1.000.000đ');
+    if (formData.mode !== 'Sale' && (!Number.isInteger(exchange) || exchange < 10_000 || exchange > 1_000_000)) missing.push('giá trị đổi từ 10.000đ đến 1.000.000đ');
+    if (missing.length) { setSubmitError(`Cần bổ sung: ${missing.join(', ')}.`); return; }
+    setSubmitting(true);
+    setSubmitError(undefined);
+    try {
+      await submitListing({ title: formData.title, author: formData.author, category: 'Khác', condition: formData.condition as 'LikeNew' | 'Good' | 'Fair' | 'Worn', pages: formData.pages, coverNote: formData.coverNote, notes: formData.notes, accessories: formData.accessories, description: formData.description, mode: formData.mode as 'Sale' | 'Exchange' | 'Both', salePrice: formData.mode === 'Exchange' ? null : sale, exchangeValue: formData.mode === 'Sale' ? null : exchange, files: imageFiles });
+      setStep(5);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Chưa gửi được bài đăng.');
+    } finally { setSubmitting(false); }
   };
 
   const renderStepIndicator = () => {
@@ -297,6 +324,17 @@ export function SellBookPage() {
                   </div>
                 </div>
               )}
+              <div style={{ display: 'grid', gap: '0.5rem' }}>
+                <label htmlFor="accessories" style={{ fontWeight: 600 }}>Phụ kiện đi kèm</label>
+                <textarea id="accessories" rows={2} value={formData.accessories} onChange={(e) => setFormData({ ...formData, accessories: e.target.value })} placeholder="Ví dụ: Không có; hoặc ghi rõ bookmark, bọc sách..." style={{ width: '100%', boxSizing: 'border-box', padding: '0.8rem', borderRadius: '8px', border: '1px solid #ddd', fontFamily: 'inherit' }} />
+                <small>Nếu không có phụ kiện, nhập “Không có”.</small>
+              </div>
+              <div style={{ display: 'grid', gap: '0.5rem' }}>
+                <label htmlFor="description" style={{ fontWeight: 600 }}>Mô tả chung</label>
+                <textarea id="description" rows={4} value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Viết ít nhất 30 ký tự về cuốn sách, tình trạng và điều bạn muốn người nhận biết." style={{ width: '100%', boxSizing: 'border-box', padding: '0.8rem', borderRadius: '8px', border: '1px solid #ddd', fontFamily: 'inherit' }} />
+                <small>{formData.description.trim().length}/30 ký tự tối thiểu</small>
+              </div>
+              {submitError && <p role="alert" style={{ margin: 0, padding: '1rem', background: '#fff1f0', color: '#963F28', borderRadius: '8px' }}>{submitError}</p>}
 
               {(formData.mode === 'Exchange' || formData.mode === 'Both') && (
                 <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
@@ -365,7 +403,7 @@ export function SellBookPage() {
             >
               <ChevronLeft size={18} /> Quay lại
             </button>
-            
+
             {step < 4 ? (
               <button 
                 onClick={() => setStep(step + 1)}
@@ -378,64 +416,37 @@ export function SellBookPage() {
               </button>
             ) : (
               <button 
-                onClick={handleSubmit}
+                onClick={() => void handleSubmit()}
+                disabled={submitting}
                 style={{ 
                   padding: '0.75rem 2rem', borderRadius: '8px', background: 'var(--brand-green, #10b981)', color: 'white', 
                   border: 'none', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)', outline: 'none'
                 }}
               >
-                Gửi duyệt <ArrowRight size={18} />
+                {submitting ? 'Đang gửi…' : 'Gửi duyệt'} <ArrowRight size={18} />
               </button>
             )}
           </div>
         )}
 
-        {step === 5 && (
+        {step === 5 && !submitError && (
           <div style={{ textAlign: 'center', padding: '3rem 1rem', animation: 'fadeIn 0.5s ease' }}>
             <Clock size={80} color="#f59e0b" style={{ marginBottom: '1.5rem' }} />
             <h2 style={{ fontSize: '2rem', marginBottom: '1rem', color: 'var(--text-dark, #1f2937)' }}>Đang chờ duyệt</h2>
-            <p style={{ fontSize: '1.1rem', color: 'var(--text-light, #6b7280)', marginBottom: '2.5rem', maxWidth: '500px', margin: '0 auto 2.5rem', lineHeight: '1.6' }}>
-              Sách <strong>{formData.title}</strong> đã được gửi lên hệ thống. Admin đang tiến hành kiểm duyệt thông tin để đảm bảo chất lượng trên sàn.
+            <p style={{ fontSize: '1.1rem', color: 'var(--text-light, #6b7280)', maxWidth: '560px', margin: '0 auto', lineHeight: '1.6' }}>
+              Sách <strong>{formData.title}</strong> đã được gửi lên hệ thống. Admin sẽ kiểm tra và duyệt bài đăng trước khi sách hiển thị công khai.
             </p>
-            
-            <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px dashed #cbd5e1', display: 'inline-block' }}>
-              <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>(Giả lập Admin duyệt)</p>
-              <button 
-                onClick={() => setStep(6)}
-                style={{
-                  padding: '0.75rem 1.5rem', borderRadius: '8px', background: '#3b82f6', color: 'white', border: 'none',
-                  fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 auto', outline: 'none'
-                }}
-              >
-                <ShieldCheck size={18} /> Admin: Phê duyệt ngay
-              </button>
-            </div>
           </div>
         )}
 
-        {step === 6 && (
+        {submitError && step !== 4 && (
           <div style={{ textAlign: 'center', padding: '3rem 1rem', animation: 'fadeIn 0.5s ease' }}>
-            <div style={{ width: '80px', height: '80px', background: '#ecfdf5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-              <CheckCircle size={48} color="#10b981" />
-            </div>
-            <h2 style={{ fontSize: '2rem', marginBottom: '1rem', color: '#059669' }}>Đăng thành công!</h2>
-            <p style={{ fontSize: '1.1rem', color: 'var(--text-light, #6b7280)', marginBottom: '2.5rem', maxWidth: '500px', margin: '0 auto', lineHeight: '1.6' }}>
-              Tuyệt vời! Sách <strong>{formData.title}</strong> đã xuất hiện trên kệ và sẵn sàng đến tay người đọc mới.
+            <Clock size={80} color="#f59e0b" style={{ marginBottom: '1.5rem' }} />
+            <h2 style={{ fontSize: '2rem', marginBottom: '1rem', color: 'var(--text-dark, #1f2937)' }}>Chưa gửi được bài đăng</h2>
+            <p style={{ fontSize: '1.1rem', color: 'var(--text-light, #6b7280)', marginBottom: '2.5rem', maxWidth: '500px', margin: '0 auto 2.5rem', lineHeight: '1.6' }}>
+              {submitError}
             </p>
-            <button 
-                onClick={() => {
-                  setStep(1);
-                  setFormData({
-                    title: '', author: '', images: [], condition: 'Good', pages: '', coverNote: '', notes: '', accessories: '', description: '', readable: null, hasMissingPages: null, missingEssentialContent: null, mode: 'Sale', salePrice: '', exchangeValue: ''
-                  });
-                }}
-                style={{
-                  padding: '1rem 2rem', borderRadius: '8px', background: 'transparent', color: 'var(--brand-green, #10b981)', border: '2px solid var(--brand-green, #10b981)',
-                  fontWeight: 'bold', cursor: 'pointer', fontSize: '1.05rem', outline: 'none'
-                }}
-              >
-                Đăng thêm cuốn khác
-              </button>
+            
           </div>
         )}
       </div>
