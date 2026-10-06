@@ -61,7 +61,8 @@ chứng được và dễ bị nhầm là giá đã xác minh.
    cung cấp): REST `generateContent`, key trong header `x-goog-api-key` (không ở URL),
    `responseSchema` JSON, `maxOutputTokens` 4000, temperature 0.2, timeout bằng
    AbortController, không retry; token suy nghĩ tính vào output; model mặc định
-   `gemini-2.5-flash`. Cả hai đều qua cùng `output-check.ts`. Không bật server-side fallback khi
+   `gemini-3.8-flash` (05/10: Google trả 404 cho `gemini-2.5-flash` với người dùng API mới).
+   Cả hai đều qua cùng `output-check.ts`. Không bật server-side fallback khi
    model từ chối: từ chối chỉ chuyển sang nhập tay. Fake provider chỉ dùng cho test lỗi/
    adapter và UI fixture, không là evidence chất lượng.
 
@@ -84,7 +85,7 @@ NeedsMoreData/Refused, lời gọi model trả 503.
 
 Không sửa giá tham chiếu đã xác minh, trần giá trị đổi, cọc, số dư; không gợi ý giá trị
 đổi; không crawler, OCR tạo listing, model tự huấn luyện, nhận diện sách giả; không tự
-quyết giá giao dịch; không hiển thị cho reviewer (chờ chủ dự án quyết).
+quyết giá giao dịch.
 
 ## 6. Hệ quả
 
@@ -103,4 +104,24 @@ quyết giá giao dịch; không hiển thị cho reviewer (chờ chủ dự án
 3. Provider/model, người giữ key, ngân sách chạy thử.
 4. Ngưỡng đạt eval (đề xuất: 100% ca phải từ chối/thiếu dữ liệu đúng; ≥80% ca có khoảng
    kỳ vọng đã kiểm có điểm giữa nằm trong khoảng; 0 output sai lọt tới client; p95 < 8 s).
-5. Reviewer có được thấy người bán đã áp dụng gợi ý hay không.
+5. ~~Reviewer có được thấy người bán đã áp dụng gợi ý hay không.~~ Đã chọn hiển thị (§8).
+6. Tỷ lệ băng theo tình trạng ở §8 (đề xuất, chỉnh trong `CONDITION_BANDS`).
+
+## 8. Cập nhật v2 (06/10/2026)
+
+Nhánh `codex/bao-price-assist-gemini`, OpenAPI 0.23.0, migration `0006`, `0007`.
+
+- **Băng theo tình trạng quyết định khoảng giá** khi có giá sách mới (giá bìa nhân viên
+  nhập hoặc giá tra trực tuyến, [ADR 0029](0029-online-price-lookup.md)): Như mới 55–75%,
+  Tốt 40–60%, Khá 25–45%, Cũ 15–30% trung vị giá sách mới; thiếu trang thì tối đa băng Khá.
+  Làm tròn 1.000 đ, cắt theo POL-16. Không có giá sách mới thì giữ biên từ giá sách cũ
+  (`R-BAND-USED-PRICES`). Strong cần giá sách mới và một giá sách cũ từ nguồn độc lập.
+- **Cần ít nhất 1 ảnh Ready** trước khi gợi ý (`R-NEED-PHOTO`), không gọi model.
+- **Giá rao của người bán khác chỉ để tham khảo** (`excluded: AskingPrice`), không vào
+  khoảng giá và không tính là đủ dữ liệu.
+- **Lưu nháp kiểm lại gợi ý**: bản ghi giữ `input` (sách, tình trạng, ba câu trả lời);
+  lưu khác đầu vào hoặc gợi ý đã hết hạn → 422 `/priceAssist/suggestionId`.
+- **Staff thấy gợi ý** ở chi tiết duyệt (`PrivateListing.priceAssist`): khoảng, mức căn
+  cứ, tình trạng người bán khai lúc xin gợi ý, đã dùng hay không, giá chọn, nguồn.
+- Gemini thử lại một lần khi 503/429 nếu còn ≥ 8 s; lỗi provider ghi log WARN kèm lý do
+  ngắn của Google.

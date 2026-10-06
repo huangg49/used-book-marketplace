@@ -84,13 +84,26 @@ export function validatePriceAssist(env: Record<string, unknown>) {
     throw new Error('PRICE_ASSIST_PROVIDER must be anthropic or gemini.');
   const model = String(
     env.PRICE_ASSIST_MODEL ||
-      (provider === 'gemini' ? 'gemini-2.5-flash' : 'claude-opus-5-5'),
+      (provider === 'gemini' ? 'gemini-3.8-flash' : 'claude-opus-5-5'),
   );
   if (!/^[a-z0-9][a-z0-9.-]{2,79}$/.test(model))
     throw new Error('PRICE_ASSIST_MODEL is invalid.');
   const effort = String(env.PRICE_ASSIST_EFFORT || 'low');
   if (!['low', 'medium', 'high', 'none'].includes(effort))
     throw new Error('PRICE_ASSIST_EFFORT must be low, medium, high or none.');
+  // Online price lookup (ADR 0029): Gemini with Google Search, off by default.
+  const lookup = String(env.PRICE_LOOKUP_ENABLED ?? 'false');
+  if (!['true', 'false'].includes(lookup))
+    throw new Error('PRICE_LOOKUP_ENABLED must be true or false.');
+  const shops = String(env.PRICE_LOOKUP_SHOPS || DEFAULT_LOOKUP_SHOPS)
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  if (!shops.length || shops.some((s) => !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(s)))
+    throw new Error('PRICE_LOOKUP_SHOPS must be a comma-separated list of domains.');
+  const searchUsd = Number(env.PRICE_LOOKUP_SEARCH_USD ?? 0.035);
+  if (!Number.isFinite(searchUsd) || searchUsd < 0 || searchUsd > 1)
+    throw new Error('PRICE_LOOKUP_SEARCH_USD must be 0..1.');
   const budget = Number(env.PRICE_ASSIST_DAILY_BUDGET_USD ?? 2);
   if (!Number.isFinite(budget) || budget < 0 || budget > 100)
     throw new Error('PRICE_ASSIST_DAILY_BUDGET_USD must be 0..100.');
@@ -105,5 +118,14 @@ export function validatePriceAssist(env: Record<string, unknown>) {
     PRICE_ASSIST_DAILY_BUDGET_USD: budget,
     PRICE_ASSIST_INPUT_USD_PER_MTOK: rateOf(env.PRICE_ASSIST_INPUT_USD_PER_MTOK, 'PRICE_ASSIST_INPUT_USD_PER_MTOK'),
     PRICE_ASSIST_OUTPUT_USD_PER_MTOK: rateOf(env.PRICE_ASSIST_OUTPUT_USD_PER_MTOK, 'PRICE_ASSIST_OUTPUT_USD_PER_MTOK'),
+    PRICE_LOOKUP_ENABLED: lookup,
+    PRICE_LOOKUP_SHOPS: shops.join(','),
+    PRICE_LOOKUP_TTL_DAYS: intIn(env.PRICE_LOOKUP_TTL_DAYS, 30, 1, 180, 'PRICE_LOOKUP_TTL_DAYS'),
+    PRICE_LOOKUP_DAILY_LIMIT: intIn(env.PRICE_LOOKUP_DAILY_LIMIT, 50, 1, 1000, 'PRICE_LOOKUP_DAILY_LIMIT'),
+    PRICE_LOOKUP_SEARCH_USD: searchUsd,
   };
 }
+
+// Proposal for the owner to confirm: shops that sell new books in Vietnam.
+export const DEFAULT_LOOKUP_SHOPS =
+  'fahasa.com,tiki.vn,nhanam.vn,nxbtre.com.vn,nxbkimdong.com.vn';

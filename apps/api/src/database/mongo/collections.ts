@@ -76,6 +76,8 @@ export interface CollectionTypes {
   price_references: D.PriceReferenceDoc;
   price_suggestions: D.PriceSuggestionDoc;
   price_assist_usage: D.PriceAssistUsageDoc;
+  price_lookups: D.PriceLookupDoc;
+  online_price_offers: D.OnlinePriceOfferDoc;
 }
 export type CollectionName = keyof CollectionTypes;
 
@@ -207,6 +209,8 @@ const NAMES: CollectionName[] = [
   'price_references',
   'price_suggestions',
   'price_assist_usage',
+  'price_lookups',
+  'online_price_offers',
 ];
 export const COLLECTION_NAMES: readonly CollectionName[] = NAMES;
 

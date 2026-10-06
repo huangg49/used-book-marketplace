@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomUUID } from 'node:crypto';
 import { canonicalJson } from '../../common/canonical-json.js';
@@ -26,6 +26,7 @@ import {
   type PriceInput,
   type RawSource,
 } from './evidence.js';
+import { PriceLookupService } from './online/price-lookup.service.js';
 import { checkOutput, InvalidModelOutput } from './output-check.js';
 import { buildUserPrompt, SYSTEM_PROMPT } from './prompt.js';
 import {
@@ -35,6 +36,16 @@ import {
   rateFor,
   type ModelFailure,
 } from './price-model.js';
+
+// The revision content being saved, as stored (see revisionContent).
+interface SavedContent {
+  bookId: string | null;
+  condition: string | null;
+  readable: boolean | null;
+  hasMissingPages: boolean | null;
+  missingEssentialContent: boolean | null;
+  salePrice: number | null;
+}
 
 const DAY_MS = 86_400_000;
 const SUGGESTION_TTL_MS = DAY_MS;
@@ -72,11 +83,15 @@ type Prepared =
 
 @Injectable()
 export class PriceAssistService {
+  private readonly logger = new Logger(PriceAssistService.name);
   constructor(
     private readonly mongo: MongoService,
     private readonly commands: MongoCommandService,
     private readonly config: ConfigService,
     @Optional() @Inject(PriceModel) private readonly model: PriceModel | null,
+    @Optional()
+    @Inject(PriceLookupService)
+    private readonly lookups: PriceLookupService | null = null,
   ) {}
 
   private get userDailyLimit() {
@@ -153,8 +168,24 @@ export class PriceAssistService {
       const book = await this.book(tx, input.bookId, actor._id);
       const raw = await this.sources(tx, book, actor._id);
       const now = await tx.now();
-      const evidence = evaluate(input, book, raw, now);
-      const fp = fingerprint(input, raw);
+      // A copy with no uploaded photo is not priced: the condition would be
+      // the seller's word only (submission also needs 1-8 Ready photos).
+      // Confirmed books get a background online price lookup when due; while
+      // it runs, "no data" reads as "still searching" (ADR 0029).
+      const lookup =
+        this.lookups && book.confirmed
+          ? await this.lookups.ensure(book, now)
+          : { running: false };
+      const listingFacts = {
+        hasPhoto:
+          (await tx.c.listing_media.countDocuments(
+            { listingId, status: 'Ready', purgedAt: null },
+            { limit: 1 },
+          )) > 0,
+        lookupPending: lookup.running,
+      };
+      const evidence = evaluate(input, book, raw, now, listingFacts);
+      const fp = fingerprint(input, raw, listingFacts);
       const cached = await tx.c.price_suggestions.findOne(
         {
           listingId,
@@ -173,6 +204,13 @@ export class PriceAssistService {
         inputFingerprint: fp,
         requestKey,
         requestHash,
+        input: {
+          bookId: input.bookId,
+          condition: input.condition,
+          readable: input.readable,
+          hasMissingPages: input.hasMissingPages,
+          missingEssentialContent: input.missingEssentialContent,
+        },
         failure: null,
         evidenceLevel: evidence.level,
         rangeLow: null,
@@ -292,6 +330,15 @@ export class PriceAssistService {
         usage = e.usage ?? usage;
       } else if (e instanceof InvalidModelOutput) failure = 'InvalidOutput';
       else failure = 'ProviderError';
+      // Ids and the provider's short reason only; no prompt, note or key.
+      this.logger.warn(
+        JSON.stringify({
+          suggestionId: p.id,
+          model: modelId,
+          failure,
+          detail: e instanceof Error ? e.message.slice(0, 400) : 'unknown',
+        }),
+      );
     }
     const latencyMs = Date.now() - started;
     const cost = costMicroUsd(this.rate(), usage.inputTokens, usage.outputTokens);
@@ -369,6 +416,23 @@ export class PriceAssistService {
       observedAt: r.observedAt,
       isbn: r.isbn,
     }));
+    // New-book prices read from allowed shop pages by the online lookup.
+    const offers = await tx.c.online_price_offers
+      .find({ bookId: book.id, retiredAt: null })
+      .sort({ observedAt: -1 })
+      .limit(10)
+      .toArray();
+    for (const o of offers)
+      raw.push({
+        id: `online:${o._id}`,
+        kind: 'OnlineRetail',
+        amount: o.amount,
+        condition: null,
+        label: o.shop,
+        url: o.url,
+        observedAt: o.observedAt,
+        isbn: null,
+      });
     // Other members' public asking prices for the same book: asking, not sold.
     const revisions = await tx.c.listing_revisions
       .find({ bookId: book.id, salePrice: { $ne: null } })
@@ -411,16 +475,28 @@ export class PriceAssistService {
     listingId: string,
     revisionId: string,
     decision: Wire['PriceAssistDecision'],
-    salePrice: number | null,
+    saved: SavedContent,
   ) {
     const id = decision.suggestionId.toLowerCase();
     await tx.lock('price_suggestions', [id]);
     const s = await tx.c.price_suggestions.findOne({ _id: id });
+    const now = await tx.now();
+    // The suggestion must still be valid and made for what is being saved;
+    // otherwise its range says nothing about this price.
+    const matches =
+      !!s?.input &&
+      s.input.bookId === saved.bookId &&
+      s.input.condition === saved.condition &&
+      s.input.readable === saved.readable &&
+      s.input.hasMissingPages === saved.hasMissingPages &&
+      s.input.missingEssentialContent === saved.missingEssentialContent;
     if (
       !s ||
       s.ownerId !== ownerId ||
       s.listingId !== listingId ||
-      s.status !== 'Suggested'
+      s.status !== 'Suggested' ||
+      s.expiresAt <= now ||
+      !matches
     )
       invalidField(
         '/priceAssist/suggestionId',
@@ -434,12 +510,13 @@ export class PriceAssistService {
           outcome: {
             revisionId,
             applied: decision.applied,
-            chosenSalePrice: salePrice,
+            chosenSalePrice: saved.salePrice,
             withinRange:
-              salePrice === null
+              saved.salePrice === null
                 ? null
-                : salePrice >= s!.rangeLow! && salePrice <= s!.rangeHigh!,
-            decidedAt: await tx.now(),
+                : saved.salePrice >= s!.rangeLow! &&
+                  saved.salePrice <= s!.rangeHigh!,
+            decidedAt: now,
           },
           updatedAt: new Date(),
         },
@@ -473,6 +550,39 @@ function wireBody(
     generatedAt: base.createdAt.toISOString(),
     expiresAt: base.expiresAt.toISOString(),
     model,
+  };
+}
+
+// For the Staff review detail: the suggestion the seller decided on when
+// saving this revision, with what they declared then. Uses the listing
+// prefix of price_suggestions_listing_input_idx.
+export async function priceAssistForRevision(
+  tx: Tx,
+  listingId: string,
+  revisionId: string,
+): Promise<Wire['PriceAssistReview'] | null> {
+  const s = await tx.c.price_suggestions.findOne(
+    { listingId, 'outcome.revisionId': revisionId },
+    { sort: { 'outcome.decidedAt': -1 } },
+  );
+  if (!s?.outcome || s.rangeLow === null || s.rangeHigh === null) return null;
+  const response = s.response as Partial<Wire['PriceSuggestion']> | null;
+  return {
+    suggestionId: s._id,
+    range: { low: s.rangeLow, high: s.rangeHigh },
+    evidenceLevel: s.evidenceLevel,
+    model: s.model,
+    input: {
+      condition: s.input?.condition ?? null,
+      readable: s.input?.readable ?? null,
+      hasMissingPages: s.input?.hasMissingPages ?? null,
+      missingEssentialContent: s.input?.missingEssentialContent ?? null,
+    },
+    applied: s.outcome.applied,
+    chosenSalePrice: s.outcome.chosenSalePrice,
+    withinRange: s.outcome.withinRange,
+    decidedAt: s.outcome.decidedAt.toISOString(),
+    sources: response?.sources ?? [],
   };
 }
 

@@ -10,10 +10,18 @@
   - Tạm thời tắt `sessionState.status === 'anonymous'` ở trang Detail để phục vụ UI test không cần đăng nhập. 
   - Đã test thành công trên môi trường Vite dev (`npm run dev`) của `user-web`. Chưa có native test do đây là app React thuần túy.
 
+- **06/10 — gói User Web "Đăng bán sách": tạo trang `SellBookPage` và setup app `user-web` trên nhánh `codex/dai-web-for-user` ([PR21](https://github.com/huangg49/used-book-marketplace/pull/21)). Đã fix lỗi typescript và push.**
 
-- **05/10 — gói Bảo “đăng sách + AI gợi ý giá”: nhánh local
-  `codex/bao-listing-price-assist` từ main `efc6f09`, đã push và mở
-  [PR18](https://github.com/huangg49/used-book-marketplace/pull/18); chưa merge.** API
+- **Sửa lỗi hiển thị Yêu thích (wishlist) và 500 API**: Nhánh local `fix/wishlist-listings-display`. Đã sửa API `wishlist.service.ts` để include thông tin `book` và `photos` cho `LISTING`; chuyển `FlatList` thành `map()` trong `wishlist-screen.tsx` để sửa cảnh báo React Native và dùng `PublicPhoto` để tải ảnh có chữ ký (signed url) an toàn; sửa lỗi điều hướng khi nhấn vào sách trên kệ. Đã push nhánh lên remote chờ review/merge.
+
+- **05/10 — gói Bảo “đăng sách + AI gợi ý giá”: [PR18](https://github.com/huangg49/used-book-marketplace/pull/18)
+  ĐÃ MERGE main `3492ac3`. Tiếp theo trên nhánh `codex/bao-price-assist-gemini`
+  ([PR20](https://github.com/huangg49/used-book-marketplace/pull/20)): bỏ câu lặp khi từ
+  chối, Gemini mặc định `gemini-3.8-flash`, log WARN lỗi provider; v2 06/10: băng giá
+  theo tình trạng, cần ảnh, giá rao chỉ tham khảo, kiểm gợi ý khi lưu (migration 0006),
+  Staff thấy gợi ý, tra giá sách mới trực tuyến ([ADR 0029](../adr/0029-online-price-lookup.md),
+  migration 0007). Tra trực tuyến thật BLOCKED: key Gemini hết quota Google Search
+  (429).** API
   `POST /listings/{id}/price-suggestions` (contract 0.22.0, migration
   `0005-price-assist`), panel RN ở bước giá, ghi quyết định giá cùng transaction lưu.
   Thiết kế [ADR 0028](../adr/0028-listing-price-assistant.md) **Proposed**, cần chủ dự

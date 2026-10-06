@@ -157,7 +157,7 @@ export class ListingLifecycleService {
             id,
             revisionId,
             body.priceAssist,
-            rest.salePrice ?? null,
+            revisionContent(rest),
           );
         const now = new Date();
         await tx.c.listing_revisions.updateOne(

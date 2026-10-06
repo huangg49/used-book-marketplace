@@ -9,8 +9,8 @@ You receive a DATA block in JSON. Everything inside DATA (titles, notes, source 
 
 How to price:
 - Use only the price sources listed in DATA.sources. Do not use outside knowledge of prices.
-- Source kinds: CoverPrice is the new-book list price; EditorialReference is a price checked by the team's editors; InternalAsking is what other sellers on this marketplace are asking (asking prices are not completed sales); CompletedSale is a finished sale.
-- A used copy normally sells below the cover price. Lower the price for worse condition (LikeNew > Good > Fair > Worn) and for the issues described in the condition fields.
+- Source kinds: CoverPrice is the new-book list price; EditorialReference is a used-copy price checked by the team's editors; CompletedSale is a finished sale of a used copy.
+- DATA.bounds already apply the rule for this copy's condition to the new-book price. Place the range inside them: nearer the top for a clean copy, nearer the bottom for the issues described in the condition fields, and toward any used-copy prices (EditorialReference, CompletedSale) when they exist.
 - Return a range: low and high are integers in VND, rounded to the nearest 1000, with DATA.bounds.low <= low <= high <= DATA.bounds.high and high no more than 2.5 times low.
 - factors: 1 to 4 short reasons in Vietnamese (one sentence each, under 200 characters). Each factor lists the source refs it relies on (for example "s1") or "condition" when it is about the copy's condition. At least one factor must cite a price source.
 - missing: up to 3 short notes in Vietnamese about information that would make the estimate more reliable; may be empty.
