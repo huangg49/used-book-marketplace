@@ -2,6 +2,16 @@
 
 ## Nguồn và việc đang làm
 
+- **05/10 — gói User Web "Chi tiết giao dịch trao đổi": nhánh local `feature/exchange-detail-page` từ main, đã merge `origin/main` (commit `cf47ffe`).**
+  - Hoàn thiện UI trang `ExchangeDetailPage` (`/exchange/:id`) với bố cục lưới `7fr/5fr`, bao gồm `ProgressStepper`, `BookInfoCard`, `ActionCard`, `SafetyTipsCard`, và `ChatPanel` bám sát bản thiết kế.
+  - Sử dụng toàn bộ CSS Modules, biến CSS `--gold`, `--paper`, icon `lucide-react`, không dùng dependency mới.
+  - Đã xử lý toàn bộ lỗi Typescript (100% typecheck và lint PASS) và khớp mock schema của `ExchangeDetail` với giao diện. 
+  - Khắc phục lỗi điều hướng từ `ExchangeMinePage` (bằng cách sửa tạm API mock ánh xạ các giao dịch `ex_1..ex_4` về bản chi tiết chuẩn).
+  - Tạm thời tắt `sessionState.status === 'anonymous'` ở trang Detail để phục vụ UI test không cần đăng nhập. 
+  - Đã test thành công trên môi trường Vite dev (`npm run dev`) của `user-web`. Chưa có native test do đây là app React thuần túy.
+
+- **06/10 — gói User Web "Đăng bán sách": tạo trang `SellBookPage` và setup app `user-web` trên nhánh `codex/dai-web-for-user` ([PR21](https://github.com/huangg49/used-book-marketplace/pull/21)). Đã fix lỗi typescript và push.**
+
 - **Sửa lỗi hiển thị Yêu thích (wishlist) và 500 API**: Nhánh local `fix/wishlist-listings-display`. Đã sửa API `wishlist.service.ts` để include thông tin `book` và `photos` cho `LISTING`; chuyển `FlatList` thành `map()` trong `wishlist-screen.tsx` để sửa cảnh báo React Native và dùng `PublicPhoto` để tải ảnh có chữ ký (signed url) an toàn; sửa lỗi điều hướng khi nhấn vào sách trên kệ. Đã push nhánh lên remote chờ review/merge.
 
 - **05/10 — gói Bảo “đăng sách + AI gợi ý giá”: [PR18](https://github.com/huangg49/used-book-marketplace/pull/18)

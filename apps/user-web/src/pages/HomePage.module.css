@@ -1,0 +1,571 @@
+/* Biến màu/font được định nghĩa ở MainLayout.module.css (.root) */
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.sectionTitle {
+  margin: 0 0 12px;
+  font-family: var(--font-serif);
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.sectionLead {
+  max-width: 520px;
+  margin: 0;
+  color: var(--ink-muted);
+  line-height: 1.6;
+}
+
+.centerHeader {
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+.rule {
+  width: 96px;
+  height: 4px;
+  margin: 16px auto 0;
+  background: var(--gold);
+}
+
+/* ===== Hero ===== */
+.hero {
+  position: relative;
+  padding: 72px 24px 80px;
+  overflow: hidden;
+}
+
+.heroGlow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 0;
+  width: 800px;
+  max-width: 100%;
+  height: 400px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(232, 223, 208, 0.7), transparent 70%);
+  pointer-events: none;
+}
+
+.heroInner {
+  position: relative;
+  z-index: 1;
+  max-width: 1000px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.heroBadge {
+  display: inline-block;
+  margin: 0 0 24px;
+  padding: 6px 16px;
+  border: 1px solid var(--gold-strong);
+  border-radius: 999px;
+  color: var(--gold-strong);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.heroTitle {
+  margin: 0 0 24px;
+  font-family: var(--font-serif);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.12;
+  color: var(--ink);
+}
+
+.heroTitleLight {
+  font-weight: 300;
+}
+
+.heroLead {
+  max-width: 640px;
+  margin: 0 auto 36px;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--ink-muted);
+}
+
+.searchForm {
+  display: flex;
+  align-items: center;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 8px;
+  background: #fff;
+  border: 2px solid var(--leather);
+  border-radius: 8px;
+  box-shadow: 0 20px 40px -12px rgba(74, 55, 40, 0.3);
+}
+
+.searchForm:focus-within {
+  outline: 3px solid var(--gold-strong);
+  outline-offset: 3px;
+}
+
+.searchIcon {
+  flex-shrink: 0;
+  margin-left: 10px;
+  color: var(--ink-muted);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  background: transparent;
+  border: none;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.searchInput:focus,
+.searchInput:focus-visible {
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: #7a6a5a;
+}
+
+.searchButton {
+  flex-shrink: 0;
+  padding: 12px 20px;
+  background: var(--gold-strong);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.searchButton:hover {
+  background: var(--gold-strong-hover);
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.primaryAction,
+.secondaryAction {
+  display: inline-block;
+  padding: 12px 24px;
+  border-radius: 2px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.primaryAction {
+  background: var(--leather);
+  color: #fff;
+  border: 1px solid var(--leather);
+}
+
+.primaryAction:hover {
+  background: var(--ink);
+}
+
+.secondaryAction {
+  background: transparent;
+  color: var(--leather);
+  border: 1px solid var(--leather);
+}
+
+.secondaryAction:hover {
+  background: var(--sepia);
+}
+
+.trending {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+  margin-top: 28px;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+.trendingLink {
+  color: var(--leather);
+  text-decoration: underline;
+}
+
+.trendingLink:hover {
+  color: var(--gold-strong);
+}
+
+/* ===== Sách nổi bật ===== */
+.featured {
+  padding: 72px 0;
+  background: rgba(232, 223, 208, 0.3);
+}
+
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.viewAll {
+  color: var(--leather);
+  font-weight: 600;
+  font-size: 15px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.viewAll:hover {
+  text-decoration: underline;
+}
+
+.bookGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+
+
+/* ===== Cách hoạt động ===== */
+.how {
+  padding: 80px 0;
+  background: #fff;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  text-align: center;
+}
+
+.stepNumber {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  background: var(--sepia);
+  border-radius: 50%;
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.stepTitle {
+  margin: 0 0 8px;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.stepText {
+  max-width: 340px;
+  margin: 0 auto;
+  line-height: 1.65;
+  color: var(--ink-muted);
+}
+
+/* ===== Người bán ===== */
+.sellers {
+  padding: 80px 0;
+  overflow: hidden;
+}
+
+.sellersInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+}
+
+.sellersVisual {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.visualBlock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 3 / 4;
+  background: linear-gradient(160deg, #6b4f3a, #4a3728);
+  color: rgba(255, 255, 255, 0.85);
+  border: 4px solid #fff;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.visualImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.visualBlockOffset {
+  margin-top: 32px;
+  background: linear-gradient(160deg, #5d6b4a, #3f4a30);
+}
+
+.sellersContent {
+  width: 100%;
+  max-width: 560px;
+}
+
+.sellersEyebrow {
+  margin: 0 0 12px;
+  color: var(--gold-strong);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.sellersTitle {
+  margin: 0 0 20px;
+  font-family: var(--font-serif);
+  font-size: 38px;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1.15;
+}
+
+.sellersLead {
+  margin: 0 0 28px;
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--ink-muted);
+}
+
+.sellerList {
+  display: grid;
+  gap: 16px;
+  margin: 0 0 32px;
+  padding: 0;
+  list-style: none;
+}
+
+.seller {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(42, 38, 34, 0.06);
+}
+
+.sellerMuted {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.avatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: var(--sepia);
+  border-radius: 50%;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--leather);
+}
+
+.sellerBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.sellerBio {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+.sellerAward {
+  flex-shrink: 0;
+  color: var(--gold);
+}
+
+.sellerCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  background: var(--leather);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 2px;
+  text-decoration: none;
+}
+
+.sellerCta:hover {
+  background: var(--ink);
+}
+
+/* ===== Cảm nhận ===== */
+.testimonials {
+  padding: 80px 0;
+  background: var(--leather);
+  color: #fff;
+}
+
+.testimonialsTitle {
+  margin: 0 0 12px;
+  font-size: 36px;
+  font-weight: 700;
+}
+
+.testimonialsLead {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.testimonialGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.testimonial {
+  position: relative;
+  margin: 0;
+  padding: 32px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 2px;
+}
+
+.quoteIcon {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  color: rgba(176, 141, 87, 0.55);
+}
+
+.quote {
+  margin: 12px 0 0;
+  font-size: 19px;
+  font-style: italic;
+  line-height: 1.65;
+}
+
+.quoteAuthor {
+  margin-top: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e3c590;
+}
+
+/* ===== Responsive ===== */
+@media (min-width: 640px) {
+  .bookGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .sectionHeader {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+  .heroTitle {
+    font-size: 52px;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 0 48px;
+  }
+  .steps,
+  .testimonialGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero {
+    padding: 96px 48px 104px;
+  }
+  .heroTitle {
+    font-size: 56px;
+  }
+  .bookGrid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+  }
+  .sellersInner {
+    flex-direction: row;
+    gap: 64px;
+  }
+  .sellersVisual {
+    flex: 1;
+  }
+  .sellersContent {
+    flex: 1;
+  }
+  .sellersTitle {
+    font-size: 46px;
+  }
+}
+
+@media (max-width: 480px) {
+  .searchButton {
+    padding: 12px 14px;
+  }
+  .searchIcon {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+  .card:hover,
+  .card:focus-within {
+    transform: none;
+  }
+}

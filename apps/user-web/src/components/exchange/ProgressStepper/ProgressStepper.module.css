@@ -1,0 +1,149 @@
+.stepperContainer {
+    position: relative;
+    width: 100%;
+    max-width: 896px;
+    margin: 0 auto;
+    padding: 16px 0;
+}
+
+.lineBg {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 100%;
+    height: 2px;
+    background: var(--sepia);
+    z-index: 0;
+}
+
+.lineProgress {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 2px;
+    background: var(--gold);
+    z-index: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .lineProgress {
+        transition: width 1s ease-in-out;
+    }
+}
+
+.stepList {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.stepItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 80px;
+}
+
+.circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 2px solid var(--sepia);
+}
+
+.circle_completed {
+    background: var(--status-green, #3f612d);
+    border-color: #fff;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.circle_current {
+    background: var(--gold);
+    border-color: #fff;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 4px rgba(176, 141, 87, 0.2);
+}
+
+.circle_failed {
+    background: var(--status-red, #b91c1c);
+    border-color: #fff;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.iconCheck, .iconTruck, .iconFailed {
+    color: #fff;
+    width: 20px;
+    height: 20px;
+}
+
+.stepNum {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--ink-muted);
+}
+
+.stepLabel {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-align: center;
+    line-height: 1.2;
+    color: var(--ink-muted);
+}
+
+.label_completed {
+    color: var(--status-green, #3f612d);
+}
+
+.label_current {
+    color: var(--gold);
+}
+
+.label_failed {
+    color: var(--status-red, #b91c1c);
+}
+
+@media (max-width: 1023px) {
+    .stepperContainer {
+        padding: 0;
+    }
+    .lineBg {
+        width: 2px;
+        height: 100%;
+        top: 0;
+        left: 20px;
+        transform: none;
+    }
+    .lineProgress {
+        width: 2px !important;
+        top: 0;
+        left: 20px;
+        transform: none;
+        /* Note: style height based on current step index */
+    }
+    .stepList {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 32px;
+    }
+    .stepItem {
+        flex-direction: row;
+        width: 100%;
+    }
+    .stepLabel {
+        text-align: left;
+    }
+}

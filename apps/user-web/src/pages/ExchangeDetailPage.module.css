@@ -1,0 +1,127 @@
+.container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px;
+}
+@media (min-width: 768px) {
+    .container {
+        padding: 48px;
+    }
+}
+
+.pageHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 24px;
+}
+@media (min-width: 768px) {
+    .pageHeader {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: flex-end;
+    }
+}
+
+.transactionCode {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gold-strong);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+}
+
+.pageTitle {
+    font-family: var(--font-serif);
+    font-size: 30px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--ink);
+    line-height: 1.2;
+}
+@media (min-width: 768px) {
+    .pageTitle {
+        font-size: 36px;
+    }
+}
+
+.headerStatus {
+    background: #fff;
+    border: 1px solid var(--line);
+    padding: 8px 16px;
+    border-radius: 2px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--leather);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    align-self: flex-start;
+}
+.statusValue {
+    color: var(--gold-strong);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-left: 4px;
+}
+
+.stepperCard {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 32px;
+    margin-bottom: 48px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.gridContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+@media (min-width: 1024px) {
+    .gridContainer {
+        display: grid;
+        grid-template-columns: 7fr 5fr;
+    }
+}
+
+.mainCol {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+.sideCol {
+    display: flex;
+    flex-direction: column;
+}
+
+.authContainer, .loadingContainer, .errorContainer, .notFoundContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 24px;
+    text-align: center;
+}
+.authContainer h2, .errorContainer h2, .notFoundContainer h2 {
+    font-family: var(--font-serif);
+    color: var(--ink);
+    margin-bottom: 16px;
+}
+.loginBtn, .backBtn, .retryBtn {
+    background: var(--leather);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 2px;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+.loginBtn:hover, .backBtn:hover, .retryBtn:hover {
+    background: var(--ink);
+}

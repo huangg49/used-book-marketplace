@@ -1,0 +1,75 @@
+/* Reset cơ bản */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  /* Use system defaults or let CSS Modules handle it */
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  line-height: 1.3;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  margin: 0 0 1rem;
+}
+
+h1 { font-size: clamp(1.75rem, 3vw, 2.75rem); letter-spacing: -0.03em; }
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1.25rem; }
+
+p { margin: 0 0 1rem; }
+p:last-child { margin-bottom: 0; }
+
+a {
+  text-underline-offset: 0.25em;
+}
+
+button {
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+  width: 100%;
+  min-height: 48px;
+  background: #FFFCF4; /* surface */
+  border: 1px solid #d9d0bf;
+  border-radius: 6px;
+  padding: 0.65rem 0.75rem;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #214B40;
+  outline-offset: 3px;
+}
+
+img { max-width: 100%; }
+
+/* Utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
