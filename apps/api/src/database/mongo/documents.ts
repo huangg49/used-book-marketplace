@@ -21,7 +21,10 @@ export type SystemActor =
   | 'OrderConfirmationExpiry'
   | 'OrderRefund'
   | 'OrderPickupExpiry'
-  | 'OrderDeliveryExpiry';
+  | 'OrderDeliveryExpiry'
+  | 'AuctionClose'
+  | 'AuctionPaymentExpiry'
+  | 'AuctionIntakeExpiry';
 
 type Lockable = { lockSeq: number };
 
@@ -404,6 +407,16 @@ export interface WorkflowContextDoc extends Lockable {
   _id: string;
   kind: 'Order';
   orderId: string;
+  auctionIntakeId: null;
+  version: number;
+  ownershipPhase: 'Holding' | 'Closed';
+}
+// Stored in workflow_contexts; Order code only reads contexts by orderId.
+export interface AuctionIntakeContextDoc extends Lockable {
+  _id: string;
+  kind: 'AuctionIntake';
+  orderId: null;
+  auctionIntakeId: string;
   version: number;
   ownershipPhase: 'Holding' | 'Closed';
 }
@@ -428,7 +441,7 @@ export interface ExclusiveCommitmentDoc extends Lockable {
   status: 'Active' | 'Released';
   acquiredAt: Date;
   endedAt: Date | null;
-  reason: string | null;
+  reason: 'Cancelled' | 'PaymentExpired' | 'Reclaimed' | null;
 }
 export interface CommitmentEventDoc {
   _id: string;
@@ -620,4 +633,138 @@ export interface OnlinePriceOfferDoc {
   observedAt: Date;
   retiredAt: Date | null;
   createdAt: Date;
+}
+
+// ------------------------------------------------ points and auctions (0008)
+export interface HandoverPointDoc extends Lockable {
+  _id: string;
+  code: string;
+  name: string;
+  displayAddress: string;
+  serviceAreaCode: 'HCM-DEMO-v1';
+  capacity: number;
+  status: 'Active' | 'Paused' | 'Closed';
+  demoOnly: boolean;
+}
+export interface PointStaffAssignmentDoc {
+  _id: string;
+  pointId: string;
+  userId: string;
+  validFrom: Date;
+  validTo: Date | null;
+  createdAt: Date;
+}
+export interface PointSlotDoc extends Lockable {
+  _id: string;
+  pointId: string;
+  listingId: string;
+  contextId: string;
+  active: boolean;
+  reservedAt: Date;
+  releasedAt: Date | null;
+  releaseReason: 'Cancelled' | 'Reclaimed' | null;
+}
+export type AuctionIntakeState =
+  | 'AwaitingDropoff'
+  | 'Received'
+  | 'Passed'
+  | 'Auctioning'
+  | 'ReclaimRequired'
+  | 'Reclaimed'
+  | 'Cancelled';
+export type ReclaimReason =
+  | 'SellerCancelled'
+  | 'InspectionFailed'
+  | 'Unsold'
+  | 'PaymentExpired'
+  | 'AuctionCancelled';
+export interface AuctionIntakeDoc extends Lockable {
+  _id: string;
+  contextId: string;
+  listingId: string;
+  listingRevisionId: string;
+  sellerId: string;
+  pointId: string;
+  slotId: string;
+  startPrice: number;
+  step: number;
+  buyNowPrice: number | null;
+  protectiveValue: number;
+  policyCode: 'HCM-AUCTION-v1';
+  state: AuctionIntakeState;
+  version: number;
+  createdAt: Date;
+  dropoffDeadline: Date;
+  receivedAt: Date | null;
+  receivedBy: string | null;
+  shelfCode: string | null;
+  inspectedAt: Date | null;
+  inspectorId: string | null;
+  inspectionOutcome: 'Pass' | 'Fail' | null;
+  inspectionNote: string | null;
+  auctionId: string | null;
+  reclaimReason: ReclaimReason | null;
+  closedAt: Date | null;
+  updatedAt: Date;
+}
+export type AuctionState =
+  | 'Active'
+  | 'BuyNowPending'
+  | 'AwaitingWinnerPayment'
+  | 'Unsold'
+  | 'OnHold'
+  | 'Cancelled'
+  | 'PaymentExpired';
+export interface AuctionDoc extends Lockable {
+  _id: string;
+  intakeId: string;
+  contextId: string;
+  listingId: string;
+  sellerId: string;
+  pointId: string;
+  startPrice: number;
+  step: number;
+  buyNowPrice: number | null;
+  startAt: Date;
+  endAt: Date;
+  state: AuctionState;
+  currentPrice: number | null;
+  leaderId: string | null;
+  bidderCount: number;
+  bidCount: number;
+  nextSequence: number;
+  winnerId: string | null;
+  finalPrice: number | null;
+  closedAt: Date | null;
+  paymentDeadline: Date | null;
+  cancelReason: string | null;
+  version: number;
+  updatedAt: Date;
+}
+// _id = `${auctionId}:${bidderId}`; level is the private commitment ceiling.
+export interface AuctionBidderDoc extends Lockable {
+  _id: string;
+  auctionId: string;
+  bidderId: string;
+  alias: number;
+  mode: 'Manual' | 'Auto';
+  level: number;
+  levelSequence: number;
+  fulfillmentMethod: 'SelfCollect';
+  firstBidAt: Date;
+  updatedAt: Date;
+  version: number;
+}
+export interface AuctionBidDoc {
+  _id: string;
+  auctionId: string;
+  bidderId: string;
+  kind: 'Manual' | 'AutoSet' | 'AutoDisable' | 'BuyNow';
+  amount: number | null;
+  levelSequence: number | null;
+  priceBefore: number | null;
+  priceAfter: number | null;
+  leaderAfter: string | null;
+  receiptId: string;
+  decidedAt: Date;
 }

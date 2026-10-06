@@ -1,3 +1,4 @@
+import { orderContext } from '../reservations/workflow-context.js';
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Collections } from '../../database/mongo/collections.js';
@@ -35,7 +36,9 @@ import { checkOrder } from './order-invariants.js';
 export async function loadOrder(c: Collections, id: string) {
   const o = await c.direct_orders.findOne({ _id: id.toLowerCase() });
   if (!o) return null;
-  const context = await c.workflow_contexts.findOne({ orderId: o._id });
+  const context = orderContext(
+    await c.workflow_contexts.findOne({ orderId: o._id }),
+  );
   const items = context
     ? await c.workflow_items.find({ contextId: context._id }).toArray()
     : [];
@@ -178,6 +181,7 @@ export class OrdersService {
             _id: randomUUID(),
             kind: 'Order',
             orderId: o._id,
+            auctionIntakeId: null,
             version: 1,
             ownershipPhase: 'Holding',
             lockSeq: 0,

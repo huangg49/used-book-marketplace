@@ -19,6 +19,11 @@ import {
   onlinePriceLookupMigration,
   onlinePriceSpecs,
 } from './0007-online-price-lookup.js';
+import {
+  auctionCollectionSpecs,
+  auctionsMigration,
+  withAuctionChanges,
+} from './0008-auctions.js';
 
 export interface Migration {
   id: string;
@@ -91,6 +96,7 @@ export const migrations: Migration[] = [
   priceAssistMigration,
   priceSuggestionInputMigration,
   onlinePriceLookupMigration,
+  auctionsMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -101,8 +107,9 @@ export const checksumOf = (migration: Migration) =>
 // The latest schema, for tests and for the app role privileges.
 export const currentCollections = (): CollectionSpec[] =>
   [
-    ...baselineCollections.map(withTitleKey),
+    ...baselineCollections.map(withTitleKey).map(withAuctionChanges),
     wishlistSpec,
     ...priceAssistSpecsV2,
     ...onlinePriceSpecs,
+    ...auctionCollectionSpecs,
   ];

@@ -762,6 +762,8 @@ export function toDocuments(snapshot: Snapshot): Record<string, Document[]> {
         doc[camel(column)] = value(row, column, spec.collection);
       }
       if (spec.lockable) doc.lockSeq = 0;
+      // PostgreSQL had Order contexts only (migration 0008 adds AuctionIntake).
+      if (spec.collection === 'workflow_contexts') doc.auctionIntakeId = null;
       return doc;
     });
   }

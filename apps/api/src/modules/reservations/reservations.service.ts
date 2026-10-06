@@ -1,3 +1,4 @@
+import { orderContext } from './workflow-context.js';
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Tx } from '../../database/mongo/transaction.js';
@@ -16,7 +17,9 @@ export class ReservationsService {
     now: Date,
     receiptId: string,
   ) {
-    const context = await tx.c.workflow_contexts.findOne({ _id: contextId });
+    const context = orderContext(
+      await tx.c.workflow_contexts.findOne({ _id: contextId }),
+    );
     const order = context
       ? await tx.c.direct_orders.findOne({ _id: context.orderId })
       : null;
@@ -70,7 +73,9 @@ export class ReservationsService {
     now: Date,
     receiptId: string,
   ) {
-    const context = await tx.c.workflow_contexts.findOne({ _id: contextId });
+    const context = orderContext(
+      await tx.c.workflow_contexts.findOne({ _id: contextId }),
+    );
     const order = context
       ? await tx.c.direct_orders.findOne({ _id: context.orderId })
       : null;
@@ -99,7 +104,9 @@ export class ReservationsService {
     now: Date,
     receiptId: string,
   ) {
-    const context = await tx.c.workflow_contexts.findOne({ _id: contextId });
+    const context = orderContext(
+      await tx.c.workflow_contexts.findOne({ _id: contextId }),
+    );
     const order = context
       ? await tx.c.direct_orders.findOne({ _id: context.orderId })
       : null;

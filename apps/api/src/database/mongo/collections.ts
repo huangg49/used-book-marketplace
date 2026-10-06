@@ -59,7 +59,7 @@ export interface CollectionTypes {
   carrier_pickup_reviews: D.CarrierPickupReviewDoc;
   order_delivery_reviews: D.OrderDeliveryReviewDoc;
   order_non_receipt_reports: D.OrderNonReceiptReportDoc;
-  workflow_contexts: D.WorkflowContextDoc;
+  workflow_contexts: D.WorkflowContextDoc | D.AuctionIntakeContextDoc;
   workflow_items: D.WorkflowItemDoc;
   agreement_snapshots: D.AgreementSnapshotDoc;
   exclusive_commitments: D.ExclusiveCommitmentDoc;
@@ -73,6 +73,13 @@ export interface CollectionTypes {
   account_locks: D.AccountLockDoc;
   counters: D.CounterDoc;
   wishlist_items: D.WishlistItemDoc;
+  handover_points: D.HandoverPointDoc;
+  point_staff_assignments: D.PointStaffAssignmentDoc;
+  point_slots: D.PointSlotDoc;
+  auction_intakes: D.AuctionIntakeDoc;
+  auctions: D.AuctionDoc;
+  auction_bidders: D.AuctionBidderDoc;
+  auction_bids: D.AuctionBidDoc;
   price_references: D.PriceReferenceDoc;
   price_suggestions: D.PriceSuggestionDoc;
   price_assist_usage: D.PriceAssistUsageDoc;
@@ -211,6 +218,13 @@ const NAMES: CollectionName[] = [
   'price_assist_usage',
   'price_lookups',
   'online_price_offers',
+  'handover_points',
+  'point_staff_assignments',
+  'point_slots',
+  'auction_intakes',
+  'auctions',
+  'auction_bidders',
+  'auction_bids',
 ];
 export const COLLECTION_NAMES: readonly CollectionName[] = NAMES;
 
