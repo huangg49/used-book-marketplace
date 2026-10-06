@@ -1,313 +1,135 @@
-import { useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Award, ChevronRight } from 'lucide-react'
-import { BookCard } from '../components/BookCard'
-import { FEATURED_BOOKS } from '../lib/mock/home'
-import styles from './BookSearchPage.module.css'
+
+import { SearchHero } from '../components/BookSearch/SearchHero';
+import { FilterSidebar } from '../components/BookSearch/FilterSidebar';
+import { MobileFilterDrawer } from '../components/BookSearch/MobileFilterDrawer';
+import { SearchBookCard } from '../components/BookSearch/SearchBookCard';
+import { SortDropdown } from '../components/BookSearch/SortDropdown';
+import { MOCK_BOOKS } from '../components/BookSearch/mockBooks';
+import { useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+const itemVariants: any = {
+  hidden: { opacity: 0, y: 20 },
+  show: {
+    opacity: 1, y: 0,
+    transition: { type: "spring", stiffness: 260, damping: 20 }
+  }
+};
 
 export function BookSearchPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
+  // @ts-expect-error unused
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Create exactly 30 books by repeating the mock books
   
-  // Lấy params
-  const q = searchParams.get('q') || ''
-  const sort = searchParams.get('sort') || 'popular'
-  const category = searchParams.get('category') || 'all'
-  const price = searchParams.get('price') || ''
-  const conditions = searchParams.getAll('condition')
-  const sellerGuild = searchParams.get('seller') === 'guild'
+  const [activeFilters, setActiveFilters] = useState([
+    { id: 'cat_tien_chien', label: 'Thời kỳ: 1930 - 1945', type: 'category' },
+    { id: 'cond_like_new', label: 'Tình trạng: Rất tốt (Like New)', type: 'condition' },
+    { id: 'trans_direct', label: 'Giao dịch: Bán trực tiếp', type: 'transaction' },
+    { id: 'attr_rare', label: 'Sách hiếm: Có thẩm định', type: 'attribute', icon: 'verified' },
+    { id: 'attr_signed', label: 'Có thủ bút / Chữ ký', type: 'attribute', icon: 'history_edu' }
+  ]);
 
-  const updateParam = (key: string, value: string) => {
-    const newParams = new URLSearchParams(searchParams)
-    if (value) {
-      newParams.set(key, value)
-    } else {
-      newParams.delete(key)
-    }
-    setSearchParams(newParams, { replace: true })
-  }
+  const toggleFilter = (filter: any) => {
+    setActiveFilters(prev => {
+      const exists = prev.find(f => f.id === filter.id);
+      if (exists) return prev.filter(f => f.id !== filter.id);
+      return [...prev, filter];
+    });
+  };
 
-  const toggleCondition = (cond: string) => {
-    const newParams = new URLSearchParams(searchParams)
-    const current = newParams.getAll('condition')
-    newParams.delete('condition')
-    
-    if (current.includes(cond)) {
-      current.filter(c => c !== cond).forEach(c => newParams.append('condition', c))
-    } else {
-      current.push(cond)
-      current.forEach(c => newParams.append('condition', c))
-    }
-    setSearchParams(newParams, { replace: true })
-  }
+  const removeFilter = (id: string) => {
+    setActiveFilters(prev => prev.filter(f => f.id !== id));
+  };
 
-  // TODO: Gọi API tìm kiếm thực tế. Dưới đây là logic giả lập (mock) để UI hoạt động
-  const results = useMemo(() => {
-    // Tạo 8 quyển sách từ FEATURED_BOOKS để có đủ dữ liệu test
-    let filtered = [...FEATURED_BOOKS, ...FEATURED_BOOKS.map(b => ({ ...b, id: b.id + '-copy' }))]
-    
-    if (q) {
-      filtered = filtered.filter(b => b.title.toLowerCase().includes(q.toLowerCase()))
-    }
+  const clearAllFilters = () => {
+    setActiveFilters([]);
+  };
 
-    if (category !== 'all') {
-      // Giả lập filter theo danh mục
-      if (category === 'novel') filtered = filtered.filter(b => b.title.includes('Dế') || b.title.includes('Số') || b.title.includes('Gatsby'))
-      if (category === 'history') filtered = filtered.filter(b => b.title.includes('Sử'))
-      if (category === 'lit') filtered = filtered.filter(b => b.title.includes('Tuổi') || b.title.includes('Moby'))
-    }
-
-    if (price === 'p1') filtered = filtered.filter(b => (b.priceVnd || 0) <= 500000)
-    if (price === 'p2') filtered = filtered.filter(b => (b.priceVnd || 0) > 500000 && (b.priceVnd || 0) <= 1000000)
-    if (price === 'p3') filtered = filtered.filter(b => (b.priceVnd || 0) > 1000000 && (b.priceVnd || 0) <= 5000000)
-    if (price === 'p4') filtered = filtered.filter(b => (b.priceVnd || 0) > 5000000)
-
-    if (conditions.length > 0) {
-      // Giả lập lọc tình trạng
-      filtered = filtered.filter(b => conditions.some(c => b.condition?.toLowerCase().includes(c)))
-    }
-
-    if (sort === 'price-asc') filtered.sort((a, b) => (a.priceVnd || 0) - (b.priceVnd || 0))
-    if (sort === 'price-desc') filtered.sort((a, b) => (b.priceVnd || 0) - (a.priceVnd || 0))
-    if (sort === 'newest') filtered.reverse()
-
-    return filtered
-  }, [q, sort, category, price, conditions])
+  const displayBooks = Array(4).fill(MOCK_BOOKS).flat().slice(0, 30);
 
   return (
-    <main className={styles.container}>
-      <header className={styles.header}>
-        <div className={styles.headerInner}>
-          <div className={styles.titleWrapper}>
-            <h1 className={styles.title}>Khám phá Thư viện</h1>
-            <p className={styles.subtitle}>
-              Tìm thấy {results.length} cuốn sách {q ? `cho "${q}" ` : ''}đang chờ đón chủ nhân mới.
-            </p>
-          </div>
-          <div className={styles.sortContainer}>
-            <span className={styles.sortLabel}>Sắp xếp:</span>
-            <select 
-              className={styles.sortSelect} 
-              value={sort}
-              onChange={(e) => updateParam('sort', e.target.value)}
+    <div className="bg-background text-on-surface flex-1 w-full">
+      <main className="flex-grow">
+        <div className="flex flex-col w-full">
+          <SearchHero activeFilters={activeFilters} removeFilter={removeFilter} clearAllFilters={clearAllFilters} />
+
+          <div className="w-full px-space-sm md:px-space-md lg:px-space-lg xl:px-8 py-space-md flex flex-col lg:flex-row gap-space-lg relative items-start">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+              className="w-[280px] xl:w-[300px] shrink-0"
             >
-              <option value="popular">Phổ biến nhất</option>
-              <option value="price-asc">Giá: Thấp đến Cao</option>
-              <option value="price-desc">Giá: Cao đến Thấp</option>
-              <option value="newest">Mới nhất</option>
-            </select>
-          </div>
-        </div>
-      </header>
+              <FilterSidebar activeFilters={activeFilters} toggleFilter={toggleFilter} />
+            </motion.div>
 
-      <div className={styles.mainLayout}>
-        <aside className={styles.sidebar}>
-          {/* Thể loại */}
-          <div className={styles.filterGroup}>
-            <h4 className={styles.filterTitle}>Thể loại</h4>
-            <ul className={styles.filterList}>
-              <li className={styles.filterItem}>
-                <input 
-                  type="checkbox" 
-                  id="cat-all" 
-                  checked={category === 'all'} 
-                  onChange={() => updateParam('category', 'all')}
-                />
-                <label htmlFor="cat-all" className={category === 'all' ? styles.active : ''}>Tất cả</label>
-              </li>
-              <li className={styles.filterItem}>
-                <input 
-                  type="checkbox" 
-                  id="cat-novel" 
-                  checked={category === 'novel'}
-                  onChange={() => updateParam('category', 'novel')} 
-                />
-                <label htmlFor="cat-novel" className={category === 'novel' ? styles.active : ''}>Tiểu thuyết</label>
-              </li>
-              <li className={styles.filterItem}>
-                <input 
-                  type="checkbox" 
-                  id="cat-history" 
-                  checked={category === 'history'}
-                  onChange={() => updateParam('category', 'history')} 
-                />
-                <label htmlFor="cat-history" className={category === 'history' ? styles.active : ''}>Lịch sử</label>
-              </li>
-              <li className={styles.filterItem}>
-                <input 
-                  type="checkbox" 
-                  id="cat-science" 
-                  checked={category === 'science'}
-                  onChange={() => updateParam('category', 'science')} 
-                />
-                <label htmlFor="cat-science" className={category === 'science' ? styles.active : ''}>Khoa học</label>
-              </li>
-              <li className={styles.filterItem}>
-                <input 
-                  type="checkbox" 
-                  id="cat-lit" 
-                  checked={category === 'lit'}
-                  onChange={() => updateParam('category', 'lit')} 
-                />
-                <label htmlFor="cat-lit" className={category === 'lit' ? styles.active : ''}>Văn học cổ điển</label>
-              </li>
-              <li className={styles.filterItem}>
-                <input 
-                  type="checkbox" 
-                  id="cat-poetry" 
-                  checked={category === 'poetry'}
-                  onChange={() => updateParam('category', 'poetry')} 
-                />
-                <label htmlFor="cat-poetry" className={category === 'poetry' ? styles.active : ''}>Thơ ca</label>
-              </li>
-            </ul>
-          </div>
+            <div className="flex-1 min-w-0 flex flex-col">
+              {/* Results Header Controls Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-space-md pb-space-sm border-b border-outline-variant">
+                <p className="font-body-md text-body-md text-on-surface-variant">
+                  Hiển thị <span className="font-bold text-primary">1–30</span> trên <span className="font-bold text-primary">12.800</span> ấn phẩm
+                </p>
+                <div className="flex items-center gap-3 self-end sm:self-auto">
+                  <SortDropdown />
+                  <div className="flex bg-surface-container border border-outline-variant rounded p-0.5">
+                    <button className="p-1 rounded bg-surface shadow-xs text-primary"><span className="material-symbols-outlined text-[18px] block">grid_view</span></button>
+                    <button className="p-1 rounded text-on-surface-variant hover:text-primary transition-colors"><span className="material-symbols-outlined text-[18px] block">view_list</span></button>
+                  </div>
+                </div>
+              </div>
 
-          {/* Khoảng giá */}
-          <div className={styles.filterGroup}>
-            <h4 className={styles.filterTitle}>Khoảng giá</h4>
-            <ul className={styles.filterList}>
-              <li className={styles.filterItem}>
-                <input 
-                  type="radio" 
-                  name="price" 
-                  id="p-all" 
-                  checked={price === ''}
-                  onChange={() => updateParam('price', '')}
-                />
-                <label htmlFor="p-all">Mọi mức giá</label>
-              </li>
-              <li className={styles.filterItem}>
-                <input 
-                  type="radio" 
-                  name="price" 
-                  id="p1" 
-                  checked={price === 'p1'}
-                  onChange={() => updateParam('price', 'p1')}
-                />
-                <label htmlFor="p1">0đ - 500.000đ</label>
-              </li>
-              <li className={styles.filterItem}>
-                <input 
-                  type="radio" 
-                  name="price" 
-                  id="p2" 
-                  checked={price === 'p2'}
-                  onChange={() => updateParam('price', 'p2')}
-                />
-                <label htmlFor="p2">500.000đ - 1.000.000đ</label>
-              </li>
-              <li className={styles.filterItem}>
-                <input 
-                  type="radio" 
-                  name="price" 
-                  id="p3" 
-                  checked={price === 'p3'}
-                  onChange={() => updateParam('price', 'p3')}
-                />
-                <label htmlFor="p3">1.000.000đ - 5.000.000đ</label>
-              </li>
-              <li className={styles.filterItem}>
-                <input 
-                  type="radio" 
-                  name="price" 
-                  id="p4" 
-                  checked={price === 'p4'}
-                  onChange={() => updateParam('price', 'p4')}
-                />
-                <label htmlFor="p4">Trên 5.000.000đ</label>
-              </li>
-            </ul>
-          </div>
+              {/*  Results Grid  */}
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="show"
+                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3"
+              >
+                {displayBooks.map((book, idx) => (
+                  <motion.div key={book.id + '_' + idx} variants={itemVariants}>
+                    <SearchBookCard book={book} />
+                  </motion.div>
+                ))}
+              </motion.div>
 
-          {/* Tình trạng */}
-          <div className={styles.filterGroup}>
-            <h4 className={styles.filterTitle}>Tình trạng</h4>
-            <ul className={styles.filterList}>
-              <li className={styles.filterItem}>
-                <input 
-                  type="checkbox" 
-                  id="cond-perfect" 
-                  checked={conditions.includes('like new')}
-                  onChange={() => toggleCondition('like new')}
-                />
-                <label htmlFor="cond-perfect">Hoàn hảo (Like New)</label>
-              </li>
-              <li className={styles.filterItem}>
-                <input 
-                  type="checkbox" 
-                  id="cond-vgood" 
-                  checked={conditions.includes('đẹp')}
-                  onChange={() => toggleCondition('đẹp')}
-                />
-                <label htmlFor="cond-vgood">Rất tốt</label>
-              </li>
-              <li className={styles.filterItem}>
-                <input 
-                  type="checkbox" 
-                  id="cond-good" 
-                  checked={conditions.includes('tốt')}
-                  onChange={() => toggleCondition('tốt')}
-                />
-                <label htmlFor="cond-good">Tốt</label>
-              </li>
-              <li className={styles.filterItem}>
-                <input 
-                  type="checkbox" 
-                  id="cond-aged" 
-                  checked={conditions.includes('cũ')}
-                  onChange={() => toggleCondition('cũ')}
-                />
-                <label htmlFor="cond-aged">Cũ (Dấu ấn thời gian)</label>
-              </li>
-            </ul>
-          </div>
+              {/*  Pagination  */}
+              <div className="mt-space-xl pt-space-md border-t border-outline-variant flex flex-col items-center gap-space-md">
+                <nav aria-label="Pagination" className="flex items-center gap-1">
+                  <button className="w-8 h-8 flex items-center justify-center rounded text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors" disabled>
+                    <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                  </button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-primary text-on-primary font-title-sm shadow-xs">1</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded text-on-surface hover:bg-surface-container hover:text-primary transition-colors font-title-sm">2</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded text-on-surface hover:bg-surface-container hover:text-primary transition-colors font-title-sm">3</button>
+                  <span className="w-8 h-8 flex items-center justify-center text-on-surface-variant">...</span>
+                  <button className="w-8 h-8 flex items-center justify-center rounded text-on-surface hover:bg-surface-container hover:text-primary transition-colors font-title-sm">42</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded text-on-surface hover:bg-surface-container hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                  </button>
+                </nav>
+                <div className="bg-secondary-container/50 border border-secondary/20 rounded-lg p-space-sm max-w-lg w-full text-center">
+                  <span className="material-symbols-outlined text-secondary text-[24px] mb-1">auto_stories</span>
+                  <h4 className="font-title-sm text-title-sm text-primary font-bold">Không tìm thấy bản thảo bạn cần?</h4>
+                  <p className="text-xs text-on-surface-variant mt-0.5">Chúng tôi nhận săn tìm sách hiếm, thủ bút và tài liệu lưu trữ theo yêu cầu. <a className="text-secondary font-medium hover:underline" href="#">Gửi yêu cầu thẩm tuyển →</a></p>
+                </div>
+              </div>
 
-          {/* Nhà bán hàng */}
-          <div className={styles.filterGroup}>
-            <h4 className={styles.filterTitle}>Nhà bán hàng</h4>
-            <ul className={styles.filterList}>
-              <li className={styles.filterItem}>
-                <input 
-                  type="checkbox" 
-                  id="seller-guild" 
-                  checked={sellerGuild}
-                  onChange={() => updateParam('seller', sellerGuild ? '' : 'guild')}
-                />
-                <label htmlFor="seller-guild" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  Thành viên Guild <Award size={16} color="var(--gold)" />
-                </label>
-              </li>
-            </ul>
-          </div>
-        </aside>
-
-        <div className={styles.resultsArea}>
-          <div className={styles.grid}>
-            {results.length > 0 ? (
-              results.map((book, index) => (
-                <BookCard key={`${book.id}-${index}`} book={book} index={index} />
-              ))
-            ) : (
-              <p style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--ink-muted)' }}>
-                Không tìm thấy cuốn sách nào phù hợp với bộ lọc.
-              </p>
-            )}
-          </div>
-
-          {results.length > 0 && (
-            <div className={styles.pagination}>
-              <button type="button" className={`${styles.pageButton} ${styles.active}`}>1</button>
-              <button type="button" className={styles.pageButton}>2</button>
-              <button type="button" className={styles.pageButton}>3</button>
-              <span className={styles.pageDots}>...</span>
-              <button type="button" className={styles.pageButton}>12</button>
-              <button type="button" className={styles.pageButton} aria-label="Next page">
-                <ChevronRight size={20} />
-              </button>
             </div>
-          )}
+          </div>
         </div>
-      </div>
-    </main>
-  )
+      </main>
+
+      <MobileFilterDrawer />
+    </div>
+  );
 }

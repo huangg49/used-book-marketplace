@@ -1,83 +1,82 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { BookOpen, Heart, MapPin, Repeat } from 'lucide-react'
-import { ROUTES, formatVnd } from '../lib/routes'
-import type { BookItem } from '../lib/mock/home'
-import styles from './BookCard.module.css'
+import { useState } from 'react';
+import { Heart } from 'lucide-react';
+import { formatVnd } from '../lib/routes';
+import styles from './BookCard.module.css';
 
 export interface BookCardProps {
-  book: BookItem
-  index: number
+  id: string;
+  title: string;
+  author: string;
+  coverUrl?: string;
+  price?: number;
+  exchangeValue?: number;
+  condition: string;
+  listingType: 'sell' | 'exchange' | 'auction';
+  location?: string;
 }
 
-export function BookCard({ book, index }: BookCardProps) {
-  const [liked, setLiked] = useState(false)
-  const [imageError, setImageError] = useState(false)
-  const coverClass = styles[`cover${index % 4}`] ?? ''
-  const isExchange = book.listingType === 'exchange'
-  const showFallback = !book.coverUrl || imageError
+export function BookCard(props: BookCardProps) {
+  const { title, author, coverUrl, price, condition, listingType } = props;
+  const [liked, setLiked] = useState(false);
+
+  // Xử lý loại giao dịch
+  let badgeLabel = 'Bán';
+  let badgeClass = styles.badgeSell;
+  if (listingType === 'exchange') {
+    badgeLabel = 'Trao đổi';
+    badgeClass = styles.badgeExchange;
+  } else if (listingType === 'auction') {
+    badgeLabel = 'Đấu giá';
+    badgeClass = styles.badgeAuction;
+  }
 
   return (
-    <article className={styles.card}>
-      <div className={`${styles.cover} ${showFallback ? coverClass : ''}`}>
-        {!showFallback ? (
-          <img 
-            src={book.coverUrl} 
-            alt={`Bìa sách ${book.title}`} 
-            loading="lazy" 
-            className={styles.coverImage}
-            onError={() => setImageError(true)}
-          />
+    <div className={styles.card}>
+      <div className={styles.coverWrapper}>
+        {coverUrl ? (
+          <img alt={`Bìa sách ${title}`} src={coverUrl} className={styles.coverImage} loading="lazy" />
         ) : (
-          <div className={styles.coverFallback}>
-            <BookOpen size={44} aria-hidden="true" />
-            <span className={styles.coverTitle} aria-hidden="true">
-              {book.title}
-            </span>
-          </div>
+          <div className={styles.coverFallback}></div>
         )}
-        
-        {isExchange ? (
-          <span className={`${styles.tag} ${styles.tagExchange}`}>
-            <Repeat size={12} aria-hidden="true" /> Trao đổi
-          </span>
-        ) : book.badge ? (
-          <span className={styles.tag}>{book.badge}</span>
-        ) : null}
+        <button 
+          className={styles.bookmarkBtn} 
+          aria-label="Lưu sách"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setLiked(!liked);
+          }}
+        >
+          <Heart size={16} fill={liked ? 'currentColor' : 'none'} color={liked ? '#B85C45' : '#81796C'} />
+        </button>
+        <span className={styles.conditionTagOver}>{condition}</span>
       </div>
+      
+      <div className={styles.meta}>
+        <div className={styles.categoryText}>Tiểu thuyết hiện thực</div>
+        <h3 className={styles.title} title={title}>{title}</h3>
+        <p className={styles.author} title={author}>{author}</p>
+        
+        <div className={styles.divider}></div>
 
-      <div className={styles.cardContent}>
-        <h3 className={styles.cardTitle}>
-          <Link to={ROUTES.bookDetail(book.id)} className={styles.cardLink}>
-            {book.title}
-          </Link>
-        </h3>
-        <p className={styles.cardAuthor}>
-          {book.author}
-          {book.year ? ` (${book.year})` : ''}
-        </p>
-        <p className={styles.cardMeta}>
-          <span>{book.condition}</span>
-          <span className={styles.cardLocation}>
-            <MapPin size={13} aria-hidden="true" /> {book.location}
-          </span>
-        </p>
-
-        <div className={styles.cardFooter}>
-          <span className={styles.price}>
-            {isExchange || book.priceVnd === undefined ? 'Chỉ trao đổi' : formatVnd(book.priceVnd)}
-          </span>
-          <button
-            type="button"
-            className={styles.favoriteButton}
-            aria-pressed={liked}
-            aria-label={liked ? `Bỏ yêu thích ${book.title}` : `Yêu thích ${book.title}`}
-            onClick={() => setLiked((value) => !value)}
-          >
-            <Heart size={16} fill={liked ? 'currentColor' : 'none'} aria-hidden="true" />
+        <div className={styles.footer}>
+          <div className={styles.priceBlock}>
+            {listingType === 'sell' && price !== undefined && (
+              <span className={styles.price}>{formatVnd(price)}</span>
+            )}
+            {listingType === 'exchange' && (
+              <span className={styles.priceExchange}>28 Xu</span>
+            )}
+            {listingType === 'auction' && price !== undefined && (
+              <span className={styles.priceAuction}>{formatVnd(price)}</span>
+            )}
+          </div>
+          
+          <button className={`${styles.actionBtn} ${listingType === 'exchange' ? styles.actionBtnOutline : styles.actionBtnSolid}`}>
+            {listingType === 'sell' ? 'Mua ngay' : listingType === 'exchange' ? 'Đổi sách' : 'Tham gia'}
           </button>
         </div>
       </div>
-    </article>
-  )
+    </div>
+  );
 }

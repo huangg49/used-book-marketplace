@@ -1,3 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400;1,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@font-face {
+  font-family: 'SVNPaulaNatalie';
+  src: url('/fonts/SVN-Paula-Natalie.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'UVNCoDien';
+  src: url('/fonts/UVNCoDien_R.TTF') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'UVNCoDien';
+  src: url('/fonts/UVNCoDien_B.TTF') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: middle;
+}
+
 /* Reset cơ bản */
 *,
 *::before,
@@ -7,7 +43,9 @@
 
 body {
   margin: 0;
-  /* Use system defaults or let CSS Modules handle it */
+  font-family: 'Inter', sans-serif;
+  background-color: #F5F0E6; /* Paper Ivory */
+  color: #24231F; /* Ink */
   -webkit-font-smoothing: antialiased;
 }
 
@@ -72,4 +110,45 @@ img { max-width: 100%; }
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* Custom Checkbox */
+.custom-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: #c3ecd7; /* Light green background for unchecked */
+  border: 1px solid #a8cfbc;
+  border-radius: 4px;
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.custom-checkbox:checked {
+  background-color: #a8cfbc;
+  border-color: #a8cfbc;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='%2300261a' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Accordion Animation */
+details[open] summary ~ * {
+  animation: details-sweep 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes details-sweep {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }

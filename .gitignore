@@ -41,3 +41,7 @@ __pycache__/
 tmp/
 .tmp/
 apps/admin-web/src/assets/hero.png
+
+# Ignored skills directories
+/stitch-skills-main/
+/taste-skill-main/

@@ -18,6 +18,7 @@
     "@used-books/session-client": "workspace:*",
     "antd": "^6.6.4",
     "axios": "^1.20.0",
+    "framer-motion": "^14.0.0",
     "lucide-react": "^1.48.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -26,11 +27,15 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@tailwindcss/forms": "^0.5.11",
     "@types/node": "^24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "autoprefixer": "^10.6.1",
     "oxlint": "^1.81.0",
+    "postcss": "^8.5.29",
+    "tailwindcss": "^3.4.19",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
     "vitest": "4.1.2"
