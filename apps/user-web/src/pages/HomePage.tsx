@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { Award, Quote, Search } from 'lucide-react'
 import { ROUTES, searchUrl } from '../lib/routes'
 import {
-  FEATURED_BOOKS,
   FEATURED_SELLERS,
   HOW_IT_WORKS,
   TESTIMONIALS,
@@ -12,6 +12,7 @@ import {
 } from '../lib/mock/home'
 import type { SellerItem } from '../lib/mock/home'
 import { BookCard } from '../components'
+import { getPublicListings } from '../services/public-listings'
 import styles from './HomePage.module.css'
 
 /* ---------- Hero ---------- */
@@ -78,6 +79,7 @@ function Hero() {
 
 
 function FeaturedBooks() {
+  const result = useQuery({ queryKey: ['home-public-listings'], queryFn: () => getPublicListings(new URLSearchParams({ limit: '4', sort: 'newest' })), retry: false, staleTime: 0 })
   return (
     <section className={styles.featured} aria-labelledby="featured-title">
       <div className={styles.container}>
@@ -96,7 +98,9 @@ function FeaturedBooks() {
         </div>
 
         <div className={styles.bookGrid}>
-          {FEATURED_BOOKS.map((book, index) => (
+          {result.isPending && <p>Đang tải sách trên kệ…</p>}
+          {result.isError && <p>Chưa tải được sách. Vui lòng thử lại từ trang Khám phá.</p>}
+          {result.data?.items.map((book, index) => (
             <BookCard key={book.id} book={book} index={index} />
           ))}
         </div>
