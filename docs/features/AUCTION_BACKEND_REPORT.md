@@ -1,7 +1,7 @@
 # Auction backend report — AU01–AU03
 
-Date: 2026-10-08 · Branch `feature/auction-backend` · OpenAPI 0.25.0 · migrations
-`0008-auctions`, `0009-point-orders` · decision record [ADR 0030](../adr/0030-bounded-auction-backend.md).
+Date: 2026-10-08 · Branch `feature/auction-backend` · OpenAPI 0.26.0 · migrations
+`0008-auctions`, `0009-point-orders`, `0010-point-collection` · decision record [ADR 0030](../adr/0030-bounded-auction-backend.md).
 Rules: [LOCAL-AUCTION-01 §6](LOCAL_HANDOVER_AUCTION.md); cases:
 [AC-AU01–14](LOCAL_TRANSACTION_ACCEPTANCE.md). AI-written; human review still required.
 
@@ -16,6 +16,7 @@ Rules: [LOCAL-AUCTION-01 §6](LOCAL_HANDOVER_AUCTION.md); cases:
 | Reads | `GET /auctions`, `GET /auctions/{id}` (public), `GET /me/auctions/{id}/participation` | Public price/history with aliases; own ceiling only to its owner |
 | Admin | `POST /operations/auctions/{id}/cancel` | ADMIN independent of seller and bidders, reason ≥ 10 chars |
 | Winner Order | `GET /me/point-orders/{id}`, `POST /point-orders/{id}/pay` | Win/Buy Now forms a ViaPoint Order; commitment transferred without release; wallet → Order hold; auction `Sold`, Order `Fulfilling` |
+| Collection | `POST /point-orders/{id}/accept-report`, `…/reject-report`, `…/collection-code`; `GET /operations/point-orders`, `POST /operations/point-orders/{id}/handover` | 72 h report decision; 72 h collection window in point hours; 6-digit 10-minute code (hash only); Staff handover → `Inspection` + 72 h window; overdue → `ResolutionPending` |
 | Worker | `AuctionWorker` inside `order-worker` | Close at `endAt` (Unsold / AwaitingWinnerPayment + Order / OnHold), payment expiry (Order and auction; commitment back to intake), drop-off expiry |
 
 ## Rule comparison (other auction sites)
@@ -34,10 +35,10 @@ Rules: [LOCAL-AUCTION-01 §6](LOCAL_HANDOVER_AUCTION.md); cases:
 
 | Check | Result |
 | --- | --- |
-| `vitest run` (API unit, incl. 14 engine tests for AC-AU03–06, random grid invariants) | PASS 97/97 |
-| `test/auctions.e2e-spec.ts` on QA replica set `latlai_e2e_test` | PASS 12/12 |
+| `vitest run` (API unit, incl. 14 engine tests for AC-AU03–06 and 5 point-hours tests) | PASS 102/102 |
+| `test/auctions.e2e-spec.ts` on QA replica set `latlai_e2e_test` | PASS 15/15 |
 | `oxlint`, `tsc --noEmit`, `nest build`, `contract:check`, `contract:routes` | PASS |
-| Full `test:api:e2e` | PASS 516/516 (26 files) |
+| Full `test:api:e2e` | PASS 519/519 (26 files) |
 | Full `test:api:mongo` | PASS 39, 4 skipped (PostgreSQL import needs `TEST_DATABASE_URL`; failover profile not started) |
 
 E2E cases: only Sale enters (Both → 409); replayed intake key; commitment/slot/
@@ -59,10 +60,20 @@ the buyer; the worker never expires a paid Order; payment at the deadline is ref
 and expiry returns the commitment to the intake; Buy Now forms a 15-minute Order that
 can be paid.
 
+Collection cases (0.26.0): decision deadline paidAt + 72h; no code before acceptance;
+seller cannot decide; collection deadline ≥ 72h and inside hours or at 18:00; raw code
+absent from code records, receipts and audit; code replay returns null; other-point
+Staff 403; closed point 409; wrong code committed with attempts left; handover replay
+returns the same receipt with one handover row; second handover 409; Inspection with
+deadline +72h; five wrong attempts then RateLimited even with the right code; expired
+code; fresh code works; rejection, silent decision and no-show all reach
+ResolutionPending with the hold kept, no refund, no live code and the listing Reserved.
+
 ## Not done / blocked
 
-- Paid Orders stop at `Fulfilling`: point handover/collection code, inspection window,
-  settlement, refunds/disputes and post-payment cancellation are planned.
+- Orders stop at `Inspection`/`ResolutionPending`: inspection-window close, settlement,
+  refunds/disputes, resolution decisions and the 14-day escalation are planned.
+- Codes are salted hashes (not keyed HMAC); point hours are a fixed UTC+7 rule.
 - Carrier inbound/outbound legs and fee holds, NeedsEvidence, late arrival, inspection
   overdue tasks, point/assignment admin APIs, OnHold resolution, SSE/notifications.
 - Account lock/restriction during an Active auction is detected at close (OnHold), not

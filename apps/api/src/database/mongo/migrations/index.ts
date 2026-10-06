@@ -29,6 +29,11 @@ import {
   pointOrdersMigration,
   withPointOrderChanges,
 } from './0009-point-orders.js';
+import {
+  pointCollectionMigration,
+  pointCollectionSpecs,
+  withPointCollectionChanges,
+} from './0010-point-collection.js';
 
 export interface Migration {
   id: string;
@@ -103,6 +108,7 @@ export const migrations: Migration[] = [
   onlinePriceLookupMigration,
   auctionsMigration,
   pointOrdersMigration,
+  pointCollectionMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -115,10 +121,12 @@ export const currentCollections = (): CollectionSpec[] => [
   ...baselineCollections
     .map(withTitleKey)
     .map(withAuctionChanges)
-    .map(withPointOrderChanges),
+    .map(withPointOrderChanges)
+    .map(withPointCollectionChanges),
   wishlistSpec,
   ...priceAssistSpecsV2,
   ...onlinePriceSpecs,
   ...auctionCollectionSpecs.map(withPointOrderChanges),
-  ...pointOrderCollectionSpecs,
+  ...pointOrderCollectionSpecs.map(withPointCollectionChanges),
+  ...pointCollectionSpecs,
 ];

@@ -1681,6 +1681,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/point-orders/{orderId}/accept-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Buyer only, within 72 hours of payment (POL-32). Accepts the condition report of the paid ViaPoint Order and opens a 72-hour collection window ending within point hours (POL-33). Accepting never waives a later claim (FR-T03). */
+        post: operations["acceptPointOrderReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/point-orders/{orderId}/reject-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Buyer only, before accepting. Opens ResolutionPending with the reason; the book stays at the point and the payment stays held. Resolution and refund remain planned. */
+        post: operations["rejectPointOrderReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/point-orders/{orderId}/collection-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Buyer only, after accepting and before the collection deadline. Issues a 6-digit code valid for 10 minutes bound to recipient, book and point; a new code revokes the previous one. Only a salted hash is stored and the code is returned once. */
+        post: operations["requestCollectionCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/point-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE STAFF with a current point assignment: paid Orders at assigned points awaiting the recipient, oldest deadline first. */
+        get: operations["listPointCollections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/point-orders/{orderId}/handover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Assigned STAFF independent of buyer and seller, during point hours (09:00-18:00 Asia/Ho_Chi_Minh). A correct live code records one handover and starts the 72-hour inspection window. Wrong or expired codes are recorded and refused; the sixth wrong attempt within 15 minutes is rate limited (AC-H17). */
+        post: operations["handOverPointOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auctions/{auctionId}/buy-now": {
         parameters: {
             query?: never;
@@ -3023,6 +3108,42 @@ export interface components {
         PayPointOrder: {
             expectedVersion: number;
         };
+        AcceptPointOrderReport: {
+            expectedVersion: number;
+        };
+        RejectPointOrderReport: {
+            expectedVersion: number;
+            reason: string;
+        };
+        RequestCollectionCode: {
+            expectedVersion: number;
+        };
+        HandOverPointOrder: {
+            expectedVersion: number;
+            code: string;
+        };
+        CollectionCodeIssued: {
+            receipt: components["schemas"]["AuctionCommandReceipt"];
+            /** @description Shown once. Null on an idempotent replay; request a new code instead. */
+            code: string | null;
+        };
+        PointCollectionItem: {
+            /** Format: uuid */
+            id: string;
+            version: number;
+            title: string;
+            /** @enum {string} */
+            state: "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "PaymentExpired";
+            recipientName: string;
+            shelfCode: string | null;
+            /** Format: date-time */
+            collectionDeadline: string | null;
+        };
+        PointCollectionQueue: {
+            items: components["schemas"]["PointCollectionItem"][];
+            /** Format: date-time */
+            serverTime: string;
+        };
         PointOrder: {
             /** Format: uuid */
             id: string;
@@ -3043,7 +3164,7 @@ export interface components {
             /** @enum {string} */
             fulfillmentMethod: "SelfCollect";
             /** @enum {string} */
-            state: "AwaitingPayment" | "Fulfilling" | "PaymentExpired";
+            state: "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "PaymentExpired";
             version: number;
             /** @constant */
             currency: "VND";
@@ -3065,6 +3186,31 @@ export interface components {
             paidAt: string | null;
             /** Format: date-time */
             closedAt: string | null;
+            /** @description Condition check at the point; not authenticity (FR-T02). */
+            report: {
+                /** @constant */
+                outcome: "Pass";
+                /** Format: date-time */
+                inspectedAt: string;
+                note: string | null;
+                scope: string;
+            };
+            /** Format: date-time */
+            acceptanceDeadline: string | null;
+            /** Format: date-time */
+            acceptedAt: string | null;
+            /** Format: date-time */
+            collectionDeadline: string | null;
+            /** Format: date-time */
+            collectedAt: string | null;
+            /** Format: date-time */
+            inspectionDeadline: string | null;
+            resolution: {
+                /** @enum {string} */
+                reason: "ReportRejected" | "RecipientDecisionOverdue" | "CollectionOverdue";
+                /** Format: date-time */
+                openedAt: string;
+            } | null;
             /** Format: date-time */
             serverTime: string;
         };
@@ -3088,10 +3234,22 @@ export interface components {
             contextId: string;
             version: number;
             /** @enum {string} */
-            state: "AwaitingDropoff" | "Received" | "Passed" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "PaymentExpired" | "AwaitingPayment" | "Fulfilling";
+            state: "AwaitingDropoff" | "Received" | "Passed" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "PaymentExpired" | "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending";
             currentPrice: number | null;
             minimumBid: number | null;
             leading: boolean | null;
+            /**
+             * @description Staff handover only. A rejected code still commits the attempt.
+             * @enum {string|null}
+             */
+            collectionOutcome: "HandedOver" | "WrongCode" | "Expired" | "RateLimited" | null;
+            /** @description Wrong attempts left in the 15-minute window. */
+            attemptsRemaining: number | null;
+            /**
+             * Format: date-time
+             * @description Collection code request only; the code itself is never stored in receipts.
+             */
+            codeExpiresAt: string | null;
             /** Format: date-time */
             serverTime: string;
         };
@@ -6706,6 +6864,196 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PayPointOrder"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    acceptPointOrderReport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptPointOrderReport"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    rejectPointOrderReport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectPointOrderReport"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    requestCollectionCode: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestCollectionCode"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionCodeIssued"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listPointCollections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointCollectionQueue"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    handOverPointOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandOverPointOrder"];
             };
         };
         responses: {

@@ -16,7 +16,7 @@ quyết toán, real-carrier và completed-purchase vẫn là yêu cầu/kế ho�
 
 ## Đấu giá và điểm mô phỏng
 
-Bounded auctions are implemented in OpenAPI 0.25.0 (migrations 0008–0009); read ADR 0030 and
+Bounded auctions are implemented in OpenAPI 0.26.0 (migrations 0008–0010); read ADR 0030 and
 `docs/features/AUCTION_BACKEND_REPORT.md`. Intake shares the exclusive commitment with
 Orders, plus one point slot and the `Reserved` projection; release only on cancel
 before drop-off, drop-off expiry or Staff reclaim. Staff steps need STAFF + current
@@ -26,8 +26,12 @@ receipts, audit and outbox. Every auction command locks the auction document and
 decides with server time after locks; `endAt` is final (no extension). A win or Buy
 Now forms a ViaPoint Order (`point_orders`, migration 0009) and transfers the
 commitment without releasing it; payment locks auction → Order → ledger and moves
-buyerTotal into the Order hold. Paid Orders stop at `Fulfilling`; handover and
-settlement remain planned, so never release the hold or commitment from that state.
+buyerTotal into the Order hold. Collection (migration 0010): report decision 72 h,
+collection window 72 h in point hours, one-time 10-minute code stored only as a
+salted hash, Staff handover during 09:00–18:00 with committed wrong attempts and a
+5-per-15-minutes limit; handover starts the 72 h inspection window. Rejection and
+missed deadlines open ResolutionPending only. Settlement is still planned, so never
+release the hold, slot or commitment from these states.
 
 ## Commitment và unpaid Order
 

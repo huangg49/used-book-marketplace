@@ -3,15 +3,18 @@
 ## Nguồn và việc đang làm
 
 - **08/10 — gói backend đấu giá AU01–AU03 (một phần): nhánh local `feature/auction-backend`
-  từ `origin/main` `9399e12`, chưa push/PR.** OpenAPI 0.25.0, migrations `0008-auctions`/`0009-point-orders`,
+  từ `origin/main` `9399e12`, chưa push/PR.** OpenAPI 0.26.0, migrations `0008-auctions`/`0009-point-orders`/`0010-point-collection`,
   [ADR 0030](../adr/0030-bounded-auction-backend.md), [báo cáo](../features/AUCTION_BACKEND_REPORT.md).
   Có: hai điểm mô phỏng/slot/assignment, intake Sale → Staff nhận/kiểm tra/mở → bid
   thủ công + Auto trần riêng (engine thuần) → Mua ngay trước bid đầu → worker đóng
   phiên tạo Order ViaPoint (migration 0009, contract 0.25.0) → người thắng trả từ ví vào
   hold, phiên `Sold`, Order `Fulfilling`; quá hạn → PaymentExpired → ReclaimRequired →
-  Staff ghi trả sách. **Chưa có bàn giao tại điểm/quyết toán**, tiền giữ nguyên ở hold. Sau `pnpm db:migrate` chạy `pnpm db:bootstrap` (quyền collection mới); `db:seed`
+  Staff ghi trả sách. Sau thanh toán: người mua chấp nhận/từ chối biên bản (72h), xin mã
+  nhận 6 số (10 phút, chỉ lưu hash), Staff nhập mã trong giờ điểm → `Inspection` 72h;
+  quá hạn/từ chối → `ResolutionPending`. **Chưa có quyết toán/hoàn tiền/xử lý tranh
+  chấp**, tiền vẫn giữ ở hold. Sau `pnpm db:migrate` chạy `pnpm db:bootstrap` (quyền collection mới); `db:seed`
   gán `staff@latlai.local` vào HCM-DEMO-01. Chưa có UI, chưa human review.
-  Evidence: API unit 97/97, auction e2e 12/12, toàn bộ `test:api:e2e` 516/516 (26 file),
+  Evidence: API unit 102/102, auction e2e 15/15, toàn bộ `test:api:e2e` 519/519 (26 file),
   `test:api:mongo` 39 PASS/4 skip (import PG và failover không có môi trường), lint/typecheck/
   build/`contract:check`/`contract:routes` PASS trên QA replica set `57017`, DB `*_test`.
 

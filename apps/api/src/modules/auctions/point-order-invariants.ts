@@ -1,4 +1,5 @@
 import type { Tx } from '../../database/mongo/transaction.js';
+import type { PointOrderState } from '../../database/mongo/documents.js';
 import { pointOrderContext } from '../reservations/workflow-context.js';
 import { balanceOf } from '../wallet/ledger.service.js';
 import { checkIntake } from './auction-invariants.js';
@@ -8,11 +9,14 @@ import { checkIntake } from './auction-invariants.js';
 const fail = (message: string): never => {
   throw new Error(`Point order invariant: ${message}`);
 };
-const AUCTION_STATE = {
+const AUCTION_STATE: Record<PointOrderState, readonly string[]> = {
   AwaitingPayment: ['BuyNowPending', 'AwaitingWinnerPayment'],
   Fulfilling: ['Sold'],
+  ReadyForCollection: ['Sold'],
+  Inspection: ['Sold'],
+  ResolutionPending: ['Sold'],
   PaymentExpired: ['PaymentExpired'],
-} as const;
+};
 
 export async function checkPointOrder(tx: Tx, orderId: string) {
   const o = await tx.c.point_orders.findOne({ _id: orderId });
@@ -47,7 +51,7 @@ export async function checkPointOrder(tx: Tx, orderId: string) {
     a.sellerId !== o.sellerId ||
     a.finalPrice !== o.bookPrice ||
     a.paymentDeadline?.getTime() !== o.paymentDeadline.getTime() ||
-    !(AUCTION_STATE[o.state] as readonly string[]).includes(a.state)
+    !AUCTION_STATE[o.state].includes(a.state)
   )
     fail('order/auction mismatch');
   const active = await tx.c.exclusive_commitments.findOne({
@@ -66,10 +70,26 @@ export async function checkPointOrder(tx: Tx, orderId: string) {
     orderId: o._id,
     type: 'OrderPayment',
   });
-  if (
-    held !== (o.state === 'Fulfilling' ? o.buyerTotal : 0) ||
-    payments !== (o.paidAt ? 1 : 0)
-  )
+  if (held !== (o.paidAt ? o.buyerTotal : 0) || payments !== (o.paidAt ? 1 : 0))
     fail('order funding mismatch');
+  // Custody leaves the point exactly once, with the handover that set
+  // collectedAt; at most one live collection code exists per Order.
+  const handovers = await tx.c.point_handovers
+    .find({ orderId: o._id })
+    .toArray();
+  if (
+    handovers.length !== (o.collectedAt ? 1 : 0) ||
+    (handovers[0] &&
+      (handovers[0].handedOverAt.getTime() !== o.collectedAt!.getTime() ||
+        handovers[0].recipientId !== o.buyerId ||
+        handovers[0].pointId !== o.pointId))
+  )
+    fail('order handover mismatch');
+  const live = await tx.c.collection_codes.countDocuments({
+    orderId: o._id,
+    live: true,
+  });
+  if (live > (o.state === 'ReadyForCollection' ? 1 : 0))
+    fail('collection code outside the collection window');
   tx.check(`auction-intake:${o.intakeId}`, () => checkIntake(tx, o.intakeId));
 }

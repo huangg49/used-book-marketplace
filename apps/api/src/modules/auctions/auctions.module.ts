@@ -12,6 +12,7 @@ import { AuctionWorker } from './auction-worker.service.js';
 import { AuctionsController } from './auctions.controller.js';
 import { HandoverPointsService } from './handover-points.service.js';
 import { PointOrdersService } from './point-orders.service.js';
+import { PointCollectionService } from './point-collection.service.js';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PointOrdersService } from './point-orders.service.js';
     AuctionBiddingService,
     HandoverPointsService,
     PointOrdersService,
+    PointCollectionService,
     AuctionClock,
     AuctionWorker,
   ],

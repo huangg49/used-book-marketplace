@@ -1,9 +1,11 @@
 # ADR 0030: Bounded auction backend
 
 Date: 2026-10-08. Status: implemented for intake → bidding → close → winner ViaPoint
-Order and wallet payment → expiry/reclaim on branch `feature/auction-backend`
-(OpenAPI 0.25.0, migrations `0008-auctions`, `0009-point-orders`). Point handover,
-inspection window and settlement are not implemented. Needs human review before merge.
+Order and wallet payment → report decision → collection code and Staff handover →
+inspection window start, plus expiry/reclaim, on branch `feature/auction-backend`
+(OpenAPI 0.26.0, migrations `0008-auctions`, `0009-point-orders`,
+`0010-point-collection`). Settlement, refunds and dispute resolution are not
+implemented. Needs human review before merge.
 
 ## Context
 
@@ -83,14 +85,33 @@ should confirm the amount before sending. Hidden reserve prices stay out of scop
 - **Expiry.** Unpaid at the deadline, the worker marks Order and auction
   `PaymentExpired`, closes the Order context and transfers the commitment back to
   the intake, which moves to `ReclaimRequired`; no charge, runner-up or relist.
+- **Collection at the point (migration 0010).** Payment opens a 72 h recipient
+  decision on the point condition report (POL-32). Accept → `ReadyForCollection`
+  with a collection deadline 72 h later, moved to the next 18:00 closing time when
+  it falls outside 09:00–18:00 Asia/Ho_Chi_Minh (POL-29/33). Reject, or no answer
+  by the deadline, → `ResolutionPending`; no auto-accept and no refund. The buyer
+  requests a 6-digit code valid 10 minutes (POL-37); a new code revokes the old
+  one, only a salted SHA-256 is stored and the raw code exists only in that HTTP
+  response (a replay returns `code: null`). Assigned, independent STAFF enter it
+  during point hours: wrong/expired codes are **committed** as attempts and
+  returned as a receipt outcome, the sixth wrong attempt within 15 minutes is rate
+  limited (AC-H17). A correct code records one `point_handovers` row and moves the
+  Order to `Inspection` with `inspectionDeadline = collectedAt + 72h` (FR-T03).
+  Missing collection by the deadline → `ResolutionPending` and revokes the code.
+  The slot, commitment, `Reserved` listing and Order hold all stay until
+  settlement. Buyer decision/code commands are existing obligations (LOCKED allowed).
 - **Constants.** Auction policy constants live in `migrations/auction-constants.ts`
   so application code does not load the migration chain (import cycle).
 
 ## Consequences and limits
 
-- Paid Orders stop at `Fulfilling`: point handover/collection code, recipient
-  acceptance, inspection window, settlement to the seller, refunds/disputes and
-  post-payment cancellation are not implemented, so held money stays held.
+- Orders stop at `Inspection` or `ResolutionPending`: inspection-window close,
+  settlement to the seller (P − C), refunds/disputes, resolution decisions and the
+  14-day Admin escalation are not implemented, so held money stays held.
+- Collection codes are salted hashes of a 6-digit secret; anyone with database
+  read access could brute-force a live code within its 10 minutes. A keyed HMAC
+  with a server secret would close that; acceptable only for the simulated demo.
+- Point hours are a fixed UTC+7 rule (no holidays, no per-point schedule).
 - Only self drop-off and self collect are modelled; carrier legs and fee holds,
   NeedsEvidence, late-arrival handling, inspection overdue tasks, point admin CRUD,
   OnHold resolution UI and SSE are not implemented.

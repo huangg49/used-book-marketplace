@@ -15,6 +15,7 @@ import { commandContext, commandResponse } from '../commands/command-http.js';
 import { ContractInput } from '../commands/contract-input.service.js';
 import { AuctionBiddingService } from './auction-bidding.service.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
+import { PointCollectionService } from './point-collection.service.js';
 
 // Point Staff steps need STAFF plus a current point assignment, checked in the
 // service; auction cancellation is ADMIN only.
@@ -23,8 +24,33 @@ export class AuctionOperationsController {
   constructor(
     private readonly intakes: AuctionIntakesService,
     private readonly bidding: AuctionBiddingService,
+    private readonly collection: PointCollectionService,
     private readonly input: ContractInput,
   ) {}
+
+  @Get('point-orders')
+  @Roles('STAFF')
+  collectionQueue(@Req() req: AuthenticatedRequest) {
+    return this.collection.queue(req.auth);
+  }
+  @Post('point-orders/:orderId/handover')
+  @Roles('STAFF')
+  @HttpCode(200)
+  handover(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.collection.handover(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('HandOverPointOrder', body),
+      ),
+      res,
+    );
+  }
 
   @Get('auction-intakes')
   @Roles('STAFF')

@@ -496,7 +496,11 @@ const exclusiveCommitmentSpec: CollectionSpec = {
 
 // The baseline principal rule lists (systemActor, operation) pairs inside an
 // $or; append the auction worker pairs there and nowhere else.
-function withSystemOperations(spec: CollectionSpec, field: string) {
+export function withSystemOperations(
+  spec: CollectionSpec,
+  field: string,
+  operations: [string, string][] = AUCTION_SYSTEM_OPERATIONS,
+) {
   const expr = JSON.parse(JSON.stringify(spec.expr)) as Document;
   let found = 0;
   const visit = (node: unknown) => {
@@ -508,7 +512,7 @@ function withSystemOperations(spec: CollectionSpec, field: string) {
       );
       if (pairs.length && pairs.length === node.length) {
         found++;
-        for (const [actor, op] of AUCTION_SYSTEM_OPERATIONS)
+        for (const [actor, op] of operations)
           node.push(and(eq(f('systemActor'), actor), eq(f(field), op)));
         return;
       }

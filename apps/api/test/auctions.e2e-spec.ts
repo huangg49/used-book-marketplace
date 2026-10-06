@@ -14,6 +14,7 @@ import {
 import { MediaStorage } from '../src/modules/media/media-storage.js';
 import { AuctionClock } from '../src/modules/auctions/auction-clock.js';
 import { AuctionWorker } from '../src/modules/auctions/auction-worker.service.js';
+import { isPointOpen } from '../src/modules/auctions/point-hours.js';
 import { validates } from './helpers/contract.js';
 import {
   CHECKLIST,
@@ -192,7 +193,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
   const longSession = (a: Actor) =>
     db.c.auth_sessions.updateOne(
       { _id: a.sessionId },
-      { $set: { expiresAt: new Date(Date.now() + 4 * 24 * HOUR) } },
+      { $set: { expiresAt: new Date(Date.now() + 10 * 24 * HOUR) } },
     );
   const payOrder = (orderId: string, a: Actor, key?: string) =>
     cmd('post', `/point-orders/${orderId}/pay`, { expectedVersion: 1 }, a, key);
@@ -209,6 +210,74 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     await longSession(winner);
     const payAt = new Date(closed.closedAt!.getTime() + 60_000);
     return { ...opened, doc: closed, orderId: closed.orderId!, payAt };
+  }
+
+  // First instant at or after `from` + 1 minute when the point is open.
+  const openAt = (from: Date) => {
+    let t = new Date(from.getTime() + 60_000);
+    while (!isPointOpen(t)) t = new Date(t.getTime() + 15 * 60_000);
+    return t;
+  };
+  // A won, paid ViaPoint Order on a pinned timeline (clock restored after).
+  async function paidOrder() {
+    const winner = await actor();
+    const won = await wonAuction(winner, 300_000);
+    await fund(winner, 300_000);
+    pinClock(won.payAt);
+    await payOrder(won.orderId, winner).expect(200);
+    vi.restoreAllMocks();
+    await longSession(staff);
+    await longSession(won.seller);
+    return { ...won, winner };
+  }
+  const orderPost = (
+    orderId: string,
+    step: string,
+    body: object,
+    a: Actor,
+    key?: string,
+  ) => cmd('post', `/point-orders/${orderId}/${step}`, body, a, key);
+  const handover = (
+    orderId: string,
+    code: string,
+    s: Actor,
+    version = 3,
+    key?: string,
+  ) =>
+    cmd(
+      'post',
+      `/operations/point-orders/${orderId}/handover`,
+      { expectedVersion: version, code },
+      s,
+      key,
+    );
+  // Accepts the report at `at` and returns the collection deadline.
+  async function accepted(o: Awaited<ReturnType<typeof paidOrder>>, at: Date) {
+    pinClock(at);
+    await orderPost(
+      o.orderId,
+      'accept-report',
+      { expectedVersion: 2 },
+      o.winner,
+    ).expect(200);
+    vi.restoreAllMocks();
+    return (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+  }
+  async function issueCode(
+    o: Awaited<ReturnType<typeof paidOrder>>,
+    at: Date,
+    key?: string,
+  ) {
+    pinClock(at);
+    const r = await orderPost(
+      o.orderId,
+      'collection-code',
+      { expectedVersion: 3 },
+      o.winner,
+      key,
+    ).expect(200);
+    vi.restoreAllMocks();
+    return r;
   }
 
   beforeAll(async () => {
@@ -775,6 +844,239 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     expect(await db.c.auctions.findOne({ _id: auctionId })).toMatchObject({
       state: 'Sold',
     });
+  });
+
+  it('FR-H09/H11/T03: report acceptance, one-time code and Staff handover open the inspection window', async () => {
+    const o = await paidOrder();
+    const paid = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+    expect(paid.acceptanceDeadline!.getTime() - paid.paidAt!.getTime()).toBe(
+      72 * HOUR,
+    );
+    pinClock(new Date(paid.paidAt!.getTime() + 60_000));
+    const view = await call(
+      'get',
+      `/me/point-orders/${o.orderId}`,
+      o.winner,
+    ).expect(200);
+    validates('PointOrder', view.body);
+    expect(view.body.report).toMatchObject({ outcome: 'Pass' });
+    // No code before the report is accepted; nobody else can decide.
+    await orderPost(
+      o.orderId,
+      'collection-code',
+      { expectedVersion: 2 },
+      o.winner,
+    ).expect(409);
+    await orderPost(
+      o.orderId,
+      'accept-report',
+      { expectedVersion: 2 },
+      o.seller,
+    ).expect(404);
+    vi.restoreAllMocks();
+    const acceptAt = new Date(paid.paidAt!.getTime() + 2 * 60_000);
+    const ready = await accepted(o, acceptAt);
+    expect(ready.state).toBe('ReadyForCollection');
+    // Within hours, or moved to a closing time (18:00 local).
+    expect(isPointOpen(new Date(ready.collectionDeadline!.getTime() - 1))).toBe(
+      true,
+    );
+    expect(ready.collectionDeadline!.getTime()).toBeGreaterThanOrEqual(
+      acceptAt.getTime() + 72 * HOUR,
+    );
+
+    const at = openAt(acceptAt);
+    const key = randomUUID();
+    const issued = await issueCode(o, new Date(at.getTime() - 60_000), key);
+    validates('CollectionCodeIssued', issued.body);
+    const code = issued.body.code as string;
+    expect(code).toMatch(/^[0-9]{6}$/);
+    expect(issued.body.receipt.codeExpiresAt).toEqual(expect.any(String));
+    // The raw code is never stored: not in the code record, receipt or audit.
+    const stored = JSON.stringify([
+      await db.c.collection_codes.find({ orderId: o.orderId }).toArray(),
+      await db.c.mutation_receipts.findOne({ _id: issued.body.receipt.id }),
+      await db.c.audit_events.findOne({ receiptId: issued.body.receipt.id }),
+    ]);
+    expect(stored).not.toContain(`"${code}"`);
+    const replay = await issueCode(o, new Date(at.getTime() - 60_000), key);
+    expect(replay.headers['idempotency-replayed']).toBe('true');
+    expect(replay.body.code).toBeNull();
+
+    // Staff of another point, the seller, and a closed point are refused.
+    pinClock(at);
+    await handover(o.orderId, code, otherStaff).expect(403);
+    const wrongCode = code === '000000' ? '111111' : '000000';
+    const wrong = await handover(o.orderId, wrongCode, staff).expect(200);
+    expect(wrong.body).toMatchObject({
+      collectionOutcome: 'WrongCode',
+      attemptsRemaining: 4,
+      state: 'ReadyForCollection',
+    });
+    const hkey = randomUUID();
+    const done = await handover(o.orderId, code, staff, 3, hkey).expect(200);
+    validates('AuctionCommandReceipt', done.body);
+    expect(done.body).toMatchObject({
+      collectionOutcome: 'HandedOver',
+      state: 'Inspection',
+      version: 4,
+    });
+    const again = await handover(o.orderId, code, staff, 3, hkey).expect(200);
+    expect(again.headers['idempotency-replayed']).toBe('true');
+    await handover(o.orderId, code, staff, 3).expect(409);
+    vi.restoreAllMocks();
+    const collected = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+    expect(collected.collectedAt).toEqual(at);
+    expect(collected.inspectionDeadline!.getTime()).toBe(
+      at.getTime() + 72 * HOUR,
+    );
+    expect(
+      await db.c.point_handovers.countDocuments({ orderId: o.orderId }),
+    ).toBe(1);
+    expect(
+      await db.c.collection_codes.countDocuments({
+        orderId: o.orderId,
+        live: true,
+      }),
+    ).toBe(0);
+    // The book stays reserved and the money held until settlement.
+    expect(await db.c.listings.findOne({ _id: o.listing.id })).toMatchObject({
+      trade: 'Reserved',
+    });
+  });
+
+  it('AC-H17: closed point, wrong codes, sixth-attempt rate limit, expiry and a fresh code', async () => {
+    const o = await paidOrder();
+    const paid = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+    const acceptAt = new Date(paid.paidAt!.getTime() + 60_000);
+    await accepted(o, acceptAt);
+    const at = openAt(acceptAt);
+    // A closed point never hands over, even with a live code.
+    let closed = new Date(at.getTime());
+    while (isPointOpen(closed))
+      closed = new Date(closed.getTime() + 15 * 60_000);
+    const early = await issueCode(o, new Date(closed.getTime() - 60_000));
+    pinClock(closed);
+    await handover(o.orderId, early.body.code, staff).expect(409);
+    vi.restoreAllMocks();
+
+    const first = await issueCode(o, new Date(at.getTime() - 60_000));
+    const code = first.body.code as string;
+    const wrongCode = code === '000000' ? '111111' : '000000';
+    pinClock(at);
+    for (const left of [4, 3, 2, 1, 0])
+      expect(
+        (await handover(o.orderId, wrongCode, staff).expect(200)).body,
+      ).toMatchObject({
+        collectionOutcome: 'WrongCode',
+        attemptsRemaining: left,
+      });
+    const limited = await handover(o.orderId, code, staff).expect(200);
+    expect(limited.body).toMatchObject({
+      collectionOutcome: 'RateLimited',
+      state: 'ReadyForCollection',
+    });
+    vi.restoreAllMocks();
+    // After the 15-minute window the old code has also expired (10 minutes).
+    const later = openAt(new Date(at.getTime() + 16 * 60_000));
+    pinClock(later);
+    expect(
+      (await handover(o.orderId, code, staff).expect(200)).body
+        .collectionOutcome,
+    ).toBe('Expired');
+    vi.restoreAllMocks();
+    const fresh = await issueCode(o, later);
+    pinClock(new Date(later.getTime() + 60_000));
+    expect(
+      (await handover(o.orderId, fresh.body.code, staff).expect(200)).body
+        .collectionOutcome,
+    ).toBe('HandedOver');
+    vi.restoreAllMocks();
+    expect(
+      await db.c.collection_attempts.countDocuments({
+        orderId: o.orderId,
+        outcome: 'WrongCode',
+      }),
+    ).toBe(5);
+  });
+
+  it('FR-H09: rejection and missed deadlines open resolution without auto-accept or refund', async () => {
+    const rejected = await paidOrder();
+    const paid = (await db.c.point_orders.findOne({ _id: rejected.orderId }))!;
+    pinClock(new Date(paid.paidAt!.getTime() + 60_000));
+    const r = await orderPost(
+      rejected.orderId,
+      'reject-report',
+      { expectedVersion: 2, reason: 'Sách khác mô tả ở phần gáy' },
+      rejected.winner,
+    ).expect(200);
+    expect(r.body.state).toBe('ResolutionPending');
+    vi.restoreAllMocks();
+
+    const silent = await paidOrder();
+    const silentPaid = (await db.c.point_orders.findOne({
+      _id: silent.orderId,
+    }))!;
+    pinClock(silentPaid.acceptanceDeadline!);
+    await orderPost(
+      silent.orderId,
+      'accept-report',
+      { expectedVersion: 2 },
+      silent.winner,
+    ).expect(409);
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+
+    const noShow = await paidOrder();
+    const noShowPaid = (await db.c.point_orders.findOne({
+      _id: noShow.orderId,
+    }))!;
+    const ready = await accepted(
+      noShow,
+      new Date(noShowPaid.paidAt!.getTime() + 60_000),
+    );
+    await issueCode(
+      noShow,
+      new Date(noShowPaid.paidAt!.getTime() + 2 * 60_000),
+    );
+    pinClock(ready.collectionDeadline!);
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+
+    for (const [o, reason] of [
+      [rejected, 'ReportRejected'],
+      [silent, 'RecipientDecisionOverdue'],
+      [noShow, 'CollectionOverdue'],
+    ] as const) {
+      const doc = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+      expect(doc).toMatchObject({
+        state: 'ResolutionPending',
+        resolutionReason: reason,
+        collectedAt: null,
+      });
+      // Money stays held, the book stays reserved, no live code survives.
+      const hold = (await db.c.wallet_accounts.findOne({
+        orderId: o.orderId,
+      }))!;
+      expect(
+        await db.c.ledger_journals.countDocuments({
+          orderId: o.orderId,
+          type: 'OrderRefund',
+        }),
+      ).toBe(0);
+      expect(hold).toBeTruthy();
+      expect(
+        await db.c.collection_codes.countDocuments({
+          orderId: o.orderId,
+          live: true,
+        }),
+      ).toBe(0);
+      expect(await db.c.listings.findOne({ _id: o.listing.id })).toMatchObject({
+        trade: 'Reserved',
+      });
+    }
+    const wallet = await call('get', '/me/wallet', noShow.winner).expect(200);
+    expect(wallet.body.transactionHeld).toBe(300_000);
   });
 
   it('AC-AU08/10: no bids closes Unsold; Admin cancel needs independence and a reason', async () => {

@@ -144,6 +144,9 @@ export type AuctionChange = {
   currentPrice: number | null;
   minimumBid: number | null;
   leading: boolean | null;
+  collectionOutcome?: Wire['AuctionCommandReceipt']['collectionOutcome'];
+  attemptsRemaining?: number | null;
+  codeExpiresAt?: Date | null;
   before?: Json;
   event?: string;
   reason?: string;
@@ -160,7 +163,11 @@ export type AuctionOperation =
   | 'setAuctionAutoBid'
   | 'disableAuctionAutoBid'
   | 'buyAuctionNow'
-  | 'payPointOrder';
+  | 'payPointOrder'
+  | 'acceptPointOrderReport'
+  | 'rejectPointOrderReport'
+  | 'requestCollectionCode'
+  | 'handOverPointOrder';
 type CommandChange =
   | AuctionChange
   | Change
@@ -198,6 +205,10 @@ const EXISTING_OBLIGATION_OPERATIONS = [
   'createPackagingEvidence',
   'uploadPackagingEvidence',
   'registerDirectShipment',
+  // Paid ViaPoint Order: the buyer may still decide and collect.
+  'acceptPointOrderReport',
+  'rejectPointOrderReport',
+  'requestCollectionCode',
 ];
 const KEY_LOCK_TTL_MS = 7 * 24 * 3_600_000;
 const sessionExpired = (
@@ -537,6 +548,9 @@ export class MongoCommandService {
       currentPrice: change.currentPrice,
       minimumBid: change.minimumBid,
       leading: change.leading,
+      collectionOutcome: change.collectionOutcome ?? null,
+      attemptsRemaining: change.attemptsRemaining ?? null,
+      codeExpiresAt: change.codeExpiresAt?.toISOString() ?? null,
       serverTime: serverTime.toISOString(),
     };
   }
@@ -556,7 +570,10 @@ export class MongoCommandService {
   systemAuction<C>(
     systemActor: Extract<
       SystemActor,
-      'AuctionClose' | 'AuctionPaymentExpiry' | 'AuctionIntakeExpiry'
+      | 'AuctionClose'
+      | 'AuctionPaymentExpiry'
+      | 'AuctionIntakeExpiry'
+      | 'PointOrderDeadline'
     >,
     key: string,
     options: {
@@ -569,6 +586,7 @@ export class MongoCommandService {
       AuctionClose: 'closeAuction',
       AuctionPaymentExpiry: 'expireAuctionPayment',
       AuctionIntakeExpiry: 'expireAuctionIntake',
+      PointOrderDeadline: 'openPointOrderResolution',
     }[systemActor];
     return this.executePrincipal(
       { actorId: null, systemActor, key, requestId: randomUUID() },

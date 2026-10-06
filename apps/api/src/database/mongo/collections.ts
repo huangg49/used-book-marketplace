@@ -82,6 +82,9 @@ export interface CollectionTypes {
   auction_bidders: D.AuctionBidderDoc;
   auction_bids: D.AuctionBidDoc;
   point_orders: D.PointOrderDoc;
+  collection_codes: D.CollectionCodeDoc;
+  collection_attempts: D.CollectionAttemptDoc;
+  point_handovers: D.PointHandoverDoc;
   price_references: D.PriceReferenceDoc;
   price_suggestions: D.PriceSuggestionDoc;
   price_assist_usage: D.PriceAssistUsageDoc;
@@ -228,6 +231,9 @@ const NAMES: CollectionName[] = [
   'auction_bidders',
   'auction_bids',
   'point_orders',
+  'collection_codes',
+  'collection_attempts',
+  'point_handovers',
 ];
 export const COLLECTION_NAMES: readonly CollectionName[] = NAMES;
 

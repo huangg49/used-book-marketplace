@@ -6,7 +6,10 @@ import type {
   PointOrderContextDoc,
   PointOrderDoc,
 } from '../../database/mongo/documents.js';
-import { POINT_ORDER_COMMISSION_BPS } from '../../database/mongo/migrations/auction-constants.js';
+import {
+  POINT_ORDER_COMMISSION_BPS,
+  RECIPIENT_DECISION_MS,
+} from '../../database/mongo/migrations/auction-constants.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import {
   DomainError,
@@ -103,6 +106,14 @@ export class PointOrdersService {
       paidAt: null,
       closedAt: null,
       updatedAt: now,
+      acceptanceDeadline: null,
+      acceptedAt: null,
+      collectionDeadline: null,
+      collectedAt: null,
+      inspectionDeadline: null,
+      resolutionReason: null,
+      resolutionNote: null,
+      resolutionOpenedAt: null,
       lockSeq: 0,
     };
     const context: PointOrderContextDoc = {
@@ -251,7 +262,15 @@ export class PointOrdersService {
         const next = await tx.c.point_orders.findOneAndUpdate(
           { _id: o._id, version: o.version, state: 'AwaitingPayment' },
           {
-            $set: { state: 'Fulfilling', paidAt: now, updatedAt: now },
+            // Payment opens the 72 h recipient decision on the report (POL-32).
+            $set: {
+              state: 'Fulfilling',
+              paidAt: now,
+              acceptanceDeadline: new Date(
+                now.getTime() + RECIPIENT_DECISION_MS,
+              ),
+              updatedAt: now,
+            },
             $inc: { version: 1 },
           },
           { returnDocument: 'after' },
@@ -271,13 +290,17 @@ export class PointOrdersService {
   }
 
   read(auth: Actor, id: string): Promise<Wire['PointOrder']> {
-    return this.commands.read(auth, async (tx, actor) => {
+    // Existing obligation: a LOCKED participant still reads a paid Order.
+    return this.commands.readObligation(auth, async (tx, actor) => {
       member(actor);
       const o = await this.own(tx, id, actor._id, false);
       const item = await tx.c.workflow_items.findOne({
         _id: `${o.contextId}:${o.listingId}`,
       });
       const point = await tx.c.handover_points.findOne({ _id: o.pointId });
+      const intake = (await tx.c.auction_intakes.findOne({
+        _id: o.intakeId,
+      }))!;
       return {
         id: o._id,
         source: 'Auction',
@@ -305,6 +328,24 @@ export class PointOrdersService {
         paymentDeadline: o.paymentDeadline.toISOString(),
         paidAt: o.paidAt?.toISOString() ?? null,
         closedAt: o.closedAt?.toISOString() ?? null,
+        report: {
+          outcome: 'Pass',
+          inspectedAt: intake.inspectedAt!.toISOString(),
+          note: intake.inspectionNote,
+          scope:
+            'Đã kiểm tra tình trạng tại điểm theo checklist; không xác nhận sách chính hãng.',
+        },
+        acceptanceDeadline: o.acceptanceDeadline?.toISOString() ?? null,
+        acceptedAt: o.acceptedAt?.toISOString() ?? null,
+        collectionDeadline: o.collectionDeadline?.toISOString() ?? null,
+        collectedAt: o.collectedAt?.toISOString() ?? null,
+        inspectionDeadline: o.inspectionDeadline?.toISOString() ?? null,
+        resolution: o.resolutionReason
+          ? {
+              reason: o.resolutionReason,
+              openedAt: o.resolutionOpenedAt!.toISOString(),
+            }
+          : null,
         serverTime: (await tx.now()).toISOString(),
       };
     });

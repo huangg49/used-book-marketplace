@@ -24,7 +24,8 @@ export type SystemActor =
   | 'OrderDeliveryExpiry'
   | 'AuctionClose'
   | 'AuctionPaymentExpiry'
-  | 'AuctionIntakeExpiry';
+  | 'AuctionIntakeExpiry'
+  | 'PointOrderDeadline';
 
 type Lockable = { lockSeq: number };
 
@@ -797,11 +798,64 @@ export interface PointOrderDoc extends Lockable {
   commissionBps: number;
   commission: number;
   sellerProceeds: number;
-  state: 'AwaitingPayment' | 'Fulfilling' | 'PaymentExpired';
+  state: PointOrderState;
   version: number;
   createdAt: Date;
   paymentDeadline: Date;
   paidAt: Date | null;
   closedAt: Date | null;
   updatedAt: Date;
+  // Collection at the point (migration 0010).
+  acceptanceDeadline: Date | null;
+  acceptedAt: Date | null;
+  collectionDeadline: Date | null;
+  collectedAt: Date | null;
+  inspectionDeadline: Date | null;
+  resolutionReason:
+    'ReportRejected' | 'RecipientDecisionOverdue' | 'CollectionOverdue' | null;
+  resolutionNote: string | null;
+  resolutionOpenedAt: Date | null;
+}
+export type PointOrderState =
+  | 'AwaitingPayment'
+  | 'Fulfilling'
+  | 'ReadyForCollection'
+  | 'Inspection'
+  | 'ResolutionPending'
+  | 'PaymentExpired';
+export interface CollectionCodeDoc extends Lockable {
+  _id: string;
+  orderId: string;
+  recipientId: string;
+  listingId: string;
+  pointId: string;
+  salt: string;
+  codeHash: string;
+  issuedAt: Date;
+  expiresAt: Date;
+  live: boolean;
+  usedAt: Date | null;
+  revokedAt: Date | null;
+  receiptId: string;
+}
+export interface CollectionAttemptDoc {
+  _id: string;
+  orderId: string;
+  staffId: string;
+  codeId: string | null;
+  outcome: 'Accepted' | 'WrongCode' | 'Expired' | 'RateLimited';
+  receiptId: string;
+  at: Date;
+}
+export interface PointHandoverDoc {
+  _id: string;
+  orderId: string;
+  listingId: string;
+  pointId: string;
+  recipientId: string;
+  staffId: string;
+  codeId: string;
+  method: 'SelfCollect';
+  handedOverAt: Date;
+  receiptId: string;
 }

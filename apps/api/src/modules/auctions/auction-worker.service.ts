@@ -4,6 +4,7 @@ import { DomainError } from '../commands/domain-error.js';
 import { AuctionBiddingService } from './auction-bidding.service.js';
 import { AuctionClock } from './auction-clock.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
+import { PointCollectionService } from './point-collection.service.js';
 
 // Bounded sweeps for auction deadlines. Discovery reads take no locks; each
 // command locks and rechecks the deadline with the server clock, so a stale
@@ -14,11 +15,12 @@ export class AuctionWorker {
     private readonly mongo: MongoService,
     private readonly bidding: AuctionBiddingService,
     private readonly intakes: AuctionIntakesService,
+    private readonly collection: PointCollectionService,
     private readonly clock: AuctionClock,
   ) {}
   async tick() {
-    const { dropoffs, endings, payments, now } = await this.mongo.tx(
-      async (tx) => {
+    const { dropoffs, endings, payments, decisions, collections, now } =
+      await this.mongo.tx(async (tx) => {
         const now = await this.clock.now(tx);
         return {
           now,
@@ -43,9 +45,24 @@ export class AuctionWorker {
               { limit: 100, sort: { paymentDeadline: 1, _id: 1 } },
             )
             .toArray(),
+          // Paid ViaPoint Orders past the report decision / collection deadline.
+          decisions: await tx.c.point_orders
+            .find(
+              { state: 'Fulfilling', acceptanceDeadline: { $lte: now } },
+              { limit: 100, sort: { acceptanceDeadline: 1, _id: 1 } },
+            )
+            .toArray(),
+          collections: await tx.c.point_orders
+            .find(
+              {
+                state: 'ReadyForCollection',
+                collectionDeadline: { $lte: now },
+              },
+              { limit: 100, sort: { collectionDeadline: 1, _id: 1 } },
+            )
+            .toArray(),
         };
-      },
-    );
+      });
     let processed = 0,
       skipped = 0,
       failed = 0;
@@ -63,10 +80,14 @@ export class AuctionWorker {
       await attempt(() => this.bidding.expirePayment(a._id));
     for (const i of dropoffs)
       await attempt(() => this.intakes.expireDropoff(i._id));
+    for (const o of [...decisions, ...collections])
+      await attempt(() => this.collection.openResolution(o._id));
     const oldest = [
       ...endings.map((a) => a.endAt),
       ...payments.map((a) => a.paymentDeadline!),
       ...dropoffs.map((i) => i.dropoffDeadline),
+      ...decisions.map((o) => o.acceptanceDeadline!),
+      ...collections.map((o) => o.collectionDeadline!),
     ].sort((x, y) => x.getTime() - y.getTime())[0];
     return {
       processed,
@@ -75,6 +96,9 @@ export class AuctionWorker {
       onHold: await this.mongo.c.auctions.countDocuments({ state: 'OnHold' }),
       reclaimRequired: await this.mongo.c.auction_intakes.countDocuments({
         state: 'ReclaimRequired',
+      }),
+      resolutionPending: await this.mongo.c.point_orders.countDocuments({
+        state: 'ResolutionPending',
       }),
       oldestLagSeconds: oldest
         ? Math.max(0, Math.round((now.getTime() - oldest.getTime()) / 1000))

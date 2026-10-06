@@ -19,6 +19,7 @@ import { AuctionBiddingService } from './auction-bidding.service.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
 import { HandoverPointsService } from './handover-points.service.js';
 import { PointOrdersService } from './point-orders.service.js';
+import { PointCollectionService } from './point-collection.service.js';
 
 @Controller()
 export class AuctionsController {
@@ -27,8 +28,64 @@ export class AuctionsController {
     private readonly bidding: AuctionBiddingService,
     private readonly points: HandoverPointsService,
     private readonly orders: PointOrdersService,
+    private readonly collection: PointCollectionService,
     private readonly input: ContractInput,
   ) {}
+
+  @Post('point-orders/:orderId/accept-report')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  acceptReport(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.collection.accept(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('AcceptPointOrderReport', body),
+      ),
+      res,
+    );
+  }
+  @Post('point-orders/:orderId/reject-report')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  rejectReport(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.collection.reject(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('RejectPointOrderReport', body),
+      ),
+      res,
+    );
+  }
+  @Post('point-orders/:orderId/collection-code')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  collectionCode(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.collection.requestCode(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('RequestCollectionCode', body),
+      ),
+      res,
+    );
+  }
 
   @Get('me/point-orders/:orderId')
   @Roles('MEMBER')
