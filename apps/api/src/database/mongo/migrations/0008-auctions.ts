@@ -231,15 +231,27 @@ const auctionIntakeSpec: CollectionSpec = {
         isNull('receivedAt'),
         isNull('auctionId'),
       ),
-      and(eq(f('state'), 'Received'), notNull('receivedAt'), isNull('inspectedAt')),
-      and(eq(f('state'), 'Passed'), eq(f('inspectionOutcome'), 'Pass'), isNull('auctionId')),
+      and(
+        eq(f('state'), 'Received'),
+        notNull('receivedAt'),
+        isNull('inspectedAt'),
+      ),
+      and(
+        eq(f('state'), 'Passed'),
+        eq(f('inspectionOutcome'), 'Pass'),
+        isNull('auctionId'),
+      ),
       and(eq(f('state'), 'Auctioning'), notNull('auctionId')),
       and(
         oneOf(f('state'), ['ReclaimRequired', 'Reclaimed']),
         notNull('receivedAt'),
         notNull('reclaimReason'),
       ),
-      and(eq(f('state'), 'Cancelled'), isNull('receivedAt'), notNull('closedAt')),
+      and(
+        eq(f('state'), 'Cancelled'),
+        isNull('receivedAt'),
+        notNull('closedAt'),
+      ),
     ),
     or(
       ne(f('state'), 'Reclaimed'),
@@ -340,13 +352,21 @@ const auctionSpec: CollectionSpec = {
         eq(f('paymentDeadline'), plusMs('endAt', AUCTION_PAYMENT_MS)),
         gte(f('closedAt'), f('endAt')),
       ),
-      and(eq(f('state'), 'PaymentExpired'), notNull('winnerId'), notNull('closedAt')),
+      and(
+        eq(f('state'), 'PaymentExpired'),
+        notNull('winnerId'),
+        notNull('closedAt'),
+      ),
       and(
         eq(f('state'), 'Unsold'),
         eq(f('bidderCount'), 0),
         gte(f('closedAt'), f('endAt')),
       ),
-      and(eq(f('state'), 'Cancelled'), notNull('closedAt'), notNull('cancelReason')),
+      and(
+        eq(f('state'), 'Cancelled'),
+        notNull('closedAt'),
+        notNull('cancelReason'),
+      ),
     ),
   ),
   indexes: [
@@ -521,9 +541,7 @@ export const auctionsMigration = {
       ...auctionCollectionSpecs,
       ...auctionChangedSpecs,
     ]);
-    const points = db.collection<Document & { _id: string }>(
-      'handover_points',
-    );
+    const points = db.collection<Document & { _id: string }>('handover_points');
     for (const point of handoverPoints)
       await points.updateOne(
         { _id: point._id },

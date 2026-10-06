@@ -1,4 +1,4 @@
-import { orderContext } from './workflow-context.js';
+import { intakeContext, orderContext } from './workflow-context.js';
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Tx } from '../../database/mongo/transaction.js';
@@ -63,6 +63,101 @@ export class ReservationsService {
       occurredAt: now,
     });
     return commitment;
+  }
+  // Auction intake (migration 0008): the same unique Active commitment, owned
+  // by an AuctionIntake context from intake creation until reclaim.
+  async acquireForIntake(
+    tx: Tx,
+    contextId: string,
+    listingId: string,
+    now: Date,
+    receiptId: string,
+  ) {
+    const context = intakeContext(
+      await tx.c.workflow_contexts.findOne({ _id: contextId }),
+    );
+    const intake = context
+      ? await tx.c.auction_intakes.findOne({ _id: context.auctionIntakeId })
+      : null;
+    const items = await tx.c.workflow_items.find({ contextId }).toArray();
+    if (
+      !context ||
+      context.ownershipPhase !== 'Holding' ||
+      intake?.state !== 'AwaitingDropoff' ||
+      intake.listingId !== listingId ||
+      items.length !== 1 ||
+      items[0].listingId !== listingId
+    )
+      throw invalidState();
+    if (
+      await tx.c.exclusive_commitments.countDocuments({
+        listingId,
+        status: 'Active',
+      })
+    )
+      throw conflict();
+    const commitment = {
+      _id: randomUUID(),
+      listingId,
+      currentContextId: contextId,
+      version: 1,
+      status: 'Active' as const,
+      acquiredAt: now,
+      endedAt: null,
+      reason: null,
+      lockSeq: 0,
+    };
+    await tx.c.exclusive_commitments.insertOne(commitment);
+    await tx.c.commitment_events.insertOne({
+      _id: randomUUID(),
+      commitmentId: commitment._id,
+      sequence: 1,
+      kind: 'Acquired',
+      beforeVersion: 0,
+      afterVersion: 1,
+      receiptId,
+      occurredAt: now,
+    });
+    return commitment;
+  }
+  // Only before drop-off (Cancelled) or after the seller collected the book
+  // back (Reclaimed); never while the book is at the point or auctioned.
+  async closeIntake(
+    tx: Tx,
+    contextId: string,
+    reason: 'Cancelled' | 'Reclaimed',
+    now: Date,
+    receiptId: string,
+  ) {
+    const context = intakeContext(
+      await tx.c.workflow_contexts.findOne({ _id: contextId }),
+    );
+    const intake = context
+      ? await tx.c.auction_intakes.findOne({ _id: context.auctionIntakeId })
+      : null;
+    if (
+      !context ||
+      context.ownershipPhase !== 'Holding' ||
+      !intake ||
+      (reason === 'Cancelled'
+        ? intake.state !== 'AwaitingDropoff'
+        : intake.state !== 'ReclaimRequired')
+    )
+      throw invalidState();
+    const c = await tx.c.exclusive_commitments.findOne({
+      currentContextId: contextId,
+      status: 'Active',
+    });
+    if (!c) throw conflict();
+    return this.release(
+      tx,
+      contextId,
+      c._id,
+      c.version,
+      reason,
+      now,
+      receiptId,
+    );
   }
   async closeUnpaid(
     tx: Tx,
@@ -149,7 +244,7 @@ export class ReservationsService {
     contextId: string,
     commitmentId: string,
     expectedVersion: number,
-    reason: 'Cancelled' | 'PaymentExpired',
+    reason: 'Cancelled' | 'PaymentExpired' | 'Reclaimed',
     now: Date,
     receiptId: string,
   ) {

@@ -1358,6 +1358,312 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/handover-points": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Authenticated MEMBER/STAFF/ADMIN. The two simulated HCM demo points with remaining capacity; not real business locations. */
+        get: operations["listHandoverPoints"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auction-intakes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Seller ACTIVE verified MEMBER. Approved, Visible, Available Sale listing with current revision; Exchange/Both rejected. In one transaction snapshots revision/start/step/buyNow, takes the exclusive commitment and one point slot (capacity checked under the point lock). Self drop-off within 72 hours; at most two unfinished intakes/auctions per seller (POL-41). */
+        post: operations["createAuctionIntake"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/auction-intakes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Seller view of own intakes, newest first (max 50). Shelf code and Staff identities are not exposed. */
+        get: operations["listMyAuctionIntakes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/auction-intakes/{intakeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Owner only; others receive 404. */
+        get: operations["getMyAuctionIntake"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auction-intakes/{intakeId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Owner. Before drop-off releases commitment and slot; after receipt and before the auction opens moves to ReclaimRequired. Opened auctions use the auction cancel rules. */
+        post: operations["cancelAuctionIntake"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/auction-intakes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE STAFF with a current assignment. Intakes at the assigned points that need receipt, inspection, opening or reclaim. */
+        get: operations["listPointAuctionIntakes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/auction-intakes/{intakeId}/receive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Assigned STAFF independent of the seller records the physical self drop-off before the deadline with a private shelf code. */
+        post: operations["receiveAuctionIntake"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/auction-intakes/{intakeId}/inspect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Assigned independent STAFF records condition inspection Pass or Fail against the frozen revision. Fail moves to ReclaimRequired. Pass is a condition checklist, not authenticity. */
+        post: operations["inspectAuctionIntake"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/auction-intakes/{intakeId}/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Assigned independent STAFF opens a Passed intake while the seller is still ACTIVE: startAt is server time, endAt is 24 hours later, no scheduling or extension. */
+        post: operations["openAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/auction-intakes/{intakeId}/reclaim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Assigned independent STAFF records that the seller collected the book. Releases the slot and exclusive commitment; the listing returns to Available. */
+        post: operations["reclaimAuctionIntake"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/auctions/{auctionId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN independent of seller and bidders cancels an Active or OnHold auction with a reason; never selects a winner. The book moves to reclaim. */
+        post: operations["cancelAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Public. Active auctions ending soonest first (max 50). Shows price and anonymous bidder count; ceilings are never exposed. */
+        get: operations["listAuctions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Public. Price, end time, anonymous price history and minimum next bid. Seller and guests never see ceilings. */
+        get: operations["getAuction"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/auctions/{auctionId}/participation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The calling bidder or Buy Now buyer only: own commitment level (including own Auto ceiling), leading flag and outcome. Others receive 404. */
+        get: operations["getMyAuctionParticipation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/bids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE verified MEMBER other than the seller or the Staff handling the book. Amount must be on the start + n*step grid, at least the minimum bid and at most 1,000,000. The leader cannot bid manually. Rejected at or after endAt even if the close worker has not run. No money is held at bid time. */
+        post: operations["placeAuctionBid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/auto-bid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Sets or raises a private Auto ceiling on the price grid. A new ceiling must reach the minimum bid; the leader may only raise, which never raises the price. */
+        put: operations["setAuctionAutoBid"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/auto-bid/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Stops further automatic raises. A leading bidder stays committed at the current price; it never lowers the price or revives an outbid bidder. */
+        post: operations["disableAuctionAutoBid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/buy-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Only before the first valid bid; decided under the same auction lock as bids so exactly one wins. Records the buyer with a 15-minute payment deadline. Order creation and payment are not implemented yet. */
+        post: operations["buyAuctionNow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1952,7 +2258,7 @@ export interface components {
             serverTime: string;
         };
         /** @enum {string} */
-        ListingErrorCode: "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "UNAVAILABLE" | "INTERNAL_ERROR" | "AccountIneligible" | "SelfReviewForbidden" | "CatalogDuplicate" | "CatalogNotConfirmed" | "ListingInvalid" | "VersionConflict" | "InvalidState" | "IdempotencyConflict" | "MediaNotReady" | "MediaQuotaExceeded" | "UploadIncomplete" | "UploadExpired" | "PayloadTooLarge" | "UnsupportedMediaType" | "SESSION_EXPIRED";
+        ListingErrorCode: "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "UNAVAILABLE" | "INTERNAL_ERROR" | "AccountIneligible" | "SelfReviewForbidden" | "CatalogDuplicate" | "CatalogNotConfirmed" | "ListingInvalid" | "VersionConflict" | "InvalidState" | "IdempotencyConflict" | "MediaNotReady" | "MediaQuotaExceeded" | "UploadIncomplete" | "UploadExpired" | "PayloadTooLarge" | "UnsupportedMediaType" | "SESSION_EXPIRED" | "BidTooLow" | "AuctionClosed";
         ListingApiError: {
             statusCode: number;
             code: components["schemas"]["ListingErrorCode"];
@@ -2679,6 +2985,197 @@ export interface components {
         WishlistPage: {
             items: components["schemas"]["WishlistItem"][];
             nextCursor: string | null;
+        };
+        AuctionCommandReceipt: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            entityType: "AuctionIntake" | "Auction";
+            /** Format: uuid */
+            entityId: string;
+            /** Format: uuid */
+            intakeId: string;
+            /** Format: uuid */
+            auctionId: string | null;
+            /** Format: uuid */
+            contextId: string;
+            version: number;
+            /** @enum {string} */
+            state: "AwaitingDropoff" | "Received" | "Passed" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Unsold" | "OnHold" | "PaymentExpired";
+            currentPrice: number | null;
+            minimumBid: number | null;
+            leading: boolean | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        CreateAuctionIntake: {
+            /** Format: uuid */
+            listingId: string;
+            expectedListingVersion: number;
+            /** Format: uuid */
+            pointId: string;
+            startPrice: number;
+            /** @enum {integer} */
+            step: 10000 | 50000;
+            buyNowPrice: number | null;
+        };
+        AuctionVersionCommand: {
+            expectedVersion: number;
+        };
+        ReceiveAuctionIntake: {
+            expectedVersion: number;
+            shelfCode: string;
+        };
+        InspectAuctionIntake: {
+            expectedVersion: number;
+            /** @enum {string} */
+            outcome: "Pass" | "Fail";
+            note: string | null;
+        };
+        CancelAuction: {
+            expectedVersion: number;
+            reason: string;
+        };
+        PlaceAuctionBid: {
+            amount: number;
+            /** @enum {string} */
+            fulfillmentMethod: "SelfCollect";
+        };
+        SetAuctionAutoBid: {
+            maxAmount: number;
+            /** @enum {string} */
+            fulfillmentMethod: "SelfCollect";
+        };
+        DisableAuctionAutoBid: Record<string, never>;
+        BuyAuctionNow: {
+            /** @enum {string} */
+            fulfillmentMethod: "SelfCollect";
+        };
+        HandoverPoint: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            displayAddress: string;
+            /** @enum {string} */
+            status: "Active" | "Paused" | "Closed";
+            capacity: number;
+            availableSlots: number;
+            /** @constant */
+            demoOnly: true;
+        };
+        HandoverPointList: {
+            items: components["schemas"]["HandoverPoint"][];
+        };
+        AuctionIntake: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            contextId: string;
+            /** Format: uuid */
+            listingId: string;
+            /** Format: uuid */
+            listingRevisionId: string;
+            title: string;
+            /** Format: uuid */
+            pointId: string;
+            startPrice: number;
+            /** @enum {integer} */
+            step: 10000 | 50000;
+            buyNowPrice: number | null;
+            protectiveValue: number;
+            /** @enum {string} */
+            state: "AwaitingDropoff" | "Received" | "Passed" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled";
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            dropoffDeadline: string;
+            /** Format: date-time */
+            receivedAt: string | null;
+            /** @description Staff reads only; null for the owner. */
+            shelfCode: string | null;
+            /** Format: date-time */
+            inspectedAt: string | null;
+            /** @enum {string|null} */
+            inspectionOutcome: "Pass" | "Fail" | null;
+            inspectionNote: string | null;
+            /** Format: uuid */
+            auctionId: string | null;
+            /** @enum {string|null} */
+            reclaimReason: "SellerCancelled" | "InspectionFailed" | "Unsold" | "PaymentExpired" | "AuctionCancelled" | null;
+            /** Format: date-time */
+            closedAt: string | null;
+        };
+        AuctionIntakeList: {
+            items: components["schemas"]["AuctionIntake"][];
+        };
+        PublicAuctionSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            listingId: string;
+            title: string;
+            /** @enum {string} */
+            state: "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Unsold" | "OnHold" | "Cancelled" | "PaymentExpired";
+            startPrice: number;
+            /** @enum {integer} */
+            step: 10000 | 50000;
+            /** @description Null once the first valid bid exists or the auction is not Active. */
+            buyNowPrice: number | null;
+            currentPrice: number | null;
+            /** @description Null when bidding is closed. */
+            minimumBid: number | null;
+            bidderCount: number;
+            /** Format: date-time */
+            startAt: string;
+            /** Format: date-time */
+            endAt: string;
+            pointName: string;
+            /** @constant */
+            demoOnly: true;
+        };
+        PublicAuctionList: {
+            items: components["schemas"]["PublicAuctionSummary"][];
+            /** Format: date-time */
+            serverTime: string;
+        };
+        AuctionPriceEvent: {
+            price: number;
+            bidderAlias: number;
+            /** Format: date-time */
+            at: string;
+        };
+        PublicAuction: {
+            auction: components["schemas"]["PublicAuctionSummary"];
+            leaderAlias: number | null;
+            history: components["schemas"]["AuctionPriceEvent"][];
+            /** Format: date-time */
+            serverTime: string;
+        };
+        AuctionParticipation: {
+            /** Format: uuid */
+            auctionId: string;
+            /** @description Null for a Buy Now buyer, who never bid. */
+            alias: number | null;
+            /** @enum {string|null} */
+            mode: "Manual" | "Auto" | null;
+            /** @description Own manual amount or own private Auto ceiling. */
+            ownLevel: number | null;
+            boughtNow: boolean;
+            leading: boolean;
+            /** @enum {string} */
+            state: "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Unsold" | "OnHold" | "Cancelled" | "PaymentExpired";
+            currentPrice: number | null;
+            minimumBid: number | null;
+            /** @enum {string} */
+            fulfillmentMethod: "SelfCollect";
+            won: boolean;
+            finalPrice: number | null;
+            /** Format: date-time */
+            paymentDeadline: string | null;
+            /** Format: date-time */
+            serverTime: string;
         };
     };
     responses: {
@@ -5443,6 +5940,660 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TransactionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listHandoverPoints: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoverPointList"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    createAuctionIntake: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAuctionIntake"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listMyAuctionIntakes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionIntakeList"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getMyAuctionIntake: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                intakeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionIntake"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    cancelAuctionIntake: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                intakeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionVersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listPointAuctionIntakes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionIntakeList"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    receiveAuctionIntake: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                intakeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceiveAuctionIntake"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    inspectAuctionIntake: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                intakeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InspectAuctionIntake"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    openAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                intakeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionVersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    reclaimAuctionIntake: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                intakeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionVersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    cancelAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelAuction"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listAuctions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicAuctionList"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getAuction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicAuction"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getMyAuctionParticipation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionParticipation"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    placeAuctionBid: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceAuctionBid"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    setAuctionAutoBid: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetAuctionAutoBid"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    disableAuctionAutoBid: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DisableAuctionAutoBid"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    buyAuctionNow: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BuyAuctionNow"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
                 };
             };
             400: components["responses"]["ListingError"];

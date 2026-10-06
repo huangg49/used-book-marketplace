@@ -16,10 +16,9 @@ export function commandContext(
     requestId: response.locals.requestId as string,
   };
 }
-export async function commandResponse(
-  result: ReturnType<MongoCommandService['run']>,
-  response: Response,
-) {
+export async function commandResponse<
+  R = Awaited<ReturnType<MongoCommandService['run']>>['receipt'],
+>(result: Promise<{ receipt: R; replayed: boolean }>, response: Response) {
   const { receipt, replayed } = await result;
   response.setHeader('Idempotency-Replayed', String(replayed));
   return receipt;

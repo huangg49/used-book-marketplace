@@ -1,0 +1,64 @@
+# Auction backend report — AU01–AU03 (partial)
+
+Date: 2026-10-08 · Branch `feature/auction-backend` · OpenAPI 0.24.0 · migration
+`0008-auctions` · decision record [ADR 0030](../adr/0030-bounded-auction-backend.md).
+Rules: [LOCAL-AUCTION-01 §6](LOCAL_HANDOVER_AUCTION.md); cases:
+[AC-AU01–14](LOCAL_TRANSACTION_ACCEPTANCE.md). AI-written; human review still required.
+
+## What exists
+
+| Area | Endpoints | Notes |
+| --- | --- | --- |
+| Points | `GET /handover-points` | Two simulated HCM points, capacity and free slots; not real addresses |
+| Seller intake | `POST /auction-intakes`, `POST /auction-intakes/{id}/cancel`, `GET /me/auction-intakes[/{id}]` | Approved/Visible/Available **Sale** only; commitment + slot + `Reserved` in one commit; max 2 open per seller; self drop-off within 72 h |
+| Point Staff | `GET /operations/auction-intakes`, `POST …/{id}/receive`, `…/inspect`, `…/open`, `…/reclaim` | STAFF with a current assignment at the point, not the seller; Pass/Fail; open = server time, 24 h fixed |
+| Bidding | `POST /auctions/{id}/bids`, `PUT …/auto-bid`, `POST …/auto-bid/disable`, `POST …/buy-now` | Proxy bidding per FR-AU04; Buy Now only before first bid; no money held at bid time |
+| Reads | `GET /auctions`, `GET /auctions/{id}` (public), `GET /me/auctions/{id}/participation` | Public price/history with aliases; own ceiling only to its owner |
+| Admin | `POST /operations/auctions/{id}/cancel` | ADMIN independent of seller and bidders, reason ≥ 10 chars |
+| Worker | `AuctionWorker` inside `order-worker` | Close at `endAt` (Unsold / AwaitingWinnerPayment / OnHold), payment expiry, drop-off expiry |
+
+## Rule comparison (other auction sites)
+
+| Topic | Reference | Lật lại | Why |
+| --- | --- | --- | --- |
+| Price paid | eBay: second-highest + increment, capped at own max | `min(H, L+step)` | Same rule (FR-AU04) |
+| Tie | eBay: earliest bid at that amount leads | Server `levelSequence` when a level rises | Same, but by server sequence instead of timestamp |
+| Increment | eBay: steps grow with price | Seller-chosen 10k/50k grid | Simple, deterministic, prices never leave the grid |
+| Late bids | Catawiki: bid in the last 60 s adds 90 s | Fixed 24 h (POL-38) | Auto ceilings blunt sniping; changing it is an owner decision |
+| Withdraw | Catawiki: never; eBay: narrow exceptions | Never | Clients must confirm the amount |
+| Buy Now | eBay: disappears at the first bid | Same (FR-AU06) | |
+| Non-payment | eBay: seller may offer to second place | PaymentExpired → reclaim, no runner-up | FR-AU08 |
+
+## Evidence (this branch, local machine)
+
+| Check | Result |
+| --- | --- |
+| `vitest run` (API unit, incl. 14 engine tests for AC-AU03–06, random grid invariants) | PASS 97/97 |
+| `test/auctions.e2e-spec.ts` on QA replica set `latlai_e2e_test` | PASS 9/9 |
+| `oxlint`, `tsc --noEmit`, `nest build`, `contract:check`, `contract:routes` | PASS |
+| Full `test:api:e2e` | PASS 513/513 (26 files) |
+| Full `test:api:mongo` | PASS 39, 4 skipped (PostgreSQL import needs `TEST_DATABASE_URL`; failover profile not started) |
+
+E2E cases: only Sale enters (Both → 409); replayed intake key; commitment/slot/
+`Reserved` held and released together on cancel; non-assigned Staff and ADMIN cannot
+receive; Fail → reclaim → Available; AC-AU03 sequence 200/300/400/450k with ceiling absent
+from public JSON and audit; tie priority, leader manual bid rejected, raise does not move
+price, off-grid/over-1M → 422, `BidTooLow`, replay and `IdempotencyConflict`, disable keeps a
+leading obligation; seller/assigned Staff/LOCKED cannot bid; bid vs Buy Now race ×3 with
+one winner; 6 simultaneous equal bids → one success; T−1 ms accepted, T rejected with
+`AuctionClosed`; two concurrent worker ticks close once with deadline `endAt+24h`;
+payment expiry → ReclaimRequired with listing still Reserved; reclaim → Available;
+no-bid close → Unsold; Admin cancel reason/independence.
+
+## Not done / blocked
+
+- **Winner Order and payment are not implemented**, so won auctions currently expire.
+  Needs a ViaPoint Order created through `OrdersService` with commitment/slot transfer
+  and P + outbound fee funding (AC-AU09 success path, AC-AU13 payment race).
+- Carrier inbound/outbound legs and fee holds, NeedsEvidence, late arrival, inspection
+  overdue tasks, point/assignment admin APIs, OnHold resolution, SSE/notifications.
+- Account lock/restriction during an Active auction is detected at close (OnHold), not
+  pushed immediately; Admin lock workflows are still planned.
+- No RN/web/operations UI yet. No load test of the per-auction lock.
+- After `pnpm db:migrate`, run `pnpm db:bootstrap` so the app role gets the new
+  collections; `pnpm db:seed` assigns `staff@latlai.local` to HCM-DEMO-01.

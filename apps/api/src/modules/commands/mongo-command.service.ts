@@ -131,7 +131,36 @@ type CarrierChange = Omit<PackagingChange, 'entityType' | 'state'> & {
   orderState: Wire['CarrierEventReceipt']['orderState'];
   orderVersion: number;
 };
+export type AuctionChange = {
+  entityType: 'AuctionIntake' | 'Auction';
+  entityId: string;
+  intakeId: string;
+  auctionId: string | null;
+  contextId: string;
+  version: number;
+  state: Wire['AuctionCommandReceipt']['state'];
+  decidedAt: Date;
+  currentPrice: number | null;
+  minimumBid: number | null;
+  leading: boolean | null;
+  before?: Json;
+  event?: string;
+  reason?: string;
+};
+export type AuctionOperation =
+  | 'createAuctionIntake'
+  | 'cancelAuctionIntake'
+  | 'receiveAuctionIntake'
+  | 'inspectAuctionIntake'
+  | 'openAuction'
+  | 'reclaimAuctionIntake'
+  | 'cancelAuction'
+  | 'placeAuctionBid'
+  | 'setAuctionAutoBid'
+  | 'disableAuctionAutoBid'
+  | 'buyAuctionNow';
 type CommandChange =
+  | AuctionChange
   | Change
   | AddressChange
   | QuoteChange
@@ -488,6 +517,71 @@ export class MongoCommandService {
       (...args) => this.orderReceipt(...args),
     );
   }
+  private auctionReceipt(
+    change: AuctionChange,
+    id: string,
+    serverTime: Date,
+  ): Wire['AuctionCommandReceipt'] {
+    return {
+      id,
+      entityType: change.entityType,
+      entityId: change.entityId,
+      intakeId: change.intakeId,
+      auctionId: change.auctionId,
+      contextId: change.contextId,
+      version: change.version,
+      state: change.state,
+      currentPrice: change.currentPrice,
+      minimumBid: change.minimumBid,
+      leading: change.leading,
+      serverTime: serverTime.toISOString(),
+    };
+  }
+  runAuction<C>(
+    context: CommandContext,
+    operation: AuctionOperation,
+    target: string | null,
+    body: unknown,
+    options: Options<C, AuctionChange>,
+  ) {
+    return this.execute(context, operation, target, body, options, (...args) =>
+      this.auctionReceipt(...args),
+    );
+  }
+  // Auction workers only; the key is the aggregate id, so each transition
+  // commits at most once per principal.
+  systemAuction<C>(
+    systemActor: Extract<
+      SystemActor,
+      'AuctionClose' | 'AuctionPaymentExpiry' | 'AuctionIntakeExpiry'
+    >,
+    key: string,
+    options: {
+      discover: (tx: Tx) => Promise<string[]>;
+      authorize: (tx: Tx) => Promise<C>;
+      mutate: (tx: Tx, current: C, receiptId: string) => Promise<AuctionChange>;
+    },
+  ) {
+    const operation = {
+      AuctionClose: 'closeAuction',
+      AuctionPaymentExpiry: 'expireAuctionPayment',
+      AuctionIntakeExpiry: 'expireAuctionIntake',
+    }[systemActor];
+    return this.executePrincipal(
+      { actorId: null, systemActor, key, requestId: randomUUID() },
+      operation,
+      key,
+      {},
+      {
+        authorize: async (tx) => {
+          await this.lockUsers(tx, await options.discover(tx));
+          return options.authorize(tx);
+        },
+        mutate: options.mutate,
+      },
+      (...args) => this.auctionReceipt(...args),
+    );
+  }
   async lockUsers(tx: Tx, users: string[]) {
     if (users.length) await tx.lock('users', users);
   }
@@ -604,7 +698,9 @@ export class MongoCommandService {
         change.entityType === 'OrderPackagingEvidence' ||
         change.entityType === 'Shipment' ||
         change.entityType === 'CarrierEvent' ||
-        change.entityType === 'TopupIntent'
+        change.entityType === 'TopupIntent' ||
+        change.entityType === 'AuctionIntake' ||
+        change.entityType === 'Auction'
           ? change.decidedAt
           : new Date();
       const receipt = project(change, id, serverTime);
@@ -623,7 +719,9 @@ export class MongoCommandService {
         change.entityType === 'Order' ||
         change.entityType === 'OrderPackagingEvidence' ||
         change.entityType === 'Shipment' ||
-        change.entityType === 'CarrierEvent'
+        change.entityType === 'CarrierEvent' ||
+        change.entityType === 'AuctionIntake' ||
+        change.entityType === 'Auction'
       )
         targets.contextId = change.contextId;
       else if (change.entityType === 'SaleQuote')
@@ -683,7 +781,15 @@ export class MongoCommandService {
                     orderId: change.orderId,
                     state: change.state,
                   }
-                : {}),
+                : change.entityType === 'AuctionIntake' ||
+                    change.entityType === 'Auction'
+                  ? {
+                      contextId: change.contextId,
+                      intakeId: change.intakeId,
+                      auctionId: change.auctionId,
+                      state: change.state,
+                    }
+                  : {}),
             ...('revisionId' in change
               ? { revisionId: change.revisionId }
               : {}),
@@ -702,6 +808,16 @@ export class MongoCommandService {
 
 function auditAfter(change: CommandChange): Json {
   switch (change.entityType) {
+    // Public price only: Auto ceilings never enter audit/outbox (FR-AU10).
+    case 'AuctionIntake':
+    case 'Auction':
+      return {
+        intakeId: change.intakeId,
+        auctionId: change.auctionId,
+        version: change.version,
+        state: change.state,
+        currentPrice: change.currentPrice,
+      };
     case 'CarrierEvent':
       return {
         eventId: change.entityId,

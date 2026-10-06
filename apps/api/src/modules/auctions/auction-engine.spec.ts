@@ -94,12 +94,14 @@ describe('auction engine (FR-AU03–05)', () => {
   });
 
   it('a higher Auto beats a lower one by one step, capped at its ceiling', () => {
-    expect(run([auto('A', 400_000), auto('B', 700_000)]).trace.at(-1)).toEqual(
-      [450_000, 'B'],
-    );
-    expect(run([auto('A', 400_000), auto('B', 450_000)]).trace.at(-1)).toEqual(
-      [450_000, 'B'],
-    );
+    expect(run([auto('A', 400_000), auto('B', 700_000)]).trace.at(-1)).toEqual([
+      450_000,
+      'B',
+    ]);
+    expect(run([auto('A', 400_000), auto('B', 450_000)]).trace.at(-1)).toEqual([
+      450_000,
+      'B',
+    ]);
   });
 
   it('AC-AU06: off-grid, above 1m, below minimum and lowering are rejected', () => {

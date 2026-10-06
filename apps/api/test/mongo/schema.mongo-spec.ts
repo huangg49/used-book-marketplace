@@ -17,6 +17,7 @@ import {
 } from '../../src/database/mongo/migrations/0002-reference-data.js';
 import { priceAssistSpecs } from '../../src/database/mongo/migrations/0005-price-assist.js';
 import { onlinePriceSpecs } from '../../src/database/mongo/migrations/0007-online-price-lookup.js';
+import { auctionCollectionSpecs } from '../../src/database/mongo/migrations/0008-auctions.js';
 import {
   currentCollections,
   migrations,
@@ -66,7 +67,9 @@ describe('migrations', () => {
         INFRASTRUCTURE_COLLECTIONS.length -
         // MongoDB-native collections with no PostgreSQL model (ADR 0028).
         priceAssistSpecs.length -
-        onlinePriceSpecs.length +
+        onlinePriceSpecs.length -
+        // Auction/point collections (ADR 0030), also MongoDB-native.
+        auctionCollectionSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });

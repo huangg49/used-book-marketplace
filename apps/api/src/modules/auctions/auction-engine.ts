@@ -61,7 +61,10 @@ export interface EngineResult {
 export const minimumBid = (a: EngineAuction) =>
   a.currentPrice === null ? a.startPrice : a.currentPrice + a.step;
 
-export const onGrid = (a: Pick<EngineAuction, 'startPrice' | 'step'>, x: number) =>
+export const onGrid = (
+  a: Pick<EngineAuction, 'startPrice' | 'step'>,
+  x: number,
+) =>
   Number.isSafeInteger(x) &&
   x >= a.startPrice &&
   (x - a.startPrice) % a.step === 0;

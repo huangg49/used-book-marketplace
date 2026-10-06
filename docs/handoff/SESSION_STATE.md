@@ -2,6 +2,19 @@
 
 ## Nguồn và việc đang làm
 
+- **08/10 — gói backend đấu giá AU01–AU03 (một phần): nhánh local `feature/auction-backend`
+  từ `origin/main` `9399e12`, chưa push/PR.** OpenAPI 0.24.0, migration `0008-auctions`,
+  [ADR 0030](../adr/0030-bounded-auction-backend.md), [báo cáo](../features/AUCTION_BACKEND_REPORT.md).
+  Có: hai điểm mô phỏng/slot/assignment, intake Sale → Staff nhận/kiểm tra/mở → bid
+  thủ công + Auto trần riêng (engine thuần) → Mua ngay trước bid đầu → worker đóng
+  phiên/hết hạn thanh toán → ReclaimRequired → Staff ghi trả sách. **Chưa có Order
+  ViaPoint/thanh toán người thắng**, nên phiên thắng hiện luôn hết hạn; đây là bước kế
+  tiếp. Sau `pnpm db:migrate` chạy `pnpm db:bootstrap` (quyền collection mới); `db:seed`
+  gán `staff@latlai.local` vào HCM-DEMO-01. Chưa có UI, chưa human review.
+  Evidence: API unit 97/97, auction e2e 9/9, toàn bộ `test:api:e2e` 513/513 (26 file),
+  `test:api:mongo` 39 PASS/4 skip (import PG và failover không có môi trường), lint/typecheck/
+  build/`contract:check`/`contract:routes` PASS trên QA replica set `57017`, DB `*_test`.
+
 - **05/10 — gói User Web "Chi tiết giao dịch trao đổi": nhánh local `feature/exchange-detail-page` từ main, đã merge `origin/main` (commit `cf47ffe`).**
   - Hoàn thiện UI trang `ExchangeDetailPage` (`/exchange/:id`) với bố cục lưới `7fr/5fr`, bao gồm `ProgressStepper`, `BookInfoCard`, `ActionCard`, `SafetyTipsCard`, và `ChatPanel` bám sát bản thiết kế.
   - Sử dụng toàn bộ CSS Modules, biến CSS `--gold`, `--paper`, icon `lucide-react`, không dùng dependency mới.

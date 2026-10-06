@@ -65,6 +65,8 @@ describe('listing design contract (not HTTP implementation tests)', () => {
       'listPublicListings',
       'getPublicListing',
       'getPublicListingMedia',
+      'listAuctions',
+      'getAuction',
     ]);
     let planned = 0;
     for (const [path, item] of Object.entries(contract.paths)) {
