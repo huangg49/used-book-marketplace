@@ -132,10 +132,11 @@ type CarrierChange = Omit<PackagingChange, 'entityType' | 'state'> & {
   orderVersion: number;
 };
 export type AuctionChange = {
-  entityType: 'AuctionIntake' | 'Auction';
+  entityType: 'AuctionIntake' | 'Auction' | 'PointOrder';
   entityId: string;
   intakeId: string;
   auctionId: string | null;
+  orderId: string | null;
   contextId: string;
   version: number;
   state: Wire['AuctionCommandReceipt']['state'];
@@ -158,7 +159,8 @@ export type AuctionOperation =
   | 'placeAuctionBid'
   | 'setAuctionAutoBid'
   | 'disableAuctionAutoBid'
-  | 'buyAuctionNow';
+  | 'buyAuctionNow'
+  | 'payPointOrder';
 type CommandChange =
   | AuctionChange
   | Change
@@ -528,6 +530,7 @@ export class MongoCommandService {
       entityId: change.entityId,
       intakeId: change.intakeId,
       auctionId: change.auctionId,
+      orderId: change.orderId,
       contextId: change.contextId,
       version: change.version,
       state: change.state,
@@ -700,7 +703,8 @@ export class MongoCommandService {
         change.entityType === 'CarrierEvent' ||
         change.entityType === 'TopupIntent' ||
         change.entityType === 'AuctionIntake' ||
-        change.entityType === 'Auction'
+        change.entityType === 'Auction' ||
+        change.entityType === 'PointOrder'
           ? change.decidedAt
           : new Date();
       const receipt = project(change, id, serverTime);
@@ -721,7 +725,8 @@ export class MongoCommandService {
         change.entityType === 'Shipment' ||
         change.entityType === 'CarrierEvent' ||
         change.entityType === 'AuctionIntake' ||
-        change.entityType === 'Auction'
+        change.entityType === 'Auction' ||
+        change.entityType === 'PointOrder'
       )
         targets.contextId = change.contextId;
       else if (change.entityType === 'SaleQuote')
@@ -782,11 +787,13 @@ export class MongoCommandService {
                     state: change.state,
                   }
                 : change.entityType === 'AuctionIntake' ||
-                    change.entityType === 'Auction'
+                    change.entityType === 'Auction' ||
+                    change.entityType === 'PointOrder'
                   ? {
                       contextId: change.contextId,
                       intakeId: change.intakeId,
                       auctionId: change.auctionId,
+                      orderId: change.orderId,
                       state: change.state,
                     }
                   : {}),
@@ -811,9 +818,11 @@ function auditAfter(change: CommandChange): Json {
     // Public price only: Auto ceilings never enter audit/outbox (FR-AU10).
     case 'AuctionIntake':
     case 'Auction':
+    case 'PointOrder':
       return {
         intakeId: change.intakeId,
         auctionId: change.auctionId,
+        orderId: change.orderId,
         version: change.version,
         state: change.state,
         currentPrice: change.currentPrice,

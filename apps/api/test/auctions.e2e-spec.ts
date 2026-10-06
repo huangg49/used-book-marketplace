@@ -1,4 +1,5 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import type { INestApplication } from '@nestjs/common';
@@ -9,7 +10,7 @@ import type { RoleCode } from '../src/database/mongo/documents.js';
 import {
   HANDOVER_POINT_A,
   HANDOVER_POINT_B,
-} from '../src/database/mongo/migrations/0008-auctions.js';
+} from '../src/database/mongo/migrations/auction-constants.js';
 import { MediaStorage } from '../src/modules/media/media-storage.js';
 import { AuctionClock } from '../src/modules/auctions/auction-clock.js';
 import { AuctionWorker } from '../src/modules/auctions/auction-worker.service.js';
@@ -32,13 +33,15 @@ const storage = {
     };
   },
 };
-type Actor = { id: string; token: string };
+type Actor = { id: string; token: string; sessionId: string };
 const HOUR = 3_600_000;
 
 describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
   let app: INestApplication, db: MongoFixtures, fixtures: ListingFixtures;
   const users: string[] = [];
   let staff: Actor, otherStaff: Actor, reviewer: Actor, admin: Actor;
+  let operator: Actor;
+  const originalSecret = process.env.PAYMENT_SIMULATOR_SECRET;
 
   const call = (
     method: 'get' | 'post' | 'put',
@@ -62,7 +65,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     const token = await app
       .get(JwtService)
       .signAsync({ sub: user._id, sid: sessionId });
-    return { id: user._id, token };
+    return { id: user._id, token, sessionId };
   }
   async function saleListing(owner: Actor, mode: 'Sale' | 'Both' = 'Sale') {
     const book = await fixtures.book(owner.id, reviewer.id);
@@ -166,7 +169,50 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
   const pinClock = (at: Date) =>
     vi.spyOn(app.get(AuctionClock), 'now').mockResolvedValue(at);
 
+  // Simulated topup through the independent TEST_OPERATOR event route.
+  async function fund(a: Actor, amount: number) {
+    const intent = (await cmd('post', '/me/topups', { amount }, a).expect(200))
+      .body;
+    await cmd(
+      'post',
+      '/operations/simulator/topup-events',
+      {
+        eventId: randomUUID(),
+        intentId: intent.entityId,
+        recipientId: a.id,
+        amount,
+        currency: 'VND',
+        outcome: 'Succeeded',
+        occurredAt: new Date().toISOString(),
+      },
+      operator,
+    ).expect(200);
+  }
+  // Test-only: a session long enough for a clock pinned past the auction end.
+  const longSession = (a: Actor) =>
+    db.c.auth_sessions.updateOne(
+      { _id: a.sessionId },
+      { $set: { expiresAt: new Date(Date.now() + 4 * 24 * HOUR) } },
+    );
+  const payOrder = (orderId: string, a: Actor, key?: string) =>
+    cmd('post', `/point-orders/${orderId}/pay`, { expectedVersion: 1 }, a, key);
+  // Opens an auction, lets `winner` lead with one bid and closes it.
+  async function wonAuction(winner: Actor, amount = 300_000) {
+    const opened = await openAuction();
+    await bid(opened.auctionId, winner, amount).expect(200);
+    const doc = (await db.c.auctions.findOne({ _id: opened.auctionId }))!;
+    pinClock(doc.endAt);
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+    const closed = (await db.c.auctions.findOne({ _id: opened.auctionId }))!;
+    // Later commands share the closed auction's (pinned) timeline.
+    await longSession(winner);
+    const payAt = new Date(closed.closedAt!.getTime() + 60_000);
+    return { ...opened, doc: closed, orderId: closed.orderId!, payAt };
+  }
+
   beforeAll(async () => {
+    process.env.PAYMENT_SIMULATOR_SECRET = randomBytes(32).toString('hex');
     db = await MongoFixtures.connect();
     fixtures = new ListingFixtures(db);
     const module = await Test.createTestingModule({ imports: [AppModule] })
@@ -174,6 +220,9 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       .useValue(storage)
       .compile();
     app = module.createNestApplication();
+    app
+      .get(ConfigService)
+      .set('PAYMENT_SIMULATOR_SECRET', process.env.PAYMENT_SIMULATOR_SECRET);
     configureApp(app, { docs: false, logRequests: false });
     await app.init();
     await app.listen(0, '127.0.0.1');
@@ -181,6 +230,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     otherStaff = await actor(['STAFF', 'MEMBER']);
     reviewer = await actor(['STAFF']);
     admin = await actor(['ADMIN']);
+    operator = await actor(['TEST_OPERATOR']);
     const now = new Date();
     await db.c.point_staff_assignments.insertMany([
       {
@@ -205,6 +255,9 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
   afterAll(async () => {
     await app?.close();
     await db?.close();
+    if (originalSecret === undefined)
+      delete process.env.PAYMENT_SIMULATOR_SECRET;
+    else process.env.PAYMENT_SIMULATOR_SECRET = originalSecret;
   });
 
   it('AC-AU01/02: only Approved Sale listings enter; intake holds commitment and slot', async () => {
@@ -547,12 +600,43 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       `/me/auctions/${auctionId}/participation`,
       a,
     ).expect(200);
-    expect(won.body).toMatchObject({ won: true, finalPrice: 400_000 });
+    expect(won.body).toMatchObject({
+      won: true,
+      finalPrice: 400_000,
+      orderId: closed.orderId,
+    });
+    const order = (await db.c.point_orders.findOne({ _id: closed.orderId! }))!;
+    expect(order).toMatchObject({
+      state: 'AwaitingPayment',
+      buyerId: a.id,
+      bookPrice: 400_000,
+      buyerTotal: 400_000,
+      commission: 20_000,
+      sellerProceeds: 380_000,
+    });
+    // The commitment moved to the Order without a release (no gap).
+    expect(
+      await db.c.exclusive_commitments.findOne({ listingId: listing.id }),
+    ).toMatchObject({ status: 'Active', currentContextId: order.contextId });
     vi.restoreAllMocks();
     pinClock(new Date(doc.endAt.getTime() + 24 * HOUR));
     await worker.tick();
     expect(await db.c.auctions.findOne({ _id: auctionId })).toMatchObject({
       state: 'PaymentExpired',
+    });
+    expect(await db.c.point_orders.findOne({ _id: order._id })).toMatchObject({
+      state: 'PaymentExpired',
+      paidAt: null,
+    });
+    expect(
+      await db.c.wallet_accounts.countDocuments({ orderId: order._id }),
+    ).toBe(0);
+    const intakeDoc = (await db.c.auction_intakes.findOne({ _id: intakeId }))!;
+    expect(
+      await db.c.exclusive_commitments.findOne({ listingId: listing.id }),
+    ).toMatchObject({
+      status: 'Active',
+      currentContextId: intakeDoc.contextId,
     });
     expect(await db.c.auction_intakes.findOne({ _id: intakeId })).toMatchObject(
       { state: 'ReclaimRequired', reclaimReason: 'PaymentExpired' },
@@ -570,6 +654,126 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     ).expect(200);
     expect(await db.c.listings.findOne({ _id: listing.id })).toMatchObject({
       trade: 'Available',
+    });
+  });
+
+  it('AC-AU09: the winner pays P from the wallet into an Order hold; the auction is Sold', async () => {
+    const winner = await actor();
+    const won = await wonAuction(winner, 300_000);
+    expect(won.doc).toMatchObject({ state: 'AwaitingWinnerPayment' });
+    pinClock(won.payAt);
+    const stranger = await actor();
+    await payOrder(won.orderId, stranger).expect(404);
+    await call('get', `/me/point-orders/${won.orderId}`, stranger).expect(404);
+    // Not enough available money: nothing is held or journalled.
+    await fund(winner, 100_000);
+    await payOrder(won.orderId, winner).expect(409);
+    expect(
+      await db.c.ledger_journals.countDocuments({ orderId: won.orderId }),
+    ).toBe(0);
+    await fund(winner, 400_000);
+    const key = randomUUID();
+    // Two payments racing with different keys: exactly one hold.
+    const [p1, p2] = await Promise.all([
+      payOrder(won.orderId, winner, key),
+      payOrder(won.orderId, winner),
+    ]);
+    expect([p1.status, p2.status].filter((s) => s === 200)).toHaveLength(1);
+    const ok = p1.status === 200 ? p1 : p2;
+    validates('AuctionCommandReceipt', ok.body);
+    expect(ok.body).toMatchObject({
+      entityType: 'PointOrder',
+      state: 'Fulfilling',
+    });
+    if (p1.status === 200) {
+      const replay = await payOrder(won.orderId, winner, key).expect(200);
+      expect(replay.headers['idempotency-replayed']).toBe('true');
+    }
+    expect(
+      await db.c.ledger_journals.countDocuments({
+        orderId: won.orderId,
+        type: 'OrderPayment',
+      }),
+    ).toBe(1);
+    expect(await db.c.auctions.findOne({ _id: won.auctionId })).toMatchObject({
+      state: 'Sold',
+    });
+    const view = await call(
+      'get',
+      `/me/point-orders/${won.orderId}`,
+      winner,
+    ).expect(200);
+    validates('PointOrder', view.body);
+    expect(view.body).toMatchObject({
+      role: 'Buyer',
+      state: 'Fulfilling',
+      amounts: { buyerTotal: 300_000, sellerProceedsOnCompletion: 285_000 },
+    });
+    const sellerView = await call(
+      'get',
+      `/me/point-orders/${won.orderId}`,
+      won.seller,
+    ).expect(200);
+    expect(sellerView.body.role).toBe('Seller');
+    expect(JSON.stringify(sellerView.body)).not.toContain(winner.id);
+    const wallet = await call('get', '/me/wallet', winner).expect(200);
+    expect(wallet.body).toMatchObject({ transactionHeld: 300_000 });
+    // The worker never expires a paid Order.
+    vi.restoreAllMocks();
+    pinClock(new Date(won.doc.paymentDeadline!.getTime() + HOUR));
+    const t = await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+    expect(t.failed).toBe(0);
+    expect(await db.c.point_orders.findOne({ _id: won.orderId })).toMatchObject(
+      { state: 'Fulfilling' },
+    );
+  });
+
+  it('AC-AU09/13: payment at the deadline is refused and expiry wins', async () => {
+    const winner = await actor();
+    const won = await wonAuction(winner, 250_000);
+    await fund(winner, 300_000);
+    pinClock(won.doc.paymentDeadline!);
+    await payOrder(won.orderId, winner).expect(409);
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+    expect(await db.c.point_orders.findOne({ _id: won.orderId })).toMatchObject(
+      { state: 'PaymentExpired' },
+    );
+    await payOrder(won.orderId, winner).expect(409);
+    expect(
+      await db.c.ledger_journals.countDocuments({ orderId: won.orderId }),
+    ).toBe(0);
+  });
+
+  it('AC-AU06: Buy Now forms a 15-minute Order that can be paid', async () => {
+    const { auctionId } = await openAuction();
+    const buyer = await actor();
+    const r = await cmd(
+      'post',
+      `/auctions/${auctionId}/buy-now`,
+      { fulfillmentMethod: 'SelfCollect' },
+      buyer,
+    ).expect(200);
+    expect(r.body.orderId).toEqual(expect.any(String));
+    const order = (await db.c.point_orders.findOne({ _id: r.body.orderId }))!;
+    expect(order.paymentDeadline.getTime() - order.createdAt.getTime()).toBe(
+      15 * 60_000,
+    );
+    const own = await call(
+      'get',
+      `/me/auctions/${auctionId}/participation`,
+      buyer,
+    ).expect(200);
+    expect(own.body).toMatchObject({
+      boughtNow: true,
+      won: true,
+      orderId: order._id,
+    });
+    await fund(buyer, 600_000);
+    await payOrder(order._id, buyer).expect(200);
+    expect(await db.c.auctions.findOne({ _id: auctionId })).toMatchObject({
+      state: 'Sold',
     });
   });
 

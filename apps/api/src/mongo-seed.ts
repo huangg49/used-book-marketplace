@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { hash } from 'argon2';
 import { MongoClient } from 'mongodb';
 import { bindCollections } from './database/mongo/collections.js';
-import { HANDOVER_POINT_A } from './database/mongo/migrations/0008-auctions.js';
+import { HANDOVER_POINT_A } from './database/mongo/migrations/auction-constants.js';
 
 // Demo accounts for development/test. Existing accounts, passwords and roles
 // are never silently reset (same rule as the former Prisma seed).

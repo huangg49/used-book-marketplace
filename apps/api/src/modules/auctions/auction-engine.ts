@@ -12,7 +12,7 @@
 import {
   AUCTION_MAX_PRICE,
   AUCTION_MIN_PRICE,
-} from '../../database/mongo/migrations/0008-auctions.js';
+} from '../../database/mongo/migrations/auction-constants.js';
 
 export { AUCTION_MAX_PRICE, AUCTION_MIN_PRICE };
 

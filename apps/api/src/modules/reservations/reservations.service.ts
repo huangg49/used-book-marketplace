@@ -159,6 +159,58 @@ export class ReservationsService {
       receiptId,
     );
   }
+  // Moves the Active commitment between an auction intake and the ViaPoint
+  // Order it formed (migration 0009), never through Released: no other
+  // checkout can take the book in between. Typed callers only.
+  async transfer(
+    tx: Tx,
+    fromContextId: string,
+    toContextId: string,
+    listingId: string,
+    now: Date,
+    receiptId: string,
+  ) {
+    const found = await tx.c.exclusive_commitments.findOne({
+      listingId,
+      currentContextId: fromContextId,
+      status: 'Active',
+    });
+    if (!found) throw conflict();
+    await tx.lock('exclusive_commitments', [found._id]);
+    const target = await tx.c.workflow_contexts.findOne({ _id: toContextId });
+    const items = await tx.c.workflow_items
+      .find({ contextId: toContextId })
+      .toArray();
+    if (
+      !target ||
+      target.ownershipPhase !== 'Holding' ||
+      items.length !== 1 ||
+      items[0].listingId !== listingId
+    )
+      throw invalidState();
+    const next = await tx.c.exclusive_commitments.findOneAndUpdate(
+      {
+        _id: found._id,
+        status: 'Active',
+        version: found.version,
+        currentContextId: fromContextId,
+      },
+      { $set: { currentContextId: toContextId }, $inc: { version: 1 } },
+      { returnDocument: 'after' },
+    );
+    if (!next) throw conflict();
+    await tx.c.commitment_events.insertOne({
+      _id: randomUUID(),
+      commitmentId: found._id,
+      sequence: next.version,
+      kind: 'Transferred',
+      beforeVersion: found.version,
+      afterVersion: next.version,
+      receiptId,
+      occurredAt: now,
+    });
+    return next;
+  }
   async closeUnpaid(
     tx: Tx,
     contextId: string,
@@ -270,7 +322,7 @@ export class ReservationsService {
     await tx.c.commitment_events.insertOne({
       _id: randomUUID(),
       commitmentId: c._id,
-      sequence: 2,
+      sequence: next!.version,
       kind: 'Released',
       beforeVersion: c.version,
       afterVersion: next!.version,

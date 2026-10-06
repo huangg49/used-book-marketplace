@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.24.0
+  version: 0.25.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -27,8 +27,9 @@ info:
     sourced price references are implemented behind a server flag; they never set or verify a
     price. Bounded auctions (ADR 0030) are implemented from Sale intake at two simulated HCM points
     through Staff receipt/inspection, proxy bidding with private Auto ceilings, Buy Now before the
-    first bid, server-time close and payment-deadline expiry to reclaim; winner Order creation and
-    payment remain planned."
+    first bid and server-time close. A win or Buy Now forms a ViaPoint Order that the buyer pays
+    from the simulated wallet into an Order hold; unpaid Orders expire to reclaim. Point handover,
+    inspection window and settlement remain planned."
 servers:
   - url: http://localhost:3000/api/v1
 tags:
@@ -5514,14 +5515,131 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /me/point-orders/{orderId}:
+    get:
+      operationId: getMyPointOrder
+      tags:
+        - Auctions
+      description: Buyer or seller of a ViaPoint Order formed by an auction; others receive 404. Shows
+        frozen amounts and deadlines; the identity of the other party and the point shelf code are not
+        exposed.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointOrder"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /point-orders/{orderId}/pay:
+    post:
+      operationId: payPointOrder
+      tags:
+        - Auctions
+      description: Buyer ACTIVE/RESTRICTED; LOCKED denied. Before the payment deadline (endAt + 24h, or 15
+        minutes for Buy Now) moves the frozen buyerTotal from available to the Order hold atomically
+        and marks the auction Sold; the Order becomes Fulfilling without seller confirmation (FR-O05).
+        A racing deadline expiry has exactly one outcome. Partial payment is never accepted.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayPointOrder"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /auctions/{auctionId}/buy-now:
     post:
       operationId: buyAuctionNow
       tags:
         - Auctions
       description: Only before the first valid bid; decided under the same auction lock as bids so exactly
-        one wins. Records the buyer with a 15-minute payment deadline. Order creation and payment are
-        not implemented yet.
+        one wins. Forms a ViaPoint Order at the Buy Now price with a 15-minute payment deadline and
+        moves the exclusive commitment to it without release.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -9592,6 +9710,142 @@ components:
           anyOf:
             - type: string
             - type: "null"
+    PayPointOrder:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    PointOrder:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - source
+        - auctionId
+        - listingId
+        - title
+        - pointId
+        - pointName
+        - role
+        - method
+        - fulfillmentMethod
+        - state
+        - version
+        - currency
+        - demoOnly
+        - amounts
+        - createdAt
+        - paymentDeadline
+        - paidAt
+        - closedAt
+        - serverTime
+      properties:
+        id:
+          type: string
+          format: uuid
+        source:
+          type: string
+          const: Auction
+        auctionId:
+          type: string
+          format: uuid
+        listingId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        pointId:
+          type: string
+          format: uuid
+        pointName:
+          type: string
+        role:
+          type: string
+          enum:
+            - Buyer
+            - Seller
+        method:
+          type: string
+          const: ViaPoint
+        fulfillmentMethod:
+          type: string
+          enum:
+            - SelfCollect
+        state:
+          type: string
+          enum:
+            - AwaitingPayment
+            - Fulfilling
+            - PaymentExpired
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        currency:
+          type: string
+          const: VND
+        demoOnly:
+          type: boolean
+          const: true
+        amounts:
+          type: object
+          additionalProperties: false
+          required:
+            - bookPrice
+            - outboundFee
+            - buyerTotal
+            - commissionBps
+            - commission
+            - sellerProceedsOnCompletion
+          properties:
+            bookPrice:
+              type: integer
+              minimum: 10000
+              maximum: 1000000
+            outboundFee:
+              type: integer
+              minimum: 0
+              maximum: 10000000
+            buyerTotal:
+              type: integer
+              minimum: 10000
+              maximum: 10000000
+            commissionBps:
+              type: integer
+              minimum: 0
+              maximum: 10000
+            commission:
+              type: integer
+              minimum: 0
+              maximum: 10000000
+            sellerProceedsOnCompletion:
+              type: integer
+              minimum: 0
+              maximum: 10000000
+        createdAt:
+          type: string
+          format: date-time
+        paymentDeadline:
+          type: string
+          format: date-time
+        paidAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        closedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        serverTime:
+          type: string
+          format: date-time
     AuctionCommandReceipt:
       type: object
       additionalProperties: false
@@ -9601,6 +9855,7 @@ components:
         - entityId
         - intakeId
         - auctionId
+        - orderId
         - contextId
         - version
         - state
@@ -9617,6 +9872,7 @@ components:
           enum:
             - AuctionIntake
             - Auction
+            - PointOrder
         entityId:
           type: string
           format: uuid
@@ -9628,6 +9884,12 @@ components:
             - string
             - "null"
           format: uuid
+        orderId:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: ViaPoint Order formed by a win or Buy Now.
         contextId:
           type: string
           format: uuid
@@ -9648,9 +9910,12 @@ components:
             - Active
             - BuyNowPending
             - AwaitingWinnerPayment
+            - Sold
             - Unsold
             - OnHold
             - PaymentExpired
+            - AwaitingPayment
+            - Fulfilling
         currentPrice:
           type:
             - integer
@@ -10037,6 +10302,7 @@ components:
             - Active
             - BuyNowPending
             - AwaitingWinnerPayment
+            - Sold
             - Unsold
             - OnHold
             - Cancelled
@@ -10159,6 +10425,7 @@ components:
         - minimumBid
         - fulfillmentMethod
         - won
+        - orderId
         - finalPrice
         - paymentDeadline
         - serverTime
@@ -10198,6 +10465,7 @@ components:
             - Active
             - BuyNowPending
             - AwaitingWinnerPayment
+            - Sold
             - Unsold
             - OnHold
             - Cancelled
@@ -10220,6 +10488,12 @@ components:
             - SelfCollect
         won:
           type: boolean
+        orderId:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: ViaPoint Order of the winner, readable at /me/point-orders/{orderId}.
         finalPrice:
           type:
             - integer

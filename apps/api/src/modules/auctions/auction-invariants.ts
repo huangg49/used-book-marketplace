@@ -41,12 +41,27 @@ export async function checkIntake(tx: Tx, intakeId: string) {
     slot.active === closed
   )
     fail('intake slot mismatch');
+  // After a win the commitment belongs to the ViaPoint Order until it is paid
+  // and fulfilled, or returns to the intake when payment expires.
+  const auction = i.auctionId
+    ? await tx.c.auctions.findOne({ _id: i.auctionId })
+    : null;
+  const order = auction?.orderId
+    ? await tx.c.point_orders.findOne({ _id: auction.orderId })
+    : null;
+  const owner =
+    order && order.state !== 'PaymentExpired' ? order.contextId : i.contextId;
   const commitments = await tx.c.exclusive_commitments
-    .find({ currentContextId: i.contextId })
+    .find({
+      currentContextId: {
+        $in: [i.contextId, ...(order ? [order.contextId] : [])],
+      },
+    })
     .toArray();
   const e = commitments[0];
   if (
     commitments.length !== 1 ||
+    e.currentContextId !== owner ||
     e.listingId !== i.listingId ||
     (closed
       ? e.status !== 'Released' ||
@@ -54,11 +69,20 @@ export async function checkIntake(tx: Tx, intakeId: string) {
       : e.status !== 'Active')
   )
     fail('intake commitment mismatch');
-  if (i.auctionId) {
-    const a = await tx.c.auctions.findOne({ _id: i.auctionId });
-    if (!a || a.intakeId !== i._id || a.contextId !== i.contextId)
-      fail('intake auction mismatch');
-  }
+  if (
+    i.auctionId &&
+    (!auction ||
+      auction.intakeId !== i._id ||
+      auction.contextId !== i.contextId)
+  )
+    fail('intake auction mismatch');
+  if (
+    order &&
+    (order.state === 'PaymentExpired'
+      ? i.state !== 'ReclaimRequired' && i.state !== 'Reclaimed'
+      : i.state !== 'Auctioning')
+  )
+    fail('intake/order reclaim mismatch');
   tx.check(`listing:${i.listingId}`, () => checkListing(tx, i.listingId));
 }
 

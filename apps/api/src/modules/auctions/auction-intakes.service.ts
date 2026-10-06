@@ -10,7 +10,7 @@ import type {
 import {
   AUCTION_DROPOFF_MS,
   AUCTION_DURATION_MS,
-} from '../../database/mongo/migrations/0008-auctions.js';
+} from '../../database/mongo/migrations/auction-constants.js';
 import { MongoService } from '../../database/mongo/mongo.service.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import {
@@ -77,6 +77,7 @@ export class AuctionIntakesService {
       entityId: i._id,
       intakeId: i._id,
       auctionId: i.auctionId,
+      orderId: null,
       contextId: i.contextId,
       version: i.version,
       state: i.state,
@@ -491,6 +492,7 @@ export class AuctionIntakesService {
           closedAt: null,
           paymentDeadline: null,
           cancelReason: null,
+          orderId: null,
           version: 1,
           updatedAt: now,
           lockSeq: 0,

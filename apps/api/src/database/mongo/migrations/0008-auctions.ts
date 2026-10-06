@@ -9,7 +9,6 @@ import {
   f,
   gt,
   gte,
-  HOUR_MS,
   index,
   isNull,
   lte,
@@ -31,14 +30,26 @@ import {
 // contexts gain the AuctionIntake kind; receipts/audit accept the auction
 // worker principals. Order creation from an auction is a later increment.
 
-export const HANDOVER_POINT_A = '00000000-0000-4000-8000-0000000000a1';
-export const HANDOVER_POINT_B = '00000000-0000-4000-8000-0000000000b2';
-export const AUCTION_DURATION_MS = 24 * HOUR_MS;
-export const AUCTION_DROPOFF_MS = 72 * HOUR_MS;
-export const AUCTION_PAYMENT_MS = 24 * HOUR_MS;
-export const BUY_NOW_PAYMENT_MS = 15 * 60_000;
-export const AUCTION_MIN_PRICE = 10_000;
-export const AUCTION_MAX_PRICE = 1_000_000;
+import {
+  AUCTION_DROPOFF_MS,
+  AUCTION_DURATION_MS,
+  AUCTION_MAX_PRICE,
+  AUCTION_MIN_PRICE,
+  AUCTION_PAYMENT_MS,
+  BUY_NOW_PAYMENT_MS,
+  HANDOVER_POINT_A,
+  HANDOVER_POINT_B,
+} from './auction-constants.js';
+export {
+  AUCTION_DROPOFF_MS,
+  AUCTION_DURATION_MS,
+  AUCTION_MAX_PRICE,
+  AUCTION_MIN_PRICE,
+  AUCTION_PAYMENT_MS,
+  BUY_NOW_PAYMENT_MS,
+  HANDOVER_POINT_A,
+  HANDOVER_POINT_B,
+};
 
 export const handoverPoints = [
   {

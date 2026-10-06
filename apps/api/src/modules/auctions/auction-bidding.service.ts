@@ -8,7 +8,7 @@ import type {
 import {
   AUCTION_PAYMENT_MS,
   BUY_NOW_PAYMENT_MS,
-} from '../../database/mongo/migrations/0008-auctions.js';
+} from '../../database/mongo/migrations/auction-constants.js';
 import { MongoService } from '../../database/mongo/mongo.service.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import {
@@ -39,6 +39,7 @@ import {
 import { checkAuction } from './auction-invariants.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
 import { HandoverPointsService } from './handover-points.service.js';
+import { PointOrdersService } from './point-orders.service.js';
 
 const RATE_LIMIT_PER_MINUTE = 30;
 const MAX_OPEN_PARTICIPATIONS = 5;
@@ -66,6 +67,7 @@ export class AuctionBiddingService {
     private readonly commands: MongoCommandService,
     private readonly intakes: AuctionIntakesService,
     private readonly points: HandoverPointsService,
+    private readonly orders: PointOrdersService,
     private readonly clock: AuctionClock,
   ) {}
 
@@ -87,6 +89,7 @@ export class AuctionBiddingService {
       entityId: a._id,
       intakeId: a.intakeId,
       auctionId: a._id,
+      orderId: a.orderId,
       contextId: a.contextId,
       version: a.version,
       state: a.state,
@@ -398,6 +401,16 @@ export class AuctionBiddingService {
             'InvalidState',
             'Mua ngay chỉ khả dụng trước lượt trả giá đầu tiên.',
           );
+        const paymentDeadline = new Date(now.getTime() + BUY_NOW_PAYMENT_MS);
+        const order = await this.orders.form(
+          tx,
+          a,
+          actor._id,
+          a.buyNowPrice,
+          paymentDeadline,
+          now,
+          receiptId,
+        );
         await tx.c.auction_bids.insertOne({
           _id: randomUUID(),
           auctionId: a._id,
@@ -419,7 +432,8 @@ export class AuctionBiddingService {
             winnerId: actor._id,
             finalPrice: a.buyNowPrice,
             closedAt: now,
-            paymentDeadline: new Date(now.getTime() + BUY_NOW_PAYMENT_MS),
+            paymentDeadline,
+            orderId: order._id,
             bidCount: a.bidCount + 1,
           },
           now,
@@ -489,7 +503,7 @@ export class AuctionBiddingService {
         return [a.sellerId, ...(a.leaderId ? [a.leaderId] : [])];
       },
       authorize: (tx) => this.auction(tx, id),
-      mutate: async (tx, before) => {
+      mutate: async (tx, before, receiptId) => {
         await tx.lock('auctions', [id]);
         const a = await this.auction(tx, id);
         if (a.leaderId !== before.leaderId) throw conflict();
@@ -517,7 +531,20 @@ export class AuctionBiddingService {
           return this.change(next, now, 'AuctionOnHold', null);
         }
         const deadline = new Date(a.endAt.getTime() + AUCTION_PAYMENT_MS);
+        // A worker later than the payment deadline records the expiry and
+        // forms no Order that could never be paid.
         const expired = now >= deadline;
+        const order = expired
+          ? null
+          : await this.orders.form(
+              tx,
+              a,
+              a.leaderId,
+              a.currentPrice!,
+              deadline,
+              now,
+              receiptId,
+            );
         const next = await this.update(
           tx,
           a,
@@ -527,6 +554,7 @@ export class AuctionBiddingService {
             finalPrice: a.currentPrice,
             closedAt: now,
             paymentDeadline: deadline,
+            orderId: order?._id ?? null,
           },
           now,
         );
@@ -546,7 +574,7 @@ export class AuctionBiddingService {
     return this.commands.systemAuction('AuctionPaymentExpiry', id, {
       discover: async () => [],
       authorize: (tx) => this.auction(tx, id),
-      mutate: async (tx) => {
+      mutate: async (tx, _before, receiptId) => {
         await tx.lock('auctions', [id]);
         const a = await this.auction(tx, id);
         const now = await this.clock.now(tx);
@@ -556,6 +584,7 @@ export class AuctionBiddingService {
           now < a.paymentDeadline!
         )
           throw invalidState();
+        if (a.orderId) await this.orders.expire(tx, a.orderId, now, receiptId);
         const next = await this.update(tx, a, { state: 'PaymentExpired' }, now);
         await this.reclaim(tx, a, 'PaymentExpired', now);
         return this.change(next, now, 'AuctionPaymentExpired', null);
@@ -670,6 +699,7 @@ export class AuctionBiddingService {
         minimumBid: open ? minimumBid(a) : null,
         fulfillmentMethod: 'SelfCollect',
         won,
+        orderId: won ? a.orderId : null,
         finalPrice: won ? a.finalPrice : null,
         paymentDeadline: won
           ? (a.paymentDeadline?.toISOString() ?? null)

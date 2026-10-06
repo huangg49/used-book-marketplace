@@ -411,6 +411,15 @@ export interface WorkflowContextDoc extends Lockable {
   version: number;
   ownershipPhase: 'Holding' | 'Closed';
 }
+// Kind PointOrder: orderId references point_orders (migration 0009).
+export interface PointOrderContextDoc extends Lockable {
+  _id: string;
+  kind: 'PointOrder';
+  orderId: string;
+  auctionIntakeId: null;
+  version: number;
+  ownershipPhase: 'Holding' | 'Closed';
+}
 // Stored in workflow_contexts; Order code only reads contexts by orderId.
 export interface AuctionIntakeContextDoc extends Lockable {
   _id: string;
@@ -447,7 +456,7 @@ export interface CommitmentEventDoc {
   _id: string;
   commitmentId: string;
   sequence: number;
-  kind: 'Acquired' | 'Released';
+  kind: 'Acquired' | 'Transferred' | 'Released';
   beforeVersion: number;
   afterVersion: number;
   receiptId: string;
@@ -711,6 +720,7 @@ export type AuctionState =
   | 'Active'
   | 'BuyNowPending'
   | 'AwaitingWinnerPayment'
+  | 'Sold'
   | 'Unsold'
   | 'OnHold'
   | 'Cancelled'
@@ -738,6 +748,7 @@ export interface AuctionDoc extends Lockable {
   closedAt: Date | null;
   paymentDeadline: Date | null;
   cancelReason: string | null;
+  orderId: string | null;
   version: number;
   updatedAt: Date;
 }
@@ -767,4 +778,30 @@ export interface AuctionBidDoc {
   leaderAfter: string | null;
   receiptId: string;
   decidedAt: Date;
+}
+// ViaPoint Order formed by an auction win or Buy Now (migration 0009).
+export interface PointOrderDoc extends Lockable {
+  _id: string;
+  source: 'Auction';
+  auctionId: string;
+  intakeId: string;
+  contextId: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  pointId: string;
+  fulfillmentMethod: 'SelfCollect';
+  bookPrice: number;
+  outboundFee: number;
+  buyerTotal: number;
+  commissionBps: number;
+  commission: number;
+  sellerProceeds: number;
+  state: 'AwaitingPayment' | 'Fulfilling' | 'PaymentExpired';
+  version: number;
+  createdAt: Date;
+  paymentDeadline: Date;
+  paidAt: Date | null;
+  closedAt: Date | null;
+  updatedAt: Date;
 }

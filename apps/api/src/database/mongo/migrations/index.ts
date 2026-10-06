@@ -24,6 +24,11 @@ import {
   auctionsMigration,
   withAuctionChanges,
 } from './0008-auctions.js';
+import {
+  pointOrderCollectionSpecs,
+  pointOrdersMigration,
+  withPointOrderChanges,
+} from './0009-point-orders.js';
 
 export interface Migration {
   id: string;
@@ -97,6 +102,7 @@ export const migrations: Migration[] = [
   priceSuggestionInputMigration,
   onlinePriceLookupMigration,
   auctionsMigration,
+  pointOrdersMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -105,11 +111,14 @@ export const checksumOf = (migration: Migration) =>
     .digest('hex');
 
 // The latest schema, for tests and for the app role privileges.
-export const currentCollections = (): CollectionSpec[] =>
-  [
-    ...baselineCollections.map(withTitleKey).map(withAuctionChanges),
-    wishlistSpec,
-    ...priceAssistSpecsV2,
-    ...onlinePriceSpecs,
-    ...auctionCollectionSpecs,
-  ];
+export const currentCollections = (): CollectionSpec[] => [
+  ...baselineCollections
+    .map(withTitleKey)
+    .map(withAuctionChanges)
+    .map(withPointOrderChanges),
+  wishlistSpec,
+  ...priceAssistSpecsV2,
+  ...onlinePriceSpecs,
+  ...auctionCollectionSpecs.map(withPointOrderChanges),
+  ...pointOrderCollectionSpecs,
+];

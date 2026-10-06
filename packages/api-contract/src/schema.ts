@@ -1647,6 +1647,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/point-orders/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Buyer or seller of a ViaPoint Order formed by an auction; others receive 404. Shows frozen amounts and deadlines; the identity of the other party and the point shelf code are not exposed. */
+        get: operations["getMyPointOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/point-orders/{orderId}/pay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Buyer ACTIVE/RESTRICTED; LOCKED denied. Before the payment deadline (endAt + 24h, or 15 minutes for Buy Now) moves the frozen buyerTotal from available to the Order hold atomically and marks the auction Sold; the Order becomes Fulfilling without seller confirmation (FR-O05). A racing deadline expiry has exactly one outcome. Partial payment is never accepted. */
+        post: operations["payPointOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auctions/{auctionId}/buy-now": {
         parameters: {
             query?: never;
@@ -1656,7 +1690,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Only before the first valid bid; decided under the same auction lock as bids so exactly one wins. Records the buyer with a 15-minute payment deadline. Order creation and payment are not implemented yet. */
+        /** @description Only before the first valid bid; decided under the same auction lock as bids so exactly one wins. Forms a ViaPoint Order at the Buy Now price with a 15-minute payment deadline and moves the exclusive commitment to it without release. */
         post: operations["buyAuctionNow"];
         delete?: never;
         options?: never;
@@ -2986,22 +3020,75 @@ export interface components {
             items: components["schemas"]["WishlistItem"][];
             nextCursor: string | null;
         };
+        PayPointOrder: {
+            expectedVersion: number;
+        };
+        PointOrder: {
+            /** Format: uuid */
+            id: string;
+            /** @constant */
+            source: "Auction";
+            /** Format: uuid */
+            auctionId: string;
+            /** Format: uuid */
+            listingId: string;
+            title: string;
+            /** Format: uuid */
+            pointId: string;
+            pointName: string;
+            /** @enum {string} */
+            role: "Buyer" | "Seller";
+            /** @constant */
+            method: "ViaPoint";
+            /** @enum {string} */
+            fulfillmentMethod: "SelfCollect";
+            /** @enum {string} */
+            state: "AwaitingPayment" | "Fulfilling" | "PaymentExpired";
+            version: number;
+            /** @constant */
+            currency: "VND";
+            /** @constant */
+            demoOnly: true;
+            amounts: {
+                bookPrice: number;
+                outboundFee: number;
+                buyerTotal: number;
+                commissionBps: number;
+                commission: number;
+                sellerProceedsOnCompletion: number;
+            };
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            paymentDeadline: string;
+            /** Format: date-time */
+            paidAt: string | null;
+            /** Format: date-time */
+            closedAt: string | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
         AuctionCommandReceipt: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            entityType: "AuctionIntake" | "Auction";
+            entityType: "AuctionIntake" | "Auction" | "PointOrder";
             /** Format: uuid */
             entityId: string;
             /** Format: uuid */
             intakeId: string;
             /** Format: uuid */
             auctionId: string | null;
+            /**
+             * Format: uuid
+             * @description ViaPoint Order formed by a win or Buy Now.
+             */
+            orderId: string | null;
             /** Format: uuid */
             contextId: string;
             version: number;
             /** @enum {string} */
-            state: "AwaitingDropoff" | "Received" | "Passed" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Unsold" | "OnHold" | "PaymentExpired";
+            state: "AwaitingDropoff" | "Received" | "Passed" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "PaymentExpired" | "AwaitingPayment" | "Fulfilling";
             currentPrice: number | null;
             minimumBid: number | null;
             leading: boolean | null;
@@ -3117,7 +3204,7 @@ export interface components {
             listingId: string;
             title: string;
             /** @enum {string} */
-            state: "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Unsold" | "OnHold" | "Cancelled" | "PaymentExpired";
+            state: "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "Cancelled" | "PaymentExpired";
             startPrice: number;
             /** @enum {integer} */
             step: 10000 | 50000;
@@ -3165,12 +3252,17 @@ export interface components {
             boughtNow: boolean;
             leading: boolean;
             /** @enum {string} */
-            state: "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Unsold" | "OnHold" | "Cancelled" | "PaymentExpired";
+            state: "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "Cancelled" | "PaymentExpired";
             currentPrice: number | null;
             minimumBid: number | null;
             /** @enum {string} */
             fulfillmentMethod: "SelfCollect";
             won: boolean;
+            /**
+             * Format: uuid
+             * @description ViaPoint Order of the winner, readable at /me/point-orders/{orderId}.
+             */
+            orderId: string | null;
             finalPrice: number | null;
             /** Format: date-time */
             paymentDeadline: string | null;
@@ -6542,6 +6634,78 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["DisableAuctionAutoBid"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getMyPointOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointOrder"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    payPointOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayPointOrder"];
             };
         };
         responses: {

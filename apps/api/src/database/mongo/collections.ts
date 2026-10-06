@@ -59,7 +59,8 @@ export interface CollectionTypes {
   carrier_pickup_reviews: D.CarrierPickupReviewDoc;
   order_delivery_reviews: D.OrderDeliveryReviewDoc;
   order_non_receipt_reports: D.OrderNonReceiptReportDoc;
-  workflow_contexts: D.WorkflowContextDoc | D.AuctionIntakeContextDoc;
+  workflow_contexts:
+    D.WorkflowContextDoc | D.AuctionIntakeContextDoc | D.PointOrderContextDoc;
   workflow_items: D.WorkflowItemDoc;
   agreement_snapshots: D.AgreementSnapshotDoc;
   exclusive_commitments: D.ExclusiveCommitmentDoc;
@@ -80,6 +81,7 @@ export interface CollectionTypes {
   auctions: D.AuctionDoc;
   auction_bidders: D.AuctionBidderDoc;
   auction_bids: D.AuctionBidDoc;
+  point_orders: D.PointOrderDoc;
   price_references: D.PriceReferenceDoc;
   price_suggestions: D.PriceSuggestionDoc;
   price_assist_usage: D.PriceAssistUsageDoc;
@@ -225,6 +227,7 @@ const NAMES: CollectionName[] = [
   'auctions',
   'auction_bidders',
   'auction_bids',
+  'point_orders',
 ];
 export const COLLECTION_NAMES: readonly CollectionName[] = NAMES;
 

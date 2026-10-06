@@ -18,6 +18,7 @@ import { ContractInput } from '../commands/contract-input.service.js';
 import { AuctionBiddingService } from './auction-bidding.service.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
 import { HandoverPointsService } from './handover-points.service.js';
+import { PointOrdersService } from './point-orders.service.js';
 
 @Controller()
 export class AuctionsController {
@@ -25,8 +26,33 @@ export class AuctionsController {
     private readonly intakes: AuctionIntakesService,
     private readonly bidding: AuctionBiddingService,
     private readonly points: HandoverPointsService,
+    private readonly orders: PointOrdersService,
     private readonly input: ContractInput,
   ) {}
+
+  @Get('me/point-orders/:orderId')
+  @Roles('MEMBER')
+  readOrder(@Param('orderId') id: string, @Req() req: AuthenticatedRequest) {
+    return this.orders.read(req.auth, this.input.uuid(id));
+  }
+  @Post('point-orders/:orderId/pay')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  pay(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.orders.pay(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('PayPointOrder', body),
+      ),
+      res,
+    );
+  }
 
   @Get('handover-points')
   @Roles('MEMBER', 'STAFF', 'ADMIN')

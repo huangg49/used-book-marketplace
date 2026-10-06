@@ -1,7 +1,7 @@
-# Auction backend report — AU01–AU03 (partial)
+# Auction backend report — AU01–AU03
 
-Date: 2026-10-08 · Branch `feature/auction-backend` · OpenAPI 0.24.0 · migration
-`0008-auctions` · decision record [ADR 0030](../adr/0030-bounded-auction-backend.md).
+Date: 2026-10-08 · Branch `feature/auction-backend` · OpenAPI 0.25.0 · migrations
+`0008-auctions`, `0009-point-orders` · decision record [ADR 0030](../adr/0030-bounded-auction-backend.md).
 Rules: [LOCAL-AUCTION-01 §6](LOCAL_HANDOVER_AUCTION.md); cases:
 [AC-AU01–14](LOCAL_TRANSACTION_ACCEPTANCE.md). AI-written; human review still required.
 
@@ -15,7 +15,8 @@ Rules: [LOCAL-AUCTION-01 §6](LOCAL_HANDOVER_AUCTION.md); cases:
 | Bidding | `POST /auctions/{id}/bids`, `PUT …/auto-bid`, `POST …/auto-bid/disable`, `POST …/buy-now` | Proxy bidding per FR-AU04; Buy Now only before first bid; no money held at bid time |
 | Reads | `GET /auctions`, `GET /auctions/{id}` (public), `GET /me/auctions/{id}/participation` | Public price/history with aliases; own ceiling only to its owner |
 | Admin | `POST /operations/auctions/{id}/cancel` | ADMIN independent of seller and bidders, reason ≥ 10 chars |
-| Worker | `AuctionWorker` inside `order-worker` | Close at `endAt` (Unsold / AwaitingWinnerPayment / OnHold), payment expiry, drop-off expiry |
+| Winner Order | `GET /me/point-orders/{id}`, `POST /point-orders/{id}/pay` | Win/Buy Now forms a ViaPoint Order; commitment transferred without release; wallet → Order hold; auction `Sold`, Order `Fulfilling` |
+| Worker | `AuctionWorker` inside `order-worker` | Close at `endAt` (Unsold / AwaitingWinnerPayment + Order / OnHold), payment expiry (Order and auction; commitment back to intake), drop-off expiry |
 
 ## Rule comparison (other auction sites)
 
@@ -34,9 +35,9 @@ Rules: [LOCAL-AUCTION-01 §6](LOCAL_HANDOVER_AUCTION.md); cases:
 | Check | Result |
 | --- | --- |
 | `vitest run` (API unit, incl. 14 engine tests for AC-AU03–06, random grid invariants) | PASS 97/97 |
-| `test/auctions.e2e-spec.ts` on QA replica set `latlai_e2e_test` | PASS 9/9 |
+| `test/auctions.e2e-spec.ts` on QA replica set `latlai_e2e_test` | PASS 12/12 |
 | `oxlint`, `tsc --noEmit`, `nest build`, `contract:check`, `contract:routes` | PASS |
-| Full `test:api:e2e` | PASS 513/513 (26 files) |
+| Full `test:api:e2e` | PASS 516/516 (26 files) |
 | Full `test:api:mongo` | PASS 39, 4 skipped (PostgreSQL import needs `TEST_DATABASE_URL`; failover profile not started) |
 
 E2E cases: only Sale enters (Both → 409); replayed intake key; commitment/slot/
@@ -50,11 +51,18 @@ one winner; 6 simultaneous equal bids → one success; T−1 ms accepted, T reje
 payment expiry → ReclaimRequired with listing still Reserved; reclaim → Available;
 no-bid close → Unsold; Admin cancel reason/independence.
 
+Payment cases (0.25.0): Order formed at close with frozen P/commission/proceeds and
+the commitment owned by the Order context; a stranger cannot pay or read; insufficient
+funds → 409 with no journal; two concurrent payments → one `OrderPayment` journal;
+Order `Fulfilling`, auction `Sold`, wallet `transactionHeld` = P; the seller read hides
+the buyer; the worker never expires a paid Order; payment at the deadline is refused
+and expiry returns the commitment to the intake; Buy Now forms a 15-minute Order that
+can be paid.
+
 ## Not done / blocked
 
-- **Winner Order and payment are not implemented**, so won auctions currently expire.
-  Needs a ViaPoint Order created through `OrdersService` with commitment/slot transfer
-  and P + outbound fee funding (AC-AU09 success path, AC-AU13 payment race).
+- Paid Orders stop at `Fulfilling`: point handover/collection code, inspection window,
+  settlement, refunds/disputes and post-payment cancellation are planned.
 - Carrier inbound/outbound legs and fee holds, NeedsEvidence, late arrival, inspection
   overdue tasks, point/assignment admin APIs, OnHold resolution, SSE/notifications.
 - Account lock/restriction during an Active auction is detected at close (OnHold), not

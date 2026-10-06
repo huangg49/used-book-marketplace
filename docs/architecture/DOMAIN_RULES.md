@@ -11,20 +11,23 @@ cơ chế persistence PostgreSQL trong báo cáo cũ; vẫn giữ invariant nghi
 Trước mở rộng giao dịch, đọc [ADR 0007](../adr/0007-hcm-handover-auction-scope.md),
 [local transaction design](../features/LOCAL_TRANSACTION_DESIGN.md) và
 [acceptance](../features/LOCAL_TRANSACTION_ACCEPTANCE.md). Auction intake/bidding/close
-đã có (ADR 0030); ViaPoint Order, thanh toán người thắng, real-carrier và
-completed-purchase vẫn là yêu cầu/kế hoạch.
+và Order ViaPoint + thanh toán người thắng đã có (ADR 0030); bàn giao tại điểm,
+quyết toán, real-carrier và completed-purchase vẫn là yêu cầu/kế hoạch.
 
 ## Đấu giá và điểm mô phỏng
 
-Bounded auctions are implemented in OpenAPI 0.24.0 (migration 0008); read ADR 0030 and
+Bounded auctions are implemented in OpenAPI 0.25.0 (migrations 0008–0009); read ADR 0030 and
 `docs/features/AUCTION_BACKEND_REPORT.md`. Intake shares the exclusive commitment with
 Orders, plus one point slot and the `Reserved` projection; release only on cancel
 before drop-off, drop-off expiry or Staff reclaim. Staff steps need STAFF + current
 point assignment and independence; ADMIN alone cannot receive/inspect/open/reclaim.
 Proxy rules live in the pure `auction-engine.ts`; keep ceilings out of public reads,
 receipts, audit and outbox. Every auction command locks the auction document and
-decides with server time after locks; `endAt` is final (no extension). Winner Order
-creation/payment remain planned, so do not treat `AwaitingWinnerPayment` as funded.
+decides with server time after locks; `endAt` is final (no extension). A win or Buy
+Now forms a ViaPoint Order (`point_orders`, migration 0009) and transfers the
+commitment without releasing it; payment locks auction → Order → ledger and moves
+buyerTotal into the Order hold. Paid Orders stop at `Fulfilling`; handover and
+settlement remain planned, so never release the hold or commitment from that state.
 
 ## Commitment và unpaid Order
 

@@ -1,8 +1,9 @@
 # ADR 0030: Bounded auction backend
 
-Date: 2026-10-08. Status: implemented for intake → bidding → close/expiry → reclaim
-on branch `feature/auction-backend` (OpenAPI 0.24.0, migration `0008-auctions`).
-Winner Order creation and payment are not implemented. Needs human review before merge.
+Date: 2026-10-08. Status: implemented for intake → bidding → close → winner ViaPoint
+Order and wallet payment → expiry/reclaim on branch `feature/auction-backend`
+(OpenAPI 0.25.0, migrations `0008-auctions`, `0009-point-orders`). Point handover,
+inspection window and settlement are not implemented. Needs human review before merge.
 
 ## Context
 
@@ -62,13 +63,34 @@ should confirm the amount before sending. Hidden reserve prices stay out of scop
   bounded scans (100) for closes, payment expiry and drop-off expiry, and logs
   processed/skipped/failed, OnHold and ReclaimRequired counts.
 
+- **Winner Order (migration 0009).** Close with a winner and Buy Now form a ViaPoint
+  Order in `point_orders` inside the same transaction: frozen agreement snapshot
+  (P, outbound fee 0 for SelfCollect, commission round(P × 5%), seller proceeds
+  P − C, deadline `endAt + 24h` or 15 min), its own `PointOrder` workflow context,
+  and the exclusive commitment **transferred** from the intake context (new
+  `Transferred` event, versions keep counting, never Released in between). The
+  point slot stays with the intake; the book keeps the same slot. `point_orders` is
+  separate from `direct_orders` because the DirectDelivery validator pins a quote,
+  a 15-minute deadline and seller confirmation, and Order workers would otherwise
+  expire or refund it through DirectDelivery rules.
+- **Payment.** `POST /point-orders/{id}/pay` (buyer ACTIVE/RESTRICTED, seller still
+  verified) locks the auction before the Order, so it serializes with the expiry
+  worker; before the deadline it posts one `OrderPayment` journal of buyerTotal into
+  the Order's `OrderHold` account, the Order becomes `Fulfilling` (no seller
+  confirmation, FR-O05) and the auction `Sold`. Insufficient funds hold nothing.
+  The ledger journal check, reconciliation and wallet `transactionHeld` accept
+  holds of both DirectDelivery and ViaPoint Orders.
+- **Expiry.** Unpaid at the deadline, the worker marks Order and auction
+  `PaymentExpired`, closes the Order context and transfers the commitment back to
+  the intake, which moves to `ReclaimRequired`; no charge, runner-up or relist.
+- **Constants.** Auction policy constants live in `migrations/auction-constants.ts`
+  so application code does not load the migration chain (import cycle).
+
 ## Consequences and limits
 
-- **Winner payment is missing.** `AwaitingWinnerPayment` and `BuyNowPending` record
-  winner, price and deadline but cannot be paid yet, so every won auction currently
-  expires to `PaymentExpired`. The next increment must add a ViaPoint Order created
-  through `OrdersService` (snapshot, commitment/slot transfer with no gap, P plus
-  outbound fee, `Fulfilling` without seller confirmation) and payment.
+- Paid Orders stop at `Fulfilling`: point handover/collection code, recipient
+  acceptance, inspection window, settlement to the seller, refunds/disputes and
+  post-payment cancellation are not implemented, so held money stays held.
 - Only self drop-off and self collect are modelled; carrier legs and fee holds,
   NeedsEvidence, late-arrival handling, inspection overdue tasks, point admin CRUD,
   OnHold resolution UI and SSE are not implemented.

@@ -15,6 +15,7 @@ import {
 import type { Tx } from '../../database/mongo/transaction.js';
 import { DomainError, invalidState } from '../commands/domain-error.js';
 import { checkOrder } from '../orders/order-invariants.js';
+import { checkPointOrder } from '../auctions/point-order-invariants.js';
 
 export const CLEARING_ID = CLEARING_ACCOUNT_ID;
 
@@ -90,27 +91,34 @@ export async function checkJournal(tx: Tx, journalId: string) {
     )
       throw new Error('Topup journal source mismatch');
   } else {
+    // An Order is a DirectDelivery Order (frozen quote) or a ViaPoint Order
+    // formed by an auction (migration 0009); both freeze buyerTotal.
     const o = await tx.c.direct_orders.findOne({ _id: j.orderId! });
     const q = o && (await tx.c.sale_quotes.findOne({ _id: o.quoteId }));
+    const p = o ? null : await tx.c.point_orders.findOne({ _id: j.orderId! });
+    const buyerId = o?.buyerId ?? p?.buyerId;
+    const total = q?.buyerTotal ?? p?.buyerTotal;
     const payment = j.type === 'OrderPayment';
     if (
-      !o ||
-      !q ||
+      !buyerId ||
+      total === undefined ||
+      (p && !payment) ||
       !entries.some(
         (x) =>
-          account(x.accountId)?.ownerId === o.buyerId &&
+          account(x.accountId)?.ownerId === buyerId &&
           account(x.accountId)?.purpose === 'UserAvailable' &&
-          (payment ? x.credit : x.debit) === q.buyerTotal,
+          (payment ? x.credit : x.debit) === total,
       ) ||
       !entries.some(
         (x) =>
-          account(x.accountId)?.orderId === o._id &&
+          account(x.accountId)?.orderId === j.orderId &&
           account(x.accountId)?.purpose === 'OrderHold' &&
-          (payment ? x.debit : x.credit) === q.buyerTotal,
+          (payment ? x.debit : x.credit) === total,
       )
     )
       throw new Error('Order journal source mismatch');
-    tx.check(`order:${o._id}`, () => checkOrder(tx, o._id));
+    if (o) tx.check(`order:${o._id}`, () => checkOrder(tx, o._id));
+    else tx.check(`point-order:${p!._id}`, () => checkPointOrder(tx, p!._id));
   }
   for (const e of entries)
     if (
@@ -166,12 +174,6 @@ export class LedgerService {
         'users',
         'Wallet account references a missing owner',
       ],
-      [
-        'OrderHold',
-        'orderId',
-        'direct_orders',
-        'Wallet account references a missing Order',
-      ],
     ] as const) {
       const missing = await tx.c.wallet_accounts
         .aggregate([
@@ -191,6 +193,33 @@ export class LedgerService {
         .toArray();
       if (missing.length) throw new Error(message);
     }
+    // An Order hold references a DirectDelivery or a ViaPoint Order.
+    const orphanHold = await tx.c.wallet_accounts
+      .aggregate([
+        { $match: { purpose: 'OrderHold' } },
+        {
+          $lookup: {
+            from: 'direct_orders',
+            localField: 'orderId',
+            foreignField: '_id',
+            as: 'direct',
+          },
+        },
+        {
+          $lookup: {
+            from: 'point_orders',
+            localField: 'orderId',
+            foreignField: '_id',
+            as: 'point',
+          },
+        },
+        { $match: { direct: { $size: 0 }, point: { $size: 0 } } },
+        { $limit: 1 },
+        { $project: { _id: 1 } },
+      ])
+      .toArray();
+    if (orphanHold.length)
+      throw new Error('Wallet account references a missing Order');
     if (!(await tx.c.ledger_journals.findOne({ _id: OPENING_JOURNAL_ID })))
       throw new Error('Opening capital journal missing');
     for (const j of await tx.c.ledger_journals.find({}).toArray())
@@ -199,6 +228,8 @@ export class LedgerService {
       await checkTopupRecord(tx, t._id);
     for (const o of await tx.c.direct_orders.find({}).toArray())
       await checkOrder(tx, o._id);
+    for (const o of await tx.c.point_orders.find({}).toArray())
+      await checkPointOrder(tx, o._id);
     const [row] = await tx.c.ledger_entries
       .aggregate<{
         debit: number;
@@ -267,8 +298,19 @@ export class LedgerService {
     const account = await tx.c.wallet_accounts.findOne({ ownerId });
     return account ? balanceOf(tx, account._id) : 0;
   }
+  // Holds of the buyer's DirectDelivery and ViaPoint (auction) Orders.
   async held(tx: Tx, buyerId: string) {
-    const [row] = await tx.c.direct_orders
+    return (
+      (await this.heldIn(tx, 'direct_orders', buyerId)) +
+      (await this.heldIn(tx, 'point_orders', buyerId))
+    );
+  }
+  private async heldIn(
+    tx: Tx,
+    orders: 'direct_orders' | 'point_orders',
+    buyerId: string,
+  ) {
+    const [row] = await tx.c[orders]
       .aggregate<{ amount: number }>([
         { $match: { buyerId } },
         {
