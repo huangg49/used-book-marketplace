@@ -41,13 +41,19 @@ import {
 } from './auction-engine.js';
 import { checkAuction, checkIntake } from './auction-invariants.js';
 import { HandoverPointsService } from './handover-points.service.js';
+import { requireUnrestricted } from './member-violations.js';
 
-const OPEN_INTAKE_STATES = [
-  'AwaitingDropoff',
-  'Received',
-  'Passed',
-  'Auctioning',
-] as const;
+// POL-41 counts intakes whose auction has not ended: before opening, or
+// opened and still Active/OnHold. A closed auction (sold, unsold, expired)
+// no longer counts even while its Order or reclaim is open.
+const PRE_AUCTION_STATES = ['AwaitingDropoff', 'Received', 'Passed'] as const;
+// FR-H08: these outcomes send the listing back to revision on reclaim.
+const REVISION_REQUIRED: readonly ReclaimReason[] = [
+  'InspectionFailed',
+  'OrderReturned',
+  'BookMisdescribed',
+];
+const WITHDRAWN_REASON = 'Người bán rút phiên trước lượt trả giá đầu tiên.';
 const forbidden = (message: string) =>
   new DomainError(403, 'FORBIDDEN', message);
 
@@ -140,6 +146,12 @@ export class AuctionIntakesService {
       'Reserved',
       'Available',
     );
+    if (
+      reason === 'Reclaimed' &&
+      i.reclaimReason &&
+      REVISION_REQUIRED.includes(i.reclaimReason)
+    )
+      await this.listings.requireRevision(tx, i.listingId);
     const closed = await tx.c.workflow_contexts.updateOne(
       { _id: i.contextId, ownershipPhase: 'Holding', version: 1 },
       { $set: { ownershipPhase: 'Closed' }, $inc: { version: 1 } },
@@ -247,18 +259,29 @@ export class AuctionIntakesService {
           const b = (await tx.c.catalog_revisions.findOne({
             _id: book.currentRevisionId!,
           }))!;
-          if (
+          const auctioning = await tx.c.auction_intakes
+            .find(
+              { sellerId: actor._id, state: 'Auctioning' },
+              { projection: { auctionId: 1 } },
+            )
+            .toArray();
+          const open =
             (await tx.c.auction_intakes.countDocuments({
               sellerId: actor._id,
-              state: { $in: [...OPEN_INTAKE_STATES] },
-            })) >= 2
-          )
+              state: { $in: [...PRE_AUCTION_STATES] },
+            })) +
+            (await tx.c.auctions.countDocuments({
+              _id: { $in: auctioning.map((i) => i.auctionId!) },
+              state: { $in: ['Active', 'OnHold'] },
+            }));
+          if (open >= 2)
             throw new DomainError(
               429,
               'RATE_LIMITED',
               'Bạn đang có hai phiên đấu giá chưa kết thúc.',
             );
           const now = await this.clock.decision(tx, context.auth);
+          await requireUnrestricted(tx, actor._id, now);
           const intakeId = randomUUID(),
             contextId = randomUUID();
           const slot = await this.points.reserveSlot(
@@ -385,9 +408,43 @@ export class AuctionIntakesService {
       mutate: async (tx, _actor, before, receiptId) => {
         if (before.state === 'AwaitingDropoff')
           await this.listings.lock(tx, before.listingId);
+        // FR-AU02 withdrawal locks the auction before the intake, the same
+        // order as bids, Buy Now and close.
+        if (before.state === 'Auctioning')
+          await tx.lock('auctions', [before.auctionId!]);
         const i = await this.lockIntake(tx, before);
         if (i.version !== body.expectedVersion) throw conflict();
         const now = await this.clock.decision(tx, context.auth);
+        if (i.state === 'Auctioning') {
+          const a = (await tx.c.auctions.findOne({ _id: i.auctionId! }))!;
+          if (a.state !== 'Active' || a.bidderCount > 0 || now >= a.endAt)
+            throw new DomainError(
+              409,
+              'InvalidState',
+              'Chỉ rút được phiên đang mở và chưa có lượt trả giá nào.',
+            );
+          const withdrawn = await tx.c.auctions.findOneAndUpdate(
+            { _id: a._id, version: a.version, state: 'Active', bidderCount: 0 },
+            {
+              $set: {
+                state: 'Cancelled',
+                closedAt: now,
+                cancelReason: WITHDRAWN_REASON,
+                updatedAt: now,
+              },
+              $inc: { version: 1 },
+            },
+          );
+          if (!withdrawn) throw conflict();
+          tx.check(`auction:${a._id}`, () => checkAuction(tx, a._id));
+          const next = await this.transition(
+            tx,
+            i,
+            { state: 'ReclaimRequired', reclaimReason: 'SellerCancelled' },
+            now,
+          );
+          return AuctionIntakesService.change(next, now, 'AuctionWithdrawn');
+        }
         if (i.state === 'AwaitingDropoff') {
           await this.closeOwnership(tx, i, 'Cancelled', now, receiptId);
           const next = await this.transition(

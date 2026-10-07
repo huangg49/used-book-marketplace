@@ -700,7 +700,8 @@ export type ReclaimReason =
   | 'PaymentExpired'
   | 'AuctionCancelled'
   | 'OrderCancelled'
-  | 'OrderReturned';
+  | 'OrderReturned'
+  | 'BookMisdescribed';
 export interface AuctionIntakeDoc extends Lockable {
   _id: string;
   contextId: string;
@@ -848,6 +849,8 @@ export interface PointOrderResolutionDoc {
   reason: string;
   adminId: string;
   journalId: string | null;
+  // Stated with every refund decision (migration 0013).
+  fault: 'BookMisdescribed' | 'BuyerDefault' | 'NoFault' | null;
   decidedAt: Date;
   receiptId: string;
 }
@@ -876,8 +879,19 @@ export interface PointReturnDoc {
   staffId: string;
   returnedBy: string;
   note: string | null;
-  journalId: string;
+  // Refused: the item did not match the report; nothing changed hands.
+  outcome: 'Accepted' | 'Refused';
+  journalId: string | null;
   receivedAt: Date;
+  receiptId: string;
+}
+// FR-AU08 / POL-17 verified violation (migration 0013).
+export interface MemberViolationDoc {
+  _id: string;
+  userId: string;
+  kind: 'AuctionNonPayment' | 'PointOrderBuyerDefault';
+  sourceId: string;
+  recordedAt: Date;
   receiptId: string;
 }
 export interface CollectionCodeDoc extends Lockable {

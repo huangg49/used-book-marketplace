@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import type { Tx } from '../../database/mongo/transaction.js';
 import { CatalogService } from '../catalog/catalog.service.js';
 import { conflict, invalidState, notFound } from '../commands/domain-error.js';
@@ -45,5 +46,54 @@ export class ListingCommitmentPolicy {
     );
     tx.check(`listing:${id}`, () => checkListing(tx, id));
     return { ...next!, id: next!._id };
+  }
+  // FR-H08: a book that failed inspection or was found misdescribed comes
+  // back to its owner with the listing in Draft (an unsubmitted copy of the
+  // last revision and its photos), so it is corrected and reviewed again
+  // before anyone can buy it. Caller holds the listing lock; trade must
+  // already be Available (no commitment).
+  async requireRevision(tx: Tx, id: string) {
+    const l = await tx.c.listings.findOne({ _id: id });
+    if (!l?.currentRevisionId) throw notFound();
+    if (l.trade !== 'Available') throw invalidState();
+    const r = (await tx.c.listing_revisions.findOne({
+      _id: l.currentRevisionId,
+    }))!;
+    const revisionId = randomUUID();
+    await tx.c.listing_revisions.insertOne({
+      ...r,
+      _id: revisionId,
+      number: r.number + 1,
+      submittedAt: null,
+      ownershipDeclaredAt: null,
+      createdAt: await tx.now(),
+      lockSeq: 0,
+    });
+    const photos = await tx.c.revision_media
+      .find({ revisionId: r._id }, { sort: { position: 1 } })
+      .toArray();
+    if (photos.length)
+      await tx.c.revision_media.insertMany(
+        photos.map((m) => ({
+          ...m,
+          _id: `${revisionId}:${m.mediaId}`,
+          revisionId,
+        })),
+      );
+    const next = await tx.c.listings.findOneAndUpdate(
+      { _id: id, version: l.version, trade: 'Available' },
+      {
+        $set: {
+          currentRevisionId: revisionId,
+          moderation: 'Draft',
+          updatedAt: new Date(),
+        },
+        $inc: { version: 1 },
+      },
+      { returnDocument: 'after' },
+    );
+    if (!next) throw conflict();
+    tx.check(`listing:${id}`, () => checkListing(tx, id));
+    return next;
   }
 }

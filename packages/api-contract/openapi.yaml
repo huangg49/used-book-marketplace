@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.28.0
+  version: 0.29.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -4749,8 +4749,10 @@ paths:
       operationId: cancelAuctionIntake
       tags:
         - Auctions
-      description: Owner. Before drop-off releases commitment and slot; after receipt and before the
-        auction opens moves to ReclaimRequired. Opened auctions use the auction cancel rules.
+      description: "Owner. Before drop-off releases commitment and slot; after receipt and before
+        the auction opens moves to ReclaimRequired. An opened auction can be withdrawn only while it
+        is Active, before endAt and before the first bid (auction Cancelled, book to reclaim). After
+        the first bid only an independent Admin can cancel."
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -5778,9 +5780,10 @@ paths:
       operationId: claimPointOrder
       tags:
         - Auctions
-      description: Buyer only, once per Order, in Inspection before the inspection deadline (a LOCKED
-        account may still claim). Opens ResolutionPending (InspectionClaim) with the description and
-        stops settlement; the payment stays held until an independent Admin decides.
+      description: "Buyer only, in Inspection before the inspection deadline (a LOCKED account may
+        still claim). Opens ResolutionPending (InspectionClaim) with the description and stops
+        settlement; the payment stays held until an independent Admin decides. After a dismissal the
+        buyer may claim again within the window; that claim must be decided by a different Admin."
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -6023,10 +6026,12 @@ paths:
       operationId: receivePointOrderReturn
       tags:
         - Auctions
-      description: ACTIVE STAFF assigned to the point, not buyer or seller, during point hours and before
-        the return deadline. Records the book back at the point, posts one OrderRefund journal of the
-        full hold to the buyer, cancels the Order and sends the book to the seller reclaim
-        (OrderReturned).
+      description: "ACTIVE STAFF assigned to the point, not buyer or seller, during point hours and
+        before the return deadline. MatchesReport records the book back at the point, posts one
+        OrderRefund journal of the full hold to the buyer, cancels the Order and sends the book to
+        the seller reclaim with its listing back to revision (OrderReturned). DoesNotMatch refuses
+        the item: the attempt is recorded, nothing changes hands, no refund, and the return deadline
+        keeps running."
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -6132,15 +6137,17 @@ paths:
       operationId: resolvePointOrder
       tags:
         - Auctions
-      description: ACTIVE ADMIN independent of buyer, seller and the Staff who received, inspected or work
-        at the point. Only for ResolutionPending. While the book is still at the point, RefundBuyer
-        posts one OrderRefund journal of the full hold back to the buyer, cancels the Order and
-        returns the commitment to the intake for reclaim, and ResumeCollection opens a new 72-hour
-        collection window within point hours. After the handover (InspectionClaim or ReturnOverdue),
-        DismissClaim returns the Order to Inspection, settled once the window has passed, and
-        RequireReturn asks the buyer to bring the book back within 72 hours; only the Staff-received
-        return refunds. Other decisions return 422. A reason is required and recorded; no partial
-        refund or penalty.
+      description: "ACTIVE ADMIN independent of buyer, seller and the Staff who received, inspected,
+        handed over, took back or work at the point; a repeated claim needs an Admin who did not
+        decide an earlier claim. Only for ResolutionPending. RecipientDecisionOverdue: RefundBuyer
+        (BuyerDefault or NoFault). ReportRejected: RefundBuyer (BookMisdescribed or NoFault) or
+        ResumeCollection when the rejection is unfounded. CollectionOverdue: RefundBuyer
+        (BuyerDefault or NoFault) or ResumeCollection. RefundBuyer posts one OrderRefund of the full
+        hold, cancels the Order and sends the book to reclaim (BookMisdescribed also sends the
+        listing back to revision; BuyerDefault records a violation). ResumeCollection opens a new
+        72-hour window in point hours without recording a buyer acceptance. After the handover
+        (InspectionClaim, ReturnOverdue): DismissClaim back to Inspection, or RequireReturn within
+        72 hours. Any other decision or fault returns 422. A reason is required and recorded."
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -10666,6 +10673,7 @@ components:
         - collectionOutcome
         - attemptsRemaining
         - codeExpiresAt
+        - returnOutcome
         - serverTime
       properties:
         id:
@@ -10765,6 +10773,15 @@ components:
             - "null"
           format: date-time
           description: Collection code request only; the code itself is never stored in receipts.
+        returnOutcome:
+          type:
+            - string
+            - "null"
+          enum:
+            - Accepted
+            - Refused
+            - null
+          description: Staff return receipt only. A refused return is still a committed attempt.
         serverTime:
           type: string
           format: date-time
@@ -11088,6 +11105,7 @@ components:
             - AuctionCancelled
             - OrderCancelled
             - OrderReturned
+            - BookMisdescribed
             - null
         closedAt:
           type:
@@ -11363,6 +11381,18 @@ components:
             - ResumeCollection
             - DismissClaim
             - RequireReturn
+        fault:
+          type:
+            - string
+            - "null"
+          enum:
+            - BookMisdescribed
+            - BuyerDefault
+            - NoFault
+            - null
+          description: Required with RefundBuyer, absent or null otherwise. BookMisdescribed only for
+            ReportRejected; BuyerDefault only for RecipientDecisionOverdue and CollectionOverdue and
+            records a member violation.
         reason:
           type: string
           minLength: 10
@@ -11445,11 +11475,19 @@ components:
       additionalProperties: false
       required:
         - expectedVersion
+        - check
       properties:
         expectedVersion:
           type: integer
           minimum: 1
           maximum: 2147483647
+        check:
+          type: string
+          enum:
+            - MatchesReport
+            - DoesNotMatch
+          description: Staff compare the returned item with the point condition report. DoesNotMatch
+            needs a note of at least 10 characters and refuses the return.
         note:
           type:
             - string

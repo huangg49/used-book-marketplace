@@ -101,12 +101,9 @@ export class PointOrderCompletionService {
         await tx.lock('point_orders', [id]);
         const o = await this.order(tx, id);
         if (o.version !== body.expectedVersion) throw conflict();
-        if (await tx.c.point_order_claims.findOne({ orderId: o._id }))
-          throw new DomainError(
-            409,
-            'InvalidState',
-            'Đơn này đã có khiếu nại; mỗi đơn chỉ được khiếu nại một lần.',
-          );
+        // One open claim at a time (FR-D01): the Order state carries it. A
+        // claim after a dismissal is allowed inside the window and goes to
+        // another Admin (appeal), see PointOrderResolutionService.
         if (o.state !== 'Inspection') throw invalidState();
         const now = await this.clock.decision(tx, context.auth);
         if (now >= o.inspectionDeadline!)
@@ -137,8 +134,10 @@ export class PointOrderCompletionService {
 
   // -------------------------------------------------------------- return
   // An Admin required the book back. Assigned Staff, independent of both
-  // parties, confirm it is at the point again; only then is the whole hold
-  // refunded and the book sent to the seller's reclaim.
+  // parties, compare the item with the point condition report (SRS §9.3
+  // "return received and checked"). Only a match takes the book back,
+  // refunds the whole hold and sends it to the seller's reclaim with the
+  // listing back to revision; a mismatch is a refused, committed attempt.
   receiveReturn(
     context: CommandContext,
     id: string,
@@ -177,6 +176,31 @@ export class PointOrderCompletionService {
             throw late(
               'Điểm giao nhận đang đóng cửa (09:00–18:00). Hãy nhận sách trong giờ mở cửa.',
             );
+          const note = body.note?.trim() || null;
+          if (body.check === 'DoesNotMatch') {
+            if (!note || note.length < 10)
+              invalidField(
+                'note',
+                'Hãy ghi rõ điểm khác biệt so với biên bản ít nhất 10 ký tự.',
+              );
+            await tx.c.point_returns.insertOne({
+              _id: randomUUID(),
+              orderId: o._id,
+              pointId: o.pointId,
+              staffId: actor._id,
+              returnedBy: o.buyerId,
+              note,
+              outcome: 'Refused',
+              journalId: null,
+              receivedAt: now,
+              receiptId,
+            });
+            tx.check(`point-order:${o._id}`, () => checkPointOrder(tx, o._id));
+            return {
+              ...PointOrdersService.change(o, now, 'PointOrderReturnRefused'),
+              returnOutcome: 'Refused' as const,
+            };
+          }
           const accounts = await this.ledger.lockOrder(
             tx,
             o.buyerId,
@@ -198,7 +222,8 @@ export class PointOrderCompletionService {
             pointId: o.pointId,
             staffId: actor._id,
             returnedBy: o.buyerId,
-            note: body.note?.trim() || null,
+            note,
+            outcome: 'Accepted',
             journalId: journal._id,
             receivedAt: now,
             receiptId,
@@ -226,7 +251,10 @@ export class PointOrderCompletionService {
             now,
           );
           tx.check(`auction:${a._id}`, () => checkAuction(tx, a._id));
-          return PointOrdersService.change(next, now, 'PointOrderReturned');
+          return {
+            ...PointOrdersService.change(next, now, 'PointOrderReturned'),
+            returnOutcome: 'Accepted' as const,
+          };
         },
       },
     );

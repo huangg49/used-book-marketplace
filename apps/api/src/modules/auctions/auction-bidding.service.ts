@@ -39,6 +39,7 @@ import {
 import { checkAuction } from './auction-invariants.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
 import { HandoverPointsService } from './handover-points.service.js';
+import { recordViolation, requireUnrestricted } from './member-violations.js';
 import { PointOrdersService } from './point-orders.service.js';
 
 const RATE_LIMIT_PER_MINUTE = 30;
@@ -143,13 +144,15 @@ export class AuctionBiddingService {
       );
   }
   // Locks the auction and this bidder's projection, then checks the server
-  // deadline, the seller and the per-account limits (POL-41).
+  // deadline, the seller and the per-account limits (POL-41). `mayLead` is
+  // true for a command that can make a non-leader the leader or the winner;
+  // it then counts the caller's live commitments and POL-17 restrictions.
   private async lockForBid(
     tx: Tx,
     auth: Actor,
     actorId: string,
     id: string,
-    newParticipation: boolean,
+    mayLead: boolean,
   ) {
     await tx.lock('auctions', [id]);
     await tx.lock('auction_bidders', [`${id}:${actorId}`]);
@@ -170,20 +173,23 @@ export class AuctionBiddingService {
         'Bạn thao tác đấu giá quá nhanh. Hãy thử lại sau ít phút.',
       );
     const own = await tx.c.auction_bidders.findOne({ _id: `${id}:${actorId}` });
-    if (!own && newParticipation)
-      await this.checkParticipationQuota(tx, actorId);
+    if (mayLead && a.leaderId !== actorId) {
+      await requireUnrestricted(tx, actorId, now);
+      await this.checkParticipationQuota(tx, actorId, id);
+    }
     return { a, now, own };
   }
-  private async checkParticipationQuota(tx: Tx, userId: string) {
-    const rows = await tx.c.auction_bidders
-      .find({ bidderId: userId }, { sort: { firstBidAt: -1 }, limit: 200 })
-      .toArray();
+  // POL-41 counts commitments not yet released: auctions the user currently
+  // leads (an outbid level no longer binds) and wins awaiting payment.
+  private async checkParticipationQuota(
+    tx: Tx,
+    userId: string,
+    auctionId: string,
+  ) {
     const open = await tx.c.auctions.countDocuments({
+      _id: { $ne: auctionId },
       $or: [
-        {
-          _id: { $in: rows.map((r) => r.auctionId) },
-          state: { $in: ['Active', 'OnHold'] },
-        },
+        { leaderId: userId, state: { $in: ['Active', 'OnHold'] } },
         {
           winnerId: userId,
           state: { $in: ['BuyNowPending', 'AwaitingWinnerPayment'] },
@@ -194,7 +200,7 @@ export class AuctionBiddingService {
       throw new DomainError(
         429,
         'RATE_LIMITED',
-        'Bạn đang tham gia tối đa 5 phiên đấu giá chưa kết thúc.',
+        'Bạn đang dẫn giá hoặc chờ thanh toán ở tối đa 5 phiên đấu giá.',
       );
   }
 
@@ -585,6 +591,14 @@ export class AuctionBiddingService {
         )
           throw invalidState();
         if (a.orderId) await this.orders.expire(tx, a.orderId, now, receiptId);
+        // FR-AU08: the winner had the whole payment window on server time.
+        await recordViolation(tx, {
+          userId: a.winnerId!,
+          kind: 'AuctionNonPayment',
+          sourceId: a._id,
+          recordedAt: now,
+          receiptId,
+        });
         const next = await this.update(tx, a, { state: 'PaymentExpired' }, now);
         await this.reclaim(tx, a, 'PaymentExpired', now);
         return this.change(next, now, 'AuctionPaymentExpired', null);

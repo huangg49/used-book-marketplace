@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import type { PointOrderDoc } from '../../database/mongo/documents.js';
+import type {
+  PointOrderDoc,
+  PointOrderResolutionDoc,
+} from '../../database/mongo/documents.js';
 import {
   COLLECTION_WINDOW_MS,
   RETURN_WINDOW_MS,
@@ -27,9 +30,31 @@ import { AuctionClock } from './auction-clock.js';
 import { checkAuction } from './auction-invariants.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
 import { HandoverPointsService } from './handover-points.service.js';
+import { recordViolation } from './member-violations.js';
 import { pointDeadline } from './point-hours.js';
 import { checkPointOrder } from './point-order-invariants.js';
 import { PointOrdersService } from './point-orders.service.js';
+
+type OpenReason = PointOrderResolutionDoc['openReason'];
+type Decision = PointOrderResolutionDoc['decision'];
+type Fault = PointOrderResolutionDoc['fault'];
+// FR-H09 / FR-D01 decision matrix (mirrored by the migration 0013 validator):
+// an unanswered report is cancelled safely (never accepted for the buyer); an
+// unfounded rejection or a missed collection may continue with a new window;
+// a refund always states the fault; after the handover only dismiss/return.
+const ALLOWED: Record<OpenReason, Partial<Record<Decision, Fault[]>>> = {
+  RecipientDecisionOverdue: { RefundBuyer: ['BuyerDefault', 'NoFault'] },
+  ReportRejected: {
+    RefundBuyer: ['BookMisdescribed', 'NoFault'],
+    ResumeCollection: [null],
+  },
+  CollectionOverdue: {
+    RefundBuyer: ['BuyerDefault', 'NoFault'],
+    ResumeCollection: [null],
+  },
+  InspectionClaim: { DismissClaim: [null], RequireReturn: [null] },
+  ReturnOverdue: { DismissClaim: [null], RequireReturn: [null] },
+};
 
 // Independent Admin decision on a ViaPoint Order in ResolutionPending. While
 // the book is still at the point the outcomes are a full refund of the Order
@@ -75,20 +100,40 @@ export class PointOrderResolutionService {
         'SelfReviewForbidden',
         'Bạn liên quan đến giao dịch hoặc điểm này nên không được quyết định.',
       );
+    if (await this.decidedEarlierClaim(tx, actor._id, o))
+      throw new DomainError(
+        403,
+        'SelfReviewForbidden',
+        'Bạn đã quyết định khiếu nại trước của đơn này; khiếu nại mới cần quản trị viên khác.',
+      );
+  }
+  // A repeated claim is the buyer's appeal: another Admin decides it.
+  private async decidedEarlierClaim(tx: Tx, userId: string, o: PointOrderDoc) {
+    return (
+      o.resolutionReason === 'InspectionClaim' &&
+      !!(await tx.c.point_order_resolutions.findOne({
+        orderId: o._id,
+        openReason: 'InspectionClaim',
+        adminId: userId,
+      }))
+    );
   }
   // Staff who received, inspected, handed over or took back this book stay
   // excluded after their assignment ends: a claim may concern their own step.
   private async involved(tx: Tx, userId: string, o: PointOrderDoc, now: Date) {
     const intake = await tx.c.auction_intakes.findOne({ _id: o.intakeId });
     const handover = await tx.c.point_handovers.findOne({ orderId: o._id });
-    const returned = await tx.c.point_returns.findOne({ orderId: o._id });
+    const returned = await tx.c.point_returns.countDocuments({
+      orderId: o._id,
+      staffId: userId,
+    });
     return (
       userId === o.buyerId ||
       userId === o.sellerId ||
       userId === intake?.receivedBy ||
       userId === intake?.inspectorId ||
       userId === handover?.staffId ||
-      userId === returned?.staffId ||
+      returned > 0 ||
       (await this.points.assignedPointIds(tx, userId, now)).includes(o.pointId)
     );
   }
@@ -117,17 +162,23 @@ export class PointOrderResolutionService {
         const o = await this.order(tx, id);
         if (o.version !== body.expectedVersion) throw conflict();
         if (o.state !== 'ResolutionPending') throw invalidState();
-        const handedOver = !!o.collectedAt;
-        if (
-          handedOver !==
-          (body.decision === 'DismissClaim' ||
-            body.decision === 'RequireReturn')
-        )
+        const fault: Fault = body.fault ?? null;
+        const faults = ALLOWED[o.resolutionReason!][body.decision];
+        if (!faults)
           invalidField(
             'decision',
-            handedOver
+            o.collectedAt
               ? 'Sách đã giao cho người mua: chỉ có thể bác khiếu nại hoặc yêu cầu trả sách về điểm.'
-              : 'Sách còn ở điểm: chỉ có thể hoàn tiền hoặc mở lại thời hạn nhận.',
+              : o.resolutionReason === 'RecipientDecisionOverdue'
+                ? 'Người mua không phản hồi biên bản: chỉ có thể hủy an toàn và hoàn tiền.'
+                : 'Sách còn ở điểm: chỉ có thể hoàn tiền hoặc mở lại thời hạn nhận.',
+          );
+        if (!faults!.includes(fault))
+          invalidField(
+            'fault',
+            body.decision === 'RefundBuyer'
+              ? 'Hãy chọn lỗi phù hợp với lý do mở hồ sơ.'
+              : 'Quyết định này không ghi lỗi.',
           );
         const now = await this.clock.decision(tx, context.auth);
         const record = (journalId: string | null) =>
@@ -139,6 +190,7 @@ export class PointOrderResolutionService {
             reason,
             adminId: actor._id,
             journalId,
+            fault,
             decidedAt: now,
             receiptId,
           });
@@ -240,12 +292,21 @@ export class PointOrderResolutionService {
           { state: 'Cancelled', closedAt: now },
           now,
         );
+        // A misdescribed book goes back with its listing sent to revision.
         await this.intakes.requireReclaim(
           tx,
           o.intakeId,
-          'OrderCancelled',
+          fault === 'BookMisdescribed' ? 'BookMisdescribed' : 'OrderCancelled',
           now,
         );
+        if (fault === 'BuyerDefault')
+          await recordViolation(tx, {
+            userId: o.buyerId,
+            kind: 'PointOrderBuyerDefault',
+            sourceId: o._id,
+            recordedAt: now,
+            receiptId,
+          });
         tx.check(`auction:${a._id}`, () => checkAuction(tx, a._id));
         return {
           ...PointOrdersService.change(next, now, 'PointOrderRefunded'),
@@ -290,7 +351,11 @@ export class PointOrderResolutionService {
       const items: Wire['PointOrderResolutionItem'][] = [];
       for (const o of rows) {
         if (items.length === 50) break;
-        if (await this.involved(tx, actor._id, o, now)) continue;
+        if (
+          (await this.involved(tx, actor._id, o, now)) ||
+          (await this.decidedEarlierClaim(tx, actor._id, o))
+        )
+          continue;
         const item = await tx.c.workflow_items.findOne({
           _id: `${o.contextId}:${o.listingId}`,
         });

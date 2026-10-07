@@ -129,23 +129,24 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       seller,
     ).expect(200);
     const intakeId = created.body.intakeId as string;
+    const pointStaff = over.pointId === HANDOVER_POINT_B ? otherStaff : staff;
     await cmd(
       'post',
       `/operations/auction-intakes/${intakeId}/receive`,
       { expectedVersion: 1, shelfCode: 'A-01' },
-      staff,
+      pointStaff,
     ).expect(200);
     await cmd(
       'post',
       `/operations/auction-intakes/${intakeId}/inspect`,
       { expectedVersion: 2, outcome: 'Pass', note: null },
-      staff,
+      pointStaff,
     ).expect(200);
     const opened = await cmd(
       'post',
       `/operations/auction-intakes/${intakeId}/open`,
       { expectedVersion: 3 },
-      staff,
+      pointStaff,
     ).expect(200);
     validates('AuctionCommandReceipt', opened.body);
     return {
@@ -304,6 +305,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     expectedVersion: number,
     decision: string,
     key?: string,
+    fault?: string,
   ) =>
     cmd(
       'post',
@@ -312,6 +314,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         expectedVersion,
         decision,
         reason: 'Đã đối chiếu ảnh và biên bản tại điểm',
+        ...(fault ? { fault } : {}),
       },
       a,
       key,
@@ -496,9 +499,18 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       { expectedVersion: 3 },
       staff,
     ).expect(200);
-    expect(await db.c.listings.findOne({ _id: l.id })).toMatchObject({
-      trade: 'Available',
-    });
+    // FR-H08: back to the owner as an unsubmitted Draft copy of the revision
+    // (photos kept), so it is corrected and reviewed before anyone buys it.
+    const back = (await db.c.listings.findOne({ _id: l.id }))!;
+    expect(back).toMatchObject({ trade: 'Available', moderation: 'Draft' });
+    expect(
+      await db.c.listing_revisions.findOne({ _id: back.currentRevisionId! }),
+    ).toMatchObject({ submittedAt: null, listingId: l.id });
+    expect(
+      await db.c.revision_media.countDocuments({
+        revisionId: back.currentRevisionId!,
+      }),
+    ).toBeGreaterThan(0);
     const mine = await call(
       'get',
       `/me/auction-intakes/${body.intakeId}`,
@@ -1153,16 +1165,31 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       decision: string,
       reason = 'Người mua không đến nhận đúng hạn',
       key?: string,
+      fault: string | null = decision === 'RefundBuyer' ? 'BuyerDefault' : null,
     ) =>
       cmd(
         'post',
         `/operations/point-orders/${o.orderId}/resolve`,
-        { expectedVersion: pending.version, decision, reason },
+        {
+          expectedVersion: pending.version,
+          decision,
+          reason,
+          ...(fault ? { fault } : {}),
+        },
         a,
         key,
       );
     await resolve(staff, 'RefundBuyer').expect(403);
     await resolve(admin, 'RefundBuyer', 'ngắn').expect(422);
+    // A missed collection is not a misdescription, and a refund needs a fault.
+    await resolve(
+      admin,
+      'RefundBuyer',
+      undefined,
+      undefined,
+      'BookMisdescribed',
+    ).expect(422);
+    await resolve(admin, 'RefundBuyer', undefined, undefined, null).expect(422);
     // An Admin who also works at this point is not independent.
     const pointAdmin = await actor(['ADMIN', 'STAFF']);
     await db.c.point_staff_assignments.insertOne({
@@ -1207,8 +1234,13 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     expect(decision).toMatchObject({
       decision: 'RefundBuyer',
       openReason: 'CollectionOverdue',
+      fault: 'BuyerDefault',
       adminId: admin.id,
     });
+    // FR-AU08: a verified buyer default is recorded once.
+    expect(
+      await db.c.member_violations.find({ userId: o.winner.id }).toArray(),
+    ).toMatchObject([{ kind: 'PointOrderBuyerDefault', sourceId: o.orderId }]);
     const intake = (await db.c.auction_intakes.findOne({ _id: o.intakeId }))!;
     expect(intake).toMatchObject({
       state: 'ReclaimRequired',
@@ -1272,7 +1304,12 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       cmd(
         'post',
         `/operations/point-orders/${o.orderId}/resolve`,
-        { expectedVersion: 3, decision: 'RefundBuyer', reason },
+        {
+          expectedVersion: 3,
+          decision: 'RefundBuyer',
+          reason,
+          fault: 'BookMisdescribed',
+        },
         second,
       ),
     ]);
@@ -1290,6 +1327,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       state: 'ReadyForCollection',
       version: 4,
       resolutionReason: null,
+      acceptedAt: null,
     });
     expect(doc.collectionOpenedAt).toEqual(resumeAt);
     expect(
@@ -1318,33 +1356,67 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     });
   });
 
-  it('FR-H09: a second missed deadline on the same Order reopens resolution', async () => {
-    const o = await paidOrder();
+  it('FR-H09: an unanswered report is only refunded; a second missed collection reopens resolution', async () => {
+    // POL-32: no answer means a safe cancel, never an acceptance for the buyer.
+    const q = await paidOrder();
     await longSession(admin);
-    const paid = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
-    pinClock(paid.acceptanceDeadline!);
+    const qp = (await db.c.point_orders.findOne({ _id: q.orderId }))!;
+    pinClock(qp.acceptanceDeadline!);
     await app.get(AuctionWorker).tick();
     vi.restoreAllMocks();
-    const resumeAt = openAt(paid.acceptanceDeadline!);
-    pinClock(resumeAt);
-    await resolveAs(admin, o.orderId, 3, 'ResumeCollection').expect(200);
+    pinClock(openAt(qp.acceptanceDeadline!));
+    await resolveAs(admin, q.orderId, 3, 'ResumeCollection').expect(422);
+    await resolveAs(
+      admin,
+      q.orderId,
+      3,
+      'RefundBuyer',
+      undefined,
+      'BookMisdescribed',
+    ).expect(422);
+    await resolveAs(
+      admin,
+      q.orderId,
+      3,
+      'RefundBuyer',
+      undefined,
+      'NoFault',
+    ).expect(200);
     vi.restoreAllMocks();
-    const ready = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
-    // An Admin decision opened this window; no buyer acceptance is invented.
-    expect(ready).toMatchObject({
+    // No fault, no violation; the listing returns to sale after reclaim.
+    expect(
+      await db.c.member_violations.countDocuments({ userId: q.winner.id }),
+    ).toBe(0);
+    expect(
+      await db.c.auction_intakes.findOne({ _id: q.intakeId }),
+    ).toMatchObject({ reclaimReason: 'OrderCancelled' });
+
+    // Accepted, then collection missed twice: deadline steps are keyed by
+    // Order version, so the second is not a replay of the first.
+    const o = await paidOrder();
+    const paid = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+    const ready = await accepted(o, new Date(paid.paidAt!.getTime() + 60_000));
+    pinClock(ready.collectionDeadline!);
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+    const resumeAt = openAt(ready.collectionDeadline!);
+    pinClock(resumeAt);
+    await resolveAs(admin, o.orderId, 4, 'ResumeCollection').expect(200);
+    vi.restoreAllMocks();
+    const again = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+    expect(again).toMatchObject({
       state: 'ReadyForCollection',
-      version: 4,
-      acceptedAt: null,
+      version: 5,
+      acceptedAt: ready.acceptedAt,
       collectionOpenedAt: resumeAt,
     });
-    // The worker step is keyed by Order version, so it is not a replay.
-    pinClock(ready.collectionDeadline!);
+    pinClock(again.collectionDeadline!);
     await app.get(AuctionWorker).tick();
     vi.restoreAllMocks();
     expect(await db.c.point_orders.findOne({ _id: o.orderId })).toMatchObject({
       state: 'ResolutionPending',
       resolutionReason: 'CollectionOverdue',
-      version: 5,
+      version: 6,
     });
   });
 
@@ -1522,17 +1594,44 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         `/operations/point-orders/${o.orderId}/receive-return`,
         {
           expectedVersion: 6,
-          note: 'Nhận lại đủ sách, tình trạng như lúc giao',
+          check,
+          note,
         },
         a,
         rkey,
       );
+    let check = 'MatchesReport',
+      note: string | null = 'Nhận lại đủ sách, tình trạng như lúc giao';
     await receive(otherStaff).expect(403);
     await receive(o.winner).expect(403);
+    // SRS 9.3: the item is checked against the report before any refund.
+    check = 'DoesNotMatch';
+    note = 'ngắn';
+    await receive(staff).expect(422);
+    note = 'Không phải cuốn đã giao: khác ấn bản và không có dấu riêng';
+    const refused = await receive(staff).expect(200);
+    validates('AuctionCommandReceipt', refused.body);
+    expect(refused.body).toMatchObject({
+      returnOutcome: 'Refused',
+      state: 'ReturnPending',
+      version: 6,
+    });
+    expect(
+      await db.c.ledger_journals.countDocuments({
+        orderId: o.orderId,
+        type: 'OrderRefund',
+      }),
+    ).toBe(0);
+    check = 'MatchesReport';
+    note = 'Nhận lại đủ sách, tình trạng như lúc giao';
     const before = (await call('get', '/me/wallet', o.winner).expect(200)).body;
     const rkey = randomUUID();
     const received = await receive(staff, rkey).expect(200);
-    expect(received.body).toMatchObject({ state: 'Cancelled', version: 7 });
+    expect(received.body).toMatchObject({
+      state: 'Cancelled',
+      version: 7,
+      returnOutcome: 'Accepted',
+    });
     const again = await receive(staff, rkey).expect(200);
     expect(again.headers['idempotency-replayed']).toBe('true');
     vi.restoreAllMocks();
@@ -1540,8 +1639,13 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     expect(after.available - before.available).toBe(300_000);
     expect(after.transactionHeld).toBe(0);
     expect(
-      await db.c.point_returns.findOne({ orderId: o.orderId }),
-    ).toMatchObject({ staffId: staff.id, returnedBy: o.winner.id });
+      await db.c.point_returns
+        .find({ orderId: o.orderId }, { sort: { outcome: 1 } })
+        .toArray(),
+    ).toMatchObject([
+      { outcome: 'Accepted', staffId: staff.id, returnedBy: o.winner.id },
+      { outcome: 'Refused', journalId: null },
+    ]);
     expect(
       await db.c.ledger_journals.countDocuments({
         orderId: o.orderId,
@@ -1564,6 +1668,19 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     validates('PointOrder', view.body);
     expect(view.body).toMatchObject({ state: 'Cancelled', refunded: true });
     expect(view.body.returnedAt).toEqual(returnAt.toISOString());
+    // An upheld claim sends the listing back to revision on reclaim.
+    pinClock(new Date(returnAt.getTime() + 60_000));
+    await cmd(
+      'post',
+      `/operations/auction-intakes/${o.intakeId}/reclaim`,
+      { expectedVersion: intake.version },
+      staff,
+    ).expect(200);
+    vi.restoreAllMocks();
+    expect(await db.c.listings.findOne({ _id: o.listing.id })).toMatchObject({
+      trade: 'Available',
+      moderation: 'Draft',
+    });
     expect(await reconciled()).toBe(true);
   });
 
@@ -1616,9 +1733,11 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     await resolveAs(admin, o.orderId, 5, 'DismissClaim').expect(200);
   });
 
-  it('FR-D02: a dismissed claim settles after the window; one claim per Order; a missed return reopens resolution', async () => {
+  it('FR-D01/02: a dismissed claim may be renewed for another Admin, then settles; a missed return reopens resolution', async () => {
     const o = await collectedOrder();
     await longSession(admin);
+    const second = await actor(['ADMIN']);
+    await longSession(second);
     const c = o.collected;
     pinClock(new Date(c.collectedAt!.getTime() + 60_000));
     await orderPost(
@@ -1630,24 +1749,42 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     vi.restoreAllMocks();
     pinClock(new Date(c.collectedAt!.getTime() + 2 * 60_000));
     await resolveAs(admin, o.orderId, 5, 'DismissClaim').expect(200);
-    await orderPost(
-      o.orderId,
-      'claim',
-      { expectedVersion: 6, description: claimText },
-      o.winner,
-    ).expect(409);
-    vi.restoreAllMocks();
     expect(await db.c.point_orders.findOne({ _id: o.orderId })).toMatchObject({
       state: 'Inspection',
       version: 6,
       resolutionReason: null,
     });
+    // The buyer may claim again inside the window (the appeal); the Admin
+    // who dismissed the first claim may not decide it and does not see it.
+    await orderPost(
+      o.orderId,
+      'claim',
+      { expectedVersion: 6, description: claimText },
+      o.winner,
+    ).expect(200);
+    const refused = await resolveAs(admin, o.orderId, 7, 'DismissClaim').expect(
+      403,
+    );
+    expect(refused.body.code).toBe('SelfReviewForbidden');
+    const queue = await call(
+      'get',
+      '/operations/point-order-resolutions',
+      admin,
+    ).expect(200);
+    expect(queue.body.items.map((i: { id: string }) => i.id)).not.toContain(
+      o.orderId,
+    );
+    await resolveAs(second, o.orderId, 7, 'DismissClaim').expect(200);
+    vi.restoreAllMocks();
+    expect(
+      await db.c.point_order_claims.countDocuments({ orderId: o.orderId }),
+    ).toBe(2);
     pinClock(c.inspectionDeadline!);
     await app.get(AuctionWorker).tick();
     vi.restoreAllMocks();
     expect(await db.c.point_orders.findOne({ _id: o.orderId })).toMatchObject({
       state: 'Completed',
-      version: 7,
+      version: 9,
     });
 
     // The buyer never brings the book back: the return deadline reopens
@@ -1670,7 +1807,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     await cmd(
       'post',
       `/operations/point-orders/${p.orderId}/receive-return`,
-      { expectedVersion: 6, note: null },
+      { expectedVersion: 6, check: 'MatchesReport', note: null },
       staff,
     ).expect(409);
     await app.get(AuctionWorker).tick();
@@ -1695,6 +1832,119 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       await db.c.point_order_resolutions.countDocuments({ orderId: p.orderId }),
     ).toBe(2);
     expect(await reconciled()).toBe(true);
+  });
+
+  it('FR-AU02: the seller withdraws an opened auction only before the first bid', async () => {
+    const atB = { pointId: HANDOVER_POINT_B };
+    const withdraw = async (
+      o: Awaited<ReturnType<typeof openAuction>>,
+      status: number,
+    ) => {
+      const i = (await db.c.auction_intakes.findOne({ _id: o.intakeId }))!;
+      return cmd(
+        'post',
+        `/auction-intakes/${o.intakeId}/cancel`,
+        { expectedVersion: i.version },
+        o.seller,
+      ).expect(status);
+    };
+    const free = await openAuction(atB);
+    const done = await withdraw(free, 200);
+    expect(done.body).toMatchObject({
+      entityType: 'AuctionIntake',
+      state: 'ReclaimRequired',
+    });
+    expect(await db.c.auctions.findOne({ _id: free.auctionId })).toMatchObject({
+      state: 'Cancelled',
+      bidderCount: 0,
+    });
+    expect(
+      await db.c.auction_intakes.findOne({ _id: free.intakeId }),
+    ).toMatchObject({ reclaimReason: 'SellerCancelled' });
+    const contested = await openAuction(atB);
+    await bid(contested.auctionId, await actor(), 200_000).expect(200);
+    await withdraw(contested, 409);
+    expect(
+      await db.c.auctions.findOne({ _id: contested.auctionId }),
+    ).toMatchObject({ state: 'Active' });
+  });
+
+  it('FR-AU08/POL-17: unpaid wins are recorded; three violations in 720 h restrict new auction activity for 168 h', async () => {
+    const winner = await actor();
+    const won = await wonAuction(winner);
+    pinClock(won.doc.paymentDeadline!);
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+    expect(
+      await db.c.member_violations.find({ userId: winner.id }).toArray(),
+    ).toMatchObject([{ kind: 'AuctionNonPayment', sourceId: won.auctionId }]);
+    // Seed earlier verified violations (test data, as the worker writes them).
+    const seed = (userId: string, hoursAgo: number[]) =>
+      db.c.member_violations.insertMany(
+        hoursAgo.map((h) => ({
+          _id: randomUUID(),
+          userId,
+          kind: 'AuctionNonPayment' as const,
+          sourceId: randomUUID(),
+          recordedAt: new Date(Date.now() - h * HOUR),
+          receiptId: randomUUID(),
+        })),
+      );
+    const restricted = await actor();
+    await seed(restricted.id, [600, 300, 2]);
+    const twice = await actor();
+    await seed(twice.id, [300, 2]);
+    // Three within 720 h, but the third was more than 168 h ago.
+    const served = await actor();
+    await seed(served.id, [800, 500, 200]);
+    const target = await openAuction({ pointId: HANDOVER_POINT_B });
+    const refused = await bid(target.auctionId, restricted, 200_000).expect(
+      403,
+    );
+    expect(refused.body.code).toBe('AccountIneligible');
+    await cmd(
+      'post',
+      `/auctions/${target.auctionId}/buy-now`,
+      { fulfillmentMethod: 'SelfCollect' },
+      restricted,
+    ).expect(403);
+    const listing = await saleListing(restricted);
+    await cmd(
+      'post',
+      '/auction-intakes',
+      intakeBody(listing, { pointId: HANDOVER_POINT_B }),
+      restricted,
+    ).expect(403);
+    await bid(target.auctionId, twice, 200_000).expect(200);
+    await bid(target.auctionId, served, 250_000).expect(200);
+  });
+
+  it('POL-41: an ended auction no longer counts for the seller; only live leads count for a bidder', async () => {
+    // The seller's sold-but-unpaid auction has ended: two new intakes fit.
+    const won = await wonAuction(await actor());
+    const intake = (listing: { id: string; version: number }) =>
+      cmd(
+        'post',
+        '/auction-intakes',
+        intakeBody(listing, { pointId: HANDOVER_POINT_B }),
+        won.seller,
+      );
+    await intake(await saleListing(won.seller)).expect(200);
+    await intake(await saleListing(won.seller)).expect(200);
+    await intake(await saleListing(won.seller)).expect(429);
+    // A bidder leading five auctions cannot join a sixth; once outbid in one,
+    // that commitment is released and the sixth is allowed.
+    const bidder = await actor();
+    const rival = await actor();
+    const auctions = [];
+    for (let i = 0; i < 6; i++)
+      auctions.push(await openAuction({ pointId: HANDOVER_POINT_B }));
+    for (const a of auctions.slice(0, 5))
+      await bid(a.auctionId, bidder, 200_000).expect(200);
+    const sixth = await bid(auctions[5].auctionId, bidder, 200_000).expect(429);
+    expect(sixth.body.code).toBe('RATE_LIMITED');
+    await bid(auctions[0].auctionId, rival, 250_000).expect(200);
+    await bid(auctions[5].auctionId, bidder, 200_000).expect(200);
   });
 
   it('AC-AU08/10: no bids closes Unsold; Admin cancel needs independence and a reason', async () => {

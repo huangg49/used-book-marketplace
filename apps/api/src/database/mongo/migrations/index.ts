@@ -44,6 +44,11 @@ import {
   settlementCollectionSpecs,
   withSettlementChanges,
 } from './0012-point-order-settlement.js';
+import {
+  auctionBusinessRulesMigration,
+  rulesCollectionSpecs,
+  withRulesChanges,
+} from './0013-auction-business-rules.js';
 
 export interface Migration {
   id: string;
@@ -121,6 +126,7 @@ export const migrations: Migration[] = [
   pointCollectionMigration,
   pointOrderResolutionMigration,
   pointOrderSettlementMigration,
+  auctionBusinessRulesMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -142,12 +148,14 @@ export const currentCollections = (): CollectionSpec[] => [
   ...auctionCollectionSpecs
     .map(withPointOrderChanges)
     .map(withResolutionChanges)
-    .map(withSettlementChanges),
+    .map(withSettlementChanges)
+    .map(withRulesChanges),
   ...pointOrderCollectionSpecs
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)
     .map(withSettlementChanges),
   ...pointCollectionSpecs,
-  ...resolutionCollectionSpecs.map(withSettlementChanges),
-  ...settlementCollectionSpecs,
+  ...resolutionCollectionSpecs.map(withSettlementChanges).map(withRulesChanges),
+  ...settlementCollectionSpecs.map(withRulesChanges),
+  ...rulesCollectionSpecs,
 ];

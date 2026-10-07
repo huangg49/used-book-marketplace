@@ -22,6 +22,7 @@ import { pointOrderCollectionSpecs } from '../../src/database/mongo/migrations/0
 import { pointCollectionSpecs } from '../../src/database/mongo/migrations/0010-point-collection.js';
 import { resolutionCollectionSpecs } from '../../src/database/mongo/migrations/0011-point-order-resolution.js';
 import { settlementCollectionSpecs } from '../../src/database/mongo/migrations/0012-point-order-settlement.js';
+import { rulesCollectionSpecs } from '../../src/database/mongo/migrations/0013-auction-business-rules.js';
 import {
   currentCollections,
   migrations,
@@ -77,7 +78,8 @@ describe('migrations', () => {
         pointOrderCollectionSpecs.length -
         pointCollectionSpecs.length -
         resolutionCollectionSpecs.length -
-        settlementCollectionSpecs.length +
+        settlementCollectionSpecs.length -
+        rulesCollectionSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });

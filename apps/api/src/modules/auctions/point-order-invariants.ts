@@ -87,7 +87,11 @@ export async function checkPointOrder(tx: Tx, orderId: string) {
     orderId: o._id,
     decision: 'RefundBuyer',
   });
-  const returns = await tx.c.point_returns.countDocuments({ orderId: o._id });
+  // Refused return attempts change nothing; only an accepted one refunds.
+  const returns = await tx.c.point_returns.countDocuments({
+    orderId: o._id,
+    outcome: 'Accepted',
+  });
   const cancelled = o.state === 'Cancelled';
   const completed = o.state === 'Completed';
   if (
@@ -110,16 +114,26 @@ export async function checkPointOrder(tx: Tx, orderId: string) {
     }))
   )
     fail('collection opened without acceptance or Admin decision');
-  // One claim per Order, only by the buyer and only after the handover.
+  // Claims come from the buyer inside the inspection window; each one is
+  // either decided or the single open claim (FR-D01).
   const claims = await tx.c.point_order_claims
     .find({ orderId: o._id })
     .toArray();
+  const claimDecisions = await tx.c.point_order_resolutions.countDocuments({
+    orderId: o._id,
+    openReason: 'InspectionClaim',
+  });
+  const openClaim =
+    o.state === 'ResolutionPending' && o.resolutionReason === 'InspectionClaim';
   if (
-    claims.length > 1 ||
-    (claims[0] &&
-      (claims[0].claimantId !== o.buyerId ||
+    claims.length !== claimDecisions + (openClaim ? 1 : 0) ||
+    claims.some(
+      (c) =>
+        c.claimantId !== o.buyerId ||
         !o.collectedAt ||
-        claims[0].claimedAt >= o.inspectionDeadline!))
+        c.claimedAt < o.collectedAt ||
+        c.claimedAt >= o.inspectionDeadline!,
+    )
   )
     fail('order claim mismatch');
   // Custody leaves the point exactly once, with the handover that set

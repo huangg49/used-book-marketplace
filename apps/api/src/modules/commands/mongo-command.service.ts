@@ -147,6 +147,7 @@ export type AuctionChange = {
   collectionOutcome?: Wire['AuctionCommandReceipt']['collectionOutcome'];
   attemptsRemaining?: number | null;
   codeExpiresAt?: Date | null;
+  returnOutcome?: Wire['AuctionCommandReceipt']['returnOutcome'];
   before?: Json;
   event?: string;
   reason?: string;
@@ -555,6 +556,7 @@ export class MongoCommandService {
       collectionOutcome: change.collectionOutcome ?? null,
       attemptsRemaining: change.attemptsRemaining ?? null,
       codeExpiresAt: change.codeExpiresAt?.toISOString() ?? null,
+      returnOutcome: change.returnOutcome ?? null,
       serverTime: serverTime.toISOString(),
     };
   }
@@ -569,8 +571,8 @@ export class MongoCommandService {
       this.auctionReceipt(...args),
     );
   }
-  // Auction workers only; the key is the aggregate id, so each transition
-  // commits at most once per principal.
+  // Auction workers only; the key names the aggregate (and, for repeatable
+  // deadlines, its version), so each transition commits at most once.
   systemAuction<C>(
     systemActor: Extract<
       SystemActor,

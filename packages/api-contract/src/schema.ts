@@ -1435,7 +1435,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Owner. Before drop-off releases commitment and slot; after receipt and before the auction opens moves to ReclaimRequired. Opened auctions use the auction cancel rules. */
+        /** @description Owner. Before drop-off releases commitment and slot; after receipt and before the auction opens moves to ReclaimRequired. An opened auction can be withdrawn only while it is Active, before endAt and before the first bid (auction Cancelled, book to reclaim). After the first bid only an independent Admin can cancel. */
         post: operations["cancelAuctionIntake"];
         delete?: never;
         options?: never;
@@ -1724,7 +1724,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Buyer only, once per Order, in Inspection before the inspection deadline (a LOCKED account may still claim). Opens ResolutionPending (InspectionClaim) with the description and stops settlement; the payment stays held until an independent Admin decides. */
+        /** @description Buyer only, in Inspection before the inspection deadline (a LOCKED account may still claim). Opens ResolutionPending (InspectionClaim) with the description and stops settlement; the payment stays held until an independent Admin decides. After a dismissal the buyer may claim again within the window; that claim must be decided by a different Admin. */
         post: operations["claimPointOrder"];
         delete?: never;
         options?: never;
@@ -1792,7 +1792,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ACTIVE STAFF assigned to the point, not buyer or seller, during point hours and before the return deadline. Records the book back at the point, posts one OrderRefund journal of the full hold to the buyer, cancels the Order and sends the book to the seller reclaim (OrderReturned). */
+        /** @description ACTIVE STAFF assigned to the point, not buyer or seller, during point hours and before the return deadline. MatchesReport records the book back at the point, posts one OrderRefund journal of the full hold to the buyer, cancels the Order and sends the book to the seller reclaim with its listing back to revision (OrderReturned). DoesNotMatch refuses the item: the attempt is recorded, nothing changes hands, no refund, and the return deadline keeps running. */
         post: operations["receivePointOrderReturn"];
         delete?: never;
         options?: never;
@@ -1826,7 +1826,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ACTIVE ADMIN independent of buyer, seller and the Staff who received, inspected or work at the point. Only for ResolutionPending. While the book is still at the point, RefundBuyer posts one OrderRefund journal of the full hold back to the buyer, cancels the Order and returns the commitment to the intake for reclaim, and ResumeCollection opens a new 72-hour collection window within point hours. After the handover (InspectionClaim or ReturnOverdue), DismissClaim returns the Order to Inspection, settled once the window has passed, and RequireReturn asks the buyer to bring the book back within 72 hours; only the Staff-received return refunds. Other decisions return 422. A reason is required and recorded; no partial refund or penalty. */
+        /** @description ACTIVE ADMIN independent of buyer, seller and the Staff who received, inspected, handed over, took back or work at the point; a repeated claim needs an Admin who did not decide an earlier claim. Only for ResolutionPending. RecipientDecisionOverdue: RefundBuyer (BuyerDefault or NoFault). ReportRejected: RefundBuyer (BookMisdescribed or NoFault) or ResumeCollection when the rejection is unfounded. CollectionOverdue: RefundBuyer (BuyerDefault or NoFault) or ResumeCollection. RefundBuyer posts one OrderRefund of the full hold, cancels the Order and sends the book to reclaim (BookMisdescribed also sends the listing back to revision; BuyerDefault records a violation). ResumeCollection opens a new 72-hour window in point hours without recording a buyer acceptance. After the handover (InspectionClaim, ReturnOverdue): DismissClaim back to Inspection, or RequireReturn within 72 hours. Any other decision or fault returns 422. A reason is required and recorded. */
         post: operations["resolvePointOrder"];
         delete?: never;
         options?: never;
@@ -3334,6 +3334,11 @@ export interface components {
              * @description Collection code request only; the code itself is never stored in receipts.
              */
             codeExpiresAt: string | null;
+            /**
+             * @description Staff return receipt only. A refused return is still a committed attempt.
+             * @enum {string|null}
+             */
+            returnOutcome: "Accepted" | "Refused" | null;
             /** Format: date-time */
             serverTime: string;
         };
@@ -3432,7 +3437,7 @@ export interface components {
             /** Format: uuid */
             auctionId: string | null;
             /** @enum {string|null} */
-            reclaimReason: "SellerCancelled" | "InspectionFailed" | "Unsold" | "PaymentExpired" | "AuctionCancelled" | "OrderCancelled" | "OrderReturned" | null;
+            reclaimReason: "SellerCancelled" | "InspectionFailed" | "Unsold" | "PaymentExpired" | "AuctionCancelled" | "OrderCancelled" | "OrderReturned" | "BookMisdescribed" | null;
             /** Format: date-time */
             closedAt: string | null;
         };
@@ -3515,6 +3520,11 @@ export interface components {
             expectedVersion: number;
             /** @enum {string} */
             decision: "RefundBuyer" | "ResumeCollection" | "DismissClaim" | "RequireReturn";
+            /**
+             * @description Required with RefundBuyer, absent or null otherwise. BookMisdescribed only for ReportRejected; BuyerDefault only for RecipientDecisionOverdue and CollectionOverdue and records a member violation.
+             * @enum {string|null}
+             */
+            fault?: "BookMisdescribed" | "BuyerDefault" | "NoFault" | null;
             reason: string;
         };
         PointOrderResolutionItem: {
@@ -3541,6 +3551,11 @@ export interface components {
         };
         ReceivePointOrderReturn: {
             expectedVersion: number;
+            /**
+             * @description Staff compare the returned item with the point condition report. DoesNotMatch needs a note of at least 10 characters and refuses the return.
+             * @enum {string}
+             */
+            check: "MatchesReport" | "DoesNotMatch";
             note?: string | null;
         };
     };
