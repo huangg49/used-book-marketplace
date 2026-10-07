@@ -27,7 +27,7 @@
   background-color: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .root a,
@@ -65,12 +65,112 @@
 
 /* ===== Header ===== */
 .header {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 50;
-  background: rgba(253, 251, 247, 0.92);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--line);
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  background: transparent;
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  border-bottom: 1px solid transparent;
+  box-shadow: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.headerScrolled {
+  background: rgba(23, 60, 46, 0.98); /* Màu xanh lá đậm (var(--forest-green)) */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* ========================================================
+   Giao diện Header màu tối (Theme Dark / Scrolled)
+   ======================================================== */
+.themeDark .logoText,
+.themeDark .navLink,
+.themeDark .iconBtn,
+.themeDark .menuButton,
+.themeDark .loginLink {
+  color: #F6C879; /* Đổi thành màu vàng gold để phân biệt với chữ trắng ở dưới */
+}
+
+.themeDark .logoSubtext {
+  color: rgba(246, 200, 121, 0.7); /* Vàng nhạt mờ */
+}
+
+.themeDark .logoIcon {
+  color: #F6C879; /* Màu vàng sáng hơn chút để hợp nền tối */
+}
+
+.themeDark .navLink:hover {
+  color: #FFFFFF;
+  border-bottom-color: #FFFFFF;
+  opacity: 0.8;
+}
+
+.themeDark .navLinkActive {
+  color: #F6C879;
+  border-bottom-color: #FFFFFF;
+}
+
+.themeDark .iconBtn:hover,
+.themeDark .menuButton:hover {
+  color: #FFFFFF;
+  opacity: 0.8;
+}
+
+.themeDark .searchBarWrapper {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.themeDark .searchBarWrapper:focus-within {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.themeDark .searchInput {
+  color: #F6C879;
+}
+
+.themeDark .searchInput::placeholder {
+  color: rgba(246, 200, 121, 0.6);
+}
+
+.themeDark .searchIcon {
+  color: rgba(246, 200, 121, 0.8);
+}
+
+.themeDark .searchBadge {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.9);
+  border-color: transparent;
+}
+
+.themeDark .walletBtn {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+}
+
+.themeDark .walletBtn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Nút chính (Đăng sách) nghịch đảo màu lại */
+.themeDark .btnPrimaryHeader {
+  background-color: #FFFFFF;
+  color: #173C2E;
+}
+
+.themeDark .btnPrimaryHeader:hover {
+  background-color: #F4ECE0;
+  color: #173C2E;
 }
 
 .headerInner {
@@ -78,55 +178,209 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 14px 24px;
+  width: 100%;
+  padding: 14px 3rem;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   color: var(--ink);
   text-decoration: none;
 }
 
-.logoIcon {
-  color: var(--gold);
+.logoImage {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%; /* Đổi thành hình tròn để hợp với logo vòng lặp */
+  background-color: #FFFFFF; /* Nền trắng cho logo */
+  object-fit: cover;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.8); /* Viền mỏng */
+}
+
+.logoTextWrapper {
+  display: flex;
+  flex-direction: column;
 }
 
 .logoText {
-  font-family: var(--font-serif);
-  font-size: 26px;
+  font-family: 'UVNCoDien', 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: bold;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.logoSubtext {
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  color: #81796C;
+  letter-spacing: 0.15em;
+  margin-top: 4px;
+}
+
+/* Đổi màu subtext khi ở theme tối */
+.themeDark .logoSubtext {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.searchBarWrapper {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.6);
+  border: 1px solid #DDD5C7;
+  border-radius: 99px;
+  padding: 0 16px;
+  height: 44px;
+  width: 320px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.searchBarWrapper:focus-within {
+  border-color: #173C2E;
+  background-color: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(23, 60, 46, 0.1);
+}
+
+.searchIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  color: #81796C;
+}
+
+.searchInput {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1D1C16;
+  width: 100%;
+  padding: 0;
+  min-height: auto;
+}
+
+.searchBadge {
+  font-size: 10px;
+  font-weight: 600;
+  background-color: #FAF7F2;
+  color: #81796C;
+  padding: 4px 8px;
+  border-radius: 99px;
+  border: 1px solid #DDD5C7;
+  position: absolute;
+  right: 8px;
 }
 
 .desktopNav {
   display: none;
   align-items: center;
-  gap: 32px;
+  gap: 16px;
+}
+
+.navSeparator {
+  width: 1px;
+  height: 14px;
+  background-color: rgba(65, 72, 68, 0.2);
+  border-radius: 2px;
+}
+
+/* Đổi màu vạch ngăn cách nếu ở nền tối */
+.themeDark .navSeparator {
+  background-color: rgba(246, 200, 121, 0.2);
 }
 
 .navLink {
-  color: var(--ink);
+  color: #414844;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
   padding: 6px 0;
   border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
 }
 
 .navLink:hover,
 .navLinkActive {
-  color: var(--gold-strong);
-  border-bottom-color: var(--gold);
+  color: #173C2E;
+  border-bottom-color: #173C2E;
 }
 
 .headerActions {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.iconBtn {
+  background: transparent;
+  border: none;
+  color: #414844;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.iconBtn:hover {
+  color: #173C2E;
+}
+
+.notificationDot {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  background-color: #B85C45;
+  border-radius: 50%;
+}
+
+.walletBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #FAF7F2;
+  border: 1px solid #DDD5C7;
+  color: #1D1C16;
+  padding: 6px 14px;
+  border-radius: 99px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.walletBtn:hover {
+  background-color: #FFF;
+  border-color: #c1c8c3;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.btnPrimaryHeader {
+  background-color: #173C2E;
+  color: #FFFFFF;
+  padding: 10px 20px;
+  border-radius: 99px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  box-shadow: 0 2px 6px rgba(23, 60, 46, 0.2);
+}
+
+.btnPrimaryHeader:hover {
+  background-color: #0F2D23;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(23, 60, 46, 0.3);
+  transform: translateY(-1px);
 }
 
 .loginLink {
@@ -214,9 +468,9 @@
 }
 
 .footerInner {
-  max-width: 1280px;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 64px 24px 32px;
+  padding: 64px 32px 32px;
 }
 
 .footerGrid {
@@ -322,3 +576,23 @@
     transition: none;
   }
 }
+
+/* Shared header must also fit the fullscreen listing flow at large text. */
+.header {--ink:#2a2622;--paper:#fdfbf7;--line:#ddd5c7;background-color:#fdfbf7;}
+.header.themeDark {background-color:#173c2e;}
+.logoTextWrapper {min-width:0;}
+.logoText {white-space:nowrap;}
+.iconBtn,.menuButton {min-width:44px;min-height:44px;flex-shrink:0;}
+@media(max-width:767px) {
+  .headerInner {padding:12px 16px;gap:12px;}
+  .logo {gap:8px;min-width:0;}
+  .logoImage {flex-shrink:0;width:36px;height:36px;}
+  .logoSubtext,.searchBarWrapper,.btnPrimaryHeader {display:none;}
+  .headerActions {gap:8px;flex-shrink:0;}
+  .mobileNav {max-height:calc(100dvh - 80px);overflow-y:auto;}
+}
+
+.header,.header.headerScrolled {background-color:#173c2e;}
+.header .logoText,.header .navLink,.header .iconBtn,.header .menuButton {color:#fffdf7;}
+.header .searchInput,.header .searchInput::placeholder {color:#625a50;}
+.header .btnPrimaryHeader {background:#fffdf7;color:#173c2e;}

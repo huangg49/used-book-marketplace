@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { BookOpen, Mail, Menu, MessageCircle, X } from 'lucide-react'
+import { BookOpen, Mail, Menu, MessageCircle, X, Search, User } from 'lucide-react'
 import { ROUTES, searchUrl } from '../lib/routes'
 import { useSession } from '../hooks/useSession'
 import { session } from '../lib/session'
@@ -12,10 +12,10 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Mua', to: ROUTES.search },
-  { label: 'Bán', to: ROUTES.sell },
-  { label: 'Trao đổi', to: ROUTES.exchange },
-  { label: 'Bộ sưu tập', to: searchUrl({ collection: 'featured' }) },
+  { label: 'Khám phá', to: ROUTES.search },
+  { label: 'Sách hiếm', to: searchUrl({ collection: 'featured' }) },
+  { label: 'Đấu giá', to: searchUrl({ collection: 'auction' }) }, // dummy url
+  { label: 'Đổi sách', to: ROUTES.exchange },
 ]
 
 const COLLECTION_LINKS: NavItem[] = [
@@ -34,19 +34,31 @@ const COMPANY_LABELS: string[] = [
   'Liên hệ',
 ]
 
-function Logo() {
+export function Logo() {
   return (
     <Link to={ROUTES.home} className={styles.logo} aria-label="Trang chủ Lật lại">
-      <BookOpen size={30} className={styles.logoIcon} aria-hidden="true" />
-      <span className={styles.logoText}>Lật lại</span>
+      <img src="/logov2.png" alt="Lật Lại Logo" className={styles.logoImage} />
+      <div className={styles.logoTextWrapper}>
+        <span className={styles.logoText}>Lật Lại</span>
+        <span className={styles.logoSubtext}>SÀN SÁCH CŨ & DI SẢN ĐỌC</span>
+      </div>
     </Link>
   )
 }
 
-function Header() {
+export function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
   const state = useSession()
   const location = useLocation()
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const isItemActive = (item: NavItem) => {
     // If the link has query params, match exactly
@@ -60,53 +72,50 @@ function Header() {
     return location.pathname === item.to || (item.to !== ROUTES.home && location.pathname.startsWith(item.to))
   }
 
+  const isHome = location.pathname === ROUTES.home || location.pathname === '/'
+  const isSearchPage = location.pathname === ROUTES.search
+  const isDarkTheme = isScrolled || isHome || isSearchPage
+
   return (
-    <header className={styles.header}>
+    <header className={`${styles.header} ${isScrolled ? styles.headerScrolled : ''} ${isDarkTheme ? styles.themeDark : ''}`}>
       <div className={styles.headerInner}>
         <Logo />
 
+        <div className={styles.searchBarWrapper}>
+          <div className={styles.searchIcon}><Search size={16} /></div>
+          <input type="text" placeholder="Tìm kiếm theo tựa sách" className={styles.searchInput} />
+          <div className={styles.searchBadge}>ISBN</div>
+        </div>
+
         <nav className={styles.desktopNav} aria-label="Điều hướng chính">
-          {NAV_ITEMS.map((item) => (
-            <Link 
-              key={item.label} 
-              to={item.to} 
-              className={`${styles.navLink} ${isItemActive(item) ? styles.navLinkActive : ''}`}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {NAV_ITEMS.map((item, index) => {
+            const link = (
+              <Link 
+                key={item.label} 
+                to={item.to} 
+                className={`${styles.navLink} ${isItemActive(item) ? styles.navLinkActive : ''}`}
+              >
+                {item.label}
+              </Link>
+            );
+            
+            if (index === NAV_ITEMS.length - 1) return link;
+            
+            return [
+              link,
+              <span key={`sep-${item.label}`} className={styles.navSeparator} />
+            ];
+          })}
         </nav>
 
         <div className={styles.headerActions}>
-          {state.status === 'authenticated' ? (
-            <>
-              <Link to="/profile" className={styles.navLink} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ 
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 28, height: 28, borderRadius: '50%', background: 'var(--gold-strong)', color: '#fff', fontSize: 13, fontWeight: 'bold' 
-                }}>
-                  {state.user.displayName.charAt(0).toUpperCase()}
-                </span>
-                <span className={styles.loginLink}>{state.user.displayName}</span>
-              </Link>
-              <button 
-                onClick={() => void session.logout()} 
-                className={styles.joinButton} 
-                style={{ background: 'transparent', border: '1px solid var(--line)', color: 'var(--ink)' }}
-              >
-                Đăng xuất
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to={ROUTES.login} className={styles.loginLink}>
-                Đăng nhập
-              </Link>
-              <Link to={ROUTES.register} className={styles.joinButton}>
-                Tham gia ngay
-              </Link>
-            </>
-          )}
+          <Link to={state.status === 'authenticated' ? '/profile' : ROUTES.login} className={styles.iconBtn} aria-label="Tài khoản">
+            <User size={20} aria-hidden="true" />
+          </Link>
+
+          <Link to={ROUTES.sell} className={styles.btnPrimaryHeader}>
+            + Đăng sách
+          </Link>
           
           <button
             type="button"
@@ -133,6 +142,7 @@ function Header() {
               {item.label}
             </Link>
           ))}
+          <Link to={ROUTES.sell} className={styles.mobileNavLink} onClick={() => setMenuOpen(false)}>Đăng sách</Link>
           {state.status === 'authenticated' ? (
             <>
               <Link to="/profile" className={styles.mobileNavLink} onClick={() => setMenuOpen(false)}>
@@ -223,13 +233,19 @@ function Footer() {
 }
 
 export default function MainLayout() {
+  const location = useLocation()
+
+  // Scroll to top on every route change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [location.pathname])
   return (
     <div className={styles.root}>
       <a href="#main-content" className={styles.skipLink}>
         Bỏ qua điều hướng
       </a>
       <Header />
-      <main id="main-content" className={styles.main}>
+      <main id="main-content" className={styles.main} style={location.pathname === ROUTES.home ? undefined : { paddingTop: '5.5rem' }}>
         <Outlet />
       </main>
       <Footer />

@@ -28,7 +28,6 @@ export const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: '/books', element: <BookSearchPage /> },
       { path: '/books/:id', element: <BookDetailPage /> },
-      { path: '/sell', element: <SellBookPage /> },
       { path: '/chat', element: <ChatPage /> },
       { path: '/chat/:roomId', element: <ChatPage /> },
       { path: '/profile', element: <ProfilePage /> },
@@ -38,12 +37,13 @@ export const router = createBrowserRouter([
       { path: '/exchange/:id', element: <ExchangeDetailPage /> },
     ],
   },
-  // Auth routes — không dùng MainLayout
+  // Auth & Fullscreen routes — không dùng MainLayout
   {
     element: <Outlet />,
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      { path: '/sell', element: <SellBookPage /> },
     ],
   },
   // Catch-all

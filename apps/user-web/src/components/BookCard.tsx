@@ -1,90 +1,106 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { BookOpen, Heart, MapPin, Repeat } from 'lucide-react'
-import { ROUTES, formatVnd } from '../lib/routes'
-import { getPublicPhoto, type PublicListing } from '../services/public-listings'
-import styles from './BookCard.module.css'
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { BookOpen } from "lucide-react";
+import { ROUTES, formatVnd } from "../lib/routes";
+import {
+  getPublicPhoto,
+  type PublicListing,
+} from "../services/public-listings";
+import styles from "./BookCard.module.css";
 
 export interface BookCardProps {
-  book: PublicListing
-  index: number
+  book: PublicListing;
+  index: number;
 }
-
-export function BookCard({ book, index }: BookCardProps) {
-  const [liked, setLiked] = useState(false)
-  const [imageError, setImageError] = useState(false)
-  const [photoUrl, setPhotoUrl] = useState<string>()
-  const photo = book.photos[0]
-  useEffect(() => {
-    let active = true
-    setPhotoUrl(undefined)
-    setImageError(false)
-    if (photo) void getPublicPhoto(book.id, photo.id).then((value) => active && setPhotoUrl(value.url)).catch(() => active && setImageError(true))
-    return () => { active = false }
-  }, [book.id, book.revisionId, photo?.id])
-  const coverClass = styles[`cover${index % 4}`] ?? ''
-  const isExchange = book.mode !== 'Sale'
-  const showFallback = !photo || imageError
-
+const conditions = {
+  LikeNew: "Gần như mới",
+  Good: "Còn tốt",
+  Fair: "Đã dùng nhiều",
+  Worn: "Cũ nhiều",
+};
+export function BookCard({ book }: BookCardProps) {
+  const [failedUrl, setFailedUrl] = useState<string>();
+  const photoId = book.photos[0]?.id;
+  const photo = useQuery({
+    queryKey: ["public-photo", book.id, book.revisionId, photoId],
+    queryFn: () => getPublicPhoto(book.id, photoId!),
+    enabled: !!photoId,
+    staleTime: 0,
+    retry: false,
+  });
+  const photoUrl = photo.data?.url;
+  const imageError = photo.isError || (!!photoUrl && failedUrl === photoUrl);
   return (
     <article className={styles.card}>
-      <div className={`${styles.cover} ${showFallback ? coverClass : ''}`}>
-        {!showFallback ? (
+      <Link
+        to={ROUTES.bookDetail(book.id)}
+        className={styles.coverWrapper}
+        aria-label={`Xem ${book.book.title}`}
+      >
+        {photoUrl && !imageError ? (
           <img
             src={photoUrl}
             alt={`Bìa sách ${book.book.title}`}
-            loading="lazy"
             className={styles.coverImage}
-            onError={() => setImageError(true)}
+            loading="lazy"
+            onError={() => setFailedUrl(photoUrl)}
           />
         ) : (
-          <div className={styles.coverFallback}>
-            <BookOpen size={44} aria-hidden="true" />
-            <span className={styles.coverTitle} aria-hidden="true">
-              {photo ? 'Đang tải ảnh…' : book.book.title}
+          <div
+            className={styles.coverFallback}
+            style={{ display: "grid", placeItems: "center" }}
+          >
+            <BookOpen aria-hidden="true" />
+            <span>
+              {imageError
+                ? "Chưa tải được ảnh"
+                : photoId
+                  ? "Đang tải ảnh…"
+                  : "Chưa có ảnh bìa"}
             </span>
           </div>
         )}
-        
-          {isExchange ? (
-          <span className={`${styles.tag} ${styles.tagExchange}`}>
-            <Repeat size={12} aria-hidden="true" /> Trao đổi
-          </span>
-        ) : null}
-      </div>
-
-      <div className={styles.cardContent}>
-        <h3 className={styles.cardTitle}>
-          <Link to={ROUTES.bookDetail(book.id)} className={styles.cardLink}>
-            {book.book.title}
-          </Link>
+        <span className={styles.conditionTagOver}>
+          {conditions[book.condition]}
+        </span>
+      </Link>
+      <div className={styles.meta}>
+        <div className={styles.categoryText}>{book.book.category}</div>
+        <h3 className={styles.title} title={book.book.title}>
+          <Link to={ROUTES.bookDetail(book.id)}>{book.book.title}</Link>
         </h3>
-        <p className={styles.cardAuthor}>
-          {book.book.authors.join(', ')}
-          {book.book.publicationYear ? ` (${book.book.publicationYear})` : ''}
+        <p className={styles.author} title={book.book.authors.join(", ")}>
+          {book.book.authors.join(", ")}
         </p>
-        <p className={styles.cardMeta}>
-          <span>{({ LikeNew: 'Gần như mới', Good: 'Còn tốt', Fair: 'Đã dùng nhiều', Worn: 'Cũ nhiều' } as const)[book.condition]}</span>
-          <span className={styles.cardLocation}>
-            <MapPin size={13} aria-hidden="true" /> {book.fulfillment?.name ?? 'Chưa có giao nhận'}
-          </span>
-        </p>
-
-        <div className={styles.cardFooter}>
-          <span className={styles.price}>
-            {book.salePrice === null ? 'Chỉ trao đổi' : formatVnd(book.salePrice)}
-          </span>
-          <button
-            type="button"
-            className={styles.favoriteButton}
-            aria-pressed={liked}
-            aria-label={liked ? `Bỏ yêu thích ${book.book.title}` : `Yêu thích ${book.book.title}`}
-            onClick={() => setLiked((value) => !value)}
-          >
-            <Heart size={16} fill={liked ? 'currentColor' : 'none'} aria-hidden="true" />
-          </button>
+        <div className={styles.divider} />
+        <div
+          className={styles.priceBlock}
+          style={{
+            flexDirection: "column",
+            alignItems: "flex-start",
+            gap: "0.25rem",
+          }}
+        >
+          {book.salePrice !== null && (
+            <span className={styles.price}>
+              Bán {formatVnd(book.salePrice)}
+            </span>
+          )}
+          {book.exchangeValue !== null && (
+            <span className={styles.priceExchange}>
+              Đổi {formatVnd(book.exchangeValue)}
+            </span>
+          )}
         </div>
+        <Link
+          className={`${styles.actionBtn} ${styles.actionBtnSolid}`}
+          style={{ marginTop: "0.75rem", textAlign: "center" }}
+          to={ROUTES.bookDetail(book.id)}
+        >
+          Xem sách
+        </Link>
       </div>
     </article>
-  )
+  );
 }
