@@ -9,10 +9,17 @@ const fail = (message: string): never => {
   throw new Error(`Auction invariant: ${message}`);
 };
 
+const RELEASE_REASON: Partial<Record<string, string>> = {
+  Cancelled: 'Cancelled',
+  Reclaimed: 'Reclaimed',
+  Sold: 'Completed',
+};
+
 export async function checkIntake(tx: Tx, intakeId: string) {
   const i = await tx.c.auction_intakes.findOne({ _id: intakeId });
   if (!i) return;
-  const closed = i.state === 'Cancelled' || i.state === 'Reclaimed';
+  const closed =
+    i.state === 'Cancelled' || i.state === 'Reclaimed' || i.state === 'Sold';
   const c = intakeContext(
     await tx.c.workflow_contexts.findOne({ _id: i.contextId }),
   );
@@ -65,8 +72,7 @@ export async function checkIntake(tx: Tx, intakeId: string) {
     e.currentContextId !== owner ||
     e.listingId !== i.listingId ||
     (closed
-      ? e.status !== 'Released' ||
-        e.reason !== (i.state === 'Cancelled' ? 'Cancelled' : 'Reclaimed')
+      ? e.status !== 'Released' || e.reason !== RELEASE_REASON[i.state]
       : e.status !== 'Active')
   )
     fail('intake commitment mismatch');
@@ -77,13 +83,18 @@ export async function checkIntake(tx: Tx, intakeId: string) {
       auction.contextId !== i.contextId)
   )
     fail('intake auction mismatch');
+  // A settled Order closes its intake Sold; nothing else does.
   if (
     order &&
     (orderClosed
       ? i.state !== 'ReclaimRequired' && i.state !== 'Reclaimed'
-      : i.state !== 'Auctioning')
+      : order.state === 'Completed'
+        ? i.state !== 'Sold'
+        : i.state !== 'Auctioning')
   )
     fail('intake/order reclaim mismatch');
+  if (i.state === 'Sold' && order?.state !== 'Completed')
+    fail('intake sold without a settled Order');
   tx.check(`listing:${i.listingId}`, () => checkListing(tx, i.listingId));
 }
 

@@ -25,7 +25,8 @@ export type SystemActor =
   | 'AuctionClose'
   | 'AuctionPaymentExpiry'
   | 'AuctionIntakeExpiry'
-  | 'PointOrderDeadline';
+  | 'PointOrderDeadline'
+  | 'PointOrderSettlement';
 
 type Lockable = { lockSeq: number };
 
@@ -451,7 +452,7 @@ export interface ExclusiveCommitmentDoc extends Lockable {
   status: 'Active' | 'Released';
   acquiredAt: Date;
   endedAt: Date | null;
-  reason: 'Cancelled' | 'PaymentExpired' | 'Reclaimed' | null;
+  reason: 'Cancelled' | 'PaymentExpired' | 'Reclaimed' | 'Completed' | null;
 }
 export interface CommitmentEventDoc {
   _id: string;
@@ -469,7 +470,11 @@ export interface WalletAccountDoc {
   ownerId: string | null;
   orderId: string | null;
   purpose:
-    'UserAvailable' | 'OrderHold' | 'SimulatorCapital' | 'SimulatorClearing';
+    | 'UserAvailable'
+    | 'OrderHold'
+    | 'SimulatorCapital'
+    | 'SimulatorClearing'
+    | 'PlatformCommission';
   currency: 'VND';
 }
 export interface TopupIntentDoc extends Lockable {
@@ -499,7 +504,12 @@ export interface SimulatedPaymentEventDoc {
 export interface LedgerJournalDoc {
   _id: string;
   sequence: number;
-  type: 'OpeningCapital' | 'Topup' | 'OrderPayment' | 'OrderRefund';
+  type:
+    | 'OpeningCapital'
+    | 'Topup'
+    | 'OrderPayment'
+    | 'OrderRefund'
+    | 'OrderSettlement';
   topupId: string | null;
   eventId: string | null;
   orderId: string | null;
@@ -672,7 +682,7 @@ export interface PointSlotDoc extends Lockable {
   active: boolean;
   reservedAt: Date;
   releasedAt: Date | null;
-  releaseReason: 'Cancelled' | 'Reclaimed' | null;
+  releaseReason: 'Cancelled' | 'Reclaimed' | 'Sold' | null;
 }
 export type AuctionIntakeState =
   | 'AwaitingDropoff'
@@ -681,14 +691,16 @@ export type AuctionIntakeState =
   | 'Auctioning'
   | 'ReclaimRequired'
   | 'Reclaimed'
-  | 'Cancelled';
+  | 'Cancelled'
+  | 'Sold';
 export type ReclaimReason =
   | 'SellerCancelled'
   | 'InspectionFailed'
   | 'Unsold'
   | 'PaymentExpired'
   | 'AuctionCancelled'
-  | 'OrderCancelled';
+  | 'OrderCancelled'
+  | 'OrderReturned';
 export interface AuctionIntakeDoc extends Lockable {
   _id: string;
   contextId: string;
@@ -813,16 +825,25 @@ export interface PointOrderDoc extends Lockable {
   collectedAt: Date | null;
   inspectionDeadline: Date | null;
   resolutionReason:
-    'ReportRejected' | 'RecipientDecisionOverdue' | 'CollectionOverdue' | null;
+    | 'ReportRejected'
+    | 'RecipientDecisionOverdue'
+    | 'CollectionOverdue'
+    | 'InspectionClaim'
+    | 'ReturnOverdue'
+    | null;
   resolutionNote: string | null;
   resolutionOpenedAt: Date | null;
   // Start of the current collection window (migration 0011).
   collectionOpenedAt: Date | null;
+  // Return to the point after an accepted claim (migration 0012).
+  returnDeadline: Date | null;
+  returnedAt: Date | null;
 }
 export interface PointOrderResolutionDoc {
   _id: string;
   orderId: string;
-  decision: 'RefundBuyer' | 'ResumeCollection';
+  decision:
+    'RefundBuyer' | 'ResumeCollection' | 'DismissClaim' | 'RequireReturn';
   openReason: NonNullable<PointOrderDoc['resolutionReason']>;
   reason: string;
   adminId: string;
@@ -836,8 +857,29 @@ export type PointOrderState =
   | 'ReadyForCollection'
   | 'Inspection'
   | 'ResolutionPending'
+  | 'ReturnPending'
+  | 'Completed'
   | 'Cancelled'
   | 'PaymentExpired';
+export interface PointOrderClaimDoc {
+  _id: string;
+  orderId: string;
+  claimantId: string;
+  description: string;
+  claimedAt: Date;
+  receiptId: string;
+}
+export interface PointReturnDoc {
+  _id: string;
+  orderId: string;
+  pointId: string;
+  staffId: string;
+  returnedBy: string;
+  note: string | null;
+  journalId: string;
+  receivedAt: Date;
+  receiptId: string;
+}
 export interface CollectionCodeDoc extends Lockable {
   _id: string;
   orderId: string;

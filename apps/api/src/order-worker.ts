@@ -47,9 +47,10 @@ try {
       if (process.argv.includes('--once') && result.failed)
         process.exitCode = 1;
       console.log(JSON.stringify({ event: 'auctionSweep', ...result }));
-      if (result.failed || result.oldestLagSeconds > 120)
+      // `failures` names each failed record (step, id, error class/message).
+      if (result.failed || result.backedOff || result.oldestLagSeconds > 120)
         console.error(
-          'Auction deadline backlog needs attention; pending work will retry.',
+          'Auction deadline backlog needs attention; failed records retry with backoff.',
         );
       if (result.onHold > 0)
         console.warn('Auctions on hold need an independent Admin decision.');

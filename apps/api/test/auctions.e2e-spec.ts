@@ -10,6 +10,7 @@ import type { RoleCode } from '../src/database/mongo/documents.js';
 import {
   HANDOVER_POINT_A,
   HANDOVER_POINT_B,
+  PLATFORM_COMMISSION_ACCOUNT_ID,
 } from '../src/database/mongo/migrations/auction-constants.js';
 import { MediaStorage } from '../src/modules/media/media-storage.js';
 import { AuctionClock } from '../src/modules/auctions/auction-clock.js';
@@ -281,6 +282,48 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     vi.restoreAllMocks();
     return r;
   }
+
+  // A paid Order handed over at the point on a pinned timeline (Inspection).
+  async function collectedOrder(handler: Actor = staff) {
+    const o = await paidOrder();
+    await longSession(handler);
+    const paid = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+    const acceptAt = new Date(paid.paidAt!.getTime() + 60_000);
+    await accepted(o, acceptAt);
+    const at = openAt(acceptAt);
+    const issued = await issueCode(o, new Date(at.getTime() - 60_000));
+    pinClock(at);
+    await handover(o.orderId, issued.body.code, handler).expect(200);
+    vi.restoreAllMocks();
+    const collected = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+    return { ...o, collected };
+  }
+  const resolveAs = (
+    a: Actor,
+    orderId: string,
+    expectedVersion: number,
+    decision: string,
+    key?: string,
+  ) =>
+    cmd(
+      'post',
+      `/operations/point-orders/${orderId}/resolve`,
+      {
+        expectedVersion,
+        decision,
+        reason: 'Đã đối chiếu ảnh và biên bản tại điểm',
+      },
+      a,
+      key,
+    );
+  const claimText =
+    'Sách bị ố vàng và thiếu trang 120–128 so với biên bản kiểm tra tại điểm';
+  const reconciled = async () =>
+    (
+      await app
+        .get(MongoService)
+        .tx((tx) => app.get(LedgerService).reconcile(tx))
+    ).balanced;
 
   beforeAll(async () => {
     process.env.PAYMENT_SIMULATOR_SECRET = randomBytes(32).toString('hex');
@@ -1273,6 +1316,385 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       collectionOutcome: 'HandedOver',
       state: 'Inspection',
     });
+  });
+
+  it('FR-H09: a second missed deadline on the same Order reopens resolution', async () => {
+    const o = await paidOrder();
+    await longSession(admin);
+    const paid = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+    pinClock(paid.acceptanceDeadline!);
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+    const resumeAt = openAt(paid.acceptanceDeadline!);
+    pinClock(resumeAt);
+    await resolveAs(admin, o.orderId, 3, 'ResumeCollection').expect(200);
+    vi.restoreAllMocks();
+    const ready = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+    // An Admin decision opened this window; no buyer acceptance is invented.
+    expect(ready).toMatchObject({
+      state: 'ReadyForCollection',
+      version: 4,
+      acceptedAt: null,
+      collectionOpenedAt: resumeAt,
+    });
+    // The worker step is keyed by Order version, so it is not a replay.
+    pinClock(ready.collectionDeadline!);
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+    expect(await db.c.point_orders.findOne({ _id: o.orderId })).toMatchObject({
+      state: 'ResolutionPending',
+      resolutionReason: 'CollectionOverdue',
+      version: 5,
+    });
+  });
+
+  it('FR-T03/SRS 9.1: an unclaimed window settles once; seller gets P − C and the listing is Sold', async () => {
+    const o = await collectedOrder();
+    const deadline = o.collected.inspectionDeadline!;
+    const sellerBefore = (await call('get', '/me/wallet', o.seller).expect(200))
+      .body.available;
+    pinClock(new Date(deadline.getTime() - 1));
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+    expect((await db.c.point_orders.findOne({ _id: o.orderId }))!.state).toBe(
+      'Inspection',
+    );
+    pinClock(deadline);
+    await app.get(AuctionWorker).tick();
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+    expect(await db.c.point_orders.findOne({ _id: o.orderId })).toMatchObject({
+      state: 'Completed',
+      version: 5,
+      closedAt: deadline,
+    });
+    // One three-way journal: hold −P, seller +(P − C), platform +C.
+    const settlement = (await db.c.ledger_journals
+      .find({ orderId: o.orderId, type: 'OrderSettlement' })
+      .toArray())!;
+    expect(settlement).toHaveLength(1);
+    const entries = await db.c.ledger_entries
+      .find({ journalId: settlement[0]._id })
+      .toArray();
+    expect(entries).toHaveLength(3);
+    expect(
+      entries.find((e) => e.accountId === PLATFORM_COMMISSION_ACCOUNT_ID),
+    ).toMatchObject({ debit: 15_000, credit: 0 });
+    const seller = await call('get', '/me/wallet', o.seller).expect(200);
+    expect(seller.body.available - sellerBefore).toBe(285_000);
+    const history = await call(
+      'get',
+      '/me/wallet/history?limit=5',
+      o.seller,
+    ).expect(200);
+    validates('WalletHistoryPage', history.body);
+    expect(history.body.items[0]).toMatchObject({
+      type: 'OrderSettlement',
+      orderId: o.orderId,
+      amount: 285_000,
+    });
+    const buyer = await call('get', '/me/wallet', o.winner).expect(200);
+    expect(buyer.body.transactionHeld).toBe(0);
+    // The book stays with the buyer: slot, commitment and intake close Sold.
+    expect(await db.c.listings.findOne({ _id: o.listing.id })).toMatchObject({
+      trade: 'Sold',
+    });
+    const intake = (await db.c.auction_intakes.findOne({ _id: o.intakeId }))!;
+    expect(intake).toMatchObject({ state: 'Sold', closedAt: deadline });
+    expect(
+      await db.c.point_slots.findOne({ _id: intake.slotId }),
+    ).toMatchObject({ active: false, releaseReason: 'Sold' });
+    expect(
+      await db.c.exclusive_commitments.findOne({ listingId: o.listing.id }),
+    ).toMatchObject({ status: 'Released', reason: 'Completed' });
+    const view = await call(
+      'get',
+      `/me/point-orders/${o.orderId}`,
+      o.winner,
+    ).expect(200);
+    validates('PointOrder', view.body);
+    expect(view.body).toMatchObject({
+      state: 'Completed',
+      settled: true,
+      refunded: false,
+    });
+    const sellerView = await call(
+      'get',
+      `/me/point-orders/${o.orderId}`,
+      o.seller,
+    ).expect(200);
+    expect(sellerView.body).toMatchObject({ role: 'Seller', settled: true });
+    const intakeView = await call(
+      'get',
+      `/me/auction-intakes/${o.intakeId}`,
+      o.seller,
+    ).expect(200);
+    validates('AuctionIntake', intakeView.body);
+    expect(intakeView.body.state).toBe('Sold');
+    // No claim after settlement; the whole ledger still reconciles.
+    await orderPost(
+      o.orderId,
+      'claim',
+      { expectedVersion: 5, description: claimText },
+      o.winner,
+    ).expect(409);
+    expect(await reconciled()).toBe(true);
+  });
+
+  it('FR-D01/02: a claim stops settlement; the Admin requires the book back and Staff refund on receipt', async () => {
+    const o = await collectedOrder();
+    await longSession(admin);
+    const c = o.collected;
+    pinClock(new Date(c.collectedAt!.getTime() + HOUR));
+    const claim = (a: Actor, description: string, key?: string) =>
+      orderPost(
+        o.orderId,
+        'claim',
+        { expectedVersion: 4, description },
+        a,
+        key,
+      );
+    await claim(o.winner, 'quá ngắn').expect(422);
+    await claim(o.seller, claimText).expect(404);
+    const key = randomUUID();
+    const claimed = await claim(o.winner, claimText, key).expect(200);
+    validates('AuctionCommandReceipt', claimed.body);
+    expect(claimed.body).toMatchObject({
+      state: 'ResolutionPending',
+      version: 5,
+    });
+    const replay = await claim(o.winner, claimText, key).expect(200);
+    expect(replay.headers['idempotency-replayed']).toBe('true');
+    vi.restoreAllMocks();
+    // The window passes, but a claimed Order is never settled by the worker.
+    pinClock(c.inspectionDeadline!);
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+    expect((await db.c.point_orders.findOne({ _id: o.orderId }))!.state).toBe(
+      'ResolutionPending',
+    );
+    expect(
+      await db.c.ledger_journals.countDocuments({
+        orderId: o.orderId,
+        type: 'OrderSettlement',
+      }),
+    ).toBe(0);
+    const decideAt = openAt(c.inspectionDeadline!);
+    pinClock(decideAt);
+    const queue = await call(
+      'get',
+      '/operations/point-order-resolutions',
+      admin,
+    ).expect(200);
+    validates('PointOrderResolutionQueue', queue.body);
+    expect(
+      queue.body.items.find((i: { id: string }) => i.id === o.orderId),
+    ).toMatchObject({ openReason: 'InspectionClaim' });
+    // Decisions meant for a book still at the point do not apply here.
+    await resolveAs(admin, o.orderId, 5, 'RefundBuyer').expect(422);
+    await resolveAs(staff, o.orderId, 5, 'RequireReturn').expect(403);
+    const required = await resolveAs(
+      admin,
+      o.orderId,
+      5,
+      'RequireReturn',
+    ).expect(200);
+    expect(required.body).toMatchObject({ state: 'ReturnPending', version: 6 });
+    vi.restoreAllMocks();
+    const pending = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+    expect(pending.returnDeadline!.getTime()).toBeGreaterThanOrEqual(
+      decideAt.getTime() + 72 * HOUR,
+    );
+    const returnAt = openAt(decideAt);
+    pinClock(returnAt);
+    const staffQueue = await call(
+      'get',
+      '/operations/point-orders',
+      staff,
+    ).expect(200);
+    validates('PointCollectionQueue', staffQueue.body);
+    expect(
+      staffQueue.body.items.find((i: { id: string }) => i.id === o.orderId),
+    ).toMatchObject({ state: 'ReturnPending' });
+    const receive = (a: Actor, rkey?: string) =>
+      cmd(
+        'post',
+        `/operations/point-orders/${o.orderId}/receive-return`,
+        {
+          expectedVersion: 6,
+          note: 'Nhận lại đủ sách, tình trạng như lúc giao',
+        },
+        a,
+        rkey,
+      );
+    await receive(otherStaff).expect(403);
+    await receive(o.winner).expect(403);
+    const before = (await call('get', '/me/wallet', o.winner).expect(200)).body;
+    const rkey = randomUUID();
+    const received = await receive(staff, rkey).expect(200);
+    expect(received.body).toMatchObject({ state: 'Cancelled', version: 7 });
+    const again = await receive(staff, rkey).expect(200);
+    expect(again.headers['idempotency-replayed']).toBe('true');
+    vi.restoreAllMocks();
+    const after = (await call('get', '/me/wallet', o.winner).expect(200)).body;
+    expect(after.available - before.available).toBe(300_000);
+    expect(after.transactionHeld).toBe(0);
+    expect(
+      await db.c.point_returns.findOne({ orderId: o.orderId }),
+    ).toMatchObject({ staffId: staff.id, returnedBy: o.winner.id });
+    expect(
+      await db.c.ledger_journals.countDocuments({
+        orderId: o.orderId,
+        type: 'OrderRefund',
+      }),
+    ).toBe(1);
+    const intake = (await db.c.auction_intakes.findOne({ _id: o.intakeId }))!;
+    expect(intake).toMatchObject({
+      state: 'ReclaimRequired',
+      reclaimReason: 'OrderReturned',
+    });
+    expect(
+      await db.c.exclusive_commitments.findOne({ listingId: o.listing.id }),
+    ).toMatchObject({ status: 'Active', currentContextId: intake.contextId });
+    const view = await call(
+      'get',
+      `/me/point-orders/${o.orderId}`,
+      o.winner,
+    ).expect(200);
+    validates('PointOrder', view.body);
+    expect(view.body).toMatchObject({ state: 'Cancelled', refunded: true });
+    expect(view.body.returnedAt).toEqual(returnAt.toISOString());
+    expect(await reconciled()).toBe(true);
+  });
+
+  it('FR-D02: the Staff who handed the book over cannot decide its claim, even after leaving the point', async () => {
+    const handler = await actor(['ADMIN', 'STAFF']);
+    const assignmentId = randomUUID();
+    await db.c.point_staff_assignments.insertOne({
+      _id: assignmentId,
+      pointId: HANDOVER_POINT_A,
+      userId: handler.id,
+      validFrom: new Date(),
+      validTo: null,
+      createdAt: new Date(),
+    });
+    const o = await collectedOrder(handler);
+    expect(
+      await db.c.point_handovers.findOne({ orderId: o.orderId }),
+    ).toMatchObject({ staffId: handler.id });
+    // The assignment ends before the pinned decision time below.
+    await db.c.point_staff_assignments.updateOne(
+      { _id: assignmentId },
+      { $set: { validTo: new Date(Date.now() + 1000) } },
+    );
+    const c = o.collected;
+    pinClock(new Date(c.collectedAt!.getTime() + 60_000));
+    await orderPost(
+      o.orderId,
+      'claim',
+      { expectedVersion: 4, description: claimText },
+      o.winner,
+    ).expect(200);
+    vi.restoreAllMocks();
+    pinClock(new Date(c.collectedAt!.getTime() + 2 * 60_000));
+    const refused = await resolveAs(
+      handler,
+      o.orderId,
+      5,
+      'DismissClaim',
+    ).expect(403);
+    expect(refused.body.code).toBe('SelfReviewForbidden');
+    const queue = await call(
+      'get',
+      '/operations/point-order-resolutions',
+      handler,
+    ).expect(200);
+    expect(queue.body.items.map((i: { id: string }) => i.id)).not.toContain(
+      o.orderId,
+    );
+    await longSession(admin);
+    await resolveAs(admin, o.orderId, 5, 'DismissClaim').expect(200);
+  });
+
+  it('FR-D02: a dismissed claim settles after the window; one claim per Order; a missed return reopens resolution', async () => {
+    const o = await collectedOrder();
+    await longSession(admin);
+    const c = o.collected;
+    pinClock(new Date(c.collectedAt!.getTime() + 60_000));
+    await orderPost(
+      o.orderId,
+      'claim',
+      { expectedVersion: 4, description: claimText },
+      o.winner,
+    ).expect(200);
+    vi.restoreAllMocks();
+    pinClock(new Date(c.collectedAt!.getTime() + 2 * 60_000));
+    await resolveAs(admin, o.orderId, 5, 'DismissClaim').expect(200);
+    await orderPost(
+      o.orderId,
+      'claim',
+      { expectedVersion: 6, description: claimText },
+      o.winner,
+    ).expect(409);
+    vi.restoreAllMocks();
+    expect(await db.c.point_orders.findOne({ _id: o.orderId })).toMatchObject({
+      state: 'Inspection',
+      version: 6,
+      resolutionReason: null,
+    });
+    pinClock(c.inspectionDeadline!);
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+    expect(await db.c.point_orders.findOne({ _id: o.orderId })).toMatchObject({
+      state: 'Completed',
+      version: 7,
+    });
+
+    // The buyer never brings the book back: the return deadline reopens
+    // resolution, and a dismissal then lets the settlement run.
+    const p = await collectedOrder();
+    const pc = p.collected;
+    pinClock(new Date(pc.collectedAt!.getTime() + 60_000));
+    await orderPost(
+      p.orderId,
+      'claim',
+      { expectedVersion: 4, description: claimText },
+      p.winner,
+    ).expect(200);
+    vi.restoreAllMocks();
+    pinClock(new Date(pc.collectedAt!.getTime() + 2 * 60_000));
+    await resolveAs(admin, p.orderId, 5, 'RequireReturn').expect(200);
+    vi.restoreAllMocks();
+    const pending = (await db.c.point_orders.findOne({ _id: p.orderId }))!;
+    pinClock(pending.returnDeadline!);
+    await cmd(
+      'post',
+      `/operations/point-orders/${p.orderId}/receive-return`,
+      { expectedVersion: 6, note: null },
+      staff,
+    ).expect(409);
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+    expect(await db.c.point_orders.findOne({ _id: p.orderId })).toMatchObject({
+      state: 'ResolutionPending',
+      resolutionReason: 'ReturnOverdue',
+      version: 7,
+    });
+    const decideAt = openAt(pending.returnDeadline!);
+    pinClock(decideAt);
+    await resolveAs(admin, p.orderId, 7, 'DismissClaim').expect(200);
+    vi.restoreAllMocks();
+    pinClock(new Date(decideAt.getTime() + 60_000));
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+    expect(await db.c.point_orders.findOne({ _id: p.orderId })).toMatchObject({
+      state: 'Completed',
+      version: 9,
+    });
+    expect(
+      await db.c.point_order_resolutions.countDocuments({ orderId: p.orderId }),
+    ).toBe(2);
+    expect(await reconciled()).toBe(true);
   });
 
   it('AC-AU08/10: no bids closes Unsold; Admin cancel needs independence and a reason', async () => {

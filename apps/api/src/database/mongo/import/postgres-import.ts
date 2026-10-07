@@ -7,6 +7,7 @@ import {
   type IntegrityReport,
 } from '../../../integrity/integrity.js';
 import { titleKey } from '../migrations/0003-catalog-title-key.js';
+import { PLATFORM_COMMISSION_ACCOUNT_ID } from '../migrations/auction-constants.js';
 import {
   LEDGER_SEQUENCE_COUNTER,
   OPENING_JOURNAL_ID,
@@ -853,7 +854,15 @@ export async function importPostgres(
       );
   const collections: ImportReport['collections'] = {};
   for (const spec of TABLES) {
-    const stored = await db.collection(spec.collection).find().toArray();
+    // The platform commission account (migration 0012) is MongoDB-native
+    // reference data with no PostgreSQL row; it is kept, not compared.
+    const stored = (
+      await db.collection(spec.collection).find().toArray()
+    ).filter(
+      (d) =>
+        spec.collection !== 'wallet_accounts' ||
+        String(d._id) !== PLATFORM_COMMISSION_ACCOUNT_ID,
+    );
     const expected = contentHash(docs[spec.collection]);
     collections[spec.collection] = {
       rows: snapshot.rows[spec.collection].length,

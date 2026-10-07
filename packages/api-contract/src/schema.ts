@@ -1707,8 +1707,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Buyer only, before accepting. Opens ResolutionPending with the reason; the book stays at the point and the payment stays held. Resolution and refund remain planned. */
+        /** @description Buyer only, before accepting. Opens ResolutionPending with the reason; the book stays at the point and the payment stays held until an independent Admin refunds it or reopens collection. */
         post: operations["rejectPointOrderReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/point-orders/{orderId}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Buyer only, once per Order, in Inspection before the inspection deadline (a LOCKED account may still claim). Opens ResolutionPending (InspectionClaim) with the description and stops settlement; the payment stays held until an independent Admin decides. */
+        post: operations["claimPointOrder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1766,6 +1783,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/point-orders/{orderId}/receive-return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE STAFF assigned to the point, not buyer or seller, during point hours and before the return deadline. Records the book back at the point, posts one OrderRefund journal of the full hold to the buyer, cancels the Order and sends the book to the seller reclaim (OrderReturned). */
+        post: operations["receivePointOrderReturn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/point-order-resolutions": {
         parameters: {
             query?: never;
@@ -1792,7 +1826,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ACTIVE ADMIN independent of buyer, seller and the Staff who received, inspected or work at the point. Only for ResolutionPending, where the book is still at the point. RefundBuyer posts one OrderRefund journal of the full hold back to the buyer, cancels the Order and returns the commitment to the intake for reclaim. ResumeCollection opens a new 72-hour collection window within point hours. A reason is required and recorded; no partial refund or penalty. */
+        /** @description ACTIVE ADMIN independent of buyer, seller and the Staff who received, inspected or work at the point. Only for ResolutionPending. While the book is still at the point, RefundBuyer posts one OrderRefund journal of the full hold back to the buyer, cancels the Order and returns the commitment to the intake for reclaim, and ResumeCollection opens a new 72-hour collection window within point hours. After the handover (InspectionClaim or ReturnOverdue), DismissClaim returns the Order to Inspection, settled once the window has passed, and RequireReturn asks the buyer to bring the book back within 72 hours; only the Staff-received return refunds. Other decisions return 422. A reason is required and recorded; no partial refund or penalty. */
         post: operations["resolvePointOrder"];
         delete?: never;
         options?: never;
@@ -2811,7 +2845,7 @@ export interface components {
             /** Format: uuid */
             topupId: string | null;
             /** @enum {string} */
-            type: "Topup" | "OrderPayment" | "OrderRefund";
+            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement";
             amount: number;
             balanceAfter: number;
             /** Format: date-time */
@@ -3167,11 +3201,16 @@ export interface components {
             version: number;
             title: string;
             /** @enum {string} */
-            state: "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "Cancelled" | "PaymentExpired";
+            state: "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed" | "Cancelled" | "PaymentExpired";
             recipientName: string;
             shelfCode: string | null;
             /** Format: date-time */
             collectionDeadline: string | null;
+            /**
+             * Format: date-time
+             * @description ReturnPending only; the buyer brings the book back before this time.
+             */
+            returnDeadline: string | null;
         };
         PointCollectionQueue: {
             items: components["schemas"]["PointCollectionItem"][];
@@ -3198,7 +3237,7 @@ export interface components {
             /** @enum {string} */
             fulfillmentMethod: "SelfCollect";
             /** @enum {string} */
-            state: "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "Cancelled" | "PaymentExpired";
+            state: "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed" | "Cancelled" | "PaymentExpired";
             version: number;
             /** @constant */
             currency: "VND";
@@ -3239,11 +3278,20 @@ export interface components {
             collectedAt: string | null;
             /** @description True once an Admin refund returned the Order hold to the buyer. */
             refunded: boolean;
+            /** @description True once the settlement journal paid the seller and the platform from the Order hold. */
+            settled: boolean;
+            /**
+             * Format: date-time
+             * @description Set when an Admin required the book back at the point after a claim.
+             */
+            returnDeadline: string | null;
+            /** Format: date-time */
+            returnedAt: string | null;
             /** Format: date-time */
             inspectionDeadline: string | null;
             resolution: {
                 /** @enum {string} */
-                reason: "ReportRejected" | "RecipientDecisionOverdue" | "CollectionOverdue";
+                reason: "ReportRejected" | "RecipientDecisionOverdue" | "CollectionOverdue" | "InspectionClaim" | "ReturnOverdue";
                 /** Format: date-time */
                 openedAt: string;
             } | null;
@@ -3270,7 +3318,7 @@ export interface components {
             contextId: string;
             version: number;
             /** @enum {string} */
-            state: "AwaitingDropoff" | "Received" | "Passed" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "PaymentExpired" | "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending";
+            state: "AwaitingDropoff" | "Received" | "Passed" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "PaymentExpired" | "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed";
             currentPrice: number | null;
             minimumBid: number | null;
             leading: boolean | null;
@@ -3366,7 +3414,7 @@ export interface components {
             buyNowPrice: number | null;
             protectiveValue: number;
             /** @enum {string} */
-            state: "AwaitingDropoff" | "Received" | "Passed" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled";
+            state: "AwaitingDropoff" | "Received" | "Passed" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Sold";
             version: number;
             /** Format: date-time */
             createdAt: string;
@@ -3384,7 +3432,7 @@ export interface components {
             /** Format: uuid */
             auctionId: string | null;
             /** @enum {string|null} */
-            reclaimReason: "SellerCancelled" | "InspectionFailed" | "Unsold" | "PaymentExpired" | "AuctionCancelled" | "OrderCancelled" | null;
+            reclaimReason: "SellerCancelled" | "InspectionFailed" | "Unsold" | "PaymentExpired" | "AuctionCancelled" | "OrderCancelled" | "OrderReturned" | null;
             /** Format: date-time */
             closedAt: string | null;
         };
@@ -3466,7 +3514,7 @@ export interface components {
         ResolvePointOrder: {
             expectedVersion: number;
             /** @enum {string} */
-            decision: "RefundBuyer" | "ResumeCollection";
+            decision: "RefundBuyer" | "ResumeCollection" | "DismissClaim" | "RequireReturn";
             reason: string;
         };
         PointOrderResolutionItem: {
@@ -3476,7 +3524,7 @@ export interface components {
             title: string;
             pointName: string;
             /** @enum {string} */
-            openReason: "ReportRejected" | "RecipientDecisionOverdue" | "CollectionOverdue";
+            openReason: "ReportRejected" | "RecipientDecisionOverdue" | "CollectionOverdue" | "InspectionClaim" | "ReturnOverdue";
             note: string | null;
             /** Format: date-time */
             openedAt: string;
@@ -3486,6 +3534,14 @@ export interface components {
             items: components["schemas"]["PointOrderResolutionItem"][];
             /** Format: date-time */
             serverTime: string;
+        };
+        ClaimPointOrder: {
+            expectedVersion: number;
+            description: string;
+        };
+        ReceivePointOrderReturn: {
+            expectedVersion: number;
+            note?: string | null;
         };
     };
     responses: {
@@ -5687,7 +5743,7 @@ export interface operations {
                 cursor?: string;
                 from?: string;
                 to?: string;
-                type?: "Topup" | "OrderPayment" | "OrderRefund";
+                type?: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement";
                 topupId?: string;
                 orderId?: string;
             };
@@ -7029,6 +7085,46 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
+    claimPointOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimPointOrder"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
     requestCollectionCode: {
         parameters: {
             query?: never;
@@ -7114,6 +7210,46 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["HandOverPointOrder"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    receivePointOrderReturn: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceivePointOrderReturn"];
             };
         };
         responses: {

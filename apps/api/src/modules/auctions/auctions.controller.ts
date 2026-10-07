@@ -20,6 +20,7 @@ import { AuctionIntakesService } from './auction-intakes.service.js';
 import { HandoverPointsService } from './handover-points.service.js';
 import { PointOrdersService } from './point-orders.service.js';
 import { PointCollectionService } from './point-collection.service.js';
+import { PointOrderCompletionService } from './point-order-completion.service.js';
 
 @Controller()
 export class AuctionsController {
@@ -29,6 +30,7 @@ export class AuctionsController {
     private readonly points: HandoverPointsService,
     private readonly orders: PointOrdersService,
     private readonly collection: PointCollectionService,
+    private readonly completion: PointOrderCompletionService,
     private readonly input: ContractInput,
   ) {}
 
@@ -106,6 +108,25 @@ export class AuctionsController {
         commandContext(this.input, req, res),
         this.input.uuid(id),
         this.input.body('PayPointOrder', body),
+      ),
+      res,
+    );
+  }
+
+  @Post('point-orders/:orderId/claim')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  claim(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.completion.claim(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('ClaimPointOrder', body),
       ),
       res,
     );

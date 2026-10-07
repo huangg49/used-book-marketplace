@@ -98,7 +98,7 @@ export class HandoverPointsService {
     tx: Tx,
     slotId: string,
     contextId: string,
-    reason: 'Cancelled' | 'Reclaimed',
+    reason: 'Cancelled' | 'Reclaimed' | 'Sold',
     now: Date,
   ) {
     await tx.lock('point_slots', [slotId]);

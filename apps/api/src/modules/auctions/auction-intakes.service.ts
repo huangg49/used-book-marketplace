@@ -163,6 +163,28 @@ export class AuctionIntakesService {
       now,
     );
   }
+  // Settlement of the Order this intake's auction formed (migration 0012).
+  // Caller holds the listing and point locks and has already released the
+  // commitment as Completed: the slot ends Sold and the listing becomes Sold.
+  async completeSale(tx: Tx, intakeId: string, now: Date) {
+    const i = await this.lockIntake(tx, await this.intake(tx, intakeId));
+    if (i.state !== 'Auctioning') throw invalidState();
+    const listing = (await tx.c.listings.findOne({ _id: i.listingId }))!;
+    await this.points.releaseSlot(tx, i.slotId, i.contextId, 'Sold', now);
+    await this.listings.project(
+      tx,
+      i.listingId,
+      listing.version,
+      'Reserved',
+      'Sold',
+    );
+    const closed = await tx.c.workflow_contexts.updateOne(
+      { _id: i.contextId, ownershipPhase: 'Holding', version: 1 },
+      { $set: { ownershipPhase: 'Closed' }, $inc: { version: 1 } },
+    );
+    if (closed.modifiedCount !== 1) throw conflict();
+    return this.transition(tx, i, { state: 'Sold', closedAt: now }, now);
+  }
   // STAFF role with a current assignment at the intake point, independent of
   // the seller. ADMIN alone cannot receive, inspect, open or reclaim.
   private async staff(

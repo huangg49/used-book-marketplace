@@ -1,4 +1,8 @@
-import { intakeContext, orderContext } from './workflow-context.js';
+import {
+  intakeContext,
+  orderContext,
+  pointOrderContext,
+} from './workflow-context.js';
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Tx } from '../../database/mongo/transaction.js';
@@ -291,12 +295,62 @@ export class ReservationsService {
       receiptId,
     );
   }
+  // A settled ViaPoint Order (migration 0012): the book stays with the buyer,
+  // so the commitment ends Completed, never back to Available. Only after the
+  // whole hold left through the settlement journal.
+  async closeCompleted(
+    tx: Tx,
+    contextId: string,
+    now: Date,
+    receiptId: string,
+  ) {
+    const context = pointOrderContext(
+      await tx.c.workflow_contexts.findOne({ _id: contextId }),
+    );
+    const order = context
+      ? await tx.c.point_orders.findOne({ _id: context.orderId })
+      : null;
+    const settled = order
+      ? await tx.c.ledger_journals.findOne({
+          orderId: order._id,
+          type: 'OrderSettlement',
+        })
+      : null;
+    const hold = order
+      ? await tx.c.wallet_accounts.findOne({ orderId: order._id })
+      : null;
+    if (
+      !context ||
+      !order ||
+      context.ownershipPhase !== 'Holding' ||
+      order.state !== 'Inspection' ||
+      !order.collectedAt ||
+      !settled ||
+      !hold ||
+      (await balanceOf(tx, hold._id)) !== 0
+    )
+      throw invalidState();
+    const c = await tx.c.exclusive_commitments.findOne({
+      currentContextId: contextId,
+      status: 'Active',
+    });
+    if (!c) throw conflict();
+    return this.release(
+      tx,
+      contextId,
+      c._id,
+      c.version,
+      'Completed',
+      now,
+      receiptId,
+    );
+  }
   private async release(
     tx: Tx,
     contextId: string,
     commitmentId: string,
     expectedVersion: number,
-    reason: 'Cancelled' | 'PaymentExpired' | 'Reclaimed',
+    reason: 'Cancelled' | 'PaymentExpired' | 'Reclaimed' | 'Completed',
     now: Date,
     receiptId: string,
   ) {

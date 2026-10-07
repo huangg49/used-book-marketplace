@@ -26,12 +26,14 @@ export class ListingCommitmentPolicy {
     id: string,
     expectedVersion: number,
     from: 'Available' | 'Reserved',
-    to: 'Reserved' | 'Available',
+    // Sold only from Reserved, by the ViaPoint settlement (migration 0012).
+    to: 'Reserved' | 'Available' | 'Sold',
   ) {
     const listing = await tx.c.listings.findOne({ _id: id });
     if (!listing) throw notFound();
     if (listing.version !== expectedVersion) throw conflict();
-    if (listing.trade !== from) throw invalidState();
+    if (listing.trade !== from || (to === 'Sold' && from !== 'Reserved'))
+      throw invalidState();
     // Preserve moderation, visibility, ownership and accepted revision on release.
     const next = await tx.c.listings.findOneAndUpdate(
       { _id: id, version: expectedVersion, trade: from },

@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { PointOrderDoc } from '../../database/mongo/documents.js';
-import { COLLECTION_WINDOW_MS } from '../../database/mongo/migrations/auction-constants.js';
+import {
+  COLLECTION_WINDOW_MS,
+  RETURN_WINDOW_MS,
+} from '../../database/mongo/migrations/auction-constants.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import {
   DomainError,
@@ -28,9 +31,12 @@ import { pointDeadline } from './point-hours.js';
 import { checkPointOrder } from './point-order-invariants.js';
 import { PointOrdersService } from './point-orders.service.js';
 
-// Independent Admin decision on a ViaPoint Order in ResolutionPending. The
-// book is still at the point (no handover happened), so the only outcomes are
-// a full refund of the Order hold with reclaim, or a new collection window.
+// Independent Admin decision on a ViaPoint Order in ResolutionPending. While
+// the book is still at the point the outcomes are a full refund of the Order
+// hold with reclaim, or a new collection window. After the handover (a buyer
+// claim or a missed return) the Admin dismisses the claim, so the Order goes
+// back to Inspection and settles after the window, or requires the book back
+// at the point; only the Staff-received return refunds the buyer.
 // Lock order: users -> session -> auction -> Order -> intake -> commitment ->
 // ledger accounts, the same as payment and expiry.
 @Injectable()
@@ -70,13 +76,19 @@ export class PointOrderResolutionService {
         'Bạn liên quan đến giao dịch hoặc điểm này nên không được quyết định.',
       );
   }
+  // Staff who received, inspected, handed over or took back this book stay
+  // excluded after their assignment ends: a claim may concern their own step.
   private async involved(tx: Tx, userId: string, o: PointOrderDoc, now: Date) {
     const intake = await tx.c.auction_intakes.findOne({ _id: o.intakeId });
+    const handover = await tx.c.point_handovers.findOne({ orderId: o._id });
+    const returned = await tx.c.point_returns.findOne({ orderId: o._id });
     return (
       userId === o.buyerId ||
       userId === o.sellerId ||
       userId === intake?.receivedBy ||
       userId === intake?.inspectorId ||
+      userId === handover?.staffId ||
+      userId === returned?.staffId ||
       (await this.points.assignedPointIds(tx, userId, now)).includes(o.pointId)
     );
   }
@@ -104,8 +116,19 @@ export class PointOrderResolutionService {
         await tx.lock('point_orders', [id]);
         const o = await this.order(tx, id);
         if (o.version !== body.expectedVersion) throw conflict();
-        if (o.state !== 'ResolutionPending' || o.collectedAt)
-          throw invalidState();
+        if (o.state !== 'ResolutionPending') throw invalidState();
+        const handedOver = !!o.collectedAt;
+        if (
+          handedOver !==
+          (body.decision === 'DismissClaim' ||
+            body.decision === 'RequireReturn')
+        )
+          invalidField(
+            'decision',
+            handedOver
+              ? 'Sách đã giao cho người mua: chỉ có thể bác khiếu nại hoặc yêu cầu trả sách về điểm.'
+              : 'Sách còn ở điểm: chỉ có thể hoàn tiền hoặc mở lại thời hạn nhận.',
+          );
         const now = await this.clock.decision(tx, context.auth);
         const record = (journalId: string | null) =>
           tx.c.point_order_resolutions.insertOne({
@@ -119,14 +142,49 @@ export class PointOrderResolutionService {
             decidedAt: now,
             receiptId,
           });
+        if (body.decision === 'DismissClaim') {
+          await record(null);
+          const next = await this.transition(
+            tx,
+            o,
+            {
+              state: 'Inspection',
+              resolutionReason: null,
+              resolutionNote: null,
+              resolutionOpenedAt: null,
+            },
+            now,
+          );
+          return {
+            ...PointOrdersService.change(next, now, 'PointOrderClaimDismissed'),
+            reason,
+          };
+        }
+        if (body.decision === 'RequireReturn') {
+          await record(null);
+          const next = await this.transition(
+            tx,
+            o,
+            {
+              state: 'ReturnPending',
+              returnDeadline: pointDeadline(now, RETURN_WINDOW_MS),
+            },
+            now,
+          );
+          return {
+            ...PointOrdersService.change(next, now, 'PointOrderReturnRequired'),
+            reason,
+          };
+        }
         if (body.decision === 'ResumeCollection') {
           await record(null);
           const next = await this.transition(
             tx,
             o,
             {
+              // acceptedAt stays as the buyer left it: an Admin decision
+              // opens this window, not a buyer acceptance of the report.
               state: 'ReadyForCollection',
-              acceptedAt: o.acceptedAt ?? now,
               collectionOpenedAt: now,
               collectionDeadline: pointDeadline(now, COLLECTION_WINDOW_MS),
               resolutionReason: null,

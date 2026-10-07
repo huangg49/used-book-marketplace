@@ -15,6 +15,8 @@ const AUCTION_STATE: Record<PointOrderState, readonly string[]> = {
   ReadyForCollection: ['Sold'],
   Inspection: ['Sold'],
   ResolutionPending: ['Sold'],
+  ReturnPending: ['Sold'],
+  Completed: ['Sold'],
   Cancelled: ['Sold'],
   PaymentExpired: ['PaymentExpired'],
 };
@@ -22,7 +24,7 @@ const AUCTION_STATE: Record<PointOrderState, readonly string[]> = {
 export async function checkPointOrder(tx: Tx, orderId: string) {
   const o = await tx.c.point_orders.findOne({ _id: orderId });
   if (!o) return;
-  const open = o.state !== 'PaymentExpired' && o.state !== 'Cancelled';
+  const open = !['PaymentExpired', 'Cancelled', 'Completed'].includes(o.state);
   const c = pointOrderContext(
     await tx.c.workflow_contexts.findOne({ _id: o.contextId }),
   );
@@ -71,23 +73,55 @@ export async function checkPointOrder(tx: Tx, orderId: string) {
     orderId: o._id,
     type: 'OrderPayment',
   });
-  // Only an Admin RefundBuyer decision returns the hold, and only once.
+  // The hold leaves once: an Admin RefundBuyer decision or a Staff-received
+  // return refunds it (Cancelled), or the settlement pays it out (Completed).
   const refunds = await tx.c.ledger_journals.countDocuments({
     orderId: o._id,
     type: 'OrderRefund',
+  });
+  const settlements = await tx.c.ledger_journals.countDocuments({
+    orderId: o._id,
+    type: 'OrderSettlement',
   });
   const refundDecisions = await tx.c.point_order_resolutions.countDocuments({
     orderId: o._id,
     decision: 'RefundBuyer',
   });
+  const returns = await tx.c.point_returns.countDocuments({ orderId: o._id });
   const cancelled = o.state === 'Cancelled';
+  const completed = o.state === 'Completed';
   if (
-    held !== (o.paidAt && !cancelled ? o.buyerTotal : 0) ||
+    held !== (o.paidAt && !cancelled && !completed ? o.buyerTotal : 0) ||
     payments !== (o.paidAt ? 1 : 0) ||
     refunds !== (cancelled ? 1 : 0) ||
-    refundDecisions !== (cancelled ? 1 : 0)
+    settlements !== (completed ? 1 : 0) ||
+    refundDecisions + returns !== (cancelled ? 1 : 0) ||
+    returns !== (o.returnedAt ? 1 : 0)
   )
     fail('order funding mismatch');
+  // A collection window without the buyer's acceptance was opened by an
+  // Admin ResumeCollection decision; nothing else may skip the acceptance.
+  if (
+    o.collectionOpenedAt &&
+    !o.acceptedAt &&
+    !(await tx.c.point_order_resolutions.findOne({
+      orderId: o._id,
+      decision: 'ResumeCollection',
+    }))
+  )
+    fail('collection opened without acceptance or Admin decision');
+  // One claim per Order, only by the buyer and only after the handover.
+  const claims = await tx.c.point_order_claims
+    .find({ orderId: o._id })
+    .toArray();
+  if (
+    claims.length > 1 ||
+    (claims[0] &&
+      (claims[0].claimantId !== o.buyerId ||
+        !o.collectedAt ||
+        claims[0].claimedAt >= o.inspectionDeadline!))
+  )
+    fail('order claim mismatch');
   // Custody leaves the point exactly once, with the handover that set
   // collectedAt; at most one live collection code exists per Order.
   const handovers = await tx.c.point_handovers

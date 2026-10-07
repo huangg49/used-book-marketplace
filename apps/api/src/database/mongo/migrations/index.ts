@@ -39,6 +39,11 @@ import {
   resolutionCollectionSpecs,
   withResolutionChanges,
 } from './0011-point-order-resolution.js';
+import {
+  pointOrderSettlementMigration,
+  settlementCollectionSpecs,
+  withSettlementChanges,
+} from './0012-point-order-settlement.js';
 
 export interface Migration {
   id: string;
@@ -115,6 +120,7 @@ export const migrations: Migration[] = [
   pointOrdersMigration,
   pointCollectionMigration,
   pointOrderResolutionMigration,
+  pointOrderSettlementMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -128,16 +134,20 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withTitleKey)
     .map(withAuctionChanges)
     .map(withPointOrderChanges)
-    .map(withPointCollectionChanges),
+    .map(withPointCollectionChanges)
+    .map(withSettlementChanges),
   wishlistSpec,
   ...priceAssistSpecsV2,
   ...onlinePriceSpecs,
   ...auctionCollectionSpecs
     .map(withPointOrderChanges)
-    .map(withResolutionChanges),
+    .map(withResolutionChanges)
+    .map(withSettlementChanges),
   ...pointOrderCollectionSpecs
     .map(withPointCollectionChanges)
-    .map(withResolutionChanges),
+    .map(withResolutionChanges)
+    .map(withSettlementChanges),
   ...pointCollectionSpecs,
-  ...resolutionCollectionSpecs,
+  ...resolutionCollectionSpecs.map(withSettlementChanges),
+  ...settlementCollectionSpecs,
 ];

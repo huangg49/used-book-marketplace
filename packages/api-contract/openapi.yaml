@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.27.0
+  version: 0.28.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -31,8 +31,10 @@ info:
     from the simulated wallet into an Order hold; unpaid Orders expire to reclaim. The buyer then
     accepts or rejects the point condition report, requests a one-time collection code and
     assigned Staff record the handover, which starts the 72-hour inspection window. Rejected or
-    overdue Orders wait for an independent Admin to refund the hold or reopen collection.
-    Settlement to the seller and post-handover disputes remain planned."
+    overdue Orders wait for an independent Admin to refund the hold or reopen collection. During
+    the inspection window the buyer may file one claim; an Admin dismisses it or requires the book
+    back, and the Staff-received return refunds the hold. Unclaimed Orders settle after the window
+    (seller P - C, platform C) and the listing becomes Sold."
 servers:
   - url: http://localhost:3000/api/v1
 tags:
@@ -3555,6 +3557,7 @@ paths:
               - Topup
               - OrderPayment
               - OrderRefund
+              - OrderSettlement
         - in: query
           name: topupId
           schema:
@@ -5709,7 +5712,7 @@ paths:
       tags:
         - Auctions
       description: Buyer only, before accepting. Opens ResolutionPending with the reason; the book stays
-        at the point and the payment stays held. Resolution and refund remain planned.
+        at the point and the payment stays held until an independent Admin refunds it or reopens collection.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -5734,6 +5737,74 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/RejectPointOrderReport"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /point-orders/{orderId}/claim:
+    post:
+      operationId: claimPointOrder
+      tags:
+        - Auctions
+      description: Buyer only, once per Order, in Inspection before the inspection deadline (a LOCKED
+        account may still claim). Opens ResolutionPending (InspectionClaim) with the description and
+        stops settlement; the payment stays held until an independent Admin decides.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimPointOrder"
       responses:
         "200":
           description: Committed receipt (including replay).
@@ -5947,6 +6018,75 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /operations/point-orders/{orderId}/receive-return:
+    post:
+      operationId: receivePointOrderReturn
+      tags:
+        - Auctions
+      description: ACTIVE STAFF assigned to the point, not buyer or seller, during point hours and before
+        the return deadline. Records the book back at the point, posts one OrderRefund journal of the
+        full hold to the buyer, cancels the Order and sends the book to the seller reclaim
+        (OrderReturned).
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceivePointOrderReturn"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /operations/point-order-resolutions:
     get:
       operationId: listPointOrderResolutions
@@ -5993,11 +6133,14 @@ paths:
       tags:
         - Auctions
       description: ACTIVE ADMIN independent of buyer, seller and the Staff who received, inspected or work
-        at the point. Only for ResolutionPending, where the book is still at the point. RefundBuyer
+        at the point. Only for ResolutionPending. While the book is still at the point, RefundBuyer
         posts one OrderRefund journal of the full hold back to the buyer, cancels the Order and
-        returns the commitment to the intake for reclaim. ResumeCollection opens a new 72-hour
-        collection window within point hours. A reason is required and recorded; no partial refund or
-        penalty.
+        returns the commitment to the intake for reclaim, and ResumeCollection opens a new 72-hour
+        collection window within point hours. After the handover (InspectionClaim or ReturnOverdue),
+        DismissClaim returns the Order to Inspection, settled once the window has passed, and
+        RequireReturn asks the buyer to bring the book back within 72 hours; only the Staff-received
+        return refunds. Other decisions return 422. A reason is required and recorded; no partial
+        refund or penalty.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -9268,6 +9411,7 @@ components:
             - Topup
             - OrderPayment
             - OrderRefund
+            - OrderSettlement
         amount:
           type: integer
           minimum: -100000000
@@ -10221,6 +10365,7 @@ components:
         - recipientName
         - shelfCode
         - collectionDeadline
+        - returnDeadline
       properties:
         id:
           type: string
@@ -10239,6 +10384,8 @@ components:
             - ReadyForCollection
             - Inspection
             - ResolutionPending
+            - ReturnPending
+            - Completed
             - Cancelled
             - PaymentExpired
         recipientName:
@@ -10252,6 +10399,12 @@ components:
             - string
             - "null"
           format: date-time
+        returnDeadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: ReturnPending only; the buyer brings the book back before this time.
     PointCollectionQueue:
       type: object
       additionalProperties: false
@@ -10297,6 +10450,9 @@ components:
         - collectedAt
         - inspectionDeadline
         - refunded
+        - settled
+        - returnDeadline
+        - returnedAt
         - resolution
         - serverTime
       properties:
@@ -10339,6 +10495,8 @@ components:
             - ReadyForCollection
             - Inspection
             - ResolutionPending
+            - ReturnPending
+            - Completed
             - Cancelled
             - PaymentExpired
         version:
@@ -10447,6 +10605,20 @@ components:
         refunded:
           type: boolean
           description: True once an Admin refund returned the Order hold to the buyer.
+        settled:
+          type: boolean
+          description: True once the settlement journal paid the seller and the platform from the Order hold.
+        returnDeadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Set when an Admin required the book back at the point after a claim.
+        returnedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
         inspectionDeadline:
           type:
             - string
@@ -10467,6 +10639,8 @@ components:
                 - ReportRejected
                 - RecipientDecisionOverdue
                 - CollectionOverdue
+                - InspectionClaim
+                - ReturnOverdue
             openedAt:
               type: string
               format: date-time
@@ -10549,6 +10723,8 @@ components:
             - ReadyForCollection
             - Inspection
             - ResolutionPending
+            - ReturnPending
+            - Completed
         currentPrice:
           type:
             - integer
@@ -10857,6 +11033,7 @@ components:
             - ReclaimRequired
             - Reclaimed
             - Cancelled
+            - Sold
         version:
           type: integer
           minimum: 1
@@ -10910,6 +11087,7 @@ components:
             - PaymentExpired
             - AuctionCancelled
             - OrderCancelled
+            - OrderReturned
             - null
         closedAt:
           type:
@@ -11183,6 +11361,8 @@ components:
           enum:
             - RefundBuyer
             - ResumeCollection
+            - DismissClaim
+            - RequireReturn
         reason:
           type: string
           minLength: 10
@@ -11217,6 +11397,8 @@ components:
             - ReportRejected
             - RecipientDecisionOverdue
             - CollectionOverdue
+            - InspectionClaim
+            - ReturnOverdue
         note:
           type:
             - string
@@ -11243,3 +11425,33 @@ components:
         serverTime:
           type: string
           format: date-time
+    ClaimPointOrder:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - description
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        description:
+          type: string
+          minLength: 30
+          maxLength: 5000
+    ReceivePointOrderReturn:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        note:
+          type:
+            - string
+            - "null"
+          maxLength: 1000

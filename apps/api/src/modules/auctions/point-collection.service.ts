@@ -39,6 +39,7 @@ import { HandoverPointsService } from './handover-points.service.js';
 import { isPointOpen, pointDeadline } from './point-hours.js';
 import { checkPointOrder } from './point-order-invariants.js';
 import { PointOrdersService } from './point-orders.service.js';
+import { stepKey } from './system-key.js';
 
 const hashCode = (salt: string, orderId: string, code: string) =>
   createHash('sha256').update(`${salt}:${orderId}:${code}`).digest('hex');
@@ -406,7 +407,9 @@ export class PointCollectionService {
         .find(
           {
             pointId: { $in: pointIds },
-            state: { $in: ['Fulfilling', 'ReadyForCollection'] },
+            state: {
+              $in: ['Fulfilling', 'ReadyForCollection', 'ReturnPending'],
+            },
             buyerId: { $ne: actor._id },
             sellerId: { $ne: actor._id },
           },
@@ -428,6 +431,10 @@ export class PointCollectionService {
           recipientName: buyer?.displayName ?? '',
           shelfCode: intake?.shelfCode ?? null,
           collectionDeadline: o.collectionDeadline?.toISOString() ?? null,
+          returnDeadline:
+            o.state === 'ReturnPending'
+              ? o.returnDeadline!.toISOString()
+              : null,
         });
       }
       return { items, serverTime: now.toISOString() };
@@ -435,52 +442,77 @@ export class PointCollectionService {
   }
 
   // ----------------------------------------------------------- worker
-  // POL-32/33: no response or no collection by the deadline opens a
-  // resolution task. No auto-accept, refund, return or forfeiture here.
-  openResolution(id: string) {
-    return this.commands.systemAuction('PointOrderDeadline', id, {
-      discover: async () => [],
-      authorize: (tx) => this.order(tx, id),
-      mutate: async (tx, before) => {
-        const o = await this.locked(tx, id, before.version);
-        const now = await this.clock.now(tx);
-        if (o.state === 'Fulfilling' && now >= o.acceptanceDeadline!) {
-          const next = await this.transition(
-            tx,
-            o,
-            {
-              state: 'ResolutionPending',
-              resolutionReason: 'RecipientDecisionOverdue',
-              resolutionOpenedAt: now,
-            },
-            now,
-          );
-          return PointOrdersService.change(
-            next,
-            now,
-            'PointOrderDecisionOverdue',
-          );
-        }
-        if (o.state === 'ReadyForCollection' && now >= o.collectionDeadline!) {
-          await this.revokeLiveCodes(tx, o._id, now);
-          const next = await this.transition(
-            tx,
-            o,
-            {
-              state: 'ResolutionPending',
-              resolutionReason: 'CollectionOverdue',
-              resolutionOpenedAt: now,
-            },
-            now,
-          );
-          return PointOrdersService.change(
-            next,
-            now,
-            'PointOrderCollectionOverdue',
-          );
-        }
-        throw invalidState();
+  // POL-32/33: no response, no collection or no required return by the
+  // deadline opens a resolution task. No auto-accept, refund or forfeiture.
+  openResolution(id: string, version: number) {
+    return this.commands.systemAuction(
+      'PointOrderDeadline',
+      stepKey(id, version),
+      {
+        discover: async () => [],
+        authorize: (tx) => this.order(tx, id),
+        mutate: async (tx, before) => {
+          if (before.version !== version) throw invalidState();
+          const o = await this.locked(tx, id, version);
+          const now = await this.clock.now(tx);
+          if (o.state === 'Fulfilling' && now >= o.acceptanceDeadline!) {
+            const next = await this.transition(
+              tx,
+              o,
+              {
+                state: 'ResolutionPending',
+                resolutionReason: 'RecipientDecisionOverdue',
+                resolutionOpenedAt: now,
+              },
+              now,
+            );
+            return PointOrdersService.change(
+              next,
+              now,
+              'PointOrderDecisionOverdue',
+            );
+          }
+          if (
+            o.state === 'ReadyForCollection' &&
+            now >= o.collectionDeadline!
+          ) {
+            await this.revokeLiveCodes(tx, o._id, now);
+            const next = await this.transition(
+              tx,
+              o,
+              {
+                state: 'ResolutionPending',
+                resolutionReason: 'CollectionOverdue',
+                resolutionOpenedAt: now,
+              },
+              now,
+            );
+            return PointOrdersService.change(
+              next,
+              now,
+              'PointOrderCollectionOverdue',
+            );
+          }
+          if (o.state === 'ReturnPending' && now >= o.returnDeadline!) {
+            const next = await this.transition(
+              tx,
+              o,
+              {
+                state: 'ResolutionPending',
+                resolutionReason: 'ReturnOverdue',
+                resolutionOpenedAt: now,
+              },
+              now,
+            );
+            return PointOrdersService.change(
+              next,
+              now,
+              'PointOrderReturnOverdue',
+            );
+          }
+          throw invalidState();
+        },
       },
-    });
+    );
   }
 }

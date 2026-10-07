@@ -17,3 +17,8 @@ export const COLLECTION_CODE_TTL_MS = 10 * 60_000;
 export const COLLECTION_ATTEMPT_WINDOW_MS = 15 * 60_000;
 export const COLLECTION_MAX_WRONG_ATTEMPTS = 5;
 export const INSPECTION_WINDOW_MS = 72 * HOUR_MS;
+// Completion and returns (migration 0012).
+export const RETURN_WINDOW_MS = 72 * HOUR_MS;
+export const CLAIM_MIN_LENGTH = 30;
+export const PLATFORM_COMMISSION_ACCOUNT_ID =
+  '00000000-0000-4000-8000-0000000000c1';

@@ -14,6 +14,7 @@ import { HandoverPointsService } from './handover-points.service.js';
 import { PointOrdersService } from './point-orders.service.js';
 import { PointCollectionService } from './point-collection.service.js';
 import { PointOrderResolutionService } from './point-order-resolution.service.js';
+import { PointOrderCompletionService } from './point-order-completion.service.js';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { PointOrderResolutionService } from './point-order-resolution.service.js
     PointOrdersService,
     PointCollectionService,
     PointOrderResolutionService,
+    PointOrderCompletionService,
     AuctionClock,
     AuctionWorker,
   ],

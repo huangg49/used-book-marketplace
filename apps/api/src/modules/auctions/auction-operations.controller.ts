@@ -16,6 +16,7 @@ import { ContractInput } from '../commands/contract-input.service.js';
 import { AuctionBiddingService } from './auction-bidding.service.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
 import { PointCollectionService } from './point-collection.service.js';
+import { PointOrderCompletionService } from './point-order-completion.service.js';
 import { PointOrderResolutionService } from './point-order-resolution.service.js';
 
 // Point Staff steps need STAFF plus a current point assignment, checked in the
@@ -27,6 +28,7 @@ export class AuctionOperationsController {
     private readonly bidding: AuctionBiddingService,
     private readonly collection: PointCollectionService,
     private readonly resolutions: PointOrderResolutionService,
+    private readonly completion: PointOrderCompletionService,
     private readonly input: ContractInput,
   ) {}
 
@@ -73,6 +75,25 @@ export class AuctionOperationsController {
         commandContext(this.input, req, res),
         this.input.uuid(id),
         this.input.body('HandOverPointOrder', body),
+      ),
+      res,
+    );
+  }
+
+  @Post('point-orders/:orderId/receive-return')
+  @Roles('STAFF')
+  @HttpCode(200)
+  receiveReturn(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.completion.receiveReturn(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('ReceivePointOrderReturn', body),
       ),
       res,
     );

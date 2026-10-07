@@ -168,7 +168,9 @@ export type AuctionOperation =
   | 'rejectPointOrderReport'
   | 'requestCollectionCode'
   | 'handOverPointOrder'
-  | 'resolvePointOrder';
+  | 'resolvePointOrder'
+  | 'claimPointOrder'
+  | 'receivePointOrderReturn';
 type CommandChange =
   | AuctionChange
   | Change
@@ -210,6 +212,7 @@ const EXISTING_OBLIGATION_OPERATIONS = [
   'acceptPointOrderReport',
   'rejectPointOrderReport',
   'requestCollectionCode',
+  'claimPointOrder',
 ];
 const KEY_LOCK_TTL_MS = 7 * 24 * 3_600_000;
 const sessionExpired = (
@@ -575,6 +578,7 @@ export class MongoCommandService {
       | 'AuctionPaymentExpiry'
       | 'AuctionIntakeExpiry'
       | 'PointOrderDeadline'
+      | 'PointOrderSettlement'
     >,
     key: string,
     options: {
@@ -588,6 +592,7 @@ export class MongoCommandService {
       AuctionPaymentExpiry: 'expireAuctionPayment',
       AuctionIntakeExpiry: 'expireAuctionIntake',
       PointOrderDeadline: 'openPointOrderResolution',
+      PointOrderSettlement: 'settlePointOrder',
     }[systemActor];
     return this.executePrincipal(
       { actorId: null, systemActor, key, requestId: randomUUID() },
