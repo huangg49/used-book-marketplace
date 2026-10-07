@@ -79,9 +79,9 @@
     opacity: 0.55;
   }
 
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
-  textarea,
-  select {
+  :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"])),
+  :where(textarea),
+  :where(select) {
     font: inherit;
     color: inherit;
     width: 100%;
