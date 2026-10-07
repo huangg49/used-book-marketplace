@@ -88,6 +88,8 @@ describe('order payment storage on populated wallet data (MongoDB)', () => {
         .sort({ purpose: 1 })
         .toArray(),
     ).toEqual([
+      // Migration 0012 adds the single platform commission account.
+      { purpose: 'PlatformCommission', orderId: null },
       { purpose: 'SimulatorCapital', orderId: null },
       { purpose: 'SimulatorClearing', orderId: null },
     ]);
@@ -223,7 +225,8 @@ describe('order payment storage on populated wallet data (MongoDB)', () => {
         addressBookId: owner,
       } as never),
     ).rejects.toMatchObject({ code: 121 });
-    expect(await rootDb.collection('wallet_accounts').countDocuments()).toBe(2);
+    // Capital, clearing and (migration 0012) platform commission only.
+    expect(await rootDb.collection('wallet_accounts').countDocuments()).toBe(3);
     expect(await rootDb.collection('ledger_journals').countDocuments()).toBe(1);
   });
 });

@@ -11,6 +11,8 @@ export const historyLabels = {
   Topup: "Nạp mô phỏng",
   OrderPayment: "Giữ tiền cho đơn sách",
   OrderRefund: "Hoàn tiền đơn sách",
+  // Seller proceeds (P − C) when an auction ViaPoint Order settles.
+  OrderSettlement: "Nhận tiền bán sách",
 } satisfies Record<WalletHistoryItem["type"], string>;
 
 export function signedAmount(amount: number) {

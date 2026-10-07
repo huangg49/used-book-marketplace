@@ -131,7 +131,49 @@ type CarrierChange = Omit<PackagingChange, 'entityType' | 'state'> & {
   orderState: Wire['CarrierEventReceipt']['orderState'];
   orderVersion: number;
 };
+export type AuctionChange = {
+  entityType: 'AuctionIntake' | 'Auction' | 'PointOrder';
+  entityId: string;
+  intakeId: string;
+  auctionId: string | null;
+  orderId: string | null;
+  contextId: string;
+  version: number;
+  state: Wire['AuctionCommandReceipt']['state'];
+  decidedAt: Date;
+  currentPrice: number | null;
+  minimumBid: number | null;
+  leading: boolean | null;
+  collectionOutcome?: Wire['AuctionCommandReceipt']['collectionOutcome'];
+  attemptsRemaining?: number | null;
+  codeExpiresAt?: Date | null;
+  returnOutcome?: Wire['AuctionCommandReceipt']['returnOutcome'];
+  before?: Json;
+  event?: string;
+  reason?: string;
+};
+export type AuctionOperation =
+  | 'createAuctionIntake'
+  | 'cancelAuctionIntake'
+  | 'receiveAuctionIntake'
+  | 'inspectAuctionIntake'
+  | 'openAuction'
+  | 'reclaimAuctionIntake'
+  | 'cancelAuction'
+  | 'placeAuctionBid'
+  | 'setAuctionAutoBid'
+  | 'disableAuctionAutoBid'
+  | 'buyAuctionNow'
+  | 'payPointOrder'
+  | 'acceptPointOrderReport'
+  | 'rejectPointOrderReport'
+  | 'requestCollectionCode'
+  | 'handOverPointOrder'
+  | 'resolvePointOrder'
+  | 'claimPointOrder'
+  | 'receivePointOrderReturn';
 type CommandChange =
+  | AuctionChange
   | Change
   | AddressChange
   | QuoteChange
@@ -167,6 +209,11 @@ const EXISTING_OBLIGATION_OPERATIONS = [
   'createPackagingEvidence',
   'uploadPackagingEvidence',
   'registerDirectShipment',
+  // Paid ViaPoint Order: the buyer may still decide and collect.
+  'acceptPointOrderReport',
+  'rejectPointOrderReport',
+  'requestCollectionCode',
+  'claimPointOrder',
 ];
 const KEY_LOCK_TTL_MS = 7 * 24 * 3_600_000;
 const sessionExpired = (
@@ -488,6 +535,82 @@ export class MongoCommandService {
       (...args) => this.orderReceipt(...args),
     );
   }
+  private auctionReceipt(
+    change: AuctionChange,
+    id: string,
+    serverTime: Date,
+  ): Wire['AuctionCommandReceipt'] {
+    return {
+      id,
+      entityType: change.entityType,
+      entityId: change.entityId,
+      intakeId: change.intakeId,
+      auctionId: change.auctionId,
+      orderId: change.orderId,
+      contextId: change.contextId,
+      version: change.version,
+      state: change.state,
+      currentPrice: change.currentPrice,
+      minimumBid: change.minimumBid,
+      leading: change.leading,
+      collectionOutcome: change.collectionOutcome ?? null,
+      attemptsRemaining: change.attemptsRemaining ?? null,
+      codeExpiresAt: change.codeExpiresAt?.toISOString() ?? null,
+      returnOutcome: change.returnOutcome ?? null,
+      serverTime: serverTime.toISOString(),
+    };
+  }
+  runAuction<C>(
+    context: CommandContext,
+    operation: AuctionOperation,
+    target: string | null,
+    body: unknown,
+    options: Options<C, AuctionChange>,
+  ) {
+    return this.execute(context, operation, target, body, options, (...args) =>
+      this.auctionReceipt(...args),
+    );
+  }
+  // Auction workers only; the key names the aggregate (and, for repeatable
+  // deadlines, its version), so each transition commits at most once.
+  systemAuction<C>(
+    systemActor: Extract<
+      SystemActor,
+      | 'AuctionClose'
+      | 'AuctionPaymentExpiry'
+      | 'AuctionIntakeExpiry'
+      | 'PointOrderDeadline'
+      | 'PointOrderSettlement'
+    >,
+    key: string,
+    options: {
+      discover: (tx: Tx) => Promise<string[]>;
+      authorize: (tx: Tx) => Promise<C>;
+      mutate: (tx: Tx, current: C, receiptId: string) => Promise<AuctionChange>;
+    },
+  ) {
+    const operation = {
+      AuctionClose: 'closeAuction',
+      AuctionPaymentExpiry: 'expireAuctionPayment',
+      AuctionIntakeExpiry: 'expireAuctionIntake',
+      PointOrderDeadline: 'openPointOrderResolution',
+      PointOrderSettlement: 'settlePointOrder',
+    }[systemActor];
+    return this.executePrincipal(
+      { actorId: null, systemActor, key, requestId: randomUUID() },
+      operation,
+      key,
+      {},
+      {
+        authorize: async (tx) => {
+          await this.lockUsers(tx, await options.discover(tx));
+          return options.authorize(tx);
+        },
+        mutate: options.mutate,
+      },
+      (...args) => this.auctionReceipt(...args),
+    );
+  }
   async lockUsers(tx: Tx, users: string[]) {
     if (users.length) await tx.lock('users', users);
   }
@@ -604,7 +727,10 @@ export class MongoCommandService {
         change.entityType === 'OrderPackagingEvidence' ||
         change.entityType === 'Shipment' ||
         change.entityType === 'CarrierEvent' ||
-        change.entityType === 'TopupIntent'
+        change.entityType === 'TopupIntent' ||
+        change.entityType === 'AuctionIntake' ||
+        change.entityType === 'Auction' ||
+        change.entityType === 'PointOrder'
           ? change.decidedAt
           : new Date();
       const receipt = project(change, id, serverTime);
@@ -623,7 +749,10 @@ export class MongoCommandService {
         change.entityType === 'Order' ||
         change.entityType === 'OrderPackagingEvidence' ||
         change.entityType === 'Shipment' ||
-        change.entityType === 'CarrierEvent'
+        change.entityType === 'CarrierEvent' ||
+        change.entityType === 'AuctionIntake' ||
+        change.entityType === 'Auction' ||
+        change.entityType === 'PointOrder'
       )
         targets.contextId = change.contextId;
       else if (change.entityType === 'SaleQuote')
@@ -683,7 +812,17 @@ export class MongoCommandService {
                     orderId: change.orderId,
                     state: change.state,
                   }
-                : {}),
+                : change.entityType === 'AuctionIntake' ||
+                    change.entityType === 'Auction' ||
+                    change.entityType === 'PointOrder'
+                  ? {
+                      contextId: change.contextId,
+                      intakeId: change.intakeId,
+                      auctionId: change.auctionId,
+                      orderId: change.orderId,
+                      state: change.state,
+                    }
+                  : {}),
             ...('revisionId' in change
               ? { revisionId: change.revisionId }
               : {}),
@@ -702,6 +841,18 @@ export class MongoCommandService {
 
 function auditAfter(change: CommandChange): Json {
   switch (change.entityType) {
+    // Public price only: Auto ceilings never enter audit/outbox (FR-AU10).
+    case 'AuctionIntake':
+    case 'Auction':
+    case 'PointOrder':
+      return {
+        intakeId: change.intakeId,
+        auctionId: change.auctionId,
+        orderId: change.orderId,
+        version: change.version,
+        state: change.state,
+        currentPrice: change.currentPrice,
+      };
     case 'CarrierEvent':
       return {
         eventId: change.entityId,

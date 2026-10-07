@@ -19,6 +19,36 @@ import {
   onlinePriceLookupMigration,
   onlinePriceSpecs,
 } from './0007-online-price-lookup.js';
+import {
+  auctionCollectionSpecs,
+  auctionsMigration,
+  withAuctionChanges,
+} from './0008-auctions.js';
+import {
+  pointOrderCollectionSpecs,
+  pointOrdersMigration,
+  withPointOrderChanges,
+} from './0009-point-orders.js';
+import {
+  pointCollectionMigration,
+  pointCollectionSpecs,
+  withPointCollectionChanges,
+} from './0010-point-collection.js';
+import {
+  pointOrderResolutionMigration,
+  resolutionCollectionSpecs,
+  withResolutionChanges,
+} from './0011-point-order-resolution.js';
+import {
+  pointOrderSettlementMigration,
+  settlementCollectionSpecs,
+  withSettlementChanges,
+} from './0012-point-order-settlement.js';
+import {
+  auctionBusinessRulesMigration,
+  rulesCollectionSpecs,
+  withRulesChanges,
+} from './0013-auction-business-rules.js';
 
 export interface Migration {
   id: string;
@@ -91,6 +121,12 @@ export const migrations: Migration[] = [
   priceAssistMigration,
   priceSuggestionInputMigration,
   onlinePriceLookupMigration,
+  auctionsMigration,
+  pointOrdersMigration,
+  pointCollectionMigration,
+  pointOrderResolutionMigration,
+  pointOrderSettlementMigration,
+  auctionBusinessRulesMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -99,10 +135,27 @@ export const checksumOf = (migration: Migration) =>
     .digest('hex');
 
 // The latest schema, for tests and for the app role privileges.
-export const currentCollections = (): CollectionSpec[] =>
-  [
-    ...baselineCollections.map(withTitleKey),
-    wishlistSpec,
-    ...priceAssistSpecsV2,
-    ...onlinePriceSpecs,
-  ];
+export const currentCollections = (): CollectionSpec[] => [
+  ...baselineCollections
+    .map(withTitleKey)
+    .map(withAuctionChanges)
+    .map(withPointOrderChanges)
+    .map(withPointCollectionChanges)
+    .map(withSettlementChanges),
+  wishlistSpec,
+  ...priceAssistSpecsV2,
+  ...onlinePriceSpecs,
+  ...auctionCollectionSpecs
+    .map(withPointOrderChanges)
+    .map(withResolutionChanges)
+    .map(withSettlementChanges)
+    .map(withRulesChanges),
+  ...pointOrderCollectionSpecs
+    .map(withPointCollectionChanges)
+    .map(withResolutionChanges)
+    .map(withSettlementChanges),
+  ...pointCollectionSpecs,
+  ...resolutionCollectionSpecs.map(withSettlementChanges).map(withRulesChanges),
+  ...settlementCollectionSpecs.map(withRulesChanges),
+  ...rulesCollectionSpecs,
+];

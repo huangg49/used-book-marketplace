@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.23.0
+  version: 0.29.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -25,7 +25,16 @@ info:
     delivery review and retain full Order hold/commitment. Delivered, inspection, dispute
     adjudication and settlement remain planned. Owner-only advisory sale-price suggestions from
     sourced price references are implemented behind a server flag; they never set or verify a
-    price."
+    price. Bounded auctions (ADR 0030) are implemented from Sale intake at two simulated HCM points
+    through Staff receipt/inspection, proxy bidding with private Auto ceilings, Buy Now before the
+    first bid and server-time close. A win or Buy Now forms a ViaPoint Order that the buyer pays
+    from the simulated wallet into an Order hold; unpaid Orders expire to reclaim. The buyer then
+    accepts or rejects the point condition report, requests a one-time collection code and
+    assigned Staff record the handover, which starts the 72-hour inspection window. Rejected or
+    overdue Orders wait for an independent Admin to refund the hold or reopen collection. During
+    the inspection window the buyer may file one claim; an Admin dismisses it or requires the book
+    back, and the Staff-received return refunds the hold. Unclaimed Orders settle after the window
+    (seller P - C, platform C) and the listing becomes Sold."
 servers:
   - url: http://localhost:3000/api/v1
 tags:
@@ -42,6 +51,7 @@ tags:
   - name: Wallet
   - name: User administration
   - name: Wishlist
+  - name: Auctions
 paths:
   /health:
     get:
@@ -3547,6 +3557,7 @@ paths:
               - Topup
               - OrderPayment
               - OrderRefund
+              - OrderSettlement
         - in: query
           name: topupId
           schema:
@@ -4544,6 +4555,1727 @@ paths:
         "503":
           $ref: "#/components/responses/ListingError"
       x-locked-access: existing-obligations
+  /handover-points:
+    get:
+      operationId: listHandoverPoints
+      tags:
+        - Auctions
+      description: Authenticated MEMBER/STAFF/ADMIN. The two simulated HCM demo points with remaining
+        capacity; not real business locations.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HandoverPointList"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auction-intakes:
+    post:
+      operationId: createAuctionIntake
+      tags:
+        - Auctions
+      description: Seller ACTIVE verified MEMBER. Approved, Visible, Available Sale listing with current
+        revision; Exchange/Both rejected. In one transaction snapshots revision/start/step/buyNow,
+        takes the exclusive commitment and one point slot (capacity checked under the point lock).
+        Self drop-off within 72 hours; at most two unfinished intakes/auctions per seller (POL-41).
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAuctionIntake"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /me/auction-intakes:
+    get:
+      operationId: listMyAuctionIntakes
+      tags:
+        - Auctions
+      description: Seller view of own intakes, newest first (max 50). Shelf code and Staff identities are
+        not exposed.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionIntakeList"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /me/auction-intakes/{intakeId}:
+    get:
+      operationId: getMyAuctionIntake
+      tags:
+        - Auctions
+      description: Owner only; others receive 404.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: intakeId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionIntake"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auction-intakes/{intakeId}/cancel:
+    post:
+      operationId: cancelAuctionIntake
+      tags:
+        - Auctions
+      description: "Owner. Before drop-off releases commitment and slot; after receipt and before
+        the auction opens moves to ReclaimRequired. An opened auction can be withdrawn only while it
+        is Active, before endAt and before the first bid (auction Cancelled, book to reclaim). After
+        the first bid only an independent Admin can cancel."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: intakeId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionVersionCommand"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/auction-intakes:
+    get:
+      operationId: listPointAuctionIntakes
+      tags:
+        - Auctions
+      description: ACTIVE STAFF with a current assignment. Intakes at the assigned points that need
+        receipt, inspection, opening or reclaim.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionIntakeList"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/auction-intakes/{intakeId}/receive:
+    post:
+      operationId: receiveAuctionIntake
+      tags:
+        - Auctions
+      description: Assigned STAFF independent of the seller records the physical self drop-off before the
+        deadline with a private shelf code.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: intakeId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceiveAuctionIntake"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/auction-intakes/{intakeId}/inspect:
+    post:
+      operationId: inspectAuctionIntake
+      tags:
+        - Auctions
+      description: Assigned independent STAFF records condition inspection Pass or Fail against the frozen
+        revision. Fail moves to ReclaimRequired. Pass is a condition checklist, not authenticity.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: intakeId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InspectAuctionIntake"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/auction-intakes/{intakeId}/open:
+    post:
+      operationId: openAuction
+      tags:
+        - Auctions
+      description: "Assigned independent STAFF opens a Passed intake while the seller is still ACTIVE:
+        startAt is server time, endAt is 24 hours later, no scheduling or extension."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: intakeId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionVersionCommand"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/auction-intakes/{intakeId}/reclaim:
+    post:
+      operationId: reclaimAuctionIntake
+      tags:
+        - Auctions
+      description: Assigned independent STAFF records that the seller collected the book. Releases the
+        slot and exclusive commitment; the listing returns to Available.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: intakeId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionVersionCommand"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/auctions/{auctionId}/cancel:
+    post:
+      operationId: cancelAuction
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN independent of seller and bidders cancels an Active or OnHold auction with
+        a reason; never selects a winner. The book moves to reclaim.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelAuction"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auctions:
+    get:
+      operationId: listAuctions
+      tags:
+        - Auctions
+      description: Public. Active auctions ending soonest first (max 50). Shows price and anonymous bidder
+        count; ceilings are never exposed.
+      x-implementation-status: implemented
+      security: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicAuctionList"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}:
+    get:
+      operationId: getAuction
+      tags:
+        - Auctions
+      description: Public. Price, end time, anonymous price history and minimum next bid. Seller and
+        guests never see ceilings.
+      x-implementation-status: implemented
+      security: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicAuction"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /me/auctions/{auctionId}/participation:
+    get:
+      operationId: getMyAuctionParticipation
+      tags:
+        - Auctions
+      description: "The calling bidder or Buy Now buyer only: own commitment level (including own Auto
+        ceiling), leading flag and outcome. Others receive 404."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionParticipation"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/bids:
+    post:
+      operationId: placeAuctionBid
+      tags:
+        - Auctions
+      description: ACTIVE verified MEMBER other than the seller or the Staff handling the book. Amount
+        must be on the start + n*step grid, at least the minimum bid and at most 1,000,000. The leader
+        cannot bid manually. Rejected at or after endAt even if the close worker has not run. No money
+        is held at bid time.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceAuctionBid"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/auto-bid:
+    put:
+      operationId: setAuctionAutoBid
+      tags:
+        - Auctions
+      description: Sets or raises a private Auto ceiling on the price grid. A new ceiling must reach the
+        minimum bid; the leader may only raise, which never raises the price.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetAuctionAutoBid"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/auto-bid/disable:
+    post:
+      operationId: disableAuctionAutoBid
+      tags:
+        - Auctions
+      description: Stops further automatic raises. A leading bidder stays committed at the current price;
+        it never lowers the price or revives an outbid bidder.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DisableAuctionAutoBid"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /me/point-orders/{orderId}:
+    get:
+      operationId: getMyPointOrder
+      tags:
+        - Auctions
+      description: Buyer or seller of a ViaPoint Order formed by an auction; others receive 404. Shows
+        frozen amounts and deadlines; the identity of the other party and the point shelf code are not
+        exposed.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointOrder"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /point-orders/{orderId}/pay:
+    post:
+      operationId: payPointOrder
+      tags:
+        - Auctions
+      description: Buyer ACTIVE/RESTRICTED; LOCKED denied. Before the payment deadline (endAt + 24h, or 15
+        minutes for Buy Now) moves the frozen buyerTotal from available to the Order hold atomically
+        and marks the auction Sold; the Order becomes Fulfilling without seller confirmation (FR-O05).
+        A racing deadline expiry has exactly one outcome. Partial payment is never accepted.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayPointOrder"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /point-orders/{orderId}/accept-report:
+    post:
+      operationId: acceptPointOrderReport
+      tags:
+        - Auctions
+      description: Buyer only, within 72 hours of payment (POL-32). Accepts the condition report of the
+        paid ViaPoint Order and opens a 72-hour collection window ending within point hours (POL-33).
+        Accepting never waives a later claim (FR-T03).
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptPointOrderReport"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /point-orders/{orderId}/reject-report:
+    post:
+      operationId: rejectPointOrderReport
+      tags:
+        - Auctions
+      description: Buyer only, before accepting. Opens ResolutionPending with the reason; the book stays
+        at the point and the payment stays held until an independent Admin refunds it or reopens collection.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectPointOrderReport"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /point-orders/{orderId}/claim:
+    post:
+      operationId: claimPointOrder
+      tags:
+        - Auctions
+      description: "Buyer only, in Inspection before the inspection deadline (a LOCKED account may
+        still claim). Opens ResolutionPending (InspectionClaim) with the description and stops
+        settlement; the payment stays held until an independent Admin decides. After a dismissal the
+        buyer may claim again within the window; that claim must be decided by a different Admin."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimPointOrder"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /point-orders/{orderId}/collection-code:
+    post:
+      operationId: requestCollectionCode
+      tags:
+        - Auctions
+      description: Buyer only, after accepting and before the collection deadline. Issues a 6-digit code
+        valid for 10 minutes bound to recipient, book and point; a new code revokes the previous one.
+        Only a salted hash is stored and the code is returned once.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestCollectionCode"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionCodeIssued"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/point-orders:
+    get:
+      operationId: listPointCollections
+      tags:
+        - Auctions
+      description: "ACTIVE STAFF with a current point assignment: paid Orders at assigned points awaiting
+        the recipient, oldest deadline first."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointCollectionQueue"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/point-orders/{orderId}/handover:
+    post:
+      operationId: handOverPointOrder
+      tags:
+        - Auctions
+      description: Assigned STAFF independent of buyer and seller, during point hours (09:00-18:00
+        Asia/Ho_Chi_Minh). A correct live code records one handover and starts the 72-hour inspection
+        window. Wrong or expired codes are recorded and refused; the sixth wrong attempt within 15
+        minutes is rate limited (AC-H17).
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HandOverPointOrder"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/point-orders/{orderId}/receive-return:
+    post:
+      operationId: receivePointOrderReturn
+      tags:
+        - Auctions
+      description: "ACTIVE STAFF assigned to the point, not buyer or seller, during point hours and
+        before the return deadline. MatchesReport records the book back at the point, posts one
+        OrderRefund journal of the full hold to the buyer, cancels the Order and sends the book to
+        the seller reclaim with its listing back to revision (OrderReturned). DoesNotMatch refuses
+        the item: the attempt is recorded, nothing changes hands, no refund, and the return deadline
+        keeps running."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceivePointOrderReturn"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/point-order-resolutions:
+    get:
+      operationId: listPointOrderResolutions
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN. ViaPoint Orders in ResolutionPending, oldest first, excluding Orders the
+        Admin takes part in or handles at the point.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointOrderResolutionQueue"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/point-orders/{orderId}/resolve:
+    post:
+      operationId: resolvePointOrder
+      tags:
+        - Auctions
+      description: "ACTIVE ADMIN independent of buyer, seller and the Staff who received, inspected,
+        handed over, took back or work at the point; a repeated claim needs an Admin who did not
+        decide an earlier claim. Only for ResolutionPending. RecipientDecisionOverdue: RefundBuyer
+        (BuyerDefault or NoFault). ReportRejected: RefundBuyer (BookMisdescribed or NoFault) or
+        ResumeCollection when the rejection is unfounded. CollectionOverdue: RefundBuyer
+        (BuyerDefault or NoFault) or ResumeCollection. RefundBuyer posts one OrderRefund of the full
+        hold, cancels the Order and sends the book to reclaim (BookMisdescribed also sends the
+        listing back to revision; BuyerDefault records a violation). ResumeCollection opens a new
+        72-hour window in point hours without recording a buyer acceptance. After the handover
+        (InspectionClaim, ReturnOverdue): DismissClaim back to Inspection, or RequireReturn within
+        72 hours. Any other decision or fault returns 422. A reason is required and recorded."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolvePointOrder"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/buy-now:
+    post:
+      operationId: buyAuctionNow
+      tags:
+        - Auctions
+      description: Only before the first valid bid; decided under the same auction lock as bids so exactly
+        one wins. Forms a ViaPoint Order at the Buy Now price with a 15-minute payment deadline and
+        moves the exclusive commitment to it without release.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuyAuctionNow"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
 components:
   securitySchemes:
     bearerAuth:
@@ -6499,6 +8231,8 @@ components:
         - PayloadTooLarge
         - UnsupportedMediaType
         - SESSION_EXPIRED
+        - BidTooLow
+        - AuctionClosed
     ListingApiError:
       type: object
       additionalProperties: false
@@ -7684,6 +9418,7 @@ components:
             - Topup
             - OrderPayment
             - OrderRefund
+            - OrderSettlement
         amount:
           type: integer
           minimum: -100000000
@@ -8552,3 +10287,1209 @@ components:
           anyOf:
             - type: string
             - type: "null"
+    PayPointOrder:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    AcceptPointOrderReport:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    RejectPointOrderReport:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+    RequestCollectionCode:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    HandOverPointOrder:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - code
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        code:
+          type: string
+          pattern: ^[0-9]{6}$
+    CollectionCodeIssued:
+      type: object
+      additionalProperties: false
+      required:
+        - receipt
+        - code
+      properties:
+        receipt:
+          $ref: "#/components/schemas/AuctionCommandReceipt"
+        code:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]{6}$
+          description: Shown once. Null on an idempotent replay; request a new code instead.
+    PointCollectionItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - version
+        - title
+        - state
+        - recipientName
+        - shelfCode
+        - collectionDeadline
+        - returnDeadline
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        title:
+          type: string
+        state:
+          type: string
+          enum:
+            - AwaitingPayment
+            - Fulfilling
+            - ReadyForCollection
+            - Inspection
+            - ResolutionPending
+            - ReturnPending
+            - Completed
+            - Cancelled
+            - PaymentExpired
+        recipientName:
+          type: string
+        shelfCode:
+          type:
+            - string
+            - "null"
+        collectionDeadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+        returnDeadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: ReturnPending only; the buyer brings the book back before this time.
+    PointCollectionQueue:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/PointCollectionItem"
+        serverTime:
+          type: string
+          format: date-time
+    PointOrder:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - source
+        - auctionId
+        - listingId
+        - title
+        - pointId
+        - pointName
+        - role
+        - method
+        - fulfillmentMethod
+        - state
+        - version
+        - currency
+        - demoOnly
+        - amounts
+        - createdAt
+        - paymentDeadline
+        - paidAt
+        - closedAt
+        - report
+        - acceptanceDeadline
+        - acceptedAt
+        - collectionDeadline
+        - collectedAt
+        - inspectionDeadline
+        - refunded
+        - settled
+        - returnDeadline
+        - returnedAt
+        - resolution
+        - serverTime
+      properties:
+        id:
+          type: string
+          format: uuid
+        source:
+          type: string
+          const: Auction
+        auctionId:
+          type: string
+          format: uuid
+        listingId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        pointId:
+          type: string
+          format: uuid
+        pointName:
+          type: string
+        role:
+          type: string
+          enum:
+            - Buyer
+            - Seller
+        method:
+          type: string
+          const: ViaPoint
+        fulfillmentMethod:
+          type: string
+          enum:
+            - SelfCollect
+        state:
+          type: string
+          enum:
+            - AwaitingPayment
+            - Fulfilling
+            - ReadyForCollection
+            - Inspection
+            - ResolutionPending
+            - ReturnPending
+            - Completed
+            - Cancelled
+            - PaymentExpired
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        currency:
+          type: string
+          const: VND
+        demoOnly:
+          type: boolean
+          const: true
+        amounts:
+          type: object
+          additionalProperties: false
+          required:
+            - bookPrice
+            - outboundFee
+            - buyerTotal
+            - commissionBps
+            - commission
+            - sellerProceedsOnCompletion
+          properties:
+            bookPrice:
+              type: integer
+              minimum: 10000
+              maximum: 1000000
+            outboundFee:
+              type: integer
+              minimum: 0
+              maximum: 10000000
+            buyerTotal:
+              type: integer
+              minimum: 10000
+              maximum: 10000000
+            commissionBps:
+              type: integer
+              minimum: 0
+              maximum: 10000
+            commission:
+              type: integer
+              minimum: 0
+              maximum: 10000000
+            sellerProceedsOnCompletion:
+              type: integer
+              minimum: 0
+              maximum: 10000000
+        createdAt:
+          type: string
+          format: date-time
+        paymentDeadline:
+          type: string
+          format: date-time
+        paidAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        closedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        report:
+          type: object
+          additionalProperties: false
+          required:
+            - outcome
+            - inspectedAt
+            - note
+            - scope
+          properties:
+            outcome:
+              type: string
+              const: Pass
+            inspectedAt:
+              type: string
+              format: date-time
+            note:
+              type:
+                - string
+                - "null"
+            scope:
+              type: string
+          description: Condition check at the point; not authenticity (FR-T02).
+        acceptanceDeadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+        acceptedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        collectionDeadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+        collectedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        refunded:
+          type: boolean
+          description: True once an Admin refund returned the Order hold to the buyer.
+        settled:
+          type: boolean
+          description: True once the settlement journal paid the seller and the platform from the Order hold.
+        returnDeadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Set when an Admin required the book back at the point after a claim.
+        returnedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        inspectionDeadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+        resolution:
+          type:
+            - object
+            - "null"
+          additionalProperties: false
+          required:
+            - reason
+            - openedAt
+          properties:
+            reason:
+              type: string
+              enum:
+                - ReportRejected
+                - RecipientDecisionOverdue
+                - CollectionOverdue
+                - InspectionClaim
+                - ReturnOverdue
+            openedAt:
+              type: string
+              format: date-time
+        serverTime:
+          type: string
+          format: date-time
+    AuctionCommandReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - entityType
+        - entityId
+        - intakeId
+        - auctionId
+        - orderId
+        - contextId
+        - version
+        - state
+        - currentPrice
+        - minimumBid
+        - leading
+        - collectionOutcome
+        - attemptsRemaining
+        - codeExpiresAt
+        - returnOutcome
+        - serverTime
+      properties:
+        id:
+          type: string
+          format: uuid
+        entityType:
+          type: string
+          enum:
+            - AuctionIntake
+            - Auction
+            - PointOrder
+        entityId:
+          type: string
+          format: uuid
+        intakeId:
+          type: string
+          format: uuid
+        auctionId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        orderId:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: ViaPoint Order formed by a win or Buy Now.
+        contextId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        state:
+          type: string
+          enum:
+            - AwaitingDropoff
+            - Received
+            - Passed
+            - Auctioning
+            - ReclaimRequired
+            - Reclaimed
+            - Cancelled
+            - Active
+            - BuyNowPending
+            - AwaitingWinnerPayment
+            - Sold
+            - Unsold
+            - OnHold
+            - PaymentExpired
+            - AwaitingPayment
+            - Fulfilling
+            - ReadyForCollection
+            - Inspection
+            - ResolutionPending
+            - ReturnPending
+            - Completed
+        currentPrice:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 1000000
+        minimumBid:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 1000000
+        leading:
+          type:
+            - boolean
+            - "null"
+        collectionOutcome:
+          type:
+            - string
+            - "null"
+          enum:
+            - HandedOver
+            - WrongCode
+            - Expired
+            - RateLimited
+            - null
+          description: Staff handover only. A rejected code still commits the attempt.
+        attemptsRemaining:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 5
+          description: Wrong attempts left in the 15-minute window.
+        codeExpiresAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Collection code request only; the code itself is never stored in receipts.
+        returnOutcome:
+          type:
+            - string
+            - "null"
+          enum:
+            - Accepted
+            - Refused
+            - null
+          description: Staff return receipt only. A refused return is still a committed attempt.
+        serverTime:
+          type: string
+          format: date-time
+    CreateAuctionIntake:
+      type: object
+      additionalProperties: false
+      required:
+        - listingId
+        - expectedListingVersion
+        - pointId
+        - startPrice
+        - step
+        - buyNowPrice
+      properties:
+        listingId:
+          type: string
+          format: uuid
+        expectedListingVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        pointId:
+          type: string
+          format: uuid
+        startPrice:
+          type: integer
+          minimum: 10000
+          maximum: 1000000
+        step:
+          type: integer
+          enum:
+            - 10000
+            - 50000
+        buyNowPrice:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 1000000
+    AuctionVersionCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    ReceiveAuctionIntake:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - shelfCode
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        shelfCode:
+          type: string
+          pattern: ^[A-Z0-9-]{1,20}$
+    InspectAuctionIntake:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - outcome
+        - note
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        outcome:
+          type: string
+          enum:
+            - Pass
+            - Fail
+        note:
+          type:
+            - string
+            - "null"
+          maxLength: 1000
+    CancelAuction:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+    PlaceAuctionBid:
+      type: object
+      additionalProperties: false
+      required:
+        - amount
+        - fulfillmentMethod
+      properties:
+        amount:
+          type: integer
+          minimum: 10000
+          maximum: 1000000
+        fulfillmentMethod:
+          type: string
+          enum:
+            - SelfCollect
+    SetAuctionAutoBid:
+      type: object
+      additionalProperties: false
+      required:
+        - maxAmount
+        - fulfillmentMethod
+      properties:
+        maxAmount:
+          type: integer
+          minimum: 10000
+          maximum: 1000000
+        fulfillmentMethod:
+          type: string
+          enum:
+            - SelfCollect
+    DisableAuctionAutoBid:
+      type: object
+      additionalProperties: false
+      required: []
+      properties: {}
+    BuyAuctionNow:
+      type: object
+      additionalProperties: false
+      required:
+        - fulfillmentMethod
+      properties:
+        fulfillmentMethod:
+          type: string
+          enum:
+            - SelfCollect
+    HandoverPoint:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - code
+        - name
+        - displayAddress
+        - status
+        - capacity
+        - availableSlots
+        - demoOnly
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        displayAddress:
+          type: string
+        status:
+          type: string
+          enum:
+            - Active
+            - Paused
+            - Closed
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        availableSlots:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        demoOnly:
+          type: boolean
+          const: true
+    HandoverPointList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/HandoverPoint"
+    AuctionIntake:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - contextId
+        - listingId
+        - listingRevisionId
+        - title
+        - pointId
+        - startPrice
+        - step
+        - buyNowPrice
+        - protectiveValue
+        - state
+        - version
+        - createdAt
+        - dropoffDeadline
+        - receivedAt
+        - shelfCode
+        - inspectedAt
+        - inspectionOutcome
+        - inspectionNote
+        - auctionId
+        - reclaimReason
+        - closedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        contextId:
+          type: string
+          format: uuid
+        listingId:
+          type: string
+          format: uuid
+        listingRevisionId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        pointId:
+          type: string
+          format: uuid
+        startPrice:
+          type: integer
+          minimum: 10000
+          maximum: 1000000
+        step:
+          type: integer
+          enum:
+            - 10000
+            - 50000
+        buyNowPrice:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 1000000
+        protectiveValue:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        state:
+          type: string
+          enum:
+            - AwaitingDropoff
+            - Received
+            - Passed
+            - Auctioning
+            - ReclaimRequired
+            - Reclaimed
+            - Cancelled
+            - Sold
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        createdAt:
+          type: string
+          format: date-time
+        dropoffDeadline:
+          type: string
+          format: date-time
+        receivedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        shelfCode:
+          type:
+            - string
+            - "null"
+          description: Staff reads only; null for the owner.
+        inspectedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        inspectionOutcome:
+          type:
+            - string
+            - "null"
+          enum:
+            - Pass
+            - Fail
+            - null
+        inspectionNote:
+          type:
+            - string
+            - "null"
+        auctionId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        reclaimReason:
+          type:
+            - string
+            - "null"
+          enum:
+            - SellerCancelled
+            - InspectionFailed
+            - Unsold
+            - PaymentExpired
+            - AuctionCancelled
+            - OrderCancelled
+            - OrderReturned
+            - BookMisdescribed
+            - null
+        closedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+    AuctionIntakeList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/AuctionIntake"
+    PublicAuctionSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - listingId
+        - title
+        - state
+        - startPrice
+        - step
+        - buyNowPrice
+        - currentPrice
+        - minimumBid
+        - bidderCount
+        - startAt
+        - endAt
+        - pointName
+        - demoOnly
+      properties:
+        id:
+          type: string
+          format: uuid
+        listingId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        state:
+          type: string
+          enum:
+            - Active
+            - BuyNowPending
+            - AwaitingWinnerPayment
+            - Sold
+            - Unsold
+            - OnHold
+            - Cancelled
+            - PaymentExpired
+        startPrice:
+          type: integer
+          minimum: 10000
+          maximum: 1000000
+        step:
+          type: integer
+          enum:
+            - 10000
+            - 50000
+        buyNowPrice:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 1000000
+          description: Null once the first valid bid exists or the auction is not Active.
+        currentPrice:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 1000000
+        minimumBid:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 1000000
+          description: Null when bidding is closed.
+        bidderCount:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        pointName:
+          type: string
+        demoOnly:
+          type: boolean
+          const: true
+    PublicAuctionList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/PublicAuctionSummary"
+        serverTime:
+          type: string
+          format: date-time
+    AuctionPriceEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - price
+        - bidderAlias
+        - at
+      properties:
+        price:
+          type: integer
+          minimum: 10000
+          maximum: 1000000
+        bidderAlias:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        at:
+          type: string
+          format: date-time
+    PublicAuction:
+      type: object
+      additionalProperties: false
+      required:
+        - auction
+        - leaderAlias
+        - history
+        - serverTime
+      properties:
+        auction:
+          $ref: "#/components/schemas/PublicAuctionSummary"
+        leaderAlias:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 2147483647
+        history:
+          type: array
+          maxItems: 200
+          items:
+            $ref: "#/components/schemas/AuctionPriceEvent"
+        serverTime:
+          type: string
+          format: date-time
+    AuctionParticipation:
+      type: object
+      additionalProperties: false
+      required:
+        - auctionId
+        - alias
+        - mode
+        - ownLevel
+        - boughtNow
+        - leading
+        - state
+        - currentPrice
+        - minimumBid
+        - fulfillmentMethod
+        - won
+        - orderId
+        - finalPrice
+        - paymentDeadline
+        - serverTime
+      properties:
+        auctionId:
+          type: string
+          format: uuid
+        alias:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 2147483647
+          description: Null for a Buy Now buyer, who never bid.
+        mode:
+          type:
+            - string
+            - "null"
+          enum:
+            - Manual
+            - Auto
+            - null
+        ownLevel:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 1000000
+          description: Own manual amount or own private Auto ceiling.
+        boughtNow:
+          type: boolean
+        leading:
+          type: boolean
+        state:
+          type: string
+          enum:
+            - Active
+            - BuyNowPending
+            - AwaitingWinnerPayment
+            - Sold
+            - Unsold
+            - OnHold
+            - Cancelled
+            - PaymentExpired
+        currentPrice:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 1000000
+        minimumBid:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 1000000
+        fulfillmentMethod:
+          type: string
+          enum:
+            - SelfCollect
+        won:
+          type: boolean
+        orderId:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: ViaPoint Order of the winner, readable at /me/point-orders/{orderId}.
+        finalPrice:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 1000000
+        paymentDeadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+        serverTime:
+          type: string
+          format: date-time
+    ResolvePointOrder:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - decision
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        decision:
+          type: string
+          enum:
+            - RefundBuyer
+            - ResumeCollection
+            - DismissClaim
+            - RequireReturn
+        fault:
+          type:
+            - string
+            - "null"
+          enum:
+            - BookMisdescribed
+            - BuyerDefault
+            - NoFault
+            - null
+          description: Required with RefundBuyer, absent or null otherwise. BookMisdescribed only for
+            ReportRejected; BuyerDefault only for RecipientDecisionOverdue and CollectionOverdue and
+            records a member violation.
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+    PointOrderResolutionItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - version
+        - title
+        - pointName
+        - openReason
+        - note
+        - openedAt
+        - buyerTotal
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        title:
+          type: string
+        pointName:
+          type: string
+        openReason:
+          type: string
+          enum:
+            - ReportRejected
+            - RecipientDecisionOverdue
+            - CollectionOverdue
+            - InspectionClaim
+            - ReturnOverdue
+        note:
+          type:
+            - string
+            - "null"
+        openedAt:
+          type: string
+          format: date-time
+        buyerTotal:
+          type: integer
+          minimum: 0
+          maximum: 10000000
+    PointOrderResolutionQueue:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/PointOrderResolutionItem"
+        serverTime:
+          type: string
+          format: date-time
+    ClaimPointOrder:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - description
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        description:
+          type: string
+          minLength: 30
+          maxLength: 5000
+    ReceivePointOrderReturn:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - check
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        check:
+          type: string
+          enum:
+            - MatchesReport
+            - DoesNotMatch
+          description: Staff compare the returned item with the point condition report. DoesNotMatch
+            needs a note of at least 10 characters and refuses the return.
+        note:
+          type:
+            - string
+            - "null"
+          maxLength: 1000

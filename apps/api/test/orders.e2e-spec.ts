@@ -537,7 +537,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       ),
       orderIds = (
         await c.workflow_contexts.find({ _id: { $in: ids } }).toArray()
-      ).map((x) => x.orderId),
+      ).flatMap((x) => x.orderId ?? []),
       commitments = (await c.exclusive_commitments.find({ listingId }).toArray())
         .map((x) => x._id),
       audits = (
@@ -1484,6 +1484,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
             _id: randomUUID(),
             kind: 'Order',
             orderId: bare._id,
+            auctionIntakeId: null,
             version: 1,
             ownershipPhase: 'Holding',
             lockSeq: 0,

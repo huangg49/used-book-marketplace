@@ -25,7 +25,7 @@ export const walletHistoryItem = z.object({
   journalId: z.uuid(),
   topupId: z.uuid().nullable(),
   orderId: z.uuid().nullable(),
-  type: z.enum(["Topup", "OrderPayment", "OrderRefund"]),
+  type: z.enum(["Topup", "OrderPayment", "OrderRefund", "OrderSettlement"]),
   amount: z.number().int().min(-100_000_000).max(100_000_000),
   balanceAfter: money,
   postedAt: z.iso.datetime({ offset: true }),

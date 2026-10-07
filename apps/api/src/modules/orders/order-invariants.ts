@@ -1,3 +1,4 @@
+import { orderContext } from '../reservations/workflow-context.js';
 import { canonicalJson } from '../../common/canonical-json.js';
 import type {
   DirectOrderDoc,
@@ -39,7 +40,7 @@ async function chain(tx: Tx, receiptId: string): Promise<Chain | null> {
 export async function checkOrder(tx: Tx, orderId: string) {
   const o = await tx.c.direct_orders.findOne({ _id: orderId });
   if (!o) return;
-  const c = await tx.c.workflow_contexts.findOne({ orderId });
+  const c = orderContext(await tx.c.workflow_contexts.findOne({ orderId }));
   const q = await tx.c.sale_quotes.findOne({ _id: o.quoteId });
   const items = c
     ? await tx.c.workflow_items.find({ contextId: c._id }).toArray()
@@ -488,7 +489,9 @@ export async function checkShipment(tx: Tx, shipmentId: string) {
   if (!s) fail('Shipment missing');
   const p = await tx.c.order_preparations.findOne({ _id: s!.orderId });
   const o = await tx.c.direct_orders.findOne({ _id: s!.orderId });
-  const c = await tx.c.workflow_contexts.findOne({ orderId: s!.orderId });
+  const c = orderContext(
+    await tx.c.workflow_contexts.findOne({ orderId: s!.orderId }),
+  );
   const a = c ? await tx.c.agreement_snapshots.findOne({ _id: c._id }) : null;
   if (
     !p ||
@@ -555,7 +558,9 @@ export async function checkPackaging(tx: Tx, evidenceId: string) {
   if (!e) fail('Packaging evidence missing');
   const o = await tx.c.direct_orders.findOne({ _id: e!.orderId });
   const p = await tx.c.order_preparations.findOne({ _id: e!.orderId });
-  const c = await tx.c.workflow_contexts.findOne({ orderId: e!.orderId });
+  const c = orderContext(
+    await tx.c.workflow_contexts.findOne({ orderId: e!.orderId }),
+  );
   const matches = (
     x: Chain | null,
     operation: string,

@@ -21,7 +21,12 @@ export type SystemActor =
   | 'OrderConfirmationExpiry'
   | 'OrderRefund'
   | 'OrderPickupExpiry'
-  | 'OrderDeliveryExpiry';
+  | 'OrderDeliveryExpiry'
+  | 'AuctionClose'
+  | 'AuctionPaymentExpiry'
+  | 'AuctionIntakeExpiry'
+  | 'PointOrderDeadline'
+  | 'PointOrderSettlement';
 
 type Lockable = { lockSeq: number };
 
@@ -404,6 +409,25 @@ export interface WorkflowContextDoc extends Lockable {
   _id: string;
   kind: 'Order';
   orderId: string;
+  auctionIntakeId: null;
+  version: number;
+  ownershipPhase: 'Holding' | 'Closed';
+}
+// Kind PointOrder: orderId references point_orders (migration 0009).
+export interface PointOrderContextDoc extends Lockable {
+  _id: string;
+  kind: 'PointOrder';
+  orderId: string;
+  auctionIntakeId: null;
+  version: number;
+  ownershipPhase: 'Holding' | 'Closed';
+}
+// Stored in workflow_contexts; Order code only reads contexts by orderId.
+export interface AuctionIntakeContextDoc extends Lockable {
+  _id: string;
+  kind: 'AuctionIntake';
+  orderId: null;
+  auctionIntakeId: string;
   version: number;
   ownershipPhase: 'Holding' | 'Closed';
 }
@@ -428,13 +452,13 @@ export interface ExclusiveCommitmentDoc extends Lockable {
   status: 'Active' | 'Released';
   acquiredAt: Date;
   endedAt: Date | null;
-  reason: string | null;
+  reason: 'Cancelled' | 'PaymentExpired' | 'Reclaimed' | 'Completed' | null;
 }
 export interface CommitmentEventDoc {
   _id: string;
   commitmentId: string;
   sequence: number;
-  kind: 'Acquired' | 'Released';
+  kind: 'Acquired' | 'Transferred' | 'Released';
   beforeVersion: number;
   afterVersion: number;
   receiptId: string;
@@ -446,7 +470,11 @@ export interface WalletAccountDoc {
   ownerId: string | null;
   orderId: string | null;
   purpose:
-    'UserAvailable' | 'OrderHold' | 'SimulatorCapital' | 'SimulatorClearing';
+    | 'UserAvailable'
+    | 'OrderHold'
+    | 'SimulatorCapital'
+    | 'SimulatorClearing'
+    | 'PlatformCommission';
   currency: 'VND';
 }
 export interface TopupIntentDoc extends Lockable {
@@ -476,7 +504,12 @@ export interface SimulatedPaymentEventDoc {
 export interface LedgerJournalDoc {
   _id: string;
   sequence: number;
-  type: 'OpeningCapital' | 'Topup' | 'OrderPayment' | 'OrderRefund';
+  type:
+    | 'OpeningCapital'
+    | 'Topup'
+    | 'OrderPayment'
+    | 'OrderRefund'
+    | 'OrderSettlement';
   topupId: string | null;
   eventId: string | null;
   orderId: string | null;
@@ -620,4 +653,280 @@ export interface OnlinePriceOfferDoc {
   observedAt: Date;
   retiredAt: Date | null;
   createdAt: Date;
+}
+
+// ------------------------------------------------ points and auctions (0008)
+export interface HandoverPointDoc extends Lockable {
+  _id: string;
+  code: string;
+  name: string;
+  displayAddress: string;
+  serviceAreaCode: 'HCM-DEMO-v1';
+  capacity: number;
+  status: 'Active' | 'Paused' | 'Closed';
+  demoOnly: boolean;
+}
+export interface PointStaffAssignmentDoc {
+  _id: string;
+  pointId: string;
+  userId: string;
+  validFrom: Date;
+  validTo: Date | null;
+  createdAt: Date;
+}
+export interface PointSlotDoc extends Lockable {
+  _id: string;
+  pointId: string;
+  listingId: string;
+  contextId: string;
+  active: boolean;
+  reservedAt: Date;
+  releasedAt: Date | null;
+  releaseReason: 'Cancelled' | 'Reclaimed' | 'Sold' | null;
+}
+export type AuctionIntakeState =
+  | 'AwaitingDropoff'
+  | 'Received'
+  | 'Passed'
+  | 'Auctioning'
+  | 'ReclaimRequired'
+  | 'Reclaimed'
+  | 'Cancelled'
+  | 'Sold';
+export type ReclaimReason =
+  | 'SellerCancelled'
+  | 'InspectionFailed'
+  | 'Unsold'
+  | 'PaymentExpired'
+  | 'AuctionCancelled'
+  | 'OrderCancelled'
+  | 'OrderReturned'
+  | 'BookMisdescribed';
+export interface AuctionIntakeDoc extends Lockable {
+  _id: string;
+  contextId: string;
+  listingId: string;
+  listingRevisionId: string;
+  sellerId: string;
+  pointId: string;
+  slotId: string;
+  startPrice: number;
+  step: number;
+  buyNowPrice: number | null;
+  protectiveValue: number;
+  policyCode: 'HCM-AUCTION-v1';
+  state: AuctionIntakeState;
+  version: number;
+  createdAt: Date;
+  dropoffDeadline: Date;
+  receivedAt: Date | null;
+  receivedBy: string | null;
+  shelfCode: string | null;
+  inspectedAt: Date | null;
+  inspectorId: string | null;
+  inspectionOutcome: 'Pass' | 'Fail' | null;
+  inspectionNote: string | null;
+  auctionId: string | null;
+  reclaimReason: ReclaimReason | null;
+  closedAt: Date | null;
+  updatedAt: Date;
+}
+export type AuctionState =
+  | 'Active'
+  | 'BuyNowPending'
+  | 'AwaitingWinnerPayment'
+  | 'Sold'
+  | 'Unsold'
+  | 'OnHold'
+  | 'Cancelled'
+  | 'PaymentExpired';
+export interface AuctionDoc extends Lockable {
+  _id: string;
+  intakeId: string;
+  contextId: string;
+  listingId: string;
+  sellerId: string;
+  pointId: string;
+  startPrice: number;
+  step: number;
+  buyNowPrice: number | null;
+  startAt: Date;
+  endAt: Date;
+  state: AuctionState;
+  currentPrice: number | null;
+  leaderId: string | null;
+  bidderCount: number;
+  bidCount: number;
+  nextSequence: number;
+  winnerId: string | null;
+  finalPrice: number | null;
+  closedAt: Date | null;
+  paymentDeadline: Date | null;
+  cancelReason: string | null;
+  orderId: string | null;
+  version: number;
+  updatedAt: Date;
+}
+// _id = `${auctionId}:${bidderId}`; level is the private commitment ceiling.
+export interface AuctionBidderDoc extends Lockable {
+  _id: string;
+  auctionId: string;
+  bidderId: string;
+  alias: number;
+  mode: 'Manual' | 'Auto';
+  level: number;
+  levelSequence: number;
+  fulfillmentMethod: 'SelfCollect';
+  firstBidAt: Date;
+  updatedAt: Date;
+  version: number;
+}
+export interface AuctionBidDoc {
+  _id: string;
+  auctionId: string;
+  bidderId: string;
+  kind: 'Manual' | 'AutoSet' | 'AutoDisable' | 'BuyNow';
+  amount: number | null;
+  levelSequence: number | null;
+  priceBefore: number | null;
+  priceAfter: number | null;
+  leaderAfter: string | null;
+  receiptId: string;
+  decidedAt: Date;
+}
+// ViaPoint Order formed by an auction win or Buy Now (migration 0009).
+export interface PointOrderDoc extends Lockable {
+  _id: string;
+  source: 'Auction';
+  auctionId: string;
+  intakeId: string;
+  contextId: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  pointId: string;
+  fulfillmentMethod: 'SelfCollect';
+  bookPrice: number;
+  outboundFee: number;
+  buyerTotal: number;
+  commissionBps: number;
+  commission: number;
+  sellerProceeds: number;
+  state: PointOrderState;
+  version: number;
+  createdAt: Date;
+  paymentDeadline: Date;
+  paidAt: Date | null;
+  closedAt: Date | null;
+  updatedAt: Date;
+  // Collection at the point (migration 0010).
+  acceptanceDeadline: Date | null;
+  acceptedAt: Date | null;
+  collectionDeadline: Date | null;
+  collectedAt: Date | null;
+  inspectionDeadline: Date | null;
+  resolutionReason:
+    | 'ReportRejected'
+    | 'RecipientDecisionOverdue'
+    | 'CollectionOverdue'
+    | 'InspectionClaim'
+    | 'ReturnOverdue'
+    | null;
+  resolutionNote: string | null;
+  resolutionOpenedAt: Date | null;
+  // Start of the current collection window (migration 0011).
+  collectionOpenedAt: Date | null;
+  // Return to the point after an accepted claim (migration 0012).
+  returnDeadline: Date | null;
+  returnedAt: Date | null;
+}
+export interface PointOrderResolutionDoc {
+  _id: string;
+  orderId: string;
+  decision:
+    'RefundBuyer' | 'ResumeCollection' | 'DismissClaim' | 'RequireReturn';
+  openReason: NonNullable<PointOrderDoc['resolutionReason']>;
+  reason: string;
+  adminId: string;
+  journalId: string | null;
+  // Stated with every refund decision (migration 0013).
+  fault: 'BookMisdescribed' | 'BuyerDefault' | 'NoFault' | null;
+  decidedAt: Date;
+  receiptId: string;
+}
+export type PointOrderState =
+  | 'AwaitingPayment'
+  | 'Fulfilling'
+  | 'ReadyForCollection'
+  | 'Inspection'
+  | 'ResolutionPending'
+  | 'ReturnPending'
+  | 'Completed'
+  | 'Cancelled'
+  | 'PaymentExpired';
+export interface PointOrderClaimDoc {
+  _id: string;
+  orderId: string;
+  claimantId: string;
+  description: string;
+  claimedAt: Date;
+  receiptId: string;
+}
+export interface PointReturnDoc {
+  _id: string;
+  orderId: string;
+  pointId: string;
+  staffId: string;
+  returnedBy: string;
+  note: string | null;
+  // Refused: the item did not match the report; nothing changed hands.
+  outcome: 'Accepted' | 'Refused';
+  journalId: string | null;
+  receivedAt: Date;
+  receiptId: string;
+}
+// FR-AU08 / POL-17 verified violation (migration 0013).
+export interface MemberViolationDoc {
+  _id: string;
+  userId: string;
+  kind: 'AuctionNonPayment' | 'PointOrderBuyerDefault';
+  sourceId: string;
+  recordedAt: Date;
+  receiptId: string;
+}
+export interface CollectionCodeDoc extends Lockable {
+  _id: string;
+  orderId: string;
+  recipientId: string;
+  listingId: string;
+  pointId: string;
+  salt: string;
+  codeHash: string;
+  issuedAt: Date;
+  expiresAt: Date;
+  live: boolean;
+  usedAt: Date | null;
+  revokedAt: Date | null;
+  receiptId: string;
+}
+export interface CollectionAttemptDoc {
+  _id: string;
+  orderId: string;
+  staffId: string;
+  codeId: string | null;
+  outcome: 'Accepted' | 'WrongCode' | 'Expired' | 'RateLimited';
+  receiptId: string;
+  at: Date;
+}
+export interface PointHandoverDoc {
+  _id: string;
+  orderId: string;
+  listingId: string;
+  pointId: string;
+  recipientId: string;
+  staffId: string;
+  codeId: string;
+  method: 'SelfCollect';
+  handedOverAt: Date;
+  receiptId: string;
 }

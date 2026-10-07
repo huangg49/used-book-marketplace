@@ -2,11 +2,13 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { OrderExpiryWorker } from './modules/orders/order-expiry.service.js';
+import { AuctionWorker } from './modules/auctions/auction-worker.service.js';
 
 const app = await NestFactory.createApplicationContext(AppModule, {
   logger: ['error', 'warn'],
 });
 const worker = app.get(OrderExpiryWorker);
+const auctions = app.get(AuctionWorker);
 let stopping = false;
 process.on('SIGINT', () => {
   stopping = true;
@@ -36,6 +38,24 @@ try {
         );
     } catch {
       console.error('Order expiry sweep failed; retrying next cycle.');
+      if (process.argv.includes('--once')) process.exitCode = 1;
+    }
+    // Auction close/payment/drop-off deadlines; a failure here never blocks
+    // the Order sweep above and is retried next cycle.
+    try {
+      const result = await auctions.tick();
+      if (process.argv.includes('--once') && result.failed)
+        process.exitCode = 1;
+      console.log(JSON.stringify({ event: 'auctionSweep', ...result }));
+      // `failures` names each failed record (step, id, error class/message).
+      if (result.failed || result.backedOff || result.oldestLagSeconds > 120)
+        console.error(
+          'Auction deadline backlog needs attention; failed records retry with backoff.',
+        );
+      if (result.onHold > 0)
+        console.warn('Auctions on hold need an independent Admin decision.');
+    } catch {
+      console.error('Auction sweep failed; retrying next cycle.');
       if (process.argv.includes('--once')) process.exitCode = 1;
     }
     if (process.argv.includes('--once')) break;
