@@ -2,13 +2,17 @@
 
 ## Nguồn và việc đang làm
 
-- **07/10 — sửa conflict Minh/Nhật ở [PR24](https://github.com/huangg49/used-book-marketplace/pull/24).**
-  Main local đã fast-forward tới `78c9a8d`, khớp `origin/main` khi fetch lại. Code Nhật
-  đã tích hợp qua PR22; PR24 của Minh (`feat/update-sell-book-page`, head cũ `005d92c`)
-  conflict ở BookCard, HomePage, BookSearchPage, SellBookPage. Nhánh sửa local
-  `codex/resolve-minh-nhat-web` merge main vào head PR24 tại `a168dbc`, đã push vào
-  `feat/update-sell-book-page`. GitHub xác nhận `mergeable=true`, PR vẫn mở; CI đang
-  chạy khi kiểm sau push. Chưa merge PR24 vào main.
+- **07/10 — [PR24](https://github.com/huangg49/used-book-marketplace/pull/24) ĐÃ MERGE main `cbeafa6`: gộp giao diện Minh với API Nhật, hết conflict.**
+  Code Nhật đã tích hợp qua PR22; PR24 của Minh (`feat/update-sell-book-page`, head
+  ban đầu `005d92c`) conflict ở BookCard, HomePage, BookSearchPage, SellBookPage.
+  Nhánh `codex/resolve-minh-nhat-web` gộp tại `a168dbc`, checkpoint `966ce35`.
+  Cả 6 job CI trên head `966ce35` PASS: api, docs, demo, admin-web, react-native,
+  operations. Chủ dự án xác nhận bản gộp đã được Minh/Nhật xem và đồng ý, cho phép
+  merge khi CI xanh (qua chat; không giả thành GitHub review). Đã squash merge PR24
+  và fast-forward main trên máy; tree tại `cbeafa6` giống hệt head đã kiểm.
+  Điểm lưu hậu merge trên nhánh `codex/pr24-merge-handoff`, subject
+  `docs(handoff): mark PR24 merged after green CI`; chỉ cập nhật tài liệu, không
+  chạy lại gate runtime đã đạt. Main local/remote cần khớp và sạch trước kết thúc.
   - Giữ lớp trình bày mới và 5 bước đăng sách; dùng listing/ảnh ký URL, bộ lọc,
     chi tiết, upload và gửi duyệt từ API thật. Bổ sung cursor pagination. Bỏ giá AI
     tính giả, số dư header giả và nút lưu thẻ chỉ đổi trạng thái local.
@@ -37,9 +41,10 @@
   - Local work trước pull bảo toàn trong stash `e9a4e80` trên `codex/openai-price-provider`
     (adapter OpenAI đang dở, chưa bật provider); không pop/drop. UX RN trước demo còn
     trên `codex/listing-ux` (`f9956b0`, `891e851`), chưa nhập vào main. `.env` giữ nguyên.
-    Stash kiến trúc cũ cũng giữ. Bước tiếp: chờ CI PR24 kết thúc, owner Minh/Nhật
-    xem phần đã gộp; chưa tự merge. Sau đó mới khôi phục gói local
-    được chủ dự án chọn, không trộn OpenAI/RN UX vào PR web.
+    Stash kiến trúc cũ cũng giữ. PR24 không còn việc tích hợp mở. Nhóm lấy main mới
+    bằng fast-forward rồi tiếp tục phần được giao; việc giữ ở stash/nhánh RN chỉ
+    khôi phục khi chủ dự án chọn gói tiếp theo, không tự trộn vào main. Native/release
+    và review độc lập toàn sản phẩm vẫn giữ trạng thái cũ trong READINESS.
 
 
 - **08/10 — gói backend đấu giá AU01–AU03 (một phần): nhánh local `feature/auction-backend`
