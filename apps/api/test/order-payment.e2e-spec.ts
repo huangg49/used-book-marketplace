@@ -565,7 +565,7 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
       ),
       orderIds = (
         await c.workflow_contexts.find({ _id: { $in: ids } }).toArray()
-      ).map((x) => x.orderId),
+      ).flatMap((x) => x.orderId ?? []),
       commitments = (
         await c.exclusive_commitments.find({ listingId }).toArray()
       ).map((x) => x._id),

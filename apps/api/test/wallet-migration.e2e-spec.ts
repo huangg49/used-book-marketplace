@@ -190,6 +190,8 @@ it('upgrades from the baseline without changing existing address/listing/receipt
         .sort({ purpose: 1 })
         .toArray(),
     ).toEqual([
+      // Migration 0012 adds the single platform commission account.
+      { purpose: 'PlatformCommission' },
       { purpose: 'SimulatorCapital' },
       { purpose: 'SimulatorClearing' },
     ]);

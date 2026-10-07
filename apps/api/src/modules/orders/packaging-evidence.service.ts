@@ -1,3 +1,4 @@
+import { orderContext } from '../reservations/workflow-context.js';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
@@ -63,7 +64,9 @@ export class PackagingEvidenceService {
   private async load(tx: Tx, orderId: string) {
     const o = await tx.c.direct_orders.findOne({ _id: orderId });
     if (!o) return null;
-    const context = await tx.c.workflow_contexts.findOne({ orderId });
+    const context = orderContext(
+      await tx.c.workflow_contexts.findOne({ orderId }),
+    );
     const preparation = await tx.c.order_preparations.findOne({ _id: orderId });
     return { ...o, context, preparation };
   }

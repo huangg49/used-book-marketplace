@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { hash } from 'argon2';
 import { MongoClient } from 'mongodb';
 import { bindCollections } from './database/mongo/collections.js';
+import { HANDOVER_POINT_A } from './database/mongo/migrations/auction-constants.js';
 
 // Demo accounts for development/test. Existing accounts, passwords and roles
 // are never silently reset (same rule as the former Prisma seed).
@@ -45,6 +46,29 @@ try {
       { upsert: true },
     );
     console.log(`Ready: ${emailNormalized}`);
+  }
+  // The demo Staff account works at simulated point A (auction intake,
+  // inspection and reclaim). Insert-if-absent; never extends or revokes.
+  const staff = await c.users.findOne({
+    emailNormalized: 'staff@latlai.local',
+  });
+  if (staff) {
+    const now = new Date();
+    await c.point_staff_assignments.updateOne(
+      { userId: staff._id, pointId: HANDOVER_POINT_A },
+      {
+        $setOnInsert: {
+          _id: randomUUID(),
+          userId: staff._id,
+          pointId: HANDOVER_POINT_A,
+          validFrom: now,
+          validTo: null,
+          createdAt: now,
+        },
+      },
+      { upsert: true },
+    );
+    console.log('Ready: staff@latlai.local assigned to HCM-DEMO-01');
   }
 } finally {
   await client.close();

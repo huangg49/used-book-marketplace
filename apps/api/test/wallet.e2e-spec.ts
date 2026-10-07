@@ -648,8 +648,12 @@ describe('Simulated wallet: real MongoDB and HTTP', () => {
       mongo = app.get(MongoService);
     const good = await mongo.tx((tx) => ledger.reconcile(tx));
     expect(good.balanced).toBe(true);
+    // Settled platform commission (auction Orders) stays in the capital.
     expect(
-      good.sourceRemaining + good.memberAvailable + good.transactionHeld,
+      good.sourceRemaining +
+        good.memberAvailable +
+        good.transactionHeld +
+        good.platformCommission,
     ).toBe(100000000);
     // Only a privileged writer (the migrator here, a DB owner before) can
     // alter a posted entry; done inside a transaction that is rolled back.
