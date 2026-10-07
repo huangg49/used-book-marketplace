@@ -6,8 +6,9 @@
   Main local đã fast-forward tới `78c9a8d`, khớp `origin/main` khi fetch lại. Code Nhật
   đã tích hợp qua PR22; PR24 của Minh (`feat/update-sell-book-page`, head cũ `005d92c`)
   conflict ở BookCard, HomePage, BookSearchPage, SellBookPage. Nhánh sửa local
-  `codex/resolve-minh-nhat-web` merge main vào head PR24, commit chứa điểm lưu có subject
-  `fix(user-web): reconcile Minh layout with Nhat API`. Chưa merge PR24 vào main.
+  `codex/resolve-minh-nhat-web` merge main vào head PR24 tại `a168dbc`, đã push vào
+  `feat/update-sell-book-page`. GitHub xác nhận `mergeable=true`, PR vẫn mở; CI đang
+  chạy khi kiểm sau push. Chưa merge PR24 vào main.
   - Giữ lớp trình bày mới và 5 bước đăng sách; dùng listing/ảnh ký URL, bộ lọc,
     chi tiết, upload và gửi duyệt từ API thật. Bổ sung cursor pagination. Bỏ giá AI
     tính giả, số dư header giả và nút lưu thẻ chỉ đổi trạng thái local.
@@ -36,8 +37,8 @@
   - Local work trước pull bảo toàn trong stash `e9a4e80` trên `codex/openai-price-provider`
     (adapter OpenAI đang dở, chưa bật provider); không pop/drop. UX RN trước demo còn
     trên `codex/listing-ux` (`f9956b0`, `891e851`), chưa nhập vào main. `.env` giữ nguyên.
-    Stash kiến trúc cũ cũng giữ. Bước tiếp: xác nhận PR24 hết conflict/CI sau push,
-    owner Minh/Nhật xem phần đã gộp; chưa tự merge. Sau đó mới khôi phục gói local
+    Stash kiến trúc cũ cũng giữ. Bước tiếp: chờ CI PR24 kết thúc, owner Minh/Nhật
+    xem phần đã gộp; chưa tự merge. Sau đó mới khôi phục gói local
     được chủ dự án chọn, không trộn OpenAI/RN UX vào PR web.
 
 
