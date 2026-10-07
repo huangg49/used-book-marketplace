@@ -114,6 +114,7 @@ export class PointOrdersService {
       resolutionReason: null,
       resolutionNote: null,
       resolutionOpenedAt: null,
+      collectionOpenedAt: null,
       lockSeq: 0,
     };
     const context: PointOrderContextDoc = {
@@ -340,6 +341,7 @@ export class PointOrdersService {
         collectionDeadline: o.collectionDeadline?.toISOString() ?? null,
         collectedAt: o.collectedAt?.toISOString() ?? null,
         inspectionDeadline: o.inspectionDeadline?.toISOString() ?? null,
+        refunded: o.state === 'Cancelled',
         resolution: o.resolutionReason
           ? {
               reason: o.resolutionReason,

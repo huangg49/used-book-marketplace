@@ -130,6 +130,7 @@ export class PointCollectionService {
             {
               state: 'ReadyForCollection',
               acceptedAt: now,
+              collectionOpenedAt: now,
               collectionDeadline: pointDeadline(now, COLLECTION_WINDOW_MS),
             },
             now,

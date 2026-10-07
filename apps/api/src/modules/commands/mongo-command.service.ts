@@ -167,7 +167,8 @@ export type AuctionOperation =
   | 'acceptPointOrderReport'
   | 'rejectPointOrderReport'
   | 'requestCollectionCode'
-  | 'handOverPointOrder';
+  | 'handOverPointOrder'
+  | 'resolvePointOrder';
 type CommandChange =
   | AuctionChange
   | Change

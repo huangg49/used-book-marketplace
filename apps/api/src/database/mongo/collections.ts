@@ -85,6 +85,7 @@ export interface CollectionTypes {
   collection_codes: D.CollectionCodeDoc;
   collection_attempts: D.CollectionAttemptDoc;
   point_handovers: D.PointHandoverDoc;
+  point_order_resolutions: D.PointOrderResolutionDoc;
   price_references: D.PriceReferenceDoc;
   price_suggestions: D.PriceSuggestionDoc;
   price_assist_usage: D.PriceAssistUsageDoc;
@@ -234,6 +235,7 @@ const NAMES: CollectionName[] = [
   'collection_codes',
   'collection_attempts',
   'point_handovers',
+  'point_order_resolutions',
 ];
 export const COLLECTION_NAMES: readonly CollectionName[] = NAMES;
 

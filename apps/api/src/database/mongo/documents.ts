@@ -687,7 +687,8 @@ export type ReclaimReason =
   | 'InspectionFailed'
   | 'Unsold'
   | 'PaymentExpired'
-  | 'AuctionCancelled';
+  | 'AuctionCancelled'
+  | 'OrderCancelled';
 export interface AuctionIntakeDoc extends Lockable {
   _id: string;
   contextId: string;
@@ -815,6 +816,19 @@ export interface PointOrderDoc extends Lockable {
     'ReportRejected' | 'RecipientDecisionOverdue' | 'CollectionOverdue' | null;
   resolutionNote: string | null;
   resolutionOpenedAt: Date | null;
+  // Start of the current collection window (migration 0011).
+  collectionOpenedAt: Date | null;
+}
+export interface PointOrderResolutionDoc {
+  _id: string;
+  orderId: string;
+  decision: 'RefundBuyer' | 'ResumeCollection';
+  openReason: NonNullable<PointOrderDoc['resolutionReason']>;
+  reason: string;
+  adminId: string;
+  journalId: string | null;
+  decidedAt: Date;
+  receiptId: string;
 }
 export type PointOrderState =
   | 'AwaitingPayment'
@@ -822,6 +836,7 @@ export type PointOrderState =
   | 'ReadyForCollection'
   | 'Inspection'
   | 'ResolutionPending'
+  | 'Cancelled'
   | 'PaymentExpired';
 export interface CollectionCodeDoc extends Lockable {
   _id: string;

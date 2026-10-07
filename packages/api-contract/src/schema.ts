@@ -1766,6 +1766,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/point-order-resolutions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN. ViaPoint Orders in ResolutionPending, oldest first, excluding Orders the Admin takes part in or handles at the point. */
+        get: operations["listPointOrderResolutions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/point-orders/{orderId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN independent of buyer, seller and the Staff who received, inspected or work at the point. Only for ResolutionPending, where the book is still at the point. RefundBuyer posts one OrderRefund journal of the full hold back to the buyer, cancels the Order and returns the commitment to the intake for reclaim. ResumeCollection opens a new 72-hour collection window within point hours. A reason is required and recorded; no partial refund or penalty. */
+        post: operations["resolvePointOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auctions/{auctionId}/buy-now": {
         parameters: {
             query?: never;
@@ -3133,7 +3167,7 @@ export interface components {
             version: number;
             title: string;
             /** @enum {string} */
-            state: "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "PaymentExpired";
+            state: "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "Cancelled" | "PaymentExpired";
             recipientName: string;
             shelfCode: string | null;
             /** Format: date-time */
@@ -3164,7 +3198,7 @@ export interface components {
             /** @enum {string} */
             fulfillmentMethod: "SelfCollect";
             /** @enum {string} */
-            state: "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "PaymentExpired";
+            state: "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "Cancelled" | "PaymentExpired";
             version: number;
             /** @constant */
             currency: "VND";
@@ -3203,6 +3237,8 @@ export interface components {
             collectionDeadline: string | null;
             /** Format: date-time */
             collectedAt: string | null;
+            /** @description True once an Admin refund returned the Order hold to the buyer. */
+            refunded: boolean;
             /** Format: date-time */
             inspectionDeadline: string | null;
             resolution: {
@@ -3348,7 +3384,7 @@ export interface components {
             /** Format: uuid */
             auctionId: string | null;
             /** @enum {string|null} */
-            reclaimReason: "SellerCancelled" | "InspectionFailed" | "Unsold" | "PaymentExpired" | "AuctionCancelled" | null;
+            reclaimReason: "SellerCancelled" | "InspectionFailed" | "Unsold" | "PaymentExpired" | "AuctionCancelled" | "OrderCancelled" | null;
             /** Format: date-time */
             closedAt: string | null;
         };
@@ -3424,6 +3460,30 @@ export interface components {
             finalPrice: number | null;
             /** Format: date-time */
             paymentDeadline: string | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        ResolvePointOrder: {
+            expectedVersion: number;
+            /** @enum {string} */
+            decision: "RefundBuyer" | "ResumeCollection";
+            reason: string;
+        };
+        PointOrderResolutionItem: {
+            /** Format: uuid */
+            id: string;
+            version: number;
+            title: string;
+            pointName: string;
+            /** @enum {string} */
+            openReason: "ReportRejected" | "RecipientDecisionOverdue" | "CollectionOverdue";
+            note: string | null;
+            /** Format: date-time */
+            openedAt: string;
+            buyerTotal: number;
+        };
+        PointOrderResolutionQueue: {
+            items: components["schemas"]["PointOrderResolutionItem"][];
             /** Format: date-time */
             serverTime: string;
         };
@@ -7054,6 +7114,76 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["HandOverPointOrder"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listPointOrderResolutions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointOrderResolutionQueue"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    resolvePointOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolvePointOrder"];
             };
         };
         responses: {

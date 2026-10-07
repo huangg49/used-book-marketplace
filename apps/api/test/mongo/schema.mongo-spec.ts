@@ -20,6 +20,7 @@ import { onlinePriceSpecs } from '../../src/database/mongo/migrations/0007-onlin
 import { auctionCollectionSpecs } from '../../src/database/mongo/migrations/0008-auctions.js';
 import { pointOrderCollectionSpecs } from '../../src/database/mongo/migrations/0009-point-orders.js';
 import { pointCollectionSpecs } from '../../src/database/mongo/migrations/0010-point-collection.js';
+import { resolutionCollectionSpecs } from '../../src/database/mongo/migrations/0011-point-order-resolution.js';
 import {
   currentCollections,
   migrations,
@@ -73,7 +74,8 @@ describe('migrations', () => {
         // Auction/point collections (ADR 0030), also MongoDB-native.
         auctionCollectionSpecs.length -
         pointOrderCollectionSpecs.length -
-        pointCollectionSpecs.length +
+        pointCollectionSpecs.length -
+        resolutionCollectionSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });

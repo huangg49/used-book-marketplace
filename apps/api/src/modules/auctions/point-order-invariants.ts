@@ -15,13 +15,14 @@ const AUCTION_STATE: Record<PointOrderState, readonly string[]> = {
   ReadyForCollection: ['Sold'],
   Inspection: ['Sold'],
   ResolutionPending: ['Sold'],
+  Cancelled: ['Sold'],
   PaymentExpired: ['PaymentExpired'],
 };
 
 export async function checkPointOrder(tx: Tx, orderId: string) {
   const o = await tx.c.point_orders.findOne({ _id: orderId });
   if (!o) return;
-  const open = o.state !== 'PaymentExpired';
+  const open = o.state !== 'PaymentExpired' && o.state !== 'Cancelled';
   const c = pointOrderContext(
     await tx.c.workflow_contexts.findOne({ _id: o.contextId }),
   );
@@ -70,7 +71,22 @@ export async function checkPointOrder(tx: Tx, orderId: string) {
     orderId: o._id,
     type: 'OrderPayment',
   });
-  if (held !== (o.paidAt ? o.buyerTotal : 0) || payments !== (o.paidAt ? 1 : 0))
+  // Only an Admin RefundBuyer decision returns the hold, and only once.
+  const refunds = await tx.c.ledger_journals.countDocuments({
+    orderId: o._id,
+    type: 'OrderRefund',
+  });
+  const refundDecisions = await tx.c.point_order_resolutions.countDocuments({
+    orderId: o._id,
+    decision: 'RefundBuyer',
+  });
+  const cancelled = o.state === 'Cancelled';
+  if (
+    held !== (o.paidAt && !cancelled ? o.buyerTotal : 0) ||
+    payments !== (o.paidAt ? 1 : 0) ||
+    refunds !== (cancelled ? 1 : 0) ||
+    refundDecisions !== (cancelled ? 1 : 0)
+  )
     fail('order funding mismatch');
   // Custody leaves the point exactly once, with the handover that set
   // collectedAt; at most one live collection code exists per Order.

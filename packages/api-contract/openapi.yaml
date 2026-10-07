@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.26.0
+  version: 0.27.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -30,8 +30,9 @@ info:
     first bid and server-time close. A win or Buy Now forms a ViaPoint Order that the buyer pays
     from the simulated wallet into an Order hold; unpaid Orders expire to reclaim. The buyer then
     accepts or rejects the point condition report, requests a one-time collection code and
-    assigned Staff record the handover, which starts the 72-hour inspection window. Settlement,
-    refunds and dispute resolution remain planned."
+    assigned Staff record the handover, which starts the 72-hour inspection window. Rejected or
+    overdue Orders wait for an independent Admin to refund the hold or reopen collection.
+    Settlement to the seller and post-handover disputes remain planned."
 servers:
   - url: http://localhost:3000/api/v1
 tags:
@@ -5946,6 +5947,117 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /operations/point-order-resolutions:
+    get:
+      operationId: listPointOrderResolutions
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN. ViaPoint Orders in ResolutionPending, oldest first, excluding Orders the
+        Admin takes part in or handles at the point.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointOrderResolutionQueue"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/point-orders/{orderId}/resolve:
+    post:
+      operationId: resolvePointOrder
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN independent of buyer, seller and the Staff who received, inspected or work
+        at the point. Only for ResolutionPending, where the book is still at the point. RefundBuyer
+        posts one OrderRefund journal of the full hold back to the buyer, cancels the Order and
+        returns the commitment to the intake for reclaim. ResumeCollection opens a new 72-hour
+        collection window within point hours. A reason is required and recorded; no partial refund or
+        penalty.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolvePointOrder"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /auctions/{auctionId}/buy-now:
     post:
       operationId: buyAuctionNow
@@ -10127,6 +10239,7 @@ components:
             - ReadyForCollection
             - Inspection
             - ResolutionPending
+            - Cancelled
             - PaymentExpired
         recipientName:
           type: string
@@ -10183,6 +10296,7 @@ components:
         - collectionDeadline
         - collectedAt
         - inspectionDeadline
+        - refunded
         - resolution
         - serverTime
       properties:
@@ -10225,6 +10339,7 @@ components:
             - ReadyForCollection
             - Inspection
             - ResolutionPending
+            - Cancelled
             - PaymentExpired
         version:
           type: integer
@@ -10329,6 +10444,9 @@ components:
             - string
             - "null"
           format: date-time
+        refunded:
+          type: boolean
+          description: True once an Admin refund returned the Order hold to the buyer.
         inspectionDeadline:
           type:
             - string
@@ -10791,6 +10909,7 @@ components:
             - Unsold
             - PaymentExpired
             - AuctionCancelled
+            - OrderCancelled
             - null
         closedAt:
           type:
@@ -11044,6 +11163,83 @@ components:
             - string
             - "null"
           format: date-time
+        serverTime:
+          type: string
+          format: date-time
+    ResolvePointOrder:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - decision
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        decision:
+          type: string
+          enum:
+            - RefundBuyer
+            - ResumeCollection
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+    PointOrderResolutionItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - version
+        - title
+        - pointName
+        - openReason
+        - note
+        - openedAt
+        - buyerTotal
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        title:
+          type: string
+        pointName:
+          type: string
+        openReason:
+          type: string
+          enum:
+            - ReportRejected
+            - RecipientDecisionOverdue
+            - CollectionOverdue
+        note:
+          type:
+            - string
+            - "null"
+        openedAt:
+          type: string
+          format: date-time
+        buyerTotal:
+          type: integer
+          minimum: 0
+          maximum: 10000000
+    PointOrderResolutionQueue:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/PointOrderResolutionItem"
         serverTime:
           type: string
           format: date-time

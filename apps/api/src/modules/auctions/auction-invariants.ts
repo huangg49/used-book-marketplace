@@ -49,8 +49,9 @@ export async function checkIntake(tx: Tx, intakeId: string) {
   const order = auction?.orderId
     ? await tx.c.point_orders.findOne({ _id: auction.orderId })
     : null;
-  const owner =
-    order && order.state !== 'PaymentExpired' ? order.contextId : i.contextId;
+  const orderClosed =
+    order?.state === 'PaymentExpired' || order?.state === 'Cancelled';
+  const owner = order && !orderClosed ? order.contextId : i.contextId;
   const commitments = await tx.c.exclusive_commitments
     .find({
       currentContextId: {
@@ -78,7 +79,7 @@ export async function checkIntake(tx: Tx, intakeId: string) {
     fail('intake auction mismatch');
   if (
     order &&
-    (order.state === 'PaymentExpired'
+    (orderClosed
       ? i.state !== 'ReclaimRequired' && i.state !== 'Reclaimed'
       : i.state !== 'Auctioning')
   )

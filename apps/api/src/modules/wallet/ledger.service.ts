@@ -102,7 +102,7 @@ export async function checkJournal(tx: Tx, journalId: string) {
     if (
       !buyerId ||
       total === undefined ||
-      (p && !payment) ||
+      (p && !payment && !(await refundDecided(tx, p._id, j._id))) ||
       !entries.some(
         (x) =>
           account(x.accountId)?.ownerId === buyerId &&
@@ -126,6 +126,18 @@ export async function checkJournal(tx: Tx, journalId: string) {
       (await balanceOf(tx, e.accountId)) < 0
     )
       throw new Error('Wallet balance cannot be negative');
+}
+
+// A ViaPoint Order refund must be the journal named by an Admin RefundBuyer
+// decision on a cancelled Order (migration 0011).
+async function refundDecided(tx: Tx, orderId: string, journalId: string) {
+  const order = await tx.c.point_orders.findOne({ _id: orderId });
+  const decision = await tx.c.point_order_resolutions.findOne({
+    orderId,
+    decision: 'RefundBuyer',
+    journalId,
+  });
+  return order?.state === 'Cancelled' && !!decision;
 }
 
 @Injectable()

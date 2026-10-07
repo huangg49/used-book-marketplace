@@ -3,9 +3,10 @@
 Date: 2026-10-08. Status: implemented for intake → bidding → close → winner ViaPoint
 Order and wallet payment → report decision → collection code and Staff handover →
 inspection window start, plus expiry/reclaim, on branch `feature/auction-backend`
-(OpenAPI 0.26.0, migrations `0008-auctions`, `0009-point-orders`,
-`0010-point-collection`). Settlement, refunds and dispute resolution are not
-implemented. Needs human review before merge.
+(OpenAPI 0.27.0, migrations `0008-auctions` … `0011-point-order-resolution`), plus
+Admin resolution (refund or resumed collection) of Orders still at the point.
+Settlement to the seller and post-handover disputes are not implemented. Needs
+human review before merge.
 
 ## Context
 
@@ -100,14 +101,26 @@ should confirm the amount before sending. Hidden reserve prices stay out of scop
   Missing collection by the deadline → `ResolutionPending` and revokes the code.
   The slot, commitment, `Reserved` listing and Order hold all stay until
   settlement. Buyer decision/code commands are existing obligations (LOCKED allowed).
+- **Resolution (migration 0011).** An ACTIVE ADMIN independent of buyer, seller and
+  the point's Staff (receiver, inspector or current assignment) decides a
+  `ResolutionPending` Order, where the book has not left the point. `RefundBuyer`
+  posts one `OrderRefund` journal of the full hold to the buyer, cancels the
+  Order, transfers the commitment back to the intake and requires reclaim
+  (`OrderCancelled`); `ResumeCollection` opens a new 72 h window from
+  `collectionOpenedAt`. Each decision is an append-only `point_order_resolutions`
+  row with the reason; the ledger accepts a ViaPoint refund only when it is the
+  journal named by that decision. No partial refund, penalty or strike.
+- **Gate.** Settlement after the inspection window (P − C to the seller, listing
+  `Sold`, slot/commitment release) is deliberately not opened: READINESS keeps
+  settlement BLOCKED until the hand-over gates close and the owner approves.
 - **Constants.** Auction policy constants live in `migrations/auction-constants.ts`
   so application code does not load the migration chain (import cycle).
 
 ## Consequences and limits
 
-- Orders stop at `Inspection` or `ResolutionPending`: inspection-window close,
-  settlement to the seller (P − C), refunds/disputes, resolution decisions and the
-  14-day Admin escalation are not implemented, so held money stays held.
+- Collected Orders stop at `Inspection`: inspection-window close, settlement to the
+  seller (P − C), post-handover claims/returns and the 14-day Admin escalation are
+  not implemented, so money for collected books stays held.
 - Collection codes are salted hashes of a 6-digit secret; anyone with database
   read access could brute-force a live code within its 10 minutes. A keyed HMAC
   with a server secret would close that; acceptable only for the simulated demo.

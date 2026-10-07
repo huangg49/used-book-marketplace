@@ -13,6 +13,7 @@ import { AuctionsController } from './auctions.controller.js';
 import { HandoverPointsService } from './handover-points.service.js';
 import { PointOrdersService } from './point-orders.service.js';
 import { PointCollectionService } from './point-collection.service.js';
+import { PointOrderResolutionService } from './point-order-resolution.service.js';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { PointCollectionService } from './point-collection.service.js';
     HandoverPointsService,
     PointOrdersService,
     PointCollectionService,
+    PointOrderResolutionService,
     AuctionClock,
     AuctionWorker,
   ],

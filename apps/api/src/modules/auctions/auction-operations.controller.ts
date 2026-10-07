@@ -16,6 +16,7 @@ import { ContractInput } from '../commands/contract-input.service.js';
 import { AuctionBiddingService } from './auction-bidding.service.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
 import { PointCollectionService } from './point-collection.service.js';
+import { PointOrderResolutionService } from './point-order-resolution.service.js';
 
 // Point Staff steps need STAFF plus a current point assignment, checked in the
 // service; auction cancellation is ADMIN only.
@@ -25,8 +26,33 @@ export class AuctionOperationsController {
     private readonly intakes: AuctionIntakesService,
     private readonly bidding: AuctionBiddingService,
     private readonly collection: PointCollectionService,
+    private readonly resolutions: PointOrderResolutionService,
     private readonly input: ContractInput,
   ) {}
+
+  @Get('point-order-resolutions')
+  @Roles('ADMIN')
+  resolutionQueue(@Req() req: AuthenticatedRequest) {
+    return this.resolutions.queue(req.auth);
+  }
+  @Post('point-orders/:orderId/resolve')
+  @Roles('ADMIN')
+  @HttpCode(200)
+  resolve(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.resolutions.resolve(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('ResolvePointOrder', body),
+      ),
+      res,
+    );
+  }
 
   @Get('point-orders')
   @Roles('STAFF')
