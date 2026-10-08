@@ -23,6 +23,7 @@ import { pointCollectionSpecs } from '../../src/database/mongo/migrations/0010-p
 import { resolutionCollectionSpecs } from '../../src/database/mongo/migrations/0011-point-order-resolution.js';
 import { settlementCollectionSpecs } from '../../src/database/mongo/migrations/0012-point-order-settlement.js';
 import { rulesCollectionSpecs } from '../../src/database/mongo/migrations/0013-auction-business-rules.js';
+import { purchaseConversationSpecs } from '../../src/database/mongo/migrations/0014-purchase-conversations.js';
 import {
   currentCollections,
   migrations,
@@ -80,6 +81,9 @@ describe('migrations', () => {
         resolutionCollectionSpecs.length -
         settlementCollectionSpecs.length -
         rulesCollectionSpecs.length +
+        // Purchase conversations are Mongo-native; they do not correspond to a
+        // PostgreSQL model in the baseline count.
+        - purchaseConversationSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });

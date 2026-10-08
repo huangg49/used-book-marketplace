@@ -324,6 +324,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/listings/{listingId}/purchase-conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start the 24-hour buyer-seller conversation for one sale listing */
+        post: operations["createPurchaseConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/purchase-conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMyPurchaseConversations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/purchase-conversations/{conversationId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPurchaseMessages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/listings": {
         parameters: {
             query?: never;
@@ -2124,7 +2173,7 @@ export interface components {
             width: number;
             height: number;
         };
-        /** @description Only current Approved + Visible + Available + nondeleted listings whose verified ACTIVE owner has MEMBER role, Confirmed catalog and Ready media. Never serialize a private listing then filter on the client. No rating/trust claims or checkout capability in this increment. */
+        /** @description Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE owner has MEMBER role, Confirmed catalog and Ready media. A Reserved listing remains readable only while it has an active 24-hour purchase conversation, but it cannot start another conversation. Never serialize a private listing then filter on the client. */
         PublicListing: {
             /** Format: uuid */
             id: string;
@@ -2156,6 +2205,11 @@ export interface components {
             publishedAt: string;
             /** @description Null when not configured or the origin was changed/deleted. The listing remains readable. */
             fulfillment: components["schemas"]["PublicFulfillment"] | null;
+            purchaseAvailability: {
+                /** @enum {string} */
+                status: "Available" | "InNegotiation";
+                expiresAt: string | null;
+            };
         } & ({
             /** @constant */
             mode?: "Sale";
@@ -2172,6 +2226,58 @@ export interface components {
             salePrice?: number;
             exchangeValue?: number;
         });
+        CreatePurchaseConversation: {
+            expectedVersion: number;
+        };
+        PurchaseConversationReceipt: {
+            /** Format: uuid */
+            id: string;
+            /** @constant */
+            entityType: "PurchaseConversation";
+            /** Format: uuid */
+            entityId: string;
+            /** Format: uuid */
+            listingId: string;
+            version: number;
+            /** @enum {string} */
+            status: "Active" | "Expired" | "Cancelled";
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        PurchaseParticipant: {
+            /** Format: uuid */
+            id: string;
+            displayName: string;
+        };
+        PurchaseConversation: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            listingId: string;
+            buyer: components["schemas"]["PurchaseParticipant"];
+            seller: components["schemas"]["PurchaseParticipant"];
+            version: number;
+            /** @enum {string} */
+            status: "Active" | "Expired" | "Cancelled";
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            createdAt: string;
+            closedAt: string | null;
+        };
+        PurchaseMessage: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            /** Format: uuid */
+            senderId: string;
+            body: string;
+            /** Format: date-time */
+            sentAt: string;
+        };
         ListingMedia: {
             /** Format: uuid */
             id: string;
@@ -4153,6 +4259,92 @@ export interface operations {
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
+        };
+    };
+    createPurchaseConversation: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                listingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePurchaseConversation"];
+            };
+        };
+        responses: {
+            /** @description Conversation created or idempotently replayed. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseConversationReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listMyPurchaseConversations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current user's buyer/seller conversations. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseConversation"][];
+                };
+            };
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+        };
+    };
+    listPurchaseMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Messages in a conversation the current user participates in. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseMessage"][];
+                };
+            };
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
         };
     };
     listMyListings: {

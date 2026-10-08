@@ -26,7 +26,8 @@ export type SystemActor =
   | 'AuctionPaymentExpiry'
   | 'AuctionIntakeExpiry'
   | 'PointOrderDeadline'
-  | 'PointOrderSettlement';
+  | 'PointOrderSettlement'
+  | 'PurchaseConversationExpiry';
 
 type Lockable = { lockSeq: number };
 
@@ -106,6 +107,28 @@ export interface ListingDoc extends Lockable {
   publishedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+// A short, no-money negotiation opened from the public shelf. It is deliberately
+// not an Order: it creates no quote, wallet hold, shipment, or custody claim.
+export interface PurchaseConversationDoc extends Lockable {
+  _id: string;
+  listingId: string;
+  listingVersion: number;
+  buyerId: string;
+  sellerId: string;
+  version: number;
+  status: 'Active' | 'Expired' | 'Cancelled';
+  expiresAt: Date;
+  closedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+export interface PurchaseMessageDoc {
+  _id: string;
+  conversationId: string;
+  senderId: string;
+  body: string;
+  sentAt: Date;
 }
 export interface ListingRevisionDoc extends Lockable {
   _id: string;

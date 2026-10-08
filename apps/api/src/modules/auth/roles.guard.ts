@@ -17,6 +17,7 @@ export const Roles = (...roles: Role[]) => SetMetadata('auth:roles', roles);
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
   canActivate(context: ExecutionContext) {
+    if (context.getType() === 'ws') return true;
     const roles = this.reflector.getAllAndOverride<Role[]>('auth:roles', [
       context.getHandler(),
       context.getClass(),

@@ -48,6 +48,10 @@ const base = z.object({
     .min(1)
     .max(8),
   publishedAt: time,
+  purchaseAvailability: z.object({
+    status: z.enum(["Available", "InNegotiation"]),
+    expiresAt: time.nullable(),
+  }),
 });
 const price = z.number().int().min(10000).max(1000000);
 export const publicListing = z.discriminatedUnion("mode", [
