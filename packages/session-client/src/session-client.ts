@@ -298,4 +298,10 @@ export class SessionClient {
       this.signingOut = false;
     }
   }
+
+  // WebSocket clients need the short-lived access token for their initial
+  // handshake. It remains memory-only, just like HTTP authorization.
+  getAccessToken(): string | null {
+    return this.accessToken;
+  }
 }
