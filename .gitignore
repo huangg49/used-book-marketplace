@@ -10,6 +10,7 @@ node_modules/
 dist/
 coverage/
 apps/admin-web/test-results/
+apps/user-web/test-results/
 apps/mobile-react-native/test-results/
 *.tsbuildinfo
 # Legacy Prisma output may remain on existing checkouts; MongoDB does not use it.

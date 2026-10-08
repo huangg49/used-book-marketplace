@@ -1,6 +1,63 @@
-# Điểm lưu hiện tại — 02/10/2026
+# Điểm lưu hiện tại — 07/10/2026
 
 ## Nguồn và việc đang làm
+
+- **07/10 — sửa conflict Minh/Nhật ở [PR24](https://github.com/huangg49/used-book-marketplace/pull/24).**
+  Main local đã fast-forward tới `78c9a8d`, khớp `origin/main` khi fetch lại. Code Nhật
+  đã tích hợp qua PR22; PR24 của Minh (`feat/update-sell-book-page`, head cũ `005d92c`)
+  conflict ở BookCard, HomePage, BookSearchPage, SellBookPage. Nhánh sửa local
+  `codex/resolve-minh-nhat-web` merge main vào head PR24 tại `a168dbc`, đã push vào
+  `feat/update-sell-book-page`. GitHub xác nhận `mergeable=true`, PR vẫn mở; CI đang
+  chạy khi kiểm sau push. Chưa merge PR24 vào main.
+  - Giữ lớp trình bày mới và 5 bước đăng sách; dùng listing/ảnh ký URL, bộ lọc,
+    chi tiết, upload và gửi duyệt từ API thật. Bổ sung cursor pagination. Bỏ giá AI
+    tính giả, số dư header giả và nút lưu thẻ chỉ đổi trạng thái local.
+  - Gửi câu trả lời tình trạng và xác nhận sở hữu từ form; lỗi hiện tại bước kiểm tra,
+    dữ liệu giữ khi lỗi. Một lần gửi có snapshot và khóa idempotency riêng; thử lại
+    trong cùng trang giữ key/body/version, tiếp tục các bước đã thành công. Không
+    có phục hồi lần gửi sau reload; thông tin được khóa sau khi bắt đầu gửi để tránh
+    đổi payload khi kết quả chưa rõ. Xử lý ảnh lỗi vĩnh viễn/khôi phục bản nháp trên
+    web cần đợt riêng; không tự tạo bản mới để né lỗi.
+  - Sửa header cố định che Back/đầu nội dung và responsive 390px/chữ130%; liên kết
+    tài khoản đi đúng session. Không thay API/contract/migration hay RN so với main.
+  - Loại `apps/api/test-wishlist.mjs` khỏi nhánh: script chứa credential và ghi vào
+    DB local chính; không chạy script. Credential vẫn có trong lịch sử Git, chủ máy
+    cần đổi theo quy trình cấu hình riêng, không gửi lại qua chat.
+  - PASS: install frozen lockfile/supply-chain; user-web typecheck/build, 11 unit tests,
+    lint không có error (5 warning cũ của exchange); API build để chạy fixture. Browser
+    Chromium thực chạy: Home/search/detail, lọc/sort/cursor, rỗng/lỗi/retry, menu mobile,
+    5 bước/giữ dữ liệu, ảnh qua Sharp, gửi PendingReview; cố tình mất ACK submit rồi
+    thử lại cùng key/body, DB chỉ thêm một listing. 390px 100/130% không tràn ngang.
+    Harness: `pnpm --filter @used-books/user-web test:browser`, cần API build và
+    `MONGO_TEST_URL` của QA replica set; tự tạo/xóa DB `*_test`, storage fake. Ảnh local
+    trong `apps/user-web/test-results/` (ignored). Không chạy trên DB/bucket demo.
+  - Giới hạn: bundle ~765KB có cảnh báo chunk; exchange và một số header/collection
+    controls vẫn là scaffold/mock từ teammate, chưa là tính năng thật. Supabase thật,
+    native và review người thật NOT RUN cho gói web này; gate release vẫn mở.
+  - Local work trước pull bảo toàn trong stash `e9a4e80` trên `codex/openai-price-provider`
+    (adapter OpenAI đang dở, chưa bật provider); không pop/drop. UX RN trước demo còn
+    trên `codex/listing-ux` (`f9956b0`, `891e851`), chưa nhập vào main. `.env` giữ nguyên.
+    Stash kiến trúc cũ cũng giữ. Bước tiếp: chờ CI PR24 kết thúc, owner Minh/Nhật
+    xem phần đã gộp; chưa tự merge. Sau đó mới khôi phục gói local
+    được chủ dự án chọn, không trộn OpenAI/RN UX vào PR web.
+
+
+- **08/10 — gói backend đấu giá AU01–AU03 (một phần): nhánh local `feature/auction-backend`
+  từ `origin/main` `9399e12`, chưa push/PR.** OpenAPI 0.27.0, migrations `0008-auctions` … `0011-point-order-resolution`,
+  [ADR 0030](../adr/0030-bounded-auction-backend.md), [báo cáo](../features/AUCTION_BACKEND_REPORT.md).
+  Có: hai điểm mô phỏng/slot/assignment, intake Sale → Staff nhận/kiểm tra/mở → bid
+  thủ công + Auto trần riêng (engine thuần) → Mua ngay trước bid đầu → worker đóng
+  phiên tạo Order ViaPoint (migration 0009, contract 0.25.0) → người thắng trả từ ví vào
+  hold, phiên `Sold`, Order `Fulfilling`; quá hạn → PaymentExpired → ReclaimRequired →
+  Staff ghi trả sách. Sau thanh toán: người mua chấp nhận/từ chối biên bản (72h), xin mã
+  nhận 6 số (10 phút, chỉ lưu hash), Staff nhập mã trong giờ điểm → `Inspection` 72h;
+  quá hạn/từ chối → `ResolutionPending` → Admin độc lập hoàn toàn bộ hold (sách về
+  reclaim) hoặc mở lại cửa sổ nhận. **Quyết toán cho người bán chưa mở** (gate READINESS
+  còn BLOCKED, cần chủ dự án duyệt); tiền của Order đã nhận sách vẫn giữ ở hold. Sau `pnpm db:migrate` chạy `pnpm db:bootstrap` (quyền collection mới); `db:seed`
+  gán `staff@latlai.local` vào HCM-DEMO-01. Chưa có UI, chưa human review.
+  Evidence: API unit 102/102, auction e2e 17/17, toàn bộ `test:api:e2e` 521/521 (26 file),
+  `test:api:mongo` 39 PASS/4 skip (import PG và failover không có môi trường), lint/typecheck/
+  build/`contract:check`/`contract:routes` PASS trên QA replica set `57017`, DB `*_test`.
 
 - **05/10 — gói User Web "Chi tiết giao dịch trao đổi": nhánh local `feature/exchange-detail-page` từ main, đã merge `origin/main` (commit `cf47ffe`).**
   - Hoàn thiện UI trang `ExchangeDetailPage` (`/exchange/:id`) với bố cục lưới `7fr/5fr`, bao gồm `ProgressStepper`, `BookInfoCard`, `ActionCard`, `SafetyTipsCard`, và `ChatPanel` bám sát bản thiết kế.

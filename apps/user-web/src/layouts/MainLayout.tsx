@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { BookOpen, Mail, Menu, MessageCircle, X, Search, Heart, User, Wallet } from 'lucide-react'
+import { BookOpen, Mail, Menu, MessageCircle, X, Search, User } from 'lucide-react'
 import { ROUTES, searchUrl } from '../lib/routes'
 import { useSession } from '../hooks/useSession'
 import { session } from '../lib/session'
@@ -109,18 +109,9 @@ export function Header() {
         </nav>
 
         <div className={styles.headerActions}>
-          <button className={styles.iconBtn} aria-label="Yêu thích">
-            <Heart size={20} />
-            <span className={styles.notificationDot}></span>
-          </button>
-          
-          <button className={styles.walletBtn}>
-            <Wallet size={16} color="#B85C45" /> 120 Xu
-          </button>
-
-          <button className={styles.iconBtn} aria-label="Tài khoản">
-            <User size={20} />
-          </button>
+          <Link to={state.status === 'authenticated' ? '/profile' : ROUTES.login} className={styles.iconBtn} aria-label="Tài khoản">
+            <User size={20} aria-hidden="true" />
+          </Link>
 
           <Link to={ROUTES.sell} className={styles.btnPrimaryHeader}>
             + Đăng sách
@@ -151,6 +142,7 @@ export function Header() {
               {item.label}
             </Link>
           ))}
+          <Link to={ROUTES.sell} className={styles.mobileNavLink} onClick={() => setMenuOpen(false)}>Đăng sách</Link>
           {state.status === 'authenticated' ? (
             <>
               <Link to="/profile" className={styles.mobileNavLink} onClick={() => setMenuOpen(false)}>
@@ -253,7 +245,7 @@ export default function MainLayout() {
         Bỏ qua điều hướng
       </a>
       <Header />
-      <main id="main-content" className={styles.main}>
+      <main id="main-content" className={styles.main} style={location.pathname === ROUTES.home ? undefined : { paddingTop: '5.5rem' }}>
         <Outlet />
       </main>
       <Footer />

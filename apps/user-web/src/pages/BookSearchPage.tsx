@@ -1,135 +1,159 @@
-
-import { SearchHero } from '../components/BookSearch/SearchHero';
-import { FilterSidebar } from '../components/BookSearch/FilterSidebar';
-import { MobileFilterDrawer } from '../components/BookSearch/MobileFilterDrawer';
-import { SearchBookCard } from '../components/BookSearch/SearchBookCard';
-import { SortDropdown } from '../components/BookSearch/SortDropdown';
-import { MOCK_BOOKS } from '../components/BookSearch/mockBooks';
-import { useSearchParams } from 'react-router-dom';
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05 }
-  }
+import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
+import { BookCard } from "../components/BookCard";
+import { getPublicListings } from "../services/public-listings";
+const conditionLabels = {
+  LikeNew: "Gần như mới",
+  Good: "Còn tốt",
+  Fair: "Đã dùng nhiều",
+  Worn: "Cũ nhiều",
 };
-
-const itemVariants: any = {
-  hidden: { opacity: 0, y: 20 },
-  show: {
-    opacity: 1, y: 0,
-    transition: { type: "spring", stiffness: 260, damping: 20 }
-  }
-};
-
 export function BookSearchPage() {
-  // @ts-expect-error unused
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  // Create exactly 30 books by repeating the mock books
-  
-  const [activeFilters, setActiveFilters] = useState([
-    { id: 'cat_tien_chien', label: 'Thời kỳ: 1930 - 1945', type: 'category' },
-    { id: 'cond_like_new', label: 'Tình trạng: Rất tốt (Like New)', type: 'condition' },
-    { id: 'trans_direct', label: 'Giao dịch: Bán trực tiếp', type: 'transaction' },
-    { id: 'attr_rare', label: 'Sách hiếm: Có thẩm định', type: 'attribute', icon: 'verified' },
-    { id: 'attr_signed', label: 'Có thủ bút / Chữ ký', type: 'attribute', icon: 'history_edu' }
-  ]);
-
-  const toggleFilter = (filter: any) => {
-    setActiveFilters(prev => {
-      const exists = prev.find(f => f.id === filter.id);
-      if (exists) return prev.filter(f => f.id !== filter.id);
-      return [...prev, filter];
-    });
+  const [params, setParams] = useSearchParams();
+  const query = new URLSearchParams();
+  for (const key of [
+    "q",
+    "mode",
+    "condition",
+    "sort",
+    "minSalePrice",
+    "maxSalePrice",
+    "cursor",
+  ]) {
+    const value = params.get(key);
+    if (value) query.set(key, value);
+  }
+  query.set("limit", "12");
+  const result = useQuery({
+    queryKey: ["public-listings", query.toString()],
+    queryFn: () => getPublicListings(query),
+    retry: false,
+    staleTime: 0,
+  });
+  const update = (key: string, value: string) => {
+    const next = new URLSearchParams(params);
+    next.delete("cursor");
+    if (value) next.set(key, value);
+    else next.delete(key);
+    setParams(next, { replace: true });
   };
-
-  const removeFilter = (id: string) => {
-    setActiveFilters(prev => prev.filter(f => f.id !== id));
-  };
-
-  const clearAllFilters = () => {
-    setActiveFilters([]);
-  };
-
-  const displayBooks = Array(4).fill(MOCK_BOOKS).flat().slice(0, 30);
-
   return (
-    <div className="bg-background text-on-surface flex-1 w-full">
-      <main className="flex-grow">
-        <div className="flex flex-col w-full">
-          <SearchHero activeFilters={activeFilters} removeFilter={removeFilter} clearAllFilters={clearAllFilters} />
-
-          <div className="w-full px-space-sm md:px-space-md lg:px-space-lg xl:px-8 py-space-md flex flex-col lg:flex-row gap-space-lg relative items-start">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-              className="w-[280px] xl:w-[300px] shrink-0"
-            >
-              <FilterSidebar activeFilters={activeFilters} toggleFilter={toggleFilter} />
-            </motion.div>
-
-            <div className="flex-1 min-w-0 flex flex-col">
-              {/* Results Header Controls Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-space-md pb-space-sm border-b border-outline-variant">
-                <p className="font-body-md text-body-md text-on-surface-variant">
-                  Hiển thị <span className="font-bold text-primary">1–30</span> trên <span className="font-bold text-primary">12.800</span> ấn phẩm
-                </p>
-                <div className="flex items-center gap-3 self-end sm:self-auto">
-                  <SortDropdown />
-                  <div className="flex bg-surface-container border border-outline-variant rounded p-0.5">
-                    <button className="p-1 rounded bg-surface shadow-xs text-primary"><span className="material-symbols-outlined text-[18px] block">grid_view</span></button>
-                    <button className="p-1 rounded text-on-surface-variant hover:text-primary transition-colors"><span className="material-symbols-outlined text-[18px] block">view_list</span></button>
-                  </div>
-                </div>
-              </div>
-
-              {/*  Results Grid  */}
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="show"
-                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3"
+    <main className="w-full bg-surface text-on-surface px-5 lg:px-12 py-8">
+      <header className="mb-8 border-b border-outline-variant pb-6">
+        <h1 className="font-serif text-3xl text-primary">Khám phá kệ sách</h1>
+        <p>Tìm một bản sách theo tên, tác giả hoặc ISBN.</p>
+      </header>
+      <div className="flex flex-col lg:flex-row gap-8 items-start">
+        <aside
+          className="w-full lg:w-64 shrink-0 flex flex-col gap-6"
+          aria-label="Lọc sách"
+        >
+          <label className="flex flex-col gap-2">
+            Tìm sách
+            <input
+              value={params.get("q") ?? ""}
+              onChange={(event) => update("q", event.target.value)}
+              placeholder="Tên, tác giả, ISBN"
+            />
+          </label>
+          <fieldset>
+            <legend>Hình thức</legend>
+            {[
+              ["", "Tất cả"],
+              ["Sale", "Bán"],
+              ["Exchange", "Trao đổi"],
+              ["Both", "Bán hoặc đổi"],
+            ].map(([value, label]) => (
+              <label key={value} className="flex items-center gap-2 py-1">
+                <input
+                  type="radio"
+                  name="mode"
+                  checked={(params.get("mode") ?? "") === value}
+                  onChange={() => update("mode", value)}
+                />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+          <fieldset>
+            <legend>Tình trạng</legend>
+            {Object.entries(conditionLabels).map(([value, label]) => (
+              <label key={value} className="flex items-center gap-2 py-1">
+                <input
+                  type="checkbox"
+                  checked={params.get("condition") === value}
+                  onChange={() =>
+                    update(
+                      "condition",
+                      params.get("condition") === value ? "" : value,
+                    )
+                  }
+                />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+        </aside>
+        <section className="flex-1 min-w-0 w-full" aria-live="polite">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <p>
+              {result.data
+                ? `${result.data.items.length} cuốn trên trang này`
+                : "Đang tìm sách"}
+            </p>
+            <label>
+              Sắp xếp{" "}
+              <select
+                value={params.get("sort") ?? "newest"}
+                onChange={(event) => update("sort", event.target.value)}
               >
-                {displayBooks.map((book, idx) => (
-                  <motion.div key={book.id + '_' + idx} variants={itemVariants}>
-                    <SearchBookCard book={book} />
-                  </motion.div>
-                ))}
-              </motion.div>
-
-              {/*  Pagination  */}
-              <div className="mt-space-xl pt-space-md border-t border-outline-variant flex flex-col items-center gap-space-md">
-                <nav aria-label="Pagination" className="flex items-center gap-1">
-                  <button className="w-8 h-8 flex items-center justify-center rounded text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors" disabled>
-                    <span className="material-symbols-outlined text-[18px]">chevron_left</span>
-                  </button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded bg-primary text-on-primary font-title-sm shadow-xs">1</button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded text-on-surface hover:bg-surface-container hover:text-primary transition-colors font-title-sm">2</button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded text-on-surface hover:bg-surface-container hover:text-primary transition-colors font-title-sm">3</button>
-                  <span className="w-8 h-8 flex items-center justify-center text-on-surface-variant">...</span>
-                  <button className="w-8 h-8 flex items-center justify-center rounded text-on-surface hover:bg-surface-container hover:text-primary transition-colors font-title-sm">42</button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded text-on-surface hover:bg-surface-container hover:text-primary transition-colors">
-                    <span className="material-symbols-outlined text-[18px]">chevron_right</span>
-                  </button>
-                </nav>
-                <div className="bg-secondary-container/50 border border-secondary/20 rounded-lg p-space-sm max-w-lg w-full text-center">
-                  <span className="material-symbols-outlined text-secondary text-[24px] mb-1">auto_stories</span>
-                  <h4 className="font-title-sm text-title-sm text-primary font-bold">Không tìm thấy bản thảo bạn cần?</h4>
-                  <p className="text-xs text-on-surface-variant mt-0.5">Chúng tôi nhận săn tìm sách hiếm, thủ bút và tài liệu lưu trữ theo yêu cầu. <a className="text-secondary font-medium hover:underline" href="#">Gửi yêu cầu thẩm tuyển →</a></p>
-                </div>
-              </div>
-
-            </div>
+                <option value="newest">Mới nhất</option>
+                <option value="salePriceAsc">Giá thấp đến cao</option>
+                <option value="salePriceDesc">Giá cao đến thấp</option>
+              </select>
+            </label>
           </div>
-        </div>
-      </main>
-
-      <MobileFilterDrawer />
-    </div>
+          {result.isPending && <p>Đang tải kệ sách…</p>}
+          {result.isError && (
+            <div role="alert">
+              <p>Không tải được kệ sách. Vui lòng kiểm tra API rồi thử lại.</p>
+              <button type="button" onClick={() => void result.refetch()}>
+                Thử lại
+              </button>
+            </div>
+          )}
+          {result.data?.items.length === 0 && (
+            <p>Chưa có cuốn sách nào phù hợp.</p>
+          )}
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            {result.data?.items.map((book, index) => (
+              <BookCard key={book.id} book={book} index={index} />
+            ))}
+          </div>
+          {result.data?.nextCursor && (
+            <button
+              type="button"
+              className="mt-6 px-5 py-3 border border-outline-variant rounded"
+              onClick={() => {
+                const next = new URLSearchParams(params);
+                next.set("cursor", result.data!.nextCursor!);
+                setParams(next);
+              }}
+            >
+              Trang tiếp theo
+            </button>
+          )}
+          {params.has("cursor") && (
+            <button
+              type="button"
+              className="mt-6 px-5 py-3"
+              onClick={() => update("cursor", "")}
+            >
+              Về trang đầu
+            </button>
+          )}
+        </section>
+      </div>
+    </main>
   );
 }

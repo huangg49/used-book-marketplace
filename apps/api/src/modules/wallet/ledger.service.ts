@@ -12,9 +12,11 @@ import {
   OPENING_CAPITAL,
   OPENING_JOURNAL_ID,
 } from '../../database/mongo/migrations/0002-reference-data.js';
+import { PLATFORM_COMMISSION_ACCOUNT_ID } from '../../database/mongo/migrations/auction-constants.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import { DomainError, invalidState } from '../commands/domain-error.js';
 import { checkOrder } from '../orders/order-invariants.js';
+import { checkPointOrder } from '../auctions/point-order-invariants.js';
 
 export const CLEARING_ID = CLEARING_ACCOUNT_ID;
 
@@ -41,7 +43,7 @@ export async function checkJournal(tx: Tx, journalId: string) {
   if (!j) throw new Error('Journal missing');
   const entries = await tx.c.ledger_entries.find({ journalId }).toArray();
   if (
-    entries.length !== 2 ||
+    entries.length !== (j.type === 'OrderSettlement' ? 3 : 2) ||
     entries.reduce((sum, e) => sum + e.debit - e.credit, 0) !== 0
   )
     throw new Error('Journal must have two balanced entries');
@@ -89,28 +91,62 @@ export async function checkJournal(tx: Tx, journalId: string) {
       )
     )
       throw new Error('Topup journal source mismatch');
-  } else {
-    const o = await tx.c.direct_orders.findOne({ _id: j.orderId! });
-    const q = o && (await tx.c.sale_quotes.findOne({ _id: o.quoteId }));
-    const payment = j.type === 'OrderPayment';
+  } else if (j.type === 'OrderSettlement') {
+    // ViaPoint completion (migration 0012): the whole hold leaves once, the
+    // seller receives P − C and the platform C plus the outbound leg fee.
+    const p = await tx.c.point_orders.findOne({ _id: j.orderId! });
     if (
-      !o ||
-      !q ||
+      !p ||
+      p.state !== 'Completed' ||
       !entries.some(
         (x) =>
-          account(x.accountId)?.ownerId === o.buyerId &&
-          account(x.accountId)?.purpose === 'UserAvailable' &&
-          (payment ? x.credit : x.debit) === q.buyerTotal,
+          account(x.accountId)?.orderId === p._id &&
+          account(x.accountId)?.purpose === 'OrderHold' &&
+          x.credit === p.buyerTotal,
       ) ||
       !entries.some(
         (x) =>
-          account(x.accountId)?.orderId === o._id &&
+          account(x.accountId)?.ownerId === p.sellerId &&
+          account(x.accountId)?.purpose === 'UserAvailable' &&
+          x.debit === p.sellerProceeds,
+      ) ||
+      !entries.some(
+        (x) =>
+          x.accountId === PLATFORM_COMMISSION_ACCOUNT_ID &&
+          x.debit === p.commission + p.outboundFee,
+      )
+    )
+      throw new Error('Settlement journal source mismatch');
+    tx.check(`point-order:${p._id}`, () => checkPointOrder(tx, p._id));
+  } else {
+    // An Order is a DirectDelivery Order (frozen quote) or a ViaPoint Order
+    // formed by an auction (migration 0009); both freeze buyerTotal.
+    const o = await tx.c.direct_orders.findOne({ _id: j.orderId! });
+    const q = o && (await tx.c.sale_quotes.findOne({ _id: o.quoteId }));
+    const p = o ? null : await tx.c.point_orders.findOne({ _id: j.orderId! });
+    const buyerId = o?.buyerId ?? p?.buyerId;
+    const total = q?.buyerTotal ?? p?.buyerTotal;
+    const payment = j.type === 'OrderPayment';
+    if (
+      !buyerId ||
+      total === undefined ||
+      (p && !payment && !(await refundDecided(tx, p._id, j._id))) ||
+      !entries.some(
+        (x) =>
+          account(x.accountId)?.ownerId === buyerId &&
+          account(x.accountId)?.purpose === 'UserAvailable' &&
+          (payment ? x.credit : x.debit) === total,
+      ) ||
+      !entries.some(
+        (x) =>
+          account(x.accountId)?.orderId === j.orderId &&
           account(x.accountId)?.purpose === 'OrderHold' &&
-          (payment ? x.debit : x.credit) === q.buyerTotal,
+          (payment ? x.debit : x.credit) === total,
       )
     )
       throw new Error('Order journal source mismatch');
-    tx.check(`order:${o._id}`, () => checkOrder(tx, o._id));
+    if (o) tx.check(`order:${o._id}`, () => checkOrder(tx, o._id));
+    else tx.check(`point-order:${p!._id}`, () => checkPointOrder(tx, p!._id));
   }
   for (const e of entries)
     if (
@@ -118,6 +154,26 @@ export async function checkJournal(tx: Tx, journalId: string) {
       (await balanceOf(tx, e.accountId)) < 0
     )
       throw new Error('Wallet balance cannot be negative');
+}
+
+// A ViaPoint Order refund must be the journal named by an Admin RefundBuyer
+// decision (migration 0011) or by the Staff record of a required return
+// (migration 0012), on a cancelled Order.
+async function refundDecided(tx: Tx, orderId: string, journalId: string) {
+  const order = await tx.c.point_orders.findOne({ _id: orderId });
+  const decision = await tx.c.point_order_resolutions.findOne({
+    orderId,
+    decision: 'RefundBuyer',
+    journalId,
+  });
+  const returned = await tx.c.point_returns.findOne({ orderId, journalId });
+  const required = await tx.c.point_order_resolutions.findOne({
+    orderId,
+    decision: 'RequireReturn',
+  });
+  return (
+    order?.state === 'Cancelled' && (!!decision || (!!returned && !!required))
+  );
 }
 
 @Injectable()
@@ -166,12 +222,6 @@ export class LedgerService {
         'users',
         'Wallet account references a missing owner',
       ],
-      [
-        'OrderHold',
-        'orderId',
-        'direct_orders',
-        'Wallet account references a missing Order',
-      ],
     ] as const) {
       const missing = await tx.c.wallet_accounts
         .aggregate([
@@ -191,6 +241,33 @@ export class LedgerService {
         .toArray();
       if (missing.length) throw new Error(message);
     }
+    // An Order hold references a DirectDelivery or a ViaPoint Order.
+    const orphanHold = await tx.c.wallet_accounts
+      .aggregate([
+        { $match: { purpose: 'OrderHold' } },
+        {
+          $lookup: {
+            from: 'direct_orders',
+            localField: 'orderId',
+            foreignField: '_id',
+            as: 'direct',
+          },
+        },
+        {
+          $lookup: {
+            from: 'point_orders',
+            localField: 'orderId',
+            foreignField: '_id',
+            as: 'point',
+          },
+        },
+        { $match: { direct: { $size: 0 }, point: { $size: 0 } } },
+        { $limit: 1 },
+        { $project: { _id: 1 } },
+      ])
+      .toArray();
+    if (orphanHold.length)
+      throw new Error('Wallet account references a missing Order');
     if (!(await tx.c.ledger_journals.findOne({ _id: OPENING_JOURNAL_ID })))
       throw new Error('Opening capital journal missing');
     for (const j of await tx.c.ledger_journals.find({}).toArray())
@@ -199,6 +276,8 @@ export class LedgerService {
       await checkTopupRecord(tx, t._id);
     for (const o of await tx.c.direct_orders.find({}).toArray())
       await checkOrder(tx, o._id);
+    for (const o of await tx.c.point_orders.find({}).toArray())
+      await checkPointOrder(tx, o._id);
     const [row] = await tx.c.ledger_entries
       .aggregate<{
         debit: number;
@@ -243,9 +322,15 @@ export class LedgerService {
       ])
       .toArray();
     const sourceRemaining = await balanceOf(tx, CLEARING_ID);
+    // Settled platform fees stay inside the simulated capital.
+    const platformCommission = await balanceOf(
+      tx,
+      PLATFORM_COMMISSION_ACCOUNT_ID,
+    );
     if (
       row.debit !== row.credit ||
-      sourceRemaining + row.available + row.held !== OPENING_CAPITAL
+      sourceRemaining + row.available + row.held + platformCommission !==
+        OPENING_CAPITAL
     )
       throw new Error('Simulated capital conservation mismatch');
     return {
@@ -255,6 +340,7 @@ export class LedgerService {
       totalCredit: row.credit,
       memberAvailable: row.available,
       transactionHeld: row.held,
+      platformCommission,
       sourceRemaining,
       journals: await tx.c.ledger_journals.countDocuments(),
       topups: await tx.c.topup_intents.countDocuments(),
@@ -267,8 +353,19 @@ export class LedgerService {
     const account = await tx.c.wallet_accounts.findOne({ ownerId });
     return account ? balanceOf(tx, account._id) : 0;
   }
+  // Holds of the buyer's DirectDelivery and ViaPoint (auction) Orders.
   async held(tx: Tx, buyerId: string) {
-    const [row] = await tx.c.direct_orders
+    return (
+      (await this.heldIn(tx, 'direct_orders', buyerId)) +
+      (await this.heldIn(tx, 'point_orders', buyerId))
+    );
+  }
+  private async heldIn(
+    tx: Tx,
+    orders: 'direct_orders' | 'point_orders',
+    buyerId: string,
+  ) {
+    const [row] = await tx.c[orders]
       .aggregate<{ amount: number }>([
         { $match: { buyerId } },
         {
@@ -430,6 +527,72 @@ export class LedgerService {
       to,
       amount,
     );
+  }
+  // ViaPoint completion: caller holds the buyer, seller and Order locks. The
+  // seller's available account is created when absent (seller lock held).
+  async settlePointOrder(
+    tx: Tx,
+    order: {
+      _id: string;
+      sellerId: string;
+      buyerTotal: number;
+      sellerProceeds: number;
+    },
+    receiptId: string,
+    now: Date,
+  ) {
+    const hold = await tx.c.wallet_accounts.findOne({ orderId: order._id });
+    if (!hold) throw new Error('Wallet account missing');
+    const seller = await this.account(tx, { ownerId: order.sellerId });
+    await this.lockAccounts(tx, [
+      hold._id,
+      seller._id,
+      PLATFORM_COMMISSION_ACCOUNT_ID,
+    ]);
+    if ((await this.balance(tx, hold._id)) !== order.buyerTotal)
+      throw invalidState();
+    const counter = await tx.c.counters.findOneAndUpdate(
+      { _id: LEDGER_SEQUENCE_COUNTER },
+      { $inc: { value: 1 } },
+      { returnDocument: 'after' },
+    );
+    const journal: LedgerJournalDoc = {
+      _id: randomUUID(),
+      sequence: counter!.value,
+      type: 'OrderSettlement',
+      topupId: null,
+      eventId: null,
+      orderId: order._id,
+      receiptId,
+      postedAt: now,
+    };
+    const platform = order.buyerTotal - order.sellerProceeds;
+    await tx.c.ledger_journals.insertOne(journal);
+    await tx.c.ledger_entries.insertMany([
+      {
+        _id: `${journal._id}:${hold._id}`,
+        journalId: journal._id,
+        accountId: hold._id,
+        debit: 0,
+        credit: order.buyerTotal,
+      },
+      {
+        _id: `${journal._id}:${seller._id}`,
+        journalId: journal._id,
+        accountId: seller._id,
+        debit: order.sellerProceeds,
+        credit: 0,
+      },
+      {
+        _id: `${journal._id}:${PLATFORM_COMMISSION_ACCOUNT_ID}`,
+        journalId: journal._id,
+        accountId: PLATFORM_COMMISSION_ACCOUNT_ID,
+        debit: platform,
+        credit: 0,
+      },
+    ]);
+    tx.check(`journal:${journal._id}`, () => checkJournal(tx, journal._id));
+    return journal;
   }
   // Caller owns participant and intent locks; this never opens a nested transaction.
   async lockFunding(tx: Tx, ownerId: string) {

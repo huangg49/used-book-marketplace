@@ -10,8 +10,30 @@ cơ chế persistence PostgreSQL trong báo cáo cũ; vẫn giữ invariant nghi
 
 Trước mở rộng giao dịch, đọc [ADR 0007](../adr/0007-hcm-handover-auction-scope.md),
 [local transaction design](../features/LOCAL_TRANSACTION_DESIGN.md) và
-[acceptance](../features/LOCAL_TRANSACTION_ACCEPTANCE.md). Point/auction/real-carrier
-và completed-purchase vẫn là yêu cầu/kế hoạch, không là API đã triển khai.
+[acceptance](../features/LOCAL_TRANSACTION_ACCEPTANCE.md). Auction intake/bidding/close
+và Order ViaPoint + thanh toán người thắng đã có (ADR 0030); bàn giao tại điểm,
+quyết toán, real-carrier và completed-purchase vẫn là yêu cầu/kế hoạch.
+
+## Đấu giá và điểm mô phỏng
+
+Bounded auctions are implemented in OpenAPI 0.27.0 (migrations 0008–0011); read ADR 0030 and
+`docs/features/AUCTION_BACKEND_REPORT.md`. Intake shares the exclusive commitment with
+Orders, plus one point slot and the `Reserved` projection; release only on cancel
+before drop-off, drop-off expiry or Staff reclaim. Staff steps need STAFF + current
+point assignment and independence; ADMIN alone cannot receive/inspect/open/reclaim.
+Proxy rules live in the pure `auction-engine.ts`; keep ceilings out of public reads,
+receipts, audit and outbox. Every auction command locks the auction document and
+decides with server time after locks; `endAt` is final (no extension). A win or Buy
+Now forms a ViaPoint Order (`point_orders`, migration 0009) and transfers the
+commitment without releasing it; payment locks auction → Order → ledger and moves
+buyerTotal into the Order hold. Collection (migration 0010): report decision 72 h,
+collection window 72 h in point hours, one-time 10-minute code stored only as a
+salted hash, Staff handover during 09:00–18:00 with committed wrong attempts and a
+5-per-15-minutes limit; handover starts the 72 h inspection window. Rejection and
+missed deadlines open ResolutionPending; only an independent Admin decision refunds
+the whole hold (book back to reclaim) or reopens collection, and the ledger accepts a
+ViaPoint refund only as the journal named by that decision. Settlement stays gated,
+so never release the hold, slot or commitment of a collected (Inspection) Order.
 
 ## Commitment và unpaid Order
 
