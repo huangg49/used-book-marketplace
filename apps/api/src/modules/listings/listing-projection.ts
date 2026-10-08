@@ -234,7 +234,13 @@ export async function checkListing(tx: Tx, listingId: string) {
     listingId,
     status: 'Active',
   });
-  if ((l.trade === 'Reserved') !== !!active)
+  const purchase = await tx.c.purchase_conversations.findOne({
+    listingId,
+    status: 'Active',
+  });
+  // A listing is reserved by exactly one workflow: either the established
+  // order/auction commitment or the 24-hour buyer-seller conversation.
+  if ((l.trade === 'Reserved') !== Boolean(active || purchase) || (active && purchase))
     throw new Error('Listing/commitment projection mismatch');
   if (active) {
     const item = await tx.c.workflow_items.findOne({
@@ -243,4 +249,6 @@ export async function checkListing(tx: Tx, listingId: string) {
     if (item?.listingRevisionId !== l.currentRevisionId)
       throw new Error('Reserved listing revision cannot change');
   }
+  if (purchase && (purchase.sellerId !== l.ownerId || purchase.listingVersion >= l.version))
+    throw new Error('Purchase conversation/listing mismatch');
 }

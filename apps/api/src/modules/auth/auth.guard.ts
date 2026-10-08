@@ -22,6 +22,9 @@ export class AuthGuard implements CanActivate {
     private readonly reflector: Reflector,
   ) {}
   async canActivate(context: ExecutionContext) {
+    // Socket authentication is performed by the purchase gateway from the
+    // short-lived bearer token; HTTP request guards do not have a Request here.
+    if (context.getType() === 'ws') return true;
     if (
       this.reflector.getAllAndOverride<boolean>(PUBLIC_ROUTE, [
         context.getHandler(),
