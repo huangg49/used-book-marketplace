@@ -16,6 +16,7 @@ const common = {
   hasMissingPages: false,
   missingEssentialContent: false,
   publishedAt: "2026-09-28T00:00:00Z",
+  purchaseAvailability: { status: "Available", expiresAt: null },
   pages: "Mô tả mẫu: đủ trang, chữ rõ; vài trang đã ngả màu.",
   coverNote: "Mô tả mẫu: mép bìa sờn nhẹ, gáy vẫn chắc.",
   notes: "Mô tả mẫu: có vài dòng gạch chân bằng bút chì.",
