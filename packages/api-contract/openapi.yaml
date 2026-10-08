@@ -908,6 +908,76 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /listings/{listingId}/purchase-conversations:
+    post:
+      operationId: createPurchaseConversation
+      tags: [Purchase conversations]
+      summary: Start the 24-hour buyer-seller conversation for one sale listing
+      x-implementation-status: implemented
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: listingId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreatePurchaseConversation" }
+      responses:
+        "200":
+          description: Conversation created or idempotently replayed.
+          headers:
+            Idempotency-Replayed: { schema: { type: string, enum: ["true", "false"] } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseConversationReceipt" }
+        "400": { $ref: "#/components/responses/ListingError" }
+        "401": { $ref: "#/components/responses/ListingError" }
+        "403": { $ref: "#/components/responses/ListingError" }
+        "404": { $ref: "#/components/responses/ListingError" }
+        "409": { $ref: "#/components/responses/ListingError" }
+        "422": { $ref: "#/components/responses/ListingError" }
+        "503": { $ref: "#/components/responses/ListingError" }
+  /me/purchase-conversations:
+    get:
+      operationId: listMyPurchaseConversations
+      tags: [Purchase conversations]
+      x-implementation-status: implemented
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Current user's buyer/seller conversations.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/PurchaseConversation" } }
+        "401": { $ref: "#/components/responses/ListingError" }
+        "403": { $ref: "#/components/responses/ListingError" }
+  /me/purchase-conversations/{conversationId}/messages:
+    get:
+      operationId: listPurchaseMessages
+      tags: [Purchase conversations]
+      x-implementation-status: implemented
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Messages in a conversation the current user participates in.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/PurchaseMessage" } }
+        "401": { $ref: "#/components/responses/ListingError" }
+        "403": { $ref: "#/components/responses/ListingError" }
+        "404": { $ref: "#/components/responses/ListingError" }
   /me/listings:
     get:
       operationId: listMyListings
@@ -7208,6 +7278,7 @@ components:
         - photos
         - publishedAt
         - fulfillment
+        - purchaseAvailability
       properties:
         id:
           type: string
@@ -7293,6 +7364,19 @@ components:
             - $ref: "#/components/schemas/PublicFulfillment"
             - type: "null"
           description: Null when not configured or the origin was changed/deleted. The listing remains readable.
+        purchaseAvailability:
+          type: object
+          additionalProperties: false
+          required: [status, expiresAt]
+          properties:
+            status:
+              type: string
+              enum: [Available, InNegotiation]
+            expiresAt:
+              anyOf:
+                - type: string
+                  format: date-time
+                - type: "null"
       oneOf:
         - properties:
             mode:
@@ -7323,9 +7407,64 @@ components:
               type: integer
               minimum: 10000
               maximum: 1000000
-      description: Only current Approved + Visible + Available + nondeleted listings whose verified ACTIVE
-        owner has MEMBER role, Confirmed catalog and Ready media. Never serialize a private listing
-        then filter on the client. No rating/trust claims or checkout capability in this increment.
+      description: Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE
+        owner has MEMBER role, Confirmed catalog and Ready media. A Reserved listing remains readable
+        only while it has an active 24-hour purchase conversation, but it cannot start another conversation.
+        Never serialize a private listing then filter on the client.
+    CreatePurchaseConversation:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { type: integer, minimum: 1, maximum: 2147483647 }
+    PurchaseConversationReceipt:
+      type: object
+      additionalProperties: false
+      required: [id, entityType, entityId, listingId, version, status, expiresAt, serverTime]
+      properties:
+        id: { type: string, format: uuid }
+        entityType: { type: string, const: PurchaseConversation }
+        entityId: { type: string, format: uuid }
+        listingId: { type: string, format: uuid }
+        version: { type: integer, minimum: 1, maximum: 2147483647 }
+        status: { type: string, enum: [Active, Expired, Cancelled] }
+        expiresAt: { type: string, format: date-time }
+        serverTime: { type: string, format: date-time }
+    PurchaseParticipant:
+      type: object
+      additionalProperties: false
+      required: [id, displayName]
+      properties:
+        id: { type: string, format: uuid }
+        displayName: { type: string, minLength: 2, maxLength: 80 }
+    PurchaseConversation:
+      type: object
+      additionalProperties: false
+      required: [id, listingId, buyer, seller, version, status, expiresAt, createdAt, closedAt]
+      properties:
+        id: { type: string, format: uuid }
+        listingId: { type: string, format: uuid }
+        buyer: { $ref: "#/components/schemas/PurchaseParticipant" }
+        seller: { $ref: "#/components/schemas/PurchaseParticipant" }
+        version: { type: integer, minimum: 1, maximum: 2147483647 }
+        status: { type: string, enum: [Active, Expired, Cancelled] }
+        expiresAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        closedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+    PurchaseMessage:
+      type: object
+      additionalProperties: false
+      required: [id, conversationId, senderId, body, sentAt]
+      properties:
+        id: { type: string, format: uuid }
+        conversationId: { type: string, format: uuid }
+        senderId: { type: string, format: uuid }
+        body: { type: string, minLength: 1, maxLength: 1000 }
+        sentAt: { type: string, format: date-time }
     ListingMedia:
       type: object
       additionalProperties: false

@@ -33,6 +33,8 @@ export interface CollectionTypes {
   catalog_revisions: D.CatalogRevisionDoc;
   catalog_decisions: D.CatalogDecisionDoc;
   listings: D.ListingDoc;
+  purchase_conversations: D.PurchaseConversationDoc;
+  purchase_messages: D.PurchaseMessageDoc;
   listing_revisions: D.ListingRevisionDoc;
   listing_media: D.ListingMediaDoc;
   revision_media: D.RevisionMediaDoc;
@@ -182,6 +184,8 @@ const NAMES: CollectionName[] = [
   'catalog_revisions',
   'catalog_decisions',
   'listings',
+  'purchase_conversations',
+  'purchase_messages',
   'listing_revisions',
   'listing_media',
   'revision_media',
