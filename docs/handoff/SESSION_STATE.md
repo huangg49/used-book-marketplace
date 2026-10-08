@@ -10,6 +10,11 @@
   Follow-up `14d4b7c` declares the required `Cache-Control: no-store` response
   policy and updates the public-listing contract fixture; `pnpm --filter
   @used-books/api test` passes 16 files / 106 tests after this change.
+  CI follow-ups `ba63520` and `15c2ef0` exclude the two Mongo-native purchase
+  collections from the PostgreSQL-model accounting check and validate
+  `purchaseAvailability` in the React Native shelf decoder. The affected Mongo
+  schema suite passes 16/16 against the isolated QA replica set; React Native
+  typecheck passes.
   A buyer starts one Active conversation for an Available sale listing, the listing
   becomes Reserved, and the expiry worker returns it to Available after 24 hours.
   The seller cannot buy their own listing; only the buyer and seller can open the
