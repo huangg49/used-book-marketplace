@@ -2,6 +2,25 @@
 
 ## Nguồn và việc đang làm
 
+- **08/10 — purchase conversations on `codex/purchase-conversations` (not merged):**
+  `ce62098` adds the OpenAPI contract and MongoDB migration `0014` for 24-hour
+  purchase conversations; `b374ee6` adds the authenticated transaction,
+  WebSocket gateway, expiry worker and listing-reservation invariant; `a0a8ed4`
+  adds the user-web purchase action and participant-only chat entry points.
+  A buyer starts one Active conversation for an Available sale listing, the listing
+  becomes Reserved, and the expiry worker returns it to Available after 24 hours.
+  The seller cannot buy their own listing; only the buyer and seller can open the
+  chat. This flow does not create an Order, payment, ledger hold, shipment or
+  settlement.
+  - Local evidence: contract check/routes, API typecheck/build, user-web
+    typecheck/build and `git diff --check` PASS. Browser test on user-web: buyer
+    opened the active conversation chat; live local API test created one Active
+    conversation and projected its listing to Reserved.
+  - The local test conversation expires on 09/10/2026 around 08:22 ICT. Restart
+    `pnpm dev:api` after pulling this branch so the separately built order worker
+    receives the expiry implementation. No QA replica-set negative/race suite,
+    native client verification, PR review or CI result has been recorded yet.
+
 - **07/10 — [PR24](https://github.com/huangg49/used-book-marketplace/pull/24) ĐÃ MERGE main `cbeafa6`: gộp giao diện Minh với API Nhật, hết conflict.**
   Code Nhật đã tích hợp qua PR22; PR24 của Minh (`feat/update-sell-book-page`, head
   ban đầu `005d92c`) conflict ở BookCard, HomePage, BookSearchPage, SellBookPage.
