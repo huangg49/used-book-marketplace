@@ -15,6 +15,8 @@
   `purchaseAvailability` in the React Native shelf decoder. The affected Mongo
   schema suite passes 16/16 against the isolated QA replica set; React Native
   typecheck passes.
+  Follow-up `a7576f8` gives the internal shelf-showcase listings their explicit
+  Available purchase state; React Native typecheck passes after the fixture update.
   A buyer starts one Active conversation for an Available sale listing, the listing
   becomes Reserved, and the expiry worker returns it to Available after 24 hours.
   The seller cannot buy their own listing; only the buyer and seller can open the
