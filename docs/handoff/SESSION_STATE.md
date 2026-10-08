@@ -7,6 +7,9 @@
   purchase conversations; `b374ee6` adds the authenticated transaction,
   WebSocket gateway, expiry worker and listing-reservation invariant; `a0a8ed4`
   adds the user-web purchase action and participant-only chat entry points.
+  Follow-up `14d4b7c` declares the required `Cache-Control: no-store` response
+  policy and updates the public-listing contract fixture; `pnpm --filter
+  @used-books/api test` passes 16 files / 106 tests after this change.
   A buyer starts one Active conversation for an Available sale listing, the listing
   becomes Reserved, and the expiry worker returns it to Available after 24 hours.
   The seller cannot buy their own listing; only the buyer and seller can open the
