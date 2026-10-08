@@ -4281,6 +4281,7 @@ export interface operations {
             /** @description Conversation created or idempotently replayed. */
             200: {
                 headers: {
+                    "Cache-Control"?: "no-store";
                     "Idempotency-Replayed"?: "true" | "false";
                     [name: string]: unknown;
                 };
@@ -4309,6 +4310,7 @@ export interface operations {
             /** @description Current user's buyer/seller conversations. */
             200: {
                 headers: {
+                    "Cache-Control"?: "no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -4333,6 +4335,7 @@ export interface operations {
             /** @description Messages in a conversation the current user participates in. */
             200: {
                 headers: {
+                    "Cache-Control"?: "no-store";
                     [name: string]: unknown;
                 };
                 content: {

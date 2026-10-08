@@ -933,6 +933,8 @@ paths:
         "200":
           description: Conversation created or idempotently replayed.
           headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
             Idempotency-Replayed: { schema: { type: string, enum: ["true", "false"] } }
           content:
             application/json:
@@ -953,6 +955,9 @@ paths:
       responses:
         "200":
           description: Current user's buyer/seller conversations.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
           content:
             application/json:
               schema: { type: array, items: { $ref: "#/components/schemas/PurchaseConversation" } }
@@ -972,6 +977,9 @@ paths:
       responses:
         "200":
           description: Messages in a conversation the current user participates in.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
           content:
             application/json:
               schema: { type: array, items: { $ref: "#/components/schemas/PurchaseMessage" } }
