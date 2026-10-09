@@ -9,6 +9,9 @@
   bước giá, tắt tự động, Mua ngay, diễn biến giá ẩn danh, người thắng thanh toán từ ví qua
   `POST /point-orders/{id}/pay`). Mỗi thao tác có xác nhận và một Idempotency-Key theo ý
   định; mất phản hồi/5xx giữ key và khóa mức giá để thử lại. Nav "Đấu giá" trỏ trang thật.
+  Chi tiết phiên theo mẫu tham chiếu của chủ dự án: ảnh lớn + cột phải dính (đếm ngược ngày/giờ/
+  phút/giây, giá lớn, 3 nút trả nhanh, ô nhập kiểm bước giá, tự động thu gọn); không thêm số
+  người theo dõi/chia sẻ vì chưa có dữ liệu.
   - Phụ thuộc API: phiên đấu giá giữ commitment nên listing bị ẩn khỏi `/listings`; UI chưa
     có ảnh bìa/phiếu tình trạng và dùng bìa chữ. Cần mở rộng contract đọc công khai (ảnh,
     tình trạng) trước khi hiển thị. Bước sau thanh toán (biên bản, mã nhận sách) chưa có UI.
