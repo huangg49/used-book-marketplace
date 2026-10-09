@@ -38,6 +38,7 @@ export class AuctionWorker {
       .map(([id]) => id);
     const ready = { _id: { $nin: blocked } };
     const {
+      holds,
       dropoffs,
       endings,
       payments,
@@ -48,8 +49,41 @@ export class AuctionWorker {
       now,
     } = await this.mongo.tx(async (tx) => {
       const now = await this.clock.now(tx);
+      // FR-AU09: open auctions whose seller or leader is no longer an ACTIVE
+      // verified member; the hold command rechecks under the auction lock.
+      const open = await tx.c.auctions
+        .find(
+          { ...ready, state: 'Active', endAt: { $gt: now } },
+          {
+            limit: 200,
+            sort: { endAt: 1, _id: 1 },
+            projection: { sellerId: 1, leaderId: 1 },
+          },
+        )
+        .toArray();
+      const parties = [
+        ...new Set(open.flatMap((a) => [a.sellerId, a.leaderId ?? []].flat())),
+      ];
+      const ineligible = new Set(
+        (
+          await tx.c.users
+            .find(
+              {
+                _id: { $in: parties },
+                $or: [{ status: { $ne: 'ACTIVE' } }, { emailVerifiedAt: null }],
+              },
+              { projection: { _id: 1 } },
+            )
+            .toArray()
+        ).map((u) => u._id),
+      );
       return {
         now,
+        holds: open.filter(
+          (a) =>
+            ineligible.has(a.sellerId) ||
+            (a.leaderId !== null && ineligible.has(a.leaderId)),
+        ),
         dropoffs: await tx.c.auction_intakes
           .find(
             {
@@ -157,6 +191,8 @@ export class AuctionWorker {
           });
       }
     };
+    for (const a of holds)
+      await attempt('hold', a._id, () => this.bidding.hold(a._id));
     for (const a of endings)
       await attempt('close', a._id, () => this.bidding.close(a._id));
     for (const a of payments)

@@ -29,6 +29,7 @@ import { ReservationsService } from '../reservations/reservations.service.js';
 import { LedgerService } from '../wallet/ledger.service.js';
 import { AuctionClock } from './auction-clock.js';
 import { checkAuction } from './auction-invariants.js';
+import { notifyAuction } from './auction-notifications.js';
 import { checkPointOrder } from './point-order-invariants.js';
 
 // ViaPoint Order formed by an auction win or Buy Now (FR-AU06/07, FR-O05).
@@ -287,6 +288,8 @@ export class PointOrdersService {
         if (!sold) throw conflict();
         tx.check(`auction:${a._id}`, () => checkAuction(tx, a._id));
         tx.check(`point-order:${o._id}`, () => checkPointOrder(tx, o._id));
+        const paid = (await tx.c.auctions.findOne({ _id: a._id }))!;
+        await notifyAuction(tx, paid, 'AuctionPaid', [o.sellerId], now);
         return PointOrdersService.change(next, now, 'PointOrderPaymentHeld');
       },
     });

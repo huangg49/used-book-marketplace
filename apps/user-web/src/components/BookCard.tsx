@@ -7,7 +7,6 @@ import {
   getPublicPhoto,
   type PublicListing,
 } from "../services/public-listings";
-import styles from "./BookCard.module.css";
 
 export interface BookCardProps {
   book: PublicListing;

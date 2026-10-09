@@ -14,11 +14,15 @@ Rules: [LOCAL-AUCTION-01 §6](LOCAL_HANDOVER_AUCTION.md); cases:
 | Point Staff | `GET /operations/auction-intakes`, `POST …/{id}/receive`, `…/inspect`, `…/open`, `…/reclaim` | STAFF with a current assignment at the point, not the seller; Pass/Fail; open = server time, 24 h fixed |
 | Bidding | `POST /auctions/{id}/bids`, `PUT …/auto-bid`, `POST …/auto-bid/disable`, `POST …/buy-now` | Proxy bidding per FR-AU04; Buy Now only before first bid; no money held at bid time |
 | Reads | `GET /auctions`, `GET /auctions/{id}` (public), `GET /me/auctions/{id}/participation` | Public price/history with aliases; own ceiling only to its owner |
+| Live | Socket.IO `/auctions`: `auction:watch`/`auction:update`, `auctions:watch`/`auction:summary` | Same public projections pushed after commit or by a 2 s version poll; [ADR 0031](../adr/0031-live-auction-updates.md) |
 | Admin | `POST /operations/auctions/{id}/cancel` | ADMIN independent of seller and bidders, reason ≥ 10 chars |
 | Winner Order | `GET /me/point-orders/{id}`, `POST /point-orders/{id}/pay` | Win/Buy Now forms a ViaPoint Order; commitment transferred without release; wallet → Order hold; auction `Sold`, Order `Fulfilling` |
 | Collection | `POST /point-orders/{id}/accept-report`, `…/reject-report`, `…/collection-code`; `GET /operations/point-orders`, `POST /operations/point-orders/{id}/handover` | 72 h report decision; 72 h collection window in point hours; 6-digit 10-minute code (hash only); Staff handover → `Inspection` + 72 h window; overdue → `ResolutionPending` |
 | Resolution | `GET /operations/point-order-resolutions`, `POST /operations/point-orders/{id}/resolve` | Independent ADMIN: `RefundBuyer` (full hold back, Order Cancelled, book to reclaim) or `ResumeCollection` (new 72 h window) |
 | Worker | `AuctionWorker` inside `order-worker` | Close at `endAt` (Unsold / AwaitingWinnerPayment + Order / OnHold), payment expiry (Order and auction; commitment back to intake), drop-off expiry |
+
+Concurrency and scope cases, the chosen tie/serialization behaviour and their tests:
+[AUCTION_TEST_CASES](AUCTION_TEST_CASES.md).
 
 ## Rule comparison (other auction sites)
 

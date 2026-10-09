@@ -2,6 +2,51 @@
 
 ## Nguồn và việc đang làm
 
+- **09/10 — user-web đấu giá trên nhánh `feature/auction-web` (từ `feature/auction-backend`,
+  chưa push/PR).** Trang `/auctions` (lưới thẻ cùng kiểu BookCard, lọc điểm/mua ngay và
+  sắp xếp phía client trên tối đa 50 phiên của `GET /auctions`) và `/auctions/:id` (bố cục
+  như chi tiết sách: giá, đếm ngược theo `serverTime`, trả giá một lần/tự động trên lưới
+  bước giá, tắt tự động, Mua ngay, diễn biến giá ẩn danh, người thắng thanh toán từ ví qua
+  `POST /point-orders/{id}/pay`). Mỗi thao tác có xác nhận và một Idempotency-Key theo ý
+  định; mất phản hồi/5xx giữ key và khóa mức giá để thử lại. Nav "Đấu giá" trỏ trang thật.
+  Chi tiết phiên theo mẫu tham chiếu của chủ dự án: ảnh lớn + cột phải dính (đếm ngược ngày/giờ/
+  phút/giây, giá lớn, 3 nút trả nhanh, ô nhập kiểm bước giá, tự động thu gọn); không thêm số
+  người theo dõi/chia sẻ vì chưa có dữ liệu. Đặt giá tự động là hộp thoại hai bước (giải thích,
+  giá hiện tại/mức thấp nhất được phép, nhập, xác nhận); không hứa thông báo bị vượt giá vì chưa có.
+  Diễn biến giá là thẻ cuộn ở cột phải, avatar số ẩn danh, hàng dẫn có nhãn "Đang dẫn".
+  - Trực tiếp ([ADR 0031](../adr/0031-live-auction-updates.md)): Socket.IO `/auctions` công khai,
+    chỉ đọc; đẩy cùng dữ liệu `GET /auctions[/{id}]` ngay sau lệnh trong API và qua poll
+    version 2 giây (chỉ khi có người xem) cho worker/vận hành; không đổi quyền Mongo,
+    không migration. Client ghi push vào cache, đọc lại participation qua REST, báo bị
+    vượt giá; REST poll chỉ là dự phòng. PASS: API unit `auction-live.spec` 4/4, toàn bộ
+    `auctions.e2e-spec` 26/26 trên QA replica set (có ca socket thật: ack, đẩy ngay, không lộ
+    trần, worker đóng phiên qua poll, unwatch dừng), API/user-web typecheck/lint. Browser
+    trên fixture tạm có Socket.IO: bị vượt giá cập nhật <1 giây, 0 GET REST chi tiết/danh sách.
+  - Ca đồng thời và phạm vi ([danh mục](../features/AUCTION_TEST_CASES.md)): 13 ca e2e mới
+    (hai người cùng bấm trả giá, cùng bật tự động, trần bằng nhau, 8 lệnh trộn, bấm đúp cùng/khác
+    key, Mua ngay đua, tắt tự động đua, POL-41 nhiều phiên, trần 1.000.000, push cuối = REST) và 4
+    ca engine duyệt mọi hoán vị, thêm ca người bán rút phiên đua với lượt trả đầu. Sửa lỗi: ở mức
+    trần `minimumBid` trả 1.050.000 (ngoài contract) nay là `null`; người dẫn đã nâng trần sau khi
+    thắng hòa không tắt được tự động (500) — nay giữ sequence đã thắng (ADR 0030 amendment); chữ
+    "mỗi lần một bước" trên web sửa thành "hơn người khác một bước". PASS: `auctions.e2e-spec`
+    42/42 (chạy lặp), API unit 115/115. Một lần chạy toàn bộ e2e có `shipments` lỗi rồi chạy lại
+    riêng 31/31 PASS — không liên quan đấu giá, cần theo dõi.
+  - Đóng các gap: hộp thư thông báo bền ([ADR 0032](../adr/0032-member-notification-inbox.md),
+    migration `0015-member-notifications`, OpenAPI 0.30.0 `GET /me/notifications`,
+    `POST /me/notifications/read`) ghi cùng transaction với sự kiện đấu giá; worker giữ phiên
+    `OnHold` ngay khi người bán/người dẫn mất điều kiện (system `AuctionHold`); web có chuông
+    thông báo, trang `/notifications`, khung "Đây là phiên của bạn" + "Rút phiên", nhãn giá đúng
+    khi tạm dừng/hủy. Máy có DB cũ: `pnpm db:migrate` rồi `pnpm db:bootstrap`.
+    PASS: `auctions.e2e-spec` 47/47, `test:api:mongo` 39 (+4 skip như cũ), contract check/routes.
+  - Phụ thuộc API: phiên đấu giá giữ commitment nên listing bị ẩn khỏi `/listings`; UI chưa
+    có ảnh bìa/phiếu tình trạng và dùng bìa chữ. Cần mở rộng contract đọc công khai (ảnh,
+    tình trạng) trước khi hiển thị. Bước sau thanh toán (biên bản, mã nhận sách) chưa có UI.
+  - PASS: user-web typecheck, lint (không cảnh báo mới), vitest 16/16, `git diff --check`.
+    Browser Chromium trên API fixture tạm (không phải backend thật, không commit): danh sách,
+    chi tiết ẩn danh/đăng nhập, trả giá bị vượt, mất phản hồi 503 → thử lại cùng key được
+    replay, Mua ngay → thanh toán, 375px không tràn ngang. API/Mongo thật, QA replica set,
+    native và review người thật NOT RUN.
+
 - **08/10 — purchase conversations on `codex/purchase-conversations` (not merged):**
   `ce62098` adds the OpenAPI contract and MongoDB migration `0014` for 24-hour
   purchase conversations; `b374ee6` adds the authenticated transaction,

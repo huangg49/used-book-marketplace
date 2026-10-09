@@ -35,6 +35,7 @@ export interface CollectionTypes {
   listings: D.ListingDoc;
   purchase_conversations: D.PurchaseConversationDoc;
   purchase_messages: D.PurchaseMessageDoc;
+  member_notifications: D.MemberNotificationDoc;
   listing_revisions: D.ListingRevisionDoc;
   listing_media: D.ListingMediaDoc;
   revision_media: D.RevisionMediaDoc;
@@ -186,6 +187,7 @@ const NAMES: CollectionName[] = [
   'listings',
   'purchase_conversations',
   'purchase_messages',
+  'member_notifications',
   'listing_revisions',
   'listing_media',
   'revision_media',

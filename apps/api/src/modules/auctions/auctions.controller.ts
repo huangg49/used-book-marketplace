@@ -17,6 +17,7 @@ import { commandContext, commandResponse } from '../commands/command-http.js';
 import { ContractInput } from '../commands/contract-input.service.js';
 import { AuctionBiddingService } from './auction-bidding.service.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
+import { AuctionLiveService } from './auction-live.service.js';
 import { HandoverPointsService } from './handover-points.service.js';
 import { PointOrdersService } from './point-orders.service.js';
 import { PointCollectionService } from './point-collection.service.js';
@@ -32,7 +33,15 @@ export class AuctionsController {
     private readonly collection: PointCollectionService,
     private readonly completion: PointOrderCompletionService,
     private readonly input: ContractInput,
+    private readonly live: AuctionLiveService,
   ) {}
+
+  // Push committed auction changes to live watchers without waiting for the poll.
+  private async notify<T>(result: Promise<T>) {
+    const receipt = await result;
+    this.live.nudge();
+    return receipt;
+  }
 
   @Post('point-orders/:orderId/accept-report')
   @Roles('MEMBER')
@@ -103,13 +112,15 @@ export class AuctionsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
-      this.orders.pay(
-        commandContext(this.input, req, res),
-        this.input.uuid(id),
-        this.input.body('PayPointOrder', body),
+    return this.notify(
+      commandResponse(
+        this.orders.pay(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('PayPointOrder', body),
+        ),
+        res,
       ),
-      res,
     );
   }
 
@@ -210,13 +221,15 @@ export class AuctionsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
-      this.bidding.bid(
-        commandContext(this.input, req, res),
-        this.input.uuid(id),
-        this.input.body('PlaceAuctionBid', body),
+    return this.notify(
+      commandResponse(
+        this.bidding.bid(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('PlaceAuctionBid', body),
+        ),
+        res,
       ),
-      res,
     );
   }
   @Put('auctions/:auctionId/auto-bid')
@@ -228,13 +241,15 @@ export class AuctionsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
-      this.bidding.setAuto(
-        commandContext(this.input, req, res),
-        this.input.uuid(id),
-        this.input.body('SetAuctionAutoBid', body),
+    return this.notify(
+      commandResponse(
+        this.bidding.setAuto(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('SetAuctionAutoBid', body),
+        ),
+        res,
       ),
-      res,
     );
   }
   @Post('auctions/:auctionId/auto-bid/disable')
@@ -246,13 +261,15 @@ export class AuctionsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
-      this.bidding.disableAuto(
-        commandContext(this.input, req, res),
-        this.input.uuid(id),
-        this.input.body('DisableAuctionAutoBid', body),
+    return this.notify(
+      commandResponse(
+        this.bidding.disableAuto(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('DisableAuctionAutoBid', body),
+        ),
+        res,
       ),
-      res,
     );
   }
   @Post('auctions/:auctionId/buy-now')
@@ -264,13 +281,15 @@ export class AuctionsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
-      this.bidding.buyNow(
-        commandContext(this.input, req, res),
-        this.input.uuid(id),
-        this.input.body('BuyAuctionNow', body),
+    return this.notify(
+      commandResponse(
+        this.bidding.buyNow(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('BuyAuctionNow', body),
+        ),
+        res,
       ),
-      res,
     );
   }
 }

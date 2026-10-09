@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { BookOpen, Mail, Menu, MessageCircle, X, Search, User, Heart, Wallet } from 'lucide-react'
+import { BookOpen, Mail, MessageCircle } from 'lucide-react'
 import { ROUTES, searchUrl } from '../lib/routes'
-import { useSession } from '../hooks/useSession'
-import { session } from '../lib/session'
 import { Header } from '../components/Header'
 export { Header }
 import { PageTransition } from '../components/PageTransition'
@@ -13,13 +11,6 @@ interface NavItem {
   label: string
   to: string
 }
-
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Khám phá', to: ROUTES.search },
-  { label: 'Sách hiếm', to: searchUrl({ collection: 'featured' }) },
-  { label: 'Đấu giá', to: searchUrl({ collection: 'auction' }) }, // dummy url
-  { label: 'Đổi sách', to: ROUTES.exchange },
-]
 
 const COLLECTION_LINKS: NavItem[] = [
   { label: 'Văn học Việt Nam', to: searchUrl({ q: 'Văn học Việt Nam' }) },

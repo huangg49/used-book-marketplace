@@ -1,9 +1,8 @@
-import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
-import { BookOpen, Search, Repeat, Gavel, Tag } from "lucide-react";
+import { Link } from "react-router-dom";
+import { BookOpen, Repeat, Gavel, Tag } from "lucide-react";
 import { motion } from "framer-motion";
-import { ROUTES, searchUrl } from "../lib/routes";
+import { ROUTES } from "../lib/routes";
 import { BookCard } from "../components/BookCard";
 import { getPublicListings } from "../services/public-listings";
 import styles from "./HomePage.module.css";
@@ -56,17 +55,11 @@ function Shelf({ mode, title }: { mode?: "Exchange"; title: string }) {
   );
 }
 export default function HomePage() {
-  const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    navigate(searchUrl({ q: search.trim() }));
-  };
   const actions = [
     { to: ROUTES.search, title: "Tìm sách quý", subtitle: "Biên mục & Lọc chuyên sâu tác phẩm hiếm có", Icon: BookOpen },
     { to: ROUTES.sell, title: "Đăng bán sách", subtitle: "Định giá & Thẩm định tình trạng 5 bước", Icon: Tag },
     { to: `${ROUTES.search}?mode=Exchange`, title: "Đổi sách bằng Xu", subtitle: "Dùng điểm Lật-Xu trao đổi không cần tiền mặt", Icon: Repeat },
-    { to: "/auction", title: "Sàn đấu giá", subtitle: "Sách chữ ký tác giả & Bản in đầu thế kỷ 20", Icon: Gavel },
+    { to: ROUTES.auctions, title: "Sàn đấu giá", subtitle: "Sách chữ ký tác giả & Bản in đầu thế kỷ 20", Icon: Gavel },
   ];
   return (
     <div className={styles.page}>

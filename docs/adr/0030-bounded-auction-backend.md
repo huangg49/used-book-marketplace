@@ -132,3 +132,21 @@ should confirm the amount before sending. Hidden reserve prices stay out of scop
   retried. That is adequate for the demo limits (POL-41) but was not load-tested.
 - After this migration, run the role bootstrap so the app user gets the new
   collections, as with earlier migrations that added collections.
+
+## Amendment 2026-10-09 — leader sequence and the price cap
+
+Found by the concurrency/scope cases in [AUCTION_TEST_CASES](../features/AUCTION_TEST_CASES.md):
+
+- **Leader raise keeps the winning sequence.** Previously a leader raising their own
+  Auto ceiling received a new `levelSequence`. After *A ties B at 400k (A first) → A
+  raises to 600k → A disables Auto*, A was set back to 400k with the newer sequence, so
+  B ranked first while `leaderId` stayed A; the commit-time ranking check refused the
+  disable (500) and the leader could not turn Auto off (FR-AU05). The leader now keeps
+  the sequence that won the lead. This does not grant the advantage FR-AU04 forbids:
+  when a leader raises, every rival is at or below the leader's old level, so nobody can
+  hold the new level with an earlier claim; the kept sequence only matters at the
+  current price, where FR-AU05 requires "the sequence of the price that won".
+- **No next bid at the cap.** `minimumBid` was `currentPrice + step` even at
+  1,000,000 (1,050,000, outside the contract). Public reads, participation and receipts
+  now return `null` once no grid amount can beat the price; `BidTooLow` says the cap is
+  reached.

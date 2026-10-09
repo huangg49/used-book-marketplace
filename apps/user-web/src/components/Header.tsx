@@ -4,6 +4,7 @@ import { Search, Heart, Wallet, User, Menu, X } from 'lucide-react'
 import { ROUTES, searchUrl } from '../lib/routes'
 import { useSession } from '../hooks/useSession'
 import { session } from '../lib/session'
+import { NotificationBell } from './NotificationBell'
 import styles from '../layouts/MainLayout.module.css'
 
 interface NavItem {
@@ -14,7 +15,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Khám phá', to: ROUTES.search },
   { label: 'Sách hiếm', to: searchUrl({ collection: 'featured' }) },
-  { label: 'Đấu giá', to: searchUrl({ collection: 'auction' }) },
+  { label: 'Đấu giá', to: ROUTES.auctions },
   { label: 'Đổi sách', to: ROUTES.exchange },
 ]
 
@@ -97,6 +98,7 @@ export function Header({ forceDark = false }: HeaderProps) {
         </nav>
 
         <div className={styles.headerActions}>
+          {state.status === 'authenticated' && <NotificationBell />}
           <button className={styles.iconBtn} aria-label="Yêu thích">
             <Heart size={20} aria-hidden="true" />
           </button>
@@ -141,6 +143,9 @@ export function Header({ forceDark = false }: HeaderProps) {
           <Link to={ROUTES.sell} className={styles.mobileNavLink} onClick={() => setMenuOpen(false)}>Đăng sách</Link>
           {state.status === 'authenticated' ? (
             <>
+              <Link to={ROUTES.notifications} className={styles.mobileNavLink} onClick={() => setMenuOpen(false)}>
+                Thông báo
+              </Link>
               <Link to="/profile" className={styles.mobileNavLink} onClick={() => setMenuOpen(false)}>
                 Hồ sơ ({state.user.displayName})
               </Link>

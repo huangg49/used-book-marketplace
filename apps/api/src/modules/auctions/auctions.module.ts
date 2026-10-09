@@ -6,6 +6,8 @@ import { ReservationsModule } from '../reservations/reservations.module.js';
 import { WalletModule } from '../wallet/wallet.module.js';
 import { AuctionBiddingService } from './auction-bidding.service.js';
 import { AuctionClock } from './auction-clock.js';
+import { AuctionGateway } from './auction.gateway.js';
+import { AuctionLiveService } from './auction-live.service.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
 import { AuctionOperationsController } from './auction-operations.controller.js';
 import { AuctionWorker } from './auction-worker.service.js';
@@ -34,6 +36,8 @@ import { PointOrderCompletionService } from './point-order-completion.service.js
     PointOrderCompletionService,
     AuctionClock,
     AuctionWorker,
+    AuctionLiveService,
+    AuctionGateway,
   ],
   controllers: [AuctionsController, AuctionOperationsController],
   exports: [AuctionWorker, AuctionClock],

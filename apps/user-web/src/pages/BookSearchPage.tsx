@@ -4,12 +4,6 @@ import { useState } from "react";
 import { BookCard } from "../components/BookCard";
 import { getPublicListings } from "../services/public-listings";
 import { motion } from "framer-motion";
-const conditionLabels = {
-  LikeNew: "Gần như mới",
-  Good: "Còn tốt",
-  Fair: "Đã dùng nhiều",
-  Worn: "Cũ nhiều",
-};
 export function BookSearchPage() {
   const [params, setParams] = useSearchParams();
   const query = new URLSearchParams();
@@ -634,7 +628,11 @@ export function BookSearchPage() {
                 <button
                   type="button"
                   className="mt-6 px-5 py-3"
-                  onClick={() => update("cursor", "")}
+                  onClick={() => {
+                    const next = new URLSearchParams(params);
+                    next.delete("cursor");
+                    setParams(next, { replace: true });
+                  }}
                 >
                   Về trang đầu
                 </button>
