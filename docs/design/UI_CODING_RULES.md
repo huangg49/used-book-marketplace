@@ -1,5 +1,9 @@
 # Luật giao diện Lật lại
 
+09/10/2026: [brief mới](../../DESIGN.md) được chủ dự án duyệt, ưu tiên hơn các
+quyết định thẩm mỹ UI-1/brand bên dưới. Lora không còn bắt buộc; hướng sans-serif
+cần kiểm bằng màn thật trước đổi runtime. Invariant/accessibility/data vẫn giữ.
+
 UI-1 (30/09/2026): [DESIGN.md](../DESIGN.md) là nguồn sự thật về định hướng trình
 bày mới, ưu tiên khi mâu thuẫn với quyết định thẩm mỹ cũ bên dưới hoặc brand v1.1.
 Đã duyệt màn chuẩn chi tiết; cho phép áp sang kệ sách, chờ duyệt ảnh kệ. Quy tắc về

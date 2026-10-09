@@ -15,8 +15,8 @@ quy tắc; test và review kiểm chứng kết quả, không bảo đảm tuy�
 
 | Công cụ | Cửa vào và cách kiểm tra |
 | --- | --- |
-| Codex | `AGENTS.md`; ba skill ở `.agents/skills/`. Dùng `$latlai-ui`, `$latlai-api-mongo` hoặc `$latlai-verify-handoff` khi cần gọi rõ tên. Kiểm tra danh sách skill của phiên; mở lại phiên nếu chưa nhận thay đổi. |
-| Claude Code | `CLAUDE.md` import `AGENTS.md`; `.claude/skills/` chứa ba adapter cùng tên. Kiểm tra `/context` và danh sách `/`; gọi `/latlai-ui` khi sửa UI. |
+| Codex | `AGENTS.md`; bốn skill ở `.agents/skills/`. Dùng `$latlai-ui`, `$latlai-api-mongo`, `$latlai-verify-handoff` hoặc `$impeccable` khi cần gọi rõ tên. Kiểm tra danh sách skill của phiên; mở lại phiên nếu chưa nhận thay đổi. |
+| Claude Code | `CLAUDE.md` import `AGENTS.md`; `.claude/skills/` chứa bốn adapter cùng tên. Kiểm tra `/context` và danh sách `/`; gọi `/latlai-ui` khi sửa UI, `/impeccable` khi critique/polish trong phạm vi đã giao. |
 | Công cụ khác | Yêu cầu đọc `AGENTS.md`, rồi mở trực tiếp `SKILL.md` liên quan. Không mặc định nó tự nhận tên file hoặc cú pháp của Codex/Claude. |
 
 Chỉ file được commit và có trên nhánh người nhận mới đi theo clone/pull. Skill cá
@@ -27,6 +27,11 @@ Không tự ghi đè cấu hình AI toàn máy hoặc cài plugin để nhận d
 Khi sửa skill, sửa nội dung ở `.agents/skills/<name>/SKILL.md`. Adapter Claude chỉ
 giữ name/description và link đến nguồn; đổi tên/mô tả thì cập nhật cả adapter, chạy
 `pnpm docs:check` để bắt lệch. Dùng file thường để clone trên Windows không cần symlink.
+
+Impeccable là vendor được khóa phiên bản: không sửa trực tiếp body upstream hoặc
+tự tải `latest`. Dùng [workflow](design/IMPECCABLE_WORKFLOW.md) và lệnh
+`pnpm ui:design`; [brief hiện hành](../DESIGN.md) và skill Lật lại ràng buộc mọi
+đề xuất thiết kế. Taste là tài liệu tham khảo, chưa cài vào dự án.
 
 Cơ chế nạp: [Codex AGENTS](https://learn.chatgpt.com/docs/agent-configuration/agents-md),
 [Codex skills](https://learn.chatgpt.com/docs/build-skills),

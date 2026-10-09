@@ -1,11 +1,32 @@
 # Điểm lưu hiện tại — 09/10/2026
 
-Source sản phẩm: main `da59199`; sau đó docs context `d77290a`.
+Source sản phẩm: main `da59199`; docs context `d77290a`, docs refresh `2e13f04`.
 OpenAPI0.30.0,15 migration Mongo,113 operation HTTP. Đây là trạng thái theo Git/
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
 ## Gói đang kết thúc
+
+- Chủ dự án duyệt tích hợp Impeccable/brief/critique, nhánh
+  `codex/impeccable-ui-workflow` từ `2e13f04`. Checkpoint subject
+  `feat(design): pin Impeccable workflow and record UI critique`.
+- Vendored Impeccable4.5.2 tại SHA `d631a8827f99414d2b6daba4ef08b7f8701751d7`,
+  engine0.1.14/checksums; wrapper `pnpm ui:design`, adapter Claude, context shared
+  và native. [DESIGN root](../../DESIGN.md) thay ràng buộc thẩm mỹ UI-1: Lora không
+  còn bắt buộc, sans cho tác vụ, ngôn ngữ rõ; runtime UI chưa đổi. Taste chỉ reference.
+- [Workflow/evidence](../design/IMPECCABLE_WORKFLOW.md),
+  [critique3 màn](../../.impeccable/critique/2026-10-09T16-30-59Z__apps-user-web-src-pages.md).
+  Hai sub-agent được phép nhưng đều dừng vì quota; critique DEGRADED do parent
+  hoàn tất. Điểm heuristic13/25/24 trên40 không là usability/human acceptance.
+- PASS: vendor64 file, pinned engine/probe/cache từ chối file hỏng, context web/
+  native adaptive, skill validatorUTF8, docs:check bốn adapters, diff whitespace.
+  Detector0 findings nhưng browser/source chỉ ra lỗi sort/filter/mobile/câu chữ/
+  state/form. API build để dựng QA, không nhận là full API test PASS.
+- QA riêng/storage fake đã dừng/dọn DB/users/roles; không native/live Supabase/
+  human sign-off/remote CI. Không đổi source sản phẩm/contract/migration, không
+  push/PR/merge/deploy; giữ READINESS và stash/nhánh teammate.
+
+## Checkpoint docs trước đó — `2e13f04`
 
 - Dọn tài liệu theo yêu cầu chủ dự án, nhánh `codex/docs-refresh` từ `d77290a`.
   Checkpoint subject `docs: refresh current guides and archive outdated session notes`.
@@ -41,7 +62,7 @@ register/profile scaffold, admin dashboard mẫu; Flutter scaffold.
 
 - [READINESS](READINESS.md) giữ trạng thái: Android PARTIAL, TalkBack/ARM/iOS OPEN,
   review tiền/quyền/UX người thật OPEN, release/hậu-F2h BLOCKED. Chưa có evidence
-  mới đóng gate trong gói docs này.
+  mới đóng gate trong gói docs hoặc critique này.
 - DirectDelivery tới F2h; ViaPoint auction có source inspection/claim/return/
   settlement worker. Cần đối chiếu gate và review trước mở rộng; không chạy worker
   trên DB chính để thử mâu thuẫn tài liệu. Point LOCKED handlers còn gap decorator
@@ -70,6 +91,9 @@ không lấy port/PID/account/config trong lịch sử làm cấu hình mặc đ
 Chat mới dùng [prompt](NEXT_SESSION_PROMPT.md), kiểm Git/source thực tế và nhận
 gói cụ thể. Setup theo [START_HERE](START_HERE.md)/[DEVELOPMENT](../DEVELOPMENT.md),
 QA `*_test` riêng, skill/checks theo [AI_WORKFLOW](../AI_WORKFLOW.md).
+Ưu tiên UI đề xuất ở critique: search đúng contract/control/state trước, rồi
+câu chữ/font/detail và form recovery. Chủ dự án đã duyệt gói tích hợp/đánh giá;
+chưa coi mọi đề xuất redesign là source đã sửa hoặc quyền merge/release mới.
 [CONTINUATION_PLAN](CONTINUATION_PLAN.md) là backlog có gate, không tự cấp quyền
 code tính năng mới/merge/deploy. Cập nhật mục của mình, không nối nhật ký dài lại.
 

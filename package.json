@@ -17,6 +17,7 @@
     "test:demo:api": "node scripts/test-demo-books.mjs",
     "test:demo:funding": "node scripts/test-demo-funding.mjs",
     "docs:check": "node scripts/check-agent-docs.mjs",
+    "ui:design": "node scripts/impeccable.mjs",
     "setup:local": "node scripts/setup-local.mjs",
     "doctor:local": "pnpm --filter @used-books/api doctor:local",
     "build:android": "node scripts/build-android.mjs",

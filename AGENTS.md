@@ -35,7 +35,7 @@
 
 | Nhiệm vụ | Đọc trước khi sửa |
 | --- | --- |
-| UI RN/web/admin/Flutter | [Skill UI](.agents/skills/latlai-ui/SKILL.md), UI_CODING_RULES/UI_COMPONENTS/brand v1.1 được dẫn trong skill |
+| UI RN/web/admin/Flutter | [Skill UI](.agents/skills/latlai-ui/SKILL.md), [brief hiện hành](DESIGN.md), UI rules/components; [Impeccable workflow](docs/design/IMPECCABLE_WORKFLOW.md) khi design/critique/refine |
 | API, permission, session, persistence | [Skill API/Mongo](.agents/skills/latlai-api-mongo/SKILL.md), phần liên quan trong [DOMAIN_RULES](docs/architecture/DOMAIN_RULES.md) và ADR/feature được dẫn |
 | Review hoặc hoàn tất một gói | [Skill verify/handoff](.agents/skills/latlai-verify-handoff/SKILL.md), [CONTRIBUTING](CONTRIBUTING.md), [TEAMWORK](docs/TEAMWORK.md) |
 

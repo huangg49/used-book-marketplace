@@ -46,7 +46,8 @@ QA replica set/database *_test và bucket riêng; không dùng DB/bucket local c
 Không đọc/in/commit token, password, DB dump, body/PII hoặc cấu hình .env thật.
 
 Chọn skill repo theo nhiệm vụ: latlai-ui, latlai-api-mongo, latlai-verify-handoff.
-UI theo DESIGN/UI_CODING_RULES/UI_COMPONENTS/brand1.1, dữ liệu API thật,
+UI theo DESIGN.md ở root (brief hiện hành)/UI_CODING_RULES/UI_COMPONENTS,
+brand1.1 giữ asset; Impeccable theo docs/design/IMPECCABLE_WORKFLOW.md. Dữ liệu API thật,
 giữ lỗi/form/Back/keyboard/safe area/chữ lớn; không tạo rating/số dư/claim badge giả.
 Chọn checks theo diff trong AI_WORKFLOW. Báo PASS/FAIL/NOT RUN/BLOCKED và skip rõ;
 không coi browser fake là Supabase thật, export là native hoặc AI review là human.

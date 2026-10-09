@@ -12,7 +12,7 @@
 | Hiểu nghiệp vụ mục tiêu | [SRS1.1](SRS_V1_1.md), [phụ lục TP.HCM](features/LOCAL_HANDOVER_AUCTION.md) |
 | Tìm API đang có | [OpenAPI](../packages/api-contract/openapi.yaml), [code map](handoff/START_HERE.md) |
 | Sửa kiến trúc / database | [Kiến trúc](architecture/README.md), [ADR0027](adr/0027-mongodb-persistence-protocol.md), [model map MongoDB](refactor/MIG02_MODEL_MAP.md) |
-| Sửa giao diện | [UI rules](design/UI_CODING_RULES.md), [components](design/UI_COMPONENTS.md), [brand1.1](../packages/brand/v1.1/README.md) |
+| Sửa giao diện | [Brief hiện hành](../DESIGN.md), [Impeccable workflow](design/IMPECCABLE_WORKFLOW.md), [UI rules](design/UI_CODING_RULES.md), [components](design/UI_COMPONENTS.md), [brand assets1.1](../packages/brand/v1.1/README.md) |
 | Lập công việc tiếp theo | [CONTINUATION_PLAN](handoff/CONTINUATION_PLAN.md), chỉ mở gói khi dependency/gate đạt |
 | Tìm báo cáo hoặc bằng chứng cũ | [Danh mục chi tiết](CATALOG.md) |
 
