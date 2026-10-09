@@ -3,7 +3,14 @@
 Chủ dự án duyệt09/10/2026: tích hợp vào repo, cập nhật brief và đánh giá ba màn
 tìm sách/chi tiết/đăng sách. Không có thay đổi màn hình/runtime trong gói tích hợp.
 
-Lượt đầu: [critique09/10](../../.impeccable/critique/2026-10-09T16-30-59Z__apps-user-web-src-pages.md).
+Lượt mới nhất: [critique độc lập09/10](../../.impeccable/critique/2026-10-09T16-53-10Z__apps-user-web-src-pages.md),
+A `/root/ui_review_a_fresh`, B `/root/ui_review_b_retry`, source UI giữ nguyên.
+Hai agent hoàn tất source/browser; A không đọc detector/B/report cũ, parent chỉ
+đọc B sau A final. B kiểm pagination và giữ form state; detector một lần0findings
+không bắt được các lỗi UX/API. Điểm A12/22/22 trên40; khác lượt trước không là
+regression vì source chưa đổi. Chi tiết disclosure và limits có trong snapshot.
+
+Lượt đầu lịch sử: [critique09/10](../../.impeccable/critique/2026-10-09T16-30-59Z__apps-user-web-src-pages.md).
 Hai agent được duyệt nhưng đều lỗi usage limit trước kết luận; parent hoàn tất
 theo chế độ DEGRADED, không nhận là dual-agent PASS. Thứ tự sửa đề xuất: search
 đúng API/control/state, câu chữ/font/detail, rồi form/recovery. Đây là backlog
@@ -115,3 +122,10 @@ QA-only Vite/API/image service đã dừng; hai database fixture cùng users/rol
 đúng hai DB QA bằng tên xác nhận; không tác động DB/process của người dùng.
 Không bật hook/live overlay/config global. Runtime cache và evidence local giữ
 trong `.tmp` bị ignore; runner/routes/body tạm đã dọn sau lưu snapshot.
+
+Lượt chạy lại: dùng API dist đã build cùng source UI/API không đổi, không chạy
+lại test/gate sản phẩm. A xem1440×1000/390×844, B1440×900/390×844, tab riêng ẩn,
+resize nối tiếp. QA mới dùng một DB fixture riêng; stop marker gọi close fixture
+thành công (exit0), xác minh DB/users/roles không còn rồi dừng đúng Mongo QA.
+Không dùng Ctrl+C cleanup ở lượt này. Docs check/diff check cho snapshot/handoff;
+local evidence giữ trong `.tmp`, runner/routes/body/marker tạm đã dọn.

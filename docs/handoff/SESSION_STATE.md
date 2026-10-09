@@ -15,9 +15,12 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   và native. [DESIGN root](../../DESIGN.md) thay ràng buộc thẩm mỹ UI-1: Lora không
   còn bắt buộc, sans cho tác vụ, ngôn ngữ rõ; runtime UI chưa đổi. Taste chỉ reference.
 - [Workflow/evidence](../design/IMPECCABLE_WORKFLOW.md),
-  [critique3 màn](../../.impeccable/critique/2026-10-09T16-30-59Z__apps-user-web-src-pages.md).
-  Hai sub-agent được phép nhưng đều dừng vì quota; critique DEGRADED do parent
-  hoàn tất. Điểm heuristic13/25/24 trên40 không là usability/human acceptance.
+  [critique độc lập3 màn](../../.impeccable/critique/2026-10-09T16-53-10Z__apps-user-web-src-pages.md).
+  User cho phép chạy lại; A `/root/ui_review_a_fresh` và B `/root/ui_review_b_retry`
+  hoàn tất source/browser riêng. Parent đọc B sau A final. Điểm A12/22/22 trên40
+  không là usability/human acceptance; source chưa đổi, không nhận chênh điểm là
+  regression. [Lượt đầu DEGRADED](../../.impeccable/critique/2026-10-09T16-30-59Z__apps-user-web-src-pages.md)
+  giữ lịch sử. Checkpoint lượt chạy lại: `docs(design): complete independent UI critique`.
 - PASS: vendor64 file, pinned engine/probe/cache từ chối file hỏng, context web/
   native adaptive, skill validatorUTF8, docs:check bốn adapters, diff whitespace.
   Detector0 findings nhưng browser/source chỉ ra lỗi sort/filter/mobile/câu chữ/
