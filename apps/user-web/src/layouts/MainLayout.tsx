@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { BookOpen, Mail, Menu, MessageCircle, X, Search, User } from 'lucide-react'
+import { BookOpen, Mail, Menu, MessageCircle, X, Search, User, Heart, Wallet } from 'lucide-react'
 import { ROUTES, searchUrl } from '../lib/routes'
 import { useSession } from '../hooks/useSession'
 import { NotificationBell } from '../components/NotificationBell'
@@ -111,6 +111,14 @@ export function Header() {
 
         <div className={styles.headerActions}>
           {state.status === 'authenticated' && <NotificationBell />}
+          <button className={styles.iconBtn} aria-label="Yêu thích">
+            <Heart size={20} aria-hidden="true" />
+          </button>
+
+          <div className={styles.walletBtn}>
+            <Wallet size={18} aria-hidden="true" className={styles.walletIcon} /> 120 Xu
+          </div>
+
           <Link to={state.status === 'authenticated' ? '/profile' : ROUTES.login} className={styles.iconBtn} aria-label="Tài khoản">
             <User size={20} aria-hidden="true" />
           </Link>
@@ -250,7 +258,7 @@ export default function MainLayout() {
         Bỏ qua điều hướng
       </a>
       <Header />
-      <main id="main-content" className={styles.main} style={location.pathname === ROUTES.home ? undefined : { paddingTop: '5.5rem' }}>
+      <main id="main-content" className={styles.main} style={(location.pathname === ROUTES.home || location.pathname === ROUTES.search) ? undefined : { paddingTop: '5.5rem' }}>
         <Outlet />
       </main>
       <Footer />
