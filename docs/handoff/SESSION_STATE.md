@@ -31,6 +31,13 @@
     "mỗi lần một bước" trên web sửa thành "hơn người khác một bước". PASS: `auctions.e2e-spec`
     42/42 (chạy lặp), API unit 115/115. Một lần chạy toàn bộ e2e có `shipments` lỗi rồi chạy lại
     riêng 31/31 PASS — không liên quan đấu giá, cần theo dõi.
+  - Đóng các gap: hộp thư thông báo bền ([ADR 0032](../adr/0032-member-notification-inbox.md),
+    migration `0015-member-notifications`, OpenAPI 0.30.0 `GET /me/notifications`,
+    `POST /me/notifications/read`) ghi cùng transaction với sự kiện đấu giá; worker giữ phiên
+    `OnHold` ngay khi người bán/người dẫn mất điều kiện (system `AuctionHold`); web có chuông
+    thông báo, trang `/notifications`, khung "Đây là phiên của bạn" + "Rút phiên", nhãn giá đúng
+    khi tạm dừng/hủy. Máy có DB cũ: `pnpm db:migrate` rồi `pnpm db:bootstrap`.
+    PASS: `auctions.e2e-spec` 47/47, `test:api:mongo` 39 (+4 skip như cũ), contract check/routes.
   - Phụ thuộc API: phiên đấu giá giữ commitment nên listing bị ẩn khỏi `/listings`; UI chưa
     có ảnh bìa/phiếu tình trạng và dùng bìa chữ. Cần mở rộng contract đọc công khai (ảnh,
     tình trạng) trước khi hiển thị. Bước sau thanh toán (biên bản, mã nhận sách) chưa có UI.

@@ -2511,4 +2511,245 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       await buyNowCmd(auctionId, y).expect(409);
     });
   });
+  describe('FR-AU09 holds and FR-N03 notifications', () => {
+    type Note = {
+      id: string;
+      kind: string;
+      title: string;
+      body: string;
+      targetId: string;
+      readAt: string | null;
+    };
+    const inbox = async (a: Actor, query = '') => {
+      const r = await call('get', `/me/notifications${query}`, a).expect(200);
+      validates('MemberNotificationPage', r.body);
+      return r.body as {
+        items: Note[];
+        unreadCount: number;
+        nextCursor: string | null;
+      };
+    };
+    const buyNowCmd = (auctionId: string, a: Actor) =>
+      cmd(
+        'post',
+        `/auctions/${auctionId}/buy-now`,
+        { fulfillmentMethod: 'SelfCollect' },
+        a,
+      );
+    const kinds = async (a: Actor, auctionId: string) =>
+      (await inbox(a, '?limit=50')).items
+        .filter((n) => n.targetId === auctionId)
+        .map((n) => n.kind)
+        .sort();
+
+    it('FR-AU09: a seller locked mid-auction holds it before the close; bids stop, nobody is promoted', async () => {
+      const o = await openAuction();
+      const [x, y] = [await actor(), await actor()];
+      await auto(o.auctionId, x, 400_000).expect(200);
+      await bid(o.auctionId, y, 300_000).expect(200);
+      await db.setStatus(o.seller.id, 'LOCKED');
+      await app.get(AuctionWorker).tick();
+      const a = (await db.c.auctions.findOne({ _id: o.auctionId }))!;
+      expect(a).toMatchObject({
+        state: 'OnHold',
+        leaderId: x.id,
+        currentPrice: 350_000,
+        winnerId: null,
+      });
+      expect(
+        await db.c.auction_bidders.countDocuments({ auctionId: o.auctionId }),
+      ).toBe(2);
+      expect((await bid(o.auctionId, y, 450_000).expect(409)).body.code).toBe(
+        'AuctionClosed',
+      );
+      // The close later skips it; only an independent Admin decides.
+      pinClock(a.endAt);
+      await app.get(AuctionWorker).tick();
+      vi.restoreAllMocks();
+      expect(await db.c.auctions.findOne({ _id: o.auctionId })).toMatchObject({
+        state: 'OnHold',
+        orderId: null,
+      });
+      // Seller (LOCKED, existing obligation) and leader are told. y never led:
+      // their own bid's receipt already said "not leading", so no notice.
+      expect(await kinds(o.seller, o.auctionId)).toEqual(['AuctionOnHold']);
+      expect(await kinds(x, o.auctionId)).toEqual(['AuctionOnHold']);
+      expect(await kinds(y, o.auctionId)).toEqual([]);
+      const pub = await call('get', `/auctions/${o.auctionId}`).expect(200);
+      expect(pub.body.auction).toMatchObject({
+        state: 'OnHold',
+        minimumBid: null,
+      });
+    });
+
+    it('FR-AU09: a leader who loses eligibility is held too; an eligible auction is never held', async () => {
+      const held = await openAuction();
+      const calm = await openAuction();
+      const [x, y] = [await actor(), await actor()];
+      await bid(held.auctionId, x, 200_000).expect(200);
+      await bid(calm.auctionId, y, 200_000).expect(200);
+      await db.setStatus(x.id, 'RESTRICTED');
+      await app.get(AuctionWorker).tick();
+      await app.get(AuctionWorker).tick(); // holding is idempotent
+      expect(
+        (await db.c.auctions.findOne({ _id: held.auctionId }))!.state,
+      ).toBe('OnHold');
+      expect(
+        (await db.c.auctions.findOne({ _id: calm.auctionId }))!.state,
+      ).toBe('Active');
+      expect(
+        await db.c.member_notifications.countDocuments({
+          targetId: held.auctionId,
+          kind: 'AuctionOnHold',
+        }),
+      ).toBe(2);
+    });
+
+    it('FR-N03: outbid, won, sold and paid reach the right people once, without ceilings', async () => {
+      const [x, y] = [await actor(), await actor()];
+      const o = await openAuction();
+      await auto(o.auctionId, x, 450_000).expect(200);
+      const key = randomUUID();
+      await bid(o.auctionId, y, 500_000, key).expect(200);
+      await bid(o.auctionId, y, 500_000, key).expect(200); // replay: no second notice
+      expect(await kinds(x, o.auctionId)).toEqual(['AuctionOutbid']);
+      const outbid = (await inbox(x)).items.find(
+        (n) => n.targetId === o.auctionId,
+      )!;
+      expect(outbid.body).toContain('500.000đ');
+      expect(outbid.body).toContain('550.000đ');
+      const doc = (await db.c.auctions.findOne({ _id: o.auctionId }))!;
+      pinClock(doc.endAt);
+      await app.get(AuctionWorker).tick();
+      vi.restoreAllMocks();
+      expect(await kinds(y, o.auctionId)).toEqual(['AuctionWon']);
+      expect(await kinds(o.seller, o.auctionId)).toEqual(['AuctionSold']);
+      const closed = (await db.c.auctions.findOne({ _id: o.auctionId }))!;
+      await longSession(y);
+      await fund(y, 500_000);
+      pinClock(new Date(closed.closedAt!.getTime() + 60_000));
+      await payOrder(closed.orderId!, y).expect(200);
+      vi.restoreAllMocks();
+      expect(await kinds(o.seller, o.auctionId)).toEqual([
+        'AuctionPaid',
+        'AuctionSold',
+      ]);
+      // A private ceiling never appears in anyone's inbox.
+      const all = await db.c.member_notifications
+        .find({ targetId: o.auctionId })
+        .toArray();
+      expect(JSON.stringify(all)).not.toContain('450.000');
+      expect(
+        all.every((n) => !n.body.includes(x.id) && !n.body.includes(y.id)),
+      ).toBe(true);
+    });
+
+    it('FR-N03: Buy Now, unsold, Admin cancel and payment expiry notify seller and bidders', async () => {
+      const [x, y] = [await actor(), await actor()];
+      const bought = await openAuction();
+      await buyNowCmd(bought.auctionId, x).expect(200);
+      expect(await kinds(bought.seller, bought.auctionId)).toEqual([
+        'AuctionBoughtNow',
+      ]);
+      expect(await kinds(x, bought.auctionId)).toEqual([]);
+
+      const unsold = await openAuction();
+      const end = (await db.c.auctions.findOne({ _id: unsold.auctionId }))!
+        .endAt;
+      pinClock(end);
+      await app.get(AuctionWorker).tick();
+      vi.restoreAllMocks();
+      expect(await kinds(unsold.seller, unsold.auctionId)).toEqual([
+        'AuctionUnsold',
+      ]);
+
+      const cancelled = await openAuction();
+      await bid(cancelled.auctionId, x, 200_000).expect(200);
+      await bid(cancelled.auctionId, y, 250_000).expect(200);
+      const version = (await db.c.auctions.findOne({
+        _id: cancelled.auctionId,
+      }))!.version;
+      await cmd(
+        'post',
+        `/operations/auctions/${cancelled.auctionId}/cancel`,
+        {
+          expectedVersion: version,
+          reason: 'Nghi ngờ thông đồng giữa các tài khoản',
+        },
+        admin,
+      ).expect(200);
+      for (const who of [cancelled.seller, x, y])
+        expect(await kinds(who, cancelled.auctionId)).toContain(
+          'AuctionCancelled',
+        );
+
+      // Buy Now unpaid for 15 minutes: buyer and seller are told.
+      const deadline = (await db.c.auctions.findOne({ _id: bought.auctionId }))!
+        .paymentDeadline!;
+      pinClock(deadline);
+      await app.get(AuctionWorker).tick();
+      vi.restoreAllMocks();
+      expect(await kinds(x, bought.auctionId)).toEqual([
+        'AuctionPaymentExpired',
+      ]);
+      expect(await kinds(bought.seller, bought.auctionId)).toEqual([
+        'AuctionBoughtNow',
+        'AuctionPaymentExpired',
+      ]);
+    });
+
+    it('FR-N04: inbox pages, unread counts, marking read only touches own rows', async () => {
+      const [x, other] = [await actor(), await actor()];
+      const ids: string[] = [];
+      for (let i = 0; i < 3; i++) {
+        const o = await openAuction();
+        await bid(o.auctionId, x, 200_000).expect(200);
+        await bid(o.auctionId, other, 250_000).expect(200);
+        ids.push(o.auctionId);
+      }
+      const first = await inbox(x, '?limit=2');
+      expect(first.items).toHaveLength(2);
+      expect(first.unreadCount).toBe(3);
+      const second = await inbox(x, `?limit=2&cursor=${first.nextCursor}`);
+      expect(second.items).toHaveLength(1);
+      expect(second.nextCursor).toBeNull();
+      expect(
+        new Set([...first.items, ...second.items].map((n) => n.targetId)),
+      ).toEqual(new Set(ids));
+      await call('get', '/me/notifications?cursor=nonsense', x).expect(400);
+
+      // Another member's ids are ignored; the caller's own stay unread.
+      const mine = first.items[0]!.id;
+      const foreign = await call('post', '/me/notifications/read', other).set('Idempotency-Key', randomUUID())
+        .send({ ids: [mine] })
+        .expect(200);
+      validates('NotificationUnreadCount', foreign.body);
+      expect((await inbox(x)).unreadCount).toBe(3);
+      const one = await call('post', '/me/notifications/read', x).set('Idempotency-Key', randomUUID())
+        .send({ ids: [mine] })
+        .expect(200);
+      expect(one.body).toEqual({ unreadCount: 2 });
+      await call('post', '/me/notifications/read', x).set('Idempotency-Key', randomUUID())
+        .send({ ids: [mine] })
+        .expect(200); // idempotent
+      await call('post', '/me/notifications/read', x).set('Idempotency-Key', randomUUID()).send({}).expect(422);
+      await call('post', '/me/notifications/read', x).set('Idempotency-Key', randomUUID())
+        .send({ ids: [mine], all: true })
+        .expect(422);
+      expect(
+        (
+          await call('post', '/me/notifications/read', x).set('Idempotency-Key', randomUUID())
+            .send({ all: true })
+            .expect(200)
+        ).body,
+      ).toEqual({
+        unreadCount: 0,
+      });
+      await call('get', '/me/notifications').expect(401);
+      // Keyed like every mutation.
+      await call('post', '/me/notifications/read', x)
+        .send({ all: true })
+        .expect(400);
+    });
+  });
 });

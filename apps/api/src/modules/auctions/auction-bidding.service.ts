@@ -38,6 +38,7 @@ import {
   type EngineAction,
 } from './auction-engine.js';
 import { checkAuction } from './auction-invariants.js';
+import { notifyAuction } from './auction-notifications.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
 import { HandoverPointsService } from './handover-points.service.js';
 import { recordViolation, requireUnrestricted } from './member-violations.js';
@@ -374,6 +375,8 @@ export class AuctionBiddingService {
           },
           now,
         );
+        if (a.leaderId && next.leaderId !== a.leaderId)
+          await notifyAuction(tx, next, 'AuctionOutbid', [a.leaderId], now);
         return this.change(
           next,
           now,
@@ -447,6 +450,7 @@ export class AuctionBiddingService {
           },
           now,
         );
+        await notifyAuction(tx, next, 'AuctionBoughtNow', [a.sellerId], now);
         return this.change(next, now, 'AuctionBoughtNow', actor._id);
       },
     });
@@ -497,12 +501,62 @@ export class AuctionBiddingService {
           'AuctionCancelled',
           now,
         );
+        const bidders = await tx.c.auction_bidders
+          .find({ auctionId: a._id }, { projection: { bidderId: 1 } })
+          .toArray();
+        await notifyAuction(
+          tx,
+          next,
+          'AuctionCancelled',
+          [a.sellerId, ...bidders.map((b) => b.bidderId)],
+          now,
+        );
         return this.change(next, now, 'AuctionCancelled', actor._id, reason);
       },
     });
   }
 
   // ---------------------------------------------------------- workers
+  // FR-AU09: the seller and the current leader must be ACTIVE verified members.
+  private async partiesEligible(tx: Tx, a: AuctionDoc) {
+    const ids = [...new Set([a.sellerId, ...(a.leaderId ? [a.leaderId] : [])])];
+    const users = await tx.c.users.find({ _id: { $in: ids } }).toArray();
+    return (
+      users.length === ids.length &&
+      users.every((u) => u.status === 'ACTIVE' && !!u.emailVerifiedAt)
+    );
+  }
+
+  // FR-AU09: an Active auction whose seller or leader lost eligibility is held
+  // at once, not only at the close. Bids are kept and no runner-up is promoted;
+  // an independent Admin decides (cancel). Keyed by the auction: held once.
+  hold(id: string) {
+    return this.commands.systemAuction('AuctionHold', id, {
+      discover: async (tx) => {
+        const a = await this.auction(tx, id);
+        return [a.sellerId, ...(a.leaderId ? [a.leaderId] : [])];
+      },
+      authorize: (tx) => this.auction(tx, id),
+      mutate: async (tx, before) => {
+        await tx.lock('auctions', [id]);
+        const a = await this.auction(tx, id);
+        if (a.leaderId !== before.leaderId) throw conflict();
+        const now = await this.clock.now(tx);
+        if (a.state !== 'Active' || now >= a.endAt) throw invalidState();
+        if (await this.partiesEligible(tx, a)) throw invalidState();
+        const next = await this.update(tx, a, { state: 'OnHold' }, now);
+        await notifyAuction(
+          tx,
+          next,
+          'AuctionOnHold',
+          [a.sellerId, a.leaderId],
+          now,
+        );
+        return this.change(next, now, 'AuctionOnHold', null);
+      },
+    });
+  }
+
   // FR-AU07/09: idempotent close keyed by the auction id. Payment deadline is
   // endAt + 24h whenever the worker runs; a late worker records the expiry.
   close(id: string) {
@@ -526,17 +580,19 @@ export class AuctionBiddingService {
             now,
           );
           await this.reclaim(tx, a, 'Unsold', now);
+          await notifyAuction(tx, next, 'AuctionUnsold', [a.sellerId], now);
           return this.change(next, now, 'AuctionUnsold', null);
         }
-        const users = await tx.c.users
-          .find({ _id: { $in: [a.sellerId, a.leaderId] } })
-          .toArray();
-        if (
-          users.length !== 2 ||
-          users.some((u) => u.status !== 'ACTIVE' || !u.emailVerifiedAt)
-        ) {
+        if (!(await this.partiesEligible(tx, a))) {
           // Never silently drop bids or promote the runner-up.
           const next = await this.update(tx, a, { state: 'OnHold' }, now);
+          await notifyAuction(
+            tx,
+            next,
+            'AuctionOnHold',
+            [a.sellerId, a.leaderId],
+            now,
+          );
           return this.change(next, now, 'AuctionOnHold', null);
         }
         const deadline = new Date(a.endAt.getTime() + AUCTION_PAYMENT_MS);
@@ -567,7 +623,19 @@ export class AuctionBiddingService {
           },
           now,
         );
-        if (expired) await this.reclaim(tx, a, 'PaymentExpired', now);
+        if (expired) {
+          await this.reclaim(tx, a, 'PaymentExpired', now);
+          await notifyAuction(
+            tx,
+            next,
+            'AuctionPaymentExpired',
+            [a.leaderId, a.sellerId],
+            now,
+          );
+        } else {
+          await notifyAuction(tx, next, 'AuctionWon', [a.leaderId], now);
+          await notifyAuction(tx, next, 'AuctionSold', [a.sellerId], now);
+        }
         return this.change(
           next,
           now,
@@ -604,6 +672,13 @@ export class AuctionBiddingService {
         });
         const next = await this.update(tx, a, { state: 'PaymentExpired' }, now);
         await this.reclaim(tx, a, 'PaymentExpired', now);
+        await notifyAuction(
+          tx,
+          next,
+          'AuctionPaymentExpired',
+          [a.winnerId, a.sellerId],
+          now,
+        );
         return this.change(next, now, 'AuctionPaymentExpired', null);
       },
     });

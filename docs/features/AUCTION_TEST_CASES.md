@@ -94,19 +94,15 @@ together → if 600k and 800k are sequenced first the price is 650k and 650k is 
 both. This matches "must beat the current price by one step" (eBay behaves the same);
 fixing it would need a sealed-bid round, which the scope does not have.
 
-## Known gaps from the business review
+## Gaps from the business review — status
 
-- The seller sees the bid panel (public reads do not expose the seller); the server
-  refuses with `SelfReviewForbidden` and the page shows that message.
-- If the seller or leader loses eligibility during an Active auction, new bids are
-  refused at once but the auction only becomes `OnHold` at close (FR-AU09); the page
-  still says "Đang nhận giá" until then.
-- POL-41 counts live leads and unpaid wins, not every outbid level: an outbid level
-  cannot win without a new action (no runner-up), so it is treated as released.
-- Admin cancel and being outbid are visible on the page/live channel only; there is no
-  durable notification inbox entry yet (FR-N01–N04).
-- A full `test:api:e2e` run once failed `shipments.e2e-spec` (forged-registration case)
-  and passed 31/31 when re-run alone; not related to auctions, logged for follow-up.
+| Gap | Fix | Tests |
+| --- | --- | --- |
+| Seller saw the bid panel on their own auction | The page reads the seller's own `/me/auction-intakes`; it shows "Đây là phiên của bạn" and, before the first bid, "Rút phiên" (FR-AU02) | Browser on fixture; withdraw race e2e |
+| A seller/leader losing eligibility only held the auction at close | Worker sweep + `AuctionHold` system command holds it at once under the auction lock (FR-AU09); bids then get `AuctionClosed`; the close skips it | `FR-AU09: a seller locked mid-auction…`, `…a leader who loses eligibility…` |
+| Outbid / cancel / hold only visible on the page | Durable inbox written in the same transaction ([ADR 0032](../adr/0032-member-notification-inbox.md)), bell + `/notifications` | `FR-N03: outbid, won, sold and paid…`, `FR-N03: Buy Now, unsold, Admin cancel…`, `FR-N04: inbox pages…` |
+| "Giá chốt" shown for held/cancelled auctions | State-specific price and history labels | Browser on fixture |
+| POL-41 counts live leads and unpaid wins, not outbid levels | Kept: an outbid level cannot win without a new action (no runner-up), so it is released | `POL-41 race…` |
 
 ## Not covered
 

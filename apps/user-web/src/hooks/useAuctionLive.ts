@@ -46,6 +46,7 @@ export function useAuctionLive(id: string | undefined, onChange?: () => void) {
       // Own standing (leading/outbid) is private: read it again over REST.
       void queryClient.invalidateQueries({ queryKey: ['auction-participation', id] })
       void queryClient.invalidateQueries({ queryKey: ['point-order'] })
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] })
       onChange?.()
     }
     const lost = () => setWatching(false)

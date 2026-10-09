@@ -64,3 +64,20 @@ export function bidOptions(minimum: number, step: number, count = 3) {
   for (let v = minimum; v <= AUCTION_MAX_PRICE && values.length < count; v += step) values.push(v)
   return values
 }
+
+// Seller side: the caller's own intakes tell the detail page that this auction
+// is theirs (public reads never expose the seller).
+const myIntakeSchema = z.object({
+  id: z.string().uuid(), auctionId: z.string().uuid().nullable(), state: z.string(), version: z.number().int(),
+})
+export type MyIntake = z.infer<typeof myIntakeSchema>
+export function getMyAuctionIntakes() {
+  return session.request('/me/auction-intakes', z.object({ items: z.array(myIntakeSchema) }))
+}
+const intakeReceiptSchema = z.object({ id: z.string().uuid(), entityType: z.string(), state: z.string(), version: z.number().int() })
+/** FR-AU02: withdraw before the first bid; the server rechecks under the auction lock. */
+export function withdrawIntake(intakeId: string, expectedVersion: number, key: string) {
+  return session.request(`/auction-intakes/${intakeId}/cancel`, intakeReceiptSchema, {
+    method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ expectedVersion }),
+  })
+}

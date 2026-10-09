@@ -16,6 +16,7 @@ export const ROUTES = {
   chat: (conversationId?: string): string => conversationId ? `/chat/${conversationId}` : '/chat',
   auctions: '/auctions',
   auctionDetail: (id: string): string => `/auctions/${id}`,
+  notifications: '/notifications',
 } as const
 
 export function searchUrl(params: Record<string, string>): string {

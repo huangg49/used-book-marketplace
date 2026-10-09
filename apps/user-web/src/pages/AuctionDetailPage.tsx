@@ -10,13 +10,30 @@ import { useAuctionLive } from '../hooks/useAuctionLive'
 import { useSession } from '../hooks/useSession'
 import { formatVnd, ROUTES } from '../lib/routes'
 import {
-  AUCTION_MAX_PRICE, bidOptions, buyNow, disableAutoBid, getAuction, getMyParticipation, getMyPointOrder,
-  payPointOrder, placeBid, setAutoBid,
+  AUCTION_MAX_PRICE, bidOptions, buyNow, disableAutoBid, getAuction, getMyAuctionIntakes, getMyParticipation, getMyPointOrder,
+  payPointOrder, placeBid, setAutoBid, withdrawIntake, type MyIntake,
   type AuctionParticipation, type AuctionState, type AuctionSummary,
 } from '../services/auctions'
 import styles from './AuctionDetailPage.module.css'
 
 const HOUR = 3_600_000
+// Only a won or bought auction has a final price; a held or cancelled one does not.
+const CLOSED_PRICE: Partial<Record<AuctionState, string>> = {
+  BuyNowPending: 'Giá mua ngay',
+  AwaitingWinnerPayment: 'Giá chốt',
+  Sold: 'Giá chốt',
+  PaymentExpired: 'Giá thắng (chưa thanh toán)',
+  OnHold: 'Giá khi tạm dừng',
+  Cancelled: 'Giá khi hủy',
+}
+const TOP_BADGE: Partial<Record<AuctionState, string>> = {
+  Active: 'Đang dẫn',
+  AwaitingWinnerPayment: 'Giá chốt',
+  Sold: 'Giá chốt',
+  OnHold: 'Dẫn khi tạm dừng',
+  Cancelled: 'Dẫn khi hủy',
+  PaymentExpired: 'Giá thắng',
+}
 const STATE_LABEL: Record<AuctionState, string> = {
   Active: 'Đang nhận giá',
   BuyNowPending: 'Đã có người mua ngay',
@@ -82,8 +99,14 @@ export function AuctionDetailPage() {
     enabled: valid && authed, retry: false, staleTime: 0,
     refetchInterval: (query) => live(query.state.data ?? undefined),
   })
+  // Public reads never name the seller; the caller's own intakes do.
+  const intakes = useQuery({
+    queryKey: ['my-auction-intakes'], queryFn: getMyAuctionIntakes, enabled: valid && authed, retry: false, staleTime: 30_000,
+  })
+  const sellerIntake = intakes.data?.items.find((i) => i.auctionId === id) ?? null
   const remaining = useCountdown(detail.data?.auction.endAt, detail.data?.serverTime)
   const refresh = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['my-auction-intakes'] }),
     queryClient.invalidateQueries({ queryKey: ['auction', id] }),
     queryClient.invalidateQueries({ queryKey: ['auction-participation', id] }),
     queryClient.invalidateQueries({ queryKey: ['auctions'] }),
@@ -113,10 +136,23 @@ export function AuctionDetailPage() {
   const open = auction.state === 'Active' && remaining > 0
   const me = participation.data ?? null
   const hasBids = auction.bidderCount > 0
-  const priceLabel = !open && auction.currentPrice !== null ? 'Giá chốt' : hasBids ? 'Giá hiện tại' : 'Giá khởi điểm'
+  const priceLabel = open || auction.currentPrice === null
+    ? hasBids ? 'Giá hiện tại' : 'Giá khởi điểm'
+    : CLOSED_PRICE[auction.state] ?? 'Giá cuối'
 
   let action
-  if (me?.won) action = <WinnerPanel me={me} auction={auction} onChanged={refresh} />
+  if (sellerIntake) action = <SellerPanel auction={auction} intake={sellerIntake} open={open} onChanged={refresh} />
+  else if (me?.won) action = <WinnerPanel me={me} auction={auction} onChanged={refresh} />
+  else if (auction.state === 'OnHold')
+    action = (
+      <div className={`${styles.standing} ${styles.standingOut}`}>
+        <strong>Phiên tạm dừng</strong>
+        <span>
+          Quản trị viên đang xem xét vì người bán hoặc người đang dẫn giá không còn đủ điều kiện. Lượt trả giá được giữ
+          nguyên, chưa có người thắng và không có khoản tiền nào bị trừ.
+        </span>
+      </div>
+    )
   else if (!open)
     action = (
       <div className={styles.notice}>
@@ -176,7 +212,7 @@ export function AuctionDetailPage() {
         </header>
 
         <aside className={styles.side} aria-label="Trả giá">
-          <Countdown ms={remaining} open={open} endAt={auction.endAt} live={pushing} />
+          <Countdown ms={remaining} open={open} endAt={auction.endAt} live={pushing} state={auction.state} />
           <section className={styles.bidCard} aria-live="polite">
             <p className={styles.priceLabel}>{priceLabel}</p>
             <p className={styles.price}>{formatVnd(auction.currentPrice ?? auction.startPrice)}</p>
@@ -188,7 +224,7 @@ export function AuctionDetailPage() {
             </p>
             {action}
           </section>
-          <BidHistory history={history} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} open={open} startPrice={auction.startPrice} />
+          <BidHistory history={history} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} badge={TOP_BADGE[auction.state] ?? null} startPrice={auction.startPrice} />
         </aside>
 
         <div className={styles.body}>
@@ -210,8 +246,8 @@ export function AuctionDetailPage() {
   )
 }
 
-function BidHistory({ history, leaderAlias, myAlias, open, startPrice }: {
-  history: { price: number; bidderAlias: number; at: string }[]; leaderAlias: number | null; myAlias: number | null; open: boolean; startPrice: number
+function BidHistory({ history, leaderAlias, myAlias, badge, startPrice }: {
+  history: { price: number; bidderAlias: number; at: string }[]; leaderAlias: number | null; myAlias: number | null; badge: string | null; startPrice: number
 }) {
   return (
     <section className={styles.historyCard} aria-labelledby="history-title">
@@ -232,7 +268,7 @@ function BidHistory({ history, leaderAlias, myAlias, open, startPrice }: {
                 </span>
                 <span className={styles.amount}>
                   {formatVnd(event.price)}
-                  {top && <em>{open ? 'Đang dẫn' : 'Giá chốt'}</em>}
+                  {top && badge && <em>{badge}</em>}
                 </span>
               </li>
             )
@@ -243,11 +279,13 @@ function BidHistory({ history, leaderAlias, myAlias, open, startPrice }: {
   )
 }
 
-function Countdown({ ms, open, endAt, live }: { ms: number; open: boolean; endAt: string; live: boolean }) {
+function Countdown({ ms, open, endAt, live, state }: { ms: number; open: boolean; endAt: string; live: boolean; state: AuctionState }) {
   if (!open)
     return (
       <div className={styles.timerCard}>
-        <span className={styles.timerClosed}>Phiên kết thúc lúc {when(endAt)}</span>
+        <span className={styles.timerClosed}>
+          {state === 'OnHold' ? 'Phiên tạm dừng, không nhận giá' : state === 'Cancelled' ? 'Phiên đã hủy' : `Phiên kết thúc lúc ${when(endAt)}`}
+        </span>
       </div>
     )
   const s = Math.floor(ms / 1000)
@@ -496,6 +534,73 @@ function dialogCopy(intent: Intent, auction: AuctionSummary) {
         confirm: 'Mua ngay',
       }
   }
+}
+
+const SELLER_STATE: Partial<Record<AuctionState, string>> = {
+  BuyNowPending: 'Đã có người mua ngay; đang chờ người mua thanh toán.',
+  AwaitingWinnerPayment: 'Phiên đã kết thúc; đang chờ người thắng thanh toán.',
+  Sold: 'Người thắng đã thanh toán. Tiền được giữ đến khi người mua nhận sách.',
+  Unsold: 'Phiên kết thúc không có lượt trả giá. Sách được trả lại cho bạn tại điểm.',
+  Cancelled: 'Phiên đã hủy. Sách được trả lại cho bạn tại điểm.',
+  PaymentExpired: 'Người thắng không thanh toán đúng hạn. Sách được trả lại cho bạn tại điểm.',
+  OnHold: 'Phiên tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá.',
+}
+
+// FR-AU02: the seller follows their own auction and may withdraw it only
+// before the first bid; the server rechecks that under the auction lock.
+function SellerPanel({ auction, intake, open, onChanged }: { auction: AuctionSummary; intake: MyIntake; open: boolean; onChanged: () => Promise<unknown> }) {
+  const intent = useIntentKey()
+  const [confirming, setConfirming] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [unknown, setUnknown] = useState(false)
+  const canWithdraw = open && auction.bidderCount === 0
+  const withdraw = async () => {
+    const key = intent.keyFor(`withdraw:${intake.id}:${intake.version}`)
+    let pending = false
+    setBusy(true); setError(null)
+    try {
+      await withdrawIntake(intake.id, intake.version, key)
+      intent.settle()
+    } catch (caught) {
+      pending = outcomeUnknown(caught)
+      if (!pending) intent.settle()
+      setError(commandError(caught))
+    } finally {
+      setUnknown(pending); setBusy(false); setConfirming(false)
+      void onChanged()
+    }
+  }
+  return (
+    <div className={styles.bidPanel}>
+      <div className={`${styles.standing} ${styles.standingLead}`}>
+        <strong>Đây là phiên của bạn</strong>
+        <span>
+          {open
+            ? auction.bidderCount === 0
+              ? 'Chưa có lượt trả giá. Bạn có thể rút phiên trước lượt trả giá đầu tiên.'
+              : `Đã có ${auction.bidderCount} người trả giá nên phiên không thể rút. Người bán không tham gia trả giá.`
+            : SELLER_STATE[auction.state] ?? STATE_LABEL[auction.state]}
+        </span>
+      </div>
+      {error && <p role="alert" className={styles.fieldError}>{error}</p>}
+      {(canWithdraw || unknown) && (
+        <button type="button" className={styles.secondaryBlock} disabled={busy} onClick={() => (unknown ? void withdraw() : setConfirming(true))}>
+          {unknown ? 'Thử lại rút phiên' : 'Rút phiên'}
+        </button>
+      )}
+      <ConfirmDialog
+        isOpen={confirming}
+        onClose={() => !busy && setConfirming(false)}
+        title="Rút phiên đấu giá?"
+        description={`Phiên đóng ngay và sách được trả lại cho bạn tại ${auction.pointName}. Chỉ rút được khi chưa có lượt trả giá; nếu có người vừa trả giá, yêu cầu sẽ bị từ chối.`}
+        confirmText="Rút phiên"
+        onConfirm={() => void withdraw()}
+        isBusy={busy}
+        isDanger
+      />
+    </div>
+  )
 }
 
 function WinnerPanel({ me, auction, onChanged }: { me: AuctionParticipation; auction: AuctionSummary; onChanged: () => Promise<unknown> }) {

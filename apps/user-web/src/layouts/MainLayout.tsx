@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { BookOpen, Mail, Menu, MessageCircle, X, Search, User } from 'lucide-react'
 import { ROUTES, searchUrl } from '../lib/routes'
 import { useSession } from '../hooks/useSession'
+import { NotificationBell } from '../components/NotificationBell'
 import { session } from '../lib/session'
 import styles from './MainLayout.module.css'
 
@@ -109,6 +110,7 @@ export function Header() {
         </nav>
 
         <div className={styles.headerActions}>
+          {state.status === 'authenticated' && <NotificationBell />}
           <Link to={state.status === 'authenticated' ? '/profile' : ROUTES.login} className={styles.iconBtn} aria-label="Tài khoản">
             <User size={20} aria-hidden="true" />
           </Link>
@@ -145,6 +147,9 @@ export function Header() {
           <Link to={ROUTES.sell} className={styles.mobileNavLink} onClick={() => setMenuOpen(false)}>Đăng sách</Link>
           {state.status === 'authenticated' ? (
             <>
+              <Link to={ROUTES.notifications} className={styles.mobileNavLink} onClick={() => setMenuOpen(false)}>
+                Thông báo
+              </Link>
               <Link to="/profile" className={styles.mobileNavLink} onClick={() => setMenuOpen(false)}>
                 Hồ sơ ({state.user.displayName})
               </Link>

@@ -15,6 +15,7 @@ import ExchangeMinePage from '../pages/ExchangeMinePage';
 import { ExchangeDetailPage } from '../pages/ExchangeDetailPage';
 import { AuctionListPage } from '../pages/AuctionListPage';
 import { AuctionDetailPage } from '../pages/AuctionDetailPage';
+import { NotificationsPage } from '../pages/NotificationsPage';
 export const router = createBrowserRouter([
   {
     element: <MainLayout />,
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
       { path: '/exchange/:id', element: <ExchangeDetailPage /> },
       { path: '/auctions', element: <AuctionListPage /> },
       { path: '/auctions/:id', element: <AuctionDetailPage /> },
+      { path: '/notifications', element: <NotificationsPage /> },
     ],
   },
   // Auth & Fullscreen routes — không dùng MainLayout
