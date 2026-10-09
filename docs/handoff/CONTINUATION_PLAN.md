@@ -4,9 +4,11 @@ Ngày 28/09/2026. Đây là backlog có thứ tự và điều kiện mở, khô
 năng đã triển khai. Chủ dự án đã yêu cầu kế hoạch đủ dài cho người tiếp nhận làm
 liên tục, ưu tiên RN và UI có bản sắc. Thời hạn/phân công hiện tại xem SESSION_STATE;
 deadline không cho phép bỏ qua gate chất lượng.
-Mốc thiết kế này đóng tại F2h/OpenAPI0.20.0. Contract hiện0.21.0 và MongoDB đã merge;
-trạng thái gói hiện hành xem [SESSION_STATE](SESSION_STATE.md), không suy từ TODO
-lúc lập kế hoạch. [READINESS](READINESS.md) vẫn là gate trước nghiệp vụ mới.
+Kế hoạch được lập tại F2h/OpenAPI0.20.0. Thứ tự/TODO/DONE dưới đây là mốc kế hoạch,
+không là status tracker hiện tại: auction/point Order/purchase/inbox đã có source
+trong main mới. Dùng [SESSION_STATE](SESSION_STATE.md)/contract/source để chọn việc;
+không làm lại gói đã nhập hoặc suy kế hoạch tự cho phép mở feature.
+[READINESS](READINESS.md) giữ gate; code ViaPoint completion không tự đóng gate.
 
 ## 1. Cách chọn việc và chia nhánh
 

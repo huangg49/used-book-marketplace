@@ -88,7 +88,7 @@ footer{padding:30px 24px;font:14px/1.6 system-ui,sans-serif}.table-scroll{overfl
 </style></head><body>
 <header><div class="eyebrow">LẬT LẠI · SÁCH CŨ. CHƯƠNG MỚI.</div><h1>Đặc tả nghiệp vụ 1.1</h1>
 <p>TP.HCM · Giữ giao tận nơi · Hai điểm giao nhận mô phỏng · Đấu giá có giới hạn</p>
-<p>Baseline ngày 26/09/2026. Đây là yêu cầu triển khai, không phải báo cáo các tính năng đã chạy. 38 nhóm nghiệm thu mới chưa được thực thi.</p></header>
+<p>Baseline ngày 26/09/2026. Đây là yêu cầu triển khai; trạng thái code và nghiệm thu hiện hành xem SESSION_STATE và READINESS, không suy từ checklist tại mốc lập đặc tả.</p></header>
 <nav aria-label="Các phần tài liệu">''' + nav + '</nav><main>' + ''.join(sections).replace('<table>', '<div class="table-scroll" tabindex="0" role="region" aria-label="Bảng dữ liệu cuộn ngang"><table>').replace('</table>', '</table></div>') + '''</main>
 <footer>Lật lại · Bộ SRS1.1 gồm bản chính và các phụ lục quy phạm. Không tiền thật, không carrier thật, không chứng nhận chính hãng. Snapshot1.0 giữ nguyên trong repository.</footer>
 </body></html>

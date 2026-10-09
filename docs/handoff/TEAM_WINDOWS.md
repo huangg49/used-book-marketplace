@@ -1,8 +1,8 @@
 # Nhóm Windows — bắt đầu phát triển trên MongoDB
 
-Mục tiêu chốt với chủ dự án ngày30/09/2026: bàn giao trong6 ngày, mỗi thành viên
-chạy database riêng bằng Docker. Chưa phân công người; bảng dưới là ranh giới code,
-không phải tính năng đã hoàn thành. Dữ liệu trên máy chủ dự án được bảo toàn riêng,
+Cập nhật09/10/2026: mỗi thành viên chạy database riêng bằng Docker.
+Owner/reviewer theo nhiệm vụ hiện hành; bảng dưới là ranh giới code,
+không phải chứng nhận tính năng đã hoàn thành. Dữ liệu trên máy chủ dự án được bảo toàn riêng,
 không phát dump, session hay storage key cho cả nhóm qua Git.
 
 ## Thiết lập chung
@@ -27,13 +27,15 @@ Không dùng database acceptance hay URL của máy chủ dự án. Seed hiện 
 local theo `DEV_SEED_PASSWORD`, không có sẵn kệ sách demo. Tạo dữ liệu sách qua API/UI;
 không tự thêm số dư, role hoặc trạng thái duyệt bằng database editor.
 API/worker dùng app user, migration dùng migrator, không chạy API bằng root.
+`setup:local` chưa tạo env user-web; nếu cần, tạo từ `apps/user-web/.env.example`,
+giữ file đã có. Backend `CORS_ORIGINS` phải chứa đúng origin web5174 đang dùng.
 
 Storage là bước cấu hình riêng: bucket dev riêng của thành viên, cấu hình backend
 theo [Supabase media](../features/SUPABASE_MEDIA_SETUP.md). Chưa có storage thì ghi rõ
 upload chưa chạy; không dùng bucket nguồn để thử cleanup. Media worker chạy bằng
 launcher `pnpm dev:api` sau khi đã cấu hình đúng bucket/database; không mở thêm
 worker trùng. Chạy hằng ngày chỉ cần `dev:api` và `dev:rn` (A Android/W web),
-hoặc `dev:admin`. Build/cài development APK một lần và xử lý môi trường theo
+`dev:user` cho React/Vite user-web hoặc `dev:admin`. Build/cài development APK và môi trường theo
 [DEVELOPMENT](../DEVELOPMENT.md).
 
 ## Ranh giới để phân công sau
@@ -45,7 +47,8 @@ Hướng dẫn/skills được chia sẻ qua Git; memory cá nhân và lịch s�
 | --- | --- | --- |
 | API dùng chung | `apps/api`, `packages/api-contract` | NestJS/MongoDB; contract-first, không tự đổi endpoint riêng cho từng client |
 | Admin web | `apps/admin-web` | Có catalog/listing review và quản lý user; `pnpm dev:admin`, xem README của app |
-| Web cho thành viên | `apps/mobile-react-native` hiện có Expo web | Chưa có app member-web riêng. `pnpm dev:rn` rồi W; việc tách app/framework cần chốt riêng |
+| Expo web | `apps/mobile-react-native` | `pnpm dev:rn` rồi W; cùng feature/session của RN |
+| User web React/Vite | `apps/user-web` | App riêng đã có trên main; `pnpm dev:user` (5174), API/CORS theo env example; Exchange/register/profile còn mock/scaffold |
 | React Native | `apps/mobile-react-native` | Client thành viên chính, Android emulator; `pnpm dev:rn`, xem REACT_NATIVE_START và ANDROID_QUALITY |
 | Flutter | `apps/mobile-flutter` | Hiện chỉ scaffold `lib/main.dart`, chưa có auth/API feature. `flutter pub get`, `flutter run` trong app; không coi chạy màn scaffold là parity với RN |
 

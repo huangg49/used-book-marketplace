@@ -13,7 +13,7 @@ Bản 1.1 kế thừa [SRS 1.0 lưu trữ](deliverables/SRS_Nen_tang_sach_cu.md)
 
 **Bộ đặc tả hiện hành phải đọc cùng nhau:** tài liệu này + [phụ lục nghiệp vụ LOCAL-AUCTION-01](features/LOCAL_HANDOVER_AUCTION.md) + [mô hình logic](features/LOCAL_TRANSACTION_DESIGN.md) + [use case và nghiệm thu](features/LOCAL_TRANSACTION_ACCEPTANCE.md). Phụ lục là một phần quy phạm của SRS 1.1, ưu tiên cho ViaPoint/Auction; phần DirectDelivery giữ hành vi cũ trừ thay đổi được nêu. [ADR 0007](adr/0007-hcm-handover-auction-scope.md) ghi quyết định và giới hạn.
 
-**Hiện trạng phần mềm:** chỉ auth/profile, catalog và nháp listing có API thật; point, auction, tiền và giao dịch ở đây chưa được triển khai. [Báo cáo API](features/CATALOG_DRAFT_API_REPORT.md) là bằng chứng riêng. Bộ ZIP/diagram/HTML 1.0 là snapshot lịch sử, không phải đặc tả 1.1.
+**Phân biệt yêu cầu và implementation:** hiện trạng code/giới hạn xem [SESSION_STATE](handoff/SESSION_STATE.md), [kiến trúc](architecture/README.md) và [READINESS](handoff/READINESS.md). Không dùng SRS làm danh sách feature đã hoàn tất. Báo cáo feature ghi evidence tại source riêng; ZIP/diagram/HTML1.0 là snapshot lịch sử, không phải đặc tả1.1.
 
 ## 1 Mục đích và quy ước
 
@@ -76,7 +76,7 @@ Giỏ hàng có thể chứa listing của nhiều người bán, nhưng mỗi c
 
 ### 2.4 Môi trường và phụ thuộc
 
-React Native phục vụ Member, web responsive phục vụ vận hành; NestJS API dùng chung Flutter, PostgreSQL, kho tệp, worker và adapter thanh toán/vận chuyển mô phỏng. Service area được kiểm tra ở server; Guest ngoài vùng vẫn xem được. Hệ thống lưu thời gian UTC, hiển thị theo Asia/Ho_Chi_Minh. Email xác minh có thể dùng hộp thư sandbox trong môi trường trình diễn. Tài khoản người dùng thường không được truy cập màn hình phát sự kiện carrier hoặc callback thanh toán.
+React Native phục vụ Member; Expo web và React/Vite user-web đã có, web vận hành riêng. NestJS API dùng chung Flutter, MongoDB replica set theo [ADR0027](adr/0027-mongodb-persistence-protocol.md), kho tệp, worker và adapter thanh toán/vận chuyển mô phỏng. PostgreSQL giữ làm lịch sử import. Service area được kiểm tra ở server; Guest ngoài vùng vẫn xem được. Hệ thống lưu thời gian UTC, hiển thị theo Asia/Ho_Chi_Minh. Email xác minh có thể dùng hộp thư sandbox trong môi trường trình diễn. Tài khoản người dùng thường không được truy cập màn hình phát sự kiện carrier hoặc callback thanh toán.
 
 Không sử dụng tiền, tài khoản ngân hàng hoặc dữ liệu cá nhân thật trong dữ liệu demo. Giao diện ví và vận chuyển phải ghi rõ “Mô phỏng đồ án”. Mục tiêu nghiệm thu là tính nhất quán của quy trình, không phải chứng nhận khả năng vận hành dịch vụ tài chính thực tế.
 

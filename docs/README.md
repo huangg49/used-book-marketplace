@@ -14,13 +14,12 @@
 | Sửa kiến trúc / database | [Kiến trúc](architecture/README.md), [ADR0027](adr/0027-mongodb-persistence-protocol.md), [model map MongoDB](refactor/MIG02_MODEL_MAP.md) |
 | Sửa giao diện | [UI rules](design/UI_CODING_RULES.md), [components](design/UI_COMPONENTS.md), [brand1.1](../packages/brand/v1.1/README.md) |
 | Lập công việc tiếp theo | [CONTINUATION_PLAN](handoff/CONTINUATION_PLAN.md), chỉ mở gói khi dependency/gate đạt |
-| Nhóm 5 người chuẩn bị demo 06/10 | [DEMO_PLAN](handoff/DEMO_PLAN_2026_10_06.md), ưu tiên sáng 30/09 và phân lane web/admin/RN |
 | Tìm báo cáo hoặc bằng chứng cũ | [Danh mục chi tiết](CATALOG.md) |
 
 ## Nguồn nào quyết định điều gì?
 
 - SRS/phụ lục: yêu cầu nghiệp vụ; ADR: quyết định thiết kế theo phiên bản.
-- OpenAPI và code: API/triển khai thực tế. Contract hiện0.21.0, MongoDB3 migrations;
+- OpenAPI và code: API/triển khai thực tế. Snapshot main `da59199` (09/10): contract0.30.0,15 migration Mongo;
   17 migration SQL là lịch sử chỉ đọc phục vụ import.
 - SESSION_STATE: việc đang làm và bước tiếp. READINESS: gate còn mở. Không lấy
   trạng thái hiện tại từ câu “chưa làm” trong một báo cáo có ngày cũ.
@@ -43,4 +42,5 @@ HTML/PDF/ZIP/PNG có thể là bản xuất của cùng nguồn; giữ snapshot 
 [manifest](artifact-manifest.json), sửa nguồn chính thay vì sửa mọi bản xuất.
 Không đặt thêm README hướng dẫn chạy khác ở root. Khi cập nhật trạng thái, sửa
 SESSION_STATE/READINESS tại chỗ; chuyển phần cũ vào lịch sử khi cần, không nối mãi
-các đoạn “điểm mới nhất”. [Kết quả rà tài liệu30/09](handoff/DOCS_AUDIT_2026_09_30.md).
+các đoạn “điểm mới nhất”. [Lượt dọn09/10](handoff/DOCS_AUDIT_2026_10_09.md) ghi phạm vi cập nhật/lưu trữ.
+Kế hoạch demo06/10 trong [CATALOG](CATALOG.md) là lịch sử, không là deadline hiện hành.

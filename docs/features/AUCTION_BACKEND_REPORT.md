@@ -1,5 +1,10 @@
 # Auction backend report — AU01–AU03
 
+> Evidence của increment AU01–AU03 ngày 08/10, migration0008–0011; backend đã nhập
+> qua PR23. Main sau đó có completion0012/0013 và web/live/inbox qua PR28. Những
+> phần chưa triển khai/không có UI trong báo cáo này thuộc mốc kiểm tra ban đầu.
+> Giữ kết quả gắn source cũ; trạng thái mới xem [SESSION_STATE](../handoff/SESSION_STATE.md).
+
 Date: 2026-10-08 · Branch `feature/auction-backend` · OpenAPI 0.27.0 · migrations
 `0008-auctions` … `0011-point-order-resolution` · decision record [ADR 0030](../adr/0030-bounded-auction-backend.md).
 Rules: [LOCAL-AUCTION-01 §6](LOCAL_HANDOVER_AUCTION.md); cases:

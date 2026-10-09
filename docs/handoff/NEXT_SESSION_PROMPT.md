@@ -25,10 +25,11 @@ ví mô phỏng, wishlist, purchase conversation/chat giữ sách24h, auction/po
 realtime và inbox auction. Purchase chat không là Order/payment/settlement.
 Exchange web, register/profile và dashboard admin còn mock/scaffold từng phần.
 
-Đặc biệt: READINESS/AGENTS và tài liệu cũ chặn nghiệp vụ sau F2h/settlement, nhưng
-source ViaPoint auction đã có inspection/claim/return và worker settlement.
-Context mục10 liệt kê khác biệt code/gate, quyền LOCKED, trạng thái merge và
-kiến trúc Member web. Không suy code merged là đã được nghiệm thu/đóng gate,
+Đặc biệt: DirectDelivery tới F2h; source ViaPoint auction đã có inspection/claim/
+return và worker settlement, trong khi gate review/release vẫn mở. Hướng dẫn
+hiện hành đã được cập nhật qua DOCS_AUDIT_2026_10_09.md. Context mục10 giữ các
+khác biệt trước đợt dọn; gap quyền LOCKED và code/gate vẫn cần review.
+Không suy code merged là đã được nghiệm thu/đóng gate,
 không tự sửa nghiệp vụ hoặc chạy worker trên DB chính để chứng minh khác biệt.
 
 Nguồn nghiệp vụ: docs/SRS_V1_1.md + docs/features/LOCAL_HANDOVER_AUCTION.md.

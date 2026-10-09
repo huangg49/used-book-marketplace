@@ -62,7 +62,7 @@ trên thành yêu cầu người dùng trả lời lại những điều đã r�
 | --- | --- |
 | API | [Code map](handoff/START_HERE.md#3-tìm-đúng-nơi-để-sửa), [quy tắc theo miền](architecture/DOMAIN_RULES.md), OpenAPI; dùng skill API/Mongo. |
 | React Native | `apps/mobile-react-native/src/features/`, `src/core/ui/`; UI rules/component/brand là nguồn chung. Dùng skill UI. |
-| Member web | Hiện là Expo web của app RN. Kiểm tra responsive và keyboard trong browser; không tự tạo app/framework mới để làm một màn hình. |
+| Member web | Expo web trong app RN và `apps/user-web` React/Vite đều đã có. Sửa app của nhiệm vụ; kiểm responsive/keyboard/session/API thật. Không tự tạo thêm app/framework. |
 | Admin/operations | [README của app](../apps/admin-web/README.md), feature review và core hiện có. Tái sử dụng component/CSS thực tế trong app; không import component RN vào DOM. |
 | Flutter | [README](../apps/mobile-flutter/README.md), [kiến trúc đề xuất](../apps/mobile-flutter/ARCHITECTURE.md). Hiện là scaffold, cần xây từng lát cắt API thật; dùng cùng contract/brand, không coi tài liệu kiến trúc là code đã có. |
 
@@ -88,6 +88,7 @@ dự án. Ghi runtime thực chạy nếu môi trường vẫn bị chặn.
 | API hoặc contract | `pnpm contract:check`, `pnpm contract:routes`; lint/typecheck/test/build của `@used-books/api`; E2E liên quan. Sửa quyền/session/transaction cần ca từ chối, replay và race phù hợp. |
 | Mongo validator/index/transaction | Kiểm tra API ở trên và `pnpm test:api:mongo`; migration mới và invariant liên quan. Test import/failover khi thay đổi chạm các cơ chế đó. |
 | RN hoặc Expo web | lint/typecheck/test của `@used-books/mobile-react-native`; export khi thay đổi ảnh hưởng bundling. Thao tác màn thật trên nền tảng bị ảnh hưởng. Đổi native dependency/config/resource cần native build. |
+| User web React/Vite | lint/typecheck/test/build của `@used-books/user-web`; browser integration khi đổi dữ liệu/session/command, theo QA prerequisite của harness. Admin/RN CI không chứng minh user-web đã được kiểm. |
 | Admin | lint/typecheck/test/build của `@used-books/admin-web`; browser suite khi thay đổi review/session/command và thao tác UI liên quan. |
 | Shared session | `pnpm --filter @used-books/session-client test` và kiểm tra consumer bị ảnh hưởng. |
 | Flutter | Trong `apps/mobile-flutter`: `dart format --output=none --set-exit-if-changed .`, `flutter analyze`, `flutter test`; chạy trên thiết bị/emulator phù hợp. |

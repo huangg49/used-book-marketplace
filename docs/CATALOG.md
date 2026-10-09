@@ -2,6 +2,10 @@
 
 # Lật lại project documentation
 
+- [Audit dọn hướng dẫn hiện hành09/10](handoff/DOCS_AUDIT_2026_10_09.md)
+- [Session history giữ nguyên trước đợt dọn09/10](handoff/SESSION_HISTORY_2026_10_09.md)
+- [README API lịch sử trước đợt dọn09/10](../apps/api/README_HISTORY_2026_10_09.md)
+
 - **Start here:** [Tiếp nhận project tại F2h](handoff/START_HERE.md)
 - [Tiến trình bàn giao và các gate còn mở](handoff/READINESS.md)
 - [Rà soát F2h: phát hiện, sửa lỗi và bằng chứng](handoff/AUDIT_F2H.md)

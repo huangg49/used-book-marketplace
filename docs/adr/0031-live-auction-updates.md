@@ -1,5 +1,9 @@
 # ADR 0031: Live auction updates over WebSocket
 
+> Live auction đã nhập main qua PR28 (`da59199`). Giới hạn chưa có durable inbox
+> thuộc phạm vi ban đầu của quyết định này; inbox bổ sung theo [ADR0032](0032-member-notification-inbox.md).
+> Trạng thái branch/review dưới đây là mốc lịch sử, không thay [SESSION_STATE](../handoff/SESSION_STATE.md).
+
 Date: 2026-10-09. Status: implemented on branch `feature/auction-web` (on top of
 `feature/auction-backend`, [ADR 0030](0030-bounded-auction-backend.md)). Needs human
 review before merge.

@@ -1,5 +1,10 @@
 # ADR 0030: Bounded auction backend
 
+> Phạm vi quyết định ban đầu ngày 08/10: migration0008–0011. Main đã nhập
+> backend qua PR23 và bổ sung completion0012/0013, live/inbox0015. Các giới hạn
+> increment trong ADR này là lịch sử; xem [kiến trúc hiện hành](../architecture/README.md)
+> và [SESSION_STATE](../handoff/SESSION_STATE.md). Code đã nhập không tự đóng gate review.
+
 Date: 2026-10-08. Status: implemented for intake → bidding → close → winner ViaPoint
 Order and wallet payment → report decision → collection code and Staff handover →
 inspection window start, plus expiry/reclaim, on branch `feature/auction-backend`

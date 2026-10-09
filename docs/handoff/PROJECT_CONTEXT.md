@@ -4,6 +4,10 @@ Snapshot **09/10/2026**, sau khi pull `main` từ `5badc90` lên **`da59199`**.
 Bản này tổng hợp yêu cầu, code và bằng chứng lưu trong repo để tiếp nhận công việc;
 không thay SRS/ADR/contract, không tự cấp quyền mở feature, merge hoặc deploy.
 
+Đợt [dọn docs09/10](DOCS_AUDIT_2026_10_09.md) đã cập nhật các hướng dẫn hiện hành.
+Mục10 giữ các khác biệt phát hiện trước đợt dọn để truy vết; đọc audit để biết phần
+đã sửa trong tài liệu và phần code/gate còn cần xử lý. Source sản phẩm không đổi.
+
 ## 1. Cách dùng và nguồn của bản bàn giao
 
 - Mở [prompt tiếp nhận](NEXT_SESSION_PROMPT.md) để khởi động chat mới có quyền đọc repo.
