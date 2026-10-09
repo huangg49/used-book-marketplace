@@ -18,8 +18,8 @@
   --status-blue: #1d4ed8;
   --status-blue-bg: rgba(37, 99, 235, 0.08);
 
-  --font-serif: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   min-height: 100vh;
   display: flex;

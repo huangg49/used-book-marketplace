@@ -33,9 +33,10 @@ export function Logo() {
 
 interface HeaderProps {
   forceDark?: boolean
+  forceSolid?: boolean
 }
 
-export function Header({ forceDark = false }: HeaderProps) {
+export function Header({ forceDark = false, forceSolid = false }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const state = useSession()
@@ -63,10 +64,11 @@ export function Header({ forceDark = false }: HeaderProps) {
 
   const isHome = location.pathname === ROUTES.home || location.pathname === '/'
   const isSearchPage = location.pathname === ROUTES.search
-  const isDarkTheme = forceDark || isScrolled || isHome || isSearchPage
+  const isDarkTheme = forceDark || forceSolid || isScrolled || isHome || isSearchPage
+  const hasSolidBg = forceSolid || isScrolled
 
   return (
-    <header className={`${styles.header} ${isScrolled ? styles.headerScrolled : ''} ${isDarkTheme ? styles.themeDark : ''}`}>
+    <header className={`${styles.header} ${hasSolidBg ? styles.headerScrolled : ''} ${isDarkTheme ? styles.themeDark : ''}`}>
       <div className={styles.headerInner}>
         <Logo />
 
