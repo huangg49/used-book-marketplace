@@ -40,14 +40,13 @@ export function RegisterPage() {
                   <span>Họ và tên</span>
                 </label>
                 <div className="relative flex items-center">
-                  <span className="material-symbols-outlined absolute left-3.5 text-[#717974] text-[18px]">person</span>
                   <input
                     id="name"
                     name="name"
                     type="text"
                     required
                     placeholder="Nguyễn Văn An"
-                    className="w-full bg-[#ffffff] text-[#1d1c16] pl-10 pr-10 py-2.5 rounded-md font-body-md text-[14px] shadow-sm border border-[#c1c8c3]/60 focus:border-[#00261a] focus:ring-1 focus:ring-[#00261a] placeholder:text-[#717974] transition-all"
+                    className="w-full bg-[#ffffff] text-[#1d1c16] px-3 py-2.5 rounded-md font-body-md text-[14px] shadow-sm border border-[#c1c8c3]/60 focus:border-[#00261a] focus:ring-1 focus:ring-[#00261a] placeholder:text-[#717974] transition-all"
                   />
                 </div>
               </div>
