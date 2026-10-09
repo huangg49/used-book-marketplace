@@ -1,6 +1,26 @@
-# Điểm lưu hiện tại — 07/10/2026
+# Điểm lưu hiện tại — 09/10/2026
 
 ## Nguồn và việc đang làm
+
+- **09/10 — thu thập context để bàn giao cho AI/chat mới:** main đã pull
+  fast-forward `5badc90` → `da59199`, sạch/khớp origin khi bắt đầu; gói docs trên
+  `codex/project-context-handoff`, checkpoint subject
+  `docs(handoff): collect current project context for AI sessions`.
+  [Context đầy đủ](PROJECT_CONTEXT.md), [inventory kỹ thuật](PROJECT_CONTEXT_INVENTORY.md)
+  và [prompt tiếp nhận](NEXT_SESSION_PROMPT.md) tổng hợp yêu cầu, kiến trúc, source,
+  code thật/mock, UI/setup, evidence và gate. Inventory: OpenAPI0.30.0,113 operations,
+  15 migration Mongo,70 collection types. Git đã có PR23/26/28 và27/29; các mục
+  dưới còn “chưa merge” là ghi nhận ở mốc gói, không là trạng thái Git hiện tại.
+  - Chỉ ra khác biệt gate quan trọng: ViaPoint auction source có claim/return/
+    settlement worker (0012/13), nhưng READINESS/AGENTS/ADR/report cũ vẫn chặn hoặc
+    ghi chưa có. Cũng ghi khác biệt Member web, LOCKED point handlers và mock
+    Exchange; không tự sửa nghiệp vụ hoặc đóng gate để khớp code.
+  - PASS: `pnpm run docs:check` (188 Markdown/1519 relative file links/3 skill
+    adapter pairs), `git diff --check`, Node24.19.0/pnpm11.19.0. Không chạy lại
+    API/native/DB/provider hoặc xác minh remote CI/review. Giữ `.env`, stash/RN UX;
+    không pop/drop/migrate/seed. Không push/PR/merge/deploy gói context.
+  - Bước tiếp: chat mới dùng prompt + context, kiểm source/Git lại rồi nhận gói
+    cụ thể từ chủ dự án; không tự mở backlog hoặc suy evidence cũ là main mới PASS.
 
 - **09/10 — user-web đấu giá trên nhánh `feature/auction-web` (từ `feature/auction-backend`,
   chưa push/PR).** Trang `/auctions` (lưới thẻ cùng kiểu BookCard, lọc điểm/mua ngay và
