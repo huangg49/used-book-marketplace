@@ -97,6 +97,18 @@ export type OrderChange = {
   event: string;
   reason?: string;
 };
+export type PurchaseConversationChange = {
+  entityType: 'PurchaseConversation';
+  entityId: string;
+  listingId: string;
+  version: number;
+  state: Wire['PurchaseConversationReceipt']['status'];
+  expiresAt: Date;
+  decidedAt: Date;
+  event: string;
+  before?: Json;
+  reason?: string;
+};
 export type WalletChange = {
   reason?: string;
   entityType: 'TopupIntent';
@@ -174,6 +186,7 @@ export type AuctionOperation =
   | 'receivePointOrderReturn';
 type CommandChange =
   | AuctionChange
+  | PurchaseConversationChange
   | Change
   | AddressChange
   | QuoteChange
@@ -389,6 +402,39 @@ export class MongoCommandService {
   ) {
     return this.execute(context, operation, target, body, options, (...args) =>
       this.orderReceipt(...args),
+    );
+  }
+  runPurchaseConversation<C>(
+    context: CommandContext,
+    operation: 'createPurchaseConversation',
+    target: string,
+    body: unknown,
+    options: Options<C, PurchaseConversationChange>,
+  ) {
+    return this.execute(context, operation, target, body, options, (change, id, serverTime): Wire['PurchaseConversationReceipt'] => ({
+      id,
+      entityType: 'PurchaseConversation',
+      entityId: change.entityId,
+      listingId: change.listingId,
+      version: change.version,
+      status: change.state,
+      expiresAt: change.expiresAt.toISOString(),
+      serverTime: serverTime.toISOString(),
+    }));
+  }
+  systemPurchaseConversation<C>(
+    key: string,
+    options: {
+      discover: (tx: Tx) => Promise<string[]>;
+      authorize: (tx: Tx) => Promise<C>;
+      mutate: (tx: Tx, current: C, receiptId: string) => Promise<PurchaseConversationChange>;
+    },
+  ) {
+    return this.executePrincipal(
+      { actorId: null, systemActor: 'PurchaseConversationExpiry', key, requestId: randomUUID() },
+      'expirePurchaseConversation', key, {},
+      { authorize: async (tx) => { await this.lockUsers(tx, await options.discover(tx)); return options.authorize(tx); }, mutate: options.mutate },
+      (change, id, serverTime): Wire['PurchaseConversationReceipt'] => ({ id, entityType: 'PurchaseConversation', entityId: change.entityId, listingId: change.listingId, version: change.version, status: change.state, expiresAt: change.expiresAt.toISOString(), serverTime: serverTime.toISOString() }),
     );
   }
   runPackaging<C>(
@@ -731,6 +777,7 @@ export class MongoCommandService {
         change.entityType === 'AuctionIntake' ||
         change.entityType === 'Auction' ||
         change.entityType === 'PointOrder'
+        || change.entityType === 'PurchaseConversation'
           ? change.decidedAt
           : new Date();
       const receipt = project(change, id, serverTime);
@@ -755,6 +802,8 @@ export class MongoCommandService {
         change.entityType === 'PointOrder'
       )
         targets.contextId = change.contextId;
+      else if (change.entityType === 'PurchaseConversation')
+        targets.listingId = change.listingId;
       else if (change.entityType === 'SaleQuote')
         targets.quoteId = change.entityId;
       else if (change.entityType === 'AddressBook')
@@ -812,7 +861,7 @@ export class MongoCommandService {
                     orderId: change.orderId,
                     state: change.state,
                   }
-                : change.entityType === 'AuctionIntake' ||
+                  : change.entityType === 'AuctionIntake' ||
                     change.entityType === 'Auction' ||
                     change.entityType === 'PointOrder'
                   ? {
@@ -822,6 +871,8 @@ export class MongoCommandService {
                       orderId: change.orderId,
                       state: change.state,
                     }
+                  : change.entityType === 'PurchaseConversation'
+                    ? { listingId: change.listingId, state: change.state, expiresAt: change.expiresAt.toISOString() }
                   : {}),
             ...('revisionId' in change
               ? { revisionId: change.revisionId }
@@ -891,6 +942,8 @@ function auditAfter(change: CommandChange): Json {
         state: change.state,
         affectedListings: change.affectedListings,
       };
+    case 'PurchaseConversation':
+      return { listingId: change.listingId, version: change.version, state: change.state, expiresAt: change.expiresAt.toISOString() };
     case 'SaleQuote':
       return {
         version: change.version,

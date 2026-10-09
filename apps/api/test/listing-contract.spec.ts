@@ -236,6 +236,7 @@ describe('listing design contract (not HTTP implementation tests)', () => {
       ],
       publishedAt: new Date().toISOString(),
       fulfillment: null,
+      purchaseAvailability: { status: 'Available', expiresAt: null },
     };
     expect(validator('PublicListing')(listing)).toBe(true);
     expect(

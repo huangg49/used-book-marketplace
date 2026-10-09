@@ -9,6 +9,7 @@ const publicListingSchema = z.object({
   seller: z.object({ id: z.string().uuid(), displayName: z.string() }),
   photos: z.array(z.object({ id: z.string().uuid(), width: z.number().int(), height: z.number().int() })), publishedAt: z.string(),
   fulfillment: z.object({ serviceAreaCode: z.literal('HCM-DEMO-v1'), name: z.literal('TP.HCM'), demoOnly: z.literal(true), method: z.literal('DirectDelivery') }).nullable(),
+  purchaseAvailability: z.object({ status: z.enum(['Available', 'InNegotiation']), expiresAt: z.string().nullable() }),
 })
 
 export type PublicListing = z.infer<typeof publicListingSchema>

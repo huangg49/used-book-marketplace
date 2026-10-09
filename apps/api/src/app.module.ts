@@ -16,6 +16,7 @@ import { ShipmentsModule } from './modules/shipments/shipments.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { WishlistModule } from './modules/wishlist/wishlist.module.js';
 import { AuctionsModule } from './modules/auctions/auctions.module.js';
+import { PurchasesModule } from './modules/purchases/purchases.module.js';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AuctionsModule } from './modules/auctions/auctions.module.js';
     UsersModule,
     WishlistModule,
     AuctionsModule,
+    PurchasesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

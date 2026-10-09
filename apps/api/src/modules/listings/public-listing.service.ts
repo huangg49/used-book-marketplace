@@ -39,10 +39,23 @@ export function publicEligibleStages(): Document[] {
       $match: {
         moderation: 'Approved',
         visibility: 'Visible',
-        trade: 'Available',
+        trade: { $in: ['Available', 'Reserved'] },
         deletedAt: null,
         publishedAt: { $ne: null },
       },
+    },
+    {
+      $lookup: {
+        from: 'purchase_conversations', localField: '_id', foreignField: 'listingId',
+        pipeline: [{ $match: { status: 'Active', $expr: { $gt: ['$expiresAt', '$$NOW'] } } }, { $limit: 1 }],
+        as: 'purchase',
+      },
+    },
+    {
+      $match: { $expr: { $or: [
+        { $eq: ['$trade', 'Available'] },
+        { $and: [{ $eq: ['$trade', 'Reserved'] }, { $gt: [{ $size: '$purchase' }, 0] }] },
+      ] } },
     },
     {
       $lookup: {
@@ -140,6 +153,7 @@ type Eligible = ListingDoc & {
   u: UserDoc;
   rm: RevisionMediaDoc[];
   m: ListingMediaDoc[];
+  purchase: { expiresAt: Date }[];
 };
 
 @Injectable()
@@ -208,6 +222,9 @@ export class PublicListingService {
         height: m.height!,
       })),
       publishedAt: l.publishedAt!.toISOString(),
+      purchaseAvailability: l.trade === 'Reserved'
+        ? { status: 'InNegotiation' as const, expiresAt: l.purchase[0]!.expiresAt.toISOString() }
+        : { status: 'Available' as const, expiresAt: null },
     };
     // Submitted/approved invariants enforce the selected mode's price requirements.
     if (r.mode === 'Sale')

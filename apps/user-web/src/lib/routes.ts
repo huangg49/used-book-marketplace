@@ -13,6 +13,7 @@ export const ROUTES = {
   exchangeCompose: (bookId: string): string => `/exchange/new?book=${bookId}`,
   exchangeMine: '/exchange/mine',
   exchangeDetail: (id: string): string => `/exchange/${id}`,
+  chat: (conversationId?: string): string => conversationId ? `/chat/${conversationId}` : '/chat',
 } as const
 
 export function searchUrl(params: Record<string, string>): string {
