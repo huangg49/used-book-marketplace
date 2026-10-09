@@ -21,6 +21,9 @@ Rules: [LOCAL-AUCTION-01 §6](LOCAL_HANDOVER_AUCTION.md); cases:
 | Resolution | `GET /operations/point-order-resolutions`, `POST /operations/point-orders/{id}/resolve` | Independent ADMIN: `RefundBuyer` (full hold back, Order Cancelled, book to reclaim) or `ResumeCollection` (new 72 h window) |
 | Worker | `AuctionWorker` inside `order-worker` | Close at `endAt` (Unsold / AwaitingWinnerPayment + Order / OnHold), payment expiry (Order and auction; commitment back to intake), drop-off expiry |
 
+Concurrency and scope cases, the chosen tie/serialization behaviour and their tests:
+[AUCTION_TEST_CASES](AUCTION_TEST_CASES.md).
+
 ## Rule comparison (other auction sites)
 
 | Topic | Reference | Lật lại | Why |

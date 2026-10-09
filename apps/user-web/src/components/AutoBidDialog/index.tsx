@@ -83,7 +83,7 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
               </p>
               <ul>
                 <li><CircleCheck size={16} aria-hidden="true" /> Giữ vị trí dẫn mà không cần theo dõi liên tục</li>
-                <li><CircleCheck size={16} aria-hidden="true" /> Mỗi lần chỉ tăng một bước {formatVnd(step)}</li>
+                <li><CircleCheck size={16} aria-hidden="true" /> Chỉ trả cao hơn người khác đúng một bước {formatVnd(step)}</li>
                 <li><CircleCheck size={16} aria-hidden="true" /> Chỉ bạn thấy mức tối đa của mình</li>
                 <li><CircleCheck size={16} aria-hidden="true" /> Có thể nâng mức hoặc tắt tự động khi phiên còn mở</li>
               </ul>
@@ -137,7 +137,7 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
             <section className={styles.how}>
               <h3>Xác nhận mức tối đa {formatVnd(value!)}</h3>
               <p>
-                Hệ thống sẽ trả thay bạn, mỗi lần một bước {formatVnd(step)}, không vượt {formatVnd(value!)}. Mức này
+                Khi có người trả cao hơn, hệ thống trả thay bạn cao hơn họ một bước {formatVnd(step)}, không vượt {formatVnd(value!)}. Mức này
                 chỉ có thể nâng lên. Nếu thắng, bạn thanh toán từ ví trong 24 giờ sau khi phiên kết thúc và tự nhận
                 sách tại {pointName}. Không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.
               </p>

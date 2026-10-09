@@ -344,6 +344,10 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     configureApp(app, { docs: false, logRequests: false });
     await app.init();
     await app.listen(0, '127.0.0.1');
+    // Test-only: the suite opens far more auctions than the 20-slot demo
+    // points hold and no case depends on that capacity, so every *_test point
+    // gets room for all of them (closing order would otherwise decide).
+    await db.c.handover_points.updateMany({}, { $set: { capacity: 200 } });
     staff = await actor(['STAFF']);
     otherStaff = await actor(['STAFF', 'MEMBER']);
     reviewer = await actor(['STAFF']);
@@ -2090,5 +2094,421 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       watcher.disconnect();
       lister.disconnect();
     }
+  });
+  describe('concurrency and auction scope', () => {
+    // ---- Concurrency: requests fired together over real HTTP; each auction is
+    // serialized by its document lock, so every result must equal some serial order.
+    // Invariants that must hold after any interleaving (FR-AU03–05).
+    async function expectConsistent(auctionId: string) {
+      const a = (await db.c.auctions.findOne({ _id: auctionId }))!;
+      const bidders = await db.c.auction_bidders.find({ auctionId }).toArray();
+      const top = [...bidders].sort(
+        (x, y) => y.level - x.level || x.levelSequence - y.levelSequence,
+      )[0]!;
+      expect(a.leaderId).toBe(top.bidderId);
+      expect(a.currentPrice!).toBeLessThanOrEqual(top.level);
+      expect((a.currentPrice! - a.startPrice) % a.step).toBe(0);
+      expect(a.bidderCount).toBe(bidders.length);
+      const seqs = bidders.map((b) => b.levelSequence);
+      expect(new Set(seqs).size).toBe(seqs.length);
+      const pub = await call('get', `/auctions/${auctionId}`).expect(200);
+      validates('PublicAuction', pub.body);
+      const prices: number[] = pub.body.history.map(
+        (h: { price: number }) => h.price,
+      );
+      expect(prices).toEqual([...prices].sort((p, q) => q - p));
+      expect(prices[0]).toBe(a.currentPrice);
+      return { a, bidders, pub: pub.body };
+    }
+    const buyNowCmd = (auctionId: string, a: Actor) =>
+      cmd(
+        'post',
+        `/auctions/${auctionId}/buy-now`,
+        { fulfillmentMethod: 'SelfCollect' },
+        a,
+      );
+
+    it('race: two people press Bid together with different amounts; the higher one leads', async () => {
+      for (let round = 0; round < 3; round++) {
+        const { auctionId } = await openAuction();
+        const [x, y] = [await actor(), await actor()];
+        const [low, high] = await Promise.all([
+          bid(auctionId, x, 300_000),
+          bid(auctionId, y, 350_000),
+        ]);
+        expect(high.status).toBe(200);
+        // Low committed first (both 200) or after high (BidTooLow); never both lost.
+        if (low.status !== 200) expect(low.body.code).toBe('BidTooLow');
+        const { a } = await expectConsistent(auctionId);
+        expect(a).toMatchObject({
+          leaderId: y.id,
+          currentPrice: 350_000,
+          bidderCount: low.status === 200 ? 2 : 1,
+        });
+      }
+    });
+
+    it('race: two people turn on Auto together; the order never changes the outcome', async () => {
+      for (let round = 0; round < 3; round++) {
+        const { auctionId } = await openAuction();
+        const [x, y] = [await actor(), await actor()];
+        const [rx, ry] = await Promise.all([
+          auto(auctionId, x, 400_000),
+          auto(auctionId, y, 600_000),
+        ]);
+        expect([rx.status, ry.status]).toEqual([200, 200]);
+        const { a, pub } = await expectConsistent(auctionId);
+        // Second price plus one step, capped at the winner's ceiling.
+        expect(a).toMatchObject({ leaderId: y.id, currentPrice: 450_000 });
+        expect(JSON.stringify(pub)).not.toContain('600000');
+        const mine = await call(
+          'get',
+          `/me/auctions/${auctionId}/participation`,
+          x,
+        ).expect(200);
+        expect(mine.body).toMatchObject({
+          leading: false,
+          ownLevel: 400_000,
+          mode: 'Auto',
+        });
+      }
+    });
+
+    it('race: equal Auto ceilings together; whoever the server sequenced first keeps the lead', async () => {
+      for (let round = 0; round < 3; round++) {
+        const { auctionId } = await openAuction();
+        const [x, y] = [await actor(), await actor()];
+        const [rx, ry] = await Promise.all([
+          auto(auctionId, x, 400_000),
+          auto(auctionId, y, 400_000),
+        ]);
+        expect([rx.status, ry.status]).toEqual([200, 200]);
+        const { a, bidders } = await expectConsistent(auctionId);
+        const first = [...bidders].sort(
+          (p, q) => p.levelSequence - q.levelSequence,
+        )[0]!;
+        expect(a).toMatchObject({
+          leaderId: first.bidderId,
+          currentPrice: 400_000,
+        });
+        // Each receipt reports the standing at its own commit, consistently.
+        const byId: Record<string, { leading: boolean; currentPrice: number }> =
+          {
+            [x.id]: rx.body,
+            [y.id]: ry.body,
+          };
+        expect(byId[first.bidderId]!.leading).toBe(true);
+        expect(byId[first.bidderId === x.id ? y.id : x.id]).toMatchObject({
+          leading: false,
+          currentPrice: 400_000,
+        });
+      }
+    });
+
+    it('race: many Autos and bids at once converge to the proxy result', async () => {
+      const { auctionId } = await openAuction();
+      const people = await Promise.all(
+        Array.from({ length: 8 }, () => actor()),
+      );
+      const plan: ['auto' | 'bid', number][] = [
+        ['auto', 300_000],
+        ['auto', 450_000],
+        ['bid', 500_000],
+        ['auto', 800_000],
+        ['auto', 650_000],
+        ['bid', 250_000],
+        ['auto', 600_000],
+        ['bid', 400_000],
+      ];
+      const results = await Promise.all(
+        plan.map(([kind, amount], i) =>
+          kind === 'auto'
+            ? auto(auctionId, people[i]!, amount)
+            : bid(auctionId, people[i]!, amount),
+        ),
+      );
+      for (const r of results.filter((r) => r.status !== 200))
+        expect(r.body.code).toBe('BidTooLow');
+      const { a } = await expectConsistent(auctionId);
+      // 800k always enters and always leads. 650k is refused if 600k and 800k
+      // were sequenced first (price 650k, next bid 700k): the price is then 650k,
+      // otherwise 650k enters and the price is 700k. Both are serial outcomes.
+      expect(results[3]!.status).toBe(200);
+      expect(a.leaderId).toBe(people[3]!.id);
+      expect(a.currentPrice).toBe(
+        results[4]!.status === 200 ? 700_000 : 650_000,
+      );
+      expect(a.bidCount).toBe(results.filter((r) => r.status === 200).length);
+    });
+
+    it('double click: the same Idempotency-Key sent three times at once commits one bid', async () => {
+      const { auctionId } = await openAuction();
+      const x = await actor();
+      const key = randomUUID();
+      const replies = await Promise.all([
+        bid(auctionId, x, 300_000, key),
+        bid(auctionId, x, 300_000, key),
+        bid(auctionId, x, 300_000, key),
+      ]);
+      for (const r of replies) expect(r.status).toBe(200);
+      expect(new Set(replies.map((r) => JSON.stringify(r.body))).size).toBe(1);
+      expect(
+        replies.filter((r) => r.headers['idempotency-replayed'] === 'false'),
+      ).toHaveLength(1);
+      expect(await db.c.auctions.findOne({ _id: auctionId })).toMatchObject({
+        bidCount: 1,
+        currentPrice: 300_000,
+      });
+      expect(
+        await db.c.mutation_receipts.countDocuments({
+          key,
+          operation: 'placeAuctionBid',
+        }),
+      ).toBe(1);
+    });
+
+    it('double submit with two keys: the second request is refused, not a second bid', async () => {
+      const { auctionId } = await openAuction();
+      const x = await actor();
+      const replies = await Promise.all([
+        bid(auctionId, x, 300_000),
+        bid(auctionId, x, 300_000),
+      ]);
+      expect(replies.map((r) => r.status).sort()).toEqual([200, 409]);
+      expect(await db.c.auctions.findOne({ _id: auctionId })).toMatchObject({
+        bidCount: 1,
+        leaderId: x.id,
+      });
+    });
+
+    it('race: two Buy Now at once, or Buy Now against an Auto, has one winner', async () => {
+      for (const rival of ['buy-now', 'auto'] as const) {
+        const { auctionId } = await openAuction();
+        const [x, y] = [await actor(), await actor()];
+        const [r1, r2] = await Promise.all([
+          buyNowCmd(auctionId, x),
+          rival === 'auto'
+            ? auto(auctionId, y, 400_000)
+            : buyNowCmd(auctionId, y),
+        ]);
+        expect([r1.status, r2.status].filter((s) => s === 200)).toHaveLength(1);
+        const a = (await db.c.auctions.findOne({ _id: auctionId }))!;
+        const orders = await db.c.point_orders.countDocuments({ auctionId });
+        if (a.state === 'BuyNowPending') expect(orders).toBe(1);
+        else {
+          expect(a).toMatchObject({
+            state: 'Active',
+            leaderId: y.id,
+            bidderCount: 1,
+          });
+          expect(orders).toBe(0);
+        }
+      }
+    });
+
+    it('race: disabling Auto while a rival bids ends in one of the two serial results', async () => {
+      for (let round = 0; round < 3; round++) {
+        const { auctionId } = await openAuction();
+        const [x, y] = [await actor(), await actor()];
+        await auto(auctionId, x, 500_000).expect(200);
+        const [off, rb] = await Promise.all([
+          cmd('post', `/auctions/${auctionId}/auto-bid/disable`, {}, x),
+          bid(auctionId, y, 300_000),
+        ]);
+        expect(off.status).toBe(200);
+        const { a } = await expectConsistent(auctionId);
+        // Disable first: x stays at 200k manual and y leads at 300k.
+        // Bid first: x's Auto answers 350k, then stops there, still leading.
+        expect([
+          { leaderId: y.id, currentPrice: 300_000 },
+          { leaderId: x.id, currentPrice: 350_000 },
+        ]).toContainEqual({
+          leaderId: a.leaderId,
+          currentPrice: a.currentPrice,
+        });
+        expect(rb.status).toBe(200);
+      }
+    });
+
+    it('race: ten ascending manual bids at once keep a monotonic history', async () => {
+      const { auctionId } = await openAuction();
+      const people = await Promise.all(
+        Array.from({ length: 10 }, () => actor()),
+      );
+      const results = await Promise.all(
+        people.map((p, i) => bid(auctionId, p, 200_000 + i * 50_000)),
+      );
+      for (const r of results.filter((r) => r.status !== 200))
+        expect(r.body.code).toBe('BidTooLow');
+      expect(results[9]!.status).toBe(200);
+      const { a, pub } = await expectConsistent(auctionId);
+      expect(a).toMatchObject({
+        leaderId: people[9]!.id,
+        currentPrice: 650_000,
+      });
+      expect(pub.history).toHaveLength(
+        results.filter((r) => r.status === 200).length,
+      );
+    });
+
+    it('POL-41 race: bids fired at once in different auctions cannot exceed five live leads', async () => {
+      const x = await actor();
+      for (let i = 0; i < 4; i++) {
+        const { auctionId } = await openAuction();
+        await bid(auctionId, x, 200_000).expect(200);
+      }
+      const fresh = [
+        await openAuction(),
+        await openAuction(),
+        await openAuction(),
+      ];
+      const replies = await Promise.all(
+        fresh.map((f) => bid(f.auctionId, x, 200_000)),
+      );
+      expect(replies.filter((r) => r.status === 200)).toHaveLength(1);
+      for (const r of replies.filter((r) => r.status !== 200))
+        expect(r.body.code).toBe('RATE_LIMITED');
+      expect(
+        await db.c.auctions.countDocuments({ leaderId: x.id, state: 'Active' }),
+      ).toBe(5);
+    });
+
+    it('cap: two Autos at 1,000,000 tie at the cap and nothing can go higher', async () => {
+      const { auctionId } = await openAuction();
+      const [x, y, z] = [await actor(), await actor(), await actor()];
+      await auto(auctionId, x, 1_000_000).expect(200);
+      const tie = await auto(auctionId, y, 1_000_000).expect(200);
+      expect(tie.body).toMatchObject({
+        currentPrice: 1_000_000,
+        leading: false,
+      });
+      const pub = await call('get', `/auctions/${auctionId}`).expect(200);
+      expect(pub.body.auction.currentPrice).toBe(1_000_000);
+      expect((await bid(auctionId, z, 1_000_000).expect(409)).body.code).toBe(
+        'BidTooLow',
+      );
+      await bid(auctionId, z, 1_050_000).expect(422);
+      const { a } = await expectConsistent(auctionId);
+      expect(a.leaderId).toBe(x.id);
+    });
+
+    it('an outbid bidder who matches the leading ceiling stays behind at that price', async () => {
+      const { auctionId } = await openAuction();
+      const [x, y] = [await actor(), await actor()];
+      await auto(auctionId, x, 500_000).expect(200);
+      await auto(auctionId, y, 400_000).expect(200);
+      const matched = await auto(auctionId, y, 500_000).expect(200);
+      expect(matched.body).toMatchObject({
+        leading: false,
+        currentPrice: 500_000,
+      });
+      const { a } = await expectConsistent(auctionId);
+      expect(a.leaderId).toBe(x.id);
+      // Lowering is never allowed, even for an outbid bidder.
+      await auto(auctionId, y, 450_000).expect(409);
+    });
+
+    it('live: after a burst of simultaneous bids the last push equals the REST state', async () => {
+      const { auctionId } = await openAuction();
+      const { port } = app.getHttpServer().address() as { port: number };
+      const watcher = await new Promise<Socket>((resolve, reject) => {
+        const s = io(`http://127.0.0.1:${port}/auctions`, {
+          transports: ['websocket'],
+          forceNew: true,
+          reconnection: false,
+        });
+        s.once('connect', () => resolve(s));
+        s.once('connect_error', reject);
+      });
+      try {
+        const updates: { auction: { currentPrice: number | null } }[] = [];
+        watcher.on('auction:update', (u: (typeof updates)[number]) =>
+          updates.push(u),
+        );
+        expect((await watcher.emitWithAck('auction:watch', auctionId)).ok).toBe(
+          true,
+        );
+        const people = await Promise.all(
+          Array.from({ length: 6 }, () => actor()),
+        );
+        await Promise.all(
+          people.map((p, i) => bid(auctionId, p, 250_000 + i * 50_000)),
+        );
+        const rest = await call('get', `/auctions/${auctionId}`).expect(200);
+        const until = Date.now() + 8000;
+        const last = () => updates[updates.length - 1];
+        while (
+          last()?.auction.currentPrice !== rest.body.auction.currentPrice
+        ) {
+          if (Date.now() > until)
+            throw new Error('Last push never reached the REST state');
+          await new Promise((r) => setTimeout(r, 50));
+        }
+        await new Promise((r) => setTimeout(r, 2500)); // one more poll: nothing stale arrives later
+        const { serverTime: _a, ...pushed } = last() as unknown as Record<
+          string,
+          unknown
+        >;
+        const { serverTime: _b, ...current } = (
+          await call('get', `/auctions/${auctionId}`).expect(200)
+        ).body;
+        expect(pushed).toEqual(current);
+      } finally {
+        watcher.disconnect();
+      }
+    });
+
+    it('FR-AU05: a leader who raised after winning a tie can still turn Auto off', async () => {
+      const { auctionId } = await openAuction();
+      const [x, y] = [await actor(), await actor()];
+      await auto(auctionId, x, 400_000).expect(200);
+      await auto(auctionId, y, 400_000).expect(200);
+      await auto(auctionId, x, 600_000).expect(200);
+      const off = await cmd(
+        'post',
+        `/auctions/${auctionId}/auto-bid/disable`,
+        {},
+        x,
+      ).expect(200);
+      expect(off.body).toMatchObject({ leading: true, currentPrice: 400_000 });
+      const { a } = await expectConsistent(auctionId);
+      expect(a.leaderId).toBe(x.id);
+    });
+
+    it('race: the seller withdrawing against the first bid has exactly one winner', async () => {
+      for (let round = 0; round < 3; round++) {
+        const o = await openAuction();
+        const x = await actor();
+        const i = (await db.c.auction_intakes.findOne({ _id: o.intakeId }))!;
+        const [w, b] = await Promise.all([
+          cmd(
+            'post',
+            `/auction-intakes/${o.intakeId}/cancel`,
+            { expectedVersion: i.version },
+            o.seller,
+          ),
+          bid(o.auctionId, x, 200_000),
+        ]);
+        expect([w.status, b.status].filter((s) => s === 200)).toHaveLength(1);
+        const a = (await db.c.auctions.findOne({ _id: o.auctionId }))!;
+        if (w.status === 200)
+          expect(a).toMatchObject({ state: 'Cancelled', bidderCount: 0 });
+        else
+          expect(a).toMatchObject({
+            state: 'Active',
+            leaderId: x.id,
+            bidderCount: 1,
+          });
+      }
+    });
+
+    it('Buy Now disappears once an Auto counts as the first bid', async () => {
+      const { auctionId } = await openAuction();
+      const [x, y] = [await actor(), await actor()];
+      await auto(auctionId, x, 300_000).expect(200);
+      const pub = await call('get', `/auctions/${auctionId}`).expect(200);
+      expect(pub.body.auction.buyNowPrice).toBeNull();
+      await buyNowCmd(auctionId, y).expect(409);
+    });
   });
 });

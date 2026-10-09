@@ -22,6 +22,15 @@
     `auctions.e2e-spec` 26/26 trên QA replica set (có ca socket thật: ack, đẩy ngay, không lộ
     trần, worker đóng phiên qua poll, unwatch dừng), API/user-web typecheck/lint. Browser
     trên fixture tạm có Socket.IO: bị vượt giá cập nhật <1 giây, 0 GET REST chi tiết/danh sách.
+  - Ca đồng thời và phạm vi ([danh mục](../features/AUCTION_TEST_CASES.md)): 13 ca e2e mới
+    (hai người cùng bấm trả giá, cùng bật tự động, trần bằng nhau, 8 lệnh trộn, bấm đúp cùng/khác
+    key, Mua ngay đua, tắt tự động đua, POL-41 nhiều phiên, trần 1.000.000, push cuối = REST) và 4
+    ca engine duyệt mọi hoán vị, thêm ca người bán rút phiên đua với lượt trả đầu. Sửa lỗi: ở mức
+    trần `minimumBid` trả 1.050.000 (ngoài contract) nay là `null`; người dẫn đã nâng trần sau khi
+    thắng hòa không tắt được tự động (500) — nay giữ sequence đã thắng (ADR 0030 amendment); chữ
+    "mỗi lần một bước" trên web sửa thành "hơn người khác một bước". PASS: `auctions.e2e-spec`
+    42/42 (chạy lặp), API unit 115/115. Một lần chạy toàn bộ e2e có `shipments` lỗi rồi chạy lại
+    riêng 31/31 PASS — không liên quan đấu giá, cần theo dõi.
   - Phụ thuộc API: phiên đấu giá giữ commitment nên listing bị ẩn khỏi `/listings`; UI chưa
     có ảnh bìa/phiếu tình trạng và dùng bìa chữ. Cần mở rộng contract đọc công khai (ảnh,
     tình trạng) trước khi hiển thị. Bước sau thanh toán (biên bản, mã nhận sách) chưa có UI.

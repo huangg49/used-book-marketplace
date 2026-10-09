@@ -421,7 +421,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
               <small>
                 {autoCapped
                   ? `Mức tự động của bạn đã ở mức tối đa ${formatVnd(AUCTION_MAX_PRICE)}.`
-                  : 'Tự trả thay bạn từng bước khi có người trả cao hơn, không vượt mức tối đa bạn chọn.'}
+                  : 'Khi có người trả cao hơn, tự trả hơn họ một bước giá, không vượt mức tối đa bạn chọn.'}
               </small>
             </span>
             <ChevronRight size={18} aria-hidden="true" />
@@ -480,7 +480,7 @@ function dialogCopy(intent: Intent, auction: AuctionSummary) {
     case 'Auto':
       return {
         title: `Đặt giá tự động tối đa ${formatVnd(intent.amount)}?`,
-        description: `Hệ thống chỉ trả vừa đủ để bạn dẫn, mỗi lần một bước ${formatVnd(auction.step)}, không vượt mức này. Chỉ bạn thấy mức tối đa và chỉ có thể nâng lên. ${pay}`,
+        description: `Hệ thống chỉ trả vừa đủ để bạn dẫn: cao hơn người khác một bước ${formatVnd(auction.step)}, không vượt mức này. Chỉ bạn thấy mức tối đa và chỉ có thể nâng lên. ${pay}`,
         confirm: 'Đặt giá tự động',
       }
     case 'Disable':

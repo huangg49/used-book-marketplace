@@ -32,8 +32,9 @@ import {
 import { AuctionClock } from './auction-clock.js';
 import {
   apply,
+  AUCTION_MAX_PRICE,
   EngineError,
-  minimumBid,
+  nextMinimumBid,
   type EngineAction,
 } from './auction-engine.js';
 import { checkAuction } from './auction-invariants.js';
@@ -96,7 +97,7 @@ export class AuctionBiddingService {
       state: a.state,
       decidedAt,
       currentPrice: a.currentPrice,
-      minimumBid: open ? minimumBid(a) : null,
+      minimumBid: open ? nextMinimumBid(a) : null,
       leading: actorId && a.state === 'Active' ? a.leaderId === actorId : null,
       event,
       reason,
@@ -288,7 +289,9 @@ export class AuctionBiddingService {
             throw new DomainError(
               409,
               'BidTooLow',
-              `Giá đã thay đổi. Mức tối thiểu hiện tại là ${e.minimumBid.toLocaleString('vi-VN')}đ.`,
+              e.minimumBid > AUCTION_MAX_PRICE
+                ? `Giá đã đạt mức tối đa ${AUCTION_MAX_PRICE.toLocaleString('vi-VN')}đ; phiên không nhận thêm giá.`
+                : `Giá đã thay đổi. Mức tối thiểu hiện tại là ${e.minimumBid.toLocaleString('vi-VN')}đ.`,
             );
           if (e.reason === 'OffGrid')
             invalidField(
@@ -629,7 +632,7 @@ export class AuctionBiddingService {
       step: a.step as 10000 | 50000,
       buyNowPrice: open && a.bidderCount === 0 ? a.buyNowPrice : null,
       currentPrice: a.currentPrice,
-      minimumBid: open ? minimumBid(a) : null,
+      minimumBid: open ? nextMinimumBid(a) : null,
       bidderCount: a.bidderCount,
       startAt: a.startAt.toISOString(),
       endAt: a.endAt.toISOString(),
@@ -710,7 +713,7 @@ export class AuctionBiddingService {
         leading: a.leaderId === actor._id,
         state: a.state,
         currentPrice: a.currentPrice,
-        minimumBid: open ? minimumBid(a) : null,
+        minimumBid: open ? nextMinimumBid(a) : null,
         fulfillmentMethod: 'SelfCollect',
         won,
         orderId: won ? a.orderId : null,

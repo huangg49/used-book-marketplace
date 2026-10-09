@@ -16,7 +16,7 @@ function price(a: AuctionSummary) { return a.currentPrice ?? a.startPrice }
 
 const STEPS = [
   ['Sách được kiểm tra trước', 'Người bán gửi sách tới điểm giao nhận; nhân viên kiểm tra rồi mới mở phiên 24 giờ.'],
-  ['Trả giá hoặc đặt mức tối đa', 'Đặt giá tự động trả thay bạn từng bước, không vượt mức bạn chọn. Mức này chỉ bạn thấy.'],
+  ['Trả giá hoặc đặt mức tối đa', 'Đặt giá tự động trả hơn người khác một bước giá, không vượt mức bạn chọn. Mức này chỉ bạn thấy.'],
   ['Thắng thì thanh toán, rồi nhận sách', 'Người thắng trả từ ví trong 24 giờ sau khi phiên đóng và nhận sách tại điểm.'],
 ]
 
