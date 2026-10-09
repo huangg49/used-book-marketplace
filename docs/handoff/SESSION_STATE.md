@@ -2,6 +2,22 @@
 
 ## Nguồn và việc đang làm
 
+- **09/10 — user-web đấu giá trên nhánh `feature/auction-web` (từ `feature/auction-backend`,
+  chưa push/PR).** Trang `/auctions` (lưới thẻ cùng kiểu BookCard, lọc điểm/mua ngay và
+  sắp xếp phía client trên tối đa 50 phiên của `GET /auctions`) và `/auctions/:id` (bố cục
+  như chi tiết sách: giá, đếm ngược theo `serverTime`, trả giá một lần/tự động trên lưới
+  bước giá, tắt tự động, Mua ngay, diễn biến giá ẩn danh, người thắng thanh toán từ ví qua
+  `POST /point-orders/{id}/pay`). Mỗi thao tác có xác nhận và một Idempotency-Key theo ý
+  định; mất phản hồi/5xx giữ key và khóa mức giá để thử lại. Nav "Đấu giá" trỏ trang thật.
+  - Phụ thuộc API: phiên đấu giá giữ commitment nên listing bị ẩn khỏi `/listings`; UI chưa
+    có ảnh bìa/phiếu tình trạng và dùng bìa chữ. Cần mở rộng contract đọc công khai (ảnh,
+    tình trạng) trước khi hiển thị. Bước sau thanh toán (biên bản, mã nhận sách) chưa có UI.
+  - PASS: user-web typecheck, lint (không cảnh báo mới), vitest 16/16, `git diff --check`.
+    Browser Chromium trên API fixture tạm (không phải backend thật, không commit): danh sách,
+    chi tiết ẩn danh/đăng nhập, trả giá bị vượt, mất phản hồi 503 → thử lại cùng key được
+    replay, Mua ngay → thanh toán, 375px không tràn ngang. API/Mongo thật, QA replica set,
+    native và review người thật NOT RUN.
+
 - **08/10 — purchase conversations on `codex/purchase-conversations` (not merged):**
   `ce62098` adds the OpenAPI contract and MongoDB migration `0014` for 24-hour
   purchase conversations; `b374ee6` adds the authenticated transaction,

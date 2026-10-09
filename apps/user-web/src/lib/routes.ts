@@ -14,6 +14,8 @@ export const ROUTES = {
   exchangeMine: '/exchange/mine',
   exchangeDetail: (id: string): string => `/exchange/${id}`,
   chat: (conversationId?: string): string => conversationId ? `/chat/${conversationId}` : '/chat',
+  auctions: '/auctions',
+  auctionDetail: (id: string): string => `/auctions/${id}`,
 } as const
 
 export function searchUrl(params: Record<string, string>): string {

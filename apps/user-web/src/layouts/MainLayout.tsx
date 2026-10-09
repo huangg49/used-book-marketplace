@@ -14,7 +14,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Khám phá', to: ROUTES.search },
   { label: 'Sách hiếm', to: searchUrl({ collection: 'featured' }) },
-  { label: 'Đấu giá', to: searchUrl({ collection: 'auction' }) }, // dummy url
+  { label: 'Đấu giá', to: ROUTES.auctions },
   { label: 'Đổi sách', to: ROUTES.exchange },
 ]
 
