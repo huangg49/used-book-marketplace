@@ -43,7 +43,16 @@
 
 /* ---- Cột phải ---- */
 .timerCard, .bidCard { background: #fff; border: 1px solid #e4dccd; border-radius: 16px; box-shadow: 0 6px 18px -12px rgba(36, 35, 31, .25); }
-.timerCard { display: flex; justify-content: center; align-items: baseline; flex-wrap: wrap; padding: 16px 18px; color: #173c2e; }
+.timerCard { display: grid; justify-items: center; gap: 8px; padding: 14px 18px 12px; color: #173c2e; }
+.timerParts { display: flex; justify-content: center; align-items: baseline; flex-wrap: wrap; }
+.liveBadge { display: inline-flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 600; color: #6b6254; }
+.liveBadge span { width: 8px; height: 8px; border-radius: 999px; background: #c7beaf; }
+.liveOn { color: #173c2e; }
+.liveOn span { background: #2f8a5b; box-shadow: 0 0 0 3px rgba(47, 138, 91, .18); }
+@media (prefers-reduced-motion: no-preference) {
+  .liveOn span { animation: livePulse 2s ease-in-out infinite; }
+}
+@keyframes livePulse { 50% { box-shadow: 0 0 0 6px rgba(47, 138, 91, 0); } }
 .timerSoon { color: #9b4027; }
 .timerPart { display: inline-flex; align-items: baseline; gap: 4px; }
 .timerPart strong { font-size: 1.85rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }

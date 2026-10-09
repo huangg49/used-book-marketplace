@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { io, type Socket } from 'socket.io-client';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
 import type { RoleCode } from '../src/database/mongo/documents.js';
@@ -1983,5 +1984,111 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     ).expect(200);
     expect(cancelled.body.state).toBe('Cancelled');
     await bid(second.auctionId, await actor(), 250_000).expect(409);
+  });
+  it('ADR 0031: live watchers get committed public snapshots without ceilings', async () => {
+    const opened = await openAuction();
+    const id = opened.auctionId;
+    const { port } = app.getHttpServer().address() as { port: number };
+    const connect = () =>
+      new Promise<Socket>((resolve, reject) => {
+        const s = io(`http://127.0.0.1:${port}/auctions`, {
+          transports: ['websocket'],
+          forceNew: true,
+          reconnection: false,
+        });
+        s.once('connect', () => resolve(s));
+        s.once('connect_error', reject);
+      });
+    const waitFor = async (check: () => boolean, ms = 8000) => {
+      const until = Date.now() + ms;
+      while (!check()) {
+        if (Date.now() > until) throw new Error('Timed out waiting for push');
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    };
+    const watcher = await connect();
+    const lister = await connect();
+    try {
+      const updates: Array<{
+        auction: { currentPrice: number | null; state: string };
+      }> = [];
+      const summaries: Array<{
+        id: string;
+        currentPrice: number | null;
+        state: string;
+      }> = [];
+      watcher.on('auction:update', (u: (typeof updates)[number]) =>
+        updates.push(u),
+      );
+      lister.on('auction:summary', (u: (typeof summaries)[number]) =>
+        summaries.push(u),
+      );
+
+      // Invalid and unknown ids are refused; the ack carries the REST snapshot.
+      expect(await watcher.emitWithAck('auction:watch', 'nope')).toMatchObject({
+        ok: false,
+      });
+      expect(
+        await watcher.emitWithAck('auction:watch', randomUUID()),
+      ).toMatchObject({
+        ok: false,
+        code: 'NOT_FOUND',
+      });
+      const ack = await watcher.emitWithAck('auction:watch', id);
+      expect(ack.ok).toBe(true);
+      validates('PublicAuction', ack.auction);
+      expect(await lister.emitWithAck('auctions:watch')).toEqual({ ok: true });
+
+      // Commands through the API push at once; the Auto ceiling never travels.
+      const first = await actor();
+      const second = await actor();
+      await auto(id, first, 500_000).expect(200);
+      await waitFor(() =>
+        updates.some((u) => u.auction.currentPrice === 200_000),
+      );
+      await bid(id, second, 300_000).expect(200);
+      await waitFor(() =>
+        updates.some((u) => u.auction.currentPrice === 350_000),
+      );
+      for (const u of updates) validates('PublicAuction', u);
+      const wire = JSON.stringify([updates, summaries]);
+      expect(wire).not.toContain('500000');
+      expect(wire).not.toContain(first.id);
+      expect(wire).not.toContain(second.id);
+      await waitFor(() =>
+        summaries.some((s) => s.id === id && s.currentPrice === 350_000),
+      );
+      for (const s of summaries) validates('PublicAuctionSummary', s);
+
+      // The close runs in the worker, outside any request: the poll finds it.
+      const doc = (await db.c.auctions.findOne({ _id: id }))!;
+      pinClock(doc.endAt);
+      await app.get(AuctionWorker).tick();
+      vi.restoreAllMocks();
+      await waitFor(() =>
+        updates.some((u) => u.auction.state === 'AwaitingWinnerPayment'),
+      );
+      await waitFor(() =>
+        summaries.some(
+          (s) => s.id === id && s.state === 'AwaitingWinnerPayment',
+        ),
+      );
+
+      expect(await watcher.emitWithAck('auction:unwatch', id)).toEqual({
+        ok: true,
+      });
+      const before = updates.length;
+      await cmd(
+        'post',
+        `/operations/auctions/${id}/cancel`,
+        { reason: 'Kiểm thử kênh trực tiếp' },
+        admin,
+      );
+      await new Promise((r) => setTimeout(r, 2500));
+      expect(updates.length).toBe(before);
+    } finally {
+      watcher.disconnect();
+      lister.disconnect();
+    }
   });
 });

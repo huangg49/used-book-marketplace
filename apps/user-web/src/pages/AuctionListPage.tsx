@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { AuctionCard } from '../components/AuctionCard'
+import { useAuctionListLive } from '../hooks/useAuctionLive'
 import { listAuctions, type AuctionSummary } from '../services/auctions'
 
 // GET /auctions trả tối đa 50 phiên đang mở, sắp kết thúc trước; lọc và sắp xếp
@@ -21,7 +22,8 @@ const STEPS = [
 
 export function AuctionListPage() {
   const [params, setParams] = useSearchParams()
-  const result = useQuery({ queryKey: ['auctions'], queryFn: listAuctions, retry: false, staleTime: 0, refetchInterval: 30_000 })
+  const live = useAuctionListLive()
+  const result = useQuery({ queryKey: ['auctions'], queryFn: listAuctions, retry: false, staleTime: 0, refetchInterval: live ? false : 30_000 })
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params)
     if (value) next.set(key, value)
@@ -78,7 +80,13 @@ export function AuctionListPage() {
         </aside>
         <section className="flex-1 min-w-0 w-full" aria-live="polite">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <p className="m-0">{result.data ? `${items.length} phiên${filtered ? ' phù hợp' : ' đang mở'}` : 'Đang tải phiên đấu giá'}</p>
+            <p className="m-0 flex items-center gap-3 flex-wrap">
+              {result.data ? `${items.length} phiên${filtered ? ' phù hợp' : ' đang mở'}` : 'Đang tải phiên đấu giá'}
+              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${live ? 'text-primary-container' : 'text-on-surface-variant'}`}>
+                <span aria-hidden="true" className={`w-2 h-2 rounded-full ${live ? 'bg-[#2f8a5b]' : 'bg-[#c7beaf]'}`} />
+                {live ? 'Giá cập nhật trực tiếp' : 'Cập nhật mỗi 30 giây'}
+              </span>
+            </p>
             <label className="flex items-center gap-2">
               Sắp xếp
               <select className="!w-auto" value={sort} onChange={(event) => update('sort', event.target.value === 'endingSoon' ? '' : event.target.value)}>

@@ -14,6 +14,14 @@
   người theo dõi/chia sẻ vì chưa có dữ liệu. Đặt giá tự động là hộp thoại hai bước (giải thích,
   giá hiện tại/mức thấp nhất được phép, nhập, xác nhận); không hứa thông báo bị vượt giá vì chưa có.
   Diễn biến giá là thẻ cuộn ở cột phải, avatar số ẩn danh, hàng dẫn có nhãn "Đang dẫn".
+  - Trực tiếp ([ADR 0031](../adr/0031-live-auction-updates.md)): Socket.IO `/auctions` công khai,
+    chỉ đọc; đẩy cùng dữ liệu `GET /auctions[/{id}]` ngay sau lệnh trong API và qua poll
+    version 2 giây (chỉ khi có người xem) cho worker/vận hành; không đổi quyền Mongo,
+    không migration. Client ghi push vào cache, đọc lại participation qua REST, báo bị
+    vượt giá; REST poll chỉ là dự phòng. PASS: API unit `auction-live.spec` 4/4, toàn bộ
+    `auctions.e2e-spec` 26/26 trên QA replica set (có ca socket thật: ack, đẩy ngay, không lộ
+    trần, worker đóng phiên qua poll, unwatch dừng), API/user-web typecheck/lint. Browser
+    trên fixture tạm có Socket.IO: bị vượt giá cập nhật <1 giây, 0 GET REST chi tiết/danh sách.
   - Phụ thuộc API: phiên đấu giá giữ commitment nên listing bị ẩn khỏi `/listings`; UI chưa
     có ảnh bìa/phiếu tình trạng và dùng bìa chữ. Cần mở rộng contract đọc công khai (ảnh,
     tình trạng) trước khi hiển thị. Bước sau thanh toán (biên bản, mã nhận sách) chưa có UI.

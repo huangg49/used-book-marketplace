@@ -12,7 +12,7 @@ export const auctionSummarySchema = z.object({
   startAt: z.string(), endAt: z.string(), pointName: z.string(), demoOnly: z.literal(true),
 })
 const auctionListSchema = z.object({ items: z.array(auctionSummarySchema), serverTime: z.string() })
-const auctionSchema = z.object({
+export const auctionSchema = z.object({
   auction: auctionSummarySchema, leaderAlias: z.number().int().nullable(),
   history: z.array(z.object({ price: money, bidderAlias: z.number().int(), at: z.string() })), serverTime: z.string(),
 })

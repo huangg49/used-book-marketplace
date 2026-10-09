@@ -6,6 +6,7 @@ import { ArrowRight, ChevronRight, Gavel, MapPin, ShieldCheck, TrendingUp, Zap }
 import { AutoBidDialog } from '../components/AutoBidDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatRemaining, outcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
+import { useAuctionLive } from '../hooks/useAuctionLive'
 import { useSession } from '../hooks/useSession'
 import { formatVnd, ROUTES } from '../lib/routes'
 import {
@@ -62,8 +63,10 @@ export function AuctionDetailPage() {
   const queryClient = useQueryClient()
   const valid = /^[0-9a-f-]{36}$/i.test(id)
   const authed = session.status === 'authenticated'
+  // Pushes keep the page live; REST polling is only the fallback when the socket is down.
+  const pushing = useAuctionLive(valid ? id : undefined)
   const live = (data?: { auction?: AuctionSummary; state?: AuctionState }) =>
-    (data?.auction?.state ?? data?.state) === 'Active' ? 10_000 : false
+    (data?.auction?.state ?? data?.state) === 'Active' ? (pushing ? 60_000 : 10_000) : false
   const detail = useQuery({
     queryKey: ['auction', id], queryFn: () => getAuction(id), enabled: valid, retry: false, staleTime: 0,
     refetchInterval: (query) => live(query.state.data),
@@ -173,7 +176,7 @@ export function AuctionDetailPage() {
         </header>
 
         <aside className={styles.side} aria-label="Trả giá">
-          <Countdown ms={remaining} open={open} endAt={auction.endAt} />
+          <Countdown ms={remaining} open={open} endAt={auction.endAt} live={pushing} />
           <section className={styles.bidCard} aria-live="polite">
             <p className={styles.priceLabel}>{priceLabel}</p>
             <p className={styles.price}>{formatVnd(auction.currentPrice ?? auction.startPrice)}</p>
@@ -240,7 +243,7 @@ function BidHistory({ history, leaderAlias, myAlias, open, startPrice }: {
   )
 }
 
-function Countdown({ ms, open, endAt }: { ms: number; open: boolean; endAt: string }) {
+function Countdown({ ms, open, endAt, live }: { ms: number; open: boolean; endAt: string; live: boolean }) {
   if (!open)
     return (
       <div className={styles.timerCard}>
@@ -254,14 +257,20 @@ function Countdown({ ms, open, endAt }: { ms: number; open: boolean; endAt: stri
   ]
   const shown = parts[0]![0] > 0 ? parts : parts.slice(1)
   return (
-    <div className={`${styles.timerCard} ${ms < HOUR ? styles.timerSoon : ''}`} role="timer" aria-label={`Còn lại ${formatRemaining(ms)}`}>
-      {shown.map(([value, unit], index) => (
-        <span key={unit} className={styles.timerPart} aria-hidden="true">
-          {index > 0 && <span className={styles.timerSep}>:</span>}
-          <strong>{String(value).padStart(2, '0')}</strong>
-          <small>{unit}</small>
-        </span>
-      ))}
+    <div className={`${styles.timerCard} ${ms < HOUR ? styles.timerSoon : ''}`}>
+      <div className={styles.timerParts} role="timer" aria-label={`Còn lại ${formatRemaining(ms)}`}>
+        {shown.map(([value, unit], index) => (
+          <span key={unit} className={styles.timerPart} aria-hidden="true">
+            {index > 0 && <span className={styles.timerSep}>:</span>}
+            <strong>{String(value).padStart(2, '0')}</strong>
+            <small>{unit}</small>
+          </span>
+        ))}
+      </div>
+      <span className={`${styles.liveBadge} ${live ? styles.liveOn : ''}`}>
+        <span aria-hidden="true" />
+        {live ? 'Trực tiếp' : 'Cập nhật mỗi 10 giây'}
+      </span>
     </div>
   )
 }
@@ -311,6 +320,12 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
   const intent = useIntentKey()
   const ids = useId()
   const locked = busy || !!unknown
+  // Someone else's bid arrives by push; say so when the lead is lost.
+  const [wasLeading, setWasLeading] = useState(leading)
+  if (wasLeading !== leading) {
+    setWasLeading(leading)
+    if (wasLeading && !leading && !busy) setNotice(`Bạn vừa bị vượt giá. Giá hiện tại ${formatVnd(auction.currentPrice ?? auction.startPrice)}.`)
+  }
   const manualError = manual === undefined ? null : amountError(manual, minimumBid, auction.startPrice, step)
   const manualCapped = minimumBid > AUCTION_MAX_PRICE
   const autoCapped = autoFloor > AUCTION_MAX_PRICE
