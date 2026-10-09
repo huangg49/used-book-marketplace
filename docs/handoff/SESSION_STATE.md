@@ -2,6 +2,16 @@
 
 ## Nguồn và việc đang làm
 
+- **09/10 — Gói Backend Trao Đổi Sách (Exchange Backend)**: Đã hoàn thiện luồng backend cho trao đổi sách trên nhánh `feature/exchange-backend`.
+  - Migration `0015-exchanges.ts` đã tạo collection `exchanges`.
+  - Cập nhật OpenAPI contract `openapi.yaml` với các routes `POST /exchanges`, `GET /exchanges`, `GET /exchanges/{id}`, `POST /exchanges/{id}/accept`, và `POST /exchanges/{id}/funding`.
+  - Cập nhật schema MongoDB vào `documents.ts` và `collections.ts`.
+  - Cập nhật `mongo-command.service.ts` để hỗ trợ command pattern cho `ExchangeDoc`.
+  - Bổ sung `ExchangesModule`, `ExchangesController`, `ExchangesService`. Tích hợp vào `app.module.ts`.
+  - Luồng tiền (`fundExchange`) sử dụng tạm `orderId` của ledger để ghi nhận `OrderHold` cho deposit trao đổi.
+  - Tình trạng CI/Build: `nest build` qua API đã PASS (0 lỗi TS). E2E/test thật NOT RUN. Chờ QA hoặc team chạy thử nghiệm.
+
+
 - **08/10 — purchase conversations on `codex/purchase-conversations` (not merged):**
   `ce62098` adds the OpenAPI contract and MongoDB migration `0014` for 24-hour
   purchase conversations; `b374ee6` adds the authenticated transaction,

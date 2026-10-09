@@ -953,3 +953,30 @@ export interface PointHandoverDoc {
   handedOverAt: Date;
   receiptId: string;
 }
+
+export type ExchangeStatus =
+  | 'Proposed'
+  | 'AcceptedAwaitingFunding'
+  | 'Preparing'
+  | 'InTransit'
+  | 'Delivered'
+  | 'Completed'
+  | 'Cancelled'
+  | 'ResolutionPending';
+
+export interface ExchangeDoc extends Lockable {
+  _id: string;
+  initiatorId: string;
+  recipientId: string;
+  initiatorListingId: string;
+  recipientListingId: string;
+  status: ExchangeStatus;
+  revision: number;
+  initiatorDeposit: number;
+  recipientDeposit: number;
+  diffAmount: number;
+  diffPayerId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+

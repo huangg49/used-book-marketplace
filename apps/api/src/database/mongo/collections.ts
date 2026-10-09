@@ -96,6 +96,7 @@ export interface CollectionTypes {
   price_assist_usage: D.PriceAssistUsageDoc;
   price_lookups: D.PriceLookupDoc;
   online_price_offers: D.OnlinePriceOfferDoc;
+  exchanges: D.ExchangeDoc;
 }
 export type CollectionName = keyof CollectionTypes;
 
@@ -246,6 +247,7 @@ const NAMES: CollectionName[] = [
   'point_order_claims',
   'point_returns',
   'member_violations',
+  'exchanges',
 ];
 export const COLLECTION_NAMES: readonly CollectionName[] = NAMES;
 

@@ -1900,6 +1900,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exchanges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns a list of exchanges for the current user. */
+        get: operations["listExchanges"];
+        put?: never;
+        /** @description Initiates an exchange proposal between the user's listing and another user's listing. */
+        post: operations["createExchangeProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns details of a specific exchange. */
+        get: operations["getExchange"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Recipient accepts the exchange proposal. */
+        post: operations["acceptExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{id}/funding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Participant funds their part of the exchange (deposit + diff). */
+        post: operations["fundExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3663,6 +3732,43 @@ export interface components {
              */
             check: "MatchesReport" | "DoesNotMatch";
             note?: string | null;
+        };
+        /** @enum {string} */
+        ExchangeStatus: "Proposed" | "AcceptedAwaitingFunding" | "Preparing" | "InTransit" | "Delivered" | "Completed" | "Cancelled" | "ResolutionPending";
+        Exchange: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            initiatorId: string;
+            /** Format: uuid */
+            recipientId: string;
+            /** Format: uuid */
+            initiatorListingId: string;
+            /** Format: uuid */
+            recipientListingId: string;
+            status: components["schemas"]["ExchangeStatus"];
+            revision: number;
+            initiatorDeposit: number;
+            recipientDeposit: number;
+            diffAmount: number;
+            diffPayerId: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ExchangePage: {
+            items: components["schemas"]["Exchange"][];
+            nextCursor: string | null;
+        };
+        CreateExchangeProposal: {
+            /** Format: uuid */
+            initiatorListingId: string;
+            /** Format: uuid */
+            recipientListingId: string;
+        };
+        AcceptExchange: {
+            revision: number;
         };
     };
     responses: {
@@ -7590,6 +7696,149 @@ export interface operations {
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
+        };
+    };
+    listExchanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangePage"];
+                };
+            };
+            401: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    createExchangeProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateExchangeProposal"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    getExchange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    acceptExchange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptExchange"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    fundExchange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
         };
     };
 }

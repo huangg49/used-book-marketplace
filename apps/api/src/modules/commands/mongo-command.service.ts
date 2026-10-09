@@ -109,6 +109,17 @@ export type PurchaseConversationChange = {
   before?: Json;
   reason?: string;
 };
+export type ExchangeChange = {
+  entityType: 'Exchange';
+  entityId: string;
+  version: number;
+  state: Wire['ExchangeStatus'];
+  decidedAt: Date;
+  event: string;
+  exchange: Wire['Exchange'];
+  before?: Json;
+  reason?: string;
+};
 export type WalletChange = {
   reason?: string;
   entityType: 'TopupIntent';
@@ -187,6 +198,7 @@ export type AuctionOperation =
 type CommandChange =
   | AuctionChange
   | PurchaseConversationChange
+  | ExchangeChange
   | Change
   | AddressChange
   | QuoteChange
@@ -421,6 +433,15 @@ export class MongoCommandService {
       expiresAt: change.expiresAt.toISOString(),
       serverTime: serverTime.toISOString(),
     }));
+  }
+  runExchange<C>(
+    context: CommandContext,
+    operation: 'createExchangeProposal' | 'acceptExchange' | 'fundExchange',
+    target: string | null,
+    body: unknown,
+    options: Options<C, ExchangeChange>,
+  ) {
+    return this.execute(context, operation, target, body, options, (change, id, serverTime): Wire['Exchange'] => change.exchange);
   }
   systemPurchaseConversation<C>(
     key: string,
@@ -792,7 +813,9 @@ export class MongoCommandService {
       };
       if (change.entityType === 'TopupIntent')
         targets.topupId = change.entityId;
-      else if (
+      else if (change.entityType === 'Exchange') {
+        // Exchange does not match a specific target yet, or we can use contextId if we integrate it
+      } else if (
         change.entityType === 'Order' ||
         change.entityType === 'OrderPackagingEvidence' ||
         change.entityType === 'Shipment' ||
@@ -948,6 +971,11 @@ function auditAfter(change: CommandChange): Json {
       return {
         version: change.version,
         expiresAt: change.expiresAt.toISOString(),
+      };
+    case 'Exchange':
+      return {
+        version: change.version,
+        state: change.state,
       };
     case 'AddressBook':
       return { version: change.version, addressId: change.addressId };

@@ -50,6 +50,7 @@ import {
   withRulesChanges,
 } from './0013-auction-business-rules.js';
 import { purchaseConversationSpecs, purchaseConversationsMigration, withPurchaseConversationChanges } from './0014-purchase-conversations.js';
+import { exchangeCollectionSpecs, exchangesMigration } from './0015-exchanges.js';
 
 export interface Migration {
   id: string;
@@ -129,6 +130,7 @@ export const migrations: Migration[] = [
   pointOrderSettlementMigration,
   auctionBusinessRulesMigration,
   purchaseConversationsMigration,
+  exchangesMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -162,4 +164,5 @@ export const currentCollections = (): CollectionSpec[] => [
   ...settlementCollectionSpecs.map(withRulesChanges),
   ...rulesCollectionSpecs,
   ...purchaseConversationSpecs,
+  ...exchangeCollectionSpecs,
 ];
