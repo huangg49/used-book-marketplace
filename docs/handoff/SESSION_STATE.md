@@ -11,7 +11,9 @@
   định; mất phản hồi/5xx giữ key và khóa mức giá để thử lại. Nav "Đấu giá" trỏ trang thật.
   Chi tiết phiên theo mẫu tham chiếu của chủ dự án: ảnh lớn + cột phải dính (đếm ngược ngày/giờ/
   phút/giây, giá lớn, 3 nút trả nhanh, ô nhập kiểm bước giá, tự động thu gọn); không thêm số
-  người theo dõi/chia sẻ vì chưa có dữ liệu.
+  người theo dõi/chia sẻ vì chưa có dữ liệu. Đặt giá tự động là hộp thoại hai bước (giải thích,
+  giá hiện tại/mức thấp nhất được phép, nhập, xác nhận); không hứa thông báo bị vượt giá vì chưa có.
+  Diễn biến giá là thẻ cuộn ở cột phải, avatar số ẩn danh, hàng dẫn có nhãn "Đang dẫn".
   - Phụ thuộc API: phiên đấu giá giữ commitment nên listing bị ẩn khỏi `/listings`; UI chưa
     có ảnh bìa/phiếu tình trạng và dùng bìa chữ. Cần mở rộng contract đọc công khai (ảnh,
     tình trạng) trước khi hiển thị. Bước sau thanh toán (biên bản, mã nhận sách) chưa có UI.

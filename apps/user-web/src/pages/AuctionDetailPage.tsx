@@ -2,7 +2,8 @@ import { useEffect, useId, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowRight, ChevronDown, Gavel, MapPin, ShieldCheck, TrendingUp, Zap } from 'lucide-react'
+import { ArrowRight, ChevronRight, Gavel, MapPin, ShieldCheck, TrendingUp, Zap } from 'lucide-react'
+import { AutoBidDialog } from '../components/AutoBidDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatRemaining, outcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import { useSession } from '../hooks/useSession'
@@ -184,6 +185,7 @@ export function AuctionDetailPage() {
             </p>
             {action}
           </section>
+          <BidHistory history={history} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} open={open} startPrice={auction.startPrice} />
         </aside>
 
         <div className={styles.body}>
@@ -195,26 +197,6 @@ export function AuctionDetailPage() {
             <div className={styles.factWide}><dt><MapPin size={14} aria-hidden="true" /> Nhận sách tại</dt><dd>{auction.pointName}</dd></div>
           </dl>
 
-          <section className={styles.history} aria-labelledby="history-title">
-            <h2 id="history-title">Diễn biến giá</h2>
-            {history.length === 0 ? (
-              <p className={styles.muted}>Chưa có lượt trả giá nào. Giá khởi điểm là {formatVnd(auction.startPrice)}.</p>
-            ) : (
-              <ol>
-                {history.map((event, index) => (
-                  <li key={`${event.at}-${index}`} className={index === 0 && event.bidderAlias === leaderAlias ? styles.leaderRow : undefined}>
-                    <span className={styles.who}>
-                      Người trả giá #{event.bidderAlias}
-                      {me?.alias === event.bidderAlias && <span className={styles.you}>Bạn</span>}
-                    </span>
-                    <span className={styles.when}>{when(event.at)}{index === 0 && open ? ' · đang dẫn' : ''}</span>
-                    <span className={styles.amount}>{formatVnd(event.price)}</span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
-
           <footer className={styles.footer}>
             <p>Người trả giá được hiển thị bằng số thứ tự ẩn danh. Mức đặt giá tự động của mỗi người không bao giờ được công khai.</p>
             <p>Điểm giao nhận và phiên đấu giá đang chạy ở chế độ mô phỏng tại TP.HCM.</p>
@@ -222,6 +204,39 @@ export function AuctionDetailPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+function BidHistory({ history, leaderAlias, myAlias, open, startPrice }: {
+  history: { price: number; bidderAlias: number; at: string }[]; leaderAlias: number | null; myAlias: number | null; open: boolean; startPrice: number
+}) {
+  return (
+    <section className={styles.historyCard} aria-labelledby="history-title">
+      <h2 id="history-title">Diễn biến giá</h2>
+      {history.length === 0 ? (
+        <p className={styles.muted}>Chưa có lượt trả giá nào. Giá khởi điểm là {formatVnd(startPrice)}.</p>
+      ) : (
+        <ol className={styles.historyList} tabIndex={0} aria-label="Các lần giá thay đổi, mới nhất trước">
+          {history.map((event, index) => {
+            const top = index === 0 && event.bidderAlias === leaderAlias
+            const mine = myAlias === event.bidderAlias
+            return (
+              <li key={`${event.at}-${index}`} className={top ? styles.historyTop : undefined}>
+                <span className={`${styles.avatar} ${mine ? styles.avatarMine : ''}`} aria-hidden="true">#{event.bidderAlias}</span>
+                <span className={styles.who}>
+                  {mine ? 'Bạn' : `Người trả giá #${event.bidderAlias}`}
+                  <small>{when(event.at)}</small>
+                </span>
+                <span className={styles.amount}>
+                  {formatVnd(event.price)}
+                  {top && <em>{open ? 'Đang dẫn' : 'Giá chốt'}</em>}
+                </span>
+              </li>
+            )
+          })}
+        </ol>
+      )}
+    </section>
   )
 }
 
@@ -286,10 +301,8 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
   const autoFloor = me?.ownLevel != null ? Math.max(leading ? 0 : minimumBid, me.ownLevel + step) : minimumBid
   // undefined = chưa sửa (theo mức tối thiểu mới nhất); null = ô đang trống.
   const [manual, setManual] = useState<number | null | undefined>(undefined)
-  const [auto, setAuto] = useState<number | null | undefined>(undefined)
   const manualAmount = manual === undefined ? minimumBid : manual
-  const autoAmount = auto === undefined ? autoFloor : auto
-  const [autoOpen, setAutoOpen] = useState(leading || me?.mode === 'Auto')
+  const [autoDialog, setAutoDialog] = useState(false)
   const [confirming, setConfirming] = useState<Intent | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -299,7 +312,6 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
   const ids = useId()
   const locked = busy || !!unknown
   const manualError = manual === undefined ? null : amountError(manual, minimumBid, auction.startPrice, step)
-  const autoError = auto === undefined ? null : amountError(auto, autoFloor, auction.startPrice, step)
   const manualCapped = minimumBid > AUCTION_MAX_PRICE
   const autoCapped = autoFloor > AUCTION_MAX_PRICE
 
@@ -312,7 +324,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
         : next.kind === 'Auto' ? await setAutoBid(auction.id, next.amount, key)
         : next.kind === 'Disable' ? await disableAutoBid(auction.id, key)
         : await buyNow(auction.id, key)
-      intent.settle(); setUnknown(null); setManual(undefined); setAuto(undefined)
+      intent.settle(); setUnknown(null); setManual(undefined)
       const price = receipt.currentPrice !== null ? formatVnd(receipt.currentPrice) : ''
       setNotice(
         next.kind === 'BuyNow' ? 'Bạn đã mua ngay. Hãy thanh toán trong 15 phút.'
@@ -325,7 +337,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
       else { intent.settle(); setUnknown(null) }
       setError(commandError(caught))
     } finally {
-      setBusy(false); setConfirming(null)
+      setBusy(false); setConfirming(null); setAutoDialog(false)
       void onChanged()
     }
   }
@@ -357,7 +369,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
           </button>
         </div>
       ) : leading ? (
-        <p className={styles.muted}>Bạn không cần trả thêm. Muốn giữ vị trí khi có người trả cao hơn, hãy đặt hoặc nâng mức tự động bên dưới.</p>
+        <p className={styles.muted}>Bạn không cần trả thêm. Muốn giữ vị trí khi có người trả cao hơn, hãy đặt hoặc nâng mức tự động.</p>
       ) : manualCapped ? (
         <p className={styles.muted}>Giá đã chạm mức tối đa {formatVnd(AUCTION_MAX_PRICE)} của phiên.</p>
       ) : (
@@ -388,44 +400,38 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
 
       {!unknown && (
         <div className={styles.autoBid}>
-          <button
-            type="button" className={styles.autoToggle} aria-expanded={autoOpen} aria-controls={`${ids}-auto`}
-            onClick={() => setAutoOpen((value) => !value)}
-          >
+          <button type="button" className={styles.autoToggle} disabled={locked || autoCapped} onClick={() => setAutoDialog(true)} aria-haspopup="dialog">
             <span>
-              <strong><Zap size={14} aria-hidden="true" /> Đặt giá tự động</strong>
-              <small>Tự trả thay bạn từng bước khi có người trả cao hơn, không vượt mức tối đa bạn chọn.</small>
+              <strong><Zap size={14} aria-hidden="true" /> {me?.mode === 'Auto' ? 'Nâng mức tự động' : 'Đặt giá tự động'}</strong>
+              <small>
+                {autoCapped
+                  ? `Mức tự động của bạn đã ở mức tối đa ${formatVnd(AUCTION_MAX_PRICE)}.`
+                  : 'Tự trả thay bạn từng bước khi có người trả cao hơn, không vượt mức tối đa bạn chọn.'}
+              </small>
             </span>
-            <ChevronDown size={18} aria-hidden="true" className={autoOpen ? styles.chevronOpen : undefined} />
+            <ChevronRight size={18} aria-hidden="true" />
           </button>
-          {autoOpen && (
-            <div id={`${ids}-auto`} className={styles.autoBody}>
-              {autoCapped ? (
-                <p className={styles.muted}>Mức tự động của bạn đã ở mức tối đa {formatVnd(AUCTION_MAX_PRICE)}.</p>
-              ) : (
-                <>
-                  <AmountField
-                    id={`${ids}-auto-amount`} label="Mức tối đa cho đặt giá tự động" value={autoAmount} onChange={setAuto} disabled={locked}
-                    hint={me?.ownLevel != null && me.mode === 'Auto' ? `Chỉ có thể nâng, từ ${formatVnd(autoFloor)}` : `Mức tối đa, từ ${formatVnd(autoFloor)}`}
-                    error={autoError}
-                  />
-                  <button
-                    type="button" className={styles.secondaryBlock} disabled={locked || !!autoError}
-                    onClick={() => autoAmount && setConfirming({ kind: 'Auto', amount: autoAmount })}
-                  >
-                    {me?.mode === 'Auto' ? 'Nâng mức tối đa lên' : 'Đặt mức tối đa'}{autoAmount ? ` ${formatVnd(autoAmount)}` : ''}
-                  </button>
-                </>
-              )}
-              {me?.mode === 'Auto' && (
-                <button type="button" className={styles.linkButton} disabled={locked} onClick={() => setConfirming({ kind: 'Disable', amount: 0 })}>
-                  Tắt đặt giá tự động
-                </button>
-              )}
-            </div>
+          {me?.mode === 'Auto' && (
+            <button type="button" className={styles.linkButton} disabled={locked} onClick={() => setConfirming({ kind: 'Disable', amount: 0 })}>
+              Tắt đặt giá tự động
+            </button>
           )}
         </div>
       )}
+
+      <AutoBidDialog
+        isOpen={autoDialog}
+        onClose={() => setAutoDialog(false)}
+        title={auction.title}
+        pointName={auction.pointName}
+        currentPrice={auction.currentPrice ?? auction.startPrice}
+        startPrice={auction.startPrice}
+        step={step}
+        floor={autoFloor}
+        currentMax={me?.mode === 'Auto' ? me.ownLevel : null}
+        busy={busy}
+        onConfirm={(maxAmount) => run({ kind: 'Auto', amount: maxAmount })}
+      />
 
       {auction.buyNowPrice !== null && !unknown && (
         <div className={styles.buyNow}>
