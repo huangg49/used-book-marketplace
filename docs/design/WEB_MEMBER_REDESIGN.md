@@ -33,6 +33,19 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `912ecec`, chủ dự án yêu cầu giữ nguyên hero và chỉ thu bốn nút do đáy bị
+cắt ở cửa sổ1535×735. Bookmark desktop168→144px, chim104→88px, padding đáy30→24px;
+mobile152px/88px, kiểu giấy/routes và toàn bộ hero giữ nguyên. Source diff chỉ
+bốn giá trị CSS thuộc bookmark; thay đổi thu hero đã hoàn tác trước checkpoint.
+Build/typecheck PASS; CUA1535×735 đáy hàng723.95px,1366×768 đáy734.75px;
+không tràn ngang/4ảnh tải đủ. Mobile390×844 vẫn2×2/min152px, không tràn.
+[Ảnh cửa sổ tương ứng](../../.impeccable/review/web-member/home-bookmarks-compact-desktop.jpg).
+Scan trước sửa0finding; actual hover/200%/backend/native/human NOT RUN.
+READINESS giữ nguyên; checkpoint subject `fix(web): compact bookmarks without shrinking hero`.
+Local, chưa push. Bước tiếp: chủ dự án xem trên cửa sổ laptop.
+Reviewer độc lập ship, không material fix;
+[review](../../.impeccable/review/web-member/home-bookmarks-compact-finish.md). Docs/diff PASS.
+
 Sau `7af062d`, chủ dự án duyệt làm dấu sách mềm hơn: hàng880px/gap32px,
 chim104px, hai góc trên8px, khía40×19.5px, viền warm50% alpha và nét wine nhỏ.
 Tái dùng texture giấy login20% multiply, clip riêng bằng useId; anchor/focus

@@ -280,8 +280,8 @@
   align-items: center;
   justify-items: center;
   align-content: center;
-  min-height: 168px;
-  padding: 4px 12px 30px;
+  min-height: 144px;
+  padding: 4px 12px 24px;
   border-radius: 8px;
   color: var(--shop-wine);
   font-size: 0.9375rem;
@@ -313,8 +313,8 @@
   opacity: 0.35;
 }
 .quickLinks a > img {
-  width: 104px;
-  height: 104px;
+  width: 88px;
+  height: 88px;
   object-fit: contain;
   transform: translateY(-2px);
 }

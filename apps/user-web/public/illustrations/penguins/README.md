@@ -21,7 +21,7 @@ bằng built-in image_gen. File mới256px/51004byte/alpha; prompt và hash ở
 budget giữ làm nguồn/lịch sử. Dấu sách được dựng bằng SVG hình học trong code,
 không cắt từ ảnh mockup hoặc biến ảnh mockup thành UI.
 
-Render104px desktop,88px mobile, `alt=""`; chữ bên cạnh là accessible name.
+Render88px desktop/mobile, `alt=""`; chữ bên cạnh là accessible name.
 Những file này là bitmap illustration; icon tác vụ nhỏ của app vẫn dùng Lucide.
 
 Paper refinement reuses `/login-art/ivory-paper.webp` at20% multiply opacity inside geometric SVG clips. No new bitmap; provenance stays with that existing texture. Wine thread and shallow silhouette hover shadow are code geometry.

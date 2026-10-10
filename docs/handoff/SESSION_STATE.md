@@ -8,6 +8,13 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `912ecec`, giữ hero y nguyên; bookmark desktop144px/chim88px/padding đáy24px.
+  Mobile152px/88px không đổi. Build/typecheck PASS; CUA1535×735/1366×768 hàng
+  đủ trong khung đầu,390px vẫn2×2; không tràn ngang. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
+  Actual hover/200%/backend/native/human NOT RUN; READINESS giữ nguyên.
+  Reviewer độc lập ship, không material fix; docs/diff PASS.
+  Checkpoint subject `fix(web): compact bookmarks without shrinking hero`;
+  local, chưa push. Bước tiếp: chủ dự án xem trên laptop.
 - Sau `7af062d`, dấu sách880px/gap32px, chim104/88px, góc8px/khía sâu hơn,
   viền nhẹ/texture giấy login và nét chỉ wine. Hover bóng theo giấy; focus không
   clip. Giữ hero/routes/API/session. Build/lint PASS (6 warning cũ); CUA5width
