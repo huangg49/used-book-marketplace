@@ -18,11 +18,11 @@ export const colorRoles = {
   scrim: "rgba(20,36,28,.45)",
   shelfCanvas: "#F6F8F3",
   shelfEdge: "#B5C3AC",
-  navigationBackground: colors.forest,
-  navigationText: colors.paper,
-  navigationSelected: colors.surface,
+  navigationBackground: colors.surface,
+  navigationText: colors.muted,
+  navigationSelected: colors.successSurface,
   navigationSelectedText: colors.forest,
-  navigationFocus: colors.leaf,
+  navigationFocus: colors.forest,
 } as const;
 export const space = {
   xs: 4,
@@ -44,16 +44,17 @@ export const radius = {
   pill: 24,
 } as const;
 export const metrics = {
-  touch: 44,
+  touch: 48,
   control: 52,
   content: 480,
   shelfCover: 196,
   sheet: 520,
 } as const;
 export const typography = {
-  // UI-1 reading roles: approved detail direction, now applied to the shelf.
-  bookTitle: [22, 30, "LoraSemi"],
-  bookHeading: [20, 28, "LoraSemi"],
+  // One bundled family for Vietnamese tasks; use the actual regular/bold faces.
+  bookTitle: [22, 30, "BeBold"],
+  bookHeading: [20, 28, "BeBold"],
+  searchTitle: [28, 36, "BeBold"],
   shelfTitle: [16, 23, "BeBold"],
   shelfPrice: [18, 25, "BeBold"],
   reading: [16, 25, "BeRegular"],
@@ -64,9 +65,9 @@ export const typography = {
   small: [12, 19, "BeRegular"],
   label: [11, 17, "BeBold"],
   navigationLabel: [12, 18, "BeBold"],
-  title: [32, 43, "LoraSemi"],
-  heading: [23, 32, "LoraSemi"],
-  card: [17, 24, "LoraSemi"],
+  title: [32, 43, "BeBold"],
+  heading: [23, 32, "BeBold"],
+  card: [17, 24, "BeBold"],
   bold: [15, 24, "BeBold"],
   price: [21, 29, "BeBold"],
 } as const;

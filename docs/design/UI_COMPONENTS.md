@@ -56,6 +56,21 @@ phải implementation thứ hai. `Notice error` cũng là adapter; code mới ư
 `radius`, `metrics`, `typography` là token. `TextScale` chỉ phục vụ stress test;
 không dùng để vô hiệu hóa font scaling của hệ điều hành.
 
+10/10/2026: role chữ RN dùng Be Vietnam Pro400/700 từ file có sẵn; không còn load
+Lora. `searchTitle`28/36 là tiêu đề tác vụ tìm sách. Target chung48dp, control52dp;
+`NavigationBar` dùng nền sáng và selected tonal xanh. `/ui` nhóm Chữ/Điều hướng
+hiển thị chính các token này. Logo giữ artwork gốc.
+
+`Screen appearance="browse"` là nền sáng với status bar tối; header/footer vẫn
+nằm ngoài vùng cuộn và safe area do Screen quản lý. `ShelfSearchHeader` dùng
+SearchField/Button có nhãn nhìn thấy. `ShelfResults` giữ nguyên thứ tự API,
+mặc định danh sách ảnh cạnh nội dung; giá bán và giá trị đổi không cắt dòng.
+`PublicPhoto result` giữ khung ảnh2:3, contain, signed-read/retry/callback hiện có.
+Phương án grid chỉ dùng trên showcase để đối chiếu, không là lựa chọn sản phẩm.
+`Notice` dùng nền/ngữ nghĩa màu và thông điệp, bỏ viền bên dày; error giữ role
+alert/live region và recovery. BrandProvider mở splash sau khi font sẵn sàng hoặc
+có lỗi để người dùng thấy được control tải lại font.
+
 UI-1: màn chi tiết sách thử các role `bookTitle`, `bookHeading`, `reading`,
 `annotation`, `stamp`, `bookPrice` trong theme dùng chung. `BookCondition stamp`
 thêm nhãn tình trạng có viền và tách hình thức giao dịch; không là huy hiệu kiểm

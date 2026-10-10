@@ -76,7 +76,7 @@ export function UiCatalogScreen() {
             <NavigationBar
               current={destination}
               destinations={[
-                { key: "discover", title: "Khám phá", icon: "book" },
+                { key: "discover", title: "Tìm sách", icon: "book" },
                 {
                   key: "books",
                   title: "Sách tôi",
@@ -94,7 +94,7 @@ export function UiCatalogScreen() {
           LẬT LẠI / THƯ VIỆN GIAO DIỆN
         </AppText>
         <AppText kind="title" color={colors.forest}>
-          Cùng một nét,{"\n"}qua từng màn hình.
+          Thành phần giao diện
         </AppText>
         <AppText color={colors.muted}>
           Mẫu chạy trực tiếp từ component dùng chung. Các thao tác ở đây chỉ

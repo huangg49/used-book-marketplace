@@ -1,4 +1,4 @@
-# Điểm lưu hiện tại — 09/10/2026
+# Điểm lưu hiện tại — 10/10/2026
 
 Source sản phẩm: main `da59199`; docs context `d77290a`, docs refresh `2e13f04`.
 OpenAPI0.30.0,15 migration Mongo,113 operation HTTP. Đây là trạng thái theo Git/
@@ -6,6 +6,25 @@ source; remote CI hiện tại và human sign-off chưa được xác minh trong
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
 ## Gói đang kết thúc
+
+- Chủ dự án duyệt redesign Android trước; nhánh `codex/android-search-redesign`
+  từ `270acbf`, checkpoint subject `feat(rn): redesign Android book search`.
+- RN tìm sách: danh sách dọc, search cố định, Bộ lọc có nhãn, câu chữ trực tiếp;
+  Be Vietnam Pro400/700 thay Lora, target48dp và navigation sáng. Hai prototype
+  cùng fixture ở showcase; chọn danh sách. Không đổi API/session/nghiệp vụ;
+  Vite/Flutter chưa redesign. [Brief](../design/ANDROID_SEARCH.md),
+  [checks/ảnh native](../ui/ANDROID_SEARCH_REDESIGN.md).
+- PASS RN108/108 test/typecheck; lint0 error,8 warning wishlist có sẵn. Android35
+  x86_64: search/detail/Back/filter, chữ130%,320dp, Gboard, rỗng/lỗi/retry được
+  thao tác; storage FAKE/database `*_test` riêng. Review độc lập yêu cầu bỏ viền
+  lỗi dày; đã sửa/recapture, verdict ship cho fix đã chấm. Token-bearing DESIGN và sidecar được đối chiếu
+  bởi documenter. Taste là reference, Impeccable pinned là quy trình.
+- PASS export Android/iOS/web13 route, docs248 file/1750 links/4 adapters,
+  formatting và diff; QA đã dừng/dọn database/users/roles. Không đóng READINESS,
+  không human sign-off/TalkBack/ARM/iOS/release, không push/PR/merge/deploy.
+  Stash, nhánh và local work teammate giữ nguyên.
+
+## Checkpoint design tools — `270acbf`
 
 - Chủ dự án duyệt tích hợp Impeccable/brief/critique, nhánh
   `codex/impeccable-ui-workflow` từ `2e13f04`. Checkpoint subject
@@ -94,9 +113,9 @@ không lấy port/PID/account/config trong lịch sử làm cấu hình mặc đ
 Chat mới dùng [prompt](NEXT_SESSION_PROMPT.md), kiểm Git/source thực tế và nhận
 gói cụ thể. Setup theo [START_HERE](START_HERE.md)/[DEVELOPMENT](../DEVELOPMENT.md),
 QA `*_test` riêng, skill/checks theo [AI_WORKFLOW](../AI_WORKFLOW.md).
-Ưu tiên UI đề xuất ở critique: search đúng contract/control/state trước, rồi
-câu chữ/font/detail và form recovery. Chủ dự án đã duyệt gói tích hợp/đánh giá;
-chưa coi mọi đề xuất redesign là source đã sửa hoặc quyền merge/release mới.
+Gói Android search đã được triển khai ở nhánh ghi trên; bước tiếp là review người
+thật/người dùng cho màn này, rồi nhận scope riêng cho detail/form recovery/web.
+Không coi các màn ngoài phạm vi là đã redesign hoặc đã có quyền merge/release.
 [CONTINUATION_PLAN](CONTINUATION_PLAN.md) là backlog có gate, không tự cấp quyền
 code tính năng mới/merge/deploy. Cập nhật mục của mình, không nối nhật ký dài lại.
 

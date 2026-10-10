@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, View } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import {
   AppText,
   BackAction,
@@ -10,17 +10,15 @@ import {
   Chip,
   Notice,
   Screen,
-  SearchField,
   Sheet,
   colors,
-  colorRoles,
-  metrics,
   space,
 } from "../../core/ui";
-import { ShelfRails } from "../shelf/shelf-rails";
+import { ShelfResults } from "../shelf/shelf-results";
 import { BookPresentation } from "../shelf/book-presentation";
 import { BookGallery } from "../shelf/book-gallery";
-import { ShelfHeader } from "../shelf/shelf-controls";
+import { ShelfSearchHeader } from "../shelf/shelf-controls";
+import { MemberNavigation } from "../navigation/member-navigation";
 import { modes } from "../shelf/contracts";
 import { showcaseBooks } from "./fixtures";
 
@@ -44,11 +42,14 @@ function DemoBanner() {
 }
 
 export function ShelfShowcase() {
+  const { composition } = useLocalSearchParams<{ composition?: string }>();
+  const grid = composition === "grid";
   const scroll = useRef<ScrollView>(null);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState("");
   const [missing, setMissing] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
   const normalized = (value: string) =>
     value
       .normalize("NFD")
@@ -57,7 +58,9 @@ export function ShelfShowcase() {
       .toLowerCase();
   const items = showcaseBooks.filter(
     ({ listing }) =>
-      (!mode || listing.mode === mode) &&
+      (!mode ||
+        listing.mode === mode ||
+        (mode !== "Both" && listing.mode === "Both")) &&
       normalized(
         `${listing.book.title} ${listing.book.authors.join(" ")}`,
       ).includes(normalized(query.trim())),
@@ -69,27 +72,24 @@ export function ShelfShowcase() {
     });
   return (
     <Screen
-      appearance="shelf"
+      appearance="browse"
       scrollRef={scroll}
       header={
         <>
           <DemoBanner />
-          <ShelfHeader inverse />
+          <ShelfSearchHeader
+            search={search}
+            onSearchChange={setSearch}
+            onSubmit={() => setQuery(search)}
+            onFilter={() => setFilterOpen(true)}
+            filterCount={mode ? 1 : 0}
+          />
         </>
       }
-      footer={
-        <BackAction title="Về kệ thật" onPress={() => router.replace("/")} />
-      }
+      footer={<MemberNavigation current="/" />}
+      footerAppearance="navigation"
+      compactFooter
     >
-      <SearchField
-        label="Tìm trong dữ liệu mẫu"
-        submitLabel="Tìm sách mẫu"
-        placeholder="Tên sách, tác giả"
-        value={search}
-        onChangeText={setSearch}
-        onSubmitEditing={() => setQuery(search)}
-        maxLength={200}
-      />
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
         {Object.entries({ "": "Tất cả", ...modes }).map(([key, title]) => (
           <Chip
@@ -106,22 +106,22 @@ export function ShelfShowcase() {
           color={colors.forest}
           accessibilityRole="header"
         >
-          Trên kệ mẫu
+          Sách đang có
         </AppText>
         <AppText kind="small" color={colors.muted}>
-          {items.length} mẫu để xem bố cục · chạm bìa để mở
+          Mới đăng · Trang 1
         </AppText>
       </View>
-      <ShelfRails
+      <ShelfResults
+        composition={grid ? "grid" : "list"}
         key={`${query}:${mode}`}
         items={items.map((x) => x.listing)}
         onOpen={(item) => open(item.id)}
-        renderPhoto={(item, onFocus) => (
+        renderPhoto={(item) => (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Mở ảnh sách ${item.book.title}`}
             onPress={() => open(item.id)}
-            onFocus={onFocus}
           >
             <BookCover
               source={
@@ -131,8 +131,8 @@ export function ShelfShowcase() {
               label={`Ảnh tư liệu ${item.book.title}`}
               style={{
                 width: "100%",
-                height: metrics.shelfCover,
-                backgroundColor: colorRoles.shelfCanvas,
+                ...(grid ? { height: 160 } : { aspectRatio: 2 / 3 }),
+                backgroundColor: colors.surface,
               }}
             />
           </Pressable>
@@ -144,6 +144,16 @@ export function ShelfShowcase() {
         </Notice>
       )}
       <Button
+        title={grid ? "Xem phương án danh sách" : "Xem phương án lưới"}
+        secondary
+        onPress={() =>
+          router.replace({
+            pathname: "/showcase",
+            params: { composition: grid ? "list" : "grid" },
+          })
+        }
+      />
+      <Button
         title={missing ? "Hiện lại ảnh tư liệu" : "Thử khi ảnh không tải được"}
         secondary
         onPress={() => setMissing((v) => !v)}
@@ -153,6 +163,28 @@ export function ShelfShowcase() {
         trong mỗi màn chi tiết. Các thành phần trình bày này cũng được dùng ở kệ
         thật.
       </AppText>
+      <BackAction
+        title="Về danh sách thật"
+        onPress={() => router.replace("/")}
+      />
+      <Sheet
+        title="Bộ lọc mẫu"
+        visible={filterOpen}
+        onClose={() => setFilterOpen(false)}
+      >
+        <AppText>Dữ liệu mẫu chỉ hỗ trợ hình thức và từ khóa.</AppText>
+        {Object.entries({ "": "Tất cả", ...modes }).map(([key, title]) => (
+          <Chip
+            key={key}
+            title={title}
+            selected={mode === key}
+            onPress={() => {
+              setMode(key);
+              setFilterOpen(false);
+            }}
+          />
+        ))}
+      </Sheet>
     </Screen>
   );
 }

@@ -38,6 +38,6 @@ it("keeps actual text/control color combinations above their contrast thresholds
   expect(contrast(colors.paper, colors.terracotta)).toBeLessThan(4.5);
 });
 it("preserves minimum target sizes even for compact controls", () => {
-  expect(metrics.touch).toBeGreaterThanOrEqual(44);
+  expect(metrics.touch).toBeGreaterThanOrEqual(48);
   expect(metrics.control).toBeGreaterThanOrEqual(metrics.touch);
 });
