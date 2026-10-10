@@ -8,11 +8,13 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
-- Sau `760a68a`, thêm nét đứt wine2/5px35% ở mép trên bốn nút; Mua sách/Đấu giá
-  cùng nền vàng#f6e0a8. Build/typecheck/docs/diff PASS; CUA1535×735 xác nhận
- 4nét/không tràn/đáy hàng723.95px; hero/routes/kích thước không đổi.
-  [Ảnh](../../.impeccable/review/web-member/home-bookmarks-stitching.jpg).
-  Checkpoint subject `style(web): add subtle bookmark stitching`; local, chưa push.
+- Sau `122576d`, thử lớp giấy đỏ bên dưới bốn dấu sách, lệch2px/3px cùng silhouette.
+  Anchor/lớp đỏ đứng yên, hover chỉ nhấc lớp trên; reduce motion giữ nghỉ.
+  Build/typecheck/lint PASS (6 warning cũ); CUA1535×735/390px không tràn,
+  lớp đỏ cùngwine/đáy726.95px/focus không clip. Hero/routes/kích thước không đổi.
+  Actual hover/200%/backend/native/human NOT RUN. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
+  Reviewer độc lập ship, không material fix; docs/diff PASS. READINESS giữ nguyên.
+  Checkpoint subject `style(web): add red paper backing to bookmarks`; local, chưa push.
 - Sau `912ecec`, giữ hero y nguyên; bookmark desktop144px/chim88px/padding đáy24px.
   Mobile152px/88px không đổi. Build/typecheck PASS; CUA1535×735/1366×768 hàng
   đủ trong khung đầu,390px vẫn2×2; không tràn ngang. [Evidence](../design/WEB_MEMBER_REDESIGN.md).

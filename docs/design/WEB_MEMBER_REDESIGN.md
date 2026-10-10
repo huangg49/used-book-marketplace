@@ -33,6 +33,18 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `122576d`, chủ dự án duyệt thử lớp giấy đỏ dưới dấu sách: SVG cùng silhouette,
+wine, lệch2px/3px, pointer-inert/aria-hidden/z−2. Anchor và lớp đỏ đứng yên;
+fine-pointer hover chỉ nhấc giấy trên/chim/nhãn3px. Reduce motion giữ transform nghỉ.
+Không đổi hero/routes/kích thước, không thêm bitmap hoặc bóng khối.
+Build/typecheck/lint PASS (6 warning cũ); CUA1535×735/390px không tràn;
+4lớp đỏ cùngwine/matrix2,3/desktop đáy726.95px, keyboard focus không clip.
+[Laptop](../../.impeccable/review/web-member/home-bookmarks-red-backing-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-bookmarks-red-backing-mobile.jpg).
+Actual hover/200%/backend/native/human NOT RUN. READINESS giữ nguyên; local, chưa push.
+Reviewer độc lập ship, không material fix;
+[review](../../.impeccable/review/web-member/home-bookmarks-red-backing-finish.md). Docs/diff PASS.
+
 Sau `4c07fb2`, Mua sách dùng cùng vàng#f6e0a8 với Đấu giá theo yêu cầu chủ dự án.
 Build/typecheck/docs/diff PASS; CUA xác nhận hai fill cùngrgb(246,224,168).
 [Ảnh](../../.impeccable/review/web-member/home-bookmarks-buy-gold.jpg). Chỉ đổi màu.

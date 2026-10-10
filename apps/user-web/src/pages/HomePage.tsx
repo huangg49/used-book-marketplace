@@ -44,33 +44,44 @@ function BookmarkPaper() {
   const paperShape =
     "M8.5.5H191.5Q199.5.5 199.5 8.5V163.5Q199.5 167.5 195.5 167.5H120L100 148L80 167.5H4.5Q.5 167.5 .5 163.5V8.5Q.5.5 8.5.5Z";
   return (
-    <svg
-      className={styles.bookmarkPaper}
-      viewBox="0 0 200 168"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <defs>
-        <clipPath id={paperId}>
-          <path d={paperShape} />
-        </clipPath>
-      </defs>
-      <path d={paperShape} vectorEffect="non-scaling-stroke" />
-      <image
-        className={styles.bookmarkTexture}
-        href="/login-art/ivory-paper.webp"
-        width="200"
-        height="168"
-        preserveAspectRatio="xMidYMid slice"
-        clipPath={`url(#${paperId})`}
-      />
-      <path
-        className={styles.bookmarkThread}
-        d="M16 12H184"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
+    <>
+      <svg
+        className={styles.bookmarkBacking}
+        viewBox="0 0 200 168"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d={paperShape} />
+      </svg>
+      <svg
+        className={styles.bookmarkPaper}
+        viewBox="0 0 200 168"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <defs>
+          <clipPath id={paperId}>
+            <path d={paperShape} />
+          </clipPath>
+        </defs>
+        <path d={paperShape} vectorEffect="non-scaling-stroke" />
+        <image
+          className={styles.bookmarkTexture}
+          href="/login-art/ivory-paper.webp"
+          width="200"
+          height="168"
+          preserveAspectRatio="xMidYMid slice"
+          clipPath={`url(#${paperId})`}
+        />
+        <path
+          className={styles.bookmarkThread}
+          d="M16 12H184"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+    </>
   );
 }
 
