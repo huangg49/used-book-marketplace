@@ -8,6 +8,16 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `6beee98`, thử bốn dấu sách kem/vàng thay hộp pastel theo duyệt chủ dự án.
+  Chim88/72px trên nhãn ngắn, khía SVG/viền1px, nối hero12px, không clip focus.
+  Hero đáy32px giữ caption cách20px; thêm chim cầm búa alpha256px/51KB, ba ảnh
+  cũ giữ nguyên. Bốn route/kệ/logo/session/API không đổi. Build/typecheck/lint
+  PASS (6 warning cũ); CUA6width không tràn, laptop hàng trọn khung mở đầu,
+  keyboard4route/focus/4ảnh PASS. Scan trước sửa0finding;200%/actual mouse hover/
+  native/backend giao dịch/human NOT RUN. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
+  Reviewer độc lập ship, không material fix; docs/diff PASS. READINESS giữ nguyên;
+  checkpoint subject `feat(web): refine home bookmark shortcuts`;
+  local, chưa push. Bước tiếp: chủ dự án xem bản thử.
 - Sau `708f8da`, ô khám phá thứ ba đổi từ “Đến 100.000₫” thành “Đấu giá”, dùng
   ROUTES.auctions (/auctions). Giữ màu đào/chim ôm ví; bộ lọc ngân sách trong kệ
   và banner giá giữ nguyên. Build/typecheck/lint PASS (6 warning cũ), CUA Enter

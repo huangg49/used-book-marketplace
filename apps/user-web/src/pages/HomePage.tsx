@@ -39,6 +39,23 @@ const heroCovers = [
   "/illustrations/chua-nhan.webp",
 ];
 
+function BookmarkPaper() {
+  return (
+    <svg
+      className={styles.bookmarkPaper}
+      viewBox="0 0 240 144"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M4.5.5H235.5Q239.5.5 239.5 4.5V139.5Q239.5 143.5 235.5 143.5H132L120 135.5L108 143.5H4.5Q.5 143.5 .5 139.5V4.5Q.5.5 4.5.5Z"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
 function HeroCovers() {
   const gallery = useRef<HTMLDivElement>(null);
   const [moving, setMoving] = useState(false);
@@ -539,50 +556,50 @@ export function HomePage() {
               className={styles.quickBuy}
               to={homeShelfUrl({ mode: "Sale" }, preview)}
             >
+              <BookmarkPaper />
               <img
                 src="/illustrations/penguins/buy.png"
-                width="72"
-                height="72"
+                width="88"
+                height="88"
                 alt=""
               />
-              <span>Mua sách cũ</span>
-              <ArrowUpRight size={16} aria-hidden="true" />
+              <span>Mua sách</span>
             </Link>
             <Link
               className={styles.quickExchange}
               to={homeShelfUrl({ mode: "Exchange" }, preview)}
             >
+              <BookmarkPaper />
               <img
                 src="/illustrations/penguins/exchange.png"
-                width="72"
-                height="72"
+                width="88"
+                height="88"
                 alt=""
               />
               <span>Đổi sách</span>
-              <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
             <Link
               className={styles.quickAuction}
               to={ROUTES.auctions}
             >
+              <BookmarkPaper />
               <img
-                src="/illustrations/penguins/budget.png"
-                width="72"
-                height="72"
+                src="/illustrations/penguins/auction.png"
+                width="88"
+                height="88"
                 alt=""
               />
               <span>Đấu giá</span>
-              <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
             <Link className={styles.quickPost} to={ROUTES.sell}>
+              <BookmarkPaper />
               <img
                 src="/illustrations/penguins/post.png"
-                width="72"
-                height="72"
+                width="88"
+                height="88"
                 alt=""
               />
-              <span>Đăng sách của bạn</span>
-              <ArrowUpRight size={16} aria-hidden="true" />
+              <span>Đăng sách</span>
             </Link>
           </nav>
           <LatestShelf preview={preview} key={preview ? "preview" : "live"} />

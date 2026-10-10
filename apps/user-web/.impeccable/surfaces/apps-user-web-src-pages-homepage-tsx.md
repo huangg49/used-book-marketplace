@@ -25,14 +25,15 @@ secondary paper field, quiet cream shelf grounds, Be Vietnam Pro24px bold sectio
 heads and task text, Anton only for the budget/exchange/posting display moments.
 Complete actual listing photographs and unboxed metadata stay authoritative.
 
-STORY: Four colored penguin shortcut tiles for buying, exchange, budget and posting. Explore actual
+STORY: Four paper bookmark shortcuts for buying, exchange, auction and posting. Explore actual
 categories in the currently loaded shelf; switch server-backed buy/exchange/price
 groups; show more locally loaded copies; open the full catalog with supported
 filters. Two budget banners lead to Sale max50000/100000. A separate exchange
 shelf and posting CTA continue the journey. No new API/session/backend behavior.
 
-FIRST VIEWPORT: Approved hero JSX/assets/motion/search/layout unchanged. Below:
-four colored penguin shortcut tiles, category section, new-listing shelf with four pressed
+FIRST VIEWPORT: Approved hero assets/motion/search remain; bottom padding32px
+leaves20px caption clearance above the bookmarks. Below:
+four paper bookmark shortcuts, category section, new-listing shelf with four pressed
 filter buttons, up to ten compact BookCards in five laptop/six wide-desktop columns. Budget
 banner pair follows, then mint exchange section with a left introduction and
 four compact cards, then wine posting band. Content max1200px, desktop outer40px,
@@ -104,12 +105,12 @@ topic shelves show10 each, exchange remains4 beside its introduction. Hero,
 Search defaults, actual API/session and preview/source/sample boundaries stay
 unchanged. This owner-pinned refinement supersedes earlier density counts.
 
-## Owner-approved penguin shortcut tiles — 10/10/2026
+## Owner-approved penguin bookmark shortcuts — 10/10/2026
 
-Owner-approved Home shortcuts use four full clickable colored tiles in buy/exchange/auction/post order. Grounds reuse cover palette #f0e2ca/#d9e7dc/#f6d4bd/#e6dced with wine text. Original generated penguin illustrations at public/illustrations/penguins are decorative (empty alt),72px desktop/56px mobile. Tile minimum112px/padding16px,12px corners,14px bold wrapping labels and16px arrows; four columns with16px gaps, two columns at1000px. At600px tiles stack image above label/arrow, minimum132px/padding12px/gap12px. Transparent1px border reserves hover space; fine-pointer hover lifts2px and shows wine border over200ms, focus wine3px/offset3px, reduced motion removes lift/transition. No shadow, nested badge or subtitle. Owner changes the third shortcut to Đấu giá → /auctions on10/10; it keeps peach ground and the existing penguin purse illustration. Other links, shelf budget filters and session semantics stay unchanged. Images256px PNG preserve alpha; four together202026bytes. Penguin is supporting illustration, existing owl logo remains.
+Owner-approved Home shortcuts are four paper bookmarks in buy/exchange/auction/post order. A1040px row overlaps the hero boundary12px with24px gaps and28px space below; four columns, two at1000px, gap12px and24px below at600px. Whole anchors remain unclipped with wine3px keyboard outline/offset3px. An aria-hidden pointer-inert SVG draws only precise paper geometry:4px upper corners, shallow central V-cut, non-scaling1px warm border. No shadows, gradients, repeated arrows, badge frames or extra text. Cream #fcf8db / #fffaf0 grounds; auction butter-gold #f6e0a8. Centered penguin above short15px bold wine label (14px mobile); images88px desktop/72px mobile, minimum144/132px heights, padding8px12px20px,4px internal gap; labels can wrap/grow. Original buy/exchange/post alpha PNGs remain; auction.png replaces purse with gavel using built-in image_gen,256px alpha with prompt/hash sidecar. Fine-pointer hover lifts2px and darkens the paper stroke; reduced motion removes lift/transition. Hero bottom padding32px ensures20px caption clearance. Hero art, navbar, owl logo, catalog, API/session and link semantics stay unchanged: Mua sách→Sale, Đổi sách→Exchange, Đấu giá→/auctions, Đăng sách→/sell. Owner-approved narrower material supersedes the pastel tile recipe and the raster mockup; the latter is visual reference only.
 
-The owner explicitly approves four colored clickable boxes and the cute penguin
-family from the generated sample. This overrides the earlier unboxed-link
-recipe. Code-led local extension; no new identity roll/comp or replacement logo.
+Owner approves implementing the bookmark concept with simpler web materials,
+keeping the penguin family and routes. Code-led local refinement; no new
+identity roll, replacement logo or raster screenshot used as runtime UI.
 Finish: desktop/mobile/narrow captures, keyboard focus and four navigation
 checks; generated image provenance/alpha, build/lint, independent review.

@@ -15,5 +15,11 @@ source/delivery SHA256, dimensions/alpha và mục đích sử dụng. Không l�
 từ Fahasa/Dribbble. Đây là minh họa phụ cho lối vào, không thay logo cú hiện tại
 và không làm ảnh sách hay chứng minh tính năng/giao dịch.
 
-Render72px desktop,56px mobile, `alt=""`; chữ bên cạnh là accessible name.
+Lượt dấu sách bổ sung `auction.png`: chim cầm búa, edit từ mẫu `budget.png`
+bằng built-in image_gen. File mới256px/51004byte/alpha; prompt và hash ở
+`auction.png.json`. Bộ đang render là buy/exchange/auction/post, tổng201799byte;
+budget giữ làm nguồn/lịch sử. Dấu sách được dựng bằng SVG hình học trong code,
+không cắt từ ảnh mockup hoặc biến ảnh mockup thành UI.
+
+Render88px desktop,72px mobile, `alt=""`; chữ bên cạnh là accessible name.
 Những file này là bitmap illustration; icon tác vụ nhỏ của app vẫn dùng Lucide.

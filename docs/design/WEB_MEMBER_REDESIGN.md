@@ -33,6 +33,26 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `6beee98`, chủ dự án duyệt thử dấu sách hợp với web thay bốn hộp pastel và
+mockup nhiều viền/bóng. Recipe hiện hành ở DESIGN.md: hàng1040px/4→2 cột, nối
+mép hero12px; giấy kem và vàng nhẹ cho đấu giá, chim88/72px trên nhãn ngắn.
+SVG chỉ là hình học giấy/khía nhỏ ở đáy, không clip anchor hoặc focus; viền1px,
+không shadow/gradient/arrow. Hero padding đáy32px giữ caption cách giấy20px.
+Giữ ba ảnh chim, thêm chim cầm búa đấu giá có [prompt](../../apps/user-web/public/illustrations/penguins/auction.png.json).
+Không đổi art hero/logo/kệ/API/session hoặc route. Chủ dự án đang xem bản thử,
+không xem đây là human sign-off.
+
+Build/typecheck/lint PASS (6 warning cũ); CUA1366/390/320/800/1024/1680 không
+tràn ngang,4/2 cột;1366×768 hàng dấu sách nằm trọn khung mở đầu. Bốn link Enter
+PASS (Sale/Exchange/auctions/sell→login), keyboard focus không clip,4 ảnh tải đủ.
+Ảnh [laptop](../../.impeccable/review/web-member/home-bookmarks-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-bookmarks-mobile.jpg),
+[320px](../../.impeccable/review/web-member/home-bookmarks-320.jpg).
+Một scan layout trước sửa0finding; không scan thêm. Mouse hover/chữ200%/native/
+backend giao dịch/human NOT RUN; READINESS giữ nguyên. Không push/merge.
+Reviewer độc lập disposition **ship**, không material fix;
+[review](../../.impeccable/review/web-member/home-bookmarks-finish.md). Docs/diff PASS.
+
 Sau `708f8da`, ô khám phá thứ ba là “Đấu giá” → /auctions theo yêu cầu chủ dự án;
 giữ màu đào và minh họa chim ôm ví. Chỉ đổi lối vào nhanh, bộ lọc/banners giá không
 đổi. Build/typecheck/lint PASS (6 warning cũ), CUA Enter xác nhận URL và heading
