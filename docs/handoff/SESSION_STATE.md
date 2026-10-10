@@ -8,6 +8,17 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `3834fde`, tám bìa hero thành hai cụm chồng nhẹ/kích thước đa dạng,
+  Alice trái/Dược sư phải dẫn cụm; giữ headline/search/footprint/motion/UI khác.
+  Desktop unit176/stage432, laptop unit theo vh; <=1100 tám cột/<=800 bốn cột,
+  focal scale1.08 không tăng flow. Build/typecheck/lint PASS (0error/6warning cũ).
+  CUA1535×735/1535×900/1100×900/390×844/320×844 đủ tám ảnh/không tràn;
+  actual hover Alice/Dược sư/SAO PASS z3/scale1.12/lift8px. Layout assessment
+  độc lập + detector trước/sau0finding; finish reviewer SHIP/không fix.
+  Canonical scoped merge; docs/diff PASS. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
+  OS-motion/no-pause limitation cũ giữ nguyên; backend/native/human/200% NOT RUN.
+  READINESS giữ nguyên. Checkpoint subject `style(web): layer hero books around Alice and Duoc su`; local, chưa push.
+  Bước tiếp: chủ dự án xem hai cụm bìa mới.
 - Sau `ed24784`, thay Chúa nhẫn thứ hai ở hero bằng Truyện Kiều — Nguyễn Du
   do chủ dự án gửi; giữ một Chúa nhẫn và đủ tám bìa, bố cục/hiệu ứng không đổi.
   Asset WebP363×560/~50KB có provenance/hash. Build/typecheck PASS;

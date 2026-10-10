@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-10T15:47:06.123Z",
+  "generatedAt": "2026-10-10T16:10:51.086Z",
   "title": "Design System: Lật lại",
   "extensions": {
     "colorMeta": {
@@ -559,7 +559,7 @@
       {
         "name": "hero-cover-hover",
         "value": "translateY(-8px) scale(1.12); transform250ms cubic-bezier(0.16,1,0.3,1); filter250ms ease-out; drop-shadow(-1px -1px 0.5px #fcf8db80) drop-shadow(2px 5px 3px #21000099) drop-shadow(12px 26px 22px #190000b3)",
-        "purpose": "Fine-pointer hover only; exit restores size/depth. Owner-requested hero exception preserves zoom/lift under reduced motion. Eight covers: desktop2x2 flanks; <=1100 below search, <=800 grid4x2."
+        "purpose": "Fine-pointer hover only; every focal/companion cover rises to z3 while its image zooms/lifts, then restores size/depth on exit. Owner-requested hero exception preserves zoom/lift under reduced motion. Eight covers: desktop varied-size overlapping clusters led by Alice/Dược sư; <=1100 relative eight-column flow below search with1.08 focal scale, <=800 four columns. Existing sway/visibility guards and no-pause limitation remain."
       },
       {
         "name": "cover-settle",
@@ -647,6 +647,128 @@
         "name": "home-discovery-layout",
         "value": "1100px exchange intro above cards;850px two-column quick links/cards and stacked budget pair;600px outer16px and panels20px16px; layered closing card wraps at1100px and stacks above fox at850px with full-width action",
         "purpose": "Local Home body recipe; no change to approved hero or shared Header."
+      }
+    ],
+    "layoutRecipes": [
+      {
+        "name": "home-hero-cover-clusters",
+        "source": "apps/user-web/src/pages/HomePage.module.css",
+        "scope": "Owner-approved Home decorative hero geometry only; headline/search/hero footprint and other UI remain.",
+        "desktop": {
+          "media": "(min-width: 1101px)",
+          "flankWidth": "270px",
+          "bookUnit": "176px",
+          "stageHeight": "432px",
+          "position": "relative stage; absolute covers; translate:none; width=height*assetRatio; object-fit:contain",
+          "shortViewport": {
+            "media": "(min-width: 1101px) and (max-height: 850px)",
+            "bookUnit": "clamp(116px,18vh,152px)",
+            "stageHeight": "calc(2 * bookUnit + 36px)"
+          },
+          "covers": [
+            {
+              "group": "left",
+              "index": 1,
+              "asset": "chua-nhan.webp",
+              "heightUnits": 1,
+              "assetRatio": 0.625,
+              "left": "12px",
+              "top": "0",
+              "rotate": "-10deg",
+              "layer": "auto"
+            },
+            {
+              "group": "left",
+              "index": 2,
+              "asset": "tuoi-tho.webp",
+              "heightUnits": 0.93,
+              "assetRatio": 0.655,
+              "left": "calc(12px + bookUnit * .78)",
+              "top": "calc(bookUnit * .18)",
+              "rotate": "6deg",
+              "layer": 1
+            },
+            {
+              "group": "left",
+              "index": 3,
+              "asset": "alice-moi.webp",
+              "heightUnits": 1.36,
+              "assetRatio": 0.645,
+              "left": "12px",
+              "top": "calc(bookUnit * .76)",
+              "rotate": "-7deg",
+              "layer": 2
+            },
+            {
+              "group": "left",
+              "index": 4,
+              "asset": "sao.webp",
+              "heightUnits": 0.96,
+              "assetRatio": 0.715,
+              "left": "calc(12px + bookUnit * .78)",
+              "top": "calc(bookUnit * 1.28)",
+              "rotate": "10deg",
+              "layer": 1
+            },
+            {
+              "group": "right",
+              "index": 1,
+              "asset": "one-piece.webp",
+              "heightUnits": 0.98,
+              "assetRatio": 0.756,
+              "left": "0",
+              "top": "0",
+              "rotate": "9deg",
+              "layer": "auto"
+            },
+            {
+              "group": "right",
+              "index": 2,
+              "asset": "nghin-le-mot-dem.webp",
+              "heightUnits": 0.9,
+              "assetRatio": 0.65,
+              "left": "calc(8px + bookUnit * .84)",
+              "top": "calc(bookUnit * .12)",
+              "rotate": "-8deg",
+              "layer": 1
+            },
+            {
+              "group": "right",
+              "index": 3,
+              "asset": "duoc-su.webp",
+              "heightUnits": 1.38,
+              "assetRatio": 0.709,
+              "left": "6px",
+              "top": "calc(4px + bookUnit * .72)",
+              "rotate": "-4deg",
+              "layer": 2
+            },
+            {
+              "group": "right",
+              "index": 4,
+              "asset": "truyen-kieu.webp",
+              "heightUnits": 0.88,
+              "assetRatio": 0.648,
+              "left": "calc(6px + bookUnit * .9)",
+              "top": "calc(12px + bookUnit * 1.2)",
+              "rotate": "8deg",
+              "layer": 1
+            }
+          ]
+        },
+        "narrow": {
+          "media": "(max-width: 1100px)",
+          "columns": 8,
+          "groupDisplay": "contents",
+          "coverPosition": "relative",
+          "coverHeight": "120px",
+          "focalScale": 1.08,
+          "flowGrowth": false,
+          "evenTranslate": "0 0",
+          "fourColumnsAt": "800px",
+          "mobileHeight": "clamp(84px,25vw,120px) at <=600px"
+        },
+        "motion": "Fine-pointer hover sets all cover layers to3; the image keeps translateY(-8px) scale(1.12),250ms transform/filter and existing deeper shadow. Separate inner sway, entrance, offscreen/hidden guards and owner-requested OS-motion/no-pause exception remain. No new accessibility acceptance is implied."
       }
     ]
   },

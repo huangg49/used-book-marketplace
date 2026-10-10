@@ -156,7 +156,10 @@ function HeroCovers() {
           key={group}
         >
           {heroCovers.slice(group * 4, group * 4 + 4).map((src, index) => (
-            <span className={styles.heroCover} key={src + index}>
+            <span
+              className={`${styles.heroCover} ${index === 2 ? styles.featuredCover : ""}`}
+              key={src + index}
+            >
               <span className={styles.coverMotion}>
                 <img
                   src={src}

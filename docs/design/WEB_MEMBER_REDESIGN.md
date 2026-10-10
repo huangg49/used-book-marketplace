@@ -33,6 +33,27 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `3834fde`, chủ dự án duyệt tám bìa thành hai cụm kích thước đa dạng,
+chồng nhẹ; Alice trái/Dược sư phải dẫn cụm ở vị trí thứ ba, layer2. Desktop
+>1100px unit176px/stage432px; height<=850px unit clamp(116px,18vh,152px),
+stage hai unit+36px. Focal1.36/1.38unit, companion0.88–1unit; từng bìa có
+offset/rotation/tỷ lệ riêng, ảnh contain. <=1100px giữ tám cột dưới search,
+<=800px bốn cột; focal scale1.08 không tăng flow. Giữ headline/search/footprint/
+ảnh/motion và UI khác, không thêm asset/API/routes. Fine-pointer hover mọi bìa
+lên z3, ảnh giữ scale1.12/lift8px/bóng cũ; sway/visibility guards giữ nguyên.
+Build/typecheck/lint PASS (0error/6warning cũ; bundle warning đã biết).
+CUA1535×735/1535×900/1100×900/390×844/320×844 không tràn ngang, đủ tám ảnh;
+actual hover Alice/Dược sư/SAO xác nhận z3/scale1.12/lift8px.
+[Desktop](../../.impeccable/review/web-member/home-cover-stacks-desktop.jpg),
+[tall](../../.impeccable/review/web-member/home-cover-stacks-tall.jpg),
+[mobile](../../.impeccable/review/web-member/home-cover-stacks-mobile.jpg) có
+JSON SHA256/viewport/kích thước encoded riêng. Layout assessment độc lập và
+detector trước/sau0finding; finish reviewer hero_stack_finish SHIP, không fix.
+Scoped canonical merge giữ token/component/recipe khác; docs/diff PASS.
+OS-motion/no-pause exception vẫn là limitation cũ, không nhận a11y PASS mới.
+Backend/native/human/200% NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): layer hero books around Alice and Duoc su`; local, chưa push.
+
 Sau `a860408`, chủ dự án duyệt gộp CTA vào cảnh mùa thu nhiều lớp:
 đồi z0, nguyên wine card/lời nhắn/link /sell z1, cáo alpha z2 chồng nhẹ mép card.
 Desktop card trái/cáo phải; <=850px card trên/cáo dưới. Wrapper accessible,
@@ -632,7 +653,7 @@ Build/typecheck PASS, CUA1440/390px PASS8ảnh tải/hiện và mobile không tr
 Kiểm hover/chữ lớn bên dưới thuộc checkpoint48e806d với cùng CSS.
 
 Cập nhật hero sau checkpoint `e0b739f`: thêm bốn bìa do chủ dự án gửi, giữ bốn vị
-trí cũ thành tám; desktop hai cụm2×2, <=1100 dưới search, <=800 thành4×2. Hover
+trí cũ thành tám; desktop lúc đó hai cụm2×2 (đã thay bằng cụm chồng nhẹ sau3834fde), <=1100 dưới search, <=800 thành4×2. Hover
 fine-pointer phóng1.12×/nâng8px/bóng đổ, rời chuột trả về; giảm chuyển động tắt
 phóng/nâng, touch không hover. Không đổi danh sách/API/mutation hoặc màn khác.
 [Desktop8bìa](../../.impeccable/review/web-member/hero-eight-desktop.jpg),

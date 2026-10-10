@@ -1,0 +1,15 @@
+{
+  "source": "CUA localhost5186 DEV catalog preview",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "encodedSize": {
+    "width": 375,
+    "height": 811
+  },
+  "bytes": 59789,
+  "sha256": "f959d33b90c56f1430acd0a5aec642e9359ad61058d8f525cb67aae085208acf",
+  "scope": "Home varied-size lightly overlapping cover clusters led by Alice on the left and Duoc su on the right",
+  "limitations": "Backend/native/human/200% NOT RUN; existing OS-motion/no-pause limitation persists; preview UI evidence does not certify real API behavior"
+}

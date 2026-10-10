@@ -31,7 +31,7 @@ both prices, then understand that reserving opens a 24-hour chat without payment
 FIRST VIEWPORT: Wine header with the user's own owl and lettering; centered
 three-line cream/yellow owner-supplied headline artwork between eight decorative cover positions: the
 four existing positions and four owner-supplied images added on10/10. Desktop
-uses two2x2 flanks; <=1100px all eight move below search, <=800px grid4x2. A wide light
+uses two varied-size, lightly overlapping clusters, led by Alice on the left and Dược sư on the right (third cover of each group). The176px unit/432px stage keeps the established hero footprint; focal heights1.36/1.38 units sit at z2, companions0.88–1 unit at auto/z1. Each cover has its own offset, rotation and contained asset ratio. <=1100px all eight return to relative flow below search in eight columns; <=800px four columns. Focals scale1.08 in that flow without growing its layout footprint. Fine-pointer hover raises any cover to z3. A wide light
 search field anchors the hero; a four-column newest shelf starts below. Search
 puts its field above a compact filter rail and four-column covers; detail pairs
 one large complete photograph with readable metadata and purchase explanation.
@@ -54,7 +54,7 @@ below600. The headline/search stay clear. Cover depth combines a thin cream
 paper edge, contact shadow and a softer offset cast shadow, expanded on hover.
 
 Laptop-height correction: above1100px wide and up to850px high, Home uses a
-shorter stage with viewport-height-aware headline/covers. The later owner request
+shorter stage with viewport-height-aware headline and a book unit clamp(116px,18vh,152px); each cluster stage is two units plus36px. The current cluster geometry is recorded in HomePage.module.css and .impeccable/design.json. The later owner request
 adds20px breathing room before description/search and removes the control row:
 at1536x730 hero469px, search y460px, first shelf heading finishes at646px.
 Keep natural document growth at enlarged text sizes; no fixed-height cropping
