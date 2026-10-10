@@ -33,6 +33,21 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `62352b5`, hoàn tất bước cảnh cáo/đồi trước footer theo duyệt chủ dự án.
+Dùng chính Background demo.png, encode toàn ảnh WebP1920×1080/94602byte,
+không sinh lại/crop/mask; CSS frame phần dưới giữ tỷ lệ, width100%/min960px,
+bottom-center. Frame full-bleed cao max(260px,26vw), sau kệ đổi sách; thay
+posting CTA cũ, còn đủ link đăng ở header/bookmark/footer. Lazy/async/aria-hidden/
+pointer-inert. Home footer margin0, các route khác giữ khoảng cách cũ.
+Hero/tán lá/24 motif/kệ/routes/API giữ nguyên. [Asset và provenance](../../apps/user-web/public/illustrations/autumn/README.md).
+Node24.19.0/pnpm11.19.0: build/typecheck/lint PASS (bundle warning và6 lint warning cũ).
+CUA1535×900/850×800/390×844/320×844 không tràn ngang, gap cảnh-footer≈0;
+ảnh natural1920px tải đúng, mobile frame260px/image960px. Route /books850px
+footer margin72px giữ nguyên. [Desktop](../../.impeccable/review/web-member/home-autumn-fox-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-autumn-fox-mobile.jpg).
+Docs/diff PASS; backend/native/human/200% NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): close home with the autumn fox landscape`; local, chưa push.
+
 Sau `42bd898`, chủ dự án duyệt hai tán lá nối hero xuống nền kem: atlas alpha
 1200×800/76574byte từ built-in ImageGen, tham chiếu Background demo.png.
 CSS chọn hai nửa bất đối xứng, cell220–400px/145px mobile; layer z0 clip riêng,

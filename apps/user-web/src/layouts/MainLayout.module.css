@@ -221,6 +221,9 @@
   color: var(--shop-cream);
   margin-top: 72px;
 }
+.footer.homeFooter {
+  margin-top: 0;
+}
 .footerInner {
   max-width: 1280px;
   margin: auto;

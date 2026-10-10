@@ -20,7 +20,9 @@ export default function MainLayout() {
       <main id="main-content" className={styles.main}>
         <Outlet />
       </main>
-      <footer className={styles.footer}>
+      <footer
+        className={`${styles.footer} ${location.pathname === ROUTES.home ? styles.homeFooter : ""}`}
+      >
         <div className={styles.footerInner}>
           <div>
             <Logo />

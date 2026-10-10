@@ -8,15 +8,15 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
-- Sau `42bd898`, thêm hai tán lá mùa thu ở đường nối hero/nền kem theo duyệt.
-  Atlas alpha ImageGen1200×800/~77KB, full prompt/hash trong repo; CSS hai nửa
-  bất đối xứng220–400px/mobile145px. Layer clip riêng/z0/pointer-inert dưới nội dung.
-  Giữ hero/overlap−12px/bookmark/24 motif/routes/CTA/footer; cáo/đồi hoãn.
-  Node24.19.0 build/typecheck/lint PASS (6 warning cũ); CUA1535/1000/390/320
-  không tràn ngang, đủ4 links. Docs/diff PASS. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
-  Backend/native/human/200% NOT RUN; READINESS giữ nguyên.
-  Checkpoint subject `style(web): frame home shortcuts with autumn canopies`; local, chưa push.
-  Bước tiếp: chủ dự án duyệt tán lá trước khi làm cảnh cáo/đồi phía footer.
+- Sau `62352b5`, thêm cảnh cáo/đồi mùa thu full-bleed trước footer Home,
+  thay posting CTA theo duyệt. Dùng ảnh gốc chủ dự án/WebP1920×1080/~95KB;
+  CSS frame đáy giữ tỷ lệ, mobile center/min960px. Home footer margin0; route
+  khác giữ spacing, đủ link đăng header/bookmark/footer. Hero/tán lá/24 motif/kệ giữ nguyên.
+  Node24.19.0 build/typecheck/lint PASS (6 warning cũ); CUA1535/850/390/320
+  không tràn ngang/gap footer≈0; /books giữ margin72px. Docs/diff PASS.
+  [Evidence](../design/WEB_MEMBER_REDESIGN.md). Backend/native/human/200% NOT RUN; READINESS giữ nguyên.
+  Checkpoint subject `style(web): close home with the autumn fox landscape`; local, chưa push.
+  Bước tiếp: chủ dự án duyệt tổng thể cảnh mùa thu Home.
 - Sau `912ecec`, giữ hero y nguyên; bookmark desktop144px/chim88px/padding đáy24px.
   Mobile152px/88px không đổi. Build/typecheck PASS; CUA1535×735/1366×768 hàng
   đủ trong khung đầu,390px vẫn2×2; không tràn ngang. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
