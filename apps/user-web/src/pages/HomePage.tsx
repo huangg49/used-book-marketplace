@@ -579,7 +579,8 @@ export function HomePage() {
         </p>
       </section>
       <div className={styles.marketplace}>
-        <div className={styles.marketInner}>
+        <div className={styles.shortcutBand}>
+          <div className={styles.shortcutBackdrop} aria-hidden="true" />
           <nav className={styles.quickLinks} aria-label="Khám phá sách">
             <Link
               className={styles.quickBuy}
@@ -631,6 +632,8 @@ export function HomePage() {
               <span>Đăng sách</span>
             </Link>
           </nav>
+        </div>
+        <div className={styles.marketInner}>
           <LatestShelf preview={preview} key={preview ? "preview" : "live"} />
           <section
             className={styles.budgetBanners}

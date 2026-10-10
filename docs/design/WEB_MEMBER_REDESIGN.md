@@ -33,6 +33,17 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `05e6794`, chủ dự án duyệt nền riêng sau bốn nút: vân giấy ivory và hai nét
+trang sách wine mờ tái sử dụng asset hero. Dải static/aria-hidden/pointer-inert,
+chỉ clip artwork, kết thúc trước thể loại; hero/chiều cao/routes/nền kệ giữ nguyên.
+Build/typecheck/lint PASS (6 warning cũ); CUA1535×735/390px không tràn ngang,
+keyboard focus rõ, desktop đáy hàng723.95px không đổi.
+[Laptop](../../.impeccable/review/web-member/home-bookmarks-paper-band-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-bookmarks-paper-band-mobile.jpg).
+Actual hover/200%/backend/native/human NOT RUN; READINESS giữ nguyên. Local, chưa push.
+Checkpoint subject `style(web): add a scoped paper backdrop to shortcuts`.
+
+
 Sau `122576d`, chủ dự án duyệt thử lớp giấy đỏ dưới dấu sách: SVG cùng silhouette,
 wine, lệch2px/3px, pointer-inert/aria-hidden/z−2. Anchor và lớp đỏ đứng yên;
 fine-pointer hover chỉ nhấc giấy trên/chim/nhãn3px. Reduce motion giữ transform nghỉ.

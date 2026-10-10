@@ -8,13 +8,14 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
-- Sau `122576d`, thử lớp giấy đỏ bên dưới bốn dấu sách, lệch2px/3px cùng silhouette.
-  Anchor/lớp đỏ đứng yên, hover chỉ nhấc lớp trên; reduce motion giữ nghỉ.
-  Build/typecheck/lint PASS (6 warning cũ); CUA1535×735/390px không tràn,
-  lớp đỏ cùngwine/đáy726.95px/focus không clip. Hero/routes/kích thước không đổi.
-  Actual hover/200%/backend/native/human NOT RUN. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
-  Reviewer độc lập ship, không material fix; docs/diff PASS. READINESS giữ nguyên.
-  Checkpoint subject `style(web): add red paper backing to bookmarks`; local, chưa push.
+- Sau `05e6794`, thêm nền giấy riêng sau bốn dấu sách, hai nét trang sách wine
+  mờ ở mép; static/pointer-inert/aria-hidden, chỉ clip artwork và dừng trước thể loại.
+  Hero/routes/chiều cao/nền các kệ không đổi. Build/typecheck/lint PASS (6 warning cũ);
+  CUA1535×735/390px không tràn, keyboard focus rõ, desktop đáy723.95px giữ nguyên.
+  [Evidence](../design/WEB_MEMBER_REDESIGN.md). Docs/diff PASS; READINESS giữ nguyên.
+  Actual hover/200%/backend/native/human NOT RUN.
+  Checkpoint subject `style(web): add a scoped paper backdrop to shortcuts`; local, chưa push.
+  Bước tiếp: chủ dự án xem bản thử nền riêng trên laptop.
 - Sau `912ecec`, giữ hero y nguyên; bookmark desktop144px/chim88px/padding đáy24px.
   Mobile152px/88px không đổi. Build/typecheck PASS; CUA1535×735/1366×768 hàng
   đủ trong khung đầu,390px vẫn2×2; không tràn ngang. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
