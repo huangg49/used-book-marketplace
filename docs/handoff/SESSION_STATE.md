@@ -8,6 +8,11 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Kế hoạch các trang tiếp theo đã lập từ source `b27047e`; chủ dự án chọn
+  Tìm sách → Chi tiết → Đăng sách, sau đó tài khoản/chat/đấu giá.
+  [Brief](../design/WEB_MEMBER_NEXT_PAGES_PLAN.md) phân biệt refinement, màn cũ
+  và dependency API/SRS. Chưa triển khai UI; không đổi DESIGN/READINESS.
+  Bước tiếp: duyệt hướng Tìm sách trước khi sửa.
 - Sau `1101fac`, chủ dự án báo OS giảm chuyển động làm mất hiệu ứng mới.
   Home nay giữ đầy đủ animation cả khi reduced-motion=true: tán lá12s,
   sáu lá nền16–19s, card lift240ms/banner320ms, filter180ms/card thêm220ms,
