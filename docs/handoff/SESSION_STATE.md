@@ -1,12 +1,31 @@
 # Điểm lưu hiện tại — 10/10/2026
 
-Source sản phẩm: main `da59199`; docs context `d77290a`, docs refresh `2e13f04`.
+Snapshot tổng quan: main `da59199`; docs context `d77290a`, docs refresh `2e13f04`.
+Checkout/gói Android hiện hành và primary main mới được ghi bên dưới.
 OpenAPI0.30.0,15 migration Mongo,113 operation HTTP. Đây là trạng thái theo Git/
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
 ## Gói lưu sách và chuẩn bị pilot Android
 
+- Preflight tiếp: nhánh `codex/android-pilot-qa` từ `684d2ea`, managed worktree
+  `android-pilot-preflight`; subject
+  `feat(qa): prepare repeatable Android pilot and verify pagination`.
+  Primary hiện clean main `d71ad3e`, giữ nguyên; Android chưa tự lên main.
+  Không đổi source RN/API/session/contract. Runner `pnpm qa:android` dựng QA
+  riêng7 sách hoặc51 mục phân trang qua API, giữ journal/private config ignored.
+  PASS native membership50+1 và5 lần Tải thêm tới mục51; pilot mới PASS login
+  return/lưu/tìm lại/bỏ lưu/PUT503/GET503 recovery, buyer QA empty sau test.
+  PASS12/12 tests helper/journal, syntax/format/docs/diff; không chạy lại gates
+  sản phẩm không đổi. [Evidence](../ui/ANDROID_SAVE_USABILITY.md),
+  [setup](../ui/ANDROID_PILOT_SETUP.md). P2 còn: danh sách wishlist lỗi đọc chưa
+  có retry trực tiếp, Back→mở lại phục hồi được. Paging DB/users/roles đã dọn;
+  giữ API3046/media3047/proxy3048/Metro8081/emulator và QA Mongo57017 cho dataset
+  `android-pilot-p01-20261010`, fault none, anonymous, buyer wishlist trống.
+  Phiếu P01 local chưa điền. Bước tiếp:2–3 thành viên thực hiện protocol trên
+  emulator; human usability/TalkBack/ARM/iOS OPEN, READINESS không đổi.
+  Không push/PR/merge/deploy. Dependency primary reuse bằng junction;
+  xem flag pnpm riêng trong setup nếu chạy ở worktree này.
 - Chủ dự án duyệt tìm→xem→lưu và bước chuẩn bị đăng sách; nhóm chưa từng mua/bán
   sách cũ, chỉ có Android Studio. Pilot chuyển thành trong nhóm/emulator, chưa chạy
   với người thật. [Protocol](../design/ANDROID_USABILITY_ROUND_01.md),
@@ -18,12 +37,12 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   Không đổi API/session storage/tokens/web/framework hoặc triển khai form đăng sách.
 - PASS RN120/120 test/typecheck; lint0error4warning cũ. Native login→return→lưu→
   tìm lại→bỏ lưu, PUT/DELETE503 và read503/recovery ở320dp130% có evidence.
-  Paging nhiều trang và return parameter sai kiểm unit, không là native PASS.
+  Return parameter sai chỉ kiểm unit; native paging bổ sung ở checkpoint trên.
   PASS format9file và export preview0 Android/iOS/web13routes. Fresh reviewer
   verdict ship cho batch bỏ kicker login/wishlist sau recapture; documenter
   không yêu cầu đổi canonical. QA services/database/users/roles đã dọn;9ảnh
   giữ ở [báo cáo](../ui/ANDROID_SAVE_USABILITY.md). Checklist preflight trước
-  pilot còn native paging, phải chạy với fixture mới; chưa ghi toàn bộ PASS.
+  pilot tại checkpoint đó còn native paging; checkpoint trên đã bổ sung bằng fixture mới.
   Human usability/TalkBack/ARM/iOS còn mở; READINESS giữ nguyên.
 
 ## Checkpoint chi tiết sách Android — `2dc069b`

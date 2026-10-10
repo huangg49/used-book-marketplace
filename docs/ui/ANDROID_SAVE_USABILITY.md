@@ -89,6 +89,62 @@ local một lần và xác nhận kết nối. Emulator đang do Android Studio 
 giữ mở; không tắt ứng dụng của người dùng. Config/credential/journal QA nằm local
 ignored, không đưa vào commit. Dataset của gói này đã dọn, không còn phục vụ pilot.
 
+## Preflight bổ sung và môi trường pilot — 10/10/2026
+
+Nhánh `codex/android-pilot-qa`, base `684d2ea`; checkpoint subject
+`feat(qa): prepare repeatable Android pilot and verify pagination`.
+Không đổi source RN/API/contract/session. Primary đã chuyển sang main `d71ad3e`
+trong lúc làm; gói này ở managed worktree riêng `android-pilot-preflight`, giữ
+nguyên main và công việc của nhóm. Không push/PR/merge/deploy.
+
+Android35 Pixel_7 x86_64,1080×2400, density443 (~390dp), font1.0; APK debug02/10
+nhận JS `684d2ea` qua Metro preview0. API dist không đổi source, Mongo57017
+rs-test/database riêng, storage FAKE. Đây là kiểm kỹ thuật do AI thao tác,
+không phải kết quả người dùng.
+
+| Ca bổ sung | Kết quả / evidence |
+| --- | --- |
+| Membership ngoài50 mục đầu | **PASS native**.51 listing được tạo/duyệt/lưu qua API. Gatsby lưu đầu, nằm cuối; trace proxy từ Android: trang đầu200/50 mục/có cursor/không Gatsby, trang sau200/1 mục/hết cursor/có Gatsby. [Chi tiết Đã lưu/Bỏ lưu](android-pilot-preflight/membership-page-two.png). |
+| Danh sách đã lưu nhiều trang | **PASS thao tác native**. [Trang đầu](android-pilot-preflight/wishlist-page-one.png), [Tải thêm](android-pilot-preflight/wishlist-load-more.png); bấm5 lần tải thêm, Gatsby hiện ở cuối trang6 (10+10+10+10+10+1). Không giữ ảnh recapture sau khi dừng dịch vụ vì ảnh phụ đã lỗi tải. |
+| Dataset pilot mới7 sách và login return | **PASS**. [Chi tiết anonymous](android-pilot-preflight/pilot-detail.png), [login quay đúng sách, chưa tự lưu](android-pilot-preflight/pilot-login-return.png). Có Gatsby65.000đ/Both và150.000đ/Sale để chọn theo ngân sách. |
+| PUT503 → thử lại | **PASS**. [Lỗi và CTA](android-pilot-preflight/pilot-save-error.png), [thành công](android-pilot-preflight/pilot-saved.png); QA DB read-only xác nhận0 mục khi lỗi và1 sau retry. |
+| Tìm lại qua tài khoản | **PASS**, GET wishlist qua API trên native; [danh sách](android-pilot-preflight/pilot-wishlist.png). |
+| GET503 → kiểm tra lại ở chi tiết | **PASS**, [lỗi và nút recovery](android-pilot-preflight/pilot-read-error.png); khôi phục proxy rồi bấm kiểm tra lại, Bỏ lưu trở lại. |
+| Bỏ lưu và trạng thái bắt đầu | **PASS**, [bỏ lưu](android-pilot-preflight/pilot-removed.png); QA DB read-only xác nhận0 mục. Đăng xuất, xóa từ khóa, [màn bắt đầu](android-pilot-preflight/pilot-start.png). |
+
+Trace chỉ lưu status/số lượng/cursor có hay không/target có hay không, không
+token, IDs, giá trị cursor hoặc response body.51 mục có sẵn sau lượt seed đầu;
+lượt đó dừng ở helper HTTP từ chối cursor ISO được mã hóa. Đã sửa helper chỉ
+cho ký tự mã hóa hợp lệ trong query, giữ chặn external/path escape; native
+trace50+1 xác nhận trực tiếp API phân trang. Serve lại giữ wishlist, không tự
+seed lại; lệnh seed riêng có read đủ trang trước khi reset.
+
+Các lượt dựng đầu chạm quota20 upload/người/giờ và ngân sách50MB; fixture cuối
+dùng3 seller QA và ảnh300px, không nới giới hạn sản phẩm. Một lần login503 rồi
+429; chờ cửa sổ limiter tự hết, không xóa counter. Giữ journal/key/body/version.
+Database/users/roles của các lượt paging đã dọn sau khi dừng dịch vụ; journal
+riêng giữ ignored. Môi trường pilot7 sách giữ chạy để chủ dự án sử dụng.
+
+Quan sát **P2**: lỗi GET ở màn danh sách đã lưu có Notice nhưng chưa có nút
+thử lại trực tiếp; đã phục hồi bằng Quay lại → mở Sách đã lưu sau khôi phục API.
+Ghi nhận riêng để ưu tiên cải thiện; không nhận là lỗi được sửa trong gói QA.
+Không phát hiện P0/P1 trong các ca đã chạy, không suy ra toàn app không có lỗi.
+
+PASS12/12 tests: journal/HTTP safety và reset đọc đủ trang, không xóa khi trang
+sau lỗi hoặc cursor lặp. PASS syntax, Prettier3.6.2, docs:check, diff whitespace.
+Negative CLI từ chối tên sai/config chưa tồn tại. Serve/Metro/stop/login/fault
+và status đã dùng thực tế. Không chạy lại RN120 tests/typecheck/export hoặc
+backend gates vì source sản phẩm không đổi; evidence ở trên thuộc `684d2ea`.
+Dependency local dùng junction sẵn có; pnpm chạy với flag riêng theo setup,
+không reinstall hoặc purge dependency của primary.
+
+Runner, dataset, lệnh chạy lại/dừng và nhập credential tại
+[ANDROID_PILOT_SETUP](ANDROID_PILOT_SETUP.md). Dataset hiện hành
+`android-pilot-p01-20261010`; buyer empty/anonymous, fault none. API3046,
+media3047, proxy3048, Metro8081 và emulator giữ chạy chủ động cho buổi thử.
+Mongo local37018/spending-tracker5432 giữ nguyên. Phiếu P01 trống được copy
+local ignored; chưa có câu trả lời, thời gian hoặc điểm do AI tạo.
+
 ## Pilot và bước tiếp
 
 [Protocol](../design/ANDROID_USABILITY_ROUND_01.md),
@@ -98,12 +154,12 @@ ignored, không đưa vào commit. Dataset của gói này đã dọn, không c�
 nhận nào được tạo bởi AI. Nhóm có thể thử khả năng hiểu dù chưa mua/bán sách cũ;
 ghi first-use hay rehearsal theo mức biết UI, giữ thiên lệch nhóm rõ trong kết luận.
 
-Technical preflight theo mục chuẩn bị #5 của protocol **chưa hoàn tất**: native
-paging nhiều trang chưa chạy. Trước buổi pilot cần dựng fixture QA mới, kiểm ca
-sách đã lưu ở trang sau và xác nhận lại checklist với đúng source/dataset buổi đó.
-Các ca đã chạy trong bảng không chứng minh toàn bộ checklist PASS.
+Technical preflight theo mục chuẩn bị #5 **PASS trong phạm vi tìm→xem→lưu**:
+native paging đã bổ sung, fixture mới đã kiểm login/return/lưu/bỏ lưu/read-write
+recovery. Trước mỗi người thử vẫn kiểm môi trường còn chạy và wishlist trống;
+chưa nhận là toàn bộ checklist tổ chức buổi thử hoặc human acceptance PASS.
 
-TalkBack/ARM/điện thoại thật/iOS, native paging nhiều trang, mất acknowledgement
+TalkBack/ARM/điện thoại thật/iOS, mất acknowledgement
 sau khi ghi, refresh-token expiry/race, invalid-route native, preferences
 checkbox lỗi và dark theme riêng NOT RUN. READINESS không đổi. Đây không là
 nghiệm thu toàn app hoặc triển khai màn đăng sách.

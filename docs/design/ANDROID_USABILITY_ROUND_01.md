@@ -31,7 +31,8 @@ quy ước pilot của nhóm, không là chuẩn thống kê hoặc chứng nh�
    phím Back hoạt động. Ghi model/API/dp/font scale và SHA thực tế.
 2. Dùng development APK + Metro cùng source; không dùng screenshot thay app.
    Setup theo [START_HERE](../handoff/START_HERE.md) và
-   [Android QA](../ANDROID_QUALITY.md). Giữ API/media/Metro khi đang thử;
+   [Android QA](../ANDROID_QUALITY.md); runner và các lệnh ở
+   [pilot setup](../ui/ANDROID_PILOT_SETUP.md). Giữ API/media/Metro khi đang thử;
    debug APK không tải được JS khi Metro tắt không là lỗi UX mạng của sản phẩm.
 3. QA là database `*_test` riêng, tài khoản Member giả và dữ liệu có nhãn QA.
    Không dùng database/bucket local chính. Tạo fixture mới; database của các

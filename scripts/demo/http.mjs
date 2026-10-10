@@ -19,7 +19,11 @@ export function createHttp(
     route,
     { actor, method = "GET", body, headers = {}, binary = false } = {},
   ) => {
-    if (!/^\/(?!\/)[a-zA-Z0-9/?=&_-]+$/.test(route))
+    if (
+      !/^\/(?!\/)[a-zA-Z0-9/_-]+(?:\?(?:[a-zA-Z0-9?=&_.-]|%[0-9a-fA-F]{2})+)?$/.test(
+        route,
+      )
+    )
       throw new ScenarioError("INVALID_ROUTE", "Invalid scenario API route.");
     let response;
     try {

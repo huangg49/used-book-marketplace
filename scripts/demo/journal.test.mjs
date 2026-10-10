@@ -235,3 +235,33 @@ test("sandbox cannot target main MongoDB or rotate an initialized run", async (t
     bindingFor({ ...config, storage: "live" }),
   );
 });
+
+test("HTTP helper accepts encoded opaque cursors only in the query", async () => {
+  let requested;
+  const http = createHttp(
+    "http://127.0.0.1:3012/api/v1",
+    {},
+    {
+      fetcher: async (url) => {
+        requested = url;
+        return Response.json({ items: [], nextCursor: null });
+      },
+    },
+  );
+  for (const cursor of [
+    "2026-10-10T04%3A45%3A00.123Z",
+    "eyJ0IjoiMTI6MzQifQ%3D%3D",
+  ]) {
+    const route = `/me/wishlist?limit=50&cursor=${cursor}`;
+    await http(route);
+    assert.equal(requested, "http://127.0.0.1:3012/api/v1" + route);
+  }
+  for (const invalid of [
+    "//evil.example",
+    "/%2e%2e/secret",
+    "/me/wishlist?cursor=%ZZ",
+    "/me/wishlist#fragment",
+    "/me/wishlist?cursor=https://evil.example",
+  ])
+    await assert.rejects(http(invalid), { code: "INVALID_ROUTE" });
+});
