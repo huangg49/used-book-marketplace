@@ -33,6 +33,23 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — animation đã duyệt10/10
 
+Cập nhật sau `1101fac`: chủ dự án yêu cầu hiệu ứng vẫn hiện trên máy bật
+OS giảm chuyển động. Override duration/iteration chỉ thuộc Home; bỏ nhánh reduce
+của filter/card mới/fox. Tán lá12s, lá16–19s, card240ms/banner320ms, filter180ms,
+card thêm220ms và fox650ms giữ cùng nhịp ở cả hai chế độ. Observer pause vùng
+khuất/document.hidden, one-shot/cleanup và layout không đổi; các trang khác giữ
+preference cũ. Build/typecheck PASS, lint0error/6warning cũ; docs/diff PASS.
+CUA1535×900 với reduced=true: canopy matrix thay đổi qua hai mẫu, lá có
+translation5.04px/12.09px, card focus matrix1.025/lift5px/transition240ms;
+canopy và lá khuất pause, không tràn ngang. Fox timing/document-hidden simulation/
+FPS/backend/native/human NOT RUN. Reviewer độc lập SHIP. Không chạy lại22unit
+đã PASS ở1101fac vì fix chỉ đổi preference của motion. Node/bundle warnings cũ.
+[Ảnh](../../.impeccable/review/web-member/home-motion-os-override.jpg),
+[QA](../../.impeccable/review/web-member/home-motion-os-override.json).
+READINESS không đổi; local, chưa push/PR/merge/deploy.
+
+Bản gốc `1101fac` (trước override ở trên):
+
 Sau `2f86adc`, tám bìa gather từ hai phía600ms, delay0/60/180/100ms; Alice và
 Dược sư kết nhịp. Sway/hover độc lập và footprint giữ nguyên. Feedback Home-only:
 card lift5px/scale1.025/240ms, controls150ms/press120ms, banner fan320ms. Filter

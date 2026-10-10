@@ -1188,33 +1188,31 @@
 }
 /* A few existing margin motifs drift locally, with a long resting interval.
    Their individual observers pause even when another part of Home is visible. */
-@media (prefers-reduced-motion: no-preference) {
-  .canopyLeft,
-  .canopyRight {
-    animation: canopyBreeze 12s ease-in-out infinite;
-    animation-play-state: paused;
-    transform-origin: left top;
-  }
-  .canopyRight {
-    transform-origin: right top;
-    animation-direction: reverse;
-    animation-delay: -5s;
-  }
-  .autumnCanopies[data-moving="true"] > span {
-    animation-play-state: running;
-  }
-  .autumnMotif[data-home-loop] {
-    animation: marginLeafDrift 16s ease-in-out infinite;
-    animation-play-state: paused;
-  }
-  .autumnMotif[data-home-loop]:nth-child(even) {
-    animation-delay: -7s;
-    animation-duration: 19s;
-    --leaf-drift-x: -10px;
-  }
-  .autumnMotif[data-moving="true"] {
-    animation-play-state: running;
-  }
+.canopyLeft,
+.canopyRight {
+  animation: canopyBreeze 12s ease-in-out infinite;
+  animation-play-state: paused;
+  transform-origin: left top;
+}
+.canopyRight {
+  transform-origin: right top;
+  animation-direction: reverse;
+  animation-delay: -5s;
+}
+.autumnCanopies[data-moving="true"] > span {
+  animation-play-state: running;
+}
+.autumnMotif[data-home-loop] {
+  animation: marginLeafDrift var(--leaf-duration, 16s) ease-in-out infinite;
+  animation-play-state: paused;
+}
+.autumnMotif[data-home-loop]:nth-child(even) {
+  animation-delay: -7s;
+  --leaf-duration: 19s;
+  --leaf-drift-x: -10px;
+}
+.autumnMotif[data-moving="true"] {
+  animation-play-state: running;
 }
 @keyframes canopyBreeze {
   0%, 100% { transform: rotate(-0.35deg); }
@@ -1239,27 +1237,39 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  /* New feedback keeps a short color transition; existing owner-approved hero,
-     bookmark and navbar exceptions remain scoped to those components. */
+  /* Owner requests all Home motion even with OS reduction enabled.
+     Restore durations only here; viewport/hidden guards still pause loops. */
+  .canopyLeft,
+  .canopyRight {
+    animation-duration: 12s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .autumnMotif[data-home-loop] {
+    animation-duration: var(--leaf-duration, 16s) !important;
+    animation-iteration-count: infinite !important;
+  }
   .categoryChoices button,
-  .shelfFilters button,
+  .shelfFilters button {
+    transition-duration: 150ms, 150ms, 150ms, 120ms !important;
+  }
   .search button,
   .more,
   .posting a {
-    transition-property: background-color, color, border-color;
-    transition-duration: 100ms !important;
+    transition-duration: 160ms, 120ms !important;
   }
-  .home article > div:first-child > img,
-  .bannerCovers img,
-  .home button:active,
-  .posting a:active,
+  .home article > div:first-child > img {
+    transition-duration: 240ms !important;
+  }
+  .bannerCovers img {
+    transition-duration: 320ms !important;
+  }
   .more svg,
   .search button svg,
   .sectionHead > a svg,
   .exchangeIntro a svg,
   .budgetBanners a svg,
   .posting a svg {
-    transform: none !important;
+    transition-duration: 200ms !important;
   }
 }
 @media (min-width: 1600px) {

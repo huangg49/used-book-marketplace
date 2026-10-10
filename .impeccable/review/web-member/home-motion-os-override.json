@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-10",
+  "base": "1101fac",
+  "scope": "Home OS reduced-motion override",
+  "reducedMotion": true,
+  "viewport": {
+    "width": 1535,
+    "height": 900
+  },
+  "checks": {
+    "buildTypecheck": "PASS",
+    "lint": "PASS (0 errors, 6 existing warnings)",
+    "canopies": "12s infinite; changing computed matrices observed",
+    "marginLeaves": "16/19s infinite; translation 5.03565px,12.0856px observed",
+    "cardKeyboardFocus": {
+      "transform": "matrix(1.025, 0, 0, 1.025, 0, -5)",
+      "transitionDuration": "0.24s"
+    },
+    "offscreen": "canopy and offscreen leaves paused; visible footer leaves running",
+    "horizontalOverflow": false,
+    "independentSourceReview": "SHIP"
+  },
+  "notRun": [
+    "fox entrance timing",
+    "document-hidden simulation",
+    "FPS profiling",
+    "backend",
+    "native",
+    "human review",
+    "unit rerun (22 passed on base)"
+  ],
+  "screenshot": "home-motion-os-override.jpg"
+}

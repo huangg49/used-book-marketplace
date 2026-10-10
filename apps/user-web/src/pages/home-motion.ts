@@ -7,7 +7,6 @@ export function useHomeAtmosphere(root: RefObject<HTMLDivElement | null>) {
     if (!page || typeof IntersectionObserver === "undefined") return;
     const visible = new Set<HTMLElement>();
     const arrivals = new Set<Animation>();
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const sync = () => {
       page.querySelectorAll<HTMLElement>("[data-home-loop]").forEach((node) => {
         node.dataset.moving = String(visible.has(node) && !document.hidden);
@@ -20,7 +19,7 @@ export function useHomeAtmosphere(root: RefObject<HTMLDivElement | null>) {
         else visible.delete(node);
         if (entry.isIntersecting && node.hasAttribute("data-home-arrival")) {
           // The fox settles once; scrolling back never replays the entrance.
-          if (!reduced.matches && !document.hidden) {
+          if (!document.hidden) {
             const animation = node.animate(
               [
                 { transform: "translateY(12px) rotate(-2deg)", opacity: 0.8 },
@@ -61,7 +60,7 @@ export function useShelfTransition(
     const node = root.current;
     if (!node) return;
     const animation = node.animate([{ opacity: 0.72 }, { opacity: 1 }], {
-      duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 100 : 180,
+      duration: 180,
       easing: "ease-out",
     });
     return () => animation.cancel();

@@ -440,17 +440,14 @@ function AddedShelfBook(props: Parameters<typeof HomeBookCard>[0]) {
     if (!card || props.index < homeShelfPageSize) return;
     const bounds = card.getBoundingClientRect();
     if (bounds.top >= window.innerHeight || bounds.bottom <= 0) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const animation = card.animate(
-      reduced
-        ? [{ opacity: 0.75 }, { opacity: 1 }]
-        : [
-            { opacity: 0.75, transform: "translateY(6px)" },
-            { opacity: 1, transform: "translateY(0)" },
-          ],
+      [
+        { opacity: 0.75, transform: "translateY(6px)" },
+        { opacity: 1, transform: "translateY(0)" },
+      ],
       {
-        duration: reduced ? 100 : 220,
-        delay: reduced ? 0 : (props.index % homeShelfPageSize) * 16,
+        duration: 220,
+        delay: (props.index % homeShelfPageSize) * 16,
         easing: "cubic-bezier(.16,1,.3,1)",
         fill: "backwards",
       },
