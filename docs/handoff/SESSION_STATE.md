@@ -8,6 +8,11 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `c06a288`, thêm sway hero±3px/±1°,6–7.5s lệch nhịp; pause/resume, hoverpause,
+  tự pause offscreen/hidden; giảm chuyển động tắt. Focused Chromium motion/layout
+  PASS, build/typecheck/lint0error6warning cũ/docs/diff PASS. Preview5186 khởi động
+  lại; proxy API3048 hiện không chạy, kệ báo lỗi; IAB reduced-motion=true giữ ảnh
+  tĩnh. Checkpoint subject `feat(web): add gentle pausable hero cover sway`.
 - Sau `6c0e266`, thay bìa Gachiakuta→SAO theo ảnh chủ dự án gửi; vị trí/CSS/hover
   giữ nguyên. Build/typecheck, ảnh tải/hiện CUA, docs/diff PASS. Checkpoint subject
   `feat(web): replace Gachiakuta hero cover with SAO`.

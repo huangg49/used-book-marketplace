@@ -44,6 +44,17 @@ fixture [QA], giá/tình trạng mô phỏng.
 
 ## Kiểm chứng
 
+Sau `c06a288`, chủ dự án yêu cầu bìa đung đưa nhẹ. Inner wrapper sway±3px/±1°,
+chu kỳ6–7.5s lệch nhịp; hover tạm dừng wrapper, giữ zoom. Có nút pause/resume,
+tự dừng ngoài viewport và khi document hidden; giảm chuyển động tắt sway.
+Focused Chromium PASS chuyển động theo thời gian/hover pause/manual pause-resume/
+offscreen pause/reduced-motion none, không tràn1440/390/320px100/130%, đủ8ảnh.
+Visibilitychange listener kiểm source, chưa mô phỏng tab background. Build/typecheck
+PASS, lint0error6warning cũ. CUA in-app thực tế reduced-motion=true nên ảnh tĩnh;
+[preview hiện tại](../../.impeccable/review/web-member/hero-sway-preview.jpg).
+Proxy QA3048 đang không chạy ở lượt này; kệ API hiện trạng thái lỗi, không đổi API
+hoặc dataset để kiểm hiệu ứng. Không nhận là kiểm lại giao dịch/native.
+
 Sau `6c0e266`, thay một bìa Gachiakuta bằng SAO do chủ dự án cung cấp; giữ CSS,
 vị trí/hover. Build/typecheck và kiểm ảnh tải/hiện CUA PASS;
 [ảnh SAO hiện tại](../../.impeccable/review/web-member/hero-sao.jpg).

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowUpRight, Search } from "lucide-react";
@@ -18,9 +18,32 @@ const heroCovers = [
   "/illustrations/chua-nhan.webp",
 ];
 
-function HeroCovers() {
+function HeroCovers({ paused }: { paused: boolean }) {
+  const gallery = useRef<HTMLDivElement>(null);
+  const [moving, setMoving] = useState(false);
+  useEffect(() => {
+    const hero = gallery.current?.closest("section");
+    if (!hero) return;
+    let inView = false;
+    const sync = () => setMoving(inView && !document.hidden);
+    const observer = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      sync();
+    });
+    observer.observe(hero);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, []);
   return (
-    <div className={styles.coverGallery} aria-hidden="true">
+    <div
+      ref={gallery}
+      className={styles.coverGallery}
+      aria-hidden="true"
+      data-moving={moving && !paused}
+    >
       {[0, 1].map((group) => (
         <div
           className={group === 0 ? styles.leftCovers : styles.rightCovers}
@@ -28,14 +51,16 @@ function HeroCovers() {
         >
           {heroCovers.slice(group * 4, group * 4 + 4).map((src, index) => (
             <span className={styles.heroCover} key={src + index}>
-              <img
-                src={src}
-                alt=""
-                width="120"
-                height="176"
-                draggable={false}
-                decoding="async"
-              />
+              <span className={styles.coverMotion}>
+                <img
+                  src={src}
+                  alt=""
+                  width="120"
+                  height="176"
+                  draggable={false}
+                  decoding="async"
+                />
+              </span>
             </span>
           ))}
         </div>
@@ -107,12 +132,13 @@ function Shelf({
 }
 export function HomePage() {
   const [query, setQuery] = useState("");
+  const [motionPaused, setMotionPaused] = useState(false);
   const navigate = useNavigate();
   return (
     <div>
       <section className={styles.hero}>
         <div className={styles.heroInner}>
-          <HeroCovers />
+          <HeroCovers paused={motionPaused} />
           <div className={styles.heroCopy}>
             <h1>
               SÁCH CŨ.
@@ -155,6 +181,14 @@ export function HomePage() {
         <p className={styles.caption}>
           Bìa sách dùng để minh họa · Ảnh sách đang đăng ở bên dưới
         </p>
+        <button
+          type="button"
+          className={styles.motionToggle}
+          aria-pressed={motionPaused}
+          onClick={() => setMotionPaused(!motionPaused)}
+        >
+          {motionPaused ? "Tiếp tục chuyển động" : "Tạm dừng chuyển động"}
+        </button>
       </section>
       <Shelf
         title="VỪA LÊN KỆ"
@@ -196,7 +230,11 @@ export function HomePage() {
               <span>Một khoản nhỏ cho việc đọc</span>
               <h3>DƯỚI 100.000₫</h3>
             </div>
-            <img src="/illustrations/nghin-le-mot-dem.webp" alt="" loading="lazy" />
+            <img
+              src="/illustrations/nghin-le-mot-dem.webp"
+              alt=""
+              loading="lazy"
+            />
           </Link>
         </div>
         <p className={styles.tileCaption}>

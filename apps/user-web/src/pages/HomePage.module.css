@@ -81,6 +81,55 @@
     filter 250ms ease-out;
   user-select: none;
 }
+.coverMotion {
+  display: block;
+  height: 100%;
+  animation: coverSway 6s ease-in-out infinite;
+  animation-delay: -1.5s;
+  animation-play-state: paused;
+}
+.heroCover:nth-child(2) .coverMotion {
+  animation-duration: 7s;
+  animation-delay: -4s;
+}
+.heroCover:nth-child(3) .coverMotion {
+  animation-duration: 6.5s;
+  animation-delay: -3s;
+}
+.heroCover:nth-child(4) .coverMotion {
+  animation-duration: 7.5s;
+  animation-delay: -5s;
+}
+.rightCovers .coverMotion {
+  animation-direction: reverse;
+}
+.coverGallery[data-moving="true"] .coverMotion {
+  animation-play-state: running;
+}
+@keyframes coverSway {
+  0%,
+  100% {
+    transform: translateY(3px) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(1deg);
+  }
+}
+.motionToggle {
+  display: block;
+  margin: 4px auto 0;
+  padding: 10px 14px;
+  background: transparent;
+  border: 0;
+  color: var(--shop-cream);
+  font-size: 0.7rem;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  min-height: 44px;
+}
+.motionToggle:focus-visible {
+  outline-color: var(--shop-cream);
+}
 @media (hover: hover) and (pointer: fine) {
   .heroCover:hover {
     z-index: 3;
@@ -88,6 +137,9 @@
   .heroCover:hover img {
     transform: translateY(-8px) scale(1.12);
     filter: drop-shadow(0 18px 16px #28000090);
+  }
+  .coverGallery[data-moving="true"] .heroCover:hover .coverMotion {
+    animation-play-state: paused;
   }
 }
 @keyframes coverSettle {
@@ -105,6 +157,12 @@
   }
   .heroCover img {
     transition: none;
+  }
+  .coverMotion {
+    animation: none;
+  }
+  .motionToggle {
+    display: none;
   }
   .heroCover:hover img {
     transform: none;
