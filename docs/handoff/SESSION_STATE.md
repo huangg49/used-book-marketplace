@@ -8,6 +8,14 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `29ff82e`, navbar morph360ms + viền kem sáng nhẹ trong collapse rồi tắt;
+  expand hủy ngay, lần thu sau replay. Chủ dự án yêu cầu hiệu ứng thấy được trên
+  laptop reduce-motion, nên giữ360ms riêng navbar, không sửa preference/global.
+  Focused desktop/390/320 reduce/no-preference PASS width/edge/replay/reversal/
+  no jump; CUA xác nhận sáng rồi về0. Build/typecheck/16unit/lint6warning cũ/docs/
+  diff PASS; detector6advisory legacy ngoài diff. Ảnh ở brief; API/native/gate
+  giữ nguyên. Checkpoint subject `feat(web): illuminate navbar edge during compact transition`.
+  Local, chưa push/PR/merge/deploy.
 - Sau `4cffb71`, navbar shared Member web đã gọn76px→64px và bo/nổi khi scroll,
   slot ổn định; mobile72px, menu/notification popup không tràn ở320px/130%text.
   Focused7viewport khách + authenticated response fixture PASS: scroll/return/no

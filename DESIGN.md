@@ -275,9 +275,14 @@ after48px of scrolling it becomes a64px floating bar,12px from the top,
 max-width1280px with at least24px side clearance,32px radius and a soft
 `0 12px 28px #28191433` shadow. It returns to the full-width form at16px or less.
 The reserved slot stays76px, so the page does not jump during the change.
-The240ms exponential transition changes only the fixed bar and its row; the
-passive scroll listener updates React only at the two thresholds. Reduced motion
-uses the existing near-instant global transition, independently of the hero exception.
+The360ms exponential transition changes only the fixed bar and its row; the
+passive scroll listener updates React only at the two thresholds. On each actual
+collapse, a pointer-inert1.5px cream inner edge fades0→65%→0 over the same360ms,
+then animationend clears the transient state. Expanding interrupts the edge
+immediately; loading an already-scrolled page does not replay it. The owner
+explicitly requests visible shrinking on their reduced-motion laptop: the finite
+navbar morph/edge retain360ms under that preference. This is a separate scoped
+exception from hero sway; other UI still uses the global reduction.
 
 At1000px and below, top height/slot is72px; the floating bar sits8px from the
 top with10px side clearance. The original owl and lettering remain; at420px

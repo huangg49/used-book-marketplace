@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-10T08:36:38.609Z",
+  "generatedAt": "2026-10-10T08:43:05.542Z",
   "title": "Design System: Lật lại",
   "extensions": {
     "colorMeta": {
@@ -498,8 +498,8 @@
       },
       {
         "name": "member-navigation-compact",
-        "value": "240ms cubic-bezier(0.16,1,0.3,1); fixed bar width/transform/radius and row min-height/padding",
-        "purpose": "Continuous change from full-width76px to floating64px after48px scroll; return at16px. Stable document slot; passive threshold updates; respects global reduced motion."
+        "value": "360ms cubic-bezier(0.16,1,0.3,1); fixed bar width/transform/radius and row min-height/padding; collapse edge opacity0→.65→0",
+        "purpose": "Stable document slot; passive threshold updates. One finite1.5px cream edge during actual collapse; clears on animationend/expansion and replays next collapse. Owner explicitly requests visible360ms morph/edge under reduced motion on their laptop; scoped exception, not a global preference change."
       }
     ],
     "breakpoints": [

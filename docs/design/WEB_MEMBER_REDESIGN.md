@@ -44,6 +44,21 @@ fixture [QA], giá/tình trạng mô phỏng.
 
 ## Kiểm chứng
 
+Sau `29ff82e`, chủ dự án yêu cầu nhìn rõ lúc navbar thu trên nền hero cùng màu.
+CUA xác nhận laptop bật reduced-motion làm transition cũ chỉ0.01ms. Đã tăng morph
+lên360ms và thêm viền kem1.5px pointer-none chỉ trong collapse, opacity0→65%→0;
+animationend xóa state, expand hủy ngay, lần thu kế tiếp chạy lại. Giữ360ms cho
+riêng morph/edge dù OS reduce, không sửa thiết lập máy hoặc animation khác.
+Focused Chromium PASS desktop1536×730/mobile390×844/320×650, cả reduce/no-preference:
+sample rAF xác nhận width trung gian/edge sáng rồi về0, replay/reversal và không
+nhảy nội dung/tràn ngang. CUA thấy collapsing=true/duration0.36s/edge0.228 rồi
+collapsing=false/edge0; [ảnh giữa chuyển động](../../.impeccable/review/web-member/navbar-edge-morph.jpg).
+Build/typecheck/16unit/lint0error6warning cũ/docs/diff PASS. Detector một lượt6
+advisory màu/type legacy ngoài diff; không có finding mới của morph/edge. Finish
+pass source/browser đạt scope, không đổi API/native/gate; auth/API integration
+không chạy lại vì không đổi session/command. Checkpoint subject
+`feat(web): illuminate navbar edge during compact transition`; local, chưa push.
+
 Sau `4cffb71`, chủ dự án duyệt navbar gọn/nổi theo hai trạng thái trong ảnh BeeWise.
 Header dùng chung Main/Auth/Dashboard và form đăng sách:76px ở đầu,64px/top12px/
 radius32px/max1280px khi cuộn>48px, trở lại ở<=16px; slot cố định không nhảy nội dung.

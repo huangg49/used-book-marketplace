@@ -77,8 +77,12 @@ soft offset shadow; return at<=16px to avoid threshold flicker. Stable76px slot
 prevents document jumps. <=1000px uses logo/menu,72px slot,top8px/side10px;
 original logo windows shrink to82% at<=420px, all controls retain44px height.
 Scrollable mobile menu, Escape/route/desktop-resize closure and narrow notification
-popup verified. Transition240ms, passive threshold-only state updates; navbar
-respects reduced motion. No new library, copy, session or API changes.
+popup verified. Owner then requests a more legible360ms morph with a transient
+1.5px cream edge, opacity0→65%→0 during collapse only. It clears on animationend
+or expansion and replays on the next collapse, not every scroll event. The finite
+360ms morph/edge remain visible on the owner's reduced-motion laptop; separate
+scoped exception, no global preference change. Passive threshold-only updates;
+no new library, copy, session or API changes.
 
 Open dependency: Dribbble supplies a composite preview, no separate cover assets;
 use existing public-domain covers and the four images the owner supplied directly

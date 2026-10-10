@@ -31,6 +31,7 @@ export function Logo() {
 export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
   const location = useLocation();
   const [floating, setFloating] = useState(() => window.scrollY > 48);
+  const [collapsing, setCollapsing] = useState(false);
   const [menuPath, setMenuPath] = useState<string | null>(null);
   const menuOpen = menuPath === location.key;
   const setMenuOpen = (open: boolean) =>
@@ -43,6 +44,7 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
       const next = compact ? window.scrollY > 16 : window.scrollY > 48;
       if (next !== compact) {
         compact = next;
+        setCollapsing(next);
         setFloating(next);
       }
     };
@@ -71,7 +73,15 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
   const active = (to: string) => location.pathname + location.search === to;
   return (
     <div className={styles.headerSlot}>
-      <header className={styles.header} data-floating={floating} data-menu-open={menuOpen}>
+      <header
+        className={styles.header}
+        data-floating={floating}
+        data-menu-open={menuOpen}
+        data-collapsing={collapsing}
+        onAnimationEnd={(event) => {
+          if (event.target === event.currentTarget) setCollapsing(false);
+        }}
+      >
         <div className={styles.headerInner}>
           <Logo />
           <nav className={styles.desktopNav} aria-label="Điều hướng chính">
