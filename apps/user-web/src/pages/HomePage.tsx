@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Link,
@@ -40,16 +40,34 @@ const heroCovers = [
 ];
 
 function BookmarkPaper() {
+  const paperId = useId();
+  const paperShape =
+    "M8.5.5H191.5Q199.5.5 199.5 8.5V163.5Q199.5 167.5 195.5 167.5H120L100 148L80 167.5H4.5Q.5 167.5 .5 163.5V8.5Q.5.5 8.5.5Z";
   return (
     <svg
       className={styles.bookmarkPaper}
-      viewBox="0 0 240 144"
+      viewBox="0 0 200 168"
       preserveAspectRatio="none"
       aria-hidden="true"
       focusable="false"
     >
+      <defs>
+        <clipPath id={paperId}>
+          <path d={paperShape} />
+        </clipPath>
+      </defs>
+      <path d={paperShape} vectorEffect="non-scaling-stroke" />
+      <image
+        className={styles.bookmarkTexture}
+        href="/login-art/ivory-paper.webp"
+        width="200"
+        height="168"
+        preserveAspectRatio="xMidYMid slice"
+        clipPath={`url(#${paperId})`}
+      />
       <path
-        d="M4.5.5H235.5Q239.5.5 239.5 4.5V139.5Q239.5 143.5 235.5 143.5H132L120 135.5L108 143.5H4.5Q.5 143.5 .5 139.5V4.5Q.5.5 4.5.5Z"
+        className={styles.bookmarkThread}
+        d="M16 12H48"
         vectorEffect="non-scaling-stroke"
       />
     </svg>

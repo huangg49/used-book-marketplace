@@ -267,8 +267,8 @@
   z-index: 1;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  max-width: 1040px;
-  gap: 24px;
+  max-width: 880px;
+  gap: 32px;
   margin: -12px auto 28px;
 }
 .quickLinks a {
@@ -280,9 +280,9 @@
   align-items: center;
   justify-items: center;
   align-content: center;
-  min-height: 144px;
-  padding: 8px 12px 20px;
-  border-radius: 4px;
+  min-height: 168px;
+  padding: 4px 12px 30px;
+  border-radius: 8px;
   color: var(--shop-wine);
   font-size: 0.9375rem;
   font-weight: 700;
@@ -298,13 +298,25 @@
   height: 100%;
   pointer-events: none;
   fill: var(--bookmark-ground, #fffaf0);
-  stroke: #c5ad8f;
+  stroke: #c5ad8f80;
   stroke-width: 1px;
+  transition: filter 200ms ease-out, stroke 200ms ease-out;
+}
+.bookmarkTexture {
+  opacity: 0.2;
+  mix-blend-mode: multiply;
+}
+.bookmarkThread {
+  fill: none;
+  stroke: var(--shop-wine);
+  stroke-linecap: round;
+  opacity: 0.35;
 }
 .quickLinks a > img {
-  width: 88px;
-  height: 88px;
+  width: 104px;
+  height: 104px;
   object-fit: contain;
+  transform: translateY(-2px);
 }
 .quickLinks a > span {
   min-width: 0;
@@ -329,10 +341,11 @@
 }
 @media (hover: hover) and (pointer: fine) {
   .quickLinks a:hover {
-    transform: translateY(-2px);
+    transform: translateY(-3px);
   }
   .quickLinks a:hover .bookmarkPaper {
-    stroke: var(--shop-wine);
+    stroke: #c5ad8f80;
+    filter: drop-shadow(0 5px 6px #28191414);
   }
 }
 .quickLinks a:hover {
@@ -340,7 +353,8 @@
   text-underline-offset: 4px;
 }
 @media (prefers-reduced-motion: reduce) {
-  .quickLinks a {
+  .quickLinks a,
+  .bookmarkPaper {
     transition: none;
   }
   .quickLinks a:hover {
@@ -715,6 +729,8 @@
 @media (max-width: 1000px) {
   .quickLinks {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 440px;
+    gap: 16px;
   }
 }
 @media (max-width: 850px) {
@@ -750,12 +766,12 @@
   }
   .quickLinks a {
     font-size: 0.875rem;
-    padding: 8px 12px 20px;
-    min-height: 132px;
+    padding: 4px 10px 28px;
+    min-height: 152px;
   }
   .quickLinks a > img {
-    width: 72px;
-    height: 72px;
+    width: 88px;
+    height: 88px;
   }
   .categories,
   .shelf,

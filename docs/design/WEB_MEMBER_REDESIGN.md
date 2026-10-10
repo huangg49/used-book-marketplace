@@ -33,6 +33,25 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `7af062d`, chủ dự án duyệt làm dấu sách mềm hơn: hàng880px/gap32px,
+chim104px, hai góc trên8px, khía40×19.5px, viền warm50% alpha và nét wine nhỏ.
+Tái dùng texture giấy login20% multiply, clip riêng bằng useId; anchor/focus
+không clip. Hover nâng3px/bóng mềm theo silhouette giấy; reduced motion bỏ lift.
+<=1000px hàng440px/2cột/gap16px; <=600px chim88px/min152px/gap12px, nhãn tự wrap.
+Giữ hero/caption/routes/logo/kệ/API/session; không thêm asset hay noise động.
+
+Build/typecheck/lint PASS (6 warning cũ); CUA1366/1024/800/390/320 không tràn,
+4/2cột,4ảnh tải đủ, nhãn không chạm notch. Laptop1366×768 hàng đủ trong khung đầu;
+keyboard Tab/focus wine không clip PASS; source4href không đổi. Một scan trước
+sửa0finding. Actual hover/chữ200%/backend giao dịch/native/human NOT RUN.
+Ảnh [laptop](../../.impeccable/review/web-member/home-bookmarks-soft-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-bookmarks-soft-mobile.jpg),
+[320px](../../.impeccable/review/web-member/home-bookmarks-soft-320.jpg).
+READINESS giữ nguyên; checkpoint subject `feat(web): soften paper bookmark shortcuts`.
+Local, chưa push; chủ dự án xem bản thử.
+Reviewer độc lập disposition **ship**, không material fix;
+[review](../../.impeccable/review/web-member/home-bookmarks-soft-finish.md). Docs/diff PASS.
+
 Sau `6beee98`, chủ dự án duyệt thử dấu sách hợp với web thay bốn hộp pastel và
 mockup nhiều viền/bóng. Recipe hiện hành ở DESIGN.md: hàng1040px/4→2 cột, nối
 mép hero12px; giấy kem và vàng nhẹ cho đấu giá, chim88/72px trên nhãn ngắn.
