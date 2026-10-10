@@ -1,9 +1,9 @@
 import { type FormEvent, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, ArrowRight } from "lucide-react";
 import { ApiError } from "@used-books/session-client";
 import { session } from "../lib/session";
-import { AuthLayout } from "../layouts/AuthLayout";
+import { Logo } from "../components/Header";
 import styles from "./LoginPage.module.css";
 export function LoginPage() {
   const navigate = useNavigate();
@@ -40,60 +40,111 @@ export function LoginPage() {
     }
   }
   return (
-    <AuthLayout>
-      <section className={styles.panel}>
-        <h1>
-          CHÀO BẠN,
-          <br />
-          <span>LẠI GẶP NHAU RỒI.</span>
-        </h1>
-        <p>Đăng nhập để đăng sách và trò chuyện với người bán.</p>
-        <form onSubmit={(event) => void handleSubmit(event)} aria-busy={busy}>
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            placeholder="ban@example.com"
+    <main className={styles.root}>
+      <aside
+        className={styles.bookshop}
+        aria-label="Lật lại · Chuyện hay còn tiếp"
+      >
+        <div className={styles.brand}>
+          <Logo />
+        </div>
+        <div className={styles.scene}>
+          <img
+            className={styles.photo}
+            src="/photography/bookshop-barcelona.jpg"
+            alt=""
+            width="3000"
+            height="2818"
+            fetchPriority="high"
           />
-          <label htmlFor="password">Mật khẩu</label>
-          <div className={styles.password}>
-            <input
-              id="password"
-              name="password"
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              required
-            />
-            <button
-              type="button"
-              aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-              aria-pressed={showPassword}
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? (
-                <EyeOff size={20} aria-hidden="true" />
-              ) : (
-                <Eye size={20} aria-hidden="true" />
-              )}
-            </button>
-          </div>
-          {error && (
-            <p className={styles.error} role="alert">
-              {error}
+          <div className={styles.tint} aria-hidden="true" />
+          <div className={styles.story}>
+            <p className={styles.storyTitle}>
+              Chuyện hay
+              <br />
+              <span>còn tiếp.</span>
             </p>
-          )}
-          <button className={styles.submit} type="submit" disabled={busy}>
-            {busy ? "Đang đăng nhập…" : "Đăng nhập"}
-            <ArrowRight size={18} aria-hidden="true" />
-          </button>
-        </form>
-        <Link to="/" className={styles.back}>
-          Về trang chủ
-        </Link>
-      </section>
-    </AuthLayout>
+            <p className={styles.storyCopy}>
+              Một cuốn sách đã đọc.
+              <br />
+              Một câu chuyện để đọc tiếp.
+            </p>
+          </div>
+          <p className={styles.credit}>
+            Ảnh:{" "}
+            <a
+              href="https://unsplash.com/photos/cozy-bookstore-interior-with-bookshelves-and-warm-lighting-mWWD9Up47OM"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Davit Margaryan / Unsplash
+              <span className="sr-only"> (mở tab mới)</span>
+            </a>
+          </p>
+        </div>
+      </aside>
+      <div className={styles.formColumn}>
+        <header className={styles.utility}>
+          <div className={styles.mobileBrand}>
+            <Logo />
+          </div>
+          <Link to="/" className={styles.back}>
+            <ArrowLeft size={18} aria-hidden="true" /> Về trang chủ
+          </Link>
+        </header>
+        <div className={styles.formArea}>
+          <section className={styles.panel} aria-labelledby="login-title">
+            <h1 id="login-title">Lại gặp nhau rồi.</h1>
+            <p>Đăng nhập để đăng sách và trò chuyện với người bán.</p>
+            <form
+              onSubmit={(event) => void handleSubmit(event)}
+              aria-busy={busy}
+            >
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                placeholder="ban@example.com"
+              />
+              <label htmlFor="password">Mật khẩu</label>
+              <div className={styles.password}>
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} aria-hidden="true" />
+                  ) : (
+                    <Eye size={20} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
+              {error && (
+                <p className={styles.error} role="alert">
+                  {error}
+                </p>
+              )}
+              <button className={styles.submit} type="submit" disabled={busy}>
+                {busy ? "Đang đăng nhập…" : "Đăng nhập"}
+                <ArrowRight size={18} aria-hidden="true" />
+              </button>
+            </form>
+          </section>
+        </div>
+        <p className={styles.note}>Lật lại · Sách cũ. Người đọc mới.</p>
+      </div>
+    </main>
   );
 }

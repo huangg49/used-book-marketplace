@@ -66,6 +66,47 @@ typography:
     fontFamily: "Be Vietnam Pro, sans-serif"
     fontSize: "1.5rem"
     fontWeight: 700
+  login-story:
+    fontFamily: "Anton, sans-serif"
+    fontSize: "clamp(3rem, 5.4vw, 5rem)"
+    fontWeight: 400
+    lineHeight: 1.3
+    letterSpacing: "0"
+  login-title:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "clamp(1.75rem, 2.8vw, 2.25rem)"
+    fontWeight: 700
+    lineHeight: 1.4
+    letterSpacing: "-0.03em"
+  login-story-copy:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "1rem"
+    fontWeight: 400
+    lineHeight: 1.8
+  login-description:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.9375rem"
+    fontWeight: 400
+    lineHeight: 1.8
+  login-label:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.875rem"
+    fontWeight: 700
+  login-support:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.875rem"
+    fontWeight: 400
+    lineHeight: 1.8
+  login-credit:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.75rem"
+    fontWeight: 400
+    lineHeight: 1.8
+  login-note:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.8125rem"
+    fontWeight: 400
+    lineHeight: 1.8
   rn-search-title:
     fontFamily: "Be Vietnam Pro"
     fontSize: "28px"
@@ -131,6 +172,17 @@ components:
     backgroundColor: "transparent"
     textColor: "{colors.shop-ink}"
     rounded: "{rounded.control}"
+  login-text-field:
+    backgroundColor: "transparent"
+    textColor: "{colors.shop-ink}"
+    rounded: "{rounded.control}"
+    height: "52px"
+  login-button-primary:
+    backgroundColor: "{colors.shop-wine}"
+    textColor: "{colors.shop-cream}"
+    rounded: "{rounded.control}"
+    padding: "12px 22px"
+    height: "52px"
   navigation:
     backgroundColor: "{colors.shop-wine}"
     textColor: "{colors.shop-cream}"
@@ -169,7 +221,7 @@ components:
 
 Member web pairs the owner's wine-red owl and lettering with warm paper, tall display type and colored grounds for complete book covers. Discovery is lively; listing facts and task controls stay direct, readable and quieter than the covers. This records the world built after the owner's replacement decision on 10/10/2026, using the [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-booksearchpage-tsx.md) and [PRODUCT](PRODUCT.md), rather than the superseded green web sketches.
 
-The implemented web slice is Home, Search, Detail, Login, shared Header/BookCard/ConfirmDialog and MainLayout/AuthLayout. Existing posting and other forms, auction, chat, profile and registration retain legacy page recipes even where the shared shell changes. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.
+The implemented web slice is Home, Search, Detail, Login, shared Header/BookCard/ConfirmDialog and MainLayout/AuthLayout. Login now owns its bookstore split and compact logo/home header, separate from the shared Member Header; AuthLayout still serves the legacy registration scaffold. Existing posting and other forms, auction, chat, profile and registration retain legacy page recipes even where the shared shell changes. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.
 
 **Key Characteristics:**
 
@@ -199,6 +251,7 @@ The web palette moves from a dark wine shell to warm paper shelves and soft cove
 
 - **Web paper / ink / muted** (`shop-paper`, `shop-ink`, `shop-muted`): canvas, reading text and secondary metadata. Shelf panels use `shop-shelf`; the gallery and descriptive condition labels use `detail-ground`.
 - **Divider / control boundary** (`shop-line`, `shop-control`): quiet grouping versus the stronger Login, price-input, sort and radio boundary treatments.
+- **Login scope:** the page binds the existing `shop-wine-hover`, `shop-error` and `shop-shelf` values locally because those roles are absent from global CSS. This restores the canonical hover, error and password-eye surface colors without adding a palette identity.
 - **Incumbent RN colors** (`rn-*`): forest action/heading, paper canvas, surface navigation, shelf canvas, ink, muted, rust condition text, input border, divider and selected-navigation surface. These are preserved from [RN theme](apps/mobile-react-native/src/core/ui/theme.ts) and [brand identity](packages/brand/v1.1/identity.tokens.json), not applied to the new web slice.
 
 **The Ground Is Not Status Rule.** Colored cover grounds are decorative; communicate condition, prices and reservation state in real text from the listing.
@@ -213,7 +266,8 @@ Both families are self-hosted in web `public/fonts`, with OFL files and [source 
 ### Hierarchy
 
 - **Home headline:** owner-supplied `Hero text final.png`, delivered as a transparent1313×655 PNG with only blank outer margins removed. Exact lettering/copy/illustration retained: SÁCH MỚI. CHƯƠNG MỚI. CÙNG LẬT LẠI. H1 contains equivalent visually hidden text; its image is decorative to assistive technology. Width is min(100%,36rem), min(100%,28rem) below850px; height follows the original ratio. This artwork is a pinned Home exception to the Anton display token. It scales as a whole image rather than wrapping or scaling each glyph as live text.
-- **Headline:** shelf and posting section headings. Search has its own Anton `clamp(2rem, 3.4vw, 3rem)` / 1.28 heading; Login uses `clamp(2rem, 5vw, 3rem)` / 1.35.
+- **Headline:** shelf and posting section headings. Search has its own Anton `clamp(2rem, 3.4vw, 3rem)` / 1.28 heading.
+- **Login:** Anton `login-story` carries the two-line photograph story in cream/yellow; bold Be Vietnam Pro `login-title` carries the form greeting, reducing to 1.75rem below 440px. Story copy uses `login-story-copy`; the task description uses `login-description`. Labels use `login-label`; error and home-link text use the `login-support` size. Inputs and submit text are 1rem, with a bold submit label. The photo credit (`login-credit`) and bottom brand note (`login-note`) are intentionally smaller secondary text, not task instructions; the credit link retains at least 44px of height. These two explicit roles account for the detector's size advisories without shrinking the task copy.
 - **Detail title / card title:** bold Be Vietnam Pro; narrow sizes are 1.65rem and 0.92rem respectively. Long titles wrap rather than truncate.
 - **Body / label:** regular reading copy and bold controls. Supporting text is mostly 0.75–0.9rem with 1.6–1.9 line height; disclosure captions are smaller. Description text preserves line breaks; task explanations cap around 60–65ch.
 - **Price:** Detail uses 1.5rem, reducing to 1.3rem on narrow layouts; card prices use 1rem then 0.9rem. Both use tabular numerals and separate sale/exchange labels.
@@ -225,7 +279,9 @@ Both families are self-hosted in web `public/fonts`, with OFL files and [source 
 
 Web shelves, catalog, header/footer and Detail use centered containers up to 1280px; inner hero/posting content reaches 1200px. Typical desktop side padding is 40px, then 24px, then 20px on narrow screens. Reused gaps follow the frontmatter steps, with surface-specific 22px/28px/36px gaps where source uses them.
 
-Home and Search have four cover columns, reducing to two at 850px and 800px respectively. Home discovery tiles go from three columns to one at 600px. Search filters go from three columns to two at 1000px, then one at 600px; the radios have explicit all-mode/all-condition choices. Search action wraps below the field at 600px. Detail pairs photograph and content with a 72px gap, reducing at 1000px and stacking at 720px. Login's centered form container is at most 520px wide.
+Home and Search have four cover columns, reducing to two at 850px and 800px respectively. Home discovery tiles go from three columns to one at 600px. Search filters go from three columns to two at 1000px, then one at 600px; the radios have explicit all-mode/all-condition choices. Search action wraps below the field at 600px. Detail pairs photograph and content with a 72px gap, reducing at 1000px and stacking at 720px.
+
+Login uses a viewport-filling 45/55 split with `min-height:100dvh`, not a fixed-height lock. The left column pairs the original Logo on a solid wine masthead with a bookstore photograph and bottom-aligned story. The right column places a home link above a vertically centered form capped at 400px, with a quiet brand note below. At 900px and below the large scene is hidden; a compact wine Logo/home row leads the single-column form. That row wraps below 440px and form padding becomes 32px 24px. Short viewports, large text and error content grow the document naturally and may scroll. This Login composition follows its [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-loginpage-tsx.md); registration and the other shared-shell consumers keep their existing recipes.
 
 At 800px the header uses an expandable menu while retaining both owl and lettering; the posting shortcut leaves the header at 600px and remains in the menu. Home uses eight decorative covers: two staggered 2×2 flanks around the headline above1100px; at1100px and below all eight move below search in a single row, becoming a 4×2 grid at800px. The same collection is rendered once, with complete contained images and user-supplied cover provenance. Dialog width is `calc(100% - 32px)`, capped at 480px, with scrollable height and stacked actions at 420px. These are implemented surface breakpoints, not one universal device taxonomy.
 
@@ -236,6 +292,8 @@ RN retains content width 480dp, page padding 20dp, targets at least 48dp and con
 ## Elevation & Depth
 
 Web uses tonal grounds and restrained photographic shadows. Metadata remains unboxed. Shadow belongs to covers, the hero search surface and the modal rather than every card. The one-time Home cover settle lasts 0.8s; card-image hover lifts 4px over 0.3s. Global reduced-motion handling suppresses animation and transition. RN retains tonal grouping and dividers without decorative shadows; its sheet scrim is `rgba(20,36,28,.45)`.
+
+Login's photograph is static, with 2px CSS blur, a 1.025 scale to conceal blurred edges and a 64% wine tint (`#5c0202a3`). The sharp cream/yellow lettering sits above this atmospheric scene; the form remains flat on paper. Only the submit background color transitions (160ms ease-out), using the global reduced-motion rule. The photo treatment is scoped to decorative Login imagery and does not crop or blur listing evidence.
 
 ### Shadow Vocabulary
 
@@ -256,7 +314,7 @@ Web controls use gently rounded corners (`control`), cover grounds/search shells
 
 ### Buttons
 
-Solid wine with cream text for primary tasks; orange with dark text for search. Detail's main action is full-width, at least 50px tall; search is at least 48px on desktop and 44px narrow. Login uses 50px; dialog uses 46px. Secondary pagination is transparent with a wine border and inverts on hover. Disabled primary/dialog actions reduce opacity. Keyboard focus is a 3px outline offset 4px; header and footer controls use a cream outline against wine.
+Solid wine with cream text for primary tasks; orange with dark text for search. Detail's main action is full-width, at least 50px tall; search is at least 48px on desktop and 44px narrow. Login uses at least 52px with 12px 22px padding; dialog uses 46px. Secondary pagination is transparent with a wine border and inverts on hover. Disabled primary/dialog actions reduce opacity. Keyboard focus is a 3px outline offset 4px; header and footer controls use a cream outline against wine.
 
 ### Cards / Containers
 
@@ -264,12 +322,13 @@ BookCard combines a rounded 4:5 colored ground, contained listing photograph, co
 
 ### Inputs / Fields
 
-Search sits inside a paper shell with a transparent borderless inner field and an explicit label. Login uses outlined 50px fields; numeric price fields are at least 42px and sort is 44px. Mode and condition use native single-selection radios with explicit all choices. Labels and invalid-price explanation remain visible; focus and caret use the wine identity. Preserve entered values on errors.
+Search sits inside a paper shell with a transparent borderless inner field and an explicit label. Login uses transparent outlined fields at least 52px tall, an 8px radius and the stronger `shop-control` boundary. Its password eye is a labelled 44×44px button with a 6px radius; hover uses wine text on the shelf ground. Numeric price fields are at least 42px and sort is 44px. Mode and condition use native single-selection radios with explicit all choices. Labels and invalid-price explanation remain visible; focus and caret use the wine identity. Preserve entered values on errors.
 
 ### Navigation
 
-The shared Member web Header stays visible across MainLayout, AuthLayout,
-DashboardLayout and standalone posting. Wine/cream, original logo and desktop
+The shared Member web Header stays visible across MainLayout, legacy AuthLayout
+registration, DashboardLayout and standalone posting. Login owns its static
+Logo/home header and does not render this scrolling Header. Wine/cream, original logo and desktop
 current-page underline remain. At the top it spans the viewport,76px tall;
 after48px of scrolling it becomes a64px floating bar,12px from the top,
 max-width1280px with at least24px side clearance,32px radius and a soft
@@ -298,6 +357,10 @@ by this shared navigation refinement; Android/admin remain separate.
 ### Condition labels and confirmation
 
 Detail condition/mode labels are descriptive, softly filled rectangles rather than verification. ConfirmDialog uses a paper surface, readable task explanation, wine confirmation and outlined cancel, with modal backdrop and a narrow stacked action layout. Purchase wording explains a 24-hour reservation/chat without payment; visual styling must not turn that into a purchase-success promise.
+
+### Login bookstore scene
+
+The decorative local 3000×2818 JPEG is Davit Margaryan's Barcelona bookstore photograph from Unsplash, with [provenance](apps/user-web/public/photography/README.md). It uses cover fitting at 64% horizontal position and a visible source link, without representing a Lật lại premises or an API listing. The original Logo is reused without regeneration. Email/password, password visibility, pending submit, distinct connection/credential errors and safe returnUrl retain the existing SessionClient behavior; this visual recipe adds no social sign-in, reset or registration capability.
 
 ## Do's and Don'ts
 

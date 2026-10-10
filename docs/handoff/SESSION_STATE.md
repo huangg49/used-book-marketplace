@@ -8,6 +8,14 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `6de0289`, Login dùng ảnh bookstore Unsplash local, blur2px/tint đỏ64%,
+  desktop45/55 và form400px/52px control, logo/home riêng; <=900px chỉ form.
+  Handler/session/returnUrl/Register giữ nguyên. Build/typecheck16unit/lint0error
+  6warning cũ PASS;9viewport100/130% response fixture và CUA PASS, ảnh ở brief.
+  Docs/diff PASS. Detector2advisory credit/footer; canonical Login được documenter cập nhật và
+  reviewer kiểm finding persistence. API thật/native/human gate NOT RUN, không
+  đổi READINESS. Checkpoint subject `feat(web): frame login with a warm bookshop photograph`.
+  Local, chưa push/PR/merge/deploy.
 - Sau `29ff82e`, navbar morph360ms + viền kem sáng nhẹ trong collapse rồi tắt;
   expand hủy ngay, lần thu sau replay. Chủ dự án yêu cầu hiệu ứng thấy được trên
   laptop reduce-motion, nên giữ360ms riêng navbar, không sửa preference/global.

@@ -31,6 +31,48 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
   để hành trình kiểm thử liên tục. Chưa redesign toàn form, dashboard, đăng ký,
   chat, đấu giá, admin hay Flutter; Android giữ checkpoint riêng.
 
+## Login — ảnh tiệm sách và form riêng
+
+Sau `6de0289`, chủ dự án chọn ảnh bookstore làm mờ nhẹ/đặt chữ và chia màn hình
+như mẫu [Edusama](https://dribbble.com/shots/27353194-Edusama-Digital-Library-Login-Exploration).
+[Contract Login](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-loginpage-tsx.md)
+ghi phạm vi code-led: desktop45/55, logo gốc trên masthead đỏ, ảnh tiệm sách
+Barcelona của Davit Margaryan từ Unsplash, CSS blur2px + tint đỏ64%, chữ
+“Chuyện hay còn tiếp.”; form nền kem400px, Be Vietnam Pro, control52px.
+<=900px bỏ mảng ảnh lớn, giữ logo và Về trang chủ. Laptop100% vừa viewport;
+màn thấp/chữ lớn/lỗi được cuộn tự nhiên. Không dùng navbar đầy đủ trên Login.
+AuthLayout/Register và Header ở các màn khác giữ recipe trước đó.
+
+Ảnh delivery local, không hotlink runtime; [nguồn/giấy phép](../../apps/user-web/public/photography/README.md)
+và origin embedded + sidecar ghi rõ là ảnh trang trí, không là cơ sở Lật lại hay
+ảnh bài đăng. SessionClient/handler/safe returnUrl vẫn nguyên; không thêm
+Google/login khác/đăng ký/khôi phục mật khẩu hoặc thay token storage.
+
+Kiểm: build/typecheck16unit PASS; lint0error6warning legacy. Focused Chromium
+response fixture9viewport100/130% PASS: không tràn ngang, một logo hiện, target44px,
+laptop vừa/màn thấp cuộn, hiện/ẩn mật khẩu, lỗi giữ dữ liệu/retry, pending disabled,
+login return về sách và browser storage trống. CUA xác nhận desktop/mobile,
+password toggle và Về trang chủ. API thật/native/human usability NOT RUN;
+không ghi/xóa DB hoặc đổi READINESS. Detector một lượt2advisory: credit12px,
+footer13px có chủ đích; không được nhận là detector0findings. Tương phản
+conservative trên toàn ảnh dưới tint alpha163/255: cream4.84:1, chữ vàng lớn
+3.36:1; muted trên nền giấy5.77:1.
+
+Ảnh đã kiểm đúng nội dung/kích thước:
+
+- [Desktop1536×730](../../.impeccable/review/web-member/login-bookshop-desktop.jpg).
+- [Laptop1366×650](../../.impeccable/review/web-member/login-bookshop-laptop.png).
+- [Mobile390×844](../../.impeccable/review/web-member/login-bookshop-mobile.jpg).
+- [320px chữ130%, full page](../../.impeccable/review/web-member/login-bookshop-small.png).
+- [Lỗi, full page](../../.impeccable/review/web-member/login-bookshop-error.png).
+
+Review độc lập source/five captures: UI đạt composition, finding còn lại là
+recipe Login cũ trong DESIGN; documenter cập nhật canonical rồi reviewer xác
+nhận finding này resolved. Recapture64% tint cũng được mở lại đủ5file, verdict
+ship ở phạm vi hai sửa persistence/tint; review trước của UI giữ hiệu lực.
+Không nhận là human acceptance. Checkpoint subject `feat(web): frame login with a warm bookshop photograph`.
+Local trên codex/web-member-redesign, chưa push/PR/merge/deploy.
+
 ## Ảnh và dữ liệu
 
 Dribbble cung cấp ảnh thiết kế tổng hợp; chưa có bộ asset tách riêng hoặc ảnh bìa

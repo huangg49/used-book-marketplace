@@ -1,0 +1,17 @@
+{
+  "route": "/login",
+  "viewport": [
+    1366,
+    650
+  ],
+  "format": "png",
+  "imageDimensions": [
+    1366,
+    699
+  ],
+  "textScale": 100,
+  "evidence": "Chromium response fixture",
+  "realApi": "NOT RUN",
+  "source": "Login bookstore photo redesign working tree after6de0289",
+  "tint": "#5c0202a3"
+}

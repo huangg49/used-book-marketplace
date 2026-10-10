@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-10T08:43:05.542Z",
+  "generatedAt": "2026-10-10T09:41:28.957Z",
   "title": "Design System: Lật lại",
   "extensions": {
     "colorMeta": {
@@ -404,7 +404,7 @@
       },
       "headline": {
         "displayName": "headline",
-        "purpose": "Home shelf/posting headings; Search and Login have related surface variants."
+        "purpose": "Home shelf/posting headings; Search has a related surface variant. Login uses its own story and task roles."
       },
       "detail-title": {
         "displayName": "detail title",
@@ -441,6 +441,38 @@
       "rn-body": {
         "displayName": "rn body",
         "purpose": "Incumbent React Native role; logical pixels with system scaling."
+      },
+      "login-story": {
+        "displayName": "Login photo story",
+        "purpose": "Anton two-line cream/yellow lettering over the static bookstore photograph."
+      },
+      "login-title": {
+        "displayName": "Login form greeting",
+        "purpose": "Bold Be Vietnam Pro task greeting; 1.75rem below440px."
+      },
+      "login-story-copy": {
+        "displayName": "Login photo copy",
+        "purpose": "Regular full-size copy below the decorative story, separate from form instructions."
+      },
+      "login-description": {
+        "displayName": "Login task description",
+        "purpose": "Quiet but readable explanation above email/password controls."
+      },
+      "login-label": {
+        "displayName": "Login field label",
+        "purpose": "Bold visible email/password labels."
+      },
+      "login-support": {
+        "displayName": "Login error and home link",
+        "purpose": "Regular error explanation and home-link text share the .875rem size; errors use1.8 line-height."
+      },
+      "login-credit": {
+        "displayName": "Login photo credit",
+        "purpose": "Intentionally small secondary attribution, not task copy. The source link has12px vertical padding, retaining at least44px height; documents the detector size advisory."
+      },
+      "login-note": {
+        "displayName": "Login bottom note",
+        "purpose": "Intentionally small secondary brand note, not a task instruction; documents the detector size advisory."
       }
     },
     "shadows": [
@@ -500,6 +532,11 @@
         "name": "member-navigation-compact",
         "value": "360ms cubic-bezier(0.16,1,0.3,1); fixed bar width/transform/radius and row min-height/padding; collapse edge opacity0→.65→0",
         "purpose": "Stable document slot; passive threshold updates. One finite1.5px cream edge during actual collapse; clears on animationend/expansion and replays next collapse. Owner explicitly requests visible360ms morph/edge under reduced motion on their laptop; scoped exception, not a global preference change."
+      },
+      {
+        "name": "login-submit-color",
+        "value": "background-color 160ms ease-out",
+        "purpose": "Login submit hover only; static scene. Global prefers-reduced-motion suppresses the transition; no Home/navbar exception applies."
       }
     ],
     "breakpoints": [
@@ -542,6 +579,16 @@
       {
         "name": "member-navigation-menu",
         "value": "1000px;72px top slot/height,64px floating,8px top/10px sides; logo windows82% at420px"
+      },
+      {
+        "name": "login-single-column",
+        "value": "900px",
+        "purpose": "Desktop45/55 min-height100dvh split becomes one column; bookstore scene hidden, compact wine Logo/home row above the centered400px form. Short height, large text and errors may grow the document."
+      },
+      {
+        "name": "login-narrow-form",
+        "value": "440px",
+        "purpose": "Utility row centers/wraps; form padding32px24px and greeting1.75rem."
       }
     ]
   },
@@ -573,10 +620,10 @@
     {
       "name": "Login text field",
       "kind": "input",
-      "refersTo": "text-field",
-      "description": "Outlined task input with visible label, original field height and stronger control boundary.",
-      "html": "<label class=\"ds-field-label\" for=\"ds-email\">Email</label><input class=\"ds-field\" id=\"ds-email\" type=\"email\" placeholder=\"Email của bạn\" />",
-      "css": ".ds-field-label{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:block;margin-bottom:10px;font-size:.85rem;font-weight:700;color:var(--shop-ink,#281914)}.ds-field{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:block;width:100%;min-height:50px;padding:.65rem .75rem;border:1px solid var(--shop-control,#8e7564);border-radius:8px;background:transparent;color:var(--shop-ink,#281914);font-size:.9rem;caret-color:var(--shop-wine,#5c0202)}.ds-field::placeholder{color:var(--shop-muted,#716157);opacity:1}.ds-field:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}"
+      "refersTo": "login-text-field",
+      "description": "Login outlined52px input,1rem text and .875rem bold visible label. Transparent paper ground with stronger control boundary; preserve values on errors.",
+      "html": "<label class=\"ds-field-label\" for=\"ds-email\">Email</label><input class=\"ds-field\" id=\"ds-email\" type=\"email\" autocomplete=\"email\" placeholder=\"ban@example.com\" />",
+      "css": ".ds-field-label{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:block;margin-bottom:10px;font-size:.875rem;font-weight:700;color:var(--shop-ink,#281914)}.ds-field{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:block;width:100%;min-height:52px;padding:.65rem .75rem;border:1px solid var(--shop-control,#8e7564);border-radius:8px;background:transparent;color:var(--shop-ink,#281914);font-size:1rem;caret-color:var(--shop-wine,#5c0202)}.ds-field::placeholder{color:var(--shop-muted,#716157);opacity:1}.ds-field:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}"
     },
     {
       "name": "Desktop navigation links",
@@ -616,11 +663,18 @@
       "description": "Preserved RN token translation; separate from the new web world, not a native implementation change.",
       "html": "<button class=\"ds-rn-primary\">Áp dụng bộ lọc</button>",
       "css": ".ds-rn-primary{font-family:'Be Vietnam Pro',sans-serif;min-height:52px;padding:13px 20px;background:#214B40;color:#F5EFDF;border:0;border-radius:8px;font-size:15px;font-weight:700;line-height:24px}.ds-rn-primary:focus-visible{outline:2px solid #214B40;outline-offset:3px}.ds-rn-primary:active{opacity:.8}.ds-rn-primary:disabled{opacity:.5}"
+    },
+    {
+      "name": "Login form and task action",
+      "kind": "custom",
+      "description": "Quiet400px task panel on paper, separate from the shared Member Header. The surrounding Login scene uses the original Logo, local Davit Margaryan/Unsplash photograph,2px blur,1.025 scale and64% wine tint (#5c0202a3); at900px it hides. This snippet previews the static form appearance, without adding auth behavior.",
+      "html": "<section class=\"ds-login-panel\" aria-labelledby=\"ds-login-title\"><h1 id=\"ds-login-title\">Lại gặp nhau rồi.</h1><p class=\"ds-login-description\">Đăng nhập để đăng sách và trò chuyện với người bán.</p><label class=\"ds-login-label\" for=\"ds-login-email\">Email</label><input class=\"ds-login-field\" id=\"ds-login-email\" type=\"email\" autocomplete=\"email\" placeholder=\"ban@example.com\" /><label class=\"ds-login-label\" for=\"ds-login-password\">Mật khẩu</label><input class=\"ds-login-field\" id=\"ds-login-password\" type=\"password\" autocomplete=\"current-password\" /><button class=\"ds-login-submit\" type=\"button\">Đăng nhập<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14m-7-7 7 7-7 7\"/></svg></button><p class=\"ds-login-note\">Lật lại · Sách cũ. Người đọc mới.</p></section>",
+      "css": ".ds-login-panel{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);width:100%;max-width:400px;background:var(--shop-paper,#fffcf5);color:var(--shop-ink,#281914)}.ds-login-panel h1{font-size:clamp(1.75rem,2.8vw,2.25rem);font-weight:700;line-height:1.4;letter-spacing:-.03em;color:var(--shop-wine,#5c0202);margin:0 0 16px;text-wrap:balance;overflow-wrap:anywhere}.ds-login-description{font-size:.9375rem;line-height:1.8;color:var(--shop-muted,#716157);margin:0 0 32px}.ds-login-label{display:block;font-size:.875rem;font-weight:700;margin-bottom:10px}.ds-login-field{font-family:inherit;font-size:1rem;color:inherit;display:block;width:100%;min-height:52px;padding:.65rem .75rem;border:1px solid var(--shop-control,#8e7564);border-radius:8px;background:transparent;margin-bottom:24px;caret-color:var(--shop-wine,#5c0202)}.ds-login-field::placeholder{color:var(--shop-muted,#716157);opacity:1}.ds-login-submit{font-family:inherit;display:flex;align-items:center;justify-content:center;gap:16px;width:100%;min-height:52px;padding:12px 22px;border:0;border-radius:8px;background:var(--shop-wine,#5c0202);color:var(--shop-cream,#fcf8db);font-size:1rem;font-weight:700;cursor:pointer;transition:background-color 160ms ease-out}.ds-login-submit:hover:not(:disabled){background:var(--shop-wine-hover,#7c2320)}.ds-login-submit:disabled{opacity:.55;cursor:default}.ds-login-field:focus-visible,.ds-login-submit:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}.ds-login-note{font-size:.8125rem;line-height:1.8;color:var(--shop-muted,#716157);text-align:center;padding:20px 24px 28px;margin:0}@media(max-width:440px){.ds-login-panel h1{font-size:1.75rem}}@media(prefers-reduced-motion:reduce){.ds-login-submit{transition-duration:.01ms}}"
     }
   ],
   "narrative": {
     "northStar": "Tiệm sách nhiều màu",
-    "overview": "Member web pairs the owner's wine-red owl and lettering with warm paper, tall display type and colored grounds for complete book covers. Discovery is lively; listing facts and task controls stay direct, readable and quieter than the covers. This records the world built after the owner's replacement decision on 10/10/2026, using the [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-booksearchpage-tsx.md) and [PRODUCT](PRODUCT.md), rather than the superseded green web sketches.\n\nThe implemented web slice is Home, Search, Detail, Login, shared Header/BookCard/ConfirmDialog and MainLayout/AuthLayout. Existing posting and other forms, auction, chat, profile and registration retain legacy page recipes even where the shared shell changes. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.",
+    "overview": "Member web pairs the owner's wine-red owl and lettering with warm paper, tall display type and colored grounds for complete book covers. Discovery is lively; listing facts and task controls stay direct, readable and quieter than the covers. This records the world built after the owner's replacement decision on 10/10/2026, using the [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-booksearchpage-tsx.md) and [PRODUCT](PRODUCT.md), rather than the superseded green web sketches.\n\nThe implemented web slice is Home, Search, Detail, Login, shared Header/BookCard/ConfirmDialog and MainLayout/AuthLayout. Login now owns its bookstore split and compact logo/home header, separate from the shared Member Header; AuthLayout still serves the legacy registration scaffold. Existing posting and other forms, auction, chat, profile and registration retain legacy page recipes even where the shared shell changes. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.",
     "keyCharacteristics": [
       "Wine-and-cream identity with orange, yellow and mint discovery accents.",
       "Anton for expressive headings; Be Vietnam Pro for book facts and actions.",

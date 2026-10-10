@@ -1,0 +1,17 @@
+{
+  "route": "/login",
+  "viewport": [
+    1536,
+    730
+  ],
+  "format": "jpeg",
+  "imageDimensions": [
+    1535,
+    730
+  ],
+  "textScale": 100,
+  "evidence": "CUA IAB",
+  "realApi": "NOT RUN",
+  "source": "Login bookstore photo redesign working tree after6de0289",
+  "tint": "#5c0202a3"
+}
