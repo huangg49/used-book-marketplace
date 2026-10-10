@@ -8,6 +8,15 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói lưu sách và chuẩn bị pilot Android
 
+- Chủ dự án yêu cầu push/merge ngày10/10. Đã tích hợp main `d71ad3e` vào nhánh
+  tại `9d5874a`, giữ web của nhóm; resolve duy nhất `.gitignore` bằng UTF-8,
+  giữ cả rule Taste của main và ignore runtime Impeccable. Đã push và mở
+  [PR31](https://github.com/huangg49/used-book-marketplace/pull/31) cho toàn bộ
+  chuỗi context/docs/design/Android/pilot đã duyệt (không chỉ commit QA cuối).
+  PASS23/23 helper/demo/docs units, docs255/1830 links/4 adapters và whitespace
+  của PR sau tích hợp. CI/review/merge hiện hành xem PR; review AI không thay
+  reviewer người thật theo TEAMWORK. Các dòng “không push/PR” bên dưới mô tả
+  phạm vi quyền tại checkpoint trước yêu cầu tích hợp này. READINESS giữ nguyên.
 - Preflight tiếp: nhánh `codex/android-pilot-qa` từ `684d2ea`, managed worktree
   `android-pilot-preflight`; subject
   `feat(qa): prepare repeatable Android pilot and verify pagination`.
