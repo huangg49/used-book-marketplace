@@ -1,0 +1,12 @@
+{
+  "source": "CUA local preview",
+  "capturedOn": "2026-10-10",
+  "url": "http://127.0.0.1:5186/",
+  "viewport": {
+    "width": 1366,
+    "height": 650
+  },
+  "state": "Search input focused; inner outline removed; yellow outer search focus shown; page scrolled to input",
+  "sha256": "0d1372e824448b64446623764af7944eb914afa95701b7d1ae19ff59d55b1b96",
+  "realApi": "NOT RUN; listing shelves show existing connection error"
+}

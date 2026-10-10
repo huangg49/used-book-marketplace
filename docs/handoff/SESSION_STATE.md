@@ -8,6 +8,11 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `f79e81f`, bỏ viền focus đỏ bên trong input tìm sách Home theo ảnh chủ dự
+  án; focus chuyển ra mép ngoài thanh search màu vàng2px/offset4px, không đổi
+  submit/query hoặc CSS global. CUA xác nhận input border0/outline none khi focus,
+  outer focus còn hiện; build/typecheck PASS. Ảnh `home-search-focus.jpg` trong
+  `.impeccable/review/web-member`. Checkpoint local, chưa push.
 - Sau `1e569eb`, Login thêm texture giấy kem local512px/85%, gạch vàng headline;
   theo correction chủ dự án đã bỏ hình sách, “Lại gặp nhau rồi.” một hàng bình
   thường và wrap khi chữ lớn. Ánh sáng nền2400ms một lượt rồi tắt, reduce-motion

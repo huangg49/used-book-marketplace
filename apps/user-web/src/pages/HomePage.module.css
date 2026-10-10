@@ -216,6 +216,13 @@
   min-height: 48px !important;
   padding: 8px 0 !important;
 }
+.search input:focus-visible {
+  outline: none;
+}
+.search:has(input:focus-visible) {
+  outline: 2px solid var(--shop-yellow);
+  outline-offset: 4px;
+}
 .search button {
   display: flex;
   align-items: center;
