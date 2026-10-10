@@ -44,6 +44,21 @@ fixture [QA], giá/tình trạng mô phỏng.
 
 ## Kiểm chứng
 
+Sau `33f0544`, chủ dự án báo hero desktop100% gần chiếm hết viewport laptop.
+CUA1536×730 đo header96.8px + hero686px, search y607px, tiêu đề kệ y851px.
+Đã thêm compact Home cho width≥1101/height≤850: headline và bìa clamp theo vh,
+nén padding/gap/caption; giữ8bìa, hover/sway/pause, nét vẽ và44px touch target.
+Không scale trang, khóa height hay cắt nội dung; Header/DOM/mobile giữ nguyên.
+Sau sửa1536×730: hero497px, search bottom504px, pause bottom582px, tiêu đề kệ
+bottom674px;1366×650 tiêu đề kệ bottom645px.
+[Ảnh laptop](../../.impeccable/review/web-member/hero-laptop-desktop.png).
+Focused Chromium9viewport1536×730,1366×650,1280×600,1182×562,1051×500,1440×900,
+1100×800,390×844,320×650 ở100/130% text size PASS đủ8ảnh/không tràn; search Enter
+đúng q. Desktop cao giữ hero686px, mobile/narrow tự cuộn khi cần. Browser zoom
+thật không được tự đổi; kiểm theo viewport tương ứng và text scaling riêng.
+Layout assessment độc lập + detector layout trước/sau0findings; build/typecheck,
+16unit/lint0error6warning cũ/docs/diff PASS. Không kiểm lại API/native hoặc gate.
+
 Sau `8a871f8`, chủ dự án duyệt minh họa giấy lật màu kem và tăng chiều sâu bìa.
 Ba SVG gốc vẽ trực tiếp: hai nét trang lật bất đối xứng quanh cụm bìa, sách mở ở
 góc dưới phải. Artwork tĩnh/aria-hidden/pointer-none, không cản input/hover;

@@ -228,6 +228,8 @@ Home and Search have four cover columns, reducing to two at 850px and 800px resp
 
 At 800px the header uses an expandable menu while retaining both owl and lettering; the posting shortcut leaves the header at 600px and remains in the menu. Home uses eight decorative covers: two staggered 2×2 flanks around the headline above1100px; at1100px and below all eight move below search in a single row, becoming a 4×2 grid at800px. The same collection is rendered once, with complete contained images and user-supplied cover provenance. Dialog width is `calc(100% - 32px)`, capped at 480px, with scrollable height and stacked actions at 420px. These are implemented surface breakpoints, not one universal device taxonomy.
 
+Wide, short laptop viewports (`min-width:1101px` and `max-height:850px`) use a compact Home stage: headline `clamp(3.25rem,8.2vh,4rem)`, cover height `clamp(116px,18vh,152px)`, hero padding28px/12px and row gap16px. The two cover clusters keep their2×2 structure with24px row gaps and16px stagger; page artwork scales to310×456px. The first real shelf starts28px below the hero. This adapts to available height without browser zoom, fixed section height, hidden content or smaller touch targets. Larger text can grow naturally; mobile and tall desktop compositions retain their existing rules.
+
 RN retains content width 480dp, page padding 20dp, targets at least 48dp and controls at least 52dp. Search owns its fixed header and 32%-width cover beside metadata; below 360dp with effective text scale at least 1.29 it stacks vertically. Screens own safe area. This is RN implementation context, not a web recipe or proof that every RN screen has been redesigned.
 
 ## Elevation & Depth

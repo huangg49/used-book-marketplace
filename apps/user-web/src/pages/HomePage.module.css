@@ -439,6 +439,49 @@
   font-weight: 700;
   font-size: 0.85rem;
 }
+/* Wide but short laptop viewports need a shorter stage, not browser zoom.
+   Keep natural document flow so enlarged text can still grow and scroll. */
+@media (min-width: 1101px) and (max-height: 850px) {
+  .hero {
+    padding-block: 28px 12px;
+  }
+  .heroInner {
+    row-gap: 16px;
+  }
+  .hero h1 {
+    font-size: clamp(3.25rem, 8.2vh, 4rem);
+  }
+  .heroCopy p {
+    margin: 12px 0 16px;
+  }
+  .leftCovers,
+  .rightCovers {
+    gap: 24px 22px;
+    padding-block: 4px 8px;
+  }
+  .heroCover {
+    height: clamp(116px, 18vh, 152px);
+  }
+  .heroCover:nth-child(even) {
+    translate: 0 16px;
+  }
+  .paperLeft,
+  .paperRight {
+    width: 310px;
+    height: 456px;
+    top: 0;
+  }
+  .openBook {
+    width: 112px;
+    bottom: 14px;
+  }
+  .caption {
+    margin-top: 12px;
+  }
+  .hero + .shelf {
+    padding-top: 28px;
+  }
+}
 @media (max-width: 1100px) {
   .heroCopy {
     max-width: 580px;

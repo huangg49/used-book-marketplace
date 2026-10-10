@@ -51,6 +51,12 @@ is aria-hidden/pointer-inert; smaller edge curls below1100, open book hidden
 below600. The headline/search stay clear. Cover depth combines a thin cream
 paper edge, contact shadow and a softer offset cast shadow, expanded on hover.
 
+Laptop-height correction: above1100px wide and up to850px high, Home uses a
+shorter stage with viewport-height-aware headline/covers and tighter vertical
+spacing. At1536x730, hero497px and first shelf heading finishes at674px; at
+1366x650 the heading finishes at645px. Keep natural document growth at enlarged
+text sizes; no fixed-height cropping or page scale. Header and mobile untouched.
+
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 Open dependency: Dribbble supplies a composite preview, no separate cover assets;

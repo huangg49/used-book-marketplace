@@ -494,6 +494,10 @@
     ],
     "breakpoints": [
       {
+        "name": "home-short-laptop-stage",
+        "value": "min-width:1101px and max-height:850px; headline clamp(3.25rem,8.2vh,4rem); covers clamp(116px,18vh,152px); natural content height"
+      },
+      {
         "name": "home-eight-covers-below-search",
         "value": "1100px"
       },

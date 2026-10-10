@@ -8,6 +8,13 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `33f0544`, sửa tỉ lệ hero cho desktop laptop thấp: chỉ Home CSS compact
+  width≥1101/height≤850, clamp chữ/bìa theo vh và nén khoảng dọc, không scale/crop.
+  CUA1536×730 hero686→497px, thấy search/pause/kệ đầu;1366×650 kệ đầu vừa viewport.
+  Focused9viewport100/130%text và search Enter PASS, đủ8bìa/không tràn ngang;
+  layout assessment riêng + detector0findings, build/typecheck/16unit/lint6warning
+  cũ/docs/diff PASS. Header/mobile/API giữ nguyên, ảnh ở brief. Checkpoint subject
+  `fix(web): fit hero proportions to short laptop viewports`. Chưa push/PR/merge.
 - Sau `8a871f8`, chủ dự án duyệt trang trí hero: ba SVG gốc giấy lật/sách mở màu
   kem, tĩnh/aria-hidden/pointer-none; responsive ra mép, tâm chữ/search thoáng.
   Bìa có cạnh sáng/contact/cast shadow rõ hơn và bóng hover sâu hơn, giữ sway/pause.
