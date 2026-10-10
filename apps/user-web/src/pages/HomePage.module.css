@@ -383,6 +383,47 @@
   --motif-size: 34px;
   --motif-angle: -25deg;
 }
+.autumnMotif:nth-child(17) {
+  top: 232px;
+  --motif-size: 44px;
+  --motif-angle: 48deg;
+}
+.autumnMotif:nth-child(18) {
+  top: 120px;
+  right: calc(var(--ornament-edge) + 44px);
+  --motif-size: 36px;
+  --motif-angle: -32deg;
+}
+.autumnMotif:nth-child(19) {
+  top: 22%;
+  --motif-size: 42px;
+  --motif-angle: -16deg;
+}
+.autumnMotif:nth-child(20) {
+  top: 30%;
+  --motif-size: 32px;
+  --motif-angle: 34deg;
+}
+.autumnMotif:nth-child(21) {
+  top: 51%;
+  --motif-size: 46px;
+  --motif-angle: -28deg;
+}
+.autumnMotif:nth-child(22) {
+  top: 61%;
+  --motif-size: 30px;
+  --motif-angle: 18deg;
+}
+.autumnMotif:nth-child(23) {
+  top: 85%;
+  --motif-size: 40px;
+  --motif-angle: -38deg;
+}
+.autumnMotif:nth-child(24) {
+  top: 91%;
+  --motif-size: 38px;
+  --motif-angle: 24deg;
+}
 .marketInner {
   position: relative;
   z-index: 1;

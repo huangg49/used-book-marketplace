@@ -9,5 +9,5 @@ Delivery768×512, alpha thật,55946byte. Chỉ resize/encode toàn atlas; CSS c
 đổi kích thước/góc/opacity. Prompt và SHA256 source/delivery ở `motifs.webp.json`.
 Original giữ ở kho generated_images trên máy; ứng dụng chỉ dùng asset trong repo.
 
-Home đặt16 motif static không đều ở hai mép, dưới lớp nội dung. Layer aria-hidden,
+Home đặt24 motif static không đều ở hai mép, dưới lớp nội dung. Layer aria-hidden,
 pointer-events:none; không thêm animation, lặp tile, tán lá lớn, cáo hoặc đồi.

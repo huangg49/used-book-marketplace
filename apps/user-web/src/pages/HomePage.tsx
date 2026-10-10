@@ -46,6 +46,14 @@ function AutumnOrnaments() {
     styles.autumnMaple,
     styles.autumnOval,
     styles.autumnAcorn,
+    styles.autumnOval,
+    styles.autumnTwig,
+    styles.autumnMaple,
+    styles.autumnSeed,
+    styles.autumnOak,
+    styles.autumnAcorn,
+    styles.autumnTwig,
+    styles.autumnOval,
   ];
   return (
     <div className={styles.autumnOrnaments} aria-hidden="true">

@@ -33,6 +33,14 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `4edb6c2`, chủ dự án muốn mật độ nhỉnh hơn: tăng16→24 motif bằng8 vị trí
+xen kẽ ở mép, giữ atlas/kích thước/opacity và toàn bộ hero/bookmark/catalog.
+Build PASS; CUA1535×735 và390×844 có24 motif, không tràn ngang, pointer:none;
+desktop giữ hero overlap−12px. [Desktop](../../.impeccable/review/web-member/home-autumn-denser-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-autumn-denser-mobile.jpg).
+Docs/diff PASS; backend/native/human NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): slightly increase autumn ornament density`; local, chưa push.
+
 Sau `14d91bb`, chủ dự án duyệt thử lá/hạt nhỏ:16 motif lá phong/oval/sồi,
 nhánh hai lá, quả sồi và cặp hạt đặt không đều ở hai mép Home. Tạo một atlas
 3×2 bằng built-in ImageGen, delivery768×512/alpha/55946byte; chỉ resize/encode,
