@@ -1,0 +1,11 @@
+{
+  "source": "CUA actual in-app browser; Open Library metadata cache and remote covers; no listing response fixtures",
+  "viewport": {
+    "width": 1366,
+    "height": 900
+  },
+  "url": "http://127.0.0.1:5186/",
+  "capturedOn": "2026-10-10",
+  "scope": "Main shelf first row and all eight category controls",
+  "sha256": "f1a8283cfe707ad86f57939befbde8c1de940e423373b906f3c750243ee0af7a"
+}

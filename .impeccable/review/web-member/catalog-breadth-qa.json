@@ -1,0 +1,27 @@
+{
+  "result": "PASS",
+  "catalogCount": 91,
+  "source": "CUA in-app browser; actual Open Library cache/remote covers; no response fixtures",
+  "widths": [
+    1366,
+    850,
+    390,
+    320
+  ],
+  "checks": [
+    "opening eight spans eight subjects",
+    "children category filter and reset",
+    "8 to16 to91 expansion",
+    "three themed shelves present",
+    "science/history link scopes main shelf",
+    "Sale filter retains knowledge topic",
+    "growth and stories links scope main shelf",
+    "return to all subjects resets shelf",
+    "no horizontal overflow",
+    "live override removes preview cards/topic shelves and preserves actual connection error"
+  ],
+  "text200": "NOT RUN this extension; existing recipe preserved",
+  "backendSuccess": "NOT RUN; no DB writes",
+  "native": "NOT RUN",
+  "review": "independent finish disposition ship"
+}

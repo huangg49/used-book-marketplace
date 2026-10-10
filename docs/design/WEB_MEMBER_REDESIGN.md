@@ -33,6 +33,31 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Mở rộng sau `100f872` theo yêu cầu chủ dự án:91 edition, gồm15 văn học,
+6 kỹ năng sống,7 kinh doanh,8 khoa học,6 lịch sử,8 thiếu nhi,25 manga và16 light
+novel. Đã thêm43 sách nguồn ngoài, bỏ kết quả bộ sách gộp; metadata/bìa giữ theo
+edition. Kệ đầu xen tám thể loại; ba kệ chủ đề bên dưới banner có4 sách/kệ,
+không lặp tám cuốn mở đầu. Banner đổi sang văn học/kỹ năng/khoa học/thiếu nhi.
+Các link chủ đề chỉ lọc Home preview, giữ chủ đề khi chọn mua/đổi/giá và có lối
+về tất cả chủ đề. Giữ hero và real-mode API/session, không ghi DB. Recipe/token
+hiện hành được tái sử dụng; thêm gap32px trước/24px giữa các kệ chủ đề.
+
+Build/typecheck và22unit PASS; lint0error6warning cũ. Detector một lượt4advisory
+hero legacy, không có role mới. Ảnh và QA mở rộng:
+[desktop](../../.impeccable/review/web-member/catalog-breadth-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/catalog-breadth-mobile.jpg),
+[kệ chủ đề](../../.impeccable/review/web-member/catalog-breadth-topics.jpg).
+CUA1366/850/390/320 không tràn; lọc thiếu nhi/reset,8→16→91, ba link chủ đề,
+giữ topic khi lọc Sale và về tất cả chủ đề PASS. Live override bỏ card/kệ mẫu,
+giữ lỗi kết nối thật; [QA](../../.impeccable/review/web-member/catalog-breadth-qa.json).
+Chữ200% chưa chạy lại ở extension này; recipe wrap hiện hành giữ nguyên.
+Backend thành công/DB/native/human NOT RUN; READINESS giữ nguyên. Checkpoint
+subject `feat(web): broaden preview catalog and home subjects`; local, chưa push.
+Reviewer độc lập kiểm ba capture/source/contract/canonical: disposition **ship**,
+không có material fix; [review](../../.impeccable/review/web-member/catalog-breadth-finish.md).
+
+Checkpoint nguồn và kiểm tra ban đầu:
+
 Sau `f4fffdb`, chủ dự án yêu cầu nhiều sách từ API để xem UI, ưu tiên manga/light
 novel, không dùng lại sách hero; DB demo sẽ chuẩn bị sau. Đã lấy48 edition thật
 từ Open Library (25 manga,16 light novel,7 văn học), giữ tên/tác giả/ISBN/bìa theo

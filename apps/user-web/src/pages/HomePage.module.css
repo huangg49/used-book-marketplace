@@ -384,6 +384,11 @@
   padding: 28px;
   border-radius: 12px;
 }
+.topicShelves {
+  display: grid;
+  gap: 24px;
+  margin-top: 32px;
+}
 .sectionHead {
   display: flex;
   align-items: flex-start;

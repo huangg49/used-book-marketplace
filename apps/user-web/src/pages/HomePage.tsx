@@ -24,6 +24,8 @@ import {
   homeShelfUrl,
   previewCatalogCount,
   budgetCoverUrls,
+  previewTopics,
+  previewTopicBooks,
 } from "../services/home-shelves";
 import styles from "./HomePage.module.css";
 
@@ -126,6 +128,11 @@ function LatestShelf({ preview }: { preview: boolean }) {
   if (preview && searchParams.has("maxSalePrice"))
     query.set("maxSalePrice", searchParams.get("maxSalePrice")!);
   if (preview && searchParams.get("q")) query.set("q", searchParams.get("q")!);
+  if (preview && searchParams.get("topic"))
+    query.set("topic", searchParams.get("topic")!);
+  const topic = preview
+    ? previewTopics.find((item) => item.id === searchParams.get("topic"))
+    : undefined;
   const result = useQuery({
     queryKey: ["home-shelves", preview, query.toString()],
     queryFn: () => getHomeShelf(query, preview),
@@ -198,12 +205,15 @@ function LatestShelf({ preview }: { preview: boolean }) {
         <div className={styles.sectionHead}>
           <div>
             <h2 id="latest-title">
-              {preview ? "Kệ sách xem trước" : "Sách mới đăng"}
+              {preview
+                ? (topic?.title ?? "Kệ sách xem trước")
+                : "Sách mới đăng"}
             </h2>
             <p>
               Mỗi cuốn một tình trạng, một câu chuyện. Chọn bản sách hợp với
               bạn.
             </p>
+            {topic && <Link to={homeShelfUrl({}, true)}>Về tất cả chủ đề</Link>}
           </div>
           {preview ? (
             <button
@@ -240,6 +250,7 @@ function LatestShelf({ preview }: { preview: boolean }) {
                 if (preview)
                   setSearchParams({
                     data: "preview",
+                    ...(topic ? { topic: topic.id } : {}),
                     ...(searchParams.get("q")
                       ? { q: searchParams.get("q")! }
                       : {}),
@@ -315,6 +326,35 @@ function LatestShelf({ preview }: { preview: boolean }) {
         </div>
       </section>
     </>
+  );
+}
+
+function TopicShelves() {
+  return (
+    <div className={styles.topicShelves}>
+      {previewTopics.map((topic) => (
+        <section
+          className={styles.shelf}
+          aria-labelledby={`topic-${topic.id}`}
+          key={topic.id}
+        >
+          <div className={styles.sectionHead}>
+            <div>
+              <h2 id={`topic-${topic.id}`}>{topic.title}</h2>
+              <p>{topic.description}</p>
+            </div>
+            <Link to={homeShelfUrl({ topic: topic.id }, true)}>
+              Xem thêm sách <ArrowUpRight size={18} aria-hidden="true" />
+            </Link>
+          </div>
+          <div className={styles.grid}>
+            {previewTopicBooks(topic.id).map((book, index) => (
+              <HomeBookCard key={book.id} book={book} index={index} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
   );
 }
 
@@ -593,6 +633,7 @@ export function HomePage() {
             Bìa trong banner dùng để minh họa, không đại diện cho sách hay giá
             đang bán.
           </p>
+          {preview && <TopicShelves />}
           <ExchangeShelf preview={preview} />
           <section className={styles.posting} aria-labelledby="posting-title">
             <div>

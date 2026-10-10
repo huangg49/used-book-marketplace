@@ -382,8 +382,14 @@ The optional `compact` BookCard variant is used only by Home's two shelves:1:1.1
 ### Home discovery below the approved hero
 
 Owner-authorized catalog preview (10/10/2026) preserves this composition. Dev-only
-Home can explicitly show48 cached Open Library editions (25 manga,16 light novel,
-7 literature) with complete remote edition covers and source links. A task-status
+Home can explicitly show91 cached Open Library editions across eight categories,
+with complete remote edition covers and source links. The opening eight span
+literature, life skills, business, science, history, children, manga and light novel.
+After the budget pair, three themed paper shelves reuse the catalog heading/card
+recipe: literature/children, science/history and skills/business, four books each,
+24px apart with32px above the group. Their source-only cards skip the opening
+eight; topic links filter Home locally, retain topic on mode/price changes and
+offer a return to all subjects. These shelves are preview-only. A task-status
 notice and each card label sample price/condition/mode; no seller or transaction
 is simulated. Preview cards reuse the compact recipe and open Open Library,
 never real listing detail. Search, price/group links and local category/expansion

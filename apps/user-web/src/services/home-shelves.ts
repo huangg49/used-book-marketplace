@@ -13,6 +13,28 @@ export interface PreviewShelfBook {
 }
 export type HomeShelfBook = PublicListing | PreviewShelfBook;
 
+export const previewTopics = [
+  {
+    id: "stories",
+    title: "Văn học & thiếu nhi",
+    description:
+      "Từ tiểu thuyết đến những câu chuyện dành cho bạn đọc nhỏ tuổi.",
+    categories: ["Văn học", "Thiếu nhi"],
+  },
+  {
+    id: "knowledge",
+    title: "Khoa học & lịch sử",
+    description: "Tìm hiểu thế giới tự nhiên và những câu chuyện của quá khứ.",
+    categories: ["Khoa học", "Lịch sử"],
+  },
+  {
+    id: "growth",
+    title: "Kỹ năng sống & kinh doanh",
+    description: "Khám phá thói quen, công việc và cách quản lý tài chính.",
+    categories: ["Kỹ năng sống", "Kinh doanh"],
+  },
+];
+
 export function isCatalogPreview(search: string) {
   const choice = new URLSearchParams(search).get("data");
   return (
@@ -44,6 +66,7 @@ export function previewShelf(query: URLSearchParams): {
   const mode = query.get("mode");
   const max = query.get("maxSalePrice");
   const q = fold(query.get("q")?.trim() ?? "");
+  const topic = previewTopics.find((item) => item.id === query.get("topic"));
   const books = catalog.items.map((book, index): PreviewShelfBook => {
     const mode = (["Sale", "Exchange", "Both"] as const)[index % 3];
     const price = 35000 + (index % 12) * 10000;
@@ -62,6 +85,7 @@ export function previewShelf(query: URLSearchParams): {
       .filter(
         (item) =>
           (!mode || item.mode === mode || item.mode === "Both") &&
+          (!topic || topic.categories.includes(item.book.category)) &&
           (!max ||
             (item.salePrice !== null && item.salePrice <= Number(max))) &&
           (!q ||
@@ -88,11 +112,20 @@ export async function getHomeShelf(
 }
 
 export const previewCatalogCount = catalog.items.length;
+export function previewTopicBooks(topicId: string) {
+  const topic = previewTopics.find((item) => item.id === topicId);
+  // Skip the opening eight, keeping these shelves useful rather than repeating
+  // the same covers immediately below the main shelf.
+  return previewShelf(new URLSearchParams())
+    .items.slice(8)
+    .filter((item) => topic?.categories.includes(item.book.category))
+    .slice(0, 4);
+}
 export const budgetCoverUrls = [
-  "Naruto",
-  "Spy x Family",
-  "Chainsaw Man",
-  "Overlord",
+  "The Great Gatsby",
+  "Atomic Habits",
+  "A Brief History of Time",
+  "Matilda",
 ].map(
   (series) =>
     catalog.items.find((book) => book.series === series)?.coverUrl ?? "",

@@ -1,0 +1,15 @@
+{
+  "runs": 1,
+  "files": [
+    "HomePage.tsx",
+    "HomePage.module.css"
+  ],
+  "advisories": 4,
+  "newFindings": 0,
+  "legacyHeroValues": [
+    "#341509",
+    "0.65rem",
+    "#efc9b7",
+    "0.6rem"
+  ]
+}

@@ -62,8 +62,8 @@ novel, with a real demo DB prepared later. Do not reuse hero books below it.
 This is a data-source extension preserving the approved layout and identity.
 
 Explicit dev-only mode: env VITE_CATALOG_PREVIEW=true or data=preview; data=live
-overrides env, production always disables preview. Home alone uses48 cached
-Open Library editions (25 manga/16 light novel/7 literature), English metadata
+overrides env, production always disables preview. Home alone uses91 cached
+Open Library editions across eight categories, English metadata
 and complete remote covers tied to edition IDs. API snapshot includes source,
 query and date; no DB writes. Budget artwork now uses four separate catalog
 covers in both modes. Hero art/layout/motion stays unchanged; its search and
@@ -80,3 +80,13 @@ never falls back to preview. Header/Search/Detail remain real API surfaces.
 Finish includes preview category/search/price/expansion/empty/remote-image-error,
 live-error isolation, desktop/mobile/large-text evidence and build/unit/lint;
 does not certify MongoDB demo, backend integration or native acceptance.
+
+Owner expansion: add substantial non-manga subjects and expose them on Home.
+Opening eight interleave literature, skills, business, science, history, children,
+manga and LN. Three preview-only shelves after the budget pair show four books
+each (two per subject): literature/children, science/history, skills/business.
+Reuse paper shelf, heading, card and four-to-two-column grid; new group spacing
+32px above/24px between. Skip the opening eight to avoid immediate repetitions.
+Topic links filter the main preview shelf; mode/price changes retain the topic,
+and a visible return clears it. Budget art uses Gatsby/Atomic Habits/Brief History
+of Time/Matilda. No new world, tokens, animation, API or real-mode subject claim.
