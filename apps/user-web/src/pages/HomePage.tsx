@@ -137,6 +137,32 @@ export function HomePage() {
   return (
     <div>
       <section className={styles.hero}>
+        <div className={styles.heroArtwork} aria-hidden="true">
+          <img
+            className={styles.paperLeft}
+            src="/illustrations/hero-paper-left.svg"
+            alt=""
+            width="380"
+            height="560"
+            draggable={false}
+          />
+          <img
+            className={styles.paperRight}
+            src="/illustrations/hero-paper-right.svg"
+            alt=""
+            width="380"
+            height="560"
+            draggable={false}
+          />
+          <img
+            className={styles.openBook}
+            src="/illustrations/hero-open-book.svg"
+            alt=""
+            width="180"
+            height="140"
+            draggable={false}
+          />
+        </div>
         <div className={styles.heroInner}>
           <HeroCovers paused={motionPaused} />
           <div className={styles.heroCopy}>

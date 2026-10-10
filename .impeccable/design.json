@@ -451,8 +451,8 @@
       },
       {
         "name": "hero-cover",
-        "value": "drop-shadow(0 12px 12px #28000060)",
-        "purpose": "Decorative Home covers from archival sources and owner-supplied images."
+        "value": "drop-shadow(-1px -1px 0.5px #fcf8db66) drop-shadow(1px 3px 2px #21000080) drop-shadow(8px 18px 16px #1d000099)",
+        "purpose": "Decorative Home covers: cream paper edge, contact and soft offset cast shadow. Compact mobile uses lighter depth; static original cream page-curl artwork sits behind the covers."
       },
       {
         "name": "hero-search",
@@ -473,7 +473,7 @@
       },
       {
         "name": "hero-cover-hover",
-        "value": "translateY(-8px) scale(1.12); transform250ms cubic-bezier(0.16,1,0.3,1); filter250ms ease-out; drop-shadow(0 18px 16px #28000090)",
+        "value": "translateY(-8px) scale(1.12); transform250ms cubic-bezier(0.16,1,0.3,1); filter250ms ease-out; drop-shadow(-1px -1px 0.5px #fcf8db80) drop-shadow(2px 5px 3px #21000099) drop-shadow(12px 26px 22px #190000b3)",
         "purpose": "Fine-pointer hover only; exit restores size/depth. Owner-requested hero exception preserves zoom/lift under reduced motion. Eight covers: desktop2x2 flanks; <=1100 below search, <=800 grid4x2."
       },
       {

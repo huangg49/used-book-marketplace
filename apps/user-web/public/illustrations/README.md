@@ -34,3 +34,9 @@ Các JPEG tư liệu cũ giữ để đọc lịch sử, không còn được Ho
 Chủ dự án tiếp tục thay Gachiakuta bằng `SAO.jpg`: bản delivery `sao.webp`
 (Sword Art Online — Early and Late), giữ toàn ảnh/tỷ lệ và provenance sidecar.
 `gachiakuta.webp` không còn được Home hiện tại tham chiếu.
+
+Lượt trang trí hero cùng ngày: `hero-paper-left.svg`, `hero-paper-right.svg` và
+`hero-open-book.svg` là minh họa vector gốc được vẽ trực tiếp trong repo theo
+phương án chủ dự án duyệt: nét giấy lật/sách mở màu kem. Không lấy hình từ
+Dribbble, không thay logo hoặc ảnh sách. Chỉ dùng trang trí Home, tĩnh,
+aria-hidden và không nhận pointer; mobile thu gọn nét ra mép, ẩn sách mở dưới600px.

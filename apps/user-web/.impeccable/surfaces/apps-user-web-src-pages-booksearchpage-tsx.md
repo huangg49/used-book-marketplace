@@ -45,6 +45,12 @@ offscreen/hidden guards remain. Touch has sway but no hover zoom.
 Actual listing photos never replaced
 with stock. Illustration source caption stays visible.
 
+Owner-approved Home refinement: original cream SVG page curls at the two outer
+cover clusters and a small open-book drawing at the lower right. Static artwork
+is aria-hidden/pointer-inert; smaller edge curls below1100, open book hidden
+below600. The headline/search stay clear. Cover depth combines a thin cream
+paper edge, contact shadow and a softer offset cast shadow, expanded on hover.
+
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 Open dependency: Dribbble supplies a composite preview, no separate cover assets;

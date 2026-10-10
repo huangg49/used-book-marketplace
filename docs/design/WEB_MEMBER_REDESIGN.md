@@ -44,6 +44,20 @@ fixture [QA], giá/tình trạng mô phỏng.
 
 ## Kiểm chứng
 
+Sau `8a871f8`, chủ dự án duyệt minh họa giấy lật màu kem và tăng chiều sâu bìa.
+Ba SVG gốc vẽ trực tiếp: hai nét trang lật bất đối xứng quanh cụm bìa, sách mở ở
+góc dưới phải. Artwork tĩnh/aria-hidden/pointer-none, không cản input/hover;
+thu gọn ra mép mobile, ẩn sách mở dưới600px. Shadow có cạnh sáng, contact và cast
+offset mềm; hover mở rộng bóng, giữ sway/pause và override OS đã duyệt.
+Build/typecheck,16unit, lint0error6warning cũ, docs/diff PASS. Chromium focused
+PASS sway/hover/manual/offscreen và reduce/no-preference, đủ8bìa không tràn ngang
+1440/390/320px100/130%. CUA1440/390px kiểm ba SVG tải đủ, pointer-none và bố cục:
+[desktop](../../.impeccable/review/web-member/hero-illustrated-desktop.png),
+[mobile](../../.impeccable/review/web-member/hero-illustrated-mobile.png).
+Detector chạy một lần; advisory size/màu thuộc CSS cũ không đổi trong diff này.
+Không đổi API/session/native hoặc dữ liệu QA; proxy3048 vẫn không chạy nên kệ
+hiện lỗi/thử lại. Không nhận là kiểm lại giao dịch hoặc nghiệm thu người thật.
+
 Sau `1c68ec3`, chủ dự án yêu cầu hero vẫn animate dù máy bật giảm animation.
 Đã giới hạn CSS exception cho entrance/sway/hover của bìa, giữ pause/resume và
 offscreen/hidden guards; không sửa cài đặt Windows hoặc override các màn khác.

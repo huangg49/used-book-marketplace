@@ -8,6 +8,14 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `8a871f8`, chủ dự án duyệt trang trí hero: ba SVG gốc giấy lật/sách mở màu
+  kem, tĩnh/aria-hidden/pointer-none; responsive ra mép, tâm chữ/search thoáng.
+  Bìa có cạnh sáng/contact/cast shadow rõ hơn và bóng hover sâu hơn, giữ sway/pause.
+  Build/typecheck/16unit/lint0error6warning cũ/docs/diff PASS; focused browser
+  motion và overflow1440/390/320px100/130% PASS, ảnh CUA desktop/mobile ở brief.
+  Detector advisory size/màu cũ ngoài diff; proxy API3048 vẫn không chạy, kệ lỗi.
+  Checkpoint subject `feat(web): illustrate hero with turning pages and cover depth`.
+  Giữ quyền gói hiện tại: local checkpoint, chưa push/PR/merge/deploy.
 - Sau `1c68ec3`, chủ dự án yêu cầu ép hero animate dù OS reduce-motion. Scoped CSS
   exception cho bìa, giữ manual pause/hoverpause/offscreen/hidden; không sửa Windows.
   Focused browser reduce/no-preference PASS, IAB reduce=true vẫn running6s/infinite;
