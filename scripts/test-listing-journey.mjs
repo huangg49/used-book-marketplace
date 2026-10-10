@@ -299,7 +299,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   await p.goto(`${origin}/book?id=${id}`);
   await p.getByText(literal, { exact: true }).waitFor();
   await p
-    .getByText("Cách sách đến tay bạn", { exact: true })
+    .getByRole("heading", { name: "Giao nhận", exact: true })
     .scrollIntoViewIfNeeded();
   await p.screenshot({
     path: path.join(artifacts, "fulfillment-public-390.png"),

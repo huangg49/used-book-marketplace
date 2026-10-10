@@ -14,8 +14,13 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   [PR31](https://github.com/huangg49/used-book-marketplace/pull/31) cho toàn bộ
   chuỗi context/docs/design/Android/pilot đã duyệt (không chỉ commit QA cuối).
   PASS23/23 helper/demo/docs units, docs255/1830 links/4 adapters và whitespace
-  của PR sau tích hợp. CI/review/merge hiện hành xem PR; review AI không thay
-  reviewer người thật theo TEAMWORK. Các dòng “không push/PR” bên dưới mô tả
+  của PR sau tích hợp. CI phát hiện browser harness còn nhãn/bố cục cũ; đã cập
+  nhật hai journey theo UI được duyệt và PASS toàn hành trình local HTTP/Mongo
+  thật, storage FAKE (search/detail/paging/lỗi/quyền, địa chỉ, đăng/duyệt sách,
+  replay mất phản hồi và showcase list/grid). Giữ các assertion nghiệp vụ.
+  Chủ dự án sẽ review PR31; chưa có xác nhận review để merge. CI/review/merge
+  hiện hành xem PR; review AI không thay reviewer người thật theo TEAMWORK.
+  Các dòng “không push/PR” bên dưới mô tả
   phạm vi quyền tại checkpoint trước yêu cầu tích hợp này. READINESS giữ nguyên.
 - Preflight tiếp: nhánh `codex/android-pilot-qa` từ `684d2ea`, managed worktree
   `android-pilot-preflight`; subject
