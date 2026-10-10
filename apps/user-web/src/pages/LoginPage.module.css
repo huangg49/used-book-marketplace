@@ -87,6 +87,48 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  position: relative;
+  isolation: isolate;
+  background: var(--shop-paper);
+}
+.formColumn::before,
+.formColumn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+.formColumn::before {
+  background: url("/login-art/ivory-paper.webp") repeat;
+  background-size: 512px 512px;
+  opacity: 0.85;
+}
+.formColumn::after {
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    #fff 50%,
+    transparent 60%
+  );
+  background-size: 250% 100%;
+  background-position: 150% 0;
+  opacity: 0;
+  animation: paperLight 2400ms cubic-bezier(0.16, 1, 0.3, 1) 1;
+}
+@keyframes paperLight {
+  0% {
+    background-position: 150% 0;
+    opacity: 0;
+  }
+  20%,
+  70% {
+    opacity: 0.3;
+  }
+  100% {
+    background-position: -50% 0;
+    opacity: 0;
+  }
 }
 .utility {
   display: flex;
@@ -111,7 +153,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px clamp(24px, 4vw, 64px);
+  padding: 16px clamp(24px, 4vw, 64px);
 }
 .panel {
   width: 100%;
@@ -119,16 +161,23 @@
 }
 .panel h1 {
   font: 700 clamp(1.75rem, 3vw, 2.5rem)/1.4 var(--shop-body);
-  margin: 0 0 12px;
+  margin: 0 0 16px;
   letter-spacing: -0.03em;
   color: var(--shop-wine);
   text-wrap: balance;
+}
+.panel h1 span {
+  text-decoration: underline;
+  text-decoration-color: var(--shop-yellow);
+  text-decoration-thickness: 4px;
+  text-underline-offset: 8px;
+  text-decoration-skip-ink: none;
 }
 .panel > p {
   font-size: 0.9375rem;
   line-height: 1.8;
   color: var(--shop-muted);
-  margin: 0 0 24px;
+  margin: 0 0 20px;
 }
 .panel form {
   display: flex;
@@ -174,8 +223,8 @@
   align-items: center;
   justify-content: center;
   column-gap: 12px;
-  margin-top: 24px;
-  padding-top: 16px;
+  margin-top: 20px;
+  padding-top: 12px;
   border-top: 1px solid var(--shop-line);
 }
 .registration p {
@@ -256,7 +305,7 @@
   text-align: center;
   font-size: 0.8125rem;
   color: var(--shop-muted);
-  padding: 8px 24px 16px;
+  padding: 8px 24px;
   margin: 0;
   line-height: 1.8;
 }
@@ -286,5 +335,10 @@
   }
   .panel h1 {
     font-size: 1.75rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .formColumn::after {
+    animation: none;
   }
 }

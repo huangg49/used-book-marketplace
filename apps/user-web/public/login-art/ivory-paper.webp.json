@@ -1,0 +1,7 @@
+{
+  "source": "Built-in image_gen",
+  "generated": "2026-10-10",
+  "prompt": "Use case: photorealistic-natural. Asset type: seamless UI background material for a Vietnamese secondhand-book shop login page. Create a square, perfectly flat front-facing macro scan of clean warm ivory book paper (#fffcf5 family). Extremely fine natural cellulose fibers, subtle tiny tonal grain, soft even illumination. Seamless repeat on every edge, uniform low contrast, nearly white cream; authentic fine uncoated book stock. No shadows, no vignette, no edges, no creases, no stains, no writing, no objects, no typography, no watermark. Texture must remain quiet beneath small dark UI text. Full canvas material, 1024 square.",
+  "delivery": "Resized to512px square, WebP85, used as repeat texture at85% opacity",
+  "purpose": "Decorative Login artwork only; no product or inventory claims"
+}

@@ -1,0 +1,14 @@
+{
+  "source": "LoginPage.tsx + module.css with generated ivory paper",
+  "url": "http://127.0.0.1:5186/login",
+  "captured": "2026-10-10",
+  "method": "Chromium response fixture",
+  "dimensions": [
+    390,
+    844
+  ],
+  "sha256": "2594a436c357d34d3c09346b08710b2772129d7df3e73d4997be14b75b5d922b",
+  "state": "Default Login; book illustration removed",
+  "privacy": "No real credentials or personal data",
+  "realApi": "NOT RUN"
+}

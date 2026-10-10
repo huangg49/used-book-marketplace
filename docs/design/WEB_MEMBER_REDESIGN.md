@@ -33,6 +33,36 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Login — ảnh tiệm sách và form riêng
 
+Cập nhật sau `1e569eb`: chủ dự án duyệt nền giấy và yêu cầu bỏ hình quyển sách,
+giữ “Lại gặp nhau rồi.” một hàng. Form dùng texture giấy kem local512px, opacity85%,
+input vẫn trắng; headline giữ Be Vietnam Pro/size hiện hành, gạch vàng nhỏ dưới
+“nhau rồi.” và cho phép wrap tự nhiên khi tăng chữ. Ánh sáng nền chạy một lượt
+2400ms rồi tắt, bỏ hoàn toàn khi giảm chuyển động; không có grain động liên tục.
+Logo/ảnh trái/session/handler/Register giữ nguyên. Texture được tạo bằng built-in
+imagegen, [prompt và nguồn](../../apps/user-web/public/login-art/ivory-paper.webp.json).
+
+Build/typecheck PASS, lint0error6warning cũ. Response fixture9viewport với
+100/130/200% chữ PASS; material QA xác nhận không còn hình sách, headline một
+hàng ở1366/390/320px100%, motion kết thúc và reduced-motion tắt. Tương phản
+muted thấp nhất4.73:1 trên toàn texture. Provenance scan1raster0missing.
+Detector chỉ chạy một lượt trước correction:2advisory màu trắng và title2rem;
+title hiện đã về1.75rem narrow theo canonical, màu trắng giữ cho input/sweep.
+Không chạy lại detector. API thật/native/human NOT RUN, READINESS giữ nguyên.
+
+- [Laptop](../../.impeccable/review/web-member/login-paper-laptop.png),
+  [mobile](../../.impeccable/review/web-member/login-paper-mobile.png),
+  [320px chữ200%](../../.impeccable/review/web-member/login-paper-small.png).
+- [Lỗi](../../.impeccable/review/web-member/login-paper-error.png),
+  [thông báo đăng ký](../../.impeccable/review/web-member/login-paper-help.png).
+- [CUA cửa sổ hiện tại](../../.impeccable/review/web-member/login-paper-cua-current.jpg),
+  [CUA desktop](../../.impeccable/review/web-member/login-paper-cua-desktop.jpg),
+  [CUA mobile](../../.impeccable/review/web-member/login-paper-cua-mobile.jpg).
+
+Documenter cập nhật DESIGN/sidecar và parity PASS; reviewer độc lập kiểm đủ8ảnh,
+contract/source/canonical, disposition **ship**, không có material fix.
+Docs/diff PASS. Checkpoint subject `feat(web): add subtle paper material to login`.
+Local, chưa push/PR/merge/deploy. Phần dưới ghi các checkpoint trước đó.
+
 Cập nhật sau `5c88499`, theo yêu cầu chủ dự án: bỏ masthead đỏ riêng và đặt cú/
 wordmark trực tiếp trên ảnh bên trái. `Logo` và ảnh PNG gốc không đổi; SVG color
 matrix riêng Login chuyển nền đỏ phẳng của PNG thành alpha, giữ đường nét kem.

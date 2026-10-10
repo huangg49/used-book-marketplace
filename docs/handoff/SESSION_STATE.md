@@ -8,6 +8,15 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `1e569eb`, Login thêm texture giấy kem local512px/85%, gạch vàng headline;
+  theo correction chủ dự án đã bỏ hình sách, “Lại gặp nhau rồi.” một hàng bình
+  thường và wrap khi chữ lớn. Ánh sáng nền2400ms một lượt rồi tắt, reduce-motion
+  bỏ hiệu ứng. Không đổi ảnh/logo trái hoặc auth. Build/typecheck PASS, lint0error
+  6warning cũ;9viewport100/130/200% fixture/material QA và CUA PASS, tương phản
+  muted tối thiểu4.73:1. Provenance1raster0missing; canonical được documenter cập
+  nhật; reviewer độc lập8capture disposition ship, docs/diff PASS.
+  API thật/native/human NOT RUN, READINESS giữ nguyên; ảnh ở brief.
+  Checkpoint subject `feat(web): add subtle paper material to login`. Local, chưa push.
 - Sau `5c88499`, Login bỏ masthead đỏ riêng, logo gốc được key nền thành alpha
   bằng SVG filter trên ảnh; mobile có vùng ảnh logo gọn, home trên nền giấy.
   Form400px/title2.5rem/input trắng52px, thêm Quên mật khẩu/Đăng ký dạng disclosure

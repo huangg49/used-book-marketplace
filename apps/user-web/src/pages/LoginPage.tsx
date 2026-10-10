@@ -108,7 +108,9 @@ export function LoginPage() {
         </header>
         <div className={styles.formArea}>
           <section className={styles.panel} aria-labelledby="login-title">
-            <h1 id="login-title">Lại gặp nhau rồi.</h1>
+            <h1 id="login-title">
+              Lại gặp <span>nhau rồi.</span>
+            </h1>
             <p>Đăng nhập để đăng sách và trò chuyện với người bán.</p>
             <form
               onSubmit={(event) => void handleSubmit(event)}
