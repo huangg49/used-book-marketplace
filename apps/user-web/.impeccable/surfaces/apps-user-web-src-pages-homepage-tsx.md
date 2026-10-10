@@ -33,19 +33,19 @@ shelf and posting CTA continue the journey. No new API/session/backend behavior.
 
 FIRST VIEWPORT: Approved hero JSX/assets/motion/search/layout unchanged. Below:
 four unboxed quick links, category section, new-listing shelf with four pressed
-filter buttons, up to eight compact BookCards in four desktop columns. Budget
+filter buttons, up to ten compact BookCards in five laptop/six wide-desktop columns. Budget
 banner pair follows, then mint exchange section with a left introduction and
 four compact cards, then wine posting band. Content max1200px, desktop outer40px,
-section padding28px/gaps24–32px. <=850px navigation/cards become two columns,
+section padding28px/gaps24–32px. Catalog/topic cards become four columns at1100px, three at850px, two at600px. <=850px quick navigation becomes two columns,
 banner pair stacks; <=600px outer16px and sections20px16px. Enlarged text wraps
 and the document grows naturally. Shared Search/Detail cards retain default size.
 
 FORM: Owner-pinned extension to the existing surface, no seed required. Main
-shelf requests latest24 with server mode/maxSalePrice filters; shows8 then adds8
+shelf requests latest24 with server mode/maxSalePrice filters; shows10 then adds10
 per click. Categories derive verbatim from that response; no category endpoint
 exists. Category filtering is local to those24 and is explicitly labeled; the
 full-catalog link omits category and says it searches all books. Group changes
-clear category/reset visible8. Loading/empty/error/retry and pending flags remain
+clear category/reset visible10. Loading/empty/error/retry and pending flags remain
 truthful; request failures hide stale cards. Listing cards never use decorative
 covers as fallback. Banner covers are reused owner-supplied illustrations with
 a visible illustration/price disclaimer. All buttons/links keyboard-operable;
@@ -68,7 +68,7 @@ and complete remote covers tied to edition IDs. API snapshot includes source,
 query and date; no DB writes. Budget artwork now uses four separate catalog
 covers in both modes. Hero art/layout/motion stays unchanged; its search and
 caption reflect preview mode. Preview search, group/price links and filters stay
-inside Home, with navigation resetting category/visible8. Show-more adds8 and
+inside Home, with navigation resetting category/visible10. Show-more adds10 and
 full shelf shows all matches. No new category API is implied.
 
 Preview notice and each card label illustrative price/condition/mode; no fake
@@ -82,11 +82,22 @@ live-error isolation, desktop/mobile/large-text evidence and build/unit/lint;
 does not certify MongoDB demo, backend integration or native acceptance.
 
 Owner expansion: add substantial non-manga subjects and expose them on Home.
-Opening eight interleave literature, skills, business, science, history, children,
-manga and LN. Three preview-only shelves after the budget pair show four books
-each (two per subject): literature/children, science/history, skills/business.
-Reuse paper shelf, heading, card and four-to-two-column grid; new group spacing
-32px above/24px between. Skip the opening eight to avoid immediate repetitions.
+Opening ten interleave literature, skills, business, science, history, children,
+manga and LN. Three preview-only shelves after the budget pair show ten books
+each: literature/children, science/history, skills/business.
+Reuse paper shelf, heading, card and responsive five/six-to-two-column grid; new group spacing
+32px above/24px between. Skip the opening ten to avoid immediate repetitions.
 Topic links filter the main preview shelf; mode/price changes retain the topic,
 and a visible return clears it. Budget art uses Gatsby/Atomic Habits/Brief History
 of Time/Matilda. No new world, tokens, animation, API or real-mode subject claim.
+
+## Owner-approved density refinement — 10/10/2026
+
+Owner approves smaller cards like the supplied Fahasa reference: five per laptop
+row, six at1600px, two on mobile. Cover stages200/180/160px with12/8px padding,
+full contain fitting; metadata gaps tighten while title/price type stays legible.
+Titles show two lines with full DOM/accessibility/tooltip text; source actions
+remain44px and failure stages grow for retry content. Main shelf starts/adds10;
+topic shelves show10 each, exchange remains4 beside its introduction. Hero,
+Search defaults, actual API/session and preview/source/sample boundaries stay
+unchanged. This owner-pinned refinement supersedes earlier density counts.

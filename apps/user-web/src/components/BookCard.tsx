@@ -95,7 +95,12 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
               : "Bán hoặc đổi"}
         </p>
         <h3>
-          <Link to={ROUTES.bookDetail(book.id)}>{book.book.title}</Link>
+          <Link
+            to={ROUTES.bookDetail(book.id)}
+            title={compact ? book.book.title : undefined}
+          >
+            {book.book.title}
+          </Link>
         </h3>
         <p className={styles.author}>
           {book.book.authors.join(", ") || "Chưa rõ tác giả"}

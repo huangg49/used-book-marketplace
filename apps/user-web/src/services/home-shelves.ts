@@ -12,6 +12,7 @@ export interface PreviewShelfBook {
   exchangeValue: number | null;
 }
 export type HomeShelfBook = PublicListing | PreviewShelfBook;
+export const homeShelfPageSize = 10;
 
 export const previewTopics = [
   {
@@ -114,12 +115,12 @@ export async function getHomeShelf(
 export const previewCatalogCount = catalog.items.length;
 export function previewTopicBooks(topicId: string) {
   const topic = previewTopics.find((item) => item.id === topicId);
-  // Skip the opening eight, keeping these shelves useful rather than repeating
+  // Skip the opening shelf, keeping these shelves useful rather than repeating
   // the same covers immediately below the main shelf.
   return previewShelf(new URLSearchParams())
-    .items.slice(8)
+    .items.slice(homeShelfPageSize)
     .filter((item) => topic?.categories.includes(item.book.category))
-    .slice(0, 4);
+    .slice(0, homeShelfPageSize);
 }
 export const budgetCoverUrls = [
   "The Great Gatsby",

@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-10T11:29:37.157Z",
+  "base": "10358bb",
+  "branch": "codex/web-member-redesign",
+  "source": "DEV Home preview;91 Open Library editions; sample commerce facts",
+  "checks": {
+    "build": "PASS tsc -b + Vite",
+    "unit": "PASS 22 tests /4 files",
+    "lint": "PASS0errors;6 existing warnings",
+    "browser": {
+      "viewports": [
+        1366,
+        1680,
+        1024,
+        800,
+        390,
+        320
+      ],
+      "horizontalOverflow": false,
+      "columns": [
+        5,
+        6,
+        4,
+        3,
+        2,
+        2
+      ],
+      "coverStagePx": {
+        "desktop": 200,
+        "intermediate": 180,
+        "mobile": 160
+      },
+      "sourceActionMinHeightPx": 44,
+      "openingCount": 10,
+      "afterShowMore": 20,
+      "childrenFilterCount": 8,
+      "afterCategoryReset": 10,
+      "topicShelfCounts": [
+        10,
+        10,
+        10
+      ],
+      "titleClampLines": 2,
+      "fullTitleDomAndTooltip": true
+    }
+  },
+  "limits": [
+    "200% text not rerun for this refinement",
+    "Image failure/retry interaction not rerun; fallback auto-height checked in source",
+    "Live API success, database, native, human acceptance NOT RUN"
+  ],
+  "detector": "Single pre-edit scoped layout assessment0findings; no rescan",
+  "scope": "Home compact variant only; shared Search default, hero, API/session/preview gate unchanged"
+}

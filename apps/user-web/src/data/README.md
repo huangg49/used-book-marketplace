@@ -43,8 +43,8 @@ chỉ ghi khi ít nhất88 edition và6 sách mỗi nhóm. Ngày cache trước 
 mở rộng. Mỗi lần cập nhật vẫn cần review metadata và bìa upstream.
 
 Kệ đầu xen tám thể loại, sau đó xoay vòng trong từng nhóm. Ba kệ theo chủ đề
-văn học/thiếu nhi, khoa học/lịch sử, kỹ năng/kinh doanh có4 sách mỗi kệ, tránh
-lặp tám sách mở đầu. Link `topic` chỉ lọc trong Home preview và giữ phạm vi khi
+văn học/thiếu nhi, khoa học/lịch sử, kỹ năng/kinh doanh có10 sách mỗi kệ, tránh
+lặp mười sách mở đầu. Link `topic` chỉ lọc trong Home preview và giữ phạm vi khi
 đổi mua/đổi/giá; có đường về tất cả chủ đề. Các kệ này không xuất hiện ở live.
 
 Sau này chuẩn bị DB demo theo schema/migration hiện có và tạo bài đăng/ảnh qua

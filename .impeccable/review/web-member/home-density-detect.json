@@ -1,0 +1,6 @@
+{
+  "command": "pnpm ui:design detect --json --scope layout apps/user-web/src/pages/HomePage.tsx apps/user-web/src/pages/HomePage.module.css apps/user-web/src/components/BookCard.module.css",
+  "timing": "Single scoped layout assessment before implementation; not a final-source rescan",
+  "exitCode": 0,
+  "findings": []
+}

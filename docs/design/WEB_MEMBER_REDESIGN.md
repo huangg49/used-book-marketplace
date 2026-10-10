@@ -33,6 +33,25 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Checkpoint mật độ sau `10358bb`: chủ dự án duyệt thu nhỏ card theo ảnh Fahasa.
+Home dùng5 cột laptop,6 từ1600px,4 tại1100px,3 tại850px,2 tại600px; gap24px16px.
+Khung bìa200/180/160px, padding12/8px, chứa nguyên ảnh; metadata gọn hơn,
+giữ cỡ chữ title/giá. Title tối đa hai dòng, tên đầy đủ còn trong DOM/accessibility
+và tooltip. Nút nguồn/chi tiết vẫn44px; khung lỗi tự cao lên để chứa nút thử lại.
+Kệ chính hiện10 rồi thêm10; ba kệ chủ đề10 sách/kệ tránh mười cuốn mở đầu;
+kệ đổi giữ4 bên cạnh phần giới thiệu. Hero/Search mặc định/API/session giữ nguyên.
+
+Build/typecheck22unit PASS, lint0error6warning cũ. CUA1366/1680/1024/800/390/320
+không tràn ngang;5/6/4/3/2 cột, bìa200/180/160px, vùng bấm44px, title dài hai dòng,
+10→20 và lọc/reset PASS. Ảnh [laptop](../../.impeccable/review/web-member/home-density-desktop.jpg),
+[desktop rộng](../../.impeccable/review/web-member/home-density-wide.jpg),
+[mobile](../../.impeccable/review/web-member/home-density-mobile.jpg).
+Một scan layout trước sửa0finding; không có scan thứ hai. Chữ200% và thao tác
+ảnh lỗi chưa chạy lại ở lượt thu gọn này; backend thành công/DB/native/human
+NOT RUN. READINESS giữ nguyên. Checkpoint subject `feat(web): compact home book shelves`;
+local, chưa push. Các số8/4 bên dưới là lịch sử checkpoint catalog trước lượt này.
+Reviewer độc lập disposition **ship**, không material fix; [review](../../.impeccable/review/web-member/home-density-finish.md).
+
 Mở rộng sau `100f872` theo yêu cầu chủ dự án:91 edition, gồm15 văn học,
 6 kỹ năng sống,7 kinh doanh,8 khoa học,6 lịch sử,8 thiếu nhi,25 manga và16 light
 novel. Đã thêm43 sách nguồn ngoài, bỏ kết quả bộ sách gộp; metadata/bìa giữ theo

@@ -1,15 +1,36 @@
 .compact .cover {
-  padding: 16px;
-  aspect-ratio: 1 / 1.1;
+  padding: 12px;
+  height: 200px;
+  aspect-ratio: auto;
+}
+.compact .cover:has(.fallback) {
+  height: auto;
+  min-height: 200px;
 }
 .compact .meta {
-  padding-top: 12px;
+  padding-top: 8px;
 }
 .compact .meta h3 {
   font-size: 0.9375rem;
+  min-block-size: 3em;
+}
+.compact .meta h3 a {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 .compact .author {
-  margin-bottom: 12px;
+  margin-bottom: 6px;
+}
+.compact .condition {
+  margin-bottom: 4px;
+}
+.compact .prices {
+  gap: 6px 12px;
+}
+.compact .view {
+  margin-top: 2px;
 }
 .card {
   min-width: 0;
@@ -157,7 +178,19 @@
   border-radius: 8px;
   color: var(--shop-wine);
 }
+@media (max-width: 1100px) {
+  .compact .cover {
+    height: 180px;
+  }
+}
 @media (max-width: 600px) {
+  .compact .cover {
+    padding: 8px;
+    height: 160px;
+  }
+  .compact .meta h3 {
+    font-size: 0.92rem;
+  }
   .cover {
     padding: 16px;
   }

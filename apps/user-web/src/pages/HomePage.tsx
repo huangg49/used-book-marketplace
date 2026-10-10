@@ -26,6 +26,7 @@ import {
   budgetCoverUrls,
   previewTopics,
   previewTopicBooks,
+  homeShelfPageSize,
 } from "../services/home-shelves";
 import styles from "./HomePage.module.css";
 
@@ -115,10 +116,11 @@ function LatestShelf({ preview }: { preview: boolean }) {
   const [selection, setSelection] = useState({
     scope: selectionScope,
     category: "",
-    visible: 8,
+    visible: homeShelfPageSize,
   });
   const category = selection.scope === selectionScope ? selection.category : "";
-  const visible = selection.scope === selectionScope ? selection.visible : 8;
+  const visible =
+    selection.scope === selectionScope ? selection.visible : homeShelfPageSize;
   const params = shelfFilters[filter].params;
   const query = new URLSearchParams({
     limit: preview ? String(previewCatalogCount) : "24",
@@ -166,7 +168,11 @@ function LatestShelf({ preview }: { preview: boolean }) {
             type="button"
             aria-pressed={!category}
             onClick={() => {
-              setSelection({ scope: selectionScope, category: "", visible: 8 });
+              setSelection({
+                scope: selectionScope,
+                category: "",
+                visible: homeShelfPageSize,
+              });
             }}
           >
             <BookOpen size={18} aria-hidden="true" /> Tất cả thể loại
@@ -180,7 +186,7 @@ function LatestShelf({ preview }: { preview: boolean }) {
                 setSelection({
                   scope: selectionScope,
                   category: name,
-                  visible: 8,
+                  visible: homeShelfPageSize,
                 });
               }}
             >
@@ -257,7 +263,11 @@ function LatestShelf({ preview }: { preview: boolean }) {
                     ...item.params,
                   });
                 else setFilter(index);
-                setSelection({ scope: "", category: "", visible: 8 });
+                setSelection({
+                  scope: "",
+                  category: "",
+                  visible: homeShelfPageSize,
+                });
               }}
             >
               {item.label}
@@ -316,7 +326,7 @@ function LatestShelf({ preview }: { preview: boolean }) {
                 setSelection({
                   scope: selectionScope,
                   category,
-                  visible: visible + 8,
+                  visible: visible + homeShelfPageSize,
                 })
               }
             >

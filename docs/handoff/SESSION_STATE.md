@@ -8,6 +8,15 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `10358bb`, thu gọn card riêng Home theo duyệt của chủ dự án:5 cột laptop,
+  6 desktop rộng,4/3/2 ở mốc1100/850/600px; khung bìa200/180/160px, title hai dòng
+  vẫn giữ tên đầy đủ/tooltip, nguồn44px. Kệ chính10/thêm10, chủ đề10/kệ, đổi4.
+  Hero/Search mặc định/API/session/91edition và nhãn mẫu giữ nguyên. Build22unit
+  PASS/lint0error6warning cũ; CUA6width không tràn, expansion/filter/reset/title
+  PASS. Scan layout một lượt0finding;200%/ảnh lỗi chưa chạy lại, backend thành công/
+  DB/native/human NOT RUN. READINESS giữ nguyên; ảnh/giới hạn ở [brief](../design/WEB_MEMBER_REDESIGN.md).
+  Reviewer độc lập disposition ship, không material fix; docs/diff PASS.
+  Checkpoint subject `feat(web): compact home book shelves`; local, chưa push.
 - Sau `100f872`, mở rộng Home preview lên91 Open Library editions/tám thể loại:
   15văn học/6kỹ năng/7kinh doanh/8khoa học/6lịch sử/8thiếu nhi/25manga/16LN.
   Kệ đầu xen tám nhóm; thêm ba kệ chủ đề4sách/kệ và link lọc/đường về toàn bộ.

@@ -55,6 +55,7 @@ export function HomeBookCard({
             href={book.book.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
+            title={book.book.title}
           >
             {book.book.title}
           </a>

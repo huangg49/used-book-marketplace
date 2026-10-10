@@ -8,6 +8,7 @@ import {
   previewShelf,
   previewTopics,
   previewTopicBooks,
+  homeShelfPageSize,
 } from "./home-shelves";
 
 afterEach(() => {
@@ -59,13 +60,15 @@ describe("explicit Home catalog preview boundary", () => {
   });
   it("opens with eight different subjects and supplies distinct topic shelves", () => {
     const all = previewShelf(new URLSearchParams()).items;
-    const openingIds = new Set(all.slice(0, 8).map((book) => book.id));
+    const openingIds = new Set(
+      all.slice(0, homeShelfPageSize).map((book) => book.id),
+    );
     expect(
       new Set(all.slice(0, 8).map((book) => book.book.category)).size,
     ).toBe(8);
     for (const topic of previewTopics) {
       const books = previewTopicBooks(topic.id);
-      expect(books).toHaveLength(4);
+      expect(books).toHaveLength(10);
       expect(new Set(books.map((book) => book.book.category)).size).toBe(2);
       expect(books.every((book) => !openingIds.has(book.id))).toBe(true);
       const filtered = previewShelf(
