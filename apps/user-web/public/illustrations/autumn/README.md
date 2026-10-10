@@ -11,3 +11,11 @@ Original giữ ở kho generated_images trên máy; ứng dụng chỉ dùng ass
 
 Home đặt24 motif static không đều ở hai mép, dưới lớp nội dung. Layer aria-hidden,
 pointer-events:none; không thêm animation, lặp tile, tán lá lớn, cáo hoặc đồi.
+
+## Tán lá ở đường nối hero
+
+`canopies.webp`: hai cụm lá bất đối xứng từ built-in ImageGen, tham chiếu phần lá
+trong Background demo.png của chủ dự án. Alpha thật,1200×800/76574byte;
+chỉ resize/encode toàn atlas. CSS chọn hai nửa và thu nhỏ ở mobile; không tile,
+không animation. Layer riêng clip/pointer-inert dưới nội dung, hero giữ nguyên.
+Prompt đầy đủ và hashes ở `canopies.webp.json`. Cáo/đồi chưa nằm trong gói này.

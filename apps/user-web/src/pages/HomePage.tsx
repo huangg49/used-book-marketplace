@@ -619,6 +619,10 @@ export function HomePage() {
       </section>
       <div className={styles.marketplace}>
         <AutumnOrnaments />
+        <div className={styles.autumnCanopies} aria-hidden="true">
+          <span className={styles.canopyLeft} />
+          <span className={styles.canopyRight} />
+        </div>
         <div className={styles.shortcutBand}>
           <nav className={styles.quickLinks} aria-label="Khám phá sách">
             <Link

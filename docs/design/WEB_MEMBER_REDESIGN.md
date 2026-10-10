@@ -33,6 +33,18 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `42bd898`, chủ dự án duyệt hai tán lá nối hero xuống nền kem: atlas alpha
+1200×800/76574byte từ built-in ImageGen, tham chiếu Background demo.png.
+CSS chọn hai nửa bất đối xứng, cell220–400px/145px mobile; layer z0 clip riêng,
+aria-hidden/pointer-inert; content/bookmark z1. Hero/overlap−12px/bookmarks/routes/
+24 motif/CTA/footer giữ nguyên; cáo/đồi hoãn. [Asset/prompt](../../apps/user-web/public/illustrations/autumn/README.md).
+Node24.19.0/pnpm11.19.0: build/typecheck và lint PASS (bundle warning và6 lint warning cũ).
+CUA1535×735/1000×800/390×844/320×844 không tràn ngang, đủ4 links; desktop
+canopy399.15px/pointer:none/overlap−12px. [Desktop](../../.impeccable/review/web-member/home-autumn-canopies-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-autumn-canopies-mobile.jpg).
+Docs/diff PASS. Backend/native/human/200% NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): frame home shortcuts with autumn canopies`; local, chưa push.
+
 Sau `4edb6c2`, chủ dự án muốn mật độ nhỉnh hơn: tăng16→24 motif bằng8 vị trí
 xen kẽ ở mép, giữ atlas/kích thước/opacity và toàn bộ hero/bookmark/catalog.
 Build PASS; CUA1535×735 và390×844 có24 motif, không tràn ngang, pointer:none;
