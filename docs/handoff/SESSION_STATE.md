@@ -8,6 +8,18 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `973e3c4`, Home giữ nguyên hero, body theo yêu cầu tham khảo Fahasa và
+  kết hợp thể loại + mua/đổi + giá: lối vào nhanh, kệ mới đăng, banner ngân sách,
+  kệ đổi và CTA đăng sách. API chỉ hỗ trợ mode/giá; thể loại lọc cục bộ tối đa24
+  bài trong kệ, ghi rõ phạm vi; không mở rộng contract/backend. BookCard compact
+  là tùy chọn riêng Home, Search/AuctionCard giữ hành vi cũ. Build/typecheck16unit
+  PASS/lint0error6warning cũ;7width100/130/200% fixture và CUA desktop/cửa sổ thật
+  PASS layout/filter/link/states. API3048 không chạy; API thật/native/human NOT RUN,
+  READINESS giữ nguyên. Detector một lượt12advisory (8legacy ngoài diff,4role mới
+  ghi canonical), provenance11raster0missing. Documenter cập nhật canonical/parity
+  PASS; reviewer độc lập8capture disposition ship, không có material fix;
+  docs/diff PASS. Ảnh và giới hạn ở [brief](../design/WEB_MEMBER_REDESIGN.md).
+  Checkpoint subject `feat(web): redesign home discovery shelves`. Local, chưa push.
 - Sau `f79e81f`, bỏ viền focus đỏ bên trong input tìm sách Home theo ảnh chủ dự
   án; focus chuyển ra mép ngoài thanh search màu vàng2px/offset4px, không đổi
   submit/query hoặc CSS global. CUA xác nhận input border0/outline none khi focus,

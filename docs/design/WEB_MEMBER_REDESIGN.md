@@ -31,6 +31,51 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
   để hành trình kiểm thử liên tục. Chưa redesign toàn form, dashboard, đăng ký,
   chat, đấu giá, admin hay Flutter; Android giữ checkpoint riêng.
 
+## Home — khám phá theo thể loại, mua/đổi và giá
+
+Sau `973e3c4`, chủ dự án yêu cầu giữ nguyên hero và thiết kế lại phần dưới theo
+cách tổ chức của [Fahasa](https://www.fahasa.com/), xác nhận kết hợp thể loại,
+mua/đổi và giá. Code-led mở rộng world đã duyệt, không sao chép banner/khuyến mãi.
+[Contract Home](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-homepage-tsx.md)
+ghi phạm vi và tiêu chí; JSX hero và các declaration responsive được so với HEAD,
+không đổi hành vi hoặc hình thức hero.
+
+Body mới có bốn lối vào nhanh, thể loại từ bài đăng thật, kệ mới đăng lọc mua/đổi/
+giá, hai banner ngân sách, kệ đổi nền xanh nhạt và CTA đăng sách. Bìa banner là
+minh họa có ghi rõ, không đại diện cho giá hoặc hàng đang bán. API chưa hỗ trợ
+thể loại: chỉ lọc cục bộ tối đa24 bài mới tải trong kệ, ghi rõ phạm vi; mode/giá
+lọc trên server và mở danh sách toàn bộ tương ứng. Hiện8 bài, thêm8 mỗi lần.
+Không thêm endpoint hoặc dữ liệu thương mại giả. BookCard có prop compact riêng
+Home; Search giữ mặc định, CSS mới không tác động AuctionCard.
+
+Build/typecheck và16unit PASS; lint0error6warning cũ. Response fixture kiểm7width
+1536/1366/1000/850/768/390/320 × chữ100/130/200% PASS: bộ lọc, liên kết, thêm bài,
+reset thể loại, rỗng/lỗi/thử lại, search Enter, card mặc định và không tràn ngang.
+CUA thật xác nhận layout/bộ lọc/link ở desktop và cửa sổ người dùng; API3048
+không chạy nên dữ liệu thật hiện trạng thái lỗi kết nối. Fixture chỉ dùng trong
+QA, có nhãn; không seed hoặc sửa DB. API thật/native/human acceptance NOT RUN;
+READINESS giữ nguyên. Bundle vẫn có warning kích thước chunk.
+
+Detector đúng một lượt:12advisory,8legacy ngoài diff;4role màu/chữ Home mới được
+ghi canonical. Provenance scan thư mục minh họa11raster0missing; dùng lại bìa
+đã có. Documenter độc lập cập nhật DESIGN/sidecar, parity PASS.
+
+- [Desktop fixture](../../.impeccable/review/web-member/home-discovery-desktop.png),
+  [mobile](../../.impeccable/review/web-member/home-discovery-mobile.png),
+  [banner mobile](../../.impeccable/review/web-member/home-discovery-mobile-lower.png),
+  [320px chữ200%](../../.impeccable/review/web-member/home-discovery-large-text.png).
+- [Rỗng](../../.impeccable/review/web-member/home-discovery-empty.png),
+  [lỗi](../../.impeccable/review/web-member/home-discovery-error.png),
+  [CUA desktop](../../.impeccable/review/web-member/home-discovery-cua-desktop.jpg),
+  [CUA cửa sổ người dùng](../../.impeccable/review/web-member/home-discovery-cua-current.jpg).
+- [QA](../../.impeccable/review/web-member/home-discovery-qa.json),
+  [detector](../../.impeccable/review/web-member/home-discovery-detect.json).
+
+Reviewer độc lập kiểm đủ8capture cùng source/contract/canonical, disposition
+**ship**, không có material fix; đây là review frontend giới hạn, không thay
+human acceptance. Docs/diff PASS. Checkpoint subject
+`feat(web): redesign home discovery shelves`; local, chưa push/PR/merge/deploy.
+
 ## Login — ảnh tiệm sách và form riêng
 
 Cập nhật sau `1e569eb`: chủ dự án duyệt nền giấy và yêu cầu bỏ hình quyển sách,

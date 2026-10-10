@@ -69,10 +69,11 @@ export function ListingPhoto({
 export interface BookCardProps {
   book: PublicListing;
   index: number;
+  compact?: boolean;
 }
-export function BookCard({ book, index }: BookCardProps) {
+export function BookCard({ book, index, compact = false }: BookCardProps) {
   return (
-    <article className={styles.card}>
+    <article className={[styles.card, compact ? styles.compact : ""].join(" ")}>
       <div className={[styles.cover, styles["ground" + (index % 4)]].join(" ")}>
         <ListingPhoto book={book} />
         <Link

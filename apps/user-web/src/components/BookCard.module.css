@@ -1,3 +1,16 @@
+.compact .cover {
+  padding: 16px;
+  aspect-ratio: 1 / 1.1;
+}
+.compact .meta {
+  padding-top: 12px;
+}
+.compact .meta h3 {
+  font-size: 0.9375rem;
+}
+.compact .author {
+  margin-bottom: 12px;
+}
 .card {
   min-width: 0;
   display: flex;

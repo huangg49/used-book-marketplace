@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowUpRight, Search } from "lucide-react";
+import {
+  ArrowUpRight,
+  ArrowRight,
+  Search,
+  ShoppingBag,
+  Repeat2,
+  Wallet,
+  Plus,
+  BookOpen,
+} from "lucide-react";
 import { ROUTES, searchUrl } from "../lib/routes";
 import { BookCard } from "../components/BookCard";
 import { getPublicListings } from "../services/public-listings";
@@ -69,19 +78,175 @@ function HeroCovers() {
   );
 }
 
-function Shelf({
-  mode,
-  title,
-  description,
-}: {
-  mode?: "Exchange";
-  title: string;
-  description: string;
-}) {
+const shelfFilters: { label: string; params: Record<string, string> }[] = [
+  { label: "Tất cả", params: {} },
+  { label: "Mua sách", params: { mode: "Sale" } },
+  { label: "Đổi sách", params: { mode: "Exchange" } },
+  { label: "Đến 100.000₫", params: { mode: "Sale", maxSalePrice: "100000" } },
+];
+
+function LatestShelf() {
+  const [filter, setFilter] = useState(0);
+  const [category, setCategory] = useState("");
+  const [visible, setVisible] = useState(8);
+  const params = shelfFilters[filter].params;
+  const query = new URLSearchParams({ limit: "24", sort: "newest", ...params });
+  const result = useQuery({
+    queryKey: ["public-listings", query.toString()],
+    queryFn: () => getPublicListings(query),
+    retry: false,
+  });
+  const items = result.data?.items ?? [];
+  const categories = [
+    ...new Set(items.map((book) => book.book.category.trim()).filter(Boolean)),
+  ];
+  const filtered = category
+    ? items.filter((book) => book.book.category.trim() === category)
+    : items;
+  const shown = filtered.slice(0, visible);
+  return (
+    <>
+      <section className={styles.categories} aria-labelledby="category-title">
+        <div className={styles.categoryHead}>
+          <h2 id="category-title">Khám phá thể loại</h2>
+          <p>Thể loại từ tối đa 24 bài đăng mới nhất trong kệ đang chọn.</p>
+        </div>
+        <div
+          className={styles.categoryChoices}
+          role="group"
+          aria-label="Lọc thể loại trong kệ mới"
+        >
+          <button
+            type="button"
+            aria-pressed={!category}
+            onClick={() => {
+              setCategory("");
+              setVisible(8);
+            }}
+          >
+            <BookOpen size={18} aria-hidden="true" /> Tất cả thể loại
+          </button>
+          {categories.map((name) => (
+            <button
+              type="button"
+              key={name}
+              aria-pressed={category === name}
+              onClick={() => {
+                setCategory(name);
+                setVisible(8);
+              }}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+        {result.isPending && (
+          <p className={styles.categoryNote}>Đang tải thể loại…</p>
+        )}
+        {result.isError && (
+          <p className={styles.categoryNote}>
+            Thể loại sẽ hiện khi tải được bài đăng. Bạn vẫn có thể tìm theo hình
+            thức hoặc mức giá.
+          </p>
+        )}
+        {!result.isPending && !result.isError && categories.length === 0 && (
+          <p className={styles.categoryNote}>Chưa có thể loại trong kệ này.</p>
+        )}
+      </section>
+      <section className={styles.shelf} aria-labelledby="latest-title">
+        <div className={styles.sectionHead}>
+          <div>
+            <h2 id="latest-title">Sách mới đăng</h2>
+            <p>
+              Mỗi cuốn một tình trạng, một câu chuyện. Chọn bản sách hợp với
+              bạn.
+            </p>
+          </div>
+          <Link to={searchUrl(params)}>
+            Tìm trong toàn bộ sách <ArrowUpRight size={18} aria-hidden="true" />
+          </Link>
+        </div>
+        <div
+          className={styles.shelfFilters}
+          role="group"
+          aria-label="Chọn kệ sách mới"
+        >
+          {shelfFilters.map((item, index) => (
+            <button
+              key={item.label}
+              type="button"
+              aria-pressed={index === filter}
+              onClick={() => {
+                setFilter(index);
+                setCategory("");
+                setVisible(8);
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div aria-live="polite" aria-busy={result.isFetching}>
+          {result.isPending && (
+            <div className={styles.loading}>Đang tải kệ sách…</div>
+          )}
+          {result.isError && (
+            <div className={styles.state} role="alert">
+              <p>Chưa tải được sách. Kiểm tra kết nối rồi thử lại.</p>
+              <button
+                type="button"
+                onClick={() => void result.refetch()}
+                disabled={result.isFetching}
+              >
+                Thử lại
+              </button>
+            </div>
+          )}
+          {!result.isPending && !result.isError && filtered.length === 0 && (
+            <div className={styles.state}>
+              <p>
+                {category
+                  ? "Chưa có sách thuộc thể loại này trong các bài đăng đã tải."
+                  : "Chưa có sách trong kệ này."}
+              </p>
+              <Link to={searchUrl(params)}>Tìm thêm sách</Link>
+            </div>
+          )}
+          {result.data && !result.isError && filtered.length > 0 && (
+            <p className={styles.resultScope}>
+              {category && <strong>{category} · </strong>}
+              {shown.length} / {filtered.length} bài đăng đã tải
+              {category ? " thuộc thể loại này" : ""}.
+              {result.data.nextCursor &&
+                " Còn bài đăng khác trong danh sách tìm sách."}
+            </p>
+          )}
+          <div className={styles.grid}>
+            {!result.isError &&
+              shown.map((book, index) => (
+                <BookCard key={book.id} book={book} index={index} compact />
+              ))}
+          </div>
+          {!result.isError && filtered.length > visible && (
+            <button
+              className={styles.more}
+              type="button"
+              onClick={() => setVisible((value) => value + 8)}
+            >
+              Xem thêm trong kệ <ArrowRight size={18} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function ExchangeShelf() {
   const query = new URLSearchParams({
     limit: "4",
     sort: "newest",
-    ...(mode ? { mode } : {}),
+    mode: "Exchange",
   });
   const result = useQuery({
     queryKey: ["public-listings", query.toString()],
@@ -89,27 +254,41 @@ function Shelf({
     retry: false,
   });
   return (
-    <section className={styles.shelf}>
-      <div className={styles.sectionHead}>
-        <div>
-          <h2>{title}</h2>
-          <p>{description}</p>
-        </div>
-        <Link to={mode ? searchUrl({ mode }) : ROUTES.search}>
-          Xem tất cả <ArrowUpRight size={20} aria-hidden="true" />
+    <section
+      className={styles.exchangeSection}
+      aria-labelledby="exchange-title"
+    >
+      <div className={styles.exchangeIntro}>
+        <Repeat2 size={28} aria-hidden="true" />
+        <h2 id="exchange-title">
+          Đổi sách.
+          <br />
+          Đổi góc nhìn.
+        </h2>
+        <p>Mang một câu chuyện đã đọc, tìm một cuốn muốn đọc tiếp.</p>
+        <Link to={searchUrl({ mode: "Exchange" })}>
+          Khám phá sách để đổi <ArrowUpRight size={18} aria-hidden="true" />
         </Link>
+        <p className={styles.exchangeNote}>
+          Giá trị đổi do người đăng cung cấp. Xem chi tiết để biết tình trạng
+          bản sách.
+        </p>
       </div>
-      <div aria-live="polite" aria-busy={result.isFetching}>
+      <div
+        className={styles.exchangeBooks}
+        aria-live="polite"
+        aria-busy={result.isFetching}
+      >
         {result.isPending && (
-          <div className={styles.loading}>Đang tải kệ sách…</div>
+          <div className={styles.loading}>Đang tải sách để đổi…</div>
         )}
         {result.isError && (
           <div className={styles.state} role="alert">
-            <p>Chưa tải được sách. Kiểm tra kết nối rồi thử lại.</p>
+            <p>Chưa tải được sách để đổi.</p>
             <button
               type="button"
-              onClick={() => void result.refetch()}
               disabled={result.isFetching}
+              onClick={() => void result.refetch()}
             >
               Thử lại
             </button>
@@ -117,14 +296,15 @@ function Shelf({
         )}
         {!result.isError && result.data?.items.length === 0 && (
           <div className={styles.state}>
-            <p>Chưa có sách trong kệ này.</p>
-            <Link to={ROUTES.sell}>Đăng cuốn sách đầu tiên</Link>
+            <p>Chưa có sách để đổi. Bắt đầu từ cuốn bạn đã đọc nhé.</p>
+            <Link to={ROUTES.sell}>Đăng sách để đổi</Link>
           </div>
         )}
-        <div className={styles.grid}>
-          {result.data?.items.map((book, index) => (
-            <BookCard key={book.id} book={book} index={index} />
-          ))}
+        <div className={styles.exchangeGrid}>
+          {!result.isError &&
+            result.data?.items.map((book, index) => (
+              <BookCard book={book} index={index} key={book.id} compact />
+            ))}
         </div>
       </div>
     </section>
@@ -215,77 +395,115 @@ export function HomePage() {
           Bìa sách dùng để minh họa · Ảnh sách đang đăng ở bên dưới
         </p>
       </section>
-      <Shelf
-        title="VỪA LÊN KỆ"
-        description="Những bản sách mới được đăng. Biết rõ tình trạng trước khi chọn."
-      />
-      <section className={styles.discover}>
-        <div className={styles.sectionHead}>
-          <div>
-            <h2>HÔM NAY, BẠN TÌM GÌ?</h2>
-            <p>Chọn cách tìm phù hợp với tủ sách và túi tiền của bạn.</p>
-          </div>
-        </div>
-        <div className={styles.tiles}>
-          <Link to={searchUrl({ mode: "Sale" })} className={styles.saleTile}>
-            <ArrowUpRight aria-hidden="true" />
-            <div>
-              <span>Thêm một cuốn vào tủ</span>
-              <h3>SÁCH ĐỂ MUA</h3>
-            </div>
-            <img src="/illustrations/alice-moi.webp" alt="" loading="lazy" />
-          </Link>
-          <Link
-            to={searchUrl({ mode: "Exchange" })}
-            className={styles.exchangeTile}
+      <div className={styles.marketplace}>
+        <div className={styles.marketInner}>
+          <nav className={styles.quickLinks} aria-label="Khám phá sách">
+            <Link to={searchUrl({ mode: "Sale" })}>
+              <span>
+                <ShoppingBag aria-hidden="true" />
+              </span>
+              Mua sách cũ
+              <ArrowUpRight size={16} aria-hidden="true" />
+            </Link>
+            <Link to={searchUrl({ mode: "Exchange" })}>
+              <span>
+                <Repeat2 aria-hidden="true" />
+              </span>
+              Đổi sách
+              <ArrowUpRight size={16} aria-hidden="true" />
+            </Link>
+            <Link to={searchUrl({ mode: "Sale", maxSalePrice: "100000" })}>
+              <span>
+                <Wallet aria-hidden="true" />
+              </span>
+              Đến 100.000₫
+              <ArrowUpRight size={16} aria-hidden="true" />
+            </Link>
+            <Link to={ROUTES.sell}>
+              <span>
+                <Plus aria-hidden="true" />
+              </span>
+              Đăng sách của bạn
+              <ArrowUpRight size={16} aria-hidden="true" />
+            </Link>
+          </nav>
+          <LatestShelf />
+          <section
+            className={styles.budgetBanners}
+            aria-label="Tìm sách theo ngân sách"
           >
-            <ArrowUpRight aria-hidden="true" />
+            <Link
+              to={searchUrl({ mode: "Sale", maxSalePrice: "50000" })}
+              className={styles.budgetSmall}
+            >
+              <div>
+                <h2>
+                  Đọc hay,
+                  <br />
+                  chi vừa.
+                </h2>
+                <p>Tìm sách giá đến 50.000₫</p>
+                <span>
+                  Xem sách <ArrowUpRight size={18} aria-hidden="true" />
+                </span>
+              </div>
+              <div className={styles.bannerCovers} aria-hidden="true">
+                <img src="/illustrations/tuoi-tho.webp" alt="" loading="lazy" />
+                <img
+                  src="/illustrations/alice-moi.webp"
+                  alt=""
+                  loading="lazy"
+                />
+              </div>
+            </Link>
+            <Link
+              to={searchUrl({ mode: "Sale", maxSalePrice: "100000" })}
+              className={styles.budgetLarge}
+            >
+              <div>
+                <h2>
+                  Thêm sách.
+                  <br />
+                  Thêm vui.
+                </h2>
+                <p>Tìm sách giá đến 100.000₫</p>
+                <span>
+                  Xem sách <ArrowUpRight size={18} aria-hidden="true" />
+                </span>
+              </div>
+              <div className={styles.bannerCovers} aria-hidden="true">
+                <img src="/illustrations/duoc-su.webp" alt="" loading="lazy" />
+                <img
+                  src="/illustrations/one-piece.webp"
+                  alt=""
+                  loading="lazy"
+                />
+              </div>
+            </Link>
+          </section>
+          <p className={styles.artNote}>
+            Bìa trong banner dùng để minh họa, không đại diện cho sách hay giá
+            đang bán.
+          </p>
+          <ExchangeShelf />
+          <section className={styles.posting} aria-labelledby="posting-title">
             <div>
-              <span>Đọc mới từ sách cũ</span>
-              <h3>SÁCH ĐỂ ĐỔI</h3>
+              <h2 id="posting-title">
+                Đọc xong rồi?
+                <br />
+                <span>Để sách đi tiếp.</span>
+              </h2>
+              <p>Chụp ảnh, ghi rõ tình trạng và đăng sách để bán hoặc đổi.</p>
             </div>
-            <img src="/illustrations/chua-nhan.webp" alt="" loading="lazy" />
-          </Link>
-          <Link
-            to={searchUrl({ mode: "Sale", maxSalePrice: "100000" })}
-            className={styles.budgetTile}
-          >
-            <ArrowUpRight aria-hidden="true" />
-            <div>
-              <span>Một khoản nhỏ cho việc đọc</span>
-              <h3>DƯỚI 100.000₫</h3>
+            <div className={styles.postingAction}>
+              <Link to={ROUTES.sell}>
+                Đăng sách của bạn <Plus size={20} aria-hidden="true" />
+              </Link>
+              <p>Mỗi bản sách có ảnh và mô tả riêng.</p>
             </div>
-            <img
-              src="/illustrations/nghin-le-mot-dem.webp"
-              alt=""
-              loading="lazy"
-            />
-          </Link>
+          </section>
         </div>
-        <p className={styles.tileCaption}>
-          Bìa minh họa từ tư liệu; mỗi mục mở danh sách bài đăng thực tế.
-        </p>
-      </section>
-      <div className={styles.exchangeShelf}>
-        <Shelf
-          mode="Exchange"
-          title="ĐỔI SÁCH, ĐỔI CÂU CHUYỆN"
-          description="Xem bản sách và giá trị đổi do người đăng cung cấp."
-        />
       </div>
-      <section className={styles.posting}>
-        <div>
-          <h2>
-            TỦ SÁCH CHẬT?
-            <br />
-            CHO SÁCH MỘT CHƯƠNG MỚI.
-          </h2>
-          <p>Chụp ảnh, mô tả tình trạng và đăng cuốn bạn muốn bán hoặc đổi.</p>
-        </div>
-        <Link to={ROUTES.sell}>
-          Đăng sách của bạn <ArrowUpRight size={20} aria-hidden="true" />
-        </Link>
-      </section>
     </div>
   );
 }

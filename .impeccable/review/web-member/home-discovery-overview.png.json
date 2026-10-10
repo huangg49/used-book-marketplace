@@ -1,0 +1,12 @@
+{
+  "source": "Crop from home-discovery-desktop.png; synthetic response fixture",
+  "crop": {
+    "left": 0,
+    "top": 590,
+    "width": 1366,
+    "height": 2650
+  },
+  "purpose": "Delivery view of redesigned lower Home",
+  "sha256": "bf022c98038b638ca69f11b3d6b571ca47f1fec82d9d6b06ad855d26d1ebc6f1",
+  "realApi": "NOT RUN; illustrative QA data"
+}
