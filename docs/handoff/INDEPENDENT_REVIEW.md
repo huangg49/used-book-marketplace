@@ -8,9 +8,11 @@ Team tự điền tên, không mặc định người tạo báo cáo là review
 
 ## Nguồn và ranh giới
 
-Cập nhật30/09: review mới phải chọn SHA trên main MongoDB (mốc tích hợp1be5144),
-OpenAPI0.21.0 và ADR0027. Các SHA/contract0.20.0 dưới đây là baseline28/09 để
-đối chiếu lịch sử; không dùng SQL trigger làm bằng chứng backstop runtime Mongo.
+Cập nhật09/10: review mới chọn SHA thực tế/contract từ Git và OpenAPI (snapshot
+main `da59199`, contract0.30.0,15 migration Mongo). Đọc ADR0027 và các lane
+purchase/auction/point-order/notification nếu scope chạm chúng; matrix F2h dưới
+đây là baseline28/09, không bao phủ mọi increment mới. Các SHA/contract0.20.0/SQL
+bên dưới là lịch sử; không dùng SQL trigger làm bằng chứng runtime Mongo.
 
 
 - Target ứng dụng: `76230ca09e94df69157845717e4d89d49b4641a0`.

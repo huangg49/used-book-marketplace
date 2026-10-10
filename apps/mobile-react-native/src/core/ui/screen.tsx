@@ -20,11 +20,12 @@ export function Screen({
   compactFooter?: boolean;
   footerAppearance?: "paper" | "navigation";
   scrollRef?: React.Ref<ScrollView>;
-  appearance?: "paper" | "shelf";
+  appearance?: "paper" | "shelf" | "browse";
 }>) {
   const inset = useSafeAreaInsets();
   const shelf = appearance === "shelf";
-  const canvas = shelf ? colorRoles.shelfCanvas : colors.paper;
+  const browse = appearance === "browse";
+  const canvas = shelf || browse ? colorRoles.shelfCanvas : colors.paper;
   const navigationFooter = footerAppearance === "navigation";
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: canvas }}>
@@ -74,7 +75,7 @@ export function Screen({
               backgroundColor: navigationFooter
                 ? colorRoles.navigationBackground
                 : canvas,
-              borderTopWidth: navigationFooter ? 0 : 1,
+              borderTopWidth: 1,
               borderColor: colors.rule,
               paddingVertical:
                 compactFooter || navigationFooter ? space.sm : space.lg,

@@ -3,7 +3,7 @@
 Chủ dự án có thể chuyển các file dưới đây qua kênh riêng cho teammate được phép.
 Không upload vào GitHub, không paste key vào prompt/chat. Tài liệu chỉ chứa tên
 file/biến; không chứa giá trị cấu hình thật. Hướng dẫn cập nhật cho MongoDB ngày
-30/09/2026; file local cũ cần đối chiếu với `.env.example`, không chép đè tự động.
+09/10/2026; file local cũ cần đối chiếu với `.env.example`, không chép đè tự động.
 
 | File tương đối từ root repo | Dùng cho | Cần làm ở máy mới |
 |---|---|---|
@@ -11,6 +11,7 @@ file/biến; không chứa giá trị cấu hình thật. Hướng dẫn cập n
 | `apps/api/.env` | API, worker, bootstrap/migrate/seed; có Supabase server key và secret simulator/JWT | Đối chiếu `MONGODB_URL`, `MONGODB_MIGRATOR_URL`, `MONGODB_ADMIN_URL`, database/password bootstrap, CORS và key backend với `.env.example` |
 | `apps/mobile-react-native/.env` | URL API của RN, cờ preview/nội bộ | Chỉnh EXPO_PUBLIC_API_BASE_URL theo emulator/điện thoại; chỉ cấu hình public. C01 opt-in theo [README RN](../../apps/mobile-react-native/README.md); default ẩn ví, không là quyền API |
 | `apps/admin-web/.env` | URL API operations web | Chỉnh VITE_API_BASE_URL theo máy chạy API; chỉ chứa cấu hình public |
+| `apps/user-web/.env` | URL API React/Vite user-web | Nếu thiếu, tạo từ app `.env.example`; VITE_API_BASE_URL và CORS backend cần khớp origin5174/preview4174; không chứa server key |
 
 Không có `apps/mobile-flutter/.env` trên máy này; Flutter chưa là ưu tiên.
 Nếu cần Flutter sau, tạo từ `.env.example` tương ứng. Không cần giao `.env` của
@@ -19,7 +20,8 @@ node_modules, Expo cache, build output, DB dump hoặc các fixture test.
 ## Cách khuyến nghị để teammate bắt đầu
 
 1. Clone main; dùng Node/pnpm theo repo rồi chạy `pnpm install --frozen-lockfile`
-   và `pnpm setup:local`. Script tạo bốn file khi thiếu và không ghi đè file có sẵn.
+   và `pnpm setup:local`. Script tạo bốn file root/API/admin/RN còn thiếu, giữ file
+   có sẵn; chưa tạo env user-web. Tạo env app này riêng từ example nếu cần.
 2. Script sinh JWT_ACCESS_SECRET, PAYMENT_SIMULATOR_SECRET và mật khẩu MongoDB
    root/app/migrator local mới. Nếu chỉ một trong hai file root/API vừa được tạo,
    đồng bộ credential tương ứng theo hướng dẫn của script. Giữ
@@ -44,10 +46,13 @@ node_modules, Expo cache, build output, DB dump hoặc các fixture test.
    `PRICE_LOOKUP_SEARCH_USD` theo `apps/api/.env.example`. Sau khi pull chạy
    `pnpm --filter @used-books/api mongo:migrate` (migration 0006, 0007).
    Người giữ key provider đặt `PRICE_ASSIST_ENABLED=true` và `PRICE_ASSIST_API_KEY`
-   trong `apps/api/.env` của máy chạy API; giữ `PRICE_ASSIST_DAILY_BUDGET_USD` và
+   trong `apps/api/.env` của máy chạy API khi gate/provider/eval được duyệt; giữ `PRICE_ASSIST_DAILY_BUDGET_USD` và
    `PRICE_ASSIST_USER_DAILY_LIMIT` ở mức đã thống nhất. Key chỉ ở backend, không đưa
    vào EXPO_PUBLIC_*/VITE_*, không gửi qua chat. Thiếu key thì lời gọi model trả 503,
    người bán vẫn nhập giá tay.
+7. Với DB đã có, phiên bản hiện tại có15 migration Mongo (registry là nguồn).
+   Khi có migration thêm collection: áp `pnpm db:migrate` rồi `pnpm db:bootstrap`
+   để cập nhật role như ADR0032; không reset/reseed hoặc sửa migration đã áp dụng.
 
 ## Các giá trị phụ thuộc máy
 

@@ -1,0 +1,8 @@
+{
+  "projectRoots": [
+    "apps/user-web",
+    "apps/mobile-react-native",
+    "apps/admin-web",
+    "apps/mobile-flutter"
+  ]
+}

@@ -23,8 +23,6 @@ export function Notice({
       accessibilityLiveRegion="polite"
       style={{
         padding: 14,
-        borderLeftWidth: 3,
-        borderLeftColor: color.text,
         backgroundColor: color.surface,
         flexDirection: "row",
         alignItems: "center",

@@ -2,7 +2,7 @@
 
 The first working slice is **login → current profile → refresh → logout**.
 The API owns authorization; React Native owns presentation and session recovery.
-Flutter and admin work can follow the same contract later.
+Admin và React/Vite user-web đã dùng cùng API/session contract; Flutter còn scaffold.
 
 Current listing increment: **Account → Sách của tôi** creates/opens listings,
 selects/requests catalog books, uploads photos, edits condition/prices and submits
@@ -17,9 +17,10 @@ The RN form and submit/rejection flow now use those operations; see
 The [public shelf](features/PUBLIC_SHELF_REPORT.md) is implemented at `/`, with
 `/book?id=...` detail and separate signed photo reads. [Operations review UI](features/OPERATIONS_REVIEW_REPORT.md)
 now consumes the real review APIs. Session transport is shared in `packages/session-client`.
-OpenAPI 0.14.0 returns LOCKED profiles for restricted existing-obligation access.
+OpenAPI introduced LOCKED profiles at 0.14.0 for restricted existing-obligation access.
 The shared parser accepts this status, and Account shows the lock notice while
-hiding address/listing navigation. Wallet/Order inbox UI is still pending; see
+hiding address/listing navigation. RN đã có ví/lịch sử chỉ đọc dưới cờ
+`EXPO_PUBLIC_INTERNAL_MEMBER_VIEWS=1`; Order UI đầu-cuối còn thiếu; see
 [the backend access report](features/LOCKED_OBLIGATIONS_REPORT.md). A 403 preserves
 the session; authorization is enforced again by the API, not by hidden buttons.
 
@@ -150,9 +151,10 @@ the device matrix and the distinction between automated and device evidence.
 The accepted business target is [SRS1.1](SRS_V1_1.md): TP.HCM, retained direct shipping,
 two simulated managed points and bounded auctions. Read [ADR0007](adr/0007-hcm-handover-auction-scope.md)
 and [the new behavior rules](features/LOCAL_HANDOVER_AUCTION.md). This documentation
-update alone did not add API routes or migrations. Points/auctions remain planned;
-Order funding is now implemented in 0.15.0 and fulfillment extends through 0.20.0.
-Checkout UI and completed purchases remain planned; see the
+update alone did not add API routes or migrations. Current source09/10 có auction/
+point-order backend và user-web auction/live/inbox; purchase chat giữ24h khác
+checkout. DirectDelivery tới F2h; ViaPoint completion source chưa đóng gate.
+RN chưa có các màn auction/purchase tương đương user-web; see the
 [current handoff status](handoff/START_HERE.md).
 
 Take one feature per branch/PR. Before UI and API implementation diverge, agree on

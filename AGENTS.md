@@ -22,17 +22,20 @@
   Yêu cầu được chấp nhận không có nghĩa workflow đã triển khai. Giữ snapshot v1.0.
 - ADR là quyết định kiến trúc; OpenAPI là contract; code/tests/evidence mô tả phần
   đã hiện thực tại source được ghi. Báo cáo có ngày và HISTORY không là trạng thái mới nhất.
-- Runtime MongoDB, [ADR 0027](docs/adr/0027-mongodb-persistence-protocol.md); nghiệp vụ
-  giao dịch đóng tại F2h. Hoàn tất gate bàn giao trước mở Delivered/inspection/settlement.
+- Runtime MongoDB, [ADR 0027](docs/adr/0027-mongodb-persistence-protocol.md).
+  DirectDelivery tới F2h; ViaPoint đấu giá có source inspection/claim/settlement,
+  nhưng không là bằng chứng đóng gate. Giữ [READINESS](docs/handoff/READINESS.md):
+  hoàn tất gate và quyền gói trước mở rộng Delivered/inspection/settlement.
   [CONTINUATION_PLAN](docs/handoff/CONTINUATION_PLAN.md) không tự cấp quyền bỏ gate.
 - React Native là client Member ưu tiên; API chung cho RN, web và Flutter.
-  Flutter còn scaffold; Member web hiện là Expo web. Không tự tách client/framework.
+  Flutter còn scaffold; Member web có Expo web và `apps/user-web` React/Vite đã có.
+  Sửa đúng app được giao; không tự tách thêm client/framework.
 
 ## Read by task
 
 | Nhiệm vụ | Đọc trước khi sửa |
 | --- | --- |
-| UI RN/web/admin/Flutter | [Skill UI](.agents/skills/latlai-ui/SKILL.md), UI_CODING_RULES/UI_COMPONENTS/brand v1.1 được dẫn trong skill |
+| UI RN/web/admin/Flutter | [Skill UI](.agents/skills/latlai-ui/SKILL.md), [brief hiện hành](DESIGN.md), UI rules/components; [Impeccable workflow](docs/design/IMPECCABLE_WORKFLOW.md) khi design/critique/refine |
 | API, permission, session, persistence | [Skill API/Mongo](.agents/skills/latlai-api-mongo/SKILL.md), phần liên quan trong [DOMAIN_RULES](docs/architecture/DOMAIN_RULES.md) và ADR/feature được dẫn |
 | Review hoặc hoàn tất một gói | [Skill verify/handoff](.agents/skills/latlai-verify-handoff/SKILL.md), [CONTRIBUTING](CONTRIBUTING.md), [TEAMWORK](docs/TEAMWORK.md) |
 

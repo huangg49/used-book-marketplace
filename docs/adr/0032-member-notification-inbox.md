@@ -1,5 +1,9 @@
 # ADR 0032: Durable member notification inbox (auction events)
 
+> Inbox đã nhập main qua PR28 (`da59199`). Branch/review bên dưới ghi bối cảnh
+> quyết định ban đầu; không có nghĩa feature vẫn chưa merge. Gate hiện hành xem
+> [READINESS](../handoff/READINESS.md), công việc xem [SESSION_STATE](../handoff/SESSION_STATE.md).
+
 Date: 2026-10-09. Status: implemented on branch `feature/auction-web` for auction
 events (OpenAPI 0.30.0, migration `0015-member-notifications`). Needs human review
 before merge.

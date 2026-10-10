@@ -202,16 +202,19 @@ export function Chip({
   title,
   selected,
   onPress,
+  disabled = false,
 }: {
   title: string;
   selected: boolean;
   onPress: () => void;
+  disabled?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled }}
+      disabled={disabled}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       onPress={onPress}
@@ -220,6 +223,7 @@ export function Chip({
         focused && s.focus,
         pressed && { opacity: 0.8 },
         selected && { backgroundColor: c.forest, borderColor: c.forest },
+        disabled && { opacity: 0.5 },
       ]}
     >
       <T kind="small" color={selected ? c.paper : c.forest}>

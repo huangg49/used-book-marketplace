@@ -1,5 +1,9 @@
 # Lật lại 1.1 — Dấu chuyền tay
 
+Ngày09/10/2026: [brief hiện hành](../../../DESIGN.md) thay các ràng buộc thẩm mỹ
+UI-1 sau phản hồi của chủ dự án. Lora không còn là font bắt buộc. Bộ này giữ
+asset, giấy phép và lịch sử; font/màu trong runtime chưa tự thay theo brief mới.
+
 Trạng thái: hướng nhận diện từ bước 1, đã được áp dụng vào nền tảng UI React Native
 ở bước 3 (25/09/2026). Cần tiếp tục kiểm chứng native và phản hồi sử dụng; không
 thay thế đặc tả nghiệp vụ. Xem [component và phạm vi](../../../docs/design/UI_COMPONENTS.md).

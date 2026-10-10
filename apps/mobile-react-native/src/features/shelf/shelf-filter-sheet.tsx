@@ -57,7 +57,7 @@ export function ShelfFilterSheet({
       }
     >
       <AppText kind="small" color={colors.muted}>
-        Chọn điều bạn cần. Chỉ cập nhật kệ khi bấm Áp dụng.
+        Chọn điều kiện, rồi bấm Áp dụng bộ lọc để xem kết quả.
       </AppText>
       <AppText kind="bold">Hình thức</AppText>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>

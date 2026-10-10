@@ -1,5 +1,10 @@
 # Use case, truy vết và demo SRS 1.1
 
+> Checklist đặc tả tại mốc 26–27/09/2026. Các nhãn **chưa chạy**/Planned và số ca
+> bên dưới là tình trạng lúc lập tài liệu, không là bảng nghiệm thu hiện tại.
+> Main đã bổ sung auction/point Order; đối chiếu evidence theo source và
+> [SESSION_STATE](../handoff/SESSION_STATE.md)/[READINESS](../handoff/READINESS.md).
+
 Ngày 26/09/2026. Đọc cùng [nghiệp vụ](LOCAL_HANDOVER_AUCTION.md), [thiết kế logic](LOCAL_TRANSACTION_DESIGN.md)
 và [SRS 1.1](../SRS_V1_1.md). Tất cả AC-H/AC-AU dưới đây là **chưa chạy**.
 42 E2E API hiện có không được dùng làm bằng chứng rằng point/auction đã hoàn thành.

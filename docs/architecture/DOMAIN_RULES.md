@@ -10,13 +10,15 @@ cơ chế persistence PostgreSQL trong báo cáo cũ; vẫn giữ invariant nghi
 
 Trước mở rộng giao dịch, đọc [ADR 0007](../adr/0007-hcm-handover-auction-scope.md),
 [local transaction design](../features/LOCAL_TRANSACTION_DESIGN.md) và
-[acceptance](../features/LOCAL_TRANSACTION_ACCEPTANCE.md). Auction intake/bidding/close
-và Order ViaPoint + thanh toán người thắng đã có (ADR 0030); bàn giao tại điểm,
-quyết toán, real-carrier và completed-purchase vẫn là yêu cầu/kế hoạch.
+[acceptance](../features/LOCAL_TRANSACTION_ACCEPTANCE.md). Auction intake/bidding/close, Order ViaPoint/pay/report/code/handover và source
+claim/return/settlement đã có trong `modules/auctions`. DirectDelivery tới F2h;
+gate completion/release chưa đóng. Code có không tự cho phép mở rộng nghiệp vụ.
+Real carrier/Exchange đầy đủ còn thiếu.
 
 ## Đấu giá và điểm mô phỏng
 
-Bounded auctions are implemented in OpenAPI 0.27.0 (migrations 0008–0011); read ADR 0030 and
+Bounded auctions started in OpenAPI 0.27.0 (migrations 0008–0011); current contract
+is 0.30.0 with completion/business-rule/inbox increments. Read ADR 0030 and
 `docs/features/AUCTION_BACKEND_REPORT.md`. Intake shares the exclusive commitment with
 Orders, plus one point slot and the `Reserved` projection; release only on cancel
 before drop-off, drop-off expiry or Staff reclaim. Staff steps need STAFF + current
@@ -32,8 +34,11 @@ salted hash, Staff handover during 09:00–18:00 with committed wrong attempts a
 5-per-15-minutes limit; handover starts the 72 h inspection window. Rejection and
 missed deadlines open ResolutionPending; only an independent Admin decision refunds
 the whole hold (book back to reclaim) or reopens collection, and the ledger accepts a
-ViaPoint refund only as the journal named by that decision. Settlement stays gated,
-so never release the hold, slot or commitment of a collected (Inspection) Order.
+ViaPoint refund only as the journal named by that decision. The source now has completion: an unclaimed Inspection Order past its deadline
+settles atomically to seller P−C/platform C and closes the slot/commitment;
+claim/resolution/return retain holds until their valid outcome. This does not
+close READINESS. Never manually release money/book/slot to bypass the protocol;
+review source and gate before changing or extending completion.
 
 ## Commitment và unpaid Order
 
@@ -121,7 +126,11 @@ denies LOCKED by default. Use method-only ExistingObligation plus service checks
 never treat login, roles or a client capability as permission for new transactions.
 0.15.0 allows LOCKED paid cancellation/rejection; 0.16.0 adds Seller acceptance.
 New payment remains denied for LOCKED.
-Chat/claim-evidence/real-carrier and Admin lock/unlock workflows remain planned.
+Purchase chat exists in `modules/purchases`, with gateway/service participant
+authorization; its HTTP handlers are not an ExistingObligation allowlist.
+Point report/code/claim/read handlers currently lack the decorator described in
+older reports, so do not claim LOCKED access there from documentation alone.
+Claim evidence upload/real carrier and Admin lock/unlock workflows remain planned.
 
 ## Ví mô phỏng
 
@@ -148,7 +157,8 @@ DirectDelivery sale quote create/read APIs are implemented in OpenAPI 0.11.0; re
 ADR 0016 and `docs/features/DIRECT_SALE_QUOTE_REPORT.md`. Quotes are immutable estimates,
 never reservations or money holds. Use the shared command executor/QuoteReceipt,
 DB decision time after locks, and pinned policy/address/listing versions.
-Member checkout UI and ViaPoint remain planned. Native address/fulfillment has
+Member DirectDelivery checkout UI remains incomplete. Bounded auction ViaPoint
+Orders exist; ordinary sale/exchange ViaPoint and carrier legs remain planned. Native address/fulfillment has
 scoped evidence in handoff; use READINESS for the remaining acceptance, not this historical feature summary.
 
 ## Client, catalog, listing và media

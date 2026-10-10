@@ -1,7 +1,14 @@
 # Lật lại — Định hướng giao diện UI-1
 
+> UI-1 là lịch sử thiết kế/evidence. Chủ dự án09/10 phản hồi UI khó hiểu/khó dùng,
+> đặc biệt Lora/câu chữ, và duyệt [brief hiện hành](../DESIGN.md) cùng
+> [workflow Impeccable](design/IMPECCABLE_WORKFLOW.md). Các quyết định thẩm mỹ giữ
+> dưới đây không đè brief mới; source chưa tự đổi chỉ vì cập nhật tài liệu.
+
 Ngày 02/10/2026 · Nhánh `codex/ui-forest-navigation` · Base `f35fb16` (kệ B và chuyển động).
-UI-1 bắt đầu từ nền sản phẩm main `4273f10`; các gói UI sau chưa merge.
+UI-1 bắt đầu từ nền main `4273f10`; checkpoint/nhánh ở đây là mốc thiết kế.
+UI/dev workflow đã nhập main qua PR15; xem [SESSION_STATE](handoff/SESSION_STATE.md)
+cho tích hợp hiện hành, không suy từ tên nhánh cũ.
 
 ## Nguồn sự thật và phạm vi
 

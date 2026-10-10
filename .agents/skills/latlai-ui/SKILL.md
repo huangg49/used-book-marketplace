@@ -8,10 +8,14 @@ description: "Build or fix Lật lại screens and shared UI in React Native, Ex
 Các đường dẫn code bên dưới tính từ root repository. Đọc [AGENTS](../../../AGENTS.md)
 và [ranh giới client](../../../docs/AI_WORKFLOW.md#ranh-giới-các-phần) trước khi sửa.
 
-1. Đọc [UI rules](../../../docs/design/UI_CODING_RULES.md),
+1. Đọc [product](../../../PRODUCT.md), [brief hiện hành](../../../DESIGN.md),
+   [UI rules](../../../docs/design/UI_CODING_RULES.md),
    [UI components](../../../docs/design/UI_COMPONENTS.md) và
    [brand v1.1](../../../packages/brand/v1.1/README.md). Kiểm tra màn hình và code
    hiện có liên quan nhiệm vụ; chọn component/mẫu hiện có trước khi tạo mới.
+   Brief09/10 ưu tiên hơn thẩm mỹ UI-1/brand cũ; Lora không còn là yêu cầu giữ.
+   Khi design/critique/refine, dùng [Impeccable pinned](../impeccable/SKILL.md)
+   theo [workflow](../../../docs/design/IMPECCABLE_WORKFLOW.md), nạp playbook cần thiết.
 2. RN dùng `apps/mobile-react-native/src/core/ui/`; routes chỉ compose feature.
    Admin dùng control/CSS của app web; Flutter dùng widget/theme của client đó.
    Giữ cùng ngôn ngữ brand, không sao chép primitive RN sang DOM/Flutter. Không
