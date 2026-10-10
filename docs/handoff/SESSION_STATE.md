@@ -8,13 +8,17 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
-- Sau `252684f`, đưa lại nguyên khối “Đọc xong rồi? Để sách đi tiếp.” và
-  link /sell trước cảnh cáo/đồi theo yêu cầu chủ dự án. Giữ toàn bộ cảnh mùa thu,
-  hero/bookmarks/footer; không thay API/routes. Node24.19.0 build/typecheck PASS.
-  CUA1535×1000/390×844/320×844 không tràn ngang, đủ lời nhắn/link, cảnh sau CTA.
-  Docs/diff PASS. [Evidence](../design/WEB_MEMBER_REDESIGN.md). Backend/native/human/200% NOT RUN; READINESS giữ nguyên.
-  Checkpoint subject `fix(web): restore posting invitation above autumn landscape`; local, chưa push.
-  Bước tiếp: chủ dự án duyệt tổng thể Home với cả CTA và cảnh cáo.
+- Sau `a860408`, gộp nguyên lời mời đăng sách/link /sell vào cảnh mùa thu:
+  đồi z0, wine card z1, cáo alpha z2 chồng nhẹ mép card; desktop trái/phải,
+  mobile trên/dưới. Wrapper accessible, chỉ art hidden/pointer-inert. Giữ hero/
+  bookmarks/tán lá/24 motif/kệ/footer/API. Hai asset ImageGen có full provenance.
+  Build/typecheck/lint PASS (0error/6warning cũ; bundle warning đã biết).
+  CUA1535/1000/390/320px không tràn, action rõ, footer gap0; mobile capture
+  chỉ CTA/đầu cáo. Detector một lượt8advisory; reviewer độc lập SHIP/không fix.
+  Canonical scoped merge; docs/diff PASS. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
+  Backend/native/human/200% NOT RUN; READINESS giữ nguyên.
+  Checkpoint subject `style(web): layer posting invitation over autumn hills`; local, chưa push.
+  Bước tiếp: chủ dự án duyệt tổng thể Home.
 - Sau `912ecec`, giữ hero y nguyên; bookmark desktop144px/chim88px/padding đáy24px.
   Mobile152px/88px không đổi. Build/typecheck PASS; CUA1535×735/1366×768 hàng
   đủ trong khung đầu,390px vẫn2×2; không tràn ngang. [Evidence](../design/WEB_MEMBER_REDESIGN.md).

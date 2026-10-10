@@ -33,6 +33,27 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `a860408`, chủ dự án duyệt gộp CTA vào cảnh mùa thu nhiều lớp:
+đồi z0, nguyên wine card/lời nhắn/link /sell z1, cáo alpha z2 chồng nhẹ mép card.
+Desktop card trái/cáo phải; <=850px card trên/cáo dưới. Wrapper accessible,
+chỉ artwork aria-hidden/pointer-inert; hero/bookmarks/tán lá/24 motif/kệ/footer/
+API giữ nguyên. Hai delivery ImageGen từ Background demo.png: đồi1600×900/
+80992byte, cáo600×750/alpha53050byte; full prompt/source/delivery hashes ở
+[asset provenance](../../apps/user-web/public/illustrations/autumn/README.md).
+fox-landscape.webp giữ làm biến thể trước, không dùng runtime hiện tại.
+Node24.19.0 build/typecheck/lint PASS (0error/6warning cũ; bundle>500KB đã biết).
+CUA1535×900/1000×900/390×844/320×844 không tràn ngang: desktop overlap box80px,
+actionRight1004 < foxLeft1020/footer gap0;1000px actionRight314 < foxLeft655;
+mobile overlap mép card16px,320px action cách cáo90.8px. [Desktop](../../.impeccable/review/web-member/home-layered-fox-desktop.jpg)
+và [mobile](../../.impeccable/review/web-member/home-layered-fox-mobile.jpg) có
+JSON sidecar SHA256/kích thước encoded; ảnh mobile chỉ chụp CTA và đầu cáo,
+không chứng minh toàn bộ cáo trong viewport. Detector một lượt8advisory về
+màu/type đã duyệt hoặc có sẵn và#000 alpha mask; không scan lại.
+Reviewer độc lập layered_fox_finish disposition SHIP, không material fix.
+Canonical scoped merge giữ recipe khác/token drift cũ; docs/diff PASS.
+Backend/native/human/200% NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): layer posting invitation over autumn hills`; local, chưa push.
+
 Sau `252684f`, chủ dự án yêu cầu đưa lại “Đọc xong rồi? Để sách đi tiếp.”:
 khôi phục nguyên khối wine posting, mô tả và link /sell trước cảnh cáo/đồi.
 Giữ ảnh cảnh/tán lá/24 motif/hero/footer nối liền; không thay API/routes.

@@ -907,11 +907,14 @@
   justify-content: space-between;
   align-items: center;
   gap: 32px;
-  padding: 36px 40px;
+  position: relative;
+  z-index: 1;
+  width: calc(100% - 260px);
+  padding: 32px 96px 32px 36px;
   background: var(--shop-wine);
   color: var(--shop-cream);
   border-radius: 12px;
-  margin-top: 32px;
+  margin: 0;
 }
 .posting h2 {
   font: 400 clamp(2rem, 3vw, 2.5rem)/1.35 var(--shop-display);
@@ -954,14 +957,22 @@
 }
 .autumnClosing {
   position: relative;
+  isolation: isolate;
   z-index: 1;
-  height: max(260px, 26vw);
   margin: 32px -40px -56px;
+  padding: 72px 40px 100px;
   overflow: hidden;
-  pointer-events: none;
   background: #ffefcb;
 }
-.autumnClosing img {
+.closingLandscape {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, transparent, #000 72px);
+}
+.closingLandscape img {
   position: absolute;
   bottom: 0;
   left: 50%;
@@ -972,12 +983,37 @@
   transform: translateX(-50%);
   user-select: none;
 }
+.closingInner {
+  position: relative;
+  max-width: 1200px;
+  margin-inline: auto;
+}
+.closingFox {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: -100px;
+  width: 340px;
+  height: 380px;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+  user-select: none;
+}
 @media (min-width: 1600px) {
   .grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }
 @media (max-width: 1100px) {
+  .posting {
+    width: calc(100% - 210px);
+    flex-wrap: wrap;
+  }
+  .closingFox {
+    width: 290px;
+    height: 350px;
+  }
   .grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -1018,6 +1054,7 @@
   .autumnClosing {
     margin-inline: -24px;
     margin-bottom: -40px;
+    padding: 40px 24px 24px;
   }
   .quickLinks {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1032,10 +1069,21 @@
     grid-template-columns: 1fr;
   }
   .posting {
-    flex-wrap: wrap;
+    display: block;
+    width: 100%;
+    padding: 28px 24px 48px;
+  }
+  .closingInner {
+    padding-bottom: 200px;
+  }
+  .closingFox {
+    width: 220px;
+    height: 240px;
+    bottom: -24px;
   }
   .postingAction {
-    max-width: 100%;
+    width: 100%;
+    margin-top: 20px;
   }
 }
 @media (max-width: 600px) {
@@ -1059,6 +1107,7 @@
   }
   .autumnClosing {
     margin: 24px -16px -32px;
+    padding-inline: 16px;
   }
   .shortcutBand {
     margin-bottom: 24px;
@@ -1141,9 +1190,7 @@
     gap: 24px;
   }
   .posting {
-    padding: 28px 24px;
-    gap: 24px;
-    margin-top: 24px;
+    padding: 28px 24px 48px;
   }
   .postingAction {
     width: 100%;

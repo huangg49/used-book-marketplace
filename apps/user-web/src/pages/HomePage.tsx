@@ -735,6 +735,20 @@ export function HomePage() {
           </p>
           {preview && <TopicShelves />}
           <ExchangeShelf preview={preview} />
+
+        </div>
+        <div className={styles.autumnClosing}>
+          <div className={styles.closingLandscape} aria-hidden="true">
+            <img
+              src="/illustrations/autumn/hills-background.webp"
+              alt=""
+              width={1920}
+              height={1080}
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+          <div className={styles.closingInner}>
           <section className={styles.posting} aria-labelledby="posting-title">
             <div>
               <h2 id="posting-title">
@@ -751,16 +765,17 @@ export function HomePage() {
               <p>Mỗi bản sách có ảnh và mô tả riêng.</p>
             </div>
           </section>
-        </div>
-        <div className={styles.autumnClosing} aria-hidden="true">
-          <img
-            src="/illustrations/autumn/fox-landscape.webp"
-            alt=""
-            width={1920}
-            height={1080}
-            loading="lazy"
-            decoding="async"
-          />
+            <img
+              className={styles.closingFox}
+              src="/illustrations/autumn/fox-foreground.webp"
+              alt=""
+              aria-hidden="true"
+              width={400}
+              height={500}
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
         </div>
       </div>
     </div>
