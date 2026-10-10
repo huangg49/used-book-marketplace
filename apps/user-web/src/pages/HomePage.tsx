@@ -28,6 +28,37 @@ import {
 } from "../services/home-shelves";
 import styles from "./HomePage.module.css";
 
+function AutumnOrnaments() {
+  const motifs = [
+    styles.autumnMaple,
+    styles.autumnOval,
+    styles.autumnSeed,
+    styles.autumnAcorn,
+    styles.autumnOak,
+    styles.autumnTwig,
+    styles.autumnOval,
+    styles.autumnMaple,
+    styles.autumnAcorn,
+    styles.autumnSeed,
+    styles.autumnTwig,
+    styles.autumnOak,
+    styles.autumnSeed,
+    styles.autumnMaple,
+    styles.autumnOval,
+    styles.autumnAcorn,
+  ];
+  return (
+    <div className={styles.autumnOrnaments} aria-hidden="true">
+      {motifs.map((motif, index) => (
+        <span
+          key={`${motif}-${index}`}
+          className={`${styles.autumnMotif} ${motif}`}
+        />
+      ))}
+    </div>
+  );
+}
+
 const heroCovers = [
   "/illustrations/chua-nhan.webp",
   "/illustrations/tuoi-tho.webp",
@@ -579,6 +610,7 @@ export function HomePage() {
         </p>
       </section>
       <div className={styles.marketplace}>
+        <AutumnOrnaments />
         <div className={styles.shortcutBand}>
           <nav className={styles.quickLinks} aria-label="Khám phá sách">
             <Link

@@ -33,6 +33,21 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `14d91bb`, chủ dự án duyệt thử lá/hạt nhỏ:16 motif lá phong/oval/sồi,
+nhánh hai lá, quả sồi và cặp hạt đặt không đều ở hai mép Home. Tạo một atlas
+3×2 bằng built-in ImageGen, delivery768×512/alpha/55946byte; chỉ resize/encode,
+CSS chọn ô. [Asset và provenance](../../apps/user-web/public/illustrations/autumn/README.md).
+Motif30–66px/opacity30%, mobile tối đa30px/22%; không tile hoặc animation.
+Layer aria-hidden/pointer-inert/z0 và clip riêng; nội dung z1. Flow-root giữ
+hero overlap−12px. Hero/nút hover/kích thước/routes/panels/CTA/footer giữ nguyên.
+Tán lá lớn/cáo/đồi vẫn hoãn. Build/typecheck/lint PASS (6 warning cũ);
+CUA1535×735/1000×800/390×844 không tràn ngang,16 motif/pointer:none/animation:none,
+mobile và desktop giữ overlap−12px/focus không clip.
+[Desktop](../../.impeccable/review/web-member/home-autumn-ornaments-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-autumn-ornaments-mobile.jpg).
+Docs/diff PASS; backend/native/200%/human NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): add sparse autumn margin ornaments`; local, chưa push.
+
 Sau `9219feb`, bước1 theo duyệt chủ dự án: nền Home dưới hero dùng#ffefcb,
 lấy pixel giữa Background demo.png1920×1080. Bỏ lớp paper/page-mask sau bốn
 nút và CSS không dùng; giữ wrapper/height/hover/card panels/CTA/footer/hero.

@@ -252,10 +252,140 @@
 
 /* Discovery below the owner-approved hero. */
 .marketplace {
+  position: relative;
+  isolation: isolate;
+  display: flow-root;
   background: #ffefcb;
   padding: 0 40px 56px;
 }
+.autumnOrnaments {
+  --ornament-edge: clamp(4px, calc((100% - 1200px) / 4), 54px);
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.autumnMotif {
+  --motif-size: 48px;
+  --motif-angle: 0deg;
+  position: absolute;
+  left: var(--ornament-edge);
+  width: var(--motif-size);
+  height: var(--motif-size);
+  background-image: url("/illustrations/autumn/motifs.webp");
+  background-size: 300% 200%;
+  background-repeat: no-repeat;
+  opacity: 0.3;
+  transform: rotate(var(--motif-angle));
+}
+.autumnMotif:nth-child(even) {
+  left: auto;
+  right: var(--ornament-edge);
+}
+.autumnMaple {
+  background-position: 0% 0%;
+}
+.autumnOval {
+  background-position: 50% 0%;
+}
+.autumnOak {
+  background-position: 100% 0%;
+}
+.autumnTwig {
+  background-position: 0% 100%;
+}
+.autumnAcorn {
+  background-position: 50% 100%;
+}
+.autumnSeed {
+  background-position: 100% 100%;
+}
+.autumnMotif:nth-child(1) {
+  top: 28px;
+  --motif-size: 66px;
+  --motif-angle: -28deg;
+}
+.autumnMotif:nth-child(2) {
+  top: 54px;
+  --motif-size: 54px;
+  --motif-angle: 24deg;
+}
+.autumnMotif:nth-child(3) {
+  top: 118px;
+  left: calc(var(--ornament-edge) + 48px);
+  --motif-size: 30px;
+  --motif-angle: 18deg;
+}
+.autumnMotif:nth-child(4) {
+  top: 186px;
+  right: calc(var(--ornament-edge) + 32px);
+  --motif-size: 34px;
+  --motif-angle: -16deg;
+}
+.autumnMotif:nth-child(5) {
+  top: 12%;
+  --motif-size: 58px;
+  --motif-angle: 35deg;
+}
+.autumnMotif:nth-child(6) {
+  top: 19%;
+  --motif-size: 50px;
+  --motif-angle: -22deg;
+}
+.autumnMotif:nth-child(7) {
+  top: 29%;
+  --motif-size: 40px;
+  --motif-angle: -40deg;
+}
+.autumnMotif:nth-child(8) {
+  top: 37%;
+  --motif-size: 62px;
+  --motif-angle: 18deg;
+}
+.autumnMotif:nth-child(9) {
+  top: 45%;
+  --motif-size: 32px;
+  --motif-angle: 28deg;
+}
+.autumnMotif:nth-child(10) {
+  top: 53%;
+  --motif-size: 44px;
+  --motif-angle: -28deg;
+}
+.autumnMotif:nth-child(11) {
+  top: 62%;
+  --motif-size: 56px;
+  --motif-angle: 14deg;
+}
+.autumnMotif:nth-child(12) {
+  top: 70%;
+  --motif-size: 52px;
+  --motif-angle: -34deg;
+}
+.autumnMotif:nth-child(13) {
+  top: 77%;
+  --motif-size: 36px;
+  --motif-angle: 42deg;
+}
+.autumnMotif:nth-child(14) {
+  top: 84%;
+  --motif-size: 48px;
+  --motif-angle: -18deg;
+}
+.autumnMotif:nth-child(15) {
+  top: 91%;
+  --motif-size: 44px;
+  --motif-angle: 32deg;
+}
+.autumnMotif:nth-child(16) {
+  top: 95%;
+  --motif-size: 34px;
+  --motif-angle: -25deg;
+}
 .marketInner {
+  position: relative;
+  z-index: 1;
   max-width: 1200px;
   margin: auto;
 }
@@ -264,6 +394,7 @@
 }
 .shortcutBand {
   position: relative;
+  z-index: 1;
   display: flow-root;
   margin: -12px 0 28px;
 }
@@ -817,6 +948,14 @@
   }
 }
 @media (max-width: 600px) {
+  .autumnOrnaments {
+    --ornament-edge: -4px;
+  }
+  .autumnMotif {
+    width: min(var(--motif-size), 30px);
+    height: min(var(--motif-size), 30px);
+    opacity: 0.22;
+  }
   .marketplace {
     padding: 0 16px 32px;
   }

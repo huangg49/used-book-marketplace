@@ -8,14 +8,15 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
-- Sau `9219feb`, thử nền Home#ffefcb lấy từ Background demo.png; bỏ backdrop
-  paper/page-mask sau bốn nút. Giữ hero/height/hover/card panels/CTA/footer.
-  Tán lá/cáo/đồi/lá rơi hoãn theo yêu cầu, chờ chủ dự án duyệt màu nền trước.
-  Build/typecheck/docs/diff PASS; CUA1535×735/390px màu đúng, không backdrop cũ,
-  không tràn ngang/bốn nút đủ. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
-  Backend/native/200%/human NOT RUN; READINESS giữ nguyên.
-  Checkpoint subject `style(web): trial the autumn canvas color`; local, chưa push.
-  Bước tiếp: chủ dự án duyệt nền trước khi thêm các thành phần cảnh mùa thu.
+- Sau `14d91bb`, thử16 motif lá/nhánh/quả sồi/hạt nhỏ ở hai mép nền Home.
+  Atlas ImageGen3×2/768×512/alpha/55KB, có full prompt/hash trong repo.
+  Static/aria-hidden/pointer-inert, z0 dưới nội dung; mobile nhỏ/nhạt hơn.
+  Hero overlap−12px/nút hover/height/routes/panels/CTA/footer giữ nguyên;
+  tán lá lớn/cáo/đồi vẫn hoãn. Build/typecheck/lint PASS (6 warning cũ),
+  CUA1535×735/1000×800/390×844 không tràn/focus không clip. Docs/diff PASS.
+  [Evidence](../design/WEB_MEMBER_REDESIGN.md). Backend/native/200%/human NOT RUN; READINESS giữ nguyên.
+  Checkpoint subject `style(web): add sparse autumn margin ornaments`; local, chưa push.
+  Bước tiếp: chủ dự án duyệt họa tiết trước khi thêm tán lá/cảnh cáo.
 - Sau `912ecec`, giữ hero y nguyên; bookmark desktop144px/chim88px/padding đáy24px.
   Mobile152px/88px không đổi. Build/typecheck PASS; CUA1535×735/1366×768 hàng
   đủ trong khung đầu,390px vẫn2×2; không tràn ngang. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
