@@ -8,6 +8,10 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `48e806d`, chủ dự án gửi ba bìa thay thế: Oz→Chúa nhẫn (cả hai vị trí),
+  Alice→Alice mới, Pride→Nghìn lẻ một đêm; áp vào hero và ba mục khám phá Home.
+  Giữ CSS/hover/API. Build/typecheck, ảnh CUA1440/390px đủ8bìa/mobile không tràn,
+  provenance/docs/diff PASS. Checkpoint subject `feat(web): use owner-selected replacement covers`.
 - Sau `e0b739f`, chủ dự án yêu cầu thêm bốn bìa và hover hero. Đã giữ bốn vị trí
   cũ thành tám, hai cụm2×2 desktop/4×2 mobile dưới search; hover phóng/nâng/bóng,
   touch tĩnh/reduced-motion không phóng. Focused browser QA1440–320px100/130%

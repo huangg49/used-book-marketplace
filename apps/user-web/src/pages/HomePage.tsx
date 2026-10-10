@@ -8,14 +8,14 @@ import { getPublicListings } from "../services/public-listings";
 import styles from "./HomePage.module.css";
 
 const heroCovers = [
-  "/illustrations/oz.jpg",
+  "/illustrations/chua-nhan.webp",
   "/illustrations/tuoi-tho.webp",
-  "/illustrations/alice.jpg",
+  "/illustrations/alice-moi.webp",
   "/illustrations/gachiakuta.webp",
   "/illustrations/one-piece.webp",
-  "/illustrations/pride.jpg",
+  "/illustrations/nghin-le-mot-dem.webp",
   "/illustrations/duoc-su.webp",
-  "/illustrations/oz.jpg",
+  "/illustrations/chua-nhan.webp",
 ];
 
 function HeroCovers() {
@@ -174,7 +174,7 @@ export function HomePage() {
               <span>Thêm một cuốn vào tủ</span>
               <h3>SÁCH ĐỂ MUA</h3>
             </div>
-            <img src="/illustrations/alice.jpg" alt="" loading="lazy" />
+            <img src="/illustrations/alice-moi.webp" alt="" loading="lazy" />
           </Link>
           <Link
             to={searchUrl({ mode: "Exchange" })}
@@ -185,7 +185,7 @@ export function HomePage() {
               <span>Đọc mới từ sách cũ</span>
               <h3>SÁCH ĐỂ ĐỔI</h3>
             </div>
-            <img src="/illustrations/oz.jpg" alt="" loading="lazy" />
+            <img src="/illustrations/chua-nhan.webp" alt="" loading="lazy" />
           </Link>
           <Link
             to={searchUrl({ mode: "Sale", maxSalePrice: "100000" })}
@@ -196,7 +196,7 @@ export function HomePage() {
               <span>Một khoản nhỏ cho việc đọc</span>
               <h3>DƯỚI 100.000₫</h3>
             </div>
-            <img src="/illustrations/pride.jpg" alt="" loading="lazy" />
+            <img src="/illustrations/nghin-le-mot-dem.webp" alt="" loading="lazy" />
           </Link>
         </div>
         <p className={styles.tileCaption}>

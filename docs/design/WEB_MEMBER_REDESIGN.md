@@ -35,13 +35,21 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 Dribbble cung cấp ảnh thiết kế tổng hợp; chưa có bộ asset tách riêng hoặc ảnh bìa
 gốc chất lượng cao từ tác giả. Không cắt bìa nhỏ từ screenshot để gán cho bài đăng.
-Mục khám phá dùng ba bìa tư liệu, hero thêm bốn ảnh chủ dự án cung cấp; nguồn trong
+Home hiện dùng bìa chủ dự án cung cấp: Chúa nhẫn (hai vị trí), Alice mới,
+Nghìn lẻ một đêm, Tuổi thơ, One Piece, Gachiakuta, Dược sư tự sự; nguồn trong
 [asset README](../../apps/user-web/public/illustrations/README.md); có chú thích
 minh họa. Thẻ/chi tiết dùng ảnh API, không thay bằng ảnh stock. Mọi raster mới
 được ghi provenance (embedded JPEG/PNG hoặc sidecar WebP). Các screenshot sử dụng
 fixture [QA], giá/tình trạng mô phỏng.
 
 ## Kiểm chứng
+
+Sau `48e806d`, thay Oz→Chúa nhẫn (hai vị trí), Alice cũ→Alice mới,
+Pride→Nghìn lẻ một đêm trong hero và ba mục khám phá. CSS/hover không đổi.
+Build/typecheck PASS, CUA1440/390px PASS8ảnh tải/hiện và mobile không tràn;
+[desktop hiện tại](../../.impeccable/review/web-member/hero-replacement-desktop.jpg),
+[mobile hiện tại](../../.impeccable/review/web-member/hero-replacement-mobile.jpg).
+Kiểm hover/chữ lớn bên dưới thuộc checkpoint48e806d với cùng CSS.
 
 Cập nhật hero sau checkpoint `e0b739f`: thêm bốn bìa do chủ dự án gửi, giữ bốn vị
 trí cũ thành tám; desktop hai cụm2×2, <=1100 dưới search, <=800 thành4×2. Hover

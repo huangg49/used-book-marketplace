@@ -22,4 +22,11 @@ Bản phục vụ web được thu nhỏ trong400×560, giữ tỷ lệ/toàn �
 không vẽ lại/cắt nội dung. Nguồn do chủ dự án gửi, không nhận là public-domain.
 Provenance của WebP nằm ở sidecar `.webp.json`. Hero có tám vị trí: giữ bốn vị trí
 cũ (Oz vốn xuất hiện hai lần) và thêm bốn ảnh mới. Chỉ là minh họa, không khẳng
-định đang có bài bán những cuốn này. Mục khám phá vẫn dùng ba bìa tư liệu cũ.
+định đang có bài bán những cuốn này.
+
+Lượt thay bìa tiếp theo cùng ngày: chủ dự án gửi Chúa nhẫn.webp, Alice.webp và
+nghìn lẻ một đêm.jpg. Bản delivery tương ứng `chua-nhan.webp`, `alice-moi.webp`,
+`nghin-le-mot-dem.webp`, cùng quy trình tối ưu và provenance sidecar ở trên.
+Home hero thay cả hai vị trí Oz bằng Chúa nhẫn, Alice cũ bằng Alice mới,
+Pride and Prejudice bằng Nghìn lẻ một đêm; ba mục khám phá dùng cùng bìa thay thế.
+Các JPEG tư liệu cũ giữ để đọc lịch sử, không còn được Home hiện tại tham chiếu.
