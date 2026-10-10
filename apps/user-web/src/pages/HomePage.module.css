@@ -310,6 +310,7 @@
   fill: none;
   stroke: var(--shop-wine);
   stroke-linecap: round;
+  stroke-dasharray: 2px 5px;
   opacity: 0.35;
 }
 .quickLinks a > img {

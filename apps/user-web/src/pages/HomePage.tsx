@@ -67,7 +67,7 @@ function BookmarkPaper() {
       />
       <path
         className={styles.bookmarkThread}
-        d="M16 12H48"
+        d="M16 12H184"
         vectorEffect="non-scaling-stroke"
       />
     </svg>

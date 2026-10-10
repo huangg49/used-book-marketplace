@@ -36,6 +36,10 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 Sau `4c07fb2`, Mua sách dùng cùng vàng#f6e0a8 với Đấu giá theo yêu cầu chủ dự án.
 Build/typecheck/docs/diff PASS; CUA xác nhận hai fill cùngrgb(246,224,168).
 [Ảnh](../../.impeccable/review/web-member/home-bookmarks-buy-gold.jpg). Chỉ đổi màu.
+Sau `760a68a`, nét ngắn đổi thành đường khâu wine35% ở mép trên, dash2/5px,
+inset16px. Build/typecheck/docs/diff PASS; CUA1535×7354nét/không tràn,
+đáy hàng723.95px. Hero/routes/kích thước không đổi; không thêm animation.
+[Ảnh](../../.impeccable/review/web-member/home-bookmarks-stitching.jpg).
 
 Sau `912ecec`, chủ dự án yêu cầu giữ nguyên hero và chỉ thu bốn nút do đáy bị
 cắt ở cửa sổ1535×735. Bookmark desktop168→144px, chim104→88px, padding đáy30→24px;
