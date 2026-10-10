@@ -24,7 +24,15 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   focus/body-scroll, guest return và Back PASS; QA riêng đã dọn. Review SHIP,
   canonical scoped merge; owner/held/ảnh lỗi/200%/native/human NOT RUN lượt này.
   Checkpoint subject `feat(web): refine book detail photo gallery`; local chưa
-  push. Bước tiếp: Đăng sách theo thứ tự đã duyệt.
+  push. Đăng sách tiếp nối đã thay form legacy bằng bàn soạn5bước/preview,
+  condition/ownership rõ, bảo vệ thoát và giữ closure retry. Build/typecheck/
+  25unit PASS; lint0error/6warning cũ. CUA4viewport/validation/giữ dữ liệu/
+  ảnh/thoát-hủy/gửi/reset PASS. Nest/Mongo *_test storagefake xác nhận đúng1bài
+  PendingReview với1ảnh và hai giá. Reviewer FIX viền, đã đổi token tương phản,
+  closure SHIP; canonical merge. Fullintegration/browser lost-response/200%/
+  native/human/beforeunload UI NOT RUN. READINESS không đổi; local chưa push.
+  Checkpoint subject `feat(web): redesign book posting workspace`.
+  Bước tiếp: Tài khoản theo thứ tự đã duyệt.
 - Sau `1101fac`, chủ dự án báo OS giảm chuyển động làm mất hiệu ứng mới.
   Home nay giữ đầy đủ animation cả khi reduced-motion=true: tán lá12s,
   sáu lá nền16–19s, card lift240ms/banner320ms, filter180ms/card thêm220ms,

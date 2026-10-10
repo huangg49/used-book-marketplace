@@ -22,6 +22,8 @@ colors:
   cover-lilac: "#e6dced"
   detail-ground: "#efe3cf"
   detail-label-ink: "#5b3428"
+  sell-desk-ground: "#f5eddc"
+  sell-action-hover: "#7a140c"
   rn-forest: "#214B40"
   rn-paper: "#F5EFDF"
   rn-surface: "#FFFCF4"
@@ -75,6 +77,27 @@ typography:
     fontSize: "1.05rem"
     fontWeight: 700
     lineHeight: 1.5
+  sell-heading:
+    fontFamily: "Anton, sans-serif"
+    fontSize: "clamp(2rem, 3vw, 2.75rem)"
+    fontWeight: 400
+    lineHeight: 1.2
+  sell-step-heading:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "1.5rem"
+    fontWeight: 700
+    lineHeight: 1.5
+    letterSpacing: "-0.02em"
+  sell-field:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.875rem"
+    fontWeight: 400
+    lineHeight: 1.7
+  sell-help:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.8125rem"
+    fontWeight: 400
+    lineHeight: 1.9
   home-section:
     fontFamily: "Be Vietnam Pro, sans-serif"
     fontSize: "1.5rem"
@@ -295,6 +318,48 @@ components:
     textColor: "{colors.rn-paper}"
     rounded: "{rounded.control}"
     padding: "13px 20px"
+  sell-form-panel:
+    backgroundColor: "{colors.shop-paper}"
+    rounded: "{rounded.panel}"
+    padding: "28px 32px"
+  sell-text-field:
+    backgroundColor: "{colors.shop-paper}"
+    textColor: "{colors.shop-ink}"
+    typography: "{typography.sell-field}"
+    rounded: "{rounded.control}"
+    padding: "12px 14px"
+    height: "48px"
+  sell-button-primary:
+    backgroundColor: "{colors.shop-wine}"
+    textColor: "{colors.shop-paper}"
+    rounded: "{rounded.control}"
+    padding: "12px 16px"
+    height: "48px"
+  sell-button-primary-hover:
+    backgroundColor: "{colors.sell-action-hover}"
+  sell-step-selected:
+    backgroundColor: "{colors.detail-ground}"
+    textColor: "{colors.shop-wine}"
+    rounded: "{rounded.control}"
+    padding: "10px 8px"
+    height: "48px"
+  sell-upload:
+    backgroundColor: "{colors.detail-ground}"
+    textColor: "{colors.shop-wine}"
+    rounded: "{rounded.panel}"
+    padding: "24px"
+    height: "172px"
+  sell-mode-selected:
+    backgroundColor: "{colors.shop-cream}"
+    textColor: "{colors.shop-wine}"
+    rounded: "{rounded.control}"
+    padding: "14px"
+    height: "50px"
+  sell-local-photo:
+    backgroundColor: "{colors.detail-ground}"
+    rounded: "{rounded.panel}"
+    padding: "20px"
+    height: "230px"
   rn-text-field:
     backgroundColor: "{colors.rn-surface}"
     textColor: "{colors.rn-ink}"
@@ -315,7 +380,7 @@ components:
 
 Member web pairs the owner's wine-red owl and lettering with warm paper, tall display type and colored grounds for complete book covers. Discovery is lively; listing facts and task controls stay direct, readable and quieter than the covers. This records the world built after the owner's replacement decision on 10/10/2026, using the [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-booksearchpage-tsx.md) and [PRODUCT](PRODUCT.md), rather than the superseded green web sketches.
 
-The implemented web slice is Home, Search, Detail, Login, shared Header/BookCard/ConfirmDialog and MainLayout/AuthLayout. Login owns its bookstore split with the original logo over the photograph, tactile ivory paper behind the form and a separate paper-side home action, apart from the shared Member Header; AuthLayout still serves the legacy registration scaffold. Existing posting and other forms, auction, chat, profile and registration retain legacy page recipes even where the shared shell changes. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.
+The implemented web slice is Home, Search, Detail, Login, Sell, shared Header/BookCard/ConfirmDialog and MainLayout/AuthLayout. Login owns its bookstore split with the original logo over the photograph, tactile ivory paper behind the form and a separate paper-side home action, apart from the shared Member Header; AuthLayout still serves the legacy registration scaffold. Sell owns its paper task desk and five existing steps. Other forms, auction, chat, profile and registration retain legacy page recipes even where the shared shell changes. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.
 
 **Key Characteristics:**
 
@@ -346,6 +411,7 @@ The web palette moves from a dark wine shell to warm paper shelves and soft cove
 - **Web paper / ink / muted** (`shop-paper`, `shop-ink`, `shop-muted`): canvas, reading text and secondary metadata. Home's discovery field and state panels use `shop-shelf`, with paper category/catalog panels; the gallery and descriptive condition labels use `detail-ground`.
 - **Divider / control boundary** (`shop-line`, `shop-control`): quiet grouping versus the stronger Login, price-input, sort and radio boundary treatments.
 - **Detail label ink** (`detail-label-ink`): descriptive condition/mode text on the photograph ground; this is a scoped factual label role.
+- **Sell scope:** `sell-desk-ground` separates the task canvas from the paper form; `detail-ground` is reused for the selected step, upload area and contained local photographs. `sell-action-hover` is the implemented primary/reset hover. Fields, dashed upload boundary, native file-selector button and mode rows reuse `shop-control`; dividers keep `shop-line`. These roles apply only to Sell.
 - **Login scope:** the page binds the existing `shop-wine-hover`, `shop-error` and `shop-shelf` values locally because those roles are absent from global CSS. This restores the canonical hover, error and password-eye surface colors without adding a palette identity.
 - **Incumbent RN colors** (`rn-*`): forest action/heading, paper canvas, surface navigation, shelf canvas, ink, muted, rust condition text, input border, divider and selected-navigation surface. These are preserved from [RN theme](apps/mobile-react-native/src/core/ui/theme.ts) and [brand identity](packages/brand/v1.1/identity.tokens.json), not applied to the new web slice.
 
@@ -367,6 +433,7 @@ Both families are self-hosted in web `public/fonts`, with OFL files and [source 
 - **Detail title / card title:** bold Be Vietnam Pro; Detail uses `detail-title` with natural wrapping and `detail-title-narrow` at720px, while the card narrow size is0.92rem. Home's optional compact BookCard uses `home-card-title` (15px) above600px and the shared14.72px narrow title below it. Home compact titles show at most two lines, with full text retained in the DOM, accessible name and native title tooltip. Search now uses the same compact title behavior; the default BookCard recipe remains available elsewhere.
 - **Body / label:** regular reading copy and bold controls. Supporting text is mostly 0.75–0.9rem with 1.6–1.9 line height; disclosure captions are smaller. Description text preserves line breaks; task explanations cap around 60–65ch.
 - **Price:** Detail uses 1.5rem, reducing to 1.3rem on narrow layouts; card prices use 1rem then 0.9rem. Both use tabular numerals and separate sale/exchange labels.
+- **Sell task desk:** uppercase Anton `sell-heading` introduces the task, at 2rem below 760px. Bold Be Vietnam Pro `sell-step-heading` carries the current step, at 1.25rem below 760px. Fields use `sell-field`, visible labels and actions use 14px bold text, and instructions/errors use `sell-help`. Step navigation uses 13px/1.5, then 12px below 760px; step counts, number markers, local-photo captions and the session-only note are 12px supporting roles. Preview titles use 16px/1.7 bold type and wrap naturally; separately labelled values use 14px bold tabular figures. These are scoped roles, not smaller global task typography.
 - **RN:** one Be Vietnam Pro family with actual regular/bold faces, including the preserved `rn-*` roles. CSS units in this interchange map to RN logical pixels and retain system text scaling; web display type does not replace the RN type system.
 
 **The Two Voices Rule.** Anton carries expressive discovery moments; Be Vietnam Pro carries Home category/catalog headings, book titles, prices, forms and consequential actions. Use the bundled weights.
@@ -384,6 +451,8 @@ At 800px the header uses an expandable menu while retaining both owl and letteri
 Wide, short laptop viewports (`min-width:1101px` and `max-height:850px`) use a compact Home stage: headline-art width `min(100%,clamp(20rem,66vh,32.5rem))`, book unit `clamp(116px,18vh,152px)`, hero padding28px/32px and row gap36px. Each cluster stage is twice that unit plus36px, keeping its individually positioned focal/companion composition; page artwork scales to310×456px. The discovery quick-link row has28px vertical padding below the hero. This adapts to available height without browser zoom, fixed section height, hidden content or smaller touch targets. Larger text can grow naturally; mobile and tall desktop retain their existing layout structure.
 
 RN retains content width 480dp, page padding 20dp, targets at least 48dp and controls at least 52dp. Search owns its fixed header and 32%-width cover beside metadata; below 360dp with effective text scale at least 1.29 it stacks vertically. Screens own safe area. This is RN implementation context, not a web recipe or proof that every RN screen has been redesigned.
+
+Sell uses a 1360px container with 36px 40px 80px padding and a 180px/minmax(0,1fr)/260px task grid,32px gaps and sticky step/preview rails at 112px. At 1150px the step rail becomes 170px, side padding 24px and preview moves into the review step, capped at 360px. At 760px the desk becomes one column with 24px gaps,24px 20px 48px page padding and a static three-column wrapping step selector; at 360px the selector becomes two columns. Form padding is 28px 32px,24px 20px at 760px and 20px 16px at 360px. Local photos use three columns, then two at 760px. Actions wrap inside normal document flow; no fixed bottom overlay is added.
 
 ## Elevation & Depth
 
@@ -513,6 +582,16 @@ The decorative local 3000×2818 JPEG is Davit Margaryan's Barcelona bookstore ph
 
 The right-side paper asset has [generation provenance](apps/user-web/public/login-art/README.md); no book illustration ships. The greeting has 16px below it and the description has 20px below it. Submit starts 24px after the field/error content. The centered registration row starts 20px below submit with 12px top padding and a single 1px `shop-line` rule. Recovery and registration are underlined wine text buttons with 44px minimum height, transparent ground and a `shop-control` underline that becomes currentColor on hover. Their inline `role="status"` messages explain that reset/registration are unavailable and suggest browsing; only one help message is open at a time. These buttons preserve both field values and send no requests or navigation. Email/password, password visibility, pending submit, distinct connection/credential errors and safe returnUrl retain the existing SessionClient behavior. This recipe adds affordances, without adding reset/registration endpoints or changing the legacy registration scaffold.
 
+### Sell paper task desk — approved 11/10
+
+The [Sell surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-sellbookpage-tsx.md) keeps five steps: book information, actual-copy photos, condition, sale/exchange and review. The paper form has 12px corners without a shadow; internal field groups use 24px gaps, bold visible labels and native inputs/selects/textareas. Fields retain 48px minimum height,8px corners and a 1px `shop-control` border. The selected step has a sand ground and wine number marker; the native condition questions remain visible as three fieldsets with Có/Không choices and 44px label targets. Mode rows use 50px minimum height, native radios and cream/wine selection. Focus is a 2px wine outline at 3px offset. The 48px primary action uses paper text on wine, cream secondary actions and scoped hover; pending controls reduce opacity and disable editing. Sizes in the frontmatter are minimum heights for controls and the upload area; text can grow them.
+
+Photo selection uses the native file control and a 172px dashed upload area, with 44px file-selector and remove controls. Up to eight JPEG/PNG/WebP files, each at most 10 MB, are selected locally; the first is the cover. The 140px contained photo tiles and 230px preview stage show actual object URLs rather than catalog art. Photos upload when submitting; the UI does not promise reordering, progress or durable drafts. URLs are revoked on removal, reset and unmount. The preview states that it is unpublished and keeps condition/mode and sale/exchange values distinct. Review repeats the complete descriptions and condition answers, then explicit ownership and the final **Gửi duyệt** action.
+
+Step-change focus reaches the heading; failed validation focuses an alert and retains input. After submission starts, fields lock to the same in-memory submission attempt; **Thử gửi lại** reuses that attempt. Success appears only after the existing service resolves, says **Đã gửi duyệt**, and explains pending moderation before public display. **Đăng cuốn khác** clears the attempt, photos and fields. Shared ConfirmDialog protects route exits; the beforeunload handler protects document exits. The visible session-only note does not promise auto-save. No API/session/business-state change or new shipping raster asset belongs to this recipe; Sell inherits global motion reduction without Home's exceptions.
+
+Seven `sell-desk-*.jpg` captures and the [finish review](.impeccable/review/web-member/sell-desk-finish.md) document the scoped desk. Independent AI review returned **ship** after four control boundaries changed to the existing `shop-control` token; contrast is 4.201:1 on paper and 3.394:1 on the upload ground. The reviewer checked source/captures and the correction, without rerunning the implementer's execution evidence. Reported CUA checks covered four widths without overflow, validation/retention, photo addition/removal, exit cancellation, success and reset. Real Nest/Mongo `*_test` with fake storage produced exactly one PendingReview listing, one uploaded photo and 75,000/90,000 VNĐ values. Build/typecheck and 25 unit tests passed; lint had 0 errors/6 existing warnings. The single detector's six advisories do not require another scan. Full integration, actual browser lost-response retry,200% text/zoom, native, browser beforeunload prompt and human acceptance remain NOT RUN; READINESS gates are unchanged.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -532,4 +611,4 @@ The right-side paper asset has [generation provenance](apps/user-web/public/logi
 - **Don't** regenerate the supplied logo, imitate its lettering with a font, or treat a reference screenshot as licensed cover assets.
 - **Don't** canonize legacy glyph-icon, display-font or animation recipes as part of this web world.
 
-Source inventory: web global CSS, Home/Search/Detail/Login module CSS, BookCard, Header/MainLayout, AuthLayout and ConfirmDialog; RN theme/brand tokens preserve the previous implementation. [Brand provenance](apps/user-web/public/brand/README.md) and [illustration provenance](apps/user-web/public/illustrations/README.md) record the assets. Legacy Material Symbols import/old animation classes remain outside the documented web slice; this documentation pass does not repair or endorse them.
+Source inventory: web global CSS, Home/Search/Detail/Login/Sell module CSS, BookCard, Header/MainLayout, AuthLayout and ConfirmDialog; RN theme/brand tokens preserve the previous implementation. [Brand provenance](apps/user-web/public/brand/README.md) and [illustration provenance](apps/user-web/public/illustrations/README.md) record the assets. Legacy Material Symbols import/old animation classes remain outside the documented web slice; this documentation pass does not repair or endorse them.

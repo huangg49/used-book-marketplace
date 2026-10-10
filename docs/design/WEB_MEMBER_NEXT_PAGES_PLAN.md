@@ -1,7 +1,7 @@
 # Kế hoạch thiết kế các trang Member web tiếp theo
 
 Lập10/10/2026 từ nguồn `b27047e`; chủ dự án đã duyệt triển khai.
-Cập nhật11/10: Tìm sách và Chi tiết đã triển khai, hoàn tất review/canonical;
+Cập nhật11/10: Tìm sách, Chi tiết và Đăng sách đã triển khai, hoàn tất review/canonical;
 các nhóm bên dưới vẫn là kế hoạch, không phải nghiệm thu toàn bộ.
 Chủ dự án chọn thứ tự: Tìm sách → Chi tiết sách → Đăng sách, sau đó tài khoản,
 chat và đấu giá. Phạm vi `apps/user-web`; Android/admin có kế hoạch riêng.
@@ -63,7 +63,9 @@ Hiện có `/books/:id`, API thật và bố cục hai cột theo brand mới.
 
 ## 3. Đăng sách — một bàn soạn bài sáng và dễ kiểm tra
 
-Hiện có `/sell`, form nhiều bước và service upload/submit; cần thay diện mạo cũ.
+Triển khai11/10: bàn soạn giấy kem, tiến trình5bước, bản xem trước và bố cục
+mobile một cột. Giữ upload/submission thật, bảo toàn retry và cảnh báo thoát.
+Review SHIP sau sửa tương phản viền. Evidence/giới hạn ở báo cáo triển khai.
 
 - Giữ các bước/field và quy tắc thật. Trình bày theo cụm ảnh → thông tin/tình trạng
   → hình thức/giá → xem lại; khi triển khai ánh xạ vào bước hiện có trước khi gộp.

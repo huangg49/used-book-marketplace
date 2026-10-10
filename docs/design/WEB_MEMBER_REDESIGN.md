@@ -31,6 +31,36 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
   để hành trình kiểm thử liên tục. Chưa redesign toàn form, dashboard, đăng ký,
   chat, đấu giá, admin hay Flutter; Android giữ checkpoint riêng.
 
+## Đăng sách — bàn soạn bài11/10
+
+Thay form legacy bằng nền giấy kem, một tiến trình5bước có tên rõ, form giữa
+và bản xem trước bên phải khi đủ chiều rộng. Mobile đặt preview ở bước kiểm tra.
+Giữ đầy đủ câu hỏi tình trạng, sở hữu, hai mức giá và service upload/submission.
+Lỗi giữ dữ liệu; attempt chưa rõ kết quả khóa input và retry cùng closure.
+Thoát có xác nhận; chưa có lưu nháp bền vững. Thành công chỉ sau server nhận,
+ghi đúng “Đã gửi duyệt”; đăng cuốn khác xóa cả dữ liệu lẫn closure cũ.
+
+Build/typecheck và25unit PASS; lint0error/6warning cũ. CUA1535/1366/390/320px
+không tràn; nhập thiếu/giá sai/không đọc rõ/chưa xác nhận sở hữu bị chặn,
+giữ dữ liệu qua bước, thêm/xóa ảnh, hủy thoát, gửi thành công và reset PASS.
+Nest/Mongo database riêng *_test với storagefake xác nhận đúng1bài PendingReview,
+1ảnh đã upload, giá bán75.000/giá trị đổi90.000. QA dùng bìa Truyện Kiều có sẵn,
+ghi rõ fixture; không là sách rao bán thật. Harness integration đã cập nhật nhãn
+và radio mới nhưng NOT RUN. Browser lost-response/beforeunload,200%/native/human
+NOT RUN; unit service replay đã PASS, không thay bằng chứng browser/native.
+
+[Desktop](../../.impeccable/review/web-member/sell-desk-desktop.jpg),
+[laptop](../../.impeccable/review/web-member/sell-desk-laptop.jpg),
+[mobile](../../.impeccable/review/web-member/sell-desk-mobile.jpg),
+[kiểm tra mobile](../../.impeccable/review/web-member/sell-desk-review-mobile.jpg),
+[320px](../../.impeccable/review/web-member/sell-desk-320.jpg),
+[tình trạng](../../.impeccable/review/web-member/sell-desk-condition.jpg),
+[biên nhận](../../.impeccable/review/web-member/sell-desk-success.jpg).
+Capture gốc CUA, không hậu kỳ. Một detector6advisory; review độc lập yêu cầu
+đổi4viền sang shop-control (4,20:1 trên giấy/3,39:1 trên nền upload), đã xác minh
+và [closure SHIP](../../.impeccable/review/web-member/sell-desk-finish.md).
+Canonical merge scoped; không đổi API/session hoặc READINESS, local chưa push.
+
 ## Chi tiết — gallery ảnh bản sách11/10
 
 Sau `4fec833`, hoàn thiện nhóm Chi tiết theo kế hoạch đã duyệt. Gallery contain

@@ -74,7 +74,8 @@ try {
   );
   assert.equal(lastPage.items.length, 1);
   assert.equal(
-    new Set([...firstPage.items, ...lastPage.items].map((book) => book.id)).size,
+    new Set([...firstPage.items, ...lastPage.items].map((book) => book.id))
+      .size,
     13,
   );
   process.chdir(path.join(root, "apps/user-web"));
@@ -96,7 +97,7 @@ try {
   const button = (name) => p.getByRole("button", { name, exact: true });
   const step = (name) =>
     p
-      .getByRole("navigation", { name: "Tiến trình" })
+      .getByRole("navigation", { name: "Các bước đăng sách" })
       .getByRole("button", { name });
   await p.goto(origin);
   console.log("QA: home/search");
@@ -253,30 +254,30 @@ try {
     .getByLabel("Tên sách", { exact: true })
     .fill("QA — Một cuốn sách cũ qua nhiều người đọc với tên dài");
   await p.getByLabel("Tác giả", { exact: true }).fill("Tác giả QA");
-  await step(/Ảnh cuốn sách/).click();
+  await step(/Ảnh bản sách/).click();
   await p.locator("input[type=file]").setInputFiles({
     name: "qa-cover.png",
     mimeType: "image/png",
     buffer: fixture.photo,
   });
   await step(/Tình trạng/).click();
-  await p.getByLabel("Tình trạng tổng thể").selectOption("Worn");
+  await p.getByLabel("Mức độ đã qua sử dụng").selectOption("Worn");
   await p
-    .getByLabel("Ruột sách và trang thiếu")
+    .getByLabel("Ruột sách")
     .fill("Đủ nội dung, thiếu một trang trắng cuối sách.");
-  await p.getByLabel("Bìa và gáy sách").fill("Gáy sờn, bìa có nếp gấp.");
-  await p.getByLabel("Ghi chú và đánh dấu").fill("Không có");
+  await p.getByLabel("Bìa và gáy").fill("Gáy sờn, bìa có nếp gấp.");
+  await p.getByLabel("Ghi chú, đánh dấu").fill("Không có");
   await p.locator("input[name=readable]").first().check();
   await p.locator("input[name=hasMissingPages]").first().check();
   await p.locator("input[name=missingEssentialContent]").last().check();
-  await step(/Bán hoặc đổi/).click();
-  await button("Bán hoặc đổi").click();
-  await p.getByLabel("Giá bán (VNĐ)").fill("35000");
-  await p.getByLabel("Giá trị quy đổi (VNĐ)").fill("45000");
-  await p.getByLabel("Phụ kiện đi kèm").fill("Không có");
+  await p.getByLabel("Phụ kiện").fill("Không có");
   await p
     .getByLabel("Mô tả chung")
     .fill("DỮ LIỆU QA. Bản sách cũ có gáy sờn, đủ nội dung để đọc.");
+  await step(/Bán hoặc đổi/).click();
+  await p.getByRole("radio", { name: "Bán hoặc đổi", exact: true }).check();
+  await p.getByLabel("Giá bán (VNĐ)").fill("35000");
+  await p.getByLabel("Giá trị đổi (VNĐ)").fill("45000");
   await step(/Thông tin sách/).click();
   assert.match(
     await p.getByLabel("Tên sách", { exact: true }).inputValue(),
@@ -333,7 +334,7 @@ try {
   await p.getByRole("alert").waitFor();
   await button("Thử gửi lại").click();
   await p
-    .getByRole("heading", { name: "Đang chờ duyệt", exact: true })
+    .getByRole("heading", { name: "Đã gửi duyệt", exact: true })
     .waitFor({ timeout: 45000 });
   assert.equal(attempts.length, 2);
   assert.equal(
