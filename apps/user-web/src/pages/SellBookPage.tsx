@@ -1,5 +1,8 @@
 import React, { useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Navigate, useLocation } from "react-router-dom";
 import { Header } from "../layouts/MainLayout";
+import { useSession } from "../hooks/useSession";
 import { createListingSubmission } from "../services/listing-submission";
 import {
   Clock,
@@ -22,6 +25,12 @@ export function SellBookPage() {
   const [hasAttempt, setHasAttempt] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const location = useLocation();
+  const session = useSession();
+
+  if (session.status === "anonymous") {
+    return <Navigate to={`/login?returnUrl=${encodeURIComponent(location.pathname)}`} replace />;
+  }
 
   const [formData, setFormData] = useState({
     // Step 1
@@ -140,68 +149,277 @@ export function SellBookPage() {
     "Bán hoặc đổi",
     "Kiểm tra",
   ];
-  const renderStepIndicator = () => (
-    <nav aria-label="Các bước đăng sách" className="sell-steps">
-      {steps.map((label, index) => (
-        <button
-          type="button"
-          key={label}
-          disabled={submitting}
-          aria-current={step === index + 1 ? "step" : undefined}
-          onClick={() => setStep(index + 1)}
-        >
-          <span>{index + 1}</span>
-          {label}
-        </button>
-      ))}
+  
+  const getStepSubtitle = (index: number) => {
+    switch (index) {
+      case 0:
+        return formData.title ? formData.title : "Chưa nhập thông tin";
+      case 1:
+        return imageFiles.length > 0 ? `${imageFiles.length} ảnh đối chiếu rõ nét` : "Cần tải ảnh lên";
+      case 2:
+        if (!formData.pages || !formData.coverNote) {
+          if (formData.pages || formData.coverNote) return 'Đang nhập chi tiết...';
+          return 'Chưa nhập chi tiết';
+        }
+        return formData.condition === 'LikeNew' ? 'Như mới (99%)' : formData.condition === 'Good' ? 'Rất tốt (88/100)' : formData.condition === 'Fair' ? 'Trung bình (70/100)' : formData.condition === 'Worn' ? 'Cũ (Dưới 50%)' : 'Chưa đánh giá';
+      case 3:
+        if (!formData.salePrice && !formData.exchangeValue) return "Niêm yết / Đổi xu / Đấu giá";
+        return formData.mode === 'Sale' ? `Khuyến nghị ${formData.salePrice}đ` : formData.mode === 'Exchange' ? `Đổi ${formData.exchangeValue} xu` : `Bán ${formData.salePrice}đ / Đổi ${formData.exchangeValue} xu`;
+      case 4:
+        return "Xác nhận & Đăng bài";
+      default:
+        return "";
+    }
+  };
+
+  const calculateProgress = () => {
+    let filled = 0;
+    const total = 8;
+    if (formData.title) filled++;
+    if (formData.author) filled++;
+    if (formData.images.length > 0) filled++;
+    if (formData.condition) filled++;
+    if (formData.pages) filled++;
+    if (formData.coverNote) filled++;
+    if (formData.mode === 'Sale' && formData.salePrice) filled++;
+    else if (formData.mode === 'Exchange' && formData.exchangeValue) filled++;
+    else if (formData.mode === 'Both' && formData.salePrice && formData.exchangeValue) filled++;
+    if (ownershipDeclared) filled++;
+    return Math.round((filled / total) * 100);
+  };
+
+  const isStepValid = (index: number) => {
+    switch (index) {
+      case 0: return !!formData.title && !!formData.author;
+      case 1: return formData.images && formData.images.length > 0;
+      case 2: return !!formData.condition && !!formData.pages && !!formData.coverNote;
+      case 3:
+        if (formData.mode === 'Sale') return !!formData.salePrice;
+        if (formData.mode === 'Exchange') return !!formData.exchangeValue;
+        return !!formData.salePrice && !!formData.exchangeValue;
+      case 4: return ownershipDeclared;
+      default: return true;
+    }
+  };
+
+  const renderSidebar = () => (
+    <aside aria-label="Các bước đăng sách" className="bg-white/80 backdrop-blur-md rounded-xl p-space-md shadow-sm border border-white/50 flex flex-col gap-2">
+      {steps.map((label, index) => {
+        const stepNumber = index + 1;
+        const isCompleted = step > stepNumber;
+        const isActive = step === stepNumber;
+        const isValid = isStepValid(index);
+        const showRedX = !isValid && isCompleted;
+
+        return (
+          <button
+            type="button"
+            key={label}
+            disabled={submitting}
+            aria-current={isActive ? "step" : undefined}
+            className={`flex items-center gap-2 text-left p-2 rounded-lg transition-colors ${isActive ? 'bg-surface-container-high/50' : 'hover:bg-surface-container/50'}`}
+            onClick={() => setStep(stepNumber)}
+          >
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm transition-colors
+              ${showRedX ? 'bg-red-100 text-red-600' :
+                isCompleted ? 'bg-primary-container text-on-primary' :
+                  isActive ? 'bg-secondary text-on-secondary' :
+                    'bg-surface-container-highest text-on-surface-variant'}`}
+            >
+              {showRedX ? (
+                <span className="material-symbols-outlined text-[24px]">close</span>
+              ) : isCompleted ? (
+                <span className="material-symbols-outlined text-[24px]">check</span>
+              ) : (
+                <span className="font-title-lg font-bold">0{stepNumber}</span>
+              )}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className={`font-label-sm text-[10px] uppercase tracking-wider mb-0.5
+                ${showRedX ? 'text-red-600 font-bold' : isActive ? 'text-secondary font-bold' : isCompleted ? 'text-primary' : 'text-on-surface-variant/70'}`}
+              >
+                {showRedX ? 'Thiếu thông tin' : isActive ? 'Đang chỉnh' : isCompleted ? `Bước 0${stepNumber}` : 'Kế tiếp'}
+              </span>
+              <span className={`font-title-md text-base truncate leading-tight mb-0.5
+                ${showRedX ? 'text-red-600 font-bold' : isActive || isCompleted ? 'text-primary font-bold' : 'text-on-surface-variant'}`}
+              >
+                {label}
+              </span>
+              <span className={`font-body-sm text-xs truncate leading-tight
+                ${showRedX ? 'text-red-500/80' : isActive ? 'text-secondary/80' : 'text-on-surface-variant/60'}`}
+              >
+                {getStepSubtitle(index)}
+              </span>
+            </div>
+          </button>
+        );
+      })}
+    </aside>
+  );
+
+  const renderHorizontalStepper = () => (
+    <nav aria-label="Tiến trình" className="bg-white/80 backdrop-blur-md rounded-xl p-3 shadow-sm mb-4 border border-white/50">
+      <div className="flex justify-between items-center relative z-10">
+        <AnimatePresence>
+          {steps.map((label, index) => {
+            const stepNumber = index + 1;
+            const isCompleted = step > stepNumber;
+            const isActive = step === stepNumber;
+            const isValid = isStepValid(index);
+            const showRedX = !isValid && isCompleted;
+
+            return (
+              <button
+                type="button"
+                key={label}
+                disabled={submitting}
+                aria-current={isActive ? "step" : undefined}
+                className={`flex items-center gap-2 text-left p-2 rounded-lg transition-all duration-300 relative group`}
+                onClick={() => setStep(stepNumber)}
+                style={{ width: "20%" }}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="active-step-bg"
+                    className="absolute inset-0 bg-[#e7e0d5] shadow-sm rounded-lg"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors duration-500 relative z-10
+                  ${showRedX ? 'bg-red-100 text-red-600' :
+                    isCompleted ? 'bg-[#173c2e] text-white' :
+                      isActive ? 'bg-[#984a30] text-white' :
+                        'bg-[#e2ddd5] text-[#716a62]'}`}
+                >
+                  {showRedX ? (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring" }}
+                      className="material-symbols-outlined text-[24px]"
+                    >
+                      close
+                    </motion.span>
+                  ) : isCompleted ? (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring" }}
+                      className="material-symbols-outlined text-[24px]"
+                    >
+                      check
+                    </motion.span>
+                  ) : (
+                    <span className="font-title-lg font-bold">0{stepNumber}</span>
+                  )}
+                </div>
+                <div className="flex flex-col min-w-0 relative z-10">
+                  <span className={`font-label-sm text-[11px] uppercase tracking-wider mb-0.5 transition-colors duration-300
+                    ${showRedX ? 'text-red-600 font-bold' : isActive ? 'text-[#984a30] font-bold' : isCompleted ? 'text-[#984a30]' : 'text-[#716a62] group-hover:text-[#984a30]'}`}
+                  >
+                    {showRedX ? 'Thiếu thông tin' : isActive ? 'Đang chỉnh' : isCompleted ? `Bước 0${stepNumber}` : 'Kế tiếp'}
+                  </span>
+                  <span className={`font-title-md text-base truncate leading-tight mb-0.5 transition-colors duration-300
+                    ${showRedX ? 'text-red-600 font-bold' : isActive || isCompleted ? 'text-[#173c2e] font-bold' : 'text-[#716a62] group-hover:text-[#173c2e]'}`}
+                  >
+                    {label}
+                  </span>
+                  <span className={`font-body-sm text-[13px] truncate leading-tight transition-colors duration-300
+                    ${showRedX ? 'text-red-500/80' : isActive ? 'text-[#984a30]' : 'text-[#716a62]'}`}
+                  >
+                    {getStepSubtitle(index)}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+
+      <div className="w-full mt-6 h-2 bg-[#e2ddd5] rounded-full overflow-hidden relative">
+        <motion.div
+          className="absolute top-0 left-0 h-full"
+          initial={{ width: 0 }}
+          animate={{ width: `${calculateProgress()}%` }}
+          transition={{ type: "spring", stiffness: 70, damping: 20 }}
+          style={{
+            background: 'linear-gradient(to right, #173c2e, #984a30)'
+          }}
+        />
+      </div>
     </nav>
   );
 
   return (
     <>
       <Header />
-      <main className="sell-workspace">
+            <main className="sell-workspace relative min-h-screen">
         <div
-          style={{ maxWidth: "1080px", margin: "0 auto", padding: "2rem 1rem" }}
-        >
-          <h1
-            style={{
-              fontSize: "2.5rem",
-              marginBottom: "0.5rem",
-              color: "var(--text-dark, #1f2937)",
-              fontWeight: "800",
-            }}
-          >
-            Đăng bán sách
-          </h1>
-          <p
-            style={{
-              color: "var(--text-light, #6b7280)",
-              marginBottom: "2rem",
-              fontSize: "1.1rem",
-            }}
-          >
-            Chia sẻ những cuốn sách bạn đã đọc cho người cần chúng.
-          </p>
-
-          {step <= 5 && renderStepIndicator()}
-
-          <div
-            className="sell-panel"
-            style={{
-              background: "var(--paper, white)",
-              padding: "2.5rem",
-              borderRadius: "16px",
-              boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
-              border: "1px solid #f3f4f6",
-            }}
-          >
-            <fieldset
-              disabled={submitting || hasAttempt}
-              className="sell-fields"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            top: '80px',
+            backgroundImage: "url('/ĐangAnh_BG.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "top center",
+            backgroundAttachment: "fixed"
+          }}
+        />
+        <div className="w-full max-w-[1600px] mx-auto px-4 md:px-8 lg:px-16 py-4 relative z-10">
+          <div className="mb-4 pt-1">
+            <motion.h1
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-3xl font-display font-black tracking-tight mb-1 text-[#1f2937]"
             >
+              Đăng bán <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#173c2e] to-[#984a30]">sách</span>
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="text-sm font-body-lg text-[#6b7280] max-w-2xl"
+            >
+              Chia sẻ những cuốn sách bạn đã đọc cho những người cần chúng. Quá trình tạo bài đăng siêu đơn giản và chỉ mất chưa đến 3 phút!
+            </motion.p>
+          </div>
+
+          {step <= 5 && renderHorizontalStepper()}
+
+          <div className="flex flex-col lg:flex-row gap-6 items-start">
+            {step <= 5 && (
+              <div className="w-full lg:w-[260px] shrink-0 sticky top-[100px]">
+                {renderSidebar()}
+              </div>
+            )}
+
+            <div
+              className="sell-panel flex-1 w-full"
+              style={{
+                background: "rgba(255, 255, 255, 0.92)",
+                backdropFilter: "blur(12px)",
+                padding: "1.5rem",
+                borderRadius: "16px",
+                boxShadow: "0 10px 30px rgba(152, 74, 48, 0.08), 0 1px 3px rgba(0,0,0,0.05)",
+                border: "1px solid rgba(255, 255, 255, 0.5)",
+              }}
+            >
+              <fieldset
+                disabled={submitting || hasAttempt}
+                className="sell-fields relative"
+                style={{ minHeight: "250px", transition: "min-height 0.3s ease" }}
+              >
+                <AnimatePresence mode="wait">
               {step === 1 && (
-                <div style={{ animation: "fadeIn 0.5s ease" }}>
+                  <motion.div
+                    key="step1"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
                   <h2
                     style={{
                       fontSize: "1.5rem",
@@ -279,11 +497,16 @@ export function SellBookPage() {
                       />
                     </div>
                   </div>
-                </div>
-              )}
-
-              {step === 2 && (
-                <div style={{ animation: "fadeIn 0.5s ease" }}>
+                </motion.div>
+                )}
+                {step === 2 && (
+                  <motion.div
+                    key="step2"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
                   <h2
                     style={{
                       fontSize: "1.5rem",
@@ -383,10 +606,16 @@ export function SellBookPage() {
 
                     <div style={{ height: "1px", background: "#e5e7eb" }} />
                   </div>
-                </div>
-              )}
-              {step === 3 && (
-                <div>
+                </motion.div>
+                )}
+                {step === 3 && (
+                  <motion.div
+                    key="step3"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
                   <h2>Tình trạng cuốn sách</h2>
                   <div style={{ display: "grid", gap: "1.5rem" }}>
                     {/* Tình trạng */}
@@ -763,11 +992,16 @@ export function SellBookPage() {
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-
-              {step === 4 && (
-                <div style={{ animation: "fadeIn 0.5s ease" }}>
+                </motion.div>
+                )}
+                {step === 4 && (
+                  <motion.div
+                    key="step4"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
                   <h2
                     style={{
                       fontSize: "1.5rem",
@@ -1003,11 +1237,16 @@ export function SellBookPage() {
                       </div>
                     )}
                   </div>
-                </div>
-              )}
-
-              {step === 5 && (
-                <div style={{ animation: "fadeIn 0.5s ease" }}>
+                </motion.div>
+                )}
+                {step === 5 && (
+                  <motion.div
+                    key="step5"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
                   <h2
                     style={{
                       fontSize: "1.5rem",
@@ -1203,9 +1442,10 @@ export function SellBookPage() {
                     />
                     Tôi có quyền sở hữu và đăng bán hoặc trao đổi cuốn sách này.
                   </label>
-                </div>
-              )}
-            </fieldset>
+                </motion.div>
+                )}
+                </AnimatePresence>
+                </fieldset>
             {submitError && (
               <div role="alert" className="sell-error">
                 {submitError}
@@ -1302,45 +1542,50 @@ export function SellBookPage() {
             )}
 
             {step === 6 && !submitError && (
-              <div
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, type: "spring", bounce: 0.4 }}
+                className="flex flex-col items-center justify-center p-12 text-center relative overflow-hidden rounded-2xl"
                 style={{
-                  textAlign: "center",
-                  padding: "3rem 1rem",
-                  animation: "fadeIn 0.5s ease",
+                  minHeight: "400px",
+                  backgroundImage: "url('/Spending_BG.png')",
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  marginTop: "2rem"
                 }}
               >
-                <Clock
-                  size={80}
-                  color="#f59e0b"
-                  style={{ marginBottom: "1.5rem" }}
-                />
-                <h2
-                  style={{
-                    fontSize: "2rem",
-                    marginBottom: "1rem",
-                    color: "var(--text-dark, #1f2937)",
-                  }}
-                >
-                  Đang chờ duyệt
-                </h2>
-                <p
-                  style={{
-                    fontSize: "1.1rem",
-                    color: "var(--text-light, #6b7280)",
-                    maxWidth: "560px",
-                    margin: "0 auto",
-                    lineHeight: "1.6",
-                  }}
-                >
-                  Sách <strong>{formData.title}</strong> đã được gửi lên hệ
-                  thống. Admin sẽ kiểm tra và duyệt bài đăng trước khi sách hiển
-                  thị công khai.
-                </p>
-              </div>
+                <div className="z-10 flex flex-col items-center">
+                  <Clock size={80} className="text-secondary mb-6 animate-pulse" />
+                  <h2 className="text-3xl font-display font-black text-primary mb-4 drop-shadow-sm">
+                    Đang chờ duyệt
+                  </h2>
+                  <p className="text-lg text-[#1f2937] max-w-lg mx-auto leading-relaxed mb-8 font-medium">
+                    Sách <strong className="text-primary font-bold">{formData.title}</strong> đã được gửi lên hệ
+                    thống. Admin sẽ kiểm tra và duyệt bài đăng trước khi sách hiển thị công khai.
+                  </p>
+                  
+                  <button
+                    onClick={() => {
+                      setStep(1);
+                      setFormData({ title: "", author: "", images: [], condition: "Good", pages: "", coverNote: "", notes: "", accessories: "", description: "", readable: null, hasMissingPages: null, missingEssentialContent: null, mode: "Sale", salePrice: "", exchangeValue: "" });
+                      setImageFiles([]);
+                      setOwnershipDeclared(false);
+                      setHasAttempt(false);
+                    }}
+                    className="px-8 py-3 rounded-xl bg-primary text-on-primary font-title-md text-title-md shadow-md hover:bg-primary/90 hover:scale-105 transition-all flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined">add_circle</span>
+                    Tiếp tục đăng sách khác
+                  </button>
+                </div>
+              </motion.div>
             )}
           </div>
-
-          <style>{`
+        </div>
+        <style>{`
         .sell-workspace {--brand-green:#173c2e; padding-top: 5rem; background: #fef9ef; min-height: 100vh;}
         .sell-fields {border:0;padding:0;margin:0;min-width:0;}
         .sell-error {margin-top:1rem;padding:1rem;border:1px solid #a33d2a;color:#7d2d20;border-radius:8px;}
