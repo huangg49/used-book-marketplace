@@ -1,0 +1,13 @@
+{
+  "source": "Codex in-app browser screenshot of local Member web preview",
+  "url": "http://127.0.0.1:5186/",
+  "date": "2026-10-10",
+  "viewport": "390x844",
+  "capture": {
+    "format": "jpeg",
+    "width": 375,
+    "height": 811
+  },
+  "purpose": "Scrollable mobile navigation expanded from floating Header with original scaled logo",
+  "data": "Anonymous preview; no account data. Backend screenshot capture may differ slightly from the CSS viewport."
+}

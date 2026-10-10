@@ -93,6 +93,7 @@ rounded:
   panel: "12px"
   rn-sheet: "20px"
   rn-pill: "24px"
+  web-floating-nav: "32px"
 spacing:
   xs: "4px"
   sm: "8px"
@@ -133,7 +134,7 @@ components:
   navigation:
     backgroundColor: "{colors.shop-wine}"
     textColor: "{colors.shop-cream}"
-    padding: "16px 40px"
+    padding: "12px 40px"
   condition-label:
     backgroundColor: "{colors.detail-ground}"
     textColor: "#5b3428"
@@ -267,7 +268,27 @@ Search sits inside a paper shell with a transparent borderless inner field and a
 
 ### Navigation
 
-Wine shell, cream links, underline for desktop hover/current page. Narrow menus expand beneath the header, close on navigation/Escape and return focus on Escape. The skip link appears on focus. The logo displays windows onto the exact original PNG for owl and lettering, including on mobile; it is not redrawn.
+The shared Member web Header stays visible across MainLayout, AuthLayout,
+DashboardLayout and standalone posting. Wine/cream, original logo and desktop
+current-page underline remain. At the top it spans the viewport,76px tall;
+after48px of scrolling it becomes a64px floating bar,12px from the top,
+max-width1280px with at least24px side clearance,32px radius and a soft
+`0 12px 28px #28191433` shadow. It returns to the full-width form at16px or less.
+The reserved slot stays76px, so the page does not jump during the change.
+The240ms exponential transition changes only the fixed bar and its row; the
+passive scroll listener updates React only at the two thresholds. Reduced motion
+uses the existing near-instant global transition, independently of the hero exception.
+
+At1000px and below, top height/slot is72px; the floating bar sits8px from the
+top with10px side clearance. The original owl and lettering remain; at420px
+their CSS windows scale to82% without changing source pixels, leaving room for
+notification and menu controls. Interactive targets remain at least44px tall.
+Narrow menus expand beneath the row, scroll within the available height, close
+on navigation/Escape or resizing to desktop, and return focus on Escape.
+The open floating menu uses24px corners. Notification panels fit within the
+narrow viewport. The skip link appears on focus;96px scroll padding keeps
+scrolled anchors/focus clear of the navbar. Legacy page content is not redesigned
+by this shared navigation refinement; Android/admin remain separate.
 
 ### Condition labels and confirmation
 

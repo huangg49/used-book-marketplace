@@ -70,6 +70,16 @@ cropping content. Existing used-book description distinguishes copy from listing
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
+Owner-approved BeeWise-style navigation refinement: use the existing shared
+Header across Member web layouts and posting. Full-width76px at top; beyond48px
+scroll,64px rounded floating bar at top12px/max1280px/side clearance24px, with
+soft offset shadow; return at<=16px to avoid threshold flicker. Stable76px slot
+prevents document jumps. <=1000px uses logo/menu,72px slot,top8px/side10px;
+original logo windows shrink to82% at<=420px, all controls retain44px height.
+Scrollable mobile menu, Escape/route/desktop-resize closure and narrow notification
+popup verified. Transition240ms, passive threshold-only state updates; navbar
+respects reduced motion. No new library, copy, session or API changes.
+
 Open dependency: Dribbble supplies a composite preview, no separate cover assets;
 use existing public-domain covers and the four images the owner supplied directly
 for decorative imagery. Caption distinguishes them from listing photographs.

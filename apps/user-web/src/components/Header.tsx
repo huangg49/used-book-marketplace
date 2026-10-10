@@ -30,11 +30,33 @@ export function Logo() {
 }
 export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
   const location = useLocation();
+  const [floating, setFloating] = useState(() => window.scrollY > 48);
   const [menuPath, setMenuPath] = useState<string | null>(null);
   const menuOpen = menuPath === location.key;
   const setMenuOpen = (open: boolean) =>
     setMenuPath(open ? location.key : null);
   const state = useSession();
+  useEffect(() => {
+    let compact = window.scrollY > 48;
+    const update = () => {
+      // Separate thresholds prevent flicker when scrolling near the top.
+      const next = compact ? window.scrollY > 16 : window.scrollY > 48;
+      if (next !== compact) {
+        compact = next;
+        setFloating(next);
+      }
+    };
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1001px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setMenuPath(null);
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
   useEffect(() => {
     if (!menuOpen) return;
     const close = (event: KeyboardEvent) => {
@@ -48,80 +70,82 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
   }, [menuOpen]);
   const active = (to: string) => location.pathname + location.search === to;
   return (
-    <header className={styles.header}>
-      <div className={styles.headerInner}>
-        <Logo />
-        <nav className={styles.desktopNav} aria-label="Điều hướng chính">
-          {links.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              aria-current={active(item.to) ? "page" : undefined}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <div className={styles.headerActions}>
-          {state.status === "authenticated" && <NotificationBell />}
-          <Link
-            className={styles.account}
-            to={state.status === "authenticated" ? "/profile" : ROUTES.login}
-          >
-            {state.status === "authenticated" ? "Tài khoản" : "Đăng nhập"}
-          </Link>
-          <Link to={ROUTES.sell} className={styles.post}>
-            <Plus size={18} aria-hidden="true" />
-            Đăng sách
-          </Link>
-          <button
-            id="member-menu-toggle"
-            type="button"
-            className={styles.menuButton}
-            aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
-            aria-expanded={menuOpen}
-            aria-controls="mobile-nav"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
-          </button>
-        </div>
-      </div>
-      {menuOpen && (
-        <nav
-          id="mobile-nav"
-          className={styles.mobileNav}
-          aria-label="Điều hướng trên điện thoại"
-        >
-          {links.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              aria-current={active(item.to) ? "page" : undefined}
-            >
-              {item.label}
-            </Link>
-          ))}
-          <Link to={ROUTES.sell}>Đăng sách</Link>
-          {state.status === "authenticated" ? (
-            <>
-              <Link to={ROUTES.notifications}>Thông báo</Link>
-              <Link to="/profile">Hồ sơ ({state.user.displayName})</Link>
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  void session.logout();
-                }}
+    <div className={styles.headerSlot}>
+      <header className={styles.header} data-floating={floating} data-menu-open={menuOpen}>
+        <div className={styles.headerInner}>
+          <Logo />
+          <nav className={styles.desktopNav} aria-label="Điều hướng chính">
+            {links.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                aria-current={active(item.to) ? "page" : undefined}
               >
-                Đăng xuất
-              </button>
-            </>
-          ) : (
-            <Link to={ROUTES.login}>Đăng nhập</Link>
-          )}
-        </nav>
-      )}
-    </header>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+          <div className={styles.headerActions}>
+            {state.status === "authenticated" && <NotificationBell />}
+            <Link
+              className={styles.account}
+              to={state.status === "authenticated" ? "/profile" : ROUTES.login}
+            >
+              {state.status === "authenticated" ? "Tài khoản" : "Đăng nhập"}
+            </Link>
+            <Link to={ROUTES.sell} className={styles.post}>
+              <Plus size={18} aria-hidden="true" />
+              Đăng sách
+            </Link>
+            <button
+              id="member-menu-toggle"
+              type="button"
+              className={styles.menuButton}
+              aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-nav"
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+            </button>
+          </div>
+        </div>
+        {menuOpen && (
+          <nav
+            id="mobile-nav"
+            className={styles.mobileNav}
+            aria-label="Điều hướng trên điện thoại"
+          >
+            {links.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                aria-current={active(item.to) ? "page" : undefined}
+              >
+                {item.label}
+              </Link>
+            ))}
+            <Link to={ROUTES.sell}>Đăng sách</Link>
+            {state.status === "authenticated" ? (
+              <>
+                <Link to={ROUTES.notifications}>Thông báo</Link>
+                <Link to="/profile">Hồ sơ ({state.user.displayName})</Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    void session.logout();
+                  }}
+                >
+                  Đăng xuất
+                </button>
+              </>
+            ) : (
+              <Link to={ROUTES.login}>Đăng nhập</Link>
+            )}
+          </nav>
+        )}
+      </header>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-10T06:48:09.386Z",
+  "generatedAt": "2026-10-10T08:36:38.609Z",
   "title": "Design System: Lật lại",
   "extensions": {
     "colorMeta": {
@@ -463,6 +463,11 @@
         "name": "modal",
         "value": "0 18px 60px #28191440",
         "purpose": "ConfirmDialog elevation."
+      },
+      {
+        "name": "floating-member-navigation",
+        "value": "0 12px 28px #28191433",
+        "purpose": "Owner-approved compact fixed wine navbar;32px radius, no decorative border."
       }
     ],
     "motion": [
@@ -490,6 +495,11 @@
         "name": "reduced-motion",
         "value": "animation-duration:.01ms;animation-iteration-count:1;transition-duration:.01ms;scroll-behavior:auto",
         "purpose": "Global prefers-reduced-motion override."
+      },
+      {
+        "name": "member-navigation-compact",
+        "value": "240ms cubic-bezier(0.16,1,0.3,1); fixed bar width/transform/radius and row min-height/padding",
+        "purpose": "Continuous change from full-width76px to floating64px after48px scroll; return at16px. Stable document slot; passive threshold updates; respects global reduced motion."
       }
     ],
     "breakpoints": [
@@ -510,7 +520,7 @@
         "value": "850px"
       },
       {
-        "name": "search-two-column-header-menu-home-cover-grid4x2",
+        "name": "search-two-column-home-cover-grid4x2",
         "value": "800px"
       },
       {
@@ -528,6 +538,10 @@
       {
         "name": "rn-shelf-stacked",
         "value": "width < 360dp and effective text scale >= 1.29"
+      },
+      {
+        "name": "member-navigation-menu",
+        "value": "1000px;72px top slot/height,64px floating,8px top/10px sides; logo windows82% at420px"
       }
     ]
   },
@@ -568,9 +582,9 @@
       "name": "Desktop navigation links",
       "kind": "nav",
       "refersTo": "navigation",
-      "description": "Link fragment of the wine header. Original logo is deliberately not approximated in this snippet.",
+      "description": "Desktop link fragment of the shared compact/floating Member Header. Full-width76px at top,64px/top12px/radius32px after48px; stable reserved slot. Original logo not approximated in this example.",
       "html": "<nav class=\"ds-nav\" aria-label=\"Điều hướng chính\"><a class=\"ds-nav-link\" href=\"#ds-search\" aria-current=\"page\">Tìm sách</a><a class=\"ds-nav-link\" href=\"#ds-exchange\">Sách để đổi</a><a class=\"ds-nav-link\" href=\"#ds-auctions\">Đấu giá</a></nav>",
-      "css": ".ds-nav{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:flex;flex-wrap:wrap;gap:30px;padding:16px 40px;background:var(--shop-wine,#5c0202);color:var(--shop-cream,#fcf8db)}.ds-nav-link{padding:12px 0;color:inherit;font-size:.875rem;text-decoration:none;white-space:nowrap}.ds-nav-link:hover,.ds-nav-link[aria-current]{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:8px}.ds-nav-link:focus-visible{outline:3px solid var(--shop-cream,#fcf8db);outline-offset:4px}"
+      "css": ".ds-nav{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:flex;flex-wrap:wrap;gap:30px;padding:12px 40px;background:var(--shop-wine,#5c0202);color:var(--shop-cream,#fcf8db)}.ds-nav-link{display:inline-flex;align-items:center;min-height:44px;padding:10px 0;color:inherit;font-size:.875rem;text-decoration:none;white-space:nowrap}.ds-nav-link:hover,.ds-nav-link[aria-current]{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:8px}.ds-nav-link:focus-visible{outline:3px solid var(--shop-cream,#fcf8db);outline-offset:4px}"
     },
     {
       "name": "Descriptive condition label",

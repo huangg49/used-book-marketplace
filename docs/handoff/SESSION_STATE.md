@@ -8,6 +8,15 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `4cffb71`, navbar shared Member web đã gọn76px→64px và bo/nổi khi scroll,
+  slot ổn định; mobile72px, menu/notification popup không tràn ở320px/130%text.
+  Focused7viewport khách + authenticated response fixture PASS: scroll/return/no
+  jump, menu/Escape/focus/route/resize, skip/reduced motion/layout consumers.
+  CUA desktop/mobile và build/typecheck/16unit/lint6warning cũ/docs/diff PASS;
+  detector một lượt có advisory legacy/scale,32px nav radius được duyệt/ghi DESIGN.
+  [Brief](../design/WEB_MEMBER_REDESIGN.md) có ảnh/giới hạn; API3048 không chạy,
+  không test auth thật/native hay đổi gate. Checkpoint subject
+  `feat(web): add compact floating member navigation`. Chưa push/PR/merge/deploy.
 - Sau `288a385`, thay headline Home bằng Hero text final.png chủ dự án cung cấp:
   SÁCH MỚI. CHƯƠNG MỚI. CÙNG LẬT LẠI. Giữ pixels RGBA/dấu/minh họa, chỉ bỏ lề
   alpha trống và chừa16px; raw pixel comparison PASS. H1 tương ứng/không đọc lặp,

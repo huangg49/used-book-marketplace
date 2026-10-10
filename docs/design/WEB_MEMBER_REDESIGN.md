@@ -44,6 +44,29 @@ fixture [QA], giá/tình trạng mô phỏng.
 
 ## Kiểm chứng
 
+Sau `4cffb71`, chủ dự án duyệt navbar gọn/nổi theo hai trạng thái trong ảnh BeeWise.
+Header dùng chung Main/Auth/Dashboard và form đăng sách:76px ở đầu,64px/top12px/
+radius32px/max1280px khi cuộn>48px, trở lại ở<=16px; slot cố định không nhảy nội dung.
+Mobile<=1000px:72px ở đầu,64px/top8px/side10px khi nổi; logo nguyên bản scale
+CSS82% dưới420px, controls>=44px. Menu tự đóng theo route/Escape/desktop resize,
+scroll trong viewport; notification popup hẹp không tràn. Navbar tôn trọng reduced
+motion; transition240ms chỉ trên fixed layer, không thêm library hay đổi API/session.
+Ảnh CUA: [đầu trang](../../.impeccable/review/web-member/navbar-desktop-top.jpg),
+[thanh nổi](../../.impeccable/review/web-member/navbar-desktop-floating.jpg),
+[menu mobile](../../.impeccable/review/web-member/navbar-mobile-menu.jpg).
+Focused Chromium PASS7viewport1536/1366/1001/1000/800/390/320,100/130%text, khách
+và authenticated response fixture: geometry/no overflow/no jump, threshold/return,
+menu/Escape/focus/route/resize, skip link/reduced motion, popup bounds và Header
+trong các layout/form. Đây là browser fixture, không kiểm auth/API thật. CUA desktop/
+mobile đã xem/thao tác; không claim Safari/Firefox/native/human acceptance.
+Build/typecheck/16unit PASS, lint0error6warning legacy; docs/diff PASS. Detector
+chạy một lần, trả advisory về màu/type/radius CSS ngoài scale;32px là hình navbar
+chủ dự án duyệt và đã ghi DESIGN, các literal legacy ngoài diff giữ nguyên.
+Finish pass theo diff/browser: scope đạt; dashboard/form/register nội dung còn
+legacy, không nhận đã redesign các trang này. API QA3048 không chạy, Home giữ
+trạng thái lỗi/thử lại. Local checkpoint subject
+`feat(web): add compact floating member navigation`; chưa push/PR/merge/deploy.
+
 Sau `288a385`, chủ dự án cung cấp Hero text final.png để thay headline Home.
 Giữ đúng SÁCH MỚI. CHƯƠNG MỚI. CÙNG LẬT LẠI., nét chữ/dấu và minh họa/đồ họa
 final; không dùng bản Hero text.png cũ hoặc tự sửa copy thành sách cũ. Source có

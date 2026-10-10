@@ -1,0 +1,13 @@
+{
+  "source": "Codex in-app browser screenshot of local Member web preview",
+  "url": "http://127.0.0.1:5186/",
+  "date": "2026-10-10",
+  "viewport": "1536x730",
+  "capture": {
+    "format": "jpeg",
+    "width": 1521,
+    "height": 723
+  },
+  "purpose": "Full-width76px Member navigation at the top of Home",
+  "data": "Anonymous preview; no account data. Backend screenshot capture may differ slightly from the CSS viewport."
+}
