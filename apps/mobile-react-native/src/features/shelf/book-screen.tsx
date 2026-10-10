@@ -130,7 +130,12 @@ export function BookScreen({ id }: { id: string }) {
                     ) : (
                       <Button
                         title="Đăng nhập để lưu sách"
-                        onPress={() => router.push("/account")}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/account",
+                            params: { returnBook: id },
+                          })
+                        }
                       />
                     )}
                     <AppText kind="annotation" color={colors.muted}>

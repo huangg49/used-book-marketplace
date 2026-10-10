@@ -5,7 +5,28 @@ OpenAPI0.30.0,15 migration Mongo,113 operation HTTP. Đây là trạng thái the
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
-## Checkpoint chi tiết sách Android
+## Gói lưu sách và chuẩn bị pilot Android
+
+- Chủ dự án duyệt tìm→xem→lưu và bước chuẩn bị đăng sách; nhóm chưa từng mua/bán
+  sách cũ, chỉ có Android Studio. Pilot chuyển thành trong nhóm/emulator, chưa chạy
+  với người thật. [Protocol](../design/ANDROID_USABILITY_ROUND_01.md),
+  [phiếu](../ui/templates/ANDROID_USABILITY_SESSION.md),
+  [brief đăng sách](../design/ANDROID_POSTING_BRIEF.md).
+- Nhánh `codex/android-save-usability` từ `2dc069b`, checkpoint subject
+  `fix(rn): clarify saved books and preserve login context`. Login trở về đúng
+  sách, không tự lưu; lưu/bỏ lưu có nhãn/trạng thái/lỗi rõ và membership đọc cursor.
+  Không đổi API/session storage/tokens/web/framework hoặc triển khai form đăng sách.
+- PASS RN120/120 test/typecheck; lint0error4warning cũ. Native login→return→lưu→
+  tìm lại→bỏ lưu, PUT/DELETE503 và read503/recovery ở320dp130% có evidence.
+  Paging nhiều trang và return parameter sai kiểm unit, không là native PASS.
+  PASS format9file và export preview0 Android/iOS/web13routes. Fresh reviewer
+  verdict ship cho batch bỏ kicker login/wishlist sau recapture; documenter
+  không yêu cầu đổi canonical. QA services/database/users/roles đã dọn;9ảnh
+  giữ ở [báo cáo](../ui/ANDROID_SAVE_USABILITY.md). Checklist preflight trước
+  pilot còn native paging, phải chạy với fixture mới; chưa ghi toàn bộ PASS.
+  Human usability/TalkBack/ARM/iOS còn mở; READINESS giữ nguyên.
+
+## Checkpoint chi tiết sách Android — `2dc069b`
 
 - Chủ dự án duyệt tiếp màn chi tiết Android; nhánh
   `codex/android-book-detail-redesign` từ `2f766ca`, checkpoint subject
@@ -132,8 +153,8 @@ không lấy port/PID/account/config trong lịch sử làm cấu hình mặc đ
 Chat mới dùng [prompt](NEXT_SESSION_PROMPT.md), kiểm Git/source thực tế và nhận
 gói cụ thể. Setup theo [START_HERE](START_HERE.md)/[DEVELOPMENT](../DEVELOPMENT.md),
 QA `*_test` riêng, skill/checks theo [AI_WORKFLOW](../AI_WORKFLOW.md).
-Gói Android search đã được triển khai ở nhánh ghi trên; bước tiếp là review người
-thật/người dùng cho màn này, rồi nhận scope riêng cho detail/form recovery/web.
+Gói Android search/detail và làm rõ lưu đã ở các nhánh ghi trên; bước tiếp là
+pilot nhóm theo protocol mới, xử lý P0/P1 rồi thực thi brief đăng sách.
 Không coi các màn ngoài phạm vi là đã redesign hoặc đã có quyền merge/release.
 [CONTINUATION_PLAN](CONTINUATION_PLAN.md) là backlog có gate, không tự cấp quyền
 code tính năng mới/merge/deploy. Cập nhật mục của mình, không nối nhật ký dài lại.

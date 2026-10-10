@@ -32,18 +32,15 @@ export function WishlistScreen() {
   const saveMutation = useSaveWishlist(client);
 
   const entries = query.data?.pages.flatMap((page) => page.items) ?? [];
-  const denied = query.error && "status" in query.error && [401, 403].includes((query.error as any).status);
+  const denied =
+    query.error &&
+    "status" in query.error &&
+    [401, 403].includes((query.error as any).status);
 
   return (
     <Screen>
-      <BackAction
-        title="Quay lại"
-        onPress={() => router.back()}
-      />
+      <BackAction title="Quay lại" onPress={() => router.back()} />
       <View style={{ gap: space.sm }}>
-        <AppText kind="label" color={colors.rustText}>
-          TÀI KHOẢN
-        </AppText>
         <AppText
           kind="heading"
           color={colors.forest}
@@ -100,12 +97,18 @@ export function WishlistScreen() {
             />
           ))}
           {query.isFetchingNextPage && (
-            <AppText color={colors.muted} style={{ textAlign: "center", marginVertical: space.md }}>
+            <AppText
+              color={colors.muted}
+              style={{ textAlign: "center", marginVertical: space.md }}
+            >
               Đang tải thêm...
             </AppText>
           )}
           {query.hasNextPage && !query.isFetchingNextPage && (
-            <TouchableOpacity onPress={() => query.fetchNextPage()} style={{ padding: space.md, alignItems: "center" }}>
+            <TouchableOpacity
+              onPress={() => query.fetchNextPage()}
+              style={{ padding: space.md, alignItems: "center" }}
+            >
               <AppText color={colors.forest}>Tải thêm</AppText>
             </TouchableOpacity>
           )}
@@ -126,10 +129,19 @@ function WishlistItemCard({
 }) {
   const isBook = item.subjectType === "CATALOG_BOOK";
   const title = isBook ? item.book?.title : item.listing?.book?.title;
-  const authors = isBook ? item.book?.authors?.join(", ") : item.listing?.book?.authors?.join(", ");
+  const authors = isBook
+    ? item.book?.authors?.join(", ")
+    : item.listing?.book?.authors?.join(", ");
 
   return (
-    <View style={{ gap: space.md, padding: space.md, backgroundColor: colors.surface, borderRadius: radius.card }}>
+    <View
+      style={{
+        gap: space.md,
+        padding: space.md,
+        backgroundColor: colors.surface,
+        borderRadius: radius.card,
+      }}
+    >
       <TouchableOpacity
         style={{ flexDirection: "row", gap: space.md }}
         onPress={() => {
@@ -142,7 +154,11 @@ function WishlistItemCard({
         accessibilityRole="button"
       >
         {isBook || !item.listing?.photos?.[0] ? (
-          <BookCover label={title || ""} missing={true} style={{ width: 60, height: 80 }} />
+          <BookCover
+            label={title || ""}
+            missing={true}
+            style={{ width: 60, height: 80 }}
+          />
         ) : (
           <View style={{ width: 60, height: 80 }}>
             <PublicPhoto
@@ -156,14 +172,30 @@ function WishlistItemCard({
           </View>
         )}
         <View style={{ flex: 1, gap: space.xs }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
-            <Icon name={isBook ? "book" : "bookmark"} size={16} color={colors.rustText} />
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: space.xs,
+            }}
+          >
+            <Icon
+              name={isBook ? "book" : "bookmark"}
+              size={16}
+              color={colors.rustText}
+            />
             <AppText kind="annotation" color={colors.rustText}>
               {isBook ? "Đầu sách chung" : "Bài đăng"}
             </AppText>
           </View>
-          <AppText kind="bold" numberOfLines={2}>{title}</AppText>
-          {authors ? <AppText color={colors.muted} numberOfLines={1}>{authors}</AppText> : null}
+          <AppText kind="bold" numberOfLines={2}>
+            {title}
+          </AppText>
+          {authors ? (
+            <AppText color={colors.muted} numberOfLines={1}>
+              {authors}
+            </AppText>
+          ) : null}
         </View>
       </TouchableOpacity>
 

@@ -86,6 +86,12 @@ Showcase dùng cùng recipe và giữ banner dữ liệu mẫu. BookTradeBar/Boo
 stamp vẫn là primitive hợp lệ cho consumer khác, không là recipe chi tiết mới.
 [Evidence/giới hạn](../ui/ANDROID_BOOK_DETAIL_REDESIGN.md).
 
+Luồng lưu10/10: `WishlistButton` là feature control, không là primitive `/ui`.
+“Đã lưu sách” là status, “Bỏ lưu sách” là hành động; read/mutation errors dùng
+Notice và read retry, loading/busy khóa ghi. Membership theo mọi cursor cần thiết,
+không lấy page đầu làm toàn bộ danh sách. Login từ detail giữ UUID returnBook,
+quay lại đúng sách và không tự lưu. [Evidence/pilot](../ui/ANDROID_SAVE_USABILITY.md).
+
 Lịch sử UI-1: màn chi tiết sách thử các role `bookTitle`, `bookHeading`, `reading`,
 `annotation`, `stamp`, `bookPrice` trong theme dùng chung. `BookCondition stamp`
 thêm nhãn tình trạng có viền và tách hình thức giao dịch; không là huy hiệu kiểm
