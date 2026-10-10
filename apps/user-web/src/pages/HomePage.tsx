@@ -580,7 +580,6 @@ export function HomePage() {
       </section>
       <div className={styles.marketplace}>
         <div className={styles.shortcutBand}>
-          <div className={styles.shortcutBackdrop} aria-hidden="true" />
           <nav className={styles.quickLinks} aria-label="Khám phá sách">
             <Link
               className={styles.quickBuy}

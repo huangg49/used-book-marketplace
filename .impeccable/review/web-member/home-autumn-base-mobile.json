@@ -1,0 +1,13 @@
+{
+  "source": "CUA In-app Browser localhost5186 DEV preview",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "encodedSize": {
+    "width": 375,
+    "height": 811
+  },
+  "sha256": "2e776a6bace287b1ffc25286c329c1217d92d812b3c9899fb5c0242d8861e2ff",
+  "scope": "Autumn canvas step1 only: plain #ffefcb and removal of shortcut backdrop; scene art deferred"
+}

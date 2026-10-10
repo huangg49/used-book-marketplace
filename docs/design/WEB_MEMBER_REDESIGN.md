@@ -33,6 +33,17 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `9219feb`, bước1 theo duyệt chủ dự án: nền Home dưới hero dùng#ffefcb,
+lấy pixel giữa Background demo.png1920×1080. Bỏ lớp paper/page-mask sau bốn
+nút và CSS không dùng; giữ wrapper/height/hover/card panels/CTA/footer/hero.
+Chưa thêm tán lá, cáo/đồi hoặc lá rơi: chủ dự án duyệt màu nền trước.
+Build/typecheck/docs/diff PASS; CUA1535×735/390px màu đúngrgb255,239,203,
+không còn shortcutBackdrop/không tràn ngang/bốn nút còn đủ.
+[Desktop](../../.impeccable/review/web-member/home-autumn-base-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-autumn-base-mobile.jpg).
+Backend/native/200%/human NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): trial the autumn canvas color`; local, chưa push.
+
 Sau `ac6575c`, làm rõ hover bốn dấu sách: giấy nhấc5px/nghiêng−1°, chim
 nhấc8px/nghiêng−5°/scale1.08, nhãn nhấc5px, bóng theo silhouette.
 Vào280ms/rời180ms, nhấn100ms; focus bàn phím cùng phản hồi và còn outline.

@@ -252,7 +252,7 @@
 
 /* Discovery below the owner-approved hero. */
 .marketplace {
-  background: #f4eddf;
+  background: #ffefcb;
   padding: 0 40px 56px;
 }
 .marketInner {
@@ -266,37 +266,6 @@
   position: relative;
   display: flow-root;
   margin: -12px 0 28px;
-}
-/* Only the artwork is clipped; links and keyboard outlines remain unobstructed. */
-.shortcutBackdrop {
-  position: absolute;
-  inset: 12px -40px -16px;
-  overflow: hidden;
-  pointer-events: none;
-  background: url("/login-art/ivory-paper.webp") repeat;
-  background-size: 512px;
-  opacity: 0.45;
-}
-.shortcutBackdrop::before,
-.shortcutBackdrop::after {
-  content: "";
-  position: absolute;
-  top: -56px;
-  width: 220px;
-  height: 300px;
-  background: var(--shop-wine);
-  opacity: 0.28;
-  mask: var(--page-motif) center / contain no-repeat;
-}
-.shortcutBackdrop::before {
-  left: 12px;
-  --page-motif: url("/illustrations/hero-paper-left.svg");
-  transform: rotate(-30deg);
-}
-.shortcutBackdrop::after {
-  right: 12px;
-  --page-motif: url("/illustrations/hero-paper-right.svg");
-  transform: rotate(30deg);
 }
 .quickLinks {
   position: relative;
@@ -828,9 +797,6 @@
   .marketplace {
     padding: 0 24px 40px;
   }
-  .shortcutBackdrop {
-    inset-inline: -24px;
-  }
   .quickLinks {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -856,21 +822,6 @@
   }
   .shortcutBand {
     margin-bottom: 24px;
-  }
-  .shortcutBackdrop {
-    inset-inline: -16px;
-  }
-  .shortcutBackdrop::before,
-  .shortcutBackdrop::after {
-    top: 48px;
-    width: 120px;
-    height: 210px;
-  }
-  .shortcutBackdrop::before {
-    left: -64px;
-  }
-  .shortcutBackdrop::after {
-    right: -64px;
   }
   .quickLinks {
     gap: 12px;
