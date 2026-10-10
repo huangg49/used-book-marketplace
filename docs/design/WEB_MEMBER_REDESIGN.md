@@ -33,6 +33,19 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `ac6575c`, làm rõ hover bốn dấu sách: giấy nhấc5px/nghiêng−1°, chim
+nhấc8px/nghiêng−5°/scale1.08, nhãn nhấc5px, bóng theo silhouette.
+Vào280ms/rời180ms, nhấn100ms; focus bàn phím cùng phản hồi và còn outline.
+Lớp đỏ/hit area/bố cục/hero/nền riêng/routes giữ nguyên. Theo lựa chọn motion
+trước đó của chủ dự án, transition hữu hạn này chạy cả khi OS giảm motion;
+chỉ override duration ở bốn nút, không thêm loop hay phụ thuộc.
+Build/typecheck/docs/diff PASS; CUA1535×735/390px không tràn, hover thật qua
+context-click/Escape và rời chuột PASS, reduce=true vẫn280ms/180ms, focus PASS.
+[Hover desktop](../../.impeccable/review/web-member/home-bookmarks-hover-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-bookmarks-hover-mobile.jpg).
+Active giữ chuột/touch thật,200%/backend/native/human NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): animate penguin bookmark interactions`; local, chưa push.
+
 Sau `05e6794`, chủ dự án duyệt nền riêng sau bốn nút: vân giấy ivory và hai nét
 trang sách wine mờ tái sử dụng asset hero. Dải static/aria-hidden/pointer-inert,
 chỉ clip artwork, kết thúc trước thể loại; hero/chiều cao/routes/nền kệ giữ nguyên.
