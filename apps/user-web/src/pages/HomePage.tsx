@@ -75,7 +75,7 @@ const heroCovers = [
   "/illustrations/one-piece.webp",
   "/illustrations/nghin-le-mot-dem.webp",
   "/illustrations/duoc-su.webp",
-  "/illustrations/chua-nhan.webp",
+  "/illustrations/truyen-kieu.webp",
 ];
 
 function BookmarkPaper() {

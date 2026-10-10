@@ -40,3 +40,8 @@ Lượt trang trí hero cùng ngày: `hero-paper-left.svg`, `hero-paper-right.sv
 phương án chủ dự án duyệt: nét giấy lật/sách mở màu kem. Không lấy hình từ
 Dribbble, không thay logo hoặc ảnh sách. Chỉ dùng trang trí Home, tĩnh,
 aria-hidden và không nhận pointer; mobile thu gọn nét ra mép, ẩn sách mở dưới600px.
+
+Chủ dự án gửi `Truyện kiều.webp` (Truyện Kiều — Nguyễn Du): delivery
+`truyen-kieu.webp` thay vị trí Chúa nhẫn thứ hai, góc dưới bên phải hero.
+Giữ một Chúa nhẫn ở góc trên bên trái, tổng tám bìa; không đổi bố cục/hiệu ứng.
+Tối ưu toàn ảnh trong400×560; provenance/hash ở `truyen-kieu.webp.json`.

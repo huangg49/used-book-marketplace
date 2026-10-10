@@ -8,6 +8,13 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `ed24784`, thay Chúa nhẫn thứ hai ở hero bằng Truyện Kiều — Nguyễn Du
+  do chủ dự án gửi; giữ một Chúa nhẫn và đủ tám bìa, bố cục/hiệu ứng không đổi.
+  Asset WebP363×560/~50KB có provenance/hash. Build/typecheck PASS;
+  browser1535×735 tải đủ tám ảnh, không tràn ngang. [Ảnh](../../.impeccable/review/web-member/home-truyen-kieu.jpg).
+  Backend/native/200% NOT RUN; READINESS giữ nguyên.
+  Checkpoint subject `fix(web): replace duplicate hero cover with Truyen Kieu`; local, chưa push.
+  Bước tiếp: chủ dự án xem hero với bìa mới.
 - Sau `a860408`, gộp nguyên lời mời đăng sách/link /sell vào cảnh mùa thu:
   đồi z0, wine card z1, cáo alpha z2 chồng nhẹ mép card; desktop trái/phải,
   mobile trên/dưới. Wrapper accessible, chỉ art hidden/pointer-inert. Giữ hero/
