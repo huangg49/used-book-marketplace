@@ -8,6 +8,10 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `4c07fb2`, Mua sách dùng cùng nền vàng#f6e0a8 với Đấu giá theo chủ dự án.
+  Build/typecheck/docs/diff PASS; CUA fill hai nút cùngrgb(246,224,168).
+  [Ảnh](../../.impeccable/review/web-member/home-bookmarks-buy-gold.jpg).
+  Checkpoint subject `style(web): match buy bookmark to auction color`; local, chưa push.
 - Sau `912ecec`, giữ hero y nguyên; bookmark desktop144px/chim88px/padding đáy24px.
   Mobile152px/88px không đổi. Build/typecheck PASS; CUA1535×735/1366×768 hàng
   đủ trong khung đầu,390px vẫn2×2; không tràn ngang. [Evidence](../design/WEB_MEMBER_REDESIGN.md).

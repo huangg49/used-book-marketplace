@@ -323,14 +323,12 @@
   overflow-wrap: anywhere;
   line-height: 1.6;
 }
-.quickBuy {
-  --bookmark-ground: var(--shop-cream);
+.quickBuy,
+.quickAuction {
+  --bookmark-ground: #f6e0a8;
 }
 .quickExchange {
   --bookmark-ground: #fffaf0;
-}
-.quickAuction {
-  --bookmark-ground: #f6e0a8;
 }
 .quickPost {
   --bookmark-ground: #fffaf0;

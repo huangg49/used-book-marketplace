@@ -33,6 +33,10 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `4c07fb2`, Mua sách dùng cùng vàng#f6e0a8 với Đấu giá theo yêu cầu chủ dự án.
+Build/typecheck/docs/diff PASS; CUA xác nhận hai fill cùngrgb(246,224,168).
+[Ảnh](../../.impeccable/review/web-member/home-bookmarks-buy-gold.jpg). Chỉ đổi màu.
+
 Sau `912ecec`, chủ dự án yêu cầu giữ nguyên hero và chỉ thu bốn nút do đáy bị
 cắt ở cửa sổ1535×735. Bookmark desktop168→144px, chim104→88px, padding đáy30→24px;
 mobile152px/88px, kiểu giấy/routes và toàn bộ hero giữ nguyên. Source diff chỉ
