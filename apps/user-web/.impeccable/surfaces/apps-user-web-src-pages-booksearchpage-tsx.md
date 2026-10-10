@@ -39,7 +39,9 @@ one large complete photograph with readable metadata and purchase explanation.
 FORM: User-pinned bookstore reference overrides direction roll 20e973c0,
 assigned index 5. Code-led; no new choice round. Signature: a single cover-fan
 settle on Home; fine-pointer hover scales1.12 and lifts8px with deeper shadow,
-restoring on exit. Reduced motion removes zoom/lift; touch keeps static covers.
+restoring on exit. Owner explicitly requests hero motion regardless of OS
+reduced-motion preference: sway and hover keep their duration; manual pause and
+offscreen/hidden guards remain. Touch has sway but no hover zoom.
 Actual listing photos never replaced
 with stock. Illustration source caption stays visible.
 

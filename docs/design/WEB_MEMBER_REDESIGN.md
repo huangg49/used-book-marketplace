@@ -44,6 +44,15 @@ fixture [QA], giá/tình trạng mô phỏng.
 
 ## Kiểm chứng
 
+Sau `1c68ec3`, chủ dự án yêu cầu hero vẫn animate dù máy bật giảm animation.
+Đã giới hạn CSS exception cho entrance/sway/hover của bìa, giữ pause/resume và
+offscreen/hidden guards; không sửa cài đặt Windows hoặc override các màn khác.
+Focused Chromium PASS cả reduce/no-preference đều sway, hover/pause/resume đúng,
+không tràn1440/390/320px100/130%. IAB thực tế reduce=true, computed animation6s/
+infinite/running và transform thay đổi; [ảnh hiện tại](../../.impeccable/review/web-member/hero-forced-sway.jpg).
+Build/typecheck/docs/diff PASS. Các dòng reduced-motion none bên dưới là lịch sử
+trước yêu cầu override này.
+
 Sau `c06a288`, chủ dự án yêu cầu bìa đung đưa nhẹ. Inner wrapper sway±3px/±1°,
 chu kỳ6–7.5s lệch nhịp; hover tạm dừng wrapper, giữ zoom. Có nút pause/resume,
 tự dừng ngoài viewport và khi document hidden; giảm chuyển động tắt sway.

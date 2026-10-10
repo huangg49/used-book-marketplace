@@ -237,9 +237,9 @@ Web uses tonal grounds and restrained photographic shadows. Metadata remains unb
 ### Shadow Vocabulary
 
 - **Listing photograph:** `drop-shadow(0 12px 12px #28191424)`.
-- **Hero cover:** `drop-shadow(0 12px 12px #28000060)`; compact mobile covers use `0 8px 8px #28000050`. Fine-pointer hover enlarges1.12× and lifts8px over250ms with `0 18px 16px #28000090` shadow, returning on exit. Reduced motion removes zoom/lift and entrance movement; covers are decorative and add no tab stops or false click affordance.
+- **Hero cover:** `drop-shadow(0 12px 12px #28000060)`; compact mobile covers use `0 8px 8px #28000050`. Fine-pointer hover enlarges1.12× and lifts8px over250ms with `0 18px 16px #28000090` shadow, returning on exit. Owner explicitly requests hero entrance/hover/sway even when the OS asks for reduced motion; the exception is scoped to these covers, with manual pause retained. Covers are decorative and add no tab stops or false click affordance.
 
-Owner-requested gentle Home sway uses a separate inner wrapper: ±3px vertical and ±1° rotation over6–7.5s, staggered by negative phase delays. Hover pauses that wrapper while image zoom stays independent. A44px pause/resume control sits beneath the source caption; IntersectionObserver and visibilitychange pause loops offscreen or in a hidden document. Reduced motion removes sway and hides the unnecessary pause control. No other shelves animate continuously.
+Owner-requested gentle Home sway uses a separate inner wrapper: ±3px vertical and ±1° rotation over6–7.5s, staggered by negative phase delays. Hover pauses that wrapper while image zoom stays independent. A44px pause/resume control sits beneath the source caption; IntersectionObserver and visibilitychange pause loops offscreen or in a hidden document. The pause control remains available under reduced motion; owner-requested CSS restores normal duration/iteration for these covers only. No other shelves animate continuously.
 - **Hero search:** `box-shadow: 0 12px 28px #2f00002e`.
 - **Modal:** `box-shadow: 0 18px 60px #28191440`; backdrop `#28191480`.
 

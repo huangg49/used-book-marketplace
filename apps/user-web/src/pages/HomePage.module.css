@@ -82,22 +82,23 @@
   user-select: none;
 }
 .coverMotion {
+  --sway-duration: 6s;
   display: block;
   height: 100%;
-  animation: coverSway 6s ease-in-out infinite;
+  animation: coverSway var(--sway-duration) ease-in-out infinite;
   animation-delay: -1.5s;
   animation-play-state: paused;
 }
 .heroCover:nth-child(2) .coverMotion {
-  animation-duration: 7s;
+  --sway-duration: 7s;
   animation-delay: -4s;
 }
 .heroCover:nth-child(3) .coverMotion {
-  animation-duration: 6.5s;
+  --sway-duration: 6.5s;
   animation-delay: -3s;
 }
 .heroCover:nth-child(4) .coverMotion {
-  animation-duration: 7.5s;
+  --sway-duration: 7.5s;
   animation-delay: -5s;
 }
 .rightCovers .coverMotion {
@@ -151,21 +152,19 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  /* Owner explicitly requests hero motion regardless of OS preference.
+     Keep this exception scoped; manual pause and visibility guards still apply. */
   .leftCovers,
   .rightCovers {
-    animation: none;
+    animation-duration: 0.8s !important;
+    animation-iteration-count: 1 !important;
   }
   .heroCover img {
-    transition: none;
+    transition-duration: 250ms !important;
   }
   .coverMotion {
-    animation: none;
-  }
-  .motionToggle {
-    display: none;
-  }
-  .heroCover:hover img {
-    transform: none;
+    animation-duration: var(--sway-duration) !important;
+    animation-iteration-count: infinite !important;
   }
 }
 .search {

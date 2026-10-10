@@ -8,6 +8,11 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `1c68ec3`, chủ dự án yêu cầu ép hero animate dù OS reduce-motion. Scoped CSS
+  exception cho bìa, giữ manual pause/hoverpause/offscreen/hidden; không sửa Windows.
+  Focused browser reduce/no-preference PASS, IAB reduce=true vẫn running6s/infinite;
+  build/typecheck/docs/diff PASS. Checkpoint subject
+  `fix(web): keep hero motion enabled per owner preference`.
 - Sau `c06a288`, thêm sway hero±3px/±1°,6–7.5s lệch nhịp; pause/resume, hoverpause,
   tự pause offscreen/hidden; giảm chuyển động tắt. Focused Chromium motion/layout
   PASS, build/typecheck/lint0error6warning cũ/docs/diff PASS. Preview5186 khởi động
