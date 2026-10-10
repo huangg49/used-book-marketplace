@@ -45,7 +45,7 @@
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 270px) minmax(0, 1fr) minmax(0, 270px);
-  gap: 24px 24px;
+  gap: 40px 24px;
   align-items: start;
 }
 .heroCopy {
@@ -69,7 +69,7 @@
   color: #f0d9b9;
   font-size: 0.9rem;
   line-height: 1.8;
-  margin: 22px 0 32px;
+  margin: 38px 0 32px;
 }
 .coverGallery {
   display: contents;
@@ -153,21 +153,6 @@
     transform: translateY(-3px) rotate(1deg);
   }
 }
-.motionToggle {
-  display: block;
-  margin: 4px auto 0;
-  padding: 10px 14px;
-  background: transparent;
-  border: 0;
-  color: var(--shop-cream);
-  font-size: 0.7rem;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  min-height: 44px;
-}
-.motionToggle:focus-visible {
-  outline-color: var(--shop-cream);
-}
 @media (hover: hover) and (pointer: fine) {
   .heroCover:hover {
     z-index: 3;
@@ -177,9 +162,6 @@
     filter: drop-shadow(-1px -1px 0.5px #fcf8db80)
       drop-shadow(2px 5px 3px #21000099)
       drop-shadow(12px 26px 22px #190000b3);
-  }
-  .coverGallery[data-moving="true"] .heroCover:hover .coverMotion {
-    animation-play-state: paused;
   }
 }
 @keyframes coverSettle {
@@ -192,7 +174,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   /* Owner explicitly requests hero motion regardless of OS preference.
-     Keep this exception scoped; manual pause and visibility guards still apply. */
+     Keep this exception scoped; offscreen/hidden guards still apply. */
   .leftCovers,
   .rightCovers {
     animation-duration: 0.8s !important;
@@ -446,13 +428,13 @@
     padding-block: 28px 12px;
   }
   .heroInner {
-    row-gap: 16px;
+    row-gap: 36px;
   }
   .hero h1 {
     font-size: clamp(3.25rem, 8.2vh, 4rem);
   }
   .heroCopy p {
-    margin: 12px 0 16px;
+    margin: 32px 0 16px;
   }
   .leftCovers,
   .rightCovers {
@@ -539,7 +521,7 @@
   }
   .heroCopy p {
     font-size: 0.8rem;
-    margin: 20px 0 26px;
+    margin: 28px 0 26px;
   }
   .mobileBreak {
     display: initial;

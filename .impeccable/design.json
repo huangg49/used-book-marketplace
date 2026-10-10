@@ -469,7 +469,7 @@
       {
         "name": "hero-cover-sway",
         "value": "translateY(-3px..3px) rotate(-1deg..1deg); 6..7.5s ease-in-out infinite; staggered phase",
-        "purpose": "Owner explicitly requests sway even with OS reduced-motion. Paused on hover/manual control/offscreen/document hidden; manual pause remains visible. Hover zoom remains separate."
+        "purpose": "Owner explicitly requests continuous sway even during hover and under OS reduced-motion, with pause control removed. Paused only offscreen/document hidden; hover zoom remains separate. Known limitation: visitors cannot stop the visible loop."
       },
       {
         "name": "hero-cover-hover",

@@ -44,6 +44,19 @@ fixture [QA], giá/tình trạng mô phỏng.
 
 ## Kiểm chứng
 
+Sau `1d9e5c5`, chủ dự án yêu cầu bỏ nút pause, bìa chuyển động liên tục và hạ
+description/search để thoáng hơn. Đã bỏ state/control/hoverpause; giữ offscreen/
+hidden guards và OS override đã duyệt. Desktop compact description/search hạ20px;
+hero469px tại1536×730 vì bỏ hàng nút, kệ đầu vẫn thấy. Mobile description hạ8px.
+[Desktop](../../.impeccable/review/web-member/hero-airy-desktop.png),
+[mobile](../../.impeccable/review/web-member/hero-airy-mobile.png).
+Focused Chromium PASS9viewport100/130%text/8bìa/nooverflow/search Enter, sway
+liên tục cả hover và OS reduce, tự dừng offscreen. Hidden listener kiểm source,
+chưa mô phỏng tab background. Build/typecheck/16unit/lint0error6warning cũ/docs/
+diff PASS; layout detector0findings. Bỏ control + OS override làm người xem không
+có cách chủ động dừng animation; ghi limitation accessibility, không nhận PASS.
+Các dòng pause bên dưới là lịch sử trước yêu cầu này. Không đổi API hoặc gate.
+
 Sau `33f0544`, chủ dự án báo hero desktop100% gần chiếm hết viewport laptop.
 CUA1536×730 đo header96.8px + hero686px, search y607px, tiêu đề kệ y851px.
 Đã thêm compact Home cho width≥1101/height≤850: headline và bìa clamp theo vh,

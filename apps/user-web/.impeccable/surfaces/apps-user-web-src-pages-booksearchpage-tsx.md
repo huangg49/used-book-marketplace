@@ -40,8 +40,10 @@ FORM: User-pinned bookstore reference overrides direction roll 20e973c0,
 assigned index 5. Code-led; no new choice round. Signature: a single cover-fan
 settle on Home; fine-pointer hover scales1.12 and lifts8px with deeper shadow,
 restoring on exit. Owner explicitly requests hero motion regardless of OS
-reduced-motion preference: sway and hover keep their duration; manual pause and
-offscreen/hidden guards remain. Touch has sway but no hover zoom.
+reduced-motion preference: sway and hover keep their duration. Owner subsequently
+requested removal of manual pause and continuous sway during hover. Offscreen/
+hidden guards remain. Visitors currently cannot stop the visible loop; this is
+a known accessibility limitation, not acceptance PASS. Touch has sway but no hover zoom.
 Actual listing photos never replaced
 with stock. Illustration source caption stays visible.
 
@@ -52,10 +54,11 @@ below600. The headline/search stay clear. Cover depth combines a thin cream
 paper edge, contact shadow and a softer offset cast shadow, expanded on hover.
 
 Laptop-height correction: above1100px wide and up to850px high, Home uses a
-shorter stage with viewport-height-aware headline/covers and tighter vertical
-spacing. At1536x730, hero497px and first shelf heading finishes at674px; at
-1366x650 the heading finishes at645px. Keep natural document growth at enlarged
-text sizes; no fixed-height cropping or page scale. Header and mobile untouched.
+shorter stage with viewport-height-aware headline/covers. The later owner request
+adds20px breathing room before description/search and removes the control row:
+at1536x730 hero469px, search y460px, first shelf heading finishes at646px.
+Keep natural document growth at enlarged text sizes; no fixed-height cropping
+or page scale. Header untouched; mobile description top margin increases8px.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 

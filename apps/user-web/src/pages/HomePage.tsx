@@ -18,7 +18,7 @@ const heroCovers = [
   "/illustrations/chua-nhan.webp",
 ];
 
-function HeroCovers({ paused }: { paused: boolean }) {
+function HeroCovers() {
   const gallery = useRef<HTMLDivElement>(null);
   const [moving, setMoving] = useState(false);
   useEffect(() => {
@@ -42,7 +42,7 @@ function HeroCovers({ paused }: { paused: boolean }) {
       ref={gallery}
       className={styles.coverGallery}
       aria-hidden="true"
-      data-moving={moving && !paused}
+      data-moving={moving}
     >
       {[0, 1].map((group) => (
         <div
@@ -132,7 +132,6 @@ function Shelf({
 }
 export function HomePage() {
   const [query, setQuery] = useState("");
-  const [motionPaused, setMotionPaused] = useState(false);
   const navigate = useNavigate();
   return (
     <div>
@@ -164,7 +163,7 @@ export function HomePage() {
           />
         </div>
         <div className={styles.heroInner}>
-          <HeroCovers paused={motionPaused} />
+          <HeroCovers />
           <div className={styles.heroCopy}>
             <h1>
               SÁCH CŨ.
@@ -207,14 +206,6 @@ export function HomePage() {
         <p className={styles.caption}>
           Bìa sách dùng để minh họa · Ảnh sách đang đăng ở bên dưới
         </p>
-        <button
-          type="button"
-          className={styles.motionToggle}
-          aria-pressed={motionPaused}
-          onClick={() => setMotionPaused(!motionPaused)}
-        >
-          {motionPaused ? "Tiếp tục chuyển động" : "Tạm dừng chuyển động"}
-        </button>
       </section>
       <Shelf
         title="VỪA LÊN KỆ"

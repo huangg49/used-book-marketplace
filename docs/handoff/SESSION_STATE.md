@@ -8,6 +8,13 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `1d9e5c5`, bỏ nút/state pause theo yêu cầu chủ dự án, sway liên tục cả hover;
+  giữ offscreen/hidden và OS override. Hạ description/search20px ở laptop, mobile
+  description8px; hero469px và kệ đầu vẫn hiện ở1536×730. Focused responsive/motion/
+  search PASS, build/typecheck/16unit/lint6warning cũ/docs/diff, detector0findings.
+  Ảnh ở brief; thiếu visitor stop control là limitation accessibility, chưa nghiệm
+  thu accessibility. Checkpoint subject `feat(web): give hero copy and search more breathing room`.
+  Local branch, chưa push/PR/merge/deploy; API/gate giữ nguyên.
 - Sau `33f0544`, sửa tỉ lệ hero cho desktop laptop thấp: chỉ Home CSS compact
   width≥1101/height≤850, clamp chữ/bìa theo vh và nén khoảng dọc, không scale/crop.
   CUA1536×730 hero686→497px, thấy search/pause/kệ đầu;1366×650 kệ đầu vừa viewport.
