@@ -1,179 +1,289 @@
 ---
-name: Lật lại — React Native Member
-description: Token RN hiện hành; web Vite và Flutter chưa áp dụng redesign Android.
+name: Lật lại — Member web and incumbent React Native
+description: Built Member web bookstore world; React Native retains its separately scoped green system.
 colors:
-  forest: "#214B40"
-  paper: "#F5EFDF"
-  surface: "#FFFCF4"
-  shelfCanvas: "#F6F8F3"
-  ink: "#202C27"
-  muted: "#58685E"
-  rustText: "#963F28"
-  border: "#788477"
-  rule: "#D5D8C8"
-  successSurface: "#E8EFDF"
+  shop-wine: "#5c0202"
+  shop-cream: "#fcf8db"
+  shop-paper: "#fffcf5"
+  shop-ink: "#281914"
+  shop-muted: "#716157"
+  shop-line: "#d9cbbd"
+  shop-control: "#8e7564"
+  shop-orange: "#f68b51"
+  shop-yellow: "#f4cb67"
+  shop-mint: "#b6dac5"
+  shop-wine-hover: "#7c2320"
+  shop-error: "#912b0e"
+  shop-shelf: "#f4eddf"
+  cover-sand: "#f0e2ca"
+  cover-sage: "#d9e7dc"
+  cover-peach: "#f6d4bd"
+  cover-lilac: "#e6dced"
+  detail-ground: "#efe3cf"
+  rn-forest: "#214B40"
+  rn-paper: "#F5EFDF"
+  rn-surface: "#FFFCF4"
+  rn-shelf-canvas: "#F6F8F3"
+  rn-ink: "#202C27"
+  rn-muted: "#58685E"
+  rn-rust-text: "#963F28"
+  rn-border: "#788477"
+  rn-rule: "#D5D8C8"
+  rn-success-surface: "#E8EFDF"
 typography:
-  searchTitle:
-    fontFamily: Be Vietnam Pro
+  display:
+    fontFamily: "Anton, sans-serif"
+    fontSize: "clamp(3rem, 5.3vw, 5rem)"
+    fontWeight: 400
+    lineHeight: 1.16
+    letterSpacing: "0"
+  headline:
+    fontFamily: "Anton, sans-serif"
+    fontSize: "clamp(1.8rem, 3vw, 2.5rem)"
+    fontWeight: 400
+    lineHeight: 1.3
+  detail-title:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "clamp(1.8rem, 3vw, 2.5rem)"
+    fontWeight: 700
+    lineHeight: 1.4
+    letterSpacing: "-0.03em"
+  card-title:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "1.05rem"
+    fontWeight: 700
+    lineHeight: 1.5
+  body:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.9rem"
+    fontWeight: 400
+    lineHeight: 1.8
+  label:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.85rem"
+    fontWeight: 700
+  price:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "1.5rem"
+    fontWeight: 700
+  rn-search-title:
+    fontFamily: "Be Vietnam Pro"
     fontSize: "28px"
     fontWeight: 700
     lineHeight: "36px"
-  shelfTitle:
-    fontFamily: Be Vietnam Pro
+  rn-shelf-title:
+    fontFamily: "Be Vietnam Pro"
     fontSize: "16px"
     fontWeight: 700
     lineHeight: "23px"
-  shelfPrice:
-    fontFamily: Be Vietnam Pro
+  rn-shelf-price:
+    fontFamily: "Be Vietnam Pro"
     fontSize: "18px"
     fontWeight: 700
     lineHeight: "25px"
-  body:
-    fontFamily: Be Vietnam Pro
+  rn-body:
+    fontFamily: "Be Vietnam Pro"
     fontSize: "15px"
     fontWeight: 400
     lineHeight: "24px"
 rounded:
   book: "2px"
+  badge: "6px"
   control: "8px"
-  sheet: "20px"
-  pill: "24px"
+  panel: "12px"
+  rn-sheet: "20px"
+  rn-pill: "24px"
 spacing:
   xs: "4px"
   sm: "8px"
   md: "12px"
   lg: "16px"
   xl: "20px"
+  group: "24px"
+  dialog: "28px"
   section: "32px"
+  page: "40px"
+  spacious: "48px"
+  shelf: "68px"
 components:
   button-primary:
-    backgroundColor: "{colors.forest}"
-    textColor: "{colors.paper}"
+    backgroundColor: "{colors.shop-wine}"
+    textColor: "{colors.shop-cream}"
+    rounded: "{rounded.control}"
+    padding: "12px 24px"
+  button-primary-hover:
+    backgroundColor: "{colors.shop-wine-hover}"
+    textColor: "{colors.shop-cream}"
+  button-search:
+    backgroundColor: "{colors.shop-orange}"
+    textColor: "#341509"
+    rounded: "{rounded.control}"
+    padding: "12px 24px"
+  button-search-hover:
+    backgroundColor: "{colors.shop-yellow}"
+  button-secondary:
+    backgroundColor: "transparent"
+    textColor: "{colors.shop-wine}"
+    rounded: "{rounded.control}"
+    padding: "10px 20px"
+  text-field:
+    backgroundColor: "transparent"
+    textColor: "{colors.shop-ink}"
+    rounded: "{rounded.control}"
+  navigation:
+    backgroundColor: "{colors.shop-wine}"
+    textColor: "{colors.shop-cream}"
+    padding: "16px 40px"
+  condition-label:
+    backgroundColor: "{colors.detail-ground}"
+    textColor: "#5b3428"
+    rounded: "{rounded.badge}"
+    padding: "7px 12px"
+  cover-panel:
+    backgroundColor: "{colors.cover-sand}"
+    rounded: "{rounded.panel}"
+    padding: "26px"
+  rn-button-primary:
+    backgroundColor: "{colors.rn-forest}"
+    textColor: "{colors.rn-paper}"
     rounded: "{rounded.control}"
     padding: "13px 20px"
-  text-field:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
+  rn-text-field:
+    backgroundColor: "{colors.rn-surface}"
+    textColor: "{colors.rn-ink}"
     rounded: "{rounded.control}"
     padding: "12px 14px"
-  navigation-selected:
-    backgroundColor: "{colors.successSurface}"
-    textColor: "{colors.forest}"
+  rn-navigation-selected:
+    backgroundColor: "{colors.rn-success-surface}"
+    textColor: "{colors.rn-forest}"
     rounded: "{rounded.control}"
     padding: "8px 4px"
 ---
 
-# Lật lại — brief UI hiện hành
-
-09/10/2026: chủ dự án duyệt tích hợp Impeccable, cập nhật brief và critique ba màn
-tìm sách/chi tiết/đăng sách. Quyết định ở đây ưu tiên hơn thẩm mỹ UI-1/brand1.1
-cũ. 10/10: bắt đầu triển khai redesign trên màn tìm sách Android theo
-[brief màn](docs/design/ANDROID_SEARCH.md). Các màn web chưa áp dụng hướng mới.
+# Design System: Lật lại
 
 ## Overview
 
-Hệ thống React Native Member hiện hành dùng một họ chữ Be Vietnam Pro, nền sáng
-và xanh rừng để người dùng đọc và thao tác rõ ràng. Hướng “Danh mục hiệu sách
-độc lập” đã được triển khai đầu tiên ở màn tìm sách Android; ảnh sách, tình trạng
-và giá tạo điểm nhìn. Các màn RN khác mới nhận thay đổi primitive/font/điều hướng
-chung; web Vite và Flutter chưa áp dụng hướng mới.
+**Creative North Star: "Tiệm sách nhiều màu"**
 
-Một marketplace sách cũ dễ dùng, rõ việc và có cá tính. Người dùng nhận ra cuốn
-sách, tình trạng, giá và hành động tiếp theo ngay vùng chính. Tác vụ mua/bán
-ưu tiên rõ ràng; trang khám phá có thể biểu cảm hơn form/giao dịch.
-Product truth tại [PRODUCT](PRODUCT.md); không đổi SRS/contract để làm giao diện đẹp.
+Member web pairs the owner's wine-red owl and lettering with warm paper, tall display type and colored grounds for complete book covers. Discovery is lively; listing facts and task controls stay direct, readable and quieter than the covers. This records the world built after the owner's replacement decision on 10/10/2026, using the [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-booksearchpage-tsx.md) and [PRODUCT](PRODUCT.md), rather than the superseded green web sketches.
+
+The implemented web slice is Home, Search, Detail, Login, shared Header/BookCard/ConfirmDialog and MainLayout/AuthLayout. Existing posting and other forms, auction, chat, profile and registration retain legacy page recipes even where the shared shell changes. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.
+
+**Key Characteristics:**
+
+- Wine-and-cream identity with orange, yellow and mint discovery accents.
+- Anton for expressive headings; Be Vietnam Pro for book facts and actions.
+- Whole covers on colored grounds; unboxed metadata and separately labelled prices.
+- Original owner logo and sourced decorative imagery, distinct from listing photographs.
+- Responsive web recipes and a separately preserved React Native implementation.
 
 ## Colors
 
-Xanh rừng dành cho hành động/chọn; ink cho nội dung, muted cho thông tin phụ.
-Tình trạng sách dùng rustText, không mang nghĩa xác thực. Browse dùng shelfCanvas,
-header/navigation dùng surface. Logo và ảnh sách giữ artwork gốc.
+The web palette moves from a dark wine shell to warm paper shelves and soft cover grounds.
+
+### Primary
+
+- **Logo wine** (`shop-wine`): header, footer, primary actions, prices and selected photo controls.
+- **Warm cream** (`shop-cream`): text and light actions against wine; focus outline on wine surfaces.
+- **Wine hover** (`shop-wine-hover`): primary action hover on Detail, Login and the dialog.
+
+### Secondary
+
+- **Bookshop orange / shelf yellow / mint** (`shop-orange`, `shop-yellow`, `shop-mint`): search action and discovery grounds; yellow also emphasizes hero words and search hover.
+- **Sand / sage / peach / lilac** (`cover-*`): the four recurring card cover grounds. They alternate by position, not listing condition, seller trust or availability.
+- **Error rust** (`shop-error`): validation/error text and the dialog's danger variant.
+
+### Neutral
+
+- **Web paper / ink / muted** (`shop-paper`, `shop-ink`, `shop-muted`): canvas, reading text and secondary metadata. Shelf panels use `shop-shelf`; the gallery and descriptive condition labels use `detail-ground`.
+- **Divider / control boundary** (`shop-line`, `shop-control`): quiet grouping versus the stronger Login, price-input, sort and radio boundary treatments.
+- **Incumbent RN colors** (`rn-*`): forest action/heading, paper canvas, surface navigation, shelf canvas, ink, muted, rust condition text, input border, divider and selected-navigation surface. These are preserved from [RN theme](apps/mobile-react-native/src/core/ui/theme.ts) and [brand identity](packages/brand/v1.1/identity.tokens.json), not applied to the new web slice.
+
+**The Ground Is Not Status Rule.** Colored cover grounds are decorative; communicate condition, prices and reservation state in real text from the listing.
 
 ## Typography
 
-Frontmatter dùng đơn vị CSS để trao đổi; source RN dùng logical pixels và vẫn
-scale theo hệ điều hành. Các role còn lại ở `theme.ts` vẫn hợp lệ. Một họ chữ:
-phân cấp bằng role/kích thước/weight thật, không giả500/600.
+**Display Font:** Anton, sans-serif (400).
+**Body Font:** Be Vietnam Pro, sans-serif (400/700).
 
-- Bỏ yêu cầu giữ Lora trong luồng sản phẩm. Sans-serif là hướng mới; Be Vietnam
-  Pro400/700 được triển khai cho RN; web vẫn cần đối chiếu riêng.
-- Một họ font cho tiêu đề, nhãn/nút, nội dung và giá trong luồng tác vụ. Phân cấp
-  bằng kích thước/độ đậm; không trộn serif/chữ viết tay vào form để tạo cá tính.
-- Dùng weight có file thật. Bộ Be hiện chỉ400/700; muốn500/600 cần bổ sung và
-  kiểm glyph/license/bundle trước, không giả weight. RN dùng hai file font đã có.
-- Kiểm tên sách dài, dấu tiếng Việt, ₫, chữ lớn và dòng phụ. Không thu nhỏ dữ kiện
-  quan trọng hoặc khóa chiều cao để giữ bố cục.
+Both families are self-hosted in web `public/fonts`, with OFL files and [source notes](apps/user-web/public/fonts/WEB-SOURCES.md). Anton gives discovery headlines a tall, compact voice; task text and actual book titles use Be Vietnam Pro.
+
+### Hierarchy
+
+- **Display:** Home's three-line hero; frontmatter captures its desktop clamp. At widths up to 600px it uses `clamp(2.4rem, 9vw, 3.3rem)`.
+- **Headline:** shelf and posting section headings. Search has its own Anton `clamp(2rem, 3.4vw, 3rem)` / 1.28 heading; Login uses `clamp(2rem, 5vw, 3rem)` / 1.35.
+- **Detail title / card title:** bold Be Vietnam Pro; narrow sizes are 1.65rem and 0.92rem respectively. Long titles wrap rather than truncate.
+- **Body / label:** regular reading copy and bold controls. Supporting text is mostly 0.75–0.9rem with 1.6–1.9 line height; disclosure captions are smaller. Description text preserves line breaks; task explanations cap around 60–65ch.
+- **Price:** Detail uses 1.5rem, reducing to 1.3rem on narrow layouts; card prices use 1rem then 0.9rem. Both use tabular numerals and separate sale/exchange labels.
+- **RN:** one Be Vietnam Pro family with actual regular/bold faces, including the preserved `rn-*` roles. CSS units in this interchange map to RN logical pixels and retain system text scaling; web display type does not replace the RN type system.
+
+**The Two Voices Rule.** Anton carries discovery headings; Be Vietnam Pro carries book titles, prices, forms and consequential actions. Use the bundled weights.
 
 ## Layout
 
-RN content tối đa480dp, padding20dp. Target tối thiểu48dp; control minHeight52dp,
-tăng theo chữ. Screen sở hữu safe area. Tìm sách: header ngoài vùng cuộn, ảnh32%
-cạnh thông tin; dưới360dp với text scale từ1.29 chuyển xếp dọc. Đây là recipe màn
-tìm sách, không là bố cục bắt buộc cho mọi app.
+Web shelves, catalog, header/footer and Detail use centered containers up to 1280px; inner hero/posting content reaches 1200px. Typical desktop side padding is 40px, then 24px, then 20px on narrow screens. Reused gaps follow the frontmatter steps, with surface-specific 22px/28px/36px gaps where source uses them.
 
-Logo và ảnh sách thật được giữ. Xanh rừng là vật liệu nhận diện hiện có; màu nền
-giấy/cam đất có thể điều chỉnh khi so sánh phương án, không phải ràng buộc giữ UI cũ.
-Bìa và dấu vết bản sách tạo điểm nhìn. Độ nổi bật đến từ bố cục, tương phản và
-ảnh có ích; hiệu ứng không được làm chậm tìm sách hoặc nhập liệu.
+Home and Search have four cover columns, reducing to two at 850px and 800px respectively. Home discovery tiles go from three columns to one at 600px. Search filters go from three columns to two at 1000px, then one at 600px; the radios have explicit all-mode/all-condition choices. Search action wraps below the field at 600px. Detail pairs photograph and content with a 72px gap, reducing at 1000px and stacking at 720px. Login's centered form container is at most 520px wide.
 
-Grid/card sách đều nhau có thể phù hợp để so sánh. Không áp máy móc lệnh cấm card,
-font phổ biến hoặc đối xứng của một reference. Form dùng phân nhóm rõ, một hành
-động chính; các giải thích chi tiết mở khi cần. Giữ cấu trúc trong error/empty/loading.
+At 800px the header uses an expandable menu while retaining both owl and lettering; the posting shortcut leaves the header at 600px and remains in the menu. Home's desktop cover fans become a compact three-cover group at 600px. Dialog width is `calc(100% - 32px)`, capped at 480px, with scrollable height and stacked actions at 420px. These are implemented surface breakpoints, not one universal device taxonomy.
+
+RN retains content width 480dp, page padding 20dp, targets at least 48dp and controls at least 52dp. Search owns its fixed header and 32%-width cover beside metadata; below 360dp with effective text scale at least 1.29 it stacks vertically. Screens own safe area. This is RN implementation context, not a web recipe or proof that every RN screen has been redesigned.
 
 ## Elevation & Depth
 
-Phân nhóm bằng lớp nền và đường phân cách; không thêm shadow trang trí. Sheet
-dùng scrim `rgba(20,36,28,.45)`, giữ focus/Back và hành động áp dụng riêng.
+Web uses tonal grounds and restrained photographic shadows. Metadata remains unboxed. Shadow belongs to covers, the hero search surface and the modal rather than every card. The one-time Home cover settle lasts 0.8s; card-image hover lifts 4px over 0.3s. Global reduced-motion handling suppresses animation and transition. RN retains tonal grouping and dividers without decorative shadows; its sheet scrim is `rgba(20,36,28,.45)`.
+
+### Shadow Vocabulary
+
+- **Listing photograph:** `drop-shadow(0 12px 12px #28191424)`.
+- **Hero cover:** `drop-shadow(0 14px 14px #28000060)`; compact mobile covers use `0 8px 8px #28000050`.
+- **Hero search:** `box-shadow: 0 12px 28px #2f00002e`.
+- **Modal:** `box-shadow: 0 18px 60px #28191440`; backdrop `#28191480`.
 
 ## Shapes
 
-Button/field8dp, chip24dp, sheet20dp; ảnh2dp. Khung contain giữ đầy đủ ảnh sách.
+Web controls use gently rounded corners (`control`), cover grounds/search shells/panels/dialog use `panel`, and condition labels use `badge`. Complete photographs use contain fitting within a 4:5 ground; no decorative crop removes condition evidence. RN keeps its book, control, sheet and pill radii from the incumbent system.
 
 ## Components
 
-Dữ kiện quyết định: ảnh, tình trạng và hai loại giá giữ nghĩa API; grid mẫu chỉ
-là phương án đối chiếu. Component RN tại `src/core/ui`, recipe màn ở feature;
-sidecar snippets là bản dịch trình bày, không là một UI web mới.
+### Buttons
 
-### Câu chữ
+Solid wine with cream text for primary tasks; orange with dark text for search. Detail's main action is full-width, at least 50px tall; search is at least 48px on desktop and 44px narrow. Login uses 50px; dialog uses 46px. Secondary pagination is transparent with a wine border and inverts on hover. Disabled primary/dialog actions reduce opacity. Keyboard focus is a 3px outline offset 4px; header and footer controls use a cream outline against wine.
 
-Tên hành động nói kết quả thực. Tiếng Việt ngắn và cụ thể; tránh thơ/ẩn dụ ở lỗi,
-form và tiền. Thuật ngữ nội bộ như DirectDelivery/expectedVersion không lộ trong
-luồng người dùng; giải thích nghiệp vụ cần thiết bằng lời thông thường.
+### Cards / Containers
 
-| Context | Hướng viết để kiểm bằng API |
-| --- | --- |
-| Purchase conversation | “Giữ sách và mở chat”; “Giữ trong24 giờ. Chưa thanh toán.” |
-| Submit listing | “Gửi bài đăng để duyệt”; phân biệt lưu nháp/gửi duyệt/đã đăng |
-| Tình trạng sách | “Tình trạng trang sách”, “Bìa và gáy”; giữ ghi chú hư hại |
-| Loading | “Đang tải sách…”; không khiến người dùng đoán app đang làm gì |
-| Giao nhận mô phỏng | “Giao tận nơi trong TP.HCM — mô phỏng đồ án” nếu đúng lane |
+BookCard combines a rounded 4:5 colored ground, contained listing photograph, condition text, title, author and separately labelled prices. Cover padding is 26px then 16px at 600px. Metadata is unboxed. Hover lifts the image; title and view links underline. Held-state text is a cream strip, not a trust badge. Load/empty/error panels use the warm shelf ground and a concrete next action.
 
-Đây là ví dụ định hướng, chưa thay chuỗi trong source. Review toàn interaction,
-không đổi một nút làm lệch confirm/success/error hoặc hứa retry không hỗ trợ.
+### Inputs / Fields
 
-### Ba màn chuẩn của lượt đầu
+Search sits inside a paper shell with a transparent borderless inner field and an explicit label. Login uses outlined 50px fields; numeric price fields are at least 42px and sort is 44px. Mode and condition use native single-selection radios with explicit all choices. Labels and invalid-price explanation remain visible; focus and caret use the wine identity. Preserve entered values on errors.
 
-| Màn / mode | Việc phải giúp người dùng làm | Phạm vi cần giữ |
-| --- | --- | --- |
-| Tìm sách / Operate | Tìm/lọc/sắp xếp, biết kết quả và mở đúng cuốn | Filters, pagination, empty/error và query thật |
-| Chi tiết / Operate | Hiểu ảnh/tình trạng/giá, biết bước tiếp theo | Owner/availability, purchase giữ24h, không nhầm thanh toán |
-| Đăng sách / Operate | Chọn catalog, chụp/tải ảnh, nhập tình trạng/giá, lưu/gửi duyệt | Form state, upload/retry/idempotency và revision |
+### Navigation
 
-Web có thể đặt thông tin liên quan cạnh nhau; native chia thành bước hợp lý,
-dùng camera/keyboard/Back đúng nền tảng. Giữ context của cùng tác vụ giữa web/mobile.
-Phạm vi chưa có API ghi dependency, không thêm nút giả để minh họa luồng hoàn chỉnh.
+Wine shell, cream links, underline for desktop hover/current page. Narrow menus expand beneath the header, close on navigation/Escape and return focus on Escape. The skip link appears on focus. The logo displays windows onto the exact original PNG for owl and lettering, including on mobile; it is not redrawn.
+
+### Condition labels and confirmation
+
+Detail condition/mode labels are descriptive, softly filled rectangles rather than verification. ConfirmDialog uses a paper surface, readable task explanation, wine confirmation and outlined cancel, with modal backdrop and a narrow stacked action layout. Purchase wording explains a 24-hour reservation/chat without payment; visual styling must not turn that into a purchase-success promise.
 
 ## Do's and Don'ts
 
-Đánh giá cấu trúc/câu chữ trước tạo hiệu ứng. So sánh phương án trên cùng nội
-dung, desktop và narrow viewport; sau sửa mới nhân rộng. Kiểm với người ngoài
-nhóm: tìm sách, hiểu tình trạng, hiểu giữ sách chưa thanh toán, đăng bài.
-Không đặt điểm AI thành mục tiêu hoặc dùng nó thay bằng chứng người dùng.
+### Do:
 
-RN đã thay Lora bằng Be Vietnam Pro, chuyển tìm sách sang danh sách dọc,
-tìm kiếm cố định và câu chữ trực tiếp. Thay font/target48dp/thanh điều hướng
-chung tác động các màn RN khác; không xem các bố cục đó là đã redesign. Web
-vẫn nhiều font; critique cũ mô tả source ở SHA ghi trong từng báo cáo.
-[UI-1](docs/DESIGN.md) giữ quyết định/evidence lịch sử; [workflow](docs/design/IMPECCABLE_WORKFLOW.md)
-quy định cách dùng bộ pinned; [UI rules](docs/design/UI_CODING_RULES.md) giữ nền chất lượng.
+- **Do** preserve the owner's original logo pixels and the owl-plus-lettering identity on narrow screens.
+- **Do** use complete API listing photographs and expose condition, sale price and exchange value with their real labels.
+- **Do** keep archival Home covers decorative and visibly captioned, with provenance in the asset READMEs.
+- **Do** use the scoped web tokens for this implemented slice and the incumbent RN tokens for unchanged native screens.
+- **Do** retain error/empty/loading states, keyboard focus, wrapping titles and reduced-motion behavior.
+- **Do** explain consequential actions in direct Vietnamese, including reservation without payment.
+
+### Don't:
+
+- **Don't** substitute stock or archival covers for real listing photographs or invent rating/trust claims.
+- **Don't** treat alternating cover colors or descriptive condition labels as verification or transaction status.
+- **Don't** infer that legacy web pages, Android, Flutter or release gates adopted this web redesign.
+- **Don't** regenerate the supplied logo, imitate its lettering with a font, or treat a reference screenshot as licensed cover assets.
+- **Don't** canonize legacy glyph-icon, display-font or animation recipes as part of this web world.
+
+Source inventory: web global CSS, Home/Search/Detail/Login module CSS, BookCard, Header/MainLayout, AuthLayout and ConfirmDialog; RN theme/brand tokens preserve the previous implementation. [Brand provenance](apps/user-web/public/brand/README.md) and [illustration provenance](apps/user-web/public/illustrations/README.md) record the assets. Legacy Material Symbols import/old animation classes remain outside the documented web slice; this documentation pass does not repair or endorse them.

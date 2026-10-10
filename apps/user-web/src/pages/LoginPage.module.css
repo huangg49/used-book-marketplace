@@ -1,0 +1,86 @@
+.panel h1 {
+  font: 400 clamp(2rem, 5vw, 3rem)/1.35 var(--shop-display);
+  margin: 0 0 18px;
+  color: var(--shop-wine);
+  text-wrap: balance;
+}
+.panel h1 span {
+  color: var(--shop-ink);
+}
+.panel > p {
+  font-size: 0.9rem;
+  line-height: 1.8;
+  color: var(--shop-muted);
+  margin: 0 0 30px;
+}
+.panel form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.panel label {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.panel input {
+  border: 1px solid var(--shop-control) !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  min-height: 50px !important;
+  font-size: 0.9rem !important;
+  margin-bottom: 12px;
+}
+.password {
+  position: relative;
+}
+.password input {
+  padding-right: 54px !important;
+  margin: 0;
+}
+.password button {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: var(--shop-muted);
+  border-radius: 6px;
+}
+.submit {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  min-height: 50px;
+  padding: 12px 22px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  font-weight: 700;
+  margin-top: 14px;
+  font-size: 0.9rem;
+}
+.submit:hover:not(:disabled) {
+  background: #7c2320;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 22px;
+  font-size: 0.85rem;
+  color: var(--shop-wine);
+  text-decoration: underline;
+}
+.error {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.8;
+  color: #912b0e;
+}

@@ -60,6 +60,11 @@ Giọng tiếng Việt cụ thể, dễ hiểu; cảm giác gần gũi có cá t
 UI cũ khó hiểu/khó dùng, đặc biệt Lora và diễn đạt; đã duyệt sửa định hướng.
 Visual direction tại [DESIGN](DESIGN.md), không suy brand cũ là yêu cầu giữ Lora.
 
+10/10/2026: chủ dự án chọn logo cú/chữ LẬT LẠI mới, đỏ rượu vang–kem và
+[Bookstore Landing Page](https://dribbble.com/shots/26947471-Bookstore-Landing-Page)
+làm hướng thay thế cho Member web. Ưu tiên web trước, Android đồng bộ sau;
+không kế thừa thẩm mỹ xanh/văn khố của các sketch trước lựa chọn này.
+
 ## Evidence on Hand
 
 Source, contract, tests và screenshot có provenance trong repo. Nội dung/ảnh QA

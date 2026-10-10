@@ -82,8 +82,12 @@ try {
   const errors = [];
   p.on("pageerror", (error) => errors.push(error.message));
   const button = (name) => p.getByRole("button", { name, exact: true });
+  const step = (name) =>
+    p
+      .getByRole("navigation", { name: "Tiến trình" })
+      .getByRole("button", { name });
   await p.goto(origin);
-  console.log('QA: home/search');
+  console.log("QA: home/search");
   await p
     .getByRole("link", { name: "Xem sách", exact: true })
     .first()
@@ -94,7 +98,8 @@ try {
     .waitFor();
   await p.screenshot({
     path: path.join(artifacts, "home-desktop.png"),
-    fullPage: true, animations: "disabled",
+    fullPage: true,
+    animations: "disabled",
   });
   await p.getByLabel("Bạn muốn tìm cuốn nào?").fill("khong-co-sach-nay");
   await button("Tìm sách").click();
@@ -107,7 +112,7 @@ try {
   await p.getByText("12 cuốn trên trang này").waitFor();
   await p.getByLabel("Cũ nhiều", { exact: true }).click();
   await p.getByText("Chưa có cuốn sách nào phù hợp.").waitFor();
-  await p.getByLabel("Cũ nhiều", { exact: true }).click();
+  await p.getByLabel("Tất cả tình trạng", { exact: true }).click();
   await p.getByLabel("Trao đổi", { exact: true }).click();
   await p
     .getByRole("link", { name: "Xem sách", exact: true })
@@ -130,7 +135,11 @@ try {
       body: JSON.stringify({ code: "Unavailable", message: "QA outage" }),
     }),
   );
-  const failedSearch = p.waitForResponse(response => response.status() === 503 && new URL(response.url()).searchParams.get("q") === "QA-failure");
+  const failedSearch = p.waitForResponse(
+    (response) =>
+      response.status() === 503 &&
+      new URL(response.url()).searchParams.get("q") === "QA-failure",
+  );
   await p.getByLabel("Tìm sách", { exact: true }).fill("QA-failure");
   await p.waitForURL("**q=QA-failure");
   await failedSearch;
@@ -152,7 +161,8 @@ try {
     );
     await p.screenshot({
       path: path.join(artifacts, `search-390-${scale}.png`),
-      fullPage: true, animations: "disabled",
+      fullPage: true,
+      animations: "disabled",
     });
     assert.ok(
       await p.evaluate(
@@ -161,31 +171,84 @@ try {
       `Search overflow at ${scale}%`,
     );
   }
-  console.log('QA: public shelf/detail/states passed; sell journey');
-  await button("Mở menu").click();
-  await p.getByRole("navigation", {name:"Điều hướng trên điện thoại"}).getByRole("link", {name:"Đăng nhập",exact:true}).click();
-  await p.waitForURL("**/login");
+  await p.setViewportSize({ width: 320, height: 844 });
+  await p
+    .getByRole("link", { name: "Trang chủ Lật lại", exact: true })
+    .first()
+    .click();
+  await p.getByLabel("Bạn muốn tìm cuốn nào?").waitFor();
+  assert.ok(
+    await p.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+    "Home overflow at320px130%",
+  );
+  await p.screenshot({
+    path: path.join(artifacts, "home-320-130.png"),
+    fullPage: true,
+    animations: "disabled",
+  });
+  await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
+  await button("Giữ sách và mở chat").waitFor();
+  assert.ok(
+    await p.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+    "Detail overflow at320px130%",
+  );
+  await p.screenshot({
+    path: path.join(artifacts, "detail-320-130.png"),
+    fullPage: true,
+    animations: "disabled",
+  });
+  await p.getByRole("link", { name: "← Về kệ sách", exact: true }).click();
+  await p.getByLabel("Tìm sách", { exact: true }).waitFor();
+  assert.ok(
+    await p.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+    "Search overflow at320px130%",
+  );
+  await p.screenshot({
+    path: path.join(artifacts, "search-320-130.png"),
+    fullPage: true,
+    animations: "disabled",
+  });
+  await p.setViewportSize({ width: 390, height: 844 });
+  console.log("QA: public shelf/detail/states passed; sell journey");
+  await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
+  await button("Giữ sách và mở chat").click();
+  await p.waitForURL("**/login?returnUrl=*");
+  const returnPath = new URL(p.url()).searchParams.get("returnUrl");
+  assert.match(returnPath, /^\/books\//);
   await p.getByLabel("Email", { exact: true }).fill("member@operations.test");
   await p.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await button("Đăng nhập").click();
+  await p.waitForURL(origin + returnPath);
+  await p
+    .getByRole("heading", { name: "Đây là bài đăng của bạn", exact: true })
+    .waitFor();
+  assert.equal(await button("Giữ sách và mở chat").count(), 0);
+  await p
+    .getByRole("link", { name: "Trang chủ Lật lại", exact: true })
+    .first()
+    .click();
   await p.getByRole("link", { name: "Đăng sách của bạn", exact: true }).click();
-  await button(/^5\s*Kiểm tra$/).click();
+  await step(/Kiểm tra/).click();
   await button("Gửi duyệt").click();
   await p.getByRole("alert").waitFor();
-  await button(/^1\s*Thông tin sách$/).click();
+  await step(/Thông tin sách/).click();
   await p
     .getByLabel("Tên sách", { exact: true })
     .fill("QA — Một cuốn sách cũ qua nhiều người đọc với tên dài");
   await p.getByLabel("Tác giả", { exact: true }).fill("Tác giả QA");
-  await button(/^2\s*Ảnh cuốn sách$/).click();
-  await p
-    .locator("input[type=file]")
-    .setInputFiles({
-      name: "qa-cover.png",
-      mimeType: "image/png",
-      buffer: fixture.photo,
-    });
-  await button(/^3\s*Tình trạng$/).click();
+  await step(/Ảnh cuốn sách/).click();
+  await p.locator("input[type=file]").setInputFiles({
+    name: "qa-cover.png",
+    mimeType: "image/png",
+    buffer: fixture.photo,
+  });
+  await step(/Tình trạng/).click();
   await p.getByLabel("Tình trạng tổng thể").selectOption("Worn");
   await p
     .getByLabel("Ruột sách và trang thiếu")
@@ -195,7 +258,7 @@ try {
   await p.locator("input[name=readable]").first().check();
   await p.locator("input[name=hasMissingPages]").first().check();
   await p.locator("input[name=missingEssentialContent]").last().check();
-  await button(/^4\s*Bán hoặc đổi$/).click();
+  await step(/Bán hoặc đổi/).click();
   await button("Bán hoặc đổi").click();
   await p.getByLabel("Giá bán (VNĐ)").fill("35000");
   await p.getByLabel("Giá trị quy đổi (VNĐ)").fill("45000");
@@ -203,12 +266,12 @@ try {
   await p
     .getByLabel("Mô tả chung")
     .fill("DỮ LIỆU QA. Bản sách cũ có gáy sờn, đủ nội dung để đọc.");
-  await button(/^1\s*Thông tin sách$/).click();
+  await step(/Thông tin sách/).click();
   assert.match(
     await p.getByLabel("Tên sách", { exact: true }).inputValue(),
     /QA/,
   );
-  await button(/^5\s*Kiểm tra$/).click();
+  await step(/Kiểm tra/).click();
   await p
     .getByLabel("Tôi có quyền sở hữu và đăng bán hoặc trao đổi cuốn sách này.")
     .check();
@@ -217,10 +280,11 @@ try {
       (scale) => (document.documentElement.style.fontSize = `${scale}%`),
       scale,
     );
-    await p.evaluate(() => window.scrollTo(0,0));
+    await p.evaluate(() => window.scrollTo(0, 0));
     await p.screenshot({
       path: path.join(artifacts, `sell-review-390-${scale}.png`),
-      fullPage: true, animations: "disabled",
+      fullPage: true,
+      animations: "disabled",
     });
     assert.ok(
       await p.evaluate(
@@ -282,16 +346,74 @@ try {
   assert.equal(posted.currentRevision.content.hasMissingPages, true);
   assert.equal(posted.currentRevision.content.condition, "Worn");
   assert.equal(posted.currentRevision.content.exchangeValue, 45000);
+  // Another authenticated Member reserves a real fixture listing. The server
+  // commits the first request but its response is lost; retry must replay it.
+  await p.goto(origin + "/login");
+  await p.getByLabel("Email", { exact: true }).fill("admin@operations.test");
+  await p.getByLabel("Mật khẩu", { exact: true }).fill(password);
+  await button("Đăng nhập").click();
+  await p.waitForURL(origin + "/");
+  const selectedPath = await p
+    .getByRole("link", { name: "Xem sách", exact: true })
+    .first()
+    .getAttribute("href");
+  const selectedListing = selectedPath.split("/").at(-1);
+  await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
+  await button("Giữ sách và mở chat").click();
+  const dialog = p.getByRole("dialog");
+  await dialog.waitFor();
+  await p.screenshot({
+    path: path.join(artifacts, "purchase-dialog-390-130.png"),
+    fullPage: true,
+    animations: "disabled",
+  });
+  const reserveAttempts = [];
+  let reserveLost = false;
+  await p.route(
+    "**/api/v1/listings/*/purchase-conversations",
+    async (route) => {
+      reserveAttempts.push({
+        key: route.request().headers()["idempotency-key"],
+        body: route.request().postData(),
+      });
+      if (!reserveLost) {
+        reserveLost = true;
+        await route.fetch();
+        await route.abort("failed");
+      } else await route.continue();
+    },
+  );
+  await dialog
+    .getByRole("button", { name: "Giữ sách và mở chat", exact: true })
+    .click();
+  await dialog.getByRole("alert").waitFor();
+  await dialog
+    .getByRole("button", { name: "Giữ sách và mở chat", exact: true })
+    .click();
+  await p.waitForURL("**/chat/*");
+  assert.equal(reserveAttempts.length, 2);
+  assert.equal(reserveAttempts[0].key, reserveAttempts[1].key);
+  assert.equal(reserveAttempts[0].body, reserveAttempts[1].body);
+  const buyerConversations = await fixture.api(
+    "/me/purchase-conversations",
+    admin.accessToken,
+  );
+  assert.equal(
+    buyerConversations.filter((item) => item.listingId === selectedListing)
+      .length,
+    1,
+  );
   assert.deepEqual(errors, []);
   console.log(
-    "PASS user-web: real shelf/filter/pagination/detail; empty/error/retry; five tabs/data retention; upload/submit and lost-response replay; 390px 100/130%. Fake storage, no native acceptance.",
+    "PASS user-web: real shelf/filter/pagination/detail; empty/error/retry; login return and owner guard; five tabs/data retention; upload/submit replay; purchase lost-response replay with one conversation; 390px100/130%, Home/Detail/Search320px130%. Fake storage, no native acceptance.",
   );
 } catch (error) {
   const pages = browser?.contexts().flatMap((context) => context.pages()) ?? [];
   if (pages[0])
     await pages[0].screenshot({
       path: path.join(artifacts, "failure.png"),
-      fullPage: true, animations: "disabled",
+      fullPage: true,
+      animations: "disabled",
     });
   throw error;
 } finally {

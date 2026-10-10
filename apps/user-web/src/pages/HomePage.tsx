@@ -1,15 +1,23 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
-import { BookOpen, Repeat, Gavel, Tag } from "lucide-react";
-import { motion } from "framer-motion";
-import { ROUTES } from "../lib/routes";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowUpRight, Search } from "lucide-react";
+import { ROUTES, searchUrl } from "../lib/routes";
 import { BookCard } from "../components/BookCard";
 import { getPublicListings } from "../services/public-listings";
 import styles from "./HomePage.module.css";
 
-function Shelf({ mode, title }: { mode?: "Exchange"; title: string }) {
+function Shelf({
+  mode,
+  title,
+  description,
+}: {
+  mode?: "Exchange";
+  title: string;
+  description: string;
+}) {
   const query = new URLSearchParams({
-    limit: "6",
+    limit: "4",
     sort: "newest",
     ...(mode ? { mode } : {}),
   });
@@ -20,32 +28,38 @@ function Shelf({ mode, title }: { mode?: "Exchange"; title: string }) {
   });
   return (
     <section className={styles.shelf}>
-      <div className={styles.shelfHeader}>
+      <div className={styles.sectionHead}>
         <div>
-          <h2 className={styles.shelfTitle}>{title}</h2>
-          <p className={styles.shelfSubtitle}>
-            Bìa, tình trạng và giá từ từng bản sách đang được đăng.
-          </p>
+          <h2>{title}</h2>
+          <p>{description}</p>
         </div>
-        <Link
-          className={styles.shelfViewAll}
-          to={mode ? `${ROUTES.search}?mode=${mode}` : ROUTES.search}
-        >
-          Xem tất cả →
+        <Link to={mode ? searchUrl({ mode }) : ROUTES.search}>
+          Xem tất cả <ArrowUpRight size={20} aria-hidden="true" />
         </Link>
       </div>
-      <div aria-live="polite">
-        {result.isPending && <p>Đang tải kệ sách…</p>}
+      <div aria-live="polite" aria-busy={result.isFetching}>
+        {result.isPending && (
+          <div className={styles.loading}>Đang tải kệ sách…</div>
+        )}
         {result.isError && (
-          <div role="alert">
-            <p>Chưa tải được sách.</p>
-            <button type="button" onClick={() => void result.refetch()}>
+          <div className={styles.state} role="alert">
+            <p>Chưa tải được sách. Kiểm tra kết nối rồi thử lại.</p>
+            <button
+              type="button"
+              onClick={() => void result.refetch()}
+              disabled={result.isFetching}
+            >
               Thử lại
             </button>
           </div>
         )}
-        {result.data?.items.length === 0 && <p>Chưa có sách trong kệ này.</p>}
-        <div className={styles.shelfGrid}>
+        {!result.isError && result.data?.items.length === 0 && (
+          <div className={styles.state}>
+            <p>Chưa có sách trong kệ này.</p>
+            <Link to={ROUTES.sell}>Đăng cuốn sách đầu tiên</Link>
+          </div>
+        )}
+        <div className={styles.grid}>
           {result.data?.items.map((book, index) => (
             <BookCard key={book.id} book={book} index={index} />
           ))}
@@ -54,133 +68,137 @@ function Shelf({ mode, title }: { mode?: "Exchange"; title: string }) {
     </section>
   );
 }
-export default function HomePage() {
-  const actions = [
-    { to: ROUTES.search, title: "Tìm sách quý", subtitle: "Biên mục & Lọc chuyên sâu tác phẩm hiếm có", Icon: BookOpen },
-    { to: ROUTES.sell, title: "Đăng bán sách", subtitle: "Định giá & Thẩm định tình trạng 5 bước", Icon: Tag },
-    { to: `${ROUTES.search}?mode=Exchange`, title: "Đổi sách bằng Xu", subtitle: "Dùng điểm Lật-Xu trao đổi không cần tiền mặt", Icon: Repeat },
-    { to: ROUTES.auctions, title: "Sàn đấu giá", subtitle: "Sách chữ ký tác giả & Bản in đầu thế kỷ 20", Icon: Gavel },
-  ];
+export function HomePage() {
+  const [query, setQuery] = useState("");
+  const navigate = useNavigate();
   return (
-    <div className={styles.page}>
-      <section className={styles.hero} aria-labelledby="hero-title">
-        <div className={styles.heroContainer}>
-          <motion.div
-            className={styles.heroLeft}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-          >
-            <span className={styles.heroTag}>
-              <span className={styles.heroTagDot} aria-hidden="true" />
-              DI SẢN TRANG GIẤY & KÝ ỨC
-            </span>
-            <h1 id="hero-title" className={styles.heroTitle}>
-              Những cuốn sách xứng đáng được đọc thêm một lần nữa.
+    <div>
+      <section className={styles.hero}>
+        <div className={styles.heroInner}>
+          <div className={styles.leftCovers} aria-hidden="true">
+            <img src="/illustrations/oz.jpg" alt="" />
+            <img src="/illustrations/alice.jpg" alt="" />
+          </div>
+          <div className={styles.heroCopy}>
+            <h1>
+              SÁCH CŨ.
+              <br />
+              <span>CHƯƠNG MỚI.</span>
+              <br />
+              ĐỢI BẠN LẬT.
             </h1>
-            <p className={styles.heroLead}>
-              Trao cho từng trang sách cũ một vòng đời mới. Nền tảng tuyển chọn,
-              thẩm định và giao dịch sách quý, sách lưu trữ minh bạch nguồn gốc
-              và tình trạng.
+            <p>
+              Một cuốn sách đã đọc.
+              <br className={styles.mobileBreak} /> Một câu chuyện để đọc tiếp.
+              <br />
+              Tìm, mua bán và đổi sách cũ tại TP.HCM.
             </p>
-            <div className={styles.heroActions}>
-              <Link to={ROUTES.search} className={styles.btnPrimary}>
-                Khám phá sách →
-              </Link>
-              <Link to={ROUTES.sell} className={styles.btnOutline}>
-                Đăng sách của bạn
-              </Link>
-            </div>
-            <div className={styles.trustGrid}>
-              <div>
-                <div className={styles.trustNum}>45.000+</div>
-                <div className={styles.trustLabel}>Tác phẩm lưu trữ</div>
-              </div>
-              <div>
-                <div className={styles.trustNum}>100%</div>
-                <div className={styles.trustLabel}>Thẩm định trang sách</div>
-              </div>
-              <div>
-                <div className={styles.trustNum}>12.000+</div>
-                <div className={styles.trustLabel}>Cộng đồng độc giả</div>
-              </div>
-            </div>
-          </motion.div>
-          <motion.div
-            className={styles.featuredCard}
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+          </div>
+          <div className={styles.mobileCovers} aria-hidden="true">
+            <img src="/illustrations/alice.jpg" alt="" />
+            <img src="/illustrations/oz.jpg" alt="" />
+            <img src="/illustrations/pride.jpg" alt="" />
+          </div>
+          <div className={styles.rightCovers} aria-hidden="true">
+            <img src="/illustrations/pride.jpg" alt="" />
+            <img src="/illustrations/oz.jpg" alt="" />
+          </div>
+          <form
+            role="search"
+            className={styles.search}
+            onSubmit={(event) => {
+              event.preventDefault();
+              navigate(searchUrl(query.trim() ? { q: query.trim() } : {}));
+            }}
           >
-            <div className={styles.featuredCardTop}>
-              <span className={styles.featuredBadge}>
-                <span className={styles.pulseDot} aria-hidden="true" /> ĐẤU GIÁ NỔI BẬT
-              </span>
-              <span className={styles.featuredTimer}>⏱ 02 : 14 : 38</span>
-            </div>
-            <div className={styles.featuredBody}>
-              <div className={styles.featuredCoverCol}>
-                <div className={styles.featuredCoverWrap}>
-                  <img
-                    src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=600&auto=format&fit=crop"
-                    alt="Đoạn Tuyệt"
-                    className={styles.featuredCoverImg}
-                  />
-                  <div className={styles.featuredCoverGradient} />
-                  <span className={styles.featuredEditionTag}>Bản in 1940</span>
-                </div>
-              </div>
-              <div className={styles.featuredInfoCol}>
-                <div>
-                  <span className={styles.featuredPublisher}>TỰ LỰC VĂN ĐOÀN</span>
-                  <h3 className={styles.featuredBookTitle}>Đoạn Tuyệt (Bản in đầu 1940)</h3>
-                  <p className={styles.featuredBookAuthor}>Tác giả: Nhất Linh</p>
-                  <span className={styles.featuredVerified}>✔ Bảo chứng tem mộc xưa</span>
-                </div>
-                <div className={styles.featuredPriceBlock}>
-                  <div className={styles.featuredPriceRow}>
-                    <span className={styles.featuredPriceLabel}>Giá đặt hiện tại:</span>
-                    <div style={{ textAlign: "right" }}>
-                      <div className={styles.featuredPriceValue}>2.890.000 đ</div>
-                      <div className={styles.featuredBidCount}>28 lượt đặt giá</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className={styles.featuredActions}>
-              <button className={styles.btnBidPrimary}>Đặt giá ngay</button>
-              <button className={styles.btnBidOutline}>Bảo chứng</button>
-            </div>
-          </motion.div>
+            <Search size={22} aria-hidden="true" />
+            <label htmlFor="home-search" className="sr-only">
+              Bạn muốn tìm cuốn nào?
+            </label>
+            <input
+              id="home-search"
+              type="search"
+              placeholder="Tên sách, tác giả hoặc ISBN…"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <button type="submit">
+              Tìm sách <ArrowUpRight size={18} aria-hidden="true" />
+            </button>
+          </form>
         </div>
+        <p className={styles.caption}>
+          Bìa tư liệu dùng để minh họa · Ảnh sách đang đăng ở bên dưới
+        </p>
       </section>
-      <section className={styles.quickActions}>
-        <div className={styles.quickActionsGrid}>
-          {actions.map(({ to, title, subtitle, Icon }, index) => (
-            <motion.div
-              key={to}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.4 + index * 0.1 }}
-            >
-              <Link to={to} className={styles.actionCard}>
-                <div className={styles.actionIconBox}>
-                  <Icon size={24} aria-hidden="true" />
-                </div>
-                <div>
-                  <h2 className={styles.actionTitle}>{title}</h2>
-                  <p className={styles.actionDesc}>{subtitle}</p>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
+      <Shelf
+        title="VỪA LÊN KỆ"
+        description="Những bản sách mới được đăng. Biết rõ tình trạng trước khi chọn."
+      />
+      <section className={styles.discover}>
+        <div className={styles.sectionHead}>
+          <div>
+            <h2>HÔM NAY, BẠN TÌM GÌ?</h2>
+            <p>Chọn cách tìm phù hợp với tủ sách và túi tiền của bạn.</p>
+          </div>
         </div>
+        <div className={styles.tiles}>
+          <Link to={searchUrl({ mode: "Sale" })} className={styles.saleTile}>
+            <ArrowUpRight aria-hidden="true" />
+            <div>
+              <span>Thêm một cuốn vào tủ</span>
+              <h3>SÁCH ĐỂ MUA</h3>
+            </div>
+            <img src="/illustrations/alice.jpg" alt="" loading="lazy" />
+          </Link>
+          <Link
+            to={searchUrl({ mode: "Exchange" })}
+            className={styles.exchangeTile}
+          >
+            <ArrowUpRight aria-hidden="true" />
+            <div>
+              <span>Đọc mới từ sách cũ</span>
+              <h3>SÁCH ĐỂ ĐỔI</h3>
+            </div>
+            <img src="/illustrations/oz.jpg" alt="" loading="lazy" />
+          </Link>
+          <Link
+            to={searchUrl({ mode: "Sale", maxSalePrice: "100000" })}
+            className={styles.budgetTile}
+          >
+            <ArrowUpRight aria-hidden="true" />
+            <div>
+              <span>Một khoản nhỏ cho việc đọc</span>
+              <h3>DƯỚI 100.000₫</h3>
+            </div>
+            <img src="/illustrations/pride.jpg" alt="" loading="lazy" />
+          </Link>
+        </div>
+        <p className={styles.tileCaption}>
+          Bìa minh họa từ tư liệu; mỗi mục mở danh sách bài đăng thực tế.
+        </p>
       </section>
-      <main className={styles.shelves} id="kham-pha">
-        <Shelf title="Mới lên kệ" />
-        <Shelf title="Sẵn sàng trao đổi" mode="Exchange" />
-      </main>
+      <div className={styles.exchangeShelf}>
+        <Shelf
+          mode="Exchange"
+          title="ĐỔI SÁCH, ĐỔI CÂU CHUYỆN"
+          description="Xem bản sách và giá trị đổi do người đăng cung cấp."
+        />
+      </div>
+      <section className={styles.posting}>
+        <div>
+          <h2>
+            TỦ SÁCH CHẬT?
+            <br />
+            CHO SÁCH MỘT CHƯƠNG MỚI.
+          </h2>
+          <p>Chụp ảnh, mô tả tình trạng và đăng cuốn bạn muốn bán hoặc đổi.</p>
+        </div>
+        <Link to={ROUTES.sell}>
+          Đăng sách của bạn <ArrowUpRight size={20} aria-hidden="true" />
+        </Link>
+      </section>
     </div>
   );
 }
+export default HomePage;

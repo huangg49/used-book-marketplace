@@ -28,10 +28,6 @@ export function SellBookPage() {
   const location = useLocation();
   const session = useSession();
 
-  if (session.status === "anonymous") {
-    return <Navigate to={`/login?returnUrl=${encodeURIComponent(location.pathname)}`} replace />;
-  }
-
   const [formData, setFormData] = useState({
     // Step 1
     title: "",
@@ -52,6 +48,10 @@ export function SellBookPage() {
     salePrice: "",
     exchangeValue: "",
   });
+
+  if (session.status === "anonymous") {
+    return <Navigate to={`/login?returnUrl=${encodeURIComponent(location.pathname)}`} replace />;
+  }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -258,8 +258,8 @@ export function SellBookPage() {
   );
 
   const renderHorizontalStepper = () => (
-    <nav aria-label="Tiến trình" className="bg-white/80 backdrop-blur-md rounded-xl p-3 shadow-sm mb-4 border border-white/50">
-      <div className="flex justify-between items-center relative z-10">
+    <nav aria-label="Tiến trình" className="bg-white/80 backdrop-blur-md rounded-xl p-3 shadow-sm mb-4 border border-white/50 overflow-x-auto">
+      <div className="flex justify-between items-center relative z-10 min-w-[700px]">
         <AnimatePresence>
           {steps.map((label, index) => {
             const stepNumber = index + 1;

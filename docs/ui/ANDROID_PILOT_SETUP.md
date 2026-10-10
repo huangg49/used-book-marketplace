@@ -8,7 +8,8 @@ hoặc bucket local chính. Chỉ chạy một dataset API và một Metro cùng
 ## Chuẩn bị
 
 Checkout chứa Android search/detail/save đã duyệt (gốc `684d2ea`) và runner
-`scripts/android-pilot.mjs`. Main của nhóm chưa tự có các thay đổi Android này.
+`scripts/android-pilot.mjs`. PR31 đã được chủ dự án merge vào main `dec19b3`;
+checkout hiện hành của gói web và worktree pilot là hai nơi khác nhau.
 Node24.15+, pnpm theo packageManager, Docker Desktop và Android Studio;
 dependency/setup theo [START_HERE](../handoff/START_HERE.md).
 

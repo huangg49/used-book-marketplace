@@ -6,6 +6,30 @@ OpenAPI0.30.0,15 migration Mongo,113 operation HTTP. Đây là trạng thái the
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
+## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
+
+- 10/10: chủ dự án báo đã merge PR31; fetch xác nhận main `dec19b3` chứa merge.
+  Primary đã fast-forward sạch rồi tạo `codex/web-member-redesign` từ main đó.
+  Managed worktree Android/pilot và local config/dataset được giữ.
+- Chủ dự án chuyển ưu tiên sang web `apps/user-web`, sau đó đồng bộ Android theo
+  thiết kế web đã kiểm chứng. [Brief](../design/WEB_MEMBER_REDESIGN.md): lát cắt
+  Trang chủ→Tìm sách→Chi tiết. Chủ dự án đã thay ba sketch xanh bằng logo cú/chữ
+  mới đỏ–kem và bản Bookstore Landing Page trên Dribbble. Đã triển khai Home,
+  Search, Detail, shared shell/card/dialog và Login nối về đúng sách; chưa đổi API
+  hoặc token storage. Giữ ảnh bài đăng thật, ảnh trang trí có nguồn/chú thích.
+  Build/16unit/lint0error6warning cũ PASS; browser HTTP/Mongo riêng storage FAKE
+  PASS tìm/lọc/sort/cursor/lỗi/login return/owner guard và đăng sách/replay.
+  Purchase mất phản hồi→thử lại giữ key/body/version, chỉ một conversation PASS;
+  Home/Detail/Search320px130% và search/sell390px100/130% không tràn ngang PASS.
+  Finish reviewer chấm cả năm sửa resolved, disposition ship ở phạm vi fix list;
+  DESIGN/sidecar đã cập nhật và kiểm schema/parity. Checkpoint subject
+  `feat(web): redesign member discovery around new bookstore identity`.
+  Scope/checks/ảnh ở brief; preview local5186 dùng dữ liệu [QA].
+  Tiếp theo: chủ dự án xem bốn màn mới; form đăng sách/chat/đấu giá còn legacy,
+  rồi mới đồng bộ Android theo hướng web. Chưa human usability/native/live storage
+  acceptance cho gói này; không push/PR/merge/deploy theo quyền cũ.
+  Các checkpoint Android bên dưới là lịch sử trước merge; READINESS giữ nguyên.
+
 ## Gói lưu sách và chuẩn bị pilot Android
 
 - Chủ dự án yêu cầu push/merge ngày10/10. Đã tích hợp main `d71ad3e` vào nhánh
@@ -18,8 +42,9 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   nhật hai journey theo UI được duyệt và PASS toàn hành trình local HTTP/Mongo
   thật, storage FAKE (search/detail/paging/lỗi/quyền, địa chỉ, đăng/duyệt sách,
   replay mất phản hồi và showcase list/grid). Giữ các assertion nghiệp vụ.
-  Chủ dự án sẽ review PR31; chưa có xác nhận review để merge. CI/review/merge
-  hiện hành xem PR; review AI không thay reviewer người thật theo TEAMWORK.
+  Tại checkpoint `ee8a048`, chủ dự án sẽ review PR31; sau đó chủ dự án tự merge,
+  remote main đã xác minh ở gói web bên trên. CI/review hiện hành xem PR;
+  review AI không thay reviewer người thật theo TEAMWORK.
   Các dòng “không push/PR” bên dưới mô tả
   phạm vi quyền tại checkpoint trước yêu cầu tích hợp này. READINESS giữ nguyên.
 - Preflight tiếp: nhánh `codex/android-pilot-qa` từ `684d2ea`, managed worktree

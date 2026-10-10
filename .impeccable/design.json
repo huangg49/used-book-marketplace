@@ -1,118 +1,631 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-10T01:17:35Z",
-  "title": "Design System: Lật lại — React Native Member",
+  "generatedAt": "2026-10-10T06:48:09.386Z",
+  "title": "Design System: Lật lại",
   "extensions": {
     "colorMeta": {
-      "forest": {
+      "shop-wine": {
         "role": "primary",
-        "displayName": "Xanh rừng"
+        "displayName": "Logo wine",
+        "tonalRamp": [
+          "oklch(15.00% 0.1206 28.78)",
+          "oklch(26.43% 0.1206 28.78)",
+          "oklch(37.86% 0.1206 28.78)",
+          "oklch(49.29% 0.1206 28.78)",
+          "oklch(60.71% 0.1206 28.78)",
+          "oklch(72.14% 0.1206 28.78)",
+          "oklch(83.57% 0.1206 28.78)",
+          "oklch(95.00% 0.1206 28.78)"
+        ]
       },
-      "paper": {
+      "shop-cream": {
+        "role": "primary",
+        "displayName": "Warm cream",
+        "tonalRamp": [
+          "oklch(15.00% 0.0381 100.62)",
+          "oklch(26.43% 0.0381 100.62)",
+          "oklch(37.86% 0.0381 100.62)",
+          "oklch(49.29% 0.0381 100.62)",
+          "oklch(60.71% 0.0381 100.62)",
+          "oklch(72.14% 0.0381 100.62)",
+          "oklch(83.57% 0.0381 100.62)",
+          "oklch(95.00% 0.0381 100.62)"
+        ]
+      },
+      "shop-paper": {
         "role": "neutral",
-        "displayName": "Giấy ấm"
+        "displayName": "Web paper",
+        "tonalRamp": [
+          "oklch(15.00% 0.0098 87.47)",
+          "oklch(26.43% 0.0098 87.47)",
+          "oklch(37.86% 0.0098 87.47)",
+          "oklch(49.29% 0.0098 87.47)",
+          "oklch(60.71% 0.0098 87.47)",
+          "oklch(72.14% 0.0098 87.47)",
+          "oklch(83.57% 0.0098 87.47)",
+          "oklch(95.00% 0.0098 87.47)"
+        ]
       },
-      "shelfCanvas": {
+      "shop-ink": {
         "role": "neutral",
-        "displayName": "Nền tìm sách"
+        "displayName": "Bookshop ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0261 39.21)",
+          "oklch(26.43% 0.0261 39.21)",
+          "oklch(37.86% 0.0261 39.21)",
+          "oklch(49.29% 0.0261 39.21)",
+          "oklch(60.71% 0.0261 39.21)",
+          "oklch(72.14% 0.0261 39.21)",
+          "oklch(83.57% 0.0261 39.21)",
+          "oklch(95.00% 0.0261 39.21)"
+        ]
       },
-      "rustText": {
+      "shop-muted": {
+        "role": "neutral",
+        "displayName": "Muted reading text",
+        "tonalRamp": [
+          "oklch(15.00% 0.0259 53.97)",
+          "oklch(26.43% 0.0259 53.97)",
+          "oklch(37.86% 0.0259 53.97)",
+          "oklch(49.29% 0.0259 53.97)",
+          "oklch(60.71% 0.0259 53.97)",
+          "oklch(72.14% 0.0259 53.97)",
+          "oklch(83.57% 0.0259 53.97)",
+          "oklch(95.00% 0.0259 53.97)"
+        ]
+      },
+      "shop-line": {
+        "role": "neutral",
+        "displayName": "Quiet divider",
+        "tonalRamp": [
+          "oklch(15.00% 0.0247 67.49)",
+          "oklch(26.43% 0.0247 67.49)",
+          "oklch(37.86% 0.0247 67.49)",
+          "oklch(49.29% 0.0247 67.49)",
+          "oklch(60.71% 0.0247 67.49)",
+          "oklch(72.14% 0.0247 67.49)",
+          "oklch(83.57% 0.0247 67.49)",
+          "oklch(95.00% 0.0247 67.49)"
+        ]
+      },
+      "shop-control": {
+        "role": "neutral",
+        "displayName": "Control boundary",
+        "tonalRamp": [
+          "oklch(15.00% 0.0403 56.01)",
+          "oklch(26.43% 0.0403 56.01)",
+          "oklch(37.86% 0.0403 56.01)",
+          "oklch(49.29% 0.0403 56.01)",
+          "oklch(60.71% 0.0403 56.01)",
+          "oklch(72.14% 0.0403 56.01)",
+          "oklch(83.57% 0.0403 56.01)",
+          "oklch(95.00% 0.0403 56.01)"
+        ]
+      },
+      "shop-orange": {
         "role": "secondary",
-        "displayName": "Tình trạng"
+        "displayName": "Bookshop orange",
+        "tonalRamp": [
+          "oklch(15.00% 0.1491 47.65)",
+          "oklch(26.43% 0.1491 47.65)",
+          "oklch(37.86% 0.1491 47.65)",
+          "oklch(49.29% 0.1491 47.65)",
+          "oklch(60.71% 0.1491 47.65)",
+          "oklch(72.14% 0.1491 47.65)",
+          "oklch(83.57% 0.1491 47.65)",
+          "oklch(95.00% 0.1491 47.65)"
+        ]
+      },
+      "shop-yellow": {
+        "role": "secondary",
+        "displayName": "Shelf yellow",
+        "tonalRamp": [
+          "oklch(15.00% 0.1272 87.23)",
+          "oklch(26.43% 0.1272 87.23)",
+          "oklch(37.86% 0.1272 87.23)",
+          "oklch(49.29% 0.1272 87.23)",
+          "oklch(60.71% 0.1272 87.23)",
+          "oklch(72.14% 0.1272 87.23)",
+          "oklch(83.57% 0.1272 87.23)",
+          "oklch(95.00% 0.1272 87.23)"
+        ]
+      },
+      "shop-mint": {
+        "role": "secondary",
+        "displayName": "Mint ground",
+        "tonalRamp": [
+          "oklch(15.00% 0.0478 159.63)",
+          "oklch(26.43% 0.0478 159.63)",
+          "oklch(37.86% 0.0478 159.63)",
+          "oklch(49.29% 0.0478 159.63)",
+          "oklch(60.71% 0.0478 159.63)",
+          "oklch(72.14% 0.0478 159.63)",
+          "oklch(83.57% 0.0478 159.63)",
+          "oklch(95.00% 0.0478 159.63)"
+        ]
+      },
+      "shop-wine-hover": {
+        "role": "primary",
+        "displayName": "Wine hover",
+        "tonalRamp": [
+          "oklch(15.00% 0.1235 26.40)",
+          "oklch(26.43% 0.1235 26.40)",
+          "oklch(37.86% 0.1235 26.40)",
+          "oklch(49.29% 0.1235 26.40)",
+          "oklch(60.71% 0.1235 26.40)",
+          "oklch(72.14% 0.1235 26.40)",
+          "oklch(83.57% 0.1235 26.40)",
+          "oklch(95.00% 0.1235 26.40)"
+        ]
+      },
+      "shop-error": {
+        "role": "secondary",
+        "displayName": "Error rust",
+        "tonalRamp": [
+          "oklch(15.00% 0.1422 35.51)",
+          "oklch(26.43% 0.1422 35.51)",
+          "oklch(37.86% 0.1422 35.51)",
+          "oklch(49.29% 0.1422 35.51)",
+          "oklch(60.71% 0.1422 35.51)",
+          "oklch(72.14% 0.1422 35.51)",
+          "oklch(83.57% 0.1422 35.51)",
+          "oklch(95.00% 0.1422 35.51)"
+        ]
+      },
+      "shop-shelf": {
+        "role": "neutral",
+        "displayName": "Warm shelf",
+        "tonalRamp": [
+          "oklch(15.00% 0.0201 84.59)",
+          "oklch(26.43% 0.0201 84.59)",
+          "oklch(37.86% 0.0201 84.59)",
+          "oklch(49.29% 0.0201 84.59)",
+          "oklch(60.71% 0.0201 84.59)",
+          "oklch(72.14% 0.0201 84.59)",
+          "oklch(83.57% 0.0201 84.59)",
+          "oklch(95.00% 0.0201 84.59)"
+        ]
+      },
+      "cover-sand": {
+        "role": "secondary",
+        "displayName": "Sand cover ground",
+        "tonalRamp": [
+          "oklch(15.00% 0.0353 81.27)",
+          "oklch(26.43% 0.0353 81.27)",
+          "oklch(37.86% 0.0353 81.27)",
+          "oklch(49.29% 0.0353 81.27)",
+          "oklch(60.71% 0.0353 81.27)",
+          "oklch(72.14% 0.0353 81.27)",
+          "oklch(83.57% 0.0353 81.27)",
+          "oklch(95.00% 0.0353 81.27)"
+        ]
+      },
+      "cover-sage": {
+        "role": "secondary",
+        "displayName": "Sage cover ground",
+        "tonalRamp": [
+          "oklch(15.00% 0.0210 152.17)",
+          "oklch(26.43% 0.0210 152.17)",
+          "oklch(37.86% 0.0210 152.17)",
+          "oklch(49.29% 0.0210 152.17)",
+          "oklch(60.71% 0.0210 152.17)",
+          "oklch(72.14% 0.0210 152.17)",
+          "oklch(83.57% 0.0210 152.17)",
+          "oklch(95.00% 0.0210 152.17)"
+        ]
+      },
+      "cover-peach": {
+        "role": "secondary",
+        "displayName": "Peach cover ground",
+        "tonalRamp": [
+          "oklch(15.00% 0.0491 56.07)",
+          "oklch(26.43% 0.0491 56.07)",
+          "oklch(37.86% 0.0491 56.07)",
+          "oklch(49.29% 0.0491 56.07)",
+          "oklch(60.71% 0.0491 56.07)",
+          "oklch(72.14% 0.0491 56.07)",
+          "oklch(83.57% 0.0491 56.07)",
+          "oklch(95.00% 0.0491 56.07)"
+        ]
+      },
+      "cover-lilac": {
+        "role": "secondary",
+        "displayName": "Lilac cover ground",
+        "tonalRamp": [
+          "oklch(15.00% 0.0252 311.69)",
+          "oklch(26.43% 0.0252 311.69)",
+          "oklch(37.86% 0.0252 311.69)",
+          "oklch(49.29% 0.0252 311.69)",
+          "oklch(60.71% 0.0252 311.69)",
+          "oklch(72.14% 0.0252 311.69)",
+          "oklch(83.57% 0.0252 311.69)",
+          "oklch(95.00% 0.0252 311.69)"
+        ]
+      },
+      "detail-ground": {
+        "role": "neutral",
+        "displayName": "Detail photograph ground",
+        "tonalRamp": [
+          "oklch(15.00% 0.0297 80.66)",
+          "oklch(26.43% 0.0297 80.66)",
+          "oklch(37.86% 0.0297 80.66)",
+          "oklch(49.29% 0.0297 80.66)",
+          "oklch(60.71% 0.0297 80.66)",
+          "oklch(72.14% 0.0297 80.66)",
+          "oklch(83.57% 0.0297 80.66)",
+          "oklch(95.00% 0.0297 80.66)"
+        ]
+      },
+      "rn-forest": {
+        "role": "primary",
+        "displayName": "RN forest",
+        "tonalRamp": [
+          "oklch(15.00% 0.0511 174.09)",
+          "oklch(26.43% 0.0511 174.09)",
+          "oklch(37.86% 0.0511 174.09)",
+          "oklch(49.29% 0.0511 174.09)",
+          "oklch(60.71% 0.0511 174.09)",
+          "oklch(72.14% 0.0511 174.09)",
+          "oklch(83.57% 0.0511 174.09)",
+          "oklch(95.00% 0.0511 174.09)"
+        ]
+      },
+      "rn-paper": {
+        "role": "neutral",
+        "displayName": "RN paper",
+        "tonalRamp": [
+          "oklch(15.00% 0.0221 89.79)",
+          "oklch(26.43% 0.0221 89.79)",
+          "oklch(37.86% 0.0221 89.79)",
+          "oklch(49.29% 0.0221 89.79)",
+          "oklch(60.71% 0.0221 89.79)",
+          "oklch(72.14% 0.0221 89.79)",
+          "oklch(83.57% 0.0221 89.79)",
+          "oklch(95.00% 0.0221 89.79)"
+        ]
+      },
+      "rn-surface": {
+        "role": "neutral",
+        "displayName": "RN surface",
+        "tonalRamp": [
+          "oklch(15.00% 0.0110 89.72)",
+          "oklch(26.43% 0.0110 89.72)",
+          "oklch(37.86% 0.0110 89.72)",
+          "oklch(49.29% 0.0110 89.72)",
+          "oklch(60.71% 0.0110 89.72)",
+          "oklch(72.14% 0.0110 89.72)",
+          "oklch(83.57% 0.0110 89.72)",
+          "oklch(95.00% 0.0110 89.72)"
+        ]
+      },
+      "rn-shelf-canvas": {
+        "role": "neutral",
+        "displayName": "RN shelf canvas",
+        "tonalRamp": [
+          "oklch(15.00% 0.0069 124.45)",
+          "oklch(26.43% 0.0069 124.45)",
+          "oklch(37.86% 0.0069 124.45)",
+          "oklch(49.29% 0.0069 124.45)",
+          "oklch(60.71% 0.0069 124.45)",
+          "oklch(72.14% 0.0069 124.45)",
+          "oklch(83.57% 0.0069 124.45)",
+          "oklch(95.00% 0.0069 124.45)"
+        ]
+      },
+      "rn-ink": {
+        "role": "neutral",
+        "displayName": "RN ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0189 167.60)",
+          "oklch(26.43% 0.0189 167.60)",
+          "oklch(37.86% 0.0189 167.60)",
+          "oklch(49.29% 0.0189 167.60)",
+          "oklch(60.71% 0.0189 167.60)",
+          "oklch(72.14% 0.0189 167.60)",
+          "oklch(83.57% 0.0189 167.60)",
+          "oklch(95.00% 0.0189 167.60)"
+        ]
+      },
+      "rn-muted": {
+        "role": "neutral",
+        "displayName": "RN muted",
+        "tonalRamp": [
+          "oklch(15.00% 0.0250 157.95)",
+          "oklch(26.43% 0.0250 157.95)",
+          "oklch(37.86% 0.0250 157.95)",
+          "oklch(49.29% 0.0250 157.95)",
+          "oklch(60.71% 0.0250 157.95)",
+          "oklch(72.14% 0.0250 157.95)",
+          "oklch(83.57% 0.0250 157.95)",
+          "oklch(95.00% 0.0250 157.95)"
+        ]
+      },
+      "rn-rust-text": {
+        "role": "secondary",
+        "displayName": "RN condition text",
+        "tonalRamp": [
+          "oklch(15.00% 0.1228 35.81)",
+          "oklch(26.43% 0.1228 35.81)",
+          "oklch(37.86% 0.1228 35.81)",
+          "oklch(49.29% 0.1228 35.81)",
+          "oklch(60.71% 0.1228 35.81)",
+          "oklch(72.14% 0.1228 35.81)",
+          "oklch(83.57% 0.1228 35.81)",
+          "oklch(95.00% 0.1228 35.81)"
+        ]
+      },
+      "rn-border": {
+        "role": "neutral",
+        "displayName": "RN input border",
+        "tonalRamp": [
+          "oklch(15.00% 0.0240 143.13)",
+          "oklch(26.43% 0.0240 143.13)",
+          "oklch(37.86% 0.0240 143.13)",
+          "oklch(49.29% 0.0240 143.13)",
+          "oklch(60.71% 0.0240 143.13)",
+          "oklch(72.14% 0.0240 143.13)",
+          "oklch(83.57% 0.0240 143.13)",
+          "oklch(95.00% 0.0240 143.13)"
+        ]
+      },
+      "rn-rule": {
+        "role": "neutral",
+        "displayName": "RN divider",
+        "tonalRamp": [
+          "oklch(15.00% 0.0218 115.47)",
+          "oklch(26.43% 0.0218 115.47)",
+          "oklch(37.86% 0.0218 115.47)",
+          "oklch(49.29% 0.0218 115.47)",
+          "oklch(60.71% 0.0218 115.47)",
+          "oklch(72.14% 0.0218 115.47)",
+          "oklch(83.57% 0.0218 115.47)",
+          "oklch(95.00% 0.0218 115.47)"
+        ]
+      },
+      "rn-success-surface": {
+        "role": "neutral",
+        "displayName": "RN selected navigation",
+        "tonalRamp": [
+          "oklch(15.00% 0.0225 126.23)",
+          "oklch(26.43% 0.0225 126.23)",
+          "oklch(37.86% 0.0225 126.23)",
+          "oklch(49.29% 0.0225 126.23)",
+          "oklch(60.71% 0.0225 126.23)",
+          "oklch(72.14% 0.0225 126.23)",
+          "oklch(83.57% 0.0225 126.23)",
+          "oklch(95.00% 0.0225 126.23)"
+        ]
       }
     },
     "typographyMeta": {
-      "searchTitle": {
-        "displayName": "Tiêu đề tìm sách"
+      "display": {
+        "displayName": "display",
+        "purpose": "Home discovery hero; narrow override is documented in DESIGN.md."
       },
-      "shelfTitle": {
-        "displayName": "Tên sách"
+      "headline": {
+        "displayName": "headline",
+        "purpose": "Home shelf/posting headings; Search and Login have related surface variants."
       },
-      "shelfPrice": {
-        "displayName": "Giá bán"
+      "detail-title": {
+        "displayName": "detail title",
+        "purpose": "Actual book title on Detail, using task typography."
+      },
+      "card-title": {
+        "displayName": "card title",
+        "purpose": "Actual listing title on BookCard."
+      },
+      "body": {
+        "displayName": "body",
+        "purpose": "Regular reading and task explanation text."
+      },
+      "label": {
+        "displayName": "label",
+        "purpose": "Bold form labels and controls."
+      },
+      "price": {
+        "displayName": "price",
+        "purpose": "Detail prices; card prices use their documented smaller scale."
+      },
+      "rn-search-title": {
+        "displayName": "rn search title",
+        "purpose": "Incumbent React Native role; logical pixels with system scaling."
+      },
+      "rn-shelf-title": {
+        "displayName": "rn shelf title",
+        "purpose": "Incumbent React Native role; logical pixels with system scaling."
+      },
+      "rn-shelf-price": {
+        "displayName": "rn shelf price",
+        "purpose": "Incumbent React Native role; logical pixels with system scaling."
+      },
+      "rn-body": {
+        "displayName": "rn body",
+        "purpose": "Incumbent React Native role; logical pixels with system scaling."
       }
     },
+    "shadows": [
+      {
+        "name": "listing-photograph",
+        "value": "drop-shadow(0 12px 12px #28191424)",
+        "purpose": "Contained API cover photograph."
+      },
+      {
+        "name": "hero-cover",
+        "value": "drop-shadow(0 14px 14px #28000060)",
+        "purpose": "Archival decorative Home covers."
+      },
+      {
+        "name": "hero-search",
+        "value": "0 12px 28px #2f00002e",
+        "purpose": "Light Home search shell on wine."
+      },
+      {
+        "name": "modal",
+        "value": "0 18px 60px #28191440",
+        "purpose": "ConfirmDialog elevation."
+      }
+    ],
+    "motion": [
+      {
+        "name": "cover-settle",
+        "value": "0.8s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "purpose": "One-time desktop Home cover settle; reduced motion suppresses it."
+      },
+      {
+        "name": "cover-hover",
+        "value": "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "BookCard image translates up 4px on hover."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation-duration:.01ms;animation-iteration-count:1;transition-duration:.01ms;scroll-behavior:auto",
+        "purpose": "Global prefers-reduced-motion override."
+      }
+    ],
     "breakpoints": [
       {
-        "name": "shelf-stacked",
+        "name": "home-cover-adjust",
+        "value": "1100px"
+      },
+      {
+        "name": "catalog-detail-shell-adjust",
+        "value": "1000px"
+      },
+      {
+        "name": "home-two-column",
+        "value": "850px"
+      },
+      {
+        "name": "search-two-column-and-header-menu",
+        "value": "800px"
+      },
+      {
+        "name": "detail-stacked",
+        "value": "720px"
+      },
+      {
+        "name": "narrow-web",
+        "value": "600px"
+      },
+      {
+        "name": "dialog-actions-and-footer-stacked",
+        "value": "420px"
+      },
+      {
+        "name": "rn-shelf-stacked",
         "value": "width < 360dp and effective text scale >= 1.29"
       }
     ]
   },
   "components": [
     {
-      "name": "Nút chính",
+      "name": "Primary task action",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "RN minHeight52dp; snippet chỉ trình bày token.",
-      "html": "<button class=\"ds-primary\">Áp dụng bộ lọc</button>",
-      "css": ".ds-primary{font-family:'Be Vietnam Pro',sans-serif;min-height:52px;padding:13px 20px;background:#214B40;color:#F5EFDF;border:0;border-radius:8px;font-size:15px;font-weight:700;line-height:24px}.ds-primary:focus-visible{outline:2px solid #214B40;outline-offset:3px}.ds-primary:active{opacity:.8}.ds-primary:disabled{opacity:.5}"
+      "description": "Detail full-width primary action, with hover/focus/disabled states.",
+      "html": "<button class=\"ds-primary\">Giữ sách và mở chat</button>",
+      "css": ".ds-primary{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:inline-flex;align-items:center;justify-content:center;gap:12px;border-radius:8px;font-size:.9rem;font-weight:700;line-height:1.6;cursor:pointer;width:100%;min-height:50px;padding:12px 24px;border:0;background:var(--shop-wine,#5c0202);color:var(--shop-cream,#fcf8db)}.ds-primary:hover:not(:disabled){background:#7c2320}.ds-primary:disabled{opacity:.55;cursor:default}.ds-primary:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}"
     },
     {
-      "name": "Nút phụ",
+      "name": "Search action",
       "kind": "button",
-      "description": "Mở bộ lọc hoặc hành động phụ.",
-      "html": "<button class=\"ds-secondary\">Bộ lọc</button>",
-      "css": ".ds-secondary{font-family:'Be Vietnam Pro',sans-serif;min-height:52px;padding:13px 20px;background:#F5EFDF;color:#214B40;border:1px solid #788477;border-radius:8px;font-size:15px;font-weight:700;line-height:24px}.ds-secondary:focus-visible{outline:2px solid #214B40;outline-offset:3px}.ds-secondary:active{opacity:.8}"
+      "refersTo": "button-search",
+      "description": "Orange search action; yellow hover. Search form keeps its own accessible label.",
+      "html": "<button class=\"ds-search-action\">Tìm sách</button>",
+      "css": ".ds-search-action{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:inline-flex;align-items:center;justify-content:center;gap:12px;border-radius:8px;font-size:.9rem;font-weight:700;line-height:1.6;cursor:pointer;min-height:48px;padding:12px 24px;border:0;background:var(--shop-orange,#f68b51);color:#341509;font-size:.85rem;gap:10px}.ds-search-action:hover{background:var(--shop-yellow,#f4cb67)}.ds-search-action:disabled{opacity:.55;cursor:default}.ds-search-action:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}"
     },
     {
-      "name": "Ô nhập",
+      "name": "Secondary pagination action",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Outlined catalog retry and pagination control.",
+      "html": "<button class=\"ds-secondary\">Trang tiếp theo</button>",
+      "css": ".ds-secondary{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:inline-flex;align-items:center;justify-content:center;gap:12px;border-radius:8px;font-size:.9rem;font-weight:700;line-height:1.6;cursor:pointer;min-height:44px;padding:10px 20px;border:1px solid var(--shop-wine,#5c0202);background:transparent;color:var(--shop-wine,#5c0202);font-size:.85rem}.ds-secondary:hover{background:var(--shop-wine,#5c0202);color:var(--shop-cream,#fcf8db)}.ds-secondary:disabled{opacity:.55;cursor:default}.ds-secondary:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}"
+    },
+    {
+      "name": "Login text field",
       "kind": "input",
       "refersTo": "text-field",
-      "description": "RN field dùng nhãn, placeholder và focus state.",
-      "html": "<label class=\"ds-label\">Tên sách<input class=\"ds-field\" placeholder=\"Nhập tên sách\" /></label>",
-      "css": ".ds-label{font-family:'Be Vietnam Pro',sans-serif;display:grid;gap:8px;color:#202C27;font-size:15px}.ds-field{font-family:'Be Vietnam Pro',sans-serif;min-height:52px;padding:12px 14px;border:1px solid #788477;border-radius:8px;background:#FFFCF4;color:#202C27;font-size:16px}.ds-field::placeholder{color:#58685E}.ds-field:focus-visible{outline:2px solid #214B40}"
+      "description": "Outlined task input with visible label, original field height and stronger control boundary.",
+      "html": "<label class=\"ds-field-label\" for=\"ds-email\">Email</label><input class=\"ds-field\" id=\"ds-email\" type=\"email\" placeholder=\"Email của bạn\" />",
+      "css": ".ds-field-label{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:block;margin-bottom:10px;font-size:.85rem;font-weight:700;color:var(--shop-ink,#281914)}.ds-field{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:block;width:100%;min-height:50px;padding:.65rem .75rem;border:1px solid var(--shop-control,#8e7564);border-radius:8px;background:transparent;color:var(--shop-ink,#281914);font-size:.9rem;caret-color:var(--shop-wine,#5c0202)}.ds-field::placeholder{color:var(--shop-muted,#716157);opacity:1}.ds-field:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}"
     },
     {
-      "name": "Chip bộ lọc",
-      "kind": "chip",
-      "description": "Selected forest; target48dp.",
-      "html": "<button class=\"ds-chip\" aria-pressed=\"true\">Bán</button>",
-      "css": ".ds-chip{font-family:'Be Vietnam Pro',sans-serif;min-height:48px;padding:10px 17px;border:1px solid #788477;border-radius:24px;background:transparent;color:#214B40;font-size:12px;line-height:19px}.ds-chip[aria-pressed=true]{background:#214B40;color:#F5EFDF;border-color:#214B40}.ds-chip:focus-visible{outline:2px solid #214B40;outline-offset:3px}.ds-chip:active{opacity:.8}"
-    },
-    {
-      "name": "Điều hướng sáng",
+      "name": "Desktop navigation links",
       "kind": "nav",
-      "refersTo": "navigation-selected",
-      "description": "RN icon/label; snippet trình bày selected token.",
-      "html": "<nav class=\"ds-nav\"><button class=\"ds-tab\" aria-selected=\"true\">Tìm sách</button><button class=\"ds-tab\" aria-selected=\"false\">Tài khoản</button></nav>",
-      "css": ".ds-nav{display:flex;gap:4px;background:#FFFCF4}.ds-tab{font-family:'Be Vietnam Pro',sans-serif;flex:1;min-width:0;min-height:52px;padding:8px 4px;border:2px solid transparent;border-radius:8px;background:transparent;color:#58685E;font-size:12px;font-weight:700;line-height:18px}.ds-tab[aria-selected=true]{background:#E8EFDF;color:#214B40}.ds-tab:focus-visible{border-color:#214B40}.ds-tab:active{opacity:.7}"
+      "refersTo": "navigation",
+      "description": "Link fragment of the wine header. Original logo is deliberately not approximated in this snippet.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Điều hướng chính\"><a class=\"ds-nav-link\" href=\"#ds-search\" aria-current=\"page\">Tìm sách</a><a class=\"ds-nav-link\" href=\"#ds-exchange\">Sách để đổi</a><a class=\"ds-nav-link\" href=\"#ds-auctions\">Đấu giá</a></nav>",
+      "css": ".ds-nav{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:flex;flex-wrap:wrap;gap:30px;padding:16px 40px;background:var(--shop-wine,#5c0202);color:var(--shop-cream,#fcf8db)}.ds-nav-link{padding:12px 0;color:inherit;font-size:.875rem;text-decoration:none;white-space:nowrap}.ds-nav-link:hover,.ds-nav-link[aria-current]{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:8px}.ds-nav-link:focus-visible{outline:3px solid var(--shop-cream,#fcf8db);outline-offset:4px}"
     },
     {
-      "name": "Thông tin sách",
+      "name": "Descriptive condition label",
+      "kind": "chip",
+      "refersTo": "condition-label",
+      "description": "Static condition text from Detail; no trust or verification meaning.",
+      "html": "<span class=\"ds-condition\">Tình trạng từ bài đăng</span>",
+      "css": ".ds-condition{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:inline-block;font-size:.75rem;line-height:1.6;padding:7px 12px;border-radius:6px;background:#efe3cf;color:#5b3428}"
+    },
+    {
+      "name": "BookCard with source fallback",
+      "kind": "card",
+      "refersTo": "cover-panel",
+      "description": "Actual fallback state and unboxed metadata. Placeholder labels stand in for API facts; no fabricated photograph, price or condition.",
+      "html": "<article class=\"ds-card\"><a class=\"ds-cover\" href=\"#ds-book\" aria-label=\"Xem sách\"><svg width=\"30\" height=\"30\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 7v14\"/><path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h3a6 6 0 0 1 6 3 6 6 0 0 1 6-3h3a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-3a6 6 0 0 0-6 3 6 6 0 0 0-6-3z\"/></svg><span>Chưa có ảnh bìa</span></a><div class=\"ds-meta\"><p class=\"ds-condition-text\">Tình trạng · Hình thức từ API</p><h3 class=\"ds-card-title\"><a href=\"#ds-book\">Tên sách từ API</a></h3><p class=\"ds-author\">Tác giả từ API</p><div class=\"ds-prices\"><p><span>Giá bán</span><strong>Giá từ API</strong></p><p><span>Giá trị đổi</span><strong>Giá trị từ API</strong></p></div><a class=\"ds-view\" href=\"#ds-book\">Xem sách</a></div></article>",
+      "css": ".ds-card{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);max-width:260px;min-width:0;color:var(--shop-ink,#281914)}.ds-cover{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;aspect-ratio:4/5;padding:26px;border-radius:12px;background:#f0e2ca;color:#614e42;text-decoration:none;font-size:.8rem}.ds-meta{padding-top:17px}.ds-condition-text{font-size:.72rem;color:var(--shop-muted,#716157);margin:0 0 7px;line-height:1.5}.ds-card-title{font-size:1.05rem;font-weight:700;line-height:1.5;margin:0 0 4px;overflow-wrap:anywhere}.ds-card-title a{color:inherit;text-decoration:none}.ds-card-title a:hover,.ds-view:hover{text-decoration:underline}.ds-author{font-size:.8rem;color:var(--shop-muted,#716157);margin:0 0 14px;line-height:1.6}.ds-prices{display:flex;flex-wrap:wrap;gap:8px 20px;font-variant-numeric:tabular-nums}.ds-prices p{display:grid;gap:4px;margin:0}.ds-prices span{font-size:.7rem;color:var(--shop-muted,#716157)}.ds-prices strong{font-size:1rem;color:var(--shop-wine,#5c0202)}.ds-view{display:inline-flex;align-items:center;min-height:44px;margin-top:5px;font-size:.8rem;font-weight:700;color:var(--shop-wine,#5c0202);text-decoration:none}.ds-card a:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}"
+    },
+    {
+      "name": "Confirmation surface",
       "kind": "custom",
-      "description": "Ảnh/giá runtime lấy từ API, không bịa dữ liệu trong panel.",
-      "html": "<button class=\"ds-result\"><strong class=\"ds-title\">Tên sách</strong><span class=\"ds-author\">Tác giả</span><span class=\"ds-condition\">Tình trạng sách</span><strong class=\"ds-price\">Giá bán từ API</strong><span class=\"ds-exchange\">Giá trị đổi từ API</span></button>",
-      "css": ".ds-result{font-family:'Be Vietnam Pro',sans-serif;display:grid;gap:8px;width:100%;text-align:left;border:0;background:transparent;color:#202C27;padding:0 0 16px}.ds-title{font-size:16px;font-weight:700;line-height:23px}.ds-author,.ds-condition,.ds-exchange{font-size:14px;line-height:21px}.ds-author{color:#58685E}.ds-condition{color:#963F28}.ds-price{color:#214B40;font-size:18px;font-weight:700;line-height:25px}.ds-result:focus-visible{outline:2px solid #214B40}.ds-result:active{opacity:.7}"
+      "description": "Visual translation of ConfirmDialog; snippet is a surface sample, not a functioning modal.",
+      "html": "<section class=\"ds-confirm\" aria-labelledby=\"ds-confirm-title\"><h2 class=\"ds-confirm-title\" id=\"ds-confirm-title\">Giữ sách và mở chat?</h2><p class=\"ds-confirm-copy\">Giữ trong 24 giờ. Chưa thanh toán.</p><div class=\"ds-confirm-actions\"><button class=\"ds-cancel\">Hủy</button><button class=\"ds-confirm-button\">Giữ sách và mở chat</button></div></section>",
+      "css": ".ds-confirm{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);max-width:480px;padding:28px;border-radius:12px;background:var(--shop-paper,#fffcf5);color:var(--shop-ink,#281914);box-shadow:0 18px 60px #28191440}.ds-confirm-title{font-size:1.25rem;font-weight:700;line-height:1.5;margin:0 0 14px}.ds-confirm-copy{font-size:.9rem;color:var(--shop-muted,#716157);line-height:1.8;margin:0 0 20px}.ds-confirm-actions{display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap;margin-top:24px}.ds-cancel,.ds-confirm-button{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);min-height:46px;padding:10px 16px;border-radius:8px;font-size:.85rem;font-weight:700;line-height:1.6;cursor:pointer}.ds-cancel{background:transparent;border:1px solid var(--shop-line,#d9cbbd);color:var(--shop-wine,#5c0202)}.ds-confirm-button{background:var(--shop-wine,#5c0202);color:var(--shop-cream,#fcf8db);border:0}.ds-cancel:hover{background:#f0e2ca}.ds-confirm-button:hover{background:#7c2320}.ds-cancel:disabled,.ds-confirm-button:disabled{opacity:.6;cursor:default}.ds-confirm button:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}"
+    },
+    {
+      "name": "Incumbent RN primary action",
+      "kind": "button",
+      "refersTo": "rn-button-primary",
+      "description": "Preserved RN token translation; separate from the new web world, not a native implementation change.",
+      "html": "<button class=\"ds-rn-primary\">Áp dụng bộ lọc</button>",
+      "css": ".ds-rn-primary{font-family:'Be Vietnam Pro',sans-serif;min-height:52px;padding:13px 20px;background:#214B40;color:#F5EFDF;border:0;border-radius:8px;font-size:15px;font-weight:700;line-height:24px}.ds-rn-primary:focus-visible{outline:2px solid #214B40;outline-offset:3px}.ds-rn-primary:active{opacity:.8}.ds-rn-primary:disabled{opacity:.5}"
     }
   ],
   "narrative": {
-    "northStar": "Danh mục hiệu sách độc lập",
-    "overview": "Hệ thống React Native Member hiện hành dùng một họ chữ Be Vietnam Pro, nền sáng và xanh rừng để người dùng đọc và thao tác rõ ràng. Hướng “Danh mục hiệu sách độc lập” đã được triển khai đầu tiên ở màn tìm sách Android; ảnh sách, tình trạng và giá tạo điểm nhìn. Các màn RN khác mới nhận thay đổi primitive/font/điều hướng chung; web Vite và Flutter chưa áp dụng hướng mới.",
+    "northStar": "Tiệm sách nhiều màu",
+    "overview": "Member web pairs the owner's wine-red owl and lettering with warm paper, tall display type and colored grounds for complete book covers. Discovery is lively; listing facts and task controls stay direct, readable and quieter than the covers. This records the world built after the owner's replacement decision on 10/10/2026, using the [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-booksearchpage-tsx.md) and [PRODUCT](PRODUCT.md), rather than the superseded green web sketches.\n\nThe implemented web slice is Home, Search, Detail, Login, shared Header/BookCard/ConfirmDialog and MainLayout/AuthLayout. Existing posting and other forms, auction, chat, profile and registration retain legacy page recipes even where the shared shell changes. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.",
     "keyCharacteristics": [
-      "Một họ chữ có weight thật.",
-      "Danh sách dọc, tìm kiếm cố định.",
-      "Dữ kiện quyết định rõ nghĩa."
+      "Wine-and-cream identity with orange, yellow and mint discovery accents.",
+      "Anton for expressive headings; Be Vietnam Pro for book facts and actions.",
+      "Whole covers on colored grounds; unboxed metadata and separately labelled prices.",
+      "Original owner logo and sourced decorative imagery, distinct from listing photographs.",
+      "Responsive web recipes and a separately preserved React Native implementation."
     ],
     "rules": [
       {
-        "name": "Một họ chữ",
-        "body": "Phân cấp bằng role/kích thước/weight thật, không giả500/600.",
-        "section": "typography"
+        "name": "The Ground Is Not Status Rule",
+        "body": "Colored cover grounds are decorative; communicate condition, prices and reservation state in real text from the listing.",
+        "section": "colors"
       },
       {
-        "name": "Dữ kiện quyết định",
-        "body": "Ảnh, tình trạng và hai loại giá giữ nghĩa API; grid mẫu chỉ là phương án đối chiếu.",
-        "section": "components"
+        "name": "The Two Voices Rule",
+        "body": "Anton carries discovery headings; Be Vietnam Pro carries book titles, prices, forms and consequential actions. Use the bundled weights.",
+        "section": "typography"
       }
     ],
     "dos": [
-      "Giữ text scaling, safe area, Back và trạng thái lỗi.",
-      "Đối chiếu API và scope của từng client."
+      "**Do** preserve the owner's original logo pixels and the owl-plus-lettering identity on narrow screens.",
+      "**Do** use complete API listing photographs and expose condition, sale price and exchange value with their real labels.",
+      "**Do** keep archival Home covers decorative and visibly captioned, with provenance in the asset READMEs.",
+      "**Do** use the scoped web tokens for this implemented slice and the incumbent RN tokens for unchanged native screens.",
+      "**Do** retain error/empty/loading states, keyboard focus, wrapping titles and reduced-motion behavior.",
+      "**Do** explain consequential actions in direct Vietnamese, including reservation without payment."
     ],
     "donts": [
-      "Không bịa rating hoặc hành động giao dịch.",
-      "Không dùng export/AI review thay native/người dùng."
+      "**Don't** substitute stock or archival covers for real listing photographs or invent rating/trust claims.",
+      "**Don't** treat alternating cover colors or descriptive condition labels as verification or transaction status.",
+      "**Don't** infer that legacy web pages, Android, Flutter or release gates adopted this web redesign.",
+      "**Don't** regenerate the supplied logo, imitate its lettering with a font, or treat a reference screenshot as licensed cover assets.",
+      "**Don't** canonize legacy glyph-icon, display-font or animation recipes as part of this web world."
     ]
   }
 }

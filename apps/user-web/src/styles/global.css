@@ -1,9 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400;1,600&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@font-face{font-family:'Be Vietnam Pro';src:url('/fonts/BeVietnamPro-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
+@font-face{font-family:'Be Vietnam Pro';src:url('/fonts/BeVietnamPro-Bold.ttf') format('truetype');font-weight:700;font-display:swap}
+@font-face{font-family:Anton;src:url('/fonts/Anton-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
+:root{
+  --shop-wine:#5c0202;--shop-cream:#fcf8db;--shop-paper:#fffcf5;--shop-ink:#281914;
+  --shop-muted:#716157;--shop-line:#d9cbbd;--shop-orange:#f68b51;--shop-yellow:#f4cb67;
+  --shop-mint:#b6dac5;--shop-body:'Be Vietnam Pro',sans-serif;--shop-display:Anton,sans-serif;
+  --shop-control:#8e7564;
+}
+::selection{background:var(--shop-yellow);color:var(--shop-wine)}
+html{scrollbar-color:#a76553 var(--shop-paper)}
+input,textarea{caret-color:var(--shop-wine)}
+input::placeholder,textarea::placeholder{color:var(--shop-muted);opacity:1}
+:focus-visible{outline:3px solid var(--shop-wine);outline-offset:4px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 
 @keyframes floatMote {
   0% {
@@ -89,9 +104,9 @@
 
   body {
     margin: 0;
-    font-family: 'Inter', sans-serif;
-    background-color: #F5F0E6; /* Paper Ivory */
-    color: #24231F; /* Ink */
+    font-family: var(--shop-body);
+    background-color: var(--shop-paper);
+    color: var(--shop-ink);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -142,7 +157,7 @@
   select:focus-visible,
   button:focus-visible,
   a:focus-visible {
-    outline: 3px solid #214B40;
+    outline: 3px solid var(--shop-wine);
     outline-offset: 3px;
   }
 
