@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-10T18:11:38.553Z",
+  "generatedAt": "2026-10-10T18:32:38.048Z",
   "title": "Design System: Lật lại",
   "extensions": {
     "colorMeta": {
@@ -585,6 +585,22 @@
       "sell-help": {
         "displayName": "Sell instructions and errors",
         "purpose": "Be Vietnam Pro13px/1.9 field instructions, local recovery and focused alert copy; smaller12px counts/captions are separate supporting roles."
+      },
+      "account-heading": {
+        "displayName": "Account shelf heading",
+        "purpose": "Scoped uppercase Anton owner-shelf introduction; clamp(2rem,3.1vw,2.75rem)/1.18,2rem at760px."
+      },
+      "account-book-title": {
+        "displayName": "Account listing title",
+        "purpose": "Complete owner-listing title; bold Be Vietnam Pro16px/1.6 with overflow-wrap:anywhere, no line clamp."
+      },
+      "account-book-title-narrow": {
+        "displayName": "Narrow Account listing title",
+        "purpose": "Account only: bold15px/1.6 at760px, natural wrapping retained."
+      },
+      "account-price": {
+        "displayName": "Account labelled values",
+        "purpose": "Account only: bold15px tabular figures, sale price and exchange value separately named."
       }
     },
     "shadows": [
@@ -746,6 +762,26 @@
         "name": "sell-narrow-steps",
         "value": "360px",
         "purpose": "Sell only:two-column steps;20px16px form padding and compact wrapping actions."
+      },
+      {
+        "name": "account-row-prices-below",
+        "value": "1100px",
+        "purpose": "Account only:92px/minmax(0,1fr) row with20px gap; prices wrap under metadata."
+      },
+      {
+        "name": "account-compact-sidebar",
+        "value": "1000px",
+        "purpose": "Account only:172px sidebar,24px gap/side padding."
+      },
+      {
+        "name": "account-labelled-disclosure",
+        "value": "760px",
+        "purpose": "Account only:static labelled44px disclosure above one column;72px cover column/16px gap, one-column read-only identity."
+      },
+      {
+        "name": "account-narrow-row",
+        "value": "360px",
+        "purpose": "Account only:60px cover column/12px gap;48x88px contain photograph."
       }
     ],
     "layoutRecipes": [
@@ -968,6 +1004,46 @@
         "motion": "No autoplay or decorative animation;global motion reduction retained without Home exceptions.",
         "evidence": "Seven sell-desk-*.jpg raw captures;independent AI source/image review SHIP after four boundaries reused shop-control;4.201:1 on paper/3.394:1 on upload ground. Reported four-width CUA validation/retention/photo add-remove/exit cancellation/success-reset;real Nest/Mongo *_test,fake storage,exactly1 PendingReview listing/1 uploaded photo/75000 and90000 values. Build/typecheck25unit PASS;lint0errors/6existing warnings;single detector6advisories. Reviewer did not rerun execution checks.",
         "limits": "Full integration,browser lost-response retry,200% text/zoom,native,browser beforeunload prompt,human acceptance NOT RUN;READINESS unchanged."
+      },
+      {
+        "name": "account-owner-shelf",
+        "source": "apps/user-web/src/pages/ProfilePage.tsx;apps/user-web/src/pages/ProfilePage.module.css;apps/user-web/src/layouts/DashboardLayout.tsx;apps/user-web/src/layouts/DashboardLayout.module.css;apps/user-web/src/pages/profile/components/DashboardSidebar.tsx;apps/user-web/src/services/my-listings.ts",
+        "scope": "Approved remaining-pages plan section4; Account only, existing /profile route. No new shipping raster assets or API/session business writes apart from existing logout.",
+        "columns": {
+          "container": "max1360px;36px40px72px padding;200px/minmax(0,1fr);40px gap",
+          "sidebar": "sticky top112px;1000px:172px/24px gap/24px page sides",
+          "narrow": "760px:one column;24px20px48px page padding;static sidebar with28px below;labelled disclosure",
+          "shelf": "shop-paper/12px radius;0 24px 8px padding;760px:0 16px 8px;no shadow",
+          "rows": "108px/minmax(0,1fr)/150px;24px gap/padding;shop-line divider;1100px:92px/minmax(0,1fr)/20px gap with prices below metadata;760px:72px/16px gap;360px:60px/12px gap",
+          "identity": "read-only definition list;32px top margin/padding and divider;two columns/24px gap,one/20px gap at760px"
+        },
+        "controls": {
+          "navigation": "48px minimum/8px radius/10px12px padding;selected detail-ground/wine/aria-current;760px:wrapped13px links/8px10px padding",
+          "disclosure": "760px:44px minimum;visible Không gian cá nhân label;aria-expanded/aria-controls;collapsed contents display:none",
+          "filters": "48px minimum/12px2px padding;13px text;pressed wine/2px underline;wrap",
+          "posting": "48px minimum/12px18px padding/8px radius;wine/cream/bold14px",
+          "recovery": "44px minimum/10px14px padding/8px radius;shop-control boundary;metadata/photo retry independent",
+          "focus": "2px wine outline/3px offset;skip link reaches main",
+          "pending": "existing logout pending/error;disabled buttons .55 opacity"
+        },
+        "photos": {
+          "source": "Owner /me/listings/{listingId}/media/{mediaId}/read;first currentRevision mediaId",
+          "fitting": "contain;88x128px in108px ground/min148px/10px padding;1100px:72x128px in92px;760px:60x100px in72px/min112px/6px padding;360px:48x88px in60px/min100px",
+          "recovery": "Independent loading/missing/error;failed signed URL or image exposes44px retry, no catalog-cover replacement"
+        },
+        "data": "GET /me/listings?limit=20 with URL moderation/cursor;moderation clears cursor;page-local count and browser Back retained. Titles/authors from confirmed catalog or owner catalog request when pending;independent metadata retry;no synthetic fallback facts. Separate moderation/visibility/trade and condition/mode/labelled sale-exchange values;public links only Approved/Visible. SessionClient read-only identity,restore/guest guard/current logout;no balances/charts/trust/orders.",
+        "motion": "Flat paper/dividers;no autoplay,new shadow or Home motion exception;global reduction retained.",
+        "evidence": "Six account-shelf and two register-status raw captures;independent AI source/capture review SHIP/no material fixes. Implementer-reported four-width CUA/filter-Back/empty/metadata recovery/menu-logout/guest return/server-off retry. Real Nest/Mongo *_test,fake storage/synthetic owner data,fully cleaned. Build/typecheck28unit PASS;lint0errors6existing warnings;one detector,six UI targets,0findings. Review did not rerun execution checks.",
+        "limits": "Browser >20 owner rows,populated Approved/Held/Removed/Rejected states,current photo-error UI,200% text/zoom,native,full integration,human acceptance NOT RUN;READINESS unchanged."
+      },
+      {
+        "name": "register-availability-scene",
+        "source": "apps/user-web/src/pages/RegisterPage.tsx;apps/user-web/src/pages/LoginPage.module.css",
+        "scope": "Approved remaining-pages plan section4; Register reuses unchanged Login CSS, no new token identity or raster.",
+        "composition": "Existing45/55 photograph/paper split,min-height100dvh;original scoped-logo matrix,bookstore story/desktop source credit,home utility row,max400px task panel,brand note. At900px one column with compact photographic Logo area;story/credit hide;440px form padding24px and1.75rem title.",
+        "material": "Existing credited Davit Margaryan/Unsplash photograph,2px blur/1.025 scale/64% wine tint and existing ivory paper/finite sweep;global reduced motion omits sweep. No shared Member Header rendered.",
+        "behavior": "Explicit Đăng ký tài khoản hiện chưa mở;Khám phá sách -> /books,Đăng nhập -> /login,Về trang chủ -> /. No disconnected input,OAuth/identity claim,API call or account-success state;register/reset remain contract-gated. Existing Login help and session behavior unchanged.",
+        "evidence": "register-status-desktop.jpg and register-status-mobile.jpg,independent source/capture review SHIP;shared scope and limits recorded in Account recipe."
       }
     ]
   },
@@ -1072,11 +1148,19 @@
       "description": "Static first-step sample of the scoped Sell desk;native fields and step/action affordances,not a running wizard or upload flow. Real local photos replace the empty SVG in runtime;the1150px review relocation and retry/exit/receipt semantics are recorded in the Sell layout recipe. No sample photograph,price,condition or listing claim is fabricated.",
       "html": "<div class=\"ds-sell\"><header class=\"ds-sell-intro\"><h1>Để sách đi tiếp.</h1><p>Thêm ảnh và kể rõ tình trạng bản sách. Kiểm tra một lượt trước khi gửi duyệt.</p></header><div class=\"ds-sell-workspace\"><nav class=\"ds-sell-steps\" aria-label=\"Các bước đăng sách\"><ol><li><button type=\"button\" aria-current=\"step\"><span>1</span><span>Thông tin sách</span></button></li><li><button type=\"button\"><span>2</span><span>Ảnh bản sách</span></button></li><li><button type=\"button\"><span>3</span><span>Tình trạng</span></button></li><li><button type=\"button\"><span>4</span><span>Bán hoặc đổi</span></button></li><li><button type=\"button\"><span>5</span><span>Kiểm tra</span></button></li></ol><p>Thông tin giữ trong phiên này. Chưa có tự động lưu nháp.</p></nav><section class=\"ds-sell-form\"><h2>Thông tin sách</h2><p class=\"ds-sell-count\">Bước 1/5</p><p class=\"ds-sell-help\">Ghi tên sách và tác giả đúng như trên bìa.</p><div class=\"ds-sell-field\"><label for=\"ds-sell-title\">Tên sách</label><input id=\"ds-sell-title\" placeholder=\"Ví dụ: Truyện Kiều\"></div><div class=\"ds-sell-field\"><label for=\"ds-sell-author\">Tác giả</label><input id=\"ds-sell-author\" placeholder=\"Ví dụ: Nguyễn Du\"></div><div class=\"ds-sell-actions\"><button type=\"button\">Tiếp tục <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M5 12h14m-6-6 6 6-6 6\"/></svg></button></div></section><aside class=\"ds-sell-preview\" aria-label=\"Bản xem trước bài đăng\"><h2>Bản xem trước</h2><div class=\"ds-sell-photo\"><svg width=\"40\" height=\"40\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M16 5h6m-3-3v6M4 3h8M3 4v16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-8M3 16l5-5 8 10m-4-6 3-3 6 6\"/><circle cx=\"8.5\" cy=\"7.5\" r=\"1\"/></svg></div><h3>Tên cuốn sách của bạn</h3><p>Tác giả</p><p>Đây là bản xem trước, chưa hiển thị công khai.</p></aside></div></div>",
       "css": ".ds-sell{max-width:1360px;padding:36px 40px 80px;background:#f5eddc;color:var(--shop-ink,#281914);font-family:var(--shop-body,\"Be Vietnam Pro\",sans-serif)}.ds-sell-intro{margin-bottom:36px}.ds-sell-intro h1{font:400 clamp(2rem,3vw,2.75rem)/1.2 var(--shop-display,Anton,sans-serif);text-transform:uppercase;color:var(--shop-wine,#5c0202);margin:0 0 12px}.ds-sell-intro p{font-size:.875rem;line-height:1.8;color:var(--shop-muted,#716157);max-width:70ch;margin:0}.ds-sell-workspace{display:grid;grid-template-columns:180px minmax(0,1fr) 260px;gap:32px;align-items:start}.ds-sell-steps ol{list-style:none;padding:0;margin:0;display:grid;gap:8px}.ds-sell-steps button{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:10px 8px;text-align:left;border:0;border-radius:8px;background:transparent;color:var(--shop-muted,#716157);font:.8125rem/1.5 var(--shop-body,\"Be Vietnam Pro\",sans-serif)}.ds-sell-steps button:hover{background:#efe3cf}.ds-sell-steps button[aria-current]{background:#efe3cf;color:var(--shop-wine,#5c0202);font-weight:700}.ds-sell-steps button>span:first-child{display:grid;place-items:center;min-width:24px;height:24px;border:1px solid var(--shop-line,#d9cbbd);border-radius:6px;font-size:.75rem}.ds-sell-steps button[aria-current]>span:first-child{background:var(--shop-wine,#5c0202);color:var(--shop-paper,#fffcf5);border-color:var(--shop-wine,#5c0202)}.ds-sell-steps p{font-size:.75rem;line-height:1.8;color:var(--shop-muted,#716157);margin:24px 8px 0}.ds-sell-form{min-width:0;background:var(--shop-paper,#fffcf5);padding:28px 32px;border-radius:12px}.ds-sell-form>h2{font-size:1.5rem;line-height:1.5;letter-spacing:-.02em;margin:0 0 4px}.ds-sell-count{margin:0 0 28px;font-size:.75rem;color:var(--shop-muted,#716157)}.ds-sell-help{font-size:.8125rem;line-height:1.9;color:var(--shop-muted,#716157);margin:0 0 24px}.ds-sell-field{min-width:0;margin-top:24px}.ds-sell-field label{display:block;font-size:.875rem;font-weight:700;margin-bottom:8px}.ds-sell-field input{display:block;width:100%;min-width:0;min-height:48px;padding:12px 14px;border:1px solid var(--shop-control,#8e7564);border-radius:8px;background:var(--shop-paper,#fffcf5);color:var(--shop-ink,#281914);font:.875rem/1.7 var(--shop-body,\"Be Vietnam Pro\",sans-serif)}.ds-sell-field input::placeholder{color:var(--shop-muted,#716157);opacity:1}.ds-sell-actions{display:flex;justify-content:flex-end;gap:16px;flex-wrap:wrap;border-top:1px solid var(--shop-line,#d9cbbd);padding-top:24px;margin-top:32px}.ds-sell-actions button{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:12px 16px;border:0;border-radius:8px;background:var(--shop-wine,#5c0202);color:var(--shop-paper,#fffcf5);font:700 .875rem var(--shop-body,\"Be Vietnam Pro\",sans-serif)}.ds-sell-actions button:hover{background:#7a140c}.ds-sell button:disabled{opacity:.55;cursor:not-allowed}.ds-sell :focus-visible{outline:2px solid var(--shop-wine,#5c0202);outline-offset:3px}.ds-sell-preview{min-width:0}.ds-sell-preview h2{font-size:.875rem;line-height:1.7;margin:0 0 16px}.ds-sell-photo{height:230px;padding:20px;display:flex;align-items:center;justify-content:center;background:#efe3cf;border-radius:12px;color:#8b6952}.ds-sell-preview h3{font-size:1rem;line-height:1.7;margin:16px 0 4px;overflow-wrap:anywhere}.ds-sell-preview p{font-size:.8125rem;line-height:1.8;color:var(--shop-muted,#716157);overflow-wrap:anywhere}@media(max-width:1150px){.ds-sell{padding-inline:24px}.ds-sell-workspace{grid-template-columns:170px minmax(0,1fr)}.ds-sell-preview{display:none}}@media(max-width:760px){.ds-sell{padding:24px 20px 48px}.ds-sell-intro{margin-bottom:24px}.ds-sell-intro h1{font-size:2rem}.ds-sell-workspace{grid-template-columns:minmax(0,1fr);gap:24px}.ds-sell-steps ol{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.ds-sell-steps button{height:100%;padding:8px;gap:8px;font-size:.75rem;align-items:flex-start}.ds-sell-steps button>span:first-child{min-width:20px;height:20px}.ds-sell-steps p{margin:14px 0 0}.ds-sell-form{padding:24px 20px}.ds-sell-form>h2{font-size:1.25rem}}@media(max-width:360px){.ds-sell-steps ol{grid-template-columns:repeat(2,minmax(0,1fr))}.ds-sell-form{padding:20px 16px}.ds-sell-actions{gap:10px}.ds-sell-actions button{padding:10px 12px;font-size:.8125rem}}"
+    },
+    {
+      "name": "Account owner shelf row",
+      "kind": "custom",
+      "refersTo": "account-shelf",
+      "description": "Static source-fallback sample of the scoped owner shelf, with placeholder title/values rather than an actual listing claim. Real runtime uses owner API facts/contained photographs, separate state and price meanings, independent retry and guarded public links. Responsive shell/navigation, pagination and identity semantics are recorded in the Account recipe; this snippet adds no runtime.",
+      "html": "<section class=\"ds-account-shelf\" aria-label=\"Bài đăng của tôi\"><div class=\"ds-account-filters\" role=\"group\" aria-label=\"Lọc theo trạng thái duyệt\"><button type=\"button\" aria-pressed=\"true\">Tất cả</button><button type=\"button\" aria-pressed=\"false\">Chờ duyệt</button></div><ul class=\"ds-account-list\"><li class=\"ds-account-row\"><div class=\"ds-account-cover\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M12 7v14m0-14C8 3 3 3 2 3v17c3 0 7 0 10 1m0-14c4-4 9-4 10-4v17c-3 0-7 0-10 1\"/></svg><span>Chưa có ảnh</span></div><div class=\"ds-account-info\"><p class=\"ds-account-status\">Trạng thái từ API</p><h3>Tên sách từ API, giữ nguyên đầy đủ khi xuống dòng</h3><p class=\"ds-account-meta\">Tác giả và tình trạng từ bài đăng</p></div><div class=\"ds-account-values\"><p><span>Giá bán</span><strong>Giá từ bài đăng</strong></p><p><span>Giá trị đổi</span><strong>Giá trị từ bài đăng</strong></p></div></li></ul></section>",
+      "css": ".ds-account-shelf{background:var(--shop-paper,#fffcf5);color:var(--shop-ink,#281914);font-family:var(--shop-body,\"Be Vietnam Pro\",sans-serif);border-radius:12px;padding:0 24px 8px}.ds-account-filters{display:flex;flex-wrap:wrap;gap:8px 20px;border-bottom:1px solid var(--shop-line,#d9cbbd);padding:12px 0 0}.ds-account-filters button{min-height:48px;padding:12px 2px;background:none;border:0;border-bottom:2px solid transparent;color:var(--shop-muted,#716157);font:inherit;font-size:.8125rem;cursor:pointer}.ds-account-filters button[aria-pressed=\"true\"]{color:var(--shop-wine,#5c0202);border-bottom-color:var(--shop-wine,#5c0202);font-weight:700}.ds-account-filters button:hover{color:var(--shop-wine,#5c0202)}.ds-account-filters button:focus-visible{outline:2px solid var(--shop-wine,#5c0202);outline-offset:3px}.ds-account-filters button:disabled{opacity:.55;cursor:wait}.ds-account-list{list-style:none;margin:0;padding:0}.ds-account-row{display:grid;grid-template-columns:108px minmax(0,1fr) 150px;align-items:start;gap:24px;padding:24px 0}.ds-account-cover{min-height:148px;padding:10px;border-radius:8px;background:var(--detail-ground,#efe3cf);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:var(--shop-muted,#716157);font-size:.75rem}.ds-account-info{min-width:0}.ds-account-status{margin:0 0 10px;color:var(--shop-muted,#716157);font-size:.75rem}.ds-account-info h3{font-size:1rem;line-height:1.6;margin:0 0 4px;font-weight:700;overflow-wrap:anywhere}.ds-account-meta{margin:0 0 8px;color:var(--shop-muted,#716157);font-size:.8125rem;line-height:1.7}.ds-account-values p{margin:0 0 12px}.ds-account-values span{display:block;color:var(--shop-muted,#716157);font-size:.75rem;margin-bottom:4px}.ds-account-values strong{color:var(--shop-wine,#5c0202);font-size:.9375rem;font-variant-numeric:tabular-nums}@media(max-width:1100px){.ds-account-row{grid-template-columns:92px minmax(0,1fr);gap:20px}.ds-account-values{grid-column:2;display:flex;flex-wrap:wrap;gap:8px 24px;margin-top:-8px}.ds-account-values p{margin:0}}@media(max-width:760px){.ds-account-shelf{padding:0 16px 8px}.ds-account-filters{gap:4px 16px}.ds-account-row{grid-template-columns:72px minmax(0,1fr);gap:16px}.ds-account-cover{padding:6px;min-height:112px}.ds-account-info h3{font-size:.9375rem}.ds-account-values{gap:12px 20px}}@media(max-width:360px){.ds-account-row{grid-template-columns:60px minmax(0,1fr);gap:12px}.ds-account-cover{min-height:100px}.ds-account-values{gap:12px}}"
     }
   ],
   "narrative": {
     "northStar": "Tiệm sách nhiều màu",
-    "overview": "Member web pairs the owner's wine-red owl and lettering with warm paper, tall display type and colored grounds for complete book covers. Discovery is lively; listing facts and task controls stay direct, readable and quieter than the covers. This records the world built after the owner's replacement decision on 10/10/2026, using the [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-booksearchpage-tsx.md) and [PRODUCT](PRODUCT.md), rather than the superseded green web sketches.\n\nThe implemented web slice is Home, Search, Detail, Login, Sell, shared Header/BookCard/ConfirmDialog and MainLayout/AuthLayout. Login owns its bookstore split with the original logo over the photograph, tactile ivory paper behind the form and a separate paper-side home action, apart from the shared Member Header; AuthLayout still serves the legacy registration scaffold. Sell owns its paper task desk and five existing steps. Other forms, auction, chat, profile and registration retain legacy page recipes even where the shared shell changes. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.\n\nSearch refined11/10 uses a compact wine title/search band and paper sidebar catalog with the existing compact cover recipe. Named native draft filters replace the sidebar at900px, with explicit Apply/Reset,44px targets, URL criteria/cursors and page-only counts. DEV preview remains labelled and separate from live API behavior; Search follows global motion reduction.",
+    "overview": "Member web pairs the owner's wine-red owl and lettering with warm paper, tall display type and colored grounds for complete book covers. Discovery is lively; listing facts and task controls stay direct, readable and quieter than the covers. This records the world built after the owner's replacement decision on 10/10/2026, using the [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-booksearchpage-tsx.md) and [PRODUCT](PRODUCT.md), rather than the superseded green web sketches.\n\nThe implemented web slice is Home, Search, Detail, Login, Sell, Account, Register, shared Header/BookCard/ConfirmDialog and MainLayout/DashboardLayout. Login owns its bookstore split with the original logo over the photograph, tactile ivory paper behind the form and a separate paper-side home action, apart from the shared Member Header. Register reuses that scene for an honest unavailable state. Sell owns its paper task desk and five existing steps. Account owns a real owner-listing shelf and read-only identity inside compact personal navigation. Other forms, auction and chat retain legacy page recipes even where the shared shell changes. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.\n\nSearch refined11/10 uses a compact wine title/search band and paper sidebar catalog with the existing compact cover recipe. Named native draft filters replace the sidebar at900px, with explicit Apply/Reset,44px targets, URL criteria/cursors and page-only counts. DEV preview remains labelled and separate from live API behavior; Search follows global motion reduction.",
     "keyCharacteristics": [
       "Wine-and-cream identity with orange, yellow and mint discovery accents.",
       "Anton for expressive headings; Be Vietnam Pro for book facts and actions.",

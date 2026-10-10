@@ -1,139 +1,98 @@
-import { Link } from 'react-router-dom';
-import { AuthLayout } from '../layouts/AuthLayout';
-import { AuthShowcase } from '../components/AuthShowcase';
-import { useState } from 'react';
+import { Link } from "react-router-dom";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { Logo } from "../components/Header";
+import styles from "./LoginPage.module.css";
 
-// TODO: Form đăng ký tài khoản mới.
-// API endpoint POST /auth/register chưa được triển khai trong version hiện tại
 export function RegisterPage() {
-  const [showPassword, setShowPassword] = useState(false);
-
   return (
-    <AuthLayout>
-      <div className="relative w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.55),0_0_0_1px_rgba(217,175,108,0.25)] ring-1 ring-amber-500/20 overflow-hidden bg-[#ffffff] backdrop-blur-xl">
-        <AuthShowcase />
-
-        {/* RIGHT COLUMN: PRISTINE CONTROLS & AUTH FORM */}
-        <div className="lg:col-span-7 bg-[#f8f3e9]/95 backdrop-blur-sm p-8 sm:p-10 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-1.5">
-                <div className="w-7 h-7 rounded bg-[#994530] flex items-center justify-center text-[#ffffff] shadow-sm">
-                  <span className="material-symbols-outlined text-[16px]">how_to_reg</span>
-                </div>
-                <span className="font-label-md text-[12px] text-[#994530] uppercase tracking-widest font-semibold">Tạo Thẻ Độc Giả</span>
-              </div>
-            </div>
-            
-            <div className="flex flex-col gap-1.5 mb-6">
-              <h1 className="font-headline-xl text-[36px] text-[#1d1c16] tracking-tight font-semibold">
-                Ghi danh vào thư khố.
-              </h1>
-              <p className="font-body-md text-[14px] text-[#414844]">
-                Tham gia cộng đồng để tìm kiếm và sưu tầm những ấn phẩm vang bóng một thời.
-              </p>
-            </div>
-
-            <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="name" className="font-label-md text-[12px] text-[#1d1c16] flex items-center justify-between font-semibold">
-                  <span>Họ và tên</span>
-                </label>
-                <div className="relative flex items-center">
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    required
-                    placeholder="Nguyễn Văn An"
-                    className="w-full bg-[#ffffff] text-[#1d1c16] px-3 py-2.5 rounded-md font-body-md text-[14px] shadow-sm border border-[#c1c8c3]/60 focus:border-[#00261a] focus:ring-1 focus:ring-[#00261a] placeholder:text-[#717974] transition-all"
+    <main className={styles.root}>
+      <aside
+        className={styles.bookshop}
+        aria-label="Lật lại · Chuyện hay còn tiếp"
+      >
+        <div className={styles.scene}>
+          <img
+            className={styles.photo}
+            src="/photography/bookshop-barcelona.jpg"
+            alt=""
+            width="3000"
+            height="2818"
+            fetchPriority="high"
+          />
+          <div className={styles.tint} aria-hidden="true" />
+          <div className={styles.brand}>
+            <svg
+              className={styles.filterDefs}
+              aria-hidden="true"
+              width="0"
+              height="0"
+            >
+              <defs>
+                <filter id="login-logo-ink" colorInterpolationFilters="sRGB">
+                  {/* Key the original flat wine ground to alpha; keep the owner's contours. */}
+                  <feColorMatrix
+                    type="matrix"
+                    values="0 0 0 0 .988235 0 0 0 0 .972549 0 0 0 0 .858824 1.59375 0 0 0 -.575"
                   />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="email" className="font-label-md text-[12px] text-[#1d1c16] flex items-center justify-between font-semibold">
-                  <span>Địa chỉ thư điện tử</span>
-                </label>
-                <div className="relative flex items-center">
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    placeholder="nguyen.an@thuvien.vn"
-                    className="w-full bg-[#ffffff] text-[#1d1c16] px-3 py-2.5 rounded-md font-body-md text-[14px] shadow-sm border border-[#c1c8c3]/60 focus:border-[#00261a] focus:ring-1 focus:ring-[#00261a] placeholder:text-[#717974] transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="password" className="font-label-md text-[12px] text-[#1d1c16] font-semibold">Mật mã tủ thư</label>
-                <div className="relative flex items-center">
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    placeholder="••••••••••"
-                    className="w-full bg-[#ffffff] text-[#1d1c16] px-3 pr-10 py-2.5 rounded-md font-body-md text-[14px] shadow-sm border border-[#c1c8c3]/60 focus:border-[#00261a] focus:ring-1 focus:ring-[#00261a] placeholder:text-[#717974] transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 text-[#717974] hover:text-[#1d1c16] transition-colors flex items-center bg-transparent border-0 !p-0 !min-h-0 w-auto"
-                    title="Hiện hoặc ẩn mật khẩu"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">
-                      {showPassword ? 'visibility_off' : 'visibility'}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="w-full mt-2 py-3 px-4 rounded-md bg-[#994530] text-[#ffffff] font-title-md text-[16px] tracking-wide shadow-md hover:bg-[#762b18] active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-not-allowed opacity-80 !border-0"
-                title="Tính năng đăng ký đang được phát triển"
-              >
-                <span>Tạo Thẻ Độc Giả Mới</span>
-              </button>
-            </form>
-
-            <div className="relative my-6 flex items-center justify-center">
-              <div className="w-full h-px bg-[#e7e2d8]"></div>
-              <span className="absolute bg-[#f8f3e9] px-2 font-label-sm text-[11px] text-[#414844] uppercase tracking-wider">
-                Đăng ký nhanh với
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button type="button" className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-md bg-[#ffffff] text-[#1d1c16] font-label-md text-[12px] font-semibold shadow-sm border border-[#c1c8c3]/50 hover:bg-[#f2ede3] transition-colors !min-h-0">
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                  <path d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.4 8.9 5 12 5z" fill="#EA4335"></path>
-                  <path d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5.1 3.7-8.8z" fill="#4285F4"></path>
-                  <path d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.6 7.2C.6 9.2 0 11.5 0 14s.6 4.8 1.6 6.8l3.7-3.1z" fill="#FBBC05"></path>
-                  <path d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.4-6.7-5.3L1.6 16c1.9 3.8 5.8 7 10.4 7z" fill="#34A853"></path>
-                </svg>
-                <span>Thư viện Google</span>
-              </button>
-              <button type="button" className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-md bg-[#ffffff] text-[#1d1c16] font-label-md text-[12px] font-semibold shadow-sm border border-[#c1c8c3]/50 hover:bg-[#f2ede3] transition-colors !min-h-0">
-                <span className="material-symbols-outlined text-[18px] text-[#416656] shrink-0">badge</span>
-                <span>Thẻ Thư Viện / VNeID</span>
-              </button>
-            </div>
+                </filter>
+              </defs>
+            </svg>
+            <Logo />
           </div>
-
-          <div className="mt-6 pt-4 flex flex-col items-center justify-center text-center gap-1.5">
-            <p className="font-body-sm text-[13px] text-[#414844]">
-              Đã có thẻ thư viện?
-              <Link to="/login" className="font-semibold text-[#00261a] hover:text-[#173c2e] underline underline-offset-4 decoration-[#00261a]/40 transition-colors ml-1">
-                Đăng nhập ngay →
-              </Link>
+          <div className={styles.story}>
+            <p className={styles.storyTitle}>
+              Chuyện hay
+              <br />
+              <span>còn tiếp.</span>
+            </p>
+            <p className={styles.storyCopy}>
+              Một cuốn sách đã đọc.
+              <br />
+              Một câu chuyện để đọc tiếp.
             </p>
           </div>
+          <p className={styles.credit}>
+            Ảnh:{" "}
+            <a
+              href="https://unsplash.com/photos/cozy-bookstore-interior-with-bookshelves-and-warm-lighting-mWWD9Up47OM"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Davit Margaryan / Unsplash
+              <span className="sr-only"> (mở tab mới)</span>
+            </a>
+          </p>
         </div>
+      </aside>
+      <div className={styles.formColumn}>
+        <header className={styles.utility}>
+          <Link to="/" className={styles.back}>
+            <ArrowLeft size={18} aria-hidden="true" />
+            Về trang chủ
+          </Link>
+        </header>
+        <div className={styles.formArea}>
+          <section className={styles.panel} aria-labelledby="register-title">
+            <h1 id="register-title">
+              Hẹn bạn ở <span>Lật lại.</span>
+            </h1>
+            <p>
+              Đăng ký tài khoản hiện chưa mở. Bạn vẫn có thể khám phá những cuốn
+              sách đang được đăng.
+            </p>
+            <Link className={styles.submit} to="/books">
+              Khám phá sách <ArrowRight size={18} aria-hidden="true" />
+            </Link>
+            <div className={styles.registration}>
+              <p>Đã có tài khoản?</p>
+              <Link className={styles.back} to="/login">
+                Đăng nhập
+              </Link>
+            </div>
+          </section>
+        </div>
+        <p className={styles.note}>Lật lại · Sách cũ. Người đọc mới.</p>
       </div>
-    </AuthLayout>
+    </main>
   );
 }

@@ -32,7 +32,14 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   closure SHIP; canonical merge. Fullintegration/browser lost-response/200%/
   native/human/beforeunload UI NOT RUN. READINESS không đổi; local chưa push.
   Checkpoint subject `feat(web): redesign book posting workspace`.
-  Bước tiếp: Tài khoản theo thứ tự đã duyệt.
+  Kệ Tài khoản tiếp nối đã dùng owner API/cursor/trạng thái và hai giá thật;
+  bỏ dashboard demo, mobile dùng menu có nhãn. Register hiển thị chưa mở theo
+  contract, không nhận đăng ký. Build/typecheck/28unit PASS; lint0error/6warning
+  cũ. CUA4viewport/filter/Back/metadata-retry/menu/logout/guest-return/error PASS;
+  QA riêng đã dọn. Review độc lập SHIP; canonical scoped merge/docs/diff PASS.
+  Browser>20pagination/200%/native/human và mọi trạng thái populated NOT RUN.
+  Checkpoint subject `feat(web): replace account mock dashboard with owner shelf`;
+  local chưa push, READINESS không đổi. Bước tiếp: Chat và Thông báo.
 - Sau `1101fac`, chủ dự án báo OS giảm chuyển động làm mất hiệu ứng mới.
   Home nay giữ đầy đủ animation cả khi reduced-motion=true: tán lá12s,
   sáu lá nền16–19s, card lift240ms/banner320ms, filter180ms/card thêm220ms,

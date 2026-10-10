@@ -16,6 +16,20 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Phạm vi triển khai
 
+- Tài khoản11/10: owner shelf thay dashboard demo; đọc metadata qua public catalog
+  hoặc currentRevision.metadata của owner request đúng contract. Lọc duyệt/URL,
+  cursor20, ảnh owner, trạng thái và hai giá tách nhãn; không có tổng kho/số dư giả.
+  Desktop sidebar, mobile menu có nhãn và logout thật. Register dùng lại auth art,
+  báo chưa mở do chưa có endpoint đăng ký/reset; Login giữ nguyên.
+  Build/typecheck/28unit PASS (3 ca owner read mới); lint0error/6warning cũ.
+  CUA1535/1366/390/320 không tràn, metadata lỗi→retry phục hồi, filter/rỗng/Back,
+  menu/logout/guest-return/error PASS trên Nest/Mongo *_test/storagefake đã dọn.
+  [Desktop](../../.impeccable/review/web-member/account-shelf-desktop.jpg),
+  [mobile](../../.impeccable/review/web-member/account-shelf-mobile.jpg),
+  [review SHIP](../../.impeccable/review/web-member/account-shelf-finish.md).
+  Detector một lượt0findings; documenter scoped canonical merge/preservation PASS.
+  Browser>20cursor, populated Approved/Held/Removed/Rejected,200%/native/human,
+  fullintegration NOT RUN; READINESS không đổi. Local checkpoint, chưa push.
 - Trang chủ: hero đỏ, headline ảnh final chủ dự án, bìa minh họa, search có tác dụng; kệ mới đăng
   và kệ để đổi lấy API thật; ba lối lọc theo hình thức/giá, CTA đăng sách.
 - Tìm sách: q/mode/condition/giá/sort/cursor theo OpenAPI; giữ URL/Back, trạng thái

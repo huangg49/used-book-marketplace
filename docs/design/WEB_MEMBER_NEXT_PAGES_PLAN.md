@@ -1,7 +1,7 @@
 # Kế hoạch thiết kế các trang Member web tiếp theo
 
 Lập10/10/2026 từ nguồn `b27047e`; chủ dự án đã duyệt triển khai.
-Cập nhật11/10: Tìm sách, Chi tiết và Đăng sách đã triển khai, hoàn tất review/canonical;
+Cập nhật11/10: Tìm sách, Chi tiết, Đăng sách và kệ Tài khoản đã triển khai, hoàn tất review/canonical;
 các nhóm bên dưới vẫn là kế hoạch, không phải nghiệm thu toàn bộ.
 Chủ dự án chọn thứ tự: Tìm sách → Chi tiết sách → Đăng sách, sau đó tài khoản,
 chat và đấu giá. Phạm vi `apps/user-web`; Android/admin có kế hoạch riêng.
@@ -81,6 +81,11 @@ Review SHIP sau sửa tương phản viền. Evidence/giới hạn ở báo cáo
   form đang nhập; bảo toàn cơ chế submission/idempotency hiện có.
 
 ## 4. Tài khoản và thư viện cá nhân
+
+Triển khai11/10: kệ bài đăng của chủ tài khoản, trạng thái duyệt/hiển thị/giao dịch,
+hai giá và cursor thật; bỏ chart/số dư demo. Sidebar desktop/menu mobile có nhãn.
+Register dùng lại bố cục auth nhưng thông báo chưa mở vì contract chưa có endpoint;
+không dựng form đăng ký giả. Review độc lập SHIP; giới hạn ở báo cáo triển khai.
 
 - Login giữ hướng ảnh tiệm sách bên trái/giấy bên phải đã duyệt; rà lại cân đối
   và trạng thái lỗi. Registration đồng bộ cùng bố cục, câu chữ thông thường.
