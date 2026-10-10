@@ -562,11 +562,8 @@ export function HomePage() {
               <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
             <Link
-              className={styles.quickBudget}
-              to={homeShelfUrl(
-                { mode: "Sale", maxSalePrice: "100000" },
-                preview,
-              )}
+              className={styles.quickAuction}
+              to={ROUTES.auctions}
             >
               <img
                 src="/illustrations/penguins/budget.png"
@@ -574,7 +571,7 @@ export function HomePage() {
                 height="72"
                 alt=""
               />
-              <span>Đến 100.000₫</span>
+              <span>Đấu giá</span>
               <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
             <Link className={styles.quickPost} to={ROUTES.sell}>

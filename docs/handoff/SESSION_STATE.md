@@ -8,6 +8,12 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `708f8da`, ô khám phá thứ ba đổi từ “Đến 100.000₫” thành “Đấu giá”, dùng
+  ROUTES.auctions (/auctions). Giữ màu đào/chim ôm ví; bộ lọc ngân sách trong kệ
+  và banner giá giữ nguyên. Build/typecheck/lint PASS (6 warning cũ), CUA Enter
+  mở đúng “Phiên đấu giá đang mở”; [ảnh](../../.impeccable/review/web-member/home-auction-shortcut.jpg).
+  Docs/diff PASS; không kiểm backend đấu giá/native hoặc đóng gate READINESS.
+  Checkpoint subject `fix(web): link home shortcut to auctions`; local, chưa push.
 - Sau `6196b88`, ẩn dải thông báo preview và link “Xem bài đăng thật” theo yêu
   cầu chủ dự án; bốn ô khám phá theo ngay hero. Bỏ CSS không dùng; caption hero,
   heading/nhãn mẫu trên card, preview source và data=live giữ nguyên.

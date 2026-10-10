@@ -33,6 +33,12 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `708f8da`, ô khám phá thứ ba là “Đấu giá” → /auctions theo yêu cầu chủ dự án;
+giữ màu đào và minh họa chim ôm ví. Chỉ đổi lối vào nhanh, bộ lọc/banners giá không
+đổi. Build/typecheck/lint PASS (6 warning cũ), CUA Enter xác nhận URL và heading
+trang đấu giá. [Ảnh](../../.impeccable/review/web-member/home-auction-shortcut.jpg)
+localhost5186, viewport1366×900, vùng scrolled Home. Không nghiệm thu backend/native.
+
 Sau `6196b88`, chủ dự án yêu cầu ẩn dải preview/source và link “Xem bài đăng thật”.
 Đã bỏ markup/CSS riêng của dải này; các ô khám phá theo ngay hero. Caption hero,
 heading kệ và nhãn mẫu trên card vẫn hiện; nguồn dữ liệu và data=live không đổi.
