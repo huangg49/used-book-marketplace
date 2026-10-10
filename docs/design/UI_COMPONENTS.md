@@ -36,7 +36,7 @@ khác cờ song song. Với bản xuất sẵn, từ root chạy `node scripts/p
 | `BackAction`    | Quay lại: mũi tên + nhãn, vùng chạm tối thiểu 44, xuống dòng/focus/disabled                   | `title`, `onPress`, `disabled`; screen quyết định router và dirty guard           |
 | `ActionRow`     | Lối vào một mục: icon, tên, mô tả, mũi tên; vùng chạm và focus                                | `title`, `description`, `icon`, `onPress`; không tự điều hướng                    |
 | `IconButton`    | Vùng chạm 44, tên, selected/disabled/focus                                                    | `name`, `label`, `onPress`                                                        |
-| `Chip`          | Bộ chọn ngắn, trạng thái selected                                                             | `title`, `selected`, `onPress`                                                    |
+| `Chip`          | Bộ chọn ngắn, selected và disabled tùy chọn; mặc định vẫn tương tác                           | `title`, `selected`, `onPress`, `disabled`                                        |
 | `TextField`     | Label, hint/error, focus, multiline, readonly                                                 | `value`, `onChangeText`, các props TextInput cần thiết                            |
 | `SearchField`   | Tìm kiếm có icon và xóa từ khóa                                                               | Label có nghĩa, query và handler                                                  |
 | `Checkbox`      | Checked/disabled và nhãn xuống dòng                                                           | State/handler bên ngoài                                                           |
@@ -71,7 +71,22 @@ Phương án grid chỉ dùng trên showcase để đối chiếu, không là l�
 alert/live region và recovery. BrandProvider mở splash sau khi font sẵn sàng hoặc
 có lỗi để người dùng thấy được control tải lại font.
 
-UI-1: màn chi tiết sách thử các role `bookTitle`, `bookHeading`, `reading`,
+Chi tiết Android10/10: [recipe hiện hành](ANDROID_BOOK_DETAIL.md) thay bố cục
+UI-1 dưới đây. Tên/tác giả dùng toàn chiều ngang; `BookPresentation.gallery(summary)`
+ghép ảnh contain với `BookPrice reading`: hai giá xếp dọc, nhãn14/21 và giá20/28
+màu ink. Không còn footer giá cố định hay phiếu đóng dấu. Ảnh thường rộng40%; khi
+width<360dp và effective scale>=1.29, BookGallery xếp dọc với khung ảnh rộng132dp và
+summary toàn chiều ngang. Có số ảnh và nút “Xem ảnh lớn” có chữ. Chip ảnh hỗ trợ
+disabled khi refresh lỗi; mặc định false, giữ selected/disabled accessibilityState
+và opacity0.5 khi khóa;
+`/ui` nhóm Phản hồi có ví dụ khóa. BookPresentation giữ đủ tình trạng/thiếu trang,
+mô tả, metadata mở rộng với expanded accessibilityState và giao nhận;
+query/media/action do screen sở hữu.
+Showcase dùng cùng recipe và giữ banner dữ liệu mẫu. BookTradeBar/BookCondition
+stamp vẫn là primitive hợp lệ cho consumer khác, không là recipe chi tiết mới.
+[Evidence/giới hạn](../ui/ANDROID_BOOK_DETAIL_REDESIGN.md).
+
+Lịch sử UI-1: màn chi tiết sách thử các role `bookTitle`, `bookHeading`, `reading`,
 `annotation`, `stamp`, `bookPrice` trong theme dùng chung. `BookCondition stamp`
 thêm nhãn tình trạng có viền và tách hình thức giao dịch; không là huy hiệu kiểm
 định. `BookPrice reading` dùng nhãn 14px/giá 20px; mặc định của các consumer cũ

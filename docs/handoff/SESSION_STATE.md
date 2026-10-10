@@ -5,7 +5,26 @@ OpenAPI0.30.0,15 migration Mongo,113 operation HTTP. Đây là trạng thái the
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
-## Gói đang kết thúc
+## Checkpoint chi tiết sách Android
+
+- Chủ dự án duyệt tiếp màn chi tiết Android; nhánh
+  `codex/android-book-detail-redesign` từ `2f766ca`, checkpoint subject
+  `feat(rn): redesign Android book detail`. [Brief](../design/ANDROID_BOOK_DETAIL.md),
+  [checks/ảnh](../ui/ANDROID_BOOK_DETAIL_REDESIGN.md).
+- Tên/tác giả toàn chiều ngang, ảnh cạnh hai giá có nhãn, bỏ footer giá; tình trạng
+  và thông tin xuất bản dễ đọc. Gallery/Back và stale/retry giữ semantics; anonymous
+  mở tài khoản để lưu, authenticated dùng wishlist cũ. Chip thêm disabled tùy chọn,
+  showcase cùng recipe. Không đổi API/session/nghiệp vụ hoặc web Vite/Flutter.
+- PASS RN108/108 test/typecheck; lint0error8warning cũ; export Android/iOS/web13routes.
+  Android35 x86_64:390dp100%,320dp130%, ảnh/Back, tình trạng, metadata, tên/giá dài,
+  mất kết nối và retry, lối vào tài khoản. Storage FAKE/QA `*_test` riêng.
+  Fresh Impeccable reviewer verdict **ship** phạm vi detail,13 ảnh; không có material fix.
+  Standalone QUALITY BAR card chưa cung cấp riêng; dùng direction đã duyệt/brief màn.
+  Documenter không yêu cầu đổi DESIGN/sidecar; recipe/components đã cập nhật.
+  QA đã dừng/dọn database/users/roles;14 ảnh hợp lệ giữ trong báo cáo.
+  Không push/PR/merge/deploy; READINESS giữ nguyên.
+
+## Checkpoint tìm sách — `2f766ca`
 
 - Chủ dự án duyệt redesign Android trước; nhánh `codex/android-search-redesign`
   từ `270acbf`, checkpoint subject `feat(rn): redesign Android book search`.

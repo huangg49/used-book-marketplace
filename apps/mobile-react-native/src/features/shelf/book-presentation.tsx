@@ -2,13 +2,11 @@ import { useState, type ReactNode } from "react";
 import { Pressable, View } from "react-native";
 import {
   AppText,
-  BookCondition,
+  BookPrice,
   Icon,
   Notice,
   colors,
-  colorRoles,
   layout,
-  radius,
   space,
 } from "../../core/ui";
 import { conditions, modes, type Listing } from "./contracts";
@@ -27,32 +25,53 @@ export function BookPresentation({
   const [focused, setFocused] = useState(false);
   return (
     <>
+      <View style={{ gap: space.sm }}>
+        <AppText
+          kind="bookTitle"
+          accessibilityRole="header"
+          color={colors.forest}
+        >
+          {item.book.title}
+        </AppText>
+        <AppText kind="reading" color={colors.muted}>
+          {item.book.authors.join(" · ")}
+        </AppText>
+        <AppText kind="label" color={colors.rustText}>
+          Tình trạng: {conditions[item.condition]} · {modes[item.mode]}
+        </AppText>
+      </View>
       {gallery(
         <View style={{ gap: space.md }}>
-          <AppText
-            kind="bookTitle"
-            accessibilityRole="header"
-            color={colors.forest}
-          >
-            {item.book.title}
-          </AppText>
-          <AppText kind="annotation" color={colors.muted}>
-            {item.book.authors.join(" · ")}
-          </AppText>
-          <BookCondition
-            stamp
-            condition={conditions[item.condition]}
-            mode={modes[item.mode]}
+          <BookPrice
+            reading
+            stacked
+            sale={item.salePrice ?? undefined}
+            exchange={item.exchangeValue ?? undefined}
           />
+          {item.exchangeValue != null && (
+            <AppText kind="annotation" color={colors.muted}>
+              Giá trị đổi để so sánh sách khi trao đổi.
+            </AppText>
+          )}
+          <View style={{ gap: space.xs }}>
+            <AppText kind="annotation" color={colors.muted}>
+              Người đăng
+            </AppText>
+            <AppText kind="bold">{item.seller.displayName}</AppText>
+          </View>
         </View>,
       )}
+      {item.purchaseAvailability.status === "InNegotiation" && (
+        <Notice tone="info">
+          Sách đang được giữ trong một cuộc trao đổi mua.
+        </Notice>
+      )}
+      {children}
       <View
         style={{
-          backgroundColor: colors.surface,
-          borderRadius: radius.record,
-          borderTopWidth: 2,
-          borderTopColor: colorRoles.bookStamp,
-          padding: space.lg,
+          borderTopWidth: 1,
+          borderTopColor: colors.rule,
+          paddingTop: space.xl,
           gap: space.lg,
         }}
       >
@@ -62,28 +81,22 @@ export function BookPresentation({
             accessibilityRole="header"
             color={colors.forest}
           >
-            Phiếu tình trạng
+            Tình trạng sách
           </AppText>
           <AppText kind="annotation" color={colors.muted}>
-            Người đăng mô tả
-          </AppText>
-          <AppText kind="stamp" color={colors.ink}>
-            {item.seller.displayName}
+            Theo mô tả của người đăng. Hãy đối chiếu với ảnh.
           </AppText>
         </View>
         <View
           style={{
-            borderLeftWidth: 1,
-            borderColor: colorRoles.bookStamp,
-            paddingLeft: space.lg,
             gap: space.lg,
           }}
         >
           {(
             [
-              ["Ruột sách", item.pages],
+              ["Trang sách", item.pages],
               ["Bìa và gáy", item.coverNote],
-              ["Ghi chú / đánh dấu", item.notes],
+              ["Ghi chú và đánh dấu", item.notes],
               ["Phụ kiện", item.accessories],
               [
                 "Trang thiếu",
@@ -99,19 +112,22 @@ export function BookPresentation({
                 gap: space.xs,
               }}
             >
-              <AppText kind="annotation" color={colors.muted}>
-                {label}
-              </AppText>
-              <AppText kind="reading">{value}</AppText>
+              <AppText kind="bold">{label}</AppText>
+              <AppText kind="reading">{value || "Chưa cung cấp"}</AppText>
             </View>
           ))}
         </View>
       </View>
-      <Notice tone="info">
-        Người đăng khai báo sách còn đọc được và không thiếu nội dung trọng yếu.
-        Hãy đối chiếu ảnh và mô tả tình trạng.
-      </Notice>
-      <AppText kind="reading">{item.description}</AppText>
+      <View style={{ gap: space.sm }}>
+        <AppText
+          kind="bookHeading"
+          accessibilityRole="header"
+          color={colors.forest}
+        >
+          Mô tả thêm
+        </AppText>
+        <AppText kind="reading">{item.description || "Chưa cung cấp"}</AppText>
+      </View>
       <View
         style={{
           borderTopWidth: 1,
@@ -121,7 +137,7 @@ export function BookPresentation({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Về đầu sách"
+          accessibilityLabel="Thông tin xuất bản"
           accessibilityState={{ expanded: metadataOpen }}
           aria-expanded={metadataOpen}
           onPress={() => setMetadataOpen((v) => !v)}
@@ -141,10 +157,10 @@ export function BookPresentation({
         >
           <View style={{ flex: 1, gap: space.xs }}>
             <AppText kind="bookHeading" color={colors.forest}>
-              Về đầu sách
+              Thông tin xuất bản
             </AppText>
             <AppText kind="annotation" color={colors.muted}>
-              Ấn bản, nhà xuất bản và ngôn ngữ
+              Nhà xuất bản, ấn bản, ngôn ngữ và ISBN
             </AppText>
           </View>
           <Icon name={metadataOpen ? "close" : "plus"} size={20} />
@@ -177,19 +193,18 @@ export function BookPresentation({
           accessibilityRole="header"
           color={colors.forest}
         >
-          Cách sách đến tay bạn
+          Giao nhận
         </AppText>
         <AppText kind="reading">
           {item.fulfillment
-            ? "Người đăng chọn giao trực tiếp trong TP.HCM. Vùng phục vụ đang dùng dữ liệu mô phỏng."
-            : "Người đăng chưa hoàn thiện thông tin giao nhận."}
+            ? "Giao tận nơi trong TP.HCM — mô phỏng đồ án."
+            : "Người đăng chưa cung cấp thông tin giao nhận."}
         </AppText>
         <AppText kind="annotation" color={colors.muted}>
-          Lật lại phục vụ TP.HCM. Đặt mua, đề nghị đổi và giao nhận chưa mở
-          trong phiên bản này.
+          Ứng dụng Android hiện cho xem và lưu sách. Chưa hỗ trợ đặt mua hoặc đề
+          nghị đổi.
         </AppText>
       </View>
-      {children}
     </>
   );
 }

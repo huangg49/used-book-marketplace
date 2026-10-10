@@ -5,7 +5,6 @@ import {
   AppText,
   BackAction,
   BookCover,
-  BookTradeBar,
   Button,
   Chip,
   Notice,
@@ -213,19 +212,7 @@ export function BookShowcase({
   };
   return (
     <Screen
-      compactFooter
-      footer={
-        sample ? (
-          <BookTradeBar
-            sale={sample.listing.salePrice ?? undefined}
-            exchange={sample.listing.exchangeValue ?? undefined}
-          >
-            <AppText kind="annotation" color={colors.muted}>
-              Dữ liệu mẫu · không nhận đơn
-            </AppText>
-          </BookTradeBar>
-        ) : undefined
-      }
+      appearance="browse"
       header={
         <>
           <DemoBanner />

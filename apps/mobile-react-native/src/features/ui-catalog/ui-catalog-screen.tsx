@@ -303,6 +303,12 @@ export function UiCatalogScreen() {
                 selected={state === "error"}
                 onPress={() => setState("error")}
               />
+              <Chip
+                title="Ảnh 2 · đang khóa"
+                selected={false}
+                disabled
+                onPress={() => {}}
+              />
             </View>
             {state === "loading" ? (
               <StatePanel loading title="Đang tải kệ sách" />

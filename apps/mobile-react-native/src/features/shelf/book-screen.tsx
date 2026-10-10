@@ -8,7 +8,6 @@ import { useForeground } from "../../core/hooks/use-foreground";
 import {
   AppText,
   BackAction,
-  BookTradeBar,
   Button,
   Notice,
   Screen,
@@ -25,7 +24,7 @@ import { PublicPhoto } from "./public-photo";
 import { WishlistButton } from "../wishlist/wishlist-button";
 
 export function BookScreen({ id }: { id: string }) {
-  const { client } = useSession(),
+  const { client, state } = useSession(),
     active = useForeground();
   const [selected, setSelected] = useState(0),
     [large, setLarge] = useState(false);
@@ -52,25 +51,17 @@ export function BookScreen({ id }: { id: string }) {
   const item = unavailable ? undefined : result.data;
   return (
     <Screen
-      compactFooter
-      footer={
-        item && !result.isError ? (
-          <BookTradeBar
-            sale={item.salePrice ?? undefined}
-            exchange={item.exchangeValue ?? undefined}
-          >
-            <AppText kind="annotation" color={colors.muted}>
-              Tiệm chưa nhận đơn ở bản này.
-            </AppText>
-          </BookTradeBar>
-        ) : undefined
-      }
+      appearance="browse"
       header={
         <View
-          style={{ paddingHorizontal: space.xl, paddingVertical: space.xs }}
+          style={{
+            paddingHorizontal: space.xl,
+            paddingVertical: space.xs,
+            backgroundColor: colors.surface,
+          }}
         >
           <BackAction
-            title="Về kệ sách"
+            title="Quay lại"
             onPress={() => {
               if (router.canGoBack()) router.back();
               else router.replace("/");
@@ -81,16 +72,18 @@ export function BookScreen({ id }: { id: string }) {
     >
       {unavailable ? (
         <StatePanel
-          title="Cuốn sách này không còn trên kệ."
-          message="Người đăng hoặc trạng thái cuốn sách có thể đã thay đổi. Bạn có thể quay lại tìm một cuốn khác."
+          title="Không tìm thấy sách"
+          message="Bài đăng không còn hiển thị ở đường dẫn này. Quay lại tìm sách để chọn cuốn khác."
         />
       ) : (
         <>
-          {result.isPending && <StatePanel loading title="Đang mở cuốn sách" />}
+          {result.isPending && (
+            <StatePanel loading title="Đang tải thông tin sách…" />
+          )}
           {result.error && (
             <>
               <Notice tone="error">
-                {item ? "Chưa kiểm tra được tình trạng hiện tại. " : ""}
+                {item ? "Thông tin dưới đây chưa được cập nhật. " : ""}
                 {presentError(result.error).message}
               </Notice>
               <Button
@@ -130,13 +123,30 @@ export function BookScreen({ id }: { id: string }) {
                   />
                 )}
               >
-                <WishlistButton subjectType="LISTING" subjectId={id} />
-                <Button
-                  title="Cập nhật tình trạng sách"
-                  secondary
-                  busy={result.isFetching}
-                  onPress={() => void result.refetch()}
-                />
+                {!result.isError && (
+                  <View style={{ gap: space.sm }}>
+                    {state.status === "authenticated" ? (
+                      <WishlistButton subjectType="LISTING" subjectId={id} />
+                    ) : (
+                      <Button
+                        title="Đăng nhập để lưu sách"
+                        onPress={() => router.push("/account")}
+                      />
+                    )}
+                    <AppText kind="annotation" color={colors.muted}>
+                      Lưu để tìm lại sau. Android chưa hỗ trợ đặt mua hoặc đề
+                      nghị đổi.
+                    </AppText>
+                  </View>
+                )}
+                {!result.isError && (
+                  <Button
+                    title="Làm mới thông tin"
+                    secondary
+                    busy={result.isFetching}
+                    onPress={() => void result.refetch()}
+                  />
+                )}
               </BookPresentation>
               <Sheet
                 motion="photo"
