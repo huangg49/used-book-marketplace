@@ -65,6 +65,18 @@ try {
       },
     );
   }
+  // The denser UI page fits this fixture; retain server cursor coverage separately.
+  const firstPage = await fixture.api("/listings?limit=12");
+  assert.equal(firstPage.items.length, 12);
+  assert.ok(firstPage.nextCursor);
+  const lastPage = await fixture.api(
+    "/listings?limit=12&cursor=" + encodeURIComponent(firstPage.nextCursor),
+  );
+  assert.equal(lastPage.items.length, 1);
+  assert.equal(
+    new Set([...firstPage.items, ...lastPage.items].map((book) => book.id)).size,
+    13,
+  );
   process.chdir(path.join(root, "apps/user-web"));
   server = await createServer({
     root: path.join(root, "apps/user-web"),
@@ -105,15 +117,14 @@ try {
   await button("Tìm sách").click();
   await p.getByText("Chưa có cuốn sách nào phù hợp.").waitFor();
   await p.getByLabel("Tìm sách", { exact: true }).fill("");
-  await p.getByText("12 cuốn trên trang này").waitFor();
-  await button("Trang tiếp theo").click();
-  await p.getByText("1 cuốn trên trang này").waitFor();
-  await button("Về trang đầu").click();
-  await p.getByText("12 cuốn trên trang này").waitFor();
+  await p.getByText("13 cuốn trên trang này").waitFor();
+  assert.equal(await button("Trang tiếp theo").count(), 0);
   await p.getByLabel("Cũ nhiều", { exact: true }).click();
+  await button("Áp dụng bộ lọc").click();
   await p.getByText("Chưa có cuốn sách nào phù hợp.").waitFor();
   await p.getByLabel("Tất cả tình trạng", { exact: true }).click();
-  await p.getByLabel("Trao đổi", { exact: true }).click();
+  await button("Áp dụng bộ lọc").click();
+  await button("Đổi sách").click();
   await p
     .getByRole("link", { name: "Xem sách", exact: true })
     .first()

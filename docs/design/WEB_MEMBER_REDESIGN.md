@@ -31,6 +31,44 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
   để hành trình kiểm thử liên tục. Chưa redesign toàn form, dashboard, đăng ký,
   chat, đấu giá, admin hay Flutter; Android giữ checkpoint riêng.
 
+## Tìm sách — kệ gọn và bộ lọc11/10
+
+Sau kế hoạch `6d6b6a8`, triển khai nhóm đầu tiên đã được chủ dự án duyệt.
+Đầu trang gọn với search bên phải; bộ lọc tình trạng/giá bên trái trên desktop,
+mua/đổi và sort ngay trên kệ.1366px có4cột,1535px có5cột,390/320px có2cột;
+20cuốn/trang. Dùng lại HomeBookCard/BookCard, giữ toàn ảnh và nhãn từng giá.
+Mobile dùng dialog native, lựa chọn nháp chỉ áp dụng khi bấm nút; Escape trả
+focus và đổi sang desktop đóng panel/khôi phục cuộn. Giá sai có lỗi và đường sửa.
+
+Chế độ DEV `data=preview` dùng91ấn bản Open Library cùng bộ lọc/phân trang,
+giữ nhãn mẫu và link nguồn; không biến IDấn bản thành IDbài đăng. Nhánh dữ liệu
+thật vẫn gọi API và lỗi vẫn hiển thị; không fallback sang mẫu. Không thêm API thể
+loại, tổng kho, rating hoặc claim giao dịch. Home/hero/navbar và session không đổi.
+
+Node24.19.0: build/typecheck PASS,25unit/5file PASS, lint0error/6warning cũ;
+bundle warning cũ. Detector một lượt trên TSX trả[]; CSS kiểm trực tiếp.
+CUA kiểm1535×735/1366×768/390×844/320×735 không tràn ngang, filter nháp/giá sai,
+mobile Escape/Apply/resize, preview trang1–2/Back và tìm rỗng/phục hồi.
+QA Nest/Mongo replica riêng57017:13bài approved, ảnh storage fake; lọc giá/tình
+trạng/mode/sort, mở bài thật rồi Back giữquery; dừng API/reload/retry giữ lỗi và
+không hiện mẫu. Fixture đã dọn DB/user riêng, giữ Vite5186 của chủ dự án.
+Lần setup21bài bị media429 và tự dọn; không tuyên bố PASS phân trang nhiều trang
+API thật. Unit kiểm đủ91IDpreview không lặp/mất. Harness integration đã chỉnh
+theo20limit/Apply nhưng chưa chạy toàn bộ;200%/native/human NOT RUN.
+
+[QA JSON](../../.impeccable/review/web-member/search-shelf-qa.json),
+[desktop](../../.impeccable/review/web-member/search-shelf-desktop.jpg),
+[laptop](../../.impeccable/review/web-member/search-shelf-laptop.jpg),
+[mobile](../../.impeccable/review/web-member/search-shelf-mobile.jpg),
+[320px](../../.impeccable/review/web-member/search-shelf-320.jpg),
+[panel](../../.impeccable/review/web-member/search-shelf-filters.jpg).
+Review độc lập: FIX hai điểm (docs stale, nút lọc40px); đã merge canonical/
+surface và tăng nút44px. Verdict pass SHIP cho cả hai fix; không là nghiệm thu
+toàn sản phẩm. [Nút lọc](../../.impeccable/review/web-member/search-shelf-active-filters.jpg)
+được CUA đo44px. DESIGN/sidecar đã merge riêng Search, giữ Home/RN.
+docs/diff PASS; READINESS không đổi. Checkpoint subject
+`feat(web): refine catalog search and mobile filters`; local, chưa push.
+
 ## Home — animation đã duyệt10/10
 
 Cập nhật sau `1101fac`: chủ dự án yêu cầu hiệu ứng vẫn hiện trên máy bật

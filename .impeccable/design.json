@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-10T16:34:41.941Z",
+  "generatedAt": "2026-10-10T17:24:42.627Z",
   "title": "Design System: Lật lại",
   "extensions": {
     "colorMeta": {
@@ -607,7 +607,7 @@
         "value": "1100px"
       },
       {
-        "name": "catalog-detail-shell-adjust",
+        "name": "detail-shell-adjust",
         "value": "1000px"
       },
       {
@@ -615,7 +615,7 @@
         "value": "850px"
       },
       {
-        "name": "search-two-column-home-cover-grid4x2",
+        "name": "home-cover-grid4x2",
         "value": "800px"
       },
       {
@@ -652,6 +652,11 @@
         "name": "home-discovery-layout",
         "value": "1100px exchange intro above cards;850px two-column quick links/cards and stacked budget pair;600px outer16px and panels20px16px; layered closing card wraps at1100px and stacks above fox at850px with full-width action",
         "purpose": "Local Home body recipe; no change to approved hero or shared Header."
+      },
+      {
+        "name": "search-catalog-layout",
+        "value": "1440px five columns; default four;1150px three/sidebar190px/gap24px;900px native filters;600px two columns/16px outer padding",
+        "purpose": "Search only;1360px container/40px padding,216px sidebar/36px gap. Compact cover stage200px,180px at1100px,160px at600px."
       }
     ],
     "layoutRecipes": [
@@ -774,6 +779,37 @@
           "mobileHeight": "clamp(84px,25vw,120px) at <=600px"
         },
         "motion": "Fine-pointer hover sets all cover layers to3; the image keeps translateY(-8px) scale(1.12),250ms transform/filter and existing deeper shadow. Separate inner sway, entrance, offscreen/hidden guards and owner-requested OS-motion/no-pause exception remain. No new accessibility acceptance is implied."
+      },
+      {
+        "name": "search-catalog-sidebar",
+        "source": "apps/user-web/src/pages/BookSearchPage.module.css; BookSearchPage.tsx; BookCard.module.css; services/catalog-search.ts",
+        "scope": "Search only, approved11/10/2026",
+        "heading": {
+          "typography": "search-heading;search-heading-narrow at600px",
+          "padding": "24px40px28px;24px inline at1150px;22px16px24px at600px",
+          "columns": "minmax(200px,.75fr) minmax(0,1.25fr);1fr at900px",
+          "gap": "40px;18px at900px;16px at600px"
+        },
+        "catalog": {
+          "maxWidth": "1360px",
+          "padding": "32px40px0;24px inline at1150px;20px top at900px;12px16px0 at600px",
+          "sidebar": "216px/36px gap;190px/24px gap at1150px;hidden at900px",
+          "columns": "5 at min1440px;4 default;3 at max1150px;2 at max600px",
+          "gridGap": "28px20px;24px14px at600px",
+          "coverHeight": "200px;180px at1100px;160px at600px"
+        },
+        "filterDialog": {
+          "element": "native dialog/showModal",
+          "width": "min(460px, calc(100% - 24px))",
+          "maxHeight": "calc(100dvh - 32px)",
+          "padding": "24px;20px at600px",
+          "radius": "16px",
+          "shadow": "0 16px 48px #28191440",
+          "backdrop": "#28191480",
+          "behavior": "Named native modal focus/Escape/return focus; body scroll lock with cleanup; closes above900px. Reset clears draft; explicit Apply commits. Invalid prices preserve draft and disable Apply."
+        },
+        "data": "URL q/mode/condition/sort/minSalePrice/maxSalePrice/cursor;limit20; page count only; no category API. Explicit DEV preview91 Open Library editions, separately labelled/source-linked; no live fallback.",
+        "motion": "150ms ease-out button color/background and shared image hover; global reduction retained, no Home exceptions."
       }
     ]
   },
@@ -790,9 +826,9 @@
       "name": "Search action",
       "kind": "button",
       "refersTo": "button-search",
-      "description": "Orange search action; yellow hover. Search form keeps its own accessible label.",
+      "description": "Scoped Search catalog action:44px minimum height,10px18px padding/7px corners and orange-to-yellow hover;10px12px at600px. Its labelled paper field sits right of the40px Anton title in a compact wine band, then below it at900px (32px title at600px). Catalog1360px/40px outer padding,216px sidebar/36px gap;1150px190px sidebar/24px gap/padding;900px hides sidebar for named native modal draft Apply/Reset;600px16px outer padding. Grid5 columns from1440px,4 default,3 at1150px,2 at600px; gaps28px20px then24px14px. Existing compact cards keep complete contained images in200px/180px at1100px/160px at600px stages and two-line titles with full accessible/tooltip text. Applied chips and all filter/paging targets44px. URL q/mode/condition/sort/minSalePrice/maxSalePrice/cursor;limit20; count only current page, cursor resets on criteria change. DEV-only explicit preview91 Open Library editions has labelled samples/source-only links and separate query/cursors; live API never falls back. No category API, Home motion exception or continuous decoration. Native dialog protects modal focus/Escape/return focus, locks body scrolling with cleanup and closes on desktop resize. Sample here is the action, not an interactive catalog or modal.",
       "html": "<button class=\"ds-search-action\">Tìm sách</button>",
-      "css": ".ds-search-action{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:inline-flex;align-items:center;justify-content:center;gap:12px;border-radius:8px;font-size:.9rem;font-weight:700;line-height:1.6;cursor:pointer;min-height:48px;padding:12px 24px;border:0;background:var(--shop-orange,#f68b51);color:#341509;font-size:.85rem;gap:10px}.ds-search-action:hover{background:var(--shop-yellow,#f4cb67)}.ds-search-action:disabled{opacity:.55;cursor:default}.ds-search-action:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}"
+      "css": ".ds-search-action{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:inline-flex;align-items:center;justify-content:center;gap:12px;border-radius:7px;font-size:.8125rem;font-weight:700;cursor:pointer;min-height:44px;padding:10px 18px;border:0;background:var(--shop-orange,#f68b51);color:#341509;transition:background-color 150ms ease-out,color 150ms ease-out}.ds-search-action:hover{background:var(--shop-yellow,#f4cb67)}.ds-search-action:disabled{opacity:.6;cursor:not-allowed}.ds-search-action:focus-visible{outline:2px solid var(--shop-wine,#5c0202);outline-offset:4px}@media(max-width:600px){.ds-search-action{padding:10px 12px;gap:6px}}@media(prefers-reduced-motion:reduce){.ds-search-action{transition:none}}"
     },
     {
       "name": "Secondary pagination action",
@@ -874,7 +910,7 @@
   ],
   "narrative": {
     "northStar": "Tiệm sách nhiều màu",
-    "overview": "Member web pairs the owner's wine-red owl and lettering with warm paper, tall display type and colored grounds for complete book covers. Discovery is lively; listing facts and task controls stay direct, readable and quieter than the covers. This records the world built after the owner's replacement decision on 10/10/2026, using the [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-booksearchpage-tsx.md) and [PRODUCT](PRODUCT.md), rather than the superseded green web sketches.\n\nThe implemented web slice is Home, Search, Detail, Login, shared Header/BookCard/ConfirmDialog and MainLayout/AuthLayout. Login owns its bookstore split with the original logo over the photograph, tactile ivory paper behind the form and a separate paper-side home action, apart from the shared Member Header; AuthLayout still serves the legacy registration scaffold. Existing posting and other forms, auction, chat, profile and registration retain legacy page recipes even where the shared shell changes. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.",
+    "overview": "Member web pairs the owner's wine-red owl and lettering with warm paper, tall display type and colored grounds for complete book covers. Discovery is lively; listing facts and task controls stay direct, readable and quieter than the covers. This records the world built after the owner's replacement decision on 10/10/2026, using the [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-booksearchpage-tsx.md) and [PRODUCT](PRODUCT.md), rather than the superseded green web sketches.\n\nThe implemented web slice is Home, Search, Detail, Login, shared Header/BookCard/ConfirmDialog and MainLayout/AuthLayout. Login owns its bookstore split with the original logo over the photograph, tactile ivory paper behind the form and a separate paper-side home action, apart from the shared Member Header; AuthLayout still serves the legacy registration scaffold. Existing posting and other forms, auction, chat, profile and registration retain legacy page recipes even where the shared shell changes. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.\n\nSearch refined11/10 uses a compact wine title/search band and paper sidebar catalog with the existing compact cover recipe. Named native draft filters replace the sidebar at900px, with explicit Apply/Reset,44px targets, URL criteria/cursors and page-only counts. DEV preview remains labelled and separate from live API behavior; Search follows global motion reduction.",
     "keyCharacteristics": [
       "Wine-and-cream identity with orange, yellow and mint discovery accents.",
       "Anton for expressive headings; Be Vietnam Pro for book facts and actions.",

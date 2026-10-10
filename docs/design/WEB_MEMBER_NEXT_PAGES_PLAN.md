@@ -1,6 +1,8 @@
 # Kế hoạch thiết kế các trang Member web tiếp theo
 
-Ngày 10/10/2026 · nguồn rà soát `b27047e` · chỉ lập kế hoạch, chưa sửa UI.
+Lập10/10/2026 từ nguồn `b27047e`; chủ dự án đã duyệt triển khai.
+Cập nhật11/10: Tìm sách đã triển khai và hoàn tất review/canonical;
+các nhóm bên dưới vẫn là kế hoạch, không phải nghiệm thu toàn bộ.
 Chủ dự án chọn thứ tự: Tìm sách → Chi tiết sách → Đăng sách, sau đó tài khoản,
 chat và đấu giá. Phạm vi `apps/user-web`; Android/admin có kế hoạch riêng.
 
@@ -21,6 +23,11 @@ giá và thao tác; mỗi trang có một điểm nhấn riêng, không nhân b�
   reduced-motion của Home sang tất cả các trang. Dữ liệu hiện ngay mặc định.
 
 ## 1. Tìm sách — khám phá nhiều bản sách mà vẫn dễ quét
+
+Triển khai11/10: đầu trang gọn, bộ lọc cột trái, kệ5cột từ1440px/4cột laptop,
+2cột mobile;20cuốn/trang, panel bộ lọc native trên mobile. Chế độ preview rõ
+`data=preview` dùng91ấn bản có nguồn; dữ liệu thật/lỗi API giữ riêng.
+[Evidence và giới hạn](WEB_MEMBER_REDESIGN.md).
 
 Hiện có `/books`, query API/URL và diện mạo đỏ–kem; đây là hoàn thiện màn đã có.
 

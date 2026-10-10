@@ -33,7 +33,13 @@ three-line cream/yellow owner-supplied headline artwork between eight decorative
 four existing positions and four owner-supplied images added on10/10. Desktop
 uses two varied-size, lightly overlapping clusters, led by Alice on the left and Dược sư on the right (third cover of each group). The176px unit/432px stage keeps the established hero footprint; focal heights1.36/1.38 units sit at z2, companions0.88–1 unit at auto/z1. Each cover has its own offset, rotation and contained asset ratio. <=1100px all eight return to relative flow below search in eight columns; <=800px four columns. Focals scale1.08 in that flow without growing its layout footprint. Fine-pointer hover raises any cover to z3. A wide light
 search field anchors the hero; a four-column newest shelf starts below. Search
-puts its field above a compact filter rail and four-column covers; detail pairs
+uses a compact wine title/search band,216px left condition/price sidebar and
+36px gap to the results (1360px container/40px padding). Its shelf has five
+columns from1440px, four by default, three at1150px and two at600px; the
+sidebar becomes190px/gap24px at1150px, then hides at900px for a labelled
+native filter dialog. Search title is40px Anton/1.2,32px at600px. Search sits
+to the right of the title on desktop and below it at900px. Compact complete
+cover stages are200px,180px at1100px and160px at600px; detail pairs
 one large complete photograph with readable metadata and purchase explanation.
 
 FORM: User-pinned bookstore reference overrides direction roll 20e973c0,
@@ -87,3 +93,51 @@ no new library, copy, session or API changes.
 Open dependency: Dribbble supplies a composite preview, no separate cover assets;
 use existing public-domain covers and the four images the owner supplied directly
 for decorative imagery. Caption distinguishes them from listing photographs.
+
+## Search refinement — approved11/10/2026
+
+The approved remaining-pages plan section1 is implemented for `/books` only.
+The shared Header, Home/RN recipes and API/session contract remain authoritative.
+Search uses the existing compact BookCard/HomeBookCard rendering: complete contain
+images, visible condition, separately labelled prices and truthful image retry.
+Compact titles show two lines while full DOM/accessibility/tooltip text remains.
+Desktop grid gaps are28px20px; at600px they are24px14px. The short title/search
+band uses24px40px28px padding and0.75fr/1.25fr columns with40px gap. At1150px
+outer padding is24px; at900px search moves below the heading; at600px the band
+uses22px16px24px padding and16px gap, catalog padding12px16px0.
+
+Modes are mutually exclusive pressed buttons with a3px wine selected underline.
+Condition and sale-price drafts are committed by **Áp dụng bộ lọc**;
+**Đặt lại lựa chọn** clears the draft, then Apply commits that reset. Applied
+condition/price chips, presets, fields, search, sort, pagination and retry have
+44px minimum targets. Invalid prices retain entered values and a linked message;
+Apply is disabled until nonnegative whole-number bounds are ordered correctly.
+
+Below/equal900px, the named native `<dialog>` protects modal focus, closes via
+its labelled44px button or Escape, and returns focus through native dialog
+behavior. Body scroll locks only while open, with cleanup on close/unmount;
+resizing above900px closes it. The paper panel is16px rounded with24px padding
+(20px at600px), width `min(460px, calc(100% - 24px))`, max-height
+`calc(100dvh - 32px)` and internal vertical scroll. Shadow is
+`0 16px 48px #28191440`; backdrop `#28191480`. Search focus is a2px wine outline
+at4px offset, yellow inside the wine head.
+
+URL fields remain `q`, `mode`, `condition`, `sort`, `minSalePrice`,
+`maxSalePrice`, `cursor`; requests use `limit=20`. Changing a filter/search/sort
+clears cursor; typing replaces history, committed changes support browser Back.
+Cursor paging focuses the result heading. Counts explicitly cover this page,
+not a total; there is no category catalog filter/API. Loading, empty, error,
+invalid-price and retry states remain concrete.
+
+DEV preview is explicit `data=preview` or the configured preview flag and uses91
+cached Open Library editions; `data=live` selects API behavior and production
+preview is disabled. Preview covers/source links and sample prices/conditions
+are labelled separately from listings. Preview query/cursors use their own
+branch; live errors never become sample success. Search controls use150ms
+ease-out color/background feedback and shared card hover follows global motion
+reduction. No Home motion exceptions or decorative loops are adopted here.
+
+Desktop/laptop/mobile/320px/filter captures:
+`.impeccable/review/web-member/search-shelf-{desktop,laptop,mobile,320,filters}.jpg`.
+These record UI composition, not native or human acceptance. Current QA and
+remaining gates live in WEB_MEMBER_REDESIGN/SESSION_STATE/READINESS.

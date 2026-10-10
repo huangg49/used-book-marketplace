@@ -1,4 +1,4 @@
-# Điểm lưu hiện tại — 10/10/2026
+# Điểm lưu hiện tại — 11/10/2026
 
 Snapshot tổng quan: main `da59199`; docs context `d77290a`, docs refresh `2e13f04`.
 Checkout/gói Android hiện hành và primary main mới được ghi bên dưới.
@@ -8,11 +8,17 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
-- Kế hoạch các trang tiếp theo đã lập từ source `b27047e`; chủ dự án chọn
-  Tìm sách → Chi tiết → Đăng sách, sau đó tài khoản/chat/đấu giá.
-  [Brief](../design/WEB_MEMBER_NEXT_PAGES_PLAN.md) phân biệt refinement, màn cũ
-  và dependency API/SRS. Chưa triển khai UI; không đổi DESIGN/READINESS.
-  Bước tiếp: duyệt hướng Tìm sách trước khi sửa.
+- Chủ dự án đã duyệt [kế hoạch](../design/WEB_MEMBER_NEXT_PAGES_PLAN.md) sau
+  `6d6b6a8`: Tìm sách → Chi tiết → Đăng sách, sau đó tài khoản/chat/đấu giá.
+  Nhóm Tìm sách11/10 đã triển khai đầu trang gọn/sidebar/kệ4–5cột/2mobile,
+  panel native Apply/Reset,20cuốn/trang; preview91ấn bản tách nhánh API thật.
+  Build/typecheck/25unit PASS; lint0error/6warning cũ. CUA desktop/mobile/filter/
+  cursorpreview/Back/error/retry PASS; QA Nest/Mongo13bài storagefake đã dọn.
+  Review độc lập FIX docs/nút40px; đã merge canonical/tăng44px, verdict SHIP
+  cho hai fix. docs/diff PASS. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
+  Full integration/native/200%/human NOT RUN; READINESS không đổi.
+  Checkpoint subject `feat(web): refine catalog search and mobile filters`;
+  local, chưa push. Bước tiếp: Chi tiết sách theo thứ tự đã duyệt.
 - Sau `1101fac`, chủ dự án báo OS giảm chuyển động làm mất hiệu ứng mới.
   Home nay giữ đầy đủ animation cả khi reduced-motion=true: tán lá12s,
   sáu lá nền16–19s, card lift240ms/banner320ms, filter180ms/card thêm220ms,

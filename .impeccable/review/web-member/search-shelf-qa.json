@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-11",
+  "source": "codex/web-member-redesign after6d6b6a8, uncommitted Search slice",
+  "surface": "apps/user-web/src/pages/BookSearchPage.tsx",
+  "browser": "Codex in-app browser through CUA",
+  "viewports": ["1535x735", "1366x768", "390x844", "320x735"],
+  "checks": {
+    "horizontalOverflow": "PASS: document width <= viewport at all four sizes",
+    "responsiveShelf": "PASS:5wide/4laptop/2phone columns, complete covers",
+    "draftFilters": "PASS: condition and price drafts leave URL unchanged until Apply",
+    "invalidPrice": "PASS: min200000/max50000 shows error and disables Apply, correction recovers",
+    "mobileDialog": "PASS: Escape restores focus to opener and body overflow; Apply closes; resize above900 closes and unlocks",
+    "previewPagination": "PASS:20items first/second, different firstID, browserBack returns first; unit suite covers all91 unique editions",
+    "empty": "PASS: unknown query and live conditionWorn show recovery, clearing restores results",
+    "realApi": "PASS: isolated Nest/Mongo QA57017 rs-test disposable *_test DB,13approved listings with fake local media; filter conditionGood/min100000/max150000/modeExchange/sortDesc; detail link opens real listing; browserBack retains exact query",
+    "failureRetry": "PASS: stoppedQAAPI thenreload/retry shows error with original filters and0previewitems",
+    "cleanup": "PASS: fixture removed only owned disposable DB/users; existing Vite5186 process retained",
+    "build": "PASS Node24.19.0 tsc+Vite, existing chunk-size warning",
+    "unit": "PASS25tests/5files",
+    "lint": "PASS0errors,6existing unrelated warnings",
+    "detector": "one run TSX target:[]; CSS reviewed visually/manually",
+    "fullIntegrationHarness": "NOT RUN; adapted expectations to20limit and explicit filterApply,13fixture records fit onepage",
+    "native200percentHuman": "NOT RUN"
+  },
+  "setupLimit": "Initial21-listing QA setup hit media HTTP429 and cleaned itself. Final13-listing fixture completed successfully; real multi-page cursor browser acceptance not claimed.",
+  "screenshots": ["search-shelf-desktop.jpg", "search-shelf-laptop.jpg", "search-shelf-mobile.jpg", "search-shelf-320.jpg", "search-shelf-filters.jpg", "search-shelf-live.jpg"],
+  "scope": "Search only; no API/contract/session/native/Home changes, no release gate closed"
+  ,"finishReview": "Independent FIX: stale Search docs and40pxchips. Both corrected; verdict SHIP scores both resolved. Canonical merged onlySearch; nonSearch preservation assertions PASS."
+}
