@@ -11,6 +11,7 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [showPassword, setShowPassword] = useState(false);
+  const [help, setHelp] = useState<"password" | "register">();
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
@@ -45,9 +46,6 @@ export function LoginPage() {
         className={styles.bookshop}
         aria-label="Lật lại · Chuyện hay còn tiếp"
       >
-        <div className={styles.brand}>
-          <Logo />
-        </div>
         <div className={styles.scene}>
           <img
             className={styles.photo}
@@ -58,6 +56,25 @@ export function LoginPage() {
             fetchPriority="high"
           />
           <div className={styles.tint} aria-hidden="true" />
+          <div className={styles.brand}>
+            <svg
+              className={styles.filterDefs}
+              aria-hidden="true"
+              width="0"
+              height="0"
+            >
+              <defs>
+                <filter id="login-logo-ink" colorInterpolationFilters="sRGB">
+                  {/* Key the original flat wine ground to alpha; keep the owner's contours. */}
+                  <feColorMatrix
+                    type="matrix"
+                    values="0 0 0 0 .988235 0 0 0 0 .972549 0 0 0 0 .858824 1.59375 0 0 0 -.575"
+                  />
+                </filter>
+              </defs>
+            </svg>
+            <Logo />
+          </div>
           <div className={styles.story}>
             <p className={styles.storyTitle}>
               Chuyện hay
@@ -85,9 +102,6 @@ export function LoginPage() {
       </aside>
       <div className={styles.formColumn}>
         <header className={styles.utility}>
-          <div className={styles.mobileBrand}>
-            <Logo />
-          </div>
           <Link to="/" className={styles.back}>
             <ArrowLeft size={18} aria-hidden="true" /> Về trang chủ
           </Link>
@@ -100,36 +114,62 @@ export function LoginPage() {
               onSubmit={(event) => void handleSubmit(event)}
               aria-busy={busy}
             >
-              <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                placeholder="ban@example.com"
-              />
-              <label htmlFor="password">Mật khẩu</label>
-              <div className={styles.password}>
+              <div className={styles.field}>
+                <label htmlFor="email">Email</label>
                 <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
                   required
+                  placeholder="ban@example.com"
                 />
-                <button
-                  type="button"
-                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                  aria-pressed={showPassword}
-                  onClick={() => setShowPassword(!showPassword)}
+              </div>
+              <div className={styles.field}>
+                <div className={styles.passwordLabel}>
+                  <label htmlFor="password">Mật khẩu</label>
+                  <button
+                    type="button"
+                    className={styles.textAction}
+                    aria-expanded={help === "password"}
+                    aria-controls="password-help"
+                    onClick={() =>
+                      setHelp(help === "password" ? undefined : "password")
+                    }
+                  >
+                    Quên mật khẩu?
+                  </button>
+                </div>
+                <div className={styles.password}>
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} aria-hidden="true" />
+                    ) : (
+                      <Eye size={20} aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
+                <p
+                  id="password-help"
+                  className={styles.help}
+                  role="status"
+                  hidden={help !== "password"}
                 >
-                  {showPassword ? (
-                    <EyeOff size={20} aria-hidden="true" />
-                  ) : (
-                    <Eye size={20} aria-hidden="true" />
-                  )}
-                </button>
+                  Khôi phục mật khẩu chưa được hỗ trợ. Bạn vẫn có thể tìm và xem
+                  sách mà không cần đăng nhập.
+                </p>
               </div>
               {error && (
                 <p className={styles.error} role="alert">
@@ -141,6 +181,30 @@ export function LoginPage() {
                 <ArrowRight size={18} aria-hidden="true" />
               </button>
             </form>
+            <div className={styles.registration}>
+              <p>Chưa có tài khoản?</p>
+              <button
+                type="button"
+                className={styles.textAction}
+                aria-expanded={help === "register"}
+                aria-controls="register-help"
+                onClick={() =>
+                  setHelp(help === "register" ? undefined : "register")
+                }
+              >
+                Đăng ký
+                <ArrowRight size={16} aria-hidden="true" />
+              </button>
+            </div>
+            <p
+              id="register-help"
+              className={styles.help}
+              role="status"
+              hidden={help !== "register"}
+            >
+              Đăng ký tài khoản chưa được hỗ trợ. Bạn có thể về trang chủ để tìm
+              và xem sách trước.
+            </p>
           </section>
         </div>
         <p className={styles.note}>Lật lại · Sách cũ. Người đọc mới.</p>

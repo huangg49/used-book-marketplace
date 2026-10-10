@@ -33,6 +33,46 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Login — ảnh tiệm sách và form riêng
 
+Cập nhật sau `5c88499`, theo yêu cầu chủ dự án: bỏ masthead đỏ riêng và đặt cú/
+wordmark trực tiếp trên ảnh bên trái. `Logo` và ảnh PNG gốc không đổi; SVG color
+matrix riêng Login chuyển nền đỏ phẳng của PNG thành alpha, giữ đường nét kem.
+Scene dùng grid auto/1fr/auto cho logo, story và credit để không chồng lên nhau.
+Desktop giữ45/55; <=900px thu ảnh thành vùng logo ngắn, ẩn story/credit; home là
+link riêng trên nền giấy. Không sửa Header/AuthLayout/Register hoặc client khác.
+
+Form400px có greeting Be Vietnam Pro tối đa2.5rem, input trắng52px, label/field
+group rõ ràng. “Quên mật khẩu?” cạnh nhãn mật khẩu; “Chưa có tài khoản? Đăng ký”
+sau nút chính, cách bằng một đường mảnh. Hai nút là disclosure44px, dùng
+aria-expanded/controls và thông báo role=status. Contract/controller chỉ có
+login/refresh/logout/me: chưa có register/reset; nút không gửi request, không
+nhận credential mới hoặc chuyển sang scaffold đăng ký legacy. Handler login,
+safe returnUrl, giữ giá trị khi lỗi và SessionClient giữ nguyên.
+
+Build/16unit PASS; lint0error6warning cũ, bundle warning có sẵn. Browser response
+fixture9viewport100/130/200% PASS một logo trên ảnh,52px field/44px target,
+không tràn ngang, desktop650px100% vừa, màn thấp/chữ lớn/error/help cuộn tự nhiên,
+password toggle/error retention/retry/busy/returnUrl/storage memory-only. Hai
+disclosure mở/đóng/thay thế đúng và không request. Lượt đầu helper kiểm nav
+Register bằng accessibility selector tại390px nên không thấy nav bị CSS ẩn;
+đã sửa selector DOM, không sửa source/test sản phẩm để che lỗi. CUA kiểm cả hai
+nút và ảnh1366×650/390×844. Scan layout trước sửa0finding; không chạy lại detector.
+API thật/native/human acceptance NOT RUN, READINESS giữ nguyên.
+
+- [Laptop](../../.impeccable/review/web-member/login-overlay-laptop.png),
+  [mobile](../../.impeccable/review/web-member/login-overlay-mobile.png).
+- [320px chữ200%](../../.impeccable/review/web-member/login-overlay-small.png),
+  [lỗi](../../.impeccable/review/web-member/login-overlay-error.png),
+  [lỗi và thông báo đăng ký](../../.impeccable/review/web-member/login-overlay-help.png).
+- [CUA desktop](../../.impeccable/review/web-member/login-overlay-cua-desktop.jpg),
+  [CUA mobile](../../.impeccable/review/web-member/login-overlay-cua-mobile.jpg).
+
+Finish reviewer độc lập kiểm đủ7capture: không có sửa visual bắt buộc; yêu cầu
+lưu canonical cho bố cục mới. Documenter cập nhật DESIGN/sidecar và kiểm parity;
+verdict pass chấm persistence **resolved**, disposition **ship**. Verdict này chỉ
+chấm sửa tài liệu; visual review trước đó giữ nguyên, không thay human acceptance.
+Docs/diff PASS. Checkpoint subject `feat(web): overlay login branding and refine account actions`.
+Local, chưa push/PR/merge/deploy. Mô tả/captures dưới đây thuộc checkpoint5c88499.
+
 Sau `6de0289`, chủ dự án chọn ảnh bookstore làm mờ nhẹ/đặt chữ và chia màn hình
 như mẫu [Edusama](https://dribbble.com/shots/27353194-Edusama-Digital-Library-Login-Exploration).
 [Contract Login](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-loginpage-tsx.md)

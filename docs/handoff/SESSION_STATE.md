@@ -8,6 +8,15 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `5c88499`, Login bỏ masthead đỏ riêng, logo gốc được key nền thành alpha
+  bằng SVG filter trên ảnh; mobile có vùng ảnh logo gọn, home trên nền giấy.
+  Form400px/title2.5rem/input trắng52px, thêm Quên mật khẩu/Đăng ký dạng disclosure
+  thông báo chưa hỗ trợ vì API chưa có register/reset; không request giả hoặc
+  đổi session/handler/Register. Build16unit PASS/lint0error6warning cũ;
+  9viewport100/130/200% response fixture và CUA desktop/mobile PASS, ảnh ở brief.
+  Docs/diff PASS; documenter cập nhật canonical, reviewer chấm persistence resolved.
+  API thật/native/human NOT RUN, READINESS giữ nguyên. Checkpoint subject
+  `feat(web): overlay login branding and refine account actions`. Local, chưa push.
 - Sau `6de0289`, Login dùng ảnh bookstore Unsplash local, blur2px/tint đỏ64%,
   desktop45/55 và form400px/52px control, logo/home riêng; <=900px chỉ form.
   Handler/session/returnUrl/Register giữ nguyên. Build/typecheck16unit/lint0error

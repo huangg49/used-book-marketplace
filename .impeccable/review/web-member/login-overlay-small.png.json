@@ -1,0 +1,14 @@
+{
+  "source": "LoginPage.tsx + LoginPage.module.css local preview",
+  "url": "http://127.0.0.1:5186/login",
+  "captured": "2026-10-10",
+  "method": "Chromium browser response fixture",
+  "dimensions": [
+    320,
+    1363
+  ],
+  "sha256": "055d1d52fc42395396574b27c7f63326b050850f38cf7d85f7073c511831f9ef",
+  "privacy": "No real credentials or personal data",
+  "state": "320px / 200% text",
+  "realApi": "NOT RUN"
+}
