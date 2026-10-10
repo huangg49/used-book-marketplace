@@ -30,3 +30,7 @@ nghìn lẻ một đêm.jpg. Bản delivery tương ứng `chua-nhan.webp`, `ali
 Home hero thay cả hai vị trí Oz bằng Chúa nhẫn, Alice cũ bằng Alice mới,
 Pride and Prejudice bằng Nghìn lẻ một đêm; ba mục khám phá dùng cùng bìa thay thế.
 Các JPEG tư liệu cũ giữ để đọc lịch sử, không còn được Home hiện tại tham chiếu.
+
+Chủ dự án tiếp tục thay Gachiakuta bằng `SAO.jpg`: bản delivery `sao.webp`
+(Sword Art Online — Early and Late), giữ toàn ảnh/tỷ lệ và provenance sidecar.
+`gachiakuta.webp` không còn được Home hiện tại tham chiếu.

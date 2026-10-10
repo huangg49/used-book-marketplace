@@ -11,7 +11,7 @@ const heroCovers = [
   "/illustrations/chua-nhan.webp",
   "/illustrations/tuoi-tho.webp",
   "/illustrations/alice-moi.webp",
-  "/illustrations/gachiakuta.webp",
+  "/illustrations/sao.webp",
   "/illustrations/one-piece.webp",
   "/illustrations/nghin-le-mot-dem.webp",
   "/illustrations/duoc-su.webp",

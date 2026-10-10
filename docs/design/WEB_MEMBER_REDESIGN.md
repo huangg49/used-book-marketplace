@@ -36,13 +36,17 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 Dribbble cung cấp ảnh thiết kế tổng hợp; chưa có bộ asset tách riêng hoặc ảnh bìa
 gốc chất lượng cao từ tác giả. Không cắt bìa nhỏ từ screenshot để gán cho bài đăng.
 Home hiện dùng bìa chủ dự án cung cấp: Chúa nhẫn (hai vị trí), Alice mới,
-Nghìn lẻ một đêm, Tuổi thơ, One Piece, Gachiakuta, Dược sư tự sự; nguồn trong
+Nghìn lẻ một đêm, Tuổi thơ, One Piece, Sword Art Online, Dược sư tự sự; nguồn trong
 [asset README](../../apps/user-web/public/illustrations/README.md); có chú thích
 minh họa. Thẻ/chi tiết dùng ảnh API, không thay bằng ảnh stock. Mọi raster mới
 được ghi provenance (embedded JPEG/PNG hoặc sidecar WebP). Các screenshot sử dụng
 fixture [QA], giá/tình trạng mô phỏng.
 
 ## Kiểm chứng
+
+Sau `6c0e266`, thay một bìa Gachiakuta bằng SAO do chủ dự án cung cấp; giữ CSS,
+vị trí/hover. Build/typecheck và kiểm ảnh tải/hiện CUA PASS;
+[ảnh SAO hiện tại](../../.impeccable/review/web-member/hero-sao.jpg).
 
 Sau `48e806d`, thay Oz→Chúa nhẫn (hai vị trí), Alice cũ→Alice mới,
 Pride→Nghìn lẻ một đêm trong hero và ba mục khám phá. CSS/hover không đổi.
