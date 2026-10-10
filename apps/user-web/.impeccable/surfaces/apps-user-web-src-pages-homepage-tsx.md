@@ -25,18 +25,18 @@ secondary paper field, quiet cream shelf grounds, Be Vietnam Pro24px bold sectio
 heads and task text, Anton only for the budget/exchange/posting display moments.
 Complete actual listing photographs and unboxed metadata stay authoritative.
 
-STORY: Four direct links for buying, exchange, budget and posting. Explore actual
+STORY: Four colored penguin shortcut tiles for buying, exchange, budget and posting. Explore actual
 categories in the currently loaded shelf; switch server-backed buy/exchange/price
 groups; show more locally loaded copies; open the full catalog with supported
 filters. Two budget banners lead to Sale max50000/100000. A separate exchange
 shelf and posting CTA continue the journey. No new API/session/backend behavior.
 
 FIRST VIEWPORT: Approved hero JSX/assets/motion/search/layout unchanged. Below:
-four unboxed quick links, category section, new-listing shelf with four pressed
+four colored penguin shortcut tiles, category section, new-listing shelf with four pressed
 filter buttons, up to ten compact BookCards in five laptop/six wide-desktop columns. Budget
 banner pair follows, then mint exchange section with a left introduction and
 four compact cards, then wine posting band. Content max1200px, desktop outer40px,
-section padding28px/gaps24–32px. Catalog/topic cards become four columns at1100px, three at850px, two at600px. <=850px quick navigation becomes two columns,
+section padding28px/gaps24–32px. Catalog/topic cards become four columns at1100px, three at850px, two at600px. <=1000px quick navigation becomes two columns,
 banner pair stacks; <=600px outer16px and sections20px16px. Enlarged text wraps
 and the document grows naturally. Shared Search/Detail cards retain default size.
 
@@ -101,3 +101,13 @@ remain44px and failure stages grow for retry content. Main shelf starts/adds10;
 topic shelves show10 each, exchange remains4 beside its introduction. Hero,
 Search defaults, actual API/session and preview/source/sample boundaries stay
 unchanged. This owner-pinned refinement supersedes earlier density counts.
+
+## Owner-approved penguin shortcut tiles — 10/10/2026
+
+Owner-approved Home shortcuts use four full clickable colored tiles in buy/exchange/budget/post order. Grounds reuse cover palette #f0e2ca/#d9e7dc/#f6d4bd/#e6dced with wine text. Original generated penguin illustrations at public/illustrations/penguins are decorative (empty alt),72px desktop/56px mobile. Tile minimum112px/padding16px,12px corners,14px bold wrapping labels and16px arrows; four columns with16px gaps, two columns at1000px. At600px tiles stack image above label/arrow, minimum132px/padding12px/gap12px. Transparent1px border reserves hover space; fine-pointer hover lifts2px and shows wine border over200ms, focus wine3px/offset3px, reduced motion removes lift/transition. No shadow, nested badge, subtitle, new action or altered URL/session semantics. Images256px PNG preserve alpha; four together202026bytes. Penguin is supporting illustration, existing owl logo remains.
+
+The owner explicitly approves four colored clickable boxes and the cute penguin
+family from the generated sample. This overrides the earlier unboxed-link
+recipe. Code-led local extension; no new identity roll/comp or replacement logo.
+Finish: desktop/mobile/narrow captures, keyboard focus and four navigation
+checks; generated image provenance/alpha, build/lint, independent review.

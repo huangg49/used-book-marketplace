@@ -33,6 +33,27 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Checkpoint shortcuts sau `a704bdf`: chủ dự án duyệt bốn ô màu có chim cánh cụt.
+Mua vàng kem, đổi mint, ngân sách đào, đăng tím nhạt; dùng lại màu nền bìa sách.
+Built-in image_gen tạo4 minh họa cùng reference, PNG256px có alpha, khoảng50KB/ảnh;
+[prompt/provenance](../../apps/user-web/public/illustrations/penguins/README.md).
+Hình72px desktop/56px mobile, chữ14px bold/arrow16px; cả ô là Link giữ URL cũ.
+Desktop4 cột/min112px, từ1000px trở xuống2 cột; dưới600px hình trên nhãn/arrow,
+min132px/gap12px, tự cao thêm khi chữ dài. Hover fine-pointer nâng2px/viền wine,
+focus3px/offset3px; giảm motion bỏ lift/transition. Không đổi logo cú/hero/kệ sách.
+
+Build/typecheck PASS, lint0error6warning cũ; CUA1366/1024/800/390/320 không tràn,
+4ảnh local tải đủ; Enter/focus, buy/Exchange/budget và sell→login returnUrl PASS.
+Ảnh [desktop](../../.impeccable/review/web-member/home-penguins-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-penguins-mobile.jpg),
+[320px](../../.impeccable/review/web-member/home-penguins-320.jpg).
+Scan layout một lượt trước sửa0finding; không scan lại. Chữ200%/hover chuột thực
+chưa chạy; source có wrap/min-height/hover/reduce rules. Native/backend thành công/
+DB/human NOT RUN; READINESS giữ nguyên. Checkpoint subject
+`feat(web): add penguin discovery shortcuts`; local, chưa push.
+Reviewer độc lập disposition **ship**, không material fix;
+[review](../../.impeccable/review/web-member/home-penguins-finish.md).
+
 Checkpoint mật độ sau `10358bb`: chủ dự án duyệt thu nhỏ card theo ảnh Fahasa.
 Home dùng5 cột laptop,6 từ1600px,4 tại1100px,3 tại850px,2 tại600px; gap24px16px.
 Khung bìa200/180/160px, padding12/8px, chứa nguyên ảnh; metadata gọn hơn,

@@ -8,6 +8,15 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `a704bdf`, Home có bốn ô mua/đổi/ngân sách/đăng màu vàng kem/mint/đào/tím,
+  kèm bộ4 chim cánh cụt image_gen local alpha,256px/~50KB. Desktop4/mobile2×2;
+  hình72/56px, full-link, hover lift2px/viền wine, focus/reduce motion giữ rõ.
+  Không đổi hero/logo/kệ/API/session. Build/lint0error6warning cũ PASS; CUA5width
+  không tràn,4ảnh và keyboard/four-route checks PASS;200%/actual hover NOT RUN.
+  Scan layout trước sửa0finding; native/backend thành công/DB/human NOT RUN,
+  READINESS giữ nguyên. Evidence/provenance ở [brief](../design/WEB_MEMBER_REDESIGN.md).
+  Reviewer độc lập disposition ship, không material fix; docs/diff PASS.
+  Checkpoint subject `feat(web): add penguin discovery shortcuts`; local, chưa push.
 - Sau `10358bb`, thu gọn card riêng Home theo duyệt của chủ dự án:5 cột laptop,
   6 desktop rộng,4/3/2 ở mốc1100/850/600px; khung bìa200/180/160px, title hai dòng
   vẫn giữ tên đầy đủ/tooltip, nguồn44px. Kệ chính10/thêm10, chủ đề10/kệ, đổi4.

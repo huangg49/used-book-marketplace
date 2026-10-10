@@ -10,9 +10,7 @@ import {
   ArrowUpRight,
   ArrowRight,
   Search,
-  ShoppingBag,
   Repeat2,
-  Wallet,
   Plus,
   BookOpen,
 } from "lucide-react";
@@ -553,37 +551,56 @@ export function HomePage() {
             </div>
           )}
           <nav className={styles.quickLinks} aria-label="Khám phá sách">
-            <Link to={homeShelfUrl({ mode: "Sale" }, preview)}>
-              <span>
-                <ShoppingBag aria-hidden="true" />
-              </span>
-              Mua sách cũ
-              <ArrowUpRight size={16} aria-hidden="true" />
-            </Link>
-            <Link to={homeShelfUrl({ mode: "Exchange" }, preview)}>
-              <span>
-                <Repeat2 aria-hidden="true" />
-              </span>
-              Đổi sách
+            <Link
+              className={styles.quickBuy}
+              to={homeShelfUrl({ mode: "Sale" }, preview)}
+            >
+              <img
+                src="/illustrations/penguins/buy.png"
+                width="72"
+                height="72"
+                alt=""
+              />
+              <span>Mua sách cũ</span>
               <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
             <Link
+              className={styles.quickExchange}
+              to={homeShelfUrl({ mode: "Exchange" }, preview)}
+            >
+              <img
+                src="/illustrations/penguins/exchange.png"
+                width="72"
+                height="72"
+                alt=""
+              />
+              <span>Đổi sách</span>
+              <ArrowUpRight size={16} aria-hidden="true" />
+            </Link>
+            <Link
+              className={styles.quickBudget}
               to={homeShelfUrl(
                 { mode: "Sale", maxSalePrice: "100000" },
                 preview,
               )}
             >
-              <span>
-                <Wallet aria-hidden="true" />
-              </span>
-              Đến 100.000₫
+              <img
+                src="/illustrations/penguins/budget.png"
+                width="72"
+                height="72"
+                alt=""
+              />
+              <span>Đến 100.000₫</span>
               <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
-            <Link to={ROUTES.sell}>
-              <span>
-                <Plus aria-hidden="true" />
-              </span>
-              Đăng sách của bạn
+            <Link className={styles.quickPost} to={ROUTES.sell}>
+              <img
+                src="/illustrations/penguins/post.png"
+                width="72"
+                height="72"
+                alt=""
+              />
+              <span>Đăng sách của bạn</span>
               <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
           </nav>

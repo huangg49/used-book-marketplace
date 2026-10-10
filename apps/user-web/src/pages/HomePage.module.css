@@ -287,36 +287,72 @@
 .quickLinks {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 24px;
+  gap: 16px;
   padding: 28px 0;
 }
 .quickLinks a {
-  display: flex;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 16px;
   gap: 12px;
   align-items: center;
-  min-height: 48px;
-  color: var(--shop-ink);
+  min-height: 112px;
+  padding: 16px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--shop-wine);
   font-size: 0.875rem;
   font-weight: 700;
   text-decoration: none;
+  transition:
+    transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 200ms ease-out;
+}
+.quickLinks a > img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
 }
 .quickLinks a > span {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  flex-shrink: 0;
-  background: var(--shop-paper);
-  color: var(--shop-wine);
-  border-radius: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.quickBuy {
+  background: #f0e2ca;
+}
+.quickExchange {
+  background: #d9e7dc;
+}
+.quickBudget {
+  background: #f6d4bd;
+}
+.quickPost {
+  background: #e6dced;
+}
+.quickLinks a:focus-visible {
+  outline: 3px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .quickLinks a:hover {
+    transform: translateY(-2px);
+    border-color: var(--shop-wine);
+  }
 }
 .quickLinks a:hover {
-  color: var(--shop-wine);
   text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .quickLinks a > svg {
-  margin-left: auto;
-  flex-shrink: 0;
+  justify-self: end;
+}
+@media (prefers-reduced-motion: reduce) {
+  .quickLinks a {
+    transition: none;
+  }
+  .quickLinks a:hover {
+    transform: none;
+  }
 }
 .categories {
   padding: 24px 28px;
@@ -685,8 +721,10 @@
   .quickLinks {
     gap: 16px;
   }
-  .quickLinks a > svg {
-    display: none;
+}
+@media (max-width: 1000px) {
+  .quickLinks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 850px) {
@@ -717,16 +755,25 @@
     padding: 0 16px 32px;
   }
   .quickLinks {
-    gap: 12px 16px;
+    gap: 12px;
     padding: 20px 0;
   }
   .quickLinks a {
-    font-size: 0.8125rem;
+    grid-template-columns: minmax(0, 1fr) 16px;
+    grid-template-rows: auto 1fr;
+    font-size: 0.875rem;
     gap: 8px;
+    padding: 12px;
+    min-height: 132px;
+    align-items: start;
   }
-  .quickLinks a > span {
-    width: 40px;
-    height: 44px;
+  .quickLinks a > img {
+    grid-column: 1 / -1;
+    width: 56px;
+    height: 56px;
+  }
+  .quickLinks a > svg {
+    margin-top: 3px;
   }
   .categories,
   .shelf,

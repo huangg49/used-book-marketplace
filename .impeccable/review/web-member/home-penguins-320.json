@@ -1,0 +1,10 @@
+{
+  "source": "CUA In-app Browser;localhost:5186;DEV preview, original shortcut illustrations",
+  "capturedAt": "2026-10-10T12:38:05.1513340Z",
+  "viewport": {
+    "height": 650,
+    "width": 320
+  },
+  "view": "Scrolled shortcut row and adjacent Home context; not document-top/full-page capture",
+  "sha256": "2310c420770cc437def7712293548810e7f3ef4b9b8bdb3601550d143492c7af"
+}
