@@ -33,6 +33,14 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `6196b88`, chủ dự án yêu cầu ẩn dải preview/source và link “Xem bài đăng thật”.
+Đã bỏ markup/CSS riêng của dải này; các ô khám phá theo ngay hero. Caption hero,
+heading kệ và nhãn mẫu trên card vẫn hiện; nguồn dữ liệu và data=live không đổi.
+Build/typecheck/lint PASS (6 warning cũ); CUA1366/390 không còn banner, không
+tràn ngang, bốn link còn đủ. [Ảnh CUA desktop](../../.impeccable/review/web-member/home-notice-hidden-desktop.jpg)
+là vùng scrolled hero/shortcuts, localhost5186 preview. Backend/native/200% chưa
+chạy lại; không mở gate. Các mô tả dải thông báo bên dưới thuộc checkpoint cũ.
+
 Checkpoint shortcuts sau `a704bdf`: chủ dự án duyệt bốn ô màu có chim cánh cụt.
 Mua vàng kem, đổi mint, ngân sách đào, đăng tím nhạt; dùng lại màu nền bìa sách.
 Built-in image_gen tạo4 minh họa cùng reference, PNG256px có alpha, khoảng50KB/ảnh;

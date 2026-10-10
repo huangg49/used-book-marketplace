@@ -71,7 +71,9 @@ caption reflect preview mode. Preview search, group/price links and filters stay
 inside Home, with navigation resetting category/visible10. Show-more adds10 and
 full shelf shows all matches. No new category API is implied.
 
-Preview notice and each card label illustrative price/condition/mode; no fake
+Owner hides the full-width preview notice/live-data link on10/10 for a cleaner
+hero-to-shortcut transition. Hero caption, shelf heading and each card still
+label illustrative price/condition/mode; data=live remains available. No fake
 seller, media, version or transaction state. Preview cards open Open Library
 source tabs, never listing detail or purchase. Cover errors have retry and never
 substitute hero art. Real mode keeps listings/media/session/error behavior and

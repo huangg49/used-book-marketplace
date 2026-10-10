@@ -534,22 +534,6 @@ export function HomePage() {
       </section>
       <div className={styles.marketplace}>
         <div className={styles.marketInner}>
-          {preview && (
-            <div className={styles.previewNotice} role="status">
-              <p>
-                <strong>
-                  Xem trước giao diện · {previewCatalogCount} sách từ Open
-                  Library
-                </strong>
-                <br />
-                Giá, tình trạng và mua/đổi là mẫu. Không có giao dịch trong bộ
-                sách này.
-              </p>
-              <Link to="/?data=live">
-                Xem bài đăng thật <ArrowUpRight size={18} aria-hidden="true" />
-              </Link>
-            </div>
-          )}
           <nav className={styles.quickLinks} aria-label="Khám phá sách">
             <Link
               className={styles.quickBuy}

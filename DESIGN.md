@@ -391,14 +391,14 @@ After the budget pair, three themed paper shelves reuse the catalog heading/card
 recipe: literature/children, science/history and skills/business, ten books each,
 24px apart with32px above the group. Their source-only cards skip the opening
 ten; topic links filter Home locally, retain topic on mode/price changes and
-offer a return to all subjects. These shelves are preview-only. A task-status
-notice and each card label sample price/condition/mode; no seller or transaction
+offer a return to all subjects. These shelves are preview-only. Hero caption,
+shelf heading and each card label sample price/condition/mode; no seller or transaction
 is simulated. Preview cards reuse the compact recipe and open Open Library,
 never real listing detail. Search, price/group links and local category/expansion
 operate inside Home. Budget artwork uses distinct catalog covers in both modes;
-hero art/layout/motion and shared Search cards remain unchanged. A wrapping
-14px/1.8 status row with24px top padding and44px live-data link uses existing
-ink/wine tokens. Explicit live mode shows API failures without sample fallback;
+hero art/layout/motion and shared Search cards remain unchanged. Owner removed
+the full-width source/sample notice and live-data link on10/10; shortcuts follow
+the hero directly. Explicit live mode shows API failures without sample fallback;
 production disables preview. This is UI evidence, not a database or E2E demo.
 
 The [Home surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-homepage-tsx.md) records this local extension. Four full clickable colored tiles lead to buying, exchange, Sale up to100000 and posting. Category choices wrap with44px minimum targets; selection is cream with a wine boundary and text. Categories derive from the latest24 responses in the selected shelf and filter only those loaded records; visible scope text states this limit. The four shelf filters (all, buy, exchange, Sale up to100000) request server-backed groups; selected controls use wine/cream. Changing group clears category and resets visible items to10; show-more adds10 locally. The full-catalog link carries supported mode/price filters and omits local category. Loading/empty/error/retry remain visible and failed requests hide stale cards.

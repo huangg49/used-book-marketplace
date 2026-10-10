@@ -259,28 +259,6 @@
   max-width: 1200px;
   margin: auto;
 }
-.previewNotice {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px 24px;
-  padding-top: 24px;
-  color: var(--shop-ink);
-  font-size: 0.875rem;
-  line-height: 1.8;
-}
-.previewNotice p {
-  margin: 0;
-}
-.previewNotice a {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  color: var(--shop-wine);
-  font-weight: 700;
-}
 .sectionHead > .more {
   margin: 0;
 }

@@ -8,6 +8,13 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `6196b88`, ẩn dải thông báo preview và link “Xem bài đăng thật” theo yêu
+  cầu chủ dự án; bốn ô khám phá theo ngay hero. Bỏ CSS không dùng; caption hero,
+  heading/nhãn mẫu trên card, preview source và data=live giữ nguyên.
+  Build/typecheck/lint PASS (6 warning cũ); CUA1366/390 không có banner/tràn ngang,
+  bốn link còn đủ. [Ảnh](../../.impeccable/review/web-member/home-notice-hidden-desktop.jpg).
+  Docs/diff PASS; backend/native/200% NOT RUN, READINESS giữ nguyên.
+  Checkpoint subject `fix(web): hide home preview notice`; local, chưa push.
 - Sau `a704bdf`, Home có bốn ô mua/đổi/ngân sách/đăng màu vàng kem/mint/đào/tím,
   kèm bộ4 chim cánh cụt image_gen local alpha,256px/~50KB. Desktop4/mobile2×2;
   hình72/56px, full-link, hover lift2px/viền wine, focus/reduce motion giữ rõ.
