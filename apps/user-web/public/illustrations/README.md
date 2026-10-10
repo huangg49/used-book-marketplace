@@ -10,3 +10,16 @@ Tối ưu kích thước truyền tải, giữ nguyên nội dung/tỷ lệ/màu
 Home, có chú thích. Không thay ảnh bài đăng API bằng các bìa này. Tham chiếu thiết
 kế là [Dribbble](https://dribbble.com/shots/26947471-Bookstore-Landing-Page), không
 trích ảnh bìa nhỏ từ screenshot hoặc nhận đó là bộ asset gốc đã được cung cấp.
+
+10/10/2026, chủ dự án cung cấp thêm bốn ảnh và yêu cầu dùng trang trí hero:
+
+- `tuoi-tho.webp`: Cho tôi một vé về tuổi thơ.gif (ảnh GIF tĩnh một frame).
+- `one-piece.webp`: One Piece Chap 1000.webp.
+- `gachiakuta.webp`: Gachiakuta tap 1.webp.
+- `duoc-su.webp`: Duoc su tu su chap 1.webp.
+
+Bản phục vụ web được thu nhỏ trong400×560, giữ tỷ lệ/toàn ảnh và nén WebP;
+không vẽ lại/cắt nội dung. Nguồn do chủ dự án gửi, không nhận là public-domain.
+Provenance của WebP nằm ở sidecar `.webp.json`. Hero có tám vị trí: giữ bốn vị trí
+cũ (Oz vốn xuất hiện hai lần) và thêm bốn ảnh mới. Chỉ là minh họa, không khẳng
+định đang có bài bán những cuốn này. Mục khám phá vẫn dùng ba bìa tư liệu cũ.

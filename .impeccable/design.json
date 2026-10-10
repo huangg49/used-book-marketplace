@@ -451,8 +451,8 @@
       },
       {
         "name": "hero-cover",
-        "value": "drop-shadow(0 14px 14px #28000060)",
-        "purpose": "Archival decorative Home covers."
+        "value": "drop-shadow(0 12px 12px #28000060)",
+        "purpose": "Decorative Home covers from archival sources and owner-supplied images."
       },
       {
         "name": "hero-search",
@@ -466,6 +466,11 @@
       }
     ],
     "motion": [
+      {
+        "name": "hero-cover-hover",
+        "value": "translateY(-8px) scale(1.12); transform250ms cubic-bezier(0.16,1,0.3,1); filter250ms ease-out; drop-shadow(0 18px 16px #28000090)",
+        "purpose": "Fine-pointer hover only; exit restores size/depth. Reduced motion removes zoom/lift. Eight covers: desktop2x2 flanks; <=1100 below search, <=800 grid4x2."
+      },
       {
         "name": "cover-settle",
         "value": "0.8s cubic-bezier(0.16, 1, 0.3, 1) both",
@@ -484,7 +489,7 @@
     ],
     "breakpoints": [
       {
-        "name": "home-cover-adjust",
+        "name": "home-eight-covers-below-search",
         "value": "1100px"
       },
       {
@@ -496,7 +501,7 @@
         "value": "850px"
       },
       {
-        "name": "search-two-column-and-header-menu",
+        "name": "search-two-column-header-menu-home-cover-grid4x2",
         "value": "800px"
       },
       {
@@ -615,7 +620,7 @@
     "dos": [
       "**Do** preserve the owner's original logo pixels and the owl-plus-lettering identity on narrow screens.",
       "**Do** use complete API listing photographs and expose condition, sale price and exchange value with their real labels.",
-      "**Do** keep archival Home covers decorative and visibly captioned, with provenance in the asset READMEs.",
+      "**Do** keep archival and owner-supplied Home covers decorative and visibly captioned, with provenance in the asset READMEs/sidecars.",
       "**Do** use the scoped web tokens for this implemented slice and the incumbent RN tokens for unchanged native screens.",
       "**Do** retain error/empty/loading states, keyboard focus, wrapping titles and reduced-motion behavior.",
       "**Do** explain consequential actions in direct Vietnamese, including reservation without payment."

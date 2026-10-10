@@ -226,7 +226,7 @@ Web shelves, catalog, header/footer and Detail use centered containers up to 128
 
 Home and Search have four cover columns, reducing to two at 850px and 800px respectively. Home discovery tiles go from three columns to one at 600px. Search filters go from three columns to two at 1000px, then one at 600px; the radios have explicit all-mode/all-condition choices. Search action wraps below the field at 600px. Detail pairs photograph and content with a 72px gap, reducing at 1000px and stacking at 720px. Login's centered form container is at most 520px wide.
 
-At 800px the header uses an expandable menu while retaining both owl and lettering; the posting shortcut leaves the header at 600px and remains in the menu. Home's desktop cover fans become a compact three-cover group at 600px. Dialog width is `calc(100% - 32px)`, capped at 480px, with scrollable height and stacked actions at 420px. These are implemented surface breakpoints, not one universal device taxonomy.
+At 800px the header uses an expandable menu while retaining both owl and lettering; the posting shortcut leaves the header at 600px and remains in the menu. Home uses eight decorative covers: two staggered 2×2 flanks around the headline above1100px; at1100px and below all eight move below search in a single row, becoming a 4×2 grid at800px. The same collection is rendered once, with complete contained images and user-supplied cover provenance. Dialog width is `calc(100% - 32px)`, capped at 480px, with scrollable height and stacked actions at 420px. These are implemented surface breakpoints, not one universal device taxonomy.
 
 RN retains content width 480dp, page padding 20dp, targets at least 48dp and controls at least 52dp. Search owns its fixed header and 32%-width cover beside metadata; below 360dp with effective text scale at least 1.29 it stacks vertically. Screens own safe area. This is RN implementation context, not a web recipe or proof that every RN screen has been redesigned.
 
@@ -237,7 +237,7 @@ Web uses tonal grounds and restrained photographic shadows. Metadata remains unb
 ### Shadow Vocabulary
 
 - **Listing photograph:** `drop-shadow(0 12px 12px #28191424)`.
-- **Hero cover:** `drop-shadow(0 14px 14px #28000060)`; compact mobile covers use `0 8px 8px #28000050`.
+- **Hero cover:** `drop-shadow(0 12px 12px #28000060)`; compact mobile covers use `0 8px 8px #28000050`. Fine-pointer hover enlarges1.12× and lifts8px over250ms with `0 18px 16px #28000090` shadow, returning on exit. Reduced motion removes zoom/lift and entrance movement; covers are decorative and add no tab stops or false click affordance.
 - **Hero search:** `box-shadow: 0 12px 28px #2f00002e`.
 - **Modal:** `box-shadow: 0 18px 60px #28191440`; backdrop `#28191480`.
 
@@ -273,7 +273,7 @@ Detail condition/mode labels are descriptive, softly filled rectangles rather th
 
 - **Do** preserve the owner's original logo pixels and the owl-plus-lettering identity on narrow screens.
 - **Do** use complete API listing photographs and expose condition, sale price and exchange value with their real labels.
-- **Do** keep archival Home covers decorative and visibly captioned, with provenance in the asset READMEs.
+- **Do** keep archival and owner-supplied Home covers decorative and visibly captioned, with provenance in the asset READMEs/sidecars.
 - **Do** use the scoped web tokens for this implemented slice and the incumbent RN tokens for unchanged native screens.
 - **Do** retain error/empty/loading states, keyboard focus, wrapping titles and reduced-motion behavior.
 - **Do** explain consequential actions in direct Vietnamese, including reservation without payment.

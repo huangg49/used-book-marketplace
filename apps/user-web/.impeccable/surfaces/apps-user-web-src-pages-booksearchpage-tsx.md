@@ -29,17 +29,22 @@ STORY: Discover the shelves, search/filter real listings, inspect condition and
 both prices, then understand that reserving opens a 24-hour chat without payment.
 
 FIRST VIEWPORT: Wine header with the user's own owl and lettering; centered
-three-line cream/yellow headline between colored archival covers. A wide light
+three-line cream/yellow headline between eight decorative cover positions: the
+four existing positions and four owner-supplied images added on10/10. Desktop
+uses two2x2 flanks; <=1100px all eight move below search, <=800px grid4x2. A wide light
 search field anchors the hero; a four-column newest shelf starts below. Search
 puts its field above a compact filter rail and four-column covers; detail pairs
 one large complete photograph with readable metadata and purchase explanation.
 
 FORM: User-pinned bookstore reference overrides direction roll 20e973c0,
 assigned index 5. Code-led; no new choice round. Signature: a single cover-fan
-settle on Home, static under reduced motion. Actual listing photos never replaced
+settle on Home; fine-pointer hover scales1.12 and lifts8px with deeper shadow,
+restoring on exit. Reduced motion removes zoom/lift; touch keeps static covers.
+Actual listing photos never replaced
 with stock. Illustration source caption stays visible.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 Open dependency: Dribbble supplies a composite preview, no separate cover assets;
-use existing public-domain book-cover sources for decorative imagery instead.
+use existing public-domain covers and the four images the owner supplied directly
+for decorative imagery. Caption distinguishes them from listing photographs.

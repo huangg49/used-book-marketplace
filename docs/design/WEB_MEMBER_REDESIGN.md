@@ -35,12 +35,29 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 Dribbble cung cấp ảnh thiết kế tổng hợp; chưa có bộ asset tách riêng hoặc ảnh bìa
 gốc chất lượng cao từ tác giả. Không cắt bìa nhỏ từ screenshot để gán cho bài đăng.
-Hero/mục khám phá dùng ba bìa tư liệu có nguồn trong
+Mục khám phá dùng ba bìa tư liệu, hero thêm bốn ảnh chủ dự án cung cấp; nguồn trong
 [asset README](../../apps/user-web/public/illustrations/README.md); có chú thích
 minh họa. Thẻ/chi tiết dùng ảnh API, không thay bằng ảnh stock. Mọi raster mới
-được nhúng provenance. Các screenshot sử dụng fixture [QA], giá/tình trạng mô phỏng.
+được ghi provenance (embedded JPEG/PNG hoặc sidecar WebP). Các screenshot sử dụng
+fixture [QA], giá/tình trạng mô phỏng.
 
 ## Kiểm chứng
+
+Cập nhật hero sau checkpoint `e0b739f`: thêm bốn bìa do chủ dự án gửi, giữ bốn vị
+trí cũ thành tám; desktop hai cụm2×2, <=1100 dưới search, <=800 thành4×2. Hover
+fine-pointer phóng1.12×/nâng8px/bóng đổ, rời chuột trả về; giảm chuyển động tắt
+phóng/nâng, touch không hover. Không đổi danh sách/API/mutation hoặc màn khác.
+[Desktop8bìa](../../.impeccable/review/web-member/hero-eight-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/hero-eight-mobile.jpg),
+[hover](../../.impeccable/review/web-member/hero-eight-hover.png),
+[320px130%](../../.impeccable/review/web-member/hero-eight-320-130.png).
+Focused Chromium QA PASS: tám ảnh tải/hiện đầy đủ, không tràn1440/1100/800/390/320px
+ở100/130%; hover phóng/nâng/exit reset, reduced-motion static, touch gate off,
+search Enter chuyển q đúng. Layout assessor xác nhận phạm vi yêu cầu đã đạt,
+không có lỗi layout đáng kể do lượt sửa này. Scan layout một lượt0findings;
+scan provenance7/7 (WebP dùng sidecar). Build/typecheck PASS, lint0error6warning cũ.
+Các kết quả integration16unit bên dưới thuộc checkpoint trước, không chạy lại
+nghiệp vụ không đổi ở lượt hero.
 
 Build/typecheck và16/16 unit PASS. Lint0error,6warning có sẵn ở chat/exchange.
 Build còn cảnh báo bundle JS lớn (1.06MB minified,330KB gzip); chưa tách bundle

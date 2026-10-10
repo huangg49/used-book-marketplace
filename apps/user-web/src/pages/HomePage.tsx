@@ -7,6 +7,43 @@ import { BookCard } from "../components/BookCard";
 import { getPublicListings } from "../services/public-listings";
 import styles from "./HomePage.module.css";
 
+const heroCovers = [
+  "/illustrations/oz.jpg",
+  "/illustrations/tuoi-tho.webp",
+  "/illustrations/alice.jpg",
+  "/illustrations/gachiakuta.webp",
+  "/illustrations/one-piece.webp",
+  "/illustrations/pride.jpg",
+  "/illustrations/duoc-su.webp",
+  "/illustrations/oz.jpg",
+];
+
+function HeroCovers() {
+  return (
+    <div className={styles.coverGallery} aria-hidden="true">
+      {[0, 1].map((group) => (
+        <div
+          className={group === 0 ? styles.leftCovers : styles.rightCovers}
+          key={group}
+        >
+          {heroCovers.slice(group * 4, group * 4 + 4).map((src, index) => (
+            <span className={styles.heroCover} key={src + index}>
+              <img
+                src={src}
+                alt=""
+                width="120"
+                height="176"
+                draggable={false}
+                decoding="async"
+              />
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Shelf({
   mode,
   title,
@@ -75,10 +112,7 @@ export function HomePage() {
     <div>
       <section className={styles.hero}>
         <div className={styles.heroInner}>
-          <div className={styles.leftCovers} aria-hidden="true">
-            <img src="/illustrations/oz.jpg" alt="" />
-            <img src="/illustrations/alice.jpg" alt="" />
-          </div>
+          <HeroCovers />
           <div className={styles.heroCopy}>
             <h1>
               SÁCH CŨ.
@@ -93,15 +127,6 @@ export function HomePage() {
               <br />
               Tìm, mua bán và đổi sách cũ tại TP.HCM.
             </p>
-          </div>
-          <div className={styles.mobileCovers} aria-hidden="true">
-            <img src="/illustrations/alice.jpg" alt="" />
-            <img src="/illustrations/oz.jpg" alt="" />
-            <img src="/illustrations/pride.jpg" alt="" />
-          </div>
-          <div className={styles.rightCovers} aria-hidden="true">
-            <img src="/illustrations/pride.jpg" alt="" />
-            <img src="/illustrations/oz.jpg" alt="" />
           </div>
           <form
             role="search"
@@ -128,7 +153,7 @@ export function HomePage() {
           </form>
         </div>
         <p className={styles.caption}>
-          Bìa tư liệu dùng để minh họa · Ảnh sách đang đăng ở bên dưới
+          Bìa sách dùng để minh họa · Ảnh sách đang đăng ở bên dưới
         </p>
       </section>
       <Shelf

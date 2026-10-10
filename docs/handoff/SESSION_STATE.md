@@ -8,6 +8,13 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `e0b739f`, chủ dự án yêu cầu thêm bốn bìa và hover hero. Đã giữ bốn vị trí
+  cũ thành tám, hai cụm2×2 desktop/4×2 mobile dưới search; hover phóng/nâng/bóng,
+  touch tĩnh/reduced-motion không phóng. Focused browser QA1440–320px100/130%
+  PASS đủ ảnh/không tràn/hover reset/reduced-motion/search Enter; layout assessor
+  xác nhận yêu cầu đạt. Build/typecheck/lint0error6warning cũ/docs/diff PASS;
+  chứng cứ và nguồn ảnh ở brief. Checkpoint subject
+  `feat(web): arrange eight hero covers and add hover depth`.
 - 10/10: chủ dự án báo đã merge PR31; fetch xác nhận main `dec19b3` chứa merge.
   Primary đã fast-forward sạch rồi tạo `codex/web-member-redesign` từ main đó.
   Managed worktree Android/pilot và local config/dataset được giữ.
