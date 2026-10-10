@@ -8,15 +8,13 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
-- Sau `62352b5`, thêm cảnh cáo/đồi mùa thu full-bleed trước footer Home,
-  thay posting CTA theo duyệt. Dùng ảnh gốc chủ dự án/WebP1920×1080/~95KB;
-  CSS frame đáy giữ tỷ lệ, mobile center/min960px. Home footer margin0; route
-  khác giữ spacing, đủ link đăng header/bookmark/footer. Hero/tán lá/24 motif/kệ giữ nguyên.
-  Node24.19.0 build/typecheck/lint PASS (6 warning cũ); CUA1535/850/390/320
-  không tràn ngang/gap footer≈0; /books giữ margin72px. Docs/diff PASS.
-  [Evidence](../design/WEB_MEMBER_REDESIGN.md). Backend/native/human/200% NOT RUN; READINESS giữ nguyên.
-  Checkpoint subject `style(web): close home with the autumn fox landscape`; local, chưa push.
-  Bước tiếp: chủ dự án duyệt tổng thể cảnh mùa thu Home.
+- Sau `252684f`, đưa lại nguyên khối “Đọc xong rồi? Để sách đi tiếp.” và
+  link /sell trước cảnh cáo/đồi theo yêu cầu chủ dự án. Giữ toàn bộ cảnh mùa thu,
+  hero/bookmarks/footer; không thay API/routes. Node24.19.0 build/typecheck PASS.
+  CUA1535×1000/390×844/320×844 không tràn ngang, đủ lời nhắn/link, cảnh sau CTA.
+  Docs/diff PASS. [Evidence](../design/WEB_MEMBER_REDESIGN.md). Backend/native/human/200% NOT RUN; READINESS giữ nguyên.
+  Checkpoint subject `fix(web): restore posting invitation above autumn landscape`; local, chưa push.
+  Bước tiếp: chủ dự án duyệt tổng thể Home với cả CTA và cảnh cáo.
 - Sau `912ecec`, giữ hero y nguyên; bookmark desktop144px/chim88px/padding đáy24px.
   Mobile152px/88px không đổi. Build/typecheck PASS; CUA1535×735/1366×768 hàng
   đủ trong khung đầu,390px vẫn2×2; không tràn ngang. [Evidence](../design/WEB_MEMBER_REDESIGN.md).

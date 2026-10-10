@@ -902,6 +902,56 @@
 .exchangeBooks .loading {
   background: var(--shop-paper);
 }
+.posting {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+  padding: 36px 40px;
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  border-radius: 12px;
+  margin-top: 32px;
+}
+.posting h2 {
+  font: 400 clamp(2rem, 3vw, 2.5rem)/1.35 var(--shop-display);
+  margin: 0 0 16px;
+}
+.posting h2 span {
+  color: var(--shop-yellow);
+}
+.posting p {
+  font-size: 0.875rem;
+  line-height: 1.8;
+  margin: 0;
+}
+.postingAction {
+  flex-shrink: 0;
+}
+.posting a {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+  min-height: 48px;
+  border-radius: 8px;
+  color: var(--shop-wine);
+  background: var(--shop-cream);
+  font-weight: 700;
+  text-decoration: none;
+}
+.posting a:hover {
+  background: var(--shop-yellow);
+}
+.postingAction p {
+  text-align: center;
+  font-size: 0.8125rem;
+  margin-top: 12px;
+}
+.posting :focus-visible {
+  outline-color: var(--shop-cream);
+}
 .autumnClosing {
   position: relative;
   z-index: 1;
@@ -980,6 +1030,12 @@
   }
   .budgetBanners {
     grid-template-columns: 1fr;
+  }
+  .posting {
+    flex-wrap: wrap;
+  }
+  .postingAction {
+    max-width: 100%;
   }
 }
 @media (max-width: 600px) {
@@ -1083,6 +1139,17 @@
   }
   .exchangeSection {
     gap: 24px;
+  }
+  .posting {
+    padding: 28px 24px;
+    gap: 24px;
+    margin-top: 24px;
+  }
+  .postingAction {
+    width: 100%;
+  }
+  .posting h2 {
+    font-size: 2rem;
   }
   .state,
   .loading {

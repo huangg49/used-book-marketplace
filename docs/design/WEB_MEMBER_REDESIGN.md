@@ -33,6 +33,16 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Home — catalog xem trước để làm UX/UI
 
+Sau `252684f`, chủ dự án yêu cầu đưa lại “Đọc xong rồi? Để sách đi tiếp.”:
+khôi phục nguyên khối wine posting, mô tả và link /sell trước cảnh cáo/đồi.
+Giữ ảnh cảnh/tán lá/24 motif/hero/footer nối liền; không thay API/routes.
+Node24.19.0 build/typecheck PASS (bundle warning cũ); CUA1535×1000/390×844/
+320×844 không tràn ngang, lời nhắn đủ/link /sell/cảnh nằm sau CTA.
+[Desktop](../../.impeccable/review/web-member/home-posting-restored-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-posting-restored-mobile.jpg).
+Docs/diff PASS; backend/native/human/200% NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `fix(web): restore posting invitation above autumn landscape`; local, chưa push.
+
 Sau `62352b5`, hoàn tất bước cảnh cáo/đồi trước footer theo duyệt chủ dự án.
 Dùng chính Background demo.png, encode toàn ảnh WebP1920×1080/94602byte,
 không sinh lại/crop/mask; CSS frame phần dưới giữ tỷ lệ, width100%/min960px,

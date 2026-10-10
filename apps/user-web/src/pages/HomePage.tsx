@@ -11,6 +11,7 @@ import {
   ArrowRight,
   Search,
   Repeat2,
+  Plus,
   BookOpen,
 } from "lucide-react";
 import { ROUTES, searchUrl } from "../lib/routes";
@@ -734,6 +735,22 @@ export function HomePage() {
           </p>
           {preview && <TopicShelves />}
           <ExchangeShelf preview={preview} />
+          <section className={styles.posting} aria-labelledby="posting-title">
+            <div>
+              <h2 id="posting-title">
+                Đọc xong rồi?
+                <br />
+                <span>Để sách đi tiếp.</span>
+              </h2>
+              <p>Chụp ảnh, ghi rõ tình trạng và đăng sách để bán hoặc đổi.</p>
+            </div>
+            <div className={styles.postingAction}>
+              <Link to={ROUTES.sell}>
+                Đăng sách của bạn <Plus size={20} aria-hidden="true" />
+              </Link>
+              <p>Mỗi bản sách có ảnh và mô tả riêng.</p>
+            </div>
+          </section>
         </div>
         <div className={styles.autumnClosing} aria-hidden="true">
           <img
