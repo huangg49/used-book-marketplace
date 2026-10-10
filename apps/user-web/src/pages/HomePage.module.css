@@ -82,7 +82,6 @@
   grid-row: 1;
   gap: 36px 22px;
   padding: 12px 8px 32px;
-  animation: coverSettle 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .leftCovers {
   grid-column: 1;
@@ -91,17 +90,32 @@
   grid-column: 3;
 }
 .heroCover {
+  --gather-x: -18px;
+  --gather-angle: -5deg;
   position: relative;
   display: block;
   height: 176px;
   min-width: 0;
   rotate: -7deg;
+  animation: bookGather 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-play-state: paused;
+}
+.heroCover:nth-child(2) {
+  animation-delay: 60ms;
+}
+.heroCover:nth-child(3) {
+  animation-delay: 180ms;
+}
+.heroCover:nth-child(4) {
+  animation-delay: 100ms;
 }
 .heroCover:nth-child(even) {
   rotate: 7deg;
   translate: 0 24px;
 }
 .rightCovers .heroCover {
+  --gather-x: 18px;
+  --gather-angle: 5deg;
   rotate: 6deg;
 }
 .rightCovers .heroCover:nth-child(even) {
@@ -222,7 +236,8 @@
 .rightCovers .coverMotion {
   animation-direction: reverse;
 }
-.coverGallery[data-moving="true"] .coverMotion {
+.coverGallery[data-moving="true"] .coverMotion,
+.coverGallery[data-moving="true"] .heroCover {
   animation-play-state: running;
 }
 @keyframes coverSway {
@@ -246,20 +261,21 @@
       drop-shadow(2px 5px 3px #21000099) drop-shadow(12px 26px 22px #190000b3);
   }
 }
-@keyframes coverSettle {
+@keyframes bookGather {
   from {
-    translate: 0 14px;
+    transform: translate(var(--gather-x), 12px) rotate(var(--gather-angle)) scale(0.96);
+    opacity: 0.65;
   }
   to {
-    translate: 0 0;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 1;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   /* Owner explicitly requests hero motion regardless of OS preference.
      Keep this exception scoped; offscreen/hidden guards still apply. */
-  .leftCovers,
-  .rightCovers {
-    animation-duration: 0.8s !important;
+  .heroCover {
+    animation-duration: 600ms !important;
     animation-iteration-count: 1 !important;
   }
   .heroCover img {
@@ -378,6 +394,7 @@
 .autumnMotif {
   --motif-size: 48px;
   --motif-angle: 0deg;
+  --motif-opacity: 0.3;
   position: absolute;
   left: var(--ornament-edge);
   width: var(--motif-size);
@@ -1082,6 +1099,168 @@
   object-position: center bottom;
   pointer-events: none;
   user-select: none;
+  transform-origin: 50% 100%;
+}
+
+/* Paper controls respond together; the shelf metadata stays still. */
+.home {
+  --home-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+.addedBook {
+  min-width: 0;
+}
+.addedBook > article {
+  height: 100%;
+}
+.home article > div:first-child > img {
+  transition: transform 240ms var(--home-ease), filter 240ms ease-out;
+}
+.home article:focus-within > div:first-child > img {
+  transform: translateY(-5px) scale(1.025);
+  filter: drop-shadow(2px 16px 12px #28191438);
+}
+.categoryChoices button,
+.shelfFilters button {
+  transition: background-color 150ms ease-out, color 150ms ease-out,
+    border-color 150ms ease-out, transform 120ms var(--home-ease);
+}
+.search button,
+.more,
+.posting a {
+  transition: background-color 160ms ease-out, transform 120ms var(--home-ease);
+}
+.categoryChoices button:active,
+.shelfFilters button:active,
+.search button:active,
+.more:active,
+.posting a:active {
+  transform: translateY(1px) scale(0.98);
+}
+.more svg,
+.search button svg,
+.sectionHead > a svg,
+.exchangeIntro a svg,
+.budgetBanners a svg,
+.posting a svg {
+  transition: transform 200ms var(--home-ease);
+}
+.more:focus-visible svg,
+.search button:focus-visible svg,
+.sectionHead > a:focus-visible svg,
+.exchangeIntro a:focus-visible svg,
+.budgetBanners a:focus-visible svg {
+  transform: translateX(3px);
+}
+.bannerCovers img {
+  transform-origin: 50% 90%;
+  transition: transform 320ms var(--home-ease);
+}
+.budgetBanners a:focus-visible .bannerCovers img {
+  transform: translate(-4px, -4px) rotate(-4deg);
+}
+.budgetBanners a:focus-visible .bannerCovers img + img {
+  transform: translate(4px, -6px) rotate(4deg);
+}
+.posting a:focus-visible svg {
+  transform: rotate(90deg);
+}
+@media (hover: hover) and (pointer: fine) {
+  .home article:hover > div:first-child > img {
+    transform: translateY(-5px) scale(1.025);
+    filter: drop-shadow(2px 16px 12px #28191438);
+  }
+  .more:hover svg,
+  .search button:hover svg,
+  .sectionHead > a:hover svg,
+  .exchangeIntro a:hover svg,
+  .budgetBanners a:hover svg {
+    transform: translateX(3px);
+  }
+  .budgetBanners a:hover .bannerCovers img {
+    transform: translate(-4px, -4px) rotate(-4deg);
+  }
+  .budgetBanners a:hover .bannerCovers img + img {
+    transform: translate(4px, -6px) rotate(4deg);
+  }
+  .posting a:hover svg {
+    transform: rotate(90deg);
+  }
+}
+/* A few existing margin motifs drift locally, with a long resting interval.
+   Their individual observers pause even when another part of Home is visible. */
+@media (prefers-reduced-motion: no-preference) {
+  .canopyLeft,
+  .canopyRight {
+    animation: canopyBreeze 12s ease-in-out infinite;
+    animation-play-state: paused;
+    transform-origin: left top;
+  }
+  .canopyRight {
+    transform-origin: right top;
+    animation-direction: reverse;
+    animation-delay: -5s;
+  }
+  .autumnCanopies[data-moving="true"] > span {
+    animation-play-state: running;
+  }
+  .autumnMotif[data-home-loop] {
+    animation: marginLeafDrift 16s ease-in-out infinite;
+    animation-play-state: paused;
+  }
+  .autumnMotif[data-home-loop]:nth-child(even) {
+    animation-delay: -7s;
+    animation-duration: 19s;
+    --leaf-drift-x: -10px;
+  }
+  .autumnMotif[data-moving="true"] {
+    animation-play-state: running;
+  }
+}
+@keyframes canopyBreeze {
+  0%, 100% { transform: rotate(-0.35deg); }
+  50% { transform: rotate(0.45deg); }
+}
+@keyframes marginLeafDrift {
+  0%, 38%, 100% {
+    transform: translate(0, 0) rotate(var(--motif-angle));
+    opacity: var(--motif-opacity);
+  }
+  68% {
+    transform: translate(var(--leaf-drift-x, 10px), 24px) rotate(calc(var(--motif-angle) + 18deg));
+    opacity: var(--motif-opacity);
+  }
+  82% {
+    transform: translate(0, 40px) rotate(calc(var(--motif-angle) + 28deg));
+    opacity: 0;
+  }
+  83% {
+    transform: translate(0, -8px) rotate(var(--motif-angle));
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* New feedback keeps a short color transition; existing owner-approved hero,
+     bookmark and navbar exceptions remain scoped to those components. */
+  .categoryChoices button,
+  .shelfFilters button,
+  .search button,
+  .more,
+  .posting a {
+    transition-property: background-color, color, border-color;
+    transition-duration: 100ms !important;
+  }
+  .home article > div:first-child > img,
+  .bannerCovers img,
+  .home button:active,
+  .posting a:active,
+  .more svg,
+  .search button svg,
+  .sectionHead > a svg,
+  .exchangeIntro a svg,
+  .budgetBanners a svg,
+  .posting a svg {
+    transform: none !important;
+  }
 }
 @media (min-width: 1600px) {
   .grid {
@@ -1181,6 +1360,7 @@
     --ornament-edge: -4px;
   }
   .autumnMotif {
+    --motif-opacity: 0.22;
     width: min(var(--motif-size), 30px);
     height: min(var(--motif-size), 30px);
     opacity: 0.22;

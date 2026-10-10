@@ -2,7 +2,7 @@
 version: 1
 slug: "apps-user-web-src-pages-homepage-tsx"
 primary_target: "apps/user-web/src/pages/HomePage.tsx"
-related_targets: ["apps/user-web/src/pages/HomePage.module.css", "apps/user-web/src/components/BookCard.tsx", "apps/user-web/src/components/BookCard.module.css", "apps/user-web/src/components/HomeBookCard.tsx", "apps/user-web/src/services/home-shelves.ts"]
+related_targets: ["apps/user-web/src/pages/home-motion.ts", "apps/user-web/src/pages/HomePage.module.css", "apps/user-web/src/components/BookCard.tsx", "apps/user-web/src/components/BookCard.module.css", "apps/user-web/src/components/HomeBookCard.tsx", "apps/user-web/src/services/home-shelves.ts"]
 ---
 
 # Home — discovery below the approved hero
@@ -50,7 +50,7 @@ clear category/reset visible10. Loading/empty/error/retry and pending flags rema
 truthful; request failures hide stale cards. Listing cards never use decorative
 covers as fallback. Banner covers are reused owner-supplied illustrations with
 a visible illustration/price disclaimer. All buttons/links keyboard-operable;
-no additional continuous animation. No invented discounts or totals.
+no continuous animation in shelf content. Guarded canopy/margin motion is now approved below. No invented discounts or totals.
 
 FINISH: Bounded desktop/mobile/large-text/state evidence, one final detector,
 fresh independent finish reviewer and canonical documentation; local commit
@@ -114,3 +114,7 @@ keeping the penguin family and routes. Code-led local refinement; no new
 identity roll, replacement logo or raster screenshot used as runtime UI.
 Finish: desktop/mobile/narrow captures, keyboard focus and four navigation
 checks; generated image provenance/alpha, build/lint, independent review.
+
+## Approved Home animation extension —10/10/2026
+
+Home motion approved10/10: eight covers gather from their own flank over600ms with0/60/180/100ms delays, Alice/Dược sư last; independent sway and hover remain. Home-only card hover/focus lifts5px/scales1.025 over240ms, metadata stays still. Controls use150ms color/120ms press; budget covers fan over320ms. Committed filter results fade.72→1 over180ms (100ms reduced), interrupted animations cancel. Added visible books beyond page10 enter over220ms with at most144ms stagger; existing keyed cards remain still, offscreen additions do not replay on scroll. Two canopies sway12s/±.45deg; six of24 margin motifs drift40px over16/19s with a resting interval. Each region pauses outside viewport/document hidden. New atmosphere is static under reduced motion, card/banner spatial feedback is suppressed; prior owner-approved hero/bookmark/navbar exceptions stay scoped. Fox settles12px/−2deg once over650ms on first visible entry, static for reduced motion. Layout/assets/routes/data unchanged; no motion dependency added. Static canonical sample records CSS/recipe; observers and WAAPI live in HomePage.tsx/home-motion.ts.

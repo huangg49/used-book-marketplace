@@ -27,6 +27,7 @@ import {
   homeShelfPageSize,
 } from "../services/home-shelves";
 import styles from "./HomePage.module.css";
+import { useHomeAtmosphere, useShelfTransition } from "./home-motion";
 
 function AutumnOrnaments() {
   const motifs = [
@@ -61,6 +62,7 @@ function AutumnOrnaments() {
         <span
           key={`${motif}-${index}`}
           className={`${styles.autumnMotif} ${motif}`}
+          data-home-loop={[4, 6, 7, 14, 18, 23].includes(index) ? "leaf" : undefined}
         />
       ))}
     </div>
@@ -186,6 +188,7 @@ const shelfFilters: { label: string; params: Record<string, string> }[] = [
 ];
 
 function LatestShelf({ preview }: { preview: boolean }) {
+  const results = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const [liveFilter, setFilter] = useState(0);
@@ -234,6 +237,11 @@ function LatestShelf({ preview }: { preview: boolean }) {
     ? items.filter((book) => book.book.category.trim() === category)
     : items;
   const shown = filtered.slice(0, visible);
+  useShelfTransition(
+    results,
+    `${selectionScope}:${category}`,
+    !result.isFetching && !result.isError,
+  );
   return (
     <>
       <section className={styles.categories} aria-labelledby="category-title">
@@ -398,10 +406,10 @@ function LatestShelf({ preview }: { preview: boolean }) {
                 " Còn bài đăng khác trong danh sách tìm sách."}
             </p>
           )}
-          <div className={styles.grid}>
+          <div className={styles.grid} ref={results}>
             {!result.isError &&
               shown.map((book, index) => (
-                <HomeBookCard key={book.id} book={book} index={index} />
+                <AddedShelfBook key={book.id} book={book} index={index} />
               ))}
           </div>
           {!result.isError && filtered.length > visible && (
@@ -422,6 +430,38 @@ function LatestShelf({ preview }: { preview: boolean }) {
         </div>
       </section>
     </>
+  );
+}
+
+function AddedShelfBook(props: Parameters<typeof HomeBookCard>[0]) {
+  const node = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const card = node.current;
+    if (!card || props.index < homeShelfPageSize) return;
+    const bounds = card.getBoundingClientRect();
+    if (bounds.top >= window.innerHeight || bounds.bottom <= 0) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const animation = card.animate(
+      reduced
+        ? [{ opacity: 0.75 }, { opacity: 1 }]
+        : [
+            { opacity: 0.75, transform: "translateY(6px)" },
+            { opacity: 1, transform: "translateY(0)" },
+          ],
+      {
+        duration: reduced ? 100 : 220,
+        delay: reduced ? 0 : (props.index % homeShelfPageSize) * 16,
+        easing: "cubic-bezier(.16,1,.3,1)",
+        fill: "backwards",
+      },
+    );
+    return () => animation.cancel();
+    // Existing keyed books must not replay when the page size changes.
+  }, [props.index]);
+  return (
+    <div ref={node} className={styles.addedBook}>
+      <HomeBookCard {...props} />
+    </div>
   );
 }
 
@@ -524,6 +564,8 @@ function ExchangeShelf({ preview }: { preview: boolean }) {
   );
 }
 export function HomePage() {
+  const page = useRef<HTMLDivElement>(null);
+  useHomeAtmosphere(page);
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
@@ -535,7 +577,7 @@ export function HomePage() {
         ?.scrollIntoView({ block: "start" });
   }, [preview, location.key, location.hash]);
   return (
-    <div>
+    <div ref={page} className={styles.home}>
       <section className={styles.hero}>
         <div className={styles.heroArtwork} aria-hidden="true">
           <img
@@ -622,7 +664,7 @@ export function HomePage() {
       </section>
       <div className={styles.marketplace}>
         <AutumnOrnaments />
-        <div className={styles.autumnCanopies} aria-hidden="true">
+        <div className={styles.autumnCanopies} aria-hidden="true" data-home-loop="canopy">
           <span className={styles.canopyLeft} />
           <span className={styles.canopyRight} />
         </div>
@@ -770,6 +812,7 @@ export function HomePage() {
           </section>
             <img
               className={styles.closingFox}
+              data-home-arrival="fox"
               src="/illustrations/autumn/fox-foreground.webp"
               alt=""
               aria-hidden="true"

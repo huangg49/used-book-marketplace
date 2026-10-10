@@ -31,6 +31,31 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
   để hành trình kiểm thử liên tục. Chưa redesign toàn form, dashboard, đăng ký,
   chat, đấu giá, admin hay Flutter; Android giữ checkpoint riêng.
 
+## Home — animation đã duyệt10/10
+
+Sau `2f86adc`, tám bìa gather từ hai phía600ms, delay0/60/180/100ms; Alice và
+Dược sư kết nhịp. Sway/hover độc lập và footprint giữ nguyên. Feedback Home-only:
+card lift5px/scale1.025/240ms, controls150ms/press120ms, banner fan320ms. Filter
+chỉ fade kết quả đã tải180ms/100ms reduced; card thêm đang hiện enter220ms,
+stagger tối đa144ms; keyed card cũ không chạy lại. Hai tán lá breeze12s; sáu
+trong24 motif drift40px/16–19s có quãng nghỉ, observer riêng/visibility guards.
+Fox settle12px/−2deg/650ms một lần. Hiệu ứng mới giảm spatial motion theo OS;
+ngoại lệ hero/bookmark/navbar đã duyệt giữ riêng. Không thêm dependency/asset,
+đổi API/routes/session/data hay thay layout. Nội dung mặc định vẫn hiện.
+
+Build/typecheck/22unit PASS; lint0error/6warning cũ; Node24.12 thấp hơn engine
+>=24.15 và bundle>500KB vẫn có warning. Docs/diff PASS. Detector một lần8advisory
+màu/type cũ; source reviewer độc lập `/root/home_motion_finish` SHIP/không blocker.
+CUA1535×735/1100×900/390×844/320×844 không tràn,8bìa tải, filter Manga→Exchange→All,
+show-more10→20 và keyboard title focus PASS; hero/7 vùng loop pause ở footer.
+CUA reduced-motion=true: hero gather/sway giữ riêng, nền mới static và feedback
+mới không dịch chuyển; backing bookmark vẫn2px3px. Normal-motion atmosphere/fox,
+FPS, document-hidden simulation, API integration/native/human/200% NOT RUN.
+[Desktop](../../.impeccable/review/web-member/home-motion-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-motion-mobile.jpg),
+[QA](../../.impeccable/review/web-member/home-motion-qa.json).
+READINESS không đổi; local commit, chưa push/PR/merge/deploy.
+
 ## Home — catalog xem trước để làm UX/UI
 
 Sau `3834fde`, chủ dự án duyệt tám bìa thành hai cụm kích thước đa dạng,

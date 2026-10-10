@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-10",
+  "sourceSubject": "feat(web): choreograph home bookshop motion",
+  "viewports": [
+    [
+      1535,
+      735
+    ],
+    [
+      1100,
+      900
+    ],
+    [
+      390,
+      844
+    ],
+    [
+      320,
+      844
+    ]
+  ],
+  "reducedMotion": true,
+  "checks": {
+    "overflow": "PASS",
+    "heroCovers": "8 loaded",
+    "filters": "Manga → Exchange → All",
+    "showMore": "10 → 20",
+    "keyboard": "Title focus",
+    "offscreen": "Hero and all7 atmosphere targets paused at footer",
+    "bookmarkBacking": "translate2px3px preserved"
+  },
+  "notRun": [
+    "normal-motion atmosphere and fox visual timing",
+    "FPS",
+    "document-hidden simulation",
+    "API integration",
+    "native",
+    "human acceptance",
+    "200%"
+  ],
+  "sourceReview": "home_motion_finish: SHIP; no material blockers",
+  "images": [
+    {
+      "file": "home-motion-desktop.jpg",
+      "sha256": "1d845c0b6c0ece689e3c8b3b835597effeb20f7bfd57215833bd1f92a51bb420"
+    },
+    {
+      "file": "home-motion-mobile.jpg",
+      "sha256": "5ccbe14b5adad6e5550320533d0177dabc214456050adb52c7066a119709a33a"
+    }
+  ]
+}

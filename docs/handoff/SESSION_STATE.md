@@ -8,17 +8,20 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
-- Sau `3834fde`, tám bìa hero thành hai cụm chồng nhẹ/kích thước đa dạng,
-  Alice trái/Dược sư phải dẫn cụm; giữ headline/search/footprint/motion/UI khác.
-  Desktop unit176/stage432, laptop unit theo vh; <=1100 tám cột/<=800 bốn cột,
-  focal scale1.08 không tăng flow. Build/typecheck/lint PASS (0error/6warning cũ).
-  CUA1535×735/1535×900/1100×900/390×844/320×844 đủ tám ảnh/không tràn;
-  actual hover Alice/Dược sư/SAO PASS z3/scale1.12/lift8px. Layout assessment
-  độc lập + detector trước/sau0finding; finish reviewer SHIP/không fix.
-  Canonical scoped merge; docs/diff PASS. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
-  OS-motion/no-pause limitation cũ giữ nguyên; backend/native/human/200% NOT RUN.
-  READINESS giữ nguyên. Checkpoint subject `style(web): layer hero books around Alice and Duoc su`; local, chưa push.
-  Bước tiếp: chủ dự án xem hai cụm bìa mới.
+- Sau `2f86adc`, triển khai motion Home đã được chủ dự án duyệt: tám bìa
+  gather600ms/lệch nhịp, Alice/Dược sư cuối; giữ layout/sway/hover. Home-only
+  feedback cho filter/card/banner/CTA; kết quả đã tải fade180ms, chỉ card thêm
+  đang hiện mới enter. Hai tán lá/sáu motif có loop theo viewport/visibility,
+  cáo settle650ms một lần. Hiệu ứng mới giảm chuyển động theo OS; ngoại lệ
+  hero/bookmark/navbar đã duyệt giữ riêng. Không đổi API/routes/data/dependency.
+  Build/typecheck/22test PASS, lint0error/6warning cũ; docs/diff PASS.
+  CUA1535×735/1100×900/390×844/320×844 không tràn, đủ8bìa; filter/show-more
+  10→20/keyboard và offscreen guard PASS. CUA reduced=true; normal-motion
+  atmosphere/fox/FPS/document-hidden simulation/backend/native/human NOT RUN.
+  Source reviewer độc lập SHIP; detector8advisory màu/type cũ. DESIGN/canonical/
+  surface được cập nhật. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
+  READINESS giữ nguyên. Checkpoint subject `feat(web): choreograph home bookshop motion`;
+  local, chưa push. Bước tiếp: chủ dự án xem Home; xem trực tiếp nền ở OS-motion đầy đủ.
 - Sau `ed24784`, thay Chúa nhẫn thứ hai ở hero bằng Truyện Kiều — Nguyễn Du
   do chủ dự án gửi; giữ một Chúa nhẫn và đủ tám bìa, bố cục/hiệu ứng không đổi.
   Asset WebP363×560/~50KB có provenance/hash. Build/typecheck PASS;
