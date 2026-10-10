@@ -31,6 +31,37 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
   để hành trình kiểm thử liên tục. Chưa redesign toàn form, dashboard, đăng ký,
   chat, đấu giá, admin hay Flutter; Android giữ checkpoint riêng.
 
+## Chi tiết — gallery ảnh bản sách11/10
+
+Sau `4fec833`, hoàn thiện nhóm Chi tiết theo kế hoạch đã duyệt. Gallery contain
+có thumbnail64×80, nút xem ảnh lớn44px và dialog native; ảnh toàn vẹn, chọn ảnh
+bằng thumbnail/mũi tên, Escape trả focus và khôi phục cuộn. Desktop vùng ảnh
+co theo chiều cao viewport; mobile xếp một cột. Tên dài wrap, hai giá tách nhãn,
+tình trạng và metadata chia cột dưới summary. Link Về kệ sách giữ query xuất phát.
+Giữ luồng giữ sách24h/mở chat, quyền và receipt/version/idempotency hiện có.
+
+Node24.19: build/typecheck PASS,25unit/5file PASS, lint0error/6warning cũ; bundle
+warning cũ. CUA1535×735/1366×768/390×844/320×735 không tràn ngang, chọn ba ảnh,
+viewer contain ảnh ngang, keyboard/Escape/focus/body-scroll PASS. Khách tới login
+đúng returnUrl; Back giữ tình trạng/hình thức. ID sai và API mất kết nối có thông
+báo/phục hồi; nút thử lại khi API vẫn tắt giữ lỗi, chưa chứng minh phục hồi server.
+QA Nest/Mongo *_test riêng, storage fake; một bài [QA] có bìa Standard Ebooks
+chuyển từ SVG có nguồn và hai ảnh thử tỉ lệ khác nhau. Không phải ảnh bản sách
+rao bán thật, không là asset shipping. Fixture đã đóng/dọn đúng dữ liệu sở hữu.
+
+[Desktop](../../.impeccable/review/web-member/detail-gallery-desktop.jpg),
+[laptop](../../.impeccable/review/web-member/detail-gallery-laptop.jpg),
+[mobile](../../.impeccable/review/web-member/detail-gallery-mobile.jpg),
+[320px](../../.impeccable/review/web-member/detail-gallery-320.jpg),
+[vùng hành động](../../.impeccable/review/web-member/detail-gallery-mobile-action.jpg),
+[viewer desktop](../../.impeccable/review/web-member/detail-gallery-viewer-desktop.jpg),
+[viewer mobile](../../.impeccable/review/web-member/detail-gallery-viewer-mobile.jpg).
+Capture là bytes gốc từ CUA; content trừ scrollbar nên kích thước ảnh khác
+viewport DOM, không hậu kỳ. Detector một lượt6advisory palette/type/radius có
+chủ đích; không có finding cơ học. [Review độc lập SHIP](../../.impeccable/review/web-member/detail-gallery-finish.md),
+canonical scoped merge theo source. Owner/held, ảnh thiếu/lỗi, full integration,
+200%/native/human NOT RUN trong lượt này. READINESS giữ nguyên; local chưa push.
+
 ## Tìm sách — kệ gọn và bộ lọc11/10
 
 Sau kế hoạch `6d6b6a8`, triển khai nhóm đầu tiên đã được chủ dự án duyệt.

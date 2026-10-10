@@ -1,7 +1,7 @@
 # Kế hoạch thiết kế các trang Member web tiếp theo
 
 Lập10/10/2026 từ nguồn `b27047e`; chủ dự án đã duyệt triển khai.
-Cập nhật11/10: Tìm sách đã triển khai và hoàn tất review/canonical;
+Cập nhật11/10: Tìm sách và Chi tiết đã triển khai, hoàn tất review/canonical;
 các nhóm bên dưới vẫn là kế hoạch, không phải nghiệm thu toàn bộ.
 Chủ dự án chọn thứ tự: Tìm sách → Chi tiết sách → Đăng sách, sau đó tài khoản,
 chat và đấu giá. Phạm vi `apps/user-web`; Android/admin có kế hoạch riêng.
@@ -43,6 +43,10 @@ Hiện có `/books`, query API/URL và diện mạo đỏ–kem; đây là hoàn
   lặp/mất sách; tải/rỗng/lỗi/giá không hợp lệ đều có đường phục hồi.
 
 ## 2. Chi tiết sách — ảnh bản sách làm điểm nhấn
+
+Triển khai11/10: gallery thumbnail và dialog xem ảnh lớn, giữ toàn ảnh; nhãn
+giá/hành động rõ, thông tin tình trạng và metadata chia hai cột, quay lại đúng
+bộ lọc kệ. Review độc lập SHIP; phạm vi/giới hạn ở báo cáo evidence bên trên.
 
 Hiện có `/books/:id`, API thật và bố cục hai cột theo brand mới.
 

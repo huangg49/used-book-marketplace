@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowUpRight, MapPin, MessageCircle } from "lucide-react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle } from "lucide-react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { ListingPhoto } from "../components/BookCard";
+import { ListingGallery } from "../components/ListingGallery";
 import { conditions } from "../lib/listing-labels";
 import { useSession } from "../hooks/useSession";
 import { formatVnd, ROUTES } from "../lib/routes";
@@ -31,6 +31,7 @@ function purchaseError(error: unknown) {
 export function BookDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const state = useSession();
   const valid = /^[0-9a-f-]{36}$/i.test(id);
   const detail = useQuery({
@@ -45,7 +46,6 @@ export function BookDetailPage() {
     enabled: state.status === "authenticated",
     retry: false,
   });
-  const [photoIndex, setPhotoIndex] = useState(0);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,9 +54,16 @@ export function BookDetailPage() {
     version: number;
     key: ReturnType<typeof crypto.randomUUID>;
   } | null>(null);
+  const catalogReturn = location.state?.catalogReturn;
+  const returnTo =
+    typeof catalogReturn === "string" &&
+    (catalogReturn === ROUTES.search ||
+      catalogReturn.startsWith(ROUTES.search + "?"))
+      ? catalogReturn
+      : ROUTES.search;
   const back = (
-    <Link className={styles.back} to={ROUTES.search}>
-      ← Về kệ sách
+    <Link className={styles.back} to={returnTo}>
+      <ArrowLeft size={17} aria-hidden="true" /> Về kệ sách
     </Link>
   );
   if (
@@ -151,32 +158,7 @@ export function BookDetailPage() {
         </div>
       )}
       <div className={styles.grid}>
-        <section aria-label="Ảnh bản sách" className={styles.gallery}>
-          <div className={styles.coverPanel}>
-            <ListingPhoto
-              key={book.id + ":" + photoIndex}
-              book={book}
-              photoIndex={photoIndex}
-              eager
-            />
-          </div>
-          {book.photos.length > 1 && (
-            <div className={styles.photoChoices}>
-              {book.photos.map((photo, index) => (
-                <button
-                  key={photo.id}
-                  type="button"
-                  onClick={() => setPhotoIndex(index)}
-                  aria-pressed={photoIndex === index}
-                  aria-label={"Xem ảnh " + (index + 1)}
-                >
-                  Ảnh {index + 1}
-                </button>
-              ))}
-            </div>
-          )}
-          <p>Ảnh do người đăng cung cấp.</p>
-        </section>
+        <ListingGallery key={book.id + book.revisionId} book={book} />
         <article className={styles.content}>
           <h1>{book.book.title}</h1>
           <p className={styles.author}>
@@ -264,38 +246,42 @@ export function BookDetailPage() {
               nối API.
             </p>
           )}
-          <section className={styles.details}>
-            <h2>Tình trạng bản sách</h2>
-            <p className={styles.description}>
-              {book.description || "Người đăng chưa có mô tả thêm."}
-            </p>
-            <dl>
-              <div>
-                <dt>Ruột sách</dt>
-                <dd>{book.pages || "Chưa ghi rõ"}</dd>
-              </div>
-              <div>
-                <dt>Trang thiếu</dt>
-                <dd>
-                  {book.hasMissingPages
-                    ? "Có trang thiếu — xem mô tả ruột sách."
-                    : "Không có trang thiếu theo người đăng."}
-                </dd>
-              </div>
-              <div>
-                <dt>Bìa và gáy</dt>
-                <dd>{book.coverNote || "Chưa ghi rõ"}</dd>
-              </div>
-              <div>
-                <dt>Ghi chú, đánh dấu</dt>
-                <dd>{book.notes || "Chưa ghi rõ"}</dd>
-              </div>
-              <div>
-                <dt>Phụ kiện</dt>
-                <dd>{book.accessories || "Chưa ghi rõ"}</dd>
-              </div>
-            </dl>
-          </section>
+        </article>
+      </div>
+      <div className={styles.detailsGrid}>
+        <section className={styles.details}>
+          <h2>Tình trạng bản sách</h2>
+          <p className={styles.description}>
+            {book.description || "Người đăng chưa có mô tả thêm."}
+          </p>
+          <dl>
+            <div>
+              <dt>Ruột sách</dt>
+              <dd>{book.pages || "Chưa ghi rõ"}</dd>
+            </div>
+            <div>
+              <dt>Trang thiếu</dt>
+              <dd>
+                {book.hasMissingPages
+                  ? "Có trang thiếu — xem mô tả ruột sách."
+                  : "Không có trang thiếu theo người đăng."}
+              </dd>
+            </div>
+            <div>
+              <dt>Bìa và gáy</dt>
+              <dd>{book.coverNote || "Chưa ghi rõ"}</dd>
+            </div>
+            <div>
+              <dt>Ghi chú, đánh dấu</dt>
+              <dd>{book.notes || "Chưa ghi rõ"}</dd>
+            </div>
+            <div>
+              <dt>Phụ kiện</dt>
+              <dd>{book.accessories || "Chưa ghi rõ"}</dd>
+            </div>
+          </dl>
+        </section>
+        <div>
           <section className={styles.details}>
             <h2>Thông tin sách</h2>
             <dl>
@@ -305,7 +291,11 @@ export function BookDetailPage() {
               </div>
               <div>
                 <dt>Ngôn ngữ</dt>
-                <dd>{book.book.language}</dd>
+                <dd>
+                  {{ vi: "Tiếng Việt", en: "Tiếng Anh", ja: "Tiếng Nhật" }[
+                    book.book.language
+                  ] || book.book.language}
+                </dd>
               </div>
               {book.book.publisher && (
                 <div>
@@ -346,7 +336,7 @@ export function BookDetailPage() {
               không xác nhận tình trạng vật lý.
             </p>
           </section>
-        </article>
+        </div>
       </div>
       <ConfirmDialog
         isOpen={confirming}

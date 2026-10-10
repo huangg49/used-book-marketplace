@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-10T17:24:42.627Z",
+  "generatedAt": "2026-10-10T17:45:04.787Z",
   "title": "Design System: Lật lại",
   "extensions": {
     "colorMeta": {
@@ -410,6 +410,21 @@
           "oklch(95.00% 0.0420 166.56)"
         ],
         "purpose": "Scoped introduction and link text on Home cover-sage exchange ground; not a replacement for web wine or native forest."
+      },
+      "detail-label-ink": {
+        "role": "neutral",
+        "displayName": "Detail descriptive label ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0602 37.88)",
+          "oklch(26.43% 0.0602 37.88)",
+          "oklch(37.86% 0.0602 37.88)",
+          "oklch(49.29% 0.0602 37.88)",
+          "oklch(60.71% 0.0602 37.88)",
+          "oklch(72.14% 0.0602 37.88)",
+          "oklch(83.57% 0.0602 37.88)",
+          "oklch(95.00% 0.0602 37.88)"
+        ],
+        "purpose": "Condition/mode copy on the Detail photograph ground; intentional scoped palette advisory."
       }
     },
     "typographyMeta": {
@@ -423,7 +438,7 @@
       },
       "detail-title": {
         "displayName": "detail title",
-        "purpose": "Actual book title on Detail, using task typography."
+        "purpose": "Actual wrapping book title on Detail: clamp(1.75rem,2.5vw,2.125rem)/1.4; intentional scoped task scale."
       },
       "card-title": {
         "displayName": "card title",
@@ -516,6 +531,14 @@
       "home-card-title": {
         "displayName": "Home compact listing title",
         "purpose": "Optional compact BookCard uses bold15px/1.5 above600px; shared0.92rem below600px. Search/default card remains unchanged."
+      },
+      "detail-title-narrow": {
+        "displayName": "Narrow Detail title",
+        "purpose": "Be Vietnam Pro700 at1.65rem/1.4 at720px and below; natural title wrapping."
+      },
+      "detail-price-narrow": {
+        "displayName": "Narrow Detail price",
+        "purpose": "Labelled sale/exchange values use1.3rem at720px and below; desktop retains the price role."
       }
     },
     "shadows": [
@@ -548,6 +571,11 @@
         "name": "home-budget-illustration",
         "value": "drop-shadow(3px 10px 8px #28191430)",
         "purpose": "Decorative owner-supplied budget-banner covers only, never listing-photo evidence."
+      },
+      {
+        "name": "detail-photo-viewer",
+        "value": "0 24px 64px #2a130a40",
+        "purpose": "Protected Detail native image viewer; soft offset depth, backdrop #281914b3."
       }
     ],
     "motion": [
@@ -810,6 +838,42 @@
         },
         "data": "URL q/mode/condition/sort/minSalePrice/maxSalePrice/cursor;limit20; page count only; no category API. Explicit DEV preview91 Open Library editions, separately labelled/source-linked; no live fallback.",
         "motion": "150ms ease-out button color/background and shared image hover; global reduction retained, no Home exceptions."
+      },
+      {
+        "name": "detail-gallery-and-facts",
+        "source": "apps/user-web/src/pages/BookDetailPage.module.css;apps/user-web/src/components/ListingGallery.module.css",
+        "scope": "Approved remaining-pages plan section2; Detail only. No new shipping raster assets.",
+        "columns": {
+          "desktop": "1fr/1.05fr;56px gap for summary and lower facts",
+          "tablet": "1000px:36px gap/24px page padding",
+          "narrow": "720px:one column;summary24px gap/lower facts32px gap/20px page padding",
+          "factsSeparation": "48px margin/32px top padding;720px:32px/28px"
+        },
+        "gallery": {
+          "position": "sticky top108px;720px:static centered max480px",
+          "photo": "contain;clamp(360px,52vh,480px) height;32px32px64px padding",
+          "tabletPhoto": "1000px:420px;24px24px64px padding",
+          "narrowPhoto": "720px:340px",
+          "thumbnails": "64x80px/6px radius;10px gap;selected2px wine border/aria-pressed",
+          "controls": "expand min44px;gallery focus2px wine/3px offset",
+          "photos": "Existing public listing media API and ListingPhoto recovery; no catalog substitution."
+        },
+        "viewer": {
+          "element": "native dialog/showModal",
+          "width": "min(960px, calc(100% - 32px))",
+          "maxHeight": "calc(100dvh - 32px)",
+          "padding": "20px24px;720px:14px",
+          "radius": "12px",
+          "largePhoto": "contain;min(65dvh,680px) height;20px padding/8px radius",
+          "narrow": "720px:20px total clearance;max-height calc(100dvh - 20px);60dvh stage/14px stage padding",
+          "shadow": "0 24px 64px #2a130a40",
+          "backdrop": "#281914b3",
+          "behavior": "Native modal focus protection/return focus;labelled44px controls;ArrowLeft/ArrowRight cycling;Escape/native close;body scroll restoration on close/unmount."
+        },
+        "navigation": "BookCard navigation state catalogReturn validates /books or /books? query; Detail returns there or falls back to /books.",
+        "motion": "No perpetual gallery motion or fixed mobile action overlay; global reduction retained.",
+        "evidence": "Seven detail-gallery-*.jpg captures; independent AI source/image review SHIP, no material fixes. Real Nest/Mongo *_test with fake storage/synthetic QA photographs and data, not shipping assets. Lower facts partly captured; reviewer did not rerun reported browser/build checks. Six detector advisories intentional scoped palette/type/radius roles.",
+        "limits": "Full owner/held integration,current-slice missing/error photo browser exercise,200% text/zoom,native accessibility,human review NOT RUN;READINESS unchanged."
       }
     ]
   },

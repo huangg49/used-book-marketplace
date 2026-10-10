@@ -21,6 +21,7 @@ colors:
   cover-peach: "#f6d4bd"
   cover-lilac: "#e6dced"
   detail-ground: "#efe3cf"
+  detail-label-ink: "#5b3428"
   rn-forest: "#214B40"
   rn-paper: "#F5EFDF"
   rn-surface: "#FFFCF4"
@@ -55,10 +56,20 @@ typography:
     lineHeight: 1.2
   detail-title:
     fontFamily: "Be Vietnam Pro, sans-serif"
-    fontSize: "clamp(1.8rem, 3vw, 2.5rem)"
+    fontSize: "clamp(1.75rem, 2.5vw, 2.125rem)"
     fontWeight: 700
     lineHeight: 1.4
     letterSpacing: "-0.03em"
+  detail-title-narrow:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "1.65rem"
+    fontWeight: 700
+    lineHeight: 1.4
+    letterSpacing: "-0.03em"
+  detail-price-narrow:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "1.3rem"
+    fontWeight: 700
   card-title:
     fontFamily: "Be Vietnam Pro, sans-serif"
     fontSize: "1.05rem"
@@ -241,9 +252,26 @@ components:
     padding: "12px 40px"
   condition-label:
     backgroundColor: "{colors.detail-ground}"
-    textColor: "#5b3428"
+    textColor: "{colors.detail-label-ink}"
     rounded: "{rounded.badge}"
     padding: "7px 12px"
+  detail-gallery-photo:
+    backgroundColor: "{colors.detail-ground}"
+    rounded: "{rounded.panel}"
+    height: "clamp(360px, 52vh, 480px)"
+    padding: "32px 32px 64px"
+  detail-gallery-expand:
+    backgroundColor: "{colors.shop-paper}"
+    textColor: "{colors.shop-wine}"
+    rounded: "{rounded.control}"
+    height: "44px"
+    padding: "10px 14px"
+  detail-gallery-thumbnail:
+    backgroundColor: "{colors.shop-paper}"
+    rounded: "{rounded.badge}"
+    width: "64px"
+    height: "80px"
+    padding: "6px"
   cover-panel:
     backgroundColor: "{colors.cover-sand}"
     rounded: "{rounded.panel}"
@@ -317,6 +345,7 @@ The web palette moves from a dark wine shell to warm paper shelves and soft cove
 
 - **Web paper / ink / muted** (`shop-paper`, `shop-ink`, `shop-muted`): canvas, reading text and secondary metadata. Home's discovery field and state panels use `shop-shelf`, with paper category/catalog panels; the gallery and descriptive condition labels use `detail-ground`.
 - **Divider / control boundary** (`shop-line`, `shop-control`): quiet grouping versus the stronger Login, price-input, sort and radio boundary treatments.
+- **Detail label ink** (`detail-label-ink`): descriptive condition/mode text on the photograph ground; this is a scoped factual label role.
 - **Login scope:** the page binds the existing `shop-wine-hover`, `shop-error` and `shop-shelf` values locally because those roles are absent from global CSS. This restores the canonical hover, error and password-eye surface colors without adding a palette identity.
 - **Incumbent RN colors** (`rn-*`): forest action/heading, paper canvas, surface navigation, shelf canvas, ink, muted, rust condition text, input border, divider and selected-navigation surface. These are preserved from [RN theme](apps/mobile-react-native/src/core/ui/theme.ts) and [brand identity](packages/brand/v1.1/identity.tokens.json), not applied to the new web slice.
 
@@ -335,7 +364,7 @@ Both families are self-hosted in web `public/fonts`, with OFL files and [source 
 - **Headline:** expressive discovery type outside the scoped Home task headings. Search uses the scoped Anton `search-heading` (40px/1.2), reducing to `search-heading-narrow` (32px/1.2) at600px; its yellow punctuation is the only heading accent.
 - **Home discovery:** category and new-listing H2s use bold Be Vietnam Pro `home-section` (24px), reducing to `home-section-narrow` (20px) at600px. These are task headings, intentionally quieter than the approved hero. Anton is reserved for budget banners (`home-budget`,28–36px,28px at600px), exchange introduction (`home-exchange`,32px) and posting band (`home-posting`,32–40px,32px at600px), all with1.35 line height. These distinct roles explain the narrow H2/posting detector advisories; they are not global type replacements.
 - **Login:** Anton `login-story` carries the two-line photograph story in cream/yellow; bold Be Vietnam Pro `login-title` carries the form greeting, reducing to 1.75rem below 440px. The greeting stays in one normal inline flow, fitting one line at desktop/390px/320px at default text size and wrapping naturally with large text. A 4px shelf-yellow underline with an 8px offset emphasizes “nhau rồi.” Story copy uses `login-story-copy`; the task description uses `login-description`. Labels use `login-label`; recovery and registration text buttons use `login-action`. Error, inline availability help, registration prompt and home-link text use the `login-support` size. Inputs and submit text are 1rem, with a bold submit label. The photo credit (`login-credit`) and bottom brand note (`login-note`) are intentionally smaller secondary text, not task instructions; the credit link retains at least 44px of height. These two explicit roles account for the detector's size advisories without shrinking the task copy.
-- **Detail title / card title:** bold Be Vietnam Pro; narrow sizes are 1.65rem and 0.92rem respectively. Home's optional compact BookCard uses `home-card-title` (15px) above600px and the shared14.72px narrow title below it. Home compact titles show at most two lines, with full text retained in the DOM, accessible name and native title tooltip. Search now uses the same compact title behavior; the default BookCard recipe remains available elsewhere.
+- **Detail title / card title:** bold Be Vietnam Pro; Detail uses `detail-title` with natural wrapping and `detail-title-narrow` at720px, while the card narrow size is0.92rem. Home's optional compact BookCard uses `home-card-title` (15px) above600px and the shared14.72px narrow title below it. Home compact titles show at most two lines, with full text retained in the DOM, accessible name and native title tooltip. Search now uses the same compact title behavior; the default BookCard recipe remains available elsewhere.
 - **Body / label:** regular reading copy and bold controls. Supporting text is mostly 0.75–0.9rem with 1.6–1.9 line height; disclosure captions are smaller. Description text preserves line breaks; task explanations cap around 60–65ch.
 - **Price:** Detail uses 1.5rem, reducing to 1.3rem on narrow layouts; card prices use 1rem then 0.9rem. Both use tabular numerals and separate sale/exchange labels.
 - **RN:** one Be Vietnam Pro family with actual regular/bold faces, including the preserved `rn-*` roles. CSS units in this interchange map to RN logical pixels and retain system text scaling; web display type does not replace the RN type system.
@@ -346,7 +375,7 @@ Both families are self-hosted in web `public/fonts`, with OFL files and [source 
 
 Web shelves, header/footer and Detail use centered containers up to 1280px; Search uses its scoped1360px container; inner hero/posting content reaches 1200px. Typical desktop side padding is 40px, then 24px, then 20px on narrow screens. Reused gaps follow the frontmatter steps, with surface-specific 22px/28px/36px gaps where source uses them.
 
-Home catalog/topic shelves use five columns above1100px, six at1600px, four at1100px, three at850px and two at600px. Search uses five columns from1440px, four by default, three at1150px and two at600px, with28px20px gaps or24px14px at600px. Home discovery below the approved hero uses a1200px container,40px outer padding, four paper bookmark shortcuts, paper category/catalog panels and24–32px section gaps. Quick links use a narrower880px bookmark row and become two columns at1000px and budget banners stack at850px; outer padding becomes24px there, then16px at600px with20px16px panel padding. Home catalog/topic cards use24px16px gaps; exchange cards use20px gaps; both use24px16px at600px. The exchange introduction sits beside four cards with a220px left column and32px gap, moves above them at1100px, then becomes a single text flow at600px. Posting actions wrap at850px and fill the band width at600px. Search has a216px sidebar with36px gap and40px outer padding; at1150px the sidebar is190px with24px gap/padding. At900px the sidebar hides and a labelled filter button opens a native dialog. Its compact wine heading/search band has24px40px28px padding, a0.75fr/1.25fr title/search split and40px gap; at900px search moves beneath the heading, and at600px padding becomes22px16px24px with16px gap. Search stays a single field/action row. Catalog top padding is32px,20px at900px and12px at600px; outer padding becomes16px at600px. Mode buttons have explicit all-mode selection; condition radios have an all-condition choice. Detail pairs photograph and content with a 72px gap, reducing at 1000px and stacking at 720px.
+Home catalog/topic shelves use five columns above1100px, six at1600px, four at1100px, three at850px and two at600px. Search uses five columns from1440px, four by default, three at1150px and two at600px, with28px20px gaps or24px14px at600px. Home discovery below the approved hero uses a1200px container,40px outer padding, four paper bookmark shortcuts, paper category/catalog panels and24–32px section gaps. Quick links use a narrower880px bookmark row and become two columns at1000px and budget banners stack at850px; outer padding becomes24px there, then16px at600px with20px16px panel padding. Home catalog/topic cards use24px16px gaps; exchange cards use20px gaps; both use24px16px at600px. The exchange introduction sits beside four cards with a220px left column and32px gap, moves above them at1100px, then becomes a single text flow at600px. Posting actions wrap at850px and fill the band width at600px. Search has a216px sidebar with36px gap and40px outer padding; at1150px the sidebar is190px with24px gap/padding. At900px the sidebar hides and a labelled filter button opens a native dialog. Its compact wine heading/search band has24px40px28px padding, a0.75fr/1.25fr title/search split and40px gap; at900px search moves beneath the heading, and at600px padding becomes22px16px24px with16px gap. Search stays a single field/action row. Catalog top padding is32px,20px at900px and12px at600px; outer padding becomes16px at600px. Mode buttons have explicit all-mode selection; condition radios have an all-condition choice. Detail pairs its gallery and summary in1fr/1.05fr columns with56px gap,36px at1000px, then one column with24px gap at720px. Lower condition/bibliographic facts use the same columns/gaps, stacking with32px gap at720px; their top margin/padding is48px/32px, then32px/28px on mobile.
 
 Login uses a viewport-filling 45/55 split with `min-height:100dvh`, not a fixed-height lock. Its left scene uses an auto/1fr/auto grid: original Logo directly over the photograph, bottom-aligned story, then source credit. Logo padding is 32px vertically with clamp(32px,4vw,64px) sides; story padding is 64px on top and 20px below. The paper right column places a home action in a 64px utility row above a vertically centered form capped at 400px, with a quiet brand note below. Form padding is 16px vertically with clamp(24px,4vw,64px) sides; the note uses 8px 24px padding. At 900px and below the single-column layout retains a compact photographic logo area with 28px 24px padding, hides story/credit, and keeps home in its separate 56px paper-side utility row. At 440px and below form padding is 24px. Short viewports, large text, errors and help content grow the document naturally and may scroll. This Login composition follows its [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-loginpage-tsx.md); registration and the other shared-shell consumers keep their existing recipes.
 
@@ -372,6 +401,7 @@ Home's wine ground includes three original cream line illustrations: asymmetric 
 Owner-requested gentle Home sway uses a separate inner wrapper: ±3px vertical and ±1° rotation over6–7.5s, staggered by negative phase delays. The owner explicitly requested continuous sway during hover and removal of the pause/resume control. Hover image zoom stays independent; IntersectionObserver and visibilitychange still pause loops offscreen or in a hidden document. CSS restores normal duration/iteration even under OS reduced motion for these covers only. There is currently no visitor control to stop the loop; this is a known accessibility limitation, not an acceptance PASS. Description and search have more breathing room: desktop description top margin38px (compact32px), stage/search gap40px (compact36px), mobile description top margin28px. No other shelves animate continuously.
 - **Hero search:** `box-shadow: 0 12px 28px #2f00002e`.
 - **Modal:** `box-shadow: 0 18px 60px #28191440`; backdrop `#28191480`.
+- **Detail photo viewer:** `box-shadow: 0 24px 64px #2a130a40`; backdrop `#281914b3`. This soft offset depth belongs to the protected image viewer.
 
 ## Shapes
 
@@ -468,6 +498,14 @@ by this shared navigation refinement; Android/admin remain separate.
 ### Condition labels and confirmation
 
 Detail condition/mode labels are descriptive, softly filled rectangles rather than verification. ConfirmDialog uses a paper surface, readable task explanation, wine confirmation and outlined cancel, with modal backdrop and a narrow stacked action layout. Purchase wording explains a 24-hour reservation/chat without payment; visual styling must not turn that into a purchase-success promise.
+
+### Detail listing gallery
+
+Detail uses complete API listing photographs on `detail-ground`, with the selected image followed by64×80px thumbnail buttons, a selected wine border/`aria-pressed`, uploader caption and photo count. The gallery stays sticky at108px above720px, then becomes static and centered within480px. Its photo stage uses `detail-gallery-photo`, changes to420px high with24px24px64px padding at1000px and340px at720px. The labelled expand button and viewer controls retain44px minimum targets; gallery focus uses a2px wine outline at3px offset. Missing/loading/error/retry remain owned by the shared ListingPhoto component.
+
+The native `<dialog>` viewer caps its width at960px within32px viewport clearance, with20px24px padding,12px corners and internal vertical scroll within `calc(100dvh - 32px)`. Its contained large-photo stage is `min(65dvh, 680px)` high with20px padding and8px corners. At720px the viewer uses20px total clearance,14px padding and a60dvh photo stage. Native modal focus protection, labelled close/previous/next controls, ArrowLeft/ArrowRight cycling and Escape closure preserve focus return; body scroll restores on close/unmount. No perpetual gallery animation or fixed mobile action overlay is added. BookCard passes a validated originating `/books` query in navigation state; Detail's shelf return uses it or defaults to `/books`.
+
+The seven `detail-gallery-*.jpg` captures and [finish review](.impeccable/review/web-member/detail-gallery-finish.md) document this scoped refinement. Browser QA used real Nest/Mongo `*_test` with fake storage and synthetic QA photographs/data; these are evidence, not shipping raster assets. The independent AI reviewer returned **ship**, with no material fixes. Its source and seven-image review does not independently rerun browser checks; lower facts were reviewed in source and only partly captured. The one detector's six palette/type/radius advisories are intentional Detail roles recorded here, not a change to other screens. Full owner/held integration, current-slice missing/error photo browser exercise,200% zoom/text, native accessibility and human acceptance remain NOT RUN; release gates are unchanged.
 
 ### Login bookstore scene
 

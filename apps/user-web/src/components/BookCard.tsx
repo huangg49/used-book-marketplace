@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { BookOpen, ArrowUpRight } from "lucide-react";
 import { ROUTES, formatVnd } from "../lib/routes";
 import {
@@ -14,10 +14,12 @@ export function ListingPhoto({
   book,
   eager = false,
   photoIndex = 0,
+  alt,
 }: {
   book: PublicListing;
   eager?: boolean;
   photoIndex?: number;
+  alt?: string;
 }) {
   const photoId = book.photos[photoIndex]?.id;
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export function ListingPhoto({
     return (
       <img
         src={url}
-        alt={"Bìa sách " + book.book.title}
+        alt={alt || "Bìa sách " + book.book.title}
         loading={eager ? "eager" : "lazy"}
         onError={() => setFailedUrl(url)}
         className={styles.image}
@@ -72,12 +74,18 @@ export interface BookCardProps {
   compact?: boolean;
 }
 export function BookCard({ book, index, compact = false }: BookCardProps) {
+  const location = useLocation();
+  const returnState =
+    location.pathname === ROUTES.search
+      ? { catalogReturn: location.pathname + location.search }
+      : undefined;
   return (
     <article className={[styles.card, compact ? styles.compact : ""].join(" ")}>
       <div className={[styles.cover, styles["ground" + (index % 4)]].join(" ")}>
         <ListingPhoto book={book} />
         <Link
           to={ROUTES.bookDetail(book.id)}
+          state={returnState}
           className={styles.coverLink}
           aria-label={"Xem chi tiết " + book.book.title}
         />
@@ -97,6 +105,7 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
         <h3>
           <Link
             to={ROUTES.bookDetail(book.id)}
+            state={returnState}
             title={compact ? book.book.title : undefined}
           >
             {book.book.title}
@@ -119,7 +128,11 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
             </p>
           )}
         </div>
-        <Link className={styles.view} to={ROUTES.bookDetail(book.id)}>
+        <Link
+          className={styles.view}
+          to={ROUTES.bookDetail(book.id)}
+          state={returnState}
+        >
           Xem sách <ArrowUpRight size={16} aria-hidden="true" />
         </Link>
       </div>

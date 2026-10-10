@@ -18,7 +18,13 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   cho hai fix. docs/diff PASS. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
   Full integration/native/200%/human NOT RUN; READINESS không đổi.
   Checkpoint subject `feat(web): refine catalog search and mobile filters`;
-  local, chưa push. Bước tiếp: Chi tiết sách theo thứ tự đã duyệt.
+  local, chưa push. Chi tiết tiếp nối đã hoàn thiện gallery thumbnail/native
+  viewer, metadata hai cột và giữ query kệ khi quay lại. Build/typecheck25unit
+  PASS; lint0error/6warning cũ. CUA4viewport không tràn, viewer/keyboard/Escape/
+  focus/body-scroll, guest return và Back PASS; QA riêng đã dọn. Review SHIP,
+  canonical scoped merge; owner/held/ảnh lỗi/200%/native/human NOT RUN lượt này.
+  Checkpoint subject `feat(web): refine book detail photo gallery`; local chưa
+  push. Bước tiếp: Đăng sách theo thứ tự đã duyệt.
 - Sau `1101fac`, chủ dự án báo OS giảm chuyển động làm mất hiệu ứng mới.
   Home nay giữ đầy đủ animation cả khi reduced-motion=true: tán lá12s,
   sáu lá nền16–19s, card lift240ms/banner320ms, filter180ms/card thêm220ms,

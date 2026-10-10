@@ -39,8 +39,9 @@ columns from1440px, four by default, three at1150px and two at600px; the
 sidebar becomes190px/gap24px at1150px, then hides at900px for a labelled
 native filter dialog. Search title is40px Anton/1.2,32px at600px. Search sits
 to the right of the title on desktop and below it at900px. Compact complete
-cover stages are200px,180px at1100px and160px at600px; detail pairs
-one large complete photograph with readable metadata and purchase explanation.
+cover stages are200px,180px at1100px and160px at600px; Detail's selected complete
+photograph, thumbnails, protected viewer and factual columns now follow its
+dedicated `apps-user-web-src-pages-bookdetailpage-tsx.md` surface contract.
 
 FORM: User-pinned bookstore reference overrides direction roll 20e973c0,
 assigned index 5. Code-led; no new choice round. Signature: a single cover-fan
