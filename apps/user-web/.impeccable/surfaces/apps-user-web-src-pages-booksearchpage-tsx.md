@@ -29,7 +29,7 @@ STORY: Discover the shelves, search/filter real listings, inspect condition and
 both prices, then understand that reserving opens a 24-hour chat without payment.
 
 FIRST VIEWPORT: Wine header with the user's own owl and lettering; centered
-three-line cream/yellow headline between eight decorative cover positions: the
+three-line cream/yellow owner-supplied headline artwork between eight decorative cover positions: the
 four existing positions and four owner-supplied images added on10/10. Desktop
 uses two2x2 flanks; <=1100px all eight move below search, <=800px grid4x2. A wide light
 search field anchors the hero; a four-column newest shelf starts below. Search
@@ -59,6 +59,14 @@ adds20px breathing room before description/search and removes the control row:
 at1536x730 hero469px, search y460px, first shelf heading finishes at646px.
 Keep natural document growth at enlarged text sizes; no fixed-height cropping
 or page scale. Header untouched; mobile description top margin increases8px.
+
+Latest owner-pinned headline is Hero text final.png: SÁCH MỚI. CHƯƠNG MỚI.
+CÙNG LẬT LẠI. Use the supplied pixels including illustrations/ornaments, never
+retype/recreate the lettering. Transparent margins only removed,16px retained;
+lossless1313x655 delivery. H1 equivalent text remains available to assistive
+technology, image has empty alt/aria-hidden. Desktop cap36rem, below850px28rem;
+short desktop cap uses min(100%,clamp(20rem,66vh,32.5rem)). Ratio preserved, no
+cropping content. Existing used-book description distinguishes copy from listings.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 

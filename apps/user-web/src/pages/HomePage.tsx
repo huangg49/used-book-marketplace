@@ -166,11 +166,19 @@ export function HomePage() {
           <HeroCovers />
           <div className={styles.heroCopy}>
             <h1>
-              SÁCH CŨ.
-              <br />
-              <span>CHƯƠNG MỚI.</span>
-              <br />
-              ĐỢI BẠN LẬT.
+              <span className="sr-only">
+                SÁCH MỚI. CHƯƠNG MỚI. CÙNG LẬT LẠI.
+              </span>
+              <img
+                className={styles.heroLettering}
+                src="/brand/hero-lettering.png"
+                alt=""
+                aria-hidden="true"
+                width="1313"
+                height="655"
+                fetchPriority="high"
+                draggable={false}
+              />
             </h1>
             <p>
               Một cuốn sách đã đọc.

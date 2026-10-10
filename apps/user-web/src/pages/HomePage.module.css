@@ -57,13 +57,14 @@
   max-width: 650px;
 }
 .hero h1 {
-  font: 400 clamp(3rem, 5.3vw, 5rem)/1.16 var(--shop-display);
-  letter-spacing: 0;
-  margin: 0;
-  text-wrap: balance;
+  width: min(100%, 36rem);
+  margin: 0 auto;
+  line-height: 0;
 }
-.hero h1 span {
-  color: var(--shop-yellow);
+.heroLettering {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 .heroCopy p {
   color: #f0d9b9;
@@ -431,7 +432,7 @@
     row-gap: 36px;
   }
   .hero h1 {
-    font-size: clamp(3.25rem, 8.2vh, 4rem);
+    width: min(100%, clamp(20rem, 66vh, 32.5rem));
   }
   .heroCopy p {
     margin: 32px 0 16px;
@@ -477,7 +478,7 @@
 }
 @media (max-width: 850px) {
   .hero h1 {
-    font-size: 3.5rem;
+    width: min(100%, 28rem);
   }
   .shelf,
   .discover {
@@ -515,9 +516,6 @@
 @media (max-width: 600px) {
   .hero {
     padding: 38px 20px 22px;
-  }
-  .hero h1 {
-    font-size: clamp(2.4rem, 9vw, 3.3rem);
   }
   .heroCopy p {
     font-size: 0.8rem;

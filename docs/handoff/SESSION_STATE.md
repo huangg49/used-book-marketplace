@@ -8,6 +8,14 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `288a385`, thay headline Home bằng Hero text final.png chủ dự án cung cấp:
+  SÁCH MỚI. CHƯƠNG MỚI. CÙNG LẬT LẠI. Giữ pixels RGBA/dấu/minh họa, chỉ bỏ lề
+  alpha trống và chừa16px; raw pixel comparison PASS. H1 tương ứng/không đọc lặp,
+  CSS giữ ratio/cap responsive. Build/typecheck/16unit/lint6warning cũ/docs/diff
+  PASS; CUA laptop/mobile và focused9viewport100/130%text/search PASS, detector0.
+  Source/evidence ở brief/brand README. Checkpoint subject
+  `feat(web): use owner-designed final hero lettering`. Không đổi API/gate/motion;
+  raster typography và thiếu motion stop control chưa là accessibility acceptance.
 - Sau `1d9e5c5`, bỏ nút/state pause theo yêu cầu chủ dự án, sway liên tục cả hover;
   giữ offscreen/hidden và OS override. Hạ description/search20px ở laptop, mobile
   description8px; hero469px và kệ đầu vẫn hiện ở1536×730. Focused responsive/motion/

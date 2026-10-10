@@ -16,7 +16,7 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Phạm vi triển khai
 
-- Trang chủ: hero đỏ, tiêu đề Anton, bìa minh họa, search có tác dụng; kệ mới đăng
+- Trang chủ: hero đỏ, headline ảnh final chủ dự án, bìa minh họa, search có tác dụng; kệ mới đăng
   và kệ để đổi lấy API thật; ba lối lọc theo hình thức/giá, CTA đăng sách.
 - Tìm sách: q/mode/condition/giá/sort/cursor theo OpenAPI; giữ URL/Back, trạng thái
   đang tải/rỗng/lỗi/thử lại; đếm số sách trên trang, không bịa tổng kho.
@@ -43,6 +43,22 @@ minh họa. Thẻ/chi tiết dùng ảnh API, không thay bằng ảnh stock. M�
 fixture [QA], giá/tình trạng mô phỏng.
 
 ## Kiểm chứng
+
+Sau `288a385`, chủ dự án cung cấp Hero text final.png để thay headline Home.
+Giữ đúng SÁCH MỚI. CHƯƠNG MỚI. CÙNG LẬT LẠI., nét chữ/dấu và minh họa/đồ họa
+final; không dùng bản Hero text.png cũ hoặc tự sửa copy thành sách cũ. Source có
+alpha; delivery1313×655 PNG lossless chỉ bỏ lề trong suốt/chừa16px, raw RGBA
+đối chiếu source crop PASS trùng pixel. H1 chữ tương ứng + ảnh alt rỗng/aria-hidden;
+không đọc lặp, fetchPriority high/intrinsic dimensions giữ tỷ lệ. Artwork cap theo
+viewport, description sách cũ giữ nguyên. Ảnh là typography cố định, không wrap
+glyph như live text; không nhận là accessibility acceptance toàn diện.
+CUA1536×730/390×844 PASS ảnh tải/đủ dấu/toàn hình/tỷ lệ/không tràn:
+[desktop](../../.impeccable/review/web-member/hero-lettering-desktop.png),
+[mobile](../../.impeccable/review/web-member/hero-lettering-mobile.png).
+Focused9viewport100/130%text/8bìa/nooverflow/search Enter PASS; laptop1536×730
+hero494px, kệ đầu kết thúc671px,1366×650 kệ đầu645px. Build/typecheck/16unit/
+lint0error6warning cũ/docs/diff PASS, layout detector0findings. Không đổi motion/
+API/DB/session/native/gate; limitation motion control ở lượt trước vẫn còn.
 
 Sau `1d9e5c5`, chủ dự án yêu cầu bỏ nút pause, bìa chuyển động liên tục và hạ
 description/search để thoáng hơn. Đã bỏ state/control/hoverpause; giữ offscreen/
