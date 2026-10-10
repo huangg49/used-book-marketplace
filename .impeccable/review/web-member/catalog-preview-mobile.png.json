@@ -1,0 +1,10 @@
+{
+  "source": "Chromium actual catalog preview; API-sourced metadata cache and remote cover images; sample prices/condition visibly labeled",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "url": "http://127.0.0.1:5186/?data=preview#latest-title",
+  "capturedOn": "2026-10-10",
+  "sha256": "88f1a77ae66b0d6ef9965c263e5424932731cee416226922629fdca0dc8c19ec"
+}

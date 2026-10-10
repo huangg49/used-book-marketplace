@@ -259,6 +259,31 @@
   max-width: 1200px;
   margin: auto;
 }
+.previewNotice {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding-top: 24px;
+  color: var(--shop-ink);
+  font-size: 0.875rem;
+  line-height: 1.8;
+}
+.previewNotice p {
+  margin: 0;
+}
+.previewNotice a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--shop-wine);
+  font-weight: 700;
+}
+.sectionHead > .more {
+  margin: 0;
+}
 .quickLinks {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -373,6 +398,9 @@
   color: var(--shop-muted);
   margin: 6px 0 0;
   max-width: 65ch;
+}
+.sectionHead h2 {
+  scroll-margin-top: 112px;
 }
 .sectionHead > a,
 .exchangeIntro a,

@@ -1,0 +1,710 @@
+{
+  "provider": "Open Library",
+  "fetchedAt": "2026-10-10T10:48:34.198Z",
+  "purpose": "Owner-requested UI preview only; no inventory, seller or transaction data",
+  "queries": [
+    "https://openlibrary.org/search.json?q=title%3A%22Naruto%22+author%3A%22Masashi+Kishimoto%22+language%3Aeng&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Chainsaw+Man%22+author%3A%22Tatsuki+Fujimoto%22+language%3Aeng&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Spy+x+Family%22+author%3A%22Tatsuya+Endo%22+language%3Aeng&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Frieren%22+author%3A%22%E5%B1%B1%E7%94%B0%E9%90%98%E4%BA%BA%22+language%3Aeng&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Jujutsu+Kaisen%22+author%3A%22Gege+Akutami%22+language%3Aeng&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Fullmetal+Alchemist%22+author%3A%22%E8%8D%92%E5%B7%9D%E5%BC%98%22+language%3Aeng&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Dandadan%22+author%3A%22Yukinobu+Tatsu%22+language%3Aeng&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Re%3AZERO%22+author%3A%22%E9%95%B7%E6%9C%88%E9%81%94%E5%B9%B3%22+language%3Aeng+%22light+novel%22&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Overlord%22+author%3A%22%E4%B8%B8%E5%B1%B1%E3%81%8F%E3%81%8C%E3%81%AD%22+language%3Aeng+%22light+novel%22&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%2286%22+author%3A%22%E5%AE%89%E9%87%8C%E3%82%A2%E3%82%B5%E3%83%88%22+language%3Aeng+%22light+novel%22&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Classroom+of+the+Elite%22+author%3A%22%E8%A1%A3%E7%AC%A0%E5%BD%B0%E6%A2%A7%22+language%3Aeng+%22light+novel%22&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Howl%27s+Moving+Castle%22+author%3A%22Diana+Wynne+Jones%22+language%3Aeng&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22The+Little+Prince%22+author%3A%22Antoine+de+Saint-Exup%C3%A9ry%22+language%3Aeng&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i"
+  ],
+  "items": [
+    {
+      "id": "/books/OL23103190M",
+      "title": "Naruto vol 33",
+      "authors": [
+        "Masashi Kishimoto"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781421520018",
+      "coverId": 8981745,
+      "coverUrl": "https://covers.openlibrary.org/b/id/8981745-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL23103190M",
+      "series": "Naruto"
+    },
+    {
+      "id": "/books/OL30165195M",
+      "title": "Chainsaw Man, Vol. 1",
+      "authors": [
+        "Tatsuki Fujimoto"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974709939",
+      "coverId": 12794650,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12794650-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL30165195M",
+      "series": "Chainsaw Man"
+    },
+    {
+      "id": "/books/OL28265740M",
+      "title": "Spy x Family, Vol. 1",
+      "authors": [
+        "Tatsuya Endo"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974715466",
+      "coverId": 14582895,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14582895-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL28265740M",
+      "series": "Spy x Family"
+    },
+    {
+      "id": "/books/OL57541730M",
+      "title": "Frieren: Beyond Journey’s End 12",
+      "authors": [
+        "山田鐘人",
+        "アベツカサ"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974751815",
+      "coverId": 15144794,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15144794-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL57541730M",
+      "series": "Frieren"
+    },
+    {
+      "id": "/books/OL27912596M",
+      "title": "Jujutsu Kaisen, Vol. 1",
+      "authors": [
+        "Gege Akutami"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974710027",
+      "coverId": 9270022,
+      "coverUrl": "https://covers.openlibrary.org/b/id/9270022-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL27912596M",
+      "series": "Jujutsu Kaisen"
+    },
+    {
+      "id": "/books/OL8853139M",
+      "title": "Fullmetal Alchemist 1",
+      "authors": [
+        "荒川弘"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781591169208",
+      "coverId": 15234071,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15234071-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL8853139M",
+      "series": "Fullmetal Alchemist"
+    },
+    {
+      "id": "/books/OL59350483M",
+      "title": "Dandadan 13",
+      "authors": [
+        "Yukinobu Tatsu"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974755110",
+      "coverId": 15151079,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15151079-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL59350483M",
+      "series": "Dandadan"
+    },
+    {
+      "id": "/books/OL26961592M",
+      "title": "Re:Zero ‐Starting Life in Another World‐, Volume 2",
+      "authors": [
+        "長月達平"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9780316398374",
+      "coverId": 15150641,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15150641-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26961592M",
+      "series": "Re:ZERO"
+    },
+    {
+      "id": "/books/OL26445872M",
+      "title": "Overlord, Volume 1",
+      "authors": [
+        "丸山くがね",
+        "so-bin"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9780316272247",
+      "coverId": 15137502,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15137502-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26445872M",
+      "series": "Overlord"
+    },
+    {
+      "id": "/books/OL28918978M",
+      "title": "86—EIGHTY-SIX, Vol. 1",
+      "authors": [
+        "安里アサト",
+        "しらび"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9781975303129",
+      "coverId": 15135888,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15135888-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL28918978M",
+      "series": "86"
+    },
+    {
+      "id": "/books/OL61018930M",
+      "title": "Classroom of the Elite, Novel 1",
+      "authors": [
+        "衣笠彰梧",
+        "トモセシュンサク"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9798888438190",
+      "coverId": 15155334,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15155334-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL61018930M",
+      "series": "Classroom of the Elite"
+    },
+    {
+      "id": "/books/OL2540706M",
+      "title": "Howl's Moving Castle",
+      "authors": [
+        "Diana Wynne Jones"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780688062330",
+      "coverId": 14818196,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14818196-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL2540706M",
+      "series": "Howl's Moving Castle"
+    },
+    {
+      "id": "/books/OL22007893M",
+      "title": "El Principito / The Little Prince",
+      "authors": [
+        "Antoine de Saint-Exupéry"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9788459912013",
+      "coverId": 14994367,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14994367-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL22007893M",
+      "series": "The Little Prince"
+    },
+    {
+      "id": "/books/OL9474943M",
+      "title": "Naruto, Volume 25",
+      "authors": [
+        "Masashi Kishimoto"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781421518619",
+      "coverId": 1813471,
+      "coverUrl": "https://covers.openlibrary.org/b/id/1813471-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL9474943M",
+      "series": "Naruto"
+    },
+    {
+      "id": "/books/OL29872725M",
+      "title": "Chainsaw Man, Vol. 2",
+      "authors": [
+        "Tatsuki Fujimoto"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974709946",
+      "coverId": 12794652,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12794652-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29872725M",
+      "series": "Chainsaw Man"
+    },
+    {
+      "id": "/books/OL29495063M",
+      "title": "Spy x Family, Vol. 2",
+      "authors": [
+        "Tatsuya Endo"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974717248",
+      "coverId": 14582939,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14582939-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29495063M",
+      "series": "Spy x Family"
+    },
+    {
+      "id": "/books/OL60674374M",
+      "title": "Frieren: Beyond Journey’s End 1",
+      "authors": [
+        "山田鐘人",
+        "アベツカサ"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974729548",
+      "coverId": 15144829,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15144829-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL60674374M",
+      "series": "Frieren"
+    },
+    {
+      "id": "/books/OL31861453M",
+      "title": "Jujutsu Kaisen 0",
+      "authors": [
+        "Gege Akutami"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974720149",
+      "coverId": 10546557,
+      "coverUrl": "https://covers.openlibrary.org/b/id/10546557-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL31861453M",
+      "series": "Jujutsu Kaisen"
+    },
+    {
+      "id": "/books/OL18587193M",
+      "title": "Fullmetal Alchemist 2",
+      "authors": [
+        "荒川弘"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781421539621",
+      "coverId": 15215653,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15215653-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL18587193M",
+      "series": "Fullmetal Alchemist"
+    },
+    {
+      "id": "/books/OL26961591M",
+      "title": "Re:Zero ‐Starting Life in Another World‐, Volume 1",
+      "authors": [
+        "長月達平"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9780316315302",
+      "coverId": 15150647,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15150647-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26961591M",
+      "series": "Re:ZERO"
+    },
+    {
+      "id": "/books/OL36929884M",
+      "title": "Overlord, Volume 14",
+      "authors": [
+        "丸山くがね",
+        "so-bin"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9781975323813",
+      "coverId": 15137584,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15137584-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL36929884M",
+      "series": "Overlord"
+    },
+    {
+      "id": "/books/OL30196321M",
+      "title": "86—EIGHTY-SIX, Vol. 5",
+      "authors": [
+        "安里アサト",
+        "しらび"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9781975314200",
+      "coverId": 15135934,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15135934-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL30196321M",
+      "series": "86"
+    },
+    {
+      "id": "/books/OL27945907M",
+      "title": "Classroom of the Elite, Novel 4",
+      "authors": [
+        "衣笠彰梧",
+        "トモセシュンサク"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9781645051978",
+      "coverId": 15138819,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15138819-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL27945907M",
+      "series": "Classroom of the Elite"
+    },
+    {
+      "id": "/books/OL17468403M",
+      "title": "Castle in the air",
+      "authors": [
+        "Diana Wynne Jones"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780416157826",
+      "coverId": 13482682,
+      "coverUrl": "https://covers.openlibrary.org/b/id/13482682-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL17468403M",
+      "series": "Howl's Moving Castle"
+    },
+    {
+      "id": "/books/OL32091859M",
+      "title": "A day with the little prince",
+      "authors": [
+        "Antoine de Saint-Exupéry"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780152047276",
+      "coverId": 10746692,
+      "coverUrl": "https://covers.openlibrary.org/b/id/10746692-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL32091859M",
+      "series": "The Little Prince"
+    },
+    {
+      "id": "/books/OL51800976M",
+      "title": "Boruto",
+      "authors": [
+        "Masashi Kishimoto"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974745548",
+      "coverId": 14652178,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14652178-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL51800976M",
+      "series": "Naruto"
+    },
+    {
+      "id": "/books/OL36102109M",
+      "title": "Chainsaw Man, Vol. 11",
+      "authors": [
+        "Tatsuki Fujimoto"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974727117",
+      "coverId": 12794662,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12794662-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL36102109M",
+      "series": "Chainsaw Man"
+    },
+    {
+      "id": "/books/OL29937765M",
+      "title": "Spy x Family, Vol. 4",
+      "authors": [
+        "Tatsuya Endo"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974721030",
+      "coverId": 14586178,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14586178-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29937765M",
+      "series": "Spy x Family"
+    },
+    {
+      "id": "/books/OL60676364M",
+      "title": "Frieren: Beyond Journey’s End 4",
+      "authors": [
+        "山田鐘人",
+        "アベツカサ"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974732883",
+      "coverId": 15144937,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15144937-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL60676364M",
+      "series": "Frieren"
+    },
+    {
+      "id": "/books/OL29495070M",
+      "title": "Jujutsu Kaisen, Vol. 7",
+      "authors": [
+        "Gege Akutami"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974717118",
+      "coverId": 12708006,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12708006-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29495070M",
+      "series": "Jujutsu Kaisen"
+    },
+    {
+      "id": "/books/OL51070797M",
+      "title": "Fullmetal Alchemist 4",
+      "authors": [
+        "荒川弘"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9780316285605",
+      "coverId": 15234088,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15234088-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL51070797M",
+      "series": "Fullmetal Alchemist"
+    },
+    {
+      "id": "/books/OL26961594M",
+      "title": "Re:Zero ‐Starting Life in Another World‐, Volume 3",
+      "authors": [
+        "長月達平"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9780316398404",
+      "coverId": 15150650,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15150650-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26961594M",
+      "series": "Re:ZERO"
+    },
+    {
+      "id": "/books/OL60565013M",
+      "title": "Overlord 11",
+      "authors": [
+        "丸山くがね",
+        "so-bin"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9781975370190",
+      "coverId": 15137770,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15137770-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL60565013M",
+      "series": "Overlord"
+    },
+    {
+      "id": "/books/OL34320752M",
+      "title": "86—EIGHTY-SIX, Vol. 9",
+      "authors": [
+        "安里アサト",
+        "しらび"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9781975340001",
+      "coverId": 15136474,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15136474-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL34320752M",
+      "series": "86"
+    },
+    {
+      "id": "/books/OL35628700M",
+      "title": "Classroom of the Elite: Year 2, Novel 1",
+      "authors": [
+        "衣笠彰梧",
+        "トモセシュンサク"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9781685794477",
+      "coverId": 15138907,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15138907-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL35628700M",
+      "series": "Classroom of the Elite"
+    },
+    {
+      "id": "/books/OL7915979M",
+      "title": "Wizard's Castle (Howl's Moving Castle #1-2)",
+      "authors": [
+        "Diana Wynne Jones"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780739423851",
+      "coverId": 8051799,
+      "coverUrl": "https://covers.openlibrary.org/b/id/8051799-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL7915979M",
+      "series": "Howl's Moving Castle"
+    },
+    {
+      "id": "/books/OL7363250M",
+      "title": "Introducing the Little Prince",
+      "authors": [
+        "Antoine de Saint-Exupéry"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780152047269",
+      "coverId": 113601,
+      "coverUrl": "https://covers.openlibrary.org/b/id/113601-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL7363250M",
+      "series": "The Little Prince"
+    },
+    {
+      "id": "/books/OL8490553M",
+      "title": "Naruto, Vol. 9",
+      "authors": [
+        "Masashi Kishimoto"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781421502397",
+      "coverId": 764948,
+      "coverUrl": "https://covers.openlibrary.org/b/id/764948-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL8490553M",
+      "series": "Naruto"
+    },
+    {
+      "id": "/books/OL34786159M",
+      "title": "Chainsaw Man, Vol. 10",
+      "authors": [
+        "Tatsuki Fujimoto"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974725359",
+      "coverId": 12794661,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12794661-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL34786159M",
+      "series": "Chainsaw Man"
+    },
+    {
+      "id": "/books/OL29862270M",
+      "title": "Spy x Family, Vol. 3",
+      "authors": [
+        "Tatsuya Endo"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974718160",
+      "coverId": 14583002,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14583002-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29862270M",
+      "series": "Spy x Family"
+    },
+    {
+      "id": "/books/OL60671902M",
+      "title": "Frieren: Beyond Journey’s End —Prelude— 1",
+      "authors": [
+        "八目迷",
+        "山田鐘人"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9798855430493",
+      "coverId": 15202646,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15202646-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL60671902M",
+      "series": "Frieren"
+    },
+    {
+      "id": "/books/OL29961352M",
+      "title": "Jujutsu Kaisen, Vol. 8",
+      "authors": [
+        "Gege Akutami"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9781974718719",
+      "coverId": 14650986,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14650986-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29961352M",
+      "series": "Jujutsu Kaisen"
+    },
+    {
+      "id": "/books/OL51068278M",
+      "title": "Fullmetal Alchemist 3",
+      "authors": [
+        "荒川弘"
+      ],
+      "category": "Manga",
+      "language": "eng",
+      "isbn": "9780316285582",
+      "coverId": 15234085,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15234085-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL51068278M",
+      "series": "Fullmetal Alchemist"
+    },
+    {
+      "id": "/books/OL29948496M",
+      "title": "Re:Zero ‐Starting Life in Another World‐, Volume 15",
+      "authors": [
+        "長月達平"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9781975383275",
+      "coverId": 15152665,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15152665-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29948496M",
+      "series": "Re:ZERO"
+    },
+    {
+      "id": "/books/OL60565078M",
+      "title": "Overlord 13",
+      "authors": [
+        "丸山くがね",
+        "so-bin"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9781975397999",
+      "coverId": 15137790,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15137790-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL60565078M",
+      "series": "Overlord"
+    },
+    {
+      "id": "/books/OL60552711M",
+      "title": "86—EIGHTY‐SIX, Vol. 11",
+      "authors": [
+        "安里アサト",
+        "しらび"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9781975349974",
+      "coverId": 15136791,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15136791-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL60552711M",
+      "series": "86"
+    },
+    {
+      "id": "/books/OL61019074M",
+      "title": "Classroom of the Elite, Novel 2",
+      "authors": [
+        "衣笠彰梧",
+        "トモセシュンサク"
+      ],
+      "category": "Light novel",
+      "language": "eng",
+      "isbn": "9798888438206",
+      "coverId": 15155335,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15155335-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL61019074M",
+      "series": "Classroom of the Elite"
+    },
+    {
+      "id": "/books/OL7363251M",
+      "title": "I Am the Little Prince / Je Suis Le Petit Prince",
+      "authors": [
+        "Antoine de Saint-Exupéry"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780152047306",
+      "coverId": 1120322,
+      "coverUrl": "https://covers.openlibrary.org/b/id/1120322-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL7363251M",
+      "series": "The Little Prince"
+    }
+  ]
+}

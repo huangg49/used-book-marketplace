@@ -31,6 +31,42 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
   để hành trình kiểm thử liên tục. Chưa redesign toàn form, dashboard, đăng ký,
   chat, đấu giá, admin hay Flutter; Android giữ checkpoint riêng.
 
+## Home — catalog xem trước để làm UX/UI
+
+Sau `f4fffdb`, chủ dự án yêu cầu nhiều sách từ API để xem UI, ưu tiên manga/light
+novel, không dùng lại sách hero; DB demo sẽ chuẩn bị sau. Đã lấy48 edition thật
+từ Open Library (25 manga,16 light novel,7 văn học), giữ tên/tác giả/ISBN/bìa theo
+nguồn tiếng Anh. Metadata cache có thời điểm/query/source; bìa vẫn tải remote.
+Không scrape Fahasa hoặc ghi MongoDB. [Hướng dẫn nguồn/bật-tắt/làm mới/chuyển DB](../../apps/user-web/src/data/README.md).
+
+Preview chỉ trong dev, bật rõ bằng env/query; `data=live` ưu tiên hơn env,
+production luôn tắt. Home có nhãn xem trước và giá/tình trạng/mua-đổi mẫu từng
+card; card mở nguồn Open Library, không tạo listing/seller/media ID/giao dịch
+giả. Search/quick links/budget/filter hoạt động trên bộ mẫu trong Home;
+Header/Search/Detail vẫn là API thật. Chuyển nguồn thật dùng lại `/listings` và
+media read, lỗi không tự fallback. Hero art/layout/motion giữ nguyên; caption và
+search phản ánh nguồn đang chọn. Bốn bìa banner thay bằng catalog riêng ở cả hai
+chế độ. Chuẩn bị DB demo/bài đăng/ảnh đúng schema là gói riêng, không là đổi tên
+file JSON hoặc bằng chứng backend đã nghiệm thu.
+
+Build/typecheck21unit PASS; lint0error6warning cũ. Focused browser QA4width
+1366/850/390/320 × chữ100/200% PASS: category, mode/price URL, reset,8→16→48,
+search/empty, nguồn ngoài, không gọi listings trong preview, ảnh remote lỗi/retry,
+live503 không hiện mẫu và không tràn ngang. CUA thật chọn Light novel và tải bìa.
+Detector một lượt4advisory hero cũ, không có role mới. API metadata và ảnh remote
+đã dùng thật; backend thành công/DB/native/human NOT RUN, READINESS giữ nguyên.
+
+- [Desktop](../../.impeccable/review/web-member/catalog-preview-desktop.png),
+  [mobile](../../.impeccable/review/web-member/catalog-preview-mobile.png),
+  [CUA Light novel](../../.impeccable/review/web-member/catalog-preview-cua-desktop.jpg).
+- [QA](../../.impeccable/review/web-member/catalog-preview-qa.json),
+  [detector](../../.impeccable/review/web-member/catalog-preview-detect.json).
+
+Reviewer độc lập kiểm3capture/source/contract/canonical, disposition **ship**,
+không có material fix. Docs/diff PASS. Preview đã bật ở `.env.local` riêng máy
+chủ dự án; cấu hình này không đưa lên Git. Checkpoint subject
+`feat(web): add isolated book catalog preview`; local, chưa push/PR/merge/deploy.
+
 ## Home — khám phá theo thể loại, mua/đổi và giá
 
 Sau `973e3c4`, chủ dự án yêu cầu giữ nguyên hero và thiết kế lại phần dưới theo

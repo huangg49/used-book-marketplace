@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useLocation,
+  useSearchParams,
+} from "react-router-dom";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -12,8 +17,14 @@ import {
   BookOpen,
 } from "lucide-react";
 import { ROUTES, searchUrl } from "../lib/routes";
-import { BookCard } from "../components/BookCard";
-import { getPublicListings } from "../services/public-listings";
+import { HomeBookCard } from "../components/HomeBookCard";
+import {
+  getHomeShelf,
+  isCatalogPreview,
+  homeShelfUrl,
+  previewCatalogCount,
+  budgetCoverUrls,
+} from "../services/home-shelves";
 import styles from "./HomePage.module.css";
 
 const heroCovers = [
@@ -85,15 +96,39 @@ const shelfFilters: { label: string; params: Record<string, string> }[] = [
   { label: "Đến 100.000₫", params: { mode: "Sale", maxSalePrice: "100000" } },
 ];
 
-function LatestShelf() {
-  const [filter, setFilter] = useState(0);
-  const [category, setCategory] = useState("");
-  const [visible, setVisible] = useState(8);
+function LatestShelf({ preview }: { preview: boolean }) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const [liveFilter, setFilter] = useState(0);
+  const filter = preview
+    ? searchParams.has("maxSalePrice")
+      ? 3
+      : searchParams.get("mode") === "Sale"
+        ? 1
+        : searchParams.get("mode") === "Exchange"
+          ? 2
+          : 0
+    : liveFilter;
+  const selectionScope = preview ? location.key : String(liveFilter);
+  const [selection, setSelection] = useState({
+    scope: selectionScope,
+    category: "",
+    visible: 8,
+  });
+  const category = selection.scope === selectionScope ? selection.category : "";
+  const visible = selection.scope === selectionScope ? selection.visible : 8;
   const params = shelfFilters[filter].params;
-  const query = new URLSearchParams({ limit: "24", sort: "newest", ...params });
+  const query = new URLSearchParams({
+    limit: preview ? String(previewCatalogCount) : "24",
+    sort: "newest",
+    ...params,
+  });
+  if (preview && searchParams.has("maxSalePrice"))
+    query.set("maxSalePrice", searchParams.get("maxSalePrice")!);
+  if (preview && searchParams.get("q")) query.set("q", searchParams.get("q")!);
   const result = useQuery({
-    queryKey: ["public-listings", query.toString()],
-    queryFn: () => getPublicListings(query),
+    queryKey: ["home-shelves", preview, query.toString()],
+    queryFn: () => getHomeShelf(query, preview),
     retry: false,
   });
   const items = result.data?.items ?? [];
@@ -109,7 +144,11 @@ function LatestShelf() {
       <section className={styles.categories} aria-labelledby="category-title">
         <div className={styles.categoryHead}>
           <h2 id="category-title">Khám phá thể loại</h2>
-          <p>Thể loại từ tối đa 24 bài đăng mới nhất trong kệ đang chọn.</p>
+          <p>
+            {preview
+              ? "Thể loại trong bộ sách xem trước đang chọn."
+              : "Thể loại từ tối đa 24 bài đăng mới nhất trong kệ đang chọn."}
+          </p>
         </div>
         <div
           className={styles.categoryChoices}
@@ -120,8 +159,7 @@ function LatestShelf() {
             type="button"
             aria-pressed={!category}
             onClick={() => {
-              setCategory("");
-              setVisible(8);
+              setSelection({ scope: selectionScope, category: "", visible: 8 });
             }}
           >
             <BookOpen size={18} aria-hidden="true" /> Tất cả thể loại
@@ -132,8 +170,11 @@ function LatestShelf() {
               key={name}
               aria-pressed={category === name}
               onClick={() => {
-                setCategory(name);
-                setVisible(8);
+                setSelection({
+                  scope: selectionScope,
+                  category: name,
+                  visible: 8,
+                });
               }}
             >
               {name}
@@ -156,15 +197,34 @@ function LatestShelf() {
       <section className={styles.shelf} aria-labelledby="latest-title">
         <div className={styles.sectionHead}>
           <div>
-            <h2 id="latest-title">Sách mới đăng</h2>
+            <h2 id="latest-title">
+              {preview ? "Kệ sách xem trước" : "Sách mới đăng"}
+            </h2>
             <p>
               Mỗi cuốn một tình trạng, một câu chuyện. Chọn bản sách hợp với
               bạn.
             </p>
           </div>
-          <Link to={searchUrl(params)}>
-            Tìm trong toàn bộ sách <ArrowUpRight size={18} aria-hidden="true" />
-          </Link>
+          {preview ? (
+            <button
+              className={styles.more}
+              type="button"
+              onClick={() =>
+                setSelection({
+                  scope: selectionScope,
+                  category,
+                  visible: filtered.length,
+                })
+              }
+            >
+              Xem toàn bộ kệ mẫu <ArrowUpRight size={18} aria-hidden="true" />
+            </button>
+          ) : (
+            <Link to={searchUrl(params)}>
+              Tìm trong toàn bộ sách{" "}
+              <ArrowUpRight size={18} aria-hidden="true" />
+            </Link>
+          )}
         </div>
         <div
           className={styles.shelfFilters}
@@ -177,9 +237,16 @@ function LatestShelf() {
               type="button"
               aria-pressed={index === filter}
               onClick={() => {
-                setFilter(index);
-                setCategory("");
-                setVisible(8);
+                if (preview)
+                  setSearchParams({
+                    data: "preview",
+                    ...(searchParams.get("q")
+                      ? { q: searchParams.get("q")! }
+                      : {}),
+                    ...item.params,
+                  });
+                else setFilter(index);
+                setSelection({ scope: "", category: "", visible: 8 });
               }}
             >
               {item.label}
@@ -209,13 +276,16 @@ function LatestShelf() {
                   ? "Chưa có sách thuộc thể loại này trong các bài đăng đã tải."
                   : "Chưa có sách trong kệ này."}
               </p>
-              <Link to={searchUrl(params)}>Tìm thêm sách</Link>
+              <Link to={homeShelfUrl({}, preview)}>
+                {preview ? "Xem lại bộ sách mẫu" : "Tìm thêm sách"}
+              </Link>
             </div>
           )}
           {result.data && !result.isError && filtered.length > 0 && (
             <p className={styles.resultScope}>
               {category && <strong>{category} · </strong>}
-              {shown.length} / {filtered.length} bài đăng đã tải
+              {shown.length} / {filtered.length}{" "}
+              {preview ? "sách xem trước" : "bài đăng đã tải"}
               {category ? " thuộc thể loại này" : ""}.
               {result.data.nextCursor &&
                 " Còn bài đăng khác trong danh sách tìm sách."}
@@ -224,14 +294,20 @@ function LatestShelf() {
           <div className={styles.grid}>
             {!result.isError &&
               shown.map((book, index) => (
-                <BookCard key={book.id} book={book} index={index} compact />
+                <HomeBookCard key={book.id} book={book} index={index} />
               ))}
           </div>
           {!result.isError && filtered.length > visible && (
             <button
               className={styles.more}
               type="button"
-              onClick={() => setVisible((value) => value + 8)}
+              onClick={() =>
+                setSelection({
+                  scope: selectionScope,
+                  category,
+                  visible: visible + 8,
+                })
+              }
             >
               Xem thêm trong kệ <ArrowRight size={18} aria-hidden="true" />
             </button>
@@ -242,15 +318,15 @@ function LatestShelf() {
   );
 }
 
-function ExchangeShelf() {
+function ExchangeShelf({ preview }: { preview: boolean }) {
   const query = new URLSearchParams({
     limit: "4",
     sort: "newest",
     mode: "Exchange",
   });
   const result = useQuery({
-    queryKey: ["public-listings", query.toString()],
-    queryFn: () => getPublicListings(query),
+    queryKey: ["home-shelves", preview, query.toString()],
+    queryFn: () => getHomeShelf(query, preview),
     retry: false,
   });
   return (
@@ -266,12 +342,13 @@ function ExchangeShelf() {
           Đổi góc nhìn.
         </h2>
         <p>Mang một câu chuyện đã đọc, tìm một cuốn muốn đọc tiếp.</p>
-        <Link to={searchUrl({ mode: "Exchange" })}>
+        <Link to={homeShelfUrl({ mode: "Exchange" }, preview)}>
           Khám phá sách để đổi <ArrowUpRight size={18} aria-hidden="true" />
         </Link>
         <p className={styles.exchangeNote}>
-          Giá trị đổi do người đăng cung cấp. Xem chi tiết để biết tình trạng
-          bản sách.
+          {preview
+            ? "Giá trị đổi và tình trạng là dữ liệu mẫu để xem giao diện."
+            : "Giá trị đổi do người đăng cung cấp. Xem chi tiết để biết tình trạng bản sách."}
         </p>
       </div>
       <div
@@ -303,7 +380,7 @@ function ExchangeShelf() {
         <div className={styles.exchangeGrid}>
           {!result.isError &&
             result.data?.items.map((book, index) => (
-              <BookCard book={book} index={index} key={book.id} compact />
+              <HomeBookCard book={book} index={index} key={book.id} />
             ))}
         </div>
       </div>
@@ -313,6 +390,14 @@ function ExchangeShelf() {
 export function HomePage() {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+  const preview = isCatalogPreview(location.search);
+  useEffect(() => {
+    if (preview && location.hash === "#latest-title")
+      document
+        .getElementById("latest-title")
+        ?.scrollIntoView({ block: "start" });
+  }, [preview, location.key, location.hash]);
   return (
     <div>
       <section className={styles.hero}>
@@ -372,7 +457,9 @@ export function HomePage() {
             className={styles.search}
             onSubmit={(event) => {
               event.preventDefault();
-              navigate(searchUrl(query.trim() ? { q: query.trim() } : {}));
+              navigate(
+                homeShelfUrl(query.trim() ? { q: query.trim() } : {}, preview),
+              );
             }}
           >
             <Search size={22} aria-hidden="true" />
@@ -392,27 +479,50 @@ export function HomePage() {
           </form>
         </div>
         <p className={styles.caption}>
-          Bìa sách dùng để minh họa · Ảnh sách đang đăng ở bên dưới
+          {preview
+            ? "Bìa trên hero để trang trí · Bộ sách bên dưới đang ở chế độ xem trước"
+            : "Bìa sách dùng để minh họa · Ảnh sách đang đăng ở bên dưới"}
         </p>
       </section>
       <div className={styles.marketplace}>
         <div className={styles.marketInner}>
+          {preview && (
+            <div className={styles.previewNotice} role="status">
+              <p>
+                <strong>
+                  Xem trước giao diện · {previewCatalogCount} sách từ Open
+                  Library
+                </strong>
+                <br />
+                Giá, tình trạng và mua/đổi là mẫu. Không có giao dịch trong bộ
+                sách này.
+              </p>
+              <Link to="/?data=live">
+                Xem bài đăng thật <ArrowUpRight size={18} aria-hidden="true" />
+              </Link>
+            </div>
+          )}
           <nav className={styles.quickLinks} aria-label="Khám phá sách">
-            <Link to={searchUrl({ mode: "Sale" })}>
+            <Link to={homeShelfUrl({ mode: "Sale" }, preview)}>
               <span>
                 <ShoppingBag aria-hidden="true" />
               </span>
               Mua sách cũ
               <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
-            <Link to={searchUrl({ mode: "Exchange" })}>
+            <Link to={homeShelfUrl({ mode: "Exchange" }, preview)}>
               <span>
                 <Repeat2 aria-hidden="true" />
               </span>
               Đổi sách
               <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
-            <Link to={searchUrl({ mode: "Sale", maxSalePrice: "100000" })}>
+            <Link
+              to={homeShelfUrl(
+                { mode: "Sale", maxSalePrice: "100000" },
+                preview,
+              )}
+            >
               <span>
                 <Wallet aria-hidden="true" />
               </span>
@@ -427,13 +537,16 @@ export function HomePage() {
               <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
           </nav>
-          <LatestShelf />
+          <LatestShelf preview={preview} key={preview ? "preview" : "live"} />
           <section
             className={styles.budgetBanners}
             aria-label="Tìm sách theo ngân sách"
           >
             <Link
-              to={searchUrl({ mode: "Sale", maxSalePrice: "50000" })}
+              to={homeShelfUrl(
+                { mode: "Sale", maxSalePrice: "50000" },
+                preview,
+              )}
               className={styles.budgetSmall}
             >
               <div>
@@ -448,16 +561,15 @@ export function HomePage() {
                 </span>
               </div>
               <div className={styles.bannerCovers} aria-hidden="true">
-                <img src="/illustrations/tuoi-tho.webp" alt="" loading="lazy" />
-                <img
-                  src="/illustrations/alice-moi.webp"
-                  alt=""
-                  loading="lazy"
-                />
+                <img src={budgetCoverUrls[0]} alt="" loading="lazy" />
+                <img src={budgetCoverUrls[1]} alt="" loading="lazy" />
               </div>
             </Link>
             <Link
-              to={searchUrl({ mode: "Sale", maxSalePrice: "100000" })}
+              to={homeShelfUrl(
+                { mode: "Sale", maxSalePrice: "100000" },
+                preview,
+              )}
               className={styles.budgetLarge}
             >
               <div>
@@ -472,12 +584,8 @@ export function HomePage() {
                 </span>
               </div>
               <div className={styles.bannerCovers} aria-hidden="true">
-                <img src="/illustrations/duoc-su.webp" alt="" loading="lazy" />
-                <img
-                  src="/illustrations/one-piece.webp"
-                  alt=""
-                  loading="lazy"
-                />
+                <img src={budgetCoverUrls[2]} alt="" loading="lazy" />
+                <img src={budgetCoverUrls[3]} alt="" loading="lazy" />
               </div>
             </Link>
           </section>
@@ -485,7 +593,7 @@ export function HomePage() {
             Bìa trong banner dùng để minh họa, không đại diện cho sách hay giá
             đang bán.
           </p>
-          <ExchangeShelf />
+          <ExchangeShelf preview={preview} />
           <section className={styles.posting} aria-labelledby="posting-title">
             <div>
               <h2 id="posting-title">

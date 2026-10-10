@@ -2,7 +2,7 @@
 version: 1
 slug: "apps-user-web-src-pages-homepage-tsx"
 primary_target: "apps/user-web/src/pages/HomePage.tsx"
-related_targets: ["apps/user-web/src/pages/HomePage.module.css", "apps/user-web/src/components/BookCard.tsx", "apps/user-web/src/components/BookCard.module.css"]
+related_targets: ["apps/user-web/src/pages/HomePage.module.css", "apps/user-web/src/components/BookCard.tsx", "apps/user-web/src/components/BookCard.module.css", "apps/user-web/src/components/HomeBookCard.tsx", "apps/user-web/src/services/home-shelves.ts"]
 ---
 
 # Home — discovery below the approved hero
@@ -54,3 +54,29 @@ no additional continuous animation. No invented discounts or totals.
 FINISH: Bounded desktop/mobile/large-text/state evidence, one final detector,
 fresh independent finish reviewer and canonical documentation; local commit
 only. API-real/native/human acceptance not implied by response-fixture captures.
+
+## Owner-authorized catalog preview extension — 10/10/2026
+
+Owner requests plentiful API-sourced books for UX/UI, especially manga/light
+novel, with a real demo DB prepared later. Do not reuse hero books below it.
+This is a data-source extension preserving the approved layout and identity.
+
+Explicit dev-only mode: env VITE_CATALOG_PREVIEW=true or data=preview; data=live
+overrides env, production always disables preview. Home alone uses48 cached
+Open Library editions (25 manga/16 light novel/7 literature), English metadata
+and complete remote covers tied to edition IDs. API snapshot includes source,
+query and date; no DB writes. Budget artwork now uses four separate catalog
+covers in both modes. Hero art/layout/motion stays unchanged; its search and
+caption reflect preview mode. Preview search, group/price links and filters stay
+inside Home, with navigation resetting category/visible8. Show-more adds8 and
+full shelf shows all matches. No new category API is implied.
+
+Preview notice and each card label illustrative price/condition/mode; no fake
+seller, media, version or transaction state. Preview cards open Open Library
+source tabs, never listing detail or purchase. Cover errors have retry and never
+substitute hero art. Real mode keeps listings/media/session/error behavior and
+never falls back to preview. Header/Search/Detail remain real API surfaces.
+
+Finish includes preview category/search/price/expansion/empty/remote-image-error,
+live-error isolation, desktop/mobile/large-text evidence and build/unit/lint;
+does not certify MongoDB demo, backend integration or native acceptance.

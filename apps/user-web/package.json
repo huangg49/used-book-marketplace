@@ -10,6 +10,7 @@
     "typecheck": "tsc -b --pretty false",
     "preview": "vite preview --port 4174",
     "test": "vitest run",
+    "catalog:refresh": "node scripts/refresh-preview-catalog.mjs",
     "test:browser": "node tests/integration.mjs"
   },
   "dependencies": {

@@ -381,6 +381,18 @@ The optional `compact` BookCard variant is used only by Home's two shelves:1:1.1
 
 ### Home discovery below the approved hero
 
+Owner-authorized catalog preview (10/10/2026) preserves this composition. Dev-only
+Home can explicitly show48 cached Open Library editions (25 manga,16 light novel,
+7 literature) with complete remote edition covers and source links. A task-status
+notice and each card label sample price/condition/mode; no seller or transaction
+is simulated. Preview cards reuse the compact recipe and open Open Library,
+never real listing detail. Search, price/group links and local category/expansion
+operate inside Home. Budget artwork uses distinct catalog covers in both modes;
+hero art/layout/motion and shared Search cards remain unchanged. A wrapping
+14px/1.8 status row with24px top padding and44px live-data link uses existing
+ink/wine tokens. Explicit live mode shows API failures without sample fallback;
+production disables preview. This is UI evidence, not a database or E2E demo.
+
 The [Home surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-homepage-tsx.md) records this local extension. Four quiet direct links lead to buying, exchange, Sale up to100000 and posting. Category choices wrap with44px minimum targets; selection is cream with a wine boundary and text. Categories derive from the latest24 responses in the selected shelf and filter only those loaded records; visible scope text states this limit. The four shelf filters (all, buy, exchange, Sale up to100000) request server-backed groups; selected controls use wine/cream. Changing group clears category and resets visible items to8; show-more adds8 locally. The full-catalog link carries supported mode/price filters and omits local category. Loading/empty/error/retry remain visible and failed requests hide stale cards.
 
 Two rounded budget banners follow, yellow and peach, linking to Sale up to50000/100000. Their rotated owner-supplied covers are illustrations, separately disclosed under the pair; they never stand in for listing photos or actual prices. The sage exchange section pairs a dark-green introduction with four compact cards requested with Exchange mode. Its note attributes exchange values to the poster. A wine band ends with an Anton cream/yellow invitation and48px cream posting action. These sections add no continuous animation. Their panel corners are12px; selected controls and actions use8px. Category/filter labels, long book names and prices wrap as text grows.

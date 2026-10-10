@@ -8,6 +8,19 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Sau `f4fffdb`, Home có preview dev-only rõ nguồn:48 Open Library editions
+  (25manga/16light novel/7văn học), cache metadata+remote covers, không dùng sách
+  hero cho kệ/banner. Giá/tình trạng/mua-đổi mẫu có nhãn; card chỉ mở nguồn,
+  không tạo người bán/media/giao dịch hoặc ghi DB. Env/query bật preview;
+  data=live ưu tiên, production tắt; backend lỗi không fallback. Search/filter/
+  budget hoạt động trong Home preview; Header/Search/Detail vẫn API thật.
+  Build/typecheck21unit PASS/lint0error6warning cũ;4width100/200% browser QA và
+  CUA chọn Light novel PASS. Detector4advisory hero legacy; metadata/bìa upstream
+  đã dùng thật, backend thành công/DB/native/human NOT RUN, READINESS giữ nguyên.
+  Reviewer độc lập3capture disposition ship, docs/diff PASS; preview bật ở config
+  local riêng máy, không commit env. Hướng dẫn chuyển nguồn/chuẩn bị DB ở
+  [brief](../design/WEB_MEMBER_REDESIGN.md).
+  Checkpoint subject `feat(web): add isolated book catalog preview`. Local, chưa push.
 - Sau `973e3c4`, Home giữ nguyên hero, body theo yêu cầu tham khảo Fahasa và
   kết hợp thể loại + mua/đổi + giá: lối vào nhanh, kệ mới đăng, banner ngân sách,
   kệ đổi và CTA đăng sách. API chỉ hỗ trợ mode/giá; thể loại lọc cục bộ tối đa24
