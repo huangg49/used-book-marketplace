@@ -183,39 +183,39 @@ typography:
     lineHeight: 1.2
     letterSpacing: "-0.025em"
   auth-annotation:
-    fontFamily: "Auth Caveat, cursive"
+    fontFamily: "Auth Melody, cursive"
     fontSize: "29px"
     fontWeight: 400
     lineHeight: 1.2
   auth-annotation-reflow:
-    fontFamily: "Auth Caveat, cursive"
+    fontFamily: "Auth Melody, cursive"
     fontSize: "24px"
     fontWeight: 400
     lineHeight: 1.2
   auth-annotation-narrow:
-    fontFamily: "Auth Caveat, cursive"
+    fontFamily: "Auth Melody, cursive"
     fontSize: "23px"
     fontWeight: 400
     lineHeight: 1.2
   auth-annotation-source:
-    fontFamily: "Auth Caveat, cursive"
+    fontFamily: "Auth Melody, cursive"
     fontSize: "20px"
     fontWeight: 400
     lineHeight: 1.5
   auth-annotation-source-reflow:
-    fontFamily: "Auth Caveat, cursive"
+    fontFamily: "Auth Melody, cursive"
     fontSize: "18px"
     fontWeight: 400
     lineHeight: 1.5
   auth-error:
-    fontFamily: "Auth Caveat, cursive"
+    fontFamily: "Auth Melody, cursive"
     fontSize: "24px"
-    fontWeight: 700
+    fontWeight: 400
     lineHeight: 1.35
   auth-librarian-note:
-    fontFamily: "Auth Caveat, cursive"
+    fontFamily: "Auth Melody, cursive"
     fontSize: "25px"
-    fontWeight: 500
+    fontWeight: 400
     lineHeight: 1.35
   auth-stamp:
     fontFamily: "Auth Bricolage, Be Vietnam Pro, sans-serif"
@@ -547,7 +547,7 @@ Both families are self-hosted in web `public/fonts`, with OFL files and [source 
 - **Home headline:** owner-supplied `Hero text final.png`, delivered as a transparent1313×655 PNG with only blank outer margins removed. Exact lettering/copy/illustration retained: SÁCH MỚI. CHƯƠNG MỚI. CÙNG LẬT LẠI. H1 contains equivalent visually hidden text; its image is decorative to assistive technology. Width is min(100%,36rem), min(100%,28rem) below850px; height follows the original ratio. This artwork is a pinned Home exception to the Anton display token. It scales as a whole image rather than wrapping or scaling each glyph as live text.
 - **Headline:** expressive discovery type outside the scoped Home task headings. Search uses the scoped Anton `search-heading` (40px/1.2), reducing to `search-heading-narrow` (32px/1.2) at600px; its yellow punctuation is the only heading accent.
 - **Home discovery:** category and new-listing H2s use bold Be Vietnam Pro `home-section` (24px), reducing to `home-section-narrow` (20px) at600px. These are task headings, intentionally quieter than the approved hero. Anton is reserved for budget banners (`home-budget`,28–36px,28px at600px), exchange introduction (`home-exchange`,32px) and posting band (`home-posting`,32–40px,32px at600px), all with1.35 line height. These distinct roles explain the narrow H2/posting detector advisories; they are not global type replacements.
-- **Auth:** self-hosted variable Auth Bricolage (200–800) carries greeting and success stamp; Auth Caveat (400–700) carries pencil annotations, handwritten errors and unavailable-sheet notes. Their unmodified OFL files and source notes live in [Auth fonts](apps/user-web/public/fonts/auth/README.md). Be Vietnam Pro remains the functional voice for visible labels, inputs, actions and availability explanations. The `auth-*` frontmatter roles record desktop and narrow sizes; headings wrap naturally. The photograph-side story retains Anton only above1100px. Small card-kind/footer/credit text is secondary; functional labels stay explicit, with their small supporting gloss hidden below400px. These fonts and type sizes apply only to the three Auth routes.
+- **Auth:** self-hosted variable Auth Bricolage (200–800) carries greeting and success stamp; Auth Melody (MTD Fancy Melody Regular400) carries pencil annotations, handwritten errors and unavailable-sheet notes. Bricolage OFL and owner-supplied Fancy Melody source notes live in [Auth fonts](apps/user-web/public/fonts/auth/README.md). Be Vietnam Pro remains the functional voice for visible labels, inputs, actions and availability explanations. The `auth-*` frontmatter roles record desktop and narrow sizes; headings wrap naturally. The photograph-side story retains Anton only above1100px. Small card-kind/footer/credit text is secondary; functional labels stay explicit, with their small supporting gloss hidden below400px. These fonts and type sizes apply only to the three Auth routes.
 - **Detail title / card title:** bold Be Vietnam Pro; Detail uses `detail-title` with natural wrapping and `detail-title-narrow` at720px, while the card narrow size is0.92rem. Home's optional compact BookCard uses `home-card-title` (15px) above600px and the shared14.72px narrow title below it. Home compact titles show at most two lines, with full text retained in the DOM, accessible name and native title tooltip. Search now uses the same compact title behavior; the default BookCard recipe remains available elsewhere.
 - **Body / label:** regular reading copy and bold controls. Supporting text is mostly 0.75–0.9rem with 1.6–1.9 line height; disclosure captions are smaller. Description text preserves line breaks; task explanations cap around 60–65ch.
 - **Price:** Detail uses 1.5rem, reducing to 1.3rem on narrow layouts; card prices use 1rem then 0.9rem. Both use tabular numerals and separate sale/exchange labels.
@@ -555,7 +555,7 @@ Both families are self-hosted in web `public/fonts`, with OFL files and [source 
 - **Account shelf:** uppercase Anton `account-heading` introduces the personal shelf, at 2rem at760px and below. Be Vietnam Pro `account-book-title` wraps complete titles with `overflow-wrap:anywhere`, reducing to `account-book-title-narrow` at760px without line clamping. Separately labelled prices use `account-price` and tabular figures. Introduction and controls use14px, author/condition/filter/recovery text13px, and state/count/date/value labels12px; notes retain1.8 line height. These smaller roles support a compact owner list, not global task typography. Auth routes use their separate scoped type roles above.
 - **RN:** one Be Vietnam Pro family with actual regular/bold faces, including the preserved `rn-*` roles. CSS units in this interchange map to RN logical pixels and retain system text scaling; web display type does not replace the RN type system.
 
-**The Two Voices Rule.** Anton carries expressive discovery moments; Be Vietnam Pro carries Home category/catalog headings, book titles, prices, forms and consequential actions. Use the bundled weights. Auth alone adds Bricolage headings and Caveat reader traces; this does not replace the global pairing.
+**The Two Voices Rule.** Anton carries expressive discovery moments; Be Vietnam Pro carries Home category/catalog headings, book titles, prices, forms and consequential actions. Use the bundled weights. Auth alone adds Bricolage headings and MTD Fancy Melody reader traces; this does not replace the global pairing.
 
 ## Layout
 

@@ -8,6 +8,14 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Auth — tập giấy thư viện — 11/10/2026
 
+- Font follow-up: `codex/auth-vietnamese-handwriting`, base `41fda2b`, checkpoint
+  `fix(web): use Fancy Melody for Vietnamese auth notes`. Theo lựa chọn mới nhất
+  của chủ dự án, dùng file MTD Fancy Melody Regular400 nguyên bản cho ghi chú/lỗi;
+  bỏ Caveat, không giữ ứng viên Athena. Glyph tiếng Việt đầy đủ; IAB1366×768,
+  mobile320×1000 và lỗi401 giả lập riêng PASS về font/đọc/không tràn ngang.
+  TypeScript/build PASS; scoped type detector không có finding. Không đổi logic
+  auth, không chạy lại API/native hoặc full finish review cho thay font nhỏ.
+  [Evidence font](../../.impeccable/review/auth-melody/README.md). READINESS không đổi.
 - Nhánh `codex/auth-library-papers`, base `d20c43a`; checkpoint subject
   `feat(web): redesign auth as library paper sheets`. Thay split-screen bằng
   AuthLayout chung: ba tờ giấy giữa nền ảnh Davit Margaryan/Unsplash đỏ rượu,

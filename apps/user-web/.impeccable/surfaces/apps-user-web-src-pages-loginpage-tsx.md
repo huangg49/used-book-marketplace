@@ -19,7 +19,7 @@ library file, replacing the incumbent split-screen photo/form composition.
 
 OWN-WORLD: Existing wine/photo/cream/logo; original local Davit Margaryan image
 with visible credit, textured paper, ink underlines. Be Vietnam Pro controls,
-Bricolage headings, Caveat pencil notes and errors from the supplied prototype.
+Bricolage headings, owner-supplied MTD Fancy Melody pencil notes and errors (Vietnamese glyph correction).
 
 STORY: Identify the reader card, enter email/password, recover from clear errors.
 Register/recovery turn to honest unavailable sheets. Real login succeeds before

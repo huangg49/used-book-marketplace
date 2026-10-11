@@ -16,6 +16,14 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Phạm vi triển khai
 
+- Auth handwriting follow-up11/10: `codex/auth-vietnamese-handwriting`, base
+  `41fda2b`. Thay Caveat bằng MTD Fancy Melody Regular400 do chủ dự án cung cấp;
+  bỏ ứng viên Athena. Giữ cỡ chữ/layout, dùng đúng weight400, labels/actions vẫn
+  Be Vietnam Pro. File local nguyên bản, nguồn/hash ghi ở fonts/auth/README.md;
+  không gán giấy phép OFL cho font chủ dự án. Build/TS và scoped type detector
+  PASS; laptop/mobile/error401 fixture xem thực tế, không đổi API/session.
+  [Evidence font hiện hành](../../.impeccable/review/auth-melody/README.md).
+  Review/captures Auth papers dưới đây là phiên bản trước lần thay font này.
 - Auth papers11/10, nhánh `codex/auth-library-papers`, base `d20c43a`:
   chủ dự án thay split-screen bằng tập ba tờ giấy thư viện chính giữa nền ảnh
   hiệu sách đỏ rượu/làm mờ. AuthLayout chung cho login/register/forgot-password;

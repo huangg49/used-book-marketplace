@@ -19,10 +19,10 @@
 .submit:hover:not(:disabled) { background: #7c2320; }
 .submit:disabled { opacity: .65; cursor: wait; }
 .registration { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 8px; margin: 16px 0 0; padding-top: 10px; border-top: 1px dashed var(--shop-line); color: var(--shop-muted); font-size: .75rem; line-height: 1.8; }
-.error { margin: 14px 0 0; color: var(--auth-error); font: 700 24px/1.35 var(--auth-hand); }
+.error { margin: 14px 0 0; color: var(--auth-error); font: 400 24px/1.35 var(--auth-hand); }
 .unavailable { margin-block: 26px; padding-block: 18px; border-block: 1px solid var(--shop-line); }
 .unavailable h2 { font: 700 .875rem/1.7 var(--shop-body); color: var(--shop-wine); margin: 0 0 8px; }
 .unavailable p { font-size: .8125rem; color: var(--shop-muted); line-height: 1.9; margin: 0; }
-.unavailable .librarianNote { font: 500 25px/1.35 var(--auth-hand); color: var(--shop-wine); margin-top: 18px; }
+.unavailable .librarianNote { font: 400 25px/1.35 var(--auth-hand); color: var(--shop-wine); margin-top: 18px; }
 @media (max-width: 600px) { .panel h1 { font-size: 29px; } }
 @media (max-width: 400px) { .field label span { display: none; } .panel h1 { font-size: 27px; } }

@@ -5,13 +5,13 @@
   font-display: swap;
 }
 @font-face {
-  font-family: "Auth Caveat";
-  src: url("/fonts/auth/Caveat.ttf") format("truetype");
-  font-weight: 400 700;
+  font-family: "Auth Melody";
+  src: url("/fonts/auth/MTD-Fancy-Melody.otf") format("opentype");
+  font-weight: 400;
   font-display: swap;
 }
 .root {
-  --auth-hand: "Auth Caveat", cursive;
+  --auth-hand: "Auth Melody", cursive;
   --auth-title: "Auth Bricolage", var(--shop-body);
   --auth-error: #912b0e;
   position: relative;
