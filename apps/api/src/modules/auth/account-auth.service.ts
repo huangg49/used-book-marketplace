@@ -1,6 +1,14 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  randomInt,
+  randomUUID,
+  timingSafeEqual,
+} from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { hash } from 'argon2';
 import { MongoServerError } from 'mongodb';
 import { MongoService } from '../../database/mongo/mongo.service.js';
@@ -8,6 +16,7 @@ import type { Tx } from '../../database/mongo/transaction.js';
 import type {
   UserDoc,
   AuthActionTokenDoc,
+  AuthOtpChallengeDoc,
 } from '../../database/mongo/documents.js';
 import { LoginLimiter } from './login-limiter.service.js';
 import { AuthMailService } from './auth-mail.service.js';
@@ -35,16 +44,29 @@ export class AccountAuthService {
     private readonly mongo: MongoService,
     private readonly limiter: LoginLimiter,
     private readonly mail: AuthMailService,
+    private readonly config: ConfigService,
   ) {}
 
-  async register(body: RegisterAccountDto, ip: string) {
+  async register(body: RegisterAccountDto, ip: string, otp = false) {
     this.mail.assertAvailable();
     await this.limiter.consume(body.email, ip, 'register');
     // Hash even for duplicates. Never replace an existing account's credentials.
     const passwordHash = await hash(body.password);
+    const challengeId = randomUUID();
     try {
       await this.mongo.tx(async (tx) => {
-        if (await tx.c.users.findOne({ emailNormalized: body.email })) return;
+        if (await tx.c.users.findOne({ emailNormalized: body.email })) {
+          if (otp)
+            await this.issueOtp(
+              tx,
+              null,
+              body.email,
+              'VerifyEmail',
+              challengeId,
+              await tx.now(),
+            );
+          return;
+        }
         const now = await tx.now();
         const user: UserDoc = {
           _id: randomUUID(),
@@ -65,7 +87,16 @@ export class AccountAuthService {
           action: 'Registered',
           createdAt: now,
         });
-        await this.issue(tx, user, 'VerifyEmail', now);
+        if (otp)
+          await this.issueOtp(
+            tx,
+            user,
+            body.email,
+            'VerifyEmail',
+            challengeId,
+            now,
+          );
+        else await this.issue(tx, user, 'VerifyEmail', now);
       });
     } catch (error) {
       // Only the normalized-email race is a harmless duplicate registration.
@@ -75,8 +106,19 @@ export class AccountAuthService {
         error.keyPattern?.emailNormalized
       ))
         throw error;
+      if (otp)
+        await this.mongo.tx(async (tx) => {
+          await this.issueOtp(
+            tx,
+            null,
+            body.email,
+            'VerifyEmail',
+            challengeId,
+            await tx.now(),
+          );
+        });
     }
-    return acknowledgement;
+    return otp ? this.otpAcknowledgement(challengeId) : acknowledgement;
   }
 
   async requestLink(
@@ -109,6 +151,7 @@ export class AccountAuthService {
         );
         if (latest && now.getTime() - latest.createdAt.getTime() < 60_000)
           return;
+        if (await this.otpCooldown(tx, user._id, purpose, now)) return;
         await this.issue(tx, user, purpose, now);
       }),
     ]);
@@ -121,6 +164,10 @@ export class AccountAuthService {
     purpose: AuthActionTokenDoc['purpose'],
     now: Date,
   ) {
+    await tx.c.auth_otp_challenges.updateMany(
+      { userId: user._id, purpose, consumedAt: null },
+      { $set: { consumedAt: now } },
+    );
     await tx.c.auth_action_tokens.updateMany(
       { userId: user._id, purpose, consumedAt: null },
       { $set: { consumedAt: now } },
@@ -230,6 +277,243 @@ export class AccountAuthService {
         { userId: user._id, purpose, consumedAt: null },
         { $set: { consumedAt: now } },
       );
+      await tx.c.auth_otp_challenges.updateMany(
+        { userId: user._id, purpose, consumedAt: null },
+        { $set: { consumedAt: now } },
+      );
     });
+  }
+
+  private otpAcknowledgement(challengeId: string) {
+    return {
+      challengeId,
+      expiresIn: 300,
+      resendAfter: 60,
+      message:
+        'Nếu email phù hợp, bạn sẽ nhận được mã 6 số. Kiểm tra cả thư rác. Mã có hiệu lực 5 phút.',
+    };
+  }
+  // Six-digit codes must not be stored with an unkeyed digest: they have only
+  // one million possibilities. Purpose + random challenge bind this HMAC.
+  private otpDigest(value: string) {
+    return createHmac(
+      'sha256',
+      this.config.getOrThrow<string>('AUTH_MAIL_ENCRYPTION_KEY'),
+    )
+      .update('latlai:auth-otp:v1:')
+      .update(value)
+      .digest('hex');
+  }
+  private codeMatches(row: AuthOtpChallengeDoc, code: string) {
+    return timingSafeEqual(
+      Buffer.from(row.codeHash, 'hex'),
+      Buffer.from(this.otpDigest(`${row._id}:${row.purpose}:${code}`), 'hex'),
+    );
+  }
+  private async otpCooldown(
+    tx: Tx,
+    userId: string,
+    purpose: AuthOtpChallengeDoc['purpose'],
+    now: Date,
+  ) {
+    const last = await tx.c.auth_otp_challenges.findOne(
+      { userId, purpose },
+      { sort: { createdAt: -1 } },
+    );
+    return !!last && now.getTime() - last.createdAt.getTime() < 60_000;
+  }
+  private async issueOtp(
+    tx: Tx,
+    user: UserDoc | null,
+    email: string,
+    purpose: AuthOtpChallengeDoc['purpose'],
+    challengeId: string,
+    now: Date,
+  ) {
+    const code = randomInt(1_000_000).toString().padStart(6, '0');
+    const expiresAt = new Date(now.getTime() + 300_000);
+    if (user) {
+      await tx.c.auth_otp_challenges.updateMany(
+        { userId: user._id, purpose, consumedAt: null },
+        { $set: { consumedAt: now } },
+      );
+      await tx.c.auth_action_tokens.updateMany(
+        { userId: user._id, purpose, consumedAt: null },
+        { $set: { consumedAt: now } },
+      );
+    }
+    await tx.c.auth_otp_challenges.insertOne({
+      _id: challengeId,
+      userId: user?._id ?? null,
+      emailHash: this.otpDigest(`email:${email}`),
+      purpose,
+      codeHash: this.otpDigest(`${challengeId}:${purpose}:${code}`),
+      attempts: 0,
+      lockSeq: 0,
+      createdAt: now,
+      expiresAt,
+      consumedAt: null,
+    });
+    if (user)
+      await this.mail.enqueue(
+        tx,
+        user._id,
+        null,
+        { to: user.emailNormalized, kind: purpose, code, challengeId },
+        now,
+        expiresAt,
+      );
+  }
+  async requestOtp(
+    email: string,
+    purpose: AuthOtpChallengeDoc['purpose'],
+    ip: string,
+  ) {
+    this.mail.assertAvailable();
+    await this.limiter.consume(email, ip, purpose);
+    const challengeId = randomUUID();
+    await Promise.all([
+      delay(150),
+      this.mongo.tx(async (tx) => {
+        const found = await tx.c.users.findOne({ emailNormalized: email });
+        if (found) await tx.lock('users', [found._id]);
+        const user = found
+          ? await tx.c.users.findOne({ _id: found._id })
+          : null;
+        const now = await tx.now();
+        let eligible =
+          !!user &&
+          (purpose === 'VerifyEmail'
+            ? user.status === 'PENDING_VERIFICATION' && !user.emailVerifiedAt
+            : eligibleForReset(user));
+        if (user && eligible) {
+          const link = await tx.c.auth_action_tokens.findOne(
+            { userId: user._id, purpose },
+            { sort: { createdAt: -1 } },
+          );
+          eligible =
+            !(link && now.getTime() - link.createdAt.getTime() < 60_000) &&
+            !(await this.otpCooldown(tx, user._id, purpose, now));
+        }
+        // Never reveal or invalidate the genuine challenge on a cooldown request.
+        // Decoys have the same expiry, wrong-attempt budget and generic response.
+        await this.issueOtp(
+          tx,
+          eligible ? user : null,
+          email,
+          purpose,
+          challengeId,
+          now,
+        );
+      }),
+    ]);
+    return this.otpAcknowledgement(challengeId);
+  }
+  async consumeOtp(
+    body: { challengeId: string; code: string },
+    purpose: AuthOtpChallengeDoc['purpose'],
+    ip: string,
+    password?: string,
+  ) {
+    if (purpose === 'ResetPassword') this.mail.assertAvailable();
+    await this.limiter.consume(body.challengeId, ip, 'otp-code');
+    const found = await this.mongo.c.auth_otp_challenges.findOne({
+      _id: body.challengeId,
+    });
+    let passwordHash: string | undefined;
+    if (
+      password &&
+      found &&
+      found.purpose === purpose &&
+      !found.consumedAt &&
+      found.attempts < 5 &&
+      this.codeMatches(found, body.code)
+    )
+      passwordHash = await hash(password);
+    const result = await this.mongo.tx(
+      async (tx): Promise<'ok' | 'invalid' | 'exhausted'> => {
+        if (!found) return 'invalid';
+        if (found.userId) await tx.lock('users', [found.userId]);
+        await tx.lock('auth_otp_challenges', [found._id]);
+        const row = await tx.c.auth_otp_challenges.findOne({ _id: found._id });
+        const now = await tx.now();
+        if (!row || row.purpose !== purpose || row.expiresAt <= now)
+          return 'invalid';
+        if (row.attempts >= 5) return 'exhausted';
+        if (row.consumedAt) return 'invalid';
+        if (!this.codeMatches(row, body.code) || !row.userId) {
+          const attempts = row.attempts + 1;
+          await tx.c.auth_otp_challenges.updateOne(
+            { _id: row._id },
+            {
+              $set: {
+                attempts,
+                ...(attempts === 5 ? { consumedAt: now } : {}),
+              },
+            },
+          );
+          return attempts === 5 ? 'exhausted' : 'invalid';
+        }
+        const user = await tx.c.users.findOne({ _id: row.userId });
+        if (
+          !user ||
+          (purpose === 'VerifyEmail'
+            ? user.status !== 'PENDING_VERIFICATION' || !!user.emailVerifiedAt
+            : !eligibleForReset(user))
+        )
+          return 'invalid';
+        if (purpose === 'VerifyEmail') {
+          await tx.c.users.updateOne(
+            { _id: user._id },
+            {
+              $set: { status: 'ACTIVE', emailVerifiedAt: now, updatedAt: now },
+            },
+          );
+        } else {
+          if (!passwordHash) return 'invalid';
+          await tx.c.users.updateOne(
+            { _id: user._id },
+            { $set: { passwordHash, updatedAt: now } },
+          );
+          await tx.c.auth_sessions.updateMany(
+            { userId: user._id, revokedAt: null },
+            { $set: { revokedAt: now }, $inc: { lockSeq: 1 } },
+          );
+          await this.mail.enqueue(
+            tx,
+            user._id,
+            null,
+            { to: user.emailNormalized, kind: 'PasswordChanged' },
+            now,
+            new Date(now.getTime() + 86400_000),
+          );
+        }
+        await tx.c.auth_events.insertOne({
+          _id: randomUUID(),
+          userId: user._id,
+          action: purpose === 'VerifyEmail' ? 'EmailVerified' : 'PasswordReset',
+          createdAt: now,
+        });
+        await tx.c.auth_otp_challenges.updateMany(
+          { userId: user._id, purpose, consumedAt: null },
+          { $set: { consumedAt: now } },
+        );
+        await tx.c.auth_action_tokens.updateMany(
+          { userId: user._id, purpose, consumedAt: null },
+          { $set: { consumedAt: now } },
+        );
+        return 'ok';
+      },
+    );
+    // Throw only AFTER the transaction commits, or wrong-attempt increments
+    // would roll back and allow unlimited guesses.
+    if (result !== 'ok')
+      throw new BadRequestException({
+        code: result === 'exhausted' ? 'OTP_ATTEMPTS_EXCEEDED' : 'OTP_INVALID',
+        message:
+          result === 'exhausted'
+            ? 'Mã đã bị khóa sau 5 lần thử sai. Hãy yêu cầu mã mới.'
+            : 'Mã chưa đúng, đã hết hạn hoặc đã được dùng. Kiểm tra mã hoặc yêu cầu mã mới.',
+      });
   }
 }

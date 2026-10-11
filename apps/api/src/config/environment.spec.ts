@@ -44,6 +44,26 @@ describe('account email config', () => {
 });
 
 describe('environment validation', () => {
+  it('requires a valid Brevo sender and rejects header injection', () => {
+    const env = {
+      AUTH_MAIL_PROVIDER: 'brevo',
+      BREVO_API_KEY: 'synthetic-key',
+      BREVO_SENDER_EMAIL: 'sender@example.test',
+    };
+    const key = 'test-only-encryption-key-0000000000000';
+    expect(validateAccountMail(env, 'development', key).BREVO_SENDER_NAME).toBe(
+      'Lật Lại',
+    );
+    for (const override of [
+      { BREVO_API_KEY: '' },
+      { BREVO_SENDER_EMAIL: 'bad' },
+      { BREVO_SENDER_NAME: 'Lật Lại\r\nInjected' },
+    ]) {
+      expect(() =>
+        validateAccountMail({ ...env, ...override }, 'development', key),
+      ).toThrow('Brevo requires');
+    }
+  });
   const valid = {
     MONGODB_URL: 'mongodb://user:password@localhost:27017/books?replicaSet=rs0',
     JWT_ACCESS_SECRET: 'a'.repeat(48),

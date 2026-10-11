@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { authOtpMigration, authOtpSpecs } from './0018-auth-otp.js';
 import { accountRecoveryMigration, accountRecoverySpecs } from './0017-account-recovery.js';
 import type { Db, MongoClient } from 'mongodb';
 import { canonicalJson } from '../../../common/canonical-json.js';
@@ -146,6 +147,7 @@ export const migrations: Migration[] = [
   memberNotificationsMigration,
   catalogClassificationMigration,
   accountRecoveryMigration,
+  authOtpMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -183,4 +185,5 @@ export const currentCollections = (): CollectionSpec[] => [
   ...purchaseConversationSpecs,
   ...notificationSpecs,
   ...accountRecoverySpecs,
+  ...authOtpSpecs,
 ];

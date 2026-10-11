@@ -22,6 +22,8 @@ export interface AccountMail {
   to: string;
   kind: 'VerifyEmail' | 'ResetPassword' | 'PasswordChanged';
   token?: string;
+  code?: string;
+  challengeId?: string;
 }
 const escapeHtml = (s: string) =>
   s.replace(
@@ -135,6 +137,13 @@ export class AuthMailService implements OnModuleInit, OnModuleDestroy {
       : verify
         ? 'Xác minh email · Lật Lại'
         : 'Đặt lại mật khẩu · Lật Lại';
+    if (payload.code) {
+      const description =
+        'Mã chỉ dùng một lần, có hiệu lực 5 phút. Không chia sẻ mã này. Nếu bạn không yêu cầu, hãy bỏ qua thư này.';
+      const text = `${subject}\n\nMã xác nhận: ${payload.code}\n\n${description}\n\nLật Lại · Sách cũ. Người đọc mới.`;
+      const html = `<!doctype html><html lang="vi"><meta charset="utf-8"><body style="background:#fff8e9;color:#54100e;font-family:Arial,sans-serif;padding:32px"><h1>${subject}</h1><p>Mã xác nhận của bạn</p><p style="font-size:36px;font-weight:bold;letter-spacing:8px">${escapeHtml(payload.code)}</p><p>${description}</p><p>Lật Lại · Sách cũ. Người đọc mới.</p></body></html>`;
+      return { subject, text, html };
+    }
     const origin = this.config.getOrThrow<string>('AUTH_WEB_ORIGIN');
     const link = changed
       ? `${origin}/forgot-password`
@@ -169,6 +178,37 @@ export class AuthMailService implements OnModuleInit, OnModuleDestroy {
       return;
     }
     this.assertAvailable();
+    if (this.config.get('AUTH_MAIL_PROVIDER') === 'brevo') {
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        signal: AbortSignal.timeout(8000),
+        headers: {
+          'api-key': this.config.getOrThrow<string>('BREVO_API_KEY'),
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          sender: {
+            email: this.config.getOrThrow<string>('BREVO_SENDER_EMAIL'),
+            name: this.config.getOrThrow<string>('BREVO_SENDER_NAME'),
+          },
+          to: [{ email: payload.to }],
+          subject: message.subject,
+          textContent: message.text,
+          htmlContent: message.html,
+          headers: { idempotencyKey: job._id },
+        }),
+      });
+      // Provider duplicate acknowledgement is a successful replay of this job.
+      if (!response.ok) {
+        const error = (await response.json().catch(() => null)) as {
+          code?: string;
+        } | null;
+        if (response.status !== 400 || error?.code !== 'duplicate_parameter')
+          throw new Error('Auth mail delivery failed');
+      } else await response.body?.cancel();
+      return;
+    }
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       signal: AbortSignal.timeout(8000),
@@ -228,13 +268,24 @@ export class AuthMailService implements OnModuleInit, OnModuleDestroy {
       );
       if (!job) return;
       try {
+        const payload = this.decrypt(job.encryptedPayload);
         if (
-          job.tokenId &&
-          !(await this.mongo.c.auth_action_tokens.findOne({
-            _id: job.tokenId,
-            consumedAt: null,
-            expiresAt: { $gt: new Date() },
-          }))
+          (job.tokenId &&
+            !(await this.mongo.c.auth_action_tokens.findOne({
+              _id: job.tokenId,
+              consumedAt: null,
+              expiresAt: { $gt: new Date() },
+            }))) ||
+          (payload.challengeId &&
+            (payload.kind === 'PasswordChanged' ||
+              !(await this.mongo.c.auth_otp_challenges.findOne({
+                _id: payload.challengeId,
+                userId: job.userId,
+                purpose: payload.kind,
+                consumedAt: null,
+                attempts: { $lt: 5 },
+                expiresAt: { $gt: new Date() },
+              }))))
         ) {
           await this.mongo.c.auth_mail_jobs.updateOne(
             { _id: job._id, leaseId, status: 'Sending' },
@@ -250,7 +301,7 @@ export class AuthMailService implements OnModuleInit, OnModuleDestroy {
           );
           continue;
         }
-        await this.deliver(job, this.decrypt(job.encryptedPayload));
+        await this.deliver(job, payload);
         await this.mongo.c.auth_mail_jobs.updateOne(
           { _id: job._id, leaseId, status: 'Sending' },
           {

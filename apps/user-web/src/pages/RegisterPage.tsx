@@ -4,6 +4,8 @@ import { useLocation } from 'react-router-dom';
 import { AuthPageLink } from '../layouts/AuthPageLink';
 import { useAuthPaper } from '../layouts/auth-paper';
 import { accountAuth } from '../services/account-auth';
+import { EmailOtpField } from './EmailOtpField';
+import { useOtpChallenge } from './useOtpChallenge';
 import { useAccountForm } from './useAccountForm';
 import { useAuthLink } from './useAuthLink';
 import styles from './LoginPage.module.css';
@@ -14,11 +16,13 @@ export function RegisterPage() {
   const state = useAccountForm();
   const [verified, setVerified] = useState(false);
   const token = useAuthLink('verify', verified);
-  const [sent, setSent] = useState(false);
+  const [challenge, setChallenge] = useOtpChallenge('verify-otp', verified);
+  const [sent, setSent] = useState(!!challenge);
+  const [code, setCode] = useState('');
   const [visible, setVisible] = useState(false);
   const [email, setEmail] = useState(draft.current.registerEmail);
   const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => { if ((sent || verified) && !heading.current?.closest('[inert]')) heading.current?.focus(); }, [sent, verified]);
+  useEffect(() => { if ((sent || verified) && !heading.current?.closest('[inert]')) heading.current?.focus(); }, [sent, verified, challenge]);
   async function register(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -34,23 +38,23 @@ export function RegisterPage() {
         email: email.trim(), password, acceptedRules: true });
       if (!state.active.current) return;
       updateDraft('registerPassword', ''); updateDraft('registerConfirmation', ''); updateDraft('email', email.trim());
-      setSent(true); state.setMessage(result.message); state.cooldown();
+      setChallenge(result.challengeId); setSent(true); state.setMessage(''); state.cooldown();
     });
   }
   async function resend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await state.run(async () => {
-      const result = await accountAuth.resend(email.trim());
-      if (state.active.current) { state.setMessage(result.message); state.cooldown(); }
+      const result = await accountAuth.requestOtp(email.trim(), 'VerifyEmail');
+      if (state.active.current) { setChallenge(result.challengeId); setSent(true); setCode(''); state.setMessage(''); state.cooldown(); }
     });
   }
   return <section className={styles.panel + ' ' + styles.registerPanel} aria-labelledby="register-title">
-    <h1 ref={heading} id="register-title" tabIndex={-1}>{verified ? 'Thẻ đã sẵn sàng.' : token ? 'Xác minh email của bạn.' : sent ? 'Kiểm tra hộp thư nhé.' : 'Một người đọc mới.'}</h1>
-    <p className={styles.lede}>{verified ? 'Email đã được xác minh. Đăng nhập để bắt đầu câu chuyện tiếp theo.' : token
+    <h1 ref={heading} id="register-title" tabIndex={-1}>{verified ? 'Thẻ đã sẵn sàng.' : token && !sent ? 'Xác minh email của bạn.' : sent ? 'Xác minh email của bạn.' : 'Một người đọc mới.'}</h1>
+    <p className={styles.lede}>{verified ? 'Email đã được xác minh. Đăng nhập để bắt đầu câu chuyện tiếp theo.' : token && !sent
       ? 'Bấm xác minh để kích hoạt tài khoản. Liên kết chỉ dùng được một lần.' : sent
-        ? 'Xác minh email trước khi đăng sách hoặc trò chuyện. Chưa thấy thư? Kiểm tra thư rác hoặc gửi lại bên dưới.'
+        ? 'Một bước nữa để thẻ sẵn sàng. Nếu email phù hợp, mã xác nhận sẽ được gửi tới hộp thư của bạn.'
         : 'Làm thẻ của bạn. Để những câu chuyện tìm được nhau.'}</p>
-    {verified ? <AuthPageLink className={styles.submit} to={'/login' + search}>Đăng nhập <ArrowRight size={18} aria-hidden="true" /></AuthPageLink> : token ? <>
+    {verified ? <AuthPageLink className={styles.submit} to={'/login' + search}>Đăng nhập <ArrowRight size={18} aria-hidden="true" /></AuthPageLink> : token && !sent ? <>
       <button className={styles.submit} disabled={state.busy} onClick={() => void state.run(async () => {
         await accountAuth.verify(token);
         if (state.active.current) { setVerified(true); state.setMessage('Email đã được xác minh.'); }
@@ -59,15 +63,36 @@ export function RegisterPage() {
         <div className={styles.field}><label htmlFor="verify-resend-email">Email đã đăng ký</label>
           <input id="verify-resend-email" name="email" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} /></div>
         <button className={styles.textAction} type="submit" disabled={state.busy || state.remaining > 0}>
-          {state.remaining > 0 ? 'Gửi lại sau ' + state.remaining + ' giây' : 'Gửi lại liên kết xác minh'}</button>
+          {state.remaining > 0 ? 'Gửi lại sau ' + state.remaining + ' giây' : 'Gửi mã xác minh'}</button>
       </form>}
+    </> : sent && challenge ? <>
+      <p className={styles.otpRecipient}>{email.trim() ? <>Email: <strong>{email.trim()}</strong></> : 'Dùng mã đã nhận trong hộp thư của bạn.'}</p>
+      <form aria-busy={state.busy} aria-describedby={state.error ? 'register-error' : undefined} onSubmit={(event) => {
+        event.preventDefault(); void state.run(async () => {
+          await accountAuth.verifyOtp({ challengeId: challenge, code });
+          if (state.active.current) { setVerified(true); setCode(''); state.setMessage(''); }
+        });
+      }}>
+        <fieldset className={styles.formFields} disabled={state.busy}>
+          <EmailOtpField id="register-otp" code={code} onChange={setCode} invalid={!!state.error} />
+          <button className={styles.submit} type="submit">{state.busy ? 'Đang xác minh…' : 'Xác minh email'} <ArrowRight size={18} aria-hidden="true" /></button>
+        </fieldset>
+      </form>
+      <div className={styles.otpActions}>
+        <button className={styles.textAction} type="button" disabled={state.busy || state.remaining > 0 || !email.trim()} onClick={() => void state.run(async () => {
+          const result = await accountAuth.requestOtp(email.trim(), 'VerifyEmail');
+          if (state.active.current) { setChallenge(result.challengeId); setCode(''); state.cooldown(); }
+        })}>{state.remaining > 0 ? 'Gửi lại sau ' + state.remaining + ' giây' : 'Gửi lại mã'}</button>
+        <button className={styles.textAction} type="button" disabled={state.busy} onClick={() => { setChallenge(null); setCode(''); setSent(!email.trim()); state.setError(''); }}>{email.trim() ? 'Sửa email đăng ký' : 'Nhập email để gửi lại'}</button>
+      </div>
+      <p className={styles.availability}>Chưa thấy thư? Kiểm tra thư rác. Mỗi mã mới thay thế mã cũ.</p>
     </> : sent ? <form onSubmit={(event) => void resend(event)} aria-busy={state.busy}>
       <div className={styles.field}><label htmlFor="resend-email">Email đã đăng ký</label>
         <input id="resend-email" name="email" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} /></div>
       <button className={styles.submit} type="submit" disabled={state.busy || state.remaining > 0}>
-        {state.busy ? 'Đang yêu cầu gửi lại…' : state.remaining > 0 ? 'Gửi lại sau ' + state.remaining + ' giây' : 'Gửi lại email xác minh'}
+        {state.busy ? 'Đang yêu cầu mã…' : state.remaining > 0 ? 'Gửi lại sau ' + state.remaining + ' giây' : 'Gửi mã xác minh'}
       </button>
-      <p className={styles.availability}>Liên kết mới thay thế liên kết cũ. Có hiệu lực 30 phút.</p>
+      <p className={styles.availability}>Tài khoản chưa đăng ký cần tạo tài khoản trước.</p>
     </form> : <form onSubmit={(event) => void register(event)} aria-busy={state.busy} aria-describedby={state.error ? 'register-error' : undefined}>
       <fieldset className={styles.formFields} disabled={state.busy}>
         <div className={styles.formGrid}>

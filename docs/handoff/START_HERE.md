@@ -1,7 +1,7 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
-Auth follow-up11/10/2026 trên `codex/auth-registration-recovery`: OpenAPI0.32.0,
-migration0017, đăng ký/xác minh/reset thật và hộp thư local demo. Xem
+Auth follow-up11/10/2026 trên `codex/auth-brevo-otp`: OpenAPI0.33.0,
+migration0018, OTP6 số cho đăng ký/reset; Brevo hoặc hộp thư local, link cũ còn hỗ trợ. Xem
 [ACCOUNT_AUTH](../features/ACCOUNT_AUTH.md) để migrate/bootstrap quyền mới,
 cấu hình origin/CORS và mở `pnpm auth:mailbox`. Snapshot main bên dưới giữ ngày
 nguồn; trạng thái bàn giao hiện tại nằm trong SESSION_STATE.

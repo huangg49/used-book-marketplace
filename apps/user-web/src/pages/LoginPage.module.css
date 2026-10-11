@@ -31,6 +31,11 @@
 .formGrid > .field + .field { margin-top: 0; }
 .librarianNote { font: 400 27px/1.4 var(--auth-hand); color: var(--shop-wine); margin: 24px 0 30px; }
 .availability { margin: 9px 0 0; color: var(--shop-muted); font-size: .6875rem; line-height: 1.8; text-align: center; }
+.panel .field .otpInput[name][type] { font-size: 1.75rem; font-weight: 700; letter-spacing: .3em; font-variant-numeric: tabular-nums; color: var(--shop-wine); }
+.otpHint { margin: 7px 0 0; color: var(--shop-muted); font-size: .75rem; line-height: 1.7; }
+.otpRecipient { margin: 0 0 16px; color: var(--shop-ink); font-size: .8125rem; line-height: 1.7; overflow-wrap: anywhere; }
+.otpActions { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.recoveryPanel .formGrid { margin-top: 16px; margin-bottom: 0; }
 .submit[aria-disabled="true"] { opacity: 1; cursor: not-allowed; }
 @media (min-width: 601px) and (max-height: 800px) {
   .registerPanel .lede { margin-bottom: 8px; }
@@ -40,6 +45,12 @@
   .formGrid { margin-bottom: 10px; }
   .submit { margin-top: 14px; }
   .registration { margin-top: 8px; padding-top: 0; }
+  .recoveryPanel .lede { margin-bottom: 6px; }
+  .recoveryPanel .otpRecipient { margin-bottom: 8px; }
+  .recoveryPanel .field .otpInput[name][type] { font-size: 1.5rem; line-height: 1.2; }
+  .recoveryPanel .formGrid { margin-top: 10px; }
+  .recoveryPanel .submit { margin-top: 10px; }
+  .recoveryPanel .registration { margin-top: 0; }
 }
 @media (max-width: 600px) { .panel h1 { font-size: 29px; } }
 @media (max-width: 400px) { .field label span { display: none; } .registerPanel .field label span { display: inline; } .panel h1 { font-size: 27px; } .formGrid { grid-template-columns: 1fr; gap: 18px; } }

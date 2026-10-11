@@ -3,6 +3,8 @@ import {
   Equals,
   IsBoolean,
   IsEmail,
+  IsIn,
+  IsUUID,
   IsString,
   Matches,
   MaxLength,
@@ -39,6 +41,23 @@ export class AuthActionTokenDto {
   token: string;
 }
 export class ResetPasswordDto extends AuthActionTokenDto {
+  @IsString()
+  @MinLength(10)
+  @MaxLength(128)
+  password: string;
+}
+export class AccountOtpRequestDto extends AccountEmailDto {
+  @IsIn(['VerifyEmail', 'ResetPassword'])
+  purpose: 'VerifyEmail' | 'ResetPassword';
+}
+export class AccountOtpCodeDto {
+  @IsUUID('4')
+  challengeId: string;
+  @IsString()
+  @Matches(/^[0-9]{6}$/)
+  code: string;
+}
+export class AccountOtpResetDto extends AccountOtpCodeDto {
   @IsString()
   @MinLength(10)
   @MaxLength(128)

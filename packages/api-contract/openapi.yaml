@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.32.0
+  version: 0.33.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -185,6 +185,94 @@ paths:
       responses:
         "204":
           description: Completed. The link cannot be used again.
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /auth/otp/register:
+    post:
+      operationId: registerAccountWithOtp
+      tags: [Auth]
+      description: Creates only an unverified MEMBER. Generic challenge acknowledgement for duplicates; credentials never overwritten. Six-digit verification code valid 5 minutes, five wrong attempts, 60-second resend cooldown. No session created.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "202":
+          description: Generic challenge; eligible accounts receive asynchronous email. Opaque challenge ID is not proof of account existence.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountOtpAcknowledgement"
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /auth/otp/request:
+    post:
+      operationId: requestAccountOtp
+      tags: [Auth]
+      description: Generic response for unknown, ineligible and cooldown requests. Eligible accounts receive a new code, invalidating prior codes and links of the same purpose. Cooldown requests never expose or invalidate the active challenge. Five-minute expiry and 60-second cooldown enforced by server time.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountOtpRequest"
+      responses:
+        "202":
+          description: Generic asynchronous acknowledgement.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountOtpAcknowledgement"
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /auth/otp/verify-email:
+    post:
+      operationId: verifyEmailWithOtp
+      tags: [Auth]
+      description: Atomically consume the challenge and activate an unverified account. Five failed code attempts lock that challenge; parallel requests cannot exceed the budget. No automatic login. OTP_INVALID or OTP_ATTEMPTS_EXCEEDED on failure.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountOtpCodeRequest"
+      responses:
+        "204":
+          description: Email verified; challenge cannot be reused.
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /auth/otp/reset-password:
+    post:
+      operationId: resetPasswordWithOtp
+      tags: [Auth]
+      description: Atomically consume the reset challenge, replace password and revoke every session. Existing status and roles retained. No automatic login. Same five-attempt budget and OTP error codes as verification.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountOtpResetRequest"
+      responses:
+        "204":
+          description: Password changed and sessions revoked.
         "400":
           $ref: "#/components/responses/Error"
         "429":
@@ -6801,6 +6889,60 @@ components:
       properties:
         message:
           type: string
+    AccountOtpRequest:
+      type: object
+      additionalProperties: false
+      required: [email, purpose]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        purpose:
+          type: string
+          enum: [VerifyEmail, ResetPassword]
+    AccountOtpCodeRequest:
+      type: object
+      additionalProperties: false
+      required: [challengeId, code]
+      properties:
+        challengeId:
+          type: string
+          format: uuid
+        code:
+          type: string
+          pattern: '^[0-9]{6}$'
+    AccountOtpResetRequest:
+      type: object
+      additionalProperties: false
+      required: [challengeId, code, password]
+      properties:
+        challengeId:
+          type: string
+          format: uuid
+        code:
+          type: string
+          pattern: '^[0-9]{6}$'
+        password:
+          type: string
+          minLength: 10
+          maxLength: 128
+    AccountOtpAcknowledgement:
+      type: object
+      additionalProperties: false
+      required: [message, challengeId, expiresIn, resendAfter]
+      properties:
+        message:
+          type: string
+        challengeId:
+          type: string
+          format: uuid
+        expiresIn:
+          type: integer
+          const: 300
+        resendAfter:
+          type: integer
+          const: 60
     LoginRequest:
       type: object
       additionalProperties: false

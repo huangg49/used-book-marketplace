@@ -91,6 +91,12 @@ model PostgreSQL để import: `auth_action_tokens` (mutable, hash token/TTL),
 giữ lock user và revoke session trong transaction. Schema coverage tách ba
 collection này khỏi phép đếm model lịch sử; không sửa migration baseline.
 
+Migration0018-auth-otp thêm auth_otp_challenges: Mongo-native mutable, keyed
+HMAC/attempt budget/TTL, không có model PostgreSQL để import. Khóa user trước
+challenge khi tiêu thụ; issue/consume/reset và mail/audit/session dùng cùng
+transaction. Schema coverage tách collection này khỏi phép đếm model lịch sử.
+[ADR0034](../adr/0034-email-otp-authentication.md) giữ contract link cũ.
+
 Quyền (`roles.ts`): appendOnly = find+insert; mutable = +update; deletable = +remove;
 reference = find. App không có createCollection/collMod/createIndex/bypassDocumentValidation.
 `latlai_migrator` = dbAdmin+readWrite trên đúng DB. Admin/root vẫn có thể sửa tay — giống

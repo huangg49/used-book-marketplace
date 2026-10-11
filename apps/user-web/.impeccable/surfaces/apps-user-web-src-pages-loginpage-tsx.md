@@ -24,10 +24,13 @@ Bricolage headings, owner-supplied MTD Fancy Melody pencil notes and errors (Vie
 
 STORY: Identify the reader card, enter email/password, recover from clear errors.
 Registration has name, email, password/reveal, confirmation and the required
-simulation-rules checkbox; success explains verification and offers resend after
-60 seconds. Recovery has an email field and librarian note; an email fragment
-opens the two-password reset form. Token links survive reload until successfully
-consumed. Errors announce the issue and recovery without losing input. Real
+simulation-rules checkbox; success opens explicit six-digit OTP verification
+and offers resend after60 seconds. Recovery has email request then OTP + two
+passwords. Code lasts5 minutes with five wrong guesses; one labelled numeric
+input supports formatted paste and leading zeros. Only challenge UUID survives
+reload in a fragment; email is reentered to resend. Legacy token links remain
+supported until consumed. Recovery passwords share a desktop row and stack
+below400px; compact height≤800px fits the1536×700 paper. Errors announce the issue and recovery without losing input. Real
 login succeeds before “ĐÃ MƯỢN” appears;
 then navigate to the existing safe returnUrl (home by default).
 
@@ -61,6 +64,6 @@ Login. At laptop height≤800px, Register's lede/secondary row are slightly tigh
 to retain the common paper minimum. Mobile keeps the 10–128 character hint;
 long/error states scroll naturally. Preserve all existing authored motion under
 OS reduction. [Implementation/evidence](../../../../docs/features/ACCOUNT_AUTH.md)
-records local mailbox delivery and the remaining real-email/native gates.
+records local/Brevo delivery and the remaining inbox/native/human gates.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance

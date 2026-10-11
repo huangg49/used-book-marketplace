@@ -117,6 +117,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/otp/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Creates only an unverified MEMBER. Generic challenge acknowledgement for duplicates; credentials never overwritten. Six-digit verification code valid 5 minutes, five wrong attempts, 60-second resend cooldown. No session created. */
+        post: operations["registerAccountWithOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/otp/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Generic response for unknown, ineligible and cooldown requests. Eligible accounts receive a new code, invalidating prior codes and links of the same purpose. Cooldown requests never expose or invalidate the active challenge. Five-minute expiry and 60-second cooldown enforced by server time. */
+        post: operations["requestAccountOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/otp/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Atomically consume the challenge and activate an unverified account. Five failed code attempts lock that challenge; parallel requests cannot exceed the budget. No automatic login. OTP_INVALID or OTP_ATTEMPTS_EXCEEDED on failure. */
+        post: operations["verifyEmailWithOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/otp/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Atomically consume the reset challenge, replace password and revoke every session. Existing status and roles retained. No automatic login. Same five-attempt budget and OTP error codes as verification. */
+        post: operations["resetPasswordWithOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -2069,6 +2137,32 @@ export interface components {
         };
         AccountRequestAcknowledgement: {
             message: string;
+        };
+        AccountOtpRequest: {
+            /** Format: email */
+            email: string;
+            /** @enum {string} */
+            purpose: "VerifyEmail" | "ResetPassword";
+        };
+        AccountOtpCodeRequest: {
+            /** Format: uuid */
+            challengeId: string;
+            code: string;
+        };
+        AccountOtpResetRequest: {
+            /** Format: uuid */
+            challengeId: string;
+            code: string;
+            password: string;
+        };
+        AccountOtpAcknowledgement: {
+            message: string;
+            /** Format: uuid */
+            challengeId: string;
+            /** @constant */
+            expiresIn: 300;
+            /** @constant */
+            resendAfter: 60;
         };
         LoginRequest: {
             /** Format: email */
@@ -4095,6 +4189,110 @@ export interface operations {
         };
         responses: {
             /** @description Completed. The link cannot be used again. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    registerAccountWithOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Generic challenge; eligible accounts receive asynchronous email. Opaque challenge ID is not proof of account existence. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOtpAcknowledgement"];
+                };
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    requestAccountOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountOtpRequest"];
+            };
+        };
+        responses: {
+            /** @description Generic asynchronous acknowledgement. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOtpAcknowledgement"];
+                };
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    verifyEmailWithOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountOtpCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Email verified; challenge cannot be reused. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    resetPasswordWithOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountOtpResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Password changed and sessions revoked. */
             204: {
                 headers: {
                     [name: string]: unknown;

@@ -8,6 +8,26 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Auth — tập giấy thư viện — 11/10/2026
 
+- OTP/Brevo: codex/auth-brevo-otp, base79f006d, checkpoint subject
+  feat(auth): add email OTP verification and Brevo delivery. OpenAPI0.33.0,
+  123operations/22controllers; migration0018 auth_otp_challenges/HMAC/TTL. Web
+  mặc định OTP6số5phút/5lầnsai/cooldown60giây cho đăng ký và reset; link cũ giữ.
+  Decoy/cross-channel invalidation/DBtime/user→challenge lock, audit/mail/session
+  atomic; reset thu hồi mọi phiên, không gỡ hạn chế/không auto-login. Brevo sender
+  HTTP200/active, một thư mẫu được chủ dự án cho phép HTTP201; inbox chờ xác nhận.
+  Key/env riêng không Git; QA luôn local trên replica set/DB _test. API127unit,
+  Auth51E2E, web65 PASS; Mongo39PASS/4SKIP; TS/lint/build/contract/routes PASS,
+  detector một lần0finding; web5warning Exchange cũ/chunk warning. CUA1536×700,
+  390×844/320×740 OTP/paste/error/resend/reload/focus/nohorizontaloverflow PASS.
+  [Evidence](../../.impeccable/review/auth-otp/README.md),
+  [setup](../features/ACCOUNT_AUTH.md), [ADR0034](../adr/0034-email-otp-authentication.md).
+  MainDB chỉ forward migration/bootstrap, zeroqueuedmail trước restart Brevo.
+  APIhealth200/Registerweb200, docs310Markdown/2150links và diffcheck PASS;
+  motion/session không đổi. RN/Flutter UI,
+  physical mobile/NVDA/human/full business E2E NOT RUN; READINESS giữ nguyên.
+  Chat/Thông báo/MainLayout WIP bảo toàn; local commit chưa push. Bước tiếp chủ
+  dự án thử đăng ký/quên mật khẩu trong inbox thật và review trước tích hợp.
+
 - Account Auth: `codex/auth-registration-recovery`, base `a300397`, checkpoint
   subject `feat(auth): implement registration and password recovery`. OpenAPI0.32.0,
   119 operations/22 controllers; migration0017 thêm token hash, encrypted mail
