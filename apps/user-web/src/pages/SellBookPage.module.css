@@ -996,6 +996,9 @@
   padding: 18px 0;
   border-bottom: 1px solid var(--shop-line);
 }
+.questions fieldset:last-child {
+  border-bottom: 0;
+}
 .questionLegend {
   position: absolute;
   width: 1px;

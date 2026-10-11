@@ -40,6 +40,13 @@ Actual inputs stay keyboard/AT accessible, with focus outlined on the visible
 face. Sale/Exchange/Both use the same local face, three columns above600px and
 one column below. No correctness color, auto-answer or new motion/business rule.
 
+Owner follow-up: activating an already selected condition answer clears that
+answer to the existing null/unanswered state; selecting the other answer and
+native arrow navigation still choose normally. A shared described hint explains
+repeat activation. Null answers still block Continue with existing validation.
+The last question has no bottom rule; the action row retains its separator.
+Mode remains exclusive and cannot be cleared.
+
 Mode: operate. Approved plan §3, incumbent wine/cream world, code-led.
 THESIS: A clear desk for describing the actual copy and checking before submission.
 OWN-WORLD: Paper surface, wine controls, Be Vietnam Pro fields, restrained rules.

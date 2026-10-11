@@ -1064,11 +1064,17 @@ export function SellBookPage() {
                           </div>
                           <div className={styles.questions}>
                             <h3>Kiểm tra điều kiện đăng</h3>
+                            <p
+                              id="condition-choice-hint"
+                              className={styles.help}
+                            >
+                              Nhấn lại đáp án đang chọn để bỏ chọn.
+                            </p>
                             {questions.map(([key, label]) => (
                               <fieldset
                                 key={key}
                                 id={`${key}-group`}
-                                {...feedbackProps(key)}
+                                {...feedbackProps(key, "condition-choice-hint")}
                               >
                                 <legend className={styles.questionLegend}>
                                   {label}
@@ -1085,6 +1091,28 @@ export function SellBookPage() {
                                           type="radio"
                                           name={key}
                                           checked={formData[key] === value}
+                                          onKeyDown={(event) => {
+                                            // Native radios do not click again on Space when checked.
+                                            if (
+                                              event.key === " " &&
+                                              (formData[key] === value ||
+                                                event.repeat)
+                                            ) {
+                                              event.preventDefault();
+                                              if (!event.repeat)
+                                                setFormData((previous) => ({
+                                                  ...previous,
+                                                  [key]: null,
+                                                }));
+                                            }
+                                          }}
+                                          onClick={() => {
+                                            if (formData[key] === value)
+                                              setFormData((previous) => ({
+                                                ...previous,
+                                                [key]: null,
+                                              }));
+                                          }}
                                           onChange={() =>
                                             setFormData((previous) => ({
                                               ...previous,

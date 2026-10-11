@@ -8,6 +8,18 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Đăng sách — phiếu thông tin sách —12/10/2026
 
+- Follow-up `codex/posting-choice-clear`, base `7675dec`, checkpoint subject
+  `fix(web): allow clearing condition answers and remove duplicate rule`:
+  bấm lại đáp án hoặc Space khi đang chọn trả về null/chưa trả lời; mũi tên vẫn
+  chọn native. Hint chung có describedby; validation bắt buộc trả lời giữ nguyên.
+  Bỏ border cuối câu hỏi, giữ một separator của hàng action; mode không bỏ chọn.
+  Web78tests/build(TS)/lint PASS (5warning Exchange cũ); CUA1440/390/320px,
+  click/Space/arrow/clear-error-focus/reanswer/Back giữ dữ liệu PASS.
+  Docs/diff PASS; independent full AI review **ship**, không material fix;
+  document comparison khớp source.
+  [Evidence](../../.impeccable/review/posting-choice-clear/README.md). QA riêng
+  dọn, API3000/Vite5186/Mongo chính giữ chạy; không fullsubmit/replay/Safari/speech/
+  physical mobile/native/actual125%zoom/human/CI/push/PR/READINESS change.
 - Follow-up `codex/posting-choice-rows`, base `dfe5f57`, checkpoint subject
   `refactor(web): clarify posting choices and eligibility rows`: chủ dự án yêu
   cầu sửa nhóm Có/Không quá trống. Ba câu hỏi thành dòng kẻ gọn, câu trái/đáp án
