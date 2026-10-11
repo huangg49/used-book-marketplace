@@ -6,6 +6,19 @@ OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hi�
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
+## Đề xuất kết hợp giao diện Đăng sách — 11/10/2026
+
+- `codex/posting-blend-plan`, base `0a07b67`, checkpoint subject
+  `docs(web): propose blended book posting design`. Chủ dự án yêu cầu nghiên
+  cứu giữ phần tốt bản Tuấn Minh và bản hiện tại; **chưa duyệt code**.
+  [Đề xuất](../design/WEB_POSTING_BLEND_PROPOSAL.md): giữ nền giấy/stepper ngang,
+  preview ở vùng trái và form rộng bên phải, bỏ điều hướng dọc trùng lặp;
+  giữ taxonomy/validation/exit/retry, sửa cách biểu thị hoàn thành và nhãn tiền.
+- Đã đọc source Minh `36cb0c0`/current `0a07b67`, assets và evidence lịch sử; tham khảo
+  W3C form steps/errors. Chưa dựng runtime Minh/đo performance/usability test.
+  Docs check/diff check; không đổi UI/API/DB, không product test/submit/email.
+  WIP khác/READINESS giữ nguyên. Bước tiếp: chủ dự án duyệt/chỉnh phương án.
+
 ## Search — nhóm lọc và xóa riêng — 11/10/2026
 
 - `codex/search-filter-group-controls`, base `cce99af`, checkpoint subject
