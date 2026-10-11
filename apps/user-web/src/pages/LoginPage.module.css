@@ -35,7 +35,13 @@
 .signInNote { margin: 8px 0 0; color: var(--shop-muted); font-size: .6875rem; line-height: 1.8; text-align: center; text-wrap: pretty; }
 .alternativeSignIn + .registration { border-top: 0; padding-top: 0; }
 .registration { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 8px; margin: 16px 0 0; padding-top: 10px; border-top: 1px dashed var(--shop-line); color: var(--shop-muted); font-size: .75rem; line-height: 1.8; }
-.error { margin: 14px 0 0; color: var(--auth-error); font: 400 24px/1.35 var(--auth-hand); }
+.error { margin: 14px 0 0; color: var(--auth-error); font: 400 .8125rem/1.8 var(--shop-body); overflow-wrap: anywhere; }
+.fieldFeedback { display: flex; align-items: flex-start; gap: 6px; margin: 6px 0 0; color: var(--shop-muted); font: 400 .75rem/1.7 var(--shop-body); overflow-wrap: anywhere; }
+.fieldFeedback[data-empty] { margin: 0; }
+.fieldFeedback svg { flex: 0 0 14px; margin-top: 3px; }
+.fieldFeedback[data-tone="error"] { color: var(--auth-error); }
+.fieldFeedback[data-tone="success"] { color: var(--shop-wine); }
+.panel .field input[name][type][aria-invalid="true"] { border-bottom-color: var(--auth-error); }
 .formGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
 .formGrid > .field + .field { margin-top: 0; }
 .librarianNote { font: 400 27px/1.4 var(--auth-hand); color: var(--shop-wine); margin: 24px 0 30px; }

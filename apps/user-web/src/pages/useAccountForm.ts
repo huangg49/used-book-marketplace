@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { accountError } from '../services/account-auth';
+import { accountError, accountErrorField } from '../services/account-auth';
 
 export function useAccountForm() {
   const active = useRef(true);
   const pending = useRef(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setErrorText] = useState('');
+  const [errorField, setErrorField] = useState<'code'>();
+  function setError(value: string) { setErrorText(value); setErrorField(undefined); }
   const [message, setMessage] = useState('');
   const [until, setUntil] = useState(0);
   const [remaining, setRemaining] = useState(0);
@@ -21,9 +23,11 @@ export function useAccountForm() {
     if (pending.current) return;
     pending.current = true;
     setBusy(true); setError('');
-    try { await task(); } catch (caught) { if (active.current) setError(accountError(caught)); }
+    try { await task(); } catch (caught) {
+      if (active.current) { setErrorText(accountError(caught)); setErrorField(accountErrorField(caught)); }
+    }
     finally { pending.current = false; if (active.current) setBusy(false); }
   }
-  return { busy, error, message, remaining, active, run, setError, setMessage,
+  return { busy, error, errorField, message, remaining, active, run, setError, setMessage,
     cooldown: () => { setUntil(Date.now() + 60_000); setRemaining(60); } };
 }

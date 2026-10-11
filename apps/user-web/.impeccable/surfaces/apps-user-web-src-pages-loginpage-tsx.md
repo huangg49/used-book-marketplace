@@ -20,7 +20,7 @@ library file, replacing the incumbent split-screen photo/form composition.
 
 OWN-WORLD: Existing wine/photo/cream/logo; original local Davit Margaryan image
 with source provenance kept in the asset README, textured paper, ink underlines. Be Vietnam Pro controls,
-Bricolage headings, owner-supplied MTD Fancy Melody pencil notes and errors (Vietnamese glyph correction).
+Bricolage headings, owner-supplied MTD Fancy Melody pencil notes (Vietnamese glyph correction). Form errors use Be Vietnam Pro for readability.
 
 STORY: Identify the reader card, enter email/password, recover from clear errors.
 Registration has name, email, password/reveal, confirmation and the required
@@ -66,6 +66,23 @@ requires all authored Auth motion even with OS reduced motion; the stamp also
 keeps its280ms animation. No initial entrance or autoplay.
 Login success retains a continuous diagonal paper flow: desktop1600ms/30 fragments, mobile≤600px1500ms/18 fragments, plus destination-ready latency. Stamp280ms and tear start280ms remain under either OS preference. Two inert printed halves separate12px/1.8deg; cloned passwords are cleared even when revealed, and copies disappear before navigation. Four irregular fragment silhouettes use cream/paper, sparse yellow, faint ink and baked soft wine-at8% shadows/near blur. Twelve small encoded SVG sprites are predecoded on Auth entry; the cache holds at most two palette/mode recipes, not viewport bitmaps. Three opaque SVG pages retain ivory-paper texture, creases, subtle edge shading and two angled foreground edges. Native WAAPI schedules all visible flights before navigation; there is no per-frame Canvas drawing or React state update. The delayed inner-page drift loops continue while the destination mounts, independently of the outer exit animations. Viewport units retain the proven solid rectangular core during resize and bounded drift. Two paint boundaries precede navigation; actual React destination DOM commit plus two further paint boundaries gate release. Back/unmount cancels animations, pending mount acknowledgement, local copies and scroll lock. Destination H1/main receives focus in the layout effect after React removes inert/aria-hidden, not in a competing frame callback. Missing WAAPI retains a440ms technical cover fallback; OS reduction never selects it. No dependency/API/session/token or Home changes. Build comparison and limitations: `.impeccable/review/auth-performance/README.md`.
 Drafts survive ordinary switches.
+
+11/10 inline input feedback: a shared AuthForm reads the existing native validity
+flags and exact password-confirmation rule, replacing browser validation popups
+with field-local messages after blur/submit. Visited fields update while edited;
+editing the original password rechecks a visited confirmation. Registration/reset
+show actual10–128 length guidance and a match confirmation, never a strength
+score. Submit focuses the first invalid input after its described-by message is
+rendered. Field feedback has a polite live region, icon plus text and standard
+body typography; empty feedback takes no height. The existing ink underline
+focus remains. OTP_INVALID/OTP_ATTEMPTS_EXCEEDED belong to the OTP field; network,
+delivery and rate failures remain form alerts. Original commands, validation
+constraints, busy/cooldown, drafts and motion remain. Errors may grow the paper;
+initial1280×720 Register still fits. Chromium390×844 remains in normal flow with
+no horizontal overflow. Evidence: `.impeccable/review/auth-inline-feedback`.
+One detector scan for this change returned only the three existing intentional
+Google vendor-color advisories above. Screen-reader speech, Safari, real auth
+submission and physical mobile are not claimed by this input-feedback QA.
 
 Account-auth follow-up: pending buttons disable duplicate requests; status/error
 use live regions, successful state headings receive focus only on the active

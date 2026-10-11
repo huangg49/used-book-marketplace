@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@used-books/session-client';
 const { publicRequest } = vi.hoisted(() => ({ publicRequest: vi.fn() }));
 vi.mock('../lib/session', () => ({ session: { publicRequest } }));
-import { accountAuth, accountError } from './account-auth';
+import { accountAuth, accountError, accountErrorField } from './account-auth';
 
 describe('account commands', () => {
   beforeEach(() => { publicRequest.mockReset().mockResolvedValue(undefined); });
@@ -38,5 +38,12 @@ describe('account commands', () => {
     expect(publicRequest.mock.calls.map((call) => call[0])).toEqual(['/auth/otp/request', '/auth/otp/verify-email', '/auth/otp/reset-password']);
     expect(JSON.parse(publicRequest.mock.calls[1][2].body).code).toBe('012345');
     expect(publicRequest.mock.calls[0][1].safeParse({ message: 'Synthetic', challengeId, expiresIn: 300, resendAfter: 60 }).success).toBe(true);
+  });
+  it('attaches only OTP failures to the code field', () => {
+    expect(accountErrorField(new ApiError(400, 'OTP_INVALID', ''))).toBe('code');
+    expect(accountErrorField(new ApiError(400, 'OTP_ATTEMPTS_EXCEEDED', ''))).toBe('code');
+    for (const code of ['NETWORK_ERROR', 'RATE_LIMITED', 'MAIL_UNAVAILABLE', 'INVALID_AUTH_LINK'])
+      expect(accountErrorField(new ApiError(400, code, ''))).toBeUndefined();
+    expect(accountErrorField(new Error('Synthetic failure'))).toBeUndefined();
   });
 });

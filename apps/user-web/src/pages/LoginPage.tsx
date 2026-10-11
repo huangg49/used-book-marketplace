@@ -6,6 +6,7 @@ import { session } from "../lib/session";
 import { AuthPageLink } from "../layouts/AuthPageLink";
 import { useAuthPaper } from "../layouts/auth-paper";
 import styles from "./LoginPage.module.css";
+import { AuthForm, AuthInput } from './AuthForm';
 
 export function LoginPage() {
   const [params] = useSearchParams();
@@ -49,10 +50,10 @@ export function LoginPage() {
   return <section className={styles.panel} aria-labelledby="login-title">
     <h1 id="login-title" tabIndex={-1}>Lại gặp nhau rồi.</h1>
     <p className={styles.lede}>Đăng nhập để đăng sách và trò chuyện với người bán.</p>
-    <form onSubmit={(event) => void handleSubmit(event)} aria-busy={busy} aria-describedby={error ? "login-error" : undefined}>
+    <AuthForm onSubmit={(event) => void handleSubmit(event)} onChange={() => setError(undefined)} aria-busy={busy} aria-describedby={error ? "login-error" : undefined}>
       <div className={styles.field}>
         <label htmlFor="email">Email <span>— tên người đọc</span></label>
-        <input id="email" name="email" type="email" autoComplete="email" required placeholder="ban@example.com"
+        <AuthInput id="email" name="email" type="email" autoComplete="email" required placeholder="ban@example.com"
           defaultValue={draft.current.email} onChange={(event) => updateDraft("email", event.target.value)} />
       </div>
       <div className={styles.field}>
@@ -61,7 +62,7 @@ export function LoginPage() {
           <AuthPageLink to={"/forgot-password" + returnQuery} className={styles.textAction}>Quên mật khẩu?</AuthPageLink>
         </div>
         <div className={styles.password}>
-          <input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required
+          <AuthInput id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required
             defaultValue={draft.current.password} onChange={(event) => updateDraft("password", event.target.value)} />
           <button type="button" aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"} aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>
             {showPassword ? <EyeOff size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}
@@ -72,7 +73,7 @@ export function LoginPage() {
       <button className={styles.submit} type="submit" disabled={busy}>
         {busy ? "Đang đăng nhập…" : "Đăng nhập"}<ArrowRight size={18} aria-hidden="true" />
       </button>
-    </form>
+    </AuthForm>
     <div className={styles.alternativeSignIn}>
       <p className={styles.signInDivider}><span>hoặc</span></p>
       <button className={styles.googleSignIn} type="button" disabled aria-describedby="google-sign-in-note">

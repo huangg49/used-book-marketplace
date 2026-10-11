@@ -674,9 +674,22 @@ Final six named Home captures in `.impeccable/review/web-member/home-discovery-*
 
 ### Inputs / Fields
 
-Search sits inside a paper shell with a transparent borderless inner field and an explicit label. Auth uses transparent square fields at least46px tall,9px2px padding and a1.5px control-color bottom edge; the next field begins18px below. Password reserves46px for its labelled44px-wide/46px-high reveal button. Labels/recovery wrap; link targets are at least44px high. Field focus adds a3px wine outline at3px offset, a faint yellow ground and wine bottom edge. Handwritten errors are alerts and preserve entered values. Search numeric price fields and sort are at least44px. Modes are mutually exclusive pressed buttons; condition uses native single-selection radios with an explicit all choice. Labels and invalid-price explanation remain visible; focus and caret use the wine identity. Preserve entered values on errors.
+Search sits inside a paper shell with a transparent borderless inner field and an explicit label. Auth uses transparent square fields at least46px tall,9px2px padding and a1.5px control-color bottom edge; the next field begins18px below. Password reserves46px for its labelled44px-wide/46px-high reveal button. Labels/recovery wrap; link targets are at least44px high. Auth field focus uses a wine bottom edge plus1px ink shadow without a rectangular outline or highlighted ground; buttons, links and checkbox retain visible keyboard outlines. Errors use standard body typography and preserve entered values. Search numeric price fields and sort are at least44px. Modes are mutually exclusive pressed buttons; condition uses native single-selection radios with an explicit all choice. Labels and invalid-price explanation remain visible; focus and caret use the wine identity. Preserve entered values on errors.
 
 ### Auth library papers
+
+Input feedback uses the shared AuthForm/AuthInput across Login, Register,
+recovery, OTP and legacy resend/reset forms. Existing native required/type/length/
+pattern flags and exact confirmation matching gate submission; the native popup
+is replaced by an inline explanation after blur or submit, updated on correction.
+The first invalid input receives focus after its described-by message is mounted.
+Password guidance describes the actual10–128 bounds and exact match, never a
+strength score. Messages use Be Vietnam Pro at12px/1.7 with wine success or the
+existing Auth error token, an icon and a polite live region. Empty feedback takes
+no space. OTP-specific server errors attach to the code field; transport/delivery/
+rate errors stay form alerts. Inputs/drafts, API commands and authored motion are
+unchanged. Handwriting remains in the decorative reader notes. Long error states
+grow naturally instead of clipping. Evidence: `.impeccable/review/auth-inline-feedback`.
 
 Register's account-auth follow-up retains the shared paper minimum with an8px
 lede and4px secondary-row margin on laptop height≤800px. The required rules

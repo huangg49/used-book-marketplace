@@ -30,3 +30,9 @@ export function accountError(error: unknown) {
   }
   return 'Chưa hoàn tất được yêu cầu. Thử lại nhé; những gì bạn đã nhập vẫn còn ở đây.';
 }
+
+/** Only OTP-specific failures belong to the code field; transport errors do not. */
+export function accountErrorField(error: unknown): 'code' | undefined {
+  return error instanceof ApiError && ['OTP_INVALID', 'OTP_ATTEMPTS_EXCEEDED'].includes(error.code)
+    ? 'code' : undefined;
+}

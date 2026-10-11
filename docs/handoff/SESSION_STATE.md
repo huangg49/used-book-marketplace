@@ -6,6 +6,24 @@ OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hi�
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
+## Auth — phản hồi khi nhập — 11/10/2026
+
+- `codex/auth-inline-feedback`, base `0224170`, checkpoint subject
+  `feat(web): add accessible inline auth form feedback`. AuthForm/AuthInput chung
+  hiện lỗi sau blur/submit, cập nhật khi sửa; focus ô lỗi đầu sau khi gắn mô tả.
+  Password10–128/khớp xác nhận theo ràng buộc cũ; không thêm strength score.
+  OTP-specific errors ở ô mã, lỗi mạng/gửi thư/rate vẫn ở form. Chữ lỗi dùng font
+  body, ghi chú vẫn viết tay. Giữ API/session/draft/motion và Google disabled.
+- CUA Chromium1280×720: Register ban đầu không scroll; lỗi tên/email/password/
+  consent, email sửa đúng, password mismatch/sửa gốc, focus/aria PASS.
+  390×844: lỗi không tràn ngang, nội dung dài cuộn tự nhiên. OTP thiếu số/dán có
+  dấu cách/giữ0 đầu, recovery submit trống PASS. Chỉ synthetic/invalid forms;
+  không gửi email/tạo user/đổi mật khẩu hoặc ghi DB. [Evidence](../../.impeccable/review/auth-inline-feedback/README.md).
+- Web78tests/build(TS)/lint PASS;5warning Exchange và chunk warning có sẵn.
+  Detector một lần chỉ3advisory màu Google chủ ý. Browser server-error responses,
+  Safari/screen-reader speech/physical mobile/human/remote CI NOT RUN. Tab QA đóng,
+  viewport reset; runtime chính/WIP khác/READINESS giữ nguyên. Local chưa push.
+
 ## Login — giao diện Google, chưa bật tính năng — 11/10/2026
 
 - `codex/auth-google-entry-ui`, base `254c600`, checkpoint subject
