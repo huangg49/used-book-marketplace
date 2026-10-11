@@ -16,6 +16,31 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Phạm vi triển khai
 
+- Card depth11/10, nhánh `codex/book-card-depth` từ `62f4df7`: chủ dự án duyệt
+  tương tác kiểu Aceternity, gồm cả chữ nổi. Shared HomeBookCard bọc preview và
+  live BookCard bằng BookCardMotion; hit area cố định/perspective900px,
+  article nghiêng tối đa6° mỗi trục, cover36px/title26px/prices20px/action18px/
+  author-condition12px. Không đổi kích thước, ảnh, dữ liệu hay route. Một RAF
+  cập nhật CSS variables khi chuột di chuyển, listener chỉ tồn tại lúc active;
+  exit/cancel/scroll/resize/blur/visibility/unmount dừng tương tác. Trên600px,
+  fine-pointer/mouse; narrow/coarse static, keyboard focus nâng lớp không xoay.
+  Bỏ lift/scale ảnh cũ trong wrapper để tránh cộng chồng. Chủ dự án muốn thấy
+  motion trên laptop giảm chuyển động: ngoại lệ hữu hạn150ms, nửa góc/depth;
+  không loop. Build/TypeScript/34unit7files PASS; lint0error5warning cũ,
+  detector một lượt `[]`, docs/diff PASS. IAB guest reduced-motion=true kiểm
+  Home1535×735/Search1280×720, hai hướng nghiêng/hit bounds/exit/focus, cover18px/
+  title13px; Home/Search390×844 và Search320×700 tĩnh/không tràn ngang.
+  [Home active](../../.impeccable/review/card-depth/home-active.jpg),
+  [Search active](../../.impeccable/review/card-depth/search-active.jpg),
+  [keyboard](../../.impeccable/review/card-depth/search-keyboard.jpg),
+  [Home mobile](../../.impeccable/review/card-depth/home-mobile.jpg),
+  [Search mobile](../../.impeccable/review/card-depth/search-mobile.jpg),
+  [Search320](../../.impeccable/review/card-depth/search-320.jpg).
+  DESIGN/sidecar/surface đồng bộ; static canonical chỉ mô tả layer/focus,
+  runtime pointer nằm trong React. Normal-motion runtime/hardware touch/
+  populated-live/FPS/zoom200%/native/human NOT RUN. Không claim independent
+  review; READINESS và WIP Chat/Thông báo/MainLayout giữ nguyên.
+
 - Danh mục navbar11/10, nhánh `codex/navbar-category-menu` từ `7283045`: nút bốn ô
   cạnh logo mở directory giấy ba cột; giữ Tìm sách riêng và navbar76/64px/morph.
   Dùng11danh mục/18nhóm con catalog-v1, tạo URL categoryId mới giữ chỉ data=live/

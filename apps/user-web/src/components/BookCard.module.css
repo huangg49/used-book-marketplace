@@ -37,6 +37,54 @@
   display: flex;
   flex-direction: column;
 }
+.motionFrame {
+  --book-rotate-x: 0;
+  --book-rotate-y: 0;
+  --book-tilt-range: 12deg;
+  --book-depth: 1;
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  perspective: 900px;
+}
+.motionFrame > .card { flex: 1; }
+@media (min-width: 601px) and (hover: hover) and (pointer: fine) {
+  .motionFrame > .card {
+    transform-style: preserve-3d;
+    transform: rotateX(calc(var(--book-rotate-x) * var(--book-tilt-range)))
+      rotateY(calc(var(--book-rotate-y) * var(--book-tilt-range)));
+    transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .motionFrame .meta { transform-style: preserve-3d; }
+  .motionFrame :is(.cover, .condition, h3, .author, .prices, .view) {
+    transform: translateZ(0);
+    transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 240ms ease-out;
+  }
+  .motionFrame:is([data-tilt], :focus-within) { z-index: 2; }
+  .motionFrame:is([data-tilt], :focus-within) .cover {
+    transform: translateZ(calc(36px * var(--book-depth)));
+    box-shadow: 0 16px 24px #2819141a;
+  }
+  .motionFrame:is([data-tilt], :focus-within) h3 { transform: translateZ(calc(26px * var(--book-depth))); }
+  .motionFrame:is([data-tilt], :focus-within) .prices { transform: translateZ(calc(20px * var(--book-depth))); }
+  .motionFrame:is([data-tilt], :focus-within) .view { transform: translateZ(calc(18px * var(--book-depth))); }
+  .motionFrame:is([data-tilt], :focus-within) :is(.condition, .author) { transform: translateZ(calc(12px * var(--book-depth))); }
+  .motionFrame .card .cover .image { transform: none; }
+  .motionFrame[data-tilt] > .card { will-change: transform; }
+  /* Owner requests visible interaction motion on their reduced-motion laptop.
+     Retain one gentler, pointer-driven response, with no autonomous loop. */
+  @media (prefers-reduced-motion: reduce) {
+    .motionFrame { --book-tilt-range: 6deg; --book-depth: 0.5; }
+    .motionFrame > .card,
+    .motionFrame :is(.cover, .condition, h3, .author, .prices, .view) {
+      transition-duration: 150ms !important;
+    }
+  }
+}
+@media (max-width: 600px), (hover: none), (pointer: coarse) {
+  .motionFrame .cover:hover .image { transform: none; }
+}
 .cover {
   position: relative;
   aspect-ratio: 4/5;

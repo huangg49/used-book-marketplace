@@ -31,6 +31,24 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Chiều sâu card11/10: nhánh `codex/book-card-depth`, base `62f4df7`, checkpoint
+  subject `feat(web): add layered book card hover motion`. HomeBookCard dùng
+  BookCardMotion chung cho preview/live trên Home và Tìm sách: nghiêng theo chuột,
+  bìa/tên/tác giả/giá/link nổi theo từng lớp, giữ kích thước và dữ liệu gốc.
+  Hit area đứng yên, một RAF khi pointer di chuyển; reset khi rời/cancel/cuộn/
+  resize/blur/ẩn trang và hủy listener khi unmount. Trên600px/fine mouse mới
+  nghiêng; màn hình nhỏ/coarse pointer tĩnh. Keyboard giữ focus/link gốc.
+  Theo yêu cầu chủ dự án, reduced-motion vẫn có phản hồi hữu hạn150ms nhưng
+  giảm nửa góc/độ sâu; không thêm loop. Build/TypeScript/34unit7files PASS;
+  lint0error5warning cũ, detector một lượt `[]`, docs/diff PASS. IAB guest
+  Home1535×735/Search1280×720 reduced-motion=true xác nhận nghiêng hai hướng,
+  depth bìa18px/tên13px, exit reset và focus bàn phím. Home/Search390×844,
+  Search320×700 tĩnh/không tràn ngang; [sáu capture JPEG](../../.impeccable/review/card-depth/).
+  Normal-motion runtime/hardware touch/populated-live/FPS/zoom200%/native/human
+  NOT RUN; READINESS không đổi. Không thêm dependency/API/DB writes; WIP Chat/
+  Thông báo/MainLayout giữ riêng, không push. Bước tiếp: chủ dự án thử rê chuột
+  lên card Home hoặc `/books?data=preview` trên Vite5186.
+
 - Danh mục navbar11/10: nhánh `codex/navbar-category-menu`, base `7283045`,
   checkpoint subject `feat(web): add navbar category directory`. Nút bốn ô cạnh
   logo mở directory giấy ba cột, dùng11danh mục/18nhóm con từ catalog-v1;

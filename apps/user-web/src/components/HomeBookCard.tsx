@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowUpRight, BookOpen } from "lucide-react";
 import { BookCard } from "./BookCard";
+import { BookCardMotion } from "./BookCardMotion";
 import type { HomeShelfBook } from "../services/home-shelves";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
@@ -15,8 +16,9 @@ export function HomeBookCard({
 }) {
   const [failed, setFailed] = useState(false);
   if (!("preview" in book))
-    return <BookCard book={book} index={index} compact />;
+    return <BookCardMotion><BookCard book={book} index={index} compact /></BookCardMotion>;
   return (
+    <BookCardMotion>
     <article
       className={`${styles.card} ${styles.compact}`}
       data-catalog-preview="true"
@@ -94,5 +96,6 @@ export function HomeBookCard({
         </a>
       </div>
     </article>
+    </BookCardMotion>
   );
 }
