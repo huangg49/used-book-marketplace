@@ -98,6 +98,19 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Search — nhóm lọc và xóa riêng — 11/10/2026
 
+- Follow-up12/10 `codex/search-filter-focus`, base `2672532`, checkpoint subject
+  `refactor(web): simplify search filter field focus`: CSS-only filter desktop/
+  dialog, bỏ outline ngoài; viền hiện có + inset liền nét, label/prefix đỏ rượu,
+  lỗi giá rust, màu170ms theo chính sách motion. Select giữ dòng dưới, series giữ
+  frame cũ; checkbox/radio/nút/search/sort/shared consumers/API không đổi.
+  Build(TS)/format/docs/diff PASS; CUA1280/390/320 keyboard/category/series/price/
+  exchange/language/error/ApplyURL/draftEscape-reopen/nooverflow PASS.
+  Detector một lần9advisory màu/radius cũ ngoài diff; CSS-only không chạy lại unit/
+  lint. Independent AI review **ship**, không material fix; docs comparison khớp.
+  [Evidence](../../.impeccable/review/search-filter-focus/README.md).
+  Forced-colors runtime/Safari/speech/physical mobile/native/actual125%zoom/full
+  live API/human/CI NOT RUN. Tab đóng/viewport reset; Vite5186 bật lại và giữ chạy;
+  không ghi DB/email/login, WIP teammate/READINESS giữ nguyên; chưa push/PR.
 - `codex/search-filter-group-controls`, base `cce99af`, checkpoint subject
   `feat(web): clarify search filter groups and resets`. Áp dụng phần UX/UI từ
   đối chiếu bản Tuấn Minh: bốn tình trạng + tất cả bằng native radio; trạng thái

@@ -221,10 +221,11 @@
   flex-shrink: 0;
   width: 28px;
   color: var(--shop-muted);
+  transition: color 170ms ease-out;
+  transition-duration: 170ms !important;
 }
 .priceFields label:focus-within {
-  outline: 2px solid var(--shop-wine);
-  outline-offset: 2px;
+  border-color: var(--filter-focus-color, var(--shop-wine));
 }
 .priceFields input {
   width: 100%;
@@ -920,4 +921,67 @@
 }
 .conditionChoices label:hover {
   color: var(--shop-wine);
+}
+
+/* One continuous focus boundary, shared by the desktop rail and mobile dialog. */
+.page .filterForm :is(select, input:not([type="checkbox"], [type="radio"])) {
+  transition-property: border-color, box-shadow;
+  transition-duration: 170ms !important;
+  transition-timing-function: ease-out;
+}
+.page
+  .filterForm
+  :is(select, input:not([type="checkbox"], [type="radio"])):focus {
+  outline: none;
+  border-color: var(--shop-wine);
+  box-shadow: none;
+}
+.page
+  .filterForm
+  :is(select, input:not([type="checkbox"], [type="radio"])):focus-visible {
+  box-shadow: inset 0 -1px 0 var(--shop-wine);
+}
+.priceFields label {
+  transition:
+    border-color 170ms ease-out,
+    box-shadow 170ms ease-out;
+  transition-duration: 170ms !important;
+}
+.priceFields label:has(input:focus-visible) {
+  box-shadow: inset 0 0 0 1px var(--filter-focus-color, var(--shop-wine));
+}
+.page .filterForm .priceFields input:focus {
+  box-shadow: none;
+}
+.priceFields label:has(input[aria-invalid="true"]) {
+  --filter-focus-color: var(--shop-error);
+  border-color: var(--shop-error);
+}
+.priceFields label:focus-within > span {
+  color: var(--filter-focus-color, var(--shop-wine));
+}
+.classification label {
+  transition: color 170ms ease-out;
+  transition-duration: 170ms !important;
+}
+.classification div:has(> :is(input, select):focus) label,
+.classification label:has(> select:focus) {
+  color: var(--shop-wine);
+}
+@media (forced-colors: active) {
+  .page
+    .filterForm
+    :is(select, input:not([type="checkbox"], [type="radio"])):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: -2px;
+    box-shadow: none;
+  }
+  .page .filterForm .priceFields input:focus-visible {
+    outline: none !important;
+  }
+  .priceFields label:has(input:focus-visible) {
+    outline: 2px solid Highlight !important;
+    outline-offset: -2px;
+    box-shadow: none;
+  }
 }

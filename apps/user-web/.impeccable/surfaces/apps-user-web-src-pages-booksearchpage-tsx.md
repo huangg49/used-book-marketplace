@@ -133,7 +133,8 @@ Sale mode shows sale bounds; Exchange shows exchange bounds; all/Both show sale
 bounds plus the optional Khoảng giá trị đổi disclosure. Both ranges require both
 criteria. Currency legends precede two full-width stacked44px price fields with
 8px gap,inline28px Từ/Đến labels and14px tabular inputs. One1px shop-control/6px
-wrapper receives the2px wine focus outline/2px offset;the input has no second ring.
+wrapper owns focus;the12/10 follow-up below replaces its former outer outline
+with a contiguous boundary/inset;the input has no second ring.
 Three equal preset columns retain8px gap,12px top margin and44px targets. Visible
 ≤ 50k/≤ 100k/≤ 200k labels have full-currency maximum accessible names;idle shelf
 ground turns wine/cream on hover or selection. Bounds are whole numbers
@@ -169,7 +170,9 @@ Shared classification is also used for new posting proposals or immutable
 confirmed-book metadata,and Admin reads labels in the existing review workflow;
 no Admin vocabulary CRUD. API/Mongo/contract changes are documented in
 `docs/design/CATALOG_CONTEXTUAL_FILTERS.md` and ADR0033. Search150ms control
-feedback/shared card hover follows global motion reduction;no Home exceptions.
+button feedback retains its existing global reduction;filter focus follows the
+12/10 owner policy below. Shared card hover is governed by the later scoped
+catalog-card-depth recipe in DESIGN.md;no Home autoplay is adopted.
 
 The owner rejected the dense boxed form and cramped price pair after the
 contextual extension. This11/10 Search-only visual refinement keeps classification,
@@ -186,3 +189,43 @@ documentation pass ran no new product tests/browser interaction. Main DB/new
 Mongo QA,native,200% zoom,OS keyboard,live Supabase,full integration and human
 review remain NOT RUN;READINESS unchanged. Earlier API/Mongo evidence remains
 at its recorded source in `docs/design/CATALOG_CONTEXTUAL_FILTERS.md`.
+
+## Filter focus follow-up — owner-approved12/10/2026
+
+User direction: apply the same clean focus as Sell to the filters. This is a
+narrow Operate extension on `codex/search-filter-focus`, base `2672532`; the
+only product diff is BookSearchPage.module.css. The transparent264px rail,
+wine/cream/ink world, Anton/Be Vietnam Pro pairing, named mobile dialog and
+classification/draft/URL/API semantics remain. Shared CatalogClassificationFields
+and global CSS are unchanged.
+
+Filter text inputs and native selects remove the outer outline. Focus colors
+their existing boundary wine; keyboard focus adds an inset1px wine bottom edge
+touching that boundary. Native category/subcategory/edition-language selects
+keep their shelf-ground bottom rule; series retains the incumbent full frame
+visible in source cascade and captures. Associated classification labels turn
+wine. Stacked price bounds retain their full wrapper frame: focus changes its
+existing1px edge to wine; keyboard focus adds a contiguous inset1px frame on all
+sides. Từ/Đến turns wine; the price input has no second ring. Aria-invalid price
+wrappers use the existing rust error role for boundary/inset/focused prefix.
+Transitions are170ms ease-out for boundary/inset and label/prefix color, with
+local important duration overrides retaining motion under either OS preference.
+Forced-colors source replaces the inset shadow with a2px Highlight outline at
+−2px offset, on the wrapper for price; this fallback has no runtime evidence.
+Radios, checkboxes, buttons, disclosures, heading search and sort keep their
+existing focus treatments.
+
+Documenter opened all seven viewport captures in
+`.impeccable/review/search-filter-focus/`: desktop, category, series, error,
+mobile, mobile-series and320. These are scrolled viewport crops, not full-page
+acceptance. Images show the contiguous wine category/price boundaries and rust
+invalid price boundary; the desktop series crop does not alone establish its
+focused computed style. Reported CUA1280×720/390×844/320×740 checked native
+category/series/price/error focus, Apply URL, draft Escape/reopen and320px
+overflow; actual reduced-motion:true retains170ms feedback. Build(TS/Vite) PASS.
+Nine detector advisories concern incumbent radius/colors outside the product
+diff. This documentation pass runs no new tests, browser interaction or
+detector. Unit/lint, forced-colors runtime, Safari, speech, physical mobile/native,
+full API/integration, human review and CI are NOT RUN for this extension;
+READINESS remains unchanged. Source comparison and inherited artifact drift:
+`.impeccable/review/search-filter-focus/documentation.md`.
