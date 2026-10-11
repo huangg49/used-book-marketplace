@@ -6,6 +6,19 @@ OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hi�
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
+## Bỏ viền focus xanh chồng lên viền thương hiệu — 11/10/2026
+
+- `codex/form-focus-ring`, base `39a36ea`, checkpoint subject
+  `fix(web): remove duplicate blue form focus ring`. Chỉ sửa global CSS:
+  tắt ring Tailwind Forms, trả border text/select/textarea về control token;
+  giữ focus-visible đỏ, style lỗi/component và trạng thái checked. CUA Chromium
+  1280×720/390×844: danh mục/tình trạng/giá/drawer/email login không còn ring xanh,
+  keyboard focus còn rõ; không submit form hoặc ghi DB. [Desktop](../../.impeccable/review/form-focus-ring/desktop.png),
+  [mobile](../../.impeccable/review/form-focus-ring/mobile.png).
+  Web69unit/build(TS)/lint PASS với5warning Exchange cũ/chunk warning;
+  Safari/physical mobile/NVDA/human/remote CI NOT RUN. READINESS/WIP khác giữ
+  nguyên; tab QA/viewport đã dọn. Local chưa push; chủ dự án kiểm lại field.
+
 ## Giữ bố cục khi đổi thanh cuộn/tab — 11/10/2026
 
 - `codex/stable-page-scroll`, base `b304d13`, checkpoint subject

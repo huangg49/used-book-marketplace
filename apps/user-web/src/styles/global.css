@@ -153,6 +153,21 @@ input::placeholder,textarea::placeholder{color:var(--shop-muted);opacity:1}
     padding: 0.65rem 0.75rem;
   }
 
+  /* The brand outline is the focus indicator; do not stack Forms' blue ring. */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    --tw-ring-color: transparent;
+    --tw-ring-offset-shadow: 0 0 #0000;
+    --tw-ring-shadow: 0 0 #0000;
+  }
+
+  input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"])):focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--shop-control);
+  }
+
   input:focus-visible,
   textarea:focus-visible,
   select:focus-visible,
