@@ -40,13 +40,20 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   Browser>20pagination/200%/native/human và mọi trạng thái populated NOT RUN.
   Checkpoint subject `feat(web): replace account mock dashboard with owner shelf`;
   local chưa push, READINESS không đổi. Account checkpoint `8d9cdf0`.
-  Chủ dự án chuyển sang yêu cầu lập [plan Tìm sách/bộ lọc](../design/WEB_SEARCH_FILTER_REFINEMENT_PLAN.md).
-  Plan đang chờ duyệt; lượt này chưa sửa Search. Chat/Thông báo còn source UI
-  uncommitted, build/typecheck/28unit PASS/lint0error5warning cũ; QA chưa hoàn tất,
-  reviewer/documenter chưa chạy. Browser phát hiện race join trước auth socket
-  hoàn tất (Unauthorized); chưa sửa API hoặc nhận Chat PASS. QA5190/API3009
-  disposable đã dừng, không đụng dữ liệu chính. Bước tiếp: duyệt plan Search;
-  sau đó tiếp tục phần Chat còn mở theo thứ tự chủ dự án chọn.
+  Chủ dự án đã duyệt [plan Tìm sách/bộ lọc](../design/WEB_SEARCH_FILTER_REFINEMENT_PLAN.md).
+  Đã triển khai panel264px ghim dưới navbar, tình trạng hai cột, giá và action
+  nằm ngang, native select khi viewport thấp/giá sai. Mobile cuộn thân dialog,
+  action đáy luôn hiện. CUA1366×768/1535×735 đủ control tại scrollY0 kể cả lỗi;
+  320px đọc đủ giá sáu chữ số. Sticky/draft/Apply/reset/Back/cursor/rỗng/lỗi/retry
+  PASS; build/typecheck/28unit PASS, lint0error5warning cũ. Review độc lập SHIP
+  cho hai material fixes; canonical scoped merge/preservation/docs/diff PASS.
+  200%/OS keyboard/native/live-success/fullintegration/human NOT RUN. READINESS
+  không đổi. Checkpoint subject `feat(web): pin compact catalog filters`;
+  local chưa push. Vite5186 giữ chạy để chủ dự án xem preview.
+  Chat/Thông báo còn source UI uncommitted; QA/reviewer/documenter chưa hoàn tất.
+  Browser phát hiện race join trước auth socket hoàn tất (Unauthorized); chưa
+  sửa API hoặc nhận Chat PASS. QA5190/API3009 disposable đã dừng, không đụng
+  dữ liệu chính. Bước tiếp: chủ dự án xem Search, Chat vẫn là gói còn mở.
 - Sau `1101fac`, chủ dự án báo OS giảm chuyển động làm mất hiệu ứng mới.
   Home nay giữ đầy đủ animation cả khi reduced-motion=true: tán lá12s,
   sáu lá nền16–19s, card lift240ms/banner320ms, filter180ms/card thêm220ms,

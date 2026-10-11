@@ -142,3 +142,32 @@ Desktop/laptop/mobile/320px/filter captures:
 `.impeccable/review/web-member/search-shelf-{desktop,laptop,mobile,320,filters}.jpg`.
 These record UI composition, not native or human acceptance. Current QA and
 remaining gates live in WEB_MEMBER_REDESIGN/SESSION_STATE/READINESS.
+
+## Compact pinned filters — approved11/10/2026
+
+This refinement supersedes only the Search layout/filter measurements above.
+Keep the established visual world and live/DEV preview/query semantics. No Home,
+shared Header, API or session change. Operate; code-led without new raster assets.
+Search band uses16px40px20px desktop padding. Catalog is264px + flexible results,
+28px gutter,24px top inset. Filter paper panel has16px padding,12px radius and
+one1px line. Sticky top92px (88px in901–1000px range) clears both navbar shapes
+by16px; align-self start bounds the panel to its catalog column before footer.
+Conditions use two columns with complete labels and44px targets; all-condition
+spans both columns. Sale-price bounds share a row, with currency in the group
+legend and short Từ/Đến visible labels; accessible price names remain unchanged.
+Labelled maximum-price presets
+are50k/100k/200k on one row with full currency accessible names. Áp dụng and
+Xóa lựa chọn share the bottom row; helper text makes draft-then-Apply explicit.
+Below700px viewport height, native condition/quick-price selects replace expanded
+choices, preserving all values and two price fields rather than shrinking text.
+At desktop widths above900px and heights701–850px, invalid prices also switch
+conditions to the native select so the complete error and recovery actions fit.
+Short desktop head padding is8px vertically, with32px title and16px catalog inset.
+Mobile native dialog protects focus; only the form body scrolls when necessary,
+with actions outside that scroll region. Search feedback150ms; reduced motion
+removes transitions. Existing cards, mode/sort/chips, limit20 and paging remain.
+Finish: independent reviewer SHIP for the two material fixes, canonical scoped
+documentation/preservation PASS. Laptop panels fit at scrollY0 in1366×768 and
+1535×735; normal height505.375px/bottom719.46875px, invalid height487.65625px/
+bottom701.75px. Browser200%/actual OS keyboard/native/live-success NOT RUN.
+Evidence: search-filter-* captures and search-filter-finish.md in the review folder.

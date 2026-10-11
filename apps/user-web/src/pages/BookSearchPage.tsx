@@ -64,101 +64,156 @@ function FilterForm({
     if (!invalid) onApply(draft);
   }
   return (
-    <form className={styles.filterForm} onSubmit={submit} noValidate>
-      <fieldset>
-        <legend>Tình trạng sách</legend>
-        <div className={styles.choices}>
-          {[["", "Tất cả tình trạng"], ...Object.entries(conditions)].map(
-            ([value, label]) => (
-              <label key={value}>
-                <input
-                  type="radio"
-                  name={`${id}-condition`}
-                  checked={draft.condition === value}
-                  onChange={() => setDraft({ ...draft, condition: value! })}
-                />
-                {label}
-              </label>
-            ),
-          )}
-        </div>
-      </fieldset>
-      <fieldset className={styles.priceFilter}>
-        <legend>Khoảng giá bán</legend>
-        <p>Áp dụng cho sách có giá bán.</p>
-        <div className={styles.priceFields}>
-          <label>
-            <span>Từ (₫)</span>
-            <input
-              aria-label="Giá bán từ"
-              inputMode="numeric"
-              placeholder="0"
-              value={draft.minSalePrice}
-              onChange={(event) =>
-                setDraft({ ...draft, minSalePrice: event.target.value })
-              }
-              aria-invalid={invalid}
-              aria-describedby={invalid ? `${id}-price-error` : undefined}
-            />
-          </label>
-          <span className={styles.priceDash} aria-hidden="true">
-            —
-          </span>
-          <label>
-            <span>Đến (₫)</span>
-            <input
-              aria-label="Giá bán đến"
-              inputMode="numeric"
-              placeholder="Bất kỳ"
-              value={draft.maxSalePrice}
-              onChange={(event) =>
-                setDraft({ ...draft, maxSalePrice: event.target.value })
-              }
-              aria-invalid={invalid}
-              aria-describedby={invalid ? `${id}-price-error` : undefined}
-            />
-          </label>
-        </div>
-        <div className={styles.pricePresets} aria-label="Chọn nhanh giá bán">
-          {[50000, 100000, 200000].map((price) => (
-            <button
-              key={price}
-              type="button"
-              aria-pressed={
-                !draft.minSalePrice && draft.maxSalePrice === String(price)
-              }
-              onClick={() =>
+    <form
+      className={styles.filterForm}
+      data-invalid={invalid || undefined}
+      onSubmit={submit}
+      noValidate
+    >
+      <div className={styles.filterBody}>
+        <fieldset>
+          <legend>Tình trạng sách</legend>
+          <select
+            className={styles.compactCondition}
+            aria-label="Tình trạng sách"
+            value={draft.condition}
+            onChange={(event) =>
+              setDraft({ ...draft, condition: event.target.value })
+            }
+          >
+            {[["", "Tất cả tình trạng"], ...Object.entries(conditions)].map(
+              ([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ),
+            )}
+          </select>
+          <div className={styles.choices}>
+            {[["", "Tất cả tình trạng"], ...Object.entries(conditions)].map(
+              ([value, label]) => (
+                <label key={value}>
+                  <input
+                    type="radio"
+                    name={`${id}-condition`}
+                    checked={draft.condition === value}
+                    onChange={() => setDraft({ ...draft, condition: value! })}
+                  />
+                  {label}
+                </label>
+              ),
+            )}
+          </div>
+        </fieldset>
+        <fieldset className={styles.priceFilter}>
+          <legend>Khoảng giá bán (₫)</legend>
+          <div className={styles.priceFields}>
+            <label>
+              <span>Từ</span>
+              <input
+                aria-label="Giá bán từ"
+                inputMode="numeric"
+                placeholder="0"
+                value={draft.minSalePrice}
+                onChange={(event) =>
+                  setDraft({ ...draft, minSalePrice: event.target.value })
+                }
+                aria-invalid={invalid}
+                aria-describedby={invalid ? `${id}-price-error` : undefined}
+              />
+            </label>
+            <span className={styles.priceDash} aria-hidden="true">
+              —
+            </span>
+            <label>
+              <span>Đến</span>
+              <input
+                aria-label="Giá bán đến"
+                inputMode="numeric"
+                placeholder="Bất kỳ"
+                value={draft.maxSalePrice}
+                onChange={(event) =>
+                  setDraft({ ...draft, maxSalePrice: event.target.value })
+                }
+                aria-invalid={invalid}
+                aria-describedby={invalid ? `${id}-price-error` : undefined}
+              />
+            </label>
+          </div>
+          <p className={styles.presetLabel}>Chọn nhanh giá tối đa</p>
+          <div
+            className={styles.pricePresets}
+            role="group"
+            aria-label="Chọn nhanh giá bán"
+          >
+            {[50000, 100000, 200000].map((price) => (
+              <button
+                key={price}
+                type="button"
+                aria-label={`Giá tối đa ${formatVnd(price)}`}
+                aria-pressed={
+                  !draft.minSalePrice && draft.maxSalePrice === String(price)
+                }
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    minSalePrice: "",
+                    maxSalePrice: String(price),
+                  })
+                }
+              >
+                {price / 1000}k
+              </button>
+            ))}
+          </div>
+          <select
+            className={styles.compactPreset}
+            aria-label="Chọn nhanh giá tối đa"
+            value={
+              !draft.minSalePrice &&
+              ["50000", "100000", "200000"].includes(draft.maxSalePrice)
+                ? draft.maxSalePrice
+                : ""
+            }
+            onChange={(event) => {
+              if (event.target.value)
                 setDraft({
                   ...draft,
                   minSalePrice: "",
-                  maxSalePrice: String(price),
-                })
-              }
-            >
-              Đến {formatVnd(price)}
-            </button>
-          ))}
+                  maxSalePrice: event.target.value,
+                });
+            }}
+          >
+            <option value="">Chọn mức giá…</option>
+            {[50000, 100000, 200000].map((price) => (
+              <option key={price} value={price}>
+                Đến {formatVnd(price)}
+              </option>
+            ))}
+          </select>
+          {invalid && (
+            <p id={`${id}-price-error`} role="alert" className={styles.error}>
+              {priceMessage}
+            </p>
+          )}
+        </fieldset>
+      </div>
+      <div className={styles.filterFooter}>
+        <p>Chọn hoặc xóa, rồi bấm Áp dụng.</p>
+        <div className={styles.filterActions}>
+          <button type="submit" className={styles.apply} disabled={invalid}>
+            Áp dụng <ArrowRight size={16} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className={styles.reset}
+            onClick={() =>
+              setDraft({ condition: "", minSalePrice: "", maxSalePrice: "" })
+            }
+          >
+            Xóa lựa chọn
+          </button>
         </div>
-        {invalid && (
-          <p id={`${id}-price-error`} role="alert" className={styles.error}>
-            {priceMessage}
-          </p>
-        )}
-      </fieldset>
-      <div className={styles.filterActions}>
-        <button type="submit" className={styles.apply} disabled={invalid}>
-          Áp dụng bộ lọc <ArrowRight size={16} aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          className={styles.reset}
-          onClick={() =>
-            setDraft({ condition: "", minSalePrice: "", maxSalePrice: "" })
-          }
-        >
-          <RotateCcw size={15} aria-hidden="true" />
-          Đặt lại lựa chọn
-        </button>
       </div>
     </form>
   );

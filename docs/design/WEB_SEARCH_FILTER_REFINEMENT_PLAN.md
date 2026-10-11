@@ -1,9 +1,9 @@
 # Đề xuất làm lại trang Tìm sách và bộ lọc
 
-11/10/2026. Đang chờ chủ dự án duyệt; chưa triển khai UI của đề xuất này.
+11/10/2026. Chủ dự án đã duyệt và yêu cầu triển khai ngày11/10/2026. Evidence thực thi ghi ở báo cáo refinement.
 Nguồn hiện tại: `8d9cdf0`, BookSearchPage.tsx/module.css, DESIGN.md và các ảnh
 search-shelf-laptop/mobile trong .impeccable/review/web-member. Local5186 không
-phản hồi lúc rà soát; không nhận đây là một lượt browser QA mới.
+phản hồi lúc lập plan; đã chạy lại và kiểm CUA trong lượt triển khai bên dưới.
 
 ## Mục tiêu và hướng
 
@@ -85,6 +85,19 @@ Một lượt QA theo lô, một lượt sửa và xác nhận; finish reviewer 
 documenter theo Impeccable khi triển khai. Chỉ nhận đủ điều kiện “không cần cuộn
 để thấy hết filter” khi geometry và thao tác thật đạt ở các laptop nêu trên.
 
-Không đổi code ứng dụng trong lượt lập plan này. DESIGN/canonical vẫn mô tả bản
-đã triển khai, chưa được cập nhật thành đề xuất. Những phần Chat/Thông báo đang
-dở được giữ riêng; lỗi race xác thực socket mới phát hiện còn mở, chưa sửa.
+## Kết quả triển khai11/10/2026
+
+Đã triển khai264px sidebar/28px gutter, ghim dưới navbar, lựa chọn tình trạng
+hai cột, hai ô giá và mức tối đa nằm ngang, action44px cùng hàng. Viewport thấp
+dùng native select; giá sai ở desktop cao701–850px cũng đổi tình trạng sang
+select để giữ nguyên thông báo lỗi và nút khôi phục. Mobile chỉ cuộn thân panel,
+action đáy luôn hiện. Không đổi hero, API/session hoặc truy vấn hiện có.
+
+CUA hai laptop mục tiêu đều hiện đủ filter tại scrollY0; panel thường505.375px,
+đáy719.46875px; panel lỗi487.65625px, đáy701.75px. Sticky/màn thấp/mobile320px,
+draft/Apply/reset/Back/cursor/rỗng/lỗi/retry đã kiểm. Build/typecheck/28unit PASS,
+lint0error/5warning cũ. Review độc lập SHIP cho hai fix; canonical scoped merge
+và preservation PASS. Browser200%/bàn phím OS thật/native/live-success và human
+NOT RUN; không dùng viewport thấp thay bằng chứng zoom/keyboard.
+[Báo cáo và ảnh](WEB_MEMBER_REDESIGN.md) ghi evidence thực tế.
+Chat/Thông báo dở được giữ riêng; lỗi race xác thực socket còn mở, chưa sửa.

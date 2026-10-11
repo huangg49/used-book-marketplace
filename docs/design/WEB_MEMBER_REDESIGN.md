@@ -45,6 +45,40 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
   để hành trình kiểm thử liên tục. Chưa redesign toàn form, dashboard, đăng ký,
   chat, đấu giá, admin hay Flutter; Android giữ checkpoint riêng.
 
+## Tìm sách — bộ lọc gọn và ghim11/10
+
+Theo plan đã duyệt sau88bd62c, giữ brand và kệ sách; sidebar264px/gutter28px,
+nền giấy khác nhẹ, ghim dưới cả hai trạng thái navbar và dừng trước footer.
+Tình trạng hai cột giữ đủ nhãn, hai ô giá cùng hàng, mức tối đa50k/100k/200k,
+Áp dụng/Xóa lựa chọn44px cùng hàng. Xóa chỉ xóa bản nháp, Apply mới đổi query.
+Viewport thấp dùng native select; giá sai ở desktop cao701–850px cũng đổi nhóm
+tình trạng sang select để không đẩy action ra khỏi vùng nhìn. Mobile native
+dialog chỉ cuộn thân form, giữ action đáy; currency lên legend để đọc đủ giá.
+
+Build/typecheck/28unit6file PASS; lint0error/5warning có sẵn, bundle warning đã
+biết. CUA1535×900/1366×768/1535×735/980×768/1366×600/390×844/320×735 và
+dialog320×400 không tràn ngang. Hai laptop tại scrollY0: panel thường505.375px,
+đáy719.46875px; panel lỗi487.65625px, đáy701.75px. Sticky top92/88px, dừng trước
+footer. Draft/Apply/reset, giá sai giữ dữ liệu, mode/sort/chip/cursor/Back/rỗng
+và API-off/retry PASS; live lỗi giữ lỗi, không thành preview thành công.
+Dialog focus/Escape/khôi phục focus/body-lock và action luôn thấy đã kiểm.
+
+[Laptop](../../.impeccable/review/web-member/search-filter-laptop.jpg),
+[laptop thấp](../../.impeccable/review/web-member/search-filter-short-laptop.jpg),
+[ghim](../../.impeccable/review/web-member/search-filter-sticky.jpg),
+[giá sai](../../.impeccable/review/web-member/search-filter-invalid.jpg),
+[mobile](../../.impeccable/review/web-member/search-filter-mobile.jpg),
+[dialog thấp](../../.impeccable/review/web-member/search-filter-short-dialog.jpg),
+[review](../../.impeccable/review/web-member/search-filter-finish.md).
+Ảnh gốc CUA sau batch sửa cuối; không hậu kỳ. Detector một lượt advisory cho
+radius/màu có sẵn; không nhận zero findings. Review độc lập FIX hai lỗi giá/cao
+panel, verdict SHIP cho cả hai sau sửa. Documenter scoped source/schema/canonical
+merge và preservation PASS; drift typographyMeta/overview có sẵn không tự sửa.
+Taste dùng nguồn chính chủ làm reference, chưa cài skill/dependency mới.
+Browser200%/OS keyboard thật/native/live API success/fullintegration/human
+NOT RUN; màn thấp chỉ là viewport proxy. Không đổi Home/API/session/READINESS.
+Chat/Thông báo WIP giữ riêng. Checkpoint local, chưa push.
+
 ## Đăng sách — bàn soạn bài11/10
 
 Thay form legacy bằng nền giấy kem, một tiến trình5bước có tên rõ, form giữa
