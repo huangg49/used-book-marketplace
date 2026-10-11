@@ -16,6 +16,43 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Phạm vi triển khai
 
+- Minh họa trạng thái11/10, nhánh `codex/member-story-illustrations` từ `2b861a5`:
+  phương án chủ dự án duyệt thêm ba cảnh chim cánh cụt: Đã gửi duyệt, kệ cá nhân
+  trống ở trang đầu/chưa lọc và phần giới thiệu Đấu giá. Hai trạng thái đầu dùng
+  `BookJourneyStates`; ảnh alpha chỉ trang trí. Pending vẫn xuất hiện sau service
+  thành công, giữ câu chờ kiểm duyệt và reset; filter/cursor rỗng vẫn gọn, không
+  dùng ảnh kệ trống. Auction chỉ đổi intro, giữ query/filter/cards và sự thật TP.HCM.
+  Hero/Home, nghiệp vụ/API/session không đổi. [Asset/prompt/provenance](../../apps/user-web/public/illustrations/book-journey/README.md):
+  ba WebP alpha800×600/800×600/900×600,56–61KB, resize/encode giữ toàn bố cục.
+  Pending settle560ms một lượt, visible mặc định, tắt theo reduced-motion.
+  Build/typecheck/34unit7files PASS; lint0error5warning Exchange có sẵn.
+  Detector một lượt trên bốn TSX trả `[]`; provenance scan3raster0missing.
+  CUA1366×768/390×844/320×740: ảnh tải, bố cục/chữ dài/không tràn ngang và callback
+  đăng tiếp/xóa lọc/focus link PASS. Pending/OwnerShelf được kiểm bằng component
+  thật trong trang QA có nhãn, không tạo bài hoặc ghi DB; trang QA đã xóa.
+  Auction dùng route guest thật, API3000 offline nên kiểm được lỗi tải có sẵn;
+  không nhận populated/API/full authenticated submission PASS. CUA full-page
+  fixture export sai hình, đã thay bằng ảnh viewport chính xác và ảnh phần dưới
+  ở320px. [Pending desktop](../../.impeccable/review/web-member/story-pending-desktop.png),
+  [mobile](../../.impeccable/review/web-member/story-pending-mobile.png),
+  [320](../../.impeccable/review/web-member/story-pending-320.png),
+  [320 dưới](../../.impeccable/review/web-member/story-pending-320-lower.png);
+  [kệ desktop](../../.impeccable/review/web-member/story-empty-desktop.png),
+  [mobile](../../.impeccable/review/web-member/story-empty-mobile.png),
+  [320](../../.impeccable/review/web-member/story-empty-320.png),
+  [320 dưới](../../.impeccable/review/web-member/story-empty-320-lower.png),
+  [lọc rỗng](../../.impeccable/review/web-member/story-filter-320.png),
+  [cursor rỗng](../../.impeccable/review/web-member/story-cursor-320.png);
+  [Auction desktop](../../.impeccable/review/web-member/story-auction-desktop.png),
+  [mobile](../../.impeccable/review/web-member/story-auction-mobile.png),
+  [320](../../.impeccable/review/web-member/story-auction-320.png).
+  Reviewer mới kiểm source/13capture: **SHIP**, không có material fix trong
+  extension này. Documenter phát hiện hai role hover chưa bind trong shared
+  states; đã bind cục bộ theo màu hiện hữu, build lại PASS. Reviewer chấm sửa
+  binding **resolved/SHIP** qua source; không nhận hover-browser PASS.
+  Không phải review người thật/toàn sản phẩm. Backend/native/
+  populated auctions/full authenticated flow/200%/human NOT RUN; READINESS không đổi.
+
 - Navbar11/10, nhánh `codex/navbar-shrink-emphasis` từ `7274a2c`: chủ dự án
   muốn thấy rõ quá trình thu vào. Shared Header nay co560ms với nhịp giảm tốc,
   viền vàng thoáng sáng và một nét kem chạy quanh680ms rồi tắt; bóng tăng dần.

@@ -1,0 +1,104 @@
+.submitted, .emptyShelf, .filteredEmpty {
+  --shop-wine-hover: #7c2320;
+  --shop-shelf: #f4eddf;
+}
+.submitted {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  align-items: center;
+  gap: 40px;
+  max-width: 960px;
+  margin: 40px auto;
+  padding: 40px;
+  background: var(--shop-paper);
+  border-radius: 12px;
+}
+.pendingArt, .emptyArt {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+}
+.pendingArt {
+  animation: bookPlaced 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes bookPlaced {
+  from { transform: translateY(8px) rotate(-2deg); }
+  to { transform: translateY(0) rotate(0); }
+}
+.message, .emptyMessage { min-width: 0; }
+.message h2 {
+  font: 400 clamp(2rem, 3vw, 2.5rem)/1.25 var(--shop-display);
+  color: var(--shop-wine);
+  margin: 0 0 16px;
+}
+.message p, .emptyMessage p {
+  font-size: 0.875rem;
+  line-height: 1.9;
+  color: var(--shop-muted);
+  overflow-wrap: anywhere;
+  max-width: 55ch;
+  margin: 0 0 24px;
+}
+.message strong { color: var(--shop-ink); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.actions button, .emptyMessage :is(a, button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 18px;
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.actions button:hover, .emptyMessage :is(a, button):hover { background: var(--shop-wine-hover); }
+.actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--shop-wine);
+  font-size: 0.8125rem;
+  text-underline-offset: 4px;
+}
+:is(.actions, .emptyMessage) :is(a, button):focus-visible {
+  outline: 3px solid var(--shop-wine);
+  outline-offset: 4px;
+}
+.emptyShelf {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+  align-items: center;
+  gap: 32px;
+  padding: 40px 8px;
+}
+.emptyMessage h2 {
+  font-size: 1.25rem;
+  line-height: 1.5;
+  color: var(--shop-wine);
+  margin: 0 0 12px;
+}
+.filteredEmpty { padding: 40px 8px; }
+.filteredEmpty h2 { margin-top: 12px; font-size: 1.125rem; }
+.filteredEmpty .emptyMessage :is(a, button) {
+  border: 1px solid var(--shop-control);
+  background: transparent;
+  color: var(--shop-wine);
+  font-weight: 400;
+}
+.filteredEmpty .emptyMessage :is(a, button):hover { background: var(--shop-shelf); }
+@media (max-width: 760px) {
+  .submitted { grid-template-columns: minmax(0, 1fr); gap: 16px; margin: 24px 0; padding: 24px; }
+  .pendingArt { max-width: 240px; margin: auto; }
+  .emptyShelf { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 24px 8px 32px; }
+  .emptyArt { order: -1; max-width: 240px; margin: auto; }
+  .emptyMessage p { max-width: 45ch; }
+}
+@media (prefers-reduced-motion: reduce) { .pendingArt { animation: none; } }

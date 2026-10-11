@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Link,
   Navigate,
   useBeforeUnload,
   useBlocker,
@@ -10,16 +9,16 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  Clock,
   ImagePlus,
   X,
 } from "lucide-react";
 import { Header } from "../layouts/MainLayout";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ListingSubmissionConfirmation } from "../components/BookJourneyStates";
 import { useSession } from "../hooks/useSession";
 import { createListingSubmission } from "../services/listing-submission";
 import { conditions } from "../lib/listing-labels";
-import { formatVnd, ROUTES } from "../lib/routes";
+import { formatVnd } from "../lib/routes";
 import {
   CatalogClassificationFields,
   type ClassificationValue,
@@ -391,17 +390,8 @@ export function SellBookPage() {
           </p>
         </header>
         {step === 6 ? (
-          <section className={styles.success} aria-live="polite">
-            <Clock size={40} aria-hidden="true" />
-            <h2>Đã gửi duyệt</h2>
-            <p>
-              Bài đăng <strong>{formData.title}</strong> đã được gửi. Thông tin
-              sách và bài đăng cần được kiểm duyệt trước khi hiển thị công khai.
-            </p>
-            <button
-              type="button"
-              className={styles.primary}
-              onClick={() => {
+          <ListingSubmissionConfirmation title={formData.title}
+              onPostAnother={() => {
                 formData.images.forEach((url) => URL.revokeObjectURL(url));
                 submission.current = null;
                 setClassification({
@@ -433,12 +423,7 @@ export function SellBookPage() {
                 setHasAttempt(false);
                 setSubmitError(undefined);
                 changeStep(1);
-              }}
-            >
-              Đăng cuốn khác <ArrowRight size={18} aria-hidden="true" />
-            </button>
-            <Link to={ROUTES.home}>Về trang chủ</Link>
-          </section>
+              }} />
         ) : (
           <div className={styles.workspace}>
             <nav className={styles.steps} aria-label="Các bước đăng sách">

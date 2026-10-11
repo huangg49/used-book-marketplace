@@ -12,6 +12,7 @@ import {
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
 import styles from "./ProfilePage.module.css";
+import { EmptyOwnerShelf } from "../components/BookJourneyStates";
 
 const moderationLabels = {
   Draft: "Bản nháp",
@@ -287,30 +288,7 @@ export function ProfilePage() {
             </ul>
           </>
         ) : (
-          <div className={styles.state}>
-            <BookOpen size={32} aria-hidden="true" />
-            <h2>
-              {cursor
-                ? "Trang này chưa có bài đăng"
-                : filter
-                  ? "Chưa có bài trong mục này"
-                  : "Kệ sách đang trống"}
-            </h2>
-            <p>
-              {filter
-                ? "Chọn mục khác để xem các bài đăng của bạn."
-                : "Đăng cuốn sách đã đọc xong để tìm người đọc tiếp theo."}
-            </p>
-            {filter ? (
-              <button type="button" onClick={() => selectFilter("")}>
-                Xem tất cả
-              </button>
-            ) : (
-              <Link to="/sell">
-                Đăng cuốn đầu tiên <ArrowUpRight size={16} aria-hidden="true" />
-              </Link>
-            )}
-          </div>
+          <EmptyOwnerShelf cursor={cursor} filter={filter} onClear={() => selectFilter("")} />
         )}
         {(cursor || query.data?.nextCursor) && (
           <nav className={styles.pagination} aria-label="Trang kệ sách">

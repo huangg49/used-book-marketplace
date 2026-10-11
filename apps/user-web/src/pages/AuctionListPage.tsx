@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { AuctionCard } from '../components/AuctionCard'
 import { useAuctionListLive } from '../hooks/useAuctionLive'
 import { listAuctions, type AuctionSummary } from '../services/auctions'
+import styles from './AuctionListPage.module.css'
 
 // GET /auctions trả tối đa 50 phiên đang mở, sắp kết thúc trước; lọc và sắp xếp
 // ở đây chỉ áp dụng trên danh sách đó.
@@ -42,13 +43,16 @@ export function AuctionListPage() {
 
   return (
     <main className="w-full bg-surface text-on-surface px-5 lg:px-12 py-8">
-      <header className="mb-8 border-b border-outline-variant pb-6">
-        <p className="text-[0.8rem] font-bold uppercase tracking-[0.08em] text-[#9b4027] mb-2">Đấu giá tại TP.HCM</p>
-        <h1 className="font-headline-md text-3xl font-bold text-primary">Phiên đấu giá đang mở</h1>
-        <p className="max-w-2xl text-on-surface-variant">
-          Mỗi cuốn sách đã được nhân viên kiểm tra tại điểm giao nhận trước khi lên phiên. Lượt trả giá không giữ
-          tiền trong ví; chỉ người thắng mới thanh toán.
-        </p>
+      <header className={styles.intro}>
+        <div>
+          <h1>Phiên đấu giá đang mở</h1>
+          <p>
+            Đấu giá tại TP.HCM. Mỗi cuốn sách đã được nhân viên kiểm tra tại điểm giao nhận trước khi lên phiên. Lượt trả giá không giữ
+            tiền trong ví; chỉ người thắng mới thanh toán.
+          </p>
+        </div>
+        <img className={styles.art} src="/illustrations/book-journey/auction.webp"
+          width="900" height="600" alt="" aria-hidden="true" decoding="async" />
       </header>
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         <aside className="w-full lg:w-64 shrink-0 flex flex-col gap-6" aria-label="Lọc phiên đấu giá">

@@ -461,34 +461,6 @@
   outline: 2px solid var(--shop-wine);
   outline-offset: 3px;
 }
-.success {
-  max-width: 620px;
-  margin: 56px auto;
-  padding: 40px;
-  background: var(--shop-paper);
-  border-radius: 12px;
-}
-.success > svg {
-  color: var(--shop-wine);
-}
-.success h2 {
-  font-size: 1.5rem;
-  margin: 20px 0 12px;
-}
-.success p {
-  font-size: 0.875rem;
-  line-height: 1.9;
-  margin: 0 0 28px;
-  overflow-wrap: anywhere;
-}
-.success a {
-  display: block;
-  margin-top: 20px;
-  min-height: 44px;
-  align-content: center;
-  color: var(--shop-wine);
-  font-size: 0.875rem;
-}
 .loading {
   padding: 80px 24px;
 }
@@ -567,10 +539,6 @@
   }
   .previewPhoto {
     height: 230px;
-  }
-  .success {
-    margin: 24px 0;
-    padding: 28px 24px;
   }
 }
 @media (max-width: 360px) {

@@ -8,6 +8,22 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Minh họa trạng thái11/10: nhánh `codex/member-story-illustrations`, base `2b861a5`,
+  checkpoint subject `feat(web): add penguin story illustrations to member pages`.
+  Ba WebP alpha cùng bộ chim cánh cụt cho Đã gửi duyệt/kệ đầu trống/intro Auction;
+  shared component giữ pending/reset và filter/cursor; Home/hero/API/session giữ.
+  Build/typecheck/34unit PASS, lint0error5warning cũ; detector một lượt `[]`,
+  provenance3/3 PASS. CUA1366/390/320/chữ dài/callback/focus/không tràn PASS,
+  pending/kệ là component QA có nhãn (đã xóa), Auction route thật với APIoffline.
+  Reviewer mới SHIP cho source/13capture; hai role hover được bind cục bộ,
+  build lại PASS và reviewer chấm binding resolved/SHIP qua source.
+  Documenter đồng bộ recipe/canonical DESIGN, sidecar và ba surface briefs;
+  JSON/token preservation/overview parity/contract blocks PASS.
+  [Evidence](../design/WEB_MEMBER_REDESIGN.md).
+  Full authenticated submission/Profile/populatedAuction/backend/native/200%/
+  human NOT RUN; READINESS không đổi. Chưa push. Chat/Thông báo/MainLayout WIP
+  giữ riêng. Bước tiếp: chủ dự án xem ba minh họa; Vite5186 tiếp tục chạy.
+
 - Navbar emphasis11/10: nhánh `codex/navbar-shrink-emphasis`, base `7274a2c`,
   checkpoint subject `feat(web): emphasize navbar collapse motion`. Co560ms,
   viền vàng/nét kem chạy một lượt680ms rồi tắt; floating/spacing/shadow rõ hơn.

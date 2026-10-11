@@ -1,0 +1,33 @@
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 360px);
+  align-items: center;
+  gap: 32px;
+  padding: 16px 0 24px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--shop-line);
+}
+.intro h1 {
+  font: 400 clamp(2rem, 3.3vw, 2.75rem)/1.25 var(--shop-display);
+  color: var(--shop-wine);
+  margin: 0 0 16px;
+}
+.intro p {
+  max-width: 66ch;
+  color: var(--shop-muted);
+  font-size: 0.875rem;
+  line-height: 1.85;
+  margin: 0;
+}
+.art {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+}
+@media (max-width: 760px) {
+  .intro { grid-template-columns: minmax(0, 1fr); gap: 12px; padding-top: 0; margin-bottom: 24px; }
+  .intro h1 { font-size: 2rem; }
+  .art { width: min(240px, 100%); justify-self: end; }
+}
