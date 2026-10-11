@@ -35,8 +35,8 @@ export function PaperStormLayout() {
     const node = overlay.current, source = journey.source;
     const rect = source?.getBoundingClientRect();
     const origin: PaperOrigin = rect ?? { x: innerWidth / 2 - 120, y: innerHeight / 2 - 180, width: 240, height: 360 };
-    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let mode: StormMode = preference.matches ? "reduced" : innerWidth <= 600 ? "mobile" : "desktop";
+    // Owner policy: keep authored motion regardless of the OS motion preference.
+    let mode: StormMode = innerWidth <= 600 ? "mobile" : "desktop";
     const rootStyle = getComputedStyle(document.documentElement);
     const palette = ["--shop-cream", "--shop-paper", "--shop-yellow", "--shop-wine"].map(name => rootStyle.getPropertyValue(name).trim());
     const painter = createStormPainter(canvas.current, origin, mode, palette);

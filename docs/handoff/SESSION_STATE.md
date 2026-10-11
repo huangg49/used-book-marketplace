@@ -10,7 +10,11 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 - Login success storm: `codex/auth-paper-storm`, base `bae53e3`, subject
   `feat(web): reveal login destination through a paper storm`. Canvas2D68/36mảnh,
-  desktop1850ms/mobile1600ms; giảm chuyển động dùng cover440ms. Chỉ đổi safe
+  desktop1850ms/mobile1600ms. Follow-up `codex/auth-motion-preference`, base
+  `b54f0e4`, subject `fix(web): preserve login animation under motion reduction`:
+  theo quy tắc mới trong AGENTS, OS reduction vẫn chạy đầy đủ/stamp280ms;
+  cover440ms chỉ còn fallback kỹ thuật khi thiếu Canvas. CUA actual reduce=true
+  1280×720/68mảnh/stamp280ms/Home focus/scroll cleanup PASS. Chỉ đổi safe
   returnUrl sau khi đã vẽ/phủ kín, overlay sống qua route; focus/scroll/Back cleanup.
   Không đổi API/session/validation;850ms chuyển form giữ nguyên. Web build/TS,
   40test8file PASS;lint0error5warning Exchange cũ;detector một lần0finding.

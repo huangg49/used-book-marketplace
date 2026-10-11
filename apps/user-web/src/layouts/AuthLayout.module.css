@@ -131,5 +131,6 @@
   .brand > a { transform: scale(.7); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .stamp { animation: none; opacity: 1; transform: rotate(-12deg); }
+  /* Preserve the authored stamp; override the shared CSS duration reduction. */
+  .stamp { animation-duration: 280ms !important; }
 }

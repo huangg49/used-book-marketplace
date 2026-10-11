@@ -60,3 +60,21 @@ NOT RUN. No new auth/backend gate claimed; READINESS unchanged. No new raster as
 or font required, existing photo/texture provenance retained. Owner can try local
 Login; with current reduced-motion setting they see the lighter fallback.
 Unrelated Chat/Notifications/MainLayout WIP remains outside this commit.
+
+## Owner motion policy follow-up — 11/10/2026
+
+`codex/auth-motion-preference`, base `b54f0e4`, subject
+`fix(web): preserve login animation under motion reduction`. Owner now requires
+all authored motion under either OS preference; recorded in AGENTS, superseding
+earlier reduction guidance. Storm chooses mode from viewport only; stamp280ms
+overrides shared CSS reduction. Canvas-unavailable fallback remains. Existing
+reduced-cover capture/tests describe technical fallback, not current OS behavior.
+
+CUA1280×720 actual OS reduce=true, no QA preference override: desktop68fragments,
+stamp animationDuration0.28s,Home H1focus/no inert/restored overflow PASS.
+`forced-motion-desktop.jpg` is the actual storm capture. No OS setting changed.
+Build/TypeScript,40tests8files,docs/diff PASS;lint0errors5known Exchange warnings.
+No new backend/native or physical-phone FPS acceptance; unrelated WIP preserved.
+
+Follow-up scoped detector ran once: one inherited intentional6px wine paper-edge
+advisory in AuthLayout.module.css (existing concept); not a detector PASS.
