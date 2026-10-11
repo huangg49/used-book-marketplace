@@ -8,6 +8,18 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Auth — tập giấy thư viện — 11/10/2026
 
+- Continuous paper flow: `codex/auth-paper-flow`, base `8f02bdf`, subject
+  `feat(web): carry login paper flow continuously through navigation`. Bỏ pause
+  rAF/plateau; đồng hồ bay độc lập đồng hồ mở cảnh. Ba tờ lớn che bằng geometry,
+  đợi React commit DOM+paint mới mở; giấy cuốn chéo/cream/ít vàng/bóng nhẹ,
+  30 mảnh desktop 1600ms / 18 mảnh mobile 1500ms kể cả giảm motion. Giữ API/session,
+  safe returnUrl/focus/Back; sửa copy visibility để form cũ không lộ trên đích.
+  CUA 1280×720/390×844 actual reduce=true, QA riêng 700ms chờ route/no freeze
+  clock/DOM-ready/returnUrl/401/Back/cleanup PASS. Build/TS và 45 test / 8 file PASS,
+  lint 0 error / 5 warning cũ; detector một lần 0 finding. [Evidence](../../.impeccable/review/auth-flow/README.md).
+  Physical mobile FPS/NVDA/native/human/hidden-tab/no-Canvas NOT RUN; READINESS
+  giữ nguyên. Chat/Thông báo/MainLayout WIP bảo toàn; chủ dự án thử Login local.
+
 - Login success storm: `codex/auth-paper-storm`, base `bae53e3`, subject
   `feat(web): reveal login destination through a paper storm`. Canvas2D68/36mảnh,
   desktop1850ms/mobile1600ms. Follow-up `codex/auth-motion-preference`, base

@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { createStormPainter, runPaperStorm, stormFrame, type PaperOrigin, type StormMode } from "./paper-storm";
+import { createStormPainter, runPaperStorm, stormFrame, stormTiming, coverSheetBounds, type PaperOrigin, type StormMode } from "./paper-storm";
 import styles from "./PaperStormLayout.module.css";
 import { JourneyContext } from "./paper-journey";
 
-type Journey = { target: string; source: HTMLElement | null; from: string; resolve: () => void; committed: boolean };
+type Journey = { target: string; source: HTMLElement | null; from: string; resolve: () => void; committed: boolean;
+  mounted: boolean; onMounted?: () => void };
 function afterPaint() {
   return new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 }
@@ -18,7 +19,7 @@ export function PaperStormLayout() {
   const canvas = useRef<HTMLCanvasElement>(null), halves = useRef<HTMLDivElement>(null), fallback = useRef<HTMLDivElement>(null);
   function start(target: string, source: HTMLElement | null) {
     if (current.current) return Promise.resolve();
-    const next = { target, source, from: location.key, committed: false, resolve: () => {} };
+    const next: Journey = { target, source, from: location.key, committed: false, mounted: false, resolve: () => {} };
     const promise = new Promise<void>((resolve) => { next.resolve = resolve; });
     current.current = next; setJourney(next);
     return promise;
@@ -28,6 +29,9 @@ export function PaperStormLayout() {
     if (!run || location.key === run.from) return;
     if (!run.committed || location.pathname + location.search !== run.target.split("#")[0]) {
       stop.current(); current.current = null; setJourney(null); run.resolve();
+    } else {
+      // React has committed the actual destination DOM, not just the URL.
+      run.mounted = true; run.onMounted?.(); run.onMounted = undefined;
     }
   }, [location.key, location.pathname, location.search]);
   useLayoutEffect(() => {
@@ -95,41 +99,48 @@ export function PaperStormLayout() {
     const commit = async () => {
       if (cancelled || navigated) return;
       navigated = true; journey.committed = true;
+      const mounted = new Promise<void>(resolve => { if (journey.mounted) resolve(); else journey.onMounted = resolve; });
       await navigate(journey.target, { replace: true });
+      await mounted;
+      if (cancelled) return;
       if (journey.target.split(/[?#]/)[0] === "/") document.title = "Lật lại — Mua bán sách cũ";
       window.scrollTo({ top: 0, behavior: "instant" });
       await afterPaint();
+      node.dataset.routeReady = "true";
     };
-    let lastTime = 0;
-    const draw = (time: number) => {
-      lastTime = time;
-      const f = stormFrame(time, mode);
+    let lastTime = 0, lastRelease = 0;
+    const draw = (time: number, releaseTime = 0) => {
+      lastTime = time; lastRelease = releaseTime;
+      const f = stormFrame(time, mode, releaseTime);
       node.dataset.phase = f.phase;
-      node.dataset.covered = f.cover === 1 && f.release === 0 ? "true" : "false";
-      if (painter) painter.draw(time);
+      node.dataset.covered = f.cover === 1 && f.release === 0 && (mode === "reduced" || coverSheetBounds(innerWidth, innerHeight, time, mode).covers) ? "true" : "false";
+      node.dataset.motionTime = String(Math.round(time));
+      node.dataset.release = f.release.toFixed(2);
+      if (painter) painter.draw(time, releaseTime);
       else if (fallback.current) fallback.current.style.opacity = String(f.cover * (1 - f.release));
-      if (source && mode !== "reduced" && copies.length) source.style.visibility = time >= (mode === "mobile" ? 280 : 350) ? "hidden" : oldVisibility;
+      if (source && mode !== "reduced" && copies.length) source.style.visibility = time >= stormTiming(mode).tear ? "hidden" : oldVisibility;
       copies.forEach((copy, index) => {
         const sign = index === 0 ? -1 : 1;
-        copy.style.visibility = f.phase === "stamp" || f.spread >= .8 ? "hidden" : "visible";
-        copy.style.transform = `translate3d(${sign * (f.tear * 46 + f.spread * innerWidth * .5)}px, ${-f.tear * 18 - f.spread * innerHeight * .32}px, 0) rotate(${sign * (f.tear * 6 + f.spread * 30)}deg)`;
+        // The printed child has visibility:visible; inherited visibility cannot hide it.
+        copy.style.display = f.phase === "stamp" || f.cover >= .9 ? "none" : "block";
+        copy.style.transform = `translate3d(${sign * f.tear * 12 + f.spread * 34}px, ${-f.tear * 6 - f.spread * 42}px, 0) rotate(${sign * f.tear * 1.8 - f.spread * 3}deg)`;
       });
     };
     const cancelAnimation = runPaperStorm(painter ? mode : "reduced", { draw, covered: commit, done: finish,
       failed: () => { void commit().finally(finish); } });
-    const abort = () => { cancelled = true; cancelAnimation(); restore(); };
+    const abort = () => { cancelled = true; cancelAnimation(); journey.onMounted?.(); journey.onMounted = undefined; restore(); };
     stop.current = abort;
-    const resize = () => { painter?.resize(); draw(lastTime); };
+    const resize = () => { painter?.resize(); draw(lastTime, lastRelease); };
     window.addEventListener("resize", resize);
     // A hidden tab must not leave a successful login stuck behind suspended rAF.
     const visibility = () => {
       if (document.visibilityState !== "hidden") return;
-      cancelAnimation(); draw(mode === "reduced" ? 200 : mode === "mobile" ? 850 : 1050);
+      cancelAnimation(); draw(stormTiming(mode).cover, 0);
       journey.committed = true; navigated = true;
       void Promise.resolve(navigate(journey.target, { replace: true })).finally(finish);
     };
     document.addEventListener("visibilitychange", visibility);
-    return () => { abort(); window.removeEventListener("resize", resize); document.removeEventListener("visibilitychange", visibility); };
+    return () => { abort(); painter?.dispose(); window.removeEventListener("resize", resize); document.removeEventListener("visibilitychange", visibility); };
   }, [journey, navigate]);
   useEffect(() => () => { stop.current(); current.current?.resolve(); }, []);
   return <JourneyContext.Provider value={start}>
