@@ -9,6 +9,49 @@
   font-size: 0.875rem;
   font-weight: 700;
 }
+.categoryHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+}
+.clear,
+.facetClear {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--shop-wine);
+  font: 600 0.8125rem/1.5 var(--shop-body);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.facetGroup {
+  position: relative;
+}
+.facetClear {
+  position: absolute;
+  right: 0;
+  top: 5px;
+}
+.facet[data-clearable] summary {
+  padding-right: 52px;
+}
+.facet[data-clearable] summary span {
+  display: block;
+  margin: 4px 0 0;
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+.clear:focus-visible,
+.facetClear:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+}
 .subcategory {
   display: flex;
   flex-direction: column;

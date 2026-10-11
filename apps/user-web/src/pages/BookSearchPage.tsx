@@ -90,13 +90,44 @@ function FilterForm({
     event.preventDefault();
     if (!invalid) onApply(draft);
   }
+  function clearGroup(
+    event: React.MouseEvent<HTMLButtonElement>,
+    next: FilterValues,
+  ) {
+    // The reset action disappears; keep keyboard focus inside its own group.
+    event.currentTarget
+      .closest("fieldset")
+      ?.querySelector<HTMLElement>("input, select")
+      ?.focus();
+    setDraft(next);
+  }
   function range(kind: "SalePrice" | "ExchangeValue", title: string) {
     const minKey = kind === "SalePrice" ? "minSalePrice" : "minExchangeValue";
     const maxKey = kind === "SalePrice" ? "maxSalePrice" : "maxExchangeValue";
     const error = invalidPrice(draft[minKey], draft[maxKey]);
     return (
-      <fieldset className={styles.priceFilter}>
-        <legend>{title} (₫)</legend>
+      <fieldset
+        className={styles.priceFilter + " " + styles.filterGroup}
+        aria-labelledby={`${id}-${kind}-label`}
+      >
+        <legend>
+          <span id={`${id}-${kind}-label`}>
+            {title} (₫)
+            {(draft[minKey] || draft[maxKey]) && <small>Đã chọn khoảng</small>}
+          </span>
+          {(draft[minKey] || draft[maxKey]) && (
+            <button
+              type="button"
+              className={styles.groupClear}
+              aria-label={`Xóa lựa chọn ${title.toLowerCase()}`}
+              onClick={(event) =>
+                clearGroup(event, { ...draft, [minKey]: "", [maxKey]: "" })
+              }
+            >
+              Xóa
+            </button>
+          )}
+        </legend>
         <div className={styles.priceFields}>
           <label>
             <span>Từ</span>
@@ -156,25 +187,51 @@ function FilterForm({
         <div className={styles.classification}>
           <CatalogClassificationFields
             id={id}
+            clearable
             value={draft}
             onChange={(value) => setDraft({ ...draft, ...value })}
           />
         </div>
-        <fieldset>
-          <legend>Tình trạng sách</legend>
-          <select
-            className={styles.conditionSelect}
-            aria-label="Tình trạng sách"
-            value={draft.condition}
-            onChange={(e) => setDraft({ ...draft, condition: e.target.value })}
-          >
-            <option value="">Tất cả tình trạng</option>
-            {Object.entries(conditions).map(([v, label]) => (
-              <option key={v} value={v}>
-                {label}
-              </option>
-            ))}
-          </select>
+        <fieldset
+          className={styles.filterGroup}
+          aria-labelledby={`${id}-condition-label`}
+        >
+          <legend>
+            <span id={`${id}-condition-label`}>
+              Tình trạng sách{draft.condition && <small>1 đã chọn</small>}
+            </span>
+            {draft.condition && (
+              <button
+                type="button"
+                className={styles.groupClear}
+                aria-label="Xóa lựa chọn tình trạng sách"
+                onClick={(event) =>
+                  clearGroup(event, { ...draft, condition: "" })
+                }
+              >
+                Xóa
+              </button>
+            )}
+          </legend>
+          <div className={styles.conditionChoices}>
+            {[["", "Tất cả tình trạng"], ...Object.entries(conditions)].map(
+              ([value, label]) => (
+                <label
+                  key={value}
+                  data-selected={draft.condition === value || undefined}
+                >
+                  <input
+                    type="radio"
+                    name={`${id}-condition`}
+                    value={value}
+                    checked={draft.condition === value}
+                    onChange={() => setDraft({ ...draft, condition: value })}
+                  />
+                  <span>{label}</span>
+                </label>
+              ),
+            )}
+          </div>
         </fieldset>
         {mode !== "Exchange" && range("SalePrice", "Giá bán")}
         {mode === "Exchange"
@@ -188,8 +245,27 @@ function FilterForm({
                 </p>
               </details>
             )}
-        <fieldset>
-          <legend>Ngôn ngữ của sách</legend>
+        <fieldset
+          className={styles.filterGroup}
+          aria-labelledby={`${id}-language-label`}
+        >
+          <legend>
+            <span id={`${id}-language-label`}>
+              Ngôn ngữ của sách{draft.language && <small>1 đã chọn</small>}
+            </span>
+            {draft.language && (
+              <button
+                type="button"
+                className={styles.groupClear}
+                aria-label="Xóa lựa chọn ngôn ngữ của sách"
+                onClick={(event) =>
+                  clearGroup(event, { ...draft, language: "" })
+                }
+              >
+                Xóa
+              </button>
+            )}
+          </legend>
           <select
             className={styles.conditionSelect}
             aria-label="Ngôn ngữ của sách"

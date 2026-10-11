@@ -18,11 +18,13 @@ export function CatalogClassificationFields({
   onChange,
   id,
   editing = false,
+  clearable = false,
 }: {
   value: ClassificationValue;
   onChange: (value: ClassificationValue) => void;
   id: string;
   editing?: boolean;
+  clearable?: boolean;
 }) {
   const [expanded, setExpanded] = useState<string[]>([]);
   const category = categoryFor(value.categoryId);
@@ -38,9 +40,27 @@ export function CatalogClassificationFields({
   }
   return (
     <div className={styles.fields}>
-      <label className={styles.label} htmlFor={`${id}-category`}>
-        Danh mục sách
-      </label>
+      <div className={clearable ? styles.categoryHeading : undefined}>
+        <label className={styles.label} htmlFor={`${id}-category`}>
+          Danh mục sách
+        </label>
+        {clearable && value.categoryId && (
+          <button
+            type="button"
+            className={styles.clear}
+            aria-label="Xóa lựa chọn danh mục sách"
+            onClick={(event) => {
+              event.currentTarget
+                .closest(`.${styles.fields}`)
+                ?.querySelector("select")
+                ?.focus();
+              changeCategory("");
+            }}
+          >
+            Xóa
+          </button>
+        )}
+      </div>
       <select
         id={`${id}-category`}
         value={root?.id || ""}
@@ -87,76 +107,129 @@ export function CatalogClassificationFields({
           ? facet.options
           : facet.options.filter((o, i) => i < 5 || selected.includes(o.id));
         return (
-          <details
-            key={`${root?.id}-${facet.id}`}
-            className={styles.facet}
-            open={editing || index < 2 || selected.length > 0 || undefined}
-          >
-            <summary>
-              {facet.label}
-              {selected.length > 0 && <span>{selected.length}</span>}
-            </summary>
-            <div className={styles.choices}>
-              {visible.map((option) => (
-                <label key={option.id}>
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(option.id)}
-                    onChange={(e) => {
-                      const next = {
-                        ...value.attributes,
-                        [facet.id]: e.target.checked
-                          ? [...selected, option.id]
-                          : selected.filter((v) => v !== option.id),
-                      };
-                      onChange({
-                        ...value,
-                        attributes: compatibleAttributes(
-                          value.categoryId,
-                          next,
-                        ),
-                      });
-                    }}
-                  />
-                  <span>{option.label}</span>
-                </label>
-              ))}
-              {!facet.options.length && (
-                <p>Chọn thông tin phía trên để xem các lựa chọn phù hợp.</p>
-              )}
-              {facet.options.length > 5 &&
-                (showAll || visible.length < facet.options.length) && (
-                  <button
-                    type="button"
-                    className={styles.more}
-                    onClick={() =>
-                      setExpanded(
-                        showAll
-                          ? expanded.filter((x) => x !== facet.id)
-                          : [...expanded, facet.id],
-                      )
-                    }
-                  >
-                    {showAll
-                      ? "Thu gọn"
-                      : `Xem thêm (${facet.options.length - visible.length})`}
-                  </button>
+          <div className={styles.facetGroup} key={`${root?.id}-${facet.id}`}>
+            <details
+              className={styles.facet}
+              data-clearable={(clearable && selected.length > 0) || undefined}
+              open={editing || index < 2 || selected.length > 0 || undefined}
+            >
+              <summary>
+                {facet.label}
+                {selected.length > 0 && (
+                  <>
+                    {" "}
+                    <span>
+                      {selected.length}
+                      {clearable && " đã chọn"}
+                    </span>
+                  </>
                 )}
-            </div>
-          </details>
+              </summary>
+              <div className={styles.choices}>
+                {visible.map((option) => (
+                  <label key={option.id}>
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(option.id)}
+                      onChange={(e) => {
+                        const next = {
+                          ...value.attributes,
+                          [facet.id]: e.target.checked
+                            ? [...selected, option.id]
+                            : selected.filter((v) => v !== option.id),
+                        };
+                        onChange({
+                          ...value,
+                          attributes: compatibleAttributes(
+                            value.categoryId,
+                            next,
+                          ),
+                        });
+                      }}
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                ))}
+                {!facet.options.length && (
+                  <p>Chọn thông tin phía trên để xem các lựa chọn phù hợp.</p>
+                )}
+                {facet.options.length > 5 &&
+                  (showAll || visible.length < facet.options.length) && (
+                    <button
+                      type="button"
+                      className={styles.more}
+                      onClick={() =>
+                        setExpanded(
+                          showAll
+                            ? expanded.filter((x) => x !== facet.id)
+                            : [...expanded, facet.id],
+                        )
+                      }
+                    >
+                      {showAll
+                        ? "Thu gọn"
+                        : `Xem thêm (${facet.options.length - visible.length})`}
+                    </button>
+                  )}
+              </div>
+            </details>
+            {clearable && selected.length > 0 && (
+              <button
+                type="button"
+                className={styles.facetClear}
+                aria-label={`Xóa lựa chọn ${facet.label.toLowerCase()}`}
+                onClick={(event) => {
+                  event.currentTarget.parentElement
+                    ?.querySelector("summary")
+                    ?.focus();
+                  const attributes = { ...value.attributes };
+                  delete attributes[facet.id];
+                  onChange({
+                    ...value,
+                    attributes: compatibleAttributes(
+                      value.categoryId,
+                      attributes,
+                    ),
+                  });
+                }}
+              >
+                Xóa
+              </button>
+            )}
+          </div>
         );
       })}
       {["manga", "light-novel"].includes(value.categoryId) && (
-        <label className={styles.subcategory}>
-          Bộ truyện
+        <div className={styles.subcategory}>
+          <div className={clearable ? styles.categoryHeading : undefined}>
+            <label htmlFor={`${id}-series`}>Bộ truyện</label>
+            {clearable && value.series && (
+              <button
+                type="button"
+                className={styles.clear}
+                aria-label="Xóa lựa chọn bộ truyện"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.currentTarget
+                    .closest(`.${styles.subcategory}`)
+                    ?.querySelector("input")
+                    ?.focus();
+                  onChange({ ...value, series: "" });
+                }}
+              >
+                Xóa
+              </button>
+            )}
+          </div>
           <input
+            id={`${id}-series`}
             value={value.series}
             maxLength={120}
             placeholder={editing ? "Ví dụ: Naruto" : "Nhập đúng tên bộ truyện…"}
             onChange={(e) => onChange({ ...value, series: e.target.value })}
           />
           {!editing && <small>Tìm theo tên bộ truyện đầy đủ.</small>}
-        </label>
+        </div>
       )}
     </div>
   );

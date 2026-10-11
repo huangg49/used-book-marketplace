@@ -6,6 +6,24 @@ OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hi�
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
+## Search — nhóm lọc và xóa riêng — 11/10/2026
+
+- `codex/search-filter-group-controls`, base `cce99af`, checkpoint subject
+  `feat(web): clarify search filter groups and resets`. Áp dụng phần UX/UI từ
+  đối chiếu bản Tuấn Minh: bốn tình trạng + tất cả bằng native radio; trạng thái
+  chọn rõ hơn; xóa riêng danh mục/facet/bộ truyện/tình trạng/khoảng tiền/ngôn ngữ.
+  Xóa thay draft, Áp dụng mới commit URL; giữ các nhóm tương thích và focus.
+  Không thêm facet count API/NXB/năm xuất bản, không đổi taxonomy/contract/DB.
+- CUA Chromium1280×800/390×844 preview: reset từng nhóm, giữ nhóm còn lại,
+  prune JLPT sau bỏ Luyện thi, category reset giữ condition, radio phím mũi tên,
+  Apply URL/kết quả/focus, mobile Escape/reopen giữ draft/footer/body unlock PASS.
+  [Evidence](../../.impeccable/review/search-filter-groups/README.md).
+- Web78tests/build(TS)/lint PASS;5warning Exchange và chunk warning có sẵn.
+  Detector một lần9advisory ở radius/màu cũ ngoài diff. Live API/DB, Safari,
+  screen-reader speech, physical mobile, human/remote CI NOT RUN. Không gửi thư/
+  ghi DB. Tab QA đóng/viewport reset; Vite5186 chạy để xem UI. WIP teammate và
+  READINESS giữ nguyên. Local chưa push; chủ dự án xem lại giao diện.
+
 ## Auth — phản hồi khi nhập — 11/10/2026
 
 - `codex/auth-inline-feedback`, base `0224170`, checkpoint subject

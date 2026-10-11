@@ -96,14 +96,14 @@ for decorative imagery. Caption distinguishes them from listing photographs.
 Operate; code-led ordinary extension after `aadbd88`. Preserve the incumbent
 wine/cream world, Anton/Be Vietnam Pro, shared Header, compact whole-cover cards,
 Home composition/motion and all session, eligibility and retry semantics. This
-section supersedes earlier Search-only preview categories, condition radios and
+section supersedes earlier Search-only preview categories, condition controls and
 “every control fits one laptop viewport” rules. Canonical source-derived visual
 rules and the matching sidecar recipe are in root DESIGN.md and
 `.impeccable/design.json` (`search-catalog-sidebar`).
 
 Shared `CatalogClassificationFields` drives live and DEV preview: native category
 and optional subcategory selects, contextual facet disclosures, optional Manga/LN
-series, then native condition, mode-appropriate sale/exchange ranges and edition
+series, then native single-choice condition radios, mode-appropriate sale/exchange ranges and edition
 language. `catalog-v1` has11 roots/29 nodes/16 controlled facet types. The first
 two groups and selected groups start open. Initially show five options plus
 selected values; Xem thêm/Thu gọn exposes the rest. Summaries, checkbox labels,
@@ -117,10 +117,10 @@ Series requires its full name and matches NFC/case-insensitively.
 The264px/28px rail is transparent and borderless,with no outer panel radius and
 padding0 16px 0 0;1150px uses24px gap/outer padding. Its wine18px/1.5 heading has
 16px bottom padding,shop-line underline and24px bottom margin. Filter-body groups
-have24px gap. Native condition/edition-language selects use shelf ground,a1px
+have24px gap. Edition-language selects use shelf ground,a1px
 shop-control bottom edge and6px upper corners. A Search-only classification wrapper
 applies that field treatment,10px inner gap and12px margin before disclosures;
-the shared Sell component keeps its own styling. ResizeObserver
+the shared Sell component keeps its own styling. Four condition states and an all-condition option are visible as native radios with44px label targets and17px wine controls. Selected category/facet/series/condition/range/language groups expose a44px underlined Xóa action; each updates only its draft, prunes incompatible dependent classification values and moves focus to its remaining input/select/summary. Facet choice counts use a separate12px muted regular line; condition/language show1 đã chọn and ranges show Đã chọn khoảng. These are selection counts, not result counts. Classification clearable defaults false outside Search. ResizeObserver
 and viewport resize allow sticky only when complete panel height+108px fits;
 top92px,88px at901–1000px. A longer panel scrolls with the document, without a
 height clamp or nested rail scroll. Desktop retains the rail at heights<=700px;

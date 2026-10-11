@@ -851,3 +851,73 @@
 .classification details {
   margin-top: 12px;
 }
+.filterForm .filterGroup {
+  position: relative;
+}
+.filterForm .filterGroup legend {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--shop-wine);
+  line-height: 1.5;
+}
+.filterGroup legend small {
+  display: block;
+  margin-top: 4px;
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+.groupClear {
+  flex: 0 0 44px;
+  margin-top: -8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--shop-wine);
+  font: 600 0.8125rem/1.5 var(--shop-body);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.conditionChoices {
+  display: flex;
+  flex-direction: column;
+}
+.conditionChoices label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.conditionChoices label[data-selected] {
+  color: var(--shop-wine);
+  font-weight: 600;
+}
+.filterForm .conditionChoices input {
+  width: 17px;
+  height: 17px;
+  min-height: 0;
+  flex: 0 0 17px;
+  padding: 0;
+  color: var(--shop-wine);
+  accent-color: var(--shop-wine);
+}
+.classification input[type="checkbox"] {
+  color: var(--shop-wine);
+}
+.groupClear:focus-visible,
+.conditionChoices input:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+.conditionChoices label:hover {
+  color: var(--shop-wine);
+}
