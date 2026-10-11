@@ -6,6 +6,30 @@ OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hi�
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
+## Auth — tập giấy thư viện — 11/10/2026
+
+- Nhánh `codex/auth-library-papers`, base `d20c43a`; checkpoint subject
+  `feat(web): redesign auth as library paper sheets`. Thay split-screen bằng
+  AuthLayout chung: ba tờ giấy giữa nền ảnh Davit Margaryan/Unsplash đỏ rượu,
+  font Bricolage/Caveat local OFL, ghi chú ngẫu nhiên, underline inputs.
+- Giữ SessionClient/API/native required/email/error/safe returnUrl. Đăng ký và
+  khôi phục vốn chưa có API: tờ riêng nói rõ chưa hỗ trợ, không nhận credential
+  hoặc giả gửi email. Draft chỉ trong memory khi còn ở Auth. Chỉ login thành
+  công mới đóng dấu ĐÃ MƯỢN; inert tờ rời, focus heading tờ tới. Auth tôn trọng
+  reduced-motion, khác ngoại lệ Home/nav/card: không lật không gian khi reduce.
+- Build/TypeScript PASS,34unit7files PASS (suite hiện có), lint0error5warning
+  Exchange cũ; docs/diff checks ghi trong evidence. IAB desktop/laptop/mobile/
+  actual572/320, native validation/focus/query PASS. Isolated UI fixture5187:
+  401/retained inputs/no stamp,200/stamp/safe internal return và chặn //external
+  PASS; không ghi DB chính. Normal-motion live/NVDA/200%/native/main-DB login
+  NOT RUN. Một detector: paper-edge warning được reviewer chấp nhận theo brief;
+  font/token additions được documenter đồng bộ, không nhận detector PASS.
+- Full finish review **ship** trên source/capture được cấp, không thay human
+  sign-off. [Evidence](../../.impeccable/review/auth-papers/README.md),
+  [review](../../.impeccable/review/auth-papers/review.md). READINESS không đổi.
+  Chat/Thông báo/MainLayout WIP giữ riêng. Bước tiếp: chủ dự án xem `/login`
+  và tự thử tài khoản local; API đăng ký/reset thuộc gói nghiệp vụ riêng.
+
 ## Khôi phục API local để đăng nhập — 11/10/2026
 
 - Nhánh `codex/local-db-login-recovery`, base `e3bcbba`; checkpoint subject

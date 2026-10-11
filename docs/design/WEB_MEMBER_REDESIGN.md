@@ -16,6 +16,26 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Phạm vi triển khai
 
+- Auth papers11/10, nhánh `codex/auth-library-papers`, base `d20c43a`:
+  chủ dự án thay split-screen bằng tập ba tờ giấy thư viện chính giữa nền ảnh
+  hiệu sách đỏ rượu/làm mờ. AuthLayout chung cho login/register/forgot-password;
+  original logo, texture giấy và credit Davit Margaryan/Unsplash giữ lại.
+  Bricolage heading/Caveat ghi chú-lỗi selfhosted OFL, controls Be Vietnam Pro;
+  ghi chú ngẫu nhiên theo lần mount, paper turn và con dấu ĐÃ MƯỢN chỉ sau login.
+  Giữ API/validation/session và safe returnUrl; register/reset vốn chưa có API
+  nên tờ riêng nói rõ chưa hỗ trợ, không nhận dữ liệu hoặc giả gửi email.
+  Current sheet inert lúc rời, destination H1 focus; draft memory-only.
+  Auth tôn trọng reduced-motion: bỏ lật không gian, dấu tĩnh500ms.
+  Build/TS/34existing unit PASS, lint0error5Exchange warning cũ. Manual detector
+  một lượt có paper-edge warning được reviewer chấp nhận, local font/token
+  additions được documenter đồng bộ; không nhận detector PASS. Full finish
+  review **ship** trên source và11capture hợp lệ, không thay human acceptance.
+  IAB native validation/focus/desktop/mobile PASS;401/200/stamp/returnUrl kiểm
+  với isolated UI fixture không DB. Normal-motion live/NVDA/200%/native và
+  main-DB login NOT RUN. [Evidence](../../.impeccable/review/auth-papers/README.md),
+  [review](../../.impeccable/review/auth-papers/review.md).
+  Recipe split-screen ở các báo cáo trước dưới đây là lịch sử, đã được thay.
+
 - Card depth11/10, nhánh `codex/book-card-depth` từ `62f4df7`: chủ dự án duyệt
   tương tác kiểu Aceternity, gồm cả chữ nổi. Shared HomeBookCard bọc preview và
   live BookCard bằng BookCardMotion; hit area cố định/perspective900px,

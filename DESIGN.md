@@ -24,6 +24,10 @@ colors:
   detail-label-ink: "#5b3428"
   sell-desk-ground: "#f5eddc"
   sell-action-hover: "#7a140c"
+  auth-paper: "#fffaf0"
+  auth-back-sheet: "#e0cfb4"
+  auth-note: "#e8d5b5"
+  auth-photo-tint: "#460909c9"
   rn-forest: "#214B40"
   rn-paper: "#F5EFDF"
   rn-surface: "#FFFCF4"
@@ -160,52 +164,114 @@ typography:
     fontFamily: "Be Vietnam Pro, sans-serif"
     fontSize: "1.5rem"
     fontWeight: 700
-  login-story:
-    fontFamily: "Anton, sans-serif"
-    fontSize: "clamp(3rem, 5.4vw, 5rem)"
+  auth-title:
+    fontFamily: "Auth Bricolage, Be Vietnam Pro, sans-serif"
+    fontSize: "32px"
+    fontWeight: 800
+    lineHeight: 1.2
+    letterSpacing: "-0.025em"
+  auth-title-narrow:
+    fontFamily: "Auth Bricolage, Be Vietnam Pro, sans-serif"
+    fontSize: "29px"
+    fontWeight: 800
+    lineHeight: 1.2
+    letterSpacing: "-0.025em"
+  auth-title-small:
+    fontFamily: "Auth Bricolage, Be Vietnam Pro, sans-serif"
+    fontSize: "27px"
+    fontWeight: 800
+    lineHeight: 1.2
+    letterSpacing: "-0.025em"
+  auth-annotation:
+    fontFamily: "Auth Caveat, cursive"
+    fontSize: "29px"
     fontWeight: 400
-    lineHeight: 1.3
-    letterSpacing: "0"
-  login-title:
-    fontFamily: "Be Vietnam Pro, sans-serif"
-    fontSize: "clamp(1.75rem, 3vw, 2.5rem)"
+    lineHeight: 1.2
+  auth-annotation-reflow:
+    fontFamily: "Auth Caveat, cursive"
+    fontSize: "24px"
+    fontWeight: 400
+    lineHeight: 1.2
+  auth-annotation-narrow:
+    fontFamily: "Auth Caveat, cursive"
+    fontSize: "23px"
+    fontWeight: 400
+    lineHeight: 1.2
+  auth-annotation-source:
+    fontFamily: "Auth Caveat, cursive"
+    fontSize: "20px"
+    fontWeight: 400
+    lineHeight: 1.5
+  auth-annotation-source-reflow:
+    fontFamily: "Auth Caveat, cursive"
+    fontSize: "18px"
+    fontWeight: 400
+    lineHeight: 1.5
+  auth-error:
+    fontFamily: "Auth Caveat, cursive"
+    fontSize: "24px"
     fontWeight: 700
-    lineHeight: 1.4
-    letterSpacing: "-0.03em"
-  login-story-copy:
-    fontFamily: "Be Vietnam Pro, sans-serif"
-    fontSize: "1rem"
-    fontWeight: 400
-    lineHeight: 1.8
-  login-description:
-    fontFamily: "Be Vietnam Pro, sans-serif"
-    fontSize: "0.9375rem"
-    fontWeight: 400
-    lineHeight: 1.8
-  login-label:
-    fontFamily: "Be Vietnam Pro, sans-serif"
-    fontSize: "0.875rem"
-    fontWeight: 700
-  login-action:
-    fontFamily: "Be Vietnam Pro, sans-serif"
-    fontSize: "0.875rem"
-    fontWeight: 700
-    lineHeight: 1.8
-  login-support:
-    fontFamily: "Be Vietnam Pro, sans-serif"
-    fontSize: "0.875rem"
-    fontWeight: 400
-    lineHeight: 1.8
-  login-credit:
-    fontFamily: "Be Vietnam Pro, sans-serif"
-    fontSize: "0.75rem"
-    fontWeight: 400
-    lineHeight: 1.8
-  login-note:
+    lineHeight: 1.35
+  auth-librarian-note:
+    fontFamily: "Auth Caveat, cursive"
+    fontSize: "25px"
+    fontWeight: 500
+    lineHeight: 1.35
+  auth-stamp:
+    fontFamily: "Auth Bricolage, Be Vietnam Pro, sans-serif"
+    fontSize: "30px"
+    fontWeight: 800
+    lineHeight: 1.2
+  auth-stamp-narrow:
+    fontFamily: "Auth Bricolage, Be Vietnam Pro, sans-serif"
+    fontSize: "26px"
+    fontWeight: 800
+    lineHeight: 1.2
+  auth-description:
     fontFamily: "Be Vietnam Pro, sans-serif"
     fontSize: "0.8125rem"
     fontWeight: 400
     lineHeight: 1.8
+  auth-label:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.8125rem"
+    fontWeight: 700
+    lineHeight: 1.7
+  auth-input:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "1rem"
+    fontWeight: 400
+    lineHeight: 1.6
+  auth-action:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.875rem"
+    fontWeight: 700
+    lineHeight: 1.7
+  auth-link:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.75rem"
+    fontWeight: 700
+    lineHeight: 1.7
+  auth-caption:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.6875rem"
+    fontWeight: 400
+    lineHeight: 1.8
+  auth-caption-narrow:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.625rem"
+    fontWeight: 400
+    lineHeight: 1.8
+  auth-story:
+    fontFamily: "Anton, sans-serif"
+    fontSize: "40px"
+    fontWeight: 400
+    lineHeight: 1.2
+  auth-story-copy:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    fontSize: "0.75rem"
+    fontWeight: 400
+    lineHeight: 1.9
   rn-search-title:
     fontFamily: "Be Vietnam Pro"
     fontSize: "28px"
@@ -227,6 +293,9 @@ typography:
     fontWeight: 400
     lineHeight: "24px"
 rounded:
+  auth-paper: "3px"
+  auth-action: "4px"
+  auth-field: "0px"
   book: "2px"
   badge: "6px"
   control: "8px"
@@ -271,23 +340,27 @@ components:
     backgroundColor: "transparent"
     textColor: "{colors.shop-ink}"
     rounded: "{rounded.control}"
-  login-text-field:
-    backgroundColor: "#fff"
+  auth-paper:
+    backgroundColor: "{colors.auth-paper}"
     textColor: "{colors.shop-ink}"
-    rounded: "{rounded.control}"
-    height: "52px"
-  login-button-primary:
+    rounded: "{rounded.auth-paper}"
+    padding: "26px 32px 18px"
+  auth-text-field:
+    backgroundColor: "transparent"
+    textColor: "{colors.shop-ink}"
+    typography: "{typography.auth-input}"
+    rounded: "{rounded.auth-field}"
+    padding: "9px 2px"
+  auth-button-primary:
     backgroundColor: "{colors.shop-wine}"
     textColor: "{colors.shop-cream}"
-    rounded: "{rounded.control}"
-    padding: "12px 22px"
-    height: "52px"
-  login-text-action:
+    typography: "{typography.auth-action}"
+    rounded: "{rounded.auth-action}"
+    padding: "12px 18px"
+  auth-text-action:
     backgroundColor: "transparent"
     textColor: "{colors.shop-wine}"
-    typography: "{typography.login-action}"
-    padding: "8px 0"
-    height: "44px"
+    typography: "{typography.auth-link}"
   navigation:
     backgroundColor: "{colors.shop-wine}"
     textColor: "{colors.shop-cream}"
@@ -421,7 +494,7 @@ components:
 
 Member web pairs the owner's wine-red owl and lettering with warm paper, tall display type and colored grounds for complete book covers. Discovery is lively; listing facts and task controls stay direct, readable and quieter than the covers. This records the world built after the owner's replacement decision on 10/10/2026, using the [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-booksearchpage-tsx.md) and [PRODUCT](PRODUCT.md), rather than the superseded green web sketches.
 
-The implemented web slice is Home, Search, Detail, Login, Sell, Account, Register, shared Header/BookCard/ConfirmDialog and MainLayout/DashboardLayout. Login owns its bookstore split with the original logo over the photograph, tactile ivory paper behind the form and a separate paper-side home action, apart from the shared Member Header. Register reuses that scene for an honest unavailable state. Sell owns its paper task desk and five existing steps. Account owns a real owner-listing shelf and read-only identity inside compact personal navigation. The approved inner-page illustration extension adds Sell's submission receipt, Account's initial empty shelf and Auction's introduction, preserving the established wine/cream penguin world. Auction's filters, live query, cards and remaining body retain their legacy recipes; other forms and chat are outside this extension. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.
+The implemented web slice is Home, Search, Detail, Login, Sell, Account, Register, shared Header/BookCard/ConfirmDialog and MainLayout/DashboardLayout. Auth owns a central three-sheet library file over the original wine-tinted bookstore photograph, with the original wine logo on paper, a pencil annotation and a separate home link, apart from the shared Member Header. Login, Register and password recovery share that scene; the latter two honestly disclose unavailable APIs. Sell owns its paper task desk and five existing steps. Account owns a real owner-listing shelf and read-only identity inside compact personal navigation. The approved inner-page illustration extension adds Sell's submission receipt, Account's initial empty shelf and Auction's introduction, preserving the established wine/cream penguin world. Auction's filters, live query, cards and remaining body retain their legacy recipes; other forms and chat are outside this extension. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.
 
 Search refined11/10 preserves the compact wine title/search band,264px rail and compact cover recipe. The rail is transparent and borderless; native selects use shelf ground and a bottom edge, price bounds stack at full width, and a full-width Apply sits above the quiet underlined reset. Live and DEV preview share native category/subcategory selects and context-dependent disclosure groups through CatalogClassificationFields. Long filters scroll with the page; only a complete rail that fits is sticky. At900px and below, the named native dialog has a scrolling form body, separate Apply/Reset footer and drafts retained across close/reopen. Classification, edition language and separate sale/exchange bounds commit to URL criteria;counts cover only this page. Preview97 Open Library editions remain labelled sample data,separate from live API behavior. Search controls retain global motion reduction; shared catalog-card depth follows its scoped owner-approved exception.
 
@@ -455,9 +528,9 @@ The web palette moves from a dark wine shell to warm paper shelves and soft cove
 - **Divider / control boundary** (`shop-line`, `shop-control`): quiet grouping versus the stronger Login, price-input, sort and radio boundary treatments.
 - **Detail label ink** (`detail-label-ink`): descriptive condition/mode text on the photograph ground; this is a scoped factual label role.
 - **Sell scope:** `sell-desk-ground` separates the task canvas from the paper form; `detail-ground` is reused for the selected step, upload area and contained local photographs. `sell-action-hover` is the implemented primary/reset hover. Fields, dashed upload boundary, native file-selector button and mode rows reuse `shop-control`; dividers keep `shop-line`. These roles apply only to Sell.
-- **Search scope:** the page binds the existing `shop-wine-hover`, `shop-shelf` and `shop-error` values locally, matching Login's existing palette bindings where global CSS lacks these roles. Native filter selects and idle price presets use shelf ground; the rail and desktop footer stay transparent. Apply hover and price error keep their explicit source colors without adding palette tokens.
-- **Login scope:** the page binds the existing `shop-wine-hover`, `shop-error` and `shop-shelf` values locally because those roles are absent from global CSS. This restores the canonical hover, error and password-eye surface colors without adding a palette identity.
-- **Account scope:** the task canvas reuses the existing `sell-desk-ground` value; shelf uses `shop-paper`, contained photograph grounds and selected navigation reuse `detail-ground`, and quiet row/section rules use `shop-line`. Wine text communicates actual state and separately labelled values; it does not introduce trust or wealth indicators. Register reuses Login's local palette bindings unchanged.
+- **Search scope:** the page binds the existing `shop-wine-hover`, `shop-shelf` and `shop-error` values locally, matching the existing canonical palette where global CSS lacks these roles. Native filter selects and idle price presets use shelf ground; the rail and desktop footer stay transparent. Apply hover and price error keep their explicit source colors without adding palette tokens.
+- **Auth scope:** `auth-paper` is the reader-card ground, `auth-back-sheet` the rear leaf and existing `cover-sand` the middle leaf. `auth-note` softens the annotation source; `auth-photo-tint` is the deep translucent wine layer over the photograph. These are local Auth roles; shared wine/cream/ink/muted/line/control colors stay unchanged. Auth binds `--auth-error` to existing `shop-error` for handwritten errors and the success stamp; yellow focus tint is an alpha application of existing shelf yellow.
+- **Account scope:** the task canvas reuses the existing `sell-desk-ground` value; shelf uses `shop-paper`, contained photograph grounds and selected navigation reuse `detail-ground`, and quiet row/section rules use `shop-line`. Wine text communicates actual state and separately labelled values; it does not introduce trust or wealth indicators. Register and recovery reuse the Auth-local material palette.
 - **Incumbent RN colors** (`rn-*`): forest action/heading, paper canvas, surface navigation, shelf canvas, ink, muted, rust condition text, input border, divider and selected-navigation surface. These are preserved from [RN theme](apps/mobile-react-native/src/core/ui/theme.ts) and [brand identity](packages/brand/v1.1/identity.tokens.json), not applied to the new web slice.
 
 **The Ground Is Not Status Rule.** Colored cover grounds are decorative; communicate condition, prices and reservation state in real text from the listing.
@@ -474,15 +547,15 @@ Both families are self-hosted in web `public/fonts`, with OFL files and [source 
 - **Home headline:** owner-supplied `Hero text final.png`, delivered as a transparent1313×655 PNG with only blank outer margins removed. Exact lettering/copy/illustration retained: SÁCH MỚI. CHƯƠNG MỚI. CÙNG LẬT LẠI. H1 contains equivalent visually hidden text; its image is decorative to assistive technology. Width is min(100%,36rem), min(100%,28rem) below850px; height follows the original ratio. This artwork is a pinned Home exception to the Anton display token. It scales as a whole image rather than wrapping or scaling each glyph as live text.
 - **Headline:** expressive discovery type outside the scoped Home task headings. Search uses the scoped Anton `search-heading` (40px/1.2), reducing to `search-heading-narrow` (32px/1.2) at600px; its yellow punctuation is the only heading accent.
 - **Home discovery:** category and new-listing H2s use bold Be Vietnam Pro `home-section` (24px), reducing to `home-section-narrow` (20px) at600px. These are task headings, intentionally quieter than the approved hero. Anton is reserved for budget banners (`home-budget`,28–36px,28px at600px), exchange introduction (`home-exchange`,32px) and posting band (`home-posting`,32–40px,32px at600px), all with1.35 line height. These distinct roles explain the narrow H2/posting detector advisories; they are not global type replacements.
-- **Login:** Anton `login-story` carries the two-line photograph story in cream/yellow; bold Be Vietnam Pro `login-title` carries the form greeting, reducing to 1.75rem below 440px. The greeting stays in one normal inline flow, fitting one line at desktop/390px/320px at default text size and wrapping naturally with large text. A 4px shelf-yellow underline with an 8px offset emphasizes “nhau rồi.” Story copy uses `login-story-copy`; the task description uses `login-description`. Labels use `login-label`; recovery and registration text buttons use `login-action`. Error, inline availability help, registration prompt and home-link text use the `login-support` size. Inputs and submit text are 1rem, with a bold submit label. The photo credit (`login-credit`) and bottom brand note (`login-note`) are intentionally smaller secondary text, not task instructions; the credit link retains at least 44px of height. These two explicit roles account for the detector's size advisories without shrinking the task copy.
+- **Auth:** self-hosted variable Auth Bricolage (200–800) carries greeting and success stamp; Auth Caveat (400–700) carries pencil annotations, handwritten errors and unavailable-sheet notes. Their unmodified OFL files and source notes live in [Auth fonts](apps/user-web/public/fonts/auth/README.md). Be Vietnam Pro remains the functional voice for visible labels, inputs, actions and availability explanations. The `auth-*` frontmatter roles record desktop and narrow sizes; headings wrap naturally. The photograph-side story retains Anton only above1100px. Small card-kind/footer/credit text is secondary; functional labels stay explicit, with their small supporting gloss hidden below400px. These fonts and type sizes apply only to the three Auth routes.
 - **Detail title / card title:** bold Be Vietnam Pro; Detail uses `detail-title` with natural wrapping and `detail-title-narrow` at720px, while the card narrow size is0.92rem. Home's optional compact BookCard uses `home-card-title` (15px) above600px and the shared14.72px narrow title below it. Home compact titles show at most two lines, with full text retained in the DOM, accessible name and native title tooltip. Search now uses the same compact title behavior; the default BookCard recipe remains available elsewhere.
 - **Body / label:** regular reading copy and bold controls. Supporting text is mostly 0.75–0.9rem with 1.6–1.9 line height; disclosure captions are smaller. Description text preserves line breaks; task explanations cap around 60–65ch.
 - **Price:** Detail uses 1.5rem, reducing to 1.3rem on narrow layouts; card prices use 1rem then 0.9rem. Both use tabular numerals and separate sale/exchange labels.
 - **Sell task desk:** uppercase Anton `sell-heading` introduces the task, at 2rem below 760px. Bold Be Vietnam Pro `sell-step-heading` carries the current step, at 1.25rem below 760px. Fields use `sell-field`, visible labels and actions use 14px bold text, and instructions/errors use `sell-help`. Step navigation uses 13px/1.5, then 12px below 760px; step counts, number markers, local-photo captions and the session-only note are 12px supporting roles. Preview titles use 16px/1.7 bold type and wrap naturally; separately labelled values use 14px bold tabular figures. These are scoped roles, not smaller global task typography.
-- **Account shelf:** uppercase Anton `account-heading` introduces the personal shelf, at 2rem at760px and below. Be Vietnam Pro `account-book-title` wraps complete titles with `overflow-wrap:anywhere`, reducing to `account-book-title-narrow` at760px without line clamping. Separately labelled prices use `account-price` and tabular figures. Introduction and controls use14px, author/condition/filter/recovery text13px, and state/count/date/value labels12px; notes retain1.8 line height. These smaller roles support a compact owner list, not global task typography. Register reuses Login's story, title, description, credit and note roles without new type tokens.
+- **Account shelf:** uppercase Anton `account-heading` introduces the personal shelf, at 2rem at760px and below. Be Vietnam Pro `account-book-title` wraps complete titles with `overflow-wrap:anywhere`, reducing to `account-book-title-narrow` at760px without line clamping. Separately labelled prices use `account-price` and tabular figures. Introduction and controls use14px, author/condition/filter/recovery text13px, and state/count/date/value labels12px; notes retain1.8 line height. These smaller roles support a compact owner list, not global task typography. Auth routes use their separate scoped type roles above.
 - **RN:** one Be Vietnam Pro family with actual regular/bold faces, including the preserved `rn-*` roles. CSS units in this interchange map to RN logical pixels and retain system text scaling; web display type does not replace the RN type system.
 
-**The Two Voices Rule.** Anton carries expressive discovery moments; Be Vietnam Pro carries Home category/catalog headings, book titles, prices, forms and consequential actions. Use the bundled weights.
+**The Two Voices Rule.** Anton carries expressive discovery moments; Be Vietnam Pro carries Home category/catalog headings, book titles, prices, forms and consequential actions. Use the bundled weights. Auth alone adds Bricolage headings and Caveat reader traces; this does not replace the global pairing.
 
 ## Layout
 
@@ -490,7 +563,7 @@ Web shelves, header/footer and Detail use centered containers up to 1280px; Sear
 
 Home catalog/topic shelves use five columns above1100px, six at1600px, four at1100px, three at850px and two at600px. Search uses five columns from1440px, four by default, three at1150px and two at600px, with28px20px gaps or24px14px at600px. Home discovery below the approved hero uses a1200px container,40px outer padding, four paper bookmark shortcuts, paper category/catalog panels and24–32px section gaps. Quick links use a narrower880px bookmark row and become two columns at1000px and budget banners stack at850px; outer padding becomes24px there, then16px at600px with20px16px panel padding. Home catalog/topic cards use24px16px gaps; exchange cards use20px gaps; both use24px16px at600px. The exchange introduction sits beside four cards with a220px left column and32px gap, moves above them at1100px, then becomes a single text flow at600px. Posting actions wrap at850px and fill the band width at600px. Search has a264px sidebar with28px gutter and40px outer padding; at1150px the sidebar stays264px with24px gap/padding. The sidebar is sticky at92px, or88px from901–1000px, only when its complete height plus108px fits the viewport; align-self:start bounds it inside the catalog before the footer. Longer grouped panels scroll naturally with the document. At900px and below the sidebar hides and a labelled filter button opens the native dialog; desktop widths retain the rail even in short viewports. Its compact wine heading/search band has16px40px20px padding, a0.75fr/1.25fr title/search split and40px gap; at900px search moves beneath the heading with18px gap, and at600px padding becomes22px16px24px with16px gap. Search stays a single field/action row. Catalog top padding is24px,20px at900px and12px at600px; outer padding becomes16px at600px. At widths of901px and above with viewport height at most700px, the band uses8px block padding, the title becomes32px with4px bottom margin and catalog top padding becomes16px. Mode buttons have explicit all-mode selection; the native condition select has an all-condition option. Detail pairs its gallery and summary in1fr/1.05fr columns with56px gap,36px at1000px, then one column with24px gap at720px. Lower condition/bibliographic facts use the same columns/gaps, stacking with32px gap at720px; their top margin/padding is48px/32px, then32px/28px on mobile.
 
-Login uses a viewport-filling 45/55 split with `min-height:100dvh`, not a fixed-height lock. Its left scene uses an auto/1fr/auto grid: original Logo directly over the photograph, bottom-aligned story, then source credit. Logo padding is 32px vertically with clamp(32px,4vw,64px) sides; story padding is 64px on top and 20px below. The paper right column places a home action in a 64px utility row above a vertically centered form capped at 400px, with a quiet brand note below. Form padding is 16px vertically with clamp(24px,4vw,64px) sides; the note uses 8px 24px padding. At 900px and below the single-column layout retains a compact photographic logo area with 28px 24px padding, hides story/credit, and keeps home in its separate 56px paper-side utility row. At 440px and below form padding is 24px. Short viewports, large text, errors and help content grow the document naturally and may scroll. This Login composition follows its [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-loginpage-tsx.md). Register reuses the same unchanged Login CSS and responsive composition for its availability message and browsing/login links; other shared-shell consumers keep their existing recipes.
+Auth uses a centered paper stack capped at480px inside a `min-height:100dvh` grid with72px24px64px outer padding. Two offset, rotated leaves sit behind the front card; the front rotates−0.7deg around its left edge. The front card uses26px32px18px padding, a logo/kind header with16px lower padding/20px lower margin, then one reading column. A192px pencil note sits38px to the right; one of six reader traces is selected once per Auth layout mount. A decorative story sits bottom left and visible photo credit along the bottom. At1100px and below the note moves into normal flow above the paper and the story disappears. At600px and below outer padding is72px20px24px, stack cap420px, card padding22px24px16px, and credit follows in document flow. At360px and below outer/card inline padding is16px/20px and the original logo scales down. Short viewports, long copy and errors scroll naturally. Login, Register and recovery follow the same [Auth surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-loginpage-tsx.md); other shells keep their existing recipes.
 
 At 800px the header uses an expandable menu while retaining both owl and lettering; the posting shortcut leaves the header at 600px and remains in the menu. Home uses eight decorative covers in two varied-size, lightly overlapping clusters around the headline above1100px. Alice (third in the left group) and Dược sư (third in the right group) lead at1.36×/1.38× the176px book unit, on layer2; companions range0.88×–1× on auto/layer1. Each270px flank has a432px relative stage and individually positioned/rotated covers with source-specific width/height ratios; complete images use contain fitting. At1100px and below all eight return to relative flow below search in an eight-column row, becoming four columns at800px; focal covers scale1.08 without increasing their flow footprint. The same collection is rendered once, with its existing provenance. Exact offsets/ratios live in HomePage.module.css and the sidecar layout recipe. Dialog width is `calc(100% - 32px)`, capped at 480px, with scrollable height and stacked actions at 420px. These are implemented surface breakpoints, not one universal device taxonomy.
 
@@ -508,9 +581,11 @@ Book-journey states use their own task layouts. The submitted receipt is a paper
 
 Web uses tonal grounds and restrained photographic shadows. Metadata remains unboxed. Shadow belongs to covers, the hero search surface and the modal rather than every card. Home covers gather individually over600ms with up to180ms delay; standalone BookCard image hover lifts4px over0.3s; Home/Search compact cards instead use the layered pointer recipe below. Global reduced-motion handling suppresses animation and transition. RN retains tonal grouping and dividers without decorative shadows; its sheet scrim is `rgba(20,36,28,.45)`.
 
-Login's photograph is static, with 2px CSS blur, a 1.025 scale to conceal blurred edges and a 64% wine tint (`#5c0202a3`). The sharp cream/yellow lettering sits above this atmospheric scene. A generated clean ivory-paper texture repeats at 512px and 85% opacity over the right column's paper ground; white controls remain crisp. One white light sweep crosses this paper on entry (2400ms, cubic-bezier(.16,1,.3,1)), fading 0→30%→0 and ending invisible. Both decorative layers sit behind content and ignore pointer input. Reduced motion omits the sweep entirely; grain and controls do not move. The submit background transition remains 160ms ease-out with global reduction. Register reuses these unchanged Login material treatments. They do not crop or blur listing evidence. Account uses flat paper and dividers, with no added shadow, autoplay or motion exception.
+Auth's photograph stays static behind the whole scene:4px blur,1.035 scale,60%52% object position and the Auth photo-tint token. The front card repeats the existing512px paper texture at45% opacity. Rear leaves rotate2.2deg/0.9deg; soft contact/cast shadows establish paper depth, with a faint CSS circular reader mark. Entry is420ms cubic-bezier(.16,1,.3,1); ordinary sheet navigation turns left over280ms, while real login success first reveals the stamp, waits600ms and turns over420ms. The stamp lands over280ms. Auth cancels interrupted animations and omits spatial movement under reduced motion; successful login retains a static500ms confirmation dwell before safe navigation. The button background transition is150ms ease-out with global reduction. There is no paper-light sweep. These treatments never crop or blur listing evidence. Account uses flat paper and dividers, with no added shadow, autoplay or motion exception.
 
 ### Shadow Vocabulary
+
+- **Auth paper:** `box-shadow:0 2px 4px #21000040, 0 24px 60px #21000066`; rear leaves use `0 12px 24px #21000040`. Soft cast depth belongs to Auth paper, not shared catalog panels.
 
 - **Listing photograph:** `drop-shadow(0 12px 12px #28191424)`.
 - **Hero cover:** layered filters `drop-shadow(-1px -1px 0.5px #fcf8db66) drop-shadow(1px 3px 2px #21000080) drop-shadow(8px 18px 16px #1d000099)` separate the paper edge, contact and cast shadow on wine. Compact mobile covers use cream edge `#fcf8db55`, contact `1px 2px 1px #21000080` and cast `4px 10px 10px #1d000080`. Fine-pointer hover brings any focal or companion cover to layer3, enlarges its image1.12× and lifts8px over250ms, with edge `#fcf8db80`, contact `2px 5px 3px #21000099` and cast `12px 26px 22px #190000b3`, returning on exit. Owner explicitly requests hero entrance/hover/sway even when the OS asks for reduced motion; the exception is scoped to these covers; the owner subsequently requested removal of the pause control. Covers are decorative and add no tab stops or false click affordance.
@@ -526,11 +601,13 @@ Owner-requested gentle Home sway uses a separate inner wrapper: ±3px vertical a
 
 Web controls use gently rounded corners (`control`), cover grounds/search shells/panels/dialog use `panel`, and condition labels use `badge`. Default BookCard photographs use contain fitting within a4:5 ground; Search uses the compact fixed-height ground described below; no decorative crop removes condition evidence. RN keeps its book, control, sheet and pill radii from the incumbent system.
 
+Auth has its own cut-paper silhouette:3px front/back corners, a6px wine top edge,4px primary/stamp corners and square underlined fields. The intentional top edge is a sheet binding, approved in the finish review; it is not a global control recipe.
+
 ## Components
 
 ### Buttons
 
-Solid wine with cream text for primary tasks; orange with dark text for search. Detail's main action is full-width, at least 50px tall; Home search is at least48px on desktop and44px narrow; Search uses44px at every width, with10px18px padding and7px corners (10px12px at600px). Login uses at least 52px with 12px 22px padding; dialog uses 46px. Secondary pagination is transparent with a wine border and inverts on hover. Disabled primary/dialog actions reduce opacity. Keyboard focus is a3px outline offset4px; Search uses a2px wine outline/4px offset and yellow inside the wine head; header and footer controls use a cream outline against wine.
+Solid wine with cream text for primary tasks; orange with dark text for search. Detail's main action is full-width, at least 50px tall; Home search is at least48px on desktop and44px narrow; Search uses44px at every width, with10px18px padding and7px corners (10px12px at600px). Auth uses at least48px with12px18px padding and4px corners; dialog uses 46px. Secondary pagination is transparent with a wine border and inverts on hover. Disabled primary/dialog actions reduce opacity. Keyboard focus is a3px outline offset4px; Search uses a2px wine outline/4px offset and yellow inside the wine head; header and footer controls use a cream outline against wine.
 
 ### Cards / Containers
 
@@ -594,13 +671,17 @@ Final six named Home captures in `.impeccable/review/web-member/home-discovery-*
 
 ### Inputs / Fields
 
-Search sits inside a paper shell with a transparent borderless inner field and an explicit label. Login uses white outlined fields at least 52px tall, an 8px radius and the stronger `shop-control` boundary. Each field group has an 8px internal gap; the second group begins 16px after the first. The password label/recovery row wraps and is at least 44px tall. Its password eye is a labelled 44×44px button with a 6px radius; hover uses wine text on the shelf ground. Search numeric price fields and sort are at least44px. Modes are mutually exclusive pressed buttons; condition uses native single-selection radios with an explicit all choice. Labels and invalid-price explanation remain visible; focus and caret use the wine identity. Preserve entered values on errors.
+Search sits inside a paper shell with a transparent borderless inner field and an explicit label. Auth uses transparent square fields at least46px tall,9px2px padding and a1.5px control-color bottom edge; the next field begins18px below. Password reserves46px for its labelled44px-wide/46px-high reveal button. Labels/recovery wrap; link targets are at least44px high. Field focus adds a3px wine outline at3px offset, a faint yellow ground and wine bottom edge. Handwritten errors are alerts and preserve entered values. Search numeric price fields and sort are at least44px. Modes are mutually exclusive pressed buttons; condition uses native single-selection radios with an explicit all choice. Labels and invalid-price explanation remain visible; focus and caret use the wine identity. Preserve entered values on errors.
+
+### Auth library papers
+
+The shared paper shell exposes real route links for Login/Register/recovery and preserves query strings, modifier clicks and a memory-only email/password draft while Auth remains mounted. Native required/email validation and the existing SessionClient login remain authoritative. Only awaited login success reveals “ĐÃ MƯỢN”; a separate polite live status announces success, then a checked same-origin returnUrl (home by default) receives navigation. Outgoing sheet content becomes inert during the turn and the next H1 receives focus. Registration and recovery contain honest unavailable explanations and browse/login actions, no fake form or request. This is a paper metaphor for authentication, not a transaction or custody receipt. [Finish review](.impeccable/review/auth-papers/review.md) records SHIP for the scoped implementation; [QA](.impeccable/review/auth-papers/README.md) separates synthetic login fixtures from untested main-DB authentication, normal-motion runtime, screen-reader speech,200% zoom/text, native and human acceptance. No release gate is closed.
 
 ### Navigation
 
 The shared Member web Header stays visible across MainLayout,
-DashboardLayout and standalone posting. Login and Register own their photographic
-Logo area and paper-side home action and do not render this scrolling Header. Wine/cream, original logo and desktop
+DashboardLayout and standalone posting. Login, Register and recovery own their
+paper Logo and separate home link and do not render this scrolling Header. Wine/cream, original logo and desktop
 current-page underline remain. At the top it spans the viewport,76px tall;
 after48px of scrolling it becomes a64px floating bar,16px from the top,
 with width `min(1248px, calc(100% - 64px))`, at least32px on each side,
@@ -728,4 +809,4 @@ Thirteen `story-*.png` captures record desktop,390px/320px, long-title actions a
 - **Don't** regenerate the supplied logo, imitate its lettering with a font, or treat a reference screenshot as licensed cover assets.
 - **Don't** canonize legacy glyph-icon, display-font or animation recipes as part of this web world.
 
-Source inventory: web global CSS, Home/Search/Detail/Login/Sell/Profile module CSS, BookJourneyStates/module CSS, AuctionListPage's introduction/module CSS, Register (unchanged Login CSS), DashboardLayout/module CSS and DashboardSidebar, owner-listing reads, BookCard, Header/MainLayout and ConfirmDialog; AuthLayout and Auction's remaining body retain legacy recipes. RN theme/brand tokens preserve the previous implementation. [Brand provenance](apps/user-web/public/brand/README.md), [illustration provenance](apps/user-web/public/illustrations/README.md) and [book-journey provenance](apps/user-web/public/illustrations/book-journey/README.md) record the assets. Legacy Material Symbols import/old animation classes remain outside the documented web slice; this documentation pass does not repair or endorse them.
+Source inventory: web global CSS, Home/Search/Detail/Login/Sell/Profile module CSS, BookJourneyStates/module CSS, AuctionListPage's introduction/module CSS, Register/ForgotPassword (shared Auth CSS), DashboardLayout/module CSS and DashboardSidebar, owner-listing reads, BookCard, Header/MainLayout and ConfirmDialog; AuthLayout/module CSS and auth-paper.ts define the approved Auth replacement; Auction's remaining body retains legacy recipes. RN theme/brand tokens preserve the previous implementation. [Brand provenance](apps/user-web/public/brand/README.md), [illustration provenance](apps/user-web/public/illustrations/README.md) and [book-journey provenance](apps/user-web/public/illustrations/book-journey/README.md) record the assets. Legacy Material Symbols import/old animation classes remain outside the documented web slice; this documentation pass does not repair or endorse them.

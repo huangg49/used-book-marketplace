@@ -7,8 +7,10 @@ resizing/compression. The owner removed the proposed book illustration; it is
 not shipped or referenced.
 
 - `ivory-paper.webp`:512×512 clean ivory cellulose scan,4378bytes before any
-  provenance embedding. CSS repeats at512px/85% opacity over the paper token.
+  provenance embedding. Auth CSS repeats at512px/45% opacity over its local ivory paper ground.
 
-Static texture; a white paper-light sweep runs once for2400ms behind the form,
-then becomes invisible. Reduced motion omits the sweep. No animation of grain,
-form or controls; no new API behavior or factual bookstore/listing claims.
+Static texture on the front of the three-sheet Auth stack; no paper-light sweep.
+A finite entry/page-turn animation moves the sheet; the success stamp appears
+only after awaited login. Reduced motion omits spatial transitions and keeps a
+static500ms success dwell. Grain stays still; no new API behavior or factual
+bookstore/listing claims.

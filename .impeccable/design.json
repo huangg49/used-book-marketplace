@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-11T08:06:49Z",
+  "generatedAt": "2026-10-11T08:59:04Z",
   "title": "Design System: Lật lại",
   "extensions": {
     "colorMeta": {
@@ -455,6 +455,62 @@
           "oklch(95.00% 0.1373 29.61)"
         ],
         "purpose": "Sell-only primary and successful-reset hover; existing buttons elsewhere retain their own hover."
+      },
+      "auth-paper": {
+        "role": "neutral",
+        "displayName": "Auth Paper",
+        "tonalRamp": [
+          "oklch(15.00% 0.0142 84.58)",
+          "oklch(26.43% 0.0142 84.58)",
+          "oklch(37.86% 0.0142 84.58)",
+          "oklch(49.29% 0.0142 84.58)",
+          "oklch(60.71% 0.0142 84.58)",
+          "oklch(72.14% 0.0142 84.58)",
+          "oklch(83.57% 0.0142 84.58)",
+          "oklch(95.00% 0.0142 84.58)"
+        ]
+      },
+      "auth-back-sheet": {
+        "role": "neutral",
+        "displayName": "Auth Back Sheet",
+        "tonalRamp": [
+          "oklch(15.00% 0.0409 79.44)",
+          "oklch(26.43% 0.0409 79.44)",
+          "oklch(37.86% 0.0409 79.44)",
+          "oklch(49.29% 0.0409 79.44)",
+          "oklch(60.71% 0.0409 79.44)",
+          "oklch(72.14% 0.0409 79.44)",
+          "oklch(83.57% 0.0409 79.44)",
+          "oklch(95.00% 0.0409 79.44)"
+        ]
+      },
+      "auth-note": {
+        "role": "neutral",
+        "displayName": "Auth Note",
+        "tonalRamp": [
+          "oklch(15.00% 0.0474 80.78)",
+          "oklch(26.43% 0.0474 80.78)",
+          "oklch(37.86% 0.0474 80.78)",
+          "oklch(49.29% 0.0474 80.78)",
+          "oklch(60.71% 0.0474 80.78)",
+          "oklch(72.14% 0.0474 80.78)",
+          "oklch(83.57% 0.0474 80.78)",
+          "oklch(95.00% 0.0474 80.78)"
+        ]
+      },
+      "auth-photo-tint": {
+        "role": "primary",
+        "displayName": "Auth Photo Tint",
+        "tonalRamp": [
+          "oklch(15.00% 0.0908 26.36 / 0.7882)",
+          "oklch(26.43% 0.0908 26.36 / 0.7882)",
+          "oklch(37.86% 0.0908 26.36 / 0.7882)",
+          "oklch(49.29% 0.0908 26.36 / 0.7882)",
+          "oklch(60.71% 0.0908 26.36 / 0.7882)",
+          "oklch(72.14% 0.0908 26.36 / 0.7882)",
+          "oklch(83.57% 0.0908 26.36 / 0.7882)",
+          "oklch(95.00% 0.0908 26.36 / 0.7882)"
+        ]
       }
     },
     "typographyMeta": {
@@ -464,7 +520,7 @@
       },
       "headline": {
         "displayName": "headline",
-        "purpose": "Expressive discovery type outside Home task headings; Search has a related surface variant. Home budget/exchange/posting use their own scoped roles. Login keeps its own story and task roles."
+        "purpose": "Expressive discovery type outside Home task headings; Search has a related surface variant. Home budget/exchange/posting use their own scoped roles. Auth uses its own scoped Bricolage, Caveat and Be Vietnam Pro roles."
       },
       "detail-title": {
         "displayName": "detail title",
@@ -501,42 +557,6 @@
       "rn-body": {
         "displayName": "rn body",
         "purpose": "Incumbent React Native role; logical pixels with system scaling."
-      },
-      "login-story": {
-        "displayName": "Login photo story",
-        "purpose": "Anton two-line cream/yellow lettering over the static bookstore photograph."
-      },
-      "login-title": {
-        "displayName": "Login form greeting",
-        "purpose": "Larger bold Be Vietnam Pro task greeting; 1.75rem at440px and below."
-      },
-      "login-story-copy": {
-        "displayName": "Login photo copy",
-        "purpose": "Regular full-size copy below the decorative story, separate from form instructions."
-      },
-      "login-description": {
-        "displayName": "Login task description",
-        "purpose": "Quiet but readable explanation above email/password controls."
-      },
-      "login-label": {
-        "displayName": "Login field label",
-        "purpose": "Bold visible email/password labels."
-      },
-      "login-support": {
-        "displayName": "Login error and home link",
-        "purpose": "Regular error, availability help, registration prompt and home-link text share the .875rem size; error/help/prompt use1.8 line-height."
-      },
-      "login-credit": {
-        "displayName": "Login photo credit",
-        "purpose": "Intentionally small secondary attribution, not task copy. The source link has12px vertical padding, retaining at least44px height; documents the detector size advisory."
-      },
-      "login-note": {
-        "displayName": "Login bottom note",
-        "purpose": "Intentionally small secondary brand note, not a task instruction; documents the detector size advisory."
-      },
-      "login-action": {
-        "displayName": "Login recovery and registration action",
-        "purpose": "Bold .875rem/1.8 underlined wine text buttons with44px minimum targets."
       },
       "home-section": {
         "displayName": "Home task section heading",
@@ -601,6 +621,90 @@
       "account-price": {
         "displayName": "Account labelled values",
         "purpose": "Account only: bold15px tabular figures, sale price and exchange value separately named."
+      },
+      "auth-title": {
+        "displayName": "Auth Title",
+        "purpose": "Auth-only title. Actual source role; global type pairing unchanged."
+      },
+      "auth-title-narrow": {
+        "displayName": "Auth Title Narrow",
+        "purpose": "Auth-only title narrow. Actual source role; global type pairing unchanged."
+      },
+      "auth-title-small": {
+        "displayName": "Auth Title Small",
+        "purpose": "Auth-only title small. Actual source role; global type pairing unchanged."
+      },
+      "auth-annotation": {
+        "displayName": "Auth Annotation",
+        "purpose": "Auth-only annotation. Actual source role; global type pairing unchanged."
+      },
+      "auth-annotation-reflow": {
+        "displayName": "Auth Annotation Reflow",
+        "purpose": "Auth-only annotation reflow. Actual source role; global type pairing unchanged."
+      },
+      "auth-annotation-narrow": {
+        "displayName": "Auth Annotation Narrow",
+        "purpose": "Auth-only annotation narrow. Actual source role; global type pairing unchanged."
+      },
+      "auth-annotation-source": {
+        "displayName": "Auth Annotation Source",
+        "purpose": "Auth-only annotation source. Actual source role; global type pairing unchanged."
+      },
+      "auth-annotation-source-reflow": {
+        "displayName": "Auth Annotation Source Reflow",
+        "purpose": "Auth-only annotation source reflow. Actual source role; global type pairing unchanged."
+      },
+      "auth-error": {
+        "displayName": "Auth Error",
+        "purpose": "Auth-only error. Actual source role; global type pairing unchanged."
+      },
+      "auth-librarian-note": {
+        "displayName": "Auth Librarian Note",
+        "purpose": "Auth-only librarian note. Actual source role; global type pairing unchanged."
+      },
+      "auth-stamp": {
+        "displayName": "Auth Stamp",
+        "purpose": "Auth-only stamp. Actual source role; global type pairing unchanged."
+      },
+      "auth-stamp-narrow": {
+        "displayName": "Auth Stamp Narrow",
+        "purpose": "Auth-only stamp narrow. Actual source role; global type pairing unchanged."
+      },
+      "auth-description": {
+        "displayName": "Auth Description",
+        "purpose": "Auth-only description. Actual source role; global type pairing unchanged."
+      },
+      "auth-label": {
+        "displayName": "Auth Label",
+        "purpose": "Auth-only label. Actual source role; global type pairing unchanged."
+      },
+      "auth-input": {
+        "displayName": "Auth Input",
+        "purpose": "Auth-only input. Actual source role; global type pairing unchanged."
+      },
+      "auth-action": {
+        "displayName": "Auth Action",
+        "purpose": "Auth-only action. Actual source role; global type pairing unchanged."
+      },
+      "auth-link": {
+        "displayName": "Auth Link",
+        "purpose": "Auth-only link. Actual source role; global type pairing unchanged."
+      },
+      "auth-caption": {
+        "displayName": "Auth Caption",
+        "purpose": "Auth-only caption. Actual source role; global type pairing unchanged."
+      },
+      "auth-caption-narrow": {
+        "displayName": "Auth Caption Narrow",
+        "purpose": "Auth-only caption narrow. Actual source role; global type pairing unchanged."
+      },
+      "auth-story": {
+        "displayName": "Auth Story",
+        "purpose": "Auth-only story. Actual source role; global type pairing unchanged."
+      },
+      "auth-story-copy": {
+        "displayName": "Auth Story Copy",
+        "purpose": "Auth-only story copy. Actual source role; global type pairing unchanged."
       }
     },
     "shadows": [
@@ -638,6 +742,16 @@
         "name": "detail-photo-viewer",
         "value": "0 24px 64px #2a130a40",
         "purpose": "Protected Detail native image viewer; soft offset depth, backdrop #281914b3."
+      },
+      {
+        "name": "auth-paper",
+        "value": "0 2px 4px #21000040, 0 24px 60px #21000066",
+        "purpose": "Front library sheet contact and soft cast depth."
+      },
+      {
+        "name": "auth-leaf",
+        "value": "0 12px 24px #21000040",
+        "purpose": "Two offset backing leaves only."
       }
     ],
     "motion": [
@@ -672,16 +786,6 @@
         "purpose": "Stable76px document slot;72px at1000px and below; passive collapse>48px/expand<=16px threshold updates. Pointer-inert1.5px yellow outline and2.5px cream dash during actual collapse only; invisible at rest,clear on animationend/expansion and replay next collapse,not on already-scrolled load or each scroll event. Owner-requested reduced-motion exception preserves finite560ms morph/680ms one-shot accents; other UI keeps global reduction."
       },
       {
-        "name": "login-submit-color",
-        "value": "background-color 160ms ease-out",
-        "purpose": "Login submit hover only; static scene. Global prefers-reduced-motion suppresses the transition; no Home/navbar exception applies."
-      },
-      {
-        "name": "login-paper-light",
-        "value": "2400ms cubic-bezier(0.16,1,0.3,1) 1; background-position:150% 0→-50% 0; opacity:0→.3→0",
-        "purpose": "One entry light sweep over static512px ivory paper at85% opacity, behind the right-column content and pointer-inert. Ends invisible; prefers-reduced-motion omits the sweep entirely. No illustration or perpetual grain/control motion."
-      },
-      {
         "name": "home-discovery-motion",
         "value": "feedback100–320ms; filter180ms regardless of OS reduction; added books220ms+0–144ms; canopy12s; six margin leaves16/19s; fox650ms once",
         "purpose": "Home motion approved10/10: eight covers gather from their own flank over600ms with0/60/180/100ms delays, Alice/Dược sư last; independent sway and hover remain. Former image lift/scale is superseded by catalog-card-depth in shared Home/Search cards. Controls use150ms color/120ms press; budget covers fan over320ms. Committed filter results fade.72→1 over180ms (also under OS reduction), interrupted animations cancel. Added visible books beyond page10 enter over220ms with at most144ms stagger; existing keyed cards remain still, offscreen additions do not replay on scroll. Two canopies sway12s/±.45deg; six of24 margin motifs drift40px over16/19s with a resting interval. Each region pauses outside viewport/document hidden. Owner now explicitly requests all Home motion under OS reduction too; Home-only duration overrides retain the same motion while all viewport/visibility guards remain. Global preferences elsewhere are unchanged. Fox settles12px/−2deg once over650ms on first visible entry, also under reduced motion by owner request. Layout/assets/routes/data unchanged; no motion dependency added. Static canonical sample records CSS/recipe; observers and WAAPI live in HomePage.tsx/home-motion.ts."
@@ -695,6 +799,26 @@
         "name": "catalog-card-depth",
         "value": "perspective720px; rotateX/Y at most12deg; cover72px/title56px/prices40px/action32px/condition-author24px;240ms cubic-bezier(.16,1,.3,1);pointer-directed32px cast/contact shadows",
         "purpose": "Owner-approved pointer interaction shared by HomeBookCard preview/live on Home and Search; stationary bounds,one RAF per pointer frame,active-only listeners and reset on leave/cancel/scroll/resize/blur/visibility/unmount. Mouse/fine-hover,width>600px only; keyboard focus lifts without tilt;narrow/coarse static. Owner reduced-motion exception retains up to10deg/80% depth with150ms settling, strengthened at owner request after the initial half-depth version read too subtly. No loop; old image lift/scale suppressed; dimensions/data/links unchanged. Runtime in BookCardMotion.tsx; static sample exposes layer/focus only."
+      },
+      {
+        "name": "auth-submit-color",
+        "value": "background-color 150ms ease-out",
+        "purpose": "Auth hover only; global reduced-motion transition suppression retained."
+      },
+      {
+        "name": "auth-paper-arrive",
+        "value": "420ms cubic-bezier(.16,1,.3,1);rotate(-.7deg) rotateY(12deg) opacity.65 → rotate(-.7deg) rotateY(0) opacity1",
+        "purpose": "Single sheet entry; reduced motion animation:none/transform:none."
+      },
+      {
+        "name": "auth-sheet-turn",
+        "value": "perspective1400px;rotateY(0→-92deg),opacity1→.15;cubic-bezier(.6,.05,.3,1);280ms ordinary /420ms after600ms success dwell",
+        "purpose": "Route links turn the outgoing inert sheet; next H1 focuses. Real login success only. Reduced motion:ordinary immediate;success static500ms. Cancellation/unmount aborts deferred navigation."
+      },
+      {
+        "name": "auth-stamp-hit",
+        "value": "280ms cubic-bezier(.16,1,.3,1);rotate(-12deg) scale(1.6→1),opacity0→1",
+        "purpose": "ĐÃ MƯỢN only after awaited SessionClient login. Reduced motion:static rotated stamp, no animation."
       }
     ],
     "breakpoints": [
@@ -737,16 +861,6 @@
       {
         "name": "member-navigation-menu",
         "value": "1000px;72px top slot/height,64px floating,10px top/calc(100% - 28px) width/14px each side; logo windows82% at420px"
-      },
-      {
-        "name": "login-single-column",
-        "value": "900px",
-        "purpose": "Desktop45/55 min-height100dvh split becomes one column; compact photographic Logo area retains28px24px padding while story/credit hide. Home stays in its separate56px paper-side utility row above the centered400px form. Short height, large text, errors and help may grow the document."
-      },
-      {
-        "name": "login-narrow-form",
-        "value": "440px",
-        "purpose": "Form padding24px and greeting1.75rem; password label/recovery and registration rows wrap naturally."
       },
       {
         "name": "home-discovery-layout",
@@ -797,6 +911,26 @@
         "name": "book-journey-stacked",
         "value": "760px",
         "purpose": "Receipt/initial-empty art above message/max240px;auction art max240px/right below prose;page/state criteria preserved."
+      },
+      {
+        "name": "auth-note-in-flow",
+        "value": "1100px",
+        "purpose": "Pencil note above paper; bottom-left story hidden."
+      },
+      {
+        "name": "auth-narrow-paper",
+        "value": "600px",
+        "purpose": "420px stack cap;72px20px24px outer/22px24px16px paper padding;photo credit in normal flow;29px heading."
+      },
+      {
+        "name": "auth-small-heading",
+        "value": "400px",
+        "purpose": "27px heading;supporting label gloss hidden, functional labels retained."
+      },
+      {
+        "name": "auth-small-gutters",
+        "value": "360px",
+        "purpose": "16px outer/20px paper inline gutters;original logo scale.7."
       }
     ],
     "layoutRecipes": [
@@ -1067,13 +1201,14 @@
         "limits": "Browser >20 owner rows,populated Approved/Held/Removed/Rejected states,current photo-error UI,200% text/zoom,native,full integration,human acceptance NOT RUN;READINESS unchanged."
       },
       {
-        "name": "register-availability-scene",
-        "source": "apps/user-web/src/pages/RegisterPage.tsx;apps/user-web/src/pages/LoginPage.module.css",
-        "scope": "Approved remaining-pages plan section4; Register reuses unchanged Login CSS, no new token identity or raster.",
-        "composition": "Existing45/55 photograph/paper split,min-height100dvh;original scoped-logo matrix,bookstore story/desktop source credit,home utility row,max400px task panel,brand note. At900px one column with compact photographic Logo area;story/credit hide;440px form padding24px and1.75rem title.",
-        "material": "Existing credited Davit Margaryan/Unsplash photograph,2px blur/1.025 scale/64% wine tint and existing ivory paper/finite sweep;global reduced motion omits sweep. No shared Member Header rendered.",
-        "behavior": "Explicit Đăng ký tài khoản hiện chưa mở;Khám phá sách -> /books,Đăng nhập -> /login,Về trang chủ -> /. No disconnected input,OAuth/identity claim,API call or account-success state;register/reset remain contract-gated. Existing Login help and session behavior unchanged.",
-        "evidence": "register-status-desktop.jpg and register-status-mobile.jpg,independent source/capture review SHIP;shared scope and limits recorded in Account recipe."
+        "name": "auth-library-papers",
+        "source": "apps/user-web/src/layouts/AuthLayout.tsx;apps/user-web/src/layouts/AuthLayout.module.css;apps/user-web/src/layouts/auth-paper.ts;apps/user-web/src/pages/LoginPage.tsx;apps/user-web/src/pages/LoginPage.module.css;apps/user-web/src/pages/RegisterPage.tsx;apps/user-web/src/pages/ForgotPasswordPage.tsx;apps/user-web/src/app/router.tsx",
+        "scope": "Owner-approved Auth-only code-led replacement; pinned paper-file HTML prototype, six-block direction; seed477df3fa acknowledged. Global branding and other surfaces preserved.",
+        "composition": "480px centered three-sheet stack, 26px32px18px front padding,3px corners/6px wine top edge;original wine logo/kind header;random reader note once per Auth mount. At1100px note moves above/story hides;600px stack420px,22px24px16px paper,credit in flow;360px smaller gutters/logo.",
+        "material": "Existing Davit Margaryan/Unsplash photograph;4px blur/1.035 scale/object-position60%52%/#460909c9 tint. Existing512px ivory texture/45% opacity on #fffaf0 paper;back #e0cfb4/middle #f0e2ca leaves,soft cast shadows;no light sweep.",
+        "behavior": "Await existing SessionClient login before stamp and polite success status, then checked internal returnUrl/home. Outgoing inert/destination H1 focus;real links preserve modifiers/query,layout-memory drafts persist between sheets only. Required/email validation,reveal/errors retained. Register/reset disclose unavailable APIs,collect no credentials and make no requests.",
+        "evidence": "Finish reviewer disposition ship;11valid JPEGs,login desktop1520x740/user pane572x815;fixture error/stamp explicitly badged/no DB. Implementer build/TypeScript/34existing tests7files PASS;lint0errors5pre-existing Exchange warnings. One detector accepted intentional6px top edge/3px radius plus documentation findings;no rerun.",
+        "limits": "Main-DB login/full auth integration,normal-motion runtime,NVDA speech,200% zoom/text,native and human acceptance NOT RUN;READINESS unchanged."
       },
       {
         "name": "book-journey-states",
@@ -1170,12 +1305,12 @@
       "css": ".ds-secondary{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:inline-flex;align-items:center;justify-content:center;gap:12px;border-radius:8px;font-size:.9rem;font-weight:700;line-height:1.6;cursor:pointer;min-height:44px;padding:10px 20px;border:1px solid var(--shop-wine,#5c0202);background:transparent;color:var(--shop-wine,#5c0202);font-size:.85rem}.ds-secondary:hover{background:var(--shop-wine,#5c0202);color:var(--shop-cream,#fcf8db)}.ds-secondary:disabled{opacity:.55;cursor:default}.ds-secondary:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}"
     },
     {
-      "name": "Login text field",
+      "name": "Auth underlined text field",
       "kind": "input",
-      "refersTo": "login-text-field",
-      "description": "Login outlined52px white input,1rem text and .875rem bold visible label with8px group gap. Stronger control boundary; preserve values on errors.",
-      "html": "<div class=\"ds-field-group\"><label class=\"ds-field-label\" for=\"ds-email\">Email</label><input class=\"ds-field\" id=\"ds-email\" type=\"email\" autocomplete=\"email\" placeholder=\"ban@example.com\" /></div>",
-      "css": ".ds-field-group{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);display:grid;gap:8px}.ds-field-label{font-size:.875rem;font-weight:700;color:var(--shop-ink,#281914)}.ds-field{font-family:inherit;display:block;width:100%;min-height:52px;padding:.65rem .75rem;border:1px solid var(--shop-control,#8e7564);border-radius:8px;background:#fff;color:var(--shop-ink,#281914);font-size:1rem;margin:0;caret-color:var(--shop-wine,#5c0202)}.ds-field::placeholder{color:var(--shop-muted,#716157);opacity:1}.ds-field:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}"
+      "refersTo": "auth-text-field",
+      "description": "Auth-only transparent square field; minimum46px,9px2px padding,1.5px bottom edge,13px bold visible label and16px input. Tinted3px focus outline; native email/required validation.",
+      "html": "<div class=\"ds-auth-field\"><label for=\"ds-auth-email-primitive\">Email</label><input id=\"ds-auth-email-primitive\" type=\"email\" autocomplete=\"email\" required placeholder=\"ban@example.com\"></div>",
+      "css": ".ds-auth-field{font-family:var(--shop-body,\"Be Vietnam Pro\",sans-serif);color:var(--shop-ink,#281914)}.ds-auth-field label{display:block;font-size:.8125rem;font-weight:700;line-height:1.7}.ds-auth-field input{display:block;width:100%;min-height:46px;padding:9px 2px;border:0;border-bottom:1.5px solid var(--shop-control,#8e7564);border-radius:0;background:transparent;color:inherit;font:400 1rem/1.6 var(--shop-body,\"Be Vietnam Pro\",sans-serif);box-shadow:none}.ds-auth-field input::placeholder{color:var(--shop-muted,#716157)}.ds-auth-field input:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:3px;background:#f4cb671a;border-bottom-color:var(--shop-wine,#5c0202)}"
     },
     {
       "name": "Desktop navigation links",
@@ -1217,11 +1352,12 @@
       "css": ".ds-rn-primary{font-family:'Be Vietnam Pro',sans-serif;min-height:52px;padding:13px 20px;background:#214B40;color:#F5EFDF;border:0;border-radius:8px;font-size:15px;font-weight:700;line-height:24px}.ds-rn-primary:focus-visible{outline:2px solid #214B40;outline-offset:3px}.ds-rn-primary:active{opacity:.8}.ds-rn-primary:disabled{opacity:.5}"
     },
     {
-      "name": "Login form and task action",
+      "name": "Auth reader paper and task action",
       "kind": "custom",
-      "description": "Quiet400px ivory-paper task panel with a single-flow greeting and a shelf-yellow underline under “nhau rồi.”, grouped white52px fields and recovery/registration text buttons. Static recovery-open appearance sample; buttons have no runtime here. The actual page toggles one truthful availability status at a time without requests/navigation or losing values. Its45/55 scene places the original PNG Logo over the local Davit Margaryan/Unsplash photo using a scoped SVG wine-to-alpha matrix with original contours/crops retained,2px blur,1.025 scale,64% wine tint (#5c0202a3) and64% horizontal crop. At900px a compact photographic Logo area remains; story/credit hide and home stays on paper. No auth/reset/registration API behavior is added. Generated512px paper repeats at85% opacity; one2400ms white sweep ends invisible and is omitted under reduced motion. No book illustration ships. The embedded material is the shipped4378byte WebP; provenance is in public/login-art/README.md.",
-      "html": "<div class=\"ds-login-paper\"><div class=\"ds-login-form-area\"><section class=\"ds-login-panel\" aria-labelledby=\"ds-login-title\"><h1 id=\"ds-login-title\">Lại gặp <span>nhau rồi.</span></h1><p class=\"ds-login-description\">Đăng nhập để đăng sách và trò chuyện với người bán.</p><div class=\"ds-login-field-group\"><label class=\"ds-login-label\" for=\"ds-login-email\">Email</label><input class=\"ds-login-field\" id=\"ds-login-email\" type=\"email\" autocomplete=\"email\" placeholder=\"ban@example.com\" /></div><div class=\"ds-login-field-group\"><div class=\"ds-login-password-label\"><label class=\"ds-login-label\" for=\"ds-login-password\">Mật khẩu</label><button class=\"ds-login-text-action\" type=\"button\" aria-expanded=\"true\" aria-controls=\"ds-login-password-help\">Quên mật khẩu?</button></div><div class=\"ds-login-password\"><input class=\"ds-login-field\" id=\"ds-login-password\" type=\"password\" autocomplete=\"current-password\" /><button class=\"ds-login-eye\" type=\"button\" aria-label=\"Hiện mật khẩu\" aria-pressed=\"false\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg></button></div><p class=\"ds-login-help\" id=\"ds-login-password-help\" role=\"status\">Khôi phục mật khẩu chưa được hỗ trợ. Bạn vẫn có thể tìm và xem sách mà không cần đăng nhập.</p></div><button class=\"ds-login-submit\" type=\"button\">Đăng nhập<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14m-7-7 7 7-7 7\"/></svg></button><div class=\"ds-login-registration\"><p>Chưa có tài khoản?</p><button class=\"ds-login-text-action\" type=\"button\" aria-expanded=\"false\" aria-controls=\"ds-login-register-help\">Đăng ký<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14m-7-7 7 7-7 7\"/></svg></button></div><p class=\"ds-login-help\" id=\"ds-login-register-help\" role=\"status\" hidden>Đăng ký tài khoản chưa được hỗ trợ. Bạn có thể về trang chủ để tìm và xem sách trước.</p></section></div><p class=\"ds-login-note\">Lật lại · Sách cũ. Người đọc mới.</p></div>",
-      "css": ".ds-login-paper{min-width:0;display:flex;flex-direction:column;position:relative;isolation:isolate;background:var(--shop-paper,#fffcf5)}.ds-login-paper::before,.ds-login-paper::after{content:\"\";position:absolute;inset:0;pointer-events:none;z-index:-1}.ds-login-paper::before{background:url(\"data:image/webp;base64,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\") repeat;background-size:512px 512px;opacity:.85}.ds-login-paper::after{background:linear-gradient(105deg,transparent 40%,#fff 50%,transparent 60%);background-size:250% 100%;background-position:150% 0;opacity:0;animation:ds-login-paper-light 2400ms cubic-bezier(.16,1,.3,1) 1}@keyframes ds-login-paper-light{0%{background-position:150% 0;opacity:0}20%,70%{opacity:.3}100%{background-position:-50% 0;opacity:0}}.ds-login-form-area{flex:1;display:flex;align-items:center;justify-content:center;padding:16px clamp(24px,4vw,64px)}.ds-login-panel h1 span{text-decoration:underline;text-decoration-color:var(--shop-yellow,#f4cb67);text-decoration-thickness:4px;text-underline-offset:8px;text-decoration-skip-ink:none}.ds-login-panel{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);width:100%;max-width:400px;background:transparent;color:var(--shop-ink,#281914)}.ds-login-panel h1{font-size:clamp(1.75rem,3vw,2.5rem);font-weight:700;line-height:1.4;letter-spacing:-.03em;color:var(--shop-wine,#5c0202);margin:0 0 16px;text-wrap:balance}.ds-login-description{font-size:.9375rem;line-height:1.8;color:var(--shop-muted,#716157);margin:0 0 20px}.ds-login-field-group{display:grid;gap:8px}.ds-login-field-group+.ds-login-field-group{margin-top:16px}.ds-login-label{font-size:.875rem;font-weight:700}.ds-login-password-label{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;column-gap:16px;min-height:44px}.ds-login-field{font-family:inherit;font-size:1rem;color:inherit;display:block;width:100%;min-height:52px;padding:.65rem .75rem;border:1px solid var(--shop-control,#8e7564);border-radius:8px;background:#fff;margin:0;caret-color:var(--shop-wine,#5c0202)}.ds-login-field::placeholder{color:var(--shop-muted,#716157);opacity:1}.ds-login-password{position:relative}.ds-login-password input{padding-right:54px}.ds-login-eye{position:absolute;right:4px;top:4px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border:0;color:var(--shop-muted,#716157);border-radius:6px;cursor:pointer}.ds-login-eye:hover{color:var(--shop-wine,#5c0202);background:var(--shop-shelf,#f4eddf)}.ds-login-submit{font-family:inherit;display:flex;align-items:center;justify-content:center;gap:16px;width:100%;min-height:52px;padding:12px 22px;border:0;border-radius:8px;background:var(--shop-wine,#5c0202);color:var(--shop-cream,#fcf8db);font-size:1rem;font-weight:700;margin-top:24px;cursor:pointer;transition:background-color 160ms ease-out}.ds-login-submit:hover:not(:disabled){background:var(--shop-wine-hover,#7c2320)}.ds-login-submit:disabled{opacity:.55;cursor:default}.ds-login-text-action{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:8px 0;border:0;background:transparent;color:var(--shop-wine,#5c0202);font:700 .875rem/1.8 var(--shop-body,'Be Vietnam Pro',sans-serif);text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--shop-control,#8e7564);cursor:pointer}.ds-login-text-action:hover{text-decoration-color:currentColor}.ds-login-registration{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:12px;margin-top:20px;padding-top:12px;border-top:1px solid var(--shop-line,#d9cbbd)}.ds-login-registration p{margin:0;color:var(--shop-muted,#716157);font-size:.875rem;line-height:1.8}.ds-login-help{margin:12px 0 0;font-size:.875rem;line-height:1.8;color:var(--shop-muted,#716157)}.ds-login-panel :focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}.ds-login-note{font-family:var(--shop-body,'Be Vietnam Pro',sans-serif);font-size:.8125rem;line-height:1.8;color:var(--shop-muted,#716157);text-align:center;padding:8px 24px;margin:0}@media(max-width:440px){.ds-login-panel h1{font-size:1.75rem}}@media(prefers-reduced-motion:reduce){.ds-login-submit{transition-duration:.01ms}}@media(max-width:440px){.ds-login-form-area{padding:24px}}@media(prefers-reduced-motion:reduce){.ds-login-paper::after{animation:none}}"
+      "description": "Static error-state fragment of the shipped paper stack: Bricolage greeting, Be Vietnam Pro labels/underlined fields/wine action and Caveat error. Local font/texture URLs are same-origin assets. Original Logo/photo, live session, password reveal and turn behavior belong to AuthLayout/LoginPage; sample makes no authentication request or success claim.",
+      "html": "<div class=\"ds-auth-stack\"><section class=\"ds-auth-paper\" aria-labelledby=\"ds-auth-title\"><h1 id=\"ds-auth-title\">Lại gặp nhau rồi.</h1><p class=\"ds-auth-lede\">Đăng nhập để đăng sách và trò chuyện với người bán.</p><div class=\"ds-auth-field\"><label for=\"ds-auth-email\">Email</label><input id=\"ds-auth-email\" type=\"email\" autocomplete=\"email\" required placeholder=\"ban@example.com\"></div><div class=\"ds-auth-field\"><label for=\"ds-auth-password\">Mật khẩu</label><input id=\"ds-auth-password\" type=\"password\" autocomplete=\"current-password\" required></div><a class=\"ds-auth-link\" href=\"/forgot-password\">Quên mật khẩu?</a><p class=\"ds-auth-error\" role=\"alert\">Chưa đăng nhập được. Kiểm tra email và mật khẩu rồi thử lại.</p><button class=\"ds-auth-submit\" type=\"button\">Đăng nhập</button><a class=\"ds-auth-link\" href=\"/register\">Đăng ký</a></section></div>",
+      "css": "@font-face{font-family:\"Auth Bricolage\";src:url(\"/fonts/auth/BricolageGrotesque.ttf\") format(\"truetype\");font-weight:200 800;font-display:swap}@font-face{font-family:\"Auth Caveat\";src:url(\"/fonts/auth/Caveat.ttf\") format(\"truetype\");font-weight:400 700;font-display:swap}.ds-auth-stack{position:relative;isolation:isolate;max-width:480px;margin:12px;font-family:var(--shop-body,\"Be Vietnam Pro\",sans-serif);color:var(--shop-ink,#281914)}.ds-auth-stack::before,.ds-auth-stack::after{content:\"\";position:absolute;inset:7px -3px -7px 3px;border-radius:3px;background:#e0cfb4;transform:rotate(2.2deg);box-shadow:0 12px 24px #21000040;z-index:-2;pointer-events:none}.ds-auth-stack::after{inset:3px -2px -3px 2px;background:#f0e2ca;transform:rotate(.9deg);z-index:-1}.ds-auth-paper{position:relative;isolation:isolate;padding:26px 32px 18px;background:#fffaf0;border-top:6px solid var(--shop-wine,#5c0202);border-radius:3px;box-shadow:0 2px 4px #21000040,0 24px 60px #21000066;transform:rotate(-.7deg)}.ds-auth-paper::before{content:\"\";position:absolute;inset:0;background:url(\"/login-art/ivory-paper.webp\") repeat;background-size:512px;opacity:.45;border-radius:inherit;pointer-events:none;z-index:-1}.ds-auth-paper h1{margin:0 0 8px;font:800 32px/1.2 \"Auth Bricolage\",var(--shop-body,\"Be Vietnam Pro\",sans-serif);letter-spacing:-.025em;color:var(--shop-wine,#5c0202);overflow-wrap:anywhere}.ds-auth-lede{margin:0 0 20px;font-size:.8125rem;line-height:1.8;color:var(--shop-muted,#716157)}.ds-auth-field+.ds-auth-field{margin-top:18px}.ds-auth-field label{display:block;font-size:.8125rem;line-height:1.7;font-weight:700}.ds-auth-field input{display:block;width:100%;min-height:46px;padding:9px 2px;border:0;border-bottom:1.5px solid var(--shop-control,#8e7564);border-radius:0;background:transparent;color:inherit;font:400 1rem/1.6 var(--shop-body,\"Be Vietnam Pro\",sans-serif)}.ds-auth-field input:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:3px;background:#f4cb671a;border-bottom-color:var(--shop-wine,#5c0202)}.ds-auth-submit{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:48px;margin-top:22px;padding:12px 18px;border:0;border-radius:4px;background:var(--shop-wine,#5c0202);color:var(--shop-cream,#fcf8db);font:700 .875rem/1.7 var(--shop-body,\"Be Vietnam Pro\",sans-serif);cursor:pointer;transition:background-color 150ms ease-out}.ds-auth-submit:hover:not(:disabled){background:#7c2320}.ds-auth-submit:focus-visible,.ds-auth-link:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}.ds-auth-submit:active:not(:disabled){background:#7c2320}.ds-auth-submit:disabled{opacity:.65;cursor:wait}.ds-auth-link{display:inline-flex;align-items:center;min-height:44px;font:700 .75rem/1.7 var(--shop-body,\"Be Vietnam Pro\",sans-serif);color:var(--shop-wine,#5c0202);text-decoration:underline;text-underline-offset:4px}.ds-auth-link:hover{color:#7c2320;text-decoration-thickness:2px}.ds-auth-error{margin:14px 0 0;font:700 24px/1.35 \"Auth Caveat\",cursive;color:#912b0e}@media(max-width:600px){.ds-auth-paper{padding:22px 24px 16px}.ds-auth-paper h1{font-size:29px}}@media(max-width:400px){.ds-auth-paper h1{font-size:27px}}@media(prefers-reduced-motion:reduce){.ds-auth-paper{transform:none}.ds-auth-submit{transition-duration:.01ms}}",
+      "refersTo": "auth-paper"
     },
     {
       "name": "Home compact BookCard",
@@ -1286,7 +1422,7 @@
   ],
   "narrative": {
     "northStar": "Tiệm sách nhiều màu",
-    "overview": "Member web pairs the owner's wine-red owl and lettering with warm paper, tall display type and colored grounds for complete book covers. Discovery is lively; listing facts and task controls stay direct, readable and quieter than the covers. This records the world built after the owner's replacement decision on 10/10/2026, using the [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-booksearchpage-tsx.md) and [PRODUCT](PRODUCT.md), rather than the superseded green web sketches.\r\n\r\nThe implemented web slice is Home, Search, Detail, Login, Sell, Account, Register, shared Header/BookCard/ConfirmDialog and MainLayout/DashboardLayout. Login owns its bookstore split with the original logo over the photograph, tactile ivory paper behind the form and a separate paper-side home action, apart from the shared Member Header. Register reuses that scene for an honest unavailable state. Sell owns its paper task desk and five existing steps. Account owns a real owner-listing shelf and read-only identity inside compact personal navigation. The approved inner-page illustration extension adds Sell's submission receipt, Account's initial empty shelf and Auction's introduction, preserving the established wine/cream penguin world. Auction's filters, live query, cards and remaining body retain their legacy recipes; other forms and chat are outside this extension. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.\r\n\r\nSearch refined11/10 preserves the compact wine title/search band,264px rail and compact cover recipe. The rail is transparent and borderless; native selects use shelf ground and a bottom edge, price bounds stack at full width, and a full-width Apply sits above the quiet underlined reset. Live and DEV preview share native category/subcategory selects and context-dependent disclosure groups through CatalogClassificationFields. Long filters scroll with the page; only a complete rail that fits is sticky. At900px and below, the named native dialog has a scrolling form body, separate Apply/Reset footer and drafts retained across close/reopen. Classification, edition language and separate sale/exchange bounds commit to URL criteria;counts cover only this page. Preview97 Open Library editions remain labelled sample data,separate from live API behavior. Search retains global motion reduction.",
+    "overview": "Member web pairs the owner's wine-red owl and lettering with warm paper, tall display type and colored grounds for complete book covers. Discovery is lively; listing facts and task controls stay direct, readable and quieter than the covers. This records the world built after the owner's replacement decision on 10/10/2026, using the [surface contract](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-booksearchpage-tsx.md) and [PRODUCT](PRODUCT.md), rather than the superseded green web sketches.\n\nThe implemented web slice is Home, Search, Detail, Login, Sell, Account, Register, shared Header/BookCard/ConfirmDialog and MainLayout/DashboardLayout. Auth owns a central three-sheet library file over the original wine-tinted bookstore photograph, with the original wine logo on paper, a pencil annotation and a separate home link, apart from the shared Member Header. Login, Register and password recovery share that scene; the latter two honestly disclose unavailable APIs. Sell owns its paper task desk and five existing steps. Account owns a real owner-listing shelf and read-only identity inside compact personal navigation. The approved inner-page illustration extension adds Sell's submission receipt, Account's initial empty shelf and Auction's introduction, preserving the established wine/cream penguin world. Auction's filters, live query, cards and remaining body retain their legacy recipes; other forms and chat are outside this extension. React Native retains its separate green Be Vietnam Pro system; its source/tests were not changed by this web build. Flutter remains scaffold. These tokens describe implementation, not human acceptance or a closed release gate.\n\nSearch refined11/10 preserves the compact wine title/search band,264px rail and compact cover recipe. The rail is transparent and borderless; native selects use shelf ground and a bottom edge, price bounds stack at full width, and a full-width Apply sits above the quiet underlined reset. Live and DEV preview share native category/subcategory selects and context-dependent disclosure groups through CatalogClassificationFields. Long filters scroll with the page; only a complete rail that fits is sticky. At900px and below, the named native dialog has a scrolling form body, separate Apply/Reset footer and drafts retained across close/reopen. Classification, edition language and separate sale/exchange bounds commit to URL criteria;counts cover only this page. Preview97 Open Library editions remain labelled sample data,separate from live API behavior. Search controls retain global motion reduction; shared catalog-card depth follows its scoped owner-approved exception.",
     "keyCharacteristics": [
       "Wine-and-cream identity with orange, yellow and mint discovery accents.",
       "Anton for expressive headings; Be Vietnam Pro for book facts and actions.",
@@ -1302,7 +1438,7 @@
       },
       {
         "name": "The Two Voices Rule",
-        "body": "Anton carries expressive discovery moments; Be Vietnam Pro carries Home category/catalog headings, book titles, prices, forms and consequential actions. Use the bundled weights.",
+        "body": "Anton carries expressive discovery moments; Be Vietnam Pro carries Home category/catalog headings, book titles, prices, forms and consequential actions. Use the bundled weights. Auth alone adds Bricolage headings and Caveat reader traces; this does not replace the global pairing.",
         "section": "typography"
       }
     ],

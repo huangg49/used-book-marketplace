@@ -9,6 +9,8 @@ import { ChatPage } from '../pages/ChatPage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
+import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
+import { AuthLayout } from '../layouts/AuthLayout';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import ExchangePage from '../pages/ExchangePage';
 import ExchangeComposePage from '../pages/ExchangeComposePage';
@@ -50,12 +52,19 @@ export const router = createBrowserRouter([
       { path: '/profile', element: <ProfilePage /> },
     ],
   },
-  // Auth & Fullscreen routes — không dùng MainLayout
+  // Auth sheets share one persistent paper stack and memory-only input draft.
   {
-    element: <Outlet />,
+    element: <AuthLayout />,
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+    ],
+  },
+  // Fullscreen routes — không dùng MainLayout
+  {
+    element: <Outlet />,
+    children: [
       { path: '/sell', element: <SellBookPage /> },
     ],
   },

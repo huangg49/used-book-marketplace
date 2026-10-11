@@ -1,28 +1,102 @@
+@font-face {
+  font-family: "Auth Bricolage";
+  src: url("/fonts/auth/BricolageGrotesque.ttf") format("truetype");
+  font-weight: 200 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Auth Caveat";
+  src: url("/fonts/auth/Caveat.ttf") format("truetype");
+  font-weight: 400 700;
+  font-display: swap;
+}
 .root {
+  --auth-hand: "Auth Caveat", cursive;
+  --auth-title: "Auth Bricolage", var(--shop-body);
+  --auth-error: #912b0e;
+  position: relative;
+  isolation: isolate;
   min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  background: var(--shop-paper);
+  display: grid;
+  place-items: center;
+  padding: 72px 24px 64px;
+  background: var(--shop-wine);
+  color: var(--shop-cream);
   font-family: var(--shop-body);
+}
+.scene { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+.scene img { width: 100%; height: 100%; object-fit: cover; object-position: 60% 52%; filter: blur(4px); transform: scale(1.035); }
+.scene::after { content: ""; position: absolute; inset: 0; background: #460909c9; }
+.back { position: absolute; left: 32px; top: max(16px, env(safe-area-inset-top)); display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: .8125rem; text-decoration: none; }
+.back:hover { text-decoration: underline; text-underline-offset: 5px; }
+.back:focus-visible, .credit a:focus-visible { outline-color: var(--shop-cream); }
+.stage { position: relative; width: min(480px, 100%); perspective: 1400px; }
+.stack { position: relative; isolation: isolate; perspective: 1400px; }
+.backSheet, .middleSheet { position: absolute; inset: 7px -3px -7px 3px; border-radius: 3px; background: #e0cfb4; transform: rotate(2.2deg); box-shadow: 0 12px 24px #21000040; pointer-events: none; z-index: -2; }
+.middleSheet { inset: 3px -2px -3px 2px; background: #f0e2ca; transform: rotate(.9deg); z-index: -1; }
+.paper {
+  position: relative;
+  padding: 26px 32px 18px;
+  background: #fffaf0;
   color: var(--shop-ink);
+  border-radius: 3px;
+  border-top: 6px solid var(--shop-wine);
+  box-shadow: 0 2px 4px #21000040, 0 24px 60px #21000066;
+  transform: rotate(-.7deg);
+  transform-origin: left center;
+  animation: paperArrive 420ms cubic-bezier(.16, 1, .3, 1);
 }
-.main {
-  width: 100%;
-  max-width: 520px;
-  margin: auto;
-  padding: 48px 24px;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.paper::before { content: ""; position: absolute; inset: 0; background: url("/login-art/ivory-paper.webp") repeat; background-size: 512px; opacity: .45; border-radius: inherit; pointer-events: none; z-index: -1; }
+.paper::after { content: ""; position: absolute; width: 76px; height: 76px; right: 12px; bottom: 14px; border: 4px solid #8e75641c; border-left-color: transparent; border-radius: 50%; transform: rotate(-22deg); pointer-events: none; z-index: -1; }
+.paperHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px solid var(--shop-line); }
+.brand { width: 154px; height: 38px; position: relative; flex-shrink: 0; }
+.brand > a { position: absolute; left: 0; top: 0; transform: scale(.8); transform-origin: left top; }
+.brand img { filter: url("#auth-logo-ink"); }
+.filterDefs { position: absolute; pointer-events: none; }
+.kind { font-size: .6875rem; line-height: 1.6; color: var(--shop-muted); text-align: right; max-width: 110px; margin: 0; }
+.paperFooter { margin-top: 14px; color: var(--shop-muted); font-size: .6875rem; line-height: 1.8; text-align: center; }
+.annotation { position: absolute; left: calc(100% + 38px); top: 42px; width: 192px; color: var(--shop-cream); transform: rotate(-5deg); font-family: var(--auth-hand); }
+.annotation p { font-size: 29px; line-height: 1.2; margin: 0 0 7px; }
+.annotation small { font-size: 20px; line-height: 1.5; color: #e8d5b5; }
+.pencilLine { display: block; width: 112px; border-bottom: 1px solid currentColor; transform: rotate(-3deg); margin-top: 9px; }
+.status { min-height: 24px; margin: 14px 0 0; font-size: .8125rem; line-height: 1.8; text-align: center; }
+.signature { position: absolute; left: 40px; bottom: 90px; pointer-events: none; }
+.signature p { font: 400 40px/1.2 var(--shop-display); margin: 0 0 14px; }
+.signature p span { color: var(--shop-yellow); }
+.signature small { font-size: .75rem; line-height: 1.9; }
+.credit { position: absolute; bottom: max(12px, env(safe-area-inset-bottom)); left: 32px; right: 32px; margin: 0; font-size: .6875rem; line-height: 1.8; }
+.credit a { display: inline-block; padding-block: 8px; text-decoration: underline; text-underline-offset: 3px; }
+.stamp { position: absolute; right: 30px; top: 43%; padding: 10px 20px; border: 4px double var(--auth-error); border-radius: 4px; background: #fffaf0e6; color: var(--auth-error); font: 800 30px/1.2 var(--auth-title); text-align: center; pointer-events: none; transform: rotate(-12deg); animation: stampHit 280ms cubic-bezier(.16, 1, .3, 1) both; }
+.stamp span { display: block; font: 400 .75rem/1.8 var(--shop-body); margin-top: 4px; }
+@keyframes paperArrive { from { transform: rotate(-.7deg) rotateY(12deg); opacity: .65; } to { transform: rotate(-.7deg) rotateY(0deg); opacity: 1; } }
+@keyframes stampHit { from { opacity: 0; transform: rotate(-12deg) scale(1.6); } to { opacity: 1; transform: rotate(-12deg) scale(1); } }
+@media (max-width: 1100px) {
+  .annotation { position: static; width: auto; margin: 0 16px 20px; transform: rotate(-2deg); }
+  .annotation p { font-size: 24px; margin-bottom: 0; }
+  .annotation small { font-size: 18px; }
+  .pencilLine { display: none; }
+  .signature { display: none; }
 }
-.main > * {
-  width: 100%;
+@media (max-width: 600px) {
+  .root { padding: 72px 20px 24px; }
+  .back { left: 20px; }
+  .stage { width: min(420px, 100%); }
+  .paper { padding: 22px 24px 16px; }
+  .paperHeader { gap: 6px; padding-bottom: 14px; margin-bottom: 20px; }
+  .kind { max-width: 100px; font-size: .625rem; }
+  .annotation { margin: 0 4px 20px; }
+  .annotation p { font-size: 23px; }
+  .credit { position: static; margin-top: 20px; text-align: center; font-size: .625rem; }
+  .status { margin-top: 12px; }
+  .stamp { right: 20px; font-size: 26px; }
 }
-.note {
-  text-align: center;
-  font-size: 0.75rem;
-  color: var(--shop-muted);
-  padding: 0 24px 24px;
-  line-height: 1.8;
+@media (max-width: 360px) {
+  .root { padding-inline: 16px; }
+  .paper { padding-inline: 20px; }
+  .brand { width: 135px; height: 34px; }
+  .brand > a { transform: scale(.7); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .paper { animation: none; transform: none; }
+  .stamp { animation: none; opacity: 1; transform: rotate(-12deg); }
 }
