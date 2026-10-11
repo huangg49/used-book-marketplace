@@ -8,6 +8,7 @@
     "node": ">=24.15.0"
   },
   "scripts": {
+    "auth:mailbox": "node scripts/auth-mailbox.mjs",
     "qa:android": "node scripts/android-pilot.mjs",
     "demo:books": "node scripts/demo-books.mjs",
     "demo:funding": "node scripts/demo-funding.mjs",

@@ -25,6 +25,7 @@ import { settlementCollectionSpecs } from '../../src/database/mongo/migrations/0
 import { rulesCollectionSpecs } from '../../src/database/mongo/migrations/0013-auction-business-rules.js';
 import { purchaseConversationSpecs } from '../../src/database/mongo/migrations/0014-purchase-conversations.js';
 import { notificationSpecs } from '../../src/database/mongo/migrations/0015-member-notifications.js';
+import { accountRecoverySpecs } from '../../src/database/mongo/migrations/0017-account-recovery.js';
 import {
   currentCollections,
   migrations,
@@ -86,7 +87,9 @@ describe('migrations', () => {
         // PostgreSQL model in the baseline count.
         -purchaseConversationSpecs.length -
         // The notification inbox (FR-N03, migration 0015) is MongoDB-native too.
-        notificationSpecs.length +
+        notificationSpecs.length -
+        // FR-A01/02/04 auth collections have no historical PostgreSQL model.
+        accountRecoverySpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });

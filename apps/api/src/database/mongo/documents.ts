@@ -979,3 +979,16 @@ export interface MemberNotificationDoc {
   createdAt: Date;
   readAt: Date | null;
 }
+export interface AuthActionTokenDoc {
+  _id: string; userId: string; purpose: 'VerifyEmail' | 'ResetPassword';
+  tokenHash: string; createdAt: Date; expiresAt: Date; consumedAt: Date | null;
+}
+export interface AuthMailJobDoc {
+  _id: string; userId: string; tokenId: string | null; encryptedPayload: string;
+  status: 'Pending' | 'Sending' | 'Sent' | 'Failed' | 'Cancelled'; attempts: number;
+  nextAttemptAt: Date; leaseId: string | null; leaseUntil: Date | null;
+  expiresAt: Date; createdAt: Date; updatedAt: Date;
+}
+export interface AuthEventDoc {
+  _id: string; userId: string; action: 'Registered' | 'EmailVerified' | 'PasswordReset'; createdAt: Date;
+}

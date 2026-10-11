@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.31.0
+  version: 0.32.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -77,6 +77,118 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+        "503":
+          $ref: "#/components/responses/Error"
+  /auth/register:
+    post:
+      operationId: registerAccount
+      tags: [Auth]
+      description: Normalized unique email; creates only an unverified MEMBER. Existing accounts receive the same acknowledgement and are never overwritten. Password 10..128 characters. Simulation rules acknowledgement required. Verification link valid 30 minutes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "202":
+          description: Request accepted without revealing account existence. Email delivery is asynchronous.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountRequestAcknowledgement"
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /auth/verification/resend:
+    post:
+      operationId: resendEmailVerification
+      tags: [Auth]
+      description: Generic acknowledgement for all email addresses. Only unverified accounts receive mail. Minimum 60 seconds between links; issuing a new link invalidates all previous verification links.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountEmailRequest"
+      responses:
+        "202":
+          description: Request accepted without revealing account existence. Email delivery is asynchronous.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountRequestAcknowledgement"
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /auth/verify-email:
+    post:
+      operationId: verifyEmail
+      tags: [Auth]
+      description: Consume an unexpired single-use verification token and activate the account atomically. No session is created.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthActionTokenRequest"
+      responses:
+        "204":
+          description: Completed. The link cannot be used again.
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /auth/forgot-password:
+    post:
+      operationId: requestPasswordReset
+      tags: [Auth]
+      description: Identical acknowledgement for existing and unknown accounts. Single-use reset link valid 15 minutes. Minimum 60 seconds between links.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountEmailRequest"
+      responses:
+        "202":
+          description: Request accepted without revealing account existence. Email delivery is asynchronous.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountRequestAcknowledgement"
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [Auth]
+      description: Consume a reset token once, replace the password and revoke all sessions atomically. Does not change status or grant roles. No automatic login.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "204":
+          description: Completed. The link cannot be used again.
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
         "503":
           $ref: "#/components/responses/Error"
   /auth/login:
@@ -6633,6 +6745,62 @@ components:
         timestamp:
           type: string
           format: date-time
+    AccountEmailRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, displayName, acceptedRules]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 10
+          maxLength: 128
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        acceptedRules:
+          type: boolean
+          const: true
+    AuthActionTokenRequest:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{43}$'
+    ResetPasswordRequest:
+      type: object
+      additionalProperties: false
+      required: [token, password]
+      properties:
+        token:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{43}$'
+        password:
+          type: string
+          minLength: 10
+          maxLength: 128
+    AccountRequestAcknowledgement:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
     LoginRequest:
       type: object
       additionalProperties: false

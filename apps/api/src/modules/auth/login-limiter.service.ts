@@ -12,7 +12,7 @@ export class LoginLimiter {
     private readonly config: ConfigService,
   ) {}
 
-  async consume(email: string, ip: string) {
+  async consume(email: string, ip: string, scope = 'login') {
     const now = Date.now();
     const window = Math.floor(now / WINDOW_MS);
     const expiresAt = new Date((window + 1) * WINDOW_MS);
@@ -22,7 +22,7 @@ export class LoginLimiter {
           'sha256',
           this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
         )
-          .update(`${window}:${identity}`)
+          .update(scope === 'login' ? `${window}:${identity}` : `${scope}:${window}:${identity}`)
           .digest('hex'),
       )
       .sort();
@@ -49,7 +49,7 @@ export class LoginLimiter {
         {
           code: 'RATE_LIMITED',
           message:
-            'Bạn đã thử đăng nhập nhiều lần. Vui lòng thử lại sau 15 phút.',
+            scope === 'login' ? 'Bạn đã thử đăng nhập nhiều lần. Vui lòng thử lại sau 15 phút.' : 'Bạn đã gửi nhiều yêu cầu. Vui lòng thử lại sau 15 phút.',
         },
         429,
       );

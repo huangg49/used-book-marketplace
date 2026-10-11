@@ -9,9 +9,9 @@ related_targets: ["apps/user-web/src/pages/LoginPage.module.css","apps/user-web/
 
 Mode: operate. Auth-only visual replacement requested by the owner. Preserve
 SessionClient, native required/email validation, password reveal, errors and safe
-returnUrl. Registration/recovery now have full frontend forms at the owner's
-request; their absent APIs are disclosed beside native-disabled submission
-actions. Draft fields stay only in Auth memory. No request or token-store addition.
+returnUrl. The owner's account-auth follow-up connects registration, verification,
+resend, recovery and reset to real public APIs through the same SessionClient.
+Draft fields stay only in Auth memory. There is no additional token store.
 
 ## Direction contract
 
@@ -23,8 +23,12 @@ with source provenance kept in the asset README, textured paper, ink underlines.
 Bricolage headings, owner-supplied MTD Fancy Melody pencil notes and errors (Vietnamese glyph correction).
 
 STORY: Identify the reader card, enter email/password, recover from clear errors.
-Registration has name, email, password/reveal and confirmation. Recovery has an
-email field and librarian note. Real login succeeds before “ĐÃ MƯỢN” appears;
+Registration has name, email, password/reveal, confirmation and the required
+simulation-rules checkbox; success explains verification and offers resend after
+60 seconds. Recovery has an email field and librarian note; an email fragment
+opens the two-password reset form. Token links survive reload until successfully
+consumed. Errors announce the issue and recovery without losing input. Real
+login succeeds before “ĐÃ MƯỢN” appears;
 then navigate to the existing safe returnUrl (home by default).
 
 FIRST VIEWPORT: 480px central paper stack, two offset sheets, wine top edge,
@@ -48,5 +52,15 @@ requires all authored Auth motion even with OS reduced motion; the stamp also
 keeps its280ms animation. No initial entrance or autoplay.
 Login success retains a continuous diagonal paper flow: desktop1600ms/30 fragments, mobile≤600px1500ms/18 fragments, plus destination-ready latency. Stamp280ms and tear start280ms remain under either OS preference. Two inert printed halves separate12px/1.8deg; cloned passwords are cleared even when revealed, and copies disappear before navigation. Four irregular fragment silhouettes use cream/paper, sparse yellow, faint ink and baked soft wine-at8% shadows/near blur. Twelve small encoded SVG sprites are predecoded on Auth entry; the cache holds at most two palette/mode recipes, not viewport bitmaps. Three opaque SVG pages retain ivory-paper texture, creases, subtle edge shading and two angled foreground edges. Native WAAPI schedules all visible flights before navigation; there is no per-frame Canvas drawing or React state update. The delayed inner-page drift loops continue while the destination mounts, independently of the outer exit animations. Viewport units retain the proven solid rectangular core during resize and bounded drift. Two paint boundaries precede navigation; actual React destination DOM commit plus two further paint boundaries gate release. Back/unmount cancels animations, pending mount acknowledgement, local copies and scroll lock. Destination H1/main receives focus in the layout effect after React removes inert/aria-hidden, not in a competing frame callback. Missing WAAPI retains a440ms technical cover fallback; OS reduction never selects it. No dependency/API/session/token or Home changes. Build comparison and limitations: `.impeccable/review/auth-performance/README.md`.
 Drafts survive ordinary switches.
+
+Account-auth follow-up: pending buttons disable duplicate requests; status/error
+use live regions, successful state headings receive focus only on the active
+sheet. Verification is an explicit action and does not auto-login. Register
+password drafts clear after success; reset revokes old sessions and returns to
+Login. At laptop height≤800px, Register's lede/secondary row are slightly tighter
+to retain the common paper minimum. Mobile keeps the 10–128 character hint;
+long/error states scroll naturally. Preserve all existing authored motion under
+OS reduction. [Implementation/evidence](../../../../docs/features/ACCOUNT_AUTH.md)
+records local mailbox delivery and the remaining real-email/native gates.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance

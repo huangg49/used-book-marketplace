@@ -8,6 +8,22 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Auth — tập giấy thư viện — 11/10/2026
 
+- Account Auth: `codex/auth-registration-recovery`, base `a300397`, checkpoint
+  subject `feat(auth): implement registration and password recovery`. OpenAPI0.32.0,
+  119 operations/22 controllers; migration0017 thêm token hash, encrypted mail
+  queue và append-only Auth audit. Register→verify/resend và forgot→reset thật;
+  token30/15phút, cooldown60giây, reset thu hồi mọi phiên/không gỡ hạn chế. Local
+  mailbox3186 được chủ dự án duyệt; origin/CORS5186 đã cấu hình local, API restart.
+  Giữ ba tờ giấy/login/session/motion; pending/error/status, mobile/laptop và
+  fragment reload được kiểm tra. API124unit, Auth32E2E, session21, web62 PASS;
+  Mongo39PASS/4SKIP(import/failover); contract/routes/TS/lint/build PASS, web có
+  5warning Exchange cũ và chunk warning. Detector một lần0finding. [Evidence](../../.impeccable/review/auth-registration/README.md),
+  [setup/behavior](../features/ACCOUNT_AUTH.md). QA replica set/DB `_test` riêng;
+  DB local chỉ forward migration/bootstrap, không reset/seed. Resend thật,
+  RN/Flutter UI, physical mobile/NVDA/human và full business E2E NOT RUN;
+  READINESS giữ nguyên. Chat/Thông báo/MainLayout WIP bảo toàn. Local commit,
+  chưa push; bước tiếp chủ dự án tự đăng ký/thử hộp thư, review trước tích hợp.
+
 - Performance follow-up: `codex/auth-paper-performance`, base `27203fb`, checkpoint
   subject `perf(web): compose login paper flights outside the frame loop`. Giữ
   look/30–18 mảnh/texture, thay Canvas vẽ mỗi frame bằng SVG tĩnh+WAAPI; native

@@ -41,9 +41,11 @@ export function validateEnvironment(env: Record<string, unknown>) {
   if (simulatorSecret && nodeEnv === 'production')
     throw new Error('Payment simulator must be disabled in production.');
   const priceAssist = validatePriceAssist(env);
+  const accountMail = validateAccountMail(env, nodeEnv, secret);
   return {
     ...env,
     ...priceAssist,
+    ...accountMail,
     MONGODB_URL: mongoUrl,
     JWT_ACCESS_SECRET: secret,
     PORT: port,
@@ -54,6 +56,28 @@ export function validateEnvironment(env: Record<string, unknown>) {
     SUPABASE_MEDIA_BUCKET: bucket,
     MEDIA_STORAGE_BUDGET_BYTES: budget,
   };
+}
+
+export function validateAccountMail(env: Record<string, unknown>, nodeEnv: string, jwtSecret: string) {
+  const provider = String(env.AUTH_MAIL_PROVIDER || (nodeEnv === 'production' ? 'disabled' : 'local'));
+  if (!['disabled', 'local', 'resend'].includes(provider)) throw new Error('Invalid AUTH_MAIL_PROVIDER.');
+  if (nodeEnv === 'production' && provider === 'local') throw new Error('Local auth mailbox is forbidden in production.');
+  const origin = String(env.AUTH_WEB_ORIGIN || 'http://127.0.0.1:5186');
+  let url: URL;
+  try { url = new URL(origin); } catch { throw new Error('Invalid AUTH_WEB_ORIGIN.'); }
+  if (url.origin !== origin || url.username || url.password || !['http:', 'https:'].includes(url.protocol) ||
+    (url.protocol === 'http:' && (!['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) || (nodeEnv === 'production' && provider !== 'disabled'))))
+    throw new Error('AUTH_WEB_ORIGIN must be an HTTPS origin (loopback HTTP only in development/test).');
+  const key = String(env.AUTH_MAIL_ENCRYPTION_KEY || (nodeEnv !== 'production' ? jwtSecret : ''));
+  const apiKey = String(env.RESEND_API_KEY || '');
+  const from = String(env.AUTH_MAIL_FROM || 'Lật Lại <onboarding@resend.dev>');
+  if (provider !== 'disabled' && (key.length < 32 || key.startsWith('replace-')))
+    throw new Error('AUTH_MAIL_ENCRYPTION_KEY must be at least 32 random characters.');
+  if (provider === 'resend' && (!apiKey || apiKey.startsWith('replace-') || /[\r\n]/.test(from) || !from.includes('@')))
+    throw new Error('Resend requires RESEND_API_KEY and AUTH_MAIL_FROM.');
+  return { AUTH_MAIL_PROVIDER: provider, AUTH_WEB_ORIGIN: origin, AUTH_MAIL_ENCRYPTION_KEY: key,
+    RESEND_API_KEY: apiKey, AUTH_MAIL_FROM: from,
+    AUTH_MAIL_LOCAL_DIR: String(env.AUTH_MAIL_LOCAL_DIR || '.tmp/auth-mail') };
 }
 
 const intIn = (raw: unknown, fallback: number, min: number, max: number, name: string) => {

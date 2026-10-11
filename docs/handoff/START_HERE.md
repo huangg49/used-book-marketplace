@@ -1,5 +1,11 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
+Auth follow-up11/10/2026 trên `codex/auth-registration-recovery`: OpenAPI0.32.0,
+migration0017, đăng ký/xác minh/reset thật và hộp thư local demo. Xem
+[ACCOUNT_AUTH](../features/ACCOUNT_AUTH.md) để migrate/bootstrap quyền mới,
+cấu hình origin/CORS và mở `pnpm auth:mailbox`. Snapshot main bên dưới giữ ngày
+nguồn; trạng thái bàn giao hiện tại nằm trong SESSION_STATE.
+
 Cập nhật09/10/2026 theo main `da59199`: contract **0.30.0**,15 migration MongoDB;
 17 migration PostgreSQL là lịch sử chỉ đọc phục vụ import. DirectDelivery tới F2h;
 ViaPoint đấu giá có source completion nhưng gate release/review còn mở.
