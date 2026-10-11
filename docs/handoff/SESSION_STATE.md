@@ -25,6 +25,10 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   Safari/speech/physical mobile/human/remote CI NOT RUN. READINESS/WIP khác giữ
   nguyên; QA tab/viewport/runtime/database đã dọn, Vite5186 giữ nguyên. Local
   chưa push; bước tiếp chủ dự án xem giao diện trước human review/tích hợp.
+  Follow-up23:48: chủ dự án không login được vì API3000 chưa chạy. Đã bật
+  `pnpm dev:api` (API/media/order workers), giữ Mongo hiện có; readiness200 và
+  CORS login preflight cho `http://127.0.0.1:5186` PASS. Không reset/seed/đổi
+  credential; chưa submit đăng nhập thay chủ dự án. Runtime được giữ chạy.
 
 ## Search — nhóm lọc và xóa riêng — 11/10/2026
 
