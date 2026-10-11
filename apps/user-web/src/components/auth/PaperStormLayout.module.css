@@ -1,0 +1,7 @@
+.content { min-height: 100dvh; }
+.overlay { position: fixed; inset: 0; z-index: 10000; overflow: hidden; touch-action: none; }
+.canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.halves { position: absolute; inset: 0; pointer-events: none; }
+.half { position: absolute; transform-origin: center; will-change: transform; }
+.fallback { position: absolute; inset: 0; background: var(--shop-cream); opacity: 0; }
+.status { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }

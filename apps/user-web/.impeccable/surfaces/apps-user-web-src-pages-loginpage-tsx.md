@@ -46,7 +46,7 @@ shadow changes. Current and underneath forms are inert during motion, live statu
 announces the change and the destination H1 receives focus. Owner explicitly
 requires this finite Auth shuffle even with OS reduced motion; the stamp alone
 still becomes static under that preference. No initial entrance or autoplay.
-Success holds the stamp650ms before shuffling. Interrupted routes/unmount cancel
-all handles and pending navigation; drafts survive ordinary switches.
+Successful login now uses a route-persistent Canvas2D paper storm instead of a success shuffle: desktop1850ms/68 fragments, mobile≤600px1600ms/36 fragments; reduced-motion440ms solid cream cover without tearing or particles. A280ms stamp remains after true SessionClient success (static under reduction). Two inert local DOM halves of the printed card tear apart; three paper shapes/four existing brand colors and depth-sorted sprites provide small distant and large softly blurred near fragments. Blur/shadows are pre-rendered once; DPR capped1.5 desktop/1.25 mobile, no new dependencies. A dedicated opaque viewport sheet must be drawn and painted before safe returnUrl/home navigation; coverage holds through route commit and two destination paints, then releases. Background content is inert/aria-hidden, status remains polite, scroll lock is restored and destination H1/main receives focus. Back/unmount cancels pending motion/navigation. Hidden-tab fast completion and unavailable-Canvas reduced fallback are source-backed, not runtime accepted. Ordinary850ms form shuffles keep their separate owner-approved reduced-motion exception.
+Drafts survive ordinary switches.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance

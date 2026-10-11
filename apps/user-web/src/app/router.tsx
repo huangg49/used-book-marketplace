@@ -19,7 +19,8 @@ import { ExchangeDetailPage } from '../pages/ExchangeDetailPage';
 import { AuctionListPage } from '../pages/AuctionListPage';
 import { AuctionDetailPage } from '../pages/AuctionDetailPage';
 import { NotificationsPage } from '../pages/NotificationsPage';
-export const router = createBrowserRouter([
+import { PaperStormLayout } from '../components/auth/PaperStormLayout';
+export const router = createBrowserRouter([{ element: <PaperStormLayout />, children: [
   {
     element: <MainLayout />,
     errorElement: (
@@ -71,4 +72,4 @@ export const router = createBrowserRouter([
   // Catch-all
   { path: '/404', element: <NotFoundPage /> },
   { path: '*', element: <Navigate to="/404" replace /> },
-]);
+] }]);

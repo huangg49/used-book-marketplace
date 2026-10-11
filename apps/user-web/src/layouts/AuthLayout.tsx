@@ -6,6 +6,7 @@ import { LoginPage } from "../pages/LoginPage";
 import { RegisterPage } from "../pages/RegisterPage";
 import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
 import { PaperContext, type AuthDraft } from "./auth-paper";
+import { usePaperJourney } from "../components/auth/paper-journey";
 import styles from "./AuthLayout.module.css";
 
 const annotations = [
@@ -16,7 +17,7 @@ const annotations = [
   ["Khóc ở chương này.", "vết gạch chân hai lần"],
   ["Để dành cho người đọc tiếp.", "một dòng ở lề sách"],
 ];
-type Turn = { id: number; from: string; target: string; stamped: boolean };
+type Turn = { id: number; from: string; target: string };
 function kind(path: string) {
   return path === "/register" ? "Làm thẻ mới" : path === "/forgot-password" ? "Cấp lại mã số thẻ" : "Thẻ người đọc";
 }
@@ -38,6 +39,7 @@ export function AuthLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const outlet = useOutlet();
+  const paperJourney = usePaperJourney();
   const leaf = useRef<HTMLDivElement>(null);
   const animations = useRef<Animation[]>([]);
   const locked = useRef(false);
@@ -47,8 +49,9 @@ export function AuthLayout() {
   const previousPage = useRef(location.key);
   const draft = useRef<AuthDraft>({ email: "", password: "", registerName: "", registerEmail: "", registerPassword: "", registerConfirmation: "", recoveryEmail: "" });
   const [transition, setTransition] = useState<Turn | null>(null);
+  const [departing, setDeparting] = useState(false);
   const turning = transition?.from === location.key;
-  const success = turning && transition.stamped;
+  const success = departing;
   const [annotation] = useState(() => annotations[Math.floor(Math.random() * annotations.length)]);
 
   function settle(id?: number) {
@@ -82,7 +85,7 @@ export function AuthLayout() {
   useLayoutEffect(() => {
     if (!transition || transition.from !== location.key || !leaf.current) return;
     const sheet = leaf.current;
-    const options: KeyframeAnimationOptions = { duration: 850, delay: transition.stamped ? 650 : 0, fill: "both" };
+    const options: KeyframeAnimationOptions = { duration: 850, fill: "both" };
     let cancelled = false;
     const play = (element: Element | null, frames: Keyframe[]) => {
       if (!element || typeof element.animate !== "function") return null;
@@ -120,7 +123,7 @@ export function AuthLayout() {
     ]);
     const done = turn ? turn.finished : Promise.resolve();
     void done.then(() => {
-      if (!cancelled && !disposed.current) navigate(transition.target, { replace: transition.stamped });
+      if (!cancelled && !disposed.current) navigate(transition.target);
     }).catch(() => {}).finally(() => settle(transition.id));
     return () => {
       cancelled = true;
@@ -130,16 +133,23 @@ export function AuthLayout() {
     };
   }, [transition, location.key, navigate]);
 
-  function turnTo(target: string, stamped = false): Promise<void> {
+  function turnTo(target: string): Promise<void> {
     if (locked.current || disposed.current || target === location.pathname + location.search) return Promise.resolve();
     locked.current = true;
     const id = ++sequence.current;
     const done = new Promise<void>((resolve) => { request.current = { id, resolve }; });
-    setTransition({ id, from: location.key, target, stamped });
+    setTransition({ id, from: location.key, target });
     return done;
   }
+  async function complete(target: string) {
+    if (locked.current || disposed.current) return;
+    locked.current = true; setDeparting(true);
+    await paperJourney(target, leaf.current?.querySelector<HTMLElement>("[data-auth-paper]") ?? null);
+    locked.current = false;
+    if (!disposed.current) setDeparting(false);
+  }
   const targetPath = transition?.target.split("?")[0] ?? "/login";
-  return <PaperContext.Provider value={{ turnTo: (target) => turnTo(target), complete: (target) => turnTo(target, true), draft,
+  return <PaperContext.Provider value={{ turnTo, complete, draft,
     updateDraft: (field, value) => { draft.current[field] = value; } }}>
     <main className={styles.root}>
       <div className={styles.scene} aria-hidden="true"><img src="/photography/bookshop-barcelona.jpg" alt="" width="3000" height="2818" fetchPriority="high" /></div>
@@ -153,12 +163,11 @@ export function AuthLayout() {
           <div className={styles.pages} data-auth-book data-shuffling={turning ? "true" : undefined}>
             <div className={styles.backSheet} aria-hidden="true" /><div className={styles.middleSheet} aria-hidden="true" />
             {turning && <div className={`${styles.face} ${styles.under}`} aria-hidden="true" inert data-next-paper>
-              {success ? <div className={styles.opening}><p>Chuyện hay<br />còn tiếp.</p><span>Đang mở trang tiếp theo…</span></div>
-                : <PaperFrame path={targetPath}><NextForm path={targetPath} /></PaperFrame>}
+              <PaperFrame path={targetPath}><NextForm path={targetPath} /></PaperFrame>
               <div className={styles.underShadow} data-under-shadow />
             </div>}
             <div key={location.key} ref={leaf} className={styles.leaf} data-auth-leaf data-turning={turning ? "true" : undefined}>
-              <div className={`${styles.face} ${styles.front}`} data-auth-paper aria-hidden={turning || undefined} inert={turning}>
+              <div className={`${styles.face} ${styles.front}`} data-auth-paper aria-hidden={turning || success || undefined} inert={turning || success}>
                 <PaperFrame path={location.pathname}>{outlet}</PaperFrame>
                 {success && <div className={styles.stamp} aria-hidden="true">ĐÃ MƯỢN<span>{new Date().toLocaleDateString("vi-VN")}</span></div>}
                 <div className={styles.faceLight} data-front-light />

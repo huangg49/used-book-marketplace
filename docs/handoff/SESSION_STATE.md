@@ -8,6 +8,17 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Auth — tập giấy thư viện — 11/10/2026
 
+- Login success storm: `codex/auth-paper-storm`, base `bae53e3`, subject
+  `feat(web): reveal login destination through a paper storm`. Canvas2D68/36mảnh,
+  desktop1850ms/mobile1600ms; giảm chuyển động dùng cover440ms. Chỉ đổi safe
+  returnUrl sau khi đã vẽ/phủ kín, overlay sống qua route; focus/scroll/Back cleanup.
+  Không đổi API/session/validation;850ms chuyển form giữ nguyên. Web build/TS,
+  40test8file PASS;lint0error5warning Exchange cũ;detector một lần0finding.
+  CUA desktop1366×768/mobile390×844 QA riêng401/200/returnUrl/Back PASS,
+  reduced-motion thật=true PASS. [Evidence](../../.impeccable/review/auth-storm/README.md).
+  Physical mobile FPS/hidden-tab/no-Canvas/NVDA/native/human NOT RUN;READINESS giữ nguyên.
+  Chat/Thông báo/MainLayout WIP bảo toàn; bước tiếp chủ dự án tự thử Login local.
+
 - Laptop layout: `codex/auth-laptop-layout`, base `3a25036`, subject
   `fix(web): align auth paper layouts on laptop screens`. Ba thẻ cùng minimum
   theo chiều cao viewport; gọn khoảng cách ở height≤800, giữ input16px/46px,
