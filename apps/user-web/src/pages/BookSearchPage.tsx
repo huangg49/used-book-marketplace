@@ -109,9 +109,6 @@ function FilterForm({
               aria-describedby={error ? id + "-" + kind + "-error" : undefined}
             />
           </label>
-          <span className={styles.priceDash} aria-hidden="true">
-            —
-          </span>
           <label>
             <span>Đến</span>
             <input
@@ -131,11 +128,12 @@ function FilterForm({
               type="button"
               key={price}
               aria-pressed={!draft[minKey] && draft[maxKey] === String(price)}
+              aria-label={`${title} tối đa ${formatVnd(price)}`}
               onClick={() =>
                 setDraft({ ...draft, [minKey]: "", [maxKey]: String(price) })
               }
             >
-              {price / 1000}k
+              ≤ {price / 1000}k
             </button>
           ))}
         </div>
@@ -154,11 +152,13 @@ function FilterForm({
   return (
     <form className={styles.filterForm} onSubmit={submit} noValidate>
       <div className={styles.filterBody}>
-        <CatalogClassificationFields
-          id={id}
-          value={draft}
-          onChange={(value) => setDraft({ ...draft, ...value })}
-        />
+        <div className={styles.classification}>
+          <CatalogClassificationFields
+            id={id}
+            value={draft}
+            onChange={(value) => setDraft({ ...draft, ...value })}
+          />
+        </div>
         <fieldset>
           <legend>Tình trạng sách</legend>
           <select

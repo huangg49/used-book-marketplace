@@ -86,17 +86,17 @@
   position: sticky;
   top: 92px;
   align-self: start;
-  padding: 16px;
-  border: 1px solid var(--shop-line);
-  border-radius: 12px;
-  background: var(--shop-shelf);
+  padding: 0 16px 0 0;
 }
 .sidebar h2 {
   display: flex;
   align-items: center;
   gap: 10px;
-  font: 700 1rem/1.5 var(--shop-body);
-  margin: 0 0 16px;
+  font: 700 1.125rem/1.5 var(--shop-body);
+  color: var(--shop-wine);
+  margin: 0 0 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--shop-line);
 }
 .filterForm,
 .filterBody {
@@ -125,9 +125,10 @@
   font: inherit;
   font-size: 0.8125rem;
   color: var(--shop-ink);
-  background-color: var(--shop-paper);
-  border: 1px solid var(--shop-control);
-  border-radius: 6px;
+  background-color: var(--shop-shelf);
+  border: 0;
+  border-bottom: 1px solid var(--shop-control);
+  border-radius: 6px 6px 0 0;
 }
 .compactPreset {
   display: none;
@@ -201,23 +202,25 @@
 }
 .priceFields {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 8px minmax(0, 1fr);
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
   align-items: end;
 }
 .priceFields label {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 12px;
   min-width: 0;
-  font-size: 0.75rem;
-  padding-left: 8px;
+  font-size: 0.8125rem;
+  padding-left: 12px;
   border: 1px solid var(--shop-control);
   border-radius: 6px;
   background: var(--shop-paper);
 }
 .priceFields label > span {
   flex-shrink: 0;
+  width: 28px;
+  color: var(--shop-muted);
 }
 .priceFields label:focus-within {
   outline: 2px solid var(--shop-wine);
@@ -227,12 +230,14 @@
   width: 100%;
   min-width: 0;
   min-height: 44px !important;
-  padding: 9px 4px !important;
-  font-size: 0.75rem !important;
+  padding: 10px 12px 10px 0 !important;
+  font-size: 0.875rem !important;
   background: transparent !important;
   border: 0 !important;
   border-radius: 6px !important;
   font-variant-numeric: tabular-nums;
+  outline: none !important;
+  box-shadow: none;
 }
 .priceFields input::placeholder {
   color: var(--shop-muted);
@@ -249,15 +254,18 @@
 .pricePresets {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
+  margin-top: 12px;
 }
 .pricePresets button {
-  border: 1px solid var(--shop-control);
+  border: 0;
   border-radius: 6px;
-  background: transparent;
+  background: var(--shop-shelf);
   color: var(--shop-wine);
   min-height: 44px;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  min-width: 0;
   font-variant-numeric: tabular-nums;
 }
 .pricePresets button:hover,
@@ -278,8 +286,8 @@
 }
 .filterActions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 4px;
 }
 .apply,
 .reset {
@@ -291,7 +299,7 @@
   padding: 8px 6px;
   border: 1px solid var(--shop-wine);
   border-radius: 7px;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 .apply {
   background: var(--shop-wine);
@@ -302,9 +310,11 @@
   background: var(--shop-wine-hover);
 }
 .reset {
-  border-color: var(--shop-control);
+  border: 0;
   background: transparent;
   color: var(--shop-wine);
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .reset:hover {
   background: var(--shop-paper);
@@ -723,14 +733,6 @@
     top: 88px;
   }
 }
-@media (max-height: 700px) {
-  .pricePresets {
-    display: none;
-  }
-  .compactPreset {
-    display: block;
-  }
-}
 @media (min-width: 901px) and (max-height: 700px) {
   .catalog {
     grid-template-columns: minmax(0, 1fr);
@@ -797,7 +799,7 @@
   position: static;
 }
 .filterBody {
-  gap: 20px;
+  gap: 24px;
 }
 .extraBudget {
   border-top: 1px solid var(--shop-line);
@@ -816,8 +818,8 @@
   line-height: 1.6;
 }
 .filterFooter {
-  background: var(--shop-shelf);
-  padding-top: 12px;
+  background: transparent;
+  padding-top: 16px;
   border-top: 1px solid var(--shop-line);
 }
 .filterDialog .filterFooter {
@@ -833,7 +835,19 @@
   .filterToggle {
     display: none;
   }
-  .pricePresets {
-    display: flex;
-  }
+}
+
+/* Search-only treatment: the posting form keeps its own field styling. */
+.classification > div {
+  gap: 10px;
+}
+.classification select,
+.classification input:not([type="checkbox"]) {
+  background: var(--shop-shelf);
+  border: 0;
+  border-bottom: 1px solid var(--shop-control);
+  border-radius: 6px 6px 0 0;
+}
+.classification details {
+  margin-top: 12px;
 }

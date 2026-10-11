@@ -126,3 +126,26 @@ Migration trên DB chính, Supabase thật, full integration mọi nghiệp vụ
 runtime, browser zoom200%, bàn phím OS thật và human review: NOT RUN gói này.
 READINESS không đổi. Trước dùng classification trên DB chính, chạy migration
 theo setup của dự án; không suy từ QA rằng DB chính đã được cập nhật.
+
+## Chỉnh giao diện sau phản hồi của chủ dự án — 11/10
+
+Chủ dự án không chấp nhận hình thức panel ở `2e42f0c`. Nhánh
+`codex/search-filter-visual-refinement` chỉnh riêng Search: bỏ khung nền ngoài,
+tiêu đề wine, các select nền shelf/viền đáy; hai giá xếp dọc đủ chiều rộng,
+ba preset chia đều với khoảng cách và nhãn tối đa rõ, chỉ một focus wrapper.
+Áp dụng chiếm cả hàng, Xóa lựa chọn là action gạch chân nhẹ. Nhóm cách24px;
+style classification qua wrapper Search nên form Đăng sách giữ nguyên.
+Các bộ lọc/query/API/draft/validation giữ hành vi; không đổi DB/contract.
+
+Web34unit/typecheck/build PASS, lint0error5warning cũ; detector Search một lượt
+0finding trong gói sửa này. CUA1535×735/1366×768/390×844/320×740: không tràn,
+ô1000000 rõ;1000001 từ chối/giá hợp lệ cho Apply; Escape/mở lại giữ Hành động,
+Apply đồng bộ URL và trả body scroll. Bảy ảnh `filter-refine-*.png` đã mở kiểm.
+Reviewer mới xem ảnh người dùng và source, yêu cầu5materialfixes; verdict cuối
+SHIP cho5fix đều resolved. Không là nghiệm thu mới toàn surface/human/native.
+Documenter đồng bộ riêng Search trong DESIGN/canonical/surface: JSON/parity/
+preservation PASS, giữ tokens và mọi nội dung ngoài Search. docs:check289file/
+2045link và diff check PASS.
+Backend E2E,DB migration,Supabase,200%/OSkeyboard không chạy lại cho thay đổi UI.
+Checkpoint subject `fix(web): refine contextual search filter layout`; local,
+chưa push. READINESS không đổi.

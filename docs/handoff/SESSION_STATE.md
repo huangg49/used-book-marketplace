@@ -70,6 +70,14 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   Checkpoint subject `feat(catalog): add contextual classification and search filters`;
   local chưa push. Bước tiếp: chủ dự án xem preview và chạy migration theo setup
   trước khi sử dụng metadata mới trên DB chính.
+  Sau `2e42f0c`, chủ dự án chê panel lọc; đã chỉnh riêng Search trên nhánh
+  `codex/search-filter-visual-refinement`: rail bỏ khung, giá xếp dọc đủ rộng,
+  preset chia đều/focus một lớp, Apply rõ/reset nhẹ; giữ nghiệp vụ và form Sell.
+  Web34unit/typecheck/build PASS, lint0error5warning cũ; CUA2laptop/390/320px,
+  lỗi giá/draft/Apply PASS; detector1lượt0finding. Reviewer mới SHIP cho5fix.
+  [Báo cáo](../design/CATALOG_CONTEXTUAL_FILTERS.md); backend/native/200% không
+  chạy lại, READINESS giữ nguyên. Checkpoint subject
+  `fix(web): refine contextual search filter layout`; local chưa push.
   Chat/Thông báo còn source UI uncommitted; QA/reviewer/documenter chưa hoàn tất.
   Browser phát hiện race join trước auth socket hoàn tất (Unauthorized); chưa
   sửa API hoặc nhận Chat PASS. QA5190/API3009 disposable đã dừng, không đụng

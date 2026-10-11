@@ -32,7 +32,7 @@ FIRST VIEWPORT: Wine header with the user's own owl and lettering; centered
 three-line cream/yellow owner-supplied headline artwork between eight decorative cover positions: the
 four existing positions and four owner-supplied images added on10/10. Desktop
 uses two varied-size, lightly overlapping clusters, led by Alice on the left and Dược sư on the right (third cover of each group). The176px unit/432px stage keeps the established hero footprint; focal heights1.36/1.38 units sit at z2, companions0.88–1 unit at auto/z1. Each cover has its own offset, rotation and contained asset ratio. <=1100px all eight return to relative flow below search in eight columns; <=800px four columns. Focals scale1.08 in that flow without growing its layout footprint. Fine-pointer hover raises any cover to z3. A wide light
-search field anchors the hero; a four-column newest shelf starts below. Search uses the compact wine title/search band,264px grouped paper sidebar and28px gutter in its1360px container/40px outer padding. Its shelf has five columns from1440px,four by default,three at1150px and two at600px;at1150px the rail remains264px with24px gutter/padding. The rail hides only at900px and below for a named native filter dialog. It pins only when its complete height plus108px fits;long grouped filters scroll with the page. Search title is40px Anton/1.2,32px at600px;search sits right of the title on desktop and below at900px. Compact complete cover stages are200px,180px at1100px and160px at600px; Detail's selected complete
+search field anchors the hero; a four-column newest shelf starts below. Search uses the compact wine title/search band,264px transparent borderless rail and28px gutter in its1360px container/40px outer padding. Its shelf has five columns from1440px,four by default,three at1150px and two at600px;at1150px the rail remains264px with24px gutter/padding. The rail hides only at900px and below for a named native filter dialog. It pins only when its complete height plus108px fits;long grouped filters scroll with the page. Search title is40px Anton/1.2,32px at600px;search sits right of the title on desktop and below at900px. Compact complete cover stages are200px,180px at1100px and160px at600px; Detail's selected complete
 photograph, thumbnails, protected viewer and factual columns now follow its
 dedicated `apps-user-web-src-pages-bookdetailpage-tsx.md` surface contract.
 
@@ -111,8 +111,13 @@ depend on target language+purpose and grades on school stage; context/chip chang
 prune incompatible selections. Edition language is separate from study language.
 Series requires its full name and matches NFC/case-insensitively.
 
-The264px/28px rail retains shelf ground,1px line,12px corners and16px padding;
-1150px uses24px gap/outer padding. Filter-body groups have20px gap. ResizeObserver
+The264px/28px rail is transparent and borderless,with no outer panel radius and
+padding0 16px 0 0;1150px uses24px gap/outer padding. Its wine18px/1.5 heading has
+16px bottom padding,shop-line underline and24px bottom margin. Filter-body groups
+have24px gap. Native condition/edition-language selects use shelf ground,a1px
+shop-control bottom edge and6px upper corners. A Search-only classification wrapper
+applies that field treatment,10px inner gap and12px margin before disclosures;
+the shared Sell component keeps its own styling. ResizeObserver
 and viewport resize allow sticky only when complete panel height+108px fits;
 top92px,88px at901–1000px. A longer panel scrolls with the document, without a
 height clamp or nested rail scroll. Desktop retains the rail at heights<=700px;
@@ -123,12 +128,17 @@ and two-line titles keep their full DOM/accessibility/tooltip text.
 
 Sale mode shows sale bounds; Exchange shows exchange bounds; all/Both show sale
 bounds plus the optional Khoảng giá trị đổi disclosure. Both ranges require both
-criteria. Currency legends,inline Từ/Đến and50k/100k/200k maximum presets stay
-visible. Bounds are whole numbers10.000–1.000.000₫,ordered;invalid input retains
-its value and linked message,with Apply disabled. The current preset accessible
-labels are the visible short values;the earlier full-currency-name claim is not
-carried forward. Draft fields commit only on Áp dụng;Xóa lựa chọn clears the
-draft and Apply commits that reset. Helper/two44px actions share the footer.
+criteria. Currency legends precede two full-width stacked44px price fields with
+8px gap,inline28px Từ/Đến labels and14px tabular inputs. One1px shop-control/6px
+wrapper receives the2px wine focus outline/2px offset;the input has no second ring.
+Three equal preset columns retain8px gap,12px top margin and44px targets. Visible
+≤ 50k/≤ 100k/≤ 200k labels have full-currency maximum accessible names;idle shelf
+ground turns wine/cream on hover or selection. Bounds are whole numbers
+10.000–1.000.000₫,ordered;invalid input retains its value and linked message,with
+Apply disabled. Draft fields commit only on Áp dụng;Xóa lựa chọn clears the
+draft and Apply commits that reset. A shop-line divider/16px top padding precedes
+the helper,full-width wine Apply and borderless underlined reset in one column
+with4px gap;both actions retain44px targets. Desktop footer stays transparent.
 
 <=900px uses a named native dialog: protected focus,labelled44px close,Escape
 and native focus return. Body locks only while open and restores on close/unmount;
@@ -158,11 +168,18 @@ no Admin vocabulary CRUD. API/Mongo/contract changes are documented in
 `docs/design/CATALOG_CONTEXTUAL_FILTERS.md` and ADR0033. Search150ms control
 feedback/shared card hover follows global motion reduction;no Home exceptions.
 
-Evidence: `.impeccable/review/web-member/contextual-filters-*.png`. Documenter
-opened desktop,mobile,low-height,invalid-URL,confirmed-book posting and Admin
-captures;appearance is observed,interaction/test results are implementer-reported.
-Independent reviewer SHIP is scoped to malformed-URL recovery and retained mobile
-drafts. Reported API119/Web34/Admin15unit,105E2E QA/storagefake,Mongo39PASS4SKIP,
-build/typecheck/contracts PASS;single Search detector0findings. This documentation
-pass ran no new tests/browser. Main DB migration,live Supabase,full integration,
-native,200% zoom,OS keyboard and human review remain NOT RUN;READINESS unchanged.
+The owner rejected the dense boxed form and cramped price pair after the
+contextual extension. This11/10 Search-only visual refinement keeps classification,
+query/URL,API,native controls and dialog behavior;it makes no DB changes.
+Evidence: all seven `.impeccable/review/web-member/filter-refine-*.png` captures
+were opened by this documenter: desktop,laptop,390px/320px mobile,price focus and
+contextual desktop/mobile. Appearance is observed;interaction/test results are
+implementer-reported. Independent reviewer SHIP is scoped to five resolved
+material fixes,with no material regression observed in that batch;no full-surface
+or human acceptance claim. Reported Web34unit/typecheck/build PASS,lint0errors/
+5known warnings,one detector[];CUA1535/1366/390/320 without overflow,invalid
+1.000.001/valid1.000.000,draft Escape/reopen,Apply URL/body unlock PASS. This
+documentation pass ran no new product tests/browser interaction. Main DB/new
+Mongo QA,native,200% zoom,OS keyboard,live Supabase,full integration and human
+review remain NOT RUN;READINESS unchanged. Earlier API/Mongo evidence remains
+at its recorded source in `docs/design/CATALOG_CONTEXTUAL_FILTERS.md`.
