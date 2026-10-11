@@ -14,7 +14,8 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   mặc định OTP6số5phút/5lầnsai/cooldown60giây cho đăng ký và reset; link cũ giữ.
   Decoy/cross-channel invalidation/DBtime/user→challenge lock, audit/mail/session
   atomic; reset thu hồi mọi phiên, không gỡ hạn chế/không auto-login. Brevo sender
-  HTTP200/active, một thư mẫu được chủ dự án cho phép HTTP201; inbox chờ xác nhận.
+  HTTP200/active, một thư mẫu được chủ dự án cho phép HTTP201; chủ dự án đã xác
+  nhận nhận thư11/10/2026. Feature commit2d3607d; không gửi thêm thư mẫu.
   Key/env riêng không Git; QA luôn local trên replica set/DB _test. API127unit,
   Auth51E2E, web65 PASS; Mongo39PASS/4SKIP; TS/lint/build/contract/routes PASS,
   detector một lần0finding; web5warning Exchange cũ/chunk warning. CUA1536×700,

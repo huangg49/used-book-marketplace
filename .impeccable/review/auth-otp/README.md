@@ -46,7 +46,9 @@ Brevo sender lookup HTTP200 and configured sender active. Initial test rejected
 HTTP401 due to caller egress IP differing from the user browser IP; owner added
 Brevo-recorded IP. One explicitly authorized sample email (nonfunctional code,
 no account created/reset) then returned HTTP201 through AuthMailService.deliver.
-Do not resend this sample. Inbox acknowledgement pending from owner. Private
+Do not resend this sample. Owner confirmed receipt in their inbox on2026-10-11.
+This confirms the sample delivery, not production deliverability or the complete
+registration/reset flow through a real inbox. Private
 backend env/key/sender never committed, output includes only statuses.
 
 Main DB forward-migrated0018/bootstrap; zero Pending/Sending jobs before
