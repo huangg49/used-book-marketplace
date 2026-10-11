@@ -40,6 +40,17 @@ one reading column. One randomized pencil note at right; small brand story at
 bottom left. Visible photo credit removed at the owner’s request11/10. On mobile
 note moves above paper; story disappears and paper remains in document flow.
 
+11/10 Google entry UI: Login alone adds a thin “hoặc” divider, a white full-width
+48px Google button and an explicit “Sắp có” availability note before registration.
+The native disabled button has type=button and a described-by note; it skips Tab
+and never submits, loads a Google SDK or starts OAuth. Official Google G artwork
+is served locally with provenance in `public/brand/google/README.md`. The existing
+paper/type/brand remains; recheck Google font/branding at functional integration.
+Compact laptop spacing keeps the shared paper minimum; mobile flows naturally.
+Google's local light-button colors (#fff, #747775 stroke, #1f1f1f text) are
+intentional vendor-specific exceptions, not new shop palette tokens. The one
+detector returned three color advisories for these values; no rescan implied.
+
 FORM: User-pinned paper-file concept and supplied “Lật Lại · Đăng nhập.html”
 prototype; code-led, seed477df3fa acknowledged and superseded by explicit brief.
 Native controls and real route links. Owner superseded hinged page turning with

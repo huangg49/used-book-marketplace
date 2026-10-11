@@ -73,6 +73,14 @@ export function LoginPage() {
         {busy ? "Đang đăng nhập…" : "Đăng nhập"}<ArrowRight size={18} aria-hidden="true" />
       </button>
     </form>
+    <div className={styles.alternativeSignIn}>
+      <p className={styles.signInDivider}><span>hoặc</span></p>
+      <button className={styles.googleSignIn} type="button" disabled aria-describedby="google-sign-in-note">
+        <img src="/brand/google/g-logo.png" width={20} height={20} alt="" aria-hidden="true" />
+        <span>Tiếp tục với Google</span>
+      </button>
+      <p id="google-sign-in-note" className={styles.signInNote}>Sắp có · Đăng nhập bằng Google chưa khả dụng.</p>
+    </div>
     <p className={styles.registration}>Chưa có tài khoản? <AuthPageLink to={"/register" + returnQuery} className={styles.textAction}>Đăng ký</AuthPageLink></p>
   </section>;
 }

@@ -26,6 +26,14 @@
 .submit { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 48px; margin-top: 22px; padding: 12px 18px; border: 0; border-radius: 4px; background: var(--shop-wine); color: var(--shop-cream); font: 700 .875rem/1.7 var(--shop-body); cursor: pointer; text-decoration: none; transition: background-color 150ms ease-out; }
 .submit:hover:not(:disabled) { background: #7c2320; }
 .submit:disabled { opacity: .65; cursor: wait; }
+.alternativeSignIn { margin-top: 22px; }
+.signInDivider { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; color: var(--shop-muted); font-size: .75rem; line-height: 1.7; }
+.signInDivider::before, .signInDivider::after { content: ""; flex: 1; height: 1px; background: var(--shop-line); }
+.googleSignIn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 48px; padding: 12px 16px; border: 1px solid #747775; border-radius: 4px; background: #fff; color: #1f1f1f; font: 400 .875rem/1.5 var(--shop-body); }
+.googleSignIn img { flex: 0 0 20px; width: 20px; height: 20px; object-fit: contain; }
+.googleSignIn:disabled { opacity: 1; cursor: not-allowed; }
+.signInNote { margin: 8px 0 0; color: var(--shop-muted); font-size: .6875rem; line-height: 1.8; text-align: center; text-wrap: pretty; }
+.alternativeSignIn + .registration { border-top: 0; padding-top: 0; }
 .registration { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 8px; margin: 16px 0 0; padding-top: 10px; border-top: 1px dashed var(--shop-line); color: var(--shop-muted); font-size: .75rem; line-height: 1.8; }
 .error { margin: 14px 0 0; color: var(--auth-error); font: 400 24px/1.35 var(--auth-hand); }
 .formGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
@@ -46,6 +54,9 @@
   .formGrid { margin-bottom: 10px; }
   .submit { margin-top: 14px; }
   .registration { margin-top: 8px; padding-top: 0; }
+  .alternativeSignIn { margin-top: 16px; }
+  .signInDivider { margin-bottom: 10px; }
+  .signInNote { margin-top: 6px; }
   .recoveryPanel .lede { margin-bottom: 6px; }
   .recoveryPanel .otpRecipient { margin-bottom: 8px; }
   .recoveryPanel .field .otpInput[name][type] { font-size: 1.5rem; line-height: 1.2; }

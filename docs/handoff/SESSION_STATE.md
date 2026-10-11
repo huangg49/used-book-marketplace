@@ -6,6 +6,21 @@ OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hi�
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
+## Login — giao diện Google, chưa bật tính năng — 11/10/2026
+
+- `codex/auth-google-entry-ui`, base `254c600`, checkpoint subject
+  `feat(web): add unavailable Google sign-in entry to login paper`. Login có
+  divider/nút Google48px/full-width và ghi Sắp có; native disabled/type=button,
+  mô tả khả dụng cho AT. Không SDK/OAuth/API/session/validation mới. Google G
+  chính thức local có provenance; font/branding cần kiểm lại khi bật chức năng.
+  CUA1280×720 không thêm scroll,390×844/320×740 không tràn ngang; bàn phím bỏ qua
+  nút disabled đến Đăng ký, logo tải đúng; [laptop](../../.impeccable/review/auth-google-entry-ui/login-laptop.png),
+  [mobile](../../.impeccable/review/auth-google-entry-ui/login-mobile.png).
+  Web69unit/build(TS)/lint PASS với5warning Exchange cũ/chunk warning. Detector
+  một lần:3advisory màu Google chủ ý, ghi brief. Không submit/ghi DB; Safari,
+  physical mobile/NVDA/human/CI/OAuth NOT RUN. WIP khác/READINESS giữ nguyên.
+  Local chưa push; phát triển tính năng Google là gói sau.
+
 ## Auth giữ cảm giác chữ trên giấy khi nhập — 11/10/2026
 
 - `codex/auth-paper-focus`, base `e2c2f0a`, checkpoint subject
