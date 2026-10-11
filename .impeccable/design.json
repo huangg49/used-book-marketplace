@@ -1186,9 +1186,18 @@
           "questions": "Three ruled native radio fieldsets;visually clipped legends with aria-hidden visible question duplicates;48px label faces;shared local choiceRows recipe;unrelated native checkbox retains18px wine accent",
           "mode": "native Sale/Exchange/Both radios;shared local choiceRows face,min52px;three columns,one at<=600px;selected wine/cream",
           "actions": "min48px/12px16px padding/8px radius;wine primary with paper text;cream secondary;wrap;360px:10px12px/13px text;no fixed overlay",
-          "focus": "2px wine outline/3px offset for existing controls;choice faces3px wine/3px offset;cream inset active-step focus;heading focus after step change;validation focuses error summary whose links focus corresponding fields;linked inline feedback",
+          "focus": "Text inputs/textareas/selects use fieldFocus below;buttons/disclosures/file controls keep2px wine outline/3px offset;choice faces3px wine/3px offset;cream inset active-step focus;heading focus after step change;validation focuses error summary whose links focus corresponding fields;linked inline feedback",
           "pending": "fieldsets lock on submitting or retained attempt;disabled controls .55 opacity and fields .7",
           "classification": "required native category/subcategory remain visible;Sell opts into collapseOptional for shared optional metadata disclosures;default false preserves other consumers"
+        },
+        "fieldFocus": {
+          "scope": "Owner-approved Sell-only refinement, no shared CSS or form/API changes",
+          "boundary": "Focused text input/textarea/select: no outer outline, existing border turns wine;focus-visible adds contiguous1px inset wine stroke for one2px boundary;title keeps bottom stroke only;no geometry change",
+          "label": "Associated functional label turns wine;field,language,catalog and classification wrappers scoped in Sell CSS",
+          "motion": "Border/stroke and label color170ms ease-out, scoped important duration retains owner motion preference policy",
+          "error": "Bind existing canonical shop-error:#912b0e at Sell root;invalid focus border and inset stroke use same error color;messages/validation preserved",
+          "forcedColors": "Inset2px system Highlight outline when forced-colors is active;shadow suppressed;not runtime-tested",
+          "evidence": ".impeccable/review/posting-field-focus/README.md"
         },
         "choiceRows": {
           "scope": "Owner-approved12/10 ordinary Operate/code-led refinement of sparse condition answers and Sale/Exchange/Both;incumbent paper desk,tokens,raster,motion and API semantics preserved",

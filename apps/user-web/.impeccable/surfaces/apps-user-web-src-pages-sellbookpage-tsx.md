@@ -31,6 +31,13 @@ runtime evidence; existing shipping assets only, no new raster or design token.
 
 ## Choice-row refinement —12/10/2026
 
+Field-focus follow-up: within Sell, text inputs/textareas/selects have one wine
+boundary and an associated wine label when focused, no outer outline. Native
+focus-visible adds a contiguous inset stroke; title remains a bottom rule. Color
+transitions170ms retain owner motion policy. Existing rust error role is bound at
+the route root, keeping focused errors distinct; forced-colors has a system inset
+outline fallback. Buttons/choices/files, values, validation and shared CSS remain.
+
 Owner screenshot rejected the sparse browser-default Yes/No layout. Preserve all
 questions, native radio names/booleans, validation and the surrounding paper desk.
 Each eligibility question becomes a ruled row: text left, two48px answer faces

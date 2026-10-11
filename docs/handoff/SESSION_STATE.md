@@ -8,6 +8,17 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Đăng sách — phiếu thông tin sách —12/10/2026
 
+- Follow-up `codex/posting-field-focus`, base `30f6df3`, checkpoint subject
+  `refactor(web): simplify posting field focus`: chỉ CSS Sell, bỏ outline ngoài
+  ở text input/textarea/select; viền liền nét và nhãn đỏ rượu, title chỉ dòng dưới.
+  Focus-visible thêm inset1px sát viền; lỗi giữ rust role chuẩn gắn local, motion
+  màu170ms theo chính sách chủ dự án. API/validation/dữ liệu giữ nguyên.
+  Build(TS)/format/docs/diff PASS; CUA1440/390/320px, keyboard/title/select/error
+  focus/sửa lỗi/giữ dữ liệu PASS. Independent AI review **ship**, docs comparison
+  khớp source. [Evidence](../../.impeccable/review/posting-field-focus/README.md).
+  CSS-only không chạy lại unit/lint/detector; forced-colors runtime/Safari/speech/
+  physical mobile/native/actual125%zoom/fullsubmit/replay/human/CI NOT RUN.
+  QA riêng đã dọn, runtime chính/WIP teammate/READINESS giữ nguyên; chưa push/PR.
 - Follow-up `codex/posting-choice-clear`, base `7675dec`, checkpoint subject
   `fix(web): allow clearing condition answers and remove duplicate rule`:
   bấm lại đáp án hoặc Space khi đang chọn trả về null/chưa trả lời; mũi tên vẫn
