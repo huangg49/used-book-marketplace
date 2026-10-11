@@ -96,7 +96,7 @@ export function AuthLayout() {
     // as explicitly requested for Auth. No autoplay or global override.
     const ease = "cubic-bezier(.4, 0, .2, 1)";
     const turn = play(sheet, [
-      { transform: "translate3d(0, 0, 12px) rotateZ(0deg) rotateX(0deg)", easing: ease },
+      { transform: "translate3d(0, 0, 0) rotateZ(0deg) rotateX(0deg)", easing: ease },
       { transform: "translate3d(calc(100% + 32px), -24px, 64px) rotateZ(5deg) rotateX(4deg)", offset: .42, easing: "ease-in-out" },
       { transform: "translate3d(calc(100% + 32px), 8px, -24px) rotateZ(2.2deg) rotateX(0deg)", offset: .58, easing: "cubic-bezier(.16, 1, .3, 1)" },
       { transform: "translate3d(3px, 7px, -24px) rotateZ(2.2deg) rotateX(0deg)" },
@@ -113,7 +113,7 @@ export function AuthLayout() {
     play(sheet.parentElement?.querySelector("[data-next-paper]") ?? null, [
       { transform: "translate3d(2px, 3px, 0) rotateZ(.9deg)", easing: ease },
       { transform: "translate3d(2px, 3px, 0) rotateZ(.9deg)", offset: .42, easing: "cubic-bezier(.16, 1, .3, 1)" },
-      { transform: "translate3d(0, 0, 12px) rotateZ(0deg)" },
+      { transform: "translate3d(0, 0, 0) rotateZ(0deg)" },
     ]);
     play(sheet.parentElement?.querySelector("[data-under-shadow]") ?? null, [
       { opacity: .18 }, { opacity: 0, offset: .42 }, { opacity: 0 },
@@ -150,7 +150,7 @@ export function AuthLayout() {
       <div className={styles.stage}>
         <aside className={styles.annotation} aria-hidden="true"><p>{annotation[0]}</p><small>{annotation[1]}</small><span className={styles.pencilLine} /></aside>
         <div className={styles.stack}>
-          <div className={styles.pages} data-auth-book>
+          <div className={styles.pages} data-auth-book data-shuffling={turning ? "true" : undefined}>
             <div className={styles.backSheet} aria-hidden="true" /><div className={styles.middleSheet} aria-hidden="true" />
             {turning && <div className={`${styles.face} ${styles.under}`} aria-hidden="true" inert data-next-paper>
               {success ? <div className={styles.opening}><p>Chuyện hay<br />còn tiếp.</p><span>Đang mở trang tiếp theo…</span></div>

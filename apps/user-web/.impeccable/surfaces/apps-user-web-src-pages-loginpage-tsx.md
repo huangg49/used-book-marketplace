@@ -39,7 +39,8 @@ Native controls and real route links. Owner superseded hinged page turning with
 a physical card shuffle: pull the top sheet fully to the right, lower it behind
 the stack, tuck it into the bottom as the actual next form advances. One850ms
 WAAPI sequence, always in the same direction; no yaw flip or carrier fade.
-Opaque textured front/back, shared2200px perspective, meaningful light/contact
+Foreground form is flat at rest for crisp text; only rear papers remain tilted.
+Opaque textured front/back, shared2200px perspective only during shuffle, meaningful light/contact
 shadow changes. Current and underneath forms are inert during motion, live status
 announces the change and the destination H1 receives focus. Owner explicitly
 requires this finite Auth shuffle even with OS reduced motion; the stamp alone

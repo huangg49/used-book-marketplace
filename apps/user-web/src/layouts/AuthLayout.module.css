@@ -32,12 +32,18 @@
 .back:hover { text-decoration: underline; text-underline-offset: 5px; }
 .back:focus-visible { outline-color: var(--shop-cream); }
 .stage { position: relative; width: min(480px, 100%); }
-.stack { position: relative; transform: rotate(-.7deg); transform-style: preserve-3d; }
-.backSheet, .middleSheet { position: absolute; inset: 0; border-radius: 3px; background: #e0cfb4; transform: translate3d(3px, 7px, -24px) rotate(2.2deg); box-shadow: 0 12px 24px #21000040; pointer-events: none; }
-.middleSheet { background: #f0e2ca; transform: translate3d(2px, 3px, -12px) rotate(.9deg); }
-.pages { position: relative; display: grid; min-height: 620px; perspective: 2200px; transform-style: preserve-3d; }
-.leaf { position: relative; grid-area: 1 / 1; transform: translateZ(12px); transform-origin: center; transform-style: preserve-3d; opacity: 1; filter: none; overflow: visible; }
-.leaf[data-turning] { will-change: transform; }
+.stack { position: relative; }
+.backSheet, .middleSheet { position: absolute; inset: 0; border-radius: 3px; background: #e0cfb4; transform: translate(3px, 7px) rotate(2.2deg); box-shadow: 0 12px 24px #21000040; pointer-events: none; z-index: -2; }
+.middleSheet { background: #f0e2ca; transform: translate(2px, 3px) rotate(.9deg); z-index: -1; }
+.pages { position: relative; z-index: 0; display: grid; min-height: 620px; }
+/* Settled form text stays in the normal 2D rendering path. */
+.leaf { position: relative; grid-area: 1 / 1; transform-origin: center; opacity: 1; filter: none; overflow: visible; }
+.pages[data-shuffling] { perspective: 2200px; transform-style: preserve-3d; }
+.pages[data-shuffling] .backSheet { z-index: auto; transform: translate3d(3px, 7px, -24px) rotate(2.2deg); }
+.pages[data-shuffling] .middleSheet { z-index: auto; transform: translate3d(2px, 3px, -12px) rotate(.9deg); }
+.leaf[data-turning] { transform-style: preserve-3d; will-change: transform; }
+.pages[data-shuffling] .face { backface-visibility: hidden; }
+.leaf[data-turning] .front { transform: translateZ(.6px); }
 .face {
   position: relative;
   display: flex;
@@ -49,11 +55,11 @@
   border-radius: 3px;
   border-top: 6px solid var(--shop-wine);
   box-shadow: 0 2px 4px #21000040, 0 24px 60px #21000066;
-  backface-visibility: hidden;
   opacity: 1;
 }
-.front { min-height: 100%; transform: translateZ(.6px); }
-.reverse { position: absolute; inset: 0; transform: rotateY(180deg) translateZ(.6px); justify-content: center; align-items: center; }
+.front { min-height: 100%; }
+.reverse { display: none; position: absolute; inset: 0; transform: rotateY(180deg) translateZ(.6px); justify-content: center; align-items: center; }
+.leaf[data-turning] .reverse { display: flex; }
 .under { grid-area: 1 / 1; transform: translate3d(2px, 3px, 0) rotate(.9deg); }
 .faceLight, .underShadow { position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; }
 .faceLight { opacity: 0; background: linear-gradient(110deg, var(--shop-cream), var(--shop-wine)); }

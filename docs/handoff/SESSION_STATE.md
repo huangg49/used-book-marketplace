@@ -8,6 +8,15 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Auth — tập giấy thư viện — 11/10/2026
 
+- Crisp-rest refinement: branch `codex/auth-crisp-rest`, base `f63d8b0`, commit
+  subject `fix(web): keep auth form text crisp at rest`. Form trước nằm phẳng
+  khi nghỉ; perspective/3D chỉ bật lúc shuffle, hai tờ sau vẫn nghiêng2D.
+  Build/TypeScript PASS, lint0error5warning Exchange cũ; CUA desktop/mobile
+  và keyboard chuyển ba thẻ/focus PASS. Detector một lần: advisory6px edge/3px
+  radius có từ trước, giữ theo concept. [Evidence](../../.impeccable/review/auth-crisp/README.md).
+  Không đổi API/validation/session/READINESS; không chạy lại backend/native.
+
+
 - Card-shuffle follow-up: `codex/auth-solid-paper`, base `8ed4b22`, checkpoint
   subject `feat(web): shuffle auth cards and build account forms`. Chủ dự án
   đổi từ lật gáy sang rút tờ trên sang phải, hạ xuống rồi xếp vào đáy850ms.
