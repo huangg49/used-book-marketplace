@@ -6,6 +6,18 @@ OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hi�
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
+## Auth giữ cảm giác chữ trên giấy khi nhập — 11/10/2026
+
+- `codex/auth-paper-focus`, base `e2c2f0a`, checkpoint subject
+  `fix(web): use ink underline focus on auth paper fields`. Chỉ sửa CSS field
+  chung Auth: bỏ outline chữ nhật/nền highlight, dùng underline đỏ đậm thêm1px
+  không đổi kích thước; focus checkbox/button/link và API/validation giữ nguyên.
+  CUA login/register/forgot keyboard focus, laptop1280×720/mobile390×844 PASS;
+  [ảnh login](../../.impeccable/review/auth-paper-focus/login-desktop.png).
+  Không submit form/ghi DB. Web69unit/build(TS)/lint PASS với5warning Exchange
+  cũ/chunk warning. Autofill thật/Safari/NVDA/physical mobile/human/CI NOT RUN.
+  READINESS/WIP khác giữ nguyên; tab QA/viewport đã dọn. Local chưa push.
+
 ## Bỏ viền focus xanh chồng lên viền thương hiệu — 11/10/2026
 
 - `codex/form-focus-ring`, base `39a36ea`, checkpoint subject

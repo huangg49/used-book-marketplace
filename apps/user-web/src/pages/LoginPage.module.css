@@ -15,7 +15,8 @@
 .field label span { font-size: .6875rem; font-weight: 400; color: var(--shop-muted); }
 .panel .field input[name][type] { display: block; width: 100%; min-height: 46px; padding: 9px 2px; border: 0; border-bottom: 1.5px solid var(--shop-control); border-radius: 0; background: transparent; color: var(--shop-ink); font: 400 1rem/1.6 var(--shop-body); box-shadow: none; }
 .panel .field input[name][type]::placeholder { color: var(--shop-muted); }
-.panel .field input[name][type]:focus-visible { outline: 3px solid var(--shop-wine); outline-offset: 3px; background: #f4cb671a; border-bottom-color: var(--shop-wine); }
+/* Keep the paper fields open; a stronger ink underline marks focus without resizing. */
+.panel .field input[name][type]:focus { outline: none; border-bottom-color: var(--shop-wine); box-shadow: 0 1px 0 var(--shop-wine); }
 .passwordLabel { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; column-gap: 8px; }
 .password { position: relative; }
 .panel .password input[name][type] { padding-right: 46px; }
