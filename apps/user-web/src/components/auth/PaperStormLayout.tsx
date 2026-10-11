@@ -4,6 +4,7 @@ import { runPaperStorm, runComposedStorm, stormFrame, type PaperOrigin, type Sto
 import { createPaperScene, warmPaperScene } from "./paper-scene";
 import styles from "./PaperStormLayout.module.css";
 import { JourneyContext } from "./paper-journey";
+import { lockPageScroll } from "../../lib/page-scroll";
 
 type Journey = { target: string; source: HTMLElement | null; from: string; resolve: () => void; committed: boolean;
   mounted: boolean; onMounted?: () => void };
@@ -64,11 +65,7 @@ export function PaperStormLayout() {
     // Owner policy: keep authored motion regardless of the OS motion preference.
     let mode: StormMode = innerWidth <= 600 ? "mobile" : "desktop";
     const palette = paperPalette();
-    const bodyOverflow = document.body.style.overflow;
-    const bodyPadding = document.body.style.paddingRight;
-    const gutter = innerWidth - document.documentElement.clientWidth;
-    document.body.style.overflow = "hidden";
-    if (gutter) document.body.style.paddingRight = `${parseFloat(getComputedStyle(document.body).paddingRight) + gutter}px`;
+    const unlockScroll = lockPageScroll();
     const oldVisibility = source?.style.visibility ?? "";
     const sourceStyle = source ? getComputedStyle(source) : null;
     // Two inert local DOM copies carry the actual printed card into the tear.
@@ -105,7 +102,7 @@ export function PaperStormLayout() {
     const restore = () => {
       if (source) source.style.visibility = oldVisibility;
       copies.forEach(copy => copy.remove());
-      document.body.style.overflow = bodyOverflow; document.body.style.paddingRight = bodyPadding;
+      unlockScroll();
     };
     const finish = () => {
       if (cancelled) return;

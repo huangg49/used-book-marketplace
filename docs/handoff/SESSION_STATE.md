@@ -6,6 +6,22 @@ OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hi�
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
+## Giữ bố cục khi đổi thanh cuộn/tab — 11/10/2026
+
+- `codex/stable-page-scroll`, base `b304d13`, checkpoint subject
+  `fix(web): preserve page geometry across scrollbars and overlays`. Root gutter
+  stable + overflow-y scroll fallback; shared scroll lock cho gallery/filter/auth
+  tránh bù padding hai lần, giữ gutter/cleanup/nested locks. Kệ sách và tab đổi
+  sách giữ chỗ280–420px cho loading/error/empty/results; không đổi màu/copy/API.
+  User-web69unit/TS/build PASS, lint0error5warning Exchange cũ/chunk warning.
+  CUA1280×720/390×844 trên Nest/Mongo `_test` riêng/local mail/fake storage:
+  5filter dài/ngắn giữ nguyên vị trí ngang/navbar, modal ảnh/Escape, drawer/
+  breakpoint cleanup và login transition PASS; [evidence](../../.impeccable/review/stable-page-scroll/README.md).
+  Fallback chỉ unit-tested; physical mobile/Safari/NVDA/full browser harness/
+  slow-network/human/remote CI NOT RUN. QA runtime/DB/users/roles/tab đã dọn;
+  READINESS và Chat/Thông báo/MainLayout/Home CSS WIP giữ nguyên. Local checkpoint
+  chưa push; bước tiếp chủ dự án thử các tab trên laptop rồi review trước tích hợp.
+
 ## Menu tài khoản, Hồ sơ và Kệ sách — 11/10/2026
 
 - `codex/account-menu-profile`, base `96e75c9`, checkpoint subject

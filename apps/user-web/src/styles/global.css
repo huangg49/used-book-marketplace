@@ -14,7 +14,8 @@
   --shop-control:#8e7564;
 }
 ::selection{background:var(--shop-yellow);color:var(--shop-wine)}
-html{scrollbar-color:#a76553 var(--shop-paper);scroll-padding-top:96px}
+html{scrollbar-color:#a76553 var(--shop-paper);scroll-padding-top:96px;scrollbar-gutter:stable}
+@supports not (scrollbar-gutter:stable){html{overflow-y:scroll}}
 input,textarea{caret-color:var(--shop-wine)}
 input::placeholder,textarea::placeholder{color:var(--shop-muted);opacity:1}
 :focus-visible{outline:3px solid var(--shop-wine);outline-offset:4px}

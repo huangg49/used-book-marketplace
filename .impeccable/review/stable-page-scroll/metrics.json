@@ -1,0 +1,101 @@
+{
+  "shelf": [
+    {
+      "body": 1264.800048828125,
+      "client": 1265,
+      "headingX": 280,
+      "min": "324px",
+      "overflow": "",
+      "padding": "",
+      "results": 1485.5999755859375,
+      "scrollHeight": 1850,
+      "tab": "Tất cả"
+    },
+    {
+      "body": 1264.800048828125,
+      "busy": "false",
+      "client": 1280,
+      "headingX": 280,
+      "results": 324,
+      "scrollHeight": 720,
+      "tab": "Bản nháp"
+    },
+    {
+      "body": 1264.800048828125,
+      "busy": "false",
+      "client": 1265,
+      "headingX": 280,
+      "results": 1485.5999755859375,
+      "scrollHeight": 1850,
+      "tab": "Chờ duyệt"
+    },
+    {
+      "body": 1264.800048828125,
+      "busy": "false",
+      "client": 1280,
+      "headingX": 280,
+      "results": 324,
+      "scrollHeight": 720,
+      "tab": "Đã duyệt"
+    },
+    {
+      "body": 1264.800048828125,
+      "busy": "false",
+      "client": 1280,
+      "headingX": 280,
+      "results": 324,
+      "scrollHeight": 720,
+      "tab": "Bị từ chối"
+    }
+  ],
+  "gallery": [
+    {
+      "body": 1264.800048828125,
+      "header": 1264.800048828125,
+      "overflow": "visible",
+      "phase": "before",
+      "x": 646.625
+    },
+    {
+      "body": 1264.800048828125,
+      "header": 1202.4749755859375,
+      "overflow": "hidden",
+      "phase": "open",
+      "x": 646.625
+    },
+    {
+      "body": 1264.800048828125,
+      "overflow": "",
+      "padding": "",
+      "phase": "closed",
+      "x": 646.625
+    }
+  ],
+  "filter": [
+    {
+      "body": 375.2000122070313,
+      "heroX": 16,
+      "overflow": "visible",
+      "phase": "before"
+    },
+    {
+      "body": 375.2000122070313,
+      "heroX": 16,
+      "horizontalOverflow": false,
+      "overflow": "hidden",
+      "phase": "open"
+    },
+    {
+      "body": 375.2000122070313,
+      "focus": "Bộ lọc",
+      "heroX": 16,
+      "overflow": "",
+      "phase": "closed"
+    },
+    {
+      "open": false,
+      "overflow": "",
+      "phase": "desktop-resize"
+    }
+  ]
+}

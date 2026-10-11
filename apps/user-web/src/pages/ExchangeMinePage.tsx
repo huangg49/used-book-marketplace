@@ -126,6 +126,7 @@ export default function ExchangeMinePage() {
             </div>
 
             <div 
+                className={styles.tabPanel}
                 role="tabpanel" 
                 id={`panel-${currentTab}`} 
                 aria-labelledby={`tab-${currentTab}`}

@@ -38,6 +38,10 @@
 }
 
 /* Tabs */
+.tabPanel {
+    min-height: clamp(280px, 45vh, 420px);
+}
+
 .tabList {
     display: flex;
     border-bottom: 1px solid var(--line);

@@ -257,56 +257,58 @@ export function MyBooksPage() {
             </button>
           ))}
         </div>
-        {query.isLoading ? (
-          <p className={styles.state} role="status">
-            Đang tải kệ sách…
-          </p>
-        ) : query.isError ? (
-          <div className={styles.state} role="alert">
-            <h2>Chưa tải được kệ sách</h2>
-            <p>
-              Kiểm tra kết nối rồi thử lại. Các bài đăng của bạn vẫn được giữ
-              trên máy chủ.
+        <div className={styles.results} aria-busy={query.isLoading}>
+          {query.isLoading ? (
+            <p className={styles.state} role="status">
+              Đang tải kệ sách…
             </p>
-            <button
-              type="button"
-              disabled={query.isFetching}
-              onClick={() => void query.refetch()}
-            >
-              {query.isFetching ? "Đang thử lại…" : "Thử lại"}
-            </button>
-          </div>
-        ) : query.data?.items.length ? (
-          <>
-            <p className={styles.count}>
-              {query.data.items.length} bài đăng trên trang này
-            </p>
-            <ul className={styles.list}>
-              {query.data.items.map((item) => (
-                <ShelfRow key={item.id} item={item} />
-              ))}
-            </ul>
-          </>
-        ) : (
-          <EmptyOwnerShelf cursor={cursor} filter={filter} onClear={() => selectFilter("")} />
-        )}
-        {(cursor || query.data?.nextCursor) && (
-          <nav className={styles.pagination} aria-label="Trang kệ sách">
-            {cursor && (
-              <button type="button" onClick={() => page()}>
-                Về trang đầu
-              </button>
-            )}
-            {query.data?.nextCursor && (
+          ) : query.isError ? (
+            <div className={styles.state} role="alert">
+              <h2>Chưa tải được kệ sách</h2>
+              <p>
+                Kiểm tra kết nối rồi thử lại. Các bài đăng của bạn vẫn được giữ
+                trên máy chủ.
+              </p>
               <button
                 type="button"
-                onClick={() => page(query.data!.nextCursor!)}
+                disabled={query.isFetching}
+                onClick={() => void query.refetch()}
               >
-                Trang tiếp theo
+                {query.isFetching ? "Đang thử lại…" : "Thử lại"}
               </button>
-            )}
-          </nav>
-        )}
+            </div>
+          ) : query.data?.items.length ? (
+            <>
+              <p className={styles.count}>
+                {query.data.items.length} bài đăng trên trang này
+              </p>
+              <ul className={styles.list}>
+                {query.data.items.map((item) => (
+                  <ShelfRow key={item.id} item={item} />
+                ))}
+              </ul>
+            </>
+          ) : (
+            <EmptyOwnerShelf cursor={cursor} filter={filter} onClear={() => selectFilter("")} />
+          )}
+          {(cursor || query.data?.nextCursor) && (
+            <nav className={styles.pagination} aria-label="Trang kệ sách">
+              {cursor && (
+                <button type="button" onClick={() => page()}>
+                  Về trang đầu
+                </button>
+              )}
+              {query.data?.nextCursor && (
+                <button
+                  type="button"
+                  onClick={() => page(query.data!.nextCursor!)}
+                >
+                  Trang tiếp theo
+                </button>
+              )}
+            </nav>
+          )}
+        </div>
       </section>
     </div>
   );

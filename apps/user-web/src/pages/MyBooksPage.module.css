@@ -76,6 +76,10 @@
   color: var(--shop-muted);
   margin: 20px 0 0;
 }
+.results {
+  display: flow-root;
+  min-height: clamp(280px, 45vh, 420px);
+}
 .list {
   list-style: none;
   padding: 0;

@@ -7,6 +7,7 @@ import {
   type PublicListing,
 } from "../services/public-listings";
 import styles from "./ListingGallery.module.css";
+import { lockPageScroll } from "../lib/page-scroll";
 
 function Thumbnail({ book, index }: { book: PublicListing; index: number }) {
   const photoId = book.photos[index]!.id;
@@ -40,11 +41,7 @@ export function ListingGallery({ book }: { book: PublicListing }) {
   }
   useEffect(() => {
     if (!expanded) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
+    return lockPageScroll();
   }, [expanded]);
   function step(amount: number) {
     setIndex((current + amount + book.photos.length) % book.photos.length);

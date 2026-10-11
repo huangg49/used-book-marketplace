@@ -11,6 +11,7 @@ import {
 import { HomeBookCard } from "../components/HomeBookCard";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
+import { lockPageScroll } from "../lib/page-scroll";
 import { getSearchShelf } from "../services/catalog-search";
 import { isCatalogPreview } from "../services/home-shelves";
 import { CatalogClassificationFields } from "../components/CatalogClassificationFields";
@@ -348,8 +349,7 @@ export function BookSearchPage() {
   }
   useEffect(() => {
     if (!filterOpen) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockPageScroll();
     const media = window.matchMedia("(min-width: 901px)");
     const closeOnDesktop = () => {
       if (media.matches) {
@@ -359,7 +359,7 @@ export function BookSearchPage() {
     };
     media.addEventListener("change", closeOnDesktop);
     return () => {
-      document.body.style.overflow = previous;
+      unlockScroll();
       media.removeEventListener("change", closeOnDesktop);
     };
   }, [filterOpen]);
