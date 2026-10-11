@@ -84,7 +84,7 @@ describe('migrations', () => {
         rulesCollectionSpecs.length +
         // Purchase conversations are Mongo-native; they do not correspond to a
         // PostgreSQL model in the baseline count.
-        - purchaseConversationSpecs.length -
+        -purchaseConversationSpecs.length -
         // The notification inbox (FR-N03, migration 0015) is MongoDB-native too.
         notificationSpecs.length +
         EMBEDDED_MODELS.length,
@@ -187,6 +187,33 @@ describe('validators replace CHECK constraints', () => {
     await c.insertOne(revision('0306406152') as never);
     await c.insertOne(revision('080442957X') as never);
     await c.insertOne(revision(null) as never);
+    const classified = {
+      ...revision(null),
+      category: 'Manga / Comic',
+      categoryId: 'manga',
+      attributes: { genre: ['action'], audience: ['shounen'] },
+      series: 'Bộ truyện thử',
+    };
+    await c.insertOne(classified as never);
+    for (const attributes of [
+      { genre: ['unknown'] },
+      { genre: ['action', 'action'] },
+      { genre: [] },
+      { unknown: ['action'] },
+    ])
+      await rejectsValidation(
+        c.insertOne({ ...classified, _id: randomUUID(), attributes } as never),
+      );
+    await rejectsValidation(
+      c.insertOne({
+        ...classified,
+        _id: randomUUID(),
+        categoryId: 'unknown',
+      } as never),
+    );
+    await rejectsValidation(
+      c.insertOne({ ...classified, _id: randomUUID(), series: '' } as never),
+    );
     await rejectsValidation(c.insertOne(revision('9780306406158') as never));
     await rejectsValidation(c.insertOne(revision('0306406153') as never));
     await rejectsValidation(c.insertOne(revision('9771234567003') as never));

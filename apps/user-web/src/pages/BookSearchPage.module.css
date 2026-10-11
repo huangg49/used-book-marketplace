@@ -349,6 +349,7 @@
   padding: 24px 0 20px;
 }
 .toolbar h2 {
+  scroll-margin-top: 110px;
   font: 700 1.125rem/1.5 var(--shop-body);
   margin: 0;
   overflow-wrap: anywhere;
@@ -788,5 +789,51 @@
 @media (prefers-reduced-motion: reduce) {
   .page button {
     transition: none;
+  }
+}
+
+/* Contextual filters can be long. Pin only when the complete panel fits. */
+.sidebar[data-sticky="false"] {
+  position: static;
+}
+.filterBody {
+  gap: 20px;
+}
+.extraBudget {
+  border-top: 1px solid var(--shop-line);
+  padding-top: 8px;
+}
+.extraBudget summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.filterHint {
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+.filterFooter {
+  background: var(--shop-shelf);
+  padding-top: 12px;
+  border-top: 1px solid var(--shop-line);
+}
+.filterDialog .filterFooter {
+  background: var(--shop-paper);
+}
+@media (min-width: 901px) {
+  .catalog {
+    grid-template-columns: 264px minmax(0, 1fr);
+  }
+  .sidebar {
+    display: block;
+  }
+  .filterToggle {
+    display: none;
+  }
+  .pricePresets {
+    display: flex;
   }
 }

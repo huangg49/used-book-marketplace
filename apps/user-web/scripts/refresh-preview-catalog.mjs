@@ -63,15 +63,20 @@ const selections = [
   ["Thiếu nhi", "The Tale of Peter Rabbit", "Beatrix Potter", 1],
   ["Thiếu nhi", "The Secret Garden", "Frances Hodgson Burnett", 1],
   ["Thiếu nhi", "The Gruffalo", "Julia Donaldson", 1],
+  ["Học ngoại ngữ", "Japanese from Zero", "George Trombley", 1],
+  ["Học ngoại ngữ", "English Grammar in Use", "Raymond Murphy", 1],
+  ["Học ngoại ngữ", "Integrated Chinese", "Yuehua Liu", 1],
+  ["Giáo khoa / tham khảo", "Calculus", "James Stewart", 1],
+  ["Giáo khoa / tham khảo", "Algebra 1", "John Saxon", 1],
+  ["Giáo khoa / tham khảo", "Biology", "Kenneth Miller", 1],
 ];
 const snapshotPath = new URL(
   "../src/data/preview-catalog.json",
   import.meta.url,
 );
 // Expansion preserves the reviewed manga/LN cache; a full refresh remains explicit.
-const previous = process.argv.includes("--expand")
-  ? JSON.parse(await readFile(snapshotPath, "utf8"))
-  : null;
+const saved = JSON.parse(await readFile(snapshotPath, "utf8"));
+const previous = process.argv.includes("--expand") ? saved : null;
 const unwantedSample =
   /collection set|books collection|study guide|summary of/i;
 const items = (previous?.items ?? []).filter(
@@ -150,11 +155,15 @@ const categoryOrder = [
   "Thiếu nhi",
   "Manga",
   "Light novel",
+  "Học ngoại ngữ",
+  "Giáo khoa / tham khảo",
 ];
 if (
   items.length < 88 ||
   categoryOrder.some(
-    (category) => items.filter((book) => book.category === category).length < 6,
+    (category) =>
+      items.filter((book) => book.category === category).length <
+      (["Học ngoại ngữ", "Giáo khoa / tham khảo"].includes(category) ? 3 : 6),
   )
 )
   throw new Error(
@@ -185,7 +194,21 @@ const snapshot = {
   purpose:
     "Owner-requested UI preview only; no inventory, seller or transaction data",
   queries,
-  items: ordered,
+  items: ordered.map((book) => {
+    // Preserve the separately curated UI classification, not remote subject tags.
+    const curated = saved.items.find(
+      (item) => item.series === book.series && item.categoryId,
+    );
+    return curated
+      ? {
+          ...book,
+          categoryId: curated.categoryId,
+          attributes: curated.attributes,
+          classificationSeed: curated.classificationSeed,
+        }
+      : book;
+  }),
+  classificationNote: saved.classificationNote,
   ...(previous ? { previousSnapshotFetchedAt: previous.fetchedAt } : {}),
 };
 await writeFile(snapshotPath, JSON.stringify(snapshot, null, 2) + "\n");

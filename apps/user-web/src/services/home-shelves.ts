@@ -1,7 +1,20 @@
 import catalog from "../data/preview-catalog.json";
 import { getPublicListings, type PublicListing } from "./public-listings";
 
-export type CatalogBook = (typeof catalog.items)[number];
+export interface CatalogBook {
+  id: string;
+  title: string;
+  authors: string[];
+  category: string;
+  language: string;
+  isbn: string | null;
+  coverId: number;
+  coverUrl: string;
+  sourceUrl: string;
+  series: string;
+  categoryId?: string;
+  attributes?: Record<string, string[]>;
+}
 export interface PreviewShelfBook {
   preview: true;
   id: string;
@@ -74,7 +87,16 @@ export function previewShelf(query: URLSearchParams): {
     return {
       preview: true,
       id: book.id,
-      book,
+      book: {
+        ...book,
+        attributes: book.attributes
+          ? Object.fromEntries(
+              Object.entries(book.attributes).filter(
+                (entry): entry is [string, string[]] => Array.isArray(entry[1]),
+              ),
+            )
+          : undefined,
+      },
       mode,
       condition: (["LikeNew", "Good", "Fair", "Worn"] as const)[index % 4],
       salePrice: mode === "Exchange" ? null : price,

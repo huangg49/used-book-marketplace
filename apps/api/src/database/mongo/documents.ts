@@ -83,6 +83,9 @@ export interface CatalogRevisionDoc {
   language: string;
   edition: string | null;
   category: string;
+  categoryId?: import('@used-books/api-contract').components['schemas']['CatalogMetadata']['categoryId'];
+  attributes?: Record<string, string[]>;
+  series?: string | null;
   isbn: string | null;
   submittedAt: Date;
 }

@@ -32,14 +32,7 @@ FIRST VIEWPORT: Wine header with the user's own owl and lettering; centered
 three-line cream/yellow owner-supplied headline artwork between eight decorative cover positions: the
 four existing positions and four owner-supplied images added on10/10. Desktop
 uses two varied-size, lightly overlapping clusters, led by Alice on the left and Dược sư on the right (third cover of each group). The176px unit/432px stage keeps the established hero footprint; focal heights1.36/1.38 units sit at z2, companions0.88–1 unit at auto/z1. Each cover has its own offset, rotation and contained asset ratio. <=1100px all eight return to relative flow below search in eight columns; <=800px four columns. Focals scale1.08 in that flow without growing its layout footprint. Fine-pointer hover raises any cover to z3. A wide light
-search field anchors the hero; a four-column newest shelf starts below. Search
-uses a compact wine title/search band,216px left condition/price sidebar and
-36px gap to the results (1360px container/40px padding). Its shelf has five
-columns from1440px, four by default, three at1150px and two at600px; the
-sidebar becomes190px/gap24px at1150px, then hides at900px for a labelled
-native filter dialog. Search title is40px Anton/1.2,32px at600px. Search sits
-to the right of the title on desktop and below it at900px. Compact complete
-cover stages are200px,180px at1100px and160px at600px; Detail's selected complete
+search field anchors the hero; a four-column newest shelf starts below. Search uses the compact wine title/search band,264px grouped paper sidebar and28px gutter in its1360px container/40px outer padding. Its shelf has five columns from1440px,four by default,three at1150px and two at600px;at1150px the rail remains264px with24px gutter/padding. The rail hides only at900px and below for a named native filter dialog. It pins only when its complete height plus108px fits;long grouped filters scroll with the page. Search title is40px Anton/1.2,32px at600px;search sits right of the title on desktop and below at900px. Compact complete cover stages are200px,180px at1100px and160px at600px; Detail's selected complete
 photograph, thumbnails, protected viewer and factual columns now follow its
 dedicated `apps-user-web-src-pages-bookdetailpage-tsx.md` surface contract.
 
@@ -95,102 +88,81 @@ Open dependency: Dribbble supplies a composite preview, no separate cover assets
 use existing public-domain covers and the four images the owner supplied directly
 for decorative imagery. Caption distinguishes them from listing photographs.
 
-## Search refinement — approved11/10/2026
+## Contextual Search extension — approved11/10/2026
 
-The approved remaining-pages plan section1 is implemented for `/books` only.
-The shared Header, Home/RN recipes and API/session contract remain authoritative.
-Search uses the existing compact BookCard/HomeBookCard rendering: complete contain
-images, visible condition, separately labelled prices and truthful image retry.
-Compact titles show two lines while full DOM/accessibility/tooltip text remains.
-Desktop grid gaps are28px20px; at600px they are24px14px. The short title/search
-band uses24px40px28px padding and0.75fr/1.25fr columns with40px gap. At1150px
-outer padding is24px; at900px search moves below the heading; at600px the band
-uses22px16px24px padding and16px gap, catalog padding12px16px0.
+Operate; code-led ordinary extension after `aadbd88`. Preserve the incumbent
+wine/cream world, Anton/Be Vietnam Pro, shared Header, compact whole-cover cards,
+Home composition/motion and all session, eligibility and retry semantics. This
+section supersedes earlier Search-only preview categories, condition radios and
+“every control fits one laptop viewport” rules. Canonical source-derived visual
+rules and the matching sidecar recipe are in root DESIGN.md and
+`.impeccable/design.json` (`search-catalog-sidebar`).
 
-Modes are mutually exclusive pressed buttons with a3px wine selected underline.
-Condition and sale-price drafts are committed by **Áp dụng bộ lọc**;
-**Đặt lại lựa chọn** clears the draft, then Apply commits that reset. Applied
-condition/price chips, presets, fields, search, sort, pagination and retry have
-44px minimum targets. Invalid prices retain entered values and a linked message;
-Apply is disabled until nonnegative whole-number bounds are ordered correctly.
+Shared `CatalogClassificationFields` drives live and DEV preview: native category
+and optional subcategory selects, contextual facet disclosures, optional Manga/LN
+series, then native condition, mode-appropriate sale/exchange ranges and edition
+language. `catalog-v1` has11 roots/29 nodes/16 controlled facet types. The first
+two groups and selected groups start open. Initially show five options plus
+selected values; Xem thêm/Thu gọn exposes the rest. Summaries, checkbox labels,
+fields, preset buttons and actions retain44px targets;17px wine-accent checkboxes
+sit beside readable Be Vietnam Pro labels. Multiple values in a group are OR;
+groups/common criteria are AND; parent categories include children. Exam levels
+depend on target language+purpose and grades on school stage; context/chip changes
+prune incompatible selections. Edition language is separate from study language.
+Series requires its full name and matches NFC/case-insensitively.
 
-Below/equal900px, the named native `<dialog>` protects modal focus, closes via
-its labelled44px button or Escape, and returns focus through native dialog
-behavior. Body scroll locks only while open, with cleanup on close/unmount;
-resizing above900px closes it. The paper panel is16px rounded with24px padding
-(20px at600px), width `min(460px, calc(100% - 24px))`, max-height
-`calc(100dvh - 32px)` and internal vertical scroll. Shadow is
-`0 16px 48px #28191440`; backdrop `#28191480`. Search focus is a2px wine outline
-at4px offset, yellow inside the wine head.
+The264px/28px rail retains shelf ground,1px line,12px corners and16px padding;
+1150px uses24px gap/outer padding. Filter-body groups have20px gap. ResizeObserver
+and viewport resize allow sticky only when complete panel height+108px fits;
+top92px,88px at901–1000px. A longer panel scrolls with the document, without a
+height clamp or nested rail scroll. Desktop retains the rail at heights<=700px;
+the short-desktop8px head padding/32px title/16px catalog inset remain. Search
+band otherwise uses16px40px20px;900px stacks title/search with18px gap;600px uses
+22px16px24px/16px gap. Grid gaps28px20px,24px14px at600px;existing compact covers
+and two-line titles keep their full DOM/accessibility/tooltip text.
 
-URL fields remain `q`, `mode`, `condition`, `sort`, `minSalePrice`,
-`maxSalePrice`, `cursor`; requests use `limit=20`. Changing a filter/search/sort
-clears cursor; typing replaces history, committed changes support browser Back.
-Cursor paging focuses the result heading. Counts explicitly cover this page,
-not a total; there is no category catalog filter/API. Loading, empty, error,
-invalid-price and retry states remain concrete.
+Sale mode shows sale bounds; Exchange shows exchange bounds; all/Both show sale
+bounds plus the optional Khoảng giá trị đổi disclosure. Both ranges require both
+criteria. Currency legends,inline Từ/Đến and50k/100k/200k maximum presets stay
+visible. Bounds are whole numbers10.000–1.000.000₫,ordered;invalid input retains
+its value and linked message,with Apply disabled. The current preset accessible
+labels are the visible short values;the earlier full-currency-name claim is not
+carried forward. Draft fields commit only on Áp dụng;Xóa lựa chọn clears the
+draft and Apply commits that reset. Helper/two44px actions share the footer.
 
-DEV preview is explicit `data=preview` or the configured preview flag and uses91
-cached Open Library editions; `data=live` selects API behavior and production
-preview is disabled. Preview covers/source links and sample prices/conditions
-are labelled separately from listings. Preview query/cursors use their own
-branch; live errors never become sample success. Search controls use150ms
-ease-out color/background feedback and shared card hover follows global motion
-reduction. No Home motion exceptions or decorative loops are adopted here.
+<=900px uses a named native dialog: protected focus,labelled44px close,Escape
+and native focus return. Body locks only while open and restores on close/unmount;
+resize>=901px closes regardless of height. The mounted mobile form retains drafts
+across dismiss/reopen until applied URL state changes. Only its body scrolls;
+Apply/Reset stay outside that region. Paper16px radius,24px padding (20px at600px),
+width min(460px,calc(100% - 24px)),max-height calc(100dvh - 32px),
+shadow0 16px 48px #28191440 and backdrop#28191480 remain Search-scoped.
 
-Desktop/laptop/mobile/320px/filter captures:
-`.impeccable/review/web-member/search-shelf-{desktop,laptop,mobile,320,filters}.jpg`.
-These record UI composition, not native or human acceptance. Current QA and
-remaining gates live in WEB_MEMBER_REDESIGN/SESSION_STATE/READINESS.
+URL carries q/mode/condition/categoryId/language/series/JSON facets/sort,
+minSalePrice/maxSalePrice/minExchangeValue/maxExchangeValue/cursor;limit20.
+Known old category links map to categoryId;live strips old category without
+mutating caller query. Criteria changes clear cursor;mode clears both ranges
+and sort. Typing replaces history;committed changes support Back. Removable
+chips preserve dependency pruning. Clear keeps q and explicit data selector.
+Apply focuses/scrolls result heading;cursor navigation focuses it. Malformed
+facet JSON or scalar/array values show Bộ lọc chưa hợp lệ with clear recovery
+and no query. Keep loading,empty,error,retry and page-only counts.
 
-## Compact pinned filters — approved11/10/2026
+DEV preview97 Open Library editions is explicit/labelled;prices,conditions and
+classification enrichment are sample data. data=live uses API;production has no
+preview and live failures never fall back. Filtering precedes pagination;
+live cursor scope uses normalized criteria,preview keeps a separate branch.
+Shared classification is also used for new posting proposals or immutable
+confirmed-book metadata,and Admin reads labels in the existing review workflow;
+no Admin vocabulary CRUD. API/Mongo/contract changes are documented in
+`docs/design/CATALOG_CONTEXTUAL_FILTERS.md` and ADR0033. Search150ms control
+feedback/shared card hover follows global motion reduction;no Home exceptions.
 
-This refinement supersedes only the Search layout/filter measurements above.
-Keep the established visual world and live/DEV preview/query semantics. No Home,
-shared Header, API or session change. Operate; code-led without new raster assets.
-Search band uses16px40px20px desktop padding. Catalog is264px + flexible results,
-28px gutter,24px top inset. Filter paper panel has16px padding,12px radius and
-one1px line. Sticky top92px (88px in901–1000px range) clears both navbar shapes
-by16px; align-self start bounds the panel to its catalog column before footer.
-Conditions use two columns with complete labels and44px targets; all-condition
-spans both columns. Sale-price bounds share a row, with currency in the group
-legend and short Từ/Đến visible labels; accessible price names remain unchanged.
-Labelled maximum-price presets
-are50k/100k/200k on one row with full currency accessible names. Áp dụng and
-Xóa lựa chọn share the bottom row; helper text makes draft-then-Apply explicit.
-Below700px viewport height, native condition/quick-price selects replace expanded
-choices, preserving all values and two price fields rather than shrinking text.
-At desktop widths above900px and heights701–850px, invalid prices also switch
-conditions to the native select so the complete error and recovery actions fit.
-Short desktop head padding is8px vertically, with32px title and16px catalog inset.
-Mobile native dialog protects focus; only the form body scrolls when necessary,
-with actions outside that scroll region. Search feedback150ms; reduced motion
-removes transitions. Existing cards, mode/sort/chips, limit20 and paging remain.
-Finish: independent reviewer SHIP for the two material fixes, canonical scoped
-documentation/preservation PASS. Laptop panels fit at scrollY0 in1366×768 and
-1535×735; normal height505.375px/bottom719.46875px, invalid height487.65625px/
-bottom701.75px. Browser200%/actual OS keyboard/native/live-success NOT RUN.
-Evidence: search-filter-* captures and search-filter-finish.md in the review folder.
-
-## Category extension — approved11/10/2026 afterbc5d98f
-
-Supersedes condition-radio and compact-condition rules above. Order is Category,
-sale price, then condition; condition is always a native44px select. DEV preview
-gets eight categories derived from the91-edition catalog, with one searchable
-combobox. Accentless typing narrows options, arrows navigate, Enter chooses,
-Escape closes only the open options, blur abandons search text. Selected category
-is a draft until Apply, then a removable chip; reset/Back/cursor semantics remain.
-Category filters the whole catalog before pagination. Live has no category control
-or category query parameter; no live API/category-support claim is introduced.
-
-Options have44px targets and a176px scrollable list. Desktop list overlays the
-following fields; native-dialog list joins the scrolling body. Normal laptops
-retain264px sticky panel at top214.09375px/height498.375px/bottom712.46875px.
-Invalid prices at desktop heights701–850px use native quick-price selection,
-8px body gaps and screen-reader-only draft helper: full error, both actions and
-panel border fit at bottom730.375px. For heights≤700px, use the existing filter
-trigger/native dialog even at desktop widths; growing above700px closes it when
-sidebar becomes available. Mobile remains a protected dialog with fixed footer.
-Build/typecheck/30unit PASS, lint0error/5existing warnings. Browser captures are
-search-category-*; final independent review recorded in search-category-finish.md.
-200%/OS keyboard/native/live API success/human remain NOT RUN.
+Evidence: `.impeccable/review/web-member/contextual-filters-*.png`. Documenter
+opened desktop,mobile,low-height,invalid-URL,confirmed-book posting and Admin
+captures;appearance is observed,interaction/test results are implementer-reported.
+Independent reviewer SHIP is scoped to malformed-URL recovery and retained mobile
+drafts. Reported API119/Web34/Admin15unit,105E2E QA/storagefake,Mongo39PASS4SKIP,
+build/typecheck/contracts PASS;single Search detector0findings. This documentation
+pass ran no new tests/browser. Main DB migration,live Supabase,full integration,
+native,200% zoom,OS keyboard and human review remain NOT RUN;READINESS unchanged.

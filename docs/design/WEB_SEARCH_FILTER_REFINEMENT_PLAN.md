@@ -1,5 +1,10 @@
 # Đề xuất làm lại trang Tìm sách và bộ lọc
 
+> Plan và evidence dưới đây thuộc checkpoint đến `aadbd88`. Chủ dự án sau đó
+> duyệt bộ lọc theo danh mục đầy đủ, cho phép sidebar dài/cuộn tự nhiên và
+> mở rộng API/DB. [Phạm vi và kết quả mới](CATALOG_CONTEXTUAL_FILTERS.md) thay
+> yêu cầu luôn vừa viewport và giới hạn chỉ lọc thể loại preview của plan này.
+
 11/10/2026. Chủ dự án đã duyệt và yêu cầu triển khai ngày11/10/2026. Evidence thực thi ghi ở báo cáo refinement.
 Nguồn hiện tại: `8d9cdf0`, BookSearchPage.tsx/module.css, DESIGN.md và các ảnh
 search-shelf-laptop/mobile trong .impeccable/review/web-member. Local5186 không

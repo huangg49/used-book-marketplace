@@ -16,12 +16,33 @@ import { Roles } from '../auth/roles.guard.js';
 import { ContractInput } from '../commands/contract-input.service.js';
 import { commandContext, commandResponse } from '../commands/command-http.js';
 import { CatalogService } from './catalog.service.js';
+import {
+  allCategories,
+  facetDefinitions,
+  languageOptions,
+  taxonomyVersion,
+} from '@used-books/api-contract/catalog-taxonomy';
 @Controller()
 export class CatalogController {
   constructor(
     private readonly catalog: CatalogService,
     private readonly input: ContractInput,
   ) {}
+  @Get('catalog/taxonomy')
+  @Public()
+  taxonomy() {
+    return {
+      version: taxonomyVersion,
+      categories: allCategories.map(({ id, label, parentId, facets }) => ({
+        id,
+        label,
+        parentId,
+        facets,
+      })),
+      facets: facetDefinitions,
+      languages: languageOptions,
+    };
+  }
   @Get('catalog/books')
   @Public()
   list(@Query() query: unknown) {

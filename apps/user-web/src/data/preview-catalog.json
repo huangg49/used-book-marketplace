@@ -68,7 +68,14 @@
     "https://openlibrary.org/search.json?q=title%3A%22The+7+Habits%22+author%3A%22Stephen+Covey%22+language%3Aeng&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
     "https://openlibrary.org/search.json?q=title%3A%22Zero+to+One%22+author%3A%22Peter+Thiel%22+language%3Aeng&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
     "https://openlibrary.org/search.json?q=title%3A%22A+Little+History+of+the+World%22+author%3A%22Ernst+Gombrich%22+language%3Aeng&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
-    "https://openlibrary.org/search.json?q=title%3A%22The+Story+of+Art%22+author%3A%22Ernst+Gombrich%22+language%3Aeng&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i"
+    "https://openlibrary.org/search.json?q=title%3A%22The+Story+of+Art%22+author%3A%22Ernst+Gombrich%22+language%3Aeng&limit=12&fields=key%2Ctitle%2Cauthor_name%2Csubject%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Genki%22+author%3A%22Eri+Banno%22+language%3Aeng&limit=8&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Japanese+from+Zero%22+author%3A%22George+Trombley%22+language%3Aeng&limit=8&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22English+Grammar+in+Use%22+author%3A%22Raymond+Murphy%22+language%3Aeng&limit=8&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Integrated+Chinese%22+author%3A%22Yuehua+Liu%22+language%3Aeng&limit=8&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Calculus%22+author%3A%22James+Stewart%22+language%3Aeng&limit=8&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Algebra+1%22+author%3A%22John+Saxon%22+language%3Aeng&limit=8&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Biology%22+author%3A%22Kenneth+Miller%22+language%3Aeng&limit=8&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i"
   ],
   "items": [
     {
@@ -1363,7 +1370,170 @@
       "coverUrl": "https://covers.openlibrary.org/b/id/15234085-L.jpg?default=false",
       "sourceUrl": "https://openlibrary.org/books/OL51068278M",
       "series": "Fullmetal Alchemist"
+    },
+    {
+      "id": "/books/OL8589679M",
+      "title": "Japanese From Zero! 1",
+      "authors": [
+        "George Trombley",
+        "Yukari Takenaka"
+      ],
+      "category": "Học ngoại ngữ",
+      "language": "eng",
+      "isbn": "9780976998129",
+      "coverId": 14420377,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14420377-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL8589679M",
+      "series": "Japanese from Zero",
+      "classificationSeed": "Japanese from Zero",
+      "categoryId": "languages.ja",
+      "attributes": {
+        "purpose": [
+          "general"
+        ],
+        "level": [
+          "beginner"
+        ],
+        "skill": [
+          "characters",
+          "grammar"
+        ]
+      }
+    },
+    {
+      "id": "/books/OL26798836M",
+      "title": "English Grammar in Use",
+      "authors": [
+        "Raymond Murphy"
+      ],
+      "category": "Học ngoại ngữ",
+      "language": "eng",
+      "isbn": "9780521189392",
+      "coverId": 8454904,
+      "coverUrl": "https://covers.openlibrary.org/b/id/8454904-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26798836M",
+      "series": "English Grammar in Use",
+      "classificationSeed": "English Grammar in Use",
+      "categoryId": "languages.en",
+      "attributes": {
+        "purpose": [
+          "general"
+        ],
+        "level": [
+          "intermediate"
+        ],
+        "skill": [
+          "grammar"
+        ]
+      }
+    },
+    {
+      "id": "/books/OL23187194M",
+      "title": "Integrated Chinese =",
+      "authors": [
+        "Yuehua Liu"
+      ],
+      "category": "Học ngoại ngữ",
+      "language": "eng",
+      "isbn": "9780887276804",
+      "coverId": 12138394,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12138394-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL23187194M",
+      "series": "Integrated Chinese",
+      "classificationSeed": "Integrated Chinese",
+      "categoryId": "languages.zh",
+      "attributes": {
+        "purpose": [
+          "general"
+        ],
+        "level": [
+          "beginner"
+        ],
+        "skill": [
+          "reading",
+          "writing"
+        ]
+      }
+    },
+    {
+      "id": "/books/OL27983777M",
+      "title": "Calculus",
+      "authors": [
+        "James Stewart"
+      ],
+      "category": "Giáo khoa / tham khảo",
+      "language": "eng",
+      "isbn": "9781285740621",
+      "coverId": 9372219,
+      "coverUrl": "https://covers.openlibrary.org/b/id/9372219-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL27983777M",
+      "series": "Calculus",
+      "classificationSeed": "Calculus",
+      "categoryId": "education",
+      "attributes": {
+        "schoolStage": [
+          "university"
+        ],
+        "subject": [
+          "math"
+        ],
+        "purpose": [
+          "textbook"
+        ]
+      }
+    },
+    {
+      "id": "/books/OL37347318M",
+      "title": "Algebra 1",
+      "authors": [
+        "John Saxon"
+      ],
+      "category": "Giáo khoa / tham khảo",
+      "language": "eng",
+      "isbn": "9781565771369",
+      "coverId": 13981515,
+      "coverUrl": "https://covers.openlibrary.org/b/id/13981515-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL37347318M",
+      "series": "Algebra 1",
+      "classificationSeed": "Algebra 1",
+      "categoryId": "education",
+      "attributes": {
+        "subject": [
+          "math"
+        ],
+        "purpose": [
+          "textbook"
+        ]
+      }
+    },
+    {
+      "id": "/books/OL10093793M",
+      "title": "Miller Biology",
+      "authors": [
+        "Kenneth Miller"
+      ],
+      "category": "Giáo khoa / tham khảo",
+      "language": "eng",
+      "isbn": "9780138030810",
+      "coverId": 5033413,
+      "coverUrl": "https://covers.openlibrary.org/b/id/5033413-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL10093793M",
+      "series": "Biology",
+      "classificationSeed": "Biology",
+      "categoryId": "education",
+      "attributes": {
+        "schoolStage": [
+          "high"
+        ],
+        "subject": [
+          "biology"
+        ],
+        "purpose": [
+          "textbook"
+        ]
+      }
     }
   ],
-  "previousSnapshotFetchedAt": "2026-10-10T11:05:55.053Z"
+  "previousSnapshotFetchedAt": "2026-10-10T11:05:55.053Z",
+  "classificationNote": "Contextual attributes are manually curated educational UI examples, not reviewed catalog metadata. No listings or inventory created."
 }

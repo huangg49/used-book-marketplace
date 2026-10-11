@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { session } from "./api";
+import type { Attributes } from "@used-books/api-contract/catalog-taxonomy";
 
 const receipt = z.object({
   entityId: z.string().uuid(),
@@ -44,6 +45,11 @@ export type ListingInput = {
   title: string;
   author: string;
   category: string;
+  bookId?: string;
+  categoryId?: string;
+  attributes?: Attributes;
+  language?: string;
+  series?: string;
   condition: "LikeNew" | "Good" | "Fair" | "Worn";
   pages: string;
   coverNote: string;
@@ -126,28 +132,41 @@ async function upload(
 }
 
 export function createListingSubmission(value: ListingInput) {
-  const input = { ...value, files: [...value.files] };
+  const input = {
+    ...value,
+    attributes: structuredClone(value.attributes ?? {}),
+    files: [...value.files],
+  };
   const remember = rememberCommands();
   return async () => {
     if (!input.files.length) throw new Error("Cần ít nhất một ảnh sách.");
-    const catalog = await remember("catalog", (key) =>
-      session.request("/catalog/requests", receipt, {
-        method: "POST",
-        headers: { "Idempotency-Key": key },
-        body: JSON.stringify({
-          metadata: {
-            title: input.title.trim(),
-            authors: [input.author.trim()],
-            publisher: null,
-            publicationYear: null,
-            language: "vi",
-            edition: null,
-            category: input.category.trim() || "Khác",
-            isbn: null,
-          },
-        }),
-      }),
-    );
+    const catalog = input.bookId
+      ? { entityId: input.bookId }
+      : await remember("catalog", (key) =>
+          session.request("/catalog/requests", receipt, {
+            method: "POST",
+            headers: { "Idempotency-Key": key },
+            body: JSON.stringify({
+              metadata: {
+                title: input.title.trim(),
+                authors: [input.author.trim()],
+                publisher: null,
+                publicationYear: null,
+                language: input.language || "vi",
+                edition: null,
+                category: input.category.trim() || "Khác",
+                ...(input.categoryId
+                  ? {
+                      categoryId: input.categoryId,
+                      attributes: input.attributes,
+                      series: input.series?.trim() || null,
+                    }
+                  : {}),
+                isbn: null,
+              },
+            }),
+          }),
+        );
     const draft = await remember("draft", (key) =>
       session.request("/listings", receipt, {
         method: "POST",

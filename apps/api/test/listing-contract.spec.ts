@@ -60,6 +60,7 @@ describe('listing design contract (not HTTP implementation tests)', () => {
   it('keeps planned endpoints explicit, unique, private by default and mutations keyed', () => {
     const ids = new Set<string>();
     const publicIds = new Set([
+      'getCatalogTaxonomy',
       'listBooks',
       'getBook',
       'listPublicListings',

@@ -100,6 +100,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/catalog/taxonomy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Versioned category tree and contextual vocabulary */
+        get: operations["getCatalogTaxonomy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/catalog/books": {
         parameters: {
             query?: never;
@@ -2020,8 +2037,46 @@ export interface components {
         CatalogStatus: "Pending" | "Confirmed" | "Rejected";
         /** @enum {string} */
         MediaStatus: "Pending" | "Processing" | "Ready" | "Failed";
+        CatalogOption: {
+            id: string;
+            label: string;
+        };
+        CatalogFacet: {
+            id: string;
+            label: string;
+            options: components["schemas"]["CatalogOption"][];
+        };
+        CatalogCategory: {
+            id: string;
+            label: string;
+            parentId: string | null;
+            facets: string[];
+        };
+        CatalogAttributes: {
+            genre?: ("action" | "adventure" | "fantasy" | "romance" | "comedy" | "drama" | "mystery" | "horror" | "scifi" | "historical")[];
+            audience?: ("shounen" | "shoujo" | "seinen" | "josei" | "kodomo")[];
+            setting?: ("school" | "isekai" | "daily" | "apocalypse" | "supernatural")[];
+            form?: ("novel" | "short" | "essay" | "poetry" | "memoir" | "picture" | "activity" | "story")[];
+            purpose?: ("general" | "communication" | "exam" | "textbook" | "workbook" | "reference")[];
+            level?: ("beginner" | "intermediate" | "advanced" | "n5" | "n4" | "n3" | "n2" | "n1" | "ielts" | "toeic" | "hsk" | "topik")[];
+            skill?: ("listening" | "speaking" | "reading" | "writing" | "grammar" | "vocabulary" | "characters")[];
+            schoolStage?: ("primary" | "secondary" | "high" | "university")[];
+            grade?: ("1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | "11" | "12")[];
+            subject?: ("math" | "literature" | "english" | "physics" | "chemistry" | "biology" | "history" | "geography" | "computing" | "civics")[];
+            reader?: ("student" | "professional" | "manager" | "entrepreneur" | "parent" | "teen" | "general")[];
+            topic?: ("habits" | "communication" | "emotion" | "relationships" | "career" | "animals" | "nature" | "discovery" | "culture" | "politics" | "civilization")[];
+            age?: ("0-3" | "4-6" | "7-10" | "11-15")[];
+            depth?: ("intro" | "popular" | "specialist")[];
+            region?: ("vietnam" | "asia" | "europe" | "americas" | "world")[];
+            period?: ("ancient" | "medieval" | "modern" | "contemporary")[];
+        };
         /** @description Trim text and count Unicode code points. ISBN may be null. Input normalization accepts ISBN separators/case and converts valid ISBN-10 to ISBN-13 before schema validation and hashing. ISBN-13 requires prefix 978 or 979 and a valid checksum; this does not verify assignment to a title. Metadata is immutable after confirmation. language is a BCP-47 tag canonicalized with Intl.getCanonicalLocales; malformed tags return field validation errors. */
         CatalogMetadata: {
+            /** @description Stable taxonomy code. Optional for legacy clients; when supplied category must match its canonical label. Confirmed metadata stays immutable. */
+            categoryId?: ("manga" | "light-novel" | "literature" | "languages" | "languages.en" | "languages.ja" | "languages.ko" | "languages.zh" | "languages.other" | "education" | "business" | "business.management" | "business.marketing" | "business.finance" | "business.startup" | "business.economics" | "psychology" | "psychology.psychology" | "psychology.skills" | "children" | "science" | "science.natural" | "science.technology" | "science.space" | "science.environment" | "history" | "history.history" | "history.geography" | "other") | null;
+            attributes?: components["schemas"]["CatalogAttributes"];
+            /** @description Series name as supplied and reviewed; not the volume or completion status. */
+            series?: string | null;
             title: string;
             authors: string[];
             publisher: string | null;
@@ -2032,6 +2087,11 @@ export interface components {
             isbn: string | null;
         };
         PublicBook: {
+            /** @description Stable taxonomy code. Optional for legacy clients; when supplied category must match its canonical label. Confirmed metadata stays immutable. */
+            categoryId?: ("manga" | "light-novel" | "literature" | "languages" | "languages.en" | "languages.ja" | "languages.ko" | "languages.zh" | "languages.other" | "education" | "business" | "business.management" | "business.marketing" | "business.finance" | "business.startup" | "business.economics" | "psychology" | "psychology.psychology" | "psychology.skills" | "children" | "science" | "science.natural" | "science.technology" | "science.space" | "science.environment" | "history" | "history.history" | "history.geography" | "other") | null;
+            attributes?: components["schemas"]["CatalogAttributes"];
+            /** @description Series name as supplied and reviewed; not the volume or completion status. */
+            series?: string | null;
             /** Format: uuid */
             id: string;
             title: string;
@@ -3897,9 +3957,43 @@ export interface operations {
             401: components["responses"]["Error"];
         };
     };
+    getCatalogTaxonomy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shared controlled classification vocabulary; no inventory counts. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        version: string;
+                        categories: components["schemas"]["CatalogCategory"][];
+                        facets: components["schemas"]["CatalogFacet"][];
+                        languages: components["schemas"]["CatalogOption"][];
+                    };
+                };
+            };
+        };
+    };
     listBooks: {
         parameters: {
             query?: {
+                /** @description Includes descendants. Legacy known category labels resolve read-only; unknown legacy categories remain unclassified. */
+                categoryId?: "manga" | "light-novel" | "literature" | "languages" | "languages.en" | "languages.ja" | "languages.ko" | "languages.zh" | "languages.other" | "education" | "business" | "business.management" | "business.marketing" | "business.finance" | "business.startup" | "business.economics" | "psychology" | "psychology.psychology" | "psychology.skills" | "children" | "science" | "science.natural" | "science.technology" | "science.space" | "science.environment" | "history" | "history.history" | "history.geography" | "other";
+                /** @description Primary language of the edition, not the language being learned. */
+                language?: string;
+                /** @description Exact series name, Unicode-normalized and case-insensitive. */
+                series?: string;
+                /** @description JSON CatalogAttributes object. Requires categoryId for nonempty values. OR within a facet; AND between facets. Unknown/inapplicable values or incompatible grade/level return 422. Normalized selections bind the cursor. */
+                facets?: string;
                 limit?: number;
                 /** @description Opaque signed keyset cursor bound to normalized filters and caller scope. Malformed, modified or mismatched cursor: 400. No snapshot guarantee. Every page rechecks authorization. */
                 cursor?: string;
@@ -4218,6 +4312,14 @@ export interface operations {
     listPublicListings: {
         parameters: {
             query?: {
+                /** @description Includes descendants. Legacy known category labels resolve read-only; unknown legacy categories remain unclassified. */
+                categoryId?: "manga" | "light-novel" | "literature" | "languages" | "languages.en" | "languages.ja" | "languages.ko" | "languages.zh" | "languages.other" | "education" | "business" | "business.management" | "business.marketing" | "business.finance" | "business.startup" | "business.economics" | "psychology" | "psychology.psychology" | "psychology.skills" | "children" | "science" | "science.natural" | "science.technology" | "science.space" | "science.environment" | "history" | "history.history" | "history.geography" | "other";
+                /** @description Primary language of the edition, not the language being learned. */
+                language?: string;
+                /** @description Exact series name, Unicode-normalized and case-insensitive. */
+                series?: string;
+                /** @description JSON CatalogAttributes object. Requires categoryId for nonempty values. OR within a facet; AND between facets. Unknown/inapplicable values or incompatible grade/level return 422. Normalized selections bind the cursor. */
+                facets?: string;
                 limit?: number;
                 /** @description Opaque base64url keyset cursor bound to normalized filters, sort and caller scope. Invalid/mismatched cursor: 400. No snapshot guarantee. All pages recheck eligibility. */
                 cursor?: string;

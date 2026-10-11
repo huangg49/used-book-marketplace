@@ -19,6 +19,10 @@ import { isbn13, normalizeSearch } from '../commands/contract-input.service.js';
 import { invalidField, notFound, type Wire } from '../commands/domain-error.js';
 import { MediaStorage } from '../media/media-storage.js';
 import { originStatus } from './listing-fulfillment.service.js';
+import {
+  catalogFilters,
+  catalogFilterStages,
+} from '../catalog/catalog-classification.js';
 
 // One predicate for shelf, detail and signed reads (the PostgreSQL publicFrom +
 // publicEligible). These are current eligibility checks, not a historical
@@ -46,16 +50,35 @@ export function publicEligibleStages(): Document[] {
     },
     {
       $lookup: {
-        from: 'purchase_conversations', localField: '_id', foreignField: 'listingId',
-        pipeline: [{ $match: { status: 'Active', $expr: { $gt: ['$expiresAt', '$$NOW'] } } }, { $limit: 1 }],
+        from: 'purchase_conversations',
+        localField: '_id',
+        foreignField: 'listingId',
+        pipeline: [
+          {
+            $match: {
+              status: 'Active',
+              $expr: { $gt: ['$expiresAt', '$$NOW'] },
+            },
+          },
+          { $limit: 1 },
+        ],
         as: 'purchase',
       },
     },
     {
-      $match: { $expr: { $or: [
-        { $eq: ['$trade', 'Available'] },
-        { $and: [{ $eq: ['$trade', 'Reserved'] }, { $gt: [{ $size: '$purchase' }, 0] }] },
-      ] } },
+      $match: {
+        $expr: {
+          $or: [
+            { $eq: ['$trade', 'Available'] },
+            {
+              $and: [
+                { $eq: ['$trade', 'Reserved'] },
+                { $gt: [{ $size: '$purchase' }, 0] },
+              ],
+            },
+          ],
+        },
+      },
     },
     {
       $lookup: {
@@ -204,6 +227,9 @@ export class PublicListingService {
         language: metadata.language,
         edition: metadata.edition,
         category: metadata.category,
+        categoryId: metadata.categoryId ?? null,
+        attributes: metadata.attributes ?? {},
+        series: metadata.series ?? null,
         isbn: metadata.isbn,
       },
       condition: r.condition!,
@@ -222,9 +248,13 @@ export class PublicListingService {
         height: m.height!,
       })),
       publishedAt: l.publishedAt!.toISOString(),
-      purchaseAvailability: l.trade === 'Reserved'
-        ? { status: 'InNegotiation' as const, expiresAt: l.purchase[0]!.expiresAt.toISOString() }
-        : { status: 'Available' as const, expiresAt: null },
+      purchaseAvailability:
+        l.trade === 'Reserved'
+          ? {
+              status: 'InNegotiation' as const,
+              expiresAt: l.purchase[0]!.expiresAt.toISOString(),
+            }
+          : { status: 'Available' as const, expiresAt: null },
     };
     // Submitted/approved invariants enforce the selected mode's price requirements.
     if (r.mode === 'Sale')
@@ -269,6 +299,7 @@ export class PublicListingService {
     const q = normalizeSearch(String(query.q ?? '')),
       isbn = isbn13(String(query.q ?? ''));
     const sort = String(query.sort ?? 'newest');
+    const classification = catalogFilters(query);
     const scope = {
       operation: 'listPublicListings',
       q,
@@ -281,6 +312,7 @@ export class PublicListingService {
       minExchangeValue: query.minExchangeValue ?? null,
       maxExchangeValue: query.maxExchangeValue ?? null,
       sort,
+      ...classification,
     };
     const match: Record<string, unknown> = {};
     const and: Record<string, unknown>[] = [];
@@ -316,6 +348,7 @@ export class PublicListingService {
         tx.c.listings,
         [
           ...publicEligibleStages(),
+          ...catalogFilterStages(classification, 'b.currentRevisionId'),
           { $match: { ...match, ...(and.length ? { $and: and } : {}) } },
           { $project: { key } },
           { $match: { key: { $ne: null } } },

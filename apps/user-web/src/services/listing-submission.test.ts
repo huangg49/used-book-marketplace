@@ -110,4 +110,45 @@ describe("resumable listing submission", () => {
     await expect(run()).rejects.toThrow("Cần ít nhất");
     expect(request).not.toHaveBeenCalled();
   });
+  it("reuses a confirmed book without proposing or changing its catalog", async () => {
+    await createListingSubmission({ ...input(), bookId: catalog })();
+    expect(
+      request.mock.calls.some(([path]) => path === "/catalog/requests"),
+    ).toBe(false);
+    expect(
+      JSON.parse(
+        request.mock.calls.find(([path]) => path.endsWith("/draft"))![2].body,
+      ),
+    ).toMatchObject({ content: { bookId: catalog } });
+  });
+  it("freezes contextual metadata across a lost catalog response", async () => {
+    const value = {
+      ...input(),
+      category: "Tiếng Nhật",
+      categoryId: "languages.ja",
+      language: "vi",
+      attributes: { purpose: ["exam"], level: ["n3"] },
+    };
+    let lost = false;
+    request.mockImplementation(async (path: string) => {
+      if (path === "/catalog/requests" && !lost) {
+        lost = true;
+        throw new Error("Lost response");
+      }
+      return respond(path);
+    });
+    const run = createListingSubmission(value);
+    await expect(run()).rejects.toThrow("Lost response");
+    value.attributes.level[0] = "n2";
+    await run();
+    const calls = request.mock.calls.filter(
+      ([path]) => path === "/catalog/requests",
+    );
+    expect(calls[0][2]).toEqual(calls[1][2]);
+    expect(JSON.parse(calls[1][2].body).metadata).toMatchObject({
+      categoryId: "languages.ja",
+      language: "vi",
+      attributes: { level: ["n3"] },
+    });
+  });
 });

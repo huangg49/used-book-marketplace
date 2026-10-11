@@ -20,10 +20,30 @@ import { useSession } from "../hooks/useSession";
 import { createListingSubmission } from "../services/listing-submission";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd, ROUTES } from "../lib/routes";
+import {
+  CatalogClassificationFields,
+  type ClassificationValue,
+} from "../components/CatalogClassificationFields";
+import {
+  CatalogBookPicker,
+  type PickedBook,
+} from "../components/CatalogBookPicker";
+import {
+  categoryFor,
+  languageOptions,
+  classificationErrors,
+} from "@used-books/api-contract/catalog-taxonomy";
 import styles from "./SellBookPage.module.css";
 
 export function SellBookPage() {
   const submission = useRef<ReturnType<typeof createListingSubmission>>(null);
+  const [classification, setClassification] = useState<ClassificationValue>({
+    categoryId: "",
+    attributes: {},
+    series: "",
+  });
+  const [language, setLanguage] = useState("vi");
+  const [selectedBook, setSelectedBook] = useState<PickedBook | null>(null);
   const [step, setStep] = useState(1);
   const [ownershipDeclared, setOwnershipDeclared] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
@@ -59,7 +79,9 @@ export function SellBookPage() {
   const imageRefs = useRef<string[]>([]);
   const dirty =
     step !== 6 &&
-    (imageFiles.length > 0 ||
+    (classification.categoryId !== "" ||
+      language !== "vi" ||
+      imageFiles.length > 0 ||
       ownershipDeclared ||
       !!formData.title ||
       !!formData.author ||
@@ -122,6 +144,7 @@ export function SellBookPage() {
       formData.readable === false && "nội dung đọc rõ để đủ điều kiện đăng",
       formData.missingEssentialContent === true &&
         "đủ nội dung trọng yếu để đủ điều kiện đăng",
+      !classification.categoryId && !selectedBook && "danh mục sách",
       !formData.title.trim() && "tên sách",
       !formData.author.trim() && "tác giả",
       !formData.pages.trim() && "mô tả ruột sách",
@@ -161,7 +184,15 @@ export function SellBookPage() {
       submission.current ??= createListingSubmission({
         title: formData.title,
         author: formData.author,
-        category: "Khác",
+        category:
+          categoryFor(classification.categoryId)?.label ||
+          selectedBook?.category ||
+          "Khác",
+        bookId: selectedBook?.id,
+        categoryId: classification.categoryId,
+        attributes: classification.attributes,
+        series: classification.series,
+        language,
         condition: formData.condition as "LikeNew" | "Good" | "Fair" | "Worn",
         pages: formData.pages,
         coverNote: formData.coverNote,
@@ -227,6 +258,16 @@ export function SellBookPage() {
   }
   function stepError(forStep: number) {
     let message: string | undefined;
+    if (
+      forStep === 1 &&
+      !selectedBook &&
+      (!classification.categoryId ||
+        classificationErrors(
+          classification.categoryId,
+          classification.attributes,
+        ).length)
+    )
+      return "Chọn danh mục và kiểm tra thuộc tính của đầu sách.";
     if (forStep === 1 && (!formData.title.trim() || !formData.author.trim()))
       message = "Nhập tên sách và tác giả trước khi tiếp tục.";
     if (forStep === 2 && !imageFiles.length)
@@ -363,6 +404,13 @@ export function SellBookPage() {
               onClick={() => {
                 formData.images.forEach((url) => URL.revokeObjectURL(url));
                 submission.current = null;
+                setClassification({
+                  categoryId: "",
+                  attributes: {},
+                  series: "",
+                });
+                setLanguage("vi");
+                setSelectedBook(null);
                 setFormData({
                   title: "",
                   author: "",
@@ -430,6 +478,38 @@ export function SellBookPage() {
                 >
                   {step === 1 && (
                     <>
+                      {!selectedBook && (
+                        <CatalogBookPicker
+                          onSelect={(book) => {
+                            setSelectedBook(book);
+                            setFormData((previous) => ({
+                              ...previous,
+                              title: book.title,
+                              author: book.authors.join(" · "),
+                            }));
+                            setClassification({
+                              categoryId:
+                                book.categoryId ||
+                                categoryFor(book.category)?.id ||
+                                "",
+                              attributes: book.attributes || {},
+                              series: book.series || "",
+                            });
+                            setLanguage(book.language);
+                          }}
+                        />
+                      )}
+                      {selectedBook && (
+                        <p className={styles.help}>
+                          Đang dùng đầu sách đã xác nhận.{" "}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedBook(null)}
+                          >
+                            Đề nghị một đầu sách khác
+                          </button>
+                        </p>
+                      )}
                       <p className={styles.help}>
                         Ghi tên sách và tác giả đúng như trên bìa.
                       </p>
@@ -445,6 +525,7 @@ export function SellBookPage() {
                             id={key}
                             required
                             value={formData[key]}
+                            disabled={!!selectedBook}
                             onChange={(event) =>
                               setFormData((previous) => ({
                                 ...previous,
@@ -455,6 +536,33 @@ export function SellBookPage() {
                           />
                         </div>
                       ))}
+                      <fieldset disabled={!!selectedBook}>
+                        <CatalogClassificationFields
+                          editing
+                          id="sell"
+                          value={classification}
+                          onChange={setClassification}
+                        />
+                        <div className={styles.field}>
+                          <label htmlFor="sell-language">
+                            Ngôn ngữ của sách
+                          </label>
+                          <select
+                            id="sell-language"
+                            value={language}
+                            onChange={(e) => setLanguage(e.target.value)}
+                          >
+                            {!languageOptions.some(
+                              (o) => o.id === language,
+                            ) && <option value={language}>{language}</option>}
+                            {languageOptions.map((o) => (
+                              <option key={o.id} value={o.id}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </fieldset>
                     </>
                   )}
                   {step === 2 && (

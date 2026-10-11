@@ -34,7 +34,9 @@ const storage = {
 };
 
 type Reader = { id: string; token: string; sessionId: string; email: string };
-const metadata = (title = 'Đường sách chuyền tay') => ({
+const metadata = (
+  title = 'Đường sách chuyền tay',
+): import('../src/modules/commands/domain-error.js').Wire['CatalogMetadata'] => ({
   title,
   authors: ['Người viết'],
   publisher: null,
@@ -226,6 +228,171 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
     };
   }
   const block = (actor: { id: string }) => Gate.lockUser(db.client, actor.id);
+
+  it('exposes versioned taxonomy and rejects incompatible classification before a write', async () => {
+    const taxonomy = await get('/catalog/taxonomy').expect(200);
+    expect(taxonomy.body.version).toBe('catalog-v1');
+    expect(
+      taxonomy.body.categories.filter((c: any) => !c.parentId),
+    ).toHaveLength(11);
+    expect(taxonomy.body.facets).toHaveLength(16);
+    const before = await db.c.catalog_books.countDocuments({
+      requesterId: m1.id,
+    });
+    for (const attributes of [
+      { skill: ['grammar'] },
+      { genre: ['action', 'action'] },
+      { genre: ['unknown'] },
+    ])
+      await post(
+        '/catalog/requests',
+        {
+          metadata: {
+            ...metadata(),
+            category: 'Manga / Comic',
+            categoryId: 'manga',
+            attributes,
+          },
+        },
+        m1,
+      ).expect(422);
+    expect(
+      await db.c.catalog_books.countDocuments({ requesterId: m1.id }),
+    ).toBe(before);
+    await get('/listings')
+      .query({
+        categoryId: 'education',
+        facets: JSON.stringify({ schoolStage: ['primary'], grade: ['10'] }),
+      })
+      .expect(422);
+    await get('/listings')
+      .query({
+        categoryId: 'languages.ja',
+        facets: JSON.stringify({ purpose: ['exam'], level: ['ielts'] }),
+      })
+      .expect(422);
+    await get('/listings')
+      .query({ categoryId: 'manga', facets: 'null' })
+      .expect(422);
+  });
+  it('persists reviewed classification, filters the full eligible shelf and binds cursors', async () => {
+    const created: any[] = [];
+    for (const [title, categoryId, category, attributes] of [
+      [
+        'Bộ lọc truyện A',
+        'manga',
+        'Manga / Comic',
+        { genre: ['action', 'fantasy'], audience: ['shounen'] },
+      ],
+      [
+        'Bộ lọc truyện B',
+        'manga',
+        'Manga / Comic',
+        { genre: ['comedy'], audience: ['shounen'] },
+      ],
+      [
+        'Bộ lọc truyện C',
+        'light-novel',
+        'Light Novel',
+        { genre: ['fantasy'], setting: ['isekai'] },
+      ],
+      [
+        'Bộ lọc ngoại ngữ',
+        'languages.ja',
+        'Tiếng Nhật',
+        { purpose: ['exam'], level: ['n3'], skill: ['grammar'] },
+      ],
+    ] as const) {
+      const l = await complete(m1, true, 'Ready', {
+        ...metadata(title),
+        categoryId,
+        category,
+        attributes: JSON.parse(JSON.stringify(attributes)),
+        series: categoryId === 'manga' ? 'Bộ lọc chung' : null,
+      });
+      const submitted = await submit(l).expect(200);
+      await decide(submitted.body).expect(200);
+      created.push(l);
+    }
+    const filters = {
+      categoryId: 'manga',
+      facets: JSON.stringify({
+        genre: ['action', 'comedy'],
+        audience: ['shounen'],
+      }),
+      limit: 1,
+    };
+    const page = await get('/listings').query(filters).expect(200);
+    validates('PublicListingPage', page.body);
+    expect(page.body.items).toHaveLength(1);
+    expect(page.body.nextCursor).toBeTruthy();
+    const second = await get('/listings')
+      .query({
+        ...filters,
+        cursor: page.body.nextCursor,
+        facets: JSON.stringify({
+          audience: ['shounen'],
+          genre: ['comedy', 'action'],
+        }),
+      })
+      .expect(200);
+    expect(
+      new Set([...page.body.items, ...second.body.items].map((l: any) => l.id)),
+    ).toEqual(new Set(created.slice(0, 2).map((l) => l.entityId)));
+    await get('/listings')
+      .query({
+        ...filters,
+        cursor: page.body.nextCursor,
+        facets: JSON.stringify({ genre: ['fantasy'] }),
+      })
+      .expect(400);
+    await get('/listings')
+      .query({
+        categoryId: 'languages',
+        language: 'vi',
+        facets: JSON.stringify({ purpose: ['exam'], level: ['n3'] }),
+      })
+      .expect(422);
+    const japanese = await get('/listings')
+      .query({
+        categoryId: 'languages.ja',
+        language: 'vi',
+        facets: JSON.stringify({ purpose: ['exam'], level: ['n3'] }),
+      })
+      .expect(200);
+    expect(japanese.body.items.map((l: any) => l.id)).toEqual([
+      created[3].entityId,
+    ]);
+    expect(japanese.body.items[0].book.attributes.level).toEqual(['n3']);
+    expect(
+      (
+        await get('/listings')
+          .query({ categoryId: 'languages.ja', language: 'ja' })
+          .expect(200)
+      ).body.items,
+    ).toEqual([]);
+    const books = await get('/catalog/books')
+      .query({ categoryId: 'languages', limit: 50 })
+      .expect(200);
+    expect(
+      books.body.items.some((b: any) => b.id === created[3].book.entityId),
+    ).toBe(true);
+    const own = await get(
+      '/operations/catalog-requests/' + created[0].book.entityId,
+      a1,
+    ).expect(200);
+    expect(own.body.currentRevision.metadata.attributes.genre).toEqual([
+      'action',
+      'fantasy',
+    ]);
+    await changeListing(created[0].entityId, { visibility: 'Hidden' });
+    const visible = await get('/listings')
+      .query({ ...filters, limit: 50 })
+      .expect(200);
+    expect(visible.body.items.map((l: any) => l.id)).toEqual([
+      created[1].entityId,
+    ]);
+  }, 45000);
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })

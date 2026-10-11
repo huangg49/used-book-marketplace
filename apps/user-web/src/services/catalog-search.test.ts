@@ -34,7 +34,7 @@ it("filters the whole preview catalog by category before paging, with no lost ed
   ).toEqual([]);
 });
 
-it("does not forward a preview category to the live API or mutate caller query", async () => {
+it("translates legacy category links to the live taxonomy contract without mutating caller query", async () => {
   vi.mocked(getPublicListings).mockResolvedValue({
     items: [],
     serverTime: "2026-10-11T00:00:00.000Z",
@@ -47,7 +47,7 @@ it("does not forward a preview category to the live API or mutate caller query",
   });
   await getSearchShelf(query, false);
   expect(vi.mocked(getPublicListings).mock.calls[0]![0].toString()).toBe(
-    "condition=Good&limit=20",
+    "condition=Good&limit=20&categoryId=manga",
   );
   expect(query.get("category")).toBe("Manga");
 });
@@ -65,7 +65,56 @@ it("paginates preview editions without repeating or dropping IDs", () => {
     nextCursor = page.nextCursor;
     if (nextCursor) query.set("cursor", nextCursor);
   } while (nextCursor);
-  expect(seen.size).toBe(91);
+  expect(seen.size).toBe(catalog.items.length);
+});
+it("filters contextual attributes, language, exchange values and descendants before pagination", () => {
+  const query = new URLSearchParams({
+    categoryId: "manga",
+    facets: JSON.stringify({
+      genre: ["action", "comedy"],
+      audience: ["shounen"],
+    }),
+    language: "en",
+    mode: "Exchange",
+    maxExchangeValue: "150000",
+    sort: "exchangeValueAsc",
+    limit: "2",
+  });
+  const values: number[] = [];
+  const seen = new Set<string>();
+  let next: string | null;
+  do {
+    const page = previewSearch(query);
+    for (const item of page.items) {
+      expect(seen.has(item.id)).toBe(false);
+      seen.add(item.id);
+      expect(item.book.attributes.audience).toContain("shounen");
+      expect(item.exchangeValue).toBeLessThanOrEqual(150000);
+      values.push(item.exchangeValue!);
+    }
+    next = page.nextCursor;
+    if (next) query.set("cursor", next);
+  } while (next);
+  expect(seen.size).toBeGreaterThan(2);
+  expect(values).toEqual([...values].sort((a, b) => a - b));
+  const languages = previewSearch(
+    new URLSearchParams({ categoryId: "languages", limit: "50" }),
+  ).items;
+  expect(languages.length).toBeGreaterThan(0);
+  expect(
+    languages.every((b) => b.book.categoryId.startsWith("languages.")),
+  ).toBe(true);
+  expect(() =>
+    previewSearch(new URLSearchParams({ categoryId: "manga", facets: "null" })),
+  ).toThrow();
+  expect(() =>
+    previewSearch(
+      new URLSearchParams({
+        categoryId: "manga",
+        facets: '{"skill":["grammar"]}',
+      }),
+    ),
+  ).toThrow();
 });
 it("combines condition, both-compatible modes, price bounds and price sort", () => {
   const query = new URLSearchParams({

@@ -2,7 +2,7 @@
 
 Snapshot tổng quan: main `da59199`; docs context `d77290a`, docs refresh `2e13f04`.
 Checkout/gói Android hiện hành và primary main mới được ghi bên dưới.
-OpenAPI0.30.0,15 migration Mongo,113 operation HTTP. Đây là trạng thái theo Git/
+OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hiện hành. Đây là trạng thái theo Git/
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
@@ -50,16 +50,26 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   200%/OS keyboard/native/live-success/fullintegration/human NOT RUN. READINESS
   không đổi. Checkpoint subject `feat(web): pin compact catalog filters`;
   local chưa push. Vite5186 giữ chạy để chủ dự án xem preview.
-  Sau bc5d98f, chủ dự án duyệt bổ sung thể loại: preview8thể loại có tìm không
-  dấu/keyboard, Apply/chip/reset/URL/Back; lọc91ấn bản trước cursor. Tình trạng
-  luôn là select, thứ tự Thể loại→Giá→Tình trạng. Live không hiện/gửi category.
-  Panel498.375px thường/516.28125px lỗi vừa cả hai laptop;≤700px dùng native
-  dialog, body cuộn/footer hiện. Build/typecheck30unit PASS; lint0error5warning
-  cũ; CUA laptop/mobile/lowheight/chọn/bỏ/Back/keyboard PASS. Review SHIP cho hai
-  fix/canonical source-parity/preservation PASS; evidence trong báo cáo.
-  200%/OS keyboard/native/live-success/human NOT RUN.
-  Checkpoint subject `feat(web): add preview category search filters`; local
-  chưa push. READINESS và các gate giữ nguyên.
+  Sau checkpoint `aadbd88` (preview8thể loại), chủ dự án duyệt mở rộng bộ lọc
+  theo danh mục trên nhánh `codex/catalog-contextual-filters`:10 nhóm chính+
+  Sách khác,29nút/16facet; OR trong nhóm/AND giữa nhóm, phụ thuộc chứng chỉ/lớp.
+  Search URL/Apply/chip/Back/giá trị đổi và sidebar dài tự nhiên; chỉ ghim khi
+  vừa vùng nhìn. Form tái dùng đầu sách Confirmed hoặc đề nghị metadata mới;
+  API lọc trước cursor, Admin đọc nhãn, optional fields/legacy giữ tương thích.
+  OpenAPI0.31.0/migration0016 (chỉ QA)/shared vocabulary catalog-v1; chưa có
+  Admin CRUD vocabulary. Preview97ấn bản, thuộc tính/giá/tình trạng là mẫu.
+  API119/Web34/Admin15unit,105E2E,Mongo39PASS4SKIP; build/typecheckAPI/Web/Admin,
+  RNtypecheck,contract/routes PASS; lint0error/Web5warning cũ. CUA2laptop,
+  390/320px/màn thấp,context prune/picker thật/form/Admin PASS. QA riêng Mongo8.0
+  và storagefake; [chi tiết/giới hạn](../design/CATALOG_CONTEXTUAL_FILTERS.md).
+  Browser200%/OSkeyboard/native runtime/Supabase/mainDB migration/fullintegration/
+  human NOT RUN. Review SHIP cho2materialfixes (URLmalformed/draftmobile),
+  QA riêng đã dọn, Vite5186 preview giữ chạy/proxy trảAPI3000 (đang tắt).
+  Finish documenter đồng bộ Search canonical/surface, parity/preservation PASS;
+  tokens/surface khác giữ nguyên. Chi tiết trong báo cáo; READINESS không đổi.
+  Checkpoint subject `feat(catalog): add contextual classification and search filters`;
+  local chưa push. Bước tiếp: chủ dự án xem preview và chạy migration theo setup
+  trước khi sử dụng metadata mới trên DB chính.
   Chat/Thông báo còn source UI uncommitted; QA/reviewer/documenter chưa hoàn tất.
   Browser phát hiện race join trước auth socket hoàn tất (Unauthorized); chưa
   sửa API hoặc nhận Chat PASS. QA5190/API3009 disposable đã dừng, không đụng

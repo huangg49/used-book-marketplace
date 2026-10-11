@@ -26,6 +26,11 @@ import {
 } from '../commands/domain-error.js';
 import { isbn13, normalizeSearch } from '../commands/contract-input.service.js';
 import {
+  catalogFilters,
+  catalogFilterStages,
+  validateClassification,
+} from './catalog-classification.js';
+import {
   MongoPageService,
   regexLiteral,
 } from '../commands/mongo-page.service.js';
@@ -49,6 +54,9 @@ function metadata(r: CatalogRevisionDoc): Wire['CatalogMetadata'] {
     language: r.language,
     edition: r.edition,
     category: r.category,
+    categoryId: r.categoryId ?? null,
+    attributes: r.attributes ?? {},
+    series: r.series ?? null,
     isbn: r.isbn,
   };
 }
@@ -90,6 +98,9 @@ const revisionFields = (m: Wire['CatalogMetadata']) => ({
   language: m.language,
   edition: m.edition ?? null,
   category: m.category,
+  ...(m.categoryId !== undefined ? { categoryId: m.categoryId } : {}),
+  ...(m.attributes !== undefined ? { attributes: m.attributes } : {}),
+  ...(m.series !== undefined ? { series: m.series } : {}),
   isbn: m.isbn ?? null,
 });
 
@@ -124,6 +135,7 @@ export async function checkCatalog(tx: Tx, bookId: string) {
   if (!b) return;
   const r = b.currentRevision;
   if (!r) throw new Error('Catalog requires its own current revision');
+  validateClassification(r);
   const decision = b.revisions.find((x) => x._id === r._id)!.decision;
   const d = decision?.decision;
   // latlai_guard_decision: nobody reviews their own catalog request.
@@ -382,6 +394,7 @@ export class CatalogService {
   async publicList(
     query: Record<string, string | number>,
   ): Promise<Wire['BookPage']> {
+    const classification = catalogFilters(query);
     const q = normalizeSearch(String(query.q ?? '')),
       isbn = isbn13(String(query.q ?? ''));
     // One snapshot for the page selection and its projection.
@@ -394,11 +407,15 @@ export class CatalogService {
         ];
       const page = await this.pages.page(
         tx.c.catalog_books,
-        [{ $match: match }, { $project: { key: '$titleKey' } }],
+        [
+          { $match: match },
+          ...catalogFilterStages(classification, 'currentRevisionId'),
+          { $project: { key: '$titleKey' } },
+        ],
         {
           kind: 'text',
           ascending: true,
-          scope: { operation: 'listBooks', q, isbn },
+          scope: { operation: 'listBooks', q, isbn, ...classification },
           limit: Number(query.limit),
           cursor: query.cursor as string | undefined,
         },

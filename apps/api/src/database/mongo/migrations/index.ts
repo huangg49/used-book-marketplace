@@ -49,8 +49,20 @@ import {
   rulesCollectionSpecs,
   withRulesChanges,
 } from './0013-auction-business-rules.js';
-import { purchaseConversationSpecs, purchaseConversationsMigration, withPurchaseConversationChanges } from './0014-purchase-conversations.js';
-import { memberNotificationsMigration, notificationSpecs, withNotificationChanges } from './0015-member-notifications.js';
+import {
+  purchaseConversationSpecs,
+  purchaseConversationsMigration,
+  withPurchaseConversationChanges,
+} from './0014-purchase-conversations.js';
+import {
+  memberNotificationsMigration,
+  notificationSpecs,
+  withNotificationChanges,
+} from './0015-member-notifications.js';
+import {
+  catalogClassificationMigration,
+  withCatalogClassification,
+} from './0016-catalog-classification.js';
 
 export interface Migration {
   id: string;
@@ -131,6 +143,7 @@ export const migrations: Migration[] = [
   auctionBusinessRulesMigration,
   purchaseConversationsMigration,
   memberNotificationsMigration,
+  catalogClassificationMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -147,7 +160,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withPointCollectionChanges)
     .map(withSettlementChanges)
     .map(withPurchaseConversationChanges)
-    .map(withNotificationChanges),
+    .map(withNotificationChanges)
+    .map(withCatalogClassification),
   wishlistSpec,
   ...priceAssistSpecsV2,
   ...onlinePriceSpecs,

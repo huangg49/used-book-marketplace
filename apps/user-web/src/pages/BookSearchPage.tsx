@@ -11,8 +11,18 @@ import {
 import { HomeBookCard } from "../components/HomeBookCard";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
-import { getSearchShelf, previewCategories } from "../services/catalog-search";
+import { getSearchShelf } from "../services/catalog-search";
 import { isCatalogPreview } from "../services/home-shelves";
+import { CatalogClassificationFields } from "../components/CatalogClassificationFields";
+import {
+  categoryFor,
+  classificationErrors,
+  compatibleAttributes,
+  facetsFor,
+  languageOptions,
+  type Attributes,
+} from "@used-books/api-contract/catalog-taxonomy";
+import { catalogQueryKeys, readAttributes } from "../lib/catalog-filters";
 import styles from "./BookSearchPage.module.css";
 
 const modes = [
@@ -21,319 +31,176 @@ const modes = [
   ["Exchange", "Đổi sách"],
   ["Both", "Bán hoặc đổi"],
 ] as const;
-const queryKeys = [
-  "q",
-  "mode",
-  "condition",
-  "category",
-  "sort",
-  "minSalePrice",
-  "maxSalePrice",
-  "cursor",
-] as const;
+const queryKeys = catalogQueryKeys;
 type FilterValues = {
-  category: string;
+  categoryId: string;
+  attributes: Attributes;
+  series: string;
+  language: string;
   condition: string;
   minSalePrice: string;
   maxSalePrice: string;
+  minExchangeValue: string;
+  maxExchangeValue: string;
 };
 function invalidPrice(min: string, max: string) {
   return (
     [min, max].some(
-      (value) =>
-        value !== "" &&
-        (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value))),
+      (v) =>
+        v !== "" &&
+        (!/^\d+$/.test(v) ||
+          !Number.isSafeInteger(Number(v)) ||
+          Number(v) < 10000 ||
+          Number(v) > 1000000),
     ) ||
     (min !== "" && max !== "" && Number(min) > Number(max))
   );
 }
 const priceMessage =
-  "Nhập giá là số nguyên không âm; giá đến phải lớn hơn hoặc bằng giá từ.";
-
-const foldCategory = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/đ/g, "d");
-
-function CategoryPicker({
-  id,
-  value,
-  onChange,
-}: {
-  id: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [active, setActive] = useState(0);
-  const list = useRef<HTMLDivElement>(null);
-  const options = ["", ...previewCategories].filter((category) =>
-    foldCategory(category || "Tất cả thể loại").includes(foldCategory(search)),
-  );
-  useEffect(() => {
-    const container = list.current;
-    const option = container?.querySelector<HTMLElement>(
-      `[id="${id}-category-${active}"]`,
-    );
-    if (!container || !option) return;
-    const optionTop =
-      option.getBoundingClientRect().top -
-      container.getBoundingClientRect().top +
-      container.scrollTop;
-    if (optionTop < container.scrollTop) container.scrollTop = optionTop;
-    else if (
-      optionTop + option.offsetHeight >
-      container.scrollTop + container.clientHeight
-    )
-      container.scrollTop =
-        optionTop + option.offsetHeight - container.clientHeight;
-  }, [active, open, search, id]);
-  function choose(category: string) {
-    onChange(category);
-    setOpen(false);
-    setSearch("");
-  }
+  "Nhập số nguyên từ 10.000₫ đến 1.000.000₫; mức đến phải lớn hơn hoặc bằng mức từ.";
+function invalidFilters(values: FilterValues) {
   return (
-    <div className={styles.categoryPicker}>
-      <input
-        id={`${id}-category`}
-        role="combobox"
-        aria-label="Thể loại"
-        aria-autocomplete="list"
-        aria-expanded={open}
-        aria-controls={`${id}-categories`}
-        aria-activedescendant={
-          open && options.length ? `${id}-category-${active}` : undefined
-        }
-        autoComplete="off"
-        placeholder="Tất cả thể loại"
-        value={open ? search : value}
-        onFocus={() => {
-          setSearch("");
-          setActive(0);
-          setOpen(true);
-        }}
-        onClick={() => {
-          if (!open) {
-            setSearch("");
-            setActive(0);
-            setOpen(true);
-          }
-        }}
-        onBlur={() => {
-          setOpen(false);
-          setSearch("");
-        }}
-        onChange={(event) => {
-          setSearch(event.target.value);
-          setActive(0);
-          setOpen(true);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-            event.preventDefault();
-            if (!open) {
-              setSearch("");
-              setActive(0);
-              setOpen(true);
-            } else
-              setActive((index) =>
-                Math.max(
-                  0,
-                  Math.min(
-                    options.length - 1,
-                    index + (event.key === "ArrowDown" ? 1 : -1),
-                  ),
-                ),
-              );
-          } else if (event.key === "Enter" && open) {
-            event.preventDefault();
-            if (options[active] !== undefined) choose(options[active]!);
-          } else if (event.key === "Escape" && open) {
-            event.preventDefault();
-            event.stopPropagation();
-            setOpen(false);
-            setSearch("");
-          }
-        }}
-      />
-      <Search size={15} aria-hidden="true" />
-      {open && (
-        <div
-          ref={list}
-          id={`${id}-categories`}
-          role="listbox"
-          aria-label="Thể loại"
-          className={styles.categoryOptions}
-        >
-          {options.map((category, index) => (
-            <div
-              role="option"
-              id={`${id}-category-${index}`}
-              key={category}
-              aria-selected={category === value}
-              data-active={active === index || undefined}
-              onMouseDown={(event) => event.preventDefault()}
-              onMouseEnter={() => setActive(index)}
-              onClick={() => choose(category)}
-            >
-              {category || "Tất cả thể loại"}
-            </div>
-          ))}
-          {!options.length && <p role="status">Không có thể loại phù hợp.</p>}
-        </div>
-      )}
-    </div>
+    invalidPrice(values.minSalePrice, values.maxSalePrice) ||
+    invalidPrice(values.minExchangeValue, values.maxExchangeValue) ||
+    (!!values.language && !/^[a-z]{2,3}$/.test(values.language)) ||
+    (!!values.series &&
+      (!["manga", "light-novel"].includes(values.categoryId) ||
+        values.series.length > 120 ||
+        !values.series.trim())) ||
+    (Object.keys(values.attributes).length > 0 && !values.categoryId) ||
+    (!!values.categoryId &&
+      classificationErrors(values.categoryId, values.attributes).length > 0)
   );
 }
-
 function FilterForm({
   initial,
   id,
   onApply,
-  preview,
+  mode,
 }: {
   initial: FilterValues;
   id: string;
   onApply: (values: FilterValues) => void;
-  preview: boolean;
+  mode: string;
 }) {
   const [draft, setDraft] = useState(initial);
-  const invalid = invalidPrice(draft.minSalePrice, draft.maxSalePrice);
+  const invalid = invalidFilters(draft);
   function submit(event: FormEvent) {
     event.preventDefault();
     if (!invalid) onApply(draft);
   }
-  return (
-    <form
-      className={styles.filterForm}
-      data-invalid={invalid || undefined}
-      onSubmit={submit}
-      noValidate
-    >
-      <div className={styles.filterBody}>
-        {preview && (
-          <fieldset className={styles.categoryField}>
-            <legend>Thể loại</legend>
-            <CategoryPicker
-              id={id}
-              value={draft.category}
-              onChange={(category) => setDraft({ ...draft, category })}
+  function range(kind: "SalePrice" | "ExchangeValue", title: string) {
+    const minKey = kind === "SalePrice" ? "minSalePrice" : "minExchangeValue";
+    const maxKey = kind === "SalePrice" ? "maxSalePrice" : "maxExchangeValue";
+    const error = invalidPrice(draft[minKey], draft[maxKey]);
+    return (
+      <fieldset className={styles.priceFilter}>
+        <legend>{title} (₫)</legend>
+        <div className={styles.priceFields}>
+          <label>
+            <span>Từ</span>
+            <input
+              aria-label={title + " từ"}
+              inputMode="numeric"
+              placeholder="10.000"
+              value={draft[minKey]}
+              onChange={(e) => setDraft({ ...draft, [minKey]: e.target.value })}
+              aria-invalid={error}
+              aria-describedby={error ? id + "-" + kind + "-error" : undefined}
             />
-          </fieldset>
+          </label>
+          <span className={styles.priceDash} aria-hidden="true">
+            —
+          </span>
+          <label>
+            <span>Đến</span>
+            <input
+              aria-label={title + " đến"}
+              inputMode="numeric"
+              placeholder="1.000.000"
+              value={draft[maxKey]}
+              onChange={(e) => setDraft({ ...draft, [maxKey]: e.target.value })}
+              aria-invalid={error}
+              aria-describedby={error ? id + "-" + kind + "-error" : undefined}
+            />
+          </label>
+        </div>
+        <div className={styles.pricePresets}>
+          {[50000, 100000, 200000].map((price) => (
+            <button
+              type="button"
+              key={price}
+              aria-pressed={!draft[minKey] && draft[maxKey] === String(price)}
+              onClick={() =>
+                setDraft({ ...draft, [minKey]: "", [maxKey]: String(price) })
+              }
+            >
+              {price / 1000}k
+            </button>
+          ))}
+        </div>
+        {error && (
+          <p
+            id={id + "-" + kind + "-error"}
+            role="alert"
+            className={styles.error}
+          >
+            {priceMessage}
+          </p>
         )}
-        <fieldset className={styles.priceFilter}>
-          <legend>Khoảng giá bán (₫)</legend>
-          <div className={styles.priceFields}>
-            <label>
-              <span>Từ</span>
-              <input
-                aria-label="Giá bán từ"
-                inputMode="numeric"
-                placeholder="0"
-                value={draft.minSalePrice}
-                onChange={(event) =>
-                  setDraft({ ...draft, minSalePrice: event.target.value })
-                }
-                aria-invalid={invalid}
-                aria-describedby={invalid ? `${id}-price-error` : undefined}
-              />
-            </label>
-            <span className={styles.priceDash} aria-hidden="true">
-              —
-            </span>
-            <label>
-              <span>Đến</span>
-              <input
-                aria-label="Giá bán đến"
-                inputMode="numeric"
-                placeholder="Bất kỳ"
-                value={draft.maxSalePrice}
-                onChange={(event) =>
-                  setDraft({ ...draft, maxSalePrice: event.target.value })
-                }
-                aria-invalid={invalid}
-                aria-describedby={invalid ? `${id}-price-error` : undefined}
-              />
-            </label>
-          </div>
-          <p className={styles.presetLabel}>Chọn nhanh giá tối đa</p>
-          <div
-            className={styles.pricePresets}
-            role="group"
-            aria-label="Chọn nhanh giá bán"
-          >
-            {[50000, 100000, 200000].map((price) => (
-              <button
-                key={price}
-                type="button"
-                aria-label={`Giá tối đa ${formatVnd(price)}`}
-                aria-pressed={
-                  !draft.minSalePrice && draft.maxSalePrice === String(price)
-                }
-                onClick={() =>
-                  setDraft({
-                    ...draft,
-                    minSalePrice: "",
-                    maxSalePrice: String(price),
-                  })
-                }
-              >
-                {price / 1000}k
-              </button>
-            ))}
-          </div>
-          <select
-            className={styles.compactPreset}
-            aria-label="Chọn nhanh giá tối đa"
-            value={
-              !draft.minSalePrice &&
-              ["50000", "100000", "200000"].includes(draft.maxSalePrice)
-                ? draft.maxSalePrice
-                : ""
-            }
-            onChange={(event) => {
-              if (event.target.value)
-                setDraft({
-                  ...draft,
-                  minSalePrice: "",
-                  maxSalePrice: event.target.value,
-                });
-            }}
-          >
-            <option value="">Chọn giá tối đa…</option>
-            {[50000, 100000, 200000].map((price) => (
-              <option key={price} value={price}>
-                Đến {formatVnd(price)}
-              </option>
-            ))}
-          </select>
-          {invalid && (
-            <p id={`${id}-price-error`} role="alert" className={styles.error}>
-              {priceMessage}
-            </p>
-          )}
-        </fieldset>
+      </fieldset>
+    );
+  }
+  return (
+    <form className={styles.filterForm} onSubmit={submit} noValidate>
+      <div className={styles.filterBody}>
+        <CatalogClassificationFields
+          id={id}
+          value={draft}
+          onChange={(value) => setDraft({ ...draft, ...value })}
+        />
         <fieldset>
           <legend>Tình trạng sách</legend>
           <select
             className={styles.conditionSelect}
             aria-label="Tình trạng sách"
             value={draft.condition}
-            onChange={(event) =>
-              setDraft({ ...draft, condition: event.target.value })
-            }
+            onChange={(e) => setDraft({ ...draft, condition: e.target.value })}
           >
-            {[["", "Tất cả tình trạng"], ...Object.entries(conditions)].map(
-              ([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ),
+            <option value="">Tất cả tình trạng</option>
+            {Object.entries(conditions).map(([v, label]) => (
+              <option key={v} value={v}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </fieldset>
+        {mode !== "Exchange" && range("SalePrice", "Giá bán")}
+        {mode === "Exchange"
+          ? range("ExchangeValue", "Giá trị đổi")
+          : mode !== "Sale" && (
+              <details className={styles.extraBudget}>
+                <summary>Khoảng giá trị đổi</summary>
+                {range("ExchangeValue", "Giá trị đổi")}
+                <p className={styles.filterHint}>
+                  Nếu chọn cả hai khoảng tiền, sách cần đáp ứng cả hai.
+                </p>
+              </details>
             )}
+        <fieldset>
+          <legend>Ngôn ngữ của sách</legend>
+          <select
+            className={styles.conditionSelect}
+            aria-label="Ngôn ngữ của sách"
+            value={draft.language}
+            onChange={(e) => setDraft({ ...draft, language: e.target.value })}
+          >
+            <option value="">Tất cả ngôn ngữ</option>
+            {languageOptions.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
           </select>
         </fieldset>
       </div>
@@ -348,10 +215,15 @@ function FilterForm({
             className={styles.reset}
             onClick={() =>
               setDraft({
-                category: "",
+                categoryId: "",
+                attributes: {},
+                series: "",
+                language: "",
                 condition: "",
                 minSalePrice: "",
                 maxSalePrice: "",
+                minExchangeValue: "",
+                maxExchangeValue: "",
               })
             }
           >
@@ -366,21 +238,54 @@ function FilterForm({
 export function BookSearchPage() {
   const [params, setParams] = useSearchParams();
   const preview = isCatalogPreview(`?${params}`);
+  const sidebar = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const node = sidebar.current;
+    if (!node) return;
+    const check = () => {
+      node.dataset.sticky = String(
+        node.offsetHeight + 108 <= window.innerHeight,
+      );
+    };
+    const observer = new ResizeObserver(check);
+    observer.observe(node);
+    window.addEventListener("resize", check);
+    check();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", check);
+    };
+  }, []);
   const dialog = useRef<HTMLDialogElement>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const query = new URLSearchParams();
   for (const key of queryKeys) {
     const value = params.get(key);
-    if (value && (key !== "category" || preview)) query.set(key, value);
+    if (value) query.set(key, value);
   }
   query.set("limit", "20");
   const initial = {
-    category: preview ? params.get("category") || "" : "",
+    categoryId:
+      params.get("categoryId") ||
+      categoryFor(params.get("category") || "")?.id ||
+      "",
+    attributes: (() => {
+      try {
+        return readAttributes(params.get("facets"));
+      } catch {
+        return { invalid: [] } as Attributes;
+      }
+    })(),
+    series: params.get("series") || "",
+    language: params.get("language") || "",
+    minExchangeValue: params.get("minExchangeValue") || "",
+    maxExchangeValue: params.get("maxExchangeValue") || "",
     condition: params.get("condition") || "",
     minSalePrice: params.get("minSalePrice") || "",
     maxSalePrice: params.get("maxSalePrice") || "",
   };
-  const priceInvalid = invalidPrice(initial.minSalePrice, initial.maxSalePrice);
+  if (initial.categoryId) query.set("categoryId", initial.categoryId);
+  const priceInvalid = invalidFilters(initial);
   const result = useQuery({
     queryKey: ["catalog-search", preview, query.toString()],
     queryFn: () => getSearchShelf(query, preview),
@@ -392,6 +297,21 @@ export function BookSearchPage() {
   function update(key: string, value: string, replace = false) {
     const next = new URLSearchParams(params);
     next.delete("cursor");
+    if (key === "categoryId") {
+      next.delete("facets");
+      next.delete("series");
+      next.delete("category");
+    }
+    if (key === "mode") {
+      for (const price of [
+        "minSalePrice",
+        "maxSalePrice",
+        "minExchangeValue",
+        "maxExchangeValue",
+        "sort",
+      ])
+        next.delete(price);
+    }
     if (value) next.set(key, value);
     else next.delete(key);
     setParams(next, { replace });
@@ -409,20 +329,28 @@ export function BookSearchPage() {
   function apply(values: FilterValues) {
     const next = new URLSearchParams(params);
     next.delete("cursor");
-    Object.entries(values).forEach(([key, value]) => {
+    next.delete("category");
+    next.delete("facets");
+    if (Object.keys(values.attributes).length)
+      next.set("facets", JSON.stringify(values.attributes));
+    const { attributes: _attributes, ...fields } = values;
+    Object.entries(fields).forEach(([key, value]) => {
       if (value) next.set(key, value);
       else next.delete(key);
     });
     setParams(next);
     closeFilters();
+    requestAnimationFrame(() => {
+      const heading = document.getElementById("catalog-results");
+      heading?.focus({ preventScroll: true });
+      heading?.scrollIntoView({ block: "start" });
+    });
   }
   useEffect(() => {
     if (!filterOpen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const media = window.matchMedia(
-      "(min-width: 901px) and (min-height: 701px)",
-    );
+    const media = window.matchMedia("(min-width: 901px)");
     const closeOnDesktop = () => {
       if (media.matches) {
         dialog.current?.close();
@@ -436,7 +364,45 @@ export function BookSearchPage() {
     };
   }, [filterOpen]);
   const chips = [
-    ...(initial.category ? [{ key: "category", label: initial.category }] : []),
+    ...(initial.categoryId
+      ? [
+          {
+            key: "categoryId",
+            label: categoryFor(initial.categoryId)?.label || initial.categoryId,
+          },
+        ]
+      : []),
+    ...(initial.language
+      ? [
+          {
+            key: "language",
+            label:
+              languageOptions.find((o) => o.id === initial.language)?.label ||
+              initial.language,
+          },
+        ]
+      : []),
+    ...(initial.series ? [{ key: "series", label: initial.series }] : []),
+    ...facetsFor(initial.categoryId, initial.attributes).flatMap((f) =>
+      (initial.attributes[f.id] || []).map((value) => ({
+        key: "facets",
+        facet: f.id,
+        value,
+        label: f.options.find((o) => o.id === value)?.label || value,
+      })),
+    ),
+    ...(["minExchangeValue", "maxExchangeValue"] as const).flatMap((key) =>
+      initial[key]
+        ? [
+            {
+              key,
+              label:
+                (key.startsWith("min") ? "Đổi từ " : "Đổi đến ") +
+                formatVnd(Number(initial[key])),
+            },
+          ]
+        : [],
+    ),
     ...(params.get("condition")
       ? [
           {
@@ -501,7 +467,11 @@ export function BookSearchPage() {
         </div>
       </section>
       <div className={styles.catalog}>
-        <aside className={styles.sidebar} aria-label="Bộ lọc sách">
+        <aside
+          ref={sidebar}
+          className={styles.sidebar}
+          aria-label="Bộ lọc sách"
+        >
           <h2>
             <SlidersHorizontal size={18} aria-hidden="true" />
             Bộ lọc sách
@@ -511,7 +481,7 @@ export function BookSearchPage() {
             initial={initial}
             id="desktop"
             onApply={apply}
-            preview={preview}
+            mode={params.get("mode") || ""}
           />
         </aside>
         <section className={styles.results} aria-labelledby="catalog-results">
@@ -540,13 +510,18 @@ export function BookSearchPage() {
               </h2>
               <p>
                 {priceInvalid
-                  ? "Kiểm tra lại khoảng giá đã chọn."
+                  ? "Kiểm tra lại bộ lọc đã chọn."
                   : result.isFetching
                     ? "Đang tìm sách…"
                     : result.data
                       ? `${result.data.items.length} ${preview ? "sách xem trước" : "cuốn"} trên trang này`
                       : "Ảnh, tình trạng và giá của từng bản sách."}
               </p>
+              {preview && (
+                <p className={styles.filterHint}>
+                  Thuộc tính và giá trong bộ sách xem trước là dữ liệu mẫu.
+                </p>
+              )}
             </div>
             <div className={styles.sortGroup}>
               <button
@@ -572,6 +547,10 @@ export function BookSearchPage() {
                   </option>
                   <option value="salePriceAsc">Giá bán tăng dần</option>
                   <option value="salePriceDesc">Giá bán giảm dần</option>
+                  <option value="exchangeValueAsc">Giá trị đổi tăng dần</option>
+                  <option value="exchangeValueDesc">
+                    Giá trị đổi giảm dần
+                  </option>
                 </select>
               </label>
             </div>
@@ -584,9 +563,36 @@ export function BookSearchPage() {
               {chips.map((chip) => (
                 <button
                   type="button"
-                  key={chip.key}
+                  key={
+                    chip.key === "facets" && "facet" in chip && "value" in chip
+                      ? `${chip.facet}-${chip.value}`
+                      : chip.key
+                  }
                   aria-label={`Bỏ lọc ${chip.label}`}
-                  onClick={() => update(chip.key, "")}
+                  onClick={() => {
+                    if (
+                      chip.key === "facets" &&
+                      "facet" in chip &&
+                      "value" in chip
+                    ) {
+                      const attributes = { ...initial.attributes };
+                      const key = String(chip.facet);
+                      attributes[key] = (attributes[key] || []).filter(
+                        (v) => v !== chip.value,
+                      );
+                      if (!attributes[key]?.length) delete attributes[key];
+                      const compatible = compatibleAttributes(
+                        initial.categoryId,
+                        attributes,
+                      );
+                      update(
+                        "facets",
+                        Object.keys(compatible).length
+                          ? JSON.stringify(compatible)
+                          : "",
+                      );
+                    } else update(chip.key, "");
+                  }}
                 >
                   {chip.label}
                   <X size={14} aria-hidden="true" />
@@ -600,8 +606,11 @@ export function BookSearchPage() {
           )}
           {priceInvalid ? (
             <div className={styles.state} role="alert">
-              <h3>Khoảng giá chưa hợp lệ</h3>
-              <p>{priceMessage}</p>
+              <h3>Bộ lọc chưa hợp lệ</h3>
+              <p>
+                Kiểm tra danh mục, thuộc tính và khoảng tiền đã chọn.{" "}
+                {priceMessage}
+              </p>
               <button type="button" onClick={clear}>
                 Xóa bộ lọc
               </button>
@@ -702,15 +711,13 @@ export function BookSearchPage() {
             <X size={22} aria-hidden="true" />
           </button>
         </div>
-        {filterOpen && (
-          <FilterForm
-            key={filterKey}
-            initial={initial}
-            id="mobile"
-            onApply={apply}
-            preview={preview}
-          />
-        )}
+        <FilterForm
+          key={filterKey}
+          initial={initial}
+          id="mobile"
+          onApply={apply}
+          mode={params.get("mode") || ""}
+        />
       </dialog>
     </div>
   );
