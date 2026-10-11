@@ -39,7 +39,14 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   QA riêng đã dọn. Review độc lập SHIP; canonical scoped merge/docs/diff PASS.
   Browser>20pagination/200%/native/human và mọi trạng thái populated NOT RUN.
   Checkpoint subject `feat(web): replace account mock dashboard with owner shelf`;
-  local chưa push, READINESS không đổi. Bước tiếp: Chat và Thông báo.
+  local chưa push, READINESS không đổi. Account checkpoint `8d9cdf0`.
+  Chủ dự án chuyển sang yêu cầu lập [plan Tìm sách/bộ lọc](../design/WEB_SEARCH_FILTER_REFINEMENT_PLAN.md).
+  Plan đang chờ duyệt; lượt này chưa sửa Search. Chat/Thông báo còn source UI
+  uncommitted, build/typecheck/28unit PASS/lint0error5warning cũ; QA chưa hoàn tất,
+  reviewer/documenter chưa chạy. Browser phát hiện race join trước auth socket
+  hoàn tất (Unauthorized); chưa sửa API hoặc nhận Chat PASS. QA5190/API3009
+  disposable đã dừng, không đụng dữ liệu chính. Bước tiếp: duyệt plan Search;
+  sau đó tiếp tục phần Chat còn mở theo thứ tự chủ dự án chọn.
 - Sau `1101fac`, chủ dự án báo OS giảm chuyển động làm mất hiệu ứng mới.
   Home nay giữ đầy đủ animation cả khi reduced-motion=true: tán lá12s,
   sáu lá nền16–19s, card lift240ms/banner320ms, filter180ms/card thêm220ms,
