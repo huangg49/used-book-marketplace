@@ -40,6 +40,15 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
   runtime pointer nằm trong React. Normal-motion runtime/hardware touch/
   populated-live/FPS/zoom200%/native/human NOT RUN. Không claim independent
   review; READINESS và WIP Chat/Thông báo/MainLayout giữ nguyên.
+  Follow-up cùng nhánh từ `58a1075`: chủ dự án nhận xét bản đầu quá nhẹ. Nay
+  perspective720px, tối đa12°, depths72/56/40/32/24px, bóng cast/contact đổi
+  hướng theo pointer; reduced-motion tối đa10°/80% depth/150ms. Build/TypeScript
+  PASS; Home1535/Search1280 reduced=true xác nhận cover57.6px/title44.8px/exit
+  reset, Search390 tĩnh/không tràn. Đã xem ba capture mới:
+  [Home](../../.impeccable/review/card-depth/home-strong.jpg),
+  [Search](../../.impeccable/review/card-depth/search-strong.jpg),
+  [mobile](../../.impeccable/review/card-depth/search-strong-mobile.jpg).
+  CSS-only không chạy lại unit; giới hạn/gate/WIP ở trên giữ nguyên.
 
 - Danh mục navbar11/10, nhánh `codex/navbar-category-menu` từ `7283045`: nút bốn ô
   cạnh logo mở directory giấy ba cột; giữ Tìm sách riêng và navbar76/64px/morph.

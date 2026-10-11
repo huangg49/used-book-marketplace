@@ -48,6 +48,15 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   NOT RUN; READINESS không đổi. Không thêm dependency/API/DB writes; WIP Chat/
   Thông báo/MainLayout giữ riêng, không push. Bước tiếp: chủ dự án thử rê chuột
   lên card Home hoặc `/books?data=preview` trên Vite5186.
+  Follow-up từ `58a1075`, cùng nhánh: chủ dự án yêu cầu 3D rõ hơn. CSS tăng
+  perspective720px/góc tối đa12°/cover72px/title56px, bóng đổ theo chuột;
+  reduced-motion tối đa10°/80% depth/150ms. Build/TypeScript PASS; IAB Home1535/
+  Search1280 reduced=true đo cover57.6px/title44.8px, exit reset; Search390 tĩnh/
+  không tràn. [Home mới](../../.impeccable/review/card-depth/home-strong.jpg),
+  [Search mới](../../.impeccable/review/card-depth/search-strong.jpg),
+  [mobile](../../.impeccable/review/card-depth/search-strong-mobile.jpg).
+  Unit không chạy lại cho CSS-only; docs/diff PASS, giới hạn NOT RUN giữ trên.
+  Checkpoint subject `refactor(web): emphasize book card depth`; không push.
 
 - Danh mục navbar11/10: nhánh `codex/navbar-category-menu`, base `7283045`,
   checkpoint subject `feat(web): add navbar category directory`. Nút bốn ô cạnh
