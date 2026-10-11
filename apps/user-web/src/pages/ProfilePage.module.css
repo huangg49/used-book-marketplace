@@ -1,353 +1,170 @@
 .root {
+  --cover-sand: #f0e2ca;
   min-width: 0;
+  max-width: 880px;
 }
 .heading {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 24px;
   margin-bottom: 28px;
 }
 .heading h1 {
+  margin: 0 0 12px;
   font-family: var(--shop-display);
   text-transform: uppercase;
-  font-weight: 400;
-  color: var(--shop-wine);
   font-size: clamp(2rem, 3.1vw, 2.75rem);
   line-height: 1.18;
-  margin: 0 0 12px;
+  font-weight: 400;
+  color: var(--shop-wine);
 }
 .heading p {
-  max-width: 55ch;
-  color: var(--shop-muted);
-  font-size: 0.875rem;
-  line-height: 1.8;
   margin: 0;
+  color: var(--shop-muted);
+  font-size: 0.9375rem;
+  line-height: 1.8;
 }
-.post {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 48px;
-  border-radius: 8px;
-  background: var(--shop-wine);
-  color: var(--shop-cream);
-  padding: 12px 18px;
-  font-size: 0.875rem;
-  font-weight: 700;
-  text-decoration: none;
-  flex-shrink: 0;
-}
-.post:hover {
-  background: var(--shop-wine-hover);
-}
-.shelf {
+.paper {
   background: var(--shop-paper);
   border-radius: 12px;
-  padding: 0 24px 8px;
+  padding: 32px;
 }
-.filters {
+.identity {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 20px;
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 28px;
   border-bottom: 1px solid var(--shop-line);
-  padding: 12px 0 0;
 }
-.filters button {
-  min-height: 48px;
-  padding: 12px 2px;
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
+.identity > div {
+  min-width: 0;
+}
+.identity h2 {
+  margin: 0 0 6px;
+  font-size: 1.5rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.identity p {
+  margin: 0;
   color: var(--shop-muted);
-  font-size: 0.8125rem;
-  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1.7;
 }
-.filters button[aria-pressed="true"] {
+.initial {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--cover-sand);
   color: var(--shop-wine);
-  border-bottom-color: var(--shop-wine);
+  font-size: 1.75rem;
   font-weight: 700;
 }
-.filters button:hover {
-  color: var(--shop-wine);
-}
-.count {
-  font-size: 0.75rem;
-  color: var(--shop-muted);
-  margin: 20px 0 0;
-}
-.list {
-  list-style: none;
-  padding: 0;
+.facts {
   margin: 0;
 }
-.row {
+.facts > div {
   display: grid;
-  grid-template-columns: 108px minmax(0, 1fr) 150px;
-  align-items: start;
+  grid-template-columns: 160px minmax(0, 1fr);
   gap: 24px;
   padding: 24px 0;
   border-bottom: 1px solid var(--shop-line);
 }
-.row:last-child {
-  border-bottom: 0;
-}
-.cover {
-  min-height: 148px;
-  background: #efe3cf;
-  padding: 10px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.cover img {
-  width: 88px;
-  height: 128px;
-  object-fit: contain;
-}
-.photoState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+.facts dt {
   color: var(--shop-muted);
-  text-align: center;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.8;
 }
-.photoState button {
-  border: 0;
-  background: none;
-  color: var(--shop-wine);
-  text-decoration: underline;
-  min-height: 44px;
-  cursor: pointer;
-}
-.bookInfo {
-  min-width: 0;
-}
-.status {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  margin: 0 0 10px;
-  font-size: 0.75rem;
-  color: var(--shop-muted);
-}
-.status strong {
-  color: var(--shop-wine);
-}
-.bookInfo h3 {
+.facts dd {
+  margin: 0;
   font-size: 1rem;
   line-height: 1.6;
-  margin: 0 0 4px;
-  font-weight: 700;
   overflow-wrap: anywhere;
 }
-.bookInfo h3 a {
-  color: inherit;
-  text-decoration: none;
-}
-.bookInfo h3 a:hover {
-  color: var(--shop-wine);
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-.author,
-.condition {
-  margin: 0 0 8px;
-  color: var(--shop-muted);
-  font-size: 0.8125rem;
-  line-height: 1.7;
-}
-.note,
-.updated,
-.reason {
-  font-size: 0.75rem;
-  line-height: 1.8;
-  color: var(--shop-muted);
-  margin: 6px 0 0;
-}
-.reason {
-  color: var(--shop-wine);
-}
-.prices p {
-  margin: 0 0 12px;
-}
-.prices p span {
-  display: block;
-  color: var(--shop-muted);
-  font-size: 0.75rem;
-  margin-bottom: 4px;
-}
-.prices strong {
-  color: var(--shop-wine);
-  font-size: 0.9375rem;
-  font-variant-numeric: tabular-nums;
-}
-.detail {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  min-height: 44px;
-  color: var(--shop-wine);
-  font-size: 0.75rem;
-  text-underline-offset: 4px;
-}
-.identityError {
-  color: var(--shop-wine);
-  font-size: 0.75rem;
-  line-height: 1.8;
-}
-.identityError button {
-  min-height: 44px;
-  color: inherit;
-  background: none;
-  border: 0;
-  text-decoration: underline;
-  cursor: pointer;
-}
-.state {
-  padding: 40px 8px;
-  color: var(--shop-muted);
-  font-size: 0.875rem;
-  line-height: 1.8;
-}
-.state h2 {
-  font-size: 1.125rem;
-  color: var(--shop-ink);
-  margin: 12px 0 8px;
-}
-.state p {
-  max-width: 60ch;
-  margin: 0 0 16px;
-}
-.state a,
-.state button,
-.pagination button {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  border: 1px solid var(--shop-control);
-  padding: 10px 14px;
-  color: var(--shop-wine);
-  background: transparent;
-  border-radius: 8px;
-  font-size: 0.8125rem;
-  cursor: pointer;
-  text-decoration: none;
-}
-.state :is(a, button):hover,
-.pagination button:hover {
-  background: #efe3cf;
-}
-.pagination {
-  padding: 20px 0;
+.security {
+  padding-top: 28px;
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
 }
-.root button:disabled {
-  opacity: 0.55;
-  cursor: wait;
+.security h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  line-height: 1.5;
 }
-.account {
-  padding-top: 32px;
-  margin-top: 32px;
-  border-top: 1px solid var(--shop-line);
-}
-.account h2 {
-  font-size: 1.125rem;
-  margin: 0 0 20px;
-}
-.account dl {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
+.security p {
   margin: 0;
-}
-.account dt {
-  font-size: 0.75rem;
+  max-width: 42ch;
   color: var(--shop-muted);
-  margin-bottom: 6px;
-}
-.account dd {
-  margin: 0;
   font-size: 0.875rem;
-  overflow-wrap: anywhere;
+  line-height: 1.8;
 }
-@media (max-width: 1100px) {
-  .row {
-    grid-template-columns: 92px minmax(0, 1fr);
-    gap: 20px;
-  }
-  .cover img {
-    width: 72px;
-  }
-  .prices {
-    grid-column: 2;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 24px;
-    margin-top: -8px;
-  }
-  .prices p {
-    margin: 0;
-  }
+.security a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--shop-wine);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-underline-offset: 5px;
 }
-@media (max-width: 760px) {
-  .heading {
-    flex-direction: column;
-    gap: 16px;
-  }
-  .heading h1 {
-    font-size: 2rem;
-  }
-  .shelf {
-    padding: 0 16px 8px;
-  }
-  .filters {
-    gap: 4px 16px;
-  }
-  .row {
-    grid-template-columns: 72px minmax(0, 1fr);
-    gap: 16px;
-  }
-  .cover {
-    padding: 6px;
-    min-height: 112px;
-  }
-  .cover img {
-    width: 60px;
-    height: 100px;
-  }
-  .bookInfo h3 {
-    font-size: 0.9375rem;
-  }
-  .prices {
-    gap: 12px 20px;
-  }
-  .account dl {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
+.shelfLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 12px 0;
+  min-height: 48px;
+  color: var(--shop-wine);
+  font-size: 0.875rem;
+  line-height: 1.8;
+  text-decoration: none;
 }
-@media (max-width: 360px) {
-  .row {
-    grid-template-columns: 60px minmax(0, 1fr);
-    gap: 12px;
+.shelfLink svg {
+  flex-shrink: 0;
+}
+.shelfLink svg:last-child {
+  margin-left: auto;
+}
+.shelfLink:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.root ::selection {
+  background: var(--cover-sand);
+  color: var(--shop-wine);
+}
+@media (max-width: 600px) {
+  .paper {
+    padding: 24px 20px;
   }
-  .cover img {
-    width: 48px;
-    height: 88px;
+  .identity {
+    gap: 14px;
+    padding-bottom: 20px;
   }
-  .cover {
-    min-height: 100px;
+  .identity h2 {
+    font-size: 1.25rem;
   }
-  .prices {
-    gap: 12px;
+  .initial {
+    width: 52px;
+    height: 52px;
+    font-size: 1.5rem;
+  }
+  .facts > div {
+    display: block;
+    padding: 20px 0;
+  }
+  .facts dt {
+    margin-bottom: 8px;
+  }
+  .security {
+    padding-top: 24px;
+  }
+  .heading p,
+  .shelfLink {
+    font-size: 1rem;
   }
 }

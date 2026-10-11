@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { Menu, Plus, X } from "lucide-react";
 import { ROUTES, searchUrl } from "../lib/routes";
 import { useSession } from "../hooks/useSession";
-import { session } from "../lib/session";
+import { AccountMenu } from "./AccountMenu";
+import { accountNavigation } from "../lib/account-navigation";
+import { useAccountLogout } from "../hooks/useAccountLogout";
 import { NotificationBell } from "./NotificationBell";
 import { CategoryNavigation, MobileCategories } from "./CategoryNavigation";
 import styles from "../layouts/MainLayout.module.css";
@@ -39,13 +41,16 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
   const setMenuOpen = (open: boolean) =>
     setMenuPath(open ? location.key : null);
   const state = useSession();
+  const accountLogout = useAccountLogout();
   useEffect(() => {
     if (!categoryArrival.current) return;
     categoryArrival.current = false;
     window.scrollTo({ top: 0, behavior: "instant" });
     document.getElementById("search-title")?.focus({ preventScroll: true });
   }, [location.key]);
-  const onCategoryNavigate = () => { categoryArrival.current = true; };
+  const onCategoryNavigate = () => {
+    categoryArrival.current = true;
+  };
   useEffect(() => {
     let compact = window.scrollY > 48;
     const update = () => {
@@ -118,12 +123,13 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
           </nav>
           <div className={styles.headerActions}>
             {state.status === "authenticated" && <NotificationBell />}
-            <Link
-              className={styles.account}
-              to={state.status === "authenticated" ? "/profile" : ROUTES.login}
-            >
-              {state.status === "authenticated" ? "Tài khoản" : "Đăng nhập"}
-            </Link>
+            {state.status === "authenticated" ? (
+              <AccountMenu displayName={state.user.displayName} />
+            ) : (
+              <Link className={styles.account} to={ROUTES.login}>
+                Đăng nhập
+              </Link>
+            )}
             <Link to={ROUTES.sell} className={styles.post}>
               <Plus size={18} aria-hidden="true" />
               Đăng sách
@@ -137,7 +143,11 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
               aria-controls="mobile-nav"
               onClick={() => setMenuOpen(!menuOpen)}
             >
-              {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+              {menuOpen ? (
+                <X aria-hidden="true" />
+              ) : (
+                <Menu aria-hidden="true" />
+              )}
             </button>
           </div>
         </div>
@@ -161,16 +171,21 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
             {state.status === "authenticated" ? (
               <>
                 <Link to={ROUTES.notifications}>Thông báo</Link>
-                <Link to="/profile">Hồ sơ ({state.user.displayName})</Link>
+                {accountNavigation.map(({ to, label }) => (
+                  <NavLink key={to} to={to} end>
+                    {label}
+                  </NavLink>
+                ))}
                 <button
                   type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    void session.logout();
-                  }}
+                  disabled={accountLogout.busy}
+                  onClick={() => void accountLogout.logout()}
                 >
-                  Đăng xuất
+                  {accountLogout.busy ? "Đang đăng xuất…" : "Đăng xuất"}
                 </button>
+                {accountLogout.error && (
+                  <p role="alert">{accountLogout.error}</p>
+                )}
               </>
             ) : (
               <Link to={ROUTES.login}>Đăng nhập</Link>

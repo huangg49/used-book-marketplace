@@ -1,34 +1,18 @@
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useState } from "react";
-import {
-  Library,
-  Bell,
-  ArrowLeftRight,
-  LogOut,
-  ChevronDown,
-} from "lucide-react";
-import { session } from "../../../lib/session";
+import { Bell, LogOut, ChevronDown } from "lucide-react";
+import { accountNavigation } from "../../../lib/account-navigation";
+import { ROUTES } from "../../../lib/routes";
+import { useAccountLogout } from "../../../hooks/useAccountLogout";
 import { useSession } from "../../../hooks/useSession";
 import styles from "../../../layouts/DashboardLayout.module.css";
 
 export function DashboardSidebar() {
   const auth = useSession();
-  const navigate = useNavigate();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  async function logout() {
-    setBusy(true);
-    setError(false);
-    try {
-      await session.logout();
-      navigate("/login", { replace: true });
-    } catch {
-      setError(true);
-    } finally {
-      setBusy(false);
-    }
-  }
+  const location = useLocation();
+  const [menuPath, setMenuPath] = useState<string | null>(null);
+  const menuOpen = menuPath === location.key;
+  const { busy, error, logout } = useAccountLogout();
   return (
     <aside className={styles.sidebar}>
       <button
@@ -36,7 +20,7 @@ export function DashboardSidebar() {
         type="button"
         aria-expanded={menuOpen}
         aria-controls="account-navigation"
-        onClick={() => setMenuOpen(!menuOpen)}
+        onClick={() => setMenuPath(menuOpen ? null : location.key)}
       >
         Không gian cá nhân <ChevronDown size={18} aria-hidden="true" />
       </button>
@@ -52,18 +36,16 @@ export function DashboardSidebar() {
           <p>Tài khoản Lật lại</p>
         </div>
         <nav className={styles.navigation} aria-label="Không gian cá nhân">
-          <Link to="/profile" aria-current="page">
-            <Library size={18} aria-hidden="true" />
-            Kệ sách của tôi
-          </Link>
-          <Link to="/exchange/mine">
-            <ArrowLeftRight size={18} aria-hidden="true" />
-            Đề nghị đổi sách
-          </Link>
-          <Link to="/notifications">
+          {accountNavigation.map(({ to, label, icon: Icon }) => (
+            <NavLink key={to} to={to} end>
+              <Icon size={18} aria-hidden="true" />
+              {label}
+            </NavLink>
+          ))}
+          <NavLink to={ROUTES.notifications} end>
             <Bell size={18} aria-hidden="true" />
             Thông báo
-          </Link>
+          </NavLink>
         </nav>
         <button
           className={styles.logout}
@@ -76,7 +58,7 @@ export function DashboardSidebar() {
         </button>
         {error && (
           <p className={styles.error} role="alert">
-            Chưa đăng xuất được. Thử lại giúp mình.
+            {error}
           </p>
         )}
       </div>

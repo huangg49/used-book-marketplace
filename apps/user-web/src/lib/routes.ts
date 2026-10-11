@@ -9,6 +9,8 @@ export const ROUTES = {
   sell: '/sell',
   login: '/login',
   register: '/register',
+  profile: '/profile',
+  myBooks: '/my-books',
   exchange: '/exchange',
   exchangeCompose: (bookId: string): string => `/exchange/new?book=${bookId}`,
   exchangeMine: '/exchange/mine',

@@ -7,6 +7,7 @@ import { BookDetailPage } from '../pages/BookDetailPage';
 import { SellBookPage } from '../pages/SellBookPage';
 import { ChatPage } from '../pages/ChatPage';
 import { ProfilePage } from '../pages/ProfilePage';
+import { MyBooksPage } from '../pages/MyBooksPage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
@@ -51,6 +52,7 @@ export const router = createBrowserRouter([{ element: <PaperStormLayout />, chil
     element: <DashboardLayout />,
     children: [
       { path: '/profile', element: <ProfilePage /> },
+      { path: '/my-books', element: <MyBooksPage /> },
     ],
   },
   // Auth sheets share one persistent paper stack and memory-only input draft.

@@ -6,6 +6,26 @@ OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hi�
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
+## Menu tài khoản, Hồ sơ và Kệ sách — 11/10/2026
+
+- `codex/account-menu-profile`, base `96e75c9`, checkpoint subject
+  `feat(web): separate account profile and book shelf navigation`. Chủ dự án
+  duyệt menu bấm Tài khoản, không thêm Kệ sách ở nav cấp đầu. `/profile` đọc
+  SessionClient name/email/status, link đặt lại mật khẩu; `/my-books` giữ owner
+  query/ảnh/filter/cursor/state. Menu desktop/mobile/sidebar dùng chung điểm đến;
+  legacy profile query giữ filter, guest returnUrl giữ pathname/query. H1 focus,
+  title, Escape/Tab/ArrowDown/outside close và logout sau auth unmount được xử lý.
+  API/auth/session không đổi; sửa tên/avatar/email còn thiếu contract, không làm
+  nút giả. Web65unit/TS/build PASS; lint0error5warning Exchange cũ/chunk warning.
+  Một detector[]; CUA1280×720/390×844 trên Nest/Mongo `_test` riêng, fake storage,
+  local mail kiểm menu/route/filter/guest/login/logout; [evidence](../../.impeccable/review/account-menu/README.md).
+  AI full review mộtP2 focus collision; verdict pass ship chấm lỗi đó resolved,
+  không là audit mới/nghiệm thu người thật. DESIGN/brief cập nhật; QA tab/runtime
+  và đúng DB/users/roles của fixture đã dọn. Docs311Markdown/2159links/diffcheck PASS.
+  Browser harness/NVDA/native/physical mobile/network-failure logout/human/CI
+  NOT RUN; READINESS giữ nguyên. Chat/Thông báo/MainLayout WIP bảo toàn. Local
+  checkpoint chưa push; bước tiếp chủ dự án thử menu/Hồ sơ/Kệ sách và review.
+
 ## Auth — tập giấy thư viện — 11/10/2026
 
 - OTP/Brevo: codex/auth-brevo-otp, base79f006d, checkpoint subject
