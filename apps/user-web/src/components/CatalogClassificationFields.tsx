@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import {
   categories,
   categoryFor,
@@ -20,6 +21,7 @@ export function CatalogClassificationFields({
   editing = false,
   clearable = false,
   collapseOptional = false,
+  secondaryField,
 }: {
   value: ClassificationValue;
   onChange: (value: ClassificationValue) => void;
@@ -27,6 +29,7 @@ export function CatalogClassificationFields({
   editing?: boolean;
   clearable?: boolean;
   collapseOptional?: boolean;
+  secondaryField?: ReactNode;
 }) {
   const [expanded, setExpanded] = useState<string[]>([]);
   const category = categoryFor(value.categoryId);
@@ -42,41 +45,49 @@ export function CatalogClassificationFields({
   }
   return (
     <div className={styles.fields}>
-      <div className={clearable ? styles.categoryHeading : undefined}>
-        <label className={styles.label} htmlFor={`${id}-category`}>
-          Danh mục sách
-        </label>
-        {clearable && value.categoryId && (
-          <button
-            type="button"
-            className={styles.clear}
-            aria-label="Xóa lựa chọn danh mục sách"
-            onClick={(event) => {
-              event.currentTarget
-                .closest(`.${styles.fields}`)
-                ?.querySelector("select")
-                ?.focus();
-              changeCategory("");
-            }}
-          >
-            Xóa
-          </button>
-        )}
-      </div>
-      <select
-        id={`${id}-category`}
-        value={root?.id || ""}
-        onChange={(e) => changeCategory(e.target.value)}
+      <div
+        className={styles.primaryFields}
+        data-paired={!!secondaryField || undefined}
       >
-        <option value="">
-          {editing ? "Chọn danh mục…" : "Tất cả danh mục"}
-        </option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.label}
-          </option>
-        ))}
-      </select>
+        <div className={styles.categoryField}>
+          <div className={clearable ? styles.categoryHeading : undefined}>
+            <label className={styles.label} htmlFor={`${id}-category`}>
+              Danh mục sách
+            </label>
+            {clearable && value.categoryId && (
+              <button
+                type="button"
+                className={styles.clear}
+                aria-label="Xóa lựa chọn danh mục sách"
+                onClick={(event) => {
+                  event.currentTarget
+                    .closest(`.${styles.fields}`)
+                    ?.querySelector("select")
+                    ?.focus();
+                  changeCategory("");
+                }}
+              >
+                Xóa
+              </button>
+            )}
+          </div>
+          <select
+            id={`${id}-category`}
+            value={root?.id || ""}
+            onChange={(e) => changeCategory(e.target.value)}
+          >
+            <option value="">
+              {editing ? "Chọn danh mục…" : "Tất cả danh mục"}
+            </option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        {secondaryField}
+      </div>
       {!!root?.children.length && (
         <label className={styles.subcategory}>
           Nhóm sách

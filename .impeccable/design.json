@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-11T16:36:29Z",
+  "generatedAt": "2026-10-11T17:28:46Z",
   "title": "Design System: Lật lại",
   "extensions": {
     "colorMeta": {
@@ -1190,6 +1190,18 @@
           "pending": "fieldsets lock on submitting or retained attempt;disabled controls .55 opacity and fields .7",
           "classification": "required native category/subcategory remain visible;Sell opts into collapseOptional for shared optional metadata disclosures;default false preserves other consumers"
         },
+        "bookSlip": {
+          "scope": "Owner-approved12/10 ordinary Operate/code-led extension;existing paper desk/background/five steps/preview topology and all token primitives preserved;no new font asset,raster,dependency or API/session/submission semantics",
+          "source": "apps/user-web/src/pages/SellBookPage.tsx;apps/user-web/src/pages/SellBookPage.module.css;apps/user-web/src/components/CatalogBookPicker.tsx;apps/user-web/src/components/CatalogClassificationFields.tsx;apps/user-web/src/components/CatalogClassificationFields.module.css",
+          "header": "Original Logo is an inert aria-hidden decorative wine mark on a ruled header;truthful Bản nháp stamp has1px wine boundary and−4deg tilt,no saved/publication claim",
+          "entry": "Two native aria-pressed buttons:Tìm sách có sẵn/Tự nhập thông tin;min48px,quiet ground,2px wine selected underline. Catalog search min56px with existing decorative search icon and44px text recovery action",
+          "manual": "Ruled title min64px,22px bold/1.7,−.02em,10px vertical padding,1px bottom shop-control boundary,radius0;author keeps existing field recipe. Required category/edition language opt into shared secondaryField:1.3fr/1fr,20px gap;<=600px single column/16px gap. Unpaired consumers and optional facets retain existing recipes",
+          "annotation": "One nonessential existing Auth Melody note,24px/1.6 wine,right aligned,left at<=760px;functional labels/instructions/errors/actions remain Be Vietnam Pro",
+          "selection": "Confirmed catalog summary:26px/1.45 wrapping title,author,category/language facts in two columns/20px gap,single column at<=760px. Existing cleanup-owned focusAfterRender focuses selected heading;choose-again focuses catalog search;manual recovery focuses title",
+          "preview": "Desktop empty-photo stage transparent116px with shop-line rules;actual-photo and compact-preview stages preserve existing recipe. Condition appears after condition step checked or pages/description entered;money after step4 or entered value;missing values muted pending text",
+          "retention": "Entry switches and step navigation retain local values;invalid first-step submit opens manual fields before existing focused error summary",
+          "comparison": ".impeccable/review/posting-book-slip/documentation.md;runtime checks/captures in adjacent README;fresh finish-review verdict recorded separately,no release/native/human acceptance claim"
+        },
         "photos": {
           "selection": "Native single-file selector;JPEG/PNG/WebP,max10MB each,up to8;first file is cover;uploads start when submitting",
           "upload": "min172px/24px padding/12px radius/dashed shop-control;detail-ground;cream hover",
@@ -1472,7 +1484,7 @@
       },
       {
         "name": "The Two Voices Rule",
-        "body": "Anton carries expressive discovery moments; Be Vietnam Pro carries Home category/catalog headings, book titles, prices, forms and consequential actions. Use the bundled weights. Auth alone adds Bricolage headings and MTD Fancy Melody reader traces; this does not replace the global pairing.",
+        "body": "Anton carries expressive discovery moments; Be Vietnam Pro carries Home category/catalog headings, book titles, prices, forms and consequential actions. Use the bundled weights. Auth adds Bricolage headings and MTD Fancy Melody reader traces; Sell's approved book-information slip reuses Melody for one nonessential marginal note. These scoped exceptions do not replace the global pairing.",
         "section": "typography"
       }
     ],

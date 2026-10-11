@@ -1,10 +1,34 @@
-# Điểm lưu hiện tại — 11/10/2026
+# Điểm lưu hiện tại — 12/10/2026
 
 Snapshot tổng quan: main `da59199`; docs context `d77290a`, docs refresh `2e13f04`.
 Checkout/gói Android hiện hành và primary main mới được ghi bên dưới.
 OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hiện hành. Đây là trạng thái theo Git/
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
+
+## Đăng sách — phiếu thông tin sách —12/10/2026
+
+- `codex/posting-book-slip`, base `34f2cc4`, checkpoint subject
+  `feat(web): give book entry a library slip hierarchy`. Chủ dự án duyệt hướng
+  phiếu sách: hai lối tìm catalog/tự nhập, tên sách lớn trên dòng kẻ, tác giả dưới,
+  danh mục/ngôn ngữ cùng hàng desktop, logo gốc/dấu Bản nháp/một ghi chú Melody.
+  Preview trống nhẹ, tình trạng/giá hiện theo bước hoặc dữ liệu đã nhập; giữ nền
+  Minh/5bước/validation/session/API/payload/exit/submission attempt/retry.
+- Web78tests/build(TS)/lint PASS;5warning Exchange cũ/chunk advisory. CUA trên
+  Nest/Mongo `*_test` riêng/fake storage:1440×900/1280×720/390×844/320×740,
+  giữ dữ liệu qua cách nhập/đổi bước, lỗi tên mở manual+focus summary/trường,
+  chọn catalog đã xác nhận/chọn lại, Search consumer mặc định PASS. Một P2 focus
+  khi control bị thay đã sửa; Enter QA và ảnh focus PASS. Full AI review thấy
+  một finding đó; verdict pass **ship**, scored resolved, không là full audit mới.
+  [Evidence](../../.impeccable/review/posting-book-slip/README.md). DESIGN/sidecar/
+  surface đã cập nhật, không đổi token/raster/dependency. Drift Auth/motion docs
+  có sẵn được ghi nhận, không sửa ngoài scope. READINESS/WIP teammate giữ nguyên.
+- Không chạy lại gửi duyệt/lost-response/retry browser của extension giao diện;
+  Safari/speech/physical mobile/native/actual125%zoom/human/CI NOT RUN. Detector
+  một lần ở phần blend trước trong cùng phiên là `[]`; không scan extension lần2.
+  QA tab/viewport/API5191-3009/Mongo57017 disposable được dọn; API3000 và Vite5186
+  local chính giữ chạy. Local commit, chưa push/PR; chủ dự án xem trước human
+  review/tích hợp.
 
 ## Giao diện Đăng sách kết hợp hai bản — 11/10/2026
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { session } from "../services/api";
+import { Search } from "lucide-react";
 import styles from "./CatalogClassificationFields.module.css";
 const book = z.object({
   id: z.string().uuid(),
@@ -16,8 +17,12 @@ const book = z.object({
 export type PickedBook = z.infer<typeof book>;
 export function CatalogBookPicker({
   onSelect,
+  label = "Chọn đầu sách đã có",
+  compact = false,
 }: {
   onSelect: (book: PickedBook) => void;
+  label?: string;
+  compact?: boolean;
 }) {
   const [term, setTerm] = useState("");
   const [cursor, setCursor] = useState("");
@@ -37,18 +42,21 @@ export function CatalogBookPicker({
       ),
   });
   return (
-    <div className={styles.picker}>
-      <label htmlFor="sell-catalog-search">Chọn đầu sách đã có</label>
-      <input
-        id="sell-catalog-search"
-        type="search"
-        placeholder="Nhập tên, tác giả hoặc ISBN…"
-        value={term}
-        onChange={(e) => {
-          setTerm(e.target.value);
-          setCursor("");
-        }}
-      />
+    <div className={`${styles.picker} ${compact ? styles.compactPicker : ""}`}>
+      <label htmlFor="sell-catalog-search">{label}</label>
+      <div className={styles.searchField}>
+        {compact && <Search size={20} aria-hidden="true" />}
+        <input
+          id="sell-catalog-search"
+          type="search"
+          placeholder="Nhập tên, tác giả hoặc ISBN…"
+          value={term}
+          onChange={(e) => {
+            setTerm(e.target.value);
+            setCursor("");
+          }}
+        />
+      </div>
       {result.isFetching && <p role="status">Đang tìm trong catalog…</p>}
       {result.isError && (
         <p role="alert">
@@ -61,7 +69,11 @@ export function CatalogBookPicker({
       {!result.isFetching &&
         !result.isError &&
         result.data?.items.length === 0 && (
-          <p>Chưa tìm thấy. Bạn có thể đề nghị đầu sách mới bên dưới.</p>
+          <p>
+            {compact
+              ? "Chưa tìm thấy. Bạn có thể chọn Tự nhập thông tin."
+              : "Chưa tìm thấy. Bạn có thể đề nghị đầu sách mới bên dưới."}
+          </p>
         )}
       {result.data?.items.map((b) => (
         <button

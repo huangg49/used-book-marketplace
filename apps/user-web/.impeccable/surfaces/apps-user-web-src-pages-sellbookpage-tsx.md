@@ -7,6 +7,28 @@ related_targets: ["apps/user-web/src/pages/SellBookPage.module.css", "apps/user-
 
 # Đăng sách —11/10/2026
 
+## Approved book-slip entry extension —12/10/2026
+
+Mode: Operate, code-led extension of the approved archival desk, no new world.
+THESIS: A book-information slip gives useful hierarchy to identifying the book.
+OWN-WORLD: Existing opaque cream paper, wine ink, Be Vietnam Pro fields and the
+existing Auth Melody for one nonessential marginal note; original Logo is a
+decorative paper mark, paired with a truthful Bản nháp stamp.
+STORY: Choose an existing catalog book or write the title from the cover, then
+continue through the same five steps, reviewing the actual copy before submission.
+FIRST VIEWPORT: Existing progress/preview topology stays; inside the paper, two
+native pressed buttons choose the entry method. Manual title is a larger ruled
+line; author below; category/language share a row above existing optional facets.
+Below600px the paired fields stack. Catalog selection becomes a readable summary.
+FORM: No API/session/validation/payload/retry changes. Draft values survive entry
+method switches and step navigation. Invalid first-step submission opens manual
+fields before the existing focused summary. Empty preview keeps illustration and
+price quiet; condition/prices appear as those steps are reached or data entered.
+QUALITY BAR: Existing44/48px controls, accessible labels/focus/error recovery,
+320px to desktop without horizontal overflow; no premature price error styling.
+FINISH: Fresh independent review plus documentation comparison and captured
+runtime evidence; existing shipping assets only, no new raster or design token.
+
 Mode: operate. Approved plan §3, incumbent wine/cream world, code-led.
 THESIS: A clear desk for describing the actual copy and checking before submission.
 OWN-WORLD: Paper surface, wine controls, Be Vietnam Pro fields, restrained rules.

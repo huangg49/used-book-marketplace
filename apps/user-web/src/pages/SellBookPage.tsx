@@ -11,9 +11,11 @@ import {
   Check,
   BookOpen,
   ImagePlus,
+  PencilLine,
   X,
 } from "lucide-react";
 import { Header } from "../layouts/MainLayout";
+import { Logo } from "../components/Header";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ListingSubmissionConfirmation } from "../components/BookJourneyStates";
 import { useSession } from "../hooks/useSession";
@@ -45,6 +47,7 @@ export function SellBookPage() {
   });
   const [language, setLanguage] = useState("vi");
   const [selectedBook, setSelectedBook] = useState<PickedBook | null>(null);
+  const [entryMode, setEntryMode] = useState<"catalog" | "manual">("catalog");
   const [step, setStep] = useState(1);
   const [checkedSteps, setCheckedSteps] = useState<number[]>([]);
   const [touched, setTouched] = useState<string[]>([]);
@@ -109,11 +112,23 @@ export function SellBookPage() {
     },
     [],
   );
-  function focusAfterRender(target: "heading" | "error") {
+  function focusAfterRender(
+    target:
+      "heading" | "error" | "selected-book" | "catalog-search" | "manual-title",
+  ) {
     if (focusFrame.current !== undefined)
       cancelAnimationFrame(focusFrame.current);
     focusFrame.current = requestAnimationFrame(() => {
-      (target === "heading" ? heading : errorBox).current?.focus();
+      if (target === "heading" || target === "error") {
+        (target === "heading" ? heading : errorBox).current?.focus();
+      } else {
+        const ids = {
+          "selected-book": "sell-selected-title",
+          "catalog-search": "sell-catalog-search",
+          "manual-title": "title",
+        };
+        document.getElementById(ids[target])?.focus();
+      }
     });
   }
   const dirty =
@@ -215,6 +230,7 @@ export function SellBookPage() {
     if (missing.length) {
       setValidationFailure(true);
       const invalidStep = [1, 2, 3, 4].find((value) => stepError(value));
+      if (invalidStep === 1 && !selectedBook) setEntryMode("manual");
       setCheckedSteps([1, 2, 3, 4, 5]);
       if (invalidStep) setStep(invalidStep);
       setSubmitError(`Cần bổ sung: ${missing.join(", ")}.`);
@@ -342,6 +358,7 @@ export function SellBookPage() {
   }
   function continueStep() {
     const message = stepError(step);
+    if (step === 1 && message && !selectedBook) setEntryMode("manual");
     setCheckedSteps((previous) => [...new Set([...previous, step])]);
     setSubmitError(message);
     setValidationFailure(!!message);
@@ -488,8 +505,13 @@ export function SellBookPage() {
     : submitError;
   const preview = (
     <section className={styles.preview} aria-label="Bản xem trước bài đăng">
-      <h2>Cuốn sách của bạn</h2>
-      <div className={styles.previewPhoto}>
+      <div className={styles.previewHeading}>
+        <h2>Cuốn sách của bạn</h2>
+        <span>Bản nháp</span>
+      </div>
+      <div
+        className={`${styles.previewPhoto} ${!formData.images.length ? styles.previewPhotoEmpty : ""}`}
+      >
         {formData.images[0] ? (
           <img
             src={formData.images[0]}
@@ -498,42 +520,64 @@ export function SellBookPage() {
         ) : (
           <div className={styles.emptyPhoto}>
             <BookOpen size={32} aria-hidden="true" />
-            <span>Ảnh bản sách sẽ hiện ở đây</span>
+            <span>Thêm ảnh ở bước tiếp theo</span>
           </div>
         )}
       </div>
-      <h3>{formData.title || "Tên cuốn sách của bạn"}</h3>
-      <p>{formData.author || "Tác giả"}</p>
-      <span>
-        {conditions[formData.condition as keyof typeof conditions]} ·{" "}
-        {formData.mode === "Sale"
-          ? "Bán"
-          : formData.mode === "Exchange"
-            ? "Đổi"
-            : "Bán hoặc đổi"}
-      </span>
-      <dl>
-        {formData.mode !== "Exchange" && (
-          <div>
-            <dt>Giá bán</dt>
-            <dd>
-              {validPrice(formData.salePrice)
-                ? formatVnd(Number(formData.salePrice))
-                : "Chưa nhập giá hợp lệ"}
-            </dd>
-          </div>
-        )}
-        {formData.mode !== "Sale" && (
-          <div>
-            <dt>Giá trị đổi</dt>
-            <dd>
-              {validPrice(formData.exchangeValue)
-                ? formatVnd(Number(formData.exchangeValue))
-                : "Chưa nhập giá hợp lệ"}
-            </dd>
-          </div>
-        )}
-      </dl>
+      <h3>{formData.title || "Cuốn nào sẽ đi tiếp?"}</h3>
+      <p>
+        {formData.author || "Tên sách và tác giả sẽ hiện ở đây khi bạn điền."}
+      </p>
+      {(checkedSteps.includes(3) || formData.pages || formData.description) && (
+        <span>
+          {conditions[formData.condition as keyof typeof conditions]} ·{" "}
+          {formData.mode === "Sale"
+            ? "Bán"
+            : formData.mode === "Exchange"
+              ? "Đổi"
+              : "Bán hoặc đổi"}
+        </span>
+      )}
+      {step >= 4 || formData.salePrice || formData.exchangeValue ? (
+        <dl>
+          {formData.mode !== "Exchange" && (
+            <div>
+              <dt>Giá bán</dt>
+              <dd
+                className={
+                  !validPrice(formData.salePrice)
+                    ? styles.previewPending
+                    : undefined
+                }
+              >
+                {validPrice(formData.salePrice)
+                  ? formatVnd(Number(formData.salePrice))
+                  : "Chưa có giá bán"}
+              </dd>
+            </div>
+          )}
+          {formData.mode !== "Sale" && (
+            <div>
+              <dt>Giá trị đổi</dt>
+              <dd
+                className={
+                  !validPrice(formData.exchangeValue)
+                    ? styles.previewPending
+                    : undefined
+                }
+              >
+                {validPrice(formData.exchangeValue)
+                  ? formatVnd(Number(formData.exchangeValue))
+                  : "Chưa có giá trị đổi"}
+              </dd>
+            </div>
+          )}
+        </dl>
+      ) : (
+        <p className={styles.previewProgress}>
+          Ảnh, tình trạng và giá sẽ được bổ sung qua từng bước.
+        </p>
+      )}
       <p className={styles.note}>
         Đây là bản xem trước, chưa hiển thị công khai.
       </p>
@@ -554,6 +598,21 @@ export function SellBookPage() {
     );
   return (
     <div className={styles.root}>
+      <svg
+        width="0"
+        height="0"
+        className={styles.logoFilter}
+        aria-hidden="true"
+      >
+        <defs>
+          <filter id="sell-logo-ink" colorInterpolationFilters="sRGB">
+            <feColorMatrix
+              type="matrix"
+              values="0 0 0 0 .360784 0 0 0 0 .007843 0 0 0 0 .007843 1.59375 0 0 0 -.575"
+            />
+          </filter>
+        </defs>
+      </svg>
       <a href="#sell-content" className={styles.skip}>
         Bỏ qua điều hướng
       </a>
@@ -580,6 +639,7 @@ export function SellBookPage() {
               });
               setLanguage("vi");
               setSelectedBook(null);
+              setEntryMode("catalog");
               setFormData({
                 title: "",
                 author: "",
@@ -655,6 +715,19 @@ export function SellBookPage() {
               </details>
               <div className={styles.formArea}>
                 <div key={step} className={styles.stepBody}>
+                  <div className={styles.slipHeader}>
+                    <div className={styles.slipBrand}>
+                      <span
+                        className={styles.slipLogo}
+                        aria-hidden="true"
+                        inert
+                      >
+                        <Logo />
+                      </span>
+                      <span>Phiếu thông tin sách</span>
+                    </div>
+                    <span className={styles.draftStamp}>Bản nháp</span>
+                  </div>
                   <p className={styles.stepCount}>Bước {step}/5</p>
                   <h2 ref={heading} tabIndex={-1}>
                     {steps[step - 1]}
@@ -690,105 +763,205 @@ export function SellBookPage() {
                       {step === 1 && (
                         <>
                           {!selectedBook && (
-                            <CatalogBookPicker
-                              onSelect={(book) => {
-                                setSelectedBook(book);
-                                setFormData((previous) => ({
-                                  ...previous,
-                                  title: book.title,
-                                  author: book.authors.join(" · "),
-                                }));
-                                setClassification({
-                                  categoryId:
-                                    book.categoryId ||
-                                    categoryFor(book.category)?.id ||
-                                    "",
-                                  attributes: book.attributes || {},
-                                  series: book.series || "",
-                                });
-                                setLanguage(book.language);
-                              }}
-                            />
-                          )}
-                          {selectedBook && (
-                            <p className={styles.help}>
-                              Đang dùng đầu sách đã xác nhận.{" "}
+                            <div
+                              className={styles.entryChoice}
+                              role="group"
+                              aria-label="Cách điền thông tin sách"
+                            >
                               <button
                                 type="button"
-                                onClick={() => setSelectedBook(null)}
+                                aria-pressed={entryMode === "catalog"}
+                                aria-controls="sell-book-entry"
+                                onClick={() => setEntryMode("catalog")}
                               >
-                                Đề nghị một đầu sách khác
+                                <BookOpen size={18} aria-hidden="true" />
+                                Tìm sách có sẵn
                               </button>
-                            </p>
-                          )}
-                          <p className={styles.help}>
-                            Ghi tên sách và tác giả đúng như trên bìa.
-                          </p>
-                          {(
-                            [
-                              ["title", "Tên sách", "Ví dụ: Truyện Kiều"],
-                              ["author", "Tác giả", "Ví dụ: Nguyễn Du"],
-                            ] as const
-                          ).map(([key, label, placeholder]) => (
-                            <div className={styles.field} key={key}>
-                              <label htmlFor={key}>{label}</label>
-                              <input
-                                id={key}
-                                required
-                                {...feedbackProps(key)}
-                                value={formData[key]}
-                                disabled={!!selectedBook}
-                                onChange={(event) =>
-                                  setFormData((previous) => ({
-                                    ...previous,
-                                    [key]: event.target.value,
-                                  }))
-                                }
-                                placeholder={placeholder}
-                              />
-                              {fieldFeedback(key)}
-                            </div>
-                          ))}
-                          <fieldset
-                            disabled={!!selectedBook}
-                            className={styles.classification}
-                            aria-describedby={
-                              shownError("sell-category")
-                                ? "sell-category-error"
-                                : undefined
-                            }
-                          >
-                            <legend>Phân loại đầu sách</legend>
-                            <CatalogClassificationFields
-                              editing
-                              collapseOptional
-                              id="sell"
-                              value={classification}
-                              onChange={setClassification}
-                            />
-                            {fieldFeedback("sell-category")}
-                            <div className={styles.field}>
-                              <label htmlFor="sell-language">
-                                Ngôn ngữ của sách
-                              </label>
-                              <select
-                                id="sell-language"
-                                value={language}
-                                onChange={(e) => setLanguage(e.target.value)}
+                              <button
+                                type="button"
+                                aria-pressed={entryMode === "manual"}
+                                aria-controls="sell-book-entry"
+                                onClick={() => setEntryMode("manual")}
                               >
-                                {!languageOptions.some(
-                                  (o) => o.id === language,
-                                ) && (
-                                  <option value={language}>{language}</option>
-                                )}
-                                {languageOptions.map((o) => (
-                                  <option key={o.id} value={o.id}>
-                                    {o.label}
-                                  </option>
-                                ))}
-                              </select>
+                                <PencilLine size={18} aria-hidden="true" />
+                                Tự nhập thông tin
+                              </button>
                             </div>
-                          </fieldset>
+                          )}
+                          <div
+                            id="sell-book-entry"
+                            className={styles.bookEntry}
+                          >
+                            {!selectedBook && entryMode === "catalog" && (
+                              <div className={styles.catalogEntry}>
+                                <CatalogBookPicker
+                                  compact
+                                  label="Tìm cuốn sách trong thư viện"
+                                  onSelect={(book) => {
+                                    setSelectedBook(book);
+                                    setFormData((previous) => ({
+                                      ...previous,
+                                      title: book.title,
+                                      author: book.authors.join(" · "),
+                                    }));
+                                    setClassification({
+                                      categoryId:
+                                        book.categoryId ||
+                                        categoryFor(book.category)?.id ||
+                                        "",
+                                      attributes: book.attributes || {},
+                                      series: book.series || "",
+                                    });
+                                    setLanguage(book.language);
+                                    focusAfterRender("selected-book");
+                                  }}
+                                />
+                                <p className={styles.help}>
+                                  Chọn đúng đầu sách để điền sẵn tên, tác giả và
+                                  phân loại.
+                                </p>
+                                <button
+                                  className={styles.textAction}
+                                  type="button"
+                                  onClick={() => {
+                                    setEntryMode("manual");
+                                    focusAfterRender("manual-title");
+                                  }}
+                                >
+                                  Không thấy sách? Tự nhập theo bìa{" "}
+                                  <ArrowRight size={16} aria-hidden="true" />
+                                </button>
+                                <p className={styles.marginNote}>
+                                  Mỗi cuốn sách, một câu chuyện.
+                                </p>
+                              </div>
+                            )}
+                            {selectedBook && (
+                              <div className={styles.selectedEntry}>
+                                <p className={styles.selectedLabel}>
+                                  <Check size={18} aria-hidden="true" />
+                                  Đầu sách đã xác nhận
+                                </p>
+                                <h3 id="sell-selected-title" tabIndex={-1}>
+                                  {selectedBook.title}
+                                </h3>
+                                <p>{selectedBook.authors.join(" · ")}</p>
+                                <dl className={styles.selectedFacts}>
+                                  <div>
+                                    <dt>Danh mục</dt>
+                                    <dd>
+                                      {categoryFor(classification.categoryId)
+                                        ?.label || selectedBook.category}
+                                    </dd>
+                                  </div>
+                                  <div>
+                                    <dt>Ngôn ngữ</dt>
+                                    <dd>
+                                      {languageOptions.find(
+                                        (option) => option.id === language,
+                                      )?.label || language}
+                                    </dd>
+                                  </div>
+                                </dl>
+                                <button
+                                  type="button"
+                                  className={styles.textAction}
+                                  onClick={() => {
+                                    setSelectedBook(null);
+                                    setEntryMode("catalog");
+                                    focusAfterRender("catalog-search");
+                                  }}
+                                >
+                                  Chọn đầu sách khác{" "}
+                                  <ArrowRight size={16} aria-hidden="true" />
+                                </button>
+                              </div>
+                            )}
+                            {!selectedBook && entryMode === "manual" && (
+                              <>
+                                <p className={styles.manualHint}>
+                                  Ghi tên sách và tác giả đúng như trên bìa.
+                                </p>
+                                {(
+                                  [
+                                    ["title", "Tên sách", "Ví dụ: Truyện Kiều"],
+                                    ["author", "Tác giả", "Ví dụ: Nguyễn Du"],
+                                  ] as const
+                                ).map(([key, label, placeholder]) => (
+                                  <div
+                                    className={`${styles.field} ${key === "title" ? styles.titleField : ""}`}
+                                    key={key}
+                                  >
+                                    <label htmlFor={key}>{label}</label>
+                                    <input
+                                      id={key}
+                                      required
+                                      {...feedbackProps(key)}
+                                      value={formData[key]}
+                                      disabled={!!selectedBook}
+                                      onChange={(event) =>
+                                        setFormData((previous) => ({
+                                          ...previous,
+                                          [key]: event.target.value,
+                                        }))
+                                      }
+                                      placeholder={placeholder}
+                                    />
+                                    {fieldFeedback(key)}
+                                  </div>
+                                ))}
+                                <fieldset
+                                  disabled={!!selectedBook}
+                                  className={styles.classification}
+                                  aria-describedby={
+                                    shownError("sell-category")
+                                      ? "sell-category-error"
+                                      : undefined
+                                  }
+                                >
+                                  <legend>Phân loại đầu sách</legend>
+                                  <CatalogClassificationFields
+                                    editing
+                                    collapseOptional
+                                    secondaryField={
+                                      <div className={styles.languageField}>
+                                        <label htmlFor="sell-language">
+                                          Ngôn ngữ của sách
+                                        </label>
+                                        <select
+                                          id="sell-language"
+                                          value={language}
+                                          onChange={(e) =>
+                                            setLanguage(e.target.value)
+                                          }
+                                        >
+                                          {!languageOptions.some(
+                                            (o) => o.id === language,
+                                          ) && (
+                                            <option value={language}>
+                                              {language}
+                                            </option>
+                                          )}
+                                          {languageOptions.map((o) => (
+                                            <option key={o.id} value={o.id}>
+                                              {o.label}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    }
+                                    id="sell"
+                                    value={classification}
+                                    onChange={setClassification}
+                                  />
+                                  {fieldFeedback("sell-category")}
+                                </fieldset>
+                                <p className={styles.marginNote}>
+                                  Đúng tên trên bìa, dễ tìm nhau hơn.
+                                </p>
+                              </>
+                            )}
+                          </div>
                         </>
                       )}
                       {step === 2 && (
