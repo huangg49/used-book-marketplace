@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { ApiError } from "@used-books/session-client";
 import { session } from "../lib/session";
-import { AuthPageLink } from "../layouts/AuthLayout";
+import { AuthPageLink } from "../layouts/AuthPageLink";
 import { useAuthPaper } from "../layouts/auth-paper";
 import styles from "./LoginPage.module.css";
 

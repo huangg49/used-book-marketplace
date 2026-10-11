@@ -16,6 +16,18 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Phạm vi triển khai
 
+- Auth card-shuffle follow-up11/10: `codex/auth-solid-paper`, base `8ed4b22`.
+  Owner thay hinged flip bằng rút/hạ/xếp đáy850ms, giấy đặc hai mặt và form thật
+  bên dưới; light/shadow riêng, không opacity/filter trên carrier3D. Auth-only
+  motion exception theo yêu cầu: shuffle vẫn chạy với OS reduction, stamp tĩnh.
+  Register/recovery có form frontend đầy đủ, draft memory, native-disabled submit
+  và ghi rõ API chưa có; không giả gửi email/tạo tài khoản. Login logic giữ nguyên.
+  CUA1366/390/320, keyboard/focus/draft/Back, synthetic401/200 và safe returnUrl;
+  build/TS/34unit PASS, lint0error5warning cũ. Detector còn warning viền giấy
+  được giữ theo concept; hai shadecolor advisory đã dùng lại token hiện có,
+  không chạy lại detector. [Evidence](../../.impeccable/review/auth-shuffle/README.md),
+  [independent scoped SHIP](../../.impeccable/review/auth-shuffle/review.md).
+  Main DB/native/human/full reduced-preference runtime chưa chạy, READINESS giữ nguyên.
 - Auth turn follow-up11/10: `codex/auth-paper-turn`, base `fd05a77`. Bỏ dòng
   credit hiển thị theo yêu cầu mới; nguồn Davit Margaryan/Unsplash vẫn trong README.
   Lật giấy320ms rời/380ms đến, có phối cảnh và bóng theo góc xoay, đảo chiều về

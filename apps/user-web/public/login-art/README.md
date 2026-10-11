@@ -7,10 +7,16 @@ resizing/compression. The owner removed the proposed book illustration; it is
 not shipped or referenced.
 
 - `ivory-paper.webp`:512×512 clean ivory cellulose scan,4378bytes before any
-  provenance embedding. Auth CSS repeats at512px/45% opacity over its local ivory paper ground.
+  provenance embedding. Auth CSS repeats at512px directly over solid `#fffaf0`
+  on front and reverse faces, at full opacity.
 
-Static texture on the front of the three-sheet Auth stack; no paper-light sweep.
-A finite entry/page-turn animation moves the sheet; the success stamp appears
-only after awaited login. Reduced motion omits spatial transitions and keeps a
-static500ms success dwell. Grain stays still; no new API behavior or factual
-bookstore/listing claims.
+Grain stays static on the three-sheet Auth stack. The owner-approved finite850ms
+shuffle pulls the top opaque sheet fully right, lowers it behind the stack and
+tucks it into the bottom while the actual next form advances underneath. The
+carrier stays opacity1/filter:none; only child light/contact shade and face
+shadows change. Light reuses the existing cream/wine palette. There is no entrance
+or autoplay. The success stamp appears only after awaited login, holds650ms and
+then shuffles. The owner's explicit latest Auth exception retains the shuffle
+under OS reduced motion; the stamp alone becomes static. No new API behavior or
+factual bookstore/listing claims. Photographer/source provenance remains in
+`../photography/README.md`; the owner removed the visible photo credit.

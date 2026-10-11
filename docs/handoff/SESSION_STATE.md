@@ -8,6 +8,18 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Auth — tập giấy thư viện — 11/10/2026
 
+- Card-shuffle follow-up: `codex/auth-solid-paper`, base `8ed4b22`, checkpoint
+  subject `feat(web): shuffle auth cards and build account forms`. Chủ dự án
+  đổi từ lật gáy sang rút tờ trên sang phải, hạ xuống rồi xếp vào đáy850ms.
+  Giấy đặc/hai mặt, form thật nằm dưới, bóng/ánh sáng theo chuyển động; không
+  fade carrier hoặc filter làm phẳng3D. Theo yêu cầu mới, chuyển thẻ Auth vẫn
+  chạy khi giảm chuyển động; dấu thành công giảm về tĩnh. Register/recovery
+  có form đầy đủ/draft memory, nút gửi native-disabled vì API chưa có. Giữ
+  Login API/validation/session/safe returnUrl. Web build/TS/34unit PASS,
+  lint0error5warning Exchange cũ; CUA laptop/mobile/keyboard/draft/Back và
+  synthetic401/200→returnUrl PASS. [Evidence](../../.impeccable/review/auth-shuffle/README.md),
+  [independent scoped SHIP](../../.impeccable/review/auth-shuffle/review.md).
+  Không đổi READINESS; chưa nghiệm thu native/backend mới hoặc người thật.
 - Turn follow-up: `codex/auth-paper-turn`, base `fd05a77`, checkpoint subject
   `feat(web): clarify auth paper turns and remove visible photo credit`.
   Bỏ credit theo yêu cầu mới, giữ nguồn ảnh ở asset README. Lật WAAPI320/380ms,
