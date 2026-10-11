@@ -39,6 +39,7 @@ Native controls and real route links. Owner superseded hinged page turning with
 a physical card shuffle: pull the top sheet fully to the right, lower it behind
 the stack, tuck it into the bottom as the actual next form advances. One850ms
 WAAPI sequence, always in the same direction; no yaw flip or carrier fade.
+On screens wider than600px, Auth uses56px/48px vertical outer padding and a shared paper minimum clamp(590px,100dvh−104px,660px). This is a minimum, not a fixed or clipping height: errors and enlarged content can grow and scroll. The polite status sits absolutely below the paper without reserving empty flow space. At height800px or less, paper vertical padding becomes22px/14px, header bottom padding/margin10px/12px, footer top padding8px; form lede12px, field/grid separation10px, submit top14px, registration top8px with no extra top padding. Input16px/46px and button48px are unchanged. At1000–1100px the reader note remains beside the stack with26px gap; below1000px it stays above. Mobile keeps its natural stacked flow.
 Foreground form is flat at rest for crisp text; only rear papers remain tilted.
 Opaque textured front/back, shared2200px perspective only during shuffle, meaningful light/contact
 shadow changes. Current and underneath forms are inert during motion, live status

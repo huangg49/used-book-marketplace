@@ -25,5 +25,12 @@
 .librarianNote { font: 400 27px/1.4 var(--auth-hand); color: var(--shop-wine); margin: 24px 0 30px; }
 .availability { margin: 9px 0 0; color: var(--shop-muted); font-size: .6875rem; line-height: 1.8; text-align: center; }
 .submit[aria-disabled="true"] { opacity: 1; cursor: not-allowed; }
+@media (min-width: 601px) and (max-height: 800px) {
+  .lede { margin-bottom: 12px; }
+  .field + .field { margin-top: 10px; }
+  .formGrid { margin-bottom: 10px; }
+  .submit { margin-top: 14px; }
+  .registration { margin-top: 8px; padding-top: 0; }
+}
 @media (max-width: 600px) { .panel h1 { font-size: 29px; } }
 @media (max-width: 400px) { .field label span { display: none; } .panel h1 { font-size: 27px; } .formGrid { grid-template-columns: 1fr; gap: 18px; } }

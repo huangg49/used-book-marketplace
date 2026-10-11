@@ -8,6 +8,16 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Auth — tập giấy thư viện — 11/10/2026
 
+- Laptop layout: `codex/auth-laptop-layout`, base `3a25036`, subject
+  `fix(web): align auth paper layouts on laptop screens`. Ba thẻ cùng minimum
+  theo chiều cao viewport; gọn khoảng cách ở height≤800, giữ input16px/46px,
+  button48px. Status ra ngoài flow; note giữ bên cạnh từ1000px. CUA1536×700
+  ba thẻ480×596 cùng vị trí/không scroll;1024×700 PASS; màn thấp/mobile vẫn
+  scroll tự nhiên, keyboard shuffle/focus PASS. Build/TS/lint PASS (5warning
+  Exchange cũ), detector một advisory viền giấy cũ. [Evidence](../../.impeccable/review/auth-laptop/README.md).
+  Không đổi API/auth/motion/READINESS; actual browser zoom/native NOT RUN.
+
+
 - Crisp-rest refinement: branch `codex/auth-crisp-rest`, base `f63d8b0`, commit
   subject `fix(web): keep auth form text crisp at rest`. Form trước nằm phẳng
   khi nghỉ; perspective/3D chỉ bật lúc shuffle, hai tờ sau vẫn nghiêng2D.
