@@ -488,7 +488,7 @@
 }
 .questions {
   display: grid;
-  gap: 24px;
+  gap: 0;
   padding-top: 8px;
 }
 .questions fieldset,
@@ -498,7 +498,6 @@
   margin: 0;
   min-width: 0;
 }
-.questions legend,
 .mode legend {
   font-weight: 700;
   font-size: 0.875rem;
@@ -506,18 +505,66 @@
   margin-bottom: 10px;
 }
 .radioOptions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 196px;
 }
-.radioOptions label {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  min-height: 44px;
-  min-width: 86px;
-  font-size: 0.875rem;
+.choice {
+  position: relative;
+  min-width: 0;
   cursor: pointer;
+}
+.choiceFace {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  align-items: center;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--shop-control);
+  border-radius: 6px;
+  color: var(--shop-ink);
+  background: var(--shop-paper);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.7;
+}
+.choiceFace svg {
+  flex-shrink: 0;
+  visibility: hidden;
+}
+.root .choice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.choice:hover input:not(:disabled):not(:checked) + .choiceFace {
+  background: var(--shop-cream);
+  border-color: var(--shop-wine);
+}
+.choice input:checked + .choiceFace {
+  background: var(--shop-wine);
+  border-color: var(--shop-wine);
+  color: var(--shop-cream);
+}
+.choice input:checked + .choiceFace svg {
+  visibility: visible;
+}
+.choice input:focus-visible + .choiceFace {
+  outline: 3px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+.choice:has(input:disabled) {
+  cursor: not-allowed;
+}
+.choice input:disabled + .choiceFace {
+  opacity: 0.55;
 }
 .root input[type="radio"],
 .root input[type="checkbox"] {
@@ -528,27 +575,15 @@
   flex-shrink: 0;
 }
 .mode {
+  margin-top: 8px;
+}
+.modeOptions {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
-.mode label {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 14px;
-  min-height: 50px;
-  border: 1px solid var(--shop-control);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  cursor: pointer;
-}
-.mode label:has(:checked) {
-  border-color: var(--shop-wine);
-  background: var(--shop-cream);
-  color: var(--shop-wine);
-}
-.mode label span {
-  flex: 1;
+.modeOptions .choiceFace {
+  min-height: 52px;
 }
 .preview {
   min-width: 0;
@@ -953,13 +988,47 @@
   padding-top: 24px;
 }
 .questions h3 {
-  margin: 0;
+  margin: 0 0 4px;
   font-size: 1rem;
   font-weight: 700;
 }
 .questions fieldset {
-  padding-bottom: 16px;
+  padding: 18px 0;
   border-bottom: 1px solid var(--shop-line);
+}
+.questionLegend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.questionRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+}
+.questionRow > p {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.8;
+}
+@media (max-width: 600px) {
+  .questionRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .radioOptions {
+    width: 100%;
+  }
+  .modeOptions {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .fieldError {
   margin: 8px 0 0;

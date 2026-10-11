@@ -8,6 +8,18 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Đăng sách — phiếu thông tin sách —12/10/2026
 
+- Follow-up `codex/posting-choice-rows`, base `dfe5f57`, checkpoint subject
+  `refactor(web): clarify posting choices and eligibility rows`: chủ dự án yêu
+  cầu sửa nhóm Có/Không quá trống. Ba câu hỏi thành dòng kẻ gọn, câu trái/đáp án
+  phải desktop, xếp trên/dưới ở600px; ô48px, đỏ rượu/chữ kem/dấu tích khi chọn.
+  Bán/Đổi/Cả hai dùng chung mặt chọn52px. Native radio/phím mũi tên/Space/focus,
+  dữ liệu và validation giữ nguyên; không đổi API/token/raster/motion.
+  Web78tests/build(TS)/lint PASS (5warning Exchange cũ), CUA1440/1280/390/320px:
+  keyboard/error-summary focus/chặn đáp án sai/tiến-lùi giữ dữ liệu PASS. Docs/diff
+  PASS; independent AI full review **ship**, không material fix trong nhóm chọn.
+  [Evidence](../../.impeccable/review/posting-choice-rows/README.md).
+  QA riêng đã dọn; runtime chính giữ chạy. Không fullsubmit/replay/Safari/speech/
+  physical mobile/native/actual125%zoom/human/CI; không push/PR/READINESS change.
 - `codex/posting-book-slip`, base `34f2cc4`, checkpoint subject
   `feat(web): give book entry a library slip hierarchy`. Chủ dự án duyệt hướng
   phiếu sách: hai lối tìm catalog/tự nhập, tên sách lớn trên dòng kẻ, tác giả dưới,

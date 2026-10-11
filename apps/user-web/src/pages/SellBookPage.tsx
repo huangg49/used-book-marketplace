@@ -1070,24 +1070,35 @@ export function SellBookPage() {
                                 id={`${key}-group`}
                                 {...feedbackProps(key)}
                               >
-                                <legend>{label}</legend>
-                                <div className={styles.radioOptions}>
-                                  {([true, false] as const).map((value) => (
-                                    <label key={String(value)}>
-                                      <input
-                                        type="radio"
-                                        name={key}
-                                        checked={formData[key] === value}
-                                        onChange={() =>
-                                          setFormData((previous) => ({
-                                            ...previous,
-                                            [key]: value,
-                                          }))
-                                        }
-                                      />
-                                      {value ? "Có" : "Không"}
-                                    </label>
-                                  ))}
+                                <legend className={styles.questionLegend}>
+                                  {label}
+                                </legend>
+                                <div className={styles.questionRow}>
+                                  <p aria-hidden="true">{label}</p>
+                                  <div className={styles.radioOptions}>
+                                    {([true, false] as const).map((value) => (
+                                      <label
+                                        className={styles.choice}
+                                        key={String(value)}
+                                      >
+                                        <input
+                                          type="radio"
+                                          name={key}
+                                          checked={formData[key] === value}
+                                          onChange={() =>
+                                            setFormData((previous) => ({
+                                              ...previous,
+                                              [key]: value,
+                                            }))
+                                          }
+                                        />
+                                        <span className={styles.choiceFace}>
+                                          <Check size={16} aria-hidden="true" />
+                                          <span>{value ? "Có" : "Không"}</span>
+                                        </span>
+                                      </label>
+                                    ))}
+                                  </div>
                                 </div>
                                 {fieldFeedback(key)}
                               </fieldset>
@@ -1099,31 +1110,33 @@ export function SellBookPage() {
                         <>
                           <fieldset className={styles.mode}>
                             <legend>Bạn muốn bán hay đổi?</legend>
-                            {(
-                              [
-                                ["Sale", "Bán sách"],
-                                ["Exchange", "Đổi sách"],
-                                ["Both", "Bán hoặc đổi"],
-                              ] as const
-                            ).map(([value, label]) => (
-                              <label key={value}>
-                                <input
-                                  type="radio"
-                                  name="mode"
-                                  checked={formData.mode === value}
-                                  onChange={() =>
-                                    setFormData((previous) => ({
-                                      ...previous,
-                                      mode: value,
-                                    }))
-                                  }
-                                />
-                                <span>{label}</span>
-                                {formData.mode === value && (
-                                  <Check size={18} aria-hidden="true" />
-                                )}
-                              </label>
-                            ))}
+                            <div className={styles.modeOptions}>
+                              {(
+                                [
+                                  ["Sale", "Bán sách"],
+                                  ["Exchange", "Đổi sách"],
+                                  ["Both", "Bán hoặc đổi"],
+                                ] as const
+                              ).map(([value, label]) => (
+                                <label className={styles.choice} key={value}>
+                                  <input
+                                    type="radio"
+                                    name="mode"
+                                    checked={formData.mode === value}
+                                    onChange={() =>
+                                      setFormData((previous) => ({
+                                        ...previous,
+                                        mode: value,
+                                      }))
+                                    }
+                                  />
+                                  <span className={styles.choiceFace}>
+                                    <Check size={18} aria-hidden="true" />
+                                    <span>{label}</span>
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
                           </fieldset>
                           <p className={styles.help}>
                             Giá bán và giá trị đổi đều tính bằng VNĐ, từ 10.000đ

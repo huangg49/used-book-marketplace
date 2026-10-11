@@ -29,6 +29,17 @@ QUALITY BAR: Existing44/48px controls, accessible labels/focus/error recovery,
 FINISH: Fresh independent review plus documentation comparison and captured
 runtime evidence; existing shipping assets only, no new raster or design token.
 
+## Choice-row refinement —12/10/2026
+
+Owner screenshot rejected the sparse browser-default Yes/No layout. Preserve all
+questions, native radio names/booleans, validation and the surrounding paper desk.
+Each eligibility question becomes a ruled row: text left, two48px answer faces
+right (196px group/8px gap), stacking below600px. The selected face has wine ink
+ground/cream text and a check; unselected paper retains a control boundary.
+Actual inputs stay keyboard/AT accessible, with focus outlined on the visible
+face. Sale/Exchange/Both use the same local face, three columns above600px and
+one column below. No correctness color, auto-answer or new motion/business rule.
+
 Mode: operate. Approved plan §3, incumbent wine/cream world, code-led.
 THESIS: A clear desk for describing the actual copy and checking before submission.
 OWN-WORLD: Paper surface, wine controls, Be Vietnam Pro fields, restrained rules.

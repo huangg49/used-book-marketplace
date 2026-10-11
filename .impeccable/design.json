@@ -1183,12 +1183,21 @@
           "boundary": "1px shop-control for fields,file-selector,mode rows;dashed shop-control upload;shop-line for non-control dividers",
           "fields": "min48px/8px radius/12px14px padding;14px/1.7;visible bold14px labels",
           "steps": "one five-column row;min60px/10px16px padding;wine active indicator/cream text and disc;28px markers;13px/1.5 labels/11px status;760px:48px high/6px padding,labels visually hidden with accessible status names;completion derives from stepError and ownership",
-          "questions": "Three visible native radio fieldsets/legends;44px label targets;18px wine-accent radios/checkboxes",
-          "mode": "native radios;min50px/14px padding/8px radius;selected cream/wine",
+          "questions": "Three ruled native radio fieldsets;visually clipped legends with aria-hidden visible question duplicates;48px label faces;shared local choiceRows recipe;unrelated native checkbox retains18px wine accent",
+          "mode": "native Sale/Exchange/Both radios;shared local choiceRows face,min52px;three columns,one at<=600px;selected wine/cream",
           "actions": "min48px/12px16px padding/8px radius;wine primary with paper text;cream secondary;wrap;360px:10px12px/13px text;no fixed overlay",
-          "focus": "2px wine outline/3px offset;cream inset active-step focus;heading focus after step change;validation focuses error summary whose links focus corresponding fields;linked inline feedback",
+          "focus": "2px wine outline/3px offset for existing controls;choice faces3px wine/3px offset;cream inset active-step focus;heading focus after step change;validation focuses error summary whose links focus corresponding fields;linked inline feedback",
           "pending": "fieldsets lock on submitting or retained attempt;disabled controls .55 opacity and fields .7",
           "classification": "required native category/subcategory remain visible;Sell opts into collapseOptional for shared optional metadata disclosures;default false preserves other consumers"
+        },
+        "choiceRows": {
+          "scope": "Owner-approved12/10 ordinary Operate/code-led refinement of sparse condition answers and Sale/Exchange/Both;incumbent paper desk,tokens,raster,motion and API semantics preserved",
+          "source": "apps/user-web/src/pages/SellBookPage.tsx;apps/user-web/src/pages/SellBookPage.module.css",
+          "face": "Native label around visually clipped focusable radio and visible face;min48px,10px12px padding,6px radius,14px/1.7 semibold Be Vietnam Pro,8px icon/text gap;mode min52px;checked wine ground/cream text and visible check;unselected paper/ink with1px shop-control boundary;hidden check reserves space",
+          "states": "Unchecked enabled hover cream/wine boundary;input:focus-visible outlines face3px wine/3px offset;disabled face .55 opacity and not-allowed label;selection never conveys eligibility correctness",
+          "questions": "Three native fieldsets with visually clipped legends and visible aria-hidden question duplicate;shop-line ruled rows,18px vertical padding;minmax(0,1fr)/auto text-answer grid,24px gap;196px two-column answer grid,8px gap;<=600px question stacks with12px gap and full-width paired answers",
+          "mode": "Native Sale/Exchange/Both group preserves visible legend;8px top margin;three equal columns with8px gaps;<=600px one column;boolean/mode values,names,validation,inline feedback and pending fieldset lock remain runtime-owned",
+          "comparison": ".impeccable/review/posting-choice-rows/documentation.md;capture evidence and independent finish-review disposition remain separate,no release/native/human acceptance claim"
         },
         "bookSlip": {
           "scope": "Owner-approved12/10 ordinary Operate/code-led extension;existing paper desk/background/five steps/preview topology and all token primitives preserved;no new font asset,raster,dependency or API/session/submission semantics",
