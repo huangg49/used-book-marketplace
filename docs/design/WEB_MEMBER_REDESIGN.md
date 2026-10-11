@@ -16,6 +16,34 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Phạm vi triển khai
 
+- Danh mục navbar11/10, nhánh `codex/navbar-category-menu` từ `7283045`: nút bốn ô
+  cạnh logo mở directory giấy ba cột; giữ Tìm sách riêng và navbar76/64px/morph.
+  Dùng11danh mục/18nhóm con catalog-v1, tạo URL categoryId mới giữ chỉ data=live/
+  preview được chọn rõ; bỏ tiêu chí cũ. Same-tab kể cả query-only trở về scroll0/
+  focus heading Search; modifier click giữ native Link. Escape/close trả focus,
+  outside click/Tab exit/route change/mobile resize đóng directory. Compact1001–
+  1279px chỉ hiện icon; mobile native details nằm trong menu cuộn giới hạn viewport.
+  Bind wine-hover/shelf cục bộ theo màu đã có; panel180ms/reduced-motion tắt,
+  không thêm raster/global token/API. Build gồm TypeScript/34unit PASS,
+  lint0error5warning cũ, detector một lượt `[]`, diff PASS. Parent kiểm guest IAB
+  1366×768/1535×735/1024×700/390×844/320×700, xem đủ sáu capture ổn định:
+  [desktop](../../.impeccable/review/navbar-categories/desktop.jpg),
+  [laptop](../../.impeccable/review/navbar-categories/user-1535.jpg),
+  [compact](../../.impeccable/review/navbar-categories/compact-1024.jpg),
+  [mobile](../../.impeccable/review/navbar-categories/mobile-390.jpg),
+  [320](../../.impeccable/review/navbar-categories/mobile-320.jpg),
+  [đã chọn Tiếng Nhật](../../.impeccable/review/navbar-categories/selected-japanese.jpg).
+  Reviewer độc lập kiểm source/sáu ảnh: SHIP sau thay capture desktop sai kích
+  thước. Đây là JPEG bytes CUA gốc, đổi đuôi từ nhãn.png; raster thực lần lượt
+  1351×760/1520×728/1009×690/375×812/305×667/1351×760 do crop vùng browser/scrollbar.
+  Sau phát hiện hai role màu chưa bind: đã bind cục bộ, build lại PASS; browser
+  đo trigger mở rgb(124,35,32), link Tiếng Nhật hiện tại rgb(244,237,223). Parent
+  chụp lại/xem đủ sáu ảnh tại cùng đường dẫn; reviewer narrow chấm fix resolved/
+  SHIP, giữ disposition review đầy đủ trước đó, không nhận thêm broad review.
+  Documenter cập nhật Navigation/sidecar/category surface; giữ tokens/Overview.
+  Auth/populated-live/200%/native/human NOT RUN. READINESS không đổi;
+  WIP Chat/Thông báo/MainLayout.tsx giữ riêng.
+
 - Minh họa trạng thái11/10, nhánh `codex/member-story-illustrations` từ `2b861a5`:
   phương án chủ dự án duyệt thêm ba cảnh chim cánh cụt: Đã gửi duyệt, kệ cá nhân
   trống ở trang đầu/chưa lọc và phần giới thiệu Đấu giá. Hai trạng thái đầu dùng

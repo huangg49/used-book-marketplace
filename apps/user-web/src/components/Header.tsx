@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, Plus, X } from "lucide-react";
 import { ROUTES, searchUrl } from "../lib/routes";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import { NotificationBell } from "./NotificationBell";
+import { CategoryNavigation, MobileCategories } from "./CategoryNavigation";
 import styles from "../layouts/MainLayout.module.css";
 
 const links = [
@@ -30,6 +31,7 @@ export function Logo() {
 }
 export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
   const location = useLocation();
+  const categoryArrival = useRef(false);
   const [floating, setFloating] = useState(() => window.scrollY > 48);
   const [collapsing, setCollapsing] = useState(false);
   const [menuPath, setMenuPath] = useState<string | null>(null);
@@ -37,6 +39,13 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
   const setMenuOpen = (open: boolean) =>
     setMenuPath(open ? location.key : null);
   const state = useSession();
+  useEffect(() => {
+    if (!categoryArrival.current) return;
+    categoryArrival.current = false;
+    window.scrollTo({ top: 0, behavior: "instant" });
+    document.getElementById("search-title")?.focus({ preventScroll: true });
+  }, [location.key]);
+  const onCategoryNavigate = () => { categoryArrival.current = true; };
   useEffect(() => {
     let compact = window.scrollY > 48;
     const update = () => {
@@ -92,7 +101,10 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
           />
         </svg>
         <div className={styles.headerInner}>
-          <Logo />
+          <div className={styles.headerBrand}>
+            <Logo />
+            <CategoryNavigation onNavigate={onCategoryNavigate} />
+          </div>
           <nav className={styles.desktopNav} aria-label="Điều hướng chính">
             {links.map((item) => (
               <Link
@@ -135,6 +147,7 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
             className={styles.mobileNav}
             aria-label="Điều hướng trên điện thoại"
           >
+            <MobileCategories onNavigate={onCategoryNavigate} />
             {links.map((item) => (
               <Link
                 key={item.to}

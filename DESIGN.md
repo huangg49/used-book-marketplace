@@ -625,6 +625,28 @@ narrow viewport. The skip link appears on focus;96px scroll padding keeps
 scrolled anchors/focus clear of the navbar. Legacy page content is not redesigned
 by this shared navigation refinement; Android/admin remain separate.
 
+The approved category extension places a four-square **Danh mục** disclosure beside
+the original logo, preserving the separate **Tìm sách** link and Header heights.
+Its paper directory reuses wine links, Be Vietnam Pro, thin dividers and12px corners;
+the44px trigger uses8px corners and yellow hover/open emphasis. Desktop content
+uses three columns within `min(1200px, calc(100% - 40px))`,24px inline padding,
+44px parent/child links and a bounded `calc(100dvh - 120px)` scrolling panel.
+Group labels are14px bold, children13px; the panel heading is18px bold.
+At1001–1279px the trigger keeps its accessible name and icons while hiding its
+text. At1000px and below, native `details` inside the existing scrolling menu
+uses a48px summary, one vertical directory and14px full-length links.
+Panel entry is180ms once from−6px/80% opacity; reduced motion disables it and the
+trigger/chevron transitions. This extension does not inherit the Header morph exception.
+Escape or the labelled close control restores trigger focus; outside click,
+Tab exit, route change or narrowing to mobile closes the desktop directory.
+Parent and child links use the shared catalog-v1 vocabulary and a fresh
+`/books?categoryId=…` URL, preserving only an explicit `data=live|preview` selector.
+Old query/facet/price criteria are cleared. Same-tab selection returns to the top
+and focuses Search's heading, including a query-only category change; modifier
+clicks retain native link behavior. The all-books action clears category too.
+The existing wine-hover and shelf roles are bound locally to the desktop and
+mobile category wrappers; global palette/type/radius/spacing tokens stay unchanged.
+
 ### Condition labels and confirmation
 
 Detail condition/mode labels are descriptive, softly filled rectangles rather than verification. ConfirmDialog uses a paper surface, readable task explanation, wine confirmation and outlined cancel, with modal backdrop and a narrow stacked action layout. Purchase wording explains a 24-hour reservation/chat without payment; visual styling must not turn that into a purchase-success promise.

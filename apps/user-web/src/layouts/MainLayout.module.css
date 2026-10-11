@@ -165,6 +165,12 @@
   gap: 30px;
   align-items: center;
 }
+.headerBrand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 18px;
+}
 .desktopNav a {
   font-size: 0.875rem;
   min-height: 44px;
@@ -435,4 +441,10 @@
   .post {
     display: none;
   }
+}
+@media (min-width: 1001px) and (max-width: 1279px) {
+  .headerInner { padding-inline: 24px; gap: 18px; }
+  .headerBrand { gap: 12px; }
+  .desktopNav { gap: 20px; }
+  .headerActions { gap: 14px; }
 }

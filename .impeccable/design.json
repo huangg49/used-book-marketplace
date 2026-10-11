@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-11T07:23:01.880Z",
+  "generatedAt": "2026-10-11T08:06:49Z",
   "title": "Design System: Lật lại",
   "extensions": {
     "colorMeta": {
@@ -1118,6 +1118,24 @@
         "behavior": "Existing TP.HCM inspection-before-session/bids-without-wallet-holds/winner-payment explanation unchanged;point,buyNow,sort URL criteria/50-session query/live updates or30s fallback/AuctionCard/guidance/loading,error,retry,empty untouched. Illustration proves no inspection,custody,payment or settlement.",
         "evidence": "story-auction desktop/390/320 actual guest route with API offline;build/typecheck34unit and one detector[] reported for slice. Independent AI source/all13-capture scoped review SHIP;handoff in docs/design/WEB_MEMBER_REDESIGN.md.",
         "limits": "Not entire auction redesign,populated-card/bidding/full-auth integration/native/live Supabase/200% zoom/human acceptance evidence;READINESS unchanged."
+      },
+      {
+        "name": "member-category-directory",
+        "source": "apps/user-web/src/components/CategoryNavigation.tsx;apps/user-web/src/components/CategoryNavigation.module.css;apps/user-web/src/components/Header.tsx;apps/user-web/src/layouts/MainLayout.module.css;apps/user-web/src/pages/BookSearchPage.tsx;packages/api-contract/src/catalog-taxonomy.js",
+        "scope": "Owner-approved11/10 ordinary code-led Operate extension beside original logo;existing wine/cream world,76/64px Header and separate Tìm sách link preserved;no new global token,raster or API.",
+        "desktop": {
+          "trigger": "44px minimum;8px corners;8px10px padding/8px gap;14px label;22px four-square/14px chevron;18px brand gap",
+          "panel": "absolute 10px below Header;centered min(1200px,calc(100% - 40px));max-height calc(100dvh - 120px);vertical scroll/overscroll contain;paper/ink/1px line/12px corners;0 16px 36px #28191433 shadow",
+          "head": "12px24px padding/20px gap;18px bold heading;44px all-books/close controls",
+          "directory": "three equal columns;18px24px24px padding;20px column padding/thin dividing rules;44px links/6px10px padding/6px corners;14px bold parent labels;13px children in two columns/8px gap"
+        },
+        "compact": "1001–1279px:trigger text hidden,accessible name retained;Header inline padding24px/gap18px,brand gap12px,desktop links20px/action gap14px",
+        "mobile": "At1000px desktop directory hides;native details within existing menu:max-height calc(100dvh - 96px)/vertical scroll. Paper8px disclosure;48px summary/10px12px padding;single-column directory/children,12px child indent,14px full-length labels;44px link minimum.",
+        "bindings": "Established shop-wine-hover:#7c2320 and shop-shelf:#f4eddf bound locally on .root,.mobile;global tokens unchanged. Trigger hover/open:yellow text/border with wine-hover;directory hover/current:shelf+underline. Panel/mobile focus:2px wine outline/2px offset.",
+        "motion": "Panel enters once180ms cubic-bezier(.16,1,.3,1),opacity .8 to1/translateY -6px to0;trigger150ms color/background/border,chevron160ms ease-out. Reduced motion disables panel animation and trigger/chevron transitions;existing Header morph exception remains separate.",
+        "behavior": "Shared catalog-v1:11 parents+18 children. Fresh /books?categoryId URL retains only explicit data=live|preview,clears old query/filters;all-books clears category. Same-tab click arms Header ref;location.key effect scrolls top0 and focuses #search-title even for query-only navigation. Modifiers/native new-tab semantics preserved. Escape/close restore trigger focus;outside pointer/Tab exit/route change/mobile resize close desktop directory.",
+        "evidence": "Parent-reported guest IAB1366x768/1535x735/1024x700/390x844/320x700;initial independent full five-section source/six-capture review SHIP after desktop stale-size recapture. Missing local color bindings found in documentation pass;fixed with existing values and rebuilt PASS. Browser opened-trigger background rgb(124,35,32),current Japanese link rgb(244,237,223). Parent refreshed/viewed all six JPEG paths; narrow reviewer scored binding fix resolved/SHIP,retaining prior full-review disposition without a new broad review. Captures are original JPEG bytes,renamed from initial .png labels;actual dimensions1351x760,1520x728,1009x690,375x812,305x667,1351x760. Build includes TypeScript/34unit PASS,lint0errors5existing warnings,one detector[];no rescan.",
+        "limits": "Authenticated/populated-live/200% zoom or text/native/human acceptance NOT RUN;READINESS unchanged. No approved decision comp or shipping raster;existing hero/Header morph preserved."
       }
     ]
   },
@@ -1251,6 +1269,14 @@
       "description": "Shared EmptyOwnerShelf filtered variant, actual source icon/text/control recipe. Static sample only: Xem tất cả has no React callback here. Initial-empty art and pending receipt are recorded in book-journey-states; raster illustrations are not inlined in this shadow-DOM sample.",
       "html": "<div class=\"ds-journey-filtered\"><div class=\"ds-journey-message\"><svg width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 7v14\"/><path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\"/></svg><h2>Chưa có bài trong mục này</h2><p>Chọn mục khác để xem các bài đăng của bạn.</p><button type=\"button\">Xem tất cả</button></div></div>",
       "css": ".ds-journey-filtered{--shop-wine-hover:#7c2320;--shop-shelf:#f4eddf;padding:40px 8px;font-family:var(--shop-body,\"Be Vietnam Pro\",sans-serif);color:var(--shop-ink,#281914)}.ds-journey-message{min-width:0}.ds-journey-message h2{font-size:1.125rem;line-height:1.5;color:var(--shop-wine,#5c0202);margin:12px 0}.ds-journey-message p{font-size:.875rem;line-height:1.9;color:var(--shop-muted,#716157);overflow-wrap:anywhere;max-width:55ch;margin:0 0 24px}.ds-journey-message button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:1px solid var(--shop-control,#8e7564);border-radius:8px;padding:12px 18px;background:transparent;color:var(--shop-wine,#5c0202);font-family:inherit;font-size:.8125rem;font-weight:400;cursor:pointer}.ds-journey-message button:hover{background:var(--shop-shelf)}.ds-journey-message button:focus-visible{outline:3px solid var(--shop-wine,#5c0202);outline-offset:4px}@media(max-width:760px){.ds-journey-message p{max-width:45ch}}"
+    },
+    {
+      "name": "Category directory links",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Static fragment of the paper category directory:14px bold parent,13px child,44px links and current/hover shelf ground. Runtime CategoryNavigation owns the full11/18 taxonomy,three-column layout,disclosure and route/focus behavior;sample does not approximate the original logo.",
+      "html": "<nav class=\"ds-category\" aria-label=\"Danh mục sách\"><a class=\"ds-category-parent\" href=\"/books?categoryId=languages\">Học ngoại ngữ<svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7h10v10M7 17 17 7\"/></svg></a><div class=\"ds-category-children\"><a href=\"/books?categoryId=languages.en\">Tiếng Anh</a><a href=\"/books?categoryId=languages.ja\" aria-current=\"page\">Tiếng Nhật</a></div></nav>",
+      "css": ".ds-category{--shop-wine-hover:#7c2320;--shop-shelf:#f4eddf;font-family:var(--shop-body,\"Be Vietnam Pro\",sans-serif);padding:18px24px24px;background:var(--shop-paper,#fffcf5);color:var(--shop-ink,#281914);border:1px solid var(--shop-line,#d9cbbd);border-radius:12px;box-shadow:0 16px 36px #28191433}.ds-category a{display:flex;align-items:center;min-height:44px;padding:6px 10px;border-radius:6px;color:inherit;font-size:.8125rem;line-height:1.6;text-decoration:none;text-underline-offset:4px}.ds-category .ds-category-parent{justify-content:space-between;gap:10px;color:var(--shop-wine,#5c0202);font-size:.875rem;font-weight:700}.ds-category-children{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 8px}.ds-category a:hover,.ds-category a[aria-current=\"page\"]{background:var(--shop-shelf);text-decoration:underline}.ds-category a:focus-visible{outline:2px solid var(--shop-wine,#5c0202);outline-offset:2px}"
     }
   ],
   "narrative": {

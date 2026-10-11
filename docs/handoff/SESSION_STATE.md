@@ -31,6 +31,27 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Danh mục navbar11/10: nhánh `codex/navbar-category-menu`, base `7283045`,
+  checkpoint subject `feat(web): add navbar category directory`. Nút bốn ô cạnh
+  logo mở directory giấy ba cột, dùng11danh mục/18nhóm con từ catalog-v1;
+  giữ Tìm sách riêng, hero và navbar morph. Chọn mục tạo URL categoryId mới,
+  giữ data=live/preview khi được chọn rõ, bỏ tiêu chí cũ không tương thích.
+  Đổi danh mục ngay trong Search cũng trở về đầu trang/focus heading; click
+  modifier mở tab mới giữ hành vi Link gốc. Escape/outside click/Tab exit/route
+  change đóng menu; mobile dùng disclosure trong menu với cuộn giới hạn màn hình.
+  Build gồm TypeScript/34unit PASS, lint0error5warning cũ, detector một lượt `[]`,
+  diff check PASS. CUA guest1366/1535/1024/390/320: URL/select/chip/reload,
+  keyboard/focus/đóng menu/không tràn PASS; query-only từ scroll1536 về0 PASS.
+  GET listings categoryId=manga200 chỉ chứng minh route đọc, không chứng minh
+  danh sách live có dữ liệu. Reviewer đầy đủ SHIP sau chụp lại ảnh desktop.
+  Documenter phát hiện hai role màu chưa bind cục bộ; đã bind đúng màu hiện có,
+  build lại PASS, chụp lại sáu viewport; reviewer chấm fix resolved/SHIP.
+  DESIGN/sidecar/brief đồng bộ recipe và giữ token/overview; docs check PASS;
+  [sáu ảnh JPEG](../../.impeccable/review/navbar-categories/) và
+  [evidence](../design/WEB_MEMBER_REDESIGN.md). Authenticated/populated-live/
+  zoom200%/native/human NOT RUN; READINESS không đổi. Không push; WIP Chat/
+  Thông báo/MainLayout.tsx giữ riêng. Bước tiếp: chủ dự án thử Danh mục tại Vite5186.
+
 - Minh họa trạng thái11/10: nhánh `codex/member-story-illustrations`, base `2b861a5`,
   checkpoint subject `feat(web): add penguin story illustrations to member pages`.
   Ba WebP alpha cùng bộ chim cánh cụt cho Đã gửi duyệt/kệ đầu trống/intro Auction;

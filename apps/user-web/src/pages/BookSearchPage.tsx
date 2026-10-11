@@ -436,7 +436,7 @@ export function BookSearchPage() {
       <section className={styles.searchHead} aria-labelledby="search-title">
         <div className={styles.headInner}>
           <div className={styles.headingRow}>
-            <h1 id="search-title">
+            <h1 id="search-title" tabIndex={-1}>
               TÌM SÁCH<span>.</span>
             </h1>
             <p>Một cuốn đã đọc. Một câu chuyện để đọc tiếp.</p>
