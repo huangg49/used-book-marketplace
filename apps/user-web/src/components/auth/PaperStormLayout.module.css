@@ -1,6 +1,11 @@
 .content { min-height: 100dvh; }
 .overlay { position: fixed; inset: 0; z-index: 10000; overflow: hidden; touch-action: none; }
-.canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.scene { position: absolute; inset: 0; pointer-events: none; }
+.sheet, .piece { position: absolute; top: 0; left: 0; pointer-events: none; }
+.sheet { will-change: transform; }
+.surface, .surface svg { display: block; width: 100%; height: 100%; }
+.surface { will-change: transform; }
+.piece { object-fit: fill; opacity: 0; }
 .halves { position: absolute; inset: 0; pointer-events: none; }
 .half { position: absolute; transform-origin: center; will-change: transform; }
 .fallback { position: absolute; inset: 0; background: var(--shop-cream); opacity: 0; }

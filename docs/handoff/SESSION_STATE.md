@@ -8,6 +8,20 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Auth — tập giấy thư viện — 11/10/2026
 
+- Performance follow-up: `codex/auth-paper-performance`, base `27203fb`, checkpoint
+  subject `perf(web): compose login paper flights outside the frame loop`. Giữ
+  look/30–18 mảnh/texture, thay Canvas vẽ mỗi frame bằng SVG tĩnh+WAAPI; native
+  drift đã lên lịch trước route, opaque paint→DOM commit→paint→exit. Sửa focus
+  sau React bỏ inert. Build QA riêng/all API intercepted/no DB: laptop p95 JS
+  callback gap33.5→5.7ms; mobile16.7→5.7ms (DPR1, không là GPU/physical FPS).
+  CUA desktop1366×768/mobile390×844 actual reduce=true, delayed readiness2s,
+  resize1024×600, H1/scroll cleanup,401/no storm, Back khi entry PASS. Native
+  coordinator/cancellation/geometry55test8file, build/TS PASS; lint0error5warning
+  Exchange cũ; detector một lần0finding. [Evidence](../../.impeccable/review/auth-performance/README.md).
+  Physical mobile/GPU memory/NVDA/native/human/hidden-tab/no-WAAPI/reveal-Back
+  runtime NOT RUN; API không đổi/READINESS giữ nguyên. Chat/Thông báo/MainLayout
+  WIP bảo toàn; local commit, chưa push. Chủ dự án thử Login trên laptop thật.
+
 - Continuous paper flow: `codex/auth-paper-flow`, base `8f02bdf`, subject
   `feat(web): carry login paper flow continuously through navigation`. Bỏ pause
   rAF/plateau; đồng hồ bay độc lập đồng hồ mở cảnh. Ba tờ lớn che bằng geometry,

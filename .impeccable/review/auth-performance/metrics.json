@@ -1,0 +1,81 @@
+{
+  "date": "2026-10-11",
+  "base": "27203fb",
+  "dpr": 1,
+  "environment": "Codex IAB, Windows; isolated Vite builds; synthetic API; no DB",
+  "measures": "JS requestAnimationFrame callback cadence and old painter submission duration, not presented GPU FPS",
+  "runs": [
+    {
+      "renderer": "baseline Canvas",
+      "viewport": [
+        1366,
+        768
+      ],
+      "setupMs": 2.9,
+      "durationMs": 1899.5,
+      "gap": {
+        "p95Ms": 33.5,
+        "maxMs": 61.1,
+        "over33_4": 10
+      },
+      "draw": {
+        "p95Ms": 33.7,
+        "maxMs": 41.4,
+        "over33_4": 9
+      }
+    },
+    {
+      "renderer": "candidate WAAPI",
+      "viewport": [
+        1366,
+        768
+      ],
+      "setupMs": 7.9,
+      "durationMs": 1712.3,
+      "gap": {
+        "p95Ms": 5.7,
+        "maxMs": 28.2,
+        "over33_4": 0
+      },
+      "draw": {
+        "calls": 0
+      }
+    },
+    {
+      "renderer": "baseline Canvas",
+      "viewport": [
+        390,
+        844
+      ],
+      "setupMs": 2.7,
+      "durationMs": 1638.3,
+      "gap": {
+        "p95Ms": 16.7,
+        "maxMs": 44.5,
+        "over33_4": 2
+      },
+      "draw": {
+        "p95Ms": 14.5,
+        "maxMs": 35.2,
+        "over33_4": 1
+      }
+    },
+    {
+      "renderer": "candidate WAAPI",
+      "viewport": [
+        390,
+        844
+      ],
+      "setupMs": 5.6,
+      "durationMs": 1593.5,
+      "gap": {
+        "p95Ms": 5.7,
+        "maxMs": 27.9,
+        "over33_4": 0
+      },
+      "draw": {
+        "calls": 0
+      }
+    }
+  ]
+}
