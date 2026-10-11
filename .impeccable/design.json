@@ -1171,6 +1171,7 @@
         "name": "sell-paper-task-desk",
         "source": "apps/user-web/src/pages/SellBookPage.tsx;apps/user-web/src/pages/SellBookPage.module.css",
         "scope": "Approved WEB_POSTING_BLEND_PROPOSAL11/10; Sell only, incumbent wine/cream world. Reuses Minh archival paper art as optimized decorative WebP with adjacent provenance; actual-copy photos stay separate. Existing submission receipt preserved.",
+        "ground": "Route-owned fixed ::before/inset0/center cover/no-repeat/pointer-events:none behind isolated root; retains artwork ratio and viewport coverage through long-form scroll. Unmount removes background; no mobile fixed-height override.",
         "columns": {
           "container": "max1280px;32px40px80px page padding",
           "desktop": "one horizontal five-step selector above240px/minmax(0,1fr) actual-copy preview/form;36px gap;preview top112px only at1200px+/900px+ and measured fit",

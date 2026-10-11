@@ -29,6 +29,13 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   `pnpm dev:api` (API/media/order workers), giữ Mongo hiện có; readiness200 và
   CORS login preflight cho `http://127.0.0.1:5186` PASS. Không reset/seed/đổi
   credential; chưa submit đăng nhập thay chủ dự án. Runtime được giữ chạy.
+  Follow-up nền: `codex/posting-background-cover`, base `8f15c76`, checkpoint
+  subject `fix(web): cover posting viewport throughout long forms`. Nền fixed
+  route-owned/center cover thay ảnh cao theo width và mobile900px; giữ tỉ lệ,
+  phủ viewport khi cuộn form, không lan Home. CUA1440×900/390×844 đầu/cuối bước
+  Tình trạng1730/2155px PASS, không tràn ngang; build(TS)/docs/diff PASS. Chỉ CSS,
+  không đổi form/API; [evidence](../../.impeccable/review/posting-background-cover/README.md).
+  QA riêng đã dọn, API3000/Vite5186 giữ chạy; Safari/physical mobile NOT RUN.
 
 ## Search — nhóm lọc và xóa riêng — 11/10/2026
 
