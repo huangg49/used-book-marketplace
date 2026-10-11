@@ -1,5 +1,10 @@
 import { previewShelf, type HomeShelfBook } from "./home-shelves";
 import { getPublicListings } from "./public-listings";
+import catalog from "../data/preview-catalog.json";
+
+export const previewCategories = [
+  ...new Set(catalog.items.map((book) => book.category)),
+];
 
 /** Preview editions keep their source links; they are never listing IDs. */
 export function previewSearch(query: URLSearchParams) {
@@ -10,10 +15,12 @@ export function previewSearch(query: URLSearchParams) {
     }),
   ).items;
   const condition = query.get("condition");
+  const category = query.get("category");
   const min = query.get("minSalePrice");
   const max = query.get("maxSalePrice");
   items = items.filter(
     (item) =>
+      (!category || item.book.category === category) &&
       (!condition || item.condition === condition) &&
       ((!min && !max) ||
         (item.salePrice !== null &&
@@ -47,5 +54,9 @@ export async function getSearchShelf(
   query: URLSearchParams,
   preview: boolean,
 ): Promise<{ items: HomeShelfBook[]; nextCursor: string | null }> {
-  return preview ? previewSearch(query) : getPublicListings(query);
+  if (preview) return previewSearch(query);
+  // The live contract has no category filter yet. Never send a demo-only field.
+  const liveQuery = new URLSearchParams(query);
+  liveQuery.delete("category");
+  return getPublicListings(liveQuery);
 }

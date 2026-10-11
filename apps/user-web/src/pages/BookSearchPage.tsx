@@ -11,7 +11,7 @@ import {
 import { HomeBookCard } from "../components/HomeBookCard";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
-import { getSearchShelf } from "../services/catalog-search";
+import { getSearchShelf, previewCategories } from "../services/catalog-search";
 import { isCatalogPreview } from "../services/home-shelves";
 import styles from "./BookSearchPage.module.css";
 
@@ -25,12 +25,14 @@ const queryKeys = [
   "q",
   "mode",
   "condition",
+  "category",
   "sort",
   "minSalePrice",
   "maxSalePrice",
   "cursor",
 ] as const;
 type FilterValues = {
+  category: string;
   condition: string;
   minSalePrice: string;
   maxSalePrice: string;
@@ -48,14 +50,156 @@ function invalidPrice(min: string, max: string) {
 const priceMessage =
   "Nhập giá là số nguyên không âm; giá đến phải lớn hơn hoặc bằng giá từ.";
 
+const foldCategory = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/đ/g, "d");
+
+function CategoryPicker({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [active, setActive] = useState(0);
+  const list = useRef<HTMLDivElement>(null);
+  const options = ["", ...previewCategories].filter((category) =>
+    foldCategory(category || "Tất cả thể loại").includes(foldCategory(search)),
+  );
+  useEffect(() => {
+    const container = list.current;
+    const option = container?.querySelector<HTMLElement>(
+      `[id="${id}-category-${active}"]`,
+    );
+    if (!container || !option) return;
+    const optionTop =
+      option.getBoundingClientRect().top -
+      container.getBoundingClientRect().top +
+      container.scrollTop;
+    if (optionTop < container.scrollTop) container.scrollTop = optionTop;
+    else if (
+      optionTop + option.offsetHeight >
+      container.scrollTop + container.clientHeight
+    )
+      container.scrollTop =
+        optionTop + option.offsetHeight - container.clientHeight;
+  }, [active, open, search, id]);
+  function choose(category: string) {
+    onChange(category);
+    setOpen(false);
+    setSearch("");
+  }
+  return (
+    <div className={styles.categoryPicker}>
+      <input
+        id={`${id}-category`}
+        role="combobox"
+        aria-label="Thể loại"
+        aria-autocomplete="list"
+        aria-expanded={open}
+        aria-controls={`${id}-categories`}
+        aria-activedescendant={
+          open && options.length ? `${id}-category-${active}` : undefined
+        }
+        autoComplete="off"
+        placeholder="Tất cả thể loại"
+        value={open ? search : value}
+        onFocus={() => {
+          setSearch("");
+          setActive(0);
+          setOpen(true);
+        }}
+        onClick={() => {
+          if (!open) {
+            setSearch("");
+            setActive(0);
+            setOpen(true);
+          }
+        }}
+        onBlur={() => {
+          setOpen(false);
+          setSearch("");
+        }}
+        onChange={(event) => {
+          setSearch(event.target.value);
+          setActive(0);
+          setOpen(true);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            if (!open) {
+              setSearch("");
+              setActive(0);
+              setOpen(true);
+            } else
+              setActive((index) =>
+                Math.max(
+                  0,
+                  Math.min(
+                    options.length - 1,
+                    index + (event.key === "ArrowDown" ? 1 : -1),
+                  ),
+                ),
+              );
+          } else if (event.key === "Enter" && open) {
+            event.preventDefault();
+            if (options[active] !== undefined) choose(options[active]!);
+          } else if (event.key === "Escape" && open) {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(false);
+            setSearch("");
+          }
+        }}
+      />
+      <Search size={15} aria-hidden="true" />
+      {open && (
+        <div
+          ref={list}
+          id={`${id}-categories`}
+          role="listbox"
+          aria-label="Thể loại"
+          className={styles.categoryOptions}
+        >
+          {options.map((category, index) => (
+            <div
+              role="option"
+              id={`${id}-category-${index}`}
+              key={category}
+              aria-selected={category === value}
+              data-active={active === index || undefined}
+              onMouseDown={(event) => event.preventDefault()}
+              onMouseEnter={() => setActive(index)}
+              onClick={() => choose(category)}
+            >
+              {category || "Tất cả thể loại"}
+            </div>
+          ))}
+          {!options.length && <p role="status">Không có thể loại phù hợp.</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function FilterForm({
   initial,
   id,
   onApply,
+  preview,
 }: {
   initial: FilterValues;
   id: string;
   onApply: (values: FilterValues) => void;
+  preview: boolean;
 }) {
   const [draft, setDraft] = useState(initial);
   const invalid = invalidPrice(draft.minSalePrice, draft.maxSalePrice);
@@ -71,40 +215,16 @@ function FilterForm({
       noValidate
     >
       <div className={styles.filterBody}>
-        <fieldset>
-          <legend>Tình trạng sách</legend>
-          <select
-            className={styles.compactCondition}
-            aria-label="Tình trạng sách"
-            value={draft.condition}
-            onChange={(event) =>
-              setDraft({ ...draft, condition: event.target.value })
-            }
-          >
-            {[["", "Tất cả tình trạng"], ...Object.entries(conditions)].map(
-              ([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ),
-            )}
-          </select>
-          <div className={styles.choices}>
-            {[["", "Tất cả tình trạng"], ...Object.entries(conditions)].map(
-              ([value, label]) => (
-                <label key={value}>
-                  <input
-                    type="radio"
-                    name={`${id}-condition`}
-                    checked={draft.condition === value}
-                    onChange={() => setDraft({ ...draft, condition: value! })}
-                  />
-                  {label}
-                </label>
-              ),
-            )}
-          </div>
-        </fieldset>
+        {preview && (
+          <fieldset className={styles.categoryField}>
+            <legend>Thể loại</legend>
+            <CategoryPicker
+              id={id}
+              value={draft.category}
+              onChange={(category) => setDraft({ ...draft, category })}
+            />
+          </fieldset>
+        )}
         <fieldset className={styles.priceFilter}>
           <legend>Khoảng giá bán (₫)</legend>
           <div className={styles.priceFields}>
@@ -184,7 +304,7 @@ function FilterForm({
                 });
             }}
           >
-            <option value="">Chọn mức giá…</option>
+            <option value="">Chọn giá tối đa…</option>
             {[50000, 100000, 200000].map((price) => (
               <option key={price} value={price}>
                 Đến {formatVnd(price)}
@@ -197,6 +317,25 @@ function FilterForm({
             </p>
           )}
         </fieldset>
+        <fieldset>
+          <legend>Tình trạng sách</legend>
+          <select
+            className={styles.conditionSelect}
+            aria-label="Tình trạng sách"
+            value={draft.condition}
+            onChange={(event) =>
+              setDraft({ ...draft, condition: event.target.value })
+            }
+          >
+            {[["", "Tất cả tình trạng"], ...Object.entries(conditions)].map(
+              ([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ),
+            )}
+          </select>
+        </fieldset>
       </div>
       <div className={styles.filterFooter}>
         <p>Chọn hoặc xóa, rồi bấm Áp dụng.</p>
@@ -208,7 +347,12 @@ function FilterForm({
             type="button"
             className={styles.reset}
             onClick={() =>
-              setDraft({ condition: "", minSalePrice: "", maxSalePrice: "" })
+              setDraft({
+                category: "",
+                condition: "",
+                minSalePrice: "",
+                maxSalePrice: "",
+              })
             }
           >
             Xóa lựa chọn
@@ -227,10 +371,11 @@ export function BookSearchPage() {
   const query = new URLSearchParams();
   for (const key of queryKeys) {
     const value = params.get(key);
-    if (value) query.set(key, value);
+    if (value && (key !== "category" || preview)) query.set(key, value);
   }
   query.set("limit", "20");
   const initial = {
+    category: preview ? params.get("category") || "" : "",
     condition: params.get("condition") || "",
     minSalePrice: params.get("minSalePrice") || "",
     maxSalePrice: params.get("maxSalePrice") || "",
@@ -275,7 +420,9 @@ export function BookSearchPage() {
     if (!filterOpen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const media = window.matchMedia("(min-width: 901px)");
+    const media = window.matchMedia(
+      "(min-width: 901px) and (min-height: 701px)",
+    );
     const closeOnDesktop = () => {
       if (media.matches) {
         dialog.current?.close();
@@ -289,6 +436,7 @@ export function BookSearchPage() {
     };
   }, [filterOpen]);
   const chips = [
+    ...(initial.category ? [{ key: "category", label: initial.category }] : []),
     ...(params.get("condition")
       ? [
           {
@@ -363,6 +511,7 @@ export function BookSearchPage() {
             initial={initial}
             id="desktop"
             onApply={apply}
+            preview={preview}
           />
         </aside>
         <section className={styles.results} aria-labelledby="catalog-results">
@@ -559,6 +708,7 @@ export function BookSearchPage() {
             initial={initial}
             id="mobile"
             onApply={apply}
+            preview={preview}
           />
         )}
       </dialog>

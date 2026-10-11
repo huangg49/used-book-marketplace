@@ -45,6 +45,37 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
   để hành trình kiểm thử liên tục. Chưa redesign toàn form, dashboard, đăng ký,
   chat, đấu giá, admin hay Flutter; Android giữ checkpoint riêng.
 
+## Tìm sách — bổ sung thể loại11/10
+
+Sau bc5d98f, chủ dự án duyệt Thể loại → Giá → Tình trạng. Preview có8thể loại
+từ bộ91ấn bản; combobox tìm không dấu, hỗ trợ chuột/mũi tên/Enter/Escape/blur,
+chọn một giá trị rồi Apply. Tình trạng luôn là native select; category có chip,
+reset và URL/Back. Lọc trên toàn catalog trước phân trang, kết hợp condition/
+mode/price/sort. Live không hiện control và loại category ở service boundary,
+giữ đúng contract chưa hỗ trợ. Không thay API/session/Home/dependency.
+
+Build/typecheck/30unit6file PASS; thêm ca đủ tất cả thể loại qua nhiều trang,
+unknown rỗng và live không gửi category/không đổi query của caller; test kết hợp
+thể loại với điều kiện/giá/sort PASS. Lint0error5warning cũ; bundle warning đã biết.
+Một detector8advisory radius/màu cũ. CUA draft/Apply/chip/reset/Back, tìm không
+dấu, keyboard/chuột/no-match/Escape chỉ đóng menu PASS. Panel thường498.375px/
+đáy712.46875px, lỗi516.28125px/đáy730.375px tại scrollY0 hai laptop1366×768 và
+1535×735. Khi cao≤700px dùng filter dialog;1366×600 action44px/đáy548.1875px,
+dialogđáy572.1875px; tăng chiều cao tự đóng dialog/khôi phục cuộn. Mobile320px
+và dialog320×400 không tràn, thân cuộn/action luôn hiện, giá sáu chữ số đọc đủ.
+
+[Laptop](../../.impeccable/review/web-member/search-category-laptop.jpg),
+[laptop thấp](../../.impeccable/review/web-member/search-category-short-laptop.jpg),
+[giá sai](../../.impeccable/review/web-member/search-category-invalid.jpg),
+[màn thấp](../../.impeccable/review/web-member/search-category-low-height.jpg),
+[mobile](../../.impeccable/review/web-member/search-category-mobile-open.jpg),
+[dialog thấp](../../.impeccable/review/web-member/search-category-short-dialog.jpg).
+Ảnh gốc CUA, không hậu kỳ. Reviewer yêu cầu sửa lowheight action và docs; verdict
+[SHIP cho hai fix](../../.impeccable/review/web-member/search-category-finish.md).
+Canonical documenter merge đúng scope,
+không sửa drift có sẵn. 200%/OS keyboard/native/live API success/human NOT RUN.
+Chat/Thông báo WIP giữ riêng, READINESS không đổi. Local checkpoint, chưa push.
+
 ## Tìm sách — bộ lọc gọn và ghim11/10
 
 Theo plan đã duyệt sau88bd62c, giữ brand và kệ sách; sidebar264px/gutter28px,

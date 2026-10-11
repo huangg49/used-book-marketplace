@@ -50,6 +50,16 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   200%/OS keyboard/native/live-success/fullintegration/human NOT RUN. READINESS
   không đổi. Checkpoint subject `feat(web): pin compact catalog filters`;
   local chưa push. Vite5186 giữ chạy để chủ dự án xem preview.
+  Sau bc5d98f, chủ dự án duyệt bổ sung thể loại: preview8thể loại có tìm không
+  dấu/keyboard, Apply/chip/reset/URL/Back; lọc91ấn bản trước cursor. Tình trạng
+  luôn là select, thứ tự Thể loại→Giá→Tình trạng. Live không hiện/gửi category.
+  Panel498.375px thường/516.28125px lỗi vừa cả hai laptop;≤700px dùng native
+  dialog, body cuộn/footer hiện. Build/typecheck30unit PASS; lint0error5warning
+  cũ; CUA laptop/mobile/lowheight/chọn/bỏ/Back/keyboard PASS. Review SHIP cho hai
+  fix/canonical source-parity/preservation PASS; evidence trong báo cáo.
+  200%/OS keyboard/native/live-success/human NOT RUN.
+  Checkpoint subject `feat(web): add preview category search filters`; local
+  chưa push. READINESS và các gate giữ nguyên.
   Chat/Thông báo còn source UI uncommitted; QA/reviewer/documenter chưa hoàn tất.
   Browser phát hiện race join trước auth socket hoàn tất (Unauthorized); chưa
   sửa API hoặc nhận Chat PASS. QA5190/API3009 disposable đã dừng, không đụng

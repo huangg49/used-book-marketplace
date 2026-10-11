@@ -1,8 +1,56 @@
 import { afterEach, expect, it, vi } from "vitest";
 vi.mock("./public-listings", () => ({ getPublicListings: vi.fn() }));
 import { getPublicListings } from "./public-listings";
-import { getSearchShelf, previewSearch } from "./catalog-search";
+import {
+  getSearchShelf,
+  previewSearch,
+  previewCategories,
+} from "./catalog-search";
+import catalog from "../data/preview-catalog.json";
 afterEach(() => vi.clearAllMocks());
+
+it("filters the whole preview catalog by category before paging, with no lost editions", () => {
+  for (const category of previewCategories) {
+    const query = new URLSearchParams({ category, limit: "3" });
+    const ids: string[] = [];
+    let cursor: string | null;
+    do {
+      const page = previewSearch(query);
+      expect(page.items.every((item) => item.book.category === category)).toBe(
+        true,
+      );
+      ids.push(...page.items.map((item) => item.book.id));
+      cursor = page.nextCursor;
+      if (cursor) query.set("cursor", cursor);
+    } while (cursor);
+    expect(ids).toEqual(
+      catalog.items
+        .filter((book) => book.category === category)
+        .map((book) => book.id),
+    );
+  }
+  expect(
+    previewSearch(new URLSearchParams({ category: "unknown" })).items,
+  ).toEqual([]);
+});
+
+it("does not forward a preview category to the live API or mutate caller query", async () => {
+  vi.mocked(getPublicListings).mockResolvedValue({
+    items: [],
+    serverTime: "2026-10-11T00:00:00.000Z",
+    nextCursor: null,
+  });
+  const query = new URLSearchParams({
+    category: "Manga",
+    condition: "Good",
+    limit: "20",
+  });
+  await getSearchShelf(query, false);
+  expect(vi.mocked(getPublicListings).mock.calls[0]![0].toString()).toBe(
+    "condition=Good&limit=20",
+  );
+  expect(query.get("category")).toBe("Manga");
+});
 
 it("paginates preview editions without repeating or dropping IDs", () => {
   const seen = new Set<string>();
@@ -21,6 +69,7 @@ it("paginates preview editions without repeating or dropping IDs", () => {
 });
 it("combines condition, both-compatible modes, price bounds and price sort", () => {
   const query = new URLSearchParams({
+    category: "Manga",
     condition: "Fair",
     mode: "Sale",
     minSalePrice: "50000",
@@ -33,6 +82,7 @@ it("combines condition, both-compatible modes, price bounds and price sort", () 
   expect(
     page.items.every(
       (item) =>
+        item.book.category === "Manga" &&
         item.condition === "Fair" &&
         item.mode !== "Exchange" &&
         item.salePrice! >= 50000 &&

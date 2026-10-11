@@ -101,3 +101,13 @@ và preservation PASS. Browser200%/bàn phím OS thật/native/live-success và 
 NOT RUN; không dùng viewport thấp thay bằng chứng zoom/keyboard.
 [Báo cáo và ảnh](WEB_MEMBER_REDESIGN.md) ghi evidence thực tế.
 Chat/Thông báo dở được giữ riêng; lỗi race xác thực socket còn mở, chưa sửa.
+
+## Bổ sung thể loại đã duyệt11/10/2026
+
+Sau checkpointbc5d98f, chủ dự án duyệt ưu tiên Thể loại → Giá → Tình trạng.
+Thêm searchable combobox từ8thể loại của bộ demo91ấn bản, tình trạng luôn là
+native select. Chọn một thể loại, Apply mới áp dụng; chip cho phép bỏ, URL/Back
+giữ lựa chọn. Lọc toàn bộ catalog trước phân trang; live API chưa hỗ trợ nên
+không hiển thị control hoặc gửi tham số category trong live. Không đổi contract.
+Hai laptop giữ sidebar ghim; cao≤700px dùng nút Bộ lọc/native dialog để action
+không bị đẩy khỏi vùng nhìn. Evidence cuối ghi trong báo cáo và surface brief.

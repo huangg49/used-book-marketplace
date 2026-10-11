@@ -171,3 +171,26 @@ documentation/preservation PASS. Laptop panels fit at scrollY0 in1366×768 and
 1535×735; normal height505.375px/bottom719.46875px, invalid height487.65625px/
 bottom701.75px. Browser200%/actual OS keyboard/native/live-success NOT RUN.
 Evidence: search-filter-* captures and search-filter-finish.md in the review folder.
+
+## Category extension — approved11/10/2026 afterbc5d98f
+
+Supersedes condition-radio and compact-condition rules above. Order is Category,
+sale price, then condition; condition is always a native44px select. DEV preview
+gets eight categories derived from the91-edition catalog, with one searchable
+combobox. Accentless typing narrows options, arrows navigate, Enter chooses,
+Escape closes only the open options, blur abandons search text. Selected category
+is a draft until Apply, then a removable chip; reset/Back/cursor semantics remain.
+Category filters the whole catalog before pagination. Live has no category control
+or category query parameter; no live API/category-support claim is introduced.
+
+Options have44px targets and a176px scrollable list. Desktop list overlays the
+following fields; native-dialog list joins the scrolling body. Normal laptops
+retain264px sticky panel at top214.09375px/height498.375px/bottom712.46875px.
+Invalid prices at desktop heights701–850px use native quick-price selection,
+8px body gaps and screen-reader-only draft helper: full error, both actions and
+panel border fit at bottom730.375px. For heights≤700px, use the existing filter
+trigger/native dialog even at desktop widths; growing above700px closes it when
+sidebar becomes available. Mobile remains a protected dialog with fixed footer.
+Build/typecheck/30unit PASS, lint0error/5existing warnings. Browser captures are
+search-category-*; final independent review recorded in search-category-finish.md.
+200%/OS keyboard/native/live API success/human remain NOT RUN.
