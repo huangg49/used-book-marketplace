@@ -807,13 +807,13 @@
       },
       {
         "name": "auth-paper-arrive",
-        "value": "420ms cubic-bezier(.16,1,.3,1);rotate(-.7deg) rotateY(12deg) opacity.65 → rotate(-.7deg) rotateY(0) opacity1",
-        "purpose": "Single sheet entry; reduced motion animation:none/transform:none."
+        "value": "380ms cubic-bezier(.16,1,.3,1);rotateY(±82deg→0),opacity.4→1;perspective2200px",
+        "purpose": "After Auth route changes only, no initial entrance. Returning to Login reverses direction. Reduced motion:160ms opacity.65→1, no transform. Entry owns its handle independently of departure cleanup."
       },
       {
         "name": "auth-sheet-turn",
-        "value": "perspective1400px;rotateY(0→-92deg),opacity1→.15;cubic-bezier(.6,.05,.3,1);280ms ordinary /420ms after600ms success dwell",
-        "purpose": "Route links turn the outgoing inert sheet; next H1 focuses. Real login success only. Reduced motion:ordinary immediate;success static500ms. Cancellation/unmount aborts deferred navigation."
+        "value": "perspective2200px;rotateY(0→±96deg),opacity1→0;shadow changes;cubic-bezier(.6,.05,.3,1);320ms ordinary /420ms after600ms success dwell",
+        "purpose": "Outgoing content inert; next H1 focuses. Reduced motion:140ms opacity1→.65, success static500ms. Cancellation/unmount aborts deferred navigation. No auth API changes."
       },
       {
         "name": "auth-stamp-hit",
@@ -920,7 +920,7 @@
       {
         "name": "auth-narrow-paper",
         "value": "600px",
-        "purpose": "420px stack cap;72px20px24px outer/22px24px16px paper padding;photo credit in normal flow;29px heading."
+        "purpose": "420px stack cap;72px20px24px outer/22px24px16px paper padding;visible photo provenance in asset README removed by owner;29px heading."
       },
       {
         "name": "auth-small-heading",

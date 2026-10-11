@@ -8,6 +8,15 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Auth — tập giấy thư viện — 11/10/2026
 
+- Turn follow-up: `codex/auth-paper-turn`, base `fd05a77`, checkpoint subject
+  `feat(web): clarify auth paper turns and remove visible photo credit`.
+  Bỏ credit theo yêu cầu mới, giữ nguồn ảnh ở asset README. Lật WAAPI320/380ms,
+  quay lại Login đảo chiều, không animation lúc tải đầu; reduced-motion fade140/160ms.
+  Handle riêng tránh cleanup tờ rời hủy tờ đến; clip projection không tạo scroll
+  tạm thời. IAB normal-motion QA riêng và production reduced/mobile/keyboard PASS;
+  build/34unit PASS, lint0error5warning Exchange cũ. Detector một warning viền giấy
+  vốn có/được giữ theo concept, không nhận detector PASS. [Evidence](../../.impeccable/review/auth-turn/README.md).
+  API/session/native/full human review không chạy lại; READINESS không đổi.
 - Font follow-up: `codex/auth-vietnamese-handwriting`, base `41fda2b`, checkpoint
   `fix(web): use Fancy Melody for Vietnamese auth notes`. Theo lựa chọn mới nhất
   của chủ dự án, dùng file MTD Fancy Melody Regular400 nguyên bản cho ghi chú/lỗi;

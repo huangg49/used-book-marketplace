@@ -16,6 +16,14 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Phạm vi triển khai
 
+- Auth turn follow-up11/10: `codex/auth-paper-turn`, base `fd05a77`. Bỏ dòng
+  credit hiển thị theo yêu cầu mới; nguồn Davit Margaryan/Unsplash vẫn trong README.
+  Lật giấy320ms rời/380ms đến, có phối cảnh và bóng theo góc xoay, đảo chiều về
+  Login; root clip ngăn scrollbar tạm thời. Reduced-motion fade140/160ms, không
+  xoay. Giữ focus/inert/query/draft/API/session và stamp sau success thật.
+  [Evidence hiện hành](../../.impeccable/review/auth-turn/README.md): normal-motion
+  qua UI QA riêng, production reduced/mobile/keyboard, build/34unit PASS;
+  lint0error5warning cũ. Không mở gate hoặc nhận human/full auth acceptance mới.
 - Auth handwriting follow-up11/10: `codex/auth-vietnamese-handwriting`, base
   `41fda2b`. Thay Caveat bằng MTD Fancy Melody Regular400 do chủ dự án cung cấp;
   bỏ ứng viên Athena. Giữ cỡ chữ/layout, dùng đúng weight400, labels/actions vẫn

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Logo } from "../components/Header";
@@ -31,6 +31,7 @@ export function AuthLayout() {
   const locked = useRef(false);
   const disposed = useRef(false);
   const previousPage = useRef(location.key);
+  const direction = useRef<1 | -1>(1);
   const draft = useRef({ email: "", password: "" });
   const [transition, setTransition] = useState<{ key: string; success: boolean } | null>(null);
   const turning = transition?.key === location.key;
@@ -41,11 +42,27 @@ export function AuthLayout() {
     disposed.current = false;
     return () => { disposed.current = true; running.current?.cancel(); };
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
     running.current?.cancel();
+    running.current = null;
     locked.current = false;
     document.title = (location.pathname === "/register" ? "Đăng ký" : location.pathname === "/forgot-password" ? "Quên mật khẩu" : "Đăng nhập") + " · Lật lại";
-    if (previousPage.current !== location.key) paper.current?.querySelector<HTMLElement>("h1")?.focus({ preventScroll: true });
+    if (previousPage.current !== location.key) {
+      const sheet = paper.current;
+      sheet?.querySelector<HTMLElement>("h1")?.focus({ preventScroll: true });
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (sheet && typeof sheet.animate === "function") {
+        const arrival = sheet.animate(reduced
+          ? [{ opacity: .65 }, { opacity: 1 }]
+          : [{ transform: `rotate(-0.7deg) rotateY(${direction.current * 82}deg)`, opacity: .4, boxShadow: "0 8px 18px #21000026" },
+            { transform: "rotate(-0.7deg) rotateY(0deg)", opacity: 1, boxShadow: "0 2px 4px #21000040, 0 24px 60px #21000066" }],
+        { duration: reduced ? 160 : 380, easing: "cubic-bezier(0.16, 1, 0.3, 1)" });
+        running.current = arrival;
+        void arrival.finished.catch(() => {}).finally(() => {
+          if (running.current === arrival) running.current = null;
+        });
+      }
+    }
     previousPage.current = location.key;
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [location.key, location.pathname]);
@@ -53,28 +70,36 @@ export function AuthLayout() {
   async function leave(target: string, stamped: boolean) {
     if (locked.current || disposed.current) return;
     locked.current = true;
+    direction.current = target.split("?")[0] === "/login" ? -1 : 1;
+    const fromKey = location.key;
+    const sheet = paper.current;
+    const currentTransform = sheet ? window.getComputedStyle(sheet).transform : "none";
+    running.current?.cancel();
+    running.current = null;
     setTransition({ key: location.key, success: stamped });
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const sheet = paper.current;
+    let departure: Animation | null = null;
     try {
-      if (sheet && typeof sheet.animate === "function" && (!reduced || stamped)) {
+      if (sheet && typeof sheet.animate === "function") {
         const animation = sheet.animate(reduced
-          ? [{ opacity: 1 }, { opacity: 1 }]
-          : [{ transform: "rotate(-0.7deg) rotateY(0deg)", opacity: 1 },
-            { transform: "rotate(-0.7deg) rotateY(-92deg)", opacity: 0.15 }],
-        { duration: reduced ? 500 : stamped ? 420 : 280,
+          ? [{ opacity: 1 }, { opacity: stamped ? 1 : .65 }]
+          : [{ transform: currentTransform, opacity: 1, boxShadow: "0 2px 4px #21000040, 0 24px 60px #21000066" },
+            { transform: `rotate(-0.7deg) rotateY(${-direction.current * 52}deg)`, opacity: 1, boxShadow: "16px 12px 32px #21000066", offset: .6 },
+            { transform: `rotate(-0.7deg) rotateY(${-direction.current * 96}deg)`, opacity: 0, boxShadow: "0 8px 18px #21000026" }],
+        { duration: reduced ? stamped ? 500 : 140 : stamped ? 420 : 320,
           delay: !reduced && stamped ? 600 : 0,
           easing: "cubic-bezier(0.6, 0.05, 0.3, 1)", fill: "forwards" });
         running.current = animation;
+        departure = animation;
         await animation.finished;
       }
       if (!disposed.current) navigate(target, { replace: stamped });
     } catch { /* Leaving Auth or interrupting the animation cancels the deferred route. */ }
     finally {
-      running.current?.cancel();
-      running.current = null;
+      departure?.cancel();
+      if (running.current === departure) running.current = null;
       locked.current = false;
-      if (!disposed.current) setTransition(null);
+      if (!disposed.current) setTransition((current) => current?.key === fromKey ? null : current);
     }
   }
 
@@ -116,7 +141,6 @@ export function AuthLayout() {
           </p>
         </div>
         <div className={styles.signature} aria-hidden="true"><p>Chuyện hay<br /><span>còn tiếp.</span></p><small>Một cuốn sách đã đọc.<br />Một câu chuyện để đọc tiếp.</small></div>
-        <p className={styles.credit}>Ảnh: <a href="https://unsplash.com/photos/cozy-bookstore-interior-with-bookshelves-and-warm-lighting-mWWD9Up47OM" target="_blank" rel="noreferrer">Davit Margaryan / Unsplash<span className="sr-only"> (mở tab mới)</span></a></p>
       </main>
     </PaperContext.Provider>
   );
