@@ -6,6 +6,29 @@ OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hi�
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
+## Khôi phục API local để đăng nhập — 11/10/2026
+
+- Nhánh `codex/local-db-login-recovery`, base `e3bcbba`; checkpoint subject
+  `docs(local): record Mongo upgrade and API login readiness`. Chủ dự án duyệt
+  nâng DB local đang cấu hình sau lỗi startup thiếu migration0008–0016.
+  Đã áp dụng đúng9migration hiện có, bootstrap quyền theo source;16checksum
+  hiện hành khớp. Không sửa migration/API/UI, không reset/reseed DB.
+- Trước thao tác đã chụp logic EJSON53collection/807document và index/options
+  vào `.tmp` cục bộ bị ignore; chưa kiểm phục hồi, không gửi/commit snapshot.
+  App/migrator credentials cũ xác thực được trước bootstrap. Đối chiếu sau
+  nâng cấp: toàn bộ ID cũ và password hash giữ nguyên; mọi record ví/ledger/
+  topup/payment cũ khớp. Có đúng1wallet account mới, khớp reference tài khoản
+  phí của migration0012; không thêm ledger/payment record.
+- API3000 và proxy Vite5186 `/api/v1/health/ready`200; taxonomy200,
+  guest `/auth/me`401, trang `/login`200. Tài khoản Member demo ACTIVE và
+  hash xác minh khớp cấu hình local. Chỉ kiểm đọc; POST login/full authenticated
+  workflow NOT RUN trên DB chính, chủ dự án sẽ đăng nhập trực tiếp.
+- `pnpm dev:api` bị Docker subprocess exit3221225794; Mongo đang chạy sẵn.
+  API được khởi động bằng `node dist/main.js` sau compile0error. API/Vite giữ
+  chạy; worker ảnh/đơn hàng chưa bật. Chưa sửa launcher Docker.
+  READINESS/human/native gates không đổi; Chat/Thông báo/MainLayout WIP giữ
+  riêng. Bước tiếp: chủ dự án thử login; bật worker khi cần kiểm luồng tương ứng.
+
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
 - Minh họa trạng thái11/10: nhánh `codex/member-story-illustrations`, base `2b861a5`,
