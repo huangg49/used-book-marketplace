@@ -19,12 +19,14 @@ export function CatalogClassificationFields({
   id,
   editing = false,
   clearable = false,
+  collapseOptional = false,
 }: {
   value: ClassificationValue;
   onChange: (value: ClassificationValue) => void;
   id: string;
   editing?: boolean;
   clearable?: boolean;
+  collapseOptional?: boolean;
 }) {
   const [expanded, setExpanded] = useState<string[]>([]);
   const category = categoryFor(value.categoryId);
@@ -111,7 +113,11 @@ export function CatalogClassificationFields({
             <details
               className={styles.facet}
               data-clearable={(clearable && selected.length > 0) || undefined}
-              open={editing || index < 2 || selected.length > 0 || undefined}
+              open={
+                (!collapseOptional && (editing || index < 2)) ||
+                selected.length > 0 ||
+                undefined
+              }
             >
               <summary>
                 {facet.label}

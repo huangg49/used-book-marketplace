@@ -1,22 +1,27 @@
 .root {
   min-height: 100dvh;
-  background: #f5eddc;
+  background: #f5eddc url("/illustrations/posting/archival-desk.webp") center
+    top / max(100%, 1440px) auto no-repeat;
   color: var(--shop-ink);
   font-family: var(--shop-body);
 }
 .page {
-  max-width: 1360px;
+  max-width: 1280px;
   margin: auto;
-  padding: 36px 40px 80px;
+  padding: 32px 40px 80px;
 }
 .intro {
-  margin-bottom: 36px;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px 20px;
+  margin-bottom: 28px;
 }
 .intro h1 {
   font: 400 clamp(2rem, 3vw, 2.75rem)/1.2 var(--shop-display);
   text-transform: uppercase;
   color: var(--shop-wine);
-  margin: 0 0 12px;
+  margin: 0;
 }
 .intro p {
   font-size: 0.875rem;
@@ -25,60 +30,83 @@
   margin: 0;
   max-width: 70ch;
 }
+.intro > p:last-child {
+  grid-column: 1 / -1;
+}
+.stepLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.stepLabel small {
+  font-weight: 400;
+  font-size: 0.6875rem;
+  line-height: 1.5;
+}
 .workspace {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr) 260px;
-  gap: 32px;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 36px;
   align-items: start;
 }
 .steps {
-  position: sticky;
-  top: 112px;
+  position: relative;
+  isolation: isolate;
+  padding: 6px;
+  margin-bottom: 32px;
+  background: var(--shop-paper);
+  border-radius: 12px;
+  box-shadow: 0 5px 18px #2819140a;
 }
 .steps ol {
   list-style: none;
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
 }
 .steps button {
+  position: relative;
   display: flex;
   gap: 10px;
   align-items: center;
   width: 100%;
-  min-height: 48px;
-  padding: 10px 8px;
+  min-height: 60px;
+  padding: 10px 16px;
   text-align: left;
   border: 0;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
   color: var(--shop-muted);
   font-size: 0.8125rem;
   line-height: 1.5;
 }
 .steps button:hover {
-  background: #efe3cf;
+  color: var(--shop-wine);
 }
 .steps button[aria-current] {
-  color: var(--shop-wine);
+  color: var(--shop-cream);
   font-weight: 700;
-  background: #efe3cf;
+  background: transparent;
+}
+.steps button[aria-current]:hover {
+  color: var(--shop-cream);
 }
 .stepNumber {
   display: grid;
   place-items: center;
-  min-width: 24px;
-  height: 24px;
-  border: 1px solid var(--shop-line);
-  border-radius: 6px;
+  min-width: 28px;
+  height: 28px;
+  border: 1px solid var(--shop-control);
+  border-radius: 50%;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 .steps [aria-current] .stepNumber {
-  background: var(--shop-wine);
-  color: var(--shop-paper);
-  border-color: var(--shop-wine);
+  background: var(--shop-cream);
+  color: var(--shop-wine);
+  border-color: var(--shop-cream);
 }
 .steps p {
   font-size: 0.75rem;
@@ -89,20 +117,21 @@
 .formArea {
   min-width: 0;
   background: var(--shop-paper);
-  padding: 28px 32px;
+  padding: 32px 36px;
   border-radius: 12px;
+  box-shadow: 0 12px 40px #28191414;
 }
-.formArea > h2 {
+.stepBody > h2 {
   font-size: 1.5rem;
   line-height: 1.5;
   letter-spacing: -0.02em;
   margin: 0 0 4px;
 }
-.formArea > h2:focus {
+.stepBody > h2:focus {
   outline: none;
 }
 .stepCount {
-  margin: 0 0 28px;
+  margin: 0 0 8px;
   font-size: 0.75rem;
   color: var(--shop-muted);
   font-variant-numeric: tabular-nums;
@@ -268,6 +297,7 @@
 .root input[type="radio"],
 .root input[type="checkbox"] {
   accent-color: var(--shop-wine);
+  color: var(--shop-wine);
   width: 18px;
   height: 18px;
   flex-shrink: 0;
@@ -297,6 +327,10 @@
 }
 .preview {
   min-width: 0;
+  padding: 20px;
+  background: var(--shop-paper);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px #2819140d;
 }
 .preview h2 {
   font-size: 0.875rem;
@@ -304,14 +338,14 @@
   line-height: 1.7;
 }
 .previewPhoto {
-  height: 230px;
+  height: 216px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
   background: #efe3cf;
   border-radius: 12px;
-  color: #8b6952;
+  color: var(--shop-muted);
 }
 .previewPhoto img {
   max-width: 100%;
@@ -359,11 +393,7 @@
   font-size: 0.75rem;
 }
 .desktopPreview {
-  position: sticky;
-  top: 112px;
-}
-.reviewPreview {
-  display: none;
+  position: static;
 }
 .reviewFacts {
   margin: 0;
@@ -476,26 +506,30 @@
 .skip:focus {
   top: 8px;
 }
-@media (max-width: 1150px) {
+@media (min-width: 1200px) and (min-height: 900px) {
+  .stickyPreview {
+    position: sticky;
+    top: 112px;
+  }
+}
+@media (max-width: 1199px) {
   .workspace {
-    grid-template-columns: 170px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
   }
   .desktopPreview {
     display: none;
   }
-  .reviewPreview {
-    display: block;
-  }
-  .reviewPreview .preview {
-    max-width: 360px;
-  }
   .page {
     padding-inline: 24px;
+  }
+  .compactPreview {
+    display: block;
   }
 }
 @media (max-width: 760px) {
   .page {
-    padding: 24px 20px 48px;
+    padding: 24px 16px 48px;
   }
   .intro {
     margin-bottom: 24px;
@@ -508,22 +542,22 @@
     gap: 24px;
   }
   .steps {
-    position: static;
+    position: relative;
+    padding: 6px;
+    margin-bottom: 20px;
   }
   .steps ol {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
   }
   .steps button {
-    height: 100%;
-    padding: 8px;
-    gap: 8px;
-    font-size: 0.75rem;
-    align-items: flex-start;
+    min-height: 48px;
+    padding: 6px;
+    justify-content: center;
   }
   .stepNumber {
-    min-width: 20px;
-    height: 20px;
+    min-width: 28px;
+    height: 28px;
   }
   .steps p {
     margin: 14px 0 0;
@@ -531,7 +565,7 @@
   .formArea {
     padding: 24px 20px;
   }
-  .formArea > h2 {
+  .stepBody > h2 {
     font-size: 1.25rem;
   }
   .photos {
@@ -540,11 +574,19 @@
   .previewPhoto {
     height: 230px;
   }
+  .stepLabel {
+    display: none;
+  }
+  .conditionFields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .root .formArea .fields .field input,
+  .root .formArea .fields .field select,
+  .root .formArea .fields .field textarea {
+    font-size: 1rem;
+  }
 }
 @media (max-width: 360px) {
-  .steps ol {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .formArea {
     padding: 20px 16px;
   }
@@ -558,5 +600,239 @@
   .field input,
   .field textarea {
     padding: 10px;
+  }
+}
+
+.intro .tagline {
+  color: var(--shop-wine);
+  font-size: 1rem;
+  margin: 0;
+}
+.activeStep {
+  position: absolute;
+  z-index: -1;
+  inset: 6px auto 6px 6px;
+  width: calc((100% - 12px) / 5);
+  background: var(--shop-wine);
+  border-radius: 8px;
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.steps button[aria-current]:focus-visible {
+  outline-color: var(--shop-cream);
+  outline-offset: -4px;
+}
+.stepBody {
+  min-height: 460px;
+  animation: step-arrive 220ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
+}
+@keyframes step-arrive {
+  from {
+    opacity: 0.92;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.stepHelp {
+  margin: 8px 0 28px;
+  color: var(--shop-muted);
+  font-size: 0.875rem;
+  line-height: 1.8;
+}
+.emptyPhoto {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+}
+.emptyPhoto span {
+  max-width: 16ch;
+  font-size: 0.8125rem;
+  line-height: 1.8;
+}
+.compactPreview {
+  display: none;
+  padding: 0 20px;
+  background: var(--shop-paper);
+  border-radius: 8px;
+}
+.compactPreview summary {
+  padding: 14px 0;
+  min-height: 48px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.compactPreview summary span {
+  float: right;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--shop-muted);
+}
+.compactPreview .preview {
+  box-shadow: none;
+  padding: 12px 0 20px;
+}
+.compactPreview[open] .preview {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  column-gap: 20px;
+}
+.compactPreview .preview h2 {
+  grid-column: 1 / -1;
+}
+.compactPreview .previewPhoto {
+  grid-column: 1;
+  grid-row: 2 / 7;
+  height: 190px;
+}
+.compactPreview .preview h3 {
+  margin-top: 0;
+}
+.compactPreview .preview dl {
+  margin: 8px 0;
+  padding: 8px 0;
+}
+.classification {
+  min-width: 0;
+  padding: 24px 0 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--shop-line);
+}
+.classification legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 16px;
+  font-weight: 700;
+  font-size: 1rem;
+}
+.classification legend + div {
+  clear: both;
+}
+.classification > .field {
+  margin-top: 24px;
+}
+.conditionFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.conditionFields .field:last-child {
+  grid-column: 1 / -1;
+}
+.questions {
+  border-top: 1px solid var(--shop-line);
+  padding-top: 24px;
+}
+.questions h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.questions fieldset {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--shop-line);
+}
+.fieldError {
+  margin: 8px 0 0;
+  color: var(--shop-error);
+  font-size: 0.8125rem;
+  line-height: 1.8;
+}
+.root .formArea .fields [aria-invalid="true"] {
+  border-color: var(--shop-error);
+}
+.textAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  color: var(--shop-wine);
+  background: transparent;
+  font: 600 0.8125rem/1.7 var(--shop-body);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-align: left;
+}
+.reviewHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 8px;
+}
+.reviewHeading h3 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+.reviewFacts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+}
+.reviewFacts > div {
+  min-width: 0;
+}
+.reviewPhotos {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.reviewPhotos img {
+  width: 100%;
+  height: 140px;
+  object-fit: contain;
+  background: #efe3cf;
+  border-radius: 6px;
+}
+.sessionNote {
+  align-self: center;
+  font-size: 0.75rem;
+  color: var(--shop-muted);
+  line-height: 1.8;
+}
+.error ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+@media (max-width: 1199px) {
+  .compactPreview {
+    display: block;
+  }
+}
+@media (max-width: 760px) {
+  .conditionFields,
+  .reviewFacts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .stepBody {
+    min-height: 0;
+  }
+  .stepHelp {
+    margin-bottom: 24px;
+  }
+  .reviewPhotos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .root {
+    background-size: auto 900px;
+  }
+  .sessionNote {
+    max-width: 12ch;
+  }
+}
+@media (max-width: 360px) {
+  .compactPreview[open] .preview {
+    display: block;
+  }
+  .compactPreview .previewPhoto {
+    height: 180px;
+    margin-bottom: 16px;
   }
 }

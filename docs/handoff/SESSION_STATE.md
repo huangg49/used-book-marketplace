@@ -6,18 +6,25 @@ OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hi�
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
-## Đề xuất kết hợp giao diện Đăng sách — 11/10/2026
+## Giao diện Đăng sách kết hợp hai bản — 11/10/2026
 
-- `codex/posting-blend-plan`, base `0a07b67`, checkpoint subject
-  `docs(web): propose blended book posting design`. Chủ dự án yêu cầu nghiên
-  cứu giữ phần tốt bản Tuấn Minh và bản hiện tại; **chưa duyệt code**.
-  [Đề xuất](../design/WEB_POSTING_BLEND_PROPOSAL.md): giữ nền giấy/stepper ngang,
-  preview ở vùng trái và form rộng bên phải, bỏ điều hướng dọc trùng lặp;
-  giữ taxonomy/validation/exit/retry, sửa cách biểu thị hoàn thành và nhãn tiền.
-- Đã đọc source Minh `36cb0c0`/current `0a07b67`, assets và evidence lịch sử; tham khảo
-  W3C form steps/errors. Chưa dựng runtime Minh/đo performance/usability test.
-  Docs check/diff check; không đổi UI/API/DB, không product test/submit/email.
-  WIP khác/READINESS giữ nguyên. Bước tiếp: chủ dự án duyệt/chỉnh phương án.
+- `codex/posting-blend-plan`, base đề xuất `dd1dfa4`, checkpoint subject
+  `feat(web): blend archival posting desk with guided review`. Chủ dự án đã
+  duyệt [phương án](../design/WEB_POSTING_BLEND_PROPOSAL.md). Giữ nền Minh
+  (WebP188KB), một thanh5bước ngang, preview trái240px/disclosure dưới1200px,
+  form giấy đặc, review đủ metadata/ảnh/tình trạng/giá và Chỉnh sửa từng phần.
+  Completion theo validation, lỗi gần trường/liên kết focus từ summary;
+  giữ taxonomy/API/session/exit/submission attempt/retry. Motion220/240ms vẫn
+  chạy theo chính sách chủ dự án. DESIGN/sidecar/surface/provenance đã cập nhật.
+- Web78tests/build(TS)/lint PASS;5warning Exchange cũ/chunk warning. Detector
+  một lần `[]`; independent AI finish review **ship**, không thay human review.
+  CUA Chromium1440×1000/1280×720/1024×640/390×844/320×740: validation/focus,
+  dữ liệu qua lại/exit-cancel,8ảnh/xóa,giá,ownership,reviewedit,gửi duyệt/reset
+  PASS trên Nest/Mongo `*_test` riêng/fake storage. [Evidence](../../.impeccable/review/posting-blend/README.md).
+  Không email/DB local chính. Browser mất phản hồi/retry, actual125%zoom,
+  Safari/speech/physical mobile/human/remote CI NOT RUN. READINESS/WIP khác giữ
+  nguyên; QA tab/viewport/runtime/database đã dọn, Vite5186 giữ nguyên. Local
+  chưa push; bước tiếp chủ dự án xem giao diện trước human review/tích hợp.
 
 ## Search — nhóm lọc và xóa riêng — 11/10/2026
 

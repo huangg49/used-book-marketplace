@@ -1,7 +1,9 @@
 # Đăng sách — đề xuất kết hợp hai bản — 11/10/2026
 
-Trạng thái: **ĐỀ XUẤT, CHƯA DUYỆT TRIỂN KHAI**. Chỉ nghiên cứu/thiết kế;
-không thay product code, API, DB, canonical DESIGN hoặc surface brief.
+Trạng thái: **ĐÃ DUYỆT VÀ TRIỂN KHAI — 11/10/2026** trên
+`codex/posting-blend-plan`, từ checkpoint đề xuất `dd1dfa4`. Phần dưới giữ căn cứ
+và phương án đã duyệt; kết quả thực tế ở [evidence](../../.impeccable/review/posting-blend/README.md).
+Đã cập nhật UI, DESIGN và surface brief đúng phạm vi; API/session/DB không đổi.
 
 ## Căn cứ và mục tiêu
 
@@ -111,12 +113,14 @@ hỗ trợ lỗi rõ cách sửa ở gần trường và đưa focus đến đ�
 căn cứ cho usability; lựa chọn bố cục/vật liệu ở trên là đề xuất thiết kế riêng,
 không phải kết quả usability test.
 
-Yêu cầu giữ bản Minh mới hơn brief cũ nói không nền minh họa. Nếu được duyệt,
-cập nhật DESIGN/surface brief đúng phạm vi, không coi brief cũ là lý do bỏ nền.
+Yêu cầu giữ bản Minh mới hơn brief cũ nói không nền minh họa. DESIGN/surface
+brief đã cập nhật đúng phạm vi sau duyệt, không coi brief cũ là lý do bỏ nền.
 Không đổi API/session/database hay mở rộng nghiệp vụ đấu giá/giá/ảnh.
 
-Sau duyệt: làm bố cục một bước đầu cho chủ dự án kiểm nhận diện, sau đó áp dụng
-đủ 5 bước và states. Chạy kiểm tra web, bàn phím/AT structure, ảnh dài/tên dài,
-laptop 125%, mobile/bàn phím, dữ liệu qua lại/lỗi/thoát-hủy và retry đúng command.
-Gửi thật chỉ trong QA test DB/storage theo START_HERE, không ghi DB local chính.
-Lượt đề xuất này không chạy product tests, submit form hoặc gửi email.
+Đã áp dụng đủ 5 bước và states, preview trái/disclosure ở màn hẹp, review đầy đủ
+và lỗi liên kết tới trường. Web78tests/build/lint PASS; CUA kiểm 1440/1280/1024/
+390/320px, giữ dữ liệu/thoát-hủy, giới hạn ảnh, giá, sở hữu, gửi duyệt và reset
+trên Nest/Mongo `*_test`/fake storage riêng. Không ghi DB local chính hoặc gửi
+email. Runtime retry khi mất phản hồi chưa chạy trong browser; unit tests hiện
+có vẫn PASS. Không coi viewport1024×640 là đo browser zoom125%; actual zoom,
+Safari, thiết bị mobile thật, screen-reader speech và human acceptance NOT RUN.
