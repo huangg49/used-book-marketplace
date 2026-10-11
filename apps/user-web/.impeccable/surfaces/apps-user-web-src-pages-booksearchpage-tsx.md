@@ -72,15 +72,18 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
 Owner-approved BeeWise-style navigation refinement: use the existing shared
 Header across Member web layouts and posting. Full-width76px at top; beyond48px
-scroll,64px rounded floating bar at top12px/max1280px/side clearance24px, with
+scroll,64px rounded floating bar at top16px/width min(1248px,calc(100% - 64px)),
+at least32px on each side,32px corners and
 soft offset shadow; return at<=16px to avoid threshold flicker. Stable76px slot
-prevents document jumps. <=1000px uses logo/menu,72px slot,top8px/side10px;
+prevents document jumps. <=1000px uses logo/menu,72px slot,top10px/width calc(100% - 28px)/14px each side;
 original logo windows shrink to82% at<=420px, all controls retain44px height.
 Scrollable mobile menu, Escape/route/desktop-resize closure and narrow notification
-popup verified. Owner then requests a more legible360ms morph with a transient
-1.5px cream edge, opacity0→65%→0 during collapse only. It clears on animationend
+popup verified. Owner then requests a more legible560ms inward morph with a transient
+1.5px yellow outline, opacity0→80%→45%→0 over680ms, and a2.5px cream dash
+travelling one perimeter lap over680ms before fading fully. Both accents are
+pointer-inert,invisible at rest and appear during actual collapse only. State clears on animationend
 or expansion and replays on the next collapse, not every scroll event. The finite
-360ms morph/edge remain visible on the owner's reduced-motion laptop; separate
+560ms morph/680ms one-shot accents remain visible on the owner's reduced-motion laptop; separate
 scoped exception, no global preference change. Passive threshold-only updates;
 no new library, copy, session or API changes.
 

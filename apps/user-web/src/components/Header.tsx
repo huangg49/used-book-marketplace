@@ -82,6 +82,15 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
           if (event.target === event.currentTarget) setCollapsing(false);
         }}
       >
+        <svg className={styles.navEdge} aria-hidden="true" focusable="false">
+          <rect
+            x="1.25"
+            y="1.25"
+            width="calc(100% - 2.5px)"
+            height="calc(100% - 2.5px)"
+            pathLength="100"
+          />
+        </svg>
         <div className={styles.headerInner}>
           <Logo />
           <nav className={styles.desktopNav} aria-label="Điều hướng chính">

@@ -596,21 +596,24 @@ The shared Member web Header stays visible across MainLayout,
 DashboardLayout and standalone posting. Login and Register own their photographic
 Logo area and paper-side home action and do not render this scrolling Header. Wine/cream, original logo and desktop
 current-page underline remain. At the top it spans the viewport,76px tall;
-after48px of scrolling it becomes a64px floating bar,12px from the top,
-max-width1280px with at least24px side clearance,32px radius and a soft
-`0 12px 28px #28191433` shadow. It returns to the full-width form at16px or less.
+after48px of scrolling it becomes a64px floating bar,16px from the top,
+with width `min(1248px, calc(100% - 64px))`, at least32px on each side,
+32px radius and a soft `0 14px 32px #28191440` shadow. It returns to the
+full-width form at16px or less.
 The reserved slot stays76px, so the page does not jump during the change.
-The360ms exponential transition changes only the fixed bar and its row; the
+The560ms exponential transition draws the fixed bar inward and changes its row; the
 passive scroll listener updates React only at the two thresholds. On each actual
-collapse, a pointer-inert1.5px cream inner edge fades0→65%→0 over the same360ms,
-then animationend clears the transient state. Expanding interrupts the edge
+collapse, a pointer-inert1.5px yellow inner outline fades0→80%→45%→0 over680ms.
+A2.5px cream dash travels one perimeter lap over the same680ms, fading fully
+at the end; its18/82 dash/gap follows the changing corners. Both accents remain
+invisible at rest, then animationend clears the transient state. Expanding interrupts the edge
 immediately; loading an already-scrolled page does not replay it. The owner
 explicitly requests visible shrinking on their reduced-motion laptop: the finite
-navbar morph/edge retain360ms under that preference. This is a separate scoped
+navbar morph retains560ms and its one-shot edge accents retain680ms under that preference. This is a separate scoped
 exception from hero sway; other UI still uses the global reduction.
 
-At1000px and below, top height/slot is72px; the floating bar sits8px from the
-top with10px side clearance. The original owl and lettering remain; at420px
+At1000px and below, top height/slot is72px; the floating bar sits10px from the
+top with width `calc(100% - 28px)`, leaving14px on each side. The original owl and lettering remain; at420px
 their CSS windows scale to82% without changing source pixels, leaving room for
 notification and menu controls. Interactive targets remain at least44px tall.
 Narrow menus expand beneath the row, scroll within the available height, close

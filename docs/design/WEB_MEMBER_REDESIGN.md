@@ -16,6 +16,30 @@ ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết qu�
 
 ## Phạm vi triển khai
 
+- Navbar11/10, nhánh `codex/navbar-shrink-emphasis` từ `7274a2c`: chủ dự án
+  muốn thấy rõ quá trình thu vào. Shared Header nay co560ms với nhịp giảm tốc,
+  viền vàng thoáng sáng và một nét kem chạy quanh680ms rồi tắt; bóng tăng dần.
+  Floating max1248px, chừa64px ngang/top16px; mobile chừa28px/top10px. Giữ
+  slot76/72px, thresholds48/16px, logo/links/menu, Home hero và session.
+  SVG trang trí aria-hidden/focusable=false/pointer-inert; không thêm vòng lặp.
+  Giữ ngoại lệ giảm chuyển động hữu hạn đã được chủ dự án duyệt, chỉ trong Header.
+  Build/typecheck PASS; lint0error/5warning Exchange có sẵn. CUA thực tế
+  reduced-motion=true:1535×735/1366×768/390×844/320×740, thu/viền/settle,
+  đảo chiều cuộn, menu/Escape/focus/links/không tràn PASS. DOM ghi floating
+ 1248×64/top16px và edge/trace opacity0, collapsing=false sau khi ổn định.
+  [Đang thu](../../.impeccable/review/web-member/nav-emphasis-desktop-moving.png),
+  [đã thu](../../.impeccable/review/web-member/nav-emphasis-desktop-settled.png),
+  [mobile](../../.impeccable/review/web-member/nav-emphasis-mobile-moving.png),
+  [menu320](../../.impeccable/review/web-member/nav-emphasis-320-menu.png).
+  Detector đã chạy một lượt; output bị tool truncate, không có report lưu lại,
+  nên không nhận detector sạch và không chạy lại. Unit/backend/native/200%/
+  Safari/human/fullintegration NOT RUN lượt cosmetic này. READINESS giữ nguyên.
+  Reviewer mới mở đủ9capture và kiểm source: SHIP cho refinement navbar này;
+  documenter đồng bộ Navigation/sidecar/navbar surface, scoped preservation/
+  JSON/docs/diff PASS; không nhận FPS/usability/native/toàn sản phẩm PASS. PNG là bytes CUA nguyên
+  bản; kích thước chuẩn hóa theo vùng nội dung có scrollbar, viewport trên là
+  cấu hình kiểm tra. Không gồm MainLayout/Chat/Thông báo WIP; không push/PR/merge/deploy.
+
 - Tài khoản11/10: owner shelf thay dashboard demo; đọc metadata qua public catalog
   hoặc currentRevision.metadata của owner request đúng contract. Lọc duyệt/URL,
   cursor20, ảnh owner, trạng thái và hai giá tách nhãn; không có tổng kho/số dư giả.

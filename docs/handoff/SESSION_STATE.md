@@ -8,6 +8,20 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Gói thiết kế web Member — logo mới và tiệm sách nhiều màu
 
+- Navbar emphasis11/10: nhánh `codex/navbar-shrink-emphasis`, base `7274a2c`,
+  checkpoint subject `feat(web): emphasize navbar collapse motion`. Co560ms,
+  viền vàng/nét kem chạy một lượt680ms rồi tắt; floating/spacing/shadow rõ hơn.
+  Giữ hero/menu/routes và ngoại lệ reduced-motion hữu hạn của Header. Build/
+  typecheck PASS, lint0error5warning cũ; CUA4viewport/reduced=true/cuộn đảo chiều/
+  menu/Escape/focus/links/không tràn PASS. [Evidence](../design/WEB_MEMBER_REDESIGN.md).
+  Detector output bị truncate, không có clean verdict; không chạy lại theo budget.
+  Reviewer mới SHIP cho refinement navbar/source/9capture; documenter đồng bộ
+  Navbar canonical/sidecar/surface, scoped preservation/JSON/docs/diff PASS; không nhận FPS/
+  usability/toàn sản phẩm PASS. Backend/native/200%/Safari/human NOT RUN;
+  READINESS không đổi. Chưa push.
+  MainLayout/Chat/Thông báo WIP giữ riêng. Vite5186 tiếp tục chạy, bước tiếp:
+  chủ dự án xem chuyển động ở Home; Chat vẫn là gói mở.
+
 - Chủ dự án đã duyệt [kế hoạch](../design/WEB_MEMBER_NEXT_PAGES_PLAN.md) sau
   `6d6b6a8`: Tìm sách → Chi tiết → Đăng sách, sau đó tài khoản/chat/đấu giá.
   Nhóm Tìm sách11/10 đã triển khai đầu trang gọn/sidebar/kệ4–5cột/2mobile,
