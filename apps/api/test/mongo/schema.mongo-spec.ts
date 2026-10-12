@@ -36,6 +36,10 @@ import {
   serverNow,
 } from '../../src/database/mongo/transaction.js';
 import { prepareDatabase, testUrl } from './harness.js';
+import {
+  allCategories,
+  facetsFor,
+} from '@used-books/api-contract/catalog-taxonomy';
 
 // MIG-02: collections, validators, indexes, reference data and least privilege.
 
@@ -106,6 +110,65 @@ describe('migrations', () => {
     ).rejects.toBeInstanceOf(MigrationChecksumError);
     // The lock is released after a failed run.
     expect(await migrate(migrator, migrator.db())).toEqual([]);
+  });
+  it('upgrades v1 classification additively without changing historical revisions or checksums', async () => {
+    const db = root.db(
+      `catalog_upgrade_${randomUUID().replaceAll('-', '')}_test`,
+    );
+    try {
+      const old = migrations.filter(
+        (m) => m.id !== '0019-catalog-vocabulary-v2',
+      );
+      await migrate(root, db, old);
+      const oldChecksum = (await db
+        .collection('_migrations')
+        .findOne({ _id: '0016-catalog-classification' as never }))!.checksum;
+      const revision = {
+        _id: randomUUID(),
+        bookId: randomUUID(),
+        number: 1,
+        title: 'Legacy sample',
+        authors: ['Test'],
+        publisher: null,
+        publicationYear: null,
+        language: 'vi',
+        edition: null,
+        category: 'Manga / Comic',
+        categoryId: 'manga',
+        attributes: { genre: ['action'], audience: ['shounen'] },
+        isbn: null,
+        submittedAt: now(),
+      };
+      await db
+        .collection<{ _id: string }>('catalog_revisions')
+        .insertOne(revision);
+      const next = {
+        ...revision,
+        _id: randomUUID(),
+        bookId: randomUUID(),
+        category: 'Sức khỏe / y học',
+        categoryId: 'health',
+        attributes: { topic: ['wellbeing'] },
+      };
+      await rejectsValidation(
+        db.collection<{ _id: string }>('catalog_revisions').insertOne(next),
+      );
+      expect(await migrate(root, db)).toEqual(['0019-catalog-vocabulary-v2']);
+      await db.collection<{ _id: string }>('catalog_revisions').insertOne(next);
+      expect(
+        await db
+          .collection('catalog_revisions')
+          .findOne({ _id: revision._id as never }),
+      ).toEqual(revision);
+      expect(
+        (await db
+          .collection('_migrations')
+          .findOne({ _id: '0016-catalog-classification' as never }))!.checksum,
+      ).toBe(oldChecksum);
+      expect(await migrate(root, db)).toEqual([]);
+    } finally {
+      await db.dropDatabase();
+    }
   });
 
   it('insert the finite simulator capital as one balanced opening journal', async () => {
@@ -200,6 +263,19 @@ describe('validators replace CHECK constraints', () => {
       series: 'Bộ truyện thử',
     };
     await c.insertOne(classified as never);
+    for (const category of allCategories) {
+      const attributes = Object.fromEntries(
+        facetsFor(category.id)
+          .filter((f) => f.options.length)
+          .map((f) => [f.id, [f.options[0]!.id]]),
+      );
+      await c.insertOne({
+        ...revision(null),
+        categoryId: category.id,
+        category: category.label,
+        attributes,
+      } as never);
+    }
     for (const attributes of [
       { genre: ['unknown'] },
       { genre: ['action', 'action'] },

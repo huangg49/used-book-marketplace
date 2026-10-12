@@ -3,6 +3,10 @@
 Date: 2026-10-11. Status: implemented locally on
 `codex/catalog-contextual-filters`; owner-approved scope, human review pending.
 
+Update12/10/2026: [ADR0035](0035-catalog-vocabulary-v2.md) extends this decision
+additively to v2 and separates parent query contexts from metadata. The text
+below records the original v1 implementation and rollout state.
+
 ## Context
 
 Member Search previously filtered eight preview categories only. The owner

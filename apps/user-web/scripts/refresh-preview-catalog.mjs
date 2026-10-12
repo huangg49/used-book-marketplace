@@ -1,5 +1,10 @@
 // Small, curated educational UI sample; never writes to the application DB.
 import { readFile, writeFile } from "node:fs/promises";
+import {
+  categories,
+  categoryFor,
+  rootCategory,
+} from "../../../packages/api-contract/src/catalog-taxonomy.js";
 
 const selections = [
   ["Manga", "Naruto", "Masashi Kishimoto"],
@@ -76,6 +81,10 @@ const snapshotPath = new URL(
 );
 // Expansion preserves the reviewed manga/LN cache; a full refresh remains explicit.
 const saved = JSON.parse(await readFile(snapshotPath, "utf8"));
+// A full refresh must also include the expanded, individually curated titles.
+for (const book of saved.items)
+  if (!selections.some((s) => s[1] === book.series))
+    selections.push([book.category, book.series, book.authors[0], 1]);
 const previous = process.argv.includes("--expand") ? saved : null;
 const unwantedSample =
   /collection set|books collection|study guide|summary of/i;
@@ -146,24 +155,41 @@ for (const [category, title, author, count = 4] of selections) {
   // Stay below the public API's one-request-per-second default.
   await new Promise((resolve) => setTimeout(resolve, 1200));
 }
-const categoryOrder = [
-  "Văn học",
-  "Kỹ năng sống",
-  "Kinh doanh",
-  "Khoa học",
-  "Lịch sử",
-  "Thiếu nhi",
-  "Manga",
-  "Light novel",
-  "Học ngoại ngữ",
-  "Giáo khoa / tham khảo",
-];
+const categoryOrder = categories
+  .filter((c) => c.id !== "other")
+  .map((c) => c.id);
+for (const book of items) {
+  const curated = saved.items.find(
+    (item) => item.series === book.series && item.categoryId,
+  );
+  if (curated) {
+    book.categoryId = curated.categoryId;
+    book.category = categoryFor(curated.categoryId).label;
+    book.attributes = curated.attributes;
+    book.classificationSeed = curated.classificationSeed;
+  }
+}
 if (
   items.length < 88 ||
   categoryOrder.some(
     (category) =>
-      items.filter((book) => book.category === category).length <
-      (["Học ngoại ngữ", "Giáo khoa / tham khảo"].includes(category) ? 3 : 6),
+      items.filter(
+        (book) =>
+          rootCategory(book.categoryId || book.category)?.id === category,
+      ).length <
+      ([
+        "languages",
+        "education",
+        "history",
+        "biography",
+        "parenting",
+        "health",
+        "arts",
+        "society",
+        "lifestyle",
+      ].includes(category)
+        ? 3
+        : 6),
   )
 )
   throw new Error(
@@ -185,7 +211,9 @@ for (let round = 0; round < 4; round++)
 const ordered = [];
 for (let round = 0; round < items.length; round++)
   for (const category of categoryOrder) {
-    const item = bySeries.filter((book) => book.category === category)[round];
+    const item = bySeries.filter(
+      (book) => rootCategory(book.categoryId || book.category)?.id === category,
+    )[round];
     if (item) ordered.push(item);
   }
 const snapshot = {
@@ -202,6 +230,7 @@ const snapshot = {
     return curated
       ? {
           ...book,
+          category: categoryFor(curated.categoryId).label,
           categoryId: curated.categoryId,
           attributes: curated.attributes,
           classificationSeed: curated.classificationSeed,

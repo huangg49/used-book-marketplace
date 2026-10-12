@@ -14,6 +14,13 @@ import {
 } from "../services/purchase-conversations";
 import { getPublicListing } from "../services/public-listings";
 import styles from "./BookDetailPage.module.css";
+import {
+  categoryFor,
+  categoryPath,
+  classificationLabels,
+  languageLabel,
+} from "@used-books/api-contract/catalog-taxonomy";
+import { searchUrl } from "../lib/routes";
 
 function purchaseError(error: unknown) {
   if (!(error instanceof ApiError))
@@ -286,16 +293,83 @@ export function BookDetailPage() {
             <h2>Thông tin sách</h2>
             <dl>
               <div>
-                <dt>Thể loại</dt>
-                <dd>{book.book.category || "Chưa ghi rõ"}</dd>
+                <dt>Danh mục</dt>
+                <dd>
+                  {categoryFor(book.book.categoryId || book.book.category)
+                    ? categoryPath(
+                        book.book.categoryId || book.book.category,
+                      ).map((c, index) => (
+                        <span key={c.id}>
+                          {index > 0 && " / "}
+                          <Link
+                            to={searchUrl({ data: "live", categoryId: c.id })}
+                          >
+                            {c.label}
+                          </Link>
+                        </span>
+                      ))
+                    : book.book.category || "Chưa ghi rõ"}
+                </dd>
               </div>
+              {book.book.series && (
+                <div>
+                  <dt>Bộ truyện</dt>
+                  <dd>
+                    <Link
+                      to={searchUrl({
+                        data: "live",
+                        categoryId:
+                          book.book.categoryId ||
+                          categoryFor(book.book.category)?.id ||
+                          "",
+                        series: book.book.series,
+                      })}
+                    >
+                      {book.book.series}
+                    </Link>
+                  </dd>
+                </div>
+              )}
+              {classificationLabels(book.book).map((f) => (
+                <div key={f.id}>
+                  <dt>{f.label}</dt>
+                  <dd>
+                    {f.values.map((o, index) => (
+                      <span key={o.id}>
+                        {index > 0 && " · "}
+                        <Link
+                          to={searchUrl({
+                            data: "live",
+                            categoryId:
+                              book.book.categoryId ||
+                              categoryFor(book.book.category)?.id ||
+                              "",
+                            facets: JSON.stringify({
+                              [f.id]: [o.id],
+                              ...(f.id === "level" &&
+                              book.book.attributes?.purpose?.includes("exam")
+                                ? { purpose: ["exam"] }
+                                : {}),
+                              ...(f.id === "grade" &&
+                              book.book.attributes?.schoolStage
+                                ? {
+                                    schoolStage:
+                                      book.book.attributes.schoolStage,
+                                  }
+                                : {}),
+                            }),
+                          })}
+                        >
+                          {o.label}
+                        </Link>
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              ))}
               <div>
                 <dt>Ngôn ngữ</dt>
-                <dd>
-                  {{ vi: "Tiếng Việt", en: "Tiếng Anh", ja: "Tiếng Nhật" }[
-                    book.book.language
-                  ] || book.book.language}
-                </dd>
+                <dd>{languageLabel(book.book.language)}</dd>
               </div>
               {book.book.publisher && (
                 <div>

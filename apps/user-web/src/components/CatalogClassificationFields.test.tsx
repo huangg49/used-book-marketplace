@@ -56,4 +56,66 @@ describe("classification select consumers", () => {
       series: "",
     });
   });
+  it("offers descendant exams in Search while the posting parent stays a valid broad context", () => {
+    const base = {
+      categoryId: "languages",
+      attributes: { purpose: ["exam"] },
+      series: "",
+    };
+    const search = renderToStaticMarkup(
+      <CatalogClassificationFields
+        id="search"
+        value={{ ...base, attributes: { ...base.attributes, level: ["n3"] } }}
+        onChange={() => undefined}
+      />,
+    );
+    const edit = renderToStaticMarkup(
+      <CatalogClassificationFields
+        id="edit"
+        editing
+        value={base}
+        onChange={() => undefined}
+      />,
+    );
+    expect(search).toContain("JLPT N3");
+    expect(search).toContain("TOEIC");
+    expect(edit).not.toContain("JLPT N3");
+    expect(edit).not.toContain("TOEIC");
+  });
+  it("keeps option searches labelled and prevents choosing more than sixteen values", () => {
+    const base = {
+      categoryId: "business",
+      attributes: {
+        businessTopic: [
+          "leadership",
+          "strategy",
+          "digital-marketing",
+          "branding",
+          "sales",
+          "investing",
+          "personal-finance",
+          "banking",
+          "startup",
+          "innovation",
+          "microeconomics",
+          "macroeconomics",
+          "accounting",
+          "tax",
+          "audit",
+          "recruitment",
+        ],
+      },
+      series: "",
+    };
+    const html = renderToStaticMarkup(
+      <CatalogClassificationFields
+        id="search"
+        value={base}
+        onChange={() => undefined}
+      />,
+    );
+    expect(html).toContain('for="search-businessTopic-search"');
+    expect(html).toContain('id="search-businessTopic-search"');
+    expect(html).toContain("Đã chọn tối đa 16 mục");
+  });
 });

@@ -19,7 +19,9 @@ import { isCatalogPreview } from "../services/home-shelves";
 import { CatalogClassificationFields } from "../components/CatalogClassificationFields";
 import {
   categoryFor,
-  classificationErrors,
+  searchClassificationErrors as classificationErrors,
+  supportsSeries,
+  taxonomyVersion,
   compatibleAttributes,
   facetsFor,
   languageOptions,
@@ -67,7 +69,7 @@ function invalidFilters(values: FilterValues) {
     invalidPrice(values.minExchangeValue, values.maxExchangeValue) ||
     (!!values.language && !/^[a-z]{2,3}$/.test(values.language)) ||
     (!!values.series &&
-      (!["manga", "light-novel"].includes(values.categoryId) ||
+      (!supportsSeries(values.categoryId) ||
         values.series.length > 120 ||
         !values.series.trim())) ||
     (Object.keys(values.attributes).length > 0 && !values.categoryId) ||
@@ -367,7 +369,7 @@ export function BookSearchPage() {
   if (initial.categoryId) query.set("categoryId", initial.categoryId);
   const priceInvalid = invalidFilters(initial);
   const result = useQuery({
-    queryKey: ["catalog-search", preview, query.toString()],
+    queryKey: ["catalog-search", taxonomyVersion, preview, query.toString()],
     queryFn: () => getSearchShelf(query, preview),
     enabled: !priceInvalid,
     retry: false,
@@ -462,13 +464,14 @@ export function BookSearchPage() {
         ]
       : []),
     ...(initial.series ? [{ key: "series", label: initial.series }] : []),
-    ...facetsFor(initial.categoryId, initial.attributes).flatMap((f) =>
-      (initial.attributes[f.id] || []).map((value) => ({
-        key: "facets",
-        facet: f.id,
-        value,
-        label: f.options.find((o) => o.id === value)?.label || value,
-      })),
+    ...facetsFor(initial.categoryId, initial.attributes, "search").flatMap(
+      (f) =>
+        (initial.attributes[f.id] || []).map((value) => ({
+          key: "facets",
+          facet: f.id,
+          value,
+          label: f.options.find((o) => o.id === value)?.label || value,
+        })),
     ),
     ...(["minExchangeValue", "maxExchangeValue"] as const).flatMap((key) =>
       initial[key]
@@ -650,6 +653,7 @@ export function BookSearchPage() {
                       const compatible = compatibleAttributes(
                         initial.categoryId,
                         attributes,
+                        "search",
                       );
                       update(
                         "facets",

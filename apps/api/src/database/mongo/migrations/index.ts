@@ -1,6 +1,13 @@
 import { createHash } from 'node:crypto';
+import {
+  catalogVocabularyV2Migration,
+  withCatalogVocabularyV2,
+} from './0019-catalog-vocabulary-v2.js';
 import { authOtpMigration, authOtpSpecs } from './0018-auth-otp.js';
-import { accountRecoveryMigration, accountRecoverySpecs } from './0017-account-recovery.js';
+import {
+  accountRecoveryMigration,
+  accountRecoverySpecs,
+} from './0017-account-recovery.js';
 import type { Db, MongoClient } from 'mongodb';
 import { canonicalJson } from '../../../common/canonical-json.js';
 import type { CollectionSpec } from '../schema-dsl.js';
@@ -148,6 +155,7 @@ export const migrations: Migration[] = [
   catalogClassificationMigration,
   accountRecoveryMigration,
   authOtpMigration,
+  catalogVocabularyV2Migration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -165,7 +173,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withSettlementChanges)
     .map(withPurchaseConversationChanges)
     .map(withNotificationChanges)
-    .map(withCatalogClassification),
+    .map(withCatalogClassification)
+    .map(withCatalogVocabularyV2),
   wishlistSpec,
   ...priceAssistSpecsV2,
   ...onlinePriceSpecs,

@@ -68,6 +68,7 @@ describe('listing design contract (not HTTP implementation tests)', () => {
       'getPublicListingMedia',
       'listAuctions',
       'getAuction',
+      'getAuctionPhoto',
     ]);
     let planned = 0;
     for (const [path, item] of Object.entries(contract.paths)) {
@@ -81,7 +82,7 @@ describe('listing design contract (not HTTP implementation tests)', () => {
         expect(['planned', 'implemented']).toContain(
           operation['x-implementation-status'],
         );
-        expect(operation.security).toEqual(
+        expect(operation.security, operation.operationId).toEqual(
           publicIds.has(operation.operationId) ? [] : [{ bearerAuth: [] }],
         );
         if (method !== 'get')

@@ -1,7 +1,10 @@
 import { previewShelf, type HomeShelfBook } from "./home-shelves";
 import { getPublicListings } from "./public-listings";
 import catalog from "../data/preview-catalog.json";
-import { matchesClassification } from "@used-books/api-contract/catalog-taxonomy";
+import {
+  matchesClassification,
+  categoryFor,
+} from "@used-books/api-contract/catalog-taxonomy";
 import { classificationQuery } from "../lib/catalog-filters";
 import { previewClassification } from "../data/preview-classification";
 
@@ -29,7 +32,9 @@ export function previewSearch(query: URLSearchParams) {
   const maxExchange = query.get("maxExchangeValue");
   items = items.filter(
     (item) =>
-      (!category || item.book.category === category) &&
+      (!category ||
+        item.book.category === category ||
+        categoryFor(category)?.id === item.book.categoryId) &&
       (!condition || item.condition === condition) &&
       matchesClassification(item.book, classification) &&
       ((!minExchange && !maxExchange) ||

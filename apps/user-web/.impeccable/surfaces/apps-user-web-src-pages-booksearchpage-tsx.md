@@ -2,7 +2,7 @@
 version: 1
 slug: "apps-user-web-src-pages-booksearchpage-tsx"
 primary_target: "apps/user-web/src/pages/BookSearchPage.tsx"
-related_targets: ["apps/user-web/src/pages/HomePage.tsx","apps/user-web/src/pages/BookDetailPage.tsx","apps/user-web/src/pages/LoginPage.tsx","apps/user-web/src/components/BookCard.tsx","apps/user-web/src/components/Header.tsx"]
+related_targets: ["apps/user-web/src/pages/HomePage.tsx","apps/user-web/src/pages/BookDetailPage.tsx","apps/user-web/src/pages/LoginPage.tsx","apps/user-web/src/components/BookCard.tsx","apps/user-web/src/components/Header.tsx","apps/user-web/src/components/CategoryNavigation.tsx","apps/user-web/src/components/CatalogClassificationFields.tsx"]
 ---
 
 # Member web — logo mới và tiệm sách nhiều màu
@@ -101,10 +101,10 @@ section supersedes earlier Search-only preview categories, condition controls an
 rules and the matching sidecar recipe are in root DESIGN.md and
 `.impeccable/design.json` (`search-catalog-sidebar`).
 
-Shared `CatalogClassificationFields` drives live and DEV preview: native category
-and optional subcategory selects, contextual facet disclosures, optional Manga/LN
+Shared `CatalogClassificationFields` drives live and DEV preview: searchable desktop
+category and optional subcategory selects, native selects at<=900px, contextual facet disclosures, optional Manga/LN
 series, then native single-choice condition radios, mode-appropriate sale/exchange ranges and edition
-language. `catalog-v1` has11 roots/29 nodes/16 controlled facet types. The first
+language. `catalog-v2` has17 roots/72 nodes/25 controlled facet types. The first
 two groups and selected groups start open. Initially show five options plus
 selected values; Xem thêm/Thu gọn exposes the rest. Summaries, checkbox labels,
 fields, preset buttons and actions retain44px targets;17px wine-accent checkboxes
@@ -162,15 +162,14 @@ Apply focuses/scrolls result heading;cursor navigation focuses it. Malformed
 facet JSON or scalar/array values show Bộ lọc chưa hợp lệ with clear recovery
 and no query. Keep loading,empty,error,retry and page-only counts.
 
-DEV preview97 Open Library editions is explicit/labelled;prices,conditions and
+DEV preview118 Open Library editions is explicit/labelled;prices,conditions and
 classification enrichment are sample data. data=live uses API;production has no
 preview and live failures never fall back. Filtering precedes pagination;
 live cursor scope uses normalized criteria,preview keeps a separate branch.
 Shared classification is also used for new posting proposals or immutable
 confirmed-book metadata,and Admin reads labels in the existing review workflow;
 no Admin vocabulary CRUD. API/Mongo/contract changes are documented in
-`docs/design/CATALOG_CONTEXTUAL_FILTERS.md` and ADR0033. Search150ms control
-button feedback retains its existing global reduction;filter focus follows the
+`docs/design/CATALOG_CONTEXTUAL_FILTERS.md`, ADR0033 and additive ADR0035. Owner motion policy retains designed animation regardless of OS preference;filter focus follows the
 12/10 owner policy below. Shared card hover is governed by the later scoped
 catalog-card-depth recipe in DESIGN.md;no Home autoplay is adopted.
 
@@ -305,7 +304,7 @@ to the field width with6px gap and opens above when below is short and above
 offers more room. Paper,8px corners,6px padding and soft canonical ink18%
 shadow extend the existing sort popup recipe. Rows are36px minimum with7px8px
 padding/4px corners; the list is capped at288px, adjusted to available room,
-showing about7.5 rows with its own thin contained scroll. All12 main options
+showing about7.5 rows with its own thin contained scroll. All18 main options
 including Tất cả danh mục remain reachable. Selection uses wine600 text/a15px
 SVG check; hover/active uses shelf ground and active has an inset1px wine stroke.
 Empty search exposes the recovery status without changing selection.
@@ -345,3 +344,46 @@ Safari/speech/physical mobile/native app/forced-colors runtime/full harness/
 live API/human/CI NOT RUN. READINESS and unrelated WIP remain unchanged.
 Source comparison and inherited drift:
 `.impeccable/review/search-compact-dropdowns/documentation.md`.
+
+## Catalog v2 contextual search and directory —12/10/2026
+
+Operate; ordinary extension on `codex/catalog-expansion`, no new world or comp.
+The current registry is `catalog-v2`:17 roots,55 children/72 nodes,25 facets and
+234 controlled options. Shared CatalogClassificationFields uses search context
+here and exact-category metadata context in Sell. A parent search merges child
+options, then requires compatible exact-category branches: OR within a facet,
+AND across facets in the same branch. Language-parent Exam+(N3 OR TOEIC) is valid;
+that combination cannot describe one edition. Purpose controls exam levels and
+school stage controls grades. Context changes and chip removals prune dependent
+choices and announce removal. Manga/LN series capability comes from the registry.
+
+Long facets (>10 options) expose a labelled accent/case/đ-insensitive substring
+search. Selected options stay visible through search/collapse; empty searches
+have recovery status. Five initial options plus selected values and Xem thêm/
+Thu gọn remain. At16 selections the remaining unchecked choices disable and a
+status explains how to add another. These are selection counts, never inventory
+counts. Taxonomy version joins the Search query key and normalized API cursor
+scope. Preview118 editions and live queries filter before pagination, with
+separate data branches, truthful errors and preserved draft/Apply/Back behavior.
+
+Shared Header directory uses four presentation sections covering every root,
+separate root links and44px child-disclosure buttons. Search matches normalized
+root/child labels and reveals matching children; current category uses
+aria-current. Desktop paper panel is min(1200px,100%−40px),12px corners with a
+bounded viewport scroll and four columns;<=1000px uses the Header's mobile menu
+with a native disclosure and one-column directory. Escape/close restore trigger
+focus; outside pointer/focus departure, route change and narrow resize close
+desktop content, with listener cleanup. Source-preserving links retain explicit
+live/preview; links from live Detail force live. Existing150ms controls,160ms
+chevron and180ms panel entry retain durations under owner motion policy.
+
+Source checked: BookSearchPage, CategoryNavigation/styles,
+CatalogClassificationFields/styles, FilterSelect/styles, catalog-filters,
+catalog-search and shared vocabulary. The finish reviewer inspected all14 final
+JPEGs and returned ship; one detector returned `[]`. Browser/API/test evidence,
+fixture provenance and remaining gates are in
+[catalog-v2 README](../../../../.impeccable/review/catalog-v2/README.md).
+This documenter ran no product tests/browser/detector. Safari, actual200% zoom,
+real phone/native speech, continuous FPS, production load, remote CI and human
+review remain unverified; READINESS is unchanged. Root DESIGN.md/sidecar's97-book
+and old global-motion prose remain recorded inherited drift, not v2 rules.

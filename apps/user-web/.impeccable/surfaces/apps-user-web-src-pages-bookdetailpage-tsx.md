@@ -2,7 +2,7 @@
 version: 1
 slug: "apps-user-web-src-pages-bookdetailpage-tsx"
 primary_target: "apps/user-web/src/pages/BookDetailPage.tsx"
-related_targets: ["apps/user-web/src/components/ListingGallery.tsx", "apps/user-web/src/components/BookCard.tsx"]
+related_targets: ["apps/user-web/src/components/ListingGallery.tsx", "apps/user-web/src/components/BookCard.tsx", "packages/api-contract/src/catalog-taxonomy.js"]
 ---
 
 # Chi tiết bản sách —11/10/2026
@@ -58,6 +58,9 @@ expectedVersion/idempotency replay and SessionClient transport retain semantics.
 
 ## Evidence and limits
 
+The following seven-capture verdict is historical to the gallery refinement.
+Current catalog-v2 source and evidence are recorded after it.
+
 Seven raw captures in `.impeccable/review/web-member/`:
 `detail-gallery-{desktop,laptop,mobile,320,mobile-action,viewer-desktop,viewer-mobile}.jpg`.
 Final review: `.impeccable/review/web-member/detail-gallery-finish.md`. This is a
@@ -72,3 +75,30 @@ Full owner/held integration, current-slice missing/error photo browser exercise,
 200% text/zoom, native accessibility and human review remain NOT RUN. No release
 or READINESS gate closes. Current QA/handoff stays in WEB_MEMBER_REDESIGN and
 SESSION_STATE.
+
+## Catalog v2 factual links —12/10/2026
+
+Operate; ordinary extension on `codex/catalog-expansion`, preserving actual-copy
+photographs, gallery, factual columns, prices and24-hour reservation semantics.
+No new comp, world or shipping raster. Shared catalog-v2 has17 roots/72 nodes
+and25 facets. Bibliographic facts render the actual category path, known facet
+labels, optional series and edition-language label. Unknown classification is
+not inferred; legacy category text remains readable. These facts remain inline
+wine links in the existing wrapping fact rows, with2px wine focus at3px offset.
+
+Category/series/facet links open Search with explicit data=live, so a preview
+environment cannot redirect a real listing's facts into sample data. A level
+link carries purpose=exam when present; a grade link carries its actual
+schoolStage dependency. Missing values create no badge, count or invented match.
+The existing catalogReturn path still returns to the originating shelf.
+
+Source checked: BookDetailPage/styles and shared categoryPath,
+classificationLabels/languageLabel helpers. The finish reviewer inspected all14
+final catalog-v2 JPEGs and returned ship; detail-law-mobile shows the factual
+path/labels and detail-linked-search-mobile shows the live civil-filter result.
+One detector returned `[]`. QA photographs are explicitly synthetic fixtures,
+not evidence of commercial-book custody. Browser/API/test provenance and limits:
+[catalog-v2 README](../../../../.impeccable/review/catalog-v2/README.md).
+This documenter ran no tests/browser/detector. Human review, real phone/native,
+Safari, actual200% zoom, production load and remote CI remain unverified;
+READINESS/global DESIGN.md/sidecar remain unchanged.

@@ -131,7 +131,7 @@ it("combines condition, both-compatible modes, price bounds and price sort", () 
   expect(
     page.items.every(
       (item) =>
-        item.book.category === "Manga" &&
+        item.book.categoryId === "manga" &&
         item.condition === "Fair" &&
         item.mode !== "Exchange" &&
         item.salePrice! >= 50000 &&

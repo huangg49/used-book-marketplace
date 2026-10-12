@@ -312,6 +312,35 @@ kể cả khi Android dùng chế độ tối. Đây là lựa chọn cho bảng
 nếu thêm dark theme, phải đổi đồng bộ màu nền và thanh trạng thái.
 Kiểm tra bổ sung Android/web: [quality report](../ANDROID_QUALITY.md).
 
+## Member web — CategoryDiscovery
+
+12/10/2026, React/Vite `apps/user-web` only. Source:
+[CategoryDiscovery.tsx](../../apps/user-web/src/components/CategoryDiscovery.tsx)
+and [scoped styles](../../apps/user-web/src/components/CategoryDiscovery.module.css).
+Home's real/preview latest-shelf composition is the current consumer; this DOM
+component does not inherit RN primitives or imply a native `/ui` example.
+
+API: `preview: boolean`. A named section/nav displays eight shared registry roots
+initially, then every17 root through Tất cả danh mục/Thu gọn with aria-expanded/
+controls and unique useId labels. Root links use categoryId and explicit
+data=preview/live. The component owns only expansion; no fetch, session, listing
+mutation, result count or loaded-page inventory claim. Empty roots still link
+to Search's normal empty state. Registry is release-controlled catalog-v2,
+17 roots/72 nodes/25 facets; runtime Admin taxonomy CRUD is separate work.
+
+Links wrap at12px gaps (8px below600px), use44px minimum height,8px corners,
+quiet shop-line borders,14px task text (13px narrow) and a15px wine arrow.
+Hover reuses shelf ground/wine edge over150ms under the owner motion policy;
+2px wine focus at3px offset remains visible. Disclosure is a44px underlined
+wine action. Existing Home category heading/container styles supply placement;
+the component adds no new palette, font, asset or design world.
+
+The [Home surface record](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-homepage-tsx.md)
+and [v2 evidence](../../.impeccable/review/catalog-v2/README.md) document source,
+expanded-directory capture, AI ship verdict and remaining gates. The118-preview
+edition covers are existing sourced remote URLs, separate from listing photos;
+all-node stock/native/human acceptance is not implied.
+
 ## Member web — OwnerListingRow
 
 12/10/2026, React/Vite `apps/user-web` only. This DOM component is separate from

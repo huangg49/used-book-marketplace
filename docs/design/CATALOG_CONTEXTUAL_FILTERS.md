@@ -1,5 +1,18 @@
 # Bộ lọc theo danh mục — 11/10/2026
 
+## Cập nhật hiện hành12/10/2026
+
+Gói lõi mở rộng đã triển khai trên `codex/catalog-expansion`: vocabulary v2
+17gốc/55con/72mã,25facet/234lựa chọn; parent query tách metadata, migration0019,
+Navbar/Home/Search/Chi tiết/Đăng sách/Admin và RN bảo toàn classification.
+OpenAPI0.34.0/125operation; preview118ấn bản có nguồn, thuộc tính và giá vẫn là mẫu.
+Migration0019 đã áp dụng local; không backfill hay sửa catalog revision cũ.
+Xem [ADR0035](../adr/0035-catalog-vocabulary-v2.md), [kế hoạch được duyệt](CATALOG_EXPANSION_PLAN.md)
+và [evidence](../../.impeccable/review/catalog-v2/README.md).
+
+Phần dưới là snapshot của gói v1 ngày11/10, giữ để đối chiếu lịch sử; các số
+vocabulary, preview, contract và trạng thái migration bên dưới thuộc mốc đó.
+
 Phạm vi chủ dự án đã duyệt: mở rộng bộ lọc theo từng nhóm sách và triển khai
 xuyên suốt Search → Đăng sách → catalog/API/Mongo → Admin đọc hồ sơ. Nhánh
 `codex/catalog-contextual-filters`, base `aadbd88`. Đây là phần tiếp nối của

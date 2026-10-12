@@ -6,15 +6,9 @@ import {
   useLocation,
   useSearchParams,
 } from "react-router-dom";
-import {
-  ArrowUpRight,
-  ArrowRight,
-  Search,
-  Repeat2,
-  Plus,
-  BookOpen,
-} from "lucide-react";
-import { ROUTES, searchUrl } from "../lib/routes";
+import { ArrowUpRight, ArrowRight, Search, Repeat2, Plus } from "lucide-react";
+import { ROUTES } from "../lib/routes";
+import { CategoryDiscovery } from "../components/CategoryDiscovery";
 import { HomeBookCard } from "../components/HomeBookCard";
 import {
   getHomeShelf,
@@ -62,7 +56,9 @@ function AutumnOrnaments() {
         <span
           key={`${motif}-${index}`}
           className={`${styles.autumnMotif} ${motif}`}
-          data-home-loop={[4, 6, 7, 14, 18, 23].includes(index) ? "leaf" : undefined}
+          data-home-loop={
+            [4, 6, 7, 14, 18, 23].includes(index) ? "leaf" : undefined
+          }
         />
       ))}
     </div>
@@ -204,10 +200,8 @@ function LatestShelf({ preview }: { preview: boolean }) {
   const selectionScope = preview ? location.key : String(liveFilter);
   const [selection, setSelection] = useState({
     scope: selectionScope,
-    category: "",
     visible: homeShelfPageSize,
   });
-  const category = selection.scope === selectionScope ? selection.category : "";
   const visible =
     selection.scope === selectionScope ? selection.visible : homeShelfPageSize;
   const params = shelfFilters[filter].params;
@@ -230,77 +224,16 @@ function LatestShelf({ preview }: { preview: boolean }) {
     retry: false,
   });
   const items = result.data?.items ?? [];
-  const categories = [
-    ...new Set(items.map((book) => book.book.category.trim()).filter(Boolean)),
-  ];
-  const filtered = category
-    ? items.filter((book) => book.book.category.trim() === category)
-    : items;
+  const filtered = items;
   const shown = filtered.slice(0, visible);
   useShelfTransition(
     results,
-    `${selectionScope}:${category}`,
+    selectionScope,
     !result.isFetching && !result.isError,
   );
   return (
     <>
-      <section className={styles.categories} aria-labelledby="category-title">
-        <div className={styles.categoryHead}>
-          <h2 id="category-title">Khám phá thể loại</h2>
-          <p>
-            {preview
-              ? "Thể loại trong bộ sách xem trước đang chọn."
-              : "Thể loại từ tối đa 24 bài đăng mới nhất trong kệ đang chọn."}
-          </p>
-        </div>
-        <div
-          className={styles.categoryChoices}
-          role="group"
-          aria-label="Lọc thể loại trong kệ mới"
-        >
-          <button
-            type="button"
-            aria-pressed={!category}
-            onClick={() => {
-              setSelection({
-                scope: selectionScope,
-                category: "",
-                visible: homeShelfPageSize,
-              });
-            }}
-          >
-            <BookOpen size={18} aria-hidden="true" /> Tất cả thể loại
-          </button>
-          {categories.map((name) => (
-            <button
-              type="button"
-              key={name}
-              aria-pressed={category === name}
-              onClick={() => {
-                setSelection({
-                  scope: selectionScope,
-                  category: name,
-                  visible: homeShelfPageSize,
-                });
-              }}
-            >
-              {name}
-            </button>
-          ))}
-        </div>
-        {result.isPending && (
-          <p className={styles.categoryNote}>Đang tải thể loại…</p>
-        )}
-        {result.isError && (
-          <p className={styles.categoryNote}>
-            Thể loại sẽ hiện khi tải được bài đăng. Bạn vẫn có thể tìm theo hình
-            thức hoặc mức giá.
-          </p>
-        )}
-        {!result.isPending && !result.isError && categories.length === 0 && (
-          <p className={styles.categoryNote}>Chưa có thể loại trong kệ này.</p>
-        )}
-      </section>
+      <CategoryDiscovery preview={preview} />
       <section className={styles.shelf} aria-labelledby="latest-title">
         <div className={styles.sectionHead}>
           <div>
@@ -322,7 +255,6 @@ function LatestShelf({ preview }: { preview: boolean }) {
               onClick={() =>
                 setSelection({
                   scope: selectionScope,
-                  category,
                   visible: filtered.length,
                 })
               }
@@ -330,7 +262,7 @@ function LatestShelf({ preview }: { preview: boolean }) {
               Xem toàn bộ kệ mẫu <ArrowUpRight size={18} aria-hidden="true" />
             </button>
           ) : (
-            <Link to={searchUrl(params)}>
+            <Link to={homeShelfUrl(params, false)}>
               Tìm trong toàn bộ sách{" "}
               <ArrowUpRight size={18} aria-hidden="true" />
             </Link>
@@ -359,7 +291,6 @@ function LatestShelf({ preview }: { preview: boolean }) {
                 else setFilter(index);
                 setSelection({
                   scope: "",
-                  category: "",
                   visible: homeShelfPageSize,
                 });
               }}
@@ -386,11 +317,7 @@ function LatestShelf({ preview }: { preview: boolean }) {
           )}
           {!result.isPending && !result.isError && filtered.length === 0 && (
             <div className={styles.state}>
-              <p>
-                {category
-                  ? "Chưa có sách thuộc thể loại này trong các bài đăng đã tải."
-                  : "Chưa có sách trong kệ này."}
-              </p>
+              <p>Chưa có sách trong kệ này.</p>
               <Link to={homeShelfUrl({}, preview)}>
                 {preview ? "Xem lại bộ sách mẫu" : "Tìm thêm sách"}
               </Link>
@@ -398,10 +325,8 @@ function LatestShelf({ preview }: { preview: boolean }) {
           )}
           {result.data && !result.isError && filtered.length > 0 && (
             <p className={styles.resultScope}>
-              {category && <strong>{category} · </strong>}
               {shown.length} / {filtered.length}{" "}
-              {preview ? "sách xem trước" : "bài đăng đã tải"}
-              {category ? " thuộc thể loại này" : ""}.
+              {preview ? "sách xem trước" : "bài đăng đã tải"}.
               {result.data.nextCursor &&
                 " Còn bài đăng khác trong danh sách tìm sách."}
             </p>
@@ -419,7 +344,6 @@ function LatestShelf({ preview }: { preview: boolean }) {
               onClick={() =>
                 setSelection({
                   scope: selectionScope,
-                  category,
                   visible: visible + homeShelfPageSize,
                 })
               }
@@ -661,7 +585,11 @@ export function HomePage() {
       </section>
       <div className={styles.marketplace}>
         <AutumnOrnaments />
-        <div className={styles.autumnCanopies} aria-hidden="true" data-home-loop="canopy">
+        <div
+          className={styles.autumnCanopies}
+          aria-hidden="true"
+          data-home-loop="canopy"
+        >
           <span className={styles.canopyLeft} />
           <span className={styles.canopyRight} />
         </div>
@@ -693,10 +621,7 @@ export function HomePage() {
               />
               <span>Đổi sách</span>
             </Link>
-            <Link
-              className={styles.quickAuction}
-              to={ROUTES.auctions}
-            >
+            <Link className={styles.quickAuction} to={ROUTES.auctions}>
               <BookmarkPaper />
               <img
                 src="/illustrations/penguins/auction.png"
@@ -777,7 +702,6 @@ export function HomePage() {
           </p>
           {preview && <TopicShelves />}
           <ExchangeShelf preview={preview} />
-
         </div>
         <div className={styles.autumnClosing}>
           <div className={styles.closingLandscape} aria-hidden="true">
@@ -791,22 +715,22 @@ export function HomePage() {
             />
           </div>
           <div className={styles.closingInner}>
-          <section className={styles.posting} aria-labelledby="posting-title">
-            <div>
-              <h2 id="posting-title">
-                Đọc xong rồi?
-                <br />
-                <span>Để sách đi tiếp.</span>
-              </h2>
-              <p>Chụp ảnh, ghi rõ tình trạng và đăng sách để bán hoặc đổi.</p>
-            </div>
-            <div className={styles.postingAction}>
-              <Link to={ROUTES.sell}>
-                Đăng sách của bạn <Plus size={20} aria-hidden="true" />
-              </Link>
-              <p>Mỗi bản sách có ảnh và mô tả riêng.</p>
-            </div>
-          </section>
+            <section className={styles.posting} aria-labelledby="posting-title">
+              <div>
+                <h2 id="posting-title">
+                  Đọc xong rồi?
+                  <br />
+                  <span>Để sách đi tiếp.</span>
+                </h2>
+                <p>Chụp ảnh, ghi rõ tình trạng và đăng sách để bán hoặc đổi.</p>
+              </div>
+              <div className={styles.postingAction}>
+                <Link to={ROUTES.sell}>
+                  Đăng sách của bạn <Plus size={20} aria-hidden="true" />
+                </Link>
+                <p>Mỗi bản sách có ảnh và mô tả riêng.</p>
+              </div>
+            </section>
             <img
               className={styles.closingFox}
               data-home-arrival="fox"

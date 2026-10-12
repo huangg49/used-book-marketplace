@@ -14,20 +14,35 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   preflight HTTP204 cho `http://127.0.0.1:5186` PASS. Không thử đăng nhập,
   seed/reset DB, đổi tài khoản hoặc cấu hình; WIP teammate/READINESS giữ nguyên.
 
-## Danh mục / thể loại — kế hoạch mở rộng12/10/2026
+## Danh mục / thể loại — mở rộng v2 ngày12/10/2026
 
-- Nhánh tài liệu `codex/catalog-expansion-plan`, source base `f4d74a7`; chủ dự
-  án chọn đầy đủ nhóm phổ biến và bộ lọc riêng theo nhóm. Đã rà soát vocabulary,
-  contract, API/query/write/cursor, Mongo validator/revision, web/Search/Sell/
-  Home/menu/chi tiết, Admin và RN/projection phụ. [Kế hoạch chi tiết](../design/CATALOG_EXPANSION_PLAN.md)
-  đề xuất17gốc/55con/72mã v2 cộng thêm, context query cha tách metadata,
-  migration mới, RN bảo toàn classification và dữ liệu demo đa dạng.
-- Đây là **proposal chưa triển khai**, chờ duyệt gói lõi1–5. Admin CRUD,
-  sửa Confirmed cũ, RN UI đầy đủ, facet counts và auction filter là gói sau.
-  Không sửa source chức năng/chạy migration/ghi DB chính hoặc chạy test sản
-  phẩm. Docs check351Markdown/2333link và diff check PASS. WIP teammate và
-  READINESS giữ nguyên; không push/PR/merge/deploy. Checkpoint subject
-  `docs: plan expanded catalog taxonomy and contextual filters`.
+- Nhánh `codex/catalog-expansion`, base `c8456df`; gói lõi1–5 trong
+  [kế hoạch được duyệt](../design/CATALOG_EXPANSION_PLAN.md) đã triển khai.
+  Vocabulary cộng thêm17gốc/55con/72mã,25facet/234lựa chọn; tách metadata
+  chính xác khỏi context query cha, giữ OR/AND, dependency và cursor version.
+  OpenAPI0.34.0/generated, migration0019 đóng băng;0016/revision cũ giữ nguyên.
+  Navbar/Home khám phá toàn hệ thống; Search/Sell/Detail/Admin cùng registry,
+  RN parse/gửi lại giữ classification. Preview118ấn bản có nguồn, phân loại/
+  giá/tình trạng là mẫu;16gốc có sách, Sách khác trống đúng trạng thái.
+- API130unit, web111unit, Admin15unit, RN2unit;93HTTP/Mongo E2E và17schema
+  PASS. Final classification7test kiểm nhánh âm nhạc sau cập nhật rule.
+  Build API/Web/Admin, typecheck4app, RN exportAndroid/iOS/web và contract
+  check/routes125operation/22controller PASS. Lint0error,5warning Exchange
+  và4warning wishlist cũ. Bundle warning đã biết; export không là native PASS.
+- Chromium1366/390/320 trên QA riêng: query cha N3|TOEIC ANDgrammar, pruning,
+  chip/Back, menu tìm không dấu/Escape, dialog mobile/Apply, Sell bước2→1,
+  Detail→liveSearch và Admin Confirm đã kiểm.14ảnh cuối đã được finish
+  reviewer độc lập kiểm, verdict **ship** phạm vi UI, không thay human review.
+  Detector một lượt `[]`. [Evidence và giới hạn](../../.impeccable/review/catalog-v2/README.md),
+  [ADR0035](../adr/0035-catalog-vocabulary-v2.md). Native/Safari/phone thật/
+  200%zoom/load production/remote CI/human NOT RUN; READINESS không đổi.
+- Local DB đã có0016–0018, áp dụng đúng0019 qua `pnpm db:migrate`, không seed/
+  reset/backfill. API trước đó mất listener nên bật lại bằng `pnpm dev:api`;
+  taxonomy3000 HTTP200/v2/72node, web5186 HTTP200. QA DB/users/roles đã dọn,
+  container QA đã dừng; runtime chính giữ chạy. Admin CRUD, sửa Confirmed,
+  RN UI đầy đủ, facet counts và auction filter vẫn deferred. WIP teammate
+  Chat/Notifications/MainLayout/Home CSS bảo toàn. Chưa push/PR/merge/deploy;
+  checkpoint subject `feat(catalog): expand categories and contextual classification`.
 
 ## Đấu giá web —12/10/2026
 

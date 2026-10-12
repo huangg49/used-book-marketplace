@@ -2,10 +2,45 @@
 version: 1
 slug: "apps-user-web-src-pages-sellbookpage-tsx"
 primary_target: "apps/user-web/src/pages/SellBookPage.tsx"
-related_targets: ["apps/user-web/src/pages/SellBookPage.module.css", "apps/user-web/src/components/BookJourneyStates.tsx", "apps/user-web/src/components/BookJourneyStates.module.css"]
+related_targets: ["apps/user-web/src/pages/SellBookPage.module.css", "apps/user-web/src/components/BookJourneyStates.tsx", "apps/user-web/src/components/BookJourneyStates.module.css", "apps/user-web/src/components/CatalogClassificationFields.tsx", "apps/user-web/src/components/CatalogBookPicker.tsx"]
 ---
 
 # Đăng sách —11/10/2026
+
+## Catalog v2 metadata extension —12/10/2026
+
+Operate; ordinary extension on `codex/catalog-expansion`, preserving the paper
+desk, five steps, original submission attempt and receipt/retry behavior. No new
+comp, world, artwork or global design tokens. Shared registry now exposes17
+roots/72 nodes and25 controlled facets. Manual entry composes native category/
+optional child selects and edition language in the established paired row;
+<=600px it stacks. `editing` uses exact-category metadata rules, distinct from
+Search's union of descendant contexts. Optional facets start collapsed unless
+selected; unknown information remains blank. Long facets (>10) offer normalized
+option search, retain selected choices and cap each facet at16 selections with
+status/disabled unchecked alternatives. Category/purpose/school-stage changes
+prune incompatible dependencies and announce removal. Series follows shared
+Manga/LN capability, and edition language is separate from study language.
+
+Picking a confirmed book retains its bookId/categoryId/attributes/series/language
+and locks the existing identity rather than editing a confirmed revision.
+Review displays actual shared labels. Admin's pending-revision reader inherits
+the same category path/facet/language vocabulary, with no vocabulary CRUD or
+direct edit added. RN parsers and rejected-request resubmission preserve optional
+classification with copied attribute arrays; full native taxonomy input is a
+separate package, and web/export checks do not establish Android acceptance.
+
+Source checked: SellBookPage, CatalogClassificationFields/styles, shared taxonomy,
+Admin reader and RN classification preservation. The fresh finish reviewer
+inspected all14 final JPEGs and returned ship; desktop/mobile law captures and
+separate footer captures show actual metadata disclosures and continuation.
+One detector returned `[]`. Browser/API/test evidence and fixture limits are in
+[catalog-v2 README](../../../../.impeccable/review/catalog-v2/README.md).
+This documenter ran no tests/browser/detector. Full upload/submit browser flow
+was not repeated for v2; native/TalkBack/real phone, human review and remote CI
+remain unverified, with READINESS unchanged. Historical receipt evidence below
+retains its original motion wording; the later owner policy retains designed
+motion regardless of OS preference. Global DESIGN.md/sidecar are preserved.
 
 ## Approved book-slip entry extension —12/10/2026
 

@@ -1,6 +1,7 @@
 import { dateText, money } from "../../core/format";
 import {
-  categoryFor,
+  categoryPath,
+  languageLabel,
   facetDefinitions,
 } from "@used-books/api-contract/catalog-taxonomy";
 import { useEffect, useRef, useState } from "react";
@@ -24,7 +25,11 @@ export function MetadataView({ value }: { value: Metadata }) {
       {value.categoryId && (
         <div>
           <dt>Danh mục chuẩn</dt>
-          <dd>{categoryFor(value.categoryId)?.label || value.categoryId}</dd>
+          <dd>
+            {categoryPath(value.categoryId)
+              .map((c) => c.label)
+              .join(" / ") || value.categoryId}
+          </dd>
         </div>
       )}
       {value.series && (
@@ -60,9 +65,9 @@ export function MetadataView({ value }: { value: Metadata }) {
         </dd>
       </div>
       <div>
-        <dt>Thể loại · Ngôn ngữ</dt>
+        <dt>Danh mục · Ngôn ngữ</dt>
         <dd>
-          {value.category} · {value.language}
+          {value.category} · {languageLabel(value.language)}
         </dd>
       </div>
       <div>

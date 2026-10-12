@@ -167,6 +167,19 @@
 .choices label:hover {
   color: var(--shop-wine);
 }
+.choices .optionSearch {
+  min-height: 0;
+  margin: 4px 0 6px;
+  font-size: 0.8125rem;
+  color: var(--shop-muted);
+}
+.choices input[type="search"] {
+  margin-bottom: 6px;
+}
+.choices label:has(input:disabled) {
+  color: var(--shop-muted);
+  cursor: default;
+}
 .more {
   align-self: flex-start;
   min-height: 44px;

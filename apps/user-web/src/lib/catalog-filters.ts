@@ -1,6 +1,7 @@
 import {
   categoryFor,
-  classificationErrors,
+  searchClassificationErrors as classificationErrors,
+  supportsSeries,
   type Attributes,
 } from "@used-books/api-contract/catalog-taxonomy";
 export const catalogQueryKeys = [
@@ -50,9 +51,7 @@ export function classificationQuery(query: URLSearchParams) {
     throw new Error("Ngôn ngữ sách chưa hợp lệ.");
   if (
     series &&
-    (!["manga", "light-novel"].includes(categoryId) ||
-      series.length > 120 ||
-      !series.trim())
+    (!supportsSeries(categoryId) || series.length > 120 || !series.trim())
   )
     throw new Error("Tên bộ truyện chỉ dùng với Manga hoặc Light novel.");
   return { categoryId, attributes, language, series };

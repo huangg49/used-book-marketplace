@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.33.0
+  version: 0.34.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -408,37 +408,7 @@ paths:
           name: categoryId
           required: false
           schema:
-            type: string
-            enum:
-              - manga
-              - light-novel
-              - literature
-              - languages
-              - languages.en
-              - languages.ja
-              - languages.ko
-              - languages.zh
-              - languages.other
-              - education
-              - business
-              - business.management
-              - business.marketing
-              - business.finance
-              - business.startup
-              - business.economics
-              - psychology
-              - psychology.psychology
-              - psychology.skills
-              - children
-              - science
-              - science.natural
-              - science.technology
-              - science.space
-              - science.environment
-              - history
-              - history.history
-              - history.geography
-              - other
+            $ref: "#/components/schemas/CatalogCategoryId"
           description: Includes descendants. Legacy known category labels resolve read-only; unknown legacy
             categories remain unclassified.
         - in: query
@@ -465,7 +435,7 @@ paths:
             minLength: 2
             maxLength: 4096
           description: JSON CatalogAttributes object. Requires categoryId for nonempty values. OR within a
-            facet; AND between facets. Unknown/inapplicable values or incompatible grade/level return 422.
+            facet; AND between facets. Parent categories accept compatible descendant contexts. Unknown/inapplicable values or incompatible grade/level return 422.
             Normalized selections bind the cursor.
         - in: query
           name: limit
@@ -990,37 +960,7 @@ paths:
           name: categoryId
           required: false
           schema:
-            type: string
-            enum:
-              - manga
-              - light-novel
-              - literature
-              - languages
-              - languages.en
-              - languages.ja
-              - languages.ko
-              - languages.zh
-              - languages.other
-              - education
-              - business
-              - business.management
-              - business.marketing
-              - business.finance
-              - business.startup
-              - business.economics
-              - psychology
-              - psychology.psychology
-              - psychology.skills
-              - children
-              - science
-              - science.natural
-              - science.technology
-              - science.space
-              - science.environment
-              - history
-              - history.history
-              - history.geography
-              - other
+            $ref: "#/components/schemas/CatalogCategoryId"
           description: Includes descendants. Legacy known category labels resolve read-only; unknown legacy
             categories remain unclassified.
         - in: query
@@ -1047,7 +987,7 @@ paths:
             minLength: 2
             maxLength: 4096
           description: JSON CatalogAttributes object. Requires categoryId for nonempty values. OR within a
-            facet; AND between facets. Unknown/inapplicable values or incompatible grade/level return 422.
+            facet; AND between facets. Parent categories accept compatible descendant contexts. Unknown/inapplicable values or incompatible grade/level return 422.
             Normalized selections bind the cursor.
         - in: query
           name: limit
@@ -7287,6 +7227,81 @@ components:
           type: array
           items:
             type: string
+    CatalogCategoryId:
+      type: string
+      enum:
+        - manga
+        - light-novel
+        - literature
+        - languages
+        - languages.en
+        - languages.ja
+        - languages.ko
+        - languages.zh
+        - languages.other
+        - languages.fr
+        - languages.de
+        - languages.vi
+        - education
+        - business
+        - business.management
+        - business.marketing
+        - business.finance
+        - business.startup
+        - business.economics
+        - business.accounting
+        - business.hr
+        - business.supply-chain
+        - business.lessons
+        - psychology
+        - psychology.psychology
+        - psychology.skills
+        - psychology.teen
+        - children
+        - science
+        - science.natural
+        - science.technology
+        - science.space
+        - science.environment
+        - history
+        - history.history
+        - history.geography
+        - biography
+        - biography.politics
+        - biography.business
+        - biography.science
+        - biography.arts
+        - biography.life
+        - parenting
+        - parenting.care
+        - parenting.education
+        - parenting.development
+        - parenting.family
+        - health
+        - health.medicine
+        - health.nutrition
+        - health.wellness
+        - health.fitness
+        - arts
+        - arts.visual
+        - arts.design
+        - arts.photography
+        - arts.music
+        - arts.cinema
+        - arts.architecture
+        - society
+        - society.philosophy
+        - society.law
+        - society.politics
+        - society.sociology
+        - society.religion
+        - lifestyle
+        - lifestyle.cooking
+        - lifestyle.crafts
+        - lifestyle.gardening
+        - lifestyle.travel
+        - lifestyle.sports
+        - other
     CatalogAttributes:
       type: object
       additionalProperties: false
@@ -7310,6 +7325,10 @@ components:
               - horror
               - scifi
               - historical
+              - sports
+              - psychological
+              - tragedy
+              - suspense
         audience:
           type: array
           minItems: 1
@@ -7336,6 +7355,9 @@ components:
               - daily
               - apocalypse
               - supernatural
+              - gaming
+              - mecha
+              - workplace
         form:
           type: array
           minItems: 1
@@ -7352,6 +7374,11 @@ components:
               - picture
               - activity
               - story
+              - reportage
+              - travelogue
+              - criticism
+              - biography
+              - autobiography
         purpose:
           type: array
           minItems: 1
@@ -7366,6 +7393,7 @@ components:
               - textbook
               - workbook
               - reference
+              - dictionary
         level:
           type: array
           minItems: 1
@@ -7386,6 +7414,8 @@ components:
               - toeic
               - hsk
               - topik
+              - delf
+              - goethe
         skill:
           type: array
           minItems: 1
@@ -7401,6 +7431,7 @@ components:
               - grammar
               - vocabulary
               - characters
+              - pronunciation
         schoolStage:
           type: array
           minItems: 1
@@ -7413,6 +7444,7 @@ components:
               - secondary
               - high
               - university
+              - preschool
         grade:
           type: array
           minItems: 1
@@ -7451,6 +7483,9 @@ components:
               - geography
               - computing
               - civics
+              - arts
+              - music
+              - technology
         reader:
           type: array
           minItems: 1
@@ -7485,6 +7520,42 @@ components:
               - culture
               - politics
               - civilization
+              - time-management
+              - thinking
+              - safety
+              - life-skills
+              - maps
+              - landscapes
+              - business-life
+              - scientist
+              - artist
+              - personal-life
+              - infant-care
+              - education-methods
+              - child-development
+              - family-life
+              - medical-study
+              - nutrition
+              - wellbeing
+              - exercise
+              - public-health
+              - art-history
+              - drawing
+              - graphic-design
+              - photography
+              - music-theory
+              - filmmaking
+              - architecture
+              - philosophy
+              - ethics
+              - society
+              - religion
+              - law
+              - cooking
+              - crafts
+              - gardening
+              - travel
+              - sports
         age:
           type: array
           minItems: 1
@@ -7497,6 +7568,7 @@ components:
               - 4-6
               - 7-10
               - 11-15
+              - 16-18
         depth:
           type: array
           minItems: 1
@@ -7533,6 +7605,142 @@ components:
               - medieval
               - modern
               - contemporary
+        comicStyle:
+          type: array
+          minItems: 1
+          maxItems: 16
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - manga
+              - manhwa
+              - manhua
+              - comic
+        workOrigin:
+          type: array
+          minItems: 1
+          maxItems: 16
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - vietnam
+              - foreign
+        businessTopic:
+          type: array
+          minItems: 1
+          maxItems: 16
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - leadership
+              - strategy
+              - digital-marketing
+              - branding
+              - sales
+              - investing
+              - personal-finance
+              - banking
+              - startup
+              - innovation
+              - microeconomics
+              - macroeconomics
+              - accounting
+              - tax
+              - audit
+              - recruitment
+              - people-management
+              - logistics
+              - operations
+              - business-cases
+        scienceField:
+          type: array
+          minItems: 1
+          maxItems: 16
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - math
+              - physics
+              - chemistry
+              - biology
+              - earth
+              - astronomy
+              - environment
+              - engineering
+              - computing
+        technologyTopic:
+          type: array
+          minItems: 1
+          maxItems: 16
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - programming
+              - web
+              - data
+              - ai
+              - hardware
+              - networks
+              - security
+        artMedium:
+          type: array
+          minItems: 1
+          maxItems: 16
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - pencil
+              - watercolor
+              - oil
+              - digital
+              - film
+              - instrument
+        lawField:
+          type: array
+          minItems: 1
+          maxItems: 16
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - civil
+              - criminal
+              - business
+              - labor
+              - constitutional
+              - international
+        cuisine:
+          type: array
+          minItems: 1
+          maxItems: 16
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - vietnam
+              - asian
+              - western
+              - vegetarian
+              - baking
+        craftType:
+          type: array
+          minItems: 1
+          maxItems: 16
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - sewing
+              - knitting
+              - paper
+              - wood
+              - ceramics
     CatalogMetadata:
       type: object
       additionalProperties: false
@@ -7548,37 +7756,7 @@ components:
       properties:
         categoryId:
           anyOf:
-            - type: string
-              enum:
-                - manga
-                - light-novel
-                - literature
-                - languages
-                - languages.en
-                - languages.ja
-                - languages.ko
-                - languages.zh
-                - languages.other
-                - education
-                - business
-                - business.management
-                - business.marketing
-                - business.finance
-                - business.startup
-                - business.economics
-                - psychology
-                - psychology.psychology
-                - psychology.skills
-                - children
-                - science
-                - science.natural
-                - science.technology
-                - science.space
-                - science.environment
-                - history
-                - history.history
-                - history.geography
-                - other
+            - $ref: "#/components/schemas/CatalogCategoryId"
             - type: "null"
           description: Stable taxonomy code. Optional for legacy clients; when supplied category must match
             its canonical label. Confirmed metadata stays immutable.
@@ -7655,37 +7833,7 @@ components:
       properties:
         categoryId:
           anyOf:
-            - type: string
-              enum:
-                - manga
-                - light-novel
-                - literature
-                - languages
-                - languages.en
-                - languages.ja
-                - languages.ko
-                - languages.zh
-                - languages.other
-                - education
-                - business
-                - business.management
-                - business.marketing
-                - business.finance
-                - business.startup
-                - business.economics
-                - psychology
-                - psychology.psychology
-                - psychology.skills
-                - children
-                - science
-                - science.natural
-                - science.technology
-                - science.space
-                - science.environment
-                - history
-                - history.history
-                - history.geography
-                - other
+            - $ref: "#/components/schemas/CatalogCategoryId"
             - type: "null"
           description: Stable taxonomy code. Optional for legacy clients; when supplied category must match
             its canonical label. Confirmed metadata stays immutable.

@@ -1,5 +1,9 @@
 import catalog from "../data/preview-catalog.json";
 import { getPublicListings, type PublicListing } from "./public-listings";
+import {
+  descendantIds,
+  categoryFor,
+} from "@used-books/api-contract/catalog-taxonomy";
 
 export interface CatalogBook {
   id: string;
@@ -30,22 +34,29 @@ export const homeShelfPageSize = 10;
 export const previewTopics = [
   {
     id: "stories",
-    title: "Văn học & thiếu nhi",
+    title: "Văn học, truyện & hồi ký",
     description:
-      "Từ tiểu thuyết đến những câu chuyện dành cho bạn đọc nhỏ tuổi.",
-    categories: ["Văn học", "Thiếu nhi"],
+      "Từ tiểu thuyết đến hồi ký và những câu chuyện cho bạn đọc nhỏ tuổi.",
+    categories: ["literature", "children", "biography"],
   },
   {
     id: "knowledge",
-    title: "Khoa học & lịch sử",
+    title: "Khoa học, lịch sử & xã hội",
     description: "Tìm hiểu thế giới tự nhiên và những câu chuyện của quá khứ.",
-    categories: ["Khoa học", "Lịch sử"],
+    categories: ["science", "history", "society"],
   },
   {
     id: "growth",
-    title: "Kỹ năng sống & kinh doanh",
-    description: "Khám phá thói quen, công việc và cách quản lý tài chính.",
-    categories: ["Kỹ năng sống", "Kinh doanh"],
+    title: "Công việc & đời sống",
+    description: "Kinh doanh, kỹ năng, gia đình và những sở thích mỗi ngày.",
+    categories: [
+      "psychology",
+      "business",
+      "parenting",
+      "health",
+      "arts",
+      "lifestyle",
+    ],
   },
 ];
 
@@ -59,9 +70,10 @@ export function isCatalogPreview(search: string) {
 }
 
 export function homeShelfUrl(params: Record<string, string>, preview: boolean) {
-  const query = new URLSearchParams(
-    preview ? { data: "preview", ...params } : params,
-  );
+  const query = new URLSearchParams({
+    data: preview ? "preview" : "live",
+    ...params,
+  });
   return preview
     ? `/?${query}#latest-title`
     : `/books${query.size ? `?${query}` : ""}`;
@@ -108,7 +120,14 @@ export function previewShelf(query: URLSearchParams): {
       .filter(
         (item) =>
           (!mode || item.mode === mode || item.mode === "Both") &&
-          (!topic || topic.categories.includes(item.book.category)) &&
+          (!topic ||
+            topic.categories.some((id) =>
+              descendantIds(id).includes(
+                item.book.categoryId ||
+                  categoryFor(item.book.category)?.id ||
+                  "",
+              ),
+            )) &&
           (!max ||
             (item.salePrice !== null && item.salePrice <= Number(max))) &&
           (!q ||
@@ -141,7 +160,13 @@ export function previewTopicBooks(topicId: string) {
   // the same covers immediately below the main shelf.
   return previewShelf(new URLSearchParams())
     .items.slice(homeShelfPageSize)
-    .filter((item) => topic?.categories.includes(item.book.category))
+    .filter((item) =>
+      topic?.categories.some((id) =>
+        descendantIds(id).includes(
+          item.book.categoryId || categoryFor(item.book.category)?.id || "",
+        ),
+      ),
+    )
     .slice(0, homeShelfPageSize);
 }
 export const budgetCoverUrls = [

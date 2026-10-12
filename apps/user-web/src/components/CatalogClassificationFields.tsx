@@ -5,6 +5,8 @@ import {
   categoryFor,
   facetsFor,
   compatibleAttributes,
+  supportsSeries,
+  foldCatalogText,
   type Attributes,
 } from "@used-books/api-contract/catalog-taxonomy";
 import styles from "./CatalogClassificationFields.module.css";
@@ -35,15 +37,44 @@ export function CatalogClassificationFields({
   renderSelect?: (props: FilterSelectProps) => ReactNode;
 }) {
   const [expanded, setExpanded] = useState<string[]>([]);
+  const [queries, setQueries] = useState<Record<string, string>>({});
+  const [notice, setNotice] = useState("");
+  const context = editing ? "metadata" : "search";
   const category = categoryFor(value.categoryId);
   const root = categories.find(
     (c) => c.id === (category?.parentId || category?.id),
   );
+  function changeAttributes(next: Attributes) {
+    const attributes = compatibleAttributes(value.categoryId, next, context);
+    const removed = Object.entries(next).reduce(
+      (n, [key, values]) =>
+        n + values.filter((v) => !attributes[key]?.includes(v)).length,
+      0,
+    );
+    setNotice(
+      removed ? `Đã bỏ ${removed} lựa chọn phụ thuộc không còn phù hợp.` : "",
+    );
+    onChange({ ...value, attributes });
+  }
   function changeCategory(categoryId: string) {
+    const attributes = compatibleAttributes(
+      categoryId,
+      value.attributes,
+      context,
+    );
+    const removed = Object.entries(value.attributes).reduce(
+      (n, [key, values]) =>
+        n + values.filter((v) => !attributes[key]?.includes(v)).length,
+      0,
+    );
+    setNotice(
+      removed ? `Đã bỏ ${removed} lựa chọn không phù hợp danh mục mới.` : "",
+    );
+    setQueries({});
     onChange({
       categoryId,
-      attributes: compatibleAttributes(categoryId, value.attributes),
-      series: ["manga", "light-novel"].includes(categoryId) ? value.series : "",
+      attributes,
+      series: supportsSeries(categoryId) ? value.series : "",
     });
   }
   function select(props: FilterSelectProps) {
@@ -139,110 +170,144 @@ export function CatalogClassificationFields({
           {!editing && ". Chọn nhiều mục để mở rộng kết quả trong cùng nhóm."}
         </p>
       )}
-      {facetsFor(value.categoryId, value.attributes).map((facet, index) => {
-        const selected = value.attributes[facet.id] || [];
-        const showAll = expanded.includes(facet.id);
-        const visible = showAll
-          ? facet.options
-          : facet.options.filter((o, i) => i < 5 || selected.includes(o.id));
-        return (
-          <div className={styles.facetGroup} key={`${root?.id}-${facet.id}`}>
-            <details
-              className={styles.facet}
-              data-clearable={(clearable && selected.length > 0) || undefined}
-              open={
-                (!collapseOptional && (editing || index < 2)) ||
-                selected.length > 0 ||
-                undefined
-              }
-            >
-              <summary>
-                {facet.label}
-                {selected.length > 0 && (
-                  <>
-                    {" "}
-                    <span>
-                      {selected.length}
-                      {clearable && " đã chọn"}
-                    </span>
-                  </>
-                )}
-              </summary>
-              <div className={styles.choices}>
-                {visible.map((option) => (
-                  <label key={option.id}>
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(option.id)}
-                      onChange={(e) => {
-                        const next = {
-                          ...value.attributes,
-                          [facet.id]: e.target.checked
-                            ? [...selected, option.id]
-                            : selected.filter((v) => v !== option.id),
-                        };
-                        onChange({
-                          ...value,
-                          attributes: compatibleAttributes(
-                            value.categoryId,
-                            next,
-                          ),
-                        });
-                      }}
-                    />
-                    <span>{option.label}</span>
-                  </label>
-                ))}
-                {!facet.options.length && (
-                  <p>Chọn thông tin phía trên để xem các lựa chọn phù hợp.</p>
-                )}
-                {facet.options.length > 5 &&
-                  (showAll || visible.length < facet.options.length) && (
-                    <button
-                      type="button"
-                      className={styles.more}
-                      onClick={() =>
-                        setExpanded(
-                          showAll
-                            ? expanded.filter((x) => x !== facet.id)
-                            : [...expanded, facet.id],
-                        )
-                      }
-                    >
-                      {showAll
-                        ? "Thu gọn"
-                        : `Xem thêm (${facet.options.length - visible.length})`}
-                    </button>
-                  )}
-              </div>
-            </details>
-            {clearable && selected.length > 0 && (
-              <button
-                type="button"
-                className={styles.facetClear}
-                aria-label={`Xóa lựa chọn ${facet.label.toLowerCase()}`}
-                onClick={(event) => {
-                  event.currentTarget.parentElement
-                    ?.querySelector("summary")
-                    ?.focus();
-                  const attributes = { ...value.attributes };
-                  delete attributes[facet.id];
-                  onChange({
-                    ...value,
-                    attributes: compatibleAttributes(
-                      value.categoryId,
-                      attributes,
-                    ),
-                  });
-                }}
+      {notice && (
+        <p className={styles.context} role="status">
+          {notice}
+        </p>
+      )}
+      {facetsFor(value.categoryId, value.attributes, context).map(
+        (facet, index) => {
+          const selected = value.attributes[facet.id] || [];
+          const showAll = expanded.includes(facet.id);
+          const term = foldCatalogText(queries[facet.id] || "").trim();
+          const matching = facet.options.filter(
+            (o) =>
+              !term ||
+              foldCatalogText(o.label).includes(term) ||
+              selected.includes(o.id),
+          );
+          const visible =
+            showAll || term
+              ? matching
+              : matching.filter((o, i) => i < 5 || selected.includes(o.id));
+          return (
+            <div className={styles.facetGroup} key={`${root?.id}-${facet.id}`}>
+              <details
+                className={styles.facet}
+                data-clearable={(clearable && selected.length > 0) || undefined}
+                open={
+                  (!collapseOptional && (editing || index < 2)) ||
+                  selected.length > 0 ||
+                  undefined
+                }
               >
-                Xóa
-              </button>
-            )}
-          </div>
-        );
-      })}
-      {["manga", "light-novel"].includes(value.categoryId) && (
+                <summary>
+                  {facet.label}
+                  {selected.length > 0 && (
+                    <>
+                      {" "}
+                      <span>
+                        {selected.length}
+                        {clearable && " đã chọn"}
+                      </span>
+                    </>
+                  )}
+                </summary>
+                <div className={styles.choices}>
+                  {facet.options.length > 10 && (
+                    <>
+                      <label
+                        className={styles.optionSearch}
+                        htmlFor={`${id}-${facet.id}-search`}
+                      >
+                        Tìm trong {facet.label.toLowerCase()}
+                      </label>
+                      <input
+                        id={`${id}-${facet.id}-search`}
+                        type="search"
+                        value={queries[facet.id] || ""}
+                        placeholder="Tìm lựa chọn…"
+                        onChange={(e) =>
+                          setQueries({ ...queries, [facet.id]: e.target.value })
+                        }
+                      />
+                    </>
+                  )}
+                  {visible.map((option) => (
+                    <label key={option.id}>
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(option.id)}
+                        disabled={
+                          !selected.includes(option.id) && selected.length >= 16
+                        }
+                        onChange={(e) => {
+                          const next = {
+                            ...value.attributes,
+                            [facet.id]: e.target.checked
+                              ? [...selected, option.id]
+                              : selected.filter((v) => v !== option.id),
+                          };
+                          changeAttributes(next);
+                        }}
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                  {!facet.options.length && (
+                    <p>Chọn thông tin phía trên để xem các lựa chọn phù hợp.</p>
+                  )}
+                  {!!facet.options.length && !matching.length && (
+                    <p role="status">Không có lựa chọn phù hợp.</p>
+                  )}
+                  {selected.length >= 16 && (
+                    <p role="status">
+                      Đã chọn tối đa 16 mục. Bỏ một mục để chọn thêm.
+                    </p>
+                  )}
+                  {!term &&
+                    facet.options.length > 5 &&
+                    (showAll || visible.length < facet.options.length) && (
+                      <button
+                        type="button"
+                        className={styles.more}
+                        onClick={() =>
+                          setExpanded(
+                            showAll
+                              ? expanded.filter((x) => x !== facet.id)
+                              : [...expanded, facet.id],
+                          )
+                        }
+                      >
+                        {showAll
+                          ? "Thu gọn"
+                          : `Xem thêm (${facet.options.length - visible.length})`}
+                      </button>
+                    )}
+                </div>
+              </details>
+              {clearable && selected.length > 0 && (
+                <button
+                  type="button"
+                  className={styles.facetClear}
+                  aria-label={`Xóa lựa chọn ${facet.label.toLowerCase()}`}
+                  onClick={(event) => {
+                    event.currentTarget.parentElement
+                      ?.querySelector("summary")
+                      ?.focus();
+                    const attributes = { ...value.attributes };
+                    delete attributes[facet.id];
+                    changeAttributes(attributes);
+                  }}
+                >
+                  Xóa
+                </button>
+              )}
+            </div>
+          );
+        },
+      )}
+      {supportsSeries(value.categoryId) && (
         <div className={styles.subcategory}>
           <div className={clearable ? styles.categoryHeading : undefined}>
             <label htmlFor={`${id}-series`}>Bộ truyện</label>

@@ -1,6 +1,9 @@
 # Kế hoạch mở rộng danh mục và thể loại sách
 
-Ngày 12/10/2026. **Đề xuất, chưa triển khai chức năng.** Rà soát source tại
+Ngày 12/10/2026. **Chủ dự án đã duyệt; gói lõi1–5 đã triển khai local.**
+[ADR0035](../adr/0035-catalog-vocabulary-v2.md) và
+[evidence](../../.impeccable/review/catalog-v2/README.md) mô tả bản hiện thực và giới hạn.
+Các mục đề xuất bên dưới giữ làm baseline của kế hoạch. Rà soát source tại
 `f4d74a7`, nhánh tài liệu `codex/catalog-expansion-plan`. Chủ dự án chọn đầy đủ
 nhóm sách phổ biến và bộ lọc riêng theo nhóm, ưu tiên Member web hiện tại.
 Các thay đổi Chat/Notifications/MainLayout/Home CSS của teammate được giữ nguyên.

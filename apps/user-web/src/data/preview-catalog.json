@@ -75,9 +75,85 @@
     "https://openlibrary.org/search.json?q=title%3A%22Integrated+Chinese%22+author%3A%22Yuehua+Liu%22+language%3Aeng&limit=8&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
     "https://openlibrary.org/search.json?q=title%3A%22Calculus%22+author%3A%22James+Stewart%22+language%3Aeng&limit=8&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
     "https://openlibrary.org/search.json?q=title%3A%22Algebra+1%22+author%3A%22John+Saxon%22+language%3Aeng&limit=8&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
-    "https://openlibrary.org/search.json?q=title%3A%22Biology%22+author%3A%22Kenneth+Miller%22+language%3Aeng&limit=8&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i"
+    "https://openlibrary.org/search.json?q=title%3A%22Biology%22+author%3A%22Kenneth+Miller%22+language%3Aeng&limit=8&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Just+Kids%22+author%3A%22Patti+Smith%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Steve+Jobs%22+author%3A%22Walter+Isaacson%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Becoming%22+author%3A%22Michelle+Obama%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22How+to+Talk+So+Kids+Will+Listen%22+author%3A%22Adele+Faber%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22The+Whole+Brain+Child%22+author%3A%22Daniel+Siegel%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Parenting+from+the+Inside+Out%22+author%3A%22Daniel+Siegel%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22The+Book+You+Wish+Your+Parents+Had+Read%22+author%3A%22Philippa+Perry%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Why+We+Sleep%22+author%3A%22Matthew+Walker%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22How+Not+to+Die%22+author%3A%22Michael+Greger%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Outlive%22+author%3A%22Peter+Attia%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Ways+of+Seeing%22+author%3A%22John+Berger%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22The+Design+of+Everyday+Things%22+author%3A%22Don+Norman%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22On+Photography%22+author%3A%22Susan+Sontag%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Meditations%22+author%3A%22Marcus+Aurelius%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22The+Republic%22+author%3A%22Plato%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Justice%22+author%3A%22Michael+Sandel%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22The+Sociological+Imagination%22+author%3A%22C.+Wright+Mills%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Salt+Fat+Acid+Heat%22+author%3A%22Samin+Nosrat%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22The+Food+Lab%22+author%3A%22Kenji+Lopez+Alt%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22A+Walk+in+the+Woods%22+author%3A%22Bill+Bryson%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22The+New+Organic+Grower%22+author%3A%22Eliot+Coleman%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Born+to+Run%22+author%3A%22Christopher+McDougall%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22The+Whole-Brain+Child%22+author%3A%22Daniel+J.+Siegel%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22The+Design+of+Everyday+Things%22+author%3A%22Donald+A.+Norman%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i",
+    "https://openlibrary.org/search.json?q=title%3A%22Justice%22+author%3A%22Michael+J.+Sandel%22+language%3Aeng&limit=5&fields=key%2Ctitle%2Cauthor_name%2Ceditions%2Ceditions.key%2Ceditions.title%2Ceditions.language%2Ceditions.isbn%2Ceditions.cover_i"
   ],
   "items": [
+    {
+      "id": "/books/OL23103190M",
+      "title": "Naruto vol 33",
+      "authors": [
+        "Masashi Kishimoto"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781421520018",
+      "coverId": 8981745,
+      "coverUrl": "https://covers.openlibrary.org/b/id/8981745-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL23103190M",
+      "series": "Naruto",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "adventure",
+          "fantasy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL26961592M",
+      "title": "Re:Zero ‐Starting Life in Another World‐, Volume 2",
+      "authors": [
+        "長月達平"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9780316398374",
+      "coverId": 15150641,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15150641-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26961592M",
+      "series": "Re:ZERO",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "fantasy",
+          "adventure"
+        ],
+        "setting": [
+          "isekai"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
     {
       "id": "/books/OL2540706M",
       "title": "Howl's Moving Castle",
@@ -90,1286 +166,20 @@
       "coverId": 14818196,
       "coverUrl": "https://covers.openlibrary.org/b/id/14818196-L.jpg?default=false",
       "sourceUrl": "https://openlibrary.org/books/OL2540706M",
-      "series": "Howl's Moving Castle"
-    },
-    {
-      "id": "/books/OL57360656M",
-      "title": "Atomic Habits",
-      "authors": [
-        "James Clear"
-      ],
-      "category": "Kỹ năng sống",
-      "language": "eng",
-      "isbn": "9781847941831",
-      "coverId": 15247577,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15247577-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL57360656M",
-      "series": "Atomic Habits"
-    },
-    {
-      "id": "/books/OL51726888M",
-      "title": "The Psychology of Money",
-      "authors": [
-        "Morgan Housel"
-      ],
-      "category": "Kinh doanh",
-      "language": "eng",
-      "isbn": "9781804090114",
-      "coverId": 15215448,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15215448-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL51726888M",
-      "series": "The Psychology of Money"
-    },
-    {
-      "id": "/books/OL361722M",
-      "title": "A Brief History of Time",
-      "authors": [
-        "Stephen Hawking"
-      ],
-      "category": "Khoa học",
-      "language": "eng",
-      "isbn": "9780553109535",
-      "coverId": 15139590,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15139590-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL361722M",
-      "series": "A Brief History of Time"
-    },
-    {
-      "id": "/books/OL27700871M",
-      "title": "Sapiens",
-      "authors": [
-        "Yuval Noah Harari"
-      ],
-      "category": "Lịch sử",
-      "language": "eng",
-      "isbn": "9780771038518",
-      "coverId": 9137127,
-      "coverUrl": "https://covers.openlibrary.org/b/id/9137127-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL27700871M",
-      "series": "Sapiens"
-    },
-    {
-      "id": "/books/OL24935310M",
-      "title": "Charlotte's Web",
-      "authors": [
-        "E. B. White"
-      ],
-      "category": "Thiếu nhi",
-      "language": "eng",
-      "isbn": "064400557",
-      "coverId": 8311463,
-      "coverUrl": "https://covers.openlibrary.org/b/id/8311463-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL24935310M",
-      "series": "Charlotte's Web"
-    },
-    {
-      "id": "/books/OL23103190M",
-      "title": "Naruto vol 33",
-      "authors": [
-        "Masashi Kishimoto"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781421520018",
-      "coverId": 8981745,
-      "coverUrl": "https://covers.openlibrary.org/b/id/8981745-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL23103190M",
-      "series": "Naruto"
-    },
-    {
-      "id": "/books/OL26961592M",
-      "title": "Re:Zero ‐Starting Life in Another World‐, Volume 2",
-      "authors": [
-        "長月達平"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9780316398374",
-      "coverId": 15150641,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15150641-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL26961592M",
-      "series": "Re:ZERO"
-    },
-    {
-      "id": "/books/OL22007893M",
-      "title": "El Principito / The Little Prince",
-      "authors": [
-        "Antoine de Saint-Exupéry"
-      ],
-      "category": "Văn học",
-      "language": "eng",
-      "isbn": "9788459912013",
-      "coverId": 14994367,
-      "coverUrl": "https://covers.openlibrary.org/b/id/14994367-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL22007893M",
-      "series": "The Little Prince"
-    },
-    {
-      "id": "/books/OL26314691M",
-      "title": "Deep Work",
-      "authors": [
-        "Cal Newport"
-      ],
-      "category": "Kỹ năng sống",
-      "language": "eng",
-      "isbn": "9781455586691",
-      "coverId": 14859612,
-      "coverUrl": "https://covers.openlibrary.org/b/id/14859612-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL26314691M",
-      "series": "Deep Work"
-    },
-    {
-      "id": "/books/OL27876905M",
-      "title": "The Lean Startup",
-      "authors": [
-        "Eric Ries"
-      ],
-      "category": "Kinh doanh",
-      "language": "eng",
-      "isbn": "9780670921607",
-      "coverId": 15103190,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15103190-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL27876905M",
-      "series": "The Lean Startup"
-    },
-    {
-      "id": "/books/OL24740450M",
-      "title": "Cosmos",
-      "authors": [
-        "Carl Sagan"
-      ],
-      "category": "Khoa học",
-      "language": "eng",
-      "isbn": "9780394502946",
-      "coverId": 10601318,
-      "coverUrl": "https://covers.openlibrary.org/b/id/10601318-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL24740450M",
-      "series": "Cosmos"
-    },
-    {
-      "id": "/books/OL39467254M",
-      "title": "Guns, germs, and steel",
-      "authors": [
-        "Jared Diamond"
-      ],
-      "category": "Lịch sử",
-      "language": "eng",
-      "isbn": "9780393061314",
-      "coverId": 15253013,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15253013-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL39467254M",
-      "series": "Guns Germs and Steel"
-    },
-    {
-      "id": "/books/OL39486910M",
-      "title": "Matilda",
-      "authors": [
-        "Roald Dahl"
-      ],
-      "category": "Thiếu nhi",
-      "language": "eng",
-      "isbn": "9780224070966",
-      "coverId": 12895022,
-      "coverUrl": "https://covers.openlibrary.org/b/id/12895022-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL39486910M",
-      "series": "Matilda"
-    },
-    {
-      "id": "/books/OL30165195M",
-      "title": "Chainsaw Man, Vol. 1",
-      "authors": [
-        "Tatsuki Fujimoto"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974709939",
-      "coverId": 12794650,
-      "coverUrl": "https://covers.openlibrary.org/b/id/12794650-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL30165195M",
-      "series": "Chainsaw Man"
-    },
-    {
-      "id": "/books/OL26445872M",
-      "title": "Overlord, Volume 1",
-      "authors": [
-        "丸山くがね",
-        "so-bin"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9780316272247",
-      "coverId": 15137502,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15137502-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL26445872M",
-      "series": "Overlord"
-    },
-    {
-      "id": "/books/OL47769457M",
-      "title": "The Great Gatsby",
-      "authors": [
-        "F. Scott Fitzgerald"
-      ],
-      "category": "Văn học",
-      "language": "eng",
-      "isbn": "9780143427094",
-      "coverId": 14635758,
-      "coverUrl": "https://covers.openlibrary.org/b/id/14635758-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL47769457M",
-      "series": "The Great Gatsby"
-    },
-    {
-      "id": "/books/OL25613003M",
-      "title": "Essentialism",
-      "authors": [
-        "Greg McKeown"
-      ],
-      "category": "Kỹ năng sống",
-      "language": "eng",
-      "isbn": "9780804137386",
-      "coverId": 7285986,
-      "coverUrl": "https://covers.openlibrary.org/b/id/7285986-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL25613003M",
-      "series": "Essentialism"
-    },
-    {
-      "id": "/books/OL17035731M",
-      "title": "Good to great",
-      "authors": [
-        "Collins, James C.",
-        "Jim Collins"
-      ],
-      "category": "Kinh doanh",
-      "language": "eng",
-      "isbn": "9780066620992",
-      "coverId": 15249404,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15249404-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL17035731M",
-      "series": "Good to Great"
-    },
-    {
-      "id": "/books/OL49829494M",
-      "title": "A short history of nearly everything",
-      "authors": [
-        "Bill Bryson"
-      ],
-      "category": "Khoa học",
-      "language": "eng",
-      "isbn": "9780552997041",
-      "coverId": 15214565,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15214565-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL49829494M",
-      "series": "A Short History of Nearly Everything"
-    },
-    {
-      "id": "/books/OL26885668M",
-      "title": "The Silk Roads",
-      "authors": [
-        "Peter Frankopan"
-      ],
-      "category": "Lịch sử",
-      "language": "eng",
-      "isbn": "9781101946329",
-      "coverId": 12514527,
-      "coverUrl": "https://covers.openlibrary.org/b/id/12514527-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL26885668M",
-      "series": "The Silk Roads"
-    },
-    {
-      "id": "/books/OL24223030M",
-      "title": "The very hungry caterpillar",
-      "authors": [
-        "Eric Carle"
-      ],
-      "category": "Thiếu nhi",
-      "language": "eng",
-      "isbn": "9780590617284",
-      "coverId": 6573238,
-      "coverUrl": "https://covers.openlibrary.org/b/id/6573238-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL24223030M",
-      "series": "The Very Hungry Caterpillar"
-    },
-    {
-      "id": "/books/OL28265740M",
-      "title": "Spy x Family, Vol. 1",
-      "authors": [
-        "Tatsuya Endo"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974715466",
-      "coverId": 14582895,
-      "coverUrl": "https://covers.openlibrary.org/b/id/14582895-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL28265740M",
-      "series": "Spy x Family"
-    },
-    {
-      "id": "/books/OL28918978M",
-      "title": "86—EIGHTY-SIX, Vol. 1",
-      "authors": [
-        "安里アサト",
-        "しらび"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9781975303129",
-      "coverId": 15135888,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15135888-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL28918978M",
-      "series": "86"
-    },
-    {
-      "id": "/books/OL60977871M",
-      "title": "To Kill a Mockingbird",
-      "authors": [
-        "Harper Lee"
-      ],
-      "category": "Văn học",
-      "language": "eng",
-      "isbn": null,
-      "coverId": 15153500,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15153500-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL60977871M",
-      "series": "To Kill a Mockingbird"
-    },
-    {
-      "id": "/books/OL36692670M",
-      "title": "The power of habit",
-      "authors": [
-        "Charles Duhigg"
-      ],
-      "category": "Kỹ năng sống",
-      "language": "eng",
-      "isbn": "9780385669740",
-      "coverId": 15197201,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15197201-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL36692670M",
-      "series": "The Power of Habit"
-    },
-    {
-      "id": "/books/OL26431670M",
-      "title": "Start with Why: How Great Leaders Inspire Everyone to Take Action",
-      "authors": [
-        "Simon Sinek"
-      ],
-      "category": "Kinh doanh",
-      "language": "eng",
-      "isbn": "9781591846444",
-      "coverId": 15213359,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15213359-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL26431670M",
-      "series": "Start with Why"
-    },
-    {
-      "id": "/books/OL24219315M",
-      "title": "The Selfish Gene",
-      "authors": [
-        "Richard Dawkins"
-      ],
-      "category": "Khoa học",
-      "language": "eng",
-      "isbn": "9780192860927",
-      "coverId": 6561465,
-      "coverUrl": "https://covers.openlibrary.org/b/id/6561465-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL24219315M",
-      "series": "The Selfish Gene"
-    },
-    {
-      "id": "/books/OL27511331M",
-      "title": "SPQR",
-      "authors": [
-        "Mary Beard",
-        "Silvia Furió"
-      ],
-      "category": "Lịch sử",
-      "language": "eng",
-      "isbn": "9781846683800",
-      "coverId": 8968031,
-      "coverUrl": "https://covers.openlibrary.org/b/id/8968031-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL27511331M",
-      "series": "SPQR"
-    },
-    {
-      "id": "/books/OL32681339M",
-      "title": "Where the wild things are",
-      "authors": [
-        "Maurice Sendak"
-      ],
-      "category": "Thiếu nhi",
-      "language": "eng",
-      "isbn": null,
-      "coverId": 14890795,
-      "coverUrl": "https://covers.openlibrary.org/b/id/14890795-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL32681339M",
-      "series": "Where the Wild Things Are"
-    },
-    {
-      "id": "/books/OL57541730M",
-      "title": "Frieren: Beyond Journey’s End 12",
-      "authors": [
-        "山田鐘人",
-        "アベツカサ"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974751815",
-      "coverId": 15144794,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15144794-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL57541730M",
-      "series": "Frieren"
-    },
-    {
-      "id": "/books/OL61018930M",
-      "title": "Classroom of the Elite, Novel 1",
-      "authors": [
-        "衣笠彰梧",
-        "トモセシュンサク"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9798888438190",
-      "coverId": 15155334,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15155334-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL61018930M",
-      "series": "Classroom of the Elite"
-    },
-    {
-      "id": "/books/OL50992667M",
-      "title": "The Old Man and the Sea",
-      "authors": [
-        "Ernest Hemingway"
-      ],
-      "category": "Văn học",
-      "language": "eng",
-      "isbn": null,
-      "coverId": 14899799,
-      "coverUrl": "https://covers.openlibrary.org/b/id/14899799-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL50992667M",
-      "series": "The Old Man and the Sea"
-    },
-    {
-      "id": "/books/OL58718718M",
-      "title": "How To Win Friends And Influence People",
-      "authors": [
-        "Dale Carnegie"
-      ],
-      "category": "Kỹ năng sống",
-      "language": "eng",
-      "isbn": null,
-      "coverId": 15247034,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15247034-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL58718718M",
-      "series": "How to Win Friends"
-    },
-    {
-      "id": "/books/OL58881816M",
-      "title": "The Intelligent Investor",
-      "authors": [
-        "Benjamin Graham"
-      ],
-      "category": "Kinh doanh",
-      "language": "eng",
-      "isbn": null,
-      "coverId": 15101160,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15101160-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL58881816M",
-      "series": "The Intelligent Investor"
-    },
-    {
-      "id": "/books/OL26414208M",
-      "title": "The Gene",
-      "authors": [
-        "Siddhartha Mukherjee",
-        "Dennis Boutsikaris"
-      ],
-      "category": "Khoa học",
-      "language": "eng",
-      "isbn": "9781847922632",
-      "coverId": 8117267,
-      "coverUrl": "https://covers.openlibrary.org/b/id/8117267-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL26414208M",
-      "series": "The Gene"
-    },
-    {
-      "id": "/books/OL21965847M",
-      "title": "The Diary of a Young Girl",
-      "authors": [
-        "Anne Frank"
-      ],
-      "category": "Lịch sử",
-      "language": "eng",
-      "isbn": null,
-      "coverId": 15106349,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15106349-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL21965847M",
-      "series": "The Diary of a Young Girl"
-    },
-    {
-      "id": "/books/OL61027637M",
-      "title": "Winnie-the-Pooh",
-      "authors": [
-        "A. A. Milne"
-      ],
-      "category": "Thiếu nhi",
-      "language": "eng",
-      "isbn": null,
-      "coverId": 15155901,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15155901-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL61027637M",
-      "series": "Winnie the Pooh"
-    },
-    {
-      "id": "/books/OL27912596M",
-      "title": "Jujutsu Kaisen, Vol. 1",
-      "authors": [
-        "Gege Akutami"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974710027",
-      "coverId": 9270022,
-      "coverUrl": "https://covers.openlibrary.org/b/id/9270022-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL27912596M",
-      "series": "Jujutsu Kaisen"
-    },
-    {
-      "id": "/books/OL26961591M",
-      "title": "Re:Zero ‐Starting Life in Another World‐, Volume 1",
-      "authors": [
-        "長月達平"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9780316315302",
-      "coverId": 15150647,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15150647-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL26961591M",
-      "series": "Re:ZERO"
-    },
-    {
-      "id": "/books/OL35354586M",
-      "title": "Jane Eyre",
-      "authors": [
-        "Charlotte Brontë"
-      ],
-      "category": "Văn học",
-      "language": "eng",
-      "isbn": "9781484160916",
-      "coverId": 12195363,
-      "coverUrl": "https://covers.openlibrary.org/b/id/12195363-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL35354586M",
-      "series": "Jane Eyre"
-    },
-    {
-      "id": "/books/OL34166863M",
-      "title": "Four Thousand Weeks",
-      "authors": [
-        "Oliver Burkeman"
-      ],
-      "category": "Kỹ năng sống",
-      "language": "eng",
-      "isbn": "9780374715243",
-      "coverId": 14840765,
-      "coverUrl": "https://covers.openlibrary.org/b/id/14840765-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL34166863M",
-      "series": "Four Thousand Weeks"
-    },
-    {
-      "id": "/books/OL36689110M",
-      "title": "Thinking, fast and slow",
-      "authors": [
-        "Daniel Kahneman"
-      ],
-      "category": "Kinh doanh",
-      "language": "eng",
-      "isbn": "9780385676519",
-      "coverId": 15129456,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15129456-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL36689110M",
-      "series": "Thinking Fast and Slow"
-    },
-    {
-      "id": "/books/OL37824151M",
-      "title": "The hidden life of trees",
-      "authors": [
-        "Peter Wohlleben"
-      ],
-      "category": "Khoa học",
-      "language": "eng",
-      "isbn": "9780670089345",
-      "coverId": 12725021,
-      "coverUrl": "https://covers.openlibrary.org/b/id/12725021-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL37824151M",
-      "series": "The Hidden Life of Trees"
-    },
-    {
-      "id": "/books/OL25647222M",
-      "title": "The Wright Brothers",
-      "authors": [
-        "David McCullough"
-      ],
-      "category": "Lịch sử",
-      "language": "eng",
-      "isbn": "9781476728742",
-      "coverId": 7317364,
-      "coverUrl": "https://covers.openlibrary.org/b/id/7317364-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL25647222M",
-      "series": "The Wright Brothers"
-    },
-    {
-      "id": "/books/OL28430408M",
-      "title": "The Tale of Peter Rabbit",
-      "authors": [
-        "Beatrix Potter"
-      ],
-      "category": "Thiếu nhi",
-      "language": "eng",
-      "isbn": "9780811849067",
-      "coverId": 15200948,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15200948-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL28430408M",
-      "series": "The Tale of Peter Rabbit"
-    },
-    {
-      "id": "/books/OL8853139M",
-      "title": "Fullmetal Alchemist 1",
-      "authors": [
-        "荒川弘"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781591169208",
-      "coverId": 15234071,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15234071-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL8853139M",
-      "series": "Fullmetal Alchemist"
-    },
-    {
-      "id": "/books/OL36929884M",
-      "title": "Overlord, Volume 14",
-      "authors": [
-        "丸山くがね",
-        "so-bin"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9781975323813",
-      "coverId": 15137584,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15137584-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL36929884M",
-      "series": "Overlord"
-    },
-    {
-      "id": "/books/OL21516677M",
-      "title": "Little Women",
-      "authors": [
-        "Louisa May Alcott"
-      ],
-      "category": "Văn học",
-      "language": "eng",
-      "isbn": "9780460012485",
-      "coverId": 10615618,
-      "coverUrl": "https://covers.openlibrary.org/b/id/10615618-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL21516677M",
-      "series": "Little Women"
-    },
-    {
-      "id": "/books/OL26943651M",
-      "title": "The personal MBA",
-      "authors": [
-        "Josh Kaufman"
-      ],
-      "category": "Kinh doanh",
-      "language": "eng",
-      "isbn": "9781591845577",
-      "coverId": 15252026,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15252026-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL26943651M",
-      "series": "The Personal MBA"
-    },
-    {
-      "id": "/books/OL39460744M",
-      "title": "Silent Spring",
-      "authors": [
-        "Rachel Carson"
-      ],
-      "category": "Khoa học",
-      "language": "eng",
-      "isbn": "9780395166116",
-      "coverId": 15199104,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15199104-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL39460744M",
-      "series": "Silent Spring"
-    },
-    {
-      "id": "/books/OL57630364M",
-      "title": "The secret garden",
-      "authors": [
-        "Frances Hodgson Burnett"
-      ],
-      "category": "Thiếu nhi",
-      "language": "eng",
-      "isbn": "9780585099934",
-      "coverId": 15113300,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15113300-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL57630364M",
-      "series": "The Secret Garden"
-    },
-    {
-      "id": "/books/OL59350483M",
-      "title": "Dandadan 13",
-      "authors": [
-        "Yukinobu Tatsu"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974755110",
-      "coverId": 15151079,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15151079-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL59350483M",
-      "series": "Dandadan"
-    },
-    {
-      "id": "/books/OL30196321M",
-      "title": "86—EIGHTY-SIX, Vol. 5",
-      "authors": [
-        "安里アサト",
-        "しらび"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9781975314200",
-      "coverId": 15135934,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15135934-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL30196321M",
-      "series": "86"
-    },
-    {
-      "id": "/books/OL7288233M",
-      "title": "The Alchemist",
-      "authors": [
-        "Paulo Coelho"
-      ],
-      "category": "Văn học",
-      "language": "eng",
-      "isbn": "9780061122415",
-      "coverId": 15121528,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15121528-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL7288233M",
-      "series": "The Alchemist"
-    },
-    {
-      "id": "/books/OL28720778M",
-      "title": "The Body",
-      "authors": [
-        "Bill Bryson"
-      ],
-      "category": "Khoa học",
-      "language": "eng",
-      "isbn": "9780857522405",
-      "coverId": 15126754,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15126754-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL28720778M",
-      "series": "The Body"
-    },
-    {
-      "id": "/books/OL16184549M",
-      "title": "The Gruffalo",
-      "authors": [
-        "Julia Donaldson"
-      ],
-      "category": "Thiếu nhi",
-      "language": "eng",
-      "isbn": "9780333710937",
-      "coverId": 10549185,
-      "coverUrl": "https://covers.openlibrary.org/b/id/10549185-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL16184549M",
-      "series": "The Gruffalo"
-    },
-    {
-      "id": "/books/OL9474943M",
-      "title": "Naruto, Volume 25",
-      "authors": [
-        "Masashi Kishimoto"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781421518619",
-      "coverId": 1813471,
-      "coverUrl": "https://covers.openlibrary.org/b/id/1813471-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL9474943M",
-      "series": "Naruto"
-    },
-    {
-      "id": "/books/OL27945907M",
-      "title": "Classroom of the Elite, Novel 4",
-      "authors": [
-        "衣笠彰梧",
-        "トモセシュンサク"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9781645051978",
-      "coverId": 15138819,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15138819-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL27945907M",
-      "series": "Classroom of the Elite"
-    },
-    {
-      "id": "/books/OL57895812M",
-      "title": "The Kite Runner",
-      "authors": [
-        "Khaled Hosseini"
-      ],
-      "category": "Văn học",
-      "language": "eng",
-      "isbn": "9781408806159",
-      "coverId": 15162763,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15162763-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL57895812M",
-      "series": "The Kite Runner"
-    },
-    {
-      "id": "/books/OL29872725M",
-      "title": "Chainsaw Man, Vol. 2",
-      "authors": [
-        "Tatsuki Fujimoto"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974709946",
-      "coverId": 12794652,
-      "coverUrl": "https://covers.openlibrary.org/b/id/12794652-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL29872725M",
-      "series": "Chainsaw Man"
-    },
-    {
-      "id": "/books/OL26961594M",
-      "title": "Re:Zero ‐Starting Life in Another World‐, Volume 3",
-      "authors": [
-        "長月達平"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9780316398404",
-      "coverId": 15150650,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15150650-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL26961594M",
-      "series": "Re:ZERO"
-    },
-    {
-      "id": "/books/OL32840838M",
-      "title": "The Book Thief",
-      "authors": [
-        "Markus Zusak"
-      ],
-      "category": "Văn học",
-      "language": "eng",
-      "isbn": "9780385754729",
-      "coverId": 11473474,
-      "coverUrl": "https://covers.openlibrary.org/b/id/11473474-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL32840838M",
-      "series": "The Book Thief"
-    },
-    {
-      "id": "/books/OL29495063M",
-      "title": "Spy x Family, Vol. 2",
-      "authors": [
-        "Tatsuya Endo"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974717248",
-      "coverId": 14582939,
-      "coverUrl": "https://covers.openlibrary.org/b/id/14582939-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL29495063M",
-      "series": "Spy x Family"
-    },
-    {
-      "id": "/books/OL60565013M",
-      "title": "Overlord 11",
-      "authors": [
-        "丸山くがね",
-        "so-bin"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9781975370190",
-      "coverId": 15137770,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15137770-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL60565013M",
-      "series": "Overlord"
-    },
-    {
-      "id": "/books/OL17468403M",
-      "title": "Castle in the air",
-      "authors": [
-        "Diana Wynne Jones"
-      ],
-      "category": "Văn học",
-      "language": "eng",
-      "isbn": "9780416157826",
-      "coverId": 13482682,
-      "coverUrl": "https://covers.openlibrary.org/b/id/13482682-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL17468403M",
-      "series": "Howl's Moving Castle"
-    },
-    {
-      "id": "/books/OL60674374M",
-      "title": "Frieren: Beyond Journey’s End 1",
-      "authors": [
-        "山田鐘人",
-        "アベツカサ"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974729548",
-      "coverId": 15144829,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15144829-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL60674374M",
-      "series": "Frieren"
-    },
-    {
-      "id": "/books/OL34320752M",
-      "title": "86—EIGHTY-SIX, Vol. 9",
-      "authors": [
-        "安里アサト",
-        "しらび"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9781975340001",
-      "coverId": 15136474,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15136474-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL34320752M",
-      "series": "86"
-    },
-    {
-      "id": "/books/OL32091859M",
-      "title": "A day with the little prince",
-      "authors": [
-        "Antoine de Saint-Exupéry"
-      ],
-      "category": "Văn học",
-      "language": "eng",
-      "isbn": "9780152047276",
-      "coverId": 10746692,
-      "coverUrl": "https://covers.openlibrary.org/b/id/10746692-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL32091859M",
-      "series": "The Little Prince"
-    },
-    {
-      "id": "/books/OL31861453M",
-      "title": "Jujutsu Kaisen 0",
-      "authors": [
-        "Gege Akutami"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974720149",
-      "coverId": 10546557,
-      "coverUrl": "https://covers.openlibrary.org/b/id/10546557-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL31861453M",
-      "series": "Jujutsu Kaisen"
-    },
-    {
-      "id": "/books/OL35628700M",
-      "title": "Classroom of the Elite: Year 2, Novel 1",
-      "authors": [
-        "衣笠彰梧",
-        "トモセシュンサク"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9781685794477",
-      "coverId": 15138907,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15138907-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL35628700M",
-      "series": "Classroom of the Elite"
-    },
-    {
-      "id": "/books/OL7915979M",
-      "title": "Wizard's Castle (Howl's Moving Castle #1-2)",
-      "authors": [
-        "Diana Wynne Jones"
-      ],
-      "category": "Văn học",
-      "language": "eng",
-      "isbn": "9780739423851",
-      "coverId": 8051799,
-      "coverUrl": "https://covers.openlibrary.org/b/id/8051799-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL7915979M",
-      "series": "Howl's Moving Castle"
-    },
-    {
-      "id": "/books/OL18587193M",
-      "title": "Fullmetal Alchemist 2",
-      "authors": [
-        "荒川弘"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781421539621",
-      "coverId": 15215653,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15215653-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL18587193M",
-      "series": "Fullmetal Alchemist"
-    },
-    {
-      "id": "/books/OL29948496M",
-      "title": "Re:Zero ‐Starting Life in Another World‐, Volume 15",
-      "authors": [
-        "長月達平"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9781975383275",
-      "coverId": 15152665,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15152665-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL29948496M",
-      "series": "Re:ZERO"
-    },
-    {
-      "id": "/books/OL7363250M",
-      "title": "Introducing the Little Prince",
-      "authors": [
-        "Antoine de Saint-Exupéry"
-      ],
-      "category": "Văn học",
-      "language": "eng",
-      "isbn": "9780152047269",
-      "coverId": 113601,
-      "coverUrl": "https://covers.openlibrary.org/b/id/113601-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL7363250M",
-      "series": "The Little Prince"
-    },
-    {
-      "id": "/books/OL51800976M",
-      "title": "Boruto",
-      "authors": [
-        "Masashi Kishimoto"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974745548",
-      "coverId": 14652178,
-      "coverUrl": "https://covers.openlibrary.org/b/id/14652178-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL51800976M",
-      "series": "Naruto"
-    },
-    {
-      "id": "/books/OL60565078M",
-      "title": "Overlord 13",
-      "authors": [
-        "丸山くがね",
-        "so-bin"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9781975397999",
-      "coverId": 15137790,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15137790-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL60565078M",
-      "series": "Overlord"
-    },
-    {
-      "id": "/books/OL7363251M",
-      "title": "I Am the Little Prince / Je Suis Le Petit Prince",
-      "authors": [
-        "Antoine de Saint-Exupéry"
-      ],
-      "category": "Văn học",
-      "language": "eng",
-      "isbn": "9780152047306",
-      "coverId": 1120322,
-      "coverUrl": "https://covers.openlibrary.org/b/id/1120322-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL7363251M",
-      "series": "The Little Prince"
-    },
-    {
-      "id": "/books/OL36102109M",
-      "title": "Chainsaw Man, Vol. 11",
-      "authors": [
-        "Tatsuki Fujimoto"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974727117",
-      "coverId": 12794662,
-      "coverUrl": "https://covers.openlibrary.org/b/id/12794662-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL36102109M",
-      "series": "Chainsaw Man"
-    },
-    {
-      "id": "/books/OL60552711M",
-      "title": "86—EIGHTY‐SIX, Vol. 11",
-      "authors": [
-        "安里アサト",
-        "しらび"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9781975349974",
-      "coverId": 15136791,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15136791-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL60552711M",
-      "series": "86"
-    },
-    {
-      "id": "/books/OL29937765M",
-      "title": "Spy x Family, Vol. 4",
-      "authors": [
-        "Tatsuya Endo"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974721030",
-      "coverId": 14586178,
-      "coverUrl": "https://covers.openlibrary.org/b/id/14586178-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL29937765M",
-      "series": "Spy x Family"
-    },
-    {
-      "id": "/books/OL61019074M",
-      "title": "Classroom of the Elite, Novel 2",
-      "authors": [
-        "衣笠彰梧",
-        "トモセシュンサク"
-      ],
-      "category": "Light novel",
-      "language": "eng",
-      "isbn": "9798888438206",
-      "coverId": 15155335,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15155335-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL61019074M",
-      "series": "Classroom of the Elite"
-    },
-    {
-      "id": "/books/OL60676364M",
-      "title": "Frieren: Beyond Journey’s End 4",
-      "authors": [
-        "山田鐘人",
-        "アベツカサ"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974732883",
-      "coverId": 15144937,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15144937-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL60676364M",
-      "series": "Frieren"
-    },
-    {
-      "id": "/books/OL29495070M",
-      "title": "Jujutsu Kaisen, Vol. 7",
-      "authors": [
-        "Gege Akutami"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974717118",
-      "coverId": 12708006,
-      "coverUrl": "https://covers.openlibrary.org/b/id/12708006-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL29495070M",
-      "series": "Jujutsu Kaisen"
-    },
-    {
-      "id": "/books/OL51070797M",
-      "title": "Fullmetal Alchemist 4",
-      "authors": [
-        "荒川弘"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9780316285605",
-      "coverId": 15234088,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15234088-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL51070797M",
-      "series": "Fullmetal Alchemist"
-    },
-    {
-      "id": "/books/OL8490553M",
-      "title": "Naruto, Vol. 9",
-      "authors": [
-        "Masashi Kishimoto"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781421502397",
-      "coverId": 764948,
-      "coverUrl": "https://covers.openlibrary.org/b/id/764948-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL8490553M",
-      "series": "Naruto"
-    },
-    {
-      "id": "/books/OL34786159M",
-      "title": "Chainsaw Man, Vol. 10",
-      "authors": [
-        "Tatsuki Fujimoto"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974725359",
-      "coverId": 12794661,
-      "coverUrl": "https://covers.openlibrary.org/b/id/12794661-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL34786159M",
-      "series": "Chainsaw Man"
-    },
-    {
-      "id": "/books/OL29862270M",
-      "title": "Spy x Family, Vol. 3",
-      "authors": [
-        "Tatsuya Endo"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974718160",
-      "coverId": 14583002,
-      "coverUrl": "https://covers.openlibrary.org/b/id/14583002-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL29862270M",
-      "series": "Spy x Family"
-    },
-    {
-      "id": "/books/OL60671902M",
-      "title": "Frieren: Beyond Journey’s End —Prelude— 1",
-      "authors": [
-        "八目迷",
-        "山田鐘人"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9798855430493",
-      "coverId": 15202646,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15202646-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL60671902M",
-      "series": "Frieren"
-    },
-    {
-      "id": "/books/OL29961352M",
-      "title": "Jujutsu Kaisen, Vol. 8",
-      "authors": [
-        "Gege Akutami"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9781974718719",
-      "coverId": 14650986,
-      "coverUrl": "https://covers.openlibrary.org/b/id/14650986-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL29961352M",
-      "series": "Jujutsu Kaisen"
-    },
-    {
-      "id": "/books/OL51068278M",
-      "title": "Fullmetal Alchemist 3",
-      "authors": [
-        "荒川弘"
-      ],
-      "category": "Manga",
-      "language": "eng",
-      "isbn": "9780316285582",
-      "coverId": 15234085,
-      "coverUrl": "https://covers.openlibrary.org/b/id/15234085-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL51068278M",
-      "series": "Fullmetal Alchemist"
+      "series": "Howl's Moving Castle",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ],
+        "genre": [
+          "fantasy"
+        ],
+        "workOrigin": [
+          "foreign"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
     },
     {
       "id": "/books/OL8589679M",
@@ -1378,14 +188,14 @@
         "George Trombley",
         "Yukari Takenaka"
       ],
-      "category": "Học ngoại ngữ",
+      "category": "Tiếng Nhật",
       "language": "eng",
       "isbn": "9780976998129",
       "coverId": 14420377,
       "coverUrl": "https://covers.openlibrary.org/b/id/14420377-L.jpg?default=false",
       "sourceUrl": "https://openlibrary.org/books/OL8589679M",
       "series": "Japanese from Zero",
-      "classificationSeed": "Japanese from Zero",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata",
       "categoryId": "languages.ja",
       "attributes": {
         "purpose": [
@@ -1397,61 +207,6 @@
         "skill": [
           "characters",
           "grammar"
-        ]
-      }
-    },
-    {
-      "id": "/books/OL26798836M",
-      "title": "English Grammar in Use",
-      "authors": [
-        "Raymond Murphy"
-      ],
-      "category": "Học ngoại ngữ",
-      "language": "eng",
-      "isbn": "9780521189392",
-      "coverId": 8454904,
-      "coverUrl": "https://covers.openlibrary.org/b/id/8454904-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL26798836M",
-      "series": "English Grammar in Use",
-      "classificationSeed": "English Grammar in Use",
-      "categoryId": "languages.en",
-      "attributes": {
-        "purpose": [
-          "general"
-        ],
-        "level": [
-          "intermediate"
-        ],
-        "skill": [
-          "grammar"
-        ]
-      }
-    },
-    {
-      "id": "/books/OL23187194M",
-      "title": "Integrated Chinese =",
-      "authors": [
-        "Yuehua Liu"
-      ],
-      "category": "Học ngoại ngữ",
-      "language": "eng",
-      "isbn": "9780887276804",
-      "coverId": 12138394,
-      "coverUrl": "https://covers.openlibrary.org/b/id/12138394-L.jpg?default=false",
-      "sourceUrl": "https://openlibrary.org/books/OL23187194M",
-      "series": "Integrated Chinese",
-      "classificationSeed": "Integrated Chinese",
-      "categoryId": "languages.zh",
-      "attributes": {
-        "purpose": [
-          "general"
-        ],
-        "level": [
-          "beginner"
-        ],
-        "skill": [
-          "reading",
-          "writing"
         ]
       }
     },
@@ -1468,7 +223,7 @@
       "coverUrl": "https://covers.openlibrary.org/b/id/9372219-L.jpg?default=false",
       "sourceUrl": "https://openlibrary.org/books/OL27983777M",
       "series": "Calculus",
-      "classificationSeed": "Calculus",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata",
       "categoryId": "education",
       "attributes": {
         "schoolStage": [
@@ -1479,6 +234,367 @@
         ],
         "purpose": [
           "textbook"
+        ]
+      }
+    },
+    {
+      "id": "/books/OL51726888M",
+      "title": "The Psychology of Money",
+      "authors": [
+        "Morgan Housel"
+      ],
+      "category": "Tài chính / đầu tư",
+      "language": "eng",
+      "isbn": "9781804090114",
+      "coverId": 15215448,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15215448-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL51726888M",
+      "series": "The Psychology of Money",
+      "categoryId": "business.finance",
+      "attributes": {
+        "businessTopic": [
+          "personal-finance"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL57360656M",
+      "title": "Atomic Habits",
+      "authors": [
+        "James Clear"
+      ],
+      "category": "Kỹ năng sống",
+      "language": "eng",
+      "isbn": "9781847941831",
+      "coverId": 15247577,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15247577-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL57360656M",
+      "series": "Atomic Habits",
+      "categoryId": "psychology.skills",
+      "attributes": {
+        "topic": [
+          "habits"
+        ],
+        "reader": [
+          "general"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL24935310M",
+      "title": "Charlotte's Web",
+      "authors": [
+        "E. B. White"
+      ],
+      "category": "Thiếu nhi",
+      "language": "eng",
+      "isbn": "064400557",
+      "coverId": 8311463,
+      "coverUrl": "https://covers.openlibrary.org/b/id/8311463-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL24935310M",
+      "series": "Charlotte's Web",
+      "categoryId": "children",
+      "attributes": {
+        "form": [
+          "story"
+        ],
+        "topic": [
+          "animals"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL361722M",
+      "title": "A Brief History of Time",
+      "authors": [
+        "Stephen Hawking"
+      ],
+      "category": "Thiên văn / vũ trụ",
+      "language": "eng",
+      "isbn": "9780553109535",
+      "coverId": 15139590,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15139590-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL361722M",
+      "series": "A Brief History of Time",
+      "categoryId": "science.space",
+      "attributes": {
+        "scienceField": [
+          "physics",
+          "astronomy"
+        ],
+        "depth": [
+          "popular"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL27700871M",
+      "title": "Sapiens",
+      "authors": [
+        "Yuval Noah Harari"
+      ],
+      "category": "Lịch sử",
+      "language": "eng",
+      "isbn": "9780771038518",
+      "coverId": 9137127,
+      "coverUrl": "https://covers.openlibrary.org/b/id/9137127-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL27700871M",
+      "series": "Sapiens",
+      "categoryId": "history.history",
+      "attributes": {
+        "region": [
+          "world"
+        ],
+        "topic": [
+          "civilization"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL21965847M",
+      "title": "The Diary of a Young Girl",
+      "authors": [
+        "Anne Frank"
+      ],
+      "category": "Câu chuyện cuộc đời",
+      "language": "eng",
+      "isbn": null,
+      "coverId": 15106349,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15106349-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL21965847M",
+      "series": "The Diary of a Young Girl",
+      "categoryId": "biography.life",
+      "attributes": {
+        "form": [
+          "memoir"
+        ],
+        "topic": [
+          "personal-life"
+        ],
+        "region": [
+          "europe"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL4117839M",
+      "title": "How to talk so kids will listen & listen so kids will talk",
+      "authors": [
+        "Adele Faber",
+        "Elaine Mazlish"
+      ],
+      "category": "Giáo dục trẻ",
+      "categoryId": "parenting.education",
+      "attributes": {
+        "topic": [
+          "communication",
+          "education-methods"
+        ],
+        "reader": [
+          "parent"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9780892561407",
+      "coverId": 15231455,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15231455-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL4117839M",
+      "series": "How to Talk So Kids Will Listen",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL28720778M",
+      "title": "The Body",
+      "authors": [
+        "Bill Bryson"
+      ],
+      "category": "Y học",
+      "language": "eng",
+      "isbn": "9780857522405",
+      "coverId": 15126754,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15126754-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL28720778M",
+      "series": "The Body",
+      "categoryId": "health.medicine",
+      "attributes": {
+        "topic": [
+          "medical-study"
+        ],
+        "depth": [
+          "popular"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL5452214M",
+      "title": "Ways of seeing",
+      "authors": [
+        "John Berger"
+      ],
+      "category": "Mỹ thuật",
+      "categoryId": "arts.visual",
+      "attributes": {
+        "topic": [
+          "art-history"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9780140216318",
+      "coverId": 15138302,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15138302-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL5452214M",
+      "series": "Ways of Seeing",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL7242701M",
+      "title": "Meditations",
+      "authors": [
+        "Marcus Aurelius"
+      ],
+      "category": "Triết học",
+      "categoryId": "society.philosophy",
+      "attributes": {
+        "topic": [
+          "philosophy",
+          "ethics"
+        ]
+      },
+      "language": "eng",
+      "isbn": null,
+      "coverId": 5559829,
+      "coverUrl": "https://covers.openlibrary.org/b/id/5559829-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL7242701M",
+      "series": "Meditations",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL26632002M",
+      "title": "Salt, Fat, Acid, Heat: Mastering the Elements of Good Cooking",
+      "authors": [
+        "Samin Nosrat"
+      ],
+      "category": "Nấu ăn",
+      "categoryId": "lifestyle.cooking",
+      "attributes": {
+        "topic": [
+          "cooking"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9781476753836",
+      "coverId": 8315567,
+      "coverUrl": "https://covers.openlibrary.org/b/id/8315567-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26632002M",
+      "series": "Salt Fat Acid Heat",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL30165195M",
+      "title": "Chainsaw Man, Vol. 1",
+      "authors": [
+        "Tatsuki Fujimoto"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974709939",
+      "coverId": 12794650,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12794650-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL30165195M",
+      "series": "Chainsaw Man",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "horror"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL26445872M",
+      "title": "Overlord, Volume 1",
+      "authors": [
+        "丸山くがね",
+        "so-bin"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9780316272247",
+      "coverId": 15137502,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15137502-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26445872M",
+      "series": "Overlord",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "fantasy",
+          "action"
+        ],
+        "setting": [
+          "isekai"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL22007893M",
+      "title": "El Principito / The Little Prince",
+      "authors": [
+        "Antoine de Saint-Exupéry"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9788459912013",
+      "coverId": 14994367,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14994367-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL22007893M",
+      "series": "The Little Prince",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ],
+        "genre": [
+          "fantasy"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL26798836M",
+      "title": "English Grammar in Use",
+      "authors": [
+        "Raymond Murphy"
+      ],
+      "category": "Tiếng Anh",
+      "language": "eng",
+      "isbn": "9780521189392",
+      "coverId": 8454904,
+      "coverUrl": "https://covers.openlibrary.org/b/id/8454904-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26798836M",
+      "series": "English Grammar in Use",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata",
+      "categoryId": "languages.en",
+      "attributes": {
+        "purpose": [
+          "general"
+        ],
+        "level": [
+          "intermediate"
+        ],
+        "skill": [
+          "grammar"
         ]
       }
     },
@@ -1495,7 +611,7 @@
       "coverUrl": "https://covers.openlibrary.org/b/id/13981515-L.jpg?default=false",
       "sourceUrl": "https://openlibrary.org/books/OL37347318M",
       "series": "Algebra 1",
-      "classificationSeed": "Algebra 1",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata",
       "categoryId": "education",
       "attributes": {
         "subject": [
@@ -1503,6 +619,352 @@
         ],
         "purpose": [
           "textbook"
+        ]
+      }
+    },
+    {
+      "id": "/books/OL27876905M",
+      "title": "The Lean Startup",
+      "authors": [
+        "Eric Ries"
+      ],
+      "category": "Khởi nghiệp",
+      "language": "eng",
+      "isbn": "9780670921607",
+      "coverId": 15103190,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15103190-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL27876905M",
+      "series": "The Lean Startup",
+      "categoryId": "business.startup",
+      "attributes": {
+        "businessTopic": [
+          "startup"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL26314691M",
+      "title": "Deep Work",
+      "authors": [
+        "Cal Newport"
+      ],
+      "category": "Kỹ năng sống",
+      "language": "eng",
+      "isbn": "9781455586691",
+      "coverId": 14859612,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14859612-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26314691M",
+      "series": "Deep Work",
+      "categoryId": "psychology.skills",
+      "attributes": {
+        "topic": [
+          "career",
+          "time-management"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL39486910M",
+      "title": "Matilda",
+      "authors": [
+        "Roald Dahl"
+      ],
+      "category": "Thiếu nhi",
+      "language": "eng",
+      "isbn": "9780224070966",
+      "coverId": 12895022,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12895022-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL39486910M",
+      "series": "Matilda",
+      "categoryId": "children",
+      "attributes": {
+        "form": [
+          "story"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL24740450M",
+      "title": "Cosmos",
+      "authors": [
+        "Carl Sagan"
+      ],
+      "category": "Thiên văn / vũ trụ",
+      "language": "eng",
+      "isbn": "9780394502946",
+      "coverId": 10601318,
+      "coverUrl": "https://covers.openlibrary.org/b/id/10601318-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL24740450M",
+      "series": "Cosmos",
+      "categoryId": "science.space",
+      "attributes": {
+        "scienceField": [
+          "astronomy"
+        ],
+        "depth": [
+          "popular"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL39467254M",
+      "title": "Guns, germs, and steel",
+      "authors": [
+        "Jared Diamond"
+      ],
+      "category": "Lịch sử",
+      "language": "eng",
+      "isbn": "9780393061314",
+      "coverId": 15253013,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15253013-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL39467254M",
+      "series": "Guns Germs and Steel",
+      "categoryId": "history.history",
+      "attributes": {
+        "region": [
+          "world"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL25647222M",
+      "title": "The Wright Brothers",
+      "authors": [
+        "David McCullough"
+      ],
+      "category": "Nhà khoa học",
+      "language": "eng",
+      "isbn": "9781476728742",
+      "coverId": 7317364,
+      "coverUrl": "https://covers.openlibrary.org/b/id/7317364-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL25647222M",
+      "series": "The Wright Brothers",
+      "categoryId": "biography.science",
+      "attributes": {
+        "form": [
+          "biography"
+        ],
+        "topic": [
+          "scientist"
+        ],
+        "region": [
+          "americas"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL29483538M",
+      "title": "The Book You Wish Your Parents Had Read (and Your Children Will Be Glad That You Did)",
+      "authors": [
+        "Philippa Perry"
+      ],
+      "category": "Gia đình",
+      "categoryId": "parenting.family",
+      "attributes": {
+        "topic": [
+          "family-life",
+          "communication"
+        ],
+        "reader": [
+          "parent"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9780241251027",
+      "coverId": 14602639,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14602639-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29483538M",
+      "series": "The Book You Wish Your Parents Had Read",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL28371841M",
+      "title": "Why We Sleep",
+      "authors": [
+        "Matthew P. Walker",
+        "Matthew Walker"
+      ],
+      "category": "Chăm sóc sức khỏe",
+      "categoryId": "health.wellness",
+      "attributes": {
+        "topic": [
+          "wellbeing"
+        ],
+        "depth": [
+          "popular"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9780141983769",
+      "coverId": 10308777,
+      "coverUrl": "https://covers.openlibrary.org/b/id/10308777-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL28371841M",
+      "series": "Why We Sleep",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL40354049M",
+      "title": "On Photography",
+      "authors": [
+        "Susan Sontag"
+      ],
+      "category": "Nhiếp ảnh",
+      "categoryId": "arts.photography",
+      "attributes": {
+        "topic": [
+          "photography"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9780713911282",
+      "coverId": 14910464,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14910464-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL40354049M",
+      "series": "On Photography",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL46947685M",
+      "title": "The Republic",
+      "authors": [
+        "Plato"
+      ],
+      "category": "Triết học",
+      "categoryId": "society.philosophy",
+      "attributes": {
+        "topic": [
+          "philosophy"
+        ]
+      },
+      "language": "eng",
+      "isbn": null,
+      "coverId": 14412200,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14412200-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL46947685M",
+      "series": "The Republic",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL26682267M",
+      "title": "The Food Lab: Better Home Cooking Through Science",
+      "authors": [
+        "J. Kenji López-Alt"
+      ],
+      "category": "Nấu ăn",
+      "categoryId": "lifestyle.cooking",
+      "attributes": {
+        "topic": [
+          "cooking"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9780393081084",
+      "coverId": 8355275,
+      "coverUrl": "https://covers.openlibrary.org/b/id/8355275-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26682267M",
+      "series": "The Food Lab",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL28265740M",
+      "title": "Spy x Family, Vol. 1",
+      "authors": [
+        "Tatsuya Endo"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974715466",
+      "coverId": 14582895,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14582895-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL28265740M",
+      "series": "Spy x Family",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "comedy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL28918978M",
+      "title": "86—EIGHTY-SIX, Vol. 1",
+      "authors": [
+        "安里アサト",
+        "しらび"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9781975303129",
+      "coverId": 15135888,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15135888-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL28918978M",
+      "series": "86",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "scifi",
+          "drama"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL47769457M",
+      "title": "The Great Gatsby",
+      "authors": [
+        "F. Scott Fitzgerald"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780143427094",
+      "coverId": 14635758,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14635758-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL47769457M",
+      "series": "The Great Gatsby",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL23187194M",
+      "title": "Integrated Chinese =",
+      "authors": [
+        "Yuehua Liu"
+      ],
+      "category": "Tiếng Trung",
+      "language": "eng",
+      "isbn": "9780887276804",
+      "coverId": 12138394,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12138394-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL23187194M",
+      "series": "Integrated Chinese",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata",
+      "categoryId": "languages.zh",
+      "attributes": {
+        "purpose": [
+          "general"
+        ],
+        "level": [
+          "beginner"
+        ],
+        "skill": [
+          "reading",
+          "writing"
         ]
       }
     },
@@ -1519,7 +981,7 @@
       "coverUrl": "https://covers.openlibrary.org/b/id/5033413-L.jpg?default=false",
       "sourceUrl": "https://openlibrary.org/books/OL10093793M",
       "series": "Biology",
-      "classificationSeed": "Biology",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata",
       "categoryId": "education",
       "attributes": {
         "schoolStage": [
@@ -1532,8 +994,1933 @@
           "textbook"
         ]
       }
+    },
+    {
+      "id": "/books/OL17035731M",
+      "title": "Good to great",
+      "authors": [
+        "Collins, James C.",
+        "Jim Collins"
+      ],
+      "category": "Quản trị / lãnh đạo",
+      "language": "eng",
+      "isbn": "9780066620992",
+      "coverId": 15249404,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15249404-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL17035731M",
+      "series": "Good to Great",
+      "categoryId": "business.management",
+      "attributes": {
+        "businessTopic": [
+          "strategy"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL25613003M",
+      "title": "Essentialism",
+      "authors": [
+        "Greg McKeown"
+      ],
+      "category": "Kỹ năng sống",
+      "language": "eng",
+      "isbn": "9780804137386",
+      "coverId": 7285986,
+      "coverUrl": "https://covers.openlibrary.org/b/id/7285986-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL25613003M",
+      "series": "Essentialism",
+      "categoryId": "psychology.skills",
+      "attributes": {
+        "topic": [
+          "time-management"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL24223030M",
+      "title": "The very hungry caterpillar",
+      "authors": [
+        "Eric Carle"
+      ],
+      "category": "Thiếu nhi",
+      "language": "eng",
+      "isbn": "9780590617284",
+      "coverId": 6573238,
+      "coverUrl": "https://covers.openlibrary.org/b/id/6573238-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL24223030M",
+      "series": "The Very Hungry Caterpillar",
+      "categoryId": "children",
+      "attributes": {
+        "form": [
+          "picture"
+        ],
+        "age": [
+          "0-3",
+          "4-6"
+        ],
+        "topic": [
+          "animals"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL49829494M",
+      "title": "A short history of nearly everything",
+      "authors": [
+        "Bill Bryson"
+      ],
+      "category": "Khoa học tự nhiên",
+      "language": "eng",
+      "isbn": "9780552997041",
+      "coverId": 15214565,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15214565-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL49829494M",
+      "series": "A Short History of Nearly Everything",
+      "categoryId": "science.natural",
+      "attributes": {
+        "depth": [
+          "popular"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL26885668M",
+      "title": "The Silk Roads",
+      "authors": [
+        "Peter Frankopan"
+      ],
+      "category": "Lịch sử",
+      "language": "eng",
+      "isbn": "9781101946329",
+      "coverId": 12514527,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12514527-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26885668M",
+      "series": "The Silk Roads",
+      "categoryId": "history.history",
+      "attributes": {
+        "region": [
+          "asia"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL24439040M",
+      "title": "Just kids",
+      "authors": [
+        "Patti Smith",
+        "Patti Smith"
+      ],
+      "category": "Nghệ sĩ",
+      "categoryId": "biography.arts",
+      "attributes": {
+        "form": [
+          "memoir"
+        ],
+        "topic": [
+          "artist"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9780066211312",
+      "coverId": 6671098,
+      "coverUrl": "https://covers.openlibrary.org/b/id/6671098-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL24439040M",
+      "series": "Just Kids",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL25169479M",
+      "title": "The whole-brain child",
+      "authors": [
+        "Daniel J. Siegel"
+      ],
+      "category": "Phát triển của trẻ",
+      "categoryId": "parenting.development",
+      "attributes": {
+        "topic": [
+          "child-development"
+        ],
+        "reader": [
+          "parent"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9780553807912",
+      "coverId": 12198207,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12198207-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL25169479M",
+      "series": "The Whole-Brain Child",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL27700072M",
+      "title": "How Not To Die",
+      "authors": [
+        "Michael Greger",
+        "Gene Stone"
+      ],
+      "category": "Dinh dưỡng",
+      "categoryId": "health.nutrition",
+      "attributes": {
+        "topic": [
+          "nutrition"
+        ],
+        "depth": [
+          "popular"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9781447282440",
+      "coverId": 9136473,
+      "coverUrl": "https://covers.openlibrary.org/b/id/9136473-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL27700072M",
+      "series": "How Not to Die",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL25726927M",
+      "title": "The Design of Everyday Things",
+      "authors": [
+        "Donald A. Norman"
+      ],
+      "category": "Thiết kế",
+      "categoryId": "arts.design",
+      "attributes": {},
+      "language": "eng",
+      "isbn": "9780465050659",
+      "coverId": 14428212,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14428212-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL25726927M",
+      "series": "The Design of Everyday Things",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL33445M",
+      "title": "The sociological imagination",
+      "authors": [
+        "C. Wright Mills"
+      ],
+      "category": "Xã hội học",
+      "categoryId": "society.sociology",
+      "attributes": {
+        "topic": [
+          "society"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9780195133738",
+      "coverId": 15258402,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15258402-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL33445M",
+      "series": "The Sociological Imagination",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL22470664M",
+      "title": "A walk in the woods",
+      "authors": [
+        "Bill Bryson"
+      ],
+      "category": "Du lịch",
+      "categoryId": "lifestyle.travel",
+      "attributes": {
+        "topic": [
+          "travel"
+        ],
+        "region": [
+          "americas"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9780385658584",
+      "coverId": 12722741,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12722741-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL22470664M",
+      "series": "A Walk in the Woods",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL57541730M",
+      "title": "Frieren: Beyond Journey’s End 12",
+      "authors": [
+        "山田鐘人",
+        "アベツカサ"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974751815",
+      "coverId": 15144794,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15144794-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL57541730M",
+      "series": "Frieren",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "fantasy",
+          "adventure"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL61018930M",
+      "title": "Classroom of the Elite, Novel 1",
+      "authors": [
+        "衣笠彰梧",
+        "トモセシュンサク"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9798888438190",
+      "coverId": 15155334,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15155334-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL61018930M",
+      "series": "Classroom of the Elite",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "drama",
+          "mystery"
+        ],
+        "setting": [
+          "school"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL60977871M",
+      "title": "To Kill a Mockingbird",
+      "authors": [
+        "Harper Lee"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": null,
+      "coverId": 15153500,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15153500-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL60977871M",
+      "series": "To Kill a Mockingbird",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL26431670M",
+      "title": "Start with Why: How Great Leaders Inspire Everyone to Take Action",
+      "authors": [
+        "Simon Sinek"
+      ],
+      "category": "Quản trị / lãnh đạo",
+      "language": "eng",
+      "isbn": "9781591846444",
+      "coverId": 15213359,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15213359-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26431670M",
+      "series": "Start with Why",
+      "categoryId": "business.management",
+      "attributes": {
+        "businessTopic": [
+          "leadership"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL36692670M",
+      "title": "The power of habit",
+      "authors": [
+        "Charles Duhigg"
+      ],
+      "category": "Kỹ năng sống",
+      "language": "eng",
+      "isbn": "9780385669740",
+      "coverId": 15197201,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15197201-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL36692670M",
+      "series": "The Power of Habit",
+      "categoryId": "psychology.skills",
+      "attributes": {
+        "topic": [
+          "habits"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL32681339M",
+      "title": "Where the wild things are",
+      "authors": [
+        "Maurice Sendak"
+      ],
+      "category": "Thiếu nhi",
+      "language": "eng",
+      "isbn": null,
+      "coverId": 14890795,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14890795-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL32681339M",
+      "series": "Where the Wild Things Are",
+      "categoryId": "children",
+      "attributes": {
+        "form": [
+          "picture"
+        ],
+        "age": [
+          "4-6"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL24219315M",
+      "title": "The Selfish Gene",
+      "authors": [
+        "Richard Dawkins"
+      ],
+      "category": "Khoa học tự nhiên",
+      "language": "eng",
+      "isbn": "9780192860927",
+      "coverId": 6561465,
+      "coverUrl": "https://covers.openlibrary.org/b/id/6561465-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL24219315M",
+      "series": "The Selfish Gene",
+      "categoryId": "science.natural",
+      "attributes": {
+        "scienceField": [
+          "biology"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL27511331M",
+      "title": "SPQR",
+      "authors": [
+        "Mary Beard",
+        "Silvia Furió"
+      ],
+      "category": "Lịch sử",
+      "language": "eng",
+      "isbn": "9781846683800",
+      "coverId": 8968031,
+      "coverUrl": "https://covers.openlibrary.org/b/id/8968031-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL27511331M",
+      "series": "SPQR",
+      "categoryId": "history.history",
+      "attributes": {
+        "region": [
+          "europe"
+        ],
+        "period": [
+          "ancient"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL27154061M",
+      "title": "Steve Jobs",
+      "authors": [
+        "Walter Isaacson"
+      ],
+      "category": "Doanh nhân",
+      "categoryId": "biography.business",
+      "attributes": {
+        "form": [
+          "biography"
+        ],
+        "topic": [
+          "business-life"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9781594136795",
+      "coverId": 12680694,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12680694-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL27154061M",
+      "series": "Steve Jobs",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL40325734M",
+      "title": "Outlive",
+      "authors": [
+        "Peter Attia",
+        "Bill Gifford"
+      ],
+      "category": "Chăm sóc sức khỏe",
+      "categoryId": "health.wellness",
+      "attributes": {
+        "topic": [
+          "wellbeing"
+        ],
+        "depth": [
+          "popular"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9781785044540",
+      "coverId": 14590549,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14590549-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL40325734M",
+      "series": "Outlive",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL24413148M",
+      "title": "Justice",
+      "authors": [
+        "Michael J. Sandel"
+      ],
+      "category": "Triết học",
+      "categoryId": "society.philosophy",
+      "attributes": {
+        "topic": [
+          "ethics"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9780374532505",
+      "coverId": 11579237,
+      "coverUrl": "https://covers.openlibrary.org/b/id/11579237-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL24413148M",
+      "series": "Justice",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL22419643M",
+      "title": "The new organic grower",
+      "authors": [
+        "Eliot Coleman"
+      ],
+      "category": "Làm vườn",
+      "categoryId": "lifestyle.gardening",
+      "attributes": {
+        "topic": [
+          "gardening"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9780930031756",
+      "coverId": 11883679,
+      "coverUrl": "https://covers.openlibrary.org/b/id/11883679-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL22419643M",
+      "series": "The New Organic Grower",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL27912596M",
+      "title": "Jujutsu Kaisen, Vol. 1",
+      "authors": [
+        "Gege Akutami"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974710027",
+      "coverId": 9270022,
+      "coverUrl": "https://covers.openlibrary.org/b/id/9270022-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL27912596M",
+      "series": "Jujutsu Kaisen",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "fantasy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL26961591M",
+      "title": "Re:Zero ‐Starting Life in Another World‐, Volume 1",
+      "authors": [
+        "長月達平"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9780316315302",
+      "coverId": 15150647,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15150647-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26961591M",
+      "series": "Re:ZERO",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "fantasy",
+          "adventure"
+        ],
+        "setting": [
+          "isekai"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL50992667M",
+      "title": "The Old Man and the Sea",
+      "authors": [
+        "Ernest Hemingway"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": null,
+      "coverId": 14899799,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14899799-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL50992667M",
+      "series": "The Old Man and the Sea",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL58881816M",
+      "title": "The Intelligent Investor",
+      "authors": [
+        "Benjamin Graham"
+      ],
+      "category": "Tài chính / đầu tư",
+      "language": "eng",
+      "isbn": null,
+      "coverId": 15101160,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15101160-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL58881816M",
+      "series": "The Intelligent Investor",
+      "categoryId": "business.finance",
+      "attributes": {
+        "businessTopic": [
+          "investing"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL58718718M",
+      "title": "How To Win Friends And Influence People",
+      "authors": [
+        "Dale Carnegie"
+      ],
+      "category": "Kỹ năng sống",
+      "language": "eng",
+      "isbn": null,
+      "coverId": 15247034,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15247034-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL58718718M",
+      "series": "How to Win Friends",
+      "categoryId": "psychology.skills",
+      "attributes": {
+        "topic": [
+          "communication",
+          "relationships"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL61027637M",
+      "title": "Winnie-the-Pooh",
+      "authors": [
+        "A. A. Milne"
+      ],
+      "category": "Thiếu nhi",
+      "language": "eng",
+      "isbn": null,
+      "coverId": 15155901,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15155901-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL61027637M",
+      "series": "Winnie the Pooh",
+      "categoryId": "children",
+      "attributes": {
+        "form": [
+          "story"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL26414208M",
+      "title": "The Gene",
+      "authors": [
+        "Siddhartha Mukherjee",
+        "Dennis Boutsikaris"
+      ],
+      "category": "Khoa học tự nhiên",
+      "language": "eng",
+      "isbn": "9781847922632",
+      "coverId": 8117267,
+      "coverUrl": "https://covers.openlibrary.org/b/id/8117267-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26414208M",
+      "series": "The Gene",
+      "categoryId": "science.natural",
+      "attributes": {
+        "scienceField": [
+          "biology"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL26869813M",
+      "title": "Becoming",
+      "authors": [
+        "Michelle Obama"
+      ],
+      "category": "Câu chuyện cuộc đời",
+      "categoryId": "biography.life",
+      "attributes": {
+        "form": [
+          "memoir"
+        ],
+        "topic": [
+          "personal-life"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9781524763152",
+      "coverId": 8565814,
+      "coverUrl": "https://covers.openlibrary.org/b/id/8565814-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26869813M",
+      "series": "Becoming",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL35088241M",
+      "title": "Born to Run",
+      "authors": [
+        "Christopher McDougall",
+        "Fred Sanders"
+      ],
+      "category": "Thể thao",
+      "categoryId": "lifestyle.sports",
+      "attributes": {
+        "topic": [
+          "sports"
+        ]
+      },
+      "language": "eng",
+      "isbn": "9780307279187",
+      "coverId": 12063992,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12063992-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL35088241M",
+      "series": "Born to Run",
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL8853139M",
+      "title": "Fullmetal Alchemist 1",
+      "authors": [
+        "荒川弘"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781591169208",
+      "coverId": 15234071,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15234071-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL8853139M",
+      "series": "Fullmetal Alchemist",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "adventure",
+          "fantasy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL36929884M",
+      "title": "Overlord, Volume 14",
+      "authors": [
+        "丸山くがね",
+        "so-bin"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9781975323813",
+      "coverId": 15137584,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15137584-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL36929884M",
+      "series": "Overlord",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "fantasy",
+          "action"
+        ],
+        "setting": [
+          "isekai"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL35354586M",
+      "title": "Jane Eyre",
+      "authors": [
+        "Charlotte Brontë"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9781484160916",
+      "coverId": 12195363,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12195363-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL35354586M",
+      "series": "Jane Eyre",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ],
+        "genre": [
+          "romance"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL26943651M",
+      "title": "The personal MBA",
+      "authors": [
+        "Josh Kaufman"
+      ],
+      "category": "Quản trị / lãnh đạo",
+      "language": "eng",
+      "isbn": "9781591845577",
+      "coverId": 15252026,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15252026-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26943651M",
+      "series": "The Personal MBA",
+      "categoryId": "business.management",
+      "attributes": {
+        "businessTopic": [
+          "strategy"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL34166863M",
+      "title": "Four Thousand Weeks",
+      "authors": [
+        "Oliver Burkeman"
+      ],
+      "category": "Kỹ năng sống",
+      "language": "eng",
+      "isbn": "9780374715243",
+      "coverId": 14840765,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14840765-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL34166863M",
+      "series": "Four Thousand Weeks",
+      "categoryId": "psychology.skills",
+      "attributes": {
+        "topic": [
+          "time-management"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL28430408M",
+      "title": "The Tale of Peter Rabbit",
+      "authors": [
+        "Beatrix Potter"
+      ],
+      "category": "Thiếu nhi",
+      "language": "eng",
+      "isbn": "9780811849067",
+      "coverId": 15200948,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15200948-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL28430408M",
+      "series": "The Tale of Peter Rabbit",
+      "categoryId": "children",
+      "attributes": {
+        "form": [
+          "picture"
+        ],
+        "topic": [
+          "animals"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL37824151M",
+      "title": "The hidden life of trees",
+      "authors": [
+        "Peter Wohlleben"
+      ],
+      "category": "Khoa học tự nhiên",
+      "language": "eng",
+      "isbn": "9780670089345",
+      "coverId": 12725021,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12725021-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL37824151M",
+      "series": "The Hidden Life of Trees",
+      "categoryId": "science.natural",
+      "attributes": {
+        "scienceField": [
+          "biology"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL59350483M",
+      "title": "Dandadan 13",
+      "authors": [
+        "Yukinobu Tatsu"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974755110",
+      "coverId": 15151079,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15151079-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL59350483M",
+      "series": "Dandadan",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "comedy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL30196321M",
+      "title": "86—EIGHTY-SIX, Vol. 5",
+      "authors": [
+        "安里アサト",
+        "しらび"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9781975314200",
+      "coverId": 15135934,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15135934-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL30196321M",
+      "series": "86",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "scifi",
+          "drama"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL21516677M",
+      "title": "Little Women",
+      "authors": [
+        "Louisa May Alcott"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780460012485",
+      "coverId": 10615618,
+      "coverUrl": "https://covers.openlibrary.org/b/id/10615618-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL21516677M",
+      "series": "Little Women",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL36689110M",
+      "title": "Thinking, fast and slow",
+      "authors": [
+        "Daniel Kahneman"
+      ],
+      "category": "Tâm lý",
+      "language": "eng",
+      "isbn": "9780385676519",
+      "coverId": 15129456,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15129456-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL36689110M",
+      "series": "Thinking Fast and Slow",
+      "categoryId": "psychology.psychology",
+      "attributes": {
+        "topic": [
+          "thinking"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL57630364M",
+      "title": "The secret garden",
+      "authors": [
+        "Frances Hodgson Burnett"
+      ],
+      "category": "Thiếu nhi",
+      "language": "eng",
+      "isbn": "9780585099934",
+      "coverId": 15113300,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15113300-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL57630364M",
+      "series": "The Secret Garden",
+      "categoryId": "children",
+      "attributes": {
+        "form": [
+          "story"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL39460744M",
+      "title": "Silent Spring",
+      "authors": [
+        "Rachel Carson"
+      ],
+      "category": "Môi trường",
+      "language": "eng",
+      "isbn": "9780395166116",
+      "coverId": 15199104,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15199104-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL39460744M",
+      "series": "Silent Spring",
+      "categoryId": "science.environment",
+      "attributes": {
+        "scienceField": [
+          "environment"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL9474943M",
+      "title": "Naruto, Volume 25",
+      "authors": [
+        "Masashi Kishimoto"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781421518619",
+      "coverId": 1813471,
+      "coverUrl": "https://covers.openlibrary.org/b/id/1813471-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL9474943M",
+      "series": "Naruto",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "adventure",
+          "fantasy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL27945907M",
+      "title": "Classroom of the Elite, Novel 4",
+      "authors": [
+        "衣笠彰梧",
+        "トモセシュンサク"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9781645051978",
+      "coverId": 15138819,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15138819-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL27945907M",
+      "series": "Classroom of the Elite",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "drama",
+          "mystery"
+        ],
+        "setting": [
+          "school"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL7288233M",
+      "title": "The Alchemist",
+      "authors": [
+        "Paulo Coelho"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780061122415",
+      "coverId": 15121528,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15121528-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL7288233M",
+      "series": "The Alchemist",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL16184549M",
+      "title": "The Gruffalo",
+      "authors": [
+        "Julia Donaldson"
+      ],
+      "category": "Thiếu nhi",
+      "language": "eng",
+      "isbn": "9780333710937",
+      "coverId": 10549185,
+      "coverUrl": "https://covers.openlibrary.org/b/id/10549185-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL16184549M",
+      "series": "The Gruffalo",
+      "categoryId": "children",
+      "attributes": {
+        "form": [
+          "picture"
+        ],
+        "age": [
+          "4-6"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL29872725M",
+      "title": "Chainsaw Man, Vol. 2",
+      "authors": [
+        "Tatsuki Fujimoto"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974709946",
+      "coverId": 12794652,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12794652-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29872725M",
+      "series": "Chainsaw Man",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "horror"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL26961594M",
+      "title": "Re:Zero ‐Starting Life in Another World‐, Volume 3",
+      "authors": [
+        "長月達平"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9780316398404",
+      "coverId": 15150650,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15150650-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL26961594M",
+      "series": "Re:ZERO",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "fantasy",
+          "adventure"
+        ],
+        "setting": [
+          "isekai"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL57895812M",
+      "title": "The Kite Runner",
+      "authors": [
+        "Khaled Hosseini"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9781408806159",
+      "coverId": 15162763,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15162763-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL57895812M",
+      "series": "The Kite Runner",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL29495063M",
+      "title": "Spy x Family, Vol. 2",
+      "authors": [
+        "Tatsuya Endo"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974717248",
+      "coverId": 14582939,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14582939-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29495063M",
+      "series": "Spy x Family",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "comedy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL60565013M",
+      "title": "Overlord 11",
+      "authors": [
+        "丸山くがね",
+        "so-bin"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9781975370190",
+      "coverId": 15137770,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15137770-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL60565013M",
+      "series": "Overlord",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "fantasy",
+          "action"
+        ],
+        "setting": [
+          "isekai"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL32840838M",
+      "title": "The Book Thief",
+      "authors": [
+        "Markus Zusak"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780385754729",
+      "coverId": 11473474,
+      "coverUrl": "https://covers.openlibrary.org/b/id/11473474-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL32840838M",
+      "series": "The Book Thief",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ],
+        "genre": [
+          "historical"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL60674374M",
+      "title": "Frieren: Beyond Journey’s End 1",
+      "authors": [
+        "山田鐘人",
+        "アベツカサ"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974729548",
+      "coverId": 15144829,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15144829-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL60674374M",
+      "series": "Frieren",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "fantasy",
+          "adventure"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL34320752M",
+      "title": "86—EIGHTY-SIX, Vol. 9",
+      "authors": [
+        "安里アサト",
+        "しらび"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9781975340001",
+      "coverId": 15136474,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15136474-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL34320752M",
+      "series": "86",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "scifi",
+          "drama"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL17468403M",
+      "title": "Castle in the air",
+      "authors": [
+        "Diana Wynne Jones"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780416157826",
+      "coverId": 13482682,
+      "coverUrl": "https://covers.openlibrary.org/b/id/13482682-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL17468403M",
+      "series": "Howl's Moving Castle",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ],
+        "genre": [
+          "fantasy"
+        ],
+        "workOrigin": [
+          "foreign"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL31861453M",
+      "title": "Jujutsu Kaisen 0",
+      "authors": [
+        "Gege Akutami"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974720149",
+      "coverId": 10546557,
+      "coverUrl": "https://covers.openlibrary.org/b/id/10546557-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL31861453M",
+      "series": "Jujutsu Kaisen",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "fantasy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL35628700M",
+      "title": "Classroom of the Elite: Year 2, Novel 1",
+      "authors": [
+        "衣笠彰梧",
+        "トモセシュンサク"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9781685794477",
+      "coverId": 15138907,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15138907-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL35628700M",
+      "series": "Classroom of the Elite",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "drama",
+          "mystery"
+        ],
+        "setting": [
+          "school"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL32091859M",
+      "title": "A day with the little prince",
+      "authors": [
+        "Antoine de Saint-Exupéry"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780152047276",
+      "coverId": 10746692,
+      "coverUrl": "https://covers.openlibrary.org/b/id/10746692-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL32091859M",
+      "series": "The Little Prince",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ],
+        "genre": [
+          "fantasy"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL18587193M",
+      "title": "Fullmetal Alchemist 2",
+      "authors": [
+        "荒川弘"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781421539621",
+      "coverId": 15215653,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15215653-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL18587193M",
+      "series": "Fullmetal Alchemist",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "adventure",
+          "fantasy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL29948496M",
+      "title": "Re:Zero ‐Starting Life in Another World‐, Volume 15",
+      "authors": [
+        "長月達平"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9781975383275",
+      "coverId": 15152665,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15152665-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29948496M",
+      "series": "Re:ZERO",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "fantasy",
+          "adventure"
+        ],
+        "setting": [
+          "isekai"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL7915979M",
+      "title": "Wizard's Castle (Howl's Moving Castle #1-2)",
+      "authors": [
+        "Diana Wynne Jones"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780739423851",
+      "coverId": 8051799,
+      "coverUrl": "https://covers.openlibrary.org/b/id/8051799-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL7915979M",
+      "series": "Howl's Moving Castle",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ],
+        "genre": [
+          "fantasy"
+        ],
+        "workOrigin": [
+          "foreign"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL51800976M",
+      "title": "Boruto",
+      "authors": [
+        "Masashi Kishimoto"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974745548",
+      "coverId": 14652178,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14652178-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL51800976M",
+      "series": "Naruto",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "adventure",
+          "fantasy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL60565078M",
+      "title": "Overlord 13",
+      "authors": [
+        "丸山くがね",
+        "so-bin"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9781975397999",
+      "coverId": 15137790,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15137790-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL60565078M",
+      "series": "Overlord",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "fantasy",
+          "action"
+        ],
+        "setting": [
+          "isekai"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL7363250M",
+      "title": "Introducing the Little Prince",
+      "authors": [
+        "Antoine de Saint-Exupéry"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780152047269",
+      "coverId": 113601,
+      "coverUrl": "https://covers.openlibrary.org/b/id/113601-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL7363250M",
+      "series": "The Little Prince",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ],
+        "genre": [
+          "fantasy"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL36102109M",
+      "title": "Chainsaw Man, Vol. 11",
+      "authors": [
+        "Tatsuki Fujimoto"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974727117",
+      "coverId": 12794662,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12794662-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL36102109M",
+      "series": "Chainsaw Man",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "horror"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL60552711M",
+      "title": "86—EIGHTY‐SIX, Vol. 11",
+      "authors": [
+        "安里アサト",
+        "しらび"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9781975349974",
+      "coverId": 15136791,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15136791-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL60552711M",
+      "series": "86",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "scifi",
+          "drama"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL7363251M",
+      "title": "I Am the Little Prince / Je Suis Le Petit Prince",
+      "authors": [
+        "Antoine de Saint-Exupéry"
+      ],
+      "category": "Văn học",
+      "language": "eng",
+      "isbn": "9780152047306",
+      "coverId": 1120322,
+      "coverUrl": "https://covers.openlibrary.org/b/id/1120322-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL7363251M",
+      "series": "The Little Prince",
+      "categoryId": "literature",
+      "attributes": {
+        "form": [
+          "novel"
+        ],
+        "genre": [
+          "fantasy"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL29937765M",
+      "title": "Spy x Family, Vol. 4",
+      "authors": [
+        "Tatsuya Endo"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974721030",
+      "coverId": 14586178,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14586178-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29937765M",
+      "series": "Spy x Family",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "comedy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL61019074M",
+      "title": "Classroom of the Elite, Novel 2",
+      "authors": [
+        "衣笠彰梧",
+        "トモセシュンサク"
+      ],
+      "category": "Light Novel",
+      "language": "eng",
+      "isbn": "9798888438206",
+      "coverId": 15155335,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15155335-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL61019074M",
+      "series": "Classroom of the Elite",
+      "categoryId": "light-novel",
+      "attributes": {
+        "genre": [
+          "drama",
+          "mystery"
+        ],
+        "setting": [
+          "school"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL60676364M",
+      "title": "Frieren: Beyond Journey’s End 4",
+      "authors": [
+        "山田鐘人",
+        "アベツカサ"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974732883",
+      "coverId": 15144937,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15144937-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL60676364M",
+      "series": "Frieren",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "fantasy",
+          "adventure"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL29495070M",
+      "title": "Jujutsu Kaisen, Vol. 7",
+      "authors": [
+        "Gege Akutami"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974717118",
+      "coverId": 12708006,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12708006-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29495070M",
+      "series": "Jujutsu Kaisen",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "fantasy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL51070797M",
+      "title": "Fullmetal Alchemist 4",
+      "authors": [
+        "荒川弘"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9780316285605",
+      "coverId": 15234088,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15234088-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL51070797M",
+      "series": "Fullmetal Alchemist",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "adventure",
+          "fantasy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL8490553M",
+      "title": "Naruto, Vol. 9",
+      "authors": [
+        "Masashi Kishimoto"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781421502397",
+      "coverId": 764948,
+      "coverUrl": "https://covers.openlibrary.org/b/id/764948-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL8490553M",
+      "series": "Naruto",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "adventure",
+          "fantasy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL34786159M",
+      "title": "Chainsaw Man, Vol. 10",
+      "authors": [
+        "Tatsuki Fujimoto"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974725359",
+      "coverId": 12794661,
+      "coverUrl": "https://covers.openlibrary.org/b/id/12794661-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL34786159M",
+      "series": "Chainsaw Man",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "horror"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL29862270M",
+      "title": "Spy x Family, Vol. 3",
+      "authors": [
+        "Tatsuya Endo"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974718160",
+      "coverId": 14583002,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14583002-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29862270M",
+      "series": "Spy x Family",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "comedy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL60671902M",
+      "title": "Frieren: Beyond Journey’s End —Prelude— 1",
+      "authors": [
+        "八目迷",
+        "山田鐘人"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9798855430493",
+      "coverId": 15202646,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15202646-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL60671902M",
+      "series": "Frieren",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "fantasy",
+          "adventure"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL29961352M",
+      "title": "Jujutsu Kaisen, Vol. 8",
+      "authors": [
+        "Gege Akutami"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9781974718719",
+      "coverId": 14650986,
+      "coverUrl": "https://covers.openlibrary.org/b/id/14650986-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL29961352M",
+      "series": "Jujutsu Kaisen",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "fantasy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
+    },
+    {
+      "id": "/books/OL51068278M",
+      "title": "Fullmetal Alchemist 3",
+      "authors": [
+        "荒川弘"
+      ],
+      "category": "Manga / Comic",
+      "language": "eng",
+      "isbn": "9780316285582",
+      "coverId": 15234085,
+      "coverUrl": "https://covers.openlibrary.org/b/id/15234085-L.jpg?default=false",
+      "sourceUrl": "https://openlibrary.org/books/OL51068278M",
+      "series": "Fullmetal Alchemist",
+      "categoryId": "manga",
+      "attributes": {
+        "genre": [
+          "action",
+          "adventure",
+          "fantasy"
+        ],
+        "audience": [
+          "shounen"
+        ]
+      },
+      "classificationSeed": "Curated UI sample; not verified inventory metadata"
     }
   ],
   "previousSnapshotFetchedAt": "2026-10-10T11:05:55.053Z",
-  "classificationNote": "Contextual attributes are manually curated educational UI examples, not reviewed catalog metadata. No listings or inventory created."
+  "classificationNote": "Curated catalog-v2 UI examples. Classification, prices and condition are illustrative, not verified inventory; missing attributes stay unknown.",
+  "expandedAt": "2026-10-12T12:21:06.046Z"
 }

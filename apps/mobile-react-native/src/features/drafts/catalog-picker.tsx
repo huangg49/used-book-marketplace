@@ -22,6 +22,10 @@ import {
   presentError,
 } from "../../core/ui";
 import { receipt } from "./contracts";
+import {
+  catalogClassificationFields,
+  classificationForResubmit,
+} from "./catalog-classification";
 
 const metadata = z.object({
   title: z.string(),
@@ -31,6 +35,7 @@ const metadata = z.object({
   language: z.string(),
   edition: z.string().nullable(),
   category: z.string(),
+  ...catalogClassificationFields,
   isbn: z.string().nullable(),
 });
 const book = metadata.extend({ id: z.string().uuid() });
@@ -193,6 +198,7 @@ export function CatalogPicker({
         language: form.language.trim(),
         edition: form.edition.trim() || null,
         category: form.category.trim(),
+        ...classificationForResubmit(edit?.currentRevision.metadata),
         isbn: form.isbn.trim() || null,
       };
       if (
@@ -437,7 +443,11 @@ export function CatalogPicker({
               key={k}
               label={label}
               value={form[k as keyof typeof blank]}
-              editable={!busy && !retryPending}
+              editable={
+                !busy &&
+                !retryPending &&
+                !(k === "category" && edit?.currentRevision.metadata.categoryId)
+              }
               maxLength={
                 k === "title"
                   ? 300

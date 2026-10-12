@@ -1,0 +1,57 @@
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  color: var(--shop-ink);
+  font-size: 0.875rem;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition:
+    background-color 150ms,
+    border-color 150ms !important;
+}
+.links a:hover {
+  background: var(--shop-shelf);
+  border-color: var(--shop-wine);
+}
+.links a svg {
+  flex-shrink: 0;
+  color: var(--shop-wine);
+}
+.more {
+  margin-top: 10px;
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--shop-wine);
+  font: 600 0.8125rem/1.5 var(--shop-body);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.links a:focus-visible,
+.more:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .links {
+    gap: 8px;
+  }
+  .links a {
+    font-size: 0.8125rem;
+    padding: 8px 12px;
+  }
+}

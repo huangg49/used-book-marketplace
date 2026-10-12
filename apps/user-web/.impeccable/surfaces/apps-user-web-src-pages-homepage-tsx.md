@@ -2,7 +2,7 @@
 version: 1
 slug: "apps-user-web-src-pages-homepage-tsx"
 primary_target: "apps/user-web/src/pages/HomePage.tsx"
-related_targets: ["apps/user-web/src/pages/home-motion.ts", "apps/user-web/src/pages/HomePage.module.css", "apps/user-web/src/components/BookCard.tsx", "apps/user-web/src/components/BookCard.module.css", "apps/user-web/src/components/HomeBookCard.tsx", "apps/user-web/src/services/home-shelves.ts"]
+related_targets: ["apps/user-web/src/pages/home-motion.ts", "apps/user-web/src/pages/HomePage.module.css", "apps/user-web/src/components/BookCard.tsx", "apps/user-web/src/components/BookCard.module.css", "apps/user-web/src/components/HomeBookCard.tsx", "apps/user-web/src/services/home-shelves.ts", "apps/user-web/src/components/CategoryDiscovery.tsx", "apps/user-web/src/components/CategoryDiscovery.module.css"]
 ---
 
 # Home — discovery below the approved hero
@@ -26,7 +26,7 @@ heads and task text, Anton only for the budget/exchange display moments.
 Complete actual listing photographs and unboxed metadata stay authoritative.
 
 STORY: Four paper bookmark shortcuts for buying, exchange, auction and posting. Explore actual
-categories in the currently loaded shelf; switch server-backed buy/exchange/price
+categories in the shared vocabulary; switch server-backed buy/exchange/price
 groups; show more locally loaded copies; open the full catalog with supported
 filters. Two budget banners lead to Sale max50000/100000. A separate exchange
 shelf and a layered autumn scene containing the posting CTA close the journey. No new API/session/backend behavior.
@@ -43,10 +43,11 @@ and the document grows naturally. Shared Search/Detail cards retain default size
 
 FORM: Owner-pinned extension to the existing surface, no seed required. Main
 shelf requests latest24 with server mode/maxSalePrice filters; shows10 then adds10
-per click. Categories derive verbatim from that response; no category endpoint
-exists. Category filtering is local to those24 and is explicitly labeled; the
-full-catalog link omits category and says it searches all books. Group changes
-clear category/reset visible10. Loading/empty/error/retry and pending flags remain
+per click. CategoryDiscovery uses the shared static registry independently of
+those24 listings: eight roots initially, all17 on Tất cả danh mục. Each link
+opens Search with categoryId and explicit data=live or data=preview. The
+full-catalog link carries the active shelf criteria. Group changes reset
+visible10. Loading/empty/error/retry and pending flags remain
 truthful; request failures hide stale cards. Listing cards never use decorative
 covers as fallback. Banner covers are reused owner-supplied illustrations with
 a visible illustration/price disclaimer. All buttons/links keyboard-operable;
@@ -63,7 +64,7 @@ novel, with a real demo DB prepared later. Do not reuse hero books below it.
 This is a data-source extension preserving the approved layout and identity.
 
 Explicit dev-only mode: env VITE_CATALOG_PREVIEW=true or data=preview; data=live
-overrides env, production always disables preview. Home alone uses91 cached
+overrides env, production always disables preview. The initial Home preview used91 cached
 Open Library editions across eight categories, English metadata
 and complete remote covers tied to edition IDs. API snapshot includes source,
 query and date; no DB writes. Budget artwork now uses four separate catalog
@@ -78,7 +79,8 @@ label illustrative price/condition/mode; data=live remains available. No fake
 seller, media, version or transaction state. Preview cards open Open Library
 source tabs, never listing detail or purchase. Cover errors have retry and never
 substitute hero art. Real mode keeps listings/media/session/error behavior and
-never falls back to preview. Header/Search/Detail remain real API surfaces.
+never falls back to preview. Search subsequently gained an explicit preview
+branch; current v2 discovery and source boundaries are recorded below.
 
 Finish includes preview category/search/price/expansion/empty/remote-image-error,
 live-error isolation, desktop/mobile/large-text evidence and build/unit/lint;
@@ -118,3 +120,36 @@ checks; generated image provenance/alpha, build/lint, independent review.
 ## Approved Home animation extension —10/10/2026
 
 Home motion approved10/10: eight covers gather from their own flank over600ms with0/60/180/100ms delays, Alice/Dược sư last; independent sway and hover remain. Home-only card hover/focus lifts5px/scales1.025 over240ms, metadata stays still. Controls use150ms color/120ms press; budget covers fan over320ms. Committed filter results fade.72→1 over180ms (also under OS reduction), interrupted animations cancel. Added visible books beyond page10 enter over220ms with at most144ms stagger; existing keyed cards remain still, offscreen additions do not replay on scroll. Two canopies sway12s/±.45deg; six of24 margin motifs drift40px over16/19s with a resting interval. Each region pauses outside viewport/document hidden. Owner now explicitly requests all Home motion under OS reduction too; Home-only duration overrides retain the same motion while all viewport/visibility guards remain. Global preferences elsewhere are unchanged. Fox settles12px/−2deg once over650ms on first visible entry, also under reduced motion by owner request. Layout/assets/routes/data unchanged; no motion dependency added. Static canonical sample records CSS/recipe; observers and WAAPI live in HomePage.tsx/home-motion.ts.
+
+## Catalog v2 discovery —12/10/2026
+
+Operate; ordinary extension on `codex/catalog-expansion`, preserving the approved
+world, hero, shelves and motion. No new comp, identity or shipping raster.
+This section supersedes loaded-shelf category discovery and the initial91-book
+preview recipe above. CategoryDiscovery reads the release-controlled shared
+`catalog-v2` registry:17 roots,55 children/72 nodes and25 facets. It shows the
+first eight roots, then all17 with a named44px Tất cả danh mục/Thu gọn button
+and aria-expanded/controls. Links have44px minimum height,8px corners,quiet
+shop-line edges,14px task text and a15px wine arrow. They wrap with12px gaps,
+8px gaps/13px text below600px; focus is2px wine at3px offset. Hover uses the
+existing shelf ground/wine edge over150ms, retained under owner motion policy.
+
+Every root opens `/books` with categoryId and explicit data=preview or data=live,
+including roots without stock. No result count or availability is inferred from
+the24 live listings or the currently visible ten. The latest shelf still shows
+ten/adds ten, and preview topics preserve their separate Home browsing behavior.
+The cached preview now has118 sourced Open Library editions across16 substantive
+roots; Other intentionally has none, and coverage does not prove stock at every
+node. Classification, condition, prices and mode are illustrative. Existing
+remote cover URLs/source links remain tied to editions; no preview edition
+becomes a listing or transaction and live errors never fall back to it.
+
+Source comparison: HomePage/CategoryDiscovery, their scoped styles, home-shelves,
+preview-classification and the shared vocabulary. The fresh finish reviewer
+inspected all14 final JPEGs in `.impeccable/review/catalog-v2/` and returned ship;
+the Home capture shows expanded system discovery. One detector result is `[]`.
+Evidence/provenance and remaining gates are in
+[catalog-v2 README](../../../../.impeccable/review/catalog-v2/README.md).
+This documenter ran no browser/test/detector pass; AI review does not close
+human, native or READINESS gates. Root DESIGN.md/sidecar retain older preview
+and motion prose as inherited drift; this extension does not rewrite them.

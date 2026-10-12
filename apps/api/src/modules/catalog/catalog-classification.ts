@@ -3,7 +3,11 @@ import {
   allCategories,
   categoryFor,
   classificationErrors,
-  descendantIds,
+  searchClassificationErrors,
+  searchBranches,
+  categoryAliases,
+  supportsSeries,
+  taxonomyVersion,
   type Attributes,
 } from '@used-books/api-contract/catalog-taxonomy';
 import { invalidField } from '../commands/domain-error.js';
@@ -36,10 +40,7 @@ export function validateClassification(metadata: {
       '/metadata/attributes',
       'Thuộc tính không phù hợp danh mục, ngôn ngữ học hoặc cấp học đã chọn.',
     );
-  if (
-    metadata.series &&
-    !['manga', 'light-novel'].includes(metadata.categoryId)
-  )
+  if (metadata.series && !supportsSeries(metadata.categoryId))
     invalidField(
       '/metadata/series',
       'Bộ truyện chỉ áp dụng cho Manga và Light Novel.',
@@ -67,7 +68,7 @@ export function catalogFilters(query: Record<string, string | number>) {
     invalidField('/categoryId', 'Chọn danh mục để lọc thuộc tính riêng.');
   if (
     (categoryId && !categoryFor(categoryId)) ||
-    (categoryId && classificationErrors(categoryId, attributes).length)
+    (categoryId && searchClassificationErrors(categoryId, attributes).length)
   )
     invalidField(
       '/facets',
@@ -76,12 +77,13 @@ export function catalogFilters(query: Record<string, string | number>) {
   const series = String(query.series ?? '')
     .normalize('NFC')
     .toLowerCase();
-  if (series && !['manga', 'light-novel'].includes(categoryId))
+  if (series && !supportsSeries(categoryId))
     invalidField(
       '/series',
       'Chọn Manga hoặc Light Novel trước khi tìm bộ truyện.',
     );
   return {
+    taxonomyVersion,
     categoryId,
     language: String(query.language ?? '').toLowerCase(),
     series,
@@ -106,21 +108,25 @@ export function catalogFilterStages(
     return [];
   const match: Document = {};
   if (filters.categoryId) {
-    const ids = descendantIds(filters.categoryId);
-    const labels = [
-      ...allCategories.map((c) => c.label),
-      'Manga',
-      'Light novel',
-      'Kỹ năng sống',
-      'Kinh doanh',
-      'Khoa học',
-      'Lịch sử',
-      'Khác',
-    ].filter((label) => ids.includes(categoryFor(label)?.id ?? ''));
-    match.$or = [
-      { 'cm.categoryId': { $in: ids } },
-      { $and: [{ 'cm.categoryId': null }, { 'cm.category': { $in: labels } }] },
-    ];
+    const branches = searchBranches(filters.categoryId, filters.attributes);
+    match.$or = branches.map((branch) => {
+      const labels = [
+        ...allCategories.map((c) => c.label),
+        ...Object.keys(categoryAliases),
+      ].filter((label) => categoryFor(label)?.id === branch.categoryId);
+      return {
+        $or: [
+          { 'cm.categoryId': branch.categoryId },
+          { 'cm.categoryId': null, 'cm.category': { $in: labels } },
+        ],
+        ...Object.fromEntries(
+          Object.entries(branch.attributes).map(([key, values]) => [
+            `cm.attributes.${key}`,
+            { $in: values },
+          ]),
+        ),
+      };
+    });
   }
   if (filters.language)
     match['cm.language'] = {
@@ -132,8 +138,6 @@ export function catalogFilterStages(
       $regex: `^${regexLiteral(filters.series)}$`,
       $options: 'i',
     };
-  for (const [key, values] of Object.entries(filters.attributes))
-    match[`cm.attributes.${key}`] = { $in: values };
   return [
     {
       $lookup: {

@@ -3,6 +3,9 @@
   min-width: 0;
   width: 100%;
 }
+.root .native {
+  appearance: none !important;
+}
 .root :is(.control, .native) {
   width: 100%;
   min-height: 44px;

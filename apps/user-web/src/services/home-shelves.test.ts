@@ -69,14 +69,18 @@ describe("explicit Home catalog preview boundary", () => {
     for (const topic of previewTopics) {
       const books = previewTopicBooks(topic.id);
       expect(books).toHaveLength(10);
-      expect(new Set(books.map((book) => book.book.category)).size).toBe(2);
+      expect(
+        new Set(books.map((book) => book.book.categoryId?.split(".")[0])).size,
+      ).toBeGreaterThanOrEqual(2);
       expect(books.every((book) => !openingIds.has(book.id))).toBe(true);
       const filtered = previewShelf(
         new URLSearchParams({ topic: topic.id }),
       ).items;
       expect(filtered.length).toBeGreaterThanOrEqual(12);
       expect(
-        filtered.every((book) => topic.categories.includes(book.book.category)),
+        filtered.every((book) =>
+          topic.categories.includes(book.book.categoryId?.split(".")[0] || ""),
+        ),
       ).toBe(true);
     }
   });
@@ -114,6 +118,8 @@ describe("explicit Home catalog preview boundary", () => {
     expect(homeShelfUrl({ mode: "Sale" }, true)).toBe(
       "/?data=preview&mode=Sale#latest-title",
     );
-    expect(homeShelfUrl({ mode: "Sale" }, false)).toBe("/books?mode=Sale");
+    expect(homeShelfUrl({ mode: "Sale" }, false)).toBe(
+      "/books?data=live&mode=Sale",
+    );
   });
 });

@@ -19,6 +19,10 @@ import { checkListing } from '../src/modules/listings/listing-projection.js';
 import { validates } from './helpers/contract.js';
 import { Gate } from './helpers/mongo-gate.js';
 import { MongoFixtures } from './helpers/mongo-fixtures.js';
+import {
+  categories,
+  facetsFor,
+} from '@used-books/api-contract/catalog-taxonomy';
 
 // Storage signing is deliberately faked. HTTP, authorization and MongoDB are real.
 const storage = {
@@ -231,11 +235,12 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
 
   it('exposes versioned taxonomy and rejects incompatible classification before a write', async () => {
     const taxonomy = await get('/catalog/taxonomy').expect(200);
-    expect(taxonomy.body.version).toBe('catalog-v1');
+    expect(taxonomy.body.version).toBe('catalog-v2');
     expect(
       taxonomy.body.categories.filter((c: any) => !c.parentId),
-    ).toHaveLength(11);
-    expect(taxonomy.body.facets).toHaveLength(16);
+    ).toHaveLength(17);
+    expect(taxonomy.body.categories).toHaveLength(72);
+    expect(taxonomy.body.facets).toHaveLength(25);
     const before = await db.c.catalog_books.countDocuments({
       requesterId: m1.id,
     });
@@ -275,6 +280,55 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
       .query({ categoryId: 'manga', facets: 'null' })
       .expect(422);
   });
+  it('publishes every v2 root and filters the complete reviewed shelf before pagination', async () => {
+    const prefix = `Taxonomy V2 ${randomUUID()}`,
+      ids = new Set<string>();
+    for (const root of categories) {
+      for (let index = 0; index < 2; index++) {
+        const category =
+          root.children[index === 0 ? 0 : root.children.length - 1] ?? root;
+        const attributes = Object.fromEntries(
+          facetsFor(category.id)
+            .filter((f) => f.options.length)
+            .map((f) => [f.id, [f.options[0]!.id]]),
+        );
+        const meta = {
+          ...metadata(`${prefix} ${root.id} ${index}`),
+          category: category.label,
+          categoryId: category.id as NonNullable<
+            ReturnType<typeof metadata>['categoryId']
+          >,
+          attributes,
+        };
+        const l = await complete(m1, true, 'Ready', meta);
+        const submitted = await submit(l).expect(200);
+        await decide(submitted.body).expect(200);
+        ids.add(l.entityId);
+        const detail = await get(`/listings/${l.entityId}`).expect(200);
+        expect(detail.body.book).toMatchObject({
+          categoryId: category.id,
+          attributes,
+        });
+      }
+      const parent = await get('/listings')
+        .query({ q: prefix, categoryId: root.id, limit: 50 })
+        .expect(200);
+      expect(parent.body.items).toHaveLength(2);
+    }
+    const seen = new Set<string>();
+    let cursor: string | undefined;
+    do {
+      const page = await get('/listings')
+        .query({ q: prefix, limit: 5, ...(cursor ? { cursor } : {}) })
+        .expect(200);
+      for (const row of page.body.items) {
+        expect(seen.has(row.id)).toBe(false);
+        seen.add(row.id);
+      }
+      cursor = page.body.nextCursor || undefined;
+    } while (cursor);
+    expect(seen).toEqual(ids);
+  }, 60000);
   it('persists reviewed classification, filters the full eligible shelf and binds cursors', async () => {
     const created: any[] = [];
     for (const [title, categoryId, category, attributes] of [
@@ -315,6 +369,7 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
       created.push(l);
     }
     const filters = {
+      q: 'Bộ lọc',
       categoryId: 'manga',
       facets: JSON.stringify({
         genre: ['action', 'comedy'],
@@ -346,13 +401,16 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
         facets: JSON.stringify({ genre: ['fantasy'] }),
       })
       .expect(400);
-    await get('/listings')
+    const japaneseParent = await get('/listings')
       .query({
         categoryId: 'languages',
         language: 'vi',
         facets: JSON.stringify({ purpose: ['exam'], level: ['n3'] }),
       })
-      .expect(422);
+      .expect(200);
+    expect(japaneseParent.body.items.map((l: any) => l.id)).toEqual([
+      created[3].entityId,
+    ]);
     const japanese = await get('/listings')
       .query({
         categoryId: 'languages.ja',

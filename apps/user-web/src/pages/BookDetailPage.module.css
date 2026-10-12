@@ -149,6 +149,15 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.details dd a {
+  color: var(--shop-wine);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+.details dd a:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+}
 .seller {
   margin-top: 28px;
   padding: 24px;
