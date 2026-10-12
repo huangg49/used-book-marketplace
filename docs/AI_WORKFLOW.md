@@ -15,8 +15,8 @@ quy tắc; test và review kiểm chứng kết quả, không bảo đảm tuy�
 
 | Công cụ | Cửa vào và cách kiểm tra |
 | --- | --- |
-| Codex | `AGENTS.md`; ba skill ở `.agents/skills/`. Dùng `$latlai-ui`, `$latlai-api-mongo` hoặc `$latlai-verify-handoff` khi cần gọi rõ tên. Kiểm tra danh sách skill của phiên; mở lại phiên nếu chưa nhận thay đổi. |
-| Claude Code | `CLAUDE.md` import `AGENTS.md`; `.claude/skills/` chứa ba adapter cùng tên. Kiểm tra `/context` và danh sách `/`; gọi `/latlai-ui` khi sửa UI. |
+| Codex | `AGENTS.md`; bốn skill ở `.agents/skills/`. Dùng `$latlai-ui`, `$latlai-api-mongo`, `$latlai-verify-handoff` hoặc `$impeccable` khi cần gọi rõ tên. Kiểm tra danh sách skill của phiên; mở lại phiên nếu chưa nhận thay đổi. |
+| Claude Code | `CLAUDE.md` import `AGENTS.md`; `.claude/skills/` chứa bốn adapter cùng tên. Kiểm tra `/context` và danh sách `/`; gọi `/latlai-ui` khi sửa UI, `/impeccable` khi critique/polish trong phạm vi đã giao. |
 | Công cụ khác | Yêu cầu đọc `AGENTS.md`, rồi mở trực tiếp `SKILL.md` liên quan. Không mặc định nó tự nhận tên file hoặc cú pháp của Codex/Claude. |
 
 Chỉ file được commit và có trên nhánh người nhận mới đi theo clone/pull. Skill cá
@@ -27,6 +27,11 @@ Không tự ghi đè cấu hình AI toàn máy hoặc cài plugin để nhận d
 Khi sửa skill, sửa nội dung ở `.agents/skills/<name>/SKILL.md`. Adapter Claude chỉ
 giữ name/description và link đến nguồn; đổi tên/mô tả thì cập nhật cả adapter, chạy
 `pnpm docs:check` để bắt lệch. Dùng file thường để clone trên Windows không cần symlink.
+
+Impeccable là vendor được khóa phiên bản: không sửa trực tiếp body upstream hoặc
+tự tải `latest`. Dùng [workflow](design/IMPECCABLE_WORKFLOW.md) và lệnh
+`pnpm ui:design`; [brief hiện hành](../DESIGN.md) và skill Lật lại ràng buộc mọi
+đề xuất thiết kế. Taste là tài liệu tham khảo, chưa cài vào dự án.
 
 Cơ chế nạp: [Codex AGENTS](https://learn.chatgpt.com/docs/agent-configuration/agents-md),
 [Codex skills](https://learn.chatgpt.com/docs/build-skills),
@@ -62,7 +67,7 @@ trên thành yêu cầu người dùng trả lời lại những điều đã r�
 | --- | --- |
 | API | [Code map](handoff/START_HERE.md#3-tìm-đúng-nơi-để-sửa), [quy tắc theo miền](architecture/DOMAIN_RULES.md), OpenAPI; dùng skill API/Mongo. |
 | React Native | `apps/mobile-react-native/src/features/`, `src/core/ui/`; UI rules/component/brand là nguồn chung. Dùng skill UI. |
-| Member web | Hiện là Expo web của app RN. Kiểm tra responsive và keyboard trong browser; không tự tạo app/framework mới để làm một màn hình. |
+| Member web | Expo web trong app RN và `apps/user-web` React/Vite đều đã có. Sửa app của nhiệm vụ; kiểm responsive/keyboard/session/API thật. Không tự tạo thêm app/framework. |
 | Admin/operations | [README của app](../apps/admin-web/README.md), feature review và core hiện có. Tái sử dụng component/CSS thực tế trong app; không import component RN vào DOM. |
 | Flutter | [README](../apps/mobile-flutter/README.md), [kiến trúc đề xuất](../apps/mobile-flutter/ARCHITECTURE.md). Hiện là scaffold, cần xây từng lát cắt API thật; dùng cùng contract/brand, không coi tài liệu kiến trúc là code đã có. |
 
@@ -88,6 +93,7 @@ dự án. Ghi runtime thực chạy nếu môi trường vẫn bị chặn.
 | API hoặc contract | `pnpm contract:check`, `pnpm contract:routes`; lint/typecheck/test/build của `@used-books/api`; E2E liên quan. Sửa quyền/session/transaction cần ca từ chối, replay và race phù hợp. |
 | Mongo validator/index/transaction | Kiểm tra API ở trên và `pnpm test:api:mongo`; migration mới và invariant liên quan. Test import/failover khi thay đổi chạm các cơ chế đó. |
 | RN hoặc Expo web | lint/typecheck/test của `@used-books/mobile-react-native`; export khi thay đổi ảnh hưởng bundling. Thao tác màn thật trên nền tảng bị ảnh hưởng. Đổi native dependency/config/resource cần native build. |
+| User web React/Vite | lint/typecheck/test/build của `@used-books/user-web`; browser integration khi đổi dữ liệu/session/command, theo QA prerequisite của harness. Admin/RN CI không chứng minh user-web đã được kiểm. |
 | Admin | lint/typecheck/test/build của `@used-books/admin-web`; browser suite khi thay đổi review/session/command và thao tác UI liên quan. |
 | Shared session | `pnpm --filter @used-books/session-client test` và kiểm tra consumer bị ảnh hưởng. |
 | Flutter | Trong `apps/mobile-flutter`: `dart format --output=none --set-exit-if-changed .`, `flutter analyze`, `flutter test`; chạy trên thiết bị/emulator phù hợp. |

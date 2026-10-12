@@ -17,6 +17,7 @@ import { UsersModule } from './modules/users/users.module.js';
 import { WishlistModule } from './modules/wishlist/wishlist.module.js';
 import { AuctionsModule } from './modules/auctions/auctions.module.js';
 import { PurchasesModule } from './modules/purchases/purchases.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { ExchangesModule } from './modules/exchanges/exchanges.module.js';
 
 @Module({
@@ -36,6 +37,7 @@ import { ExchangesModule } from './modules/exchanges/exchanges.module.js';
     WishlistModule,
     AuctionsModule,
     PurchasesModule,
+    NotificationsModule,
     ExchangesModule,
   ],
   controllers: [AppController],

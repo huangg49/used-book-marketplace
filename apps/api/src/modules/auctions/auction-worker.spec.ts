@@ -32,6 +32,8 @@ describe('AuctionWorker', () => {
       auction_intakes: collection([]),
       auctions: collection([]),
       point_orders: collection(settling),
+      // Hold sweep (FR-AU09): no open auction, so no party to check.
+      users: { find: () => ({ toArray: async () => [] }) },
     };
     const mongo = {
       c,

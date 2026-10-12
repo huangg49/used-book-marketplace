@@ -17,7 +17,7 @@ import {
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
 
-export function LoginScreen() {
+export function LoginScreen({ returnBook }: { returnBook?: string }) {
   const { client } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -60,22 +60,31 @@ export function LoginScreen() {
           gap: space.sm,
         }}
       >
-        <BackAction title="Về kệ sách" onPress={() => router.navigate("/")} />
+        <BackAction
+          title={returnBook ? "Quay lại sách" : "Về kệ sách"}
+          onPress={() => {
+            if (returnBook)
+              router.dismissTo({
+                pathname: "/book",
+                params: { id: returnBook },
+              });
+            else router.navigate("/");
+          }}
+        />
         <BrandLogo />
       </View>
       <View style={{ gap: space.sm, paddingVertical: space.md }}>
-        <AppText kind="label" color={colors.rustText}>
-          GÓC CỦA BẠN
-        </AppText>
         <AppText
           kind="heading"
           color={colors.forest}
           accessibilityRole="header"
         >
-          Chào bạn trở lại
+          {returnBook ? "Đăng nhập để lưu sách" : "Chào bạn trở lại"}
         </AppText>
         <AppText color={colors.muted}>
-          Giữ những bản nháp và chuẩn bị sách cho người đọc tiếp theo.
+          {returnBook
+            ? "Sau khi đăng nhập, bạn sẽ quay lại sách đang xem. Chọn lưu để tìm lại sau."
+            : "Giữ những bản nháp và chuẩn bị sách cho người đọc tiếp theo."}
         </AppText>
       </View>
       <TextField

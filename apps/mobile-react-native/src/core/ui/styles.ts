@@ -44,7 +44,7 @@ export const layout = StyleSheet.create({
     gap: 12,
     padding: 12,
   },
-  notice: { padding: 14, borderLeftWidth: 3 },
+  notice: { padding: 14 },
   scrim: {
     flex: 1,
     backgroundColor: colorRoles.scrim,

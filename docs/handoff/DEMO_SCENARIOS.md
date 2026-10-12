@@ -43,7 +43,9 @@ Fixture dùng file local và Sharp thật, được ghi **FAKE** trong output/ma
 Kết quả này không đóng gate Supabase. Không đổi chế độ storage của run cũ; tạo
 run có tên mới. Tool không chạy cleanup DB/object; dữ liệu demo nhỏ được giữ để xem.
 
-Member web vẫn là Expo web. Đặt API base cho terminal client trước khi build/chạy,
+Ví dụ harness bên dưới dùng Expo web của RN. React/Vite user-web riêng đã có nhưng
+CORS fixture hiện không mặc định cho origin5174; kiểm harness/config trước dùng.
+Đặt API base cho terminal client trước khi build/chạy,
 không sửa file cấu hình dùng cho dữ liệu chính:
 
 ```powershell

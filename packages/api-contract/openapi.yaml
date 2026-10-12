@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.29.0
+  version: 0.30.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -963,6 +963,73 @@ paths:
               schema: { type: array, items: { $ref: "#/components/schemas/PurchaseConversation" } }
         "401": { $ref: "#/components/responses/ListingError" }
         "403": { $ref: "#/components/responses/ListingError" }
+  /me/notifications:
+    get:
+      operationId: listMyNotifications
+      tags: [Notifications]
+      x-locked-access: existing-obligations
+      description: The caller's durable inbox (FR-N03/N04), newest first. Rows are written in the
+        same transaction as the event they report; realtime pages only refresh this list. Text
+        carries public prices, states and deadlines only.
+      x-implementation-status: implemented
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: cursor
+          required: false
+          schema: { type: string, maxLength: 200 }
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 50 }
+      responses:
+        "200":
+          description: One page of the caller's notifications and the unread total.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MemberNotificationPage" }
+        "400": { $ref: "#/components/responses/ListingError" }
+        "401": { $ref: "#/components/responses/ListingError" }
+        "403": { $ref: "#/components/responses/ListingError" }
+        "422": { $ref: "#/components/responses/ListingError" }
+  /me/notifications/read:
+    post:
+      operationId: markMyNotificationsRead
+      tags: [Notifications]
+      x-locked-access: existing-obligations
+      description: Marks the caller's notifications read, either the listed ids or all of them. Ids
+        that are not the caller's are ignored. The operation is naturally idempotent (only unread
+        rows change), so a retry with the same key and body has the same effect; no receipt is
+        stored for it.
+      x-implementation-status: implemented
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+          description: One key per intent, like every mutation; repeating it is harmless.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MarkNotificationsRead" }
+      responses:
+        "200":
+          description: Remaining unread notifications.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationUnreadCount" }
+        "400": { $ref: "#/components/responses/ListingError" }
+        "401": { $ref: "#/components/responses/ListingError" }
+        "403": { $ref: "#/components/responses/ListingError" }
+        "422": { $ref: "#/components/responses/ListingError" }
   /me/purchase-conversations/{conversationId}/messages:
     get:
       operationId: listPurchaseMessages
@@ -7803,6 +7870,62 @@ components:
       properties:
         id: { type: string, format: uuid }
         displayName: { type: string, minLength: 2, maxLength: 80 }
+    MemberNotification:
+      type: object
+      additionalProperties: false
+      required: [id, kind, title, body, targetType, targetId, createdAt, readAt]
+      properties:
+        id: { type: string, format: uuid }
+        kind:
+          type: string
+          enum:
+            - AuctionOutbid
+            - AuctionWon
+            - AuctionSold
+            - AuctionBoughtNow
+            - AuctionUnsold
+            - AuctionCancelled
+            - AuctionOnHold
+            - AuctionPaymentExpired
+            - AuctionPaid
+        title: { type: string, maxLength: 120 }
+        body: { type: string, maxLength: 400 }
+        targetType: { type: string, enum: [Auction] }
+        targetId:
+          type: string
+          format: uuid
+          description: Opens with GET /auctions/{id}; the caller's own view comes from participation or point-order reads.
+        createdAt: { type: string, format: date-time }
+        readAt: { type: [string, "null"], format: date-time }
+    MemberNotificationPage:
+      type: object
+      additionalProperties: false
+      required: [items, unreadCount, nextCursor]
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/MemberNotification" }
+        unreadCount: { type: integer, minimum: 0 }
+        nextCursor: { type: [string, "null"], maxLength: 200 }
+    MarkNotificationsRead:
+      type: object
+      additionalProperties: false
+      description: Exactly one of ids or all.
+      properties:
+        ids:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items: { type: string, format: uuid }
+        all: { type: boolean, const: true }
+    NotificationUnreadCount:
+      type: object
+      additionalProperties: false
+      required: [unreadCount]
+      properties:
+        unreadCount: { type: integer, minimum: 0 }
     PurchaseConversation:
       type: object
       additionalProperties: false

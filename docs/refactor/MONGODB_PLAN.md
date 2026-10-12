@@ -9,7 +9,8 @@ MongoDB. Chủ dự án cho push/merge checkpoint Q01 rồi mở nhánh refactor
 Cập nhật30/09: đã merge main qua PR5/PR6, CI5 nhóm PASS; cutover local và restore
 backup đã kiểm theo [báo cáo](../handoff/LOCAL_MONGO_CUTOVER_2026_09_30.md).
 Các bước/mốc bên dưới ghi tiến trình29/09; tra gate còn mở ở
-[READINESS](../handoff/READINESS.md). Contract hiện0.21.0, nghiệp vụ giao dịch giữ F2h.
+[READINESS](../handoff/READINESS.md). Contract0.21.0/F2h là mốc30/09 của lane refactor, không là version hiện hành.
+Source/gói mới xem [SESSION_STATE](../handoff/SESSION_STATE.md).
 
 - Baseline PostgreSQL: `1e08969dfeb8c712a286cb2c365bdf7614906f3b` trên main,
   squash merge [PR #2](https://github.com/huangg49/used-book-marketplace/pull/2).

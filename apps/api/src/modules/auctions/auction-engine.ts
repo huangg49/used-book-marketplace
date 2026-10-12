@@ -60,6 +60,12 @@ export interface EngineResult {
 
 export const minimumBid = (a: EngineAuction) =>
   a.currentPrice === null ? a.startPrice : a.currentPrice + a.step;
+// What clients may bid next: null once the price sits within one step of the
+// 1,000,000 cap, because no amount on the grid can beat it any more.
+export const nextMinimumBid = (a: EngineAuction) => {
+  const min = minimumBid(a);
+  return min > AUCTION_MAX_PRICE ? null : min;
+};
 
 export const onGrid = (
   a: Pick<EngineAuction, 'startPrice' | 'step'>,
@@ -134,11 +140,14 @@ export function apply(
     // price by itself.
     if (action.kind === 'Manual')
       throw new EngineError('LeaderMustRaiseAuto', min);
+    // The leader keeps the sequence that won the lead. Every rival is at or
+    // below the old level, so the earlier sequence is the true "reached it
+    // first" order at every level; a new one would let a rival tied at the
+    // current price outrank the leader after a later disable (FR-AU05).
     const bidder: EngineBidder = {
       ...own!,
       mode: 'Auto',
       level: amount,
-      levelSequence: a.nextSequence,
     };
     return {
       currentPrice: a.currentPrice!,

@@ -1,5 +1,9 @@
 # Bộ hướng dẫn AI cho nhóm — 30/09/2026
 
+> Báo cáo checkpoint 30/09. Trạng thái chưa push/merge và branch bên dưới thuộc
+> mốc đó; bộ hướng dẫn đã có trên main. Quy trình hiện hành xem
+> [AI_WORKFLOW](../AI_WORKFLOW.md), công việc xem [SESSION_STATE](SESSION_STATE.md).
+
 Nhánh `codex/team-ai-handoff`, base `19ffb84` của gói docs-navigation-cleanup;
 main MongoDB là `1be5144`. Commit subject của gói này:
 `docs(ai): add shared team skills and verified onboarding workflow`.

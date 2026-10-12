@@ -1,10 +1,10 @@
-import { useState, type PropsWithChildren } from "react";
+import { useEffect, useState, type PropsWithChildren } from "react";
 import { useFonts, loadAsync } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { colors } from "./theme";
 
 const fonts = {
-  LoraSemi: require("../../../assets/fonts/Lora-SemiBold.ttf"),
   BeRegular: require("../../../../../packages/brand/fonts/BeVietnamPro-Regular.ttf"),
   BeBold: require("../../../../../packages/brand/fonts/BeVietnamPro-Bold.ttf"),
 };
@@ -12,6 +12,10 @@ export function BrandProvider({ children }: PropsWithChildren) {
   const [loaded, error] = useFonts(fonts);
   const [recovered, setRecovered] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  useEffect(() => {
+    // Reveal either the ready UI or its font-recovery controls after mounting.
+    if (loaded || error || recovered) SplashScreen.hide();
+  }, [loaded, error, recovered]);
   if (loaded || recovered) return children;
   return (
     <View

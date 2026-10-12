@@ -1,75 +1,65 @@
 # Architecture
 
-The platform is a modular monolith. This keeps deployment and transactions simple while enforcing module boundaries that can be split later if needed.
+Cập nhật09/10/2026 theo main `da59199`. Modular monolith NestJS dùng chung API
+cho RN/Expo web, React/Vite user-web và admin; Flutter hiện là scaffold.
+Yêu cầu mục tiêu: [SRS1.1](../SRS_V1_1.md) và [phụ lục TP.HCM](../features/LOCAL_HANDOVER_AUCTION.md).
+Code tồn tại không chứng minh mọi yêu cầu đã được nghiệm thu; gate ở [READINESS](../handoff/READINESS.md).
 
-## Boundaries
+## Persistence và ranh giới
 
-Business target: [SRS1.1](../SRS_V1_1.md) and [ADR0007](../adr/0007-hcm-handover-auction-scope.md).
-The [new logical model](../features/LOCAL_TRANSACTION_DESIGN.md) adds service areas,
-point assignment/capacity, custody/inspection and auctions. These are planned domains,
-not existing modules; real catalog/draft APIs remain described separately.
-The [exclusive commitment design](../features/COMMITMENT_DESIGN.md) and
-[ADR 0013](../adr/0013-exclusive-commitment-foundation.md) refine the shared
-reservation authority, snapshots, safe closure and worker/HTTP lock order.
-See the [implementation sequence](../features/TRANSACTION_FOUNDATION_PLAN.md)
-before adding checkout; these are design decisions, not deployed modules.
-F0 has implemented member addresses, demo service-area directory, revision-bound
-delivery origins and [DirectDelivery sale quotes](../features/DIRECT_SALE_QUOTE_REPORT.md).
-The quotes module uses the shared command executor; it writes no reservations,
-orders or ledger entries. Point/custody/auction workflows remain planned.
-F1 now has [unpaid direct Orders](../features/UNPAID_ORDER_REPORT.md), typed workflow
-contexts, exclusive commitments and an explicit expiry worker. OrdersService uses
-ReservationsService and ListingCommitmentPolicy inside the shared command transaction.
-Worker receipts have an allowlisted system principal; no synthetic Member account.
-F2a adds [simulated wallet/topups](../features/SIMULATED_WALLET_REPORT.md).
-WalletService orchestrates the existing command transaction; LedgerService posts
-typed journals in its caller Tx. Signed simulator events require an independent
-TEST_OPERATOR. Withdrawals and automated reconciliation remain planned.
-F2b adds [explicit LOCKED obligation access](../features/LOCKED_OBLIGATIONS_REPORT.md).
-Login identifies the account; handler allowlist and service checks grant only
-existing participant/owner actions. All other authenticated operations default-deny
-LOCKED, including accounts with operations roles. No new session/token store exists.
-F2c–g add wallet funding/refund before acceptance, Seller acceptance, private packaging
-evidence, label registration and [independent simulated pickup](../features/CARRIER_PICKUP_REPORT.md).
-ShipmentsService reuses fulfillment locks and asks OrdersService to change Order state.
-Global carrier event replay runs through the shared command executor; money stays held
-through InTransit and sticky carrier review. F2h adds
-[delivery-overdue review and Buyer reporting](../features/DELIVERY_OVERDUE_REPORT.md)
-inside OrdersService, sharing its command/lock protocol with the expiry worker.
-Delivered/inspection, dispute resolution and settlement remain planned.
+- MongoDB replica set là runtime; official driver theo [ADR0027](../adr/0027-mongodb-persistence-protocol.md).
+  PostgreSQL schema/migrations là lịch sử chỉ đọc cho import, không là runtime API.
+- Business code ở `apps/api/src/modules/<feature>`. Cross-module mutation qua explicit
+  service trong shared command transaction, auth hiện tại trước replay; giữ lock order,
+  decision clock, idempotency/receipt và commit-time checks theo [model map](../refactor/MIG02_MODEL_MAP.md).
+- Ledger immutable là nguồn tiền. Booking/commitment/slot phải có chủ workflow;
+  không suy custody hoặc cho restock/refund từ label, ảnh hoặc report.
+- Supabase private storage chứa ảnh; Mongo giữ metadata/quyền/budget/jobs.
+  Media worker riêng xử lý ảnh listing bằng Sharp; packaging pipeline có quy tắc riêng.
+- Order worker riêng chạy Order expiry, purchase conversation expiry và auction/
+  point-order sweep. API không tự thay worker; launcher `dev:api` quản lý cả hai.
+- Redis/BullMQ có dependency/hạ tầng, không là nguồn số dư hoặc engine hai worker hiện tại.
 
-- Mobile apps serve Member workflows.
-- The web console serves Staff, Admin, and authorized Test Operator workflows.
-- The API owns authorization, business state, transaction integrity, and audit records.
-- MongoDB is the source of truth ([ADR0027](../adr/0027-mongodb-persistence-protocol.md));
-  PostgreSQL is retained only as read-only import history/source.
-- Implemented media/Order queues and leases are in MongoDB. Redis/BullMQ remain
-  available dependencies, not the execution engine or source of balances.
-- Supabase Storage Free stores private images; MongoDB stores metadata and access rules.
-  Listing Sharp runs in a separate worker; Order packaging evidence is normalized
-  synchronously and retained separately. Claim evidence workflows remain planned. Read
-  [ADR 0008](../adr/0008-free-private-media-storage.md) and [setup](../features/SUPABASE_MEDIA_SETUP.md).
-- Payment and carrier simulators implement adapters behind the same boundaries expected for external providers.
+## Code map hiện hành
 
-## Backend modules
+| Miền | Source | Phạm vi |
+| --- | --- | --- |
+| Auth/users | `modules/auth`, `users`, `packages/session-client` | Session/guards/profile/user directory; chưa register/reset/lock-unlock đầy đủ |
+| Catalog/listing/media | `modules/catalog`, `listings`, `media` | Draft/revision/photos/submit/review/public reads/lifecycle |
+| Địa chỉ/quote | `modules/addresses`, `quotes` | Address revisions, demo geography, frozen estimate; quote không giữ sách |
+| Commitment/command | `modules/reservations`, `commands` | Shared transaction/locks/receipt/auth/invariant |
+| DirectDelivery | `modules/orders`, `shipments`, `wallet` | Funding/accept/packaging/label/pickup/InTransit/overdue review tới F2h |
+| Wishlist/price | `modules/wishlist`, `price-assist` | Wishlist thật; advisory price/lookup phía server dưới cờ, eval/provider còn gap |
+| Purchase chat | `modules/purchases` | Sale/Both giữ24h + participant messages/socket; không tạo Order hoặc hold |
+| Auction/point Order | `modules/auctions` | Intake/Staff/slot/proxy bid/close/pay/report/code/handover, claim/return/settlement source |
+| Inbox | `modules/notifications` | Durable auction events/read-unread; chưa email/wishlist matching |
 
-```text
-addresses auth catalog commands listings media orders quotes
-reservations shipments users wallet
-```
+Danh sách API/migrations/collections/test: [inventory source](../handoff/PROJECT_CONTEXT_INVENTORY.md).
+Không có backend Exchange/forum/full review/withdrawal workflow trong inventory hiện tại.
 
-These are the current directories under apps/api/src/modules. Exchanges, disputes,
-community, managed points, custody/inspection and auctions remain target domains.
-Modules use explicit services for cross-module mutations and MongoDB transactions
-with the shared locking/commit-check protocol; see ADR0027 and the model map.
+## Lane giao dịch và gate
 
-## Client architecture
+DirectDelivery vẫn dừng tại F2h: overdue/non-receipt tạo hồ sơ review và giữ hold/
+commitment, không phải kết luận tranh chấp hoặc quyết toán cho seller.
+ViaPoint auction có source inspection/claim/return và automatic settlement sau
+inspection window. READINESS vẫn chưa có evidence đóng gate cho lane này.
+Không mô tả nó là chưa code hoặc đã release; cần review độc lập và quyền gói
+khi thay đổi/mở rộng, không tự nới gate cho khớp implementation.
 
-Flutter currently has only a scaffold; its proposed architecture follows View,
-ViewModel, Repository, and Service separation. React Native groups routes in
-`src/app` and feature code outside the route directory, with shared session transport
-and TanStack Query for server state. Flutter has not implemented equivalent flows yet.
+## Realtime và client
 
-Operations review uses feature modules, TanStack Query and shared session transport
-with RN. See [ADR 0010](../adr/0010-operations-review-client.md); other operations
-workflows listed above remain target scope.
+[ADR0031](../adr/0031-live-auction-updates.md): `/auctions` public read-only Socket.IO;
+REST command giữ quyền/bid/Auto/payment. Nudge sau commit + watcher version poll
+bắt thay đổi từ worker. [ADR0032](../adr/0032-member-notification-inbox.md) bổ sung
+inbox ghi cùng transaction. `/purchase-chat` là gateway authenticated riêng.
+Không áp HTTP guards thay cho gateway/service authorization.
+
+RN: route `src/app` compose `src/features`; `src/core` giữ transport/session/UI.
+TanStack Query quản lý server state. Expo web chia sẻ RN features; `apps/user-web`
+React/Vite riêng đã có trên main và có feature/mock khác RN. Admin có review/user
+directory thật, dashboard mẫu. Flutter chỉ có `lib/main.dart` scaffold.
+SessionClient dùng chung RN/user-web/admin: browser memory-only, native chỉ lưu
+refresh token ở SecureStore. Không tạo token store/API riêng cho một client.
+
+Setup tại [DEVELOPMENT](../DEVELOPMENT.md), chi tiết invariant tại
+[DOMAIN_RULES](DOMAIN_RULES.md); chọn task và source thực tế trước sửa.

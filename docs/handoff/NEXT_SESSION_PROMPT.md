@@ -1,28 +1,65 @@
-# Prompt tiếp tục dự án
+# Prompt tiếp nhận Lật lại cho AI/chat mới
 
-Gửi link repository/nhánh và đoạn sau; không cần chép toàn bộ lịch sử chat.
+Cập nhật 09/10/2026, source khảo sát main `da59199`. Dùng cùng
+[context đầy đủ](PROJECT_CONTEXT.md) và [inventory kỹ thuật](PROJECT_CONTEXT_INVENTORY.md).
+Nếu chat mới đọc được repo, chỉ cần gửi prompt dưới đây. Nếu không đọc được repo,
+gửi thêm hai file context; AI chỉ được suy từ snapshot và cần source bổ sung khi sửa.
 
 ```text
-Tiếp tục Lật lại. Tự khôi phục context từ repository, giao tiếp ngắn gọn bằng tiếng Việt.
-1. Kiểm git status/branch/log/remote; giữ mọi thay đổi local, không reset/clean/pull đè.
-2. Đọc AGENTS.md ở root; SESSION_STATE.md và READINESS.md dưới docs/handoff.
-   Setup/code map ở docs/handoff/START_HERE.md; máy mới theo TEAM_WINDOWS.md.
-   Cách dùng AI/skills và giao việc ở docs/AI_WORKFLOW.md. Chỉ đọc skill/ADR/feature
-   liên quan; CONTINUATION_PLAN để chọn gói, HISTORY không là trạng thái hiện tại.
-3. Runtime đã là MongoDB, contract0.21.0; business giao dịch vẫn dừng ở F2h.
-   Đọc ADR0027/model map trước sửa DB; giữ SQL migrations làm lịch sử import.
-   Flutter còn scaffold; không mặc định các client có tính năng tương đương RN.
-4. Chỉ đọc sâu ADR/feature/test liên quan nhiệm vụ. Làm gói cụ thể đến kiểm thử
-   tương xứng và bằng chứng; không lặp các ca đã đạt nếu không đổi source liên quan.
-5. UI theo UI_CODING_RULES/UI_COMPONENTS/brand1.1; dùng component và logic thật.
-   Bảo toàn permission/session/transaction/idempotency và invariant tiền/sách.
-6. Không in/commit secret/dump. DB local chính không phải nơi QA; dùng *_test riêng.
-   Không coi storage fake là Supabase thật, web export là native hay AI review là human.
-7. Quyền push/merge phải đúng phạm vi user đã giao; mốc Mongo đã merge không tự cấp
-   quyền deploy hoặc bỏ release gate. Một feature/nhánh, commit rõ phạm vi.
-8. Cập nhật SESSION_STATE tại chỗ: source/branch/commit, việc xong, test thực chạy,
-   giới hạn/blocker và bước tiếp cụ thể. Báo đúng kết quả, không thêm báo cáo trùng.
+Tiếp nhận Project Lật lại — used-book-marketplace. Giao tiếp bằng tiếng Việt.
+
+Trước tiên kiểm git status/branch/log/remote, giữ local work và stash; không
+reset/clean/checkout đè hoặc tự phục hồi nhánh WIP. Tìm repo thực tế trên máy nhận.
+Đọc AGENTS.md; docs/handoff/PROJECT_CONTEXT.md, PROJECT_CONTEXT_INVENTORY.md,
+SESSION_STATE.md và READINESS.md. Bản context là snapshot09/10/2026 ở main da59199,
+không mặc định branch/remote/environment hiện tại vẫn ở phiên bản đó.
+
+Nền sản phẩm: mua/bán/đổi từng bản sách cũ, TP.HCM, tiền/carrier mô phỏng,
+hai điểm HCM-DEMO-01/02. RN là client Member ưu tiên; main còn có Expo web,
+React/Vite user-web riêng và admin-web; Flutter là scaffold. API NestJS dùng
+MongoDB replica set/official driver; SQL migrations giữ để import lịch sử.
+Ở snapshot: OpenAPI0.30.0, 15 migration Mongo, 113 operation HTTP.
+
+Main có catalog/listing/media/review/shelf/addresses/quotes, DirectDelivery tới F2h,
+ví mô phỏng, wishlist, purchase conversation/chat giữ sách24h, auction/point Order,
+realtime và inbox auction. Purchase chat không là Order/payment/settlement.
+Exchange web, register/profile và dashboard admin còn mock/scaffold từng phần.
+
+Đặc biệt: DirectDelivery tới F2h; source ViaPoint auction đã có inspection/claim/
+return và worker settlement, trong khi gate review/release vẫn mở. Hướng dẫn
+hiện hành đã được cập nhật qua DOCS_AUDIT_2026_10_09.md. Context mục10 giữ các
+khác biệt trước đợt dọn; gap quyền LOCKED và code/gate vẫn cần review.
+Không suy code merged là đã được nghiệm thu/đóng gate,
+không tự sửa nghiệp vụ hoặc chạy worker trên DB chính để chứng minh khác biệt.
+
+Nguồn nghiệp vụ: docs/SRS_V1_1.md + docs/features/LOCAL_HANDOVER_AUCTION.md.
+Contract: packages/api-contract/openapi.yaml; generated schema không sửa tay.
+Trước sửa DB/tiền/quyền đọc ADR0027, model map và DOMAIN_RULES phần liên quan.
+Giữ auth hiện tại trước replay, owner/eligibility/state, lock order/transaction,
+expectedVersion/key/body/receipt theo từng command, immutable ledger và commitment.
+Browser tokens memory-only; native chỉ persist refresh token qua SecureStore.
+
+Setup/code map: START_HERE/TEAM_WINDOWS/DEVELOPMENT/ENV_HANDOFF. Node>=24.15.0,
+pnpm11.19.0; kiểm runtime thật. Chạy hằng ngày dev:api + client phụ trách:
+dev:rn (A/W), dev:admin hoặc dev:user. Không tự migrate/seed/reset chỉ để tiếp nhận.
+QA replica set/database *_test và bucket riêng; không dùng DB/bucket local chính.
+Không đọc/in/commit token, password, DB dump, body/PII hoặc cấu hình .env thật.
+
+Chọn skill repo theo nhiệm vụ: latlai-ui, latlai-api-mongo, latlai-verify-handoff.
+UI theo DESIGN.md ở root (brief hiện hành)/UI_CODING_RULES/UI_COMPONENTS,
+brand1.1 giữ asset; Impeccable theo docs/design/IMPECCABLE_WORKFLOW.md. Dữ liệu API thật,
+giữ lỗi/form/Back/keyboard/safe area/chữ lớn; không tạo rating/số dư/claim badge giả.
+Chọn checks theo diff trong AI_WORKFLOW. Báo PASS/FAIL/NOT RUN/BLOCKED và skip rõ;
+không coi browser fake là Supabase thật, export là native hoặc AI review là human.
+
+Nhiệm vụ của lượt tiếp nhận: hiểu context, nêu ngắn gọn trạng thái và điểm cần
+xác minh cho nhiệm vụ kế tiếp. Chỉ triển khai feature khi chủ dự án giao cụ thể;
+CONTINUATION_PLAN không tự cấp quyền bỏ gate. Một feature/nhánh; giữ phần việc
+teammate, update SESSION_STATE phần mình. Push/PR/merge/deploy theo quyền gói mới.
+
+Nhiệm vụ cụ thể tiếp theo (nếu đã được giao): [dán yêu cầu và acceptance ở đây].
 ```
 
-Chuyển cấu hình riêng theo [ENV_HANDOFF](ENV_HANDOFF.md). Review tiền/quyền theo
-[TEAMWORK](../TEAMWORK.md), ghi rõ thiếu người review thay vì tự xác nhận thay họ.
+Không gửi cấu hình riêng trong prompt; chuyển theo [ENV_HANDOFF](ENV_HANDOFF.md).
+Review tiền/quyền theo [TEAMWORK](../TEAMWORK.md). Remote CI và review tại main
+mới chưa được xác minh trong phiên thu thập; kết quả cũ phải gắn source của chúng.

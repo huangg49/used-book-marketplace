@@ -50,9 +50,11 @@ import {
   withRulesChanges,
 } from './0013-auction-business-rules.js';
 import { purchaseConversationSpecs, purchaseConversationsMigration, withPurchaseConversationChanges } from './0014-purchase-conversations.js';
-import { exchangeCollectionSpecs, exchangesMigration } from './0015-exchanges.js';
-import { exchangesPhase2Migration, withExchangePhase2Changes } from './0016-exchanges-phase2.js';
-import { exchangesPhase3Migration, withExchangePhase3Changes } from './0017-exchanges-proposal-expiry.js';
+import { memberNotificationsMigration, notificationSpecs, withNotificationChanges } from './0015-member-notifications.js';
+import { exchangeCollectionSpecs, exchangesMigration } from './0016-exchanges.js';
+import { exchangesPhase2Migration, withExchangePhase2Changes } from './0017-exchanges-phase2.js';
+import { exchangesPhase3Migration, withExchangePhase3Changes } from './0018-exchanges-proposal-expiry.js';
+
 
 export interface Migration {
   id: string;
@@ -132,9 +134,11 @@ export const migrations: Migration[] = [
   pointOrderSettlementMigration,
   auctionBusinessRulesMigration,
   purchaseConversationsMigration,
+  memberNotificationsMigration,
   exchangesMigration,
   exchangesPhase2Migration,
   exchangesPhase3Migration,
+
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -150,7 +154,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withPointOrderChanges)
     .map(withPointCollectionChanges)
     .map(withSettlementChanges)
-    .map(withPurchaseConversationChanges),
+    .map(withPurchaseConversationChanges)
+    .map(withNotificationChanges),
   wishlistSpec,
   ...priceAssistSpecsV2,
   ...onlinePriceSpecs,
@@ -168,5 +173,7 @@ export const currentCollections = (): CollectionSpec[] => [
   ...settlementCollectionSpecs.map(withRulesChanges),
   ...rulesCollectionSpecs,
   ...purchaseConversationSpecs,
+  ...notificationSpecs,
   ...exchangeCollectionSpecs.map(withExchangePhase2Changes).map(withExchangePhase3Changes),
+
 ];

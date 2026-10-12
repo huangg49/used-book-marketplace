@@ -645,6 +645,7 @@ export class MongoCommandService {
     systemActor: Extract<
       SystemActor,
       | 'AuctionClose'
+      | 'AuctionHold'
       | 'AuctionPaymentExpiry'
       | 'AuctionIntakeExpiry'
       | 'PointOrderDeadline'
@@ -659,6 +660,7 @@ export class MongoCommandService {
   ) {
     const operation = {
       AuctionClose: 'closeAuction',
+      AuctionHold: 'holdAuction',
       AuctionPaymentExpiry: 'expireAuctionPayment',
       AuctionIntakeExpiry: 'expireAuctionIntake',
       PointOrderDeadline: 'openPointOrderResolution',

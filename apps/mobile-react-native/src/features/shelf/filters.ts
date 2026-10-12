@@ -1,5 +1,5 @@
 export const sorts = {
-  newest: "Mới lên kệ",
+  newest: "Mới đăng",
   salePriceAsc: "Giá bán tăng dần",
   salePriceDesc: "Giá bán giảm dần",
   exchangeValueAsc: "Giá trị đổi tăng dần",

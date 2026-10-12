@@ -46,3 +46,13 @@ apps/admin-web/src/assets/hero.png
 # Ignored skills directories
 /stitch-skills-main/
 /taste-skill-main/
+
+# Impeccable: shared context/critique is tracked; local runtime/live state is not.
+.impeccable/config.local.json
+.impeccable/live/
+.impeccable/screenshots/
+.impeccable/logs/
+.agents/skills/impeccable/scripts/bin/
+
+# Keep the additional team ignore rule, normalized to UTF-8.
+taste-skill-main

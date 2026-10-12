@@ -1,8 +1,8 @@
-import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
-import { BookOpen, Search, Repeat } from "lucide-react";
-import { ROUTES, searchUrl } from "../lib/routes";
+import { Link } from "react-router-dom";
+import { BookOpen, Repeat, Gavel, Tag } from "lucide-react";
+import { motion } from "framer-motion";
+import { ROUTES } from "../lib/routes";
 import { BookCard } from "../components/BookCard";
 import { getPublicListings } from "../services/public-listings";
 import styles from "./HomePage.module.css";
@@ -55,80 +55,125 @@ function Shelf({ mode, title }: { mode?: "Exchange"; title: string }) {
   );
 }
 export default function HomePage() {
-  const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    navigate(searchUrl({ q: search.trim() }));
-  };
   const actions = [
-    { to: ROUTES.search, title: "Khám phá sách", Icon: BookOpen },
-    { to: ROUTES.sell, title: "Đăng sách", Icon: BookOpen },
-    {
-      to: `${ROUTES.search}?mode=Exchange`,
-      title: "Sách để trao đổi",
-      Icon: Repeat,
-    },
+    { to: ROUTES.search, title: "Tìm sách quý", subtitle: "Biên mục & Lọc chuyên sâu tác phẩm hiếm có", Icon: BookOpen },
+    { to: ROUTES.sell, title: "Đăng bán sách", subtitle: "Định giá & Thẩm định tình trạng 5 bước", Icon: Tag },
+    { to: `${ROUTES.search}?mode=Exchange`, title: "Đổi sách bằng Xu", subtitle: "Dùng điểm Lật-Xu trao đổi không cần tiền mặt", Icon: Repeat },
+    { to: ROUTES.auctions, title: "Sàn đấu giá", subtitle: "Sách chữ ký tác giả & Bản in đầu thế kỷ 20", Icon: Gavel },
   ];
   return (
     <div className={styles.page}>
       <section className={styles.hero} aria-labelledby="hero-title">
         <div className={styles.heroContainer}>
-          <div className={styles.heroLeft}>
+          <motion.div
+            className={styles.heroLeft}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          >
             <span className={styles.heroTag}>
-              LẬT LẠI · TIỆM SÁCH CHUYỀN TAY
+              <span className={styles.heroTagDot} aria-hidden="true" />
+              DI SẢN TRANG GIẤY & KÝ ỨC
             </span>
             <h1 id="hero-title" className={styles.heroTitle}>
               Những cuốn sách xứng đáng được đọc thêm một lần nữa.
             </h1>
             <p className={styles.heroLead}>
-              Tìm một bản sách cũ, xem tình trạng thật và chọn mua hoặc trao đổi
-              với người đang giữ sách.
+              Trao cho từng trang sách cũ một vòng đời mới. Nền tảng tuyển chọn,
+              thẩm định và giao dịch sách quý, sách lưu trữ minh bạch nguồn gốc
+              và tình trạng.
             </p>
             <div className={styles.heroActions}>
               <Link to={ROUTES.search} className={styles.btnPrimary}>
-                Dạo kệ sách
+                Khám phá sách →
               </Link>
               <Link to={ROUTES.sell} className={styles.btnOutline}>
                 Đăng sách của bạn
               </Link>
             </div>
-          </div>
-          <form
-            onSubmit={submit}
+            <div className={styles.trustGrid}>
+              <div>
+                <div className={styles.trustNum}>45.000+</div>
+                <div className={styles.trustLabel}>Tác phẩm lưu trữ</div>
+              </div>
+              <div>
+                <div className={styles.trustNum}>100%</div>
+                <div className={styles.trustLabel}>Thẩm định trang sách</div>
+              </div>
+              <div>
+                <div className={styles.trustNum}>12.000+</div>
+                <div className={styles.trustLabel}>Cộng đồng độc giả</div>
+              </div>
+            </div>
+          </motion.div>
+          <motion.div
             className={styles.featuredCard}
-            style={{ padding: "2rem" }}
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
           >
-            <label
-              htmlFor="home-book-search"
-              style={{ display: "block", marginBottom: "1rem" }}
-            >
-              Bạn muốn tìm cuốn nào?
-            </label>
-            <input
-              id="home-book-search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Tên sách, tác giả hoặc ISBN"
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                marginBottom: "1rem",
-              }}
-            />
-            <button type="submit" className={styles.btnBidPrimary}>
-              <Search size={18} aria-hidden="true" /> Tìm sách
-            </button>
-          </form>
+            <div className={styles.featuredCardTop}>
+              <span className={styles.featuredBadge}>
+                <span className={styles.pulseDot} aria-hidden="true" /> ĐẤU GIÁ NỔI BẬT
+              </span>
+              <span className={styles.featuredTimer}>⏱ 02 : 14 : 38</span>
+            </div>
+            <div className={styles.featuredBody}>
+              <div className={styles.featuredCoverCol}>
+                <div className={styles.featuredCoverWrap}>
+                  <img
+                    src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=600&auto=format&fit=crop"
+                    alt="Đoạn Tuyệt"
+                    className={styles.featuredCoverImg}
+                  />
+                  <div className={styles.featuredCoverGradient} />
+                  <span className={styles.featuredEditionTag}>Bản in 1940</span>
+                </div>
+              </div>
+              <div className={styles.featuredInfoCol}>
+                <div>
+                  <span className={styles.featuredPublisher}>TỰ LỰC VĂN ĐOÀN</span>
+                  <h3 className={styles.featuredBookTitle}>Đoạn Tuyệt (Bản in đầu 1940)</h3>
+                  <p className={styles.featuredBookAuthor}>Tác giả: Nhất Linh</p>
+                  <span className={styles.featuredVerified}>✔ Bảo chứng tem mộc xưa</span>
+                </div>
+                <div className={styles.featuredPriceBlock}>
+                  <div className={styles.featuredPriceRow}>
+                    <span className={styles.featuredPriceLabel}>Giá đặt hiện tại:</span>
+                    <div style={{ textAlign: "right" }}>
+                      <div className={styles.featuredPriceValue}>2.890.000 đ</div>
+                      <div className={styles.featuredBidCount}>28 lượt đặt giá</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.featuredActions}>
+              <button className={styles.btnBidPrimary}>Đặt giá ngay</button>
+              <button className={styles.btnBidOutline}>Bảo chứng</button>
+            </div>
+          </motion.div>
         </div>
       </section>
       <section className={styles.quickActions}>
         <div className={styles.quickActionsGrid}>
-          {actions.map(({ to, title, Icon }) => (
-            <Link key={to} to={to} className={styles.actionCard}>
-              <Icon aria-hidden="true" />
-              <h2 className={styles.actionTitle}>{title}</h2>
-            </Link>
+          {actions.map(({ to, title, subtitle, Icon }, index) => (
+            <motion.div
+              key={to}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.4 + index * 0.1 }}
+            >
+              <Link to={to} className={styles.actionCard}>
+                <div className={styles.actionIconBox}>
+                  <Icon size={24} aria-hidden="true" />
+                </div>
+                <div>
+                  <h2 className={styles.actionTitle}>{title}</h2>
+                  <p className={styles.actionDesc}>{subtitle}</p>
+                </div>
+              </Link>
+            </motion.div>
           ))}
         </div>
       </section>

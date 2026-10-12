@@ -18,6 +18,8 @@ pnpm db:seed
 Setup giữ `.env` có sẵn. Bootstrap/migrate/seed là bước rõ ràng, không chạy ngầm
 trong lệnh dev. Máy đã có dữ liệu không làm lại setup để chữa lỗi. Khi pull có
 migration mới, áp dụng `pnpm db:migrate` có chủ đích trước chạy phiên bản mới.
+Nếu migration thêm collection, chạy lại `pnpm db:bootstrap` để cập nhật quyền
+app theo ADR/migration; không reset hoặc seed lại để chữa thiếu quyền.
 Mỗi teammate dùng database và storage dev riêng theo
 [TEAM_WINDOWS](handoff/TEAM_WINDOWS.md).
 
@@ -60,6 +62,12 @@ giữ terminal tương tác của Expo, không tự khởi động backend hay b
 
 Người làm admin dùng `pnpm dev:admin` ở terminal thứ hai và mở
 `http://localhost:5173`. Không cần chạy RN/Flutter khi chỉ làm admin.
+
+Người làm React/Vite user-web dùng `pnpm dev:user` và mở `http://localhost:5174`.
+App này khác Expo web. `setup:local` chưa tạo env user-web; nếu thiếu, tạo từ
+`apps/user-web/.env.example`, giữ file đã có. `VITE_API_BASE_URL` trỏ API phù hợp;
+backend `CORS_ORIGINS` cần đúng origin5174 (preview4174 nếu dùng). Secret backend
+không đưa vào biến VITE.
 
 API mặc định `http://localhost:3000/api/v1`. Launcher RN lấy shared URL public
 trong `.env`; khi host là `localhost`, Android emulator dùng `10.0.2.2` cùng cổng,

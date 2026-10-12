@@ -1,5 +1,9 @@
 # Thiết kế logic cho giao nhận nội thành và đấu giá
 
+> Thiết kế nghiệp vụ đích, không là báo cáo implementation hiện hành. Các trạng
+> thái chưa có API/Planned dưới đây ghi tại mốc26–27/09; phần5 dẫn trạng thái mới.
+> Runtime hiện tại là MongoDB theo ADR0027, Prisma chỉ còn lịch sử PostgreSQL.
+
 Ngày 26/09/2026 · Thiết kế đích của [SRS 1.1](../SRS_V1_1.md), chưa là schema/API đã triển khai.
 Quy tắc chuẩn nằm ở [LOCAL-AUCTION-01](LOCAL_HANDOVER_AUCTION.md). Không sửa Prisma/OpenAPI
 để đánh dấu các luồng này implemented trước khi có handler và kiểm thử.
@@ -7,7 +11,7 @@ Quy tắc chuẩn nằm ở [LOCAL-AUCTION-01](LOCAL_HANDOVER_AUCTION.md). Khôn
 Cụ thể hóa ngày 27/09/2026: [ADR 0013](../adr/0013-exclusive-commitment-foundation.md),
 [thiết kế cam kết](COMMITMENT_DESIGN.md), [32 ca CM-AC](COMMITMENT_ACCEPTANCE.md) và
 [thứ tự triển khai](TRANSACTION_FOUNDATION_PLAN.md). Các tài liệu này chốt thêm
-cardinality, lock order, system principal và deadline; vẫn là thiết kế, chưa có API.
+cardinality, lock order, system principal và deadline; tại mốc đó vẫn là thiết kế, chưa có API.
 
 ## 1. Ranh giới miền nghiệp vụ
 
@@ -183,10 +187,11 @@ khi nghiệm thu SRS, không giả định handler hiện tại đã đáp ứng
 
 ## 5. Tác động API, UI và migration
 
-OpenAPI khi viết bản thiết kế ban đầu là **0.4.0**; hiện **0.8.0** đã có listing
-lifecycle nhưng vẫn chưa có transaction/point/custody/auction. Chưa đổi version, thêm route
-giả hoặc sửa generated types trong lần cập nhật tài liệu này. Khi triển khai từng
-lát cắt phải thêm request/response/error cụ thể và migration được kiểm thử.
+OpenAPI khi lập thiết kế là **0.4.0**, cập nhật thiết kế ban đầu tại **0.8.0**.
+Bảng gap bên dưới là checklist của mốc đó, không là implementation hiện tại.
+Transaction/auction/point Order đã có source; xem [SESSION_STATE](../handoff/SESSION_STATE.md),
+contract/code và gate trước chọn việc. Mỗi lát cắt cần request/response/error,
+migration được kiểm thử; thiết kế không tạo route giả hoặc tự cho phép đóng gate.
 
 | Phần hiện có | Thay đổi cần thiết, chưa thực hiện |
 |---|---|

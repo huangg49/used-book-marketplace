@@ -357,6 +357,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The caller's durable inbox (FR-N03/N04), newest first. Rows are written in the same transaction as the event they report; realtime pages only refresh this list. Text carries public prices, states and deadlines only. */
+        get: operations["listMyNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Marks the caller's notifications read, either the listed ids or all of them. Ids that are not the caller's are ignored. The operation is naturally idempotent (only unread rows change), so a retry with the same key and body has the same effect; no receipt is stored for it. */
+        post: operations["markMyNotificationsRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/purchase-conversations/{conversationId}/messages": {
         parameters: {
             query?: never;
@@ -2387,6 +2421,39 @@ export interface components {
             /** Format: uuid */
             id: string;
             displayName: string;
+        };
+        MemberNotification: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid";
+            title: string;
+            body: string;
+            /** @enum {string} */
+            targetType: "Auction";
+            /**
+             * Format: uuid
+             * @description Opens with GET /auctions/{id}; the caller's own view comes from participation or point-order reads.
+             */
+            targetId: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            readAt: string | null;
+        };
+        MemberNotificationPage: {
+            items: components["schemas"]["MemberNotification"][];
+            unreadCount: number;
+            nextCursor: string | null;
+        };
+        /** @description Exactly one of ids or all. */
+        MarkNotificationsRead: {
+            ids?: string[];
+            /** @constant */
+            all?: true;
+        };
+        NotificationUnreadCount: {
+            unreadCount: number;
         };
         PurchaseConversation: {
             /** Format: uuid */
@@ -4513,6 +4580,66 @@ export interface operations {
             };
             401: components["responses"]["ListingError"];
             403: components["responses"]["ListingError"];
+        };
+    };
+    listMyNotifications: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the caller's notifications and the unread total. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberNotificationPage"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+        };
+    };
+    markMyNotificationsRead: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent, like every mutation; repeating it is harmless. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkNotificationsRead"];
+            };
+        };
+        responses: {
+            /** @description Remaining unread notifications. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationUnreadCount"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
         };
     };
     listPurchaseMessages: {

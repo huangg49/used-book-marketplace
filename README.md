@@ -13,16 +13,19 @@
 
 ## Trạng thái sản phẩm
 
-MongoDB đã tích hợp vào main qua PR5/PR6; OpenAPI hiện **0.21.0**. Nghiệp vụ giao
-dịch dừng ở F2h: chưa có Delivered/inspection/settlement hay luồng mua hoàn chỉnh.
+Cập nhật09/10/2026, source main `da59199`: OpenAPI **0.30.0**,15 migration Mongo.
+Catalog/listing, purchase chat24h, đấu giá web/realtime và inbox đã có.
+DirectDelivery tới F2h; ViaPoint đấu giá có source inspection/claim/settlement,
+nhưng gate nghiệm thu vẫn mở. Xem [trạng thái](docs/handoff/SESSION_STATE.md).
 SRS1.1 là yêu cầu mục tiêu, không phải danh sách tính năng đã triển khai.
 
 | Thành phần | Thực trạng |
 | --- | --- |
 | React Native / Expo web | Client Member chính: phiên, kệ/chi tiết, đăng sách, địa chỉ |
+| User web React/Vite | Kệ/tìm/chi tiết/đăng sách, purchase chat, đấu giá và thông báo; Exchange/register/profile còn mock/scaffold |
 | Admin web | Duyệt catalog/listing và xem danh sách user; chưa có lock/unlock user |
 | Flutter | Scaffold, chưa có auth/API feature tương đương RN |
-| NestJS API | MongoDB replica set; catalog/media, quote/Order, tiền và carrier mô phỏng |
+| NestJS API | MongoDB replica set; catalog/media, quote/Order, ví/carrier mô phỏng, purchase/auction/point-order/notification |
 | Media / Order workers | Process riêng, trạng thái bền vững trong MongoDB; ảnh ở Supabase Storage |
 
 CI tích hợp đã đạt; full native và review người thật vẫn còn phần mở. Phạm vi từng
@@ -46,13 +49,13 @@ pnpm dev:api
 Mỗi người dùng database/credential riêng. Seed tạo4 tài khoản local, không tạo sẵn
 sách. Chạy client phụ trách ở terminal khác: pnpm dev:rn hoặc pnpm dev:admin.
 Chạy hằng ngày bằng hai terminal: `pnpm dev:api` (Mongo/API/hai worker) và
-`pnpm dev:rn` (bấm A mở Android development APK, W mở Member web), hoặc
-`pnpm dev:admin` cho người làm admin. Upload cần cấu hình
+`pnpm dev:rn` (A Android, W Expo web), `pnpm dev:user` cho React/Vite user-web,
+hoặc `pnpm dev:admin` cho admin. Upload cần cấu hình
 [Supabase](docs/features/SUPABASE_MEDIA_SETUP.md). Xem
 [hướng dẫn chạy](docs/DEVELOPMENT.md) để phân biệt setup một lần, build APK và
 chạy hằng ngày. Launcher không tự seed/migrate/reset dữ liệu.
 
-API: http://localhost:3000/api/v1 · Swagger: http://localhost:3000/docs · Admin: http://localhost:5173.
+API: http://localhost:3000/api/v1 · Swagger: http://localhost:3000/docs · Admin: http://localhost:5173 · User web: http://localhost:5174.
 
 ## Cấu trúc repository
 

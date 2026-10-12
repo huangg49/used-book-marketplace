@@ -20,7 +20,7 @@ footer{padding:30px 24px;font:14px/1.6 system-ui,sans-serif}.table-scroll{overfl
 </style></head><body>
 <header><div class="eyebrow">LẬT LẠI · SÁCH CŨ. CHƯƠNG MỚI.</div><h1>Đặc tả nghiệp vụ 1.1</h1>
 <p>TP.HCM · Giữ giao tận nơi · Hai điểm giao nhận mô phỏng · Đấu giá có giới hạn</p>
-<p>Baseline ngày 26/09/2026. Đây là yêu cầu triển khai, không phải báo cáo các tính năng đã chạy. 38 nhóm nghiệm thu mới chưa được thực thi.</p></header>
+<p>Baseline ngày 26/09/2026. Đây là yêu cầu triển khai; trạng thái code và nghiệm thu hiện hành xem SESSION_STATE và READINESS, không suy từ checklist tại mốc lập đặc tả.</p></header>
 <nav aria-label="Các phần tài liệu"><a href="#srs">SRS 1.1</a><a href="#rules">Nghiệp vụ điểm và đấu giá</a><a href="#model">Mô hình và trạng thái</a><a href="#acceptance">Use case và nghiệm thu</a><a href="#changes">Thay đổi 1.0 → 1.1</a></nav><main><section id="srs" aria-label="SRS 1.1"><h1 id="srs-ac-ta-yeu-cau-phan-mem-nen-tang-mua-ban-va-trao-oi-sach-cu">Đặc tả yêu cầu phần mềm nền tảng mua bán và trao đổi sách cũ</h1><details class="section-toc"><summary>Mục lục phần này</summary><div class="toc">
 <ul>
 <li><a href="#srs-ac-ta-yeu-cau-phan-mem-nen-tang-mua-ban-va-trao-oi-sach-cu">Đặc tả yêu cầu phần mềm nền tảng mua bán và trao đổi sách cũ</a><ul>
@@ -152,7 +152,7 @@ footer{padding:30px 24px;font:14px/1.6 system-ui,sans-serif}.table-scroll{overfl
 <p>Tài liệu xác định hệ thống phải làm gì, ai được thực hiện, điều kiện chuyển bước, cách quản lý sách và tiền, cách xử lý ngoại lệ và điều kiện nghiệm thu. Trọng tâm là mua bán và trao đổi từng bản sách vật lý, có kiểm duyệt, giữ tiền, vận chuyển, khiếu nại và truy vết nghiệp vụ. Một cuốn sách không được đồng thời cam kết cho hai giao dịch; tiền chỉ được phân bổ khi có đủ điều kiện và không được ghi nhận hai lần cho cùng một sự kiện.</p>
 <p>Bản 1.1 kế thừa <a href="deliverables/SRS_Nen_tang_sach_cu.md">SRS 1.0 lưu trữ</a> và thay đổi phạm vi theo quyết định chủ dự án trong phiên làm việc ngày 26/09/2026. Phương án TP.HCM, giữ ship, hai điểm mô phỏng do Lật lại quản lý, điểm tùy chọn cho mua/đổi và bắt buộc trước đấu giá đã được duyệt. Các con số/chính sách biên là baseline do nhóm cụ thể hóa theo ủy quyền, không gán cho giảng viên.</p>
 <p><strong>Bộ đặc tả hiện hành phải đọc cùng nhau:</strong> tài liệu này + <a href="#rules">phụ lục nghiệp vụ LOCAL-AUCTION-01</a> + <a href="#model">mô hình logic</a> + <a href="#acceptance">use case và nghiệm thu</a>. Phụ lục là một phần quy phạm của SRS 1.1, ưu tiên cho ViaPoint/Auction; phần DirectDelivery giữ hành vi cũ trừ thay đổi được nêu. <a href="adr/0007-hcm-handover-auction-scope.md">ADR 0007</a> ghi quyết định và giới hạn.</p>
-<p><strong>Hiện trạng phần mềm:</strong> chỉ auth/profile, catalog và nháp listing có API thật; point, auction, tiền và giao dịch ở đây chưa được triển khai. <a href="features/CATALOG_DRAFT_API_REPORT.md">Báo cáo API</a> là bằng chứng riêng. Bộ ZIP/diagram/HTML 1.0 là snapshot lịch sử, không phải đặc tả 1.1.</p>
+<p><strong>Phân biệt yêu cầu và implementation:</strong> hiện trạng code/giới hạn xem <a href="handoff/SESSION_STATE.md">SESSION_STATE</a>, <a href="architecture/README.md">kiến trúc</a> và <a href="handoff/READINESS.md">READINESS</a>. Không dùng SRS làm danh sách feature đã hoàn tất. Báo cáo feature ghi evidence tại source riêng; ZIP/diagram/HTML1.0 là snapshot lịch sử, không phải đặc tả1.1.</p>
 <h2 id="srs-1-muc-ich-va-quy-uoc">1 Mục đích và quy ước</h2>
 <h3 id="srs-11-nguoi-su-dung-tai-lieu">1.1 Người sử dụng tài liệu</h3>
 <p>Nhóm phân tích dùng SRS để viết use case, thiết kế dữ liệu và giao diện. Nhóm phát triển dùng các yêu cầu có mã để triển khai. Nhóm kiểm thử dùng tiêu chí chấp nhận và ma trận truy vết. Giảng viên và hội đồng dùng phạm vi, các bất biến nghiệp vụ và tình huống ngoại lệ để đánh giá mức hoàn thiện.</p>
@@ -268,7 +268,7 @@ footer{padding:30px 24px;font:14px/1.6 system-ui,sans-serif}.table-scroll{overfl
 <h3 id="srs-23-ngoai-pham-vi-bat-buoc">2.3 Ngoài phạm vi bắt buộc</h3>
 <p>Đăng nhập Google/Facebook/SĐT; payment gateway và ngân hàng thật; carrier thật; COD; giao dịch tiền thật; đổi nhiều cuốn cùng lúc; giao ngoài vùng TP.HCM; đấu giá nâng cao/auto-relist/giá sàn bí mật; chuyển sách giữa các điểm/đối tác ký gửi; chứng nhận sách chính hãng; miễn cọc theo điểm uy tín; định giá thị trường tự động; phát hiện nhiều tài khoản cùng một người bằng danh tính thực; xử lý bồi thường vượt nguồn tiền đang giữ; chatbot; các tích hợp thương mại thật. React Native không còn ngoài phạm vi, theo ADR 0003. Các mục này chỉ được bổ sung khi có yêu cầu thay đổi phạm vi.</p>
 <h3 id="srs-24-moi-truong-va-phu-thuoc">2.4 Môi trường và phụ thuộc</h3>
-<p>React Native phục vụ Member, web responsive phục vụ vận hành; NestJS API dùng chung Flutter, PostgreSQL, kho tệp, worker và adapter thanh toán/vận chuyển mô phỏng. Service area được kiểm tra ở server; Guest ngoài vùng vẫn xem được. Hệ thống lưu thời gian UTC, hiển thị theo Asia/Ho_Chi_Minh. Email xác minh có thể dùng hộp thư sandbox trong môi trường trình diễn. Tài khoản người dùng thường không được truy cập màn hình phát sự kiện carrier hoặc callback thanh toán.</p>
+<p>React Native phục vụ Member; Expo web và React/Vite user-web đã có, web vận hành riêng. NestJS API dùng chung Flutter, MongoDB replica set theo <a href="adr/0027-mongodb-persistence-protocol.md">ADR0027</a>, kho tệp, worker và adapter thanh toán/vận chuyển mô phỏng. PostgreSQL giữ làm lịch sử import. Service area được kiểm tra ở server; Guest ngoài vùng vẫn xem được. Hệ thống lưu thời gian UTC, hiển thị theo Asia/Ho_Chi_Minh. Email xác minh có thể dùng hộp thư sandbox trong môi trường trình diễn. Tài khoản người dùng thường không được truy cập màn hình phát sự kiện carrier hoặc callback thanh toán.</p>
 <p>Không sử dụng tiền, tài khoản ngân hàng hoặc dữ liệu cá nhân thật trong dữ liệu demo. Giao diện ví và vận chuyển phải ghi rõ “Mô phỏng đồ án”. Mục tiêu nghiệm thu là tính nhất quán của quy trình, không phải chứng nhận khả năng vận hành dịch vụ tài chính thực tế.</p>
 <h3 id="srs-25-vai-tro-va-ranh-gioi-trach-nhiem">2.5 Vai trò và ranh giới trách nhiệm</h3>
 <div class="table-scroll" tabindex="0" role="region" aria-label="Bảng dữ liệu cuộn ngang"><table>
@@ -3689,9 +3689,18 @@ Nghiệm thu: <a href="#acceptance">use case, traceability và demo</a>.</p></se
 </ul>
 </div>
 </details>
+<blockquote>
+<p>Thiết kế nghiệp vụ đích, không là báo cáo implementation hiện hành. Các trạng
+thái chưa có API/Planned dưới đây ghi tại mốc26–27/09; phần5 dẫn trạng thái mới.
+Runtime hiện tại là MongoDB theo ADR0027, Prisma chỉ còn lịch sử PostgreSQL.</p>
+</blockquote>
 <p>Ngày 26/09/2026 · Thiết kế đích của <a href="#srs">SRS 1.1</a>, chưa là schema/API đã triển khai.
 Quy tắc chuẩn nằm ở <a href="#rules">LOCAL-AUCTION-01</a>. Không sửa Prisma/OpenAPI
 để đánh dấu các luồng này implemented trước khi có handler và kiểm thử.</p>
+<p>Cụ thể hóa ngày 27/09/2026: <a href="adr/0013-exclusive-commitment-foundation.md">ADR 0013</a>,
+<a href="features/COMMITMENT_DESIGN.md">thiết kế cam kết</a>, <a href="features/COMMITMENT_ACCEPTANCE.md">32 ca CM-AC</a> và
+<a href="features/TRANSACTION_FOUNDATION_PLAN.md">thứ tự triển khai</a>. Các tài liệu này chốt thêm
+cardinality, lock order, system principal và deadline; tại mốc đó vẫn là thiết kế, chưa có API.</p>
 <h2 id="model-1-ranh-gioi-mien-nghiep-vu">1. Ranh giới miền nghiệp vụ</h2>
 <div class="table-scroll" tabindex="0" role="region" aria-label="Bảng dữ liệu cuộn ngang"><table>
 <thead>
@@ -4062,9 +4071,11 @@ bị LOCKED còn mở cần kênh xử lý Staff/claim được phân quyền; a
 LOCKED nên phải thiết kế contract hỗ trợ nghĩa vụ hoặc Staff-assisted workflow trước
 khi nghiệm thu SRS, không giả định handler hiện tại đã đáp ứng trường hợp này.</p>
 <h2 id="model-5-tac-ong-api-ui-va-migration">5. Tác động API, UI và migration</h2>
-<p>OpenAPI hiện <strong>0.4.0</strong> chưa có point/custody/auction. Chưa đổi version, thêm route
-giả hoặc sửa generated types trong lần cập nhật tài liệu này. Khi triển khai từng
-lát cắt phải thêm request/response/error cụ thể và migration được kiểm thử.</p>
+<p>OpenAPI khi lập thiết kế là <strong>0.4.0</strong>, cập nhật thiết kế ban đầu tại <strong>0.8.0</strong>.
+Bảng gap bên dưới là checklist của mốc đó, không là implementation hiện tại.
+Transaction/auction/point Order đã có source; xem <a href="handoff/SESSION_STATE.md">SESSION_STATE</a>,
+contract/code và gate trước chọn việc. Mỗi lát cắt cần request/response/error,
+migration được kiểm thử; thiết kế không tạo route giả hoặc tự cho phép đóng gate.</p>
 <div class="table-scroll" tabindex="0" role="region" aria-label="Bảng dữ liệu cuộn ngang"><table>
 <thead>
 <tr>
@@ -4116,9 +4127,18 @@ DB hoặc thay behavior code chỉ để “đồng bộ” với các thực th
 </ul>
 </div>
 </details>
+<blockquote>
+<p>Checklist đặc tả tại mốc 26–27/09/2026. Các nhãn <strong>chưa chạy</strong>/Planned và số ca
+bên dưới là tình trạng lúc lập tài liệu, không là bảng nghiệm thu hiện tại.
+Main đã bổ sung auction/point Order; đối chiếu evidence theo source và
+<a href="handoff/SESSION_STATE.md">SESSION_STATE</a>/<a href="handoff/READINESS.md">READINESS</a>.</p>
+</blockquote>
 <p>Ngày 26/09/2026. Đọc cùng <a href="#rules">nghiệp vụ</a>, <a href="#model">thiết kế logic</a>
 và <a href="#srs">SRS 1.1</a>. Tất cả AC-H/AC-AU dưới đây là <strong>chưa chạy</strong>.
 42 E2E API hiện có không được dùng làm bằng chứng rằng point/auction đã hoàn thành.</p>
+<p>Cập nhật 27/09/2026: listing có114 API E2E theo báo cáo riêng; AC-H/AC-AU vẫn chưa
+chạy. <a href="features/COMMITMENT_ACCEPTANCE.md">32 ca cam kết CM-AC</a> bổ sung kiểm tra reservation,
+deadline và race trước các workflow ở đây; CM-AC cũng đang Planned.</p>
 <h2 id="acceptance-1-use-case-bo-sung">1. Use case bổ sung</h2>
 <div class="table-scroll" tabindex="0" role="region" aria-label="Bảng dữ liệu cuộn ngang"><table>
 <thead>

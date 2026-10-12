@@ -18,8 +18,8 @@
   --status-blue: #1d4ed8;
   --status-blue-bg: rgba(37, 99, 235, 0.08);
 
-  --font-serif: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   min-height: 100vh;
   display: flex;
@@ -134,15 +134,16 @@
 }
 
 .themeDark .searchInput {
-  color: #F6C879;
+  color: #FFFFFF !important;
 }
 
 .themeDark .searchInput::placeholder {
-  color: rgba(246, 200, 121, 0.6);
+  color: #f4e4b5;
+  opacity: 0.9;
 }
 
 .themeDark .searchIcon {
-  color: rgba(246, 200, 121, 0.8);
+  color: #f4e4b5;
 }
 
 .themeDark .searchBadge {
@@ -254,15 +255,16 @@
 }
 
 .searchInput {
-  border: none;
-  background: transparent;
-  outline: none;
+  border: none !important;
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
   font-size: 14px;
   font-weight: 500;
-  color: #1D1C16;
+  color: #1D1C16 !important;
   width: 100%;
-  padding: 0;
-  min-height: auto;
+  padding: 0 !important;
+  min-height: auto !important;
 }
 
 .searchBadge {
@@ -579,7 +581,8 @@
 
 /* Shared header must also fit the fullscreen listing flow at large text. */
 .header {--ink:#2a2622;--paper:#fdfbf7;--line:#ddd5c7;background-color:#fdfbf7;}
-.header.themeDark {background-color:#173c2e;}
+.header.themeDark {background-color:transparent;}
+.header.headerScrolled {background-color:#173c2e;}
 .logoTextWrapper {min-width:0;}
 .logoText {white-space:nowrap;}
 .iconBtn,.menuButton {min-width:44px;min-height:44px;flex-shrink:0;}
@@ -592,7 +595,6 @@
   .mobileNav {max-height:calc(100dvh - 80px);overflow-y:auto;}
 }
 
-.header,.header.headerScrolled {background-color:#173c2e;}
-.header .logoText,.header .navLink,.header .iconBtn,.header .menuButton {color:#fffdf7;}
-.header .searchInput,.header .searchInput::placeholder {color:#625a50;}
-.header .btnPrimaryHeader {background:#fffdf7;color:#173c2e;}
+.header.themeDark .logoText,.header.themeDark .navLink,.header.themeDark .iconBtn,.header.themeDark .menuButton {color:#F6C879;}
+.header.themeDark .searchInput,.header.themeDark .searchInput::placeholder {color:#F6C879; opacity: 1;}
+.header.themeDark .btnPrimaryHeader {background:#fffdf7;color:#173c2e;}

@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 import HomePage from '../pages/HomePage';
 import { BookSearchPage } from '../pages/BookSearchPage';
 import { BookDetailPage } from '../pages/BookDetailPage';
@@ -13,6 +14,9 @@ import ExchangePage from '../pages/ExchangePage';
 import ExchangeComposePage from '../pages/ExchangeComposePage';
 import ExchangeMinePage from '../pages/ExchangeMinePage';
 import { ExchangeDetailPage } from '../pages/ExchangeDetailPage';
+import { AuctionListPage } from '../pages/AuctionListPage';
+import { AuctionDetailPage } from '../pages/AuctionDetailPage';
+import { NotificationsPage } from '../pages/NotificationsPage';
 export const router = createBrowserRouter([
   {
     element: <MainLayout />,
@@ -30,11 +34,20 @@ export const router = createBrowserRouter([
       { path: '/books/:id', element: <BookDetailPage /> },
       { path: '/chat', element: <ChatPage /> },
       { path: '/chat/:roomId', element: <ChatPage /> },
-      { path: '/profile', element: <ProfilePage /> },
       { path: '/exchange', element: <ExchangePage /> },
       { path: '/exchange/new', element: <ExchangeComposePage /> },
       { path: '/exchange/mine', element: <ExchangeMinePage /> },
       { path: '/exchange/:id', element: <ExchangeDetailPage /> },
+      { path: '/auctions', element: <AuctionListPage /> },
+      { path: '/auctions/:id', element: <AuctionDetailPage /> },
+      { path: '/notifications', element: <NotificationsPage /> },
+    ],
+  },
+  // Dashboard routes — dùng DashboardLayout
+  {
+    element: <DashboardLayout />,
+    children: [
+      { path: '/profile', element: <ProfilePage /> },
     ],
   },
   // Auth & Fullscreen routes — không dùng MainLayout

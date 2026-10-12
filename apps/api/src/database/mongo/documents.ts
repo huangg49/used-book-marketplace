@@ -27,7 +27,8 @@ export type SystemActor =
   | 'AuctionIntakeExpiry'
   | 'PointOrderDeadline'
   | 'PointOrderSettlement'
-  | 'PurchaseConversationExpiry';
+  | 'PurchaseConversationExpiry'
+  | 'AuctionHold';
 
 type Lockable = { lockSeq: number };
 
@@ -1003,4 +1004,25 @@ export interface ExchangeDoc extends Lockable {
   lockSeq: number;
 }
 
+export interface MemberNotificationDoc {
+  _id: string;
+  userId: string;
+  kind:
+    | 'AuctionOutbid'
+    | 'AuctionWon'
+    | 'AuctionSold'
+    | 'AuctionBoughtNow'
+    | 'AuctionUnsold'
+    | 'AuctionCancelled'
+    | 'AuctionOnHold'
+    | 'AuctionPaymentExpired'
+    | 'AuctionPaid';
+  title: string;
+  body: string;
+  targetType: 'Auction';
+  targetId: string;
+  dedupeKey: string;
+  createdAt: Date;
+  readAt: Date | null;
+}
 

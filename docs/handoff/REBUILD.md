@@ -1,5 +1,9 @@
 # Kiểm chứng dựng lại nguồn F2h
 
+> Báo cáo dựng lại checkpoint ngày 28/09, không là setup runtime main hiện nay.
+> Máy nhận mới dùng [START_HERE](START_HERE.md) và [TEAM_WINDOWS](TEAM_WINDOWS.md);
+> giữ các lệnh/bằng chứng dưới đây để tái hiện đúng source lịch sử.
+
 Ngày 28/09/2026. Commit nguồn được kiểm tra:
 `beea372386b27b4dd9dd4324b6cfbdeb082ce3f1`.
 Các cập nhật sau commit này chỉ hoàn thiện hồ sơ bàn giao, không đổi runtime.

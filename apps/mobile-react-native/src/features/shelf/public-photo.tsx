@@ -26,6 +26,7 @@ export function PublicPhoto({
   compact = false,
   shelf = false,
   rail = false,
+  result = false,
   onCoverFocus,
 }: {
   listingId: string;
@@ -39,6 +40,7 @@ export function PublicPhoto({
   compact?: boolean;
   shelf?: boolean;
   rail?: boolean;
+  result?: boolean;
   onCoverFocus?: () => void;
 }) {
   const { client } = useSession();
@@ -84,21 +86,26 @@ export function PublicPhoto({
       onLoad={() => setFailed(undefined)}
       style={{
         width: "100%",
-        height: expanded
-          ? 420
-          : rail
-            ? metrics.shelfCover
-            : shelf
-              ? 180
-              : compact
-                ? undefined
-                : large
-                  ? 286
-                  : 210,
-        ...(compact || shelf || rail
+        height: result
+          ? undefined
+          : expanded
+            ? 420
+            : rail
+              ? metrics.shelfCover
+              : shelf
+                ? 180
+                : compact
+                  ? undefined
+                  : large
+                    ? 286
+                    : 210,
+        ...(compact || shelf || rail || result
           ? {
-              ...(compact && !shelf && !rail ? { aspectRatio: 2 / 3 } : {}),
-              backgroundColor: rail || shelf ? colors.surface : colors.paper,
+              ...((compact && !shelf && !rail) || result
+                ? { aspectRatio: 2 / 3 }
+                : {}),
+              backgroundColor:
+                rail || shelf || result ? colors.surface : colors.paper,
               borderRadius: radius.book,
             }
           : {}),

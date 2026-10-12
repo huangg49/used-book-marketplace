@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-10T01:17:35Z",
+  "title": "Design System: Lật lại — React Native Member",
+  "extensions": {
+    "colorMeta": {
+      "forest": {
+        "role": "primary",
+        "displayName": "Xanh rừng"
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Giấy ấm"
+      },
+      "shelfCanvas": {
+        "role": "neutral",
+        "displayName": "Nền tìm sách"
+      },
+      "rustText": {
+        "role": "secondary",
+        "displayName": "Tình trạng"
+      }
+    },
+    "typographyMeta": {
+      "searchTitle": {
+        "displayName": "Tiêu đề tìm sách"
+      },
+      "shelfTitle": {
+        "displayName": "Tên sách"
+      },
+      "shelfPrice": {
+        "displayName": "Giá bán"
+      }
+    },
+    "breakpoints": [
+      {
+        "name": "shelf-stacked",
+        "value": "width < 360dp and effective text scale >= 1.29"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Nút chính",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "RN minHeight52dp; snippet chỉ trình bày token.",
+      "html": "<button class=\"ds-primary\">Áp dụng bộ lọc</button>",
+      "css": ".ds-primary{font-family:'Be Vietnam Pro',sans-serif;min-height:52px;padding:13px 20px;background:#214B40;color:#F5EFDF;border:0;border-radius:8px;font-size:15px;font-weight:700;line-height:24px}.ds-primary:focus-visible{outline:2px solid #214B40;outline-offset:3px}.ds-primary:active{opacity:.8}.ds-primary:disabled{opacity:.5}"
+    },
+    {
+      "name": "Nút phụ",
+      "kind": "button",
+      "description": "Mở bộ lọc hoặc hành động phụ.",
+      "html": "<button class=\"ds-secondary\">Bộ lọc</button>",
+      "css": ".ds-secondary{font-family:'Be Vietnam Pro',sans-serif;min-height:52px;padding:13px 20px;background:#F5EFDF;color:#214B40;border:1px solid #788477;border-radius:8px;font-size:15px;font-weight:700;line-height:24px}.ds-secondary:focus-visible{outline:2px solid #214B40;outline-offset:3px}.ds-secondary:active{opacity:.8}"
+    },
+    {
+      "name": "Ô nhập",
+      "kind": "input",
+      "refersTo": "text-field",
+      "description": "RN field dùng nhãn, placeholder và focus state.",
+      "html": "<label class=\"ds-label\">Tên sách<input class=\"ds-field\" placeholder=\"Nhập tên sách\" /></label>",
+      "css": ".ds-label{font-family:'Be Vietnam Pro',sans-serif;display:grid;gap:8px;color:#202C27;font-size:15px}.ds-field{font-family:'Be Vietnam Pro',sans-serif;min-height:52px;padding:12px 14px;border:1px solid #788477;border-radius:8px;background:#FFFCF4;color:#202C27;font-size:16px}.ds-field::placeholder{color:#58685E}.ds-field:focus-visible{outline:2px solid #214B40}"
+    },
+    {
+      "name": "Chip bộ lọc",
+      "kind": "chip",
+      "description": "Selected forest; target48dp.",
+      "html": "<button class=\"ds-chip\" aria-pressed=\"true\">Bán</button>",
+      "css": ".ds-chip{font-family:'Be Vietnam Pro',sans-serif;min-height:48px;padding:10px 17px;border:1px solid #788477;border-radius:24px;background:transparent;color:#214B40;font-size:12px;line-height:19px}.ds-chip[aria-pressed=true]{background:#214B40;color:#F5EFDF;border-color:#214B40}.ds-chip:focus-visible{outline:2px solid #214B40;outline-offset:3px}.ds-chip:active{opacity:.8}"
+    },
+    {
+      "name": "Điều hướng sáng",
+      "kind": "nav",
+      "refersTo": "navigation-selected",
+      "description": "RN icon/label; snippet trình bày selected token.",
+      "html": "<nav class=\"ds-nav\"><button class=\"ds-tab\" aria-selected=\"true\">Tìm sách</button><button class=\"ds-tab\" aria-selected=\"false\">Tài khoản</button></nav>",
+      "css": ".ds-nav{display:flex;gap:4px;background:#FFFCF4}.ds-tab{font-family:'Be Vietnam Pro',sans-serif;flex:1;min-width:0;min-height:52px;padding:8px 4px;border:2px solid transparent;border-radius:8px;background:transparent;color:#58685E;font-size:12px;font-weight:700;line-height:18px}.ds-tab[aria-selected=true]{background:#E8EFDF;color:#214B40}.ds-tab:focus-visible{border-color:#214B40}.ds-tab:active{opacity:.7}"
+    },
+    {
+      "name": "Thông tin sách",
+      "kind": "custom",
+      "description": "Ảnh/giá runtime lấy từ API, không bịa dữ liệu trong panel.",
+      "html": "<button class=\"ds-result\"><strong class=\"ds-title\">Tên sách</strong><span class=\"ds-author\">Tác giả</span><span class=\"ds-condition\">Tình trạng sách</span><strong class=\"ds-price\">Giá bán từ API</strong><span class=\"ds-exchange\">Giá trị đổi từ API</span></button>",
+      "css": ".ds-result{font-family:'Be Vietnam Pro',sans-serif;display:grid;gap:8px;width:100%;text-align:left;border:0;background:transparent;color:#202C27;padding:0 0 16px}.ds-title{font-size:16px;font-weight:700;line-height:23px}.ds-author,.ds-condition,.ds-exchange{font-size:14px;line-height:21px}.ds-author{color:#58685E}.ds-condition{color:#963F28}.ds-price{color:#214B40;font-size:18px;font-weight:700;line-height:25px}.ds-result:focus-visible{outline:2px solid #214B40}.ds-result:active{opacity:.7}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Danh mục hiệu sách độc lập",
+    "overview": "Hệ thống React Native Member hiện hành dùng một họ chữ Be Vietnam Pro, nền sáng và xanh rừng để người dùng đọc và thao tác rõ ràng. Hướng “Danh mục hiệu sách độc lập” đã được triển khai đầu tiên ở màn tìm sách Android; ảnh sách, tình trạng và giá tạo điểm nhìn. Các màn RN khác mới nhận thay đổi primitive/font/điều hướng chung; web Vite và Flutter chưa áp dụng hướng mới.",
+    "keyCharacteristics": [
+      "Một họ chữ có weight thật.",
+      "Danh sách dọc, tìm kiếm cố định.",
+      "Dữ kiện quyết định rõ nghĩa."
+    ],
+    "rules": [
+      {
+        "name": "Một họ chữ",
+        "body": "Phân cấp bằng role/kích thước/weight thật, không giả500/600.",
+        "section": "typography"
+      },
+      {
+        "name": "Dữ kiện quyết định",
+        "body": "Ảnh, tình trạng và hai loại giá giữ nghĩa API; grid mẫu chỉ là phương án đối chiếu.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Giữ text scaling, safe area, Back và trạng thái lỗi.",
+      "Đối chiếu API và scope của từng client."
+    ],
+    "donts": [
+      "Không bịa rating hoặc hành động giao dịch.",
+      "Không dùng export/AI review thay native/người dùng."
+    ]
+  }
+}

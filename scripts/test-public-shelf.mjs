@@ -123,27 +123,21 @@ try {
   const click = (name) => p.getByRole("button", { name, exact: true }).click();
   await p.goto(origin);
   await p
-    .getByRole("button", { name: /^Xem cuốn sách:/ })
+    .getByRole("button", { name: /^Xem sách:/ })
     .first()
     .waitFor();
-  assert.equal(
-    await p.getByRole("button", { name: /^Xem cuốn sách:/ }).count(),
-    12,
-  );
-  await click("Trang sách tiếp");
+  assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 12);
+  await click("Trang tiếp");
   await p.getByText(/Trang 2/).waitFor();
   await p
-    .getByRole("button", { name: /^Xem cuốn sách:/ })
+    .getByRole("button", { name: /^Xem sách:/ })
     .first()
     .waitFor();
-  assert.equal(
-    await p.getByRole("button", { name: /^Xem cuốn sách:/ }).count(),
-    1,
-  );
+  assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 1);
   await click("Trang trước");
   await p.getByText(/Trang 1/).waitFor();
   await p
-    .getByRole("button", { name: /^Xem cuốn sách:/ })
+    .getByRole("button", { name: /^Xem sách:/ })
     .nth(11)
     .waitFor();
   await p.screenshot({
@@ -151,16 +145,18 @@ try {
     fullPage: true,
   });
   await p
-    .getByLabel("Tìm sách", { exact: true })
+    .getByLabel("Tìm sách theo tên, tác giả hoặc ISBN", { exact: true })
     .fill("khong-co-cuon-sach-nay");
-  await click("Tìm trên kệ");
-  await p.getByText("Chưa gặp cuốn bạn tìm.", { exact: true }).waitFor();
-  await click("Bỏ bộ lọc");
   await p
-    .getByRole("button", { name: /^Xem cuốn sách:/ })
+    .getByLabel("Tìm sách theo tên, tác giả hoặc ISBN", { exact: true })
+    .press("Enter");
+  await p.getByText("Không tìm thấy sách phù hợp", { exact: true }).waitFor();
+  await click("Xóa tìm kiếm và bộ lọc");
+  await p
+    .getByRole("button", { name: /^Xem sách:/ })
     .first()
     .waitFor();
-  await click("Lọc và sắp xếp");
+  await click("Bộ lọc");
   // Filter changes are staged. Dismissal must not leak them into Search.
   await click("Giá bán giảm dần");
   await click("Đóng");
@@ -169,14 +165,18 @@ try {
       r.url().includes("/api/v1/listings?") &&
       new URL(r.url()).searchParams.get("q") === "Catalog",
   );
-  await p.getByLabel("Tìm sách", { exact: true }).fill("Catalog");
-  await click("Tìm trên kệ");
+  await p
+    .getByLabel("Tìm sách theo tên, tác giả hoặc ISBN", { exact: true })
+    .fill("Catalog");
+  await p
+    .getByLabel("Tìm sách theo tên, tác giả hoặc ISBN", { exact: true })
+    .press("Enter");
   assert.equal(
     new URL((await unchangedSearch).url()).searchParams.get("sort"),
     "newest",
   );
-  await click("Bỏ bộ lọc");
-  await click("Lọc và sắp xếp");
+  await click("Xóa tìm kiếm và bộ lọc");
+  await click("Bộ lọc");
   for (const width of [320, 390]) {
     await p.setViewportSize({ width, height: 844 });
     const applyButton = p.getByRole("button", {
@@ -218,16 +218,18 @@ try {
   await click("Giá bán tăng dần");
   await click("Áp dụng bộ lọc");
   await p
-    .getByRole("button", { name: /^Xem cuốn sách:/ })
+    .getByRole("button", { name: /^Xem sách:/ })
     .first()
     .waitFor();
   await p
-    .getByRole("button", { name: /^Xem cuốn sách:/ })
+    .getByRole("button", { name: /^Xem sách:/ })
     .first()
     .click();
-  await p.getByRole("heading", { name: "Phiếu tình trạng", exact: true }).waitFor();
+  await p
+    .getByRole("heading", { name: "Tình trạng sách", exact: true })
+    .waitFor();
   const metadataToggle = p.getByRole("button", {
-    name: "Về đầu sách",
+    name: "Thông tin xuất bản",
     exact: true,
   });
   assert.equal(await metadataToggle.getAttribute("aria-expanded"), "false");
@@ -262,12 +264,12 @@ try {
   await p
     .getByRole("button", { name: "Đóng", exact: true })
     .waitFor({ state: "hidden" });
-  const back = p.getByRole("button", { name: "Về kệ sách", exact: true });
+  const back = p.getByRole("button", { name: "Quay lại", exact: true });
   await back.scrollIntoViewIfNeeded();
   const target = await back.boundingBox();
   assert.ok(
-    target.width >= 44 && target.height >= 44,
-    "Back navigation retains a 44px touch target",
+    target.width >= 48 && target.height >= 48,
+    "Back navigation retains a 48px touch target",
   );
   await p.screenshot({
     path: path.join(artifacts, "book-390.png"),
@@ -294,34 +296,31 @@ try {
   });
   // A real owner status change hides both the fetched detail and future photos.
   await fixture.setUserStatus(fixture.member.user.id, "RESTRICTED");
-  await click("Cập nhật tình trạng sách");
-  await p
-    .getByText("Cuốn sách này không còn trên kệ.", { exact: true })
-    .waitFor();
+  await click("Làm mới thông tin");
+  await p.getByText("Không tìm thấy sách", { exact: true }).waitFor();
   assert.equal(
-    await p.getByRole("heading", { name: "Phiếu tình trạng", exact: true }).count(),
+    await p
+      .getByRole("heading", { name: "Tình trạng sách", exact: true })
+      .count(),
     0,
   );
-  await click("Về kệ sách");
-  await p.getByText("Chưa gặp cuốn bạn tìm.", { exact: true }).waitFor();
+  await click("Quay lại");
+  await p.getByText("Không tìm thấy sách phù hợp", { exact: true }).waitFor();
   await fixture.setUserStatus(fixture.member.user.id, "ACTIVE");
-  await click("Làm mới kệ");
+  await click("Làm mới danh sách");
   await p
-    .getByRole("button", { name: /^Xem cuốn sách:/ })
+    .getByRole("button", { name: /^Xem sách:/ })
     .first()
     .waitFor();
   let offline = true;
   await p.route("**/api/v1/listings?*", (route) =>
     offline ? route.abort("failed") : route.continue(),
   );
-  await click("Cập nhật kệ");
-  await p.getByText(/Chưa cập nhật được kệ/).waitFor();
-  assert.equal(
-    await p.getByRole("button", { name: /^Xem cuốn sách:/ }).count(),
-    12,
-  );
+  await click("Làm mới danh sách");
+  await p.getByText(/Chưa cập nhật được danh sách/).waitFor();
+  assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 12);
   offline = false;
-  await click("Thử tải lại kệ");
+  await click("Thử lại");
   await p.setViewportSize({ width: 390, height: 844 });
   await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
   await p.getByLabel("Email", { exact: true }).waitFor();
@@ -334,7 +333,7 @@ try {
   await p.screenshot({ path: path.join(artifacts, "account-390.png") });
   await click("Khám phá kệ sách");
   await p
-    .getByRole("button", { name: /^Xem cuốn sách:/ })
+    .getByRole("button", { name: /^Xem sách:/ })
     .first()
     .waitFor();
   assert(publicRequests.length > 0);
@@ -446,7 +445,7 @@ try {
   await addressJourney(p, fixture, artifacts);
   await listingJourney(p, fixture, admin, artifacts);
   // Account actions must still reflect server eligibility after the layout changes.
-  await click("Về kệ sách");
+  await click("Quay lại");
   await fixture.setUserStatus(fixture.member.user.id, "RESTRICTED");
   // listingJourney navigates to a guest URL; browser tokens are memory-only.
   await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
@@ -516,27 +515,30 @@ try {
   await p.setViewportSize({ width: 390, height: 844 });
   await p.goto(`${origin}/showcase`);
   await p.getByText("BẢN XEM THỬ · DỮ LIỆU MẪU", { exact: true }).waitFor();
-  assert.equal(
-    await p.getByRole("button", { name: /^Xem cuốn sách:/ }).count(),
-    4,
-  );
+  assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 4);
   await click("Đổi");
-  assert.equal(
-    await p.getByRole("button", { name: /^Xem cuốn sách:/ }).count(),
-    1,
-  );
+  assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 2);
   await click("Tất cả");
-  // Wait for client dimensions after hydration before recording the layout.
-  await p.waitForFunction(() => {
-    const cards = [...document.querySelectorAll('[role="button"]')].filter(
-      (element) =>
-        element.getAttribute("aria-label")?.startsWith("Xem cuốn sách:"),
-    );
-    if (cards.length !== 4) return false;
-    const first = cards[0].getBoundingClientRect();
-    const second = cards[1].getBoundingClientRect();
-    return second.x > first.x + first.width && Math.abs(second.y - first.y) < 2;
-  });
+  // List is the approved default; the opt-in comparison still renders a grid.
+  const expectComposition = (grid) =>
+    p.waitForFunction((grid) => {
+      const cards = [...document.querySelectorAll('[role="button"]')].filter(
+        (element) =>
+          element.getAttribute("aria-label")?.startsWith("Xem sách:"),
+      );
+      if (cards.length !== 4) return false;
+      const first = cards[0].getBoundingClientRect();
+      const second = cards[1].getBoundingClientRect();
+      return grid
+        ? second.x > first.x + first.width && Math.abs(second.y - first.y) < 2
+        : second.y >= first.y + first.height &&
+            Math.abs(second.x - first.x) < 2;
+    }, grid);
+  await expectComposition(false);
+  await click("Xem phương án lưới");
+  await expectComposition(true);
+  await click("Xem phương án danh sách");
+  await expectComposition(false);
   await p.screenshot({ path: path.join(artifacts, "showcase-shelf-390.png") });
   await p
     .getByRole("button", {
@@ -565,7 +567,7 @@ try {
   );
   await p.setViewportSize({ width: 320, height: 780 });
   const longSample = p.getByRole("button", {
-    name: /^Xem cuốn sách: Những ngày/,
+    name: /^Xem sách: Những ngày/,
   });
   await longSample.scrollIntoViewIfNeeded();
   assert.equal(
@@ -580,7 +582,7 @@ try {
     .getByText("1.000.000 ₫", { exact: true })
     .filter({ visible: true })
     .waitFor();
-  await click("Về đầu sách");
+  await click("Thông tin xuất bản");
   await p.getByText("Nhà xuất bản", { exact: true }).waitFor();
   assert.deepEqual(
     showcaseRequests,

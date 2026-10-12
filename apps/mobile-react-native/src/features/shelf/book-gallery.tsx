@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
-import { View } from "react-native";
-import { AppText, Chip, IconButton, colors, space } from "../../core/ui";
+import { useContext, type ReactNode } from "react";
+import { View, useWindowDimensions } from "react-native";
+import { AppText, Button, Chip, TextScale, colors, space } from "../../core/ui";
 
 export function BookGallery({
   photo,
@@ -21,41 +21,55 @@ export function BookGallery({
   caption: string;
   summary?: ReactNode;
 }) {
+  const { width, fontScale } = useWindowDimensions();
+  const textScale = useContext(TextScale);
+  const stacked = width < 360 && fontScale * textScale >= 1.29;
   return (
     <View style={{ gap: space.sm }}>
       <View
         style={{
-          flexDirection: "row",
+          flexDirection: stacked ? "column" : "row",
           gap: space.lg,
           alignItems: "flex-start",
         }}
       >
-        <View style={{ width: summary ? "40%" : "100%", gap: space.sm }}>
+        <View
+          style={{
+            width: summary ? (stacked ? 132 : "40%") : "100%",
+            gap: space.sm,
+          }}
+        >
           {photo}
+        </View>
+        {summary && (
           <View
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: space.sm,
+              flex: stacked ? undefined : 1,
+              width: stacked ? "100%" : undefined,
+              minWidth: 0,
             }}
           >
-            <AppText
-              kind="annotation"
-              color={colors.muted}
-              accessibilityLabel={`Ảnh ${selected + 1} / ${count}`}
-              style={{ flex: 1 }}
-            >
-              {selected + 1} / {count}
-            </AppText>
-            <IconButton
-              name="search"
-              label="Xem ảnh lớn"
-              disabled={disabled}
-              onPress={onEnlarge}
-            />
+            {summary}
           </View>
-        </View>
-        {summary && <View style={{ flex: 1, minWidth: 0 }}>{summary}</View>}
+        )}
+      </View>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: space.sm,
+        }}
+      >
+        <AppText kind="annotation" color={colors.muted} style={{ flexGrow: 1 }}>
+          Ảnh {selected + 1} / {count}
+        </AppText>
+        <Button
+          secondary
+          title="Xem ảnh lớn"
+          disabled={disabled}
+          onPress={onEnlarge}
+        />
       </View>
       {count > 1 && (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
@@ -64,6 +78,7 @@ export function BookGallery({
               key={index}
               title={`Ảnh ${index + 1}`}
               selected={index === selected}
+              disabled={disabled}
               onPress={() => onSelect(index)}
             />
           ))}
