@@ -7,6 +7,8 @@
 - WIP Chat/Notifications/MainLayout/Home CSS được checkpoint riêng
   `3dcda7a`; khảo sát `489fc75`; merge main `c8de21e`.
   Checkout chính và cấu hình/runtime/DB chính được bảo toàn.
+- Code checkpoint cuối `2de87d6` đã push; [PR nháp33](https://github.com/huangg49/used-book-marketplace/pull/33).
+  Các commit tiếp theo chỉ cập nhật handoff, không đổi source được test.
 - PR chứa toàn bộ chuỗi phát triển giao diện/auth/catalog trước đây, không chỉ
   commit catalog cuối. Khảo sát ban đầu: 98 candidate commit, 6 main commit.
   [Khảo sát trước merge](PREMERGE_CATALOG_2026_10_12.md) là báo cáo lịch sử;
@@ -58,7 +60,7 @@ live acceptance. Không seed/reset DB chính.
 | Exchange browser1366/390 | PASS |Create/accept/cancel, lost ACK giữ intent, funding rejection giữ dialog,403 ẩn dữ liệu; không overflow mobile |
 | Shelf/detail/sell/purchase browser | PASS |Filter/cursor/empty/error/retry, login return/owner guard,5bước/giữ dữ liệu, upload/submit/purchase lost ACK;390px100/130%,320px130% |
 | Docs / diff whitespace | PASS |356Markdown/2376relative links; diff check sạch |
-| Remote CI / human review | NOT VERIFIED |Chỉ xác nhận khi có evidence từ PR |
+| Remote CI / human review | BLOCKED / PENDING |Công cụ CI yêu cầu kết nối GitHub; reviewer người thật chưa ký |
 
 Các lỗi selector của harness cũ đã được cập nhật theo nhãn hiện tại, control
 radio có mặt nhãn riêng và hai danh mục cùng tên; giữ nguyên assert nghiệp vụ,
@@ -73,7 +75,7 @@ giữ kiểm submit/purchase lost-response và số aggregate/conversation thự
 - Safari, điện thoại thật/native, performance production, live storage và
   gửi Brevo thật không chạy lại trong gói tích hợp này.
 - READINESS không đổi. Full suite PASS không tự đóng các gate nghiệp vụ.
-- Push nhánh tích hợp/tạo PR để reviewer xem. Theo
+- Nhánh đã push và PR nháp đã tạo để reviewer xem. Theo
   [TEAMWORK](../TEAMWORK.md), owner review, reviewer thứ hai cho tiền/quyền và
   CI PASS là điều kiện trước squash merge. Chưa merge/deploy.
 

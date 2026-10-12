@@ -25,9 +25,11 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   Thêm User Web CI lint/build/unit/session và browser QA riêng.
 - [Bằng chứng và giới hạn](../verification/INTEGRATION_MAIN_2026_10_12.md).
   Primary WIP/runtime/DB không sửa/reset/seed; READINESS không đổi.
-  Native/Safari/live storage/Brevo thật NOT RUN. Push/PR là bước tiếp,
-  remote CI/owner review và reviewer thứ hai cho tiền/quyền còn chờ;
-  chưa merge/deploy.
+  Native/Safari/live storage/Brevo thật NOT RUN. Đã push và tạo
+  [PR nháp33](https://github.com/huangg49/used-book-marketplace/pull/33),
+  code checkpoint `2de87d6`. Công cụ CI yêu cầu kết nối GitHub nên chưa
+  xác minh remote checks; owner review và reviewer thứ hai cho tiền/quyền
+  còn chờ. Chưa merge/deploy.
 
 ## Khảo sát trước tích hợp — 12/10/2026
 
