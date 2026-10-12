@@ -9,6 +9,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { HomeBookCard } from "../components/HomeBookCard";
+import { CatalogSort } from "../components/CatalogSort";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
 import { lockPageScroll } from "../lib/page-scroll";
@@ -611,24 +612,11 @@ export function BookSearchPage() {
                 <SlidersHorizontal size={17} aria-hidden="true" />
                 Bộ lọc{chips.length > 0 && <span>{chips.length}</span>}
               </button>
-              <label className={styles.sort}>
-                <span>Sắp xếp</span>
-                <select
-                  aria-label="Sắp xếp"
-                  value={params.get("sort") || "newest"}
-                  onChange={(event) => update("sort", event.target.value)}
-                >
-                  <option value="newest">
-                    {preview ? "Thứ tự mặc định" : "Mới đăng"}
-                  </option>
-                  <option value="salePriceAsc">Giá bán tăng dần</option>
-                  <option value="salePriceDesc">Giá bán giảm dần</option>
-                  <option value="exchangeValueAsc">Giá trị đổi tăng dần</option>
-                  <option value="exchangeValueDesc">
-                    Giá trị đổi giảm dần
-                  </option>
-                </select>
-              </label>
+              <CatalogSort
+                value={params.get("sort") || "newest"}
+                preview={preview}
+                onChange={(value) => update("sort", value)}
+              />
             </div>
           </div>
           {filtered && (

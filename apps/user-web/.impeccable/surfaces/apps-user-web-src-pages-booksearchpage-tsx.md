@@ -229,3 +229,59 @@ detector. Unit/lint, forced-colors runtime, Safari, speech, physical mobile/nati
 full API/integration, human review and CI are NOT RUN for this extension;
 READINESS remains unchanged. Source comparison and inherited artifact drift:
 `.impeccable/review/search-filter-focus/documentation.md`.
+
+## Sort dropdown follow-up — owner-approved12/10/2026
+
+Operate; narrow extension on `codex/search-sort-dropdown`, base `a3f4d13`.
+The owner rejected the detached double outline and gray browser popup in the
+supplied sort screenshot. Preserve the existing wine/cream/ink world,
+Anton/Be Vietnam Pro,264px rail, search band, compact cards, five sort values
+and existing URL/API behavior. Active BookSearchPage now composes controlled
+CatalogSort; its former native-sort CSS is removed. Legacy BookSearch and
+SortDropdown remain outside this route and unchanged.
+
+Above600px a labelled paper button opens a right-aligned252px paper menu with
+6px padding,8px corners and soft ink18% shadow,8px below the trigger. Trigger
+min194px width/min44px height,6px corners,13px/1.5 Be Vietnam Pro and16px wine
+chevron. Options retain44px targets,10px12px padding,4px corners and13px task
+text; current selection is600-weight wine with a16px check. Hover/keyboard
+focus uses shelf ground; focus has an inset1px wine stroke. Trigger/native
+focus colors the existing frame wine and adds that contiguous inset stroke,
+with no detached outline. At<=600px the custom menu/visible label hide and a
+native select retains44px height,12px text and190px maximum width.
+
+The expanded/controls/label-bound trigger and menu-radio items focus the current
+item on open. Arrows wrap, Home/End move, Enter/Space select, Escape closes and
+returns trigger focus. Open typeahead uses accent-normalized case-insensitive
+prefixes and a600ms event-timestamp window. Outside pointer, focus departure,
+resize and browser Back close it; while open, resize/Back transfers owned focus
+to the visible native picker or trigger. Listeners clean up on close/unmount.
+Native-select keyboard handling passes directly to the browser. Existing
+onChange updates sort and clears cursor through the route's update function.
+Preview uses Thứ tự mặc định; live uses Mới đăng for newest.
+
+Trigger border/inset feedback is170ms ease-out; menu settles from translateY4px
+to0 over140ms cubic-bezier(.16,1,.3,1). Scoped important durations retain both
+under either OS motion preference. Forced-colors source supplies a CanvasText
+menu border and inset Highlight focus outline; runtime NOT RUN.
+
+Documenter reopened corrected native JPEG desktop/selected/closed/tablet/mobile/
+320.jpg plus the owner's rejected screenshot. Captures show the scoped popup,
+checked wine selection,closed trigger and native narrow fit;320.jpg now shows
+loaded first-row covers and no stale blank right band. Actual JPEG rasters are
+1265×712 desktop/selected/closed,753×882 tablet,375×812 mobile and305×705 at320;
+configured browser viewports were1280×720/768×900/390×844/320×740. Reported320
+DOM inner320×740/client305×740/document width305px; screenshot backend heights
+differ, so raster dimensions do not establish matching DOM height or actual125%
+zoom. Reported TS/Vite build,78existing unit tests and
+lint0errors/5old Exchange warnings PASS. Reported CUA1280×720/768×900/390×844/
+320×740 open/selectURL/keyboard/typeahead/outside/Tab/Back/native arrows/resize
+focus PASS; actual reduced-motion:true retains140ms,320px document width305px.
+One detector pass had9advisories:8incumbent radius/colors and an initial new
+shadow RGB replaced by canonical ink color-mix; no rescan. Integration selector
+was updated for the actual custom menu; full harness NOT RUN because older
+unrelated selectors remain. This documenter ran no tests/browser/detector.
+No DB writes,real email,login or backend checks;forced-colors runtime,Safari,
+speech,physical mobile,native app,human review and CI NOT RUN. READINESS/WIP
+remain unchanged. Source comparison and drift:
+`.impeccable/review/search-sort-dropdown/documentation.md`.

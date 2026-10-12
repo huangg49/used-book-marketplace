@@ -98,6 +98,20 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Search — nhóm lọc và xóa riêng — 11/10/2026
 
+- Follow-up12/10 `codex/search-sort-dropdown`, base `a3f4d13`, checkpoint subject
+  `feat(web): refine catalog sorting dropdown`: CatalogSort controlled thay native
+  desktop bằng menu giấy/dấu tích/44px targets/focus liền; <=600px giữ native.
+  Giữ5sort values/nhãn preview-live/update URL/API/filter. Keyboard arrows/Home/
+  End/Enter/Escape/typeahead/outside/Tab/Back/resizefocus native PASS trên CUA
+  1280/768/390/320px, không tràn ngang; motion140ms theo chính sách chủ dự án.
+  Build(TS)/78unit/lint PASS (5warning Exchange cũ); detector một lần9advisory,
+  shadow mới chuyển token,8drift cũ ngoài scope; không scan lại.
+  Format/docs/diff PASS; independent AI review **ship**, không material fix; docs
+  comparison khớp. Ảnh JPEG sửa lỗi capture320, không suy raster là CSSviewport.
+  [Evidence](../../.impeccable/review/search-sort-dropdown/README.md).
+  Fullharness/liveAPI/forcedcolors/Safari/speech/physicalmobile/native/human/CI
+  NOT RUN; không ghi DB/login/email. Tab đóng/viewport reset, Vite5186 giữ chạy;
+  WIP teammate/READINESS giữ nguyên; local chưa push/PR.
 - Follow-up12/10 `codex/search-filter-focus`, base `2672532`, checkpoint subject
   `refactor(web): simplify search filter field focus`: CSS-only filter desktop/
   dialog, bỏ outline ngoài; viền hiện có + inset liền nét, label/prefix đỏ rượu,

@@ -131,7 +131,8 @@ try {
     .first()
     .waitFor();
   assert.equal(new URL(p.url()).searchParams.get("mode"), "Exchange");
-  await p.getByLabel("Sắp xếp").selectOption("salePriceDesc");
+  await p.getByRole("button", { name: /^Sắp xếp / }).click();
+  await p.getByRole("menuitemradio", { name: "Giá bán giảm dần" }).click();
   await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
   await p
     .getByRole("heading", { level: 1, name: fixture.metadata.title })
