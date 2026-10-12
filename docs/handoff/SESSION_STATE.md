@@ -8,7 +8,8 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Web mở phiên đấu giá từ sách — 12/10/2026
 
-- Nhánh `feature/auction-web`: `apps/user-web` thêm `/auctions/new` gọi
+- Nhánh `feature/auction-create-from-book`, [PR35](https://github.com/huangg49/used-book-marketplace/pull/35)
+  (#34 đóng, thay bằng #35): `apps/user-web` thêm `/auctions/new` gọi
   `POST /auction-intakes` (contract có sẵn, không đổi OpenAPI/API). Chọn sách
   Bán đã duyệt/hiển thị/Sẵn sàng, điểm từ `/handover-points`, lưới giá
   start/step/mua ngay theo POL-39; giữ expectedListingVersion, khóa body/key
@@ -20,6 +21,9 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   QA cục bộ (API thật cần cấu hình riêng): chọn sách/điểm, lỗi lưới giá,
   xác nhận, biên nhận, intake list, preselect từ kệ, không tràn ngang. Luồng
   với API/Mongo thật, rút sách thật, 200% zoom và human review NOT RUN.
+- Thêm: báo hòa giá (FR-AU04, người cam kết trước dẫn) thay cho "bị vượt giá";
+  bố cục lại "Về bản sách này"/"Thông tin phiên". Kiểm trên API+Mongo local thật
+  (Mongo Docker cổng 27019 vì mongod Windows giữ 27017). Chưa merge/deploy.
 
 ## Tích hợp Member/main — 12/10/2026
 
