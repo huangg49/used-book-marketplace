@@ -14,6 +14,21 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   preflight HTTP204 cho `http://127.0.0.1:5186` PASS. Không thử đăng nhập,
   seed/reset DB, đổi tài khoản hoặc cấu hình; WIP teammate/READINESS giữ nguyên.
 
+## Danh mục / thể loại — kế hoạch mở rộng12/10/2026
+
+- Nhánh tài liệu `codex/catalog-expansion-plan`, source base `f4d74a7`; chủ dự
+  án chọn đầy đủ nhóm phổ biến và bộ lọc riêng theo nhóm. Đã rà soát vocabulary,
+  contract, API/query/write/cursor, Mongo validator/revision, web/Search/Sell/
+  Home/menu/chi tiết, Admin và RN/projection phụ. [Kế hoạch chi tiết](../design/CATALOG_EXPANSION_PLAN.md)
+  đề xuất17gốc/55con/72mã v2 cộng thêm, context query cha tách metadata,
+  migration mới, RN bảo toàn classification và dữ liệu demo đa dạng.
+- Đây là **proposal chưa triển khai**, chờ duyệt gói lõi1–5. Admin CRUD,
+  sửa Confirmed cũ, RN UI đầy đủ, facet counts và auction filter là gói sau.
+  Không sửa source chức năng/chạy migration/ghi DB chính hoặc chạy test sản
+  phẩm. Docs check351Markdown/2333link và diff check PASS. WIP teammate và
+  READINESS giữ nguyên; không push/PR/merge/deploy. Checkpoint subject
+  `docs: plan expanded catalog taxonomy and contextual filters`.
+
 ## Đấu giá web —12/10/2026
 
 - Motion follow-up: `codex/auction-motion`, base `9479303`, checkpoint subject
