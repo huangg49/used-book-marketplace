@@ -238,9 +238,22 @@ export async function checkListing(tx: Tx, listingId: string) {
     listingId,
     status: 'Active',
   });
+  const exchange = await tx.c.exchanges.findOne({
+    $or: [{ initiatorListingId: listingId }, { recipientListingId: listingId }],
+    status: {
+      $in: [
+        'AcceptedAwaitingFunding',
+        'Preparing',
+        'InTransit',
+        'Delivered',
+      ],
+    },
+  });
   // A listing is reserved by exactly one workflow: either the established
-  // order/auction commitment or the 24-hour buyer-seller conversation.
-  if ((l.trade === 'Reserved') !== Boolean(active || purchase) || (active && purchase))
+  // order/auction commitment, the 24-hour buyer-seller conversation, or an active exchange.
+  const reserverCount =
+    (active ? 1 : 0) + (purchase ? 1 : 0) + (exchange ? 1 : 0);
+  if ((l.trade === 'Reserved') !== (reserverCount === 1) || reserverCount > 1)
     throw new Error('Listing/commitment projection mismatch');
   if (active) {
     const item = await tx.c.workflow_items.findOne({

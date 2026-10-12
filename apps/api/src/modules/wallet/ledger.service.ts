@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type {
+  ExchangeDoc,
   LedgerJournalDoc,
   TopupIntentDoc,
   WalletAccountDoc,
@@ -95,37 +96,104 @@ export async function checkJournal(tx: Tx, journalId: string) {
     // ViaPoint completion (migration 0012): the whole hold leaves once, the
     // seller receives P − C and the platform C plus the outbound leg fee.
     const p = await tx.c.point_orders.findOne({ _id: j.orderId! });
-    if (
-      !p ||
-      p.state !== 'Completed' ||
-      !entries.some(
-        (x) =>
-          account(x.accountId)?.orderId === p._id &&
-          account(x.accountId)?.purpose === 'OrderHold' &&
-          x.credit === p.buyerTotal,
-      ) ||
-      !entries.some(
-        (x) =>
-          account(x.accountId)?.ownerId === p.sellerId &&
-          account(x.accountId)?.purpose === 'UserAvailable' &&
-          x.debit === p.sellerProceeds,
-      ) ||
-      !entries.some(
-        (x) =>
-          x.accountId === PLATFORM_COMMISSION_ACCOUNT_ID &&
-          x.debit === p.commission + p.outboundFee,
+    const ex = p
+      ? null
+      : await tx.c.exchanges.findOne({
+          $or: [
+            { initiatorOrderId: j.orderId! },
+            { recipientOrderId: j.orderId! },
+          ],
+        });
+    if (p) {
+      if (
+        p.state !== 'Completed' ||
+        !entries.some(
+          (x) =>
+            account(x.accountId)?.orderId === p._id &&
+            account(x.accountId)?.purpose === 'OrderHold' &&
+            x.credit === p.buyerTotal,
+        ) ||
+        !entries.some(
+          (x) =>
+            account(x.accountId)?.ownerId === p.sellerId &&
+            account(x.accountId)?.purpose === 'UserAvailable' &&
+            x.debit === p.sellerProceeds,
+        ) ||
+        !entries.some(
+          (x) =>
+            x.accountId === PLATFORM_COMMISSION_ACCOUNT_ID &&
+            x.debit === p.commission + p.outboundFee,
+        )
       )
-    )
+        throw new Error('Settlement journal source mismatch');
+      tx.check(`point-order:${p._id}`, () => checkPointOrder(tx, p._id));
+    } else if (ex) {
+      const isInit = ex.initiatorOrderId === j.orderId;
+      const payerId = isInit ? ex.initiatorId : ex.recipientId;
+      const receiverId = isInit ? ex.recipientId : ex.initiatorId;
+      const deposit = isInit ? ex.initiatorDeposit : ex.recipientDeposit;
+      const totalHeld = deposit + ex.diffAmount;
+      if (
+        ex.status !== 'Completed' ||
+        ex.diffPayerId !== payerId ||
+        !entries.some(
+          (x) =>
+            account(x.accountId)?.orderId === j.orderId &&
+            account(x.accountId)?.purpose === 'OrderHold' &&
+            x.credit === totalHeld,
+        ) ||
+        !entries.some(
+          (x) =>
+            account(x.accountId)?.ownerId === payerId &&
+            account(x.accountId)?.purpose === 'UserAvailable' &&
+            x.debit === deposit,
+        ) ||
+        !entries.some(
+          (x) =>
+            account(x.accountId)?.ownerId === receiverId &&
+            account(x.accountId)?.purpose === 'UserAvailable' &&
+            x.debit === ex.diffAmount,
+        )
+      )
+        throw new Error('Settlement journal source mismatch');
+      tx.check(`exchange:${ex._id}`, () => checkExchange(tx, ex._id));
+    } else {
       throw new Error('Settlement journal source mismatch');
-    tx.check(`point-order:${p._id}`, () => checkPointOrder(tx, p._id));
+    }
   } else {
     // An Order is a DirectDelivery Order (frozen quote) or a ViaPoint Order
     // formed by an auction (migration 0009); both freeze buyerTotal.
     const o = await tx.c.direct_orders.findOne({ _id: j.orderId! });
     const q = o && (await tx.c.sale_quotes.findOne({ _id: o.quoteId }));
     const p = o ? null : await tx.c.point_orders.findOne({ _id: j.orderId! });
-    const buyerId = o?.buyerId ?? p?.buyerId;
-    const total = q?.buyerTotal ?? p?.buyerTotal;
+    const ex =
+      o || p
+        ? null
+        : await tx.c.exchanges.findOne({
+            $or: [
+              { initiatorOrderId: j.orderId! },
+              { recipientOrderId: j.orderId! },
+            ],
+          });
+    let buyerId: string | undefined;
+    let total: number | undefined;
+    if (o) {
+      buyerId = o.buyerId;
+      total = q?.buyerTotal;
+    } else if (p) {
+      buyerId = p.buyerId;
+      total = p.buyerTotal;
+    } else if (ex) {
+      const isInit = ex.initiatorOrderId === j.orderId;
+      buyerId = isInit ? ex.initiatorId : ex.recipientId;
+      const deposit = isInit ? ex.initiatorDeposit : ex.recipientDeposit;
+      const diff = ex.diffPayerId === buyerId ? ex.diffAmount : 0;
+      if (j.type === 'OrderPayment') {
+        total = deposit + diff;
+      } else {
+        total = ex.status === 'Completed' ? deposit : deposit + diff;
+      }
+    }
     const payment = j.type === 'OrderPayment';
     if (
       !buyerId ||
@@ -146,7 +214,8 @@ export async function checkJournal(tx: Tx, journalId: string) {
     )
       throw new Error('Order journal source mismatch');
     if (o) tx.check(`order:${o._id}`, () => checkOrder(tx, o._id));
-    else tx.check(`point-order:${p!._id}`, () => checkPointOrder(tx, p!._id));
+    else if (p) tx.check(`point-order:${p._id}`, () => checkPointOrder(tx, p._id));
+    else if (ex) tx.check(`exchange:${ex._id}`, () => checkExchange(tx, ex._id));
   }
   for (const e of entries)
     if (
@@ -241,7 +310,7 @@ export class LedgerService {
         .toArray();
       if (missing.length) throw new Error(message);
     }
-    // An Order hold references a DirectDelivery or a ViaPoint Order.
+    // An Order hold references a DirectDelivery, a ViaPoint Order, or an Exchange.
     const orphanHold = await tx.c.wallet_accounts
       .aggregate([
         { $match: { purpose: 'OrderHold' } },
@@ -261,7 +330,32 @@ export class LedgerService {
             as: 'point',
           },
         },
-        { $match: { direct: { $size: 0 }, point: { $size: 0 } } },
+        {
+          $lookup: {
+            from: 'exchanges',
+            let: { oid: '$orderId' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $or: [
+                      { $eq: ['$initiatorOrderId', '$$oid'] },
+                      { $eq: ['$recipientOrderId', '$$oid'] },
+                    ],
+                  },
+                },
+              },
+            ],
+            as: 'exchange',
+          },
+        },
+        {
+          $match: {
+            direct: { $size: 0 },
+            point: { $size: 0 },
+            exchange: { $size: 0 },
+          },
+        },
         { $limit: 1 },
         { $project: { _id: 1 } },
       ])
@@ -628,6 +722,197 @@ export class LedgerService {
       intent.amount,
     );
   }
+  async settleExchange(
+    tx: Tx,
+    exchange: ExchangeDoc,
+    now: Date,
+  ) {
+    if (exchange.diffAmount === 0) {
+      if (exchange.initiatorDeposit > 0) {
+        const initAccounts = await this.lockOrder(
+          tx,
+          exchange.initiatorId,
+          exchange.initiatorOrderId,
+          false,
+        );
+        await this.postOrder(
+          tx,
+          exchange.initiatorOrderId,
+          randomUUID(),
+          initAccounts,
+          exchange.initiatorDeposit,
+          now,
+          true,
+        );
+      }
+      if (exchange.recipientDeposit > 0) {
+        const recAccounts = await this.lockOrder(
+          tx,
+          exchange.recipientId,
+          exchange.recipientOrderId,
+          false,
+        );
+        await this.postOrder(
+          tx,
+          exchange.recipientOrderId,
+          randomUUID(),
+          recAccounts,
+          exchange.recipientDeposit,
+          now,
+          true,
+        );
+      }
+    } else {
+      const isInitDiff = exchange.diffPayerId === exchange.initiatorId;
+      const payerId = isInitDiff
+        ? exchange.initiatorId
+        : exchange.recipientId;
+      const payerOrderId = isInitDiff
+        ? exchange.initiatorOrderId
+        : exchange.recipientOrderId;
+      const payerDeposit = isInitDiff
+        ? exchange.initiatorDeposit
+        : exchange.recipientDeposit;
+
+      const receiverId = isInitDiff
+        ? exchange.recipientId
+        : exchange.initiatorId;
+      const receiverOrderId = isInitDiff
+        ? exchange.recipientOrderId
+        : exchange.initiatorOrderId;
+      const receiverDeposit = isInitDiff
+        ? exchange.recipientDeposit
+        : exchange.initiatorDeposit;
+
+      if (receiverDeposit > 0) {
+        const receiverAccounts = await this.lockOrder(
+          tx,
+          receiverId,
+          receiverOrderId,
+          false,
+        );
+        await this.postOrder(
+          tx,
+          receiverOrderId,
+          randomUUID(),
+          receiverAccounts,
+          receiverDeposit,
+          now,
+          true,
+        );
+      }
+
+      const payerHold = await tx.c.wallet_accounts.findOne({
+        orderId: payerOrderId,
+        purpose: 'OrderHold',
+      });
+      if (!payerHold) throw new Error('Payer wallet hold missing');
+      const payerAvail = await this.account(tx, { ownerId: payerId });
+      const receiverAvail = await this.account(tx, { ownerId: receiverId });
+
+      await this.lockAccounts(tx, [
+        payerHold._id,
+        payerAvail._id,
+        receiverAvail._id,
+      ]);
+      const totalHeld = payerDeposit + exchange.diffAmount;
+      if ((await this.balance(tx, payerHold._id)) !== totalHeld)
+        throw invalidState();
+
+      const counter = await tx.c.counters.findOneAndUpdate(
+        { _id: LEDGER_SEQUENCE_COUNTER },
+        { $inc: { value: 1 } },
+        { returnDocument: 'after' },
+      );
+      const journal: LedgerJournalDoc = {
+        _id: randomUUID(),
+        sequence: counter!.value,
+        type: 'OrderSettlement',
+        topupId: null,
+        eventId: null,
+        orderId: payerOrderId,
+        receiptId: randomUUID(),
+        postedAt: now,
+      };
+      await tx.c.ledger_journals.insertOne(journal);
+      await tx.c.ledger_entries.insertMany([
+        {
+          _id: `${journal._id}:${payerHold._id}`,
+          journalId: journal._id,
+          accountId: payerHold._id,
+          debit: 0,
+          credit: totalHeld,
+        },
+        {
+          _id: `${journal._id}:${payerAvail._id}`,
+          journalId: journal._id,
+          accountId: payerAvail._id,
+          debit: payerDeposit,
+          credit: 0,
+        },
+        {
+          _id: `${journal._id}:${receiverAvail._id}`,
+          journalId: journal._id,
+          accountId: receiverAvail._id,
+          debit: exchange.diffAmount,
+          credit: 0,
+        },
+      ]);
+      tx.check(`journal:${journal._id}`, () =>
+        checkJournal(tx, journal._id),
+      );
+    }
+  }
+  async refundExchange(
+    tx: Tx,
+    exchange: ExchangeDoc,
+    now: Date,
+  ) {
+    if (exchange.initiatorFundedAt) {
+      const isInitDiff = exchange.diffPayerId === exchange.initiatorId;
+      const amount =
+        exchange.initiatorDeposit + (isInitDiff ? exchange.diffAmount : 0);
+      if (amount > 0) {
+        const accounts = await this.lockOrder(
+          tx,
+          exchange.initiatorId,
+          exchange.initiatorOrderId,
+          false,
+        );
+        await this.postOrder(
+          tx,
+          exchange.initiatorOrderId,
+          randomUUID(),
+          accounts,
+          amount,
+          now,
+          true,
+        );
+      }
+    }
+    if (exchange.recipientFundedAt) {
+      const isRecDiff = exchange.diffPayerId === exchange.recipientId;
+      const amount =
+        exchange.recipientDeposit + (isRecDiff ? exchange.diffAmount : 0);
+      if (amount > 0) {
+        const accounts = await this.lockOrder(
+          tx,
+          exchange.recipientId,
+          exchange.recipientOrderId,
+          false,
+        );
+        await this.postOrder(
+          tx,
+          exchange.recipientOrderId,
+          randomUUID(),
+          accounts,
+          amount,
+          now,
+          true,
+        );
+      }
+    }
+  }
 }
 
 // Commit-time replacement for latlai_check_topup.
@@ -683,3 +968,28 @@ export async function checkTopupRecord(tx: Tx, topupId: string) {
     bad = true;
   if (bad) throw new Error('Topup event/ledger/receipt mismatch');
 }
+
+export async function checkExchange(tx: Tx, exchangeId: string) {
+  const ex = await tx.c.exchanges.findOne({ _id: exchangeId });
+  if (!ex) throw new Error('Exchange missing');
+  if (ex.status === 'Completed') {
+    if (!ex.initiatorReceivedAt || !ex.recipientReceivedAt) {
+      throw new Error('Exchange completed without both receipts');
+    }
+    const initHold = await tx.c.wallet_accounts.findOne({
+      orderId: ex.initiatorOrderId,
+      purpose: 'OrderHold',
+    });
+    const recHold = await tx.c.wallet_accounts.findOne({
+      orderId: ex.recipientOrderId,
+      purpose: 'OrderHold',
+    });
+    if (initHold && (await balanceOf(tx, initHold._id)) !== 0) {
+      throw new Error('Initiator exchange hold not released on completion');
+    }
+    if (recHold && (await balanceOf(tx, recHold._id)) !== 0) {
+      throw new Error('Recipient exchange hold not released on completion');
+    }
+  }
+}
+
