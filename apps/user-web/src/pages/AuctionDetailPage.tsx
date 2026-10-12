@@ -375,6 +375,8 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  // The price a bid notice describes; a later price change makes it stale.
+  const [noticePrice, setNoticePrice] = useState<number | null>(null)
   const [receipt, setReceipt] = useState<{ sequence: number; bid: boolean } | null>(null)
   const receiptSequence = useRef(0)
   const standing = useRef<HTMLDivElement>(null)
@@ -387,8 +389,13 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
   const [wasLeading, setWasLeading] = useState(leading)
   if (wasLeading !== leading) {
     setWasLeading(leading)
-    if (wasLeading && !leading && !busy) { setReceipt(null); setNotice(`Bạn vừa bị vượt giá. Giá hiện tại ${formatVnd(auction.currentPrice ?? auction.startPrice)}.`) }
+    if (wasLeading && !leading && !busy) { setReceipt(null); setNoticePrice(null); setNotice(`Bạn vừa bị vượt giá. Giá hiện tại ${formatVnd(auction.currentPrice ?? auction.startPrice)}.`) }
   }
+  const currentPrice = auction.currentPrice ?? auction.startPrice
+  // FR-AU04: equal commitments rank by who reached the level first, so an equal
+  // bid that does not lead is a tie lost on order, not a higher rival amount.
+  const tied = !!me && !leading && me.ownLevel !== null && me.ownLevel === auction.currentPrice
+  const staleNotice = noticePrice !== null && noticePrice !== currentPrice
   const manualError = manual === undefined ? null : amountError(manual, minimumBid, auction.startPrice, step)
   const manualCapped = minimumBid > AUCTION_MAX_PRICE
   const autoCapped = autoFloor > AUCTION_MAX_PRICE
@@ -408,8 +415,11 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
         next.kind === 'BuyNow' ? 'Đã tạo đơn mua ngay. Hãy thanh toán trong 15 phút để tiếp tục.'
         : next.kind === 'Disable' ? 'Đã tắt đặt giá tự động.'
         : receipt.leading ? `Bạn đang dẫn giá ở ${price}.`
-        : `Đã ghi nhận, nhưng một mức tự động khác cao hơn. Giá hiện tại ${price}.`,
+        : receipt.currentPrice === next.amount
+          ? `Đã ghi nhận ${price}, nhưng một người khác đã cam kết mức này trước bạn nên vẫn dẫn giá.`
+          : `Đã ghi nhận, nhưng một mức tự động khác cao hơn. Giá hiện tại ${price}.`,
       )
+      setNoticePrice(next.kind === 'Manual' || next.kind === 'Auto' ? receipt.currentPrice : null)
       setReceipt({ sequence: ++receiptSequence.current, bid: next.kind === 'Manual' || next.kind === 'Auto' })
     } catch (caught) {
       if (outcomeUnknown(caught)) { setUnknown(next); setAutoDialog(false) }
@@ -426,16 +436,18 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
     <div className={styles.bidPanel}>
       {me && (
         <div ref={standing} role="status" className={`${styles.standing} ${leading ? styles.standingLead : styles.standingOut}`}>
-          <strong>{leading ? 'Bạn đang dẫn giá' : 'Bạn đã bị vượt giá'}</strong>
+          <strong>{leading ? 'Bạn đang dẫn giá' : tied ? 'Bạn trả bằng người dẫn giá' : 'Bạn đã bị vượt giá'}</strong>
           <span>
-            {me.mode === 'Auto' && me.ownLevel !== null
+            {tied
+              ? `Một người khác đã cam kết ${formatVnd(currentPrice)} trước bạn. Khi hai mức bằng nhau, người đặt trước dẫn giá. Trả từ ${formatVnd(minimumBid)} để vượt lên.`
+              : me.mode === 'Auto' && me.ownLevel !== null
               ? `Mức tự động tối đa của bạn: ${formatVnd(me.ownLevel)} (chỉ bạn thấy).`
               : me.ownLevel !== null ? `Lượt trả gần nhất của bạn: ${formatVnd(me.ownLevel)}.` : null}
           </span>
         </div>
       )}
 
-      {notice && (receipt ? <AuctionReceipt key={receipt.sequence} message={notice} bid={receipt.bid} /> : <p role="status" className={styles.fieldError}>{notice}</p>)}
+      {notice && !staleNotice && (receipt ? <AuctionReceipt key={receipt.sequence} message={notice} bid={receipt.bid} /> : <p role="status" className={styles.fieldError}>{notice}</p>)}
       {error && !autoDialog && <p role="alert" className={styles.fieldError}>{error}</p>}
 
       {unknown ? (
