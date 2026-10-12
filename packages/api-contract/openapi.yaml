@@ -6427,9 +6427,15 @@ paths:
       tags:
         - Exchanges
       description: Initiates an exchange proposal between the user's listing and another user's listing.
-      x-implementation-status: planned
       security:
         - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -6462,7 +6468,6 @@ paths:
       tags:
         - Exchanges
       description: Returns a list of exchanges for the current user.
-      x-implementation-status: planned
       security:
         - bearerAuth: []
       responses:
@@ -6482,7 +6487,6 @@ paths:
       tags:
         - Exchanges
       description: Returns details of a specific exchange.
-      x-implementation-status: planned
       security:
         - bearerAuth: []
       parameters:
@@ -6513,7 +6517,6 @@ paths:
       tags:
         - Exchanges
       description: Recipient accepts the exchange proposal.
-      x-implementation-status: planned
       security:
         - bearerAuth: []
       parameters:
@@ -6560,7 +6563,6 @@ paths:
       tags:
         - Exchanges
       description: Participant funds their part of the exchange (deposit + diff).
-      x-implementation-status: planned
       security:
         - bearerAuth: []
       parameters:
