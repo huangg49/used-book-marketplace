@@ -60,11 +60,28 @@ live acceptance. Không seed/reset DB chính.
 | Exchange browser1366/390 | PASS |Create/accept/cancel, lost ACK giữ intent, funding rejection giữ dialog,403 ẩn dữ liệu; không overflow mobile |
 | Shelf/detail/sell/purchase browser | PASS |Filter/cursor/empty/error/retry, login return/owner guard,5bước/giữ dữ liệu, upload/submit/purchase lost ACK;390px100/130%,320px130% |
 | Docs / diff whitespace | PASS |356Markdown/2376relative links; diff check sạch |
-| Remote CI / human review | BLOCKED / PENDING |Công cụ CI yêu cầu kết nối GitHub; reviewer người thật chưa ký |
+| Remote CI / human review | FAIL lượt đầu / PENDING |Ảnh log chủ dự án gửi: User Web browser selector khớp hai CTA; bản sửa local PASS, remote rerun chưa xác minh; reviewer người thật chưa ký |
 
 Các lỗi selector của harness cũ đã được cập nhật theo nhãn hiện tại, control
 radio có mặt nhãn riêng và hai danh mục cùng tên; giữ nguyên assert nghiệp vụ,
 giữ kiểm submit/purchase lost-response và số aggregate/conversation thực.
+
+### Sửa User Web CI sau push
+
+Ảnh log CI chủ dự án gửi cho thấy selector toàn trang
+`getByRole('link', { name: 'Đăng sách của bạn', exact: true })` khớp cả CTA
+cuối Home và footer. Lượt chạy local trước sửa vẫn PASS, nên local PASS không
+đủ bảo đảm selector này ổn định khi render trên CI.
+
+Scope click vào region “Đọc xong rồi? Để sách đi tiếp.”; chờ link footer
+xuất hiện trước click để bài kiểm thử bao phủ trang có đủ cả hai entry point,
+rồi xác nhận URL `/sell`. Không dùng `.first()` để che selector mơ hồ, không
+đổi giao diện hoặc assert nghiệp vụ. Toàn bộ `test:browser` chạy hai lượt
+với `CI=true` trên Node24.19.0/pnpm11.19.0 và QA Mongo riêng PASS; lint PASS.
+Giữ các ca filter/detail/login/owner guard, five-step form, lost ACK/replay
+và số conversation thật. Không chạy lại API/native suite vì không đổi source
+liên quan. CI Ubuntu Node24.15.0 cần xác minh lại sau push; connector hiện
+yêu cầu kết nối GitHub, không tuyên bố remote PASS.
 
 ## Giới hạn và bước tiếp
 

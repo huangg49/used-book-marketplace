@@ -30,6 +30,12 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   code checkpoint `2de87d6`. Công cụ CI yêu cầu kết nối GitHub nên chưa
   xác minh remote checks; owner review và reviewer thứ hai cho tiền/quyền
   còn chờ. Chưa merge/deploy.
+- Theo ảnh log CI chủ dự án gửi, User Web CI lượt đầu FAIL ở
+  `tests/integration.mjs`: selector toàn trang cho “Đăng sách của bạn” khớp
+  cả CTA cuối Home và footer. Sửa trong cùng nhánh bằng scope region có tên,
+  chờ footer xuất hiện để kiểm trang render đầy đủ và xác nhận URL `/sell`.
+  Browser QA riêng chạy hai lượt với `CI=true` PASS; lint PASS; không đổi UI,
+  API hoặc giảm assert. Remote rerun sau push vẫn cần xác minh.
 
 ## Khảo sát trước tích hợp — 12/10/2026
 

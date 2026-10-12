@@ -251,7 +251,21 @@ try {
     .getByRole("link", { name: "Trang chủ Lật lại", exact: true })
     .first()
     .click();
-  await p.getByRole("link", { name: "Đăng sách của bạn", exact: true }).click();
+  // Both the closing invitation and the footer have this label. Wait for the
+  // footer too so this journey covers the fully rendered page, then scope the
+  // click to the invitation instead of depending on which link renders first.
+  await p
+    .getByRole("contentinfo")
+    .getByRole("link", { name: "Đăng sách của bạn", exact: true })
+    .waitFor();
+  await p
+    .getByRole("region", {
+      name: "Đọc xong rồi? Để sách đi tiếp.",
+      exact: true,
+    })
+    .getByRole("link", { name: "Đăng sách của bạn", exact: true })
+    .click();
+  await p.waitForURL(origin + "/sell");
   await step(/Kiểm tra/).click();
   await button("Gửi duyệt").click();
   await p.getByRole("alert").waitFor();
