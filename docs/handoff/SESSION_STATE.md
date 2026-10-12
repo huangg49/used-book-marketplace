@@ -14,6 +14,18 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   preflight HTTP204 cho `http://127.0.0.1:5186` PASS. Không thử đăng nhập,
   seed/reset DB, đổi tài khoản hoặc cấu hình; WIP teammate/READINESS giữ nguyên.
 
+## Nghiên cứu profile Tuấn Minh —12/10/2026
+
+- `codex/profile-integration-study`, base `cc51e0b`: theo yêu cầu tham khảo lại
+  profile Minh (`36cb0c0`), đối chiếu component legacy với Profile/MyBooks hiện tại
+  và OpenAPI. [Phương án](../design/WEB_PROFILE_BLEND_PROPOSAL.md) đề xuất lấy khung
+  dashboard làm Tổng quan riêng, giữ profile/kệ và dữ liệu thật; phân biệt API đã
+  có với UI/mẫu và phần cần contract mới. Chỉ docs; chưa đổi giao diện/route/API.
+  Fetch origin thành công, không pull/merge. Docs/diff checks PASS; không test/build/
+  browser vì không đổi source, chưa render bản Minh; human review chưa có.
+  WIP teammate/runtime/READINESS giữ nguyên. Bước tiếp: chủ dự án duyệt hướng tích
+  hợp trước khi code; không push/PR.
+
 ## Navbar — đồng bộ khi chuyển trang —12/10/2026
 
 - `codex/navbar-route-sync`, base `884a30e`, checkpoint subject
