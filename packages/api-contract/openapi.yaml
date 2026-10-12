@@ -6528,6 +6528,190 @@ paths:
           $ref: "#/components/responses/ListingError"
         "500":
           $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/cancel:
+    post:
+      operationId: cancelExchange
+      tags:
+        - Exchanges
+      description: Initiator cancels the exchange proposal.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VersionCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exchange"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/reject:
+    post:
+      operationId: rejectExchange
+      tags:
+        - Exchanges
+      description: Recipient rejects the exchange proposal.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectExchangeCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exchange"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/ship:
+    post:
+      operationId: shipExchange
+      tags:
+        - Exchanges
+      description: Participant confirms they have shipped their book.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VersionCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exchange"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/receive:
+    post:
+      operationId: receiveExchange
+      tags:
+        - Exchanges
+      description: Participant confirms they have received the other book.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VersionCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exchange"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
 components:
   securitySchemes:
     bearerAuth:
@@ -11825,6 +12009,19 @@ components:
         - Completed
         - Cancelled
         - ResolutionPending
+    ExchangeCancelReason:
+      type: string
+      enum:
+        - FundingExpired
+        - ProposalExpired
+        - CancelledByUser
+        - ListingUnavailable
+    ExchangeCancelledBy:
+      type: string
+      enum:
+        - System
+        - Initiator
+        - Recipient
     Exchange:
       type: object
       additionalProperties: false
@@ -11877,6 +12074,63 @@ components:
             - type: string
               format: uuid
             - type: "null"
+        fundingDeadline:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        initiatorFundedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        recipientFundedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        rejectionReason:
+          anyOf:
+            - type: string
+            - type: "null"
+        cancelReason:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeCancelReason"
+            - type: "null"
+        cancelledBy:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeCancelledBy"
+            - type: "null"
+        cancelledAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        initiatorShippedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        recipientShippedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        initiatorReceivedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        recipientReceivedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        proposalExpiresAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
         createdAt:
           type: string
           format: date-time
@@ -11920,3 +12174,16 @@ components:
         revision:
           type: integer
           minimum: 1
+    RejectExchangeCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          minLength: 5

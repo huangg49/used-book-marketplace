@@ -64,4 +64,60 @@ export class ExchangesController {
       res,
     );
   }
+
+  @Post(':id/cancel')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  cancelExchange(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    return commandResponse(
+      this.exchanges.cancel(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('VersionCommand', body),
+      ),
+      res,
+    );
+  }
+
+  @Post(':id/reject')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  rejectExchange(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    return commandResponse(
+      this.exchanges.reject(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('RejectExchangeCommand', body),
+      ),
+      res,
+    );
+  }
+
+  @Post(':id/ship')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  shipExchange(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    return commandResponse(
+      this.exchanges.ship(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('VersionCommand', body),
+      ),
+      res,
+    );
+  }
+
+  @Post(':id/receive')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  receiveExchange(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    return commandResponse(
+      this.exchanges.receive(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('VersionCommand', body),
+      ),
+      res,
+    );
+  }
 }

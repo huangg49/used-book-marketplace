@@ -2,15 +2,33 @@
 
 ## Nguồn và việc đang làm
 
-- **09/10 — Gói Backend Trao Đổi Sách (Exchange Backend)**: Đã hoàn thiện luồng backend cho trao đổi sách trên nhánh `feature/exchange-backend`.
-  - Migration `0015-exchanges.ts` đã tạo collection `exchanges`.
-  - Cập nhật OpenAPI contract `openapi.yaml` với các routes `POST /exchanges`, `GET /exchanges`, `GET /exchanges/{id}`, `POST /exchanges/{id}/accept`, và `POST /exchanges/{id}/funding`.
-  - Cập nhật schema MongoDB vào `documents.ts` và `collections.ts`.
-  - Cập nhật `mongo-command.service.ts` để hỗ trợ command pattern cho `ExchangeDoc`.
-  - Bổ sung `ExchangesModule`, `ExchangesController`, `ExchangesService`. Tích hợp vào `app.module.ts`.
-  - Luồng tiền (`fundExchange`) sử dụng tạm `orderId` của ledger để ghi nhận `OrderHold` cho deposit trao đổi.
-  - Tình trạng CI/Build: `nest build` qua API đã PASS (0 lỗi TS). E2E/test thật NOT RUN. Chờ QA hoặc team chạy thử nghiệm.
-
+- **12/10 — Hoàn thiện toàn diện Backend Trao Đổi Sách (Exchange Backend)**: Đã audit và xử lý triệt để toàn bộ kiến trúc, schema, invariants, ledger escrow và state machine cho luồng trao đổi sách trên nhánh `feature/exchange-backend`:
+  - **Migration 0016 (`0016-exchanges-phase2.ts`)**:
+    - Chuẩn hóa validator schema cho `exchanges` qua `withExchangePhase2Changes`: bổ sung `lockSeq`, `initiatorOrderId`, `recipientOrderId`, `fundingDeadline`, `initiatorFundedAt`, `recipientFundedAt`, `rejectionReason`, `initiatorShippedAt`, `recipientShippedAt`, `initiatorReceivedAt`, `recipientReceivedAt`.
+    - Bảo toàn biểu thức `$expr` nguyên thủy và bổ sung unique index trên `initiatorOrderId`, `recipientOrderId` và index deadline `(status, fundingDeadline)`.
+    - Đã khấu trừ `exchangeCollectionSpecs.length` trong `schema.mongo-spec.ts` bảo toàn kiểm tra 45 models.
+  - **Sửa lỗi đích danh (Target constraint crash code 121)**:
+    - Trong `mongo-command.service.ts`: bổ sung `initiatorListingId` vào `ExchangeChange` và gán `targets.listingId = change.initiatorListingId` để thỏa mãn bất biến `eq(nonNullCount(...TARGETS), 1)` của `mutation_receipts` và `audit_events`.
+  - **Cam kết & Trạng thái Listing (Listing trade projection)**:
+    - Mở rộng `checkListing` trong `listing-projection.ts`: nhận diện các exchange đang hoạt động (`AcceptedAwaitingFunding`, `Preparing`, `InTransit`, `Delivered`) bảo đảm đúng duy nhất 1 workflow giữ chỗ `Reserved`.
+    - Cập nhật `ListingCommitmentPolicy.project`: cho phép chuyển đổi hợp lệ sang `Exchanged` khi hoàn tất trao đổi.
+  - **Sổ cái & Escrow (Ledger Escrow, Collision & Reconciliation)**:
+    - Tách biệt `initiatorOrderId` và `recipientOrderId` tránh va chạm unique key `{ orderId: 1, type: 1 }` trên `ledger_journals`.
+    - Cập nhật `checkJournal` trong `ledger.service.ts` hỗ trợ xác thực `OrderPayment`, `OrderRefund`, và `OrderSettlement` cho các đơn trao đổi.
+    - Bổ sung `checkExchange` kiểm tra các hold tài khoản đã giải phóng khi `Completed`.
+    - Cập nhật `orphanHold` trong `reconcile()` để nhận diện `exchanges`.
+    - Thêm `settleExchange` (phân bổ cọc và tiền bù Δ) và `refundExchange` (hoàn cọc khi hủy).
+  - **Nghiệp vụ dịch vụ (`exchanges.service.ts`)**:
+    - `create`: Kiểm tra `Available`, `Approved`, `Visible`, `Exchange/Both`, tính toán tiền bù chênh lệch Δ và cọc đối ứng 100% (POL-12).
+    - `accept`: Khóa nguyên tử cả 2 listing chuyển sang `Reserved`, thiết lập deadline 24h (POL-05), tự động hủy các đề xuất cạnh tranh trùng sách.
+    - `fund`: Từng bên đóng cọc (+ Δ nếu là bên bù), chống nạp đúp (`initiatorFundedAt`/`recipientFundedAt`), chuyển `Preparing` khi đủ 2 bên.
+    - `cancel/reject`: Hoàn cọc an toàn qua Ledger nếu đã nạp, giải phóng listing trở lại `Available`.
+    - `ship`: Ghi nhận `shippedAt` của từng bên, chuyển `InTransit` khi cả 2 đã gửi.
+    - `receive`: Ghi nhận `receivedAt` của từng bên; khi cả 2 đã nhận thì chuyển `Completed`, hoàn cọc và chuyển tiền bù Δ qua Ledger, chuyển 2 listing sang `Exchanged`.
+  - **Contract & Verification**:
+    - OpenAPI: Cập nhật `packages/api-contract/openapi.yaml`, chạy `pnpm contract:generate` và `pnpm contract:check` PASS 100%.
+    - Typecheck & Build: `npx pnpm --filter @used-books/api typecheck` và `npx pnpm --filter @used-books/api build` PASS 100% không cảnh báo/lỗi.
+    - Test Suite: Bổ sung bộ kiểm thử E2E đầy đủ `apps/api/test/exchanges.e2e-spec.ts`.
 
 - **08/10 — purchase conversations on `codex/purchase-conversations` (not merged):**
   `ce62098` adds the OpenAPI contract and MongoDB migration `0014` for 24-hour

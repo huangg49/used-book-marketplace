@@ -112,6 +112,7 @@ export type PurchaseConversationChange = {
 export type ExchangeChange = {
   entityType: 'Exchange';
   entityId: string;
+  initiatorListingId: string;
   version: number;
   state: Wire['ExchangeStatus'];
   decidedAt: Date;
@@ -436,7 +437,7 @@ export class MongoCommandService {
   }
   runExchange<C>(
     context: CommandContext,
-    operation: 'createExchangeProposal' | 'acceptExchange' | 'fundExchange',
+    operation: 'createExchangeProposal' | 'acceptExchange' | 'fundExchange' | 'cancelExchange' | 'rejectExchange' | 'shipExchange' | 'receiveExchange',
     target: string | null,
     body: unknown,
     options: Options<C, ExchangeChange>,
@@ -814,7 +815,7 @@ export class MongoCommandService {
       if (change.entityType === 'TopupIntent')
         targets.topupId = change.entityId;
       else if (change.entityType === 'Exchange') {
-        // Exchange does not match a specific target yet, or we can use contextId if we integrate it
+        targets.listingId = change.initiatorListingId;
       } else if (
         change.entityType === 'Order' ||
         change.entityType === 'OrderPackagingEvidence' ||

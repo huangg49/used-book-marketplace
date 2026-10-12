@@ -1969,6 +1969,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exchanges/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Initiator cancels the exchange proposal. */
+        post: operations["cancelExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Recipient rejects the exchange proposal. */
+        post: operations["rejectExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{id}/ship": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Participant confirms they have shipped their book. */
+        post: operations["shipExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{id}/receive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Participant confirms they have received the other book. */
+        post: operations["receiveExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3735,6 +3803,10 @@ export interface components {
         };
         /** @enum {string} */
         ExchangeStatus: "Proposed" | "AcceptedAwaitingFunding" | "Preparing" | "InTransit" | "Delivered" | "Completed" | "Cancelled" | "ResolutionPending";
+        /** @enum {string} */
+        ExchangeCancelReason: "FundingExpired" | "ProposalExpired" | "CancelledByUser" | "ListingUnavailable";
+        /** @enum {string} */
+        ExchangeCancelledBy: "System" | "Initiator" | "Recipient";
         Exchange: {
             /** Format: uuid */
             id: string;
@@ -3752,6 +3824,18 @@ export interface components {
             recipientDeposit: number;
             diffAmount: number;
             diffPayerId: string | null;
+            fundingDeadline?: string | null;
+            initiatorFundedAt?: string | null;
+            recipientFundedAt?: string | null;
+            rejectionReason?: string | null;
+            cancelReason?: components["schemas"]["ExchangeCancelReason"] | null;
+            cancelledBy?: components["schemas"]["ExchangeCancelledBy"] | null;
+            cancelledAt?: string | null;
+            initiatorShippedAt?: string | null;
+            recipientShippedAt?: string | null;
+            initiatorReceivedAt?: string | null;
+            recipientReceivedAt?: string | null;
+            proposalExpiresAt?: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -3769,6 +3853,10 @@ export interface components {
         };
         AcceptExchange: {
             revision: number;
+        };
+        RejectExchangeCommand: {
+            expectedVersion: number;
+            reason: string;
         };
     };
     responses: {
@@ -7823,6 +7911,142 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    cancelExchange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    rejectExchange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectExchangeCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    shipExchange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    receiveExchange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionCommand"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
