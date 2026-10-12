@@ -1,10 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ApiError } from "@used-books/session-client";
 import { ArrowRight, ArrowUpRight, Bell, Plus, Wallet } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { ROUTES, formatVnd } from "../lib/routes";
 import { myListingsQuery } from "../lib/owner-listing-queries";
+import {
+  overviewShelfFocus,
+  shelfFocusFilters,
+  type ShelfSignal,
+} from "../lib/overview-shelf-focus";
 import { getWalletSummary } from "../services/wallet";
 import {
   listNotifications,
@@ -116,11 +121,84 @@ function WalletSummary({ ownerId }: { ownerId: string }) {
   );
 }
 
-const shelfShortcuts = [
-  ["Draft", "Bản nháp"],
-  ["PendingReview", "Chờ duyệt"],
-  ["Rejected", "Bị từ chối"],
-] as const;
+function ShelfFocus({ ownerId }: { ownerId: string }) {
+  const queries = useQueries({
+    queries: shelfFocusFilters.map(({ moderation }) => ({
+      ...myListingsQuery(ownerId, moderation, undefined, 1),
+      refetchOnMount: "always",
+    })),
+  });
+  const signals: ShelfSignal[] = queries.map((query) =>
+    accessDenied(query.error)
+      ? "forbidden"
+      : query.isPending || query.isFetching
+        ? "loading"
+        : query.isError
+          ? "error"
+          : query.data?.items.length
+            ? "present"
+            : "empty",
+  );
+  const focus = overviewShelfFocus(signals);
+  const labels = {
+    present: "Có bài trên kệ",
+    empty: "Chưa có bài",
+    loading: "Đang kiểm tra…",
+    error: "Chưa tải được",
+    forbidden: "Chưa được phép xem",
+  };
+  return (
+    <section className={styles.focus} aria-labelledby="overview-focus">
+      <div className={styles.focusBody} aria-busy={signals.includes("loading")}>
+        <div className={styles.nextAction}>
+          <h2 id="overview-focus">{focus.title}</h2>
+          <p
+            role={
+              focus.kind === "error" || focus.kind === "forbidden"
+                ? "alert"
+                : undefined
+            }
+          >
+            {focus.description}
+          </p>
+          {focus.to && (
+            <Link to={focus.to}>
+              {focus.action}
+              <ArrowRight size={17} aria-hidden="true" />
+            </Link>
+          )}
+          {signals.includes("error") && (
+            <button
+              type="button"
+              onClick={() => {
+                queries.forEach((query) => {
+                  if (query.isError && !accessDenied(query.error))
+                    void query.refetch();
+                });
+              }}
+              disabled={queries.some((query) => query.isFetching)}
+            >
+              Thử lại việc trên kệ
+            </button>
+          )}
+        </div>
+        <ul className={styles.focusLinks}>
+          {shelfFocusFilters.map(({ moderation, label }, index) => (
+            <li key={moderation}>
+              <Link to={`${ROUTES.myBooks}?moderation=${moderation}`}>
+                <span>
+                  <strong>{label}</strong>
+                  <small>{labels[signals[index]!]}</small>
+                </span>
+                <ArrowUpRight size={16} aria-hidden="true" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
 
 function RecentBooks({ ownerId }: { ownerId: string }) {
   const query = useQuery(myListingsQuery(ownerId, "", undefined, 4));
@@ -135,14 +213,6 @@ function RecentBooks({ ownerId }: { ownerId: string }) {
           Xem toàn bộ kệ <ArrowUpRight size={16} aria-hidden="true" />
         </Link>
       </header>
-      <nav className={styles.shortcuts} aria-label="Lối vào các mục trên kệ">
-        {shelfShortcuts.map(([value, label]) => (
-          <Link key={value} to={`${ROUTES.myBooks}?moderation=${value}`}>
-            {label}
-            <ArrowUpRight size={14} aria-hidden="true" />
-          </Link>
-        ))}
-      </nav>
       <div className={styles.bookResults} aria-busy={query.isPending}>
         {query.isPending ? (
           <LoadingRows subject="kệ sách" />
@@ -290,11 +360,9 @@ export function AccountOverviewPage() {
       <header className={styles.greeting}>
         <div className={styles.greetingCopy}>
           <h1>Tổng quan của bạn</h1>
-          <p className={styles.hello}>
-            Chào {user.displayName}, mừng bạn trở lại.
-          </p>
+          <p className={styles.hello}>Chào {user.displayName},</p>
           <p className={styles.intro}>
-            Chăm chút kệ sách, đón người đọc tiếp theo.
+            Kệ sách của bạn. Những câu chuyện còn tiếp.
           </p>
           <div className={styles.actions}>
             <Link className={styles.post} to={ROUTES.sell}>
@@ -323,6 +391,7 @@ export function AccountOverviewPage() {
           dịch mới. <Link to={ROUTES.profile}>Xem thông tin tài khoản</Link>
         </p>
       )}
+      <ShelfFocus ownerId={user.id} />
       <WalletSummary ownerId={user.id} />
       <div className={styles.workspace}>
         <RecentBooks ownerId={user.id} />

@@ -22,7 +22,7 @@ const { createServer } = await import(
   pathToFileURL(webRequire.resolve("vite")).href
 );
 const origin = "http://127.0.0.1:5192";
-const evidence = path.join(root, ".impeccable/review/account-overview");
+const evidence = path.join(root, ".impeccable/review/account-overview-refined");
 await mkdir(evidence, { recursive: true });
 Object.assign(process.env, {
   VITE_API_BASE_URL: base,
@@ -83,6 +83,7 @@ try {
   const books = page.getByRole("region", { name: "Kệ cập nhật gần đây" });
   const activity = page.getByRole("region", { name: "Hoạt động gần đây" });
   const wallet = page.getByRole("region", { name: "Ví mô phỏng" });
+  const focus = page.locator('section[aria-labelledby="overview-focus"]');
   async function login(email) {
     await page.getByLabel(/^Email/).fill(email);
     await page.getByLabel(/^Mật khẩu/).fill(password);
@@ -162,12 +163,49 @@ try {
   checks.push(
     "guest returnUrl; bounded4/3 real reads; wallet zero; pending private rows; preview does not mark read",
   );
+  await focus
+    .getByRole("heading", { name: "Sách của bạn đang chờ duyệt" })
+    .waitFor();
+  assert.equal(
+    await focus
+      .getByRole("link", { name: "Xem bài chờ duyệt" })
+      .getAttribute("href"),
+    "/my-books?moderation=PendingReview",
+  );
 
   // One batch of valid desktop/laptop/mobile evidence, with real owner data.
   await capture("desktop", { width: 1440, height: 1000 });
   await capture("laptop", { width: 1280, height: 720 });
   await capture("mobile", { width: 390, height: 844 });
   await capture("narrow", { width: 320, height: 740 });
+  const rejectedRoute = (url) =>
+    url.pathname.endsWith("/me/listings") &&
+    url.searchParams.get("limit") === "1" &&
+    url.searchParams.get("moderation") === "Rejected";
+  await page.route(rejectedRoute, (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ code: "TEST_FAILURE", message: "QA" }),
+    }),
+  );
+  await page.evaluate(async () => {
+    const { queryClient } = await import("/src/lib/session.ts");
+    await queryClient.invalidateQueries({ queryKey: ["my-listings"] });
+  });
+  await focus
+    .getByRole("heading", { name: "Chưa kiểm tra được việc trên kệ" })
+    .waitFor();
+  assert.equal(await books.locator("ul > li").count(), 4);
+  await capture("focus-error", { width: 1280, height: 720 });
+  await page.unroute(rejectedRoute);
+  await focus.getByRole("button", { name: "Thử lại việc trên kệ" }).click();
+  await focus
+    .getByRole("heading", { name: "Sách của bạn đang chờ duyệt" })
+    .waitFor();
+  checks.push(
+    "filtered limit1 reads find pending work; incomplete read never claims no work; local retry recovers",
+  );
   await page.setViewportSize({ width: 1280, height: 720 });
   await main.evaluate((el) => {
     el.style.zoom = "2";
@@ -221,6 +259,10 @@ try {
     .getByRole("heading", { name: "Chưa có bài trong mục này" })
     .waitFor();
   await account();
+  await focus
+    .getByRole("heading", { name: "Bạn còn bản nháp trên kệ" })
+    .waitFor();
+  await capture("draft-priority", { width: 1440, height: 900 });
   checks.push(
     "full shelf20+cursor remains independent; filter clears cursor; overview navigation",
   );
@@ -290,7 +332,7 @@ try {
     }),
   );
   // Current preview is made of newer drafts without media; revisit pending owner rows.
-  await books.getByRole("link", { name: "Chờ duyệt", exact: true }).click();
+  await focus.getByRole("link", { name: /^Chờ duyệt/ }).click();
   await main.getByText("4 bài đăng trên trang này").waitFor();
   await page.evaluate(async () => {
     const { queryClient } = await import("/src/lib/session.ts");
@@ -329,6 +371,56 @@ try {
     "opening a notification targets its auction and marks only that notice read",
   );
 
+  const toReject = await fixture.api(
+    `/me/listings/${fixture.listings[0]}`,
+    fixture.member.accessToken,
+  );
+  await fixture.api(
+    `/operations/listings/${fixture.listings[0]}/decision`,
+    admin.accessToken,
+    {
+      expectedVersion: toReject.version,
+      revisionId: toReject.currentRevision.id,
+      decision: "Reject",
+      reason:
+        "DỮ LIỆU KIỂM THỬ: cần bổ sung ảnh góc bìa để kiểm tra tình trạng.",
+    },
+  );
+  // Rejection updates updatedAt; newer drafts deliberately push it out of limit4.
+  for (let index = 0; index < 5; index++)
+    await fixture.api("/listings", fixture.member.accessToken, {
+      content: { ...seed.currentRevision.content, mediaIds: [] },
+    });
+  const recent = await fixture.api(
+    "/me/listings?limit=4",
+    fixture.member.accessToken,
+  );
+  assert.equal(
+    recent.items.some((item) => item.id === fixture.listings[0]),
+    false,
+  );
+  await page.evaluate(async () => {
+    const { queryClient } = await import("/src/lib/session.ts");
+    await queryClient.invalidateQueries({ queryKey: ["my-listings"] });
+  });
+  await focus.getByRole("heading", { name: "Có bài cần xem lại" }).waitFor();
+  await page.waitForFunction(() => {
+    const titles = document
+      .querySelector("#overview-books")
+      ?.closest("section");
+    return titles && !titles.textContent.includes("Bị từ chối");
+  });
+  assert.equal(
+    await focus
+      .getByRole("link", { name: "Xem bài bị từ chối" })
+      .getAttribute("href"),
+    "/my-books?moderation=Rejected",
+  );
+  await capture("rejected-priority", { width: 1440, height: 900 });
+  checks.push(
+    "real rejected item outside recent four takes priority over drafts and pending; link selects exact owner filter",
+  );
+
   // Switch to a second real account through logout/login, never editing browser token storage.
   await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
   await page.waitForURL(origin + "/login");
@@ -338,6 +430,9 @@ try {
     .getByRole("heading", { name: "Một chỗ trống cho cuốn sách đầu tiên." })
     .waitFor();
   await activity.getByRole("heading", { name: "Chưa có thông báo" }).waitFor();
+  await focus
+    .getByRole("heading", { name: "Dành chỗ cho cuốn sách tiếp theo" })
+    .waitFor();
   assert.equal(await books.locator("ul > li").count(), 0);
   assert.equal(await activity.locator("li").count(), 0);
   assert.equal(
@@ -356,6 +451,9 @@ try {
   await page.goto(origin + "/account");
   await login("admin@operations.test");
   await books.getByRole("alert").waitFor();
+  await focus
+    .getByRole("heading", { name: "Xem lại trạng thái tài khoản" })
+    .waitFor();
   await main
     .getByText("Tài khoản đang khóa giao dịch mới.", { exact: false })
     .waitFor();

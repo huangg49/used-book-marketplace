@@ -8,8 +8,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 32px 36px;
-  background: var(--shop-cream);
+  padding: 24px 32px;
+  background: var(--shop-wine);
+  color: var(--shop-cream);
   border-radius: 12px;
 }
 .greetingCopy {
@@ -22,11 +23,11 @@
   font-size: clamp(2rem, 3.1vw, 2.75rem);
   font-weight: 400;
   line-height: 1.2;
-  color: var(--shop-wine);
-  margin: 0 0 14px;
+  color: var(--shop-cream);
+  margin: 0 0 12px;
 }
 .hello {
-  font-size: 1rem;
+  font-size: clamp(1.125rem, 1.6vw, 1.375rem);
   font-weight: 700;
   line-height: 1.7;
   overflow-wrap: anywhere;
@@ -36,14 +37,14 @@
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.8;
-  color: var(--shop-muted);
+  color: var(--shop-cream);
 }
 .actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 24px;
-  margin-top: 22px;
+  margin-top: 16px;
 }
 .post,
 .shelfLink {
@@ -58,35 +59,121 @@
 .post {
   padding: 10px 16px;
   border-radius: 8px;
-  background: var(--shop-wine);
-  color: var(--shop-cream);
+  background: var(--shop-cream);
+  color: var(--shop-wine);
 }
 .post:hover {
-  background: var(--shop-wine-hover);
+  background: var(--shop-yellow);
 }
 .shelfLink {
-  color: var(--shop-wine);
+  color: var(--shop-cream);
 }
 .shelfLink:hover {
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 .greetingArt {
-  width: 156px;
-  height: 156px;
+  width: 136px;
+  height: 136px;
+  padding: 12px;
+  background: var(--shop-cream);
+  border-radius: 12px;
   object-fit: contain;
   flex: 0 0 auto;
   transform: rotate(4deg);
+}
+.focus {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--shop-line);
+}
+.focusBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 24px;
+  align-items: center;
+}
+.nextAction h2 {
+  font-size: 1.125rem;
+  line-height: 1.5;
+  margin: 0 0 6px;
+}
+.nextAction p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--shop-muted);
+  line-height: 1.8;
+  max-width: 48ch;
+}
+.nextAction > a,
+.nextAction > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--shop-wine);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-underline-offset: 4px;
+  margin-top: 4px;
+}
+.nextAction > button {
+  border: 0;
+  background: transparent;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  margin-inline-start: 20px;
+}
+.nextAction > button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.focusLinks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.focusLinks a {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding-block: 14px;
+  min-height: 80px;
+  border-block: 1px solid var(--shop-line);
+  color: var(--shop-wine);
+  text-decoration: none;
+}
+.focusLinks svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.focusLinks a:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.focusLinks strong {
+  font-size: 0.8125rem;
+}
+.focusLinks small {
+  display: block;
+  font-size: 0.75rem;
+  line-height: 1.8;
+  color: var(--shop-muted);
+  margin-top: 8px;
 }
 .wallet {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 20px 36px;
-  padding: 24px 0;
+  padding: 16px 0;
   margin-bottom: 12px;
   border-bottom: 1px solid var(--shop-line);
-  min-height: 104px;
+  min-height: 80px;
 }
 .walletLabel {
   display: flex;
@@ -172,26 +259,6 @@
   min-height: 44px;
   text-underline-offset: 4px;
 }
-.shortcuts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 18px;
-  padding: 12px 0 4px;
-  border-bottom: 1px solid var(--shop-line);
-}
-.shortcuts a {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  color: var(--shop-wine);
-  font-size: 0.75rem;
-  text-decoration: none;
-}
-.shortcuts a:hover {
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
 .bookResults {
   min-height: 300px;
 }
@@ -203,6 +270,9 @@
   list-style: none;
   padding: 0;
   margin: 0;
+}
+.bookList {
+  margin-top: 12px;
 }
 .activityResults {
   min-height: 180px;
@@ -344,6 +414,13 @@
     color 170ms ease-out,
     background-color 170ms ease-out;
 }
+.greeting :is(a, button):focus-visible {
+  outline-color: var(--shop-yellow);
+}
+.root ::selection {
+  color: var(--shop-cream);
+  background: var(--shop-wine);
+}
 @media (prefers-reduced-motion: reduce) {
   .root :is(a, button) {
     transition:
@@ -368,11 +445,17 @@
     border-bottom: 0;
   }
   .greeting {
-    padding: 28px;
+    padding: 24px 28px;
   }
   .greetingArt {
     width: 124px;
     height: 124px;
+  }
+  .focusBody {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .focusLinks {
+    gap: 10px;
   }
 }
 @media (max-width: 760px) {
@@ -383,11 +466,12 @@
   }
   .greeting h1 {
     font-size: 2rem;
-    padding-right: 64px;
+    padding-right: 70px;
   }
   .greetingArt {
-    width: 64px;
-    height: 64px;
+    width: 68px;
+    height: 68px;
+    padding: 5px;
     position: absolute;
     top: 24px;
     right: 16px;
@@ -395,13 +479,20 @@
   .actions {
     gap: 4px 16px;
   }
+  .focusBody {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .focusLinks {
+    gap: 16px;
+  }
   .balances {
     gap: 16px 28px;
     width: 100%;
   }
   .wallet {
     gap: 16px;
-    padding: 24px 4px;
+    padding: 16px 4px;
   }
   .books {
     padding: 20px 16px 8px;
@@ -415,5 +506,29 @@
   }
   .activityList li {
     border-bottom: 1px solid var(--shop-line);
+  }
+}
+@media (max-width: 380px) {
+  .focusLinks {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .focusLinks li + li a {
+    border-top: 0;
+  }
+  .focusLinks a {
+    min-height: 52px;
+    padding-block: 12px;
+    align-items: center;
+  }
+  .focusLinks a > span {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex: 1;
+  }
+  .focusLinks small {
+    margin-top: 0;
   }
 }

@@ -1,0 +1,19 @@
+{
+  "checks": [
+    "guest returnUrl; bounded4/3 real reads; wallet zero; pending private rows; preview does not mark read",
+    "filtered limit1 reads find pending work; incomplete read never claims no work; local retry recovers",
+    "1440/1280/390/320 no overflow;200% content zoom; scoped motion retained",
+    "full shelf20+cursor remains independent; filter clears cursor; overview navigation",
+    "Profile preserved; H1 focus; account ArrowDown/Escape",
+    "wallet failure is local; cached values flagged; retry recovers",
+    "shared owner photo failure/retry; no public-cover fallback",
+    "opening a notification targets its auction and marks only that notice read",
+    "real rejected item outside recent four takes priority over drafts and pending; link selects exact owner filter",
+    "account switch isolates owner books/notifications; real empty account",
+    "real LOCKED member: listing403 is distinct from empty; wallet obligation read remains available"
+  ],
+  "browser": "Chromium",
+  "api": "real Nest on disposable *_test Mongo",
+  "storage": "fake",
+  "native": "NOT RUN"
+}

@@ -16,6 +16,26 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Tổng quan tài khoản, pha trộn profile Minh —12/10/2026
 
+- Refinement theo phản hồi "hơi thường": `codex/account-overview-refine`, base
+  `5350059`, checkpoint subject `feat(web): personalize overview shelf guidance`.
+  Chủ dự án chốt Tổng quan trước, Hồ sơ sau. Greeting đỏ rượu/kem, tên thật và
+  asset chim cánh cụt hiện có; thêm gợi ý việc trên kệ với3 query riêng limit1 theo
+  owner/filter. Ưu tiên Rejected → Draft → PendingReview, không suy từ4 bài gần
+  đây hoặc tạo số tổng. Kiểm lại khi vào trang; loading/error/403 và retry cục bộ.
+  Link vào filter kệ có thật; không hứa sửa tiếp nháp chưa có UI.
+- Build/102 unit tests/lint PASS (5 warning Exchange cũ),11 nhóm browser PASS
+  trên QA Mongo riêng/fake storage, gồm bài bị từ chối nằm ngoài4 bài mới nhất.
+  [Evidence refinement](../../.impeccable/review/account-overview-refined/README.md).
+  Detector một lần:1 advisory cỡ chữ tên max22px ngoài ramp, lựa chọn local có
+  chủ đích; không đổi DESIGN/token toàn cục. Giới hạn native/Safari/speech/full
+  browser zoom/live Supabase/human/CI như bản đầu bên dưới. Profile/API/DB/auth/
+  Home/READINESS và WIP teammate giữ nguyên. Backend/web chính vẫn chạy.
+  Full AI review yêu cầu bỏ eyebrow/Library ở vùng gợi ý; đã sửa và recapture11
+  ảnh. Verdict pass ship: P2 duy nhất resolved, không là whole-surface/human
+  review mới. QA đã xóa database/users/roles riêng, xác nhận0 database browser
+  còn lại, dừng API/Vite/images và Mongo QA của lượt này.
+  Chưa push/PR/merge; bước tiếp xem `/account`, đồng bộ Hồ sơ là gói sau.
+
 - `codex/account-overview`, base `2b4e557`, checkpoint subject
   `feat(web): add personal account overview`: triển khai giai đoạn1 của
   [kế hoạch đã duyệt](../design/WEB_PROFILE_BLEND_PROPOSAL.md), dựa trên nghiên

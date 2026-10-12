@@ -6,6 +6,30 @@ MyBooksPage.module.css, owner-listing-queries.ts, owner-listing-labels.ts,
 wallet.ts, account-navigation.ts, routes.ts, app/router.tsx.
 Mode: Operate. Approved plan: `docs/design/WEB_PROFILE_BLEND_PROPOSAL.md`.
 
+## Refinement contract — 12/10/2026
+
+Owner feedback: the shipped overview feels ordinary; requested more character
+and intelligence. Confirmed scope: Tổng quan first, Hồ sơ later. This is a local
+bolder/refinement pass in the incumbent world, preserving the rail, greeting,
+wallet strip and shelf/activity composition. No new visual system or image comp.
+
+THESIS: Recognize the owner and point to the next useful shelf action.
+OWN-WORLD: Existing wine/cream, Anton and original posting penguin. The greeting
+uses wine at full strength with cream type/actions; surrounding work stays quiet.
+STORY: Greeting → actionable shelf check → read-only wallet → recent books/activity.
+FIRST VIEWPORT: One wine greeting with the real owner's name and contained
+existing illustration, followed by one unboxed shelf-task area. Three compact
+filter links show presence, never totals. Wide priority left / filters right;
+mobile flows in DOM order. Keep actual four owner books as the work area below.
+FORM: Three independent owner/filter/limit1 reads determine rejected > draft >
+pending priority across the shelf, rather than inferring from the recent four.
+Failure/loading/403 remain explicit, with local retry and no false all-clear.
+FINISH: Build/test/browser, one detector and independent review/documentation;
+bounded desktop/mobile capture rounds. No new aggregate, API or auth behavior.
+
+The shipped comparison below records the original phase1 baseline; refinement
+evidence is kept separately under `.impeccable/review/account-overview-refined/`.
+
 ## Direction contract
 
 THESIS: Preserve Minh's greeting, summary, sidebar and recent-work structure;
@@ -153,3 +177,101 @@ reduction, and the sidecar still records the global `.01ms` override. Those
 pre-existing descriptions are not a new rule for this overview; its scoped
 170ms override follows current owner policy. Global files are deliberately
 preserved because this is an ordinary established-world extension.
+
+## Shipped refinement comparison — 12/10/2026
+
+Source: `codex/account-overview-refine`, base `5350059`. This comparison follows
+the Refinement contract above; the phase1 comparison remains historical.
+The documenter compared final AccountOverviewPage.tsx/.module.css,
+overview-shelf-focus.ts and its unit cases, and tests/account-overview.mjs with
+PRODUCT.md, incumbent DESIGN.md/.impeccable/design.json and all11 latest captures
+in the [refinement evidence index](../../../../.impeccable/review/account-overview-refined/README.md).
+This is an ordinary local refinement; the global system files are preserved.
+
+### Character, hierarchy and responsive form
+
+The greeting now uses the existing wine ground and cream title, owner name,
+body and actions. Its Anton H1 retains the account-heading size and local1.2
+line height. The owner name is bold Be Vietnam Pro at
+`clamp(1.125rem,1.6vw,1.375rem)`/1.7; it wraps without truncation. The cream
+posting action retains44px minimum height and8px corners, with the existing
+yellow hover/focus role. The shelf link remains cream. The original256×256
+`post.png` is contained in a cream square with12px corners and4° rotation:
+136px with12px padding,124px at1150px and below,68px with5px padding at760px
+and below. Intrinsic dimensions, empty alt/aria-hidden and async decoding stay.
+Its existing prompt/hash sidecar and asset provenance are unchanged.
+
+Greeting padding is24px32px, then24px28px at1150px and24px at760px; its
+gap is24px, then8px on narrow screens. The added shelf-task area is unboxed,
+with16px block padding and a fine lower rule. The dynamic advice is the18px/1.5
+Be Vietnam Pro section H2 and supplies its accessible label directly. There is
+no eyebrow or Library ornament. Supporting text is13px/1.8 with48ch maximum;
+the action and retry controls retain44px minimum height.
+
+Wide task layout uses `minmax(0,1fr)`/`minmax(0,1.1fr)` with24px gap, equal
+columns at1150px, then one column with16px gap at760px. Three ruled presence
+links use13px labels,12px status text and80px minimum height. At380px and
+below they become full-width52px rows, keeping label, status and arrow readable.
+DOM order is greeting → shelf task → wallet → recent books/activity. Existing
+workspace columns and their1150/760px stacking remain; recent-book and activity
+spacing is adjusted locally. Wallet padding is16px block with12px bottom margin.
+No new shadow, global token, font, raster, dependency or animation engine lands.
+Existing170ms color/background transitions remain under OS reduced motion per
+owner policy, with yellow focus outlines inside the wine greeting.
+
+### Useful advice from bounded owner reads
+
+Three independent existing owner-listing queries request limit1 for Rejected,
+Draft and PendingReview, keyed by owner/filter/limit. They refetch on every
+overview mount. Advice prioritizes Rejected → Draft → PendingReview only after
+the reads complete successfully. Loading and a failed read never become an
+all-clear;403 leads to account status, and retry refetches failed non403 reads
+locally. Presence labels describe each read without a count. All three successful
+empty reads offer posting; they do not assert that the whole shelf is empty.
+The draft action opens the existing filter without promising edit/resume.
+
+The recent four owner rows remain a separate read; a rejected item outside those
+four can still drive the advice. Read-only simulated wallet, three-notification
+preview and existing notice-open behavior remain. No aggregate, full-shelf scan,
+polling, API, auth/session, permission or persistence change is introduced.
+Profile and other pages are outside this refinement; unrelated teammate work
+is not included in this comparison.
+
+### Evidence, disposition and limits
+
+Implementer-reported build/102unit tests/lint PASS with five existing Exchange
+warnings and the existing bundle advisory. The documenter reopened all11 latest
+captures: desktop, laptop, mobile, narrow, focus-error, draft-priority,
+rejected-priority, partial-error, empty-desktop, empty-mobile and locked. They
+show the wine greeting, direct H2 advice, responsive presence links and explicit
+error/empty/403 states. Synthetic long titles and fake green photographs test
+wrapping/private reads rather than production image variety.
+
+[checks.json](../../../../.impeccable/review/account-overview-refined/checks.json)
+records11 Chromium scenario groups using real Nest/Mongo on isolated disposable
+`*_test` data and fake storage. The harness tests a rejected item below the recent
+four, incomplete-read recovery, owner switching, locked-member403, independent
+full-shelf pagination, wallet/photo retry and notification opening. This
+documentation pass inspected source/evidence without rerunning product tests,
+browser scenarios or the detector.
+
+The one detector advisory is the greeting name's fluid1.375rem (22px) endpoint
+outside the documented ramp. It is an intentional local size beneath the Anton
+H1, not a new global typography role or a zero-finding result; no second detector
+ran. The implementation session reports oneP2 eyebrow finding from the full
+independent finish review. After removing the eyebrow/Library ornament and
+recapturing all11 states, the same reviewer returned **ship**, scoring thatP2
+resolved. This verdict pass covers the scored fix; it is not a new whole-surface
+audit or human acceptance.
+
+Actual browser zoom125%/200%, Safari, speech screen reader, physical mobile,
+native/RN/Flutter, live Supabase, human review and remote CI remain NOT RUN.
+Only main-content CSS zoom200% is exercised. Synthetic auction targets do not
+prove a full auction or wallet-mutation flow. READINESS gates remain unchanged.
+
+Not canonized or repaired: the earlier global Account destination/scope prose,
+sidecar Account recipe and global reduced-motion descriptions still predate
+this overview; PRODUCT.md's register/profile-scaffold description also predates
+the later real auth/account work. These are existing context drift, preserved
+outside this local write boundary. The removed eyebrow is not a reusable rule;
+the22px owner-name exception stays local to this surface.
