@@ -35,7 +35,7 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   - **Contract & Verification**:
     - OpenAPI: Cập nhật `packages/api-contract/openapi.yaml`, chạy `pnpm contract:generate` và `pnpm contract:check` PASS 100%.
     - Typecheck & Build: `npx pnpm --filter @used-books/api typecheck` và `npx pnpm --filter @used-books/api build` PASS 100% không cảnh báo/lỗi.
-    - Test Suite: Bổ sung bộ kiểm thử E2E đầy đủ `apps/api/test/exchanges.e2e-spec.ts` pass 21/21 tests ổn định.
+    - Test Suite: Bổ sung bộ kiểm thử E2E đầy đủ `apps/api/test/exchanges.e2e-spec.ts` pass 21/21 tests ổn định. Cập nhật `afterAll` cleanup trong `exchanges.e2e-spec.ts` dọn sạch order hold accounts, journals và entries theo đúng cơ chế bảo toàn nguồn tiền mô phỏng, khắc phục triệt để lỗi orphan hold trong `test/wallet.e2e-spec.ts` (`reconciliation validates sources...`).
 
 ## Gói lưu sách và chuẩn bị pilot Android
 

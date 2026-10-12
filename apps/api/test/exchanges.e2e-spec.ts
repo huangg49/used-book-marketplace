@@ -283,12 +283,23 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
   afterAll(async () => {
     if (db) {
       const c = db.c;
+      // 1. Collect exchange order IDs BEFORE deleting exchanges
+      const userExchanges = await c.exchanges
+        .find({
+          $or: [{ initiatorId: { $in: users } }, { recipientId: { $in: users } }],
+        })
+        .toArray();
+      const exchangeOrderIds = [
+        ...userExchanges.map((e) => e.initiatorOrderId).filter(Boolean),
+        ...userExchanges.map((e) => e.recipientOrderId).filter(Boolean),
+      ];
+
       // Clean up exchanges created by test users
       await c.exchanges.deleteMany({
-        $or: [{ initiatorId: { $in: users } }, { recipientId: { $in: users } }],
+        _id: { $in: userExchanges.map((e) => e._id) },
       });
 
-      // Clean up listings
+      // 2. Clean up listings and catalog requests
       const userListings = (
         await c.listings.find({ ownerId: { $in: users } }).toArray()
       ).map((l) => l._id);
@@ -302,12 +313,62 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       await c.listing_revisions.deleteMany({ listingId: { $in: userListings } });
       await c.listings.deleteMany({ ownerId: { $in: users } });
 
-      // Clean up wallet accounts and journals
-      const userAccounts = (
-        await c.wallet_accounts.find({ ownerId: { $in: users } }).toArray()
+      const books = (
+        await c.catalog_books.find({ requesterId: { $in: users } }).toArray()
+      ).map((b) => b._id);
+      const bookRevisions = (
+        await c.catalog_revisions.find({ bookId: { $in: books } }).toArray()
+      ).map((r) => r._id);
+      await c.catalog_decisions.deleteMany({ revisionId: { $in: bookRevisions } });
+      await c.catalog_revisions.deleteMany({ _id: { $in: bookRevisions } });
+      await c.catalog_books.deleteMany({ _id: { $in: books } });
+
+      // 3. Clean up wallet accounts, journals, and entries (conserving simulated capital)
+      const topups = (
+        await c.topup_intents.find({ ownerId: { $in: users } }).toArray()
+      ).map((t) => t._id);
+      const accounts = (
+        await c.wallet_accounts
+          .find({
+            $or: [
+              { ownerId: { $in: users } },
+              { orderId: { $in: exchangeOrderIds } },
+            ],
+          })
+          .toArray()
       ).map((a) => a._id);
-      await c.ledger_entries.deleteMany({ accountId: { $in: userAccounts } });
-      await c.wallet_accounts.deleteMany({ ownerId: { $in: users } });
+      const journals = [
+        ...new Set(
+          (
+            await c.ledger_entries
+              .find({ accountId: { $in: accounts } })
+              .toArray()
+          ).map((e) => e.journalId),
+        ),
+      ];
+
+      await c.ledger_entries.deleteMany({ journalId: { $in: journals } });
+      await c.ledger_journals.deleteMany({ _id: { $in: journals } });
+      await c.simulated_payment_events.deleteMany({
+        intentId: { $in: topups },
+      });
+      await c.topup_intents.deleteMany({ _id: { $in: topups } });
+      await c.account_locks.deleteMany({ _id: { $in: accounts } });
+      await c.wallet_accounts.deleteMany({ _id: { $in: accounts } });
+
+      // 4. Receipts & audits
+      const history = {
+        $or: [
+          { actorId: { $in: users } },
+          { topupId: { $in: topups } },
+        ],
+      };
+      const audits = (await c.audit_events.find(history).toArray()).map(
+        (a) => a._id,
+      );
+      await c.outbox_events.deleteMany({ auditId: { $in: audits } });
+      await c.audit_events.deleteMany({ _id: { $in: audits } });
+      await c.mutation_receipts.deleteMany(history);
 
       await db.removeUsers(users);
       await db.close();
