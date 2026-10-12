@@ -1,0 +1,164 @@
+/* Auction desk: same wine/cream bookstore world, with the auction bookmark's
+   butter-gold paper (#f6e0a8) marking what differs from an ordinary listing. */
+.page {
+  --shop-shelf: #f4eddf; --shop-wine-hover: #7c2320; --shop-error: #912b0e; --auction-paper: #f6e0a8; --auction-paper-soft: #fbf0cf;
+  max-width: 1248px; margin: auto; padding: 20px clamp(16px, 4vw, 40px) 64px; color: var(--shop-ink);
+}
+.state { min-height: 50vh; display: grid; place-items: center; color: var(--shop-muted); }
+.crumbs { display: flex; gap: 8px; align-items: center; font-size: .8125rem; color: var(--shop-muted); margin-bottom: 8px; }
+.crumbs a { color: var(--shop-wine); text-underline-offset: 4px; min-height: 44px; display: inline-flex; align-items: center; }
+
+.intro { display: grid; grid-template-columns: minmax(0, 1fr) clamp(160px, 22vw, 260px); align-items: center; gap: 32px; padding: 0 0 20px; }
+.intro h1 { color: var(--shop-wine); font: 400 clamp(2rem, 3.3vw, 2.75rem)/1.25 var(--shop-display); margin: 0 0 12px; }
+.intro p { color: var(--shop-muted); font-size: .9375rem; line-height: 1.85; max-width: 62ch; margin: 0; }
+.art { display: block; width: 100%; height: auto; pointer-events: none; }
+
+/* Listing vs auction: the listing side stays quiet paper; the auction side is the gold sheet. */
+.compare { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: 16px; margin-bottom: 36px; }
+.compare ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: .875rem; line-height: 1.7; }
+.compareListing, .compareAuction { border-radius: 12px; padding: 18px 22px 20px; }
+.compareListing { background: var(--shop-paper); border: 1px dashed var(--shop-line); color: var(--shop-muted); }
+.compareAuction { background: var(--auction-paper); color: var(--shop-ink); box-shadow: 3px 4px 0 var(--shop-wine); }
+.compareAuction li::marker { color: var(--shop-wine); }
+.compareTag { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 10px; font-weight: 700; font-size: .875rem; color: var(--shop-wine); }
+.compareListing .compareTag { color: var(--shop-muted); }
+.compareArrow { align-self: center; color: var(--shop-wine); }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 40px; align-items: start; }
+.form { display: grid; gap: 28px; min-width: 0; }
+.step { border: 0; margin: 0; padding: 0 0 28px; border-bottom: 1px solid var(--shop-line); min-width: 0; display: grid; gap: 14px; }
+.step legend { display: flex; align-items: center; gap: 12px; padding: 0; margin-bottom: 4px; font-size: 1.25rem; font-weight: 700; line-height: 1.5; }
+.num { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--shop-wine); color: var(--shop-cream); font: 400 1rem/1 var(--shop-display); }
+.stepHint { margin: 0; font-size: .8125rem; line-height: 1.85; color: var(--shop-muted); max-width: 70ch; }
+.stepHint a { color: var(--shop-wine); }
+.error { margin: 0; font-size: .8125rem; line-height: 1.7; color: var(--shop-error); }
+.hint { margin: 0; font-size: .8125rem; line-height: 1.7; color: var(--shop-muted); }
+
+.skeletonList { display: grid; gap: 10px; }
+.skeletonList > div { height: 96px; border-radius: 10px; background: var(--shop-shelf); }
+.inlineState { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 18px 20px; border-radius: 10px; background: var(--shop-paper); font-size: .875rem; line-height: 1.7; }
+.inlineState > svg { color: var(--shop-wine); flex: none; }
+.inlineState p { margin: 0; flex: 1 1 260px; }
+.inlineState button, .inlineActions a { min-height: 44px; display: inline-flex; align-items: center; padding: 8px 16px; border: 1px solid var(--shop-control); border-radius: 6px; background: var(--shop-paper); color: var(--shop-wine); font-weight: 600; font-size: .8125rem; cursor: pointer; text-decoration: none; }
+.inlineActions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* Selectable book and point cards share the same radio treatment. */
+.bookList, .points { display: grid; gap: 10px; }
+.bookOption, .pointOption { position: relative; display: grid; align-items: center; gap: 16px; padding: 12px 44px 12px 12px; border: 1px solid var(--shop-line); border-radius: 10px; background: var(--shop-paper); cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease; }
+.bookOption { grid-template-columns: 64px minmax(0, 1fr) auto; }
+.pointOption { grid-template-columns: auto minmax(0, 1fr) auto; padding-left: 16px; }
+.bookOption input, .pointOption input, .segment input, .toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.bookOption:hover, .pointOption:hover { border-color: var(--shop-control); }
+.bookOption:has(input:focus-visible), .pointOption:has(input:focus-visible), .segment label:has(input:focus-visible), .toggle:has(input:focus-visible) { outline: 3px solid var(--shop-wine); outline-offset: 2px; }
+.selected { border-color: var(--shop-wine); background: var(--auction-paper-soft); box-shadow: inset 0 0 0 1px var(--shop-wine); }
+.tick { position: absolute; right: 14px; top: 50%; translate: 0 -50%; color: var(--shop-wine); opacity: 0; }
+.selected .tick { opacity: 1; }
+.bookCover { width: 64px; height: 84px; border-radius: 4px; background: var(--shop-shelf); display: grid; place-items: center; overflow: hidden; }
+.bookCover img, .ticketCover img { width: 100%; height: 100%; object-fit: cover; }
+.photoState { display: grid; justify-items: center; gap: 4px; padding: 4px; font-size: .6875rem; line-height: 1.4; text-align: center; color: var(--shop-muted); }
+.bookText { display: grid; gap: 2px; min-width: 0; font-size: .8125rem; color: var(--shop-muted); line-height: 1.6; }
+.bookText strong { font-size: .9375rem; color: var(--shop-ink); overflow-wrap: anywhere; }
+.bookPrice { display: grid; justify-items: end; font-size: .75rem; color: var(--shop-muted); }
+.bookPrice strong { font-size: .9375rem; color: var(--shop-ink); font-variant-numeric: tabular-nums; }
+.pointOption > svg { color: var(--shop-wine); }
+.pointOption > span:nth-of-type(1) { display: grid; gap: 2px; font-size: .8125rem; color: var(--shop-muted); line-height: 1.6; min-width: 0; }
+.pointOption strong { font-size: .9375rem; color: var(--shop-ink); }
+.slots { font-size: .75rem; font-weight: 600; color: var(--shop-wine); white-space: nowrap; }
+.full { cursor: not-allowed; opacity: .6; }
+.full .slots { color: var(--shop-muted); }
+
+.field { display: grid; gap: 8px; max-width: 420px; }
+.field > label, .label { font-size: .85rem; font-weight: 700; }
+.segment { display: inline-grid; grid-auto-flow: column; width: fit-content; padding: 4px; border-radius: 8px; background: var(--shop-shelf); gap: 4px; }
+.segment label { position: relative; min-height: 40px; min-width: 108px; display: grid; place-items: center; padding: 6px 16px; border-radius: 6px; font-weight: 600; font-size: .875rem; color: var(--shop-muted); cursor: pointer; font-variant-numeric: tabular-nums; }
+.segmentOn { background: var(--shop-wine); color: var(--shop-cream) !important; }
+.money { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto 44px; align-items: center; border: 1px solid var(--shop-control); border-radius: 8px; background: var(--shop-paper); overflow: hidden; }
+.money:focus-within { outline: 3px solid var(--shop-wine); outline-offset: 2px; }
+.money input { border: 0; background: transparent; min-height: 48px; padding: 0 4px 0 8px; font: 700 1.125rem var(--shop-body); color: var(--shop-ink); text-align: right; font-variant-numeric: tabular-nums; min-width: 0; outline: none; }
+.money > span { padding-right: 10px; font-weight: 700; color: var(--shop-muted); }
+.money button { height: 48px; border: 0; background: var(--shop-shelf); color: var(--shop-wine); cursor: pointer; display: grid; place-items: center; }
+.money button:disabled { color: var(--shop-line); cursor: not-allowed; }
+.invalid { border-color: var(--shop-error); }
+.toggle { position: relative; display: flex; gap: 12px; align-items: flex-start; cursor: pointer; max-width: 560px; padding: 4px 0; }
+.toggle::before { content: ''; flex: none; width: 20px; height: 20px; margin-top: 2px; border: 1.5px solid var(--shop-control); border-radius: 4px; background: var(--shop-paper); }
+.toggle:has(input:checked)::before { background: var(--shop-wine) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fcf8db' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/14px no-repeat; border-color: var(--shop-wine); }
+.toggle > span { display: grid; gap: 2px; font-size: .8125rem; color: var(--shop-muted); line-height: 1.7; }
+.toggle strong { font-size: .9375rem; color: var(--shop-ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips button { min-height: 44px; display: grid; padding: 6px 14px; border: 1px solid var(--shop-line); border-radius: 8px; background: var(--shop-paper); color: var(--shop-ink); font-weight: 700; font-size: .875rem; cursor: pointer; text-align: left; font-variant-numeric: tabular-nums; }
+.chips button span { font-weight: 400; font-size: .6875rem; color: var(--shop-muted); }
+.chips button[aria-pressed='true'] { border-color: var(--shop-wine); background: var(--auction-paper-soft); }
+
+.submitError { margin: 0; padding: 12px 16px; border-left: 3px solid var(--shop-error); background: var(--shop-paper); color: var(--shop-error); font-size: .875rem; line-height: 1.7; }
+.submitRow { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.primary { display: inline-flex; gap: 10px; align-items: center; justify-content: center; min-height: 48px; padding: 12px 24px; border: 0; border-radius: 6px; background: var(--shop-wine); color: var(--shop-cream); font-weight: 700; font-size: .9375rem; text-decoration: none; cursor: pointer; }
+.primary:hover:not(:disabled) { background: var(--shop-wine-hover); }
+.primary:disabled { opacity: .6; cursor: progress; }
+.secondary { display: inline-flex; align-items: center; min-height: 48px; padding: 12px 18px; color: var(--shop-wine); font-weight: 600; font-size: .875rem; text-underline-offset: 4px; }
+
+/* Preview ticket: the gold auction paper with a perforated stub edge. */
+.preview { position: sticky; top: 96px; display: grid; gap: 12px; }
+.ticket { position: relative; padding: 22px 22px 20px; border-radius: 12px; background: var(--auction-paper); box-shadow: 4px 5px 0 var(--shop-wine); }
+.ticket::after { content: ''; position: absolute; left: 14px; right: 14px; top: 58px; border-top: 2px dashed #5c020240; }
+.kicker { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 30px; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--shop-wine); }
+.ticketBook { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 14px; align-items: center; }
+.ticketBook > div { display: grid; gap: 2px; font-size: .8125rem; color: var(--shop-muted); line-height: 1.6; min-width: 0; }
+.ticketBook strong { font-size: 1rem; color: var(--shop-ink); overflow-wrap: anywhere; }
+.ticketCover { width: 72px; height: 96px; border-radius: 4px; background: var(--shop-paper); display: grid; place-items: center; overflow: hidden; box-shadow: 0 2px 6px #28191426; }
+.ticketPrices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin: 18px 0 0; padding: 16px 0 0; border-top: 1px solid #5c020226; }
+.ticketPrices div { display: grid; gap: 2px; }
+.ticketPrices dt { font-size: .75rem; color: var(--shop-muted); }
+.ticketPrices dd { margin: 0; font-weight: 700; font-size: .9375rem; font-variant-numeric: tabular-nums; }
+.ticketMain { grid-column: 1 / -1; }
+.ticketMain dd { font: 400 2rem/1.2 var(--shop-display); color: var(--shop-wine); }
+.protect { margin: 12px 0 0; font-size: .75rem; line-height: 1.7; color: var(--shop-muted); }
+.timeline { list-style: none; margin: 18px 0 0; padding: 16px 0 0; border-top: 1px solid #5c020226; display: grid; gap: 12px; }
+.timeline li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; font-size: .75rem; color: var(--shop-muted); line-height: 1.6; }
+.timeline li > svg { box-sizing: content-box; padding: 6px; border-radius: 50%; background: #fffcf599; color: var(--shop-wine); }
+.timeline span { display: grid; }
+.timeline strong { font-size: .8125rem; color: var(--shop-ink); }
+.timelineNow > svg { background: var(--shop-wine) !important; color: var(--shop-cream) !important; }
+.demo { margin: 0; font-size: .75rem; line-height: 1.8; color: var(--shop-muted); }
+.confirmList { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: .875rem; line-height: 1.7; }
+
+/* Success receipt follows the book-journey receipt geometry. */
+.receipt { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 40px; align-items: center; max-width: 960px; margin: 40px auto; padding: 40px; border-radius: 12px; background: var(--shop-paper); }
+.receipt img { width: 100%; height: auto; pointer-events: none; }
+.receipt h1 { margin: 0 0 12px; font: 400 clamp(1.75rem, 2.8vw, 2.4rem)/1.25 var(--shop-display); color: var(--shop-wine); overflow-wrap: anywhere; }
+.receipt p { margin: 0; font-size: .9375rem; line-height: 1.8; color: var(--shop-muted); }
+.receipt .kicker { margin-bottom: 12px; }
+.receiptFacts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; margin: 22px 0; padding: 18px 20px; border-radius: 10px; background: var(--auction-paper); }
+.receiptFacts div { display: grid; gap: 2px; }
+.receiptFacts dt { font-size: .75rem; color: var(--shop-muted); }
+.receiptFacts dd { margin: 0; font-weight: 700; font-size: .9375rem; font-variant-numeric: tabular-nums; display: grid; }
+.receiptFacts dd span { font-weight: 400; font-size: .75rem; color: var(--shop-muted); }
+.receiptActions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+@media (max-width: 1000px) {
+  .layout { grid-template-columns: 1fr; }
+  .preview { position: static; }
+  .kicker { margin-bottom: 26px; }
+}
+@media (max-width: 760px) {
+  .intro { grid-template-columns: minmax(0, 1fr) 108px; gap: 12px; }
+  .intro h1 { font-size: 2rem; }
+  .intro p { font-size: .875rem; }
+  .compare { grid-template-columns: 1fr; gap: 8px; margin-bottom: 28px; }
+  .compareListing, .compareAuction { padding: 14px 16px; }
+  .compare ul { font-size: .8125rem; gap: 2px; }
+  .compareArrow { justify-self: center; rotate: 90deg; }
+  .bookOption { grid-template-columns: 52px minmax(0, 1fr); gap: 12px; }
+  .bookCover { width: 52px; height: 70px; }
+  .bookPrice { grid-column: 2; justify-items: start; grid-auto-flow: column; gap: 6px; align-items: baseline; }
+  .pointOption { grid-template-columns: auto minmax(0, 1fr); }
+  .slots { grid-column: 2; }
+  .receipt { grid-template-columns: 1fr; gap: 16px; padding: 24px; margin: 24px 0; }
+  .receipt img { max-width: 240px; }
+  .receiptFacts { grid-template-columns: 1fr; }
+}
+@media (max-width: 400px) {
+  .intro { grid-template-columns: 1fr; }
+  .art { display: none; }
+  .segment label { min-width: 0; padding-inline: 12px; }
+  .submitRow .primary { width: 100%; }
+}

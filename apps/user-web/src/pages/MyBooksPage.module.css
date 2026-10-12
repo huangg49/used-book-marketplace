@@ -198,6 +198,28 @@
   font-size: 0.75rem;
   text-underline-offset: 4px;
 }
+.auction {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 40px;
+  margin-top: 4px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #f6e0a8;
+  color: var(--shop-wine);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.auction:hover {
+  box-shadow: 2px 2px 0 var(--shop-wine);
+}
+.auction:focus-visible {
+  outline: 3px solid var(--shop-wine);
+  outline-offset: 3px;
+}
 .identityError {
   color: var(--shop-wine);
   font-size: 0.75rem;
