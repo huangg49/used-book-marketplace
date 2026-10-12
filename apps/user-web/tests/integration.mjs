@@ -120,11 +120,16 @@ try {
   await p.getByLabel("Tìm sách", { exact: true }).fill("");
   await p.getByText("13 cuốn trên trang này").waitFor();
   assert.equal(await button("Trang tiếp theo").count(), 0);
-  await p.getByLabel("Cũ nhiều", { exact: true }).click();
-  await button("Áp dụng bộ lọc").click();
+  await p.getByRole("radio", { name: "Cũ nhiều", exact: true }).click();
+  await button("Áp dụng").click();
+  await p.waitForURL((url) => url.searchParams.has("condition"));
   await p.getByText("Chưa có cuốn sách nào phù hợp.").waitFor();
-  await p.getByLabel("Tất cả tình trạng", { exact: true }).click();
-  await button("Áp dụng bộ lọc").click();
+  await p
+    .getByRole("radio", { name: "Tất cả tình trạng", exact: true })
+    .click();
+  await button("Áp dụng").click();
+  await p.waitForURL((url) => !url.searchParams.has("condition"));
+  await p.getByText("13 cuốn trên trang này").waitFor();
   await button("Đổi sách").click();
   await p
     .getByRole("link", { name: "Xem sách", exact: true })
@@ -139,7 +144,7 @@ try {
     .waitFor();
   await p.getByText(/125\.000\s*₫/).waitFor();
   await p.getByText(/150\.000\s*₫/).waitFor();
-  await p.getByRole("link", { name: "← Về kệ sách" }).click();
+  await p.getByRole("link", { name: "Về kệ sách", exact: true }).click();
   // Search failure/retry against the same real data.
   await p.route("**/api/v1/listings?*", (route) =>
     route.fulfill({
@@ -214,7 +219,7 @@ try {
     fullPage: true,
     animations: "disabled",
   });
-  await p.getByRole("link", { name: "← Về kệ sách", exact: true }).click();
+  await p.getByRole("link", { name: "Về kệ sách", exact: true }).click();
   await p.getByLabel("Tìm sách", { exact: true }).waitFor();
   assert.ok(
     await p.evaluate(
@@ -234,8 +239,8 @@ try {
   await p.waitForURL("**/login?returnUrl=*");
   const returnPath = new URL(p.url()).searchParams.get("returnUrl");
   assert.match(returnPath, /^\/books\//);
-  await p.getByLabel("Email", { exact: true }).fill("member@operations.test");
-  await p.getByLabel("Mật khẩu", { exact: true }).fill(password);
+  await p.getByLabel(/^Email/).fill("member@operations.test");
+  await p.getByLabel(/^Mật khẩu/).fill(password);
   await button("Đăng nhập").click();
   await p.waitForURL(origin + returnPath);
   await p
@@ -251,10 +256,15 @@ try {
   await button("Gửi duyệt").click();
   await p.getByRole("alert").waitFor();
   await step(/Thông tin sách/).click();
+  if (await button("Không thấy sách? Tự nhập theo bìa").count())
+    await button("Không thấy sách? Tự nhập theo bìa").click();
   await p
     .getByLabel("Tên sách", { exact: true })
     .fill("QA — Một cuốn sách cũ qua nhiều người đọc với tên dài");
   await p.getByLabel("Tác giả", { exact: true }).fill("Tác giả QA");
+  await p
+    .getByRole("combobox", { name: "Danh mục sách", exact: true })
+    .selectOption({ label: "Sách khác" });
   await step(/Ảnh bản sách/).click();
   await p.locator("input[type=file]").setInputFiles({
     name: "qa-cover.png",
@@ -268,15 +278,23 @@ try {
     .fill("Đủ nội dung, thiếu một trang trắng cuối sách.");
   await p.getByLabel("Bìa và gáy").fill("Gáy sờn, bìa có nếp gấp.");
   await p.getByLabel("Ghi chú, đánh dấu").fill("Không có");
-  await p.locator("input[name=readable]").first().check();
-  await p.locator("input[name=hasMissingPages]").first().check();
-  await p.locator("input[name=missingEssentialContent]").last().check();
+  for (const [name, index] of [
+    ["readable", 0],
+    ["hasMissingPages", 0],
+    ["missingEssentialContent", 1],
+  ]) {
+    const input = p.locator(`input[name=${name}]`).nth(index);
+    await input.locator("..").click();
+    assert.equal(await input.isChecked(), true);
+  }
   await p.getByLabel("Phụ kiện").fill("Không có");
   await p
     .getByLabel("Mô tả chung")
     .fill("DỮ LIỆU QA. Bản sách cũ có gáy sờn, đủ nội dung để đọc.");
   await step(/Bán hoặc đổi/).click();
-  await p.getByRole("radio", { name: "Bán hoặc đổi", exact: true }).check();
+  const both = p.getByRole("radio", { name: "Bán hoặc đổi", exact: true });
+  if (!(await both.isChecked())) await both.locator("..").click();
+  assert.equal(await both.isChecked(), true);
   await p.getByLabel("Giá bán (VNĐ)").fill("35000");
   await p.getByLabel("Giá trị đổi (VNĐ)").fill("45000");
   await step(/Thông tin sách/).click();
@@ -362,8 +380,8 @@ try {
   // Another authenticated Member reserves a real fixture listing. The server
   // commits the first request but its response is lost; retry must replay it.
   await p.goto(origin + "/login");
-  await p.getByLabel("Email", { exact: true }).fill("admin@operations.test");
-  await p.getByLabel("Mật khẩu", { exact: true }).fill(password);
+  await p.getByLabel(/^Email/).fill("admin@operations.test");
+  await p.getByLabel(/^Mật khẩu/).fill(password);
   await button("Đăng nhập").click();
   await p.waitForURL(origin + "/");
   const selectedPath = await p

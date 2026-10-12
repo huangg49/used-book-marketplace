@@ -1,10 +1,33 @@
 # Điểm lưu hiện tại — 12/10/2026
 
-Snapshot tổng quan: main `da59199`; docs context `d77290a`, docs refresh `2e13f04`.
-Checkout/gói Android hiện hành và primary main mới được ghi bên dưới.
-OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hiện hành. Đây là trạng thái theo Git/
-source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
+Source tích hợp: `codex/integration-main`, main đã fetch `53a2673`;
+OpenAPI0.34.0,22migration Mongo,134HTTP operation/23controller.
+Checkout/gói Android và WIP của các thành viên được ghi bên dưới.
+Remote CI và human sign-off phải kiểm riêng trên PR trước merge.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
+
+## Tích hợp Member/main — 12/10/2026
+
+- Theo kế hoạch được duyệt, tích hợp trong managed worktree riêng trên
+  `codex/integration-main`; candidate `30953d0`, main `53a2673`.
+  WIP checkpoint `3dcda7a`, merge `c8de21e`; subject phần nối cuối
+  `fix(exchange): connect member UI to integrated main backend`.
+- Giữ giao diện Member và module/ba migration exchange của Đại; union
+  registry/schema/catalog/auth/OTP, checksum cũ không đổi. Client command
+  dùng contract thật, revision/key/body; bỏ fallback mock và thống kê giả.
+  Chọn một sách, tiền bù/cọc/state thật; xác nhận intent cũ khi mất phản hồi,
+  kể cả đọc listing không còn công khai. Chi tiết sách có CTA đổi thật.
+  Chat/report/review/đề xuất lại/gợi ý tự động vẫn ghi chưa khả dụng.
+- API620E2E/130unit; Mongo40PASS/4SKIP, schema recheck19PASS gồm2upgrade
+  mới; web119unit/build/lint0error,21session; Admin15/RN122unit và
+  typecheck PASS; dev15PASS. Browser shelf/detail/sell/purchase và exchange
+  desktop/mobile PASS, gồm denied read, mất ACK, lỗi ví, dữ liệu form.
+  Thêm User Web CI lint/build/unit/session và browser QA riêng.
+- [Bằng chứng và giới hạn](../verification/INTEGRATION_MAIN_2026_10_12.md).
+  Primary WIP/runtime/DB không sửa/reset/seed; READINESS không đổi.
+  Native/Safari/live storage/Brevo thật NOT RUN. Push/PR là bước tiếp,
+  remote CI/owner review và reviewer thứ hai cho tiền/quyền còn chờ;
+  chưa merge/deploy.
 
 ## Khảo sát trước tích hợp — 12/10/2026
 

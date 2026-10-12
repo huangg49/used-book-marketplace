@@ -1,0 +1,74 @@
+name: User Web CI
+
+on:
+  pull_request:
+    paths:
+      [
+        "apps/user-web/**",
+        "apps/api/**",
+        "apps/admin-web/tests/test-api.mjs",
+        "infra/docker-compose.mongo-test.yml",
+        "infra/mongo/**",
+        "packages/api-contract/**",
+        "packages/session-client/**",
+        ".github/workflows/user-web-ci.yml",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "package.json",
+      ]
+  push:
+    branches: [main]
+    paths:
+      [
+        "apps/user-web/**",
+        "apps/api/**",
+        "apps/admin-web/tests/test-api.mjs",
+        "infra/docker-compose.mongo-test.yml",
+        "infra/mongo/**",
+        "packages/api-contract/**",
+        "packages/session-client/**",
+        ".github/workflows/user-web-ci.yml",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "package.json",
+      ]
+
+permissions:
+  contents: read
+
+jobs:
+  user-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @used-books/user-web lint
+      - run: pnpm --filter @used-books/user-web typecheck
+      - run: pnpm --filter @used-books/user-web test
+      - run: pnpm --filter @used-books/session-client test
+      - run: pnpm --filter @used-books/user-web build
+      - run: pnpm --filter @used-books/api build
+      - run: pnpm --filter @used-books/admin-web exec playwright install --with-deps chromium
+      - run: pnpm infra:mongo:test:up
+      - run: pnpm --filter @used-books/user-web test:browser
+        env:
+          MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
+      - run: pnpm --filter @used-books/user-web test:exchange:browser
+        env:
+          MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: user-web-browser-evidence
+          path: |
+            apps/user-web/test-results/
+            .impeccable/review/integration-main/
+      - if: always()
+        run: pnpm infra:mongo:test:stop

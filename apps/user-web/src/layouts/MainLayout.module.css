@@ -7,6 +7,22 @@
 .main {
   min-height: 60vh;
 }
+.main[data-exchange="true"] {
+  /* Bridge the retained exchange components to the current member brand. */
+  --ink: var(--shop-ink);
+  --ink-muted: var(--shop-muted);
+  --line: var(--shop-line);
+  --paper: var(--shop-paper);
+  --sepia: var(--shop-shelf, #f4eddf);
+  --leather: var(--shop-wine);
+  --gold: var(--shop-yellow);
+  --gold-strong: var(--shop-wine);
+  --gold-strong-hover: var(--shop-wine-hover, #7c2320);
+  --status-red: var(--shop-error, #912b0e);
+  --status-green: var(--shop-exchange-ink, #254337);
+  --font-serif: var(--shop-body);
+  --font-sans: var(--shop-body);
+}
 .headerSlot {
   /* Keep page geometry stable as the fixed navigation changes shape. */
   min-height: 76px;
@@ -26,7 +42,8 @@
   color: var(--shop-cream);
   font-family: var(--shop-body);
   box-shadow: inset 0 -1px #853735;
-  transition: width var(--nav-morph-duration) cubic-bezier(0.16, 1, 0.3, 1),
+  transition:
+    width var(--nav-morph-duration) cubic-bezier(0.16, 1, 0.3, 1),
     transform var(--nav-morph-duration) cubic-bezier(0.16, 1, 0.3, 1),
     border-radius var(--nav-morph-duration) cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow var(--nav-morph-duration) ease-out;
@@ -44,10 +61,18 @@
   animation: navEdgeFlash var(--nav-edge-duration) ease-out;
 }
 @keyframes navEdgeFlash {
-  0% { opacity: 0; }
-  20% { opacity: 0.8; }
-  65% { opacity: 0.45; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  65% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 .header[data-floating="true"] {
   width: min(1248px, calc(100% - 64px));
@@ -83,10 +108,20 @@
   animation: navEdgeTrace var(--nav-edge-duration) linear;
 }
 @keyframes navEdgeTrace {
-  0% { stroke-dashoffset: 100; opacity: 0; }
-  15% { opacity: 1; }
-  75% { opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: 0; }
+  0% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
 }
 .header[data-floating="true"][data-menu-open="true"] {
   border-radius: 24px;
@@ -100,7 +135,8 @@
   justify-content: space-between;
   gap: 28px;
   min-height: 76px;
-  transition: min-height var(--nav-morph-duration) cubic-bezier(0.16, 1, 0.3, 1),
+  transition:
+    min-height var(--nav-morph-duration) cubic-bezier(0.16, 1, 0.3, 1),
     padding var(--nav-morph-duration) cubic-bezier(0.16, 1, 0.3, 1);
 }
 /* Owner requests a visible, finite navbar morph even on their reduced-motion laptop. */
@@ -443,8 +479,17 @@
   }
 }
 @media (min-width: 1001px) and (max-width: 1279px) {
-  .headerInner { padding-inline: 24px; gap: 18px; }
-  .headerBrand { gap: 12px; }
-  .desktopNav { gap: 20px; }
-  .headerActions { gap: 14px; }
+  .headerInner {
+    padding-inline: 24px;
+    gap: 18px;
+  }
+  .headerBrand {
+    gap: 12px;
+  }
+  .desktopNav {
+    gap: 20px;
+  }
+  .headerActions {
+    gap: 14px;
+  }
 }

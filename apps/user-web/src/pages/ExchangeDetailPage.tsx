@@ -1,16 +1,18 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ROUTES } from '../lib/routes';
+import { useSession } from '../hooks/useSession';
+import { retryExchange } from '../services/exchange';
 import {
     getExchangeDetail,
     getMessages,
     sendMessage,
     cancelExchange,
     acceptExchange,
+    fundExchange,
     rejectExchange,
     confirmSent,
-    confirmReceived,
-    reportIssue
+    confirmReceived
 } from '../services/exchangeDetail';
 import { ProgressStepper } from '../components/exchange/ProgressStepper';
 import { BookInfoCard } from '../components/exchange/BookInfoCard';
@@ -22,6 +24,7 @@ import styles from './ExchangeDetailPage.module.css';
 export function ExchangeDetailPage() {
     const { id } = useParams<{ id: string }>();
     const queryClient = useQueryClient();
+    const auth = useSession();
 
     const {
         data: detail,
@@ -29,9 +32,9 @@ export function ExchangeDetailPage() {
         isError: isDetailError,
         refetch: refetchDetail
     } = useQuery({
-        queryKey: ['exchangeDetail', id],
+        queryKey: ['exchangeDetail', auth.status === 'authenticated' ? auth.user.id : undefined, id],
         queryFn: () => getExchangeDetail(id!),
-        enabled: !!id,
+        enabled: !!id && auth.status === 'authenticated',
         refetchInterval: 10000,
         refetchIntervalInBackground: false
     });
@@ -39,14 +42,17 @@ export function ExchangeDetailPage() {
     const { data: messages = [] } = useQuery({
         queryKey: ['exchangeMessages', id],
         queryFn: () => getMessages(id!),
-        enabled: !!id,
+        enabled: false,
         refetchInterval: 10000,
         refetchIntervalInBackground: false
     });
 
     // Mutations
     const invalidate = () => {
-        queryClient.invalidateQueries({ queryKey: ['exchangeDetail', id] });
+        queryClient.invalidateQueries({ queryKey: ['exchangeDetail'] });
+        queryClient.invalidateQueries({ queryKey: ['exchangeTransactions'] });
+        queryClient.invalidateQueries({ queryKey: ['exchangeCounts'] });
+        queryClient.invalidateQueries({ queryKey: ['wallet'] });
         queryClient.invalidateQueries({ queryKey: ['exchangeMessages', id] });
     };
 
@@ -56,45 +62,34 @@ export function ExchangeDetailPage() {
     };
 
     const handleCancel = async () => {
-        await cancelExchange(id!);
+        await cancelExchange(id!, detail!.revision!);
         invalidate();
     };
 
     const handleAccept = async () => {
-        await acceptExchange(id!);
+        await acceptExchange(id!, detail!.revision!);
         invalidate();
     };
 
     const handleReject = async (reason?: string) => {
-        await rejectExchange(id!, reason);
+        await rejectExchange(id!, detail!.revision!, reason ?? 'Không phù hợp');
         invalidate();
     };
 
     const handleConfirmSent = async () => {
-        await confirmSent(id!);
+        await confirmSent(id!, detail!.revision!);
         invalidate();
     };
 
     const handleConfirmReceived = async () => {
-        await confirmReceived(id!);
+        await confirmReceived(id!, detail!.revision!);
         invalidate();
     };
 
-    const handleReportIssue = async (type: string, desc: string) => {
-        await reportIssue(id!, type, desc);
-        invalidate();
-    };
 
-    // Tạm tắt để test UI
-    // if (sessionState.status === 'anonymous') {
-    //     return (
-    //         <div className={styles.authContainer}>
-    //             <h2>Vui lòng đăng nhập để xem giao dịch</h2>
-    //             <Link to={ROUTES.login} className={styles.loginBtn}>Đăng nhập</Link>
-    //         </div>
-    //     );
-    // }
-
+    if (auth.status !== 'authenticated') {
+        return <div className={styles.authContainer}><h2>{auth.status === 'loading' ? 'Đang kiểm tra đăng nhập…' : 'Đăng nhập để xem trao đổi'}</h2>{auth.status !== 'loading' && <Link className={styles.loginBtn} to={`/login?returnUrl=${encodeURIComponent(`/exchange/${id ?? ''}`)}`}>Đăng nhập</Link>}</div>;
+    }
     if (isDetailLoading) {
         return <div className={styles.loadingContainer}>Đang tải...</div>;
     }
@@ -118,10 +113,12 @@ export function ExchangeDetailPage() {
         );
     }
 
-    const isReadOnly = ['REJECTED', 'CANCELLED', 'EXPIRED'].includes(detail.status);
 
     let statusText = String(detail.status);
     if (detail.status === 'PENDING') statusText = 'Chờ phản hồi';
+    else if (detail.status === 'FUNDING') statusText = 'Chờ đặt cọc';
+    else if (detail.status === 'WAITING_YOU_SEND') statusText = 'Chuẩn bị gửi sách';
+    else if (detail.status === 'RESOLUTION_PENDING') statusText = 'Đang cần xử lý';
     else if (detail.status === 'DELIVERING') statusText = 'Đang giao nhận';
     else if (detail.status === 'WAITING_YOU_CONFIRM') statusText = 'Chờ xác nhận';
     else if (detail.status === 'COMPLETED') statusText = 'Hoàn tất';
@@ -154,10 +151,11 @@ export function ExchangeDetailPage() {
                         detail={detail} 
                         onCancel={handleCancel}
                         onAccept={handleAccept}
+                        onFund={async () => { await fundExchange(id!); invalidate(); }}
+                        onRetry={async () => { await retryExchange(id!); invalidate(); }}
                         onReject={handleReject}
                         onConfirmSent={handleConfirmSent}
                         onConfirmReceived={handleConfirmReceived}
-                        onReportIssue={handleReportIssue}
                     />
                     <SafetyTipsCard />
                 </div>
@@ -167,7 +165,8 @@ export function ExchangeDetailPage() {
                         messages={messages} 
                         partner={detail.partner} 
                         onSendMessage={handleSendMessage}
-                        isReadOnly={isReadOnly}
+                        isReadOnly={true}
+                        unavailable={true}
                     />
                 </div>
             </div>

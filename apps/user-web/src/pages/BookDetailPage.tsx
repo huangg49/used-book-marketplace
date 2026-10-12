@@ -247,11 +247,31 @@ export function BookDetailPage() {
               )}
             </section>
           )}
-          {book.mode === "Exchange" && (
-            <p className={styles.exchangeNote}>
-              Bạn đang xem sách để đổi. Luồng gửi đề nghị đổi trên web chưa kết
-              nối API.
-            </p>
+          {["Exchange", "Both"].includes(book.mode) && (
+            <section className={styles.purchase}>
+              <p className={styles.exchangeNote}>
+                {isOwner
+                  ? "Đây là bản sách của bạn. Theo dõi đề nghị trong Trao đổi của tôi."
+                  : held
+                    ? "Bản sách đang được giữ cho giao dịch hiện tại."
+                    : "Chọn một bản sách trong kệ của bạn để đề nghị đổi. Máy chủ tính tiền bù theo giá trị đổi."}
+              </p>
+              {isOwner ? (
+                <Link className={styles.primary} to={ROUTES.exchangeMine}>
+                  Trao đổi của tôi
+                </Link>
+              ) : (
+                !held && (
+                  <Link
+                    className={styles.primary}
+                    to={ROUTES.exchangeCompose(book.id)}
+                  >
+                    Gửi đề nghị đổi sách{" "}
+                    <ArrowUpRight size={18} aria-hidden="true" />
+                  </Link>
+                )
+              )}
+            </section>
           )}
         </article>
       </div>

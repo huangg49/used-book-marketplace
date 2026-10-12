@@ -113,6 +113,60 @@ describe('migrations', () => {
     // The lock is released after a failed run.
     expect(await migrate(migrator, migrator.db())).toEqual([]);
   });
+  it.each(['exchange-main', 'member-catalog'])(
+    'upgrades %s to the union without rewriting applied checksums',
+    async (lane) => {
+      const db = root.db(
+        `integration_upgrade_${randomUUID().replaceAll('-', '')}_test`,
+      );
+      const exchangeIds = new Set([
+        '0016-exchanges',
+        '0017-exchanges-phase2',
+        '0018-exchanges-proposal-expiry',
+      ]);
+      const memberIds = new Set([
+        '0016-catalog-classification',
+        '0017-account-recovery',
+        '0018-auth-otp',
+        '0019-catalog-vocabulary-v2',
+      ]);
+      const before = migrations.filter(
+        (m) => !(lane === 'exchange-main' ? memberIds : exchangeIds).has(m.id),
+      );
+      try {
+        await migrate(root, db, before);
+        const ledger = db.collection<{ _id: string; checksum: string }>(
+          '_migrations',
+        );
+        const checksums = new Map(
+          (await ledger.find().toArray()).map((row) => [row._id, row.checksum]),
+        );
+        expect(await migrate(root, db)).toEqual(
+          migrations.filter((m) => !checksums.has(m.id)).map((m) => m.id),
+        );
+        const after = await ledger.find().toArray();
+        expect(after).toHaveLength(migrations.length);
+        for (const row of after)
+          if (checksums.has(row._id))
+            expect(row.checksum).toBe(checksums.get(row._id));
+        expect(await migrate(root, db)).toEqual([]);
+        const collections = await db.listCollections().toArray();
+        for (const spec of currentCollections()) {
+          const actual = collections.find(
+            (collection) => collection.name === spec.name,
+          );
+          const validator =
+            actual && 'options' in actual
+              ? actual.options?.validator
+              : undefined;
+          expect(validator?.$jsonSchema).toEqual(spec.schema);
+          if (spec.expr) expect(validator?.$expr).toEqual(spec.expr);
+        }
+      } finally {
+        await db.dropDatabase();
+      }
+    },
+  );
   it('upgrades v1 classification additively without changing historical revisions or checksums', async () => {
     const db = root.db(
       `catalog_upgrade_${randomUUID().replaceAll('-', '')}_test`,

@@ -19,7 +19,15 @@ export default function MainLayout() {
         Bỏ qua điều hướng
       </a>
       <Header />
-      <main id="main-content" className={styles.main}>
+      <main
+        id="main-content"
+        className={styles.main}
+        data-exchange={
+          location.pathname === "/exchange" ||
+          location.pathname.startsWith("/exchange/") ||
+          undefined
+        }
+      >
         <Outlet />
       </main>
       {!isChat && (

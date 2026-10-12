@@ -1,5 +1,6 @@
 import { useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useSession } from '../hooks/useSession'
 import { ArrowLeftRight, X, Star, ChevronLeft, ChevronRight } from 'lucide-react'
 import { ROUTES, formatVnd } from '../lib/routes'
 import { getExchangeTransactions, getExchangeCounts } from '../services/exchange'
@@ -15,6 +16,8 @@ const TAB_MAPPINGS: Record<ExchangeTab, string> = {
 
 function getStatusInfo(status: string) {
     switch (status) {
+        case 'FUNDING': return { text: 'Chờ đặt cọc', class: styles.statusActive }
+        case 'RESOLUTION_PENDING': return { text: 'Đang cần xử lý', class: styles.statusActive }
         // Sent / Received
         case 'PENDING': return { text: 'Chờ phản hồi', class: styles.statusPending }
         case 'REJECTED': return { text: 'Bị từ chối', class: styles.statusRejected }
@@ -45,32 +48,25 @@ function formatDate(isoString: string) {
 
 export default function ExchangeMinePage() {
     const [searchParams, setSearchParams] = useSearchParams()
+    const auth = useSession()
+    const actor = auth.status === 'authenticated' ? auth.user.id : undefined
 
-    const currentTab = (searchParams.get('tab') as ExchangeTab) || 'sent'
-    const currentPage = parseInt(searchParams.get('page') || '1', 10)
-
-    // Tạm tắt để test UI khi không chạy backend
-    // useEffect(() => {
-    //     if (sessionState.status === 'anonymous') {
-    //         navigate(ROUTES.login, { replace: true })
-    //     }
-    // }, [sessionState.status, navigate])
+    const rawTab = searchParams.get('tab')
+    const currentTab: ExchangeTab = rawTab && rawTab in TAB_MAPPINGS ? rawTab as ExchangeTab : 'sent'
+    const rawPage = Number(searchParams.get('page') ?? 1)
+    const currentPage = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1
 
     const { data: countsData } = useQuery({
-        queryKey: ['exchangeCounts'],
+        queryKey: ['exchangeCounts', actor],
         queryFn: getExchangeCounts,
-        // enabled: sessionState.status === 'authenticated'
+        enabled: !!actor
     })
 
     const { data: listData, isLoading, isError, refetch } = useQuery({
-        queryKey: ['exchangeTransactions', currentTab, currentPage],
+        queryKey: ['exchangeTransactions', actor, currentTab, currentPage],
         queryFn: () => getExchangeTransactions(currentTab, currentPage),
-        // enabled: sessionState.status === 'authenticated'
+        enabled: !!actor
     })
-
-    // if (sessionState.status !== 'authenticated') {
-    //     return <div className={styles.loading}>Đang kiểm tra đăng nhập...</div>
-    // }
 
     const setTab = (tab: ExchangeTab) => {
         setSearchParams({ tab, page: '1' })
@@ -92,6 +88,7 @@ export default function ExchangeMinePage() {
         }
     }
 
+    if (!actor) return <div className={styles.container}><h1 className={styles.pageTitle}>Trao đổi của tôi</h1><p>{auth.status === 'loading' ? 'Đang kiểm tra đăng nhập…' : 'Đăng nhập để xem trao đổi của bạn.'}</p>{auth.status !== 'loading' && <Link className={styles.btnAction} to="/login?returnUrl=%2Fexchange%2Fmine">Đăng nhập</Link>}</div>
     return (
         <div className={styles.container}>
             <div className={styles.header}>
@@ -105,7 +102,7 @@ export default function ExchangeMinePage() {
                 aria-label="Các loại trao đổi"
             >
                 {(Object.keys(TAB_MAPPINGS) as ExchangeTab[]).map((tab, idx, arr) => {
-                    const count = countsData ? countsData[tab] : 0;
+                    const count = countsData ? countsData[tab] : '—';
                     const isActive = currentTab === tab;
                     return (
                         <button
