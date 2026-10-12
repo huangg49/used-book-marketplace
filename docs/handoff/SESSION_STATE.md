@@ -14,6 +14,37 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   preflight HTTP204 cho `http://127.0.0.1:5186` PASS. Không thử đăng nhập,
   seed/reset DB, đổi tài khoản hoặc cấu hình; WIP teammate/READINESS giữ nguyên.
 
+## Đấu giá web —12/10/2026
+
+- `codex/auction-web-refine`, base `f0c3115`, checkpoint subject
+  `feat(web): refine auction browsing and personal sessions`: giữ luồng giá/
+  auto/mua ngay/thanh toán; đổi list/detail theo brand, ảnh và tình trạng từ
+  revision đã duyệt/kiểm tra. `/my-auctions` có bốn view và phân trang cursor
+  gắn actor/view, sidebar/menu dùng chung cấu hình. Không N+1 participation ở
+  public list; không công khai mức trần hoặc danh tính bidder.
+- Contract bổ sung read metadata/photo đấu giá và member page; photo kiểm quyền
+  trước/sau ký URL. Không sửa migration hoặc write workflow. Unknown payment
+  retry giữ order/version/key. Lỗi auto giữ số tiền, lỗi refresh giữ cache kèm
+  cảnh báo;401/403 không hiển thị cache riêng bị từ chối. Mobile dropdown rõ chữ.
+-49 auction HTTP/Mongo tests và102 web unit PASS; API typecheck/build/lint,
+  web build/lint, contract generate/check/routes125operations/22controllers PASS.
+  Có5 warning Exchange và cảnh báo bundle Vite có sẵn. Browser1366×900/390×844
+  trên QA Mongo riêng/fake storage, gồm bid/auto/gallery/filter/private tabs,
+  auto rejection đồng thời,503 giữ nội dung và403 ẩn rows riêng.
+  [Evidence và giới hạn](../../.impeccable/review/auctions/README.md).
+- AI finish review yêu cầu3 sửa; verdict pass **ship**,3/3 resolved, không là
+  human review hay whole-surface re-review. Detector một lần1primary/22advisory;
+  bỏ thumb giả/stripe cũ, đồng bộ token cục bộ; không chạy detector lần hai.
+  READINESS và gate nhận sách/inspection/settlement không đổi. Không seed DB chính.
+- Ba surface brief đấu giá đã đồng bộ; giữ DESIGN/sidecar, ghi nhận prose đấu giá
+  cũ chưa phản ánh bản mới. Các vai trò màu có sẵn được bind trong phạm vi component.
+  QA đã dọn database/users/roles,0 browser DB còn lại; dừng runtime/container QA.
+- Chưa push/PR/merge/deploy. WIP Chat/Notifications/MainLayout/Home của teammate
+  giữ nguyên. Backend3000/web5186 chính tiếp tục chạy. Native/điện thoại thật/
+  Safari/speech screen reader/full browser zoom/live Supabase/remote CI và ca
+  unknown-payment mất mạng ở browser NOT RUN. Bước tiếp: chủ dự án xem
+  `/auctions` và `/my-auctions`, human review/tích hợp theo TEAMWORK.
+
 ## Tổng quan tài khoản, pha trộn profile Minh —12/10/2026
 
 - Refinement theo phản hồi "hơi thường": `codex/account-overview-refine`, base

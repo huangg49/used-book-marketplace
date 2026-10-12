@@ -18,6 +18,7 @@ export const ROUTES = {
   exchangeDetail: (id: string): string => `/exchange/${id}`,
   chat: (conversationId?: string): string => conversationId ? `/chat/${conversationId}` : '/chat',
   auctions: '/auctions',
+  myAuctions: '/my-auctions',
   auctionDetail: (id: string): string => `/auctions/${id}`,
   notifications: '/notifications',
 } as const

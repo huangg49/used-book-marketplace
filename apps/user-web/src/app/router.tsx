@@ -19,6 +19,7 @@ import ExchangeComposePage from '../pages/ExchangeComposePage';
 import ExchangeMinePage from '../pages/ExchangeMinePage';
 import { ExchangeDetailPage } from '../pages/ExchangeDetailPage';
 import { AuctionListPage } from '../pages/AuctionListPage';
+import { MyAuctionsPage } from '../pages/MyAuctionsPage';
 import { AuctionDetailPage } from '../pages/AuctionDetailPage';
 import { NotificationsPage } from '../pages/NotificationsPage';
 import { PaperStormLayout } from '../components/auth/PaperStormLayout';
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([{ element: <PaperStormLayout />, chil
       { path: '/account', element: <AccountOverviewPage /> },
       { path: '/profile', element: <ProfilePage /> },
       { path: '/my-books', element: <MyBooksPage /> },
+      { path: '/my-auctions', element: <MyAuctionsPage /> },
     ],
   },
   // Auth sheets share one persistent paper stack and memory-only input draft.

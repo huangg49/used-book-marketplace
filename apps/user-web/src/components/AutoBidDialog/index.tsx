@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, CircleCheck, Lock, X, Zap } from 'lucide-react'
 import { formatVnd } from '../../lib/routes'
 import { AUCTION_MAX_PRICE } from '../../services/auctions'
 import styles from './AutoBidDialog.module.css'
+import { lockPageScroll } from '../../lib/page-scroll'
 
 interface AutoBidDialogProps {
   isOpen: boolean
@@ -17,6 +18,7 @@ interface AutoBidDialogProps {
   /** Mức tự động hiện có của người dùng (chỉ họ thấy), nếu có. */
   currentMax: number | null
   busy: boolean
+  submissionError?: string | null
   onConfirm: (maxAmount: number) => Promise<void>
 }
 
@@ -33,12 +35,18 @@ function amountError(amount: number | null, floor: number, start: number, step: 
 
 /** Hộp thoại hai bước: nhập mức tối đa, rồi xác nhận ở màn hình sau. */
 export function AutoBidDialog(props: AutoBidDialogProps) {
-  const { isOpen, onClose, title, pointName, currentPrice, startPrice, step, floor, currentMax, busy, onConfirm } = props
+  const { isOpen, onClose, title, pointName, currentPrice, startPrice, step, floor, currentMax, busy, submissionError, onConfirm } = props
   const ref = useRef<HTMLDialogElement>(null)
+  const confirmationHeading = useRef<HTMLHeadingElement>(null)
   const ids = useId()
   const [value, setValue] = useState<number | null>(floor)
   const [stage, setStage] = useState<'form' | 'confirm'>('form')
   const error = amountError(value, floor, startPrice, step)
+  useEffect(() => isOpen ? lockPageScroll() : undefined, [isOpen])
+  useEffect(() => {
+    if (isOpen && stage === 'confirm') confirmationHeading.current?.focus()
+    else if (isOpen && stage === 'form' && ref.current?.open) ref.current.querySelector<HTMLInputElement>('input')?.focus()
+  }, [isOpen, stage])
 
   useEffect(() => {
     const dialog = ref.current
@@ -63,7 +71,6 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
     <dialog ref={ref} className={styles.dialog} aria-labelledby={`${ids}-title`}>
       <div className={styles.sheet}>
         <header className={styles.header}>
-          <span className={styles.thumb} aria-hidden="true"><span>{title}</span></span>
           <span className={styles.heading}>
             <strong id={`${ids}-title`}><Zap size={20} aria-hidden="true" /> Đặt giá tự động</strong>
             <small>cho {title}</small>
@@ -135,13 +142,14 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
         ) : (
           <div className={styles.body}>
             <section className={styles.how}>
-              <h3>Xác nhận mức tối đa {formatVnd(value!)}</h3>
+              <h3 ref={confirmationHeading} tabIndex={-1}>Xác nhận mức tối đa {formatVnd(value!)}</h3>
               <p>
                 Khi có người trả cao hơn, hệ thống trả thay bạn cao hơn họ một bước {formatVnd(step)}, không vượt {formatVnd(value!)}. Mức này
                 chỉ có thể nâng lên. Nếu thắng, bạn thanh toán từ ví trong 24 giờ sau khi phiên kết thúc và tự nhận
                 sách tại {pointName}. Không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.
               </p>
             </section>
+            {submissionError && <p className={styles.error} role="alert">{submissionError} Chọn “Sửa mức” để điều chỉnh; số tiền bạn nhập vẫn được giữ.</p>}
             <div className={styles.actions}>
               <button type="button" className={styles.back} onClick={() => setStage('form')} disabled={busy}>
                 <ArrowLeft size={16} aria-hidden="true" /> Sửa mức

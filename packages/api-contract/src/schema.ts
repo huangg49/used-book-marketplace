@@ -1815,6 +1815,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/auctions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Member-only keyset page of their own seller, bidder or Buy Now winner auctions. Cursor is bound to actor and view. Never returns another bidder's commitment ceiling. */
+        get: operations["listMyAuctions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/photos/{mediaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Public signed derivative from the inspected, approved intake revision only. Rechecks publication and media eligibility before and after signing. No storage keys or staff notes are exposed. */
+        get: operations["getAuctionPhoto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auctions/{auctionId}": {
         parameters: {
             query?: never;
@@ -3878,6 +3912,39 @@ export interface components {
         AuctionIntakeList: {
             items: components["schemas"]["AuctionIntake"][];
         };
+        MyAuctionPage: {
+            items: {
+                auction: components["schemas"]["PublicAuctionSummary"];
+                /** @enum {string} */
+                role: "Seller" | "Bidder";
+                leading: boolean;
+                won: boolean;
+                needsPayment: boolean;
+                /** Format: date-time */
+                paymentDeadline: string | null;
+            }[];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        PublicAuctionBook: {
+            /** Format: uuid */
+            revisionId: string;
+            authors: string[];
+            condition: components["schemas"]["BookCondition"];
+            pages: string;
+            coverNote: string;
+            notes: string;
+            accessories: string;
+            description: string;
+            hasMissingPages: boolean;
+            photos: {
+                /** Format: uuid */
+                id: string;
+                width: number;
+                height: number;
+            }[];
+        };
         PublicAuctionSummary: {
             /** Format: uuid */
             id: string;
@@ -3900,6 +3967,8 @@ export interface components {
             /** Format: date-time */
             endAt: string;
             pointName: string;
+            /** @description Approved, inspected intake revision. Null when no longer eligible for public book/media reads. Optional for compatibility with older clients; never includes seller identity or inspection notes. */
+            book?: components["schemas"]["PublicAuctionBook"] | null;
             /** @constant */
             demoOnly: true;
         };
@@ -7618,6 +7687,61 @@ export interface operations {
             422: components["responses"]["ListingError"];
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listMyAuctions: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+                view?: "all" | "active" | "payment" | "selling";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Caller-owned auction activity. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyAuctionPage"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+        };
+    };
+    getAuctionPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auctionId: string;
+                mediaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Short-lived signed derivative. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaRead"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
         };
     };

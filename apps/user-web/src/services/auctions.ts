@@ -5,13 +5,28 @@ import { session } from '../lib/session'
 // public; the caller's own ceiling only comes from /me/auctions/{id}/participation.
 const money = z.number().int()
 const auctionState = z.enum(['Active', 'BuyNowPending', 'AwaitingWinnerPayment', 'Sold', 'Unsold', 'OnHold', 'Cancelled', 'PaymentExpired'])
+const auctionBookSchema = z.object({
+  revisionId: z.string().uuid(), authors: z.array(z.string()), condition: z.enum(['LikeNew', 'Good', 'Fair', 'Worn']),
+  pages: z.string(), coverNote: z.string(), notes: z.string(), accessories: z.string(), description: z.string(),
+  hasMissingPages: z.boolean(), photos: z.array(z.object({ id: z.string().uuid(), width: z.number().positive(), height: z.number().positive() })),
+})
 export const auctionSummarySchema = z.object({
   id: z.string().uuid(), listingId: z.string().uuid(), title: z.string(), state: auctionState,
   startPrice: money, step: z.union([z.literal(10000), z.literal(50000)]), buyNowPrice: money.nullable(),
   currentPrice: money.nullable(), minimumBid: money.nullable(), bidderCount: z.number().int(),
   startAt: z.string(), endAt: z.string(), pointName: z.string(), demoOnly: z.literal(true),
+  book: auctionBookSchema.nullish(),
 })
 const auctionListSchema = z.object({ items: z.array(auctionSummarySchema), serverTime: z.string() })
+const myAuctionPageSchema = z.object({ items: z.array(z.object({ auction: auctionSummarySchema,
+  role: z.enum(['Seller', 'Bidder']), leading: z.boolean(), won: z.boolean(), needsPayment: z.boolean(), paymentDeadline: z.string().nullable(),
+})), nextCursor: z.string().nullable(), serverTime: z.string() })
+export type MyAuctionItem = z.infer<typeof myAuctionPageSchema>['items'][number]
+export function listMyAuctions(view = 'all', cursor?: string) {
+  const params = new URLSearchParams({ limit: '12', view })
+  if (cursor) params.set('cursor', cursor)
+  return session.request(`/me/auctions?${params}`, myAuctionPageSchema)
+}
 export const auctionSchema = z.object({
   auction: auctionSummarySchema, leaderAlias: z.number().int().nullable(),
   history: z.array(z.object({ price: money, bidderAlias: z.number().int(), at: z.string() })), serverTime: z.string(),
@@ -46,6 +61,9 @@ export const AUCTION_MAX_PRICE = 1_000_000
 
 export function listAuctions() { return session.publicRequest('/auctions', auctionListSchema) }
 export function getAuction(id: string) { return session.publicRequest(`/auctions/${id}`, auctionSchema) }
+export function getAuctionPhoto(id: string, mediaId: string) {
+  return session.publicRequest(`/auctions/${id}/photos/${mediaId}`, z.object({ id: z.string().uuid(), url: z.string().url(), expiresAt: z.string(), width: z.number(), height: z.number() }))
+}
 export function getMyParticipation(id: string) { return session.request(`/me/auctions/${id}/participation`, participationSchema) }
 export function getMyPointOrder(id: string) { return session.request(`/me/point-orders/${id}`, pointOrderSchema) }
 

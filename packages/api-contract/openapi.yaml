@@ -5729,6 +5729,72 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /me/auctions:
+    get:
+      operationId: listMyAuctions
+      tags: [Auctions]
+      x-implementation-status: implemented
+      description: Member-only keyset page of their own seller, bidder or Buy Now winner auctions. Cursor is bound to actor and view. Never returns another bidder's commitment ceiling.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 50, default: 12 }
+        - in: query
+          name: cursor
+          schema: { type: string, maxLength: 2048 }
+        - in: query
+          name: view
+          schema: { type: string, enum: [all, active, payment, selling], default: all }
+      responses:
+        "200":
+          description: Caller-owned auction activity.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyAuctionPage"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/photos/{mediaId}:
+    get:
+      operationId: getAuctionPhoto
+      tags: [Auctions]
+      x-implementation-status: implemented
+      description: Public signed derivative from the inspected, approved intake revision only. Rechecks publication and media eligibility before and after signing. No storage keys or staff notes are exposed.
+      security: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: mediaId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Short-lived signed derivative.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaRead"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /auctions/{auctionId}:
     get:
       operationId: getAuction
@@ -12241,6 +12307,55 @@ components:
           maxItems: 50
           items:
             $ref: "#/components/schemas/AuctionIntake"
+    MyAuctionPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor, serverTime]
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            type: object
+            additionalProperties: false
+            required: [auction, role, leading, won, needsPayment, paymentDeadline]
+            properties:
+              auction:
+                $ref: "#/components/schemas/PublicAuctionSummary"
+              role: { type: string, enum: [Seller, Bidder] }
+              leading: { type: boolean }
+              won: { type: boolean }
+              needsPayment: { type: boolean }
+              paymentDeadline: { type: [string, "null"], format: date-time }
+        nextCursor: { type: [string, "null"] }
+        serverTime: { type: string, format: date-time }
+    PublicAuctionBook:
+      type: object
+      additionalProperties: false
+      required: [revisionId, authors, condition, pages, coverNote, notes, accessories, description, hasMissingPages, photos]
+      properties:
+        revisionId: { type: string, format: uuid }
+        authors:
+          type: array
+          items: { type: string }
+        condition:
+          $ref: "#/components/schemas/BookCondition"
+        pages: { type: string }
+        coverNote: { type: string }
+        notes: { type: string }
+        accessories: { type: string }
+        description: { type: string }
+        hasMissingPages: { type: boolean }
+        photos:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, width, height]
+            properties:
+              id: { type: string, format: uuid }
+              width: { type: integer, minimum: 1 }
+              height: { type: integer, minimum: 1 }
     PublicAuctionSummary:
       type: object
       additionalProperties: false
@@ -12320,6 +12435,11 @@ components:
           format: date-time
         pointName:
           type: string
+        book:
+          description: Approved, inspected intake revision. Null when no longer eligible for public book/media reads. Optional for compatibility with older clients; never includes seller identity or inspection notes.
+          oneOf:
+            - $ref: "#/components/schemas/PublicAuctionBook"
+            - type: "null"
         demoOnly:
           type: boolean
           const: true
