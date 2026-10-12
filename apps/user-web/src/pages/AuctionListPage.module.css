@@ -43,3 +43,6 @@
 .toolbar select { appearance: none; background-image: none !important; }
 .refreshError { padding: 12px 0 20px; color: var(--shop-wine); font-size: .875rem; line-height: 1.7; }
 .refreshError p { margin: 0; }
+
+.sectionActions a.create { padding: 8px 16px; border-radius: 6px; background: #f6e0a8; font-weight: 700; text-decoration: none; box-shadow: 2px 2px 0 var(--shop-wine); }
+.sectionActions a.create:hover { background: #f4cb67; }

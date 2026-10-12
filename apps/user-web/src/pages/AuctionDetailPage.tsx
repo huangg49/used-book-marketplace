@@ -2,7 +2,9 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { ArrowRight, ChevronRight, Gavel, MapPin, ShieldCheck, TrendingUp, Zap } from 'lucide-react'
+import {
+  AlertTriangle, ArrowRight, BookMarked, Check, ChevronRight, FileText, Gavel, Images, MapPin, Package, ShieldCheck, StickyNote, TrendingUp, Zap,
+} from 'lucide-react'
 import { AutoBidDialog } from '../components/AutoBidDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatRemaining, outcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
@@ -232,24 +234,8 @@ export function AuctionDetailPage() {
         </aside>
 
         <div className={styles.body}>
-          <section className={styles.description} aria-labelledby="auction-condition-title">
-            <h2 id="auction-condition-title">Về bản sách này</h2>
-            {auction.book ? <>
-              <p><strong>{conditions[auction.book.condition]}</strong>{auction.book.hasMissingPages ? ' · Có thiếu trang — xem mô tả bên dưới.' : ' · Không thiếu trang theo thông tin đăng.'}</p>
-              {auction.book.description && <p>{auction.book.description}</p>}
-              <dl className={styles.conditionNotes}>{[
-                ['Bìa sách', auction.book.coverNote], ['Ruột sách', auction.book.pages],
-                ['Ghi chú', auction.book.notes], ['Phụ kiện', auction.book.accessories],
-              ].filter(([, value]) => !!value).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
-            </> : <p>Thông tin bản sách hiện chưa được hiển thị công khai. Bạn vẫn có thể xem trạng thái phiên và các lượt giá.</p>}
-          </section>
-          <dl className={styles.facts}>
-            <div><dt>Giá khởi điểm</dt><dd>{formatVnd(auction.startPrice)}</dd></div>
-            <div><dt>Bước giá</dt><dd>{formatVnd(auction.step)}</dd></div>
-            <div><dt>Mở lúc</dt><dd>{when(auction.startAt)}</dd></div>
-            <div><dt>Kết thúc</dt><dd>{when(auction.endAt)}</dd></div>
-            <div className={styles.factWide}><dt><MapPin size={14} aria-hidden="true" /> Nhận sách tại</dt><dd>{auction.pointName}</dd></div>
-          </dl>
+          <BookCondition book={auction.book ?? null} />
+          <SessionFacts auction={auction} remaining={remaining} open={open} />
 
           <BidHistory auctionId={auction.id} history={history} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} badge={TOP_BADGE[auction.state] ?? null} startPrice={auction.startPrice} />
 
@@ -260,6 +246,113 @@ export function AuctionDetailPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+const CONDITION_SCALE = ['LikeNew', 'Good', 'Fair', 'Worn'] as const
+type AuctionBook = NonNullable<AuctionSummary['book']>
+
+// Condition first (what bidders weigh most), the seller's own words next, then
+// the per-part notes as scannable tiles. Empty notes are left out.
+function BookCondition({ book }: { book: AuctionBook | null }) {
+  if (!book)
+    return (
+      <section className={styles.bookCard} aria-labelledby="auction-condition-title">
+        <h2 id="auction-condition-title">Về bản sách này</h2>
+        <p className={styles.muted}>Thông tin bản sách hiện chưa được hiển thị công khai. Bạn vẫn có thể xem trạng thái phiên và các lượt giá.</p>
+      </section>
+    )
+  const level = CONDITION_SCALE.indexOf(book.condition)
+  const parts = ([
+    ['Bìa sách', book.coverNote, BookMarked], ['Ruột sách', book.pages, FileText],
+    ['Phụ kiện', book.accessories, Package], ['Ghi chú', book.notes, StickyNote],
+  ] as const).filter(([, value]) => !!value.trim())
+  return (
+    <section className={styles.bookCard} aria-labelledby="auction-condition-title">
+      <h2 id="auction-condition-title">Về bản sách này</h2>
+      <div className={styles.conditionRow}>
+        <div className={styles.conditionLead}>
+          <span className={styles.eyebrow}>Tình trạng</span>
+          <strong>{conditions[book.condition]}</strong>
+          <span>Người bán khai báo; nhân viên đã đối chiếu khi nhận sách tại điểm.</span>
+        </div>
+        <ol className={styles.conditionScale} aria-label={`Thang tình trạng: ${conditions[book.condition]}, bậc ${level + 1} trên 4`}>
+          {CONDITION_SCALE.map((c, i) => (
+            <li key={c} className={i === level ? styles.scaleOn : i < level ? styles.scalePast : undefined} aria-current={i === level ? 'true' : undefined}>
+              <span aria-hidden="true" />{conditions[c]}
+            </li>
+          ))}
+        </ol>
+      </div>
+      <ul className={styles.chips} aria-label="Điểm chính">
+        <li className={book.hasMissingPages ? styles.chipWarn : styles.chipOk}>
+          {book.hasMissingPages ? <AlertTriangle size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}
+          {book.hasMissingPages ? 'Có thiếu trang, xem ghi chú' : 'Không thiếu trang'}
+        </li>
+        {book.photos.length > 0 && <li><Images size={14} aria-hidden="true" /> {book.photos.length} ảnh của chính bản sách này</li>}
+      </ul>
+      {book.description.trim() && (
+        <figure className={styles.sellerNote}>
+          <figcaption>Người bán mô tả</figcaption>
+          <blockquote>{book.description}</blockquote>
+        </figure>
+      )}
+      {parts.length > 0 && (
+        <dl className={styles.partGrid}>
+          {parts.map(([label, value, Icon]) => (
+            <div key={label}>
+              <dt><Icon size={16} aria-hidden="true" />{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </section>
+  )
+}
+
+const clock = (iso: string) => new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+const day = (iso: string) => new Date(iso).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })
+
+// Prices as tiles, the session window as a track (progress from the server-aligned
+// countdown, never the device clock), and the pickup point as its own callout.
+function SessionFacts({ auction, remaining, open }: { auction: AuctionSummary; remaining: number; open: boolean }) {
+  const span = Date.parse(auction.endAt) - Date.parse(auction.startAt)
+  const progress = !open ? 100 : span > 0 ? Math.min(100, Math.max(0, (1 - remaining / span) * 100)) : 0
+  return (
+    <section className={styles.sessionCard} aria-labelledby="auction-session-title">
+      <h2 id="auction-session-title">Thông tin phiên</h2>
+      <dl className={styles.priceTiles}>
+        <div><dt>Giá khởi điểm</dt><dd>{formatVnd(auction.startPrice)}</dd></div>
+        <div><dt>Bước giá</dt><dd>+{formatVnd(auction.step)}</dd></div>
+        <div className={auction.buyNowPrice !== null ? styles.tileAccent : undefined}>
+          <dt>Mua ngay</dt>
+          {/* The API withholds buy-now after the first bid or once closed, so null is not "never offered". */}
+          <dd>
+            {auction.buyNowPrice !== null ? formatVnd(auction.buyNowPrice) : auction.bidderCount > 0 || !open ? 'Không còn' : 'Không áp dụng'}
+            {auction.buyNowPrice === null && (auction.bidderCount > 0 || !open) && <small>Chỉ có trước lượt trả giá đầu tiên</small>}
+          </dd>
+        </div>
+      </dl>
+      <div className={styles.window}>
+        <div className={styles.windowEnds}>
+          <p><span>Mở phiên</span><strong>{clock(auction.startAt)}</strong><small>{day(auction.startAt)}</small></p>
+          <p><span>Kết thúc</span><strong>{clock(auction.endAt)}</strong><small>{day(auction.endAt)}</small></p>
+        </div>
+        <div className={styles.track} role="progressbar" aria-label="Thời gian phiên đã trôi qua" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
+          <span style={{ width: `${progress}%` }} />
+        </div>
+        <p className={styles.windowNote}>{open ? `Còn ${formatRemaining(remaining)} · phiên kéo dài ${Math.round(span / HOUR)} giờ` : 'Phiên đã đóng'}</p>
+      </div>
+      <div className={styles.pickup}>
+        <span className={styles.pickupIcon}><MapPin size={18} aria-hidden="true" /></span>
+        <div>
+          <span className={styles.eyebrow}>Nhận sách tại</span>
+          <strong>{auction.pointName}</strong>
+          <small>Người thắng thanh toán từ ví rồi tự đến lấy sách · điểm mô phỏng tại TP.HCM</small>
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -375,6 +468,8 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  // The price a bid notice describes; a later price change makes it stale.
+  const [noticePrice, setNoticePrice] = useState<number | null>(null)
   const [receipt, setReceipt] = useState<{ sequence: number; bid: boolean } | null>(null)
   const receiptSequence = useRef(0)
   const standing = useRef<HTMLDivElement>(null)
@@ -387,8 +482,13 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
   const [wasLeading, setWasLeading] = useState(leading)
   if (wasLeading !== leading) {
     setWasLeading(leading)
-    if (wasLeading && !leading && !busy) { setReceipt(null); setNotice(`Bạn vừa bị vượt giá. Giá hiện tại ${formatVnd(auction.currentPrice ?? auction.startPrice)}.`) }
+    if (wasLeading && !leading && !busy) { setReceipt(null); setNoticePrice(null); setNotice(`Bạn vừa bị vượt giá. Giá hiện tại ${formatVnd(auction.currentPrice ?? auction.startPrice)}.`) }
   }
+  const currentPrice = auction.currentPrice ?? auction.startPrice
+  // FR-AU04: equal commitments rank by who reached the level first, so an equal
+  // bid that does not lead is a tie lost on order, not a higher rival amount.
+  const tied = !!me && !leading && me.ownLevel !== null && me.ownLevel === auction.currentPrice
+  const staleNotice = noticePrice !== null && noticePrice !== currentPrice
   const manualError = manual === undefined ? null : amountError(manual, minimumBid, auction.startPrice, step)
   const manualCapped = minimumBid > AUCTION_MAX_PRICE
   const autoCapped = autoFloor > AUCTION_MAX_PRICE
@@ -408,8 +508,11 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
         next.kind === 'BuyNow' ? 'Đã tạo đơn mua ngay. Hãy thanh toán trong 15 phút để tiếp tục.'
         : next.kind === 'Disable' ? 'Đã tắt đặt giá tự động.'
         : receipt.leading ? `Bạn đang dẫn giá ở ${price}.`
-        : `Đã ghi nhận, nhưng một mức tự động khác cao hơn. Giá hiện tại ${price}.`,
+        : receipt.currentPrice === next.amount
+          ? `Đã ghi nhận ${price}, nhưng một người khác đã cam kết mức này trước bạn nên vẫn dẫn giá.`
+          : `Đã ghi nhận, nhưng một mức tự động khác cao hơn. Giá hiện tại ${price}.`,
       )
+      setNoticePrice(next.kind === 'Manual' || next.kind === 'Auto' ? receipt.currentPrice : null)
       setReceipt({ sequence: ++receiptSequence.current, bid: next.kind === 'Manual' || next.kind === 'Auto' })
     } catch (caught) {
       if (outcomeUnknown(caught)) { setUnknown(next); setAutoDialog(false) }
@@ -426,16 +529,18 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
     <div className={styles.bidPanel}>
       {me && (
         <div ref={standing} role="status" className={`${styles.standing} ${leading ? styles.standingLead : styles.standingOut}`}>
-          <strong>{leading ? 'Bạn đang dẫn giá' : 'Bạn đã bị vượt giá'}</strong>
+          <strong>{leading ? 'Bạn đang dẫn giá' : tied ? 'Bạn trả bằng người dẫn giá' : 'Bạn đã bị vượt giá'}</strong>
           <span>
-            {me.mode === 'Auto' && me.ownLevel !== null
+            {tied
+              ? `Một người khác đã cam kết ${formatVnd(currentPrice)} trước bạn. Khi hai mức bằng nhau, người đặt trước dẫn giá. Trả từ ${formatVnd(minimumBid)} để vượt lên.`
+              : me.mode === 'Auto' && me.ownLevel !== null
               ? `Mức tự động tối đa của bạn: ${formatVnd(me.ownLevel)} (chỉ bạn thấy).`
               : me.ownLevel !== null ? `Lượt trả gần nhất của bạn: ${formatVnd(me.ownLevel)}.` : null}
           </span>
         </div>
       )}
 
-      {notice && (receipt ? <AuctionReceipt key={receipt.sequence} message={notice} bid={receipt.bid} /> : <p role="status" className={styles.fieldError}>{notice}</p>)}
+      {notice && !staleNotice && (receipt ? <AuctionReceipt key={receipt.sequence} message={notice} bid={receipt.bid} /> : <p role="status" className={styles.fieldError}>{notice}</p>)}
       {error && !autoDialog && <p role="alert" className={styles.fieldError}>{error}</p>}
 
       {unknown ? (

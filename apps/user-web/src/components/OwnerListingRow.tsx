@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { BookOpen, ArrowUpRight } from "lucide-react";
+import { BookOpen, ArrowUpRight, Gavel } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import {
   getMyPhoto,
@@ -9,12 +9,13 @@ import {
   type MyListing,
 } from "../services/my-listings";
 import { conditions } from "../lib/listing-labels";
-import { formatVnd } from "../lib/routes";
+import { formatVnd, ROUTES } from "../lib/routes";
 import {
   moderationLabels,
   visibilityLabels,
   tradeLabels,
   isPublicOwnerListing,
+  auctionEligible,
 } from "../lib/owner-listing-labels";
 import styles from "../pages/MyBooksPage.module.css";
 
@@ -184,6 +185,15 @@ export function OwnerListingRow({
             aria-label={`Xem bài đăng ${title}`}
           >
             Xem bài đăng <ArrowUpRight size={16} aria-hidden="true" />
+          </Link>
+        )}
+        {!compact && auctionEligible(item) && (
+          <Link
+            className={styles.auction}
+            to={ROUTES.auctionCreate(item.id)}
+            aria-label={`Đưa ${title} lên đấu giá`}
+          >
+            <Gavel size={15} aria-hidden="true" /> Đưa lên đấu giá
           </Link>
         )}
       </div>

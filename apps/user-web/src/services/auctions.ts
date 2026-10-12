@@ -85,9 +85,16 @@ export function bidOptions(minimum: number, step: number, count = 3) {
 
 // Seller side: the caller's own intakes tell the detail page that this auction
 // is theirs (public reads never expose the seller).
+const intakeState = z.enum(['AwaitingDropoff', 'Received', 'Passed', 'Auctioning', 'ReclaimRequired', 'Reclaimed', 'Cancelled', 'Sold'])
 const myIntakeSchema = z.object({
-  id: z.string().uuid(), auctionId: z.string().uuid().nullable(), state: z.string(), version: z.number().int(),
+  id: z.string().uuid(), auctionId: z.string().uuid().nullable(), state: intakeState, version: z.number().int(),
+  listingId: z.string().uuid(), title: z.string(), pointId: z.string().uuid(),
+  startPrice: money, step: z.union([z.literal(10000), z.literal(50000)]), buyNowPrice: money.nullable(), protectiveValue: money,
+  createdAt: z.string(), dropoffDeadline: z.string(), receivedAt: z.string().nullable(), inspectedAt: z.string().nullable(),
+  inspectionOutcome: z.enum(['Pass', 'Fail']).nullable(), inspectionNote: z.string().nullable(),
+  reclaimReason: z.string().nullable(), closedAt: z.string().nullable(),
 })
+export type IntakeState = z.infer<typeof intakeState>
 export type MyIntake = z.infer<typeof myIntakeSchema>
 export function getMyAuctionIntakes() {
   return session.request('/me/auction-intakes', z.object({ items: z.array(myIntakeSchema) }))
@@ -98,4 +105,40 @@ export function withdrawIntake(intakeId: string, expectedVersion: number, key: s
   return session.request(`/auction-intakes/${intakeId}/cancel`, intakeReceiptSchema, {
     method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ expectedVersion }),
   })
+}
+
+export function getMyAuctionIntake(id: string) { return session.request(`/me/auction-intakes/${id}`, myIntakeSchema) }
+
+// Seller intake (FR-AU01, POL-39/41): an approved, visible, available Sale listing
+// is snapshotted with its price grid and one point slot; self drop-off within 72h.
+const handoverPointSchema = z.object({
+  id: z.string().uuid(), code: z.string(), name: z.string(), displayAddress: z.string(),
+  status: z.enum(['Active', 'Paused', 'Closed']), capacity: z.number().int(), availableSlots: z.number().int(), demoOnly: z.literal(true),
+})
+export type HandoverPoint = z.infer<typeof handoverPointSchema>
+export function listHandoverPoints() {
+  return session.request('/handover-points', z.object({ items: z.array(handoverPointSchema) }))
+}
+export type CreateIntakeBody = {
+  listingId: string; expectedListingVersion: number; pointId: string
+  startPrice: number; step: 10000 | 50000; buyNowPrice: number | null
+}
+export function createAuctionIntake(body: CreateIntakeBody, key: string) {
+  return command('/auction-intakes', key, body)
+}
+export const AUCTION_MIN_PRICE = 10_000
+
+/** Client mirror of the server's POL-39 checks; the server stays authoritative. */
+export function intakePriceErrors(startPrice: number | null, step: number, buyNowPrice: number | null) {
+  const errors: { startPrice?: string; buyNowPrice?: string } = {}
+  if (!startPrice) errors.startPrice = 'Nhập giá khởi điểm.'
+  else if (startPrice < AUCTION_MIN_PRICE || startPrice > AUCTION_MAX_PRICE) errors.startPrice = 'Giá khởi điểm từ 10.000đ đến 1.000.000đ.'
+  else if (buyNowPrice !== null) {
+    if (buyNowPrice <= startPrice || buyNowPrice > AUCTION_MAX_PRICE) errors.buyNowPrice = 'Giá mua ngay phải lớn hơn giá khởi điểm và không quá 1.000.000đ.'
+    else if ((buyNowPrice - startPrice) % step !== 0) {
+      const up = Math.min(startPrice + Math.ceil((buyNowPrice - startPrice) / step) * step, AUCTION_MAX_PRICE)
+      errors.buyNowPrice = `Giá mua ngay phải bằng giá khởi điểm cộng một số bước giá. Thử ${up.toLocaleString('vi-VN')}đ.`
+    }
+  }
+  return errors
 }

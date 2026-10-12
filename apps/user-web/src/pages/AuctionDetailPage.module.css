@@ -64,18 +64,58 @@
 .secondaryBlock,.secondary { min-height: 44px; padding: 10px 16px; border: 1px solid var(--shop-control); border-radius: 6px; background: var(--shop-paper); color: var(--shop-wine); font-size: .875rem; font-weight: 600; text-decoration: none; cursor: pointer; }
 .secondaryBlock { display: inline-flex; align-items: center; justify-content: center; width: 100%; }
 .linkButton { justify-self: start; min-height: 44px; padding: 0; border: 0; background: none; color: var(--shop-wine); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
-.description { padding: 4px 0 12px; }
-.description h2,.historyCard h2 { font-size: 1.25rem; line-height: 1.5; margin: 0 0 16px; }
-.description p { font-size: .9375rem; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; }
-.conditionNotes { margin: 18px 0 0; }
-.conditionNotes div { display: grid; grid-template-columns: 100px minmax(0,1fr); gap: 16px; padding: 12px 0; border-top: 1px solid var(--shop-line); font-size: .875rem; line-height: 1.8; }
-.conditionNotes dt { color: var(--shop-muted); }
-.conditionNotes dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.facts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 24px; border-block: 1px solid var(--shop-line); margin: 12px 0 32px; }
-.facts div { padding: 14px 0; min-width: 0; }
-.facts .factWide { grid-column: 1/-1; }
-.facts dt { display: inline-flex; align-items: center; gap: 5px; color: var(--shop-muted); font-size: .8125rem; }
-.facts dd { margin: 4px 0 0; font-size: .875rem; line-height: 1.7; font-weight: 600; overflow-wrap: anywhere; }
+.bookCard, .sessionCard { margin: 0 0 28px; padding: 24px; border-radius: 12px; background: var(--shop-paper); border: 1px solid var(--shop-line); }
+.bookCard h2, .sessionCard h2, .historyCard h2 { font-size: 1.25rem; line-height: 1.5; margin: 0 0 18px; }
+.eyebrow { display: block; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--shop-muted); }
+
+/* Condition: the grade reads first, the 4-step scale places it in context. */
+.conditionRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 24px; align-items: center; padding: 18px 20px; border-radius: 10px; background: var(--shop-shelf); }
+.conditionLead { display: grid; gap: 4px; min-width: 0; }
+.conditionLead strong { font: 400 1.75rem/1.25 var(--shop-display); color: var(--shop-wine); }
+.conditionLead > span:last-child { font-size: .8125rem; line-height: 1.7; color: var(--shop-muted); }
+.conditionScale { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.conditionScale li { display: grid; gap: 8px; font-size: .75rem; line-height: 1.4; color: var(--shop-muted); text-align: center; }
+.conditionScale li > span { height: 8px; border-radius: 4px; background: var(--shop-line); }
+.conditionScale .scalePast > span { background: #c9a9a0; }
+.conditionScale .scaleOn { color: var(--shop-wine); font-weight: 700; }
+.conditionScale .scaleOn > span { background: var(--shop-wine); box-shadow: 0 0 0 3px #5c020226; }
+
+.chips { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; padding: 0; }
+.chips li { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 12px; border-radius: 999px; background: var(--shop-shelf); font-size: .8125rem; color: var(--shop-ink); }
+.chips .chipOk { background: #e8efe9; color: var(--shop-exchange-ink); }
+.chips .chipWarn { background: #f7e3dc; color: var(--shop-error); font-weight: 600; }
+
+.sellerNote { margin: 20px 0 0; padding: 4px 0 4px 18px; border-left: 3px solid var(--shop-wine); }
+.sellerNote figcaption { font-size: .75rem; font-weight: 700; color: var(--shop-muted); margin-bottom: 6px; }
+.sellerNote blockquote { margin: 0; font-size: .9375rem; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--shop-ink); }
+
+.partGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 20px 0 0; }
+.partGrid div { min-width: 0; padding: 14px 16px; border: 1px solid var(--shop-line); border-radius: 10px; background: #fffdf8; }
+.partGrid dt { display: flex; align-items: center; gap: 8px; font-size: .8125rem; font-weight: 700; color: var(--shop-wine); }
+.partGrid dd { margin: 6px 0 0; font-size: .875rem; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Session: three price tiles, a time track, then the pickup callout. */
+.priceTiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.priceTiles div { min-width: 0; padding: 14px 16px; border-radius: 10px; background: var(--shop-shelf); }
+.priceTiles dt { font-size: .75rem; color: var(--shop-muted); }
+.priceTiles dd { margin: 4px 0 0; font-size: 1.125rem; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.priceTiles .tileAccent { background: #f6e0a8; }
+.priceTiles .tileAccent dd { color: var(--shop-wine); }
+.window { margin: 20px 0 0; }
+.windowEnds { display: flex; justify-content: space-between; gap: 16px; }
+.windowEnds p { display: grid; margin: 0; }
+.windowEnds p:last-child { text-align: right; }
+.windowEnds span { font-size: .75rem; color: var(--shop-muted); }
+.windowEnds strong { font-size: 1.25rem; font-variant-numeric: tabular-nums; line-height: 1.4; }
+.windowEnds small { font-size: .75rem; color: var(--shop-muted); text-transform: capitalize; }
+.track { position: relative; height: 8px; margin: 12px 0 8px; border-radius: 4px; background: var(--shop-line); overflow: hidden; }
+.track span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--shop-wine); }
+.windowNote { margin: 0; font-size: .8125rem; color: var(--shop-muted); }
+.pickup { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; align-items: center; margin: 20px 0 0; padding: 14px 16px; border-radius: 10px; border: 1px dashed var(--shop-control); }
+.pickupIcon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: var(--shop-wine); color: var(--shop-cream); }
+.pickup div { display: grid; gap: 2px; min-width: 0; }
+.pickup strong { font-size: .9375rem; overflow-wrap: anywhere; }
+.pickup small { font-size: .75rem; line-height: 1.6; color: var(--shop-muted); }
 .historyCard { padding: 0; }
 .historyList { list-style: none; margin: 0; padding: 0 6px 0 0; max-height: 360px; overflow-y: auto; scrollbar-color: var(--shop-control) var(--shop-paper); }
 .historyList li { display: grid; grid-template-columns: 40px minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 12px 8px; border-bottom: 1px solid var(--shop-line); }
@@ -89,4 +129,6 @@
 .footer { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--shop-line); }
 .footer p { font-size: .8125rem; line-height: 1.8; color: var(--shop-muted); margin: 0 0 8px; }
 @media(max-width:960px) { .layout { grid-template-columns: 1fr; grid-template-areas: 'head' 'media' 'side' 'body'; gap: 24px; } .side { position: static; } .head h1 { max-width: none; } }
-@media(max-width:480px) { .page { padding-top: 16px; } .crumbs { margin-bottom: 18px; } .timerPart strong { font-size: 1.5rem; } .bidCard { padding: 18px 16px; } .head h1 { font-size: 1.65rem; } .inspected { margin-top: 10px; } .conditionNotes div { grid-template-columns: 76px minmax(0,1fr); gap: 12px; } .historyList li { grid-template-columns: 32px minmax(0,1fr) auto; gap: 7px; padding-inline: 4px; } .avatar { width: 30px; height: 30px; } }
+@media(max-width:640px) { .conditionRow { grid-template-columns: 1fr; gap: 16px; } }
+@media(max-width:480px) { .page { padding-top: 16px; } .crumbs { margin-bottom: 18px; } .timerPart strong { font-size: 1.5rem; } .bidCard { padding: 18px 16px; } .head h1 { font-size: 1.65rem; } .inspected { margin-top: 10px; } .bookCard, .sessionCard { padding: 18px 16px; } .partGrid, .priceTiles { grid-template-columns: 1fr; } .priceTiles { gap: 8px; } .priceTiles div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; } .priceTiles dd { margin: 0; font-size: 1rem; text-align: right; } .partGrid { gap: 8px; } .partGrid div { display: grid; grid-template-columns: 104px minmax(0,1fr); gap: 10px; padding: 10px 12px; } .partGrid dd { margin: 0; } .historyList li { grid-template-columns: 32px minmax(0,1fr) auto; gap: 7px; padding-inline: 4px; } .avatar { width: 30px; height: 30px; } }
+.priceTiles small { display: block; margin-top: 2px; font-size: .6875rem; line-height: 1.5; color: var(--shop-muted); }

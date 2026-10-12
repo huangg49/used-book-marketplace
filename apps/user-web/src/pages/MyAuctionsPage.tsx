@@ -1,11 +1,15 @@
-import { useQuery } from '@tanstack/react-query'
+import { useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Gavel, RefreshCw } from 'lucide-react'
+import { ArrowRight, Gavel, MapPin, Plus, RefreshCw } from 'lucide-react'
 import { AuctionPhoto } from '../components/AuctionGallery'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { useSession } from '../hooks/useSession'
-import { formatRemaining, outcomeUnknown, useCountdown } from '../hooks/useAuctionClock'
-import { listMyAuctions, type MyAuctionItem } from '../services/auctions'
+import { formatRemaining, outcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
+import {
+  getMyAuctionIntakes, listHandoverPoints, listMyAuctions, withdrawIntake, type MyAuctionItem, type MyIntake,
+} from '../services/auctions'
 import { ROUTES, formatVnd } from '../lib/routes'
 import styles from './MyAuctionsPage.module.css'
 
@@ -96,6 +100,128 @@ function AuctionRow({
   )
 }
 
+// Intakes before a session opens, plus books waiting to be collected back.
+const INTAKE_STATES: Partial<Record<MyIntake['state'], string>> = {
+  AwaitingDropoff: 'Chờ bạn mang sách tới điểm',
+  Received: 'Điểm đã nhận sách, chờ kiểm tra',
+  Passed: 'Đã qua kiểm tra, chờ mở phiên',
+  ReclaimRequired: 'Mời bạn tới điểm nhận lại sách',
+}
+const RECLAIM: Record<string, string> = {
+  SellerCancelled: 'Bạn đã rút sách khỏi đấu giá.',
+  InspectionFailed: 'Sách chưa khớp mô tả khi kiểm tra.',
+  Unsold: 'Phiên kết thúc mà chưa có người trả giá.',
+  PaymentExpired: 'Người thắng không thanh toán đúng hạn.',
+  AuctionCancelled: 'Phiên đã bị hủy.',
+}
+const intakeTime = (iso: string) =>
+  new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+
+function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointName?: string; onChanged: () => Promise<unknown> }) {
+  const intent = useIntentKey()
+  // An unknown outcome keeps the same version and key so a retry replays the same intent.
+  const pending = useRef<{ version: number; key: string } | null>(null)
+  const [confirming, setConfirming] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [unknown, setUnknown] = useState(false)
+  const cancellable = intake.state === 'AwaitingDropoff' || intake.state === 'Received' || intake.state === 'Passed'
+  const withdraw = async () => {
+    const attempt = pending.current ?? { version: intake.version, key: intent.keyFor(`withdraw:${intake.id}:${intake.version}`) }
+    pending.current = attempt
+    let stillUnknown = false
+    setBusy(true); setError(null)
+    try {
+      await withdrawIntake(intake.id, attempt.version, attempt.key)
+      intent.settle(); pending.current = null
+    } catch (caught) {
+      stillUnknown = outcomeUnknown(caught)
+      if (!stillUnknown) { intent.settle(); pending.current = null }
+      setError(!stillUnknown && caught instanceof ApiError
+        ? caught.message || 'Chưa rút được sách khỏi đấu giá.'
+        : 'Chưa rõ yêu cầu đã được ghi hay chưa. Hãy thử lại đúng thao tác này.')
+    } finally {
+      setUnknown(stillUnknown); setBusy(false); setConfirming(false)
+      if (!stillUnknown) void onChanged()
+    }
+  }
+  return (
+    <li className={styles.intake}>
+      <div>
+        <span className={styles.intakeState}>{INTAKE_STATES[intake.state]}</span>
+        <h3>{intake.title}</h3>
+        <p>
+          <MapPin size={13} aria-hidden="true" /> {pointName ?? 'Điểm đã chọn'}
+          {intake.state === 'AwaitingDropoff' && <> · hạn gửi {intakeTime(intake.dropoffDeadline)}</>}
+        </p>
+        {intake.state === 'ReclaimRequired' && intake.reclaimReason && (
+          <p>{RECLAIM[intake.reclaimReason] ?? 'Sách cần được nhận lại.'}{intake.inspectionNote ? ` Ghi chú kiểm tra: ${intake.inspectionNote}` : ''}</p>
+        )}
+        {error && <p className={styles.urgent} role="alert">{error}</p>}
+      </div>
+      <div className={styles.intakeSide}>
+        <span>Khởi điểm</span>
+        <strong>{formatVnd(intake.startPrice)}</strong>
+        <span>Bước {formatVnd(intake.step)}{intake.buyNowPrice !== null ? ` · mua ngay ${formatVnd(intake.buyNowPrice)}` : ''}</span>
+        {cancellable && (
+          <button type="button" disabled={busy} onClick={() => (unknown ? void withdraw() : setConfirming(true))}>
+            {unknown ? 'Thử lại rút sách' : 'Rút khỏi đấu giá'}
+          </button>
+        )}
+      </div>
+      <ConfirmDialog
+        isOpen={confirming}
+        onClose={() => !busy && setConfirming(false)}
+        title="Rút cuốn sách này khỏi đấu giá?"
+        description={intake.state === 'AwaitingDropoff'
+          ? 'Chỗ tại điểm được trả lại và bài đăng bán không còn ở trạng thái Đang giữ.'
+          : 'Sách đang ở điểm. Sau khi rút, bạn cần tới điểm để nhận lại sách.'}
+        confirmText="Rút sách"
+        isDanger
+        isBusy={busy}
+        onConfirm={() => void withdraw()}
+      />
+    </li>
+  )
+}
+
+function SellerIntakes({ enabled }: { enabled: boolean }) {
+  const queryClient = useQueryClient()
+  const intakes = useQuery({ queryKey: ['my-auction-intakes'], queryFn: getMyAuctionIntakes, enabled, retry: false, refetchInterval: 30_000 })
+  const points = useQuery({ queryKey: ['handover-points'], queryFn: listHandoverPoints, enabled, retry: false, staleTime: 60_000 })
+  if (!enabled || intakes.isPending) return null
+  if (intakes.isError)
+    return (
+      <div className={styles.refreshError} role="alert">
+        <p>Chưa tải được sách đang chờ mở phiên.</p>
+        <button type="button" onClick={() => void intakes.refetch()}><RefreshCw size={16} aria-hidden="true" /> Thử lại</button>
+      </div>
+    )
+  const waiting = intakes.data.items.filter((i) => i.state in INTAKE_STATES)
+  const refresh = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['my-auction-intakes'] }),
+    queryClient.invalidateQueries({ queryKey: ['my-auctions'] }),
+    queryClient.invalidateQueries({ queryKey: ['my-listings'] }),
+  ])
+  return (
+    <section className={styles.intakes} aria-labelledby="intakes-title">
+      <div className={styles.intakesHead}>
+        <h2 id="intakes-title">Sách chờ mở phiên</h2>
+        <Link to={ROUTES.auctionCreate()}><Plus size={15} aria-hidden="true" /> Đưa sách lên đấu giá</Link>
+      </div>
+      {waiting.length ? (
+        <ul>
+          {waiting.map((i) => (
+            <IntakeRow key={i.id} intake={i} pointName={points.data?.items.find((p) => p.id === i.pointId)?.name} onChanged={refresh} />
+          ))}
+        </ul>
+      ) : (
+        <p className={styles.intakesEmpty}>Chưa có sách nào đang chờ. Chọn một cuốn đang bán trên kệ để đưa lên đấu giá.</p>
+      )}
+    </section>
+  )
+}
+
 export function MyAuctionsPage() {
   const auth = useSession()
   const userId = auth.status === 'authenticated' ? auth.user.id : undefined
@@ -145,6 +271,7 @@ export function MyAuctionsPage() {
           </button>
         ))}
       </nav>
+      <SellerIntakes enabled={!!userId && (view === 'all' || view === 'selling') && !cursor} />
       <div className={styles.results} aria-busy={query.isFetching}>
         {query.isPending && <p role="status">Đang tải các phiên của bạn…</p>}
         {query.isError && (

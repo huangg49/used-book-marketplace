@@ -6,6 +6,25 @@ Checkout/gói Android và WIP của các thành viên được ghi bên dưới.
 Remote CI và human sign-off phải kiểm riêng trên PR trước merge.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
+## Web mở phiên đấu giá từ sách — 12/10/2026
+
+- Nhánh `feature/auction-create-from-book`, [PR35](https://github.com/huangg49/used-book-marketplace/pull/35)
+  (#34 đóng, thay bằng #35): `apps/user-web` thêm `/auctions/new` gọi
+  `POST /auction-intakes` (contract có sẵn, không đổi OpenAPI/API). Chọn sách
+  Bán đã duyệt/hiển thị/Sẵn sàng, điểm từ `/handover-points`, lưới giá
+  start/step/mua ngay theo POL-39; giữ expectedListingVersion, khóa body/key
+  khi mất phản hồi. Khối so sánh bài đăng bán và phiên đấu giá dùng giấy
+  vàng bơ của bookmark đấu giá; phiếu xem trước và biên nhận hạn gửi 72 giờ.
+- Lối vào: nút "Đưa lên đấu giá" trên Kệ sách (chỉ sách đủ điều kiện), CTA
+  ở danh sách đấu giá; Đấu giá của tôi có "Sách chờ mở phiên" với rút sách.
+- Web typecheck/lint/119unit PASS. Browser 1366/390 chỉ chạy trên mock API
+  QA cục bộ (API thật cần cấu hình riêng): chọn sách/điểm, lỗi lưới giá,
+  xác nhận, biên nhận, intake list, preselect từ kệ, không tràn ngang. Luồng
+  với API/Mongo thật, rút sách thật, 200% zoom và human review NOT RUN.
+- Thêm: báo hòa giá (FR-AU04, người cam kết trước dẫn) thay cho "bị vượt giá";
+  bố cục lại "Về bản sách này"/"Thông tin phiên". Kiểm trên API+Mongo local thật
+  (Mongo Docker cổng 27019 vì mongod Windows giữ 27017). Chưa merge/deploy.
+
 ## Tích hợp Member/main — 12/10/2026
 
 - Theo kế hoạch được duyệt, tích hợp trong managed worktree riêng trên

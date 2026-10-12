@@ -21,6 +21,7 @@ import { ExchangeDetailPage } from '../pages/ExchangeDetailPage';
 import { AuctionListPage } from '../pages/AuctionListPage';
 import { MyAuctionsPage } from '../pages/MyAuctionsPage';
 import { AuctionDetailPage } from '../pages/AuctionDetailPage';
+import { CreateAuctionPage } from '../pages/CreateAuctionPage';
 import { NotificationsPage } from '../pages/NotificationsPage';
 import { PaperStormLayout } from '../components/auth/PaperStormLayout';
 export const router = createBrowserRouter([{ element: <PaperStormLayout />, children: [
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([{ element: <PaperStormLayout />, chil
       { path: '/exchange/mine', element: <ExchangeMinePage /> },
       { path: '/exchange/:id', element: <ExchangeDetailPage /> },
       { path: '/auctions', element: <AuctionListPage /> },
+      { path: '/auctions/new', element: <CreateAuctionPage /> },
       { path: '/auctions/:id', element: <AuctionDetailPage /> },
       { path: '/notifications', element: <NotificationsPage /> },
     ],

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { AuctionGrid } from '../components/AuctionGrid'
 import { useSearchParams, Link } from 'react-router-dom'
-import { ArrowRight, BookOpen, ChevronDown } from 'lucide-react'
+import { ArrowRight, BookOpen, ChevronDown, Gavel } from 'lucide-react'
 import { AuctionCard } from '../components/AuctionCard'
 import { FilterSelect } from '../components/FilterSelect'
 import { useAuctionListLive } from '../hooks/useAuctionLive'
@@ -54,7 +54,7 @@ export function AuctionListPage() {
       <ol>{STEPS.map(([title, body]) => <li key={title}><strong>{title}</strong><p>{body}</p></li>)}</ol>
     </details>
     <section aria-labelledby="auction-list-title">
-      <div className={styles.sectionHeading}><h2 id="auction-list-title">Phiên đang mở</h2><div className={styles.sectionActions}><span className={styles.connection}><i className={live ? styles.live : ''} aria-hidden="true" />{live ? 'Giá cập nhật trực tiếp' : 'Cập nhật mỗi 30 giây'}</span>{auth.status === 'authenticated' && <Link to={ROUTES.myAuctions}>Đấu giá của tôi <ArrowRight size={15} aria-hidden="true" /></Link>}</div></div>
+      <div className={styles.sectionHeading}><h2 id="auction-list-title">Phiên đang mở</h2><div className={styles.sectionActions}><span className={styles.connection}><i className={live ? styles.live : ''} aria-hidden="true" />{live ? 'Giá cập nhật trực tiếp' : 'Cập nhật mỗi 30 giây'}</span>{auth.status === 'authenticated' && <Link to={ROUTES.myAuctions}>Đấu giá của tôi <ArrowRight size={15} aria-hidden="true" /></Link>}<Link className={styles.create} to={ROUTES.auctionCreate()}><Gavel size={15} aria-hidden="true" />Đấu giá sách của bạn</Link></div></div>
       <div className={styles.toolbar} role="group" aria-label="Lọc và sắp xếp phiên đấu giá">
         <div className={styles.point}><FilterSelect id="auction-point" label="Điểm nhận sách" value={point} onChange={(v) => update('point', v)} options={[{ value: '', label: 'Tất cả điểm nhận' }, ...points.map((p) => ({ value: p, label: p }))]} /></div>
         <label className={styles.checkbox}><input type="checkbox" checked={buyNowOnly} onChange={() => update('buyNow', buyNowOnly ? '' : '1')} />Có giá mua ngay</label>

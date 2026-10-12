@@ -22,3 +22,13 @@ export function isPublicOwnerListing(item: MyListing) {
     item.state.moderation === "Approved" && item.state.visibility === "Visible"
   );
 }
+
+// Only approved, visible, still-available Sale listings can enter an auction
+// (FR-AU01); the server rechecks under the listing lock.
+export function auctionEligible(item: MyListing) {
+  return (
+    isPublicOwnerListing(item) &&
+    item.state.trade === "Available" &&
+    item.currentRevision.content.mode === "Sale"
+  );
+}
