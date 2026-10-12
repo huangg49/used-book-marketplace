@@ -314,7 +314,12 @@
   padding: 8px 0 !important;
 }
 .search input:focus-visible {
-  outline: none;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.search input:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }
 .search:has(input:focus-visible) {
   outline: 2px solid var(--shop-yellow);
@@ -620,11 +625,7 @@
   mix-blend-mode: multiply;
 }
 .bookmarkThread {
-  fill: none;
-  stroke: var(--shop-wine);
-  stroke-linecap: round;
-  stroke-dasharray: 2px 5px;
-  opacity: 0.35;
+  display: none;
 }
 .quickLinks a > img {
   width: 88px;
@@ -652,6 +653,131 @@
 .quickPost {
   --bookmark-ground: #fffaf0;
 }
+
+/* ── Ribbon bookmark decorations ──────────────────────────────────────
+   Tuning knobs (per-card vars below):
+     --rb-w    ribbon width  (px)        → affects dot/stripe positions
+     --rb-h    ribbon length (px)
+     --rb-r    right offset from card edge (px)
+     --rb-tilt rotation angle
+
+   Pattern layers (front → back):
+     1. Shine streak            – very subtle, adds fabric depth
+     2. Cream dots (#fff5d2)    – 3px ∅, spaced every 11px, centered
+     3. Right mustard stripe    – #b8860b, 2px wide, 2px from right edge
+     4. Left mustard stripe     – #b8860b, 2px wide, 2px from left edge
+     5. Base wine-red           – #8b1e1e
+
+   Adjust dot colour  → layer 2: rgba(255,245,210, …)
+   Adjust dot size    → radial-gradient radius (1.5px)
+   Adjust dot spacing → background-size 100% 11px
+   Adjust stripe colour → layers 3 & 4: #b8860b
+   Adjust stripe width  → the "4px" stop (stripe = stop2 − 2px)
+─────────────────────────────────────────────────────────────────────── */
+.quickBuy::before,
+.quickExchange::before,
+.quickAuction::before,
+.quickPost::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: var(--rb-r, 20px);
+  z-index: 1;
+  pointer-events: none;
+  width: var(--rb-w, 15px);
+  height: var(--rb-h, 52px);
+
+  /* Layer stack */
+  background-image:
+    /* 1. Shine streak – angled white sliver */
+    linear-gradient(
+      108deg,
+      transparent 28%,
+      rgba(255, 255, 255, 0.11) 42%,
+      transparent 54%
+    ),
+    /* 2. Cream dots – repeat-y every 11px, centred horizontally */
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 245, 210, 0.72) 1.5px,
+      transparent 1.5px
+    ),
+    /* 3. Right mustard edge stripe (2px in from right, 2px wide) */
+    linear-gradient(
+      to left,
+      transparent 2px,
+      #b8860b 2px,
+      #b8860b 4px,
+      transparent 4px
+    ),
+    /* 4. Left mustard edge stripe (2px in from left, 2px wide) */
+    linear-gradient(
+      to right,
+      transparent 2px,
+      #b8860b 2px,
+      #b8860b 4px,
+      transparent 4px
+    ),
+    /* 5. Base wine-red */
+    linear-gradient(180deg, #8b1e1e 0%, #7a1818 100%);
+
+  background-size:
+    100% 100%,   /* 1. shine – full cover */
+    100% 11px,   /* 2. dots – tile every 11px vertically */
+    100% 100%,   /* 3. right stripe – full cover */
+    100% 100%,   /* 4. left stripe – full cover */
+    100% 100%;   /* 5. base – full cover */
+
+  background-repeat:
+    no-repeat,
+    repeat-y,
+    no-repeat,
+    no-repeat,
+    no-repeat;
+
+  background-position:
+    0 0,
+    50% 5px,   /* dots: first dot starts 5px from top */
+    0 0,
+    0 0,
+    0 0;
+
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 83%, 0 100%);
+  box-shadow: 1px 3px 7px rgba(0, 0, 0, 0.30);
+  transform: rotate(calc(var(--rb-tilt, 0deg) + var(--rb-tilt-extra, 0deg)));
+  transform-origin: top center;
+  translate: 0 -5px;
+  transition:
+    translate 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 180ms ease-out;
+}
+
+/* Each card: unique size + subtle tilt for a natural, hand-placed feel */
+.quickBuy::before {
+  --rb-w: 15px;
+  --rb-h: 60px;
+  --rb-r: 20px;
+  --rb-tilt: -1.5deg;
+}
+.quickExchange::before {
+  --rb-w: 14px;
+  --rb-h: 56px;
+  --rb-r: 22px;
+  --rb-tilt: 1deg;
+}
+.quickAuction::before {
+  --rb-w: 16px;
+  --rb-h: 62px;
+  --rb-r: 18px;
+  --rb-tilt: -0.5deg;
+}
+.quickPost::before {
+  --rb-w: 15px;
+  --rb-h: 58px;
+  --rb-r: 24px;
+  --rb-tilt: 2deg;
+}
 .quickLinks a:focus-visible {
   outline: 3px solid var(--shop-wine);
   outline-offset: 3px;
@@ -667,6 +793,16 @@
   .quickLinks a:hover > img {
     transform: translateY(-8px) rotate(-5deg) scale(1.08);
   }
+  /* Ribbon: lifts with the card, swings outward — each card tilts its own way */
+  .quickLinks a:hover::before {
+    translate: 0 -10px;
+    filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.28));
+    transition-duration: 280ms;
+  }
+  .quickBuy:hover::before      { --rb-tilt-extra: -4deg; }
+  .quickExchange:hover::before { --rb-tilt-extra:  4deg; }
+  .quickAuction:hover::before  { --rb-tilt-extra: -3deg; }
+  .quickPost:hover::before     { --rb-tilt-extra:  5deg; }
   .quickLinks a:hover .bookmarkPaper,
   .quickLinks a:hover > img,
   .quickLinks a:hover > span {
@@ -686,6 +822,15 @@
 .quickLinks a:focus-visible > img {
   transform: translateY(-8px) rotate(-5deg) scale(1.08);
 }
+/* Ribbon follows on keyboard focus too */
+.quickLinks a:focus-visible::before {
+  translate: 0 -10px;
+  filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.28));
+}
+.quickBuy:focus-visible::before      { --rb-tilt-extra: -4deg; }
+.quickExchange:focus-visible::before { --rb-tilt-extra:  4deg; }
+.quickAuction:focus-visible::before  { --rb-tilt-extra: -3deg; }
+.quickPost:focus-visible::before     { --rb-tilt-extra:  5deg; }
 .quickLinks a:focus-visible {
   --bookmark-motion-duration: 280ms;
 }
@@ -703,6 +848,13 @@
 .quickLinks a:active > img {
   transform: translateY(-1px) scale(0.98);
 }
+/* Ribbon settles on press */
+.quickLinks a:active::before {
+  translate: 0 -3px;
+  --rb-tilt-extra: 2deg;
+  filter: none;
+  transition-duration: 100ms;
+}
 .quickLinks a:active .bookmarkPaper,
 .quickLinks a:active > img,
 .quickLinks a:active > span {
@@ -715,7 +867,8 @@
 @media (prefers-reduced-motion: reduce) {
   .bookmarkPaper,
   .quickLinks a > img,
-  .quickLinks a > span {
+  .quickLinks a > span,
+  .quickLinks a::before {
     transition-duration: var(--bookmark-motion-duration, 180ms) !important;
   }
 }
@@ -1396,6 +1549,14 @@
   .quickLinks a > img {
     width: 88px;
     height: 88px;
+  }
+  /* Ribbon: scale down slightly on small screens */
+  .quickBuy::before,
+  .quickExchange::before,
+  .quickAuction::before,
+  .quickPost::before {
+    --rb-w: 12px;
+    --rb-h: 48px;
   }
   .categories,
   .shelf,

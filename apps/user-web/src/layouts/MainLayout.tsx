@@ -8,6 +8,8 @@ import styles from "./MainLayout.module.css";
 
 export default function MainLayout() {
   const location = useLocation();
+  const isChat =
+    location.pathname === "/chat" || location.pathname.startsWith("/chat/");
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [location.pathname]);
@@ -20,39 +22,41 @@ export default function MainLayout() {
       <main id="main-content" className={styles.main}>
         <Outlet />
       </main>
-      <footer
-        className={`${styles.footer} ${location.pathname === ROUTES.home ? styles.homeFooter : ""}`}
-      >
-        <div className={styles.footerInner}>
-          <div>
-            <Logo />
-            <p>
-              Sách cũ. Người đọc mới.
+      {!isChat && (
+        <footer
+          className={`${styles.footer} ${location.pathname === ROUTES.home ? styles.homeFooter : ""}`}
+        >
+          <div className={styles.footerInner}>
+            <div>
+              <Logo />
+              <p>
+                Sách cũ. Người đọc mới.
+                <br />
+                Câu chuyện còn tiếp.
+              </p>
+            </div>
+            <nav aria-label="Khám phá sách">
+              <Link to={ROUTES.search}>
+                Tìm một cuốn sách <ArrowUpRight size={18} aria-hidden="true" />
+              </Link>
+              <Link to={searchUrl({ mode: "Exchange" })}>
+                Xem sách để đổi <ArrowUpRight size={18} aria-hidden="true" />
+              </Link>
+              <Link to={ROUTES.sell}>
+                Đăng sách của bạn <ArrowUpRight size={18} aria-hidden="true" />
+              </Link>
+            </nav>
+            <p className={styles.footerNote}>
+              Dành cho người đọc tại TP.HCM.
               <br />
-              Câu chuyện còn tiếp.
+              Dự án học tập; tiền và giao nhận mô phỏng.
             </p>
           </div>
-          <nav aria-label="Khám phá sách">
-            <Link to={ROUTES.search}>
-              Tìm một cuốn sách <ArrowUpRight size={18} aria-hidden="true" />
-            </Link>
-            <Link to={searchUrl({ mode: "Exchange" })}>
-              Xem sách để đổi <ArrowUpRight size={18} aria-hidden="true" />
-            </Link>
-            <Link to={ROUTES.sell}>
-              Đăng sách của bạn <ArrowUpRight size={18} aria-hidden="true" />
-            </Link>
-          </nav>
-          <p className={styles.footerNote}>
-            Dành cho người đọc tại TP.HCM.
-            <br />
-            Dự án học tập; tiền và giao nhận mô phỏng.
-          </p>
-        </div>
-        <div className={styles.footerBottom}>
-          © {new Date().getFullYear()} Lật lại · Tiệm sách cũ
-        </div>
-      </footer>
+          <div className={styles.footerBottom}>
+            © {new Date().getFullYear()} Lật lại · Tiệm sách cũ
+          </div>
+        </footer>
+      )}
     </div>
   );
 }
