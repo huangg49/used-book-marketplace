@@ -1,0 +1,26 @@
+[
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "C:\\Users\\ASUS\\Documents\\LaiLai\\used-book-marketplace\\apps\\user-web\\src\\pages\\AuctionDetailPage.module.css",
+    "line": 60,
+    "snippet": "Undocumented color #fbeee9 is outside DESIGN.md colors",
+    "advisory": true,
+    "ignoreValue": "#fbeee9"
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "C:\\Users\\ASUS\\Documents\\LaiLai\\used-book-marketplace\\apps\\user-web\\src\\pages\\AuctionDetailPage.module.css",
+    "line": 60,
+    "snippet": "Undocumented color #7b2e1b is outside DESIGN.md colors",
+    "advisory": true,
+    "ignoreValue": "#7b2e1b"
+  }
+]

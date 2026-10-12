@@ -16,6 +16,28 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Đấu giá web —12/10/2026
 
+- Motion follow-up: `codex/auction-motion`, base `9479303`, checkpoint subject
+  `feat(web): add meaningful auction motion`. Giá/lượt lịch sử mới nhấn màu giấy,
+  trạng thái dẫn/bị vượt có phản hồi; phiếu và một nhịp Gavel chỉ sau ACK thành công.
+  Card dùng snapshot/WAAPI220ms khi lọc/sắp xếp, ngắt từ vị trí đang hiển thị;
+  auto dialog220ms/chuyển bước200ms, giữ input/focus/Escape, nút mobile không cắt giá.
+  Không animation đồng hồ mỗi giây, không optimistic win/receipt, không đổi
+  API/auth/validation/key/body hoặc thêm dependency. Giữ chính sách ép animation.
+- Build(TS)/109unit/lint0errors PASS (5warning Exchange/bundle cũ). Chromium desktop
+  1280/1366 và mobile390, actual reduced-motion=true: giá/Gavel/card có chuyển động,
+  auto rejection giữ input, gateway503 sau commit không báo success, retry trả
+  receipt cũ;503 read giữ cache và khôi phục. [Evidence motion](../../.impeccable/review/auction-motion/README.md).
+  AI full finish review **ship**, no material fixes; không thay human/FPS proof.
+  Detector một lượt2 advisory màu trạng thái cũ, không chạy lại. Native/phone thật/
+  Safari/speech/fullzoom/continuous FPS/remote CI NOT RUN; API tests không chạy lại
+  vì source API không đổi. READINESS/gate giữ nguyên; WIP teammate được bảo toàn.
+  Hai surface brief đã cập nhật, giữ DESIGN/sidecar và ghi nhận prose cũ.
+  QA đã dọn0 database/user/role, dừng QA runtime/Mongo; API chính mất listener
+  dù watcher còn sống nên restart nhóm process sở hữu với config/data giữ nguyên.
+  API readiness3000/web auctions5186 HTTP200; web giữ chạy. Chưa push/PR/merge/deploy;
+  bước tiếp xem phiên đang mở để
+  trải nghiệm phản hồi giá, human review/tích hợp theo TEAMWORK.
+
 - `codex/auction-web-refine`, base `f0c3115`, checkpoint subject
   `feat(web): refine auction browsing and personal sessions`: giữ luồng giá/
   auto/mua ngay/thanh toán; đổi list/detail theo brand, ảnh và tình trạng từ

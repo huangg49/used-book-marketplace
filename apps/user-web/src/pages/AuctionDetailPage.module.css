@@ -27,8 +27,7 @@
 .liveOn span { background: var(--shop-exchange-ink); }
 .bidCard { padding: 20px; }
 .priceLabel { margin: 0; color: var(--shop-muted); font-size: .8125rem; }
-.price { margin: 6px 0 10px; color: var(--shop-wine); font-size: clamp(2rem,3vw,2.5rem); line-height: 1.3; font-weight: 700; font-variant-numeric: tabular-nums; animation: priceArrive 220ms cubic-bezier(.16,1,.3,1) !important; }
-@keyframes priceArrive { from { transform: translateY(3px); } to { transform: translateY(0); } }
+.price { margin: 6px 0 10px; color: var(--shop-wine); font-size: clamp(2rem,3vw,2.5rem); line-height: 1.3; font-weight: 700; font-variant-numeric: tabular-nums; }
 .priceMeta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: .8125rem; color: var(--shop-muted); margin: 0 0 22px; }
 .bidPanel { display: grid; gap: 16px; }
 .quickLabel { margin: 0 0 -8px; font-size: .8125rem; color: var(--shop-muted); }
@@ -55,7 +54,7 @@
 .buyNow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: .875rem; }
 .buyNow strong { color: var(--shop-wine); }
 .buyNow small { display: block; margin-top: 4px; font-size: .75rem; line-height: 1.7; color: var(--shop-muted); }
-.standing { display: grid; gap: 6px; padding: 14px; border-radius: 6px; font-size: .875rem; line-height: 1.8; }
+.standing { display: grid; gap: 6px; padding: 14px; border-radius: 6px; font-size: .875rem; line-height: 1.8; transition: background-color 270ms ease-out, color 270ms ease-out !important; }
 .standing strong { font-size: .9375rem; }
 .standingLead { background: #e8efe9; color: var(--shop-exchange-ink); }
 .standingOut { background: #fbeee9; color: #7b2e1b; }

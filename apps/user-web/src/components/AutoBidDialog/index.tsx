@@ -1,9 +1,10 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, CircleCheck, Lock, X, Zap } from 'lucide-react'
 import { formatVnd } from '../../lib/routes'
 import { AUCTION_MAX_PRICE } from '../../services/auctions'
 import styles from './AutoBidDialog.module.css'
 import { lockPageScroll } from '../../lib/page-scroll'
+import { playAuctionMotion, sheetFrames } from '../../lib/auction-motion'
 
 interface AutoBidDialogProps {
   isOpen: boolean
@@ -43,7 +44,7 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
   const [stage, setStage] = useState<'form' | 'confirm'>('form')
   const error = amountError(value, floor, startPrice, step)
   useEffect(() => isOpen ? lockPageScroll() : undefined, [isOpen])
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isOpen && stage === 'confirm') confirmationHeading.current?.focus()
     else if (isOpen && stage === 'form' && ref.current?.open) ref.current.querySelector<HTMLInputElement>('input')?.focus()
   }, [isOpen, stage])
@@ -51,8 +52,11 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
   useEffect(() => {
     const dialog = ref.current
     if (!dialog) return
-    if (isOpen && !dialog.open) { setValue(floor); setStage('form'); dialog.showModal() }
-    if (!isOpen && dialog.open) dialog.close()
+    if (isOpen && !dialog.open) {
+      setValue(floor); setStage('form'); dialog.showModal()
+      return playAuctionMotion(dialog, sheetFrames, 220)
+    }
+    if (!isOpen && dialog.open) { dialog.close(); setStage('form') }
     // Mở lại luôn bắt đầu từ mức tối thiểu mới nhất.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
@@ -81,7 +85,7 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
         </header>
 
         {stage === 'form' ? (
-          <div className={styles.body}>
+          <div key="form" className={styles.body}>
             <section className={styles.how}>
               <h3>Cách đặt giá tự động hoạt động</h3>
               <p>
@@ -140,7 +144,7 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
             </p>
           </div>
         ) : (
-          <div className={styles.body}>
+          <div key="confirm" className={styles.body}>
             <section className={styles.how}>
               <h3 ref={confirmationHeading} tabIndex={-1}>Xác nhận mức tối đa {formatVnd(value!)}</h3>
               <p>

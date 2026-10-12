@@ -2,7 +2,7 @@
 version: 1
 slug: "apps-user-web-src-pages-auctionlistpage-tsx"
 primary_target: "apps/user-web/src/pages/AuctionListPage.tsx"
-related_targets: ["apps/user-web/src/pages/AuctionListPage.module.css", "apps/user-web/src/components/AuctionCard/index.tsx", "apps/user-web/src/components/AuctionCard/AuctionCard.module.css", "apps/user-web/src/components/AuctionGallery.tsx"]
+related_targets: ["apps/user-web/src/pages/AuctionListPage.module.css", "apps/user-web/src/components/AuctionCard/index.tsx", "apps/user-web/src/components/AuctionCard/AuctionCard.module.css", "apps/user-web/src/components/AuctionGallery.tsx", "apps/user-web/src/components/AuctionGrid.tsx", "apps/user-web/src/components/AuctionPrice.tsx", "apps/user-web/src/hooks/useAuctionMotion.ts", "apps/user-web/src/lib/auction-motion.ts"]
 ---
 
 # Đấu giá — danh sách phiên, cập nhật12/10/2026
@@ -45,6 +45,23 @@ disclosure, opening three columns on desktop and one below 700px.
   error alerts retain keyboard access. Links/actions are at least 44px tall;
   shared focus-visible treatment applies. Simulation and TP.HCM scope stay visible.
 
+## Motion and interaction
+
+- Actual prices appear immediately. A changed price for the same auction gets
+  finite paper-yellow emphasis and a 3px arrival over 500ms; initial values,
+  unchanged snapshots and a different auction identity establish a baseline.
+- Filtering/sorting moves retained keyed cards between their measured positions
+  over 220ms. A rapid reversal starts from the currently displayed position and
+  cancels the preceding motion. Links/focus stay attached to the same cards;
+  new cards are immediately readable and removed cards leave no delayed copies.
+- Fine-pointer hover or keyboard focus lifts the cover 3px over 220ms and moves
+  the action arrow 2px right/up over 170ms. Touch browsing needs no hover state.
+  Countdown updates have no per-second animation or client-side winner feedback.
+- Local motion retains the owner's11/10 policy even when the browser reports
+  reduced motion. WAAPI skips hidden/offscreen targets, cancels when the document
+  hides and cleans up on interruption/unmount; returning does not replay a backlog.
+  Without WAAPI, current content and actions remain immediately usable.
+
 ## Comparison and verification limits
 
 Source/CSS plus `list-desktop.jpg`, `list-mobile.jpg` and `list-refresh-error.jpg`
@@ -52,7 +69,8 @@ in [auction evidence](../../../../.impeccable/review/auctions/README.md) support
 current recipe. The list retains the incumbent palette/type/material hierarchy;
 these page-specific sizes are not new global tokens. DESIGN.md's older
 introduction-only dimensions and statement that the rest of Auction is legacy
-are stale; DESIGN.md and its sidecar remain unchanged by this scoped pass.
+are stale, as is its older reduced-motion guidance for this scoped policy.
+DESIGN.md and its sidecar remain unchanged by this ordinary extension.
 The page now binds the incumbent shelf, wine-hover and exchange-ink roles locally;
 this resolves missing inherited role definitions without changing global tokens.
 
@@ -61,3 +79,14 @@ live listings or Supabase. Browser QA reports 1366×900/390×844 and filter/guid
 checks; the finish verdict resolved three scoped fixes, not whole-product or human
 acceptance. Native, physical phone, Safari, speech screen reader, full 125%/200%
 zoom, remote CI and release gates remain unverified. See evidence for test counts.
+
+[Motion evidence](../../../../.impeccable/review/auction-motion/README.md) and its
+`runtime.json` add desktop/mobile list captures, native/custom sorting, buy-now
+filtering, interrupted position changes and keyboard cover/action checks.
+Chromium actually reported reduced motion enabled; DOM samples captured nonzero
+card offsets during interrupted motion. The independent finish disposition was
+ship with no material fixes. The evidence records 109 unit tests, build/TypeScript
+PASS and lint with zero errors/five existing Exchange warnings. Hidden-tab and
+missing-WAAPI behavior have unit coverage, not browser proof; captures/samples
+provide no continuous FPS/CPU trace or physical-phone acceptance. No API, auth,
+session, database, dependency or release-gate change is implied.

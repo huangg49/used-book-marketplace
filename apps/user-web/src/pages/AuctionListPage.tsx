@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { AuctionGrid } from '../components/AuctionGrid'
 import { useSearchParams, Link } from 'react-router-dom'
 import { ArrowRight, BookOpen, ChevronDown } from 'lucide-react'
 import { AuctionCard } from '../components/AuctionCard'
@@ -42,6 +43,7 @@ export function AuctionListPage() {
   const filtered = !!point || buyNowOnly
   const stale = result.isError && !!result.data && outcomeUnknown(result.error)
   const showData = !!result.data && (!result.isError || stale)
+  const layoutKey = items.map((a) => a.id).join(':')
   return <div className={styles.page}>
     <header className={styles.intro}>
       <div><h1>Mỗi cuốn sách, một cơ hội.</h1><p>Khám phá những phiên đấu giá sách cũ tại TP.HCM. Sách được kiểm tra tại điểm giao nhận trước khi mở phiên.</p></div>
@@ -67,7 +69,7 @@ export function AuctionListPage() {
         <p>{filtered ? 'Thử bỏ bớt bộ lọc để khám phá các phiên khác.' : 'Phiên mới mở sau khi sách được kiểm tra tại điểm giao nhận. Trong lúc chờ, ghé kệ sách đang bán nhé.'}</p>
         {filtered ? <button type="button" className={styles.action} onClick={() => { const next = new URLSearchParams(params); next.delete('point'); next.delete('buyNow'); setParams(next, {replace:true}) }}>Xem tất cả phiên</button> : <Link className={styles.action} to={ROUTES.search}>Khám phá sách <ArrowRight size={16} aria-hidden="true" /></Link>}
       </div>}
-      {result.data && showData && items.length > 0 && <div className={styles.grid}>{items.map((auction) => <AuctionCard key={auction.id} auction={auction} serverTime={result.data.serverTime} />)}</div>}
+      {result.data && showData && items.length > 0 && <AuctionGrid className={styles.grid} orderKey={layoutKey}>{items.map((auction) => <AuctionCard key={auction.id} auction={auction} serverTime={result.data.serverTime} />)}</AuctionGrid>}
       {all.length >= 50 && <p className={styles.limit}>Đang hiển thị tối đa 50 phiên sắp kết thúc. Bộ lọc và sắp xếp áp dụng trong danh sách này.</p>}
     </section>
     <p className={styles.demo}>Điểm giao nhận và tiền trong ví được mô phỏng cho đồ án.</p>

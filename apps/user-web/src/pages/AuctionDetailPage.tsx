@@ -17,6 +17,10 @@ import {
 import styles from './AuctionDetailPage.module.css'
 import { AuctionGallery } from '../components/AuctionGallery'
 import { conditions } from '../lib/listing-labels'
+import { AuctionPrice } from '../components/AuctionPrice'
+import { AuctionReceipt } from '../components/AuctionReceipt'
+import { useAuctionChangeMotion } from '../hooks/useAuctionMotion'
+import { rowFrames, standingFrames } from '../lib/auction-motion'
 
 const HOUR = 3_600_000
 // Only a won or bought auction has a final price; a held or cancelled one does not.
@@ -213,9 +217,9 @@ export function AuctionDetailPage() {
 
         <aside className={styles.side} aria-label="Trả giá">
           <Countdown ms={remaining} open={open} endAt={auction.endAt} live={pushing} state={auction.state} />
-          <section className={styles.bidCard} aria-live="polite">
+          <section className={styles.bidCard}>
             <p className={styles.priceLabel}>{priceLabel}</p>
-            <p className={styles.price} key={auction.currentPrice ?? auction.startPrice}>{formatVnd(auction.currentPrice ?? auction.startPrice)}</p>
+            <p className={styles.price} aria-live="polite" aria-atomic="true"><span className="sr-only">{priceLabel}: </span><AuctionPrice auctionId={auction.id} amount={auction.currentPrice ?? auction.startPrice} /></p>
             <p className={styles.priceMeta}>
               <TrendingUp size={14} aria-hidden="true" />
               {hasBids ? `${auction.bidderCount} người trả giá` : 'Chưa có lượt trả giá'}
@@ -247,7 +251,7 @@ export function AuctionDetailPage() {
             <div className={styles.factWide}><dt><MapPin size={14} aria-hidden="true" /> Nhận sách tại</dt><dd>{auction.pointName}</dd></div>
           </dl>
 
-          <BidHistory history={history} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} badge={TOP_BADGE[auction.state] ?? null} startPrice={auction.startPrice} />
+          <BidHistory auctionId={auction.id} history={history} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} badge={TOP_BADGE[auction.state] ?? null} startPrice={auction.startPrice} />
 
           <footer className={styles.footer}>
             <p>Người trả giá được hiển thị bằng số thứ tự ẩn danh. Mức đặt giá tự động của mỗi người không bao giờ được công khai.</p>
@@ -259,9 +263,13 @@ export function AuctionDetailPage() {
   )
 }
 
-function BidHistory({ history, leaderAlias, myAlias, badge, startPrice }: {
+function BidHistory({ auctionId, history, leaderAlias, myAlias, badge, startPrice }: {
+  auctionId: string;
   history: { price: number; bidderAlias: number; at: string }[]; leaderAlias: number | null; myAlias: number | null; badge: string | null; startPrice: number
 }) {
+  const latest = useRef<HTMLLIElement>(null)
+  const event = history[0]
+  useAuctionChangeMotion(auctionId, event ? `${event.at}:${event.bidderAlias}:${event.price}` : 'empty', latest, rowFrames)
   return (
     <section className={styles.historyCard} aria-labelledby="history-title">
       <h2 id="history-title">Diễn biến giá</h2>
@@ -273,7 +281,7 @@ function BidHistory({ history, leaderAlias, myAlias, badge, startPrice }: {
             const top = index === 0 && event.bidderAlias === leaderAlias
             const mine = myAlias === event.bidderAlias
             return (
-              <li key={`${event.at}-${index}`} className={top ? styles.historyTop : undefined}>
+              <li key={`${event.at}:${event.bidderAlias}:${event.price}`} ref={index === 0 ? latest : undefined} className={top ? styles.historyTop : undefined}>
                 <span className={`${styles.avatar} ${mine ? styles.avatarMine : ''}`} aria-hidden="true">#{event.bidderAlias}</span>
                 <span className={styles.who}>
                   {mine ? 'Bạn' : `Người trả giá #${event.bidderAlias}`}
@@ -367,6 +375,10 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [receipt, setReceipt] = useState<{ sequence: number; bid: boolean } | null>(null)
+  const receiptSequence = useRef(0)
+  const standing = useRef<HTMLDivElement>(null)
+  useAuctionChangeMotion(auction.id, me ? leading : undefined, standing, standingFrames, 270)
   const [unknown, setUnknown] = useState<Intent | null>(null)
   const intent = useIntentKey()
   const ids = useId()
@@ -375,7 +387,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
   const [wasLeading, setWasLeading] = useState(leading)
   if (wasLeading !== leading) {
     setWasLeading(leading)
-    if (wasLeading && !leading && !busy) setNotice(`Bạn vừa bị vượt giá. Giá hiện tại ${formatVnd(auction.currentPrice ?? auction.startPrice)}.`)
+    if (wasLeading && !leading && !busy) { setReceipt(null); setNotice(`Bạn vừa bị vượt giá. Giá hiện tại ${formatVnd(auction.currentPrice ?? auction.startPrice)}.`) }
   }
   const manualError = manual === undefined ? null : amountError(manual, minimumBid, auction.startPrice, step)
   const manualCapped = minimumBid > AUCTION_MAX_PRICE
@@ -383,7 +395,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
 
   const run = async (next: Intent) => {
     const key = intent.keyFor(`${next.kind}:${next.amount}`)
-    setBusy(true); setError(null); setNotice(null)
+    setBusy(true); setError(null); setNotice(null); setReceipt(null)
     try {
       const receipt =
         next.kind === 'Manual' ? await placeBid(auction.id, next.amount, key)
@@ -398,6 +410,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
         : receipt.leading ? `Bạn đang dẫn giá ở ${price}.`
         : `Đã ghi nhận, nhưng một mức tự động khác cao hơn. Giá hiện tại ${price}.`,
       )
+      setReceipt({ sequence: ++receiptSequence.current, bid: next.kind === 'Manual' || next.kind === 'Auto' })
     } catch (caught) {
       if (outcomeUnknown(caught)) { setUnknown(next); setAutoDialog(false) }
       else { intent.settle(); setUnknown(null) }
@@ -412,7 +425,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
   return (
     <div className={styles.bidPanel}>
       {me && (
-        <div className={`${styles.standing} ${leading ? styles.standingLead : styles.standingOut}`}>
+        <div ref={standing} role="status" className={`${styles.standing} ${leading ? styles.standingLead : styles.standingOut}`}>
           <strong>{leading ? 'Bạn đang dẫn giá' : 'Bạn đã bị vượt giá'}</strong>
           <span>
             {me.mode === 'Auto' && me.ownLevel !== null
@@ -422,7 +435,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
         </div>
       )}
 
-      {notice && <p role="status" className={styles.success}>{notice}</p>}
+      {notice && (receipt ? <AuctionReceipt key={receipt.sequence} message={notice} bid={receipt.bid} /> : <p role="status" className={styles.fieldError}>{notice}</p>)}
       {error && !autoDialog && <p role="alert" className={styles.fieldError}>{error}</p>}
 
       {unknown ? (

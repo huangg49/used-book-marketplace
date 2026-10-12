@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Timer } from 'lucide-react'
+import { AuctionPrice } from '../AuctionPrice'
 import { AuctionPhoto } from '../AuctionGallery'
 import { formatRemaining, useCountdown } from '../../hooks/useAuctionClock'
 import { formatVnd, ROUTES } from '../../lib/routes'
@@ -16,7 +17,7 @@ export function AuctionCard({ auction, serverTime }: { auction: AuctionSummary; 
   const price = auction.currentPrice ?? auction.startPrice
   const to = ROUTES.auctionDetail(auction.id)
   return (
-    <article className={styles.card}>
+    <article className={styles.card} data-auction-id={auction.id}>
       <Link to={to} className={styles.cover} aria-label={`Xem phiên đấu giá ${auction.title}`}>
         <AuctionPhoto auction={auction} interactive={false} />
           <span className={`${styles.timer} ${remaining < HOUR ? styles.timerSoon : ''}`}>
@@ -32,7 +33,7 @@ export function AuctionCard({ auction, serverTime }: { auction: AuctionSummary; 
         <div className={styles.priceRow}>
           <div>
             <span className={styles.priceLabel}>{hasBids ? 'Giá hiện tại' : 'Giá khởi điểm'}</span>
-            <span className={styles.price}>{formatVnd(price)}</span>
+            <span className={styles.price}><AuctionPrice auctionId={auction.id} amount={price} /></span>
           </div>
           <span className={styles.bidders}>
             {hasBids ? `${auction.bidderCount} người trả giá` : 'Chưa có lượt trả giá'}
