@@ -1,7 +1,8 @@
-# Tham khảo profile Tuấn Minh —12/10/2026
+# Kế hoạch pha trộn profile Tuấn Minh —12/10/2026
 
-Trạng thái: nghiên cứu source, chưa duyệt triển khai. Yêu cầu: Tuấn Minh muốn
-đưa code profile của mình trở lại; đối chiếu bản cũ với bản hiện hành trước khi sửa.
+Trạng thái: nghiên cứu và kế hoạch, chưa triển khai UI/route/API. Chủ dự án đã
+chọn **giữ cấu trúc chính, cải tiến cho đồng bộ**. Lựa chọn chốt mức độ kế thừa;
+phạm vi triển khai dưới đây vẫn là đề xuất để duyệt.
 
 ## Nguồn đối chiếu
 
@@ -53,40 +54,189 @@ Trạng thái: nghiên cứu source, chưa duyệt triển khai. Yêu cầu: Tu�
    Pro/Lucide hiện hành. Chuyển style trong phạm vi dashboard, không đổi token
    toàn app hoặc navbar/Home/Auth để khớp dashboard cũ.
 
-## Khả năng nối dữ liệu
+## Mục tiêu và điều hướng
 
-- Session/profile và `/me/listings` đã có consumer web thật, phù hợp bản đầu.
-- `/me/wallet`, `/me/wallet/history`, `/me/orders`, `/me/wishlist` đã có trong
-  contract. Đây là khả năng backend, không chứng minh web đã có đủ màn/chức năng.
-  Ví là mô phỏng theo contract, không tự thêm điểm Lật-Xu hoặc rút tiền thật.
-- Auction web có public list và `/me/auctions/{id}/participation`. Chưa thấy
-  endpoint liệt kê tất cả phiên riêng đã tham gia hoặc dashboard tổng hợp trong
-  contract hiện tại; không gọi participation cho mọi phiên public để giả bộ list.
-- Thống kê thu/chi, tổng kệ và số việc cần xử lý cần contract/định nghĩa riêng nếu
-  vượt dữ liệu API hiện có. Không suy hoàn tất/settlement từ timeline UI; gate
-  READINESS giữ nguyên.
+Member vào không gian cá nhân để biết sách của mình đang ra sao, xem hoạt động
+liên quan và đi đến đúng màn xử lý. Đây là giao diện thao tác (Operate): dùng
+bìa sách, chất giấy và chữ để có cá tính; ưu tiên scan và hành động rõ ràng.
+Thành công là tìm được Kệ, Hồ sơ, Đăng sách hoặc thông báo liên quan mà không
+phải giải mã thuật ngữ hoặc dò qua số liệu mẫu.
 
-## Hướng tích hợp đề xuất
+Đề xuất **Tổng quan cá nhân tại `/account`**. `/profile` giữ thông tin/bảo mật,
+`/my-books` giữ quản lý bài đăng và legacy query redirect. Menu Tài khoản và
+sidebar thêm Tổng quan ở đầu, tiếp tục dùng một nguồn cấu hình điều hướng.
+Giữ các mục thật hiện hành, không thêm nút cấp đầu trên navbar hoặc đổi menu
+bấm sang hover. Đăng nhập tiếp tục dùng `returnUrl`, không tự đổi mọi đích về
+tổng quan. Đây là đề xuất mở rộng menu, chưa tạo route trong lượt nghiên cứu.
 
-Tạo trang **Tổng quan cá nhân** (đề xuất `/account`, chưa tạo route). Menu bấm
-Tài khoản có Tổng quan, Hồ sơ của tôi, Kệ sách của tôi; không thêm mục cấp đầu
-trên navbar. `/profile` giữ thông tin tài khoản/bảo mật; `/my-books` giữ quản lý
-bài đăng và legacy query redirect. Đây là đề xuất mở rộng quyết định menu cũ,
-chưa được xem là chấp thuận mới.
+## Bố cục và cảm giác đề xuất
 
-Bản đầu của tổng quan giữ khung Minh: greeting có ảnh, hành động nhanh, vùng
-công việc gần đây và kệ xem nhanh. Dùng session/owner listing thật trước; link
-đến kệ chờ duyệt/bản nháp qua query, không bịa số tổng. Tái sử dụng logic dữ liệu
-và thành phần trạng thái của bản hiện tại; greeting dùng tên thật, lời ngắn dễ hiểu.
-Nếu chưa có việc hoặc sách, hiển thị empty state có link Đăng sách. Lỗi tải là lỗi
-từng khối có Thử lại, không báo chưa có sách hoặc giấu cả trang.
+Desktop giữ sidebar khoảng200–220px; vùng chính mở đầu bằng lời chào thấp,
+khoảng180–230px với nội dung thông thường, tự tăng khi chữ dài. Tiếp theo là
+dải tóm tắt ví, rồi bố cục bất đối xứng: **kệ rộng ở trái, hoạt động gọn ở phải**.
+Đơn hàng nối tiếp khi đủ đường dữ liệu/trang đích. Không ép mọi khối thành các
+card giống nhau hoặc cùng chiều cao.
 
-Sau khi duyệt khung, triển khai ví/đơn/wishlist theo từng gói có route/API/loading/
-empty/error riêng. Live auctions và cashflow triển khai sau khi rõ nguồn riêng và
-gates. Nếu cần trình bày dashboard đầy đủ trước khi nối dữ liệu, dùng một preview
-được ghi rõ dữ liệu mẫu, tách khỏi hồ sơ thật.
+```text
+Sidebar       Lời chào + Đăng sách / Xem kệ
+              Ví mô phỏng: khả dụng · đang giữ cho giao dịch
+              Kệ cập nhật gần đây (rộng) | Hoạt động gần đây (gọn)
+              Đơn mua / đơn bán (giai đoạn2)
+```
 
-Khi code: nhánh riêng, giữ WIP teammate; kiểm desktop/laptop/mobile, keyboard,
-guest returnUrl, account switching, lỗi/rỗng,20+listing/cursor, điều kiện ảnh riêng
-và ba trục state. Giữ motion có ý nghĩa theo chính sách chủ dự án; không replay
-animation dàn hàng cho mọi section mỗi lần đổi tab.
+- Lời chào dùng tên session thật, câu ngắn như “Chào [tên], đây là kệ của bạn.”;
+  một CTA chính Đăng sách và link Xem kệ. Hình nằm bên phải, không lót dưới chữ
+  hoặc chiếm phần lớn viewport laptop; tên dài được xuống dòng.
+- Giữ ý tưởng ảnh giấy cũ của Minh. Đã xem `public/bg-greeting.png`: bản đồ thế
+  giới/kính lúp có chất liệu hợp, nhưng ít liên quan mua bán sách TP.HCM. Không
+  ưu tiên làm hình trung tâm; chọn asset sách đã có sau khi kiểm nguồn/quyền,
+  crop và tối ưu kích thước. Chưa tạo ảnh hoặc xác minh bản quyền asset trong gói này.
+- Dùng đỏ rượu/kem/giấy sáng, font và Lucide hiện hành. Đường phân cách mảnh,
+  ít khung; chữ viết tay nếu có chỉ ở một ghi chú ngắn, không ở số liệu/nhãn.
+  Không đổi token toàn app hoặc dựng lại Home hero trong tài khoản.
+- Kệ tối đa4 bài cập nhật gần đây, dạng dòng bìa nhỏ: tên, tác giả, trạng thái,
+  giá bán/giá trị đổi nếu có. Không đưa hiệu ứng3D public listing vào danh sách
+  quản lý. “Xem toàn bộ kệ” dẫn `/my-books`.
+- “Bản nháp”, “Chờ duyệt”, “Bị từ chối” dẫn filter kệ có thật, chưa gắn số đếm
+  khi không có tổng từ API. Không hứa sửa tiếp bản nháp trực tiếp khi luồng
+  resume chưa được hiện thực và kiểm chứng.
+- Hoạt động tối đa3 thông báo, thời gian và link đúng phiên; “Xem thông báo”
+  đến inbox hiện hành. Không đổi unreadCount thành số việc cần xử lý.
+- Mobile một cột, menu cá nhân thu gọn hiện tại. Thứ tự lời chào → tóm tắt ngắn
+  → kệ → hoạt động, cùng thứ tự DOM/keyboard desktop.320px vẫn đọc được
+  tên/bìa, nút wrap khi cần; không đảo vị trí bằng CSS làm tab order khó hiểu.
+- Skeleton giữ khoảng trống tương ứng nội dung, không khoá toàn trang ở chiều
+  cao cố định. Giữ scrollbar gutter và chiều cao tối thiểu hợp lý của các khối.
+- Motion ngắn ở feedback/đổi trạng thái, không opacity0/stagger100–500ms cho
+  mọi section lúc vào trang. Giữ chính sách motion chủ dự án, cleanup/visibility
+  và tối ưu mobile; không sửa hiệu ứng navbar đang có.
+
+## Dữ liệu: dùng ngay và có điều kiện
+
+| Vùng | Source thực tế | Quyết định |
+| --- | --- | --- |
+| Tên/email/trạng thái | Session hiện tại | Dùng ngay, không tạo token store hoặc đọc lại profile vô ích |
+| Kệ | `/me/listings`, identity và ảnh owner | Bản đầu, limit4; sort updatedAt/id giảm dần nên gọi “cập nhật gần đây” |
+| Ví | `/me/wallet` có controller/service thật | Bản đầu chỉ đọc; thêm service web có schema đúng contract |
+| Hoạt động | `/me/notifications`, service web có sẵn | Bản đầu; hiện chỉ gồm sự kiện Auction, không gọi là feed toàn bộ nghiệp vụ |
+| Đơn hàng | `/me/orders` có source | Giai đoạn2; summary chưa có tên/bìa/giá, web chưa có màn đơn thật |
+| Wishlist | `/me/wishlist` có source | Giai đoạn2; kiểm projection/quyền/visibility/schema trước khi nối |
+| Đấu giá cá nhân | Participation theo từng auction | Giai đoạn3; thiếu endpoint list riêng, không quét toàn bộ public auctions |
+| Tổng kệ/thu chi/tăng trưởng | Chưa có aggregate phù hợp | Giai đoạn3; định nghĩa và contract trước, không suy từ trang đầu |
+| Sửa hồ sơ/avatar/liên hệ | SRS có mục tiêu, chưa thấy API cập nhật hiện hành | Ngoài gói này; không đưa nút Lưu giả vào Profile |
+
+Ví bản đầu hiển thị `available` và `transactionHeld` với nhãn “Ví mô phỏng ·
+Mô phỏng đồ án”, định dạng VND. Không cộng giá sách thành giá trị tài sản.
+`withdrawalsEnabled` hiện false, `withdrawalHeld` hiện0; không thêm CTA Rút tiền
+hoặc số Lật-Xu. Không tạo nút vào màn Ví chưa tồn tại. Các thao tác ví sau này
+phải dựa trên flags server và được triển khai trong gói riêng.
+
+Thông báo là sự kiện lịch sử. Một thông báo vượt giá không chứng minh người
+dùng hiện còn bị vượt giá. Không thêm countdown/live badge/giá hiện tại hoặc
+yêu cầu thanh toán từ notification body. Trang đấu giá đọc state hiện hành
+mới quyết định hành động. Không tự đánh dấu đã đọc khi tổng quan lấy preview;
+query và unread badge phải dùng chung cơ chế cache.
+
+Order summary có id/state/version/role/thời gian, thiếu dữ liệu sách/giá; list
+chỉ filter state, chưa có role filter. Tab mua/bán cần chốt projection và role
+filter hoặc một phương án đọc hữu hạn đã kiểm chứng; không lọc role trên một
+trang rồi tuyên bố đó là toàn bộ đơn. Timeline chỉ dùng state đã có, không mở
+Delivered/inspection/settlement vượt gate READINESS.
+
+Wishlist cần kiểm thêm đường project book/listing và điều kiện visible/deleted,
+không mặc định raw document đã là public response đúng contract. Đây là
+dependency cần kiểm, chưa phải kết luận lỗi đã tái hiện. Ví/history/orders/
+wishlist có contract/source không có nghĩa mọi luồng đã được runtime nghiệm thu.
+
+## Trạng thái và tương tác
+
+| Trường hợp | Phản hồi yêu cầu |
+| --- | --- |
+| Khôi phục phiên | Shell loading, chưa render dữ liệu người trước |
+| Guest | Login redirect, giữ returnUrl đầy đủ |
+| Thành viên mới | CTA Đăng sách, kệ rỗng một hình nhỏ, “Chưa có thông báo”; ví0 chỉ khi server trả0 |
+| Một khối lỗi | Lỗi cục bộ và Thử lại; các khối khác vẫn dùng được; không biến lỗi thành0 hoặc trống |
+| Refetch | Giữ dữ liệu đúng owner đang có, trạng thái cập nhật nhẹ; không nhấp nháy cả trang |
+| RESTRICTED/LOCKED | Hiển thị trạng thái thật, không suy login là quyền;403 có giải thích, không retry vô hạn |
+| Draft/PendingReview/Rejected | Giữ nghĩa riêng/lý do khi có, vào owner shelf thay vì ép mở detail public |
+| Approved nhưng Hidden/Removed | Không coi đang bán công khai, không link public nếu thiếu điều kiện |
+| Reserved/Sold/Exchanged | Nhãn riêng, không suy từ visibility hoặc gộp “Đã bán” |
+| Identity/ảnh lỗi hoặc hết hạn | Placeholder cùng kích thước, retry phù hợp; không thay bằng bìa sách khác |
+| Nội dung dài | Wrap tên/tác giả/lý do, không tràn ngang; giá0 khác chưa có giá |
+| Đổi tài khoản/logout | Query owner và cleanup phiên, không flash tên/ảnh/số dư của tài khoản trước |
+
+Một H1, heading từng section; số liệu có nhãn, không truyền nghĩa bằng màu
+riêng. Link đi trang, button làm hành động. Giữ skip link, H1 focus khi đổi
+pathname, Escape/Tab menu và logout pending/error. Retry section không cướp
+focus về H1; không đặt aria-live lên cả danh sách. Touch target đủ lớn,
+focus-visible rõ nhưng không viền kép. Không che lỗi để giao diện nhìn gọn.
+
+## Cách triển khai phù hợp codebase
+
+1. Thêm `AccountOverviewPage` và CSS module trong `apps/user-web`, route dưới
+   DashboardLayout hiện tại; cập nhật ROUTES/accountNavigation dùng chung.
+   Không tạo DashboardLayout hoặc session logic thứ hai.
+2. Compose Greeting/WalletSummary/RecentBooks/RecentActivity; có thể refactor
+   legacy file khi hữu ích, không import khối mock chỉ vì trùng tên. Style trong
+   phạm vi màn hình, không sửa global Tailwind/token.
+3. Tách phần owner lặp từ MyBooks: ảnh, identity, nhãn state, điều kiện link.
+   Full shelf và preview dùng presentation riêng trên logic chung; không gộp
+   public BookCard với owner card vì khác quyền và mục đích.
+4. Mở rộng service listings nhận limit, mặc định20 tương thích consumer cũ.
+   Key gồm owner và tham số ảnh hưởng response, kể cả limit/cursor/filter;
+   dashboard limit4, notification limit3; query factory/cache dùng chung khi phù hợp.
+5. Giữ một SessionClient, schema Zod theo OpenAPI cho wallet. Session hiện clear
+   cache khi identity đổi; vẫn giữ owner key và kiểm account switching thực tế.
+6. Giới hạn fan-out theo4 bài: tối đa một identity và một ảnh đại diện/bài khi
+   cần; dedupe cùng bookId. Không fetch toàn bộ media/cursor hoặc poll nhanh
+   để dựng dashboard. Ảnh đúng kích thước, tránh kéo nền nặng vào mọi route;
+   cache sau read notification cập nhật qua cơ chế hiện có, không đoán state mới.
+7. Giai đoạn1 dự kiến không đổi API/DB/migration/OpenAPI. Nếu kiểm runtime phát
+   hiện thiếu contract/quyền, ghi dependency và điều chỉnh gói; không workaround
+   nghiệp vụ trong UI. Các gói API sau đi contract-first.
+
+## Thứ tự thực hiện
+
+**Giai đoạn1 — Tổng quan sử dụng được:** route/menu/shell, greeting, ví chỉ đọc,
+4 bài gần đây,3 thông báo, lối filter kệ và đủ loading/rỗng/lỗi/quyền. Giữ
+Profile/MyBooks/đường dẫn cũ; không section mẫu hoặc nút giả trong tài khoản
+thật. Đây là phạm vi đề xuất để duyệt triển khai đầu tiên.
+
+**Giai đoạn2 — Đơn hàng và tiện ích cá nhân:** chốt contract đọc/route chi tiết/
+state mua-bán rồi gắn Orders vào tổng quan. Wishlist nối sau kiểm projection/
+quyền. Màn ví/lịch sử và sửa hồ sơ là các gói riêng; không mở hết menu khi chưa
+có trang hoặc hành vi tương ứng.
+
+**Giai đoạn3 — Đấu giá cá nhân và thống kê:** endpoint list tham gia/tổ chức,
+tổng kệ theo state, ledger aggregate theo kỳ nếu cần. Định nghĩa nguồn,
+currency/timezone/phạm vi trước. READINESS giữ nguyên, không suy quyền làm
+settlement từ nhu cầu vẽ biểu đồ.
+
+## Tiêu chí nghiệm thu giai đoạn1
+
+- Menu đến đúng trang, guest quay lại đúng returnUrl; Profile/MyBooks/query/
+  Back/active menu giữ hành vi. Không lẫn owner ở tên/email/ảnh/số dư.
+- Không nhầm ba trục state;20+ bài/cursor không làm dashboard nhận mình biết
+  tổng. Ví lỗi không thành0; thông báo không biến thành quyền hoặc state live.
+- Kiểm1440/1280px, laptop cao720px,390/320px và zoom125%/200%: không scroll
+  ngang, CTA/focus không bị sticky navbar che; không ép dashboard vào một
+  viewport hoặc giật ngang khi chiều cao thay đổi.
+- Keyboard menu/Tab/Escape/skip/H1/retry, contrast và nhãn. Kiểm screen reader
+  khi có công cụ, ghi đúng phần chưa chạy; DOM không là chứng minh speech PASS.
+- Ca kệ0/1/4/>20, tên dài, thiếu ảnh/signed URL hết hạn, endpoint chậm/500/403,
+  refetch, logout và account switching. Harness ghi dữ liệu chỉ chạy trên
+  Mongo replica set/database `*_test` riêng; không seed/reset DB chính.
+- Unit tests cần thiết cho state mapping, owner query/isolation và route khi
+  refactor; web test/build/lint và consumer kệ/menu liên quan. API checks theo
+  diff nếu có đổi source; không chạy lại gate không đổi.
+- Bounded visual QA theo Impeccable: một lượt desktop/mobile, sửa cùng đợt rồi
+  xác nhận nếu cần; evidence không lộ PII, handoff ghi thực chạy/NOT RUN/human
+  review. Web không là nghiệm thu RN/Flutter/native.
+
+## Checkpoint nghiên cứu
+
+Chủ dự án đã chọn giữ cấu trúc Minh và cải tiến đồng bộ; không còn câu hỏi CSS
+hoặc cấu hình cần quyết định. Phạm vi giai đoạn1 và route `/account` là đề xuất
+chờ duyệt. Lượt này chỉ lưu nghiên cứu/kế hoạch, không đổi application source,
+DESIGN/surface contract/API/DB/runtime. Khi code dùng nhánh feature riêng,
+bảo toàn WIP teammate. Chưa push/PR.

@@ -18,9 +18,14 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 - `codex/profile-integration-study`, base `cc51e0b`: theo yêu cầu tham khảo lại
   profile Minh (`36cb0c0`), đối chiếu component legacy với Profile/MyBooks hiện tại
-  và OpenAPI. [Phương án](../design/WEB_PROFILE_BLEND_PROPOSAL.md) đề xuất lấy khung
-  dashboard làm Tổng quan riêng, giữ profile/kệ và dữ liệu thật; phân biệt API đã
-  có với UI/mẫu và phần cần contract mới. Chỉ docs; chưa đổi giao diện/route/API.
+  và OpenAPI/controller/service. Chủ dự án chọn giữ cấu trúc chính, cải tiến đồng
+  bộ. [Kế hoạch](../design/WEB_PROFILE_BLEND_PROPOSAL.md) đề xuất `/account` riêng,
+  giữ Profile/Kệ; giai đoạn1 gồm greeting, ví chỉ đọc có nhãn mô phỏng,4 bài gần
+  đây,3 thông báo và lối filter kệ. Có bố cục responsive, định nghĩa chỉ số,
+  lỗi/quyền/cache/owner isolation, cách tái sử dụng component và ca nghiệm thu.
+  Orders/wishlist giai đoạn2 cần projection/route; đấu giá cá nhân/aggregate
+  giai đoạn3 cần contract. Phân biệt source/API với runtime nghiệm thu; chưa
+  duyệt triển khai phạm vi mới. Chỉ docs, chưa đổi giao diện/route/API/DB.
   Fetch origin thành công, không pull/merge. Docs/diff checks PASS; không test/build/
   browser vì không đổi source, chưa render bản Minh; human review chưa có.
   WIP teammate/runtime/READINESS giữ nguyên. Bước tiếp: chủ dự án duyệt hướng tích
