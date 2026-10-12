@@ -1,8 +1,8 @@
 # Kế hoạch pha trộn profile Tuấn Minh —12/10/2026
 
-Trạng thái: nghiên cứu và kế hoạch, chưa triển khai UI/route/API. Chủ dự án đã
-chọn **giữ cấu trúc chính, cải tiến cho đồng bộ**. Lựa chọn chốt mức độ kế thừa;
-phạm vi triển khai dưới đây vẫn là đề xuất để duyệt.
+Trạng thái: chủ dự án đã duyệt kế hoạch ngày12/10/2026; giai đoạn1 đã triển khai
+trên `codex/account-overview`. Giữ **cấu trúc chính, cải tiến cho đồng bộ**.
+Giai đoạn2/3 vẫn là đề xuất, chưa triển khai. Không đổi API hoặc DB trong gói1.
 
 ## Nguồn đối chiếu
 
@@ -233,10 +233,13 @@ settlement từ nhu cầu vẽ biểu đồ.
   xác nhận nếu cần; evidence không lộ PII, handoff ghi thực chạy/NOT RUN/human
   review. Web không là nghiệm thu RN/Flutter/native.
 
-## Checkpoint nghiên cứu
+## Checkpoint triển khai giai đoạn1
 
-Chủ dự án đã chọn giữ cấu trúc Minh và cải tiến đồng bộ; không còn câu hỏi CSS
-hoặc cấu hình cần quyết định. Phạm vi giai đoạn1 và route `/account` là đề xuất
-chờ duyệt. Lượt này chỉ lưu nghiên cứu/kế hoạch, không đổi application source,
-DESIGN/surface contract/API/DB/runtime. Khi code dùng nhánh feature riêng,
-bảo toàn WIP teammate. Chưa push/PR.
+`/account`, điều hướng chung, greeting, ví chỉ đọc,4 bài gần đây và3 thông báo
+đã triển khai trên nhánh feature `codex/account-overview`, base `2b4e557`.
+Build/99 unit tests/lint và9 nhóm browser QA PASS; independent AI finish-review
+ship, không material fixes. [Evidence](../../.impeccable/review/account-overview/README.md)
+ghi rõ phạm vi kiểm, ảnh và các mục NOT RUN, gồm full browser zoom và speech.
+Giữ DESIGN toàn cục/API/DB/READINESS và WIP teammate; có surface contract riêng.
+Giai đoạn2/3 cần chốt contract/projection trước khi mở rộng. Chưa push/PR/merge;
+human review chưa có.

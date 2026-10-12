@@ -258,6 +258,35 @@
   opacity: 0.55;
   cursor: wait;
 }
+.row.compact {
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 12px 16px;
+  padding: 20px 0;
+}
+.compact .cover {
+  min-height: 96px;
+  padding: 6px;
+}
+.compact .cover img {
+  width: 52px;
+  height: 84px;
+}
+.compact .bookInfo h3 {
+  font-size: 0.9375rem;
+}
+.compact .status {
+  gap: 4px 10px;
+  margin-bottom: 6px;
+}
+.compact .prices {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: -4px;
+}
+.compact .prices p { margin: 0; }
+.compact .detail { width: 100%; }
 @media (max-width: 1100px) {
   .row {
     grid-template-columns: 92px minmax(0, 1fr);

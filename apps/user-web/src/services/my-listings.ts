@@ -61,8 +61,8 @@ export const myListingPageSchema = z.object({
 
 export type MyListing = z.infer<typeof myListingSchema>;
 
-export function getMyListings(moderation?: string, cursor?: string) {
-  const query = new URLSearchParams({ limit: "20" });
+export function getMyListings(moderation?: string, cursor?: string, limit = 20) {
+  const query = new URLSearchParams({ limit: String(limit) });
   if (moderation) query.set("moderation", moderation);
   if (cursor) query.set("cursor", cursor);
   return session.request(`/me/listings?${query}`, myListingPageSchema);

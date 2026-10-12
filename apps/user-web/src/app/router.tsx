@@ -8,6 +8,7 @@ import { SellBookPage } from '../pages/SellBookPage';
 import { ChatPage } from '../pages/ChatPage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { MyBooksPage } from '../pages/MyBooksPage';
+import { AccountOverviewPage } from '../pages/AccountOverviewPage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
@@ -51,6 +52,7 @@ export const router = createBrowserRouter([{ element: <PaperStormLayout />, chil
   {
     element: <DashboardLayout />,
     children: [
+      { path: '/account', element: <AccountOverviewPage /> },
       { path: '/profile', element: <ProfilePage /> },
       { path: '/my-books', element: <MyBooksPage /> },
     ],

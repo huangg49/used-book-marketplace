@@ -9,6 +9,7 @@ export const ROUTES = {
   sell: '/sell',
   login: '/login',
   register: '/register',
+  account: '/account',
   profile: '/profile',
   myBooks: '/my-books',
   exchange: '/exchange',

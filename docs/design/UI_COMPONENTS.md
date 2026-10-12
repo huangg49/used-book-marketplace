@@ -311,3 +311,45 @@ Root layout đặt `StatusBar` kiểu `dark` để giờ/pin giữ tương phả
 kể cả khi Android dùng chế độ tối. Đây là lựa chọn cho bảng màu sáng hiện tại;
 nếu thêm dark theme, phải đổi đồng bộ màu nền và thanh trạng thái.
 Kiểm tra bổ sung Android/web: [quality report](../ANDROID_QUALITY.md).
+
+## Member web — OwnerListingRow
+
+12/10/2026, React/Vite `apps/user-web` only. This DOM component is separate from
+the React Native foundation above. Source:
+[OwnerListingRow.tsx](../../apps/user-web/src/components/OwnerListingRow.tsx),
+with styles in [MyBooksPage.module.css](../../apps/user-web/src/pages/MyBooksPage.module.css).
+The actual examples are `/my-books` (full row) and `/account` (compact preview);
+no RN `/ui` example or native acceptance is implied.
+
+```tsx
+<ul>
+  {items.map((item) => <OwnerListingRow key={item.id} item={item} compact />)}
+</ul>
+```
+
+API: `item: MyListing`, `compact?: boolean` (default false). The component emits
+one `li`; the consumer supplies its list, loading/empty/error shell, filtering
+and pagination. It owns the existing owner identity/photo reads through the
+shared SessionClient/query cache; it does not perform listing mutations or
+decide server permissions. Identity keys include owner/book/catalog status;
+photo keys include owner/listing/revision/first media id. Confirmed identity
+uses public catalog, other statuses use the owner's catalog request. Photo
+and identity errors have independent retry; missing photos remain placeholders.
+
+Full mode preserves condition/mode, pending explanation and update date. Compact
+mode omits those secondary fields, while retaining title/author, separate
+moderation/visibility/trade labels, rejection/removal reasons when returned,
+sale price and exchange value (including zero). Only Approved/Visible rows link
+to public detail; Reserved, Hidden, Removed and Exchanged keep their own labels.
+
+Rows use fine rules, wrapping text, wine emphasis and contain-fitted owner
+photographs. Full desktop layout has108px cover/150px price columns; compact
+uses a64px cover column and moves wrapped prices beneath metadata. Compact
+cover ground has96px minimum height with52×84px image at its base rule; responsive
+image widths also follow the shared shelf media rules. Full shelf breakpoints
+at1100/760/360px retain its existing two-column narrow layout. This is a shared
+owner task row, not the public animated BookCard.
+
+The [overview surface record](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-accountoverviewpage-tsx.md)
+links final source/capture comparison, isolated browser checks and limitations.
+Fake storage evidence does not establish real Supabase or native acceptance.

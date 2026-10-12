@@ -11,7 +11,8 @@
     "preview": "vite preview --port 4174",
     "test": "vitest run",
     "catalog:refresh": "node scripts/refresh-preview-catalog.mjs",
-    "test:browser": "node tests/integration.mjs"
+    "test:browser": "node tests/integration.mjs",
+    "test:account:browser": "node tests/account-overview.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

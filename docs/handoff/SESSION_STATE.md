@@ -14,22 +14,30 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   preflight HTTP204 cho `http://127.0.0.1:5186` PASS. Không thử đăng nhập,
   seed/reset DB, đổi tài khoản hoặc cấu hình; WIP teammate/READINESS giữ nguyên.
 
-## Nghiên cứu profile Tuấn Minh —12/10/2026
+## Tổng quan tài khoản, pha trộn profile Minh —12/10/2026
 
-- `codex/profile-integration-study`, base `cc51e0b`: theo yêu cầu tham khảo lại
-  profile Minh (`36cb0c0`), đối chiếu component legacy với Profile/MyBooks hiện tại
-  và OpenAPI/controller/service. Chủ dự án chọn giữ cấu trúc chính, cải tiến đồng
-  bộ. [Kế hoạch](../design/WEB_PROFILE_BLEND_PROPOSAL.md) đề xuất `/account` riêng,
-  giữ Profile/Kệ; giai đoạn1 gồm greeting, ví chỉ đọc có nhãn mô phỏng,4 bài gần
-  đây,3 thông báo và lối filter kệ. Có bố cục responsive, định nghĩa chỉ số,
-  lỗi/quyền/cache/owner isolation, cách tái sử dụng component và ca nghiệm thu.
-  Orders/wishlist giai đoạn2 cần projection/route; đấu giá cá nhân/aggregate
-  giai đoạn3 cần contract. Phân biệt source/API với runtime nghiệm thu; chưa
-  duyệt triển khai phạm vi mới. Chỉ docs, chưa đổi giao diện/route/API/DB.
-  Fetch origin thành công, không pull/merge. Docs/diff checks PASS; không test/build/
-  browser vì không đổi source, chưa render bản Minh; human review chưa có.
-  WIP teammate/runtime/READINESS giữ nguyên. Bước tiếp: chủ dự án duyệt hướng tích
-  hợp trước khi code; không push/PR.
+- `codex/account-overview`, base `2b4e557`, checkpoint subject
+  `feat(web): add personal account overview`: triển khai giai đoạn1 của
+  [kế hoạch đã duyệt](../design/WEB_PROFILE_BLEND_PROPOSAL.md), dựa trên nghiên
+  cứu profile Minh (`36cb0c0`). `/account` có greeting, ví thật chỉ đọc kèm nhãn
+  mô phỏng,4 bài gần đây,3 thông báo đấu giá và lối filter kệ. Menu/sidebar dùng
+  chung cấu hình; Profile/MyBooks giữ trang riêng. Tách OwnerListingRow dùng
+  chung, giữ ba trục moderation/visibility/trade, query theo owner và limit.
+- Loading/empty/error/retry cục bộ;403 khác kệ trống, không hiển thị cache bị
+  từ chối. Chuyển tài khoản không lẫn dữ liệu; chỉ thông báo được mở mới đánh
+  dấu đã đọc. Không đổi API/DB/auth/Home/token toàn cục hoặc READINESS.
+- Build PASS;99 tests PASS; lint PASS với5 warning Exchange có sẵn; detector
+  một lượt `[]`.9 nhóm browser PASS trên API/Mongo QA riêng,8 ảnh desktop/mobile/
+  empty/error/locked hợp lệ; [evidence và giới hạn](../../.impeccable/review/account-overview/README.md).
+  Independent AI finish-review: ship, không material fixes; không thay human review.
+- NOT RUN: native/điện thoại thật/Safari/speech screen reader/full browser zoom
+  125% hoặc200%/live Supabase/remote CI. Chỉ main-content CSS zoom200% đã kiểm.
+  Fixture dùng fake storage và database `*_test`; đã xóa database QA, dừng runtime
+  và container QA của lượt này. Backend3000/web5186 chính vẫn chạy, không ghi DB chính.
+- Giai đoạn2 orders/wishlist và giai đoạn3 đấu giá cá nhân/aggregate vẫn là
+  đề xuất cần contract/projection; không tự mở rộng. WIP teammate được giữ nguyên.
+  Bước tiếp: chủ dự án xem `/account`; human review/tích hợp theo TEAMWORK.
+  Chưa push/PR/merge.
 
 ## Navbar — đồng bộ khi chuyển trang —12/10/2026
 

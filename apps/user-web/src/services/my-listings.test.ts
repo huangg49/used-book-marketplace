@@ -10,6 +10,13 @@ beforeEach(() => {
 });
 
 describe("owner shelf reads", () => {
+  it("bounds the overview read without changing the default full shelf size", async () => {
+    request.mockResolvedValue({ items: [], nextCursor: "more" });
+    await getMyListings(undefined, undefined, 4);
+    expect(request.mock.calls[0]![0]).toBe("/me/listings?limit=4");
+    await getMyListings();
+    expect(request.mock.calls[1]![0]).toBe("/me/listings?limit=20");
+  });
   it("encodes the opaque cursor without changing the moderation scope", async () => {
     request.mockResolvedValue({ items: [], nextCursor: null });
     await getMyListings("Rejected", "opaque+/=&");
