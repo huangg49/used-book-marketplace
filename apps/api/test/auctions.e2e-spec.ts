@@ -28,7 +28,7 @@ import {
 import { MongoFixtures } from './helpers/mongo-fixtures.js';
 
 // Auctions over real HTTP, authorization and MongoDB (QA replica set, *_test
-// database). Storage signing is faked; no auction path reads media.
+// database). Storage signing is faked; no live bucket is used.
 const storage = {
   async check() {},
   async signedRead(key: string) {
@@ -380,6 +380,171 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     if (originalSecret === undefined)
       delete process.env.PAYMENT_SIMULATOR_SECRET;
     else process.env.PAYMENT_SIMULATOR_SECRET = originalSecret;
+  });
+
+  it('public book reads use only the inspected revision and never bypass ordinary shelf custody', async () => {
+    const o = await openAuction();
+    const response = await call('get', `/auctions/${o.auctionId}`).expect(200);
+    validates('PublicAuction', response.body);
+    const book = response.body.auction.book;
+    expect(book.condition).toBe('Good');
+    expect(book.photos.length).toBeGreaterThan(0);
+    expect(Object.keys(book).sort()).toEqual(
+      [
+        'accessories',
+        'authors',
+        'condition',
+        'coverNote',
+        'description',
+        'hasMissingPages',
+        'notes',
+        'pages',
+        'photos',
+        'revisionId',
+      ].sort(),
+    );
+    const mediaId = book.photos[0].id;
+    const photo = await call(
+      'get',
+      `/auctions/${o.auctionId}/photos/${mediaId}`,
+    ).expect(200);
+    validates('MediaRead', photo.body);
+    expect(photo.headers['cache-control']).toBe('no-store');
+    await call('get', `/listings/${o.listing.id}`).expect(404);
+    await call('get', `/auctions/${o.auctionId}/photos/${randomUUID()}`).expect(
+      404,
+    );
+    const other = await openAuction();
+    await call('get', `/auctions/${other.auctionId}/photos/${mediaId}`).expect(
+      404,
+    );
+    await db.c.listing_media.updateOne(
+      { _id: mediaId },
+      { $set: { purgedAt: new Date() } },
+    );
+    await call('get', `/auctions/${o.auctionId}/photos/${mediaId}`).expect(404);
+    await db.c.listing_media.updateOne(
+      { _id: mediaId },
+      { $set: { purgedAt: null } },
+    );
+    await db.c.users.updateOne(
+      { _id: o.seller.id },
+      { $set: { status: 'LOCKED' } },
+    );
+    expect(
+      (await call('get', `/auctions/${o.auctionId}`).expect(200)).body.auction
+        .book,
+    ).toBeNull();
+    await call('get', `/auctions/${o.auctionId}/photos/${mediaId}`).expect(404);
+    await db.c.users.updateOne(
+      { _id: o.seller.id },
+      { $set: { status: 'ACTIVE' } },
+    );
+    await db.c.auction_intakes.updateOne(
+      { _id: o.intakeId },
+      { $set: { inspectionOutcome: 'Fail' } },
+    );
+    await call('get', `/auctions/${o.auctionId}/photos/${mediaId}`).expect(404);
+    await db.c.auction_intakes.updateOne(
+      { _id: o.intakeId },
+      { $set: { inspectionOutcome: 'Pass' } },
+    );
+    await db.c.listings.updateOne(
+      { _id: o.listing.id },
+      { $set: { visibility: 'Hidden' } },
+    );
+    await call('get', `/auctions/${o.auctionId}/photos/${mediaId}`).expect(404);
+    await db.c.listings.updateOne(
+      { _id: o.listing.id },
+      { $set: { visibility: 'Visible' } },
+    );
+    vi.spyOn(storage, 'signedRead').mockImplementationOnce(async (key) => {
+      await db.c.listings.updateOne(
+        { _id: o.listing.id },
+        { $set: { visibility: 'Hidden' } },
+      );
+      return {
+        url: 'https://storage.test/' + key,
+        expiresAt: new Date(Date.now() + 120000).toISOString(),
+      };
+    });
+    await call('get', `/auctions/${o.auctionId}/photos/${mediaId}`).expect(404);
+    await db.c.listings.updateOne(
+      { _id: o.listing.id },
+      { $set: { visibility: 'Visible' } },
+    );
+  });
+
+  it('private auction pages bind ownership, payment state and keyset cursor to the caller', async () => {
+    const first = await openAuction();
+    const second = await openAuction();
+    const bidder = await actor();
+    const stranger = await actor();
+    await bid(first.auctionId, bidder, 250_000).expect(200);
+    await auto(second.auctionId, bidder, 400_000).expect(200);
+    await call('get', '/me/auctions').expect(401);
+    await call('get', '/me/auctions', staff).expect(403);
+    const unrelated = await call('get', '/me/auctions', stranger).expect(200);
+    expect(unrelated.body.items).toEqual([]);
+    const page = await call('get', '/me/auctions?limit=1', bidder).expect(200);
+    validates('MyAuctionPage', page.body);
+    expect(page.body.items).toHaveLength(1);
+    expect(page.body.items[0].role).toBe('Bidder');
+    expect(page.body.items[0].leading).toBe(true);
+    expect(JSON.stringify(page.body)).not.toMatch(
+      /ownLevel|maxAmount|levelSequence|sellerId|bidderId/,
+    );
+    expect(page.body.nextCursor).toBeTruthy();
+    const next = await call(
+      'get',
+      `/me/auctions?limit=1&cursor=${encodeURIComponent(page.body.nextCursor)}`,
+      bidder,
+    ).expect(200);
+    expect(next.body.items).toHaveLength(1);
+    expect(next.body.items[0].auction.id).not.toBe(
+      page.body.items[0].auction.id,
+    );
+    await call(
+      'get',
+      `/me/auctions?limit=1&cursor=${encodeURIComponent(page.body.nextCursor)}`,
+      stranger,
+    ).expect(400);
+    await call(
+      'get',
+      `/me/auctions?view=active&limit=1&cursor=${encodeURIComponent(page.body.nextCursor)}`,
+      bidder,
+    ).expect(400);
+    const selling = await call(
+      'get',
+      '/me/auctions?view=selling',
+      first.seller,
+    ).expect(200);
+    expect(
+      selling.body.items.map((i: { auction: { id: string } }) => i.auction.id),
+    ).toEqual([first.auctionId]);
+    expect(selling.body.items[0].role).toBe('Seller');
+    expect(
+      (await call('get', '/me/auctions?view=selling', bidder).expect(200)).body
+        .items,
+    ).toEqual([]);
+    const won = await openAuction();
+    await cmd(
+      'post',
+      `/auctions/${won.auctionId}/buy-now`,
+      { fulfillmentMethod: 'SelfCollect' },
+      bidder,
+    ).expect(200);
+    const payable = await call(
+      'get',
+      '/me/auctions?view=payment',
+      bidder,
+    ).expect(200);
+    expect(
+      payable.body.items.map((i: { auction: { id: string } }) => i.auction.id),
+    ).toEqual([won.auctionId]);
+    expect(payable.body.items[0].needsPayment).toBe(true);
+    expect(payable.body.items[0].won).toBe(true);
+    await call('get', '/me/auctions?view=invalid', bidder).expect(400);
   });
 
   it('AC-AU01/02: only Approved Sale listings enter; intake holds commitment and slot', async () => {
@@ -2720,25 +2885,33 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
 
       // Another member's ids are ignored; the caller's own stay unread.
       const mine = first.items[0]!.id;
-      const foreign = await call('post', '/me/notifications/read', other).set('Idempotency-Key', randomUUID())
+      const foreign = await call('post', '/me/notifications/read', other)
+        .set('Idempotency-Key', randomUUID())
         .send({ ids: [mine] })
         .expect(200);
       validates('NotificationUnreadCount', foreign.body);
       expect((await inbox(x)).unreadCount).toBe(3);
-      const one = await call('post', '/me/notifications/read', x).set('Idempotency-Key', randomUUID())
+      const one = await call('post', '/me/notifications/read', x)
+        .set('Idempotency-Key', randomUUID())
         .send({ ids: [mine] })
         .expect(200);
       expect(one.body).toEqual({ unreadCount: 2 });
-      await call('post', '/me/notifications/read', x).set('Idempotency-Key', randomUUID())
+      await call('post', '/me/notifications/read', x)
+        .set('Idempotency-Key', randomUUID())
         .send({ ids: [mine] })
         .expect(200); // idempotent
-      await call('post', '/me/notifications/read', x).set('Idempotency-Key', randomUUID()).send({}).expect(422);
-      await call('post', '/me/notifications/read', x).set('Idempotency-Key', randomUUID())
+      await call('post', '/me/notifications/read', x)
+        .set('Idempotency-Key', randomUUID())
+        .send({})
+        .expect(422);
+      await call('post', '/me/notifications/read', x)
+        .set('Idempotency-Key', randomUUID())
         .send({ ids: [mine], all: true })
         .expect(422);
       expect(
         (
-          await call('post', '/me/notifications/read', x).set('Idempotency-Key', randomUUID())
+          await call('post', '/me/notifications/read', x)
+            .set('Idempotency-Key', randomUUID())
             .send({ all: true })
             .expect(200)
         ).body,

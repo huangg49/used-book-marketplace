@@ -1,150 +1,124 @@
-import { MOCK_EXCHANGE_DETAILS, MOCK_MESSAGES } from '../lib/mock/exchangeDetail';
-import type { ExchangeDetail, ChatMessage } from '../lib/mock/exchangeDetail';
-import { session } from './api';
-import { exchangeSchema } from './exchange';
-import { getPublicListing } from './public-listings';
+import type { ExchangeDetail, ChatMessage } from "../lib/mock/exchangeDetail";
+import {
+  exchangeActor,
+  getExchange,
+  exchangeListing,
+  exchangeBook,
+  mapExchangeStatus,
+  exchangeCommand,
+} from "./exchange";
 
-// In-memory state
-let detailsState = [...MOCK_EXCHANGE_DETAILS.map(d => ({ ...d }))];
-let messagesState = { ...MOCK_MESSAGES };
-
-function getDetailById(id: string) {
-    const detail = detailsState.find(d => d.id === id);
-    if (detail) return detail;
-    
-    if (id === 'ex_1' || id === 'ex_2' || id === 'ex_3') return detailsState.find(d => d.id === 'ex-sent-pending');
-    if (id === 'ex_4') return detailsState.find(d => d.id === 'ex-recv-pending');
-    
-    return detailsState[0];
+export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
+  const actor = exchangeActor();
+  const ex = await getExchange(id);
+  const initiator = ex.initiatorId === actor.id;
+  const [init, rec] = await Promise.all([
+    exchangeListing(ex.initiatorListingId),
+    exchangeListing(ex.recipientListingId),
+  ]);
+  const [give, receive] = await Promise.all([
+    exchangeBook(
+      initiator ? ex.initiatorListingId : ex.recipientListingId,
+      initiator ? init : rec,
+    ),
+    exchangeBook(
+      initiator ? ex.recipientListingId : ex.initiatorListingId,
+      initiator ? rec : init,
+    ),
+  ]);
+  return {
+    id: ex.id,
+    transactionCode: ex.id.slice(0, 8).toUpperCase(),
+    revision: ex.revision,
+    createdAt: ex.createdAt,
+    status: mapExchangeStatus(ex, actor.id),
+    rawStatus: ex.status,
+    viewerRole: initiator ? "proposer" : "recipient",
+    viewer: { id: actor.id, username: actor.displayName },
+    partner: {
+      id: initiator ? ex.recipientId : ex.initiatorId,
+      username:
+        (initiator ? rec : init)?.seller.displayName ?? "Đối tác trao đổi",
+    },
+    receiveBooks: [receive],
+    giveBooks: [give],
+    moneyCompensationType: ex.diffAmount
+      ? ex.diffPayerId === actor.id
+        ? "user_pays"
+        : "other_pays"
+      : "none",
+    moneyAmount: ex.diffAmount || undefined,
+    rejectionReason: ex.rejectionReason ?? undefined,
+    fundingDeadline: ex.fundingDeadline ?? undefined,
+    proposalExpiresAt: ex.proposalExpiresAt ?? undefined,
+    viewerFundedAt:
+      (initiator ? ex.initiatorFundedAt : ex.recipientFundedAt) ?? undefined,
+    viewerFundingAmount:
+      (initiator ? ex.initiatorDeposit : ex.recipientDeposit) +
+      (ex.diffPayerId === actor.id ? ex.diffAmount : 0),
+    viewerShipping: {
+      sentAt:
+        (initiator ? ex.initiatorShippedAt : ex.recipientShippedAt) ??
+        undefined,
+      receivedAt:
+        (initiator ? ex.initiatorReceivedAt : ex.recipientReceivedAt) ??
+        undefined,
+    },
+    partnerShipping: {
+      sentAt:
+        (initiator ? ex.recipientShippedAt : ex.initiatorShippedAt) ??
+        undefined,
+      receivedAt:
+        (initiator ? ex.recipientReceivedAt : ex.initiatorReceivedAt) ??
+        undefined,
+    },
+    hasViewerReviewed: false,
+    closedBy:
+      ex.cancelledBy === "System" || !ex.cancelledBy
+        ? undefined
+        : ex.cancelledBy === (initiator ? "Initiator" : "Recipient")
+          ? "viewer"
+          : "partner",
+  };
 }
-
-function addSystemMessage(id: string, text: string) {
-    if (!messagesState[id]) messagesState[id] = [];
-    messagesState[id].push({
-        id: `sys-${Date.now()}-${Math.random()}`,
-        senderRole: 'system',
-        text,
-        sentAt: new Date().toISOString()
-    });
+export function cancelExchange(id: string, revision: number) {
+  return exchangeCommand(`/exchanges/${id}/cancel`, {
+    expectedVersion: revision,
+  });
 }
-
-export async function getExchangeDetail(id: string): Promise<ExchangeDetail | null> {
-    try {
-        const ex = await session.request(`/exchanges/${id}`, exchangeSchema);
-        const myUserId = session.session?.user.id;
-        const isInitiator = ex.initiatorId === myUserId;
-        
-        let initListing, recListing;
-        try { initListing = await getPublicListing(ex.initiatorListingId); } catch(e) {}
-        try { recListing = await getPublicListing(ex.recipientListingId); } catch(e) {}
-
-        const myListing = isInitiator ? initListing : recListing;
-        const theirListing = isInitiator ? recListing : initListing;
-
-        return {
-            id: ex.id,
-            createdAt: ex.createdAt,
-            status: ex.status === 'Proposed' ? 'PENDING' : 
-                    ex.status === 'Cancelled' ? 'CANCELLED' : 
-                    ex.status === 'ResolutionPending' ? 'NEED_REVIEW' : 
-                    ex.status === 'Completed' ? 'COMPLETED' : 
-                    ex.status === 'AcceptedAwaitingFunding' || ex.status === 'Preparing' ? 'WAITING_YOU_SEND' : 'DELIVERING',
-            partner: {
-                id: isInitiator ? ex.recipientId : ex.initiatorId,
-                username: theirListing?.seller.displayName || 'Người dùng',
-                rating: 5,
-                joinDate: '2024-01-01',
-                completedExchanges: 10
-            },
-            receiveBooks: theirListing ? [{ id: theirListing.book.id, title: theirListing.book.title, author: theirListing.book.authors.join(', '), coverUrl: theirListing.photos?.[0] ? undefined : undefined, condition: theirListing.condition, exchangeValue: theirListing.exchangeValue }] : [{ id: 'unknown', title: 'Sách', author: 'N/A', condition: 'Good' }],
-            giveBooks: myListing ? [{ id: myListing.book.id, title: myListing.book.title, author: myListing.book.authors.join(', '), coverUrl: myListing.photos?.[0] ? undefined : undefined, condition: myListing.condition, exchangeValue: myListing.exchangeValue }] : [{ id: 'unknown', title: 'Sách', author: 'N/A', condition: 'Good' }],
-            moneyCompensationType: ex.diffAmount > 0 ? (ex.diffPayerId === myUserId ? 'user_pays' : 'other_pays') : 'none',
-            moneyAmount: ex.diffAmount > 0 ? ex.diffAmount : undefined,
-            viewerShipping: { address: 'Địa chỉ của tôi', phone: '0901234567', name: 'Tôi' },
-            partnerShipping: { address: 'Địa chỉ đối tác', phone: '0909999999', name: 'Đối tác' },
-            timeline: [{ title: 'Tạo yêu cầu', description: 'Đã gửi yêu cầu trao đổi', date: ex.createdAt, isCompleted: true }]
-        };
-    } catch (e) {
-        // Fallback for mock IDs
-        await new Promise(resolve => setTimeout(resolve, 400));
-        return getDetailById(id) || null;
-    }
+export function acceptExchange(id: string, revision: number) {
+  return exchangeCommand(`/exchanges/${id}/accept`, { revision });
 }
-
-export async function getMessages(id: string): Promise<ChatMessage[]> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return messagesState[id] || [];
+export function rejectExchange(id: string, revision: number, reason: string) {
+  return exchangeCommand(`/exchanges/${id}/reject`, {
+    expectedVersion: revision,
+    reason,
+  });
 }
-
-export async function sendMessage(id: string, text: string): Promise<ChatMessage> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const msg: ChatMessage = {
-        id: `msg-${Date.now()}-${Math.random()}`,
-        senderRole: 'viewer',
-        text,
-        sentAt: new Date().toISOString()
-    };
-    if (!messagesState[id]) messagesState[id] = [];
-    messagesState[id].push(msg);
-    return msg;
+export function fundExchange(id: string) {
+  return exchangeCommand(`/exchanges/${id}/funding`, {});
 }
-
-export async function cancelExchange(id: string): Promise<void> {
-    try {
-        await session.request(`/exchanges/${id}/cancel`, z.any(), {
-            method: 'POST',
-            body: JSON.stringify({ expectedVersion: 1 })
-        });
-    } catch (e) {
-        console.error("Failed to call API cancel", e);
-    }
+export function confirmSent(id: string, revision: number) {
+  return exchangeCommand(`/exchanges/${id}/ship`, {
+    expectedVersion: revision,
+  });
 }
-
-export async function acceptExchange(id: string): Promise<void> {
-    try {
-        await session.request(`/exchanges/${id}/accept`, z.any(), {
-            method: 'POST',
-            body: JSON.stringify({ revision: 1 })
-        });
-    } catch (e) {
-        console.error("Failed to call API", e);
-    }
+export function confirmReceived(id: string, revision: number) {
+  return exchangeCommand(`/exchanges/${id}/receive`, {
+    expectedVersion: revision,
+  });
 }
-
-export async function rejectExchange(id: string, reason?: string): Promise<void> {
-    try {
-        await session.request(`/exchanges/${id}/reject`, z.any(), {
-            method: 'POST',
-            body: JSON.stringify({ expectedVersion: 1, reason: reason || 'Không phù hợp' })
-        });
-    } catch (e) {
-        console.error("Failed to call API reject", e);
-    }
+// No exchange chat/report endpoint exists yet. Never fake successful writes.
+export async function getMessages(_id: string): Promise<ChatMessage[]> {
+  return [];
 }
-
-export async function confirmSent(id: string): Promise<void> {
-    try {
-        await session.request(`/exchanges/${id}/ship`, z.any(), {
-            method: 'POST',
-            body: JSON.stringify({ expectedVersion: 1 })
-        });
-    } catch (e) {
-        console.error("Failed to call API ship", e);
-    }
+export async function sendMessage(_id: string, _text: string): Promise<void> {
+  throw new Error("Nhắn tin trao đổi chưa khả dụng.");
 }
-
-export async function confirmReceived(id: string): Promise<void> {
-    try {
-        await session.request(`/exchanges/${id}/receive`, z.any(), {
-            method: 'POST',
-            body: JSON.stringify({ expectedVersion: 1 })
-        });
-    } catch (e) {
-        console.error("Failed to call API receive", e);
-    }
-}
-
-export async function reportIssue(id: string, type: string, description: string): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    addSystemMessage(id, `Bạn đã báo cáo sự cố: [${type}] ${description}`);
+export async function reportIssue(
+  _id: string,
+  _type: string,
+  _description: string,
+): Promise<void> {
+  throw new Error("Báo cáo trao đổi chưa khả dụng.");
 }

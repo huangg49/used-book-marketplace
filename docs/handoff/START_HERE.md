@@ -1,5 +1,11 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
+Auth follow-up11/10/2026 trên `codex/auth-brevo-otp`: OpenAPI0.33.0,
+migration0018, OTP6 số cho đăng ký/reset; Brevo hoặc hộp thư local, link cũ còn hỗ trợ. Xem
+[ACCOUNT_AUTH](../features/ACCOUNT_AUTH.md) để migrate/bootstrap quyền mới,
+cấu hình origin/CORS và mở `pnpm auth:mailbox`. Snapshot main bên dưới giữ ngày
+nguồn; trạng thái bàn giao hiện tại nằm trong SESSION_STATE.
+
 Cập nhật09/10/2026 theo main `da59199`: contract **0.30.0**,15 migration MongoDB;
 17 migration PostgreSQL là lịch sử chỉ đọc phục vụ import. DirectDelivery tới F2h;
 ViaPoint đấu giá có source completion nhưng gate release/review còn mở.
@@ -112,7 +118,7 @@ Các đường dẫn trong bảng tính từ root repo.
 | Màn hình RN | `apps/mobile-react-native/src/app/` → `src/features/{shelf,account,auth,drafts,addresses}` | [UI rules](../design/UI_CODING_RULES.md), [components](../design/UI_COMPONENTS.md) |
 | UI dùng chung | `apps/mobile-react-native/src/core/ui/`; `packages/brand/v1.1/` | `/ui` và `/design` chỉ bật khi `EXPO_PUBLIC_DESIGN_PREVIEW=1`; dữ liệu mẫu không là API |
 | Operations | `apps/admin-web/src/features/review/` và `src/core/` | ADR 0010; `apps/admin-web/tests/browser.mjs` |
-| User web | `apps/user-web/src/app/router.tsx`, `src/pages/`, `src/services/` | Listing/purchase/auction/inbox thật; Exchange mock; `tests/integration.mjs` dùng QA riêng |
+| User web | `apps/user-web/src/app/router.tsx`, `src/pages/`, `src/services/` | Listing/purchase/auction/inbox/exchange dùng API thật; exchange chat/report/review deferred. `tests/integration.mjs` và `tests/exchange-integration.mjs` dùng QA riêng |
 | Catalog/listing | `apps/api/src/modules/catalog/`, `listings/` | ADR 0005–0006/0009/0011–0012; catalog/listing/media E2E |
 | Ảnh listing | `apps/api/src/modules/media/`; `src/media-worker.ts` | ADR 0008; `media.e2e-spec.ts`; tests dùng storage fake có nhãn |
 | Địa chỉ/báo giá | `apps/api/src/modules/addresses/`, `quotes/`; listing fulfillment | ADR 0014–0016; addresses/quotes E2E |

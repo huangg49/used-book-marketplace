@@ -234,11 +234,11 @@ export class SessionClient {
     return this.refreshing;
   }
 
-  // Public reads deliberately carry no bearer/refresh token, even while signed in.
+  // Public requests deliberately carry no bearer/refresh token, even while signed in.
   // They must remain usable when a private session expires or cannot be restored.
-  async publicRequest<T>(path: string, schema: z.ZodType<T>): Promise<T> {
+  async publicRequest<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
     return schema.parse(
-      await this.send(path, { method: "GET", cache: "no-store" }),
+      await this.send(path, { method: "GET", ...init, cache: "no-store" }),
     );
   }
 

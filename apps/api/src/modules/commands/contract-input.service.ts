@@ -6,6 +6,7 @@ import type { ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
 import { parse } from 'yaml';
 import { DomainError, invalidField, type Wire } from './domain-error.js';
+import { validateClassification } from '../catalog/catalog-classification.js';
 
 export function isbn13(input: string): string | null {
   const value = input.replace(/[\s-]/g, '').toUpperCase();
@@ -176,6 +177,15 @@ export class ContractInput {
         'Kiểm tra lại thông tin đã nhập.',
         errors.length ? errors : undefined,
       );
+    }
+    const metadata = (value as { metadata?: Wire['CatalogMetadata'] })
+      ?.metadata;
+    if (
+      metadata &&
+      ['CreateCatalogRequest', 'ResubmitCatalogRequest'].includes(name)
+    ) {
+      if (metadata.series) metadata.series = metadata.series.normalize('NFC');
+      validateClassification(metadata);
     }
     return value as Wire[K];
   }

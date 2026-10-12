@@ -1,0 +1,17 @@
+{
+  "source": "CUA in-app browser, current local Login",
+  "url": "http://127.0.0.1:5186/login",
+  "capturedOn": "2026-10-10",
+  "viewport": {
+    "width": 1366,
+    "height": 650
+  },
+  "image": {
+    "width": 1366,
+    "height": 650
+  },
+  "state": "default; reduced motion enabled; no book illustration; normal one-line greeting",
+  "sha256": "13a6e464f1d7b98a0245fe66dbb052f503b28748b6563bd507d4fcb2e2a3d378",
+  "privacy": "No entered credentials or PII",
+  "realApi": "NOT RUN"
+}

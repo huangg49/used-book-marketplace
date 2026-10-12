@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { components } from "@used-books/api-contract";
+import { catalogClassificationFields } from "../drafts/catalog-classification";
 type Wire = components["schemas"];
 const uuid = z.uuid(),
   time = z.iso.datetime({ offset: true });
@@ -12,6 +13,7 @@ const metadata = z.object({
   language: z.string(),
   edition: z.string().nullable(),
   category: z.string(),
+  ...catalogClassificationFields,
   isbn: z.string().nullable(),
 });
 const base = z.object({

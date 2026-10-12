@@ -1,139 +1,127 @@
-import { Link } from 'react-router-dom';
-import { AuthLayout } from '../layouts/AuthLayout';
-import { AuthShowcase } from '../components/AuthShowcase';
-import { useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { AuthPageLink } from '../layouts/AuthPageLink';
+import { useAuthPaper } from '../layouts/auth-paper';
+import { accountAuth } from '../services/account-auth';
+import { EmailOtpField } from './EmailOtpField';
+import { useOtpChallenge } from './useOtpChallenge';
+import { useAccountForm } from './useAccountForm';
+import { useAuthLink } from './useAuthLink';
+import styles from './LoginPage.module.css';
+import { AuthForm, AuthInput, AuthFieldFeedback } from './AuthForm';
 
-// TODO: Form đăng ký tài khoản mới.
-// API endpoint POST /auth/register chưa được triển khai trong version hiện tại
 export function RegisterPage() {
-  const [showPassword, setShowPassword] = useState(false);
-
-  return (
-    <AuthLayout>
-      <div className="relative w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.55),0_0_0_1px_rgba(217,175,108,0.25)] ring-1 ring-amber-500/20 overflow-hidden bg-[#ffffff] backdrop-blur-xl">
-        <AuthShowcase />
-
-        {/* RIGHT COLUMN: PRISTINE CONTROLS & AUTH FORM */}
-        <div className="lg:col-span-7 bg-[#f8f3e9]/95 backdrop-blur-sm p-8 sm:p-10 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-1.5">
-                <div className="w-7 h-7 rounded bg-[#994530] flex items-center justify-center text-[#ffffff] shadow-sm">
-                  <span className="material-symbols-outlined text-[16px]">how_to_reg</span>
-                </div>
-                <span className="font-label-md text-[12px] text-[#994530] uppercase tracking-widest font-semibold">Tạo Thẻ Độc Giả</span>
-              </div>
-            </div>
-            
-            <div className="flex flex-col gap-1.5 mb-6">
-              <h1 className="font-headline-xl text-[36px] text-[#1d1c16] tracking-tight font-semibold">
-                Ghi danh vào thư khố.
-              </h1>
-              <p className="font-body-md text-[14px] text-[#414844]">
-                Tham gia cộng đồng để tìm kiếm và sưu tầm những ấn phẩm vang bóng một thời.
-              </p>
-            </div>
-
-            <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="name" className="font-label-md text-[12px] text-[#1d1c16] flex items-center justify-between font-semibold">
-                  <span>Họ và tên</span>
-                </label>
-                <div className="relative flex items-center">
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    required
-                    placeholder="Nguyễn Văn An"
-                    className="w-full bg-[#ffffff] text-[#1d1c16] px-3 py-2.5 rounded-md font-body-md text-[14px] shadow-sm border border-[#c1c8c3]/60 focus:border-[#00261a] focus:ring-1 focus:ring-[#00261a] placeholder:text-[#717974] transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="email" className="font-label-md text-[12px] text-[#1d1c16] flex items-center justify-between font-semibold">
-                  <span>Địa chỉ thư điện tử</span>
-                </label>
-                <div className="relative flex items-center">
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    placeholder="nguyen.an@thuvien.vn"
-                    className="w-full bg-[#ffffff] text-[#1d1c16] px-3 py-2.5 rounded-md font-body-md text-[14px] shadow-sm border border-[#c1c8c3]/60 focus:border-[#00261a] focus:ring-1 focus:ring-[#00261a] placeholder:text-[#717974] transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="password" className="font-label-md text-[12px] text-[#1d1c16] font-semibold">Mật mã tủ thư</label>
-                <div className="relative flex items-center">
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    placeholder="••••••••••"
-                    className="w-full bg-[#ffffff] text-[#1d1c16] px-3 pr-10 py-2.5 rounded-md font-body-md text-[14px] shadow-sm border border-[#c1c8c3]/60 focus:border-[#00261a] focus:ring-1 focus:ring-[#00261a] placeholder:text-[#717974] transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 text-[#717974] hover:text-[#1d1c16] transition-colors flex items-center bg-transparent border-0 !p-0 !min-h-0 w-auto"
-                    title="Hiện hoặc ẩn mật khẩu"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">
-                      {showPassword ? 'visibility_off' : 'visibility'}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="w-full mt-2 py-3 px-4 rounded-md bg-[#994530] text-[#ffffff] font-title-md text-[16px] tracking-wide shadow-md hover:bg-[#762b18] active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-not-allowed opacity-80 !border-0"
-                title="Tính năng đăng ký đang được phát triển"
-              >
-                <span>Tạo Thẻ Độc Giả Mới</span>
-              </button>
-            </form>
-
-            <div className="relative my-6 flex items-center justify-center">
-              <div className="w-full h-px bg-[#e7e2d8]"></div>
-              <span className="absolute bg-[#f8f3e9] px-2 font-label-sm text-[11px] text-[#414844] uppercase tracking-wider">
-                Đăng ký nhanh với
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button type="button" className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-md bg-[#ffffff] text-[#1d1c16] font-label-md text-[12px] font-semibold shadow-sm border border-[#c1c8c3]/50 hover:bg-[#f2ede3] transition-colors !min-h-0">
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                  <path d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.4 8.9 5 12 5z" fill="#EA4335"></path>
-                  <path d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5.1 3.7-8.8z" fill="#4285F4"></path>
-                  <path d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.6 7.2C.6 9.2 0 11.5 0 14s.6 4.8 1.6 6.8l3.7-3.1z" fill="#FBBC05"></path>
-                  <path d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.4-6.7-5.3L1.6 16c1.9 3.8 5.8 7 10.4 7z" fill="#34A853"></path>
-                </svg>
-                <span>Thư viện Google</span>
-              </button>
-              <button type="button" className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-md bg-[#ffffff] text-[#1d1c16] font-label-md text-[12px] font-semibold shadow-sm border border-[#c1c8c3]/50 hover:bg-[#f2ede3] transition-colors !min-h-0">
-                <span className="material-symbols-outlined text-[18px] text-[#416656] shrink-0">badge</span>
-                <span>Thẻ Thư Viện / VNeID</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-6 pt-4 flex flex-col items-center justify-center text-center gap-1.5">
-            <p className="font-body-sm text-[13px] text-[#414844]">
-              Đã có thẻ thư viện?
-              <Link to="/login" className="font-semibold text-[#00261a] hover:text-[#173c2e] underline underline-offset-4 decoration-[#00261a]/40 transition-colors ml-1">
-                Đăng nhập ngay →
-              </Link>
-            </p>
-          </div>
-        </div>
+  const { search } = useLocation();
+  const { draft, updateDraft } = useAuthPaper();
+  const state = useAccountForm();
+  const [verified, setVerified] = useState(false);
+  const token = useAuthLink('verify', verified);
+  const [challenge, setChallenge] = useOtpChallenge('verify-otp', verified);
+  const [sent, setSent] = useState(!!challenge);
+  const [code, setCode] = useState('');
+  const [visible, setVisible] = useState(false);
+  const [email, setEmail] = useState(draft.current.registerEmail);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const otpError = state.errorField === 'code' ? state.error : undefined;
+  useEffect(() => { if ((sent || verified) && !heading.current?.closest('[inert]')) heading.current?.focus(); }, [sent, verified, challenge]);
+  async function register(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const password = String(data.get('password'));
+    if (data.get('acceptedRules') !== 'on') { state.setError('Bạn cần xác nhận quy tắc mô phỏng trước khi tạo tài khoản.'); return; }
+    if (password !== data.get('passwordConfirmation')) {
+      state.setError('Hai mật khẩu chưa giống nhau. Nhập lại mật khẩu cho khớp nhé.');
+      form.querySelector<HTMLInputElement>('#register-confirmation')?.focus(); return;
+    }
+    await state.run(async () => {
+      const result = await accountAuth.register({ displayName: String(data.get('displayName')).trim(),
+        email: email.trim(), password, acceptedRules: true });
+      if (!state.active.current) return;
+      updateDraft('registerPassword', ''); updateDraft('registerConfirmation', ''); updateDraft('email', email.trim());
+      setChallenge(result.challengeId); setSent(true); state.setMessage(''); state.cooldown();
+    });
+  }
+  async function resend(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await state.run(async () => {
+      const result = await accountAuth.requestOtp(email.trim(), 'VerifyEmail');
+      if (state.active.current) { setChallenge(result.challengeId); setSent(true); setCode(''); state.setMessage(''); state.cooldown(); }
+    });
+  }
+  return <section className={styles.panel + ' ' + styles.registerPanel} aria-labelledby="register-title">
+    <h1 ref={heading} id="register-title" tabIndex={-1}>{verified ? 'Thẻ đã sẵn sàng.' : token && !sent ? 'Xác minh email của bạn.' : sent ? 'Xác minh email của bạn.' : 'Một người đọc mới.'}</h1>
+    <p className={styles.lede}>{verified ? 'Email đã được xác minh. Đăng nhập để bắt đầu câu chuyện tiếp theo.' : token && !sent
+      ? 'Bấm xác minh để kích hoạt tài khoản. Liên kết chỉ dùng được một lần.' : sent
+        ? 'Một bước nữa để thẻ sẵn sàng. Nếu email phù hợp, mã xác nhận sẽ được gửi tới hộp thư của bạn.'
+        : 'Làm thẻ của bạn. Để những câu chuyện tìm được nhau.'}</p>
+    {verified ? <AuthPageLink className={styles.submit} to={'/login' + search}>Đăng nhập <ArrowRight size={18} aria-hidden="true" /></AuthPageLink> : token && !sent ? <>
+      <button className={styles.submit} disabled={state.busy} onClick={() => void state.run(async () => {
+        await accountAuth.verify(token);
+        if (state.active.current) { setVerified(true); state.setMessage('Email đã được xác minh.'); }
+      })}>{state.busy ? 'Đang xác minh…' : 'Xác minh email'}</button>
+      {state.error && <AuthForm onSubmit={(event) => void resend(event)} aria-busy={state.busy}>
+        <div className={styles.field}><label htmlFor="verify-resend-email">Email đã đăng ký</label>
+          <AuthInput id="verify-resend-email" name="email" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} /></div>
+        <button className={styles.textAction} type="submit" disabled={state.busy || state.remaining > 0}>
+          {state.remaining > 0 ? 'Gửi lại sau ' + state.remaining + ' giây' : 'Gửi mã xác minh'}</button>
+      </AuthForm>}
+    </> : sent && challenge ? <>
+      <p className={styles.otpRecipient}>{email.trim() ? <>Email: <strong>{email.trim()}</strong></> : 'Dùng mã đã nhận trong hộp thư của bạn.'}</p>
+      <AuthForm onChange={() => state.setError('')} aria-busy={state.busy} aria-describedby={state.error && !otpError ? 'register-error' : undefined} onSubmit={(event) => {
+        event.preventDefault(); void state.run(async () => {
+          await accountAuth.verifyOtp({ challengeId: challenge, code });
+          if (state.active.current) { setVerified(true); setCode(''); state.setMessage(''); }
+        });
+      }}>
+        <fieldset className={styles.formFields} disabled={state.busy}>
+          <EmailOtpField id="register-otp" code={code} onChange={setCode} error={otpError} />
+          <button className={styles.submit} type="submit">{state.busy ? 'Đang xác minh…' : 'Xác minh email'} <ArrowRight size={18} aria-hidden="true" /></button>
+        </fieldset>
+      </AuthForm>
+      <div className={styles.otpActions}>
+        <button className={styles.textAction} type="button" disabled={state.busy || state.remaining > 0 || !email.trim()} onClick={() => void state.run(async () => {
+          const result = await accountAuth.requestOtp(email.trim(), 'VerifyEmail');
+          if (state.active.current) { setChallenge(result.challengeId); setCode(''); state.cooldown(); }
+        })}>{state.remaining > 0 ? 'Gửi lại sau ' + state.remaining + ' giây' : 'Gửi lại mã'}</button>
+        <button className={styles.textAction} type="button" disabled={state.busy} onClick={() => { setChallenge(null); setCode(''); setSent(!email.trim()); state.setError(''); }}>{email.trim() ? 'Sửa email đăng ký' : 'Nhập email để gửi lại'}</button>
       </div>
-    </AuthLayout>
-  );
+      <p className={styles.availability}>Chưa thấy thư? Kiểm tra thư rác. Mỗi mã mới thay thế mã cũ.</p>
+    </> : sent ? <AuthForm onChange={() => state.setError('')} onSubmit={(event) => void resend(event)} aria-busy={state.busy}>
+      <div className={styles.field}><label htmlFor="resend-email">Email đã đăng ký</label>
+        <AuthInput id="resend-email" name="email" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} /></div>
+      <button className={styles.submit} type="submit" disabled={state.busy || state.remaining > 0}>
+        {state.busy ? 'Đang yêu cầu mã…' : state.remaining > 0 ? 'Gửi lại sau ' + state.remaining + ' giây' : 'Gửi mã xác minh'}
+      </button>
+      <p className={styles.availability}>Tài khoản chưa đăng ký cần tạo tài khoản trước.</p>
+    </AuthForm> : <AuthForm onChange={() => state.setError('')} onSubmit={(event) => void register(event)} aria-busy={state.busy} aria-describedby={state.error && !otpError ? 'register-error' : undefined}>
+      <fieldset className={styles.formFields} disabled={state.busy}>
+        <div className={styles.formGrid}>
+          <div className={styles.field}><label htmlFor="register-name">Tên của bạn</label>
+            <AuthInput id="register-name" name="displayName" type="text" autoComplete="name" required maxLength={80} placeholder="Tên người đọc"
+              defaultValue={draft.current.registerName} onChange={(event) => updateDraft('registerName', event.target.value)} /></div>
+          <div className={styles.field}><label htmlFor="register-email">Email</label>
+            <AuthInput id="register-email" name="email" type="email" autoComplete="email" required maxLength={254} placeholder="ban@example.com"
+              value={email} onChange={(event) => { setEmail(event.target.value); updateDraft('registerEmail', event.target.value); }} /></div>
+        </div>
+        <div className={styles.field}><label htmlFor="register-password">Mật khẩu <span>— 10 đến 128 ký tự</span></label>
+          <div className={styles.password}><AuthInput id="register-password" name="password" type={visible ? 'text' : 'password'} autoComplete="new-password" required minLength={10} maxLength={128} placeholder="Tạo mật khẩu của bạn"
+            defaultValue={draft.current.registerPassword} onChange={(event) => updateDraft('registerPassword', event.target.value)} />
+            <button type="button" aria-label={visible ? 'Ẩn mật khẩu đăng ký' : 'Hiện mật khẩu đăng ký'} aria-pressed={visible} onClick={() => setVisible(!visible)}>
+              {visible ? <EyeOff size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></div></div>
+        <div className={styles.field}><label htmlFor="register-confirmation">Nhập lại mật khẩu</label>
+          <AuthInput id="register-confirmation" name="passwordConfirmation" type={visible ? 'text' : 'password'} autoComplete="new-password" required minLength={10} maxLength={128} placeholder="Một lần nữa, cho chắc nhé"
+            defaultValue={draft.current.registerConfirmation} onChange={(event) => updateDraft('registerConfirmation', event.target.value)} /></div>
+        <label className={styles.rules}><AuthInput id="accepted-rules" name="acceptedRules" type="checkbox" required />
+          <span>Tôi hiểu giao dịch, tiền là mô phỏng đồ án; không thanh toán thật.</span></label>
+        <AuthFieldFeedback id="accepted-rules" />
+        <button className={styles.submit} type="submit">{state.busy ? 'Đang tạo tài khoản…' : 'Tạo tài khoản'} <ArrowRight size={18} aria-hidden="true" /></button>
+      </fieldset>
+    </AuthForm>}
+    {state.error && !otpError && <p id="register-error" className={styles.error} role="alert">{state.error}</p>}
+    {state.message && <p className={styles.feedback} role="status">{state.message}</p>}
+    {!verified && <p className={styles.registration}>Đã có tài khoản? <AuthPageLink className={styles.textAction} to={'/login' + search}>Đăng nhập</AuthPageLink>
+      {!token && !sent && <button className={styles.textAction} type="button" aria-label="Gửi lại email xác minh" onClick={() => setSent(true)}>Gửi lại xác minh</button>}</p>}
+  </section>;
 }

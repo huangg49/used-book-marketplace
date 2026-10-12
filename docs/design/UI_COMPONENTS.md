@@ -311,3 +311,74 @@ Root layout đặt `StatusBar` kiểu `dark` để giờ/pin giữ tương phả
 kể cả khi Android dùng chế độ tối. Đây là lựa chọn cho bảng màu sáng hiện tại;
 nếu thêm dark theme, phải đổi đồng bộ màu nền và thanh trạng thái.
 Kiểm tra bổ sung Android/web: [quality report](../ANDROID_QUALITY.md).
+
+## Member web — CategoryDiscovery
+
+12/10/2026, React/Vite `apps/user-web` only. Source:
+[CategoryDiscovery.tsx](../../apps/user-web/src/components/CategoryDiscovery.tsx)
+and [scoped styles](../../apps/user-web/src/components/CategoryDiscovery.module.css).
+Home's real/preview latest-shelf composition is the current consumer; this DOM
+component does not inherit RN primitives or imply a native `/ui` example.
+
+API: `preview: boolean`. A named section/nav displays eight shared registry roots
+initially, then every17 root through Tất cả danh mục/Thu gọn with aria-expanded/
+controls and unique useId labels. Root links use categoryId and explicit
+data=preview/live. The component owns only expansion; no fetch, session, listing
+mutation, result count or loaded-page inventory claim. Empty roots still link
+to Search's normal empty state. Registry is release-controlled catalog-v2,
+17 roots/72 nodes/25 facets; runtime Admin taxonomy CRUD is separate work.
+
+Links wrap at12px gaps (8px below600px), use44px minimum height,8px corners,
+quiet shop-line borders,14px task text (13px narrow) and a15px wine arrow.
+Hover reuses shelf ground/wine edge over150ms under the owner motion policy;
+2px wine focus at3px offset remains visible. Disclosure is a44px underlined
+wine action. Existing Home category heading/container styles supply placement;
+the component adds no new palette, font, asset or design world.
+
+The [Home surface record](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-homepage-tsx.md)
+and [v2 evidence](../../.impeccable/review/catalog-v2/README.md) document source,
+expanded-directory capture, AI ship verdict and remaining gates. The118-preview
+edition covers are existing sourced remote URLs, separate from listing photos;
+all-node stock/native/human acceptance is not implied.
+
+## Member web — OwnerListingRow
+
+12/10/2026, React/Vite `apps/user-web` only. This DOM component is separate from
+the React Native foundation above. Source:
+[OwnerListingRow.tsx](../../apps/user-web/src/components/OwnerListingRow.tsx),
+with styles in [MyBooksPage.module.css](../../apps/user-web/src/pages/MyBooksPage.module.css).
+The actual examples are `/my-books` (full row) and `/account` (compact preview);
+no RN `/ui` example or native acceptance is implied.
+
+```tsx
+<ul>
+  {items.map((item) => <OwnerListingRow key={item.id} item={item} compact />)}
+</ul>
+```
+
+API: `item: MyListing`, `compact?: boolean` (default false). The component emits
+one `li`; the consumer supplies its list, loading/empty/error shell, filtering
+and pagination. It owns the existing owner identity/photo reads through the
+shared SessionClient/query cache; it does not perform listing mutations or
+decide server permissions. Identity keys include owner/book/catalog status;
+photo keys include owner/listing/revision/first media id. Confirmed identity
+uses public catalog, other statuses use the owner's catalog request. Photo
+and identity errors have independent retry; missing photos remain placeholders.
+
+Full mode preserves condition/mode, pending explanation and update date. Compact
+mode omits those secondary fields, while retaining title/author, separate
+moderation/visibility/trade labels, rejection/removal reasons when returned,
+sale price and exchange value (including zero). Only Approved/Visible rows link
+to public detail; Reserved, Hidden, Removed and Exchanged keep their own labels.
+
+Rows use fine rules, wrapping text, wine emphasis and contain-fitted owner
+photographs. Full desktop layout has108px cover/150px price columns; compact
+uses a64px cover column and moves wrapped prices beneath metadata. Compact
+cover ground has96px minimum height with52×84px image at its base rule; responsive
+image widths also follow the shared shelf media rules. Full shelf breakpoints
+at1100/760/360px retain its existing two-column narrow layout. This is a shared
+owner task row, not the public animated BookCard.
+
+The [overview surface record](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-accountoverviewpage-tsx.md)
+links final source/capture comparison, isolated browser checks and limitations.
+Fake storage evidence does not establish real Supabase or native acceptance.

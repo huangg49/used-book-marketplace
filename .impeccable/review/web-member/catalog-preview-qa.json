@@ -1,0 +1,26 @@
+{
+  "result": "PASS",
+  "catalogCount": 48,
+  "widths": [
+    1366,
+    850,
+    390,
+    320
+  ],
+  "textScales": [
+    100,
+    200
+  ],
+  "checks": [
+    "no listing API calls in preview",
+    "source links only",
+    "category and showmore",
+    "mode/price URL filters and category reset",
+    "48 item expansion",
+    "hero search and empty reset",
+    "no overflow",
+    "remote cover failure/retry",
+    "live switch shows backend error without fallback"
+  ],
+  "realApi": "NOT RUN; live error fixture; no DB writes"
+}

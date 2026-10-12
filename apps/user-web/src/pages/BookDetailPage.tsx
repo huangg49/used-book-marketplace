@@ -1,37 +1,448 @@
-import { useQuery } from '@tanstack/react-query'
-import { ApiError } from '@used-books/session-client'
-import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ConfirmDialog } from '../components/ConfirmDialog'
-import { useSession } from '../hooks/useSession'
-import { formatVnd, ROUTES } from '../lib/routes'
-import { getPurchaseConversations, startPurchaseConversation } from '../services/purchase-conversations'
-import { getPublicListing, getPublicPhoto } from '../services/public-listings'
-import styles from './BookDetailPage.module.css'
-
-const condition = { LikeNew: 'Gần như mới', Good: 'Còn tốt', Fair: 'Đã dùng nhiều', Worn: 'Cũ nhiều' }
+import { useQuery } from "@tanstack/react-query";
+import { ApiError } from "@used-books/session-client";
+import { useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle } from "lucide-react";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ListingGallery } from "../components/ListingGallery";
+import { conditions } from "../lib/listing-labels";
+import { useSession } from "../hooks/useSession";
+import { formatVnd, ROUTES } from "../lib/routes";
+import {
+  getPurchaseConversations,
+  startPurchaseConversation,
+} from "../services/purchase-conversations";
+import { getPublicListing } from "../services/public-listings";
+import styles from "./BookDetailPage.module.css";
+import {
+  categoryFor,
+  categoryPath,
+  classificationLabels,
+  languageLabel,
+} from "@used-books/api-contract/catalog-taxonomy";
+import { searchUrl } from "../lib/routes";
 
 function purchaseError(error: unknown) {
-  if (!(error instanceof ApiError)) return 'Chưa thể bắt đầu cuộc trao đổi. Vui lòng thử lại sau.'
-  if (error.status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
-  if (error.code === 'CONFLICT') return 'Thông tin sách vừa thay đổi. Hãy tải lại trang để xem trạng thái mới nhất.'
-  if (error.code === 'INVALID_STATE') return 'Sách này hiện chưa thể mở cuộc trao đổi. Hãy tải lại trang.'
-  if (error.status === 0) return 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.'
-  return 'Máy chủ chưa thể bắt đầu cuộc trao đổi. Vui lòng thử lại sau.'
+  if (!(error instanceof ApiError))
+    return "Chưa thể mở chat. Vui lòng thử lại sau.";
+  if (error.status === 401)
+    return "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+  if (error.code === "CONFLICT")
+    return "Thông tin sách vừa thay đổi. Hãy tải lại trang để xem trạng thái mới nhất.";
+  if (error.code === "INVALID_STATE")
+    return "Sách này hiện chưa thể giữ để mua. Hãy tải lại trang.";
+  if (error.status === 0)
+    return "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.";
+  return "Máy chủ chưa thể mở chat. Vui lòng thử lại sau.";
 }
 export function BookDetailPage() {
-  const { id = '' } = useParams<{ id: string }>(); const navigate = useNavigate(); const state = useSession()
-  const valid = /^[0-9a-f-]{36}$/i.test(id)
-  const detail = useQuery({ queryKey: ['public-listing', id], queryFn: () => getPublicListing(id), enabled: valid, retry: false })
-  const photo = useQuery({ queryKey: ['public-listing-photo', id, detail.data?.revisionId], queryFn: () => getPublicPhoto(id, detail.data!.photos[0]!.id), enabled: Boolean(detail.data?.photos[0]), retry: false, staleTime: 60_000 })
-  const conversations = useQuery({ queryKey: ['purchase-conversations'], queryFn: getPurchaseConversations, enabled: state.status === 'authenticated', retry: false })
-  const [confirming, setConfirming] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null)
-  if (!valid || detail.isError) return <main className={styles.state}><h1>Cuốn sách này không còn trên kệ</h1><Link to={ROUTES.search}>Về kệ sách</Link></main>
-  if (!detail.data) return <main className={styles.state}>Đang mở thông tin sách…</main>
-  const book = detail.data; const held = book.purchaseAvailability.status === 'InNegotiation'
-  const isOwner = state.status === 'authenticated' && state.user.id === book.seller.id
-  const activeConversation = conversations.data?.find((conversation) => conversation.listingId === book.id && conversation.status === 'Active')
-  const requestPurchase = () => { if (state.status !== 'authenticated') { navigate(ROUTES.login); return }; if (isOwner) return; setError(null); setConfirming(true) }
-  const confirmPurchase = async () => { setBusy(true); setError(null); try { const receipt = await startPurchaseConversation(book.id, book.version); navigate(ROUTES.chat(receipt.entityId)) } catch (caught) { setError(purchaseError(caught)) } finally { setBusy(false) } }
-  return <main className={styles.page}><Link className={styles.back} to={ROUTES.search}>← Về kệ sách</Link><div className={styles.grid}><section className={styles.coverPanel}>{photo.data ? <img src={photo.data.url} alt={`Ảnh bìa ${book.book.title}`} /> : <div className={styles.photoFallback}>{photo.isError ? 'Không tải được ảnh' : 'Đang tải ảnh…'}</div>}</section><article className={styles.content}><p className={styles.eyebrow}>{book.mode === 'Sale' ? 'Đăng bán' : book.mode === 'Exchange' ? 'Trao đổi' : 'Bán hoặc đổi'} · {condition[book.condition]}</p><h1>{book.book.title}</h1><p className={styles.author}>{book.book.authors.join(', ')}</p><div className={styles.prices}>{book.salePrice !== null && <p><span>Giá bán</span><strong>{formatVnd(book.salePrice)}</strong></p>}{book.exchangeValue !== null && <p><span>Giá trị đổi</span><strong>{formatVnd(book.exchangeValue)}</strong></p>}</div>{book.salePrice !== null && isOwner && <section className={styles.purchase}><h2>{activeConversation ? 'Sách đang giao dịch' : 'Đây là bài đăng của bạn'}</h2><p>{activeConversation ? 'Bạn đang trao đổi với người mua cho cuốn sách này.' : 'Bạn không thể mua bài đăng của chính mình.'}</p>{activeConversation && <Link className={styles.chatLink} to={ROUTES.chat(activeConversation.id)}>Mở chat với người mua</Link>}</section>}{book.salePrice !== null && !isOwner && <section className={styles.purchase}><h2>{held ? 'Sách đang giao dịch' : 'Bạn muốn mua cuốn này?'}</h2><p>{held ? `Một cuộc trao đổi đang diễn ra${book.purchaseAvailability.expiresAt ? ` đến ${new Date(book.purchaseAvailability.expiresAt).toLocaleString('vi-VN')}` : ''}. ${activeConversation ? 'Bạn là người tham gia cuộc trao đổi này.' : 'Bạn vẫn có thể xem thông tin nhưng chưa thể mua.'}` : 'Khi mua, hệ thống giữ sách trong 24 giờ và mở chat riêng với người bán. Bước này chưa phát sinh thanh toán.'}</p>{activeConversation ? <Link className={styles.chatLink} to={ROUTES.chat(activeConversation.id)}>Mở chat với người bán</Link> : <><>{error && <p className={styles.purchaseError} role="alert">{error}</p>}</><button type="button" disabled={held} onClick={requestPurchase}>{held ? 'Đang giao dịch' : 'Mua sách'}</button></>}</section>}<section className={styles.details}><h2>Tình trạng bản sách</h2><p className={styles.description}>{book.description}</p><dl><div><dt>Ruột sách</dt><dd>{book.pages}</dd></div><div><dt>Bìa và gáy</dt><dd>{book.coverNote}</dd></div><div><dt>Ghi chú</dt><dd>{book.notes}</dd></div><div><dt>Phụ kiện</dt><dd>{book.accessories}</dd></div></dl></section><footer><p>Người đăng: <strong>{book.seller.displayName}</strong></p><p className={styles.note}>{book.fulfillment ? 'Giao hàng DirectDelivery mô phỏng trong TP.HCM.' : 'Bài đăng chưa cấu hình giao nhận.'}</p><p className={styles.note}>Ảnh và tình trạng do người đăng cung cấp; việc kiểm duyệt không xác nhận tình trạng vật lý.</p></footer></article></div><ConfirmDialog isOpen={confirming} onClose={() => !busy && setConfirming(false)} title="Giữ sách để trao đổi?" description="Sách sẽ chuyển sang đang giao dịch trong 24 giờ và chỉ bạn cùng người bán có thể chat. Bước này chưa thanh toán." confirmText="Giữ sách và mở chat" onConfirm={() => void confirmPurchase()} isBusy={busy}>{error && <p role="alert">{error}</p>}</ConfirmDialog></main>
+  const { id = "" } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const state = useSession();
+  const valid = /^[0-9a-f-]{36}$/i.test(id);
+  const detail = useQuery({
+    queryKey: ["public-listing", id],
+    queryFn: () => getPublicListing(id),
+    enabled: valid,
+    retry: false,
+  });
+  const conversations = useQuery({
+    queryKey: ["purchase-conversations"],
+    queryFn: getPurchaseConversations,
+    enabled: state.status === "authenticated",
+    retry: false,
+  });
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const purchaseIntent = useRef<{
+    listingId: string;
+    version: number;
+    key: ReturnType<typeof crypto.randomUUID>;
+  } | null>(null);
+  const catalogReturn = location.state?.catalogReturn;
+  const returnTo =
+    typeof catalogReturn === "string" &&
+    (catalogReturn === ROUTES.search ||
+      catalogReturn.startsWith(ROUTES.search + "?"))
+      ? catalogReturn
+      : ROUTES.search;
+  const back = (
+    <Link className={styles.back} to={returnTo}>
+      <ArrowLeft size={17} aria-hidden="true" /> Về kệ sách
+    </Link>
+  );
+  if (
+    !valid ||
+    (detail.error instanceof ApiError && detail.error.status === 404)
+  )
+    return (
+      <section className={styles.state}>
+        {back}
+        <h1>Không tìm thấy bài đăng này</h1>
+        <p>Sách có thể đã được gỡ. Hãy tìm một cuốn khác trên kệ.</p>
+      </section>
+    );
+  if (detail.isError && !detail.data)
+    return (
+      <section className={styles.state}>
+        {back}
+        <div role="alert">
+          <h1>Chưa tải được thông tin sách</h1>
+          <p>Kiểm tra kết nối rồi thử lại.</p>
+          <button
+            type="button"
+            onClick={() => void detail.refetch()}
+            disabled={detail.isFetching}
+          >
+            Thử lại
+          </button>
+        </div>
+      </section>
+    );
+  if (!detail.data)
+    return (
+      <section className={styles.state} role="status">
+        {back}
+        <p>Đang mở thông tin sách…</p>
+      </section>
+    );
+  const book = detail.data;
+  const held = book.purchaseAvailability.status === "InNegotiation";
+  const isOwner =
+    state.status === "authenticated" && state.user.id === book.seller.id;
+  const activeConversation = conversations.data?.find(
+    (conversation) =>
+      conversation.listingId === book.id && conversation.status === "Active",
+  );
+  function requestPurchase() {
+    if (state.status !== "authenticated") {
+      navigate(
+        ROUTES.login +
+          "?returnUrl=" +
+          encodeURIComponent(ROUTES.bookDetail(book.id)),
+      );
+      return;
+    }
+    if (isOwner) return;
+    if (purchaseIntent.current?.listingId !== book.id) {
+      purchaseIntent.current = {
+        listingId: book.id,
+        version: book.version,
+        key: crypto.randomUUID(),
+      };
+    }
+    setError(null);
+    setConfirming(true);
+  }
+  async function confirmPurchase() {
+    setBusy(true);
+    setError(null);
+    try {
+      const intent = purchaseIntent.current!;
+      const receipt = await startPurchaseConversation(
+        intent.listingId,
+        intent.version,
+        intent.key,
+      );
+      navigate(ROUTES.chat(receipt.entityId));
+    } catch (caught) {
+      setError(purchaseError(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className={styles.page}>
+      {back}
+      {detail.isError && (
+        <div role="alert" className={styles.refreshError}>
+          Chưa cập nhật được thông tin mới nhất.{" "}
+          <button type="button" onClick={() => void detail.refetch()}>
+            Thử lại
+          </button>
+        </div>
+      )}
+      <div className={styles.grid}>
+        <ListingGallery key={book.id + book.revisionId} book={book} />
+        <article className={styles.content}>
+          <h1>{book.book.title}</h1>
+          <p className={styles.author}>
+            {book.book.authors.join(", ") || "Chưa rõ tác giả"}
+          </p>
+          <div className={styles.labels}>
+            <span>{conditions[book.condition]}</span>
+            <span>
+              {book.mode === "Sale"
+                ? "Đăng bán"
+                : book.mode === "Exchange"
+                  ? "Trao đổi"
+                  : "Bán hoặc đổi"}
+            </span>
+            {held && <span>Đang giao dịch</span>}
+          </div>
+          <div className={styles.prices}>
+            {book.salePrice !== null && (
+              <p>
+                <span>Giá bán</span>
+                <strong>{formatVnd(book.salePrice)}</strong>
+              </p>
+            )}
+            {book.exchangeValue !== null && (
+              <p>
+                <span>Giá trị đổi</span>
+                <strong>{formatVnd(book.exchangeValue)}</strong>
+              </p>
+            )}
+          </div>
+          {book.salePrice !== null && (
+            <section className={styles.purchase}>
+              <h2>
+                {isOwner
+                  ? "Đây là bài đăng của bạn"
+                  : held
+                    ? "Sách đang được giữ"
+                    : "Muốn đọc cuốn này?"}
+              </h2>
+              <p>
+                {isOwner
+                  ? "Bạn có thể theo dõi cuộc trò chuyện khi có người giữ sách."
+                  : held
+                    ? "Một cuộc trao đổi đang diễn ra" +
+                      (book.purchaseAvailability.expiresAt
+                        ? " đến " +
+                          new Date(
+                            book.purchaseAvailability.expiresAt,
+                          ).toLocaleString("vi-VN")
+                        : "") +
+                      "."
+                    : "Giữ sách trong 24 giờ để chat với người bán và thống nhất việc mua. Bước này chưa thanh toán."}
+              </p>
+              {activeConversation ? (
+                <Link
+                  className={styles.primary}
+                  to={ROUTES.chat(activeConversation.id)}
+                >
+                  <MessageCircle size={18} aria-hidden="true" />
+                  {isOwner ? "Mở chat với người mua" : "Mở chat với người bán"}
+                </Link>
+              ) : (
+                !isOwner && (
+                  <button
+                    type="button"
+                    className={styles.primary}
+                    disabled={
+                      held ||
+                      detail.isFetching ||
+                      detail.isError ||
+                      state.status === "loading"
+                    }
+                    onClick={requestPurchase}
+                  >
+                    {held ? "Đang giao dịch" : "Giữ sách và mở chat"}
+                    <ArrowUpRight size={18} aria-hidden="true" />
+                  </button>
+                )
+              )}
+            </section>
+          )}
+          {["Exchange", "Both"].includes(book.mode) && (
+            <section className={styles.purchase}>
+              <p className={styles.exchangeNote}>
+                {isOwner
+                  ? "Đây là bản sách của bạn. Theo dõi đề nghị trong Trao đổi của tôi."
+                  : held
+                    ? "Bản sách đang được giữ cho giao dịch hiện tại."
+                    : "Chọn một bản sách trong kệ của bạn để đề nghị đổi. Máy chủ tính tiền bù theo giá trị đổi."}
+              </p>
+              {isOwner ? (
+                <Link className={styles.primary} to={ROUTES.exchangeMine}>
+                  Trao đổi của tôi
+                </Link>
+              ) : (
+                !held && (
+                  <Link
+                    className={styles.primary}
+                    to={ROUTES.exchangeCompose(book.id)}
+                  >
+                    Gửi đề nghị đổi sách{" "}
+                    <ArrowUpRight size={18} aria-hidden="true" />
+                  </Link>
+                )
+              )}
+            </section>
+          )}
+        </article>
+      </div>
+      <div className={styles.detailsGrid}>
+        <section className={styles.details}>
+          <h2>Tình trạng bản sách</h2>
+          <p className={styles.description}>
+            {book.description || "Người đăng chưa có mô tả thêm."}
+          </p>
+          <dl>
+            <div>
+              <dt>Ruột sách</dt>
+              <dd>{book.pages || "Chưa ghi rõ"}</dd>
+            </div>
+            <div>
+              <dt>Trang thiếu</dt>
+              <dd>
+                {book.hasMissingPages
+                  ? "Có trang thiếu — xem mô tả ruột sách."
+                  : "Không có trang thiếu theo người đăng."}
+              </dd>
+            </div>
+            <div>
+              <dt>Bìa và gáy</dt>
+              <dd>{book.coverNote || "Chưa ghi rõ"}</dd>
+            </div>
+            <div>
+              <dt>Ghi chú, đánh dấu</dt>
+              <dd>{book.notes || "Chưa ghi rõ"}</dd>
+            </div>
+            <div>
+              <dt>Phụ kiện</dt>
+              <dd>{book.accessories || "Chưa ghi rõ"}</dd>
+            </div>
+          </dl>
+        </section>
+        <div>
+          <section className={styles.details}>
+            <h2>Thông tin sách</h2>
+            <dl>
+              <div>
+                <dt>Danh mục</dt>
+                <dd>
+                  {categoryFor(book.book.categoryId || book.book.category)
+                    ? categoryPath(
+                        book.book.categoryId || book.book.category,
+                      ).map((c, index) => (
+                        <span key={c.id}>
+                          {index > 0 && " / "}
+                          <Link
+                            to={searchUrl({ data: "live", categoryId: c.id })}
+                          >
+                            {c.label}
+                          </Link>
+                        </span>
+                      ))
+                    : book.book.category || "Chưa ghi rõ"}
+                </dd>
+              </div>
+              {book.book.series && (
+                <div>
+                  <dt>Bộ truyện</dt>
+                  <dd>
+                    <Link
+                      to={searchUrl({
+                        data: "live",
+                        categoryId:
+                          book.book.categoryId ||
+                          categoryFor(book.book.category)?.id ||
+                          "",
+                        series: book.book.series,
+                      })}
+                    >
+                      {book.book.series}
+                    </Link>
+                  </dd>
+                </div>
+              )}
+              {classificationLabels(book.book).map((f) => (
+                <div key={f.id}>
+                  <dt>{f.label}</dt>
+                  <dd>
+                    {f.values.map((o, index) => (
+                      <span key={o.id}>
+                        {index > 0 && " · "}
+                        <Link
+                          to={searchUrl({
+                            data: "live",
+                            categoryId:
+                              book.book.categoryId ||
+                              categoryFor(book.book.category)?.id ||
+                              "",
+                            facets: JSON.stringify({
+                              [f.id]: [o.id],
+                              ...(f.id === "level" &&
+                              book.book.attributes?.purpose?.includes("exam")
+                                ? { purpose: ["exam"] }
+                                : {}),
+                              ...(f.id === "grade" &&
+                              book.book.attributes?.schoolStage
+                                ? {
+                                    schoolStage:
+                                      book.book.attributes.schoolStage,
+                                  }
+                                : {}),
+                            }),
+                          })}
+                        >
+                          {o.label}
+                        </Link>
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              ))}
+              <div>
+                <dt>Ngôn ngữ</dt>
+                <dd>{languageLabel(book.book.language)}</dd>
+              </div>
+              {book.book.publisher && (
+                <div>
+                  <dt>Nhà xuất bản</dt>
+                  <dd>{book.book.publisher}</dd>
+                </div>
+              )}
+              {book.book.publicationYear && (
+                <div>
+                  <dt>Năm xuất bản</dt>
+                  <dd>{book.book.publicationYear}</dd>
+                </div>
+              )}
+              {book.book.edition && (
+                <div>
+                  <dt>Ấn bản</dt>
+                  <dd>{book.book.edition}</dd>
+                </div>
+              )}
+              {book.book.isbn && (
+                <div>
+                  <dt>ISBN</dt>
+                  <dd>{book.book.isbn}</dd>
+                </div>
+              )}
+            </dl>
+          </section>
+          <section className={styles.seller}>
+            <h2>Người đăng: {book.seller.displayName}</h2>
+            <p>
+              <MapPin size={16} aria-hidden="true" />
+              {book.fulfillment
+                ? "Giao hàng mô phỏng trong TP.HCM."
+                : "Bài đăng chưa cấu hình giao nhận."}
+            </p>
+            <p className={styles.note}>
+              Ảnh và tình trạng do người đăng cung cấp; kiểm duyệt bài đăng
+              không xác nhận tình trạng vật lý.
+            </p>
+          </section>
+        </div>
+      </div>
+      <ConfirmDialog
+        isOpen={confirming}
+        onClose={() => !busy && setConfirming(false)}
+        title="Giữ sách và mở chat?"
+        description="Sách sẽ được giữ trong 24 giờ. Chỉ bạn và người bán tham gia chat này. Bước này chưa phát sinh thanh toán."
+        confirmText="Giữ sách và mở chat"
+        onConfirm={() => void confirmPurchase()}
+        isBusy={busy}
+      >
+        {error && <p role="alert">{error}</p>}
+      </ConfirmDialog>
+    </div>
+  );
 }

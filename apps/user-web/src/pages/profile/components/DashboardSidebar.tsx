@@ -1,15 +1,67 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { session } from '../../../lib/session';
+import { NavLink, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { Bell, LogOut, ChevronDown } from "lucide-react";
+import { accountNavigation } from "../../../lib/account-navigation";
+import { ROUTES } from "../../../lib/routes";
+import { useAccountLogout } from "../../../hooks/useAccountLogout";
+import { useSession } from "../../../hooks/useSession";
+import styles from "../../../layouts/DashboardLayout.module.css";
 
 export function DashboardSidebar() {
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await session.logout();
-    navigate('/login');
-  };
-
+  const auth = useSession();
+  const location = useLocation();
+  const [menuPath, setMenuPath] = useState<string | null>(null);
+  const menuOpen = menuPath === location.key;
+  const { busy, error, logout } = useAccountLogout();
   return (
-    <aside className="fixed left-0 top-[79px] h-[calc(100vh-79px)] w-72 bg-surface-container-low shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex flex-col justify-between py-space-lg overflow-y-auto"><div className="flex flex-col gap-space-lg"><div className="px-space-lg flex items-center gap-space-sm"><div className="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center text-on-primary shadow-sm"><span className="material-symbols-outlined text-[22px]">auto_stories</span></div><div><span className="font-headline-sm text-headline-sm text-primary tracking-tight block">Lật Lại</span><span className="font-label-sm text-label-sm text-on-surface-variant tracking-wider uppercase block">Di sản &amp; Lưu trữ</span></div></div><div className="px-space-md"><div className="bg-surface-container-high px-space-md py-space-sm rounded-lg flex items-center justify-between"><div className="flex items-center gap-space-xs"><span className="material-symbols-outlined text-secondary text-[18px]">toll</span><span className="font-label-md text-label-md text-on-surface-variant">Số dư Lật-Xu</span></div><span className="font-currency-display text-currency-display text-secondary">1.250</span></div></div><nav className="flex flex-col gap-space-xs px-space-md" data-active-classes="bg-primary-container text-on-primary font-title-md"><Link aria-current="page" className="flex items-center gap-space-md px-space-md py-space-sm rounded-lg transition-colors bg-primary-container text-on-primary font-title-md" data-path="tong-quan" to="#"><span className="material-symbols-outlined text-[20px]">dashboard</span><span className="font-body-md text-body-md">Tổng quan</span></Link><Link className="flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="vi-lat-lai" to="#"><span className="material-symbols-outlined text-[20px]">account_balance_wallet</span><span className="font-body-md text-body-md">Ví Lật Lại</span></Link><Link className="flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="ke-sach-cua-toi" to="#"><span className="material-symbols-outlined text-[20px]">shelves</span><span className="font-body-md text-body-md">Kệ sách của tôi</span></Link><Link className="flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="don-mua" to="#"><span className="material-symbols-outlined text-[20px]">receipt_long</span><span className="font-body-md text-body-md">Đơn mua</span></Link><Link className="flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="don-ban" to="#"><span className="material-symbols-outlined text-[20px]">storefront</span><span className="font-body-md text-body-md">Đơn bán</span></Link><Link className="flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="dau-gia" to="#"><span className="material-symbols-outlined text-[20px]">gavel</span><span className="font-body-md text-body-md">Đấu giá</span></Link><Link className="flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="wishlist" to="#"><span className="material-symbols-outlined text-[20px]">bookmark_heart</span><span className="font-body-md text-body-md">Wishlist</span></Link><Link className="flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="ho-so-ca-nhan" to="#"><span className="material-symbols-outlined text-[20px]">badge</span><span className="font-body-md text-body-md">Hồ sơ cá nhân</span></Link></nav></div><div className="px-space-md flex flex-col gap-space-md"><div className="bg-surface-container p-space-md rounded-lg flex flex-col gap-space-xs"><span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Bảo chứng thư tịch</span><span className="font-body-sm text-body-sm text-on-surface-variant">Sách cổ &amp; Ấn bản đặc biệt đã kiểm định danh tính.</span></div><button onClick={handleLogout} className="flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-error hover:bg-error/10 transition-colors w-full text-left" type="button"><span className="material-symbols-outlined text-[20px]">logout</span><span className="font-body-md text-body-md font-semibold">Đăng xuất</span></button></div></aside>
+    <aside className={styles.sidebar}>
+      <button
+        className={styles.accountMenu}
+        type="button"
+        aria-expanded={menuOpen}
+        aria-controls="account-navigation"
+        onClick={() => setMenuPath(menuOpen ? null : location.key)}
+      >
+        Không gian cá nhân <ChevronDown size={18} aria-hidden="true" />
+      </button>
+      <div
+        id="account-navigation"
+        className={styles.menuContents}
+        data-open={menuOpen}
+      >
+        <div className={styles.identity}>
+          <strong>
+            {auth.status === "authenticated" ? auth.user.displayName : ""}
+          </strong>
+          <p>Tài khoản Lật lại</p>
+        </div>
+        <nav className={styles.navigation} aria-label="Không gian cá nhân">
+          {accountNavigation.map(({ to, label, icon: Icon }) => (
+            <NavLink key={to} to={to} end>
+              <Icon size={18} aria-hidden="true" />
+              {label}
+            </NavLink>
+          ))}
+          <NavLink to={ROUTES.notifications} end>
+            <Bell size={18} aria-hidden="true" />
+            Thông báo
+          </NavLink>
+        </nav>
+        <button
+          className={styles.logout}
+          onClick={() => void logout()}
+          disabled={busy}
+          type="button"
+        >
+          <LogOut size={18} aria-hidden="true" />
+          {busy ? "Đang đăng xuất…" : "Đăng xuất"}
+        </button>
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+    </aside>
   );
 }

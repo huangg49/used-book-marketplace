@@ -1,0 +1,15 @@
+{
+  "source": "Actual CUA browser; dev preview on; cached Open Library metadata and real remote covers; no API fixture injection",
+  "capturedOn": "2026-10-10",
+  "viewport": {
+    "width": 1366,
+    "height": 800
+  },
+  "image": {
+    "width": 1351,
+    "height": 791
+  },
+  "url": "http://127.0.0.1:5186/",
+  "state": "Light novel selected; preview notice and category scope visible",
+  "sha256": "5c9c36b18692435fde175863ae9338afab49437eece732322d02980b39929e3b"
+}

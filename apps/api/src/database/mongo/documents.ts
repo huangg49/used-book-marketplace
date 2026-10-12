@@ -83,6 +83,9 @@ export interface CatalogRevisionDoc {
   language: string;
   edition: string | null;
   category: string;
+  categoryId?: import('@used-books/api-contract').components['schemas']['CatalogMetadata']['categoryId'];
+  attributes?: Record<string, string[]>;
+  series?: string | null;
   isbn: string | null;
   submittedAt: Date;
 }
@@ -1024,5 +1027,24 @@ export interface MemberNotificationDoc {
   dedupeKey: string;
   createdAt: Date;
   readAt: Date | null;
+}
+export interface AuthActionTokenDoc {
+  _id: string; userId: string; purpose: 'VerifyEmail' | 'ResetPassword';
+  tokenHash: string; createdAt: Date; expiresAt: Date; consumedAt: Date | null;
+}
+export interface AuthOtpChallengeDoc {
+  _id: string; userId: string | null; emailHash: string;
+  purpose: 'VerifyEmail' | 'ResetPassword'; codeHash: string;
+  attempts: number; lockSeq: number; createdAt: Date; expiresAt: Date;
+  consumedAt: Date | null;
+}
+export interface AuthMailJobDoc {
+  _id: string; userId: string; tokenId: string | null; encryptedPayload: string;
+  status: 'Pending' | 'Sending' | 'Sent' | 'Failed' | 'Cancelled'; attempts: number;
+  nextAttemptAt: Date; leaseId: string | null; leaseUntil: Date | null;
+  expiresAt: Date; createdAt: Date; updatedAt: Date;
+}
+export interface AuthEventDoc {
+  _id: string; userId: string; action: 'Registered' | 'EmailVerified' | 'PasswordReset'; createdAt: Date;
 }
 

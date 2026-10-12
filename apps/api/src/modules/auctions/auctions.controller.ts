@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Req,
   Res,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { Roles } from '../auth/roles.guard.js';
 import { commandContext, commandResponse } from '../commands/command-http.js';
 import { ContractInput } from '../commands/contract-input.service.js';
 import { AuctionBiddingService } from './auction-bidding.service.js';
+import { AuctionBookService } from './auction-book.service.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
 import { AuctionLiveService } from './auction-live.service.js';
 import { HandoverPointsService } from './handover-points.service.js';
@@ -34,6 +36,7 @@ export class AuctionsController {
     private readonly completion: PointOrderCompletionService,
     private readonly input: ContractInput,
     private readonly live: AuctionLiveService,
+    private readonly books: AuctionBookService,
   ) {}
 
   // Push committed auction changes to live watchers without waiting for the poll.
@@ -204,6 +207,11 @@ export class AuctionsController {
   read(@Param('auctionId') id: string) {
     return this.bidding.readPublic(this.input.uuid(id));
   }
+  @Get('auctions/:auctionId/photos/:mediaId')
+  @Public()
+  photo(@Param('auctionId') id: string, @Param('mediaId') mediaId: string) {
+    return this.books.photo(this.input.uuid(id), this.input.uuid(mediaId));
+  }
   @Get('me/auctions/:auctionId/participation')
   @Roles('MEMBER')
   participation(
@@ -211,6 +219,11 @@ export class AuctionsController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.bidding.participation(req.auth, this.input.uuid(id));
+  }
+  @Get('me/auctions')
+  @Roles('MEMBER')
+  mine(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
+    return this.bidding.listMine(req.auth, this.input.query('listMyAuctions', query));
   }
   @Post('auctions/:auctionId/bids')
   @Roles('MEMBER')

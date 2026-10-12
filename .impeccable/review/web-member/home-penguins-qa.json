@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-10T12:32:27.743Z",
+  "base": "a704bdf",
+  "scope": "Home quicklinks only, original generated penguin art",
+  "checks": {
+    "build": "PASS tsc -b + Vite build",
+    "lint": "PASS0errors6existingwarnings",
+    "browser": {
+      "viewports": [
+        1366,
+        1024,
+        800,
+        390,
+        320
+      ],
+      "columns": [
+        4,
+        4,
+        2,
+        2,
+        2
+      ],
+      "horizontalOverflow": false,
+      "localImagesLoaded": 4,
+      "keyboardFocus": "wine outline visible",
+      "routes": {
+        "buy": "Sale",
+        "exchange": "Exchange",
+        "budget": "Sale + maxSalePrice100000",
+        "post": "login?returnUrl=%2Fsell for anonymous member"
+      },
+      "allLinksFullTile": true
+    },
+    "assets": {
+      "count": 4,
+      "dimensions": [
+        256,
+        256
+      ],
+      "alpha": true,
+      "transparentCorners": true,
+      "totalBytes": 202026,
+      "method": "built-in image_gen; same identity reference; resize/PNG encode only",
+      "provenance": "Four prompt/source/delivery SHA256 sidecars"
+    },
+    "contrastWineOnTiles": [
+      11.22,
+      11.21,
+      10.29,
+      10.8
+    ],
+    "layoutScan": {
+      "timing": "Single before-edit assessment, no final-source rescan",
+      "findings": [],
+      "exitCode": 0
+    }
+  },
+  "limits": [
+    "200% text and actual mouse hover NOT RUN; source supports wrap/min-height/fine-pointer/reduced-motion",
+    "Native/backend success/DB/human acceptance NOT RUN"
+  ],
+  "preserved": "Owl logo, hero, card density, URL contracts, API/session, preview truth boundary",
+  "review": "Independent finish review: ship; no material fixes; desktop/mobile/320 captures checked"
+}

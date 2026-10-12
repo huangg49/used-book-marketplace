@@ -1,0 +1,14 @@
+{
+  "source": "LoginPage.tsx + module.css with generated ivory paper",
+  "url": "http://127.0.0.1:5186/login",
+  "captured": "2026-10-10",
+  "method": "Chromium response fixture",
+  "dimensions": [
+    320,
+    1347
+  ],
+  "sha256": "b1a0c6e2d964cb029a1656b2514747a779f1065d9f605ef05b433f5adb16efad",
+  "state": "320px200%text",
+  "privacy": "No real credentials or personal data",
+  "realApi": "NOT RUN"
+}

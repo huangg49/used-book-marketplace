@@ -13,7 +13,7 @@ import {
 } from "./dev-runtime.mjs";
 
 export async function startApi(root = repoRoot) {
-  // await checkNode(root);
+  await checkNode(root);
   const rootEnv = await readEnvironment(resolve(root, ".env"));
   const apiEnv = await readEnvironment(resolve(root, "apps/api/.env"));
   const config = apiConfiguration(rootEnv, apiEnv);

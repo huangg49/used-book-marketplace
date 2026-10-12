@@ -1,0 +1,328 @@
+.root,
+.mobile {
+  --shop-wine-hover: #7c2320;
+  --shop-shelf: #f4eddf;
+}
+.root {
+  color: var(--shop-cream);
+}
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 10px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 150ms,
+    background-color 150ms,
+    border-color 150ms;
+}
+.trigger:hover,
+.trigger[aria-expanded="true"] {
+  color: var(--shop-yellow);
+  background: var(--shop-wine-hover);
+  border-color: var(--shop-yellow);
+}
+.chevron {
+  transition: transform 160ms ease-out;
+}
+.trigger[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+.panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  width: min(1200px, calc(100% - 40px));
+  transform: translateX(-50%);
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--shop-control) var(--shop-paper);
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  box-shadow: 0 16px 36px #28191433;
+  animation: directoryOpen 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes directoryOpen {
+  from {
+    opacity: 0.8;
+    transform: translate(-50%, -6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+.panelHead {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--shop-line);
+}
+.panelHead h2 {
+  margin: 0;
+  font: inherit;
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+.panelHead .allBooks {
+  margin-left: auto;
+}
+.allBooks {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--shop-wine);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  text-underline-offset: 4px;
+}
+.allBooks:hover {
+  text-decoration: underline;
+}
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  color: var(--shop-wine);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.close:hover {
+  background: var(--shop-shelf);
+}
+.directory {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 18px 24px 24px;
+}
+.directorySearch {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px 0;
+}
+.directorySearch label {
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+}
+.directorySearch input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--shop-control);
+  border-radius: 6px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  font: inherit;
+  caret-color: var(--shop-wine);
+}
+.directorySearch input::placeholder {
+  color: var(--shop-muted);
+}
+.noResults {
+  padding: 12px 24px;
+  color: var(--shop-muted);
+}
+.columnTitle {
+  margin: 0 0 10px;
+  font: 600 0.8125rem/1.5 var(--shop-body);
+  color: var(--shop-muted);
+}
+.groupHead {
+  display: flex;
+  align-items: center;
+}
+.groupHead .groupLink {
+  flex: 1;
+  min-width: 0;
+}
+.expandGroup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--shop-wine);
+  cursor: pointer;
+}
+.expandGroup[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.expandGroup:hover {
+  background: var(--shop-shelf);
+}
+.column {
+  min-width: 0;
+  padding-inline: 20px;
+}
+.column:first-child {
+  padding-left: 0;
+}
+.column:last-child {
+  padding-right: 0;
+}
+.column + .column {
+  border-left: 1px solid var(--shop-line);
+}
+.group + .group {
+  margin-top: 10px;
+}
+.directory a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 10px;
+  color: var(--shop-ink);
+  text-decoration: none;
+  text-underline-offset: 4px;
+  border-radius: 6px;
+  line-height: 1.6;
+}
+.directory .groupLink {
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--shop-wine);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.groupLink svg {
+  flex-shrink: 0;
+}
+.children {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 8px;
+  padding-left: 10px;
+}
+.children a {
+  font-size: 0.8125rem;
+}
+.directory a:hover,
+.directory a[aria-current="page"] {
+  background: var(--shop-shelf);
+  text-decoration: underline;
+}
+.panel :focus-visible,
+.mobile :focus-visible {
+  outline: 2px solid var(--shop-wine) !important;
+  outline-offset: 2px;
+}
+.panel ::selection,
+.mobile ::selection {
+  background: var(--shop-yellow);
+  color: var(--shop-wine);
+}
+.mobile {
+  color: var(--shop-ink);
+  border-radius: 8px;
+  background: var(--shop-paper);
+}
+.mobile summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 12px;
+  cursor: pointer;
+  color: var(--shop-wine);
+  font-weight: 600;
+  font-size: 0.875rem;
+  list-style: none;
+}
+.mobile summary::-webkit-details-marker {
+  display: none;
+}
+.mobile summary svg:last-child {
+  margin-left: auto;
+}
+.mobile[open] summary svg:last-child {
+  transform: rotate(180deg);
+}
+.mobile > .allBooks {
+  margin-inline: 12px;
+  color: var(--shop-wine);
+}
+.mobile .directory {
+  grid-template-columns: 1fr;
+  padding: 6px 8px 12px;
+}
+.mobile .directorySearch {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+}
+.mobile .column {
+  padding: 0;
+  border: 0;
+}
+.mobile .column + .column {
+  border-top: 1px solid var(--shop-line);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+.mobile .children {
+  grid-template-columns: 1fr;
+  padding-left: 12px;
+}
+.mobile .directory a {
+  color: var(--shop-ink);
+  background: transparent;
+  font-size: 0.875rem;
+}
+.mobile .directory .groupLink {
+  color: var(--shop-wine);
+}
+.mobile .directory a:hover,
+.mobile .directory a[aria-current="page"] {
+  background: var(--shop-shelf);
+}
+@media (max-width: 1279px) {
+  .trigger span {
+    display: none;
+  }
+}
+@media (max-width: 1000px) {
+  .root {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: directoryOpen 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+  .trigger {
+    transition:
+      color 150ms,
+      background-color 150ms,
+      border-color 150ms !important;
+  }
+  .chevron {
+    transition: transform 160ms ease-out !important;
+  }
+}

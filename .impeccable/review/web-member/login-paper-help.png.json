@@ -1,0 +1,14 @@
+{
+  "source": "LoginPage.tsx + module.css with generated ivory paper",
+  "url": "http://127.0.0.1:5186/login",
+  "captured": "2026-10-10",
+  "method": "Chromium response fixture",
+  "dimensions": [
+    1366,
+    721
+  ],
+  "sha256": "7821cbe030af72b1a74175690c934e512fc8f812cb3df2c39694ccebf4e71b1e",
+  "state": "503error+register unavailable disclosure",
+  "privacy": "No real credentials or personal data",
+  "realApi": "NOT RUN"
+}

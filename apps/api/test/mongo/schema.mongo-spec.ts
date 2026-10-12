@@ -25,6 +25,8 @@ import { settlementCollectionSpecs } from '../../src/database/mongo/migrations/0
 import { rulesCollectionSpecs } from '../../src/database/mongo/migrations/0013-auction-business-rules.js';
 import { purchaseConversationSpecs } from '../../src/database/mongo/migrations/0014-purchase-conversations.js';
 import { notificationSpecs } from '../../src/database/mongo/migrations/0015-member-notifications.js';
+import { accountRecoverySpecs } from '../../src/database/mongo/migrations/0017-account-recovery.js';
+import { authOtpSpecs } from '../../src/database/mongo/migrations/0018-auth-otp.js';
 import { exchangeCollectionSpecs } from '../../src/database/mongo/migrations/0016-exchanges.js';
 import {
   currentCollections,
@@ -35,6 +37,10 @@ import {
   serverNow,
 } from '../../src/database/mongo/transaction.js';
 import { prepareDatabase, testUrl } from './harness.js';
+import {
+  allCategories,
+  facetsFor,
+} from '@used-books/api-contract/catalog-taxonomy';
 
 // MIG-02: collections, validators, indexes, reference data and least privilege.
 
@@ -85,9 +91,12 @@ describe('migrations', () => {
         rulesCollectionSpecs.length +
         // Purchase conversations are Mongo-native; they do not correspond to a
         // PostgreSQL model in the baseline count.
-        - purchaseConversationSpecs.length -
+        -purchaseConversationSpecs.length -
         // The notification inbox (FR-N03, migration 0015) is MongoDB-native too.
         notificationSpecs.length -
+        // FR-A01/02/04 auth collections have no historical PostgreSQL model.
+        accountRecoverySpecs.length -
+        authOtpSpecs.length -
         exchangeCollectionSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
@@ -103,6 +112,119 @@ describe('migrations', () => {
     ).rejects.toBeInstanceOf(MigrationChecksumError);
     // The lock is released after a failed run.
     expect(await migrate(migrator, migrator.db())).toEqual([]);
+  });
+  it.each(['exchange-main', 'member-catalog'])(
+    'upgrades %s to the union without rewriting applied checksums',
+    async (lane) => {
+      const db = root.db(
+        `integration_upgrade_${randomUUID().replaceAll('-', '')}_test`,
+      );
+      const exchangeIds = new Set([
+        '0016-exchanges',
+        '0017-exchanges-phase2',
+        '0018-exchanges-proposal-expiry',
+      ]);
+      const memberIds = new Set([
+        '0016-catalog-classification',
+        '0017-account-recovery',
+        '0018-auth-otp',
+        '0019-catalog-vocabulary-v2',
+      ]);
+      const before = migrations.filter(
+        (m) => !(lane === 'exchange-main' ? memberIds : exchangeIds).has(m.id),
+      );
+      try {
+        await migrate(root, db, before);
+        const ledger = db.collection<{ _id: string; checksum: string }>(
+          '_migrations',
+        );
+        const checksums = new Map(
+          (await ledger.find().toArray()).map((row) => [row._id, row.checksum]),
+        );
+        expect(await migrate(root, db)).toEqual(
+          migrations.filter((m) => !checksums.has(m.id)).map((m) => m.id),
+        );
+        const after = await ledger.find().toArray();
+        expect(after).toHaveLength(migrations.length);
+        for (const row of after)
+          if (checksums.has(row._id))
+            expect(row.checksum).toBe(checksums.get(row._id));
+        expect(await migrate(root, db)).toEqual([]);
+        const collections = await db.listCollections().toArray();
+        for (const spec of currentCollections()) {
+          const actual = collections.find(
+            (collection) => collection.name === spec.name,
+          );
+          const validator =
+            actual && 'options' in actual
+              ? actual.options?.validator
+              : undefined;
+          expect(validator?.$jsonSchema).toEqual(spec.schema);
+          if (spec.expr) expect(validator?.$expr).toEqual(spec.expr);
+        }
+      } finally {
+        await db.dropDatabase();
+      }
+    },
+  );
+  it('upgrades v1 classification additively without changing historical revisions or checksums', async () => {
+    const db = root.db(
+      `catalog_upgrade_${randomUUID().replaceAll('-', '')}_test`,
+    );
+    try {
+      const old = migrations.filter(
+        (m) => m.id !== '0019-catalog-vocabulary-v2',
+      );
+      await migrate(root, db, old);
+      const oldChecksum = (await db
+        .collection('_migrations')
+        .findOne({ _id: '0016-catalog-classification' as never }))!.checksum;
+      const revision = {
+        _id: randomUUID(),
+        bookId: randomUUID(),
+        number: 1,
+        title: 'Legacy sample',
+        authors: ['Test'],
+        publisher: null,
+        publicationYear: null,
+        language: 'vi',
+        edition: null,
+        category: 'Manga / Comic',
+        categoryId: 'manga',
+        attributes: { genre: ['action'], audience: ['shounen'] },
+        isbn: null,
+        submittedAt: now(),
+      };
+      await db
+        .collection<{ _id: string }>('catalog_revisions')
+        .insertOne(revision);
+      const next = {
+        ...revision,
+        _id: randomUUID(),
+        bookId: randomUUID(),
+        category: 'Sức khỏe / y học',
+        categoryId: 'health',
+        attributes: { topic: ['wellbeing'] },
+      };
+      await rejectsValidation(
+        db.collection<{ _id: string }>('catalog_revisions').insertOne(next),
+      );
+      expect(await migrate(root, db)).toEqual(['0019-catalog-vocabulary-v2']);
+      await db.collection<{ _id: string }>('catalog_revisions').insertOne(next);
+      expect(
+        await db
+          .collection('catalog_revisions')
+          .findOne({ _id: revision._id as never }),
+      ).toEqual(revision);
+      expect(
+        (await db
+          .collection('_migrations')
+          .findOne({ _id: '0016-catalog-classification' as never }))!.checksum,
+      ).toBe(oldChecksum);
+      expect(await migrate(root, db)).toEqual([]);
+    } finally {
+      await db.dropDatabase();
+    }
   });
 
   it('insert the finite simulator capital as one balanced opening journal', async () => {
@@ -189,6 +311,46 @@ describe('validators replace CHECK constraints', () => {
     await c.insertOne(revision('0306406152') as never);
     await c.insertOne(revision('080442957X') as never);
     await c.insertOne(revision(null) as never);
+    const classified = {
+      ...revision(null),
+      category: 'Manga / Comic',
+      categoryId: 'manga',
+      attributes: { genre: ['action'], audience: ['shounen'] },
+      series: 'Bộ truyện thử',
+    };
+    await c.insertOne(classified as never);
+    for (const category of allCategories) {
+      const attributes = Object.fromEntries(
+        facetsFor(category.id)
+          .filter((f) => f.options.length)
+          .map((f) => [f.id, [f.options[0]!.id]]),
+      );
+      await c.insertOne({
+        ...revision(null),
+        categoryId: category.id,
+        category: category.label,
+        attributes,
+      } as never);
+    }
+    for (const attributes of [
+      { genre: ['unknown'] },
+      { genre: ['action', 'action'] },
+      { genre: [] },
+      { unknown: ['action'] },
+    ])
+      await rejectsValidation(
+        c.insertOne({ ...classified, _id: randomUUID(), attributes } as never),
+      );
+    await rejectsValidation(
+      c.insertOne({
+        ...classified,
+        _id: randomUUID(),
+        categoryId: 'unknown',
+      } as never),
+    );
+    await rejectsValidation(
+      c.insertOne({ ...classified, _id: randomUUID(), series: '' } as never),
+    );
     await rejectsValidation(c.insertOne(revision('9780306406158') as never));
     await rejectsValidation(c.insertOne(revision('0306406153') as never));
     await rejectsValidation(c.insertOne(revision('9771234567003') as never));

@@ -1,0 +1,74 @@
+.panel { position: relative; }
+.formFields { min-width: 0; margin: 0; padding: 0; border: 0; }
+.rules { display: flex; align-items: flex-start; gap: 10px; margin-top: 6px; min-height: 44px; padding-block: 2px; color: var(--shop-ink); font-size: .75rem; line-height: 1.7; cursor: pointer; }
+.rules input { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--shop-wine); }
+.rules input:focus-visible { outline: 3px solid var(--shop-wine); outline-offset: 3px; }
+.feedback { margin: 14px 0 0; color: var(--shop-ink); font-size: .8125rem; line-height: 1.8; overflow-wrap: anywhere; }
+.panel button.textAction { border: 0; padding: 8px 0; background: transparent; cursor: pointer; }
+.panel button.textAction:disabled { color: var(--shop-muted); cursor: default; }
+.panel h1 { margin: 0 0 8px; font: 800 32px/1.2 var(--auth-title); letter-spacing: -.025em; color: var(--shop-wine); overflow-wrap: anywhere; }
+.panel h1:focus { outline: none; }
+.panel h1:focus-visible { outline: 2px solid var(--shop-wine); outline-offset: 5px; }
+.lede { margin: 0 0 20px; color: var(--shop-muted); font-size: .8125rem; line-height: 1.8; }
+.field + .field { margin-top: 18px; }
+.field label { display: block; font-size: .8125rem; line-height: 1.7; font-weight: 700; color: var(--shop-ink); }
+.field label span { font-size: .6875rem; font-weight: 400; color: var(--shop-muted); }
+.panel .field input[name][type] { display: block; width: 100%; min-height: 46px; padding: 9px 2px; border: 0; border-bottom: 1.5px solid var(--shop-control); border-radius: 0; background: transparent; color: var(--shop-ink); font: 400 1rem/1.6 var(--shop-body); box-shadow: none; }
+.panel .field input[name][type]::placeholder { color: var(--shop-muted); }
+/* Keep the paper fields open; a stronger ink underline marks focus without resizing. */
+.panel .field input[name][type]:focus { outline: none; border-bottom-color: var(--shop-wine); box-shadow: 0 1px 0 var(--shop-wine); }
+.passwordLabel { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; column-gap: 8px; }
+.password { position: relative; }
+.panel .password input[name][type] { padding-right: 46px; }
+.password button { position: absolute; right: 0; top: 0; display: grid; place-items: center; min-width: 44px; min-height: 46px; border: 0; background: transparent; color: var(--shop-wine); cursor: pointer; }
+.textAction { display: inline-flex; align-items: center; min-height: 44px; font-size: .75rem; font-weight: 700; line-height: 1.7; color: var(--shop-wine); text-decoration: underline; text-underline-offset: 4px; }
+.textAction:hover { color: #7c2320; text-decoration-thickness: 2px; }
+.submit { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 48px; margin-top: 22px; padding: 12px 18px; border: 0; border-radius: 4px; background: var(--shop-wine); color: var(--shop-cream); font: 700 .875rem/1.7 var(--shop-body); cursor: pointer; text-decoration: none; transition: background-color 150ms ease-out; }
+.submit:hover:not(:disabled) { background: #7c2320; }
+.submit:disabled { opacity: .65; cursor: wait; }
+.alternativeSignIn { margin-top: 22px; }
+.signInDivider { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; color: var(--shop-muted); font-size: .75rem; line-height: 1.7; }
+.signInDivider::before, .signInDivider::after { content: ""; flex: 1; height: 1px; background: var(--shop-line); }
+.googleSignIn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 48px; padding: 12px 16px; border: 1px solid #747775; border-radius: 4px; background: #fff; color: #1f1f1f; font: 400 .875rem/1.5 var(--shop-body); }
+.googleSignIn img { flex: 0 0 20px; width: 20px; height: 20px; object-fit: contain; }
+.googleSignIn:disabled { opacity: 1; cursor: not-allowed; }
+.signInNote { margin: 8px 0 0; color: var(--shop-muted); font-size: .6875rem; line-height: 1.8; text-align: center; text-wrap: pretty; }
+.alternativeSignIn + .registration { border-top: 0; padding-top: 0; }
+.registration { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 8px; margin: 16px 0 0; padding-top: 10px; border-top: 1px dashed var(--shop-line); color: var(--shop-muted); font-size: .75rem; line-height: 1.8; }
+.error { margin: 14px 0 0; color: var(--auth-error); font: 400 .8125rem/1.8 var(--shop-body); overflow-wrap: anywhere; }
+.fieldFeedback { display: flex; align-items: flex-start; gap: 6px; margin: 6px 0 0; color: var(--shop-muted); font: 400 .75rem/1.7 var(--shop-body); overflow-wrap: anywhere; }
+.fieldFeedback[data-empty] { margin: 0; }
+.fieldFeedback svg { flex: 0 0 14px; margin-top: 3px; }
+.fieldFeedback[data-tone="error"] { color: var(--auth-error); }
+.fieldFeedback[data-tone="success"] { color: var(--shop-wine); }
+.panel .field input[name][type][aria-invalid="true"] { border-bottom-color: var(--auth-error); }
+.formGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+.formGrid > .field + .field { margin-top: 0; }
+.librarianNote { font: 400 27px/1.4 var(--auth-hand); color: var(--shop-wine); margin: 24px 0 30px; }
+.availability { margin: 9px 0 0; color: var(--shop-muted); font-size: .6875rem; line-height: 1.8; text-align: center; }
+.panel .field .otpInput[name][type] { font-size: 1.75rem; font-weight: 700; letter-spacing: .3em; font-variant-numeric: tabular-nums; color: var(--shop-wine); }
+.otpHint { margin: 7px 0 0; color: var(--shop-muted); font-size: .75rem; line-height: 1.7; }
+.otpRecipient { margin: 0 0 16px; color: var(--shop-ink); font-size: .8125rem; line-height: 1.7; overflow-wrap: anywhere; }
+.otpActions { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.recoveryPanel .formGrid { margin-top: 16px; margin-bottom: 0; }
+.submit[aria-disabled="true"] { opacity: 1; cursor: not-allowed; }
+@media (min-width: 601px) and (max-height: 800px) {
+  .registerPanel .lede { margin-bottom: 8px; }
+  .registerPanel .registration { margin-top: 4px; }
+  .lede { margin-bottom: 12px; }
+  .field + .field { margin-top: 10px; }
+  .formGrid { margin-bottom: 10px; }
+  .submit { margin-top: 14px; }
+  .registration { margin-top: 8px; padding-top: 0; }
+  .alternativeSignIn { margin-top: 16px; }
+  .signInDivider { margin-bottom: 10px; }
+  .signInNote { margin-top: 6px; }
+  .recoveryPanel .lede { margin-bottom: 6px; }
+  .recoveryPanel .otpRecipient { margin-bottom: 8px; }
+  .recoveryPanel .field .otpInput[name][type] { font-size: 1.5rem; line-height: 1.2; }
+  .recoveryPanel .formGrid { margin-top: 10px; }
+  .recoveryPanel .submit { margin-top: 10px; }
+  .recoveryPanel .registration { margin-top: 0; }
+}
+@media (max-width: 600px) { .panel h1 { font-size: 29px; } }
+@media (max-width: 400px) { .field label span { display: none; } .registerPanel .field label span { display: inline; } .panel h1 { font-size: 27px; } .formGrid { grid-template-columns: 1fr; gap: 18px; } }

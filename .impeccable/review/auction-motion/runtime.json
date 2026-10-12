@@ -1,0 +1,121 @@
+[
+  {
+    "case": "buy-now-filter",
+    "rows": 1
+  },
+  {
+    "case": "server-confirmed-manual",
+    "price": [
+      {
+        "background": "rgba(244, 203, 103, 0.29)",
+        "text": "Giá hiện tại: 250.000 ₫",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)"
+      }
+    ],
+    "receipt": [
+      {
+        "gavel": null,
+        "text": "Bạn đang dẫn giáLượt trả gần nhất của bạn: 250.000 ₫.",
+        "transform": "none"
+      },
+      {
+        "gavel": "matrix(0.999721, 0.0236194, -0.0236194, 0.999721, 0, 0)",
+        "text": "Bạn đang dẫn giá ở 250.000 ₫.",
+        "transform": "matrix(1, 0, 0, 1, 0, 0.0714227)"
+      }
+    ]
+  },
+  {
+    "case": "auto-open",
+    "background": "rgba(0, 0, 0, 0)",
+    "opacity": "1",
+    "transform": "matrix(1, 0, 0, 1, 0, 9.05062e-06)"
+  },
+  {
+    "case": "known-error-retains-amount",
+    "value": "450.000"
+  },
+  {
+    "case": "live-history-update-keeps-scroll",
+    "background": "rgb(244, 237, 223)",
+    "first": "#2Người trả giá #216:58 12-10600.000 ₫Đang dẫn",
+    "scrollY": 1957,
+    "transform": "none"
+  },
+  {
+    "case": "history-anchor-after-live",
+    "focus": "Các lần giá thay đổi, mới nhất trước",
+    "historyTop": 332.03125
+  },
+  {
+    "case": "lost-ack-503",
+    "alerts": [
+      "Máy chủ đang gặp sự cố nên chưa rõ kết quả. Hãy thử lại đúng thao tác này."
+    ],
+    "receiptCount": 0
+  },
+  {
+    "case": "unknown-replay-confirmed",
+    "statuses": [
+      "Bạn đang dẫn giáMức tự động tối đa của bạn: 700.000 ₫ (chỉ bạn thấy).",
+      "Bạn đang dẫn giá ở 650.000 ₫."
+    ]
+  },
+  {
+    "case": "motion-preference",
+    "preference": true
+  },
+  {
+    "case": "auto-stage-focus-motion",
+    "bodyTop": 303.171875,
+    "bodyTransform": "none",
+    "focus": "Xác nhận mức tối đa 750.000 ₫"
+  },
+  {
+    "case": "auto-stage-final",
+    "duration": "0.2s",
+    "focus": "Xác nhận mức tối đa 750.000 ₫",
+    "name": "_auctionStepArrive_1a2r4_1",
+    "transform": "none"
+  },
+  {
+    "case": "stale-read-keeps-content",
+    "heading": true,
+    "alerts": [
+      "Chưa làm mới được phiên. Giá và trạng thái bên dưới là lần tải gần nhất; máy chủ sẽ kiểm tra lại khi bạn trả giá.Thử cập nhật lại",
+      "Chưa làm mới được lượt trả giá của bạn. Mức đã hiển thị là lần tải gần nhất. Thử cập nhật lại lượt giá"
+    ]
+  },
+  {
+    "case": "desktop-grid-reorder",
+    "order": [
+      "Dược sư tự sự — Tập 1",
+      "Alice ở xứ sở diệu kỳ"
+    ],
+    "transforms": [
+      "none",
+      "none"
+    ]
+  },
+  {
+    "case": "interrupted-mobile-reorder",
+    "firstMove": [
+      "matrix(1, 0, 0, 1, 174.5, 0)",
+      "matrix(1, 0, 0, 1, -174.5, 0)"
+    ],
+    "order": [
+      "Dược sư tự sự — Tập 1",
+      "Alice ở xứ sở diệu kỳ"
+    ],
+    "transforms": [
+      "matrix(1, 0, 0, 1, 107.774, 0)",
+      "matrix(1, 0, 0, 1, -107.774, 0)"
+    ]
+  },
+  {
+    "case": "escape-restores-opener",
+    "focusIsAutoButton": true,
+    "focusTag": "BUTTON",
+    "openDialogs": 0
+  }
+]

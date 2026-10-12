@@ -29,6 +29,10 @@ export interface CollectionTypes {
   users: D.UserDoc;
   auth_sessions: D.AuthSessionDoc;
   login_attempts: D.LoginAttemptDoc;
+  auth_action_tokens: D.AuthActionTokenDoc;
+  auth_otp_challenges: D.AuthOtpChallengeDoc;
+  auth_mail_jobs: D.AuthMailJobDoc;
+  auth_events: D.AuthEventDoc;
   catalog_books: D.CatalogBookDoc;
   catalog_revisions: D.CatalogRevisionDoc;
   catalog_decisions: D.CatalogDecisionDoc;
@@ -182,6 +186,10 @@ const NAMES: CollectionName[] = [
   'users',
   'auth_sessions',
   'login_attempts',
+  'auth_action_tokens',
+  'auth_otp_challenges',
+  'auth_mail_jobs',
+  'auth_events',
   'catalog_books',
   'catalog_revisions',
   'catalog_decisions',

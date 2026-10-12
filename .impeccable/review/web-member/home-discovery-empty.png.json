@@ -1,0 +1,13 @@
+{
+  "source": "Chromium response fixture; synthetic QA only",
+  "capturedOn": "2026-10-10",
+  "url": "http://127.0.0.1:5186/",
+  "viewport": {
+    "width": 1366,
+    "height": 800
+  },
+  "state": "empty",
+  "fullPage": false,
+  "sha256": "f3141e1bf3b18eb29a7d1819c7fee73cf331825563f4593aae790633e331638f",
+  "realApi": "NOT RUN"
+}

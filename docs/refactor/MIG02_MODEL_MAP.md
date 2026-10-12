@@ -84,6 +84,19 @@ MongoDB không tự thực hiện**; P giới hạn writer nào có thể đi v�
 Hạ tầng mới (không có model): `command_locks` (khóa idempotency, TTL), `account_locks`,
 `counters`, `_migrations` (chỉ migrator ghi). Test kiểm 43 collection + 1 model nhúng = 44.
 
+Auth follow-up11/10/2026, migration0017: ba collection Mongo-native không có
+model PostgreSQL để import: `auth_action_tokens` (mutable, hash token/TTL),
+`auth_mail_jobs` (mutable, encrypted delivery/lease/TTL), `auth_events`
+(appendOnly, audit không secret/PII). [Giao thức Auth](../features/ACCOUNT_AUTH.md)
+giữ lock user và revoke session trong transaction. Schema coverage tách ba
+collection này khỏi phép đếm model lịch sử; không sửa migration baseline.
+
+Migration0018-auth-otp thêm auth_otp_challenges: Mongo-native mutable, keyed
+HMAC/attempt budget/TTL, không có model PostgreSQL để import. Khóa user trước
+challenge khi tiêu thụ; issue/consume/reset và mail/audit/session dùng cùng
+transaction. Schema coverage tách collection này khỏi phép đếm model lịch sử.
+[ADR0034](../adr/0034-email-otp-authentication.md) giữ contract link cũ.
+
 Quyền (`roles.ts`): appendOnly = find+insert; mutable = +update; deletable = +remove;
 reference = find. App không có createCollection/collMod/createIndex/bypassDocumentValidation.
 `latlai_migrator` = dbAdmin+readWrite trên đúng DB. Admin/root vẫn có thể sửa tay — giống

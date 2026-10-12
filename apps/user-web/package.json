@@ -10,7 +10,10 @@
     "typecheck": "tsc -b --pretty false",
     "preview": "vite preview --port 4174",
     "test": "vitest run",
-    "test:browser": "node tests/integration.mjs"
+    "catalog:refresh": "node scripts/refresh-preview-catalog.mjs",
+    "test:browser": "node tests/integration.mjs",
+    "test:exchange:browser": "node tests/exchange-integration.mjs",
+    "test:account:browser": "node tests/account-overview.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

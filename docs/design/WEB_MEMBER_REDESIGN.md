@@ -1,0 +1,1088 @@
+# Web Member — logo mới và hướng tiệm sách nhiều màu
+
+10/10/2026, nhánh codex/web-member-redesign từ main dec19b3 sau khi chủ dự án
+merge PR31. Làm trong apps/user-web React/Vite hiện có; web trước, Android theo sau.
+
+## Hướng đã được chọn
+
+Chủ dự án yêu cầu thay hẳn design cũ bằng Logo.png mới (cú và chữ LẬT LẠI,
+đỏ rượu vang–kem) kết hợp bố cục/hình ảnh/màu sắc
+[Bookstore Landing Page](https://dribbble.com/shots/26947471-Bookstore-Landing-Page)
+của Md. Rakibul Hasan. Ba sketch xanh trước đó đã được thay thế bởi lựa chọn này.
+
+Code-led theo Impeccable; direction roll 20e973c0 được ghi nhận, yêu cầu cụ thể
+của chủ dự án ưu tiên hơn roll. [Direction contract](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-booksearchpage-tsx.md)
+ghi sáu khối và tiêu chí hoàn tất. DESIGN.md/sidecar mô tả kết quả sau review.
+
+## Phạm vi triển khai
+
+- Auth card-shuffle follow-up11/10: `codex/auth-solid-paper`, base `8ed4b22`.
+  Owner thay hinged flip bằng rút/hạ/xếp đáy850ms, giấy đặc hai mặt và form thật
+  bên dưới; light/shadow riêng, không opacity/filter trên carrier3D. Auth-only
+  motion exception theo yêu cầu: shuffle vẫn chạy với OS reduction, stamp tĩnh.
+  Register/recovery có form frontend đầy đủ, draft memory, native-disabled submit
+  và ghi rõ API chưa có; không giả gửi email/tạo tài khoản. Login logic giữ nguyên.
+  CUA1366/390/320, keyboard/focus/draft/Back, synthetic401/200 và safe returnUrl;
+  build/TS/34unit PASS, lint0error5warning cũ. Detector còn warning viền giấy
+  được giữ theo concept; hai shadecolor advisory đã dùng lại token hiện có,
+  không chạy lại detector. [Evidence](../../.impeccable/review/auth-shuffle/README.md),
+  [independent scoped SHIP](../../.impeccable/review/auth-shuffle/review.md).
+  Main DB/native/human/full reduced-preference runtime chưa chạy, READINESS giữ nguyên.
+- Auth turn follow-up11/10: `codex/auth-paper-turn`, base `fd05a77`. Bỏ dòng
+  credit hiển thị theo yêu cầu mới; nguồn Davit Margaryan/Unsplash vẫn trong README.
+  Lật giấy320ms rời/380ms đến, có phối cảnh và bóng theo góc xoay, đảo chiều về
+  Login; root clip ngăn scrollbar tạm thời. Reduced-motion fade140/160ms, không
+  xoay. Giữ focus/inert/query/draft/API/session và stamp sau success thật.
+  [Evidence hiện hành](../../.impeccable/review/auth-turn/README.md): normal-motion
+  qua UI QA riêng, production reduced/mobile/keyboard, build/34unit PASS;
+  lint0error5warning cũ. Không mở gate hoặc nhận human/full auth acceptance mới.
+- Auth handwriting follow-up11/10: `codex/auth-vietnamese-handwriting`, base
+  `41fda2b`. Thay Caveat bằng MTD Fancy Melody Regular400 do chủ dự án cung cấp;
+  bỏ ứng viên Athena. Giữ cỡ chữ/layout, dùng đúng weight400, labels/actions vẫn
+  Be Vietnam Pro. File local nguyên bản, nguồn/hash ghi ở fonts/auth/README.md;
+  không gán giấy phép OFL cho font chủ dự án. Build/TS và scoped type detector
+  PASS; laptop/mobile/error401 fixture xem thực tế, không đổi API/session.
+  [Evidence font hiện hành](../../.impeccable/review/auth-melody/README.md).
+  Review/captures Auth papers dưới đây là phiên bản trước lần thay font này.
+- Auth papers11/10, nhánh `codex/auth-library-papers`, base `d20c43a`:
+  chủ dự án thay split-screen bằng tập ba tờ giấy thư viện chính giữa nền ảnh
+  hiệu sách đỏ rượu/làm mờ. AuthLayout chung cho login/register/forgot-password;
+  original logo, texture giấy và credit Davit Margaryan/Unsplash giữ lại.
+  Bricolage heading/Caveat ghi chú-lỗi selfhosted OFL, controls Be Vietnam Pro;
+  ghi chú ngẫu nhiên theo lần mount, paper turn và con dấu ĐÃ MƯỢN chỉ sau login.
+  Giữ API/validation/session và safe returnUrl; register/reset vốn chưa có API
+  nên tờ riêng nói rõ chưa hỗ trợ, không nhận dữ liệu hoặc giả gửi email.
+  Current sheet inert lúc rời, destination H1 focus; draft memory-only.
+  Auth tôn trọng reduced-motion: bỏ lật không gian, dấu tĩnh500ms.
+  Build/TS/34existing unit PASS, lint0error5Exchange warning cũ. Manual detector
+  một lượt có paper-edge warning được reviewer chấp nhận, local font/token
+  additions được documenter đồng bộ; không nhận detector PASS. Full finish
+  review **ship** trên source và11capture hợp lệ, không thay human acceptance.
+  IAB native validation/focus/desktop/mobile PASS;401/200/stamp/returnUrl kiểm
+  với isolated UI fixture không DB. Normal-motion live/NVDA/200%/native và
+  main-DB login NOT RUN. [Evidence](../../.impeccable/review/auth-papers/README.md),
+  [review](../../.impeccable/review/auth-papers/review.md).
+  Recipe split-screen ở các báo cáo trước dưới đây là lịch sử, đã được thay.
+
+- Card depth11/10, nhánh `codex/book-card-depth` từ `62f4df7`: chủ dự án duyệt
+  tương tác kiểu Aceternity, gồm cả chữ nổi. Shared HomeBookCard bọc preview và
+  live BookCard bằng BookCardMotion; hit area cố định/perspective900px,
+  article nghiêng tối đa6° mỗi trục, cover36px/title26px/prices20px/action18px/
+  author-condition12px. Không đổi kích thước, ảnh, dữ liệu hay route. Một RAF
+  cập nhật CSS variables khi chuột di chuyển, listener chỉ tồn tại lúc active;
+  exit/cancel/scroll/resize/blur/visibility/unmount dừng tương tác. Trên600px,
+  fine-pointer/mouse; narrow/coarse static, keyboard focus nâng lớp không xoay.
+  Bỏ lift/scale ảnh cũ trong wrapper để tránh cộng chồng. Chủ dự án muốn thấy
+  motion trên laptop giảm chuyển động: ngoại lệ hữu hạn150ms, nửa góc/depth;
+  không loop. Build/TypeScript/34unit7files PASS; lint0error5warning cũ,
+  detector một lượt `[]`, docs/diff PASS. IAB guest reduced-motion=true kiểm
+  Home1535×735/Search1280×720, hai hướng nghiêng/hit bounds/exit/focus, cover18px/
+  title13px; Home/Search390×844 và Search320×700 tĩnh/không tràn ngang.
+  [Home active](../../.impeccable/review/card-depth/home-active.jpg),
+  [Search active](../../.impeccable/review/card-depth/search-active.jpg),
+  [keyboard](../../.impeccable/review/card-depth/search-keyboard.jpg),
+  [Home mobile](../../.impeccable/review/card-depth/home-mobile.jpg),
+  [Search mobile](../../.impeccable/review/card-depth/search-mobile.jpg),
+  [Search320](../../.impeccable/review/card-depth/search-320.jpg).
+  DESIGN/sidecar/surface đồng bộ; static canonical chỉ mô tả layer/focus,
+  runtime pointer nằm trong React. Normal-motion runtime/hardware touch/
+  populated-live/FPS/zoom200%/native/human NOT RUN. Không claim independent
+  review; READINESS và WIP Chat/Thông báo/MainLayout giữ nguyên.
+  Follow-up cùng nhánh từ `58a1075`: chủ dự án nhận xét bản đầu quá nhẹ. Nay
+  perspective720px, tối đa12°, depths72/56/40/32/24px, bóng cast/contact đổi
+  hướng theo pointer; reduced-motion tối đa10°/80% depth/150ms. Build/TypeScript
+  PASS; Home1535/Search1280 reduced=true xác nhận cover57.6px/title44.8px/exit
+  reset, Search390 tĩnh/không tràn. Đã xem ba capture mới:
+  [Home](../../.impeccable/review/card-depth/home-strong.jpg),
+  [Search](../../.impeccable/review/card-depth/search-strong.jpg),
+  [mobile](../../.impeccable/review/card-depth/search-strong-mobile.jpg).
+  CSS-only không chạy lại unit; giới hạn/gate/WIP ở trên giữ nguyên.
+
+- Danh mục navbar11/10, nhánh `codex/navbar-category-menu` từ `7283045`: nút bốn ô
+  cạnh logo mở directory giấy ba cột; giữ Tìm sách riêng và navbar76/64px/morph.
+  Dùng11danh mục/18nhóm con catalog-v1, tạo URL categoryId mới giữ chỉ data=live/
+  preview được chọn rõ; bỏ tiêu chí cũ. Same-tab kể cả query-only trở về scroll0/
+  focus heading Search; modifier click giữ native Link. Escape/close trả focus,
+  outside click/Tab exit/route change/mobile resize đóng directory. Compact1001–
+  1279px chỉ hiện icon; mobile native details nằm trong menu cuộn giới hạn viewport.
+  Bind wine-hover/shelf cục bộ theo màu đã có; panel180ms/reduced-motion tắt,
+  không thêm raster/global token/API. Build gồm TypeScript/34unit PASS,
+  lint0error5warning cũ, detector một lượt `[]`, diff PASS. Parent kiểm guest IAB
+  1366×768/1535×735/1024×700/390×844/320×700, xem đủ sáu capture ổn định:
+  [desktop](../../.impeccable/review/navbar-categories/desktop.jpg),
+  [laptop](../../.impeccable/review/navbar-categories/user-1535.jpg),
+  [compact](../../.impeccable/review/navbar-categories/compact-1024.jpg),
+  [mobile](../../.impeccable/review/navbar-categories/mobile-390.jpg),
+  [320](../../.impeccable/review/navbar-categories/mobile-320.jpg),
+  [đã chọn Tiếng Nhật](../../.impeccable/review/navbar-categories/selected-japanese.jpg).
+  Reviewer độc lập kiểm source/sáu ảnh: SHIP sau thay capture desktop sai kích
+  thước. Đây là JPEG bytes CUA gốc, đổi đuôi từ nhãn.png; raster thực lần lượt
+  1351×760/1520×728/1009×690/375×812/305×667/1351×760 do crop vùng browser/scrollbar.
+  Sau phát hiện hai role màu chưa bind: đã bind cục bộ, build lại PASS; browser
+  đo trigger mở rgb(124,35,32), link Tiếng Nhật hiện tại rgb(244,237,223). Parent
+  chụp lại/xem đủ sáu ảnh tại cùng đường dẫn; reviewer narrow chấm fix resolved/
+  SHIP, giữ disposition review đầy đủ trước đó, không nhận thêm broad review.
+  Documenter cập nhật Navigation/sidecar/category surface; giữ tokens/Overview.
+  Auth/populated-live/200%/native/human NOT RUN. READINESS không đổi;
+  WIP Chat/Thông báo/MainLayout.tsx giữ riêng.
+
+- Minh họa trạng thái11/10, nhánh `codex/member-story-illustrations` từ `2b861a5`:
+  phương án chủ dự án duyệt thêm ba cảnh chim cánh cụt: Đã gửi duyệt, kệ cá nhân
+  trống ở trang đầu/chưa lọc và phần giới thiệu Đấu giá. Hai trạng thái đầu dùng
+  `BookJourneyStates`; ảnh alpha chỉ trang trí. Pending vẫn xuất hiện sau service
+  thành công, giữ câu chờ kiểm duyệt và reset; filter/cursor rỗng vẫn gọn, không
+  dùng ảnh kệ trống. Auction chỉ đổi intro, giữ query/filter/cards và sự thật TP.HCM.
+  Hero/Home, nghiệp vụ/API/session không đổi. [Asset/prompt/provenance](../../apps/user-web/public/illustrations/book-journey/README.md):
+  ba WebP alpha800×600/800×600/900×600,56–61KB, resize/encode giữ toàn bố cục.
+  Pending settle560ms một lượt, visible mặc định, tắt theo reduced-motion.
+  Build/typecheck/34unit7files PASS; lint0error5warning Exchange có sẵn.
+  Detector một lượt trên bốn TSX trả `[]`; provenance scan3raster0missing.
+  CUA1366×768/390×844/320×740: ảnh tải, bố cục/chữ dài/không tràn ngang và callback
+  đăng tiếp/xóa lọc/focus link PASS. Pending/OwnerShelf được kiểm bằng component
+  thật trong trang QA có nhãn, không tạo bài hoặc ghi DB; trang QA đã xóa.
+  Auction dùng route guest thật, API3000 offline nên kiểm được lỗi tải có sẵn;
+  không nhận populated/API/full authenticated submission PASS. CUA full-page
+  fixture export sai hình, đã thay bằng ảnh viewport chính xác và ảnh phần dưới
+  ở320px. [Pending desktop](../../.impeccable/review/web-member/story-pending-desktop.png),
+  [mobile](../../.impeccable/review/web-member/story-pending-mobile.png),
+  [320](../../.impeccable/review/web-member/story-pending-320.png),
+  [320 dưới](../../.impeccable/review/web-member/story-pending-320-lower.png);
+  [kệ desktop](../../.impeccable/review/web-member/story-empty-desktop.png),
+  [mobile](../../.impeccable/review/web-member/story-empty-mobile.png),
+  [320](../../.impeccable/review/web-member/story-empty-320.png),
+  [320 dưới](../../.impeccable/review/web-member/story-empty-320-lower.png),
+  [lọc rỗng](../../.impeccable/review/web-member/story-filter-320.png),
+  [cursor rỗng](../../.impeccable/review/web-member/story-cursor-320.png);
+  [Auction desktop](../../.impeccable/review/web-member/story-auction-desktop.png),
+  [mobile](../../.impeccable/review/web-member/story-auction-mobile.png),
+  [320](../../.impeccable/review/web-member/story-auction-320.png).
+  Reviewer mới kiểm source/13capture: **SHIP**, không có material fix trong
+  extension này. Documenter phát hiện hai role hover chưa bind trong shared
+  states; đã bind cục bộ theo màu hiện hữu, build lại PASS. Reviewer chấm sửa
+  binding **resolved/SHIP** qua source; không nhận hover-browser PASS.
+  Không phải review người thật/toàn sản phẩm. Backend/native/
+  populated auctions/full authenticated flow/200%/human NOT RUN; READINESS không đổi.
+
+- Navbar11/10, nhánh `codex/navbar-shrink-emphasis` từ `7274a2c`: chủ dự án
+  muốn thấy rõ quá trình thu vào. Shared Header nay co560ms với nhịp giảm tốc,
+  viền vàng thoáng sáng và một nét kem chạy quanh680ms rồi tắt; bóng tăng dần.
+  Floating max1248px, chừa64px ngang/top16px; mobile chừa28px/top10px. Giữ
+  slot76/72px, thresholds48/16px, logo/links/menu, Home hero và session.
+  SVG trang trí aria-hidden/focusable=false/pointer-inert; không thêm vòng lặp.
+  Giữ ngoại lệ giảm chuyển động hữu hạn đã được chủ dự án duyệt, chỉ trong Header.
+  Build/typecheck PASS; lint0error/5warning Exchange có sẵn. CUA thực tế
+  reduced-motion=true:1535×735/1366×768/390×844/320×740, thu/viền/settle,
+  đảo chiều cuộn, menu/Escape/focus/links/không tràn PASS. DOM ghi floating
+ 1248×64/top16px và edge/trace opacity0, collapsing=false sau khi ổn định.
+  [Đang thu](../../.impeccable/review/web-member/nav-emphasis-desktop-moving.png),
+  [đã thu](../../.impeccable/review/web-member/nav-emphasis-desktop-settled.png),
+  [mobile](../../.impeccable/review/web-member/nav-emphasis-mobile-moving.png),
+  [menu320](../../.impeccable/review/web-member/nav-emphasis-320-menu.png).
+  Detector đã chạy một lượt; output bị tool truncate, không có report lưu lại,
+  nên không nhận detector sạch và không chạy lại. Unit/backend/native/200%/
+  Safari/human/fullintegration NOT RUN lượt cosmetic này. READINESS giữ nguyên.
+  Reviewer mới mở đủ9capture và kiểm source: SHIP cho refinement navbar này;
+  documenter đồng bộ Navigation/sidecar/navbar surface, scoped preservation/
+  JSON/docs/diff PASS; không nhận FPS/usability/native/toàn sản phẩm PASS. PNG là bytes CUA nguyên
+  bản; kích thước chuẩn hóa theo vùng nội dung có scrollbar, viewport trên là
+  cấu hình kiểm tra. Không gồm MainLayout/Chat/Thông báo WIP; không push/PR/merge/deploy.
+
+- Tài khoản11/10: owner shelf thay dashboard demo; đọc metadata qua public catalog
+  hoặc currentRevision.metadata của owner request đúng contract. Lọc duyệt/URL,
+  cursor20, ảnh owner, trạng thái và hai giá tách nhãn; không có tổng kho/số dư giả.
+  Desktop sidebar, mobile menu có nhãn và logout thật. Register dùng lại auth art,
+  báo chưa mở do chưa có endpoint đăng ký/reset; Login giữ nguyên.
+  Build/typecheck/28unit PASS (3 ca owner read mới); lint0error/6warning cũ.
+  CUA1535/1366/390/320 không tràn, metadata lỗi→retry phục hồi, filter/rỗng/Back,
+  menu/logout/guest-return/error PASS trên Nest/Mongo *_test/storagefake đã dọn.
+  [Desktop](../../.impeccable/review/web-member/account-shelf-desktop.jpg),
+  [mobile](../../.impeccable/review/web-member/account-shelf-mobile.jpg),
+  [review SHIP](../../.impeccable/review/web-member/account-shelf-finish.md).
+  Detector một lượt0findings; documenter scoped canonical merge/preservation PASS.
+  Browser>20cursor, populated Approved/Held/Removed/Rejected,200%/native/human,
+  fullintegration NOT RUN; READINESS không đổi. Local checkpoint, chưa push.
+- Trang chủ: hero đỏ, headline ảnh final chủ dự án, bìa minh họa, search có tác dụng; kệ mới đăng
+  và kệ để đổi lấy API thật; ba lối lọc theo hình thức/giá, CTA đăng sách.
+- Tìm sách: q/mode/condition/giá/sort/cursor theo OpenAPI; giữ URL/Back, trạng thái
+  đang tải/rỗng/lỗi/thử lại; đếm số sách trên trang, không bịa tổng kho.
+- Chi tiết: ảnh bản sách đầy đủ, chuyển ảnh, giá bán và giá trị đổi đều VNĐ;
+  tình trạng/trang thiếu/metadata/người đăng rõ; giữ sách24h mở chat, chưa thanh toán.
+- Header/footer/thẻ sách/dialog đồng bộ. Logo giữ nguyên pixel, CSS lấy biểu tượng
+  và chữ từ ảnh gốc. Be Vietnam Pro400/700 cho tác vụ, Anton cho tiêu đề hiển thị,
+  tự host kèm OFL. Không giữ Lora hoặc câu chữ văn khố trên các màn đã làm lại.
+- Đăng nhập được làm lại vì là đường bắt buộc từ CTA giữ sách; Email/Mật khẩu rõ,
+  trở về sách sau login, không tự giữ sách. SessionClient/tokens giữ nguyên.
+- Sửa tối thiểu lỗi hook có điều kiện và tràn stepper130% của form đăng sách cũ
+  để hành trình kiểm thử liên tục. Chưa redesign toàn form, dashboard, đăng ký,
+  chat, đấu giá, admin hay Flutter; Android giữ checkpoint riêng.
+
+## Tìm sách — bổ sung thể loại11/10
+
+Sau bc5d98f, chủ dự án duyệt Thể loại → Giá → Tình trạng. Preview có8thể loại
+từ bộ91ấn bản; combobox tìm không dấu, hỗ trợ chuột/mũi tên/Enter/Escape/blur,
+chọn một giá trị rồi Apply. Tình trạng luôn là native select; category có chip,
+reset và URL/Back. Lọc trên toàn catalog trước phân trang, kết hợp condition/
+mode/price/sort. Live không hiện control và loại category ở service boundary,
+giữ đúng contract chưa hỗ trợ. Không thay API/session/Home/dependency.
+
+Build/typecheck/30unit6file PASS; thêm ca đủ tất cả thể loại qua nhiều trang,
+unknown rỗng và live không gửi category/không đổi query của caller; test kết hợp
+thể loại với điều kiện/giá/sort PASS. Lint0error5warning cũ; bundle warning đã biết.
+Một detector8advisory radius/màu cũ. CUA draft/Apply/chip/reset/Back, tìm không
+dấu, keyboard/chuột/no-match/Escape chỉ đóng menu PASS. Panel thường498.375px/
+đáy712.46875px, lỗi516.28125px/đáy730.375px tại scrollY0 hai laptop1366×768 và
+1535×735. Khi cao≤700px dùng filter dialog;1366×600 action44px/đáy548.1875px,
+dialogđáy572.1875px; tăng chiều cao tự đóng dialog/khôi phục cuộn. Mobile320px
+và dialog320×400 không tràn, thân cuộn/action luôn hiện, giá sáu chữ số đọc đủ.
+
+[Laptop](../../.impeccable/review/web-member/search-category-laptop.jpg),
+[laptop thấp](../../.impeccable/review/web-member/search-category-short-laptop.jpg),
+[giá sai](../../.impeccable/review/web-member/search-category-invalid.jpg),
+[màn thấp](../../.impeccable/review/web-member/search-category-low-height.jpg),
+[mobile](../../.impeccable/review/web-member/search-category-mobile-open.jpg),
+[dialog thấp](../../.impeccable/review/web-member/search-category-short-dialog.jpg).
+Ảnh gốc CUA, không hậu kỳ. Reviewer yêu cầu sửa lowheight action và docs; verdict
+[SHIP cho hai fix](../../.impeccable/review/web-member/search-category-finish.md).
+Canonical documenter merge đúng scope,
+không sửa drift có sẵn. 200%/OS keyboard/native/live API success/human NOT RUN.
+Chat/Thông báo WIP giữ riêng, READINESS không đổi. Local checkpoint, chưa push.
+
+## Tìm sách — bộ lọc gọn và ghim11/10
+
+Theo plan đã duyệt sau88bd62c, giữ brand và kệ sách; sidebar264px/gutter28px,
+nền giấy khác nhẹ, ghim dưới cả hai trạng thái navbar và dừng trước footer.
+Tình trạng hai cột giữ đủ nhãn, hai ô giá cùng hàng, mức tối đa50k/100k/200k,
+Áp dụng/Xóa lựa chọn44px cùng hàng. Xóa chỉ xóa bản nháp, Apply mới đổi query.
+Viewport thấp dùng native select; giá sai ở desktop cao701–850px cũng đổi nhóm
+tình trạng sang select để không đẩy action ra khỏi vùng nhìn. Mobile native
+dialog chỉ cuộn thân form, giữ action đáy; currency lên legend để đọc đủ giá.
+
+Build/typecheck/28unit6file PASS; lint0error/5warning có sẵn, bundle warning đã
+biết. CUA1535×900/1366×768/1535×735/980×768/1366×600/390×844/320×735 và
+dialog320×400 không tràn ngang. Hai laptop tại scrollY0: panel thường505.375px,
+đáy719.46875px; panel lỗi487.65625px, đáy701.75px. Sticky top92/88px, dừng trước
+footer. Draft/Apply/reset, giá sai giữ dữ liệu, mode/sort/chip/cursor/Back/rỗng
+và API-off/retry PASS; live lỗi giữ lỗi, không thành preview thành công.
+Dialog focus/Escape/khôi phục focus/body-lock và action luôn thấy đã kiểm.
+
+[Laptop](../../.impeccable/review/web-member/search-filter-laptop.jpg),
+[laptop thấp](../../.impeccable/review/web-member/search-filter-short-laptop.jpg),
+[ghim](../../.impeccable/review/web-member/search-filter-sticky.jpg),
+[giá sai](../../.impeccable/review/web-member/search-filter-invalid.jpg),
+[mobile](../../.impeccable/review/web-member/search-filter-mobile.jpg),
+[dialog thấp](../../.impeccable/review/web-member/search-filter-short-dialog.jpg),
+[review](../../.impeccable/review/web-member/search-filter-finish.md).
+Ảnh gốc CUA sau batch sửa cuối; không hậu kỳ. Detector một lượt advisory cho
+radius/màu có sẵn; không nhận zero findings. Review độc lập FIX hai lỗi giá/cao
+panel, verdict SHIP cho cả hai sau sửa. Documenter scoped source/schema/canonical
+merge và preservation PASS; drift typographyMeta/overview có sẵn không tự sửa.
+Taste dùng nguồn chính chủ làm reference, chưa cài skill/dependency mới.
+Browser200%/OS keyboard thật/native/live API success/fullintegration/human
+NOT RUN; màn thấp chỉ là viewport proxy. Không đổi Home/API/session/READINESS.
+Chat/Thông báo WIP giữ riêng. Checkpoint local, chưa push.
+
+## Đăng sách — bàn soạn bài11/10
+
+Thay form legacy bằng nền giấy kem, một tiến trình5bước có tên rõ, form giữa
+và bản xem trước bên phải khi đủ chiều rộng. Mobile đặt preview ở bước kiểm tra.
+Giữ đầy đủ câu hỏi tình trạng, sở hữu, hai mức giá và service upload/submission.
+Lỗi giữ dữ liệu; attempt chưa rõ kết quả khóa input và retry cùng closure.
+Thoát có xác nhận; chưa có lưu nháp bền vững. Thành công chỉ sau server nhận,
+ghi đúng “Đã gửi duyệt”; đăng cuốn khác xóa cả dữ liệu lẫn closure cũ.
+
+Build/typecheck và25unit PASS; lint0error/6warning cũ. CUA1535/1366/390/320px
+không tràn; nhập thiếu/giá sai/không đọc rõ/chưa xác nhận sở hữu bị chặn,
+giữ dữ liệu qua bước, thêm/xóa ảnh, hủy thoát, gửi thành công và reset PASS.
+Nest/Mongo database riêng *_test với storagefake xác nhận đúng1bài PendingReview,
+1ảnh đã upload, giá bán75.000/giá trị đổi90.000. QA dùng bìa Truyện Kiều có sẵn,
+ghi rõ fixture; không là sách rao bán thật. Harness integration đã cập nhật nhãn
+và radio mới nhưng NOT RUN. Browser lost-response/beforeunload,200%/native/human
+NOT RUN; unit service replay đã PASS, không thay bằng chứng browser/native.
+
+[Desktop](../../.impeccable/review/web-member/sell-desk-desktop.jpg),
+[laptop](../../.impeccable/review/web-member/sell-desk-laptop.jpg),
+[mobile](../../.impeccable/review/web-member/sell-desk-mobile.jpg),
+[kiểm tra mobile](../../.impeccable/review/web-member/sell-desk-review-mobile.jpg),
+[320px](../../.impeccable/review/web-member/sell-desk-320.jpg),
+[tình trạng](../../.impeccable/review/web-member/sell-desk-condition.jpg),
+[biên nhận](../../.impeccable/review/web-member/sell-desk-success.jpg).
+Capture gốc CUA, không hậu kỳ. Một detector6advisory; review độc lập yêu cầu
+đổi4viền sang shop-control (4,20:1 trên giấy/3,39:1 trên nền upload), đã xác minh
+và [closure SHIP](../../.impeccable/review/web-member/sell-desk-finish.md).
+Canonical merge scoped; không đổi API/session hoặc READINESS, local chưa push.
+
+## Chi tiết — gallery ảnh bản sách11/10
+
+Sau `4fec833`, hoàn thiện nhóm Chi tiết theo kế hoạch đã duyệt. Gallery contain
+có thumbnail64×80, nút xem ảnh lớn44px và dialog native; ảnh toàn vẹn, chọn ảnh
+bằng thumbnail/mũi tên, Escape trả focus và khôi phục cuộn. Desktop vùng ảnh
+co theo chiều cao viewport; mobile xếp một cột. Tên dài wrap, hai giá tách nhãn,
+tình trạng và metadata chia cột dưới summary. Link Về kệ sách giữ query xuất phát.
+Giữ luồng giữ sách24h/mở chat, quyền và receipt/version/idempotency hiện có.
+
+Node24.19: build/typecheck PASS,25unit/5file PASS, lint0error/6warning cũ; bundle
+warning cũ. CUA1535×735/1366×768/390×844/320×735 không tràn ngang, chọn ba ảnh,
+viewer contain ảnh ngang, keyboard/Escape/focus/body-scroll PASS. Khách tới login
+đúng returnUrl; Back giữ tình trạng/hình thức. ID sai và API mất kết nối có thông
+báo/phục hồi; nút thử lại khi API vẫn tắt giữ lỗi, chưa chứng minh phục hồi server.
+QA Nest/Mongo *_test riêng, storage fake; một bài [QA] có bìa Standard Ebooks
+chuyển từ SVG có nguồn và hai ảnh thử tỉ lệ khác nhau. Không phải ảnh bản sách
+rao bán thật, không là asset shipping. Fixture đã đóng/dọn đúng dữ liệu sở hữu.
+
+[Desktop](../../.impeccable/review/web-member/detail-gallery-desktop.jpg),
+[laptop](../../.impeccable/review/web-member/detail-gallery-laptop.jpg),
+[mobile](../../.impeccable/review/web-member/detail-gallery-mobile.jpg),
+[320px](../../.impeccable/review/web-member/detail-gallery-320.jpg),
+[vùng hành động](../../.impeccable/review/web-member/detail-gallery-mobile-action.jpg),
+[viewer desktop](../../.impeccable/review/web-member/detail-gallery-viewer-desktop.jpg),
+[viewer mobile](../../.impeccable/review/web-member/detail-gallery-viewer-mobile.jpg).
+Capture là bytes gốc từ CUA; content trừ scrollbar nên kích thước ảnh khác
+viewport DOM, không hậu kỳ. Detector một lượt6advisory palette/type/radius có
+chủ đích; không có finding cơ học. [Review độc lập SHIP](../../.impeccable/review/web-member/detail-gallery-finish.md),
+canonical scoped merge theo source. Owner/held, ảnh thiếu/lỗi, full integration,
+200%/native/human NOT RUN trong lượt này. READINESS giữ nguyên; local chưa push.
+
+## Tìm sách — kệ gọn và bộ lọc11/10
+
+Sau kế hoạch `6d6b6a8`, triển khai nhóm đầu tiên đã được chủ dự án duyệt.
+Đầu trang gọn với search bên phải; bộ lọc tình trạng/giá bên trái trên desktop,
+mua/đổi và sort ngay trên kệ.1366px có4cột,1535px có5cột,390/320px có2cột;
+20cuốn/trang. Dùng lại HomeBookCard/BookCard, giữ toàn ảnh và nhãn từng giá.
+Mobile dùng dialog native, lựa chọn nháp chỉ áp dụng khi bấm nút; Escape trả
+focus và đổi sang desktop đóng panel/khôi phục cuộn. Giá sai có lỗi và đường sửa.
+
+Chế độ DEV `data=preview` dùng91ấn bản Open Library cùng bộ lọc/phân trang,
+giữ nhãn mẫu và link nguồn; không biến IDấn bản thành IDbài đăng. Nhánh dữ liệu
+thật vẫn gọi API và lỗi vẫn hiển thị; không fallback sang mẫu. Không thêm API thể
+loại, tổng kho, rating hoặc claim giao dịch. Home/hero/navbar và session không đổi.
+
+Node24.19.0: build/typecheck PASS,25unit/5file PASS, lint0error/6warning cũ;
+bundle warning cũ. Detector một lượt trên TSX trả[]; CSS kiểm trực tiếp.
+CUA kiểm1535×735/1366×768/390×844/320×735 không tràn ngang, filter nháp/giá sai,
+mobile Escape/Apply/resize, preview trang1–2/Back và tìm rỗng/phục hồi.
+QA Nest/Mongo replica riêng57017:13bài approved, ảnh storage fake; lọc giá/tình
+trạng/mode/sort, mở bài thật rồi Back giữquery; dừng API/reload/retry giữ lỗi và
+không hiện mẫu. Fixture đã dọn DB/user riêng, giữ Vite5186 của chủ dự án.
+Lần setup21bài bị media429 và tự dọn; không tuyên bố PASS phân trang nhiều trang
+API thật. Unit kiểm đủ91IDpreview không lặp/mất. Harness integration đã chỉnh
+theo20limit/Apply nhưng chưa chạy toàn bộ;200%/native/human NOT RUN.
+
+[QA JSON](../../.impeccable/review/web-member/search-shelf-qa.json),
+[desktop](../../.impeccable/review/web-member/search-shelf-desktop.jpg),
+[laptop](../../.impeccable/review/web-member/search-shelf-laptop.jpg),
+[mobile](../../.impeccable/review/web-member/search-shelf-mobile.jpg),
+[320px](../../.impeccable/review/web-member/search-shelf-320.jpg),
+[panel](../../.impeccable/review/web-member/search-shelf-filters.jpg).
+Review độc lập: FIX hai điểm (docs stale, nút lọc40px); đã merge canonical/
+surface và tăng nút44px. Verdict pass SHIP cho cả hai fix; không là nghiệm thu
+toàn sản phẩm. [Nút lọc](../../.impeccable/review/web-member/search-shelf-active-filters.jpg)
+được CUA đo44px. DESIGN/sidecar đã merge riêng Search, giữ Home/RN.
+docs/diff PASS; READINESS không đổi. Checkpoint subject
+`feat(web): refine catalog search and mobile filters`; local, chưa push.
+
+## Home — animation đã duyệt10/10
+
+Cập nhật sau `1101fac`: chủ dự án yêu cầu hiệu ứng vẫn hiện trên máy bật
+OS giảm chuyển động. Override duration/iteration chỉ thuộc Home; bỏ nhánh reduce
+của filter/card mới/fox. Tán lá12s, lá16–19s, card240ms/banner320ms, filter180ms,
+card thêm220ms và fox650ms giữ cùng nhịp ở cả hai chế độ. Observer pause vùng
+khuất/document.hidden, one-shot/cleanup và layout không đổi; các trang khác giữ
+preference cũ. Build/typecheck PASS, lint0error/6warning cũ; docs/diff PASS.
+CUA1535×900 với reduced=true: canopy matrix thay đổi qua hai mẫu, lá có
+translation5.04px/12.09px, card focus matrix1.025/lift5px/transition240ms;
+canopy và lá khuất pause, không tràn ngang. Fox timing/document-hidden simulation/
+FPS/backend/native/human NOT RUN. Reviewer độc lập SHIP. Không chạy lại22unit
+đã PASS ở1101fac vì fix chỉ đổi preference của motion. Node/bundle warnings cũ.
+[Ảnh](../../.impeccable/review/web-member/home-motion-os-override.jpg),
+[QA](../../.impeccable/review/web-member/home-motion-os-override.json).
+READINESS không đổi; local, chưa push/PR/merge/deploy.
+
+Bản gốc `1101fac` (trước override ở trên):
+
+Sau `2f86adc`, tám bìa gather từ hai phía600ms, delay0/60/180/100ms; Alice và
+Dược sư kết nhịp. Sway/hover độc lập và footprint giữ nguyên. Feedback Home-only:
+card lift5px/scale1.025/240ms, controls150ms/press120ms, banner fan320ms. Filter
+chỉ fade kết quả đã tải180ms/100ms reduced; card thêm đang hiện enter220ms,
+stagger tối đa144ms; keyed card cũ không chạy lại. Hai tán lá breeze12s; sáu
+trong24 motif drift40px/16–19s có quãng nghỉ, observer riêng/visibility guards.
+Fox settle12px/−2deg/650ms một lần. Hiệu ứng mới giảm spatial motion theo OS;
+ngoại lệ hero/bookmark/navbar đã duyệt giữ riêng. Không thêm dependency/asset,
+đổi API/routes/session/data hay thay layout. Nội dung mặc định vẫn hiện.
+
+Build/typecheck/22unit PASS; lint0error/6warning cũ; Node24.12 thấp hơn engine
+>=24.15 và bundle>500KB vẫn có warning. Docs/diff PASS. Detector một lần8advisory
+màu/type cũ; source reviewer độc lập `/root/home_motion_finish` SHIP/không blocker.
+CUA1535×735/1100×900/390×844/320×844 không tràn,8bìa tải, filter Manga→Exchange→All,
+show-more10→20 và keyboard title focus PASS; hero/7 vùng loop pause ở footer.
+CUA reduced-motion=true: hero gather/sway giữ riêng, nền mới static và feedback
+mới không dịch chuyển; backing bookmark vẫn2px3px. Normal-motion atmosphere/fox,
+FPS, document-hidden simulation, API integration/native/human/200% NOT RUN.
+[Desktop](../../.impeccable/review/web-member/home-motion-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-motion-mobile.jpg),
+[QA](../../.impeccable/review/web-member/home-motion-qa.json).
+READINESS không đổi; local commit, chưa push/PR/merge/deploy.
+
+## Home — catalog xem trước để làm UX/UI
+
+Sau `3834fde`, chủ dự án duyệt tám bìa thành hai cụm kích thước đa dạng,
+chồng nhẹ; Alice trái/Dược sư phải dẫn cụm ở vị trí thứ ba, layer2. Desktop
+>1100px unit176px/stage432px; height<=850px unit clamp(116px,18vh,152px),
+stage hai unit+36px. Focal1.36/1.38unit, companion0.88–1unit; từng bìa có
+offset/rotation/tỷ lệ riêng, ảnh contain. <=1100px giữ tám cột dưới search,
+<=800px bốn cột; focal scale1.08 không tăng flow. Giữ headline/search/footprint/
+ảnh/motion và UI khác, không thêm asset/API/routes. Fine-pointer hover mọi bìa
+lên z3, ảnh giữ scale1.12/lift8px/bóng cũ; sway/visibility guards giữ nguyên.
+Build/typecheck/lint PASS (0error/6warning cũ; bundle warning đã biết).
+CUA1535×735/1535×900/1100×900/390×844/320×844 không tràn ngang, đủ tám ảnh;
+actual hover Alice/Dược sư/SAO xác nhận z3/scale1.12/lift8px.
+[Desktop](../../.impeccable/review/web-member/home-cover-stacks-desktop.jpg),
+[tall](../../.impeccable/review/web-member/home-cover-stacks-tall.jpg),
+[mobile](../../.impeccable/review/web-member/home-cover-stacks-mobile.jpg) có
+JSON SHA256/viewport/kích thước encoded riêng. Layout assessment độc lập và
+detector trước/sau0finding; finish reviewer hero_stack_finish SHIP, không fix.
+Scoped canonical merge giữ token/component/recipe khác; docs/diff PASS.
+OS-motion/no-pause exception vẫn là limitation cũ, không nhận a11y PASS mới.
+Backend/native/human/200% NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): layer hero books around Alice and Duoc su`; local, chưa push.
+
+Sau `a860408`, chủ dự án duyệt gộp CTA vào cảnh mùa thu nhiều lớp:
+đồi z0, nguyên wine card/lời nhắn/link /sell z1, cáo alpha z2 chồng nhẹ mép card.
+Desktop card trái/cáo phải; <=850px card trên/cáo dưới. Wrapper accessible,
+chỉ artwork aria-hidden/pointer-inert; hero/bookmarks/tán lá/24 motif/kệ/footer/
+API giữ nguyên. Hai delivery ImageGen từ Background demo.png: đồi1600×900/
+80992byte, cáo600×750/alpha53050byte; full prompt/source/delivery hashes ở
+[asset provenance](../../apps/user-web/public/illustrations/autumn/README.md).
+fox-landscape.webp giữ làm biến thể trước, không dùng runtime hiện tại.
+Node24.19.0 build/typecheck/lint PASS (0error/6warning cũ; bundle>500KB đã biết).
+CUA1535×900/1000×900/390×844/320×844 không tràn ngang: desktop overlap box80px,
+actionRight1004 < foxLeft1020/footer gap0;1000px actionRight314 < foxLeft655;
+mobile overlap mép card16px,320px action cách cáo90.8px. [Desktop](../../.impeccable/review/web-member/home-layered-fox-desktop.jpg)
+và [mobile](../../.impeccable/review/web-member/home-layered-fox-mobile.jpg) có
+JSON sidecar SHA256/kích thước encoded; ảnh mobile chỉ chụp CTA và đầu cáo,
+không chứng minh toàn bộ cáo trong viewport. Detector một lượt8advisory về
+màu/type đã duyệt hoặc có sẵn và#000 alpha mask; không scan lại.
+Reviewer độc lập layered_fox_finish disposition SHIP, không material fix.
+Canonical scoped merge giữ recipe khác/token drift cũ; docs/diff PASS.
+Backend/native/human/200% NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): layer posting invitation over autumn hills`; local, chưa push.
+
+Sau `252684f`, chủ dự án yêu cầu đưa lại “Đọc xong rồi? Để sách đi tiếp.”:
+khôi phục nguyên khối wine posting, mô tả và link /sell trước cảnh cáo/đồi.
+Giữ ảnh cảnh/tán lá/24 motif/hero/footer nối liền; không thay API/routes.
+Node24.19.0 build/typecheck PASS (bundle warning cũ); CUA1535×1000/390×844/
+320×844 không tràn ngang, lời nhắn đủ/link /sell/cảnh nằm sau CTA.
+[Desktop](../../.impeccable/review/web-member/home-posting-restored-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-posting-restored-mobile.jpg).
+Docs/diff PASS; backend/native/human/200% NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `fix(web): restore posting invitation above autumn landscape`; local, chưa push.
+
+Sau `62352b5`, hoàn tất bước cảnh cáo/đồi trước footer theo duyệt chủ dự án.
+Dùng chính Background demo.png, encode toàn ảnh WebP1920×1080/94602byte,
+không sinh lại/crop/mask; CSS frame phần dưới giữ tỷ lệ, width100%/min960px,
+bottom-center. Frame full-bleed cao max(260px,26vw), sau kệ đổi sách; thay
+posting CTA cũ, còn đủ link đăng ở header/bookmark/footer. Lazy/async/aria-hidden/
+pointer-inert. Home footer margin0, các route khác giữ khoảng cách cũ.
+Hero/tán lá/24 motif/kệ/routes/API giữ nguyên. [Asset và provenance](../../apps/user-web/public/illustrations/autumn/README.md).
+Node24.19.0/pnpm11.19.0: build/typecheck/lint PASS (bundle warning và6 lint warning cũ).
+CUA1535×900/850×800/390×844/320×844 không tràn ngang, gap cảnh-footer≈0;
+ảnh natural1920px tải đúng, mobile frame260px/image960px. Route /books850px
+footer margin72px giữ nguyên. [Desktop](../../.impeccable/review/web-member/home-autumn-fox-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-autumn-fox-mobile.jpg).
+Docs/diff PASS; backend/native/human/200% NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): close home with the autumn fox landscape`; local, chưa push.
+
+Sau `42bd898`, chủ dự án duyệt hai tán lá nối hero xuống nền kem: atlas alpha
+1200×800/76574byte từ built-in ImageGen, tham chiếu Background demo.png.
+CSS chọn hai nửa bất đối xứng, cell220–400px/145px mobile; layer z0 clip riêng,
+aria-hidden/pointer-inert; content/bookmark z1. Hero/overlap−12px/bookmarks/routes/
+24 motif/CTA/footer giữ nguyên; cáo/đồi hoãn. [Asset/prompt](../../apps/user-web/public/illustrations/autumn/README.md).
+Node24.19.0/pnpm11.19.0: build/typecheck và lint PASS (bundle warning và6 lint warning cũ).
+CUA1535×735/1000×800/390×844/320×844 không tràn ngang, đủ4 links; desktop
+canopy399.15px/pointer:none/overlap−12px. [Desktop](../../.impeccable/review/web-member/home-autumn-canopies-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-autumn-canopies-mobile.jpg).
+Docs/diff PASS. Backend/native/human/200% NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): frame home shortcuts with autumn canopies`; local, chưa push.
+
+Sau `4edb6c2`, chủ dự án muốn mật độ nhỉnh hơn: tăng16→24 motif bằng8 vị trí
+xen kẽ ở mép, giữ atlas/kích thước/opacity và toàn bộ hero/bookmark/catalog.
+Build PASS; CUA1535×735 và390×844 có24 motif, không tràn ngang, pointer:none;
+desktop giữ hero overlap−12px. [Desktop](../../.impeccable/review/web-member/home-autumn-denser-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-autumn-denser-mobile.jpg).
+Docs/diff PASS; backend/native/human NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): slightly increase autumn ornament density`; local, chưa push.
+
+Sau `14d91bb`, chủ dự án duyệt thử lá/hạt nhỏ:16 motif lá phong/oval/sồi,
+nhánh hai lá, quả sồi và cặp hạt đặt không đều ở hai mép Home. Tạo một atlas
+3×2 bằng built-in ImageGen, delivery768×512/alpha/55946byte; chỉ resize/encode,
+CSS chọn ô. [Asset và provenance](../../apps/user-web/public/illustrations/autumn/README.md).
+Motif30–66px/opacity30%, mobile tối đa30px/22%; không tile hoặc animation.
+Layer aria-hidden/pointer-inert/z0 và clip riêng; nội dung z1. Flow-root giữ
+hero overlap−12px. Hero/nút hover/kích thước/routes/panels/CTA/footer giữ nguyên.
+Tán lá lớn/cáo/đồi vẫn hoãn. Build/typecheck/lint PASS (6 warning cũ);
+CUA1535×735/1000×800/390×844 không tràn ngang,16 motif/pointer:none/animation:none,
+mobile và desktop giữ overlap−12px/focus không clip.
+[Desktop](../../.impeccable/review/web-member/home-autumn-ornaments-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-autumn-ornaments-mobile.jpg).
+Docs/diff PASS; backend/native/200%/human NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): add sparse autumn margin ornaments`; local, chưa push.
+
+Sau `9219feb`, bước1 theo duyệt chủ dự án: nền Home dưới hero dùng#ffefcb,
+lấy pixel giữa Background demo.png1920×1080. Bỏ lớp paper/page-mask sau bốn
+nút và CSS không dùng; giữ wrapper/height/hover/card panels/CTA/footer/hero.
+Chưa thêm tán lá, cáo/đồi hoặc lá rơi: chủ dự án duyệt màu nền trước.
+Build/typecheck/docs/diff PASS; CUA1535×735/390px màu đúngrgb255,239,203,
+không còn shortcutBackdrop/không tràn ngang/bốn nút còn đủ.
+[Desktop](../../.impeccable/review/web-member/home-autumn-base-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-autumn-base-mobile.jpg).
+Backend/native/200%/human NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): trial the autumn canvas color`; local, chưa push.
+
+Sau `ac6575c`, làm rõ hover bốn dấu sách: giấy nhấc5px/nghiêng−1°, chim
+nhấc8px/nghiêng−5°/scale1.08, nhãn nhấc5px, bóng theo silhouette.
+Vào280ms/rời180ms, nhấn100ms; focus bàn phím cùng phản hồi và còn outline.
+Lớp đỏ/hit area/bố cục/hero/nền riêng/routes giữ nguyên. Theo lựa chọn motion
+trước đó của chủ dự án, transition hữu hạn này chạy cả khi OS giảm motion;
+chỉ override duration ở bốn nút, không thêm loop hay phụ thuộc.
+Build/typecheck/docs/diff PASS; CUA1535×735/390px không tràn, hover thật qua
+context-click/Escape và rời chuột PASS, reduce=true vẫn280ms/180ms, focus PASS.
+[Hover desktop](../../.impeccable/review/web-member/home-bookmarks-hover-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-bookmarks-hover-mobile.jpg).
+Active giữ chuột/touch thật,200%/backend/native/human NOT RUN; READINESS giữ nguyên.
+Checkpoint subject `style(web): animate penguin bookmark interactions`; local, chưa push.
+
+Sau `05e6794`, chủ dự án duyệt nền riêng sau bốn nút: vân giấy ivory và hai nét
+trang sách wine mờ tái sử dụng asset hero. Dải static/aria-hidden/pointer-inert,
+chỉ clip artwork, kết thúc trước thể loại; hero/chiều cao/routes/nền kệ giữ nguyên.
+Build/typecheck/lint PASS (6 warning cũ); CUA1535×735/390px không tràn ngang,
+keyboard focus rõ, desktop đáy hàng723.95px không đổi.
+[Laptop](../../.impeccable/review/web-member/home-bookmarks-paper-band-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-bookmarks-paper-band-mobile.jpg).
+Actual hover/200%/backend/native/human NOT RUN; READINESS giữ nguyên. Local, chưa push.
+Checkpoint subject `style(web): add a scoped paper backdrop to shortcuts`.
+
+
+Sau `122576d`, chủ dự án duyệt thử lớp giấy đỏ dưới dấu sách: SVG cùng silhouette,
+wine, lệch2px/3px, pointer-inert/aria-hidden/z−2. Anchor và lớp đỏ đứng yên;
+fine-pointer hover chỉ nhấc giấy trên/chim/nhãn3px. Reduce motion giữ transform nghỉ.
+Không đổi hero/routes/kích thước, không thêm bitmap hoặc bóng khối.
+Build/typecheck/lint PASS (6 warning cũ); CUA1535×735/390px không tràn;
+4lớp đỏ cùngwine/matrix2,3/desktop đáy726.95px, keyboard focus không clip.
+[Laptop](../../.impeccable/review/web-member/home-bookmarks-red-backing-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-bookmarks-red-backing-mobile.jpg).
+Actual hover/200%/backend/native/human NOT RUN. READINESS giữ nguyên; local, chưa push.
+Reviewer độc lập ship, không material fix;
+[review](../../.impeccable/review/web-member/home-bookmarks-red-backing-finish.md). Docs/diff PASS.
+
+Sau `4c07fb2`, Mua sách dùng cùng vàng#f6e0a8 với Đấu giá theo yêu cầu chủ dự án.
+Build/typecheck/docs/diff PASS; CUA xác nhận hai fill cùngrgb(246,224,168).
+[Ảnh](../../.impeccable/review/web-member/home-bookmarks-buy-gold.jpg). Chỉ đổi màu.
+Sau `760a68a`, nét ngắn đổi thành đường khâu wine35% ở mép trên, dash2/5px,
+inset16px. Build/typecheck/docs/diff PASS; CUA1535×7354nét/không tràn,
+đáy hàng723.95px. Hero/routes/kích thước không đổi; không thêm animation.
+[Ảnh](../../.impeccable/review/web-member/home-bookmarks-stitching.jpg).
+
+Sau `912ecec`, chủ dự án yêu cầu giữ nguyên hero và chỉ thu bốn nút do đáy bị
+cắt ở cửa sổ1535×735. Bookmark desktop168→144px, chim104→88px, padding đáy30→24px;
+mobile152px/88px, kiểu giấy/routes và toàn bộ hero giữ nguyên. Source diff chỉ
+bốn giá trị CSS thuộc bookmark; thay đổi thu hero đã hoàn tác trước checkpoint.
+Build/typecheck PASS; CUA1535×735 đáy hàng723.95px,1366×768 đáy734.75px;
+không tràn ngang/4ảnh tải đủ. Mobile390×844 vẫn2×2/min152px, không tràn.
+[Ảnh cửa sổ tương ứng](../../.impeccable/review/web-member/home-bookmarks-compact-desktop.jpg).
+Scan trước sửa0finding; actual hover/200%/backend/native/human NOT RUN.
+READINESS giữ nguyên; checkpoint subject `fix(web): compact bookmarks without shrinking hero`.
+Local, chưa push. Bước tiếp: chủ dự án xem trên cửa sổ laptop.
+Reviewer độc lập ship, không material fix;
+[review](../../.impeccable/review/web-member/home-bookmarks-compact-finish.md). Docs/diff PASS.
+
+Sau `7af062d`, chủ dự án duyệt làm dấu sách mềm hơn: hàng880px/gap32px,
+chim104px, hai góc trên8px, khía40×19.5px, viền warm50% alpha và nét wine nhỏ.
+Tái dùng texture giấy login20% multiply, clip riêng bằng useId; anchor/focus
+không clip. Hover nâng3px/bóng mềm theo silhouette giấy; reduced motion bỏ lift.
+<=1000px hàng440px/2cột/gap16px; <=600px chim88px/min152px/gap12px, nhãn tự wrap.
+Giữ hero/caption/routes/logo/kệ/API/session; không thêm asset hay noise động.
+
+Build/typecheck/lint PASS (6 warning cũ); CUA1366/1024/800/390/320 không tràn,
+4/2cột,4ảnh tải đủ, nhãn không chạm notch. Laptop1366×768 hàng đủ trong khung đầu;
+keyboard Tab/focus wine không clip PASS; source4href không đổi. Một scan trước
+sửa0finding. Actual hover/chữ200%/backend giao dịch/native/human NOT RUN.
+Ảnh [laptop](../../.impeccable/review/web-member/home-bookmarks-soft-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-bookmarks-soft-mobile.jpg),
+[320px](../../.impeccable/review/web-member/home-bookmarks-soft-320.jpg).
+READINESS giữ nguyên; checkpoint subject `feat(web): soften paper bookmark shortcuts`.
+Local, chưa push; chủ dự án xem bản thử.
+Reviewer độc lập disposition **ship**, không material fix;
+[review](../../.impeccable/review/web-member/home-bookmarks-soft-finish.md). Docs/diff PASS.
+
+Sau `6beee98`, chủ dự án duyệt thử dấu sách hợp với web thay bốn hộp pastel và
+mockup nhiều viền/bóng. Recipe hiện hành ở DESIGN.md: hàng1040px/4→2 cột, nối
+mép hero12px; giấy kem và vàng nhẹ cho đấu giá, chim88/72px trên nhãn ngắn.
+SVG chỉ là hình học giấy/khía nhỏ ở đáy, không clip anchor hoặc focus; viền1px,
+không shadow/gradient/arrow. Hero padding đáy32px giữ caption cách giấy20px.
+Giữ ba ảnh chim, thêm chim cầm búa đấu giá có [prompt](../../apps/user-web/public/illustrations/penguins/auction.png.json).
+Không đổi art hero/logo/kệ/API/session hoặc route. Chủ dự án đang xem bản thử,
+không xem đây là human sign-off.
+
+Build/typecheck/lint PASS (6 warning cũ); CUA1366/390/320/800/1024/1680 không
+tràn ngang,4/2 cột;1366×768 hàng dấu sách nằm trọn khung mở đầu. Bốn link Enter
+PASS (Sale/Exchange/auctions/sell→login), keyboard focus không clip,4 ảnh tải đủ.
+Ảnh [laptop](../../.impeccable/review/web-member/home-bookmarks-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-bookmarks-mobile.jpg),
+[320px](../../.impeccable/review/web-member/home-bookmarks-320.jpg).
+Một scan layout trước sửa0finding; không scan thêm. Mouse hover/chữ200%/native/
+backend giao dịch/human NOT RUN; READINESS giữ nguyên. Không push/merge.
+Reviewer độc lập disposition **ship**, không material fix;
+[review](../../.impeccable/review/web-member/home-bookmarks-finish.md). Docs/diff PASS.
+
+Sau `708f8da`, ô khám phá thứ ba là “Đấu giá” → /auctions theo yêu cầu chủ dự án;
+giữ màu đào và minh họa chim ôm ví. Chỉ đổi lối vào nhanh, bộ lọc/banners giá không
+đổi. Build/typecheck/lint PASS (6 warning cũ), CUA Enter xác nhận URL và heading
+trang đấu giá. [Ảnh](../../.impeccable/review/web-member/home-auction-shortcut.jpg)
+localhost5186, viewport1366×900, vùng scrolled Home. Không nghiệm thu backend/native.
+
+Sau `6196b88`, chủ dự án yêu cầu ẩn dải preview/source và link “Xem bài đăng thật”.
+Đã bỏ markup/CSS riêng của dải này; các ô khám phá theo ngay hero. Caption hero,
+heading kệ và nhãn mẫu trên card vẫn hiện; nguồn dữ liệu và data=live không đổi.
+Build/typecheck/lint PASS (6 warning cũ); CUA1366/390 không còn banner, không
+tràn ngang, bốn link còn đủ. [Ảnh CUA desktop](../../.impeccable/review/web-member/home-notice-hidden-desktop.jpg)
+là vùng scrolled hero/shortcuts, localhost5186 preview. Backend/native/200% chưa
+chạy lại; không mở gate. Các mô tả dải thông báo bên dưới thuộc checkpoint cũ.
+
+Checkpoint shortcuts sau `a704bdf`: chủ dự án duyệt bốn ô màu có chim cánh cụt.
+Mua vàng kem, đổi mint, ngân sách đào, đăng tím nhạt; dùng lại màu nền bìa sách.
+Built-in image_gen tạo4 minh họa cùng reference, PNG256px có alpha, khoảng50KB/ảnh;
+[prompt/provenance](../../apps/user-web/public/illustrations/penguins/README.md).
+Hình72px desktop/56px mobile, chữ14px bold/arrow16px; cả ô là Link giữ URL cũ.
+Desktop4 cột/min112px, từ1000px trở xuống2 cột; dưới600px hình trên nhãn/arrow,
+min132px/gap12px, tự cao thêm khi chữ dài. Hover fine-pointer nâng2px/viền wine,
+focus3px/offset3px; giảm motion bỏ lift/transition. Không đổi logo cú/hero/kệ sách.
+
+Build/typecheck PASS, lint0error6warning cũ; CUA1366/1024/800/390/320 không tràn,
+4ảnh local tải đủ; Enter/focus, buy/Exchange/budget và sell→login returnUrl PASS.
+Ảnh [desktop](../../.impeccable/review/web-member/home-penguins-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-penguins-mobile.jpg),
+[320px](../../.impeccable/review/web-member/home-penguins-320.jpg).
+Scan layout một lượt trước sửa0finding; không scan lại. Chữ200%/hover chuột thực
+chưa chạy; source có wrap/min-height/hover/reduce rules. Native/backend thành công/
+DB/human NOT RUN; READINESS giữ nguyên. Checkpoint subject
+`feat(web): add penguin discovery shortcuts`; local, chưa push.
+Reviewer độc lập disposition **ship**, không material fix;
+[review](../../.impeccable/review/web-member/home-penguins-finish.md).
+
+Checkpoint mật độ sau `10358bb`: chủ dự án duyệt thu nhỏ card theo ảnh Fahasa.
+Home dùng5 cột laptop,6 từ1600px,4 tại1100px,3 tại850px,2 tại600px; gap24px16px.
+Khung bìa200/180/160px, padding12/8px, chứa nguyên ảnh; metadata gọn hơn,
+giữ cỡ chữ title/giá. Title tối đa hai dòng, tên đầy đủ còn trong DOM/accessibility
+và tooltip. Nút nguồn/chi tiết vẫn44px; khung lỗi tự cao lên để chứa nút thử lại.
+Kệ chính hiện10 rồi thêm10; ba kệ chủ đề10 sách/kệ tránh mười cuốn mở đầu;
+kệ đổi giữ4 bên cạnh phần giới thiệu. Hero/Search mặc định/API/session giữ nguyên.
+
+Build/typecheck22unit PASS, lint0error6warning cũ. CUA1366/1680/1024/800/390/320
+không tràn ngang;5/6/4/3/2 cột, bìa200/180/160px, vùng bấm44px, title dài hai dòng,
+10→20 và lọc/reset PASS. Ảnh [laptop](../../.impeccable/review/web-member/home-density-desktop.jpg),
+[desktop rộng](../../.impeccable/review/web-member/home-density-wide.jpg),
+[mobile](../../.impeccable/review/web-member/home-density-mobile.jpg).
+Một scan layout trước sửa0finding; không có scan thứ hai. Chữ200% và thao tác
+ảnh lỗi chưa chạy lại ở lượt thu gọn này; backend thành công/DB/native/human
+NOT RUN. READINESS giữ nguyên. Checkpoint subject `feat(web): compact home book shelves`;
+local, chưa push. Các số8/4 bên dưới là lịch sử checkpoint catalog trước lượt này.
+Reviewer độc lập disposition **ship**, không material fix; [review](../../.impeccable/review/web-member/home-density-finish.md).
+
+Mở rộng sau `100f872` theo yêu cầu chủ dự án:91 edition, gồm15 văn học,
+6 kỹ năng sống,7 kinh doanh,8 khoa học,6 lịch sử,8 thiếu nhi,25 manga và16 light
+novel. Đã thêm43 sách nguồn ngoài, bỏ kết quả bộ sách gộp; metadata/bìa giữ theo
+edition. Kệ đầu xen tám thể loại; ba kệ chủ đề bên dưới banner có4 sách/kệ,
+không lặp tám cuốn mở đầu. Banner đổi sang văn học/kỹ năng/khoa học/thiếu nhi.
+Các link chủ đề chỉ lọc Home preview, giữ chủ đề khi chọn mua/đổi/giá và có lối
+về tất cả chủ đề. Giữ hero và real-mode API/session, không ghi DB. Recipe/token
+hiện hành được tái sử dụng; thêm gap32px trước/24px giữa các kệ chủ đề.
+
+Build/typecheck và22unit PASS; lint0error6warning cũ. Detector một lượt4advisory
+hero legacy, không có role mới. Ảnh và QA mở rộng:
+[desktop](../../.impeccable/review/web-member/catalog-breadth-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/catalog-breadth-mobile.jpg),
+[kệ chủ đề](../../.impeccable/review/web-member/catalog-breadth-topics.jpg).
+CUA1366/850/390/320 không tràn; lọc thiếu nhi/reset,8→16→91, ba link chủ đề,
+giữ topic khi lọc Sale và về tất cả chủ đề PASS. Live override bỏ card/kệ mẫu,
+giữ lỗi kết nối thật; [QA](../../.impeccable/review/web-member/catalog-breadth-qa.json).
+Chữ200% chưa chạy lại ở extension này; recipe wrap hiện hành giữ nguyên.
+Backend thành công/DB/native/human NOT RUN; READINESS giữ nguyên. Checkpoint
+subject `feat(web): broaden preview catalog and home subjects`; local, chưa push.
+Reviewer độc lập kiểm ba capture/source/contract/canonical: disposition **ship**,
+không có material fix; [review](../../.impeccable/review/web-member/catalog-breadth-finish.md).
+
+Checkpoint nguồn và kiểm tra ban đầu:
+
+Sau `f4fffdb`, chủ dự án yêu cầu nhiều sách từ API để xem UI, ưu tiên manga/light
+novel, không dùng lại sách hero; DB demo sẽ chuẩn bị sau. Đã lấy48 edition thật
+từ Open Library (25 manga,16 light novel,7 văn học), giữ tên/tác giả/ISBN/bìa theo
+nguồn tiếng Anh. Metadata cache có thời điểm/query/source; bìa vẫn tải remote.
+Không scrape Fahasa hoặc ghi MongoDB. [Hướng dẫn nguồn/bật-tắt/làm mới/chuyển DB](../../apps/user-web/src/data/README.md).
+
+Preview chỉ trong dev, bật rõ bằng env/query; `data=live` ưu tiên hơn env,
+production luôn tắt. Home có nhãn xem trước và giá/tình trạng/mua-đổi mẫu từng
+card; card mở nguồn Open Library, không tạo listing/seller/media ID/giao dịch
+giả. Search/quick links/budget/filter hoạt động trên bộ mẫu trong Home;
+Header/Search/Detail vẫn là API thật. Chuyển nguồn thật dùng lại `/listings` và
+media read, lỗi không tự fallback. Hero art/layout/motion giữ nguyên; caption và
+search phản ánh nguồn đang chọn. Bốn bìa banner thay bằng catalog riêng ở cả hai
+chế độ. Chuẩn bị DB demo/bài đăng/ảnh đúng schema là gói riêng, không là đổi tên
+file JSON hoặc bằng chứng backend đã nghiệm thu.
+
+Build/typecheck21unit PASS; lint0error6warning cũ. Focused browser QA4width
+1366/850/390/320 × chữ100/200% PASS: category, mode/price URL, reset,8→16→48,
+search/empty, nguồn ngoài, không gọi listings trong preview, ảnh remote lỗi/retry,
+live503 không hiện mẫu và không tràn ngang. CUA thật chọn Light novel và tải bìa.
+Detector một lượt4advisory hero cũ, không có role mới. API metadata và ảnh remote
+đã dùng thật; backend thành công/DB/native/human NOT RUN, READINESS giữ nguyên.
+
+- [Desktop](../../.impeccable/review/web-member/catalog-preview-desktop.png),
+  [mobile](../../.impeccable/review/web-member/catalog-preview-mobile.png),
+  [CUA Light novel](../../.impeccable/review/web-member/catalog-preview-cua-desktop.jpg).
+- [QA](../../.impeccable/review/web-member/catalog-preview-qa.json),
+  [detector](../../.impeccable/review/web-member/catalog-preview-detect.json).
+
+Reviewer độc lập kiểm3capture/source/contract/canonical, disposition **ship**,
+không có material fix. Docs/diff PASS. Preview đã bật ở `.env.local` riêng máy
+chủ dự án; cấu hình này không đưa lên Git. Checkpoint subject
+`feat(web): add isolated book catalog preview`; local, chưa push/PR/merge/deploy.
+
+## Home — khám phá theo thể loại, mua/đổi và giá
+
+Sau `973e3c4`, chủ dự án yêu cầu giữ nguyên hero và thiết kế lại phần dưới theo
+cách tổ chức của [Fahasa](https://www.fahasa.com/), xác nhận kết hợp thể loại,
+mua/đổi và giá. Code-led mở rộng world đã duyệt, không sao chép banner/khuyến mãi.
+[Contract Home](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-homepage-tsx.md)
+ghi phạm vi và tiêu chí; JSX hero và các declaration responsive được so với HEAD,
+không đổi hành vi hoặc hình thức hero.
+
+Body mới có bốn lối vào nhanh, thể loại từ bài đăng thật, kệ mới đăng lọc mua/đổi/
+giá, hai banner ngân sách, kệ đổi nền xanh nhạt và CTA đăng sách. Bìa banner là
+minh họa có ghi rõ, không đại diện cho giá hoặc hàng đang bán. API chưa hỗ trợ
+thể loại: chỉ lọc cục bộ tối đa24 bài mới tải trong kệ, ghi rõ phạm vi; mode/giá
+lọc trên server và mở danh sách toàn bộ tương ứng. Hiện8 bài, thêm8 mỗi lần.
+Không thêm endpoint hoặc dữ liệu thương mại giả. BookCard có prop compact riêng
+Home; Search giữ mặc định, CSS mới không tác động AuctionCard.
+
+Build/typecheck và16unit PASS; lint0error6warning cũ. Response fixture kiểm7width
+1536/1366/1000/850/768/390/320 × chữ100/130/200% PASS: bộ lọc, liên kết, thêm bài,
+reset thể loại, rỗng/lỗi/thử lại, search Enter, card mặc định và không tràn ngang.
+CUA thật xác nhận layout/bộ lọc/link ở desktop và cửa sổ người dùng; API3048
+không chạy nên dữ liệu thật hiện trạng thái lỗi kết nối. Fixture chỉ dùng trong
+QA, có nhãn; không seed hoặc sửa DB. API thật/native/human acceptance NOT RUN;
+READINESS giữ nguyên. Bundle vẫn có warning kích thước chunk.
+
+Detector đúng một lượt:12advisory,8legacy ngoài diff;4role màu/chữ Home mới được
+ghi canonical. Provenance scan thư mục minh họa11raster0missing; dùng lại bìa
+đã có. Documenter độc lập cập nhật DESIGN/sidecar, parity PASS.
+
+- [Desktop fixture](../../.impeccable/review/web-member/home-discovery-desktop.png),
+  [mobile](../../.impeccable/review/web-member/home-discovery-mobile.png),
+  [banner mobile](../../.impeccable/review/web-member/home-discovery-mobile-lower.png),
+  [320px chữ200%](../../.impeccable/review/web-member/home-discovery-large-text.png).
+- [Rỗng](../../.impeccable/review/web-member/home-discovery-empty.png),
+  [lỗi](../../.impeccable/review/web-member/home-discovery-error.png),
+  [CUA desktop](../../.impeccable/review/web-member/home-discovery-cua-desktop.jpg),
+  [CUA cửa sổ người dùng](../../.impeccable/review/web-member/home-discovery-cua-current.jpg).
+- [QA](../../.impeccable/review/web-member/home-discovery-qa.json),
+  [detector](../../.impeccable/review/web-member/home-discovery-detect.json).
+
+Reviewer độc lập kiểm đủ8capture cùng source/contract/canonical, disposition
+**ship**, không có material fix; đây là review frontend giới hạn, không thay
+human acceptance. Docs/diff PASS. Checkpoint subject
+`feat(web): redesign home discovery shelves`; local, chưa push/PR/merge/deploy.
+
+## Login — ảnh tiệm sách và form riêng
+
+Cập nhật sau `1e569eb`: chủ dự án duyệt nền giấy và yêu cầu bỏ hình quyển sách,
+giữ “Lại gặp nhau rồi.” một hàng. Form dùng texture giấy kem local512px, opacity85%,
+input vẫn trắng; headline giữ Be Vietnam Pro/size hiện hành, gạch vàng nhỏ dưới
+“nhau rồi.” và cho phép wrap tự nhiên khi tăng chữ. Ánh sáng nền chạy một lượt
+2400ms rồi tắt, bỏ hoàn toàn khi giảm chuyển động; không có grain động liên tục.
+Logo/ảnh trái/session/handler/Register giữ nguyên. Texture được tạo bằng built-in
+imagegen, [prompt và nguồn](../../apps/user-web/public/login-art/ivory-paper.webp.json).
+
+Build/typecheck PASS, lint0error6warning cũ. Response fixture9viewport với
+100/130/200% chữ PASS; material QA xác nhận không còn hình sách, headline một
+hàng ở1366/390/320px100%, motion kết thúc và reduced-motion tắt. Tương phản
+muted thấp nhất4.73:1 trên toàn texture. Provenance scan1raster0missing.
+Detector chỉ chạy một lượt trước correction:2advisory màu trắng và title2rem;
+title hiện đã về1.75rem narrow theo canonical, màu trắng giữ cho input/sweep.
+Không chạy lại detector. API thật/native/human NOT RUN, READINESS giữ nguyên.
+
+- [Laptop](../../.impeccable/review/web-member/login-paper-laptop.png),
+  [mobile](../../.impeccable/review/web-member/login-paper-mobile.png),
+  [320px chữ200%](../../.impeccable/review/web-member/login-paper-small.png).
+- [Lỗi](../../.impeccable/review/web-member/login-paper-error.png),
+  [thông báo đăng ký](../../.impeccable/review/web-member/login-paper-help.png).
+- [CUA cửa sổ hiện tại](../../.impeccable/review/web-member/login-paper-cua-current.jpg),
+  [CUA desktop](../../.impeccable/review/web-member/login-paper-cua-desktop.jpg),
+  [CUA mobile](../../.impeccable/review/web-member/login-paper-cua-mobile.jpg).
+
+Documenter cập nhật DESIGN/sidecar và parity PASS; reviewer độc lập kiểm đủ8ảnh,
+contract/source/canonical, disposition **ship**, không có material fix.
+Docs/diff PASS. Checkpoint subject `feat(web): add subtle paper material to login`.
+Local, chưa push/PR/merge/deploy. Phần dưới ghi các checkpoint trước đó.
+
+Cập nhật sau `5c88499`, theo yêu cầu chủ dự án: bỏ masthead đỏ riêng và đặt cú/
+wordmark trực tiếp trên ảnh bên trái. `Logo` và ảnh PNG gốc không đổi; SVG color
+matrix riêng Login chuyển nền đỏ phẳng của PNG thành alpha, giữ đường nét kem.
+Scene dùng grid auto/1fr/auto cho logo, story và credit để không chồng lên nhau.
+Desktop giữ45/55; <=900px thu ảnh thành vùng logo ngắn, ẩn story/credit; home là
+link riêng trên nền giấy. Không sửa Header/AuthLayout/Register hoặc client khác.
+
+Form400px có greeting Be Vietnam Pro tối đa2.5rem, input trắng52px, label/field
+group rõ ràng. “Quên mật khẩu?” cạnh nhãn mật khẩu; “Chưa có tài khoản? Đăng ký”
+sau nút chính, cách bằng một đường mảnh. Hai nút là disclosure44px, dùng
+aria-expanded/controls và thông báo role=status. Contract/controller chỉ có
+login/refresh/logout/me: chưa có register/reset; nút không gửi request, không
+nhận credential mới hoặc chuyển sang scaffold đăng ký legacy. Handler login,
+safe returnUrl, giữ giá trị khi lỗi và SessionClient giữ nguyên.
+
+Build/16unit PASS; lint0error6warning cũ, bundle warning có sẵn. Browser response
+fixture9viewport100/130/200% PASS một logo trên ảnh,52px field/44px target,
+không tràn ngang, desktop650px100% vừa, màn thấp/chữ lớn/error/help cuộn tự nhiên,
+password toggle/error retention/retry/busy/returnUrl/storage memory-only. Hai
+disclosure mở/đóng/thay thế đúng và không request. Lượt đầu helper kiểm nav
+Register bằng accessibility selector tại390px nên không thấy nav bị CSS ẩn;
+đã sửa selector DOM, không sửa source/test sản phẩm để che lỗi. CUA kiểm cả hai
+nút và ảnh1366×650/390×844. Scan layout trước sửa0finding; không chạy lại detector.
+API thật/native/human acceptance NOT RUN, READINESS giữ nguyên.
+
+- [Laptop](../../.impeccable/review/web-member/login-overlay-laptop.png),
+  [mobile](../../.impeccable/review/web-member/login-overlay-mobile.png).
+- [320px chữ200%](../../.impeccable/review/web-member/login-overlay-small.png),
+  [lỗi](../../.impeccable/review/web-member/login-overlay-error.png),
+  [lỗi và thông báo đăng ký](../../.impeccable/review/web-member/login-overlay-help.png).
+- [CUA desktop](../../.impeccable/review/web-member/login-overlay-cua-desktop.jpg),
+  [CUA mobile](../../.impeccable/review/web-member/login-overlay-cua-mobile.jpg).
+
+Finish reviewer độc lập kiểm đủ7capture: không có sửa visual bắt buộc; yêu cầu
+lưu canonical cho bố cục mới. Documenter cập nhật DESIGN/sidecar và kiểm parity;
+verdict pass chấm persistence **resolved**, disposition **ship**. Verdict này chỉ
+chấm sửa tài liệu; visual review trước đó giữ nguyên, không thay human acceptance.
+Docs/diff PASS. Checkpoint subject `feat(web): overlay login branding and refine account actions`.
+Local, chưa push/PR/merge/deploy. Mô tả/captures dưới đây thuộc checkpoint5c88499.
+
+Sau `6de0289`, chủ dự án chọn ảnh bookstore làm mờ nhẹ/đặt chữ và chia màn hình
+như mẫu [Edusama](https://dribbble.com/shots/27353194-Edusama-Digital-Library-Login-Exploration).
+[Contract Login](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-loginpage-tsx.md)
+ghi phạm vi code-led: desktop45/55, logo gốc trên masthead đỏ, ảnh tiệm sách
+Barcelona của Davit Margaryan từ Unsplash, CSS blur2px + tint đỏ64%, chữ
+“Chuyện hay còn tiếp.”; form nền kem400px, Be Vietnam Pro, control52px.
+<=900px bỏ mảng ảnh lớn, giữ logo và Về trang chủ. Laptop100% vừa viewport;
+màn thấp/chữ lớn/lỗi được cuộn tự nhiên. Không dùng navbar đầy đủ trên Login.
+AuthLayout/Register và Header ở các màn khác giữ recipe trước đó.
+
+Ảnh delivery local, không hotlink runtime; [nguồn/giấy phép](../../apps/user-web/public/photography/README.md)
+và origin embedded + sidecar ghi rõ là ảnh trang trí, không là cơ sở Lật lại hay
+ảnh bài đăng. SessionClient/handler/safe returnUrl vẫn nguyên; không thêm
+Google/login khác/đăng ký/khôi phục mật khẩu hoặc thay token storage.
+
+Kiểm: build/typecheck16unit PASS; lint0error6warning legacy. Focused Chromium
+response fixture9viewport100/130% PASS: không tràn ngang, một logo hiện, target44px,
+laptop vừa/màn thấp cuộn, hiện/ẩn mật khẩu, lỗi giữ dữ liệu/retry, pending disabled,
+login return về sách và browser storage trống. CUA xác nhận desktop/mobile,
+password toggle và Về trang chủ. API thật/native/human usability NOT RUN;
+không ghi/xóa DB hoặc đổi READINESS. Detector một lượt2advisory: credit12px,
+footer13px có chủ đích; không được nhận là detector0findings. Tương phản
+conservative trên toàn ảnh dưới tint alpha163/255: cream4.84:1, chữ vàng lớn
+3.36:1; muted trên nền giấy5.77:1.
+
+Ảnh đã kiểm đúng nội dung/kích thước:
+
+- [Desktop1536×730](../../.impeccable/review/web-member/login-bookshop-desktop.jpg).
+- [Laptop1366×650](../../.impeccable/review/web-member/login-bookshop-laptop.png).
+- [Mobile390×844](../../.impeccable/review/web-member/login-bookshop-mobile.jpg).
+- [320px chữ130%, full page](../../.impeccable/review/web-member/login-bookshop-small.png).
+- [Lỗi, full page](../../.impeccable/review/web-member/login-bookshop-error.png).
+
+Review độc lập source/five captures: UI đạt composition, finding còn lại là
+recipe Login cũ trong DESIGN; documenter cập nhật canonical rồi reviewer xác
+nhận finding này resolved. Recapture64% tint cũng được mở lại đủ5file, verdict
+ship ở phạm vi hai sửa persistence/tint; review trước của UI giữ hiệu lực.
+Không nhận là human acceptance. Checkpoint subject `feat(web): frame login with a warm bookshop photograph`.
+Local trên codex/web-member-redesign, chưa push/PR/merge/deploy.
+
+## Ảnh và dữ liệu
+
+Dribbble cung cấp ảnh thiết kế tổng hợp; chưa có bộ asset tách riêng hoặc ảnh bìa
+gốc chất lượng cao từ tác giả. Không cắt bìa nhỏ từ screenshot để gán cho bài đăng.
+Home hiện dùng bìa chủ dự án cung cấp: Chúa nhẫn (hai vị trí), Alice mới,
+Nghìn lẻ một đêm, Tuổi thơ, One Piece, Sword Art Online, Dược sư tự sự; nguồn trong
+[asset README](../../apps/user-web/public/illustrations/README.md); có chú thích
+minh họa. Thẻ/chi tiết dùng ảnh API, không thay bằng ảnh stock. Mọi raster mới
+được ghi provenance (embedded JPEG/PNG hoặc sidecar WebP). Các screenshot sử dụng
+fixture [QA], giá/tình trạng mô phỏng.
+
+## Kiểm chứng
+
+Sau `29ff82e`, chủ dự án yêu cầu nhìn rõ lúc navbar thu trên nền hero cùng màu.
+CUA xác nhận laptop bật reduced-motion làm transition cũ chỉ0.01ms. Đã tăng morph
+lên360ms và thêm viền kem1.5px pointer-none chỉ trong collapse, opacity0→65%→0;
+animationend xóa state, expand hủy ngay, lần thu kế tiếp chạy lại. Giữ360ms cho
+riêng morph/edge dù OS reduce, không sửa thiết lập máy hoặc animation khác.
+Focused Chromium PASS desktop1536×730/mobile390×844/320×650, cả reduce/no-preference:
+sample rAF xác nhận width trung gian/edge sáng rồi về0, replay/reversal và không
+nhảy nội dung/tràn ngang. CUA thấy collapsing=true/duration0.36s/edge0.228 rồi
+collapsing=false/edge0; [ảnh giữa chuyển động](../../.impeccable/review/web-member/navbar-edge-morph.jpg).
+Build/typecheck/16unit/lint0error6warning cũ/docs/diff PASS. Detector một lượt6
+advisory màu/type legacy ngoài diff; không có finding mới của morph/edge. Finish
+pass source/browser đạt scope, không đổi API/native/gate; auth/API integration
+không chạy lại vì không đổi session/command. Checkpoint subject
+`feat(web): illuminate navbar edge during compact transition`; local, chưa push.
+
+Sau `4cffb71`, chủ dự án duyệt navbar gọn/nổi theo hai trạng thái trong ảnh BeeWise.
+Header dùng chung Main/Auth/Dashboard và form đăng sách:76px ở đầu,64px/top12px/
+radius32px/max1280px khi cuộn>48px, trở lại ở<=16px; slot cố định không nhảy nội dung.
+Mobile<=1000px:72px ở đầu,64px/top8px/side10px khi nổi; logo nguyên bản scale
+CSS82% dưới420px, controls>=44px. Menu tự đóng theo route/Escape/desktop resize,
+scroll trong viewport; notification popup hẹp không tràn. Navbar tôn trọng reduced
+motion; transition240ms chỉ trên fixed layer, không thêm library hay đổi API/session.
+Ảnh CUA: [đầu trang](../../.impeccable/review/web-member/navbar-desktop-top.jpg),
+[thanh nổi](../../.impeccable/review/web-member/navbar-desktop-floating.jpg),
+[menu mobile](../../.impeccable/review/web-member/navbar-mobile-menu.jpg).
+Focused Chromium PASS7viewport1536/1366/1001/1000/800/390/320,100/130%text, khách
+và authenticated response fixture: geometry/no overflow/no jump, threshold/return,
+menu/Escape/focus/route/resize, skip link/reduced motion, popup bounds và Header
+trong các layout/form. Đây là browser fixture, không kiểm auth/API thật. CUA desktop/
+mobile đã xem/thao tác; không claim Safari/Firefox/native/human acceptance.
+Build/typecheck/16unit PASS, lint0error6warning legacy; docs/diff PASS. Detector
+chạy một lần, trả advisory về màu/type/radius CSS ngoài scale;32px là hình navbar
+chủ dự án duyệt và đã ghi DESIGN, các literal legacy ngoài diff giữ nguyên.
+Finish pass theo diff/browser: scope đạt; dashboard/form/register nội dung còn
+legacy, không nhận đã redesign các trang này. API QA3048 không chạy, Home giữ
+trạng thái lỗi/thử lại. Local checkpoint subject
+`feat(web): add compact floating member navigation`; chưa push/PR/merge/deploy.
+
+Sau `288a385`, chủ dự án cung cấp Hero text final.png để thay headline Home.
+Giữ đúng SÁCH MỚI. CHƯƠNG MỚI. CÙNG LẬT LẠI., nét chữ/dấu và minh họa/đồ họa
+final; không dùng bản Hero text.png cũ hoặc tự sửa copy thành sách cũ. Source có
+alpha; delivery1313×655 PNG lossless chỉ bỏ lề trong suốt/chừa16px, raw RGBA
+đối chiếu source crop PASS trùng pixel. H1 chữ tương ứng + ảnh alt rỗng/aria-hidden;
+không đọc lặp, fetchPriority high/intrinsic dimensions giữ tỷ lệ. Artwork cap theo
+viewport, description sách cũ giữ nguyên. Ảnh là typography cố định, không wrap
+glyph như live text; không nhận là accessibility acceptance toàn diện.
+CUA1536×730/390×844 PASS ảnh tải/đủ dấu/toàn hình/tỷ lệ/không tràn:
+[desktop](../../.impeccable/review/web-member/hero-lettering-desktop.png),
+[mobile](../../.impeccable/review/web-member/hero-lettering-mobile.png).
+Focused9viewport100/130%text/8bìa/nooverflow/search Enter PASS; laptop1536×730
+hero494px, kệ đầu kết thúc671px,1366×650 kệ đầu645px. Build/typecheck/16unit/
+lint0error6warning cũ/docs/diff PASS, layout detector0findings. Không đổi motion/
+API/DB/session/native/gate; limitation motion control ở lượt trước vẫn còn.
+
+Sau `1d9e5c5`, chủ dự án yêu cầu bỏ nút pause, bìa chuyển động liên tục và hạ
+description/search để thoáng hơn. Đã bỏ state/control/hoverpause; giữ offscreen/
+hidden guards và OS override đã duyệt. Desktop compact description/search hạ20px;
+hero469px tại1536×730 vì bỏ hàng nút, kệ đầu vẫn thấy. Mobile description hạ8px.
+[Desktop](../../.impeccable/review/web-member/hero-airy-desktop.png),
+[mobile](../../.impeccable/review/web-member/hero-airy-mobile.png).
+Focused Chromium PASS9viewport100/130%text/8bìa/nooverflow/search Enter, sway
+liên tục cả hover và OS reduce, tự dừng offscreen. Hidden listener kiểm source,
+chưa mô phỏng tab background. Build/typecheck/16unit/lint0error6warning cũ/docs/
+diff PASS; layout detector0findings. Bỏ control + OS override làm người xem không
+có cách chủ động dừng animation; ghi limitation accessibility, không nhận PASS.
+Các dòng pause bên dưới là lịch sử trước yêu cầu này. Không đổi API hoặc gate.
+
+Sau `33f0544`, chủ dự án báo hero desktop100% gần chiếm hết viewport laptop.
+CUA1536×730 đo header96.8px + hero686px, search y607px, tiêu đề kệ y851px.
+Đã thêm compact Home cho width≥1101/height≤850: headline và bìa clamp theo vh,
+nén padding/gap/caption; giữ8bìa, hover/sway/pause, nét vẽ và44px touch target.
+Không scale trang, khóa height hay cắt nội dung; Header/DOM/mobile giữ nguyên.
+Sau sửa1536×730: hero497px, search bottom504px, pause bottom582px, tiêu đề kệ
+bottom674px;1366×650 tiêu đề kệ bottom645px.
+[Ảnh laptop](../../.impeccable/review/web-member/hero-laptop-desktop.png).
+Focused Chromium9viewport1536×730,1366×650,1280×600,1182×562,1051×500,1440×900,
+1100×800,390×844,320×650 ở100/130% text size PASS đủ8ảnh/không tràn; search Enter
+đúng q. Desktop cao giữ hero686px, mobile/narrow tự cuộn khi cần. Browser zoom
+thật không được tự đổi; kiểm theo viewport tương ứng và text scaling riêng.
+Layout assessment độc lập + detector layout trước/sau0findings; build/typecheck,
+16unit/lint0error6warning cũ/docs/diff PASS. Không kiểm lại API/native hoặc gate.
+
+Sau `8a871f8`, chủ dự án duyệt minh họa giấy lật màu kem và tăng chiều sâu bìa.
+Ba SVG gốc vẽ trực tiếp: hai nét trang lật bất đối xứng quanh cụm bìa, sách mở ở
+góc dưới phải. Artwork tĩnh/aria-hidden/pointer-none, không cản input/hover;
+thu gọn ra mép mobile, ẩn sách mở dưới600px. Shadow có cạnh sáng, contact và cast
+offset mềm; hover mở rộng bóng, giữ sway/pause và override OS đã duyệt.
+Build/typecheck,16unit, lint0error6warning cũ, docs/diff PASS. Chromium focused
+PASS sway/hover/manual/offscreen và reduce/no-preference, đủ8bìa không tràn ngang
+1440/390/320px100/130%. CUA1440/390px kiểm ba SVG tải đủ, pointer-none và bố cục:
+[desktop](../../.impeccable/review/web-member/hero-illustrated-desktop.png),
+[mobile](../../.impeccable/review/web-member/hero-illustrated-mobile.png).
+Detector chạy một lần; advisory size/màu thuộc CSS cũ không đổi trong diff này.
+Không đổi API/session/native hoặc dữ liệu QA; proxy3048 vẫn không chạy nên kệ
+hiện lỗi/thử lại. Không nhận là kiểm lại giao dịch hoặc nghiệm thu người thật.
+
+Sau `1c68ec3`, chủ dự án yêu cầu hero vẫn animate dù máy bật giảm animation.
+Đã giới hạn CSS exception cho entrance/sway/hover của bìa, giữ pause/resume và
+offscreen/hidden guards; không sửa cài đặt Windows hoặc override các màn khác.
+Focused Chromium PASS cả reduce/no-preference đều sway, hover/pause/resume đúng,
+không tràn1440/390/320px100/130%. IAB thực tế reduce=true, computed animation6s/
+infinite/running và transform thay đổi; [ảnh hiện tại](../../.impeccable/review/web-member/hero-forced-sway.jpg).
+Build/typecheck/docs/diff PASS. Các dòng reduced-motion none bên dưới là lịch sử
+trước yêu cầu override này.
+
+Sau `c06a288`, chủ dự án yêu cầu bìa đung đưa nhẹ. Inner wrapper sway±3px/±1°,
+chu kỳ6–7.5s lệch nhịp; hover tạm dừng wrapper, giữ zoom. Có nút pause/resume,
+tự dừng ngoài viewport và khi document hidden; giảm chuyển động tắt sway.
+Focused Chromium PASS chuyển động theo thời gian/hover pause/manual pause-resume/
+offscreen pause/reduced-motion none, không tràn1440/390/320px100/130%, đủ8ảnh.
+Visibilitychange listener kiểm source, chưa mô phỏng tab background. Build/typecheck
+PASS, lint0error6warning cũ. CUA in-app thực tế reduced-motion=true nên ảnh tĩnh;
+[preview hiện tại](../../.impeccable/review/web-member/hero-sway-preview.jpg).
+Proxy QA3048 đang không chạy ở lượt này; kệ API hiện trạng thái lỗi, không đổi API
+hoặc dataset để kiểm hiệu ứng. Không nhận là kiểm lại giao dịch/native.
+
+Sau `6c0e266`, thay một bìa Gachiakuta bằng SAO do chủ dự án cung cấp; giữ CSS,
+vị trí/hover. Build/typecheck và kiểm ảnh tải/hiện CUA PASS;
+[ảnh SAO hiện tại](../../.impeccable/review/web-member/hero-sao.jpg).
+
+Sau `48e806d`, thay Oz→Chúa nhẫn (hai vị trí), Alice cũ→Alice mới,
+Pride→Nghìn lẻ một đêm trong hero và ba mục khám phá. CSS/hover không đổi.
+Build/typecheck PASS, CUA1440/390px PASS8ảnh tải/hiện và mobile không tràn;
+[desktop hiện tại](../../.impeccable/review/web-member/hero-replacement-desktop.jpg),
+[mobile hiện tại](../../.impeccable/review/web-member/hero-replacement-mobile.jpg).
+Kiểm hover/chữ lớn bên dưới thuộc checkpoint48e806d với cùng CSS.
+
+Cập nhật hero sau checkpoint `e0b739f`: thêm bốn bìa do chủ dự án gửi, giữ bốn vị
+trí cũ thành tám; desktop lúc đó hai cụm2×2 (đã thay bằng cụm chồng nhẹ sau3834fde), <=1100 dưới search, <=800 thành4×2. Hover
+fine-pointer phóng1.12×/nâng8px/bóng đổ, rời chuột trả về; giảm chuyển động tắt
+phóng/nâng, touch không hover. Không đổi danh sách/API/mutation hoặc màn khác.
+[Desktop8bìa](../../.impeccable/review/web-member/hero-eight-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/hero-eight-mobile.jpg),
+[hover](../../.impeccable/review/web-member/hero-eight-hover.png),
+[320px130%](../../.impeccable/review/web-member/hero-eight-320-130.png).
+Focused Chromium QA PASS: tám ảnh tải/hiện đầy đủ, không tràn1440/1100/800/390/320px
+ở100/130%; hover phóng/nâng/exit reset, reduced-motion static, touch gate off,
+search Enter chuyển q đúng. Layout assessor xác nhận phạm vi yêu cầu đã đạt,
+không có lỗi layout đáng kể do lượt sửa này. Scan layout một lượt0findings;
+scan provenance7/7 (WebP dùng sidecar). Build/typecheck PASS, lint0error6warning cũ.
+Các kết quả integration16unit bên dưới thuộc checkpoint trước, không chạy lại
+nghiệp vụ không đổi ở lượt hero.
+
+Build/typecheck và16/16 unit PASS. Lint0error,6warning có sẵn ở chat/exchange.
+Build còn cảnh báo bundle JS lớn (1.06MB minified,330KB gzip); chưa tách bundle
+trong gói visual này.
+Browser integration HTTP Nest/MongoDB thật trên database riêng *_test, storage
+FAKE: tìm/lọc/sort/cursor/chi tiết, rỗng/503/retry, login return/owner guard,
+form5 bước/dữ liệu giữ lại/upload/submit/mất phản hồi replay,390px100/130% PASS.
+Purchase mất phản hồi sau commit→thử lại giữ nguyên key/body/version, API xác nhận
+chỉ một conversation PASS. Home/Detail/Search320px130% không tràn ngang PASS.
+Browser CUA chụp Home/Search/Detail1440px và390px, Login320px; không tràn ngang
+trong các viewport đã đo. [Ảnh desktop](../../.impeccable/review/web-member/home-desktop.jpg),
+[mobile](../../.impeccable/review/web-member/home-mobile.jpg),
+[tìm sách](../../.impeccable/review/web-member/search-desktop.jpg),
+[chi tiết](../../.impeccable/review/web-member/detail-desktop.jpg) và
+[login320](../../.impeccable/review/web-member/login-320.jpg) ghi bản sau sửa review.
+Finish reviewer độc lập yêu cầu năm sửa: giữ cú/bìa trên mobile; radio chọn một
+kèm Tất cả; viền control/focus đủ rõ; caption ảnh trung tính; lưu đúng DESIGN/sidecar.
+Verdict Pass của reviewer độc lập: cả năm sửa **resolved**, disposition **ship**.
+Verdict này chấm các sửa đã yêu cầu, không chứng nhận toàn sản phẩm hoặc thay
+review người thật. Documenter đã cập nhật DESIGN/sidecar và kiểm schema-v2,
+token/snippet/narrative parity; giữ riêng sự thật RN và các màn legacy.
+Scan raster PASS4/4 có provenance. Không có approved comp; đây là code-led theo
+hai ảnh tham chiếu của chủ dự án.
+Detector một lượt:101 advisory đối chiếu DESIGN cũ (32 màu,54 cỡ chữ,15 radius),
+không có finding cơ học; direction mới thay thế palette cũ theo yêu cầu chủ dự án.
+
+Không đóng READINESS, không coi đây là human usability/native/live Supabase PASS.
+Không push/PR/merge/deploy cho gói web này.

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/schema.ts",
+    "./catalog-taxonomy": "./src/catalog-taxonomy.js",
     "./openapi.yaml": "./openapi.yaml"
   },
   "scripts": {

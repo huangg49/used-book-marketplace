@@ -1,287 +1,208 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, AlertTriangle } from 'lucide-react';
-import type { ExchangeDetail } from '../../../lib/mock/exchangeDetail';
-import { ConfirmDialog } from '../../ConfirmDialog';
-import { ROUTES } from '../../../lib/routes';
-import styles from './ActionCard.module.css';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
+import { ConfirmDialog } from "../../ConfirmDialog";
+import { ROUTES, formatVnd } from "../../../lib/routes";
+import { exchangeError, pendingExchange } from "../../../services/exchange";
+import styles from "./ActionCard.module.css";
 
-interface ActionCardProps {
-    detail: ExchangeDetail;
-    onCancel: () => Promise<void>;
-    onAccept: () => Promise<void>;
-    onReject: (reason?: string) => Promise<void>;
-    onConfirmSent: () => Promise<void>;
-    onConfirmReceived: () => Promise<void>;
-    onReportIssue: (type: string, desc: string) => Promise<void>;
+type Action =
+  "cancel" | "accept" | "reject" | "fund" | "sent" | "received" | "retry";
+interface Props {
+  detail: ExchangeDetail;
+  onCancel: () => Promise<void>;
+  onAccept: () => Promise<void>;
+  onReject: (reason: string) => Promise<void>;
+  onFund: () => Promise<void>;
+  onConfirmSent: () => Promise<void>;
+  onConfirmReceived: () => Promise<void>;
+  onRetry: () => Promise<void>;
 }
+const labels: Record<Action, string> = {
+  cancel: "Hủy đề nghị",
+  accept: "Chấp nhận đề nghị",
+  reject: "Từ chối đề nghị",
+  fund: "Đặt cọc mô phỏng",
+  sent: "Xác nhận đã gửi sách",
+  received: "Xác nhận đã nhận sách",
+  retry: "Thử lại thao tác trước",
+};
 
-export function ActionCard({
-    detail,
-    onCancel,
-    onAccept,
-    onReject,
-    onConfirmSent,
-    onConfirmReceived,
-    onReportIssue
-}: ActionCardProps) {
-    const navigate = useNavigate();
-    const isProposer = detail.viewerRole === 'proposer';
-    
-    // Dialog states
-    const [cancelOpen, setCancelOpen] = useState(false);
-    const [acceptOpen, setAcceptOpen] = useState(false);
-    const [rejectOpen, setRejectOpen] = useState(false);
-    const [sentOpen, setSentOpen] = useState(false);
-    const [receivedOpen, setReceivedOpen] = useState(false);
-    const [reportOpen, setReportOpen] = useState(false);
-
-    // Reject Form State
-    const [rejectReason, setRejectReason] = useState('');
-    const [rejectError, setRejectError] = useState('');
-    const [isProcessing, setIsProcessing] = useState(false);
-
-    // Report Form State
-    const [reportType, setReportType] = useState('Không nhận được sách');
-    const [reportDesc, setReportDesc] = useState('');
-    const [reportError, setReportError] = useState('');
-
-    const wrapAction = async (action: () => Promise<void>, closeFn: () => void, setErrorMsg: (msg: string) => void) => {
-        setIsProcessing(true);
-        setErrorMsg('');
-        try {
-            await action();
-            closeFn();
-        } catch (_e) {
-            setErrorMsg('Đã có lỗi xảy ra. Vui lòng thử lại.');
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    const handleReject = () => {
-        if (rejectReason.length > 300) {
-            setRejectError('Lý do không được vượt quá 300 ký tự');
-            return;
-        }
-        wrapAction(() => onReject(rejectReason), () => setRejectOpen(false), setRejectError);
-    };
-
-    const handleReport = () => {
-        if (reportDesc.length < 20) {
-            setReportError('Vui lòng nhập tối thiểu 20 ký tự mô tả chi tiết sự cố.');
-            return;
-        }
-        wrapAction(() => onReportIssue(reportType, reportDesc), () => setReportOpen(false), setReportError);
-    };
-
-    let title = 'Hành động của bạn';
-    let instructions = '';
-    let buttons = null;
-
-    if (detail.status === 'PENDING') {
-        if (isProposer) {
-            instructions = 'Bạn đã gửi đề nghị. Đang chờ đối tác phản hồi.';
-            buttons = (
-                <div className={styles.btnRow}>
-                    <button className={styles.btnSecondary} onClick={() => setCancelOpen(true)}>Hủy đề nghị</button>
-                    <button className={styles.btnSecondary} onClick={() => navigate(`${ROUTES.exchangeCompose}?from=${detail.id}`)}>Cập nhật đề nghị</button>
-                </div>
-            );
-        } else {
-            instructions = 'Bạn nhận được một đề nghị trao đổi. Vui lòng xem xét và phản hồi.';
-            buttons = (
-                <div className={styles.btnRow}>
-                    <button className={styles.btnPrimary} onClick={() => setAcceptOpen(true)}>Chấp nhận</button>
-                    <button className={styles.btnSecondary} onClick={() => setRejectOpen(true)}>Từ chối</button>
-                    <button className={styles.btnSecondary} onClick={() => navigate(`${ROUTES.exchangeCompose}?from=${detail.id}`)}>Đề xuất lại</button>
-                </div>
-            );
-        }
-    } else if (detail.status === 'DELIVERING') {
-        const viewerShipping = detail.viewerShipping;
-        const partnerShipping = detail.partnerShipping;
-        
-        if (!viewerShipping?.sentAt) {
-            instructions = 'Đề nghị đã được chấp nhận. Vui lòng gửi sách và xác nhận khi bạn đã hoàn tất việc gửi đi.';
-            buttons = (
-                <div className={styles.btnRow}>
-                    <button className={styles.btnPrimary} onClick={() => setSentOpen(true)}>
-                        <CheckCircle2 size={18} /> Xác nhận đã gửi sách
-                    </button>
-                    {!partnerShipping?.sentAt && (
-                        <button className={styles.btnSecondary} onClick={() => navigate(`${ROUTES.exchangeCompose}?from=${detail.id}`)}>Đề xuất lại</button>
-                    )}
-                    <button className={styles.btnSecondary} onClick={() => setReportOpen(true)}>
-                        <AlertTriangle size={18} /> Báo cáo sự cố
-                    </button>
-                </div>
-            );
-        } else {
-            instructions = `Bạn đã xác nhận gửi lúc ${new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short', hour12: false }).format(new Date(viewerShipping.sentAt))}. Đang chờ quá trình giao nhận hoàn tất.`;
-            buttons = (
-                <div className={styles.btnRow}>
-                    <button className={styles.btnSecondary} onClick={() => setReportOpen(true)}>
-                        <AlertTriangle size={18} /> Báo cáo sự cố
-                    </button>
-                </div>
-            );
-        }
-    } else if (detail.status === 'WAITING_YOU_CONFIRM') {
-        const viewerShipping = detail.viewerShipping;
-        
-        if (!viewerShipping?.receivedAt) {
-            instructions = 'Đối tác đã xác nhận gửi sách. Vui lòng xác nhận khi bạn đã nhận được sách.';
-            buttons = (
-                <div className={styles.btnRow}>
-                    <button className={styles.btnPrimary} onClick={() => setReceivedOpen(true)}>
-                        <CheckCircle2 size={18} /> Xác nhận đã nhận sách
-                    </button>
-                    <button className={styles.btnSecondary} onClick={() => setReportOpen(true)}>
-                        <AlertTriangle size={18} /> Báo cáo sự cố
-                    </button>
-                </div>
-            );
-        } else {
-            instructions = 'Bạn đã xác nhận nhận sách. Đang chờ đối tác xác nhận để hoàn tất giao dịch.';
-            buttons = (
-                <div className={styles.btnRow}>
-                    <button className={styles.btnSecondary} onClick={() => setReportOpen(true)}>
-                        <AlertTriangle size={18} /> Báo cáo sự cố
-                    </button>
-                </div>
-            );
-        }
-    } else if (detail.status === 'COMPLETED') {
-        instructions = 'Giao dịch trao đổi sách đã hoàn tất thành công. Bạn có thể để lại đánh giá cho đối tác.';
-        buttons = (
-            <div className={styles.btnRow}>
-                <div className={styles.btnWrapper}>
-                    <button className={styles.btnPrimary} disabled aria-describedby="review-todo">Để lại đánh giá</button>
-                    <span id="review-todo" className={styles.todoMsg} role="status">Tính năng đánh giá sẽ sớm có</span>
-                </div>
-                <button className={styles.btnSecondary} onClick={() => navigate(ROUTES.exchangeMine)}>Xem lại trao đổi của tôi</button>
-            </div>
-        );
-    } else {
-        instructions = detail.status === 'REJECTED' ? 'Đề nghị trao đổi đã bị từ chối.' : 
-                      detail.status === 'CANCELLED' ? 'Đề nghị trao đổi đã bị hủy.' : 
-                      'Đề nghị trao đổi đã hết hạn do không có phản hồi.';
-        buttons = (
-            <div className={styles.btnRow}>
-                <button className={styles.btnPrimary} onClick={() => navigate(ROUTES.exchangeMine)}>Quay lại Trao đổi của tôi</button>
-                <button className={styles.btnSecondary} onClick={() => setReportOpen(true)}>Báo cáo sự cố</button>
-            </div>
-        );
+export function ActionCard(props: Props) {
+  const { detail } = props;
+  const [action, setAction] = useState<Action>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [reason, setReason] = useState("");
+  const pending = pendingExchange(detail.id);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!detail.fundingDeadline) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [detail.fundingDeadline]);
+  const expired =
+    detail.fundingDeadline && Date.parse(detail.fundingDeadline) <= now;
+  let instructions = "Theo dõi trạng thái trao đổi tại đây.";
+  const actions: Action[] = [];
+  if (detail.status === "PENDING") {
+    instructions =
+      detail.viewerRole === "proposer"
+        ? "Đề nghị đã gửi. Đang chờ đối tác phản hồi."
+        : "Xem sách và khoản tiền bù trước khi chấp nhận.";
+    if (detail.viewerRole === "proposer") actions.push("cancel");
+    else actions.push("accept", "reject");
+  } else if (detail.status === "FUNDING") {
+    instructions = detail.viewerFundedAt
+      ? "Bạn đã đặt cọc. Đang chờ đối tác hoàn tất khoản cọc của họ."
+      : `Khoản cần giữ từ ví mô phỏng: ${formatVnd(detail.viewerFundingAmount ?? 0)} (cọc và tiền bù nếu có).`;
+    if (!detail.viewerFundedAt && !expired) actions.push("fund");
+    actions.push("cancel");
+  } else if (detail.status === "WAITING_YOU_SEND") {
+    instructions = detail.viewerShipping.sentAt
+      ? "Bạn đã xác nhận gửi. Đang chờ đối tác gửi sách."
+      : "Hai bên đã đặt cọc. Chỉ xác nhận sau khi bạn thực sự gửi sách.";
+    if (!detail.viewerShipping.sentAt) actions.push("sent");
+  } else if (detail.status === "WAITING_YOU_CONFIRM") {
+    instructions =
+      "Hai bên đã gửi sách. Chỉ xác nhận khi bạn đã nhận và kiểm tra bản sách.";
+    if (!detail.viewerShipping.receivedAt) actions.push("received");
+  } else if (detail.status === "DELIVERING") {
+    instructions = "Bạn đã xác nhận nhận sách. Đang chờ đối tác xác nhận.";
+  } else if (detail.status === "COMPLETED") {
+    instructions =
+      "Trao đổi đã hoàn tất. Khoản cọc và tiền bù được xử lý theo kết quả máy chủ.";
+  } else if (detail.status === "RESOLUTION_PENDING") {
+    instructions =
+      "Trao đổi đang cần xử lý. Khoản tiền giữ chưa được coi là đã hoàn trả.";
+  } else {
+    instructions =
+      detail.status === "REJECTED"
+        ? `Đề nghị đã bị từ chối.${detail.rejectionReason ? ` Lý do: ${detail.rejectionReason}` : ""}`
+        : detail.status === "EXPIRED"
+          ? "Đề nghị hoặc thời hạn đặt cọc đã hết."
+          : "Đề nghị đã bị hủy.";
+  }
+  const open = (next: Action) => {
+    setError("");
+    setAction(next);
+  };
+  async function confirm() {
+    if (!action || busy) return;
+    if (
+      action === "reject" &&
+      (reason.trim().length < 5 || reason.trim().length > 300)
+    ) {
+      setError("Nhập lý do từ 5 đến 300 ký tự.");
+      return;
     }
-
-    return (
-        <div className={styles.card}>
-            <h2 className={styles.cardTitle}>{title}</h2>
-            <p className={styles.instructions}>{instructions}</p>
-            {buttons}
-
-            {/* Dialogs */}
-            <ConfirmDialog 
-                isOpen={cancelOpen} 
-                onClose={() => setCancelOpen(false)}
-                onConfirm={() => wrapAction(onCancel, () => setCancelOpen(false), setRejectError)}
-                title="Hủy đề nghị"
-                confirmText="Hủy đề nghị"
-                isBusy={isProcessing}
+    setBusy(true);
+    setError("");
+    try {
+      const run = {
+        cancel: props.onCancel,
+        accept: props.onAccept,
+        reject: () => props.onReject(reason.trim()),
+        fund: props.onFund,
+        sent: props.onConfirmSent,
+        received: props.onConfirmReceived,
+        retry: props.onRetry,
+      };
+      await run[action]();
+      setAction(undefined);
+    } catch (failure) {
+      setError(exchangeError(failure));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className={styles.card}>
+      <h2 className={styles.cardTitle}>Hành động của bạn</h2>
+      <p className={styles.instructions}>{instructions}</p>
+      {detail.status === "FUNDING" && detail.fundingDeadline && (
+        <p>
+          Hạn đặt cọc:{" "}
+          <time dateTime={detail.fundingDeadline}>
+            {new Date(detail.fundingDeadline).toLocaleString("vi-VN")}
+          </time>
+          {expired ? " · Đã hết hạn" : ""}
+        </p>
+      )}
+      {pending && (
+        <p role="status">
+          Có thao tác chưa rõ kết quả. Thử lại trước khi thực hiện việc khác.
+        </p>
+      )}
+      <div className={styles.btnRow}>
+        {pending ? (
+          <button
+            type="button"
+            className={styles.btnPrimary}
+            onClick={() => open("retry")}
+          >
+            {labels.retry}
+          </button>
+        ) : (
+          actions.map((next, index) => (
+            <button
+              type="button"
+              key={next}
+              className={
+                index === 0 && next !== "cancel"
+                  ? styles.btnPrimary
+                  : styles.btnSecondary
+              }
+              onClick={() => open(next)}
             >
-                <p>Bạn có chắc chắn muốn hủy đề nghị trao đổi này không?</p>
-            </ConfirmDialog>
-
-            <ConfirmDialog 
-                isOpen={acceptOpen} 
-                onClose={() => setAcceptOpen(false)}
-                onConfirm={() => wrapAction(onAccept, () => setAcceptOpen(false), setRejectError)}
-                title="Chấp nhận đề nghị"
-                confirmText="Chấp nhận"
-                isBusy={isProcessing}
-            >
-                <p>Bằng việc chấp nhận, bạn đồng ý với các điều khoản trao đổi.</p>
-            </ConfirmDialog>
-
-            <ConfirmDialog 
-                isOpen={sentOpen} 
-                onClose={() => setSentOpen(false)}
-                onConfirm={() => wrapAction(onConfirmSent, () => setSentOpen(false), setRejectError)}
-                title="Xác nhận đã gửi"
-                confirmText="Xác nhận"
-                isBusy={isProcessing}
-                isDanger
-            >
-                <p>Xác nhận bạn đã gửi sách cho đối tác? Hành động này không thể hoàn tác.</p>
-            </ConfirmDialog>
-
-            <ConfirmDialog 
-                isOpen={receivedOpen} 
-                onClose={() => setReceivedOpen(false)}
-                onConfirm={() => wrapAction(onConfirmReceived, () => setReceivedOpen(false), setRejectError)}
-                title="Xác nhận đã nhận"
-                confirmText="Xác nhận"
-                isBusy={isProcessing}
-                isDanger
-            >
-                <p>Xác nhận bạn đã nhận được sách từ đối tác với tình trạng như thỏa thuận? Hành động này không thể hoàn tác.</p>
-            </ConfirmDialog>
-
-            <ConfirmDialog 
-                isOpen={rejectOpen} 
-                onClose={() => setRejectOpen(false)}
-                onConfirm={handleReject}
-                title="Từ chối đề nghị"
-                confirmText="Từ chối"
-                isBusy={isProcessing}
-            >
-                <p style={{ marginBottom: 16 }}>Bạn có thể cho đối tác biết lý do từ chối (tùy chọn).</p>
-                <div className={styles.inputGroup}>
-                    <textarea 
-                        className={styles.textarea} 
-                        value={rejectReason}
-                        onChange={(e) => setRejectReason(e.target.value)}
-                        placeholder="Nhập lý do từ chối (tối đa 300 ký tự)"
-                        maxLength={300}
-                        aria-invalid={!!rejectError}
-                        aria-describedby={rejectError ? "reject-error" : undefined}
-                    />
-                    {rejectError && <p id="reject-error" className={styles.errorText}>{rejectError}</p>}
-                </div>
-            </ConfirmDialog>
-
-            <ConfirmDialog 
-                isOpen={reportOpen} 
-                onClose={() => setReportOpen(false)}
-                onConfirm={handleReport}
-                title="Báo cáo sự cố"
-                confirmText="Gửi báo cáo"
-                isBusy={isProcessing}
-            >
-                <p style={{ marginBottom: 16 }}>Vui lòng cung cấp chi tiết sự cố để Lật lại hỗ trợ bạn.</p>
-                <div className={styles.inputGroup}>
-                    <select 
-                        className={styles.select}
-                        value={reportType}
-                        onChange={(e) => setReportType(e.target.value)}
-                    >
-                        <option value="Không nhận được sách">Không nhận được sách</option>
-                        <option value="Sách không đúng mô tả">Sách không đúng mô tả</option>
-                        <option value="Đối tác không phản hồi">Đối tác không phản hồi</option>
-                        <option value="Khác">Khác</option>
-                    </select>
-                    <textarea 
-                        className={styles.textarea} 
-                        value={reportDesc}
-                        onChange={(e) => setReportDesc(e.target.value)}
-                        placeholder="Mô tả chi tiết sự cố (tối thiểu 20 ký tự)..."
-                        aria-invalid={!!reportError}
-                        aria-describedby={reportError ? "report-error" : undefined}
-                    />
-                    {reportError && <p id="report-error" className={styles.errorText}>{reportError}</p>}
-                </div>
-            </ConfirmDialog>
-        </div>
-    );
+              {labels[next]}
+            </button>
+          ))
+        )}
+        <Link className={styles.btnSecondary} to={ROUTES.exchangeMine}>
+          Trao đổi của tôi
+        </Link>
+      </div>
+      <p className={styles.todoMsg}>
+        Nhắn tin, đề xuất lại, báo cáo và đánh giá trao đổi chưa khả dụng.
+      </p>
+      <ConfirmDialog
+        isOpen={!!action}
+        onClose={() => setAction(undefined)}
+        title={action ? labels[action] : ""}
+        confirmText={action ? labels[action] : "Xác nhận"}
+        isBusy={busy}
+        isDanger={action === "received" || action === "cancel"}
+        onConfirm={() => void confirm()}
+      >
+        <p>
+          {action === "fund"
+            ? `Giữ ${formatVnd(detail.viewerFundingAmount ?? 0)} từ ví mô phỏng. Kiểm tra khoản tiền trước khi xác nhận.`
+            : action === "received"
+              ? "Chỉ xác nhận khi đã nhận đúng sách. Khi cả hai bên xác nhận, máy chủ sẽ hoàn tất trao đổi và xử lý tiền cọc, tiền bù."
+              : action === "retry"
+                ? "Gửi lại đúng mã và nội dung của thao tác trước để xác nhận kết quả."
+                : "Kiểm tra thông tin trước khi xác nhận thao tác này."}
+        </p>
+        {action === "reject" && (
+          <>
+            <label htmlFor="exchange-reason">Lý do từ chối</label>
+            <textarea
+              id="exchange-reason"
+              className={styles.textarea}
+              value={reason}
+              maxLength={300}
+              disabled={busy || !!pending}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </>
+        )}
+        {error && (
+          <p role="alert" className={styles.errorText}>
+            {error}
+          </p>
+        )}
+      </ConfirmDialog>
+    </div>
+  );
 }

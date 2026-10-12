@@ -7,17 +7,23 @@ import { BookDetailPage } from '../pages/BookDetailPage';
 import { SellBookPage } from '../pages/SellBookPage';
 import { ChatPage } from '../pages/ChatPage';
 import { ProfilePage } from '../pages/ProfilePage';
+import { MyBooksPage } from '../pages/MyBooksPage';
+import { AccountOverviewPage } from '../pages/AccountOverviewPage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
+import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
+import { AuthLayout } from '../layouts/AuthLayout';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import ExchangePage from '../pages/ExchangePage';
 import ExchangeComposePage from '../pages/ExchangeComposePage';
 import ExchangeMinePage from '../pages/ExchangeMinePage';
 import { ExchangeDetailPage } from '../pages/ExchangeDetailPage';
 import { AuctionListPage } from '../pages/AuctionListPage';
+import { MyAuctionsPage } from '../pages/MyAuctionsPage';
 import { AuctionDetailPage } from '../pages/AuctionDetailPage';
 import { NotificationsPage } from '../pages/NotificationsPage';
-export const router = createBrowserRouter([
+import { PaperStormLayout } from '../components/auth/PaperStormLayout';
+export const router = createBrowserRouter([{ element: <PaperStormLayout />, children: [
   {
     element: <MainLayout />,
     errorElement: (
@@ -47,19 +53,29 @@ export const router = createBrowserRouter([
   {
     element: <DashboardLayout />,
     children: [
+      { path: '/account', element: <AccountOverviewPage /> },
       { path: '/profile', element: <ProfilePage /> },
+      { path: '/my-books', element: <MyBooksPage /> },
+      { path: '/my-auctions', element: <MyAuctionsPage /> },
     ],
   },
-  // Auth & Fullscreen routes — không dùng MainLayout
+  // Auth sheets share one persistent paper stack and memory-only input draft.
   {
-    element: <Outlet />,
+    element: <AuthLayout />,
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+    ],
+  },
+  // Fullscreen routes — không dùng MainLayout
+  {
+    element: <Outlet />,
+    children: [
       { path: '/sell', element: <SellBookPage /> },
     ],
   },
   // Catch-all
   { path: '/404', element: <NotFoundPage /> },
   { path: '*', element: <Navigate to="/404" replace /> },
-]);
+] }]);

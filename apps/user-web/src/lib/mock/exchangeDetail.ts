@@ -15,10 +15,16 @@ export interface ExchangeDetail {
   failedAtStep?: 1 | 2 | 3 | 4 | 5; // chỉ khi REJECTED/CANCELLED/EXPIRED
   viewerRole: ViewerRole;
   viewer: ExchangeUser;
-  partner: ExchangeUser & { transactionCount: number };
+  partner: ExchangeUser & { transactionCount?: number };
   receiveBooks: (ExchangeBook & { condition?: string })[];
   giveBooks: (ExchangeBook & { condition?: string })[];
-  deliveryMethod: 'meetup' | 'shipping';
+  deliveryMethod?: 'meetup' | 'shipping';
+  revision?: number;
+  rawStatus?: string;
+  viewerFundedAt?: string;
+  viewerFundingAmount?: number;
+  fundingDeadline?: string;
+  proposalExpiresAt?: string;
   moneyCompensationType: 'none' | 'user_pays' | 'other_pays';
   moneyAmount?: number;
   initialMessage?: string;

@@ -43,6 +43,8 @@ import { AuctionIntakesService } from './auction-intakes.service.js';
 import { HandoverPointsService } from './handover-points.service.js';
 import { recordViolation, requireUnrestricted } from './member-violations.js';
 import { PointOrdersService } from './point-orders.service.js';
+import { AuctionBookService } from './auction-book.service.js';
+import { MongoPageService } from '../commands/mongo-page.service.js';
 
 const RATE_LIMIT_PER_MINUTE = 30;
 const MAX_OPEN_PARTICIPATIONS = 5;
@@ -72,6 +74,8 @@ export class AuctionBiddingService {
     private readonly points: HandoverPointsService,
     private readonly orders: PointOrdersService,
     private readonly clock: AuctionClock,
+    private readonly books: AuctionBookService,
+    private readonly pages: MongoPageService,
   ) {}
 
   private async auction(tx: Tx, id: string) {
@@ -712,6 +716,7 @@ export class AuctionBiddingService {
       startAt: a.startAt.toISOString(),
       endAt: a.endAt.toISOString(),
       pointName: point?.name ?? '',
+      book: await this.books.book(a),
       demoOnly: true,
     };
   }
@@ -726,9 +731,124 @@ export class AuctionBiddingService {
         },
       )
       .toArray();
-    const items = [];
-    for (const a of rows) items.push(await this.summary(a, now));
+    const items: Wire['PublicAuctionSummary'][] = [];
+    // Bound concurrent snapshot reads instead of serially opening up to 50 sessions.
+    for (let offset = 0; offset < rows.length; offset += 4) {
+      items.push(
+        ...(await Promise.all(
+          rows.slice(offset, offset + 4).map((a) => this.summary(a, now)),
+        )),
+      );
+    }
     return { items, serverTime: now.toISOString() };
+  }
+  listMine(
+    auth: Actor,
+    query: Record<string, string | number>,
+  ): Promise<Wire['MyAuctionPage']> {
+    return this.commands.read(auth, async (tx, actor) => {
+      member(actor);
+      const now = await tx.now();
+      const view = String(query.view ?? 'all');
+      const page = await this.pages.page(
+        tx.c.auctions,
+        [
+          {
+            $lookup: {
+              from: 'auction_bidders',
+              localField: '_id',
+              foreignField: 'auctionId',
+              pipeline: [{ $match: { bidderId: actor._id } }, { $limit: 1 }],
+              as: 'own',
+            },
+          },
+          {
+            $match: {
+              $or: [
+                { sellerId: actor._id },
+                { winnerId: actor._id },
+                { 'own.0': { $exists: true } },
+              ],
+            },
+          },
+          {
+            $lookup: {
+              from: 'point_orders',
+              localField: 'orderId',
+              foreignField: '_id',
+              pipeline: [
+                {
+                  $match: {
+                    buyerId: actor._id,
+                    state: 'AwaitingPayment',
+                    paymentDeadline: { $gt: now },
+                  },
+                },
+              ],
+              as: 'payable',
+            },
+          },
+          ...(view === 'active'
+            ? [{ $match: { state: 'Active', endAt: { $gt: now } } }]
+            : []),
+          ...(view === 'payment'
+            ? [
+                {
+                  $match: {
+                    winnerId: actor._id,
+                    'payable.0': { $exists: true },
+                  },
+                },
+              ]
+            : []),
+          ...(view === 'selling' ? [{ $match: { sellerId: actor._id } }] : []),
+          { $project: { key: '$startAt' } },
+        ],
+        {
+          kind: 'time',
+          ascending: false,
+          scope: { operation: 'listMyAuctions', actor: actor._id, view },
+          limit: Number(query.limit ?? 12),
+          cursor: query.cursor as string | undefined,
+        },
+      );
+      const items: Wire['MyAuctionPage']['items'] = [];
+      for (const id of page.ids) {
+        const a = await tx.c.auctions.findOne({ _id: id });
+        if (!a) continue;
+        const own = await tx.c.auction_bidders.findOne({
+          auctionId: a._id,
+          bidderId: actor._id,
+        });
+        const seller = a.sellerId === actor._id;
+        const won = a.winnerId === actor._id;
+        if (!seller && !own && !won) continue;
+        const order =
+          won && a.orderId
+            ? await tx.c.point_orders.findOne({
+                _id: a.orderId,
+                buyerId: actor._id,
+              })
+            : null;
+        items.push({
+          auction: await this.summary(a, now),
+          role: seller ? 'Seller' : 'Bidder',
+          leading: !seller && a.leaderId === actor._id,
+          won: !seller && won,
+          needsPayment:
+            !!order &&
+            order.state === 'AwaitingPayment' &&
+            !!order.paymentDeadline &&
+            order.paymentDeadline > now,
+          paymentDeadline: order?.paymentDeadline?.toISOString() ?? null,
+        });
+      }
+      return {
+        items,
+        nextCursor: page.nextCursor,
+        serverTime: page.serverTime,
+      };
+    });
   }
   async readPublic(id: string): Promise<Wire['PublicAuction']> {
     const now = await this.mongo.now();

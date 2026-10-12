@@ -1,36 +1,64 @@
-import React, { useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Navigate, useLocation } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Navigate,
+  useBeforeUnload,
+  useBlocker,
+  useLocation,
+} from "react-router-dom";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  BookOpen,
+  ImagePlus,
+  PencilLine,
+  X,
+} from "lucide-react";
 import { Header } from "../layouts/MainLayout";
+import { Logo } from "../components/Header";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ListingSubmissionConfirmation } from "../components/BookJourneyStates";
 import { useSession } from "../hooks/useSession";
 import { createListingSubmission } from "../services/listing-submission";
+import { conditions } from "../lib/listing-labels";
+import { formatVnd } from "../lib/routes";
 import {
-  Clock,
-  BookOpen,
-  Tag,
-  Image as ImageIcon,
-  Upload,
-  Info,
-  ChevronRight,
-  ChevronLeft,
-  ArrowRight,
-  List,
-} from "lucide-react";
+  CatalogClassificationFields,
+  type ClassificationValue,
+} from "../components/CatalogClassificationFields";
+import {
+  CatalogBookPicker,
+  type PickedBook,
+} from "../components/CatalogBookPicker";
+import {
+  categoryFor,
+  languageOptions,
+  classificationErrors,
+  facetsFor,
+} from "@used-books/api-contract/catalog-taxonomy";
+import styles from "./SellBookPage.module.css";
 
 export function SellBookPage() {
   const submission = useRef<ReturnType<typeof createListingSubmission>>(null);
+  const [classification, setClassification] = useState<ClassificationValue>({
+    categoryId: "",
+    attributes: {},
+    series: "",
+  });
+  const [language, setLanguage] = useState("vi");
+  const [selectedBook, setSelectedBook] = useState<PickedBook | null>(null);
+  const [entryMode, setEntryMode] = useState<"catalog" | "manual">("catalog");
   const [step, setStep] = useState(1);
+  const [checkedSteps, setCheckedSteps] = useState<number[]>([]);
+  const [touched, setTouched] = useState<string[]>([]);
   const [ownershipDeclared, setOwnershipDeclared] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
+  const [validationFailure, setValidationFailure] = useState(false);
   const [hasAttempt, setHasAttempt] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const location = useLocation();
   const session = useSession();
-
-  if (session.status === "anonymous") {
-    return <Navigate to={`/login?returnUrl=${encodeURIComponent(location.pathname)}`} replace />;
-  }
 
   const [formData, setFormData] = useState({
     // Step 1
@@ -53,21 +81,115 @@ export function SellBookPage() {
     exchangeValue: "",
   });
 
+  const heading = useRef<HTMLHeadingElement>(null);
+  const errorBox = useRef<HTMLDivElement>(null);
+  const imageRefs = useRef<string[]>([]);
+  const previewElement = useRef<HTMLElement>(null);
+  const [previewFits, setPreviewFits] = useState(false);
+  const receiptVisible = step === 6;
+  useEffect(() => {
+    const element = previewElement.current;
+    if (!element || !window.ResizeObserver) return;
+    const measure = () =>
+      setPreviewFits(
+        element.offsetHeight > 0 &&
+          element.offsetHeight + 136 < window.innerHeight,
+      );
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    window.addEventListener("resize", measure);
+    measure();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [session.status, receiptVisible]);
+  const focusFrame = useRef<number | undefined>(undefined);
+  useEffect(
+    () => () => {
+      if (focusFrame.current !== undefined)
+        cancelAnimationFrame(focusFrame.current);
+    },
+    [],
+  );
+  function focusAfterRender(
+    target:
+      "heading" | "error" | "selected-book" | "catalog-search" | "manual-title",
+  ) {
+    if (focusFrame.current !== undefined)
+      cancelAnimationFrame(focusFrame.current);
+    focusFrame.current = requestAnimationFrame(() => {
+      if (target === "heading" || target === "error") {
+        (target === "heading" ? heading : errorBox).current?.focus();
+      } else {
+        const ids = {
+          "selected-book": "sell-selected-title",
+          "catalog-search": "sell-catalog-search",
+          "manual-title": "title",
+        };
+        document.getElementById(ids[target])?.focus();
+      }
+    });
+  }
+  const dirty =
+    step !== 6 &&
+    (classification.categoryId !== "" ||
+      language !== "vi" ||
+      imageFiles.length > 0 ||
+      ownershipDeclared ||
+      !!formData.title ||
+      !!formData.author ||
+      !!formData.pages ||
+      !!formData.coverNote ||
+      !!formData.notes ||
+      !!formData.accessories ||
+      !!formData.description ||
+      !!formData.salePrice ||
+      !!formData.exchangeValue ||
+      formData.condition !== "Good" ||
+      formData.mode !== "Sale" ||
+      formData.readable !== null ||
+      formData.hasMissingPages !== null ||
+      formData.missingEssentialContent !== null);
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      dirty && currentLocation.pathname !== nextLocation.pathname,
+  );
+  useBeforeUnload((event) => {
+    if (dirty) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+  });
+  useEffect(() => {
+    imageRefs.current = formData.images;
+  }, [formData.images]);
+  useEffect(
+    () => () => imageRefs.current.forEach((url) => URL.revokeObjectURL(url)),
+    [],
+  );
+  useEffect(() => {
+    if (submitError) errorBox.current?.focus();
+  }, [submitError]);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (imageFiles.length >= 8) return;
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (
         !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
         file.size > 10_000_000
       ) {
+        setValidationFailure(false);
         setSubmitError("Ảnh cần là JPEG, PNG hoặc WebP và không quá 10 MB.");
         return;
       }
       setSubmitError(undefined);
       // Keep the local preview while retaining the original file for the API upload.
-      const fakeUrl = URL.createObjectURL(e.target.files[0]);
+      const fakeUrl = URL.createObjectURL(file);
       setFormData((prev) => ({ ...prev, images: [...prev.images, fakeUrl] }));
-      setImageFiles((files) => [...files, e.target.files![0]]);
+      setImageFiles((files) => [...files, file]);
+      e.target.value = "";
     }
   };
 
@@ -77,6 +199,7 @@ export function SellBookPage() {
       formData.readable === false && "nội dung đọc rõ để đủ điều kiện đăng",
       formData.missingEssentialContent === true &&
         "đủ nội dung trọng yếu để đủ điều kiện đăng",
+      !classification.categoryId && !selectedBook && "danh mục sách",
       !formData.title.trim() && "tên sách",
       !formData.author.trim() && "tác giả",
       !formData.pages.trim() && "mô tả ruột sách",
@@ -105,16 +228,30 @@ export function SellBookPage() {
     )
       missing.push("giá trị đổi từ 10.000đ đến 1.000.000đ");
     if (missing.length) {
+      setValidationFailure(true);
+      const invalidStep = [1, 2, 3, 4].find((value) => stepError(value));
+      if (invalidStep === 1 && !selectedBook) setEntryMode("manual");
+      setCheckedSteps([1, 2, 3, 4, 5]);
+      if (invalidStep) setStep(invalidStep);
       setSubmitError(`Cần bổ sung: ${missing.join(", ")}.`);
       return;
     }
     setSubmitting(true);
+    setValidationFailure(false);
     setSubmitError(undefined);
     try {
       submission.current ??= createListingSubmission({
         title: formData.title,
         author: formData.author,
-        category: "Khác",
+        category:
+          categoryFor(classification.categoryId)?.label ||
+          selectedBook?.category ||
+          "Khác",
+        bookId: selectedBook?.id,
+        categoryId: classification.categoryId,
+        attributes: classification.attributes,
+        series: classification.series,
+        language,
         condition: formData.condition as "LikeNew" | "Good" | "Fair" | "Worn",
         pages: formData.pages,
         coverNote: formData.coverNote,
@@ -144,1466 +281,1192 @@ export function SellBookPage() {
 
   const steps = [
     "Thông tin sách",
-    "Ảnh cuốn sách",
+    "Ảnh bản sách",
     "Tình trạng",
     "Bán hoặc đổi",
     "Kiểm tra",
   ];
-  
-  const getStepSubtitle = (index: number) => {
-    switch (index) {
-      case 0:
-        return formData.title ? formData.title : "Chưa nhập thông tin";
-      case 1:
-        return imageFiles.length > 0 ? `${imageFiles.length} ảnh đối chiếu rõ nét` : "Cần tải ảnh lên";
-      case 2:
-        if (!formData.pages || !formData.coverNote) {
-          if (formData.pages || formData.coverNote) return 'Đang nhập chi tiết...';
-          return 'Chưa nhập chi tiết';
-        }
-        return formData.condition === 'LikeNew' ? 'Như mới (99%)' : formData.condition === 'Good' ? 'Rất tốt (88/100)' : formData.condition === 'Fair' ? 'Trung bình (70/100)' : formData.condition === 'Worn' ? 'Cũ (Dưới 50%)' : 'Chưa đánh giá';
-      case 3:
-        if (!formData.salePrice && !formData.exchangeValue) return "Niêm yết / Đổi xu / Đấu giá";
-        return formData.mode === 'Sale' ? `Khuyến nghị ${formData.salePrice}đ` : formData.mode === 'Exchange' ? `Đổi ${formData.exchangeValue} xu` : `Bán ${formData.salePrice}đ / Đổi ${formData.exchangeValue} xu`;
-      case 4:
-        return "Xác nhận & Đăng bài";
-      default:
-        return "";
+  const textFields = [
+    ["pages", "Ruột sách", "Giấy, độ rõ chữ, nếp gấp…"],
+    ["coverNote", "Bìa và gáy", "Mép bìa, gáy sách, vết sờn…"],
+    [
+      "notes",
+      "Ghi chú, đánh dấu",
+      "Ghi rõ phần đã viết hoặc tô; không có thì ghi “Không có”.",
+    ],
+    [
+      "accessories",
+      "Phụ kiện",
+      "Bookmark, bìa áo, quà kèm; không có thì ghi “Không có”.",
+    ],
+    [
+      "description",
+      "Mô tả chung",
+      "Điều người đọc tiếp theo nên biết (ít nhất 30 ký tự).",
+    ],
+  ] as const;
+  const questions = [
+    ["readable", "Nội dung có đọc rõ không?"],
+    ["hasMissingPages", "Sách có thiếu trang không?"],
+    ["missingEssentialContent", "Sách có thiếu nội dung trọng yếu không?"],
+  ] as const;
+  function changeStep(next: number) {
+    if (!hasAttempt) {
+      setSubmitError(undefined);
+      setValidationFailure(false);
     }
-  };
-
-  const calculateProgress = () => {
-    let filled = 0;
-    const total = 8;
-    if (formData.title) filled++;
-    if (formData.author) filled++;
-    if (formData.images.length > 0) filled++;
-    if (formData.condition) filled++;
-    if (formData.pages) filled++;
-    if (formData.coverNote) filled++;
-    if (formData.mode === 'Sale' && formData.salePrice) filled++;
-    else if (formData.mode === 'Exchange' && formData.exchangeValue) filled++;
-    else if (formData.mode === 'Both' && formData.salePrice && formData.exchangeValue) filled++;
-    if (ownershipDeclared) filled++;
-    return Math.round((filled / total) * 100);
-  };
-
-  const isStepValid = (index: number) => {
-    switch (index) {
-      case 0: return !!formData.title && !!formData.author;
-      case 1: return formData.images && formData.images.length > 0;
-      case 2: return !!formData.condition && !!formData.pages && !!formData.coverNote;
-      case 3:
-        if (formData.mode === 'Sale') return !!formData.salePrice;
-        if (formData.mode === 'Exchange') return !!formData.exchangeValue;
-        return !!formData.salePrice && !!formData.exchangeValue;
-      case 4: return ownershipDeclared;
-      default: return true;
+    setStep(next);
+    focusAfterRender("heading");
+  }
+  function stepError(forStep: number) {
+    let message: string | undefined;
+    if (
+      forStep === 1 &&
+      !selectedBook &&
+      (!classification.categoryId ||
+        classificationErrors(
+          classification.categoryId,
+          classification.attributes,
+        ).length)
+    )
+      return "Chọn danh mục và kiểm tra thuộc tính của đầu sách.";
+    if (forStep === 1 && (!formData.title.trim() || !formData.author.trim()))
+      message = "Nhập tên sách và tác giả trước khi tiếp tục.";
+    if (forStep === 2 && !imageFiles.length)
+      message = "Thêm ít nhất một ảnh bản sách.";
+    if (forStep === 3) {
+      if (
+        textFields.some(([key]) => !formData[key].trim()) ||
+        formData.description.trim().length < 30
+      )
+        message =
+          "Bổ sung mô tả ruột sách, bìa/gáy, ghi chú, phụ kiện và mô tả chung ít nhất 30 ký tự. Không có thì ghi “Không có”.";
+      else if (questions.some(([key]) => formData[key] === null))
+        message = "Trả lời đủ ba câu hỏi về tình trạng sách.";
+      else if (!formData.readable || formData.missingEssentialContent)
+        message =
+          "Sách cần có nội dung đọc rõ và đủ nội dung trọng yếu để đủ điều kiện đăng.";
     }
+    if (
+      forStep === 4 &&
+      ((formData.mode !== "Exchange" && !validPrice(formData.salePrice)) ||
+        (formData.mode !== "Sale" && !validPrice(formData.exchangeValue)))
+    )
+      message =
+        "Giá bán và giá trị đổi từ 10.000đ đến 1.000.000đ, không có phần lẻ.";
+    return message;
+  }
+  function continueStep() {
+    const message = stepError(step);
+    if (step === 1 && message && !selectedBook) setEntryMode("manual");
+    setCheckedSteps((previous) => [...new Set([...previous, step])]);
+    setSubmitError(message);
+    setValidationFailure(!!message);
+    if (!message) changeStep(step + 1);
+    else focusAfterRender("error");
+  }
+  function validPrice(raw: string) {
+    const value = Number(raw);
+    return Number.isInteger(value) && value >= 10_000 && value <= 1_000_000;
+  }
+  function removePhoto(index: number) {
+    URL.revokeObjectURL(formData.images[index]!);
+    setFormData((previous) => ({
+      ...previous,
+      images: previous.images.filter((_, position) => position !== index),
+    }));
+    setImageFiles((previous) =>
+      previous.filter((_, position) => position !== index),
+    );
+  }
+  const fieldErrors: Record<string, string | undefined> = {
+    title: !formData.title.trim() ? "Nhập tên sách như trên bìa." : undefined,
+    author: !formData.author.trim()
+      ? "Nhập tên tác giả như trên bìa."
+      : undefined,
+    images: !imageFiles.length ? "Thêm ít nhất một ảnh bản sách." : undefined,
+    "sell-category":
+      !selectedBook &&
+      stepError(1) &&
+      (!classification.categoryId ||
+        classificationErrors(
+          classification.categoryId,
+          classification.attributes,
+        ).length)
+        ? "Chọn danh mục và kiểm tra các thuộc tính đã chọn."
+        : undefined,
+    salePrice:
+      formData.mode !== "Exchange" && !validPrice(formData.salePrice)
+        ? "Nhập số nguyên từ 10.000 đến 1.000.000 VNĐ."
+        : undefined,
+    exchangeValue:
+      formData.mode !== "Sale" && !validPrice(formData.exchangeValue)
+        ? "Nhập số nguyên từ 10.000 đến 1.000.000 VNĐ."
+        : undefined,
+    readable:
+      formData.readable === null
+        ? "Chọn Có hoặc Không."
+        : !formData.readable
+          ? "Sách cần có nội dung đọc rõ để đủ điều kiện đăng."
+          : undefined,
+    hasMissingPages:
+      formData.hasMissingPages === null ? "Chọn Có hoặc Không." : undefined,
+    missingEssentialContent:
+      formData.missingEssentialContent === null
+        ? "Chọn Có hoặc Không."
+        : formData.missingEssentialContent
+          ? "Sách cần đủ nội dung trọng yếu để đủ điều kiện đăng."
+          : undefined,
+    ownership: !ownershipDeclared
+      ? "Xác nhận quyền sở hữu trước khi gửi duyệt."
+      : undefined,
+    ...Object.fromEntries(
+      textFields.map(([key, label]) => [
+        key,
+        !formData[key].trim()
+          ? `Bổ sung ${label.toLowerCase()}; không có thì ghi “Không có”.`
+          : key === "description" && formData.description.trim().length < 30
+            ? "Mô tả chung cần ít nhất 30 ký tự."
+            : undefined,
+      ]),
+    ),
   };
-
-  const renderSidebar = () => (
-    <aside aria-label="Các bước đăng sách" className="bg-white/80 backdrop-blur-md rounded-xl p-space-md shadow-sm border border-white/50 flex flex-col gap-2">
-      {steps.map((label, index) => {
-        const stepNumber = index + 1;
-        const isCompleted = step > stepNumber;
-        const isActive = step === stepNumber;
-        const isValid = isStepValid(index);
-        const showRedX = !isValid && isCompleted;
-
-        return (
-          <button
-            type="button"
-            key={label}
-            disabled={submitting}
-            aria-current={isActive ? "step" : undefined}
-            className={`flex items-center gap-2 text-left p-2 rounded-lg transition-colors ${isActive ? 'bg-surface-container-high/50' : 'hover:bg-surface-container/50'}`}
-            onClick={() => setStep(stepNumber)}
-          >
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm transition-colors
-              ${showRedX ? 'bg-red-100 text-red-600' :
-                isCompleted ? 'bg-primary-container text-on-primary' :
-                  isActive ? 'bg-secondary text-on-secondary' :
-                    'bg-surface-container-highest text-on-surface-variant'}`}
-            >
-              {showRedX ? (
-                <span className="material-symbols-outlined text-[24px]">close</span>
-              ) : isCompleted ? (
-                <span className="material-symbols-outlined text-[24px]">check</span>
-              ) : (
-                <span className="font-title-lg font-bold">0{stepNumber}</span>
-              )}
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className={`font-label-sm text-[10px] uppercase tracking-wider mb-0.5
-                ${showRedX ? 'text-red-600 font-bold' : isActive ? 'text-secondary font-bold' : isCompleted ? 'text-primary' : 'text-on-surface-variant/70'}`}
-              >
-                {showRedX ? 'Thiếu thông tin' : isActive ? 'Đang chỉnh' : isCompleted ? `Bước 0${stepNumber}` : 'Kế tiếp'}
-              </span>
-              <span className={`font-title-md text-base truncate leading-tight mb-0.5
-                ${showRedX ? 'text-red-600 font-bold' : isActive || isCompleted ? 'text-primary font-bold' : 'text-on-surface-variant'}`}
-              >
-                {label}
-              </span>
-              <span className={`font-body-sm text-xs truncate leading-tight
-                ${showRedX ? 'text-red-500/80' : isActive ? 'text-secondary/80' : 'text-on-surface-variant/60'}`}
-              >
-                {getStepSubtitle(index)}
-              </span>
-            </div>
-          </button>
-        );
-      })}
-    </aside>
-  );
-
-  const renderHorizontalStepper = () => (
-    <nav aria-label="Tiến trình" className="bg-white/80 backdrop-blur-md rounded-xl p-3 shadow-sm mb-4 border border-white/50">
-      <div className="flex justify-between items-center relative z-10">
-        <AnimatePresence>
-          {steps.map((label, index) => {
-            const stepNumber = index + 1;
-            const isCompleted = step > stepNumber;
-            const isActive = step === stepNumber;
-            const isValid = isStepValid(index);
-            const showRedX = !isValid && isCompleted;
-
-            return (
-              <button
-                type="button"
-                key={label}
-                disabled={submitting}
-                aria-current={isActive ? "step" : undefined}
-                className={`flex items-center gap-2 text-left p-2 rounded-lg transition-all duration-300 relative group`}
-                onClick={() => setStep(stepNumber)}
-                style={{ width: "20%" }}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="active-step-bg"
-                    className="absolute inset-0 bg-[#e7e0d5] shadow-sm rounded-lg"
-                    initial={false}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  />
-                )}
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors duration-500 relative z-10
-                  ${showRedX ? 'bg-red-100 text-red-600' :
-                    isCompleted ? 'bg-[#173c2e] text-white' :
-                      isActive ? 'bg-[#984a30] text-white' :
-                        'bg-[#e2ddd5] text-[#716a62]'}`}
-                >
-                  {showRedX ? (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring" }}
-                      className="material-symbols-outlined text-[24px]"
-                    >
-                      close
-                    </motion.span>
-                  ) : isCompleted ? (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring" }}
-                      className="material-symbols-outlined text-[24px]"
-                    >
-                      check
-                    </motion.span>
-                  ) : (
-                    <span className="font-title-lg font-bold">0{stepNumber}</span>
-                  )}
-                </div>
-                <div className="flex flex-col min-w-0 relative z-10">
-                  <span className={`font-label-sm text-[11px] uppercase tracking-wider mb-0.5 transition-colors duration-300
-                    ${showRedX ? 'text-red-600 font-bold' : isActive ? 'text-[#984a30] font-bold' : isCompleted ? 'text-[#984a30]' : 'text-[#716a62] group-hover:text-[#984a30]'}`}
-                  >
-                    {showRedX ? 'Thiếu thông tin' : isActive ? 'Đang chỉnh' : isCompleted ? `Bước 0${stepNumber}` : 'Kế tiếp'}
-                  </span>
-                  <span className={`font-title-md text-base truncate leading-tight mb-0.5 transition-colors duration-300
-                    ${showRedX ? 'text-red-600 font-bold' : isActive || isCompleted ? 'text-[#173c2e] font-bold' : 'text-[#716a62] group-hover:text-[#173c2e]'}`}
-                  >
-                    {label}
-                  </span>
-                  <span className={`font-body-sm text-[13px] truncate leading-tight transition-colors duration-300
-                    ${showRedX ? 'text-red-500/80' : isActive ? 'text-[#984a30]' : 'text-[#716a62]'}`}
-                  >
-                    {getStepSubtitle(index)}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </AnimatePresence>
+  function shownError(key: string) {
+    return checkedSteps.includes(step) || touched.includes(key)
+      ? fieldErrors[key]
+      : undefined;
+  }
+  function fieldFeedback(key: string) {
+    const message = shownError(key);
+    return message ? (
+      <p id={`${key}-error`} className={styles.fieldError}>
+        {message}
+      </p>
+    ) : null;
+  }
+  function feedbackProps(key: string, hint?: string) {
+    return {
+      "aria-invalid": shownError(key) ? true : undefined,
+      "aria-describedby":
+        [hint, shownError(key) ? `${key}-error` : undefined]
+          .filter(Boolean)
+          .join(" ") || undefined,
+    };
+  }
+  const stepHelp = [
+    "Chọn đầu sách đã có, hoặc bổ sung thông tin như trên bìa.",
+    "Ảnh thật giúp người đọc nhìn rõ bản sách của bạn.",
+    "Kể rõ những dấu vết đã có trên cuốn sách.",
+    "Chọn hình thức phù hợp và đặt giá cho bản sách.",
+    "Xem lại một lượt. Bạn có thể chỉnh sửa từng phần.",
+  ];
+  function reviewEdit(target: number) {
+    return (
+      <button
+        type="button"
+        className={styles.textAction}
+        onClick={() => changeStep(target)}
+      >
+        Chỉnh sửa
+        <span className="sr-only"> {steps[target - 1].toLowerCase()}</span>
+        <ArrowRight size={14} aria-hidden="true" />
+      </button>
+    );
+  }
+  function completeStep(value: number) {
+    return value < 5
+      ? !stepError(value)
+      : ownershipDeclared && [1, 2, 3, 4].every((number) => !stepError(number));
+  }
+  function statusForStep(value: number) {
+    return value === step
+      ? "Đang chỉnh"
+      : completeStep(value)
+        ? "Đủ thông tin"
+        : checkedSteps.includes(value)
+          ? "Cần bổ sung"
+          : "Chưa hoàn thành";
+  }
+  const stepFields: string[] =
+    step === 1
+      ? ["title", "author", "sell-category"]
+      : step === 2
+        ? ["images"]
+        : step === 3
+          ? [
+              ...textFields.map(([key]) => key),
+              ...questions.map(([key]) => key),
+            ]
+          : step === 4
+            ? ["salePrice", "exchangeValue"]
+            : ["ownership"];
+  const visibleSubmitError = validationFailure
+    ? stepError(step) || (step === 5 ? fieldErrors.ownership : undefined)
+    : submitError;
+  const preview = (
+    <section className={styles.preview} aria-label="Bản xem trước bài đăng">
+      <div className={styles.previewHeading}>
+        <h2>Cuốn sách của bạn</h2>
+        <span>Bản nháp</span>
       </div>
-
-      <div className="w-full mt-6 h-2 bg-[#e2ddd5] rounded-full overflow-hidden relative">
-        <motion.div
-          className="absolute top-0 left-0 h-full"
-          initial={{ width: 0 }}
-          animate={{ width: `${calculateProgress()}%` }}
-          transition={{ type: "spring", stiffness: 70, damping: 20 }}
-          style={{
-            background: 'linear-gradient(to right, #173c2e, #984a30)'
-          }}
-        />
-      </div>
-    </nav>
-  );
-
-  return (
-    <>
-      <Header />
-            <main className="sell-workspace relative min-h-screen">
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            top: '80px',
-            backgroundImage: "url('/ĐangAnh_BG.png')",
-            backgroundSize: "cover",
-            backgroundPosition: "top center",
-            backgroundAttachment: "fixed"
-          }}
-        />
-        <div className="w-full max-w-[1600px] mx-auto px-4 md:px-8 lg:px-16 py-4 relative z-10">
-          <div className="mb-4 pt-1">
-            <motion.h1
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="text-3xl font-display font-black tracking-tight mb-1 text-[#1f2937]"
-            >
-              Đăng bán <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#173c2e] to-[#984a30]">sách</span>
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-sm font-body-lg text-[#6b7280] max-w-2xl"
-            >
-              Chia sẻ những cuốn sách bạn đã đọc cho những người cần chúng. Quá trình tạo bài đăng siêu đơn giản và chỉ mất chưa đến 3 phút!
-            </motion.p>
+      <div
+        className={`${styles.previewPhoto} ${!formData.images.length ? styles.previewPhotoEmpty : ""}`}
+      >
+        {formData.images[0] ? (
+          <img
+            src={formData.images[0]}
+            alt={`Ảnh bìa ${formData.title || "bản sách"}`}
+          />
+        ) : (
+          <div className={styles.emptyPhoto}>
+            <BookOpen size={32} aria-hidden="true" />
+            <span>Thêm ảnh ở bước tiếp theo</span>
           </div>
-
-          {step <= 5 && renderHorizontalStepper()}
-
-          <div className="flex flex-col lg:flex-row gap-6 items-start">
-            {step <= 5 && (
-              <div className="w-full lg:w-[260px] shrink-0 sticky top-[100px]">
-                {renderSidebar()}
-              </div>
-            )}
-
-            <div
-              className="sell-panel flex-1 w-full"
-              style={{
-                background: "rgba(255, 255, 255, 0.92)",
-                backdropFilter: "blur(12px)",
-                padding: "1.5rem",
-                borderRadius: "16px",
-                boxShadow: "0 10px 30px rgba(152, 74, 48, 0.08), 0 1px 3px rgba(0,0,0,0.05)",
-                border: "1px solid rgba(255, 255, 255, 0.5)",
-              }}
-            >
-              <fieldset
-                disabled={submitting || hasAttempt}
-                className="sell-fields relative"
-                style={{ minHeight: "250px", transition: "min-height 0.3s ease" }}
+        )}
+      </div>
+      <h3>{formData.title || "Cuốn nào sẽ đi tiếp?"}</h3>
+      <p>
+        {formData.author || "Tên sách và tác giả sẽ hiện ở đây khi bạn điền."}
+      </p>
+      {(checkedSteps.includes(3) || formData.pages || formData.description) && (
+        <span>
+          {conditions[formData.condition as keyof typeof conditions]} ·{" "}
+          {formData.mode === "Sale"
+            ? "Bán"
+            : formData.mode === "Exchange"
+              ? "Đổi"
+              : "Bán hoặc đổi"}
+        </span>
+      )}
+      {step >= 4 || formData.salePrice || formData.exchangeValue ? (
+        <dl>
+          {formData.mode !== "Exchange" && (
+            <div>
+              <dt>Giá bán</dt>
+              <dd
+                className={
+                  !validPrice(formData.salePrice)
+                    ? styles.previewPending
+                    : undefined
+                }
               >
-                <AnimatePresence mode="wait">
-              {step === 1 && (
-                  <motion.div
-                    key="step1"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                  <h2
-                    style={{
-                      fontSize: "1.5rem",
-                      marginBottom: "1.5rem",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      color: "var(--text-dark, #1f2937)",
-                    }}
-                  >
-                    <BookOpen size={24} color="var(--brand-green, #173c2e)" />{" "}
-                    Thông tin cơ bản
-                  </h2>
-                  <div style={{ display: "grid", gap: "1.5rem" }}>
-                    <div>
-                      <label
-                        htmlFor="title"
-                        style={{
-                          display: "block",
-                          fontWeight: "600",
-                          marginBottom: "0.5rem",
-                          color: "var(--text-dark, #1f2937)",
-                        }}
+                {validPrice(formData.salePrice)
+                  ? formatVnd(Number(formData.salePrice))
+                  : "Chưa có giá bán"}
+              </dd>
+            </div>
+          )}
+          {formData.mode !== "Sale" && (
+            <div>
+              <dt>Giá trị đổi</dt>
+              <dd
+                className={
+                  !validPrice(formData.exchangeValue)
+                    ? styles.previewPending
+                    : undefined
+                }
+              >
+                {validPrice(formData.exchangeValue)
+                  ? formatVnd(Number(formData.exchangeValue))
+                  : "Chưa có giá trị đổi"}
+              </dd>
+            </div>
+          )}
+        </dl>
+      ) : (
+        <p className={styles.previewProgress}>
+          Ảnh, tình trạng và giá sẽ được bổ sung qua từng bước.
+        </p>
+      )}
+      <p className={styles.note}>
+        Đây là bản xem trước, chưa hiển thị công khai.
+      </p>
+    </section>
+  );
+  if (session.status === "anonymous")
+    return (
+      <Navigate
+        to={`/login?returnUrl=${encodeURIComponent(location.pathname)}`}
+        replace
+      />
+    );
+  if (session.status !== "authenticated")
+    return (
+      <main className={styles.loading} role="status">
+        Đang mở bàn đăng sách…
+      </main>
+    );
+  return (
+    <div className={styles.root}>
+      <svg
+        width="0"
+        height="0"
+        className={styles.logoFilter}
+        aria-hidden="true"
+      >
+        <defs>
+          <filter id="sell-logo-ink" colorInterpolationFilters="sRGB">
+            <feColorMatrix
+              type="matrix"
+              values="0 0 0 0 .360784 0 0 0 0 .007843 0 0 0 0 .007843 1.59375 0 0 0 -.575"
+            />
+          </filter>
+        </defs>
+      </svg>
+      <a href="#sell-content" className={styles.skip}>
+        Bỏ qua điều hướng
+      </a>
+      <Header />
+      <main id="sell-content" className={styles.page}>
+        <header className={styles.intro}>
+          <h1>Đăng sách</h1>
+          <p className={styles.tagline}>Để sách đi tiếp.</p>
+          <p>
+            Thêm ảnh và kể rõ tình trạng bản sách. Kiểm tra một lượt trước khi
+            gửi duyệt.
+          </p>
+        </header>
+        {step === 6 ? (
+          <ListingSubmissionConfirmation
+            title={formData.title}
+            onPostAnother={() => {
+              formData.images.forEach((url) => URL.revokeObjectURL(url));
+              submission.current = null;
+              setClassification({
+                categoryId: "",
+                attributes: {},
+                series: "",
+              });
+              setLanguage("vi");
+              setSelectedBook(null);
+              setEntryMode("catalog");
+              setFormData({
+                title: "",
+                author: "",
+                images: [],
+                condition: "Good",
+                pages: "",
+                coverNote: "",
+                notes: "",
+                accessories: "",
+                description: "",
+                readable: null,
+                hasMissingPages: null,
+                missingEssentialContent: null,
+                mode: "Sale",
+                salePrice: "",
+                exchangeValue: "",
+              });
+              setImageFiles([]);
+              setOwnershipDeclared(false);
+              setHasAttempt(false);
+              setSubmitError(undefined);
+              setCheckedSteps([]);
+              setTouched([]);
+              changeStep(1);
+            }}
+          />
+        ) : (
+          <>
+            <nav className={styles.steps} aria-label="Các bước đăng sách">
+              <span
+                className={styles.activeStep}
+                style={{ transform: `translateX(${(step - 1) * 100}%)` }}
+                aria-hidden="true"
+              />
+              <ol>
+                {steps.map((label, index) => (
+                  <li key={label}>
+                    <button
+                      type="button"
+                      aria-current={step === index + 1 ? "step" : undefined}
+                      disabled={submitting}
+                      aria-label={`${index + 1}. ${label}, ${statusForStep(index + 1).toLowerCase()}`}
+                      onClick={() => changeStep(index + 1)}
+                    >
+                      <span className={styles.stepNumber}>
+                        {completeStep(index + 1) ? (
+                          <Check size={16} aria-hidden="true" />
+                        ) : (
+                          index + 1
+                        )}
+                      </span>
+                      <span className={styles.stepLabel}>
+                        {label}
+                        <small>{statusForStep(index + 1)}</small>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+            <div className={styles.workspace}>
+              <aside
+                ref={previewElement}
+                className={`${styles.desktopPreview} ${previewFits ? styles.stickyPreview : ""}`}
+              >
+                {preview}
+              </aside>
+              <details className={styles.compactPreview}>
+                <summary>
+                  Xem bản nháp <span>{imageFiles.length}/8 ảnh</span>
+                </summary>
+                {preview}
+              </details>
+              <div className={styles.formArea}>
+                <div key={step} className={styles.stepBody}>
+                  <div className={styles.slipHeader}>
+                    <div className={styles.slipBrand}>
+                      <span
+                        className={styles.slipLogo}
+                        aria-hidden="true"
+                        inert
                       >
-                        Tên sách
-                      </label>
-                      <input
-                        id="title"
-                        value={formData.title}
-                        onChange={(e) =>
-                          setFormData({ ...formData, title: e.target.value })
-                        }
-                        placeholder="VD: Đắc Nhân Tâm"
-                        style={{
-                          width: "100%",
-                          padding: "1rem",
-                          borderRadius: "8px",
-                          border: "1px solid #ddd",
-                          fontSize: "1rem",
-                          outline: "none",
-                          transition: "border 0.2s",
-                          boxSizing: "border-box",
-                        }}
-                      />
+                        <Logo />
+                      </span>
+                      <span>Phiếu thông tin sách</span>
                     </div>
-                    <div>
-                      <label
-                        htmlFor="author"
-                        style={{
-                          display: "block",
-                          fontWeight: "600",
-                          marginBottom: "0.5rem",
-                          color: "var(--text-dark, #1f2937)",
-                        }}
-                      >
-                        Tác giả
-                      </label>
-                      <input
-                        id="author"
-                        value={formData.author}
-                        onChange={(e) =>
-                          setFormData({ ...formData, author: e.target.value })
-                        }
-                        placeholder="VD: Dale Carnegie"
-                        style={{
-                          width: "100%",
-                          padding: "1rem",
-                          borderRadius: "8px",
-                          border: "1px solid #ddd",
-                          fontSize: "1rem",
-                          outline: "none",
-                          transition: "border 0.2s",
-                          boxSizing: "border-box",
-                        }}
-                      />
-                    </div>
+                    <span className={styles.draftStamp}>Bản nháp</span>
                   </div>
-                </motion.div>
-                )}
-                {step === 2 && (
-                  <motion.div
-                    key="step2"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                  <h2
-                    style={{
-                      fontSize: "1.5rem",
-                      marginBottom: "1.5rem",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      color: "var(--text-dark, #1f2937)",
-                    }}
-                  >
-                    <ImageIcon size={24} color="var(--brand-green, #173c2e)" />{" "}
-                    Ảnh và tình trạng
+                  <p className={styles.stepCount}>Bước {step}/5</p>
+                  <h2 ref={heading} tabIndex={-1}>
+                    {steps[step - 1]}
                   </h2>
-                  <div style={{ display: "grid", gap: "2rem" }}>
-                    {/* Upload Ảnh */}
-                    <div>
-                      <label
-                        style={{
-                          display: "block",
-                          fontWeight: "600",
-                          marginBottom: "0.5rem",
-                          color: "var(--text-dark, #1f2937)",
-                        }}
-                      >
-                        Ảnh bản sách ({formData.images.length}/8)
-                      </label>
-                      <p
-                        style={{
-                          fontSize: "0.9rem",
-                          color: "var(--text-light, #6b7280)",
-                          marginBottom: "1rem",
-                        }}
-                      >
-                        Chụp bìa, gáy và những phần đã qua sử dụng.
-                      </p>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "1rem",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        {formData.images.map((img, idx) => (
+                  <p className={styles.stepHelp}>{stepHelp[step - 1]}</p>
+                  <form
+                    onBlurCapture={(event) => {
+                      const target = event.target;
+                      if (
+                        target instanceof HTMLInputElement ||
+                        target instanceof HTMLTextAreaElement ||
+                        target instanceof HTMLSelectElement
+                      ) {
+                        const key = target.name || target.id;
+                        setTouched((previous) =>
+                          previous.includes(key)
+                            ? previous
+                            : [...previous, key],
+                        );
+                      }
+                    }}
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      if (step < 5) continueStep();
+                      else void handleSubmit();
+                    }}
+                    noValidate
+                  >
+                    <fieldset
+                      disabled={submitting || hasAttempt}
+                      className={styles.fields}
+                    >
+                      {step === 1 && (
+                        <>
+                          {!selectedBook && (
+                            <div
+                              className={styles.entryChoice}
+                              role="group"
+                              aria-label="Cách điền thông tin sách"
+                            >
+                              <button
+                                type="button"
+                                aria-pressed={entryMode === "catalog"}
+                                aria-controls="sell-book-entry"
+                                onClick={() => setEntryMode("catalog")}
+                              >
+                                <BookOpen size={18} aria-hidden="true" />
+                                Tìm sách có sẵn
+                              </button>
+                              <button
+                                type="button"
+                                aria-pressed={entryMode === "manual"}
+                                aria-controls="sell-book-entry"
+                                onClick={() => setEntryMode("manual")}
+                              >
+                                <PencilLine size={18} aria-hidden="true" />
+                                Tự nhập thông tin
+                              </button>
+                            </div>
+                          )}
                           <div
-                            key={idx}
-                            style={{
-                              width: "100px",
-                              height: "100px",
-                              borderRadius: "8px",
-                              overflow: "hidden",
-                              border: "1px solid #eee",
-                            }}
+                            id="sell-book-entry"
+                            className={styles.bookEntry}
                           >
-                            <img
-                              src={img}
-                              alt="Book preview"
-                              style={{
-                                width: "100%",
-                                height: "100%",
-                                objectFit: "cover",
-                              }}
-                            />
+                            {!selectedBook && entryMode === "catalog" && (
+                              <div className={styles.catalogEntry}>
+                                <CatalogBookPicker
+                                  compact
+                                  label="Tìm cuốn sách trong thư viện"
+                                  onSelect={(book) => {
+                                    setSelectedBook(book);
+                                    setFormData((previous) => ({
+                                      ...previous,
+                                      title: book.title,
+                                      author: book.authors.join(" · "),
+                                    }));
+                                    setClassification({
+                                      categoryId:
+                                        book.categoryId ||
+                                        categoryFor(book.category)?.id ||
+                                        "",
+                                      attributes: book.attributes || {},
+                                      series: book.series || "",
+                                    });
+                                    setLanguage(book.language);
+                                    focusAfterRender("selected-book");
+                                  }}
+                                />
+                                <p className={styles.help}>
+                                  Chọn đúng đầu sách để điền sẵn tên, tác giả và
+                                  phân loại.
+                                </p>
+                                <button
+                                  className={styles.textAction}
+                                  type="button"
+                                  onClick={() => {
+                                    setEntryMode("manual");
+                                    focusAfterRender("manual-title");
+                                  }}
+                                >
+                                  Không thấy sách? Tự nhập theo bìa{" "}
+                                  <ArrowRight size={16} aria-hidden="true" />
+                                </button>
+                                <p className={styles.marginNote}>
+                                  Mỗi cuốn sách, một câu chuyện.
+                                </p>
+                              </div>
+                            )}
+                            {selectedBook && (
+                              <div className={styles.selectedEntry}>
+                                <p className={styles.selectedLabel}>
+                                  <Check size={18} aria-hidden="true" />
+                                  Đầu sách đã xác nhận
+                                </p>
+                                <h3 id="sell-selected-title" tabIndex={-1}>
+                                  {selectedBook.title}
+                                </h3>
+                                <p>{selectedBook.authors.join(" · ")}</p>
+                                <dl className={styles.selectedFacts}>
+                                  <div>
+                                    <dt>Danh mục</dt>
+                                    <dd>
+                                      {categoryFor(classification.categoryId)
+                                        ?.label || selectedBook.category}
+                                    </dd>
+                                  </div>
+                                  <div>
+                                    <dt>Ngôn ngữ</dt>
+                                    <dd>
+                                      {languageOptions.find(
+                                        (option) => option.id === language,
+                                      )?.label || language}
+                                    </dd>
+                                  </div>
+                                </dl>
+                                <button
+                                  type="button"
+                                  className={styles.textAction}
+                                  onClick={() => {
+                                    setSelectedBook(null);
+                                    setEntryMode("catalog");
+                                    focusAfterRender("catalog-search");
+                                  }}
+                                >
+                                  Chọn đầu sách khác{" "}
+                                  <ArrowRight size={16} aria-hidden="true" />
+                                </button>
+                              </div>
+                            )}
+                            {!selectedBook && entryMode === "manual" && (
+                              <>
+                                <p className={styles.manualHint}>
+                                  Ghi tên sách và tác giả đúng như trên bìa.
+                                </p>
+                                {(
+                                  [
+                                    ["title", "Tên sách", "Ví dụ: Truyện Kiều"],
+                                    ["author", "Tác giả", "Ví dụ: Nguyễn Du"],
+                                  ] as const
+                                ).map(([key, label, placeholder]) => (
+                                  <div
+                                    className={`${styles.field} ${key === "title" ? styles.titleField : ""}`}
+                                    key={key}
+                                  >
+                                    <label htmlFor={key}>{label}</label>
+                                    <input
+                                      id={key}
+                                      required
+                                      {...feedbackProps(key)}
+                                      value={formData[key]}
+                                      disabled={!!selectedBook}
+                                      onChange={(event) =>
+                                        setFormData((previous) => ({
+                                          ...previous,
+                                          [key]: event.target.value,
+                                        }))
+                                      }
+                                      placeholder={placeholder}
+                                    />
+                                    {fieldFeedback(key)}
+                                  </div>
+                                ))}
+                                <fieldset
+                                  disabled={!!selectedBook}
+                                  className={styles.classification}
+                                  aria-describedby={
+                                    shownError("sell-category")
+                                      ? "sell-category-error"
+                                      : undefined
+                                  }
+                                >
+                                  <legend>Phân loại đầu sách</legend>
+                                  <CatalogClassificationFields
+                                    editing
+                                    collapseOptional
+                                    secondaryField={
+                                      <div className={styles.languageField}>
+                                        <label htmlFor="sell-language">
+                                          Ngôn ngữ của sách
+                                        </label>
+                                        <select
+                                          id="sell-language"
+                                          value={language}
+                                          onChange={(e) =>
+                                            setLanguage(e.target.value)
+                                          }
+                                        >
+                                          {!languageOptions.some(
+                                            (o) => o.id === language,
+                                          ) && (
+                                            <option value={language}>
+                                              {language}
+                                            </option>
+                                          )}
+                                          {languageOptions.map((o) => (
+                                            <option key={o.id} value={o.id}>
+                                              {o.label}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    }
+                                    id="sell"
+                                    value={classification}
+                                    onChange={setClassification}
+                                  />
+                                  {fieldFeedback("sell-category")}
+                                </fieldset>
+                                <p className={styles.marginNote}>
+                                  Đúng tên trên bìa, dễ tìm nhau hơn.
+                                </p>
+                              </>
+                            )}
                           </div>
-                        ))}
-                        {formData.images.length < 8 && (
-                          <label
-                            style={{
-                              width: "100px",
-                              height: "100px",
-                              borderRadius: "8px",
-                              border: "2px dashed #cbd5e1",
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              cursor: "pointer",
-                              color: "#64748b",
-                              background: "#f8fafc",
-                              transition: "all 0.2s",
-                            }}
-                          >
-                            <Upload
-                              size={24}
-                              style={{ marginBottom: "0.25rem" }}
-                            />
-                            <span style={{ fontSize: "0.8rem" }}>Tải ảnh</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageUpload}
-                              style={{ display: "none" }}
-                            />
+                        </>
+                      )}
+                      {step === 2 && (
+                        <>
+                          <p className={styles.help}>
+                            Chụp bìa, gáy, ruột sách và phần đã qua sử dụng. Ảnh
+                            đầu tiên là ảnh bìa.
+                          </p>
+                          <label htmlFor="images" className={styles.upload}>
+                            <ImagePlus size={28} aria-hidden="true" />
+                            <strong>Chọn ảnh bản sách</strong>
+                            <span>JPEG, PNG, WebP · tối đa 10 MB/ảnh</span>
                           </label>
+                          <input
+                            id="images"
+                            className={styles.fileInput}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={handleImageUpload}
+                            disabled={
+                              imageFiles.length >= 8 || hasAttempt || submitting
+                            }
+                            {...feedbackProps("images", "image-help")}
+                          />
+                          {fieldFeedback("images")}
+                          <p id="image-help" className={styles.help}>
+                            {imageFiles.length}/8 ảnh · Ảnh được tải lên khi gửi
+                            duyệt.
+                          </p>
+                          <div className={styles.photos}>
+                            {formData.images.map((url, index) => (
+                              <div key={url}>
+                                <img
+                                  src={url}
+                                  alt={`Ảnh bản sách ${index + 1}`}
+                                />
+                                <span>
+                                  {index === 0 ? "Ảnh bìa" : `Ảnh ${index + 1}`}
+                                </span>
+                                <button
+                                  type="button"
+                                  aria-label={`Xóa ảnh ${index + 1}`}
+                                  onClick={() => removePhoto(index)}
+                                >
+                                  <X size={18} aria-hidden="true" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      {step === 3 && (
+                        <>
+                          <div className={styles.field}>
+                            <label htmlFor="condition">
+                              Mức độ đã qua sử dụng
+                            </label>
+                            <select
+                              id="condition"
+                              value={formData.condition}
+                              onChange={(event) =>
+                                setFormData((previous) => ({
+                                  ...previous,
+                                  condition: event.target.value,
+                                }))
+                              }
+                            >
+                              {Object.entries(conditions).map(
+                                ([value, label]) => (
+                                  <option key={value} value={value}>
+                                    {label}
+                                  </option>
+                                ),
+                              )}
+                            </select>
+                          </div>
+                          <div className={styles.conditionFields}>
+                            {textFields.map(([key, label, hint]) => (
+                              <div className={styles.field} key={key}>
+                                <label htmlFor={key}>{label}</label>
+                                <p id={`${key}-hint`} className={styles.help}>
+                                  {hint}
+                                </p>
+                                <textarea
+                                  id={key}
+                                  rows={key === "description" ? 4 : 2}
+                                  required
+                                  value={formData[key]}
+                                  onChange={(event) =>
+                                    setFormData((previous) => ({
+                                      ...previous,
+                                      [key]: event.target.value,
+                                    }))
+                                  }
+                                  {...feedbackProps(key, `${key}-hint`)}
+                                />
+                                {fieldFeedback(key)}
+                              </div>
+                            ))}
+                          </div>
+                          <div className={styles.questions}>
+                            <h3>Kiểm tra điều kiện đăng</h3>
+                            <p
+                              id="condition-choice-hint"
+                              className={styles.help}
+                            >
+                              Nhấn lại đáp án đang chọn để bỏ chọn.
+                            </p>
+                            {questions.map(([key, label]) => (
+                              <fieldset
+                                key={key}
+                                id={`${key}-group`}
+                                {...feedbackProps(key, "condition-choice-hint")}
+                              >
+                                <legend className={styles.questionLegend}>
+                                  {label}
+                                </legend>
+                                <div className={styles.questionRow}>
+                                  <p aria-hidden="true">{label}</p>
+                                  <div className={styles.radioOptions}>
+                                    {([true, false] as const).map((value) => (
+                                      <label
+                                        className={styles.choice}
+                                        key={String(value)}
+                                      >
+                                        <input
+                                          type="radio"
+                                          name={key}
+                                          checked={formData[key] === value}
+                                          onKeyDown={(event) => {
+                                            // Native radios do not click again on Space when checked.
+                                            if (
+                                              event.key === " " &&
+                                              (formData[key] === value ||
+                                                event.repeat)
+                                            ) {
+                                              event.preventDefault();
+                                              if (!event.repeat)
+                                                setFormData((previous) => ({
+                                                  ...previous,
+                                                  [key]: null,
+                                                }));
+                                            }
+                                          }}
+                                          onClick={() => {
+                                            if (formData[key] === value)
+                                              setFormData((previous) => ({
+                                                ...previous,
+                                                [key]: null,
+                                              }));
+                                          }}
+                                          onChange={() =>
+                                            setFormData((previous) => ({
+                                              ...previous,
+                                              [key]: value,
+                                            }))
+                                          }
+                                        />
+                                        <span className={styles.choiceFace}>
+                                          <Check size={16} aria-hidden="true" />
+                                          <span>{value ? "Có" : "Không"}</span>
+                                        </span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                                {fieldFeedback(key)}
+                              </fieldset>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      {step === 4 && (
+                        <>
+                          <fieldset className={styles.mode}>
+                            <legend>Bạn muốn bán hay đổi?</legend>
+                            <div className={styles.modeOptions}>
+                              {(
+                                [
+                                  ["Sale", "Bán sách"],
+                                  ["Exchange", "Đổi sách"],
+                                  ["Both", "Bán hoặc đổi"],
+                                ] as const
+                              ).map(([value, label]) => (
+                                <label className={styles.choice} key={value}>
+                                  <input
+                                    type="radio"
+                                    name="mode"
+                                    checked={formData.mode === value}
+                                    onChange={() =>
+                                      setFormData((previous) => ({
+                                        ...previous,
+                                        mode: value,
+                                      }))
+                                    }
+                                  />
+                                  <span className={styles.choiceFace}>
+                                    <Check size={18} aria-hidden="true" />
+                                    <span>{label}</span>
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </fieldset>
+                          <p className={styles.help}>
+                            Giá bán và giá trị đổi đều tính bằng VNĐ, từ 10.000đ
+                            đến 1.000.000đ.
+                          </p>
+                          {(
+                            [
+                              [
+                                "salePrice",
+                                "Giá bán",
+                                formData.mode !== "Exchange",
+                              ],
+                              [
+                                "exchangeValue",
+                                "Giá trị đổi",
+                                formData.mode !== "Sale",
+                              ],
+                            ] as const
+                          )
+                            .filter(([, , visible]) => visible)
+                            .map(([key, label]) => (
+                              <div className={styles.field} key={key}>
+                                <label htmlFor={key}>{label} (VNĐ)</label>
+                                <input
+                                  id={key}
+                                  inputMode="numeric"
+                                  {...feedbackProps(key)}
+                                  value={formData[key]}
+                                  onChange={(event) =>
+                                    setFormData((previous) => ({
+                                      ...previous,
+                                      [key]: event.target.value,
+                                    }))
+                                  }
+                                  placeholder="Ví dụ: 75000"
+                                />
+                                {fieldFeedback(key)}
+                              </div>
+                            ))}
+                        </>
+                      )}
+                      {step === 5 && (
+                        <>
+                          <div className={styles.reviewHeading}>
+                            <h3>Thông tin đầu sách</h3>
+                            {reviewEdit(1)}
+                          </div>
+                          <dl className={styles.reviewFacts}>
+                            {[
+                              ["Tên sách", formData.title],
+                              ["Tác giả", formData.author],
+                              [
+                                "Danh mục",
+                                categoryFor(classification.categoryId)?.label ||
+                                  selectedBook?.category,
+                              ],
+                              [
+                                "Ngôn ngữ",
+                                languageOptions.find(
+                                  (option) => option.id === language,
+                                )?.label || language,
+                              ],
+                              ...(classification.series
+                                ? [["Bộ truyện", classification.series]]
+                                : []),
+                              ...facetsFor(
+                                classification.categoryId,
+                                classification.attributes,
+                              ).flatMap((facet) => {
+                                const selected =
+                                  classification.attributes[facet.id] || [];
+                                return selected.length
+                                  ? [
+                                      [
+                                        facet.label,
+                                        selected
+                                          .map(
+                                            (id) =>
+                                              facet.options.find(
+                                                (option) => option.id === id,
+                                              )?.label || id,
+                                          )
+                                          .join(", "),
+                                      ],
+                                    ]
+                                  : [];
+                              }),
+                            ].map(([label, value]) => (
+                              <div key={label}>
+                                <dt>{label}</dt>
+                                <dd>{value || "Chưa nhập"}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                          <div className={styles.reviewHeading}>
+                            <h3>Ảnh bản sách · {imageFiles.length}/8</h3>
+                            {reviewEdit(2)}
+                          </div>
+                          {formData.images.length > 0 ? (
+                            <div className={styles.reviewPhotos}>
+                              {formData.images.map((url, index) => (
+                                <img
+                                  key={url}
+                                  src={url}
+                                  alt={`Ảnh bản sách ${index + 1}${index === 0 ? ", ảnh bìa" : ""}`}
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <p className={styles.help}>Chưa có ảnh bản sách.</p>
+                          )}
+                          <div className={styles.reviewHeading}>
+                            <h3>Tình trạng bản sách</h3>
+                            {reviewEdit(3)}
+                          </div>
+                          <dl className={styles.reviewFacts}>
+                            <div>
+                              <dt>Mức độ đã qua sử dụng</dt>
+                              <dd>
+                                {
+                                  conditions[
+                                    formData.condition as keyof typeof conditions
+                                  ]
+                                }
+                              </dd>
+                            </div>
+                            {textFields.map(([key, label]) => (
+                              <div key={key}>
+                                <dt>{label}</dt>
+                                <dd>{formData[key] || "Chưa nhập"}</dd>
+                              </div>
+                            ))}
+                            {questions.map(([key, label]) => (
+                              <div key={key}>
+                                <dt>{label}</dt>
+                                <dd>
+                                  {formData[key] === null
+                                    ? "Chưa trả lời"
+                                    : formData[key]
+                                      ? "Có"
+                                      : "Không"}
+                                </dd>
+                              </div>
+                            ))}
+                          </dl>
+                          <div className={styles.reviewHeading}>
+                            <h3>Bán hoặc đổi</h3>
+                            {reviewEdit(4)}
+                          </div>
+                          <dl className={styles.reviewFacts}>
+                            <div>
+                              <dt>Hình thức</dt>
+                              <dd>
+                                {formData.mode === "Sale"
+                                  ? "Bán sách"
+                                  : formData.mode === "Exchange"
+                                    ? "Đổi sách"
+                                    : "Bán hoặc đổi"}
+                              </dd>
+                            </div>
+                            {formData.mode !== "Exchange" && (
+                              <div>
+                                <dt>Giá bán</dt>
+                                <dd>
+                                  {validPrice(formData.salePrice)
+                                    ? formatVnd(Number(formData.salePrice))
+                                    : "Chưa nhập giá hợp lệ"}
+                                </dd>
+                              </div>
+                            )}
+                            {formData.mode !== "Sale" && (
+                              <div>
+                                <dt>Giá trị đổi</dt>
+                                <dd>
+                                  {validPrice(formData.exchangeValue)
+                                    ? formatVnd(Number(formData.exchangeValue))
+                                    : "Chưa nhập giá hợp lệ"}
+                                </dd>
+                              </div>
+                            )}
+                          </dl>
+                          <p className={styles.help}>
+                            {imageFiles.length} ảnh bản sách. Bài đăng và thông
+                            tin sách được gửi kiểm duyệt trước khi xuất hiện
+                            trên kệ.
+                          </p>
+                          <label className={styles.ownership}>
+                            <input
+                              id="ownership"
+                              type="checkbox"
+                              {...feedbackProps("ownership")}
+                              checked={ownershipDeclared}
+                              onChange={(event) =>
+                                setOwnershipDeclared(event.target.checked)
+                              }
+                            />
+                            Tôi có quyền sở hữu và đăng bán hoặc trao đổi cuốn
+                            sách này.
+                          </label>
+                          {fieldFeedback("ownership")}
+                        </>
+                      )}
+                    </fieldset>
+                    {visibleSubmitError && (
+                      <div
+                        role="alert"
+                        ref={errorBox}
+                        tabIndex={-1}
+                        className={styles.error}
+                      >
+                        <p>{visibleSubmitError}</p>
+                        {validationFailure && (
+                          <ul>
+                            {Object.entries(fieldErrors)
+                              .filter(
+                                ([key, message]) =>
+                                  message && stepFields.includes(key),
+                              )
+                              .map(([key, message]) => (
+                                <li key={key}>
+                                  <button
+                                    type="button"
+                                    className={styles.textAction}
+                                    onClick={() => {
+                                      const target =
+                                        document.getElementById(key) ||
+                                        document.querySelector<HTMLInputElement>(
+                                          `input[name="${key}"]`,
+                                        );
+                                      target?.focus();
+                                    }}
+                                  >
+                                    {message}
+                                  </button>
+                                </li>
+                              ))}
+                          </ul>
+                        )}
+                        {hasAttempt && (
+                          <p>
+                            Thông tin đang được giữ nguyên. Bấm thử lại để tiếp
+                            tục lần gửi này; đừng tải lại trang.
+                          </p>
                         )}
                       </div>
-                    </div>
-
-                    <div style={{ height: "1px", background: "#e5e7eb" }} />
-                  </div>
-                </motion.div>
-                )}
-                {step === 3 && (
-                  <motion.div
-                    key="step3"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                  <h2>Tình trạng cuốn sách</h2>
-                  <div style={{ display: "grid", gap: "1.5rem" }}>
-                    {/* Tình trạng */}
-                    <div style={{ display: "grid", gap: "1.5rem" }}>
-                      <div>
-                        <label
-                          htmlFor="condition"
-                          style={{
-                            display: "block",
-                            fontWeight: "600",
-                            marginBottom: "0.5rem",
-                            color: "var(--text-dark, #1f2937)",
-                          }}
-                        >
-                          Tình trạng tổng thể
-                        </label>
-                        <select
-                          id="condition"
-                          value={formData.condition}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              condition: e.target.value,
-                            })
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "1rem",
-                            borderRadius: "8px",
-                            border: "1px solid #ddd",
-                            fontSize: "1rem",
-                            boxSizing: "border-box",
-                          }}
-                        >
-                          <option value="LikeNew">Gần như mới</option>
-                          <option value="Good">Còn tốt</option>
-                          <option value="Fair">Đã dùng nhiều</option>
-                          <option value="Worn">Cũ nhiều</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label
-                          htmlFor="pages"
-                          style={{
-                            display: "block",
-                            fontWeight: "600",
-                            marginBottom: "0.25rem",
-                            color: "var(--text-dark, #1f2937)",
-                          }}
-                        >
-                          Ruột sách và trang thiếu
-                        </label>
-                        <p
-                          style={{
-                            fontSize: "0.85rem",
-                            color: "#64748b",
-                            marginBottom: "0.5rem",
-                          }}
-                        >
-                          Đủ trang hay thiếu trang nào? Có ố, rách hoặc bong
-                          trang không?
-                        </p>
-                        <textarea
-                          rows={2}
-                          id="pages"
-                          value={formData.pages}
-                          onChange={(e) =>
-                            setFormData({ ...formData, pages: e.target.value })
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "1rem",
-                            borderRadius: "8px",
-                            border: "1px solid #ddd",
-                            fontSize: "1rem",
-                            fontFamily: "inherit",
-                            boxSizing: "border-box",
-                          }}
-                        />
-                      </div>
-
-                      <div>
-                        <label
-                          htmlFor="coverNote"
-                          style={{
-                            display: "block",
-                            fontWeight: "600",
-                            marginBottom: "0.25rem",
-                            color: "var(--text-dark, #1f2937)",
-                          }}
-                        >
-                          Bìa và gáy sách
-                        </label>
-                        <p
-                          style={{
-                            fontSize: "0.85rem",
-                            color: "#64748b",
-                            marginBottom: "0.5rem",
-                          }}
-                        >
-                          Mô tả góc sờn, nếp gấp hoặc phần bong gáy.
-                        </p>
-                        <textarea
-                          rows={2}
-                          id="coverNote"
-                          value={formData.coverNote}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              coverNote: e.target.value,
-                            })
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "1rem",
-                            borderRadius: "8px",
-                            border: "1px solid #ddd",
-                            fontSize: "1rem",
-                            fontFamily: "inherit",
-                            boxSizing: "border-box",
-                          }}
-                        />
-                      </div>
-
-                      <div>
-                        <label
-                          htmlFor="notes"
-                          style={{
-                            display: "block",
-                            fontWeight: "600",
-                            marginBottom: "0.25rem",
-                            color: "var(--text-dark, #1f2937)",
-                          }}
-                        >
-                          Ghi chú và đánh dấu
-                        </label>
-                        <p
-                          style={{
-                            fontSize: "0.85rem",
-                            color: "#64748b",
-                            marginBottom: "0.5rem",
-                          }}
-                        >
-                          Có viết, tô hoặc gạch chân không? Nếu không, ghi
-                          'Không có'.
-                        </p>
-                        <textarea
-                          rows={2}
-                          id="notes"
-                          value={formData.notes}
-                          onChange={(e) =>
-                            setFormData({ ...formData, notes: e.target.value })
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "1rem",
-                            borderRadius: "8px",
-                            border: "1px solid #ddd",
-                            fontSize: "1rem",
-                            fontFamily: "inherit",
-                            boxSizing: "border-box",
-                          }}
-                        />
-                      </div>
-
-                      {/* Các câu hỏi trắc nghiệm */}
-                      <div
-                        style={{
-                          background: "#f8fafc",
-                          padding: "1.5rem",
-                          borderRadius: "12px",
-                          border: "1px solid #e2e8f0",
-                          display: "grid",
-                          gap: "1.2rem",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            flexWrap: "wrap",
-                            gap: "1rem",
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontWeight: "500",
-                              color: "var(--text-dark, #1f2937)",
-                            }}
-                          >
-                            Nội dung có còn đọc rõ?
-                          </span>
-                          <div style={{ display: "flex", gap: "1rem" }}>
-                            <label
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.5rem",
-                                cursor: "pointer",
-                                color: "var(--text-dark, #1f2937)",
-                              }}
-                            >
-                              <input
-                                type="radio"
-                                name="readable"
-                                checked={formData.readable === true}
-                                onChange={() =>
-                                  setFormData({ ...formData, readable: true })
-                                }
-                              />{" "}
-                              Có
-                            </label>
-                            <label
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.5rem",
-                                cursor: "pointer",
-                                color: "var(--text-dark, #1f2937)",
-                              }}
-                            >
-                              <input
-                                type="radio"
-                                name="readable"
-                                checked={formData.readable === false}
-                                onChange={() =>
-                                  setFormData({ ...formData, readable: false })
-                                }
-                              />{" "}
-                              Không
-                            </label>
-                          </div>
-                        </div>
-
-                        <div style={{ height: "1px", background: "#e2e8f0" }} />
-
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            flexWrap: "wrap",
-                            gap: "1rem",
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontWeight: "500",
-                              color: "var(--text-dark, #1f2937)",
-                            }}
-                          >
-                            Sách có thiếu trang?
-                          </span>
-                          <div style={{ display: "flex", gap: "1rem" }}>
-                            <label
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.5rem",
-                                cursor: "pointer",
-                                color: "var(--text-dark, #1f2937)",
-                              }}
-                            >
-                              <input
-                                type="radio"
-                                name="hasMissingPages"
-                                checked={formData.hasMissingPages === true}
-                                onChange={() =>
-                                  setFormData({
-                                    ...formData,
-                                    hasMissingPages: true,
-                                  })
-                                }
-                              />{" "}
-                              Có
-                            </label>
-                            <label
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.5rem",
-                                cursor: "pointer",
-                                color: "var(--text-dark, #1f2937)",
-                              }}
-                            >
-                              <input
-                                type="radio"
-                                name="hasMissingPages"
-                                checked={formData.hasMissingPages === false}
-                                onChange={() =>
-                                  setFormData({
-                                    ...formData,
-                                    hasMissingPages: false,
-                                  })
-                                }
-                              />{" "}
-                              Không
-                            </label>
-                          </div>
-                        </div>
-
-                        <div style={{ height: "1px", background: "#e2e8f0" }} />
-
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            flexWrap: "wrap",
-                            gap: "1rem",
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontWeight: "500",
-                              color: "var(--text-dark, #1f2937)",
-                            }}
-                          >
-                            Có thiếu nội dung trọng yếu?
-                          </span>
-                          <div style={{ display: "flex", gap: "1rem" }}>
-                            <label
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.5rem",
-                                cursor: "pointer",
-                                color: "var(--text-dark, #1f2937)",
-                              }}
-                            >
-                              <input
-                                type="radio"
-                                name="missingEssentialContent"
-                                checked={
-                                  formData.missingEssentialContent === true
-                                }
-                                onChange={() =>
-                                  setFormData({
-                                    ...formData,
-                                    missingEssentialContent: true,
-                                  })
-                                }
-                              />{" "}
-                              Có
-                            </label>
-                            <label
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.5rem",
-                                cursor: "pointer",
-                                color: "var(--text-dark, #1f2937)",
-                              }}
-                            >
-                              <input
-                                type="radio"
-                                name="missingEssentialContent"
-                                checked={
-                                  formData.missingEssentialContent === false
-                                }
-                                onChange={() =>
-                                  setFormData({
-                                    ...formData,
-                                    missingEssentialContent: false,
-                                  })
-                                }
-                              />{" "}
-                              Không
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-                )}
-                {step === 4 && (
-                  <motion.div
-                    key="step4"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                  <h2
-                    style={{
-                      fontSize: "1.5rem",
-                      marginBottom: "1.5rem",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      color: "var(--text-dark, #1f2937)",
-                    }}
-                  >
-                    <Tag size={24} color="var(--brand-green, #173c2e)" /> Bán
-                    hoặc đổi
-                  </h2>
-                  <div style={{ display: "grid", gap: "2rem" }}>
-                    <div>
-                      <label
-                        style={{
-                          display: "block",
-                          fontWeight: "600",
-                          marginBottom: "1rem",
-                          color: "var(--text-dark, #1f2937)",
-                        }}
-                      >
-                        Bạn muốn bán hay đổi?
-                      </label>
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns:
-                            "repeat(auto-fit, minmax(120px, 1fr))",
-                          gap: "1rem",
-                        }}
-                      >
-                        {["Sale", "Exchange", "Both"].map((mode) => (
-                          <button
-                            key={mode}
-                            onClick={() => setFormData({ ...formData, mode })}
-                            style={{
-                              padding: "1rem",
-                              borderRadius: "12px",
-                              border: `2px solid ${formData.mode === mode ? "var(--brand-green, #173c2e)" : "#e2e8f0"}`,
-                              background:
-                                formData.mode === mode ? "#ecfdf5" : "white",
-                              cursor: "pointer",
-                              fontWeight: "600",
-                              color:
-                                formData.mode === mode
-                                  ? "var(--brand-green, #173c2e)"
-                                  : "#64748b",
-                              transition: "all 0.2s",
-                              outline: "none",
-                            }}
-                          >
-                            {mode === "Sale"
-                              ? "Bán sách"
-                              : mode === "Exchange"
-                                ? "Đổi sách"
-                                : "Bán hoặc đổi"}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {(formData.mode === "Sale" || formData.mode === "Both") && (
-                      <div
-                        style={{
-                          background: "#f8fafc",
-                          padding: "1.5rem",
-                          borderRadius: "12px",
-                          border: "1px solid #e2e8f0",
-                        }}
-                      >
-                        <label
-                          htmlFor="salePrice"
-                          style={{
-                            display: "block",
-                            fontWeight: "600",
-                            marginBottom: "0.5rem",
-                            color: "var(--text-dark, #1f2937)",
-                          }}
-                        >
-                          Giá bán (VNĐ)
-                        </label>
-                        <p
-                          style={{
-                            fontSize: "0.85rem",
-                            color: "#64748b",
-                            marginBottom: "1rem",
-                          }}
-                        >
-                          Từ 10.000 đến 1.000.000 đồng.
-                        </p>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: "1rem",
-                            alignItems: "center",
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <input
-                            type="number"
-                            id="salePrice"
-                            value={formData.salePrice}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                salePrice: e.target.value,
-                              })
-                            }
-                            placeholder="VD: 125000"
-                            style={{
-                              flex: 1,
-                              minWidth: "0",
-                              padding: "1rem",
-                              borderRadius: "8px",
-                              border: "1px solid #ddd",
-                              fontSize: "1.1rem",
-                              outline: "none",
-                              boxSizing: "border-box",
-                            }}
-                          />
-                        </div>
-                      </div>
                     )}
-                    <div style={{ display: "grid", gap: "0.5rem" }}>
-                      <label htmlFor="accessories" style={{ fontWeight: 600 }}>
-                        Phụ kiện đi kèm
-                      </label>
-                      <textarea
-                        id="accessories"
-                        rows={2}
-                        value={formData.accessories}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            accessories: e.target.value,
-                          })
-                        }
-                        placeholder="Ví dụ: Không có; hoặc ghi rõ bookmark, bọc sách..."
-                        style={{
-                          width: "100%",
-                          boxSizing: "border-box",
-                          padding: "0.8rem",
-                          borderRadius: "8px",
-                          border: "1px solid #ddd",
-                          fontFamily: "inherit",
-                        }}
-                      />
-                      <small>Nếu không có phụ kiện, nhập “Không có”.</small>
-                    </div>
-                    <div style={{ display: "grid", gap: "0.5rem" }}>
-                      <label htmlFor="description" style={{ fontWeight: 600 }}>
-                        Mô tả chung
-                      </label>
-                      <textarea
-                        id="description"
-                        rows={4}
-                        value={formData.description}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            description: e.target.value,
-                          })
-                        }
-                        placeholder="Viết ít nhất 30 ký tự về cuốn sách, tình trạng và điều bạn muốn người nhận biết."
-                        style={{
-                          width: "100%",
-                          boxSizing: "border-box",
-                          padding: "0.8rem",
-                          borderRadius: "8px",
-                          border: "1px solid #ddd",
-                          fontFamily: "inherit",
-                        }}
-                      />
-                      <small>
-                        {formData.description.trim().length}/30 ký tự tối thiểu
-                      </small>
-                    </div>
-
-                    {(formData.mode === "Exchange" ||
-                      formData.mode === "Both") && (
-                      <div
-                        style={{
-                          background: "#f8fafc",
-                          padding: "1.5rem",
-                          borderRadius: "12px",
-                          border: "1px solid #e2e8f0",
-                        }}
-                      >
-                        <label
-                          htmlFor="exchangeValue"
-                          style={{
-                            display: "block",
-                            fontWeight: "600",
-                            marginBottom: "0.5rem",
-                            color: "var(--text-dark, #1f2937)",
-                          }}
-                        >
-                          Giá trị quy đổi (VNĐ)
-                        </label>
-                        <p
-                          style={{
-                            fontSize: "0.85rem",
-                            color: "#64748b",
-                            marginBottom: "1rem",
-                          }}
-                        >
-                          Mức giá trị để đối chiếu khi đổi sách.
-                        </p>
-                        <input
-                          type="number"
-                          id="exchangeValue"
-                          value={formData.exchangeValue}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              exchangeValue: e.target.value,
-                            })
-                          }
-                          placeholder="VD: 100000"
-                          style={{
-                            width: "100%",
-                            padding: "1rem",
-                            borderRadius: "8px",
-                            border: "1px solid #ddd",
-                            fontSize: "1.1rem",
-                            outline: "none",
-                            boxSizing: "border-box",
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-                )}
-                {step === 5 && (
-                  <motion.div
-                    key="step5"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                  <h2
-                    style={{
-                      fontSize: "1.5rem",
-                      marginBottom: "1.5rem",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      color: "var(--text-dark, #1f2937)",
-                    }}
-                  >
-                    <List size={24} color="var(--brand-green, #173c2e)" /> Kiểm
-                    tra thông tin
-                  </h2>
-                  <div
-                    style={{ display: "grid", gap: "1.5rem", fontSize: "1rem" }}
-                  >
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "120px 1fr",
-                        gap: "1rem",
-                        borderBottom: "1px solid #f1f5f9",
-                        paddingBottom: "1rem",
-                      }}
-                    >
-                      <span style={{ color: "#64748b", fontWeight: "500" }}>
-                        Tên sách
-                      </span>
-                      <span
-                        style={{
-                          fontWeight: "600",
-                          color: "var(--text-dark, #1f2937)",
-                        }}
-                      >
-                        {formData.title || "(Chưa nhập)"}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "120px 1fr",
-                        gap: "1rem",
-                        borderBottom: "1px solid #f1f5f9",
-                        paddingBottom: "1rem",
-                      }}
-                    >
-                      <span style={{ color: "#64748b", fontWeight: "500" }}>
-                        Tác giả
-                      </span>
-                      <span
-                        style={{
-                          fontWeight: "600",
-                          color: "var(--text-dark, #1f2937)",
-                        }}
-                      >
-                        {formData.author || "(Chưa nhập)"}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "120px 1fr",
-                        gap: "1rem",
-                        borderBottom: "1px solid #f1f5f9",
-                        paddingBottom: "1rem",
-                      }}
-                    >
-                      <span style={{ color: "#64748b", fontWeight: "500" }}>
-                        Tình trạng
-                      </span>
-                      <span
-                        style={{
-                          fontWeight: "600",
-                          color: "var(--text-dark, #1f2937)",
-                        }}
-                      >
-                        {formData.condition === "LikeNew"
-                          ? "Gần như mới"
-                          : formData.condition === "Good"
-                            ? "Còn tốt"
-                            : formData.condition === "Fair"
-                              ? "Đã dùng nhiều"
-                              : "Cũ nhiều"}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "120px 1fr",
-                        gap: "1rem",
-                        borderBottom: "1px solid #f1f5f9",
-                        paddingBottom: "1rem",
-                      }}
-                    >
-                      <span style={{ color: "#64748b", fontWeight: "500" }}>
-                        Hình thức
-                      </span>
-                      <span
-                        style={{
-                          fontWeight: "600",
-                          color: "var(--text-dark, #1f2937)",
-                        }}
-                      >
-                        {formData.mode === "Sale"
-                          ? "Bán sách"
-                          : formData.mode === "Exchange"
-                            ? "Đổi sách"
-                            : "Bán hoặc đổi"}
-                      </span>
-                    </div>
-                    {(formData.mode === "Sale" || formData.mode === "Both") && (
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "120px 1fr",
-                          gap: "1rem",
-                          borderBottom: "1px solid #f1f5f9",
-                          paddingBottom: "1rem",
-                        }}
-                      >
-                        <span style={{ color: "#64748b", fontWeight: "500" }}>
-                          Giá bán
-                        </span>
-                        <span
-                          style={{
-                            fontWeight: "700",
-                            color: "var(--brand-green, #173c2e)",
-                          }}
-                        >
-                          {formData.salePrice
-                            ? `${parseInt(formData.salePrice).toLocaleString("vi-VN")} đ`
-                            : "(Chưa nhập)"}
-                        </span>
-                      </div>
-                    )}
-
-                    {formData.mode !== "Sale" && (
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "120px 1fr",
-                          gap: "1rem",
-                        }}
-                      >
-                        <span>Giá trị đổi</span>
-                        <strong>
-                          {formData.exchangeValue
-                            ? `${Number(formData.exchangeValue).toLocaleString("vi-VN")} đ`
-                            : "(Chưa nhập)"}
-                        </strong>
-                      </div>
-                    )}
-                    <div
-                      style={{
-                        background: "#fef3c7",
-                        padding: "1rem",
-                        borderRadius: "8px",
-                        display: "flex",
-                        gap: "0.75rem",
-                        marginTop: "1rem",
-                      }}
-                    >
-                      <Info
-                        size={20}
-                        color="#d97706"
-                        style={{ flexShrink: 0 }}
-                      />
-                      <p
-                        style={{
-                          color: "#b45309",
-                          margin: 0,
-                          fontSize: "0.95rem",
-                          lineHeight: "1.5",
-                        }}
-                      >
-                        Vui lòng kiểm tra kỹ thông tin. Sách của bạn sẽ được gửi
-                        cho Admin duyệt trước khi hiển thị công khai trên kệ.
+                    {hasAttempt && (
+                      <p role="status" className={styles.help}>
+                        Thông tin đã khóa cho lần gửi này để giữ đúng dữ liệu
+                        khi thử lại.
                       </p>
+                    )}
+                    <div className={styles.actions}>
+                      {step > 1 ? (
+                        <button
+                          type="button"
+                          disabled={submitting}
+                          onClick={() => changeStep(step - 1)}
+                        >
+                          <ArrowLeft size={18} aria-hidden="true" />
+                          Quay lại
+                        </button>
+                      ) : (
+                        <span className={styles.sessionNote}>
+                          Chưa có tự động lưu nháp.
+                        </span>
+                      )}
+                      <button
+                        type="submit"
+                        className={styles.primary}
+                        disabled={submitting}
+                      >
+                        {step < 5
+                          ? "Tiếp tục"
+                          : submitting
+                            ? "Đang gửi…"
+                            : hasAttempt
+                              ? "Thử gửi lại"
+                              : "Gửi duyệt"}
+                        <ArrowRight size={18} aria-hidden="true" />
+                      </button>
                     </div>
-                  </div>
-                  <label
-                    style={{
-                      display: "flex",
-                      gap: "0.75rem",
-                      alignItems: "flex-start",
-                      marginTop: "1.5rem",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={ownershipDeclared}
-                      onChange={(e) => setOwnershipDeclared(e.target.checked)}
-                    />
-                    Tôi có quyền sở hữu và đăng bán hoặc trao đổi cuốn sách này.
-                  </label>
-                </motion.div>
-                )}
-                </AnimatePresence>
-                </fieldset>
-            {submitError && (
-              <div role="alert" className="sell-error">
-                {submitError}
-                {hasAttempt && (
-                  <p>
-                    Thông tin đang được giữ nguyên. Bấm thử lại để tiếp tục lần
-                    gửi này; đừng tải lại trang.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Nút điều hướng */}
-            {step <= 5 && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginTop: "2.5rem",
-                  paddingTop: "1.5rem",
-                  borderTop: "1px solid #f1f5f9",
-                  gap: "0.5rem",
-                  flexWrap: "wrap",
-                }}
-              >
-                <button
-                  onClick={() => setStep(step - 1)}
-                  style={{
-                    visibility: step > 1 ? "visible" : "hidden",
-                    padding: "0.75rem 1.5rem",
-                    borderRadius: "8px",
-                    background: "#f1f5f9",
-                    color: "#475569",
-                    border: "none",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    outline: "none",
-                  }}
-                >
-                  <ChevronLeft size={18} /> Quay lại
-                </button>
-
-                {step < 5 ? (
-                  <button
-                    onClick={() => setStep(step + 1)}
-                    style={{
-                      padding: "0.75rem 1.5rem",
-                      borderRadius: "8px",
-                      background: "var(--brand-green, #173c2e)",
-                      color: "white",
-                      border: "none",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      outline: "none",
-                    }}
-                  >
-                    Tiếp tục <ChevronRight size={18} />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => void handleSubmit()}
-                    disabled={submitting}
-                    style={{
-                      padding: "0.75rem 2rem",
-                      borderRadius: "8px",
-                      background: "var(--brand-green, #173c2e)",
-                      color: "white",
-                      border: "none",
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      fontSize: "1.05rem",
-                      boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
-                      outline: "none",
-                    }}
-                  >
-                    {submitting
-                      ? "Đang gửi…"
-                      : hasAttempt
-                        ? "Thử gửi lại"
-                        : "Gửi duyệt"}{" "}
-                    <ArrowRight size={18} />
-                  </button>
-                )}
-              </div>
-            )}
-
-            {step === 6 && !submitError && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, type: "spring", bounce: 0.4 }}
-                className="flex flex-col items-center justify-center p-12 text-center relative overflow-hidden rounded-2xl"
-                style={{
-                  minHeight: "400px",
-                  backgroundImage: "url('/Spending_BG.png')",
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  marginTop: "2rem"
-                }}
-              >
-                <div className="z-10 flex flex-col items-center">
-                  <Clock size={80} className="text-secondary mb-6 animate-pulse" />
-                  <h2 className="text-3xl font-display font-black text-primary mb-4 drop-shadow-sm">
-                    Đang chờ duyệt
-                  </h2>
-                  <p className="text-lg text-[#1f2937] max-w-lg mx-auto leading-relaxed mb-8 font-medium">
-                    Sách <strong className="text-primary font-bold">{formData.title}</strong> đã được gửi lên hệ
-                    thống. Admin sẽ kiểm tra và duyệt bài đăng trước khi sách hiển thị công khai.
-                  </p>
-                  
-                  <button
-                    onClick={() => {
-                      setStep(1);
-                      setFormData({ title: "", author: "", images: [], condition: "Good", pages: "", coverNote: "", notes: "", accessories: "", description: "", readable: null, hasMissingPages: null, missingEssentialContent: null, mode: "Sale", salePrice: "", exchangeValue: "" });
-                      setImageFiles([]);
-                      setOwnershipDeclared(false);
-                      setHasAttempt(false);
-                    }}
-                    className="px-8 py-3 rounded-xl bg-primary text-on-primary font-title-md text-title-md shadow-md hover:bg-primary/90 hover:scale-105 transition-all flex items-center gap-2"
-                  >
-                    <span className="material-symbols-outlined">add_circle</span>
-                    Tiếp tục đăng sách khác
-                  </button>
+                  </form>
                 </div>
-              </motion.div>
-            )}
-          </div>
-        </div>
-        <style>{`
-        .sell-workspace {--brand-green:#173c2e; padding-top: 5rem; background: #fef9ef; min-height: 100vh;}
-        .sell-fields {border:0;padding:0;margin:0;min-width:0;}
-        .sell-error {margin-top:1rem;padding:1rem;border:1px solid #a33d2a;color:#7d2d20;border-radius:8px;}
-        .sell-workspace :focus-visible {outline:2px solid #a33d2a!important;outline-offset:3px;}
-        @media(prefers-reduced-motion:reduce) {.sell-workspace * {animation:none!important;transition:none!important;}}
-        .sell-steps {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.5rem;margin-bottom:2rem;}
-        .sell-steps button {display:flex;align-items:center;gap:0.5rem;min-width:0;padding:0.8rem;border:1px solid #ddd5c7;border-radius:8px;text-align:left;background:#fffdf7;color:#173c2e;}
-        .sell-steps button[aria-current] {background:#173c2e;color:#fffdf7;}
-        .sell-steps button span {font-weight:700;}
-        @media(max-width:640px) {.sell-panel {padding:1rem!important;} .sell-steps {grid-template-columns:1fr 1fr;} .sell-workspace input,.sell-workspace textarea,.sell-workspace select {max-width:100%;}}
-
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-        </div>
+              </div>
+            </div>
+          </>
+        )}
       </main>
-    </>
+      <ConfirmDialog
+        isOpen={blocker.state === "blocked"}
+        title="Rời bàn đăng sách?"
+        description={
+          hasAttempt
+            ? "Lần gửi chưa được xác nhận. Rời trang sẽ mất khả năng tiếp tục lần gửi này."
+            : "Thông tin chưa được lưu. Rời trang sẽ mất nội dung đang nhập."
+        }
+        cancelText="Ở lại chỉnh tiếp"
+        confirmText="Rời trang"
+        onClose={() => blocker.state === "blocked" && blocker.reset()}
+        onConfirm={() => blocker.state === "blocked" && blocker.proceed()}
+      />
+    </div>
   );
 }

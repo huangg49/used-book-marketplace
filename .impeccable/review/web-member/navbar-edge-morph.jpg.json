@@ -1,0 +1,9 @@
+{
+  "source": "Codex in-app browser screenshot of local Member web preview",
+  "url": "http://127.0.0.1:5186/",
+  "date": "2026-10-10",
+  "viewport": "1536x730",
+  "purpose": "Intermediate navbar collapse with a transient cream edge; after completion the edge is transparent",
+  "observation": "IAB reduced-motion=true, computed navbar transition0.36s, collapsing=true and edge opacity0.228 before capture; later collapsing=false and opacity0.",
+  "data": "Anonymous preview; no account data. Backend capture may differ slightly from the CSS viewport."
+}

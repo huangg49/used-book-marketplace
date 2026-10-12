@@ -9,6 +9,18 @@ const storage = {
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status });
 describe("public reads", () => {
+  it("sends public account commands once, accepts 204 and never rotates on failure", async () => {
+    const fetcher = vi.fn<Fetcher>().mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(json({ code: 'INVALID_AUTH_LINK' }, 400));
+    const client = new SessionClient('https://api.test', storage, fetcher);
+    const init = { method: 'POST', body: JSON.stringify({ token: 'test-action-token' }) };
+    await expect(client.publicRequest('/auth/verify-email', z.undefined(), init)).resolves.toBeUndefined();
+    await expect(client.publicRequest('/auth/reset-password', z.undefined(), init)).rejects.toMatchObject({ status: 400, code: 'INVALID_AUTH_LINK' });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher.mock.calls[0][1]?.method).toBe('POST');
+    expect(new Headers(fetcher.mock.calls[0][1]?.headers).has('Authorization')).toBe(false);
+    expect(fetcher.mock.calls[0][1]?.body).toBe(init.body);
+  });
   it("works anonymously without touching refresh or storage", async () => {
     const fetcher = vi.fn<Fetcher>(async () => json({ title: "Sách" }));
     const client = new SessionClient("https://api.test", storage, fetcher);

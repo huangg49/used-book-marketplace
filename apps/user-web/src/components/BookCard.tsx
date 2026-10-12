@@ -1,125 +1,140 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
-import { BookOpen } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { BookOpen, ArrowUpRight } from "lucide-react";
 import { ROUTES, formatVnd } from "../lib/routes";
 import {
   getPublicPhoto,
   type PublicListing,
 } from "../services/public-listings";
+import styles from "./BookCard.module.css";
+import { conditions } from "../lib/listing-labels";
 
-export interface BookCardProps {
+export function ListingPhoto({
+  book,
+  eager = false,
+  photoIndex = 0,
+  alt,
+}: {
   book: PublicListing;
-  index: number;
-}
-const conditions = {
-  LikeNew: "Gần như mới",
-  Good: "Còn tốt",
-  Fair: "Đã dùng nhiều",
-  Worn: "Cũ nhiều",
-};
-export function BookCard({ book }: BookCardProps) {
-  const [failedUrl, setFailedUrl] = useState<string>();
-  const photoId = book.photos[0]?.id;
+  eager?: boolean;
+  photoIndex?: number;
+  alt?: string;
+}) {
+  const photoId = book.photos[photoIndex]?.id;
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const photo = useQuery({
-    queryKey: ["public-photo", book.id, book.revisionId, photoId],
+    queryKey: ["public-listing-photo", book.id, book.revisionId, photoId],
     queryFn: () => getPublicPhoto(book.id, photoId!),
     enabled: !!photoId,
     staleTime: 0,
     retry: false,
   });
-  const photoUrl = photo.data?.url;
-  const imageError = photo.isError || (!!photoUrl && failedUrl === photoUrl);
+  const url = photo.data?.url;
+  const failed = photo.isError || (!!url && failedUrl === url);
+  if (url && !failed)
+    return (
+      <img
+        src={url}
+        alt={alt || "Bìa sách " + book.book.title}
+        loading={eager ? "eager" : "lazy"}
+        onError={() => setFailedUrl(url)}
+        className={styles.image}
+      />
+    );
   return (
-    <article className="group flex flex-col bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-xs hover:shadow-md hover:border-outline transition-all duration-200 h-full">
-      <Link
-        to={ROUTES.bookDetail(book.id)}
-        className="relative w-full aspect-[3/4] bg-surface-container overflow-hidden block"
-      >
-        {photoUrl && !imageError ? (
-          <img
-            src={photoUrl}
-            alt={`Bìa sách ${book.book.title}`}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-            onError={() => setFailedUrl(photoUrl)}
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-outline bg-surface-container group-hover:scale-105 transition-transform duration-300">
-            <BookOpen aria-hidden="true" className="mb-2" />
-            <span className="text-xs">
-              {imageError
-                ? "Chưa tải được ảnh"
-                : photoId
-                  ? "Đang tải ảnh…"
-                  : "Chưa có ảnh bìa"}
-            </span>
-          </div>
-        )}
-        <div
-          className="absolute inset-y-0 left-0 w-3 pointer-events-none spine-crease"
-          style={{ boxShadow: "inset 3px 0 6px -1px rgba(36, 35, 31, 0.22)" }}
-        ></div>
-        {/* Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
-          {book.exchangeValue !== null && book.salePrice === null && (
-            <span className="bg-primary text-on-primary font-label-sm text-[10px] uppercase font-bold px-2 py-0.5 rounded shadow-sm">
-              Đổi Lật-Xu
-            </span>
-          )}
-        </div>
-        {/* Bookmark button */}
+    <div className={styles.fallback}>
+      <BookOpen size={30} aria-hidden="true" />
+      <span>
+        {failed
+          ? "Chưa tải được ảnh"
+          : photoId
+            ? "Đang tải ảnh…"
+            : "Chưa có ảnh bìa"}
+      </span>
+      {failed && (
         <button
-          className="absolute top-2 right-2 p-1.5 rounded-full bg-surface/80 backdrop-blur-xs text-on-surface hover:text-secondary hover:bg-surface transition-colors"
-          title="Lưu tác phẩm"
+          type="button"
+          disabled={photo.isFetching}
+          onClick={() => {
+            setFailedUrl(null);
+            void photo.refetch();
+          }}
+          aria-label={"Tải lại ảnh " + book.book.title}
         >
-          <span className="material-symbols-outlined text-[18px]">
-            bookmark_border
-          </span>
+          Tải lại ảnh
         </button>
-      </Link>
-
-      {/* Metadata Details */}
-      <div className="p-3 sm:p-3.5 flex flex-col flex-grow justify-between gap-2.5">
-        <div className="space-y-1">
-          <span
-            className="text-[11px] font-label-sm text-outline block truncate"
-            title={book.book.authors.join(", ")}
-          >
-            {book.book.authors.join(", ")} • {book.book.category || "Khác"}
-          </span>
-          <h3
-            className="font-headline-sm text-[16px] leading-tight text-primary font-bold line-clamp-2 group-hover:text-secondary transition-colors"
-            title={book.book.title}
-          >
-            <Link to={ROUTES.bookDetail(book.id)}>{book.book.title}</Link>
-          </h3>
-          <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-1">
-            <span className="bg-surface-container px-2 py-0.5 rounded font-label-sm text-label-sm text-primary font-medium">
-              {conditions[book.condition]}
-            </span>
-          </div>
-        </div>
-
-        {/* Transaction Footer */}
-        <div className="pt-2.5 border-t border-outline-variant flex items-center justify-between gap-1">
-          <div>
-            <span className="text-[10px] text-outline block">
-              {book.salePrice !== null ? "Giá bán" : "Điểm đổi"}
-            </span>
-            <span className="font-currency-display text-currency-display text-secondary font-bold">
-              {book.salePrice !== null
-                ? formatVnd(book.salePrice)
-                : `${book.exchangeValue} Xu`}
-            </span>
-          </div>
+      )}
+    </div>
+  );
+}
+export interface BookCardProps {
+  book: PublicListing;
+  index: number;
+  compact?: boolean;
+}
+export function BookCard({ book, index, compact = false }: BookCardProps) {
+  const location = useLocation();
+  const returnState =
+    location.pathname === ROUTES.search
+      ? { catalogReturn: location.pathname + location.search }
+      : undefined;
+  return (
+    <article className={[styles.card, compact ? styles.compact : ""].join(" ")}>
+      <div className={[styles.cover, styles["ground" + (index % 4)]].join(" ")}>
+        <ListingPhoto book={book} />
+        <Link
+          to={ROUTES.bookDetail(book.id)}
+          state={returnState}
+          className={styles.coverLink}
+          aria-label={"Xem chi tiết " + book.book.title}
+        />
+        {book.purchaseAvailability.status === "InNegotiation" && (
+          <span className={styles.held}>Đang giao dịch</span>
+        )}
+      </div>
+      <div className={styles.meta}>
+        <p className={styles.condition}>
+          {conditions[book.condition]} ·{" "}
+          {book.mode === "Sale"
+            ? "Bán"
+            : book.mode === "Exchange"
+              ? "Đổi"
+              : "Bán hoặc đổi"}
+        </p>
+        <h3>
           <Link
             to={ROUTES.bookDetail(book.id)}
-            className="bg-primary-container hover:bg-primary text-on-primary px-3 py-1.5 rounded font-title-md text-xs transition-colors shadow-xs"
+            state={returnState}
+            title={compact ? book.book.title : undefined}
           >
-            {book.salePrice !== null ? "Mua ngay" : "Xem ngay"}
+            {book.book.title}
           </Link>
+        </h3>
+        <p className={styles.author}>
+          {book.book.authors.join(", ") || "Chưa rõ tác giả"}
+        </p>
+        <div className={styles.prices}>
+          {book.salePrice !== null && (
+            <p>
+              <span>Giá bán</span>
+              <strong>{formatVnd(book.salePrice)}</strong>
+            </p>
+          )}
+          {book.exchangeValue !== null && (
+            <p>
+              <span>Giá trị đổi</span>
+              <strong>{formatVnd(book.exchangeValue)}</strong>
+            </p>
+          )}
         </div>
+        <Link
+          className={styles.view}
+          to={ROUTES.bookDetail(book.id)}
+          state={returnState}
+        >
+          Xem sách <ArrowUpRight size={16} aria-hidden="true" />
+        </Link>
       </div>
     </article>
   );

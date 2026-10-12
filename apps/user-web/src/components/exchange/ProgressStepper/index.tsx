@@ -20,6 +20,9 @@ export function ProgressStepper({ status, failedAtStep, closedBy, partnerUsernam
 
     let currentStepIndex = 0;
     if (status === 'PENDING') currentStepIndex = 2; // Waiting for accept
+    else if (status === 'FUNDING') currentStepIndex = 2;
+    else if (status === 'WAITING_YOU_SEND') currentStepIndex = 3;
+    else if (status === 'RESOLUTION_PENDING') currentStepIndex = 3;
     else if (status === 'DELIVERING') currentStepIndex = 3;
     else if (status === 'WAITING_YOU_CONFIRM') currentStepIndex = 4;
     else if (status === 'COMPLETED' || status === 'NEED_REVIEW') currentStepIndex = 5;

@@ -1,0 +1,162 @@
+.root {
+  min-height: 100dvh;
+  background: #f5eddc;
+  color: var(--shop-ink);
+  font-family: var(--shop-body);
+}
+.workspace {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 36px 40px 72px;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+.main {
+  min-width: 0;
+}
+.accountMenu {
+  display: none;
+}
+.sidebar {
+  position: sticky;
+  top: 112px;
+  min-width: 0;
+}
+.identity {
+  padding: 0 12px 24px;
+  border-bottom: 1px solid var(--shop-line);
+  margin-bottom: 16px;
+}
+.identity strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+}
+.identity p {
+  font-size: 0.75rem;
+  color: var(--shop-muted);
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+.navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.navigation a,
+.logout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--shop-ink);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+.navigation a[aria-current="page"] {
+  background: #efe3cf;
+  color: var(--shop-wine);
+  font-weight: 700;
+}
+.navigation a:hover,
+.logout:hover {
+  background: #efe3cf;
+}
+.logout {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  color: var(--shop-wine);
+  margin-top: 24px;
+  cursor: pointer;
+}
+.logout:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.error {
+  color: var(--shop-wine);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+}
+.loading {
+  padding: 48px 24px;
+}
+.skip {
+  position: fixed;
+  top: -100px;
+  left: 16px;
+  z-index: 200;
+  padding: 12px;
+  background: var(--shop-paper);
+  color: var(--shop-wine);
+}
+.skip:focus {
+  top: 8px;
+}
+.root :is(a, button):focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+@media (max-width: 1000px) {
+  .workspace {
+    grid-template-columns: 172px minmax(0, 1fr);
+    gap: 24px;
+    padding-inline: 24px;
+  }
+}
+@media (max-width: 760px) {
+  .accountMenu {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-height: 44px;
+    background: transparent;
+    color: var(--shop-wine);
+    border: 0;
+    border-bottom: 1px solid var(--shop-line);
+    font-size: 0.875rem;
+    padding: 8px 0;
+    cursor: pointer;
+  }
+  .menuContents[data-open="false"] {
+    display: none;
+  }
+  .menuContents[data-open="true"] {
+    padding-top: 16px;
+  }
+  .workspace {
+    display: block;
+    padding: 24px 20px 48px;
+  }
+  .sidebar {
+    position: static;
+    margin-bottom: 28px;
+  }
+  .identity {
+    padding: 0 0 16px;
+    margin-bottom: 8px;
+  }
+  .navigation {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+  .navigation a {
+    font-size: 0.8125rem;
+    padding: 8px 10px;
+  }
+  .logout {
+    margin: 8px 0 0;
+    width: auto;
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+}

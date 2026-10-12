@@ -42,7 +42,7 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
                                 <div className={styles.bookInfo}>
                                     <h3 className={styles.bookTitle}>{book.title}</h3>
                                     <p className={styles.bookAuthor}>{book.author}</p>
-                                    <p className={styles.bookCondition}>Tình trạng: {book.condition || 'Rất tốt'}</p>
+                                    <p className={styles.bookCondition}>Tình trạng: {book.condition || 'Chưa có thông tin'}</p>
                                 </div>
                             </div>
                         ))}
@@ -84,19 +84,19 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
                             <p className={styles.partnerName}>@{detail.partner.username}</p>
                         </div>
                     </div>
-                    <div className={styles.partnerStats}>
+                    {(detail.partner.rating !== undefined || detail.partner.transactionCount !== undefined) && <div className={styles.partnerStats}>
                         <div className={styles.starRow}>
                             <Star className={styles.iconStar} size={14} fill="currentColor" />
-                            <span className={styles.ratingValue}>{detail.partner.rating?.toFixed(1) || '0.0'}</span>
+                            <span className={styles.ratingValue}>{detail.partner.rating?.toFixed(1) ?? 'Chưa có đánh giá'}</span>
                         </div>
-                        <p className={styles.tradeCount}>{detail.partner.transactionCount} giao dịch</p>
-                    </div>
+                        {detail.partner.transactionCount !== undefined && <p className={styles.tradeCount}>{detail.partner.transactionCount} giao dịch</p>}
+                    </div>}
                 </div>
 
                 <div className={styles.detailItem}>
                     <p className={styles.detailLabel}>Phương thức giao</p>
                     <p className={styles.detailValueFlex}>
-                        <Mail className={styles.iconGoldSmall} size={16} /> {detail.deliveryMethod === 'meetup' ? 'Gặp trực tiếp' : 'Gửi qua đường bưu điện'}
+                        <Mail className={styles.iconGoldSmall} size={16} /> {detail.deliveryMethod === 'meetup' ? 'Gặp trực tiếp' : detail.deliveryMethod === 'shipping' ? 'Gửi qua đường bưu điện' : 'Chưa có thông tin giao nhận'}
                     </p>
                 </div>
 

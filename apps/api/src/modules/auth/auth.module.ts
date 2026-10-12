@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { AccountAuthController } from './account-auth.controller.js';
+import { AccountAuthService } from './account-auth.service.js';
+import { AuthMailService } from './auth-mail.service.js';
 import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
@@ -30,9 +33,11 @@ import { LoginLimiter } from './login-limiter.service.js';
       }),
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AccountAuthController],
   providers: [
     AuthService,
+    AccountAuthService,
+    AuthMailService,
     AuthGuard,
     RolesGuard,
     LoginLimiter,

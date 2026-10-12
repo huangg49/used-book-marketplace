@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { MediaModule } from '../media/media.module.js';
+import { AuctionBookService } from './auction-book.service.js';
 import { DatabaseModule } from '../../database/database.module.js';
 import { CommandsModule } from '../commands/commands.module.js';
 import { ListingsModule } from '../listings/listings.module.js';
@@ -25,9 +27,11 @@ import { PointOrderCompletionService } from './point-order-completion.service.js
     ListingsModule,
     ReservationsModule,
     WalletModule,
+    MediaModule,
   ],
   providers: [
     AuctionIntakesService,
+    AuctionBookService,
     AuctionBiddingService,
     HandoverPointsService,
     PointOrdersService,

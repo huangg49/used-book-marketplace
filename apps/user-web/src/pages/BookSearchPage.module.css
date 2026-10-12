@@ -1,0 +1,964 @@
+.page {
+  --shop-wine-hover: #7c2320;
+  --shop-shelf: #f4eddf;
+  --shop-error: #912b0e;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+}
+.searchHead {
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+}
+.headInner {
+  max-width: 1360px;
+  margin: auto;
+  padding: 16px 40px 20px;
+  display: grid;
+  grid-template-columns: minmax(200px, 0.75fr) minmax(0, 1.25fr);
+  gap: 40px;
+  align-items: center;
+}
+.headingRow h1 {
+  font: 400 2.5rem/1.2 var(--shop-display);
+  margin: 0 0 8px;
+}
+.headingRow h1 span {
+  color: var(--shop-yellow);
+}
+.headingRow p {
+  margin: 0;
+  color: #f0d9b9;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 6px 6px 16px;
+  border-radius: 10px;
+  background: var(--shop-paper);
+  color: var(--shop-wine);
+}
+.search:focus-within {
+  outline: 2px solid var(--shop-yellow);
+  outline-offset: 4px;
+}
+.search input {
+  min-width: 0;
+  width: 0;
+  flex: 1;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 10px 0 !important;
+  font-size: 0.875rem !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+}
+.search button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 18px;
+  background: var(--shop-orange);
+  color: #341509;
+  border: 0;
+  border-radius: 7px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.search button:hover {
+  background: var(--shop-yellow);
+}
+.catalog {
+  max-width: 1360px;
+  margin: auto;
+  padding: 24px 40px 0;
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  gap: 28px;
+}
+.sidebar {
+  position: sticky;
+  top: 92px;
+  align-self: start;
+  padding: 0 16px 0 0;
+}
+.sidebar h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 700 1.125rem/1.5 var(--shop-body);
+  color: var(--shop-wine);
+  margin: 0 0 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--shop-line);
+}
+.filterForm,
+.filterBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+.filterForm fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.filterForm legend {
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.compactPreset {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 28px 8px 10px;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--shop-ink);
+  background-color: var(--shop-shelf);
+  border: 0;
+  border-bottom: 1px solid var(--shop-control);
+  border-radius: 6px 6px 0 0;
+}
+.compactPreset {
+  display: none;
+}
+.categoryField {
+  position: relative;
+  z-index: 2;
+}
+.categoryPicker {
+  position: relative;
+}
+.categoryPicker > input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 34px 10px 10px !important;
+  font: 400 0.8125rem/1.5 var(--shop-body);
+  color: var(--shop-ink);
+  border: 1px solid var(--shop-control) !important;
+  border-radius: 6px !important;
+  background: var(--shop-paper) !important;
+}
+.categoryPicker > svg {
+  position: absolute;
+  right: 12px;
+  top: 15px;
+  pointer-events: none;
+  color: var(--shop-muted);
+}
+.categoryOptions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 176px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--shop-control);
+  border-radius: 6px;
+  background: var(--shop-paper);
+  scrollbar-color: var(--shop-control) var(--shop-paper);
+  scrollbar-width: thin;
+}
+.categoryOptions [role="option"] {
+  min-height: 44px;
+  padding: 12px 10px;
+  font-size: 0.8125rem;
+  line-height: 20px;
+  cursor: pointer;
+}
+.categoryOptions [data-active="true"] {
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+}
+.categoryOptions [aria-selected="true"] {
+  font-weight: 700;
+}
+.categoryOptions p {
+  padding: 12px 10px;
+  margin: 0;
+  font-size: 0.8125rem;
+}
+.filterDialog .categoryOptions {
+  position: static;
+  margin-top: 4px;
+}
+.priceFilter > p {
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--shop-muted);
+  margin: 0 0 12px;
+}
+.priceFields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  align-items: end;
+}
+.priceFields label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  font-size: 0.8125rem;
+  padding-left: 12px;
+  border: 1px solid var(--shop-control);
+  border-radius: 6px;
+  background: var(--shop-paper);
+}
+.priceFields label > span {
+  flex-shrink: 0;
+  width: 28px;
+  color: var(--shop-muted);
+  transition: color 170ms ease-out;
+  transition-duration: 170ms !important;
+}
+.priceFields label:focus-within {
+  border-color: var(--filter-focus-color, var(--shop-wine));
+}
+.priceFields input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px !important;
+  padding: 10px 12px 10px 0 !important;
+  font-size: 0.875rem !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  font-variant-numeric: tabular-nums;
+  outline: none !important;
+  box-shadow: none;
+}
+.priceFields input::placeholder {
+  color: var(--shop-muted);
+  opacity: 1;
+}
+.priceDash {
+  align-self: center;
+  margin-top: 0;
+  font-size: 0.75rem;
+}
+.priceFilter > .presetLabel {
+  margin: 10px 0 4px;
+}
+.pricePresets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.pricePresets button {
+  border: 0;
+  border-radius: 6px;
+  background: var(--shop-shelf);
+  color: var(--shop-wine);
+  min-height: 44px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.pricePresets button:hover,
+.pricePresets button[aria-pressed="true"] {
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  border-color: var(--shop-wine);
+}
+.filterFooter {
+  padding-top: 12px;
+  border-top: 1px solid var(--shop-line);
+}
+.filterFooter > p {
+  margin: 0 0 10px;
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+.filterActions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+.apply,
+.reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 6px;
+  border: 1px solid var(--shop-wine);
+  border-radius: 7px;
+  font-size: 0.8125rem;
+}
+.apply {
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  font-weight: 700;
+}
+.apply:hover {
+  background: var(--shop-wine-hover);
+}
+.reset {
+  border: 0;
+  background: transparent;
+  color: var(--shop-wine);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.reset:hover {
+  background: var(--shop-paper);
+}
+.results {
+  min-width: 0;
+}
+.modeRow {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--shop-line);
+  flex-wrap: wrap;
+}
+.modeRow button {
+  min-height: 48px;
+  padding: 8px 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  position: relative;
+}
+.modeRow button[aria-pressed="true"] {
+  color: var(--shop-wine);
+}
+.modeRow button[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  height: 3px;
+  background: var(--shop-wine);
+  inset: auto 0 -1px;
+}
+.modeRow button:hover {
+  color: var(--shop-wine);
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 0 20px;
+}
+.toolbar h2 {
+  scroll-margin-top: 110px;
+  font: 700 1.125rem/1.5 var(--shop-body);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.toolbar p {
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--shop-muted);
+  margin: 5px 0 0;
+}
+.sortGroup {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.filterToggle {
+  display: none;
+}
+.activeFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 20px;
+}
+.activeFilters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: left;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  background: #f0e2ca;
+  color: var(--shop-wine);
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+.activeFilters .clear {
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 28px 20px;
+}
+.state,
+.empty {
+  padding: 36px;
+  background: var(--shop-shelf);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  line-height: 1.7;
+}
+.state h3,
+.empty h3 {
+  font: 700 1.125rem/1.5 var(--shop-body);
+  margin: 0 0 10px;
+}
+.state p,
+.empty p {
+  font-size: 0.875rem;
+  color: var(--shop-muted);
+  margin: 0 0 16px;
+}
+.empty {
+  text-align: center;
+  padding: 40px 24px;
+}
+.empty img {
+  display: block;
+  margin: 0 auto 16px;
+  object-fit: contain;
+}
+.state button,
+.empty button,
+.pagination button {
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid var(--shop-wine);
+  background: transparent;
+  color: var(--shop-wine);
+  border-radius: 7px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+.state button:hover,
+.empty button:hover,
+.pagination button:hover {
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+}
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 32px;
+}
+.pagination button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+.error,
+.priceFilter > .error {
+  color: var(--shop-error);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  margin-top: 12px;
+}
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 36px 0;
+  font-size: 0.875rem;
+  color: var(--shop-muted);
+}
+.loading span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--shop-wine);
+}
+.filterDialog {
+  color: var(--shop-ink);
+  background: var(--shop-paper);
+  border: 0;
+  border-radius: 16px;
+  padding: 24px;
+  width: min(460px, calc(100% - 24px));
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+  box-shadow: 0 16px 48px #28191440;
+}
+.filterDialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.filterDialog .filterBody {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px;
+}
+.filterDialog .filterFooter {
+  flex-shrink: 0;
+}
+.filterDialog::backdrop {
+  background: #28191480;
+}
+.dialogHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.dialogHead h2 {
+  font: 700 1.25rem/1.5 var(--shop-body);
+  margin: 0;
+}
+.dialogHead button {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--shop-wine);
+  display: grid;
+  place-items: center;
+}
+.page button {
+  cursor: pointer;
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out;
+}
+.page button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.page :focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 4px;
+}
+.searchHead :focus-visible {
+  outline-color: var(--shop-yellow);
+}
+@media (min-width: 1440px) {
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+@media (max-width: 1150px) {
+  .catalog {
+    padding-inline: 24px;
+    grid-template-columns: 264px minmax(0, 1fr);
+    gap: 24px;
+  }
+  .sidebar {
+    top: 92px;
+  }
+  .headInner {
+    padding-inline: 24px;
+  }
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .catalog {
+    display: block;
+    padding-top: 20px;
+  }
+  .sidebar {
+    display: none;
+  }
+  .filterToggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid var(--shop-control);
+    border-radius: 7px;
+    color: var(--shop-wine);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .filterToggle span {
+    font-variant-numeric: tabular-nums;
+  }
+  .headInner {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .headingRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .headingRow h1 {
+    margin: 0;
+  }
+  .headingRow p {
+    max-width: 32ch;
+  }
+  .sortGroup {
+    flex-shrink: 1;
+  }
+}
+@media (max-width: 600px) {
+  .headInner {
+    padding: 22px 16px 24px;
+    gap: 16px;
+  }
+  .headingRow {
+    display: block;
+  }
+  .headingRow h1 {
+    font-size: 2rem;
+    margin-bottom: 8px;
+  }
+  .headingRow p {
+    font-size: 0.75rem;
+    max-width: none;
+  }
+  .search {
+    gap: 8px;
+    padding-left: 12px;
+  }
+  .search > svg {
+    width: 18px;
+    flex-shrink: 0;
+  }
+  .search input {
+    font-size: 0.8125rem !important;
+  }
+  .search button {
+    padding: 10px 12px;
+    gap: 6px;
+  }
+  .search button svg {
+    display: none;
+  }
+  .catalog {
+    padding: 12px 16px 0;
+  }
+  .modeRow {
+    gap: 0;
+    justify-content: space-between;
+  }
+  .modeRow button {
+    font-size: 0.75rem;
+    padding-inline: 2px;
+  }
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px 0;
+  }
+  .toolbar h2 {
+    font-size: 1rem;
+  }
+  .sortGroup {
+    justify-content: space-between;
+  }
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 14px;
+  }
+  .activeFilters button {
+    min-height: 44px;
+  }
+  .state {
+    padding: 24px;
+  }
+  .filterDialog {
+    padding: 20px;
+  }
+}
+
+.page ::selection {
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+}
+.page input {
+  caret-color: var(--shop-wine);
+}
+.filterBody {
+  scrollbar-color: var(--shop-control) var(--shop-paper);
+  scrollbar-width: thin;
+}
+@media (min-width: 901px) and (max-width: 1000px) {
+  .sidebar {
+    top: 88px;
+  }
+}
+@media (min-width: 901px) and (max-height: 700px) {
+  .catalog {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sidebar {
+    display: none;
+  }
+  .filterToggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid var(--shop-control);
+    border-radius: 7px;
+    color: var(--shop-wine);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .headInner {
+    padding-block: 8px;
+  }
+  .headingRow h1 {
+    font-size: 2rem;
+    margin-bottom: 4px;
+  }
+  .catalog {
+    padding-top: 16px;
+  }
+}
+@media (min-width: 901px) and (min-height: 701px) and (max-height: 850px) {
+  .filterForm[data-invalid="true"] .filterBody {
+    gap: 8px;
+  }
+  .filterForm[data-invalid="true"] .presetLabel,
+  .filterForm[data-invalid="true"] .pricePresets {
+    display: none;
+  }
+  .filterForm[data-invalid="true"] .compactPreset {
+    display: block;
+    margin-top: 10px;
+  }
+  .filterForm[data-invalid="true"] .filterFooter > p {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page button {
+    transition: none;
+  }
+}
+
+/* Contextual filters can be long. Pin only when the complete panel fits. */
+.sidebar[data-sticky="false"] {
+  position: static;
+}
+.filterBody {
+  gap: 24px;
+}
+.extraBudget {
+  border-top: 1px solid var(--shop-line);
+  padding-top: 8px;
+}
+.extraBudget summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.filterHint {
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+.filterFooter {
+  background: transparent;
+  padding-top: 16px;
+  border-top: 1px solid var(--shop-line);
+}
+.filterDialog .filterFooter {
+  background: var(--shop-paper);
+}
+@media (min-width: 901px) {
+  .catalog {
+    grid-template-columns: 264px minmax(0, 1fr);
+  }
+  .sidebar {
+    display: block;
+  }
+  .filterToggle {
+    display: none;
+  }
+}
+
+/* Search-only treatment: the posting form keeps its own field styling. */
+.classification > div {
+  gap: 10px;
+}
+.classification select,
+.classification input:not([type="checkbox"]) {
+  background: var(--shop-shelf);
+  border: 0;
+  border-bottom: 1px solid var(--shop-control);
+  border-radius: 6px 6px 0 0;
+}
+.classification details {
+  margin-top: 12px;
+}
+.filterForm .filterGroup {
+  position: relative;
+}
+.filterForm .filterGroup legend {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--shop-wine);
+  line-height: 1.5;
+}
+.filterGroup legend small {
+  display: block;
+  margin-top: 4px;
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+.groupClear {
+  flex: 0 0 44px;
+  margin-top: -8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--shop-wine);
+  font: 600 0.8125rem/1.5 var(--shop-body);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.conditionChoices {
+  display: flex;
+  flex-direction: column;
+}
+.conditionChoices label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.conditionChoices label[data-selected] {
+  color: var(--shop-wine);
+  font-weight: 600;
+}
+.filterForm .conditionChoices input {
+  width: 17px;
+  height: 17px;
+  min-height: 0;
+  flex: 0 0 17px;
+  padding: 0;
+  color: var(--shop-wine);
+  accent-color: var(--shop-wine);
+}
+.classification input[type="checkbox"] {
+  color: var(--shop-wine);
+}
+.groupClear:focus-visible,
+.conditionChoices input:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+.conditionChoices label:hover {
+  color: var(--shop-wine);
+}
+
+/* One continuous focus boundary, shared by the desktop rail and mobile dialog. */
+.page .filterForm :is(select, input:not([type="checkbox"], [type="radio"])) {
+  transition-property: border-color, box-shadow;
+  transition-duration: 170ms !important;
+  transition-timing-function: ease-out;
+}
+.page
+  .filterForm
+  :is(select, input:not([type="checkbox"], [type="radio"])):focus {
+  outline: none;
+  border-color: var(--shop-wine);
+  box-shadow: none;
+}
+.page
+  .filterForm
+  :is(select, input:not([type="checkbox"], [type="radio"])):focus-visible {
+  box-shadow: inset 0 -1px 0 var(--shop-wine);
+}
+.priceFields label {
+  transition:
+    border-color 170ms ease-out,
+    box-shadow 170ms ease-out;
+  transition-duration: 170ms !important;
+}
+.priceFields label:has(input:focus-visible) {
+  box-shadow: inset 0 0 0 1px var(--filter-focus-color, var(--shop-wine));
+}
+.page .filterForm .priceFields input:focus {
+  box-shadow: none;
+}
+.priceFields label:has(input[aria-invalid="true"]) {
+  --filter-focus-color: var(--shop-error);
+  border-color: var(--shop-error);
+}
+.priceFields label:focus-within > span {
+  color: var(--filter-focus-color, var(--shop-wine));
+}
+.classification label {
+  transition: color 170ms ease-out;
+  transition-duration: 170ms !important;
+}
+.classification div:has(> :is(input, select):focus) label,
+.classification
+  div:has(> div > :is(input[role="combobox"], select):focus)
+  label,
+.classification label:has(> select:focus) {
+  color: var(--shop-wine);
+}
+@media (forced-colors: active) {
+  .page
+    .filterForm
+    :is(select, input:not([type="checkbox"], [type="radio"])):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: -2px;
+    box-shadow: none;
+  }
+  .page .filterForm .priceFields input:focus-visible {
+    outline: none !important;
+  }
+  .priceFields label:has(input:focus-visible) {
+    outline: 2px solid Highlight !important;
+    outline-offset: -2px;
+    box-shadow: none;
+  }
+}

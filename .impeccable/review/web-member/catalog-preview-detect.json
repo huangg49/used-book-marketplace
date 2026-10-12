@@ -1,0 +1,27 @@
+{
+  "runCount": 1,
+  "findings": [
+    {
+      "file": "HomePage.module.css",
+      "line": 230,
+      "value": "#341509"
+    },
+    {
+      "file": "HomePage.module.css",
+      "line": 244,
+      "value": "0.65rem"
+    },
+    {
+      "file": "HomePage.module.css",
+      "line": 246,
+      "value": "#efc9b7"
+    },
+    {
+      "file": "HomePage.module.css",
+      "line": 871,
+      "value": "0.6rem"
+    }
+  ],
+  "severity": "advisory",
+  "disposition": "4 existing hero advisories outside changed styling; no new role drift; no rescan"
+}

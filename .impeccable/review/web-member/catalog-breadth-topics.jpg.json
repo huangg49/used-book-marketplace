@@ -1,0 +1,11 @@
+{
+  "source": "CUA actual in-app browser; Open Library metadata cache and remote covers; no listing response fixtures",
+  "viewport": {
+    "width": 1366,
+    "height": 900
+  },
+  "url": "http://127.0.0.1:5186/",
+  "capturedOn": "2026-10-10",
+  "scope": "Science/history themed shelf and four complete source covers with sample prices",
+  "sha256": "12eacc759bcc5855afca9b87a1b9972cc3aa8280fdc6419473de7ecb1ce6ff77"
+}

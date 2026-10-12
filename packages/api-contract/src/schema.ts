@@ -32,6 +32,159 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Normalized unique email; creates only an unverified MEMBER. Existing accounts receive the same acknowledgement and are never overwritten. Password 10..128 characters. Simulation rules acknowledgement required. Verification link valid 30 minutes. */
+        post: operations["registerAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/verification/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Generic acknowledgement for all email addresses. Only unverified accounts receive mail. Minimum 60 seconds between links; issuing a new link invalidates all previous verification links. */
+        post: operations["resendEmailVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Consume an unexpired single-use verification token and activate the account atomically. No session is created. */
+        post: operations["verifyEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Identical acknowledgement for existing and unknown accounts. Single-use reset link valid 15 minutes. Minimum 60 seconds between links. */
+        post: operations["requestPasswordReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Consume a reset token once, replace the password and revoke all sessions atomically. Does not change status or grant roles. No automatic login. */
+        post: operations["resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/otp/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Creates only an unverified MEMBER. Generic challenge acknowledgement for duplicates; credentials never overwritten. Six-digit verification code valid 5 minutes, five wrong attempts, 60-second resend cooldown. No session created. */
+        post: operations["registerAccountWithOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/otp/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Generic response for unknown, ineligible and cooldown requests. Eligible accounts receive a new code, invalidating prior codes and links of the same purpose. Cooldown requests never expose or invalidate the active challenge. Five-minute expiry and 60-second cooldown enforced by server time. */
+        post: operations["requestAccountOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/otp/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Atomically consume the challenge and activate an unverified account. Five failed code attempts lock that challenge; parallel requests cannot exceed the budget. No automatic login. OTP_INVALID or OTP_ATTEMPTS_EXCEEDED on failure. */
+        post: operations["verifyEmailWithOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/otp/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Atomically consume the reset challenge, replace password and revoke every session. Existing status and roles retained. No automatic login. Same five-attempt budget and OTP error codes as verification. */
+        post: operations["resetPasswordWithOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -92,6 +245,23 @@ export interface paths {
         };
         /** @description Verified LOCKED users may authenticate/rotate/read profile for existing obligations; protected routes remain deny-by-default for LOCKED. Status and roles are rechecked from DB. */
         get: operations["getCurrentUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/catalog/taxonomy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Versioned category tree and contextual vocabulary */
+        get: operations["getCatalogTaxonomy"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1645,6 +1815,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/auctions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Member-only keyset page of their own seller, bidder or Buy Now winner auctions. Cursor is bound to actor and view. Never returns another bidder's commitment ceiling. */
+        get: operations["listMyAuctions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/photos/{mediaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Public signed derivative from the inspected, approved intake revision only. Rechecks publication and media eligibility before and after signing. No storage keys or staff notes are exposed. */
+        get: operations["getAuctionPhoto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auctions/{auctionId}": {
         parameters: {
             query?: never;
@@ -2083,6 +2287,54 @@ export interface components {
             /** Format: date-time */
             timestamp: string;
         };
+        AccountEmailRequest: {
+            /** Format: email */
+            email: string;
+        };
+        RegisterRequest: {
+            /** Format: email */
+            email: string;
+            password: string;
+            displayName: string;
+            /** @constant */
+            acceptedRules: true;
+        };
+        AuthActionTokenRequest: {
+            token: string;
+        };
+        ResetPasswordRequest: {
+            token: string;
+            password: string;
+        };
+        AccountRequestAcknowledgement: {
+            message: string;
+        };
+        AccountOtpRequest: {
+            /** Format: email */
+            email: string;
+            /** @enum {string} */
+            purpose: "VerifyEmail" | "ResetPassword";
+        };
+        AccountOtpCodeRequest: {
+            /** Format: uuid */
+            challengeId: string;
+            code: string;
+        };
+        AccountOtpResetRequest: {
+            /** Format: uuid */
+            challengeId: string;
+            code: string;
+            password: string;
+        };
+        AccountOtpAcknowledgement: {
+            message: string;
+            /** Format: uuid */
+            challengeId: string;
+            /** @constant */
+            expiresIn: 300;
+            /** @constant */
+            resendAfter: 60;
+        };
         LoginRequest: {
             /** Format: email */
             email: string;
@@ -2157,8 +2409,57 @@ export interface components {
         CatalogStatus: "Pending" | "Confirmed" | "Rejected";
         /** @enum {string} */
         MediaStatus: "Pending" | "Processing" | "Ready" | "Failed";
+        CatalogOption: {
+            id: string;
+            label: string;
+        };
+        CatalogFacet: {
+            id: string;
+            label: string;
+            options: components["schemas"]["CatalogOption"][];
+        };
+        CatalogCategory: {
+            id: string;
+            label: string;
+            parentId: string | null;
+            facets: string[];
+        };
+        /** @enum {string} */
+        CatalogCategoryId: "manga" | "light-novel" | "literature" | "languages" | "languages.en" | "languages.ja" | "languages.ko" | "languages.zh" | "languages.other" | "languages.fr" | "languages.de" | "languages.vi" | "education" | "business" | "business.management" | "business.marketing" | "business.finance" | "business.startup" | "business.economics" | "business.accounting" | "business.hr" | "business.supply-chain" | "business.lessons" | "psychology" | "psychology.psychology" | "psychology.skills" | "psychology.teen" | "children" | "science" | "science.natural" | "science.technology" | "science.space" | "science.environment" | "history" | "history.history" | "history.geography" | "biography" | "biography.politics" | "biography.business" | "biography.science" | "biography.arts" | "biography.life" | "parenting" | "parenting.care" | "parenting.education" | "parenting.development" | "parenting.family" | "health" | "health.medicine" | "health.nutrition" | "health.wellness" | "health.fitness" | "arts" | "arts.visual" | "arts.design" | "arts.photography" | "arts.music" | "arts.cinema" | "arts.architecture" | "society" | "society.philosophy" | "society.law" | "society.politics" | "society.sociology" | "society.religion" | "lifestyle" | "lifestyle.cooking" | "lifestyle.crafts" | "lifestyle.gardening" | "lifestyle.travel" | "lifestyle.sports" | "other";
+        CatalogAttributes: {
+            genre?: ("action" | "adventure" | "fantasy" | "romance" | "comedy" | "drama" | "mystery" | "horror" | "scifi" | "historical" | "sports" | "psychological" | "tragedy" | "suspense")[];
+            audience?: ("shounen" | "shoujo" | "seinen" | "josei" | "kodomo")[];
+            setting?: ("school" | "isekai" | "daily" | "apocalypse" | "supernatural" | "gaming" | "mecha" | "workplace")[];
+            form?: ("novel" | "short" | "essay" | "poetry" | "memoir" | "picture" | "activity" | "story" | "reportage" | "travelogue" | "criticism" | "biography" | "autobiography")[];
+            purpose?: ("general" | "communication" | "exam" | "textbook" | "workbook" | "reference" | "dictionary")[];
+            level?: ("beginner" | "intermediate" | "advanced" | "n5" | "n4" | "n3" | "n2" | "n1" | "ielts" | "toeic" | "hsk" | "topik" | "delf" | "goethe")[];
+            skill?: ("listening" | "speaking" | "reading" | "writing" | "grammar" | "vocabulary" | "characters" | "pronunciation")[];
+            schoolStage?: ("primary" | "secondary" | "high" | "university" | "preschool")[];
+            grade?: ("1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | "11" | "12")[];
+            subject?: ("math" | "literature" | "english" | "physics" | "chemistry" | "biology" | "history" | "geography" | "computing" | "civics" | "arts" | "music" | "technology")[];
+            reader?: ("student" | "professional" | "manager" | "entrepreneur" | "parent" | "teen" | "general")[];
+            topic?: ("habits" | "communication" | "emotion" | "relationships" | "career" | "animals" | "nature" | "discovery" | "culture" | "politics" | "civilization" | "time-management" | "thinking" | "safety" | "life-skills" | "maps" | "landscapes" | "business-life" | "scientist" | "artist" | "personal-life" | "infant-care" | "education-methods" | "child-development" | "family-life" | "medical-study" | "nutrition" | "wellbeing" | "exercise" | "public-health" | "art-history" | "drawing" | "graphic-design" | "photography" | "music-theory" | "filmmaking" | "architecture" | "philosophy" | "ethics" | "society" | "religion" | "law" | "cooking" | "crafts" | "gardening" | "travel" | "sports")[];
+            age?: ("0-3" | "4-6" | "7-10" | "11-15" | "16-18")[];
+            depth?: ("intro" | "popular" | "specialist")[];
+            region?: ("vietnam" | "asia" | "europe" | "americas" | "world")[];
+            period?: ("ancient" | "medieval" | "modern" | "contemporary")[];
+            comicStyle?: ("manga" | "manhwa" | "manhua" | "comic")[];
+            workOrigin?: ("vietnam" | "foreign")[];
+            businessTopic?: ("leadership" | "strategy" | "digital-marketing" | "branding" | "sales" | "investing" | "personal-finance" | "banking" | "startup" | "innovation" | "microeconomics" | "macroeconomics" | "accounting" | "tax" | "audit" | "recruitment" | "people-management" | "logistics" | "operations" | "business-cases")[];
+            scienceField?: ("math" | "physics" | "chemistry" | "biology" | "earth" | "astronomy" | "environment" | "engineering" | "computing")[];
+            technologyTopic?: ("programming" | "web" | "data" | "ai" | "hardware" | "networks" | "security")[];
+            artMedium?: ("pencil" | "watercolor" | "oil" | "digital" | "film" | "instrument")[];
+            lawField?: ("civil" | "criminal" | "business" | "labor" | "constitutional" | "international")[];
+            cuisine?: ("vietnam" | "asian" | "western" | "vegetarian" | "baking")[];
+            craftType?: ("sewing" | "knitting" | "paper" | "wood" | "ceramics")[];
+        };
         /** @description Trim text and count Unicode code points. ISBN may be null. Input normalization accepts ISBN separators/case and converts valid ISBN-10 to ISBN-13 before schema validation and hashing. ISBN-13 requires prefix 978 or 979 and a valid checksum; this does not verify assignment to a title. Metadata is immutable after confirmation. language is a BCP-47 tag canonicalized with Intl.getCanonicalLocales; malformed tags return field validation errors. */
         CatalogMetadata: {
+            /** @description Stable taxonomy code. Optional for legacy clients; when supplied category must match its canonical label. Confirmed metadata stays immutable. */
+            categoryId?: components["schemas"]["CatalogCategoryId"] | null;
+            attributes?: components["schemas"]["CatalogAttributes"];
+            /** @description Series name as supplied and reviewed; not the volume or completion status. */
+            series?: string | null;
             title: string;
             authors: string[];
             publisher: string | null;
@@ -2169,6 +2470,11 @@ export interface components {
             isbn: string | null;
         };
         PublicBook: {
+            /** @description Stable taxonomy code. Optional for legacy clients; when supplied category must match its canonical label. Confirmed metadata stays immutable. */
+            categoryId?: components["schemas"]["CatalogCategoryId"] | null;
+            attributes?: components["schemas"]["CatalogAttributes"];
+            /** @description Series name as supplied and reviewed; not the volume or completion status. */
+            series?: string | null;
             /** Format: uuid */
             id: string;
             title: string;
@@ -3754,6 +4060,39 @@ export interface components {
         AuctionIntakeList: {
             items: components["schemas"]["AuctionIntake"][];
         };
+        MyAuctionPage: {
+            items: {
+                auction: components["schemas"]["PublicAuctionSummary"];
+                /** @enum {string} */
+                role: "Seller" | "Bidder";
+                leading: boolean;
+                won: boolean;
+                needsPayment: boolean;
+                /** Format: date-time */
+                paymentDeadline: string | null;
+            }[];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        PublicAuctionBook: {
+            /** Format: uuid */
+            revisionId: string;
+            authors: string[];
+            condition: components["schemas"]["BookCondition"];
+            pages: string;
+            coverNote: string;
+            notes: string;
+            accessories: string;
+            description: string;
+            hasMissingPages: boolean;
+            photos: {
+                /** Format: uuid */
+                id: string;
+                width: number;
+                height: number;
+            }[];
+        };
         PublicAuctionSummary: {
             /** Format: uuid */
             id: string;
@@ -3776,6 +4115,8 @@ export interface components {
             /** Format: date-time */
             endAt: string;
             pointName: string;
+            /** @description Approved, inspected intake revision. Null when no longer eligible for public book/media reads. Optional for compatibility with older clients; never includes seller identity or inspection notes. */
+            book?: components["schemas"]["PublicAuctionBook"] | null;
             /** @constant */
             demoOnly: true;
         };
@@ -4002,6 +4343,241 @@ export interface operations {
             503: components["responses"]["Error"];
         };
     };
+    registerAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Request accepted without revealing account existence. Email delivery is asynchronous. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountRequestAcknowledgement"];
+                };
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    resendEmailVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountEmailRequest"];
+            };
+        };
+        responses: {
+            /** @description Request accepted without revealing account existence. Email delivery is asynchronous. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountRequestAcknowledgement"];
+                };
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    verifyEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthActionTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Completed. The link cannot be used again. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    requestPasswordReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountEmailRequest"];
+            };
+        };
+        responses: {
+            /** @description Request accepted without revealing account existence. Email delivery is asynchronous. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountRequestAcknowledgement"];
+                };
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Completed. The link cannot be used again. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    registerAccountWithOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Generic challenge; eligible accounts receive asynchronous email. Opaque challenge ID is not proof of account existence. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOtpAcknowledgement"];
+                };
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    requestAccountOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountOtpRequest"];
+            };
+        };
+        responses: {
+            /** @description Generic asynchronous acknowledgement. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOtpAcknowledgement"];
+                };
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    verifyEmailWithOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountOtpCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Email verified; challenge cannot be reused. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    resetPasswordWithOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountOtpResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Password changed and sessions revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
     login: {
         parameters: {
             query?: never;
@@ -4091,9 +4667,43 @@ export interface operations {
             401: components["responses"]["Error"];
         };
     };
+    getCatalogTaxonomy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shared controlled classification vocabulary; no inventory counts. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        version: string;
+                        categories: components["schemas"]["CatalogCategory"][];
+                        facets: components["schemas"]["CatalogFacet"][];
+                        languages: components["schemas"]["CatalogOption"][];
+                    };
+                };
+            };
+        };
+    };
     listBooks: {
         parameters: {
             query?: {
+                /** @description Includes descendants. Legacy known category labels resolve read-only; unknown legacy categories remain unclassified. */
+                categoryId?: components["schemas"]["CatalogCategoryId"];
+                /** @description Primary language of the edition, not the language being learned. */
+                language?: string;
+                /** @description Exact series name, Unicode-normalized and case-insensitive. */
+                series?: string;
+                /** @description JSON CatalogAttributes object. Requires categoryId for nonempty values. OR within a facet; AND between facets. Parent categories accept compatible descendant contexts. Unknown/inapplicable values or incompatible grade/level return 422. Normalized selections bind the cursor. */
+                facets?: string;
                 limit?: number;
                 /** @description Opaque signed keyset cursor bound to normalized filters and caller scope. Malformed, modified or mismatched cursor: 400. No snapshot guarantee. Every page rechecks authorization. */
                 cursor?: string;
@@ -4412,6 +5022,14 @@ export interface operations {
     listPublicListings: {
         parameters: {
             query?: {
+                /** @description Includes descendants. Legacy known category labels resolve read-only; unknown legacy categories remain unclassified. */
+                categoryId?: components["schemas"]["CatalogCategoryId"];
+                /** @description Primary language of the edition, not the language being learned. */
+                language?: string;
+                /** @description Exact series name, Unicode-normalized and case-insensitive. */
+                series?: string;
+                /** @description JSON CatalogAttributes object. Requires categoryId for nonempty values. OR within a facet; AND between facets. Parent categories accept compatible descendant contexts. Unknown/inapplicable values or incompatible grade/level return 422. Normalized selections bind the cursor. */
+                facets?: string;
                 limit?: number;
                 /** @description Opaque base64url keyset cursor bound to normalized filters, sort and caller scope. Invalid/mismatched cursor: 400. No snapshot guarantee. All pages recheck eligibility. */
                 cursor?: string;
@@ -7274,6 +7892,61 @@ export interface operations {
             422: components["responses"]["ListingError"];
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listMyAuctions: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+                view?: "all" | "active" | "payment" | "selling";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Caller-owned auction activity. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyAuctionPage"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+        };
+    };
+    getAuctionPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auctionId: string;
+                mediaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Short-lived signed derivative. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaRead"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
         };
     };

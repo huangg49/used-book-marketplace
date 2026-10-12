@@ -1,4 +1,5 @@
 export type ExchangeStatus = 
+    | 'FUNDING' | 'RESOLUTION_PENDING'
     | 'PENDING' | 'REJECTED' | 'EXPIRED' | 'CANCELLED' // sent / received
     | 'DELIVERING' | 'WAITING_YOU_SEND' | 'WAITING_YOU_CONFIRM' // active
     | 'COMPLETED' | 'NEED_REVIEW'; // done

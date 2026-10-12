@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { components } from "@used-books/api-contract";
+import { allCategories } from "@used-books/api-contract/catalog-taxonomy";
 type Schema = components["schemas"];
 const uuid = z.uuid(),
   time = z.iso.datetime({ offset: true }),
@@ -12,6 +13,16 @@ export const metadata = z.object({
   language: z.string(),
   edition: z.string().nullable(),
   category: z.string(),
+  categoryId: z
+    .custom<Schema["CatalogMetadata"]["categoryId"]>(
+      (v) => v === null || allCategories.some((c) => c.id === v),
+    )
+    .optional(),
+  attributes: z
+    .record(z.string(), z.array(z.string()))
+    .transform((v) => v as Schema["CatalogAttributes"])
+    .optional(),
+  series: z.string().nullable().optional(),
   isbn: z.string().nullable(),
 }) satisfies z.ZodType<Schema["CatalogMetadata"]>;
 export const book = metadata.extend({ id: uuid }) satisfies z.ZodType<

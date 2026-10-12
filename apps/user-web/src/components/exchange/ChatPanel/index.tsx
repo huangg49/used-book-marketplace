@@ -9,9 +9,10 @@ interface ChatPanelProps {
     partner: ExchangeUser;
     onSendMessage: (text: string) => Promise<void>;
     isReadOnly?: boolean;
+    unavailable?: boolean;
 }
 
-export function ChatPanel({ messages, partner, onSendMessage, isReadOnly }: ChatPanelProps) {
+export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavailable }: ChatPanelProps) {
     const [inputText, setInputText] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [showScrollBtn, setShowScrollBtn] = useState(false);
@@ -37,7 +38,7 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly }: Chat
                 scrollToBottom();
             }
         }
-    }, [messages.length]);
+    }, [messages.length, showScrollBtn]);
 
     useEffect(() => {
         scrollToBottom();
@@ -53,7 +54,7 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly }: Chat
             await onSendMessage(text);
             setInputText('');
             scrollToBottom();
-        } catch (_error) {
+        } catch {
             alert('Gửi tin nhắn thất bại. Vui lòng thử lại.');
         } finally {
             setIsSending(false);
@@ -68,7 +69,7 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly }: Chat
     };
 
     return (
-        <div className={styles.chatContainer}>
+        <div className={styles.chatContainer} data-unavailable={unavailable || undefined}>
             <div className={styles.chatHeader}>
                 <div className={styles.avatar}>
                     {partner.username.charAt(0).toUpperCase()}
@@ -123,7 +124,7 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly }: Chat
             <div className={styles.inputArea}>
                 {isReadOnly ? (
                     <div className={styles.readOnlyMsg}>
-                        Giao dịch đã đóng. Bạn không thể gửi tin nhắn.
+                        {unavailable ? 'Nhắn tin trong trao đổi chưa khả dụng.' : 'Giao dịch đã đóng. Bạn không thể gửi tin nhắn.'}
                     </div>
                 ) : (
                     <form className={styles.inputForm} onSubmit={handleSend}>

@@ -1,0 +1,15 @@
+{
+  "source": "CUA localhost5186 DEV catalog preview",
+  "viewport": {
+    "width": 1535,
+    "height": 900
+  },
+  "encodedSize": {
+    "width": 1520,
+    "height": 891
+  },
+  "bytes": 107402,
+  "sha256": "ebb9282d1bd4710ef56aac99302b23deeb06b5010b1613a9d4831c05dce2993d",
+  "scope": "Layered Home closing: existing posting card, hills, foreground fox and flush footer",
+  "limitations": "Backend/native/human/200% NOT RUN; preview UI evidence does not certify real API behavior"
+}

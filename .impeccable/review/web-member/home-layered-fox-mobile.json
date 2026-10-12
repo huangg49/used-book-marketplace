@@ -1,0 +1,15 @@
+{
+  "source": "CUA localhost5186 DEV catalog preview",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "encodedSize": {
+    "width": 375,
+    "height": 811
+  },
+  "bytes": 40969,
+  "sha256": "2df6254f112555b0c97fb55a02f054c2f63f68a2115ac3985bbd12c135a3e6ce",
+  "scope": "Layered Home closing: CTA and top of fox only; full fox is outside this viewport capture",
+  "limitations": "Backend/native/human/200% NOT RUN; preview UI evidence does not certify real API behavior"
+}

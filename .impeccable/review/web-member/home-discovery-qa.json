@@ -1,0 +1,28 @@
+{
+  "result": "PASS",
+  "viewports": [
+    1536,
+    1366,
+    1000,
+    850,
+    768,
+    390,
+    320
+  ],
+  "textScales": [
+    100,
+    130,
+    200
+  ],
+  "checks": [
+    "category from actual response and scoped to loaded24",
+    "local category/showmore/reset",
+    "server mode Sale/Exchange includes Both and maxprice",
+    "matching full catalog URL",
+    "empty/error/retry",
+    "44px controls/no overflow",
+    "hero search Enter",
+    "shared Search card remains noncompact"
+  ],
+  "realApi": "NOT RUN; fixture only; no DB writes"
+}

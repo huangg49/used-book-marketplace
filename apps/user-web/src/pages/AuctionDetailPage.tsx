@@ -1,7 +1,7 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { ArrowRight, ChevronRight, Gavel, MapPin, ShieldCheck, TrendingUp, Zap } from 'lucide-react'
 import { AutoBidDialog } from '../components/AutoBidDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -15,6 +15,12 @@ import {
   type AuctionParticipation, type AuctionState, type AuctionSummary,
 } from '../services/auctions'
 import styles from './AuctionDetailPage.module.css'
+import { AuctionGallery } from '../components/AuctionGallery'
+import { conditions } from '../lib/listing-labels'
+import { AuctionPrice } from '../components/AuctionPrice'
+import { AuctionReceipt } from '../components/AuctionReceipt'
+import { useAuctionChangeMotion } from '../hooks/useAuctionMotion'
+import { rowFrames, standingFrames } from '../lib/auction-motion'
 
 const HOUR = 3_600_000
 // Only a won or bought auction has a final price; a held or cancelled one does not.
@@ -76,6 +82,7 @@ type Intent = { kind: 'Manual' | 'Auto' | 'Disable' | 'BuyNow'; amount: number }
 
 export function AuctionDetailPage() {
   const { id = '' } = useParams<{ id: string }>()
+  const location = useLocation()
   const session = useSession()
   const queryClient = useQueryClient()
   const valid = /^[0-9a-f-]{36}$/i.test(id)
@@ -121,20 +128,22 @@ export function AuctionDetailPage() {
   }, [ended, detail.dataUpdatedAt])
 
   if (!valid || (detail.error instanceof ApiError && detail.error.status === 404))
-    return <main className={styles.state}><h1>Không tìm thấy phiên đấu giá</h1><Link to={ROUTES.auctions}>Về danh sách đấu giá</Link></main>
-  if (detail.isError)
+    return <div className={styles.state}><h1>Không tìm thấy phiên đấu giá</h1><Link to={ROUTES.auctions}>Về danh sách đấu giá</Link></div>
+  const stale = detail.isError && !!detail.data && outcomeUnknown(detail.error)
+  if (detail.isError && !stale)
     return (
-      <main className={styles.state} role="alert">
+      <div className={styles.state} role="alert">
         <h1>Chưa tải được phiên đấu giá</h1>
-        <p>Vui lòng kiểm tra kết nối rồi thử lại.</p>
+        <p>{detail.error instanceof ApiError && [401, 403].includes(detail.error.status) ? 'Bạn không có quyền xem phiên này. Kiểm tra phiên đăng nhập hoặc trạng thái tài khoản.' : 'Vui lòng kiểm tra kết nối rồi thử lại.'}</p>
         <button type="button" className={styles.secondary} onClick={() => void detail.refetch()}>Thử lại</button>
-      </main>
+      </div>
     )
-  if (!detail.data) return <main className={styles.state}>Đang mở phiên đấu giá…</main>
+  if (!detail.data) return <div className={styles.state}>Đang mở phiên đấu giá…</div>
 
   const { auction, history, leaderAlias } = detail.data
   const open = auction.state === 'Active' && remaining > 0
-  const me = participation.data ?? null
+  const participationStale = participation.isError && participation.data !== undefined && outcomeUnknown(participation.error)
+  const me = participation.isError && !participationStale ? null : participation.data ?? null
   const hasBids = auction.bidderCount > 0
   const priceLabel = open || auction.currentPrice === null
     ? hasBids ? 'Giá hiện tại' : 'Giá khởi điểm'
@@ -171,11 +180,11 @@ export function AuctionDetailPage() {
       <div className={styles.notice}>
         <strong>Đăng nhập để trả giá</strong>
         <p>Trả giá không giữ tiền trong ví. Nếu thắng, bạn thanh toán từ ví và nhận sách tại {auction.pointName}.</p>
-        <Link className={styles.primaryBlock} to={ROUTES.login}>Đăng nhập <ArrowRight size={16} aria-hidden="true" /></Link>
+        <Link className={styles.primaryBlock} to={`${ROUTES.login}?returnUrl=${encodeURIComponent(location.pathname + location.search)}`}>Đăng nhập để trả giá <ArrowRight size={16} aria-hidden="true" /></Link>
       </div>
     )
   else if (participation.isPending) action = <p className={styles.muted}>Đang tải lượt trả giá của bạn…</p>
-  else if (participation.isError)
+  else if (participation.isError && !participationStale)
     action = (
       <div className={styles.notice} role="alert">
         <p>Chưa tải được lượt trả giá của bạn.</p>
@@ -185,7 +194,8 @@ export function AuctionDetailPage() {
   else action = <BidPanel auction={auction} me={me} onChanged={refresh} />
 
   return (
-    <main className={styles.page}>
+    <div className={styles.page}>
+      {stale && <div className={styles.notice} role="alert"><p>Chưa làm mới được phiên. Giá và trạng thái bên dưới là lần tải gần nhất; máy chủ sẽ kiểm tra lại khi bạn trả giá.</p><button type="button" className={styles.secondary} onClick={() => void detail.refetch()}>Thử cập nhật lại</button></div>}
       <nav className={styles.crumbs} aria-label="Vị trí trang">
         <Link to={ROUTES.auctions}>Đấu giá</Link>
         <span aria-hidden="true">/</span>
@@ -193,41 +203,46 @@ export function AuctionDetailPage() {
       </nav>
 
       <div className={styles.layout}>
-        <section className={styles.media} aria-label="Bìa sách">
-          <span className={styles.mediaChip}><ShieldCheck size={14} aria-hidden="true" /> Đã kiểm tra tại điểm giao nhận</span>
-          <div className={styles.book} aria-hidden="true">
-            <span className={styles.bookTitle}>{auction.title}</span>
-            <span className={styles.bookMark}>Lật lại · Đấu giá</span>
-          </div>
-          <p className={styles.mediaNote}>Phiên đấu giá chưa hiển thị ảnh bìa.</p>
-        </section>
+        <div className={styles.media}><AuctionGallery key={auction.id} auction={auction} /></div>
 
         <header className={styles.head}>
-          <p className={styles.eyebrow}>Đấu giá · {auction.pointName}</p>
           <h1>{auction.title}</h1>
+          {!!auction.book?.authors.length && <p className={styles.authors}>{auction.book.authors.join(', ')}</p>}
           <span className={`${styles.status} ${open ? '' : styles.statusClosed}`}>
             {open ? <Gavel size={14} aria-hidden="true" /> : null}
             {ended ? 'Đã hết giờ, đang chốt kết quả' : STATE_LABEL[auction.state]}
           </span>
+          {auction.book && <span className={styles.inspected}><ShieldCheck size={15} aria-hidden="true" /> Đã kiểm tra tại điểm giao nhận</span>}
         </header>
 
         <aside className={styles.side} aria-label="Trả giá">
           <Countdown ms={remaining} open={open} endAt={auction.endAt} live={pushing} state={auction.state} />
-          <section className={styles.bidCard} aria-live="polite">
+          <section className={styles.bidCard}>
             <p className={styles.priceLabel}>{priceLabel}</p>
-            <p className={styles.price}>{formatVnd(auction.currentPrice ?? auction.startPrice)}</p>
+            <p className={styles.price} aria-live="polite" aria-atomic="true"><span className="sr-only">{priceLabel}: </span><AuctionPrice auctionId={auction.id} amount={auction.currentPrice ?? auction.startPrice} /></p>
             <p className={styles.priceMeta}>
               <TrendingUp size={14} aria-hidden="true" />
               {hasBids ? `${auction.bidderCount} người trả giá` : 'Chưa có lượt trả giá'}
               <span aria-hidden="true">•</span>
               bước giá {formatVnd(auction.step)}
             </p>
+            {participationStale && <p className={styles.fieldError} role="alert">Chưa làm mới được lượt trả giá của bạn. Mức đã hiển thị là lần tải gần nhất. <button type="button" className={styles.linkButton} onClick={() => void participation.refetch()}>Thử cập nhật lại lượt giá</button></p>}
             {action}
           </section>
-          <BidHistory history={history} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} badge={TOP_BADGE[auction.state] ?? null} startPrice={auction.startPrice} />
         </aside>
 
         <div className={styles.body}>
+          <section className={styles.description} aria-labelledby="auction-condition-title">
+            <h2 id="auction-condition-title">Về bản sách này</h2>
+            {auction.book ? <>
+              <p><strong>{conditions[auction.book.condition]}</strong>{auction.book.hasMissingPages ? ' · Có thiếu trang — xem mô tả bên dưới.' : ' · Không thiếu trang theo thông tin đăng.'}</p>
+              {auction.book.description && <p>{auction.book.description}</p>}
+              <dl className={styles.conditionNotes}>{[
+                ['Bìa sách', auction.book.coverNote], ['Ruột sách', auction.book.pages],
+                ['Ghi chú', auction.book.notes], ['Phụ kiện', auction.book.accessories],
+              ].filter(([, value]) => !!value).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+            </> : <p>Thông tin bản sách hiện chưa được hiển thị công khai. Bạn vẫn có thể xem trạng thái phiên và các lượt giá.</p>}
+          </section>
           <dl className={styles.facts}>
             <div><dt>Giá khởi điểm</dt><dd>{formatVnd(auction.startPrice)}</dd></div>
             <div><dt>Bước giá</dt><dd>{formatVnd(auction.step)}</dd></div>
@@ -236,19 +251,25 @@ export function AuctionDetailPage() {
             <div className={styles.factWide}><dt><MapPin size={14} aria-hidden="true" /> Nhận sách tại</dt><dd>{auction.pointName}</dd></div>
           </dl>
 
+          <BidHistory auctionId={auction.id} history={history} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} badge={TOP_BADGE[auction.state] ?? null} startPrice={auction.startPrice} />
+
           <footer className={styles.footer}>
             <p>Người trả giá được hiển thị bằng số thứ tự ẩn danh. Mức đặt giá tự động của mỗi người không bao giờ được công khai.</p>
             <p>Điểm giao nhận và phiên đấu giá đang chạy ở chế độ mô phỏng tại TP.HCM.</p>
           </footer>
         </div>
       </div>
-    </main>
+    </div>
   )
 }
 
-function BidHistory({ history, leaderAlias, myAlias, badge, startPrice }: {
+function BidHistory({ auctionId, history, leaderAlias, myAlias, badge, startPrice }: {
+  auctionId: string;
   history: { price: number; bidderAlias: number; at: string }[]; leaderAlias: number | null; myAlias: number | null; badge: string | null; startPrice: number
 }) {
+  const latest = useRef<HTMLLIElement>(null)
+  const event = history[0]
+  useAuctionChangeMotion(auctionId, event ? `${event.at}:${event.bidderAlias}:${event.price}` : 'empty', latest, rowFrames)
   return (
     <section className={styles.historyCard} aria-labelledby="history-title">
       <h2 id="history-title">Diễn biến giá</h2>
@@ -260,7 +281,7 @@ function BidHistory({ history, leaderAlias, myAlias, badge, startPrice }: {
             const top = index === 0 && event.bidderAlias === leaderAlias
             const mine = myAlias === event.bidderAlias
             return (
-              <li key={`${event.at}-${index}`} className={top ? styles.historyTop : undefined}>
+              <li key={`${event.at}:${event.bidderAlias}:${event.price}`} ref={index === 0 ? latest : undefined} className={top ? styles.historyTop : undefined}>
                 <span className={`${styles.avatar} ${mine ? styles.avatarMine : ''}`} aria-hidden="true">#{event.bidderAlias}</span>
                 <span className={styles.who}>
                   {mine ? 'Bạn' : `Người trả giá #${event.bidderAlias}`}
@@ -354,6 +375,10 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [receipt, setReceipt] = useState<{ sequence: number; bid: boolean } | null>(null)
+  const receiptSequence = useRef(0)
+  const standing = useRef<HTMLDivElement>(null)
+  useAuctionChangeMotion(auction.id, me ? leading : undefined, standing, standingFrames, 270)
   const [unknown, setUnknown] = useState<Intent | null>(null)
   const intent = useIntentKey()
   const ids = useId()
@@ -362,7 +387,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
   const [wasLeading, setWasLeading] = useState(leading)
   if (wasLeading !== leading) {
     setWasLeading(leading)
-    if (wasLeading && !leading && !busy) setNotice(`Bạn vừa bị vượt giá. Giá hiện tại ${formatVnd(auction.currentPrice ?? auction.startPrice)}.`)
+    if (wasLeading && !leading && !busy) { setReceipt(null); setNotice(`Bạn vừa bị vượt giá. Giá hiện tại ${formatVnd(auction.currentPrice ?? auction.startPrice)}.`) }
   }
   const manualError = manual === undefined ? null : amountError(manual, minimumBid, auction.startPrice, step)
   const manualCapped = minimumBid > AUCTION_MAX_PRICE
@@ -370,27 +395,28 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
 
   const run = async (next: Intent) => {
     const key = intent.keyFor(`${next.kind}:${next.amount}`)
-    setBusy(true); setError(null); setNotice(null)
+    setBusy(true); setError(null); setNotice(null); setReceipt(null)
     try {
       const receipt =
         next.kind === 'Manual' ? await placeBid(auction.id, next.amount, key)
         : next.kind === 'Auto' ? await setAutoBid(auction.id, next.amount, key)
         : next.kind === 'Disable' ? await disableAutoBid(auction.id, key)
         : await buyNow(auction.id, key)
-      intent.settle(); setUnknown(null); setManual(undefined)
+      intent.settle(); setUnknown(null); setManual(undefined); setAutoDialog(false)
       const price = receipt.currentPrice !== null ? formatVnd(receipt.currentPrice) : ''
       setNotice(
-        next.kind === 'BuyNow' ? 'Bạn đã mua ngay. Hãy thanh toán trong 15 phút.'
+        next.kind === 'BuyNow' ? 'Đã tạo đơn mua ngay. Hãy thanh toán trong 15 phút để tiếp tục.'
         : next.kind === 'Disable' ? 'Đã tắt đặt giá tự động.'
         : receipt.leading ? `Bạn đang dẫn giá ở ${price}.`
         : `Đã ghi nhận, nhưng một mức tự động khác cao hơn. Giá hiện tại ${price}.`,
       )
+      setReceipt({ sequence: ++receiptSequence.current, bid: next.kind === 'Manual' || next.kind === 'Auto' })
     } catch (caught) {
-      if (outcomeUnknown(caught)) setUnknown(next)
+      if (outcomeUnknown(caught)) { setUnknown(next); setAutoDialog(false) }
       else { intent.settle(); setUnknown(null) }
       setError(commandError(caught))
     } finally {
-      setBusy(false); setConfirming(null); setAutoDialog(false)
+      setBusy(false); setConfirming(null)
       void onChanged()
     }
   }
@@ -399,7 +425,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
   return (
     <div className={styles.bidPanel}>
       {me && (
-        <div className={`${styles.standing} ${leading ? styles.standingLead : styles.standingOut}`}>
+        <div ref={standing} role="status" className={`${styles.standing} ${leading ? styles.standingLead : styles.standingOut}`}>
           <strong>{leading ? 'Bạn đang dẫn giá' : 'Bạn đã bị vượt giá'}</strong>
           <span>
             {me.mode === 'Auto' && me.ownLevel !== null
@@ -409,16 +435,16 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
         </div>
       )}
 
-      {notice && <p role="status" className={styles.success}>{notice}</p>}
-      {error && <p role="alert" className={styles.fieldError}>{error}</p>}
+      {notice && (receipt ? <AuctionReceipt key={receipt.sequence} message={notice} bid={receipt.bid} /> : <p role="status" className={styles.fieldError}>{notice}</p>)}
+      {error && !autoDialog && <p role="alert" className={styles.fieldError}>{error}</p>}
 
       {unknown ? (
         <div className={styles.stack}>
           <button type="button" className={styles.primaryBlock} disabled={busy} onClick={() => void run(unknown)}>
             {busy ? 'Đang thử lại…' : 'Thử lại thao tác vừa rồi'}
           </button>
-          <button type="button" className={styles.secondaryBlock} disabled={busy} onClick={() => { intent.settle(); setUnknown(null); setError(null); void onChanged() }}>
-            Bỏ qua và xem giá mới
+          <button type="button" className={styles.secondaryBlock} disabled={busy} onClick={() => void onChanged()}>
+            Cập nhật trạng thái phiên
           </button>
         </div>
       ) : leading ? (
@@ -427,15 +453,14 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
         <p className={styles.muted}>Giá đã chạm mức tối đa {formatVnd(AUCTION_MAX_PRICE)} của phiên.</p>
       ) : (
         <>
-          <p className={styles.quickLabel}>Trả nhanh</p>
+          <p className={styles.quickLabel}>Chọn nhanh mức trả</p>
           <div className={styles.quick}>
             {bidOptions(minimumBid, step).map((value) => (
-              <button key={value} type="button" disabled={locked} onClick={() => setConfirming({ kind: 'Manual', amount: value })}>
+              <button key={value} type="button" disabled={locked} aria-pressed={manualAmount === value} onClick={() => setManual(value)}>
                 {formatVnd(value)}
               </button>
             ))}
           </div>
-          <div className={styles.or}><span>hoặc</span></div>
           <div className={styles.customBid}>
             <AmountField
               id={`${ids}-manual`} label="Số tiền trả lượt này" value={manualAmount} onChange={setManual} disabled={locked}
@@ -453,7 +478,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
 
       {!unknown && (
         <div className={styles.autoBid}>
-          <button type="button" className={styles.autoToggle} disabled={locked || autoCapped} onClick={() => setAutoDialog(true)} aria-haspopup="dialog">
+          <button type="button" className={styles.autoToggle} disabled={locked || autoCapped} onClick={() => { setError(null); setAutoDialog(true) }} aria-haspopup="dialog">
             <span>
               <strong><Zap size={14} aria-hidden="true" /> {me?.mode === 'Auto' ? 'Nâng mức tự động' : 'Đặt giá tự động'}</strong>
               <small>
@@ -483,6 +508,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
         floor={autoFloor}
         currentMax={me?.mode === 'Auto' ? me.ownLevel : null}
         busy={busy}
+        submissionError={error}
         onConfirm={(maxAmount) => run({ kind: 'Auto', amount: maxAmount })}
       />
 
@@ -615,18 +641,25 @@ function WinnerPanel({ me, auction, onChanged }: { me: AuctionParticipation; auc
   const [error, setError] = useState<string | null>(null)
   const [unknown, setUnknown] = useState(false)
   const headline = me.boughtNow ? 'Bạn đã mua ngay cuốn sách này' : 'Bạn đã thắng phiên đấu giá'
+  const pendingPayment = useRef<{ id: string; version: number; key: string } | null>(null)
 
   const pay = async () => {
     if (!order.data) return
-    const key = intent.keyFor(`pay:${order.data.id}:${order.data.version}`)
+    const payment = pendingPayment.current ?? {
+      id: order.data.id,
+      version: order.data.version,
+      key: intent.keyFor(`pay:${order.data.id}:${order.data.version}`),
+    }
+    pendingPayment.current = payment
     let pending = false
     setBusy(true); setError(null)
     try {
-      await payPointOrder(order.data.id, order.data.version, key)
+      await payPointOrder(payment.id, payment.version, payment.key)
       intent.settle()
+      pendingPayment.current = null
     } catch (caught) {
       pending = outcomeUnknown(caught)
-      if (!pending) intent.settle()
+      if (!pending) { intent.settle(); pendingPayment.current = null }
       setError(commandError(caught))
     } finally {
       setUnknown(pending); setBusy(false); setConfirming(false)
@@ -657,8 +690,15 @@ function WinnerPanel({ me, auction, onChanged }: { me: AuctionParticipation; auc
   if (o.state !== 'AwaitingPayment')
     return (
       <div className={`${styles.standing} ${styles.standingLead}`}>
-        <strong>Đã thanh toán {formatVnd(o.amounts.buyerTotal)}</strong>
-        <span>Tiền đang được giữ cho đơn này đến khi bạn nhận sách tại {o.pointName}. Bước tiếp theo là xác nhận biên bản kiểm tra rồi lấy mã nhận sách tại điểm.</span>
+        <strong>{o.state === 'Completed' ? 'Đơn nhận sách đã hoàn tất' : `Đã thanh toán ${formatVnd(o.amounts.buyerTotal)}`}</strong>
+        <span>{({
+          Fulfilling: `Đơn đang được xử lý tại ${o.pointName}. Hãy theo dõi thông báo về thời điểm nhận sách.`,
+          ReadyForCollection: `Sách sẵn sàng tại ${o.pointName}. Bạn cần xác nhận biên bản kiểm tra và lấy mã nhận sách trước khi nhận. Các thao tác nhận sách chưa có trên màn hình này.`,
+          Inspection: 'Đang trong bước kiểm tra khi nhận sách. Hãy thực hiện theo hướng dẫn của nhân viên tại điểm.',
+          ResolutionPending: 'Đơn đang chờ xử lý vấn đề. Theo dõi thông báo; đây chưa phải giao dịch hoàn tất.',
+          ReturnPending: 'Đơn đang trong quy trình trả sách. Theo dõi thông báo để biết bước tiếp theo.',
+          Completed: 'Quy trình nhận sách đã hoàn tất. Cảm ơn bạn đã cho cuốn sách một chương mới.',
+        } as Record<string, string>)[o.state]}</span>
       </div>
     )
 

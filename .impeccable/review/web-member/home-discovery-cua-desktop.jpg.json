@@ -1,0 +1,16 @@
+{
+  "source": "CUA real local preview; API unavailable",
+  "url": "http://127.0.0.1:5186/",
+  "capturedOn": "2026-10-10",
+  "viewport": {
+    "width": 1366,
+    "height": 800
+  },
+  "image": {
+    "width": 1351,
+    "height": 791
+  },
+  "state": "All filter; scrolled below hero",
+  "sha256": "85404f4ea9b1401908be1d9e3c37c1a7d0c10630ef0cee307d756f336e853750",
+  "realApi": "Listing API unavailable; no synthetic data injected"
+}

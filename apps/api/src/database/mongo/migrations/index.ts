@@ -1,4 +1,25 @@
+import {
+  exchangeCollectionSpecs,
+  exchangesMigration,
+} from './0016-exchanges.js';
+import {
+  exchangesPhase2Migration,
+  withExchangePhase2Changes,
+} from './0017-exchanges-phase2.js';
+import {
+  exchangesPhase3Migration,
+  withExchangePhase3Changes,
+} from './0018-exchanges-proposal-expiry.js';
 import { createHash } from 'node:crypto';
+import {
+  catalogVocabularyV2Migration,
+  withCatalogVocabularyV2,
+} from './0019-catalog-vocabulary-v2.js';
+import { authOtpMigration, authOtpSpecs } from './0018-auth-otp.js';
+import {
+  accountRecoveryMigration,
+  accountRecoverySpecs,
+} from './0017-account-recovery.js';
 import type { Db, MongoClient } from 'mongodb';
 import { canonicalJson } from '../../../common/canonical-json.js';
 import type { CollectionSpec } from '../schema-dsl.js';
@@ -49,12 +70,20 @@ import {
   rulesCollectionSpecs,
   withRulesChanges,
 } from './0013-auction-business-rules.js';
-import { purchaseConversationSpecs, purchaseConversationsMigration, withPurchaseConversationChanges } from './0014-purchase-conversations.js';
-import { memberNotificationsMigration, notificationSpecs, withNotificationChanges } from './0015-member-notifications.js';
-import { exchangeCollectionSpecs, exchangesMigration } from './0016-exchanges.js';
-import { exchangesPhase2Migration, withExchangePhase2Changes } from './0017-exchanges-phase2.js';
-import { exchangesPhase3Migration, withExchangePhase3Changes } from './0018-exchanges-proposal-expiry.js';
-
+import {
+  purchaseConversationSpecs,
+  purchaseConversationsMigration,
+  withPurchaseConversationChanges,
+} from './0014-purchase-conversations.js';
+import {
+  memberNotificationsMigration,
+  notificationSpecs,
+  withNotificationChanges,
+} from './0015-member-notifications.js';
+import {
+  catalogClassificationMigration,
+  withCatalogClassification,
+} from './0016-catalog-classification.js';
 
 export interface Migration {
   id: string;
@@ -135,10 +164,13 @@ export const migrations: Migration[] = [
   auctionBusinessRulesMigration,
   purchaseConversationsMigration,
   memberNotificationsMigration,
+  catalogClassificationMigration,
+  accountRecoveryMigration,
+  authOtpMigration,
+  catalogVocabularyV2Migration,
   exchangesMigration,
   exchangesPhase2Migration,
   exchangesPhase3Migration,
-
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -155,7 +187,9 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withPointCollectionChanges)
     .map(withSettlementChanges)
     .map(withPurchaseConversationChanges)
-    .map(withNotificationChanges),
+    .map(withNotificationChanges)
+    .map(withCatalogClassification)
+    .map(withCatalogVocabularyV2),
   wishlistSpec,
   ...priceAssistSpecsV2,
   ...onlinePriceSpecs,
@@ -174,6 +208,9 @@ export const currentCollections = (): CollectionSpec[] => [
   ...rulesCollectionSpecs,
   ...purchaseConversationSpecs,
   ...notificationSpecs,
-  ...exchangeCollectionSpecs.map(withExchangePhase2Changes).map(withExchangePhase3Changes),
-
+  ...accountRecoverySpecs,
+  ...authOtpSpecs,
+  ...exchangeCollectionSpecs
+    .map(withExchangePhase2Changes)
+    .map(withExchangePhase3Changes),
 ];

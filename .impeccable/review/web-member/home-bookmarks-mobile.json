@@ -1,0 +1,13 @@
+{
+  "source": "CUA In-app Browser, localhost5186 DEV preview",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "encodedSize": {
+    "width": 375,
+    "height": 811
+  },
+  "view": "Scrolled bookmark row and adjacent hero/categories",
+  "sha256": "cd10fde0d06082affd2809378fae1074035a4a384f4acc2bc99fdee1fcbc7884"
+}

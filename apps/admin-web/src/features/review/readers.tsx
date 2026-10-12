@@ -1,4 +1,9 @@
 import { dateText, money } from "../../core/format";
+import {
+  categoryPath,
+  languageLabel,
+  facetDefinitions,
+} from "@used-books/api-contract/catalog-taxonomy";
 import { useEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { session } from "../../core/session";
@@ -17,6 +22,37 @@ import {
 export function MetadataView({ value }: { value: Metadata }) {
   return (
     <dl className="facts">
+      {value.categoryId && (
+        <div>
+          <dt>Danh mục chuẩn</dt>
+          <dd>
+            {categoryPath(value.categoryId)
+              .map((c) => c.label)
+              .join(" / ") || value.categoryId}
+          </dd>
+        </div>
+      )}
+      {value.series && (
+        <div>
+          <dt>Bộ truyện</dt>
+          <dd>{value.series}</dd>
+        </div>
+      )}
+      {Object.entries(value.attributes ?? {}).map(([key, values]) => (
+        <div key={key}>
+          <dt>{facetDefinitions.find((f) => f.id === key)?.label || key}</dt>
+          <dd>
+            {values
+              ?.map(
+                (v) =>
+                  facetDefinitions
+                    .find((f) => f.id === key)
+                    ?.options.find((o) => o.id === v)?.label || v,
+              )
+              .join(" · ")}
+          </dd>
+        </div>
+      ))}
       <div>
         <dt>Tác giả</dt>
         <dd>{value.authors.join(" · ")}</dd>
@@ -29,9 +65,9 @@ export function MetadataView({ value }: { value: Metadata }) {
         </dd>
       </div>
       <div>
-        <dt>Thể loại · Ngôn ngữ</dt>
+        <dt>Danh mục · Ngôn ngữ</dt>
         <dd>
-          {value.category} · {value.language}
+          {value.category} · {languageLabel(value.language)}
         </dd>
       </div>
       <div>
