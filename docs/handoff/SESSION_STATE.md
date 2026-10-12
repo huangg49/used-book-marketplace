@@ -977,8 +977,39 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
   rồi mới đồng bộ Android theo hướng web. Chưa human usability/native/live storage
   acceptance cho gói này; không push/PR/merge/deploy theo quyền cũ.
   Các checkpoint Android bên dưới là lịch sử trước merge; READINESS giữ nguyên.
+- **12/10 — Hoàn thiện toàn diện Backend Trao Đổi Sách (Exchange Backend)**: Đã audit và xử lý triệt để toàn bộ kiến trúc, schema, invariants, ledger escrow, worker tự động hủy quá hạn cọc và đề xuất cho luồng trao đổi sách trên nhánh `feature/exchange-backend`:
+  - **Migration 0016, 0017, 0018 (`0016-exchanges.ts`, `0017-exchanges-phase2.ts`, `0018-exchanges-proposal-expiry.ts`)**:
+    - Chuẩn hóa validator schema cho `exchanges`: bổ sung `lockSeq`, `initiatorOrderId`, `recipientOrderId`, `fundingDeadline`, `initiatorFundedAt`, `recipientFundedAt`, `proposalExpiresAt`, `rejectionReason`, `cancelReason`, `cancelledBy`, `cancelledAt`, `initiatorShippedAt`, `recipientShippedAt`, `initiatorReceivedAt`, `recipientReceivedAt`.
+    - Bảo toàn biểu thức `$expr` nguyên thủy và bổ sung unique index trên `initiatorOrderId`, `recipientOrderId` và index deadline `(status, fundingDeadline)`, `(status, proposalExpiresAt)`.
+    - Đã khấu trừ `exchangeCollectionSpecs.length` trong `schema.mongo-spec.ts` bảo toàn kiểm tra model count.
+  - **Sửa lỗi đích danh (Target constraint crash code 121)**:
+    - Trong `mongo-command.service.ts`: bổ sung `initiatorListingId` vào `ExchangeChange` và gán `targets.listingId = change.initiatorListingId` để thỏa mãn bất biến `eq(nonNullCount(...TARGETS), 1)` của `mutation_receipts` và `audit_events`.
+  - **Cam kết & Trạng thái Listing (Listing trade projection)**:
+    - Mở rộng `checkListing` trong `listing-projection.ts`: nhận diện các exchange đang hoạt động (`AcceptedAwaitingFunding`, `Preparing`, `InTransit`, `Delivered`) bảo đảm đúng duy nhất 1 workflow giữ chỗ `Reserved`.
+    - Cập nhật `ListingCommitmentPolicy.project`: cho phép chuyển đổi hợp lệ sang `Exchanged` khi hoàn tất trao đổi.
+  - **Sổ cái & Escrow (Ledger Escrow, Collision & Reconciliation)**:
+    - Tách biệt `initiatorOrderId` và `recipientOrderId` tránh va chạm unique key `{ orderId: 1, type: 1 }` trên `ledger_journals`.
+    - Cập nhật `checkJournal` trong `ledger.service.ts` hỗ trợ xác thực `OrderPayment`, `OrderRefund`, và `OrderSettlement` cho các đơn trao đổi.
+    - Bổ sung `checkExchange` kiểm tra các hold tài khoản đã giải phóng khi `Completed`.
+    - Cập nhật `orphanHold` trong `reconcile()` để nhận diện `exchanges`.
+    - Thêm `settleExchange` (phân bổ cọc và tiền bù Δ) và `refundExchange` (hoàn cọc khi hủy).
+  - **Worker Hủy Tự Động (`exchange-expiry.service.ts`)**:
+    - Nhánh 1: Hủy khi quá hạn nạp cọc `AcceptedAwaitingFunding` (`fundingDeadline <= now`).
+    - Nhánh 2: Hủy khi quá hạn phản hồi đề xuất `Proposed` (`proposalExpiresAt <= now`), không bút toán, giữ sách `Available`.
+  - **Nghiệp vụ dịch vụ (`exchanges.service.ts`)**:
+    - `create`: Kiểm tra `Available`, `Approved`, `Visible`, `Exchange/Both`, tính toán tiền bù chênh lệch Δ và cọc đối ứng 100% (POL-12), gán `proposalExpiresAt = now + TTL` (mặc định 72h).
+    - `accept`: Khóa nguyên tử cả 2 listing chuyển sang `Reserved`, thiết lập deadline 24h (POL-05), từ chối 409 InvalidState nếu đã quá hạn, tự động hủy các đề xuất cạnh tranh trùng sách.
+    - `fund`: Từng bên đóng cọc (+ Δ nếu là bên bù), chống nạp đúp (`initiatorFundedAt`/`recipientFundedAt`), chuyển `Preparing` khi đủ 2 bên.
+    - `cancel/reject`: Hoàn cọc an toàn qua Ledger nếu đã nạp, giải phóng listing trở lại `Available`, trả 409 InvalidState sạch khi đã bị hủy trước.
+    - `ship`: Ghi nhận `shippedAt` của từng bên, chuyển `InTransit` khi cả 2 đã gửi.
+    - `receive`: Ghi nhận `receivedAt` của từng bên; khi cả 2 đã nhận thì chuyển `Completed`, hoàn cọc và chuyển tiền bù Δ qua Ledger, chuyển 2 listing sang `Exchanged`.
+  - **Contract & Verification**:
+    - OpenAPI: Cập nhật `packages/api-contract/openapi.yaml`, chạy `pnpm contract:generate` và `pnpm contract:check` PASS 100%.
+    - Typecheck & Build: `npx pnpm --filter @used-books/api typecheck` và `npx pnpm --filter @used-books/api build` PASS 100% không cảnh báo/lỗi.
+    - Test Suite: Bổ sung bộ kiểm thử E2E đầy đủ `apps/api/test/exchanges.e2e-spec.ts` pass 21/21 tests ổn định. Cập nhật `afterAll` cleanup trong `exchanges.e2e-spec.ts` dọn sạch order hold accounts, journals và entries theo đúng cơ chế bảo toàn nguồn tiền mô phỏng, khắc phục triệt để lỗi orphan hold trong `test/wallet.e2e-spec.ts` (`reconciliation validates sources...`).
 
 ## Gói lưu sách và chuẩn bị pilot Android
+
 
 - Chủ dự án yêu cầu push/merge ngày10/10. Đã tích hợp main `d71ad3e` vào nhánh
   tại `9d5874a`, giữ web của nhóm; resolve duy nhất `.gitignore` bằng UTF-8,

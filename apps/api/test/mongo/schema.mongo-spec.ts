@@ -27,6 +27,7 @@ import { purchaseConversationSpecs } from '../../src/database/mongo/migrations/0
 import { notificationSpecs } from '../../src/database/mongo/migrations/0015-member-notifications.js';
 import { accountRecoverySpecs } from '../../src/database/mongo/migrations/0017-account-recovery.js';
 import { authOtpSpecs } from '../../src/database/mongo/migrations/0018-auth-otp.js';
+import { exchangeCollectionSpecs } from '../../src/database/mongo/migrations/0016-exchanges.js';
 import {
   currentCollections,
   migrations,
@@ -95,7 +96,8 @@ describe('migrations', () => {
         notificationSpecs.length -
         // FR-A01/02/04 auth collections have no historical PostgreSQL model.
         accountRecoverySpecs.length -
-        authOtpSpecs.length +
+        authOtpSpecs.length -
+        exchangeCollectionSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });

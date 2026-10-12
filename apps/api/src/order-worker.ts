@@ -4,6 +4,7 @@ import { AppModule } from './app.module.js';
 import { OrderExpiryWorker } from './modules/orders/order-expiry.service.js';
 import { AuctionWorker } from './modules/auctions/auction-worker.service.js';
 import { PurchaseExpiryWorker } from './modules/purchases/purchase-expiry.service.js';
+import { ExchangeExpiryWorker } from './modules/exchanges/exchange-expiry.service.js';
 
 const app = await NestFactory.createApplicationContext(AppModule, {
   logger: ['error', 'warn'],
@@ -11,6 +12,7 @@ const app = await NestFactory.createApplicationContext(AppModule, {
 const worker = app.get(OrderExpiryWorker);
 const auctions = app.get(AuctionWorker);
 const purchases = app.get(PurchaseExpiryWorker);
+const exchangeExpiry = app.get(ExchangeExpiryWorker);
 let stopping = false;
 process.on('SIGINT', () => {
   stopping = true;
@@ -48,6 +50,14 @@ try {
       console.log(JSON.stringify({ event: 'purchaseConversationExpirySweep', ...result }));
     } catch {
       console.error('Purchase conversation expiry sweep failed; retrying next cycle.');
+      if (process.argv.includes('--once')) process.exitCode = 1;
+    }
+    try {
+      const result = await exchangeExpiry.tick();
+      if (process.argv.includes('--once') && result.failed) process.exitCode = 1;
+      console.log(JSON.stringify({ event: 'exchangeExpirySweep', ...result }));
+    } catch {
+      console.error('Exchange expiry sweep failed; retrying next cycle.');
       if (process.argv.includes('--once')) process.exitCode = 1;
     }
     // Auction close/payment/drop-off deadlines; a failure here never blocks

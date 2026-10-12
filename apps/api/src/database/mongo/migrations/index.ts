@@ -1,3 +1,6 @@
+import { exchangeCollectionSpecs, exchangesMigration } from './0016-exchanges.js';
+import { exchangesPhase2Migration, withExchangePhase2Changes } from './0017-exchanges-phase2.js';
+import { exchangesPhase3Migration, withExchangePhase3Changes } from './0018-exchanges-proposal-expiry.js';
 import { createHash } from 'node:crypto';
 import {
   catalogVocabularyV2Migration,
@@ -156,6 +159,9 @@ export const migrations: Migration[] = [
   accountRecoveryMigration,
   authOtpMigration,
   catalogVocabularyV2Migration,
+  exchangesMigration,
+  exchangesPhase2Migration,
+  exchangesPhase3Migration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -195,4 +201,5 @@ export const currentCollections = (): CollectionSpec[] => [
   ...notificationSpecs,
   ...accountRecoverySpecs,
   ...authOtpSpecs,
+  ...exchangeCollectionSpecs.map(withExchangePhase2Changes).map(withExchangePhase3Changes),
 ];

@@ -1,3 +1,6 @@
+import { session } from '../../services/api';
+import { z } from 'zod';
+
 export interface TargetBook {
     id: string
     title: string
@@ -56,10 +59,18 @@ export interface ExchangeFormData {
     deliveryMethod: 'meetup' | 'shipping'
 }
 
-// TODO: Thay bằng gọi API qua session-client/api-contract khi backend có endpoint
 export async function submitExchangeRequest(targetBookId: string, data: ExchangeFormData): Promise<{ success: boolean }> {
-    console.log('Mock submitting exchange request', { targetBookId, data })
-    return new Promise((resolve) => {
-        setTimeout(() => resolve({ success: true }), 1500)
-    })
+    try {
+        await session.request('/exchanges', z.any(), {
+            method: 'POST',
+            body: JSON.stringify({
+                initiatorListingId: data.selectedBookIds[0],
+                recipientListingId: targetBookId
+            })
+        });
+        return { success: true };
+    } catch (e) {
+        console.error("Lỗi khi tạo đề nghị trao đổi:", e);
+        return { success: false };
+    }
 }

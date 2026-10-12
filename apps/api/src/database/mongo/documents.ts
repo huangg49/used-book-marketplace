@@ -958,6 +958,55 @@ export interface PointHandoverDoc {
   receiptId: string;
 }
 
+export type ExchangeStatus =
+  | 'Proposed'
+  | 'AcceptedAwaitingFunding'
+  | 'Preparing'
+  | 'InTransit'
+  | 'Delivered'
+  | 'Completed'
+  | 'Cancelled'
+  | 'ResolutionPending';
+
+export type ExchangeCancelReason =
+  | 'FundingExpired'
+  | 'ProposalExpired'
+  | 'CancelledByUser'
+  | 'ListingUnavailable';
+
+export type ExchangeCancelledBy = 'System' | 'Initiator' | 'Recipient';
+
+export interface ExchangeDoc extends Lockable {
+  _id: string;
+  initiatorId: string;
+  recipientId: string;
+  initiatorListingId: string;
+  recipientListingId: string;
+  status: ExchangeStatus;
+  revision: number;
+  initiatorDeposit: number;
+  recipientDeposit: number;
+  diffAmount: number;
+  diffPayerId: string | null;
+  initiatorOrderId: string;
+  recipientOrderId: string;
+  fundingDeadline: Date | null;
+  initiatorFundedAt: Date | null;
+  recipientFundedAt: Date | null;
+  proposalExpiresAt: Date | null;
+  rejectionReason: string | null;
+  cancelReason?: ExchangeCancelReason | null;
+  cancelledBy?: ExchangeCancelledBy | null;
+  cancelledAt?: Date | null;
+  initiatorShippedAt: Date | null;
+  recipientShippedAt: Date | null;
+  initiatorReceivedAt: Date | null;
+  recipientReceivedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  lockSeq: number;
+}
+
 export interface MemberNotificationDoc {
   _id: string;
   userId: string;
@@ -998,3 +1047,4 @@ export interface AuthMailJobDoc {
 export interface AuthEventDoc {
   _id: string; userId: string; action: 'Registered' | 'EmailVerified' | 'PasswordReset'; createdAt: Date;
 }
+
