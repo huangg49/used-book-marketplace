@@ -6,6 +6,17 @@ OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hi�
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
+## Khảo sát trước tích hợp — 12/10/2026
+
+- Candidate `codex/catalog-expansion`/`30953d0`; fetched main `53a2673` có
+  backend exchanges. Chênh6main/98candidate commit;4conflict Mongo/docs và
+  virtual merge web báo13TypeScript errors. Commands exchanges từ main thiếu
+  command key, cố định version và nuốt lỗi; chưa nên merge.
+- Clean HEAD: build/111unit/lint web,21session tests, API/admin/RN typecheck,
+  contract/routes và docs PASS; chưa kiểm bản merge/browser/Mongo tích hợp/
+  remote CI/human. WIP teammate và runtime giữ nguyên; chỉ thêm tài liệu review,
+  chưa push/PR/merge/deploy. [Kết quả và bước tiếp](../verification/PREMERGE_CATALOG_2026_10_12.md).
+
 ## Runtime local — 12/10/2026
 
 - Theo yêu cầu bật backend để đăng nhập, chạy `pnpm dev:api` trên
