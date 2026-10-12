@@ -6,6 +6,28 @@ OpenAPI0.31.0,16 migration Mongo,114 operation HTTP trên nhánh bộ lọc hi�
 source; remote CI hiện tại và human sign-off chưa được xác minh trong hai gói docs.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).
 
+## Runtime local — 12/10/2026
+
+- Theo yêu cầu bật backend để đăng nhập, chạy `pnpm dev:api` trên
+  `codex/search-compact-dropdowns` (`884a30e`). API3000 và worker ảnh/đơn hàng
+  đang chạy; Mongo27017/Vite5186 giữ nguyên. Readiness HTTP200 và login CORS
+  preflight HTTP204 cho `http://127.0.0.1:5186` PASS. Không thử đăng nhập,
+  seed/reset DB, đổi tài khoản hoặc cấu hình; WIP teammate/READINESS giữ nguyên.
+
+## Navbar — đồng bộ khi chuyển trang —12/10/2026
+
+- `codex/navbar-route-sync`, base `884a30e`, checkpoint subject
+  `fix(web): synchronize navbar with route scroll resets`: sửa trạng thái thu gọn
+  còn sót sau khi về đầu trang. Header đồng bộ lúc mount/đổi pathname trước paint,
+  kiểm thêm frame kế tiếp và dọn listener/frame khi rời trang. Giữ48/16px hysteresis,
+  CSS morph/viền sáng; không sửa MainLayout hoặc WIP teammate.
+  Web84tests/build(TS)/lint PASS (5warning Exchange cũ); Chromium1280/390px
+  Home/Search scroll, chuyển trang/mobile menu, scrollY0/floatingfalse và không
+  overflow PASS. Authenticated Sell→Home/account runtime chưa chạy vì tab anonymous;
+  lifecycle reset không scroll event/mount/cleanup có unit regression. Safari/
+  physical mobile/speech/human/CI NOT RUN. [Evidence](../../.impeccable/review/navbar-route-sync/README.md).
+  QA riêng dọn; API/Vite/Mongo giữ chạy, READINESS giữ nguyên, chưa push/PR.
+
 ## Đăng sách — phiếu thông tin sách —12/10/2026
 
 - Follow-up `codex/posting-field-focus`, base `30f6df3`, checkpoint subject

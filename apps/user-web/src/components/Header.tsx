@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Menu, Plus, X } from "lucide-react";
 import { ROUTES, searchUrl } from "../lib/routes";
+import { observeHeaderScroll } from "../lib/header-scroll";
 import { useSession } from "../hooks/useSession";
 import { AccountMenu } from "./AccountMenu";
 import { accountNavigation } from "../lib/account-navigation";
@@ -51,20 +52,14 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
   const onCategoryNavigate = () => {
     categoryArrival.current = true;
   };
-  useEffect(() => {
-    let compact = window.scrollY > 48;
-    const update = () => {
-      // Separate thresholds prevent flicker when scrolling near the top.
-      const next = compact ? window.scrollY > 16 : window.scrollY > 48;
-      if (next !== compact) {
-        compact = next;
-        setCollapsing(next);
+  useLayoutEffect(
+    () =>
+      observeHeaderScroll((next, animate) => {
         setFloating(next);
-      }
-    };
-    window.addEventListener("scroll", update, { passive: true });
-    return () => window.removeEventListener("scroll", update);
-  }, []);
+        setCollapsing(animate);
+      }),
+    [location.pathname],
+  );
   useEffect(() => {
     const desktop = window.matchMedia("(min-width: 1001px)");
     const closeOnDesktop = () => {
