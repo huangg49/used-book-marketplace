@@ -117,7 +117,6 @@
   font-weight: 700;
   margin-bottom: 8px;
 }
-.conditionSelect,
 .compactPreset {
   width: 100%;
   min-height: 44px;
@@ -940,6 +939,9 @@
   transition-duration: 170ms !important;
 }
 .classification div:has(> :is(input, select):focus) label,
+.classification
+  div:has(> div > :is(input[role="combobox"], select):focus)
+  label,
 .classification label:has(> select:focus) {
   color: var(--shop-wine);
 }

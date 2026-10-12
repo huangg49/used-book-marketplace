@@ -98,6 +98,21 @@ Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_
 
 ## Search — nhóm lọc và xóa riêng — 11/10/2026
 
+- Follow-up12/10 `codex/search-compact-dropdowns`, base `66a79bb`, checkpoint
+  subject `feat(web): add compact searchable filter dropdowns`: Search-only
+  renderer cho danh mục/nhóm/ngôn ngữ; >900px combobox tìm không dấu, portal cố
+  định theo ô44px, hàng36px/max288px, đủ12mục; tự mở trên khi thiếu chỗ. <=900px
+  giữ native44px/chevron. Default Đăng sách native; taxonomy/pruning/draft/URL/API
+  giữ nguyên. Build(TS)/80unit/lint PASS (5warning Exchange cũ);2SSR regression
+  native/injected callback. CUA1280/390/320 mouse/keyboard/search/empty/Escape/
+  End/active-descendant/outside/Tab/ApplyURL/mobile draft/nooverflow PASS.
+  Detector một lần8advisory cũ ngoài diff, không scan lại.
+  Format/docs/diff PASS; independent AI review **ship**; follow-up native label
+  focus đã sửa và scored resolved,390px label/viền wine/inset1px/44px/170ms PASS.
+  [Evidence](../../.impeccable/review/search-compact-dropdowns/README.md).
+  Sell browser auth/fullharness/liveAPI/Safari/speech/physicalmobile/native/
+  forcedcolors/human/CI NOT RUN. Tab đóng/viewport reset; Vite5186 giữ chạy;
+  không ghi DB/login/email, WIP teammate/READINESS giữ nguyên; chưa push/PR.
 - Follow-up12/10 `codex/search-sort-dropdown`, base `a3f4d13`, checkpoint subject
   `feat(web): refine catalog sorting dropdown`: CatalogSort controlled thay native
   desktop bằng menu giấy/dấu tích/44px targets/focus liền; <=600px giữ native.

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { HomeBookCard } from "../components/HomeBookCard";
 import { CatalogSort } from "../components/CatalogSort";
+import { FilterSelect } from "../components/FilterSelect";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
 import { lockPageScroll } from "../lib/page-scroll";
@@ -189,6 +190,7 @@ function FilterForm({
           <CatalogClassificationFields
             id={id}
             clearable
+            renderSelect={(props) => <FilterSelect {...props} />}
             value={draft}
             onChange={(value) => setDraft({ ...draft, ...value })}
           />
@@ -267,19 +269,19 @@ function FilterForm({
               </button>
             )}
           </legend>
-          <select
-            className={styles.conditionSelect}
-            aria-label="Ngôn ngữ của sách"
+          <FilterSelect
+            id={`${id}-language`}
+            label="Ngôn ngữ của sách"
             value={draft.language}
-            onChange={(e) => setDraft({ ...draft, language: e.target.value })}
-          >
-            <option value="">Tất cả ngôn ngữ</option>
-            {languageOptions.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+            onChange={(language) => setDraft({ ...draft, language })}
+            options={[
+              { value: "", label: "Tất cả ngôn ngữ" },
+              ...languageOptions.map((option) => ({
+                value: option.id,
+                label: option.label,
+              })),
+            ]}
+          />
         </fieldset>
       </div>
       <div className={styles.filterFooter}>

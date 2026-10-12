@@ -8,6 +8,7 @@ import {
   type Attributes,
 } from "@used-books/api-contract/catalog-taxonomy";
 import styles from "./CatalogClassificationFields.module.css";
+import type { FilterSelectProps } from "./FilterSelect";
 
 export interface ClassificationValue {
   categoryId: string;
@@ -22,6 +23,7 @@ export function CatalogClassificationFields({
   clearable = false,
   collapseOptional = false,
   secondaryField,
+  renderSelect,
 }: {
   value: ClassificationValue;
   onChange: (value: ClassificationValue) => void;
@@ -30,6 +32,7 @@ export function CatalogClassificationFields({
   clearable?: boolean;
   collapseOptional?: boolean;
   secondaryField?: ReactNode;
+  renderSelect?: (props: FilterSelectProps) => ReactNode;
 }) {
   const [expanded, setExpanded] = useState<string[]>([]);
   const category = categoryFor(value.categoryId);
@@ -42,6 +45,23 @@ export function CatalogClassificationFields({
       attributes: compatibleAttributes(categoryId, value.attributes),
       series: ["manga", "light-novel"].includes(categoryId) ? value.series : "",
     });
+  }
+  function select(props: FilterSelectProps) {
+    return renderSelect ? (
+      renderSelect(props)
+    ) : (
+      <select
+        id={props.id}
+        value={props.value}
+        onChange={(event) => props.onChange(event.target.value)}
+      >
+        {props.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    );
   }
   return (
     <div className={styles.fields}>
@@ -62,7 +82,9 @@ export function CatalogClassificationFields({
                 onClick={(event) => {
                   event.currentTarget
                     .closest(`.${styles.fields}`)
-                    ?.querySelector("select")
+                    ?.querySelector<HTMLElement>(
+                      'select, input[role="combobox"]',
+                    )
                     ?.focus();
                   changeCategory("");
                 }}
@@ -71,38 +93,42 @@ export function CatalogClassificationFields({
               </button>
             )}
           </div>
-          <select
-            id={`${id}-category`}
-            value={root?.id || ""}
-            onChange={(e) => changeCategory(e.target.value)}
-          >
-            <option value="">
-              {editing ? "Chọn danh mục…" : "Tất cả danh mục"}
-            </option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
+          {select({
+            id: `${id}-category`,
+            label: "Danh mục sách",
+            value: root?.id || "",
+            onChange: changeCategory,
+            options: [
+              {
+                value: "",
+                label: editing ? "Chọn danh mục…" : "Tất cả danh mục",
+              },
+              ...categories.map((category) => ({
+                value: category.id,
+                label: category.label,
+              })),
+            ],
+          })}
         </div>
         {secondaryField}
       </div>
       {!!root?.children.length && (
-        <label className={styles.subcategory}>
-          Nhóm sách
-          <select
-            value={category?.parentId ? category.id : ""}
-            onChange={(e) => changeCategory(e.target.value || root.id)}
-          >
-            <option value="">Tất cả {root.label.toLowerCase()}</option>
-            {root.children.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className={styles.subcategory}>
+          <label htmlFor={`${id}-subcategory`}>Nhóm sách</label>
+          {select({
+            id: `${id}-subcategory`,
+            label: "Nhóm sách",
+            value: category?.parentId ? category.id : "",
+            onChange: (value) => changeCategory(value || root.id),
+            options: [
+              { value: "", label: `Tất cả ${root.label.toLowerCase()}` },
+              ...root.children.map((category) => ({
+                value: category.id,
+                label: category.label,
+              })),
+            ],
+          })}
+        </div>
       )}
       {category && (
         <p className={styles.context} role="status">

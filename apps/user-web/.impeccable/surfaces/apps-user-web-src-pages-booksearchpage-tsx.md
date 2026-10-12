@@ -285,3 +285,63 @@ No DB writes,real email,login or backend checks;forced-colors runtime,Safari,
 speech,physical mobile,native app,human review and CI NOT RUN. READINESS/WIP
 remain unchanged. Source comparison and drift:
 `.impeccable/review/search-sort-dropdown/documentation.md`.
+
+## Compact filter-dropdown follow-up — owner-approved12/10/2026
+
+Operate; narrow extension on `codex/search-compact-dropdowns`, base `66a79bb`.
+The owner wants nicer filter dropdowns while keeping many categories compact.
+Preserve wine/cream/paper/ink/shelf, Anton/Be Vietnam Pro, the264px rail,
+search band, cards and draft/Apply URL/API behavior. Search supplies optional
+`renderSelect` to shared CatalogClassificationFields and directly composes
+FilterSelect for edition language. Default classification rendering remains
+native for Sell. The subcategory label uses explicit htmlFor/id inside the
+same flex wrapper; source cleanup removes the unused conditionSelect selector.
+
+Above900px, the editable combobox uses the existing44px shelf-ground bottom-rule
+field,6px upper corners,13px/1.5 task text and a16px wine chevron/search icon.
+Its selected label becomes the placeholder when open; the same input filters
+labels by case/accent/đ-insensitive substring. The fixed portal listbox anchors
+to the field width with6px gap and opens above when below is short and above
+offers more room. Paper,8px corners,6px padding and soft canonical ink18%
+shadow extend the existing sort popup recipe. Rows are36px minimum with7px8px
+padding/4px corners; the list is capped at288px, adjusted to available room,
+showing about7.5 rows with its own thin contained scroll. All12 main options
+including Tất cả danh mục remain reachable. Selection uses wine600 text/a15px
+SVG check; hover/active uses shelf ground and active has an inset1px wine stroke.
+Empty search exposes the recovery status without changing selection.
+
+Focus stays in the expanded/controls/autocomplete-list-labelled input, with
+aria-activedescendant on its current option and associated category labels. Both nested desktop combobox and native mobile select focus turn classification labels wine.
+Arrows wrap, Home/End move, Enter selects and Tab closes. Escape/outside/blur/
+page scroll/resize/Back close; popup scrolling stays open. Listeners clean up
+on close/unmount; viewport subscription cleans up and a focused desktop picker
+moving below the breakpoint focuses the native replacement. At<=900px,
+real native44px selects with16px chevrons fit the scrolling filter dialog.
+Taxonomy, compatible-attribute pruning, dependent series cleanup, draft reset
+and Apply remain with existing classification/form logic. Filter entry140ms
+and boundary/inset170ms remain under either OS motion preference through local
+important durations. Forced-colors source supplies CanvasText popup border and
+inset Highlight active/focus treatment; runtime NOT RUN.
+
+Documenter reopened all seven native JPEG viewport crops in
+`.impeccable/review/search-compact-dropdowns/`: desktop/search/empty/subcategory/
+language are1265×712 from configured1280×720; mobile/320 rasters are390×844 and
+320×740. Desktop captures show the bounded root list, khoa hoc matching science,
+empty recovery, optional language subgroup and edition language opening above.
+Mobile/320 show Học ngoại ngữ with native subgroup/chevrons and protected footer.
+Raster dimensions are recorded separately from the reported320px document
+width305px; no actual zoom or physical-device acceptance is inferred.
+
+Implementer-reported TypeScript/Vite build,80unit tests and lint PASS with5old
+Exchange warnings. Two inspected new SSR regressions cover default native
+rendering/associated labels/selected child and injected parent/leaf controls/
+dependent cleanup; they do not prove an actual Sell browser flow. Reported CUA
+preview keyboard/pointer/select/reset, draft Escape/reopen, Apply URL
+`categoryId=languages.ja&language=en`, End/active-option scroll, empty Escape
+preserving selection, outside/Tab-next-field, narrow44px and320doc305 PASS.
+One detector had8old Search radius/color advisories; no rescan. Documenter ran
+no product tests/browser/detector. Backend/account/email/DB activity was absent;
+Safari/speech/physical mobile/native app/forced-colors runtime/full harness/
+live API/human/CI NOT RUN. READINESS and unrelated WIP remain unchanged.
+Source comparison and inherited drift:
+`.impeccable/review/search-compact-dropdowns/documentation.md`.
