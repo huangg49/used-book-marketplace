@@ -303,9 +303,9 @@ try {
   // The approved-edit flow names the first transition after the book
   // information step explicitly; later steps use the generic "Tiếp theo".
   await click("Tiếp tục: Ảnh bản sách →");
-  await click("Tiếp tục");
+  await click("Tiếp theo");
   await p.getByLabel("Giá bán (đồng)", { exact: true }).fill("175000");
-  await click("Tiếp tục");
+  await click("Tiếp theo");
   await p
     .getByRole("checkbox", {
       name: "Tôi có quyền đăng cuốn sách này; ảnh và mô tả phản ánh trung thực tình trạng sách.",
