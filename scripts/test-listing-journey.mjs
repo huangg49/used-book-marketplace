@@ -11,7 +11,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
         "/api/v1/listings" &&
       r.request().method() === "POST",
   );
-  await click("Tạo bản nháp");
+  await click("+ Đăng Sách Mới Ngay");
   const createdResponse = await created;
   assert.equal(
     createdResponse.ok(),
