@@ -7,13 +7,18 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   const fill = (name, value) => p.getByLabel(name, { exact: true }).fill(value);
   const created = p.waitForResponse(
     (r) =>
-      new URL(r.url()).pathname === "/api/v1/listings" &&
-      r.request().method() === "POST" &&
-      r.status() >= 200 &&
-      r.status() < 300,
+      new URL(r.url()).pathname.replace(/\/$/, "") ===
+        "/api/v1/listings" &&
+      r.request().method() === "POST",
   );
   await click("Tạo bản nháp");
-  const id = (await (await created).json()).entityId;
+  const createdResponse = await created;
+  assert.equal(
+    createdResponse.ok(),
+    true,
+    `Create listing failed: ${createdResponse.status()} ${createdResponse.url()}`,
+  );
+  const id = (await createdResponse.json()).entityId;
   await p
     .getByRole("button", { name: "Chọn đầu sách này", exact: true })
     .first()
