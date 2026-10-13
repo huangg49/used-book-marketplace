@@ -1,4 +1,30 @@
-# Điểm lưu hiện tại — 13/10/2026
+# Điểm lưu hiện tại — 14/10/2026
+
+## Member web: Login gió và sân khấu đấu giá — 14/10/2026
+
+- Chủ dự án duyệt preview `5de3a4e`, giao tích hợp chính, rà lỗi toàn gói,
+  push/PR và sửa CI tự động; review người thật sáng hôm sau. Chưa giao merge/deploy.
+- Branch `codex/auth-wind-login-integration`, base main `7a52d08` (PR38).
+  Commit subject `feat(web): integrate approved auth wind and auction stage`.
+  Worktree riêng; WIP `apps/api/package.json`/`seed-bidders.ts` và các thay đổi
+  Detail/Exchange chưa tích hợp trên checkout cũ được giữ nguyên, không đưa vào PR.
+- Login dùng cùng source mesh với preview: dấu 280ms + ba tờ nguyên vẹn bay
+  1152ms, mảnh nhỏ, giấy ngoài che/mở và breeze tan 2500ms. Chỉ chạy sau API
+  thành công; xóa mọi giá trị input khỏi texture. Không xé/zoom form/đón gió.
+  Rèm toàn trang Đấu giá giữ navbar, nhịp 1385ms, sides/diềm gọn đã duyệt;
+  không chạy lại khi đến qua Login giấy, lần navbar/Back/reload sau vẫn chạy.
+- Sửa async cancellation/late renderer và đồng bộ dấu để không hit hai lần
+  khi capture chậm. Lint/typecheck/135 web unit, 21 session unit, build/preview
+  build, docs và browser fixtures desktop/mobile/465px PASS. Rèm regression,
+  wrong Login, query/hash/focus/inert/scroll, Back/resize/context loss/missing
+  capture/delayed preparation PASS. [Evidence và giới hạn](../../.impeccable/review/auth-wind-production/README.md).
+- Review AI mới tìm một P2; verdict chấm đã resolved, `ship` phạm vi lỗi đó.
+  Three 0.186.1 production lazy Auth; không API/contract/DB/native/gate thay đổi.
+  Local Node 24.12<24.15 và chunk warning còn; Safari/live Auth/physical/FPS
+  chưa kiểm. READINESS giữ nguyên. Remote CI/PR chờ push trong gói hiện tại;
+  cập nhật link và kết quả theo đúng head khi hoàn tất. Bước tiếp review người thật.
+
+### Điểm lưu teammate được giữ
 
 Source tích hợp: `feat/rn-ui-redesign-navbar-auctions`, PR #37.
 OpenAPI 0.34.0, 22 migration Mongo, 134 HTTP operation / 23 controller.

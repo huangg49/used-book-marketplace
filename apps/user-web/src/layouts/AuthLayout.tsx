@@ -7,6 +7,7 @@ import { RegisterPage } from "../pages/RegisterPage";
 import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
 import { PaperContext, type AuthDraft } from "./auth-paper";
 import { usePaperJourney } from "../components/auth/paper-journey";
+import { warmAuthFlight } from "../components/auth/auth-flight";
 import styles from "./AuthLayout.module.css";
 
 const annotations = [
@@ -53,6 +54,14 @@ export function AuthLayout() {
   const turning = transition?.from === location.key;
   const success = departing;
   const [annotation] = useState(() => annotations[Math.floor(Math.random() * annotations.length)]);
+  useEffect(() => {
+    const source = leaf.current?.querySelector<HTMLElement>('[data-auth-paper]');
+    if (!source) return;
+    const warm = () => { void warmAuthFlight(source); };
+    warm();
+    const observer = new ResizeObserver(warm); observer.observe(source);
+    return () => observer.disconnect();
+  }, [location.key]);
 
   function settle(id?: number) {
     if (request.current && (id === undefined || request.current.id === id)) {
@@ -143,7 +152,11 @@ export function AuthLayout() {
   }
   async function complete(target: string) {
     if (locked.current || disposed.current) return;
-    locked.current = true; setDeparting(true);
+    locked.current = true;
+    const source = leaf.current?.querySelector<HTMLElement>('[data-auth-paper]');
+    if (source) await Promise.race([warmAuthFlight(source), new Promise(resolve => setTimeout(resolve, 400))]);
+    if (disposed.current) { locked.current = false; return; }
+    setDeparting(true);
     await paperJourney(target, leaf.current?.querySelector<HTMLElement>("[data-auth-paper]") ?? null);
     locked.current = false;
     if (!disposed.current) setDeparting(false);
@@ -169,7 +182,7 @@ export function AuthLayout() {
             <div key={location.key} ref={leaf} className={styles.leaf} data-auth-leaf data-turning={turning ? "true" : undefined}>
               <div className={`${styles.face} ${styles.front}`} data-auth-paper aria-hidden={turning || success || undefined} inert={turning || success}>
                 <PaperFrame path={location.pathname}>{outlet}</PaperFrame>
-                {success && <div className={styles.stamp} aria-hidden="true">ĐÃ MƯỢN<span>{new Date().toLocaleDateString("vi-VN")}</span></div>}
+                {success && <div className={styles.stamp} data-auth-stamp aria-hidden="true" style={{ visibility: 'hidden', animation: 'none' }}>ĐÃ MƯỢN<span>{new Date().toLocaleDateString("vi-VN")}</span></div>}
                 <div className={styles.faceLight} data-front-light />
               </div>
               <div className={`${styles.face} ${styles.reverse}`} aria-hidden="true" inert>

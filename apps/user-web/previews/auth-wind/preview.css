@@ -1,0 +1,44 @@
+html { scrollbar-gutter: auto; }
+body { margin: 0; background: var(--shop-wine); }
+.wind-source { pointer-events: none; }
+.paper-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 2; visibility: hidden; }
+.paper-shadow { position: fixed; border-radius: 3px; box-shadow: 0 2px 4px #21000040, 0 24px 60px #21000066; pointer-events: none; z-index: 1; opacity: 0; }
+.journey-destination { position: fixed; inset: 0; overflow: auto; visibility: hidden; pointer-events: none; }
+.journey-destination, .journey-destination *, body:has(.journey-destination) .wind-source { transition: none !important; }
+.journey-outside, .journey-breeze { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.journey-outside { z-index: 100; }
+.journey-breeze { z-index: 101; }
+body:has(.journey-destination) .wind-controls { z-index: 102; }
+.wind-controls { position: fixed; bottom: 0; inset-inline: 0; z-index: 3; display: flex; align-items: center; gap: 28px; padding: 17px max(24px, env(safe-area-inset-right)) max(17px, env(safe-area-inset-bottom)); background: var(--shop-paper); color: var(--shop-ink); font: 400 12px/1.5 var(--shop-body); box-shadow: 0 -8px 30px #21000026; }
+.wind-caption h1 { font: 800 20px/1.3 'Auth Bricolage', sans-serif; color: var(--shop-wine); margin: 0 0 4px; }
+.wind-caption p { margin: 0; color: var(--shop-muted); max-width: 340px; }
+.wind-playback { display: flex; align-items: center; gap: 8px; }
+.wind-controls button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--shop-line); border-radius: 4px; background: transparent; color: var(--shop-wine); cursor: pointer; white-space: nowrap; }
+.wind-controls button:hover { background: var(--shop-shelf, #f4eddf); }
+.wind-controls button:disabled { opacity: .5; cursor: wait; }
+.wind-controls .wind-primary { background: var(--shop-wine); color: var(--shop-cream); border-color: var(--shop-wine); min-width: 112px; }
+.wind-controls .wind-primary:hover { background: var(--shop-wine-hover, #7c2320); }
+.wind-slow { display: inline-flex; align-items: center; min-height: 44px; gap: 6px; white-space: nowrap; cursor: pointer; padding: 0 4px; }
+.wind-slow input { accent-color: var(--shop-wine); }
+.wind-scrub { flex: 1; min-width: 170px; }
+.wind-scrub label { display: flex; justify-content: space-between; gap: 12px; color: var(--shop-wine); }
+.wind-scrub label span { font-variant-numeric: tabular-nums; }
+.wind-scrub input { accent-color: var(--shop-wine); display: block; width: 100%; height: 28px; cursor: ew-resize; }
+.wind-controls .wind-compare { border: 0; padding-inline: 0; text-decoration: underline; text-underline-offset: 4px; }
+@media (max-width: 1000px) {
+  .wind-controls { gap: 10px 18px; flex-wrap: wrap; padding: 12px 18px max(12px, env(safe-area-inset-bottom)); }
+  .wind-caption { flex: 1; }
+  .wind-caption h1 { font-size: 18px; }
+  .wind-caption p { font-size: 10px; }
+  .wind-scrub { flex-basis: 60%; }
+  .wind-compare { font-size: 10px; }
+}
+@media (max-width: 600px) {
+  .wind-controls { gap: 5px 12px; padding-inline: 14px; }
+  .wind-caption { flex-basis: 100%; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .wind-caption h1 { font-size: 16px; flex-shrink: 0; }
+  .wind-caption p { max-width: 138px; line-height: 1.4; }
+  .wind-playback { flex: 1; }
+  .wind-scrub { flex-basis: 100%; order: 4; }
+  .wind-controls .wind-compare { max-width: 85px; white-space: normal; text-align: right; }
+}

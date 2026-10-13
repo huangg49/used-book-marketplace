@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-13",
+  "fixture": "synthetic frontend-only; no API/Mongo writes",
+  "source": "codex/auction-stage-curtains",
+  "checks": [
+    "StrictMode: one opening; full 1284ms curtain motion with reducedMotion=reduce; measured fold bounds overlap",
+    "URL filter and query-cache price update keep the same mounted stage open",
+    "Leave to Home and Back: fresh opening",
+    "Closed desktop/mobile cloth: changing hidden underlying content changes zero pixels; opening captures supplied for visual inspection",
+    "1440/1280×600/768/390/320 + 200% root font + long title: no horizontal overflow",
+    "Pending/empty/read error/image error and focal-photo retry retain honest content",
+    "Keyboard focus opens immediately; shelf link scrolls and focuses results heading",
+    "Missing WAAPI leaves content open",
+    "Failed curtain art leaves content open",
+    "Continuous Chromium opening video recorded; no physical-device FPS claim"
+  ],
+  "pageErrors": [],
+  "limits": [
+    "Live API/real auction photos",
+    "Safari",
+    "physical phone/native",
+    "speech screen reader",
+    "actual browser zoom",
+    "continuous FPS trace"
+  ]
+}

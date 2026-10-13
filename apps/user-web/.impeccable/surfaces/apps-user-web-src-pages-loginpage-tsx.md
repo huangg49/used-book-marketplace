@@ -67,6 +67,46 @@ keeps its280ms animation. No initial entrance or autoplay.
 Login success retains a continuous diagonal paper flow: desktop1600ms/30 fragments, mobile≤600px1500ms/18 fragments, plus destination-ready latency. Stamp280ms and tear start280ms remain under either OS preference. Two inert printed halves separate12px/1.8deg; cloned passwords are cleared even when revealed, and copies disappear before navigation. Four irregular fragment silhouettes use cream/paper, sparse yellow, faint ink and baked soft wine-at8% shadows/near blur. Twelve small encoded SVG sprites are predecoded on Auth entry; the cache holds at most two palette/mode recipes, not viewport bitmaps. Three opaque SVG pages retain ivory-paper texture, creases, subtle edge shading and two angled foreground edges. Native WAAPI schedules all visible flights before navigation; there is no per-frame Canvas drawing or React state update. The delayed inner-page drift loops continue while the destination mounts, independently of the outer exit animations. Viewport units retain the proven solid rectangular core during resize and bounded drift. Two paint boundaries precede navigation; actual React destination DOM commit plus two further paint boundaries gate release. Back/unmount cancels animations, pending mount acknowledgement, local copies and scroll lock. Destination H1/main receives focus in the layout effect after React removes inert/aria-hidden, not in a competing frame callback. Missing WAAPI retains a440ms technical cover fallback; OS reduction never selects it. No dependency/API/session/token or Home changes. Build comparison and limitations: `.impeccable/review/auth-performance/README.md`.
 Drafts survive ordinary switches.
 
+Owner13/10 approved staged improvement: step1 adds one short breeze to the paper
+tear, not glow/stardust/autumn leaves yet. Two fine cream wind strokes draw and
+fade over720ms. Six mobile/ten desktop dandelion seeds originate along the card
+seam, follow its diagonal gust with varied drag/sway, then continue from their
+actual computed poses for2500ms after paper removal. WAAPI schedules flights;
+the finite aria-hidden/pointer-events-none layer neither retains inert nor
+delays focus/scroll/interaction. Back before completion, destination navigation,
+hidden document/new journey/unmount dispose it. The two printed halves lift
+slightly in the first tear frames; existing stamp, cover and route gates remain.
+Reduced preference retains authored motion per owner policy. Step1 rhythm awaits
+human approval before adding glow. [Initial evidence](../../../../.impeccable/review/auth-breeze-step1/README.md).
+Owner refinement: atmosphere belongs to the large full-screen pages, not just
+the form tear. Current field has16mobile/26desktop seeds spread across independent
+viewport lanes, smaller/fainter in the distance and larger/clearer close by;
+paper-phase seeds rise diagonally with the pages. Two wind traces now connect the
+tear and a viewport-spanning gust. A faint wine printed edge keeps cream fibers
+visible against paper. Slow local sway continues while destination readiness is
+pending. All9 screen sectors contain seeds at reveal in the latest fixture;
+the2500ms tail, interaction and cleanup remain. No glow yet.
+[Current evidence](../../../../.impeccable/review/auth-breeze-pagewide/README.md).
+Owner approved the page-wide atmosphere, requested more natural flight/dissolve.
+Current motion keeps the original gust transform and an independently phased
+continuous flutter through reveal; no new transform/angle trajectory at handoff.
+Gust ripple tapers with zero endpoint velocity. Reveal changes opacity only:
+staggered quintic fades have gentle start/end and native finished promises gate
+disposal, rather than a2500ms wall-clock timer. Normal tail remains about2–2.5s.
+Same-page query/filter changes preserve the tail; leaving the pathname, Back
+during tear, hidden/new journey/unmount still dispose. Shape/count/field/glow scope
+unchanged. [Latest evidence](../../../../.impeccable/review/auth-breeze-fluid/README.md).
+Owner approved fluid motion and authorized step2: cream/gold radiance on6desktop/
+4mobile foreground seeds, plus14desktop/8mobile dust motes,5–11px including halo.
+Local SVG radial lights use existing cream/yellow tokens, no blur filters or
+viewport wash. Soft light opacity varies over2.8–4.04s with individual phases,
+never a flashing star effect. Seed paths/count/field and native flight/flutter
+stay; dust uses the same gust/dissolve lifecycle. All light remains inside each
+particle, so native fade completion removes it together; no extra waiting time.
+No new rasters/dependencies/session changes. Owner approved step2 intensity and
+the completed breeze on13/10/2026; preserve current flight, dissolve and light.
+[Glow evidence](../../../../.impeccable/review/auth-breeze-glow/README.md).
+
 11/10 inline input feedback: a shared AuthForm reads the existing native validity
 flags and exact password-confirmation rule, replacing browser validation popups
 with field-local messages after blur/submit. Visited fields update while edited;

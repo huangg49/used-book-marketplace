@@ -1,0 +1,70 @@
+{
+  "browser": "151.0.7922.34",
+  "results": [
+    {
+      "name": "desktop",
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "rect": {
+        "x": 469.239990234375,
+        "y": 69.109375,
+        "width": 427.52001953125,
+        "height": 547.634765625
+      },
+      "engine": "three.js r186",
+      "captureMs": "220",
+      "captureRect": "{\"x\":443,\"y\":20,\"width\":480,\"height\":614.859375,\"top\":20,\"right\":923,\"bottom\":634.859375,\"left\":443}",
+      "vertices": "1485",
+      "alignedRect": "{\"x\":469.239990234375,\"y\":69.109375,\"width\":427.52001953125,\"height\":547.634765625,\"top\":69.109375,\"right\":896.760009765625,\"bottom\":616.744140625,\"left\":469.239990234375}",
+      "edgeHeight": "0",
+      "pinDistance": "0",
+      "edgeSamples": [
+        87.14253234863281,
+        -0.0001097017593565397,
+        129.36624145507812,
+        14.239843368530273,
+        420.433349609375
+      ],
+      "durationMs": 2000,
+      "meanRGBDifference": 2.451227625906028,
+      "errors": [],
+      "apiRequests": 0
+    },
+    {
+      "name": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "rect": {
+        "x": 55.904388427734375,
+        "y": 70,
+        "width": 278.19122314453125,
+        "height": 553.4017944335938
+      },
+      "engine": "three.js r186",
+      "captureMs": "233",
+      "captureRect": "{\"x\":20,\"y\":20,\"width\":350,\"height\":696.25,\"top\":20,\"right\":370,\"bottom\":716.25,\"left\":20}",
+      "vertices": "825",
+      "alignedRect": "{\"x\":55.904388427734375,\"y\":70,\"width\":278.19122314453125,\"height\":553.4017944335938,\"top\":70,\"right\":334.0956115722656,\"bottom\":623.4017944335938,\"left\":55.904388427734375}",
+      "edgeHeight": "0",
+      "pinDistance": "0",
+      "edgeSamples": [
+        80.44945526123047,
+        -0.00018670350254978985,
+        119.39466094970703,
+        13.160116195678711,
+        388.3883972167969
+      ],
+      "durationMs": 2000,
+      "meanRGBDifference": 3.027280673298731,
+      "errors": [],
+      "apiRequests": 0
+    },
+    {
+      "lifecycle": "resize, hidden pause, context loss restores DOM, retry PASS"
+    }
+  ]
+}

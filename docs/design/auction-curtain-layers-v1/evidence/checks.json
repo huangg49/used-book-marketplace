@@ -1,0 +1,19 @@
+{
+  "scope": "standalone art-layer preview only",
+  "browser": "Chromium",
+  "viewports": [
+    "1440×1050",
+    "390×844"
+  ],
+  "pngAssetsDecoded": 15,
+  "svgAssetsDecoded": 1,
+  "layerInstances": 20,
+  "poseSwitch": "PASS",
+  "closedBackgroundChangedPixels": 0,
+  "individualVisibility": "PASS",
+  "navbarSlot": "PASS",
+  "mobileOverflow": "none",
+  "pageErrors": [],
+  "animation": "NOT RUN / not implemented",
+  "applicationIntegration": "NOT RUN / unchanged"
+}

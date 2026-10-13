@@ -4,6 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "dev:auth-wind": "vite --host 127.0.0.1 --port 5198 --strictPort",
+    "build:auth-wind": "node scripts/build-auth-wind-preview.mjs",
+    "test:auth-wind:browser": "node tests/auth-wind-preview.mjs",
+    "test:auth-wind:stack": "node tests/auth-wind-preview.mjs --stack",
+    "test:auth-wind:journey": "node tests/auth-wind-journey.mjs",
     "dev": "vite --port 5174",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
@@ -13,7 +18,9 @@
     "catalog:refresh": "node scripts/refresh-preview-catalog.mjs",
     "test:browser": "node tests/integration.mjs",
     "test:exchange:browser": "node tests/exchange-integration.mjs",
-    "test:account:browser": "node tests/account-overview.mjs"
+    "test:account:browser": "node tests/account-overview.mjs",
+    "test:auction-stage:browser": "node tests/auction-stage.mjs",
+    "test:auth-motion:browser": "node tests/auth-auction-arrival.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -29,7 +36,8 @@
     "react-hook-form": "^7.88.0",
     "react-router-dom": "^7.18.4",
     "socket.io-client": "^4.8.3",
-    "zod": "^4.6.5"
+    "zod": "^4.6.5",
+    "three": "0.186.1"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.11",

@@ -56,6 +56,12 @@ jobs:
       - run: pnpm --filter @used-books/user-web build
       - run: pnpm --filter @used-books/api build
       - run: pnpm --filter @used-books/admin-web exec playwright install --with-deps chromium
+      - run: pnpm --filter @used-books/user-web test:auth-motion:browser
+        env:
+          AUTH_MOTION_EVIDENCE: apps/user-web/test-results/auth-motion
+      - run: pnpm --filter @used-books/user-web test:auction-stage:browser
+        env:
+          AUCTION_MOTION_EVIDENCE: apps/user-web/test-results/auction-stage
       - run: pnpm infra:mongo:test:up
       - run: pnpm --filter @used-books/user-web test:browser
         env:

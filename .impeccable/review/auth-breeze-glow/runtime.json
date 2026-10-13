@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-13",
+  "fixture": "synthetic frontend Login; no real API/DB",
+  "checks": [
+    "desktop: suspended fade survives beyond 2500ms without abrupt disposal; resumes and cleans up on animation completion",
+    "desktop: page-wide gust; occupied sectors during full-screen coverage 9/9, after paper 9/9; 16/26 seeds, 8/14 dust, 4/6 lit seeds; original flight retained; controls usable; nominal 2500ms fade with native completion cleanup",
+    "desktop: rejected Login preserves draft; successful Login paper only, query/hash retained, focus/scroll restored; filter no curtain; subsequent navbar visit opens curtain",
+    "desktop: direct reload opens curtain",
+    "desktop: leaving during lingering/Back during tear clears breeze and unlocks page",
+    "mobile: page-wide gust; occupied sectors during full-screen coverage 9/9, after paper 8/9; 16/26 seeds, 8/14 dust, 4/6 lit seeds; original flight retained; controls usable; nominal 2500ms fade with native completion cleanup",
+    "mobile: rejected Login preserves draft; successful Login paper only, query/hash retained, focus/scroll restored; filter no curtain; subsequent navbar visit opens curtain",
+    "mobile: direct reload opens curtain",
+    "mobile: leaving during lingering/Back during tear clears breeze and unlocks page"
+  ],
+  "pageErrors": []
+}

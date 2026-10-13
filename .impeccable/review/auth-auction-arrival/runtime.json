@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-13",
+  "fixture": "synthetic frontend Login; no real API/DB",
+  "checks": [
+    "desktop: rejected Login preserves draft; successful Login paper only, query/hash retained, focus/scroll restored; filter no curtain; subsequent navbar visit opens curtain",
+    "desktop: direct reload opens curtain",
+    "mobile: rejected Login preserves draft; successful Login paper only, query/hash retained, focus/scroll restored; filter no curtain; subsequent navbar visit opens curtain",
+    "mobile: direct reload opens curtain"
+  ],
+  "pageErrors": []
+}
