@@ -231,6 +231,7 @@ const EXISTING_OBLIGATION_OPERATIONS = [
   'cancelPaidOrder',
   'rejectPaidOrder',
   'acceptOrder',
+  'confirmOrderReceipt',
   'reportOrderNonReceipt',
   'createPackagingEvidence',
   'uploadPackagingEvidence',
@@ -406,6 +407,8 @@ export class MongoCommandService {
       | 'cancelUnpaidOrder'
       | 'payOrder'
       | 'acceptOrder'
+      | 'confirmOrderReceipt'
+      | 'emitSimulatedDeliveryEvent'
       | 'reportOrderNonReceipt'
       | 'cancelPaidOrder'
       | 'rejectPaidOrder',
@@ -576,11 +579,14 @@ export class MongoCommandService {
       | 'expireSellerConfirmation'
       | 'expireOrderPickup'
       | 'expireOrderDelivery'
+      | 'settleDirectOrder'
       | 'refundOrder' = 'expireOrder',
   ) {
     const systemActor: SystemActor =
       operation === 'expireOrderDelivery'
         ? 'OrderDeliveryExpiry'
+        : operation === 'settleDirectOrder'
+          ? 'OrderInspectionExpiry'
         : operation === 'expireOrder'
           ? 'OrderExpiry'
           : operation === 'refundOrder'

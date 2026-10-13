@@ -102,7 +102,10 @@ export async function checkOrder(tx: Tx, orderId: string) {
     fail('Order commitment mismatch');
   for (const ev of events) {
     const x = await chain(tx, ev.receiptId);
-    const expected = ev.sequence === 1 ? 1 : o.paidAt ? 4 : 2;
+    // The release produced by settlement is the sixth and final Direct Order
+    // version.  All other paid release paths still end at version four.
+    const expected =
+      ev.sequence === 1 ? 1 : o.state === 'Completed' ? 6 : o.paidAt ? 4 : 2;
     if (
       !x ||
       x.r.contextId !== c!._id ||
@@ -132,6 +135,10 @@ async function checkOrderFunding(
     orderId: o._id,
     type: 'OrderRefund',
   });
+  const settlement = await tx.c.ledger_journals.findOne({
+    orderId: o._id,
+    type: 'OrderSettlement',
+  });
   const hold = await tx.c.wallet_accounts.findOne({ orderId: o._id });
   if (!o.paidAt) {
     if (p || f || hold) fail('Unpaid order cannot own funds');
@@ -156,8 +163,10 @@ async function checkOrderFunding(
     hold.purpose !== 'OrderHold' ||
     p.postedAt.getTime() !== o.paidAt.getTime() ||
     (o.state === 'Cancelled') !== !!f ||
+    (o.state === 'Completed') !== !!settlement ||
     (f && f.postedAt.getTime() !== o.closedAt?.getTime()) ||
-    (balance?.amount ?? 0) !== (o.state === 'Cancelled' ? 0 : buyerTotal)
+    (balance?.amount ?? 0) !==
+      (o.state === 'Cancelled' || o.state === 'Completed' ? 0 : buyerTotal)
   )
     fail('Order funding/hold projection mismatch');
   for (const j of await tx.c.ledger_journals
@@ -176,7 +185,11 @@ async function checkOrderFunding(
       (j.type === 'OrderRefund' &&
         (x.r.operation !== 'refundOrder' ||
           x.r.systemActor !== 'OrderRefund' ||
-          x.r.resultVersion !== 4))
+          x.r.resultVersion !== 4)) ||
+      (j.type === 'OrderSettlement' &&
+        (x.r.operation !== 'settleDirectOrder' ||
+          x.r.systemActor !== 'OrderInspectionExpiry' ||
+          x.r.resultVersion !== 6))
     )
       fail('Order journal receipt mismatch');
   }
@@ -222,7 +235,7 @@ async function checkOrderPreparation(
 ) {
   const p = await tx.c.order_preparations.findOne({ _id: o._id });
   const review = await tx.c.pickup_reviews.findOne({ orderId: o._id });
-  if (!['Preparing', 'InTransit', 'ResolutionPending'].includes(o.state)) {
+  if (!['Preparing', 'InTransit', 'ResolutionPending', 'Inspection', 'Completed'].includes(o.state)) {
     if (p || review) fail('Unexpected preparation history');
     return;
   }
@@ -276,6 +289,7 @@ async function checkOrderPreparation(
       fail('Pickup verification task mismatch');
   }
   await checkOrderPickup(tx, o, c);
+  if (['Inspection', 'Completed'].includes(o.state)) return;
   await checkDeliveryReview(tx, o, c);
 }
 
@@ -387,6 +401,65 @@ async function checkOrderPickup(
     expectedVersion = 5;
   }
   const pickupReview = await tx.c.pickup_reviews.findOne({ orderId: o._id });
+  if (['Inspection', 'Completed'].includes(o.state)) {
+    const deliveryEvent = await tx.c.direct_delivery_events.findOne({ orderId: o._id });
+    const deliveryChain = deliveryEvent ? await chain(tx, deliveryEvent.receiptId) : null;
+    const completed = o.state === 'Completed';
+    if (
+      !hasApplied ||
+      !deliveryEvent ||
+      deliveryEvent.shipmentId !== s?._id ||
+      deliveryEvent.occurredAt < first!.occurredAt ||
+      deliveryEvent.receivedAt < deliveryEvent.occurredAt ||
+      !o.deliveredAt ||
+      !o.inspectionDeadline ||
+      o.deliveredAt.getTime() !== deliveryEvent.occurredAt.getTime() ||
+      o.inspectionDeadline.getTime() !== o.deliveredAt.getTime() + 72 * 3600000 ||
+      (completed
+        ? !o.completedAt || o.completedAt < o.inspectionDeadline || o.version !== 6
+        : !!o.completedAt || o.version !== 5) ||
+      pickupReview ||
+      cr ||
+      delivery ||
+      !deliveryChain ||
+      deliveryChain.r.contextId !== c._id ||
+      deliveryChain.r.committedAt.getTime() !== deliveryEvent.receivedAt.getTime() ||
+      deliveryChain.r.resultVersion !== 5 ||
+      get(deliveryChain.r.result, 'state') !== 'Inspection' ||
+      get(deliveryChain.r.result, 'version') !== 5 ||
+      deliveryChain.a.contextId !== c._id ||
+      deliveryChain.a.action !== deliveryChain.r.operation ||
+      (deliveryEvent.source === 'BuyerReceived'
+        ? deliveryChain.r.operation !== 'confirmOrderReceipt' ||
+          deliveryChain.r.actorId !== o.buyerId ||
+          deliveryChain.r.systemActor !== null
+        : deliveryChain.r.operation !== 'emitSimulatedDeliveryEvent' ||
+          !deliveryChain.r.actorId ||
+          [o.buyerId, o.sellerId].includes(deliveryChain.r.actorId) ||
+          deliveryChain.r.systemActor !== null)
+    )
+      fail('Invalid inspection opening');
+    if (completed) {
+      const settlement = await tx.c.ledger_journals.findOne({
+        orderId: o._id,
+        type: 'OrderSettlement',
+      });
+      const settled = settlement ? await chain(tx, settlement.receiptId!) : null;
+      if (
+        !settlement ||
+        !settled ||
+        settlement.postedAt.getTime() !== o.completedAt!.getTime() ||
+        settled.r.operation !== 'settleDirectOrder' ||
+        settled.r.systemActor !== 'OrderInspectionExpiry' ||
+        settled.r.resultVersion !== 6 ||
+        get(settled.r.result, 'state') !== 'Completed' ||
+        get(settled.r.result, 'version') !== 6 ||
+        settled.o.type !== 'DirectOrderSettled'
+      )
+        fail('Invalid Direct Delivery settlement');
+    }
+    return;
+  }
   if (
     (n > 0 && (o.state !== expectedState || o.version !== expectedVersion)) ||
     (n === 0 && o.state === 'InTransit') ||

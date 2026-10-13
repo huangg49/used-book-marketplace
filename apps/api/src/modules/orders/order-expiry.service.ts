@@ -131,6 +131,15 @@ export class OrderExpiryWorker {
     );
     for (const row of deliveries)
       await attempt(() => this.orders.expireDelivery(row.orderId));
+    const inspections = await this.scan(async (tx, now) =>
+      tx.c.direct_orders
+        .find(
+          { state: 'Inspection', inspectionDeadline: { $lte: now } },
+          { sort: { inspectionDeadline: 1, _id: 1 }, limit: 100 },
+        )
+        .toArray(),
+    );
+    for (const order of inspections) await attempt(() => this.orders.settle(order._id));
     const backlog = await this.scan(async (tx, now) => {
       const unpaid = {
         state: 'AwaitingPayment',
@@ -195,13 +204,22 @@ export class OrderExpiryWorker {
         { sort: { openedAt: 1 } },
       );
       const deliveryRemaining = deliveryBacklog?.count ?? 0;
+      const inspectionRemaining = await tx.c.direct_orders.countDocuments({
+        state: 'Inspection', inspectionDeadline: { $lte: now },
+      });
+      const inspection = await tx.c.direct_orders.findOne(
+        { state: 'Inspection', inspectionDeadline: { $lte: now } },
+        { sort: { inspectionDeadline: 1, _id: 1 } },
+      );
+      if (inspection?.inspectionDeadline) deadlines.push(inspection.inspectionDeadline);
       return {
         remaining:
           remaining +
           confirmationRemaining +
           refundRemaining +
           pickups.length +
-          deliveryRemaining,
+          deliveryRemaining + inspectionRemaining,
+          inspectionRemaining,
         deliveryRemaining,
         openDeliveryReviews,
         oldestDeliveryReviewAgeSeconds: oldestDeliveryReview

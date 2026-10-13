@@ -84,6 +84,14 @@ import {
   catalogClassificationMigration,
   withCatalogClassification,
 } from './0016-catalog-classification.js';
+import {
+  directDeliveryCompletionMigration,
+  directDeliveryCompletionSpecs,
+} from './0020-direct-delivery-completion.js';
+import {
+  directDeliveryCompletionLegacyShapeMigration,
+  withDirectDeliveryCompletionLegacyShape,
+} from './0021-direct-delivery-completion-legacy-shape.js';
 
 export interface Migration {
   id: string;
@@ -171,6 +179,8 @@ export const migrations: Migration[] = [
   exchangesMigration,
   exchangesPhase2Migration,
   exchangesPhase3Migration,
+  directDeliveryCompletionMigration,
+  directDeliveryCompletionLegacyShapeMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -181,6 +191,7 @@ export const checksumOf = (migration: Migration) =>
 // The latest schema, for tests and for the app role privileges.
 export const currentCollections = (): CollectionSpec[] => [
   ...baselineCollections
+    .filter((spec) => spec.name !== 'direct_orders')
     .map(withTitleKey)
     .map(withAuctionChanges)
     .map(withPointOrderChanges)
@@ -190,6 +201,9 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withNotificationChanges)
     .map(withCatalogClassification)
     .map(withCatalogVocabularyV2),
+  ...baselineCollections
+    .filter((spec) => spec.name === 'direct_orders')
+    .map(withDirectDeliveryCompletionLegacyShape),
   wishlistSpec,
   ...priceAssistSpecsV2,
   ...onlinePriceSpecs,
@@ -213,4 +227,5 @@ export const currentCollections = (): CollectionSpec[] => [
   ...exchangeCollectionSpecs
     .map(withExchangePhase2Changes)
     .map(withExchangePhase3Changes),
+  ...directDeliveryCompletionSpecs,
 ];

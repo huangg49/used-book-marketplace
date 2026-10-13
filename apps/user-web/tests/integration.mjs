@@ -311,6 +311,10 @@ try {
   assert.equal(await both.isChecked(), true);
   await p.getByLabel("Giá bán (VNĐ)").fill("35000");
   await p.getByLabel("Giá trị đổi (VNĐ)").fill("45000");
+  await p.getByLabel("Họ tên người gửi", { exact: true }).fill("Người gửi QA");
+  await p.getByLabel("Số điện thoại người gửi", { exact: true }).fill("0901234567");
+  await p.getByLabel("Khu vực phục vụ", { exact: true }).selectOption("DEMO-A");
+  await p.getByLabel("Địa chỉ chi tiết", { exact: true }).fill("123 Đường QA");
   await step(/Thông tin sách/).click();
   assert.match(
     await p.getByLabel("Tên sách", { exact: true }).inputValue(),
@@ -362,6 +366,7 @@ try {
     }
   }, 250);
   const before = await fixture.db.collection("listings").countDocuments();
+  const addressesBefore = await fixture.db.collection("member_addresses").countDocuments();
   await button("Gửi duyệt").click();
   await button("Thử gửi lại").waitFor({ timeout: 45000 });
   await p.getByRole("alert").waitFor();
@@ -379,6 +384,10 @@ try {
     await fixture.db.collection("listings").countDocuments(),
     before + 1,
   );
+  assert.equal(
+    await fixture.db.collection("member_addresses").countDocuments(),
+    addressesBefore + 1,
+  );
   const latest = await fixture.api("/me/listings", fixture.member.accessToken);
   const id = latest.items.find(
     (item) => !fixture.listings.includes(item.id),
@@ -391,6 +400,8 @@ try {
   assert.equal(posted.currentRevision.content.hasMissingPages, true);
   assert.equal(posted.currentRevision.content.condition, "Worn");
   assert.equal(posted.currentRevision.content.exchangeValue, 45000);
+  assert.equal(posted.currentRevision.fulfillmentStatus, "Current");
+  assert.equal(posted.currentRevision.content.fulfillment.method, "DirectDelivery");
   // Another authenticated Member reserves a real fixture listing. The server
   // commits the first request but its response is lost; retry must replay it.
   await p.goto(origin + "/login");

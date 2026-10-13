@@ -20,6 +20,14 @@ export class CarrierSimulator {
       .update('LatLaiCarrierPickup-v1\n' + canonicalJson(event))
       .digest('hex');
   }
+  signDelivery(event: Wire['SimulatedDeliveryEvent']) {
+    const secret = this.config.get<string>('PAYMENT_SIMULATOR_SECRET');
+    if (!secret)
+      throw new DomainError(503, 'UNAVAILABLE', 'Bộ vận chuyển mô phỏng chưa được bật.');
+    return createHmac('sha256', secret)
+      .update('LatLaiCarrierDelivery-v1\n' + canonicalJson(event))
+      .digest('hex');
+  }
   verify(event: Wire['SimulatedPickupEvent'], signature: string) {
     const expected = Buffer.from(this.sign(event), 'hex');
     if (
@@ -30,6 +38,18 @@ export class CarrierSimulator {
         403,
         'FORBIDDEN',
         'Sự kiện vận chuyển chưa được xác thực.',
+      );
+  }
+  verifyDelivery(event: Wire['SimulatedDeliveryEvent'], signature: string) {
+    const expected = Buffer.from(this.signDelivery(event), 'hex');
+    if (
+      !/^[a-f0-9]{64}$/.test(signature) ||
+      !timingSafeEqual(expected, Buffer.from(signature, 'hex'))
+    )
+      throw new DomainError(
+        403,
+        'FORBIDDEN',
+        'Sự kiện giao hàng chưa được xác thực.',
       );
   }
 }

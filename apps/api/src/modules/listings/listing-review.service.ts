@@ -99,10 +99,13 @@ export class ListingReviewService {
       },
       mutate: async (tx, actor, before) => {
         requireActive(actor);
+        const originReferenceForSubmission = originReference(
+          before.currentRevision!,
+        );
         const origin = await this.fulfillment.prepare(
           tx,
           actor._id,
-          originReference(before.currentRevision!),
+          originReferenceForSubmission,
         );
         await this.catalog.lockForListing(
           tx,

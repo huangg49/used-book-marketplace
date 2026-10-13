@@ -688,6 +688,14 @@ export class LedgerService {
     tx.check(`journal:${journal._id}`, () => checkJournal(tx, journal._id));
     return journal;
   }
+  async settleDirectOrder(
+    tx: Tx,
+    order: { _id: string; sellerId: string; buyerTotal: number; sellerProceeds: number },
+    receiptId: string,
+    now: Date,
+  ) {
+    return this.settlePointOrder(tx, order, receiptId, now);
+  }
   // Caller owns participant and intent locks; this never opens a nested transaction.
   async lockFunding(tx: Tx, ownerId: string) {
     const account = await this.account(tx, { ownerId });
@@ -992,4 +1000,3 @@ export async function checkExchange(tx: Tx, exchangeId: string) {
     }
   }
 }
-

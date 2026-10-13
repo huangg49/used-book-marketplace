@@ -22,6 +22,7 @@ export type SystemActor =
   | 'OrderRefund'
   | 'OrderPickupExpiry'
   | 'OrderDeliveryExpiry'
+  | 'OrderInspectionExpiry'
   | 'AuctionClose'
   | 'AuctionPaymentExpiry'
   | 'AuctionIntakeExpiry'
@@ -338,6 +339,20 @@ export interface DirectOrderDoc extends Lockable {
   sellerConfirmationDeadline: Date | null;
   cancellationRequestedAt: Date | null;
   cancellationReason: string | null;
+  deliveredAt: Date | null;
+  inspectionDeadline: Date | null;
+  completedAt: Date | null;
+}
+export interface DirectDeliveryEventDoc {
+  _id: string;
+  orderId: string;
+  shipmentId: string;
+  source: 'CarrierDelivered' | 'BuyerReceived';
+  occurredAt: Date;
+  receivedAt: Date;
+  payloadHash: string;
+  signature: string;
+  receiptId: string;
 }
 export interface OrderPreparationDoc {
   _id: string; // orderId
@@ -1047,4 +1062,3 @@ export interface AuthMailJobDoc {
 export interface AuthEventDoc {
   _id: string; userId: string; action: 'Registered' | 'EmailVerified' | 'PasswordReset'; createdAt: Date;
 }
-

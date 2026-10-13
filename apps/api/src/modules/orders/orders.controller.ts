@@ -75,6 +75,23 @@ export class OrdersController {
     res.setHeader('Idempotency-Replayed', String(result.replayed));
     return result.receipt;
   }
+  @Post('orders/:orderId/confirm-receipt')
+  @ExistingObligation()
+  @HttpCode(200)
+  async confirmReceipt(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.orders.confirmReceipt(
+      commandContext(this.input, req, res),
+      this.input.uuid(id),
+      this.input.body('ConfirmOrderReceipt', body),
+    );
+    res.setHeader('Idempotency-Replayed', String(result.replayed));
+    return result.receipt;
+  }
   @Post('orders/:orderId/non-receipt')
   @ExistingObligation()
   @HttpCode(200)

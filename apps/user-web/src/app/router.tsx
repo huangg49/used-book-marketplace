@@ -6,6 +6,7 @@ import { BookSearchPage } from '../pages/BookSearchPage';
 import { BookDetailPage } from '../pages/BookDetailPage';
 import { SellBookPage } from '../pages/SellBookPage';
 import { ChatPage } from '../pages/ChatPage';
+import { CheckoutPage } from '../pages/CheckoutPage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { MyBooksPage } from '../pages/MyBooksPage';
 import { AccountOverviewPage } from '../pages/AccountOverviewPage';
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([{ element: <PaperStormLayout />, chil
       { path: '/books/:id', element: <BookDetailPage /> },
       { path: '/chat', element: <ChatPage /> },
       { path: '/chat/:roomId', element: <ChatPage /> },
+      { path: '/checkout/:listingId', element: <CheckoutPage /> },
       { path: '/exchange', element: <ExchangePage /> },
       { path: '/exchange/new', element: <ExchangeComposePage /> },
       { path: '/exchange/mine', element: <ExchangeMinePage /> },

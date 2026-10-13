@@ -345,6 +345,22 @@ export class ReservationsService {
       receiptId,
     );
   }
+  async closeDirectCompleted(
+    tx: Tx,
+    contextId: string,
+    now: Date,
+    receiptId: string,
+  ) {
+    const context = orderContext(await tx.c.workflow_contexts.findOne({ _id: contextId }));
+    const order = context ? await tx.c.direct_orders.findOne({ _id: context.orderId }) : null;
+    const settled = order ? await tx.c.ledger_journals.findOne({ orderId: order._id, type: 'OrderSettlement' }) : null;
+    const hold = order ? await tx.c.wallet_accounts.findOne({ orderId: order._id }) : null;
+    if (!context || !order || context.ownershipPhase !== 'Holding' || order.state !== 'Inspection' || !order.inspectionDeadline || now < order.inspectionDeadline || !settled || !hold || (await balanceOf(tx, hold._id)) !== 0)
+      throw invalidState();
+    const commitment = await tx.c.exclusive_commitments.findOne({ currentContextId: contextId, status: 'Active' });
+    if (!commitment) throw conflict();
+    return this.release(tx, contextId, commitment._id, commitment.version, 'Completed', now, receiptId);
+  }
   private async release(
     tx: Tx,
     contextId: string,

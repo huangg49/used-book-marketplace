@@ -28,6 +28,7 @@ import { notificationSpecs } from '../../src/database/mongo/migrations/0015-memb
 import { accountRecoverySpecs } from '../../src/database/mongo/migrations/0017-account-recovery.js';
 import { authOtpSpecs } from '../../src/database/mongo/migrations/0018-auth-otp.js';
 import { exchangeCollectionSpecs } from '../../src/database/mongo/migrations/0016-exchanges.js';
+import { directDeliveryCompletionSpecs } from '../../src/database/mongo/migrations/0020-direct-delivery-completion.js';
 import {
   currentCollections,
   migrations,
@@ -98,6 +99,9 @@ describe('migrations', () => {
         accountRecoverySpecs.length -
         authOtpSpecs.length -
         exchangeCollectionSpecs.length +
+        // Delivery events are Mongo-native immutable evidence, not a historical
+        // PostgreSQL model.
+        -directDeliveryCompletionSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });
@@ -479,6 +483,17 @@ describe('validators replace CHECK constraints', () => {
     });
     const c = appDb.collection('direct_orders');
     await c.insertOne(order({}) as never);
+    // Legacy imported orders predate the nullable delivery completion fields.
+    await c.insertOne(
+      order({
+        state: 'PendingSellerConfirmation',
+        version: 2,
+        paidAt: new Date(created.getTime() + 60_000),
+        sellerConfirmationDeadline: new Date(
+          created.getTime() + 48 * 3_600_000 + 60_000,
+        ),
+      }) as never,
+    );
     await rejectsValidation(
       c.insertOne(
         order({

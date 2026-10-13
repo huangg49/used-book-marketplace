@@ -651,6 +651,40 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
     expect(view.amounts.bookPrice).toBe(210000);
     expect(view.moneyHeld).toBe(0);
   });
+  it('transfers the buyer\'s active purchase conversation into one unpaid Order', async () => {
+    const f = await setup();
+    const conversation = await post(
+      `/listings/${f.l.entityId}/purchase-conversations`,
+      { expectedVersion: f.l.version },
+      f.buyer,
+    ).expect(200);
+    const q = await quote(f, randomUUID(), {
+      ...f.body,
+      expectedListingVersion: f.l.version + 1,
+    }).expect(200);
+    const p = {
+      f,
+      body: {
+        quoteId: q.body.entityId,
+        expectedQuoteVersion: 1,
+        expectedListingVersion: f.l.version + 1,
+        expectedListingRevisionId: f.l.revisionId,
+      },
+    };
+    const created = await create(p).expect(200);
+    expect(created.body.state).toBe('AwaitingPayment');
+    expect(
+      (await db.c.purchase_conversations.findOne({
+        _id: conversation.body.entityId,
+      }))!.status,
+    ).toBe('Cancelled');
+    expect((await findOrder(created.body.entityId)).state).toBe(
+      'AwaitingPayment',
+    );
+    expect(
+      (await db.c.listings.findOne({ _id: f.l.entityId }))!.trade,
+    ).toBe('Reserved');
+  });
   it('rejects forged amounts, principal, foreign quote, self purchase, stale versions and guest/operations roles', async () => {
     const p = await prepared();
     await request(app.getHttpServer())
@@ -1467,6 +1501,9 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       sellerConfirmationDeadline: null,
       cancellationRequestedAt: null,
       cancellationReason: null,
+      deliveredAt: null,
+      inspectionDeadline: null,
+      completedAt: null,
       lockSeq: 0,
     });
     const orphan = order();

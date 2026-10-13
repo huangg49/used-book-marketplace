@@ -1577,6 +1577,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/simulator/delivery-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Independent TEST_OPERATOR records one simulated Delivered event after an Applied pickup. It starts, but never settles, the buyer inspection window. */
+        post: operations["emitSimulatedDeliveryEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orders/{orderId}/confirm-receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Buyer-only receipt confirmation. It starts the 72-hour inspection window; it does not settle money or mark the listing Sold. */
+        post: operations["confirmOrderReceipt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/orders/{orderId}/shipment/pickup-events": {
         parameters: {
             query?: never;
@@ -2535,7 +2569,7 @@ export interface components {
             salePrice: number | null;
             exchangeValue: number | null;
             mediaIds: string[];
-            /** @description Optional for legacy compatibility. Omitted preserves the existing choice on replacement; null explicitly clears it. Configured origins must be current at save, submission and approval. No checkout is enabled. */
+            /** @description Optional while a draft is incomplete; required before submitting a Sale or Both listing. Omitted preserves the existing choice on replacement; null explicitly clears it. Configured origins must be current at save, submission and approval. No checkout is enabled. */
             fulfillment?: components["schemas"]["ListingFulfillment"] | null;
         } & ({
             /** @constant */
@@ -3305,7 +3339,7 @@ export interface components {
             contextId: string;
             version: number;
             /** @enum {string} */
-            state: "AwaitingPayment" | "PendingSellerConfirmation" | "SettlementPending" | "Cancelled" | "PaymentExpired" | "Preparing" | "ResolutionPending" | "Preparing" | "ResolutionPending" | "Preparing" | "ResolutionPending" | "Preparing" | "ResolutionPending" | "InTransit";
+            state: "AwaitingPayment" | "PendingSellerConfirmation" | "SettlementPending" | "Cancelled" | "PaymentExpired" | "Preparing" | "ResolutionPending" | "InTransit" | "Inspection" | "Completed";
             /** Format: date-time */
             serverTime: string;
             /** Format: date-time */
@@ -3324,7 +3358,7 @@ export interface components {
             contextId: string;
             version: number;
             /** @enum {string} */
-            state: "AwaitingPayment" | "PendingSellerConfirmation" | "SettlementPending" | "Cancelled" | "PaymentExpired" | "Preparing" | "ResolutionPending" | "Preparing" | "ResolutionPending" | "Preparing" | "ResolutionPending" | "Preparing" | "ResolutionPending" | "InTransit";
+            state: "AwaitingPayment" | "PendingSellerConfirmation" | "SettlementPending" | "Cancelled" | "PaymentExpired" | "Preparing" | "ResolutionPending" | "InTransit" | "Inspection" | "Completed";
             /** @enum {string} */
             role: "Buyer" | "Seller";
             /** Format: date-time */
@@ -3335,6 +3369,13 @@ export interface components {
             closedAt: string | null;
             /** Format: date-time */
             serverTime: string;
+            /** Format: date-time */
+            deliveredAt: string | null;
+            /** Format: date-time */
+            inspectionDeadline: string | null;
+            /** Format: date-time */
+            completedAt: string | null;
+            canConfirmReceipt: boolean;
             /** Format: uuid */
             quoteId: string;
             item: components["schemas"]["OrderItemSnapshot"];
@@ -3499,7 +3540,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            state: "AwaitingPayment" | "PendingSellerConfirmation" | "SettlementPending" | "Cancelled" | "PaymentExpired" | "Preparing" | "ResolutionPending" | "Preparing" | "ResolutionPending" | "Preparing" | "ResolutionPending" | "Preparing" | "ResolutionPending" | "InTransit";
+            state: "AwaitingPayment" | "PendingSellerConfirmation" | "SettlementPending" | "Cancelled" | "PaymentExpired" | "Preparing" | "ResolutionPending" | "InTransit" | "Inspection" | "Completed";
             version: number;
             /** @enum {string} */
             role: "Buyer" | "Seller";
@@ -3728,6 +3769,23 @@ export interface components {
             orderState: "Preparing" | "InTransit" | "ResolutionPending";
             /** Format: date-time */
             serverTime: string;
+        };
+        SimulatedDeliveryEvent: {
+            /** Format: uuid */
+            eventId: string;
+            /** Format: uuid */
+            shipmentId: string;
+            /** Format: uuid */
+            orderId: string;
+            /** @constant */
+            carrier: "LatLaiSimulator";
+            trackingCode: string;
+            /** Format: date-time */
+            occurredAt: string;
+        };
+        ConfirmOrderReceipt: {
+            /** @enum {integer} */
+            expectedVersion: 4;
         };
         ReportOrderNonReceipt: {
             /** @enum {integer} */
@@ -6962,7 +7020,7 @@ export interface operations {
             query?: {
                 limit?: number;
                 cursor?: string;
-                state?: "AwaitingPayment" | "PendingSellerConfirmation" | "SettlementPending" | "Cancelled" | "PaymentExpired" | "Preparing" | "ResolutionPending" | "Preparing" | "ResolutionPending" | "Preparing" | "ResolutionPending" | "Preparing" | "ResolutionPending" | "InTransit";
+                state?: "AwaitingPayment" | "PendingSellerConfirmation" | "SettlementPending" | "Cancelled" | "PaymentExpired" | "Preparing" | "ResolutionPending" | "InTransit" | "Inspection" | "Completed";
             };
             header?: never;
             path?: never;
@@ -7384,6 +7442,82 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CarrierEventReceipt"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    emitSimulatedDeliveryEvent: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulatedDeliveryEvent"];
+            };
+        };
+        responses: {
+            /** @description Delivery recorded. */
+            200: {
+                headers: {
+                    /** @description Private response; never cache. */
+                    "Cache-Control"?: "no-store";
+                    /** @description Whether the original committed receipt was replayed. */
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionCommandReceipt"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    confirmOrderReceipt: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmOrderReceipt"];
+            };
+        };
+        responses: {
+            /** @description Receipt confirmation recorded. */
+            200: {
+                headers: {
+                    /** @description Private response; never cache. */
+                    "Cache-Control"?: "no-store";
+                    /** @description Whether the original committed receipt was replayed. */
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionCommandReceipt"];
                 };
             };
             401: components["responses"]["Error"];
