@@ -382,6 +382,680 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     else process.env.PAYMENT_SIMULATOR_SECRET = originalSecret;
   });
 
+  // First in the suite: the queue shows the 50 auctions ending soonest.
+  it('Admin cancel queue lists open auctions with their version, never involved ones', async () => {
+    const open = await openAuction();
+    const mine = await openAuction();
+    const adminBidder = await actor(['ADMIN', 'MEMBER']);
+    await bid(mine.auctionId, adminBidder, 200_000).expect(200);
+    await call('get', '/operations/auctions', staff).expect(403);
+    await call('get', '/operations/auctions', await actor()).expect(403);
+    await call('get', '/operations/auctions').expect(401);
+    const list = await call('get', '/operations/auctions', adminBidder).expect(
+      200,
+    );
+    validates('OperationsAuctionList', list.body);
+    expect(list.headers['cache-control']).toBe('no-store');
+    const ids = list.body.items.map((i: { id: string }) => i.id);
+    expect(ids).toContain(open.auctionId);
+    // The Admin bids in `mine`, so `cancel` would refuse: it is not offered.
+    expect(ids).not.toContain(mine.auctionId);
+    const row = list.body.items.find(
+      (i: { id: string }) => i.id === open.auctionId,
+    );
+    const doc = (await db.c.auctions.findOne({ _id: open.auctionId }))!;
+    expect(row).toMatchObject({ version: doc.version, state: 'Active' });
+    expect(JSON.stringify(list.body)).not.toMatch(/maxAmount|leaderId|seller/);
+    // The listed version is what cancel accepts.
+    await cmd(
+      'post',
+      `/operations/auctions/${open.auctionId}/cancel`,
+      {
+        expectedVersion: row.version,
+        reason: 'Kiểm tra hủy từ danh sách vận hành',
+      },
+      admin,
+    ).expect(200);
+    const after = await call('get', '/operations/auctions', admin).expect(200);
+    expect(after.body.items.map((i: { id: string }) => i.id)).not.toContain(
+      open.auctionId,
+    );
+  });
+
+  it('Admin manages points and Staff assignments with version, audit and obligation rules (FR-H04)', async () => {
+    const code = `HCM-T-${randomBytes(3).toString('hex').toUpperCase()}`;
+    const create = {
+      code,
+      name: 'Điểm kiểm thử N4',
+      displayAddress: 'Bàn kiểm thử — không phải địa điểm thực tế, TP.HCM',
+      capacity: 2,
+    };
+    await call('get', '/operations/points', staff).expect(403);
+    await call('get', '/operations/points').expect(401);
+    await cmd('post', '/operations/points', create, staff).expect(403);
+    const key = randomUUID();
+    const created = await cmd('post', '/operations/points', create, admin, key);
+    expect(created.status).toBe(201);
+    validates('PointCommandReceipt', created.body);
+    expect(created.body).toMatchObject({ state: 'Paused', version: 1 });
+    const pointId = created.body.pointId as string;
+    const replay = await cmd('post', '/operations/points', create, admin, key);
+    expect(replay.headers['idempotency-replayed']).toBe('true');
+    expect(replay.body).toEqual(created.body);
+    await cmd('post', '/operations/points', create, admin).expect(422);
+    const update = (version: number, over: object = {}) => ({
+      expectedVersion: version,
+      name: create.name,
+      displayAddress: create.displayAddress,
+      capacity: 2,
+      status: 'Active',
+      reason: 'Mở điểm kiểm thử sau khi phân công',
+      ...over,
+    });
+    // Active needs a current Staff assignment.
+    await cmd('post', `/operations/points/${pointId}`, update(1), admin).expect(
+      409,
+    );
+    const pointStaff = await actor(['STAFF']);
+    const member = await actor();
+    const assign = (version: number, userId: string, a: Actor = admin) =>
+      cmd(
+        'post',
+        `/operations/points/${pointId}/assignments`,
+        { expectedVersion: version, userId },
+        a,
+      );
+    await assign(1, admin.id).expect(403);
+    await assign(1, member.id).expect(422);
+    const assigned = await assign(1, pointStaff.id).expect(200);
+    validates('PointCommandReceipt', assigned.body);
+    expect(assigned.body).toMatchObject({
+      entityType: 'PointAssignment',
+      state: 'Current',
+      version: 2,
+    });
+    await assign(1, pointStaff.id).expect(409); // stale version
+    await assign(2, pointStaff.id).expect(409); // already current
+    const mine = await call('get', '/me/point-assignments', pointStaff).expect(
+      200,
+    );
+    validates('MyPointAssignmentList', mine.body);
+    expect(mine.body.items).toEqual([
+      expect.objectContaining({ pointId, code, status: 'Paused' }),
+    ]);
+    await call('get', '/me/point-assignments', member).expect(403);
+    await cmd('post', `/operations/points/${pointId}`, update(2), admin).expect(
+      200,
+    );
+    // Two held slots: capacity cannot drop below them, Closed and ending the
+    // last assignment are refused while they are held.
+    const intakes = [];
+    for (let n = 0; n < 2; n++) {
+      const seller = await actor();
+      const l = await saleListing(seller);
+      intakes.push(
+        (
+          await cmd(
+            'post',
+            '/auction-intakes',
+            intakeBody(l, { pointId }),
+            seller,
+          ).expect(200)
+        ).body.intakeId as string,
+      );
+    }
+    const list = await call('get', '/operations/points', admin).expect(200);
+    validates('OperationsPointList', list.body);
+    const row = list.body.items.find((p: { id: string }) => p.id === pointId);
+    expect(row).toMatchObject({ heldSlots: 2, version: 3, status: 'Active' });
+    expect(row.assignments).toEqual([
+      expect.objectContaining({ userId: pointStaff.id }),
+    ]);
+    await cmd(
+      'post',
+      `/operations/points/${pointId}`,
+      update(3, { capacity: 1 }),
+      admin,
+    ).expect(422);
+    await cmd(
+      'post',
+      `/operations/points/${pointId}`,
+      update(3, { status: 'Closed' }),
+      admin,
+    ).expect(409);
+    const end = (version: number, assignmentId: string) =>
+      cmd(
+        'post',
+        `/operations/points/${pointId}/assignments/${assignmentId}/end`,
+        { expectedVersion: version, reason: 'Nhân viên chuyển sang điểm khác' },
+        admin,
+      );
+    await end(3, row.assignments[0].id).expect(409);
+    // Paused blocks new bookings, not the existing intake's receipt.
+    await cmd(
+      'post',
+      `/operations/points/${pointId}`,
+      update(3, { status: 'Paused', reason: 'Tạm dừng nhận booking mới' }),
+      admin,
+    ).expect(200);
+    const late = await actor();
+    await cmd(
+      'post',
+      '/auction-intakes',
+      intakeBody(await saleListing(late), { pointId }),
+      late,
+    ).expect(409);
+    await cmd(
+      'post',
+      `/operations/auction-intakes/${intakes[0]}/receive`,
+      { expectedVersion: 1, shelfCode: 'T-01' },
+      pointStaff,
+    ).expect(200);
+    // A second assignment lets the first one end; audit names the point.
+    const second = await actor(['STAFF']);
+    await assign(4, second.id).expect(200);
+    const ended = await end(5, row.assignments[0].id).expect(200);
+    expect(ended.body).toMatchObject({ state: 'Ended', version: 6 });
+    await call('get', '/me/point-assignments', pointStaff)
+      .expect(200)
+      .expect(({ body }) => expect(body.items).toEqual([]));
+    await cmd(
+      'post',
+      `/operations/auction-intakes/${intakes[0]}/inspect`,
+      { expectedVersion: 2, outcome: 'Pass', note: null },
+      pointStaff,
+    ).expect(403);
+    const audit = await db.c.audit_events.findOne({
+      receiptId: ended.body.id,
+    });
+    expect(audit).toMatchObject({
+      pointId,
+      action: 'endPointAssignment',
+      reason: 'Nhân viên chuyển sang điểm khác',
+      actorId: admin.id,
+    });
+  });
+
+  it('NeedsEvidence blocks opening; an independent Staff member decides after the seller answers or the deadline (FR-T01/T02, POL-09)', async () => {
+    const reviewerStaff = await actor(['STAFF']);
+    await db.c.point_staff_assignments.insertOne({
+      _id: randomUUID(),
+      pointId: HANDOVER_POINT_A,
+      userId: reviewerStaff.id,
+      validFrom: new Date(),
+      validTo: null,
+      createdAt: new Date(),
+    });
+    const ok = {
+      titleEditionMatches: true,
+      privateMarksMatch: true,
+      coverPagesMatch: true,
+      notesAccessoriesMatch: true,
+      suspectedCopy: false,
+    };
+    const suspicious = { ...ok, suspectedCopy: true };
+    async function received() {
+      const seller = await actor();
+      const l = await saleListing(seller);
+      const intakeId = (
+        await cmd('post', '/auction-intakes', intakeBody(l), seller).expect(200)
+      ).body.intakeId as string;
+      await cmd(
+        'post',
+        `/operations/auction-intakes/${intakeId}/receive`,
+        { expectedVersion: 1, shelfCode: 'E-01' },
+        staff,
+      ).expect(200);
+      return { seller, intakeId };
+    }
+    const inspect = (intakeId: string, body: object) =>
+      cmd(
+        'post',
+        `/operations/auction-intakes/${intakeId}/inspect`,
+        { expectedVersion: 2, ...body },
+        staff,
+      );
+    const decide = (
+      intakeId: string,
+      a: Actor,
+      version: number,
+      body: object,
+    ) =>
+      cmd(
+        'post',
+        `/operations/auction-intakes/${intakeId}/evidence-decision`,
+        {
+          expectedVersion: version,
+          note: 'Đã đối chiếu bằng chứng người bán gửi',
+          ...body,
+        },
+        a,
+      );
+    const answer = (intakeId: string, a: Actor, version: number) =>
+      cmd(
+        'post',
+        `/me/auction-intakes/${intakeId}/evidence`,
+        {
+          expectedVersion: version,
+          note: 'Dấu mộc ở trang 3 là của thư viện trường cũ, có ảnh phiếu mượn.',
+        },
+        a,
+      );
+    const request = {
+      outcome: 'NeedsEvidence',
+      note: 'Cần ảnh dấu mộc trang 3 để đối chiếu',
+      checklist: suspicious,
+    };
+
+    const first = await received();
+    // A suspected copy asks for evidence; a Pass needs every item matching.
+    await inspect(first.intakeId, { ...request, checklist: null }).expect(422);
+    await inspect(first.intakeId, {
+      outcome: 'Pass',
+      note: null,
+      checklist: suspicious,
+    }).expect(422);
+    await inspect(first.intakeId, {
+      outcome: 'Fail',
+      note: 'Nghi bản sao',
+      checklist: suspicious,
+    }).expect(422);
+    await inspect(first.intakeId, {
+      outcome: 'Pass',
+      note: null,
+      checklist: { ...ok, coverPagesMatch: false },
+    }).expect(422);
+    const asked = await inspect(first.intakeId, request).expect(200);
+    expect(asked.body).toMatchObject({ state: 'NeedsEvidence', version: 3 });
+    const mine = await call(
+      'get',
+      `/me/auction-intakes/${first.intakeId}`,
+      first.seller,
+    ).expect(200);
+    validates('AuctionIntake', mine.body);
+    expect(mine.body).toMatchObject({
+      state: 'NeedsEvidence',
+      inspectionOutcome: 'NeedsEvidence',
+      evidenceRequestedBy: null,
+      evidenceSubmittedAt: null,
+      reports: [
+        expect.objectContaining({
+          revision: 1,
+          outcome: 'NeedsEvidence',
+          checklist: suspicious,
+        }),
+      ],
+    });
+    expect(
+      Date.parse(mine.body.evidenceDeadline) -
+        Date.parse(mine.body.inspectedAt),
+    ).toBe(48 * HOUR);
+    expect(JSON.stringify(mine.body)).not.toContain(staff.id);
+    await cmd(
+      'post',
+      `/operations/auction-intakes/${first.intakeId}/open`,
+      { expectedVersion: 3 },
+      staff,
+    ).expect(409);
+    // No answer yet and the window is open: nobody decides; the requester never does.
+    await decide(first.intakeId, reviewerStaff, 3, { outcome: 'Fail' }).expect(
+      409,
+    );
+    expect(
+      (await decide(first.intakeId, staff, 3, { outcome: 'Pass' }).expect(403))
+        .body.code,
+    ).toBe('SelfReviewForbidden');
+    await answer(first.intakeId, await actor(), 3).expect(404);
+    const answered = await answer(first.intakeId, first.seller, 3).expect(200);
+    expect(answered.body).toMatchObject({ state: 'NeedsEvidence', version: 4 });
+    await answer(first.intakeId, first.seller, 4).expect(409);
+    const passed = await decide(first.intakeId, reviewerStaff, 4, {
+      outcome: 'Pass',
+      checklist: ok,
+    }).expect(200);
+    expect(passed.body).toMatchObject({ state: 'Passed', version: 5 });
+    const staffView = await call('get', '/operations/auction-intakes', staff)
+      .expect(200)
+      .then((r) =>
+        r.body.items.find((i: { id: string }) => i.id === first.intakeId),
+      );
+    expect(staffView).toMatchObject({
+      evidenceRequestedBy: staff.id,
+      reports: [
+        expect.objectContaining({ revision: 1, outcome: 'NeedsEvidence' }),
+        expect.objectContaining({
+          revision: 2,
+          outcome: 'Pass',
+          checklist: ok,
+        }),
+      ],
+    });
+    await cmd(
+      'post',
+      `/operations/auction-intakes/${first.intakeId}/open`,
+      { expectedVersion: 5 },
+      staff,
+    ).expect(200);
+
+    // Silence past the deadline: Fail only, never an automatic Pass.
+    const second = await received();
+    const requested = await inspect(second.intakeId, request).expect(200);
+    await longSession(second.seller);
+    await longSession(reviewerStaff);
+    pinClock(new Date(Date.parse(requested.body.serverTime) + 48 * HOUR));
+    await answer(second.intakeId, second.seller, 3).expect(409);
+    await decide(second.intakeId, reviewerStaff, 3, {
+      outcome: 'Pass',
+      checklist: ok,
+    }).expect(409);
+    const failed = await decide(second.intakeId, reviewerStaff, 3, {
+      outcome: 'Fail',
+      note: 'Người bán không bổ sung bằng chứng trong hạn',
+    }).expect(200);
+    expect(failed.body.state).toBe('ReclaimRequired');
+    expect(
+      await db.c.auction_intakes.findOne({ _id: second.intakeId }),
+    ).toMatchObject({
+      reclaimReason: 'InspectionFailed',
+      reclaimRequiredAt: new Date(failed.body.serverTime),
+    });
+    expect(
+      await db.c.intake_inspection_reports.countDocuments({
+        intakeId: second.intakeId,
+      }),
+    ).toBe(2);
+  });
+
+  it('incidents exist without an Order; an independent Admin decides within the protected value and the simulated fund (FR-T04, POL-42)', async () => {
+    // A dedicated point: emergency close and an unfunded decision pause it.
+    const created = await cmd(
+      'post',
+      '/operations/points',
+      {
+        code: `HCM-I-${randomBytes(3).toString('hex').toUpperCase()}`,
+        name: 'Điểm sự cố kiểm thử',
+        displayAddress: 'Bàn kiểm thử sự cố — không phải địa điểm thực tế',
+        capacity: 5,
+      },
+      admin,
+    ).expect(201);
+    const pointId = created.body.pointId as string;
+    await cmd(
+      'post',
+      `/operations/points/${pointId}/assignments`,
+      { expectedVersion: 1, userId: staff.id },
+      admin,
+    ).expect(200);
+    const activate = (version: number) =>
+      cmd(
+        'post',
+        `/operations/points/${pointId}`,
+        {
+          expectedVersion: version,
+          name: 'Điểm sự cố kiểm thử',
+          displayAddress: 'Bàn kiểm thử sự cố — không phải địa điểm thực tế',
+          capacity: 5,
+          status: 'Active',
+          reason: 'Mở lại điểm kiểm thử sự cố',
+        },
+        admin,
+      );
+    await activate(2).expect(200);
+    const seller = await actor();
+    const intakeId = (
+      await cmd(
+        'post',
+        '/auction-intakes',
+        intakeBody(await saleListing(seller), { pointId }),
+        seller,
+      ).expect(200)
+    ).body.intakeId as string;
+    const protectiveValue = (await db.c.auction_intakes.findOne({
+      _id: intakeId,
+    }))!.protectiveValue;
+    const open = (a: Actor, over: object = {}) =>
+      cmd(
+        'post',
+        '/operations/incidents',
+        {
+          pointId,
+          intakeId,
+          kind: 'Damaged',
+          description: 'Bìa sách bị ướt khi đặt trên kệ gần cửa sổ tại điểm',
+          ...over,
+        },
+        a,
+      );
+    await open(otherStaff).expect(403); // assigned to another point
+    await open(await actor()).expect(403);
+    await open(staff, { kind: 'EmergencyClose' }).expect(403);
+    await open(seller).expect(403);
+    const opened = await open(staff).expect(201);
+    validates('PointCommandReceipt', opened.body);
+    expect(opened.body).toMatchObject({
+      entityType: 'PointIncident',
+      state: 'Open',
+      pointId,
+    });
+    const incidentId = opened.body.entityId as string;
+    const staffList = await call('get', '/operations/incidents', staff).expect(
+      200,
+    );
+    validates('PointIncidentList', staffList.body);
+    const row = staffList.body.items.find(
+      (i: { id: string }) => i.id === incidentId,
+    );
+    expect(row).toMatchObject({ protectedValue: protectiveValue, version: 1 });
+    expect(
+      (await call('get', '/operations/incidents', otherStaff).expect(200)).body
+        .items,
+    ).not.toContainEqual(expect.objectContaining({ id: incidentId }));
+    // Independence: Staff, an Admin assigned to the point, the opener.
+    const decide = (a: Actor, over: object = {}, key?: string) =>
+      cmd(
+        'post',
+        `/operations/incidents/${incidentId}/decide`,
+        {
+          expectedVersion: 1,
+          decision: 'Compensate',
+          amount: 5_000,
+          reason: 'Ảnh tại điểm xác nhận hư hỏng do điểm',
+          ...over,
+        },
+        a,
+        key,
+      );
+    await decide(staff).expect(403);
+    const assignedAdmin = await actor(['ADMIN', 'STAFF']);
+    await cmd(
+      'post',
+      `/operations/points/${pointId}/assignments`,
+      { expectedVersion: 3, userId: assignedAdmin.id },
+      admin,
+    ).expect(200);
+    expect((await decide(assignedAdmin).expect(403)).body.code).toBe(
+      'SelfReviewForbidden',
+    );
+    await decide(admin, { amount: protectiveValue + 1 }).expect(422);
+    await decide(admin, { decision: 'NoCompensation', amount: 5 }).expect(422);
+    const fundBefore = await call('get', '/operations/incident-fund', admin)
+      .expect(200)
+      .then((r) => r.body);
+    validates('IncidentFund', fundBefore);
+    await call('get', '/operations/incident-fund', staff).expect(403);
+    const key = randomUUID();
+    const decided = await decide(admin, {}, key).expect(200);
+    expect(decided.body).toMatchObject({ state: 'Decided', version: 2 });
+    const replay = await decide(admin, {}, key).expect(200);
+    expect(replay.headers['idempotency-replayed']).toBe('true');
+    expect(replay.body).toEqual(decided.body);
+    await decide(admin, { expectedVersion: 2 }).expect(409);
+    const fundAfter = (
+      await call('get', '/operations/incident-fund', admin).expect(200)
+    ).body;
+    expect(fundAfter.balance).toBe(fundBefore.balance - 5_000);
+    expect(fundAfter.entries[0]).toMatchObject({
+      type: 'CompensationApproved',
+      amount: 5_000,
+      incidentId,
+    });
+    expect(
+      await db.c.audit_events.findOne({ receiptId: decided.body.id }),
+    ).toMatchObject({ pointId, action: 'decidePointIncident' });
+
+    // Emergency close (Admin only) pauses new bookings at once.
+    const emergency = await open(admin, {
+      kind: 'EmergencyClose',
+      intakeId: null,
+      description: 'Mất điện kéo dài, tạm dừng nhận sách mới tại điểm',
+    }).expect(201);
+    expect(emergency.body.state).toBe('Open');
+    const paused = (await db.c.handover_points.findOne({ _id: pointId }))!;
+    expect(paused.status).toBe('Paused');
+    // Without a book there is no protected value to compensate.
+    await cmd(
+      'post',
+      `/operations/incidents/${emergency.body.entityId}/decide`,
+      {
+        expectedVersion: 1,
+        decision: 'Compensate',
+        amount: 1_000,
+        reason: 'Thử bồi thường không gắn sách',
+      },
+      admin,
+    ).expect(403); // the opener never decides
+    await cmd(
+      'post',
+      `/operations/incidents/${emergency.body.entityId}/decide`,
+      {
+        expectedVersion: 1,
+        decision: 'Compensate',
+        amount: 1_000,
+        reason: 'Thử bồi thường không gắn sách',
+      },
+      await actor(['ADMIN']),
+    ).expect(422);
+    await activate(paused.version).expect(200);
+
+    // The fund runs short: the unfunded part is recorded, never invented,
+    // and the point stops taking new bookings.
+    const last = (await db.c.incident_fund_journal.findOne(
+      {},
+      { sort: { sequence: -1 } },
+    ))!;
+    await db.c.incident_fund_journal.insertOne({
+      _id: randomUUID(),
+      sequence: last.sequence + 1,
+      type: 'CompensationApproved',
+      amount: last.balanceAfter - 1_000,
+      incidentId: randomUUID(),
+      balanceAfter: 1_000,
+      createdAt: new Date(),
+    });
+    const lost = await open(staff, {
+      kind: 'Lost',
+      description: 'Không tìm thấy sách trên kệ khi kiểm kê cuối ngày',
+    }).expect(201);
+    const short = await cmd(
+      'post',
+      `/operations/incidents/${lost.body.entityId}/decide`,
+      {
+        expectedVersion: 1,
+        decision: 'Compensate',
+        amount: 5_000,
+        reason: 'Sách mất trong thời gian điểm giữ',
+      },
+      admin,
+    ).expect(200);
+    expect(short.body.state).toBe('Underfunded');
+    expect(
+      await db.c.point_incidents.findOne({ _id: lost.body.entityId }),
+    ).toMatchObject({ fundedAmount: 1_000, unfundedAmount: 4_000 });
+    const after = (await db.c.handover_points.findOne({ _id: pointId }))!;
+    expect(after.status).toBe('Paused');
+    expect(
+      (await call('get', '/operations/incident-fund', admin).expect(200)).body
+        .balance,
+    ).toBe(0);
+  });
+
+  it('overdue inspection and reclaim are derived for the Admin and never act on their own (POL-31, POL-34)', async () => {
+    async function received(shelfCode: string) {
+      const seller = await actor();
+      const intakeId = (
+        await cmd(
+          'post',
+          '/auction-intakes',
+          intakeBody(await saleListing(seller)),
+          seller,
+        ).expect(200)
+      ).body.intakeId as string;
+      const receipt = await cmd(
+        'post',
+        `/operations/auction-intakes/${intakeId}/receive`,
+        { expectedVersion: 1, shelfCode },
+        staff,
+      ).expect(200);
+      return { intakeId, at: Date.parse(receipt.body.serverTime) };
+    }
+    const waiting = await received('D-01');
+    const failed = await received('D-02');
+    const reclaim = await cmd(
+      'post',
+      `/operations/auction-intakes/${failed.intakeId}/inspect`,
+      { expectedVersion: 2, outcome: 'Fail', note: 'Bìa rách khác mô tả' },
+      staff,
+    ).expect(200);
+    const reclaimAt = Date.parse(reclaim.body.serverTime);
+    const queue = (
+      await call('get', '/operations/auction-intakes', staff).expect(200)
+    ).body.items as { id: string }[];
+    expect(queue.find((i) => i.id === waiting.intakeId)).toMatchObject({
+      inspectionDueAt: new Date(waiting.at + 24 * HOUR).toISOString(),
+      reclaimDueAt: null,
+    });
+    expect(queue.find((i) => i.id === failed.intakeId)).toMatchObject({
+      inspectionDueAt: null,
+      reclaimDueAt: new Date(reclaimAt + 72 * HOUR).toISOString(),
+    });
+    const escalations = async () => {
+      const r = await call('get', '/operations/escalations', admin).expect(200);
+      validates('PointEscalationList', r.body);
+      return r.body.items as { intakeId: string; kind: string }[];
+    };
+    await call('get', '/operations/escalations', staff).expect(403);
+    expect(
+      (await escalations()).filter((e) =>
+        [waiting.intakeId, failed.intakeId].includes(e.intakeId),
+      ),
+    ).toEqual([]);
+    pinClock(new Date(reclaimAt + 72 * HOUR));
+    expect(await escalations()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          intakeId: waiting.intakeId,
+          kind: 'InspectionOverdue',
+          state: 'Received',
+        }),
+        expect.objectContaining({
+          intakeId: failed.intakeId,
+          kind: 'ReclaimOverdue',
+        }),
+      ]),
+    );
+    pinClock(new Date(reclaimAt + 72 * HOUR + 14 * 24 * HOUR));
+    expect(
+      (await escalations()).find((e) => e.intakeId === failed.intakeId),
+    ).toMatchObject({ kind: 'ReclaimEscalated' });
+    // Reading changed nothing: no automatic Pass, Fail or confiscation.
+    expect(
+      await db.c.auction_intakes.findOne({ _id: waiting.intakeId }),
+    ).toMatchObject({ state: 'Received', version: 2 });
+    expect(
+      await db.c.auction_intakes.findOne({ _id: failed.intakeId }),
+    ).toMatchObject({ state: 'ReclaimRequired', version: 3 });
+  });
+
   it('public book reads use only the inspected revision and never bypass ordinary shelf custody', async () => {
     const o = await openAuction();
     const response = await call('get', `/auctions/${o.auctionId}`).expect(200);

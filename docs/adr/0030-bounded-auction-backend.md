@@ -155,3 +155,44 @@ Found by the concurrency/scope cases in [AUCTION_TEST_CASES](../features/AUCTION
   1,000,000 (1,050,000, outside the contract). Public reads, participation and receipts
   now return `null` once no grid amount can beat the price; `BidTooLow` says the cap is
   reached.
+
+## Amendment 2026-10-13 — Admin cancel queue
+
+- `POST /operations/auctions/{id}/cancel` needs `expectedVersion`, but no read gave an
+  Admin the auction version, and OnHold auctions were not readable at all. OpenAPI 0.35.0
+  adds `GET /operations/auctions` (ACTIVE ADMIN): Active auctions before `endAt` and OnHold
+  ones, ending soonest first, at most 50, with `version`, prices, bidder count and point.
+  It leaves out auctions the Admin sells or bids in, matching the independence check of
+  `cancel`, and never includes Auto ceilings or bidder identities. Read only; the cancel
+  command and its checks are unchanged. Used by the admin-web auction list (N4-05).
+
+## Amendment 2026-10-14 — point operations (N4 Phase 2)
+
+Approved by the person directing the work on 14/10/2026 as N4 Phase 2 (N4-10…N4-14).
+READINESS gates are unchanged; this is source and evidence on `*_test` only.
+
+- **Points and assignments (FR-H04, OpenAPI 0.36.0, migration 0022).** ADMIN creates
+  points (start Paused), edits name/address/capacity/status with a reason, assigns and
+  ends Staff assignments. Every command locks the point and checks its new `version`.
+  Capacity never drops below held slots; Closed needs no held slot and no open or
+  underfunded incident; Active needs a current assignment; no self-assignment; the last
+  assignment of a point with held slots cannot end. Receipts and audit rows gain an
+  optional `pointId` target (still exactly one target per row). Opening hours stay the
+  fixed POL-29 rule: editable hours would change deadline calculation and need a policy.
+- **Inspection evidence (FR-T01/T02, FR-H08, POL-09, 0.37.0, migration 0023).** Inspect
+  takes the checklist and may conclude NeedsEvidence (suspected copy cannot Pass or Fail
+  at first inspection). The seller answers once, in writing, within 48 hours. A Staff
+  member other than the requester decides; without an answer only Fail, after the
+  deadline. Each conclusion is an immutable `intake_inspection_reports` revision. Photo
+  evidence is not part of this increment.
+- **Incidents and fund (FR-T04, POL-42, 0.38.0, migration 0024).** Assigned Staff or an
+  Admin opens an incident with or without an Order; EmergencyClose (Admin) pauses new
+  bookings. An Admin who is neither the opener nor assigned to the point decides once.
+  Compensation is capped by the protected value (Order book price once sold, else the
+  intake sale-price snapshot) and funded from the simulated fund while it lasts; the
+  unfunded part is recorded and the point pauses. The fund journal records approvals;
+  **no member wallet is paid** — payout stays behind the settlement gate. Notifying
+  affected members of an emergency close is not implemented.
+- **Deadlines (POL-31/09/34, 0.39.0).** Due dates and `/operations/escalations` are
+  derived at read time from stored timestamps instead of a worker, so a repeated read
+  cannot double-act and nothing passes, fails or confiscates automatically.
