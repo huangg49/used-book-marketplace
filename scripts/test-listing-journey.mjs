@@ -264,6 +264,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   await p
     .getByRole("tab", { name: /^Ảnh bản sách,/ })
     .click();
+  await click("Tiếp theo");
   await fill(
     "Ruột sách và trang thiếu",
     "Trang trắng sau cùng bị rời, nội dung từ trang 1 đến 120 vẫn đủ.",
