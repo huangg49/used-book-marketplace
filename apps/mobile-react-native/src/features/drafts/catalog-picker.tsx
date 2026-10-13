@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { View } from "react-native";
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
 import {
   useInfiniteQuery,
   useQuery,
@@ -13,13 +19,14 @@ import { ApiError } from "../../core/api/session-client";
 import {
   AppText,
   Button,
+  Icon,
   Notice,
-  Sheet,
   StatePanel,
   TextField,
   colors,
   space,
   presentError,
+  stitchTokens,
 } from "../../core/ui";
 import { receipt } from "./contracts";
 import {
@@ -50,12 +57,16 @@ const books = z.object({
   items: z.array(book),
   nextCursor: z.string().nullable(),
 });
-const requests = z.object({
-  items: z.array(ownBook),
-  nextCursor: z.string().nullable(),
-});
 type OwnBook = z.infer<typeof ownBook>;
-export function BookIdentity({ id }: { id: string | null }) {
+export function BookIdentity({
+  id,
+  onEdit,
+  compact,
+}: {
+  id: string | null;
+  onEdit?: () => void;
+  compact?: boolean;
+}) {
   const { client } = useSession();
   const read = useQuery({
     queryKey: ["listing-book", id],
@@ -70,7 +81,44 @@ export function BookIdentity({ id }: { id: string | null }) {
       }
     },
   });
-  if (!id) return <AppText kind="heading">Chưa chọn đầu sách</AppText>;
+  if (!id) {
+    if (compact) {
+      return (
+        <View style={{ gap: 2 }}>
+          <AppText
+            kind="bold"
+            color={stitchTokens.wineDark}
+            style={{ fontSize: 13, lineHeight: 17 }}
+            numberOfLines={2}
+          >
+            Chưa chọn đầu sách
+          </AppText>
+          <AppText kind="small" color="#8B716D" style={{ fontSize: 10 }}>
+            Chưa gán catalog
+          </AppText>
+        </View>
+      );
+    }
+    return (
+      <View
+        style={{
+          alignItems: "center",
+          justifyContent: "center",
+          paddingBottom: space.xs,
+          borderBottomWidth: 1,
+          borderColor: "#DEC0BB",
+        }}
+      >
+        <AppText
+          kind="heading"
+          color={stitchTokens.wineDark}
+          style={{ textAlign: "center" }}
+        >
+          Chưa chọn đầu sách
+        </AppText>
+      </View>
+    );
+  }
   if (read.isPending) return <AppText kind="small">Đang tải tên sách…</AppText>;
   if (!read.data)
     return (
@@ -84,22 +132,119 @@ export function BookIdentity({ id }: { id: string | null }) {
         />
       </View>
     );
+
+  if (compact) {
+    return (
+      <View style={{ gap: 2 }}>
+        <AppText
+          kind="bold"
+          color={stitchTokens.wineDark}
+          style={{ fontSize: 13, lineHeight: 17 }}
+          numberOfLines={2}
+        >
+          {read.data.title}
+        </AppText>
+        <AppText
+          kind="small"
+          color="#7D7068"
+          style={{ fontSize: 11 }}
+          numberOfLines={1}
+        >
+          {read.data.authors.join(" · ")}
+        </AppText>
+      </View>
+    );
+  }
+
+  const metaText =
+    [
+      read.data.publisher,
+      read.data.publicationYear,
+      read.data.edition,
+      read.data.isbn ? `ISBN ${read.data.isbn}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || read.data.category;
+
   return (
-    <View style={{ gap: space.sm }}>
-      <AppText kind="heading" accessibilityRole="header">
-        {read.data.title}
-      </AppText>
-      <AppText kind="small">{read.data.authors.join(" · ")}</AppText>
-      <AppText kind="small">
-        {[
-          read.data.publisher,
-          read.data.publicationYear,
-          read.data.edition,
-          read.data.isbn ? `ISBN ${read.data.isbn}` : null,
-        ]
-          .filter(Boolean)
-          .join(" · ") || read.data.category}
-      </AppText>
+    <View
+      style={{
+        padding: 12,
+        backgroundColor: "#FFFDF8",
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: "#DDD5C7",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+      }}
+    >
+      <View
+        style={{
+          width: 50,
+          height: 68,
+          borderRadius: 6,
+          backgroundColor: "#FAF7F2",
+          borderWidth: 1,
+          borderColor: "#DEC0BB",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <AppText kind="title" color={colors.rustText} style={{ fontSize: 20 }}>
+          📖
+        </AppText>
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <View
+            style={{
+              backgroundColor: "#E7E3C7",
+              paddingHorizontal: 6,
+              paddingVertical: 2,
+              borderRadius: 4,
+            }}
+          >
+            <AppText
+              kind="small"
+              color={colors.rustText}
+              style={{ fontSize: 9, fontWeight: "700" }}
+            >
+              ĐÃ KHỚP CATALOG
+            </AppText>
+          </View>
+          <AppText kind="small" color="#7D7068" style={{ fontSize: 10 }}>
+            {`#BK-${id.slice(0, 6).toUpperCase()}`}
+          </AppText>
+        </View>
+        <AppText
+          kind="bold"
+          color={stitchTokens.wineDark}
+          style={{ fontSize: 15 }}
+          numberOfLines={2}
+        >
+          {read.data.title}
+        </AppText>
+        <AppText kind="small" color="#7D7068" numberOfLines={1}>
+          {read.data.authors.join(" · ")}
+        </AppText>
+        <AppText
+          kind="small"
+          color="#7D7068"
+          style={{ fontSize: 11 }}
+          numberOfLines={1}
+        >
+          {metaText}
+        </AppText>
+      </View>
+      {onEdit ? (
+        <Button secondary title="Đổi sách" onPress={onEdit} />
+      ) : null}
     </View>
   );
 }
@@ -126,10 +271,11 @@ export function CatalogPicker({
 }) {
   const { client } = useSession(),
     cache = useQueryClient();
+  const [entryMode, setEntryMode] = useState<"catalog" | "manual">("catalog");
   const [search, setSearch] = useState(""),
-    [term, setTerm] = useState("");
-  const [open, setOpen] = useState(false),
-    [edit, setEdit] = useState<OwnBook | null>(null),
+    [term, setTerm] = useState(""),
+    [isFocused, setIsFocused] = useState(false);
+  const [edit, setEdit] = useState<OwnBook | null>(null),
     [form, setForm] = useState(blank),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -151,18 +297,7 @@ export function CatalogPicker({
         books,
       ),
     getNextPageParam: (p) => p.nextCursor ?? undefined,
-    enabled: !disabled,
-  });
-  const mine = useInfiniteQuery({
-    queryKey: ["catalog-mine"],
-    initialPageParam: null as string | null,
-    queryFn: ({ pageParam }) =>
-      client.request(
-        `/me/catalog-requests?limit=10${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ""}`,
-        requests,
-      ),
-    getNextPageParam: (p) => p.nextCursor ?? undefined,
-    enabled: !disabled,
+    enabled: !disabled && term.trim().length >= 2,
   });
   const send = async () => {
     if (busyRef.current) return;
@@ -229,11 +364,9 @@ export function CatalogPicker({
       });
       attempt.current = null;
       onSelect(result.entityId);
-      setOpen(false);
       setForm(blank);
       setEdit(null);
       onDirtyChange(false);
-      await cache.invalidateQueries({ queryKey: ["catalog-mine"] });
       await cache.invalidateQueries({
         queryKey: ["listing-book", result.entityId],
       });
@@ -252,239 +385,420 @@ export function CatalogPicker({
     }
   };
   return (
-    <View style={{ gap: space.lg }}>
+    <View style={{ gap: space.md }}>
       <BookIdentity id={selected} />
       {!disabled ? (
         <>
-          <AppText>
-            Chọn đúng đầu sách và ấn bản. Tình trạng cuốn sách của bạn sẽ được
-            mô tả ở bước sau.
-          </AppText>
-          <TextField
-            label="Tìm tên sách, tác giả hoặc ISBN"
-            value={search}
-            onChangeText={setSearch}
-            maxLength={200}
-          />
-          {found.isPending ? (
-            <StatePanel loading title="Đang tìm trong danh mục" />
-          ) : null}
-          {found.error ? (
-            <StatePanel
-              title="Chưa tải được danh mục"
-              action={{
-                label: "Thử lại",
-                onPress: () => void found.refetch(),
-                busy: found.isFetching,
-              }}
-            />
-          ) : null}
-          {found.data?.pages[0].items.length === 0 ? (
-            <AppText kind="small">
-              Chưa tìm thấy đầu sách phù hợp. Bạn có thể gửi thông tin ở bên
-              dưới.
-            </AppText>
-          ) : null}
-          {found.data?.pages
-            .flatMap((p) => p.items)
-            .map((b) => (
-              <View
-                key={b.id}
-                style={{
-                  gap: space.sm,
-                  paddingVertical: space.md,
-                  borderBottomWidth: 1,
-                  borderColor: colors.rule,
-                }}
+          {/* Sub-tabs: [ 📖 Tìm sách có sẵn ]   [ ✏️ Tự nhập thông tin ] */}
+          <View style={styles.entryChoiceRow}>
+            <Pressable
+              onPress={() => setEntryMode("catalog")}
+              style={[
+                styles.entryChoiceTab,
+                entryMode === "catalog" && styles.entryChoiceTabActive,
+              ]}
+            >
+              <Icon
+                name="book"
+                size={16}
+                color={entryMode === "catalog" ? stitchTokens.wine : "#735650"}
+              />
+              <AppText
+                style={[
+                  styles.entryChoiceText,
+                  entryMode === "catalog" && styles.entryChoiceTextActive,
+                ]}
               >
-                <AppText kind="heading">{b.title}</AppText>
-                <AppText kind="small">{b.authors.join(" · ")}</AppText>
-                <AppText kind="small">
-                  {[b.publisher, b.publicationYear, b.edition, b.isbn]
-                    .filter(Boolean)
-                    .join(" · ") || b.category}
-                </AppText>
-                <Button
-                  secondary
-                  title={
-                    selected === b.id
-                      ? "Đã chọn đầu sách này"
-                      : "Chọn đầu sách này"
-                  }
-                  disabled={selected === b.id}
-                  onPress={() => onSelect(b.id)}
+                Tìm sách có sẵn
+              </AppText>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setEntryMode("manual")}
+              style={[
+                styles.entryChoiceTab,
+                entryMode === "manual" && styles.entryChoiceTabActive,
+              ]}
+            >
+              <Icon
+                name="pen"
+                size={16}
+                color={entryMode === "manual" ? stitchTokens.wine : "#735650"}
+              />
+              <AppText
+                style={[
+                  styles.entryChoiceText,
+                  entryMode === "manual" && styles.entryChoiceTextActive,
+                ]}
+              >
+                Tự nhập thông tin
+              </AppText>
+            </Pressable>
+          </View>
+
+          {entryMode === "catalog" ? (
+            <View style={{ gap: space.md }}>
+              <AppText kind="bold" style={{ fontSize: 15, color: "#2B1D19" }}>
+                Tìm cuốn sách trong thư viện
+              </AppText>
+
+              {/* Big prominent search bar */}
+              <View
+                style={[
+                  styles.searchBar,
+                  isFocused && styles.searchBarFocused,
+                ]}
+              >
+                <View style={styles.searchIconContainer}>
+                  <Icon
+                    name="search"
+                    size={22}
+                    color={isFocused ? stitchTokens.wine : "#735650"}
+                  />
+                </View>
+                <TextInput
+                  placeholder="Nhập tên, tác giả hoặc ISBN..."
+                  placeholderTextColor="#9E8E89"
+                  value={search}
+                  onChangeText={setSearch}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  style={styles.searchInput}
+                  returnKeyType="search"
+                  autoCorrect={false}
                 />
+                {search.length > 0 ? (
+                  <Pressable
+                    onPress={() => setSearch("")}
+                    hitSlop={10}
+                    style={styles.searchClearBtn}
+                  >
+                    <Icon name="close" size={14} color="#735650" />
+                  </Pressable>
+                ) : null}
               </View>
-            ))}
-          {found.hasNextPage ? (
-            <Button
-              secondary
-              title="Xem thêm đầu sách"
-              busy={found.isFetchingNextPage}
-              onPress={() => void found.fetchNextPage()}
-            />
-          ) : null}
-          <AppText kind="heading">Đầu sách bạn đã đề nghị</AppText>
-          {mine.isPending ? (
-            <StatePanel loading title="Đang tải đề nghị của bạn" />
-          ) : null}
-          {mine.error ? (
-            <StatePanel
-              title="Chưa tải được các đề nghị"
-              action={{ label: "Thử lại", onPress: () => void mine.refetch() }}
-            />
-          ) : null}
-          {mine.data?.pages[0].items.length === 0 ? (
-            <AppText kind="small">Bạn chưa đề nghị đầu sách mới.</AppText>
-          ) : null}
-          {mine.data?.pages
-            .flatMap((p) => p.items)
-            .map((b) => (
-              <View
-                key={b.id}
-                style={{
-                  gap: space.sm,
-                  paddingVertical: space.md,
-                  borderBottomWidth: 1,
-                  borderColor: colors.rule,
-                }}
-              >
-                <AppText kind="bold">
-                  {b.currentRevision.metadata.title}
-                </AppText>
-                <AppText kind="small">
-                  {b.status === "Pending"
-                    ? "Chờ xác nhận thông tin đầu sách"
-                    : b.status === "Rejected"
-                      ? "Thông tin cần chỉnh sửa"
-                      : "Đã có trong danh mục"}
-                </AppText>
-                {b.status === "Rejected" ? (
-                  <>
-                    <Notice tone="warning">
-                      {b.decisions[0]?.reason ||
-                        "Hãy kiểm tra lại thông tin ấn bản."}
-                    </Notice>
-                    <Button
-                      secondary
-                      title="Sửa thông tin đầu sách"
-                      onPress={() => {
-                        const m = b.currentRevision.metadata;
-                        if (attempt.current) {
-                          setOpen(true);
-                          return;
-                        }
-                        setEdit(b);
-                        onDirtyChange(true);
-                        setForm({
-                          ...m,
-                          authors: m.authors.join("; "),
-                          publisher: m.publisher ?? "",
-                          publicationYear: m.publicationYear?.toString() ?? "",
-                          edition: m.edition ?? "",
-                          isbn: m.isbn ?? "",
-                        });
-                        setError("");
-                        setOpen(true);
+
+              {term.trim().length >= 2 ? (
+                <>
+                  {found.isPending ? (
+                    <StatePanel loading title="Đang tìm trong danh mục" />
+                  ) : null}
+
+                  {found.error ? (
+                    <StatePanel
+                      title="Chưa tải được danh mục"
+                      action={{
+                        label: "Thử lại",
+                        onPress: () => void found.refetch(),
+                        busy: found.isFetching,
                       }}
                     />
-                  </>
-                ) : (
-                  <Button
-                    secondary
-                    title={selected === b.id ? "Đã chọn" : "Dùng đầu sách này"}
-                    disabled={selected === b.id}
-                    onPress={() => onSelect(b.id)}
-                  />
-                )}
+                  ) : null}
+
+                  {!found.isPending &&
+                  !found.error &&
+                  found.data?.pages[0]?.items.length === 0 ? (
+                    <View style={{ gap: 4 }}>
+                      <AppText kind="small" color="#4A3B32" style={{ fontSize: 13 }}>
+                        Chưa tìm thấy. Bạn có thể chọn Tự nhập thông tin.
+                      </AppText>
+                      <AppText kind="small" color="#8C807C" style={{ fontSize: 12 }}>
+                        Chọn đúng đầu sách để điền sẵn tên, tác giả và phân loại.
+                      </AppText>
+                      <Pressable
+                        onPress={() => setEntryMode("manual")}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 4,
+                          marginTop: 4,
+                        }}
+                      >
+                        <AppText
+                          kind="small"
+                          color={stitchTokens.wine}
+                          style={{
+                            fontWeight: "700",
+                            textDecorationLine: "underline",
+                          }}
+                        >
+                          Không thấy sách? Tự nhập theo bìa →
+                        </AppText>
+                      </Pressable>
+                    </View>
+                  ) : null}
+
+                  {found.data?.pages
+                    .flatMap((p) => p.items)
+                    .map((b) => (
+                      <View key={b.id} style={styles.bookResultCard}>
+                        <AppText kind="heading" color={stitchTokens.wineDark}>
+                          {b.title}
+                        </AppText>
+                        <AppText kind="small" color="#735650">
+                          {b.authors.join(" · ")}
+                        </AppText>
+                        <AppText kind="small" color="#8C807C">
+                          {[b.publisher, b.publicationYear, b.edition, b.isbn]
+                            .filter(Boolean)
+                            .join(" · ") || b.category}
+                        </AppText>
+                        <Button
+                          wine
+                          title={
+                            selected === b.id
+                              ? "Đã chọn đầu sách này"
+                              : "Chọn đầu sách này"
+                          }
+                          disabled={selected === b.id}
+                          onPress={() => onSelect(b.id)}
+                        />
+                      </View>
+                    ))}
+
+                  {found.hasNextPage ? (
+                    <Button
+                      secondary
+                      title="Xem thêm đầu sách"
+                      busy={found.isFetchingNextPage}
+                      onPress={() => void found.fetchNextPage()}
+                    />
+                  ) : null}
+                </>
+              ) : (
+                <View style={{ gap: 4 }}>
+                  <AppText kind="small" color="#8C807C" style={{ fontSize: 12 }}>
+                    Chọn đúng đầu sách để điền sẵn tên, tác giả và phân loại.
+                  </AppText>
+                  <Pressable
+                    onPress={() => setEntryMode("manual")}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                      marginTop: 4,
+                    }}
+                  >
+                    <AppText
+                      kind="small"
+                      color={stitchTokens.wine}
+                      style={{
+                        fontWeight: "700",
+                        textDecorationLine: "underline",
+                      }}
+                    >
+                      Không thấy sách? Tự nhập theo bìa →
+                    </AppText>
+                  </Pressable>
+                </View>
+              )}
+
+              <AppText
+                style={{
+                  textAlign: "right",
+                  fontStyle: "italic",
+                  color: stitchTokens.wine,
+                  fontSize: 13,
+                  marginTop: space.xs,
+                }}
+              >
+                Mỗi cuốn sách, một câu chuyện.
+              </AppText>
+            </View>
+          ) : (
+            /* Mode 2: Tự nhập thông tin */
+            <View style={{ gap: space.md }}>
+              <AppText kind="bold" style={{ fontSize: 15, color: "#2B1D19" }}>
+                Tự nhập thông tin sách
+              </AppText>
+              <AppText color="#735650" style={{ fontSize: 13 }}>
+                Ghi tên sách và tác giả đúng như trên bìa. Thông tin sẽ được dùng để gán cho ấn bản của bạn.
+              </AppText>
+
+              {error ? <Notice tone="error">{error}</Notice> : null}
+
+              <TextField
+                label="Tên sách *"
+                value={form.title}
+                placeholder="Ví dụ: Truyện Kiều"
+                onChangeText={(v) => {
+                  onDirtyChange(true);
+                  setForm((f) => ({ ...f, title: v }));
+                }}
+                maxLength={300}
+              />
+
+              <TextField
+                label="Tác giả * (ngăn cách bằng dấu ; nếu nhiều tác giả)"
+                value={form.authors}
+                placeholder="Ví dụ: Nguyễn Du"
+                onChangeText={(v) => {
+                  onDirtyChange(true);
+                  setForm((f) => ({ ...f, authors: v }));
+                }}
+                maxLength={500}
+              />
+
+              <TextField
+                label="Thể loại / Danh mục *"
+                value={form.category}
+                placeholder="Ví dụ: Văn học, Kinh tế, Kỹ năng sống..."
+                onChangeText={(v) => {
+                  onDirtyChange(true);
+                  setForm((f) => ({ ...f, category: v }));
+                }}
+                maxLength={80}
+              />
+
+              <TextField
+                label="Ngôn ngữ"
+                value={form.language}
+                placeholder="vi"
+                onChangeText={(v) => {
+                  onDirtyChange(true);
+                  setForm((f) => ({ ...f, language: v }));
+                }}
+                maxLength={35}
+              />
+
+              <TextField
+                label="Nhà xuất bản (nếu có)"
+                value={form.publisher}
+                placeholder="Ví dụ: NXB Kim Đồng"
+                onChangeText={(v) => {
+                  onDirtyChange(true);
+                  setForm((f) => ({ ...f, publisher: v }));
+                }}
+                maxLength={200}
+              />
+
+              <TextField
+                label="Năm xuất bản (nếu có)"
+                value={form.publicationYear}
+                placeholder="Ví dụ: 2021"
+                keyboardType="number-pad"
+                onChangeText={(v) => {
+                  onDirtyChange(true);
+                  setForm((f) => ({ ...f, publicationYear: v }));
+                }}
+                maxLength={4}
+              />
+
+              <TextField
+                label="ISBN (nếu có)"
+                value={form.isbn}
+                placeholder="Ví dụ: 9786042123456"
+                onChangeText={(v) => {
+                  onDirtyChange(true);
+                  setForm((f) => ({ ...f, isbn: v }));
+                }}
+                maxLength={30}
+              />
+
+              <View style={{ gap: space.sm, marginTop: space.xs }}>
+                <Button
+                  wine
+                  title="Xác nhận & Sử dụng đầu sách này"
+                  busy={busy}
+                  disabled={busy || !form.title.trim() || !form.authors.trim()}
+                  onPress={async () => {
+                    await send();
+                  }}
+                />
+                <Button
+                  secondary
+                  title="← Quay lại tìm sách có sẵn"
+                  disabled={busy}
+                  onPress={() => setEntryMode("catalog")}
+                />
               </View>
-            ))}
-          {mine.hasNextPage ? (
-            <Button
-              secondary
-              title="Xem thêm đề nghị"
-              busy={mine.isFetchingNextPage}
-              onPress={() => void mine.fetchNextPage()}
-            />
-          ) : null}
-          <Button
-            secondary
-            title="Chưa có sách? Gửi thông tin đầu sách"
-            onPress={() => {
-              if (!attempt.current) setEdit(null);
-              setError("");
-              setOpen(true);
-            }}
-          />
+            </View>
+          )}
         </>
       ) : null}
-      <Sheet
-        visible={open}
-        title={edit ? "Sửa thông tin đầu sách" : "Đề nghị đầu sách mới"}
-        onClose={() => setOpen(false)}
-        dismissible={!busy}
-      >
-        <View style={{ gap: space.lg }}>
-          <AppText>
-            Chép thông tin trên trang tên sách và trang bản quyền. Đề nghị sẽ
-            được kiểm tra trước khi bài đăng có thể được duyệt.
-          </AppText>
-          {Object.entries({
-            title: "Tên sách",
-            authors: "Tác giả (ngăn cách bằng dấu ;)",
-            publisher: "Nhà xuất bản (nếu có)",
-            publicationYear: "Năm xuất bản (nếu có)",
-            language: "Mã ngôn ngữ, ví dụ vi hoặc en",
-            edition: "Ấn bản (nếu có)",
-            category: "Thể loại",
-            isbn: "ISBN (nếu có)",
-          }).map(([k, label]) => (
-            <TextField
-              key={k}
-              label={label}
-              value={form[k as keyof typeof blank]}
-              editable={
-                !busy &&
-                !retryPending &&
-                !(k === "category" && edit?.currentRevision.metadata.categoryId)
-              }
-              maxLength={
-                k === "title"
-                  ? 300
-                  : k === "authors"
-                    ? 2010
-                    : k === "category"
-                      ? 80
-                      : k === "publicationYear"
-                        ? 4
-                        : k === "language"
-                          ? 35
-                          : 200
-              }
-              keyboardType={k === "publicationYear" ? "number-pad" : "default"}
-              onChangeText={(v) => {
-                onDirtyChange(true);
-                setForm((f) => ({ ...f, [k]: v }));
-              }}
-            />
-          ))}
-          {error ? (
-            <Notice tone="error">
-              {error}
-              {retryPending ? " Thử lại để kiểm tra đúng đề nghị vừa gửi." : ""}
-            </Notice>
-          ) : null}
-          <Button
-            title={
-              retryPending
-                ? "Thử lại đề nghị vừa gửi"
-                : "Gửi thông tin đầu sách"
-            }
-            busy={busy}
-            onPress={() => void send()}
-          />
-        </View>
-      </Sheet>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  entryChoiceRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderColor: "#E5DCD8",
+    gap: 20,
+    marginBottom: 4,
+  },
+  entryChoiceTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 2,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  entryChoiceTabActive: {
+    borderBottomColor: stitchTokens.wine,
+  },
+  entryChoiceText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#735650",
+  },
+  entryChoiceTextActive: {
+    color: stitchTokens.wine,
+    fontWeight: "700",
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    minHeight: 56,
+    borderWidth: 1.5,
+    borderColor: "#DEC0BB",
+    borderRadius: 16,
+    backgroundColor: "#FAF7F5",
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === "ios" ? 10 : 8,
+    shadowColor: "#5C0202",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  searchBarFocused: {
+    borderColor: stitchTokens.wine,
+    backgroundColor: "#FFFFFF",
+    shadowOpacity: 0.1,
+    elevation: 2,
+  },
+  searchIconContainer: {
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: "#2B1D19",
+    paddingVertical: 0,
+    fontWeight: "500",
+  },
+  searchClearBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#EFE8E6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bookResultCard: {
+    gap: space.sm,
+    padding: space.md,
+    backgroundColor: "#FFFDF8",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#DEC0BB",
+  },
+});

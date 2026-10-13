@@ -12,8 +12,12 @@ export type Filters = {
   sort: keyof typeof sorts;
   minSalePrice: string;
   maxSalePrice: string;
-  minExchangeValue: string;
-  maxExchangeValue: string;
+  minExchangeValue?: string;
+  maxExchangeValue?: string;
+  categoryId?: string;
+  facets?: string;
+  series?: string;
+  language?: string;
 };
 export const initialFilters: Filters = {
   q: "",
@@ -24,16 +28,18 @@ export const initialFilters: Filters = {
   maxSalePrice: "",
   minExchangeValue: "",
   maxExchangeValue: "",
+  language: "",
 };
 export function filterError(filters: Filters): string | undefined {
-  if ([...filters.q.trim()].length > 200) return "Từ khóa tối đa 200 ký tự.";
+  if (filters.q && [...filters.q.trim()].length > 200)
+    return "Từ khóa tối đa 200 ký tự.";
   for (const field of [
     "minSalePrice",
     "maxSalePrice",
     "minExchangeValue",
     "maxExchangeValue",
   ] as const) {
-    const value = filters[field].trim();
+    const value = typeof filters[field] === "string" ? filters[field].trim() : "";
     if (
       value &&
       (!/^\d+$/.test(value) || Number(value) < 10000 || Number(value) > 1000000)
@@ -43,18 +49,17 @@ export function filterError(filters: Filters): string | undefined {
   for (const [min, max] of [
     ["minSalePrice", "maxSalePrice"],
     ["minExchangeValue", "maxExchangeValue"],
-  ] as const)
-    if (
-      filters[min].trim() &&
-      filters[max].trim() &&
-      Number(filters[min]) > Number(filters[max])
-    )
+  ] as const) {
+    const minVal = typeof filters[min] === "string" ? filters[min].trim() : "";
+    const maxVal = typeof filters[max] === "string" ? filters[max].trim() : "";
+    if (minVal && maxVal && Number(minVal) > Number(maxVal))
       return "Giá tối thiểu cần nhỏ hơn hoặc bằng giá tối đa.";
+  }
 }
 export function queryString(filters: Filters): string {
   const query = new URLSearchParams({ limit: "12", sort: filters.sort });
   for (const [key, value] of Object.entries(filters))
-    if (key !== "sort" && value.trim())
+    if (key !== "sort" && typeof value === "string" && value.trim())
       query.set(
         key,
         key.includes("Price") || key.includes("Value")

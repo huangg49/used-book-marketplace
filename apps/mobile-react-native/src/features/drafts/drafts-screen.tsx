@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import {
   useInfiniteQuery,
@@ -11,28 +11,41 @@ import * as Crypto from "expo-crypto";
 import { useSession } from "../../core/session/session-provider";
 import {
   AppText,
-  BackAction,
+  BookCard,
   Button,
   Chip,
+  ConfirmDialog,
+  Icon,
   Notice,
   Screen,
   StatePanel,
+  WebBrandLogo,
   colors,
   space,
+  stitchTokens,
 } from "../../core/ui";
 import { draftPage, emptyContent, privateDraft, receipt } from "./contracts";
 import { DraftEditor } from "./draft-editor";
 import { photoError, useForeground } from "./draft-media";
 import { BookIdentity } from "./catalog-picker";
 import { listingSummary, moderationLabel } from "./listing-form";
+import { executeLifecycle, lifecycleIntent } from "./lifecycle-command";
 import { MemberNavigation } from "../navigation/member-navigation";
+
 export function DraftsScreen() {
   const { client, state } = useSession(),
     cache = useQueryClient();
   const foreground = useForeground();
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    version: number;
+  } | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const createKey = useRef<string | null>(null);
+
   const drafts = useInfiniteQuery({
     queryKey: ["drafts", filter],
     initialPageParam: null as string | null,
@@ -47,12 +60,21 @@ export function DraftsScreen() {
     enabled: foreground,
     refetchInterval: foreground ? 15000 : false,
   });
+
+  const allDrafts = useQuery({
+    queryKey: ["drafts-metrics"],
+    queryFn: () => client.request("/me/listings?limit=50", draftPage),
+    enabled: foreground,
+    refetchInterval: foreground ? 15000 : false,
+  });
+
   const detail = useQuery({
     queryKey: ["draft", selected],
     queryFn: () => client.request(`/me/listings/${selected}`, privateDraft),
     enabled: !!selected,
     refetchOnWindowFocus: false,
   });
+
   const create = useMutation({
     mutationFn: () => {
       createKey.current ??= Crypto.randomUUID();
@@ -66,8 +88,10 @@ export function DraftsScreen() {
       createKey.current = null;
       setSelected(r.entityId);
       await cache.invalidateQueries({ queryKey: ["drafts"] });
+      await cache.invalidateQueries({ queryKey: ["drafts-metrics"] });
     },
   });
+
   if (selected && detail.data)
     return (
       <DraftEditor
@@ -76,10 +100,12 @@ export function DraftsScreen() {
         onBack={() => {
           setSelected(null);
           void cache.invalidateQueries({ queryKey: ["drafts"] });
+          void cache.invalidateQueries({ queryKey: ["drafts-metrics"] });
           void cache.removeQueries({ queryKey: ["draft", selected] });
         }}
       />
     );
+
   if (selected)
     return (
       <Screen>
@@ -94,129 +120,441 @@ export function DraftsScreen() {
         />
         <Button
           title="Về danh sách"
+          wine
           secondary
           onPress={() => setSelected(null)}
         />
       </Screen>
     );
+
+  const metricItems = allDrafts.data?.items ?? [];
+  const totalCount = metricItems.length;
+  const pendingCount = metricItems.filter(
+    (d) => d.state.moderation === "PendingReview",
+  ).length;
+  const approvedCount = metricItems.filter(
+    (d) => d.state.moderation === "Approved",
+  ).length;
+  const rejectedCount = metricItems.filter(
+    (d) => d.state.moderation === "Rejected",
+  ).length;
+  const draftOnlyCount = metricItems.filter(
+    (d) => d.state.moderation === "Draft",
+  ).length;
+
   return (
     <Screen
       footer={<MemberNavigation current="/drafts" />}
       footerAppearance="navigation"
     >
-      <BackAction
-        title="Về tài khoản"
-        onPress={() => router.replace("./account")}
-      />
-      <View style={{ gap: space.md }}>
-        <AppText kind="label" color={colors.rustText}>
-          TỦ SÁCH CỦA BẠN
-        </AppText>
-        <AppText
-          kind="heading"
-          color={colors.forest}
-          accessibilityRole="header"
-        >
-          Sách của tôi
-        </AppText>
-        <AppText color={colors.muted}>
-          Hoàn thiện bản nháp, theo dõi duyệt bài và xem lại những cuốn bạn muốn
-          chuyền tay.
-        </AppText>
-      </View>
-      <Button
-        title="Tạo bản nháp"
-        busy={create.isPending}
-        disabled={
-          state.status !== "authenticated" || state.user.status !== "ACTIVE"
-        }
-        onPress={() => {
-          if (!create.isPending) create.mutate();
+      {/* DangSachHome Header */}
+      <View
+        style={{
+          alignItems: "center",
+          justifyContent: "center",
+          marginTop: space.xs,
+          marginBottom: 4,
+          gap: 6,
         }}
-      />
-      <View style={{ gap: space.sm, flexDirection: "row", flexWrap: "wrap" }}>
-        {[["", "Tất cả sách"], ...Object.entries(moderationLabel)].map(
-          ([value, label]) => (
-            <Chip
-              key={value}
-              selected={filter === value}
-              title={label}
-              onPress={() => setFilter(value)}
-            />
-          ),
-        )}
+      >
+        <View
+          style={{
+            backgroundColor: stitchTokens.wine,
+            paddingHorizontal: 18,
+            paddingVertical: 7,
+            borderRadius: 14,
+            shadowColor: stitchTokens.wine,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 4,
+            elevation: 3,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <WebBrandLogo scale={0.75} />
+        </View>
+
+        <View
+          style={{
+            paddingHorizontal: 10,
+            paddingVertical: 3,
+            borderRadius: 10,
+            backgroundColor: "#FFE2D9",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+          }}
+        >
+          <Icon name="book" size={12} color={stitchTokens.wine} />
+          <AppText
+            kind="small"
+            color={stitchTokens.wine}
+            style={{
+              fontSize: 10,
+              fontWeight: "700",
+              letterSpacing: 0.5,
+            }}
+          >
+            TỦ SÁCH CỦA TÔI · QUẢN LÝ BÀI ĐĂNG
+          </AppText>
+        </View>
+
+
       </View>
+
+      {/* Bento Stats & Quick Action Hero */}
+      <View
+        style={{
+          backgroundColor: "#FFFDF8",
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: "#DEC0BB",
+          padding: space.md,
+          gap: space.md,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+          elevation: 2,
+        }}
+      >
+        {/* 4-Stat Metric Row */}
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "#FAF7F2",
+              paddingVertical: 8,
+              paddingHorizontal: 2,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: "#DEC0BB",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <AppText
+              kind="heading"
+              color={stitchTokens.wineDark}
+              style={{ fontSize: 20, fontWeight: "700" }}
+            >
+              {totalCount}
+            </AppText>
+            <AppText
+              kind="small"
+              color="#8B716D"
+              style={{ fontSize: 10, marginTop: 2, fontWeight: "600" }}
+            >
+              Tổng ấn bản
+            </AppText>
+          </View>
+
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "#FAF7F2",
+              paddingVertical: 8,
+              paddingHorizontal: 2,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: "#DEC0BB",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+              <View
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: "#EAC25F",
+                }}
+              />
+              <AppText
+                kind="heading"
+                color={stitchTokens.wineDark}
+                style={{ fontSize: 20, fontWeight: "700" }}
+              >
+                {pendingCount}
+              </AppText>
+            </View>
+            <AppText
+              kind="small"
+              color="#8B716D"
+              style={{ fontSize: 10, marginTop: 2, fontWeight: "600" }}
+            >
+              Chờ duyệt
+            </AppText>
+          </View>
+
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "#FAF7F2",
+              paddingVertical: 8,
+              paddingHorizontal: 2,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: "#DEC0BB",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+              <View
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: "#3D7A57",
+                }}
+              />
+              <AppText
+                kind="heading"
+                color={stitchTokens.wineDark}
+                style={{ fontSize: 20, fontWeight: "700" }}
+              >
+                {approvedCount}
+              </AppText>
+            </View>
+            <AppText
+              kind="small"
+              color="#8B716D"
+              style={{ fontSize: 10, marginTop: 2, fontWeight: "600" }}
+            >
+              Đang bán
+            </AppText>
+          </View>
+
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "#FAF7F2",
+              paddingVertical: 8,
+              paddingHorizontal: 2,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: "#DEC0BB",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+              <View
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: "#A63A2E",
+                }}
+              />
+              <AppText
+                kind="heading"
+                color="#A63A2E"
+                style={{ fontSize: 20, fontWeight: "700" }}
+              >
+                {rejectedCount}
+              </AppText>
+            </View>
+            <AppText
+              kind="small"
+              color="#8B716D"
+              style={{ fontSize: 10, marginTop: 2, fontWeight: "600" }}
+            >
+              Cần sửa
+            </AppText>
+          </View>
+        </View>
+
+        {/* Quick Action CTA Button */}
+        <Button
+          title="+ Đăng Sách Mới Ngay"
+          wine
+          busy={create.isPending}
+          disabled={
+            state.status !== "authenticated" || state.user.status !== "ACTIVE"
+          }
+          onPress={() => {
+            if (!create.isPending) create.mutate();
+          }}
+        />
+      </View>
+
+      {/* Status Filter Chips (Single Horizontal Scrollable Row) */}
+      <View style={{ marginTop: space.xs }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{
+            gap: 6,
+            paddingVertical: 4,
+          }}
+          style={{ flexGrow: 0 }}
+        >
+          {[
+            { value: "", label: "Tất cả", count: totalCount },
+            { value: "Draft", label: "Bản nháp", count: draftOnlyCount },
+            { value: "PendingReview", label: "Chờ duyệt", count: pendingCount },
+            { value: "Rejected", label: "Cần sửa", count: rejectedCount },
+            { value: "Approved", label: "Đang niêm yết", count: approvedCount },
+          ].map((tab) => (
+            <Chip
+              key={tab.value}
+              selected={filter === tab.value}
+              title={`${tab.label} (${tab.count})`}
+              wine
+              onPress={() => setFilter(tab.value)}
+            />
+          ))}
+        </ScrollView>
+      </View>
+
       {create.error ? (
         <Notice tone="error">{photoError(create.error)}</Notice>
       ) : null}
+
       {drafts.isPending ? (
-        <StatePanel loading title="Đang tải bản nháp" />
+        <StatePanel loading title="Đang tải danh sách bài đăng…" />
       ) : null}
+
       {drafts.error ? (
         <>
           <Notice tone="error">{photoError(drafts.error)}</Notice>
           <Button
             title="Thử tải lại"
+            wine
             secondary
             onPress={() => void drafts.refetch()}
           />
         </>
       ) : null}
+
       {drafts.data?.pages[0].items.length === 0 ? (
-        <StatePanel
-          title="Chưa có sách trong mục này"
-          message="Bản nháp và kết quả duyệt của bạn sẽ xuất hiện ở đây."
-        />
+        <View
+          style={{
+            backgroundColor: "#FFFDF8",
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: "#DEC0BB",
+            padding: space.lg,
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <Icon name="book" size={32} color="#8B716D" />
+          <AppText kind="bold" color={stitchTokens.wineDark}>
+            Chưa có bài đăng nào trong mục này
+          </AppText>
+          <AppText kind="small" color="#8B716D" style={{ textAlign: "center" }}>
+            Các ấn bản bạn tạo, gửi duyệt hoặc đang niêm yết sẽ xuất hiện tại đây.
+          </AppText>
+        </View>
       ) : null}
-      {drafts.data?.pages
-        .flatMap((p) => p.items)
-        .map((d, i) => {
-          const summary = listingSummary(d, i + 1);
-          return (
-            <View
-              key={d.id}
-              style={{
-                gap: space.sm,
-                paddingVertical: space.lg,
-                borderTopWidth: 1,
-                borderColor: colors.rule,
-              }}
-            >
-              <AppText kind="label" color={colors.rustText}>
-                {summary.status}
-              </AppText>
-              <BookIdentity id={d.currentRevision.content.bookId} />
-              <AppText>
-                {d.currentRevision.content.description ||
-                  "Chưa có lời nhắn về cuốn sách."}
-              </AppText>
-              <AppText kind="small">
-                {d.currentRevision.content.mediaIds.length} ảnh đã chọn
-              </AppText>
-              {summary.note ? (
-                <AppText
-                  kind="small"
-                  color={
-                    d.state.moderation === "Rejected" ||
-                    d.state.visibility === "Removed"
-                      ? colors.rustText
-                      : colors.muted
+
+      {/* 2-Column Grid Layout for Book Postings */}
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          marginHorizontal: -4,
+        }}
+      >
+        {drafts.data?.pages
+          .flatMap((p) => p.items)
+          .map((d, i) => {
+            const summary = listingSummary(d, i + 1);
+            const modState = d.state.moderation;
+            const isRejected = modState === "Rejected";
+
+            const actionTitle = isRejected
+              ? "Sửa bài"
+              : modState === "PendingReview"
+                ? "Chi tiết"
+                : modState === "Draft"
+                  ? "Hoàn thiện"
+                  : "Xem sách";
+
+            return (
+              <View
+                key={d.id}
+                style={{
+                  width: "50%",
+                  padding: 4,
+                }}
+              >
+                <BookCard
+                  variant="management"
+                  style={{ width: "100%", marginBottom: 0 }}
+                  item={{
+                    id: d.id,
+                    moderation: d.state.moderation,
+                    salePrice: d.currentRevision.content.salePrice,
+                    mediaCount: d.currentRevision.content.mediaIds.length,
+                  }}
+                  titleNode={
+                    <BookIdentity id={d.currentRevision.content.bookId} compact />
                   }
-                >
-                  {summary.note}
-                </AppText>
-              ) : null}
-              <Button
-                secondary
-                title={summary.action}
-                onPress={() => setSelected(d.id)}
-              />
-            </View>
-          );
-        })}
+                  actionTitle={actionTitle}
+                  onActionPress={() => setSelected(d.id)}
+                  onOpen={() => setSelected(d.id)}
+                  onDelete={
+                    !d.state.deletedAt
+                      ? () =>
+                          setDeleteTarget({
+                            id: d.id,
+                            version: d.version,
+                          })
+                      : undefined
+                  }
+                />
+              </View>
+            );
+          })}
+      </View>
+
+      <ConfirmDialog
+        visible={!!deleteTarget}
+        title="Xóa bài đăng"
+        message="Bạn có chắc chắn muốn xóa bài đăng này không? Thao tác này không thể hoàn tác."
+        confirmLabel="Xóa"
+        destructive
+        busy={deleteBusy}
+        error={deleteError}
+        onCancel={() => {
+          if (!deleteBusy) {
+            setDeleteTarget(null);
+            setDeleteError("");
+          }
+        }}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          setDeleteBusy(true);
+          setDeleteError("");
+          try {
+            const intent = lifecycleIntent(
+              deleteTarget.id,
+              deleteTarget.version,
+              "archive",
+              Crypto.randomUUID(),
+            );
+            await executeLifecycle(client, intent);
+            await cache.invalidateQueries({ queryKey: ["drafts"] });
+            await cache.invalidateQueries({ queryKey: ["drafts-metrics"] });
+            setDeleteTarget(null);
+          } catch (e) {
+            setDeleteError(photoError(e));
+          } finally {
+            setDeleteBusy(false);
+          }
+        }}
+      />
+
       {drafts.hasNextPage ? (
         <Button
           title="Xem thêm bản nháp"
+          wine
           secondary
           busy={drafts.isFetchingNextPage}
           onPress={() => void drafts.fetchNextPage()}

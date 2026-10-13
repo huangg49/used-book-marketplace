@@ -90,26 +90,30 @@ export function TextField({
   error,
   required,
   inputRef,
+  focusColor,
   style,
   onFocus,
   onBlur,
   ...props
 }: TextInputProps & {
-  label: string;
+  label?: string;
   hint?: string;
   error?: string;
   required?: boolean;
   inputRef?: Ref<TextInput>;
+  focusColor?: string;
 }) {
   const id = useId();
   const [focused, setFocused] = useState(false);
   const description = error || hint;
   return (
-    <View style={{ gap: space.sm }}>
-      <AppText nativeID={`${id}-label`} kind="bold">
-        {label}
-        {required ? " *" : ""}
-      </AppText>
+    <View style={{ gap: space.xs }}>
+      {label ? (
+        <AppText nativeID={`${id}-label`} kind="bold">
+          {label}
+          {required ? " *" : ""}
+        </AppText>
+      ) : null}
       <TextInput
         {...props}
         ref={inputRef}
@@ -132,13 +136,13 @@ export function TextField({
           layout.input,
           props.multiline && { minHeight: 128, textAlignVertical: "top" },
           props.editable === false && {
-            backgroundColor: colors.successSurface,
+            backgroundColor: "#F4F0E8",
           },
           {
             borderColor: error
               ? colors.error
               : focused
-                ? colors.forest
+                ? (focusColor ?? colors.forest)
                 : colors.border,
             borderWidth: focused ? 2 : 1,
           },
@@ -165,11 +169,15 @@ export function Checkbox({
   checked,
   onPress,
   disabled = false,
+  color,
+  style,
 }: {
   title: string;
   checked: boolean;
   onPress: () => void;
   disabled?: boolean;
+  color?: string;
+  style?: any;
 }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -188,27 +196,30 @@ export function Checkbox({
         focused && layout.focus,
         {
           minHeight: metrics.touch,
-          alignItems: "flex-start",
-          paddingVertical: space.sm,
+          alignItems: "center",
+          paddingVertical: 4,
           opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
         },
+        style,
       ]}
     >
       <View
         style={{
-          width: 24,
-          height: 24,
+          width: 22,
+          height: 22,
           borderWidth: 1,
           borderColor: colors.border,
           borderRadius: radius.small,
-          backgroundColor: checked ? colors.forest : colors.surface,
+          backgroundColor: checked
+            ? color ?? colors.forest
+            : colors.surface,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        {checked ? <Icon name="check" size={18} color={colors.paper} /> : null}
+        {checked ? <Icon name="check" size={16} color={colors.paper} /> : null}
       </View>
-      <AppText style={{ flex: 1 }}>{title}</AppText>
+      <AppText style={{ flexShrink: 1 }}>{title}</AppText>
     </Pressable>
   );
 }

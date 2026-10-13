@@ -20,9 +20,9 @@ export const colorRoles = {
   shelfEdge: "#B5C3AC",
   navigationBackground: colors.surface,
   navigationText: colors.muted,
-  navigationSelected: colors.successSurface,
-  navigationSelectedText: colors.forest,
-  navigationFocus: colors.forest,
+  navigationSelected: "#F7EBE8",
+  navigationSelectedText: "#5C0202",
+  navigationFocus: "#5C0202",
 } as const;
 export const space = {
   xs: 4,
@@ -77,3 +77,27 @@ export const feedbackColors = {
   success: { text: colors.success, surface: colors.successSurface },
   info: { text: colors.info, surface: colors.infoSurface },
 } as const;
+
+export const stitchTokens = {
+  wine: "#5C0202",
+  wineDark: "#360000",
+  wineDeep: "#440000",
+  wineMid: "#6A0404",
+  wineLight: "#8D1919",
+  gold: "#FFDF97",
+  goldLight: "#FFF8E7",
+  goldDark: "#B08D2F",
+  goldAccent: "#F4CB67",
+  creamBg: "#F7F3ED",
+  whiteSurface: "#FFFFFF",
+  cardBorder: "#E8E4DA",
+  flashRed: "#D32F2F",
+  flashRedBg: "#FFEBEE",
+  likeNewGreen: "#1B5E20",
+  likeNewGreenBg: "#E8F5E9",
+  tagFreeshipBg: "#FFEBEE",
+  tagFreeshipText: "#C62828",
+  tagExchangeBg: "#FFF8E1",
+  tagExchangeText: "#E65100",
+} as const;
+
