@@ -199,7 +199,10 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     "PUT",
   );
   await p.clock.fastForward(31_000);
-  await p.getByText(/Nơi gửi đã được sửa hoặc xóa\./).waitFor();
+  await p
+    .locator('div:has-text("Nơi gửi đã được sửa hoặc xóa."):visible')
+    .last()
+    .waitFor();
   await fill("Giá bán (đồng)", "12000");
   await click("Lưu nháp");
   await click("Kiểm tra trạng thái mới nhất");
