@@ -28,9 +28,6 @@ export interface BookCardItem {
   salePrice?: number | null;
   exchangeValue?: number | null;
   coverUrl?: string;
-  badgeLabel?: string;
-  tags?: string[];
-  salesCount?: number;
   location?: string;
   fulfillment?: { name?: string };
   moderation?: "Draft" | "PendingReview" | "Approved" | "Rejected" | string;
@@ -44,12 +41,7 @@ export interface BookCardProps {
   readonly variant?: "shelf" | "search" | "management";
   readonly photoNode?: ReactNode;
   readonly titleNode?: ReactNode;
-  readonly badgeNode?: ReactNode;
   readonly onOpen?: () => void;
-  readonly isFavorite?: boolean;
-  readonly onToggleFavorite?: () => void;
-  readonly showFavorite?: boolean;
-  readonly showAuthor?: boolean;
   readonly actionTitle?: string;
   readonly onActionPress?: () => void;
   readonly onDelete?: () => void;
