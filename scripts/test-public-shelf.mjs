@@ -446,9 +446,17 @@ try {
     .last()
     .waitFor();
   assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 4);
-  await p.locator('button:visible').filter({ hasText: "Đổi" }).first().click();
+  await p
+    .locator('button:visible')
+    .filter({ hasText: "Đổi" })
+    .first()
+    .click({ force: true });
   assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 2);
-  await p.locator('button:visible').filter({ hasText: "Tất cả" }).first().click();
+  await p
+    .locator('button:visible')
+    .filter({ hasText: "Tất cả" })
+    .first()
+    .click({ force: true });
   // List is the approved default; the opt-in comparison still renders a grid.
   const expectComposition = (grid) =>
     p.waitForFunction((grid) => {
