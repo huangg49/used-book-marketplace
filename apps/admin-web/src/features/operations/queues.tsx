@@ -23,6 +23,7 @@ import {
   IntakeReclaim,
 } from "./intake-actions";
 import { Forbidden, OperationsQueue } from "./queue-frame";
+import { ResolutionDecision } from "./resolution-actions";
 import {
   refetchWhileClosed,
   useQueuePanel,
@@ -197,6 +198,12 @@ function ResolutionQueueContent() {
         detail: [`Người mua đã trả ${money(item.buyerTotal)}`, item.note]
           .filter(Boolean)
           .join(" · "),
+        action: {
+          label: "Quyết định",
+          render: (context) => (
+            <ResolutionDecision item={item} {...context} />
+          ),
+        },
       }))}
       empty={{
         title: "Chưa có đơn cần quyết định.",

@@ -101,6 +101,29 @@ export const resolutionItem = z.object({
   buyerTotal: price,
 }) satisfies z.ZodType<Schema["PointOrderResolutionItem"]>;
 export type ResolutionItem = z.infer<typeof resolutionItem>;
+export type Decision = Schema["ResolvePointOrder"]["decision"];
+export type Fault = NonNullable<Schema["ResolvePointOrder"]["fault"]> | null;
+// Mirrors the API's FR-H09 decision matrix (point-order-resolution.service.ts):
+// a refund always names the fault; after the handover only dismiss or return.
+// The API still validates every combination.
+const ALLOWED: Record<
+  ResolutionItem["openReason"],
+  Partial<Record<Decision, Fault[]>>
+> = {
+  RecipientDecisionOverdue: { RefundBuyer: ["BuyerDefault", "NoFault"] },
+  ReportRejected: {
+    RefundBuyer: ["BookMisdescribed", "NoFault"],
+    ResumeCollection: [null],
+  },
+  CollectionOverdue: {
+    RefundBuyer: ["BuyerDefault", "NoFault"],
+    ResumeCollection: [null],
+  },
+  InspectionClaim: { DismissClaim: [null], RequireReturn: [null] },
+  ReturnOverdue: { DismissClaim: [null], RequireReturn: [null] },
+};
+export const decisionsFor = (reason: ResolutionItem["openReason"]) =>
+  ALLOWED[reason];
 export const resolutionQueue = z.object({
   items: z.array(resolutionItem),
   serverTime: time,
