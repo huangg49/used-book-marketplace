@@ -304,6 +304,7 @@ try {
   // information step explicitly; later steps use the generic "Tiếp theo".
   await click("Tiếp tục: Ảnh bản sách →");
   await click("Tiếp theo");
+  await click("Tiếp theo");
   await p.getByLabel("Giá bán (đồng)", { exact: true }).fill("175000");
   await click("Tiếp theo");
   await p
