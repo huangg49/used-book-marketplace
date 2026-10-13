@@ -154,6 +154,7 @@ export function LoginScreen({
         {/* Email Field */}
         <TextField
           label="Tên đăng nhập hoặc Email"
+          accessibilityLabel="Email"
           inputRef={emailInput}
           value={email}
           onChangeText={setEmail}
@@ -204,6 +205,8 @@ export function LoginScreen({
             </Pressable>
           </View>
           <TextField
+            label="Mật khẩu"
+            accessibilityLabel="Mật khẩu"
             inputRef={passwordInput}
             value={password}
             onChangeText={setPassword}
@@ -270,7 +273,7 @@ export function LoginScreen({
 
         {/* Primary CTA Submit Button (WINE RED) */}
         <Button
-          title="Mở Sách & Đăng Nhập"
+          title="Đăng nhập"
           wine
           busy={busy}
           onPress={() => {

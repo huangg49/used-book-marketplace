@@ -406,6 +406,7 @@ export function RegisterScreen({
             {/* Field 2: Email */}
             <TextField
               label="Địa chỉ Email"
+              accessibilityLabel="Email"
               inputRef={emailInput}
               value={email}
               onChangeText={setEmail}
@@ -454,6 +455,8 @@ export function RegisterScreen({
                 </Pressable>
               </View>
               <TextField
+                label="Mật khẩu"
+                accessibilityLabel="Mật khẩu"
                 inputRef={passwordInput}
                 value={password}
                 onChangeText={setPassword}
