@@ -4,6 +4,7 @@ import { AppTextInput, Icon, stitchTokens } from "../../../core/ui";
 import { AppText } from "../../../core/ui/text";
 
 export interface HomeHeaderProps {
+  readonly onSearchPress?: () => void;
   readonly search?: string;
   readonly onSearchChange?: (value: string) => void;
   readonly onSubmitSearch?: () => void;
@@ -15,6 +16,7 @@ export interface HomeHeaderProps {
 }
 
 export function HomeHeader({
+  onSearchPress,
   search = "",
   onSearchChange,
   onSubmitSearch,
@@ -30,11 +32,15 @@ export function HomeHeader({
     <View style={[styles.headerRoot, { paddingTop: Math.max(insets.top, 12) }]}>
       <View style={styles.headerContent}>
         {/* Search Bar - Real input with accessibility label for test and UX */}
-        <View style={styles.searchBar}>
+        <Pressable
+          accessibilityRole="search"
+          onPress={onSearchPress}
+          style={styles.searchBar}
+        >
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Tìm kiếm"
-            onPress={onSubmitSearch}
+            onPress={onSubmitSearch || onSearchPress}
             style={styles.searchIconWrapper}
           >
             <Icon name="search" size={18} color={stitchTokens.wine} />
@@ -46,6 +52,11 @@ export function HomeHeader({
             value={search}
             onChangeText={onSearchChange}
             onSubmitEditing={onSubmitSearch}
+            onFocus={() => {
+              if (onSearchPress) {
+                onSearchPress();
+              }
+            }}
             returnKeyType="search"
             style={styles.searchInput}
           />
@@ -58,7 +69,7 @@ export function HomeHeader({
           >
             <Icon name="camera" size={18} color={stitchTokens.stoneMuted} />
           </Pressable>
-        </View>
+        </Pressable>
 
         {/* Action: Notifications */}
         <Pressable

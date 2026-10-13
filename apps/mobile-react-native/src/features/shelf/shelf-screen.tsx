@@ -129,11 +129,12 @@ export function ShelfScreen() {
 
   return (
     <Screen
-      appearance="browse"
+      appearance="home"
       scrollRef={scroll}
       header={
         <HomeHeader
           search={search}
+          onSearchPress={() => router.navigate("/search")}
           onSearchChange={setSearch}
           onSubmitSearch={() => apply({ ...applied, q: search })}
           onCameraPress={() => setInspectionOpen(true)}
@@ -188,7 +189,7 @@ export function ShelfScreen() {
         {error && !filterOpen ? <Notice tone="error">{error}</Notice> : null}
 
         {/* 5. Section Header with Title and Filter Button */}
-        <View style={styles.sectionHeaderRow}>
+        <View style={[styles.sectionHeaderRow, { paddingHorizontal: 12 }]}>
           <View style={styles.sectionTitleGroup}>
             <View style={styles.sectionTitleBar} />
             <View style={{ gap: space.xs, flex: 1 }}>
@@ -241,7 +242,7 @@ export function ShelfScreen() {
         </View>
 
         {hasCriteria && (result.data?.items.length !== 0 || result.error) && (
-          <View style={{ alignSelf: "flex-start" }}>
+          <View style={{ alignSelf: "flex-start", paddingHorizontal: 12 }}>
             <Chip
               title="Xóa tìm kiếm và bộ lọc"
               selected={false}
@@ -300,71 +301,75 @@ export function ShelfScreen() {
         )}
 
         {/* 6. Curated Product Grid */}
-        <ShelfResults
-          items={result.data?.items ?? []}
-          composition="grid"
-          onOpen={(item) =>
-            router.push({ pathname: "./book", params: { id: item.id } })
-          }
-          renderPhoto={(item) => (
-            <PublicPhoto
-              listingId={item.id}
-              revisionId={item.revisionId}
-              mediaId={item.photos[0].id}
-              label={`Ảnh sách ${item.book.title}`}
-              active={active && !result.isError}
-              result
-              onOpen={() =>
-                router.push({ pathname: "./book", params: { id: item.id } })
-              }
+        <View style={{ paddingHorizontal: 12 }}>
+          <ShelfResults
+            items={result.data?.items ?? []}
+            composition="grid"
+            onOpen={(item) =>
+              router.push({ pathname: "./book", params: { id: item.id } })
+            }
+            renderPhoto={(item) => (
+              <PublicPhoto
+                listingId={item.id}
+                revisionId={item.revisionId}
+                mediaId={item.photos[0].id}
+                label={`Ảnh sách ${item.book.title}`}
+                active={active && !result.isError}
+                result
+                onOpen={() =>
+                  router.push({ pathname: "./book", params: { id: item.id } })
+                }
+              />
+            )}
+          />
+        </View>
+
+        <View style={{ paddingHorizontal: 12, gap: space.md }}>
+          {(cursors.length > 1 || (result.data?.nextCursor && !result.error)) && (
+            <View
+              style={{ flexDirection: "row", flexWrap: "wrap", gap: space.md }}
+            >
+              {cursors.length > 1 && (
+                <Button
+                  title="Trang trước"
+                  secondary
+                  disabled={result.isFetching}
+                  onPress={() => {
+                    setCursors((previous) => previous.slice(0, -1));
+                    scroll.current?.scrollTo({ y: 0, animated: false });
+                  }}
+                />
+              )}
+              {result.data?.nextCursor && !result.error && (
+                <Button
+                  title="Trang tiếp"
+                  busy={result.isFetching}
+                  onPress={() => {
+                    setCursors((previous) => [
+                      ...previous,
+                      result.data!.nextCursor!,
+                    ]);
+                    scroll.current?.scrollTo({ y: 0, animated: false });
+                  }}
+                />
+              )}
+            </View>
+          )}
+
+          {!result.isPending && !result.error && (
+            <Button
+              title="Làm mới danh sách"
+              secondary
+              busy={result.isFetching}
+              onPress={() => void result.refetch()}
             />
           )}
-        />
 
-        {(cursors.length > 1 || (result.data?.nextCursor && !result.error)) && (
-          <View
-            style={{ flexDirection: "row", flexWrap: "wrap", gap: space.md }}
-          >
-            {cursors.length > 1 && (
-              <Button
-                title="Trang trước"
-                secondary
-                disabled={result.isFetching}
-                onPress={() => {
-                  setCursors((previous) => previous.slice(0, -1));
-                  scroll.current?.scrollTo({ y: 0, animated: false });
-                }}
-              />
-            )}
-            {result.data?.nextCursor && !result.error && (
-              <Button
-                title="Trang tiếp"
-                busy={result.isFetching}
-                onPress={() => {
-                  setCursors((previous) => [
-                    ...previous,
-                    result.data!.nextCursor!,
-                  ]);
-                  scroll.current?.scrollTo({ y: 0, animated: false });
-                }}
-              />
-            )}
-          </View>
-        )}
-
-        {!result.isPending && !result.error && (
-          <Button
-            title="Làm mới danh sách"
-            secondary
-            busy={result.isFetching}
-            onPress={() => void result.refetch()}
-          />
-        )}
-
-        <AppText kind="small" color={colors.muted}>
-          Ảnh và tình trạng do người đăng cung cấp. Xem chi tiết sách trước khi
-          quyết định. Chức năng giao dịch trên ứng dụng đang được chuẩn bị.
-        </AppText>
+          <AppText kind="small" color={colors.muted}>
+            Ảnh và tình trạng do người đăng cung cấp. Xem chi tiết sách trước khi
+            quyết định. Chức năng giao dịch trên ứng dụng đang được chuẩn bị.
+          </AppText>
+        </View>
       </View>
 
       {/* Filter Sheet */}
