@@ -267,3 +267,46 @@ export function sendOrderCommand(
 }
 export const CLAIM_MIN_LENGTH = 30;
 export const POINT_HOURS = "09:00–18:00";
+
+export const AUCTION_MIN_PRICE = 10_000;
+/** Client mirror of POL-39 for a new intake; the server stays authoritative. */
+export function intakePriceErrors(
+  startPrice: number | null,
+  step: number,
+  buyNowPrice: number | null,
+) {
+  const errors: { startPrice?: string; buyNowPrice?: string } = {};
+  if (!startPrice) errors.startPrice = "Nhập giá khởi điểm.";
+  else if (startPrice < AUCTION_MIN_PRICE || startPrice > AUCTION_MAX_PRICE)
+    errors.startPrice = "Giá khởi điểm từ 10.000đ đến 1.000.000đ.";
+  else if (buyNowPrice !== null) {
+    if (buyNowPrice <= startPrice || buyNowPrice > AUCTION_MAX_PRICE)
+      errors.buyNowPrice = "Giá mua ngay phải lớn hơn giá khởi điểm và không quá 1.000.000đ.";
+    else if ((buyNowPrice - startPrice) % step !== 0) {
+      const up = Math.min(
+        startPrice + Math.ceil((buyNowPrice - startPrice) / step) * step,
+        AUCTION_MAX_PRICE,
+      );
+      errors.buyNowPrice = `Giá mua ngay phải bằng giá khởi điểm cộng một số bước giá. Thử ${formatVnd(up)}.`;
+    }
+  }
+  return errors;
+}
+// FR-AU01: only approved, visible, still-available Sale listings enter; the
+// server rechecks under the listing lock.
+export function auctionEligible(listing: {
+  state: { moderation: string; visibility: string; trade: string; deletedAt: string | null };
+  currentRevision: { content: { mode: string | null } };
+}) {
+  return (
+    listing.state.moderation === "Approved" &&
+    listing.state.visibility === "Visible" &&
+    listing.state.trade === "Available" &&
+    !listing.state.deletedAt &&
+    listing.currentRevision.content.mode === "Sale"
+  );
+}
+// The seller may withdraw before the session opens (and the server also
+// allows it while no bid exists).
+export const withdrawable = (state: string) =>
+  state === "AwaitingDropoff" || state === "Received" || state === "Passed";

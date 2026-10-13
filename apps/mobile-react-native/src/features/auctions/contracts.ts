@@ -163,3 +163,54 @@ export const codeIssued = z.object({
   code: z.string().regex(/^[0-9]{6}$/).nullable(),
 });
 export type CodeIssued = z.infer<typeof codeIssued>;
+
+export const handoverPoints = z.object({
+  items: z.array(
+    z.object({
+      id: z.string().uuid(),
+      code: z.string(),
+      name: z.string(),
+      displayAddress: z.string(),
+      status: z.enum(["Active", "Paused", "Closed"]),
+      capacity: z.number().int(),
+      availableSlots: z.number().int(),
+      demoOnly: z.literal(true),
+    }),
+  ),
+});
+export type HandoverPoint = z.infer<typeof handoverPoints>["items"][number];
+
+export const intakeStates = [
+  "AwaitingDropoff",
+  "Received",
+  "Passed",
+  "Auctioning",
+  "ReclaimRequired",
+  "Reclaimed",
+  "Cancelled",
+  "Sold",
+] as const;
+export const myIntake = z.object({
+  id: z.string().uuid(),
+  auctionId: z.string().uuid().nullable(),
+  state: z.enum(intakeStates),
+  version: z.number().int(),
+  listingId: z.string().uuid(),
+  title: z.string(),
+  pointId: z.string().uuid(),
+  startPrice: z.number().int(),
+  step: z.union([z.literal(10000), z.literal(50000)]),
+  buyNowPrice: z.number().int().nullable(),
+  dropoffDeadline: z.string(),
+  inspectionOutcome: z.enum(["Pass", "Fail"]).nullable(),
+  inspectionNote: z.string().nullable(),
+  reclaimReason: z.string().nullable(),
+});
+export type MyIntake = z.infer<typeof myIntake>;
+export const myIntakes = z.object({ items: z.array(myIntake) });
+export const intakeReceipt = z.object({
+  id: z.string().uuid(),
+  intakeId: z.string().uuid(),
+  version: z.number().int(),
+  state: z.string(),
+});

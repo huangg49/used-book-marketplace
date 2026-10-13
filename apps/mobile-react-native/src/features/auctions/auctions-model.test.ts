@@ -5,6 +5,8 @@ import {
   bidOptions,
   createAuctionCommand,
   createOrderCommand,
+  auctionEligible,
+  intakePriceErrors,
   receiptMessage,
   standingOf,
 } from "./auctions-model";
@@ -103,5 +105,25 @@ describe("point order commands", () => {
       path: "/point-orders/o1/claim",
       body: JSON.stringify({ expectedVersion: 4, description: "x".repeat(30) }),
     });
+  });
+});
+
+describe("seller intake (POL-39, FR-AU01)", () => {
+  it("keeps start, step and buy-now on one grid", () => {
+    expect(intakePriceErrors(null, 50_000, null).startPrice).toMatch(/Nhập/);
+    expect(intakePriceErrors(5_000, 10_000, null).startPrice).toMatch(/10\.000/);
+    expect(intakePriceErrors(200_000, 50_000, 200_000).buyNowPrice).toMatch(/lớn hơn/);
+    expect(intakePriceErrors(200_000, 50_000, 320_000).buyNowPrice).toMatch(/350\.000/);
+    expect(intakePriceErrors(200_000, 50_000, 600_000)).toEqual({});
+  });
+  it("only lets an approved, visible, available Sale listing in", () => {
+    const listing = (over: Partial<{ moderation: string; visibility: string; trade: string; mode: string }>) => ({
+      state: { moderation: "Approved", visibility: "Visible", trade: "Available", deletedAt: null, ...over },
+      currentRevision: { content: { mode: over.mode ?? "Sale" } },
+    });
+    expect(auctionEligible(listing({}))).toBe(true);
+    expect(auctionEligible(listing({ mode: "Both" }))).toBe(false);
+    expect(auctionEligible(listing({ trade: "Reserved" }))).toBe(false);
+    expect(auctionEligible(listing({ visibility: "Hidden" }))).toBe(false);
   });
 });

@@ -47,7 +47,10 @@ export function AuctionsScreen() {
       </View>
       <Notice>Mô phỏng đồ án. Giá và ví là dữ liệu thử nghiệm.</Notice>
       {member && (
-        <Button secondary title="Phiên của tôi" onPress={() => router.push("/my-auctions")} />
+        <View style={{ gap: space.sm }}>
+          <Button secondary title="Phiên của tôi" onPress={() => router.push("/my-auctions")} />
+          <Button secondary title="Gửi sách đấu giá" onPress={() => router.push("/send-to-auction")} />
+        </View>
       )}
       {result.isPending && <StatePanel loading title="Đang tải phiên đấu giá" />}
       {result.error && (
