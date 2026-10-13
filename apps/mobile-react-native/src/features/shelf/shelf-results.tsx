@@ -98,7 +98,6 @@ function ShelfResult({
           shadowRadius: 3,
           marginBottom: 10,
           opacity: pressed ? 0.9 : 1,
-          transform: pressed ? [{ scale: 0.985 }] : undefined,
         },
         focused && layout.focus,
       ]}
