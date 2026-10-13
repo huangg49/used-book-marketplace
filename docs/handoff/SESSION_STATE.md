@@ -21,8 +21,12 @@
 - Review AI mới tìm một P2; verdict chấm đã resolved, `ship` phạm vi lỗi đó.
   Three 0.186.1 production lazy Auth; không API/contract/DB/native/gate thay đổi.
   Local Node 24.12<24.15 và chunk warning còn; Safari/live Auth/physical/FPS
-  chưa kiểm. READINESS giữ nguyên. Remote CI/PR chờ push trong gói hiện tại;
-  cập nhật link và kết quả theo đúng head khi hoàn tất. Bước tiếp review người thật.
+  chưa kiểm. READINESS giữ nguyên. Đã push và tạo
+  [PR39](https://github.com/huangg49/used-book-marketplace/pull/39); kết quả remote
+  CI theo đúng head được cập nhật trong bảng Validation của PR và tab Checks
+  (bảy workflow đã khởi chạy tại checkpoint này). Bước tiếp review người thật;
+  chưa merge/deploy. Bản nguồn mới để xem local tại `http://127.0.0.1:5200/`,
+  checkout cũ/preview5198 giữ nguyên.
 
 ### Điểm lưu teammate được giữ
 

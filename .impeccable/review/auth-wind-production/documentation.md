@@ -87,7 +87,9 @@ not prove timing or real account authentication.
 | Implementer-reported validation | 135 web unit tests/21 files, 21 session tests, lint/typecheck, production build, preview build and docs PASS; source/fixture checks include three WebGL actors and scrubbed revealed credentials. No new test, browser or detector run by this documenter. |
 | [Full AI review](finish-review.md), [verdict pass](verdict-pass.md) | Full review returned one P2 stamp-clock finding. The bounded verdict scored that one fix resolved and returned **ship**; it is not a new whole-surface audit or human review. |
 
-Remote CI is NOT RUN at this documentation checkpoint, awaiting PR creation.
+Remote CI was NOT RUN during the documenter pass. The parent subsequently opened
+[PR39](https://github.com/huangg49/used-book-marketplace/pull/39); its Validation
+table and Checks tab record remote results against the exact latest head.
 Live Auth API, Safari, physical/mobile-native acceptance and measured FPS remain
 NOT RUN. The fixture tests use no real API/DB. Local Node 24.12 is below the repo's
 24.15 requirement; >500kB chunk warnings remain (main≈1.172MB, lazy Auth≈551kB /
