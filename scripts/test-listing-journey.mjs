@@ -39,11 +39,8 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .getByRole("tab", { name: /^Ảnh bản sách, Chưa điền thành công/ })
     .waitFor();
   await click("Tiếp theo");
-  const chooser = p.waitForEvent("filechooser");
   await click("Thêm ảnh khảo chứng");
-  await (
-    await chooser
-  ).setFiles({
+  await p.locator('input[type="file"]').last().setInputFiles({
     name: "listing-fixture.png",
     mimeType: "image/png",
     buffer: fixture.photo,
