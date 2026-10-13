@@ -59,6 +59,7 @@ export function ShelfScreen() {
     if (auctionsQuery.data?.items && auctionsQuery.data.items.length > 0) {
       return auctionsQuery.data.items.map((auc, idx) => ({
         id: auc.id,
+        listingId: auc.listingId,
         title: auc.title,
         currentBid: auc.currentPrice ?? auc.startPrice,
         startPrice: auc.startPrice,
@@ -112,6 +113,10 @@ export function ShelfScreen() {
     router.push({ pathname: "./book", params: { id } });
   };
 
+  const handleOpenAuction = (id: string) => {
+    router.push({ pathname: "./auction", params: { id } });
+  };
+
   return (
     <Screen
       appearance="home"
@@ -143,7 +148,7 @@ export function ShelfScreen() {
 
         {/* 2. Quick Action 4 Shortcuts */}
         <HomeShortcuts
-          onAuctionPress={() => router.navigate("/search")}
+          onAuctionPress={() => router.navigate("/auctions")}
           onNewestPress={() => apply({ ...applied, sort: "newest" })}
           onExchangePress={() => apply({ ...applied, mode: "Exchange" })}
           onRarePress={() => apply({ ...applied, condition: "LikeNew" })}
@@ -152,9 +157,9 @@ export function ShelfScreen() {
         {/* 3. Live Book Auctions Section */}
         <HomeFlashDeals
           items={liveAuctions}
-          onOpenAuction={handleOpenBook}
+          onOpenAuction={handleOpenAuction}
           onSeeAllPress={() => {
-            router.navigate("/search");
+            router.navigate("/auctions");
           }}
         />
 

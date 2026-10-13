@@ -49,10 +49,6 @@ export function MemberNavigation({
       router.navigate("/drafts");
       return;
     }
-    if (href === "/auctions") {
-      router.navigate("/");
-      return;
-    }
     router.navigate(href);
   };
 
