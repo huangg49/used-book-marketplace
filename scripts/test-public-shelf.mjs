@@ -309,7 +309,7 @@ try {
   await click("Tiếp theo");
   await p
     .getByRole("checkbox", {
-      name: "Tôi có quyền đăng cuốn sách này; ảnh và mô tả phản ánh trung thực tình trạng sách.",
+      name: "Tôi xác nhận sở hữu ấn bản này và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại.",
     })
     .click();
   let lostRevision = true;
