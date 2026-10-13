@@ -3,6 +3,21 @@
 Source tích hợp: `feat/rn-ui-redesign-navbar-auctions`, PR #37.
 OpenAPI 0.34.0, 22 migration Mongo, 134 HTTP operation / 23 controller.
 
+## N4-01 khung vận hành điểm trong admin-web — 13/10/2026
+
+- Nhánh `feature/n4-01-operations-shell` từ `main` `7be68a4`; kế hoạch N4 ở nhánh
+  `docs/n4-auction-operations-plan` (`N4_AUCTION_OPERATIONS_PLAN.md`). Chưa push/PR.
+- Nhóm nav "Điểm và đấu giá": STAFF thấy Nhận sách đấu giá/Giao sách, ADMIN thấy Xử lý
+  đơn tại điểm/Phiên đấu giá; `canOperatePoint` (ACTIVE+STAFF), `canResolve`
+  (ACTIVE+ADMIN). Bốn trang chỉ đọc gọi endpoint có sẵn, không đổi contract/API;
+  giao diện theo hàng đợi Bàn kiểm duyệt. Thao tác trên từng dòng là N4-02…05.
+- Staff chưa được phân công nhận **danh sách rỗng**, không phải 403; UI ghi chú điều
+  này trong trạng thái rỗng (kế hoạch N4 viết 403 là sai, cần sửa khi tích hợp).
+- Typecheck/lint/20 unit PASS. Browser 1366/390 trên API thật + DB QA `ops_browser_*_test`
+  (fixture tạm: intake thật tại điểm A, chỉ staff được phân công): hàng intake, trạng
+  thái rỗng, Staff mở URL Admin bị chặn, Admin thấy đủ 4 mục. `test:browser` của
+  admin-web chưa mở rộng cho trang mới; 320 px, human review NOT RUN.
+
 ## Mobile React Native CI Lint & Design Token Remediation — 13/10/2026
 
 - PR #37 (`feat/rn-ui-redesign-navbar-auctions`): Khắc phục lỗi CI `react-native-ci.yml`

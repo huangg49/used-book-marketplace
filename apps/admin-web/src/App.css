@@ -222,6 +222,10 @@
   margin: 1.5rem 0;
   flex-wrap: wrap;
 }
+/* Queues without filter tabs keep the refresh action on the right. */
+.queue-toolbar > .button:only-child {
+  margin-left: auto;
+}
 .directory-filters {
   display: grid;
   grid-template-columns: minmax(240px, 1.0fr) minmax(160px, 0.1fr) minmax(160px, 0.1fr) auto;
