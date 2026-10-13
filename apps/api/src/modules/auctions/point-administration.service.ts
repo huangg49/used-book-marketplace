@@ -226,6 +226,17 @@ export class PointAdministrationService {
               throw refused(
                 'Điểm còn sách hoặc chỗ đang giữ; chỉ đóng khi không còn nghĩa vụ.',
               );
+            // N4-13: an undecided or underfunded incident is still an obligation.
+            if (
+              body.status === 'Closed' &&
+              (await tx.c.point_incidents.countDocuments({
+                pointId: p._id,
+                state: { $in: ['Open', 'Underfunded'] },
+              }))
+            )
+              throw refused(
+                'Điểm còn sự cố chưa xử lý xong; chỉ đóng khi không còn nghĩa vụ.',
+              );
             if (
               body.status === 'Active' &&
               !(await this.current(tx, p._id, now)).length

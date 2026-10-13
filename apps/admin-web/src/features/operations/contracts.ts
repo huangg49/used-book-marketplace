@@ -293,7 +293,7 @@ export const operationsPointList = z.object({
 export type OperationsPoint = z.infer<typeof operationsPoint>;
 export const pointReceipt = z.object({
   id: uuid,
-  entityType: z.enum(["HandoverPoint", "PointAssignment"]),
+  entityType: z.enum(["HandoverPoint", "PointAssignment", "PointIncident"]),
   entityId: uuid,
   pointId: uuid,
   version,
@@ -321,4 +321,69 @@ export const pointStatusLabels: Record<OperationsPoint["status"], string> = {
   Active: "Đang mở",
   Paused: "Tạm dừng nhận booking mới",
   Closed: "Đã đóng",
+};
+
+// N4-13: incidents and the simulated fund (FR-T04, POL-42).
+const incidentKinds = [
+  "Lost",
+  "Damaged",
+  "ArrivalMismatch",
+  "LateArrival",
+  "EmergencyClose",
+  "Other",
+] as const;
+const amount = z.number().int().nonnegative();
+export const pointIncident = z.object({
+  id: uuid,
+  pointId: uuid,
+  pointName: z.string(),
+  intakeId: uuid.nullable(),
+  title: z.string().nullable(),
+  kind: z.enum(incidentKinds),
+  description: z.string(),
+  protectedValue: amount.nullable(),
+  state: z.enum(["Open", "Decided", "Underfunded"]),
+  openedBy: uuid,
+  openedAt: time,
+  decision: z.enum(["Compensate", "NoCompensation"]).nullable(),
+  approvedAmount: amount.nullable(),
+  fundedAmount: amount.nullable(),
+  unfundedAmount: amount.nullable(),
+  decidedAt: time.nullable(),
+  decisionReason: z.string().nullable(),
+  version,
+}) satisfies z.ZodType<Schema["PointIncident"]>;
+export type PointIncident = z.infer<typeof pointIncident>;
+export const pointIncidentList = z.object({
+  items: z.array(pointIncident),
+  serverTime: time,
+}) satisfies z.ZodType<Schema["PointIncidentList"]>;
+export const incidentFund = z.object({
+  opening: amount,
+  approved: amount,
+  balance: amount,
+  entries: z.array(
+    z.object({
+      sequence: z.number().int().positive(),
+      type: z.enum(["Opening", "CompensationApproved"]),
+      amount: z.number().int().positive(),
+      incidentId: uuid.nullable(),
+      balanceAfter: amount,
+      createdAt: time,
+    }),
+  ),
+  serverTime: time,
+}) satisfies z.ZodType<Schema["IncidentFund"]>;
+export const incidentKindLabels: Record<PointIncident["kind"], string> = {
+  Lost: "Mất sách",
+  Damaged: "Hư hỏng",
+  ArrivalMismatch: "Sách đến không khớp",
+  LateArrival: "Sách đến trễ hạn",
+  EmergencyClose: "Đóng khẩn cấp",
+  Other: "Khác",
+};
+export const incidentStateLabels: Record<PointIncident["state"], string> = {
+  Open: "Chờ quyết định",
+  Decided: "Đã quyết định",
+  Underfunded: "Quỹ không đủ",
 };

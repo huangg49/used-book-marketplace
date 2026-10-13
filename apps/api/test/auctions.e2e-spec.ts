@@ -766,6 +766,219 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     ).toBe(2);
   });
 
+  it('incidents exist without an Order; an independent Admin decides within the protected value and the simulated fund (FR-T04, POL-42)', async () => {
+    // A dedicated point: emergency close and an unfunded decision pause it.
+    const created = await cmd(
+      'post',
+      '/operations/points',
+      {
+        code: `HCM-I-${randomBytes(3).toString('hex').toUpperCase()}`,
+        name: 'Điểm sự cố kiểm thử',
+        displayAddress: 'Bàn kiểm thử sự cố — không phải địa điểm thực tế',
+        capacity: 5,
+      },
+      admin,
+    ).expect(201);
+    const pointId = created.body.pointId as string;
+    await cmd(
+      'post',
+      `/operations/points/${pointId}/assignments`,
+      { expectedVersion: 1, userId: staff.id },
+      admin,
+    ).expect(200);
+    const activate = (version: number) =>
+      cmd(
+        'post',
+        `/operations/points/${pointId}`,
+        {
+          expectedVersion: version,
+          name: 'Điểm sự cố kiểm thử',
+          displayAddress: 'Bàn kiểm thử sự cố — không phải địa điểm thực tế',
+          capacity: 5,
+          status: 'Active',
+          reason: 'Mở lại điểm kiểm thử sự cố',
+        },
+        admin,
+      );
+    await activate(2).expect(200);
+    const seller = await actor();
+    const intakeId = (
+      await cmd(
+        'post',
+        '/auction-intakes',
+        intakeBody(await saleListing(seller), { pointId }),
+        seller,
+      ).expect(200)
+    ).body.intakeId as string;
+    const protectiveValue = (await db.c.auction_intakes.findOne({
+      _id: intakeId,
+    }))!.protectiveValue;
+    const open = (a: Actor, over: object = {}) =>
+      cmd(
+        'post',
+        '/operations/incidents',
+        {
+          pointId,
+          intakeId,
+          kind: 'Damaged',
+          description: 'Bìa sách bị ướt khi đặt trên kệ gần cửa sổ tại điểm',
+          ...over,
+        },
+        a,
+      );
+    await open(otherStaff).expect(403); // assigned to another point
+    await open(await actor()).expect(403);
+    await open(staff, { kind: 'EmergencyClose' }).expect(403);
+    await open(seller).expect(403);
+    const opened = await open(staff).expect(201);
+    validates('PointCommandReceipt', opened.body);
+    expect(opened.body).toMatchObject({
+      entityType: 'PointIncident',
+      state: 'Open',
+      pointId,
+    });
+    const incidentId = opened.body.entityId as string;
+    const staffList = await call('get', '/operations/incidents', staff).expect(
+      200,
+    );
+    validates('PointIncidentList', staffList.body);
+    const row = staffList.body.items.find(
+      (i: { id: string }) => i.id === incidentId,
+    );
+    expect(row).toMatchObject({ protectedValue: protectiveValue, version: 1 });
+    expect(
+      (await call('get', '/operations/incidents', otherStaff).expect(200)).body
+        .items,
+    ).not.toContainEqual(expect.objectContaining({ id: incidentId }));
+    // Independence: Staff, an Admin assigned to the point, the opener.
+    const decide = (a: Actor, over: object = {}, key?: string) =>
+      cmd(
+        'post',
+        `/operations/incidents/${incidentId}/decide`,
+        {
+          expectedVersion: 1,
+          decision: 'Compensate',
+          amount: 5_000,
+          reason: 'Ảnh tại điểm xác nhận hư hỏng do điểm',
+          ...over,
+        },
+        a,
+        key,
+      );
+    await decide(staff).expect(403);
+    const assignedAdmin = await actor(['ADMIN', 'STAFF']);
+    await cmd(
+      'post',
+      `/operations/points/${pointId}/assignments`,
+      { expectedVersion: 3, userId: assignedAdmin.id },
+      admin,
+    ).expect(200);
+    expect((await decide(assignedAdmin).expect(403)).body.code).toBe(
+      'SelfReviewForbidden',
+    );
+    await decide(admin, { amount: protectiveValue + 1 }).expect(422);
+    await decide(admin, { decision: 'NoCompensation', amount: 5 }).expect(422);
+    const fundBefore = await call('get', '/operations/incident-fund', admin)
+      .expect(200)
+      .then((r) => r.body);
+    validates('IncidentFund', fundBefore);
+    await call('get', '/operations/incident-fund', staff).expect(403);
+    const key = randomUUID();
+    const decided = await decide(admin, {}, key).expect(200);
+    expect(decided.body).toMatchObject({ state: 'Decided', version: 2 });
+    const replay = await decide(admin, {}, key).expect(200);
+    expect(replay.headers['idempotency-replayed']).toBe('true');
+    expect(replay.body).toEqual(decided.body);
+    await decide(admin, { expectedVersion: 2 }).expect(409);
+    const fundAfter = (
+      await call('get', '/operations/incident-fund', admin).expect(200)
+    ).body;
+    expect(fundAfter.balance).toBe(fundBefore.balance - 5_000);
+    expect(fundAfter.entries[0]).toMatchObject({
+      type: 'CompensationApproved',
+      amount: 5_000,
+      incidentId,
+    });
+    expect(
+      await db.c.audit_events.findOne({ receiptId: decided.body.id }),
+    ).toMatchObject({ pointId, action: 'decidePointIncident' });
+
+    // Emergency close (Admin only) pauses new bookings at once.
+    const emergency = await open(admin, {
+      kind: 'EmergencyClose',
+      intakeId: null,
+      description: 'Mất điện kéo dài, tạm dừng nhận sách mới tại điểm',
+    }).expect(201);
+    expect(emergency.body.state).toBe('Open');
+    const paused = (await db.c.handover_points.findOne({ _id: pointId }))!;
+    expect(paused.status).toBe('Paused');
+    // Without a book there is no protected value to compensate.
+    await cmd(
+      'post',
+      `/operations/incidents/${emergency.body.entityId}/decide`,
+      {
+        expectedVersion: 1,
+        decision: 'Compensate',
+        amount: 1_000,
+        reason: 'Thử bồi thường không gắn sách',
+      },
+      admin,
+    ).expect(403); // the opener never decides
+    await cmd(
+      'post',
+      `/operations/incidents/${emergency.body.entityId}/decide`,
+      {
+        expectedVersion: 1,
+        decision: 'Compensate',
+        amount: 1_000,
+        reason: 'Thử bồi thường không gắn sách',
+      },
+      await actor(['ADMIN']),
+    ).expect(422);
+    await activate(paused.version).expect(200);
+
+    // The fund runs short: the unfunded part is recorded, never invented,
+    // and the point stops taking new bookings.
+    const last = (await db.c.incident_fund_journal.findOne(
+      {},
+      { sort: { sequence: -1 } },
+    ))!;
+    await db.c.incident_fund_journal.insertOne({
+      _id: randomUUID(),
+      sequence: last.sequence + 1,
+      type: 'CompensationApproved',
+      amount: last.balanceAfter - 1_000,
+      incidentId: randomUUID(),
+      balanceAfter: 1_000,
+      createdAt: new Date(),
+    });
+    const lost = await open(staff, {
+      kind: 'Lost',
+      description: 'Không tìm thấy sách trên kệ khi kiểm kê cuối ngày',
+    }).expect(201);
+    const short = await cmd(
+      'post',
+      `/operations/incidents/${lost.body.entityId}/decide`,
+      {
+        expectedVersion: 1,
+        decision: 'Compensate',
+        amount: 5_000,
+        reason: 'Sách mất trong thời gian điểm giữ',
+      },
+      admin,
+    ).expect(200);
+    expect(short.body.state).toBe('Underfunded');
+    expect(
+      await db.c.point_incidents.findOne({ _id: lost.body.entityId }),
+    ).toMatchObject({ fundedAmount: 1_000, unfundedAmount: 4_000 });
+    const after = (await db.c.handover_points.findOne({ _id: pointId }))!;
+    expect(after.status).toBe('Paused');
+    expect(
+      (await call('get', '/operations/incident-fund', admin).expect(200)).body
+        .balance,
+    ).toBe(0);
+  });
+
   it('public book reads use only the inspected revision and never bypass ordinary shelf custody', async () => {
     const o = await openAuction();
     const response = await call('get', `/auctions/${o.auctionId}`).expect(200);

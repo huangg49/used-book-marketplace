@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
@@ -6,6 +6,7 @@ import { dateText } from "../../core/format";
 import { canResolve, session } from "../../core/session";
 import { Button, ErrorNotice } from "../../core/ui";
 import { ActionPanel } from "./action-panel";
+import { Field } from "./field";
 import {
   operationsPointList,
   pointReceipt,
@@ -29,32 +30,6 @@ const length = (value: string) => [...value.trim()].length;
 const between = (value: string, min: number, max: number) =>
   length(value) >= min && length(value) <= max;
 const CODE = /^HCM-[A-Z0-9-]{2,36}$/;
-
-function Field({
-  id,
-  label,
-  hint,
-  error,
-  children,
-}: {
-  id: string;
-  label: string;
-  hint: string;
-  error?: string;
-  children: ReactNode;
-}) {
-  return (
-    <>
-      <div className="field">
-        <label htmlFor={id}>{label}</label>
-        {children}
-      </div>
-      <p id={`${id}-hint`} className={error ? "field-error" : "muted"}>
-        {error ?? hint}
-      </p>
-    </>
-  );
-}
 
 export function PointsPage() {
   const user = useOutletContext<CurrentUser>();

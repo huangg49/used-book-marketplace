@@ -801,6 +801,43 @@ export interface IntakeInspectionReportDoc {
   inspectorId: string;
   createdAt: Date;
 }
+// N4-13 (FR-T04, POL-42): incidents at a point and the simulated fund.
+export type PointIncidentKind =
+  | 'Lost'
+  | 'Damaged'
+  | 'ArrivalMismatch'
+  | 'LateArrival'
+  | 'EmergencyClose'
+  | 'Other';
+export interface PointIncidentDoc extends Lockable {
+  _id: string;
+  pointId: string;
+  intakeId: string | null;
+  kind: PointIncidentKind;
+  description: string;
+  protectedValue: number | null;
+  state: 'Open' | 'Decided' | 'Underfunded';
+  openedBy: string;
+  openedAt: Date;
+  decision: 'Compensate' | 'NoCompensation' | null;
+  approvedAmount: number | null;
+  fundedAmount: number | null;
+  unfundedAmount: number | null;
+  decidedBy: string | null;
+  decidedAt: Date | null;
+  decisionReason: string | null;
+  version: number;
+  updatedAt: Date;
+}
+export interface IncidentFundEntryDoc {
+  _id: string;
+  sequence: number;
+  type: 'Opening' | 'CompensationApproved';
+  amount: number;
+  incidentId: string | null;
+  balanceAfter: number;
+  createdAt: Date;
+}
 export type AuctionState =
   | 'Active'
   | 'BuyNowPending'

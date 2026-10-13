@@ -14,6 +14,7 @@ import { Roles } from '../auth/roles.guard.js';
 import { commandContext, commandResponse } from '../commands/command-http.js';
 import { ContractInput } from '../commands/contract-input.service.js';
 import { PointAdministrationService } from './point-administration.service.js';
+import { PointIncidentsService } from './point-incidents.service.js';
 
 // FR-H04: ADMIN manages points and Staff assignments; STAFF reads their own
 // current assignments. The service rechecks role and status in the command.
@@ -21,6 +22,7 @@ import { PointAdministrationService } from './point-administration.service.js';
 export class PointAdministrationController {
   constructor(
     private readonly points: PointAdministrationService,
+    private readonly incidents: PointIncidentsService,
     private readonly input: ContractInput,
   ) {}
 
@@ -99,6 +101,50 @@ export class PointAdministrationController {
       ),
       res,
     );
+  }
+  // N4-13: incidents and the simulated fund (FR-T04, POL-42).
+  @Get('operations/incidents')
+  @Roles('STAFF', 'ADMIN')
+  listIncidents(@Req() req: AuthenticatedRequest) {
+    return this.incidents.list(req.auth);
+  }
+  @Post('operations/incidents')
+  @Roles('STAFF', 'ADMIN')
+  openIncident(
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.incidents.open(
+        commandContext(this.input, req, res),
+        this.input.body('OpenPointIncident', body),
+      ),
+      res,
+    );
+  }
+  @Post('operations/incidents/:incidentId/decide')
+  @Roles('ADMIN')
+  @HttpCode(200)
+  decideIncident(
+    @Param('incidentId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.incidents.decide(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('DecidePointIncident', body),
+      ),
+      res,
+    );
+  }
+  @Get('operations/incident-fund')
+  @Roles('ADMIN')
+  incidentFund(@Req() req: AuthenticatedRequest) {
+    return this.incidents.fund(req.auth);
   }
   @Get('me/point-assignments')
   @Roles('STAFF')

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.37.0
+  version: 0.38.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -6254,6 +6254,209 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MyPointAssignmentList"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/incidents:
+    get:
+      operationId: listPointIncidents
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN sees every incident; ACTIVE STAFF sees incidents at the points they are assigned to now. Open first, then the most recent. FR-T04.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointIncidentList"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+    post:
+      operationId: openPointIncident
+      tags:
+        - Auctions
+      description: Assigned STAFF or ACTIVE ADMIN opens an incident at a point, with or without an Order (auction intake). The protected value is snapshotted from the intake (Order book price once sold). EmergencyClose is ADMIN only and pauses new bookings at the point.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenPointIncident"
+      responses:
+        "201":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/incidents/{incidentId}/decide:
+    post:
+      operationId: decidePointIncident
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN independent of the point (no current assignment) and of the incident (not the opener) decides once. Compensation is capped by the protected value and funded from the POL-42 simulated fund while it lasts; the unfunded part is recorded and the point stops taking new bookings. No wallet payout is made here.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: incidentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecidePointIncident"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/incident-fund:
+    get:
+      operationId: readIncidentFund
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN. The POL-42 simulated incident fund with its opening balance, approved compensation and append-only journal.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentFund"
         "400":
           $ref: "#/components/responses/ListingError"
         "401":
@@ -14127,6 +14330,7 @@ components:
           enum:
             - HandoverPoint
             - PointAssignment
+            - PointIncident
         entityId:
           type: string
           format: uuid
@@ -14137,7 +14341,7 @@ components:
           type: integer
           minimum: 1
           maximum: 2147483647
-          description: The point version after the command.
+          description: The version of the changed point or incident after the command.
         state:
           type: string
           description: Point status, or Current/Ended for an assignment.
@@ -14273,6 +14477,254 @@ components:
           oneOf:
             - $ref: "#/components/schemas/InspectionChecklist"
             - type: "null"
+    PointIncident:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - pointId
+        - pointName
+        - intakeId
+        - title
+        - kind
+        - description
+        - protectedValue
+        - state
+        - openedBy
+        - openedAt
+        - decision
+        - approvedAmount
+        - fundedAmount
+        - unfundedAmount
+        - decidedAt
+        - decisionReason
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        pointId:
+          type: string
+          format: uuid
+        pointName:
+          type: string
+        intakeId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        title:
+          type:
+            - string
+            - "null"
+          description: Book title when the incident concerns an intake.
+        kind:
+          type: string
+          enum:
+            - Lost
+            - Damaged
+            - ArrivalMismatch
+            - LateArrival
+            - EmergencyClose
+            - Other
+        description:
+          type: string
+        protectedValue:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 1000000
+        state:
+          type: string
+          enum:
+            - Open
+            - Decided
+            - Underfunded
+        openedBy:
+          type: string
+          format: uuid
+        openedAt:
+          type: string
+          format: date-time
+        decision:
+          type:
+            - string
+            - "null"
+          enum:
+            - Compensate
+            - NoCompensation
+            - null
+        approvedAmount:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 1000000
+        fundedAmount:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 1000000
+        unfundedAmount:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 1000000
+        decidedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        decisionReason:
+          type:
+            - string
+            - "null"
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    PointIncidentList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/PointIncident"
+        serverTime:
+          type: string
+          format: date-time
+    OpenPointIncident:
+      type: object
+      additionalProperties: false
+      required:
+        - pointId
+        - intakeId
+        - kind
+        - description
+      properties:
+        pointId:
+          type: string
+          format: uuid
+        intakeId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - Lost
+            - Damaged
+            - ArrivalMismatch
+            - LateArrival
+            - EmergencyClose
+            - Other
+        description:
+          type: string
+          minLength: 20
+          maxLength: 2000
+    DecidePointIncident:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - decision
+        - amount
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        decision:
+          type: string
+          enum:
+            - Compensate
+            - NoCompensation
+        amount:
+          type: integer
+          minimum: 0
+          maximum: 1000000
+          description: 0 for NoCompensation; 1..protectedValue for Compensate.
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+    IncidentFundEntry:
+      type: object
+      additionalProperties: false
+      required:
+        - sequence
+        - type
+        - amount
+        - incidentId
+        - balanceAfter
+        - createdAt
+      properties:
+        sequence:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        type:
+          type: string
+          enum:
+            - Opening
+            - CompensationApproved
+        amount:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        incidentId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        balanceAfter:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        createdAt:
+          type: string
+          format: date-time
+    IncidentFund:
+      type: object
+      additionalProperties: false
+      required:
+        - opening
+        - approved
+        - balance
+        - entries
+        - serverTime
+      properties:
+        opening:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        approved:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        balance:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        entries:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/IncidentFundEntry"
+        serverTime:
+          type: string
+          format: date-time
+      description: Simulated demo fund (POL-42). Approved compensation is recorded here; paying a member wallet is a separate, gated step.
     PointOrderResolutionQueue:
       type: object
       additionalProperties: false

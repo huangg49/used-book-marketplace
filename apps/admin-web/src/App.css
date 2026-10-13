@@ -843,3 +843,26 @@
 .report-revisions li + li {
   margin-block-start: 0.25rem;
 }
+
+/* N4-13: simulated incident fund summary above the incident list. */
+.fund-summary {
+  margin-block-end: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  border-radius: 8px;
+}
+.fund-summary dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2.5rem;
+  margin: 0.5rem 0;
+}
+.fund-summary dt {
+  font-size: 0.8125rem;
+}
+.fund-summary dd {
+  margin: 0;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}

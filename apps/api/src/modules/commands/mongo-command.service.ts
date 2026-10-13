@@ -179,7 +179,7 @@ export type AuctionChange = {
 // FR-H04 point administration and later point operations (N4-10..N4-13):
 // receipts and audit name the point.
 export type PointChange = {
-  entityType: 'HandoverPoint' | 'PointAssignment';
+  entityType: 'HandoverPoint' | 'PointAssignment' | 'PointIncident';
   entityId: string;
   pointId: string;
   version: number;
@@ -194,7 +194,9 @@ export type PointOperation =
   | 'createHandoverPoint'
   | 'updateHandoverPoint'
   | 'assignPointStaff'
-  | 'endPointAssignment';
+  | 'endPointAssignment'
+  | 'openPointIncident'
+  | 'decidePointIncident';
 export type AuctionOperation =
   | 'createAuctionIntake'
   | 'cancelAuctionIntake'
@@ -856,7 +858,8 @@ export class MongoCommandService {
         change.entityType === 'Auction' ||
         change.entityType === 'PointOrder' ||
         change.entityType === 'HandoverPoint' ||
-        change.entityType === 'PointAssignment'
+        change.entityType === 'PointAssignment' ||
+        change.entityType === 'PointIncident'
         || change.entityType === 'PurchaseConversation'
           ? change.decidedAt
           : new Date();
@@ -873,7 +876,8 @@ export class MongoCommandService {
       };
       if (
         change.entityType === 'HandoverPoint' ||
-        change.entityType === 'PointAssignment'
+        change.entityType === 'PointAssignment' ||
+        change.entityType === 'PointIncident'
       )
         targets.pointId = change.pointId;
       else if (change.entityType === 'TopupIntent')
@@ -982,6 +986,7 @@ function auditAfter(change: CommandChange): Json {
   switch (change.entityType) {
     case 'HandoverPoint':
     case 'PointAssignment':
+    case 'PointIncident':
       return {
         entityId: change.entityId,
         version: change.version,

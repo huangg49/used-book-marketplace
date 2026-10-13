@@ -1773,7 +1773,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Assigned independent STAFF records condition inspection Pass or Fail against the frozen revision. Fail moves to ReclaimRequired. Pass is a condition checklist, not authenticity. */
+        /** @description Assigned independent STAFF records condition inspection Pass, Fail or NeedsEvidence with the FR-T01 checklist against the frozen revision. Fail moves to ReclaimRequired. Pass is a condition checklist, not authenticity. */
         post: operations["inspectAuctionIntake"];
         delete?: never;
         options?: never;
@@ -1978,6 +1978,58 @@ export interface paths {
         };
         /** @description ACTIVE STAFF. The points the caller is assigned to now. An empty list means no current assignment. */
         get: operations["listMyPointAssignments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN sees every incident; ACTIVE STAFF sees incidents at the points they are assigned to now. Open first, then the most recent. FR-T04. */
+        get: operations["listPointIncidents"];
+        put?: never;
+        /** @description Assigned STAFF or ACTIVE ADMIN opens an incident at a point, with or without an Order (auction intake). The protected value is snapshotted from the intake (Order book price once sold). EmergencyClose is ADMIN only and pauses new bookings at the point. */
+        post: operations["openPointIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/incidents/{incidentId}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN independent of the point (no current assignment) and of the incident (not the opener) decides once. Compensation is capped by the protected value and funded from the POL-42 simulated fund while it lasts; the unfunded part is recorded and the point stops taking new bookings. No wallet payout is made here. */
+        post: operations["decidePointIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/incident-fund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN. The POL-42 simulated incident fund with its opening balance, approved compensation and append-only journal. */
+        get: operations["readIncidentFund"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4485,12 +4537,12 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            entityType: "HandoverPoint" | "PointAssignment";
+            entityType: "HandoverPoint" | "PointAssignment" | "PointIncident";
             /** Format: uuid */
             entityId: string;
             /** Format: uuid */
             pointId: string;
-            /** @description The point version after the command. */
+            /** @description The version of the changed point or incident after the command. */
             version: number;
             /** @description Point status, or Current/Ended for an assignment. */
             state: string;
@@ -4537,6 +4589,78 @@ export interface components {
             outcome: "Pass" | "Fail";
             note: string;
             checklist?: components["schemas"]["InspectionChecklist"] | null;
+        };
+        PointIncident: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            pointId: string;
+            pointName: string;
+            /** Format: uuid */
+            intakeId: string | null;
+            /** @description Book title when the incident concerns an intake. */
+            title: string | null;
+            /** @enum {string} */
+            kind: "Lost" | "Damaged" | "ArrivalMismatch" | "LateArrival" | "EmergencyClose" | "Other";
+            description: string;
+            protectedValue: number | null;
+            /** @enum {string} */
+            state: "Open" | "Decided" | "Underfunded";
+            /** Format: uuid */
+            openedBy: string;
+            /** Format: date-time */
+            openedAt: string;
+            /** @enum {string|null} */
+            decision: "Compensate" | "NoCompensation" | null;
+            approvedAmount: number | null;
+            fundedAmount: number | null;
+            unfundedAmount: number | null;
+            /** Format: date-time */
+            decidedAt: string | null;
+            decisionReason: string | null;
+            version: number;
+        };
+        PointIncidentList: {
+            items: components["schemas"]["PointIncident"][];
+            /** Format: date-time */
+            serverTime: string;
+        };
+        OpenPointIncident: {
+            /** Format: uuid */
+            pointId: string;
+            /** Format: uuid */
+            intakeId: string | null;
+            /** @enum {string} */
+            kind: "Lost" | "Damaged" | "ArrivalMismatch" | "LateArrival" | "EmergencyClose" | "Other";
+            description: string;
+        };
+        DecidePointIncident: {
+            expectedVersion: number;
+            /** @enum {string} */
+            decision: "Compensate" | "NoCompensation";
+            /** @description 0 for NoCompensation; 1..protectedValue for Compensate. */
+            amount: number;
+            reason: string;
+        };
+        IncidentFundEntry: {
+            sequence: number;
+            /** @enum {string} */
+            type: "Opening" | "CompensationApproved";
+            amount: number;
+            /** Format: uuid */
+            incidentId: string | null;
+            balanceAfter: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description Simulated demo fund (POL-42). Approved compensation is recorded here; paying a member wallet is a separate, gated step. */
+        IncidentFund: {
+            opening: number;
+            approved: number;
+            balance: number;
+            entries: components["schemas"]["IncidentFundEntry"][];
+            /** Format: date-time */
+            serverTime: string;
         };
         PointOrderResolutionQueue: {
             items: components["schemas"]["PointOrderResolutionItem"][];
@@ -8634,6 +8758,144 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyPointAssignmentList"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listPointIncidents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointIncidentList"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    openPointIncident: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenPointIncident"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            201: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    decidePointIncident: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                incidentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecidePointIncident"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    readIncidentFund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentFund"];
                 };
             };
             400: components["responses"]["ListingError"];

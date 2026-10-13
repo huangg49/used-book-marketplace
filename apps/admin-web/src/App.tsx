@@ -29,6 +29,7 @@ import {
   UsersRound,
   Warehouse,
   MapPin,
+  TriangleAlert,
 } from "lucide-react";
 import { currentUserSchema } from "@used-books/session-client";
 import logo from "../../../packages/brand/logos/lat-lai-horizontal-primary.svg";
@@ -53,6 +54,7 @@ import {
   ResolutionQueue,
 } from "./features/operations/queues";
 import { PointsPage } from "./features/operations/points";
+import { IncidentsPage } from "./features/operations/incidents";
 import "./App.css";
 
 function Login() {
@@ -232,6 +234,10 @@ function Workspace() {
                     </NavLink>
                   </>
                 )}
+                <NavLink to="/operations/incidents">
+                  <TriangleAlert aria-hidden="true" />
+                  Sự cố tại điểm
+                </NavLink>
                 {canResolve(user) && (
                   <>
                     <NavLink to="/operations/resolutions">
@@ -328,6 +334,7 @@ const router = createBrowserRouter([
       { path: "/operations/resolutions", element: <ResolutionQueue /> },
       { path: "/operations/auctions", element: <AuctionQueue /> },
       { path: "/operations/points", element: <PointsPage /> },
+      { path: "/operations/incidents", element: <IncidentsPage /> },
       {
         path: "*",
         element: (

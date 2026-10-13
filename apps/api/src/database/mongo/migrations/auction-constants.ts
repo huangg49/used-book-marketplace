@@ -24,3 +24,6 @@ export const PLATFORM_COMMISSION_ACCOUNT_ID =
   '00000000-0000-4000-8000-0000000000c1';
 // POL-09: the seller answers a NeedsEvidence inspection within 48 hours.
 export const EVIDENCE_WINDOW_MS = 48 * 3_600_000;
+// POL-42: simulated incident fund opening balance (no automatic top-up).
+export const INCIDENT_FUND_OPENING = 2_000_000;
+export const INCIDENT_FUND_OPENING_ID = '00000000-0000-4000-8000-0000000000f1';
