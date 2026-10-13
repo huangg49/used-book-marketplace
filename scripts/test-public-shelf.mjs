@@ -244,10 +244,10 @@ try {
   await click("Thử lại");
   await p.setViewportSize({ width: 390, height: 844 });
   await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
-  await p.getByLabel("Email", { exact: true }).waitFor();
+  await p.getByLabel("Email", { exact: true }).last().waitFor();
   await p.screenshot({ path: path.join(artifacts, "login-390.png") });
-  await p.getByLabel("Email", { exact: true }).fill("member@operations.test");
-  await p.getByLabel("Mật khẩu", { exact: true }).fill(password);
+  await p.getByLabel("Email", { exact: true }).last().fill("member@operations.test");
+  await p.getByLabel("Mật khẩu", { exact: true }).last().fill(password);
   await click("Đăng nhập");
   await p.getByRole("button", { name: "Sách của tôi", exact: true }).waitFor();
   await p.screenshot({ path: path.join(artifacts, "account-390.png") });
@@ -376,8 +376,8 @@ try {
   await fixture.setUserStatus(fixture.member.user.id, "RESTRICTED");
   // listingJourney navigates to a guest URL; browser tokens are memory-only.
   await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
-  await p.getByLabel("Email", { exact: true }).fill("member@operations.test");
-  await p.getByLabel("Mật khẩu", { exact: true }).fill(password);
+  await p.getByLabel("Email", { exact: true }).last().fill("member@operations.test");
+  await p.getByLabel("Mật khẩu", { exact: true }).last().fill(password);
   await click("Đăng nhập");
   await p
     .getByText("Tài khoản đang bị hạn chế một số hoạt động.", { exact: true })
@@ -399,7 +399,7 @@ try {
   );
   await p.screenshot({ path: path.join(artifacts, "account-locked-390.png") });
   await click("Đăng xuất");
-  await p.getByLabel("Email", { exact: true }).waitFor();
+  await p.getByLabel("Email", { exact: true }).last().waitFor();
   await p.goto(`${origin}/ui`);
   await p.getByRole("button", { name: "Về kệ sách", exact: true }).waitFor();
   await p.setViewportSize({ width: 320, height: 780 });
