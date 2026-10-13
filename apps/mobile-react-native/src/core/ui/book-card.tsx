@@ -11,7 +11,7 @@ import { AppText } from "./text";
 import { Icon } from "./icon";
 import { Button } from "./actions";
 import { formatVnd } from "./format";
-import { stitchTokens } from "./theme";
+import { colors, space, stitchTokens } from "./theme";
 
 export interface BookCardItem {
   id: string;
@@ -24,7 +24,7 @@ export interface BookCardItem {
     category?: string;
   };
   condition?: "LikeNew" | "Good" | "Fair" | "Worn" | string;
-  mode?: "Sale" | "Exchange" | "Both" | string;
+  mode?: "Sale" | "Exchange" | "Both" | "Auction" | string;
   salePrice?: number | null;
   exchangeValue?: number | null;
   coverUrl?: string;
@@ -35,6 +35,8 @@ export interface BookCardItem {
   fulfillment?: { name?: string };
   moderation?: "Draft" | "PendingReview" | "Approved" | "Rejected" | string;
   mediaCount?: number;
+  photos?: { id: string }[];
+  revisionId?: string;
 }
 
 export interface BookCardProps {
@@ -54,15 +56,22 @@ export interface BookCardProps {
   readonly style?: StyleProp<ViewStyle>;
 }
 
-// Condition styles
+// Condition styles matching Home shelf
 const conditionConfig: Record<
   string,
   { label: string; bg: string; text: string }
 > = {
-  LikeNew: { label: "Như mới", bg: "#1B5E20", text: "#FFFFFF" },
-  Good: { label: "Còn tốt", bg: "#C67D38", text: "#FFFFFF" },
-  Fair: { label: "Đã dùng", bg: "#58685E", text: "#FFFFFF" },
-  Worn: { label: "Cũ nhiều", bg: "#74520C", text: "#FFFFFF" },
+  LikeNew: { label: "Như mới", bg: stitchTokens.likeNewGreen, text: stitchTokens.white },
+  Good: { label: "Còn tốt", bg: stitchTokens.goldBronze, text: stitchTokens.white },
+  Fair: { label: "Đã dùng nhiều", bg: stitchTokens.darkTaupe, text: stitchTokens.white },
+  Worn: { label: "Cũ nhiều", bg: stitchTokens.darkTaupe, text: stitchTokens.white },
+};
+
+const modeConfig: Record<string, { label: string; bg: string }> = {
+  Sale: { label: "Bán", bg: stitchTokens.wine },
+  Exchange: { label: "Đổi", bg: stitchTokens.orangeDeep },
+  Both: { label: "Bán hoặc đổi", bg: stitchTokens.darkRed },
+  Auction: { label: "Đấu giá", bg: stitchTokens.darkRed },
 };
 
 // Moderation badge config for management variant
@@ -100,39 +109,32 @@ export function BookCard({
   variant = "shelf",
   photoNode,
   titleNode,
-  badgeNode,
   onOpen,
-  isFavorite: controlledFavorite,
-  onToggleFavorite,
-  showFavorite = false,
-  showAuthor,
   actionTitle,
   onActionPress,
   onDelete,
   style,
 }: BookCardProps) {
-  const [internalFavorite, setInternalFavorite] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
-  const favorite = controlledFavorite ?? internalFavorite;
-
-  const handleFavoriteToggle = () => {
-    setInternalFavorite(!internalFavorite);
-    onToggleFavorite?.();
-  };
 
   const bookTitle = item.book?.title || "Chưa chọn đầu sách";
-  const authorAndYear = [
-    item.book?.authors?.[0],
-    item.book?.publicationYear || item.book?.publisher,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const authorText =
+    Array.isArray(item.book?.authors) && item.book.authors.length > 0
+      ? item.book.authors.join(" · ")
+      : typeof item.book?.authors === "string"
+        ? item.book.authors
+        : [
+            item.book?.authors?.[0],
+            item.book?.publicationYear || item.book?.publisher,
+          ]
+            .filter(Boolean)
+            .join(" · ");
 
   // Condition info
-  const condition = conditionConfig[item.condition] || {
-    label: item.condition || "Đã dùng",
-    bg: "#58685E",
-    text: "#FFFFFF",
+  const condition = (item.condition && conditionConfig[item.condition]) || {
+    label: item.condition || "Còn tốt",
+    bg: stitchTokens.goldBronze,
+    text: stitchTokens.white,
   };
 
   // Moderation info for management variant
@@ -142,33 +144,11 @@ export function BookCard({
     text: "#57423E",
   };
 
-  // Mode badge / preferred badge
-  const preferredBadge =
-    item.badgeLabel ||
-    (item.condition === "LikeNew"
-      ? "Yêu thích+"
-      : item.mode === "Both" || item.mode === "Exchange"
-        ? "Đổi sách"
-        : undefined);
-
-  // Filter tags (excluding freeship)
-  const candidateTags: (string | undefined)[] =
-    item.tags && item.tags.length > 0
-      ? item.tags
-      : [
-          item.mode === "Exchange" || item.mode === "Both"
-            ? "Đổi sách"
-            : undefined,
-        ];
-
-  const displayTags: string[] = candidateTags.filter(
-    (tag: string | undefined): tag is string =>
-      Boolean(tag && typeof tag === "string" && !tag.toLowerCase().includes("freeship")),
-  );
+  // Mode badge
+  const modeInfo = item.mode ? modeConfig[item.mode] || { label: item.mode, bg: stitchTokens.wine } : null;
 
   const locationText =
-    item.location ||
-    (item.fulfillment?.name ? `${item.fulfillment.name}` : "TP.HCM");
+    item.fulfillment?.name ?? item.location ?? "TP.HCM";
 
   const mediaCount =
     item.mediaCount ?? item.currentRevision?.content?.mediaIds?.length ?? 0;
@@ -202,9 +182,6 @@ export function BookCard({
           </View>
         )}
 
-        {/* Book Spine Crease Effect */}
-        <View style={styles.spineCrease} />
-
         {/* Top-Left Badge */}
         {variant === "management" ? (
           <View
@@ -232,29 +209,24 @@ export function BookCard({
               { backgroundColor: condition.bg },
             ]}
           >
-            <Icon name="check" size={10} color="#FFFFFF" />
             <AppText kind="small" style={styles.conditionText}>
               {condition.label}
             </AppText>
           </View>
         )}
 
-        {/* Top-Right Favorite Button */}
-        {variant !== "management" && (onToggleFavorite || showFavorite) ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={favorite ? "Bỏ yêu thích" : "Lưu vào yêu thích"}
-            onPress={handleFavoriteToggle}
-            hitSlop={6}
-            style={styles.heartButton}
+        {/* Top-Right Mode Tag (Bán / Đổi / Bán hoặc đổi) */}
+        {variant !== "management" && modeInfo ? (
+          <View
+            style={[
+              styles.modeBadge,
+              { backgroundColor: modeInfo.bg },
+            ]}
           >
-            <Icon
-              name="heart"
-              size={16}
-              color={favorite ? stitchTokens.flashRed : "#FFFFFF"}
-              filled={favorite}
-            />
-          </Pressable>
+            <AppText kind="small" style={styles.modeText}>
+              {modeInfo.label}
+            </AppText>
+          </View>
         ) : null}
 
         {/* Top-Right 3-Dots Button & Quick Delete Popover for Management */}
@@ -303,16 +275,7 @@ export function BookCard({
           </View>
         ) : null}
 
-        {/* Bottom-Left Preferred Badge */}
-        {variant !== "management" && preferredBadge ? (
-          <View style={styles.preferredBadge}>
-            <AppText kind="small" style={styles.preferredText}>
-              {preferredBadge}
-            </AppText>
-          </View>
-        ) : null}
-
-        {/* Bottom-Right Media Count (for management or when photos exist) */}
+        {/* Bottom-Right Media Count (for management) */}
         {variant === "management" && mediaCount > 0 ? (
           <View style={styles.mediaCountBadge}>
             <AppText kind="small" style={styles.mediaCountText}>
@@ -329,58 +292,39 @@ export function BookCard({
             titleNode
           ) : (
             <>
-              <AppText kind="small" style={styles.bookTitle} numberOfLines={2}>
+              <AppText
+                kind="shelfTitle"
+                style={styles.bookTitle}
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
                 {bookTitle}
               </AppText>
 
-              {/* Subtitle / Author text for Search or when specified */}
-              {(variant === "search" || showAuthor) && authorAndYear ? (
-                <AppText kind="small" style={styles.authorText} numberOfLines={1}>
-                  {authorAndYear}
+              {authorText ? (
+                <AppText
+                  kind="annotation"
+                  color={colors.muted}
+                  numberOfLines={1}
+                  style={styles.authorText}
+                >
+                  {authorText}
                 </AppText>
               ) : null}
             </>
           )}
         </View>
 
-        {/* Feature Tags (only if any exist) */}
-        {variant !== "management" && displayTags.length > 0 ? (
-          <View style={styles.tagsRow}>
-            {displayTags.map((tag) => (
-              <View
-                key={tag}
-                style={[
-                  styles.tagPill,
-                  tag.includes("Freeship")
-                    ? styles.freeshipPill
-                    : styles.exchangePill,
-                ]}
-              >
-                <AppText
-                  kind="small"
-                  style={[
-                    styles.tagText,
-                    tag.includes("Freeship")
-                      ? styles.freeshipText
-                      : styles.exchangeText,
-                  ]}
-                >
-                  {tag}
-                </AppText>
-              </View>
-            ))}
-          </View>
-        ) : null}
-
         {/* Price & Footnote */}
         <View style={styles.bottomBlock}>
-          {priceValue ? (
+          {item.salePrice != null && (
             <AppText kind="shelfPrice" style={styles.priceText}>
-              {formatVnd(priceValue)}
+              {formatVnd(item.salePrice)}
             </AppText>
-          ) : (
-            <AppText kind="small" style={styles.noPriceText}>
-              Chưa đặt giá
+          )}
+          {item.exchangeValue != null && (
+            <AppText kind="annotation" style={styles.exchangeText}>
+              Giá trị đổi {formatVnd(item.exchangeValue)}
             </AppText>
           )}
 
@@ -395,8 +339,9 @@ export function BookCard({
               />
             </View>
           ) : locationText ? (
-            /* Footnote (Location) */
+            /* Footnote (Location with Pin icon) */
             <View style={styles.metaRow}>
+              <Icon name="pin" size={11} color={colors.muted} />
               <AppText kind="small" style={styles.metaText} numberOfLines={1}>
                 {locationText}
               </AppText>
@@ -411,26 +356,25 @@ export function BookCard({
 const styles = StyleSheet.create({
   cardContainer: {
     width: "48.5%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#EBE6DE",
+    borderColor: stitchTokens.creamParchment,
     overflow: "hidden",
     elevation: 2,
-    shadowColor: "rgba(40, 25, 20, 0.08)",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 3,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   cardPressed: {
     opacity: 0.9,
-    transform: [{ scale: 0.985 }],
   },
   coverFrame: {
     width: "100%",
     aspectRatio: 3 / 4,
-    backgroundColor: "#F7F4EE",
+    backgroundColor: stitchTokens.offWhiteWarm,
     position: "relative",
     overflow: "hidden",
   },
@@ -446,30 +390,38 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FAF7F2",
-  },
-  spineCrease: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    width: 6,
-    backgroundColor: "rgba(0,0,0,0.06)",
+    backgroundColor: stitchTokens.parchment,
   },
   conditionBadge: {
     position: "absolute",
     top: 6,
     left: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    paddingHorizontal: 5,
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 3,
+    borderRadius: 4,
     elevation: 2,
   },
   conditionText: {
-    color: "#FFFFFF",
+    color: stitchTokens.white,
+    fontSize: 9,
+    fontWeight: "700",
+    lineHeight: 11,
+  },
+  modeBadge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    elevation: 2,
+    shadowColor: stitchTokens.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+  },
+  modeText: {
+    color: stitchTokens.white,
     fontSize: 9,
     fontWeight: "700",
     lineHeight: 11,
@@ -484,7 +436,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 1,
@@ -497,17 +449,6 @@ const styles = StyleSheet.create({
   moderationText: {
     fontSize: 9,
     fontWeight: "700",
-  },
-  heartButton: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    alignItems: "center",
-    justifyContent: "center",
   },
   menuContainer: {
     position: "absolute",
@@ -522,30 +463,30 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     backgroundColor: "rgba(255, 255, 255, 0.94)",
     borderWidth: 1,
-    borderColor: "#DEC0BB",
+    borderColor: stitchTokens.peachBorder,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.12,
     shadowRadius: 2,
   },
   moreButtonActive: {
-    backgroundColor: "#FCEEEB",
+    backgroundColor: stitchTokens.roseWarmSurface,
     borderColor: stitchTokens.wine,
   },
   menuPopover: {
     position: "absolute",
     top: 30,
     right: 0,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#DEC0BB",
+    borderColor: stitchTokens.peachBorder,
     minWidth: 84,
     paddingVertical: 3,
     paddingHorizontal: 4,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.18,
     shadowRadius: 4,
@@ -561,27 +502,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   menuItemPressed: {
-    backgroundColor: "#FFEBEE",
+    backgroundColor: stitchTokens.flashRedBg,
   },
   menuItemText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#B71C1C",
-  },
-  preferredBadge: {
-    position: "absolute",
-    bottom: 6,
-    left: 6,
-    backgroundColor: stitchTokens.wine,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 3,
-  },
-  preferredText: {
-    color: stitchTokens.gold,
-    fontSize: 9,
-    fontWeight: "700",
-    lineHeight: 11,
+    color: stitchTokens.darkRed,
   },
   mediaCountBadge: {
     position: "absolute",
@@ -593,91 +519,51 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   mediaCountText: {
-    color: "#FFFDF8",
+    color: stitchTokens.warmIvory,
     fontSize: 9,
     fontWeight: "600",
   },
   contentArea: {
-    padding: 8,
-    flex: 1,
+    padding: 10,
+    gap: space.xs,
     justifyContent: "space-between",
+    flex: 1,
   },
   titleBlock: {
     gap: 2,
   },
   bookTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
-    color: "#271813",
-    lineHeight: 16,
-    fontFamily: "BeBold",
+    color: stitchTokens.darkWood,
+    lineHeight: 17,
   },
   authorText: {
-    fontSize: 10,
-    color: "#786B67",
-    lineHeight: 13,
-  },
-  tagsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 4,
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  tagPill: {
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 3,
-    borderWidth: 0.5,
-  },
-  tagText: {
-    fontSize: 9,
-    fontWeight: "600",
-    lineHeight: 11,
-  },
-  freeshipPill: {
-    backgroundColor: "#FFEBEE",
-    borderColor: "#FFCDD2",
-  },
-  freeshipText: {
-    color: "#C62828",
-    fontSize: 9,
-    fontWeight: "600",
-    lineHeight: 11,
-  },
-  exchangePill: {
-    backgroundColor: "#FFF8E1",
-    borderColor: "#FFE082",
-  },
-  exchangeText: {
-    color: "#E65100",
-    fontSize: 9,
-    fontWeight: "600",
-    lineHeight: 11,
+    fontSize: 11,
+    color: colors.muted,
   },
   bottomBlock: {
     marginTop: 4,
+    gap: 2,
   },
   priceText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
     color: stitchTokens.wine,
-    fontFamily: "BeBold",
   },
-  noPriceText: {
-    fontSize: 10,
-    fontStyle: "italic",
-    color: "#8B716D",
+  exchangeText: {
+    fontSize: 11,
+    color: stitchTokens.warmUmber,
   },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
-    marginTop: 4,
+    gap: 3,
+    marginTop: 3,
   },
   metaText: {
     fontSize: 10,
-    color: "#8C807C",
+    color: colors.muted,
   },
   managementActionRow: {
     marginTop: 6,
