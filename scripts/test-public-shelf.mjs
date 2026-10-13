@@ -446,9 +446,9 @@ try {
     .last()
     .waitFor();
   assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 4);
-  await click("Đổi");
+  await p.locator('button:visible').filter({ hasText: "Đổi" }).first().click();
   assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 2);
-  await click("Tất cả");
+  await p.locator('button:visible').filter({ hasText: "Tất cả" }).first().click();
   // List is the approved default; the opt-in comparison still renders a grid.
   const expectComposition = (grid) =>
     p.waitForFunction((grid) => {
