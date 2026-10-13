@@ -388,7 +388,7 @@ try {
   await p.getByRole("tab", { name: "Trang chủ", exact: true }).click();
   await fixture.setUserStatus(fixture.member.user.id, "LOCKED");
   await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
-  await p.getByText(/Tài khoản đang bị khóa/).waitFor();
+  await p.getByText(/Tài khoản đang bị khóa/).first().waitFor();
   assert.equal(
     await p.getByRole("button", { name: "Sách của tôi", exact: true }).count(),
     0,
