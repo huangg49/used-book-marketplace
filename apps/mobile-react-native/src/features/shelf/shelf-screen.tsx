@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Keyboard, ScrollView, StyleSheet, View } from "react-native";
+import { Keyboard, ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
@@ -12,18 +12,15 @@ import {
   Screen,
   StatePanel,
   colors,
-  formatVnd,
   presentError,
   space,
-  stitchTokens,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
-import { conditions, publicPage } from "./contracts";
+import { publicPage } from "./contracts";
 import {
   filterError,
   initialFilters,
   queryString,
-  sorts,
   type Filters,
 } from "./filters";
 import { PublicPhoto } from "./public-photo";
@@ -172,47 +169,6 @@ export function ShelfScreen() {
 
         {error ? <Notice tone="error">{error}</Notice> : null}
 
-        {/* 5. Section Header with Title */}
-        <View style={[styles.sectionHeaderRow, { paddingHorizontal: 12 }]}>
-          <View style={styles.sectionTitleGroup}>
-            <View style={styles.sectionTitleBar} />
-            <View style={{ gap: space.xs, flex: 1 }}>
-              <AppText kind="heading" style={styles.sectionTitle} accessibilityRole="header">
-                {applied.q
-                  ? `Kết quả cho “${applied.q}”`
-                  : selectedCategory
-                    ? `TUYỂN CHỌN: ${selectedCategory.toUpperCase()}`
-                    : "GỢI Ý HÔM NAY · SÁCH ĐANG CÓ"}
-              </AppText>
-              <AppText kind="annotation" color={colors.muted}>
-                {sorts[applied.sort]}
-                {applied.condition
-                  ? ` · ${conditions[applied.condition as keyof typeof conditions]}`
-                  : ""}
-                {` · Trang ${cursors.length}`}
-              </AppText>
-              {(
-                [
-                  ["minSalePrice", "maxSalePrice", "Giá bán"],
-                  ["minExchangeValue", "maxExchangeValue", "Giá trị đổi"],
-                ] as const
-              ).map(([min, max, label]) =>
-                applied[min] || applied[max] ? (
-                  <AppText key={min} kind="annotation" color={colors.muted}>
-                    {label}:{" "}
-                    {applied[min]
-                      ? `từ ${formatVnd(Number(applied[min]))}`
-                      : "không giới hạn dưới"}
-                    {applied[max]
-                      ? ` đến ${formatVnd(Number(applied[max]))}`
-                      : ", không giới hạn trên"}
-                  </AppText>
-                ) : null,
-              )}
-            </View>
-          </View>
-        </View>
-
         {hasCriteria && (result.data?.items.length !== 0 || result.error) && (
           <View style={{ alignSelf: "flex-start", paddingHorizontal: 12 }}>
             <Chip
@@ -330,7 +286,7 @@ export function ShelfScreen() {
 
           {!result.isPending && !result.error && (
             <Button
-              title="Làm mới danh sách"
+              title="Xem thêm các tác phẩm gợi ý"
               secondary
               busy={result.isFetching}
               onPress={() => void result.refetch()}
@@ -372,29 +328,3 @@ export function ShelfScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  sectionTitleGroup: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    flex: 1,
-  },
-  sectionTitleBar: {
-    width: 4,
-    height: 18,
-    borderRadius: 2,
-    backgroundColor: stitchTokens.wine,
-    marginTop: 2,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: stitchTokens.wine,
-    letterSpacing: 0.3,
-  },
-});
