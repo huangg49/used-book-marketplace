@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Keyboard, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Keyboard, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
@@ -8,7 +8,6 @@ import {
   AppText,
   Button,
   Chip,
-  Icon,
   Notice,
   Screen,
   StatePanel,
@@ -29,7 +28,6 @@ import {
 } from "./filters";
 import { PublicPhoto } from "./public-photo";
 import { ShelfResults } from "./shelf-results";
-import { ShelfFilterSheet } from "./shelf-filter-sheet";
 import { HomeHeader } from "./home-components/home-header";
 import { HomeBanner } from "./home-components/home-banner";
 import { HomeShortcuts } from "./home-components/home-shortcuts";
@@ -47,9 +45,7 @@ export function ShelfScreen() {
   const active = useForeground();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [draft, setDraft] = useState(initialFilters);
   const [applied, setApplied] = useState(initialFilters);
-  const [filterOpen, setFilterOpen] = useState(false);
   const [vouchersOpen, setVouchersOpen] = useState(false);
   const [inspectionOpen, setInspectionOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -103,7 +99,6 @@ export function ShelfScreen() {
     setApplied({ ...next, q: next.q.trim() });
     setSearch(next.q.trim());
     setCursors([""]);
-    setFilterOpen(false);
     Keyboard.dismiss();
     scroll.current?.scrollTo({ y: 0, animated: false });
   }
@@ -115,13 +110,6 @@ export function ShelfScreen() {
     Number(!!(applied.minSalePrice || applied.maxSalePrice)) +
     Number(!!(applied.minExchangeValue || applied.maxExchangeValue));
   const hasCriteria = !!applied.q || filterCount > 0;
-
-  const openFilters = () => {
-    Keyboard.dismiss();
-    setDraft({ ...applied, q: search });
-    setError(undefined);
-    setFilterOpen(true);
-  };
 
   const handleOpenBook = (id: string) => {
     router.push({ pathname: "./book", params: { id } });
@@ -182,9 +170,9 @@ export function ShelfScreen() {
           }}
         />
 
-        {error && !filterOpen ? <Notice tone="error">{error}</Notice> : null}
+        {error ? <Notice tone="error">{error}</Notice> : null}
 
-        {/* 5. Section Header with Title and Filter Button */}
+        {/* 5. Section Header with Title */}
         <View style={[styles.sectionHeaderRow, { paddingHorizontal: 12 }]}>
           <View style={styles.sectionTitleGroup}>
             <View style={styles.sectionTitleBar} />
@@ -223,18 +211,6 @@ export function ShelfScreen() {
               )}
             </View>
           </View>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Bộ lọc"
-            onPress={openFilters}
-            style={styles.filterBtn}
-          >
-            <Icon name="tune" size={15} color={stitchTokens.wine} />
-            <AppText kind="small" style={styles.filterBtnText}>
-              Bộ lọc{filterCount > 0 ? ` (${filterCount})` : ""}
-            </AppText>
-          </Pressable>
         </View>
 
         {hasCriteria && (result.data?.items.length !== 0 || result.error) && (
@@ -368,22 +344,6 @@ export function ShelfScreen() {
         </View>
       </View>
 
-      {/* Filter Sheet */}
-      <ShelfFilterSheet
-        visible={filterOpen}
-        value={draft}
-        onChange={(next) => {
-          setDraft(next);
-          setError(undefined);
-        }}
-        onClose={() => {
-          setFilterOpen(false);
-          setError(undefined);
-        }}
-        onApply={() => apply(draft)}
-        error={error}
-      />
-
       {/* Interactive Voucher Modal */}
       <HomeVouchersModal
         visible={vouchersOpen}
@@ -436,26 +396,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: stitchTokens.wine,
     letterSpacing: 0.3,
-  },
-  filterBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: stitchTokens.white,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: stitchTokens.clayLight,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  filterBtnText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: stitchTokens.wine,
   },
 });
