@@ -256,7 +256,6 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     decision: "Reject",
     reason: "Cần bổ sung rõ tình trạng trang trắng bị rời.",
   });
-  await click("Kiểm tra trạng thái mới nhất");
   await p
     .getByText(
       "Lần duyệt trước: Cần bổ sung rõ tình trạng trang trắng bị rời.",
@@ -298,7 +297,6 @@ export async function listingJourney(p, fixture, admin, artifacts) {
       contentAppropriate: true,
     },
   });
-  await click("Kiểm tra trạng thái mới nhất");
   await p
     .getByRole("button", { name: "Sửa bài đã duyệt", exact: true })
     .waitFor();
