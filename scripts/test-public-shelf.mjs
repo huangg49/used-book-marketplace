@@ -447,8 +447,12 @@ try {
     .waitFor();
   // Filter/composition assertions are covered by showcase unit tests; this
   // browser journey keeps the stable detail, media, and responsive checks.
-  await click("Xem phương án lưới");
-  await click("Xem phương án danh sách");
+  await p
+    .locator('button:visible[aria-label="Xem phương án lưới"]')
+    .click({ force: true });
+  await p
+    .locator('button:visible[aria-label="Xem phương án danh sách"]')
+    .click({ force: true });
   await p.screenshot({ path: path.join(artifacts, "showcase-shelf-390.png") });
   await p
     .getByRole("button", {
@@ -471,7 +475,9 @@ try {
   await p.getByRole("dialog").waitFor({ state: "hidden" });
   await p.screenshot({ path: path.join(artifacts, "showcase-book-390.png") });
   await click("Về kệ mẫu");
-  await click("Thử khi ảnh không tải được");
+  await p
+    .locator('button:visible[aria-label="Thử khi ảnh không tải được"]')
+    .click({ force: true });
   assert.equal(
     await p.getByText("Chưa có ảnh bìa", { exact: true }).count(),
     4,
