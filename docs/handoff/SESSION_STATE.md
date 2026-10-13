@@ -1,7 +1,34 @@
-# Điểm lưu hiện tại — 12/10/2026
+# Điểm lưu hiện tại — 13/10/2026
 
-Source tích hợp: `codex/integration-main`, main đã fetch `53a2673`;
-OpenAPI0.34.0,22migration Mongo,134HTTP operation/23controller.
+Source tích hợp: `feat/rn-ui-redesign-navbar-auctions`, PR #37.
+OpenAPI 0.34.0, 22 migration Mongo, 134 HTTP operation / 23 controller.
+
+## Mobile React Native CI Lint & Design Token Remediation — 13/10/2026
+
+- PR #37 (`feat/rn-ui-redesign-navbar-auctions`): Khắc phục lỗi CI `react-native-ci.yml`
+  khiến `pnpm --filter @used-books/mobile-react-native lint` thất bại (535 problems: 496 errors, 39 warnings),
+  và lỗi `operations-ci.yml` tại `pnpm test:public:browser` (`test-public-shelf.mjs` báo `6 !== 12`).
+- Nguyên nhân:
+  1. `eslint.config.js` chặn hardcoded hex/rgba string literals trong `src/features/**` và `src/app/**`.
+  2. Chặn import trực tiếp `Modal` và `TextInput` từ `"react-native"` trong routes/features.
+  3. Lỗi unescaped quotes `"` trong JSX text ở `account-screen.tsx`.
+  4. Các biến/import dư thừa chưa dùng.
+  5. `shelf-screen.tsx` trước đó giới hạn hiển thị `slice(0, 6)` và lược bỏ các components của contract browser test (`ShelfSearchHeader`, `ShelfFilterSheet`, pagination buttons `Trang tiếp`/`Trang trước`).
+- Khắc phục:
+  1. Mở rộng `stitchTokens` trong `apps/mobile-react-native/src/core/ui/theme.ts` với đầy đủ bộ token màu dùng chung cho giao diện Stitch.
+  2. Tạo component dùng chung `AppModal` (`src/core/ui/modal.tsx`) và `AppTextInput` (`src/core/ui/field.tsx`), export qua `src/core/ui`.
+  3. Thay thế toàn bộ color literals trong 19 files feature bằng `stitchTokens.*`.
+  4. Thay thế `Modal` bằng `AppModal`, `TextInput` bằng `AppTextInput` trong các modals và forms.
+  5. Xử lý escape quotes `&quot;` và dọn dẹp toàn bộ unused imports/vars.
+  6. Khôi phục `ShelfResults` (hiển thị đầy đủ 12 kết quả trang đầu), `ShelfSearchHeader`, `ShelfFilterSheet` (`src/features/shelf/shelf-filter-sheet.tsx`), phân trang `Trang tiếp`/`Trang trước` phục vụ contract `test-public-shelf.mjs`, đồng thời bảo toàn mục đấu giá sách trực tiếp (`HomeFlashDeals`) trên trang chủ.
+- Kiểm tra cục bộ:
+  - `pnpm contract:check` PASS (OpenAPI types current).
+  - `pnpm --filter @used-books/mobile-react-native lint` PASS (0 errors, 0 warnings).
+  - `pnpm --filter @used-books/mobile-react-native typecheck` PASS (0 errors).
+  - `pnpm --filter @used-books/session-client test` PASS (2 files, 21 tests passed).
+  - `pnpm --filter @used-books/mobile-react-native test` PASS (20 files, 133 tests passed).
+  - `pnpm --filter @used-books/mobile-react-native export:all` PASS (iOS, Android, Web static routes bundled successfully).
+
 Checkout/gói Android và WIP của các thành viên được ghi bên dưới.
 Remote CI và human sign-off phải kiểm riêng trên PR trước merge.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).

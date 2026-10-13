@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Keyboard, ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -29,6 +29,9 @@ import { PublicPhoto } from "./public-photo";
 import { ShelfSearchHeader } from "./shelf-controls";
 import { ShelfResults } from "./shelf-results";
 import { ShelfFilterSheet } from "./shelf-filter-sheet";
+import { HomeFlashDeals } from "./home-components/home-flash-deals";
+import { FALLBACK_AUCTIONS, type LiveAuctionItem } from "./home-mock-data";
+import { usePublicAuctions } from "../auctions/auctions-model";
 
 export function ShelfScreen() {
   const { client } = useSession();
@@ -42,6 +45,29 @@ export function ShelfScreen() {
   const scroll = useRef<ScrollView>(null);
   const cursor = cursors[cursors.length - 1],
     query = queryString(applied);
+
+  const auctionsQuery = usePublicAuctions(client);
+
+  const liveAuctions: readonly LiveAuctionItem[] = useMemo(() => {
+    if (auctionsQuery.data?.items && auctionsQuery.data.items.length > 0) {
+      return auctionsQuery.data.items.map((auc, idx) => ({
+        id: auc.id,
+        title: auc.title,
+        currentBid: auc.currentPrice ?? auc.startPrice,
+        startPrice: auc.startPrice,
+        bidderCount: auc.bidderCount,
+        endAt: auc.endAt,
+        statusText: `${auc.bidderCount} lượt đấu`,
+        coverUrl:
+          FALLBACK_AUCTIONS[idx % FALLBACK_AUCTIONS.length]?.coverUrl ??
+          FALLBACK_AUCTIONS[0]!.coverUrl,
+        conditionLabel: auc.pointName ? `Trạm ${auc.pointName}` : "Đang đấu giá",
+        buyNowPrice: auc.buyNowPrice,
+      }));
+    }
+    return FALLBACK_AUCTIONS;
+  }, [auctionsQuery.data]);
+
   const result = useQuery({
     queryKey: ["public-shelf", query, cursor],
     queryFn: () =>
@@ -55,6 +81,7 @@ export function ShelfScreen() {
     refetchInterval: active ? 30_000 : false,
     retry: false,
   });
+
   function apply(next: Filters) {
     const issue = filterError(next);
     setError(issue);
@@ -66,6 +93,7 @@ export function ShelfScreen() {
     Keyboard.dismiss();
     scroll.current?.scrollTo({ y: 0, animated: false });
   }
+
   const filterCount =
     Number(!!applied.mode) +
     Number(!!applied.condition) +
@@ -73,12 +101,18 @@ export function ShelfScreen() {
     Number(!!(applied.minSalePrice || applied.maxSalePrice)) +
     Number(!!(applied.minExchangeValue || applied.maxExchangeValue));
   const hasCriteria = !!applied.q || filterCount > 0;
+
   const openFilters = () => {
     Keyboard.dismiss();
     setDraft({ ...applied, q: search });
     setError(undefined);
     setFilterOpen(true);
   };
+
+  const handleOpenBook = (id: string) => {
+    router.push({ pathname: "./book", params: { id } });
+  };
+
   return (
     <Screen
       appearance="browse"
@@ -97,6 +131,15 @@ export function ShelfScreen() {
       compactFooter
     >
       <View style={{ gap: space.lg }}>
+        {/* Live Book Auctions Section */}
+        <HomeFlashDeals
+          items={liveAuctions}
+          onOpenAuction={handleOpenBook}
+          onSeeAllPress={() => {
+            router.navigate("/search");
+          }}
+        />
+
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}

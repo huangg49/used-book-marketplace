@@ -55,7 +55,15 @@ const requests = z.object({
   nextCursor: z.string().nullable(),
 });
 type OwnBook = z.infer<typeof ownBook>;
-export function BookIdentity({ id }: { id: string | null }) {
+export function BookIdentity({
+  id,
+  onEdit,
+  compact,
+}: {
+  id: string | null;
+  onEdit?: () => void;
+  compact?: boolean;
+}) {
   const { client } = useSession();
   const read = useQuery({
     queryKey: ["listing-book", id],
@@ -70,7 +78,22 @@ export function BookIdentity({ id }: { id: string | null }) {
       }
     },
   });
-  if (!id) return <AppText kind="heading">Chưa chọn đầu sách</AppText>;
+  if (!id) {
+    if (compact) {
+      return (
+        <View style={{ gap: 2 }}>
+          <AppText
+            kind="bold"
+            style={{ fontSize: 13, lineHeight: 17 }}
+            numberOfLines={2}
+          >
+            Chưa chọn đầu sách
+          </AppText>
+        </View>
+      );
+    }
+    return <AppText kind="heading">Chưa chọn đầu sách</AppText>;
+  }
   if (read.isPending) return <AppText kind="small">Đang tải tên sách…</AppText>;
   if (!read.data)
     return (
@@ -84,6 +107,22 @@ export function BookIdentity({ id }: { id: string | null }) {
         />
       </View>
     );
+  if (compact) {
+    return (
+      <View style={{ gap: 2 }}>
+        <AppText
+          kind="bold"
+          style={{ fontSize: 13, lineHeight: 17 }}
+          numberOfLines={2}
+        >
+          {read.data.title}
+        </AppText>
+        <AppText kind="small" numberOfLines={1}>
+          {read.data.authors.join(" · ")}
+        </AppText>
+      </View>
+    );
+  }
   return (
     <View style={{ gap: space.sm }}>
       <AppText kind="heading" accessibilityRole="header">

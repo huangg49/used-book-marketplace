@@ -1,16 +1,25 @@
-import { Redirect } from "expo-router";
+import { router } from "expo-router";
 import { useSession } from "../core/session/session-provider";
-import { Screen, StatePanel } from "../core/ui";
+import { BackAction, Screen, StatePanel } from "../core/ui";
 import { DraftsScreen } from "../features/drafts/drafts-screen";
+import { LoginScreen } from "../features/auth/login-screen";
+
 export default function DraftsRoute() {
   const { state } = useSession();
-  if (state.status === "anonymous") return <Redirect href="./account" />;
-  if (state.status !== "authenticated")
+
+  if (state.status === "authenticated" && state.user.roles.includes("MEMBER")) {
+    return <DraftsScreen />;
+  }
+
+  if (state.status === "loading") {
     return (
       <Screen>
-        <StatePanel loading title="Đang khôi phục phiên" />
+        <BackAction title="Quay lại" onPress={() => router.back()} />
+        <StatePanel loading title="Đang tải…" />
       </Screen>
     );
-  if (!state.user.roles.includes("MEMBER")) return <Redirect href="./account" />;
-  return <DraftsScreen />;
+  }
+
+  // Nếu chưa đăng nhập, hiển thị màn hình Đăng Nhập
+  return <LoginScreen />;
 }

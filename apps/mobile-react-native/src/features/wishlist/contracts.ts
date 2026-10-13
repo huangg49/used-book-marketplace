@@ -1,4 +1,3 @@
-import type { components } from "@used-books/api-contract";
 import { z } from "zod";
 
 export const publicBook = z.object({

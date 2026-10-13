@@ -42,9 +42,9 @@ export function BackAction({
       ]}
     >
       <View style={{ width: 20, flexShrink: 0 }}>
-        <Icon name="back" size={20} />
+        <Icon name="back" size={20} color="#5C0202" />
       </View>
-      <T kind="bold" color={c.forest} style={{ flexShrink: 1 }}>
+      <T kind="bold" color="#5C0202" style={{ flexShrink: 1 }}>
         {title}
       </T>
     </Pressable>
@@ -145,6 +145,7 @@ export function Button({
   busy = false,
   destructive = false,
   selected,
+  wine = false,
 }: {
   title: string;
   onPress: () => void;
@@ -153,6 +154,7 @@ export function Button({
   busy?: boolean;
   destructive?: boolean;
   selected?: boolean;
+  wine?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -167,8 +169,9 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         s.button,
+        wine && { backgroundColor: "#5C0202" },
         secondary && s.secondary,
-        destructive && { backgroundColor: c.error },
+        destructive && { backgroundColor: c.error, borderColor: c.error },
         focused && s.focus,
         disabled && { opacity: 0.5 },
         pressed && { opacity: 0.8 },
@@ -184,12 +187,24 @@ export function Button({
       >
         {busy ? (
           <ActivityIndicator
-            color={secondary && !destructive ? c.forest : c.paper}
+            color={
+              secondary && !destructive
+                ? "#5C0202"
+                : wine
+                  ? "#FFDF97"
+                  : c.paper
+            }
           />
         ) : null}
         <T
           kind="bold"
-          color={secondary && !destructive ? c.forest : c.paper}
+          color={
+            secondary && !destructive
+              ? "#5C0202"
+              : wine
+                ? "#FFDF97"
+                : "#FFFFFF"
+          }
           style={{ textAlign: "center", flexShrink: 1 }}
         >
           {title}
@@ -203,13 +218,19 @@ export function Chip({
   selected,
   onPress,
   disabled = false,
+  wine = false,
 }: {
   title: string;
   selected: boolean;
   onPress: () => void;
   disabled?: boolean;
+  wine?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
+  const activeBg = wine ? "#5C0202" : c.forest;
+  const activeColor = wine ? "#FFFFFF" : c.paper;
+  const inactiveColor = wine ? "#57423E" : c.forest;
+  const inactiveBorder = wine ? "#DEC0BB" : c.border;
   return (
     <Pressable
       accessibilityRole="button"
@@ -222,11 +243,18 @@ export function Chip({
         s.chip,
         focused && s.focus,
         pressed && { opacity: 0.8 },
-        selected && { backgroundColor: c.forest, borderColor: c.forest },
+        {
+          borderColor: selected ? activeBg : inactiveBorder,
+          backgroundColor: selected ? activeBg : "#FAF7F2",
+        },
         disabled && { opacity: 0.5 },
       ]}
     >
-      <T kind="small" color={selected ? c.paper : c.forest}>
+      <T
+        kind="small"
+        color={selected ? activeColor : inactiveColor}
+        style={{ fontWeight: selected ? "700" : "500" }}
+      >
         {title}
       </T>
     </Pressable>

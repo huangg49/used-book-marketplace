@@ -1,9 +1,16 @@
-import { ActivityIndicator, View } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  View,
+} from "react-native";
 import { AppText } from "./text";
 import { Button, IconButton } from "./actions";
 import { Icon, type IconName } from "./icon";
-import { Sheet } from "./sheet";
-import { colors, feedbackColors, space } from "./theme";
+import { colorRoles, colors, feedbackColors, space, stitchTokens } from "./theme";
 
 export function Notice({
   children,
@@ -112,23 +119,124 @@ export function ConfirmDialog({
   error?: string;
   destructive?: boolean;
 }) {
+  if (!visible) return null;
+
   return (
-    <Sheet
-      title={title}
+    <Modal
+      accessibilityLabel={title}
       visible={visible}
-      onClose={onCancel}
-      dismissible={!busy}
-      backdropDismiss={false}
+      transparent
+      animationType={Platform.OS === "web" ? "none" : "fade"}
+      onRequestClose={() => {
+        if (!busy) onCancel();
+      }}
     >
-      <AppText>{message}</AppText>
-      {error ? <Notice tone="error">{error}</Notice> : null}
-      <Button title="Quay lại" secondary disabled={busy} onPress={onCancel} />
-      <Button
-        title={confirmLabel}
-        busy={busy}
-        destructive={destructive}
-        onPress={onConfirm}
-      />
-    </Sheet>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{
+          flex: 1,
+          backgroundColor: colorRoles.scrim,
+          justifyContent: "center",
+          alignItems: "center",
+          padding: space.xl,
+        }}
+      >
+        <Pressable
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+          accessible={false}
+          importantForAccessibility="no"
+          focusable={false}
+          onPress={() => {
+            if (!busy) onCancel();
+          }}
+        />
+
+        <View
+          accessibilityViewIsModal
+          style={{
+            backgroundColor: "#FFFFFF",
+            width: "100%",
+            maxWidth: 380,
+            borderRadius: 24,
+            padding: space.xxl,
+            gap: space.lg,
+            borderWidth: 1,
+            borderColor: "#DEC0BB",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.18,
+            shadowRadius: 20,
+            elevation: 10,
+          }}
+        >
+          {/* Header with Title and Close button */}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: space.md,
+            }}
+          >
+            <AppText
+              kind="heading"
+              accessibilityRole="header"
+              style={{
+                flex: 1,
+                fontSize: 20,
+                color: stitchTokens.wine,
+                fontWeight: "700",
+              }}
+            >
+              {title}
+            </AppText>
+            <IconButton
+              name="close"
+              label="Đóng"
+              disabled={busy}
+              onPress={onCancel}
+            />
+          </View>
+
+          {/* Dialog message */}
+          <ScrollView
+            style={{ maxHeight: 220 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <AppText
+              style={{
+                fontSize: 15,
+                lineHeight: 22,
+                color: colors.ink,
+              }}
+            >
+              {message}
+            </AppText>
+            {error ? (
+              <View style={{ marginTop: space.sm }}>
+                <Notice tone="error">{error}</Notice>
+              </View>
+            ) : null}
+          </ScrollView>
+
+          {/* Action buttons */}
+          <View style={{ gap: space.md, marginTop: space.xs }}>
+            <Button
+              title="Quay lại"
+              secondary
+              disabled={busy}
+              onPress={onCancel}
+            />
+            <Button
+              title={confirmLabel}
+              busy={busy}
+              wine={!destructive}
+              destructive={destructive}
+              onPress={onConfirm}
+            />
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
