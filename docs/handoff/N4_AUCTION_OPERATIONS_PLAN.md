@@ -48,12 +48,14 @@ Each package is one branch and one PR. Sizes: S ≈ 1 day, M ≈ 2–3 days, L �
 
 ### N4-01 — Operations shell in admin-web (S)
 
-- Add an "Vận hành điểm" nav group to `apps/admin-web/src/App.tsx`: Staff sees *Nhận sách
+- Add an "Điểm và đấu giá" nav group to `apps/admin-web/src/App.tsx`: Staff sees *Nhận sách
   đấu giá* and *Giao sách*; Admin sees *Xử lý đơn tại điểm* and *Phiên đấu giá*.
 - `core/session.ts`: add `canOperatePoint` (ACTIVE + STAFF) and `canResolve` (ACTIVE +
   ADMIN), with tests like the existing `canReview` cases.
-- The UI cannot know the Staff member's assignment (no read API). Show the server's 403 as
-  "Bạn chưa được phân công tại điểm này" instead of hiding the error.
+- The UI cannot know the Staff member's assignment (no read API). The Staff queues return an
+  **empty list** (not 403) for an unassigned Staff member, so the empty state must say that
+  only assigned points are listed. Commands on a point the Staff member is not assigned to
+  do return 403 ("Bạn không được phân công tại điểm giao nhận này"); N4-02/03 show that.
 - Done when: role cases are tested; a STAFF without an assignment sees an explained empty
   state, not a broken page.
 
