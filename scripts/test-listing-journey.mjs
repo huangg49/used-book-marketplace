@@ -40,7 +40,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .waitFor();
   await click("Tiếp theo");
   const chooser = p.waitForEvent("filechooser");
-  await click("Chọn ảnh từ thư viện");
+  await click("Thêm ảnh khảo chứng");
   await (
     await chooser
   ).setFiles({
@@ -117,8 +117,8 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     path: path.join(artifacts, "editor-condition-390.png"),
   });
   await click("Có, còn đọc rõ");
-  await click("Có — tôi đã mô tả trang thiếu ở trên");
-  await click("Không thiếu nội dung trọng yếu");
+  await click("Không thiếu trang");
+  await click("Không thiếu nội dung chính");
   await p
     .getByRole("tab", { name: /^Ảnh bản sách, Đã điền đầy đủ/ })
     .waitFor();
