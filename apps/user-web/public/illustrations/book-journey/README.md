@@ -9,7 +9,7 @@ Không thay logo, ảnh sách thật hoặc dữ liệu API.
 | --- | --- | --- | --- | --- |
 | pending.webp | Đã gửi duyệt, sau khi service trả kết quả | 800×600 | 56.5 KB | [pending.webp.json](pending.webp.json) |
 | empty.webp | Kệ sách cá nhân trống ở trang đầu, chưa lọc | 800×600 | 61.4 KB | [empty.webp.json](empty.webp.json) |
-| auction.webp | Phần giới thiệu danh sách đấu giá | 900×600 | 60.1 KB | [auction.webp.json](auction.webp.json) |
+| auction.webp | Linh vật phụ và cảnh thay thế trong hero danh sách đấu giá | 900×600 | 60.1 KB | [auction.webp.json](auction.webp.json) |
 
 Mỗi sidecar lưu prompt đầy đủ, nguồn, tham chiếu, SHA-256 nguồn/delivery và alpha.
 `auction.webp.json` lưu cả yêu cầu chỉnh đèn. Bản delivery chỉ resize/encode WebP

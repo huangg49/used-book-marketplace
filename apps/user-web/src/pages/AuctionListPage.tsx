@@ -3,6 +3,8 @@ import { AuctionGrid } from '../components/AuctionGrid'
 import { useSearchParams, Link } from 'react-router-dom'
 import { ArrowRight, BookOpen, ChevronDown, Gavel } from 'lucide-react'
 import { AuctionCard } from '../components/AuctionCard'
+import { AuctionHero } from '../components/AuctionHero'
+import { AuctionEntrance } from '../components/AuctionEntrance'
 import { FilterSelect } from '../components/FilterSelect'
 import { useAuctionListLive } from '../hooks/useAuctionLive'
 import { listAuctions, type AuctionSummary } from '../services/auctions'
@@ -45,21 +47,21 @@ export function AuctionListPage() {
   const showData = !!result.data && (!result.isError || stale)
   const layoutKey = items.map((a) => a.id).join(':')
   return <div className={styles.page}>
-    <header className={styles.intro}>
-      <div><h1>Mỗi cuốn sách, một cơ hội.</h1><p>Khám phá những phiên đấu giá sách cũ tại TP.HCM. Sách được kiểm tra tại điểm giao nhận trước khi mở phiên.</p></div>
-      <img className={styles.art} src="/illustrations/book-journey/auction.webp" width="900" height="600" alt="" decoding="async" />
-    </header>
+    <AuctionEntrance />
+    <AuctionHero auctions={showData ? all : []} serverTime={result.data?.serverTime} pending={result.isPending} stale={stale} failed={result.isError && !stale} />
+    <div className={styles.content}>
     <details className={styles.guide}>
       <summary>Cách tham gia đấu giá <ChevronDown size={16} aria-hidden="true" /></summary>
       <ol>{STEPS.map(([title, body]) => <li key={title}><strong>{title}</strong><p>{body}</p></li>)}</ol>
     </details>
     <section aria-labelledby="auction-list-title">
-      <div className={styles.sectionHeading}><h2 id="auction-list-title">Phiên đang mở</h2><div className={styles.sectionActions}><span className={styles.connection}><i className={live ? styles.live : ''} aria-hidden="true" />{live ? 'Giá cập nhật trực tiếp' : 'Cập nhật mỗi 30 giây'}</span>{auth.status === 'authenticated' && <Link to={ROUTES.myAuctions}>Đấu giá của tôi <ArrowRight size={15} aria-hidden="true" /></Link>}<Link className={styles.create} to={ROUTES.auctionCreate()}><Gavel size={15} aria-hidden="true" />Đấu giá sách của bạn</Link></div></div>
+      <div className={styles.sectionHeading}><h2 id="auction-list-title" tabIndex={-1}>Phiên đang mở</h2><div className={styles.sectionActions}><span className={styles.connection}><i className={live && !result.isError ? styles.live : ''} aria-hidden="true" />{result.isError ? 'Chưa cập nhật được giá' : live ? 'Giá cập nhật trực tiếp' : 'Cập nhật mỗi 30 giây'}</span>{auth.status === 'authenticated' && <Link to={ROUTES.myAuctions}>Đấu giá của tôi <ArrowRight size={15} aria-hidden="true" /></Link>}<Link className={styles.create} to={ROUTES.auctionCreate()}><Gavel size={15} aria-hidden="true" />Đấu giá sách của bạn</Link></div></div>
       <div className={styles.toolbar} role="group" aria-label="Lọc và sắp xếp phiên đấu giá">
         <div className={styles.point}><FilterSelect id="auction-point" label="Điểm nhận sách" value={point} onChange={(v) => update('point', v)} options={[{ value: '', label: 'Tất cả điểm nhận' }, ...points.map((p) => ({ value: p, label: p }))]} /></div>
         <label className={styles.checkbox}><input type="checkbox" checked={buyNowOnly} onChange={() => update('buyNow', buyNowOnly ? '' : '1')} />Có giá mua ngay</label>
         <div className={styles.sort}><FilterSelect id="auction-sort" label="Sắp xếp" value={sort} onChange={(v) => update('sort', v === 'endingSoon' ? '' : v)} options={Object.entries(SORTS).map(([value, s]) => ({ value, label: s.label }))} /></div>
       </div>
+      {filtered && <p className={styles.filterScope}>Bộ lọc áp dụng cho kệ phiên bên dưới.</p>}
       <div className={styles.resultLine}><p role="status">{result.data ? `${items.length} phiên${filtered ? ' phù hợp' : ' đang mở'}` : result.isError ? 'Chưa tải được danh sách' : 'Đang tải phiên đấu giá…'}</p>{filtered && <button type="button" className={styles.textButton} onClick={() => { const next = new URLSearchParams(params); next.delete('point'); next.delete('buyNow'); setParams(next, {replace:true}) }}>Xóa bộ lọc</button>}</div>
       {result.isPending && <div className={styles.grid} aria-busy="true" aria-label="Đang tải phiên đấu giá">{Array.from({length:4}, (_, i) => <div key={i} className={styles.skeleton} />)}</div>}
       {result.isError && !stale && <div className={styles.empty} role="alert"><BookOpen size={32} aria-hidden="true" /><h3>Chưa tải được các phiên</h3><p>Kiểm tra kết nối rồi thử lại. Các lựa chọn bộ lọc của bạn vẫn được giữ.</p><button type="button" className={styles.action} onClick={() => void result.refetch()}>Thử lại</button></div>}
@@ -73,5 +75,6 @@ export function AuctionListPage() {
       {all.length >= 50 && <p className={styles.limit}>Đang hiển thị tối đa 50 phiên sắp kết thúc. Bộ lọc và sắp xếp áp dụng trong danh sách này.</p>}
     </section>
     <p className={styles.demo}>Điểm giao nhận và tiền trong ví được mô phỏng cho đồ án.</p>
+    </div>
   </div>
 }

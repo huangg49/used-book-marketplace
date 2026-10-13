@@ -1,10 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { runPaperStorm, runComposedStorm, stormFrame, type PaperOrigin, type StormMode } from "./paper-storm";
+import { runPaperStorm, runComposedStorm, stormFrame, type PaperOrigin, type StormMode, type ComposedScene } from "./paper-storm";
 import { createPaperScene, warmPaperScene } from "./paper-scene";
+import { createPaperBreeze, type PaperBreeze } from "./paper-breeze";
 import styles from "./PaperStormLayout.module.css";
-import { JourneyContext } from "./paper-journey";
+import { JourneyContext, PaperArrivalContext } from "./paper-journey";
 import { lockPageScroll } from "../../lib/page-scroll";
+import { flightModule } from './auth-flight';
+import type { AuthFlight } from './wind/login-flight.mjs';
 
 type Journey = { target: string; source: HTMLElement | null; from: string; resolve: () => void; committed: boolean;
   mounted: boolean; onMounted?: () => void };
@@ -23,7 +26,12 @@ export function PaperStormLayout() {
   const current = useRef<Journey | null>(null), stop = useRef<() => void>(() => {});
   const focusDestination = useRef(false);
   const content = useRef<HTMLDivElement>(null), overlay = useRef<HTMLDivElement>(null);
-  const sceneRoot = useRef<HTMLDivElement>(null), halves = useRef<HTMLDivElement>(null), fallback = useRef<HTMLDivElement>(null);
+  const sceneRoot = useRef<HTMLDivElement>(null), flightRoot = useRef<HTMLCanvasElement>(null), fallback = useRef<HTMLDivElement>(null);
+  const breezeRoot = useRef<HTMLDivElement>(null), breeze = useRef<PaperBreeze | null>(null);
+  const breezePath = useRef("");
+  useEffect(() => {
+    if (!journey && location.pathname !== breezePath.current) breeze.current?.dispose();
+  }, [journey, location.pathname]);
   useEffect(() => {
     if (["/login", "/register", "/forgot-password"].includes(location.pathname)) {
       warmPaperScene(innerWidth <= 600 ? "mobile" : "desktop", paperPalette());
@@ -67,45 +75,62 @@ export function PaperStormLayout() {
     const palette = paperPalette();
     const unlockScroll = lockPageScroll();
     const oldVisibility = source?.style.visibility ?? "";
-    const sourceStyle = source ? getComputedStyle(source) : null;
-    // Two inert local DOM copies carry the actual printed card into the tear.
-    // No screenshot library, form serialization, network upload or persisted copy.
-    const copies: HTMLElement[] = [];
-    if (source && typeof node.animate === "function" && halves.current) {
-      for (let side = 0; side < 2; side++) {
-        const holder = document.createElement("div"); holder.className = styles.half!;
-        Object.assign(holder.style, { left: `${origin.x}px`, top: `${origin.y}px`, width: `${origin.width}px`, height: `${origin.height}px`,
-          clipPath: side === 0 ? "polygon(0 0,51% 0,49% 9%,52% 18%,48% 29%,51% 40%,49% 52%,52% 63%,48% 74%,51% 86%,49% 100%,0 100%)"
-            : "polygon(51% 0,100% 0,100% 100%,49% 100%,51% 86%,48% 74%,52% 63%,49% 52%,51% 40%,48% 29%,52% 18%,49% 9%)" });
-        const copy = source.cloneNode(true) as HTMLElement;
-        copy.inert = true; copy.setAttribute("aria-hidden", "true");
-        copy.style.width = "100%"; copy.style.height = "100%"; copy.style.transform = "none"; copy.style.visibility = "visible";
-        for (const name of ["--auth-title", "--auth-hand", "--auth-error"]) copy.style.setProperty(name, sourceStyle?.getPropertyValue(name) ?? "");
-        copy.removeAttribute("data-auth-paper");
-        for (const element of [copy, ...copy.querySelectorAll<HTMLElement>("*")]) {
-          element.removeAttribute("id"); element.removeAttribute("for");
-          element.removeAttribute("data-front-light");
-          if (element instanceof HTMLInputElement) {
-            element.disabled = true;
-            // A revealed password is type=text; never print it onto the tear copy.
-            if (element.type === "password" || element.name === "password" || element.autocomplete.includes("password")) element.value = "";
-          }
+    let domFlight: Animation | null = null;
+    let wind: PaperBreeze | null = null;
+    let flight: AuthFlight | null = null;
+    let hold: Animation | null = null;
+    let sceneDisposed = false;
+    const startDomStamp = () => {
+      const stamp = source?.querySelector<HTMLElement>('[data-auth-stamp]');
+      if (stamp) { stamp.style.visibility = 'visible'; stamp.style.animation = ''; }
+    };
+    const pages = createPaperScene(sceneRoot.current, origin, mode, palette, [], null, { externalOnly: true, schedule: { burst: 700, cover: 1350, release: 700 } });
+    const scene: ComposedScene | null = pages ? { count: innerWidth <= 600 ? 18 : 30,
+      async enter() {
+        if (source && flightRoot.current) {
+          try {
+            const pending = flightModule().then(module => module.createAuthFlight(flightRoot.current!, source));
+            const result = await Promise.race([pending, new Promise<null>(resolve => setTimeout(() => resolve(null), 350))]);
+            if (cancelled || sceneDisposed) { result?.dispose(); void pending.then(value => value.dispose(), () => {}); return; }
+            flight = result;
+            if (!result) void pending.then(value => value.dispose(), () => {});
+          } catch { /* Unsupported capture/WebGL uses the intact DOM fallback. */ }
         }
-        holder.append(copy); halves.current.append(holder); copies.push(holder);
-      }
-    }
-    const scene = createPaperScene(sceneRoot.current, origin, mode, palette, copies, source);
-    if (!scene) mode = "reduced";
+        if (cancelled || sceneDisposed) return;
+        const entered = pages.enter();
+        sceneRoot.current!.style.visibility = "visible";
+        flight?.start();
+        if (!flight && source && typeof source.animate === "function") {
+          // CSS stamp and fallback flight begin together, never during capture.
+          startDomStamp();
+          domFlight = source.closest("[data-auth-book]")!.animate([{ transform: "translate3d(0,0,0)", opacity: 1 }, { transform: "translate3d(120vw,-90vh,0) rotate(18deg)", opacity: 0 }], { delay: 280, duration: 1152, easing: "cubic-bezier(.45,0,.85,.65)", fill: "both" });
+          void domFlight.finished.catch(() => {});
+        }
+        node.dataset.renderer = flight ? "webgl-intact" : "compositor-intact";
+        breeze.current?.dispose();
+        wind = breezeRoot.current ? createPaperBreeze(breezeRoot.current, origin, mode, palette, 280) : null;
+        breeze.current = wind; breezePath.current = journey.target.split(/[?#]/)[0]!;
+        await entered;
+      },
+      async release() {
+        hold = node.animate([{ opacity: 1 }, { opacity: 1 }], { duration: 150 });
+        await hold.finished;
+        await pages.release();
+      },
+      dispose() { sceneDisposed = true; hold?.cancel(); flight?.dispose(); domFlight?.cancel(); pages.dispose(); },
+    } : null;
+    if (!scene) { mode = "reduced"; startDomStamp(); }
+    sceneRoot.current.style.visibility = "hidden";
     node.dataset.mode = mode; node.dataset.pieces = String(scene?.count ?? 0);
-    node.dataset.renderer = scene ? "compositor" : "fallback";
-    let cancelled = false, navigated = false;
+    node.dataset.renderer = scene ? "preparing-intact" : "fallback";
+    let cancelled = false, navigated = false, completed = false;
     const restore = () => {
       if (source) source.style.visibility = oldVisibility;
-      copies.forEach(copy => copy.remove());
       unlockScroll();
     };
     const finish = () => {
       if (cancelled) return;
+      completed = true; wind?.settle();
       focusDestination.current = navigated;
       restore(); current.current = null; setJourney(null); journey.resolve();
     };
@@ -115,7 +140,6 @@ export function PaperStormLayout() {
       await afterPaint();
       if (cancelled || navigated) return;
       node.dataset.phase = "covered"; node.dataset.covered = "true";
-      copies.forEach(copy => { copy.style.display = "none"; });
       navigated = true; journey.committed = true;
       const mounted = new Promise<void>(resolve => { if (journey.mounted) resolve(); else journey.onMounted = resolve; });
       await navigate(journey.target, { replace: true });
@@ -128,6 +152,8 @@ export function PaperStormLayout() {
     };
     node.dataset.phase = "storm";
     const failed = () => {
+      if (cancelled || completed) return;
+      cancelAnimation();
       if (fallback.current) fallback.current.style.opacity = "1";
       void commit().then(finish, finish);
     };
@@ -140,9 +166,9 @@ export function PaperStormLayout() {
         if (fallback.current) fallback.current.style.opacity = String(f.cover * (1 - f.release));
       }, covered: commit, done: finish, failed,
     });
-    const abort = () => { cancelled = true; cancelAnimation(); journey.onMounted?.(); journey.onMounted = undefined; restore(); };
+    const abort = () => { cancelled = true; cancelAnimation(); if (!completed) wind?.dispose(); journey.onMounted?.(); journey.onMounted = undefined; restore(); };
     stop.current = abort;
-    // Page geometry uses vw/vh; resizing does not clear a canvas or rebuild flights.
+    // A resized mesh cannot guarantee coverage: commit behind the opaque fallback.
     // A hidden tab must not leave a successful login stuck behind suspended rAF.
     const visibility = () => {
       if (document.visibilityState !== "hidden") return;
@@ -152,14 +178,28 @@ export function PaperStormLayout() {
       void Promise.resolve(navigate(journey.target, { replace: true })).finally(finish);
     };
     document.addEventListener("visibilitychange", visibility);
-    return () => { abort(); document.removeEventListener("visibilitychange", visibility); };
+    const graphicsFailed = (event: Event) => { event.preventDefault(); failed(); };
+    const resize = () => { if (!completed) failed(); };
+    flightRoot.current?.addEventListener('webglcontextlost', graphicsFailed);
+    flightRoot.current?.addEventListener('paperflightfailed', graphicsFailed);
+    const canvas = flightRoot.current;
+    window.addEventListener('resize', resize);
+    return () => {
+      abort(); document.removeEventListener("visibilitychange", visibility);
+      canvas?.removeEventListener('webglcontextlost', graphicsFailed);
+      canvas?.removeEventListener('paperflightfailed', graphicsFailed);
+      window.removeEventListener('resize', resize);
+    };
   }, [journey, navigate]);
-  useEffect(() => () => { stop.current(); current.current?.resolve(); }, []);
+  useEffect(() => () => { stop.current(); breeze.current?.dispose(); current.current?.resolve(); }, []);
   return <JourneyContext.Provider value={start}>
-    <div ref={content} className={styles.content} inert={Boolean(journey)} aria-hidden={journey ? true : undefined}><Outlet /></div>
+    <PaperArrivalContext.Provider value={Boolean(journey?.committed && location.pathname + location.search === journey.target.split("#")[0])}>
+      <div ref={content} className={styles.content} inert={Boolean(journey)} aria-hidden={journey ? true : undefined}><Outlet /></div>
+    </PaperArrivalContext.Provider>
+    <div ref={breezeRoot} className={styles.breeze} data-paper-breeze aria-hidden="true" hidden />
     {journey && <div ref={overlay} className={styles.overlay} data-paper-storm>
       <div ref={fallback} className={styles.fallback} aria-hidden="true" />
-      <div ref={halves} className={styles.halves} aria-hidden="true" />
+      <canvas ref={flightRoot} className={styles.flight} data-auth-flight aria-hidden="true" hidden />
       <div ref={sceneRoot} className={styles.scene} aria-hidden="true" />
       <p className={styles.status} role="status" aria-live="polite">Đăng nhập thành công. Đang mở trang tiếp theo…</p>
     </div>}

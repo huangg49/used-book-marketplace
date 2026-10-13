@@ -81,7 +81,7 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
   }, [menuOpen]);
   const active = (to: string) => location.pathname + location.search === to;
   return (
-    <div className={styles.headerSlot}>
+    <div className={styles.headerSlot} data-member-header-slot>
       <header
         className={styles.header}
         data-floating={floating}
