@@ -264,9 +264,13 @@ try {
   // Continue through owner lifecycle using RN controls and real versioned commands.
   await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
   await click("Sách của tôi");
-  await p
-    .getByRole("button", { name: "Quản lý sách 1", exact: true })
-    .waitFor();
+  // DraftsScreen now uses the per-listing action label ("Xem sách" for an
+  // approved listing) instead of the legacy "Quản lý sách 1" label.
+  const ownerBookAction = p.getByRole("button", {
+    name: "Xem sách",
+    exact: true,
+  }).last();
+  await ownerBookAction.waitFor();
   await p.screenshot({ path: path.join(artifacts, "drafts-390.png") });
   const ownerResponse = p.waitForResponse(
     (r) =>
@@ -275,7 +279,7 @@ try {
       !r.url().includes("/media") &&
       r.status() === 200,
   );
-  await click("Quản lý sách 1");
+  await ownerBookAction.click();
   const ownerId = new URL((await ownerResponse).url()).pathname
     .split("/")
     .at(-1);
