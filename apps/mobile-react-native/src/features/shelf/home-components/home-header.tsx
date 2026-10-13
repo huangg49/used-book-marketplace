@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AppTextInput, Icon, stitchTokens } from "../../../core/ui";
+import { Icon, stitchTokens } from "../../../core/ui";
 import { AppText } from "../../../core/ui/text";
 
 export interface HomeHeaderProps {
@@ -31,39 +31,38 @@ export function HomeHeader({
   return (
     <View style={[styles.headerRoot, { paddingTop: Math.max(insets.top, 12) }]}>
       <View style={styles.headerContent}>
-        {/* Search Bar - Real input with accessibility label for test and UX */}
+        {/* Search Bar - Button-like trigger navigating directly to /search */}
         <Pressable
-          accessibilityRole="search"
+          accessibilityRole="button"
+          accessibilityLabel="Tìm sách theo tên, tác giả hoặc ISBN"
           onPress={onSearchPress}
-          style={styles.searchBar}
+          style={({ pressed }) => [
+            styles.searchBar,
+            pressed && { opacity: 0.85 },
+          ]}
         >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Tìm kiếm"
-            onPress={onSubmitSearch || onSearchPress}
-            style={styles.searchIconWrapper}
-          >
+          <View style={styles.searchIconWrapper}>
             <Icon name="search" size={18} color={stitchTokens.wine} />
-          </Pressable>
-          <AppTextInput
-            accessibilityLabel="Tìm sách theo tên, tác giả hoặc ISBN"
-            placeholder="Tìm kiếm sách cổ, tác giả, tựa s..."
-            placeholderTextColor={stitchTokens.ashBrown}
-            value={search}
-            onChangeText={onSearchChange}
-            onSubmitEditing={onSubmitSearch}
-            onFocus={() => {
-              if (onSearchPress) {
-                onSearchPress();
-              }
-            }}
-            returnKeyType="search"
-            style={styles.searchInput}
-          />
+          </View>
+          <View pointerEvents="none" style={styles.searchInputWrapper}>
+            <AppText
+              kind="small"
+              style={[
+                styles.searchPlaceholder,
+                search ? styles.searchActiveText : null,
+              ]}
+              numberOfLines={1}
+            >
+              {search || "Tìm kiếm sách cổ, tác giả, tựa s..."}
+            </AppText>
+          </View>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Tìm bằng hình ảnh bìa sách"
-            onPress={onCameraPress}
+            onPress={(e) => {
+              e.stopPropagation();
+              onCameraPress();
+            }}
             hitSlop={8}
             style={styles.iconButton}
           >
@@ -144,15 +143,19 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.softRose,
   },
   searchIconWrapper: {
-    marginRight: 6,
+    marginRight: 8,
   },
-  searchInput: {
+  searchInputWrapper: {
     flex: 1,
-    height: 38,
+    justifyContent: "center",
+  },
+  searchPlaceholder: {
     fontSize: 13,
+    color: stitchTokens.ashBrown,
+  },
+  searchActiveText: {
     color: stitchTokens.charcoalBrown,
-    paddingVertical: 0,
-    paddingHorizontal: 4,
+    fontWeight: "500",
   },
   iconButton: {
     padding: 4,
