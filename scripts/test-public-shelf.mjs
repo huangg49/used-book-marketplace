@@ -300,7 +300,9 @@ try {
     .click();
   await p.getByText("Đã mở lại bài trên kệ.", { exact: true }).waitFor();
   await click("Sửa bài đã duyệt");
-  await click("Tiếp tục");
+  // The approved-edit flow names the first transition after the book
+  // information step explicitly; later steps use the generic "Tiếp theo".
+  await click("Tiếp tục: Ảnh bản sách →");
   await click("Tiếp tục");
   await p.getByLabel("Giá bán (đồng)", { exact: true }).fill("175000");
   await click("Tiếp tục");
