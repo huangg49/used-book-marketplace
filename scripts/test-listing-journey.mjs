@@ -64,7 +64,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   await p
     .getByText("Chưa tải được ảnh xem trước.", { exact: true })
     .waitFor({ state: "hidden" });
-  await click("Còn tốt");
+  await p.getByRole("button", { name: /^Còn tốt,/ }).click();
   for (const [field, value] of [
     [
       "Ruột sách và trang thiếu",
@@ -123,7 +123,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .getByRole("tab", { name: /^Ảnh bản sách, Đã điền đầy đủ/ })
     .waitFor();
   await click("Tiếp theo");
-  await click("Bán hoặc đổi");
+  await p.getByRole("button", { name: /^Cả bán & đổi,/ }).click();
   await fill("Giá bán (đồng)", "10000");
   await fill("Giá trị đổi (đồng)", "1000000");
   await p
@@ -256,7 +256,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     decision: "Reject",
     reason: "Cần bổ sung rõ tình trạng trang trắng bị rời.",
   });
-  await click("Cập nhật trạng thái đã lưu");
+  await click("Kiểm tra trạng thái mới nhất");
   await p
     .getByText(
       "Lần duyệt trước: Cần bổ sung rõ tình trạng trang trắng bị rời.",
@@ -298,7 +298,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
       contentAppropriate: true,
     },
   });
-  await click("Cập nhật trạng thái đã lưu");
+  await click("Kiểm tra trạng thái mới nhất");
   await p
     .getByRole("button", { name: "Sửa bài đã duyệt", exact: true })
     .waitFor();
