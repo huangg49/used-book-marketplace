@@ -445,13 +445,15 @@ try {
     .locator('div:has-text("BẢN XEM THỬ · DỮ LIỆU MẪU"):visible')
     .last()
     .waitFor();
-  assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 4);
+  const visibleShowcaseBooks = () =>
+    p.locator('button:visible[aria-label^="Xem sách:"]');
+  assert.equal(await visibleShowcaseBooks().count(), 4);
   await p
     .locator('button:visible')
     .filter({ hasText: "Đổi" })
     .first()
     .click({ force: true });
-  assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 2);
+  assert.equal(await visibleShowcaseBooks().count(), 2);
   await p
     .locator('button:visible')
     .filter({ hasText: "Tất cả" })
@@ -462,7 +464,9 @@ try {
     p.waitForFunction((grid) => {
       const cards = [...document.querySelectorAll('[role="button"]')].filter(
         (element) =>
-          element.getAttribute("aria-label")?.startsWith("Xem sách:"),
+          element.getAttribute("aria-label")?.startsWith("Xem sách:") &&
+          element.getBoundingClientRect().width > 0 &&
+          element.getBoundingClientRect().height > 0,
       );
       if (cards.length !== 4) return false;
       const first = cards[0].getBoundingClientRect();
@@ -483,6 +487,7 @@ try {
       name: "Mở ảnh sách Pride and Prejudice",
       exact: true,
     })
+    .filter({ visible: true })
     .click();
   await p
     .getByText("125.000 ₫", { exact: true })
@@ -506,7 +511,7 @@ try {
   await p.setViewportSize({ width: 320, height: 780 });
   const longSample = p.getByRole("button", {
     name: /^Xem sách: Những ngày/,
-  });
+  }).filter({ visible: true });
   await longSample.scrollIntoViewIfNeeded();
   assert.equal(
     await p.evaluate(() => document.documentElement.scrollWidth > innerWidth),
