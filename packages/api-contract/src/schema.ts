@@ -7471,6 +7471,10 @@ export interface operations {
             /** @description Delivery recorded. */
             200: {
                 headers: {
+                    /** @description Private response; never cache. */
+                    "Cache-Control"?: "no-store";
+                    /** @description Whether the original committed receipt was replayed. */
+                    "Idempotency-Replayed"?: "true" | "false";
                     [name: string]: unknown;
                 };
                 content: {
@@ -7506,6 +7510,10 @@ export interface operations {
             /** @description Receipt confirmation recorded. */
             200: {
                 headers: {
+                    /** @description Private response; never cache. */
+                    "Cache-Control"?: "no-store";
+                    /** @description Whether the original committed receipt was replayed. */
+                    "Idempotency-Replayed"?: "true" | "false";
                     [name: string]: unknown;
                 };
                 content: {

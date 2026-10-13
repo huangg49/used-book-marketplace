@@ -4897,6 +4897,17 @@ paths:
       responses:
         "200":
           description: Delivery recorded.
+          headers:
+            Cache-Control:
+              description: Private response; never cache.
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              description: Whether the original committed receipt was replayed.
+              schema:
+                type: string
+                enum: ["true", "false"]
           content:
             application/json:
               schema:
@@ -4934,6 +4945,17 @@ paths:
       responses:
         "200":
           description: Receipt confirmation recorded.
+          headers:
+            Cache-Control:
+              description: Private response; never cache.
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              description: Whether the original committed receipt was replayed.
+              schema:
+                type: string
+                enum: ["true", "false"]
           content:
             application/json:
               schema:
