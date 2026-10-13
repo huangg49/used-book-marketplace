@@ -29,6 +29,7 @@ import { DraftEditor } from "./draft-editor";
 import { photoError, useForeground } from "./draft-media";
 import { BookIdentity } from "./catalog-picker";
 import { executeLifecycle, lifecycleIntent } from "./lifecycle-command";
+import { listingSummary } from "./listing-form";
 import { MemberNavigation } from "../navigation/member-navigation";
 
 export function DraftsScreen() {
@@ -382,7 +383,7 @@ export function DraftsScreen() {
 
         {/* Quick Action CTA Button */}
         <Button
-          title="+ Đăng Sách Mới Ngay"
+          title="Tạo bản nháp"
           wine
           busy={create.isPending}
           disabled={
@@ -475,17 +476,8 @@ export function DraftsScreen() {
       >
         {drafts.data?.pages
           .flatMap((p) => p.items)
-          .map((d) => {
-            const modState = d.state.moderation;
-            const isRejected = modState === "Rejected";
-
-            const actionTitle = isRejected
-              ? "Sửa bài"
-              : modState === "PendingReview"
-                ? "Chi tiết"
-                : modState === "Draft"
-                  ? "Hoàn thiện"
-                  : "Xem sách";
+          .map((d, index) => {
+            const summary = listingSummary(d, index + 1);
 
             return (
               <View
@@ -507,7 +499,7 @@ export function DraftsScreen() {
                   titleNode={
                     <BookIdentity id={d.currentRevision.content.bookId} compact />
                   }
-                  actionTitle={actionTitle}
+                  actionTitle={summary.action}
                   onActionPress={() => setSelected(d.id)}
                   onOpen={() => setSelected(d.id)}
                   onDelete={

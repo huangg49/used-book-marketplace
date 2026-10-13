@@ -163,16 +163,15 @@ describe("member listing form", () => {
     ).toBeTruthy();
     expect(errorStep({ bookId: "missing", salePrice: "bad" })).toBe(0);
     expect(errorStep({ mediaIds: "pending" })).toBe(1);
-    expect(errorStep({ condition: "bad" })).toBe(2);
-    expect(errorStep({ salePrice: "bad" })).toBe(3);
-    expect(errorStep({ ownershipDeclared: "missing" })).toBe(4);
-    expect(errorStep({})).toBe(4);
+    expect(errorStep({ salePrice: "bad" })).toBe(2);
+    expect(errorStep({ ownershipDeclared: "missing" })).toBe(3);
+    expect(errorStep({})).toBe(3);
   });
   it("targets the first error in on-screen order, photos before condition", () => {
     expect(
       firstError({ description: "short", mediaIds: "pending", salePrice: "x" }),
     ).toBe("mediaIds");
-    expect(firstError({ readable: "no", pages: "empty" })).toBe("readable");
+    expect(firstError({ readable: "no", pages: "empty" })).toBe("pages");
     expect(firstError({})).toBeNull();
   });
   it("clears fixed errors without surfacing unflagged ones", () => {
@@ -185,8 +184,7 @@ describe("member listing form", () => {
   });
   it("derives step progress only from entered data", () => {
     const f = valid();
-    expect([0, 1, 2, 3].map((s) => stepComplete(f, ready, s))).toEqual([
-      true,
+    expect([0, 1, 2].map((s) => stepComplete(f, ready, s))).toEqual([
       true,
       true,
       true,
@@ -196,12 +194,12 @@ describe("member listing form", () => {
     expect(
       stepComplete(f, [{ id: "photo", status: "Processing" }] as Media[], 1),
     ).toBe(false);
-    expect(stepComplete({ ...f, description: "ngắn" }, ready, 2)).toBe(false);
-    expect(stepComplete({ ...f, salePrice: "" }, ready, 3)).toBe(false);
+    expect(stepComplete({ ...f, description: "ngắn" }, ready, 1)).toBe(false);
+    expect(stepComplete({ ...f, salePrice: "" }, ready, 2)).toBe(false);
     // Other steps stay complete when only one step is missing data.
     expect(stepComplete({ ...f, salePrice: "" }, ready, 1)).toBe(true);
     // The ownership declaration is a submit-time confirmation, not progress.
-    expect(stepComplete(f, ready, 4)).toBe(true);
+    expect(stepComplete(f, ready, 3)).toBe(true);
   });
 });
 describe("my books row summary", () => {
