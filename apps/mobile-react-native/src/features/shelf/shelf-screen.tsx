@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Keyboard, ScrollView, View } from "react-native";
+import { Keyboard, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
@@ -8,21 +8,25 @@ import {
   AppText,
   Button,
   Chip,
+  Icon,
   Notice,
   Screen,
   StatePanel,
   colors,
   presentError,
   space,
+  stitchTokens,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
-import { publicPage } from "./contracts";
+import { conditions, publicPage } from "./contracts";
 import {
   filterError,
   initialFilters,
   queryString,
+  sorts,
   type Filters,
 } from "./filters";
+import { ShelfFilterSheet } from "./shelf-filter-sheet";
 import { PublicPhoto } from "./public-photo";
 import { ShelfResults } from "./shelf-results";
 import { HomeHeader } from "./home-components/home-header";
@@ -43,6 +47,8 @@ export function ShelfScreen() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [applied, setApplied] = useState(initialFilters);
+  const [draft, setDraft] = useState(initialFilters);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [vouchersOpen, setVouchersOpen] = useState(false);
   const [inspectionOpen, setInspectionOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -98,6 +104,12 @@ export function ShelfScreen() {
     setCursors([""]);
     Keyboard.dismiss();
     scroll.current?.scrollTo({ y: 0, animated: false });
+  }
+
+  function openFilters() {
+    setDraft(applied);
+    setError(undefined);
+    setFilterOpen(true);
   }
 
   const filterCount =
@@ -228,6 +240,45 @@ export function ShelfScreen() {
           />
         )}
 
+        {/* 5. Section Header with Title and Filter Button */}
+        <View style={styles.sectionHeaderRow}>
+          <View style={styles.sectionTitleGroup}>
+            <View style={styles.sectionTitleBar} />
+            <View style={{ gap: space.xs, flex: 1 }}>
+              <AppText
+                kind="heading"
+                style={styles.sectionTitle}
+                accessibilityRole="header"
+              >
+                {applied.q
+                  ? `Kết quả cho “${applied.q}”`
+                  : selectedCategory
+                    ? `TUYỂN CHỌN: ${selectedCategory.toUpperCase()}`
+                    : "GỢI Ý HÔM NAY · SÁCH ĐANG CÓ"}
+              </AppText>
+              <AppText kind="annotation" color={colors.muted}>
+                {sorts[applied.sort]}
+                {applied.condition
+                  ? ` · ${conditions[applied.condition as keyof typeof conditions]}`
+                  : ""}
+                {` · Trang ${cursors.length}`}
+              </AppText>
+            </View>
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Bộ lọc"
+            onPress={openFilters}
+            style={styles.filterBtn}
+          >
+            <Icon name="tune" size={15} color={stitchTokens.wine} />
+            <AppText kind="small" style={styles.filterBtnText}>
+              Bộ lọc{filterCount > 0 ? ` (${filterCount})` : ""}
+            </AppText>
+          </Pressable>
+        </View>
+
         {/* 6. Curated Product Grid */}
         <View style={{ paddingHorizontal: 12 }}>
           <ShelfResults
@@ -255,7 +306,12 @@ export function ShelfScreen() {
         <View style={{ paddingHorizontal: 12, gap: space.md }}>
           {(cursors.length > 1 || (result.data?.nextCursor && !result.error)) && (
             <View
-              style={{ flexDirection: "row", flexWrap: "wrap", gap: space.md }}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: space.md,
+              }}
             >
               {cursors.length > 1 && (
                 <Button
@@ -268,6 +324,13 @@ export function ShelfScreen() {
                   }}
                 />
               )}
+              <AppText
+                kind="small"
+                color={colors.muted}
+                style={{ fontWeight: "600" }}
+              >
+                {`Trang ${cursors.length}`}
+              </AppText>
               {result.data?.nextCursor && !result.error && (
                 <Button
                   title="Trang tiếp"
@@ -286,7 +349,7 @@ export function ShelfScreen() {
 
           {!result.isPending && !result.error && (
             <Button
-              title="Xem thêm các tác phẩm gợi ý"
+              title="Làm mới danh sách"
               secondary
               busy={result.isFetching}
               onPress={() => void result.refetch()}
@@ -324,7 +387,74 @@ export function ShelfScreen() {
         onClose={() => setCartOpen(false)}
         onOpenBook={handleOpenBook}
       />
+
+      {/* Filter Sheet */}
+      <ShelfFilterSheet
+        visible={filterOpen}
+        value={draft}
+        onChange={(next) => {
+          setDraft(next);
+          setError(undefined);
+        }}
+        onClose={() => {
+          setFilterOpen(false);
+          setError(undefined);
+        }}
+        onApply={() => {
+          setFilterOpen(false);
+          apply(draft);
+        }}
+        error={error}
+      />
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+  },
+  sectionTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  sectionTitleBar: {
+    width: 4,
+    height: 18,
+    borderRadius: 2,
+    backgroundColor: stitchTokens.wine,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: stitchTokens.wine,
+    letterSpacing: 0.3,
+  },
+  filterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: stitchTokens.white,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: stitchTokens.clayLight,
+    shadowColor: stitchTokens.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  filterBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.wine,
+  },
+});
 
