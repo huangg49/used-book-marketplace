@@ -49,6 +49,15 @@ const pointOrderSchema = z.object({
   state: z.enum(['AwaitingPayment', 'Fulfilling', 'ReadyForCollection', 'Inspection', 'ResolutionPending', 'ReturnPending', 'Completed', 'Cancelled', 'PaymentExpired']),
   version: z.number().int(), amounts: z.object({ bookPrice: money, buyerTotal: money }),
   paymentDeadline: z.string().nullable(), paidAt: z.string().nullable(), serverTime: z.string(),
+  // Condition check at the point (FR-T02): never an authenticity claim.
+  report: z.object({ outcome: z.literal('Pass'), inspectedAt: z.string(), note: z.string().nullable(), scope: z.string() }),
+  acceptanceDeadline: z.string().nullable(), acceptedAt: z.string().nullable(),
+  collectionDeadline: z.string().nullable(), collectedAt: z.string().nullable(),
+  inspectionDeadline: z.string().nullable(), returnDeadline: z.string().nullable(), refunded: z.boolean(),
+  resolution: z.object({
+    reason: z.enum(['ReportRejected', 'RecipientDecisionOverdue', 'CollectionOverdue', 'InspectionClaim', 'ReturnOverdue']),
+    openedAt: z.string(),
+  }).nullable(),
 })
 
 export type AuctionState = z.infer<typeof auctionState>
@@ -75,6 +84,28 @@ export function setAutoBid(id: string, maxAmount: number, key: string) { return 
 export function disableAutoBid(id: string, key: string) { return command(`/auctions/${id}/auto-bid/disable`, key, {}) }
 export function buyNow(id: string, key: string) { return command(`/auctions/${id}/buy-now`, key, { fulfillmentMethod: 'SelfCollect' }) }
 export function payPointOrder(orderId: string, expectedVersion: number, key: string) { return command(`/point-orders/${orderId}/pay`, key, { expectedVersion }) }
+// Buyer steps after payment (FR-H09/H11, FR-T03). The server checks every deadline.
+export function acceptPointOrderReport(orderId: string, expectedVersion: number, key: string) {
+  return command(`/point-orders/${orderId}/accept-report`, key, { expectedVersion })
+}
+export function rejectPointOrderReport(orderId: string, expectedVersion: number, reason: string, key: string) {
+  return command(`/point-orders/${orderId}/reject-report`, key, { expectedVersion, reason })
+}
+export function claimPointOrder(orderId: string, expectedVersion: number, description: string, key: string) {
+  return command(`/point-orders/${orderId}/claim`, key, { expectedVersion, description })
+}
+const codeIssuedSchema = z.object({
+  receipt: receiptSchema.extend({ codeExpiresAt: z.string().nullable() }),
+  // Null on a replay: a code is shown once and never stored in receipts.
+  code: z.string().regex(/^[0-9]{6}$/).nullable(),
+})
+export type CodeIssued = z.infer<typeof codeIssuedSchema>
+export function requestCollectionCode(orderId: string, expectedVersion: number, key: string) {
+  return session.request(`/point-orders/${orderId}/collection-code`, codeIssuedSchema, {
+    method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ expectedVersion }),
+  })
+}
+export const CLAIM_MIN_LENGTH = 30
 
 /** Amounts a bidder may enter: start + n·step, from the minimum bid up to the cap. */
 export function bidOptions(minimum: number, step: number, count = 3) {
