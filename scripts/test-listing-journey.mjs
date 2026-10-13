@@ -159,7 +159,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .getByText("Bản nháp đã lưu. Bạn có thể hoàn thiện sau.", { exact: true })
     .waitFor();
   await click("Về sách của tôi");
-  await click("Hoàn thiện sách 1");
+  await click("Hoàn thiện");
   await click("Tiếp theo");
   assert.equal(
     await p
