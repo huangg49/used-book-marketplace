@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, stitchTokens } from "../../../core/ui";
 import { AppText } from "../../../core/ui/text";
@@ -66,7 +65,7 @@ export function HomeHeader({
             hitSlop={8}
             style={styles.iconButton}
           >
-            <Icon name="camera" size={18} color="#786B67" />
+            <Icon name="camera" size={18} color={stitchTokens.stoneMuted} />
           </Pressable>
         </Pressable>
 
@@ -80,7 +79,7 @@ export function HomeHeader({
             pressed && styles.btnPressed,
           ]}
         >
-          <Icon name="bell" size={22} color="#FFFFFF" />
+          <Icon name="bell" size={22} color={stitchTokens.white} />
           {notificationCount > 0 ? (
             <View style={styles.badgePill}>
               <AppText kind="small" style={styles.badgeText}>
@@ -100,7 +99,7 @@ export function HomeHeader({
             pressed && styles.btnPressed,
           ]}
         >
-          <Icon name="message" size={20} color="#FFFFFF" />
+          <Icon name="message" size={20} color={stitchTokens.white} />
           {cartCount > 0 ? (
             <View style={styles.badgePill}>
               <AppText kind="small" style={styles.badgeText}>
@@ -118,7 +117,7 @@ const styles = StyleSheet.create({
   headerRoot: {
     backgroundColor: stitchTokens.wine,
     paddingBottom: 10,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -136,11 +135,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     height: 38,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 8,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: "#E8E2DE",
+    borderColor: stitchTokens.softRose,
   },
   searchBarPressed: {
     opacity: 0.9,
@@ -152,11 +151,11 @@ const styles = StyleSheet.create({
   searchPlaceholder: {
     flex: 1,
     fontSize: 13,
-    color: "#8C7E7A",
+    color: stitchTokens.ashBrown,
     fontFamily: "BeRegular",
   },
   searchPlaceholderFilled: {
-    color: "#271813",
+    color: stitchTokens.charcoalBrown,
   },
   iconButton: {
     padding: 4,

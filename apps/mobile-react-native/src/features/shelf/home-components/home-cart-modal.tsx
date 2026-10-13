@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Image, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { Button, Icon, formatVnd, stitchTokens } from "../../../core/ui";
+import { AppModal, Button, Icon, formatVnd, stitchTokens  } from "../../../core/ui";
 import { FALLBACK_FLASH_DEALS } from "../home-mock-data";
 
 export interface HomeCartModalProps {
@@ -24,7 +24,7 @@ export function HomeCartModal({
   };
 
   return (
-    <Modal
+    <AppModal
       visible={visible}
       transparent
       animationType="slide"
@@ -52,7 +52,7 @@ export function HomeCartModal({
               hitSlop={8}
               style={styles.closeBtn}
             >
-              <Icon name="close" size={20} color="#786B67" />
+              <Icon name="close" size={20} color={stitchTokens.stoneMuted} />
             </Pressable>
           </View>
 
@@ -63,7 +63,7 @@ export function HomeCartModal({
           >
             {items.length === 0 ? (
               <View style={styles.emptyState}>
-                <Icon name="book" size={36} color="#A89C98" />
+                <Icon name="book" size={36} color={stitchTokens.coolMuted} />
                 <AppText kind="bold" style={styles.emptyTitle}>
                   Giỏ sách đang trống
                 </AppText>
@@ -146,21 +146,21 @@ export function HomeCartModal({
           ) : null}
         </View>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 
 const styles = StyleSheet.create({
   scrim: {
     flex: 1,
-    backgroundColor: "rgba(30, 20, 18, 0.55)",
+    backgroundColor: stitchTokens.modalScrim,
     justifyContent: "flex-end",
   },
   backdrop: {
     flex: 1,
   },
   sheetContainer: {
-    backgroundColor: "#FAF7F2",
+    backgroundColor: stitchTokens.parchment,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     maxHeight: "80%",
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderColor: "#EAE5DC",
+    borderColor: stitchTokens.warmBorder,
   },
   headerLeft: {
     flexDirection: "row",
@@ -200,20 +200,20 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 14,
-    color: "#4A3F3B",
+    color: stitchTokens.darkTaupe,
   },
   emptySub: {
     fontSize: 12,
-    color: "#8C807C",
+    color: stitchTokens.slateWarm,
     textAlign: "center",
     paddingHorizontal: 20,
   },
   cartCard: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#EBE6DE",
+    borderColor: stitchTokens.creamParchment,
     padding: 10,
     gap: 12,
   },
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 4,
     overflow: "hidden",
-    backgroundColor: "#F5F2EC",
+    backgroundColor: stitchTokens.surfaceSoft,
   },
   coverImg: {
     width: "100%",
@@ -234,12 +234,12 @@ const styles = StyleSheet.create({
   },
   bookTitle: {
     fontSize: 12,
-    color: "#271813",
+    color: stitchTokens.charcoalBrown,
     lineHeight: 16,
   },
   authorText: {
     fontSize: 11,
-    color: "#8C807C",
+    color: stitchTokens.slateWarm,
     marginTop: 2,
   },
   priceRow: {
@@ -255,14 +255,14 @@ const styles = StyleSheet.create({
   },
   removeText: {
     fontSize: 11,
-    color: "#D32F2F",
+    color: stitchTokens.flashRed,
     fontWeight: "600",
   },
   bottomArea: {
     paddingHorizontal: 16,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderColor: "#EAE5DC",
+    borderColor: stitchTokens.warmBorder,
     gap: 10,
   },
   totalRow: {
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 13,
-    color: "#4A3F3B",
+    color: stitchTokens.darkTaupe,
   },
   totalAmount: {
     fontSize: 16,

@@ -19,9 +19,10 @@ export {
   Chip,
 } from "./actions";
 export { Icon, type IconName } from "./icon";
-export { TextField, SearchField, Checkbox } from "./field";
+export { TextField, SearchField, Checkbox, AppTextInput } from "./field";
 export type { TextFieldRef } from "./field";
 export { Sheet } from "./sheet";
+export { AppModal } from "./modal";
 export { Notice, ErrorNotice, StatePanel, ConfirmDialog } from "./feedback";
 export {
   BookCover,

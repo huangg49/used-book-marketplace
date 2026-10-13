@@ -1,19 +1,14 @@
-import { useState } from "react";
 import { Pressable, View } from "react-native";
 import {
   AppText,
-  Button,
   Icon,
   Notice,
   TextField,
   colors,
-  layout,
-  metrics,
   space,
   stitchTokens,
 } from "../../core/ui";
 import type { Form, Errors } from "./listing-form";
-import type { components } from "@used-books/api-contract";
 
 export type Anchor = (field: keyof Errors) => (node: View | null) => void;
 const noAnchor: Anchor = () => () => {};
@@ -118,11 +113,11 @@ export function ConditionFields({
                     minHeight: 110,
                     padding: space.sm,
                     borderRadius: 12,
-                    backgroundColor: isSelected ? "#FFF8F6" : "#FFFDF8",
+                    backgroundColor: isSelected ? stitchTokens.roseWarmSurface : stitchTokens.warmIvory,
                     borderWidth: isSelected ? 2 : 1,
-                    borderColor: isSelected ? stitchTokens.wine : "#DDD5C7",
+                    borderColor: isSelected ? stitchTokens.wine : stitchTokens.borderWarm,
                     justifyContent: "space-between",
-                    shadowColor: isSelected ? stitchTokens.wine : "#000",
+                    shadowColor: isSelected ? stitchTokens.wine : stitchTokens.black,
                     shadowOffset: { width: 0, height: 1 },
                     shadowOpacity: isSelected ? 0.15 : 0.04,
                     shadowRadius: 2,
@@ -143,7 +138,7 @@ export function ConditionFields({
                       style={{
                         backgroundColor: isSelected
                           ? stitchTokens.wine
-                          : "#E7E3C7",
+                          : stitchTokens.sageGold,
                         paddingHorizontal: 6,
                         paddingVertical: 2,
                         borderRadius: 4,
@@ -184,7 +179,7 @@ export function ConditionFields({
 
                 <AppText
                   kind="small"
-                  color="#7D7068"
+                  color={stitchTokens.subtleGray}
                   style={{ fontSize: 10, lineHeight: 14 }}
                   numberOfLines={3}
                 >
@@ -214,10 +209,10 @@ export function ConditionFields({
         <View
           ref={anchor("readable")}
           style={{
-            backgroundColor: "#FFFDF8",
+            backgroundColor: stitchTokens.warmIvory,
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: errors.readable ? colors.rustText : "#DDD5C7",
+            borderColor: errors.readable ? colors.rustText : stitchTokens.borderWarm,
             padding: space.md,
             gap: space.sm,
           }}
@@ -241,15 +236,15 @@ export function ConditionFields({
                     paddingVertical: 10,
                     paddingHorizontal: 8,
                     borderRadius: 8,
-                    backgroundColor: active ? stitchTokens.wine : "#FAF7F2",
+                    backgroundColor: active ? stitchTokens.wine : stitchTokens.parchment,
                     borderWidth: 1,
-                    borderColor: active ? stitchTokens.wine : "#DEC0BB",
+                    borderColor: active ? stitchTokens.wine : stitchTokens.peachBorder,
                     alignItems: "center",
                   }}
                 >
                   <AppText
                     kind="bold"
-                    color={active ? "#FFFFFF" : "#7D7068"}
+                    color={active ? stitchTokens.white : stitchTokens.subtleGray}
                     style={{ fontSize: 12 }}
                   >
                     {opt.label}
@@ -267,10 +262,10 @@ export function ConditionFields({
         <View
           ref={anchor("hasMissingPages")}
           style={{
-            backgroundColor: "#FFFDF8",
+            backgroundColor: stitchTokens.warmIvory,
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: errors.hasMissingPages ? colors.rustText : "#DDD5C7",
+            borderColor: errors.hasMissingPages ? colors.rustText : stitchTokens.borderWarm,
             padding: space.md,
             gap: space.sm,
           }}
@@ -294,15 +289,15 @@ export function ConditionFields({
                     paddingVertical: 10,
                     paddingHorizontal: 8,
                     borderRadius: 8,
-                    backgroundColor: active ? stitchTokens.wine : "#FAF7F2",
+                    backgroundColor: active ? stitchTokens.wine : stitchTokens.parchment,
                     borderWidth: 1,
-                    borderColor: active ? stitchTokens.wine : "#DEC0BB",
+                    borderColor: active ? stitchTokens.wine : stitchTokens.peachBorder,
                     alignItems: "center",
                   }}
                 >
                   <AppText
                     kind="bold"
-                    color={active ? "#FFFFFF" : "#7D7068"}
+                    color={active ? stitchTokens.white : stitchTokens.subtleGray}
                     style={{ fontSize: 12 }}
                   >
                     {opt.label}
@@ -320,12 +315,12 @@ export function ConditionFields({
         <View
           ref={anchor("missingEssentialContent")}
           style={{
-            backgroundColor: "#FFFDF8",
+            backgroundColor: stitchTokens.warmIvory,
             borderRadius: 12,
             borderWidth: 1,
             borderColor: errors.missingEssentialContent
               ? colors.rustText
-              : "#DDD5C7",
+              : stitchTokens.borderWarm,
             padding: space.md,
             gap: space.sm,
           }}
@@ -351,15 +346,15 @@ export function ConditionFields({
                     paddingVertical: 10,
                     paddingHorizontal: 8,
                     borderRadius: 8,
-                    backgroundColor: active ? stitchTokens.wine : "#FAF7F2",
+                    backgroundColor: active ? stitchTokens.wine : stitchTokens.parchment,
                     borderWidth: 1,
-                    borderColor: active ? stitchTokens.wine : "#DEC0BB",
+                    borderColor: active ? stitchTokens.wine : stitchTokens.peachBorder,
                     alignItems: "center",
                   }}
                 >
                   <AppText
                     kind="bold"
-                    color={active ? "#FFFFFF" : "#7D7068"}
+                    color={active ? stitchTokens.white : stitchTokens.subtleGray}
                     style={{ fontSize: 12 }}
                   >
                     {opt.label}
@@ -424,10 +419,10 @@ export function ConditionFields({
               key={key}
               ref={anchor(key)}
               style={{
-                backgroundColor: "#FFFDF8",
+                backgroundColor: stitchTokens.warmIvory,
                 borderRadius: 12,
                 borderWidth: 1,
-                borderColor: errors[key] ? colors.rustText : "#DDD5C7",
+                borderColor: errors[key] ? colors.rustText : stitchTokens.borderWarm,
                 padding: space.md,
                 gap: space.xs,
               }}
@@ -449,7 +444,7 @@ export function ConditionFields({
                 </AppText>
                 <AppText
                   kind="small"
-                  color="#7D7068"
+                  color={stitchTokens.subtleGray}
                   style={{ flexShrink: 0, fontSize: 11, paddingTop: 1 }}
                 >
                   {`${charCount}/${max}`}
@@ -536,11 +531,11 @@ export function PricingFields({
                     flex: 1,
                     padding: space.sm,
                     borderRadius: 12,
-                    backgroundColor: isSelected ? "#FFF8F6" : "#FFFDF8",
+                    backgroundColor: isSelected ? stitchTokens.roseWarmSurface : stitchTokens.warmIvory,
                     borderWidth: isSelected ? 2 : 1,
-                    borderColor: isSelected ? stitchTokens.wine : "#DDD5C7",
+                    borderColor: isSelected ? stitchTokens.wine : stitchTokens.borderWarm,
                     gap: 4,
-                    shadowColor: isSelected ? stitchTokens.wine : "#000",
+                    shadowColor: isSelected ? stitchTokens.wine : stitchTokens.black,
                     shadowOffset: { width: 0, height: 1 },
                     shadowOpacity: isSelected ? 0.12 : 0.04,
                     shadowRadius: 2,
@@ -581,7 +576,7 @@ export function PricingFields({
 
                 <AppText
                   kind="label"
-                  color={isSelected ? stitchTokens.wine : "#7D7068"}
+                  color={isSelected ? stitchTokens.wine : stitchTokens.subtleGray}
                   style={{ fontSize: 11, fontWeight: "600" }}
                 >
                   {m.subtitle}
@@ -589,7 +584,7 @@ export function PricingFields({
 
                 <AppText
                   kind="small"
-                  color="#7D7068"
+                  color={stitchTokens.subtleGray}
                   style={{ fontSize: 10, lineHeight: 13 }}
                   numberOfLines={2}
                 >
@@ -608,13 +603,13 @@ export function PricingFields({
         <View
           ref={anchor("salePrice")}
           style={{
-            backgroundColor: "#FFFDF8",
+            backgroundColor: stitchTokens.warmIvory,
             borderRadius: 14,
             borderWidth: 1,
-            borderColor: errors.salePrice ? colors.rustText : "#DDD5C7",
+            borderColor: errors.salePrice ? colors.rustText : stitchTokens.borderWarm,
             padding: space.md,
             gap: space.sm,
-            shadowColor: "#000",
+            shadowColor: stitchTokens.black,
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.05,
             shadowRadius: 3,
@@ -635,7 +630,7 @@ export function PricingFields({
             >
               GIÁ BÁN ĐỀ XUẤT (VND)
             </AppText>
-            <AppText kind="small" color="#7D7068">
+            <AppText kind="small" color={stitchTokens.subtleGray}>
               10.000₫ – 1.000.000₫
             </AppText>
           </View>
@@ -675,13 +670,13 @@ export function PricingFields({
         <View
           ref={anchor("exchangeValue")}
           style={{
-            backgroundColor: "#FFFDF8",
+            backgroundColor: stitchTokens.warmIvory,
             borderRadius: 14,
             borderWidth: 1,
-            borderColor: errors.exchangeValue ? colors.rustText : "#DDD5C7",
+            borderColor: errors.exchangeValue ? colors.rustText : stitchTokens.borderWarm,
             padding: space.md,
             gap: space.sm,
-            shadowColor: "#000",
+            shadowColor: stitchTokens.black,
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.05,
             shadowRadius: 3,
@@ -702,7 +697,7 @@ export function PricingFields({
             >
               GIÁ TRỊ QUY ĐỔI / ĐỐI CHIẾU (VND)
             </AppText>
-            <AppText kind="small" color="#7D7068">
+            <AppText kind="small" color={stitchTokens.subtleGray}>
               10.000₫ – 1.000.000₫
             </AppText>
           </View>

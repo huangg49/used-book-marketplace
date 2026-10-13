@@ -1,15 +1,12 @@
 import { useCallback, useState } from "react";
 import {
-  Image,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
   useWindowDimensions,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { currentUserSchema } from "../../core/api/schemas";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
@@ -22,11 +19,8 @@ import {
   Screen,
   StatePanel,
   TopNavbar,
-  WebBrandLogo,
-  colors,
   formatVnd,
   presentError,
-  space,
   stitchTokens,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
@@ -45,7 +39,6 @@ const roleLabels: Record<string, string> = {
 export function AccountScreen() {
   const { client, state } = useSession();
   const isAuthenticated = state.status === "authenticated";
-  const insets = useSafeAreaInsets();
   const foreground = useForeground();
   const { fontScale } = useWindowDimensions();
   const [presentationVersion, setPresentationVersion] = useState(0);
@@ -156,7 +149,7 @@ export function AccountScreen() {
                     </AppText>
                   </View>
                   <View style={styles.verifiedBadge}>
-                    <Icon name="verified" size={12} color="#FFFFFF" />
+                    <Icon name="verified" size={12} color={stitchTokens.white} />
                   </View>
                 </View>
 
@@ -182,7 +175,7 @@ export function AccountScreen() {
                       style={{
                         fontSize: 11,
                         fontWeight: "700",
-                        color: "#494833",
+                        color: stitchTokens.oliveDark,
                       }}
                     >
                       {roleLabels[profile.data.roles[0]] || "Độc giả uy tín"} ★ 4.9
@@ -191,7 +184,7 @@ export function AccountScreen() {
 
                   <AppText
                     kind="small"
-                    color="#7D7068"
+                    color={stitchTokens.subtleGray}
                     style={{ fontSize: 12 }}
                     numberOfLines={1}
                   >
@@ -210,10 +203,10 @@ export function AccountScreen() {
                     (pressed || isLocked) && { opacity: isLocked ? 0.5 : 0.8 },
                   ]}
                 >
-                  <Icon name="plus" size={15} color="#FFFFFF" strokeWidth={2.4} />
+                  <Icon name="plus" size={15} color={stitchTokens.white} strokeWidth={2.4} />
                   <AppText
                     kind="bold"
-                    style={{ fontSize: 13, color: "#FFFFFF" }}
+                    style={{ fontSize: 13, color: stitchTokens.white }}
                   >
                     Đăng sách
                   </AppText>
@@ -260,7 +253,7 @@ export function AccountScreen() {
                     </AppText>
                     <AppText
                       kind="small"
-                      color="#8B716D"
+                      color={stitchTokens.roseBrown}
                       style={{ fontSize: 10, textTransform: "uppercase" }}
                     >
                       Ví mô phỏng (Đồ án TP.HCM)
@@ -284,7 +277,7 @@ export function AccountScreen() {
               {/* Balances */}
               <View style={styles.balanceGrid}>
                 <View style={{ flex: 1, gap: 2 }}>
-                  <AppText kind="small" color="#7D7068" style={{ fontSize: 11 }}>
+                  <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 11 }}>
                     Số dư khả dụng
                   </AppText>
                   <AppText
@@ -302,7 +295,7 @@ export function AccountScreen() {
                 </View>
 
                 <View style={{ flex: 1, gap: 2 }}>
-                  <AppText kind="small" color="#7D7068" style={{ fontSize: 11 }}>
+                  <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 11 }}>
                     Tạm giữ Escrow
                   </AppText>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -312,7 +305,7 @@ export function AccountScreen() {
                       style={{
                         fontSize: 16,
                         fontWeight: "700",
-                        color: "#C62828",
+                        color: stitchTokens.tagFreeshipText,
                       }}
                     >
                       {wallet.data?.transactionHeld != null
@@ -334,10 +327,10 @@ export function AccountScreen() {
                     pressed && { opacity: 0.8 },
                   ]}
                 >
-                  <Icon name="tag" size={14} color="#FFFFFF" />
+                  <Icon name="tag" size={14} color={stitchTokens.white} />
                   <AppText
                     kind="bold"
-                    style={{ fontSize: 13, color: "#FFFFFF" }}
+                    style={{ fontSize: 13, color: stitchTokens.white }}
                   >
                     Nạp / Rút
                   </AppText>
@@ -399,7 +392,7 @@ export function AccountScreen() {
                         style={{
                           fontSize: 10,
                           fontWeight: "700",
-                          color: "#C62828",
+                          color: stitchTokens.tagFreeshipText,
                           textTransform: "uppercase",
                         }}
                       >
@@ -414,11 +407,11 @@ export function AccountScreen() {
                       </AppText>
                       <AppText
                         kind="small"
-                        color="#7D7068"
+                        color={stitchTokens.subtleGray}
                         style={{ fontSize: 11 }}
                         numberOfLines={1}
                       >
-                        Bạn đọc gửi đề nghị đổi lấy cuốn "Gió Đầu Mùa"
+                        Bạn đọc gửi đề nghị đổi lấy cuốn &quot;Gió Đầu Mùa&quot;
                       </AppText>
                     </View>
                   </View>
@@ -432,10 +425,10 @@ export function AccountScreen() {
                         pressed && { opacity: 0.8 },
                       ]}
                     >
-                      <Icon name="swap" size={13} color="#FFFFFF" />
+                      <Icon name="swap" size={13} color={stitchTokens.white} />
                       <AppText
                         kind="bold"
-                        style={{ fontSize: 12, color: "#FFFFFF" }}
+                        style={{ fontSize: 12, color: stitchTokens.white }}
                       >
                         Xem phản hồi
                       </AppText>
@@ -450,7 +443,7 @@ export function AccountScreen() {
                     >
                       <AppText
                         kind="small"
-                        style={{ fontSize: 12, color: "#7D7068" }}
+                        style={{ fontSize: 12, color: stitchTokens.subtleGray }}
                       >
                         Bỏ qua
                       </AppText>
@@ -502,7 +495,7 @@ export function AccountScreen() {
                         </View>
                         <AppText
                           kind="small"
-                          color="#7D7068"
+                          color={stitchTokens.subtleGray}
                           style={{ fontSize: 11 }}
                           numberOfLines={1}
                         >
@@ -511,7 +504,7 @@ export function AccountScreen() {
                       </View>
                     </View>
 
-                    <Icon name="chevronRight" size={18} color="#8B716D" />
+                    <Icon name="chevronRight" size={18} color={stitchTokens.roseBrown} />
                   </View>
                 </View>
               </View>
@@ -584,8 +577,8 @@ export function AccountScreen() {
                               {
                                 backgroundColor:
                                   item.state.moderation === "Approved"
-                                    ? "#E8F5E9"
-                                    : "#FFF8E1",
+                                    ? stitchTokens.likeNewGreenBg
+                                    : stitchTokens.tagExchangeBg,
                               },
                             ]}
                           >
@@ -596,8 +589,8 @@ export function AccountScreen() {
                                 fontWeight: "700",
                                 color:
                                   item.state.moderation === "Approved"
-                                    ? "#1B5E20"
-                                    : "#E65100",
+                                    ? stitchTokens.likeNewGreen
+                                    : stitchTokens.tagExchangeText,
                               }}
                             >
                               {item.state.moderation === "Approved"
@@ -610,7 +603,7 @@ export function AccountScreen() {
                         </View>
                         <AppText
                           kind="small"
-                          color="#7D7068"
+                          color={stitchTokens.subtleGray}
                           style={{ fontSize: 11 }}
                           numberOfLines={1}
                         >
@@ -624,8 +617,8 @@ export function AccountScreen() {
                 </View>
               ) : (
                 <View style={styles.emptyBookCard}>
-                  <AppText kind="small" color="#7D7068" style={{ textAlign: "center" }}>
-                    Chưa có sách nào trên kệ. Hãy bấm "Đăng sách" để chia sẻ cuốn sách của bạn!
+                  <AppText kind="small" color={stitchTokens.subtleGray} style={{ textAlign: "center" }}>
+                    Chưa có sách nào trên kệ. Hãy bấm &quot;Đăng sách&quot; để chia sẻ cuốn sách của bạn!
                   </AppText>
                 </View>
               )}
@@ -666,12 +659,12 @@ export function AccountScreen() {
                     <View style={styles.menuCountBadge}>
                       <AppText
                         kind="small"
-                        style={{ fontSize: 11, color: "#7D7068", fontWeight: "600" }}
+                        style={{ fontSize: 11, color: stitchTokens.subtleGray, fontWeight: "600" }}
                       >
                         {bookCount} cuốn
                       </AppText>
                     </View>
-                    <Icon name="chevronRight" size={16} color="#8B716D" />
+                    <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
                   </View>
                 </Pressable>
 
@@ -696,7 +689,7 @@ export function AccountScreen() {
                       Sách đã quan tâm (Yêu thích)
                     </AppText>
                   </View>
-                  <Icon name="chevronRight" size={16} color="#8B716D" />
+                  <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
                 </Pressable>
 
                 {/* Row 3: Sổ địa chỉ trạm ViaPoint */}
@@ -720,7 +713,7 @@ export function AccountScreen() {
                       Địa chỉ nhận sách & Trạm ViaPoint
                     </AppText>
                   </View>
-                  <Icon name="chevronRight" size={16} color="#8B716D" />
+                  <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
                 </Pressable>
 
                 {/* Row 4: Ví lưu ký */}
@@ -756,7 +749,7 @@ export function AccountScreen() {
                           : "0 ₫"}
                       </AppText>
                     </View>
-                    <Icon name="chevronRight" size={16} color="#8B716D" />
+                    <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
                   </View>
                 </Pressable>
               </View>
@@ -775,8 +768,8 @@ export function AccountScreen() {
 
             {/* Micro footer note */}
             <View style={styles.microFooter}>
-              <Icon name="book" size={14} color="#8B716D" />
-              <AppText kind="small" color="#8B716D" style={{ fontSize: 11 }}>
+              <Icon name="book" size={14} color={stitchTokens.roseBrown} />
+              <AppText kind="small" color={stitchTokens.roseBrown} style={{ fontSize: 11 }}>
                 Lật Lại · Thư xã văn hóa Sài Gòn · Phiên bản 1.2.0
               </AppText>
             </View>
@@ -799,7 +792,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomLeftRadius: 18,
     borderBottomRightRadius: 18,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -814,14 +807,14 @@ const styles = StyleSheet.create({
   headerDivider: {
     width: 1,
     height: 18,
-    backgroundColor: "rgba(255, 223, 151, 0.4)",
+    backgroundColor: stitchTokens.goldAlpha40,
     marginHorizontal: 2,
   },
   headerIconButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: stitchTokens.whiteAlpha14,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
@@ -836,12 +829,12 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.gold,
   },
   profileHeaderCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#E8E4DA",
-    shadowColor: "#000",
+    borderColor: stitchTokens.cardBorder,
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
@@ -851,7 +844,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: "#FAF7F2",
+    backgroundColor: stitchTokens.parchment,
     borderWidth: 2,
     borderColor: stitchTokens.wine,
     alignItems: "center",
@@ -864,9 +857,9 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#1B5E20",
+    backgroundColor: stitchTokens.likeNewGreen,
     borderWidth: 1.5,
-    borderColor: "#FFFFFF",
+    borderColor: stitchTokens.white,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -874,7 +867,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#F2EDE4",
+    backgroundColor: stitchTokens.canvasMuted,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
@@ -888,20 +881,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
   },
   walletCard: {
-    backgroundColor: "#FFF8F6",
+    backgroundColor: stitchTokens.roseWarmSurface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#DEC0BB",
+    borderColor: stitchTokens.peachBorder,
     gap: 14,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
@@ -911,12 +904,12 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: "#FFEBE8",
+    backgroundColor: stitchTokens.roseWarmTag,
     alignItems: "center",
     justifyContent: "center",
   },
   tagLocation: {
-    backgroundColor: "#FFEBE8",
+    backgroundColor: stitchTokens.roseWarmTag,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -926,13 +919,13 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingTop: 4,
     borderTopWidth: 1,
-    borderColor: "#F0D4CB",
+    borderColor: stitchTokens.peachMuted,
   },
   escrowDot: {
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: "#C62828",
+    backgroundColor: stitchTokens.tagFreeshipText,
   },
   walletBtnPrimary: {
     flex: 1,
@@ -943,7 +936,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.wine,
     paddingVertical: 9,
     borderRadius: 8,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -955,22 +948,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderWidth: 1,
-    borderColor: "#DEC0BB",
+    borderColor: stitchTokens.peachBorder,
     paddingVertical: 9,
     borderRadius: 8,
   },
   metricCard: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#E8E4DA",
+    borderColor: stitchTokens.cardBorder,
     justifyContent: "space-between",
     gap: 10,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
@@ -980,7 +973,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#FFF8E1",
+    backgroundColor: stitchTokens.tagExchangeBg,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -988,32 +981,32 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#F7EBE8",
+    backgroundColor: stitchTokens.roseParchment,
     alignItems: "center",
     justifyContent: "center",
   },
   rewardTag: {
-    backgroundColor: "#FFF8E1",
+    backgroundColor: stitchTokens.tagExchangeBg,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
   },
   gradeTag: {
-    backgroundColor: "#F2EDE4",
+    backgroundColor: stitchTokens.canvasMuted,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
   },
   guaranteeCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#E8E4DA",
+    borderColor: stitchTokens.cardBorder,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
@@ -1023,7 +1016,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#F7EBE8",
+    backgroundColor: stitchTokens.roseParchment,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1034,12 +1027,12 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.wine,
   },
   actionItemCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#E8E4DA",
-    shadowColor: "#000",
+    borderColor: stitchTokens.cardBorder,
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
@@ -1049,9 +1042,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 58,
     borderRadius: 6,
-    backgroundColor: "#FAF7F2",
+    backgroundColor: stitchTokens.parchment,
     borderWidth: 1,
-    borderColor: "#DEC0BB",
+    borderColor: stitchTokens.peachBorder,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1059,12 +1052,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: "#F7EBE8",
+    backgroundColor: stitchTokens.roseParchment,
     alignItems: "center",
     justifyContent: "center",
   },
   transitTag: {
-    backgroundColor: "#F7EBE8",
+    backgroundColor: stitchTokens.roseParchment,
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
@@ -1082,21 +1075,21 @@ const styles = StyleSheet.create({
   btnRespondSecondary: {
     paddingHorizontal: 14,
     paddingVertical: 7,
-    backgroundColor: "#FAF7F2",
+    backgroundColor: stitchTokens.parchment,
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
   },
   recentBookCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#E8E4DA",
+    borderColor: stitchTokens.cardBorder,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 3,
@@ -1106,9 +1099,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 52,
     borderRadius: 4,
-    backgroundColor: "#FAF7F2",
+    backgroundColor: stitchTokens.parchment,
     borderWidth: 1,
-    borderColor: "#DEC0BB",
+    borderColor: stitchTokens.peachBorder,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1118,19 +1111,19 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   emptyBookCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#E8E4DA",
+    borderColor: stitchTokens.cardBorder,
   },
   menuCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E8E4DA",
+    borderColor: stitchTokens.cardBorder,
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
@@ -1143,24 +1136,24 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderColor: "#F0EAE1",
+    borderColor: stitchTokens.warmCard,
   },
   menuRowLast: {
     borderBottomWidth: 0,
   },
   menuRowPressed: {
-    backgroundColor: "#FAF7F2",
+    backgroundColor: stitchTokens.parchment,
   },
   menuIconBox: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: "#FAF7F2",
+    backgroundColor: stitchTokens.parchment,
     alignItems: "center",
     justifyContent: "center",
   },
   menuCountBadge: {
-    backgroundColor: "#F2EDE4",
+    backgroundColor: stitchTokens.canvasMuted,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,

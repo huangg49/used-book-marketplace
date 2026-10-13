@@ -1,12 +1,10 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Keyboard,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -24,16 +22,14 @@ import {
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import {
+  AppModal,
   AppText,
-  Button,
+  AppTextInput,
   Icon,
-  Notice,
   Screen,
   StatePanel,
   TopNavbar,
-  formatVnd,
   stitchTokens,
-  WebBrandLogo,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
 import { publicPage, type Listing } from "../shelf/contracts";
@@ -176,21 +172,24 @@ export function SearchScreen() {
     setSubcategoryModalOpen(false);
   };
 
-  const handleToggleFacetOption = (facetId: string, optionId: string) => {
-    setSelectedAttributes((prev) => {
-      const current = prev[facetId] ?? [];
-      const nextVals = current.includes(optionId)
-        ? current.filter((v) => v !== optionId)
-        : [...current, optionId];
-      const updated = { ...prev };
-      if (nextVals.length === 0) {
-        delete updated[facetId];
-      } else {
-        updated[facetId] = nextVals;
-      }
-      return compatibleAttributes(activeCategoryId, updated, "search");
-    });
-  };
+  const handleToggleFacetOption = useCallback(
+    (facetId: string, optionId: string) => {
+      setSelectedAttributes((prev) => {
+        const current = prev[facetId] ?? [];
+        const nextVals = current.includes(optionId)
+          ? current.filter((v) => v !== optionId)
+          : [...current, optionId];
+        const updated = { ...prev };
+        if (nextVals.length === 0) {
+          delete updated[facetId];
+        } else {
+          updated[facetId] = nextVals;
+        }
+        return compatibleAttributes(activeCategoryId, updated, "search");
+      });
+    },
+    [activeCategoryId],
+  );
 
   const handleClearFacet = (facetId: string) => {
     setSelectedAttributes((prev) => {
@@ -495,10 +494,6 @@ export function SearchScreen() {
     }
   };
 
-  const handleToggleSort = () => {
-    setSortIndex((prev) => (prev + 1) % SORTS.length);
-  };
-
   const handleTogglePickup = () => {
     setPickupIndex((prev) => (prev + 1) % pickupLocations.length);
   };
@@ -642,6 +637,7 @@ export function SearchScreen() {
     minExchangeValue,
     maxExchangeValue,
     selectedLanguage,
+    handleToggleFacetOption,
   ]);
 
   const handleVoiceSearch = () => {
@@ -698,11 +694,11 @@ export function SearchScreen() {
         <View style={styles.searchBarSection}>
           <View style={styles.searchBarBox}>
             <Icon name="search" size={20} color={stitchTokens.wine} />
-            <TextInput
+            <AppTextInput
               value={search}
               onChangeText={setSearch}
               placeholder="Tìm tên sách, tác giả, NXB..."
-              placeholderTextColor="#8C7E7A"
+              placeholderTextColor={stitchTokens.ashBrown}
               returnKeyType="search"
               style={styles.searchInput}
               accessibilityLabel="Ô tìm kiếm sách"
@@ -716,7 +712,7 @@ export function SearchScreen() {
                 hitSlop={8}
                 style={styles.clearBtn}
               >
-                <Icon name="close" size={16} color="#786B67" />
+                <Icon name="close" size={16} color={stitchTokens.stoneMuted} />
               </Pressable>
             ) : null}
             <View style={styles.searchDivider} />
@@ -797,7 +793,7 @@ export function SearchScreen() {
               size={15}
               color={
                 filterPanelOpen || filterCount > 0
-                  ? "#FFFDF8"
+                  ? stitchTokens.warmIvory
                   : stitchTokens.wine
               }
             />
@@ -877,7 +873,7 @@ export function SearchScreen() {
                   hitSlop={8}
                   style={styles.closeFilterBtn}
                 >
-                  <Icon name="close" size={16} color="#786B67" />
+                  <Icon name="close" size={16} color={stitchTokens.stoneMuted} />
                 </Pressable>
               </View>
             </View>
@@ -911,7 +907,7 @@ export function SearchScreen() {
                 >
                   {rootCategory?.label ?? "Tất cả danh mục"}
                 </AppText>
-                <Icon name="chevronDown" size={16} color="#786B67" />
+                <Icon name="chevronDown" size={16} color={stitchTokens.stoneMuted} />
               </Pressable>
 
               {/* Subcategory Dropdown (Nhóm sách con nếu có) */}
@@ -950,7 +946,7 @@ export function SearchScreen() {
                           `Tất cả ${rootCategory?.label.toLowerCase()}`)
                         : `Tất cả ${rootCategory?.label.toLowerCase()}`}
                     </AppText>
-                    <Icon name="chevronDown" size={16} color="#786B67" />
+                    <Icon name="chevronDown" size={16} color={stitchTokens.stoneMuted} />
                   </Pressable>
                 </View>
               ) : null}
@@ -1056,11 +1052,11 @@ export function SearchScreen() {
                     ) : null}
                   </View>
                   <View style={styles.seriesInputBox}>
-                    <TextInput
+                    <AppTextInput
                       value={selectedSeries}
                       onChangeText={setSelectedSeries}
                       placeholder="Ví dụ: Doraemon, Harry Potter..."
-                      placeholderTextColor="#9A8E89"
+                      placeholderTextColor={stitchTokens.taupeMuted}
                       style={styles.seriesInputText}
                       accessibilityLabel="Tên bộ sách hoặc series"
                     />
@@ -1071,7 +1067,7 @@ export function SearchScreen() {
                         onPress={() => setSelectedSeries("")}
                         hitSlop={8}
                       >
-                        <Icon name="close" size={14} color="#786B67" />
+                        <Icon name="close" size={14} color={stitchTokens.stoneMuted} />
                       </Pressable>
                     ) : null}
                   </View>
@@ -1185,11 +1181,11 @@ export function SearchScreen() {
                         <AppText kind="small" style={styles.priceFieldLabel}>
                           Từ
                         </AppText>
-                        <TextInput
+                        <AppTextInput
                           value={minPrice}
                           onChangeText={(val) => setMinPrice(val.replace(/\D/g, ""))}
                           placeholder="10.000"
-                          placeholderTextColor="#9A8E89"
+                          placeholderTextColor={stitchTokens.taupeMuted}
                           keyboardType="numeric"
                           style={styles.priceInputText}
                           accessibilityLabel="Giá bán từ"
@@ -1202,11 +1198,11 @@ export function SearchScreen() {
                         <AppText kind="small" style={styles.priceFieldLabel}>
                           Đến
                         </AppText>
-                        <TextInput
+                        <AppTextInput
                           value={maxPrice}
                           onChangeText={(val) => setMaxPrice(val.replace(/\D/g, ""))}
                           placeholder="1.000.000"
-                          placeholderTextColor="#9A8E89"
+                          placeholderTextColor={stitchTokens.taupeMuted}
                           keyboardType="numeric"
                           style={styles.priceInputText}
                           accessibilityLabel="Giá bán đến"
@@ -1296,13 +1292,13 @@ export function SearchScreen() {
                         <AppText kind="small" style={styles.priceFieldLabel}>
                           Từ
                         </AppText>
-                        <TextInput
+                        <AppTextInput
                           value={minExchangeValue}
                           onChangeText={(val) =>
                             setMinExchangeValue(val.replace(/\D/g, ""))
                           }
                           placeholder="10.000"
-                          placeholderTextColor="#9A8E89"
+                          placeholderTextColor={stitchTokens.taupeMuted}
                           keyboardType="numeric"
                           style={styles.priceInputText}
                           accessibilityLabel="Giá trị đổi từ"
@@ -1315,13 +1311,13 @@ export function SearchScreen() {
                         <AppText kind="small" style={styles.priceFieldLabel}>
                           Đến
                         </AppText>
-                        <TextInput
+                        <AppTextInput
                           value={maxExchangeValue}
                           onChangeText={(val) =>
                             setMaxExchangeValue(val.replace(/\D/g, ""))
                           }
                           placeholder="1.000.000"
-                          placeholderTextColor="#9A8E89"
+                          placeholderTextColor={stitchTokens.taupeMuted}
                           keyboardType="numeric"
                           style={styles.priceInputText}
                           accessibilityLabel="Giá trị đổi đến"
@@ -1417,7 +1413,7 @@ export function SearchScreen() {
                        selectedLanguage)
                     : "Tất cả ngôn ngữ"}
                 </AppText>
-                <Icon name="chevronDown" size={16} color="#786B67" />
+                <Icon name="chevronDown" size={16} color={stitchTokens.stoneMuted} />
               </Pressable>
             </View>
 
@@ -1463,7 +1459,7 @@ export function SearchScreen() {
                 }}
                 style={styles.applyFilterBtn}
               >
-                <Icon name="search" size={17} color="#FFFDF8" />
+                <Icon name="search" size={17} color={stitchTokens.warmIvory} />
                 <AppText kind="bold" style={styles.applyFilterBtnText}>
                   Tìm kiếm
                 </AppText>
@@ -1500,7 +1496,7 @@ export function SearchScreen() {
                 onPress={handleResetFilters}
                 style={styles.clearAllChip}
               >
-                <Icon name="sync" size={12} color="#786B67" />
+                <Icon name="sync" size={12} color={stitchTokens.stoneMuted} />
                 <AppText kind="small" style={styles.clearAllChipText}>
                   Xóa bộ lọc
                 </AppText>
@@ -1579,7 +1575,7 @@ export function SearchScreen() {
       </View>
 
       {/* Category Picker Modal */}
-      <Modal
+      <AppModal
         visible={categoryModalOpen}
         transparent
         animationType="fade"
@@ -1603,7 +1599,7 @@ export function SearchScreen() {
                 onPress={() => setCategoryModalOpen(false)}
                 hitSlop={8}
               >
-                <Icon name="close" size={18} color="#786B67" />
+                <Icon name="close" size={18} color={stitchTokens.stoneMuted} />
               </Pressable>
             </View>
             <ScrollView style={styles.modalListScroll}>
@@ -1660,10 +1656,10 @@ export function SearchScreen() {
             </ScrollView>
           </Pressable>
         </Pressable>
-      </Modal>
+      </AppModal>
 
       {/* Subcategory Picker Modal */}
-      <Modal
+      <AppModal
         visible={subcategoryModalOpen}
         transparent
         animationType="fade"
@@ -1687,7 +1683,7 @@ export function SearchScreen() {
                 onPress={() => setSubcategoryModalOpen(false)}
                 hitSlop={8}
               >
-                <Icon name="close" size={18} color="#786B67" />
+                <Icon name="close" size={18} color={stitchTokens.stoneMuted} />
               </Pressable>
             </View>
             <ScrollView style={styles.modalListScroll}>
@@ -1744,10 +1740,10 @@ export function SearchScreen() {
             </ScrollView>
           </Pressable>
         </Pressable>
-      </Modal>
+      </AppModal>
 
       {/* Language Picker Modal */}
-      <Modal
+      <AppModal
         visible={languageModalOpen}
         transparent
         animationType="fade"
@@ -1771,7 +1767,7 @@ export function SearchScreen() {
                 onPress={() => setLanguageModalOpen(false)}
                 hitSlop={8}
               >
-                <Icon name="close" size={18} color="#786B67" />
+                <Icon name="close" size={18} color={stitchTokens.stoneMuted} />
               </Pressable>
             </View>
             <ScrollView style={styles.modalListScroll}>
@@ -1834,10 +1830,10 @@ export function SearchScreen() {
             </ScrollView>
           </Pressable>
         </Pressable>
-      </Modal>
+      </AppModal>
 
       {/* Sort Dropdown Popup Modal */}
-      <Modal
+      <AppModal
         visible={sortDropdownOpen}
         transparent
         animationType="fade"
@@ -1898,7 +1894,7 @@ export function SearchScreen() {
             })}
           </View>
         </Pressable>
-      </Modal>
+      </AppModal>
 
       {/* Notifications Modal */}
       <HomeNotificationsModal
@@ -1914,7 +1910,7 @@ const styles = StyleSheet.create({
   topNavHeader: {
     backgroundColor: stitchTokens.wine,
     paddingBottom: 10,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -1961,14 +1957,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255, 223, 151, 0.4)",
+    borderColor: stitchTokens.goldAlpha40,
   },
   searchBody: {
     paddingBottom: 24,
-    backgroundColor: "#FFF8F6",
+    backgroundColor: stitchTokens.roseWarmSurface,
   },
   searchBarSection: {
-    backgroundColor: "rgba(255, 248, 246, 0.95)",
+    backgroundColor: stitchTokens.roseWarmBlur,
     paddingHorizontal: 12,
     paddingTop: 10,
     paddingBottom: 6,
@@ -1977,12 +1973,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     height: 44,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 12,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: "#EAE5DC",
-    shadowColor: "rgba(40, 25, 20, 0.06)",
+    borderColor: stitchTokens.warmBorder,
+    shadowColor: stitchTokens.shadowSoft,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1992,7 +1988,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: "100%",
     fontSize: 13,
-    color: "#271813",
+    color: stitchTokens.charcoalBrown,
     paddingHorizontal: 8,
     fontFamily: "BeRegular",
   },
@@ -2002,7 +1998,7 @@ const styles = StyleSheet.create({
   searchDivider: {
     width: 1,
     height: 18,
-    backgroundColor: "#E8E2DA",
+    backgroundColor: stitchTokens.sandBorder,
     marginHorizontal: 6,
   },
   micBtn: {
@@ -2023,7 +2019,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   modeTabUnselected: {
-    backgroundColor: "#F2EDE4",
+    backgroundColor: stitchTokens.canvasMuted,
   },
   modeTabText: {
     fontSize: 11,
@@ -2033,7 +2029,7 @@ const styles = StyleSheet.create({
     color: stitchTokens.gold,
   },
   modeTabTextUnselected: {
-    color: "#4A3F3B",
+    color: stitchTokens.darkTaupe,
   },
   summaryBar: {
     flexDirection: "row",
@@ -2049,7 +2045,7 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     fontSize: 12,
-    color: "#6D5F5A",
+    color: stitchTokens.mediumMuted,
   },
   summaryCount: {
     color: stitchTokens.wine,
@@ -2059,12 +2055,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#EFEBE3",
+    backgroundColor: stitchTokens.creamMuted,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#DDD5C7",
+    borderColor: stitchTokens.borderWarm,
   },
   filterToggleBtnActive: {
     backgroundColor: stitchTokens.wine,
@@ -2073,10 +2069,10 @@ const styles = StyleSheet.create({
   filterToggleText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#271813",
+    color: stitchTokens.charcoalBrown,
   },
   filterToggleTextActive: {
-    color: "#FFFDF8",
+    color: stitchTokens.warmIvory,
   },
   filterDot: {
     width: 6,
@@ -2094,7 +2090,7 @@ const styles = StyleSheet.create({
   },
   sortBarLabel: {
     fontSize: 13,
-    color: "#6D5F5A",
+    color: stitchTokens.mediumMuted,
     fontWeight: "500",
   },
   sortDropdownTrigger: {
@@ -2102,7 +2098,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
-    backgroundColor: "#FAF7F2",
+    backgroundColor: stitchTokens.parchment,
     borderWidth: 1.5,
     borderColor: stitchTokens.wine,
     borderRadius: 8,
@@ -2111,12 +2107,12 @@ const styles = StyleSheet.create({
     minWidth: 140,
   },
   sortDropdownTriggerActive: {
-    backgroundColor: "#FFFDF8",
+    backgroundColor: stitchTokens.warmIvory,
     borderColor: stitchTokens.wine,
   },
   sortDropdownTriggerText: {
     fontSize: 13,
-    color: "#271813",
+    color: stitchTokens.charcoalBrown,
     fontWeight: "600",
   },
   sortModalBackdrop: {
@@ -2126,13 +2122,13 @@ const styles = StyleSheet.create({
   sortDropdownCard: {
     position: "absolute",
     width: 220,
-    backgroundColor: "#FFFDF8",
+    backgroundColor: stitchTokens.warmIvory,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E6DFD5",
+    borderColor: stitchTokens.desertSand,
     paddingVertical: 6,
     paddingHorizontal: 4,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.16,
     shadowRadius: 14,
@@ -2147,11 +2143,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   sortDropdownItemSelected: {
-    backgroundColor: "rgba(92, 2, 2, 0.05)",
+    backgroundColor: stitchTokens.wineAlpha05,
   },
   sortDropdownItemText: {
     fontSize: 13,
-    color: "#271813",
+    color: stitchTokens.charcoalBrown,
     fontWeight: "500",
   },
   sortDropdownItemTextSelected: {
@@ -2160,13 +2156,13 @@ const styles = StyleSheet.create({
   },
   webFilterPanel: {
     marginHorizontal: 12,
-    backgroundColor: "#F7F2E8",
+    backgroundColor: stitchTokens.antiqueWhite,
     borderRadius: 12,
     padding: 12,
     gap: 12,
     borderWidth: 1,
-    borderColor: "#E5DDD0",
-    shadowColor: "#000",
+    borderColor: stitchTokens.warmCanvas,
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -2179,7 +2175,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#EAE3D6",
+    borderBottomColor: stitchTokens.paperBorder,
   },
   filterHeadTitle: {
     flexDirection: "row",
@@ -2227,14 +2223,14 @@ const styles = StyleSheet.create({
   sectionTitleText: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#6D5F5A",
+    color: stitchTokens.mediumMuted,
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
   selectedCountBadge: {
     fontSize: 10,
     color: stitchTokens.wine,
-    backgroundColor: "rgba(92, 2, 2, 0.08)",
+    backgroundColor: stitchTokens.wineAlpha08,
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 8,
@@ -2264,18 +2260,18 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.wine,
   },
   choicePillUnselected: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#DDD5C7",
+    backgroundColor: stitchTokens.white,
+    borderColor: stitchTokens.borderWarm,
   },
   choicePillText: {
     fontSize: 11,
     fontWeight: "600",
   },
   choicePillTextSelected: {
-    color: "#FFFDF8",
+    color: stitchTokens.warmIvory,
   },
   choicePillTextUnselected: {
-    color: "#3A2E2A",
+    color: stitchTokens.darkEarth,
   },
   priceInputsRow: {
     flexDirection: "row",
@@ -2286,16 +2282,16 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#DDD5C7",
+    borderColor: stitchTokens.borderWarm,
     paddingHorizontal: 8,
     height: 34,
   },
   priceFieldLabel: {
     fontSize: 11,
-    color: "#8A7C75",
+    color: stitchTokens.neutralMuted,
     marginRight: 4,
   },
   priceInputText: {
@@ -2307,7 +2303,7 @@ const styles = StyleSheet.create({
   },
   priceDash: {
     fontSize: 12,
-    color: "#8A7C75",
+    color: stitchTokens.neutralMuted,
     fontWeight: "600",
   },
   presetsRow: {
@@ -2325,18 +2321,18 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.wine,
   },
   presetBtnUnselected: {
-    backgroundColor: "#EFEBE3",
-    borderColor: "#DDD5C7",
+    backgroundColor: stitchTokens.creamMuted,
+    borderColor: stitchTokens.borderWarm,
   },
   presetBtnText: {
     fontSize: 10,
     fontWeight: "600",
   },
   presetBtnTextSelected: {
-    color: "#FFFDF8",
+    color: stitchTokens.warmIvory,
   },
   presetBtnTextUnselected: {
-    color: "#5A4C47",
+    color: stitchTokens.coffee,
   },
   sortChoicesRow: {
     flexDirection: "row",
@@ -2355,18 +2351,18 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.wine,
   },
   sortPillUnselected: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#DDD5C7",
+    backgroundColor: stitchTokens.white,
+    borderColor: stitchTokens.borderWarm,
   },
   sortPillText: {
     fontSize: 11,
     fontWeight: "600",
   },
   sortPillTextSelected: {
-    color: "#FFFDF8",
+    color: stitchTokens.warmIvory,
   },
   sortPillTextUnselected: {
-    color: "#3A2E2A",
+    color: stitchTokens.darkEarth,
   },
   activeFiltersRow: {
     marginHorizontal: 12,
@@ -2383,9 +2379,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(92, 2, 2, 0.08)",
+    backgroundColor: stitchTokens.wineAlpha08,
     borderWidth: 1,
-    borderColor: "rgba(92, 2, 2, 0.2)",
+    borderColor: stitchTokens.wineAlpha20,
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 14,
@@ -2402,18 +2398,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 14,
-    backgroundColor: "#EFEBE3",
+    backgroundColor: stitchTokens.creamMuted,
   },
   clearAllChipText: {
     fontSize: 11,
-    color: "#6A5B55",
+    color: stitchTokens.brownMuted,
     fontWeight: "500",
   },
   pickupCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#ECE5D8",
+    backgroundColor: stitchTokens.cardSurface,
     padding: 8,
     borderRadius: 8,
   },
@@ -2436,14 +2432,14 @@ const styles = StyleSheet.create({
   },
   pickupTitle: {
     fontSize: 11,
-    color: "#271813",
+    color: stitchTokens.charcoalBrown,
   },
   pickupSubtitle: {
     fontSize: 10,
-    color: "#6D5F5A",
+    color: stitchTokens.mediumMuted,
   },
   changePickupBtn: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -2463,11 +2459,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   emptyContainer: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#EAE5DC",
+    borderColor: stitchTokens.warmBorder,
   },
   paginationSection: {
     alignItems: "center",
@@ -2477,7 +2473,7 @@ const styles = StyleSheet.create({
   progressBarWrapper: {
     width: 140,
     height: 4,
-    backgroundColor: "#E2DCD5",
+    backgroundColor: stitchTokens.borderMuted,
     borderRadius: 2,
     overflow: "hidden",
   },
@@ -2488,7 +2484,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 11,
-    color: "#786B67",
+    color: stitchTokens.stoneMuted,
   },
   loadMoreBtn: {
     flexDirection: "row",
@@ -2496,7 +2492,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     width: "100%",
-    backgroundColor: "#EDE7DB",
+    backgroundColor: stitchTokens.linenBg,
     paddingVertical: 12,
     borderRadius: 10,
     marginTop: 4,
@@ -2510,16 +2506,16 @@ const styles = StyleSheet.create({
   },
   endOfCatalogText: {
     fontSize: 11,
-    color: "#8C807C",
+    color: stitchTokens.slateWarm,
     fontStyle: "italic",
   },
   categoryDropdownBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderWidth: 1,
-    borderColor: "#DDD5C7",
+    borderColor: stitchTokens.borderWarm,
     borderRadius: 8,
     paddingHorizontal: 12,
     height: 40,
@@ -2527,7 +2523,7 @@ const styles = StyleSheet.create({
   },
   categoryDropdownText: {
     fontSize: 12,
-    color: "#271813",
+    color: stitchTokens.charcoalBrown,
     fontWeight: "500",
     flex: 1,
   },
@@ -2537,7 +2533,7 @@ const styles = StyleSheet.create({
   },
   facetContextNote: {
     fontSize: 11,
-    color: "#786B67",
+    color: stitchTokens.stoneMuted,
     fontStyle: "italic",
     lineHeight: 16,
     marginVertical: 4,
@@ -2547,13 +2543,13 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: "#EAE4D9",
+    borderTopColor: stitchTokens.parchmentBorder,
     marginTop: 4,
   },
   facetTitleText: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#6D5F5A",
+    color: stitchTokens.mediumMuted,
     textTransform: "uppercase",
     letterSpacing: 0.3,
   },
@@ -2566,37 +2562,37 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: "#EAE4D9",
+    borderTopColor: stitchTokens.parchmentBorder,
     marginTop: 4,
   },
   seriesInputBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#DDD5C7",
+    borderColor: stitchTokens.borderWarm,
     paddingHorizontal: 10,
     height: 36,
   },
   seriesInputText: {
     flex: 1,
     fontSize: 11,
-    color: "#271813",
+    color: stitchTokens.charcoalBrown,
     padding: 0,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    backgroundColor: stitchTokens.blackAlpha45,
     justifyContent: "flex-end",
   },
   modalSheet: {
-    backgroundColor: "#FFFDF9",
+    backgroundColor: stitchTokens.ivoryWhite,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     maxHeight: "75%",
     paddingBottom: 28,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -2609,7 +2605,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#EAE4D9",
+    borderBottomColor: stitchTokens.parchmentBorder,
   },
   modalTitle: {
     fontSize: 14,
@@ -2628,14 +2624,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#F4EEE4",
+    borderBottomColor: stitchTokens.biscuit,
   },
   modalItemRowSelected: {
-    backgroundColor: "rgba(92, 2, 2, 0.05)",
+    backgroundColor: stitchTokens.wineAlpha05,
   },
   modalItemText: {
     fontSize: 13,
-    color: "#271813",
+    color: stitchTokens.charcoalBrown,
   },
   modalItemTextSelected: {
     fontWeight: "700",
@@ -2652,7 +2648,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.wine,
     paddingVertical: 11,
     borderRadius: 8,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     shadowRadius: 2,
@@ -2660,13 +2656,13 @@ const styles = StyleSheet.create({
   },
   applyFilterBtnText: {
     fontSize: 13,
-    color: "#FFFDF8",
+    color: stitchTokens.warmIvory,
     fontWeight: "700",
   },
   exchangeSection: {
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#EDE7DB",
+    borderBottomColor: stitchTokens.linenBg,
     gap: 8,
   },
   exchangeToggleHeader: {
@@ -2691,7 +2687,7 @@ const styles = StyleSheet.create({
   },
   exchangeHintText: {
     fontSize: 11,
-    color: "#786B67",
+    color: stitchTokens.stoneMuted,
     fontStyle: "italic",
     marginTop: 2,
   },

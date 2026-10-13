@@ -3,7 +3,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import {
@@ -18,6 +17,7 @@ import { useSession } from "../../core/session/session-provider";
 import { ApiError } from "../../core/api/session-client";
 import {
   AppText,
+  AppTextInput,
   Button,
   Icon,
   Notice,
@@ -93,7 +93,7 @@ export function BookIdentity({
           >
             Chưa chọn đầu sách
           </AppText>
-          <AppText kind="small" color="#8B716D" style={{ fontSize: 10 }}>
+          <AppText kind="small" color={stitchTokens.roseBrown} style={{ fontSize: 10 }}>
             Chưa gán catalog
           </AppText>
         </View>
@@ -106,7 +106,7 @@ export function BookIdentity({
           justifyContent: "center",
           paddingBottom: space.xs,
           borderBottomWidth: 1,
-          borderColor: "#DEC0BB",
+          borderColor: stitchTokens.peachBorder,
         }}
       >
         <AppText
@@ -146,7 +146,7 @@ export function BookIdentity({
         </AppText>
         <AppText
           kind="small"
-          color="#7D7068"
+          color={stitchTokens.subtleGray}
           style={{ fontSize: 11 }}
           numberOfLines={1}
         >
@@ -170,14 +170,14 @@ export function BookIdentity({
     <View
       style={{
         padding: 12,
-        backgroundColor: "#FFFDF8",
+        backgroundColor: stitchTokens.warmIvory,
         borderRadius: 14,
         borderWidth: 1,
-        borderColor: "#DDD5C7",
+        borderColor: stitchTokens.borderWarm,
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
-        shadowColor: "#000",
+        shadowColor: stitchTokens.black,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
         shadowRadius: 2,
@@ -189,9 +189,9 @@ export function BookIdentity({
           width: 50,
           height: 68,
           borderRadius: 6,
-          backgroundColor: "#FAF7F2",
+          backgroundColor: stitchTokens.parchment,
           borderWidth: 1,
-          borderColor: "#DEC0BB",
+          borderColor: stitchTokens.peachBorder,
           alignItems: "center",
           justifyContent: "center",
         }}
@@ -204,7 +204,7 @@ export function BookIdentity({
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <View
             style={{
-              backgroundColor: "#E7E3C7",
+              backgroundColor: stitchTokens.sageGold,
               paddingHorizontal: 6,
               paddingVertical: 2,
               borderRadius: 4,
@@ -218,7 +218,7 @@ export function BookIdentity({
               ĐÃ KHỚP CATALOG
             </AppText>
           </View>
-          <AppText kind="small" color="#7D7068" style={{ fontSize: 10 }}>
+          <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 10 }}>
             {`#BK-${id.slice(0, 6).toUpperCase()}`}
           </AppText>
         </View>
@@ -230,12 +230,12 @@ export function BookIdentity({
         >
           {read.data.title}
         </AppText>
-        <AppText kind="small" color="#7D7068" numberOfLines={1}>
+        <AppText kind="small" color={stitchTokens.subtleGray} numberOfLines={1}>
           {read.data.authors.join(" · ")}
         </AppText>
         <AppText
           kind="small"
-          color="#7D7068"
+          color={stitchTokens.subtleGray}
           style={{ fontSize: 11 }}
           numberOfLines={1}
         >
@@ -283,7 +283,7 @@ export function CatalogPicker({
     null,
   );
   const busyRef = useRef(false);
-  const [retryPending, setRetryPending] = useState(false);
+  const [, setRetryPending] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setTerm(search.trim()), 350);
     return () => clearTimeout(timer);
@@ -401,7 +401,7 @@ export function CatalogPicker({
               <Icon
                 name="book"
                 size={16}
-                color={entryMode === "catalog" ? stitchTokens.wine : "#735650"}
+                color={entryMode === "catalog" ? stitchTokens.wine : stitchTokens.warmUmber}
               />
               <AppText
                 style={[
@@ -423,7 +423,7 @@ export function CatalogPicker({
               <Icon
                 name="pen"
                 size={16}
-                color={entryMode === "manual" ? stitchTokens.wine : "#735650"}
+                color={entryMode === "manual" ? stitchTokens.wine : stitchTokens.warmUmber}
               />
               <AppText
                 style={[
@@ -438,7 +438,7 @@ export function CatalogPicker({
 
           {entryMode === "catalog" ? (
             <View style={{ gap: space.md }}>
-              <AppText kind="bold" style={{ fontSize: 15, color: "#2B1D19" }}>
+              <AppText kind="bold" style={{ fontSize: 15, color: stitchTokens.darkWood }}>
                 Tìm cuốn sách trong thư viện
               </AppText>
 
@@ -453,12 +453,12 @@ export function CatalogPicker({
                   <Icon
                     name="search"
                     size={22}
-                    color={isFocused ? stitchTokens.wine : "#735650"}
+                    color={isFocused ? stitchTokens.wine : stitchTokens.warmUmber}
                   />
                 </View>
-                <TextInput
+                <AppTextInput
                   placeholder="Nhập tên, tác giả hoặc ISBN..."
-                  placeholderTextColor="#9E8E89"
+                  placeholderTextColor={stitchTokens.softStone}
                   value={search}
                   onChangeText={setSearch}
                   onFocus={() => setIsFocused(true)}
@@ -473,7 +473,7 @@ export function CatalogPicker({
                     hitSlop={10}
                     style={styles.searchClearBtn}
                   >
-                    <Icon name="close" size={14} color="#735650" />
+                    <Icon name="close" size={14} color={stitchTokens.warmUmber} />
                   </Pressable>
                 ) : null}
               </View>
@@ -499,10 +499,10 @@ export function CatalogPicker({
                   !found.error &&
                   found.data?.pages[0]?.items.length === 0 ? (
                     <View style={{ gap: 4 }}>
-                      <AppText kind="small" color="#4A3B32" style={{ fontSize: 13 }}>
+                      <AppText kind="small" color={stitchTokens.espresso} style={{ fontSize: 13 }}>
                         Chưa tìm thấy. Bạn có thể chọn Tự nhập thông tin.
                       </AppText>
-                      <AppText kind="small" color="#8C807C" style={{ fontSize: 12 }}>
+                      <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 12 }}>
                         Chọn đúng đầu sách để điền sẵn tên, tác giả và phân loại.
                       </AppText>
                       <Pressable
@@ -535,10 +535,10 @@ export function CatalogPicker({
                         <AppText kind="heading" color={stitchTokens.wineDark}>
                           {b.title}
                         </AppText>
-                        <AppText kind="small" color="#735650">
+                        <AppText kind="small" color={stitchTokens.warmUmber}>
                           {b.authors.join(" · ")}
                         </AppText>
-                        <AppText kind="small" color="#8C807C">
+                        <AppText kind="small" color={stitchTokens.slateWarm}>
                           {[b.publisher, b.publicationYear, b.edition, b.isbn]
                             .filter(Boolean)
                             .join(" · ") || b.category}
@@ -567,7 +567,7 @@ export function CatalogPicker({
                 </>
               ) : (
                 <View style={{ gap: 4 }}>
-                  <AppText kind="small" color="#8C807C" style={{ fontSize: 12 }}>
+                  <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 12 }}>
                     Chọn đúng đầu sách để điền sẵn tên, tác giả và phân loại.
                   </AppText>
                   <Pressable
@@ -608,10 +608,10 @@ export function CatalogPicker({
           ) : (
             /* Mode 2: Tự nhập thông tin */
             <View style={{ gap: space.md }}>
-              <AppText kind="bold" style={{ fontSize: 15, color: "#2B1D19" }}>
+              <AppText kind="bold" style={{ fontSize: 15, color: stitchTokens.darkWood }}>
                 Tự nhập thông tin sách
               </AppText>
-              <AppText color="#735650" style={{ fontSize: 13 }}>
+              <AppText color={stitchTokens.warmUmber} style={{ fontSize: 13 }}>
                 Ghi tên sách và tác giả đúng như trên bìa. Thông tin sẽ được dùng để gán cho ấn bản của bạn.
               </AppText>
 
@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
   entryChoiceRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderColor: "#E5DCD8",
+    borderColor: stitchTokens.sandstone,
     gap: 20,
     marginBottom: 4,
   },
@@ -743,7 +743,7 @@ const styles = StyleSheet.create({
   entryChoiceText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#735650",
+    color: stitchTokens.warmUmber,
   },
   entryChoiceTextActive: {
     color: stitchTokens.wine,
@@ -755,12 +755,12 @@ const styles = StyleSheet.create({
     gap: 12,
     minHeight: 56,
     borderWidth: 1.5,
-    borderColor: "#DEC0BB",
+    borderColor: stitchTokens.peachBorder,
     borderRadius: 16,
-    backgroundColor: "#FAF7F5",
+    backgroundColor: stitchTokens.offWhiteWarm,
     paddingHorizontal: 14,
     paddingVertical: Platform.OS === "ios" ? 10 : 8,
-    shadowColor: "#5C0202",
+    shadowColor: stitchTokens.wine,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -768,7 +768,7 @@ const styles = StyleSheet.create({
   },
   searchBarFocused: {
     borderColor: stitchTokens.wine,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     shadowOpacity: 0.1,
     elevation: 2,
   },
@@ -781,7 +781,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: "#2B1D19",
+    color: stitchTokens.darkWood,
     paddingVertical: 0,
     fontWeight: "500",
   },
@@ -789,16 +789,16 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: "#EFE8E6",
+    backgroundColor: stitchTokens.linenRose,
     alignItems: "center",
     justifyContent: "center",
   },
   bookResultCard: {
     gap: space.sm,
     padding: space.md,
-    backgroundColor: "#FFFDF8",
+    backgroundColor: stitchTokens.warmIvory,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#DEC0BB",
+    borderColor: stitchTokens.peachBorder,
   },
 });

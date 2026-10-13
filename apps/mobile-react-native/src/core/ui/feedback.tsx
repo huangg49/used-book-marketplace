@@ -10,7 +10,6 @@ import {
 import { AppText } from "./text";
 import { Button, IconButton } from "./actions";
 import { Icon, type IconName } from "./icon";
-import { Sheet } from "./sheet";
 import { colorRoles, colors, feedbackColors, space, stitchTokens } from "./theme";
 
 export function Notice({

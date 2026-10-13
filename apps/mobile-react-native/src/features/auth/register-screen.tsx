@@ -31,21 +31,21 @@ function getPasswordStrength(p: string): {
   label: string;
   color: string;
 } {
-  if (!p) return { score: 0, label: "Nhập mật khẩu", color: "#DEC0BB" };
+  if (!p) return { score: 0, label: "Nhập mật khẩu", color: stitchTokens.peachBorder };
   if (p.length < 10)
     return {
       score: 1,
       label: "Quá ngắn (tối thiểu 10 ký tự)",
-      color: "#BA1A1A",
+      color: stitchTokens.crimson,
     };
   let s = 1;
   if (p.length >= 12) s++;
   if (/[A-Z]/.test(p) && /[0-9]/.test(p)) s++;
   if (/[^A-Za-z0-9]/.test(p)) s++;
-  if (s <= 1) return { score: 1, label: "Độ an toàn: Yếu", color: "#BA1A1A" };
+  if (s <= 1) return { score: 1, label: "Độ an toàn: Yếu", color: stitchTokens.crimson };
   if (s === 2)
-    return { score: 2, label: "Độ an toàn: Trung bình", color: "#EAC25F" };
-  return { score: 3, label: "Độ an toàn: Tốt", color: "#1B5E20" };
+    return { score: 2, label: "Độ an toàn: Trung bình", color: stitchTokens.goldMedal };
+  return { score: 3, label: "Độ an toàn: Tốt", color: stitchTokens.likeNewGreen };
 }
 
 export function RegisterScreen({
@@ -246,14 +246,14 @@ export function RegisterScreen({
       {/* Central Parchment Card (Single-Screen Fit) */}
       <View
         style={{
-          backgroundColor: "#FFFDF8",
+          backgroundColor: stitchTokens.warmIvory,
           borderRadius: 18,
           borderWidth: 1,
-          borderColor: "#DEC0BB",
+          borderColor: stitchTokens.peachBorder,
           paddingHorizontal: space.md,
           paddingVertical: 12,
           gap: 8,
-          shadowColor: "#000",
+          shadowColor: stitchTokens.black,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.05,
           shadowRadius: 3,
@@ -277,7 +277,7 @@ export function RegisterScreen({
               </AppText>
               <AppText
                 kind="small"
-                color="#57423E"
+                color={stitchTokens.deepCocoa}
                 style={{ textAlign: "center", fontSize: 11 }}
               >
                 Nhập mã 6 số gửi tới:{" "}
@@ -330,7 +330,7 @@ export function RegisterScreen({
               >
                 <AppText
                   kind="small"
-                  color={cooldown > 0 ? "#8B716D" : stitchTokens.wine}
+                  color={cooldown > 0 ? stitchTokens.roseBrown : stitchTokens.wine}
                   style={{
                     fontWeight: "600",
                     fontSize: 11,
@@ -379,7 +379,7 @@ export function RegisterScreen({
               </AppText>
               <AppText
                 kind="small"
-                color="#57423E"
+                color={stitchTokens.deepCocoa}
                 style={{ textAlign: "center", fontSize: 11 }}
               >
                 Mở ra trang sách đầu tiên của bạn tại Lật Lại.
@@ -495,7 +495,7 @@ export function RegisterScreen({
                       style={{
                         flex: 1,
                         backgroundColor:
-                          strength.score >= 1 ? stitchTokens.wine : "#E8E4DA",
+                          strength.score >= 1 ? stitchTokens.wine : stitchTokens.cardBorder,
                         borderRadius: 2,
                       }}
                     />
@@ -503,7 +503,7 @@ export function RegisterScreen({
                       style={{
                         flex: 1,
                         backgroundColor:
-                          strength.score >= 2 ? stitchTokens.wine : "#E8E4DA",
+                          strength.score >= 2 ? stitchTokens.wine : stitchTokens.cardBorder,
                         borderRadius: 2,
                       }}
                     />
@@ -511,7 +511,7 @@ export function RegisterScreen({
                       style={{
                         flex: 1,
                         backgroundColor:
-                          strength.score >= 3 ? stitchTokens.wine : "#E8E4DA",
+                          strength.score >= 3 ? stitchTokens.wine : stitchTokens.cardBorder,
                         borderRadius: 2,
                       }}
                     />
@@ -587,7 +587,7 @@ export function RegisterScreen({
                 marginTop: 2,
               }}
             >
-              <AppText kind="small" color="#57423E" style={{ fontSize: 12 }}>
+              <AppText kind="small" color={stitchTokens.deepCocoa} style={{ fontSize: 12 }}>
                 Đã có tài khoản?
               </AppText>
               <Pressable onPress={handleGoLogin}>

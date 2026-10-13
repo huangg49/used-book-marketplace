@@ -460,10 +460,6 @@ export function DraftEditor({
     }
   };
 
-  const status =
-    base.state.visibility === "Removed"
-      ? "Đã gỡ"
-      : (moderationLabel[base.state.moderation] ?? "Đang cập nhật");
   const ids = form.mediaIds;
   const navLocked = busy || uncertain || lifecyclePending;
   const canSave = editable && !approvedEdit;
@@ -546,14 +542,14 @@ export function DraftEditor({
             justifyContent: "space-between",
             paddingBottom: space.xs,
             borderBottomWidth: 1,
-            borderColor: "#DEC0BB",
+            borderColor: stitchTokens.peachBorder,
             marginTop: space.xs,
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <View
               style={{
-                backgroundColor: "#5C0202",
+                backgroundColor: stitchTokens.wine,
                 paddingHorizontal: 8,
                 paddingVertical: 4,
                 borderRadius: 8,
@@ -567,11 +563,11 @@ export function DraftEditor({
               style={{
                 width: 1,
                 height: 18,
-                backgroundColor: "#DEC0BB",
+                backgroundColor: stitchTokens.peachBorder,
                 marginHorizontal: 1,
               }}
             />
-            <AppText kind="small" color="#8C807C" style={{ fontSize: 11, fontWeight: "500" }}>
+            <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 11, fontWeight: "500" }}>
               Phiếu thông tin sách
             </AppText>
           </View>
@@ -580,7 +576,7 @@ export function DraftEditor({
             <View
               style={{
                 borderWidth: 1,
-                borderColor: "#B71C1C",
+                borderColor: stitchTokens.darkRed,
                 paddingHorizontal: 8,
                 paddingVertical: 2,
                 borderRadius: 4,
@@ -590,7 +586,7 @@ export function DraftEditor({
               <AppText
                 kind="small"
                 style={{
-                  color: "#B71C1C",
+                  color: stitchTokens.darkRed,
                   fontSize: 10,
                   fontWeight: "800",
                   letterSpacing: 1,
@@ -623,7 +619,7 @@ export function DraftEditor({
 
         {/* Step Indicator & Headings */}
         <View style={{ gap: 2, marginTop: space.xs }}>
-          <AppText kind="small" color="#8C807C" style={{ fontWeight: "600" }}>
+          <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontWeight: "600" }}>
             {`Bước ${step + 1}/5`}
           </AppText>
           <AppText
@@ -634,7 +630,7 @@ export function DraftEditor({
           >
             {stepLabels[step]}
           </AppText>
-          <AppText kind="small" color="#735650" style={{ fontSize: 12 }}>
+          <AppText kind="small" color={stitchTokens.warmUmber} style={{ fontSize: 12 }}>
             {stepHelp[step]}
           </AppText>
         </View>
@@ -774,14 +770,14 @@ export function DraftEditor({
               </AppText>
               <AppText
                 kind="small"
-                color="#7D7068"
+                color={stitchTokens.subtleGray}
                 style={{ fontWeight: "600" }}
               >
                 {`Đã tải ${ids.length}/8 ảnh`}
               </AppText>
             </View>
 
-            <AppText kind="small" color="#7D7068">
+            <AppText kind="small" color={stitchTokens.subtleGray}>
               Chụp bìa, gáy và các góc thể hiện tình trạng thật. JPEG, PNG hoặc WebP ≤ 10 MB.
               Ảnh đầu tiên được dùng làm ảnh bìa chính.
             </AppText>
@@ -820,10 +816,10 @@ export function DraftEditor({
                     key={item.id}
                     style={{
                       width: "31.3%",
-                      backgroundColor: "#FFFDF8",
+                      backgroundColor: stitchTokens.warmIvory,
                       borderRadius: 10,
                       borderWidth: isCover ? 2 : 1,
-                      borderColor: isCover ? stitchTokens.wine : "#DDD5C7",
+                      borderColor: isCover ? stitchTokens.wine : stitchTokens.borderWarm,
                       padding: 6,
                       gap: 6,
                     }}
@@ -898,8 +894,8 @@ export function DraftEditor({
                       borderRadius: 10,
                       borderWidth: 1.5,
                       borderStyle: "dashed",
-                      borderColor: "#DEC0BB",
-                      backgroundColor: "#FFF8F6",
+                      borderColor: stitchTokens.peachBorder,
+                      backgroundColor: stitchTokens.roseWarmSurface,
                       alignItems: "center",
                       justifyContent: "center",
                       gap: 4,
@@ -916,7 +912,7 @@ export function DraftEditor({
                   >
                     + Thêm ảnh
                   </AppText>
-                  <AppText kind="small" color="#7D7068" style={{ fontSize: 9 }}>
+                  <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 9 }}>
                     Tối đa 8 ảnh
                   </AppText>
                 </Pressable>
@@ -1011,10 +1007,10 @@ export function DraftEditor({
           {base.state.moderation !== "Draft" ? (
             <View
               style={{
-                backgroundColor: "#FFFDF8",
+                backgroundColor: stitchTokens.warmIvory,
                 borderRadius: 14,
                 borderWidth: 1,
-                borderColor: "#DEC0BB",
+                borderColor: stitchTokens.peachBorder,
                 padding: space.md,
                 gap: space.sm,
               }}
@@ -1042,7 +1038,7 @@ export function DraftEditor({
                 </AppText>
               </View>
 
-              <AppText color="#7D7068" kind="small">
+              <AppText color={stitchTokens.subtleGray} kind="small">
                 {base.state.moderation === "PendingReview"
                   ? "Nội dung bài đăng đang được kiểm duyệt bởi đội ngũ Lật Lại."
                   : base.state.moderation === "Approved"
@@ -1093,10 +1089,10 @@ export function DraftEditor({
           {/* Overview Specs Table */}
           <View
             style={{
-              backgroundColor: "#FFFDF8",
+              backgroundColor: stitchTokens.warmIvory,
               borderRadius: 14,
               borderWidth: 1,
-              borderColor: "#DDD5C7",
+              borderColor: stitchTokens.borderWarm,
               padding: space.md,
               gap: space.sm,
             }}
@@ -1158,10 +1154,10 @@ export function DraftEditor({
                   justifyContent: "space-between",
                   paddingVertical: 4,
                   borderBottomWidth: 1,
-                  borderColor: "#FAF7F2",
+                  borderColor: stitchTokens.parchment,
                 }}
               >
-                <AppText kind="small" color="#7D7068" style={{ fontWeight: "600" }}>
+                <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontWeight: "600" }}>
                   {lbl}
                 </AppText>
                 <AppText
@@ -1178,10 +1174,10 @@ export function DraftEditor({
           {/* Description */}
           <View
             style={{
-              backgroundColor: "#FFFDF8",
+              backgroundColor: stitchTokens.warmIvory,
               borderRadius: 14,
               borderWidth: 1,
-              borderColor: "#DDD5C7",
+              borderColor: stitchTokens.borderWarm,
               padding: space.md,
               gap: space.xs,
             }}
@@ -1210,12 +1206,12 @@ export function DraftEditor({
             <View
               ref={anchor("ownershipDeclared")}
               style={{
-                backgroundColor: "#FFFDF8",
+                backgroundColor: stitchTokens.warmIvory,
                 borderRadius: 14,
                 borderWidth: 1,
                 borderColor: errors.ownershipDeclared
                   ? colors.rustText
-                  : "#DEC0BB",
+                  : stitchTokens.peachBorder,
                 padding: space.md,
                 gap: space.xs,
               }}
@@ -1228,7 +1224,7 @@ export function DraftEditor({
               />
               <AppText
                 kind="small"
-                color="#7D7068"
+                color={stitchTokens.subtleGray}
                 style={{ marginLeft: 32, fontSize: 11 }}
               >
                 Được bảo chứng bồi hoàn nếu sách không đúng mô tả.
@@ -1299,13 +1295,13 @@ export function DraftEditor({
 
 const styles = StyleSheet.create({
   formWhiteCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#DEC0BB",
+    borderColor: stitchTokens.peachBorder,
     padding: space.md,
     gap: space.md,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,

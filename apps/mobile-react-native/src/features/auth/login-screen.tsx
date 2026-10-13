@@ -115,14 +115,14 @@ export function LoginScreen({
       {/* Central Parchment Card (Single-Screen Fit) */}
       <View
         style={{
-          backgroundColor: "#FFFDF8",
+          backgroundColor: stitchTokens.warmIvory,
           borderRadius: 18,
           borderWidth: 1,
-          borderColor: "#DEC0BB",
+          borderColor: stitchTokens.peachBorder,
           paddingHorizontal: space.md,
           paddingVertical: space.md,
           gap: space.sm,
-          shadowColor: "#000",
+          shadowColor: stitchTokens.black,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.05,
           shadowRadius: 3,
@@ -144,7 +144,7 @@ export function LoginScreen({
           </AppText>
           <AppText
             kind="small"
-            color="#57423E"
+            color={stitchTokens.deepCocoa}
             style={{ textAlign: "center", fontSize: 11 }}
           >
             Đăng nhập để đăng sách và kết nối người yêu sách Sài Gòn.
@@ -288,7 +288,7 @@ export function LoginScreen({
             marginTop: 2,
           }}
         >
-          <AppText kind="small" color="#57423E" style={{ fontSize: 12 }}>
+          <AppText kind="small" color={stitchTokens.deepCocoa} style={{ fontSize: 12 }}>
             Chưa có tài khoản độc giả?
           </AppText>
           <Pressable onPress={handleGoRegister}>

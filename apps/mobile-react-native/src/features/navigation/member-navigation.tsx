@@ -1,5 +1,4 @@
 import { router } from "expo-router";
-import { useSession } from "../../core/session/session-provider";
 import { NavigationBar } from "../../core/ui";
 
 export type MemberDestinationHref =
@@ -37,8 +36,6 @@ export function MemberNavigation({
   onSearchPress?: () => void;
   onAuctionPress?: () => void;
 }) {
-  const { state } = useSession();
-
   const handleSelect = (href: MemberDestinationHref) => {
     if (href === "/search" && onSearchPress) {
       onSearchPress();

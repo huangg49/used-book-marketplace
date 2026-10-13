@@ -1,6 +1,6 @@
-import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { Button, Icon, stitchTokens } from "../../../core/ui";
+import { AppModal, Button, Icon, stitchTokens  } from "../../../core/ui";
 
 export interface HomeInspectionModalProps {
   readonly visible: boolean;
@@ -12,7 +12,7 @@ export function HomeInspectionModal({
   onClose,
 }: HomeInspectionModalProps) {
   return (
-    <Modal
+    <AppModal
       visible={visible}
       transparent
       animationType="slide"
@@ -40,7 +40,7 @@ export function HomeInspectionModal({
               hitSlop={8}
               style={styles.closeBtn}
             >
-              <Icon name="close" size={20} color="#786B67" />
+              <Icon name="close" size={20} color={stitchTokens.stoneMuted} />
             </Pressable>
           </View>
 
@@ -51,7 +51,7 @@ export function HomeInspectionModal({
             {/* Banner overview */}
             <View style={styles.highlightCard}>
               <View style={styles.shieldIconBig}>
-                <Icon name="check" size={28} color="#FFFFFF" />
+                <Icon name="check" size={28} color={stitchTokens.white} />
               </View>
               <View style={styles.highlightText}>
                 <AppText kind="bold" style={styles.highlightTitle}>
@@ -125,21 +125,21 @@ export function HomeInspectionModal({
           </View>
         </View>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 
 const styles = StyleSheet.create({
   scrim: {
     flex: 1,
-    backgroundColor: "rgba(30, 20, 18, 0.55)",
+    backgroundColor: stitchTokens.modalScrim,
     justifyContent: "flex-end",
   },
   backdrop: {
     flex: 1,
   },
   sheetContainer: {
-    backgroundColor: "#FAF7F2",
+    backgroundColor: stitchTokens.parchment,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     maxHeight: "80%",
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderColor: "#EAE5DC",
+    borderColor: stitchTokens.warmBorder,
   },
   headerLeft: {
     flexDirection: "row",
@@ -173,9 +173,9 @@ const styles = StyleSheet.create({
   },
   highlightCard: {
     flexDirection: "row",
-    backgroundColor: "#E8F5E9",
+    backgroundColor: stitchTokens.likeNewGreenBg,
     borderWidth: 1,
-    borderColor: "#C8E6C9",
+    borderColor: stitchTokens.mintGreen,
     borderRadius: 10,
     padding: 12,
     gap: 12,
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#2E7D32",
+    backgroundColor: stitchTokens.verifiedGreen,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -194,11 +194,11 @@ const styles = StyleSheet.create({
   },
   highlightTitle: {
     fontSize: 13,
-    color: "#1B5E20",
+    color: stitchTokens.likeNewGreen,
   },
   highlightSub: {
     fontSize: 11,
-    color: "#388E3C",
+    color: stitchTokens.leafGreen,
     marginTop: 2,
     lineHeight: 15,
   },
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   stepNumText: {
-    color: "#FFFFFF",
+    color: stitchTokens.white,
     fontWeight: "700",
     fontSize: 12,
   },
@@ -228,11 +228,11 @@ const styles = StyleSheet.create({
   },
   stepTitle: {
     fontSize: 13,
-    color: "#271813",
+    color: stitchTokens.charcoalBrown,
   },
   stepDesc: {
     fontSize: 11,
-    color: "#786B67",
+    color: stitchTokens.stoneMuted,
     marginTop: 2,
     lineHeight: 16,
   },

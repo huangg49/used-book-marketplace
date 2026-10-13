@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
-import { router } from "expo-router";
 import {
   useInfiniteQuery,
   useMutation,
@@ -20,7 +19,6 @@ import {
   Screen,
   StatePanel,
   WebBrandLogo,
-  colors,
   space,
   stitchTokens,
 } from "../../core/ui";
@@ -28,7 +26,6 @@ import { draftPage, emptyContent, privateDraft, receipt } from "./contracts";
 import { DraftEditor } from "./draft-editor";
 import { photoError, useForeground } from "./draft-media";
 import { BookIdentity } from "./catalog-picker";
-import { listingSummary, moderationLabel } from "./listing-form";
 import { executeLifecycle, lifecycleIntent } from "./lifecycle-command";
 import { MemberNavigation } from "../navigation/member-navigation";
 
@@ -180,7 +177,7 @@ export function DraftsScreen() {
             paddingHorizontal: 10,
             paddingVertical: 3,
             borderRadius: 10,
-            backgroundColor: "#FFE2D9",
+            backgroundColor: stitchTokens.terracottaSoft,
             flexDirection: "row",
             alignItems: "center",
             gap: 5,
@@ -206,13 +203,13 @@ export function DraftsScreen() {
       {/* Bento Stats & Quick Action Hero */}
       <View
         style={{
-          backgroundColor: "#FFFDF8",
+          backgroundColor: stitchTokens.warmIvory,
           borderRadius: 18,
           borderWidth: 1,
-          borderColor: "#DEC0BB",
+          borderColor: stitchTokens.peachBorder,
           padding: space.md,
           gap: space.md,
-          shadowColor: "#000",
+          shadowColor: stitchTokens.black,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.05,
           shadowRadius: 4,
@@ -224,12 +221,12 @@ export function DraftsScreen() {
           <View
             style={{
               flex: 1,
-              backgroundColor: "#FAF7F2",
+              backgroundColor: stitchTokens.parchment,
               paddingVertical: 8,
               paddingHorizontal: 2,
               borderRadius: 10,
               borderWidth: 1,
-              borderColor: "#DEC0BB",
+              borderColor: stitchTokens.peachBorder,
               alignItems: "center",
               justifyContent: "center",
             }}
@@ -243,7 +240,7 @@ export function DraftsScreen() {
             </AppText>
             <AppText
               kind="small"
-              color="#8B716D"
+              color={stitchTokens.roseBrown}
               style={{ fontSize: 10, marginTop: 2, fontWeight: "600" }}
             >
               Tổng ấn bản
@@ -253,12 +250,12 @@ export function DraftsScreen() {
           <View
             style={{
               flex: 1,
-              backgroundColor: "#FAF7F2",
+              backgroundColor: stitchTokens.parchment,
               paddingVertical: 8,
               paddingHorizontal: 2,
               borderRadius: 10,
               borderWidth: 1,
-              borderColor: "#DEC0BB",
+              borderColor: stitchTokens.peachBorder,
               alignItems: "center",
               justifyContent: "center",
             }}
@@ -269,7 +266,7 @@ export function DraftsScreen() {
                   width: 6,
                   height: 6,
                   borderRadius: 3,
-                  backgroundColor: "#EAC25F",
+                  backgroundColor: stitchTokens.goldMedal,
                 }}
               />
               <AppText
@@ -282,7 +279,7 @@ export function DraftsScreen() {
             </View>
             <AppText
               kind="small"
-              color="#8B716D"
+              color={stitchTokens.roseBrown}
               style={{ fontSize: 10, marginTop: 2, fontWeight: "600" }}
             >
               Chờ duyệt
@@ -292,12 +289,12 @@ export function DraftsScreen() {
           <View
             style={{
               flex: 1,
-              backgroundColor: "#FAF7F2",
+              backgroundColor: stitchTokens.parchment,
               paddingVertical: 8,
               paddingHorizontal: 2,
               borderRadius: 10,
               borderWidth: 1,
-              borderColor: "#DEC0BB",
+              borderColor: stitchTokens.peachBorder,
               alignItems: "center",
               justifyContent: "center",
             }}
@@ -308,7 +305,7 @@ export function DraftsScreen() {
                   width: 6,
                   height: 6,
                   borderRadius: 3,
-                  backgroundColor: "#3D7A57",
+                  backgroundColor: stitchTokens.forestGreen,
                 }}
               />
               <AppText
@@ -321,7 +318,7 @@ export function DraftsScreen() {
             </View>
             <AppText
               kind="small"
-              color="#8B716D"
+              color={stitchTokens.roseBrown}
               style={{ fontSize: 10, marginTop: 2, fontWeight: "600" }}
             >
               Đang bán
@@ -331,12 +328,12 @@ export function DraftsScreen() {
           <View
             style={{
               flex: 1,
-              backgroundColor: "#FAF7F2",
+              backgroundColor: stitchTokens.parchment,
               paddingVertical: 8,
               paddingHorizontal: 2,
               borderRadius: 10,
               borderWidth: 1,
-              borderColor: "#DEC0BB",
+              borderColor: stitchTokens.peachBorder,
               alignItems: "center",
               justifyContent: "center",
             }}
@@ -347,12 +344,12 @@ export function DraftsScreen() {
                   width: 6,
                   height: 6,
                   borderRadius: 3,
-                  backgroundColor: "#A63A2E",
+                  backgroundColor: stitchTokens.brickRed,
                 }}
               />
               <AppText
                 kind="heading"
-                color="#A63A2E"
+                color={stitchTokens.brickRed}
                 style={{ fontSize: 20, fontWeight: "700" }}
               >
                 {rejectedCount}
@@ -360,7 +357,7 @@ export function DraftsScreen() {
             </View>
             <AppText
               kind="small"
-              color="#8B716D"
+              color={stitchTokens.roseBrown}
               style={{ fontSize: 10, marginTop: 2, fontWeight: "600" }}
             >
               Cần sửa
@@ -434,20 +431,20 @@ export function DraftsScreen() {
       {drafts.data?.pages[0].items.length === 0 ? (
         <View
           style={{
-            backgroundColor: "#FFFDF8",
+            backgroundColor: stitchTokens.warmIvory,
             borderRadius: 14,
             borderWidth: 1,
-            borderColor: "#DEC0BB",
+            borderColor: stitchTokens.peachBorder,
             padding: space.lg,
             alignItems: "center",
             gap: 6,
           }}
         >
-          <Icon name="book" size={32} color="#8B716D" />
+          <Icon name="book" size={32} color={stitchTokens.roseBrown} />
           <AppText kind="bold" color={stitchTokens.wineDark}>
             Chưa có bài đăng nào trong mục này
           </AppText>
-          <AppText kind="small" color="#8B716D" style={{ textAlign: "center" }}>
+          <AppText kind="small" color={stitchTokens.roseBrown} style={{ textAlign: "center" }}>
             Các ấn bản bạn tạo, gửi duyệt hoặc đang niêm yết sẽ xuất hiện tại đây.
           </AppText>
         </View>
@@ -463,8 +460,7 @@ export function DraftsScreen() {
       >
         {drafts.data?.pages
           .flatMap((p) => p.items)
-          .map((d, i) => {
-            const summary = listingSummary(d, i + 1);
+          .map((d) => {
             const modState = d.state.moderation;
             const isRejected = modState === "Rejected";
 

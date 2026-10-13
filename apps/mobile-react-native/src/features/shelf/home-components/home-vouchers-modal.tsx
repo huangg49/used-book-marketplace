@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { Button, Icon, stitchTokens } from "../../../core/ui";
+import { AppModal, Button, Icon, stitchTokens  } from "../../../core/ui";
 import { VOUCHERS_LIST, type CuratedVoucher } from "../home-mock-data";
 
 export interface HomeVouchersModalProps {
@@ -25,7 +25,7 @@ export function HomeVouchersModal({
   };
 
   return (
-    <Modal
+    <AppModal
       visible={visible}
       transparent
       animationType="slide"
@@ -53,7 +53,7 @@ export function HomeVouchersModal({
               hitSlop={8}
               style={styles.closeBtn}
             >
-              <Icon name="close" size={20} color="#786B67" />
+              <Icon name="close" size={20} color={stitchTokens.stoneMuted} />
             </Pressable>
           </View>
 
@@ -120,21 +120,21 @@ export function HomeVouchersModal({
           </View>
         </View>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 
 const styles = StyleSheet.create({
   scrim: {
     flex: 1,
-    backgroundColor: "rgba(30, 20, 18, 0.55)",
+    backgroundColor: stitchTokens.modalScrim,
     justifyContent: "flex-end",
   },
   backdrop: {
     flex: 1,
   },
   sheetContainer: {
-    backgroundColor: "#FAF7F2",
+    backgroundColor: stitchTokens.parchment,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     maxHeight: "80%",
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderColor: "#EAE5DC",
+    borderColor: stitchTokens.warmBorder,
   },
   headerLeft: {
     flexDirection: "row",
@@ -168,14 +168,14 @@ const styles = StyleSheet.create({
   },
   voucherCard: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E6E0D5",
+    borderColor: stitchTokens.sandWarm,
     overflow: "hidden",
     position: "relative",
     elevation: 2,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -205,23 +205,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: stitchTokens.wine,
-    backgroundColor: "#FFEBEE",
+    backgroundColor: stitchTokens.flashRedBg,
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 3,
   },
   expiryText: {
     fontSize: 10,
-    color: "#9C908C",
+    color: stitchTokens.slateStone,
   },
   voucherTitle: {
     fontSize: 13,
-    color: "#271813",
+    color: stitchTokens.charcoalBrown,
     lineHeight: 18,
   },
   voucherDesc: {
     fontSize: 11,
-    color: "#786B67",
+    color: stitchTokens.stoneMuted,
     marginTop: 2,
     lineHeight: 15,
   },
@@ -236,19 +236,19 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.wine,
   },
   btnCollected: {
-    backgroundColor: "#E8F5E9",
+    backgroundColor: stitchTokens.likeNewGreenBg,
     borderWidth: 1,
-    borderColor: "#C8E6C9",
+    borderColor: stitchTokens.mintGreen,
   },
   collectBtnText: {
     fontSize: 11,
     fontWeight: "700",
   },
   btnTextActive: {
-    color: "#FFFFFF",
+    color: stitchTokens.white,
   },
   btnTextCollected: {
-    color: "#2E7D32",
+    color: stitchTokens.verifiedGreen,
   },
   bottomArea: {
     paddingHorizontal: 16,

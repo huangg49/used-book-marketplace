@@ -13,12 +13,9 @@ import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import {
   AppText,
-  Button,
   Icon,
-  Notice,
   Screen,
   StatePanel,
-  presentError,
   stitchTokens,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
@@ -40,7 +37,6 @@ import { HomeNotificationsModal } from "./home-components/home-notifications-mod
 import { HomeCartModal } from "./home-components/home-cart-modal";
 import {
   FALLBACK_LISTINGS,
-  FALLBACK_FLASH_DEALS,
   FALLBACK_AUCTIONS,
   type LiveAuctionItem,
 } from "./home-mock-data";
@@ -201,23 +197,12 @@ export function ShelfScreen() {
     );
   };
 
-  const handleSale49kShortcut = () => {
-    apply({ ...applied, maxSalePrice: "49000", minSalePrice: "" });
-  };
-
   const handleExchangeShortcut = () => {
     apply({ ...applied, mode: "Exchange" });
   };
 
   const handleRareShortcut = () => {
     apply({ ...applied, condition: "LikeNew" });
-  };
-
-  const handleFreeshipShortcut = () => {
-    Alert.alert(
-      "Freeship 0đ - Điểm Nhận ViaPoint TP.HCM",
-      "Miễn phí 100% cước giao dịch khi gửi và nhận sách tại 2 điểm đại diện:\n• Quận 1: 120 Hai Bà Trưng\n• Bình Thạnh: 45 Nguyễn Gia Trí",
-    );
   };
 
   const handleNewestShortcut = () => {
@@ -376,7 +361,7 @@ export function ShelfScreen() {
                 <AppText kind="small" style={styles.loadMoreText}>
                   Xem thêm các tác phẩm gợi ý
                 </AppText>
-                <Icon name="chevronDown" size={16} color="#4A3F3B" />
+                <Icon name="chevronDown" size={16} color={stitchTokens.darkTaupe} />
               </Pressable>
             </View>
           ) : (
@@ -461,12 +446,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#E5DFD7",
+    borderColor: stitchTokens.clayLight,
   },
   filterBtnText: {
     fontSize: 11,
@@ -482,11 +467,11 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   emptyContainer: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 8,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#EAE5DC",
+    borderColor: stitchTokens.warmBorder,
     marginVertical: 8,
   },
   loadMoreWrapper: {
@@ -499,13 +484,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     width: "100%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderWidth: 1,
-    borderColor: "#DDD5C7",
+    borderColor: stitchTokens.borderWarm,
     paddingVertical: 11,
     borderRadius: 8,
     elevation: 1,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 2,
@@ -513,7 +498,7 @@ const styles = StyleSheet.create({
   loadMoreText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#4A3F3B",
+    color: stitchTokens.darkTaupe,
   },
   endOfCatalog: {
     marginTop: 16,
@@ -522,7 +507,7 @@ const styles = StyleSheet.create({
   },
   endOfCatalogText: {
     fontSize: 11,
-    color: "#8C807C",
+    color: stitchTokens.slateWarm,
     fontStyle: "italic",
   },
 });

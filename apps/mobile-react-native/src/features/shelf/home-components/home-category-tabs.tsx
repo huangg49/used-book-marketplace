@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   headerLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#4A3F3B",
+    color: stitchTokens.darkTaupe,
     letterSpacing: 0.5,
   },
   chipsScroll: {
@@ -93,14 +93,14 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.wine,
     borderColor: stitchTokens.wine,
     elevation: 2,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     shadowRadius: 2,
   },
   chipUnselected: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E2DCD5",
+    backgroundColor: stitchTokens.white,
+    borderColor: stitchTokens.borderMuted,
   },
   chipText: {
     fontSize: 12,
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   chipTextUnselected: {
-    color: "#3F3734",
+    color: stitchTokens.darkSlate,
     fontWeight: "500",
   },
 });

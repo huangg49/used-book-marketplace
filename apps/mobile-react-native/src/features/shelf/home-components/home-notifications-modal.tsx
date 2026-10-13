@@ -1,14 +1,12 @@
 import { useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Modal,
+import { ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { Button, Icon, stitchTokens } from "../../../core/ui";
+import { AppModal, Button, Icon, stitchTokens  } from "../../../core/ui";
 import { useSession } from "../../../core/session/session-provider";
 import {
   useNotifications,
@@ -93,7 +91,7 @@ export function HomeNotificationsModal({
   };
 
   return (
-    <Modal
+    <AppModal
       visible={visible}
       transparent
       animationType="slide"
@@ -144,7 +142,7 @@ export function HomeNotificationsModal({
                 hitSlop={8}
                 style={styles.closeBtn}
               >
-                <Icon name="close" size={20} color="#786B67" />
+                <Icon name="close" size={20} color={stitchTokens.stoneMuted} />
               </Pressable>
             </View>
           </View>
@@ -166,7 +164,7 @@ export function HomeNotificationsModal({
             {isAuthenticated && !query.isPending && displayItems.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <View style={styles.emptyIconCircle}>
-                  <Icon name="bell" size={26} color="#A89C98" />
+                  <Icon name="bell" size={26} color={stitchTokens.coolMuted} />
                 </View>
                 <AppText kind="bold" style={styles.emptyTitle}>
                   Hộp thư thông báo đang trống
@@ -208,7 +206,7 @@ export function HomeNotificationsModal({
                             : "info"
                     }
                     size={16}
-                    color="#FFFFFF"
+                    color={stitchTokens.white}
                   />
                 </View>
 
@@ -235,21 +233,21 @@ export function HomeNotificationsModal({
           </View>
         </View>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 
 const styles = StyleSheet.create({
   scrim: {
     flex: 1,
-    backgroundColor: "rgba(30, 20, 18, 0.55)",
+    backgroundColor: stitchTokens.modalScrim,
     justifyContent: "flex-end",
   },
   backdrop: {
     flex: 1,
   },
   sheetContainer: {
-    backgroundColor: "#FAF7F2",
+    backgroundColor: stitchTokens.parchment,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     maxHeight: "80%",
@@ -262,7 +260,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderColor: "#EAE5DC",
+    borderColor: stitchTokens.warmBorder,
   },
   headerLeft: {
     flexDirection: "row",
@@ -282,7 +280,7 @@ const styles = StyleSheet.create({
   },
   badgeUnreadText: {
     fontSize: 10,
-    color: "#FFFFFF",
+    color: stitchTokens.white,
     fontWeight: "600",
   },
   headerRight: {
@@ -314,21 +312,21 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 12,
-    color: "#786B67",
+    color: stitchTokens.stoneMuted,
   },
   notifItem: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#EBE6DE",
+    borderColor: stitchTokens.creamParchment,
     padding: 12,
     gap: 10,
     alignItems: "flex-start",
   },
   notifUnread: {
-    backgroundColor: "#FFF9F5",
-    borderColor: "#FFCCBC",
+    backgroundColor: stitchTokens.creamWarm,
+    borderColor: stitchTokens.peachLight,
   },
   iconCircle: {
     width: 32,
@@ -338,13 +336,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   iconOrder: {
-    backgroundColor: "#1976D2",
+    backgroundColor: stitchTokens.trustBlue,
   },
   iconAuction: {
     backgroundColor: stitchTokens.wine,
   },
   iconDefault: {
-    backgroundColor: "#689F38",
+    backgroundColor: stitchTokens.oliveGreen,
   },
   itemTextContainer: {
     flex: 1,
@@ -356,7 +354,7 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     fontSize: 12,
-    color: "#271813",
+    color: stitchTokens.charcoalBrown,
   },
   unreadDot: {
     width: 6,
@@ -366,13 +364,13 @@ const styles = StyleSheet.create({
   },
   itemMessage: {
     fontSize: 11,
-    color: "#786B67",
+    color: stitchTokens.stoneMuted,
     marginTop: 2,
     lineHeight: 15,
   },
   itemTime: {
     fontSize: 10,
-    color: "#A89C98",
+    color: stitchTokens.coolMuted,
     marginTop: 4,
   },
   bottomArea: {
@@ -390,19 +388,19 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: "#EAE5DC",
+    backgroundColor: stitchTokens.warmBorder,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,
   },
   emptyTitle: {
     fontSize: 14,
-    color: "#4A3E3D",
+    color: stitchTokens.warmSlate,
     textAlign: "center",
   },
   emptySubtitle: {
     fontSize: 12,
-    color: "#8B7D77",
+    color: stitchTokens.mediumAsh,
     textAlign: "center",
     lineHeight: 17,
   },

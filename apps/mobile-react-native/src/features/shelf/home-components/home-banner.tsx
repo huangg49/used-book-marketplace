@@ -120,9 +120,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: stitchTokens.wineDeep,
     borderWidth: 1,
-    borderColor: "rgba(255,223,151,0.2)",
+    borderColor: stitchTokens.goldAlpha20,
     elevation: 4,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     fontFamily: "BeBold",
   },
   bannerSubtitle: {
-    color: "#FFF2D1",
+    color: stitchTokens.goldVeryLight,
     fontSize: 11,
     marginTop: 2,
   },
@@ -195,14 +195,14 @@ const styles = StyleSheet.create({
     width: 86,
     height: 96,
     borderRadius: 43,
-    backgroundColor: "rgba(255, 223, 151, 0.2)",
+    backgroundColor: stitchTokens.goldAlpha20,
   },
   bookCoverImage: {
     width: 68,
     height: 90,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: "rgba(255, 223, 151, 0.4)",
+    borderColor: stitchTokens.goldAlpha40,
     transform: [{ rotate: "-4deg" }],
   },
   dotsRow: {
@@ -225,6 +225,6 @@ const styles = StyleSheet.create({
   },
   dotInactive: {
     width: 5,
-    backgroundColor: "rgba(255, 255, 255, 0.4)",
+    backgroundColor: stitchTokens.whiteAlpha40,
   },
 });

@@ -48,7 +48,7 @@ export function StepNav({
               {
                 width: `${progressPercent}%`,
                 backgroundColor:
-                  completedCount === totalCount ? "#2E7D32" : stitchTokens.wine,
+                  completedCount === totalCount ? stitchTokens.verifiedGreen : stitchTokens.wine,
               },
             ]}
           />
@@ -110,9 +110,9 @@ export function StepNav({
                   ]}
                 >
                   {isDone ? (
-                    <Icon name="check" size={13} color="#FFFFFF" strokeWidth={2.5} />
+                    <Icon name="check" size={13} color={stitchTokens.white} strokeWidth={2.5} />
                   ) : (
-                    <Icon name="close" size={12} color="#D32F2F" strokeWidth={2.5} />
+                    <Icon name="close" size={12} color={stitchTokens.flashRed} strokeWidth={2.5} />
                   )}
                 </Pressable>
               </View>
@@ -149,13 +149,13 @@ export function StepNav({
 const styles = StyleSheet.create({
   container: {
     marginVertical: 4,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#DEC0BB",
+    borderColor: stitchTokens.peachBorder,
     paddingVertical: 14,
     paddingHorizontal: 10,
-    shadowColor: "#000000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   progressTitle: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#735650",
+    color: stitchTokens.warmUmber,
   },
   progressStats: {
     fontSize: 12,
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     width: "100%",
     height: 6,
-    backgroundColor: "#F0EAE8",
+    backgroundColor: stitchTokens.linenLight,
     borderRadius: 3,
     overflow: "hidden",
   },
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 13,
     height: 3,
-    backgroundColor: "#EFE8E6",
+    backgroundColor: stitchTokens.linenRose,
     zIndex: 1,
   },
   connectingLineLeft: {
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     right: 0,
   },
   connectingLineDone: {
-    backgroundColor: "#2E7D32",
+    backgroundColor: stitchTokens.verifiedGreen,
   },
   connectingLineActive: {
     backgroundColor: stitchTokens.wine,
@@ -240,12 +240,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   circleDone: {
-    backgroundColor: "#2E7D32",
-    borderColor: "#2E7D32",
+    backgroundColor: stitchTokens.verifiedGreen,
+    borderColor: stitchTokens.verifiedGreen,
   },
   circleMissing: {
-    backgroundColor: "#FFF5F5",
-    borderColor: "#E57373",
+    backgroundColor: stitchTokens.roseIce,
+    borderColor: stitchTokens.coralRed,
   },
   circleSelected: {
     borderWidth: 2.5,
@@ -265,11 +265,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   labelDone: {
-    color: "#2E7D32",
+    color: stitchTokens.verifiedGreen,
     fontWeight: "600",
   },
   labelDefault: {
-    color: "#8C807C",
+    color: stitchTokens.slateWarm,
     fontWeight: "500",
   },
 });

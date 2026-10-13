@@ -2,9 +2,7 @@ import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Icon, type IconName } from "./icon";
 import { AppText } from "./text";
-import { colorRoles, metrics, radius, space } from "./theme";
-
-import { stitchTokens } from "./theme";
+import { colorRoles, metrics, radius, space, stitchTokens } from "./theme";
 
 type Destination<Key extends string> = {
   key: Key;

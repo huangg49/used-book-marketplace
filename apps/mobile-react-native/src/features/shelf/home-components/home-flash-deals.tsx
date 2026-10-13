@@ -39,7 +39,7 @@ export function HomeLiveAuctions({
         <View style={styles.titleWithCountdown}>
           <View style={styles.titleGroup}>
             <View style={styles.gavelCircle}>
-              <Icon name="gavel" size={15} color="#FFFFFF" />
+              <Icon name="gavel" size={15} color={stitchTokens.white} />
             </View>
             <AppText kind="heading" style={styles.titleText}>
               ĐẤU GIÁ TRỰC TIẾP
@@ -88,7 +88,7 @@ export function HomeLiveAuctions({
           <AppText kind="small" style={styles.seeAllText}>
             Xem tất cả
           </AppText>
-          <Icon name="chevronRight" size={14} color="#786B67" />
+          <Icon name="chevronRight" size={14} color={stitchTokens.stoneMuted} />
         </Pressable>
       </View>
 
@@ -129,7 +129,7 @@ export function HomeLiveAuctions({
 
                 {/* Live Gavel Overlay Badge */}
                 <View style={styles.bidCountBadge}>
-                  <Icon name="flame" size={10} color="#FFFFFF" />
+                  <Icon name="flame" size={10} color={stitchTokens.white} />
                   <AppText kind="small" style={styles.bidCountText}>
                     {item.statusText}
                   </AppText>
@@ -159,7 +159,7 @@ export function HomeLiveAuctions({
 
                 {/* Auction Bid Action Pill */}
                 <View style={styles.actionPillBg}>
-                  <Icon name="gavel" size={11} color="#FFFFFF" />
+                  <Icon name="gavel" size={11} color={stitchTokens.white} />
                   <AppText kind="small" style={styles.actionPillText}>
                     Trả giá ngay
                   </AppText>
@@ -178,14 +178,14 @@ export { HomeLiveAuctions as HomeFlashDeals };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     marginTop: 10,
     paddingVertical: 12,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: "#EFECE6",
+    borderColor: stitchTokens.canvasWhite,
     elevation: 2,
-    shadowColor: "#000",
+    shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -226,23 +226,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
-    backgroundColor: "#FFEBEE",
+    backgroundColor: stitchTokens.flashRedBg,
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: "#FFCDD2",
+    borderColor: stitchTokens.lightPink,
   },
   livePulseDot: {
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: "#D32F2F",
+    backgroundColor: stitchTokens.flashRed,
   },
   liveTagText: {
     fontSize: 9,
     fontWeight: "800",
-    color: "#D32F2F",
+    color: stitchTokens.flashRed,
     letterSpacing: 0.5,
   },
   countdownBox: {
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   pillText: {
-    color: "#FFFFFF",
+    color: stitchTokens.white,
     fontSize: 10,
     fontWeight: "700",
     fontFamily: "BeBold",
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 11,
-    color: "#786B67",
+    color: stitchTokens.stoneMuted,
     fontWeight: "500",
   },
   scrollList: {
@@ -296,9 +296,9 @@ const styles = StyleSheet.create({
     height: 146,
     borderRadius: 6,
     overflow: "hidden",
-    backgroundColor: "#F5F2EC",
+    backgroundColor: stitchTokens.surfaceSoft,
     borderWidth: 1,
-    borderColor: "#EAE5DC",
+    borderColor: stitchTokens.warmBorder,
     position: "relative",
   },
   coverImage: {
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 4,
     left: 4,
-    backgroundColor: "rgba(43, 20, 16, 0.82)",
+    backgroundColor: stitchTokens.scrimDark,
     paddingHorizontal: 5,
     paddingVertical: 1.5,
     borderRadius: 3,
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     bottom: 4,
     left: 4,
     right: 4,
-    backgroundColor: "rgba(92, 2, 2, 0.85)",
+    backgroundColor: stitchTokens.wineScrim,
     paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 3,
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   bidCountText: {
-    color: "#FFFFFF",
+    color: stitchTokens.white,
     fontSize: 8.5,
     fontWeight: "700",
     lineHeight: 11,
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   },
   pricePrefix: {
     fontSize: 9.5,
-    color: "#786B67",
+    color: stitchTokens.stoneMuted,
     fontWeight: "500",
   },
   dealPrice: {
@@ -362,13 +362,13 @@ const styles = StyleSheet.create({
   },
   buyNowText: {
     fontSize: 9.5,
-    color: "#2E7D32",
+    color: stitchTokens.verifiedGreen,
     fontWeight: "600",
     marginTop: 1,
   },
   startPriceText: {
     fontSize: 9.5,
-    color: "#A09895",
+    color: stitchTokens.mediumGray,
     marginTop: 1,
   },
   actionPillBg: {
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   actionPillText: {
     fontSize: 9.5,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: stitchTokens.white,
     lineHeight: 12,
   },
 });

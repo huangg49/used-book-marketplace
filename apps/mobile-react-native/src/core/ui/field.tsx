@@ -223,3 +223,7 @@ export function Checkbox({
     </Pressable>
   );
 }
+
+export function AppTextInput(props: TextInputProps & { ref?: Ref<TextInput> }) {
+  return <TextInput {...props} />;
+}
