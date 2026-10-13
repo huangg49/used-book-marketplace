@@ -4,8 +4,8 @@ import { Icon, type IconName, stitchTokens } from "../../../core/ui";
 
 export interface HomeShortcutsProps {
   readonly onAuctionPress: () => void;
-  readonly onExchangePress: () => void;
   readonly onNewestPress: () => void;
+  readonly onExchangePress: () => void;
   readonly onRarePress: () => void;
 }
 
@@ -33,7 +33,7 @@ export function HomeShortcuts({
   const items: readonly ShortcutItem[] = [
     {
       id: "sc-auction",
-      title: "Đấu Giá",
+      title: "Đấu Giá Live",
       icon: "gavel",
       iconColor: stitchTokens.wine,
       bgColor: stitchTokens.amberBg,
@@ -46,17 +46,8 @@ export function HomeShortcuts({
       onPress: onAuctionPress,
     },
     {
-      id: "sc-exchange",
-      title: "Góc Trao Đổi",
-      icon: "sync",
-      iconColor: stitchTokens.likeNewGreen,
-      bgColor: stitchTokens.likeNewGreenBg,
-      borderColor: stitchTokens.mintGreen,
-      onPress: onExchangePress,
-    },
-    {
       id: "sc-newest",
-      title: "Sách Mới Đăng",
+      title: "Sách Mới",
       icon: "flame",
       iconColor: stitchTokens.tagExchangeText,
       bgColor: stitchTokens.amberBg,
@@ -67,6 +58,15 @@ export function HomeShortcuts({
         color: stitchTokens.white,
       },
       onPress: onNewestPress,
+    },
+    {
+      id: "sc-exchange",
+      title: "Góc Trao Đổi",
+      icon: "sync",
+      iconColor: stitchTokens.likeNewGreen,
+      bgColor: stitchTokens.likeNewGreenBg,
+      borderColor: stitchTokens.likeNewGreen,
+      onPress: onExchangePress,
     },
     {
       id: "sc-rare",
@@ -147,8 +147,9 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
-    justifyContent: "space-between",
+    rowGap: 14,
   },
   itemCell: {
     width: "25%",

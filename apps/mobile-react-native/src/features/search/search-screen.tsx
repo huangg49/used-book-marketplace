@@ -39,6 +39,7 @@ import {
   type Filters,
 } from "../shelf/filters";
 import { SearchBookCard } from "./search-book-card";
+import { PublicPhoto } from "../shelf/public-photo";
 import { FALLBACK_LISTINGS } from "../shelf/home-mock-data";
 import { HomeNotificationsModal } from "../shelf/home-components/home-notifications-modal";
 import { useNotifications } from "../notifications/notifications-model";
@@ -1525,6 +1526,18 @@ export function SearchScreen() {
                 <SearchBookCard
                   key={item.id}
                   item={item}
+                  photoNode={
+                    item.photos?.[0]?.id ? (
+                      <PublicPhoto
+                        listingId={item.id}
+                        revisionId={item.revisionId}
+                        mediaId={item.photos[0].id}
+                        label={`Ảnh sách ${item.book.title}`}
+                        active={active && !result.isError}
+                        result
+                      />
+                    ) : undefined
+                  }
                   onOpen={() => handleOpenBook(item.id)}
                 />
               ))}

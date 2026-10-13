@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Platform, View, type ScrollView } from "react-native";
+import { Platform, Pressable, StyleSheet, View, type ScrollView } from "react-native";
 import { useNavigation } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,11 +13,14 @@ import {
   Button,
   Checkbox,
   ConfirmDialog,
+  Icon,
   Notice,
   Screen,
   StatePanel,
   colors,
   space,
+  stitchTokens,
+  WebBrandLogo,
 } from "../../core/ui";
 import { mediaPage, privateDraft, type Draft, type Media } from "./contracts";
 import { Photo, photoError, useForeground } from "./draft-media";
@@ -66,19 +69,24 @@ import {
 import { PriceSuggestionPanel } from "./price-suggestion-panel";
 
 const stepLabels = [
-  "Đầu sách",
-  "Ảnh và tình trạng",
+  "Thông tin sách",
+  "Ảnh bản sách",
+  "Tình trạng",
   "Bán hoặc đổi",
   "Kiểm tra",
 ] as const;
+
+const stepHelp = [
+  "Chọn đầu sách đã có, hoặc bổ sung thông tin như trên bìa.",
+  "Tải từ 1 đến 8 ảnh thực tế của cuốn sách bạn đang giữ.",
+  "Mô tả chân thực tình trạng sách để người đọc sau an tâm.",
+  "Thiết lập giá bán hoặc giá trị quy đổi và phương thức giao nhận.",
+  "Xem lại toàn bộ thông tin trước khi lưu hoặc gửi duyệt.",
+] as const;
+
 const checkMessage =
   "Có thông tin cần bổ sung. Kiểm tra các mục được ghi chú bên dưới.";
-const titles = [
-  "Bắt đầu từ đúng cuốn sách.",
-  "Những dấu đã qua tay bạn.",
-  "Chọn cách chuyền sách.",
-  "Trước khi đến người đọc sau.",
-];
+
 export function DraftEditor({
   initial,
   onBack,
@@ -93,7 +101,7 @@ export function DraftEditor({
     [form, setForm] = useState(() =>
       fromContent(initial.currentRevision.content),
     );
-  const [step, setStep] = useState(editableListing(initial) ? 0 : 3),
+  const [step, setStep] = useState(editableListing(initial) ? 0 : 4),
     [declared, setDeclared] = useState(false),
     [check, setCheck] = useState<{ errors: Errors; submit: boolean }>({
       errors: {},
@@ -112,17 +120,20 @@ export function DraftEditor({
     [lifecyclePending, setLifecyclePending] = useState(false);
   const scroll = useRef<ScrollView>(null);
   const [catalogDirty, setCatalogDirty] = useState(false);
-  // Price suggestion lives here so it survives step changes; it is advisory and
-  // never part of the saved form except as the optional decision record.
+
+  // Price suggestion lives here so it survives step changes
   const [assist, setAssist] = useState<AssistState>({ status: "idle" });
   const assistToken = useRef(0);
+
   const go = (value: number) => {
     setStep(value);
     scroll.current?.scrollTo({ y: 0, animated: false });
   };
+
   // Field wrappers registered by the steps; a failed check scrolls to the first error.
   const [{ anchor, get: anchored }] = useState(createAnchors);
   const [jump, setJump] = useState<{ field: keyof Errors } | null>(null);
+
   useEffect(() => {
     const node = jump && anchored(jump.field);
     const view = scroll.current as
@@ -140,9 +151,11 @@ export function DraftEditor({
     });
     return () => cancelAnimationFrame(frame);
   }, [jump, anchored]);
+
   const intent = useRef<ListingIntent | null>(null),
     attempt = useRef<UploadAttempt | null>(null),
     busyRef = useRef(false);
+
   const editable =
     state.status === "authenticated" &&
     state.user.status === "ACTIVE" &&
@@ -152,15 +165,18 @@ export function DraftEditor({
         base.state.trade === "Available" &&
         base.state.visibility !== "Removed" &&
         !base.state.deletedAt));
+
   const approvedEdit = editable && base.state.moderation === "Approved";
   const locked = !editable || busy || uncertain || lifecyclePending;
   const dirty =
     JSON.stringify(form) !==
     JSON.stringify(fromContent(base.currentRevision.content));
+
   const navigation = useNavigation();
   const pendingNavigation = useRef<
     Parameters<typeof navigation.dispatch>[0] | null
   >(null);
+
   usePreventRemove(
     dirty || busy || uncertain || catalogDirty || lifecyclePending,
     ({ data }) => {
@@ -170,6 +186,7 @@ export function DraftEditor({
       }
     },
   );
+
   useEffect(() => {
     if (
       Platform.OS !== "web" ||
@@ -184,6 +201,7 @@ export function DraftEditor({
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty, uncertain, catalogDirty, lifecyclePending]);
+
   const photos = useQuery({
     queryKey: ["draft-media", base.id],
     queryFn: async () => {
@@ -206,6 +224,7 @@ export function DraftEditor({
         ? 4000
         : false,
   });
+
   const latest = useQuery({
     queryKey: ["listing-status", base.id],
     queryFn: () => client.request(`/me/listings/${base.id}`, privateDraft),
@@ -213,7 +232,7 @@ export function DraftEditor({
     refetchInterval:
       foreground && base.state.moderation === "PendingReview" ? 15000 : false,
   });
-  // Adopt only newer state while clean; background reads must never discard edits.
+
   if (
     latest.data &&
     !dirty &&
@@ -225,11 +244,12 @@ export function DraftEditor({
     setBase(latest.data);
     setForm(fromContent(latest.data.currentRevision.content));
     setDeclared(false);
-    // A newer server state (e.g. review result) supersedes the last action's note.
     setMessage("");
   }
+
   const photoList = photos.data ?? [];
   const assistKey = suggestionKey(base.id, form);
+
   const askPrice = async () => {
     const input = suggestionInput(form);
     if (!input.bookId) return;
@@ -251,13 +271,16 @@ export function DraftEditor({
       setAssist((s) => failLoading(s, token, assistError(e)));
     }
   };
+
   const errors = stillFailing(
     check.errors,
     validateForm(form, photoList, declared, check.submit),
   );
-  // The check summary belongs to the step that still has flagged fields.
+
   const checkClearedHere =
-    error === checkMessage && !stepFields[step].some((k) => errors[k]);
+    error === checkMessage &&
+    (step < 5 ? !stepFields[step]?.some((k) => errors[k]) : true);
+
   const reconcile = async (fresh: Draft, replaceForm: boolean) => {
     setBase(fresh);
     if (replaceForm) setForm(fromContent(fresh.currentRevision.content));
@@ -267,6 +290,7 @@ export function DraftEditor({
     await cache.invalidateQueries({ queryKey: ["public-shelf"] });
     await cache.invalidateQueries({ queryKey: ["public-listing", base.id] });
   };
+
   const save = async (submit = false, retry = false) => {
     if (
       busyRef.current ||
@@ -274,6 +298,10 @@ export function DraftEditor({
       (!retry && (!editable || (approvedEdit && !submit)))
     )
       return;
+    if (!dirty && !submit && !retry) {
+      setMessage("Bản nháp đã lưu. Bạn có thể hoàn thiện sau.");
+      return;
+    }
     if (!retry) {
       const problems = validateForm(form, photos.data ?? [], declared, submit);
       setCheck({ errors: problems, submit });
@@ -300,9 +328,9 @@ export function DraftEditor({
     setError("");
     setMessage("");
     try {
-      const stopped = intent.current.stopped;
+      const isStopped = intent.current.stopped;
       const fresh = await runListingIntent(client, intent.current);
-      await reconcile(fresh, !stopped);
+      await reconcile(fresh, !isStopped);
       const wasSubmit = intent.current.submitted;
       intent.current = null;
       setEditingApproved(false);
@@ -310,13 +338,13 @@ export function DraftEditor({
       setUncertain(false);
       setDeclared(false);
       setMessage(
-        stopped
+        isStopped
           ? "Đã tải trạng thái mới nhất. Nội dung bạn đang sửa vẫn được giữ; kiểm tra lại trước khi gửi."
           : wasSubmit
             ? "Đã gửi duyệt. Bạn có thể quay lại để xem kết quả."
             : "Bản nháp đã lưu. Bạn có thể hoàn thiện sau.",
       );
-      if (wasSubmit) go(3);
+      if (wasSubmit) go(4);
     } catch (e) {
       setStopped(!!intent.current?.stopped);
       setUncertain(true);
@@ -327,6 +355,7 @@ export function DraftEditor({
       setBusy(false);
     }
   };
+
   const send = async (retry = false) => {
     if (busyRef.current || !editable || uncertain || lifecyclePending) return;
     busyRef.current = true;
@@ -430,36 +459,51 @@ export function DraftEditor({
       setBusy(false);
     }
   };
-  const status =
-    base.state.visibility === "Removed"
-      ? "Đã gỡ"
-      : (moderationLabel[base.state.moderation] ?? "Đang cập nhật");
+
   const ids = form.mediaIds;
   const navLocked = busy || uncertain || lifecyclePending;
   const canSave = editable && !approvedEdit;
-  const hasPrimary = step < 3 || editable;
-  // Save and step actions stay above the keyboard instead of below long fields.
+  const hasPrimary = step < 4 || editable;
+
+  const nextStepTitle =
+    step < 4
+      ? "Tiếp theo"
+      : approvedEdit
+        ? "Gửi bản sửa để duyệt lại"
+        : "Lưu và gửi duyệt";
+
+  // Footer Navigation Bar (Stitch Sticky Bottom Action Bar)
   const footer =
     hasPrimary || canSave ? (
       <ActionBar note={canSave && dirty ? "Có thay đổi chưa lưu." : undefined}>
+        {step > 0 && (editable || step < 5) ? (
+          <Button
+            key="prev"
+            secondary
+            title="Trước"
+            disabled={navLocked}
+            onPress={() => go(step - 1)}
+          />
+        ) : null}
         {canSave ? (
           <Button
             key="save"
             secondary
             title="Lưu nháp"
             busy={busy}
-            disabled={locked || !dirty || retryAvailable}
+            disabled={locked || retryAvailable}
             onPress={() => void save()}
           />
         ) : null}
-        {step < 3 ? (
+        {step < 4 ? (
           <Button
             key="next"
-            title="Tiếp tục"
+            title={nextStepTitle}
             disabled={navLocked}
+            wine
             onPress={() => go(step + 1)}
           />
-        ) : hasPrimary ? (
+        ) : hasPrimary && step === 4 ? (
           <Button
             key="submit"
             title={
@@ -467,6 +511,7 @@ export function DraftEditor({
             }
             disabled={locked || retryAvailable}
             busy={busy}
+            wine
             onPress={() =>
               approvedEdit ? setReviseConfirm(true) : void save(true)
             }
@@ -474,38 +519,124 @@ export function DraftEditor({
         ) : null}
       </ActionBar>
     ) : undefined;
+
   return (
     <Screen scrollRef={scroll} footer={footer}>
-      <BackAction
-        title="Về sách của tôi"
-        disabled={busy}
-        onPress={() =>
-          dirty || uncertain || catalogDirty || lifecyclePending
-            ? setLeave(true)
-            : onBack()
-        }
-      />
+      {/* Top Header & Dismiss Bar */}
       <View style={{ gap: space.sm }}>
-        <AppText kind="label" color={colors.rustText}>
-          CHUẨN BỊ CHUYỀN SÁCH · {status.toLocaleUpperCase("vi")}
-        </AppText>
+        <BackAction
+          title="Về sách của tôi"
+          disabled={busy}
+          onPress={() =>
+            dirty || uncertain || catalogDirty || lifecyclePending
+              ? setLeave(true)
+              : onBack()
+          }
+        />
+
+        {/* Slip Header (Web Match) */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingBottom: space.xs,
+            borderBottomWidth: 1,
+            borderColor: stitchTokens.peachBorder,
+            marginTop: space.xs,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View
+              style={{
+                backgroundColor: stitchTokens.wine,
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderRadius: 8,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <WebBrandLogo scale={0.5} />
+            </View>
+            <View
+              style={{
+                width: 1,
+                height: 18,
+                backgroundColor: stitchTokens.peachBorder,
+                marginHorizontal: 1,
+              }}
+            />
+            <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 11, fontWeight: "500" }}>
+              Phiếu thông tin sách
+            </AppText>
+          </View>
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: stitchTokens.darkRed,
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 4,
+                transform: [{ rotate: "-2deg" }],
+              }}
+            >
+              <AppText
+                kind="small"
+                style={{
+                  color: stitchTokens.darkRed,
+                  fontSize: 10,
+                  fontWeight: "800",
+                  letterSpacing: 1,
+                }}
+              >
+                {base.state.moderation === "Draft"
+                  ? "BẢN NHÁP"
+                  : moderationLabel[base.state.moderation]?.toLocaleUpperCase("vi") ?? "BẢN NHÁP"}
+              </AppText>
+            </View>
+          </View>
+        </View>
+
+        {/* 5-Step Stepper Tabs */}
         <StepNav
           labels={stepLabels}
           current={step}
-          states={stepLabels.map((_, i) =>
-            i === 3
-              ? "review"
-              : stepComplete(form, photoList, i)
-                ? "done"
-                : "missing",
-          )}
+          states={stepLabels.map((_, i) => {
+            if (i === 4) {
+              if (base.state.moderation === "Approved") return "done";
+              if (base.state.moderation === "PendingReview") return "review";
+              if (base.state.moderation === "Rejected") return "missing";
+              return declared ? "done" : "missing";
+            }
+            return stepComplete(form, photoList, i) ? "done" : "missing";
+          })}
           disabled={navLocked}
           onSelect={go}
         />
-        <AppText kind="title" color={colors.forest} accessibilityRole="header">
-          {titles[step]}
-        </AppText>
+
+        {/* Step Indicator & Headings */}
+        <View style={{ gap: 2, marginTop: space.xs }}>
+          <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontWeight: "600" }}>
+            {`Bước ${step + 1}/5`}
+          </AppText>
+          <AppText
+            kind="heading"
+            color={stitchTokens.wineDark}
+            accessibilityRole="header"
+            style={{ fontSize: 20 }}
+          >
+            {stepLabels[step]}
+          </AppText>
+          <AppText kind="small" color={stitchTokens.warmUmber} style={{ fontSize: 12 }}>
+            {stepHelp[step]}
+          </AppText>
+        </View>
       </View>
+
+      {/* Moderation Notices */}
       {base.latestDecision?.decision === "Reject" ? (
         <Notice tone="warning">
           Lần duyệt trước: {base.latestDecision.reason}
@@ -585,130 +716,243 @@ export function DraftEditor({
           Chưa cập nhật được trạng thái mới. Nội dung đang nhập vẫn được giữ.
         </Notice>
       ) : null}
-      <View style={{ display: step === 0 ? "flex" : "none", gap: space.lg }}>
-        <CatalogPicker
-          selected={form.bookId}
-          onDirtyChange={setCatalogDirty}
-          disabled={locked}
-          onSelect={(bookId) => setForm((f) => ({ ...f, bookId }))}
-        />
-        {errors.bookId ? <Notice tone="error">{errors.bookId}</Notice> : null}
-      </View>
-      {step === 1 ? (
-        <>
-          <AppText>
-            Chụp bìa, gáy và những phần đã qua sử dụng. Giữ nguyên màu và dấu
-            vết để người đọc sau hiểu đúng cuốn sách.
-          </AppText>
-          <View ref={anchor("mediaIds")}>
-            <AppText kind="heading">Ảnh bản sách · {ids.length}/8</AppText>
-          </View>
-          <AppText kind="small">
-            JPEG, PNG hoặc WebP, tối đa 10 MB mỗi ảnh. Ảnh được chọn đầu tiên là
-            ảnh bìa.
-          </AppText>
-          {photos.isPending ? (
-            <StatePanel loading title="Đang tải ảnh" />
-          ) : null}
-          {photos.error ? (
-            <StatePanel
-              title="Chưa tải được ảnh của bạn"
-              action={{
-                label: "Tải lại ảnh",
-                onPress: () => void photos.refetch(),
-              }}
-            />
-          ) : null}
-          {!photos.isPending && photos.data?.length === 0 ? (
-            <StatePanel
-              title="Cuốn sách còn chờ một tấm ảnh"
-              message="Bắt đầu với bìa trước, rồi thêm các góc thể hiện tình trạng thật."
-            />
-          ) : null}
-          {errors.mediaIds ? (
-            <Notice tone="error">{errors.mediaIds}</Notice>
-          ) : null}
-          {photos.data?.map((item) => (
-            <View key={item.id}>
-              <Photo
-                item={item}
-                foreground={foreground}
-                selected={ids.includes(item.id)}
-                disabled={locked || (!ids.includes(item.id) && ids.length >= 8)}
-                onToggle={() =>
-                  setForm((f) => ({
-                    ...f,
-                    mediaIds: f.mediaIds.includes(item.id)
-                      ? f.mediaIds.filter((id) => id !== item.id)
-                      : [...f.mediaIds, item.id],
-                  }))
-                }
+
+      {/* STEP 0 (01: Thông tin đầu sách) */}
+      <View style={{ display: step === 0 ? "flex" : "none" }}>
+        <View style={styles.formWhiteCard}>
+          {form.bookId ? (
+            <View style={{ gap: space.md }}>
+              <BookIdentity
+                id={form.bookId}
+                onEdit={() => setForm((f) => ({ ...f, bookId: "" }))}
               />
-              {ids.includes(item.id) ? (
-                <Button
-                  secondary
-                  title={
-                    ids[0] === item.id ? "Ảnh bìa đã chọn" : "Dùng làm ảnh bìa"
-                  }
-                  disabled={locked || ids[0] === item.id}
-                  onPress={() =>
-                    setForm((f) => ({
-                      ...f,
-                      mediaIds: [
-                        item.id,
-                        ...f.mediaIds.filter((id) => id !== item.id),
-                      ],
-                    }))
-                  }
-                />
-              ) : null}
+              <Button
+                title="Tiếp tục: Ảnh bản sách →"
+                disabled={locked}
+                wine
+                onPress={() => go(1)}
+              />
             </View>
-          ))}
-          {editable ? (
-            <Button
-              secondary
-              title="Chọn ảnh từ thư viện"
-              disabled={locked || ids.length >= 8 || retryAvailable}
-              onPress={() => void send()}
-            />
-          ) : null}
-          {retryAvailable ? (
-            <View style={{ gap: space.sm }}>
-              <Button
-                secondary
-                title="Thử lại ảnh vừa chọn"
-                disabled={uncertain || !editable}
-                busy={busy}
-                onPress={() => void send(true)}
+          ) : (
+            <>
+              <CatalogPicker
+                selected={form.bookId}
+                onDirtyChange={setCatalogDirty}
+                disabled={locked}
+                onSelect={(bookId) => setForm((f) => ({ ...f, bookId }))}
               />
-              <Button
-                secondary
-                title="Bỏ lần tải chưa hoàn tất"
-                disabled={busy || uncertain}
-                onPress={() => {
-                  attempt.current = null;
-                  setRetryAvailable(false);
-                  setError("");
-                  setMessage(
-                    "Đã bỏ lần tải đang giữ trên máy. Bạn có thể chọn lại ảnh; ảnh chưa gắn vào bài sẽ được dọn theo thời hạn lưu.",
-                  );
+              {errors.bookId ? <Notice tone="error">{errors.bookId}</Notice> : null}
+            </>
+          )}
+        </View>
+      </View>
+
+      {/* STEP 1 (02: Ảnh bản sách) */}
+      {step === 1 ? (
+        <View style={styles.formWhiteCard}>
+          {form.bookId ? <BookIdentity id={form.bookId} /> : null}
+
+          {/* Stitch Section 2: Photo Grid */}
+          <View style={{ gap: space.md, marginTop: space.xs }}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <AppText
+                kind="label"
+                color={stitchTokens.wine}
+                style={{ fontWeight: "700", letterSpacing: 0.5 }}
+              >
+                HÌNH ẢNH THỰC TẾ ẤN BẢN
+              </AppText>
+              <AppText
+                kind="small"
+                color={stitchTokens.subtleGray}
+                style={{ fontWeight: "600" }}
+              >
+                {`Đã tải ${ids.length}/8 ảnh`}
+              </AppText>
+            </View>
+
+            <AppText kind="small" color={stitchTokens.subtleGray}>
+              Chụp bìa, gáy và các góc thể hiện tình trạng thật. JPEG, PNG hoặc WebP ≤ 10 MB.
+              Ảnh đầu tiên được dùng làm ảnh bìa chính.
+            </AppText>
+
+            {photos.isPending ? (
+              <StatePanel loading title="Đang tải ảnh" />
+            ) : null}
+            {photos.error ? (
+              <StatePanel
+                title="Chưa tải được ảnh của bạn"
+                action={{
+                  label: "Tải lại ảnh",
+                  onPress: () => void photos.refetch(),
                 }}
               />
+            ) : null}
+            {errors.mediaIds ? (
+              <Notice tone="error">{errors.mediaIds}</Notice>
+            ) : null}
+
+            {/* 3-Column Photo Grid */}
+            <View
+              ref={anchor("mediaIds")}
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                gap: space.sm,
+              }}
+            >
+              {photos.data?.map((item) => {
+                const isSelected = ids.includes(item.id);
+                const isCover = ids[0] === item.id;
+
+                return (
+                  <View
+                    key={item.id}
+                    style={{
+                      width: "31.3%",
+                      backgroundColor: stitchTokens.warmIvory,
+                      borderRadius: 10,
+                      borderWidth: isCover ? 2 : 1,
+                      borderColor: isCover ? stitchTokens.wine : stitchTokens.borderWarm,
+                      padding: 6,
+                      gap: 6,
+                    }}
+                  >
+                    <Photo
+                      item={item}
+                      foreground={foreground}
+                      selected={isSelected}
+                      disabled={locked || (!isSelected && ids.length >= 8)}
+                      onToggle={() =>
+                        setForm((f) => ({
+                          ...f,
+                          mediaIds: f.mediaIds.includes(item.id)
+                            ? f.mediaIds.filter((id) => id !== item.id)
+                            : [...f.mediaIds, item.id],
+                        }))
+                      }
+                    />
+
+                    {isSelected ? (
+                      <View style={{ gap: 4 }}>
+                        {isCover ? (
+                          <View
+                            style={{
+                              backgroundColor: stitchTokens.wine,
+                              paddingVertical: 3,
+                              paddingHorizontal: 4,
+                              borderRadius: 4,
+                              alignItems: "center",
+                            }}
+                          >
+                            <AppText
+                              kind="small"
+                              color={stitchTokens.gold}
+                              style={{ fontSize: 9, fontWeight: "700" }}
+                            >
+                              BÌA CHÍNH
+                            </AppText>
+                          </View>
+                        ) : (
+                          <Button
+                            secondary
+                            title="Làm bìa"
+                            disabled={locked}
+                            onPress={() =>
+                              setForm((f) => ({
+                                ...f,
+                                mediaIds: [
+                                  item.id,
+                                  ...f.mediaIds.filter((id) => id !== item.id),
+                                ],
+                              }))
+                            }
+                          />
+                        )}
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })}
+
+              {/* Upload Slot Card */}
+              {editable && ids.length < 8 ? (
+                <Pressable
+                  disabled={locked || retryAvailable}
+                  onPress={() => void send()}
+                  accessibilityLabel="Thêm ảnh khảo chứng"
+                  style={({ pressed }) => [
+                    {
+                      width: "31.3%",
+                      minHeight: 140,
+                      borderRadius: 10,
+                      borderWidth: 1.5,
+                      borderStyle: "dashed",
+                      borderColor: stitchTokens.peachBorder,
+                      backgroundColor: stitchTokens.roseWarmSurface,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 4,
+                      padding: 8,
+                    },
+                    (pressed || locked) && { opacity: 0.6 },
+                  ]}
+                >
+                  <Icon name="camera" size={24} color={stitchTokens.wine} />
+                  <AppText
+                    kind="small"
+                    color={stitchTokens.wine}
+                    style={{ fontWeight: "700", fontSize: 11, textAlign: "center" }}
+                  >
+                    + Thêm ảnh
+                  </AppText>
+                  <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 9 }}>
+                    Tối đa 8 ảnh
+                  </AppText>
+                </Pressable>
+              ) : null}
             </View>
-          ) : null}
-          <View
-            style={{
-              paddingTop: space.lg,
-              borderTopWidth: 1,
-              borderColor: colors.rule,
-              gap: space.sm,
-            }}
-          >
-            <AppText kind="heading">Tình trạng bản sách</AppText>
-            <AppText>
-              Mô tả đúng những gì người nhận sẽ thấy khi mở sách.
-            </AppText>
+
+            {retryAvailable ? (
+              <View style={{ gap: space.sm }}>
+                <Button
+                  secondary
+                  title="Thử lại ảnh vừa chọn"
+                  disabled={uncertain || !editable}
+                  busy={busy}
+                  onPress={() => void send(true)}
+                />
+                <Button
+                  secondary
+                  title="Bỏ lần tải chưa hoàn tất"
+                  disabled={busy || uncertain}
+                  onPress={() => {
+                    attempt.current = null;
+                    setRetryAvailable(false);
+                    setError("");
+                    setMessage(
+                      "Đã bỏ lần tải đang giữ trên máy. Bạn có thể chọn lại ảnh; ảnh chưa gắn vào bài sẽ được dọn theo thời hạn lưu.",
+                    );
+                  }}
+                />
+              </View>
+            ) : null}
           </View>
+        </View>
+      ) : null}
+
+      {/* STEP 2 (03: Tình trạng) */}
+      {step === 2 ? (
+        <View style={styles.formWhiteCard}>
+          {form.bookId ? <BookIdentity id={form.bookId} /> : null}
+
+          {/* Stitch Section 3: Book Condition Rating */}
           <ConditionFields
             form={form}
             onChange={setForm}
@@ -716,10 +960,14 @@ export function DraftEditor({
             disabled={locked}
             anchor={anchor}
           />
-        </>
+        </View>
       ) : null}
-      {step === 2 ? (
-        <>
+
+      {/* STEP 3 (04: Bán hoặc đổi) */}
+      {step === 3 ? (
+        <View style={styles.formWhiteCard}>
+          {form.bookId ? <BookIdentity id={form.bookId} /> : null}
+
           <PricingFields
             form={form}
             onChange={setForm}
@@ -727,6 +975,7 @@ export function DraftEditor({
             disabled={locked}
             anchor={anchor}
           />
+
           {editable && (form.mode === "Sale" || form.mode === "Both") ? (
             <PriceSuggestionPanel
               form={form}
@@ -743,46 +992,109 @@ export function DraftEditor({
               }}
             />
           ) : null}
+
           <FulfillmentFields
             value={form.fulfillment}
             disabled={locked}
             onChange={(fulfillment) => setForm((f) => ({ ...f, fulfillment }))}
           />
-        </>
+        </View>
       ) : null}
-      {step === 3 ? (
-        <>
+
+      {/* STEP 4 (05: Kiểm tra) */}
+      {step === 4 ? (
+        <View style={styles.formWhiteCard}>
+          {base.state.moderation !== "Draft" ? (
+            <View
+              style={{
+                backgroundColor: stitchTokens.warmIvory,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: stitchTokens.peachBorder,
+                padding: space.md,
+                gap: space.sm,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+                <Icon
+                  name={
+                    base.state.moderation === "Approved"
+                      ? "check"
+                      : base.state.moderation === "PendingReview"
+                        ? "info"
+                        : "tune"
+                  }
+                  size={20}
+                  color={
+                    base.state.moderation === "Approved"
+                      ? colors.success
+                      : base.state.moderation === "PendingReview"
+                        ? stitchTokens.wine
+                        : colors.rustText
+                  }
+                />
+                <AppText kind="heading" color={stitchTokens.wineDark}>
+                  {moderationLabel[base.state.moderation] ?? "Đang cập nhật"}
+                </AppText>
+              </View>
+
+              <AppText color={stitchTokens.subtleGray} kind="small">
+                {base.state.moderation === "PendingReview"
+                  ? "Nội dung bài đăng đang được kiểm duyệt bởi đội ngũ Lật Lại."
+                  : base.state.moderation === "Approved"
+                    ? "Ấn bản của bạn đã được kiểm duyệt và sẵn sàng công khai trên kệ sách Lật Lại."
+                    : base.state.moderation === "Rejected"
+                      ? `Bài đăng cần chỉnh sửa: ${base.latestDecision?.reason ?? "Chưa rõ lý do"}.`
+                      : "Bài đăng đang ở chế độ bản nháp."}
+              </AppText>
+            </View>
+          ) : null}
           <BookIdentity id={form.bookId} />
+
           <FulfillmentFields
             value={form.fulfillment}
             disabled
             summary
             onChange={() => {}}
           />
-          {ids
-            .map((id) => photos.data?.find((m) => m.id === id))
-            .map((item) =>
-              item ? (
-                <Photo
-                  key={item.id}
-                  item={item}
-                  foreground={foreground}
-                  selected
-                  disabled
-                  onToggle={() => {}}
-                />
-              ) : null,
-            )}
-          <AppText>
-            {form.description || "Chưa có lời nhắn về cuốn sách."}
-          </AppText>
+
+          {/* Photos Preview */}
+          <View style={{ gap: space.sm }}>
+            <AppText
+              kind="label"
+              color={stitchTokens.wine}
+              style={{ fontWeight: "700", letterSpacing: 0.5 }}
+            >
+              HÌNH ẢNH ĐÃ CHỌN ({ids.length})
+            </AppText>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+              {ids
+                .map((id) => photos.data?.find((m) => m.id === id))
+                .map((item) =>
+                  item ? (
+                    <View key={item.id} style={{ width: "31.3%" }}>
+                      <Photo
+                        item={item}
+                        foreground={foreground}
+                        selected
+                        disabled
+                        onToggle={() => {}}
+                      />
+                    </View>
+                  ) : null,
+                )}
+            </View>
+          </View>
+
+          {/* Overview Specs Table */}
           <View
             style={{
-              gap: space.md,
-              paddingVertical: space.lg,
-              borderTopWidth: 1,
-              borderBottomWidth: 1,
-              borderColor: colors.rule,
+              backgroundColor: stitchTokens.warmIvory,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: stitchTokens.borderWarm,
+              padding: space.md,
+              gap: space.sm,
             }}
           >
             {[
@@ -799,7 +1111,7 @@ export function DraftEditor({
                 form.readable === null
                   ? "Chưa trả lời"
                   : form.readable
-                    ? "Có"
+                    ? "Có, đọc rõ"
                     : "Không",
               ],
               [
@@ -807,74 +1119,125 @@ export function DraftEditor({
                 form.hasMissingPages === null
                   ? "Chưa trả lời"
                   : form.hasMissingPages
-                    ? "Có"
-                    : "Không",
+                    ? "Có thiếu trang"
+                    : "Không thiếu",
               ],
               [
                 "Thiếu nội dung trọng yếu",
                 form.missingEssentialContent === null
                   ? "Chưa trả lời"
                   : form.missingEssentialContent
-                    ? "Có"
-                    : "Không",
+                    ? "Có thiếu"
+                    : "Không thiếu",
               ],
-              ["Ảnh đã chọn", `${ids.length}/8`],
               [
-                "Hình thức",
+                "Hình thức giao dịch",
                 form.mode === "Both"
-                  ? "Bán hoặc đổi"
+                  ? "Cả bán & đổi"
                   : form.mode === "Sale"
-                    ? "Bán sách"
+                    ? "Bán trực tiếp"
                     : form.mode === "Exchange"
-                      ? "Đổi sách"
+                      ? "Đổi Lật-Xu"
                       : "Chưa chọn",
               ],
               ...(form.mode === "Sale" || form.mode === "Both"
-                ? [["Giá bán", displayPrice(form.salePrice)]]
+                ? [["Giá bán đề xuất", displayPrice(form.salePrice)]]
                 : []),
               ...(form.mode === "Exchange" || form.mode === "Both"
-                ? [["Giá trị đổi", displayPrice(form.exchangeValue)]]
+                ? [["Giá trị đổi / đối chiếu", displayPrice(form.exchangeValue)]]
                 : []),
-            ].map(([label, value]) => (
-              <View key={label} style={{ gap: space.xs }}>
-                <AppText kind="label">{label}</AppText>
-                <AppText>{value || "Chưa điền"}</AppText>
+            ].map(([lbl, val]) => (
+              <View
+                key={lbl}
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  paddingVertical: 4,
+                  borderBottomWidth: 1,
+                  borderColor: stitchTokens.parchment,
+                }}
+              >
+                <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontWeight: "600" }}>
+                  {lbl}
+                </AppText>
+                <AppText
+                  kind="small"
+                  color={stitchTokens.wineDark}
+                  style={{ fontWeight: "700", maxWidth: "60%", textAlign: "right" }}
+                >
+                  {val || "Chưa điền"}
+                </AppText>
               </View>
             ))}
           </View>
+
+          {/* Description */}
+          <View
+            style={{
+              backgroundColor: stitchTokens.warmIvory,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: stitchTokens.borderWarm,
+              padding: space.md,
+              gap: space.xs,
+            }}
+          >
+            <AppText
+              kind="label"
+              color={stitchTokens.wine}
+              style={{ fontWeight: "700" }}
+            >
+              LỜI NHẮN GỬI NGƯỜI ĐỌC SAU
+            </AppText>
+            <AppText color={stitchTokens.wineDark}>
+              {form.description || "Chưa có lời nhắn về cuốn sách."}
+            </AppText>
+          </View>
+
           {base.catalogStatus === "Pending" ? (
             <Notice tone="info">
               Đầu sách đang chờ xác nhận. Bạn có thể gửi bài; việc duyệt bài sẽ
               chờ thông tin đầu sách được xác nhận.
             </Notice>
           ) : null}
+
+          {/* Stitch Section 5: Trust Commitment Checkbox */}
           {editable ? (
-            <>
-              <View ref={anchor("ownershipDeclared")} style={{ gap: space.md }}>
-                <Checkbox
-                  title="Tôi có quyền đăng cuốn sách này; ảnh và mô tả phản ánh trung thực tình trạng sách."
-                  checked={declared}
-                  disabled={locked}
-                  onPress={() => setDeclared((v) => !v)}
-                />
-                {errors.ownershipDeclared ? (
-                  <Notice tone="error">{errors.ownershipDeclared}</Notice>
-                ) : null}
-              </View>
-              <AppText kind="small">
-                Sau khi gửi, nội dung sẽ được giữ nguyên trong lúc kiểm duyệt.
-                Bài đăng chỉ được duyệt khi thông tin đầy đủ và đạt yêu cầu.
+            <View
+              ref={anchor("ownershipDeclared")}
+              style={{
+                backgroundColor: stitchTokens.warmIvory,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: errors.ownershipDeclared
+                  ? colors.rustText
+                  : stitchTokens.peachBorder,
+                padding: space.md,
+                gap: space.xs,
+              }}
+            >
+              <Checkbox
+                title="Tôi xác nhận sở hữu ấn bản này và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại."
+                checked={declared}
+                disabled={locked}
+                onPress={() => setDeclared((v) => !v)}
+              />
+              <AppText
+                kind="small"
+                color={stitchTokens.subtleGray}
+                style={{ marginLeft: 32, fontSize: 11 }}
+              >
+                Được bảo chứng bồi hoàn nếu sách không đúng mô tả.
               </AppText>
-            </>
+              {errors.ownershipDeclared ? (
+                <Notice tone="error">{errors.ownershipDeclared}</Notice>
+              ) : null}
+            </View>
           ) : null}
-        </>
+        </View>
       ) : null}
-      <Button
-        secondary
-        title="Cập nhật trạng thái đã lưu"
-        disabled={busy || uncertain || lifecyclePending}
-        onPress={() => (dirty ? setReloadOpen(true) : void reload())}
-      />
+
+      {/* Extra Action Buttons & Lifecycle Actions */}
       <LifecycleActions
         value={base}
         disabled={dirty || busy || uncertain || catalogDirty || editingApproved}
@@ -882,6 +1245,8 @@ export function DraftEditor({
         onBack={onBack}
         onPending={setLifecyclePending}
       />
+
+      {/* Confirmation Dialogs */}
       <ConfirmDialog
         visible={reviseConfirm}
         title="Gửi bản sửa để duyệt lại?"
@@ -927,3 +1292,19 @@ export function DraftEditor({
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  formWhiteCard: {
+    backgroundColor: stitchTokens.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    padding: space.md,
+    gap: space.md,
+    shadowColor: stitchTokens.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+});

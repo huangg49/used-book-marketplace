@@ -8,7 +8,6 @@ export interface HomeHeaderProps {
   readonly search?: string;
   readonly onSearchChange?: (value: string) => void;
   readonly onSubmitSearch?: () => void;
-  readonly onClearSearch?: () => void;
   readonly onCameraPress: () => void;
   readonly onOpenNotifications: () => void;
   readonly onOpenCart: () => void;
@@ -21,45 +20,47 @@ export function HomeHeader({
   search = "",
   onSearchChange,
   onSubmitSearch,
-  onClearSearch,
   onCameraPress,
   onOpenNotifications,
   onOpenCart,
   notificationCount = 3,
-  cartCount = 5,
+  cartCount = 0,
 }: HomeHeaderProps) {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={[styles.headerRoot, { paddingTop: Math.max(insets.top, 12) }]}>
       <View style={styles.headerContent}>
-        {/* Search Bar - Bấm vào điều hướng sang trang Tìm Kiếm */}
+        {/* Search Bar - Button-like trigger navigating directly to /search */}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Tìm kiếm sách cổ, tác giả, tựa sách. Bấm để chuyển sang trang tìm kiếm"
+          accessibilityLabel="Tìm sách theo tên, tác giả hoặc ISBN"
           onPress={onSearchPress}
           style={({ pressed }) => [
             styles.searchBar,
-            pressed && styles.searchBarPressed,
+            pressed && { opacity: 0.85 },
           ]}
         >
           <View style={styles.searchIconWrapper}>
             <Icon name="search" size={18} color={stitchTokens.wine} />
           </View>
-          <AppText
-            numberOfLines={1}
-            style={[
-              styles.searchPlaceholder,
-              search ? styles.searchPlaceholderFilled : null,
-            ]}
-          >
-            {search || "Tìm kiếm sách cổ, tác giả, tựa sách..."}
-          </AppText>
+          <View pointerEvents="none" style={styles.searchInputWrapper}>
+            <AppText
+              kind="small"
+              style={[
+                styles.searchPlaceholder,
+                search ? styles.searchActiveText : null,
+              ]}
+              numberOfLines={1}
+            >
+              {search || "Tìm kiếm sách cổ, tác giả, tựa s..."}
+            </AppText>
+          </View>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Tìm bằng hình ảnh bìa sách"
             onPress={(e) => {
-              e.stopPropagation?.();
+              e.stopPropagation();
               onCameraPress();
             }}
             hitSlop={8}
@@ -100,7 +101,7 @@ export function HomeHeader({
           ]}
         >
           <Icon name="message" size={20} color={stitchTokens.white} />
-          {cartCount > 0 ? (
+          {cartCount >= 0 ? (
             <View style={styles.badgePill}>
               <AppText kind="small" style={styles.badgeText}>
                 {cartCount > 9 ? "9+" : cartCount}
@@ -141,21 +142,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: stitchTokens.softRose,
   },
-  searchBarPressed: {
-    opacity: 0.9,
-    borderColor: stitchTokens.gold,
-  },
   searchIconWrapper: {
-    marginRight: 6,
+    marginRight: 8,
+  },
+  searchInputWrapper: {
+    flex: 1,
+    justifyContent: "center",
   },
   searchPlaceholder: {
-    flex: 1,
     fontSize: 13,
     color: stitchTokens.ashBrown,
-    fontFamily: "BeRegular",
   },
-  searchPlaceholderFilled: {
+  searchActiveText: {
     color: stitchTokens.charcoalBrown,
+    fontWeight: "500",
   },
   iconButton: {
     padding: 4,

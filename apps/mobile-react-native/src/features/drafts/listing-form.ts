@@ -183,22 +183,27 @@ export function stillFailing(flagged: Errors, current: Errors): Errors {
     if (current[key]) e[key] = current[key];
   return e;
 }
-// Fields per editor step, in on-screen order, so errors land on the first visible one.
+// Fields per editor step, in on-screen order (5 steps matching web), so errors land on the first visible one.
 export const stepFields: readonly (readonly (keyof Errors)[])[] = [
+  // 1: Thông tin sách
   ["bookId"],
+  // 2: Ảnh bản sách
+  ["mediaIds"],
+  // 3: Tình trạng
   [
-    "mediaIds",
     "condition",
+    "readable",
+    "hasMissingPages",
+    "missingEssentialContent",
     "pages",
     "coverNote",
     "notes",
     "accessories",
     "description",
-    "readable",
-    "hasMissingPages",
-    "missingEssentialContent",
   ],
+  // 4: Bán hoặc đổi
   ["mode", "salePrice", "exchangeValue", "fulfillment"],
+  // 5: Kiểm tra
   ["ownershipDeclared"],
 ];
 export function firstError(e: Errors): keyof Errors | null {
@@ -208,10 +213,10 @@ export function firstError(e: Errors): keyof Errors | null {
 }
 export function errorStep(e: Errors) {
   const field = firstError(e);
-  return field ? stepFields.findIndex((f) => f.includes(field)) : 3;
+  return field !== null ? stepFields.findIndex((f) => f.includes(field)) : 4;
 }
 // Progress comes from the submit rules applied to what is entered now, never from step visits.
 export function stepComplete(f: Form, images: Media[], step: number): boolean {
   const e = validateForm(f, images, true, true);
-  return !stepFields[step].some((field) => e[field]);
+  return !stepFields[step]?.some((field) => e[field]);
 }
