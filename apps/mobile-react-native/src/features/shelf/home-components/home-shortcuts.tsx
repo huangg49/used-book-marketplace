@@ -7,6 +7,10 @@ export interface HomeShortcutsProps {
   readonly onExchangePress: () => void;
   readonly onNewestPress: () => void;
   readonly onRarePress: () => void;
+  readonly onDealsPress?: () => void;
+  readonly onFreeshipPress?: () => void;
+  readonly onVouchersPress?: () => void;
+  readonly onInspectionPress?: () => void;
 }
 
 interface ShortcutItem {
@@ -29,11 +33,15 @@ export function HomeShortcuts({
   onExchangePress,
   onNewestPress,
   onRarePress,
+  onDealsPress,
+  onFreeshipPress,
+  onVouchersPress,
+  onInspectionPress,
 }: HomeShortcutsProps) {
   const items: readonly ShortcutItem[] = [
     {
       id: "sc-auction",
-      title: "Đấu Giá",
+      title: "Đấu Giá Live",
       icon: "gavel",
       iconColor: stitchTokens.wine,
       bgColor: stitchTokens.amberBg,
@@ -46,6 +54,20 @@ export function HomeShortcuts({
       onPress: onAuctionPress,
     },
     {
+      id: "sc-deals",
+      title: "Đồng Giá 49k",
+      icon: "tag",
+      iconColor: stitchTokens.brickRed,
+      bgColor: stitchTokens.linenRose,
+      borderColor: stitchTokens.peachBorder,
+      badge: {
+        text: "49K",
+        bg: stitchTokens.goldDark,
+        color: stitchTokens.white,
+      },
+      onPress: onDealsPress || onAuctionPress,
+    },
+    {
       id: "sc-exchange",
       title: "Góc Trao Đổi",
       icon: "sync",
@@ -55,8 +77,35 @@ export function HomeShortcuts({
       onPress: onExchangePress,
     },
     {
+      id: "sc-rare",
+      title: "Ấn Bản Hiếm",
+      icon: "diamond",
+      iconColor: stitchTokens.goldBronze,
+      bgColor: stitchTokens.lemonLight,
+      borderColor: stitchTokens.lemonBg,
+      onPress: onRarePress,
+    },
+    {
+      id: "sc-freeship",
+      title: "Freeship 0đ",
+      icon: "truck",
+      iconColor: stitchTokens.wine,
+      bgColor: stitchTokens.linenRose,
+      borderColor: stitchTokens.peachBorder,
+      onPress: onFreeshipPress || onAuctionPress,
+    },
+    {
+      id: "sc-vouchers",
+      title: "Voucher Sưu..",
+      icon: "ticket",
+      iconColor: stitchTokens.darkRed,
+      bgColor: stitchTokens.parchment,
+      borderColor: stitchTokens.peachBorder,
+      onPress: onVouchersPress || onAuctionPress,
+    },
+    {
       id: "sc-newest",
-      title: "Sách Mới Đăng",
+      title: "Sách Mới..",
       icon: "flame",
       iconColor: stitchTokens.tagExchangeText,
       bgColor: stitchTokens.amberBg,
@@ -69,13 +118,13 @@ export function HomeShortcuts({
       onPress: onNewestPress,
     },
     {
-      id: "sc-rare",
-      title: "Ấn Bản Hiếm",
-      icon: "diamond",
-      iconColor: stitchTokens.goldBronze,
-      bgColor: stitchTokens.lemonLight,
-      borderColor: stitchTokens.lemonBg,
-      onPress: onRarePress,
+      id: "sc-inspect",
+      title: "Thẩm Định..",
+      icon: "shield",
+      iconColor: stitchTokens.oliveDark,
+      bgColor: stitchTokens.warmIvory,
+      borderColor: stitchTokens.peachBorder,
+      onPress: onInspectionPress || onAuctionPress,
     },
   ];
 
@@ -147,8 +196,9 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
-    justifyContent: "space-between",
+    rowGap: 14,
   },
   itemCell: {
     width: "25%",

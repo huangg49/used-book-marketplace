@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Icon, stitchTokens } from "../../../core/ui";
+import { AppTextInput, Icon, stitchTokens } from "../../../core/ui";
 import { AppText } from "../../../core/ui/text";
 
 export interface HomeHeaderProps {
@@ -17,57 +17,50 @@ export interface HomeHeaderProps {
 }
 
 export function HomeHeader({
-  onSearchPress,
   search = "",
   onSearchChange,
   onSubmitSearch,
-  onClearSearch,
   onCameraPress,
   onOpenNotifications,
   onOpenCart,
   notificationCount = 3,
-  cartCount = 5,
+  cartCount = 0,
 }: HomeHeaderProps) {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={[styles.headerRoot, { paddingTop: Math.max(insets.top, 12) }]}>
       <View style={styles.headerContent}>
-        {/* Search Bar - Bấm vào điều hướng sang trang Tìm Kiếm */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Tìm kiếm sách cổ, tác giả, tựa sách. Bấm để chuyển sang trang tìm kiếm"
-          onPress={onSearchPress}
-          style={({ pressed }) => [
-            styles.searchBar,
-            pressed && styles.searchBarPressed,
-          ]}
-        >
-          <View style={styles.searchIconWrapper}>
-            <Icon name="search" size={18} color={stitchTokens.wine} />
-          </View>
-          <AppText
-            numberOfLines={1}
-            style={[
-              styles.searchPlaceholder,
-              search ? styles.searchPlaceholderFilled : null,
-            ]}
+        {/* Search Bar - Real input with accessibility label for test and UX */}
+        <View style={styles.searchBar}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Tìm kiếm"
+            onPress={onSubmitSearch}
+            style={styles.searchIconWrapper}
           >
-            {search || "Tìm kiếm sách cổ, tác giả, tựa sách..."}
-          </AppText>
+            <Icon name="search" size={18} color={stitchTokens.wine} />
+          </Pressable>
+          <AppTextInput
+            accessibilityLabel="Tìm sách theo tên, tác giả hoặc ISBN"
+            placeholder="Tìm kiếm sách cổ, tác giả, tựa s..."
+            placeholderTextColor={stitchTokens.ashBrown}
+            value={search}
+            onChangeText={onSearchChange}
+            onSubmitEditing={onSubmitSearch}
+            returnKeyType="search"
+            style={styles.searchInput}
+          />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Tìm bằng hình ảnh bìa sách"
-            onPress={(e) => {
-              e.stopPropagation?.();
-              onCameraPress();
-            }}
+            onPress={onCameraPress}
             hitSlop={8}
             style={styles.iconButton}
           >
             <Icon name="camera" size={18} color={stitchTokens.stoneMuted} />
           </Pressable>
-        </Pressable>
+        </View>
 
         {/* Action: Notifications */}
         <Pressable
@@ -100,7 +93,7 @@ export function HomeHeader({
           ]}
         >
           <Icon name="message" size={20} color={stitchTokens.white} />
-          {cartCount > 0 ? (
+          {cartCount >= 0 ? (
             <View style={styles.badgePill}>
               <AppText kind="small" style={styles.badgeText}>
                 {cartCount > 9 ? "9+" : cartCount}
@@ -147,6 +140,14 @@ const styles = StyleSheet.create({
   },
   searchIconWrapper: {
     marginRight: 6,
+  },
+  searchInput: {
+    flex: 1,
+    height: 38,
+    fontSize: 13,
+    color: stitchTokens.charcoalBrown,
+    paddingVertical: 0,
+    paddingHorizontal: 4,
   },
   searchPlaceholder: {
     flex: 1,

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Keyboard, ScrollView, View } from "react-native";
+import { Keyboard, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
@@ -8,13 +8,15 @@ import {
   AppText,
   Button,
   Chip,
+  Icon,
   Notice,
   Screen,
   StatePanel,
   colors,
   formatVnd,
-  space,
   presentError,
+  space,
+  stitchTokens,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
 import { conditions, modes, publicPage } from "./contracts";
@@ -26,10 +28,16 @@ import {
   type Filters,
 } from "./filters";
 import { PublicPhoto } from "./public-photo";
-import { ShelfSearchHeader } from "./shelf-controls";
 import { ShelfResults } from "./shelf-results";
 import { ShelfFilterSheet } from "./shelf-filter-sheet";
+import { HomeHeader } from "./home-components/home-header";
+import { HomeBanner } from "./home-components/home-banner";
+import { HomeShortcuts } from "./home-components/home-shortcuts";
 import { HomeFlashDeals } from "./home-components/home-flash-deals";
+import { HomeVouchersModal } from "./home-components/home-vouchers-modal";
+import { HomeInspectionModal } from "./home-components/home-inspection-modal";
+import { HomeNotificationsModal } from "./home-components/home-notifications-modal";
+import { HomeCartModal } from "./home-components/home-cart-modal";
 import { FALLBACK_AUCTIONS, type LiveAuctionItem } from "./home-mock-data";
 import { usePublicAuctions } from "../auctions/auctions-model";
 
@@ -40,6 +48,10 @@ export function ShelfScreen() {
   const [draft, setDraft] = useState(initialFilters);
   const [applied, setApplied] = useState(initialFilters);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [vouchersOpen, setVouchersOpen] = useState(false);
+  const [inspectionOpen, setInspectionOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
   const [error, setError] = useState<string>();
   const [cursors, setCursors] = useState<string[]>([""]);
   const scroll = useRef<ScrollView>(null);
@@ -118,12 +130,15 @@ export function ShelfScreen() {
       appearance="browse"
       scrollRef={scroll}
       header={
-        <ShelfSearchHeader
+        <HomeHeader
           search={search}
           onSearchChange={setSearch}
-          onSubmit={() => apply({ ...applied, q: search })}
-          onFilter={openFilters}
-          filterCount={filterCount}
+          onSubmitSearch={() => apply({ ...applied, q: search })}
+          onCameraPress={() => setInspectionOpen(true)}
+          onOpenNotifications={() => setNotificationsOpen(true)}
+          onOpenCart={() => setCartOpen(true)}
+          notificationCount={3}
+          cartCount={0}
         />
       }
       footer={<MemberNavigation current="/" />}
@@ -131,7 +146,26 @@ export function ShelfScreen() {
       compactFooter
     >
       <View style={{ gap: space.lg }}>
-        {/* Live Book Auctions Section */}
+        {/* 1. Hero Promo Banner Carousel */}
+        <HomeBanner
+          onExplorePress={() => {
+            scroll.current?.scrollTo({ y: 520, animated: true });
+          }}
+        />
+
+        {/* 2. Quick Action 8 Shortcuts (2 Rows) */}
+        <HomeShortcuts
+          onAuctionPress={() => router.navigate("/search")}
+          onDealsPress={() => apply({ ...applied, maxSalePrice: "49000" })}
+          onExchangePress={() => apply({ ...applied, mode: "Exchange" })}
+          onRarePress={() => apply({ ...applied, condition: "LikeNew" })}
+          onFreeshipPress={() => setVouchersOpen(true)}
+          onVouchersPress={() => setVouchersOpen(true)}
+          onNewestPress={() => apply({ ...applied, sort: "newest" })}
+          onInspectionPress={() => setInspectionOpen(true)}
+        />
+
+        {/* 3. Live Book Auctions Section */}
         <HomeFlashDeals
           items={liveAuctions}
           onOpenAuction={handleOpenBook}
@@ -140,6 +174,7 @@ export function ShelfScreen() {
           }}
         />
 
+        {/* 4. Modes & Category Filter Chips */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -154,47 +189,67 @@ export function ShelfScreen() {
             />
           ))}
         </ScrollView>
+
         {error && !filterOpen ? <Notice tone="error">{error}</Notice> : null}
-        <View style={{ gap: space.sm }}>
-          <AppText kind="bookHeading" accessibilityRole="header">
-            {applied.q ? `Kết quả cho “${applied.q}”` : "Sách đang có"}
-          </AppText>
-          <AppText kind="annotation" color={colors.muted}>
-            {sorts[applied.sort]}
-            {applied.condition
-              ? ` · ${conditions[applied.condition as keyof typeof conditions]}`
-              : ""}
-            {` · Trang ${cursors.length}`}
-          </AppText>
-          {(
-            [
-              ["minSalePrice", "maxSalePrice", "Giá bán"],
-              ["minExchangeValue", "maxExchangeValue", "Giá trị đổi"],
-            ] as const
-          ).map(([min, max, label]) =>
-            applied[min] || applied[max] ? (
-              <AppText key={min} kind="annotation" color={colors.muted}>
-                {label}:{" "}
-                {applied[min]
-                  ? `từ ${formatVnd(Number(applied[min]))}`
-                  : "không giới hạn dưới"}
-                {applied[max]
-                  ? ` đến ${formatVnd(Number(applied[max]))}`
-                  : ", không giới hạn trên"}
-              </AppText>
-            ) : null,
-          )}
-          {hasCriteria && (result.data?.items.length !== 0 || result.error) && (
-            <View style={{ alignSelf: "flex-start" }}>
-              <Chip
-                title="Xóa tìm kiếm và bộ lọc"
-                selected={false}
-                onPress={() => apply(initialFilters)}
-              />
-            </View>
-          )}
+
+        {/* 5. Section Header with Title and Filter Button */}
+        <View style={styles.sectionHeaderRow}>
+          <View style={{ gap: space.xs, flex: 1 }}>
+            <AppText kind="bookHeading" accessibilityRole="header">
+              {applied.q ? `Kết quả cho “${applied.q}”` : "Sách đang có"}
+            </AppText>
+            <AppText kind="annotation" color={colors.muted}>
+              {sorts[applied.sort]}
+              {applied.condition
+                ? ` · ${conditions[applied.condition as keyof typeof conditions]}`
+                : ""}
+              {` · Trang ${cursors.length}`}
+            </AppText>
+            {(
+              [
+                ["minSalePrice", "maxSalePrice", "Giá bán"],
+                ["minExchangeValue", "maxExchangeValue", "Giá trị đổi"],
+              ] as const
+            ).map(([min, max, label]) =>
+              applied[min] || applied[max] ? (
+                <AppText key={min} kind="annotation" color={colors.muted}>
+                  {label}:{" "}
+                  {applied[min]
+                    ? `từ ${formatVnd(Number(applied[min]))}`
+                    : "không giới hạn dưới"}
+                  {applied[max]
+                    ? ` đến ${formatVnd(Number(applied[max]))}`
+                    : ", không giới hạn trên"}
+                </AppText>
+              ) : null,
+            )}
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Bộ lọc"
+            onPress={openFilters}
+            style={styles.filterBtn}
+          >
+            <Icon name="tune" size={15} color={stitchTokens.wine} />
+            <AppText kind="small" style={styles.filterBtnText}>
+              Bộ lọc{filterCount > 0 ? ` (${filterCount})` : ""}
+            </AppText>
+          </Pressable>
         </View>
+
+        {hasCriteria && (result.data?.items.length !== 0 || result.error) && (
+          <View style={{ alignSelf: "flex-start" }}>
+            <Chip
+              title="Xóa tìm kiếm và bộ lọc"
+              selected={false}
+              onPress={() => apply(initialFilters)}
+            />
+          </View>
+        )}
+
         {result.isPending && <StatePanel loading title="Đang tải sách…" />}
+
         {result.error && (
           <>
             <Notice tone="error">
@@ -214,6 +269,7 @@ export function ShelfScreen() {
             />
           </>
         )}
+
         {result.data?.items.length === 0 && !result.error && (
           <StatePanel
             icon="book"
@@ -240,6 +296,8 @@ export function ShelfScreen() {
             }
           />
         )}
+
+        {/* 6. Curated Product Grid */}
         <ShelfResults
           items={result.data?.items ?? []}
           onOpen={(item) =>
@@ -259,6 +317,7 @@ export function ShelfScreen() {
             />
           )}
         />
+
         {(cursors.length > 1 || (result.data?.nextCursor && !result.error)) && (
           <View
             style={{ flexDirection: "row", flexWrap: "wrap", gap: space.md }}
@@ -289,6 +348,7 @@ export function ShelfScreen() {
             )}
           </View>
         )}
+
         {!result.isPending && !result.error && (
           <Button
             title="Làm mới danh sách"
@@ -297,11 +357,14 @@ export function ShelfScreen() {
             onPress={() => void result.refetch()}
           />
         )}
+
         <AppText kind="small" color={colors.muted}>
           Ảnh và tình trạng do người đăng cung cấp. Xem chi tiết sách trước khi
           quyết định. Chức năng giao dịch trên ứng dụng đang được chuẩn bị.
         </AppText>
       </View>
+
+      {/* Filter Sheet */}
       <ShelfFilterSheet
         visible={filterOpen}
         value={draft}
@@ -316,6 +379,60 @@ export function ShelfScreen() {
         onApply={() => apply(draft)}
         error={error}
       />
+
+      {/* Interactive Voucher Modal */}
+      <HomeVouchersModal
+        visible={vouchersOpen}
+        onClose={() => setVouchersOpen(false)}
+      />
+
+      {/* Interactive 24h Inspection Modal */}
+      <HomeInspectionModal
+        visible={inspectionOpen}
+        onClose={() => setInspectionOpen(false)}
+      />
+
+      {/* Interactive Notifications Modal */}
+      <HomeNotificationsModal
+        visible={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+      />
+
+      {/* Interactive Cart / Saved Books Modal */}
+      <HomeCartModal
+        visible={cartOpen}
+        onClose={() => setCartOpen(false)}
+        onOpenBook={handleOpenBook}
+      />
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  filterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: stitchTokens.white,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: stitchTokens.clayLight,
+    shadowColor: stitchTokens.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  filterBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.wine,
+  },
+});
