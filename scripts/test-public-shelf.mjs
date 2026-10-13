@@ -451,7 +451,11 @@ try {
     .locator('button:visible[aria-label="Xem phương án lưới"]')
     .click({ force: true });
   await p
-    .locator('button:visible[aria-label="Xem phương án danh sách"]')
+    .getByRole("button", {
+      name: "Xem phương án danh sách",
+      exact: true,
+    })
+    .last()
     .click({ force: true });
   await p.screenshot({ path: path.join(artifacts, "showcase-shelf-390.png") });
   await p
