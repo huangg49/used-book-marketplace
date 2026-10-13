@@ -3,7 +3,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { dateText } from "../../core/format";
 import { Button, ErrorNotice, Notice } from "../../core/ui";
 import type { Finish } from "./action-panel";
-import type { QueuePanel, Row } from "./queue-panel";
+import type { ActionContext, QueuePanel, Row } from "./queue-panel";
 
 export function OperationsQueue({
   number,
@@ -16,6 +16,7 @@ export function OperationsQueue({
   rows,
   empty,
   panel,
+  extra,
 }: {
   number: string;
   title: string;
@@ -28,6 +29,8 @@ export function OperationsQueue({
   rows: Row[];
   empty: { title: string; body: ReactNode };
   panel: QueuePanel;
+  // A page-level command (e.g. adding a point) shares the notice and refresh.
+  extra?: (context: ActionContext) => ReactNode;
 }) {
   const { open, setOpen, pending, setPending, notice, setNotice } = panel;
   const noticeRef = useRef<HTMLDivElement>(null);
@@ -61,6 +64,7 @@ export function OperationsQueue({
           Cập nhật danh sách
         </Button>
       </div>
+      {extra?.({ onFinish: finish, onPending: setPending, reconcile })}
       <p className="muted">
         {order}{" "}
         {result.isSuccess &&

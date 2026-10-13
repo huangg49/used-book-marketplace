@@ -410,13 +410,170 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     await cmd(
       'post',
       `/operations/auctions/${open.auctionId}/cancel`,
-      { expectedVersion: row.version, reason: 'Kiểm tra hủy từ danh sách vận hành' },
+      {
+        expectedVersion: row.version,
+        reason: 'Kiểm tra hủy từ danh sách vận hành',
+      },
       admin,
     ).expect(200);
     const after = await call('get', '/operations/auctions', admin).expect(200);
     expect(after.body.items.map((i: { id: string }) => i.id)).not.toContain(
       open.auctionId,
     );
+  });
+
+  it('Admin manages points and Staff assignments with version, audit and obligation rules (FR-H04)', async () => {
+    const code = `HCM-T-${randomBytes(3).toString('hex').toUpperCase()}`;
+    const create = {
+      code,
+      name: 'Điểm kiểm thử N4',
+      displayAddress: 'Bàn kiểm thử — không phải địa điểm thực tế, TP.HCM',
+      capacity: 2,
+    };
+    await call('get', '/operations/points', staff).expect(403);
+    await call('get', '/operations/points').expect(401);
+    await cmd('post', '/operations/points', create, staff).expect(403);
+    const key = randomUUID();
+    const created = await cmd('post', '/operations/points', create, admin, key);
+    expect(created.status).toBe(201);
+    validates('PointCommandReceipt', created.body);
+    expect(created.body).toMatchObject({ state: 'Paused', version: 1 });
+    const pointId = created.body.pointId as string;
+    const replay = await cmd('post', '/operations/points', create, admin, key);
+    expect(replay.headers['idempotency-replayed']).toBe('true');
+    expect(replay.body).toEqual(created.body);
+    await cmd('post', '/operations/points', create, admin).expect(422);
+    const update = (version: number, over: object = {}) => ({
+      expectedVersion: version,
+      name: create.name,
+      displayAddress: create.displayAddress,
+      capacity: 2,
+      status: 'Active',
+      reason: 'Mở điểm kiểm thử sau khi phân công',
+      ...over,
+    });
+    // Active needs a current Staff assignment.
+    await cmd('post', `/operations/points/${pointId}`, update(1), admin).expect(
+      409,
+    );
+    const pointStaff = await actor(['STAFF']);
+    const member = await actor();
+    const assign = (version: number, userId: string, a: Actor = admin) =>
+      cmd(
+        'post',
+        `/operations/points/${pointId}/assignments`,
+        { expectedVersion: version, userId },
+        a,
+      );
+    await assign(1, admin.id).expect(403);
+    await assign(1, member.id).expect(422);
+    const assigned = await assign(1, pointStaff.id).expect(200);
+    validates('PointCommandReceipt', assigned.body);
+    expect(assigned.body).toMatchObject({
+      entityType: 'PointAssignment',
+      state: 'Current',
+      version: 2,
+    });
+    await assign(1, pointStaff.id).expect(409); // stale version
+    await assign(2, pointStaff.id).expect(409); // already current
+    const mine = await call('get', '/me/point-assignments', pointStaff).expect(
+      200,
+    );
+    validates('MyPointAssignmentList', mine.body);
+    expect(mine.body.items).toEqual([
+      expect.objectContaining({ pointId, code, status: 'Paused' }),
+    ]);
+    await call('get', '/me/point-assignments', member).expect(403);
+    await cmd('post', `/operations/points/${pointId}`, update(2), admin).expect(
+      200,
+    );
+    // Two held slots: capacity cannot drop below them, Closed and ending the
+    // last assignment are refused while they are held.
+    const intakes = [];
+    for (let n = 0; n < 2; n++) {
+      const seller = await actor();
+      const l = await saleListing(seller);
+      intakes.push(
+        (
+          await cmd(
+            'post',
+            '/auction-intakes',
+            intakeBody(l, { pointId }),
+            seller,
+          ).expect(200)
+        ).body.intakeId as string,
+      );
+    }
+    const list = await call('get', '/operations/points', admin).expect(200);
+    validates('OperationsPointList', list.body);
+    const row = list.body.items.find((p: { id: string }) => p.id === pointId);
+    expect(row).toMatchObject({ heldSlots: 2, version: 3, status: 'Active' });
+    expect(row.assignments).toEqual([
+      expect.objectContaining({ userId: pointStaff.id }),
+    ]);
+    await cmd(
+      'post',
+      `/operations/points/${pointId}`,
+      update(3, { capacity: 1 }),
+      admin,
+    ).expect(422);
+    await cmd(
+      'post',
+      `/operations/points/${pointId}`,
+      update(3, { status: 'Closed' }),
+      admin,
+    ).expect(409);
+    const end = (version: number, assignmentId: string) =>
+      cmd(
+        'post',
+        `/operations/points/${pointId}/assignments/${assignmentId}/end`,
+        { expectedVersion: version, reason: 'Nhân viên chuyển sang điểm khác' },
+        admin,
+      );
+    await end(3, row.assignments[0].id).expect(409);
+    // Paused blocks new bookings, not the existing intake's receipt.
+    await cmd(
+      'post',
+      `/operations/points/${pointId}`,
+      update(3, { status: 'Paused', reason: 'Tạm dừng nhận booking mới' }),
+      admin,
+    ).expect(200);
+    const late = await actor();
+    await cmd(
+      'post',
+      '/auction-intakes',
+      intakeBody(await saleListing(late), { pointId }),
+      late,
+    ).expect(409);
+    await cmd(
+      'post',
+      `/operations/auction-intakes/${intakes[0]}/receive`,
+      { expectedVersion: 1, shelfCode: 'T-01' },
+      pointStaff,
+    ).expect(200);
+    // A second assignment lets the first one end; audit names the point.
+    const second = await actor(['STAFF']);
+    await assign(4, second.id).expect(200);
+    const ended = await end(5, row.assignments[0].id).expect(200);
+    expect(ended.body).toMatchObject({ state: 'Ended', version: 6 });
+    await call('get', '/me/point-assignments', pointStaff)
+      .expect(200)
+      .expect(({ body }) => expect(body.items).toEqual([]));
+    await cmd(
+      'post',
+      `/operations/auction-intakes/${intakes[0]}/inspect`,
+      { expectedVersion: 2, outcome: 'Pass', note: null },
+      pointStaff,
+    ).expect(403);
+    const audit = await db.c.audit_events.findOne({
+      receiptId: ended.body.id,
+    });
+    expect(audit).toMatchObject({
+      pointId,
+      action: 'endPointAssignment',
+      reason: 'Nhân viên chuyển sang điểm khác',
+      actorId: admin.id,
+    });
   });
 
   it('public book reads use only the inspected revision and never bypass ordinary shelf custody', async () => {

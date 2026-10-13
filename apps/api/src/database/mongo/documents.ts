@@ -214,6 +214,7 @@ export interface MutationReceiptDoc {
   quoteId: string | null;
   contextId: string | null;
   topupId: string | null;
+  pointId?: string | null;
   resultVersion: number;
   result: Json;
   committedAt: Date;
@@ -230,6 +231,7 @@ export interface AuditEventDoc {
   quoteId: string | null;
   contextId: string | null;
   topupId: string | null;
+  pointId?: string | null;
   action: string;
   before: Json | null;
   after: Json | null;
@@ -707,6 +709,8 @@ export interface HandoverPointDoc extends Lockable {
   capacity: number;
   status: 'Active' | 'Paused' | 'Closed';
   demoOnly: boolean;
+  version: number;
+  updatedAt: Date;
 }
 export interface PointStaffAssignmentDoc {
   _id: string;

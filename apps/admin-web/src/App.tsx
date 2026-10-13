@@ -28,6 +28,7 @@ import {
   Scale,
   UsersRound,
   Warehouse,
+  MapPin,
 } from "lucide-react";
 import { currentUserSchema } from "@used-books/session-client";
 import logo from "../../../packages/brand/logos/lat-lai-horizontal-primary.svg";
@@ -51,6 +52,7 @@ import {
   IntakeQueue,
   ResolutionQueue,
 } from "./features/operations/queues";
+import { PointsPage } from "./features/operations/points";
 import "./App.css";
 
 function Login() {
@@ -240,6 +242,10 @@ function Workspace() {
                       <Gavel aria-hidden="true" />
                       Phiên đấu giá
                     </NavLink>
+                    <NavLink to="/operations/points">
+                      <MapPin aria-hidden="true" />
+                      Điểm giao nhận
+                    </NavLink>
                   </>
                 )}
               </div>
@@ -321,6 +327,7 @@ const router = createBrowserRouter([
       { path: "/operations/collections", element: <CollectionQueue /> },
       { path: "/operations/resolutions", element: <ResolutionQueue /> },
       { path: "/operations/auctions", element: <AuctionQueue /> },
+      { path: "/operations/points", element: <PointsPage /> },
       {
         path: "*",
         element: (

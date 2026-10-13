@@ -3,6 +3,7 @@ import { useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
 import { dateText, money } from "../../core/format";
 import { canOperatePoint, canResolve, session } from "../../core/session";
+import { AssignmentNote } from "./assignment-note";
 import { AuctionCancel } from "./auction-actions";
 import {
   collectionLabels,
@@ -25,17 +26,10 @@ import {
 } from "./intake-actions";
 import { Forbidden, OperationsQueue } from "./queue-frame";
 import { ResolutionDecision } from "./resolution-actions";
-import {
-  refetchWhileClosed,
-  useQueuePanel,
-  type Row,
-} from "./queue-panel";
+import { refetchWhileClosed, useQueuePanel, type Row } from "./queue-panel";
 
 // Queues for the point desks and Admin decisions. Each row's command opens
 // under the row (N4-02 to N4-05).
-
-const assignmentNote =
-  "Danh sách chỉ gồm sách tại các điểm bạn đang được phân công, trừ sách của chính bạn. Nếu bạn chưa được phân công điểm nào, danh sách sẽ luôn trống; hãy liên hệ quản trị viên.";
 
 export function IntakeQueue() {
   const user = useOutletContext<CurrentUser>();
@@ -111,7 +105,7 @@ function IntakeQueueContent() {
         ),
         action: intakeAction(item),
       }))}
-      empty={{ title: "Chưa có sách cần xử lý.", body: assignmentNote }}
+      empty={{ title: "Chưa có sách cần xử lý.", body: <AssignmentNote /> }}
     />
   );
 }
@@ -164,7 +158,10 @@ function CollectionQueueContent() {
         detail: `Người nhận: ${item.recipientName}`,
         action: collectionAction(item),
       }))}
-      empty={{ title: "Chưa có đơn cần giao hoặc nhận lại.", body: assignmentNote }}
+      empty={{
+        title: "Chưa có đơn cần giao hoặc nhận lại.",
+        body: <AssignmentNote />,
+      }}
     />
   );
 }
@@ -201,9 +198,7 @@ function ResolutionQueueContent() {
           .join(" · "),
         action: {
           label: "Quyết định",
-          render: (context) => (
-            <ResolutionDecision item={item} {...context} />
-          ),
+          render: (context) => <ResolutionDecision item={item} {...context} />,
         },
       }))}
       empty={{

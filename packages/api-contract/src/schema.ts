@@ -1866,6 +1866,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/points": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN. Every handover point with capacity, slots still held and the current Staff assignments, ordered by code. FR-H04. */
+        get: operations["listOperationsPoints"];
+        put?: never;
+        /** @description ACTIVE ADMIN creates a simulated HCM point. A new point starts Paused, so no booking reaches it before a Staff member is assigned and an Admin activates it. */
+        post: operations["createHandoverPoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/points/{pointId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN edits name, address, capacity and status with a reason. Capacity never drops below slots still held. Paused blocks new bookings only. Closed needs no held slot. Active needs a current Staff assignment. */
+        post: operations["updateHandoverPoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/points/{pointId}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN assigns an ACTIVE STAFF account to the point. No self-assignment and no second current assignment for the same person and point. */
+        post: operations["assignPointStaff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/points/{pointId}/assignments/{assignmentId}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN ends a current assignment with a reason. The last current assignment of a point that still holds slots cannot end. */
+        post: operations["endPointAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/point-assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE STAFF. The points the caller is assigned to now. An empty list means no current assignment. */
+        get: operations["listMyPointAssignments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/auctions": {
         parameters: {
             query?: never;
@@ -4288,6 +4374,88 @@ export interface components {
             items: components["schemas"]["OperationsAuctionItem"][];
             /** Format: date-time */
             serverTime: string;
+        };
+        PointAssignment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            displayName: string;
+            /** Format: date-time */
+            validFrom: string;
+        };
+        OperationsPoint: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            displayAddress: string;
+            /** @enum {string} */
+            status: "Active" | "Paused" | "Closed";
+            capacity: number;
+            heldSlots: number;
+            version: number;
+            /** Format: date-time */
+            updatedAt: string;
+            assignments: components["schemas"]["PointAssignment"][];
+        };
+        OperationsPointList: {
+            items: components["schemas"]["OperationsPoint"][];
+            /** Format: date-time */
+            serverTime: string;
+        };
+        CreateHandoverPoint: {
+            code: string;
+            name: string;
+            displayAddress: string;
+            capacity: number;
+        };
+        UpdateHandoverPoint: {
+            expectedVersion: number;
+            name: string;
+            displayAddress: string;
+            capacity: number;
+            /** @enum {string} */
+            status: "Active" | "Paused" | "Closed";
+            reason: string;
+        };
+        AssignPointStaff: {
+            expectedVersion: number;
+            /** Format: uuid */
+            userId: string;
+        };
+        EndPointAssignment: {
+            expectedVersion: number;
+            reason: string;
+        };
+        PointCommandReceipt: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            entityType: "HandoverPoint" | "PointAssignment";
+            /** Format: uuid */
+            entityId: string;
+            /** Format: uuid */
+            pointId: string;
+            /** @description The point version after the command. */
+            version: number;
+            /** @description Point status, or Current/Ended for an assignment. */
+            state: string;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        MyPointAssignment: {
+            /** Format: uuid */
+            pointId: string;
+            code: string;
+            name: string;
+            /** @enum {string} */
+            status: "Active" | "Paused" | "Closed";
+            /** Format: date-time */
+            validFrom: string;
+        };
+        MyPointAssignmentList: {
+            items: components["schemas"]["MyPointAssignment"][];
         };
         PointOrderResolutionQueue: {
             items: components["schemas"]["PointOrderResolutionItem"][];
@@ -8086,6 +8254,225 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicAuctionList"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listOperationsPoints: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsPointList"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    createHandoverPoint: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateHandoverPoint"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            201: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    updateHandoverPoint: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                pointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateHandoverPoint"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    assignPointStaff: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                pointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignPointStaff"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    endPointAssignment: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                pointId: string;
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndPointAssignment"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listMyPointAssignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyPointAssignmentList"];
                 };
             };
             400: components["responses"]["ListingError"];

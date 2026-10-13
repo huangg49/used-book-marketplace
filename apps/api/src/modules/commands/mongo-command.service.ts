@@ -176,6 +176,25 @@ export type AuctionChange = {
   event?: string;
   reason?: string;
 };
+// FR-H04 point administration and later point operations (N4-10..N4-13):
+// receipts and audit name the point.
+export type PointChange = {
+  entityType: 'HandoverPoint' | 'PointAssignment';
+  entityId: string;
+  pointId: string;
+  version: number;
+  state: string;
+  decidedAt: Date;
+  before?: Json;
+  after?: Json;
+  event?: string;
+  reason?: string;
+};
+export type PointOperation =
+  | 'createHandoverPoint'
+  | 'updateHandoverPoint'
+  | 'assignPointStaff'
+  | 'endPointAssignment';
 export type AuctionOperation =
   | 'createAuctionIntake'
   | 'cancelAuctionIntake'
@@ -197,6 +216,7 @@ export type AuctionOperation =
   | 'claimPointOrder'
   | 'receivePointOrderReturn';
 type CommandChange =
+  | PointChange
   | AuctionChange
   | PurchaseConversationChange
   | ExchangeChange
@@ -645,6 +665,32 @@ export class MongoCommandService {
       this.auctionReceipt(...args),
     );
   }
+  runPoint<C>(
+    context: CommandContext,
+    operation: PointOperation,
+    target: string | null,
+    body: unknown,
+    options: Options<C, PointChange>,
+  ) {
+    return this.execute(context, operation, target, body, options, (...args) =>
+      this.pointReceipt(...args),
+    );
+  }
+  private pointReceipt(
+    change: PointChange,
+    id: string,
+    serverTime: Date,
+  ): Wire['PointCommandReceipt'] {
+    return {
+      id,
+      entityType: change.entityType,
+      entityId: change.entityId,
+      pointId: change.pointId,
+      version: change.version,
+      state: change.state,
+      serverTime: serverTime.toISOString(),
+    };
+  }
   // Auction workers only; the key names the aggregate (and, for repeatable
   // deadlines, its version), so each transition commits at most once.
   systemAuction<C>(
@@ -806,7 +852,9 @@ export class MongoCommandService {
         change.entityType === 'TopupIntent' ||
         change.entityType === 'AuctionIntake' ||
         change.entityType === 'Auction' ||
-        change.entityType === 'PointOrder'
+        change.entityType === 'PointOrder' ||
+        change.entityType === 'HandoverPoint' ||
+        change.entityType === 'PointAssignment'
         || change.entityType === 'PurchaseConversation'
           ? change.decidedAt
           : new Date();
@@ -819,8 +867,14 @@ export class MongoCommandService {
         quoteId: null as string | null,
         contextId: null as string | null,
         topupId: null as string | null,
+        pointId: null as string | null,
       };
-      if (change.entityType === 'TopupIntent')
+      if (
+        change.entityType === 'HandoverPoint' ||
+        change.entityType === 'PointAssignment'
+      )
+        targets.pointId = change.pointId;
+      else if (change.entityType === 'TopupIntent')
         targets.topupId = change.entityId;
       else if (change.entityType === 'Exchange') {
         targets.listingId = change.initiatorListingId;
@@ -924,6 +978,16 @@ export class MongoCommandService {
 
 function auditAfter(change: CommandChange): Json {
   switch (change.entityType) {
+    case 'HandoverPoint':
+    case 'PointAssignment':
+      return {
+        entityId: change.entityId,
+        version: change.version,
+        state: change.state,
+        ...(change.after && typeof change.after === 'object'
+          ? change.after
+          : {}),
+      } as Json;
     // Public price only: Auto ceilings never enter audit/outbox (FR-AU10).
     case 'AuctionIntake':
     case 'Auction':

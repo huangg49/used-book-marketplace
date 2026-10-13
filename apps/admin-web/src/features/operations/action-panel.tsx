@@ -1,11 +1,6 @@
-import {
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useBlocker } from "react-router-dom";
+import type { z } from "zod";
 import { createCommand, runCommand, type Intent } from "../../core/command";
 import { operationErrorText } from "../../core/errors";
 import { LeaveGuard } from "../../core/leave-guard";
@@ -23,7 +18,8 @@ export type Finish = (outcome: Omit<Outcome, "close">) => void;
 
 // One confirmed command on one queue row. The request body and key are frozen
 // when the person confirms; an unknown result is retried as the same request.
-export function ActionPanel({
+// Auction commands answer with the auction receipt; point commands pass theirs.
+export function ActionPanel<R = CommandReceipt>({
   label,
   title,
   intro,
@@ -34,6 +30,7 @@ export function ActionPanel({
   confirmBody,
   validate = () => true,
   build,
+  schema = commandReceipt as unknown as z.ZodType<R>,
   interpret,
   reconcile,
   onFinish,
@@ -49,7 +46,8 @@ export function ActionPanel({
   confirmBody: ReactNode;
   validate?: () => boolean;
   build: () => { path: string; body: unknown };
-  interpret: (receipt: CommandReceipt) => Outcome;
+  schema?: z.ZodType<R>;
+  interpret: (receipt: R) => Outcome;
   reconcile: () => Promise<unknown>;
   onFinish: Finish;
   onPending: (pending: boolean) => void;
@@ -116,7 +114,7 @@ export function ActionPanel({
     try {
       const receipt = await runCommand(
         active,
-        commandReceipt,
+        schema,
         session.request.bind(session),
         async () => {
           await reconcile();

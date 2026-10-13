@@ -227,3 +227,61 @@ export const resolutionLabels: Record<ResolutionItem["openReason"], string> = {
   InspectionClaim: "Khiếu nại sau khi nhận",
   ReturnOverdue: "Quá hạn mang trả sách",
 };
+
+// N4-10/N4-11: points, assignments and their receipts (FR-H04).
+const pointStatus = z.enum(["Active", "Paused", "Closed"]);
+export const operationsPoint = z.object({
+  id: uuid,
+  code: z.string(),
+  name: z.string(),
+  displayAddress: z.string(),
+  status: pointStatus,
+  capacity: z.number().int().positive(),
+  heldSlots: z.number().int().nonnegative(),
+  version,
+  updatedAt: time,
+  assignments: z.array(
+    z.object({
+      id: uuid,
+      userId: uuid,
+      displayName: z.string(),
+      validFrom: time,
+    }),
+  ),
+}) satisfies z.ZodType<Schema["OperationsPoint"]>;
+export const operationsPointList = z.object({
+  items: z.array(operationsPoint),
+  serverTime: time,
+}) satisfies z.ZodType<Schema["OperationsPointList"]>;
+export type OperationsPoint = z.infer<typeof operationsPoint>;
+export const pointReceipt = z.object({
+  id: uuid,
+  entityType: z.enum(["HandoverPoint", "PointAssignment"]),
+  entityId: uuid,
+  pointId: uuid,
+  version,
+  state: z.string(),
+  serverTime: time,
+}) satisfies z.ZodType<Schema["PointCommandReceipt"]>;
+export const myPointAssignments = z.object({
+  items: z.array(
+    z.object({
+      pointId: uuid,
+      code: z.string(),
+      name: z.string(),
+      status: pointStatus,
+      validFrom: time,
+    }),
+  ),
+}) satisfies z.ZodType<Schema["MyPointAssignmentList"]>;
+// The Admin user directory, narrowed to what the Staff picker shows.
+export const staffPage = z.object({
+  items: z.array(
+    z.object({ id: uuid, displayName: z.string(), email: z.string() }),
+  ),
+});
+export const pointStatusLabels: Record<OperationsPoint["status"], string> = {
+  Active: "Đang mở",
+  Paused: "Tạm dừng nhận booking mới",
+  Closed: "Đã đóng",
+};
