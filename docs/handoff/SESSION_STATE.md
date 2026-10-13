@@ -3,6 +3,28 @@
 Source tích hợp: `feat/rn-ui-redesign-navbar-auctions`, PR #37.
 OpenAPI 0.34.0 trên `main` (nhánh N4-05: 0.35.0), 22 migration Mongo, 134 HTTP operation / 23 controller.
 
+## N4 Phase 2 — vận hành điểm — 14/10/2026
+
+Người giao việc duyệt Phase 2 ngày 14/10/2026. Gate READINESS không đổi; chỉ có source
+và evidence trên `*_test`. Chi tiết quyết định: ADR 0030 amendment 2026-10-14.
+
+| Gói | Nhánh (base) | Nội dung |
+| --- | --- | --- |
+| N4-10/11 | `feature/n4-10-11-points-assignments` (từ N4-05) | OpenAPI 0.36.0, migration 0022: Admin tạo/sửa điểm, trạng thái, sức chứa, phân công/kết thúc phân công; `/me/point-assignments`; admin-web trang Điểm giao nhận |
+| N4-12 | `feature/n4-12-inspection-evidence` → RN `feature/n4-12-rn-evidence` (từ N4-09) | 0.37.0, migration 0023: bảng kiểm, NeedsEvidence, người bán bổ sung một lần trong 48 giờ, nhân viên khác quyết định, biên bản bất biến; admin-web, user-web, RN |
+| N4-13 | `feature/n4-13-incidents` | 0.38.0, migration 0024: sự cố có/không có đơn, đóng khẩn cấp, quỹ mô phỏng 2.000.000đ; Admin độc lập quyết định; không chi vào ví |
+| N4-14 | `feature/n4-14-deadlines` | 0.39.0: hạn kiểm tra/nhận lại và `/operations/escalations` tính khi đọc, không worker tự hành động |
+
+- Kiểm tra: API typecheck, contract check/routes (150 operation), `auctions.e2e-spec.ts`
+  54/54 trên QA replica set; admin-web typecheck/lint/28 unit; user-web
+  typecheck/lint/119 unit; RN typecheck/lint/142 unit PASS. Browser admin-web trên API
+  thật + DB `ops_browser_*_test` (fixture tạm): bảng kiểm, NeedsEvidence, quyết định
+  bằng chứng, báo/quyết định sự cố và quỹ, việc quá hạn, tạo/phân công/mở điểm, từ chối
+  đóng điểm còn sách, 375 px không tràn. Full API E2E/Mongo suite, RN/user-web browser
+  cho bằng chứng, native, human review NOT RUN.
+- Giới hạn: chưa thông báo thành viên khi đóng khẩn cấp; bằng chứng chỉ là văn bản;
+  bồi thường chỉ ghi duyệt, chưa chi ví; giờ mở cửa vẫn cố định.
+
 ## N4 Phase 1 — đấu giá & vận hành trên client — 13/10/2026
 
 Kế hoạch: nhánh `docs/n4-auction-operations-plan`. Mỗi gói một nhánh, commit local,
