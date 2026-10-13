@@ -1243,8 +1243,9 @@ code tính năng mới/merge/deploy. Cập nhật mục của mình, không nố
   contract check/routes và diff check PASS.
 - Bổ sung nơi gửi sách ngay bước **Bán hoặc đổi** của `/sell`: seller chọn địa chỉ đã
   lưu hoặc nhập địa chỉ TP.HCM mới; địa chỉ mới được lưu bằng idempotency key trước khi
-  tạo draft. Buyer chỉ thấy khu vực, không thấy địa chỉ/điện thoại chi tiết. API từ chối
-  submit bài `Sale`/`Both` chưa có fulfillment để không tạo bài không thể báo giá. Web
+  tạo draft. Buyer chỉ thấy khu vực, không thấy địa chỉ/điện thoại chi tiết. Web yêu cầu
+  nơi gửi cho `Sale`/`Both`; API giữ tương thích ADR0015 cho bài chưa cấu hình, chỉ chặn
+  tạo báo giá khi thiếu nơi gửi. Web
   typecheck/build và 11 unit tests `listing-submission` PASS; API typecheck và contract
   generate PASS. Bài đã publish thiếu nơi gửi vẫn là dữ liệu legacy: cần revision/repost
   của seller, không tự ý sửa địa chỉ từ buyer.
@@ -1254,11 +1255,20 @@ code tính năng mới/merge/deploy. Cập nhật mục của mình, không nố
   để **tạo** Order: state ban đầu vẫn `AwaitingPayment`; ví/ledger chỉ được dùng ở lệnh pay.
   Không biến giao dịch thành miễn phí vì trái SRS. Sửa thêm client để sau khi lưu địa chỉ mới
   luôn refetch lấy **phiên bản địa chỉ** (không nhầm phiên bản AddressBook) trước báo giá/
-  fulfillment. API/Web typecheck PASS; Mongo E2E vẫn BLOCKED bởi Docker Desktop daemon.
-- Mongo QA E2E **BLOCKED**: Docker Desktop daemon không chạy (`dockerDesktopLinuxEngine`
-  không tồn tại), nên chưa có evidence migration/E2E/race; không dùng runtime DB chính.
-  READINESS không đổi; cần bật Docker QA rồi chạy targeted `orders.e2e-spec.ts` và review
-  tiền/quyền trước merge/release.
+  fulfillment. API/Web typecheck PASS.
+- CI follow-up trên [PR36](https://github.com/huangg49/used-book-marketplace/pull/36):
+  `ce63c8d` bổ sung response headers; `baf6308` thêm migration0021 cho shape order lịch sử,
+  giữ checksum0020. `02b17f1` khôi phục submit unconfigured theo contract/ADR0015 và khai
+  báo existing-obligations cho confirm receipt. `7b46bfa` sửa retry Sell sau khi lưu địa
+  chỉ: tiếp tục submission đã pin origin, không gửi lại address key với book version mới.
+  Browser regression điền nơi gửi và kiểm chỉ tạo một địa chỉ qua lost-ACK/retry.
+- Docker QA đã chạy. Local PASS: Mongo42/4SKIP (import/failover chưa cấu hình local),
+  API130unit/typecheck/build, Web119unit/lint/build, contract/routes136operation,
+  Demo H01a/funding/orders/transit và Operations/Member Web browser trên QA riêng với
+  storage fake. Full API E2E local có timeout trong auction/race khi chạy nhiều nhóm;
+  chưa nhận là PASS. Các lượt CI cũ có Mongo/import/failover PASS, E2E FAIL vì gate submit
+  sai và metadata obligations; đang xác minh rerun trên source mới. READINESS không đổi;
+  native/live storage/human review và merge/release chưa được xác nhận.
 
 ## Lịch sử
 
