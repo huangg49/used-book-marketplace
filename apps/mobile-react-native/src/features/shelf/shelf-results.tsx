@@ -2,6 +2,7 @@ import { useContext, useState, type ReactNode } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 import {
   AppText,
+  Icon,
   TextScale,
   colors,
   formatVnd,
@@ -143,6 +144,41 @@ function ShelfResult({
             {conditions[item.condition]}
           </AppText>
         </View>
+
+        {/* Mode Tag in top-right (Bán / Đổi / Bán hoặc đổi) */}
+        <View
+          style={{
+            position: "absolute",
+            top: 6,
+            right: 6,
+            backgroundColor:
+              item.mode === "Sale"
+                ? stitchTokens.wine
+                : item.mode === "Exchange"
+                  ? stitchTokens.orangeDeep
+                  : stitchTokens.darkRed,
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            borderRadius: 4,
+            elevation: 2,
+            shadowColor: stitchTokens.black,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.15,
+            shadowRadius: 2,
+          }}
+        >
+          <AppText
+            kind="small"
+            style={{
+              color: stitchTokens.white,
+              fontSize: 9,
+              fontWeight: "700",
+              lineHeight: 11,
+            }}
+          >
+            {modes[item.mode]}
+          </AppText>
+        </View>
       </View>
 
       <View
@@ -198,14 +234,24 @@ function ShelfResult({
               Giá trị đổi {formatVnd(item.exchangeValue)}
             </AppText>
           )}
-          <AppText
-            kind="small"
-            color={colors.muted}
-            numberOfLines={1}
-            style={{ fontSize: 10, marginTop: 2 }}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 3,
+              marginTop: 3,
+            }}
           >
-            {modes[item.mode]} · {item.seller.displayName}
-          </AppText>
+            <Icon name="pin" size={11} color={colors.muted} />
+            <AppText
+              kind="small"
+              color={colors.muted}
+              numberOfLines={1}
+              style={{ fontSize: 10 }}
+            >
+              {item.fulfillment?.name ?? "TP.HCM"}
+            </AppText>
+          </View>
         </View>
       </View>
     </Pressable>
