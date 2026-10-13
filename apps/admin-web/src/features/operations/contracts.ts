@@ -138,6 +138,57 @@ export const auctionList = z.object({
   serverTime: time,
 }) satisfies z.ZodType<Schema["PublicAuctionList"]>;
 
+export const commandReceipt = z.object({
+  id: uuid,
+  entityType: z.enum(["AuctionIntake", "Auction", "PointOrder"]),
+  entityId: uuid,
+  intakeId: uuid,
+  auctionId: uuid.nullable(),
+  orderId: uuid.nullable(),
+  contextId: uuid,
+  version,
+  state: z.enum([
+    ...intakeStates,
+    "Active",
+    "BuyNowPending",
+    "AwaitingWinnerPayment",
+    "Unsold",
+    "OnHold",
+    "PaymentExpired",
+    "AwaitingPayment",
+    "Fulfilling",
+    "ReadyForCollection",
+    "Inspection",
+    "ResolutionPending",
+    "ReturnPending",
+    "Completed",
+  ]),
+  currentPrice: price.nullable(),
+  minimumBid: price.nullable(),
+  leading: z.boolean().nullable(),
+  collectionOutcome: z
+    .enum(["HandedOver", "WrongCode", "Expired", "RateLimited"])
+    .nullable(),
+  attemptsRemaining: z.number().int().min(0).max(5).nullable(),
+  codeExpiresAt: time.nullable(),
+  returnOutcome: z.enum(["Accepted", "Refused"]).nullable(),
+  serverTime: time,
+}) satisfies z.ZodType<Schema["AuctionCommandReceipt"]>;
+export type CommandReceipt = z.infer<typeof commandReceipt>;
+
+export const reclaimLabels: Record<
+  NonNullable<Intake["reclaimReason"]>,
+  string
+> = {
+  SellerCancelled: "Người bán rút sách",
+  InspectionFailed: "Không đạt kiểm tra",
+  Unsold: "Phiên kết thúc không có người mua",
+  PaymentExpired: "Người thắng không thanh toán đúng hạn",
+  AuctionCancelled: "Phiên bị hủy",
+  OrderCancelled: "Đơn bị hủy",
+  OrderReturned: "Người mua trả sách",
+  BookMisdescribed: "Sách khác mô tả",
+};
 export const intakeLabels: Record<Intake["state"], string> = {
   AwaitingDropoff: "Chờ người bán mang sách tới",
   Received: "Đã nhận, chờ kiểm tra",

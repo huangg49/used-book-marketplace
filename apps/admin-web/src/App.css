@@ -520,6 +520,16 @@
 .decision-panel .actions .button {
   flex-grow: 1;
 }
+/* Point and auction commands open under their queue row. */
+.row-panel {
+  grid-column: 2 / -1;
+}
+.operation-panel h3 {
+  margin-bottom: 0.5rem;
+}
+.operation-panel fieldset {
+  margin: 1rem 0 0;
+}
 .history details {
   border-bottom: 1px solid var(--rule);
 }
@@ -760,7 +770,8 @@
   .row-number {
     font-size: 1.3rem;
   }
-  .read-link {
+  .read-link,
+  .row-action {
     grid-column: 2;
   }
   .row-meta {
