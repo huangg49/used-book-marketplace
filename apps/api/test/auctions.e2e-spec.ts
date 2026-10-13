@@ -382,6 +382,43 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     else process.env.PAYMENT_SIMULATOR_SECRET = originalSecret;
   });
 
+  // First in the suite: the queue shows the 50 auctions ending soonest.
+  it('Admin cancel queue lists open auctions with their version, never involved ones', async () => {
+    const open = await openAuction();
+    const mine = await openAuction();
+    const adminBidder = await actor(['ADMIN', 'MEMBER']);
+    await bid(mine.auctionId, adminBidder, 200_000).expect(200);
+    await call('get', '/operations/auctions', staff).expect(403);
+    await call('get', '/operations/auctions', await actor()).expect(403);
+    await call('get', '/operations/auctions').expect(401);
+    const list = await call('get', '/operations/auctions', adminBidder).expect(
+      200,
+    );
+    validates('OperationsAuctionList', list.body);
+    expect(list.headers['cache-control']).toBe('no-store');
+    const ids = list.body.items.map((i: { id: string }) => i.id);
+    expect(ids).toContain(open.auctionId);
+    // The Admin bids in `mine`, so `cancel` would refuse: it is not offered.
+    expect(ids).not.toContain(mine.auctionId);
+    const row = list.body.items.find(
+      (i: { id: string }) => i.id === open.auctionId,
+    );
+    const doc = (await db.c.auctions.findOne({ _id: open.auctionId }))!;
+    expect(row).toMatchObject({ version: doc.version, state: 'Active' });
+    expect(JSON.stringify(list.body)).not.toMatch(/maxAmount|leaderId|seller/);
+    // The listed version is what cancel accepts.
+    await cmd(
+      'post',
+      `/operations/auctions/${open.auctionId}/cancel`,
+      { expectedVersion: row.version, reason: 'Kiểm tra hủy từ danh sách vận hành' },
+      admin,
+    ).expect(200);
+    const after = await call('get', '/operations/auctions', admin).expect(200);
+    expect(after.body.items.map((i: { id: string }) => i.id)).not.toContain(
+      open.auctionId,
+    );
+  });
+
   it('public book reads use only the inspected revision and never bypass ordinary shelf custody', async () => {
     const o = await openAuction();
     const response = await call('get', `/auctions/${o.auctionId}`).expect(200);

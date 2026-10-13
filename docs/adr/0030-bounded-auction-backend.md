@@ -155,3 +155,13 @@ Found by the concurrency/scope cases in [AUCTION_TEST_CASES](../features/AUCTION
   1,000,000 (1,050,000, outside the contract). Public reads, participation and receipts
   now return `null` once no grid amount can beat the price; `BidTooLow` says the cap is
   reached.
+
+## Amendment 2026-10-13 — Admin cancel queue
+
+- `POST /operations/auctions/{id}/cancel` needs `expectedVersion`, but no read gave an
+  Admin the auction version, and OnHold auctions were not readable at all. OpenAPI 0.35.0
+  adds `GET /operations/auctions` (ACTIVE ADMIN): Active auctions before `endAt` and OnHold
+  ones, ending soonest first, at most 50, with `version`, prices, bidder count and point.
+  It leaves out auctions the Admin sells or bids in, matching the independence check of
+  `cancel`, and never includes Auto ceilings or bidder identities. Read only; the cancel
+  command and its checks are unchanged. Used by the admin-web auction list (N4-05).

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.34.0
+  version: 0.35.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -5634,6 +5634,47 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/auctions:
+    get:
+      operationId: listOperationsAuctions
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN. Auctions an Admin may cancel (Active before endAt, and OnHold), ending
+        soonest first, with the version the cancel command needs. Excludes auctions the Admin sells
+        or bids in. Never includes Auto ceilings or bidder identities.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsAuctionList"
         "400":
           $ref: "#/components/responses/ListingError"
         "401":
@@ -13298,6 +13339,78 @@ components:
           type: integer
           minimum: 0
           maximum: 10000000
+    OperationsAuctionItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - version
+        - title
+        - state
+        - startPrice
+        - step
+        - currentPrice
+        - bidderCount
+        - startAt
+        - endAt
+        - pointName
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        title:
+          type: string
+        state:
+          type: string
+          enum:
+            - Active
+            - OnHold
+        startPrice:
+          type: integer
+          minimum: 10000
+          maximum: 1000000
+        step:
+          type: integer
+          enum:
+            - 10000
+            - 50000
+        currentPrice:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 1000000
+        bidderCount:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        pointName:
+          type: string
+    OperationsAuctionList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/OperationsAuctionItem"
+        serverTime:
+          type: string
+          format: date-time
     PointOrderResolutionQueue:
       type: object
       additionalProperties: false

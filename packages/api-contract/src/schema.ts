@@ -1815,6 +1815,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/auctions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN. Auctions an Admin may cancel (Active before endAt, and OnHold), ending soonest first, with the version the cancel command needs. Excludes auctions the Admin sells or bids in. Never includes Auto ceilings or bidder identities. */
+        get: operations["listOperationsAuctions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/auctions/{auctionId}/cancel": {
         parameters: {
             query?: never;
@@ -4248,6 +4265,29 @@ export interface components {
             /** Format: date-time */
             openedAt: string;
             buyerTotal: number;
+        };
+        OperationsAuctionItem: {
+            /** Format: uuid */
+            id: string;
+            version: number;
+            title: string;
+            /** @enum {string} */
+            state: "Active" | "OnHold";
+            startPrice: number;
+            /** @enum {integer} */
+            step: 10000 | 50000;
+            currentPrice: number | null;
+            bidderCount: number;
+            /** Format: date-time */
+            startAt: string;
+            /** Format: date-time */
+            endAt: string;
+            pointName: string;
+        };
+        OperationsAuctionList: {
+            items: components["schemas"]["OperationsAuctionItem"][];
+            /** Format: date-time */
+            serverTime: string;
         };
         PointOrderResolutionQueue: {
             items: components["schemas"]["PointOrderResolutionItem"][];
@@ -7946,6 +7986,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listOperationsAuctions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsAuctionList"];
                 };
             };
             400: components["responses"]["ListingError"];

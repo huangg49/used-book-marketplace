@@ -176,6 +176,11 @@ export class AuctionOperationsController {
       res,
     );
   }
+  @Get('auctions')
+  @Roles('ADMIN')
+  auctionQueue(@Req() req: AuthenticatedRequest) {
+    return this.bidding.listForAdmin(req.auth);
+  }
   @Post('auctions/:auctionId/cancel')
   @Roles('ADMIN')
   @HttpCode(200)
