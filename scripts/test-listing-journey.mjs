@@ -162,6 +162,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   await click("Về sách của tôi");
   await click("Hoàn thiện");
   await click("Tiếp theo");
+  await click("Tiếp theo");
   assert.equal(
     await p
       .getByLabel("Vài dòng gửi người đọc sau (Mô tả chung)", { exact: true })
