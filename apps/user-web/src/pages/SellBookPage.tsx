@@ -294,7 +294,9 @@ export function SellBookPage() {
     setSubmitError(undefined);
     try {
       let origin = selectedOrigin;
-      if (needsOrigin && !origin) {
+      // An existing submission already pins its origin and command keys. Resume
+      // it without repeating address creation with a refreshed book version.
+      if (needsOrigin && !origin && !submission.current) {
         const idempotencyKey =
           originAddressIntent.current ?? crypto.randomUUID();
         originAddressIntent.current = idempotencyKey;
