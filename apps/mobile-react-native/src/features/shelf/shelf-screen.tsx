@@ -156,16 +156,12 @@ export function ShelfScreen() {
           }}
         />
 
-        {/* 2. Quick Action 8 Shortcuts (2 Rows) */}
+        {/* 2. Quick Action 4 Shortcuts */}
         <HomeShortcuts
           onAuctionPress={() => router.navigate("/search")}
-          onDealsPress={() => apply({ ...applied, maxSalePrice: "49000" })}
+          onNewestPress={() => apply({ ...applied, sort: "newest" })}
           onExchangePress={() => apply({ ...applied, mode: "Exchange" })}
           onRarePress={() => apply({ ...applied, condition: "LikeNew" })}
-          onFreeshipPress={() => setVouchersOpen(true)}
-          onVouchersPress={() => setVouchersOpen(true)}
-          onNewestPress={() => apply({ ...applied, sort: "newest" })}
-          onInspectionPress={() => setInspectionOpen(true)}
         />
 
         {/* 3. Live Book Auctions Section */}
