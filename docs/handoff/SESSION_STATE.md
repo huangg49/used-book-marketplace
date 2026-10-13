@@ -1227,6 +1227,39 @@ Không coi các màn ngoài phạm vi là đã redesign hoặc đã có quyền 
 [CONTINUATION_PLAN](CONTINUATION_PLAN.md) là backlog có gate, không tự cấp quyền
 code tính năng mới/merge/deploy. Cập nhật mục của mình, không nối nhật ký dài lại.
 
+## DirectDelivery inspection completion — 13/10/2026 (local branch `codex/direct-delivery-completion`)
+
+- Checkpoint tách phạm vi: backend/contract `20d3215` (`feat(orders): complete direct
+  delivery lifecycle`); Member Web `2dc2b71` (`feat(member-web): add checkout and seller
+  origin address`).
+
+- Theo SRS: buyer tạo Order từ báo giá/địa chỉ sau thỏa thuận chat; callback simulator
+  hoặc buyer xác nhận nhận sách mở `Inspection` 72 giờ. Worker chỉ settlement khi hết
+  hạn, không có review; ledger, commitment/context và listing chuyển atomically sang
+  `Completed`/`Sold`. Không có bước admin duyệt.
+- Có migration mới `0020-direct-delivery-completion`, contract/generated types, endpoint
+  callback TEST_OPERATOR và buyer receipt, invariant/worker/ledger/reservation; User Web
+  có CTA từ chat và form địa chỉ → quote → order thật. API typecheck, Web build,
+  contract check/routes và diff check PASS.
+- Bổ sung nơi gửi sách ngay bước **Bán hoặc đổi** của `/sell`: seller chọn địa chỉ đã
+  lưu hoặc nhập địa chỉ TP.HCM mới; địa chỉ mới được lưu bằng idempotency key trước khi
+  tạo draft. Buyer chỉ thấy khu vực, không thấy địa chỉ/điện thoại chi tiết. API từ chối
+  submit bài `Sale`/`Both` chưa có fulfillment để không tạo bài không thể báo giá. Web
+  typecheck/build và 11 unit tests `listing-submission` PASS; API typecheck và contract
+  generate PASS. Bài đã publish thiếu nơi gửi vẫn là dữ liệu legacy: cần revision/repost
+  của seller, không tự ý sửa địa chỉ từ buyer.
+- Sửa integration Chat → checkout: chat hợp lệ giữ listing `Reserved` để chỉ buyer trong
+  hội thoại được tạo báo giá; khi buyer tạo Order, conversation được đóng atomically và
+  commitment Order thay thế reservation chat (listing vẫn `Reserved`). Không cần/bypass ví
+  để **tạo** Order: state ban đầu vẫn `AwaitingPayment`; ví/ledger chỉ được dùng ở lệnh pay.
+  Không biến giao dịch thành miễn phí vì trái SRS. Sửa thêm client để sau khi lưu địa chỉ mới
+  luôn refetch lấy **phiên bản địa chỉ** (không nhầm phiên bản AddressBook) trước báo giá/
+  fulfillment. API/Web typecheck PASS; Mongo E2E vẫn BLOCKED bởi Docker Desktop daemon.
+- Mongo QA E2E **BLOCKED**: Docker Desktop daemon không chạy (`dockerDesktopLinuxEngine`
+  không tồn tại), nên chưa có evidence migration/E2E/race; không dùng runtime DB chính.
+  READINESS không đổi; cần bật Docker QA rồi chạy targeted `orders.e2e-spec.ts` và review
+  tiền/quyền trước merge/release.
+
 ## Lịch sử
 
 [28–30/09](SESSION_HISTORY_2026_09_30.md),
