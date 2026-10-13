@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.38.0
+  version: 0.39.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -6457,6 +6457,45 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/IncidentFund"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/escalations:
+    get:
+      operationId: listPointEscalations
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN. Overdue point work derived at read time from stored timestamps, oldest due first. InspectionOverdue (POL-31), EvidenceDecisionOverdue (POL-09), ReclaimOverdue and, 14 days later, ReclaimEscalated (POL-34). Read-only; nothing is passed, failed or confiscated automatically.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointEscalationList"
         "400":
           $ref: "#/components/responses/ListingError"
         "401":
@@ -13538,6 +13577,8 @@ components:
         - evidenceSubmittedAt
         - reclaimRequiredAt
         - reports
+        - inspectionDueAt
+        - reclaimDueAt
       properties:
         id:
           type: string
@@ -13681,6 +13722,18 @@ components:
           description: Immutable inspection report revisions, oldest first. No inspector identity.
           items:
             $ref: "#/components/schemas/InspectionReport"
+        inspectionDueAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: POL-31, 24 hours after receipt while the book waits for inspection.
+        reclaimDueAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: POL-34, 72 hours after reclaim became required. Overdue never confiscates.
     AuctionIntakeList:
       type: object
       additionalProperties: false
@@ -14725,6 +14778,59 @@ components:
           type: string
           format: date-time
       description: Simulated demo fund (POL-42). Approved compensation is recorded here; paying a member wallet is a separate, gated step.
+    PointEscalation:
+      type: object
+      additionalProperties: false
+      required:
+        - intakeId
+        - title
+        - pointId
+        - pointName
+        - kind
+        - dueAt
+        - state
+      properties:
+        intakeId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        pointId:
+          type: string
+          format: uuid
+        pointName:
+          type: string
+        kind:
+          type: string
+          enum:
+            - InspectionOverdue
+            - EvidenceDecisionOverdue
+            - ReclaimOverdue
+            - ReclaimEscalated
+        dueAt:
+          type: string
+          format: date-time
+        state:
+          type: string
+          enum:
+            - Received
+            - NeedsEvidence
+            - ReclaimRequired
+    PointEscalationList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/PointEscalation"
+        serverTime:
+          type: string
+          format: date-time
     PointOrderResolutionQueue:
       type: object
       additionalProperties: false

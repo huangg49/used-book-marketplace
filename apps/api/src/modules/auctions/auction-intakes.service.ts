@@ -11,7 +11,11 @@ import type {
 import {
   AUCTION_DROPOFF_MS,
   AUCTION_DURATION_MS,
+  EVIDENCE_DECISION_MS,
   EVIDENCE_WINDOW_MS,
+  OWNER_RECLAIM_MS,
+  POINT_INSPECTION_MS,
+  RECLAIM_ESCALATION_MS,
 } from '../../database/mongo/migrations/auction-constants.js';
 import { MongoService } from '../../database/mongo/mongo.service.js';
 import type { Tx } from '../../database/mongo/transaction.js';
@@ -60,6 +64,7 @@ const REVISION_REQUIRED: readonly ReclaimReason[] = [
   'OrderReturned',
   'BookMisdescribed',
 ];
+const plus = (at: Date, ms: number) => new Date(at.getTime() + ms);
 const WITHDRAWN_REASON = 'Người bán rút phiên trước lượt trả giá đầu tiên.';
 const forbidden = (message: string) =>
   new DomainError(403, 'FORBIDDEN', message);
@@ -935,6 +940,14 @@ export class AuctionIntakesService {
       evidenceNote: i.evidenceNote,
       evidenceSubmittedAt: i.evidenceSubmittedAt?.toISOString() ?? null,
       reclaimRequiredAt: i.reclaimRequiredAt?.toISOString() ?? null,
+      inspectionDueAt:
+        i.state === 'Received' && i.receivedAt
+          ? plus(i.receivedAt, POINT_INSPECTION_MS).toISOString()
+          : null,
+      reclaimDueAt:
+        i.state === 'ReclaimRequired' && i.reclaimRequiredAt
+          ? plus(i.reclaimRequiredAt, OWNER_RECLAIM_MS).toISOString()
+          : null,
       reports: (
         await tx.c.intake_inspection_reports
           .find({ intakeId: i._id }, { sort: { revision: 1 }, limit: 20 })
@@ -967,6 +980,79 @@ export class AuctionIntakesService {
       return this.project(tx, i, false);
     });
   }
+  // N4-14: overdue point work, derived at read time from stored timestamps,
+  // so a repeated read can never double-act. It only informs the Admin.
+  listEscalations(auth: Actor): Promise<Wire['PointEscalationList']> {
+    return this.commands.read(auth, async (tx, actor) => {
+      requireActive(actor);
+      if (!actor.roles.some((r) => r.role === 'ADMIN'))
+        throw forbidden('Chỉ quản trị viên được xem việc quá hạn.');
+      const now = await this.clock.now(tx);
+      const before = (ms: number) => new Date(now.getTime() - ms);
+      const rows = await tx.c.auction_intakes
+        .find({
+          $or: [
+            {
+              state: 'Received',
+              receivedAt: { $lte: before(POINT_INSPECTION_MS) },
+            },
+            {
+              state: 'NeedsEvidence',
+              $or: [
+                { evidenceSubmittedAt: { $lte: before(EVIDENCE_DECISION_MS) } },
+                { evidenceSubmittedAt: null, evidenceDeadline: { $lte: now } },
+              ],
+            },
+            {
+              state: 'ReclaimRequired',
+              reclaimRequiredAt: { $lte: before(OWNER_RECLAIM_MS) },
+            },
+          ],
+        })
+        .toArray();
+      const points = new Map(
+        (
+          await tx.c.handover_points
+            .find({ _id: { $in: [...new Set(rows.map((r) => r.pointId))] } })
+            .toArray()
+        ).map((p) => [p._id, p.name]),
+      );
+      const items: Wire['PointEscalation'][] = [];
+      for (const i of rows) {
+        const due =
+          i.state === 'Received'
+            ? plus(i.receivedAt!, POINT_INSPECTION_MS)
+            : i.state === 'NeedsEvidence'
+              ? i.evidenceSubmittedAt
+                ? plus(i.evidenceSubmittedAt, EVIDENCE_DECISION_MS)
+                : i.evidenceDeadline!
+              : plus(i.reclaimRequiredAt!, OWNER_RECLAIM_MS);
+        const kind =
+          i.state === 'Received'
+            ? 'InspectionOverdue'
+            : i.state === 'NeedsEvidence'
+              ? 'EvidenceDecisionOverdue'
+              : now.getTime() >= due.getTime() + RECLAIM_ESCALATION_MS
+                ? 'ReclaimEscalated'
+                : 'ReclaimOverdue';
+        const item = await tx.c.workflow_items.findOne({
+          _id: `${i.contextId}:${i.listingId}`,
+        });
+        items.push({
+          intakeId: i._id,
+          title: String((item?.snapshot as { title?: string })?.title ?? ''),
+          pointId: i.pointId,
+          pointName: points.get(i.pointId) ?? '',
+          kind,
+          dueAt: due.toISOString(),
+          state: i.state as Wire['PointEscalation']['state'],
+        });
+      }
+      items.sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+      return { items: items.slice(0, 100), serverTime: now.toISOString() };
+    });
+  }
+
   listForStaff(auth: Actor): Promise<Wire['AuctionIntakeList']> {
     return this.commands.read(auth, async (tx, actor) => {
       requireActive(actor);

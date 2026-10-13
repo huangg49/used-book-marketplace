@@ -78,6 +78,8 @@ export const intake = z.object({
   evidenceNote: z.string().nullable(),
   evidenceSubmittedAt: time.nullable(),
   reclaimRequiredAt: time.nullable(),
+  inspectionDueAt: time.nullable(),
+  reclaimDueAt: time.nullable(),
   reports: z.array(
     z.object({
       revision: z.number().int().positive(),
@@ -386,4 +388,49 @@ export const incidentStateLabels: Record<PointIncident["state"], string> = {
   Open: "Chờ quyết định",
   Decided: "Đã quyết định",
   Underfunded: "Quỹ không đủ",
+};
+
+// N4-14: overdue point work for the Admin (POL-31, POL-09, POL-34).
+export const pointEscalationList = z.object({
+  items: z.array(
+    z.object({
+      intakeId: uuid,
+      title: z.string(),
+      pointId: uuid,
+      pointName: z.string(),
+      kind: z.enum([
+        "InspectionOverdue",
+        "EvidenceDecisionOverdue",
+        "ReclaimOverdue",
+        "ReclaimEscalated",
+      ]),
+      dueAt: time,
+      state: z.enum(["Received", "NeedsEvidence", "ReclaimRequired"]),
+    }),
+  ),
+  serverTime: time,
+}) satisfies z.ZodType<Schema["PointEscalationList"]>;
+export type PointEscalation = z.infer<
+  typeof pointEscalationList
+>["items"][number];
+export const escalationLabels: Record<
+  PointEscalation["kind"],
+  [string, string]
+> = {
+  InspectionOverdue: [
+    "Quá hạn kiểm tra (24 giờ)",
+    "Nhắc nhân viên điểm kiểm tra. Sách không tự đạt.",
+  ],
+  EvidenceDecisionOverdue: [
+    "Quá hạn quyết định bằng chứng",
+    "Một nhân viên khác tại điểm cần quyết định. Không tự đạt.",
+  ],
+  ReclaimOverdue: [
+    "Người bán quá hạn nhận lại (72 giờ)",
+    "Liên hệ người bán. Sách vẫn được giữ, không tự tịch thu hay thanh lý.",
+  ],
+  ReclaimEscalated: [
+    "Quá hạn nhận lại hơn 14 ngày",
+    "Cần quản trị viên xử lý trực tiếp với người bán. Không tự tịch thu hay thanh lý.",
+  ],
 };

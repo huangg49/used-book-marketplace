@@ -2038,6 +2038,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/escalations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN. Overdue point work derived at read time from stored timestamps, oldest due first. InspectionOverdue (POL-31), EvidenceDecisionOverdue (POL-09), ReclaimOverdue and, 14 days later, ReclaimEscalated (POL-34). Read-only; nothing is passed, failed or confiscated automatically. */
+        get: operations["listPointEscalations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/auctions": {
         parameters: {
             query?: never;
@@ -4322,6 +4339,16 @@ export interface components {
             reclaimRequiredAt: string | null;
             /** @description Immutable inspection report revisions, oldest first. No inspector identity. */
             reports: components["schemas"]["InspectionReport"][];
+            /**
+             * Format: date-time
+             * @description POL-31, 24 hours after receipt while the book waits for inspection.
+             */
+            inspectionDueAt: string | null;
+            /**
+             * Format: date-time
+             * @description POL-34, 72 hours after reclaim became required. Overdue never confiscates.
+             */
+            reclaimDueAt: string | null;
         };
         AuctionIntakeList: {
             items: components["schemas"]["AuctionIntake"][];
@@ -4659,6 +4686,25 @@ export interface components {
             approved: number;
             balance: number;
             entries: components["schemas"]["IncidentFundEntry"][];
+            /** Format: date-time */
+            serverTime: string;
+        };
+        PointEscalation: {
+            /** Format: uuid */
+            intakeId: string;
+            title: string;
+            /** Format: uuid */
+            pointId: string;
+            pointName: string;
+            /** @enum {string} */
+            kind: "InspectionOverdue" | "EvidenceDecisionOverdue" | "ReclaimOverdue" | "ReclaimEscalated";
+            /** Format: date-time */
+            dueAt: string;
+            /** @enum {string} */
+            state: "Received" | "NeedsEvidence" | "ReclaimRequired";
+        };
+        PointEscalationList: {
+            items: components["schemas"]["PointEscalation"][];
             /** Format: date-time */
             serverTime: string;
         };
@@ -8896,6 +8942,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IncidentFund"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listPointEscalations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointEscalationList"];
                 };
             };
             400: components["responses"]["ListingError"];

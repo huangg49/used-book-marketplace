@@ -40,6 +40,10 @@ function intakeMeta(item: Intake) {
   if (item.state === "AwaitingDropoff")
     return [`Hạn mang tới: ${dateText(item.dropoffDeadline)}`];
   const meta = [`Nhận lúc ${dateText(item.receivedAt)}`];
+  if (item.inspectionDueAt)
+    meta.push(`Hạn kiểm tra: ${dateText(item.inspectionDueAt)}`);
+  if (item.reclaimDueAt)
+    meta.push(`Hạn người bán nhận lại: ${dateText(item.reclaimDueAt)}`);
   if (item.state === "NeedsEvidence")
     meta.push(
       item.evidenceSubmittedAt

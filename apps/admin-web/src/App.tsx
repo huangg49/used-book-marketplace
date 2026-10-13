@@ -30,6 +30,7 @@ import {
   Warehouse,
   MapPin,
   TriangleAlert,
+  Clock,
 } from "lucide-react";
 import { currentUserSchema } from "@used-books/session-client";
 import logo from "../../../packages/brand/logos/lat-lai-horizontal-primary.svg";
@@ -55,6 +56,7 @@ import {
 } from "./features/operations/queues";
 import { PointsPage } from "./features/operations/points";
 import { IncidentsPage } from "./features/operations/incidents";
+import { EscalationsPage } from "./features/operations/escalations";
 import "./App.css";
 
 function Login() {
@@ -248,6 +250,10 @@ function Workspace() {
                       <Gavel aria-hidden="true" />
                       Phiên đấu giá
                     </NavLink>
+                    <NavLink to="/operations/escalations">
+                      <Clock aria-hidden="true" />
+                      Việc quá hạn
+                    </NavLink>
                     <NavLink to="/operations/points">
                       <MapPin aria-hidden="true" />
                       Điểm giao nhận
@@ -335,6 +341,7 @@ const router = createBrowserRouter([
       { path: "/operations/auctions", element: <AuctionQueue /> },
       { path: "/operations/points", element: <PointsPage /> },
       { path: "/operations/incidents", element: <IncidentsPage /> },
+      { path: "/operations/escalations", element: <EscalationsPage /> },
       {
         path: "*",
         element: (

@@ -979,6 +979,83 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     ).toBe(0);
   });
 
+  it('overdue inspection and reclaim are derived for the Admin and never act on their own (POL-31, POL-34)', async () => {
+    async function received(shelfCode: string) {
+      const seller = await actor();
+      const intakeId = (
+        await cmd(
+          'post',
+          '/auction-intakes',
+          intakeBody(await saleListing(seller)),
+          seller,
+        ).expect(200)
+      ).body.intakeId as string;
+      const receipt = await cmd(
+        'post',
+        `/operations/auction-intakes/${intakeId}/receive`,
+        { expectedVersion: 1, shelfCode },
+        staff,
+      ).expect(200);
+      return { intakeId, at: Date.parse(receipt.body.serverTime) };
+    }
+    const waiting = await received('D-01');
+    const failed = await received('D-02');
+    const reclaim = await cmd(
+      'post',
+      `/operations/auction-intakes/${failed.intakeId}/inspect`,
+      { expectedVersion: 2, outcome: 'Fail', note: 'Bìa rách khác mô tả' },
+      staff,
+    ).expect(200);
+    const reclaimAt = Date.parse(reclaim.body.serverTime);
+    const queue = (
+      await call('get', '/operations/auction-intakes', staff).expect(200)
+    ).body.items as { id: string }[];
+    expect(queue.find((i) => i.id === waiting.intakeId)).toMatchObject({
+      inspectionDueAt: new Date(waiting.at + 24 * HOUR).toISOString(),
+      reclaimDueAt: null,
+    });
+    expect(queue.find((i) => i.id === failed.intakeId)).toMatchObject({
+      inspectionDueAt: null,
+      reclaimDueAt: new Date(reclaimAt + 72 * HOUR).toISOString(),
+    });
+    const escalations = async () => {
+      const r = await call('get', '/operations/escalations', admin).expect(200);
+      validates('PointEscalationList', r.body);
+      return r.body.items as { intakeId: string; kind: string }[];
+    };
+    await call('get', '/operations/escalations', staff).expect(403);
+    expect(
+      (await escalations()).filter((e) =>
+        [waiting.intakeId, failed.intakeId].includes(e.intakeId),
+      ),
+    ).toEqual([]);
+    pinClock(new Date(reclaimAt + 72 * HOUR));
+    expect(await escalations()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          intakeId: waiting.intakeId,
+          kind: 'InspectionOverdue',
+          state: 'Received',
+        }),
+        expect.objectContaining({
+          intakeId: failed.intakeId,
+          kind: 'ReclaimOverdue',
+        }),
+      ]),
+    );
+    pinClock(new Date(reclaimAt + 72 * HOUR + 14 * 24 * HOUR));
+    expect(
+      (await escalations()).find((e) => e.intakeId === failed.intakeId),
+    ).toMatchObject({ kind: 'ReclaimEscalated' });
+    // Reading changed nothing: no automatic Pass, Fail or confiscation.
+    expect(
+      await db.c.auction_intakes.findOne({ _id: waiting.intakeId }),
+    ).toMatchObject({ state: 'Received', version: 2 });
+    expect(
+      await db.c.auction_intakes.findOne({ _id: failed.intakeId }),
+    ).toMatchObject({ state: 'ReclaimRequired', version: 3 });
+  });
+
   it('public book reads use only the inspected revision and never bypass ordinary shelf custody', async () => {
     const o = await openAuction();
     const response = await call('get', `/auctions/${o.auctionId}`).expect(200);

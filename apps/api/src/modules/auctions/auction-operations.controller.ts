@@ -194,6 +194,11 @@ export class AuctionOperationsController {
       res,
     );
   }
+  @Get('escalations')
+  @Roles('ADMIN')
+  escalations(@Req() req: AuthenticatedRequest) {
+    return this.intakes.listEscalations(req.auth);
+  }
   @Get('auctions')
   @Roles('ADMIN')
   auctionQueue(@Req() req: AuthenticatedRequest) {
