@@ -26,6 +26,11 @@ const input = (): ListingInput => ({
   hasMissingPages: true,
   missingEssentialContent: false,
   ownershipDeclared: true,
+  fulfillment: {
+    originAddressId: "10000000-0000-4000-8000-000000000004",
+    originAddressVersion: 1,
+    method: "DirectDelivery",
+  },
 });
 function respond(path: string) {
   if (path === "/catalog/requests") return { entityId: catalog, version: 1 };
@@ -98,6 +103,11 @@ describe("resumable listing submission", () => {
       missingEssentialContent: false,
       salePrice: 35000,
       exchangeValue: 45000,
+      fulfillment: {
+        originAddressId: "10000000-0000-4000-8000-000000000004",
+        originAddressVersion: 1,
+        method: "DirectDelivery",
+      },
     });
     expect(
       JSON.parse(

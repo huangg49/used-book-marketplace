@@ -236,6 +236,20 @@ function ChatRoom({
           </>
         )}
       </div>
+      {active && room.buyer.id === userId && book.data?.fulfillment && (
+        <aside className={styles.connection} aria-label="Bước tiếp theo">
+          <span>Đã chốt thông tin với người bán? Hãy nhập địa chỉ để tạo đơn. Nội dung chat không tự tạo giao dịch.</span>
+          <Link to={`/checkout/${room.listingId}`}>Tạo đơn hàng</Link>
+        </aside>
+      )}
+      {active && room.buyer.id === userId && book.data && !book.data.fulfillment && (
+        <p className={styles.connection} role="status">
+          Người bán chưa hoàn thiện nơi gửi cho bài đăng này nên chưa thể tạo đơn. Hãy nhắn người bán cập nhật thông tin giao hàng.
+        </p>
+      )}
+      {active && room.seller.id === userId && (
+        <p className={styles.connection}>Khi đã chốt thông tin, người mua sẽ tự nhập địa chỉ và tạo đơn hàng. Chat chỉ dùng để thỏa thuận.</p>
+      )}
       {connection !== "online" && (
         <div className={styles.connection} role="status">
           <span>

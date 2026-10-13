@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { z } from "zod";
 import {
   Navigate,
   useBeforeUnload,
@@ -19,6 +21,7 @@ import { Logo } from "../components/Header";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ListingSubmissionConfirmation } from "../components/BookJourneyStates";
 import { useSession } from "../hooks/useSession";
+import { session as apiSession } from "../lib/session";
 import { createListingSubmission } from "../services/listing-submission";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
@@ -37,6 +40,20 @@ import {
   facetsFor,
 } from "@used-books/api-contract/catalog-taxonomy";
 import styles from "./SellBookPage.module.css";
+
+const addressBookSchema = z.object({
+  version: z.number().int().nonnegative(),
+  items: z.array(z.object({
+    id: z.string().uuid(), version: z.number().int().positive(),
+    recipientName: z.string(), phone: z.string(), serviceAreaCode: z.string(),
+    localityCode: z.string(), detail: z.string(), isDefault: z.boolean(),
+  })),
+});
+const serviceAreasSchema = z.object({
+  code: z.literal("HCM-DEMO-v1"),
+  localities: z.array(z.object({ code: z.string(), label: z.string() })),
+});
+const addressReceiptSchema = z.object({ addressId: z.string().uuid(), version: z.number().int().positive() });
 
 export function SellBookPage() {
   const submission = useRef<ReturnType<typeof createListingSubmission>>(null);
@@ -59,6 +76,24 @@ export function SellBookPage() {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const location = useLocation();
   const session = useSession();
+  const addresses = useQuery({
+    queryKey: ["address-book"],
+    queryFn: () => apiSession.request("/me/addresses", addressBookSchema),
+    enabled: session.status === "authenticated",
+  });
+  const serviceAreas = useQuery({
+    queryKey: ["service-areas"],
+    queryFn: () => apiSession.request("/service-areas", serviceAreasSchema),
+    enabled: session.status === "authenticated",
+  });
+  const originAddressIntent = useRef<string | null>(null);
+  const [originAddressId, setOriginAddressId] = useState("");
+  const [originForm, setOriginForm] = useState({
+    recipientName: "",
+    phone: "",
+    localityCode: "",
+    detail: "",
+  });
 
   const [formData, setFormData] = useState({
     // Step 1
@@ -146,6 +181,11 @@ export function SellBookPage() {
       !!formData.description ||
       !!formData.salePrice ||
       !!formData.exchangeValue ||
+      !!originAddressId ||
+      !!originForm.recipientName ||
+      !!originForm.phone ||
+      !!originForm.localityCode ||
+      !!originForm.detail ||
       formData.condition !== "Good" ||
       formData.mode !== "Sale" ||
       formData.readable !== null ||
@@ -195,6 +235,18 @@ export function SellBookPage() {
 
   const handleSubmit = async () => {
     if (submitting) return;
+    const needsOrigin = formData.mode !== "Exchange";
+    const selectedOrigin = addresses.data?.items.find(
+      (item) => item.id === originAddressId,
+    );
+    const originIsValid =
+      !!selectedOrigin ||
+      (!!serviceAreas.data?.localities.some(
+        (item) => item.code === originForm.localityCode,
+      ) &&
+        originForm.recipientName.trim().length >= 2 &&
+        /^0\d{9}$/.test(originForm.phone.trim()) &&
+        originForm.detail.trim().length >= 5);
     const missing = [
       formData.readable === false && "nội dung đọc rõ để đủ điều kiện đăng",
       formData.missingEssentialContent === true &&
@@ -214,6 +266,7 @@ export function SellBookPage() {
       formData.missingEssentialContent === null &&
         "câu trả lời về nội dung trọng yếu",
       !ownershipDeclared && "xác nhận quyền sở hữu sách",
+      needsOrigin && !originIsValid && "nơi gửi sách tại TP.HCM",
     ].filter(Boolean);
     const sale = Number(formData.salePrice);
     const exchange = Number(formData.exchangeValue);
@@ -240,6 +293,39 @@ export function SellBookPage() {
     setValidationFailure(false);
     setSubmitError(undefined);
     try {
+      let origin = selectedOrigin;
+      if (needsOrigin && !origin) {
+        const idempotencyKey =
+          originAddressIntent.current ?? crypto.randomUUID();
+        originAddressIntent.current = idempotencyKey;
+        const saved = await apiSession.request(
+          "/me/addresses",
+          addressReceiptSchema,
+          {
+            method: "POST",
+            headers: { "Idempotency-Key": idempotencyKey },
+            body: JSON.stringify({
+              expectedBookVersion: addresses.data?.version ?? 0,
+              address: {
+                recipientName: originForm.recipientName.trim(),
+                phone: originForm.phone.trim(),
+                serviceAreaCode: "HCM-DEMO-v1",
+                localityCode: originForm.localityCode,
+                detail: originForm.detail.trim(),
+              },
+              makeDefault: (addresses.data?.items.length ?? 0) === 0,
+            }),
+          },
+        );
+        const refreshed = await addresses.refetch();
+        origin = refreshed.data?.items.find(
+          (address) => address.id === saved.addressId,
+        );
+        if (!origin)
+          throw new Error(
+            "Địa chỉ vừa lưu chưa thể xác nhận. Hãy tải lại trang trước khi gửi bài.",
+          );
+      }
       submission.current ??= createListingSubmission({
         title: formData.title,
         author: formData.author,
@@ -266,6 +352,13 @@ export function SellBookPage() {
         hasMissingPages: formData.hasMissingPages!,
         missingEssentialContent: formData.missingEssentialContent!,
         ownershipDeclared,
+        fulfillment: needsOrigin
+          ? {
+              originAddressId: origin!.id,
+              originAddressVersion: origin!.version,
+              method: "DirectDelivery",
+            }
+          : null,
       });
       setHasAttempt(true);
       await submission.current();
@@ -354,6 +447,13 @@ export function SellBookPage() {
     )
       message =
         "Giá bán và giá trị đổi từ 10.000đ đến 1.000.000đ, không có phần lẻ.";
+    if (
+      forStep === 4 &&
+      formData.mode !== "Exchange" &&
+      !hasValidOriginAddress()
+    )
+      message =
+        "Chọn hoặc nhập nơi gửi sách thuộc khu vực phục vụ TP.HCM trước khi tiếp tục.";
     return message;
   }
   function continueStep() {
@@ -368,6 +468,25 @@ export function SellBookPage() {
   function validPrice(raw: string) {
     const value = Number(raw);
     return Number.isInteger(value) && value >= 10_000 && value <= 1_000_000;
+  }
+  function hasValidOriginAddress() {
+    if (addresses.data?.items.some((item) => item.id === originAddressId))
+      return true;
+    return (
+      !!serviceAreas.data?.localities.some(
+        (item) => item.code === originForm.localityCode,
+      ) &&
+      originForm.recipientName.trim().length >= 2 &&
+      /^0\d{9}$/.test(originForm.phone.trim()) &&
+      originForm.detail.trim().length >= 5
+    );
+  }
+  function changeOriginForm(
+    field: keyof typeof originForm,
+    value: string,
+  ) {
+    originAddressIntent.current = null;
+    setOriginForm((previous) => ({ ...previous, [field]: value }));
   }
   function removePhoto(index: number) {
     URL.revokeObjectURL(formData.images[index]!);
@@ -402,6 +521,10 @@ export function SellBookPage() {
     exchangeValue:
       formData.mode !== "Sale" && !validPrice(formData.exchangeValue)
         ? "Nhập số nguyên từ 10.000 đến 1.000.000 VNĐ."
+        : undefined,
+    originAddress:
+      formData.mode !== "Exchange" && !hasValidOriginAddress()
+        ? "Chọn địa chỉ đã lưu hoặc nhập đủ nơi gửi sách thuộc TP.HCM."
         : undefined,
     readable:
       formData.readable === null
@@ -498,7 +621,7 @@ export function SellBookPage() {
               ...questions.map(([key]) => key),
             ]
           : step === 4
-            ? ["salePrice", "exchangeValue"]
+            ? ["salePrice", "exchangeValue", "originAddress"]
             : ["ownership"];
   const visibleSubmitError = validationFailure
     ? stepError(step) || (step === 5 ? fieldErrors.ownership : undefined)
@@ -658,6 +781,14 @@ export function SellBookPage() {
                 exchangeValue: "",
               });
               setImageFiles([]);
+              setOriginAddressId("");
+              setOriginForm({
+                recipientName: "",
+                phone: "",
+                localityCode: "",
+                detail: "",
+              });
+              originAddressIntent.current = null;
               setOwnershipDeclared(false);
               setHasAttempt(false);
               setSubmitError(undefined);
@@ -1170,6 +1301,134 @@ export function SellBookPage() {
                             Giá bán và giá trị đổi đều tính bằng VNĐ, từ 10.000đ
                             đến 1.000.000đ.
                           </p>
+                          {formData.mode !== "Exchange" && (
+                            <fieldset className={styles.mode}>
+                              <legend>Nơi gửi sách</legend>
+                              <p className={styles.help}>
+                                Người giao hàng sẽ lấy sách tại đây. Người mua
+                                chỉ thấy khu vực TP.HCM, không thấy địa chỉ chi
+                                tiết hoặc số điện thoại của bạn.
+                              </p>
+                              <div className={styles.field}>
+                                <label htmlFor="originAddress">
+                                  Địa chỉ đã lưu
+                                </label>
+                                <select
+                                  id="originAddress"
+                                  {...feedbackProps("originAddress")}
+                                  value={originAddressId}
+                                  disabled={addresses.isLoading}
+                                  onChange={(event) => {
+                                    originAddressIntent.current = null;
+                                    setOriginAddressId(event.target.value);
+                                  }}
+                                >
+                                  <option value="">
+                                    {addresses.isLoading
+                                      ? "Đang tải địa chỉ…"
+                                      : "Nhập địa chỉ mới bên dưới"}
+                                  </option>
+                                  {addresses.data?.items.map((address) => (
+                                    <option key={address.id} value={address.id}>
+                                      {address.recipientName} · {address.detail}
+                                    </option>
+                                  ))}
+                                </select>
+                                {addresses.isError && (
+                                  <p role="alert" className={styles.fieldError}>
+                                    Chưa tải được địa chỉ đã lưu. Bạn vẫn có thể
+                                    nhập địa chỉ mới.
+                                  </p>
+                                )}
+                                {fieldFeedback("originAddress")}
+                              </div>
+                              {!originAddressId && (
+                                <div className={styles.conditionFields}>
+                                  <div className={styles.field}>
+                                    <label htmlFor="originRecipientName">
+                                      Họ tên người gửi
+                                    </label>
+                                    <input
+                                      id="originRecipientName"
+                                      minLength={2}
+                                      value={originForm.recipientName}
+                                      onChange={(event) =>
+                                        changeOriginForm(
+                                          "recipientName",
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div className={styles.field}>
+                                    <label htmlFor="originPhone">
+                                      Số điện thoại người gửi
+                                    </label>
+                                    <input
+                                      id="originPhone"
+                                      inputMode="numeric"
+                                      pattern="0[0-9]{9}"
+                                      value={originForm.phone}
+                                      onChange={(event) =>
+                                        changeOriginForm(
+                                          "phone",
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div className={styles.field}>
+                                    <label htmlFor="originLocality">
+                                      Khu vực phục vụ
+                                    </label>
+                                    <select
+                                      id="originLocality"
+                                      value={originForm.localityCode}
+                                      disabled={serviceAreas.isLoading}
+                                      onChange={(event) =>
+                                        changeOriginForm(
+                                          "localityCode",
+                                          event.target.value,
+                                        )
+                                      }
+                                    >
+                                      <option value="">
+                                        {serviceAreas.isLoading
+                                          ? "Đang tải khu vực…"
+                                          : "Chọn khu vực"}
+                                      </option>
+                                      {serviceAreas.data?.localities.map(
+                                        (locality) => (
+                                          <option
+                                            key={locality.code}
+                                            value={locality.code}
+                                          >
+                                            {locality.label}
+                                          </option>
+                                        ),
+                                      )}
+                                    </select>
+                                  </div>
+                                  <div className={styles.field}>
+                                    <label htmlFor="originDetail">
+                                      Địa chỉ chi tiết
+                                    </label>
+                                    <textarea
+                                      id="originDetail"
+                                      minLength={5}
+                                      value={originForm.detail}
+                                      onChange={(event) =>
+                                        changeOriginForm(
+                                          "detail",
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </fieldset>
+                          )}
                           {(
                             [
                               [
@@ -1345,7 +1604,25 @@ export function SellBookPage() {
                                 </dd>
                               </div>
                             )}
+                            {formData.mode !== "Exchange" && (
+                              <div>
+                                <dt>Nơi gửi sách</dt>
+                                <dd>
+                                  {originAddressId
+                                    ? "Đã chọn một địa chỉ đã lưu"
+                                    : hasValidOriginAddress()
+                                      ? "Địa chỉ mới sẽ được lưu riêng tư"
+                                      : "Chưa chọn nơi gửi"}
+                                </dd>
+                              </div>
+                            )}
                           </dl>
+                          {formData.mode !== "Exchange" && (
+                            <p className={styles.help}>
+                              Địa chỉ chi tiết và số điện thoại chỉ dùng cho
+                              giao nhận; người mua chỉ thấy khu vực TP.HCM.
+                            </p>
+                          )}
                           <p className={styles.help}>
                             {imageFiles.length} ảnh bản sách. Bài đăng và thông
                             tin sách được gửi kiểm duyệt trước khi xuất hiện

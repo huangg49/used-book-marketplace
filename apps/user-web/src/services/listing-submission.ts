@@ -64,6 +64,11 @@ export type ListingInput = {
   hasMissingPages: boolean;
   missingEssentialContent: boolean;
   ownershipDeclared: boolean;
+  fulfillment: {
+    originAddressId: string;
+    originAddressVersion: number;
+    method: "DirectDelivery";
+  } | null;
 };
 
 async function upload(
@@ -223,6 +228,7 @@ export function createListingSubmission(value: ListingInput) {
             salePrice: input.salePrice,
             exchangeValue: input.exchangeValue,
             mediaIds,
+            fulfillment: input.fulfillment,
           },
         }),
       }),
