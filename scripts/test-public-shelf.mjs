@@ -449,15 +449,13 @@ try {
     p.locator('button:visible[aria-label^="Xem sách:"]');
   assert.equal(await visibleShowcaseBooks().count(), 4);
   await p
-    .locator('button:visible')
-    .filter({ hasText: "Đổi" })
-    .first()
+    .getByRole("button", { name: "Đổi", exact: true })
+    .last()
     .click({ force: true });
   assert.equal(await visibleShowcaseBooks().count(), 2);
   await p
-    .locator('button:visible')
-    .filter({ hasText: "Tất cả" })
-    .first()
+    .getByRole("button", { name: "Tất cả", exact: true })
+    .last()
     .click({ force: true });
   // List is the approved default; the opt-in comparison still renders a grid.
   const expectComposition = (grid) =>
