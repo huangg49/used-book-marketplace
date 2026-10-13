@@ -19,7 +19,7 @@ import {
   stitchTokens,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
-import { conditions, modes, publicPage } from "./contracts";
+import { conditions, publicPage } from "./contracts";
 import {
   filterError,
   initialFilters,
@@ -34,6 +34,7 @@ import { HomeHeader } from "./home-components/home-header";
 import { HomeBanner } from "./home-components/home-banner";
 import { HomeShortcuts } from "./home-components/home-shortcuts";
 import { HomeFlashDeals } from "./home-components/home-flash-deals";
+import { HomeCategoryTabs } from "./home-components/home-category-tabs";
 import { HomeVouchersModal } from "./home-components/home-vouchers-modal";
 import { HomeInspectionModal } from "./home-components/home-inspection-modal";
 import { HomeNotificationsModal } from "./home-components/home-notifications-modal";
@@ -45,6 +46,7 @@ export function ShelfScreen() {
   const { client } = useSession();
   const active = useForeground();
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [draft, setDraft] = useState(initialFilters);
   const [applied, setApplied] = useState(initialFilters);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -174,55 +176,55 @@ export function ShelfScreen() {
           }}
         />
 
-        {/* 4. Modes & Category Filter Chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: space.sm }}
-        >
-          {Object.entries({ "": "Tất cả", ...modes }).map(([key, title]) => (
-            <Chip
-              key={key}
-              title={title}
-              selected={applied.mode === key}
-              onPress={() => apply({ ...applied, q: search, mode: key })}
-            />
-          ))}
-        </ScrollView>
+        {/* 4. Curated Category Discovery Chips */}
+        <HomeCategoryTabs
+          selectedCategory={selectedCategory}
+          onSelectCategory={(cat) => {
+            setSelectedCategory(cat);
+            apply({ ...applied, q: cat });
+          }}
+        />
 
         {error && !filterOpen ? <Notice tone="error">{error}</Notice> : null}
 
         {/* 5. Section Header with Title and Filter Button */}
         <View style={styles.sectionHeaderRow}>
-          <View style={{ gap: space.xs, flex: 1 }}>
-            <AppText kind="bookHeading" accessibilityRole="header">
-              {applied.q ? `Kết quả cho “${applied.q}”` : "Sách đang có"}
-            </AppText>
-            <AppText kind="annotation" color={colors.muted}>
-              {sorts[applied.sort]}
-              {applied.condition
-                ? ` · ${conditions[applied.condition as keyof typeof conditions]}`
-                : ""}
-              {` · Trang ${cursors.length}`}
-            </AppText>
-            {(
-              [
-                ["minSalePrice", "maxSalePrice", "Giá bán"],
-                ["minExchangeValue", "maxExchangeValue", "Giá trị đổi"],
-              ] as const
-            ).map(([min, max, label]) =>
-              applied[min] || applied[max] ? (
-                <AppText key={min} kind="annotation" color={colors.muted}>
-                  {label}:{" "}
-                  {applied[min]
-                    ? `từ ${formatVnd(Number(applied[min]))}`
-                    : "không giới hạn dưới"}
-                  {applied[max]
-                    ? ` đến ${formatVnd(Number(applied[max]))}`
-                    : ", không giới hạn trên"}
-                </AppText>
-              ) : null,
-            )}
+          <View style={styles.sectionTitleGroup}>
+            <View style={styles.sectionTitleBar} />
+            <View style={{ gap: space.xs, flex: 1 }}>
+              <AppText kind="heading" style={styles.sectionTitle} accessibilityRole="header">
+                {applied.q
+                  ? `Kết quả cho “${applied.q}”`
+                  : selectedCategory
+                    ? `TUYỂN CHỌN: ${selectedCategory.toUpperCase()}`
+                    : "GỢI Ý HÔM NAY · SÁCH ĐANG CÓ"}
+              </AppText>
+              <AppText kind="annotation" color={colors.muted}>
+                {sorts[applied.sort]}
+                {applied.condition
+                  ? ` · ${conditions[applied.condition as keyof typeof conditions]}`
+                  : ""}
+                {` · Trang ${cursors.length}`}
+              </AppText>
+              {(
+                [
+                  ["minSalePrice", "maxSalePrice", "Giá bán"],
+                  ["minExchangeValue", "maxExchangeValue", "Giá trị đổi"],
+                ] as const
+              ).map(([min, max, label]) =>
+                applied[min] || applied[max] ? (
+                  <AppText key={min} kind="annotation" color={colors.muted}>
+                    {label}:{" "}
+                    {applied[min]
+                      ? `từ ${formatVnd(Number(applied[min]))}`
+                      : "không giới hạn dưới"}
+                    {applied[max]
+                      ? ` đến ${formatVnd(Number(applied[max]))}`
+                      : ", không giới hạn trên"}
+                  </AppText>
+                ) : null,
+              )}
+            </View>
           </View>
 
           <Pressable
@@ -300,6 +302,7 @@ export function ShelfScreen() {
         {/* 6. Curated Product Grid */}
         <ShelfResults
           items={result.data?.items ?? []}
+          composition="grid"
           onOpen={(item) =>
             router.push({ pathname: "./book", params: { id: item.id } })
           }
@@ -413,6 +416,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+  sectionTitleGroup: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    flex: 1,
+  },
+  sectionTitleBar: {
+    width: 4,
+    height: 18,
+    borderRadius: 2,
+    backgroundColor: stitchTokens.wine,
+    marginTop: 2,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: stitchTokens.wine,
+    letterSpacing: 0.3,
   },
   filterBtn: {
     flexDirection: "row",

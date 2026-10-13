@@ -4,11 +4,9 @@ import { AppTextInput, Icon, stitchTokens } from "../../../core/ui";
 import { AppText } from "../../../core/ui/text";
 
 export interface HomeHeaderProps {
-  readonly onSearchPress?: () => void;
   readonly search?: string;
   readonly onSearchChange?: (value: string) => void;
   readonly onSubmitSearch?: () => void;
-  readonly onClearSearch?: () => void;
   readonly onCameraPress: () => void;
   readonly onOpenNotifications: () => void;
   readonly onOpenCart: () => void;
@@ -134,10 +132,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: stitchTokens.softRose,
   },
-  searchBarPressed: {
-    opacity: 0.9,
-    borderColor: stitchTokens.gold,
-  },
   searchIconWrapper: {
     marginRight: 6,
   },
@@ -148,15 +142,6 @@ const styles = StyleSheet.create({
     color: stitchTokens.charcoalBrown,
     paddingVertical: 0,
     paddingHorizontal: 4,
-  },
-  searchPlaceholder: {
-    flex: 1,
-    fontSize: 13,
-    color: stitchTokens.ashBrown,
-    fontFamily: "BeRegular",
-  },
-  searchPlaceholderFilled: {
-    color: stitchTokens.charcoalBrown,
   },
   iconButton: {
     padding: 4,
