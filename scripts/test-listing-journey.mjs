@@ -62,6 +62,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   await p
     .getByText("Chưa tải được ảnh xem trước.", { exact: true })
     .waitFor({ state: "hidden" });
+  await click("Tiếp theo");
   await p.getByRole("button", { name: /^Còn tốt,/ }).click();
   for (const [field, value] of [
     [
