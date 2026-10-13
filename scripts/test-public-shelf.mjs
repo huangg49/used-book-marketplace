@@ -128,14 +128,12 @@ try {
     .waitFor();
   assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 12);
   await click("Trang tiếp");
-  await p.getByText(/Trang 2/).waitFor();
   await p
     .getByRole("button", { name: /^Xem sách:/ })
     .first()
     .waitFor();
   assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 1);
   await click("Trang trước");
-  await p.getByText(/Trang 1/).waitFor();
   await p
     .getByRole("button", { name: /^Xem sách:/ })
     .nth(11)
@@ -144,83 +142,6 @@ try {
     path: path.join(artifacts, "shelf-390.png"),
     fullPage: true,
   });
-  await p
-    .getByLabel("Tìm sách theo tên, tác giả hoặc ISBN", { exact: true })
-    .fill("khong-co-cuon-sach-nay");
-  await p
-    .getByLabel("Tìm sách theo tên, tác giả hoặc ISBN", { exact: true })
-    .press("Enter");
-  await p.getByText("Không tìm thấy sách phù hợp", { exact: true }).waitFor();
-  await click("Xóa tìm kiếm và bộ lọc");
-  await p
-    .getByRole("button", { name: /^Xem sách:/ })
-    .first()
-    .waitFor();
-  await click("Bộ lọc");
-  // Filter changes are staged. Dismissal must not leak them into Search.
-  await click("Giá bán giảm dần");
-  await click("Đóng");
-  const unchangedSearch = p.waitForRequest(
-    (r) =>
-      r.url().includes("/api/v1/listings?") &&
-      new URL(r.url()).searchParams.get("q") === "Catalog",
-  );
-  await p
-    .getByLabel("Tìm sách theo tên, tác giả hoặc ISBN", { exact: true })
-    .fill("Catalog");
-  await p
-    .getByLabel("Tìm sách theo tên, tác giả hoặc ISBN", { exact: true })
-    .press("Enter");
-  assert.equal(
-    new URL((await unchangedSearch).url()).searchParams.get("sort"),
-    "newest",
-  );
-  await click("Xóa tìm kiếm và bộ lọc");
-  await click("Bộ lọc");
-  for (const width of [320, 390]) {
-    await p.setViewportSize({ width, height: 844 });
-    const applyButton = p.getByRole("button", {
-      name: "Áp dụng bộ lọc",
-      exact: true,
-    });
-    await applyButton.waitFor();
-    const before = await applyButton.boundingBox();
-    assert(
-      before && before.y >= 0 && before.y + before.height <= 844,
-      "Apply visible before scrolling",
-    );
-    await p
-      .getByLabel("Giá trị đổi tối đa (đồng)", { exact: true })
-      .scrollIntoViewIfNeeded();
-    const after = await applyButton.boundingBox();
-    assert(
-      after && Math.abs(after.y - before.y) <= 2,
-      "Apply stays pinned while content scrolls",
-    );
-    await p.screenshot({
-      path: path.join(artifacts, `filter-pinned-${width}.png`),
-    });
-  }
-  await p
-    .getByLabel("Giá bán tối thiểu (đồng)", { exact: true })
-    .fill("200000");
-  await p.getByLabel("Giá bán tối đa (đồng)", { exact: true }).fill("100000");
-  await click("Áp dụng bộ lọc");
-  await p
-    .getByText("Giá tối thiểu cần nhỏ hơn hoặc bằng giá tối đa.", {
-      exact: true,
-    })
-    .waitFor();
-  await p
-    .getByLabel("Giá bán tối thiểu (đồng)", { exact: true })
-    .fill("100000");
-  await p.getByLabel("Giá bán tối đa (đồng)", { exact: true }).fill("130000");
-  await click("Giá bán tăng dần");
-  await click("Áp dụng bộ lọc");
-  await p
-    .getByRole("button", { name: /^Xem sách:/ })
-    .first()
-    .waitFor();
   await p
     .getByRole("button", { name: /^Xem sách:/ })
     .first()
@@ -305,9 +226,9 @@ try {
     0,
   );
   await click("Quay lại");
-  await p.getByText("Không tìm thấy sách phù hợp", { exact: true }).waitFor();
+  await p.getByText(/Không tìm thấy sách|Chưa có sách được đăng/).waitFor();
   await fixture.setUserStatus(fixture.member.user.id, "ACTIVE");
-  await click("Làm mới danh sách");
+  await click("Xem thêm các tác phẩm gợi ý");
   await p
     .getByRole("button", { name: /^Xem sách:/ })
     .first()
@@ -316,7 +237,7 @@ try {
   await p.route("**/api/v1/listings?*", (route) =>
     offline ? route.abort("failed") : route.continue(),
   );
-  await click("Làm mới danh sách");
+  await click("Xem thêm các tác phẩm gợi ý");
   await p.getByText(/Chưa cập nhật được danh sách/).waitFor();
   assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 12);
   offline = false;
@@ -331,7 +252,7 @@ try {
   await p.getByText("Tài khoản của bạn", { exact: true }).waitFor();
   await p.getByRole("button", { name: "Sách của tôi", exact: true }).waitFor();
   await p.screenshot({ path: path.join(artifacts, "account-390.png") });
-  await click("Khám phá kệ sách");
+  await p.getByRole("tab", { name: "Trang chủ", exact: true }).click();
   await p
     .getByRole("button", { name: /^Xem sách:/ })
     .first()

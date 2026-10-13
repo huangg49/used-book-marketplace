@@ -13,6 +13,7 @@ import { useForeground } from "../../core/hooks/use-foreground";
 import { internalMemberViewsEnabled } from "../../core/config/internal-member-views";
 import {
   AppText,
+  BackAction,
   Button,
   Icon,
   Notice,
@@ -435,7 +436,7 @@ export function AccountScreen() {
                     </Pressable>
                     <Pressable
                       accessibilityRole="button"
-                      onPress={() => {}}
+                      onPress={() => { }}
                       style={({ pressed }) => [
                         styles.btnRespondSecondary,
                         pressed && { opacity: 0.8 },
