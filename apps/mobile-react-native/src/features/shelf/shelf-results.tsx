@@ -4,10 +4,10 @@ import {
   AppText,
   TextScale,
   colors,
-  colorRoles,
   formatVnd,
   layout,
   space,
+  stitchTokens,
 } from "../../core/ui";
 import { conditions, modes, type Listing } from "./contracts";
 
@@ -77,66 +77,138 @@ function ShelfResult({
     .filter(Boolean)
     .join(". ");
   return (
-    <View
-      style={{
-        width: grid ? "47%" : "100%",
-        flexDirection: grid || stacked ? "column" : "row",
-        alignItems: "flex-start",
-        gap: space.lg,
-        paddingBottom: space.lg,
-        borderBottomWidth: 1,
-        borderColor: colors.rule,
-      }}
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onOpen}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={({ pressed }) => [
+        {
+          width: grid ? "48.5%" : "100%",
+          backgroundColor: stitchTokens.white,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: stitchTokens.creamParchment,
+          overflow: "hidden",
+          elevation: 2,
+          shadowColor: stitchTokens.black,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.06,
+          shadowRadius: 3,
+          marginBottom: 10,
+          opacity: pressed ? 0.9 : 1,
+          transform: pressed ? [{ scale: 0.985 }] : undefined,
+        },
+        focused && layout.focus,
+      ]}
     >
       <View
-        style={{ width: grid ? "100%" : stacked ? 112 : "32%", minWidth: 0 }}
+        style={{
+          width: "100%",
+          aspectRatio: grid ? 3 / 4 : 4 / 3,
+          backgroundColor: stitchTokens.offWhiteWarm,
+          position: "relative",
+          overflow: "hidden",
+        }}
       >
         {photo}
+
+        {/* Condition Badge in top-left */}
+        <View
+          style={{
+            position: "absolute",
+            top: 6,
+            left: 6,
+            backgroundColor:
+              item.condition === "LikeNew"
+                ? stitchTokens.likeNewGreen
+                : item.condition === "Good"
+                  ? stitchTokens.goldBronze
+                  : stitchTokens.darkTaupe,
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            borderRadius: 4,
+            elevation: 2,
+          }}
+        >
+          <AppText
+            kind="small"
+            style={{
+              color: stitchTokens.white,
+              fontSize: 9,
+              fontWeight: "700",
+              lineHeight: 11,
+            }}
+          >
+            {conditions[item.condition]}
+          </AppText>
+        </View>
       </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        onPress={onOpen}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={({ pressed }) => [
-          {
-            flex: grid || stacked ? undefined : 1,
-            width: grid || stacked ? "100%" : undefined,
-            minWidth: 0,
-            gap: space.sm,
-            opacity: pressed ? 0.7 : 1,
-          },
-          focused && layout.focus,
-        ]}
+
+      <View
+        style={{
+          padding: 10,
+          gap: space.xs,
+          justifyContent: "space-between",
+          flex: 1,
+        }}
       >
-        <View style={{ gap: space.xs }}>
-          <AppText kind="shelfTitle" numberOfLines={3} ellipsizeMode="tail">
+        <View style={{ gap: 2 }}>
+          <AppText
+            kind="shelfTitle"
+            numberOfLines={2}
+            ellipsizeMode="tail"
+            style={{
+              fontSize: 13,
+              fontWeight: "700",
+              color: stitchTokens.darkWood,
+              lineHeight: 17,
+            }}
+          >
             {item.book.title}
           </AppText>
-          <AppText kind="annotation" color={colors.muted} numberOfLines={2}>
+          <AppText
+            kind="annotation"
+            color={colors.muted}
+            numberOfLines={1}
+            style={{ fontSize: 11 }}
+          >
             {item.book.authors.join(" · ")}
           </AppText>
         </View>
-        <AppText kind="annotation" color={colorRoles.bookStamp}>
-          {conditions[item.condition]}
-        </AppText>
-        <View style={{ gap: space.xs }}>
+
+        <View style={{ marginTop: 4, gap: 2 }}>
           {item.salePrice != null && (
-            <AppText kind="shelfPrice" color={colors.forest}>
+            <AppText
+              kind="shelfPrice"
+              style={{
+                fontSize: 14,
+                fontWeight: "700",
+                color: stitchTokens.wine,
+              }}
+            >
               {formatVnd(item.salePrice)}
             </AppText>
           )}
           {item.exchangeValue != null && (
-            <AppText kind="annotation" color={colors.ink}>
+            <AppText
+              kind="annotation"
+              style={{ fontSize: 11, color: stitchTokens.warmUmber }}
+            >
               Giá trị đổi {formatVnd(item.exchangeValue)}
             </AppText>
           )}
+          <AppText
+            kind="small"
+            color={colors.muted}
+            numberOfLines={1}
+            style={{ fontSize: 10, marginTop: 2 }}
+          >
+            {modes[item.mode]} · {item.seller.displayName}
+          </AppText>
         </View>
-        <AppText kind="small" color={colors.muted} numberOfLines={1}>
-          {modes[item.mode]} · {item.seller.displayName}
-        </AppText>
-      </Pressable>
-    </View>
+      </View>
+    </Pressable>
   );
 }
