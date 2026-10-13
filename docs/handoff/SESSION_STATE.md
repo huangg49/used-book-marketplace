@@ -20,8 +20,12 @@ và evidence trên `*_test`. Chi tiết quyết định: ADR 0030 amendment 2026
   typecheck/lint/119 unit; RN typecheck/lint/142 unit PASS. Browser admin-web trên API
   thật + DB `ops_browser_*_test` (fixture tạm): bảng kiểm, NeedsEvidence, quyết định
   bằng chứng, báo/quyết định sự cố và quỹ, việc quá hạn, tạo/phân công/mở điểm, từ chối
-  đóng điểm còn sách, 375 px không tràn. Full API E2E/Mongo suite, RN/user-web browser
-  cho bằng chứng, native, human review NOT RUN.
+  đóng điểm còn sách, 375 px không tràn.
+- Nhánh tích hợp `feature/n4-auction-operations` (main `7a52d08` + mọi nhánh N4): full
+  API E2E 626/626, `schema.mongo-spec` PASS sau khi thêm 3 collection Mongo-native vào
+  phép đếm; admin-web `test:browser`, user-web `test:browser`/`test:exchange:browser`,
+  RN export web PASS. Hai lệnh tạo (điểm, sự cố) trả 200 như contract test yêu cầu.
+  RN/user-web browser cho bằng chứng, native, human review NOT RUN.
 - Giới hạn: chưa thông báo thành viên khi đóng khẩn cấp; bằng chứng chỉ là văn bản;
   bồi thường chỉ ghi duyệt, chưa chi ví; giờ mở cửa vẫn cố định.
 

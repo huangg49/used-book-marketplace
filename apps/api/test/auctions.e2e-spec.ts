@@ -435,7 +435,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     await cmd('post', '/operations/points', create, staff).expect(403);
     const key = randomUUID();
     const created = await cmd('post', '/operations/points', create, admin, key);
-    expect(created.status).toBe(201);
+    expect(created.status).toBe(200);
     validates('PointCommandReceipt', created.body);
     expect(created.body).toMatchObject({ state: 'Paused', version: 1 });
     const pointId = created.body.pointId as string;
@@ -778,7 +778,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         capacity: 5,
       },
       admin,
-    ).expect(201);
+    ).expect(200);
     const pointId = created.body.pointId as string;
     await cmd(
       'post',
@@ -830,7 +830,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     await open(await actor()).expect(403);
     await open(staff, { kind: 'EmergencyClose' }).expect(403);
     await open(seller).expect(403);
-    const opened = await open(staff).expect(201);
+    const opened = await open(staff).expect(200);
     validates('PointCommandReceipt', opened.body);
     expect(opened.body).toMatchObject({
       entityType: 'PointIncident',
@@ -908,7 +908,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       kind: 'EmergencyClose',
       intakeId: null,
       description: 'Mất điện kéo dài, tạm dừng nhận sách mới tại điểm',
-    }).expect(201);
+    }).expect(200);
     expect(emergency.body.state).toBe('Open');
     const paused = (await db.c.handover_points.findOne({ _id: pointId }))!;
     expect(paused.status).toBe('Paused');
@@ -955,7 +955,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     const lost = await open(staff, {
       kind: 'Lost',
       description: 'Không tìm thấy sách trên kệ khi kiểm kê cuối ngày',
-    }).expect(201);
+    }).expect(200);
     const short = await cmd(
       'post',
       `/operations/incidents/${lost.body.entityId}/decide`,

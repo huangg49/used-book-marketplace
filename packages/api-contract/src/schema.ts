@@ -8645,7 +8645,7 @@ export interface operations {
         };
         responses: {
             /** @description Committed receipt (including replay). */
-            201: {
+            200: {
                 headers: {
                     "Cache-Control"?: "no-store";
                     "Idempotency-Replayed"?: "true" | "false";
@@ -8864,7 +8864,7 @@ export interface operations {
         };
         responses: {
             /** @description Committed receipt (including replay). */
-            201: {
+            200: {
                 headers: {
                     "Cache-Control"?: "no-store";
                     "Idempotency-Replayed"?: "true" | "false";

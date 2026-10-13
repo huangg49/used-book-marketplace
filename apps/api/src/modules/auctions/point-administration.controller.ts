@@ -33,6 +33,7 @@ export class PointAdministrationController {
   }
   @Post('operations/points')
   @Roles('ADMIN')
+  @HttpCode(200)
   create(
     @Body() body: unknown,
     @Req() req: AuthenticatedRequest,
@@ -110,6 +111,7 @@ export class PointAdministrationController {
   }
   @Post('operations/incidents')
   @Roles('STAFF', 'ADMIN')
+  @HttpCode(200)
   openIncident(
     @Body() body: unknown,
     @Req() req: AuthenticatedRequest,
