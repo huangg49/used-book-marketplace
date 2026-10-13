@@ -12,8 +12,10 @@ import {
   reclaimLabels,
   resolutionLabels,
   resolutionQueue,
+  type CollectionItem,
   type Intake,
 } from "./contracts";
+import { CollectionHandover, CollectionReturn } from "./collection-actions";
 import {
   IntakeInspect,
   IntakeOpen,
@@ -112,6 +114,20 @@ function IntakeQueueContent() {
   );
 }
 
+// N4-03: handover with the recipient's code, or a return check.
+function collectionAction(item: CollectionItem): Row["action"] {
+  if (item.state === "ReadyForCollection")
+    return {
+      label: "Giao sách",
+      render: (context) => <CollectionHandover item={item} {...context} />,
+    };
+  if (item.state === "ReturnPending")
+    return {
+      label: "Nhận lại sách",
+      render: (context) => <CollectionReturn item={item} {...context} />,
+    };
+  return undefined;
+}
 export function CollectionQueue() {
   const user = useOutletContext<CurrentUser>();
   if (!canOperatePoint(user)) return <Forbidden />;
@@ -144,6 +160,7 @@ function CollectionQueueContent() {
         ],
         title: item.title,
         detail: `Người nhận: ${item.recipientName}`,
+        action: collectionAction(item),
       }))}
       empty={{ title: "Chưa có đơn cần giao hoặc nhận lại.", body: assignmentNote }}
     />
