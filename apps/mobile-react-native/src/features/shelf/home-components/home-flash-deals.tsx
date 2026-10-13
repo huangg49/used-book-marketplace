@@ -9,7 +9,7 @@ import {
 
 export interface HomeLiveAuctionsProps {
   readonly items?: readonly LiveAuctionItem[];
-  readonly onOpenAuction: (listingId: string) => void;
+  readonly onOpenAuction: (auctionId: string) => void;
   readonly onSeeAllPress: () => void;
 }
 
@@ -99,14 +99,15 @@ export function HomeLiveAuctions({
         contentContainerStyle={styles.scrollList}
       >
         {items.map((item) => {
-          const { listingId } = item;
+          // Placeholder cards have no real auction behind them.
+          const real = !!item.listingId;
           return (
             <Pressable
               key={item.id}
               accessibilityRole="button"
               accessibilityLabel={`${item.title}. Giá dẫn đầu ${formatVnd(item.currentBid)}`}
-              disabled={!listingId}
-              onPress={listingId ? () => onOpenAuction(listingId) : undefined}
+              disabled={!real}
+              onPress={real ? () => onOpenAuction(item.id) : undefined}
               style={({ pressed }) => [
                 styles.dealCard,
                 pressed && styles.cardPressed,

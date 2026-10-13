@@ -110,8 +110,8 @@ export function ShelfScreen() {
     setFilterOpen(true);
   };
 
-  const handleOpenBook = (id: string) => {
-    router.push({ pathname: "./book", params: { id } });
+  const handleOpenAuction = (id: string) => {
+    router.push({ pathname: "./auction", params: { id } });
   };
 
   return (
@@ -135,9 +135,9 @@ export function ShelfScreen() {
         {/* Live Book Auctions Section */}
         <HomeFlashDeals
           items={liveAuctions}
-          onOpenAuction={handleOpenBook}
+          onOpenAuction={handleOpenAuction}
           onSeeAllPress={() => {
-            router.navigate("/search");
+            router.navigate("/auctions");
           }}
         />
 
