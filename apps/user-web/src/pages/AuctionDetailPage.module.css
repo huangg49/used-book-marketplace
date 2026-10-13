@@ -44,6 +44,10 @@
 .currency { color: var(--shop-muted); padding-left: 8px; }
 .fieldHint,.fieldError { margin: 0; font-size: .8125rem; line-height: 1.7; color: var(--shop-muted); }
 .fieldError { color: var(--shop-error); }
+.textarea { width: 100%; min-height: 96px; padding: 10px 12px; border: 1px solid var(--shop-control); border-radius: 6px; background: var(--shop-paper); color: var(--shop-ink); font: inherit; font-size: .9375rem; line-height: 1.7; resize: vertical; }
+.textarea:focus-visible { border-color: var(--shop-wine); outline: 0; box-shadow: inset 0 -2px var(--shop-wine); }
+.textarea[aria-invalid=true] { border-color: var(--shop-error); }
+.notice .collectionCode { margin: 0; font-size: 2rem; line-height: 1.3; font-weight: 700; letter-spacing: .28em; font-variant-numeric: tabular-nums; color: var(--shop-ink); }
 .continue,.primaryBlock { display: inline-flex; width: 100%; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 12px 16px; border: 0; border-radius: 6px; background: var(--shop-wine); color: var(--shop-cream); font-size: .9375rem; font-weight: 700; text-decoration: none; cursor: pointer; }
 .continue:hover:not(:disabled),.primaryBlock:hover { background: var(--shop-wine-hover); }
 .page button:disabled { opacity: .6; cursor: not-allowed; }
