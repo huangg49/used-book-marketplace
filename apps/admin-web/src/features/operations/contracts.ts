@@ -129,37 +129,24 @@ export const resolutionQueue = z.object({
   serverTime: time,
 }) satisfies z.ZodType<Schema["PointOrderResolutionQueue"]>;
 
-// `book` is optional in the contract and not needed by the operations list.
-export const auctionSummary = z.object({
+export const operationsAuction = z.object({
   id: uuid,
-  listingId: uuid,
+  version,
   title: z.string(),
-  state: z.enum([
-    "Active",
-    "BuyNowPending",
-    "AwaitingWinnerPayment",
-    "Sold",
-    "Unsold",
-    "OnHold",
-    "Cancelled",
-    "PaymentExpired",
-  ]),
+  state: z.enum(["Active", "OnHold"]),
   startPrice: price,
   step,
-  buyNowPrice: price.nullable(),
   currentPrice: price.nullable(),
-  minimumBid: price.nullable(),
   bidderCount: z.number().int().nonnegative(),
   startAt: time,
   endAt: time,
   pointName: z.string(),
-  demoOnly: z.literal(true),
-}) satisfies z.ZodType<Schema["PublicAuctionSummary"]>;
-export type AuctionSummary = z.infer<typeof auctionSummary>;
-export const auctionList = z.object({
-  items: z.array(auctionSummary),
+}) satisfies z.ZodType<Schema["OperationsAuctionItem"]>;
+export type OperationsAuction = z.infer<typeof operationsAuction>;
+export const operationsAuctionList = z.object({
+  items: z.array(operationsAuction),
   serverTime: time,
-}) satisfies z.ZodType<Schema["PublicAuctionList"]>;
+}) satisfies z.ZodType<Schema["OperationsAuctionList"]>;
 
 export const commandReceipt = z.object({
   id: uuid,

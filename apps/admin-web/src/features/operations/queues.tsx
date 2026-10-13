@@ -3,12 +3,13 @@ import { useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
 import { dateText, money } from "../../core/format";
 import { canOperatePoint, canResolve, session } from "../../core/session";
+import { AuctionCancel } from "./auction-actions";
 import {
-  auctionList,
   collectionLabels,
   collectionQueue,
   intakeLabels,
   intakeList,
+  operationsAuctionList,
   reclaimLabels,
   resolutionLabels,
   resolutionQueue,
@@ -222,14 +223,15 @@ function AuctionQueueContent() {
   const panel = useQueuePanel();
   const result = useQuery({
     queryKey: ["operations", "auctions"],
-    queryFn: () => session.publicRequest("/auctions", auctionList),
+    queryFn: () =>
+      session.request("/operations/auctions", operationsAuctionList),
     refetchInterval: refetchWhileClosed(panel),
   });
   return (
     <OperationsQueue
       number="04"
-      title="Phiên đang diễn ra."
-      intro="Theo dõi các phiên đấu giá đang mở. Chỉ hủy phiên khi có sự cố hoặc gian lận, kèm lý do; hệ thống không tự chọn người thắng."
+      title="Phiên đang mở hoặc tạm giữ."
+      intro="Theo dõi các phiên còn có thể hủy. Chỉ hủy khi có sự cố hoặc gian lận, kèm lý do; hệ thống không tự chọn người thắng."
       order="Xếp theo giờ kết thúc, gần nhất trước."
       unit="phiên"
       result={result}
@@ -237,14 +239,21 @@ function AuctionQueueContent() {
       serverTime={result.data?.serverTime}
       rows={(result.data?.items ?? []).map((item) => ({
         id: item.id,
-        status: `Kết thúc ${dateText(item.endAt)}`,
+        status:
+          item.state === "OnHold"
+            ? "Tạm giữ, chờ quyết định"
+            : `Kết thúc ${dateText(item.endAt)}`,
         meta: [item.pointName, `${item.bidderCount} người trả giá`],
         title: item.title,
         detail: `Giá hiện tại ${money(item.currentPrice ?? item.startPrice)} · bước ${money(item.step)}`,
+        action: {
+          label: "Hủy phiên",
+          render: (context) => <AuctionCancel item={item} {...context} />,
+        },
       }))}
       empty={{
-        title: "Không có phiên nào đang diễn ra.",
-        body: "Phiên mới xuất hiện sau khi nhân viên điểm mở phiên cho sách đạt kiểm tra.",
+        title: "Không có phiên nào cần theo dõi.",
+        body: "Phiên bạn bán hoặc đã trả giá không hiện ở đây, để việc hủy luôn độc lập.",
       }}
     />
   );
