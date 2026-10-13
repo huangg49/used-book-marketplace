@@ -75,7 +75,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   ])
     await fill(field, value);
   // maxLength is UTF-16 but API limits Unicode code points, including emoji.
-  await fill("Vài dòng gửi người đọc sau", "📚".repeat(5001));
+  await fill("Vài dòng gửi người đọc sau (Mô tả chung)", "📚".repeat(5001));
   await click("Lưu nháp");
   await p.getByText("Nhập tối đa 5.000 ký tự.", { exact: true }).waitFor();
   const incomplete = await fixture.api(
@@ -83,7 +83,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     fixture.member.accessToken,
   );
   assert.equal(incomplete.currentRevision.content.description, "");
-  await fill("Vài dòng gửi người đọc sau", "📚".repeat(5000));
+  await fill("Vài dòng gửi người đọc sau (Mô tả chung)", "📚".repeat(5000));
   await click("Lưu nháp");
   await p
     .getByText("Bản nháp đã lưu. Bạn có thể hoàn thiện sau.", { exact: true })
@@ -95,7 +95,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   );
   const literal =
     '<img src=x onerror="window.__listingInjection=true"> DỮ LIỆU KIỂM THỬ: sách có dấu đọc thật.';
-  await fill("Vài dòng gửi người đọc sau", literal);
+  await fill("Vài dòng gửi người đọc sau (Mô tả chung)", literal);
   // The new top back control must retain the existing unsaved-work guard.
   await click("Về sách của tôi");
   const leaveDialog = p.getByRole("dialog");
@@ -105,7 +105,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .click();
   assert.equal(
     await p
-      .getByLabel("Vài dòng gửi người đọc sau", { exact: true })
+      .getByLabel("Vài dòng gửi người đọc sau (Mô tả chung)", { exact: true })
       .inputValue(),
     literal,
   );
@@ -164,7 +164,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   await click("Tiếp theo");
   assert.equal(
     await p
-      .getByLabel("Vài dòng gửi người đọc sau", { exact: true })
+      .getByLabel("Vài dòng gửi người đọc sau (Mô tả chung)", { exact: true })
       .inputValue(),
     literal,
   );
