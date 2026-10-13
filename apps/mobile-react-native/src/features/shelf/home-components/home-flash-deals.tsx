@@ -9,7 +9,7 @@ import {
 
 export interface HomeLiveAuctionsProps {
   readonly items?: readonly LiveAuctionItem[];
-  readonly onOpenAuction: (auctionId: string) => void;
+  readonly onOpenAuction: (listingId: string) => void;
   readonly onSeeAllPress: () => void;
 }
 
@@ -99,12 +99,14 @@ export function HomeLiveAuctions({
         contentContainerStyle={styles.scrollList}
       >
         {items.map((item) => {
+          const { listingId } = item;
           return (
             <Pressable
               key={item.id}
               accessibilityRole="button"
               accessibilityLabel={`${item.title}. Giá dẫn đầu ${formatVnd(item.currentBid)}`}
-              onPress={() => onOpenAuction(item.id)}
+              disabled={!listingId}
+              onPress={listingId ? () => onOpenAuction(listingId) : undefined}
               style={({ pressed }) => [
                 styles.dealCard,
                 pressed && styles.cardPressed,

@@ -15,6 +15,9 @@ export interface FlashDealItem {
 
 export interface LiveAuctionItem {
   readonly id: string;
+  // The book's listing, opened on tap. Absent on placeholder cards, which
+  // have no real listing to open.
+  readonly listingId?: string;
   readonly title: string;
   readonly currentBid: number;
   readonly startPrice: number;

@@ -52,6 +52,7 @@ export function ShelfScreen() {
     if (auctionsQuery.data?.items && auctionsQuery.data.items.length > 0) {
       return auctionsQuery.data.items.map((auc, idx) => ({
         id: auc.id,
+        listingId: auc.listingId,
         title: auc.title,
         currentBid: auc.currentPrice ?? auc.startPrice,
         startPrice: auc.startPrice,
