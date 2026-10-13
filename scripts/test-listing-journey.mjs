@@ -63,7 +63,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .getByText("Chưa tải được ảnh xem trước.", { exact: true })
     .waitFor({ state: "hidden" });
   await click("Tiếp theo");
-  await p.getByRole("button", { name: /^Còn tốt,/ }).click();
+  await p.getByText("Tốt (Good)", { exact: true }).click();
   for (const [field, value] of [
     [
       "Ruột sách và trang thiếu",
