@@ -183,6 +183,7 @@ export type HandoverPoint = z.infer<typeof handoverPoints>["items"][number];
 export const intakeStates = [
   "AwaitingDropoff",
   "Received",
+  "NeedsEvidence",
   "Passed",
   "Auctioning",
   "ReclaimRequired",
@@ -202,9 +203,12 @@ export const myIntake = z.object({
   step: z.union([z.literal(10000), z.literal(50000)]),
   buyNowPrice: z.number().int().nullable(),
   dropoffDeadline: z.string(),
-  inspectionOutcome: z.enum(["Pass", "Fail"]).nullable(),
+  inspectionOutcome: z.enum(["Pass", "Fail", "NeedsEvidence"]).nullable(),
   inspectionNote: z.string().nullable(),
   reclaimReason: z.string().nullable(),
+  // N4-12: the point asked for evidence (POL-09, 48 hours, one answer).
+  evidenceDeadline: z.string().nullable(),
+  evidenceSubmittedAt: z.string().nullable(),
 });
 export type MyIntake = z.infer<typeof myIntake>;
 export const myIntakes = z.object({ items: z.array(myIntake) });

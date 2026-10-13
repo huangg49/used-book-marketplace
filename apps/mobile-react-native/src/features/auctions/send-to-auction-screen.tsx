@@ -45,6 +45,7 @@ const digits = (text: string) => Number(text.replace(/\D/g, "")) || null;
 const INTAKE_LABEL: Record<MyIntake["state"], string> = {
   AwaitingDropoff: "Chờ bạn mang sách tới",
   Received: "Điểm đã nhận, chờ kiểm tra",
+  NeedsEvidence: "Điểm cần bạn bổ sung bằng chứng",
   Passed: "Đạt kiểm tra, chờ mở phiên",
   Auctioning: "Đang đấu giá",
   ReclaimRequired: "Mời bạn tới điểm nhận lại sách",
@@ -53,7 +54,9 @@ const INTAKE_LABEL: Record<MyIntake["state"], string> = {
   Sold: "Đã bán",
 };
 
-type Pending = { kind: "create" | "withdraw"; path: string; body: string; key: string };
+type Pending = { kind: "create" | "withdraw" | "evidence"; path: string; body: string; key: string };
+// N4-12 (FR-T02, POL-09): one written answer before the 48-hour deadline.
+export const EVIDENCE_MIN_LENGTH = 20;
 
 export function SendToAuctionScreen({ userId }: { userId: string }) {
   const { client } = useSession();
@@ -90,6 +93,9 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<MyIntake | null>(null);
+  const [evidence, setEvidence] = useState<Record<string, string>>({});
+  const [evidenceTarget, setEvidenceTarget] = useState<MyIntake | null>(null);
+  const [evidenceError, setEvidenceError] = useState<{ id: string; text: string } | null>(null);
 
   const listing = eligible.find((l) => l.id === listingId);
   const openPoints = (points.data?.items ?? []).filter((p) => p.status === "Active");
@@ -130,6 +136,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
       setBusy(false);
       setConfirming(false);
       setWithdrawTarget(null);
+      setEvidenceTarget(null);
       void queryClient.invalidateQueries({ queryKey: ["my-auction-intakes", userId] });
       void queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
       void queryClient.invalidateQueries({ queryKey: ["handover-points"] });
@@ -273,7 +280,41 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
               <AppText kind="small" color={colors.muted}>
                 {i.state === "AwaitingDropoff" ? `Mang tới điểm trước ${time(i.dropoffDeadline)}. ` : ""}
                 {i.inspectionOutcome === "Fail" && i.inspectionNote ? `Ghi chú kiểm tra: ${i.inspectionNote}` : ""}
+                {i.state === "NeedsEvidence" && i.inspectionNote ? `Điểm cần: ${i.inspectionNote} ` : ""}
+                {i.state === "NeedsEvidence" && !i.evidenceSubmittedAt && i.evidenceDeadline
+                  ? `Hạn bổ sung ${time(i.evidenceDeadline)}; quá hạn, sách không được đấu giá và bạn sẽ được mời nhận lại.`
+                  : ""}
+                {i.state === "NeedsEvidence" && i.evidenceSubmittedAt
+                  ? `Bạn đã gửi bằng chứng lúc ${time(i.evidenceSubmittedAt)}. Một nhân viên khác tại điểm sẽ quyết định.`
+                  : ""}
               </AppText>
+              {i.state === "NeedsEvidence" && !i.evidenceSubmittedAt && (
+                <>
+                  <TextField
+                    label="Bằng chứng của bạn"
+                    hint={`Nguồn gốc, dấu riêng hoặc giấy tờ bạn có (${EVIDENCE_MIN_LENGTH}–2.000 ký tự). Chỉ gửi được một lần.`}
+                    error={evidenceError?.id === i.id ? evidenceError.text : undefined}
+                    multiline
+                    maxLength={2000}
+                    editable={!locked}
+                    value={evidence[i.id] ?? ""}
+                    onChangeText={(text) => {
+                      setEvidence((all) => ({ ...all, [i.id]: text }));
+                      setEvidenceError(null);
+                    }}
+                  />
+                  <Button
+                    secondary
+                    title="Gửi bằng chứng"
+                    disabled={locked}
+                    onPress={() => {
+                      if ([...(evidence[i.id] ?? "").trim()].length < EVIDENCE_MIN_LENGTH)
+                        setEvidenceError({ id: i.id, text: `Mô tả bằng chứng ít nhất ${EVIDENCE_MIN_LENGTH} ký tự.` });
+                      else setEvidenceTarget(i);
+                    }}
+                  />
+                </>
+              )}
               {withdrawable(i.state) && (
                 <Button secondary destructive title="Rút sách khỏi đấu giá" disabled={locked} onPress={() => setWithdrawTarget(i)} />
               )}
@@ -312,6 +353,26 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
               startPrice,
               step,
               buyNowPrice,
+            }),
+          })
+        }
+      />
+      <ConfirmDialog
+        visible={!!evidenceTarget}
+        title="Gửi bằng chứng?"
+        message="Bạn chỉ gửi được một lần. Nhân viên khác tại điểm sẽ xem và quyết định sách có được đấu giá hay không."
+        confirmLabel="Gửi"
+        busy={busy}
+        onCancel={() => !busy && setEvidenceTarget(null)}
+        onConfirm={() =>
+          evidenceTarget &&
+          void send({
+            kind: "evidence",
+            path: `/me/auction-intakes/${evidenceTarget.id}/evidence`,
+            key: Crypto.randomUUID(),
+            body: JSON.stringify({
+              expectedVersion: evidenceTarget.version,
+              note: (evidence[evidenceTarget.id] ?? "").trim(),
             }),
           })
         }
