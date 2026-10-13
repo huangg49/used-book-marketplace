@@ -222,6 +222,10 @@
   margin: 1.5rem 0;
   flex-wrap: wrap;
 }
+/* Queues without filter tabs keep the refresh action on the right. */
+.queue-toolbar > .button:only-child {
+  margin-left: auto;
+}
 .directory-filters {
   display: grid;
   grid-template-columns: minmax(240px, 1.0fr) minmax(160px, 0.1fr) minmax(160px, 0.1fr) auto;
@@ -516,6 +520,16 @@
 .decision-panel .actions .button {
   flex-grow: 1;
 }
+/* Point and auction commands open under their queue row. */
+.row-panel {
+  grid-column: 2 / -1;
+}
+.operation-panel h3 {
+  margin-bottom: 0.5rem;
+}
+.operation-panel fieldset {
+  margin: 1rem 0 0;
+}
 .history details {
   border-bottom: 1px solid var(--rule);
 }
@@ -756,7 +770,8 @@
   .row-number {
     font-size: 1.3rem;
   }
-  .read-link {
+  .read-link,
+  .row-action {
     grid-column: 2;
   }
   .row-meta {
@@ -801,4 +816,53 @@
   .detail-heading h1 {
     font-size: 2rem;
   }
+}
+
+/* N4-10/N4-11: tab chooser and staff search inside a point row. */
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-end: 1rem;
+}
+.inline-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+}
+.inline-search .field {
+  flex: 1 1 16rem;
+}
+
+/* N4-12: inspection report revisions under an intake row. */
+.report-revisions {
+  margin: 0.5rem 0 0;
+  padding-inline-start: 1.25rem;
+}
+.report-revisions li + li {
+  margin-block-start: 0.25rem;
+}
+
+/* N4-13: simulated incident fund summary above the incident list. */
+.fund-summary {
+  margin-block-end: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  border-radius: 8px;
+}
+.fund-summary dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2.5rem;
+  margin: 0.5rem 0;
+}
+.fund-summary dt {
+  font-size: 0.8125rem;
+}
+.fund-summary dd {
+  margin: 0;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
 }

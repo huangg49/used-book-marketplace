@@ -31,7 +31,60 @@
 ### Điểm lưu teammate được giữ
 
 Source tích hợp: `feat/rn-ui-redesign-navbar-auctions`, PR #37.
-OpenAPI 0.34.0, 22 migration Mongo, 134 HTTP operation / 23 controller.
+OpenAPI 0.34.0 trên `main` (nhánh N4-05: 0.35.0), 22 migration Mongo, 134 HTTP operation / 23 controller.
+
+## N4 Phase 2 — vận hành điểm — 14/10/2026
+
+Người giao việc duyệt Phase 2 ngày 14/10/2026. Gate READINESS không đổi; chỉ có source
+và evidence trên `*_test`. Chi tiết quyết định: ADR 0030 amendment 2026-10-14.
+
+| Gói | Nhánh (base) | Nội dung |
+| --- | --- | --- |
+| N4-10/11 | `feature/n4-10-11-points-assignments` (từ N4-05) | OpenAPI 0.36.0, migration 0022: Admin tạo/sửa điểm, trạng thái, sức chứa, phân công/kết thúc phân công; `/me/point-assignments`; admin-web trang Điểm giao nhận |
+| N4-12 | `feature/n4-12-inspection-evidence` → RN `feature/n4-12-rn-evidence` (từ N4-09) | 0.37.0, migration 0023: bảng kiểm, NeedsEvidence, người bán bổ sung một lần trong 48 giờ, nhân viên khác quyết định, biên bản bất biến; admin-web, user-web, RN |
+| N4-13 | `feature/n4-13-incidents` | 0.38.0, migration 0024: sự cố có/không có đơn, đóng khẩn cấp, quỹ mô phỏng 2.000.000đ; Admin độc lập quyết định; không chi vào ví |
+| N4-14 | `feature/n4-14-deadlines` | 0.39.0: hạn kiểm tra/nhận lại và `/operations/escalations` tính khi đọc, không worker tự hành động |
+
+- Kiểm tra: API typecheck, contract check/routes (150 operation), `auctions.e2e-spec.ts`
+  54/54 trên QA replica set; admin-web typecheck/lint/28 unit; user-web
+  typecheck/lint/119 unit; RN typecheck/lint/142 unit PASS. Browser admin-web trên API
+  thật + DB `ops_browser_*_test` (fixture tạm): bảng kiểm, NeedsEvidence, quyết định
+  bằng chứng, báo/quyết định sự cố và quỹ, việc quá hạn, tạo/phân công/mở điểm, từ chối
+  đóng điểm còn sách, 375 px không tràn.
+- Nhánh tích hợp `feature/n4-auction-operations` (main `7a52d08` + mọi nhánh N4): full
+  API E2E 626/626, `schema.mongo-spec` PASS sau khi thêm 3 collection Mongo-native vào
+  phép đếm; admin-web `test:browser`, user-web `test:browser`/`test:exchange:browser`,
+  RN export web PASS. Hai lệnh tạo (điểm, sự cố) trả 200 như contract test yêu cầu.
+  RN/user-web browser cho bằng chứng, native, human review NOT RUN.
+- Giới hạn: chưa thông báo thành viên khi đóng khẩn cấp; bằng chứng chỉ là văn bản;
+  bồi thường chỉ ghi duyệt, chưa chi ví; giờ mở cửa vẫn cố định.
+
+## N4 Phase 1 — đấu giá & vận hành trên client — 13/10/2026
+
+Kế hoạch: nhánh `docs/n4-auction-operations-plan`. Mỗi gói một nhánh, commit local,
+**chưa push/PR**. Phase 2 (N4-10…14: CRUD điểm, phân công, NeedsEvidence, incident,
+quá hạn) chưa làm: READINESS vẫn chặn mở rộng nghiệp vụ, cần chủ dự án duyệt.
+
+| Gói | Nhánh (base) | Nội dung |
+| --- | --- | --- |
+| N4-01…05 | `feature/n4-01-operations-shell` → `-02-intake-desk` → `-03-collection-desk` → `-04-resolution-desk` → `-05-auction-cancel` (chuỗi từ `main` `7be68a4`) | admin-web "Điểm và đấu giá": Staff nhận/kiểm tra/mở phiên/trả sách, giao sách bằng mã và nhận lại sách trả; Admin quyết định đơn tại điểm theo ma trận API, hủy phiên. `core/command.ts` dùng chung với review (body/key cố định, retry cùng request) |
+| N4-05 API | cùng nhánh N4-05 | OpenAPI **0.35.0**: `GET /operations/auctions` (ADMIN, chỉ đọc) trả version cho lệnh hủy, gồm OnHold, loại phiên Admin bán/trả giá. ADR 0030 có amendment |
+| N4-06 | `feature/n4-06-web-after-win` (từ `main`) | user-web: xem biên bản, đồng ý/từ chối, lấy mã nhận (hiện một lần), khiếu nại; toast bị vượt giá theo luật hòa FR-AU04 |
+| N4-07…09 | `feature/n4-07-rn-auctions` (từ `fix/rn-auction-card-listing-id`) → `-08-rn-after-win` → `-09-rn-seller-intake` | RN: danh sách/chi tiết phiên, trả giá/Auto/mua ngay, trạng thái dẫn/hòa/bị vượt; Phiên của tôi và các bước người thắng; gửi sách đấu giá và rút |
+
+- Kiểm tra: admin-web typecheck/lint/28 unit, user-web typecheck/lint/119 unit, RN
+  lint/typecheck/142 unit PASS; API typecheck/lint/130 unit, contract check/routes
+  (137 operation) và `auctions.e2e-spec.ts` 50/50 trên QA replica set PASS. Full API
+  E2E/Mongo suite NOT RUN cho thay đổi này.
+- Browser trên API thật + DB `ops_browser_*_test` (fixture tạm, storage fake): mọi thao
+  tác Staff/Admin, các bước người mua web, RN web 375 (kể cả ca 300k hòa: người đặt
+  sau thấy "trả bằng người dẫn giá"). Fixture **dời AuctionClock tới 10:00** khi điểm
+  đóng cửa (như e2e pin clock), không đổi luật server. Native Android/iOS, 320 px,
+  `test:browser` mở rộng, human review NOT RUN.
+- Sửa thêm khi kiểm: mã nhận dán "436 147" mất số (maxLength trước khi lọc); cỡ chữ mã
+  ở web; RN không hiện giá khởi điểm như giá đã trả cho đơn mua ngay.
+- Ghi nhận ngoài phạm vi: màn tài khoản RN có huy hiệu "Bạn đọc uy tín ★ 4.9" và nội
+  dung mock (AGENTS cấm bịa rating/trust badge) — chưa sửa.
 
 ## Mobile React Native CI Lint & Design Token Remediation — 13/10/2026
 

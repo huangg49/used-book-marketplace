@@ -19,6 +19,9 @@ import { PointOrdersService } from './point-orders.service.js';
 import { PointCollectionService } from './point-collection.service.js';
 import { PointOrderResolutionService } from './point-order-resolution.service.js';
 import { PointOrderCompletionService } from './point-order-completion.service.js';
+import { PointAdministrationController } from './point-administration.controller.js';
+import { PointAdministrationService } from './point-administration.service.js';
+import { PointIncidentsService } from './point-incidents.service.js';
 
 @Module({
   imports: [
@@ -38,12 +41,18 @@ import { PointOrderCompletionService } from './point-order-completion.service.js
     PointCollectionService,
     PointOrderResolutionService,
     PointOrderCompletionService,
+    PointAdministrationService,
+    PointIncidentsService,
     AuctionClock,
     AuctionWorker,
     AuctionLiveService,
     AuctionGateway,
   ],
-  controllers: [AuctionsController, AuctionOperationsController],
+  controllers: [
+    AuctionsController,
+    AuctionOperationsController,
+    PointAdministrationController,
+  ],
   exports: [AuctionWorker, AuctionClock],
 })
 export class AuctionsModule {}

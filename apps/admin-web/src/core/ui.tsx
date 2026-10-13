@@ -64,10 +64,12 @@ export function ErrorNotice({
   error,
   retry,
   busy,
+  describe = errorText,
 }: {
   error: unknown;
   retry?: () => void;
   busy?: boolean;
+  describe?: (error: unknown) => string;
 }) {
   const id =
     error instanceof ApiError &&
@@ -76,7 +78,7 @@ export function ErrorNotice({
       : undefined;
   return (
     <Notice tone="error">
-      <p>{errorText(error)}</p>
+      <p>{describe(error)}</p>
       {id && <small>Mã hỗ trợ: {id}</small>}
       {retry && (
         <Button busy={busy} onClick={retry}>

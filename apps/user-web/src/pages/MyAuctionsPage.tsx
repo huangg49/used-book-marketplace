@@ -8,7 +8,8 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { useSession } from '../hooks/useSession'
 import { formatRemaining, outcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import {
-  getMyAuctionIntakes, listHandoverPoints, listMyAuctions, withdrawIntake, type MyAuctionItem, type MyIntake,
+  EVIDENCE_MIN_LENGTH, getMyAuctionIntakes, listHandoverPoints, listMyAuctions, submitIntakeEvidence, withdrawIntake,
+  type MyAuctionItem, type MyIntake,
 } from '../services/auctions'
 import { ROUTES, formatVnd } from '../lib/routes'
 import styles from './MyAuctionsPage.module.css'
@@ -104,6 +105,7 @@ function AuctionRow({
 const INTAKE_STATES: Partial<Record<MyIntake['state'], string>> = {
   AwaitingDropoff: 'Chờ bạn mang sách tới điểm',
   Received: 'Điểm đã nhận sách, chờ kiểm tra',
+  NeedsEvidence: 'Điểm cần bạn bổ sung bằng chứng',
   Passed: 'Đã qua kiểm tra, chờ mở phiên',
   ReclaimRequired: 'Mời bạn tới điểm nhận lại sách',
 }
@@ -116,6 +118,64 @@ const RECLAIM: Record<string, string> = {
 }
 const intakeTime = (iso: string) =>
   new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+
+// N4-12: the point asked for evidence. One written answer before the deadline;
+// another Staff member decides, and silence never counts as a Pass.
+function EvidenceForm({ intake, onChanged }: { intake: MyIntake; onChanged: () => Promise<unknown> }) {
+  const intent = useIntentKey()
+  const pending = useRef<{ version: number; key: string; note: string } | null>(null)
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [unknown, setUnknown] = useState(false)
+  const trimmed = note.trim()
+  if (intake.evidenceSubmittedAt)
+    return <p>Bạn đã gửi bằng chứng lúc {intakeTime(intake.evidenceSubmittedAt)}. Một nhân viên khác tại điểm sẽ quyết định.</p>
+  const send = async () => {
+    if ([...trimmed].length < EVIDENCE_MIN_LENGTH && !pending.current) {
+      setError(`Mô tả bằng chứng ít nhất ${EVIDENCE_MIN_LENGTH} ký tự.`)
+      return
+    }
+    // A retry after an unknown outcome resends the same body with the same key.
+    const attempt = pending.current ?? { version: intake.version, key: intent.keyFor(`evidence:${intake.id}:${intake.version}`), note: trimmed }
+    pending.current = attempt
+    let stillUnknown = false
+    setBusy(true); setError(null)
+    try {
+      await submitIntakeEvidence(intake.id, attempt.version, attempt.note, attempt.key)
+      intent.settle(); pending.current = null
+    } catch (caught) {
+      stillUnknown = outcomeUnknown(caught)
+      if (!stillUnknown) { intent.settle(); pending.current = null }
+      setError(!stillUnknown && caught instanceof ApiError
+        ? caught.message || 'Chưa gửi được bằng chứng.'
+        : 'Chưa rõ bằng chứng đã được ghi hay chưa. Hãy thử lại đúng thao tác này.')
+    } finally {
+      setUnknown(stillUnknown); setBusy(false)
+      if (!stillUnknown) void onChanged()
+    }
+  }
+  return (
+    <div className={styles.evidence}>
+      {intake.inspectionNote && <p>Điểm cần: {intake.inspectionNote}</p>}
+      {intake.evidenceDeadline && <p>Hạn bổ sung: {intakeTime(intake.evidenceDeadline)}. Quá hạn, sách sẽ được trả lại cho bạn.</p>}
+      <label htmlFor={`evidence-${intake.id}`}>Bằng chứng của bạn</label>
+      <textarea
+        id={`evidence-${intake.id}`}
+        rows={3}
+        maxLength={2000}
+        value={note}
+        disabled={busy || unknown}
+        onChange={(event) => { setNote(event.target.value); setError(null) }}
+      />
+      <span>Mô tả nguồn gốc, dấu riêng hoặc giấy tờ bạn có ({EVIDENCE_MIN_LENGTH}–2.000 ký tự). Chỉ gửi được một lần.</span>
+      {error && <p className={styles.urgent} role="alert">{error}</p>}
+      <button type="button" disabled={busy} onClick={() => void send()}>
+        {unknown ? 'Thử lại gửi bằng chứng' : busy ? 'Đang gửi…' : 'Gửi bằng chứng'}
+      </button>
+    </div>
+  )
+}
 
 function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointName?: string; onChanged: () => Promise<unknown> }) {
   const intent = useIntentKey()
@@ -157,6 +217,7 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
         {intake.state === 'ReclaimRequired' && intake.reclaimReason && (
           <p>{RECLAIM[intake.reclaimReason] ?? 'Sách cần được nhận lại.'}{intake.inspectionNote ? ` Ghi chú kiểm tra: ${intake.inspectionNote}` : ''}</p>
         )}
+        {intake.state === 'NeedsEvidence' && <EvidenceForm intake={intake} onChanged={onChanged} />}
         {error && <p className={styles.urgent} role="alert">{error}</p>}
       </div>
       <div className={styles.intakeSide}>

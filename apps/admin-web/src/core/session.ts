@@ -38,3 +38,10 @@ export const canReview = (user: CurrentUser) =>
   user.roles.some((role) => role === "STAFF" || role === "ADMIN");
 export const canReviewCatalog = (user: CurrentUser) =>
   user.status === "ACTIVE" && user.roles.includes("ADMIN");
+// Point desks need STAFF itself: the API refuses an Admin without it. Whether the
+// Staff member is assigned to a point is checked only on the server.
+export const canOperatePoint = (user: CurrentUser) =>
+  user.status === "ACTIVE" && user.roles.includes("STAFF");
+// Independent decisions on point Orders and auctions belong to ADMIN.
+export const canResolve = (user: CurrentUser) =>
+  user.status === "ACTIVE" && user.roles.includes("ADMIN");

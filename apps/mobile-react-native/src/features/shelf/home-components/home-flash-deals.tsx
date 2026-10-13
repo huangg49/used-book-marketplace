@@ -99,12 +99,15 @@ export function HomeLiveAuctions({
         contentContainerStyle={styles.scrollList}
       >
         {items.map((item) => {
+          // Placeholder cards have no real auction behind them.
+          const real = !!item.listingId;
           return (
             <Pressable
               key={item.id}
               accessibilityRole="button"
               accessibilityLabel={`${item.title}. Giá dẫn đầu ${formatVnd(item.currentBid)}`}
-              onPress={() => onOpenAuction(item.id)}
+              disabled={!real}
+              onPress={real ? () => onOpenAuction(item.id) : undefined}
               style={({ pressed }) => [
                 styles.dealCard,
                 pressed && styles.cardPressed,

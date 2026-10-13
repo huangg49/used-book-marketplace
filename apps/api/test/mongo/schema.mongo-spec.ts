@@ -29,6 +29,8 @@ import { accountRecoverySpecs } from '../../src/database/mongo/migrations/0017-a
 import { authOtpSpecs } from '../../src/database/mongo/migrations/0018-auth-otp.js';
 import { exchangeCollectionSpecs } from '../../src/database/mongo/migrations/0016-exchanges.js';
 import { directDeliveryCompletionSpecs } from '../../src/database/mongo/migrations/0020-direct-delivery-completion.js';
+import { inspectionEvidenceCollectionSpecs } from '../../src/database/mongo/migrations/0023-inspection-evidence.js';
+import { pointIncidentCollectionSpecs } from '../../src/database/mongo/migrations/0024-point-incidents.js';
 import {
   currentCollections,
   migrations,
@@ -101,7 +103,10 @@ describe('migrations', () => {
         exchangeCollectionSpecs.length +
         // Delivery events are Mongo-native immutable evidence, not a historical
         // PostgreSQL model.
-        -directDeliveryCompletionSpecs.length +
+        -directDeliveryCompletionSpecs.length -
+        // N4 point operations (ADR 0030 amendment 2026-10-14) are Mongo-native.
+        inspectionEvidenceCollectionSpecs.length -
+        pointIncidentCollectionSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });
