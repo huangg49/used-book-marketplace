@@ -441,7 +441,10 @@ try {
   p.on("request", recordShowcase);
   await p.setViewportSize({ width: 390, height: 844 });
   await p.goto(`${origin}/showcase`);
-  await p.getByText("BẢN XEM THỬ · DỮ LIỆU MẪU", { exact: true }).waitFor();
+  await p
+    .getByText("BẢN XEM THỬ · DỮ LIỆU MẪU", { exact: true })
+    .last()
+    .waitFor();
   assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 4);
   await click("Đổi");
   assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 2);
