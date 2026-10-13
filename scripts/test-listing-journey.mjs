@@ -115,9 +115,9 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   await p.screenshot({
     path: path.join(artifacts, "editor-condition-390.png"),
   });
-  await click("Có, còn đọc rõ");
-  await click("Không thiếu trang");
-  await click("Không thiếu nội dung chính");
+  await p.getByText("Có, còn đọc rõ", { exact: true }).click();
+  await p.getByText("Không thiếu trang", { exact: true }).click();
+  await p.getByText("Không thiếu nội dung chính", { exact: true }).click();
   await p
     .getByRole("tab", { name: /^Ảnh bản sách, Đã điền đầy đủ/ })
     .waitFor();
