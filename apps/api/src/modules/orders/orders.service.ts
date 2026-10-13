@@ -1,6 +1,6 @@
 import { orderContext } from '../reservations/workflow-context.js';
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { Collections } from '../../database/mongo/collections.js';
 import type {
   DirectOrderDoc,
@@ -10,6 +10,7 @@ import type {
 import type { Tx } from '../../database/mongo/transaction.js';
 import {
   MongoCommandService,
+  canonicalJson,
   member,
   requireActive,
   type Actor,
@@ -141,13 +142,46 @@ export class OrdersService {
           member(actor);
           return this.quote(tx, body.quoteId, actor._id);
         },
-        mutate: async (tx, actor, _before, receiptId) => {
+        mutate: async (tx, actor, quote, receiptId) => {
           requireActive(actor);
+          const conversation = await tx.c.purchase_conversations.findOne({
+            listingId: quote.listingId,
+            buyerId: actor._id,
+            sellerId: quote.sellerId,
+            status: 'Active',
+          });
+          if (conversation)
+            await tx.lock('purchase_conversations', [conversation._id]);
           const { q, l, book, origin, destination } =
             await this.quotes.prepareOrder(tx, actor._id, body);
           if (q.sellerId === actor._id) throw invalidState();
           const now = await this.decision(tx, context.auth);
           if (now >= q.expiresAt) throw conflict();
+          if (l.trade === 'Reserved') {
+            const currentConversation = conversation
+              ? await tx.c.purchase_conversations.findOne({
+                  _id: conversation._id,
+                  listingId: l._id,
+                  buyerId: actor._id,
+                  sellerId: q.sellerId,
+                  status: 'Active',
+                })
+              : null;
+            if (!currentConversation || now >= currentConversation.expiresAt)
+              throw invalidState();
+            const closed = await tx.c.purchase_conversations.updateOne(
+              {
+                _id: currentConversation._id,
+                version: currentConversation.version,
+                status: 'Active',
+              },
+              {
+                $set: { status: 'Cancelled', closedAt: now, updatedAt: now },
+                $inc: { version: 1 },
+              },
+            );
+            if (closed.matchedCount !== 1) throw conflict();
+          } else if (l.trade !== 'Available') throw invalidState();
           if (
             (await tx.c.direct_orders.countDocuments({
               buyerId: actor._id,
@@ -174,6 +208,9 @@ export class OrdersService {
             sellerConfirmationDeadline: null,
             cancellationRequestedAt: null,
             cancellationReason: null,
+            deliveredAt: null,
+            inspectionDeadline: null,
+            completedAt: null,
             lockSeq: 0,
           };
           await tx.c.direct_orders.insertOne(o);
@@ -262,13 +299,16 @@ export class OrdersService {
             snapshot: agreement as unknown as Json,
           });
           await this.reservations.acquire(tx, c._id, l._id, now, receiptId);
-          const listing = await this.listings.project(
-            tx,
-            l._id,
-            l.version,
-            'Available',
-            'Reserved',
-          );
+          const listing =
+            l.trade === 'Available'
+              ? await this.listings.project(
+                  tx,
+                  l._id,
+                  l.version,
+                  'Available',
+                  'Reserved',
+                )
+              : l;
           tx.check(`order:${o._id}`, () => checkOrder(tx, o._id));
           return {
             entityType: 'Order',
@@ -632,6 +672,114 @@ export class OrdersService {
       },
     });
   }
+  confirmReceipt(
+    context: CommandContext,
+    id: string,
+    body: Wire['ConfirmOrderReceipt'],
+  ) {
+    return this.commands.runOrder(context, 'confirmOrderReceipt', id, body, {
+      discover: async (tx) => {
+        const o = await this.own(tx, id, context.auth.user.id, true);
+        return [o.buyerId, o.sellerId];
+      },
+      authorize: async (tx, actor) => {
+        member(actor);
+        return this.own(tx, id, actor._id, true);
+      },
+      mutate: async (tx, _actor, _before, receiptId) => {
+        const { o, commitment } = await this.locked(tx, id);
+        if (o.version !== body.expectedVersion || o.state !== 'InTransit')
+          throw invalidState();
+        if (commitment.status !== 'Active') throw invalidState();
+        const shipment = await tx.c.direct_shipments.findOne({ orderId: o._id });
+        const pickup = shipment
+          ? await tx.c.carrier_pickup_events.findOne({
+              shipmentId: shipment._id,
+              outcome: 'Applied',
+            })
+          : null;
+        if (!shipment || !pickup || (await tx.c.order_delivery_reviews.findOne({ orderId: o._id })))
+          throw invalidState();
+        await this.ledger.lockOrder(tx, o.buyerId, o._id, false);
+        if ((await this.ledger.orderFunds(tx, o._id)).held !== o.quote.buyerTotal)
+          throw invalidState();
+        const now = await this.decision(tx, context.auth);
+        await tx.c.direct_delivery_events.insertOne({
+          _id: receiptId,
+          orderId: o._id,
+          shipmentId: shipment._id,
+          source: 'BuyerReceived',
+          occurredAt: now,
+          receivedAt: now,
+          payloadHash: createHash('sha256').update(canonicalJson(body)).digest('hex'),
+          signature: createHash('sha256').update(`buyer-receipt:${receiptId}`).digest('hex'),
+          receiptId,
+        });
+        const next = await this.transition(tx, o, {
+          state: 'Inspection',
+          deliveredAt: now,
+          inspectionDeadline: new Date(now.getTime() + 72 * 3600000),
+        });
+        return {
+          entityType: 'Order', entityId: o._id, contextId: o.context!._id,
+          version: next.version, state: 'Inspection', decidedAt: now,
+          paymentDeadline: o.paymentDeadline, affectedListings: [],
+          event: 'OrderReceiptConfirmed', before: { state: o.state, version: o.version },
+        };
+      },
+    });
+  }
+  recordDelivery(
+    context: CommandContext,
+    event: Wire['SimulatedDeliveryEvent'],
+    signature: string,
+  ) {
+    return this.commands.runOrder(context, 'emitSimulatedDeliveryEvent', event.orderId, event, {
+      discover: async (tx) => {
+        const shipment = await tx.c.direct_shipments.findOne({ _id: event.shipmentId });
+        if (!shipment || shipment.orderId !== event.orderId) throw notFound();
+        const order = await this.order(tx, event.orderId);
+        return [order.buyerId, order.sellerId];
+      },
+      authorize: async (tx, actor) => {
+        requireActive(actor);
+        if (!actor.roles.some((role) => role.role === 'TEST_OPERATOR'))
+          throw new DomainError(403, 'FORBIDDEN', 'Cần quyền vận hành mô phỏng.');
+        const shipment = await tx.c.direct_shipments.findOne({ _id: event.shipmentId });
+        if (!shipment || shipment.orderId !== event.orderId || shipment.carrier !== event.carrier || shipment.trackingCode !== event.trackingCode)
+          throw notFound();
+        const order = await this.order(tx, event.orderId);
+        if ([order.buyerId, order.sellerId].includes(actor._id))
+          throw new DomainError(403, 'FORBIDDEN', 'Người vận hành phải độc lập với hai bên giao dịch.');
+      },
+      mutate: async (tx, _actor, _before, receiptId) => {
+        const { o, commitment } = await this.locked(tx, event.orderId);
+        const shipment = await tx.c.direct_shipments.findOne({ _id: event.shipmentId });
+        const pickup = shipment ? await tx.c.carrier_pickup_events.findOne({ shipmentId: shipment._id, outcome: 'Applied' }) : null;
+        if (!shipment || !pickup || o.state !== 'InTransit' || commitment.status !== 'Active' || await tx.c.order_delivery_reviews.findOne({ orderId: o._id }))
+          throw invalidState();
+        await this.ledger.lockOrder(tx, o.buyerId, o._id, false);
+        if ((await this.ledger.orderFunds(tx, o._id)).held !== o.quote.buyerTotal) throw invalidState();
+        const now = await this.decision(tx, context.auth);
+        const occurredAt = new Date(event.occurredAt);
+        if (occurredAt < pickup.occurredAt || occurredAt > now)
+          throw new DomainError(422, 'VALIDATION_ERROR', 'Thời điểm giao phải sau pickup và không ở tương lai.');
+        await tx.c.direct_delivery_events.insertOne({
+          _id: event.eventId, orderId: o._id, shipmentId: shipment._id,
+          source: 'CarrierDelivered', occurredAt, receivedAt: now,
+          payloadHash: createHash('sha256').update(canonicalJson(event)).digest('hex'), signature, receiptId,
+        });
+        const next = await this.transition(tx, o, {
+          state: 'Inspection', deliveredAt: occurredAt,
+          inspectionDeadline: new Date(occurredAt.getTime() + 72 * 3600000),
+        });
+        return { entityType: 'Order', entityId: o._id, contextId: o.context!._id,
+          version: next.version, state: 'Inspection', decidedAt: now,
+          paymentDeadline: o.paymentDeadline, affectedListings: [], event: 'CarrierDeliveryRecorded',
+          before: { state: o.state, version: o.version } };
+      },
+    });
+  }
   expirePickup(id: string) {
     return this.commands.expireOrder(
       id,
@@ -711,6 +859,33 @@ export class OrdersService {
       },
       'expireOrderDelivery',
     );
+  }
+  settle(id: string) {
+    return this.commands.expireOrder(id, {
+      discover: async (tx) => {
+        const o = await this.order(tx, id);
+        return [o.buyerId, o.sellerId];
+      },
+      authorize: (tx) => this.order(tx, id),
+      mutate: async (tx, _before, receiptId) => {
+        const { o, listing } = await this.locked(tx, id);
+        if (o.state !== 'Inspection' || !o.inspectionDeadline) throw invalidState();
+        const now = await this.decision(tx);
+        if (now < o.inspectionDeadline) throw conflict();
+        await this.ledger.settleDirectOrder(tx, {
+          _id: o._id, sellerId: o.sellerId, buyerTotal: o.quote.buyerTotal,
+          sellerProceeds: o.quote.sellerProceeds,
+        }, receiptId, now);
+        await this.reservations.closeDirectCompleted(tx, o.context!._id, now, receiptId);
+        await this.closeContext(tx, o.context!);
+        const sold = await this.listings.project(tx, listing.id, listing.version, 'Reserved', 'Sold');
+        const next = await this.transition(tx, o, { state: 'Completed', completedAt: now, closedAt: now });
+        return { entityType: 'Order', entityId: o._id, contextId: o.context!._id,
+          version: next.version, state: 'Completed', decidedAt: now,
+          paymentDeadline: o.paymentDeadline, affectedListings: [{ id: sold.id, version: sold.version }],
+          event: 'DirectOrderSettled', before: { state: o.state, version: o.version } };
+      },
+    }, 'settleDirectOrder');
   }
   private async openDeliveryReview(
     tx: Tx,
@@ -919,6 +1094,15 @@ export class OrdersService {
             !!pickup?.deliveryDeadline &&
             now >= pickup.deliveryDeadline &&
             !buyerReport &&
+            funds.held === o.quote.buyerTotal,
+          deliveredAt: o.deliveredAt?.toISOString() ?? null,
+          inspectionDeadline: o.inspectionDeadline?.toISOString() ?? null,
+          completedAt: o.completedAt?.toISOString() ?? null,
+          canConfirmReceipt:
+            role === 'Buyer' &&
+            o.state === 'InTransit' &&
+            !!pickup &&
+            !delivery &&
             funds.held === o.quote.buyerTotal,
           carrierReview: carrierReview
             ? {

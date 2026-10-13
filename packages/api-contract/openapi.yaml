@@ -4139,13 +4139,9 @@ paths:
               - PaymentExpired
               - Preparing
               - ResolutionPending
-              - Preparing
-              - ResolutionPending
-              - Preparing
-              - ResolutionPending
-              - Preparing
-              - ResolutionPending
               - InTransit
+              - Inspection
+              - Completed
       responses:
         "200":
           description: Successful operation.
@@ -4879,6 +4875,76 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/SimulatedPickupEvent"
+  /operations/simulator/delivery-events:
+    post:
+      operationId: emitSimulatedDeliveryEvent
+      tags: [Orders]
+      x-implementation-status: implemented
+      description: Independent TEST_OPERATOR records one simulated Delivered event after an Applied pickup. It starts, but never settles, the buyer inspection window.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulatedDeliveryEvent"
+      responses:
+        "200":
+          description: Delivery recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionCommandReceipt"
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "503": { $ref: "#/components/responses/Error" }
+  /orders/{orderId}/confirm-receipt:
+    post:
+      operationId: confirmOrderReceipt
+      tags: [Orders]
+      x-implementation-status: implemented
+      description: Buyer-only receipt confirmation. It starts the 72-hour inspection window; it does not settle money or mark the listing Sold.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmOrderReceipt"
+      responses:
+        "200":
+          description: Receipt confirmation recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionCommandReceipt"
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "503": { $ref: "#/components/responses/Error" }
   /me/orders/{orderId}/shipment/pickup-events:
     get:
       operationId: listMyPickupEvents
@@ -8430,9 +8496,10 @@ components:
           anyOf:
             - $ref: "#/components/schemas/ListingFulfillment"
             - type: "null"
-          description: Optional for legacy compatibility. Omitted preserves the existing choice on
-            replacement; null explicitly clears it. Configured origins must be current at save,
-            submission and approval. No checkout is enabled.
+          description: Optional while a draft is incomplete; required before submitting a Sale or
+            Both listing. Omitted preserves the existing choice on replacement; null explicitly
+            clears it. Configured origins must be current at save, submission and approval. No
+            checkout is enabled.
       description: Full replacement, not a patch. Incomplete text is allowed. Selected values must be
         valid; inactive mode prices must be null (both null if mode is null). mediaIds are ordered
         and must belong to this listing. Uploads may be Processing in a draft, but must be Ready at
@@ -10629,13 +10696,9 @@ components:
             - PaymentExpired
             - Preparing
             - ResolutionPending
-            - Preparing
-            - ResolutionPending
-            - Preparing
-            - ResolutionPending
-            - Preparing
-            - ResolutionPending
             - InTransit
+            - Inspection
+            - Completed
         serverTime:
           type: string
           format: date-time
@@ -10699,6 +10762,10 @@ components:
         - carrierReview
         - deliveryReview
         - canReportNonReceipt
+        - deliveredAt
+        - inspectionDeadline
+        - completedAt
+        - canConfirmReceipt
       properties:
         id:
           type: string
@@ -10720,13 +10787,9 @@ components:
             - PaymentExpired
             - Preparing
             - ResolutionPending
-            - Preparing
-            - ResolutionPending
-            - Preparing
-            - ResolutionPending
-            - Preparing
-            - ResolutionPending
             - InTransit
+            - Inspection
+            - Completed
         role:
           type: string
           enum:
@@ -10746,6 +10809,17 @@ components:
         serverTime:
           type: string
           format: date-time
+        deliveredAt:
+          type: [string, "null"]
+          format: date-time
+        inspectionDeadline:
+          type: [string, "null"]
+          format: date-time
+        completedAt:
+          type: [string, "null"]
+          format: date-time
+        canConfirmReceipt:
+          type: boolean
         quoteId:
           type: string
           format: uuid
@@ -11219,13 +11293,9 @@ components:
             - PaymentExpired
             - Preparing
             - ResolutionPending
-            - Preparing
-            - ResolutionPending
-            - Preparing
-            - ResolutionPending
-            - Preparing
-            - ResolutionPending
             - InTransit
+            - Inspection
+            - Completed
         version:
           type: integer
           minimum: 1
@@ -11827,6 +11897,25 @@ components:
         serverTime:
           type: string
           format: date-time
+    SimulatedDeliveryEvent:
+      type: object
+      additionalProperties: false
+      required: [eventId, shipmentId, orderId, carrier, trackingCode, occurredAt]
+      properties:
+        eventId: { type: string, format: uuid }
+        shipmentId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        carrier: { type: string, const: LatLaiSimulator }
+        trackingCode: { type: string, pattern: '^LL-[A-Z0-9]{8,32}$' }
+        occurredAt: { type: string, format: date-time }
+    ConfirmOrderReceipt:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          enum: [4]
     ReportOrderNonReceipt:
       type: object
       additionalProperties: false

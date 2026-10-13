@@ -66,6 +66,7 @@ export interface CollectionTypes {
   carrier_pickup_reviews: D.CarrierPickupReviewDoc;
   order_delivery_reviews: D.OrderDeliveryReviewDoc;
   order_non_receipt_reports: D.OrderNonReceiptReportDoc;
+  direct_delivery_events: D.DirectDeliveryEventDoc;
   workflow_contexts:
     D.WorkflowContextDoc | D.AuctionIntakeContextDoc | D.PointOrderContextDoc;
   workflow_items: D.WorkflowItemDoc;

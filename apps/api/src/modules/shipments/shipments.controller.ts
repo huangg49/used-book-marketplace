@@ -65,4 +65,19 @@ export class ShipmentsController {
     res.setHeader('Idempotency-Replayed', String(result.replayed));
     return result.receipt;
   }
+  @Post('operations/simulator/delivery-events')
+  @HttpCode(200)
+  @Roles('TEST_OPERATOR')
+  async delivery(
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.shipments.deliver(
+      commandContext(this.input, req, res),
+      this.input.body('SimulatedDeliveryEvent', body),
+    );
+    res.setHeader('Idempotency-Replayed', String(result.replayed));
+    return result.receipt;
+  }
 }

@@ -57,16 +57,24 @@ export class QuotesService {
       _id: selection!.policyCode,
     }))!;
   }
-  private async available(tx: Tx, listingId: string) {
+  private async available(tx: Tx, listingId: string, buyerId?: string) {
     const [row] = await tx.c.listings
       .aggregate([
         { $match: { _id: listingId } },
         ...publicEligibleStages(),
         { $match: { 'r.mode': { $in: ['Sale', 'Both'] } } },
-        { $project: { _id: 1 } },
+        { $project: { _id: 1, trade: 1 } },
       ])
       .toArray();
-    return !!row;
+    if (!row) return false;
+    if (row.trade !== 'Reserved') return true;
+    if (!buyerId) return false;
+    return !!(await tx.c.purchase_conversations.findOne({
+      listingId,
+      buyerId,
+      status: 'Active',
+      expiresAt: { $gt: await tx.now() },
+    }));
   }
   private async lockListing(
     tx: Tx,
@@ -132,7 +140,7 @@ export class QuotesService {
           l.currentRevisionId !== body.expectedListingRevisionId
         )
           throw conflict();
-        if (!(await this.available(tx, l._id))) throw invalidState();
+        if (!(await this.available(tx, l._id, actor._id))) throw invalidState();
         if (!r.originAddressId)
           invalidField(
             '/listingId',
@@ -215,7 +223,7 @@ export class QuotesService {
         if (now >= q.expiresAt) assessment = 'Expired';
         else if (
           actor.status !== 'ACTIVE' ||
-          !(await this.available(tx, l._id))
+          !(await this.available(tx, l._id, actor._id))
         )
           assessment = 'Unavailable';
         else {
@@ -271,7 +279,7 @@ export class QuotesService {
       destination.serviceAreaCode !== q.serviceAreaCode
     )
       throw conflict();
-    if (!(await this.available(tx, l._id))) throw invalidState();
+    if (!(await this.available(tx, l._id, buyerId))) throw invalidState();
     return { q, l, book: book!, origin, destination };
   }
   private project(

@@ -234,6 +234,11 @@ export class ShipmentsService {
   emit(context: CommandContext, event: Wire['SimulatedPickupEvent']) {
     return this.ingest(context, event, this.simulator.sign(event));
   }
+  deliver(context: CommandContext, event: Wire['SimulatedDeliveryEvent']) {
+    const signature = this.simulator.signDelivery(event);
+    this.simulator.verifyDelivery(event, signature);
+    return this.orders.recordDelivery(context, event, signature);
+  }
   ingest(
     context: CommandContext,
     event: Wire['SimulatedPickupEvent'],
