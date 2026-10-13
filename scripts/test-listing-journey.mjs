@@ -33,10 +33,10 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .click();
   // Progress reflects entered data, not visited steps.
   await p
-    .getByRole("tab", { name: /^Bước 1: Đầu sách, đã đủ/ })
+    .getByRole("tab", { name: /^Thông tin sách, Đã điền đầy đủ/ })
     .waitFor();
   await p
-    .getByRole("tab", { name: /^Bước 2: Ảnh và tình trạng, còn thiếu/ })
+    .getByRole("tab", { name: /^Ảnh bản sách, Chưa điền thành công/ })
     .waitFor();
   await click("Tiếp theo");
   const chooser = p.waitForEvent("filechooser");
@@ -120,7 +120,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   await click("Có — tôi đã mô tả trang thiếu ở trên");
   await click("Không thiếu nội dung trọng yếu");
   await p
-    .getByRole("tab", { name: /^Bước 2: Ảnh và tình trạng, đã đủ/ })
+    .getByRole("tab", { name: /^Ảnh bản sách, Đã điền đầy đủ/ })
     .waitFor();
   await click("Tiếp theo");
   await click("Bán hoặc đổi");
