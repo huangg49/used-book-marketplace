@@ -1,22 +1,34 @@
 # Điểm lưu hiện tại — 13/10/2026
 
 Source tích hợp: `feat/rn-ui-redesign-navbar-auctions`, PR #37.
-OpenAPI 0.34.0, 22 migration Mongo, 134 HTTP operation / 23 controller.
+OpenAPI 0.34.0 trên `main` (nhánh N4-05: 0.35.0), 22 migration Mongo, 134 HTTP operation / 23 controller.
 
-## N4-01 khung vận hành điểm trong admin-web — 13/10/2026
+## N4 Phase 1 — đấu giá & vận hành trên client — 13/10/2026
 
-- Nhánh `feature/n4-01-operations-shell` từ `main` `7be68a4`; kế hoạch N4 ở nhánh
-  `docs/n4-auction-operations-plan` (`N4_AUCTION_OPERATIONS_PLAN.md`). Chưa push/PR.
-- Nhóm nav "Điểm và đấu giá": STAFF thấy Nhận sách đấu giá/Giao sách, ADMIN thấy Xử lý
-  đơn tại điểm/Phiên đấu giá; `canOperatePoint` (ACTIVE+STAFF), `canResolve`
-  (ACTIVE+ADMIN). Bốn trang chỉ đọc gọi endpoint có sẵn, không đổi contract/API;
-  giao diện theo hàng đợi Bàn kiểm duyệt. Thao tác trên từng dòng là N4-02…05.
-- Staff chưa được phân công nhận **danh sách rỗng**, không phải 403; UI ghi chú điều
-  này trong trạng thái rỗng (kế hoạch N4 viết 403 là sai, cần sửa khi tích hợp).
-- Typecheck/lint/20 unit PASS. Browser 1366/390 trên API thật + DB QA `ops_browser_*_test`
-  (fixture tạm: intake thật tại điểm A, chỉ staff được phân công): hàng intake, trạng
-  thái rỗng, Staff mở URL Admin bị chặn, Admin thấy đủ 4 mục. `test:browser` của
-  admin-web chưa mở rộng cho trang mới; 320 px, human review NOT RUN.
+Kế hoạch: nhánh `docs/n4-auction-operations-plan`. Mỗi gói một nhánh, commit local,
+**chưa push/PR**. Phase 2 (N4-10…14: CRUD điểm, phân công, NeedsEvidence, incident,
+quá hạn) chưa làm: READINESS vẫn chặn mở rộng nghiệp vụ, cần chủ dự án duyệt.
+
+| Gói | Nhánh (base) | Nội dung |
+| --- | --- | --- |
+| N4-01…05 | `feature/n4-01-operations-shell` → `-02-intake-desk` → `-03-collection-desk` → `-04-resolution-desk` → `-05-auction-cancel` (chuỗi từ `main` `7be68a4`) | admin-web "Điểm và đấu giá": Staff nhận/kiểm tra/mở phiên/trả sách, giao sách bằng mã và nhận lại sách trả; Admin quyết định đơn tại điểm theo ma trận API, hủy phiên. `core/command.ts` dùng chung với review (body/key cố định, retry cùng request) |
+| N4-05 API | cùng nhánh N4-05 | OpenAPI **0.35.0**: `GET /operations/auctions` (ADMIN, chỉ đọc) trả version cho lệnh hủy, gồm OnHold, loại phiên Admin bán/trả giá. ADR 0030 có amendment |
+| N4-06 | `feature/n4-06-web-after-win` (từ `main`) | user-web: xem biên bản, đồng ý/từ chối, lấy mã nhận (hiện một lần), khiếu nại; toast bị vượt giá theo luật hòa FR-AU04 |
+| N4-07…09 | `feature/n4-07-rn-auctions` (từ `fix/rn-auction-card-listing-id`) → `-08-rn-after-win` → `-09-rn-seller-intake` | RN: danh sách/chi tiết phiên, trả giá/Auto/mua ngay, trạng thái dẫn/hòa/bị vượt; Phiên của tôi và các bước người thắng; gửi sách đấu giá và rút |
+
+- Kiểm tra: admin-web typecheck/lint/28 unit, user-web typecheck/lint/119 unit, RN
+  lint/typecheck/142 unit PASS; API typecheck/lint/130 unit, contract check/routes
+  (137 operation) và `auctions.e2e-spec.ts` 50/50 trên QA replica set PASS. Full API
+  E2E/Mongo suite NOT RUN cho thay đổi này.
+- Browser trên API thật + DB `ops_browser_*_test` (fixture tạm, storage fake): mọi thao
+  tác Staff/Admin, các bước người mua web, RN web 375 (kể cả ca 300k hòa: người đặt
+  sau thấy "trả bằng người dẫn giá"). Fixture **dời AuctionClock tới 10:00** khi điểm
+  đóng cửa (như e2e pin clock), không đổi luật server. Native Android/iOS, 320 px,
+  `test:browser` mở rộng, human review NOT RUN.
+- Sửa thêm khi kiểm: mã nhận dán "436 147" mất số (maxLength trước khi lọc); cỡ chữ mã
+  ở web; RN không hiện giá khởi điểm như giá đã trả cho đơn mua ngay.
+- Ghi nhận ngoài phạm vi: màn tài khoản RN có huy hiệu "Bạn đọc uy tín ★ 4.9" và nội
+  dung mock (AGENTS cấm bịa rating/trust badge) — chưa sửa.
 
 ## Mobile React Native CI Lint & Design Token Remediation — 13/10/2026
 
