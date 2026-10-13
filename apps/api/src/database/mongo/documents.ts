@@ -734,6 +734,7 @@ export type AuctionIntakeState =
   | 'AwaitingDropoff'
   | 'Received'
   | 'Passed'
+  | 'NeedsEvidence'
   | 'Auctioning'
   | 'ReclaimRequired'
   | 'Reclaimed'
@@ -770,12 +771,35 @@ export interface AuctionIntakeDoc extends Lockable {
   shelfCode: string | null;
   inspectedAt: Date | null;
   inspectorId: string | null;
-  inspectionOutcome: 'Pass' | 'Fail' | null;
+  inspectionOutcome: 'Pass' | 'Fail' | 'NeedsEvidence' | null;
   inspectionNote: string | null;
+  evidenceRequestedBy: string | null;
+  evidenceDeadline: Date | null;
+  evidenceNote: string | null;
+  evidenceSubmittedAt: Date | null;
+  reclaimRequiredAt: Date | null;
   auctionId: string | null;
   reclaimReason: ReclaimReason | null;
   closedAt: Date | null;
   updatedAt: Date;
+}
+export interface InspectionChecklist {
+  titleEditionMatches: boolean;
+  privateMarksMatch: boolean;
+  coverPagesMatch: boolean;
+  notesAccessoriesMatch: boolean;
+  suspectedCopy: boolean;
+}
+// Immutable revision of the point inspection report (FR-T01).
+export interface IntakeInspectionReportDoc {
+  _id: string;
+  intakeId: string;
+  revision: number;
+  outcome: 'Pass' | 'Fail' | 'NeedsEvidence';
+  checklist: InspectionChecklist | null;
+  note: string | null;
+  inspectorId: string;
+  createdAt: Date;
 }
 export type AuctionState =
   | 'Active'

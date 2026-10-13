@@ -19,11 +19,11 @@ import {
 } from "./contracts";
 import { CollectionHandover, CollectionReturn } from "./collection-actions";
 import {
+  IntakeEvidenceDecision,
   IntakeInspect,
-  IntakeOpen,
-  IntakeReceive,
-  IntakeReclaim,
-} from "./intake-actions";
+  InspectionReports,
+} from "./inspection";
+import { IntakeOpen, IntakeReceive, IntakeReclaim } from "./intake-actions";
 import { Forbidden, OperationsQueue } from "./queue-frame";
 import { ResolutionDecision } from "./resolution-actions";
 import { refetchWhileClosed, useQueuePanel, type Row } from "./queue-panel";
@@ -34,19 +34,35 @@ import { refetchWhileClosed, useQueuePanel, type Row } from "./queue-panel";
 export function IntakeQueue() {
   const user = useOutletContext<CurrentUser>();
   if (!canOperatePoint(user)) return <Forbidden />;
-  return <IntakeQueueContent />;
+  return <IntakeQueueContent userId={user.id} />;
 }
 function intakeMeta(item: Intake) {
   if (item.state === "AwaitingDropoff")
     return [`Hạn mang tới: ${dateText(item.dropoffDeadline)}`];
   const meta = [`Nhận lúc ${dateText(item.receivedAt)}`];
+  if (item.state === "NeedsEvidence")
+    meta.push(
+      item.evidenceSubmittedAt
+        ? "Người bán đã bổ sung bằng chứng"
+        : `Hạn bổ sung: ${dateText(item.evidenceDeadline)}`,
+    );
   if (item.shelfCode) meta.push(`Kệ ${item.shelfCode}`);
   if (item.reclaimReason) meta.push(reclaimLabels[item.reclaimReason]);
   return meta;
 }
 // N4-02: the next step for the assigned Staff member, if any.
-function intakeAction(item: Intake): Row["action"] {
+function intakeAction(item: Intake, userId: string): Row["action"] {
   switch (item.state) {
+    // The Staff member who asked for evidence never decides on it.
+    case "NeedsEvidence":
+      return item.evidenceRequestedBy === userId
+        ? undefined
+        : {
+            label: "Xem bằng chứng",
+            render: (context) => (
+              <IntakeEvidenceDecision item={item} {...context} />
+            ),
+          };
     case "AwaitingDropoff":
       return {
         label: "Nhận sách",
@@ -71,7 +87,7 @@ function intakeAction(item: Intake): Row["action"] {
       return undefined;
   }
 }
-function IntakeQueueContent() {
+function IntakeQueueContent({ userId }: { userId: string }) {
   const panel = useQueuePanel();
   const result = useQuery({
     queryKey: ["operations", "auction-intakes"],
@@ -98,12 +114,17 @@ function IntakeQueueContent() {
               {item.buyNowPrice !== null &&
                 ` · mua ngay ${money(item.buyNowPrice)}`}
             </p>
-            {item.inspectionNote && (
-              <p className="prose">Ghi chú kiểm tra: {item.inspectionNote}</p>
-            )}
+            <InspectionReports item={item} />
+            {item.state === "NeedsEvidence" &&
+              item.evidenceRequestedBy === userId && (
+                <p>
+                  Bạn đã yêu cầu bằng chứng; một nhân viên khác tại điểm sẽ
+                  quyết định.
+                </p>
+              )}
           </>
         ),
-        action: intakeAction(item),
+        action: intakeAction(item, userId),
       }))}
       empty={{ title: "Chưa có sách cần xử lý.", body: <AssignmentNote /> }}
     />

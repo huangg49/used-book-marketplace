@@ -96,6 +96,11 @@ import {
   pointAdministrationMigration,
   withPointAdministrationChanges,
 } from './0022-point-administration.js';
+import {
+  inspectionEvidenceCollectionSpecs,
+  inspectionEvidenceMigration,
+  withInspectionEvidenceChanges,
+} from './0023-inspection-evidence.js';
 
 export interface Migration {
   id: string;
@@ -186,6 +191,7 @@ export const migrations: Migration[] = [
   directDeliveryCompletionMigration,
   directDeliveryCompletionLegacyShapeMigration,
   pointAdministrationMigration,
+  inspectionEvidenceMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -218,7 +224,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withResolutionChanges)
     .map(withSettlementChanges)
     .map(withRulesChanges)
-    .map(withPointAdministrationChanges),
+    .map(withPointAdministrationChanges)
+    .map(withInspectionEvidenceChanges),
   ...pointOrderCollectionSpecs
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)
@@ -235,4 +242,5 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withExchangePhase2Changes)
     .map(withExchangePhase3Changes),
   ...directDeliveryCompletionSpecs,
+  ...inspectionEvidenceCollectionSpecs,
 ];

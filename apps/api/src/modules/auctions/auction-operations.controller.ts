@@ -140,6 +140,24 @@ export class AuctionOperationsController {
       res,
     );
   }
+  @Post('auction-intakes/:intakeId/evidence-decision')
+  @Roles('STAFF')
+  @HttpCode(200)
+  decideEvidence(
+    @Param('intakeId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.intakes.decideEvidence(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('DecideAuctionIntakeEvidence', body),
+      ),
+      res,
+    );
+  }
   @Post('auction-intakes/:intakeId/open')
   @Roles('STAFF')
   @HttpCode(200)

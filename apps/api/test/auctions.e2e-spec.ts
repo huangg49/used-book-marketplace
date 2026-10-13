@@ -576,6 +576,196 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     });
   });
 
+  it('NeedsEvidence blocks opening; an independent Staff member decides after the seller answers or the deadline (FR-T01/T02, POL-09)', async () => {
+    const reviewerStaff = await actor(['STAFF']);
+    await db.c.point_staff_assignments.insertOne({
+      _id: randomUUID(),
+      pointId: HANDOVER_POINT_A,
+      userId: reviewerStaff.id,
+      validFrom: new Date(),
+      validTo: null,
+      createdAt: new Date(),
+    });
+    const ok = {
+      titleEditionMatches: true,
+      privateMarksMatch: true,
+      coverPagesMatch: true,
+      notesAccessoriesMatch: true,
+      suspectedCopy: false,
+    };
+    const suspicious = { ...ok, suspectedCopy: true };
+    async function received() {
+      const seller = await actor();
+      const l = await saleListing(seller);
+      const intakeId = (
+        await cmd('post', '/auction-intakes', intakeBody(l), seller).expect(200)
+      ).body.intakeId as string;
+      await cmd(
+        'post',
+        `/operations/auction-intakes/${intakeId}/receive`,
+        { expectedVersion: 1, shelfCode: 'E-01' },
+        staff,
+      ).expect(200);
+      return { seller, intakeId };
+    }
+    const inspect = (intakeId: string, body: object) =>
+      cmd(
+        'post',
+        `/operations/auction-intakes/${intakeId}/inspect`,
+        { expectedVersion: 2, ...body },
+        staff,
+      );
+    const decide = (
+      intakeId: string,
+      a: Actor,
+      version: number,
+      body: object,
+    ) =>
+      cmd(
+        'post',
+        `/operations/auction-intakes/${intakeId}/evidence-decision`,
+        {
+          expectedVersion: version,
+          note: 'Đã đối chiếu bằng chứng người bán gửi',
+          ...body,
+        },
+        a,
+      );
+    const answer = (intakeId: string, a: Actor, version: number) =>
+      cmd(
+        'post',
+        `/me/auction-intakes/${intakeId}/evidence`,
+        {
+          expectedVersion: version,
+          note: 'Dấu mộc ở trang 3 là của thư viện trường cũ, có ảnh phiếu mượn.',
+        },
+        a,
+      );
+    const request = {
+      outcome: 'NeedsEvidence',
+      note: 'Cần ảnh dấu mộc trang 3 để đối chiếu',
+      checklist: suspicious,
+    };
+
+    const first = await received();
+    // A suspected copy asks for evidence; a Pass needs every item matching.
+    await inspect(first.intakeId, { ...request, checklist: null }).expect(422);
+    await inspect(first.intakeId, {
+      outcome: 'Pass',
+      note: null,
+      checklist: suspicious,
+    }).expect(422);
+    await inspect(first.intakeId, {
+      outcome: 'Fail',
+      note: 'Nghi bản sao',
+      checklist: suspicious,
+    }).expect(422);
+    await inspect(first.intakeId, {
+      outcome: 'Pass',
+      note: null,
+      checklist: { ...ok, coverPagesMatch: false },
+    }).expect(422);
+    const asked = await inspect(first.intakeId, request).expect(200);
+    expect(asked.body).toMatchObject({ state: 'NeedsEvidence', version: 3 });
+    const mine = await call(
+      'get',
+      `/me/auction-intakes/${first.intakeId}`,
+      first.seller,
+    ).expect(200);
+    validates('AuctionIntake', mine.body);
+    expect(mine.body).toMatchObject({
+      state: 'NeedsEvidence',
+      inspectionOutcome: 'NeedsEvidence',
+      evidenceRequestedBy: null,
+      evidenceSubmittedAt: null,
+      reports: [
+        expect.objectContaining({
+          revision: 1,
+          outcome: 'NeedsEvidence',
+          checklist: suspicious,
+        }),
+      ],
+    });
+    expect(
+      Date.parse(mine.body.evidenceDeadline) -
+        Date.parse(mine.body.inspectedAt),
+    ).toBe(48 * HOUR);
+    expect(JSON.stringify(mine.body)).not.toContain(staff.id);
+    await cmd(
+      'post',
+      `/operations/auction-intakes/${first.intakeId}/open`,
+      { expectedVersion: 3 },
+      staff,
+    ).expect(409);
+    // No answer yet and the window is open: nobody decides; the requester never does.
+    await decide(first.intakeId, reviewerStaff, 3, { outcome: 'Fail' }).expect(
+      409,
+    );
+    expect(
+      (await decide(first.intakeId, staff, 3, { outcome: 'Pass' }).expect(403))
+        .body.code,
+    ).toBe('SelfReviewForbidden');
+    await answer(first.intakeId, await actor(), 3).expect(404);
+    const answered = await answer(first.intakeId, first.seller, 3).expect(200);
+    expect(answered.body).toMatchObject({ state: 'NeedsEvidence', version: 4 });
+    await answer(first.intakeId, first.seller, 4).expect(409);
+    const passed = await decide(first.intakeId, reviewerStaff, 4, {
+      outcome: 'Pass',
+      checklist: ok,
+    }).expect(200);
+    expect(passed.body).toMatchObject({ state: 'Passed', version: 5 });
+    const staffView = await call('get', '/operations/auction-intakes', staff)
+      .expect(200)
+      .then((r) =>
+        r.body.items.find((i: { id: string }) => i.id === first.intakeId),
+      );
+    expect(staffView).toMatchObject({
+      evidenceRequestedBy: staff.id,
+      reports: [
+        expect.objectContaining({ revision: 1, outcome: 'NeedsEvidence' }),
+        expect.objectContaining({
+          revision: 2,
+          outcome: 'Pass',
+          checklist: ok,
+        }),
+      ],
+    });
+    await cmd(
+      'post',
+      `/operations/auction-intakes/${first.intakeId}/open`,
+      { expectedVersion: 5 },
+      staff,
+    ).expect(200);
+
+    // Silence past the deadline: Fail only, never an automatic Pass.
+    const second = await received();
+    const requested = await inspect(second.intakeId, request).expect(200);
+    await longSession(second.seller);
+    await longSession(reviewerStaff);
+    pinClock(new Date(Date.parse(requested.body.serverTime) + 48 * HOUR));
+    await answer(second.intakeId, second.seller, 3).expect(409);
+    await decide(second.intakeId, reviewerStaff, 3, {
+      outcome: 'Pass',
+      checklist: ok,
+    }).expect(409);
+    const failed = await decide(second.intakeId, reviewerStaff, 3, {
+      outcome: 'Fail',
+      note: 'Người bán không bổ sung bằng chứng trong hạn',
+    }).expect(200);
+    expect(failed.body.state).toBe('ReclaimRequired');
+    expect(
+      await db.c.auction_intakes.findOne({ _id: second.intakeId }),
+    ).toMatchObject({
+      reclaimReason: 'InspectionFailed',
+      reclaimRequiredAt: new Date(failed.body.serverTime),
+    });
+    expect(
+      await db.c.intake_inspection_reports.countDocuments({
+        intakeId: second.intakeId,
+      }),
+    ).toBe(2);
+  });
+
   it('public book reads use only the inspected revision and never bypass ordinary shelf custody', async () => {
     const o = await openAuction();
     const response = await call('get', `/auctions/${o.auctionId}`).expect(200);

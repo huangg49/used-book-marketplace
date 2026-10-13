@@ -84,6 +84,7 @@ export interface CollectionTypes {
   wishlist_items: D.WishlistItemDoc;
   handover_points: D.HandoverPointDoc;
   point_staff_assignments: D.PointStaffAssignmentDoc;
+  intake_inspection_reports: D.IntakeInspectionReportDoc;
   point_slots: D.PointSlotDoc;
   auction_intakes: D.AuctionIntakeDoc;
   auctions: D.AuctionDoc;
@@ -245,6 +246,7 @@ const NAMES: CollectionName[] = [
   'online_price_offers',
   'handover_points',
   'point_staff_assignments',
+  'intake_inspection_reports',
   'point_slots',
   'auction_intakes',
   'auctions',

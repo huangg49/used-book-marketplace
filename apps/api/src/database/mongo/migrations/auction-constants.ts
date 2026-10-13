@@ -22,3 +22,5 @@ export const RETURN_WINDOW_MS = 72 * HOUR_MS;
 export const CLAIM_MIN_LENGTH = 30;
 export const PLATFORM_COMMISSION_ACCOUNT_ID =
   '00000000-0000-4000-8000-0000000000c1';
+// POL-09: the seller answers a NeedsEvidence inspection within 48 hours.
+export const EVIDENCE_WINDOW_MS = 48 * 3_600_000;

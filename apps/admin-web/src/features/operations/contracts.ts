@@ -11,12 +11,34 @@ export const intakeStates = [
   "AwaitingDropoff",
   "Received",
   "Passed",
+  "NeedsEvidence",
   "Auctioning",
   "ReclaimRequired",
   "Reclaimed",
   "Cancelled",
   "Sold",
 ] as const;
+// N4-12 (FR-T01): the point inspection checklist.
+const checklist = z.object({
+  titleEditionMatches: z.boolean(),
+  privateMarksMatch: z.boolean(),
+  coverPagesMatch: z.boolean(),
+  notesAccessoriesMatch: z.boolean(),
+  suspectedCopy: z.boolean(),
+}) satisfies z.ZodType<Schema["InspectionChecklist"]>;
+export type Checklist = z.infer<typeof checklist>;
+export const checklistLabels: Record<keyof Checklist, string> = {
+  titleEditionMatches: "Đúng đầu sách và ấn bản",
+  privateMarksMatch: "Dấu riêng khớp ảnh đã đăng",
+  coverPagesMatch: "Bìa và trang khớp mô tả",
+  notesAccessoriesMatch: "Ghi chú và phụ kiện khớp mô tả",
+  suspectedCopy: "Có dấu hiệu nghi bản sao",
+};
+export const outcomeLabels = {
+  Pass: "Đạt",
+  Fail: "Không đạt",
+  NeedsEvidence: "Cần bằng chứng",
+} as const;
 export const intake = z.object({
   id: uuid,
   contextId: uuid,
@@ -35,7 +57,7 @@ export const intake = z.object({
   receivedAt: time.nullable(),
   shelfCode: z.string().nullable(),
   inspectedAt: time.nullable(),
-  inspectionOutcome: z.enum(["Pass", "Fail"]).nullable(),
+  inspectionOutcome: z.enum(["Pass", "Fail", "NeedsEvidence"]).nullable(),
   inspectionNote: z.string().nullable(),
   auctionId: uuid.nullable(),
   reclaimReason: z
@@ -51,6 +73,20 @@ export const intake = z.object({
     ])
     .nullable(),
   closedAt: time.nullable(),
+  evidenceRequestedBy: uuid.nullable(),
+  evidenceDeadline: time.nullable(),
+  evidenceNote: z.string().nullable(),
+  evidenceSubmittedAt: time.nullable(),
+  reclaimRequiredAt: time.nullable(),
+  reports: z.array(
+    z.object({
+      revision: z.number().int().positive(),
+      outcome: z.enum(["Pass", "Fail", "NeedsEvidence"]),
+      checklist: checklist.nullable(),
+      note: z.string().nullable(),
+      createdAt: time,
+    }),
+  ),
 }) satisfies z.ZodType<Schema["AuctionIntake"]>;
 export type Intake = z.infer<typeof intake>;
 export const intakeList = z.object({
@@ -203,6 +239,7 @@ export const intakeLabels: Record<Intake["state"], string> = {
   AwaitingDropoff: "Chờ người bán mang sách tới",
   Received: "Đã nhận, chờ kiểm tra",
   Passed: "Đạt kiểm tra, chờ mở phiên",
+  NeedsEvidence: "Chờ bằng chứng của người bán",
   Auctioning: "Đang đấu giá",
   ReclaimRequired: "Chờ người bán nhận lại",
   Reclaimed: "Đã trả người bán",

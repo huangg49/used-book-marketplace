@@ -200,6 +200,8 @@ export type AuctionOperation =
   | 'cancelAuctionIntake'
   | 'receiveAuctionIntake'
   | 'inspectAuctionIntake'
+  | 'submitAuctionIntakeEvidence'
+  | 'decideAuctionIntakeEvidence'
   | 'openAuction'
   | 'reclaimAuctionIntake'
   | 'cancelAuction'

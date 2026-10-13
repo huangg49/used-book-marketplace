@@ -834,3 +834,12 @@
 .inline-search .field {
   flex: 1 1 16rem;
 }
+
+/* N4-12: inspection report revisions under an intake row. */
+.report-revisions {
+  margin: 0.5rem 0 0;
+  padding-inline-start: 1.25rem;
+}
+.report-revisions li + li {
+  margin-block-start: 0.25rem;
+}

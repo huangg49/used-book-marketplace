@@ -4,12 +4,14 @@ import type {
   AuctionDoc,
   AuctionIntakeContextDoc,
   AuctionIntakeDoc,
+  InspectionChecklist,
   Json,
   ReclaimReason,
 } from '../../database/mongo/documents.js';
 import {
   AUCTION_DROPOFF_MS,
   AUCTION_DURATION_MS,
+  EVIDENCE_WINDOW_MS,
 } from '../../database/mongo/migrations/auction-constants.js';
 import { MongoService } from '../../database/mongo/mongo.service.js';
 import type { Tx } from '../../database/mongo/transaction.js';
@@ -46,7 +48,12 @@ import { requireUnrestricted } from './member-violations.js';
 // POL-41 counts intakes whose auction has not ended: before opening, or
 // opened and still Active/OnHold. A closed auction (sold, unsold, expired)
 // no longer counts even while its Order or reclaim is open.
-const PRE_AUCTION_STATES = ['AwaitingDropoff', 'Received', 'Passed'] as const;
+const PRE_AUCTION_STATES = [
+  'AwaitingDropoff',
+  'Received',
+  'NeedsEvidence',
+  'Passed',
+] as const;
 // FR-H08: these outcomes send the listing back to revision on reclaim.
 const REVISION_REQUIRED: readonly ReclaimReason[] = [
   'InspectionFailed',
@@ -56,6 +63,40 @@ const REVISION_REQUIRED: readonly ReclaimReason[] = [
 const WITHDRAWN_REASON = 'Người bán rút phiên trước lượt trả giá đầu tiên.';
 const forbidden = (message: string) =>
   new DomainError(403, 'FORBIDDEN', message);
+const noteLength = (note: string | null | undefined) =>
+  [...(note?.trim() ?? '')].length;
+// FR-T01/T02: a Pass covers the checklist only; a suspected copy is never
+// passed or failed outright at the first inspection, it asks for evidence.
+function checkConclusion(
+  outcome: 'Pass' | 'Fail' | 'NeedsEvidence',
+  checklist: InspectionChecklist | null | undefined,
+  note: string | null | undefined,
+  firstInspection: boolean,
+) {
+  if (outcome === 'NeedsEvidence') {
+    if (!checklist)
+      invalidField(
+        'checklist',
+        'Ghi bảng kiểm khi yêu cầu bổ sung bằng chứng.',
+      );
+    if (noteLength(note) < 10)
+      invalidField('note', 'Ghi rõ bằng chứng cần bổ sung (10–1.000 ký tự).');
+  }
+  if (!checklist) return;
+  if (outcome === 'Pass') {
+    const { suspectedCopy, ...matches } = checklist;
+    if (suspectedCopy || Object.values(matches).some((ok) => !ok))
+      invalidField(
+        'checklist',
+        'Chỉ kết luận đạt khi mọi mục khớp và không nghi bản sao.',
+      );
+  }
+  if (firstInspection && checklist.suspectedCopy && outcome === 'Fail')
+    invalidField(
+      'outcome',
+      'Nghi bản sao cần yêu cầu người bán bổ sung bằng chứng trước khi kết luận.',
+    );
+}
 
 // Seller intake and point Staff steps before an auction opens (FR-AU01/02,
 // FR-H07, FR-T01) plus reclaim afterwards. Lock order: users -> session ->
@@ -114,7 +155,16 @@ export class AuctionIntakesService {
   ) {
     const next = await tx.c.auction_intakes.findOneAndUpdate(
       { _id: i._id, version: i.version, state: i.state },
-      { $set: { ...set, updatedAt: now }, $inc: { version: 1 } },
+      {
+        $set: {
+          ...set,
+          ...(set.state === 'ReclaimRequired'
+            ? { reclaimRequiredAt: now }
+            : {}),
+          updatedAt: now,
+        },
+        $inc: { version: 1 },
+      },
       { returnDocument: 'after' },
     );
     if (!next) throw conflict();
@@ -325,6 +375,11 @@ export class AuctionIntakesService {
             inspectorId: null,
             inspectionOutcome: null,
             inspectionNote: null,
+            evidenceRequestedBy: null,
+            evidenceDeadline: null,
+            evidenceNote: null,
+            evidenceSubmittedAt: null,
+            reclaimRequiredAt: null,
             auctionId: null,
             reclaimReason: null,
             closedAt: null,
@@ -514,15 +569,141 @@ export class AuctionIntakesService {
   ) {
     return this.staffCommand(context, 'inspectAuctionIntake', id, body, {
       from: 'Received',
-      apply: (tx, i, actor, now) =>
-        this.transition(
+      apply: async (tx, i, actor, now) => {
+        checkConclusion(body.outcome, body.checklist, body.note, true);
+        const note = body.note?.trim() || null;
+        await this.appendReport(
+          tx,
+          i,
+          body.outcome,
+          body.checklist,
+          note,
+          actor,
+          now,
+        );
+        return this.transition(
           tx,
           i,
           {
             inspectedAt: now,
             inspectorId: actor._id,
             inspectionOutcome: body.outcome,
-            inspectionNote: body.note?.trim() || null,
+            inspectionNote: note,
+            ...(body.outcome === 'Pass'
+              ? { state: 'Passed' as const }
+              : body.outcome === 'NeedsEvidence'
+                ? {
+                    state: 'NeedsEvidence' as const,
+                    evidenceRequestedBy: actor._id,
+                    evidenceDeadline: new Date(
+                      now.getTime() + EVIDENCE_WINDOW_MS,
+                    ),
+                  }
+                : {
+                    state: 'ReclaimRequired' as const,
+                    reclaimReason: 'InspectionFailed' as const,
+                  }),
+          },
+          now,
+        );
+      },
+      event: 'AuctionBookInspected',
+    });
+  }
+
+  // FR-T02/POL-09: once, before the deadline; the conclusion stays with Staff.
+  submitEvidence(
+    context: CommandContext,
+    id: string,
+    body: Wire['SubmitAuctionIntakeEvidence'],
+  ) {
+    return this.commands.runAuction(
+      context,
+      'submitAuctionIntakeEvidence',
+      id,
+      body,
+      {
+        authorize: async (tx, actor) => {
+          member(actor);
+          const i = await this.intake(tx, id);
+          if (i.sellerId !== actor._id) throw notFound();
+          return i;
+        },
+        mutate: async (tx, _actor, before) => {
+          const i = await this.lockIntake(tx, before);
+          if (i.version !== body.expectedVersion) throw conflict();
+          const now = await this.clock.decision(tx, context.auth);
+          if (i.state !== 'NeedsEvidence' || i.evidenceSubmittedAt)
+            throw invalidState();
+          if (now >= i.evidenceDeadline!)
+            throw new DomainError(
+              409,
+              'InvalidState',
+              'Đã quá hạn bổ sung bằng chứng cho sách này.',
+            );
+          const next = await this.transition(
+            tx,
+            i,
+            { evidenceNote: body.note.trim(), evidenceSubmittedAt: now },
+            now,
+          );
+          return AuctionIntakesService.change(
+            next,
+            now,
+            'AuctionIntakeEvidenceSubmitted',
+          );
+        },
+      },
+    );
+  }
+
+  // An independent Staff member decides; without an answer only Fail is
+  // possible, and only after the deadline (never an automatic Pass).
+  decideEvidence(
+    context: CommandContext,
+    id: string,
+    body: Wire['DecideAuctionIntakeEvidence'],
+  ) {
+    return this.staffCommand(context, 'decideAuctionIntakeEvidence', id, body, {
+      from: 'NeedsEvidence',
+      apply: async (tx, i, actor, now) => {
+        if (actor._id === i.evidenceRequestedBy)
+          throw new DomainError(
+            403,
+            'SelfReviewForbidden',
+            'Một nhân viên khác phải xem xét bằng chứng bạn đã yêu cầu.',
+          );
+        if (!i.evidenceSubmittedAt && now < i.evidenceDeadline!)
+          throw new DomainError(
+            409,
+            'InvalidState',
+            'Người bán vẫn còn hạn bổ sung bằng chứng.',
+          );
+        if (!i.evidenceSubmittedAt && body.outcome === 'Pass')
+          throw new DomainError(
+            409,
+            'InvalidState',
+            'Người bán không bổ sung bằng chứng; chỉ có thể kết luận không đạt.',
+          );
+        checkConclusion(body.outcome, body.checklist, body.note, false);
+        const note = body.note.trim();
+        await this.appendReport(
+          tx,
+          i,
+          body.outcome,
+          body.checklist,
+          note,
+          actor,
+          now,
+        );
+        return this.transition(
+          tx,
+          i,
+          {
+            inspectedAt: now,
+            inspectorId: actor._id,
+            inspectionOutcome: body.outcome,
+            inspectionNote: note,
             ...(body.outcome === 'Pass'
               ? { state: 'Passed' as const }
               : {
@@ -531,8 +712,35 @@ export class AuctionIntakesService {
                 }),
           },
           now,
-        ),
+        );
+      },
       event: 'AuctionBookInspected',
+    });
+  }
+
+  // Immutable report revision (FR-T01); the intake keeps the latest result.
+  private async appendReport(
+    tx: Tx,
+    i: AuctionIntakeDoc,
+    outcome: 'Pass' | 'Fail' | 'NeedsEvidence',
+    checklist: InspectionChecklist | null | undefined,
+    note: string | null,
+    actor: CurrentActor,
+    now: Date,
+  ) {
+    const revision =
+      (await tx.c.intake_inspection_reports.countDocuments({
+        intakeId: i._id,
+      })) + 1;
+    await tx.c.intake_inspection_reports.insertOne({
+      _id: randomUUID(),
+      intakeId: i._id,
+      revision,
+      outcome,
+      checklist: checklist ?? null,
+      note,
+      inspectorId: actor._id,
+      createdAt: now,
     });
   }
 
@@ -615,6 +823,7 @@ export class AuctionIntakesService {
     operation:
       | 'receiveAuctionIntake'
       | 'inspectAuctionIntake'
+      | 'decideAuctionIntakeEvidence'
       | 'openAuction'
       | 'reclaimAuctionIntake',
     id: string,
@@ -721,6 +930,22 @@ export class AuctionIntakesService {
       auctionId: i.auctionId,
       reclaimReason: i.reclaimReason,
       closedAt: i.closedAt?.toISOString() ?? null,
+      evidenceRequestedBy: staffView ? i.evidenceRequestedBy : null,
+      evidenceDeadline: i.evidenceDeadline?.toISOString() ?? null,
+      evidenceNote: i.evidenceNote,
+      evidenceSubmittedAt: i.evidenceSubmittedAt?.toISOString() ?? null,
+      reclaimRequiredAt: i.reclaimRequiredAt?.toISOString() ?? null,
+      reports: (
+        await tx.c.intake_inspection_reports
+          .find({ intakeId: i._id }, { sort: { revision: 1 }, limit: 20 })
+          .toArray()
+      ).map((r) => ({
+        revision: r.revision,
+        outcome: r.outcome,
+        checklist: r.checklist,
+        note: r.note,
+        createdAt: r.createdAt.toISOString(),
+      })),
     };
   }
   listMine(auth: Actor): Promise<Wire['AuctionIntakeList']> {

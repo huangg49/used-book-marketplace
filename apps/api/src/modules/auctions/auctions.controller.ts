@@ -178,6 +178,24 @@ export class AuctionsController {
   readMine(@Param('intakeId') id: string, @Req() req: AuthenticatedRequest) {
     return this.intakes.readMine(req.auth, this.input.uuid(id));
   }
+  @Post('me/auction-intakes/:intakeId/evidence')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  submitEvidence(
+    @Param('intakeId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.intakes.submitEvidence(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('SubmitAuctionIntakeEvidence', body),
+      ),
+      res,
+    );
+  }
   @Post('auction-intakes/:intakeId/cancel')
   @Roles('MEMBER')
   @HttpCode(200)

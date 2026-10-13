@@ -1815,6 +1815,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/auction-intakes/{intakeId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The seller answers a NeedsEvidence inspection once, before the POL-09 48-hour deadline, with a written explanation. It does not change the conclusion; an independent Staff member decides. */
+        post: operations["submitAuctionIntakeEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/auction-intakes/{intakeId}/evidence-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Assigned STAFF other than the one who asked for evidence decides Pass or Fail after the seller answered, or Fail after the deadline passed without an answer. NeedsEvidence never becomes Pass on its own. */
+        post: operations["decideAuctionIntakeEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/auctions": {
         parameters: {
             query?: never;
@@ -4095,7 +4129,7 @@ export interface components {
             contextId: string;
             version: number;
             /** @enum {string} */
-            state: "AwaitingDropoff" | "Received" | "Passed" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "PaymentExpired" | "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed";
+            state: "AwaitingDropoff" | "Received" | "Passed" | "NeedsEvidence" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "PaymentExpired" | "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed";
             currentPrice: number | null;
             minimumBid: number | null;
             leading: boolean | null;
@@ -4140,8 +4174,10 @@ export interface components {
         InspectAuctionIntake: {
             expectedVersion: number;
             /** @enum {string} */
-            outcome: "Pass" | "Fail";
+            outcome: "Pass" | "Fail" | "NeedsEvidence";
             note: string | null;
+            /** @description Required for NeedsEvidence. Pass needs every match true and suspectedCopy false; suspectedCopy true needs NeedsEvidence. */
+            checklist?: components["schemas"]["InspectionChecklist"] | null;
         };
         CancelAuction: {
             expectedVersion: number;
@@ -4196,7 +4232,7 @@ export interface components {
             buyNowPrice: number | null;
             protectiveValue: number;
             /** @enum {string} */
-            state: "AwaitingDropoff" | "Received" | "Passed" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Sold";
+            state: "AwaitingDropoff" | "Received" | "Passed" | "NeedsEvidence" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Sold";
             version: number;
             /** Format: date-time */
             createdAt: string;
@@ -4209,7 +4245,7 @@ export interface components {
             /** Format: date-time */
             inspectedAt: string | null;
             /** @enum {string|null} */
-            inspectionOutcome: "Pass" | "Fail" | null;
+            inspectionOutcome: "Pass" | "Fail" | "NeedsEvidence" | null;
             inspectionNote: string | null;
             /** Format: uuid */
             auctionId: string | null;
@@ -4217,6 +4253,23 @@ export interface components {
             reclaimReason: "SellerCancelled" | "InspectionFailed" | "Unsold" | "PaymentExpired" | "AuctionCancelled" | "OrderCancelled" | "OrderReturned" | "BookMisdescribed" | null;
             /** Format: date-time */
             closedAt: string | null;
+            /**
+             * Format: uuid
+             * @description Staff reads only; null for the owner.
+             */
+            evidenceRequestedBy: string | null;
+            /**
+             * Format: date-time
+             * @description POL-09 48 hours from the NeedsEvidence conclusion.
+             */
+            evidenceDeadline: string | null;
+            evidenceNote: string | null;
+            /** Format: date-time */
+            evidenceSubmittedAt: string | null;
+            /** Format: date-time */
+            reclaimRequiredAt: string | null;
+            /** @description Immutable inspection report revisions, oldest first. No inspector identity. */
+            reports: components["schemas"]["InspectionReport"][];
         };
         AuctionIntakeList: {
             items: components["schemas"]["AuctionIntake"][];
@@ -4456,6 +4509,34 @@ export interface components {
         };
         MyPointAssignmentList: {
             items: components["schemas"]["MyPointAssignment"][];
+        };
+        /** @description FR-T01 condition checklist. A Pass covers this checklist only, not every page or authenticity. */
+        InspectionChecklist: {
+            titleEditionMatches: boolean;
+            privateMarksMatch: boolean;
+            coverPagesMatch: boolean;
+            notesAccessoriesMatch: boolean;
+            suspectedCopy: boolean;
+        };
+        InspectionReport: {
+            revision: number;
+            /** @enum {string} */
+            outcome: "Pass" | "Fail" | "NeedsEvidence";
+            checklist: components["schemas"]["InspectionChecklist"] | null;
+            note: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        SubmitAuctionIntakeEvidence: {
+            expectedVersion: number;
+            note: string;
+        };
+        DecideAuctionIntakeEvidence: {
+            expectedVersion: number;
+            /** @enum {string} */
+            outcome: "Pass" | "Fail";
+            note: string;
+            checklist?: components["schemas"]["InspectionChecklist"] | null;
         };
         PointOrderResolutionQueue: {
             items: components["schemas"]["PointOrderResolutionItem"][];
@@ -8142,6 +8223,86 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AuctionVersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    submitAuctionIntakeEvidence: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                intakeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitAuctionIntakeEvidence"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    decideAuctionIntakeEvidence: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                intakeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideAuctionIntakeEvidence"];
             };
         };
         responses: {

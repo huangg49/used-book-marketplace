@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.36.0
+  version: 0.37.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -5456,7 +5456,7 @@ paths:
       operationId: inspectAuctionIntake
       tags:
         - Auctions
-      description: Assigned independent STAFF records condition inspection Pass or Fail against the frozen
+      description: Assigned independent STAFF records condition inspection Pass, Fail or NeedsEvidence with the FR-T01 checklist against the frozen
         revision. Fail moves to ReclaimRequired. Pass is a condition checklist, not authenticity.
       x-implementation-status: implemented
       security:
@@ -5616,6 +5616,138 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/AuctionVersionCommand"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /me/auction-intakes/{intakeId}/evidence:
+    post:
+      operationId: submitAuctionIntakeEvidence
+      tags:
+        - Auctions
+      description: The seller answers a NeedsEvidence inspection once, before the POL-09 48-hour deadline, with a written explanation. It does not change the conclusion; an independent Staff member decides.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: intakeId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitAuctionIntakeEvidence"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/auction-intakes/{intakeId}/evidence-decision:
+    post:
+      operationId: decideAuctionIntakeEvidence
+      tags:
+        - Auctions
+      description: Assigned STAFF other than the one who asked for evidence decides Pass or Fail after the seller answered, or Fail after the deadline passed without an answer. NeedsEvidence never becomes Pass on its own.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: intakeId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecideAuctionIntakeEvidence"
       responses:
         "200":
           description: Committed receipt (including replay).
@@ -12901,6 +13033,7 @@ components:
             - AwaitingDropoff
             - Received
             - Passed
+            - NeedsEvidence
             - Auctioning
             - ReclaimRequired
             - Reclaimed
@@ -13048,11 +13181,18 @@ components:
           enum:
             - Pass
             - Fail
+            - NeedsEvidence
         note:
           type:
             - string
             - "null"
           maxLength: 1000
+        checklist:
+          oneOf:
+            - $ref: "#/components/schemas/InspectionChecklist"
+            - type: "null"
+          description: Required for NeedsEvidence. Pass needs every match true and suspectedCopy false;
+            suspectedCopy true needs NeedsEvidence.
     CancelAuction:
       type: object
       additionalProperties: false
@@ -13189,6 +13329,12 @@ components:
         - auctionId
         - reclaimReason
         - closedAt
+        - evidenceRequestedBy
+        - evidenceDeadline
+        - evidenceNote
+        - evidenceSubmittedAt
+        - reclaimRequiredAt
+        - reports
       properties:
         id:
           type: string
@@ -13232,6 +13378,7 @@ components:
             - AwaitingDropoff
             - Received
             - Passed
+            - NeedsEvidence
             - Auctioning
             - ReclaimRequired
             - Reclaimed
@@ -13269,6 +13416,7 @@ components:
           enum:
             - Pass
             - Fail
+            - NeedsEvidence
             - null
         inspectionNote:
           type:
@@ -13298,6 +13446,38 @@ components:
             - string
             - "null"
           format: date-time
+        evidenceRequestedBy:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Staff reads only; null for the owner.
+        evidenceDeadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: POL-09 48 hours from the NeedsEvidence conclusion.
+        evidenceNote:
+          type:
+            - string
+            - "null"
+        evidenceSubmittedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        reclaimRequiredAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        reports:
+          type: array
+          maxItems: 20
+          description: Immutable inspection report revisions, oldest first. No inspector identity.
+          items:
+            $ref: "#/components/schemas/InspectionReport"
     AuctionIntakeList:
       type: object
       additionalProperties: false
@@ -14001,6 +14181,98 @@ components:
           maxItems: 20
           items:
             $ref: "#/components/schemas/MyPointAssignment"
+    InspectionChecklist:
+      type: object
+      additionalProperties: false
+      required:
+        - titleEditionMatches
+        - privateMarksMatch
+        - coverPagesMatch
+        - notesAccessoriesMatch
+        - suspectedCopy
+      properties:
+        titleEditionMatches:
+          type: boolean
+        privateMarksMatch:
+          type: boolean
+        coverPagesMatch:
+          type: boolean
+        notesAccessoriesMatch:
+          type: boolean
+        suspectedCopy:
+          type: boolean
+      description: FR-T01 condition checklist. A Pass covers this checklist only, not every page or authenticity.
+    InspectionReport:
+      type: object
+      additionalProperties: false
+      required:
+        - revision
+        - outcome
+        - checklist
+        - note
+        - createdAt
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        outcome:
+          type: string
+          enum:
+            - Pass
+            - Fail
+            - NeedsEvidence
+        checklist:
+          oneOf:
+            - $ref: "#/components/schemas/InspectionChecklist"
+            - type: "null"
+        note:
+          type:
+            - string
+            - "null"
+        createdAt:
+          type: string
+          format: date-time
+    SubmitAuctionIntakeEvidence:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - note
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        note:
+          type: string
+          minLength: 20
+          maxLength: 2000
+    DecideAuctionIntakeEvidence:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - outcome
+        - note
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        outcome:
+          type: string
+          enum:
+            - Pass
+            - Fail
+        note:
+          type: string
+          minLength: 10
+          maxLength: 1000
+        checklist:
+          oneOf:
+            - $ref: "#/components/schemas/InspectionChecklist"
+            - type: "null"
     PointOrderResolutionQueue:
       type: object
       additionalProperties: false

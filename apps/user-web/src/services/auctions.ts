@@ -85,14 +85,15 @@ export function bidOptions(minimum: number, step: number, count = 3) {
 
 // Seller side: the caller's own intakes tell the detail page that this auction
 // is theirs (public reads never expose the seller).
-const intakeState = z.enum(['AwaitingDropoff', 'Received', 'Passed', 'Auctioning', 'ReclaimRequired', 'Reclaimed', 'Cancelled', 'Sold'])
+const intakeState = z.enum(['AwaitingDropoff', 'Received', 'NeedsEvidence', 'Passed', 'Auctioning', 'ReclaimRequired', 'Reclaimed', 'Cancelled', 'Sold'])
 const myIntakeSchema = z.object({
   id: z.string().uuid(), auctionId: z.string().uuid().nullable(), state: intakeState, version: z.number().int(),
   listingId: z.string().uuid(), title: z.string(), pointId: z.string().uuid(),
   startPrice: money, step: z.union([z.literal(10000), z.literal(50000)]), buyNowPrice: money.nullable(), protectiveValue: money,
   createdAt: z.string(), dropoffDeadline: z.string(), receivedAt: z.string().nullable(), inspectedAt: z.string().nullable(),
-  inspectionOutcome: z.enum(['Pass', 'Fail']).nullable(), inspectionNote: z.string().nullable(),
+  inspectionOutcome: z.enum(['Pass', 'Fail', 'NeedsEvidence']).nullable(), inspectionNote: z.string().nullable(),
   reclaimReason: z.string().nullable(), closedAt: z.string().nullable(),
+  evidenceDeadline: z.string().nullable(), evidenceNote: z.string().nullable(), evidenceSubmittedAt: z.string().nullable(),
 })
 export type IntakeState = z.infer<typeof intakeState>
 export type MyIntake = z.infer<typeof myIntakeSchema>
@@ -104,6 +105,14 @@ const intakeReceiptSchema = z.object({ id: z.string().uuid(), entityType: z.stri
 export function withdrawIntake(intakeId: string, expectedVersion: number, key: string) {
   return session.request(`/auction-intakes/${intakeId}/cancel`, intakeReceiptSchema, {
     method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ expectedVersion }),
+  })
+}
+
+// N4-12 (FR-T02, POL-09): one written answer before the 48-hour deadline.
+export const EVIDENCE_MIN_LENGTH = 20
+export function submitIntakeEvidence(intakeId: string, expectedVersion: number, note: string, key: string) {
+  return session.request(`/me/auction-intakes/${intakeId}/evidence`, intakeReceiptSchema, {
+    method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ expectedVersion, note }),
   })
 }
 
