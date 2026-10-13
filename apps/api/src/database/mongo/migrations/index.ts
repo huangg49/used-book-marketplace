@@ -89,6 +89,10 @@ import {
   directDeliveryCompletionSpecs,
   withDirectDeliveryCompletionChanges,
 } from './0020-direct-delivery-completion.js';
+import {
+  directDeliveryCompletionLegacyShapeMigration,
+  withDirectDeliveryCompletionLegacyShape,
+} from './0021-direct-delivery-completion-legacy-shape.js';
 
 export interface Migration {
   id: string;
@@ -177,6 +181,7 @@ export const migrations: Migration[] = [
   exchangesPhase2Migration,
   exchangesPhase3Migration,
   directDeliveryCompletionMigration,
+  directDeliveryCompletionLegacyShapeMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -199,7 +204,7 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withCatalogVocabularyV2),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
-    .map(withDirectDeliveryCompletionChanges),
+    .map(withDirectDeliveryCompletionLegacyShape),
   wishlistSpec,
   ...priceAssistSpecsV2,
   ...onlinePriceSpecs,
