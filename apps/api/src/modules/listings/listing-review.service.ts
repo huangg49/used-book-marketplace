@@ -18,7 +18,6 @@ import { ContractInput } from '../commands/contract-input.service.js';
 import {
   conflict,
   DomainError,
-  invalidField,
   invalidState,
   notFound,
   type Wire,
@@ -103,14 +102,6 @@ export class ListingReviewService {
         const originReferenceForSubmission = originReference(
           before.currentRevision!,
         );
-        if (
-          before.currentRevision!.mode !== 'Exchange' &&
-          !originReferenceForSubmission
-        )
-          invalidField(
-            '/content/fulfillment',
-            'Chọn nơi gửi sách tại TP.HCM trước khi gửi duyệt.',
-          );
         const origin = await this.fulfillment.prepare(
           tx,
           actor._id,

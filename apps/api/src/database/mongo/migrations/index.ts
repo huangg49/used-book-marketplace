@@ -87,7 +87,6 @@ import {
 import {
   directDeliveryCompletionMigration,
   directDeliveryCompletionSpecs,
-  withDirectDeliveryCompletionChanges,
 } from './0020-direct-delivery-completion.js';
 import {
   directDeliveryCompletionLegacyShapeMigration,
