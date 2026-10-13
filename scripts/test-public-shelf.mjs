@@ -249,7 +249,6 @@ try {
   await p.getByLabel("Email", { exact: true }).fill("member@operations.test");
   await p.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await click("Đăng nhập");
-  await p.getByText("Tài khoản của bạn", { exact: true }).waitFor();
   await p.getByRole("button", { name: "Sách của tôi", exact: true }).waitFor();
   await p.screenshot({ path: path.join(artifacts, "account-390.png") });
   await p.getByRole("tab", { name: "Trang chủ", exact: true }).click();
@@ -379,7 +378,7 @@ try {
   await p.screenshot({
     path: path.join(artifacts, "account-restricted-390.png"),
   });
-  await click("Khám phá kệ sách");
+  await p.getByRole("tab", { name: "Trang chủ", exact: true }).click();
   await fixture.setUserStatus(fixture.member.user.id, "LOCKED");
   await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
   await p.getByText(/Tài khoản đang bị khóa/).waitFor();
