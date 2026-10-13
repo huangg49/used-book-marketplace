@@ -20,6 +20,9 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   );
   const id = (await createdResponse.json()).entityId;
   await p
+    .getByPlaceholder("Nhập tên, tác giả hoặc ISBN...", { exact: true })
+    .fill("Những trang sách");
+  await p
     .getByRole("button", { name: "Chọn đầu sách này", exact: true })
     .first()
     .waitFor();
@@ -33,7 +36,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   await p
     .getByRole("tab", { name: "Bước 2: Ảnh và tình trạng, còn thiếu" })
     .waitFor();
-  await click("Tiếp tục");
+  await click("Tiếp theo");
   const chooser = p.waitForEvent("filechooser");
   await click("Chọn ảnh từ thư viện");
   await (
@@ -117,7 +120,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   await p
     .getByRole("tab", { name: "Bước 2: Ảnh và tình trạng, đã đủ" })
     .waitFor();
-  await click("Tiếp tục");
+  await click("Tiếp theo");
   await click("Bán hoặc đổi");
   await fill("Giá bán (đồng)", "10000");
   await fill("Giá trị đổi (đồng)", "1000000");
@@ -157,14 +160,14 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .waitFor();
   await click("Về sách của tôi");
   await click("Hoàn thiện sách 1");
-  await click("Tiếp tục");
+  await click("Tiếp theo");
   assert.equal(
     await p
       .getByLabel("Vài dòng gửi người đọc sau", { exact: true })
       .inputValue(),
     literal,
   );
-  await click("Tiếp tục");
+  await click("Tiếp theo");
   assert.equal(
     await p.getByLabel("Giá bán (đồng)", { exact: true }).inputValue(),
     "10000",
@@ -226,12 +229,12 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     true,
   );
   await p.setViewportSize({ width: 390, height: 844 });
-  await click("Tiếp tục");
+  await click("Tiếp theo");
   await p.screenshot({ path: path.join(artifacts, "editor-review-390.png") });
   const declaration = () =>
     p
       .getByRole("checkbox", {
-        name: "Tôi có quyền đăng cuốn sách này; ảnh và mô tả phản ánh trung thực tình trạng sách.",
+        name: "Tôi xác nhận sở hữu ấn bản này và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại.",
       })
       .click();
   await declaration();
@@ -264,8 +267,8 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     "Ruột sách và trang thiếu",
     "Trang trắng sau cùng bị rời, nội dung từ trang 1 đến 120 vẫn đủ.",
   );
-  await click("Tiếp tục");
-  await click("Tiếp tục");
+  await click("Tiếp theo");
+  await click("Tiếp theo");
   await declaration();
   await click("Lưu và gửi duyệt");
   await p
