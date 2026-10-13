@@ -13,6 +13,7 @@ import { useForeground } from "../../core/hooks/use-foreground";
 import { internalMemberViewsEnabled } from "../../core/config/internal-member-views";
 import {
   AppText,
+  BackAction,
   Button,
   Icon,
   Notice,
@@ -110,10 +111,21 @@ export function AccountScreen() {
         hasNotification={notificationCount > 0}
         onNotificationsPress={() => setNotificationsOpen(true)}
         onMessagesPress={() => router.push("./account")}
-        style={{ marginBottom: 16 }}
+        style={{ marginBottom: 8 }}
       />
 
       <View style={{ paddingHorizontal: 16, paddingBottom: 24, gap: 16 }}>
+        <BackAction
+          title="Khám phá kệ sách"
+          onPress={() => router.replace("/")}
+        />
+        <AppText
+          kind="heading"
+          style={{ fontSize: 20, color: stitchTokens.wineDark }}
+          accessibilityRole="header"
+        >
+          Tài khoản của bạn
+        </AppText>
         {/* Profile State Error/Pending */}
         {profile.isPending ? (
           <StatePanel loading title="Đang tải hồ sơ bạn đọc…" />
@@ -511,255 +523,259 @@ export function AccountScreen() {
             </View>
 
             {/* 7. Kệ Sách Cập Nhật Gần Đây */}
-            <View style={{ gap: 10 }}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Icon name="book" size={17} color={stitchTokens.wine} />
-                  <AppText
-                    kind="bold"
-                    style={{ fontSize: 15, color: stitchTokens.wineDark }}
-                  >
-                    Kệ Sách Gần Đây
-                  </AppText>
-                </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Xem tất cả sách của tôi"
-                  onPress={() => router.push("./drafts")}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 2 }}
+            {profile.data.roles.includes("MEMBER") && !isLocked ? (
+              <View style={{ gap: 10 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
                 >
-                  <AppText
-                    kind="bold"
-                    style={{ fontSize: 12, color: stitchTokens.wine }}
-                  >
-                    Xem tất cả ({bookCount})
-                  </AppText>
-                  <Icon name="chevronRight" size={14} color={stitchTokens.wine} />
-                </Pressable>
-              </View>
-
-              {recentBooks.length > 0 ? (
-                <View style={{ gap: 8 }}>
-                  {recentBooks.map((item) => (
-                    <Pressable
-                      key={item.id}
-                      onPress={() => router.push("./drafts")}
-                      style={styles.recentBookCard}
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Icon name="book" size={17} color={stitchTokens.wine} />
+                    <AppText
+                      kind="bold"
+                      style={{ fontSize: 15, color: stitchTokens.wineDark }}
                     >
-                      <View style={styles.recentCoverBox}>
-                        <Icon name="book" size={18} color={stitchTokens.wine} />
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                          }}
-                        >
-                          <AppText
-                            kind="bold"
-                            style={{ fontSize: 14, color: stitchTokens.wineDark }}
-                            numberOfLines={1}
-                          >
-                            {item.currentRevision.content.description?.slice(0, 30) ||
-                              "Bản sách đã lưu"}
-                          </AppText>
+                      Kệ Sách Gần Đây
+                    </AppText>
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Xem tất cả sách của tôi"
+                    onPress={() => router.push("./drafts")}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 2 }}
+                  >
+                    <AppText
+                      kind="bold"
+                      style={{ fontSize: 12, color: stitchTokens.wine }}
+                    >
+                      Xem tất cả ({bookCount})
+                    </AppText>
+                    <Icon name="chevronRight" size={14} color={stitchTokens.wine} />
+                  </Pressable>
+                </View>
+
+                {recentBooks.length > 0 ? (
+                  <View style={{ gap: 8 }}>
+                    {recentBooks.map((item) => (
+                      <Pressable
+                        key={item.id}
+                        onPress={() => router.push("./drafts")}
+                        style={styles.recentBookCard}
+                      >
+                        <View style={styles.recentCoverBox}>
+                          <Icon name="book" size={18} color={stitchTokens.wine} />
+                        </View>
+                        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                           <View
-                            style={[
-                              styles.miniStatusBadge,
-                              {
-                                backgroundColor:
-                                  item.state.moderation === "Approved"
-                                    ? stitchTokens.likeNewGreenBg
-                                    : stitchTokens.tagExchangeBg,
-                              },
-                            ]}
+                            style={{
+                              flexDirection: "row",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
                           >
                             <AppText
-                              kind="small"
-                              style={{
-                                fontSize: 9,
-                                fontWeight: "700",
-                                color:
-                                  item.state.moderation === "Approved"
-                                    ? stitchTokens.likeNewGreen
-                                    : stitchTokens.tagExchangeText,
-                              }}
+                              kind="bold"
+                              style={{ fontSize: 14, color: stitchTokens.wineDark }}
+                              numberOfLines={1}
                             >
-                              {item.state.moderation === "Approved"
-                                ? "ĐÃ DUYỆT"
-                                : item.state.moderation === "PendingReview"
-                                  ? "CHỜ DUYỆT"
-                                  : "BẢN NHÁP"}
+                              {item.currentRevision.content.description?.slice(0, 30) ||
+                                "Bản sách đã lưu"}
                             </AppText>
+                            <View
+                              style={[
+                                styles.miniStatusBadge,
+                                {
+                                  backgroundColor:
+                                    item.state.moderation === "Approved"
+                                      ? stitchTokens.likeNewGreenBg
+                                      : stitchTokens.tagExchangeBg,
+                                },
+                              ]}
+                            >
+                              <AppText
+                                kind="small"
+                                style={{
+                                  fontSize: 9,
+                                  fontWeight: "700",
+                                  color:
+                                    item.state.moderation === "Approved"
+                                      ? stitchTokens.likeNewGreen
+                                      : stitchTokens.tagExchangeText,
+                                }}
+                              >
+                                {item.state.moderation === "Approved"
+                                  ? "ĐÃ DUYỆT"
+                                  : item.state.moderation === "PendingReview"
+                                    ? "CHỜ DUYỆT"
+                                    : "BẢN NHÁP"}
+                              </AppText>
+                            </View>
                           </View>
+                          <AppText
+                            kind="small"
+                            color={stitchTokens.subtleGray}
+                            style={{ fontSize: 11 }}
+                            numberOfLines={1}
+                          >
+                            {item.currentRevision.content.salePrice
+                              ? `Giá: ${formatVnd(item.currentRevision.content.salePrice)}`
+                              : "Trao đổi tự do"}
+                          </AppText>
                         </View>
-                        <AppText
-                          kind="small"
-                          color={stitchTokens.subtleGray}
-                          style={{ fontSize: 11 }}
-                          numberOfLines={1}
-                        >
-                          {item.currentRevision.content.salePrice
-                            ? `Giá: ${formatVnd(item.currentRevision.content.salePrice)}`
-                            : "Trao đổi tự do"}
-                        </AppText>
-                      </View>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : (
-                <View style={styles.emptyBookCard}>
-                  <AppText kind="small" color={stitchTokens.subtleGray} style={{ textAlign: "center" }}>
-                    Chưa có sách nào trên kệ. Hãy bấm &quot;Đăng sách&quot; để chia sẻ cuốn sách của bạn!
-                  </AppText>
-                </View>
-              )}
-            </View>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.emptyBookCard}>
+                    <AppText kind="small" color={stitchTokens.subtleGray} style={{ textAlign: "center" }}>
+                      Chưa có sách nào trên kệ. Hãy bấm &quot;Đăng sách&quot; để chia sẻ cuốn sách của bạn!
+                    </AppText>
+                  </View>
+                )}
+              </View>
+            ) : null}
 
             {/* 8. Lối Tắt Quản Lý Bộ Sưu Tập (Quick Actions List) */}
-            <View style={{ gap: 10 }}>
-              <AppText
-                kind="bold"
-                style={{ fontSize: 15, color: stitchTokens.wineDark }}
-              >
-                Quản Lý Bộ Sưu Tập
-              </AppText>
-
-              <View style={styles.menuCard}>
-                {/* Row 1: Kệ sách của tôi */}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Kệ sách của tôi"
-                  onPress={() => router.push("./drafts")}
-                  style={({ pressed }) => [
-                    styles.menuRow,
-                    pressed && styles.menuRowPressed,
-                  ]}
+            {profile.data.roles.includes("MEMBER") && !isLocked ? (
+              <View style={{ gap: 10 }}>
+                <AppText
+                  kind="bold"
+                  style={{ fontSize: 15, color: stitchTokens.wineDark }}
                 >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                    <View style={styles.menuIconBox}>
-                      <Icon name="book" size={18} color={stitchTokens.wine} />
-                    </View>
-                    <AppText
-                      kind="bold"
-                      style={{ fontSize: 14, color: stitchTokens.wineDark }}
-                    >
-                      Kệ sách của tôi
-                    </AppText>
-                  </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <View style={styles.menuCountBadge}>
+                  Quản Lý Bộ Sưu Tập
+                </AppText>
+
+                <View style={styles.menuCard}>
+                  {/* Row 1: Sách của tôi */}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Sách của tôi"
+                    onPress={() => router.push("./drafts")}
+                    style={({ pressed }) => [
+                      styles.menuRow,
+                      pressed && styles.menuRowPressed,
+                    ]}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                      <View style={styles.menuIconBox}>
+                        <Icon name="book" size={18} color={stitchTokens.wine} />
+                      </View>
                       <AppText
-                        kind="small"
-                        style={{ fontSize: 11, color: stitchTokens.subtleGray, fontWeight: "600" }}
+                        kind="bold"
+                        style={{ fontSize: 14, color: stitchTokens.wineDark }}
                       >
-                        {bookCount} cuốn
+                        Sách của tôi
+                      </AppText>
+                    </View>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <View style={styles.menuCountBadge}>
+                        <AppText
+                          kind="small"
+                          style={{ fontSize: 11, color: stitchTokens.subtleGray, fontWeight: "600" }}
+                        >
+                          {bookCount} cuốn
+                        </AppText>
+                      </View>
+                      <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
+                    </View>
+                  </Pressable>
+
+                  {/* Row 2: Sách đã lưu (Wishlist) */}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Sách đã lưu"
+                    onPress={() => router.push("./wishlist")}
+                    style={({ pressed }) => [
+                      styles.menuRow,
+                      pressed && styles.menuRowPressed,
+                    ]}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                      <View style={styles.menuIconBox}>
+                        <Icon name="bookmark" size={18} color={stitchTokens.wine} />
+                      </View>
+                      <AppText
+                        kind="bold"
+                        style={{ fontSize: 14, color: stitchTokens.wineDark }}
+                      >
+                        Sách đã lưu
                       </AppText>
                     </View>
                     <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
-                  </View>
-                </Pressable>
+                  </Pressable>
 
-                {/* Row 2: Sách đã lưu (Wishlist) */}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Sách đã lưu"
-                  onPress={() => router.push("./wishlist")}
-                  style={({ pressed }) => [
-                    styles.menuRow,
-                    pressed && styles.menuRowPressed,
-                  ]}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                    <View style={styles.menuIconBox}>
-                      <Icon name="bookmark" size={18} color={stitchTokens.wine} />
-                    </View>
-                    <AppText
-                      kind="bold"
-                      style={{ fontSize: 14, color: stitchTokens.wineDark }}
-                    >
-                      Sách đã quan tâm (Yêu thích)
-                    </AppText>
-                  </View>
-                  <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
-                </Pressable>
-
-                {/* Row 3: Sổ địa chỉ trạm ViaPoint */}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Sổ địa chỉ"
-                  onPress={() => router.push("./addresses")}
-                  style={({ pressed }) => [
-                    styles.menuRow,
-                    pressed && styles.menuRowPressed,
-                  ]}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                    <View style={styles.menuIconBox}>
-                      <Icon name="pin" size={18} color={stitchTokens.wine} />
-                    </View>
-                    <AppText
-                      kind="bold"
-                      style={{ fontSize: 14, color: stitchTokens.wineDark }}
-                    >
-                      Địa chỉ nhận sách & Trạm ViaPoint
-                    </AppText>
-                  </View>
-                  <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
-                </Pressable>
-
-                {/* Row 4: Ví lưu ký */}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Ví lưu ký"
-                  onPress={() => router.push("./wallet")}
-                  style={({ pressed }) => [
-                    styles.menuRow,
-                    styles.menuRowLast,
-                    pressed && styles.menuRowPressed,
-                  ]}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                    <View style={styles.menuIconBox}>
-                      <Icon name="wallet" size={18} color={stitchTokens.wine} />
-                    </View>
-                    <AppText
-                      kind="bold"
-                      style={{ fontSize: 14, color: stitchTokens.wineDark }}
-                    >
-                      Ví Lưu Ký & Đối soát
-                    </AppText>
-                  </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <View style={styles.menuCountBadge}>
+                  {/* Row 3: Sổ địa chỉ trạm ViaPoint */}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Sổ địa chỉ"
+                    onPress={() => router.push("./addresses")}
+                    style={({ pressed }) => [
+                      styles.menuRow,
+                      pressed && styles.menuRowPressed,
+                    ]}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                      <View style={styles.menuIconBox}>
+                        <Icon name="pin" size={18} color={stitchTokens.wine} />
+                      </View>
                       <AppText
-                        kind="small"
-                        style={{ fontSize: 11, color: stitchTokens.wine, fontWeight: "700" }}
+                        kind="bold"
+                        style={{ fontSize: 14, color: stitchTokens.wineDark }}
                       >
-                        {wallet.data?.available != null
-                          ? formatVnd(wallet.data.available)
-                          : "0 ₫"}
+                        Sổ địa chỉ
                       </AppText>
                     </View>
                     <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
-                  </View>
-                </Pressable>
+                  </Pressable>
+
+                  {/* Row 4: Ví lưu ký */}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Ví lưu ký"
+                    onPress={() => router.push("./wallet")}
+                    style={({ pressed }) => [
+                      styles.menuRow,
+                      styles.menuRowLast,
+                      pressed && styles.menuRowPressed,
+                    ]}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                      <View style={styles.menuIconBox}>
+                        <Icon name="wallet" size={18} color={stitchTokens.wine} />
+                      </View>
+                      <AppText
+                        kind="bold"
+                        style={{ fontSize: 14, color: stitchTokens.wineDark }}
+                      >
+                        Ví lưu ký & Đối soát
+                      </AppText>
+                    </View>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <View style={styles.menuCountBadge}>
+                        <AppText
+                          kind="small"
+                          style={{ fontSize: 11, color: stitchTokens.wine, fontWeight: "700" }}
+                        >
+                          {wallet.data?.available != null
+                            ? formatVnd(wallet.data.available)
+                            : "0 ₫"}
+                        </AppText>
+                      </View>
+                      <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
+                    </View>
+                  </Pressable>
+                </View>
               </View>
-            </View>
+            ) : null}
 
             {/* 9. Nút Đăng Xuất */}
             {error ? <Notice tone="error">{error}</Notice> : null}
             <View style={{ marginTop: 4 }}>
               <Button
-                title="Đăng xuất tài khoản"
+                title="Đăng xuất"
                 secondary
                 busy={busy}
                 onPress={() => void logout()}

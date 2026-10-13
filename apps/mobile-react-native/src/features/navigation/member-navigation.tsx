@@ -9,21 +9,21 @@ export type MemberDestinationHref =
   | "/account";
 
 const destinations = [
-  { href: "/", title: "Trang Chủ", icon: "home" as const },
-  { href: "/search", title: "Tìm Sách", icon: "search" as const },
+  { href: "/", title: "Trang chủ", icon: "home" as const },
+  { href: "/search", title: "Tìm sách", icon: "search" as const },
   {
     href: "/drafts",
-    title: "Đăng Sách",
+    title: "Đăng sách",
     icon: "plus" as const,
     primaryAction: true,
   },
   {
     href: "/auctions",
-    title: "Đấu Giá",
+    title: "Đấu giá",
     icon: "gavel" as const,
     badge: true,
   },
-  { href: "/account", title: "Tài Khoản", icon: "person" as const },
+  { href: "/account", title: "Tài khoản", icon: "person" as const },
 ] as const;
 
 // Only mount on destination screens, never inside a dirty editor.
