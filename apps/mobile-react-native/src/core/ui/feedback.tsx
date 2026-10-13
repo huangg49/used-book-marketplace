@@ -119,12 +119,14 @@ export function ConfirmDialog({
   error?: string;
   destructive?: boolean;
 }) {
+  if (!visible) return null;
+
   return (
     <Modal
       accessibilityLabel={title}
       visible={visible}
       transparent
-      animationType="fade"
+      animationType={Platform.OS === "web" ? "none" : "fade"}
       onRequestClose={() => {
         if (!busy) onCancel();
       }}
