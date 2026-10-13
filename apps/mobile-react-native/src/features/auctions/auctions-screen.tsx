@@ -21,8 +21,9 @@ import type { PublicAuctionSummary } from "./contracts";
 // Open auctions, ending soonest first (the API's order). Each row opens the
 // auction; the price shown is the server's, never a client estimate.
 export function AuctionsScreen() {
-  const { client } = useSession();
+  const { client, state } = useSession();
   const foreground = useForeground();
+  const member = state.status === "authenticated" && state.user.roles.includes("MEMBER");
   const result = usePublicAuctions(client, foreground);
   const items = result.data?.items ?? [];
   // Rows render only with data, so the server time is always there.
@@ -45,6 +46,9 @@ export function AuctionsScreen() {
         </AppText>
       </View>
       <Notice>Mô phỏng đồ án. Giá và ví là dữ liệu thử nghiệm.</Notice>
+      {member && (
+        <Button secondary title="Phiên của tôi" onPress={() => router.push("/my-auctions")} />
+      )}
       {result.isPending && <StatePanel loading title="Đang tải phiên đấu giá" />}
       {result.error && (
         <>

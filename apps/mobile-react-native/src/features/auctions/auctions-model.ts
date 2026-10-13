@@ -3,7 +3,10 @@ import { ApiError, type SessionClient } from "../../core/api/session-client";
 import { formatVnd } from "../../core/ui/format";
 import {
   auctionReceipt,
+  codeIssued,
+  myAuctionPage,
   participation,
+  pointOrder,
   publicAuction,
   publicAuctionList,
   type Participation,
@@ -195,3 +198,72 @@ export function receiptMessage(
     return `Đã ghi nhận ${price}, nhưng một người khác đã cam kết mức này trước bạn nên vẫn dẫn giá.`;
   return `Đã ghi nhận, nhưng một mức tự động khác cao hơn. Giá hiện tại ${price}.`;
 }
+
+// Caller-owned auction activity, newest first, keyset pages bound to the view.
+export type MyAuctionView = "all" | "active" | "payment" | "selling";
+export const myAuctionsOptions = (
+  client: SessionClient,
+  userId: string,
+  view: MyAuctionView,
+) => ({
+  queryKey: ["my-auctions", userId, view] as const,
+  initialPageParam: "",
+  queryFn: ({ pageParam }: { pageParam: string }) => {
+    const params = new URLSearchParams({ limit: "12", view });
+    if (pageParam) params.set("cursor", pageParam);
+    return client.request(`/me/auctions?${params}`, myAuctionPage);
+  },
+  getNextPageParam: (page: { nextCursor: string | null }) =>
+    page.nextCursor ?? undefined,
+});
+export const pointOrderKey = (id: string) => ["point-order", id] as const;
+export const pointOrderOptions = (client: SessionClient, id: string) => ({
+  queryKey: pointOrderKey(id),
+  queryFn: () => client.request(`/me/point-orders/${id}`, pointOrder),
+});
+
+export type OrderStep =
+  | "pay"
+  | "accept-report"
+  | "reject-report"
+  | "collection-code"
+  | "claim";
+export type OrderCommand = {
+  step: OrderStep;
+  path: string;
+  body: string;
+  key: string;
+};
+// Frozen like auction commands: a retry after an unknown outcome resends this.
+export function createOrderCommand(
+  orderId: string,
+  step: OrderStep,
+  expectedVersion: number,
+  key: string,
+  text?: string,
+): OrderCommand {
+  const body: Record<string, unknown> = { expectedVersion };
+  if (step === "reject-report") body.reason = text;
+  if (step === "claim") body.description = text;
+  return {
+    step,
+    path: `/point-orders/${orderId}/${step}`,
+    body: JSON.stringify(body),
+    key,
+  };
+}
+export function sendOrderCommand(
+  client: Pick<SessionClient, "request">,
+  command: OrderCommand,
+) {
+  const init = {
+    method: "POST",
+    body: command.body,
+    headers: { "Idempotency-Key": command.key },
+  };
+  return command.step === "collection-code"
+    ? client.request(command.path, codeIssued, init)
+    : client.request(command.path, auctionReceipt, init);
+}
+export const CLAIM_MIN_LENGTH = 30;
+export const POINT_HOURS = "09:00–18:00";

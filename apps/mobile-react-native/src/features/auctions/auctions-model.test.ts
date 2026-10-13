@@ -4,6 +4,7 @@ import {
   autoFloor,
   bidOptions,
   createAuctionCommand,
+  createOrderCommand,
   receiptMessage,
   standingOf,
 } from "./auctions-model";
@@ -88,5 +89,19 @@ describe("auction commands", () => {
       body: JSON.stringify({ maxAmount: 500_000, fulfillmentMethod: "SelfCollect" }),
     });
     expect(createAuctionCommand("a1", "Disable", 0, "k3").body).toBe("{}");
+  });
+});
+
+describe("point order commands", () => {
+  it("sends only the fields each step takes", () => {
+    expect(JSON.parse(createOrderCommand("o1", "pay", 1, "k").body)).toEqual({ expectedVersion: 1 });
+    expect(JSON.parse(createOrderCommand("o1", "reject-report", 2, "k", "Gáy nứt không nêu").body)).toEqual({
+      expectedVersion: 2,
+      reason: "Gáy nứt không nêu",
+    });
+    expect(createOrderCommand("o1", "claim", 4, "k", "x".repeat(30))).toMatchObject({
+      path: "/point-orders/o1/claim",
+      body: JSON.stringify({ expectedVersion: 4, description: "x".repeat(30) }),
+    });
   });
 });

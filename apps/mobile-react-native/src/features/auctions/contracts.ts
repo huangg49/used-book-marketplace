@@ -102,3 +102,64 @@ export const auctionReceipt = z.object({
   serverTime: z.string(),
 });
 export type AuctionReceipt = z.infer<typeof auctionReceipt>;
+
+export const myAuctionPage = z.object({
+  items: z.array(
+    z.object({
+      auction: publicAuctionSummary,
+      role: z.enum(["Seller", "Bidder"]),
+      leading: z.boolean(),
+      won: z.boolean(),
+      needsPayment: z.boolean(),
+      paymentDeadline: z.string().nullable(),
+    }),
+  ),
+  nextCursor: z.string().nullable(),
+  serverTime: z.string(),
+});
+export type MyAuctionPage = z.infer<typeof myAuctionPage>;
+export type MyAuctionItem = MyAuctionPage["items"][number];
+
+export const pointOrderStates = [
+  "AwaitingPayment",
+  "Fulfilling",
+  "ReadyForCollection",
+  "Inspection",
+  "ResolutionPending",
+  "ReturnPending",
+  "Completed",
+  "Cancelled",
+  "PaymentExpired",
+] as const;
+export const pointOrder = z.object({
+  id: z.string().uuid(),
+  auctionId: z.string().uuid().nullable(),
+  title: z.string(),
+  pointName: z.string(),
+  role: z.enum(["Buyer", "Seller"]),
+  state: z.enum(pointOrderStates),
+  version: z.number().int(),
+  amounts: z.object({ bookPrice: z.number().int(), buyerTotal: z.number().int() }),
+  paymentDeadline: z.string().nullable(),
+  paidAt: z.string().nullable(),
+  // Condition check at the point (FR-T02): never an authenticity claim.
+  report: z.object({
+    outcome: z.literal("Pass"),
+    inspectedAt: z.string(),
+    note: z.string().nullable(),
+    scope: z.string(),
+  }),
+  acceptanceDeadline: z.string().nullable(),
+  collectionDeadline: z.string().nullable(),
+  inspectionDeadline: z.string().nullable(),
+  returnDeadline: z.string().nullable(),
+  serverTime: z.string(),
+});
+export type PointOrder = z.infer<typeof pointOrder>;
+
+export const codeIssued = z.object({
+  receipt: auctionReceipt.extend({ codeExpiresAt: z.string().nullable() }),
+  // Null on a replay: a code is shown once and never stored in receipts.
+  code: z.string().regex(/^[0-9]{6}$/).nullable(),
+});
+export type CodeIssued = z.infer<typeof codeIssued>;

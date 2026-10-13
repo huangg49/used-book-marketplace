@@ -48,6 +48,7 @@ import type {
   PublicAuction,
   PublicAuctionSummary,
 } from "./contracts";
+import { WinnerSteps } from "./winner-steps";
 
 const STATE_LABEL: Record<AuctionState, string> = {
   Active: "Đang mở",
@@ -209,10 +210,11 @@ function AuctionBody({
         </AppText>
       </View>
       {me?.won ? (
-        <Notice tone="success">
-          {me.boughtNow ? "Bạn đã mua ngay cuốn sách này." : "Bạn đã thắng phiên đấu giá."} Thanh toán và nhận sách
-          tại {auction.pointName} trong mục Đấu giá của tôi.
-        </Notice>
+        me.orderId ? (
+          <WinnerSteps orderId={me.orderId} boughtNow={me.boughtNow} />
+        ) : (
+          <Notice tone="success">Đơn nhận sách đang được tạo. Trang sẽ tự cập nhật.</Notice>
+        )
       ) : open && auction.state === "Active" ? (
         signedIn ? (
           meLoading ? (
