@@ -205,7 +205,6 @@ export function LoginScreen({
             </Pressable>
           </View>
           <TextField
-            label="Mật khẩu"
             accessibilityLabel="Mật khẩu"
             inputRef={passwordInput}
             value={password}
