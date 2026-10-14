@@ -742,6 +742,56 @@ export class AuctionBiddingService {
     }
     return { items, serverTime: now.toISOString() };
   }
+  // ADMIN cancel queue: open or held auctions with the version `cancel` needs.
+  // Auctions the Admin sells or bids in are left out, as `cancel` refuses them.
+  listForAdmin(auth: Actor): Promise<Wire['OperationsAuctionList']> {
+    return this.commands.read(auth, async (tx, actor) => {
+      requireActive(actor);
+      if (!actor.roles.some((r) => r.role === 'ADMIN'))
+        throw new DomainError(
+          403,
+          'FORBIDDEN',
+          'Chỉ quản trị viên được xem danh sách này.',
+        );
+      const now = await tx.now();
+      const rows = await tx.c.auctions
+        .find(
+          {
+            $or: [
+              { state: 'Active', endAt: { $gt: now } },
+              { state: 'OnHold' },
+            ],
+            sellerId: { $ne: actor._id },
+          },
+          { sort: { endAt: 1, _id: 1 }, limit: 100 },
+        )
+        .toArray();
+      const items: Wire['OperationsAuctionItem'][] = [];
+      for (const a of rows) {
+        if (items.length === 50) break;
+        if (await tx.c.auction_bidders.findOne({ _id: `${a._id}:${actor._id}` }))
+          continue;
+        const item = await tx.c.workflow_items.findOne({
+          _id: `${a.contextId}:${a.listingId}`,
+        });
+        const point = await tx.c.handover_points.findOne({ _id: a.pointId });
+        items.push({
+          id: a._id,
+          version: a.version,
+          title: String((item?.snapshot as { title?: string })?.title ?? ''),
+          state: a.state as 'Active' | 'OnHold',
+          startPrice: a.startPrice,
+          step: a.step as 10000 | 50000,
+          currentPrice: a.currentPrice,
+          bidderCount: a.bidderCount,
+          startAt: a.startAt.toISOString(),
+          endAt: a.endAt.toISOString(),
+          pointName: point?.name ?? '',
+        });
+      }
+      return { items, serverTime: now.toISOString() };
+    });
+  }
   listMine(
     auth: Actor,
     query: Record<string, string | number>,

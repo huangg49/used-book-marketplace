@@ -20,3 +20,15 @@ export function errorText(error: unknown): string {
     return "Đã có quá nhiều yêu cầu. Vui lòng chờ một lúc rồi thử lại.";
   return "Máy chủ chưa hoàn tất yêu cầu. Vui lòng thử lại.";
 }
+// Point and auction commands carry a specific Vietnamese reason from the API
+// (not assigned here, deadline passed, state changed); show it as given.
+export function operationErrorText(error: unknown): string {
+  if (
+    error instanceof ApiError &&
+    error.status >= 403 &&
+    error.status < 500 &&
+    error.message
+  )
+    return error.message;
+  return errorText(error);
+}

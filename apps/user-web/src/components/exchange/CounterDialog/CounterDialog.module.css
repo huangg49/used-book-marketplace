@@ -1,0 +1,257 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(42, 38, 34, 0.6);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+}
+
+.modal {
+    background: #fff;
+    width: 100%;
+    max-width: 540px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    box-shadow: 0 12px 32px rgba(42, 38, 34, 0.2);
+    overflow: hidden;
+    animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 24px 20px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+}
+
+.headerIcon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(125, 31, 31, 0.1);
+    color: var(--burgundy, #7d1f1f);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.title {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0;
+}
+
+.subtitle {
+    font-size: 13px;
+    color: var(--ink-secondary);
+    margin: 4px 0 0;
+}
+
+.body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.radioGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.radioCard {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    cursor: pointer;
+    background: var(--paper);
+    transition: all 0.2s ease;
+}
+
+.radioCard:hover {
+    border-color: var(--burgundy);
+    background: #fff;
+}
+
+.radioCardActive {
+    border-color: var(--burgundy);
+    background: #fff;
+    box-shadow: 0 0 0 1px var(--burgundy);
+}
+
+.input, .select, .textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font-size: 14px;
+    color: var(--ink);
+    background: #fff;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.input:focus, .select:focus, .textarea:focus {
+    outline: none;
+    border-color: var(--burgundy);
+    box-shadow: 0 0 0 2px rgba(125, 31, 31, 0.15);
+}
+
+.textarea {
+    resize: vertical;
+    min-height: 70px;
+}
+
+.errorBanner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #fdf2f2;
+    border: 1px solid #f8d7da;
+    border-radius: 4px;
+    color: #a71d2a;
+    font-size: 13px;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 18px 24px;
+    background: var(--paper);
+    border-top: 1px solid var(--line);
+}
+
+.cancelBtn {
+    padding: 10px 18px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.cancelBtn:hover {
+    background: var(--paper);
+}
+
+.submitBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    border: none;
+    background: var(--burgundy, #7d1f1f);
+    color: #fff;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.submitBtn:hover:not(:disabled) {
+    background: #5c0202;
+}
+
+.submitBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.addressHeaderRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.toggleAddressBtn {
+    background: none;
+    border: none;
+    color: var(--burgundy, #7d1f1f);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+}
+
+.toggleAddressBtn:hover {
+    color: #5c0202;
+}
+
+.newAddressBox {
+    background: var(--paper, #fffcf5);
+    border: 1px dashed var(--line, #d9cbbd);
+    border-radius: 4px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.newAddressHint {
+    font-size: 12px;
+    color: var(--shop-muted, #716157);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.twoCols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.fieldLabel {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink, #281914);
+    margin-bottom: 4px;
+}

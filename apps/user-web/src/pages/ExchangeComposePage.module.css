@@ -418,6 +418,25 @@
     resize: none;
 }
 
+.select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    background: #fff;
+    color: var(--ink);
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.select:focus {
+    outline: none;
+    border-color: var(--gold-strong);
+    box-shadow: 0 0 0 1px var(--gold-strong);
+}
+
 .textareaPaper {
     background: var(--paper);
 }

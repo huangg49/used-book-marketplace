@@ -52,6 +52,46 @@ export class ExchangesController {
     );
   }
 
+  @Post(':id/counter')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  counterExchange(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.exchanges.counter(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('CounterExchangeProposal', body),
+      ),
+      res,
+    );
+  }
+
+  @Get(':id/messages')
+  @Roles('MEMBER')
+  getMessages(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.exchanges.getMessages(req.auth, this.input.uuid(id));
+  }
+
+  @Post(':id/messages')
+  @Roles('MEMBER')
+  @HttpCode(201)
+  sendMessage(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.exchanges.sendMessage(
+      req.auth,
+      this.input.uuid(id),
+      this.input.body('CreateExchangeMessage', body),
+    );
+  }
+
   @Post(':id/funding')
   @Roles('MEMBER')
   @HttpCode(200)
@@ -101,7 +141,7 @@ export class ExchangesController {
       this.exchanges.ship(
         commandContext(this.input, req, res),
         this.input.uuid(id),
-        this.input.body('VersionCommand', body),
+        this.input.body('ShipExchangeCommand', body),
       ),
       res,
     );
@@ -113,6 +153,20 @@ export class ExchangesController {
   receiveExchange(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
     return commandResponse(
       this.exchanges.receive(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('VersionCommand', body),
+      ),
+      res,
+    );
+  }
+
+  @Post(':id/complete')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  completeExchange(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    return commandResponse(
+      this.exchanges.complete(
         commandContext(this.input, req, res),
         this.input.uuid(id),
         this.input.body('VersionCommand', body),

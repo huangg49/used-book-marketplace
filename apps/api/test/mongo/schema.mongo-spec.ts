@@ -29,6 +29,10 @@ import { accountRecoverySpecs } from '../../src/database/mongo/migrations/0017-a
 import { authOtpSpecs } from '../../src/database/mongo/migrations/0018-auth-otp.js';
 import { exchangeCollectionSpecs } from '../../src/database/mongo/migrations/0016-exchanges.js';
 import { directDeliveryCompletionSpecs } from '../../src/database/mongo/migrations/0020-direct-delivery-completion.js';
+import { exchangeMessageSpecs } from '../../src/database/mongo/migrations/0023-exchange-messages.js';
+import { inspectionEvidenceCollectionSpecs } from '../../src/database/mongo/migrations/0023-inspection-evidence.js';
+import { pointIncidentCollectionSpecs } from '../../src/database/mongo/migrations/0024-point-incidents.js';
+import { transactionReviewSpecs } from '../../src/database/mongo/migrations/0025-exchange-reviews.js';
 import {
   currentCollections,
   migrations,
@@ -103,7 +107,13 @@ describe('migrations', () => {
         // Delivery events are Mongo-native immutable evidence, not a historical
         // PostgreSQL model.
         -directDeliveryCompletionSpecs.length -
-        paymentSpecs.length +
+        paymentSpecs.length -
+        // N4 point operations (ADR 0030 amendment 2026-10-14) are Mongo-native.
+        inspectionEvidenceCollectionSpecs.length -
+        pointIncidentCollectionSpecs.length -
+        // Exchange chat messages & reviews are Mongo-native.
+        exchangeMessageSpecs.length -
+        transactionReviewSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });
@@ -120,19 +130,123 @@ describe('migrations', () => {
     expect(await migrate(migrator, migrator.db())).toEqual([]);
   });
   it('upgrades applied wallet migration0022 without rewriting its checksum or data', async () => {
-    const db = root.db(`wallet_upgrade_${randomUUID().replaceAll('-', '')}_test`);
+    const db = root.db(
+      `wallet_upgrade_${randomUUID().replaceAll('-', '')}_test`,
+    );
     try {
-      await migrate(root, db, migrations.filter(m => !['0023-direct-order-settlement-principals', '0024-vnpay-querydr'].includes(m.id)));
-      const before = await db.collection<{ _id: string; checksum: string }>('_migrations').findOne({ _id: '0022-vnpay-wallet-listing-fees' });
-      expect(before?.checksum).toBe('68eaf37f04e73f0c6c87398a92c612237fb305f4e6ed82c68e7d6e78675dc0db');
+      await migrate(
+        root,
+        db,
+        migrations.filter(
+          (m) =>
+            ![
+              '0023-direct-order-settlement-principals',
+              '0024-vnpay-querydr',
+              '0027-wallet-point-command-union',
+            ].includes(m.id),
+        ),
+      );
+      const before = await db
+        .collection<{ _id: string; checksum: string }>('_migrations')
+        .findOne({ _id: '0022-vnpay-wallet-listing-fees' });
+      expect(before?.checksum).toBe(
+        '68eaf37f04e73f0c6c87398a92c612237fb305f4e6ed82c68e7d6e78675dc0db',
+      );
       const names = ['wallet_accounts', 'ledger_journals', 'ledger_entries'];
-      const counts = await Promise.all(names.map(name => db.collection(name).countDocuments()));
-      expect(await migrate(root, db)).toEqual(['0023-direct-order-settlement-principals', '0024-vnpay-querydr']);
-      expect(await db.collection<{ _id: string; checksum: string }>('_migrations').findOne({ _id: '0022-vnpay-wallet-listing-fees' })).toEqual(before);
-      expect(await Promise.all(names.map(name => db.collection(name).countDocuments()))).toEqual(counts);
+      const counts = await Promise.all(
+        names.map((name) => db.collection(name).countDocuments()),
+      );
+      expect(await migrate(root, db)).toEqual([
+        '0023-direct-order-settlement-principals',
+        '0024-vnpay-querydr',
+        '0027-wallet-point-command-union',
+      ]);
+      expect(
+        await db
+          .collection<{ _id: string; checksum: string }>('_migrations')
+          .findOne({ _id: '0022-vnpay-wallet-listing-fees' }),
+      ).toEqual(before);
+      expect(
+        await Promise.all(
+          names.map((name) => db.collection(name).countDocuments()),
+        ),
+      ).toEqual(counts);
       expect(await migrate(root, db)).toEqual([]);
-    } finally { await db.dropDatabase(); }
+    } finally {
+      await db.dropDatabase();
+    }
   });
+  it.each(['wallet', 'main'])(
+    'upgrades the applied %s branch without losing schemas or rewriting checksums',
+    async (lane) => {
+      const db = root.db(
+        `wallet_point_union_${randomUUID().replaceAll('-', '')}_test`,
+      );
+      const walletIds = new Set([
+        '0022-vnpay-wallet-listing-fees',
+        '0023-direct-order-settlement-principals',
+        '0024-vnpay-querydr',
+      ]);
+      const mainIds = new Set([
+        '0022-point-administration',
+        '0023-inspection-evidence',
+        '0024-point-incidents',
+        '0022-exchange-completion',
+        '0023-exchange-messages',
+        '0024-exchange-notifications',
+        '0025-exchange-reviews',
+        '0026-exchange-mutual-completion',
+      ]);
+      const before = migrations.filter(
+        (m) =>
+          m.id !== '0027-wallet-point-command-union' &&
+          !(lane === 'wallet' ? mainIds : walletIds).has(m.id),
+      );
+      try {
+        await migrate(root, db, before);
+        const ledger = db.collection<{ _id: string; checksum: string }>(
+          '_migrations',
+        );
+        const checksums = new Map(
+          (await ledger.find().toArray()).map((row) => [row._id, row.checksum]),
+        );
+        const journalCount = await db
+          .collection('ledger_journals')
+          .countDocuments();
+        const entryCount = await db
+          .collection('ledger_entries')
+          .countDocuments();
+        expect(await migrate(root, db)).toEqual(
+          migrations.filter((m) => !checksums.has(m.id)).map((m) => m.id),
+        );
+        for (const row of await ledger.find().toArray())
+          if (checksums.has(row._id))
+            expect(row.checksum).toBe(checksums.get(row._id));
+        expect(await db.collection('ledger_journals').countDocuments()).toBe(
+          journalCount,
+        );
+        expect(await db.collection('ledger_entries').countDocuments()).toBe(
+          entryCount,
+        );
+        const actual = new Map(
+          (await db.listCollections().toArray()).map((c) => [
+            c.name,
+            'options' in c ? c.options?.validator : undefined,
+          ]),
+        );
+        for (const spec of currentCollections()) {
+          expect(actual.get(spec.name)?.$jsonSchema, spec.name).toEqual(
+            spec.schema,
+          );
+          if (spec.expr)
+            expect(actual.get(spec.name)?.$expr, spec.name).toEqual(spec.expr);
+        }
+        expect(await migrate(root, db)).toEqual([]);
+      } finally {
+        await db.dropDatabase();
+      }
+    },
+  );
   it.each(['exchange-main', 'member-catalog'])(
     'upgrades %s to the union without rewriting applied checksums',
     async (lane) => {
@@ -143,6 +257,11 @@ describe('migrations', () => {
         '0016-exchanges',
         '0017-exchanges-phase2',
         '0018-exchanges-proposal-expiry',
+        '0022-exchange-completion',
+        '0023-exchange-messages',
+        '0024-exchange-notifications',
+        '0025-exchange-reviews',
+        '0026-exchange-mutual-completion',
       ]);
       const memberIds = new Set([
         '0016-catalog-classification',
@@ -151,7 +270,9 @@ describe('migrations', () => {
         '0019-catalog-vocabulary-v2',
       ]);
       const before = migrations.filter(
-        (m) => !(lane === 'exchange-main' ? memberIds : exchangeIds).has(m.id),
+        (m) =>
+          m.id !== '0027-wallet-point-command-union' &&
+          !(lane === 'exchange-main' ? memberIds : exchangeIds).has(m.id),
       );
       try {
         await migrate(root, db, before);
@@ -651,6 +772,52 @@ describe('validators replace CHECK constraints', () => {
     });
     const c = appDb.collection('mutation_receipts');
     await c.insertOne(receipt({}) as never);
+    const vnpay = {
+      principal: 'system:VNPaySandbox',
+      systemActor: 'VNPaySandbox',
+      operation: 'applyVNPayQuery',
+      contextId: null,
+      topupId: randomUUID(),
+      pointId: null,
+    };
+    await c.insertOne(receipt(vnpay) as never);
+    await rejectsValidation(
+      c.insertOne(receipt({ ...vnpay, pointId: randomUUID() }) as never),
+    );
+    await rejectsValidation(
+      c.insertOne(
+        receipt({ ...vnpay, operation: 'settleDirectOrder' }) as never,
+      ),
+    );
+    const pointActor = randomUUID();
+    await c.insertOne(
+      receipt({
+        principal: `user:${pointActor}`,
+        actorId: pointActor,
+        systemActor: null,
+        operation: 'createHandoverPoint',
+        contextId: null,
+        pointId: randomUUID(),
+      }) as never,
+    );
+    await c.insertOne(
+      receipt({
+        principal: 'system:OrderInspectionExpiry',
+        systemActor: 'OrderInspectionExpiry',
+        operation: 'settleDirectOrder',
+        pointId: null,
+      }) as never,
+    );
+    await rejectsValidation(
+      c.insertOne(
+        receipt({
+          principal: 'system:OrderInspectionExpiry',
+          systemActor: 'OrderInspectionExpiry',
+          operation: 'settleDirectOrder',
+          pointId: randomUUID(),
+        }) as never,
+      ),
+    );
     await rejectsValidation(
       c.insertOne(receipt({ operation: 'refundOrder' }) as never),
     );

@@ -1,0 +1,69 @@
+{
+  "scope": "standalone motion preview; application unchanged",
+  "renderer": "WebGL + WebGL",
+  "viewports": [
+    "1440×1080",
+    "390×844",
+    "1280×950 video"
+  ],
+  "durationMs": 3000,
+  "closedBackdropChangedPixels": 0,
+  "scrubPixelIdentity": "PASS",
+  "pauseReplaySpeedHoldKeyboard": "PASS",
+  "offscreenPause": "PASS",
+  "reducedPreferenceFullSequence": "PASS",
+  "canvasFallback": "PASS",
+  "contextLossPreservesTime": "PASS",
+  "jsErrors": [],
+  "captures": [
+    {
+      "time": 0,
+      "file": "0000.png"
+    },
+    {
+      "time": 420,
+      "file": "0420.png"
+    },
+    {
+      "time": 900,
+      "file": "0900.png"
+    },
+    {
+      "time": 1400,
+      "file": "1400.png"
+    },
+    {
+      "time": 1780,
+      "file": "1780.png"
+    },
+    {
+      "time": 2080,
+      "file": "2080.png"
+    },
+    {
+      "time": 2480,
+      "file": "2480.png"
+    },
+    {
+      "time": 3000,
+      "file": "3000.png"
+    }
+  ],
+  "timing": {
+    "samples": 109,
+    "medianFrameIntervalMs": 33.299999999999955,
+    "p95FrameIntervalMs": 33.40000000000009,
+    "over50Ms": 0,
+    "note": "Headless Chromium local capture; not physical-device FPS acceptance."
+  },
+  "noVideoTiming": {
+    "samples": 140,
+    "medianFrameIntervalMs": 16.700000000000045,
+    "p95FrameIntervalMs": 33.40000000000009,
+    "medianDrawMs": 1.299999998882413,
+    "p95DrawMs": 1.6000000014901161,
+    "note": "No video recorder; still headless local Chromium, not physical-device acceptance."
+  },
+  "physicalMobileSafari": "NOT RUN",
+  "applicationIntegration": "NOT RUN"
+}

@@ -56,11 +56,20 @@ jobs:
       - run: pnpm --filter @used-books/user-web build
       - run: pnpm --filter @used-books/api build
       - run: pnpm --filter @used-books/admin-web exec playwright install --with-deps chromium
+      - run: pnpm --filter @used-books/user-web test:auth-motion:browser
+        env:
+          AUTH_MOTION_EVIDENCE: apps/user-web/test-results/auth-motion
+      - run: pnpm --filter @used-books/user-web test:auction-stage:browser
+        env:
+          AUCTION_MOTION_EVIDENCE: apps/user-web/test-results/auction-stage
       - run: pnpm infra:mongo:test:up
       - run: pnpm --filter @used-books/user-web test:browser
         env:
           MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
       - run: pnpm --filter @used-books/user-web test:exchange:browser
+        env:
+          MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
+      - run: pnpm --filter @used-books/user-web test:wallet:browser
         env:
           MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
       - if: failure()
@@ -70,5 +79,6 @@ jobs:
           path: |
             apps/user-web/test-results/
             .impeccable/review/integration-main/
+            .tmp/wallet-checkout-browser/
       - if: always()
         run: pnpm infra:mongo:test:stop

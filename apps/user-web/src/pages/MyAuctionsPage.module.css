@@ -48,3 +48,10 @@
 .intakeSide button { margin-top: 6px; min-height: 40px; padding: 6px 12px; border: 1px solid var(--shop-control); border-radius: 6px; background: var(--shop-paper); color: var(--shop-wine); font-weight: 600; font-size: .75rem; cursor: pointer; }
 .intakesEmpty { margin: 6px 0 0; font-size: .8125rem; line-height: 1.7; color: var(--shop-muted); }
 @media(max-width:700px) { .intakes { padding: 16px; } .intake { grid-template-columns: 1fr; } .intakeSide { justify-items: start; text-align: left; } }
+/* N4-12: the seller's one answer to a NeedsEvidence inspection. */
+.evidence { display: grid; gap: 6px; margin-top: 8px; padding: 12px; border: 1px solid #5c020226; border-radius: 8px; }
+.evidence label { font-size: .8125rem; font-weight: 600; color: var(--shop-ink, inherit); }
+.evidence textarea { width: 100%; min-height: 88px; padding: 8px 10px; border: 1px solid var(--shop-control); border-radius: 6px; font: inherit; font-size: .875rem; resize: vertical; }
+.evidence span { font-size: .75rem; color: var(--shop-muted); }
+.evidence button { justify-self: start; min-height: 40px; padding: 6px 14px; border: 0; border-radius: 6px; background: var(--shop-wine); color: var(--shop-paper); font-weight: 600; cursor: pointer; }
+.evidence button:disabled { opacity: .6; cursor: progress; }

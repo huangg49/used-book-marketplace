@@ -7,9 +7,10 @@ export interface ProgressStepperProps {
     failedAtStep?: number;
     closedBy?: 'viewer' | 'partner';
     partnerUsername?: string;
+    hasReceived?: boolean;
 }
 
-export function ProgressStepper({ status, failedAtStep, closedBy, partnerUsername: _partnerUsername }: ProgressStepperProps) {
+export function ProgressStepper({ status, failedAtStep, closedBy, partnerUsername: _partnerUsername, hasReceived }: ProgressStepperProps) {
     const steps = [
         { id: 1, label: 'Đã gửi đề nghị' },
         { id: 2, label: 'Đã chấp nhận' },
@@ -23,8 +24,9 @@ export function ProgressStepper({ status, failedAtStep, closedBy, partnerUsernam
     else if (status === 'FUNDING') currentStepIndex = 2;
     else if (status === 'WAITING_YOU_SEND') currentStepIndex = 3;
     else if (status === 'RESOLUTION_PENDING') currentStepIndex = 3;
-    else if (status === 'DELIVERING') currentStepIndex = 3;
-    else if (status === 'WAITING_YOU_CONFIRM') currentStepIndex = 4;
+    else if (status === 'DELIVERING') currentStepIndex = hasReceived ? 4 : 3;
+    else if (status === 'WAITING_YOU_CONFIRM') currentStepIndex = hasReceived ? 4 : 3;
+    else if (status === 'INSPECTING') currentStepIndex = 4;
     else if (status === 'COMPLETED' || status === 'NEED_REVIEW') currentStepIndex = 5;
 
     // For failure states

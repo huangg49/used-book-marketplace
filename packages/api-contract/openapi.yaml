@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.35.0
+  version: 0.40.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -52,6 +52,7 @@ tags:
   - name: User administration
   - name: Wishlist
   - name: Auctions
+  - name: Reviews
 paths:
   /health:
     get:
@@ -5553,7 +5554,7 @@ paths:
       operationId: inspectAuctionIntake
       tags:
         - Auctions
-      description: Assigned independent STAFF records condition inspection Pass or Fail against the frozen
+      description: Assigned independent STAFF records condition inspection Pass, Fail or NeedsEvidence with the FR-T01 checklist against the frozen
         revision. Fail moves to ReclaimRequired. Pass is a condition checklist, not authenticity.
       x-implementation-status: implemented
       security:
@@ -5749,6 +5750,179 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /me/auction-intakes/{intakeId}/evidence:
+    post:
+      operationId: submitAuctionIntakeEvidence
+      tags:
+        - Auctions
+      description: The seller answers a NeedsEvidence inspection once, before the POL-09 48-hour deadline, with a written explanation. It does not change the conclusion; an independent Staff member decides.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: intakeId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitAuctionIntakeEvidence"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/auction-intakes/{intakeId}/evidence-decision:
+    post:
+      operationId: decideAuctionIntakeEvidence
+      tags:
+        - Auctions
+      description: Assigned STAFF other than the one who asked for evidence decides Pass or Fail after the seller answered, or Fail after the deadline passed without an answer. NeedsEvidence never becomes Pass on its own.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: intakeId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecideAuctionIntakeEvidence"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/auctions:
+    get:
+      operationId: listOperationsAuctions
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN. Auctions an Admin may cancel (Active before endAt, and OnHold), ending
+        soonest first, with the version the cancel command needs. Excludes auctions the Admin sells
+        or bids in. Never includes Auto ceilings or bidder identities.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsAuctionList"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /operations/auctions/{auctionId}/cancel:
     post:
       operationId: cancelAuction
@@ -5837,6 +6011,589 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PublicAuctionList"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/points:
+    get:
+      operationId: listOperationsPoints
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN. Every handover point with capacity, slots still held and the current Staff assignments, ordered by code. FR-H04.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsPointList"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+    post:
+      operationId: createHandoverPoint
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN creates a simulated HCM point. A new point starts Paused, so no booking reaches it before a Staff member is assigned and an Admin activates it.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHandoverPoint"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/points/{pointId}:
+    post:
+      operationId: updateHandoverPoint
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN edits name, address, capacity and status with a reason. Capacity never drops below slots still held. Paused blocks new bookings only. Closed needs no held slot. Active needs a current Staff assignment.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: pointId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateHandoverPoint"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/points/{pointId}/assignments:
+    post:
+      operationId: assignPointStaff
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN assigns an ACTIVE STAFF account to the point. No self-assignment and no second current assignment for the same person and point.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: pointId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignPointStaff"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/points/{pointId}/assignments/{assignmentId}/end:
+    post:
+      operationId: endPointAssignment
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN ends a current assignment with a reason. The last current assignment of a point that still holds slots cannot end.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: pointId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: assignmentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EndPointAssignment"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /me/point-assignments:
+    get:
+      operationId: listMyPointAssignments
+      tags:
+        - Auctions
+      description: ACTIVE STAFF. The points the caller is assigned to now. An empty list means no current assignment.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyPointAssignmentList"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/incidents:
+    get:
+      operationId: listPointIncidents
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN sees every incident; ACTIVE STAFF sees incidents at the points they are assigned to now. Open first, then the most recent. FR-T04.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointIncidentList"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+    post:
+      operationId: openPointIncident
+      tags:
+        - Auctions
+      description: Assigned STAFF or ACTIVE ADMIN opens an incident at a point, with or without an Order (auction intake). The protected value is snapshotted from the intake (Order book price once sold). EmergencyClose is ADMIN only and pauses new bookings at the point.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenPointIncident"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/incidents/{incidentId}/decide:
+    post:
+      operationId: decidePointIncident
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN independent of the point (no current assignment) and of the incident (not the opener) decides once. Compensation is capped by the protected value and funded from the POL-42 simulated fund while it lasts; the unfunded part is recorded and the point stops taking new bookings. No wallet payout is made here.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: incidentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecidePointIncident"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/incident-fund:
+    get:
+      operationId: readIncidentFund
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN. The POL-42 simulated incident fund with its opening balance, approved compensation and append-only journal.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentFund"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/escalations:
+    get:
+      operationId: listPointEscalations
+      tags:
+        - Auctions
+      description: ACTIVE ADMIN. Overdue point work derived at read time from stored timestamps, oldest due first. InspectionOverdue (POL-31), EvidenceDecisionOverdue (POL-09), ReclaimOverdue and, 14 days later, ReclaimEscalated (POL-34). Read-only; nothing is passed, failed or confiscated automatically.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointEscalationList"
         "400":
           $ref: "#/components/responses/ListingError"
         "401":
@@ -7106,6 +7863,52 @@ paths:
           $ref: "#/components/responses/ListingError"
         "500":
           $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/counter:
+    post:
+      operationId: counterExchange
+      tags:
+        - Exchanges
+      description: Submit a counter-proposal for the exchange.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CounterExchangeProposal"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exchange"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
   /exchanges/{id}/funding:
     post:
       operationId: fundExchange
@@ -7264,7 +8067,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/VersionCommand"
+              $ref: "#/components/schemas/ShipExchangeCommand"
       responses:
         "200":
           description: OK
@@ -7330,6 +8133,289 @@ paths:
           $ref: "#/components/responses/ListingError"
         "500":
           $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/complete:
+    post:
+      operationId: completeExchange
+      tags:
+        - Exchanges
+      description: Participant confirms satisfaction during the inspection window to complete the exchange early.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VersionCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exchange"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/messages:
+    get:
+      operationId: getExchangeMessages
+      tags:
+        - Exchanges
+      description: Get messages in the exchange chat thread.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeMessagesResponse"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+    post:
+      operationId: sendExchangeMessage
+      tags:
+        - Exchanges
+      description: Send a message in the exchange chat thread.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExchangeMessage"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeMessage"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+  /shipments/carrier/calculate-fee:
+    post:
+      operationId: calculateCarrierFee
+      tags:
+        - Shipments
+      description: Calculate shipping fee between two addresses.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fromAddress
+                - toAddress
+              properties:
+                fromAddress:
+                  type: object
+                toAddress:
+                  type: object
+                carrierCode:
+                  type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /shipments/carrier/create:
+    post:
+      operationId: createCarrierShipment
+      tags:
+        - Shipments
+      description: Create a carrier shipment order.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - orderId
+                - sender
+                - receiver
+              properties:
+                orderId:
+                  type: string
+                carrierCode:
+                  type: string
+                sender:
+                  type: object
+                receiver:
+                  type: object
+                notes:
+                  type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /shipments/carrier/tracking/{code}:
+    get:
+      operationId: getCarrierTracking
+      tags:
+        - Shipments
+      description: Get tracking status for a shipment code.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: carrier
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /webhooks/carrier:
+    post:
+      operationId: carrierWebhookCallback
+      tags:
+        - Shipments
+      description: Receive webhook events from carrier partners.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - trackingCode
+                - status
+              properties:
+                trackingCode:
+                  type: string
+                status:
+                  type: string
+                description:
+                  type: string
+      responses:
+        "200":
+          description: OK
+          content:
+  /exchanges/{id}/reviews:
+    get:
+      operationId: getExchangeReviews
+      tags:
+        - Reviews
+      description: Get reviews for an exchange transaction.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewsResponse"
+    post:
+      operationId: createExchangeReview
+      tags:
+        - Reviews
+      description: Submit review for a completed exchange (FR-R01, FR-R02).
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExchangeReview"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
 components:
   securitySchemes:
     bearerAuth:
@@ -9139,13 +10225,21 @@ components:
             - AuctionOnHold
             - AuctionPaymentExpired
             - AuctionPaid
+            - ExchangeProposed
+            - ExchangeAccepted
+            - ExchangeFunded
+            - ExchangeShipped
+            - ExchangeReceived
+            - ExchangeCompleted
+            - ExchangeCancelled
+            - ExchangeRejected
         title: { type: string, maxLength: 120 }
         body: { type: string, maxLength: 400 }
-        targetType: { type: string, enum: [Auction] }
+        targetType: { type: string, enum: [Auction, Exchange] }
         targetId:
           type: string
           format: uuid
-          description: Opens with GET /auctions/{id}; the caller's own view comes from participation or point-order reads.
+          description: Opens with GET /auctions/{id} or GET /exchanges/{id}; the caller's own view comes from participation or point-order reads.
         createdAt: { type: string, format: date-time }
         readAt: { type: [string, "null"], format: date-time }
     MemberNotificationPage:
@@ -12639,6 +13733,7 @@ components:
             - AwaitingDropoff
             - Received
             - Passed
+            - NeedsEvidence
             - Auctioning
             - ReclaimRequired
             - Reclaimed
@@ -12786,11 +13881,18 @@ components:
           enum:
             - Pass
             - Fail
+            - NeedsEvidence
         note:
           type:
             - string
             - "null"
           maxLength: 1000
+        checklist:
+          oneOf:
+            - $ref: "#/components/schemas/InspectionChecklist"
+            - type: "null"
+          description: Required for NeedsEvidence. Pass needs every match true and suspectedCopy false;
+            suspectedCopy true needs NeedsEvidence.
     CancelAuction:
       type: object
       additionalProperties: false
@@ -12927,6 +14029,14 @@ components:
         - auctionId
         - reclaimReason
         - closedAt
+        - evidenceRequestedBy
+        - evidenceDeadline
+        - evidenceNote
+        - evidenceSubmittedAt
+        - reclaimRequiredAt
+        - reports
+        - inspectionDueAt
+        - reclaimDueAt
       properties:
         id:
           type: string
@@ -12970,6 +14080,7 @@ components:
             - AwaitingDropoff
             - Received
             - Passed
+            - NeedsEvidence
             - Auctioning
             - ReclaimRequired
             - Reclaimed
@@ -13007,6 +14118,7 @@ components:
           enum:
             - Pass
             - Fail
+            - NeedsEvidence
             - null
         inspectionNote:
           type:
@@ -13036,6 +14148,50 @@ components:
             - string
             - "null"
           format: date-time
+        evidenceRequestedBy:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Staff reads only; null for the owner.
+        evidenceDeadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: POL-09 48 hours from the NeedsEvidence conclusion.
+        evidenceNote:
+          type:
+            - string
+            - "null"
+        evidenceSubmittedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        reclaimRequiredAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        reports:
+          type: array
+          maxItems: 20
+          description: Immutable inspection report revisions, oldest first. No inspector identity.
+          items:
+            $ref: "#/components/schemas/InspectionReport"
+        inspectionDueAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: POL-31, 24 hours after receipt while the book waits for inspection.
+        reclaimDueAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: POL-34, 72 hours after reclaim became required. Overdue never confiscates.
     AuctionIntakeList:
       type: object
       additionalProperties: false
@@ -13418,6 +14574,721 @@ components:
           type: integer
           minimum: 0
           maximum: 10000000
+    OperationsAuctionItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - version
+        - title
+        - state
+        - startPrice
+        - step
+        - currentPrice
+        - bidderCount
+        - startAt
+        - endAt
+        - pointName
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        title:
+          type: string
+        state:
+          type: string
+          enum:
+            - Active
+            - OnHold
+        startPrice:
+          type: integer
+          minimum: 10000
+          maximum: 1000000
+        step:
+          type: integer
+          enum:
+            - 10000
+            - 50000
+        currentPrice:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 1000000
+        bidderCount:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        pointName:
+          type: string
+    OperationsAuctionList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/OperationsAuctionItem"
+        serverTime:
+          type: string
+          format: date-time
+    PointAssignment:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - userId
+        - displayName
+        - validFrom
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        validFrom:
+          type: string
+          format: date-time
+    OperationsPoint:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - code
+        - name
+        - displayAddress
+        - status
+        - capacity
+        - heldSlots
+        - version
+        - updatedAt
+        - assignments
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        displayAddress:
+          type: string
+        status:
+          type: string
+          enum:
+            - Active
+            - Paused
+            - Closed
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 200
+        heldSlots:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        updatedAt:
+          type: string
+          format: date-time
+        assignments:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/PointAssignment"
+    OperationsPointList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/OperationsPoint"
+        serverTime:
+          type: string
+          format: date-time
+    CreateHandoverPoint:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - name
+        - displayAddress
+        - capacity
+      properties:
+        code:
+          type: string
+          pattern: ^HCM-[A-Z0-9-]{2,36}$
+        name:
+          type: string
+          minLength: 3
+          maxLength: 120
+        displayAddress:
+          type: string
+          minLength: 10
+          maxLength: 300
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 200
+    UpdateHandoverPoint:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - name
+        - displayAddress
+        - capacity
+        - status
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        name:
+          type: string
+          minLength: 3
+          maxLength: 120
+        displayAddress:
+          type: string
+          minLength: 10
+          maxLength: 300
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 200
+        status:
+          type: string
+          enum:
+            - Active
+            - Paused
+            - Closed
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+    AssignPointStaff:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - userId
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        userId:
+          type: string
+          format: uuid
+    EndPointAssignment:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+    PointCommandReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - entityType
+        - entityId
+        - pointId
+        - version
+        - state
+        - serverTime
+      properties:
+        id:
+          type: string
+          format: uuid
+        entityType:
+          type: string
+          enum:
+            - HandoverPoint
+            - PointAssignment
+            - PointIncident
+        entityId:
+          type: string
+          format: uuid
+        pointId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+          description: The version of the changed point or incident after the command.
+        state:
+          type: string
+          description: Point status, or Current/Ended for an assignment.
+        serverTime:
+          type: string
+          format: date-time
+    MyPointAssignment:
+      type: object
+      additionalProperties: false
+      required:
+        - pointId
+        - code
+        - name
+        - status
+        - validFrom
+      properties:
+        pointId:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum:
+            - Active
+            - Paused
+            - Closed
+        validFrom:
+          type: string
+          format: date-time
+    MyPointAssignmentList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/MyPointAssignment"
+    InspectionChecklist:
+      type: object
+      additionalProperties: false
+      required:
+        - titleEditionMatches
+        - privateMarksMatch
+        - coverPagesMatch
+        - notesAccessoriesMatch
+        - suspectedCopy
+      properties:
+        titleEditionMatches:
+          type: boolean
+        privateMarksMatch:
+          type: boolean
+        coverPagesMatch:
+          type: boolean
+        notesAccessoriesMatch:
+          type: boolean
+        suspectedCopy:
+          type: boolean
+      description: FR-T01 condition checklist. A Pass covers this checklist only, not every page or authenticity.
+    InspectionReport:
+      type: object
+      additionalProperties: false
+      required:
+        - revision
+        - outcome
+        - checklist
+        - note
+        - createdAt
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        outcome:
+          type: string
+          enum:
+            - Pass
+            - Fail
+            - NeedsEvidence
+        checklist:
+          oneOf:
+            - $ref: "#/components/schemas/InspectionChecklist"
+            - type: "null"
+        note:
+          type:
+            - string
+            - "null"
+        createdAt:
+          type: string
+          format: date-time
+    SubmitAuctionIntakeEvidence:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - note
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        note:
+          type: string
+          minLength: 20
+          maxLength: 2000
+    DecideAuctionIntakeEvidence:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - outcome
+        - note
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        outcome:
+          type: string
+          enum:
+            - Pass
+            - Fail
+        note:
+          type: string
+          minLength: 10
+          maxLength: 1000
+        checklist:
+          oneOf:
+            - $ref: "#/components/schemas/InspectionChecklist"
+            - type: "null"
+    PointIncident:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - pointId
+        - pointName
+        - intakeId
+        - title
+        - kind
+        - description
+        - protectedValue
+        - state
+        - openedBy
+        - openedAt
+        - decision
+        - approvedAmount
+        - fundedAmount
+        - unfundedAmount
+        - decidedAt
+        - decisionReason
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        pointId:
+          type: string
+          format: uuid
+        pointName:
+          type: string
+        intakeId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        title:
+          type:
+            - string
+            - "null"
+          description: Book title when the incident concerns an intake.
+        kind:
+          type: string
+          enum:
+            - Lost
+            - Damaged
+            - ArrivalMismatch
+            - LateArrival
+            - EmergencyClose
+            - Other
+        description:
+          type: string
+        protectedValue:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 1000000
+        state:
+          type: string
+          enum:
+            - Open
+            - Decided
+            - Underfunded
+        openedBy:
+          type: string
+          format: uuid
+        openedAt:
+          type: string
+          format: date-time
+        decision:
+          type:
+            - string
+            - "null"
+          enum:
+            - Compensate
+            - NoCompensation
+            - null
+        approvedAmount:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 1000000
+        fundedAmount:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 1000000
+        unfundedAmount:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 1000000
+        decidedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        decisionReason:
+          type:
+            - string
+            - "null"
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    PointIncidentList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/PointIncident"
+        serverTime:
+          type: string
+          format: date-time
+    OpenPointIncident:
+      type: object
+      additionalProperties: false
+      required:
+        - pointId
+        - intakeId
+        - kind
+        - description
+      properties:
+        pointId:
+          type: string
+          format: uuid
+        intakeId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - Lost
+            - Damaged
+            - ArrivalMismatch
+            - LateArrival
+            - EmergencyClose
+            - Other
+        description:
+          type: string
+          minLength: 20
+          maxLength: 2000
+    DecidePointIncident:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - decision
+        - amount
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        decision:
+          type: string
+          enum:
+            - Compensate
+            - NoCompensation
+        amount:
+          type: integer
+          minimum: 0
+          maximum: 1000000
+          description: 0 for NoCompensation; 1..protectedValue for Compensate.
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+    IncidentFundEntry:
+      type: object
+      additionalProperties: false
+      required:
+        - sequence
+        - type
+        - amount
+        - incidentId
+        - balanceAfter
+        - createdAt
+      properties:
+        sequence:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        type:
+          type: string
+          enum:
+            - Opening
+            - CompensationApproved
+        amount:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        incidentId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        balanceAfter:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        createdAt:
+          type: string
+          format: date-time
+    IncidentFund:
+      type: object
+      additionalProperties: false
+      required:
+        - opening
+        - approved
+        - balance
+        - entries
+        - serverTime
+      properties:
+        opening:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        approved:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        balance:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        entries:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/IncidentFundEntry"
+        serverTime:
+          type: string
+          format: date-time
+      description: Simulated demo fund (POL-42). Approved compensation is recorded here; paying a member wallet is a separate, gated step.
+    PointEscalation:
+      type: object
+      additionalProperties: false
+      required:
+        - intakeId
+        - title
+        - pointId
+        - pointName
+        - kind
+        - dueAt
+        - state
+      properties:
+        intakeId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        pointId:
+          type: string
+          format: uuid
+        pointName:
+          type: string
+        kind:
+          type: string
+          enum:
+            - InspectionOverdue
+            - EvidenceDecisionOverdue
+            - ReclaimOverdue
+            - ReclaimEscalated
+        dueAt:
+          type: string
+          format: date-time
+        state:
+          type: string
+          enum:
+            - Received
+            - NeedsEvidence
+            - ReclaimRequired
+    PointEscalationList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/PointEscalation"
+        serverTime:
+          type: string
+          format: date-time
     PointOrderResolutionQueue:
       type: object
       additionalProperties: false
@@ -13604,6 +15475,42 @@ components:
             - type: string
               format: date-time
             - type: "null"
+        inspectionDeadline:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        completedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        initiatorCompletedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        recipientCompletedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        initiatorAddress:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeAddressSnapshot"
+            - type: "null"
+        recipientAddress:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeAddressSnapshot"
+            - type: "null"
+        initiatorShipment:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeShipmentInfo"
+            - type: "null"
+        recipientShipment:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeShipmentInfo"
+            - type: "null"
         createdAt:
           type: string
           format: date-time
@@ -13625,6 +15532,64 @@ components:
           anyOf:
             - type: string
             - type: "null"
+    ExchangeAddressSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+        - recipientName
+        - phone
+        - detail
+      properties:
+        recipientName:
+          type: string
+        phone:
+          type: string
+        detail:
+          type: string
+        localityCode:
+          type:
+            - string
+            - "null"
+        serviceAreaCode:
+          type:
+            - string
+            - "null"
+    ExchangeShipmentInfo:
+      type: object
+      additionalProperties: false
+      required:
+        - method
+      properties:
+        method:
+          type: string
+          enum:
+            - carrier
+            - direct
+        carrierCode:
+          type:
+            - string
+            - "null"
+        carrierName:
+          type:
+            - string
+            - "null"
+        trackingCode:
+          type:
+            - string
+            - "null"
+        meetupLocation:
+          type:
+            - string
+            - "null"
+        notes:
+          type:
+            - string
+            - "null"
+        shippedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
     CreateExchangeProposal:
       type: object
       additionalProperties: false
@@ -13638,6 +15603,9 @@ components:
         recipientListingId:
           type: string
           format: uuid
+        deliveryAddressId:
+          type: string
+          format: uuid
     AcceptExchange:
       type: object
       additionalProperties: false
@@ -13647,6 +15615,33 @@ components:
         revision:
           type: integer
           minimum: 1
+        deliveryAddressId:
+          type: string
+          format: uuid
+    ShipExchangeCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        method:
+          type: string
+          enum:
+            - carrier
+            - direct
+        carrierCode:
+          type: string
+        carrierName:
+          type: string
+        trackingCode:
+          type: string
+        meetupLocation:
+          type: string
+        notes:
+          type: string
     RejectExchangeCommand:
       type: object
       additionalProperties: false
@@ -13660,3 +15655,163 @@ components:
         reason:
           type: string
           minLength: 5
+    ExchangeMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - exchangeId
+        - senderId
+        - body
+        - sentAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        exchangeId:
+          type: string
+          format: uuid
+        senderId:
+          type: string
+          format: uuid
+        body:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+    CreateExchangeMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - body
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    ExchangeMessagesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExchangeMessage"
+    CounterExchangeProposal:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - diffAmount
+        - diffPayer
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        diffAmount:
+          type: integer
+          minimum: 0
+          maximum: 10000000
+        diffPayer:
+          type: string
+          enum:
+            - initiator
+            - recipient
+            - none
+        deliveryAddressId:
+          type: string
+          format: uuid
+        note:
+          type: string
+          maxLength: 500
+    CreateExchangeReview:
+      type: object
+      additionalProperties: false
+      required:
+        - bookRating
+        - partnerRating
+      properties:
+        bookRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        partnerRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        tags:
+          type: array
+          items:
+            type: string
+        comment:
+          type: string
+          maxLength: 1000
+    ExchangeReviewItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - exchangeId
+        - authorId
+        - targetUserId
+        - bookRating
+        - partnerRating
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        exchangeId:
+          type: string
+          format: uuid
+        authorId:
+          type: string
+          format: uuid
+        authorName:
+          type: string
+        targetUserId:
+          type: string
+          format: uuid
+        bookRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        partnerRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        tags:
+          type: array
+          items:
+            type: string
+        comment:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ExchangeReviewsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - canReview
+      properties:
+        canReview:
+          type: boolean
+        deadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+        myReview:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeReviewItem"
+            - type: "null"
+        partnerReview:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeReviewItem"
+            - type: "null"

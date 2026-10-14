@@ -88,15 +88,23 @@ public tới API và từ chối callback không hợp lệ; không là giao d�
 
 Chạy `pnpm db:migrate`, build/restart API và Order worker cùng source. Migration
 0022 thêm validator/index/reference account;0024 mở đúng operation QueryDR cho
-system principal VNPay. Không sửa checksum migration cũ hoặc reset/seed database.
+system principal VNPay;0027 hợp nhất receipt/audit với point administration từ
+main sau khi áp dụng các migration của cả hai nhánh. Giữ pointId và đúng một
+target, cặp principal/operation VNPay và DirectDelivery worker. Không sửa checksum
+migration cũ hoặc reset/seed database.
+Máy nhận bản hợp nhất từ nhánh ví cũ cần chạy `pnpm db:bootstrap` trước
+`pnpm db:migrate` để bổ sung quyền collection N4/exchange cho app và migrator.
+Giữ credential hiện có trong env; không seed lại hoặc đổi mật khẩu.
 Trong phiên15/10, theo yêu cầu chạy localhost, credential/Return env đã cấu hình và
 0024 đã áp dụng trên máy chủ dự án; owner restart terminal API để nhận env mới.
 
 `LISTING_SUBMISSION_FEE_VND` mặc định20000; integer0–1000000.
 `ORDER_CHECKOUT_MODE` mặc địnhWallet. Profile chuyển tiếp0/Unpaid có thể cấu hình
 ở server để giữ contract lịch sử; Member request không thể chọn profile đó.
-Các suite E2E lịch sử khai báo profile0/Unpaid; suite `wallet-checkout` kiểm profile
-20000/Wallet riêng, không coi các suite lịch sử là bằng chứng của behavior mới.
+Các suite E2E và browser harness lịch sử khai báo profile0/Unpaid; suite
+`wallet-checkout` kiểm profile20000/Wallet riêng, không coi các suite lịch sử là
+bằng chứng của behavior mới. User Web CI chạy cả các browser suite lịch sử và
+`pnpm --filter @used-books/user-web test:wallet:browser` để kiểm nạp ví mặc định.
 
 ## Phạm vi sandbox và kiểm chứng
 

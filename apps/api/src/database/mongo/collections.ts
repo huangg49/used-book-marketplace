@@ -87,6 +87,9 @@ export interface CollectionTypes {
   wishlist_items: D.WishlistItemDoc;
   handover_points: D.HandoverPointDoc;
   point_staff_assignments: D.PointStaffAssignmentDoc;
+  intake_inspection_reports: D.IntakeInspectionReportDoc;
+  point_incidents: D.PointIncidentDoc;
+  incident_fund_journal: D.IncidentFundEntryDoc;
   point_slots: D.PointSlotDoc;
   auction_intakes: D.AuctionIntakeDoc;
   auctions: D.AuctionDoc;
@@ -106,6 +109,8 @@ export interface CollectionTypes {
   price_lookups: D.PriceLookupDoc;
   online_price_offers: D.OnlinePriceOfferDoc;
   exchanges: D.ExchangeDoc;
+  exchange_messages: D.ExchangeMessageDoc;
+  transaction_reviews: D.TransactionReviewDoc;
 }
 export type CollectionName = keyof CollectionTypes;
 
@@ -252,6 +257,9 @@ const NAMES: CollectionName[] = [
   'online_price_offers',
   'handover_points',
   'point_staff_assignments',
+  'intake_inspection_reports',
+  'point_incidents',
+  'incident_fund_journal',
   'point_slots',
   'auction_intakes',
   'auctions',
@@ -266,6 +274,8 @@ const NAMES: CollectionName[] = [
   'point_returns',
   'member_violations',
   'exchanges',
+  'exchange_messages',
+  'transaction_reviews',
 ];
 export const COLLECTION_NAMES: readonly CollectionName[] = NAMES;
 

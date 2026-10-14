@@ -1,0 +1,27 @@
+.entrance {
+  position: fixed;
+  inset: var(--auction-nav-height, 76px) 0 0;
+  /* Navigation remains above the stage throughout route entry. */
+  z-index: 50;
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: none;
+  /* Opaque primer conceals the page until the first textured frame is ready. */
+  background: var(--shop-wine);
+}
+.entrance[data-state='opening'] { background: transparent; }
+.entrance[hidden] { display: none; }
+@media (max-width: 1000px) {
+  .entrance { --auction-nav-height: 72px; }
+}
+.art {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 1920px;
+  height: 1080px;
+  transform-origin: 0 0;
+}
+.sprite { position: absolute; display: block; max-width: none; object-fit: fill; }
+.mesh { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+/* Motion is authored on the canvas/inline transforms. No CSS animation is
+   subject to the global reduced-motion durations; owner's full sequence stays. */

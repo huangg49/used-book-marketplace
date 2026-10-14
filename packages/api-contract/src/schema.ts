@@ -1833,7 +1833,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Assigned independent STAFF records condition inspection Pass or Fail against the frozen revision. Fail moves to ReclaimRequired. Pass is a condition checklist, not authenticity. */
+        /** @description Assigned independent STAFF records condition inspection Pass, Fail or NeedsEvidence with the FR-T01 checklist against the frozen revision. Fail moves to ReclaimRequired. Pass is a condition checklist, not authenticity. */
         post: operations["inspectAuctionIntake"];
         delete?: never;
         options?: never;
@@ -1875,6 +1875,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/auction-intakes/{intakeId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The seller answers a NeedsEvidence inspection once, before the POL-09 48-hour deadline, with a written explanation. It does not change the conclusion; an independent Staff member decides. */
+        post: operations["submitAuctionIntakeEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/auction-intakes/{intakeId}/evidence-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Assigned STAFF other than the one who asked for evidence decides Pass or Fail after the seller answered, or Fail after the deadline passed without an answer. NeedsEvidence never becomes Pass on its own. */
+        post: operations["decideAuctionIntakeEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/auctions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN. Auctions an Admin may cancel (Active before endAt, and OnHold), ending soonest first, with the version the cancel command needs. Excludes auctions the Admin sells or bids in. Never includes Auto ceilings or bidder identities. */
+        get: operations["listOperationsAuctions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/auctions/{auctionId}/cancel": {
         parameters: {
             query?: never;
@@ -1901,6 +1952,161 @@ export interface paths {
         };
         /** @description Public. Active auctions ending soonest first (max 50). Shows price and anonymous bidder count; ceilings are never exposed. */
         get: operations["listAuctions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/points": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN. Every handover point with capacity, slots still held and the current Staff assignments, ordered by code. FR-H04. */
+        get: operations["listOperationsPoints"];
+        put?: never;
+        /** @description ACTIVE ADMIN creates a simulated HCM point. A new point starts Paused, so no booking reaches it before a Staff member is assigned and an Admin activates it. */
+        post: operations["createHandoverPoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/points/{pointId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN edits name, address, capacity and status with a reason. Capacity never drops below slots still held. Paused blocks new bookings only. Closed needs no held slot. Active needs a current Staff assignment. */
+        post: operations["updateHandoverPoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/points/{pointId}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN assigns an ACTIVE STAFF account to the point. No self-assignment and no second current assignment for the same person and point. */
+        post: operations["assignPointStaff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/points/{pointId}/assignments/{assignmentId}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN ends a current assignment with a reason. The last current assignment of a point that still holds slots cannot end. */
+        post: operations["endPointAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/point-assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE STAFF. The points the caller is assigned to now. An empty list means no current assignment. */
+        get: operations["listMyPointAssignments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN sees every incident; ACTIVE STAFF sees incidents at the points they are assigned to now. Open first, then the most recent. FR-T04. */
+        get: operations["listPointIncidents"];
+        put?: never;
+        /** @description Assigned STAFF or ACTIVE ADMIN opens an incident at a point, with or without an Order (auction intake). The protected value is snapshotted from the intake (Order book price once sold). EmergencyClose is ADMIN only and pauses new bookings at the point. */
+        post: operations["openPointIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/incidents/{incidentId}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN independent of the point (no current assignment) and of the incident (not the opener) decides once. Compensation is capped by the protected value and funded from the POL-42 simulated fund while it lasts; the unfunded part is recorded and the point stops taking new bookings. No wallet payout is made here. */
+        post: operations["decidePointIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/incident-fund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN. The POL-42 simulated incident fund with its opening balance, approved compensation and append-only journal. */
+        get: operations["readIncidentFund"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/escalations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN. Overdue point work derived at read time from stored timestamps, oldest due first. InspectionOverdue (POL-31), EvidenceDecisionOverdue (POL-09), ReclaimOverdue and, 14 days later, ReclaimEscalated (POL-34). Read-only; nothing is passed, failed or confiscated automatically. */
+        get: operations["listPointEscalations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2284,6 +2490,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exchanges/{id}/counter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Submit a counter-proposal for the exchange. */
+        post: operations["counterExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/exchanges/{id}/funding": {
         parameters: {
             query?: never;
@@ -2363,6 +2586,127 @@ export interface paths {
         put?: never;
         /** @description Participant confirms they have received the other book. */
         post: operations["receiveExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Participant confirms satisfaction during the inspection window to complete the exchange early. */
+        post: operations["completeExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get messages in the exchange chat thread. */
+        get: operations["getExchangeMessages"];
+        put?: never;
+        /** @description Send a message in the exchange chat thread. */
+        post: operations["sendExchangeMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/carrier/calculate-fee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Calculate shipping fee between two addresses. */
+        post: operations["calculateCarrierFee"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/carrier/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Create a carrier shipment order. */
+        post: operations["createCarrierShipment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/carrier/tracking/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get tracking status for a shipment code. */
+        get: operations["getCarrierTracking"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhooks/carrier": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Receive webhook events from carrier partners. */
+        post: operations["carrierWebhookCallback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get reviews for an exchange transaction. */
+        get: operations["getExchangeReviews"];
+        put?: never;
+        /** @description Submit review for a completed exchange (FR-R01, FR-R02). */
+        post: operations["createExchangeReview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2826,14 +3170,14 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid";
+            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected";
             title: string;
             body: string;
             /** @enum {string} */
-            targetType: "Auction";
+            targetType: "Auction" | "Exchange";
             /**
              * Format: uuid
-             * @description Opens with GET /auctions/{id}; the caller's own view comes from participation or point-order reads.
+             * @description Opens with GET /auctions/{id} or GET /exchanges/{id}; the caller's own view comes from participation or point-order reads.
              */
             targetId: string;
             /** Format: date-time */
@@ -4066,7 +4410,7 @@ export interface components {
             contextId: string;
             version: number;
             /** @enum {string} */
-            state: "AwaitingDropoff" | "Received" | "Passed" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "PaymentExpired" | "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed";
+            state: "AwaitingDropoff" | "Received" | "Passed" | "NeedsEvidence" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "PaymentExpired" | "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed";
             currentPrice: number | null;
             minimumBid: number | null;
             leading: boolean | null;
@@ -4111,8 +4455,10 @@ export interface components {
         InspectAuctionIntake: {
             expectedVersion: number;
             /** @enum {string} */
-            outcome: "Pass" | "Fail";
+            outcome: "Pass" | "Fail" | "NeedsEvidence";
             note: string | null;
+            /** @description Required for NeedsEvidence. Pass needs every match true and suspectedCopy false; suspectedCopy true needs NeedsEvidence. */
+            checklist?: components["schemas"]["InspectionChecklist"] | null;
         };
         CancelAuction: {
             expectedVersion: number;
@@ -4167,7 +4513,7 @@ export interface components {
             buyNowPrice: number | null;
             protectiveValue: number;
             /** @enum {string} */
-            state: "AwaitingDropoff" | "Received" | "Passed" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Sold";
+            state: "AwaitingDropoff" | "Received" | "Passed" | "NeedsEvidence" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Sold";
             version: number;
             /** Format: date-time */
             createdAt: string;
@@ -4180,7 +4526,7 @@ export interface components {
             /** Format: date-time */
             inspectedAt: string | null;
             /** @enum {string|null} */
-            inspectionOutcome: "Pass" | "Fail" | null;
+            inspectionOutcome: "Pass" | "Fail" | "NeedsEvidence" | null;
             inspectionNote: string | null;
             /** Format: uuid */
             auctionId: string | null;
@@ -4188,6 +4534,33 @@ export interface components {
             reclaimReason: "SellerCancelled" | "InspectionFailed" | "Unsold" | "PaymentExpired" | "AuctionCancelled" | "OrderCancelled" | "OrderReturned" | "BookMisdescribed" | null;
             /** Format: date-time */
             closedAt: string | null;
+            /**
+             * Format: uuid
+             * @description Staff reads only; null for the owner.
+             */
+            evidenceRequestedBy: string | null;
+            /**
+             * Format: date-time
+             * @description POL-09 48 hours from the NeedsEvidence conclusion.
+             */
+            evidenceDeadline: string | null;
+            evidenceNote: string | null;
+            /** Format: date-time */
+            evidenceSubmittedAt: string | null;
+            /** Format: date-time */
+            reclaimRequiredAt: string | null;
+            /** @description Immutable inspection report revisions, oldest first. No inspector identity. */
+            reports: components["schemas"]["InspectionReport"][];
+            /**
+             * Format: date-time
+             * @description POL-31, 24 hours after receipt while the book waits for inspection.
+             */
+            inspectionDueAt: string | null;
+            /**
+             * Format: date-time
+             * @description POL-34, 72 hours after reclaim became required. Overdue never confiscates.
+             */
+            reclaimDueAt: string | null;
         };
         AuctionIntakeList: {
             items: components["schemas"]["AuctionIntake"][];
@@ -4323,6 +4696,230 @@ export interface components {
             openedAt: string;
             buyerTotal: number;
         };
+        OperationsAuctionItem: {
+            /** Format: uuid */
+            id: string;
+            version: number;
+            title: string;
+            /** @enum {string} */
+            state: "Active" | "OnHold";
+            startPrice: number;
+            /** @enum {integer} */
+            step: 10000 | 50000;
+            currentPrice: number | null;
+            bidderCount: number;
+            /** Format: date-time */
+            startAt: string;
+            /** Format: date-time */
+            endAt: string;
+            pointName: string;
+        };
+        OperationsAuctionList: {
+            items: components["schemas"]["OperationsAuctionItem"][];
+            /** Format: date-time */
+            serverTime: string;
+        };
+        PointAssignment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            displayName: string;
+            /** Format: date-time */
+            validFrom: string;
+        };
+        OperationsPoint: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            displayAddress: string;
+            /** @enum {string} */
+            status: "Active" | "Paused" | "Closed";
+            capacity: number;
+            heldSlots: number;
+            version: number;
+            /** Format: date-time */
+            updatedAt: string;
+            assignments: components["schemas"]["PointAssignment"][];
+        };
+        OperationsPointList: {
+            items: components["schemas"]["OperationsPoint"][];
+            /** Format: date-time */
+            serverTime: string;
+        };
+        CreateHandoverPoint: {
+            code: string;
+            name: string;
+            displayAddress: string;
+            capacity: number;
+        };
+        UpdateHandoverPoint: {
+            expectedVersion: number;
+            name: string;
+            displayAddress: string;
+            capacity: number;
+            /** @enum {string} */
+            status: "Active" | "Paused" | "Closed";
+            reason: string;
+        };
+        AssignPointStaff: {
+            expectedVersion: number;
+            /** Format: uuid */
+            userId: string;
+        };
+        EndPointAssignment: {
+            expectedVersion: number;
+            reason: string;
+        };
+        PointCommandReceipt: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            entityType: "HandoverPoint" | "PointAssignment" | "PointIncident";
+            /** Format: uuid */
+            entityId: string;
+            /** Format: uuid */
+            pointId: string;
+            /** @description The version of the changed point or incident after the command. */
+            version: number;
+            /** @description Point status, or Current/Ended for an assignment. */
+            state: string;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        MyPointAssignment: {
+            /** Format: uuid */
+            pointId: string;
+            code: string;
+            name: string;
+            /** @enum {string} */
+            status: "Active" | "Paused" | "Closed";
+            /** Format: date-time */
+            validFrom: string;
+        };
+        MyPointAssignmentList: {
+            items: components["schemas"]["MyPointAssignment"][];
+        };
+        /** @description FR-T01 condition checklist. A Pass covers this checklist only, not every page or authenticity. */
+        InspectionChecklist: {
+            titleEditionMatches: boolean;
+            privateMarksMatch: boolean;
+            coverPagesMatch: boolean;
+            notesAccessoriesMatch: boolean;
+            suspectedCopy: boolean;
+        };
+        InspectionReport: {
+            revision: number;
+            /** @enum {string} */
+            outcome: "Pass" | "Fail" | "NeedsEvidence";
+            checklist: components["schemas"]["InspectionChecklist"] | null;
+            note: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        SubmitAuctionIntakeEvidence: {
+            expectedVersion: number;
+            note: string;
+        };
+        DecideAuctionIntakeEvidence: {
+            expectedVersion: number;
+            /** @enum {string} */
+            outcome: "Pass" | "Fail";
+            note: string;
+            checklist?: components["schemas"]["InspectionChecklist"] | null;
+        };
+        PointIncident: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            pointId: string;
+            pointName: string;
+            /** Format: uuid */
+            intakeId: string | null;
+            /** @description Book title when the incident concerns an intake. */
+            title: string | null;
+            /** @enum {string} */
+            kind: "Lost" | "Damaged" | "ArrivalMismatch" | "LateArrival" | "EmergencyClose" | "Other";
+            description: string;
+            protectedValue: number | null;
+            /** @enum {string} */
+            state: "Open" | "Decided" | "Underfunded";
+            /** Format: uuid */
+            openedBy: string;
+            /** Format: date-time */
+            openedAt: string;
+            /** @enum {string|null} */
+            decision: "Compensate" | "NoCompensation" | null;
+            approvedAmount: number | null;
+            fundedAmount: number | null;
+            unfundedAmount: number | null;
+            /** Format: date-time */
+            decidedAt: string | null;
+            decisionReason: string | null;
+            version: number;
+        };
+        PointIncidentList: {
+            items: components["schemas"]["PointIncident"][];
+            /** Format: date-time */
+            serverTime: string;
+        };
+        OpenPointIncident: {
+            /** Format: uuid */
+            pointId: string;
+            /** Format: uuid */
+            intakeId: string | null;
+            /** @enum {string} */
+            kind: "Lost" | "Damaged" | "ArrivalMismatch" | "LateArrival" | "EmergencyClose" | "Other";
+            description: string;
+        };
+        DecidePointIncident: {
+            expectedVersion: number;
+            /** @enum {string} */
+            decision: "Compensate" | "NoCompensation";
+            /** @description 0 for NoCompensation; 1..protectedValue for Compensate. */
+            amount: number;
+            reason: string;
+        };
+        IncidentFundEntry: {
+            sequence: number;
+            /** @enum {string} */
+            type: "Opening" | "CompensationApproved";
+            amount: number;
+            /** Format: uuid */
+            incidentId: string | null;
+            balanceAfter: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description Simulated demo fund (POL-42). Approved compensation is recorded here; paying a member wallet is a separate, gated step. */
+        IncidentFund: {
+            opening: number;
+            approved: number;
+            balance: number;
+            entries: components["schemas"]["IncidentFundEntry"][];
+            /** Format: date-time */
+            serverTime: string;
+        };
+        PointEscalation: {
+            /** Format: uuid */
+            intakeId: string;
+            title: string;
+            /** Format: uuid */
+            pointId: string;
+            pointName: string;
+            /** @enum {string} */
+            kind: "InspectionOverdue" | "EvidenceDecisionOverdue" | "ReclaimOverdue" | "ReclaimEscalated";
+            /** Format: date-time */
+            dueAt: string;
+            /** @enum {string} */
+            state: "Received" | "NeedsEvidence" | "ReclaimRequired";
+        };
+        PointEscalationList: {
+            items: components["schemas"]["PointEscalation"][];
+            /** Format: date-time */
+            serverTime: string;
+        };
         PointOrderResolutionQueue: {
             items: components["schemas"]["PointOrderResolutionItem"][];
             /** Format: date-time */
@@ -4376,6 +4973,14 @@ export interface components {
             initiatorReceivedAt?: string | null;
             recipientReceivedAt?: string | null;
             proposalExpiresAt?: string | null;
+            inspectionDeadline?: string | null;
+            completedAt?: string | null;
+            initiatorCompletedAt?: string | null;
+            recipientCompletedAt?: string | null;
+            initiatorAddress?: components["schemas"]["ExchangeAddressSnapshot"] | null;
+            recipientAddress?: components["schemas"]["ExchangeAddressSnapshot"] | null;
+            initiatorShipment?: components["schemas"]["ExchangeShipmentInfo"] | null;
+            recipientShipment?: components["schemas"]["ExchangeShipmentInfo"] | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -4385,18 +4990,108 @@ export interface components {
             items: components["schemas"]["Exchange"][];
             nextCursor: string | null;
         };
+        ExchangeAddressSnapshot: {
+            recipientName: string;
+            phone: string;
+            detail: string;
+            localityCode?: string | null;
+            serviceAreaCode?: string | null;
+        };
+        ExchangeShipmentInfo: {
+            /** @enum {string} */
+            method: "carrier" | "direct";
+            carrierCode?: string | null;
+            carrierName?: string | null;
+            trackingCode?: string | null;
+            meetupLocation?: string | null;
+            notes?: string | null;
+            /** Format: date-time */
+            shippedAt?: string | null;
+        };
         CreateExchangeProposal: {
             /** Format: uuid */
             initiatorListingId: string;
             /** Format: uuid */
             recipientListingId: string;
+            /** Format: uuid */
+            deliveryAddressId?: string;
         };
         AcceptExchange: {
             revision: number;
+            /** Format: uuid */
+            deliveryAddressId?: string;
+        };
+        ShipExchangeCommand: {
+            expectedVersion: number;
+            /** @enum {string} */
+            method?: "carrier" | "direct";
+            carrierCode?: string;
+            carrierName?: string;
+            trackingCode?: string;
+            meetupLocation?: string;
+            notes?: string;
         };
         RejectExchangeCommand: {
             expectedVersion: number;
             reason: string;
+        };
+        ExchangeMessage: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            exchangeId: string;
+            /** Format: uuid */
+            senderId: string;
+            body: string;
+            /** Format: date-time */
+            sentAt: string;
+        };
+        CreateExchangeMessage: {
+            body: string;
+        };
+        ExchangeMessagesResponse: {
+            items: components["schemas"]["ExchangeMessage"][];
+        };
+        CounterExchangeProposal: {
+            expectedVersion: number;
+            diffAmount: number;
+            /** @enum {string} */
+            diffPayer: "initiator" | "recipient" | "none";
+            /** Format: uuid */
+            deliveryAddressId?: string;
+            note?: string;
+        };
+        CreateExchangeReview: {
+            bookRating: number;
+            partnerRating: number;
+            tags?: string[];
+            comment?: string;
+        };
+        ExchangeReviewItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            exchangeId: string;
+            /** Format: uuid */
+            authorId: string;
+            authorName?: string;
+            /** Format: uuid */
+            targetUserId: string;
+            bookRating: number;
+            partnerRating: number;
+            tags?: string[];
+            comment?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        ExchangeReviewsResponse: {
+            canReview: boolean;
+            /** Format: date-time */
+            deadline?: string | null;
+            myReview?: components["schemas"]["ExchangeReviewItem"] | null;
+            partnerReview?: components["schemas"]["ExchangeReviewItem"] | null;
         };
     };
     responses: {
@@ -8131,6 +8826,116 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
+    submitAuctionIntakeEvidence: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                intakeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitAuctionIntakeEvidence"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    decideAuctionIntakeEvidence: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                intakeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideAuctionIntakeEvidence"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listOperationsAuctions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsAuctionList"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
     cancelAuction: {
         parameters: {
             query?: never;
@@ -8188,6 +8993,393 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicAuctionList"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listOperationsPoints: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsPointList"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    createHandoverPoint: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateHandoverPoint"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    updateHandoverPoint: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                pointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateHandoverPoint"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    assignPointStaff: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                pointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignPointStaff"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    endPointAssignment: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                pointId: string;
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndPointAssignment"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listMyPointAssignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyPointAssignmentList"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listPointIncidents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointIncidentList"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    openPointIncident: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenPointIncident"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    decidePointIncident: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                incidentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecidePointIncident"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    readIncidentFund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentFund"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listPointEscalations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointEscalationList"];
                 };
             };
             400: components["responses"]["ListingError"];
@@ -9007,6 +10199,40 @@ export interface operations {
             500: components["responses"]["ListingError"];
         };
     };
+    counterExchange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CounterExchangeProposal"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
     fundExchange: {
         parameters: {
             query?: never;
@@ -9118,7 +10344,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["VersionCommand"];
+                "application/json": components["schemas"]["ShipExchangeCommand"];
             };
         };
         responses: {
@@ -9171,6 +10397,254 @@ export interface operations {
             404: components["responses"]["ListingError"];
             409: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+        };
+    };
+    completeExchange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    getExchangeMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeMessagesResponse"];
+                };
+            };
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    sendExchangeMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateExchangeMessage"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeMessage"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    calculateCarrierFee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    fromAddress: Record<string, never>;
+                    toAddress: Record<string, never>;
+                    carrierCode?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    createCarrierShipment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    orderId: string;
+                    carrierCode?: string;
+                    sender: Record<string, never>;
+                    receiver: Record<string, never>;
+                    notes?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    getCarrierTracking: {
+        parameters: {
+            query?: {
+                carrier?: string;
+            };
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    carrierWebhookCallback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    trackingCode: string;
+                    status: string;
+                    description?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getExchangeReviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeReviewsResponse"];
+                };
+            };
+        };
+    };
+    createExchangeReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateExchangeReview"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeReviewItem"];
+                };
+            };
         };
     };
 }

@@ -115,17 +115,6 @@ export function AccountScreen() {
       />
 
       <View style={{ paddingHorizontal: 16, paddingBottom: 24, gap: 16 }}>
-        <BackAction
-          title="Khám phá kệ sách"
-          onPress={() => router.replace("/")}
-        />
-        <AppText
-          kind="heading"
-          style={{ fontSize: 20, color: stitchTokens.wineDark }}
-          accessibilityRole="header"
-        >
-          Tài khoản của bạn
-        </AppText>
         {/* Profile State Error/Pending */}
         {profile.isPending ? (
           <StatePanel loading title="Đang tải hồ sơ bạn đọc…" />
@@ -447,7 +436,7 @@ export function AccountScreen() {
                     </Pressable>
                     <Pressable
                       accessibilityRole="button"
-                      onPress={() => {}}
+                      onPress={() => { }}
                       style={({ pressed }) => [
                         styles.btnRespondSecondary,
                         pressed && { opacity: 0.8 },

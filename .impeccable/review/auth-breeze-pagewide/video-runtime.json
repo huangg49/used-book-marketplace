@@ -1,0 +1,9 @@
+{
+  "date": "2026-10-13",
+  "fixture": "synthetic frontend Login; no real API/DB",
+  "checks": [
+    "desktop: page-wide gust; occupied sectors during full-screen coverage 8/9, after paper 9/9; 16/26 seeds, no pointer blocking; controls usable; tail cleans up in 2500ms",
+    "mobile: page-wide gust; occupied sectors during full-screen coverage 6/9, after paper 9/9; 16/26 seeds, no pointer blocking; controls usable; tail cleans up in 2500ms"
+  ],
+  "pageErrors": []
+}

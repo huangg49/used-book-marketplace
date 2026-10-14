@@ -1,0 +1,1707 @@
+{
+  "timing": {
+    "coverStart": 700,
+    "covered": 1350,
+    "release": 1500,
+    "arrived": 2200,
+    "end": 4700
+  },
+  "results": [
+    {
+      "name": "desktop",
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "samples": [
+        {
+          "label": "stamp",
+          "time": 150.4,
+          "inline": "visibility: hidden;",
+          "destinationData": "false",
+          "transition": "none",
+          "destination": "hidden",
+          "source": "visible",
+          "outsideHidden": false,
+          "breezeHidden": false,
+          "seeds": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pages": [
+            {
+              "x": -4098,
+              "y": 1228.800048828125,
+              "width": 3005.1875,
+              "height": 1689.59375,
+              "top": 1228.800048828125,
+              "right": -1092.8125,
+              "bottom": 2918.393798828125,
+              "left": -4098
+            },
+            {
+              "x": -3779.983154296875,
+              "y": 1199.4378662109375,
+              "width": 1617.86328125,
+              "height": 1479.5115966796875,
+              "top": 1199.4378662109375,
+              "right": -2162.119873046875,
+              "bottom": 2678.949462890625,
+              "left": -3779.983154296875
+            },
+            {
+              "x": -3775.256103515625,
+              "y": 1113.448974609375,
+              "width": 1711.859375,
+              "height": 1593.3271484375,
+              "top": 1113.448974609375,
+              "right": -2063.396728515625,
+              "bottom": 2706.776123046875,
+              "left": -3775.256103515625
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            }
+          ]
+        },
+        {
+          "label": "flight",
+          "time": 559.3,
+          "inline": "visibility: hidden;",
+          "destinationData": "false",
+          "transition": "none",
+          "destination": "hidden",
+          "source": "visible",
+          "outsideHidden": false,
+          "breezeHidden": false,
+          "seeds": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pages": [
+            {
+              "x": -4098,
+              "y": 1228.800048828125,
+              "width": 3005.1875,
+              "height": 1689.59375,
+              "top": 1228.800048828125,
+              "right": -1092.8125,
+              "bottom": 2918.393798828125,
+              "left": -4098
+            },
+            {
+              "x": -3779.983154296875,
+              "y": 1199.4378662109375,
+              "width": 1617.86328125,
+              "height": 1479.5115966796875,
+              "top": 1199.4378662109375,
+              "right": -2162.119873046875,
+              "bottom": 2678.949462890625,
+              "left": -3779.983154296875
+            },
+            {
+              "x": -3775.256103515625,
+              "y": 1113.448974609375,
+              "width": 1711.859375,
+              "height": 1593.3271484375,
+              "top": 1113.448974609375,
+              "right": -2063.396728515625,
+              "bottom": 2706.776123046875,
+              "left": -3775.256103515625
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            }
+          ]
+        },
+        {
+          "label": "cover",
+          "time": 1339.4999999999998,
+          "inline": "visibility: hidden;",
+          "destinationData": "false",
+          "transition": "none",
+          "destination": "hidden",
+          "source": "visible",
+          "outsideHidden": false,
+          "breezeHidden": false,
+          "seeds": [
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333
+          ],
+          "pages": [
+            {
+              "x": -820.2276611328125,
+              "y": -460.45147705078125,
+              "width": 3005.1875,
+              "height": 1689.59375,
+              "top": -460.45147705078125,
+              "right": 2184.9598388671875,
+              "bottom": 1229.1422729492188,
+              "left": -820.2276611328125
+            },
+            {
+              "x": -799.2064208984375,
+              "y": -399.6328430175781,
+              "width": 1617.863037109375,
+              "height": 1479.5115966796875,
+              "top": -399.6328430175781,
+              "right": 818.6566162109375,
+              "bottom": 1079.8787536621094,
+              "left": -799.2064208984375
+            },
+            {
+              "x": -147.34234619140625,
+              "y": -465.47711181640625,
+              "width": 1711.859375,
+              "height": 1593.3271484375,
+              "top": -465.47711181640625,
+              "right": 1564.5170288085938,
+              "bottom": 1127.8500366210938,
+              "left": -147.34234619140625
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            }
+          ]
+        },
+        {
+          "label": "handoff",
+          "time": 1367.6999999999998,
+          "inline": "visibility: visible;",
+          "destinationData": "true",
+          "transition": "none",
+          "destination": "visible",
+          "source": "hidden",
+          "outsideHidden": false,
+          "breezeHidden": false,
+          "seeds": [
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333
+          ],
+          "pages": [
+            {
+              "x": -819.5999755859375,
+              "y": -460.79998779296875,
+              "width": 3005.1875,
+              "height": 1689.59375,
+              "top": -460.79998779296875,
+              "right": 2185.5875244140625,
+              "bottom": 1228.7937622070312,
+              "left": -819.5999755859375
+            },
+            {
+              "x": -798.5611572265625,
+              "y": -399.9934387207031,
+              "width": 1617.863037109375,
+              "height": 1479.5115966796875,
+              "top": -399.9934387207031,
+              "right": 819.3018798828125,
+              "bottom": 1079.5181579589844,
+              "left": -798.5611572265625
+            },
+            {
+              "x": -147.36151123046875,
+              "y": -465.44580078125,
+              "width": 1711.859375,
+              "height": 1593.3271484375,
+              "top": -465.44580078125,
+              "right": 1564.4978637695312,
+              "bottom": 1127.88134765625,
+              "left": -147.36151123046875
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            }
+          ]
+        },
+        {
+          "label": "reveal",
+          "time": 1800.1000000000001,
+          "inline": "visibility: visible;",
+          "destinationData": "true",
+          "transition": "none",
+          "destination": "visible",
+          "source": "hidden",
+          "outsideHidden": false,
+          "breezeHidden": false,
+          "seeds": [
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333
+          ],
+          "pages": [
+            {
+              "x": 2334.51416015625,
+              "y": -1790.7923583984375,
+              "width": 3005.1875,
+              "height": 1689.59375,
+              "top": -1790.7923583984375,
+              "right": 5339.70166015625,
+              "bottom": -101.1986083984375,
+              "left": 2334.51416015625
+            },
+            {
+              "x": 2552.684814453125,
+              "y": -1840.818603515625,
+              "width": 1617.863037109375,
+              "height": 1479.51171875,
+              "top": -1840.818603515625,
+              "right": 4170.5478515625,
+              "bottom": -361.306884765625,
+              "left": 2552.684814453125
+            },
+            {
+              "x": 3598.1484375,
+              "y": -2072.519775390625,
+              "width": 1711.859375,
+              "height": 1593.3270263671875,
+              "top": -2072.519775390625,
+              "right": 5310.0078125,
+              "bottom": -479.1927490234375,
+              "left": 3598.1484375
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            }
+          ]
+        },
+        {
+          "label": "arrived",
+          "time": 2298.2999999999997,
+          "inline": "visibility: visible;",
+          "destinationData": "true",
+          "transition": "none",
+          "destination": "visible",
+          "source": "hidden",
+          "outsideHidden": true,
+          "breezeHidden": false,
+          "seeds": [
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333
+          ],
+          "pages": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            }
+          ]
+        },
+        {
+          "label": "tail",
+          "time": 3398.1,
+          "inline": "visibility: visible;",
+          "destinationData": "true",
+          "transition": "none",
+          "destination": "visible",
+          "source": "hidden",
+          "outsideHidden": true,
+          "breezeHidden": false,
+          "seeds": [
+            0.196324,
+            0.317369,
+            0.368891,
+            0.39858,
+            0.152426,
+            0.330928,
+            0.389219,
+            0.42655,
+            0.166019,
+            0.274913,
+            0.40739,
+            0.452131,
+            0.178606,
+            0.293464,
+            0.331603,
+            0.475401,
+            0.190116,
+            0.310063,
+            0.356272,
+            0.37924,
+            0.200716,
+            0.324847,
+            0.378404,
+            0.409856,
+            0.157113,
+            0.33785
+          ],
+          "pages": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            }
+          ]
+        },
+        {
+          "label": "end",
+          "time": 4700,
+          "inline": "visibility: visible;",
+          "destinationData": "true",
+          "transition": "none",
+          "destination": "visible",
+          "source": "hidden",
+          "outsideHidden": true,
+          "breezeHidden": true,
+          "seeds": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pages": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "api": [],
+      "reducedMotion": "reduce",
+      "replay": "PASS",
+      "pause": "PASS",
+      "resize": "PASS",
+      "visibility": "PASS"
+    },
+    {
+      "name": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "samples": [
+        {
+          "label": "stamp",
+          "time": 150.4,
+          "inline": "visibility: hidden;",
+          "destinationData": "false",
+          "transition": "none",
+          "destination": "hidden",
+          "source": "visible",
+          "outsideHidden": false,
+          "breezeHidden": false,
+          "seeds": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pages": [
+            {
+              "x": -1170,
+              "y": 1350.39990234375,
+              "width": 858,
+              "height": 1856.796875,
+              "top": 1350.39990234375,
+              "right": -312,
+              "bottom": 3207.19677734375,
+              "left": -1170
+            },
+            {
+              "x": -1161.3175048828125,
+              "y": 1411.0732421875,
+              "width": 626.1350708007812,
+              "height": 1440.04736328125,
+              "top": 1411.0732421875,
+              "right": -535.1824340820312,
+              "bottom": 2851.12060546875,
+              "left": -1161.3175048828125
+            },
+            {
+              "x": -1210.3548583984375,
+              "y": 1373.6060791015625,
+              "width": 753.7454223632812,
+              "height": 1451.0631103515625,
+              "top": 1373.6060791015625,
+              "right": -456.60943603515625,
+              "bottom": 2824.669189453125,
+              "left": -1210.3548583984375
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            },
+            {
+              "state": "paused",
+              "time": 150.4
+            }
+          ]
+        },
+        {
+          "label": "flight",
+          "time": 559.3,
+          "inline": "visibility: hidden;",
+          "destinationData": "false",
+          "transition": "none",
+          "destination": "hidden",
+          "source": "visible",
+          "outsideHidden": false,
+          "breezeHidden": false,
+          "seeds": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pages": [
+            {
+              "x": -1170,
+              "y": 1350.39990234375,
+              "width": 858,
+              "height": 1856.796875,
+              "top": 1350.39990234375,
+              "right": -312,
+              "bottom": 3207.19677734375,
+              "left": -1170
+            },
+            {
+              "x": -1161.3175048828125,
+              "y": 1411.0732421875,
+              "width": 626.1350708007812,
+              "height": 1440.04736328125,
+              "top": 1411.0732421875,
+              "right": -535.1824340820312,
+              "bottom": 2851.12060546875,
+              "left": -1161.3175048828125
+            },
+            {
+              "x": -1210.3548583984375,
+              "y": 1373.6060791015625,
+              "width": 753.7454223632812,
+              "height": 1451.0631103515625,
+              "top": 1373.6060791015625,
+              "right": -456.60943603515625,
+              "bottom": 2824.669189453125,
+              "left": -1210.3548583984375
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            },
+            {
+              "state": "paused",
+              "time": 559.3
+            }
+          ]
+        },
+        {
+          "label": "cover",
+          "time": 1339.4999999999998,
+          "inline": "visibility: hidden;",
+          "destinationData": "false",
+          "transition": "none",
+          "destination": "hidden",
+          "source": "visible",
+          "outsideHidden": false,
+          "breezeHidden": false,
+          "seeds": [
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72
+          ],
+          "pages": [
+            {
+              "x": -234.16168212890625,
+              "y": -506.0553894042969,
+              "width": 858,
+              "height": 1856.796875,
+              "top": -506.0553894042969,
+              "right": 623.8383178710938,
+              "bottom": 1350.7414855957031,
+              "left": -234.16168212890625
+            },
+            {
+              "x": -311.6644287109375,
+              "y": -343.2660217285156,
+              "width": 626.1351318359375,
+              "height": 1440.04736328125,
+              "top": -343.2660217285156,
+              "right": 314.470703125,
+              "bottom": 1096.7813415527344,
+              "left": -311.6644287109375
+            },
+            {
+              "x": -174.250732421875,
+              "y": -362.25445556640625,
+              "width": 753.7454833984375,
+              "height": 1451.063232421875,
+              "top": -362.25445556640625,
+              "right": 579.4947509765625,
+              "bottom": 1088.8087768554688,
+              "left": -174.250732421875
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1339.4999999999998
+            }
+          ]
+        },
+        {
+          "label": "handoff",
+          "time": 1367.6999999999998,
+          "inline": "visibility: visible;",
+          "destinationData": "true",
+          "transition": "none",
+          "destination": "visible",
+          "source": "hidden",
+          "outsideHidden": false,
+          "breezeHidden": false,
+          "seeds": [
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72
+          ],
+          "pages": [
+            {
+              "x": -234,
+              "y": -506.3999938964844,
+              "width": 858,
+              "height": 1856.796875,
+              "top": -506.3999938964844,
+              "right": 624,
+              "bottom": 1350.3968811035156,
+              "left": -234
+            },
+            {
+              "x": -311.4847106933594,
+              "y": -343.6522521972656,
+              "width": 626.1351318359375,
+              "height": 1440.04736328125,
+              "top": -343.6522521972656,
+              "right": 314.6504211425781,
+              "bottom": 1096.3951110839844,
+              "left": -311.4847106933594
+            },
+            {
+              "x": -174.22357177734375,
+              "y": -362.2882385253906,
+              "width": 753.7454833984375,
+              "height": 1451.0631103515625,
+              "top": -362.2882385253906,
+              "right": 579.5219116210938,
+              "bottom": 1088.7748718261719,
+              "left": -174.22357177734375
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            },
+            {
+              "state": "paused",
+              "time": 1367.6999999999998
+            }
+          ]
+        },
+        {
+          "label": "reveal",
+          "time": 1800.1000000000001,
+          "inline": "visibility: visible;",
+          "destinationData": "true",
+          "transition": "none",
+          "destination": "visible",
+          "source": "hidden",
+          "outsideHidden": false,
+          "breezeHidden": false,
+          "seeds": [
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72
+          ],
+          "pages": [
+            {
+              "x": 666.515625,
+              "y": -1968.0062255859375,
+              "width": 858,
+              "height": 1856.796875,
+              "top": -1968.0062255859375,
+              "right": 1524.515625,
+              "bottom": -111.2093505859375,
+              "left": 666.515625
+            },
+            {
+              "x": 645.3131713867188,
+              "y": -1927.0589599609375,
+              "width": 626.1350708007812,
+              "height": 1440.04736328125,
+              "top": -1927.0589599609375,
+              "right": 1271.4482421875,
+              "bottom": -487.0115966796875,
+              "left": 645.3131713867188
+            },
+            {
+              "x": 895.1388549804688,
+              "y": -2128.395751953125,
+              "width": 753.7454223632812,
+              "height": 1451.06298828125,
+              "top": -2128.395751953125,
+              "right": 1648.88427734375,
+              "bottom": -677.332763671875,
+              "left": 895.1388549804688
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            },
+            {
+              "state": "paused",
+              "time": 1800.1000000000001
+            }
+          ]
+        },
+        {
+          "label": "arrived",
+          "time": 2298.2999999999997,
+          "inline": "visibility: visible;",
+          "destinationData": "true",
+          "transition": "none",
+          "destination": "visible",
+          "source": "hidden",
+          "outsideHidden": true,
+          "breezeHidden": false,
+          "seeds": [
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72,
+            0.32,
+            0.453333,
+            0.586667,
+            0.72
+          ],
+          "pages": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            },
+            {
+              "state": "paused",
+              "time": 2298.2999999999997
+            }
+          ]
+        },
+        {
+          "label": "tail",
+          "time": 3398.1,
+          "inline": "visibility: visible;",
+          "destinationData": "true",
+          "transition": "none",
+          "destination": "visible",
+          "source": "hidden",
+          "outsideHidden": true,
+          "breezeHidden": false,
+          "seeds": [
+            0.196324,
+            0.317369,
+            0.368891,
+            0.39858,
+            0.152426,
+            0.330928,
+            0.389219,
+            0.42655,
+            0.166019,
+            0.274913,
+            0.40739,
+            0.452131,
+            0.178606,
+            0.293464,
+            0.331603,
+            0.475401
+          ],
+          "pages": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            },
+            {
+              "state": "paused",
+              "time": 3398.1
+            }
+          ]
+        },
+        {
+          "label": "end",
+          "time": 4700,
+          "inline": "visibility: visible;",
+          "destinationData": "true",
+          "transition": "none",
+          "destination": "visible",
+          "source": "hidden",
+          "outsideHidden": true,
+          "breezeHidden": true,
+          "seeds": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pages": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          ],
+          "animations": [
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            },
+            {
+              "state": "paused",
+              "time": 4700
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "api": [],
+      "reducedMotion": "reduce",
+      "replay": "PASS",
+      "pause": "PASS",
+      "resize": "PASS",
+      "visibility": "PASS"
+    }
+  ]
+}

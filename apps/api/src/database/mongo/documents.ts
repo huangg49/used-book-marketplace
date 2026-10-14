@@ -215,6 +215,7 @@ export interface MutationReceiptDoc {
   quoteId: string | null;
   contextId: string | null;
   topupId: string | null;
+  pointId?: string | null;
   resultVersion: number;
   result: Json;
   committedAt: Date;
@@ -231,6 +232,7 @@ export interface AuditEventDoc {
   quoteId: string | null;
   contextId: string | null;
   topupId: string | null;
+  pointId?: string | null;
   action: string;
   before: Json | null;
   after: Json | null;
@@ -736,6 +738,8 @@ export interface HandoverPointDoc extends Lockable {
   capacity: number;
   status: 'Active' | 'Paused' | 'Closed';
   demoOnly: boolean;
+  version: number;
+  updatedAt: Date;
 }
 export interface PointStaffAssignmentDoc {
   _id: string;
@@ -759,6 +763,7 @@ export type AuctionIntakeState =
   | 'AwaitingDropoff'
   | 'Received'
   | 'Passed'
+  | 'NeedsEvidence'
   | 'Auctioning'
   | 'ReclaimRequired'
   | 'Reclaimed'
@@ -795,12 +800,72 @@ export interface AuctionIntakeDoc extends Lockable {
   shelfCode: string | null;
   inspectedAt: Date | null;
   inspectorId: string | null;
-  inspectionOutcome: 'Pass' | 'Fail' | null;
+  inspectionOutcome: 'Pass' | 'Fail' | 'NeedsEvidence' | null;
   inspectionNote: string | null;
+  evidenceRequestedBy: string | null;
+  evidenceDeadline: Date | null;
+  evidenceNote: string | null;
+  evidenceSubmittedAt: Date | null;
+  reclaimRequiredAt: Date | null;
   auctionId: string | null;
   reclaimReason: ReclaimReason | null;
   closedAt: Date | null;
   updatedAt: Date;
+}
+export interface InspectionChecklist {
+  titleEditionMatches: boolean;
+  privateMarksMatch: boolean;
+  coverPagesMatch: boolean;
+  notesAccessoriesMatch: boolean;
+  suspectedCopy: boolean;
+}
+// Immutable revision of the point inspection report (FR-T01).
+export interface IntakeInspectionReportDoc {
+  _id: string;
+  intakeId: string;
+  revision: number;
+  outcome: 'Pass' | 'Fail' | 'NeedsEvidence';
+  checklist: InspectionChecklist | null;
+  note: string | null;
+  inspectorId: string;
+  createdAt: Date;
+}
+// N4-13 (FR-T04, POL-42): incidents at a point and the simulated fund.
+export type PointIncidentKind =
+  | 'Lost'
+  | 'Damaged'
+  | 'ArrivalMismatch'
+  | 'LateArrival'
+  | 'EmergencyClose'
+  | 'Other';
+export interface PointIncidentDoc extends Lockable {
+  _id: string;
+  pointId: string;
+  intakeId: string | null;
+  kind: PointIncidentKind;
+  description: string;
+  protectedValue: number | null;
+  state: 'Open' | 'Decided' | 'Underfunded';
+  openedBy: string;
+  openedAt: Date;
+  decision: 'Compensate' | 'NoCompensation' | null;
+  approvedAmount: number | null;
+  fundedAmount: number | null;
+  unfundedAmount: number | null;
+  decidedBy: string | null;
+  decidedAt: Date | null;
+  decisionReason: string | null;
+  version: number;
+  updatedAt: Date;
+}
+export interface IncidentFundEntryDoc {
+  _id: string;
+  sequence: number;
+  type: 'Opening' | 'CompensationApproved';
+  amount: number;
+  incidentId: string | null;
+  balanceAfter: number;
+  createdAt: Date;
 }
 export type AuctionState =
   | 'Active'
@@ -1020,6 +1085,24 @@ export type ExchangeCancelReason =
 
 export type ExchangeCancelledBy = 'System' | 'Initiator' | 'Recipient';
 
+export interface ExchangeAddressSnapshot {
+  recipientName: string;
+  phone: string;
+  detail: string;
+  localityCode?: string | null;
+  serviceAreaCode?: string | null;
+}
+
+export interface ExchangeShipmentSnapshot {
+  method: 'carrier' | 'direct';
+  carrierCode?: string | null;
+  carrierName?: string | null;
+  trackingCode?: string | null;
+  notes?: string | null;
+  meetupLocation?: string | null;
+  shippedAt?: Date | null;
+}
+
 export interface ExchangeDoc extends Lockable {
   _id: string;
   initiatorId: string;
@@ -1046,6 +1129,14 @@ export interface ExchangeDoc extends Lockable {
   recipientShippedAt: Date | null;
   initiatorReceivedAt: Date | null;
   recipientReceivedAt: Date | null;
+  inspectionDeadline: Date | null;
+  completedAt: Date | null;
+  initiatorCompletedAt?: Date | null;
+  recipientCompletedAt?: Date | null;
+  initiatorAddress?: ExchangeAddressSnapshot | null;
+  recipientAddress?: ExchangeAddressSnapshot | null;
+  initiatorShipment?: ExchangeShipmentSnapshot | null;
+  recipientShipment?: ExchangeShipmentSnapshot | null;
   createdAt: Date;
   updatedAt: Date;
   lockSeq: number;
@@ -1063,10 +1154,18 @@ export interface MemberNotificationDoc {
     | 'AuctionCancelled'
     | 'AuctionOnHold'
     | 'AuctionPaymentExpired'
-    | 'AuctionPaid';
+    | 'AuctionPaid'
+    | 'ExchangeProposed'
+    | 'ExchangeAccepted'
+    | 'ExchangeFunded'
+    | 'ExchangeShipped'
+    | 'ExchangeReceived'
+    | 'ExchangeCompleted'
+    | 'ExchangeCancelled'
+    | 'ExchangeRejected';
   title: string;
   body: string;
-  targetType: 'Auction';
+  targetType: 'Auction' | 'Exchange';
   targetId: string;
   dedupeKey: string;
   createdAt: Date;
@@ -1112,4 +1211,28 @@ export interface AuthEventDoc {
   userId: string;
   action: 'Registered' | 'EmailVerified' | 'PasswordReset';
   createdAt: Date;
+}
+
+export interface ExchangeMessageDoc {
+  _id: string;
+  exchangeId: string;
+  senderId: string;
+  body: string;
+  sentAt: Date;
+}
+
+export interface TransactionReviewDoc extends Lockable {
+  _id: string;
+  transactionType: 'Exchange' | 'Order';
+  transactionId: string;
+  authorId: string;
+  authorName: string;
+  targetUserId: string;
+  bookRating: number;
+  partnerRating: number;
+  tags: string[];
+  comment: string;
+  publishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 }

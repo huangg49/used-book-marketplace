@@ -23,6 +23,8 @@ import { AuctionPrice } from '../components/AuctionPrice'
 import { AuctionReceipt } from '../components/AuctionReceipt'
 import { useAuctionChangeMotion } from '../hooks/useAuctionMotion'
 import { rowFrames, standingFrames } from '../lib/auction-motion'
+import { commandError } from '../lib/auction-errors'
+import { PointOrderSteps } from './AuctionPointOrder'
 
 const HOUR = 3_600_000
 // Only a won or bought auction has a final price; a held or cancelled one does not.
@@ -57,16 +59,6 @@ function when(iso: string) {
   return new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
 }
 const plain = (amount: number) => amount.toLocaleString('vi-VN')
-
-function commandError(error: unknown) {
-  if (!(error instanceof ApiError) || error.status === 0)
-    return 'Không kết nối được máy chủ nên chưa rõ thao tác đã được ghi hay chưa. Hãy thử lại đúng thao tác này.'
-  if (error.status >= 500) return 'Máy chủ đang gặp sự cố nên chưa rõ kết quả. Hãy thử lại đúng thao tác này.'
-  if (error.status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
-  if (error.code === 'IdempotencyConflict') return 'Thao tác trước chưa hoàn tất. Hãy tải lại trang để xem trạng thái mới nhất.'
-  // Lỗi nghiệp vụ của API đấu giá đã có lời nhắn tiếng Việt cho người dùng.
-  return error.message || 'Không thể thực hiện thao tác này. Hãy tải lại trang.'
-}
 
 /** Giá hợp lệ: giá khởi điểm + n·bước, trong [floor, 1.000.000]. */
 function amountError(amount: number | null, floor: number, start: number, step: number) {
@@ -478,16 +470,22 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
   const intent = useIntentKey()
   const ids = useId()
   const locked = busy || !!unknown
-  // Someone else's bid arrives by push; say so when the lead is lost.
-  const [wasLeading, setWasLeading] = useState(leading)
-  if (wasLeading !== leading) {
-    setWasLeading(leading)
-    if (wasLeading && !leading && !busy) { setReceipt(null); setNoticePrice(null); setNotice(`Bạn vừa bị vượt giá. Giá hiện tại ${formatVnd(auction.currentPrice ?? auction.startPrice)}.`) }
-  }
   const currentPrice = auction.currentPrice ?? auction.startPrice
   // FR-AU04: equal commitments rank by who reached the level first, so an equal
   // bid that does not lead is a tie lost on order, not a higher rival amount.
   const tied = !!me && !leading && me.ownLevel !== null && me.ownLevel === auction.currentPrice
+  // Someone else's bid arrives by push; say so when the lead is lost, with the
+  // same tie rule as the status card.
+  const [wasLeading, setWasLeading] = useState(leading)
+  if (wasLeading !== leading) {
+    setWasLeading(leading)
+    if (wasLeading && !leading && !busy) {
+      setReceipt(null); setNoticePrice(null)
+      setNotice(tied
+        ? `Một người khác đã cam kết ${formatVnd(currentPrice)} trước bạn nên đang dẫn giá.`
+        : `Bạn vừa bị vượt giá. Giá hiện tại ${formatVnd(currentPrice)}.`)
+    }
+  }
   const staleNotice = noticePrice !== null && noticePrice !== currentPrice
   const manualError = manual === undefined ? null : amountError(manual, minimumBid, auction.startPrice, step)
   const manualCapped = minimumBid > AUCTION_MAX_PRICE
@@ -794,17 +792,10 @@ function WinnerPanel({ me, auction, onChanged }: { me: AuctionParticipation; auc
     )
   if (o.state !== 'AwaitingPayment')
     return (
-      <div className={`${styles.standing} ${styles.standingLead}`}>
-        <strong>{o.state === 'Completed' ? 'Đơn nhận sách đã hoàn tất' : `Đã thanh toán ${formatVnd(o.amounts.buyerTotal)}`}</strong>
-        <span>{({
-          Fulfilling: `Đơn đang được xử lý tại ${o.pointName}. Hãy theo dõi thông báo về thời điểm nhận sách.`,
-          ReadyForCollection: `Sách sẵn sàng tại ${o.pointName}. Bạn cần xác nhận biên bản kiểm tra và lấy mã nhận sách trước khi nhận. Các thao tác nhận sách chưa có trên màn hình này.`,
-          Inspection: 'Đang trong bước kiểm tra khi nhận sách. Hãy thực hiện theo hướng dẫn của nhân viên tại điểm.',
-          ResolutionPending: 'Đơn đang chờ xử lý vấn đề. Theo dõi thông báo; đây chưa phải giao dịch hoàn tất.',
-          ReturnPending: 'Đơn đang trong quy trình trả sách. Theo dõi thông báo để biết bước tiếp theo.',
-          Completed: 'Quy trình nhận sách đã hoàn tất. Cảm ơn bạn đã cho cuốn sách một chương mới.',
-        } as Record<string, string>)[o.state]}</span>
-      </div>
+      <PointOrderSteps
+        order={o}
+        onChanged={async () => { await queryClient.invalidateQueries({ queryKey: ['point-order', me.orderId] }); await onChanged() }}
+      />
     )
 
   return (

@@ -29,6 +29,10 @@ Return query không chứng minh payment; không ghi credit dựa vào browser s
   event→receipt→audit→outbox. Query receipt dùng `applyVNPayQuery`; migration0024
   chỉ mở operation này cho system VNPay với topup target, giữ checksum0022/0023.
   QueryDR/IPN cùng transactionNo không credit hai lần. Không refund hoặc tạo Order.
+- Tích hợp main ngày15/10 dùng migration0027 hợp nhất receipt/audit với pointId
+  của point administration. Các migration đã áp dụng của hai nhánh giữ nguyên;
+  validator cuối giữ đúng một target và cặp system principal/operation, gồm
+  QueryDR/IPN và DirectDelivery settlement. Nâng cấp từ mỗi nhánh được kiểm riêng.
 
 ## Giới hạn
 

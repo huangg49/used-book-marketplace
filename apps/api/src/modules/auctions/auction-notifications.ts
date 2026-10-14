@@ -10,7 +10,7 @@ import { nextMinimumBid } from './auction-engine.js';
 // transaction so they exist exactly when the event committed. The text holds
 // public prices, states and deadlines only — never a private Auto ceiling,
 // another member's identity, a collection code or an address.
-type Kind = MemberNotificationDoc['kind'];
+type Kind = Extract<MemberNotificationDoc['kind'], `Auction${string}`>;
 
 const vnd = (amount: number | null) =>
   amount === null ? '—' : `${amount.toLocaleString('vi-VN')}đ`;

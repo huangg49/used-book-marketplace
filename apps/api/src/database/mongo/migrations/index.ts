@@ -10,6 +10,14 @@ import {
   exchangesPhase3Migration,
   withExchangePhase3Changes,
 } from './0018-exchanges-proposal-expiry.js';
+import {
+  exchangesPhase4Migration,
+  withExchangePhase4Changes,
+} from './0022-exchange-completion.js';
+import {
+  exchangeMessageSpecs,
+  exchangeMessagesMigration,
+} from './0023-exchange-messages.js';
 import { createHash } from 'node:crypto';
 import {
   paymentSpecs,
@@ -17,7 +25,14 @@ import {
   withPayments,
 } from './0022-vnpay-wallet-listing-fees.js';
 export { paymentSpecs };
-import { directSettlementPrincipalMigration, withDirectSettlementPrincipal } from './0023-direct-order-settlement-principals.js';
+import {
+  integratedWalletPointMigration,
+  withIntegratedWalletPointCommands,
+} from './0027-wallet-point-command-union.js';
+import {
+  directSettlementPrincipalMigration,
+  withDirectSettlementPrincipal,
+} from './0023-direct-order-settlement-principals.js';
 import { vnpayQueryMigration, withVNPayQuery } from './0024-vnpay-querydr.js';
 import {
   catalogVocabularyV2Migration,
@@ -100,6 +115,31 @@ import {
   directDeliveryCompletionLegacyShapeMigration,
   withDirectDeliveryCompletionLegacyShape,
 } from './0021-direct-delivery-completion-legacy-shape.js';
+import {
+  pointAdministrationMigration,
+  withPointAdministrationChanges,
+} from './0022-point-administration.js';
+import {
+  inspectionEvidenceCollectionSpecs,
+  inspectionEvidenceMigration,
+  withInspectionEvidenceChanges,
+} from './0023-inspection-evidence.js';
+import {
+  pointIncidentCollectionSpecs,
+  pointIncidentsMigration,
+} from './0024-point-incidents.js';
+import {
+  exchangeNotificationsMigration,
+  withExchangeNotificationChanges,
+} from './0024-exchange-notifications.js';
+import {
+  exchangeReviewsMigration,
+  transactionReviewSpecs,
+} from './0025-exchange-reviews.js';
+import {
+  exchangeMutualCompletionMigration,
+  withExchangePhase5Changes,
+} from './0026-exchange-mutual-completion.js';
 
 export interface Migration {
   id: string;
@@ -192,6 +232,15 @@ export const migrations: Migration[] = [
   walletPaymentsMigration,
   directSettlementPrincipalMigration,
   vnpayQueryMigration,
+  pointAdministrationMigration,
+  inspectionEvidenceMigration,
+  pointIncidentsMigration,
+  exchangesPhase4Migration,
+  exchangeMessagesMigration,
+  exchangeNotificationsMigration,
+  exchangeReviewsMigration,
+  exchangeMutualCompletionMigration,
+  integratedWalletPointMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -212,9 +261,11 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withNotificationChanges)
     .map(withCatalogClassification)
     .map(withCatalogVocabularyV2)
+    .map(withPointAdministrationChanges)
     .map(withPayments)
     .map(withDirectSettlementPrincipal)
-    .map(withVNPayQuery),
+    .map(withVNPayQuery)
+    .map(withIntegratedWalletPointCommands),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),
@@ -225,7 +276,9 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withPointOrderChanges)
     .map(withResolutionChanges)
     .map(withSettlementChanges)
-    .map(withRulesChanges),
+    .map(withRulesChanges)
+    .map(withPointAdministrationChanges)
+    .map(withInspectionEvidenceChanges),
   ...pointOrderCollectionSpecs
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)
@@ -235,12 +288,18 @@ export const currentCollections = (): CollectionSpec[] => [
   ...settlementCollectionSpecs.map(withRulesChanges),
   ...rulesCollectionSpecs,
   ...purchaseConversationSpecs,
-  ...notificationSpecs,
+  ...notificationSpecs.map(withExchangeNotificationChanges),
   ...accountRecoverySpecs,
   ...authOtpSpecs,
   ...exchangeCollectionSpecs
     .map(withExchangePhase2Changes)
-    .map(withExchangePhase3Changes),
+    .map(withExchangePhase3Changes)
+    .map(withExchangePhase4Changes)
+    .map(withExchangePhase5Changes),
   ...directDeliveryCompletionSpecs,
   ...paymentSpecs,
+  ...exchangeMessageSpecs,
+  ...transactionReviewSpecs,
+  ...inspectionEvidenceCollectionSpecs,
+  ...pointIncidentCollectionSpecs,
 ];

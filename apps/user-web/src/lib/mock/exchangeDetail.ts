@@ -31,6 +31,14 @@ export interface ExchangeDetail {
   rejectionReason?: string;
   viewerShipping: ShippingConfirm;
   partnerShipping: ShippingConfirm;
+  inspectionDeadline?: string;
+  completedAt?: string;
+  viewerCompletedAt?: string;
+  partnerCompletedAt?: string;
+  viewerAddress?: { recipientName: string; phone: string; detail: string; localityCode?: string | null; serviceAreaCode?: string | null };
+  partnerAddress?: { recipientName: string; phone: string; detail: string; localityCode?: string | null; serviceAreaCode?: string | null };
+  viewerShipment?: { method: 'carrier' | 'direct'; carrierCode?: string | null; carrierName?: string | null; trackingCode?: string | null; meetupLocation?: string | null; notes?: string | null; shippedAt?: string | null };
+  partnerShipment?: { method: 'carrier' | 'direct'; carrierCode?: string | null; carrierName?: string | null; trackingCode?: string | null; meetupLocation?: string | null; notes?: string | null; shippedAt?: string | null };
   hasViewerReviewed: boolean;
   closedBy?: 'viewer' | 'partner';
 }

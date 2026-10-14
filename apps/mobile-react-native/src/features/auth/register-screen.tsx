@@ -455,7 +455,6 @@ export function RegisterScreen({
                 </Pressable>
               </View>
               <TextField
-                label="Mật khẩu"
                 accessibilityLabel="Mật khẩu"
                 inputRef={passwordInput}
                 value={password}

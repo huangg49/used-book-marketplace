@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { session } from "./api";
 import type { ExchangeDetail, ChatMessage } from "../lib/mock/exchangeDetail";
 import {
   exchangeActor,
@@ -72,6 +74,18 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
         (initiator ? ex.recipientReceivedAt : ex.initiatorReceivedAt) ??
         undefined,
     },
+    inspectionDeadline: ex.inspectionDeadline ?? undefined,
+    completedAt: ex.completedAt ?? undefined,
+    viewerCompletedAt:
+      (initiator ? ex.initiatorCompletedAt : ex.recipientCompletedAt) ??
+      undefined,
+    partnerCompletedAt:
+      (initiator ? ex.recipientCompletedAt : ex.initiatorCompletedAt) ??
+      undefined,
+    viewerAddress: (initiator ? ex.initiatorAddress : ex.recipientAddress) ?? undefined,
+    partnerAddress: (initiator ? ex.recipientAddress : ex.initiatorAddress) ?? undefined,
+    viewerShipment: (initiator ? ex.initiatorShipment : ex.recipientShipment) ?? undefined,
+    partnerShipment: (initiator ? ex.recipientShipment : ex.initiatorShipment) ?? undefined,
     hasViewerReviewed: false,
     closedBy:
       ex.cancelledBy === "System" || !ex.cancelledBy
@@ -86,8 +100,15 @@ export function cancelExchange(id: string, revision: number) {
     expectedVersion: revision,
   });
 }
-export function acceptExchange(id: string, revision: number) {
-  return exchangeCommand(`/exchanges/${id}/accept`, { revision });
+export function acceptExchange(
+  id: string,
+  revision: number,
+  deliveryAddressId?: string,
+) {
+  return exchangeCommand(`/exchanges/${id}/accept`, {
+    revision,
+    ...(deliveryAddressId ? { deliveryAddressId } : {}),
+  });
 }
 export function rejectExchange(id: string, revision: number, reason: string) {
   return exchangeCommand(`/exchanges/${id}/reject`, {
@@ -98,9 +119,30 @@ export function rejectExchange(id: string, revision: number, reason: string) {
 export function fundExchange(id: string) {
   return exchangeCommand(`/exchanges/${id}/funding`, {});
 }
-export function confirmSent(id: string, revision: number) {
+export function confirmSent(
+  id: string,
+  revision: number,
+  shipment?: {
+    method?: "carrier" | "direct";
+    carrierCode?: string;
+    carrierName?: string;
+    trackingCode?: string;
+    meetupLocation?: string;
+    notes?: string;
+  },
+) {
   return exchangeCommand(`/exchanges/${id}/ship`, {
     expectedVersion: revision,
+    ...(shipment
+      ? {
+          method: shipment.method,
+          carrierCode: shipment.carrierCode,
+          carrierName: shipment.carrierName,
+          trackingCode: shipment.trackingCode,
+          meetupLocation: shipment.meetupLocation,
+          notes: shipment.notes,
+        }
+      : {}),
   });
 }
 export function confirmReceived(id: string, revision: number) {
@@ -108,13 +150,84 @@ export function confirmReceived(id: string, revision: number) {
     expectedVersion: revision,
   });
 }
-// No exchange chat/report endpoint exists yet. Never fake successful writes.
-export async function getMessages(_id: string): Promise<ChatMessage[]> {
-  return [];
+export function completeExchange(id: string, revision: number) {
+  return exchangeCommand(`/exchanges/${id}/complete`, {
+    expectedVersion: revision,
+  });
 }
-export async function sendMessage(_id: string, _text: string): Promise<void> {
-  throw new Error("Nhắn tin trao đổi chưa khả dụng.");
+
+export function counterExchange(
+  id: string,
+  revision: number,
+  data: {
+    diffAmount: number;
+    diffPayer: "initiator" | "recipient" | "none";
+    deliveryAddressId?: string;
+    note?: string;
+  },
+) {
+  return exchangeCommand(`/exchanges/${id}/counter`, {
+    expectedVersion: revision,
+    diffAmount: data.diffAmount,
+    diffPayer: data.diffPayer,
+    ...(data.deliveryAddressId ? { deliveryAddressId: data.deliveryAddressId } : {}),
+    ...(data.note ? { note: data.note } : {}),
+  });
 }
+
+const exchangeMessagesSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.string(),
+      exchangeId: z.string(),
+      senderId: z.string(),
+      body: z.string(),
+      sentAt: z.string(),
+    }),
+  ),
+});
+
+export async function getMessages(id: string): Promise<ChatMessage[]> {
+  try {
+    const actor = exchangeActor();
+    const res = await session.request(
+      `/exchanges/${id}/messages`,
+      exchangeMessagesSchema,
+    );
+    return res.items.map((m) => {
+      let senderRole: "viewer" | "partner" | "system" = "partner";
+      if (m.senderId === actor.id) {
+        senderRole = "viewer";
+      } else if (
+        m.body.startsWith("[Đề xuất lại") ||
+        m.body.startsWith("[Hệ thống")
+      ) {
+        senderRole = "system";
+      }
+      return {
+        id: m.id,
+        senderRole,
+        text: m.body,
+        sentAt: m.sentAt,
+      };
+    });
+  } catch (err) {
+    console.warn("Could not load exchange messages:", err);
+    return [];
+  }
+}
+
+export async function sendMessage(id: string, text: string): Promise<void> {
+  await session.request(
+    `/exchanges/${id}/messages`,
+    z.object({ id: z.string() }),
+    {
+      method: "POST",
+      body: JSON.stringify({ body: text }),
+    },
+  );
+}
+
 export async function reportIssue(
   _id: string,
   _type: string,
