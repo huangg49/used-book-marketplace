@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lật Lại · Duyệt lớp rèm</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#fffcf5;color:#281914;font:15px/1.5 Arial,sans-serif}main{max-width:1500px;margin:auto;padding:24px}h1{margin:0 0 8px;font-size:26px}p{margin:6px 0 18px;max-width:90ch;color:#716157}button,select{font:inherit;color:#5c0202;border:1px solid #8e7564;background:#fffcf5;padding:9px 12px;cursor:pointer}button[aria-pressed=true]{background:#5c0202;color:#fcf8db}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #5c0202;outline-offset:3px}.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0}.workspace{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:22px}.stage{position:relative;aspect-ratio:16/9;overflow:hidden;background:#fcf8db;isolation:isolate;outline:1px solid #d9cbbd}.stage.checker{background-color:#fffcf5;background-image:linear-gradient(45deg,#e9e0d4 25%,transparent 25%),linear-gradient(-45deg,#e9e0d4 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e9e0d4 75%),linear-gradient(-45deg,transparent 75%,#e9e0d4 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}.layer{position:absolute;display:block;pointer-events:none;object-fit:fill}.layer[hidden]{display:none}.layer.selected{filter:drop-shadow(0 0 3px #254337);outline:1px dashed #254337}.navbar{position:absolute;left:8%;width:84%;top:5%;height:9%;background:#fcf8db;color:#5c0202;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #d9cbbd;font-size:clamp(8px,1.1vw,18px);font-weight:bold;letter-spacing:.03em}.navbar[hidden]{display:none}.layers{max-height:650px;overflow:auto;border-top:1px solid #d9cbbd}.row{padding:7px 0;border-bottom:1px solid #d9cbbd;display:flex;align-items:center;gap:8px}.row label{flex:1;cursor:pointer}.row button{padding:3px 7px;font-size:12px}.row.inactive{opacity:.45}.details{font-size:13px;color:#716157;padding:12px 0}details{margin:16px 0}summary{cursor:pointer}a{color:#5c0202}.reference{display:block;max-width:520px;width:100%;height:auto}.note{margin-top:14px;font-size:13px}#loadState{font-size:13px;margin-bottom:10px}@media(max-width:850px){main{padding:16px}.workspace{grid-template-columns:1fr}.layers{max-height:none}h1{font-size:22px}.navbar{font-size:10px}}
+</style>
+<main>
+<h1>Duyệt từng lớp rèm</h1>
+<p>Bản chuẩn bị hình cho sân khấu Đấu giá. Các lớp PNG có nền trong suốt và điểm neo riêng; dáng đóng/mở là hai mốc hình tĩnh để duyệt, chưa có animation.</p>
+<div class="toolbar">
+<button id="open" aria-pressed="true">Rèm mở</button><button id="closed" aria-pressed="false">Rèm đóng</button>
+<label><input type="checkbox" id="checker"> Nền kiểm tra trong suốt</label>
+<label><input type="checkbox" id="nav"> Thử navbar</label>
+<select id="slot" aria-label="Thứ tự lớp navbar"></select>
+<button id="restore">Hiện lại tất cả</button>
+</div>
+<div id="loadState" role="status">Đang tải các lớp…</div>
+<div class="workspace">
+<section><div id="stage" class="stage" aria-label="Bản ráp lớp rèm"><div class="navbar" id="navbar">NAVBAR · THANH MẪU ĐỂ KIỂM TRA CHE PHỦ</div></div>
+<p class="note">Bật/tắt lớp ở bên phải để nhìn phần vải phía sau. Thanh navbar chỉ là mẫu kiểm tra thứ tự lớp; không thay navbar thật của website.</p>
+<div id="details" class="details"></div>
+<details><summary>Đối chiếu bản hình gốc</summary><img class="reference" src="reference-board.png" alt="Bản duyệt hình tĩnh rèm đóng và mở"></details>
+</section>
+<aside aria-label="Danh sách lớp"><strong>Thứ tự từ trước ra sau</strong><div id="layers" class="layers"></div></aside>
+</div>
+<p class="note">Các lớp được dựng lại từ ảnh phẳng; phần bị che đã được bổ sung. Đây là bản tách lớp để duyệt, chưa là bằng chứng chuyển động mượt hay bộ rig hoàn chỉnh.</p>
+<a href="manifest.json">Vị trí, điểm neo và thứ tự lớp</a> · <a href="generation-prompts.json">Prompt tạo từng phần</a>
+</main>
+<script type="module">
+import {attachLayers} from './attachments.mjs';
+const manifest=attachLayers({"version":1,"status":"draft-awaiting-art-approval","viewport":{"width":1920,"height":1080},"art":"AI-reconstructed layers from approved flat board; hidden regions repainted by image_gen, not original PSD layers.","motion":"Not implemented. Closed and open inner assets are pose references; a later deforming rig must keep motion continuous.","navbarSlots":[{"id":"behind","z":10,"label":"Sau toàn bộ rèm"},{"id":"under-frame","z":30,"label":"Sau khung diềm và rèm ngoài"},{"id":"between-valances","z":45,"label":"Giữa diềm sau và diềm trước"},{"id":"front","z":90,"label":"Trước toàn bộ rèm"}],"layers":[{"id":"inner-underlay-left","label":"Lớp lót kín trái · đóng","file":"assets/inner-underlay.svg","x":0,"y":0,"width":1020,"height":1080,"z":18,"pose":"closed","pivot":[0,0]},{"id":"inner-underlay-right","label":"Lớp lót kín phải · đóng","file":"assets/inner-underlay.svg","x":900,"y":0,"width":1020,"height":1080,"z":19,"pose":"closed","pivot":[1,0]},{"id":"inner-closed-left","label":"Rèm trong trái · đóng","file":"assets/inner-closed-left.png","x":-80,"y":-22,"width":1130,"height":1170,"z":20,"pose":"closed","pivot":[0,0]},{"id":"inner-closed-right","label":"Rèm trong phải · đóng","file":"assets/inner-closed-right.png","x":870,"y":-22,"width":1130,"height":1170,"z":21,"pose":"closed","pivot":[1,0]},{"id":"inner-open-left","label":"Rèm trong trái · mở","file":"assets/inner-open-left.png","x":-8,"y":-10,"width":212,"height":1100,"z":20,"pose":"open","pivot":[0,0]},{"id":"inner-open-right","label":"Rèm trong phải · mở","file":"assets/inner-open-right.png","x":1716,"y":-10,"width":212,"height":1100,"z":21,"pose":"open","pivot":[1,0]},{"id":"valance-rear-left","label":"Diềm sau trái","file":"assets/valance-rear-left.png","x":-25,"y":-4,"width":1110,"height":114,"z":40,"pose":"both","pivot":[0,0]},{"id":"valance-rear-right","label":"Diềm sau phải","file":"assets/valance-rear-right.png","x":835,"y":-4,"width":1110,"height":114,"z":41,"pose":"both","pivot":[1,0]},{"id":"pendant-side-outer-left","label":"Họa tiết diềm ngoài trái","file":"assets/pendant-side.png","x":282,"y":98.88,"width":20,"height":23,"z":41,"pose":"both","pivot":[0.5,0],"attachment":{"parent":"valance-rear-left","edgeY":104.88,"overlap":2}},{"id":"pendant-side-outer-right","label":"Họa tiết diềm ngoài phải","file":"assets/pendant-side.png","x":1618,"y":98.88,"width":20,"height":23,"z":42,"pose":"both","pivot":[0.5,0],"attachment":{"parent":"valance-rear-right","edgeY":104.88,"overlap":2}},{"id":"pendant-side-inner-left","label":"Họa tiết diềm trong trái","file":"assets/pendant-side.png","x":442,"y":27.259999999999998,"width":20,"height":23,"z":51,"pose":"both","pivot":[0.5,0],"attachment":{"parent":"valance-front","edgeY":37.26,"overlap":2}},{"id":"pendant-side-inner-right","label":"Họa tiết diềm trong phải","file":"assets/pendant-side.png","x":1458,"y":27.799999999999997,"width":20,"height":23,"z":51,"pose":"both","pivot":[0.5,0],"attachment":{"parent":"valance-front","edgeY":37.8,"overlap":2}},{"id":"valance-front","label":"Diềm giữa phía trước","file":"assets/valance-front.png","x":413,"y":-8,"width":1094,"height":142,"z":50,"pose":"both","pivot":[0.5,0]},{"id":"pendant-center","label":"Họa tiết giữa","file":"assets/pendant-center.png","x":940,"y":128.25,"width":40,"height":32,"z":51,"pose":"both","pivot":[0.5,0],"attachment":{"parent":"valance-front","edgeY":138.25,"overlap":2}},{"id":"outer-left","label":"Rèm ngoài trái","file":"assets/outer-left.png","x":-6,"y":-6,"width":190,"height":1092,"z":60,"pose":"both","pivot":[0,0]},{"id":"outer-right","label":"Rèm ngoài phải","file":"assets/outer-right.png","x":1736,"y":-6,"width":190,"height":1092,"z":61,"pose":"both","pivot":[1,0]},{"id":"rope-left","label":"Dây cài trái","file":"assets/rope-left.png","x":-2,"y":532,"width":64,"height":30,"z":70,"pose":"both","pivot":[0.8,0.5],"clip":"inset(0 0 46% 0)","motionAnchor":{"parent":"outer-left","uv":[0.3,0.505]}},{"id":"rope-right","label":"Dây cài phải","file":"assets/rope-right.png","x":1858,"y":532,"width":64,"height":30,"z":71,"pose":"both","pivot":[0.2,0.5],"clip":"inset(0 0 46% 0)","motionAnchor":{"parent":"outer-right","uv":[0.7,0.505]}},{"id":"tassels-left","label":"Tua trái","file":"assets/tassels-left.png","x":22,"y":544,"width":64,"height":116,"z":80,"pose":"both","pivot":[0.5,0],"motionAnchor":{"parent":"outer-left","uv":[0.3,0.505]}},{"id":"tassels-right","label":"Tua phải","file":"assets/tassels-right.png","x":1834,"y":544,"width":64,"height":116,"z":81,"pose":"both","pivot":[0.5,0],"motionAnchor":{"parent":"outer-right","uv":[0.7,0.505]}}]});
+const stage=document.getElementById('stage'), list=document.getElementById('layers');
+let pose='open',selected=null;
+const hidden=new Set(), records=new Map();
+for(const layer of manifest.layers){
+ const img=document.createElement('img');img.className='layer';img.alt='';img.src=layer.file;img.dataset.layer=layer.id;
+ Object.assign(img.style,{left:layer.x/manifest.viewport.width*100+'%',top:layer.y/manifest.viewport.height*100+'%',width:layer.width/manifest.viewport.width*100+'%',height:layer.height/manifest.viewport.height*100+'%',zIndex:layer.z,clipPath:layer.clip||'none',transformOrigin:layer.pivot[0]*100+'% '+layer.pivot[1]*100+'%'});
+ stage.appendChild(img);records.set(layer.id,{layer,img});
+}
+for(const layer of [...manifest.layers].sort((a,b)=>b.z-a.z)){
+ const row=document.createElement('div');row.className='row';
+ const check=document.createElement('input');check.type='checkbox';check.checked=true;check.id='toggle-'+layer.id;
+ const label=document.createElement('label');label.htmlFor=check.id;label.textContent=layer.label;
+ const button=document.createElement('button');button.textContent='Xem';button.setAttribute('aria-label','Đánh dấu '+layer.label);
+ check.addEventListener('change',()=>{check.checked?hidden.delete(layer.id):hidden.add(layer.id);render()});
+ button.addEventListener('click',()=>{selected=selected===layer.id?null:layer.id;render()});
+ row.append(check,label,button);list.appendChild(row);Object.assign(records.get(layer.id),{row,check});
+}
+const slot=document.getElementById('slot');
+for(const item of manifest.navbarSlots){const option=document.createElement('option');option.value=item.z;option.textContent=item.label;slot.appendChild(option)}slot.value='45';
+function render(){
+ for(const {layer,img,row,check} of records.values()){const inactive=layer.pose!=='both'&&layer.pose!==pose;img.hidden=inactive||hidden.has(layer.id)||(layer.attachment&&hidden.has(layer.attachment.parent));img.classList.toggle('selected',selected===layer.id);row.classList.toggle('inactive',inactive);check.checked=!hidden.has(layer.id)}
+ stage.classList.toggle('checker',document.getElementById('checker').checked);
+ const nav=document.getElementById('navbar');nav.hidden=!document.getElementById('nav').checked;nav.style.zIndex=slot.value;
+ document.getElementById('open').setAttribute('aria-pressed',String(pose==='open'));document.getElementById('closed').setAttribute('aria-pressed',String(pose==='closed'));
+ const layer=selected&&records.get(selected).layer;
+ document.getElementById('details').textContent=layer?`${layer.label} · z=${layer.z} · x=${layer.x}, y=${layer.y} · ${layer.width}×${layer.height} · điểm neo (${layer.pivot.join(', ')})`:'Chọn “Xem” ở một lớp để đánh dấu vùng hình và xem điểm neo.';
+}
+document.getElementById('open').onclick=()=>{pose='open';render()};document.getElementById('closed').onclick=()=>{pose='closed';render()};
+document.getElementById('restore').onclick=()=>{hidden.clear();selected=null;render()};
+for(const id of ['nav','checker','slot'])document.getElementById(id).addEventListener('change',render);
+render();
+Promise.all([...records.values()].map(({img})=>img.decode())).then(()=>document.getElementById('loadState').textContent=`Đã tải 15 PNG trong suốt + lớp lót SVG · ${manifest.layers.length} lớp điều khiển.`).catch(()=>document.getElementById('loadState').textContent='Có lớp hình chưa tải được. Kiểm tra thư mục assets bên cạnh file này.');
+</script>
+</html>

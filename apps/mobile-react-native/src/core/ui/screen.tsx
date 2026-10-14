@@ -4,7 +4,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { colors, colorRoles, metrics, space } from "./theme";
+import { colors, colorRoles, metrics, space, stitchTokens } from "./theme";
 
 export function Screen({
   children,
@@ -14,22 +14,32 @@ export function Screen({
   footerAppearance = "paper",
   scrollRef,
   appearance = "paper",
+  centerContent = false,
 }: React.PropsWithChildren<{
   header?: React.ReactNode;
   footer?: React.ReactNode;
   compactFooter?: boolean;
   footerAppearance?: "paper" | "navigation";
   scrollRef?: React.Ref<ScrollView>;
-  appearance?: "paper" | "shelf" | "browse";
+  appearance?: "paper" | "shelf" | "browse" | "home";
+  centerContent?: boolean;
 }>) {
   const inset = useSafeAreaInsets();
   const shelf = appearance === "shelf";
   const browse = appearance === "browse";
-  const canvas = shelf || browse ? colorRoles.shelfCanvas : colors.paper;
+  const home = appearance === "home";
+  const canvas = home
+    ? stitchTokens.creamBg
+    : shelf || browse
+      ? colorRoles.shelfCanvas
+      : colors.paper;
   const navigationFooter = footerAppearance === "navigation";
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: canvas }}>
-      <StatusBar style={shelf ? "light" : "dark"} />
+    <SafeAreaView
+      edges={home ? ["bottom", "left", "right"] : undefined}
+      style={{ flex: 1, backgroundColor: canvas }}
+    >
+      <StatusBar style={home || shelf ? "light" : "dark"} />
       {shelf && (
         <View
           pointerEvents="none"
@@ -54,16 +64,17 @@ export function Screen({
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             flexGrow: 1,
-            paddingHorizontal: space.xl,
-            paddingVertical: shelf ? space.lg : space.xl,
+            justifyContent: centerContent ? "center" : undefined,
+            paddingHorizontal: home ? 0 : space.xl,
+            paddingVertical: home ? 0 : shelf ? space.lg : space.xl,
           }}
         >
           <View
             style={{
               width: "100%",
-              maxWidth: metrics.content,
+              maxWidth: home ? undefined : metrics.content,
               alignSelf: "center",
-              gap: shelf ? space.sm : space.xl,
+              gap: home ? 0 : shelf ? space.sm : space.xl,
             }}
           >
             {children}

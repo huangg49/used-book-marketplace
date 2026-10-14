@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-13",
+  "fixture": "synthetic frontend Login; no real API/DB",
+  "checks": [
+    "desktop: gust at tear; 6/10 seeds linger after paper, no pointer blocking; controls usable; tail cleans up in 2500ms",
+    "desktop: rejected Login preserves draft; successful Login paper only, query/hash retained, focus/scroll restored; filter no curtain; subsequent navbar visit opens curtain",
+    "desktop: direct reload opens curtain",
+    "desktop: leaving during lingering/Back during tear clears breeze and unlocks page",
+    "mobile: gust at tear; 6/10 seeds linger after paper, no pointer blocking; controls usable; tail cleans up in 2500ms",
+    "mobile: rejected Login preserves draft; successful Login paper only, query/hash retained, focus/scroll restored; filter no curtain; subsequent navbar visit opens curtain",
+    "mobile: direct reload opens curtain",
+    "mobile: leaving during lingering/Back during tear clears breeze and unlocks page"
+  ],
+  "pageErrors": []
+}

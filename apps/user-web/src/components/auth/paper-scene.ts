@@ -76,9 +76,11 @@ function position(index: number, time: number, mode: StormMode) {
 const transform = (x: number, y: number, angle = 0) => `translate3d(${x * 100}vw,${y * 100}vh,0) rotate(${angle}deg)`;
 
 /** Visible motion is scheduled once in WAAPI, not repainted by a JS frame loop. */
-export function createPaperScene(root: HTMLElement, origin: PaperOrigin, mode: StormMode, palette: string[], copies: HTMLElement[], source: HTMLElement | null): ComposedScene | null {
+export function createPaperScene(root: HTMLElement, origin: PaperOrigin, mode: StormMode, palette: string[], copies: HTMLElement[], source: HTMLElement | null,
+  options: { externalOnly?: boolean; schedule?: { burst: number; cover: number; release: number } } = {}): ComposedScene | null {
   if (typeof root.animate !== "function") return null;
   const timing = stormTiming(mode), animations: Animation[] = [];
+  const entryDelay = options.schedule?.burst ?? timing.burst, coveredAt = options.schedule?.cover ?? timing.cover;
   const pages: { element: HTMLElement; base: ReturnType<typeof position> }[] = [];
   const play = (node: Element, frames: Keyframe[], options: KeyframeAnimationOptions) => {
     const animation = node.animate(frames, { fill: "both", ...options });
@@ -96,7 +98,7 @@ export function createPaperScene(root: HTMLElement, origin: PaperOrigin, mode: S
     page.append(surface); root.append(page);
     pages.push({ element: page, base: position(index, timing.cover, mode) });
   }
-  const urls = sprites(mode, palette), count = mode === "mobile" ? 18 : 30;
+  const urls = options.externalOnly ? [] : sprites(mode, palette), count = options.externalOnly ? 0 : mode === "mobile" ? 18 : 30;
   const pieces = Array.from({ length: count }, (_, index) => {
     const depth = index / (count - 1), image = document.createElement("img");
     image.className = styles.piece!; image.alt = ""; image.draggable = false;
@@ -114,7 +116,8 @@ export function createPaperScene(root: HTMLElement, origin: PaperOrigin, mode: S
         const sign = index === 0 ? -1 : 1;
         play(copy, [{ transform: "translate3d(0,0,0) rotate(0deg)", opacity: 0 },
           { transform: "translate3d(0,0,0) rotate(0deg)", opacity: 1, offset: .001 },
-          { transform: `translate3d(${sign * 12}px,-6px,0) rotate(${sign * 1.8}deg)`, opacity: 1, offset: .25 },
+          { transform: `translate3d(${sign * 3}px,-3px,0) rotate(${sign * .6}deg) rotateX(3deg)`, opacity: 1, offset: .10 },
+          { transform: `translate3d(${sign * 12}px,-6px,0) rotate(${sign * 1.8}deg) rotateX(5deg)`, opacity: 1, offset: .25 },
           { transform: `translate3d(${sign * 12 + 34}px,-48px,0) rotate(${sign * 1.8 - 3}deg)`, opacity: 0 }],
         { delay: timing.tear, duration: timing.cover - timing.tear, easing: "ease-out" });
       });
@@ -126,7 +129,7 @@ export function createPaperScene(root: HTMLElement, origin: PaperOrigin, mode: S
           const p = position(index, timing.burst + (timing.cover - timing.burst) * key / 32, mode);
           return { transform: transform(p.x, p.y, p.angle) };
         });
-        const entry = play(element, frames, { delay: timing.burst, duration: timing.cover - timing.burst, easing: "linear" });
+        const entry = play(element, frames, { delay: entryDelay, duration: coveredAt - entryDelay, easing: "linear" });
         if (index === 0) covered = entry.finished;
         // This delayed native loop is already scheduled before React mounts Home.
         // It starts even if JS is temporarily busy at the coverage boundary.
@@ -134,7 +137,7 @@ export function createPaperScene(root: HTMLElement, origin: PaperOrigin, mode: S
         play(element.firstElementChild!, Array.from({ length: 33 }, (_, key) => {
           const drift = paperHold(index, key / 32 * period, mode);
           return { transform: transform(drift.x, drift.y) };
-        }), { delay: timing.cover, duration: period, iterations: Infinity, easing: "linear" });
+        }), { delay: coveredAt, duration: period, iterations: Infinity, easing: "linear" });
       });
       pieces.forEach(({ image, size, depth, index }) => {
         const lane = ((index * 17) % 19 / 19 - .5);
@@ -153,7 +156,7 @@ export function createPaperScene(root: HTMLElement, origin: PaperOrigin, mode: S
       const completed = pages.map(({ element, base }, index) => play(element,
         [{ transform: transform(base.x, base.y, base.angle) },
           { transform: transform(base.x + (index === 0 ? 3.2 : 3.4 + (index - 1) * .4), base.y - (index === 0 ? 2.4 : 2.6 + (index - 1) * .3), base.angle) }],
-        { duration: timing.end - timing.reveal, easing: "cubic-bezier(.18,.12,.3,1)" }).finished);
+        { duration: options.schedule?.release ?? timing.end - timing.reveal, easing: "cubic-bezier(.18,.12,.3,1)" }).finished);
       await Promise.all(completed);
     },
     dispose() { animations.forEach(animation => animation.cancel()); root.replaceChildren(); },

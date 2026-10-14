@@ -1,0 +1,9 @@
+{
+  "date": "2026-10-13",
+  "fixture": "synthetic frontend Login; no real API/DB",
+  "checks": [
+    "desktop: gust at tear; 6/10 seeds linger after paper, no pointer blocking; controls usable; tail cleans up in 2500ms",
+    "mobile: gust at tear; 6/10 seeds linger after paper, no pointer blocking; controls usable; tail cleans up in 2500ms"
+  ],
+  "pageErrors": []
+}

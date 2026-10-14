@@ -1,0 +1,197 @@
+[
+  {
+    "id": "valance-front",
+    "source": "front",
+    "crop": {
+      "left": 41,
+      "top": 208,
+      "width": 2090,
+      "height": 265
+    },
+    "visiblePixels": 408858,
+    "transparentPixelsInCell": 1155613,
+    "hasAlpha": true
+  },
+  {
+    "id": "valance-rear-left",
+    "source": "rear",
+    "crop": {
+      "left": 14,
+      "top": 165,
+      "width": 1013,
+      "height": 175
+    },
+    "visiblePixels": 138149,
+    "transparentPixelsInCell": 646637,
+    "hasAlpha": true
+  },
+  {
+    "id": "valance-rear-right",
+    "source": "rear",
+    "crop": {
+      "left": 1147,
+      "top": 165,
+      "width": 1011,
+      "height": 175
+    },
+    "visiblePixels": 138189,
+    "transparentPixelsInCell": 646590,
+    "hasAlpha": true
+  },
+  {
+    "id": "outer-left",
+    "source": "outer",
+    "crop": {
+      "left": 127,
+      "top": 0,
+      "width": 181,
+      "height": 1024
+    },
+    "visiblePixels": 110876,
+    "transparentPixelsInCell": 672826,
+    "hasAlpha": true
+  },
+  {
+    "id": "outer-right",
+    "source": "outer",
+    "crop": {
+      "left": 1229,
+      "top": 0,
+      "width": 181,
+      "height": 1024
+    },
+    "visiblePixels": 111303,
+    "transparentPixelsInCell": 672175,
+    "hasAlpha": true
+  },
+  {
+    "id": "inner-closed-left",
+    "source": "closed",
+    "crop": {
+      "left": 15,
+      "top": 9,
+      "width": 801,
+      "height": 908
+    },
+    "visiblePixels": 651310,
+    "transparentPixelsInCell": 130504,
+    "hasAlpha": true
+  },
+  {
+    "id": "inner-closed-right",
+    "source": "closed",
+    "crop": {
+      "left": 893,
+      "top": 8,
+      "width": 775,
+      "height": 909
+    },
+    "visiblePixels": 623913,
+    "transparentPixelsInCell": 159367,
+    "hasAlpha": true
+  },
+  {
+    "id": "inner-open-left",
+    "source": "open",
+    "crop": {
+      "left": 102,
+      "top": 17,
+      "width": 254,
+      "height": 988
+    },
+    "visiblePixels": 208637,
+    "transparentPixelsInCell": 574526,
+    "hasAlpha": true
+  },
+  {
+    "id": "inner-open-right",
+    "source": "open",
+    "crop": {
+      "left": 1181,
+      "top": 16,
+      "width": 257,
+      "height": 989
+    },
+    "visiblePixels": 209076,
+    "transparentPixelsInCell": 574291,
+    "hasAlpha": true
+  },
+  {
+    "id": "rope-left",
+    "source": "accessories",
+    "crop": {
+      "left": 65,
+      "top": 86,
+      "width": 404,
+      "height": 381
+    },
+    "visiblePixels": 30391,
+    "transparentPixelsInCell": 228090,
+    "hasAlpha": true
+  },
+  {
+    "id": "rope-right",
+    "source": "accessories",
+    "crop": {
+      "left": 675,
+      "top": 86,
+      "width": 385,
+      "height": 381
+    },
+    "visiblePixels": 28975,
+    "transparentPixelsInCell": 228402,
+    "hasAlpha": true
+  },
+  {
+    "id": "tassels-left",
+    "source": "accessories",
+    "crop": {
+      "left": 179,
+      "top": 467,
+      "width": 269,
+      "height": 456
+    },
+    "visiblePixels": 44649,
+    "transparentPixelsInCell": 212178,
+    "hasAlpha": true
+  },
+  {
+    "id": "tassels-right",
+    "source": "accessories",
+    "crop": {
+      "left": 675,
+      "top": 467,
+      "width": 272,
+      "height": 456
+    },
+    "visiblePixels": 44686,
+    "transparentPixelsInCell": 210634,
+    "hasAlpha": true
+  },
+  {
+    "id": "pendant-center",
+    "source": "accessories",
+    "crop": {
+      "left": 185,
+      "top": 1092,
+      "width": 273,
+      "height": 211
+    },
+    "visiblePixels": 26695,
+    "transparentPixelsInCell": 227549,
+    "hasAlpha": true
+  },
+  {
+    "id": "pendant-side",
+    "source": "accessories",
+    "crop": {
+      "left": 751,
+      "top": 1111,
+      "width": 176,
+      "height": 160
+    },
+    "visiblePixels": 13078,
+    "transparentPixelsInCell": 243688,
+    "hasAlpha": true
+  }
+]

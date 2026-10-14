@@ -1,0 +1,267 @@
+[
+  {
+    "id": "valance-rear-left",
+    "label": "Diềm sau trái",
+    "file": "assets/valance-rear-left.png",
+    "x": -25,
+    "y": -4,
+    "width": 1110,
+    "height": 114,
+    "z": 40,
+    "pose": "both",
+    "pivot": [
+      0,
+      0
+    ]
+  },
+  {
+    "id": "valance-rear-right",
+    "label": "Diềm sau phải",
+    "file": "assets/valance-rear-right.png",
+    "x": 835,
+    "y": -4,
+    "width": 1110,
+    "height": 114,
+    "z": 41,
+    "pose": "both",
+    "pivot": [
+      1,
+      0
+    ]
+  },
+  {
+    "id": "pendant-side-outer-left",
+    "label": "Họa tiết diềm ngoài trái",
+    "file": "assets/pendant-side.png",
+    "x": 282,
+    "y": 98.88,
+    "width": 20,
+    "height": 23,
+    "z": 41,
+    "pose": "both",
+    "pivot": [
+      0.5,
+      0
+    ],
+    "attachment": {
+      "parent": "valance-rear-left",
+      "edgeY": 104.88,
+      "overlap": 2
+    }
+  },
+  {
+    "id": "pendant-side-outer-right",
+    "label": "Họa tiết diềm ngoài phải",
+    "file": "assets/pendant-side.png",
+    "x": 1618,
+    "y": 98.88,
+    "width": 20,
+    "height": 23,
+    "z": 42,
+    "pose": "both",
+    "pivot": [
+      0.5,
+      0
+    ],
+    "attachment": {
+      "parent": "valance-rear-right",
+      "edgeY": 104.88,
+      "overlap": 2
+    }
+  },
+  {
+    "id": "pendant-side-inner-left",
+    "label": "Họa tiết diềm trong trái",
+    "file": "assets/pendant-side.png",
+    "x": 442,
+    "y": 27.259999999999998,
+    "width": 20,
+    "height": 23,
+    "z": 51,
+    "pose": "both",
+    "pivot": [
+      0.5,
+      0
+    ],
+    "attachment": {
+      "parent": "valance-front",
+      "edgeY": 37.26,
+      "overlap": 2
+    }
+  },
+  {
+    "id": "pendant-side-inner-right",
+    "label": "Họa tiết diềm trong phải",
+    "file": "assets/pendant-side.png",
+    "x": 1458,
+    "y": 27.799999999999997,
+    "width": 20,
+    "height": 23,
+    "z": 51,
+    "pose": "both",
+    "pivot": [
+      0.5,
+      0
+    ],
+    "attachment": {
+      "parent": "valance-front",
+      "edgeY": 37.8,
+      "overlap": 2
+    }
+  },
+  {
+    "id": "valance-front",
+    "label": "Diềm giữa phía trước",
+    "file": "assets/valance-front.png",
+    "x": 413,
+    "y": -8,
+    "width": 1094,
+    "height": 142,
+    "z": 50,
+    "pose": "both",
+    "pivot": [
+      0.5,
+      0
+    ]
+  },
+  {
+    "id": "pendant-center",
+    "label": "Họa tiết giữa",
+    "file": "assets/pendant-center.png",
+    "x": 940,
+    "y": 128.25,
+    "width": 40,
+    "height": 32,
+    "z": 51,
+    "pose": "both",
+    "pivot": [
+      0.5,
+      0
+    ],
+    "attachment": {
+      "parent": "valance-front",
+      "edgeY": 138.25,
+      "overlap": 2
+    }
+  },
+  {
+    "id": "outer-left",
+    "label": "Rèm ngoài trái",
+    "file": "assets/outer-left.png",
+    "x": -6,
+    "y": -6,
+    "width": 190,
+    "height": 1092,
+    "z": 60,
+    "pose": "both",
+    "pivot": [
+      0,
+      0
+    ]
+  },
+  {
+    "id": "outer-right",
+    "label": "Rèm ngoài phải",
+    "file": "assets/outer-right.png",
+    "x": 1736,
+    "y": -6,
+    "width": 190,
+    "height": 1092,
+    "z": 61,
+    "pose": "both",
+    "pivot": [
+      1,
+      0
+    ]
+  },
+  {
+    "id": "rope-left",
+    "label": "Dây cài trái",
+    "file": "assets/rope-left.png",
+    "x": -2,
+    "y": 532,
+    "width": 64,
+    "height": 30,
+    "z": 70,
+    "pose": "both",
+    "pivot": [
+      0.8,
+      0.5
+    ],
+    "clip": "inset(0 0 46% 0)",
+    "motionAnchor": {
+      "parent": "outer-left",
+      "uv": [
+        0.3,
+        0.505
+      ]
+    }
+  },
+  {
+    "id": "rope-right",
+    "label": "Dây cài phải",
+    "file": "assets/rope-right.png",
+    "x": 1858,
+    "y": 532,
+    "width": 64,
+    "height": 30,
+    "z": 71,
+    "pose": "both",
+    "pivot": [
+      0.2,
+      0.5
+    ],
+    "clip": "inset(0 0 46% 0)",
+    "motionAnchor": {
+      "parent": "outer-right",
+      "uv": [
+        0.7,
+        0.505
+      ]
+    }
+  },
+  {
+    "id": "tassels-left",
+    "label": "Tua trái",
+    "file": "assets/tassels-left.png",
+    "x": 22,
+    "y": 544,
+    "width": 64,
+    "height": 116,
+    "z": 80,
+    "pose": "both",
+    "pivot": [
+      0.5,
+      0
+    ],
+    "motionAnchor": {
+      "parent": "outer-left",
+      "uv": [
+        0.3,
+        0.505
+      ]
+    }
+  },
+  {
+    "id": "tassels-right",
+    "label": "Tua phải",
+    "file": "assets/tassels-right.png",
+    "x": 1834,
+    "y": 544,
+    "width": 64,
+    "height": 116,
+    "z": 81,
+    "pose": "both",
+    "pivot": [
+      0.5,
+      0
+    ],
+    "motionAnchor": {
+      "parent": "outer-right",
+      "uv": [
+        0.7,
+        0.505
+      ]
+    }
+  }
+]

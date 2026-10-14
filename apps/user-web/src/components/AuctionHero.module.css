@@ -1,0 +1,249 @@
+.hero {
+  --hero-shadow: #28191466;
+  position: relative;
+  isolation: isolate;
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+}
+.inner {
+  max-width: 1320px;
+  margin: auto;
+  padding: 32px clamp(24px, 4vw, 48px) 36px;
+  display: grid;
+  grid-template-columns: minmax(0, .65fr) minmax(0, 1.45fr);
+  align-items: center;
+  gap: 36px;
+}
+.copy { min-width: 0; }
+.copy h1 {
+  margin: 0;
+  font: 400 clamp(2rem, 3.8vw, 3.25rem)/1.13 var(--shop-display);
+  letter-spacing: -.02em;
+}
+.copy h1 span {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.15em;
+  color: var(--shop-yellow);
+}
+.copy > p {
+  max-width: 42ch;
+  margin: 20px 0 12px;
+  color: var(--shop-cream);
+  font-size: .875rem;
+  line-height: 1.8;
+}
+.shelfLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  color: var(--shop-cream);
+  text-underline-offset: 5px;
+  font-size: .8125rem;
+  font-weight: 600;
+}
+.shelfLink:hover { color: var(--shop-yellow); }
+.stage {
+  position: relative;
+  min-width: 0;
+  min-height: 380px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, .9fr);
+  align-items: center;
+  gap: 24px;
+}
+.books {
+  position: relative;
+  min-width: 0;
+  height: 380px;
+  isolation: isolate;
+  /* Warm stage light belongs to the book display, not the readable copy. */
+  background: radial-gradient(ellipse at 48% 44%, #f4cb6726, #f4cb6700 70%);
+}
+.books::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: auto -3% 0;
+  height: 110px;
+  border-radius: 50%;
+  background: var(--shop-wine-hover, #7c2320);
+  border-top: 1px solid #f4cb6766;
+  box-shadow: 0 12px 22px var(--hero-shadow);
+}
+.focal {
+  --book-height: 224px;
+  --podium-height: 28px;
+  position: absolute;
+  z-index: 2;
+  width: 38%;
+  left: 31%;
+  bottom: 50px;
+}
+.bookFace {
+  position: relative;
+  z-index: 1;
+  height: var(--book-height);
+  rotate: -2deg;
+  transform-origin: center bottom;
+  transition: transform 220ms ease-out;
+  transition-duration: 220ms !important;
+}
+.bookFace > div { min-height: 100%; height: 100%; color: var(--shop-cream); font-size: .75rem; }
+.bookFace > div button { max-width: 100%; padding-inline: 8px; }
+.bookFace img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  filter: drop-shadow(4px 8px 8px var(--hero-shadow));
+}
+.companion {
+  --book-height: 172px;
+  --podium-height: 22px;
+  position: absolute;
+  width: 26%;
+  bottom: 76px;
+  left: 2%;
+  pointer-events: none;
+}
+.companion .bookFace { rotate: -5deg; }
+.companion[data-position="1"] { --book-height: 164px; --podium-height: 22px; left: auto; right: 1%; bottom: 88px; }
+.companion[data-position="1"] .bookFace { rotate: 5deg; }
+.podium {
+  position: relative;
+  height: var(--podium-height);
+  border-radius: 50% / 8px;
+  background: var(--cover-sand, #f0e2ca);
+  box-shadow: 2px 12px 14px var(--hero-shadow);
+}
+.podium::before {
+  content: '';
+  position: absolute;
+  inset: -6px 0 auto;
+  height: 12px;
+  background: var(--shop-cream);
+  border-radius: 50%;
+}
+.ticket {
+  position: relative;
+  z-index: 3;
+  min-width: 0;
+  padding: 18px;
+  color: var(--shop-ink);
+  background: var(--shop-paper);
+  border-radius: 4px;
+  box-shadow: 4px 10px 20px var(--hero-shadow);
+}
+.ticket::before {
+  content: '';
+  display: block;
+  border-top: 1px dashed var(--shop-control);
+  margin-bottom: 12px;
+}
+.ticket h2 {
+  margin: 0 0 16px;
+  font: 700 1rem/1.5 var(--shop-body);
+  overflow-wrap: anywhere;
+}
+.priceLabel { margin: 0 0 4px; color: var(--shop-muted); font-size: .75rem; }
+.price { font: 700 1.75rem/1.3 var(--shop-body); color: var(--shop-wine); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.price > span { max-width: 100%; }
+.remaining { display: flex; align-items: start; gap: 6px; margin: 12px 0; font-size: .75rem; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.remaining svg { flex-shrink: 0; margin-top: 2px; }
+.buyNow { font-size: .75rem; line-height: 1.6; margin: 0 0 12px; color: var(--shop-muted); }
+.buyNow strong { color: var(--shop-ink); }
+.warning { font-size: .75rem; line-height: 1.6; color: var(--shop-error); }
+.sessionLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 12px;
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: .8125rem;
+  font-weight: 700;
+}
+.sessionLink:hover { background: var(--shop-wine-hover, #7c2320); }
+.mascot {
+  position: absolute;
+  width: 150px;
+  max-width: 38%;
+  height: auto;
+  right: -1%;
+  bottom: 4px;
+  z-index: 4;
+  pointer-events: none;
+  filter: drop-shadow(2px 8px 6px var(--hero-shadow));
+}
+.fallback { grid-column: 1 / -1; min-height: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.fallback img { width: min(100%, 300px); height: auto; }
+.fallback p { margin: 8px 0 0; max-width: 38ch; font-size: .8125rem; line-height: 1.7; }
+.fallback a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--shop-cream); font-size: .8125rem; text-underline-offset: 4px; }
+.hero :focus-visible { outline: 2px solid var(--shop-yellow); outline-offset: 4px; }
+.ticket :focus-visible { outline-color: var(--shop-wine); }
+.hero ::selection { color: var(--shop-wine); background: var(--shop-yellow); }
+.ticket ::selection { color: var(--shop-cream); background: var(--shop-wine); }
+@media (hover: hover) and (pointer: fine) {
+  .focal:hover .bookFace { transform: translateY(-6px); }
+}
+.stage:has(.sessionLink:focus-visible) .focal .bookFace { transform: translateY(-6px); }
+@media (min-width: 801px) and (max-height: 700px) {
+  .inner { padding-block: 20px; }
+  .copy h1 { font-size: clamp(2rem, 3.2vw, 2.5rem); }
+  .copy > p { margin-top: 12px; }
+  .books { height: 312px; }
+  .focal { --book-height: 190px; --podium-height: 24px; bottom: 44px; }
+  .companion { --book-height: 140px; --podium-height: 18px; bottom: 64px; }
+  .companion[data-position="1"] { --book-height: 134px; --podium-height: 20px; bottom: 74px; }
+  .stage { min-height: 312px; }
+  .mascot { width: 136px; }
+  .fallback { min-height: 244px; }
+  .ticket h2 { margin-bottom: 12px; }
+}
+@media (max-width: 1100px) {
+  .inner { gap: 24px; grid-template-columns: minmax(0, .6fr) minmax(0, 1.4fr); }
+  .ticket { padding: 16px; }
+  .price { font-size: 1.5rem; }
+}
+@media (max-width: 800px) {
+  .inner { grid-template-columns: minmax(0, 1fr); gap: 16px; padding-block: 24px; }
+  .copy h1 { font-size: 2.5rem; }
+  .copy h1 span { font-size: 1em; }
+  .desktopBreak { display: none; }
+  .copy > p { margin-top: 12px; }
+  .stage { max-width: 680px; width: 100%; margin-inline: auto; }
+}
+@media (max-width: 600px) {
+  .inner { padding: 20px 20px 24px; gap: 12px; }
+  .copy h1 { font-size: 1.875rem; line-height: 1.2; }
+  .copy h1 span { font-size: .9em; margin-top: 4px; }
+  .copy > p { font-size: .8125rem; margin: 12px 0 4px; }
+  .shelfLink { font-size: .75rem; }
+  .stage { grid-template-columns: minmax(0, 1fr); gap: 12px; min-height: 0; }
+  .books { width: min(100%, 340px); height: 300px; margin-inline: auto; }
+  .focal { --book-height: 170px; --podium-height: 24px; bottom: 46px; }
+  .companion { --book-height: 130px; --podium-height: 18px; bottom: 68px; }
+  .companion[data-position="1"] { --book-height: 124px; --podium-height: 20px; bottom: 78px; }
+  .ticket { padding: 12px; }
+  .ticket::before { margin-bottom: 8px; }
+  .ticket h2 { font-size: .8125rem; line-height: 1.5; margin-bottom: 12px; }
+  .price { font-size: 1.375rem; }
+  .remaining { margin: 10px 0; }
+  .mascot { width: 122px; bottom: 4px; }
+  .books::after { height: 92px; }
+  .fallback { min-height: 300px; }
+  .stage[aria-busy='true'] .fallback { min-height: 544px; }
+  .fallback img { width: 240px; }
+}
+@media (forced-colors: active) {
+  .ticket { border: 1px solid CanvasText; }
+  .hero :focus-visible { outline-color: Highlight; }
+  .sessionLink { border: 1px solid ButtonText; }
+}

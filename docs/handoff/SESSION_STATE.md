@@ -1,7 +1,117 @@
-# Điểm lưu hiện tại — 12/10/2026
+# Điểm lưu hiện tại — 14/10/2026
 
-Source tích hợp: `codex/integration-main`, main đã fetch `53a2673`;
-OpenAPI0.34.0,22migration Mongo,134HTTP operation/23controller.
+## Member web: Login gió và sân khấu đấu giá — 14/10/2026
+
+- Chủ dự án duyệt preview `5de3a4e`, giao tích hợp chính, rà lỗi toàn gói,
+  push/PR và sửa CI tự động; review người thật sáng hôm sau. Chưa giao merge/deploy.
+- Branch `codex/auth-wind-login-integration`, base main `7a52d08` (PR38).
+  Commit subject `feat(web): integrate approved auth wind and auction stage`.
+  Worktree riêng; WIP `apps/api/package.json`/`seed-bidders.ts` và các thay đổi
+  Detail/Exchange chưa tích hợp trên checkout cũ được giữ nguyên, không đưa vào PR.
+- Login dùng cùng source mesh với preview: dấu 280ms + ba tờ nguyên vẹn bay
+  1152ms, mảnh nhỏ, giấy ngoài che/mở và breeze tan 2500ms. Chỉ chạy sau API
+  thành công; xóa mọi giá trị input khỏi texture. Không xé/zoom form/đón gió.
+  Rèm toàn trang Đấu giá giữ navbar, nhịp 1385ms, sides/diềm gọn đã duyệt;
+  không chạy lại khi đến qua Login giấy, lần navbar/Back/reload sau vẫn chạy.
+- Sửa async cancellation/late renderer và đồng bộ dấu để không hit hai lần
+  khi capture chậm. Lint/typecheck/135 web unit, 21 session unit, build/preview
+  build, docs và browser fixtures desktop/mobile/465px PASS. Rèm regression,
+  wrong Login, query/hash/focus/inert/scroll, Back/resize/context loss/missing
+  capture/delayed preparation PASS. [Evidence và giới hạn](../../.impeccable/review/auth-wind-production/README.md).
+- Review AI mới tìm một P2; verdict chấm đã resolved, `ship` phạm vi lỗi đó.
+  Three 0.186.1 production lazy Auth; không API/contract/DB/native/gate thay đổi.
+  Local Node 24.12<24.15 và chunk warning còn; Safari/live Auth/physical/FPS
+  chưa kiểm. READINESS giữ nguyên. Đã push và tạo
+  [PR39](https://github.com/huangg49/used-book-marketplace/pull/39); kết quả remote
+  CI theo đúng head được cập nhật trong bảng Validation của PR và tab Checks
+  (bảy workflow đã khởi chạy tại checkpoint này). Bước tiếp review người thật;
+  chưa merge/deploy. Bản nguồn mới để xem local tại `http://127.0.0.1:5200/`,
+  checkout cũ/preview5198 giữ nguyên.
+
+### Điểm lưu teammate được giữ
+
+Source tích hợp: `feat/rn-ui-redesign-navbar-auctions`, PR #37.
+OpenAPI 0.34.0 trên `main` (nhánh N4-05: 0.35.0), 22 migration Mongo, 134 HTTP operation / 23 controller.
+
+## N4 Phase 2 — vận hành điểm — 14/10/2026
+
+Người giao việc duyệt Phase 2 ngày 14/10/2026. Gate READINESS không đổi; chỉ có source
+và evidence trên `*_test`. Chi tiết quyết định: ADR 0030 amendment 2026-10-14.
+
+| Gói | Nhánh (base) | Nội dung |
+| --- | --- | --- |
+| N4-10/11 | `feature/n4-10-11-points-assignments` (từ N4-05) | OpenAPI 0.36.0, migration 0022: Admin tạo/sửa điểm, trạng thái, sức chứa, phân công/kết thúc phân công; `/me/point-assignments`; admin-web trang Điểm giao nhận |
+| N4-12 | `feature/n4-12-inspection-evidence` → RN `feature/n4-12-rn-evidence` (từ N4-09) | 0.37.0, migration 0023: bảng kiểm, NeedsEvidence, người bán bổ sung một lần trong 48 giờ, nhân viên khác quyết định, biên bản bất biến; admin-web, user-web, RN |
+| N4-13 | `feature/n4-13-incidents` | 0.38.0, migration 0024: sự cố có/không có đơn, đóng khẩn cấp, quỹ mô phỏng 2.000.000đ; Admin độc lập quyết định; không chi vào ví |
+| N4-14 | `feature/n4-14-deadlines` | 0.39.0: hạn kiểm tra/nhận lại và `/operations/escalations` tính khi đọc, không worker tự hành động |
+
+- Kiểm tra: API typecheck, contract check/routes (150 operation), `auctions.e2e-spec.ts`
+  54/54 trên QA replica set; admin-web typecheck/lint/28 unit; user-web
+  typecheck/lint/119 unit; RN typecheck/lint/142 unit PASS. Browser admin-web trên API
+  thật + DB `ops_browser_*_test` (fixture tạm): bảng kiểm, NeedsEvidence, quyết định
+  bằng chứng, báo/quyết định sự cố và quỹ, việc quá hạn, tạo/phân công/mở điểm, từ chối
+  đóng điểm còn sách, 375 px không tràn.
+- Nhánh tích hợp `feature/n4-auction-operations` (main `7a52d08` + mọi nhánh N4): full
+  API E2E 626/626, `schema.mongo-spec` PASS sau khi thêm 3 collection Mongo-native vào
+  phép đếm; admin-web `test:browser`, user-web `test:browser`/`test:exchange:browser`,
+  RN export web PASS. Hai lệnh tạo (điểm, sự cố) trả 200 như contract test yêu cầu.
+  RN/user-web browser cho bằng chứng, native, human review NOT RUN.
+- Giới hạn: chưa thông báo thành viên khi đóng khẩn cấp; bằng chứng chỉ là văn bản;
+  bồi thường chỉ ghi duyệt, chưa chi ví; giờ mở cửa vẫn cố định.
+
+## N4 Phase 1 — đấu giá & vận hành trên client — 13/10/2026
+
+Kế hoạch: nhánh `docs/n4-auction-operations-plan`. Mỗi gói một nhánh, commit local,
+**chưa push/PR**. Phase 2 (N4-10…14: CRUD điểm, phân công, NeedsEvidence, incident,
+quá hạn) chưa làm: READINESS vẫn chặn mở rộng nghiệp vụ, cần chủ dự án duyệt.
+
+| Gói | Nhánh (base) | Nội dung |
+| --- | --- | --- |
+| N4-01…05 | `feature/n4-01-operations-shell` → `-02-intake-desk` → `-03-collection-desk` → `-04-resolution-desk` → `-05-auction-cancel` (chuỗi từ `main` `7be68a4`) | admin-web "Điểm và đấu giá": Staff nhận/kiểm tra/mở phiên/trả sách, giao sách bằng mã và nhận lại sách trả; Admin quyết định đơn tại điểm theo ma trận API, hủy phiên. `core/command.ts` dùng chung với review (body/key cố định, retry cùng request) |
+| N4-05 API | cùng nhánh N4-05 | OpenAPI **0.35.0**: `GET /operations/auctions` (ADMIN, chỉ đọc) trả version cho lệnh hủy, gồm OnHold, loại phiên Admin bán/trả giá. ADR 0030 có amendment |
+| N4-06 | `feature/n4-06-web-after-win` (từ `main`) | user-web: xem biên bản, đồng ý/từ chối, lấy mã nhận (hiện một lần), khiếu nại; toast bị vượt giá theo luật hòa FR-AU04 |
+| N4-07…09 | `feature/n4-07-rn-auctions` (từ `fix/rn-auction-card-listing-id`) → `-08-rn-after-win` → `-09-rn-seller-intake` | RN: danh sách/chi tiết phiên, trả giá/Auto/mua ngay, trạng thái dẫn/hòa/bị vượt; Phiên của tôi và các bước người thắng; gửi sách đấu giá và rút |
+
+- Kiểm tra: admin-web typecheck/lint/28 unit, user-web typecheck/lint/119 unit, RN
+  lint/typecheck/142 unit PASS; API typecheck/lint/130 unit, contract check/routes
+  (137 operation) và `auctions.e2e-spec.ts` 50/50 trên QA replica set PASS. Full API
+  E2E/Mongo suite NOT RUN cho thay đổi này.
+- Browser trên API thật + DB `ops_browser_*_test` (fixture tạm, storage fake): mọi thao
+  tác Staff/Admin, các bước người mua web, RN web 375 (kể cả ca 300k hòa: người đặt
+  sau thấy "trả bằng người dẫn giá"). Fixture **dời AuctionClock tới 10:00** khi điểm
+  đóng cửa (như e2e pin clock), không đổi luật server. Native Android/iOS, 320 px,
+  `test:browser` mở rộng, human review NOT RUN.
+- Sửa thêm khi kiểm: mã nhận dán "436 147" mất số (maxLength trước khi lọc); cỡ chữ mã
+  ở web; RN không hiện giá khởi điểm như giá đã trả cho đơn mua ngay.
+- Ghi nhận ngoài phạm vi: màn tài khoản RN có huy hiệu "Bạn đọc uy tín ★ 4.9" và nội
+  dung mock (AGENTS cấm bịa rating/trust badge) — chưa sửa.
+
+## Mobile React Native CI Lint & Design Token Remediation — 13/10/2026
+
+- PR #37 (`feat/rn-ui-redesign-navbar-auctions`): Khắc phục lỗi CI `react-native-ci.yml`
+  khiến `pnpm --filter @used-books/mobile-react-native lint` thất bại (535 problems: 496 errors, 39 warnings),
+  và lỗi `operations-ci.yml` tại `pnpm test:public:browser` (`test-public-shelf.mjs` báo `6 !== 12`).
+- Nguyên nhân:
+  1. `eslint.config.js` chặn hardcoded hex/rgba string literals trong `src/features/**` và `src/app/**`.
+  2. Chặn import trực tiếp `Modal` và `TextInput` từ `"react-native"` trong routes/features.
+  3. Lỗi unescaped quotes `"` trong JSX text ở `account-screen.tsx`.
+  4. Các biến/import dư thừa chưa dùng.
+  5. `shelf-screen.tsx` trước đó giới hạn hiển thị `slice(0, 6)` và lược bỏ các components của contract browser test (`ShelfSearchHeader`, `ShelfFilterSheet`, pagination buttons `Trang tiếp`/`Trang trước`).
+- Khắc phục:
+  1. Mở rộng `stitchTokens` trong `apps/mobile-react-native/src/core/ui/theme.ts` với đầy đủ bộ token màu dùng chung cho giao diện Stitch.
+  2. Tạo component dùng chung `AppModal` (`src/core/ui/modal.tsx`) và `AppTextInput` (`src/core/ui/field.tsx`), export qua `src/core/ui`.
+  3. Thay thế toàn bộ color literals trong 19 files feature bằng `stitchTokens.*`.
+  4. Thay thế `Modal` bằng `AppModal`, `TextInput` bằng `AppTextInput` trong các modals và forms.
+  5. Xử lý escape quotes `&quot;` và dọn dẹp toàn bộ unused imports/vars.
+  6. Khôi phục `ShelfResults` (hiển thị đầy đủ 12 kết quả trang đầu), `ShelfSearchHeader`, `ShelfFilterSheet` (`src/features/shelf/shelf-filter-sheet.tsx`), phân trang `Trang tiếp`/`Trang trước` phục vụ contract `test-public-shelf.mjs`, đồng thời bảo toàn mục đấu giá sách trực tiếp (`HomeFlashDeals`) trên trang chủ.
+- Kiểm tra cục bộ:
+  - `pnpm contract:check` PASS (OpenAPI types current).
+  - `pnpm --filter @used-books/mobile-react-native lint` PASS (0 errors, 0 warnings).
+  - `pnpm --filter @used-books/mobile-react-native typecheck` PASS (0 errors).
+  - `pnpm --filter @used-books/session-client test` PASS (2 files, 21 tests passed).
+  - `pnpm --filter @used-books/mobile-react-native test` PASS (20 files, 133 tests passed).
+  - `pnpm --filter @used-books/mobile-react-native export:all` PASS (iOS, Android, Web static routes bundled successfully).
+
 Checkout/gói Android và WIP của các thành viên được ghi bên dưới.
 Remote CI và human sign-off phải kiểm riêng trên PR trước merge.
 Tổng quan: [PROJECT_CONTEXT](PROJECT_CONTEXT.md); [inventory](PROJECT_CONTEXT_INVENTORY.md).

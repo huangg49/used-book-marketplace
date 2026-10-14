@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lật Lại · Duyệt lớp rèm</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#fffcf5;color:#281914;font:15px/1.5 Arial,sans-serif}main{max-width:1500px;margin:auto;padding:24px}h1{margin:0 0 8px;font-size:26px}p{margin:6px 0 18px;max-width:90ch;color:#716157}button,select{font:inherit;color:#5c0202;border:1px solid #8e7564;background:#fffcf5;padding:9px 12px;cursor:pointer}button[aria-pressed=true]{background:#5c0202;color:#fcf8db}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #5c0202;outline-offset:3px}.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0}.workspace{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:22px}.stage{position:relative;aspect-ratio:16/9;overflow:hidden;background:#fcf8db;isolation:isolate;outline:1px solid #d9cbbd}.stage.checker{background-color:#fffcf5;background-image:linear-gradient(45deg,#e9e0d4 25%,transparent 25%),linear-gradient(-45deg,#e9e0d4 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e9e0d4 75%),linear-gradient(-45deg,transparent 75%,#e9e0d4 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}.layer{position:absolute;display:block;pointer-events:none;object-fit:fill}.layer[hidden]{display:none}.layer.selected{filter:drop-shadow(0 0 3px #254337);outline:1px dashed #254337}.navbar{position:absolute;left:8%;width:84%;top:5%;height:9%;background:#fcf8db;color:#5c0202;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #d9cbbd;font-size:clamp(8px,1.1vw,18px);font-weight:bold;letter-spacing:.03em}.navbar[hidden]{display:none}.layers{max-height:650px;overflow:auto;border-top:1px solid #d9cbbd}.row{padding:7px 0;border-bottom:1px solid #d9cbbd;display:flex;align-items:center;gap:8px}.row label{flex:1;cursor:pointer}.row button{padding:3px 7px;font-size:12px}.row.inactive{opacity:.45}.details{font-size:13px;color:#716157;padding:12px 0}details{margin:16px 0}summary{cursor:pointer}a{color:#5c0202}.reference{display:block;max-width:520px;width:100%;height:auto}.note{margin-top:14px;font-size:13px}#loadState{font-size:13px;margin-bottom:10px}@media(max-width:850px){main{padding:16px}.workspace{grid-template-columns:1fr}.layers{max-height:none}h1{font-size:22px}.navbar{font-size:10px}}
+</style>
+<main>
+<h1>Duyệt từng lớp rèm</h1>
+<p>Bản chuẩn bị hình cho sân khấu Đấu giá. Các lớp PNG có nền trong suốt và điểm neo riêng; dáng đóng/mở là hai mốc hình tĩnh để duyệt, chưa có animation.</p>
+<div class="toolbar">
+<button id="open" aria-pressed="true">Rèm mở</button><button id="closed" aria-pressed="false">Rèm đóng</button>
+<label><input type="checkbox" id="checker"> Nền kiểm tra trong suốt</label>
+<label><input type="checkbox" id="nav"> Thử navbar</label>
+<select id="slot" aria-label="Thứ tự lớp navbar"></select>
+<button id="restore">Hiện lại tất cả</button>
+</div>
+<div id="loadState" role="status">Đang tải các lớp…</div>
+<div class="workspace">
+<section><div id="stage" class="stage" aria-label="Bản ráp lớp rèm"><div class="navbar" id="navbar">NAVBAR · THANH MẪU ĐỂ KIỂM TRA CHE PHỦ</div></div>
+<p class="note">Bật/tắt lớp ở bên phải để nhìn phần vải phía sau. Thanh navbar chỉ là mẫu kiểm tra thứ tự lớp; không thay navbar thật của website.</p>
+<div id="details" class="details"></div>
+<details><summary>Đối chiếu bản hình gốc</summary><img class="reference" src="reference-board.png" alt="Bản duyệt hình tĩnh rèm đóng và mở"></details>
+</section>
+<aside aria-label="Danh sách lớp"><strong>Thứ tự từ trước ra sau</strong><div id="layers" class="layers"></div></aside>
+</div>
+<p class="note">Các lớp được dựng lại từ ảnh phẳng; phần bị che đã được bổ sung. Đây là bản tách lớp để duyệt, chưa là bằng chứng chuyển động mượt hay bộ rig hoàn chỉnh.</p>
+<a href="manifest.json">Vị trí, điểm neo và thứ tự lớp</a> · <a href="generation-prompts.json">Prompt tạo từng phần</a>
+</main>
+<script type="module">
+import {attachLayers} from './attachments.mjs';
+const manifest=attachLayers(/* MANIFEST */null);
+const stage=document.getElementById('stage'), list=document.getElementById('layers');
+let pose='open',selected=null;
+const hidden=new Set(), records=new Map();
+for(const layer of manifest.layers){
+ const img=document.createElement('img');img.className='layer';img.alt='';img.src=layer.file;img.dataset.layer=layer.id;
+ Object.assign(img.style,{left:layer.x/manifest.viewport.width*100+'%',top:layer.y/manifest.viewport.height*100+'%',width:layer.width/manifest.viewport.width*100+'%',height:layer.height/manifest.viewport.height*100+'%',zIndex:layer.z,clipPath:layer.clip||'none',transformOrigin:layer.pivot[0]*100+'% '+layer.pivot[1]*100+'%'});
+ stage.appendChild(img);records.set(layer.id,{layer,img});
+}
+for(const layer of [...manifest.layers].sort((a,b)=>b.z-a.z)){
+ const row=document.createElement('div');row.className='row';
+ const check=document.createElement('input');check.type='checkbox';check.checked=true;check.id='toggle-'+layer.id;
+ const label=document.createElement('label');label.htmlFor=check.id;label.textContent=layer.label;
+ const button=document.createElement('button');button.textContent='Xem';button.setAttribute('aria-label','Đánh dấu '+layer.label);
+ check.addEventListener('change',()=>{check.checked?hidden.delete(layer.id):hidden.add(layer.id);render()});
+ button.addEventListener('click',()=>{selected=selected===layer.id?null:layer.id;render()});
+ row.append(check,label,button);list.appendChild(row);Object.assign(records.get(layer.id),{row,check});
+}
+const slot=document.getElementById('slot');
+for(const item of manifest.navbarSlots){const option=document.createElement('option');option.value=item.z;option.textContent=item.label;slot.appendChild(option)}slot.value='45';
+function render(){
+ for(const {layer,img,row,check} of records.values()){const inactive=layer.pose!=='both'&&layer.pose!==pose;img.hidden=inactive||hidden.has(layer.id)||(layer.attachment&&hidden.has(layer.attachment.parent));img.classList.toggle('selected',selected===layer.id);row.classList.toggle('inactive',inactive);check.checked=!hidden.has(layer.id)}
+ stage.classList.toggle('checker',document.getElementById('checker').checked);
+ const nav=document.getElementById('navbar');nav.hidden=!document.getElementById('nav').checked;nav.style.zIndex=slot.value;
+ document.getElementById('open').setAttribute('aria-pressed',String(pose==='open'));document.getElementById('closed').setAttribute('aria-pressed',String(pose==='closed'));
+ const layer=selected&&records.get(selected).layer;
+ document.getElementById('details').textContent=layer?`${layer.label} · z=${layer.z} · x=${layer.x}, y=${layer.y} · ${layer.width}×${layer.height} · điểm neo (${layer.pivot.join(', ')})`:'Chọn “Xem” ở một lớp để đánh dấu vùng hình và xem điểm neo.';
+}
+document.getElementById('open').onclick=()=>{pose='open';render()};document.getElementById('closed').onclick=()=>{pose='closed';render()};
+document.getElementById('restore').onclick=()=>{hidden.clear();selected=null;render()};
+for(const id of ['nav','checker','slot'])document.getElementById(id).addEventListener('change',render);
+render();
+Promise.all([...records.values()].map(({img})=>img.decode())).then(()=>document.getElementById('loadState').textContent=`Đã tải 15 PNG trong suốt + lớp lót SVG · ${manifest.layers.length} lớp điều khiển.`).catch(()=>document.getElementById('loadState').textContent='Có lớp hình chưa tải được. Kiểm tra thư mục assets bên cạnh file này.');
+</script>
+</html>

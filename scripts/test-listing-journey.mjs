@@ -7,12 +7,21 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   const fill = (name, value) => p.getByLabel(name, { exact: true }).fill(value);
   const created = p.waitForResponse(
     (r) =>
-      r.url().endsWith("/api/v1/listings") &&
-      r.request().method() === "POST" &&
-      r.status() === 200,
+      new URL(r.url()).pathname.replace(/\/$/, "") ===
+        "/api/v1/listings" &&
+      r.request().method() === "POST",
   );
-  await click("Tạo bản nháp");
-  const id = (await (await created).json()).entityId;
+  await click("+ Đăng Sách Mới Ngay");
+  const createdResponse = await created;
+  assert.equal(
+    createdResponse.ok(),
+    true,
+    `Create listing failed: ${createdResponse.status()} ${createdResponse.url()}`,
+  );
+  const id = (await createdResponse.json()).entityId;
+  await p
+    .getByPlaceholder("Nhập tên, tác giả hoặc ISBN...", { exact: true })
+    .fill("Những trang sách");
   await p
     .getByRole("button", { name: "Chọn đầu sách này", exact: true })
     .first()
@@ -23,16 +32,16 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .first()
     .click();
   // Progress reflects entered data, not visited steps.
-  await p.getByRole("tab", { name: "Bước 1: Đầu sách, đã đủ" }).waitFor();
   await p
-    .getByRole("tab", { name: "Bước 2: Ảnh và tình trạng, còn thiếu" })
+    .getByRole("tab", { name: /^Thông tin sách, Đã điền đầy đủ/ })
     .waitFor();
-  await click("Tiếp tục");
+  await p
+    .getByRole("tab", { name: /^Ảnh bản sách, Chưa điền thành công/ })
+    .waitFor();
+  await click("Tiếp theo");
   const chooser = p.waitForEvent("filechooser");
-  await click("Chọn ảnh từ thư viện");
-  await (
-    await chooser
-  ).setFiles({
+  await p.getByText("+ Thêm ảnh", { exact: true }).click();
+  await (await chooser).setFiles({
     name: "listing-fixture.png",
     mimeType: "image/png",
     buffer: fixture.photo,
@@ -53,7 +62,8 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   await p
     .getByText("Chưa tải được ảnh xem trước.", { exact: true })
     .waitFor({ state: "hidden" });
-  await click("Còn tốt");
+  await click("Tiếp theo");
+  await p.getByText("Tốt (Good)", { exact: true }).click();
   for (const [field, value] of [
     [
       "Ruột sách và trang thiếu",
@@ -65,7 +75,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   ])
     await fill(field, value);
   // maxLength is UTF-16 but API limits Unicode code points, including emoji.
-  await fill("Vài dòng gửi người đọc sau", "📚".repeat(5001));
+  await fill("Vài dòng gửi người đọc sau (Mô tả chung)", "📚".repeat(5001));
   await click("Lưu nháp");
   await p.getByText("Nhập tối đa 5.000 ký tự.", { exact: true }).waitFor();
   const incomplete = await fixture.api(
@@ -73,7 +83,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     fixture.member.accessToken,
   );
   assert.equal(incomplete.currentRevision.content.description, "");
-  await fill("Vài dòng gửi người đọc sau", "📚".repeat(5000));
+  await fill("Vài dòng gửi người đọc sau (Mô tả chung)", "📚".repeat(5000));
   await click("Lưu nháp");
   await p
     .getByText("Bản nháp đã lưu. Bạn có thể hoàn thiện sau.", { exact: true })
@@ -85,7 +95,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   );
   const literal =
     '<img src=x onerror="window.__listingInjection=true"> DỮ LIỆU KIỂM THỬ: sách có dấu đọc thật.';
-  await fill("Vài dòng gửi người đọc sau", literal);
+  await fill("Vài dòng gửi người đọc sau (Mô tả chung)", literal);
   // The new top back control must retain the existing unsaved-work guard.
   await click("Về sách của tôi");
   const leaveDialog = p.getByRole("dialog");
@@ -95,7 +105,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .click();
   assert.equal(
     await p
-      .getByLabel("Vài dòng gửi người đọc sau", { exact: true })
+      .getByLabel("Vài dòng gửi người đọc sau (Mô tả chung)", { exact: true })
       .inputValue(),
     literal,
   );
@@ -105,14 +115,14 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   await p.screenshot({
     path: path.join(artifacts, "editor-condition-390.png"),
   });
-  await click("Có, còn đọc rõ");
-  await click("Có — tôi đã mô tả trang thiếu ở trên");
-  await click("Không thiếu nội dung trọng yếu");
+  await p.getByText("Có, còn đọc rõ", { exact: true }).click();
+  await p.getByText("Không thiếu trang", { exact: true }).click();
+  await p.getByText("Không thiếu nội dung chính", { exact: true }).click();
   await p
-    .getByRole("tab", { name: "Bước 2: Ảnh và tình trạng, đã đủ" })
+    .getByRole("tab", { name: /^Ảnh bản sách, Đã điền đầy đủ/ })
     .waitFor();
-  await click("Tiếp tục");
-  await click("Bán hoặc đổi");
+  await click("Tiếp theo");
+  await p.getByRole("button", { name: /^Cả bán & đổi,/ }).click();
   await fill("Giá bán (đồng)", "10000");
   await fill("Giá trị đổi (đồng)", "1000000");
   await p
@@ -150,15 +160,16 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .getByText("Bản nháp đã lưu. Bạn có thể hoàn thiện sau.", { exact: true })
     .waitFor();
   await click("Về sách của tôi");
-  await click("Hoàn thiện sách 1");
-  await click("Tiếp tục");
+  await click("Hoàn thiện");
+  await click("Tiếp theo");
+  await click("Tiếp theo");
   assert.equal(
     await p
-      .getByLabel("Vài dòng gửi người đọc sau", { exact: true })
+      .getByLabel("Vài dòng gửi người đọc sau (Mô tả chung)", { exact: true })
       .inputValue(),
     literal,
   );
-  await click("Tiếp tục");
+  await click("Tiếp theo");
   assert.equal(
     await p.getByLabel("Giá bán (đồng)", { exact: true }).inputValue(),
     "10000",
@@ -189,7 +200,8 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   );
   await p.clock.fastForward(31_000);
   await p
-    .getByText("Nơi gửi đã được sửa hoặc xóa.", { exact: false })
+    .locator('div:has-text("Nơi gửi đã được sửa hoặc xóa."):visible')
+    .last()
     .waitFor();
   await fill("Giá bán (đồng)", "12000");
   await click("Lưu nháp");
@@ -220,12 +232,12 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     true,
   );
   await p.setViewportSize({ width: 390, height: 844 });
-  await click("Tiếp tục");
+  await click("Tiếp theo");
   await p.screenshot({ path: path.join(artifacts, "editor-review-390.png") });
   const declaration = () =>
     p
       .getByRole("checkbox", {
-        name: "Tôi có quyền đăng cuốn sách này; ảnh và mô tả phản ánh trung thực tình trạng sách.",
+        name: "Tôi xác nhận sở hữu ấn bản này và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại.",
       })
       .click();
   await declaration();
@@ -245,7 +257,6 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     decision: "Reject",
     reason: "Cần bổ sung rõ tình trạng trang trắng bị rời.",
   });
-  await click("Cập nhật trạng thái đã lưu");
   await p
     .getByText(
       "Lần duyệt trước: Cần bổ sung rõ tình trạng trang trắng bị rời.",
@@ -253,13 +264,16 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     )
     .waitFor();
   // Step tabs replace the stacked back buttons and keep the entered data.
-  await p.getByRole("tab", { name: /^Bước 2: Ảnh và tình trạng/ }).click();
+  await p
+    .getByRole("tab", { name: /^Ảnh bản sách,/ })
+    .click();
+  await click("Tiếp theo");
   await fill(
     "Ruột sách và trang thiếu",
     "Trang trắng sau cùng bị rời, nội dung từ trang 1 đến 120 vẫn đủ.",
   );
-  await click("Tiếp tục");
-  await click("Tiếp tục");
+  await click("Tiếp theo");
+  await click("Tiếp theo");
   await declaration();
   await click("Lưu và gửi duyệt");
   await p
@@ -285,7 +299,6 @@ export async function listingJourney(p, fixture, admin, artifacts) {
       contentAppropriate: true,
     },
   });
-  await click("Cập nhật trạng thái đã lưu");
   await p
     .getByRole("button", { name: "Sửa bài đã duyệt", exact: true })
     .waitFor();

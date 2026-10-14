@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-13",
+  "fixture": "synthetic frontend-only; no API/DB writes",
+  "checks": [
+    "StrictMode one 1385ms sequence: opening pace retained, fade 230→115ms; closed content coverage; navbar geometry/hit testing preserved, pixel delta ≤1/255; finite disposal",
+    "Filter/cache price updates no replay; Home→Back/Home navbar→Auction fresh opening retains navbar",
+    "390px portrait/768px resize: retains time; pixel coverage/no overflow",
+    "Focus/pointer/scroll/document hidden release content and resources",
+    "WebGL context loss fallback retains time",
+    "Pending/empty/API error/photo retry remain usable after entrance",
+    "Failed/slow art ≤1200ms fallback; no Canvas fallback open; Canvas2D full rig; no late resurrection"
+  ],
+  "navbarSamples": [
+    {
+      "width": 1425,
+      "height": 76,
+      "curtainTop": 76,
+      "maxChannelDifference": 0,
+      "changedChannels": 0
+    },
+    {
+      "width": 1425,
+      "height": 76,
+      "curtainTop": 76,
+      "maxChannelDifference": 0,
+      "changedChannels": 0
+    },
+    {
+      "width": 1425,
+      "height": 76,
+      "curtainTop": 76,
+      "maxChannelDifference": 0,
+      "changedChannels": 0
+    },
+    {
+      "width": 375,
+      "height": 72,
+      "curtainTop": 72,
+      "maxChannelDifference": 1,
+      "changedChannels": 27
+    }
+  ],
+  "pageErrors": [],
+  "limits": [
+    "physical phone/Safari/native",
+    "continuous FPS",
+    "real auction API/photos"
+  ]
+}

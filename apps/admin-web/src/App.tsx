@@ -21,12 +21,22 @@ import {
   BookPlus,
   ChartNoAxesCombined,
   ClipboardCheck,
+  Gavel,
+  Handshake,
   LayoutDashboard,
+  PackageCheck,
+  Scale,
   UsersRound,
+  Warehouse,
+  MapPin,
+  TriangleAlert,
+  Clock,
 } from "lucide-react";
 import { currentUserSchema } from "@used-books/session-client";
 import logo from "../../../packages/brand/logos/lat-lai-horizontal-primary.svg";
 import {
+  canOperatePoint,
+  canResolve,
   canReview,
   canReviewCatalog,
   queryClient,
@@ -38,6 +48,15 @@ import { Detail } from "./features/review/detail";
 import { LeaveGuard } from "./core/leave-guard";
 import { UserDirectory } from "./features/users/directory";
 import { DashboardMock } from "./features/dashboard/mock";
+import {
+  AuctionQueue,
+  CollectionQueue,
+  IntakeQueue,
+  ResolutionQueue,
+} from "./features/operations/queues";
+import { PointsPage } from "./features/operations/points";
+import { IncidentsPage } from "./features/operations/incidents";
+import { EscalationsPage } from "./features/operations/escalations";
 import "./App.css";
 
 function Login() {
@@ -199,6 +218,50 @@ function Workspace() {
                 </NavLink>
               )}
             </div>
+            {(canOperatePoint(user) || canResolve(user)) && (
+              <div className="sidebar-group">
+                <p className="sidebar-group-title">
+                  <Warehouse aria-hidden="true" />
+                  Điểm và đấu giá
+                </p>
+                {canOperatePoint(user) && (
+                  <>
+                    <NavLink to="/operations/intakes">
+                      <PackageCheck aria-hidden="true" />
+                      Nhận sách đấu giá
+                    </NavLink>
+                    <NavLink to="/operations/collections">
+                      <Handshake aria-hidden="true" />
+                      Giao sách
+                    </NavLink>
+                  </>
+                )}
+                <NavLink to="/operations/incidents">
+                  <TriangleAlert aria-hidden="true" />
+                  Sự cố tại điểm
+                </NavLink>
+                {canResolve(user) && (
+                  <>
+                    <NavLink to="/operations/resolutions">
+                      <Scale aria-hidden="true" />
+                      Xử lý đơn tại điểm
+                    </NavLink>
+                    <NavLink to="/operations/auctions">
+                      <Gavel aria-hidden="true" />
+                      Phiên đấu giá
+                    </NavLink>
+                    <NavLink to="/operations/escalations">
+                      <Clock aria-hidden="true" />
+                      Việc quá hạn
+                    </NavLink>
+                    <NavLink to="/operations/points">
+                      <MapPin aria-hidden="true" />
+                      Điểm giao nhận
+                    </NavLink>
+                  </>
+                )}
+              </div>
+            )}
             {canReviewCatalog(user) && (
               <NavLink to="/users">
                 <UsersRound aria-hidden="true" />
@@ -272,6 +335,13 @@ const router = createBrowserRouter([
       { path: "/review/:kind", element: <Queue /> },
       { path: "/review/:kind/:id", element: <Detail /> },
       { path: "/users", element: <UserDirectory /> },
+      { path: "/operations/intakes", element: <IntakeQueue /> },
+      { path: "/operations/collections", element: <CollectionQueue /> },
+      { path: "/operations/resolutions", element: <ResolutionQueue /> },
+      { path: "/operations/auctions", element: <AuctionQueue /> },
+      { path: "/operations/points", element: <PointsPage /> },
+      { path: "/operations/incidents", element: <IncidentsPage /> },
+      { path: "/operations/escalations", element: <EscalationsPage /> },
       {
         path: "*",
         element: (

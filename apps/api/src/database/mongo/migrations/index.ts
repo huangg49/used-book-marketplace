@@ -101,6 +101,19 @@ import {
   withDirectDeliveryCompletionLegacyShape,
 } from './0021-direct-delivery-completion-legacy-shape.js';
 import {
+  pointAdministrationMigration,
+  withPointAdministrationChanges,
+} from './0022-point-administration.js';
+import {
+  inspectionEvidenceCollectionSpecs,
+  inspectionEvidenceMigration,
+  withInspectionEvidenceChanges,
+} from './0023-inspection-evidence.js';
+import {
+  pointIncidentCollectionSpecs,
+  pointIncidentsMigration,
+} from './0024-point-incidents.js';
+import {
   exchangeNotificationsMigration,
   withExchangeNotificationChanges,
 } from './0024-exchange-notifications.js';
@@ -201,6 +214,9 @@ export const migrations: Migration[] = [
   exchangesPhase3Migration,
   directDeliveryCompletionMigration,
   directDeliveryCompletionLegacyShapeMigration,
+  pointAdministrationMigration,
+  inspectionEvidenceMigration,
+  pointIncidentsMigration,
   exchangesPhase4Migration,
   exchangeMessagesMigration,
   exchangeNotificationsMigration,
@@ -225,7 +241,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withPurchaseConversationChanges)
     .map(withNotificationChanges)
     .map(withCatalogClassification)
-    .map(withCatalogVocabularyV2),
+    .map(withCatalogVocabularyV2)
+    .map(withPointAdministrationChanges),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),
@@ -236,7 +253,9 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withPointOrderChanges)
     .map(withResolutionChanges)
     .map(withSettlementChanges)
-    .map(withRulesChanges),
+    .map(withRulesChanges)
+    .map(withPointAdministrationChanges)
+    .map(withInspectionEvidenceChanges),
   ...pointOrderCollectionSpecs
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)
@@ -257,4 +276,6 @@ export const currentCollections = (): CollectionSpec[] => [
   ...directDeliveryCompletionSpecs,
   ...exchangeMessageSpecs,
   ...transactionReviewSpecs,
+  ...inspectionEvidenceCollectionSpecs,
+  ...pointIncidentCollectionSpecs,
 ];
