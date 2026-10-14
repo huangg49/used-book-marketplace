@@ -28,6 +28,11 @@ try {
     const mobile = viewport.width <= 600;
     const context = await browser.newContext({ viewport, reducedMotion: 'reduce',
       ...(process.env.AUTH_MOTION_VIDEO ? { recordVideo: { dir: path.join(root, '.tmp/auth-breeze-video'), size: viewport } } : {}) })
+    // Synthetic HTTP fixtures have no realtime server; do not let Socket.IO
+    // recurse through the dev proxy targeting this same frontend origin.
+    await context.routeWebSocket(/\/socket\.io\//, socket => socket.close())
+    await context.route(`${origin}/socket.io/**`, route =>
+      route.fulfill({ status: 503, json: { message: 'Frontend-only QA: realtime unavailable' } }))
     await context.route(`${origin}/api/v1/**`, route => {
       if (new URL(route.request().url()).pathname === '/api/v1/auth/login') {
         if (route.request().postDataJSON().password !== 'QA-only-pass') return route.fulfill({ status: 401, json: { code: 'INVALID_CREDENTIALS' } })

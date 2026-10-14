@@ -178,6 +178,14 @@ quá hạn) chưa làm: READINESS vẫn chặn mở rộng nghiệp vụ, cần 
   các ca lost ACK/replay/funding/cancel. Browser API thật/QA Mongo/storage fake
   với `CI=true` local PASS; web lint PASS với bốn warning cũ. Không đổi ứng dụng,
   timeout hay bỏ test; CI bản sửa đối chiếu theo head PR42.
+- API CI tại2155e5b cũng PASS. User Web lượt này FAIL ở auction motion fixture:
+  VITE API trỏ cùng origin làm Socket.IO đi qua dev proxy quay về chính Vite,
+  tạo vòng lặp upgrade và mất trang trong ca fallback. Commit subject
+  `test(web): isolate realtime in frontend motion fixtures` mock cả websocket và
+  HTTP polling unavailable trong hai fixture thuần frontend; không đổi proxy
+  ứng dụng hoặc bộ browser dùng API thật. Auction/auth motion local `CI=true`
+  PASS (auth ép proxy cùng origin), không có ws proxy error; web lint/docs PASS.
+  Giữ mọi assertion chuyển động/fallback và timeout; remote theo head PR42.
 - API có9lint warning cũ, Web bundle warning lớn. Full tạo→pay→credit merchant thật,
   native/human NOT RUN; remote CI theo head PR; không tự giải quyết ReviewRequired hoặc query
   non-success. READINESS không đổi; WIP khác bảo toàn; chưa merge/deploy. Bước tiếp:
