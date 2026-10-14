@@ -1,4 +1,4 @@
-import { BookHeart, Repeat, Star, Mail } from 'lucide-react';
+import { BookHeart, Repeat, Star, Truck, Banknote, ShieldCheck, MapPin } from 'lucide-react';
 import type { ExchangeDetail } from '../../../lib/mock/exchangeDetail';
 import { BookCover } from '../../BookCover';
 import { formatVnd } from '../../../lib/routes';
@@ -94,15 +94,64 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
                 </div>
 
                 <div className={styles.detailItem}>
-                    <p className={styles.detailLabel}>Phương thức giao</p>
+                    <p className={styles.detailLabel}>Phương thức giao nhận</p>
                     <p className={styles.detailValueFlex}>
-                        <Mail className={styles.iconGoldSmall} size={16} /> {detail.deliveryMethod === 'meetup' ? 'Gặp trực tiếp' : detail.deliveryMethod === 'shipping' ? 'Gửi qua đường bưu điện' : 'Chưa có thông tin giao nhận'}
+                        <Truck className={styles.iconGoldSmall} size={16} /> 
+                        <span>Chuyển phát bưu điện / Hẹn gặp trực tiếp (TP.HCM)</span>
                     </p>
                 </div>
 
                 <div className={styles.detailItem}>
-                    <p className={styles.detailLabel}>Bù tiền</p>
+                    <p className={styles.detailLabel}>Cước phí vận chuyển</p>
+                    <p className={styles.detailValueFlex}>
+                        <Banknote className={styles.iconGoldSmall} size={16} />
+                        <span>Mỗi bên tự chi trả chiều gửi của mình (0 đ cấn trừ sàn)</span>
+                    </p>
+                </div>
+
+                <div className={styles.detailItem}>
+                    <p className={styles.detailLabel}>Bù chênh lệch</p>
                     <p className={styles.detailValue}>{moneyText}</p>
+                </div>
+
+                <div className={styles.detailItem}>
+                    <p className={styles.detailLabel}>Tiền cọc bảo chứng</p>
+                    <p className={styles.detailValueFlex}>
+                        <ShieldCheck className={styles.iconGoldSmall} size={16} />
+                        <span>{detail.viewerFundingAmount ? formatVnd(detail.viewerFundingAmount) : '100% giá trị sách đối tác'} (Hoàn lại khi hoàn tất)</span>
+                    </p>
+                </div>
+
+                <div className={styles.detailItem}>
+                    <p className={styles.detailLabel}>Địa chỉ nhận sách của bạn</p>
+                    <p className={styles.detailValueFlex}>
+                        <MapPin className={styles.iconGoldSmall} size={16} />
+                        <span>
+                            {detail.viewerAddress ? (
+                                <>
+                                    <strong>{detail.viewerAddress.recipientName}</strong> · {detail.viewerAddress.phone} · {detail.viewerAddress.detail}
+                                </>
+                            ) : (
+                                <span style={{ color: '#888' }}>Chưa thiết lập (chọn qua nút Đề xuất lại hoặc Chấp nhận)</span>
+                            )}
+                        </span>
+                    </p>
+                </div>
+
+                <div className={styles.detailItem}>
+                    <p className={styles.detailLabel}>Địa chỉ nhận sách của đối tác</p>
+                    <p className={styles.detailValueFlex}>
+                        <MapPin className={styles.iconGoldSmall} size={16} />
+                        <span>
+                            {detail.partnerAddress ? (
+                                <>
+                                    <strong>{detail.partnerAddress.recipientName}</strong> · {detail.partnerAddress.phone} · {detail.partnerAddress.detail}
+                                </>
+                            ) : (
+                                <span style={{ color: '#888' }}>Chờ đối tác cập nhật</span>
+                            )}
+                        </span>
+                    </p>
                 </div>
 
                 {detail.initialMessage && (

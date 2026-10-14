@@ -44,6 +44,54 @@ export const exchangeSchema = z.object({
   recipientShippedAt: date,
   initiatorReceivedAt: date,
   recipientReceivedAt: date,
+  inspectionDeadline: date,
+  completedAt: date,
+  initiatorCompletedAt: date,
+  recipientCompletedAt: date,
+  initiatorAddress: z
+    .object({
+      recipientName: z.string(),
+      phone: z.string(),
+      detail: z.string(),
+      localityCode: z.string().nullable().optional(),
+      serviceAreaCode: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+  recipientAddress: z
+    .object({
+      recipientName: z.string(),
+      phone: z.string(),
+      detail: z.string(),
+      localityCode: z.string().nullable().optional(),
+      serviceAreaCode: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+  initiatorShipment: z
+    .object({
+      method: z.enum(["carrier", "direct"]),
+      carrierCode: z.string().nullable().optional(),
+      carrierName: z.string().nullable().optional(),
+      trackingCode: z.string().nullable().optional(),
+      meetupLocation: z.string().nullable().optional(),
+      notes: z.string().nullable().optional(),
+      shippedAt: date,
+    })
+    .nullable()
+    .optional(),
+  recipientShipment: z
+    .object({
+      method: z.enum(["carrier", "direct"]),
+      carrierCode: z.string().nullable().optional(),
+      carrierName: z.string().nullable().optional(),
+      trackingCode: z.string().nullable().optional(),
+      meetupLocation: z.string().nullable().optional(),
+      notes: z.string().nullable().optional(),
+      shippedAt: date,
+    })
+    .nullable()
+    .optional(),
   rejectionReason: z.string().nullable().optional(),
   cancelReason: z
     .enum([
@@ -81,7 +129,17 @@ export function mapExchangeStatus(ex: Exchange, actor: string): ExchangeStatus {
     case "Preparing":
       return "WAITING_YOU_SEND";
     case "InTransit":
+      return (
+        ex.initiatorId === actor
+          ? ex.initiatorReceivedAt
+          : ex.recipientReceivedAt
+      )
+        ? "DELIVERING"
+        : "WAITING_YOU_CONFIRM";
     case "Delivered":
+      if (ex.initiatorReceivedAt && ex.recipientReceivedAt) {
+        return "INSPECTING";
+      }
       return (
         ex.initiatorId === actor
           ? ex.initiatorReceivedAt
@@ -118,14 +176,25 @@ export function getExchange(id: string) {
   return session.request(`/exchanges/${id}`, exchangeSchema);
 }
 
-// Accepted listings can cease being public. Never substitute demo books.
 export async function exchangeListing(
   id: string,
 ): Promise<PublicListing | null> {
   try {
-    return await getPublicListing(id);
+    const listing = await getPublicListing(id);
+    if (listing) {
+      try {
+        localStorage.setItem(`latlai_cached_listing_${id}`, JSON.stringify(listing));
+      } catch {}
+    }
+    return listing;
   } catch (error) {
-    if (error instanceof ApiError && error.status === 404) return null;
+    if (error instanceof ApiError && error.status === 404) {
+      try {
+        const raw = localStorage.getItem(`latlai_cached_listing_${id}`);
+        if (raw) return JSON.parse(raw) as PublicListing;
+      } catch {}
+      return null;
+    }
     throw error;
   }
 }

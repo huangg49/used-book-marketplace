@@ -1056,6 +1056,24 @@ export type ExchangeCancelReason =
 
 export type ExchangeCancelledBy = 'System' | 'Initiator' | 'Recipient';
 
+export interface ExchangeAddressSnapshot {
+  recipientName: string;
+  phone: string;
+  detail: string;
+  localityCode?: string | null;
+  serviceAreaCode?: string | null;
+}
+
+export interface ExchangeShipmentSnapshot {
+  method: 'carrier' | 'direct';
+  carrierCode?: string | null;
+  carrierName?: string | null;
+  trackingCode?: string | null;
+  notes?: string | null;
+  meetupLocation?: string | null;
+  shippedAt?: Date | null;
+}
+
 export interface ExchangeDoc extends Lockable {
   _id: string;
   initiatorId: string;
@@ -1082,6 +1100,14 @@ export interface ExchangeDoc extends Lockable {
   recipientShippedAt: Date | null;
   initiatorReceivedAt: Date | null;
   recipientReceivedAt: Date | null;
+  inspectionDeadline: Date | null;
+  completedAt: Date | null;
+  initiatorCompletedAt?: Date | null;
+  recipientCompletedAt?: Date | null;
+  initiatorAddress?: ExchangeAddressSnapshot | null;
+  recipientAddress?: ExchangeAddressSnapshot | null;
+  initiatorShipment?: ExchangeShipmentSnapshot | null;
+  recipientShipment?: ExchangeShipmentSnapshot | null;
   createdAt: Date;
   updatedAt: Date;
   lockSeq: number;
@@ -1099,10 +1125,18 @@ export interface MemberNotificationDoc {
     | 'AuctionCancelled'
     | 'AuctionOnHold'
     | 'AuctionPaymentExpired'
-    | 'AuctionPaid';
+    | 'AuctionPaid'
+    | 'ExchangeProposed'
+    | 'ExchangeAccepted'
+    | 'ExchangeFunded'
+    | 'ExchangeShipped'
+    | 'ExchangeReceived'
+    | 'ExchangeCompleted'
+    | 'ExchangeCancelled'
+    | 'ExchangeRejected';
   title: string;
   body: string;
-  targetType: 'Auction';
+  targetType: 'Auction' | 'Exchange';
   targetId: string;
   dedupeKey: string;
   createdAt: Date;
@@ -1126,4 +1160,28 @@ export interface AuthMailJobDoc {
 }
 export interface AuthEventDoc {
   _id: string; userId: string; action: 'Registered' | 'EmailVerified' | 'PasswordReset'; createdAt: Date;
+}
+
+export interface ExchangeMessageDoc {
+  _id: string;
+  exchangeId: string;
+  senderId: string;
+  body: string;
+  sentAt: Date;
+}
+
+export interface TransactionReviewDoc extends Lockable {
+  _id: string;
+  transactionType: 'Exchange' | 'Order';
+  transactionId: string;
+  authorId: string;
+  authorName: string;
+  targetUserId: string;
+  bookRating: number;
+  partnerRating: number;
+  tags: string[];
+  comment: string;
+  publishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 }

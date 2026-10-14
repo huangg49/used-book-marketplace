@@ -2430,6 +2430,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exchanges/{id}/counter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Submit a counter-proposal for the exchange. */
+        post: operations["counterExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/exchanges/{id}/funding": {
         parameters: {
             query?: never;
@@ -2509,6 +2526,127 @@ export interface paths {
         put?: never;
         /** @description Participant confirms they have received the other book. */
         post: operations["receiveExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Participant confirms satisfaction during the inspection window to complete the exchange early. */
+        post: operations["completeExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get messages in the exchange chat thread. */
+        get: operations["getExchangeMessages"];
+        put?: never;
+        /** @description Send a message in the exchange chat thread. */
+        post: operations["sendExchangeMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/carrier/calculate-fee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Calculate shipping fee between two addresses. */
+        post: operations["calculateCarrierFee"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/carrier/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Create a carrier shipment order. */
+        post: operations["createCarrierShipment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/carrier/tracking/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get tracking status for a shipment code. */
+        get: operations["getCarrierTracking"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhooks/carrier": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Receive webhook events from carrier partners. */
+        post: operations["carrierWebhookCallback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get reviews for an exchange transaction. */
+        get: operations["getExchangeReviews"];
+        put?: never;
+        /** @description Submit review for a completed exchange (FR-R01, FR-R02). */
+        post: operations["createExchangeReview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2972,14 +3110,14 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid";
+            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected";
             title: string;
             body: string;
             /** @enum {string} */
-            targetType: "Auction";
+            targetType: "Auction" | "Exchange";
             /**
              * Format: uuid
-             * @description Opens with GET /auctions/{id}; the caller's own view comes from participation or point-order reads.
+             * @description Opens with GET /auctions/{id} or GET /exchanges/{id}; the caller's own view comes from participation or point-order reads.
              */
             targetId: string;
             /** Format: date-time */
@@ -4761,6 +4899,14 @@ export interface components {
             initiatorReceivedAt?: string | null;
             recipientReceivedAt?: string | null;
             proposalExpiresAt?: string | null;
+            inspectionDeadline?: string | null;
+            completedAt?: string | null;
+            initiatorCompletedAt?: string | null;
+            recipientCompletedAt?: string | null;
+            initiatorAddress?: components["schemas"]["ExchangeAddressSnapshot"] | null;
+            recipientAddress?: components["schemas"]["ExchangeAddressSnapshot"] | null;
+            initiatorShipment?: components["schemas"]["ExchangeShipmentInfo"] | null;
+            recipientShipment?: components["schemas"]["ExchangeShipmentInfo"] | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -4770,18 +4916,108 @@ export interface components {
             items: components["schemas"]["Exchange"][];
             nextCursor: string | null;
         };
+        ExchangeAddressSnapshot: {
+            recipientName: string;
+            phone: string;
+            detail: string;
+            localityCode?: string | null;
+            serviceAreaCode?: string | null;
+        };
+        ExchangeShipmentInfo: {
+            /** @enum {string} */
+            method: "carrier" | "direct";
+            carrierCode?: string | null;
+            carrierName?: string | null;
+            trackingCode?: string | null;
+            meetupLocation?: string | null;
+            notes?: string | null;
+            /** Format: date-time */
+            shippedAt?: string | null;
+        };
         CreateExchangeProposal: {
             /** Format: uuid */
             initiatorListingId: string;
             /** Format: uuid */
             recipientListingId: string;
+            /** Format: uuid */
+            deliveryAddressId?: string;
         };
         AcceptExchange: {
             revision: number;
+            /** Format: uuid */
+            deliveryAddressId?: string;
+        };
+        ShipExchangeCommand: {
+            expectedVersion: number;
+            /** @enum {string} */
+            method?: "carrier" | "direct";
+            carrierCode?: string;
+            carrierName?: string;
+            trackingCode?: string;
+            meetupLocation?: string;
+            notes?: string;
         };
         RejectExchangeCommand: {
             expectedVersion: number;
             reason: string;
+        };
+        ExchangeMessage: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            exchangeId: string;
+            /** Format: uuid */
+            senderId: string;
+            body: string;
+            /** Format: date-time */
+            sentAt: string;
+        };
+        CreateExchangeMessage: {
+            body: string;
+        };
+        ExchangeMessagesResponse: {
+            items: components["schemas"]["ExchangeMessage"][];
+        };
+        CounterExchangeProposal: {
+            expectedVersion: number;
+            diffAmount: number;
+            /** @enum {string} */
+            diffPayer: "initiator" | "recipient" | "none";
+            /** Format: uuid */
+            deliveryAddressId?: string;
+            note?: string;
+        };
+        CreateExchangeReview: {
+            bookRating: number;
+            partnerRating: number;
+            tags?: string[];
+            comment?: string;
+        };
+        ExchangeReviewItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            exchangeId: string;
+            /** Format: uuid */
+            authorId: string;
+            authorName?: string;
+            /** Format: uuid */
+            targetUserId: string;
+            bookRating: number;
+            partnerRating: number;
+            tags?: string[];
+            comment?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        ExchangeReviewsResponse: {
+            canReview: boolean;
+            /** Format: date-time */
+            deadline?: string | null;
+            myReview?: components["schemas"]["ExchangeReviewItem"] | null;
+            partnerReview?: components["schemas"]["ExchangeReviewItem"] | null;
         };
     };
     responses: {
@@ -9791,6 +10027,40 @@ export interface operations {
             500: components["responses"]["ListingError"];
         };
     };
+    counterExchange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CounterExchangeProposal"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
     fundExchange: {
         parameters: {
             query?: never;
@@ -9902,7 +10172,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["VersionCommand"];
+                "application/json": components["schemas"]["ShipExchangeCommand"];
             };
         };
         responses: {
@@ -9955,6 +10225,254 @@ export interface operations {
             404: components["responses"]["ListingError"];
             409: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+        };
+    };
+    completeExchange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    getExchangeMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeMessagesResponse"];
+                };
+            };
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    sendExchangeMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateExchangeMessage"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeMessage"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    calculateCarrierFee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    fromAddress: Record<string, never>;
+                    toAddress: Record<string, never>;
+                    carrierCode?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    createCarrierShipment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    orderId: string;
+                    carrierCode?: string;
+                    sender: Record<string, never>;
+                    receiver: Record<string, never>;
+                    notes?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    getCarrierTracking: {
+        parameters: {
+            query?: {
+                carrier?: string;
+            };
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    carrierWebhookCallback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    trackingCode: string;
+                    status: string;
+                    description?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getExchangeReviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeReviewsResponse"];
+                };
+            };
+        };
+    };
+    createExchangeReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateExchangeReview"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeReviewItem"];
+                };
+            };
         };
     };
 }

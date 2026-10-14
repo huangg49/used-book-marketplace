@@ -370,6 +370,14 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       await c.audit_events.deleteMany({ _id: { $in: audits } });
       await c.mutation_receipts.deleteMany(history);
 
+      // 5. Addresses and auxiliary exchange collections
+      await c.member_addresses.deleteMany({ ownerId: { $in: users } });
+      await c.address_identities.deleteMany({ ownerId: { $in: users } });
+      await c.address_books.deleteMany({ _id: { $in: users } });
+      const exchangeIds = userExchanges.map((e) => e._id);
+      await c.exchange_messages.deleteMany({ exchangeId: { $in: exchangeIds } });
+      await c.transaction_reviews.deleteMany({ exchangeId: { $in: exchangeIds } });
+
       await db.removeUsers(users);
       await db.close();
     }
@@ -378,22 +386,52 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     else process.env.PAYMENT_SIMULATOR_SECRET = originalSecret;
   });
 
-  it('completes the full exchange lifecycle: proposal -> accept -> fund -> ship -> receive -> settlement', async () => {
-    // 1. Setup two approved listings
-    // user1 listing value: 100,000 VND
-    // user2 listing value: 150,000 VND
-    // Diff: 50,000 VND paid by user1 (since 100k < 150k)
-    // Deposit user1: 150,000 VND
-    // Deposit user2: 100,000 VND
+  it('completes the full exchange lifecycle: proposal -> accept -> fund -> ship -> receive -> inspection -> settlement', async () => {
+    // 1. Setup two approved listings and delivery addresses
+    const addr1 = {
+      _id: randomUUID(),
+      ownerId: user1.id,
+      version: 1,
+      recipientName: 'Nguyễn Văn A',
+      phone: '0901234567',
+      serviceAreaCode: 'HCM-DEMO-v1',
+      localityCode: 'DEMO-A',
+      detail: '123 Nguyễn Huệ',
+      isDefault: true,
+      createdAt: new Date(),
+    };
+    const addr2 = {
+      _id: randomUUID(),
+      ownerId: user2.id,
+      version: 1,
+      recipientName: 'Trần Thị B',
+      phone: '0909876543',
+      serviceAreaCode: 'HCM-DEMO-v1',
+      localityCode: 'DEMO-B',
+      detail: '456 Lê Văn Sỹ',
+      isDefault: true,
+      createdAt: new Date(),
+    };
+    await db.c.member_addresses.insertMany([addr1, addr2]);
+    await db.c.address_identities.insertMany([
+      { _id: addr1._id, ownerId: user1.id },
+      { _id: addr2._id, ownerId: user2.id },
+    ]);
+    await db.c.address_books.insertMany([
+      { _id: user1.id, version: 1, lockSeq: 0 },
+      { _id: user2.id, version: 1, lockSeq: 0 },
+    ]);
+
     const l1 = await createApprovedListing(user1, 100000, 'Both');
     const l2 = await createApprovedListing(user2, 150000, 'Both');
 
-    // 2. User1 creates exchange proposal
+    // 2. User1 creates exchange proposal with deliveryAddressId
     const createRes = await post(
       '/exchanges',
       {
         initiatorListingId: l1.listingId,
         recipientListingId: l2.listingId,
+        deliveryAddressId: addr1._id,
       },
       user1,
     ).expect(201);
@@ -409,6 +447,11 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       recipientDeposit: 100000,
       diffAmount: 50000,
       diffPayerId: user1.id,
+      initiatorAddress: {
+        recipientName: 'Nguyễn Văn A',
+        phone: '0901234567',
+        detail: '123 Nguyễn Huệ',
+      },
     });
     const exchangeId = createRes.body.id;
 
@@ -418,10 +461,10 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     expect(l1Doc?.trade).toBe('Available');
     expect(l2Doc?.trade).toBe('Available');
 
-    // 3. User2 accepts the proposal
+    // 3. User2 accepts the proposal with deliveryAddressId
     const acceptRes = await post(
       `/exchanges/${exchangeId}/accept`,
-      { revision: 1 },
+      { revision: 1, deliveryAddressId: addr2._id },
       user2,
     ).expect(200);
 
@@ -429,6 +472,11 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       id: exchangeId,
       status: 'AcceptedAwaitingFunding',
       revision: 2,
+      recipientAddress: {
+        recipientName: 'Trần Thị B',
+        phone: '0909876543',
+        detail: '456 Lê Văn Sỹ',
+      },
     });
     expect(acceptRes.body.fundingDeadline).toBeDefined();
 
@@ -452,51 +500,96 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     expect(fund2Res.body.status).toBe('Preparing');
     expect(fund2Res.body.recipientFundedAt).toBeDefined();
 
-    // 5. Shipping
-    // User1 ships
+    // 5. Shipping with carrier metadata
+    // User1 ships with GHN tracking
     const ship1Res = await post(
       `/exchanges/${exchangeId}/ship`,
-      { expectedVersion: fund2Res.body.revision },
+      {
+        expectedVersion: fund2Res.body.revision,
+        method: 'carrier',
+        carrierCode: 'GHN',
+        carrierName: 'Giao Hàng Nhanh',
+        trackingCode: 'GHN888999',
+        notes: 'Sách đóng hộp chống sốc',
+      },
       user1,
     ).expect(200);
     expect(ship1Res.body.initiatorShippedAt).toBeDefined();
+    expect(ship1Res.body.initiatorShipment).toMatchObject({
+      method: 'carrier',
+      carrierCode: 'GHN',
+      trackingCode: 'GHN888999',
+      notes: 'Sách đóng hộp chống sốc',
+    });
     expect(ship1Res.body.status).toBe('Preparing');
 
     // User2 ships -> status becomes InTransit
     const ship2Res = await post(
       `/exchanges/${exchangeId}/ship`,
-      { expectedVersion: ship1Res.body.revision },
+      {
+        expectedVersion: ship1Res.body.revision,
+        method: 'carrier',
+        carrierCode: 'GHTK',
+        carrierName: 'Giao Hàng Tiết Kiệm',
+        trackingCode: 'GHTK777888',
+      },
       user2,
     ).expect(200);
     expect(ship2Res.body.recipientShippedAt).toBeDefined();
+    expect(ship2Res.body.recipientShipment).toMatchObject({
+      method: 'carrier',
+      carrierCode: 'GHTK',
+      trackingCode: 'GHTK777888',
+    });
     expect(ship2Res.body.status).toBe('InTransit');
 
     // 6. Receiving
-    // User1 receives -> status becomes Delivered
+    // User1 receives -> status remains InTransit until both sides receive
     const rec1Res = await post(
       `/exchanges/${exchangeId}/receive`,
       { expectedVersion: ship2Res.body.revision },
       user1,
     ).expect(200);
     expect(rec1Res.body.initiatorReceivedAt).toBeDefined();
-    expect(rec1Res.body.status).toBe('Delivered');
+    expect(rec1Res.body.status).toBe('InTransit');
 
-    // User2 receives -> status becomes Completed!
+    // User2 receives -> both sides received, enters 48h Inspection Window (Delivered)!
     const rec2Res = await post(
       `/exchanges/${exchangeId}/receive`,
       { expectedVersion: rec1Res.body.revision },
       user2,
     ).expect(200);
     expect(rec2Res.body.recipientReceivedAt).toBeDefined();
-    expect(rec2Res.body.status).toBe('Completed');
+    expect(rec2Res.body.status).toBe('Delivered');
+    expect(rec2Res.body.inspectionDeadline).toBeDefined();
 
-    // 7. Verify listings are now Exchanged!
+    // 7. Early Satisfaction / Inspection Acceptance ("Nghiệm thu hài lòng")
+    // User1 confirms satisfaction -> mutual completion requires both sides
+    const comp1Res = await post(
+      `/exchanges/${exchangeId}/complete`,
+      { expectedVersion: rec2Res.body.revision },
+      user1,
+    ).expect(200);
+    expect(comp1Res.body.initiatorCompletedAt).toBeDefined();
+    expect(comp1Res.body.status).toBe('Delivered');
+
+    // User2 confirms satisfaction -> both sides satisfied, status becomes Completed
+    const comp2Res = await post(
+      `/exchanges/${exchangeId}/complete`,
+      { expectedVersion: comp1Res.body.revision },
+      user2,
+    ).expect(200);
+    expect(comp2Res.body.recipientCompletedAt).toBeDefined();
+    expect(comp2Res.body.status).toBe('Completed');
+    expect(comp2Res.body.completedAt).toBeDefined();
+
+    // 8. Verify listings are now Exchanged!
     const l1Final = await db.c.listings.findOne({ _id: l1.listingId });
     const l2Final = await db.c.listings.findOne({ _id: l2.listingId });
     expect(l1Final?.trade).toBe('Exchanged');
     expect(l2Final?.trade).toBe('Exchanged');
 
-    // 8. Verify ledger holds are released and reconciled!
+    // 9. Verify ledger holds are released and reconciled!
     const rec = await reconcile();
     expect(rec.balanced).toBe(true);
   });
@@ -1225,6 +1318,87 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
 
     expect(second.status).toBe('Proposed');
     expect(second.id).not.toBe(first.id);
+
+    const rec = await reconcile();
+    expect(rec.balanced).toBe(true);
+  });
+
+  it('P8. Tự động tất toán khi hết thời hạn kiểm tra hàng 48 giờ (Inspection Window Expiry Worker)', async () => {
+    const l1 = await createApprovedListing(user1, 100000, 'Both');
+    const l2 = await createApprovedListing(user2, 100000, 'Both');
+
+    const created = (
+      await post(
+        '/exchanges',
+        { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+        user1,
+      ).expect(201)
+    ).body;
+
+    await post(
+      `/exchanges/${created.id}/accept`,
+      { revision: created.revision },
+      user2,
+    ).expect(200);
+
+    await post(`/exchanges/${created.id}/funding`, {}, user1).expect(200);
+    const funded2 = (
+      await post(`/exchanges/${created.id}/funding`, {}, user2).expect(200)
+    ).body;
+
+    const shipped1 = (
+      await post(
+        `/exchanges/${created.id}/ship`,
+        { expectedVersion: funded2.revision },
+        user1,
+      ).expect(200)
+    ).body;
+
+    const shipped2 = (
+      await post(
+        `/exchanges/${created.id}/ship`,
+        { expectedVersion: shipped1.revision },
+        user2,
+      ).expect(200)
+    ).body;
+
+    const received1 = (
+      await post(
+        `/exchanges/${created.id}/receive`,
+        { expectedVersion: shipped2.revision },
+        user1,
+      ).expect(200)
+    ).body;
+
+    const received2 = (
+      await post(
+        `/exchanges/${created.id}/receive`,
+        { expectedVersion: received1.revision },
+        user2,
+      ).expect(200)
+    ).body;
+
+    expect(received2.status).toBe('Delivered');
+    expect(received2.inspectionDeadline).toBeDefined();
+
+    // Listings still Reserved during inspection window
+    const l1Check = await db.c.listings.findOne({ _id: l1.listingId });
+    expect(l1Check?.trade).toBe('Reserved');
+
+    // Simulate worker sweep after inspection deadline has passed
+    const afterDeadline = new Date(new Date(received2.inspectionDeadline).getTime() + 1000);
+    await worker.tick(afterDeadline);
+
+    // Verify exchange is now auto-settled to Completed!
+    const exDoc = await db.c.exchanges.findOne({ _id: created.id });
+    expect(exDoc?.status).toBe('Completed');
+    expect(exDoc?.completedAt).toBeDefined();
+
+    // Listings now Exchanged
+    const l1Final = await db.c.listings.findOne({ _id: l1.listingId });
+    const l2Final = await db.c.listings.findOne({ _id: l2.listingId });
+    expect(l1Final?.trade).toBe('Exchanged');
+    expect(l2Final?.trade).toBe('Exchanged');
 
     const rec = await reconcile();
     expect(rec.balanced).toBe(true);

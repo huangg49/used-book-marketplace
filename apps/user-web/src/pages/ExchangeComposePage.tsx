@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { z } from "zod";
 import {
   BookmarkPlus,
   Library,
@@ -11,6 +12,7 @@ import {
   PlusCircle,
 } from "lucide-react";
 import { useSession } from "../hooks/useSession";
+import { session } from "../lib/session";
 import { ROUTES, formatVnd } from "../lib/routes";
 import { getPublicListing, getPublicPhoto } from "../services/public-listings";
 import {
@@ -26,6 +28,22 @@ import {
 import { BookCover } from "../components/BookCover";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import styles from "./ExchangeComposePage.module.css";
+
+const addressBookSchema = z.object({
+  version: z.number().int(),
+  items: z.array(
+    z.object({
+      id: z.string().uuid(),
+      recipientName: z.string(),
+      phone: z.string(),
+      serviceAreaCode: z.string(),
+      localityCode: z.string(),
+      detail: z.string(),
+      isDefault: z.boolean(),
+      version: z.number().int(),
+    }),
+  ),
+});
 
 async function inventory() {
   const rows = [];
@@ -107,6 +125,19 @@ export default function ExchangeComposePage() {
     queryFn: inventory,
     enabled: auth.status === "authenticated",
   });
+  const addresses = useQuery({
+    queryKey: ["address-book"],
+    queryFn: () => session.request("/me/addresses", addressBookSchema),
+    enabled: auth.status === "authenticated",
+  });
+  const [deliveryAddressId, setDeliveryAddressId] = useState<string>("");
+  useEffect(() => {
+    if (addresses.data?.items?.length && !deliveryAddressId) {
+      const def = addresses.data.items.find((a) => a.isDefault);
+      setDeliveryAddressId(def ? def.id : addresses.data.items[0].id);
+    }
+  }, [addresses.data, deliveryAddressId]);
+
   const chosen = mine.data?.find((book) => book.id === selected);
   const targetBook = target.data;
   const eligible =
@@ -133,6 +164,7 @@ export default function ExchangeComposePage() {
         retained ?? {
           initiatorListingId: chosen!.id,
           recipientListingId: targetBook!.id,
+          deliveryAddressId: deliveryAddressId || undefined,
         },
       );
       setUnresolved(false);
@@ -370,14 +402,27 @@ export default function ExchangeComposePage() {
                 </p>
               </div>
               <div className={styles.formGroupBox}>
-                <h3>Sau khi chấp nhận</h3>
-                <p>
-                  Hai bên cần hoàn tất tiền cọc mô phỏng trong thời hạn trước
-                  khi gửi sách.
-                </p>
+                <h3>Địa chỉ nhận sách của bạn (TP.HCM)</h3>
+                {addresses.data?.items && addresses.data.items.length > 0 ? (
+                  <select
+                    className={styles.select}
+                    value={deliveryAddressId}
+                    onChange={(e) => setDeliveryAddressId(e.target.value)}
+                    disabled={busy}
+                  >
+                    {addresses.data.items.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.recipientName} · {item.phone} · {item.detail} ({item.localityCode})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className={styles.helpTextDesc}>
+                    Chưa có địa chỉ lưu sẵn. Bạn có thể thêm địa chỉ nhận hàng tại trang Tài khoản.
+                  </p>
+                )}
                 <p className={styles.helpTextDesc}>
-                  Lời nhắn và lựa chọn cách giao nhận chưa được hỗ trợ trong đề
-                  nghị hiện tại.
+                  Đối tác sẽ thấy địa chỉ này để gửi sách cho bạn sau khi cả hai bên đặt cọc.
                 </p>
               </div>
             </div>
@@ -414,6 +459,15 @@ export default function ExchangeComposePage() {
           <strong>Bạn giao:</strong> {chosen?.title}
         </div>
         <div className={styles.summarySection}>{moneyText}</div>
+        {deliveryAddressId && addresses.data?.items && (
+          <div className={styles.summarySection}>
+            <strong>Địa chỉ nhận của bạn:</strong>{" "}
+            {(() => {
+              const a = addresses.data.items.find((item) => item.id === deliveryAddressId);
+              return a ? `${a.recipientName} (${a.phone}) - ${a.detail}` : "";
+            })()}
+          </div>
+        )}
         <p>Máy chủ kiểm tra lại tình trạng bài đăng khi gửi.</p>
         {error && (
           <p role="alert" className={styles.errorText}>

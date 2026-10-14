@@ -464,12 +464,28 @@ export class MongoCommandService {
   }
   runExchange<C>(
     context: CommandContext,
-    operation: 'createExchangeProposal' | 'acceptExchange' | 'fundExchange' | 'cancelExchange' | 'rejectExchange' | 'shipExchange' | 'receiveExchange',
+    operation:
+      | 'createExchangeProposal'
+      | 'acceptExchange'
+      | 'counterExchangeProposal'
+      | 'fundExchange'
+      | 'cancelExchange'
+      | 'rejectExchange'
+      | 'shipExchange'
+      | 'receiveExchange'
+      | 'completeExchange',
     target: string | null,
     body: unknown,
     options: Options<C, ExchangeChange>,
   ) {
-    return this.execute(context, operation, target, body, options, (change, id, serverTime): Wire['Exchange'] => change.exchange);
+    return this.execute(
+      context,
+      operation,
+      target,
+      body,
+      options,
+      (change): Wire['Exchange'] => change.exchange,
+    );
   }
   systemPurchaseConversation<C>(
     key: string,

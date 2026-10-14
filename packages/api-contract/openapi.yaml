@@ -52,6 +52,7 @@ tags:
   - name: User administration
   - name: Wishlist
   - name: Auctions
+  - name: Reviews
 paths:
   /health:
     get:
@@ -7765,6 +7766,52 @@ paths:
           $ref: "#/components/responses/ListingError"
         "500":
           $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/counter:
+    post:
+      operationId: counterExchange
+      tags:
+        - Exchanges
+      description: Submit a counter-proposal for the exchange.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CounterExchangeProposal"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exchange"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
   /exchanges/{id}/funding:
     post:
       operationId: fundExchange
@@ -7923,7 +7970,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/VersionCommand"
+              $ref: "#/components/schemas/ShipExchangeCommand"
       responses:
         "200":
           description: OK
@@ -7989,6 +8036,289 @@ paths:
           $ref: "#/components/responses/ListingError"
         "500":
           $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/complete:
+    post:
+      operationId: completeExchange
+      tags:
+        - Exchanges
+      description: Participant confirms satisfaction during the inspection window to complete the exchange early.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VersionCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exchange"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/messages:
+    get:
+      operationId: getExchangeMessages
+      tags:
+        - Exchanges
+      description: Get messages in the exchange chat thread.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeMessagesResponse"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+    post:
+      operationId: sendExchangeMessage
+      tags:
+        - Exchanges
+      description: Send a message in the exchange chat thread.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExchangeMessage"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeMessage"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+  /shipments/carrier/calculate-fee:
+    post:
+      operationId: calculateCarrierFee
+      tags:
+        - Shipments
+      description: Calculate shipping fee between two addresses.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fromAddress
+                - toAddress
+              properties:
+                fromAddress:
+                  type: object
+                toAddress:
+                  type: object
+                carrierCode:
+                  type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /shipments/carrier/create:
+    post:
+      operationId: createCarrierShipment
+      tags:
+        - Shipments
+      description: Create a carrier shipment order.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - orderId
+                - sender
+                - receiver
+              properties:
+                orderId:
+                  type: string
+                carrierCode:
+                  type: string
+                sender:
+                  type: object
+                receiver:
+                  type: object
+                notes:
+                  type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /shipments/carrier/tracking/{code}:
+    get:
+      operationId: getCarrierTracking
+      tags:
+        - Shipments
+      description: Get tracking status for a shipment code.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: carrier
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /webhooks/carrier:
+    post:
+      operationId: carrierWebhookCallback
+      tags:
+        - Shipments
+      description: Receive webhook events from carrier partners.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - trackingCode
+                - status
+              properties:
+                trackingCode:
+                  type: string
+                status:
+                  type: string
+                description:
+                  type: string
+      responses:
+        "200":
+          description: OK
+          content:
+  /exchanges/{id}/reviews:
+    get:
+      operationId: getExchangeReviews
+      tags:
+        - Reviews
+      description: Get reviews for an exchange transaction.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewsResponse"
+    post:
+      operationId: createExchangeReview
+      tags:
+        - Reviews
+      description: Submit review for a completed exchange (FR-R01, FR-R02).
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExchangeReview"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
 components:
   securitySchemes:
     bearerAuth:
@@ -9798,13 +10128,21 @@ components:
             - AuctionOnHold
             - AuctionPaymentExpired
             - AuctionPaid
+            - ExchangeProposed
+            - ExchangeAccepted
+            - ExchangeFunded
+            - ExchangeShipped
+            - ExchangeReceived
+            - ExchangeCompleted
+            - ExchangeCancelled
+            - ExchangeRejected
         title: { type: string, maxLength: 120 }
         body: { type: string, maxLength: 400 }
-        targetType: { type: string, enum: [Auction] }
+        targetType: { type: string, enum: [Auction, Exchange] }
         targetId:
           type: string
           format: uuid
-          description: Opens with GET /auctions/{id}; the caller's own view comes from participation or point-order reads.
+          description: Opens with GET /auctions/{id} or GET /exchanges/{id}; the caller's own view comes from participation or point-order reads.
         createdAt: { type: string, format: date-time }
         readAt: { type: [string, "null"], format: date-time }
     MemberNotificationPage:
@@ -15017,6 +15355,42 @@ components:
             - type: string
               format: date-time
             - type: "null"
+        inspectionDeadline:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        completedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        initiatorCompletedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        recipientCompletedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        initiatorAddress:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeAddressSnapshot"
+            - type: "null"
+        recipientAddress:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeAddressSnapshot"
+            - type: "null"
+        initiatorShipment:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeShipmentInfo"
+            - type: "null"
+        recipientShipment:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeShipmentInfo"
+            - type: "null"
         createdAt:
           type: string
           format: date-time
@@ -15038,6 +15412,64 @@ components:
           anyOf:
             - type: string
             - type: "null"
+    ExchangeAddressSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+        - recipientName
+        - phone
+        - detail
+      properties:
+        recipientName:
+          type: string
+        phone:
+          type: string
+        detail:
+          type: string
+        localityCode:
+          type:
+            - string
+            - "null"
+        serviceAreaCode:
+          type:
+            - string
+            - "null"
+    ExchangeShipmentInfo:
+      type: object
+      additionalProperties: false
+      required:
+        - method
+      properties:
+        method:
+          type: string
+          enum:
+            - carrier
+            - direct
+        carrierCode:
+          type:
+            - string
+            - "null"
+        carrierName:
+          type:
+            - string
+            - "null"
+        trackingCode:
+          type:
+            - string
+            - "null"
+        meetupLocation:
+          type:
+            - string
+            - "null"
+        notes:
+          type:
+            - string
+            - "null"
+        shippedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
     CreateExchangeProposal:
       type: object
       additionalProperties: false
@@ -15051,6 +15483,9 @@ components:
         recipientListingId:
           type: string
           format: uuid
+        deliveryAddressId:
+          type: string
+          format: uuid
     AcceptExchange:
       type: object
       additionalProperties: false
@@ -15060,6 +15495,33 @@ components:
         revision:
           type: integer
           minimum: 1
+        deliveryAddressId:
+          type: string
+          format: uuid
+    ShipExchangeCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        method:
+          type: string
+          enum:
+            - carrier
+            - direct
+        carrierCode:
+          type: string
+        carrierName:
+          type: string
+        trackingCode:
+          type: string
+        meetupLocation:
+          type: string
+        notes:
+          type: string
     RejectExchangeCommand:
       type: object
       additionalProperties: false
@@ -15073,3 +15535,165 @@ components:
         reason:
           type: string
           minLength: 5
+    ExchangeMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - exchangeId
+        - senderId
+        - body
+        - sentAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        exchangeId:
+          type: string
+          format: uuid
+        senderId:
+          type: string
+          format: uuid
+        body:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+    CreateExchangeMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - body
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    ExchangeMessagesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExchangeMessage"
+    CounterExchangeProposal:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - diffAmount
+        - diffPayer
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        diffAmount:
+          type: integer
+          minimum: 0
+          maximum: 10000000
+        diffPayer:
+          type: string
+          enum:
+            - initiator
+            - recipient
+            - none
+        deliveryAddressId:
+          type: string
+          format: uuid
+        note:
+          type: string
+          maxLength: 500
+    CreateExchangeReview:
+      type: object
+      additionalProperties: false
+      required:
+        - bookRating
+        - partnerRating
+      properties:
+        bookRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        partnerRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        tags:
+          type: array
+          items:
+            type: string
+        comment:
+          type: string
+          maxLength: 1000
+    ExchangeReviewItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - exchangeId
+        - authorId
+        - targetUserId
+        - bookRating
+        - partnerRating
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        exchangeId:
+          type: string
+          format: uuid
+        authorId:
+          type: string
+          format: uuid
+        authorName:
+          type: string
+        targetUserId:
+          type: string
+          format: uuid
+        bookRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        partnerRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        tags:
+          type: array
+          items:
+            type: string
+        comment:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ExchangeReviewsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - canReview
+      properties:
+        canReview:
+          type: boolean
+        deadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+        myReview:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeReviewItem"
+            - type: "null"
+        partnerReview:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeReviewItem"
+            - type: "null"
+
+
