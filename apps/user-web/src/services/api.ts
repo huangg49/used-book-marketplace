@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { session } from '../lib/session';
 
-// Axios instance gọi thẳng backend; không dùng proxy /api của Vite.
+// Axios dùng API base cấu hình; /api/v1 đi qua proxy Vite trên cùng origin.
 // session.request() đã xử lý token rotation — axios instance này chỉ cho
 // các endpoint công khai không cần auth hoặc khi muốn dùng API style quen thuộc.
 // TODO: thêm interceptor refresh token nếu cần gọi API riêng ngoài session.request().

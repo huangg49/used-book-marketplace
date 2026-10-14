@@ -1,0 +1,79 @@
+.page {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  color: var(--shop-ink);
+}
+.page h1 {
+  font-size: 2rem;
+  margin: 1.5rem 0 0.75rem;
+}
+.page h2 {
+  font-size: 1.2rem;
+  margin: 1.5rem 0 0.75rem;
+}
+.balances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 1rem 0;
+  border-block: 1px solid var(--shop-line);
+}
+.balances dt {
+  font-size: 0.875rem;
+}
+.balances dd {
+  font-weight: 700;
+  margin: 0.5rem 0 0;
+  font-size: 1.5rem;
+}
+.form {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+.page input {
+  width: 100%;
+  min-height: 3rem;
+  border: 1px solid var(--shop-line);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  background: var(--shop-paper);
+  color: inherit;
+}
+.page button {
+  min-height: 2.75rem;
+  padding: 0.6rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid currentColor;
+  font: inherit;
+  cursor: pointer;
+}
+.form > button {
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+}
+.page button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.page :focus-visible {
+  outline: 3px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+.result {
+  border-left: 3px solid var(--shop-wine);
+  padding-left: 1rem;
+}
+.history {
+  padding-left: 1.25rem;
+}
+.history li {
+  margin-block: 0.75rem;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 480px) {
+  .balances {
+    flex-direction: column;
+  }
+}
