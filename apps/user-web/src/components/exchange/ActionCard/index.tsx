@@ -175,17 +175,6 @@ export function ActionCard(props: Props) {
       setCounterOpen(true);
       return;
     }
-    if (next === "accept") {
-      setBusy(true);
-      try {
-        await props.onAccept(selectedAddressId || undefined);
-      } catch (failure) {
-        setError(exchangeError(failure));
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
     setAction(next);
   };
 
@@ -227,7 +216,7 @@ export function ActionCard(props: Props) {
   }
 
   async function confirm() {
-    if (!action || busy || action === "counter" || action === "accept") return;
+    if (!action || busy || action === "counter") return;
     if (
       action === "reject" &&
       (reason.trim().length < 5 || reason.trim().length > 300)
@@ -238,7 +227,8 @@ export function ActionCard(props: Props) {
     setBusy(true);
     setError("");
     try {
-      const run: Record<Exclude<Action, "counter" | "accept">, () => Promise<void>> = {
+      const run: Record<Exclude<Action, "counter">, () => Promise<void>> = {
+        accept: () => props.onAccept(selectedAddressId || undefined),
         cancel: props.onCancel,
         reject: () => props.onReject(reason.trim()),
         fund: props.onFund,
@@ -313,7 +303,7 @@ export function ActionCard(props: Props) {
                 }
                 onClick={() => void open(next)}
               >
-                {busy && next === "accept" ? "Đang xử lý..." : labels[next]}
+                {labels[next]}
               </button>
             );
           })
@@ -374,13 +364,15 @@ export function ActionCard(props: Props) {
         onConfirm={() => void confirm()}
       >
         <p>
-          {action === "fund"
-            ? `Giữ ${formatVnd(detail.viewerFundingAmount ?? 0)} từ ví mô phỏng. Kiểm tra khoản tiền trước khi xác nhận.`
-            : action === "retry"
-              ? "Gửi lại đúng mã và nội dung của thao tác trước để xác nhận kết quả."
-              : action === "complete"
-                ? "Bạn xác nhận sách nhận được đúng tình trạng thỏa thuận và hài lòng với chất lượng? Khi cả hai bên cùng nghiệm thu hài lòng (hoặc hết hạn 48h kiểm tra), giao dịch sẽ hoàn tất và tiền cọc bảo chứng sẽ được giải phóng ngay."
-                : "Kiểm tra thông tin trước khi xác nhận thao tác này."}
+          {action === "accept"
+            ? "Bằng việc chấp nhận, bạn đồng ý với các điều khoản trao đổi."
+            : action === "fund"
+              ? `Giữ ${formatVnd(detail.viewerFundingAmount ?? 0)} từ ví mô phỏng. Kiểm tra khoản tiền trước khi xác nhận.`
+              : action === "retry"
+                ? "Gửi lại đúng mã và nội dung của thao tác trước để xác nhận kết quả."
+                : action === "complete"
+                  ? "Bạn xác nhận sách nhận được đúng tình trạng thỏa thuận và hài lòng với chất lượng? Khi cả hai bên cùng nghiệm thu hài lòng (hoặc hết hạn 48h kiểm tra), giao dịch sẽ hoàn tất và tiền cọc bảo chứng sẽ được giải phóng ngay."
+                  : "Kiểm tra thông tin trước khi xác nhận thao tác này."}
         </p>
         {action === "reject" && (
           <>
