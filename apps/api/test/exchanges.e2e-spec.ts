@@ -544,14 +544,14 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     expect(ship2Res.body.status).toBe('InTransit');
 
     // 6. Receiving
-    // User1 receives -> status becomes Delivered
+    // User1 receives -> status remains InTransit until both sides receive
     const rec1Res = await post(
       `/exchanges/${exchangeId}/receive`,
       { expectedVersion: ship2Res.body.revision },
       user1,
     ).expect(200);
     expect(rec1Res.body.initiatorReceivedAt).toBeDefined();
-    expect(rec1Res.body.status).toBe('Delivered');
+    expect(rec1Res.body.status).toBe('InTransit');
 
     // User2 receives -> both sides received, enters 48h Inspection Window (Delivered)!
     const rec2Res = await post(
@@ -564,13 +564,24 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     expect(rec2Res.body.inspectionDeadline).toBeDefined();
 
     // 7. Early Satisfaction / Inspection Acceptance ("Nghiệm thu hài lòng")
-    const compRes = await post(
+    // User1 confirms satisfaction -> mutual completion requires both sides
+    const comp1Res = await post(
       `/exchanges/${exchangeId}/complete`,
       { expectedVersion: rec2Res.body.revision },
       user1,
     ).expect(200);
-    expect(compRes.body.status).toBe('Completed');
-    expect(compRes.body.completedAt).toBeDefined();
+    expect(comp1Res.body.initiatorCompletedAt).toBeDefined();
+    expect(comp1Res.body.status).toBe('Delivered');
+
+    // User2 confirms satisfaction -> both sides satisfied, status becomes Completed
+    const comp2Res = await post(
+      `/exchanges/${exchangeId}/complete`,
+      { expectedVersion: comp1Res.body.revision },
+      user2,
+    ).expect(200);
+    expect(comp2Res.body.recipientCompletedAt).toBeDefined();
+    expect(comp2Res.body.status).toBe('Completed');
+    expect(comp2Res.body.completedAt).toBeDefined();
 
     // 8. Verify listings are now Exchanged!
     const l1Final = await db.c.listings.findOne({ _id: l1.listingId });
