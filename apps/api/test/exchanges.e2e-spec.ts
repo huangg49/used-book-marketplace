@@ -391,8 +391,6 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       detail: '123 Nguyễn Huệ',
       isDefault: true,
       createdAt: new Date(),
-      updatedAt: new Date(),
-      lockSeq: 0,
     };
     const addr2 = {
       _id: randomUUID(),
@@ -405,8 +403,6 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       detail: '456 Lê Văn Sỹ',
       isDefault: true,
       createdAt: new Date(),
-      updatedAt: new Date(),
-      lockSeq: 0,
     };
     await db.c.member_addresses.insertMany([addr1, addr2]);
 
