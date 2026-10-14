@@ -294,6 +294,13 @@ try {
   );
   assert.equal(final.status, "Cancelled");
   assert.ok(final.revision > 1);
+  await page
+    .getByRole("link", { name: "Trao đổi của tôi", exact: true })
+    .click();
+  await page.getByRole("tab", { name: /Hoàn tất/ }).click();
+  // Install the denial only after leaving the open detail. Its background
+  // refresh must not remove the navigation link before this test clicks it.
+  await page.getByRole("link", { name: /Xem chi tiết/ }).first().waitFor();
   await page.route(`**/api/v1/exchanges/${id}`, (route) =>
     route.fulfill({
       status: 403,
@@ -301,10 +308,6 @@ try {
       body: JSON.stringify({ code: "Forbidden", message: "QA rejection" }),
     }),
   );
-  await page
-    .getByRole("link", { name: "Trao đổi của tôi", exact: true })
-    .click();
-  await page.getByRole("tab", { name: /Hoàn tất/ }).click();
   await page
     .getByRole("link", { name: /Xem chi tiết/ })
     .first()

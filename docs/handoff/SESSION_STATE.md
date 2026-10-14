@@ -170,6 +170,14 @@ quá hạn) chưa làm: READINESS vẫn chặn mở rộng nghiệp vụ, cần 
   journal/entry/sequence và negative privilege/validator checks. Không đổi source
   ứng dụng/migration/timeout CI. Hai E2E này local2PASS; API lint/typecheck và docs
   PASS. Bảy workflow khác ở b2bb37b PASS; check bản mới theo head PR42.
+- [API CI tại8c48627](https://github.com/huangg49/used-book-marketplace/actions/runs/38649179034)
+  PASS; bảy workflow xanh, User Web FAIL ở exchange browser: mock403 được bật
+  khi detail còn mở, polling5s có thể ẩn link trước khi test điều hướng. Commit
+  subject `test(web): isolate exchange denial from detail polling` chỉ bật mock
+  sau khi về danh sách Hoàn tất; giữ kiểm tra màn lỗi và không lộ đối tác, cùng
+  các ca lost ACK/replay/funding/cancel. Browser API thật/QA Mongo/storage fake
+  với `CI=true` local PASS; web lint PASS với bốn warning cũ. Không đổi ứng dụng,
+  timeout hay bỏ test; CI bản sửa đối chiếu theo head PR42.
 - API có9lint warning cũ, Web bundle warning lớn. Full tạo→pay→credit merchant thật,
   native/human NOT RUN; remote CI theo head PR; không tự giải quyết ReviewRequired hoặc query
   non-success. READINESS không đổi; WIP khác bảo toàn; chưa merge/deploy. Bước tiếp:
