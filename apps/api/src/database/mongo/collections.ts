@@ -103,6 +103,8 @@ export interface CollectionTypes {
   price_lookups: D.PriceLookupDoc;
   online_price_offers: D.OnlinePriceOfferDoc;
   exchanges: D.ExchangeDoc;
+  exchange_messages: D.ExchangeMessageDoc;
+  transaction_reviews: D.TransactionReviewDoc;
 }
 export type CollectionName = keyof CollectionTypes;
 
@@ -259,6 +261,8 @@ const NAMES: CollectionName[] = [
   'point_returns',
   'member_violations',
   'exchanges',
+  'exchange_messages',
+  'transaction_reviews',
 ];
 export const COLLECTION_NAMES: readonly CollectionName[] = NAMES;
 

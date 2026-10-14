@@ -20,7 +20,11 @@ export function useOpenNotification() {
       void markNotificationsRead({ ids: [n.id] })
         .catch(() => undefined)
         .finally(() => void queryClient.invalidateQueries({ queryKey: ['notifications'] }))
-    navigate(ROUTES.auctionDetail(n.targetId))
+    if (n.targetType === 'Exchange') {
+      navigate(`/exchange/${n.targetId}`)
+    } else {
+      navigate(ROUTES.auctionDetail(n.targetId))
+    }
   }
 }
 

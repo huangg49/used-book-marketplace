@@ -19,6 +19,7 @@ import { AuctionsModule } from './modules/auctions/auctions.module.js';
 import { PurchasesModule } from './modules/purchases/purchases.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { ExchangesModule } from './modules/exchanges/exchanges.module.js';
+import { ReviewsModule } from './modules/reviews/reviews.module.js';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { ExchangesModule } from './modules/exchanges/exchanges.module.js';
     PurchasesModule,
     NotificationsModule,
     ExchangesModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

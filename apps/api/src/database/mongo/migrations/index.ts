@@ -10,6 +10,14 @@ import {
   exchangesPhase3Migration,
   withExchangePhase3Changes,
 } from './0018-exchanges-proposal-expiry.js';
+import {
+  exchangesPhase4Migration,
+  withExchangePhase4Changes,
+} from './0022-exchange-completion.js';
+import {
+  exchangeMessageSpecs,
+  exchangeMessagesMigration,
+} from './0023-exchange-messages.js';
 import { createHash } from 'node:crypto';
 import {
   catalogVocabularyV2Migration,
@@ -92,6 +100,18 @@ import {
   directDeliveryCompletionLegacyShapeMigration,
   withDirectDeliveryCompletionLegacyShape,
 } from './0021-direct-delivery-completion-legacy-shape.js';
+import {
+  exchangeNotificationsMigration,
+  withExchangeNotificationChanges,
+} from './0024-exchange-notifications.js';
+import {
+  exchangeReviewsMigration,
+  transactionReviewSpecs,
+} from './0025-exchange-reviews.js';
+import {
+  exchangeMutualCompletionMigration,
+  withExchangePhase5Changes,
+} from './0026-exchange-mutual-completion.js';
 
 export interface Migration {
   id: string;
@@ -181,6 +201,11 @@ export const migrations: Migration[] = [
   exchangesPhase3Migration,
   directDeliveryCompletionMigration,
   directDeliveryCompletionLegacyShapeMigration,
+  exchangesPhase4Migration,
+  exchangeMessagesMigration,
+  exchangeNotificationsMigration,
+  exchangeReviewsMigration,
+  exchangeMutualCompletionMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -221,11 +246,15 @@ export const currentCollections = (): CollectionSpec[] => [
   ...settlementCollectionSpecs.map(withRulesChanges),
   ...rulesCollectionSpecs,
   ...purchaseConversationSpecs,
-  ...notificationSpecs,
+  ...notificationSpecs.map(withExchangeNotificationChanges),
   ...accountRecoverySpecs,
   ...authOtpSpecs,
   ...exchangeCollectionSpecs
     .map(withExchangePhase2Changes)
-    .map(withExchangePhase3Changes),
+    .map(withExchangePhase3Changes)
+    .map(withExchangePhase4Changes)
+    .map(withExchangePhase5Changes),
   ...directDeliveryCompletionSpecs,
+  ...exchangeMessageSpecs,
+  ...transactionReviewSpecs,
 ];

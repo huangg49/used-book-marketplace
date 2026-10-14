@@ -2,9 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import type {
+  ExchangeAddressSnapshot,
   ExchangeCancelReason,
   ExchangeCancelledBy,
   ExchangeDoc,
+  ExchangeShipmentSnapshot,
   ListingDoc,
 } from '../../database/mongo/documents.js';
 import type { Tx } from '../../database/mongo/transaction.js';
@@ -24,6 +26,7 @@ import {
 } from '../commands/domain-error.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
 import { LedgerService } from '../wallet/ledger.service.js';
+import { notifyExchange } from './exchange-notifications.js';
 
 @Injectable()
 export class ExchangesService {
@@ -122,6 +125,36 @@ export class ExchangesService {
       { returnDocument: 'after' },
     );
     if (!next) throw conflict();
+
+    let notifyRecipients: string[] = [];
+    let reasonText = '';
+    if (cancelledBy === 'Initiator') {
+      notifyRecipients = [next.recipientId];
+      reasonText = 'Người khởi tạo đã hủy giao dịch';
+    } else if (cancelledBy === 'Recipient') {
+      notifyRecipients = [next.initiatorId];
+      reasonText = 'Đối tác đã hủy giao dịch';
+    } else if (cancelledBy === 'System') {
+      if (reason === 'FundingExpired') {
+        notifyRecipients = [next.initiatorId, next.recipientId];
+        reasonText = 'Hết thời hạn nạp cọc bảo chứng (24 giờ)';
+      } else if (reason === 'ProposalExpired') {
+        notifyRecipients = [next.initiatorId];
+        reasonText = 'Hết thời hạn chờ phản hồi đề xuất';
+      }
+    }
+
+    if (notifyRecipients.length) {
+      await notifyExchange(
+        tx,
+        next,
+        'ExchangeCancelled',
+        notifyRecipients,
+        now,
+        { reason: reasonText },
+      );
+    }
+
     return next;
   }
 
@@ -162,6 +195,54 @@ export class ExchangesService {
       recipientShippedAt: row.recipientShippedAt?.toISOString() ?? null,
       initiatorReceivedAt: row.initiatorReceivedAt?.toISOString() ?? null,
       recipientReceivedAt: row.recipientReceivedAt?.toISOString() ?? null,
+      inspectionDeadline: row.inspectionDeadline?.toISOString() ?? null,
+      completedAt: row.completedAt?.toISOString() ?? null,
+      initiatorCompletedAt: row.initiatorCompletedAt?.toISOString() ?? null,
+      recipientCompletedAt: row.recipientCompletedAt?.toISOString() ?? null,
+      initiatorAddress: row.initiatorAddress
+        ? {
+            recipientName: row.initiatorAddress.recipientName,
+            phone: row.initiatorAddress.phone,
+            detail: row.initiatorAddress.detail,
+            localityCode: row.initiatorAddress.localityCode ?? null,
+            serviceAreaCode: row.initiatorAddress.serviceAreaCode ?? null,
+          }
+        : null,
+      recipientAddress: row.recipientAddress
+        ? {
+            recipientName: row.recipientAddress.recipientName,
+            phone: row.recipientAddress.phone,
+            detail: row.recipientAddress.detail,
+            localityCode: row.recipientAddress.localityCode ?? null,
+            serviceAreaCode: row.recipientAddress.serviceAreaCode ?? null,
+          }
+        : null,
+      initiatorShipment: row.initiatorShipment
+        ? {
+            method: row.initiatorShipment.method,
+            carrierCode: row.initiatorShipment.carrierCode ?? null,
+            carrierName: row.initiatorShipment.carrierName ?? null,
+            trackingCode: row.initiatorShipment.trackingCode ?? null,
+            meetupLocation: row.initiatorShipment.meetupLocation ?? null,
+            notes: row.initiatorShipment.notes ?? null,
+            shippedAt: row.initiatorShipment.shippedAt
+              ? new Date(row.initiatorShipment.shippedAt).toISOString()
+              : null,
+          }
+        : null,
+      recipientShipment: row.recipientShipment
+        ? {
+            method: row.recipientShipment.method,
+            carrierCode: row.recipientShipment.carrierCode ?? null,
+            carrierName: row.recipientShipment.carrierName ?? null,
+            trackingCode: row.recipientShipment.trackingCode ?? null,
+            meetupLocation: row.recipientShipment.meetupLocation ?? null,
+            notes: row.recipientShipment.notes ?? null,
+            shippedAt: row.recipientShipment.shippedAt
+              ? new Date(row.recipientShipment.shippedAt).toISOString()
+              : null,
+          }
+        : null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
@@ -248,6 +329,23 @@ export class ExchangesService {
             diffPayerId = recipientListing.ownerId;
           }
 
+          let initiatorAddress: ExchangeAddressSnapshot | null = null;
+          if (body.deliveryAddressId) {
+            const addr = await tx.c.member_addresses.findOne({
+              _id: body.deliveryAddressId,
+              ownerId: actor._id,
+            });
+            if (addr) {
+              initiatorAddress = {
+                recipientName: addr.recipientName,
+                phone: addr.phone,
+                detail: addr.detail,
+                localityCode: addr.localityCode ?? null,
+                serviceAreaCode: addr.serviceAreaCode ?? null,
+              };
+            }
+          }
+
           const now = await tx.now();
           const proposalExpiresAt = new Date(
             now.getTime() + proposalTtlHours * 3_600_000,
@@ -278,12 +376,26 @@ export class ExchangesService {
             recipientShippedAt: null,
             initiatorReceivedAt: null,
             recipientReceivedAt: null,
+            inspectionDeadline: null,
+            completedAt: null,
+            initiatorAddress,
+            recipientAddress: null,
+            initiatorShipment: null,
+            recipientShipment: null,
             createdAt: now,
             updatedAt: now,
             lockSeq: 0,
           };
 
           await tx.c.exchanges.insertOne(row);
+
+          await notifyExchange(
+            tx,
+            row,
+            'ExchangeProposed',
+            [row.recipientId],
+            now,
+          );
 
           return {
             entityType: 'Exchange',
@@ -410,12 +522,30 @@ export class ExchangesService {
         // 24-hour funding deadline per POL-05
         const fundingDeadline = new Date(now.getTime() + 24 * 3600_000);
 
+        let recipientAddress: ExchangeAddressSnapshot | null = null;
+        if (body.deliveryAddressId) {
+          const addr = await tx.c.member_addresses.findOne({
+            _id: body.deliveryAddressId,
+            ownerId: actor._id,
+          });
+          if (addr) {
+            recipientAddress = {
+              recipientName: addr.recipientName,
+              phone: addr.phone,
+              detail: addr.detail,
+              localityCode: addr.localityCode ?? null,
+              serviceAreaCode: addr.serviceAreaCode ?? null,
+            };
+          }
+        }
+
         const next = await tx.c.exchanges.findOneAndUpdate(
           { _id: exchange._id, revision: exchange.revision, status: 'Proposed' },
           {
             $set: {
               status: 'AcceptedAwaitingFunding',
               fundingDeadline,
+              recipientAddress: recipientAddress ?? exchange.recipientAddress ?? null,
               updatedAt: now,
             },
             $inc: { revision: 1 },
@@ -423,6 +553,14 @@ export class ExchangesService {
           { returnDocument: 'after' },
         );
         if (!next) throw conflict();
+
+        await notifyExchange(
+          tx,
+          next,
+          'ExchangeAccepted',
+          [next.initiatorId, next.recipientId],
+          now,
+        );
 
         return {
           entityType: 'Exchange',
@@ -435,6 +573,182 @@ export class ExchangesService {
           exchange: this.view(next),
         };
       },
+    });
+  }
+
+  counter(
+    context: CommandContext,
+    id: string,
+    body: Wire['CounterExchangeProposal'],
+  ) {
+    return this.commands.runExchange(
+      context,
+      'counterExchangeProposal',
+      id,
+      body,
+      {
+        discover: async (tx) => {
+          const exchange = await tx.c.exchanges.findOne({ _id: id });
+          return [exchange?.initiatorId, exchange?.recipientId].filter(
+            Boolean,
+          ) as string[];
+        },
+        authorize: async (tx, actor) => {
+          member(actor);
+          return this.exchange(tx, id);
+        },
+        mutate: async (tx, actor, initialExchange) => {
+          requireActive(actor);
+          this.participant(initialExchange, actor._id);
+
+          const exchange = await this.exchange(tx, initialExchange._id);
+
+          if (exchange.status !== 'Proposed') {
+            throw invalidState();
+          }
+          if (exchange.revision !== body.expectedVersion) {
+            throw conflict();
+          }
+
+          const now = await tx.now();
+          if (exchange.proposalExpiresAt && now >= exchange.proposalExpiresAt) {
+            throw invalidState();
+          }
+
+          let diffPayerId: string | null = null;
+          if (body.diffPayer === 'initiator') {
+            diffPayerId = exchange.initiatorId;
+          } else if (body.diffPayer === 'recipient') {
+            diffPayerId = exchange.recipientId;
+          }
+
+          let updatedAddress: ExchangeAddressSnapshot | null = null;
+          if (body.deliveryAddressId) {
+            const addr = await tx.c.member_addresses.findOne({
+              _id: body.deliveryAddressId,
+              ownerId: actor._id,
+            });
+            if (addr) {
+              updatedAddress = {
+                recipientName: addr.recipientName,
+                phone: addr.phone,
+                detail: addr.detail,
+                localityCode: addr.localityCode ?? null,
+                serviceAreaCode: addr.serviceAreaCode ?? null,
+              };
+            }
+          }
+
+          const isInitiator = actor._id === exchange.initiatorId;
+          const setFields: Record<string, unknown> = {
+            diffAmount: body.diffAmount,
+            diffPayerId,
+            updatedAt: now,
+          };
+          if (updatedAddress) {
+            if (isInitiator) {
+              setFields.initiatorAddress = updatedAddress;
+            } else {
+              setFields.recipientAddress = updatedAddress;
+            }
+          }
+
+          const next = await tx.c.exchanges.findOneAndUpdate(
+            { _id: exchange._id, revision: exchange.revision, status: 'Proposed' },
+            {
+              $set: setFields,
+              $inc: { revision: 1 },
+            },
+            { returnDocument: 'after' },
+          );
+          if (!next) throw conflict();
+
+          // Also insert a notification in exchange_messages so both parties see it in chat
+          const payerLabel =
+            body.diffPayer === 'none'
+              ? 'Đổi ngang giá (không bù tiền)'
+              : (body.diffPayer === (isInitiator ? 'initiator' : 'recipient')
+                  ? 'Tôi bù thêm '
+                  : 'Đối tác bù thêm ') +
+                body.diffAmount.toLocaleString('vi-VN') +
+                ' đ';
+          const addressPart = updatedAddress
+            ? `\n• Địa chỉ nhận mới: ${updatedAddress.recipientName} - ${updatedAddress.phone}, ${updatedAddress.detail} (${updatedAddress.localityCode ?? 'TP.HCM'})`
+            : '';
+          const notePart = body.note?.trim()
+            ? `\nLời nhắn: ${body.note.trim()}`
+            : '';
+          await tx.c.exchange_messages.insertOne({
+            _id: randomUUID(),
+            exchangeId: exchange._id,
+            senderId: actor._id,
+            body: `[Đề xuất lại điều khoản]\n• Tiền bù: ${payerLabel}${addressPart}${notePart}`,
+            sentAt: now,
+          });
+
+          return {
+            entityType: 'Exchange',
+            entityId: next._id,
+            initiatorListingId: next.initiatorListingId,
+            version: next.revision,
+            state: next.status as Wire['ExchangeStatus'],
+            decidedAt: now,
+            event: 'ExchangeCounterProposed',
+            exchange: this.view(next),
+          };
+        },
+      },
+    );
+  }
+
+  getMessages(auth: Actor, id: string) {
+    return this.commands.read(auth, async (tx, actor) => {
+      const exchange = await this.exchange(tx, id);
+      this.participant(exchange, actor._id);
+      const rows = await tx.c.exchange_messages
+        .find({ exchangeId: id }, { sort: { sentAt: 1, _id: 1 }, limit: 500 })
+        .toArray();
+      return {
+        items: rows.map((m) => ({
+          id: m._id,
+          exchangeId: m.exchangeId,
+          senderId: m.senderId,
+          body: m.body,
+          sentAt: m.sentAt.toISOString(),
+        })),
+      };
+    });
+  }
+
+  sendMessage(
+    auth: Actor,
+    id: string,
+    body: Wire['CreateExchangeMessage'],
+  ) {
+    return this.commands.read(auth, async (tx, actor) => {
+      const text = body.body.trim();
+      if (!text || [...text].length > 1000) throw invalidState();
+
+      const exchange = await this.exchange(tx, id);
+      this.participant(exchange, actor._id);
+
+      const now = await tx.now();
+      const messageId = randomUUID();
+      await tx.c.exchange_messages.insertOne({
+        _id: messageId,
+        exchangeId: exchange._id,
+        senderId: actor._id,
+        body: text,
+        sentAt: now,
+      });
+
+      return {
+        id: messageId,
+        exchangeId: exchange._id,
+        senderId: actor._id,
+        body: text,
+        sentAt: now.toISOString(),
+      };
     });
   }
 
@@ -530,6 +844,11 @@ export class ExchangesService {
         );
 
         if (!next) throw conflict();
+
+        const otherUserId = isInitiator
+          ? exchange.recipientId
+          : exchange.initiatorId;
+        await notifyExchange(tx, next, 'ExchangeFunded', [otherUserId], now);
 
         return {
           entityType: 'Exchange',
@@ -670,6 +989,15 @@ export class ExchangesService {
         );
         if (!next) throw conflict();
 
+        await notifyExchange(
+          tx,
+          next,
+          'ExchangeRejected',
+          [next.initiatorId],
+          now,
+          { reason: body.reason },
+        );
+
         return {
           entityType: 'Exchange',
           entityId: next._id,
@@ -684,7 +1012,7 @@ export class ExchangesService {
     });
   }
 
-  ship(context: CommandContext, id: string, body: Wire['VersionCommand']) {
+  ship(context: CommandContext, id: string, body: Wire['ShipExchangeCommand']) {
     return this.commands.runExchange(context, 'shipExchange', id, body, {
       discover: async (tx) => {
         const exchange = await tx.c.exchanges.findOne({ _id: id });
@@ -717,8 +1045,23 @@ export class ExchangesService {
 
         const now = await tx.now();
         const setFields: Record<string, unknown> = { updatedAt: now };
-        if (isInitiator) setFields.initiatorShippedAt = now;
-        else setFields.recipientShippedAt = now;
+        const shipmentSnapshot: ExchangeShipmentSnapshot = {
+          method: (body.method as 'carrier' | 'direct') ?? 'carrier',
+          carrierCode: body.carrierCode ?? null,
+          carrierName: body.carrierName ?? null,
+          trackingCode: body.trackingCode ?? null,
+          meetupLocation: body.meetupLocation ?? null,
+          notes: body.notes ?? null,
+          shippedAt: now,
+        };
+
+        if (isInitiator) {
+          setFields.initiatorShippedAt = now;
+          setFields.initiatorShipment = shipmentSnapshot;
+        } else {
+          setFields.recipientShippedAt = now;
+          setFields.recipientShipment = shipmentSnapshot;
+        }
 
         const willBeBothShipped =
           (isInitiator
@@ -734,6 +1077,13 @@ export class ExchangesService {
           { returnDocument: 'after' },
         );
         if (!next) throw conflict();
+
+        const otherUserId = isInitiator
+          ? exchange.recipientId
+          : exchange.initiatorId;
+        await notifyExchange(tx, next, 'ExchangeShipped', [otherUserId], now, {
+          trackingCode: body.trackingCode ?? undefined,
+        });
 
         return {
           entityType: 'Exchange',
@@ -791,18 +1141,104 @@ export class ExchangesService {
             : exchange.initiatorReceivedAt) != null;
 
         if (willBeBothReceived) {
-          setFields.status = 'Completed';
+          const inspectionHours = Number(
+            this.config.get('EXCHANGE_INSPECTION_HOURS') ?? 48,
+          );
+          setFields.status = 'Delivered';
+          setFields.inspectionDeadline = new Date(
+            now.getTime() + inspectionHours * 3_600_000,
+          );
+        }
 
-          // Settle holds: release deposits back to owners, transfer diffAmount
+        const next = await tx.c.exchanges.findOneAndUpdate(
+          { _id: exchange._id, revision: exchange.revision },
+          { $set: setFields, $inc: { revision: 1 } },
+          { returnDocument: 'after' },
+        );
+        if (!next) throw conflict();
+
+        const otherUserId = isInitiator
+          ? exchange.recipientId
+          : exchange.initiatorId;
+        await notifyExchange(tx, next, 'ExchangeReceived', [otherUserId], now);
+
+        return {
+          entityType: 'Exchange',
+          entityId: next._id,
+          initiatorListingId: next.initiatorListingId,
+          version: next.revision,
+          state: next.status as Wire['ExchangeStatus'],
+          decidedAt: now,
+          event: 'ExchangeReceived',
+          exchange: this.view(next),
+        };
+      },
+    });
+  }
+
+  complete(context: CommandContext, id: string, body: Wire['VersionCommand']) {
+    return this.commands.runExchange<ExchangeDoc>(context, 'completeExchange', id, body, {
+      discover: async (tx) => {
+        const exchange = await tx.c.exchanges.findOne({ _id: id });
+        return [exchange?.initiatorId, exchange?.recipientId].filter(
+          Boolean,
+        ) as string[];
+      },
+      authorize: async (tx, actor) => {
+        member(actor);
+        return this.exchange(tx, id);
+      },
+      mutate: async (tx, actor, initialExchange) => {
+        requireActive(actor);
+        this.participant(initialExchange, actor._id);
+
+        await tx.lock('exchanges', [initialExchange._id]);
+        const exchange = await this.exchange(tx, initialExchange._id);
+
+        if (
+          exchange.status !== 'Delivered' ||
+          !exchange.initiatorReceivedAt ||
+          !exchange.recipientReceivedAt
+        ) {
+          throw invalidState();
+        }
+        if (exchange.revision !== body.expectedVersion) {
+          throw conflict();
+        }
+
+        const isInitiator = exchange.initiatorId === actor._id;
+        if (
+          (isInitiator && exchange.initiatorCompletedAt) ||
+          (!isInitiator && exchange.recipientCompletedAt)
+        ) {
+          throw invalidState();
+        }
+
+        const now = await tx.now();
+        const setFields: Record<string, unknown> = { updatedAt: now };
+        if (isInitiator) {
+          setFields.initiatorCompletedAt = now;
+        } else {
+          setFields.recipientCompletedAt = now;
+        }
+
+        const willBeBothCompleted =
+          (isInitiator
+            ? exchange.recipientCompletedAt
+            : exchange.initiatorCompletedAt) != null;
+
+        if (willBeBothCompleted) {
+          setFields.status = 'Completed';
+          setFields.completedAt = now;
+
           const updatedForSettlement: ExchangeDoc = {
             ...exchange,
+            ...setFields,
             status: 'Completed',
-            initiatorReceivedAt: isInitiator ? now : exchange.initiatorReceivedAt,
-            recipientReceivedAt: !isInitiator ? now : exchange.recipientReceivedAt,
+            completedAt: now,
           };
           await this.ledger.settleExchange(tx, updatedForSettlement, now);
 
-          // Project listings from Reserved to Exchanged
           const { initListing, recListing } = await this.lockListingsOrdered(
             tx,
             exchange.initiatorListingId,
@@ -822,16 +1258,27 @@ export class ExchangesService {
             'Reserved',
             'Exchanged',
           );
-        } else if (exchange.status === 'InTransit') {
-          setFields.status = 'Delivered';
         }
 
         const next = await tx.c.exchanges.findOneAndUpdate(
-          { _id: exchange._id, revision: exchange.revision },
-          { $set: setFields, $inc: { revision: 1 } },
+          { _id: exchange._id, revision: exchange.revision, status: 'Delivered' },
+          {
+            $set: setFields,
+            $inc: { revision: 1 },
+          },
           { returnDocument: 'after' },
         );
         if (!next) throw conflict();
+
+        if (willBeBothCompleted) {
+          await notifyExchange(
+            tx,
+            next,
+            'ExchangeCompleted',
+            [next.initiatorId, next.recipientId],
+            now,
+          );
+        }
 
         return {
           entityType: 'Exchange',
@@ -840,10 +1287,88 @@ export class ExchangesService {
           version: next.revision,
           state: next.status as Wire['ExchangeStatus'],
           decidedAt: now,
-          event: 'ExchangeReceived',
+          event: willBeBothCompleted ? 'ExchangeCompleted' : 'ExchangeInspected',
           exchange: this.view(next),
         };
       },
+    });
+  }
+
+  async expireInspection(id: string, nowOverride?: Date) {
+    return this.mongo.tx(async (tx) => {
+      await tx.lock('exchanges', [id]);
+      const exchange = await tx.c.exchanges.findOne({ _id: id });
+      if (!exchange) return null;
+
+      const now = nowOverride ?? (await tx.now());
+      if (
+        exchange.status !== 'Delivered' ||
+        !exchange.initiatorReceivedAt ||
+        !exchange.recipientReceivedAt ||
+        !exchange.inspectionDeadline ||
+        exchange.inspectionDeadline > now
+      ) {
+        return null;
+      }
+
+      const updatedForSettlement: ExchangeDoc = {
+        ...exchange,
+        status: 'Completed',
+        completedAt: now,
+      };
+      await this.ledger.settleExchange(tx, updatedForSettlement, now);
+
+      const { initListing, recListing } = await this.lockListingsOrdered(
+        tx,
+        exchange.initiatorListingId,
+        exchange.recipientListingId,
+      );
+      await this.listings.project(
+        tx,
+        initListing._id,
+        initListing.version,
+        'Reserved',
+        'Exchanged',
+      );
+      await this.listings.project(
+        tx,
+        recListing._id,
+        recListing.version,
+        'Reserved',
+        'Exchanged',
+      );
+
+      const next = await tx.c.exchanges.findOneAndUpdate(
+        { _id: exchange._id, revision: exchange.revision, status: 'Delivered' },
+        {
+          $set: {
+            status: 'Completed',
+            completedAt: now,
+            updatedAt: now,
+          },
+          $inc: { revision: 1 },
+        },
+        { returnDocument: 'after' },
+      );
+      if (!next) return null;
+
+      await notifyExchange(
+        tx,
+        next,
+        'ExchangeCompleted',
+        [next.initiatorId, next.recipientId],
+        now,
+      );
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'exchangeInspectionCompleted',
+          exchangeId: exchange._id,
+          status: 'Completed',
+        }),
+      );
+
+      return { exchange: this.view(next) };
     });
   }
 

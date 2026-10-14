@@ -12,9 +12,16 @@ import {
     fundExchange,
     rejectExchange,
     confirmSent,
-    confirmReceived
+    confirmReceived,
+    completeExchange,
+    counterExchange
 } from '../services/exchangeDetail';
+import type { CounterOfferData } from '../components/exchange/CounterDialog';
+import { saveExchangeShipment, type ShipmentData } from '../services/exchangeShipment';
 import { ProgressStepper } from '../components/exchange/ProgressStepper';
+import { SettlementCard } from '../components/exchange/SettlementCard';
+import { ReviewCard } from '../components/exchange/ReviewCard';
+import { ShippingTrackingCard } from '../components/exchange/ShippingTrackingCard';
 import { BookInfoCard } from '../components/exchange/BookInfoCard';
 import { ActionCard } from '../components/exchange/ActionCard';
 import { ChatPanel } from '../components/exchange/ChatPanel';
@@ -35,15 +42,15 @@ export function ExchangeDetailPage() {
         queryKey: ['exchangeDetail', auth.status === 'authenticated' ? auth.user.id : undefined, id],
         queryFn: () => getExchangeDetail(id!),
         enabled: !!id && auth.status === 'authenticated',
-        refetchInterval: 10000,
+        refetchInterval: 5000,
         refetchIntervalInBackground: false
     });
 
     const { data: messages = [] } = useQuery({
         queryKey: ['exchangeMessages', id],
         queryFn: () => getMessages(id!),
-        enabled: false,
-        refetchInterval: 10000,
+        enabled: !!id && auth.status === 'authenticated',
+        refetchInterval: 3000,
         refetchIntervalInBackground: false
     });
 
@@ -66,8 +73,8 @@ export function ExchangeDetailPage() {
         invalidate();
     };
 
-    const handleAccept = async () => {
-        await acceptExchange(id!, detail!.revision!);
+    const handleAccept = async (deliveryAddressId?: string) => {
+        await acceptExchange(id!, detail!.revision!, deliveryAddressId);
         invalidate();
     };
 
@@ -76,13 +83,27 @@ export function ExchangeDetailPage() {
         invalidate();
     };
 
-    const handleConfirmSent = async () => {
-        await confirmSent(id!, detail!.revision!);
+    const handleCounter = async (data: CounterOfferData) => {
+        await counterExchange(id!, detail!.revision!, data);
+        invalidate();
+    };
+
+    const handleConfirmSent = async (shipmentData?: ShipmentData) => {
+        if (shipmentData && detail) {
+            const role = detail.viewerRole === 'proposer' ? 'initiator' : 'recipient';
+            saveExchangeShipment(id!, role, shipmentData);
+        }
+        await confirmSent(id!, detail!.revision!, shipmentData);
         invalidate();
     };
 
     const handleConfirmReceived = async () => {
         await confirmReceived(id!, detail!.revision!);
+        invalidate();
+    };
+
+    const handleComplete = async () => {
+        await completeExchange(id!, detail!.revision!);
         invalidate();
     };
 
@@ -119,8 +140,13 @@ export function ExchangeDetailPage() {
     else if (detail.status === 'FUNDING') statusText = 'Chờ đặt cọc';
     else if (detail.status === 'WAITING_YOU_SEND') statusText = 'Chuẩn bị gửi sách';
     else if (detail.status === 'RESOLUTION_PENDING') statusText = 'Đang cần xử lý';
-    else if (detail.status === 'DELIVERING') statusText = 'Đang giao nhận';
-    else if (detail.status === 'WAITING_YOU_CONFIRM') statusText = 'Chờ xác nhận';
+    else if (detail.status === 'DELIVERING') {
+        statusText = detail.viewerShipping.receivedAt ? 'Đang chờ đối tác nhận sách' : 'Đang giao nhận';
+    }
+    else if (detail.status === 'WAITING_YOU_CONFIRM') {
+        statusText = detail.viewerShipping.receivedAt ? 'Đang chờ đối tác nhận sách' : 'Chờ xác nhận nhận sách';
+    }
+    else if (detail.status === 'INSPECTING') statusText = 'Đang kiểm tra sách (48h)';
     else if (detail.status === 'COMPLETED') statusText = 'Hoàn tất';
     else if (detail.status === 'REJECTED') {
         statusText = detail.closedBy === 'viewer' ? 'Bạn đã từ chối đề nghị này' : `@${detail.partner.username} đã từ chối đề nghị của bạn`;
@@ -141,21 +167,37 @@ export function ExchangeDetailPage() {
             </div>
 
             <div className={styles.stepperCard}>
-                <ProgressStepper status={detail.status} failedAtStep={detail.failedAtStep} closedBy={detail.closedBy} partnerUsername={detail.partner.username} />
+                <ProgressStepper 
+                    status={detail.status} 
+                    failedAtStep={detail.failedAtStep} 
+                    closedBy={detail.closedBy} 
+                    partnerUsername={detail.partner.username}
+                    hasReceived={Boolean(detail.viewerShipping.receivedAt)}
+                />
             </div>
+
+            {detail.status === 'COMPLETED' && (
+                <>
+                    <SettlementCard detail={detail} />
+                    <ReviewCard detail={detail} />
+                </>
+            )}
 
             <div className={styles.gridContainer}>
                 <div className={styles.mainCol}>
                     <BookInfoCard detail={detail} />
+                    <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
                     <ActionCard 
                         detail={detail} 
                         onCancel={handleCancel}
                         onAccept={handleAccept}
+                        onCounter={handleCounter}
                         onFund={async () => { await fundExchange(id!); invalidate(); }}
                         onRetry={async () => { await retryExchange(id!); invalidate(); }}
                         onReject={handleReject}
                         onConfirmSent={handleConfirmSent}
                         onConfirmReceived={handleConfirmReceived}
+                        onComplete={handleComplete}
                     />
                     <SafetyTipsCard />
                 </div>
@@ -165,8 +207,8 @@ export function ExchangeDetailPage() {
                         messages={messages} 
                         partner={detail.partner} 
                         onSendMessage={handleSendMessage}
-                        isReadOnly={true}
-                        unavailable={true}
+                        isReadOnly={['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'].includes(detail.status)}
+                        unavailable={false}
                     />
                 </div>
             </div>
