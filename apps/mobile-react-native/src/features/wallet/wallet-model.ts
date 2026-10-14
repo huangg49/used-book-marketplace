@@ -13,6 +13,9 @@ export const historyLabels = {
   OrderRefund: "Hoàn tiền đơn sách",
   // Seller proceeds (P − C) when an auction ViaPoint Order settles.
   OrderSettlement: "Nhận tiền bán sách",
+  ListingFeeCharge: "Giữ phí gửi duyệt bài",
+  ListingFeeRefund: "Hoàn phí bài bị từ chối",
+  ListingFeeSettlement: "Phí bài được duyệt",
 } satisfies Record<WalletHistoryItem["type"], string>;
 
 export function signedAmount(amount: number) {

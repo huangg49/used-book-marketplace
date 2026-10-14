@@ -18,6 +18,9 @@ export const walletSummary = z.object({
   topupEnabled: z.boolean(),
   paymentsEnabled: z.boolean(),
   withdrawalsEnabled: z.literal(false),
+  listingSubmissionFee: money.optional(),
+  atomicCheckout: z.boolean().optional(),
+  vnpayEnabled: z.boolean().optional(),
 }) satisfies z.ZodType<components["schemas"]["WalletSummary"]>;
 
 export const walletHistoryItem = z.object({
@@ -25,7 +28,15 @@ export const walletHistoryItem = z.object({
   journalId: z.uuid(),
   topupId: z.uuid().nullable(),
   orderId: z.uuid().nullable(),
-  type: z.enum(["Topup", "OrderPayment", "OrderRefund", "OrderSettlement"]),
+  type: z.enum([
+    "Topup",
+    "OrderPayment",
+    "OrderRefund",
+    "OrderSettlement",
+    "ListingFeeCharge",
+    "ListingFeeRefund",
+    "ListingFeeSettlement",
+  ]),
   amount: z.number().int().min(-100_000_000).max(100_000_000),
   balanceAfter: money,
   postedAt: z.iso.datetime({ offset: true }),
