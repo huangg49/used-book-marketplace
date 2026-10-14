@@ -52,6 +52,11 @@ a real workflow. Checkout UI remains planned.
 
 ## Funding và refund trước acceptance
 
+14/10/2026: chủ dự án chốt phí gửi duyệt20.000đ/hoàn khi từ chối và Order tạo
+đồng thời với wallet hold; VNPay sandbox nạp ví. [Gói hiện hành](../features/WALLET_CHECKOUT.md)
+mô tả default và profile lịch sử, không mở gate release. Ledger phí riêng khỏi
+OrderHold; tiền mua sách quyết toán cho seller, không hoàn buyer khi Completed.
+
 Order wallet funding and pre-confirmation full refunds are implemented in OpenAPI
 0.15.0; read ADR 0020 and `docs/features/ORDER_PAYMENT_REPORT.md`. Payment holds the
 frozen P+S once, cancellation/rejection/48h expiry records SettlementPending, then

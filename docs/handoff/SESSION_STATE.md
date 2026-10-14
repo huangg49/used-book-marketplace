@@ -3,6 +3,49 @@
 Source tích hợp: `feat/rn-ui-redesign-navbar-auctions`, PR #37.
 OpenAPI 0.34.0, 22 migration Mongo, 134 HTTP operation / 23 controller.
 
+## VNPay sandbox trên localhost — 15/10/2026
+
+- Nhánh `codex/vnpay-wallet-listing-fees`, base `7be68a4`; chủ dự án yêu cầu nạp ví
+  từ localhost không ngrok. API env riêng đã bật merchant/Returnlocalhost5174;
+  Web dùng `/api/v1` cùng origin, proxy HTTP/Socket.IO giữ chat/auction live.
+  Credential/hostname máy riêng không vào Git. [Setup](../features/WALLET_CHECKOUT.md),
+  [ADR0036](../adr/0036-vnpay-local-querydr.md).
+- POST `me/topups/:topupId/vnpay-query` kiểm owner/current role/session trước
+  và sau call; HMAC QueryDR/merchant/ref/amount/type01/payment00 trước credit.
+  Query/IPN chung executor/ledger và transaction identity, receipt operation riêng;
+  chỉ credit một lần khi race. Key Query bằng intentId; response chưa xác nhận
+  không được coi là receipt credit. Return query vẫn chỉ để tìm intent.
+- Follow-up giữ phiên sau nạp: Web mở VNPay trong tab riêng ngay khi bấm,
+  bỏ opener và giữ token trong bộ nhớ tab ví. Return gate trước auth chỉ gửi
+  intentId/ACK qua BroadcastChannel cùng origin rồi đóng tab; tab ví tự QueryDR,
+  số dư và Tổng quan tài khoản cùng cập nhật. Popup blocked không tạo intent,
+  closed/pending tiếp tục cùng key/body; tab ví đã mất/phiên hết hạn vẫn login.
+- Migration0024 forward-only cho Query operation đã áp trên local,0022/0023
+  checksum giữ nguyên; không seed/reset hoặc tự ghi credit. Probe merchant thật
+  read-only qua adapter PASS chữ ký/status/amount, configured Returnlocalhost.
+  Restart API sau khi đổi env; không cần tunnel.
+- PASS: API146unit/typecheck/build, wallet22E2E gồm denied owner/header/revoked
+  session/role/LOCKED/replay/Query-IPN race; Mongo43PASS/4SKIP (import/failover chưa
+  cấu hình); OpenAPI0.35/routes139operations/23controllers. Web lint/build và browser
+  desktop/mobile trên QA Mongo riêng/fake storage/provider: same-origin API, giả
+  Return không credit, Query outage/retry/credit, lost-ACK cùng key/body. Screenshot
+  QA ở `.tmp/wallet-checkout-browser`, không là provider payment thật.
+- Browser follow-up đã kiểm tab ví giữ đăng nhập qua Return, tự credit/display,
+  quay về Tổng quan có số dư mới, callback không có tab nguồn không lộ private
+  data/credential, gỡ raw bank query khỏi URL; fake provider trên QA riêng.
+- Owner báo giao dịch sandbox thật đã cộng ví; lần chạy provider popup mới của
+  owner chưa xác nhận. Backend/session/contract không đổi trong follow-up UI.
+- RN lint/typecheck/133unit PASS; cache typed routes `.expo` cũ thiếu register/search
+  được tạo lại bằng generator Expo trước typecheck, không sửa source route.
+- Chia commit theo phạm vi: `4dbf226` API/contract/migration và tests; `073d0ef`
+  parser/nhãn ví RN; `2c906ca` cho Web; commit
+  `docs(wallet): document sandbox setup and verification`
+  cho hướng dẫn/điểm lưu. Chủ dự án đã giao commit/push nhánh này ngày15/10.
+- API có9lint warning cũ, Web bundle warning lớn. Full tạo→pay→credit merchant thật,
+  native/human/remote CI NOT RUN; không tự giải quyết ReviewRequired hoặc query
+  non-success. READINESS không đổi; WIP khác bảo toàn; chưa merge/deploy. Bước tiếp:
+  reviewer độc lập cho tiền/quyền và kiểm CI trước khi tích hợp theo TEAMWORK.
+
 ## Mobile React Native CI Lint & Design Token Remediation — 13/10/2026
 
 - PR #37 (`feat/rn-ui-redesign-navbar-auctions`): Khắc phục lỗi CI `react-native-ci.yml`
