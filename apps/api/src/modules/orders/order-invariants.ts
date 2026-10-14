@@ -105,7 +105,16 @@ export async function checkOrder(tx: Tx, orderId: string) {
     // The release produced by settlement is the sixth and final Direct Order
     // version.  All other paid release paths still end at version four.
     const expected =
-      ev.sequence === 1 ? 1 : o.state === 'Completed' ? 6 : o.paidAt ? 4 : 2;
+      ev.sequence === 1
+        ? x?.r.operation === 'createDirectOrder' &&
+          get(x.r.result, 'state') === 'PendingSellerConfirmation'
+          ? 2
+          : 1
+        : o.state === 'Completed'
+          ? 6
+          : o.paidAt
+            ? 4
+            : 2;
     if (
       !x ||
       x.r.contextId !== c!._id ||
@@ -179,7 +188,7 @@ async function checkOrderFunding(
       x.a.contextId !== c._id ||
       x.r.committedAt.getTime() !== j.postedAt.getTime() ||
       (j.type === 'OrderPayment' &&
-        (x.r.operation !== 'payOrder' ||
+        (!['payOrder', 'createDirectOrder'].includes(x.r.operation) ||
           x.r.actorId !== o.buyerId ||
           x.r.resultVersion !== 2)) ||
       (j.type === 'OrderRefund' &&
@@ -235,7 +244,15 @@ async function checkOrderPreparation(
 ) {
   const p = await tx.c.order_preparations.findOne({ _id: o._id });
   const review = await tx.c.pickup_reviews.findOne({ orderId: o._id });
-  if (!['Preparing', 'InTransit', 'ResolutionPending', 'Inspection', 'Completed'].includes(o.state)) {
+  if (
+    ![
+      'Preparing',
+      'InTransit',
+      'ResolutionPending',
+      'Inspection',
+      'Completed',
+    ].includes(o.state)
+  ) {
     if (p || review) fail('Unexpected preparation history');
     return;
   }
@@ -402,8 +419,12 @@ async function checkOrderPickup(
   }
   const pickupReview = await tx.c.pickup_reviews.findOne({ orderId: o._id });
   if (['Inspection', 'Completed'].includes(o.state)) {
-    const deliveryEvent = await tx.c.direct_delivery_events.findOne({ orderId: o._id });
-    const deliveryChain = deliveryEvent ? await chain(tx, deliveryEvent.receiptId) : null;
+    const deliveryEvent = await tx.c.direct_delivery_events.findOne({
+      orderId: o._id,
+    });
+    const deliveryChain = deliveryEvent
+      ? await chain(tx, deliveryEvent.receiptId)
+      : null;
     const completed = o.state === 'Completed';
     if (
       !hasApplied ||
@@ -414,16 +435,20 @@ async function checkOrderPickup(
       !o.deliveredAt ||
       !o.inspectionDeadline ||
       o.deliveredAt.getTime() !== deliveryEvent.occurredAt.getTime() ||
-      o.inspectionDeadline.getTime() !== o.deliveredAt.getTime() + 72 * 3600000 ||
+      o.inspectionDeadline.getTime() !==
+        o.deliveredAt.getTime() + 72 * 3600000 ||
       (completed
-        ? !o.completedAt || o.completedAt < o.inspectionDeadline || o.version !== 6
+        ? !o.completedAt ||
+          o.completedAt < o.inspectionDeadline ||
+          o.version !== 6
         : !!o.completedAt || o.version !== 5) ||
       pickupReview ||
       cr ||
       delivery ||
       !deliveryChain ||
       deliveryChain.r.contextId !== c._id ||
-      deliveryChain.r.committedAt.getTime() !== deliveryEvent.receivedAt.getTime() ||
+      deliveryChain.r.committedAt.getTime() !==
+        deliveryEvent.receivedAt.getTime() ||
       deliveryChain.r.resultVersion !== 5 ||
       get(deliveryChain.r.result, 'state') !== 'Inspection' ||
       get(deliveryChain.r.result, 'version') !== 5 ||
@@ -444,7 +469,9 @@ async function checkOrderPickup(
         orderId: o._id,
         type: 'OrderSettlement',
       });
-      const settled = settlement ? await chain(tx, settlement.receiptId!) : null;
+      const settled = settlement
+        ? await chain(tx, settlement.receiptId!)
+        : null;
       if (
         !settlement ||
         !settled ||

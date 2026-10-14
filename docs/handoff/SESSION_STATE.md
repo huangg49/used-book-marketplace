@@ -86,6 +86,111 @@ quá hạn) chưa làm: READINESS vẫn chặn mở rộng nghiệp vụ, cần 
 - Ghi nhận ngoài phạm vi: màn tài khoản RN có huy hiệu "Bạn đọc uy tín ★ 4.9" và nội
   dung mock (AGENTS cấm bịa rating/trust badge) — chưa sửa.
 
+## VNPay sandbox trên localhost — 15/10/2026
+
+- Nhánh `codex/vnpay-wallet-listing-fees`, base `7be68a4`; chủ dự án yêu cầu nạp ví
+  từ localhost không ngrok. API env riêng đã bật merchant/Returnlocalhost5174;
+  Web dùng `/api/v1` cùng origin, proxy HTTP/Socket.IO giữ chat/auction live.
+  Credential/hostname máy riêng không vào Git. [Setup](../features/WALLET_CHECKOUT.md),
+  [ADR0036](../adr/0036-vnpay-local-querydr.md).
+- POST `me/topups/:topupId/vnpay-query` kiểm owner/current role/session trước
+  và sau call; HMAC QueryDR/merchant/ref/amount/type01/payment00 trước credit.
+  Query/IPN chung executor/ledger và transaction identity, receipt operation riêng;
+  chỉ credit một lần khi race. Key Query bằng intentId; response chưa xác nhận
+  không được coi là receipt credit. Return query vẫn chỉ để tìm intent.
+- Follow-up giữ phiên sau nạp: Web mở VNPay trong tab riêng ngay khi bấm,
+  bỏ opener và giữ token trong bộ nhớ tab ví. Return gate trước auth chỉ gửi
+  intentId/ACK qua BroadcastChannel cùng origin rồi đóng tab; tab ví tự QueryDR,
+  số dư và Tổng quan tài khoản cùng cập nhật. Popup blocked không tạo intent,
+  closed/pending tiếp tục cùng key/body; tab ví đã mất/phiên hết hạn vẫn login.
+- Migration0024 forward-only cho Query operation đã áp trên local,0022/0023
+  checksum giữ nguyên; không seed/reset hoặc tự ghi credit. Probe merchant thật
+  read-only qua adapter PASS chữ ký/status/amount, configured Returnlocalhost.
+  Restart API sau khi đổi env; không cần tunnel.
+- PASS: API146unit/typecheck/build, wallet22E2E gồm denied owner/header/revoked
+  session/role/LOCKED/replay/Query-IPN race; Mongo43PASS/4SKIP (import/failover chưa
+  cấu hình); OpenAPI0.35/routes139operations/23controllers. Web lint/build và browser
+  desktop/mobile trên QA Mongo riêng/fake storage/provider: same-origin API, giả
+  Return không credit, Query outage/retry/credit, lost-ACK cùng key/body. Screenshot
+  QA ở `.tmp/wallet-checkout-browser`, không là provider payment thật.
+- Browser follow-up đã kiểm tab ví giữ đăng nhập qua Return, tự credit/display,
+  quay về Tổng quan có số dư mới, callback không có tab nguồn không lộ private
+  data/credential, gỡ raw bank query khỏi URL; fake provider trên QA riêng.
+- Owner báo giao dịch sandbox thật đã cộng ví; lần chạy provider popup mới của
+  owner chưa xác nhận. Backend/session/contract không đổi trong follow-up UI.
+- RN lint/typecheck/133unit PASS; cache typed routes `.expo` cũ thiếu register/search
+  được tạo lại bằng generator Expo trước typecheck, không sửa source route.
+- Chia commit theo phạm vi: `4dbf226` API/contract/migration và tests; `073d0ef`
+  parser/nhãn ví RN; `2c906ca` cho Web; commit
+  `docs(wallet): document sandbox setup and verification`
+  cho hướng dẫn/điểm lưu. Chủ dự án đã giao commit/push nhánh này ngày15/10.
+- Follow-up conflict ngày15/10: hợp nhất `origin/main` tại `c9688ac` vào nhánh ví,
+  giữ Login gió/sân khấu đấu giá, N4 point administration/inspection/incidents và
+  exchange completion/messages/reviews từ main. [PR42](https://github.com/huangg49/used-book-marketplace/pull/42).
+  Commit subject `fix(integration): merge main and reconcile wallet command schemas`.
+  OpenAPI0.40.0,163operations/26controllers;36migration có ID duy nhất.
+- Migration0027 forward-only hợp nhất receipt/audit của point và VNPay, gồm đúng
+  một target kể cả pointId, QueryDR/IPN và DirectDelivery system principal pairs.
+  Nâng cấp từ mỗi nhánh giữ schema cuối, checksum và journal/entry count; migration
+  cũ không sửa. Máy nhận từ nhánh ví cần bootstrap quyền collection rồi migrate
+  theo [setup](../features/WALLET_CHECKOUT.md); DB chính chưa chạy các bước này.
+- Browser fixture lịch sử giữ profile0/Unpaid; wallet suite tự khai báo20000/Wallet.
+  User Web CI thêm wallet browser sau hai suite lịch sử. Browser cả ba suite trên
+  API/Mongo QA thật và fake storage/provider PASS; ảnh QA mới ở `.tmp`, giữ ảnh
+  evidence đã commit của teammate.
+- Kiểm sau hợp nhất: API150unit/lint/typecheck/build; Web135unit/lint/typecheck/build;
+  RN142unit/lint/typecheck/export Android/iOS/Web; Admin28unit/typecheck;21session
+  unit; Mongo45PASS/4SKIP (import/failover chưa cấu hình); contract/routes/docs và
+  diff check PASS. API11/Web4/RN1 lint warning từ main; Web chunk warning còn.
+- E2E sau hợp nhất: carrier-pickup30PASS gồm cap128; wallet22/exchange22 PASS.
+  Scoped98case có97PASS/1FAIL vì Mongo QA monitor timeout; bid race chạy riêng PASS.
+  Delivery35case có34PASS/1FAIL ở worker khi QA gián đoạn; worker chạy riêng PASS.
+  Fixture provider timestamp của delivery dùng DB clock thay clock Windows để
+  tránh lệch đồng hồ; không đổi validation ứng dụng. Lượt local dùng CLI
+  testTimeout60000/hookTimeout120000, source timeout/transaction/assert không đổi.
+  Lượt đầu chạy chung Mongo failpoint bị nhiễu; lượt15s timeout, không tính PASS.
+  Full E2E đã dừng sau lỗi kết nối QA, không ghi full-suite PASS.
+- Follow-up CI trên [PR42](https://github.com/huangg49/used-book-marketplace/pull/42):
+  head `3efc5ae` có6workflow PASS; API FAIL ở PostgreSQL import thừa native account
+  `ListingFeeClearing`, Demo FAIL ở submit409 do default phí mới. Commit subject
+  `fix(ci): preserve native fee accounts and pin historical demo policy` giữ hai
+  native account theo đúng ID khi so hash/count PostgreSQL, giữ nguyên account và
+  zero balance; demo sandbox khai báo0/Unpaid/VNPay off, app mặc định20000/Wallet
+  không đổi. Không bỏ assert hoặc tắt job.
+- Local follow-up: PostgreSQL import3PASS trên PG QA/Mongo QA thật, source snapshot/
+  hash/count/nghĩa vụ cũ và native fee account giữ nguyên; một lượt trước lỗi Mongo
+  monitor được chạy lại thành công. Demo15unit và bốn scenario API/funding/orders/
+  transit PASS, gồm rerun books với assert profile; lint/typecheck/build/docs PASS.
+  CI của bản sửa phải đối chiếu theo head PR và tab Checks; không suy từ lượt cũ.
+- [API CI tại b2bb37b](https://github.com/huangg49/used-book-marketplace/actions/runs/38629217780)
+  đã qua Mongo import/failover và647/649E2E; chỉ hai test migration còn kỳ vọng ba
+  account thay vì bốn sau0022. Commit subject `test(wallet): verify fee clearing in
+  migration upgrades` cập nhật danh sách/count chính xác, thêm assert ID/shape và
+  zero balance của fee clearing; giữ toàn bộ snapshot history, finite capital,
+  journal/entry/sequence và negative privilege/validator checks. Không đổi source
+  ứng dụng/migration/timeout CI. Hai E2E này local2PASS; API lint/typecheck và docs
+  PASS. Bảy workflow khác ở b2bb37b PASS; check bản mới theo head PR42.
+- [API CI tại8c48627](https://github.com/huangg49/used-book-marketplace/actions/runs/38649179034)
+  PASS; bảy workflow xanh, User Web FAIL ở exchange browser: mock403 được bật
+  khi detail còn mở, polling5s có thể ẩn link trước khi test điều hướng. Commit
+  subject `test(web): isolate exchange denial from detail polling` chỉ bật mock
+  sau khi về danh sách Hoàn tất; giữ kiểm tra màn lỗi và không lộ đối tác, cùng
+  các ca lost ACK/replay/funding/cancel. Browser API thật/QA Mongo/storage fake
+  với `CI=true` local PASS; web lint PASS với bốn warning cũ. Không đổi ứng dụng,
+  timeout hay bỏ test; CI bản sửa đối chiếu theo head PR42.
+- API CI tại2155e5b cũng PASS. User Web lượt này FAIL ở auction motion fixture:
+  VITE API trỏ cùng origin làm Socket.IO đi qua dev proxy quay về chính Vite,
+  tạo vòng lặp upgrade và mất trang trong ca fallback. Commit subject
+  `test(web): isolate realtime in frontend motion fixtures` mock cả websocket và
+  HTTP polling unavailable trong hai fixture thuần frontend; không đổi proxy
+  ứng dụng hoặc bộ browser dùng API thật. Auction/auth motion local `CI=true`
+  PASS (auth ép proxy cùng origin), không có ws proxy error; web lint/docs PASS.
+  Giữ mọi assertion chuyển động/fallback và timeout; remote theo head PR42.
+- API có9lint warning cũ, Web bundle warning lớn. Full tạo→pay→credit merchant thật,
+  native/human NOT RUN; remote CI theo head PR; không tự giải quyết ReviewRequired hoặc query
+  non-success. READINESS không đổi; WIP khác bảo toàn; chưa merge/deploy. Bước tiếp:
+  reviewer độc lập cho tiền/quyền và kiểm CI trước khi tích hợp theo TEAMWORK.
+
 ## Mobile React Native CI Lint & Design Token Remediation — 13/10/2026
 
 - PR #37 (`feat/rn-ui-redesign-navbar-auctions`): Khắc phục lỗi CI `react-native-ci.yml`

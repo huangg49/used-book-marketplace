@@ -14,6 +14,7 @@ import { ListingLifecycleService } from './listing-lifecycle.service.js';
 import { ListingLifecycleController } from './listing-lifecycle.controller.js';
 import { ListingFulfillmentService } from './listing-fulfillment.service.js';
 import { PriceAssistModule } from '../price-assist/price-assist.module.js';
+import { WalletModule } from '../wallet/wallet.module.js';
 @Module({
   imports: [
     CommandsModule,
@@ -21,6 +22,7 @@ import { PriceAssistModule } from '../price-assist/price-assist.module.js';
     MediaModule,
     DatabaseModule,
     PriceAssistModule,
+    WalletModule,
   ],
   providers: [
     ListingCommitmentPolicy,

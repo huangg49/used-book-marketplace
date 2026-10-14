@@ -63,8 +63,22 @@ node_modules, Expo cache, build output, DB dump hoặc các fixture test.
   localhost trên điện thoại không trỏ đến máy tính.
 - CORS_ORIGINS khớp origin web thực tế của operations/RN web; localhost và
   127.0.0.1 là hai origin khác nhau. Không sửa auth guard để né lỗi CORS.
+- Member Web chạy qua tunnel: đặt `LATLAI_DEV_ALLOWED_HOST` trong
+  `apps/user-web/.env.local` thành đúng hostname được cấp, không có `https://`
+  hoặc path. Vite chỉ cho phép hostname đó; đổi tunnel thì cập nhật giá trị.
+  Với một tunnel cho Web/API, đặt `LATLAI_DEV_API_ORIGIN=http://localhost:3000`
+  và `VITE_API_BASE_URL=/api/v1` trong cùng file local;
+  proxy `/api` và `/socket.io` chuyển về API local trên cùng origin, nên Web
+  localhost vẫn dùng được khi tunnel tắt. Xem
+  [VNPay sandbox](../features/WALLET_CHECKOUT.md) cho Return/IPN.
+  URL website không tự chứng minh IPN VNPay đã tới API hoặc nạp ví thành công.
 - API và media/order worker dùng cùng cấu hình/version; sau thay config cần
   khởi động lại đúng process. Không giết toàn bộ node/java trên máy.
+- VNPay local không cần tunnel: API env riêng có `VNPAY_SANDBOX_ENABLED=true`,
+  `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL=http://localhost:5174/wallet`.
+  Web dùng `/api/v1` qua proxy như trên; API tự QueryDR khi Member kiểm tra intent.
+  Credential chỉ ở backend và bàn giao qua kênh riêng, không vào Git/chat/VITE.
+  Máy mới áp migration0024 và restart API/worker cùng source; không reset DB.
 - `MONGO_TEST_URL` trỏ replica set QA riêng (`pnpm infra:mongo:test:up`), database
   kết thúc `_test`, theo START_HERE; không dùng `MONGODB_URL` của app để chạy E2E.
   Browser suite cũng dùng replica set này và tự tạo database `_test` riêng.

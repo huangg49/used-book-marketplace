@@ -7,9 +7,11 @@ import {
   LEDGER_SEQUENCE_COUNTER,
   OPENING_JOURNAL_ID,
 } from '../src/database/mongo/migrations/0002-reference-data.js';
+import { LISTING_FEE_CLEARING_ID } from '../src/database/mongo/migrations/0022-vnpay-wallet-listing-fees.js';
 import { bootstrapRoles } from '../src/database/mongo/roles.js';
 import { runTransaction } from '../src/database/mongo/transaction.js';
 import { checkListing } from '../src/modules/listings/listing-projection.js';
+import { balanceOf } from '../src/modules/wallet/ledger.service.js';
 import { E2E_DATABASE } from './mongo-global-setup.js';
 import {
   TEST_APP_PASSWORD,
@@ -190,11 +192,28 @@ it('upgrades from the baseline without changing existing address/listing/receipt
         .sort({ purpose: 1 })
         .toArray(),
     ).toEqual([
-      // Migration 0012 adds the single platform commission account.
+      // 0012/0022 add zero-balance reference accounts, without new capital.
+      { purpose: 'ListingFeeClearing' },
       { purpose: 'PlatformCommission' },
       { purpose: 'SimulatorCapital' },
       { purpose: 'SimulatorClearing' },
     ]);
+    expect(
+      await bindCollections(rootDb).wallet_accounts.findOne({
+        _id: LISTING_FEE_CLEARING_ID,
+      }),
+    ).toEqual({
+      _id: LISTING_FEE_CLEARING_ID,
+      ownerId: null,
+      orderId: null,
+      purpose: 'ListingFeeClearing',
+      currency: 'VND',
+    });
+    expect(
+      await runTransaction(root, rootDb, (tx) =>
+        balanceOf(tx, LISTING_FEE_CLEARING_ID),
+      ),
+    ).toBe(0);
     expect(
       await rootDb
         .collection('ledger_journals')

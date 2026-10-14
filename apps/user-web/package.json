@@ -18,6 +18,7 @@
     "catalog:refresh": "node scripts/refresh-preview-catalog.mjs",
     "test:browser": "node tests/integration.mjs",
     "test:exchange:browser": "node tests/exchange-integration.mjs",
+    "test:wallet:browser": "node tests/wallet-checkout.mjs",
     "test:account:browser": "node tests/account-overview.mjs",
     "test:auction-stage:browser": "node tests/auction-stage.mjs",
     "test:auth-motion:browser": "node tests/auth-auction-arrival.mjs"

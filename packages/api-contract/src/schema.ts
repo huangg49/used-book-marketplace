@@ -668,7 +668,7 @@ export interface paths {
         put?: never;
         /**
          * submitListing
-         * @description ACTIVE owner, Draft/Rejected; validate saved content as SubmittedContent, Ready media, declaration and accessible catalog; freeze revision, PendingReview. Resubmitting Rejected creates a new revision even when unchanged.
+         * @description ACTIVE owner, Draft/Rejected; validate saved content as SubmittedContent, Ready media, declaration and accessible catalog; freeze revision, PendingReview. Resubmitting Rejected creates a new revision even when unchanged. Default submission fee is 20000 VND held from the owner wallet in the same transaction; insufficient funds reject submission. Rejection refunds that revision fee; approval settles it. Historical submissions are not charged retroactively.
          */
         post: operations["submitListing"];
         delete?: never;
@@ -1228,7 +1228,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ACTIVE verified MEMBER buyer; revalidate owned quote and both participants under locks. Atomically reserve one Sale/Both listing, create immutable agreement and unpaid Order for 15 minutes. At most two AwaitingPayment Orders per buyer, including overdue Orders pending worker. No charge. Current MEMBER/session authorization precedes replay, even after closure. Conflict requires a fresh quote and explicit user confirmation. LOCKED is rejected with 403 before any receipt replay or mutation. */
+        /** @description Default Wallet checkout atomically creates the Order and holds the server quote total P+S from the buyer wallet; insufficient funds leave no Order or reservation. Returns PendingSellerConfirmation version 2. Configured legacy Unpaid mode retains AwaitingPayment and the separate pay command. Same key/body returns the original receipt and never charges twice. */
         post: operations["createDirectOrder"];
         delete?: never;
         options?: never;
@@ -1296,6 +1296,66 @@ export interface paths {
         };
         /** @description Derived simulated available + transaction-held balance. LOCKED may read, but cannot pay. Withdrawal not implemented. A payment capability is not a checkout UI release gate. */
         get: operations["getMyWallet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/topups/vnpay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a VNPay sandbox wallet topup
+         * @description Verified Member; LOCKED denied. No credit until a signed IPN or server-verified QueryDR result is applied. Same key/body replays the original payment URL and deadline. Sandbox only; finite demo clearing source remains enforced.
+         */
+        post: operations["createVNPayTopup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/topups/{topupId}/vnpay-query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify an owned VNPay sandbox topup using QueryDR
+         * @description Existing obligation, including LOCKED Members. Owner and current session are checked before the outbound provider query and again before applying its result. No client payment evidence or amount is accepted. Only a signed successful payment of the original amount may credit the original wallet; a pending, unconfirmed or non-successful query leaves the intent unchanged. Repeated queries and concurrent IPN deliveries cannot credit twice. Provider outages or invalid evidence return 503 without changing the wallet. Does not create or fund an Order.
+         */
+        post: operations["queryMyVNPayTopup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/payments/vnpay/ipn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Receive a signed VNPay sandbox payment result
+         * @description Public server callback authenticated by HMAC-SHA512, merchant, amount and transaction reference. Return URL never credits a wallet. Duplicate callbacks do not credit twice; late valid payments may fund only their original wallet. Does not create or fund an Order.
+         */
+        get: operations["receiveVNPayIpn"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3770,6 +3830,9 @@ export interface components {
             /** @description Buyer, Applied pickup with pinned delivery deadline reached, full hold, InTransit/ResolutionPending and no existing Buyer report; advisory only. No Delivered event exists yet. */
             canReportNonReceipt: boolean;
         };
+        CreateVNPayTopup: {
+            amount: number;
+        };
         CreateTopupIntent: {
             amount: number;
         };
@@ -3795,6 +3858,10 @@ export interface components {
             currency: "VND";
         };
         WalletSummary: {
+            /** @description Current fee per new submission; default 20000 VND. Approved content edits are not charged again. */
+            listingSubmissionFee?: number;
+            atomicCheckout?: boolean;
+            vnpayEnabled?: boolean;
             /** @constant */
             demoOnly: true;
             /** @constant */
@@ -3814,6 +3881,13 @@ export interface components {
             withdrawalsEnabled: false;
         };
         WalletCommandReceipt: {
+            /**
+             * Format: uri
+             * @description Signed sandbox URL; present only on VNPay creation receipts.
+             */
+            paymentUrl?: string;
+            /** Format: date-time */
+            expiresAt?: string;
             /** Format: uuid */
             id: string;
             /** @constant */
@@ -3846,7 +3920,7 @@ export interface components {
             /** Format: uuid */
             topupId: string | null;
             /** @enum {string} */
-            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement";
+            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement";
             amount: number;
             balanceAfter: number;
             /** Format: date-time */
@@ -7530,6 +7604,104 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
+    createVNPayTopup: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVNPayTopup"];
+            };
+        };
+        responses: {
+            /** @description Pending topup and signed sandbox URL; not a payment receipt. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    queryMyVNPayTopup: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Must equal topupId. Rechecks the same intent; successful credit is independently deduplicated by verified provider evidence, including concurrent IPN. An unconfirmed query is not a cached payment receipt. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                topupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current owner-checked topup state after querying VNPay. Terminal intents are read without another provider query. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopupIntent"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    receiveVNPayIpn: {
+        parameters: {
+            query: {
+                vnp_TxnRef: string;
+                vnp_TmnCode: string;
+                vnp_Amount: string;
+                vnp_ResponseCode: string;
+                vnp_TransactionStatus: string;
+                vnp_TransactionNo: string;
+                vnp_PayDate?: string;
+                vnp_SecureHash: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description VNPay protocol acknowledgement; 00 accepted, 02 already processed, 01 unknown reference, 04 wrong amount, 97 unauthenticated callback, 99 retryable processing error. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        RspCode: "00" | "01" | "02" | "04" | "97" | "99";
+                        Message: string;
+                    };
+                };
+            };
+        };
+    };
     listMyTopups: {
         parameters: {
             query?: {
@@ -7642,7 +7814,7 @@ export interface operations {
                 cursor?: string;
                 from?: string;
                 to?: string;
-                type?: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement";
+                type?: "Topup" | "OrderPayment" | "OrderRefund" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "OrderSettlement";
                 topupId?: string;
                 orderId?: string;
             };

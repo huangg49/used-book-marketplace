@@ -167,10 +167,10 @@ export function ExchangeDetailPage() {
             </div>
 
             <div className={styles.stepperCard}>
-                <ProgressStepper 
-                    status={detail.status} 
-                    failedAtStep={detail.failedAtStep} 
-                    closedBy={detail.closedBy} 
+                <ProgressStepper
+                    status={detail.status}
+                    failedAtStep={detail.failedAtStep}
+                    closedBy={detail.closedBy}
                     partnerUsername={detail.partner.username}
                     hasReceived={Boolean(detail.viewerShipping.receivedAt)}
                 />
@@ -187,8 +187,8 @@ export function ExchangeDetailPage() {
                 <div className={styles.mainCol}>
                     <BookInfoCard detail={detail} />
                     <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
-                    <ActionCard 
-                        detail={detail} 
+                    <ActionCard
+                        detail={detail}
                         onCancel={handleCancel}
                         onAccept={handleAccept}
                         onCounter={handleCounter}
@@ -201,11 +201,11 @@ export function ExchangeDetailPage() {
                     />
                     <SafetyTipsCard />
                 </div>
-                
+
                 <div className={styles.sideCol}>
-                    <ChatPanel 
-                        messages={messages} 
-                        partner={detail.partner} 
+                    <ChatPanel
+                        messages={messages}
+                        partner={detail.partner}
                         onSendMessage={handleSendMessage}
                         isReadOnly={['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'].includes(detail.status)}
                         unavailable={false}

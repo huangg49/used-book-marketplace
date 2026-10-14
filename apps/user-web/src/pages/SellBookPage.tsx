@@ -6,6 +6,7 @@ import {
   useBeforeUnload,
   useBlocker,
   useLocation,
+  Link,
 } from "react-router-dom";
 import {
   ArrowLeft,
@@ -23,6 +24,7 @@ import { ListingSubmissionConfirmation } from "../components/BookJourneyStates";
 import { useSession } from "../hooks/useSession";
 import { session as apiSession } from "../lib/session";
 import { createListingSubmission } from "../services/listing-submission";
+import { getWalletSummary } from "../services/wallet";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
 import {
@@ -43,19 +45,38 @@ import styles from "./SellBookPage.module.css";
 
 const addressBookSchema = z.object({
   version: z.number().int().nonnegative(),
-  items: z.array(z.object({
-    id: z.string().uuid(), version: z.number().int().positive(),
-    recipientName: z.string(), phone: z.string(), serviceAreaCode: z.string(),
-    localityCode: z.string(), detail: z.string(), isDefault: z.boolean(),
-  })),
+  items: z.array(
+    z.object({
+      id: z.string().uuid(),
+      version: z.number().int().positive(),
+      recipientName: z.string(),
+      phone: z.string(),
+      serviceAreaCode: z.string(),
+      localityCode: z.string(),
+      detail: z.string(),
+      isDefault: z.boolean(),
+    }),
+  ),
 });
 const serviceAreasSchema = z.object({
   code: z.literal("HCM-DEMO-v1"),
   localities: z.array(z.object({ code: z.string(), label: z.string() })),
 });
-const addressReceiptSchema = z.object({ addressId: z.string().uuid(), version: z.number().int().positive() });
+const addressReceiptSchema = z.object({
+  addressId: z.string().uuid(),
+  version: z.number().int().positive(),
+});
 
 export function SellBookPage() {
+  const feeAuth = useSession();
+  const feeWallet = useQuery({
+    queryKey: [
+      "wallet-summary",
+      feeAuth.status === "authenticated" ? feeAuth.user.id : undefined,
+    ],
+    queryFn: getWalletSummary,
+    enabled: feeAuth.status === "authenticated",
+  });
   const submission = useRef<ReturnType<typeof createListingSubmission>>(null);
   const [classification, setClassification] = useState<ClassificationValue>({
     categoryId: "",
@@ -483,10 +504,7 @@ export function SellBookPage() {
       originForm.detail.trim().length >= 5
     );
   }
-  function changeOriginForm(
-    field: keyof typeof originForm,
-    value: string,
-  ) {
+  function changeOriginForm(field: keyof typeof originForm, value: string) {
     originAddressIntent.current = null;
     setOriginForm((previous) => ({ ...previous, [field]: value }));
   }
@@ -1689,6 +1707,28 @@ export function SellBookPage() {
                           </p>
                         )}
                       </div>
+                    )}
+                    {feeWallet.data?.listingSubmissionFee !== undefined && (
+                      <p className={styles.help}>
+                        Phí gửi duyệt:{" "}
+                        <strong>
+                          {formatVnd(feeWallet.data.listingSubmissionFee)}
+                        </strong>
+                        , giữ từ ví khi gửi bài. Bị từ chối sẽ hoàn về ví. Số dư
+                        khả dụng: {formatVnd(feeWallet.data.available)}.{" "}
+                        <Link to="/wallet">Nạp ví</Link>
+                      </p>
+                    )}
+                    {feeWallet.isError && (
+                      <p role="alert">
+                        Chưa kiểm tra được phí và số dư.{" "}
+                        <button
+                          type="button"
+                          onClick={() => void feeWallet.refetch()}
+                        >
+                          Kiểm tra lại
+                        </button>
+                      </p>
                     )}
                     {hasAttempt && (
                       <p role="status" className={styles.help}>

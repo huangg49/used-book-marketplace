@@ -122,6 +122,8 @@ export type ExchangeChange = {
   reason?: string;
 };
 export type WalletChange = {
+  paymentUrl?: string;
+  expiresAt?: Date;
   reason?: string;
   entityType: 'TopupIntent';
   entityId: string;
@@ -451,16 +453,23 @@ export class MongoCommandService {
     body: unknown,
     options: Options<C, PurchaseConversationChange>,
   ) {
-    return this.execute(context, operation, target, body, options, (change, id, serverTime): Wire['PurchaseConversationReceipt'] => ({
-      id,
-      entityType: 'PurchaseConversation',
-      entityId: change.entityId,
-      listingId: change.listingId,
-      version: change.version,
-      status: change.state,
-      expiresAt: change.expiresAt.toISOString(),
-      serverTime: serverTime.toISOString(),
-    }));
+    return this.execute(
+      context,
+      operation,
+      target,
+      body,
+      options,
+      (change, id, serverTime): Wire['PurchaseConversationReceipt'] => ({
+        id,
+        entityType: 'PurchaseConversation',
+        entityId: change.entityId,
+        listingId: change.listingId,
+        version: change.version,
+        status: change.state,
+        expiresAt: change.expiresAt.toISOString(),
+        serverTime: serverTime.toISOString(),
+      }),
+    );
   }
   runExchange<C>(
     context: CommandContext,
@@ -492,14 +501,40 @@ export class MongoCommandService {
     options: {
       discover: (tx: Tx) => Promise<string[]>;
       authorize: (tx: Tx) => Promise<C>;
-      mutate: (tx: Tx, current: C, receiptId: string) => Promise<PurchaseConversationChange>;
+      mutate: (
+        tx: Tx,
+        current: C,
+        receiptId: string,
+      ) => Promise<PurchaseConversationChange>;
     },
   ) {
     return this.executePrincipal(
-      { actorId: null, systemActor: 'PurchaseConversationExpiry', key, requestId: randomUUID() },
-      'expirePurchaseConversation', key, {},
-      { authorize: async (tx) => { await this.lockUsers(tx, await options.discover(tx)); return options.authorize(tx); }, mutate: options.mutate },
-      (change, id, serverTime): Wire['PurchaseConversationReceipt'] => ({ id, entityType: 'PurchaseConversation', entityId: change.entityId, listingId: change.listingId, version: change.version, status: change.state, expiresAt: change.expiresAt.toISOString(), serverTime: serverTime.toISOString() }),
+      {
+        actorId: null,
+        systemActor: 'PurchaseConversationExpiry',
+        key,
+        requestId: randomUUID(),
+      },
+      'expirePurchaseConversation',
+      key,
+      {},
+      {
+        authorize: async (tx) => {
+          await this.lockUsers(tx, await options.discover(tx));
+          return options.authorize(tx);
+        },
+        mutate: options.mutate,
+      },
+      (change, id, serverTime): Wire['PurchaseConversationReceipt'] => ({
+        id,
+        entityType: 'PurchaseConversation',
+        entityId: change.entityId,
+        listingId: change.listingId,
+        version: change.version,
+        status: change.state,
+        expiresAt: change.expiresAt.toISOString(),
+        serverTime: serverTime.toISOString(),
+      }),
     );
   }
   runPackaging<C>(
@@ -580,7 +615,8 @@ export class MongoCommandService {
   }
   runWallet<C>(
     context: CommandContext,
-    operation: 'createTopupIntent' | 'emitSimulatedTopupEvent',
+    operation:
+      'createTopupIntent' | 'createVNPayTopup' | 'emitSimulatedTopupEvent',
     target: string | null,
     body: unknown,
     options: Options<C, WalletChange>,
@@ -591,6 +627,55 @@ export class MongoCommandService {
       target,
       body,
       options,
+      (change, id, serverTime): Wire['WalletCommandReceipt'] => ({
+        id,
+        entityType: 'TopupIntent',
+        entityId: change.entityId,
+        version: change.version,
+        state: change.state,
+        credited: change.credited,
+        journalId: change.journalId,
+        serverTime: serverTime.toISOString(),
+        demoOnly: true,
+        label: 'Mô phỏng đồ án',
+        currency: 'VND',
+        ...(change.paymentUrl
+          ? {
+              paymentUrl: change.paymentUrl,
+              expiresAt: change.expiresAt!.toISOString(),
+            }
+          : {}),
+      }),
+    );
+  }
+  runVNPay<C>(
+    key: string,
+    target: string,
+    body: unknown,
+    options: {
+      discover: (tx: Tx) => Promise<string[]>;
+      authorize: (tx: Tx) => Promise<C>;
+      mutate: (tx: Tx, current: C, receiptId: string) => Promise<WalletChange>;
+    },
+    operation: 'applyVNPayIpn' | 'applyVNPayQuery' = 'applyVNPayIpn',
+  ) {
+    return this.executePrincipal(
+      {
+        actorId: null,
+        systemActor: 'VNPaySandbox',
+        key,
+        requestId: randomUUID(),
+      },
+      operation,
+      target,
+      body,
+      {
+        authorize: async (tx) => {
+          await this.lockUsers(tx, await options.discover(tx));
+          return options.authorize(tx);
+        },
+        mutate: options.mutate,
+      },
       (change, id, serverTime): Wire['WalletCommandReceipt'] => ({
         id,
         entityType: 'TopupIntent',
@@ -627,13 +712,13 @@ export class MongoCommandService {
         ? 'OrderDeliveryExpiry'
         : operation === 'settleDirectOrder'
           ? 'OrderInspectionExpiry'
-        : operation === 'expireOrder'
-          ? 'OrderExpiry'
-          : operation === 'refundOrder'
-            ? 'OrderRefund'
-            : operation === 'expireOrderPickup'
-              ? 'OrderPickupExpiry'
-              : 'OrderConfirmationExpiry';
+          : operation === 'expireOrder'
+            ? 'OrderExpiry'
+            : operation === 'refundOrder'
+              ? 'OrderRefund'
+              : operation === 'expireOrderPickup'
+                ? 'OrderPickupExpiry'
+                : 'OrderConfirmationExpiry';
     return this.executePrincipal(
       { actorId: null, systemActor, key: orderId, requestId: randomUUID() },
       operation,
@@ -875,8 +960,8 @@ export class MongoCommandService {
         change.entityType === 'PointOrder' ||
         change.entityType === 'HandoverPoint' ||
         change.entityType === 'PointAssignment' ||
-        change.entityType === 'PointIncident'
-        || change.entityType === 'PurchaseConversation'
+        change.entityType === 'PointIncident' ||
+        change.entityType === 'PurchaseConversation'
           ? change.decidedAt
           : new Date();
       const receipt = project(change, id, serverTime);
@@ -969,7 +1054,7 @@ export class MongoCommandService {
                     orderId: change.orderId,
                     state: change.state,
                   }
-                  : change.entityType === 'AuctionIntake' ||
+                : change.entityType === 'AuctionIntake' ||
                     change.entityType === 'Auction' ||
                     change.entityType === 'PointOrder'
                   ? {
@@ -980,8 +1065,12 @@ export class MongoCommandService {
                       state: change.state,
                     }
                   : change.entityType === 'PurchaseConversation'
-                    ? { listingId: change.listingId, state: change.state, expiresAt: change.expiresAt.toISOString() }
-                  : {}),
+                    ? {
+                        listingId: change.listingId,
+                        state: change.state,
+                        expiresAt: change.expiresAt.toISOString(),
+                      }
+                    : {}),
             ...('revisionId' in change
               ? { revisionId: change.revisionId }
               : {}),
@@ -1062,7 +1151,12 @@ function auditAfter(change: CommandChange): Json {
         affectedListings: change.affectedListings,
       };
     case 'PurchaseConversation':
-      return { listingId: change.listingId, version: change.version, state: change.state, expiresAt: change.expiresAt.toISOString() };
+      return {
+        listingId: change.listingId,
+        version: change.version,
+        state: change.state,
+        expiresAt: change.expiresAt.toISOString(),
+      };
     case 'SaleQuote':
       return {
         version: change.version,

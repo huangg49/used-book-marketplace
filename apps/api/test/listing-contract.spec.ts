@@ -69,6 +69,7 @@ describe('listing design contract (not HTTP implementation tests)', () => {
       'listAuctions',
       'getAuction',
       'getAuctionPhoto',
+      'receiveVNPayIpn', // Signed server callback; adapter verifies each delivery.
     ]);
     let planned = 0;
     for (const [path, item] of Object.entries(contract.paths)) {

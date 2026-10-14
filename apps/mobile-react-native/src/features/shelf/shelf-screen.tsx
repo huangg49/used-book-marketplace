@@ -332,4 +332,3 @@ export function ShelfScreen() {
     </Screen>
   );
 }
-

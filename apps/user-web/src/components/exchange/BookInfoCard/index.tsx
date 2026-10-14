@@ -15,7 +15,7 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
 
     const moneyAmount = detail.moneyAmount || 0;
     let moneyText = 'Trao đổi ngang giá (Không bù tiền)';
-    
+
     if (detail.moneyCompensationType !== 'none' && moneyAmount > 0) {
         if (detail.moneyCompensationType === 'user_pays') {
             moneyText = `Tôi bù thêm ${formatVnd(moneyAmount)}`;
@@ -29,7 +29,7 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
             <h2 className={styles.cardTitle}>
                 <BookHeart className={styles.iconGold} /> Thông tin sách
             </h2>
-            
+
             <div className={styles.booksArea}>
                 <div className={styles.receiveCol}>
                     <span className={styles.pillReceive}>Sách bạn nhận</span>
@@ -96,7 +96,7 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
                 <div className={styles.detailItem}>
                     <p className={styles.detailLabel}>Phương thức giao nhận</p>
                     <p className={styles.detailValueFlex}>
-                        <Truck className={styles.iconGoldSmall} size={16} /> 
+                        <Truck className={styles.iconGoldSmall} size={16} />
                         <span>Chuyển phát bưu điện / Hẹn gặp trực tiếp (TP.HCM)</span>
                     </p>
                 </div>

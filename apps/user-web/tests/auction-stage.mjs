@@ -85,6 +85,11 @@ const cache = (page, value) => page.evaluate(async value => {
 }, value)
 const overflow = async page => assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'horizontal overflow')
 async function fixture(context) {
+  // This fixture has no realtime server. Keep Socket.IO away from Vite's
+  // same-origin dev proxy, which would otherwise forward back into itself.
+  await context.routeWebSocket(/\/socket\.io\//, socket => socket.close())
+  await context.route(`${origin}/socket.io/**`, route =>
+    route.fulfill({ status: 503, json: { message: 'Frontend-only QA: realtime unavailable' } }))
   await context.route(`${origin}/api/v1/**`, async route => {
     const url = new URL(route.request().url())
     if (url.pathname === '/api/v1/auctions') {

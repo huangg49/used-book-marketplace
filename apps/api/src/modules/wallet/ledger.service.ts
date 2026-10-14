@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type {
   ExchangeDoc,
   LedgerJournalDoc,
+  ListingFeeDoc,
   TopupIntentDoc,
   WalletAccountDoc,
 } from '../../database/mongo/documents.js';
@@ -18,6 +19,10 @@ import type { Tx } from '../../database/mongo/transaction.js';
 import { DomainError, invalidState } from '../commands/domain-error.js';
 import { checkOrder } from '../orders/order-invariants.js';
 import { checkPointOrder } from '../auctions/point-order-invariants.js';
+import {
+  FEE_JOURNAL_TYPES,
+  LISTING_FEE_CLEARING_ID,
+} from '../../database/mongo/migrations/0022-vnpay-wallet-listing-fees.js';
 
 export const CLEARING_ID = CLEARING_ACCOUNT_ID;
 
@@ -92,11 +97,41 @@ export async function checkJournal(tx: Tx, journalId: string) {
       )
     )
       throw new Error('Topup journal source mismatch');
+  } else if ((FEE_JOURNAL_TYPES as readonly string[]).includes(j.type)) {
+    const fee = j.listingFeeId
+      ? await tx.c.listing_fees.findOne({ _id: j.listingFeeId })
+      : null;
+    const owner =
+      fee &&
+      accounts.find(
+        (a) => a.ownerId === fee.ownerId && a.purpose === 'UserAvailable',
+      );
+    const from =
+      j.type === 'ListingFeeCharge' ? owner?._id : LISTING_FEE_CLEARING_ID;
+    const to =
+      j.type === 'ListingFeeSettlement'
+        ? PLATFORM_COMMISSION_ACCOUNT_ID
+        : j.type === 'ListingFeeCharge'
+          ? LISTING_FEE_CLEARING_ID
+          : owner?._id;
+    if (
+      !fee ||
+      !entries.some(
+        (e) => e.accountId === from && e.credit === fee.amount && e.debit === 0,
+      ) ||
+      !entries.some(
+        (e) => e.accountId === to && e.debit === fee.amount && e.credit === 0,
+      )
+    )
+      throw new Error('Listing fee journal source mismatch');
+    tx.check(`listing-fee:${fee._id}`, () => checkListingFee(tx, fee._id));
   } else if (j.type === 'OrderSettlement') {
     // ViaPoint completion (migration 0012): the whole hold leaves once, the
     // seller receives P − C and the platform C plus the outbound leg fee.
-    const p = await tx.c.point_orders.findOne({ _id: j.orderId! });
-    const ex = p
+    const direct = await tx.c.direct_orders.findOne({ _id: j.orderId! });
+    const quote = direct && await tx.c.sale_quotes.findOne({ _id: direct.quoteId });
+    const p = direct ? null : await tx.c.point_orders.findOne({ _id: j.orderId! });
+    const ex = direct || p
       ? null
       : await tx.c.exchanges.findOne({
           $or: [
@@ -104,7 +139,14 @@ export async function checkJournal(tx: Tx, journalId: string) {
             { recipientOrderId: j.orderId! },
           ],
         });
-    if (p) {
+    if (direct) {
+      if (!quote || direct.state !== 'Completed' ||
+          !entries.some(x => account(x.accountId)?.orderId === direct._id && account(x.accountId)?.purpose === 'OrderHold' && x.credit === quote.buyerTotal) ||
+          !entries.some(x => account(x.accountId)?.ownerId === direct.sellerId && account(x.accountId)?.purpose === 'UserAvailable' && x.debit === quote.sellerProceeds) ||
+          !entries.some(x => x.accountId === PLATFORM_COMMISSION_ACCOUNT_ID && x.debit === quote.commission))
+        throw new Error('Direct settlement journal source mismatch');
+      tx.check(`order:${direct._id}`, () => checkOrder(tx, direct._id));
+    } else if (p) {
       if (
         p.state !== 'Completed' ||
         !entries.some(
@@ -214,8 +256,10 @@ export async function checkJournal(tx: Tx, journalId: string) {
     )
       throw new Error('Order journal source mismatch');
     if (o) tx.check(`order:${o._id}`, () => checkOrder(tx, o._id));
-    else if (p) tx.check(`point-order:${p._id}`, () => checkPointOrder(tx, p._id));
-    else if (ex) tx.check(`exchange:${ex._id}`, () => checkExchange(tx, ex._id));
+    else if (p)
+      tx.check(`point-order:${p._id}`, () => checkPointOrder(tx, p._id));
+    else if (ex)
+      tx.check(`exchange:${ex._id}`, () => checkExchange(tx, ex._id));
   }
   for (const e of entries)
     if (
@@ -368,6 +412,8 @@ export class LedgerService {
       await checkJournal(tx, j._id);
     for (const t of await tx.c.topup_intents.find({}).toArray())
       await checkTopupRecord(tx, t._id);
+    for (const fee of await tx.c.listing_fees.find({}).toArray())
+      await checkListingFee(tx, fee._id);
     for (const o of await tx.c.direct_orders.find({}).toArray())
       await checkOrder(tx, o._id);
     for (const o of await tx.c.point_orders.find({}).toArray())
@@ -421,9 +467,17 @@ export class LedgerService {
       tx,
       PLATFORM_COMMISSION_ACCOUNT_ID,
     );
+    const listingFeeHeld = await balanceOf(tx, LISTING_FEE_CLEARING_ID);
+    const pendingFees = await this.pendingListingFees(tx);
+    if (listingFeeHeld !== pendingFees)
+      throw new Error('Listing fee clearing mismatch');
     if (
       row.debit !== row.credit ||
-      sourceRemaining + row.available + row.held + platformCommission !==
+      sourceRemaining +
+        row.available +
+        row.held +
+        platformCommission +
+        listingFeeHeld !==
         OPENING_CAPITAL
     )
       throw new Error('Simulated capital conservation mismatch');
@@ -435,6 +489,7 @@ export class LedgerService {
       memberAvailable: row.available,
       transactionHeld: row.held,
       platformCommission,
+      listingFeeHeld,
       sourceRemaining,
       journals: await tx.c.ledger_journals.countDocuments(),
       topups: await tx.c.topup_intents.countDocuments(),
@@ -451,7 +506,8 @@ export class LedgerService {
   async held(tx: Tx, buyerId: string) {
     return (
       (await this.heldIn(tx, 'direct_orders', buyerId)) +
-      (await this.heldIn(tx, 'point_orders', buyerId))
+      (await this.heldIn(tx, 'point_orders', buyerId)) +
+      (await this.pendingListingFees(tx, buyerId))
     );
   }
   private async heldIn(
@@ -490,6 +546,77 @@ export class LedgerService {
       ])
       .toArray();
     return row?.amount ?? 0;
+  }
+  private async pendingListingFees(tx: Tx, ownerId?: string) {
+    const rows = await tx.c.listing_fees
+      .aggregate<{ amount: number }>([
+        { $match: ownerId ? { ownerId } : {} },
+        {
+          $lookup: {
+            from: 'ledger_journals',
+            localField: '_id',
+            foreignField: 'listingFeeId',
+            as: 'journals',
+          },
+        },
+        {
+          $match: {
+            'journals.type': {
+              $nin: ['ListingFeeRefund', 'ListingFeeSettlement'],
+            },
+          },
+        },
+        { $group: { _id: null, amount: { $sum: '$amount' } } },
+      ])
+      .toArray();
+    return rows[0]?.amount ?? 0;
+  }
+  async postListingFee(
+    tx: Tx,
+    fee: ListingFeeDoc,
+    type: 'ListingFeeCharge' | 'ListingFeeRefund' | 'ListingFeeSettlement',
+    receiptId: string,
+    now: Date,
+  ) {
+    const owner = await this.account(tx, { ownerId: fee.ownerId });
+    const from =
+      type === 'ListingFeeCharge' ? owner._id : LISTING_FEE_CLEARING_ID;
+    const to =
+      type === 'ListingFeeSettlement'
+        ? PLATFORM_COMMISSION_ACCOUNT_ID
+        : type === 'ListingFeeCharge'
+          ? LISTING_FEE_CLEARING_ID
+          : owner._id;
+    await this.lockAccounts(tx, [from, to]);
+    if ((await balanceOf(tx, from)) < fee.amount)
+      throw new DomainError(
+        409,
+        'InvalidState',
+        'Số dư ví không đủ phí gửi duyệt. Hãy nạp ví rồi gửi lại; bài vẫn được lưu.',
+      );
+    return this.journal(
+      tx,
+      {
+        type,
+        listingFeeId: fee._id,
+        topupId: null,
+        eventId: null,
+        orderId: null,
+        receiptId,
+        postedAt: now,
+      },
+      from,
+      to,
+      fee.amount,
+    );
+  }
+  async lockListingFee(tx: Tx, ownerId: string) {
+    const owner = await this.account(tx, { ownerId });
+    await this.lockAccounts(tx, [
+      owner._id,
+      LISTING_FEE_CLEARING_ID,
+      PLATFORM_COMMISSION_ACCOUNT_ID,
+    ]);
   }
   async orderFunds(tx: Tx, orderId: string) {
     const account = await tx.c.wallet_accounts.findOne({ orderId });
@@ -690,7 +817,12 @@ export class LedgerService {
   }
   async settleDirectOrder(
     tx: Tx,
-    order: { _id: string; sellerId: string; buyerTotal: number; sellerProceeds: number },
+    order: {
+      _id: string;
+      sellerId: string;
+      buyerTotal: number;
+      sellerProceeds: number;
+    },
     receiptId: string,
     now: Date,
   ) {
@@ -730,11 +862,7 @@ export class LedgerService {
       intent.amount,
     );
   }
-  async settleExchange(
-    tx: Tx,
-    exchange: ExchangeDoc,
-    now: Date,
-  ) {
+  async settleExchange(tx: Tx, exchange: ExchangeDoc, now: Date) {
     if (exchange.diffAmount === 0) {
       if (exchange.initiatorDeposit > 0) {
         const initAccounts = await this.lockOrder(
@@ -772,9 +900,7 @@ export class LedgerService {
       }
     } else {
       const isInitDiff = exchange.diffPayerId === exchange.initiatorId;
-      const payerId = isInitDiff
-        ? exchange.initiatorId
-        : exchange.recipientId;
+      const payerId = isInitDiff ? exchange.initiatorId : exchange.recipientId;
       const payerOrderId = isInitDiff
         ? exchange.initiatorOrderId
         : exchange.recipientOrderId;
@@ -866,16 +992,10 @@ export class LedgerService {
           credit: 0,
         },
       ]);
-      tx.check(`journal:${journal._id}`, () =>
-        checkJournal(tx, journal._id),
-      );
+      tx.check(`journal:${journal._id}`, () => checkJournal(tx, journal._id));
     }
   }
-  async refundExchange(
-    tx: Tx,
-    exchange: ExchangeDoc,
-    now: Date,
-  ) {
+  async refundExchange(tx: Tx, exchange: ExchangeDoc, now: Date) {
     if (exchange.initiatorFundedAt) {
       const isInitDiff = exchange.diffPayerId === exchange.initiatorId;
       const amount =
@@ -924,6 +1044,57 @@ export class LedgerService {
 }
 
 // Commit-time replacement for latlai_check_topup.
+export async function checkListingFee(tx: Tx, revisionId: string) {
+  const fee = await tx.c.listing_fees.findOne({ _id: revisionId });
+  if (!fee) throw new Error('Listing fee missing');
+  const revision = await tx.c.listing_revisions.findOne({ _id: revisionId });
+  const listing = await tx.c.listings.findOne({ _id: fee.listingId });
+  const owner = await tx.c.users.findOne({ _id: fee.ownerId });
+  const receipt = await tx.c.mutation_receipts.findOne({ _id: fee.receiptId });
+  const journals = await tx.c.ledger_journals
+    .find({ listingFeeId: revisionId })
+    .toArray();
+  const decision = await tx.c.listing_decisions.findOne({ revisionId });
+  const charge = journals.find((j) => j.type === 'ListingFeeCharge');
+  const outcome = journals.find((j) => j.type !== 'ListingFeeCharge');
+  if (
+    !revision?.submittedAt ||
+    revision.listingId !== fee.listingId ||
+    listing?.ownerId !== fee.ownerId ||
+    !owner ||
+    receipt?.actorId !== fee.ownerId ||
+    !['submitListing', 'reviseApprovedListing'].includes(receipt.operation) ||
+    receipt.listingId !== fee.listingId ||
+    (receipt.result as Record<string, unknown>).revisionId !== revisionId ||
+    !charge ||
+    charge.receiptId !== fee.receiptId ||
+    charge.postedAt.getTime() !== fee.createdAt.getTime() ||
+    journals.length !== (decision ? 2 : 1) ||
+    (decision &&
+      outcome?.type !==
+        (decision.decision === 'Approve'
+          ? 'ListingFeeSettlement'
+          : 'ListingFeeRefund'))
+  )
+    throw new Error('Listing fee/revision/decision mismatch');
+  for (const j of journals) {
+    const r =
+      j.receiptId &&
+      (await tx.c.mutation_receipts.findOne({ _id: j.receiptId }));
+    const a = r && (await tx.c.audit_events.findOne({ receiptId: r._id }));
+    const o = a && (await tx.c.outbox_events.findOne({ auditId: a._id }));
+    if (
+      !r ||
+      !o ||
+      r.listingId !== fee.listingId ||
+      a?.listingId !== fee.listingId ||
+      (j.type !== 'ListingFeeCharge' &&
+        (r.operation !== 'decideListing' || r.actorId !== decision?.reviewerId))
+    )
+      throw new Error('Listing fee receipt/audit/outbox mismatch');
+  }
+}
+
 export async function checkTopupRecord(tx: Tx, topupId: string) {
   const t = await tx.c.topup_intents.findOne({ _id: topupId });
   if (!t) throw new Error('Topup missing');
@@ -931,6 +1102,7 @@ export async function checkTopupRecord(tx: Tx, topupId: string) {
   const events = await tx.c.simulated_payment_events
     .find({ intentId: topupId })
     .toArray();
+  const provider = await tx.c.vnpay_payments.findOne({ _id: topupId });
   const chain = async (receiptId: string) => {
     const r = await tx.c.mutation_receipts.findOne({ _id: receiptId });
     const a = r && (await tx.c.audit_events.findOne({ receiptId }));
@@ -939,7 +1111,7 @@ export async function checkTopupRecord(tx: Tx, topupId: string) {
   };
   const creation = await tx.c.mutation_receipts.findOne({
     topupId,
-    operation: 'createTopupIntent',
+    operation: provider ? 'createVNPayTopup' : 'createTopupIntent',
     actorId: t.ownerId,
     resultVersion: 1,
   });
@@ -954,7 +1126,12 @@ export async function checkTopupRecord(tx: Tx, topupId: string) {
     const { r, a, o } = await chain(e.receiptId);
     if (
       r?.topupId !== topupId ||
-      r.operation !== 'emitSimulatedTopupEvent' ||
+      !(e.provider === 'VNPaySandbox-v1'
+        ? ['applyVNPayIpn', 'applyVNPayQuery'].includes(r.operation)
+        : r.operation === 'emitSimulatedTopupEvent') ||
+      (e.provider === 'VNPaySandbox-v1' &&
+        (!provider || r.systemActor !== 'VNPaySandbox')) ||
+      (e.provider === 'LatLaiSimulator-v1' && !!provider) ||
       a?.topupId !== topupId ||
       !o
     )
@@ -964,7 +1141,10 @@ export async function checkTopupRecord(tx: Tx, topupId: string) {
       (e.recipientId !== t.ownerId ||
         e.amount !== t.amount ||
         e.currency !== t.currency ||
-        e.occurredAt < t.createdAt ||
+        e.occurredAt.getTime() <
+          (e.provider === 'VNPaySandbox-v1'
+            ? Math.floor(t.createdAt.getTime() / 1000) * 1000
+            : t.createdAt.getTime()) ||
         e.occurredAt.getTime() > e.receivedAt.getTime() + 300_000)
     )
       bad = true;
@@ -974,6 +1154,24 @@ export async function checkTopupRecord(tx: Tx, topupId: string) {
     t.state !== 'ReviewRequired'
   )
     bad = true;
+  if (provider) {
+    if (
+      provider.receiptId !== creation?._id ||
+      provider.createdAt.getTime() !== t.createdAt.getTime()
+    )
+      bad = true;
+    const transaction = await tx.c.vnpay_transactions.findOne({
+      intentId: topupId,
+    });
+    const applied = events.find(
+      (e) => e.outcome === 'Succeeded' && e.disposition === 'Applied',
+    );
+    if (
+      !!transaction !== !!applied ||
+      (applied && transaction?.eventId !== applied._id)
+    )
+      bad = true;
+  }
   if (bad) throw new Error('Topup event/ledger/receipt mismatch');
 }
 

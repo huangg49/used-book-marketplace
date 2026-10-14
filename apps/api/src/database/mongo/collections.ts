@@ -75,6 +75,9 @@ export interface CollectionTypes {
   commitment_events: D.CommitmentEventDoc;
   wallet_accounts: D.WalletAccountDoc;
   topup_intents: D.TopupIntentDoc;
+  listing_fees: D.ListingFeeDoc;
+  vnpay_payments: D.VNPayPaymentDoc;
+  vnpay_transactions: D.VNPayTransactionDoc;
   simulated_payment_events: D.SimulatedPaymentEventDoc;
   ledger_journals: D.LedgerJournalDoc;
   ledger_entries: D.LedgerEntryDoc;
@@ -229,6 +232,7 @@ const NAMES: CollectionName[] = [
   'carrier_pickup_reviews',
   'order_delivery_reviews',
   'order_non_receipt_reports',
+  'direct_delivery_events',
   'workflow_contexts',
   'workflow_items',
   'agreement_snapshots',
@@ -236,6 +240,9 @@ const NAMES: CollectionName[] = [
   'commitment_events',
   'wallet_accounts',
   'topup_intents',
+  'listing_fees',
+  'vnpay_payments',
+  'vnpay_transactions',
   'simulated_payment_events',
   'ledger_journals',
   'ledger_entries',

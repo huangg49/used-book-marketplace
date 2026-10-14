@@ -48,14 +48,13 @@ try {
   sandbox = await createSandbox(config, directory);
   const manifest = await runBooks(config, directory, sandbox);
   assert.equal(manifest.status, "PASS");
-  assert.equal(
-    (
-      await createHttp(sandbox.base, sandbox.tokens)("/me/wallet", {
-        actor: "seller",
-      })
-    ).topupEnabled,
-    false,
-  );
+  const demoWallet = await createHttp(sandbox.base, sandbox.tokens)("/me/wallet", {
+    actor: "seller",
+  });
+  assert.equal(demoWallet.topupEnabled, false);
+  assert.equal(demoWallet.listingSubmissionFee, 0);
+  assert.equal(demoWallet.atomicCheckout, false);
+  assert.equal(demoWallet.vnpayEnabled, false);
   assert.match(manifest.storage, /FAKE/);
   assert.equal(Object.keys(manifest.steps).length, 9);
   const counts = async () =>

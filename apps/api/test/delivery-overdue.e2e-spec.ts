@@ -675,6 +675,9 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
     expect(r.headers['cache-control']).toContain('no-store');
     return r.body;
   }
+  // Windows and the QA container have separate clocks. Synthetic provider facts
+  // use the database clock too; production still rejects pre-label/future facts.
+  const fixtureNow = () => app.get(MongoService).tx((tx) => tx.now());
   async function fund(actor: Reader, amount = 500000) {
     const intent = (await post('/me/topups', { amount }, actor).expect(200))
       .body;
@@ -687,7 +690,7 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
         amount,
         currency: 'VND',
         outcome: 'Succeeded',
-        occurredAt: new Date().toISOString(),
+        occurredAt: (await fixtureNow()).toISOString(),
       },
       operator,
     ).expect(200);
@@ -831,7 +834,7 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
         carrier: 'LatLaiSimulator',
         trackingCode: body.trackingCode,
         type: 'PickedUp',
-        occurredAt: new Date().toISOString(),
+        occurredAt: (await fixtureNow()).toISOString(),
       } as Wire['SimulatedPickupEvent'],
     };
   }
@@ -1166,7 +1169,7 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
     await emit({
       ...event,
       eventId: randomUUID(),
-      occurredAt: new Date().toISOString(),
+      occurredAt: (await fixtureNow()).toISOString(),
     }).expect(200);
     const review = await db.c.carrier_pickup_reviews.findOne({ orderId: f.id });
     await freeze(f, p.deliveryDeadline!);

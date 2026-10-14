@@ -67,7 +67,7 @@ export function CounterDialog({
   const [amountStr, setAmountStr] = useState('0');
   const [addressMode, setAddressMode] = useState<'existing' | 'new'>('existing');
   const [selectedAddressId, setSelectedAddressId] = useState<string>(currentAddressId ?? '');
-  
+
   // New address form fields
   const [newRecipientName, setNewRecipientName] = useState('');
   const [newPhone, setNewPhone] = useState('');
