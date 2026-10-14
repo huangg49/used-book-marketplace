@@ -29,8 +29,10 @@ import { accountRecoverySpecs } from '../../src/database/mongo/migrations/0017-a
 import { authOtpSpecs } from '../../src/database/mongo/migrations/0018-auth-otp.js';
 import { exchangeCollectionSpecs } from '../../src/database/mongo/migrations/0016-exchanges.js';
 import { directDeliveryCompletionSpecs } from '../../src/database/mongo/migrations/0020-direct-delivery-completion.js';
+import { exchangeMessageSpecs } from '../../src/database/mongo/migrations/0023-exchange-messages.js';
 import { inspectionEvidenceCollectionSpecs } from '../../src/database/mongo/migrations/0023-inspection-evidence.js';
 import { pointIncidentCollectionSpecs } from '../../src/database/mongo/migrations/0024-point-incidents.js';
+import { transactionReviewSpecs } from '../../src/database/mongo/migrations/0025-exchange-reviews.js';
 import {
   currentCollections,
   migrations,
@@ -106,7 +108,10 @@ describe('migrations', () => {
         -directDeliveryCompletionSpecs.length -
         // N4 point operations (ADR 0030 amendment 2026-10-14) are Mongo-native.
         inspectionEvidenceCollectionSpecs.length -
-        pointIncidentCollectionSpecs.length +
+        pointIncidentCollectionSpecs.length -
+        // Exchange chat messages & reviews are Mongo-native.
+        exchangeMessageSpecs.length -
+        transactionReviewSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });
@@ -132,6 +137,11 @@ describe('migrations', () => {
         '0016-exchanges',
         '0017-exchanges-phase2',
         '0018-exchanges-proposal-expiry',
+        '0022-exchange-completion',
+        '0023-exchange-messages',
+        '0024-exchange-notifications',
+        '0025-exchange-reviews',
+        '0026-exchange-mutual-completion',
       ]);
       const memberIds = new Set([
         '0016-catalog-classification',
