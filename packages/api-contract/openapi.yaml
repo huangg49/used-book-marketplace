@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.34.0
+  version: 0.35.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -1606,7 +1606,7 @@ paths:
       summary: submitListing
       description: ACTIVE owner, Draft/Rejected; validate saved content as SubmittedContent, Ready media,
         declaration and accessible catalog; freeze revision, PendingReview. Resubmitting Rejected
-        creates a new revision even when unchanged.
+        creates a new revision even when unchanged. Default submission fee is 20000 VND held from the owner wallet in the same transaction; insufficient funds reject submission. Rejection refunds that revision fee; approval settles it. Historical submissions are not charged retroactively.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -3498,12 +3498,7 @@ paths:
       tags:
         - Orders
       x-implementation-status: implemented
-      description: ACTIVE verified MEMBER buyer; revalidate owned quote and both participants under locks.
-        Atomically reserve one Sale/Both listing, create immutable agreement and unpaid Order for 15
-        minutes. At most two AwaitingPayment Orders per buyer, including overdue Orders pending
-        worker. No charge. Current MEMBER/session authorization precedes replay, even after closure.
-        Conflict requires a fresh quote and explicit user confirmation. LOCKED is rejected with 403
-        before any receipt replay or mutation.
+      description: Default Wallet checkout atomically creates the Order and holds the server quote total P+S from the buyer wallet; insufficient funds leave no Order or reservation. Returns PendingSellerConfirmation version 2. Configured legacy Unpaid mode retains AwaitingPayment and the separate pay command. Same key/body returns the original receipt and never charges twice.
       security:
         - bearerAuth: []
       parameters:
@@ -3773,6 +3768,105 @@ paths:
         "503":
           $ref: "#/components/responses/ListingError"
       x-locked-access: existing-obligations
+  /me/topups/vnpay:
+    post:
+      operationId: createVNPayTopup
+      tags: [Wallet]
+      summary: Create a VNPay sandbox wallet topup
+      description: Verified Member; LOCKED denied. No credit until a signed IPN or server-verified QueryDR result is applied. Same key/body replays the original payment URL and deadline. Sandbox only; finite demo clearing source remains enforced.
+      x-implementation-status: implemented
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateVNPayTopup" }
+      responses:
+        "200":
+          description: Pending topup and signed sandbox URL; not a payment receipt.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+            Idempotency-Replayed:
+              schema: { type: string, enum: ["true", "false"] }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WalletCommandReceipt" }
+        "400": { $ref: "#/components/responses/ListingError" }
+        "401": { $ref: "#/components/responses/ListingError" }
+        "403": { $ref: "#/components/responses/ListingError" }
+        "409": { $ref: "#/components/responses/ListingError" }
+        "503": { $ref: "#/components/responses/ListingError" }
+  /me/topups/{topupId}/vnpay-query:
+    post:
+      operationId: queryMyVNPayTopup
+      tags: [Wallet]
+      summary: Verify an owned VNPay sandbox topup using QueryDR
+      description: Existing obligation, including LOCKED Members. Owner and current session are checked before the outbound provider query and again before applying its result. No client payment evidence or amount is accepted. Only a signed successful payment of the original amount may credit the original wallet; a pending, unconfirmed or non-successful query leaves the intent unchanged. Repeated queries and concurrent IPN deliveries cannot credit twice. Provider outages or invalid evidence return 503 without changing the wallet. Does not create or fund an Order.
+      x-implementation-status: implemented
+      x-locked-access: existing-obligations
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          description: Must equal topupId. Rechecks the same intent; successful credit is independently deduplicated by verified provider evidence, including concurrent IPN. An unconfirmed query is not a cached payment receipt.
+          schema: { type: string, format: uuid }
+        - in: path
+          name: topupId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Current owner-checked topup state after querying VNPay. Terminal intents are read without another provider query.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TopupIntent" }
+        "400": { $ref: "#/components/responses/ListingError" }
+        "401": { $ref: "#/components/responses/ListingError" }
+        "403": { $ref: "#/components/responses/ListingError" }
+        "404": { $ref: "#/components/responses/ListingError" }
+        "503": { $ref: "#/components/responses/ListingError" }
+  /payments/vnpay/ipn:
+    get:
+      operationId: receiveVNPayIpn
+      tags: [Wallet]
+      summary: Receive a signed VNPay sandbox payment result
+      description: Public server callback authenticated by HMAC-SHA512, merchant, amount and transaction reference. Return URL never credits a wallet. Duplicate callbacks do not credit twice; late valid payments may fund only their original wallet. Does not create or fund an Order.
+      x-implementation-status: implemented
+      security: []
+      parameters:
+        - { in: query, name: vnp_TxnRef, required: true, schema: { type: string } }
+        - { in: query, name: vnp_TmnCode, required: true, schema: { type: string } }
+        - { in: query, name: vnp_Amount, required: true, schema: { type: string } }
+        - { in: query, name: vnp_ResponseCode, required: true, schema: { type: string } }
+        - { in: query, name: vnp_TransactionStatus, required: true, schema: { type: string } }
+        - { in: query, name: vnp_TransactionNo, required: true, schema: { type: string } }
+        - { in: query, name: vnp_PayDate, schema: { type: string } }
+        - { in: query, name: vnp_SecureHash, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: VNPay protocol acknowledgement; 00 accepted, 02 already processed, 01 unknown reference, 04 wrong amount, 97 unauthenticated callback, 99 retryable processing error.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [RspCode, Message]
+                properties:
+                  RspCode: { type: string, enum: ["00", "01", "02", "04", "97", "99"] }
+                  Message: { type: string }
   /me/topups:
     post:
       operationId: createTopupIntent
@@ -3999,6 +4093,9 @@ paths:
               - Topup
               - OrderPayment
               - OrderRefund
+              - ListingFeeCharge
+              - ListingFeeRefund
+              - ListingFeeSettlement
               - OrderSettlement
         - in: query
           name: topupId
@@ -10990,6 +11087,12 @@ components:
         task, never proof of custody, strike or refund. Shipment registration is available through
         its separate endpoint; independent pickup simulation can advance InTransit or open
         carrierReview/ResolutionPending. Review resolution handlers remain planned.
+    CreateVNPayTopup:
+      type: object
+      additionalProperties: false
+      required: [amount]
+      properties:
+        amount: { type: integer, minimum: 5000, maximum: 10000000 }
     CreateTopupIntent:
       type: object
       additionalProperties: false
@@ -11072,6 +11175,13 @@ components:
         - paymentsEnabled
         - withdrawalsEnabled
       properties:
+        listingSubmissionFee:
+          type: integer
+          minimum: 0
+          maximum: 1000000
+          description: Current fee per new submission; default 20000 VND. Approved content edits are not charged again.
+        atomicCheckout: { type: boolean }
+        vnpayEnabled: { type: boolean }
         demoOnly:
           type: boolean
           const: true
@@ -11122,6 +11232,13 @@ components:
         - label
         - currency
       properties:
+        paymentUrl:
+          type: string
+          format: uri
+          description: Signed sandbox URL; present only on VNPay creation receipts.
+        expiresAt:
+          type: string
+          format: date-time
         id:
           type: string
           format: uuid
@@ -11208,6 +11325,9 @@ components:
             - OrderPayment
             - OrderRefund
             - OrderSettlement
+            - ListingFeeCharge
+            - ListingFeeRefund
+            - ListingFeeSettlement
         amount:
           type: integer
           minimum: -100000000

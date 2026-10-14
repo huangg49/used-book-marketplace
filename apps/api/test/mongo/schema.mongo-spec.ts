@@ -32,6 +32,7 @@ import { directDeliveryCompletionSpecs } from '../../src/database/mongo/migratio
 import {
   currentCollections,
   migrations,
+  paymentSpecs,
 } from '../../src/database/mongo/migrations/index.js';
 import {
   runTransaction,
@@ -101,7 +102,8 @@ describe('migrations', () => {
         exchangeCollectionSpecs.length +
         // Delivery events are Mongo-native immutable evidence, not a historical
         // PostgreSQL model.
-        -directDeliveryCompletionSpecs.length +
+        -directDeliveryCompletionSpecs.length -
+        paymentSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });
@@ -116,6 +118,20 @@ describe('migrations', () => {
     ).rejects.toBeInstanceOf(MigrationChecksumError);
     // The lock is released after a failed run.
     expect(await migrate(migrator, migrator.db())).toEqual([]);
+  });
+  it('upgrades applied wallet migration0022 without rewriting its checksum or data', async () => {
+    const db = root.db(`wallet_upgrade_${randomUUID().replaceAll('-', '')}_test`);
+    try {
+      await migrate(root, db, migrations.filter(m => !['0023-direct-order-settlement-principals', '0024-vnpay-querydr'].includes(m.id)));
+      const before = await db.collection<{ _id: string; checksum: string }>('_migrations').findOne({ _id: '0022-vnpay-wallet-listing-fees' });
+      expect(before?.checksum).toBe('68eaf37f04e73f0c6c87398a92c612237fb305f4e6ed82c68e7d6e78675dc0db');
+      const names = ['wallet_accounts', 'ledger_journals', 'ledger_entries'];
+      const counts = await Promise.all(names.map(name => db.collection(name).countDocuments()));
+      expect(await migrate(root, db)).toEqual(['0023-direct-order-settlement-principals', '0024-vnpay-querydr']);
+      expect(await db.collection<{ _id: string; checksum: string }>('_migrations').findOne({ _id: '0022-vnpay-wallet-listing-fees' })).toEqual(before);
+      expect(await Promise.all(names.map(name => db.collection(name).countDocuments()))).toEqual(counts);
+      expect(await migrate(root, db)).toEqual([]);
+    } finally { await db.dropDatabase(); }
   });
   it.each(['exchange-main', 'member-catalog'])(
     'upgrades %s to the union without rewriting applied checksums',

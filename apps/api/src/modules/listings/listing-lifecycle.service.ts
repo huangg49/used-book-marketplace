@@ -223,6 +223,15 @@ export class ListingLifecycleService {
       },
       mutate: async (tx, _actor, before) => {
         const l = await this.lock(tx, before, body.expectedVersion);
+        if (
+          l.moderation === 'PendingReview' &&
+          (await tx.c.listing_fees.findOne({ _id: l.currentRevisionId! }))
+        )
+          throw new DomainError(
+            409,
+            'InvalidState',
+            'Bài có phí đang chờ duyệt. Hãy đợi kết quả duyệt trước khi bỏ bài.',
+          );
         const next = await this.update(tx, l, { deletedAt: new Date() });
         return this.change(l, next);
       },
@@ -245,6 +254,15 @@ export class ListingLifecycleService {
       },
       mutate: async (tx, _actor, before) => {
         const l = await this.lock(tx, before, body.expectedVersion);
+        if (
+          l.moderation === 'PendingReview' &&
+          (await tx.c.listing_fees.findOne({ _id: l.currentRevisionId! }))
+        )
+          throw new DomainError(
+            409,
+            'InvalidState',
+            'Hãy duyệt hoặc từ chối bài trước khi gỡ để xử lý phí đang giữ.',
+          );
         const next = await this.update(tx, l, {
           visibility: 'Removed',
           removalReason: body.reason,

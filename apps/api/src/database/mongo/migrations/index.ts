@@ -12,6 +12,14 @@ import {
 } from './0018-exchanges-proposal-expiry.js';
 import { createHash } from 'node:crypto';
 import {
+  paymentSpecs,
+  walletPaymentsMigration,
+  withPayments,
+} from './0022-vnpay-wallet-listing-fees.js';
+export { paymentSpecs };
+import { directSettlementPrincipalMigration, withDirectSettlementPrincipal } from './0023-direct-order-settlement-principals.js';
+import { vnpayQueryMigration, withVNPayQuery } from './0024-vnpay-querydr.js';
+import {
   catalogVocabularyV2Migration,
   withCatalogVocabularyV2,
 } from './0019-catalog-vocabulary-v2.js';
@@ -181,6 +189,9 @@ export const migrations: Migration[] = [
   exchangesPhase3Migration,
   directDeliveryCompletionMigration,
   directDeliveryCompletionLegacyShapeMigration,
+  walletPaymentsMigration,
+  directSettlementPrincipalMigration,
+  vnpayQueryMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -200,7 +211,10 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withPurchaseConversationChanges)
     .map(withNotificationChanges)
     .map(withCatalogClassification)
-    .map(withCatalogVocabularyV2),
+    .map(withCatalogVocabularyV2)
+    .map(withPayments)
+    .map(withDirectSettlementPrincipal)
+    .map(withVNPayQuery),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),
@@ -228,4 +242,5 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withExchangePhase2Changes)
     .map(withExchangePhase3Changes),
   ...directDeliveryCompletionSpecs,
+  ...paymentSpecs,
 ];

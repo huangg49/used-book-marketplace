@@ -15,6 +15,12 @@ import {
 import { DomainError, notFound, type Wire } from '../commands/domain-error.js';
 import { checkTopupRecord, LedgerService } from './ledger.service.js';
 import { PaymentSimulator } from './payment-simulator.js';
+import {
+  VNPaySandbox,
+  VNPayCallbackError,
+  parseVNDate,
+} from './vnpay-sandbox.js';
+import { TransactionPolicy } from './transaction-policy.js';
 
 const DEMO = {
   demoOnly: true,
@@ -28,6 +34,8 @@ export class WalletService {
     private readonly commands: MongoCommandService,
     private readonly ledger: LedgerService,
     private readonly simulator: PaymentSimulator,
+    private readonly vnpay: VNPaySandbox,
+    private readonly policy: TransactionPolicy,
   ) {}
   private async session(tx: Tx, auth: Actor, now: Date) {
     const session = await tx.c.auth_sessions.findOne({ _id: auth.sessionId });
@@ -95,17 +103,33 @@ export class WalletService {
         transactionHeld,
         withdrawalHeld: 0,
         serverTime: now.toISOString(),
-        topupEnabled: actor.status !== 'LOCKED' && this.simulator.enabled(),
+        topupEnabled:
+          actor.status !== 'LOCKED' &&
+          (this.simulator.enabled() || this.vnpay.enabled()),
         paymentsEnabled: actor.status !== 'LOCKED',
         withdrawalsEnabled: false,
+        listingSubmissionFee: this.policy.listingFee,
+        atomicCheckout: this.policy.atomicCheckout,
+        vnpayEnabled: actor.status !== 'LOCKED' && this.vnpay.enabled(),
       };
     });
   }
-  create(context: CommandContext, body: Wire['CreateTopupIntent']) {
-    return this.commands.runWallet(context, 'createTopupIntent', null, body, {
+  create(
+    context: CommandContext,
+    body: Wire['CreateTopupIntent'],
+    provider: 'Simulator' | 'VNPay' = 'Simulator',
+    ip = '127.0.0.1',
+  ) {
+    const operation =
+      provider === 'VNPay' ? 'createVNPayTopup' : 'createTopupIntent';
+    return this.commands.runWallet(context, operation, null, body, {
       authorize: async (tx, actor) => {
         member(actor);
-        if (!this.simulator.enabled())
+        if (
+          !(provider === 'VNPay'
+            ? this.vnpay.enabled()
+            : this.simulator.enabled())
+        )
           throw new DomainError(
             503,
             'UNAVAILABLE',
@@ -113,7 +137,7 @@ export class WalletService {
           );
         await this.session(tx, context.auth, await tx.now());
       },
-      mutate: async (tx, actor) => {
+      mutate: async (tx, actor, _before, receiptId) => {
         const open = await tx.c.topup_intents.countDocuments({
           ownerId: actor._id,
           state: { $in: ['Pending', 'Processing', 'ReviewRequired'] },
@@ -138,9 +162,240 @@ export class WalletService {
           lockSeq: 0,
         };
         await tx.c.topup_intents.insertOne(intent);
+        if (provider === 'VNPay') {
+          if (body.amount < 5000)
+            throw new DomainError(
+              400,
+              'VALIDATION_ERROR',
+              'VNPay yêu cầu nạp ít nhất 5.000đ.',
+            );
+          const expiresAt = new Date(now.getTime() + 15 * 60000);
+          const checkout = this.vnpay.checkout(
+            intent._id,
+            intent.amount,
+            now,
+            expiresAt,
+            ip,
+          );
+          await tx.c.vnpay_payments.insertOne({
+            _id: intent._id,
+            ...checkout,
+            createdAt: now,
+            expiresAt,
+            receiptId,
+          });
+          return {
+            ...(await this.change(tx, intent, now)),
+            paymentUrl: checkout.paymentUrl,
+            expiresAt,
+          };
+        }
         return this.change(tx, intent, now);
       },
     });
+  }
+  async receiveVNPay(
+    raw: unknown,
+  ): Promise<{ RspCode: string; Message: string }> {
+    try {
+      return await this.applyVerifiedVNPay(this.vnpay.verify(raw));
+    } catch (error) {
+      if (error instanceof VNPayCallbackError)
+        return { RspCode: error.code, Message: error.message };
+      if (error instanceof DomainError && error.getStatus() === 404)
+        return { RspCode: '01', Message: 'Order not found' };
+      return { RspCode: '99', Message: 'Processing error; retry callback' };
+    }
+  }
+
+  async queryVNPay(auth: Actor, id: string) {
+    const snapshot = await this.commands.readObligation(
+      auth,
+      async (tx, actor) => {
+        member(actor);
+        const intent = await this.owned(tx, id, actor._id);
+        const payment = await tx.c.vnpay_payments.findOne({ _id: intent._id });
+        if (!payment) throw notFound();
+        return { intent, payment };
+      },
+    );
+    if (['Pending', 'Processing'].includes(snapshot.intent.state)) {
+      const evidence = await this.vnpay.queryPayment({
+        id: snapshot.intent._id,
+        tmnCode: snapshot.payment.tmnCode,
+        amount: snapshot.intent.amount,
+        createdAt: snapshot.payment.createdAt,
+      });
+      if (evidence) await this.applyVerifiedVNPay(evidence, auth);
+    }
+    return this.read(auth, id);
+  }
+
+  private async applyVerifiedVNPay(
+    p: Record<string, string>,
+    queryingActor?: Actor,
+  ) {
+    const operation = queryingActor ? 'applyVNPayQuery' : 'applyVNPayIpn';
+    const id = p.vnp_TxnRef;
+    const amount = Number(p.vnp_Amount) / 100;
+    const outcome =
+      p.vnp_ResponseCode === '00' && p.vnp_TransactionStatus === '00'
+        ? 'Succeeded'
+        : 'Failed';
+    let paidAt: Date | null = null;
+    if (p.vnp_PayDate) paidAt = parseVNDate(p.vnp_PayDate);
+    if (outcome === 'Succeeded' && (!paidAt || p.vnp_TransactionNo === '0'))
+      throw new VNPayCallbackError('97', 'Missing transaction evidence');
+    const body = {
+      id,
+      amount,
+      outcome,
+      transactionNo: p.vnp_TransactionNo,
+      payDate: p.vnp_PayDate ?? '',
+      responseCode: p.vnp_ResponseCode,
+      transactionStatus: p.vnp_TransactionStatus,
+    };
+    const hash = createHash('sha256')
+      .update(
+        canonicalJson(
+          queryingActor ? { ...body, evidenceSource: 'QueryDR' } : body,
+        ),
+      )
+      .digest('hex');
+    const eventId = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+    const result = await this.commands.runVNPay(
+      eventId,
+      id,
+      body,
+      {
+        discover: async (tx) => [(await this.owned(tx, id)).ownerId],
+        authorize: async (tx) => {
+          // The provider call occurs outside a transaction. Recheck the current
+          // owner, role and session under locks before mutation or replay.
+          if (queryingActor) {
+            const actor = await this.commands.actor(
+              tx,
+              queryingActor,
+              [],
+              'ExistingObligation',
+            );
+            member(actor);
+            await this.owned(tx, id, actor._id);
+            await this.session(tx, queryingActor, await tx.now());
+          }
+          const intent = await this.owned(tx, id);
+          const payment = await tx.c.vnpay_payments.findOne({ _id: id });
+          if (!payment || payment.tmnCode !== p.vnp_TmnCode) throw notFound();
+          if (intent.amount !== amount)
+            throw new VNPayCallbackError('04', 'Amount mismatch');
+          await tx.lock('topup_intents', [id]);
+          return { intent: await this.owned(tx, id), payment };
+        },
+        mutate: async (tx, { intent, payment }, receiptId) => {
+          // Provider transaction identity spans topups; a paid transaction cannot
+          // credit another wallet. Global lock serializes competing callbacks.
+          await tx.c.command_locks.updateOne(
+            {
+              _id: createHash('sha256')
+                .update(`vnpay-transaction:${p.vnp_TransactionNo}`)
+                .digest('hex'),
+            },
+            {
+              $inc: { lockSeq: 1 },
+              $set: { expiresAt: new Date(Date.now() + 7 * 86400000) },
+            },
+            { upsert: true },
+          );
+          const transaction = await tx.c.vnpay_transactions.findOne({
+            _id: p.vnp_TransactionNo,
+          });
+          if (transaction && transaction.intentId !== id)
+            throw new VNPayCallbackError(
+              '97',
+              'Transaction reference mismatch',
+            );
+          const priorTransaction = await tx.c.vnpay_transactions.findOne({
+            intentId: id,
+          });
+          if (
+            (await tx.c.simulated_payment_events.countDocuments({
+              intentId: id,
+            })) >= 128
+          )
+            throw new DomainError(
+              503,
+              'UNAVAILABLE',
+              'Cần đối soát yêu cầu nạp ví.',
+            );
+          const accountId =
+            outcome === 'Succeeded' &&
+            ['Pending', 'Processing'].includes(intent.state)
+              ? await this.ledger.lockFunding(tx, intent.ownerId)
+              : null;
+          const now = await tx.now();
+          // A delayed IPN can fund its wallet, but success outside the pinned
+          // checkout interval is held for review. Whole-second provider dates.
+          const occurredAt = paidAt ?? payment.createdAt;
+          const mismatch =
+            occurredAt.getTime() <
+              Math.floor(payment.createdAt.getTime() / 1000) * 1000 ||
+            occurredAt >= payment.expiresAt ||
+            occurredAt.getTime() > now.getTime() + 300000 ||
+            (transaction &&
+              transaction.payDate.getTime() !== occurredAt.getTime());
+          const contradiction =
+            (intent.state === 'Succeeded' &&
+              (outcome === 'Failed' ||
+                priorTransaction?._id !== p.vnp_TransactionNo)) ||
+            (intent.state === 'Failed' && outcome === 'Succeeded');
+          let next = intent.state;
+          let disposition: 'Applied' | 'Ignored' | 'ReviewRequired' = 'Ignored';
+          if (mismatch || contradiction || intent.state === 'ReviewRequired') {
+            next = 'ReviewRequired';
+            disposition = 'ReviewRequired';
+          } else if (['Pending', 'Processing'].includes(intent.state)) {
+            next = outcome;
+            disposition = 'Applied';
+          }
+          await tx.c.simulated_payment_events.insertOne({
+            _id: eventId,
+            intentId: id,
+            provider: 'VNPaySandbox-v1',
+            payloadHash: hash,
+            recipientId: intent.ownerId,
+            amount,
+            currency: 'VND',
+            outcome,
+            disposition,
+            occurredAt,
+            receivedAt: now,
+            receiptId,
+          });
+          const updated = await tx.c.topup_intents.findOneAndUpdate(
+            { _id: id, version: intent.version },
+            { $set: { state: next, updatedAt: now }, $inc: { version: 1 } },
+            { returnDocument: 'after' },
+          );
+          if (disposition === 'Applied' && next === 'Succeeded') {
+            await tx.c.vnpay_transactions.insertOne({
+              _id: p.vnp_TransactionNo,
+              intentId: id,
+              eventId,
+              payDate: occurredAt,
+            });
+            await this.ledger.postTopup(tx, intent, accountId!, eventId, now);
+          }
+          if (queryingActor)
+            await this.session(tx, queryingActor, await tx.now());
+          return this.change(tx, updated!, now);
+        },
+      },
+      operation,
+    );
+    return {
+      RspCode: result.replayed ? '02' : '00',
+      Message: result.replayed ? 'Already confirmed' : 'Confirm Success',
+    };
   }
   read(auth: Actor, id: string) {
     return this.commands.readObligation(auth, async (tx, actor) => {
@@ -310,6 +565,12 @@ export class WalletService {
               'Cần tài khoản vận hành mô phỏng.',
             );
           const intent = await this.owned(tx, body.intentId);
+          if (await tx.c.vnpay_payments.findOne({ _id: intent._id }))
+            throw new DomainError(
+              403,
+              'FORBIDDEN',
+              'Yêu cầu VNPay chỉ nhận kết quả đã xác minh từ VNPay.',
+            );
           if (intent.ownerId === actor._id)
             throw new DomainError(
               403,
