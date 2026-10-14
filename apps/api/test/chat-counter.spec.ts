@@ -2,13 +2,12 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../src/app.module.js';
 import { ExchangesService } from '../src/modules/exchanges/exchanges.service.js';
-import { ExchangesController } from '../src/modules/exchanges/exchanges.controller.js';
 import { MongoService } from '../src/database/mongo/mongo.service.js';
+import type { MemberAddressDoc } from '../src/database/mongo/documents.js';
 
 describe('Exchange Chat and Counter Tests', () => {
   let module: TestingModule;
   let svc: ExchangesService;
-  let ctrl: ExchangesController;
   let mongo: MongoService;
 
   beforeAll(async () => {
@@ -17,7 +16,6 @@ describe('Exchange Chat and Counter Tests', () => {
     }).compile();
 
     svc = module.get<ExchangesService>(ExchangesService);
-    ctrl = module.get<ExchangesController>(ExchangesController);
     mongo = module.get<MongoService>(MongoService);
   });
 
@@ -127,7 +125,7 @@ describe('Exchange Chat and Counter Tests', () => {
 
     let recAddr = await mongo.c.member_addresses.findOne({ ownerId: exchange.recipientId });
     if (!recAddr) {
-      recAddr = {
+      const newAddr: MemberAddressDoc = {
         _id: crypto.randomUUID(),
         ownerId: exchange.recipientId,
         recipientName: 'Trần Tú',
@@ -138,10 +136,9 @@ describe('Exchange Chat and Counter Tests', () => {
         isDefault: true,
         version: 1,
         createdAt: new Date(),
-        updatedAt: new Date(),
-        lockSeq: 0,
       };
-      await mongo.c.member_addresses.insertOne(recAddr);
+      await mongo.c.member_addresses.insertOne(newAddr);
+      recAddr = newAddr;
     }
 
     const countered = await svc.counter(
