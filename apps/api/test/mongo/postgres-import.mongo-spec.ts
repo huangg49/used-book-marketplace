@@ -8,6 +8,7 @@ import {
   readSnapshot,
 } from '../../src/database/mongo/import/postgres-import.js';
 import { OPENING_JOURNAL_ID } from '../../src/database/mongo/migrations/0002-reference-data.js';
+import { LISTING_FEE_CLEARING_ID } from '../../src/database/mongo/migrations/0022-vnpay-wallet-listing-fees.js';
 import { prepareDatabase, testUrl } from './harness.js';
 import { postgresOrderFixture } from './postgres-order-fixture.js';
 import { runTransaction } from '../../src/database/mongo/transaction.js';
@@ -163,7 +164,28 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
 
   it('imports every table with matching counts, hashes and integrity', async () => {
     const before = await readSnapshot(source);
+    const feeAccount = await mongo
+      .db()
+      .collection<{ _id: string }>('wallet_accounts')
+      .findOne({ _id: LISTING_FEE_CLEARING_ID });
+    expect(feeAccount).toMatchObject({
+      purpose: 'ListingFeeClearing',
+      ownerId: null,
+      orderId: null,
+      currency: 'VND',
+    });
     const report = await importPostgres(source, mongo, mongo.db());
+    expect(
+      await mongo
+        .db()
+        .collection<{ _id: string }>('wallet_accounts')
+        .findOne({ _id: LISTING_FEE_CLEARING_ID }),
+    ).toEqual(feeAccount);
+    expect(
+      await runTransaction(mongo, mongo.db(), (tx) =>
+        balanceOf(tx, LISTING_FEE_CLEARING_ID),
+      ),
+    ).toBe(0);
     expect(await readSnapshot(source)).toEqual(before);
     expect(report.mismatches).toEqual([]);
     expect(report.integrity?.failures).toEqual([]);

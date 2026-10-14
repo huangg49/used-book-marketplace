@@ -142,12 +142,28 @@ quá hạn) chưa làm: READINESS vẫn chặn mở rộng nghiệp vụ, cần 
   RN142unit/lint/typecheck/export Android/iOS/Web; Admin28unit/typecheck;21session
   unit; Mongo45PASS/4SKIP (import/failover chưa cấu hình); contract/routes/docs và
   diff check PASS. API11/Web4/RN1 lint warning từ main; Web chunk warning còn.
-- E2E sau hợp nhất đang chạy tuần tự trên QA riêng; carrier-pickup30PASS gồm cap128.
-  Lượt local dùng CLI testTimeout60000/hookTimeout120000 do độ trễ máy Windows;
-  source timeout/transaction/assert không đổi. Lượt đầu chạy chung Mongo failpoint
-  bị nhiễu, đã dừng; lượt15s bị timeout, không tính PASS. Full E2E/remote CI còn chờ.
+- E2E sau hợp nhất: carrier-pickup30PASS gồm cap128; wallet22/exchange22 PASS.
+  Scoped98case có97PASS/1FAIL vì Mongo QA monitor timeout; bid race chạy riêng PASS.
+  Delivery35case có34PASS/1FAIL ở worker khi QA gián đoạn; worker chạy riêng PASS.
+  Fixture provider timestamp của delivery dùng DB clock thay clock Windows để
+  tránh lệch đồng hồ; không đổi validation ứng dụng. Lượt local dùng CLI
+  testTimeout60000/hookTimeout120000, source timeout/transaction/assert không đổi.
+  Lượt đầu chạy chung Mongo failpoint bị nhiễu; lượt15s timeout, không tính PASS.
+  Full E2E đã dừng sau lỗi kết nối QA, không ghi full-suite PASS.
+- Follow-up CI trên [PR42](https://github.com/huangg49/used-book-marketplace/pull/42):
+  head `3efc5ae` có6workflow PASS; API FAIL ở PostgreSQL import thừa native account
+  `ListingFeeClearing`, Demo FAIL ở submit409 do default phí mới. Commit subject
+  `fix(ci): preserve native fee accounts and pin historical demo policy` giữ hai
+  native account theo đúng ID khi so hash/count PostgreSQL, giữ nguyên account và
+  zero balance; demo sandbox khai báo0/Unpaid/VNPay off, app mặc định20000/Wallet
+  không đổi. Không bỏ assert hoặc tắt job.
+- Local follow-up: PostgreSQL import3PASS trên PG QA/Mongo QA thật, source snapshot/
+  hash/count/nghĩa vụ cũ và native fee account giữ nguyên; một lượt trước lỗi Mongo
+  monitor được chạy lại thành công. Demo15unit và bốn scenario API/funding/orders/
+  transit PASS, gồm rerun books với assert profile; lint/typecheck/build/docs PASS.
+  CI của bản sửa phải đối chiếu theo head PR và tab Checks; không suy từ lượt cũ.
 - API có9lint warning cũ, Web bundle warning lớn. Full tạo→pay→credit merchant thật,
-  native/human/remote CI NOT RUN; không tự giải quyết ReviewRequired hoặc query
+  native/human NOT RUN; remote CI theo head PR; không tự giải quyết ReviewRequired hoặc query
   non-success. READINESS không đổi; WIP khác bảo toàn; chưa merge/deploy. Bước tiếp:
   reviewer độc lập cho tiền/quyền và kiểm CI trước khi tích hợp theo TEAMWORK.
 
