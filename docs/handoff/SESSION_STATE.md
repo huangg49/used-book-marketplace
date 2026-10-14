@@ -162,6 +162,14 @@ quá hạn) chưa làm: READINESS vẫn chặn mở rộng nghiệp vụ, cần 
   monitor được chạy lại thành công. Demo15unit và bốn scenario API/funding/orders/
   transit PASS, gồm rerun books với assert profile; lint/typecheck/build/docs PASS.
   CI của bản sửa phải đối chiếu theo head PR và tab Checks; không suy từ lượt cũ.
+- [API CI tại b2bb37b](https://github.com/huangg49/used-book-marketplace/actions/runs/38629217780)
+  đã qua Mongo import/failover và647/649E2E; chỉ hai test migration còn kỳ vọng ba
+  account thay vì bốn sau0022. Commit subject `test(wallet): verify fee clearing in
+  migration upgrades` cập nhật danh sách/count chính xác, thêm assert ID/shape và
+  zero balance của fee clearing; giữ toàn bộ snapshot history, finite capital,
+  journal/entry/sequence và negative privilege/validator checks. Không đổi source
+  ứng dụng/migration/timeout CI. Hai E2E này local2PASS; API lint/typecheck và docs
+  PASS. Bảy workflow khác ở b2bb37b PASS; check bản mới theo head PR42.
 - API có9lint warning cũ, Web bundle warning lớn. Full tạo→pay→credit merchant thật,
   native/human NOT RUN; remote CI theo head PR; không tự giải quyết ReviewRequired hoặc query
   non-success. READINESS không đổi; WIP khác bảo toàn; chưa merge/deploy. Bước tiếp:
