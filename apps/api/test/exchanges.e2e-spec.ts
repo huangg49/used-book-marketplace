@@ -370,6 +370,14 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       await c.audit_events.deleteMany({ _id: { $in: audits } });
       await c.mutation_receipts.deleteMany(history);
 
+      // 5. Addresses and auxiliary exchange collections
+      await c.member_addresses.deleteMany({ ownerId: { $in: users } });
+      await c.address_identities.deleteMany({ ownerId: { $in: users } });
+      await c.address_books.deleteMany({ _id: { $in: users } });
+      const exchangeIds = userExchanges.map((e) => e._id);
+      await c.exchange_messages.deleteMany({ exchangeId: { $in: exchangeIds } });
+      await c.transaction_reviews.deleteMany({ exchangeId: { $in: exchangeIds } });
+
       await db.removeUsers(users);
       await db.close();
     }
@@ -387,7 +395,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       recipientName: 'Nguyễn Văn A',
       phone: '0901234567',
       serviceAreaCode: 'HCM-DEMO-v1',
-      localityCode: 'Q1',
+      localityCode: 'DEMO-A',
       detail: '123 Nguyễn Huệ',
       isDefault: true,
       createdAt: new Date(),
@@ -399,12 +407,20 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       recipientName: 'Trần Thị B',
       phone: '0909876543',
       serviceAreaCode: 'HCM-DEMO-v1',
-      localityCode: 'Q3',
+      localityCode: 'DEMO-B',
       detail: '456 Lê Văn Sỹ',
       isDefault: true,
       createdAt: new Date(),
     };
     await db.c.member_addresses.insertMany([addr1, addr2]);
+    await db.c.address_identities.insertMany([
+      { _id: addr1._id, ownerId: user1.id },
+      { _id: addr2._id, ownerId: user2.id },
+    ]);
+    await db.c.address_books.insertMany([
+      { _id: user1.id, version: 1, lockSeq: 0 },
+      { _id: user2.id, version: 1, lockSeq: 0 },
+    ]);
 
     const l1 = await createApprovedListing(user1, 100000, 'Both');
     const l2 = await createApprovedListing(user2, 150000, 'Both');
