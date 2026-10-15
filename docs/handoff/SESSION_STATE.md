@@ -1,4 +1,29 @@
-# Điểm lưu hiện tại — 14/10/2026
+# Điểm lưu hiện tại — 16/10/2026
+
+## Chat mua bán, Seller tạo Order — 16/10/2026
+
+- Nhánh local `codex/seller-selected-purchase-orders`, bắt đầu từ working tree sạch
+  trên `main` (`3edb2c1`); hai commit local `064d744` (API/contract/migration và
+  nghiệp vụ) và `d7b32a6` (User Web), chưa push/PR. Luồng direct Sale/Both đổi theo
+  quyết định người dùng: chat không giữ listing; Buyer gửi địa chỉ + báo giá giao
+  nhận; Seller xem thông tin, nhập giá đã thương lượng và tạo Order unpaid; Buyer
+  xác nhận thanh toán sau. Chỉ Order tạo exclusive commitment/Reserved; listing
+  Order vẫn public với trạng thái đang giao dịch. Buyer trong đơn thấy nhãn giao
+  dịch với mình và có thể mở hội thoại/đơn từ trang sách; header có mục Chat riêng.
+- OpenAPI 0.41.0 + generated types, API endpoint gắn quote vào conversation, seller
+  Order create, Order snapshot dùng agreed price; migration 0028 giữ tương thích
+  hội thoại 24h cũ. User Web cập nhật listing detail, chat và bước địa chỉ/quote;
+  quote preview chia sẻ địa chỉ chỉ với Buyer/Seller của conversation. ADR 0037 và
+  SRS 1.1/PROJECT_CONTEXT/WALLET_CHECKOUT ghi quyết định; không sửa snapshot 1.0.
+- Contract check/routes, API + user-web typecheck, docs check, API + user-web lint,
+  `git diff --check` PASS; user-web typecheck/lint và diff check cũng PASS sau UI
+  follow-up (lint có 4 cảnh báo hiện hữu ở file khác). `pnpm db:migrate` áp dụng đến 0027 rồi
+  0028 lỗi validation ở backfill dưới validator schema cũ; 0028 chưa được ghi vào
+  migration ledger. Đã sửa thứ tự 0028: drop unique index cũ, cập nhật validator/
+  indexes mới, rồi mới backfill quoteId/orderId; chưa chạy lại DB migration.
+  Automated/integration/browser tests, QA replica set, human review và live payment
+  NOT RUN; không đổi READINESS. Cần chủ máy chạy lại `pnpm db:migrate` sau khi lấy
+  bản sửa; rồi review người thật và quyết định commit/push/PR theo quyền của gói.
 
 ## Member web: Login gió và sân khấu đấu giá — 14/10/2026
 
