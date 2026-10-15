@@ -228,6 +228,26 @@
   align-items: center;
   gap: 22px;
 }
+.chatAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--shop-cream);
+  border-radius: 8px;
+  color: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.chatAction:hover,
+.chatAction[aria-current="page"] {
+  background: var(--shop-cream);
+  color: var(--shop-wine);
+}
 .account {
   min-height: 44px;
   display: inline-flex;
@@ -298,6 +318,9 @@
 .mobileNav a:hover,
 .mobileNav button:hover {
   background: #762321;
+}
+.mobileNav a[aria-current="page"] {
+  background: var(--shop-wine-hover);
 }
 .footer {
   background: var(--shop-wine);
@@ -400,7 +423,8 @@
     padding: 12px 20px;
   }
   .desktopNav,
-  .account {
+  .account,
+  .chatAction {
     display: none;
   }
   .menuButton {
