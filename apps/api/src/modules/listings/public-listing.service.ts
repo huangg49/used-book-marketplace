@@ -66,21 +66,6 @@ export function publicEligibleStages(): Document[] {
       },
     },
     {
-      $match: {
-        $expr: {
-          $or: [
-            { $eq: ['$trade', 'Available'] },
-            {
-              $and: [
-                { $eq: ['$trade', 'Reserved'] },
-                { $gt: [{ $size: '$purchase' }, 0] },
-              ],
-            },
-          ],
-        },
-      },
-    },
-    {
       $lookup: {
         from: 'exclusive_commitments',
         localField: '_id',
@@ -89,7 +74,56 @@ export function publicEligibleStages(): Document[] {
         as: 'active',
       },
     },
-    { $match: { active: { $size: 0 } } },
+    {
+      $lookup: {
+        from: 'workflow_contexts',
+        localField: 'active.currentContextId',
+        foreignField: '_id',
+        pipeline: [{ $match: { kind: 'Order' } }, { $limit: 1 }],
+        as: 'activeOrderContext',
+      },
+    },
+    {
+      $lookup: {
+        from: 'direct_orders',
+        localField: 'activeOrderContext.orderId',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $match: {
+              state: {
+                $in: [
+                  'AwaitingPayment', 'PendingSellerConfirmation', 'SettlementPending',
+                  'Preparing', 'InTransit', 'ResolutionPending', 'Inspection',
+                ],
+              },
+            },
+          },
+          { $limit: 1 },
+        ],
+        as: 'activeOrder',
+      },
+    },
+    {
+      $match: {
+        $expr: {
+          $or: [
+            { $eq: ['$trade', 'Available'] },
+            {
+              $and: [
+                { $eq: ['$trade', 'Reserved'] },
+                {
+                  $or: [
+                    { $gt: [{ $size: '$purchase' }, 0] },
+                    { $gt: [{ $size: '$activeOrder' }, 0] },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    },
     {
       $lookup: {
         from: 'listing_revisions',
@@ -252,7 +286,7 @@ export class PublicListingService {
         l.trade === 'Reserved'
           ? {
               status: 'InNegotiation' as const,
-              expiresAt: l.purchase[0]!.expiresAt.toISOString(),
+              expiresAt: l.purchase[0]?.expiresAt?.toISOString() ?? null,
             }
           : { status: 'Available' as const, expiresAt: null },
     };

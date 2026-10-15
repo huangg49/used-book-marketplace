@@ -8,6 +8,7 @@ import type {
 } from '../../database/mongo/documents.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import { checkListing } from '../listings/listing-projection.js';
+import { quoteAmounts } from '../quotes/quote-money.js';
 
 // Commit-time replacements for the PostgreSQL deferred constraint triggers of
 // the Order aggregate (MIG02_MODEL_MAP, section C): latlai_check_order and its
@@ -61,6 +62,15 @@ export async function checkOrder(tx: Tx, orderId: string) {
   const a = await tx.c.agreement_snapshots.findOne({ _id: c!._id });
   const snapshot = a?.snapshot;
   const amounts = get(snapshot, 'amounts') as Json | undefined;
+  const bookPrice = get(amounts, 'bookPrice');
+  const shippingFee = get(amounts, 'shippingFee');
+  const commissionBps = get(amounts, 'commissionBps');
+  const calculated =
+    typeof bookPrice === 'number' &&
+    typeof shippingFee === 'number' &&
+    typeof commissionBps === 'number'
+      ? quoteAmounts(bookPrice, shippingFee, commissionBps)
+      : null;
   if (
     !a ||
     i.listingId !== q!.listingId ||
@@ -74,7 +84,12 @@ export async function checkOrder(tx: Tx, orderId: string) {
     time(get(snapshot, 'createdAt')) !== o.createdAt.getTime() ||
     time(get(snapshot, 'paymentDeadline')) !== o.paymentDeadline.getTime() ||
     get(snapshot, 'policyVersion') !== q!.policyCode ||
-    get(amounts, 'buyerTotal') !== q!.buyerTotal
+    !calculated ||
+    get(amounts, 'buyerTotal') !== calculated.buyerTotal ||
+    get(amounts, 'commission') !== calculated.commission ||
+    get(amounts, 'sellerProceedsOnCompletion') !== calculated.sellerProceeds ||
+    shippingFee !== q!.shippingFee ||
+    commissionBps !== q!.commissionBps
   )
     fail('Order snapshot mismatch');
   const commitments = await tx.c.exclusive_commitments
@@ -86,6 +101,13 @@ export async function checkOrder(tx: Tx, orderId: string) {
   const events = await tx.c.commitment_events
     .find({ commitmentId: e._id })
     .toArray();
+  const initial = events.find((event) => event.sequence === 1);
+  const initialChain = initial ? await chain(tx, initial.receiptId) : null;
+  if (
+    bookPrice !== q!.bookPrice &&
+    initialChain?.r.operation !== 'createDirectOrderFromConversation'
+  )
+    fail('Unapproved negotiated Order price');
   if (
     e.listingId !== i.listingId ||
     e.version !== c!.version ||
@@ -106,8 +128,8 @@ export async function checkOrder(tx: Tx, orderId: string) {
     // version.  All other paid release paths still end at version four.
     const expected =
       ev.sequence === 1
-        ? x?.r.operation === 'createDirectOrder' &&
-          get(x.r.result, 'state') === 'PendingSellerConfirmation'
+        ? (x?.r.operation === 'createDirectOrder' &&
+            get(x.r.result, 'state') === 'PendingSellerConfirmation')
           ? 2
           : 1
         : o.state === 'Completed'
@@ -125,7 +147,7 @@ export async function checkOrder(tx: Tx, orderId: string) {
     )
       fail('Missing commitment receipt/audit/outbox');
   }
-  await checkOrderFunding(tx, o, c!, q!.buyerTotal);
+  await checkOrderFunding(tx, o, c!, calculated!.buyerTotal);
   await checkOrderPreparation(tx, o, c!);
   tx.check(`listing:${i.listingId}`, () => checkListing(tx, i.listingId));
 }

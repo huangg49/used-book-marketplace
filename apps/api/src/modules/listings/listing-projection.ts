@@ -234,10 +234,6 @@ export async function checkListing(tx: Tx, listingId: string) {
     listingId,
     status: 'Active',
   });
-  const purchase = await tx.c.purchase_conversations.findOne({
-    listingId,
-    status: 'Active',
-  });
   const exchange = await tx.c.exchanges.findOne({
     $or: [{ initiatorListingId: listingId }, { recipientListingId: listingId }],
     status: {
@@ -249,10 +245,14 @@ export async function checkListing(tx: Tx, listingId: string) {
       ],
     },
   });
-  // A listing is reserved by exactly one workflow: either the established
-  // order/auction commitment, the 24-hour buyer-seller conversation, or an active exchange.
+  const legacyPurchase =
+    l.trade === 'Reserved' && !active && !exchange
+      ? await tx.c.purchase_conversations.findOne({ listingId, status: 'Active', expiresAt: { $ne: null } })
+      : null;
+  // New conversations do not reserve inventory. This temporary projection
+  // still recognizes reservations created by the previous 24-hour behavior.
   const reserverCount =
-    (active ? 1 : 0) + (purchase ? 1 : 0) + (exchange ? 1 : 0);
+    (active ? 1 : 0) + (legacyPurchase ? 1 : 0) + (exchange ? 1 : 0);
   if ((l.trade === 'Reserved') !== (reserverCount === 1) || reserverCount > 1)
     throw new Error('Listing/commitment projection mismatch');
   if (active) {
@@ -262,6 +262,6 @@ export async function checkListing(tx: Tx, listingId: string) {
     if (item?.listingRevisionId !== l.currentRevisionId)
       throw new Error('Reserved listing revision cannot change');
   }
-  if (purchase && (purchase.sellerId !== l.ownerId || purchase.listingVersion >= l.version))
+  if (legacyPurchase && (legacyPurchase.sellerId !== l.ownerId || legacyPurchase.listingVersion >= l.version))
     throw new Error('Purchase conversation/listing mismatch');
 }

@@ -30,6 +30,10 @@ import {
   withIntegratedWalletPointCommands,
 } from './0027-wallet-point-command-union.js';
 import {
+  sellerSelectedOrdersMigration,
+  sellerSelectedConversationSpecs,
+} from './0028-seller-selected-orders.js';
+import {
   directSettlementPrincipalMigration,
   withDirectSettlementPrincipal,
 } from './0023-direct-order-settlement-principals.js';
@@ -94,7 +98,6 @@ import {
   withRulesChanges,
 } from './0013-auction-business-rules.js';
 import {
-  purchaseConversationSpecs,
   purchaseConversationsMigration,
   withPurchaseConversationChanges,
 } from './0014-purchase-conversations.js';
@@ -241,6 +244,7 @@ export const migrations: Migration[] = [
   exchangeReviewsMigration,
   exchangeMutualCompletionMigration,
   integratedWalletPointMigration,
+  sellerSelectedOrdersMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -287,7 +291,7 @@ export const currentCollections = (): CollectionSpec[] => [
   ...resolutionCollectionSpecs.map(withSettlementChanges).map(withRulesChanges),
   ...settlementCollectionSpecs.map(withRulesChanges),
   ...rulesCollectionSpecs,
-  ...purchaseConversationSpecs,
+  ...sellerSelectedConversationSpecs,
   ...notificationSpecs.map(withExchangeNotificationChanges),
   ...accountRecoverySpecs,
   ...authOtpSpecs,

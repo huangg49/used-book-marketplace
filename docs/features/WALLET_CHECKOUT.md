@@ -122,7 +122,10 @@ và [phân biệt Return/IPN](https://sandbox.vnpayment.vn/apis/docs/faqs/),
 [ADR0036](../adr/0036-vnpay-local-querydr.md).
 
 Evidence thực chạy được ghi trong mục VNPay của [SESSION_STATE](../handoff/SESSION_STATE.md).
-User Web có trang ví, phí gửi duyệt và xác nhận tổng báo giá trước checkout;
-RN chỉ cập nhật parser/nhãn history tương thích, chưa thêm giao diện nạp VNPay native.
+User Web có trang ví và xác nhận tổng báo giá trước thanh toán. Luồng mua direct
+hiện yêu cầu Buyer gửi địa chỉ/báo giá trong chat trước; Seller chọn Buyer, nhập
+giá đã thỏa thuận và tạo Order unpaid. Listing chỉ được reserve khi Order được
+tạo; Buyer xem tổng đã chốt rồi mới thanh toán. RN chỉ cập nhật parser/nhãn
+history tương thích, chưa thêm giao diện nạp VNPay native.
 Human money/permission review, remote CI, merchant sandbox thật và release giữ
 nguyên gate; code/test không thay nghiệm thu đó.
