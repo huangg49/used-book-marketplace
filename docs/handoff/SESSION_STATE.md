@@ -28,8 +28,16 @@
   `origin/codex/paid-listing-transaction-state` với ba commit riêng
   `6116bff` (Mua ngay), `56c5008` (form chọn ảnh), `1130b90` (nhãn theo payment).
   Commit bàn giao: `docs(handoff): record published buy-now commits`.
-  Remote CI chưa xác minh; chưa tạo PR/merge/deploy. Bước tiếp review/tích hợp
-  theo TEAMWORK và quyền gói tiếp theo. Các mốc “commit local” dưới đây là lịch sử.
+  [PR44](https://github.com/huangg49/used-book-marketplace/pull/44) hiện mở.
+  Kiểm tra GitHub16/10 trên head `c733641`: cả8job FAIL trước khi start vì
+  account payments/spending limit (annotation giống nhau), không có test step
+  nào chạy. [API run](https://github.com/huangg49/used-book-marketplace/actions/runs/38876117415),
+  [web run](https://github.com/huangg49/used-book-marketplace/actions/runs/38876117404).
+  Chủ dự án giao kiểm tra CI và push lại; commit
+  `docs(handoff): record PR44 Actions billing blocker` ghi evidence, không đổi
+  workflow hoặc bỏ check. Owner cần xử lý Billing & plans rồi rerun checks.
+  Local PASS phía trên không thay remote CI. Chưa merge/deploy; human review
+  theo TEAMWORK còn cần. Các mốc “commit local” dưới đây là lịch sử.
 
 ## Mua ngay độc lập — 16/10/2026
 
