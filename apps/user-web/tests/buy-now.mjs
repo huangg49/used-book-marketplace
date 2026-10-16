@@ -126,11 +126,46 @@ try {
   await login(sellerPage, 'member@operations.test');
   await sellerPage.getByRole('button', { name: 'Tài khoản', exact: true }).click();
   await sellerPage.getByRole('link', { name: 'Đơn hàng của tôi', exact: true }).click();
+  const shipmentUrl = `**/api/v1/me/orders/${orderId}/shipment`;
+  let shipmentUnavailable = false;
+  await sellerPage.route(shipmentUrl, async (route) => {
+    if (shipmentUnavailable) {
+      shipmentUnavailable = false;
+      await route.fulfill({ status: 503, contentType: 'application/json', body: '{}' });
+    } else {
+      // Make each background read observable while the file chooser is open.
+      const response = await route.fetch();
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      await route.fulfill({ response });
+    }
+  });
   await sellerPage.locator(`a[href="/orders/${orderId}"]`).click();
   await sellerPage.getByRole('heading', { name: 'Chuẩn bị và bàn giao sách', exact: true }).waitFor();
   const apiRequire = createRequire(path.join(root, 'apps/api/package.json'));
   const bytes = await apiRequire('sharp')({ create: { width: 300, height: 300, channels: 3, background: '#58685E' } }).png().toBuffer();
-  await sellerPage.getByLabel('Ảnh đóng gói', { exact: true }).setInputFiles({ name: 'qa-packaging.png', mimeType: 'image/png', buffer: bytes });
+  const photo = sellerPage.getByLabel('Ảnh đóng gói', { exact: true });
+  const tracking = sellerPage.getByLabel('Mã vận đơn mô phỏng', { exact: true });
+  await photo.waitFor();
+  const originalInput = await photo.elementHandle();
+  const nextShipmentRead = (status) => sellerPage.waitForResponse((response) =>
+    response.url().endsWith(`/me/orders/${orderId}/shipment`) && response.status() === status);
+  const pickerOpened = sellerPage.waitForEvent('filechooser');
+  await photo.click();
+  const picker = await pickerOpened;
+  await nextShipmentRead(404);
+  assert(await originalInput.evaluate((input) => input.isConnected), 'Polling must preserve the input while choosing a file');
+  await picker.setFiles({ name: 'qa-packaging.png', mimeType: 'image/png', buffer: bytes });
+  await tracking.fill('LL-BUYNOWQA123');
+  shipmentUnavailable = true;
+  await nextShipmentRead(503);
+  await sellerPage.getByRole('alert').filter({ hasText: 'Chưa tải được vận đơn' }).waitFor();
+  assert(await originalInput.evaluate((input) => input.isConnected), 'A background read failure must preserve the form');
+  assert.equal(await photo.evaluate((input) => input.files[0]?.name), 'qa-packaging.png');
+  assert.equal(await tracking.inputValue(), 'LL-BUYNOWQA123');
+  assert(await tracking.evaluate((input) => document.activeElement === input), 'Polling must preserve keyboard focus');
+  await nextShipmentRead(404);
+  assert(await originalInput.evaluate((input) => input.isConnected));
+  assert.equal(await photo.evaluate((input) => input.files[0]?.name), 'qa-packaging.png');
   await sellerPage.getByRole('button', { name: 'Lưu ảnh đóng gói', exact: true }).click();
   await sellerPage.getByText('Ảnh đóng gói đã lưu: 1', { exact: true }).waitFor();
   await sellerPage.getByLabel('Mã vận đơn mô phỏng', { exact: true }).fill('LL-BUYNOWQA123');
@@ -151,7 +186,7 @@ try {
   await buyerPage.screenshot({ path: path.join(artifacts, 'buyer-in-transit-mobile.png'), fullPage: true });
   assert.equal(await fixture.db.collection('purchase_conversations').countDocuments({ listingId }), 0);
   assert.deepEqual(errors, []);
-  console.log('PASS buy-now browser: listed price, no chat, quote does not reserve, create/pay lost ACK same-key/body replay, underfunded no hold, paid Preparing without seller approval, durable notifications, real image upload/registration, independent simulated pickup InTransit; 390/1440. API/Mongo real, QA storage/payment/carrier only.');
+  console.log('PASS buy-now browser: listed price, no chat, quote does not reserve, create/pay lost ACK same-key/body replay, underfunded no hold, paid Preparing without seller approval, durable notifications, file chooser/input/focus/draft retained across shipment polling and transient 503, real image upload/registration, independent simulated pickup InTransit; 390/1440. API/Mongo real, QA storage/payment/carrier only.');
 } catch (error) {
   for (const [index, context] of (browser?.contexts() ?? []).entries())
     for (const page of context.pages()) await page.screenshot({ path: path.join(artifacts, `failure-${index}.png`), fullPage: true }).catch(() => {});

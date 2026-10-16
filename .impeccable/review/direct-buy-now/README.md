@@ -28,5 +28,15 @@ contract/typecheck/build phù hợp PASS.
 
 Kết quả kiểm tra cuối và bước tiếp xem [SESSION_STATE](../../../docs/handoff/SESSION_STATE.md).
 
+Hồi quy chọn ảnh16/10: nhánh `codex/fix-order-upload-flicker`, base `6116bff`.
+Browser test bấm input để nhận sự kiện `filechooser`, giữ picker qua một lần
+poll404 rồi chọn PNG. Trước sửa FAIL vì input đã bị detach; sau sửa PASS giữ
+cùng DOM input, file, mã vận đơn và keyboard focus qua503 mô phỏng rồi404 phục
+hồi. Upload qua Sharp/storage fake, đăng ký label và pickup độc lập tiếp tục PASS.
+Empty shipment được cache thành null; lỗi nền hiện retry mà không tháo form.
+Web lint/typecheck/build/135unit PASS; warning cũ4 và chunk còn. Đây là Chromium
+automation390/1440, chưa là thao tác hộp thoại Windows bằng tay; không chạy lại
+full API/native/provider suites khi chỉ đổi xử lý đọc dữ liệu của Member web.
+
 Impeccable context báo config chưa có buildPath và các surface brief cũ bị lệch
 đường dẫn. Không sửa cấu hình/brief trong feature này; có thể rà ở gói riêng.

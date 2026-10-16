@@ -34,8 +34,19 @@ export function OrderShipping({
 }) {
   const shipment = useQuery({
     queryKey: ["order-shipment", order.id],
-    queryFn: () =>
-      session.request(`/me/orders/${order.id}/shipment`, shipmentSchema),
+    queryFn: async () => {
+      try {
+        return await session.request(
+          `/me/orders/${order.id}/shipment`,
+          shipmentSchema,
+        );
+      } catch (cause) {
+        // No shipment yet is a stable empty result. Treating it as an error
+        // unmounts the forms on every poll, interrupting the native file picker.
+        if (cause instanceof ApiError && cause.status === 404) return null;
+        throw cause;
+      }
+    },
     retry: false,
     refetchInterval: 5000,
   });
@@ -185,8 +196,7 @@ export function OrderShipping({
       setBusy(false);
     }
   }
-  const missing =
-    shipment.error instanceof ApiError && shipment.error.status === 404;
+  const missing = shipment.data === null;
   return (
     <div>
       {shipment.data ? (
@@ -199,13 +209,12 @@ export function OrderShipping({
         </p>
       ) : shipment.isPending ? (
         <p role="status">Đang kiểm tra vận đơn…</p>
-      ) : (
-        !missing && (
-          <p role="alert">
-            Chưa tải được vận đơn.{" "}
-            <button onClick={() => void shipment.refetch()}>Thử lại</button>
-          </p>
-        )
+      ) : null}
+      {shipment.isError && (
+        <p role="alert">
+          Chưa tải được vận đơn.{" "}
+          <button onClick={() => void shipment.refetch()}>Thử lại</button>
+        </p>
       )}
       {error && (
         <p role="alert" className={styles.error}>

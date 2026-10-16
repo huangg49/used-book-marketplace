@@ -2,6 +2,16 @@
 
 ## Mua ngay độc lập — 16/10/2026
 
+- Sửa hồi quy form gửi sách trên `codex/fix-order-upload-flicker`, base
+  `6116bff`; subject `fix(web): preserve shipping form during background polling`.
+  GET shipment404 là kết quả rỗng được cache, không làm tháo/dựng form mỗi5giây.
+  Lỗi tải nền vẫn báo retry và giữ ảnh, mã đang nhập, focus. Browser test mới
+  tái hiện FAIL trước sửa vì file input bị detach khi picker mở; PASS sau sửa
+  qua404/503/phục hồi404, chọn/lưu PNG và đăng ký vận đơn tới pickup mô phỏng.
+  Web lint/typecheck/build và135unit PASS, warning cũ4/chunk còn. Chromium hai
+  phiên390/1440, API/Mongo QA thật/storage fake; chưa kiểm hộp thoại Windows
+  bằng tay. Không đổi API/contract/DB/native, không chạy lại full API suite.
+  Bản sửa commit local; chưa push/PR/merge/deploy, READINESS giữ nguyên.
 - Chủ dự án chốt hai luồng riêng: thương lượng qua chat/Seller tạo đơn và Mua
   ngay giá niêm yết không chat/duyệt lại. Nhánh `codex/direct-buy-now`, base main
   `4924fab`; commit subject `feat(orders): add independent listed-price buy-now checkout`.
