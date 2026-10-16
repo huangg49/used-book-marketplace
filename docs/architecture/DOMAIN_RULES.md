@@ -73,6 +73,9 @@ niêm yết, payment vào Preparing/version3 trong một transaction với hold,
 preparation và inbox. Không dùng reject/cancel-paid/refund trước acceptance cho
 BuyNow đã trả tiền. Pickup expiry vẫn mở review, giữ tiền và sách. Historical
 agreement không có purchaseMode là Negotiated; gate completion không đổi.
+Public listing chỉ hiển thị “Đang giao dịch”/InTransaction khi Order active có
+paidAt sau payment commit. Unpaid vẫn giữ commitment15phút nhưng là “Chờ thanh
+toán”/AwaitingPayment; không suy đã thanh toán từ Reserved hoặc OrderCreated.
 
 ## Seller acceptance và pickup review
 

@@ -566,7 +566,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       }),
     };
   }
-  it('creates a 15-minute immutable unpaid agreement, reserves stock, marks the public listing in negotiation and keeps contact private by role', async () => {
+  it('creates a 15-minute immutable unpaid agreement, reserves stock, marks the public listing awaiting payment and keeps contact private by role', async () => {
     const p = await prepared(),
       r = await create(p).expect(200);
     validates('TransactionCommandReceipt', r.body);
@@ -610,7 +610,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       buyer.id,
     );
     const publicListing = (await get(`/listings/${p.f.l.entityId}`).expect(200)).body;
-    expect(publicListing.purchaseAvailability).toEqual({ status: 'InNegotiation', expiresAt: null });
+    expect(publicListing.purchaseAvailability).toEqual({ status: 'AwaitingPayment', expiresAt: buyer.paymentDeadline });
     expect(JSON.stringify(publicListing)).not.toContain(p.f.buyer.id);
     expect((await get(`/listings?bookId=${p.f.l.book.entityId}`).expect(200)).body.items)
       .toEqual(expect.arrayContaining([expect.objectContaining({ id: p.f.l.entityId })]));

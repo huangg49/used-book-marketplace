@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.42.0
+  version: 0.43.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -10235,7 +10235,8 @@ components:
           properties:
             status:
               type: string
-              enum: [Available, InNegotiation]
+              enum: [Available, InNegotiation, AwaitingPayment, InTransaction]
+              description: Available accepts checkout; InNegotiation is a legacy conversation reservation; AwaitingPayment is an unpaid Order reservation; InTransaction requires a successfully funded active Order.
             expiresAt:
               anyOf:
                 - type: string
@@ -10273,7 +10274,9 @@ components:
               maximum: 1000000
       description: Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE
         owner has MEMBER role, Confirmed catalog and Ready media. Reserved direct-sale Orders remain visible
-        with InNegotiation availability; no new conversation can start until the listing is Available.
+        with AwaitingPayment until payment commits, then InTransaction. Unpaid reservations expose only
+        their payment deadline, never participant identities. InNegotiation is retained for legacy
+        conversation reservations. No new checkout or conversation can start until Available.
         Never serialize a private listing then filter on the client.
     CreatePurchaseConversation:
       type: object

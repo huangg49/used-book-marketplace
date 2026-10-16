@@ -661,7 +661,9 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
     const f = await ready(),
       before = await stateCounts(f.f.l.entityId),
       key = randomUUID();
+    await expectAvailability(f.f.l.entityId, 'AwaitingPayment');
     const paid = (await pay(f, key).expect(200)).body;
+    await expectAvailability(f.f.l.entityId, 'InTransaction');
     validates('TransactionCommandReceipt', paid);
     expect(paid).toMatchObject({
       state: 'PendingSellerConfirmation',
@@ -1401,6 +1403,12 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
     };
     return { f, body };
   }
+  async function expectAvailability(listingId: string, status: string) {
+    const listing = (await get(`/listings/${listingId}`).expect(200)).body;
+    validates('PublicListing', listing);
+    expect(listing.purchaseAvailability.status).toBe(status);
+    return listing.purchaseAvailability;
+  }
   it('buy-now freezes listed price without chat; payment commits preparation and notifications once', async () => {
     const p = await instant(),
       key = randomUUID();
@@ -1412,6 +1420,8 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
     ).expect(200);
     validates('TransactionCommandReceipt', created.body);
     const id = created.body.entityId;
+    expect(await expectAvailability(p.f.l.entityId, 'AwaitingPayment'))
+      .toEqual({ status: 'AwaitingPayment', expiresAt: created.body.paymentDeadline });
     expect(
       await db.c.purchase_conversations.countDocuments({
         listingId: p.f.l.entityId,
@@ -1431,6 +1441,7 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
       409,
     );
     expect(await holdAccounts(id)).toBe(0);
+    await expectAvailability(p.f.l.entityId, 'AwaitingPayment');
     await fund(p.f.buyer);
     const payKey = randomUUID();
     const paid = await post(
@@ -1440,6 +1451,8 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
       payKey,
     ).expect(200);
     expect(paid.body).toMatchObject({ state: 'Preparing', version: 3 });
+    expect(await expectAvailability(p.f.l.entityId, 'InTransaction'))
+      .toEqual({ status: 'InTransaction', expiresAt: null });
     const buyer = await orderView(id, p.f.buyer),
       seller = await orderView(id, p.f.seller);
     expect(buyer.purchaseMode).toBe('BuyNow');
@@ -1462,6 +1475,7 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
       ).body,
     ).toEqual(paid.body);
     expect(await journals(id, 'OrderPayment')).toBe(1);
+    await expectAvailability(p.f.l.entityId, 'InTransaction');
     expect(
       await db.c.member_notifications.countDocuments({
         targetId: id,
@@ -1533,6 +1547,7 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
     );
     const id = created.body.entityId;
     await cancel(id, p.f.buyer).expect(200);
+    await expectAvailability(p.f.l.entityId, 'Available');
     expect((await db.c.listings.findOne({ _id: p.f.l.entityId }))!.trade).toBe(
       'Available',
     );
@@ -1570,6 +1585,7 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
       mock.mockRestore();
     }
     expect((await orderView(id, p.f.buyer)).state).toBe('AwaitingPayment');
+    await expectAvailability(p.f.l.entityId, 'AwaitingPayment');
     expect(await holdAccounts(id)).toBe(0);
     expect(await journals(id)).toBe(0);
     expect(await db.c.order_preparations.countDocuments({ _id: id })).toBe(0);
@@ -1583,6 +1599,7 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
       key,
     ).expect(200);
     expect(result.body.state).toBe('Preparing');
+    await expectAvailability(p.f.l.entityId, 'InTransaction');
   }, 60000);
   it('buy-now payment at the deadline fails and expiry releases the unpaid book once', async () => {
     const p = await instant();
@@ -1601,6 +1618,7 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
       await app.get(OrdersService).expire(id);
       await app.get(OrdersService).expire(id);
       expect((await orderView(id, p.f.buyer)).state).toBe('PaymentExpired');
+      await expectAvailability(p.f.l.entityId, 'Available');
       expect(
         (await db.c.listings.findOne({ _id: p.f.l.entityId }))!.trade,
       ).toBe('Available');

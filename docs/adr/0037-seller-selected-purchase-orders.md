@@ -17,8 +17,9 @@ những quyết định dưới đây tiếp tục áp dụng cho đường thư
   khả năng reservation trong cùng transaction; giá đã chốt được ghi bất biến vào
   agreement snapshot, phí giao nhận lấy từ quote.
 - Chỉ transaction tạo Order mới tạo exclusive commitment và chuyển listing sang
-  Reserved. Listing có Order active vẫn xuất hiện công khai với trạng thái đang
-  giao dịch; không nhận Order thứ hai. Buyer xem tổng từ snapshot rồi thanh toán.
+  Reserved. Listing có Order unpaid vẫn xuất hiện công khai với trạng thái
+  “Chờ thanh toán”; chỉ sau payment thành công mới hiển thị “Đang giao dịch”.
+  Không nhận Order thứ hai trong lúc giữ chỗ. Buyer xem tổng từ snapshot rồi thanh toán.
 - Listing không được giữ khi chỉ có chat hoặc quote. Nếu Order chưa thanh toán
   hết hạn/hủy, quy trình Order hiện tại release reservation; Buyer/Seller có thể
   mở thêm hội thoại theo quy tắc hiện hành.

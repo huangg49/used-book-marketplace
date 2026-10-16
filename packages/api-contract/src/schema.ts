@@ -3121,7 +3121,7 @@ export interface components {
             width: number;
             height: number;
         };
-        /** @description Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE owner has MEMBER role, Confirmed catalog and Ready media. Reserved direct-sale Orders remain visible with InNegotiation availability; no new conversation can start until the listing is Available. Never serialize a private listing then filter on the client. */
+        /** @description Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE owner has MEMBER role, Confirmed catalog and Ready media. Reserved direct-sale Orders remain visible with AwaitingPayment until payment commits, then InTransaction. Unpaid reservations expose only their payment deadline, never participant identities. InNegotiation is retained for legacy conversation reservations. No new checkout or conversation can start until Available. Never serialize a private listing then filter on the client. */
         PublicListing: {
             /** Format: uuid */
             id: string;
@@ -3154,8 +3154,11 @@ export interface components {
             /** @description Null when not configured or the origin was changed/deleted. The listing remains readable. */
             fulfillment: components["schemas"]["PublicFulfillment"] | null;
             purchaseAvailability: {
-                /** @enum {string} */
-                status: "Available" | "InNegotiation";
+                /**
+                 * @description Available accepts checkout; InNegotiation is a legacy conversation reservation; AwaitingPayment is an unpaid Order reservation; InTransaction requires a successfully funded active Order.
+                 * @enum {string}
+                 */
+                status: "Available" | "InNegotiation" | "AwaitingPayment" | "InTransaction";
                 expiresAt: string | null;
             };
         } & ({

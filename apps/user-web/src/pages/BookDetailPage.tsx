@@ -111,7 +111,12 @@ export function BookDetailPage() {
       </section>
     );
   const book = detail.data;
-  const held = book.purchaseAvailability.status === "InNegotiation";
+  const held = book.purchaseAvailability.status !== "Available";
+  const heldLabel = book.purchaseAvailability.status === "AwaitingPayment"
+    ? "Chờ thanh toán"
+    : book.purchaseAvailability.status === "InTransaction"
+      ? "Đang giao dịch"
+      : "Đang giữ sách";
   const currentUserId =
     state.status === "authenticated" ? state.user.id : undefined;
   const isOwner =
@@ -205,11 +210,9 @@ export function BookDetailPage() {
             </span>
             {held && (
               <span>
-                {buyerOrderConversation
+                {buyerOrderConversation && book.purchaseAvailability.status === "InTransaction"
                   ? "Đang giao dịch với bạn"
-                  : sellerOrderConversation
-                    ? "Bạn đã tạo đơn"
-                    : "Đang giao dịch"}
+                  : heldLabel}
               </span>
             )}
           </div>
@@ -237,7 +240,7 @@ export function BookDetailPage() {
                     : isOwner
                   ? "Đây là bài đăng của bạn"
                   : held
-                    ? "Sách đang giao dịch"
+                    ? heldLabel
                     : "Muốn đọc cuốn này?"}
               </h2>
               <p>
@@ -284,7 +287,7 @@ export function BookDetailPage() {
                     }
                     onClick={requestPurchase}
                   >
-                    {held ? "Đang giao dịch" : "Chat với người bán"}
+                    {held ? heldLabel : "Chat với người bán"}
                     <ArrowUpRight size={18} aria-hidden="true" />
                   </button>
                 )

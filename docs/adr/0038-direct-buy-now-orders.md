@@ -16,6 +16,12 @@ Không mở gate Delivered/inspection/settlement trong [READINESS](../handoff/RE
 - Tạo unpaid Order và exclusive commitment cùng transaction, giữ 15 phút. Buyer
   tối đa hai đơn unpaid. Hai luồng và Exchange/intake cạnh tranh cùng commitment;
   chat không có ưu tiên. Unpaid cancel/expiry chỉ release commitment của chính đơn.
+- Điều chỉnh16/10 theo chủ dự án: reservation unpaid hiển thị “Chờ thanh toán”,
+  payment commit thành công mới hiển thị “Đang giao dịch” trên kệ/chi tiết.
+  Public availability phân biệt AwaitingPayment/InTransaction từ paidAt của
+  Order active; chỉ public hạn thanh toán, không lộ người mua hoặc Order ID.
+  Giữ Reserved/commitment nội bộ15phút và chống mua trùng. Thiếu tiền/rollback
+  không đổi nhãn sang giao dịch; hủy/hết hạn release về Available như cũ.
 - Sale/Both cho phép Mua ngay; đăng bán là cam kết bán theo giá niêm yết. UI đăng
   sách giải thích nghĩa vụ. Thanh toán thành công chuyển thẳng Preparing, không
   cho Seller chọn lại Buyer hoặc từ chối qua API pre-acceptance.

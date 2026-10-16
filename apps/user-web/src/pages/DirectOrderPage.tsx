@@ -60,6 +60,8 @@ export function DirectOrderPage() {
       await order.refetch();
       void cache.invalidateQueries({ queryKey: ["direct-orders"] });
       void cache.invalidateQueries({ queryKey: ["public-listing"] });
+      for (const key of ["home-shelves", "catalog-search", "exchange-public-listings"])
+        void cache.invalidateQueries({ queryKey: [key] });
       void cache.invalidateQueries({ queryKey: ["wallet"] });
       void cache.invalidateQueries({ queryKey: ["notifications"] });
     } catch (cause) {

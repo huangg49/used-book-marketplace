@@ -1,5 +1,31 @@
 # Điểm lưu hiện tại — 16/10/2026
 
+## Trạng thái listing theo thanh toán — 16/10/2026
+
+- Chủ dự án đổi nhãn: Order unpaid là “Chờ thanh toán”, chỉ payment commit
+  thành công mới “Đang giao dịch”. Nhánh `codex/paid-listing-transaction-state`,
+  base `56c5008`; subject `fix(listings): show transaction status only after payment`.
+- OpenAPI0.43.0 bổ sung purchaseAvailability AwaitingPayment/InTransaction;
+  projection snapshot lấy paidAt/paymentDeadline từ active Order, không lộ ID
+  hoặc danh tính Buyer. Reserved/commitment15phút vẫn chống mua trùng; không
+  sửa command/ledger/Mongo schema hoặc dữ liệu app. InNegotiation chỉ còn cho
+  reservation chat lịch sử. Web kệ/chi tiết và parser/notice RN nhận trạng thái
+  mới; chat OrderCreated dùng nhãn trung tính “Đã tạo đơn”.
+  Payment thành công làm stale cache kệ/tìm kiếm/chi tiết để khi quay lại cập
+  nhật nhãn ngay. Browser Mua ngay/thương lượng390/1440 PASS, thêm người xem
+  public kiểm nhãn kệ/chi tiết trước pay, thiếu tiền và sau pay; mất ACK giữ
+  đúng key/body. Không cần migration hoặc sửa dữ liệu cũ.
+- PASS: contract generate/check/routes165/26; API lint/typecheck/build/150unit,
+  web lint/typecheck/build/135unit, RN lint/typecheck/142unit. Warning cũ
+  API11/web4/RN1 và web chunk còn. Node24.21.0/pnpm11.19.0.
+- API scoped9/9 PASS (132 ca ngoài filter không chạy): unpaid projection,
+  negotiated paid/accepted, sáu ca BuyNow gồm thiếu tiền, replay, cạnh tranh,
+  rollback payment, cancel/expiry. Chạy trên replica set QA/database *_test,
+  không chạy lại full API/Mongo import/failover. Native device/live provider,
+  human review/remote CI NOT RUN; READINESS giữ nguyên.
+- [Evidence và giới hạn](../../.impeccable/review/direct-buy-now/README.md).
+  Bước tiếp: review/tích hợp theo quyền gói; commit local, chưa push/PR/merge/deploy.
+
 ## Mua ngay độc lập — 16/10/2026
 
 - Sửa hồi quy form gửi sách trên `codex/fix-order-upload-flicker`, base

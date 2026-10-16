@@ -28,6 +28,19 @@ contract/typecheck/build phù hợp PASS.
 
 Kết quả kiểm tra cuối và bước tiếp xem [SESSION_STATE](../../../docs/handoff/SESSION_STATE.md).
 
+Điều chỉnh nhãn thanh toán16/10: nhánh `codex/paid-listing-transaction-state`,
+base `56c5008`, OpenAPI0.43.0. [Chưa thanh toán](listing-unpaid-desktop.png)
+hiện “Chờ thanh toán”; [đã thanh toán](listing-paid-desktop.png) mới “Đang giao
+dịch”. Ảnh Chromium1440, người xem public ẩn danh, nội dung/ảnh đều QA fixture.
+Kệ và chi tiết dùng cùng projection theo paidAt; Reserved nội bộ vẫn giữ15phút.
+Browser Mua ngay và thương lượng390/1440 PASS; người xem public kiểm kệ/chi tiết
+trước pay, sau thiếu tiền và sau pay. Payer quay lại kệ nhận nhãn đã thanh toán.
+Các cache kệ/tìm kiếm/chi tiết được invalidation sau payment thành công.
+API scoped9/9 PASS gồm unpaid, negotiated paid/accepted và BuyNow rollback/
+thiếu tiền/replay/cancel/expiry/race;132 ca ngoài filter không chạy. API150,
+web135, RN142 unit cùng lint/typecheck/build phù hợp PASS; warning cũ còn.
+Không đổi Mongo schema, không chạy full API/Mongo/native/live-provider gates.
+
 Hồi quy chọn ảnh16/10: nhánh `codex/fix-order-upload-flicker`, base `6116bff`.
 Browser test bấm input để nhận sự kiện `filechooser`, giữ picker qua một lần
 poll404 rồi chọn PNG. Trước sửa FAIL vì input đã bị detach; sau sửa PASS giữ

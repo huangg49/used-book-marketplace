@@ -338,7 +338,7 @@ Mọi yêu cầu trong mục này là M trừ khi ghi E. Các tiêu chí AC ở 
 
 | Mã | Quy tắc |
 |---|---|
-| BR-10 | Chat và báo giá không giữ listing; nhiều Buyer có thể trao đổi về cùng một listing. Khi Seller tạo Order thương lượng hoặc Buyer tạo Order Mua ngay, listing mới chuyển Reserved; listing đang có Order vẫn hiện công khai với trạng thái đang giao dịch. |
+| BR-10 | Chat và báo giá không giữ listing; nhiều Buyer có thể trao đổi về cùng một listing. Khi Seller tạo Order thương lượng hoặc Buyer tạo Order Mua ngay, listing mới chuyển Reserved nội bộ và hiện công khai “Chờ thanh toán”. Chỉ sau thanh toán thành công mới hiển thị “Đang giao dịch”; giữ chỗ vẫn có hiệu lực trong hạn thanh toán. |
 | BR-11 | Buyer hủy miễn phí khi AwaitingPayment hoặc PendingSellerConfirmation; sau Seller xác nhận cần đồng ý trước pickup hoặc quy trình dispute/return. |
 | BR-12 | Deadline do máy chủ tính và snapshot; thời gian trình duyệt chỉ để hiển thị. Hết hạn không phụ thuộc worker đã chạy hay chưa. |
 | BR-13 | Mọi lần chấp nhận đề xuất phải đúng revision; thay listing làm vô hiệu phiên bản cũ và chỉ bên đang chờ phản hồi được chấp nhận. |
@@ -538,7 +538,7 @@ Mỗi use case dưới đây xác định trigger, tiền điều kiện, luồn
 1. Hệ thống mở listing hiện hành và tạo chat riêng; listing vẫn Available, hiển thị và có thể có chat với nhiều Buyer.
 2. Buyer thỏa thuận trong chat, chọn địa chỉ và gửi báo giá giao nhận; thao tác này chưa tạo Order hoặc reservation.
 3. Seller chọn đúng hội thoại, nhập giá sách đã chốt và tạo Order. Hệ thống kiểm tra participant, báo giá/địa chỉ, revision và điều kiện listing.
-4. Trong một giao dịch dữ liệu, tạo snapshot Order unpaid, reservation Active và deadline; listing chuyển Reserved nhưng vẫn hiển thị trạng thái đang giao dịch.
+4. Trong một giao dịch dữ liệu, tạo snapshot Order unpaid, reservation Active và deadline; listing chuyển Reserved nội bộ nhưng hiển thị “Chờ thanh toán”. Payment thành công mới đổi hiển thị sang “Đang giao dịch”.
 5. Buyer xem giá trong Order và xác nhận thanh toán trước deadline.
 
 **Ngoại lệ:** báo giá/địa chỉ/revision đổi yêu cầu Buyer gửi lại; nếu một Seller tạo Order đồng thời với Seller khác thì chỉ một reservation thắng; tự mua bị từ chối; Order hết hạn chưa thanh toán được giải phóng. **Hậu điều kiện:** nhiều Buyer có thể chat nhưng tối đa một Order có reservation cho listing. **Liên kết:** FR-O01–O03, BR-03/10, AC-07–AC-09.

@@ -102,10 +102,23 @@ try {
   assert.equal(order.amounts.bookPrice, 125000);
   assert.equal(order.amounts.buyerTotal, 155000);
   assert.equal(order.state, 'AwaitingPayment');
+  const observer = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const assertPublicState = async (label, status, screenshot) => {
+    assert.equal((await fixture.api(`/listings/${listingId}`)).purchaseAvailability.status, status);
+    await observer.goto(origin + '/');
+    const card = observer.locator('article').filter({ has: observer.locator(`a[href="/books/${listingId}"]`) }).first();
+    await card.getByText(label, { exact: true }).waitFor();
+    await card.locator(`a[href="/books/${listingId}"]`).first().click();
+    await observer.getByText(label, { exact: true }).first().waitFor();
+    if (status === 'AwaitingPayment') assert.equal(await observer.getByText('Đang giao dịch', { exact: true }).count(), 0);
+    if (screenshot) await observer.screenshot({ path: path.join(artifacts, screenshot), fullPage: true });
+  };
+  await assertPublicState('Chờ thanh toán', 'AwaitingPayment', 'listing-unpaid-desktop.png');
   assert.equal(await fixture.db.collection('direct_orders').countDocuments({ buyerId: buyer.user.id }), 1);
   await buyerPage.getByRole('button', { name: /Thanh toán 155/ }).click();
   await buyerPage.getByRole('alert').filter({ hasText: 'số dư ví' }).waitFor();
   assert.equal((await fixture.api('/me/wallet', buyer.accessToken)).transactionHeld, 0);
+  await assertPublicState('Chờ thanh toán', 'AwaitingPayment');
   await fundBuyer(150000);
   const paymentAttempts = [];
   let lostPay = false;
@@ -120,6 +133,12 @@ try {
   await buyerPage.getByText('Người bán đang chuẩn bị gửi', { exact: true }).waitFor();
   assert.equal(paymentAttempts.length, 2);
   assert.deepEqual(paymentAttempts[0], paymentAttempts[1]);
+  await assertPublicState('Đang giao dịch', 'InTransaction', 'listing-paid-desktop.png');
+  await buyerPage.locator('a[href="/"]').first().click();
+  await buyerPage.locator('article').filter({ has: buyerPage.locator(`a[href="/books/${listingId}"]`) }).first()
+    .getByText('Đang giao dịch', { exact: true }).waitFor();
+  await buyerPage.goBack();
+  await buyerPage.getByText('Người bán đang chuẩn bị gửi', { exact: true }).waitFor();
   assert.equal((await fixture.api('/me/wallet', buyer.accessToken)).transactionHeld, 155000);
   assert.equal(await fixture.db.collection('ledger_journals').countDocuments({ orderId, type: 'OrderPayment' }), 1);
   assert.equal(await fixture.db.collection('member_notifications').countDocuments({ targetId: orderId, kind: 'OrderBuyNowPaid' }), 2);

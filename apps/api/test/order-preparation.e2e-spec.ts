@@ -648,7 +648,7 @@ describe('Order acceptance and pickup review: real MongoDB and HTTP', () => {
     await app.close();
     app = await makeApp();
     expect((await accept(f, key).expect(200)).body).toEqual(result);
-    expect((await get('/listings/' + f.f.l.entityId).expect(200)).body.purchaseAvailability.status).toBe('InNegotiation');
+    expect((await get('/listings/' + f.f.l.entityId).expect(200)).body.purchaseAvailability.status).toBe('InTransaction');
     await get('/me/orders/' + f.id, await reader()).expect(404);
     expect(
       (await get('/me/orders?state=Preparing', f.f.seller).expect(200)).body
