@@ -24,7 +24,12 @@
   không chạy lại full API/Mongo import/failover. Native device/live provider,
   human review/remote CI NOT RUN; READINESS giữ nguyên.
 - [Evidence và giới hạn](../../.impeccable/review/direct-buy-now/README.md).
-  Bước tiếp: review/tích hợp theo quyền gói; commit local, chưa push/PR/merge/deploy.
+  Chủ dự án giao push16/10: đã push nhánh tổng hợp
+  `origin/codex/paid-listing-transaction-state` với ba commit riêng
+  `6116bff` (Mua ngay), `56c5008` (form chọn ảnh), `1130b90` (nhãn theo payment).
+  Commit bàn giao: `docs(handoff): record published buy-now commits`.
+  Remote CI chưa xác minh; chưa tạo PR/merge/deploy. Bước tiếp review/tích hợp
+  theo TEAMWORK và quyền gói tiếp theo. Các mốc “commit local” dưới đây là lịch sử.
 
 ## Mua ngay độc lập — 16/10/2026
 
