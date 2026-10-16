@@ -5,7 +5,8 @@
 Nguồn: [SRS1.1](docs/SRS_V1_1.md), [phụ lục](docs/features/LOCAL_HANDOVER_AUCTION.md),
 source main `da59199` và phản hồi/chấp thuận của chủ dự án09/10/2026.
 Đọc [SESSION_STATE](docs/handoff/SESSION_STATE.md) khi cần trạng thái triển khai;
-file này không thay contract hoặc tự đóng gate.
+file này không thay contract hoặc tự đóng gate. Luồng chat/Order cập nhật theo
+[ADR0037](docs/adr/0037-seller-selected-purchase-orders.md),16/10/2026.
 
 ## Platform
 
