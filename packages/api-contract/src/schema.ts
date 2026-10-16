@@ -503,7 +503,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Start the 24-hour buyer-seller conversation for one sale listing */
+        /** Start a buyer-seller conversation without reserving the listing */
         post: operations["createPurchaseConversation"];
         delete?: never;
         options?: never;
@@ -571,6 +571,22 @@ export interface paths {
         get: operations["listPurchaseMessages"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/purchase-conversations/{conversationId}/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["attachPurchaseConversationQuote"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1228,8 +1244,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Default Wallet checkout atomically creates the Order and holds the server quote total P+S from the buyer wallet; insufficient funds leave no Order or reservation. Returns PendingSellerConfirmation version 2. Configured legacy Unpaid mode retains AwaitingPayment and the separate pay command. Same key/body returns the original receipt and never charges twice. */
-        post: operations["createDirectOrder"];
+        /** @description The current seller creates an unpaid Order from an Active purchase conversation with a buyer-attached quote and agreed book price. The Order and exclusive listing commitment are created atomically; no buyer wallet is charged until the buyer confirms payment through POST /orders/{orderId}/pay. Only the conversation seller may create it. Same key/body returns the original receipt. */
+        post: operations["createSellerDirectOrder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3088,7 +3104,7 @@ export interface components {
             width: number;
             height: number;
         };
-        /** @description Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE owner has MEMBER role, Confirmed catalog and Ready media. A Reserved listing remains readable only while it has an active 24-hour purchase conversation, but it cannot start another conversation. Never serialize a private listing then filter on the client. */
+        /** @description Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE owner has MEMBER role, Confirmed catalog and Ready media. Reserved direct-sale Orders remain visible with InNegotiation availability; no new conversation can start until the listing is Available. Never serialize a private listing then filter on the client. */
         PublicListing: {
             /** Format: uuid */
             id: string;
@@ -3155,12 +3171,29 @@ export interface components {
             listingId: string;
             version: number;
             /** @enum {string} */
-            status: "Active" | "Expired" | "Cancelled";
+            status: "Active" | "Expired" | "Cancelled" | "OrderCreated";
             /** Format: date-time */
-            expiresAt: string;
+            expiresAt: string | null;
             /** Format: date-time */
             serverTime: string;
         };
+        AttachPurchaseConversationQuote: {
+            expectedVersion: number;
+            /** Format: uuid */
+            quoteId: string;
+            /** @constant */
+            expectedQuoteVersion: 1;
+            expectedListingVersion: number;
+            /** Format: uuid */
+            expectedListingRevisionId: string;
+        };
+        CreateOrderFromPurchaseConversation: {
+            /** Format: uuid */
+            conversationId: string;
+            expectedVersion: number;
+            agreedBookPrice: number;
+        };
+        CreateSellerDirectOrder: components["schemas"]["CreateOrderFromPurchaseConversation"];
         PurchaseParticipant: {
             /** Format: uuid */
             id: string;
@@ -3199,6 +3232,7 @@ export interface components {
         NotificationUnreadCount: {
             unreadCount: number;
         };
+        /** @description Participant-only conversation. quotePreview exposes the buyer-submitted destination only to the buyer and selected seller. */
         PurchaseConversation: {
             /** Format: uuid */
             id: string;
@@ -3208,12 +3242,22 @@ export interface components {
             seller: components["schemas"]["PurchaseParticipant"];
             version: number;
             /** @enum {string} */
-            status: "Active" | "Expired" | "Cancelled";
+            status: "Active" | "Expired" | "Cancelled" | "OrderCreated";
             /** Format: date-time */
-            expiresAt: string;
+            expiresAt: string | null;
+            hasQuote: boolean;
+            quotePreview: components["schemas"]["PurchaseQuotePreview"] | null;
+            /** Format: uuid */
+            orderId: string | null;
             /** Format: date-time */
             createdAt: string;
             closedAt: string | null;
+        };
+        PurchaseQuotePreview: {
+            destination: components["schemas"]["OrderContact"];
+            shippingFee: number;
+            /** Format: date-time */
+            expiresAt: string;
         };
         PurchaseMessage: {
             /** Format: uuid */
@@ -5984,7 +6028,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Conversation created or idempotently replayed. */
+            /** @description Conversation created or idempotently replayed. The listing remains Available. */
             200: {
                 headers: {
                     "Cache-Control"?: "no-store";
@@ -6111,6 +6155,43 @@ export interface operations {
             401: components["responses"]["ListingError"];
             403: components["responses"]["ListingError"];
             404: components["responses"]["ListingError"];
+        };
+    };
+    attachPurchaseConversationQuote: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttachPurchaseConversationQuote"];
+            };
+        };
+        responses: {
+            /** @description Buyer quote attached for the seller to create an Order; private address data stays hidden. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseConversationReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
         };
     };
     listMyListings: {
@@ -7433,7 +7514,7 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
-    createDirectOrder: {
+    createSellerDirectOrder: {
         parameters: {
             query?: never;
             header: {
@@ -7444,7 +7525,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateDirectOrder"];
+                "application/json": components["schemas"]["CreateSellerDirectOrder"];
             };
         };
         responses: {

@@ -1,3 +1,4 @@
+import { prepareSellerOrder } from './helpers/seller-order.js';
 import sharp from 'sharp';
 import { digest } from '../src/modules/media/media-storage.js';
 
@@ -655,18 +656,18 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
     const q = (await quote(f).expect(200)).body;
     return {
       f,
-      body: {
+      ...await prepareSellerOrder(app, f.buyer, {
         quoteId: q.entityId,
         expectedQuoteVersion: 1,
         expectedListingVersion: f.l.version,
         expectedListingRevisionId: f.l.revisionId,
-      },
+      }),
     };
   }
   const create = (
     p: Awaited<ReturnType<typeof prepared>>,
     key = randomUUID(),
-    actor = p.f.buyer,
+    actor = p.f.seller,
     body: object = p.body,
   ) => post('/orders', body, actor, key);
   async function orderView(id: string, actor: Reader) {

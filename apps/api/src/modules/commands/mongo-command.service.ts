@@ -103,7 +103,7 @@ export type PurchaseConversationChange = {
   listingId: string;
   version: number;
   state: Wire['PurchaseConversationReceipt']['status'];
-  expiresAt: Date;
+  expiresAt: Date | null;
   decidedAt: Date;
   event: string;
   before?: Json;
@@ -430,6 +430,7 @@ export class MongoCommandService {
     context: CommandContext,
     operation:
       | 'createDirectOrder'
+      | 'createDirectOrderFromConversation'
       | 'cancelUnpaidOrder'
       | 'payOrder'
       | 'acceptOrder'
@@ -448,7 +449,9 @@ export class MongoCommandService {
   }
   runPurchaseConversation<C>(
     context: CommandContext,
-    operation: 'createPurchaseConversation',
+    operation:
+      | 'createPurchaseConversation'
+      | 'attachPurchaseConversationQuote',
     target: string,
     body: unknown,
     options: Options<C, PurchaseConversationChange>,
@@ -466,7 +469,7 @@ export class MongoCommandService {
         listingId: change.listingId,
         version: change.version,
         status: change.state,
-        expiresAt: change.expiresAt.toISOString(),
+        expiresAt: change.expiresAt?.toISOString() ?? null,
         serverTime: serverTime.toISOString(),
       }),
     );
@@ -532,7 +535,7 @@ export class MongoCommandService {
         listingId: change.listingId,
         version: change.version,
         status: change.state,
-        expiresAt: change.expiresAt.toISOString(),
+        expiresAt: change.expiresAt?.toISOString() ?? null,
         serverTime: serverTime.toISOString(),
       }),
     );
@@ -1068,7 +1071,7 @@ export class MongoCommandService {
                     ? {
                         listingId: change.listingId,
                         state: change.state,
-                        expiresAt: change.expiresAt.toISOString(),
+                        expiresAt: change.expiresAt?.toISOString() ?? null,
                       }
                     : {}),
             ...('revisionId' in change
@@ -1155,7 +1158,7 @@ function auditAfter(change: CommandChange): Json {
         listingId: change.listingId,
         version: change.version,
         state: change.state,
-        expiresAt: change.expiresAt.toISOString(),
+        expiresAt: change.expiresAt?.toISOString() ?? null,
       };
     case 'SaleQuote':
       return {

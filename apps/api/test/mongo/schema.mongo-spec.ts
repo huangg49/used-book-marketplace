@@ -24,6 +24,8 @@ import { resolutionCollectionSpecs } from '../../src/database/mongo/migrations/0
 import { settlementCollectionSpecs } from '../../src/database/mongo/migrations/0012-point-order-settlement.js';
 import { rulesCollectionSpecs } from '../../src/database/mongo/migrations/0013-auction-business-rules.js';
 import { purchaseConversationSpecs } from '../../src/database/mongo/migrations/0014-purchase-conversations.js';
+import { sellerSelectedOrdersMigration } from '../../src/database/mongo/migrations/0028-seller-selected-orders.js';
+import { applyCollectionSpecs } from '../../src/database/mongo/migrations/index.js';
 import { notificationSpecs } from '../../src/database/mongo/migrations/0015-member-notifications.js';
 import { accountRecoverySpecs } from '../../src/database/mongo/migrations/0017-account-recovery.js';
 import { authOtpSpecs } from '../../src/database/mongo/migrations/0018-auth-otp.js';
@@ -975,5 +977,32 @@ describe('least-privilege application user', () => {
     });
     expect(at).toBeInstanceOf(Date);
     expect(await serverNow({ db: appDb })).toBeInstanceOf(Date);
+  });
+});
+
+
+describe('seller-selected conversations upgrade', () => {
+  it('backfills populated 24-hour conversations and replaces only the active-listing uniqueness', async () => {
+    const db = root.db('latlai_seller_conversation_upgrade_test');
+    try {
+      await applyCollectionSpecs(db, purchaseConversationSpecs);
+      const now = new Date(), sellerId = randomUUID();
+      const rows = ['Active', 'Expired', 'Cancelled'].map((status) => ({
+        _id: randomUUID(), listingId: randomUUID(), listingVersion: 1,
+        buyerId: randomUUID(), sellerId, version: 1, status,
+        expiresAt: new Date(now.getTime() + 86400000),
+        closedAt: status === 'Active' ? null : now, createdAt: now, updatedAt: now, lockSeq: 0,
+      }));
+      await db.collection<{ _id: string }>('purchase_conversations').insertMany(rows);
+      await sellerSelectedOrdersMigration.up(db);
+      for (const row of rows) expect(await db.collection<{ _id: string }>('purchase_conversations').findOne({ _id: row._id }))
+        .toEqual({ ...row, quoteId: null, orderId: null });
+      const second = { ...rows[0], _id: randomUUID(), buyerId: randomUUID(), expiresAt: null, quoteId: null, orderId: null };
+      await db.collection<{ _id: string }>('purchase_conversations').insertOne(second);
+      await expect(db.collection<{ _id: string }>('purchase_conversations').insertOne({ ...second, _id: randomUUID() }))
+        .rejects.toMatchObject({ code: 11000 });
+      await sellerSelectedOrdersMigration.up(db);
+      expect(await db.collection<{ _id: string }>('purchase_conversations').countDocuments()).toBe(4);
+    } finally { await db.dropDatabase(); }
   });
 });

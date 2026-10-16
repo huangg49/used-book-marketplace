@@ -174,24 +174,24 @@ export async function runOrders(
         };
       },
     );
+    const conversation = await command(
+      `${scope}.conversation`, "buyer", `/listings/${listingId}/purchase-conversations`, async () => ({
+        expectedVersion: (await http(`/me/quotes/${quoted.entityId}`, { actor: "buyer" })).listingVersion,
+      }),
+    );
+    const attached = await command(
+      `${scope}.attachQuote`, "buyer", `/me/purchase-conversations/${conversation.entityId}/quote`, async () => {
+        const quote = await http(`/me/quotes/${quoted.entityId}`, { actor: "buyer" });
+        check(quote.assessment === "Current", "Saved quote is no longer current; retain its intent and investigate.");
+        return { expectedVersion: conversation.version, quoteId: quoted.entityId, expectedQuoteVersion: quote.version,
+          expectedListingVersion: quote.listingVersion, expectedListingRevisionId: quote.listingRevisionId };
+      },
+    );
     const created = await command(
-      `${scope}.create`,
-      "buyer",
-      "/orders",
-      async () => {
-        const quote = await http(`/me/quotes/${quoted.entityId}`, {
-          actor: "buyer",
-        });
-        check(
-          quote.assessment === "Current",
-          "Saved quote is no longer current; keep its intent and choose a new run after investigation.",
-        );
-        return {
-          quoteId: quoted.entityId,
-          expectedQuoteVersion: quote.version,
-          expectedListingVersion: quote.listingVersion,
-          expectedListingRevisionId: quote.listingRevisionId,
-        };
+      `${scope}.create`, "seller", "/orders", async () => {
+        const quote = await http(`/me/quotes/${quoted.entityId}`, { actor: "buyer" });
+        check(quote.assessment === "Current", "Saved quote is no longer current; retain its intent and investigate.");
+        return { conversationId: conversation.entityId, expectedVersion: attached.version, agreedBookPrice: quote.amounts.bookPrice };
       },
     );
     const id = created.entityId;

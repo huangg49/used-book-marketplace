@@ -37,6 +37,13 @@ test("order receipts reject malformed identities/states and discard private fiel
     assert.throws(() => orderReceipt({ ...value, ...extra }), {
       code: "INVALID_RECEIPT",
     });
+  const conversation = receipt("PurchaseConversation", {
+    listingId: randomUUID(), status: "Active", expiresAt: null,
+    destination: { phone: "never-persist" },
+  });
+  assert.ok(!JSON.stringify(orderReceipt(conversation)).includes("never-persist"));
+  assert.throws(() => orderReceipt({ ...conversation, listingId: "bad" }), { code: "INVALID_RECEIPT" });
+  assert.throws(() => orderReceipt({ ...conversation, status: "Paid" }), { code: "INVALID_RECEIPT" });
   assert.throws(
     () => orderReceipt(receipt("SaleQuote", { expiresAt: "bad" })),
     { code: "INVALID_RECEIPT" },

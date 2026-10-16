@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { orderAmounts } from '../orders/order-amounts.js';
 import { randomUUID } from 'node:crypto';
 import type {
   ExchangeDoc,
@@ -129,7 +130,7 @@ export async function checkJournal(tx: Tx, journalId: string) {
     // ViaPoint completion (migration 0012): the whole hold leaves once, the
     // seller receives P − C and the platform C plus the outbound leg fee.
     const direct = await tx.c.direct_orders.findOne({ _id: j.orderId! });
-    const quote = direct && await tx.c.sale_quotes.findOne({ _id: direct.quoteId });
+    const amounts = direct && await orderAmounts(tx.c, direct._id);
     const p = direct ? null : await tx.c.point_orders.findOne({ _id: j.orderId! });
     const ex = direct || p
       ? null
@@ -140,10 +141,10 @@ export async function checkJournal(tx: Tx, journalId: string) {
           ],
         });
     if (direct) {
-      if (!quote || direct.state !== 'Completed' ||
-          !entries.some(x => account(x.accountId)?.orderId === direct._id && account(x.accountId)?.purpose === 'OrderHold' && x.credit === quote.buyerTotal) ||
-          !entries.some(x => account(x.accountId)?.ownerId === direct.sellerId && account(x.accountId)?.purpose === 'UserAvailable' && x.debit === quote.sellerProceeds) ||
-          !entries.some(x => x.accountId === PLATFORM_COMMISSION_ACCOUNT_ID && x.debit === quote.commission))
+      if (!amounts || direct.state !== 'Completed' ||
+          !entries.some(x => account(x.accountId)?.orderId === direct._id && account(x.accountId)?.purpose === 'OrderHold' && x.credit === amounts.buyerTotal) ||
+          !entries.some(x => account(x.accountId)?.ownerId === direct.sellerId && account(x.accountId)?.purpose === 'UserAvailable' && x.debit === amounts.sellerProceedsOnCompletion) ||
+          !entries.some(x => x.accountId === PLATFORM_COMMISSION_ACCOUNT_ID && x.debit === amounts.commission))
         throw new Error('Direct settlement journal source mismatch');
       tx.check(`order:${direct._id}`, () => checkOrder(tx, direct._id));
     } else if (p) {
@@ -206,7 +207,7 @@ export async function checkJournal(tx: Tx, journalId: string) {
     // An Order is a DirectDelivery Order (frozen quote) or a ViaPoint Order
     // formed by an auction (migration 0009); both freeze buyerTotal.
     const o = await tx.c.direct_orders.findOne({ _id: j.orderId! });
-    const q = o && (await tx.c.sale_quotes.findOne({ _id: o.quoteId }));
+    const amounts = o && await orderAmounts(tx.c, o._id);
     const p = o ? null : await tx.c.point_orders.findOne({ _id: j.orderId! });
     const ex =
       o || p
@@ -221,7 +222,7 @@ export async function checkJournal(tx: Tx, journalId: string) {
     let total: number | undefined;
     if (o) {
       buyerId = o.buyerId;
-      total = q?.buyerTotal;
+      total = amounts?.buyerTotal;
     } else if (p) {
       buyerId = p.buyerId;
       total = p.buyerTotal;

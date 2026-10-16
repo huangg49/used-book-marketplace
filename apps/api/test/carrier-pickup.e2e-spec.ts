@@ -1,3 +1,4 @@
+import { prepareSellerOrder } from './helpers/seller-order.js';
 import sharp from 'sharp';
 import { checkIntegrity } from '../src/integrity/integrity.js';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
@@ -479,18 +480,18 @@ describe('Carrier pickup: real MongoDB and HTTP', () => {
     const q = (await quote(f).expect(200)).body;
     return {
       f,
-      body: {
+      ...await prepareSellerOrder(app, f.buyer, {
         quoteId: q.entityId,
         expectedQuoteVersion: 1,
         expectedListingVersion: f.l.version,
         expectedListingRevisionId: f.l.revisionId,
-      },
+      }),
     };
   }
   const create = (
     p: Awaited<ReturnType<typeof prepared>>,
     key = randomUUID(),
-    actor = p.f.buyer,
+    actor = p.f.seller,
     body: object = p.body,
   ) => post('/orders', body, actor, key);
   async function orderView(id: string, actor: Reader) {
@@ -1167,6 +1168,7 @@ describe('Carrier pickup: real MongoDB and HTTP', () => {
     expect(await reviews(f.id)).toBe(1);
     expect((await reconcile()).balanced).toBe(true);
   });
+  // The race also reconciles all financial history retained by earlier suites.
   it('pickup and expiry racing at deadline retain both facts safely with one Order transition', async () => {
     const { f, event } = await labelled(),
       p = await preparation(f);
@@ -1194,7 +1196,7 @@ describe('Carrier pickup: real MongoDB and HTTP', () => {
       await incoming;
       await expiry;
     }
-  });
+  }, 60000);
   it('session expiry after ledger wait rejects even an otherwise valid event', async () => {
     const { f, event } = await labelled(),
       op2 = await reader(['TEST_OPERATOR']);

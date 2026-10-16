@@ -1,4 +1,41 @@
-# Điểm lưu hiện tại — 14/10/2026
+# Điểm lưu hiện tại — 16/10/2026
+
+## Chat mua bán, Seller tạo Order — 16/10/2026
+
+- [PR43](https://github.com/huangg49/used-book-marketplace/pull/43), base main
+  `3edb2c1`; feature `064d744`/`d7b32a6`, integration fix `514213a` trên
+  `codex/pr43-ci-fixes`, push vào `codex/seller-selected-purchase-orders`.
+  Chủ dự án giao test local rồi squash-merge dù GitHub Actions bị billing chặn.
+  Trạng thái merge/SHA thực tế xem PR; không suy CI xanh hoặc human sign-off.
+- Direct Sale/Both: chat/báo giá không giữ listing; nhiều Buyer có thể nhắn;
+  Buyer gửi địa chỉ/báo giá, Seller chọn hội thoại và giá đã thỏa thuận để tạo
+  Order unpaid/reservation, Buyer thanh toán sau. Listing Order vẫn public với
+  trạng thái đang giao dịch. OpenAPI0.41.0/ADR0037/SRS1.1 là contract/quyết định.
+- Fix tích hợp: sổ cái payment/refund/settlement kiểm số tiền agreement bất biến;
+  kiểm Buyer hiện hành; không chia sẻ địa chỉ mới nếu khác version đã gửi;
+  từ chối quote/listing stale. Web giữ key/body/giá sau mất phản hồi, cho xóa giá
+  để nhập lại, cập nhật trạng thái sách khi quay về từ chat, báo lỗi thiếu số dư.
+  Fixture/demo chuyển sang API Seller thật; contract Buyer-create cũ vẫn bị từ chối.
+- Local Node24.19.0/pnpm11.19.0: contract/routes164operation/26controller, docs,
+  diff, API/web/admin lint/typecheck/build PASS; unit API150/web135/admin28/
+  session21/RN142/demo15 PASS. RN Android/iOS/web export + browser kệ/địa chỉ/
+  đăng sách, operations browser, web shelf/sell/exchange/wallet/auth/auction PASS.
+  Browser Seller Order mới390/1440: quote, giá90000+ship30000, mất ACK tạo đơn/
+  same-key replay, thiếu tiền không hold rồi nạp và pay một lần PASS; đưa vào CI.
+- API E2E:651/652 PASS trong lượt tổng; ca pickup/expiry còn lại vượt budget15s
+  cũ, PASS6,4s khi chạy riêng trên chính database QA giữ nguyên sau lượt tổng.
+  Test audit/race có budget60s, assertions tài chính/rollback giữ nguyên.
+  Migration0028 populated/fresh schema PASS; định nghĩa/checksum migration giữ.
+  Mongo full6suite/50test gồm PostgreSQL import và replica-set failover PASS,
+  không skip. QA dùng replica set/database riêng, không chạm DB app.
+  Demo Order46/transit65 intents/receipts stable PASS. Flutter format/analyze/
+  test1 PASS; Windows pub-get plugin-link cần Developer Mode nên analyze/test
+  chạy --no-pub sau resolve deps; không đổi cài đặt máy.
+- GitHub8jobs trên `514213a` FAIL trước khi start do billing/spending limit.
+  Kết quả local không thay bằng chứng remote CI. Independent human review/live
+  provider/native-device acceptance NOT RUN; READINESS giữ nguyên. Không deploy
+  hoặc migrate DB app. Khi cập nhật runtime, áp dụng migration pending gồm0028
+  trước API/worker mới. WIP API và Home/demo cũ ở checkout khác được bảo toàn.
 
 ## Member web: Login gió và sân khấu đấu giá — 14/10/2026
 
