@@ -1,3 +1,4 @@
+import { prepareSellerOrder } from './helpers/seller-order.js';
 import { OrderClock } from '../src/modules/orders/order-clock.js';
 import { LedgerService } from '../src/modules/wallet/ledger.service.js';
 
@@ -452,18 +453,18 @@ describe('Order acceptance and pickup review: real MongoDB and HTTP', () => {
     const q = (await quote(f).expect(200)).body;
     return {
       f,
-      body: {
+      ...await prepareSellerOrder(app, f.buyer, {
         quoteId: q.entityId,
         expectedQuoteVersion: 1,
         expectedListingVersion: f.l.version,
         expectedListingRevisionId: f.l.revisionId,
-      },
+      }),
     };
   }
   const create = (
     p: Awaited<ReturnType<typeof prepared>>,
     key = randomUUID(),
-    actor = p.f.buyer,
+    actor = p.f.seller,
     body: object = p.body,
   ) => post('/orders', body, actor, key);
   async function orderView(id: string, actor: Reader) {
@@ -647,7 +648,7 @@ describe('Order acceptance and pickup review: real MongoDB and HTTP', () => {
     await app.close();
     app = await makeApp();
     expect((await accept(f, key).expect(200)).body).toEqual(result);
-    await get('/listings/' + f.f.l.entityId).expect(404);
+    expect((await get('/listings/' + f.f.l.entityId).expect(200)).body.purchaseAvailability.status).toBe('InNegotiation');
     await get('/me/orders/' + f.id, await reader()).expect(404);
     expect(
       (await get('/me/orders?state=Preparing', f.f.seller).expect(200)).body

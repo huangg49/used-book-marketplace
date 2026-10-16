@@ -162,6 +162,10 @@ export class OrdersService {
         },
         mutate: async (tx, actor, before, receiptId) => {
           requireActive(actor);
+          const buyer = await tx.c.users.findOne({ _id: before.buyerId });
+          if (!buyer) throw invalidState();
+          member(buyer);
+          requireActive(buyer);
           await tx.lock('purchase_conversations', [before._id]);
           const conversation = await tx.c.purchase_conversations.findOne({ _id: before._id });
           if (
@@ -191,7 +195,7 @@ export class OrdersService {
           if (q.sellerId !== actor._id || (l.trade !== 'Available' && !continuingLegacyHold)) throw invalidState();
           const orderId = randomUUID();
           const now = await this.decision(tx, context.auth);
-          if (now >= q.expiresAt) throw conflict();
+          if (now >= q.expiresAt || (conversation.expiresAt && now >= conversation.expiresAt)) throw conflict();
           if (
             (await tx.c.direct_orders.countDocuments({
               buyerId: conversation.buyerId,

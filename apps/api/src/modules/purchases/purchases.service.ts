@@ -35,7 +35,7 @@ export class PurchasesService {
       version: row.version, status: row.status,
       expiresAt: row.expiresAt?.toISOString() ?? null,
       hasQuote: row.quoteId !== null,
-      quotePreview: quote && destination ? {
+      quotePreview: quote && destination?.version === quote.destinationAddressVersion ? {
         destination: {
           recipientName: destination.recipientName,
           phone: destination.phone,
@@ -127,6 +127,9 @@ export class PurchasesService {
         if (
           listing.trade !== 'Available' ||
           !quote ||
+          listing.version !== quote.listingVersion ||
+          listing.currentRevisionId !== quote.listingRevisionId ||
+          listing.moderation !== 'Approved' || listing.visibility !== 'Visible' ||
           quote.sellerId !== row.sellerId ||
           quote.listingId !== row.listingId ||
           quote.version !== body.expectedQuoteVersion ||

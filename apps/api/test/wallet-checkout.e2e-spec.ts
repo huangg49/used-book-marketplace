@@ -1,3 +1,4 @@
+import { prepareSellerOrder } from './helpers/seller-order.js';
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { Test } from '@nestjs/testing';
@@ -42,7 +43,7 @@ const checklist = {
   pricingValid: true,
   contentAppropriate: true,
 };
-describe('VNPay sandbox / paid listing submissions / atomic wallet checkout (default policy)', () => {
+describe('VNPay sandbox / paid listing submissions / seller-selected wallet checkout (default policy)', () => {
   let app: INestApplication, db: MongoFixtures, reviewer: Reader;
   const post = (url: string, body: object, actor: Reader, key = randomUUID()) =>
     request(app.getHttpServer())
@@ -253,12 +254,12 @@ describe('VNPay sandbox / paid listing submissions / atomic wallet checkout (def
       seller,
       buyer,
       l: approved,
-      body: {
+      ...await prepareSellerOrder(app, buyer, {
         quoteId: q.body.entityId,
         expectedQuoteVersion: 1,
         expectedListingVersion: approved.version,
         expectedListingRevisionId: approved.revisionId,
-      },
+      }),
     };
   }
   beforeAll(async () => {
@@ -725,106 +726,79 @@ describe('VNPay sandbox / paid listing submissions / atomic wallet checkout (def
     ).toBe(2);
     expect((await wallet(a)).transactionHeld).toBe(0);
   });
-  it('refuses underfunded checkout with no Order, hold, reservation or listing transition', async () => {
+  it('creates an unpaid Seller order and refuses underfunded Buyer payment without a hold', async () => {
     const f = await sale();
     await fund(f.buyer, 50000);
-    await post('/orders', f.body, f.buyer).expect(409);
-    expect(
-      await db.c.direct_orders.countDocuments({ buyerId: f.buyer.id }),
-    ).toBe(0);
-    expect(await db.c.listings.findOne({ _id: f.l.entityId })).toMatchObject({
-      trade: 'Available',
-      version: f.l.version,
-    });
-    expect(
-      await db.c.exclusive_commitments.countDocuments({
-        listingId: f.l.entityId,
-      }),
-    ).toBe(0);
-    expect((await wallet(f.buyer)).available).toBe(50000);
+    const created = (await post('/orders', f.body, f.seller).expect(200)).body;
+    expect(created).toMatchObject({ state: 'AwaitingPayment', version: 1 });
+    await post(`/orders/${created.entityId}/pay`, { expectedVersion: 1 }, f.buyer).expect(409);
+    expect(await db.c.direct_orders.findOne({ _id: created.entityId })).toMatchObject({ state: 'AwaitingPayment' });
+    expect((await wallet(f.buyer))).toMatchObject({ available: 50000, transactionHeld: 0 });
+    expect(await db.c.ledger_journals.countDocuments({ orderId: created.entityId })).toBe(0);
+    expect(await db.c.exclusive_commitments.countDocuments({ listingId: f.l.entityId, status: 'Active' })).toBe(1);
   });
-  it('creates a paid Order with P+S once, replays its receipt and refunds a legal cancellation', async () => {
+  it('holds P+S only on Buyer payment, replays each command and refunds a legal cancellation', async () => {
     const f = await sale();
     await fund(f.buyer, 80000);
-    const key = randomUUID(),
-      r = await post('/orders', f.body, f.buyer, key).expect(200);
+    const key = randomUUID(), r = await post('/orders', f.body, f.seller, key).expect(200);
     validates('TransactionCommandReceipt', r.body);
-    expect(r.body).toMatchObject({
-      state: 'PendingSellerConfirmation',
-      version: 2,
-    });
-    const replay = await post('/orders', f.body, f.buyer, key).expect(200);
-    expect(replay.body).toEqual(r.body);
-    expect(await wallet(f.buyer)).toMatchObject({
-      available: 0,
-      transactionHeld: 80000,
-    });
-    await post(
-      `/orders/${r.body.entityId}/cancel-paid`,
-      { expectedVersion: 2 },
-      f.buyer,
-    ).expect(200);
+    expect(r.body).toMatchObject({ state: 'AwaitingPayment', version: 1 });
+    expect((await post('/orders', f.body, f.seller, key).expect(200)).body).toEqual(r.body);
+    expect(await wallet(f.buyer)).toMatchObject({ available: 80000, transactionHeld: 0 });
+    const payKey = randomUUID();
+    const paid = await post(`/orders/${r.body.entityId}/pay`, { expectedVersion: 1 }, f.buyer, payKey).expect(200);
+    expect(paid.body).toMatchObject({ state: 'PendingSellerConfirmation', version: 2 });
+    expect((await post(`/orders/${r.body.entityId}/pay`, { expectedVersion: 1 }, f.buyer, payKey).expect(200)).body).toEqual(paid.body);
+    expect(await wallet(f.buyer)).toMatchObject({ available: 0, transactionHeld: 80000 });
+    await post(`/orders/${r.body.entityId}/cancel-paid`, { expectedVersion: 2 }, f.buyer).expect(200);
     await app.get(OrdersService).refund(r.body.entityId);
-    expect(await wallet(f.buyer)).toMatchObject({
-      available: 80000,
-      transactionHeld: 0,
-    });
-    expect(
-      await db.c.ledger_journals.countDocuments({
-        orderId: r.body.entityId,
-        type: 'OrderPayment',
-      }),
-    ).toBe(1);
+    expect(await wallet(f.buyer)).toMatchObject({ available: 80000, transactionHeld: 0 });
+    expect(await db.c.ledger_journals.countDocuments({ orderId: r.body.entityId, type: 'OrderPayment' })).toBe(1);
   });
-  it('allows only one competing checkout to spend a shared available balance', async () => {
-    const buyer = await reader(),
-      f1 = await sale(buyer);
-    // Reuse the first buyer address; create a second listing and quote directly.
+  it.each([40000, 70000])('funds and refunds the agreed price %i rather than the listing price', async (agreedBookPrice) => {
+    const f = await sale();
+    f.body.agreedBookPrice = agreedBookPrice;
+    await fund(f.buyer, 200000);
+    const created = (await post('/orders', f.body, f.seller).expect(200)).body;
+    const before = (await get(`/me/orders/${created.entityId}`, f.buyer).expect(200)).body;
+    expect(before.amounts.bookPrice).toBe(agreedBookPrice);
+    expect(before.amounts.buyerTotal).toBe(agreedBookPrice + 30000);
+    await post(`/orders/${created.entityId}/pay`, { expectedVersion: 1 }, f.buyer).expect(200);
+    expect(await wallet(f.buyer)).toMatchObject({ available: 200000 - agreedBookPrice - 30000, transactionHeld: agreedBookPrice + 30000 });
+    await post(`/orders/${created.entityId}/cancel-paid`, { expectedVersion: 2 }, f.buyer).expect(200);
+    await app.get(OrdersService).refund(created.entityId);
+    expect(await wallet(f.buyer)).toMatchObject({ available: 200000, transactionHeld: 0 });
+  });
+  it('allows only one competing Buyer payment to spend a shared available balance', async () => {
+    const buyer = await reader(), f1 = await sale(buyer);
     const seller = await reader();
     await fund(seller, 20000);
-    const l = await listing(seller),
-      sent = (await submit(l, seller).expect(200)).body,
-      approved = (await decide(sent, true).expect(200)).body;
+    const l = await listing(seller), sent = (await submit(l, seller).expect(200)).body;
+    const approved = (await decide(sent, true).expect(200)).body;
     const destination = (await get('/me/addresses', buyer)).body.items[0];
-    const q = await post(
-      `/listings/${l.entityId}/quotes`,
-      {
-        expectedListingVersion: approved.version,
-        expectedListingRevisionId: approved.revisionId,
-        destinationAddressId: destination.id,
-        expectedDestinationAddressVersion: destination.version,
-        method: 'DirectDelivery',
-      },
-      buyer,
-    ).expect(200);
-    const body = {
-      quoteId: q.body.entityId,
-      expectedQuoteVersion: 1,
-      expectedListingVersion: approved.version,
-      expectedListingRevisionId: approved.revisionId,
-    };
+    const q = await post(`/listings/${l.entityId}/quotes`, {
+      expectedListingVersion: approved.version, expectedListingRevisionId: approved.revisionId,
+      destinationAddressId: destination.id, expectedDestinationAddressVersion: destination.version, method: 'DirectDelivery',
+    }, buyer).expect(200);
+    const p2 = await prepareSellerOrder(app, buyer, { quoteId: q.body.entityId, expectedQuoteVersion: 1,
+      expectedListingVersion: approved.version, expectedListingRevisionId: approved.revisionId });
+    const first = (await post('/orders', f1.body, f1.seller).expect(200)).body;
+    const second = (await post('/orders', p2.body, seller).expect(200)).body;
     await fund(buyer, 80000);
     const gate = await Gate.lockUser(db.client, buyer.id),
-      a = post('/orders', f1.body, buyer).then((r) => r),
-      b = post('/orders', body, buyer).then((r) => r);
-    try {
-      await gate.contended(2);
-    } finally {
-      await gate.close();
-    }
-    expect((await Promise.all([a, b])).map((r) => r.status).sort()).toEqual([
-      200, 409,
-    ]);
-    expect(await wallet(buyer)).toMatchObject({
-      available: 0,
-      transactionHeld: 80000,
-    });
+      a = post(`/orders/${first.entityId}/pay`, { expectedVersion: 1 }, buyer).then((r) => r),
+      b = post(`/orders/${second.entityId}/pay`, { expectedVersion: 1 }, buyer).then((r) => r);
+    try { await gate.contended(2); } finally { await gate.close(); }
+    expect((await Promise.all([a, b])).map((r) => r.status).sort()).toEqual([200, 409]);
+    expect(await wallet(buyer)).toMatchObject({ available: 0, transactionHeld: 80000 });
   });
   it('keeps money held through delivery and settles to the seller once after 72h inspection', async () => {
     const f = await sale();
-    await fund(f.buyer, 80000);
-    const created = (await post('/orders', f.body, f.buyer).expect(200)).body,
+    f.body.agreedBookPrice = 40000;
+    await fund(f.buyer, 70000);
+    const created = (await post('/orders', f.body, f.seller).expect(200)).body,
       id = created.entityId;
+    await post(`/orders/${id}/pay`, { expectedVersion: 1 }, f.buyer).expect(200);
     await post(`/orders/${id}/accept`, { expectedVersion: 2 }, f.seller).expect(
       200,
     );
@@ -890,7 +864,7 @@ describe('VNPay sandbox / paid listing submissions / atomic wallet checkout (def
     ).expect(200);
     expect(await wallet(f.buyer)).toMatchObject({
       available: 0,
-      transactionHeld: 80000,
+      transactionHeld: 70000,
     });
     expect((await wallet(f.seller)).available).toBe(0);
     await expect(app.get(OrdersService).settle(id)).rejects.toMatchObject({
@@ -910,8 +884,8 @@ describe('VNPay sandbox / paid listing submissions / atomic wallet checkout (def
       available: 0,
       transactionHeld: 0,
     });
-    // 50000 - 5% commission + 30000 advanced shipping reimbursement.
-    expect((await wallet(f.seller)).available).toBe(77500);
+    // 40000 - 5% commission + 30000 advanced shipping reimbursement.
+    expect((await wallet(f.seller)).available).toBe(68000);
     expect(
       await db.c.ledger_journals.countDocuments({
         orderId: id,

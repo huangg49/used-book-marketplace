@@ -72,7 +72,7 @@ function ChatRoom({
   >("connecting");
   const [error, setError] = useState<string>();
   const [sending, setSending] = useState(false);
-  const [agreedPrice, setAgreedPrice] = useState("");
+  const [agreedPrice, setAgreedPrice] = useState<string | null>(null);
   const [orderBusy, setOrderBusy] = useState(false);
   const [orderError, setOrderError] = useState<string>();
   const orderAttempt = useRef<{ key: string; version: number; price: number } | undefined>(undefined);
@@ -276,7 +276,7 @@ function ChatRoom({
           event.preventDefault();
           if (orderBusy) return;
           const submittedPrice = new FormData(event.currentTarget).get("agreedBookPrice");
-          const price = typeof submittedPrice === "string" ? Number(submittedPrice) : Number.NaN;
+          const price = orderAttempt.current?.price ?? (typeof submittedPrice === "string" ? Number(submittedPrice) : Number.NaN);
           if (!Number.isInteger(price) || price < 10000 || price > 1000000) {
             setOrderError("Giá sách phải từ 10.000 ₫ đến 1.000.000 ₫.");
             return;
@@ -300,7 +300,7 @@ function ChatRoom({
           } finally { setOrderBusy(false); }
         }}>
           <label>Giá sách đã thỏa thuận (₫)
-            <input name="agreedBookPrice" type="number" min={10000} max={1000000} step={1000} required value={agreedPrice || book.data?.salePrice || ""} onChange={(event) => { orderAttempt.current = undefined; setOrderError(undefined); setAgreedPrice(event.target.value); }} />
+            <input name="agreedBookPrice" type="number" min={10000} max={1000000} step={1000} required disabled={orderBusy || !!orderAttempt.current} value={agreedPrice ?? book.data?.salePrice ?? ""} onChange={(event) => { setOrderError(undefined); setAgreedPrice(event.target.value); }} />
           </label>
           {room.quotePreview ? <div>
             <p>Địa chỉ nhận: {room.quotePreview.destination.recipientName} · {room.quotePreview.destination.phone}</p>
@@ -327,7 +327,9 @@ function ChatRoom({
                 if (cause instanceof ApiError && [400, 403, 404, 409, 422].includes(cause.status)) {
                   payAttempt.current = undefined;
                   void order.refetch();
-                  setPayError("Đơn vừa thay đổi hoặc hết hạn. Đã tải lại trạng thái đơn.");
+                  setPayError(cause.code === "InvalidState"
+                    ? "Chưa thể thanh toán. Kiểm tra số dư ví và trạng thái đơn rồi thử lại."
+                    : "Đơn vừa thay đổi hoặc hết hạn. Đã tải lại trạng thái đơn.");
                 } else setPayError("Chưa xác nhận được thanh toán. Thử lại để gửi cùng yêu cầu.");
               }
               finally { setPayBusy(false); }

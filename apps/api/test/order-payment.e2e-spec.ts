@@ -1,3 +1,4 @@
+import { prepareSellerOrder } from './helpers/seller-order.js';
 import { OrderClock } from '../src/modules/orders/order-clock.js';
 import { LedgerService } from '../src/modules/wallet/ledger.service.js';
 
@@ -534,18 +535,18 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
     const q = (await quote(f).expect(200)).body;
     return {
       f,
-      body: {
+      ...await prepareSellerOrder(app, f.buyer, {
         quoteId: q.entityId,
         expectedQuoteVersion: 1,
         expectedListingVersion: f.l.version,
         expectedListingRevisionId: f.l.revisionId,
-      },
+      }),
     };
   }
   const create = (
     p: Awaited<ReturnType<typeof prepared>>,
     key = randomUUID(),
-    actor = p.f.buyer,
+    actor = p.f.seller,
     body: object = p.body,
   ) => post('/orders', body, actor, key);
   const cancel = (id: string, actor: Reader, key = randomUUID(), version = 1) =>

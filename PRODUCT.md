@@ -42,8 +42,10 @@ RN là Member client ưu tiên, Expo web chia sẻ RN; React/Vite user-web và a
 
 - DirectDelivery tới F2h. Auction ViaPoint có completion code nhưng review/release
   vẫn có gate. [READINESS](docs/handoff/READINESS.md) là nguồn gate.
-- Purchase chat giữ sách24h, không tạo Order/thanh toán/hold tiền. Nhãn nút phải
-  phản ánh đúng kết quả này; không báo mua thành công.
+- Theo [ADR0037](docs/adr/0037-seller-selected-purchase-orders.md), chat không giữ
+  sách; Buyer gửi địa chỉ/báo giá, Seller chốt giá và tạo Order unpaid để giữ listing.
+  Buyer thanh toán sau; mở chat/gửi báo giá không được báo mua thành công. Hội thoại
+  cũ có hold24h vẫn theo expiry lịch sử.
 - Exchange user-web còn mock, register/profile/admin dashboard còn scaffold;
   không lấy giao diện làm bằng chứng API đã triển khai.
 - Phân chia mục tiêu đã duyệt: mobile ưu tiên tìm/xem/lưu sách, chụp ảnh/đăng bài,

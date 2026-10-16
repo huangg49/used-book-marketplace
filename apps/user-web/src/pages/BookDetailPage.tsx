@@ -45,6 +45,7 @@ export function BookDetailPage() {
     queryKey: ["public-listing", id],
     queryFn: () => getPublicListing(id),
     enabled: valid,
+    refetchOnMount: "always",
     retry: false,
   });
   const conversations = useQuery({

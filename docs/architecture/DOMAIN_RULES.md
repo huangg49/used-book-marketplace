@@ -73,7 +73,10 @@ accept paid obligations, including LOCKED/RESTRICTED. Preparing has an immutable
 48h pickup deadline; worker opens a durable PickupReview/ResolutionPending once.
 That is an unresolved verification task, not proof of custody, a strike or refund.
 Keep hold/commitment and never use pre-confirmation refund after acceptance.
-Shipping destination is shared only with the accepted Seller. Later pickup/delivery-overdue increments are described below;
+The Order fulfillment destination is shared with the accepted Seller. ADR0037
+additionally permits the Buyer to share the quoted destination with their own
+conversation's Seller before Order creation; changed address versions are not
+shared automatically. Later pickup/delivery-overdue increments are described below;
 review resolution and post-acceptance cancellation remain planned.
 
 ## Shipment label
