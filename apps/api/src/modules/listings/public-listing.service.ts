@@ -211,6 +211,7 @@ type Eligible = ListingDoc & {
   rm: RevisionMediaDoc[];
   m: ListingMediaDoc[];
   purchase: { expiresAt: Date }[];
+  activeOrder: { paidAt: Date | null; paymentDeadline: Date }[];
 };
 
 @Injectable()
@@ -284,7 +285,16 @@ export class PublicListingService {
       publishedAt: l.publishedAt!.toISOString(),
       purchaseAvailability:
         l.trade === 'Reserved'
-          ? {
+          ? l.activeOrder[0]
+            ? {
+                status: l.activeOrder[0].paidAt
+                  ? 'InTransaction' as const
+                  : 'AwaitingPayment' as const,
+                expiresAt: l.activeOrder[0].paidAt
+                  ? null
+                  : l.activeOrder[0].paymentDeadline.toISOString(),
+              }
+            : {
               status: 'InNegotiation' as const,
               expiresAt: l.purchase[0]?.expiresAt?.toISOString() ?? null,
             }

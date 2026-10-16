@@ -1,3 +1,4 @@
+import { buyNowNotificationsMigration } from '../../src/database/mongo/migrations/0029-buy-now-notifications.js';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, MongoServerError, type Db } from 'mongodb';
 import { COLLECTION_NAMES } from '../../src/database/mongo/collections.js';
@@ -202,6 +203,8 @@ describe('migrations', () => {
       const before = migrations.filter(
         (m) =>
           m.id !== '0027-wallet-point-command-union' &&
+          // These historical branches predate BuyNow; upgrade it after their missing migrations.
+          m.id !== '0029-buy-now-notifications' &&
           !(lane === 'wallet' ? mainIds : walletIds).has(m.id),
       );
       try {
@@ -274,6 +277,8 @@ describe('migrations', () => {
       const before = migrations.filter(
         (m) =>
           m.id !== '0027-wallet-point-command-union' &&
+          // These historical branches predate BuyNow; upgrade it after their missing migrations.
+          m.id !== '0029-buy-now-notifications' &&
           !(lane === 'exchange-main' ? memberIds : exchangeIds).has(m.id),
       );
       try {
@@ -1003,6 +1008,32 @@ describe('seller-selected conversations upgrade', () => {
         .rejects.toMatchObject({ code: 11000 });
       await sellerSelectedOrdersMigration.up(db);
       expect(await db.collection<{ _id: string }>('purchase_conversations').countDocuments()).toBe(4);
+    } finally { await db.dropDatabase(); }
+  });
+});
+
+
+describe('buy-now notification migration', () => {
+  it('preserves populated inbox rows and indexes while admitting Order notifications with dedupe', async () => {
+    const db = root.db('latlai_buy_now_notification_upgrade_test');
+    const rows = db.collection<{ _id: string; [key: string]: unknown }>('member_notifications');
+    try {
+      const { exchangeNotificationSpecs } = await import('../../src/database/mongo/migrations/0024-exchange-notifications.js');
+      await applyCollectionSpecs(db, exchangeNotificationSpecs);
+      const old = { _id: randomUUID(), userId: randomUUID(), kind: 'ExchangeAccepted',
+        title: 'QA exchange', body: 'QA only', targetType: 'Exchange', targetId: randomUUID(),
+        dedupeKey: randomUUID(), createdAt: new Date(), readAt: null };
+      await rows.insertOne(old);
+      const indexes = await rows.indexes();
+      await buyNowNotificationsMigration.up(db);
+      expect(await rows.findOne({ _id: old._id })).toEqual(old);
+      expect(await rows.indexes()).toEqual(indexes);
+      const order = { ...old, _id: randomUUID(), kind: 'OrderBuyNowPaid', targetType: 'Order', dedupeKey: 'qa-buy-now-notice' };
+      await rows.insertOne(order);
+      await expect(rows.insertOne({ ...order, _id: randomUUID() })).rejects.toMatchObject({ code: 11000 });
+      await expect(rows.insertOne({ ...order, _id: randomUUID(), dedupeKey: 'qa-invalid-kind', kind: 'MadeUp' })).rejects.toMatchObject({ code: 121 });
+      await buyNowNotificationsMigration.up(db);
+      expect(await rows.countDocuments()).toBe(2);
     } finally { await db.dropDatabase(); }
   });
 });

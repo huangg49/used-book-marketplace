@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.41.0
+  version: 0.43.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -3587,6 +3587,64 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /orders/buy-now:
+    post:
+      operationId: createBuyNowOrder
+      tags:
+        - Orders
+      x-implementation-status: implemented
+      description: ACTIVE verified MEMBER buyer creates a 15-minute unpaid reservation at the current listed price from their own valid DirectDelivery quote, without a conversation. Atomically revalidates listing, addresses, policy and exclusive commitment. Same key/body replays the original receipt; no money held until pay. Successful payment automatically starts Preparing and its 48-hour pickup deadline; no seller approval.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDirectOrder"
+      responses:
+        "200":
+          description: Successful operation.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /me/orders/{orderId}:
     get:
       operationId: getMyOrder
@@ -3594,7 +3652,7 @@ paths:
         - Orders
       x-implementation-status: implemented
       description: Private participant Order, including payment/hold and refund progress; own contact
-        only. LOCKED existing-obligation access. No seller acceptance/dispatch yet.
+        only. LOCKED existing-obligation access. BuyNow includes automatic preparation after payment; Negotiated retains seller acceptance.
       security:
         - bearerAuth: []
       parameters:
@@ -10177,7 +10235,8 @@ components:
           properties:
             status:
               type: string
-              enum: [Available, InNegotiation]
+              enum: [Available, InNegotiation, AwaitingPayment, InTransaction]
+              description: Available accepts checkout; InNegotiation is a legacy conversation reservation; AwaitingPayment is an unpaid Order reservation; InTransaction requires a successfully funded active Order.
             expiresAt:
               anyOf:
                 - type: string
@@ -10215,7 +10274,9 @@ components:
               maximum: 1000000
       description: Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE
         owner has MEMBER role, Confirmed catalog and Ready media. Reserved direct-sale Orders remain visible
-        with InNegotiation availability; no new conversation can start until the listing is Available.
+        with AwaitingPayment until payment commits, then InTransaction. Unpaid reservations expose only
+        their payment deadline, never participant identities. InNegotiation is retained for legacy
+        conversation reservations. No new checkout or conversation can start until Available.
         Never serialize a private listing then filter on the client.
     CreatePurchaseConversation:
       type: object
@@ -10281,6 +10342,7 @@ components:
             - AuctionOnHold
             - AuctionPaymentExpired
             - AuctionPaid
+            - OrderBuyNowPaid
             - ExchangeProposed
             - ExchangeAccepted
             - ExchangeFunded
@@ -10291,7 +10353,7 @@ components:
             - ExchangeRejected
         title: { type: string, maxLength: 120 }
         body: { type: string, maxLength: 400 }
-        targetType: { type: string, enum: [Auction, Exchange] }
+        targetType: { type: string, enum: [Auction, Exchange, Order] }
         targetId:
           type: string
           format: uuid
@@ -11876,6 +11938,10 @@ components:
         - createdAt
         - paymentDeadline
       properties:
+        purchaseMode:
+          type: string
+          enum: [Negotiated, BuyNow]
+          description: Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
         schemaVersion:
           type: integer
           const: 1
@@ -12052,6 +12118,10 @@ components:
         - completedAt
         - canConfirmReceipt
       properties:
+        purchaseMode:
+          type: string
+          enum: [Negotiated, BuyNow]
+          description: Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
         id:
           type: string
           format: uuid
@@ -12588,6 +12658,16 @@ components:
         - paymentDeadline
         - closedAt
       properties:
+        title:
+          type: string
+          description: Book title frozen in the Order item snapshot.
+        listingId:
+          type: string
+          format: uuid
+        purchaseMode:
+          type: string
+          enum: [Negotiated, BuyNow]
+          description: Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
         id:
           type: string
           format: uuid

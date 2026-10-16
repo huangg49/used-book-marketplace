@@ -215,10 +215,10 @@ Mọi yêu cầu trong mục này là M trừ khi ghi E. Các tiêu chí AC ở 
 | Mã | Yêu cầu |
 |---|---|
 | FR-O01 | Member thêm/xóa listing Sale/Both trong giỏ, tối đa 50 dòng; số lượng mỗi listing luôn bằng 1; thêm giỏ không giữ chỗ. |
-| FR-O02 | Buyer nhắn người bán và gửi địa chỉ/báo giá giao nhận trước; chat và báo giá không giữ listing. Seller chọn hội thoại, nhập giá sách đã thỏa thuận và tạo Order unpaid trong một commit; chỉ commit này tạo reservation. Buyer xem đơn và xác nhận thanh toán sau. |
+| FR-O02 | Hai đường mua độc lập: thương lượng giữ Buyer gửi địa chỉ/báo giá trong chat, Seller chọn hội thoại/giá và tạo unpaid Order; Mua ngay cho Buyer tạo unpaid Order từ quote theo giá niêm yết, không cần chat hoặc Seller chọn. Quote/chat không giữ listing; chỉ commit tạo Order giữ sách 15 phút. Buyer xem tổng rồi thanh toán. ADR0038 bổ sung ADR0037. |
 | FR-O03 | Hiển thị hạn thanh toán, tiền sách, phí ship, phí Buyer nếu có và chính sách đã chốt. Dùng available mô phỏng thanh toán một lần; thiếu số dư cho phép nạp riêng, không kéo dài reservation. |
-| FR-O04 | Thanh toán thành công chuyển toàn bộ tiền phải trả vào hold của Order; chờ Seller xác nhận. Buyer có thể hủy trước Seller xác nhận; lệnh đồng thời phải cho đúng một kết quả. |
-| FR-O05 | Order thường: Seller xác nhận/từ chối trong POL-02, từ chối/hết hạn hoàn theo custody. Order từ auction: Seller đã cam kết khi mở phiên, không được từ chối lại chỉ vì không hài lòng giá thắng. |
+| FR-O04 | Thanh toán thành công chuyển toàn bộ tiền phải trả vào hold của Order; thương lượng chờ Seller xác nhận, Mua ngay vào Preparing theo FR-O05. Buyer được hủy trước acceptance; thanh toán Mua ngay đồng thời ghi acceptance nên không dùng refund trước acceptance. Lệnh đồng thời phải cho đúng một kết quả. |
+| FR-O05 | Order thương lượng: Seller xác nhận/từ chối trong POL-02, từ chối/hết hạn hoàn theo custody. Order Mua ngay: Seller đã cam kết theo giá niêm yết; thanh toán thành công vào Preparing và bắt đầu POL-03, không xác nhận/từ chối lại. Order từ auction: Seller đã cam kết khi mở phiên, không được từ chối lại chỉ vì không hài lòng giá thắng. |
 | FR-O06 | Sau xác nhận, Seller nhập vận đơn và ảnh đóng gói; phải có pickup trong POL-03. Mã đơn thuần không thỏa điều kiện đã gửi. |
 | FR-O07 | Hệ thống theo dõi giao hàng; Buyer xác nhận nhận được; nhận/giao hợp lệ mở cửa sổ kiểm tra POL-08, không giải ngân ngay. |
 | FR-O08 | Hết hạn kiểm tra và không có dispute/return/hold điều tra: quyết toán phí và tiền Seller, đóng Order, listing Sold; mọi bước phải chống lặp. |
@@ -325,7 +325,7 @@ Mọi yêu cầu trong mục này là M trừ khi ghi E. Các tiêu chí AC ở 
 | Mã | Quy tắc |
 |---|---|
 | BR-01 | Một listing đại diện một hiện vật; không có quantity lớn hơn 1. Một người có hai bản giống nhau phải tạo hai listing riêng với ảnh phân biệt. Hệ thống không thể tự chứng minh hai listing không chụp cùng hiện vật; nghi trùng chuyển kiểm duyệt. |
-| BR-02 | Chỉ Approved + Visible + Available, không custody obligation và chủ đủ quyền mới mở chat/báo giá mua hoặc tạo checkout/Exchange/auction intake mới. Seller chỉ tạo Order từ hội thoại/báo giá còn hợp lệ; Auction chuyển commitment sẵn có sang Order theo FR-AU06–07, không yêu cầu listing trở lại Available. Mọi bước chốt kiểm tra điều kiện hiện hành. |
+| BR-02 | Chỉ Approved + Visible + Available, không custody obligation và chủ đủ quyền mới mở chat/báo giá mua hoặc tạo checkout/Exchange/auction intake mới. Seller tạo Order thương lượng từ hội thoại/báo giá còn hợp lệ; Buyer tạo Order Mua ngay từ quote còn hợp lệ theo ADR0038; Auction chuyển commitment sẵn có sang Order theo FR-AU06–07, không yêu cầu listing trở lại Available. Mọi bước chốt kiểm tra điều kiện hiện hành. |
 | BR-03 | Một listing tối đa một cam kết độc quyền Active xuyên Order, Exchange và AuctionIntake/Auction. Chuyển auction sang Order nguyên tử, không có khoảng trống release; database bảo vệ, không chỉ UI. |
 | BR-04 | Chỉ giao dịch sở hữu reservation được giải phóng nó. Từ chối một Proposed không được mở sách đang giữ cho người khác. |
 | BR-05 | Giữ hai listing Exchange là nguyên tử, dùng thứ tự khóa ổn định hoặc cơ chế tương đương để tránh giữ một nửa. |
@@ -338,7 +338,7 @@ Mọi yêu cầu trong mục này là M trừ khi ghi E. Các tiêu chí AC ở 
 
 | Mã | Quy tắc |
 |---|---|
-| BR-10 | Chat và báo giá không giữ listing; nhiều Buyer có thể trao đổi về cùng một listing. Chỉ khi Seller chọn một Buyer và tạo Order, listing mới chuyển Reserved; listing đang có Order vẫn hiện công khai với trạng thái đang giao dịch. |
+| BR-10 | Chat và báo giá không giữ listing; nhiều Buyer có thể trao đổi về cùng một listing. Khi Seller tạo Order thương lượng hoặc Buyer tạo Order Mua ngay, listing mới chuyển Reserved nội bộ và hiện công khai “Chờ thanh toán”. Chỉ sau thanh toán thành công mới hiển thị “Đang giao dịch”; giữ chỗ vẫn có hiệu lực trong hạn thanh toán. |
 | BR-11 | Buyer hủy miễn phí khi AwaitingPayment hoặc PendingSellerConfirmation; sau Seller xác nhận cần đồng ý trước pickup hoặc quy trình dispute/return. |
 | BR-12 | Deadline do máy chủ tính và snapshot; thời gian trình duyệt chỉ để hiển thị. Hết hạn không phụ thuộc worker đã chạy hay chưa. |
 | BR-13 | Mọi lần chấp nhận đề xuất phải đúng revision; thay listing làm vô hiệu phiên bản cũ và chỉ bên đang chờ phản hồi được chấp nhận. |
@@ -538,7 +538,7 @@ Mỗi use case dưới đây xác định trigger, tiền điều kiện, luồn
 1. Hệ thống mở listing hiện hành và tạo chat riêng; listing vẫn Available, hiển thị và có thể có chat với nhiều Buyer.
 2. Buyer thỏa thuận trong chat, chọn địa chỉ và gửi báo giá giao nhận; thao tác này chưa tạo Order hoặc reservation.
 3. Seller chọn đúng hội thoại, nhập giá sách đã chốt và tạo Order. Hệ thống kiểm tra participant, báo giá/địa chỉ, revision và điều kiện listing.
-4. Trong một giao dịch dữ liệu, tạo snapshot Order unpaid, reservation Active và deadline; listing chuyển Reserved nhưng vẫn hiển thị trạng thái đang giao dịch.
+4. Trong một giao dịch dữ liệu, tạo snapshot Order unpaid, reservation Active và deadline; listing chuyển Reserved nội bộ nhưng hiển thị “Chờ thanh toán”. Payment thành công mới đổi hiển thị sang “Đang giao dịch”.
 5. Buyer xem giá trong Order và xác nhận thanh toán trước deadline.
 
 **Ngoại lệ:** báo giá/địa chỉ/revision đổi yêu cầu Buyer gửi lại; nếu một Seller tạo Order đồng thời với Seller khác thì chỉ một reservation thắng; tự mua bị từ chối; Order hết hạn chưa thanh toán được giải phóng. **Hậu điều kiện:** nhiều Buyer có thể chat nhưng tối đa một Order có reservation cho listing. **Liên kết:** FR-O01–O03, BR-03/10, AC-07–AC-09.

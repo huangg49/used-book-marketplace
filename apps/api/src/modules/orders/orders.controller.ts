@@ -37,6 +37,20 @@ export class OrdersController {
     res.setHeader('Idempotency-Replayed', String(result.replayed));
     return result.receipt;
   }
+  @Post('orders/buy-now')
+  @HttpCode(200)
+  async buyNow(
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.orders.buyNow(
+      commandContext(this.input, req, res),
+      this.input.body('CreateDirectOrder', body),
+    );
+    res.setHeader('Idempotency-Replayed', String(result.replayed));
+    return result.receipt;
+  }
   @Get('me/orders/:orderId')
   @ExistingObligation()
   read(@Param('orderId') id: string, @Req() req: AuthenticatedRequest) {

@@ -111,7 +111,12 @@ export function BookDetailPage() {
       </section>
     );
   const book = detail.data;
-  const held = book.purchaseAvailability.status === "InNegotiation";
+  const held = book.purchaseAvailability.status !== "Available";
+  const heldLabel = book.purchaseAvailability.status === "AwaitingPayment"
+    ? "Chờ thanh toán"
+    : book.purchaseAvailability.status === "InTransaction"
+      ? "Đang giao dịch"
+      : "Đang giữ sách";
   const currentUserId =
     state.status === "authenticated" ? state.user.id : undefined;
   const isOwner =
@@ -205,11 +210,9 @@ export function BookDetailPage() {
             </span>
             {held && (
               <span>
-                {buyerOrderConversation
+                {buyerOrderConversation && book.purchaseAvailability.status === "InTransaction"
                   ? "Đang giao dịch với bạn"
-                  : sellerOrderConversation
-                    ? "Bạn đã tạo đơn"
-                    : "Đang giao dịch"}
+                  : heldLabel}
               </span>
             )}
           </div>
@@ -237,7 +240,7 @@ export function BookDetailPage() {
                     : isOwner
                   ? "Đây là bài đăng của bạn"
                   : held
-                    ? "Sách đang giao dịch"
+                    ? heldLabel
                     : "Muốn đọc cuốn này?"}
               </h2>
               <p>
@@ -246,14 +249,20 @@ export function BookDetailPage() {
                   : sellerOrderConversation
                     ? "Bạn đã tạo đơn cho người mua này. Mở hội thoại để xem thông tin đơn hàng."
                     : isOwner
-                  ? "Người mua có thể nhắn bạn để thỏa thuận; sách chỉ chuyển sang giao dịch khi bạn tạo đơn."
+                  ? "Người mua có thể mua ngay theo giá niêm yết hoặc nhắn bạn để thương lượng. Đơn Mua ngay đã thanh toán sẽ chuyển thẳng sang chuẩn bị gửi."
                   : held
-                    ? "Người bán đã tạo đơn cho bản sách này. Bạn vẫn có thể xem bài đăng nhưng không thể bắt đầu giao dịch mới."
-                    : "Nhắn người bán để thỏa thuận giá và giao nhận. Sách vẫn được rao bán và người khác cũng có thể nhắn cho đến khi người bán tạo đơn."}
+                    ? "Bản sách này đã có đơn giữ chỗ. Bạn vẫn có thể xem bài đăng nhưng chưa thể đặt mua."
+                    : "Mua ngay theo giá niêm yết, không cần trao đổi. Bạn cũng có thể nhắn người bán nếu muốn thương lượng; chat chưa giữ sách."}
               </p>
+              {!isOwner && !held && (
+                <Link className={styles.primary} to={`/buy-now/${book.id}`}>Mua ngay <ArrowUpRight size={18} aria-hidden="true" /></Link>
+              )}
+              {held && !orderConversation && state.status === 'authenticated' && (
+                <Link className={styles.secondary} to="/orders">Xem đơn hàng của tôi</Link>
+              )}
               {conversationToOpen ? (
                 <Link
-                  className={styles.primary}
+                  className={styles.secondary}
                   to={ROUTES.chat(conversationToOpen.id)}
                 >
                   <MessageCircle size={18} aria-hidden="true" />
@@ -269,7 +278,7 @@ export function BookDetailPage() {
                 !isOwner && (
                   <button
                     type="button"
-                    className={styles.primary}
+                    className={styles.secondary}
                     disabled={
                       held ||
                       detail.isFetching ||
@@ -278,7 +287,7 @@ export function BookDetailPage() {
                     }
                     onClick={requestPurchase}
                   >
-                    {held ? "Đang giao dịch" : "Chat với người bán"}
+                    {held ? heldLabel : "Chat với người bán"}
                     <ArrowUpRight size={18} aria-hidden="true" />
                   </button>
                 )

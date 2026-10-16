@@ -89,8 +89,14 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
           className={styles.coverLink}
           aria-label={"Xem chi tiết " + book.book.title}
         />
-        {book.purchaseAvailability.status === "InNegotiation" && (
-          <span className={styles.held}>Đang giao dịch</span>
+        {book.purchaseAvailability.status !== "Available" && (
+          <span className={styles.held}>
+            {book.purchaseAvailability.status === "AwaitingPayment"
+              ? "Chờ thanh toán"
+              : book.purchaseAvailability.status === "InTransaction"
+                ? "Đang giao dịch"
+                : "Đang giữ sách"}
+          </span>
         )}
       </div>
       <div className={styles.meta}>

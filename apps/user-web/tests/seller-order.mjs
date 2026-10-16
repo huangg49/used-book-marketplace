@@ -117,6 +117,7 @@ try {
   assert.equal((await fixture.api(`/me/orders/${order._id}`, buyer.accessToken)).amounts.buyerTotal, 120000);
   assert.equal((await fixture.api('/me/wallet', buyer.accessToken)).transactionHeld, 0);
   assert.equal((await fixture.db.collection('listings').findOne({ _id: listingId })).trade, 'Reserved');
+  assert.equal((await fixture.api(`/listings/${listingId}`)).purchaseAvailability.status, 'AwaitingPayment');
   await buyerPage.screenshot({ path: path.join(artifacts, 'buyer-payment-mobile.png'), fullPage: true });
   await buyerPage.getByRole('button', { name: 'Xác nhận và thanh toán', exact: true }).click();
   await buyerPage.getByRole('alert').filter({ hasText: 'Kiểm tra số dư ví' }).waitFor();
@@ -127,6 +128,7 @@ try {
   await buyerPage.getByText('Trạng thái đơn: PendingSellerConfirmation', { exact: true }).waitFor();
   const wallet = await fixture.api('/me/wallet', buyer.accessToken);
   assert.equal(wallet.transactionHeld, 120000);
+  assert.equal((await fixture.api(`/listings/${listingId}`)).purchaseAvailability.status, 'InTransaction');
   assert.equal(wallet.available, 80000);
   assert.equal(await fixture.db.collection('ledger_journals').countDocuments({ orderId: order._id, type: 'OrderPayment' }), 1);
   await buyerPage.locator(`a[href="/books/${listingId}"]`).first().click();

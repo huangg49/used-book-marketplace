@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
 import { ApiError } from "@used-books/session-client";
 import { Link, useParams } from "react-router-dom";
@@ -29,7 +29,7 @@ const statusLabels = {
   Active: "Đang thương lượng",
   Expired: "Đã hết hạn",
   Cancelled: "Đã hủy",
-  OrderCreated: "Đang giao dịch",
+  OrderCreated: "Đã tạo đơn",
 };
 function dateTime(value: string) {
   return new Intl.DateTimeFormat("vi-VN", {
@@ -51,6 +51,7 @@ function ChatRoom({
   refreshRooms: () => void;
 }) {
   const other = room.buyer.id === userId ? room.seller : room.buyer;
+  const cache = useQueryClient();
   const history = useQuery({
     queryKey: ["purchase-messages", room.id],
     queryFn: () => getPurchaseMessages(room.id),
@@ -322,7 +323,13 @@ function ChatRoom({
               const intent = payAttempt.current ?? { key: crypto.randomUUID(), version: order.data!.version };
               payAttempt.current = intent;
               setPayBusy(true); setPayError(undefined);
-              try { await payOrder(order.data!.id, intent.version, intent.key); payAttempt.current = undefined; void order.refetch(); }
+              try {
+                await payOrder(order.data!.id, intent.version, intent.key);
+                payAttempt.current = undefined;
+                void order.refetch();
+                for (const key of ["public-listing", "home-shelves", "catalog-search", "exchange-public-listings"])
+                  void cache.invalidateQueries({ queryKey: [key] });
+              }
               catch (cause) {
                 if (cause instanceof ApiError && [400, 403, 404, 409, 422].includes(cause.status)) {
                   payAttempt.current = undefined;

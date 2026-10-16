@@ -1,0 +1,204 @@
+.page {
+  --shop-shelf: #f4eddf;
+  --shop-error: #912b0e;
+  max-width: 1120px;
+  margin: auto;
+  padding: 40px 32px 80px;
+  color: var(--shop-ink);
+  font-family: var(--shop-body);
+  min-height: 60vh;
+}
+.page h1 {
+  font: 400 clamp(2rem, 4vw, 3rem)/1.2 var(--shop-display);
+  margin: 20px 0 12px;
+}
+.page h2 {
+  font: 700 1.15rem/1.6 var(--shop-body);
+  margin: 0 0 16px;
+  overflow-wrap: anywhere;
+}
+.page p {
+  line-height: 1.85;
+}
+.page a {
+  color: var(--shop-wine);
+  text-underline-offset: 4px;
+}
+.intro,
+.note {
+  color: var(--shop-muted);
+}
+.note {
+  font-size: 0.85rem;
+}
+.back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+  margin-top: 32px;
+}
+.section {
+  padding: 0 0 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--shop-line);
+}
+.summary {
+  padding: 24px;
+  background: var(--shop-shelf);
+  border-radius: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.summary dl {
+  margin: 24px 0;
+}
+.summary dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-block: 8px;
+}
+.summary dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+}
+.summary .total {
+  border-top: 1px solid var(--shop-control);
+  padding-top: 16px;
+  margin-top: 12px;
+  font-size: 1.1rem;
+  color: var(--shop-wine);
+}
+.page fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.page legend {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+.address {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+  padding-block: 12px;
+  line-height: 1.8;
+  cursor: pointer;
+}
+.address input {
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  accent-color: var(--shop-wine);
+  flex-shrink: 0;
+}
+.form {
+  display: grid;
+  gap: 18px;
+}
+.form label {
+  display: grid;
+  gap: 8px;
+  line-height: 1.7;
+}
+.form input,
+.form select,
+.form textarea {
+  border: 1px solid var(--shop-control);
+  border-radius: 8px;
+  padding: 12px;
+  min-height: 48px;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  font: inherit;
+}
+.form textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font: 700 0.9rem/1.6 var(--shop-body);
+  cursor: pointer;
+  width: 100%;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.page .primary {
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  border: 1px solid var(--shop-wine);
+}
+.secondary {
+  background: transparent;
+  color: var(--shop-wine);
+  border: 1px solid var(--shop-control);
+  margin-top: 12px;
+}
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.page :focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 4px;
+}
+.error {
+  color: var(--shop-error);
+  background: var(--shop-paper);
+  padding: 16px;
+  border: 1px solid var(--shop-control);
+  border-radius: 8px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  border-bottom: 1px solid var(--shop-line);
+  padding: 20px 0;
+}
+.row p {
+  margin: 4px 0;
+}
+.row a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.status {
+  color: var(--shop-wine);
+  font-weight: 700;
+}
+@media (max-width: 700px) {
+  .page {
+    padding: 24px 20px 48px;
+  }
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+  .summary {
+    padding: 20px;
+  }
+}

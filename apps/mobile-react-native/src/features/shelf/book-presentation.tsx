@@ -61,9 +61,13 @@ export function BookPresentation({
           </View>
         </View>,
       )}
-      {item.purchaseAvailability.status === "InNegotiation" && (
+      {item.purchaseAvailability.status !== "Available" && (
         <Notice tone="info">
-          Sách đang được giữ trong một cuộc trao đổi mua.
+          {item.purchaseAvailability.status === "AwaitingPayment"
+            ? "Sách đang được giữ chờ thanh toán."
+            : item.purchaseAvailability.status === "InTransaction"
+              ? "Sách đang giao dịch."
+              : "Sách đang được giữ trong một cuộc trao đổi mua."}
         </Notice>
       )}
       {children}

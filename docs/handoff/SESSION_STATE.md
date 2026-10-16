@@ -1,5 +1,102 @@
 # Điểm lưu hiện tại — 16/10/2026
 
+## Trạng thái listing theo thanh toán — 16/10/2026
+
+- Chủ dự án đổi nhãn: Order unpaid là “Chờ thanh toán”, chỉ payment commit
+  thành công mới “Đang giao dịch”. Nhánh `codex/paid-listing-transaction-state`,
+  base `56c5008`; subject `fix(listings): show transaction status only after payment`.
+- OpenAPI0.43.0 bổ sung purchaseAvailability AwaitingPayment/InTransaction;
+  projection snapshot lấy paidAt/paymentDeadline từ active Order, không lộ ID
+  hoặc danh tính Buyer. Reserved/commitment15phút vẫn chống mua trùng; không
+  sửa command/ledger/Mongo schema hoặc dữ liệu app. InNegotiation chỉ còn cho
+  reservation chat lịch sử. Web kệ/chi tiết và parser/notice RN nhận trạng thái
+  mới; chat OrderCreated dùng nhãn trung tính “Đã tạo đơn”.
+  Payment thành công làm stale cache kệ/tìm kiếm/chi tiết để khi quay lại cập
+  nhật nhãn ngay. Browser Mua ngay/thương lượng390/1440 PASS, thêm người xem
+  public kiểm nhãn kệ/chi tiết trước pay, thiếu tiền và sau pay; mất ACK giữ
+  đúng key/body. Không cần migration hoặc sửa dữ liệu cũ.
+- PASS: contract generate/check/routes165/26; API lint/typecheck/build/150unit,
+  web lint/typecheck/build/135unit, RN lint/typecheck/142unit. Warning cũ
+  API11/web4/RN1 và web chunk còn. Node24.21.0/pnpm11.19.0.
+- API scoped9/9 PASS (132 ca ngoài filter không chạy): unpaid projection,
+  negotiated paid/accepted, sáu ca BuyNow gồm thiếu tiền, replay, cạnh tranh,
+  rollback payment, cancel/expiry. Chạy trên replica set QA/database *_test,
+  không chạy lại full API/Mongo import/failover. Native device/live provider,
+  human review/remote CI NOT RUN; READINESS giữ nguyên.
+- [Evidence và giới hạn](../../.impeccable/review/direct-buy-now/README.md).
+  Chủ dự án giao push16/10: đã push nhánh tổng hợp
+  `origin/codex/paid-listing-transaction-state` với ba commit riêng
+  `6116bff` (Mua ngay), `56c5008` (form chọn ảnh), `1130b90` (nhãn theo payment).
+  Commit bàn giao: `docs(handoff): record published buy-now commits`.
+  [PR44](https://github.com/huangg49/used-book-marketplace/pull/44) hiện mở.
+  Kiểm tra GitHub16/10 trên head `c733641`: cả8job FAIL trước khi start vì
+  account payments/spending limit (annotation giống nhau), không có test step
+  nào chạy. [API run](https://github.com/huangg49/used-book-marketplace/actions/runs/38876117415),
+  [web run](https://github.com/huangg49/used-book-marketplace/actions/runs/38876117404).
+  Chủ dự án giao kiểm tra CI và push lại; commit
+  `docs(handoff): record PR44 Actions billing blocker` ghi evidence, không đổi
+  workflow hoặc bỏ check. Owner cần xử lý Billing & plans rồi rerun checks.
+  Local PASS phía trên không thay remote CI. Chưa merge/deploy; human review
+  theo TEAMWORK còn cần. Các mốc “commit local” dưới đây là lịch sử.
+
+## Mua ngay độc lập — 16/10/2026
+
+- Sửa hồi quy form gửi sách trên `codex/fix-order-upload-flicker`, base
+  `6116bff`; subject `fix(web): preserve shipping form during background polling`.
+  GET shipment404 là kết quả rỗng được cache, không làm tháo/dựng form mỗi5giây.
+  Lỗi tải nền vẫn báo retry và giữ ảnh, mã đang nhập, focus. Browser test mới
+  tái hiện FAIL trước sửa vì file input bị detach khi picker mở; PASS sau sửa
+  qua404/503/phục hồi404, chọn/lưu PNG và đăng ký vận đơn tới pickup mô phỏng.
+  Web lint/typecheck/build và135unit PASS, warning cũ4/chunk còn. Chromium hai
+  phiên390/1440, API/Mongo QA thật/storage fake; chưa kiểm hộp thoại Windows
+  bằng tay. Không đổi API/contract/DB/native, không chạy lại full API suite.
+  Bản sửa commit local; chưa push/PR/merge/deploy, READINESS giữ nguyên.
+- Chủ dự án chốt hai luồng riêng: thương lượng qua chat/Seller tạo đơn và Mua
+  ngay giá niêm yết không chat/duyệt lại. Nhánh `codex/direct-buy-now`, base main
+  `4924fab`; commit subject `feat(orders): add independent listed-price buy-now checkout`.
+  [ADR0038](../adr/0038-direct-buy-now-orders.md) bổ sung ADR0037, SRS1.1 cập nhật.
+- OpenAPI0.42.0/165operation/26controller: `POST /orders/buy-now`, quote thuộc
+  Buyer ACTIVE, giá từ listing đã khóa; snapshot purchaseMode. Quote/chat không
+  giữ sách; create giữ15phút, cùng commitment với thương lượng/Exchange/intake.
+  Payment atomically hold + Preparing/version3 + pickup48h + hai inbox, không
+  cần Seller accept và không dùng nhánh refund trước acceptance. Ledger/version,
+  replay và nghĩa vụ giao nhận cũ giữ nguyên; quá hạn pickup mở review giữ tiền.
+- Web: Mua ngay ở chi tiết; `/buy-now/:listingId`, `/orders`, `/orders/:orderId`;
+  địa chỉ, tổng, pay/cancel unpaid, ví, theo dõi; Seller ảnh đóng gói/label;
+  inbox mở đúng Order. Không lưu token/PII/intent vào browser storage. Native chỉ
+  cập nhật parser inbox để nhận contract chung; chưa có UI Mua ngay native.
+- Migration0029 forward-only chỉ nới kind/target inbox; migration cũ/checksum
+  không sửa. Máy nhận cần migrate pending gồm0029 trước API/worker mới.
+  Không migrate/seed DB app, không push/PR/merge/deploy; READINESS giữ nguyên.
+- PASS: contract/generate/routes, API lint/typecheck/build/150unit, web
+  lint/typecheck/build/135unit, RN lint/typecheck/142unit, Mongo schema24/24
+  gồm upgrade populated/idempotency/dedupe và giữ index/checksum. Có warning cũ
+  API11/web4/RN1 và web chunk; không thêm warning mới. Node24.21.0/pnpm11.19.0.
+- BuyNow scoped6/6 PASS: giá/không chat, owner/current authorization, stale
+  address/payload chèn giá, same-key/body conflict, thiếu tiền không hold,
+  auto preparation + inbox một lần, từ chối pre-acceptance sau pay, race với
+  thương lượng, unpaid cancel, rollback payment và expiry đúng deadline.
+- Browser Mua ngay PASS hai phiên390/1440: mất ACK create/pay giữ key/body,
+  một payment/hold, không conversation, ảnh qua Sharp/storage fake, label vẫn
+  Preparing rồi pickup bởi operator độc lập mới InTransit; không tràn ngang.
+  [Ảnh và provenance](../../.impeccable/review/direct-buy-now/README.md).
+- Browser Seller Order thương lượng PASS hai phiên390/1440: quote không giữ
+  sách, giá90000+ship30000, lost ACK, thiếu ví rồi pay một lần; giữ semantics cũ.
+  API6suite Order/payment/preparation/packaging/shipment/pickup:229/231 PASS
+  trong lượt tổng, hai ca timeout60s (Restricted existing obligation/expiry và
+  wrongAmount balanced entries) chạy riêng đều PASS3,55s/1,27s trên database
+  QA mới của cùng replica set, giữ nguyên assertion rollback/quyền/tiền.
+  Không ghi full-suite PASS. Lượt tổng dùng CLI testTimeout60s/hook120s;
+  transaction budget/lock/assert không đổi. 100 payment replay và các race,
+  sáu ca BuyNow đều PASS trong lượt tổng. Lượt15s trước đã dừng sau timeout,
+  không tính PASS.
+  Lượt trước bị gián đoạn Mongo monitor/timing không tính PASS; lượt unit web
+  khởi tạo quá nhiều worker bị timeout đã chạy135/135 với maxWorkers2.
+- Full API E2E/Mongo import/failover, native-device/live-provider acceptance,
+  human review và remote CI NOT RUN trong gói này. Không mở gate Delivered/
+  inspection/claim/settlement. Bước tiếp: review tiền/quyền bởi người độc lập
+  theo TEAMWORK, tích hợp/migration/deploy theo quyền gói tiếp theo.
+
 ## Chat mua bán, Seller tạo Order — 16/10/2026
 
 - [PR43](https://github.com/huangg49/used-book-marketplace/pull/43), base main
