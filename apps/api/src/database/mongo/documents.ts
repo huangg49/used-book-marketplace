@@ -1156,6 +1156,7 @@ export interface MemberNotificationDoc {
     | 'AuctionCancelled'
     | 'AuctionOnHold'
     | 'AuctionPaymentExpired'
+    | 'OrderBuyNowPaid'
     | 'AuctionPaid'
     | 'ExchangeProposed'
     | 'ExchangeAccepted'
@@ -1167,7 +1168,7 @@ export interface MemberNotificationDoc {
     | 'ExchangeRejected';
   title: string;
   body: string;
-  targetType: 'Auction' | 'Exchange';
+  targetType: 'Auction' | 'Exchange' | 'Order';
   targetId: string;
   dedupeKey: string;
   createdAt: Date;

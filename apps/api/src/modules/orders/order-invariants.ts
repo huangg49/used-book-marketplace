@@ -103,6 +103,9 @@ export async function checkOrder(tx: Tx, orderId: string) {
     .toArray();
   const initial = events.find((event) => event.sequence === 1);
   const initialChain = initial ? await chain(tx, initial.receiptId) : null;
+  const buyNow = get(snapshot, 'purchaseMode') === 'BuyNow';
+  if (buyNow !== (initialChain?.r.operation === 'createBuyNowOrder'))
+    fail('Order purchase mode/creation receipt mismatch');
   if (
     bookPrice !== q!.bookPrice &&
     initialChain?.r.operation !== 'createDirectOrderFromConversation'
@@ -128,8 +131,8 @@ export async function checkOrder(tx: Tx, orderId: string) {
     // version.  All other paid release paths still end at version four.
     const expected =
       ev.sequence === 1
-        ? (x?.r.operation === 'createDirectOrder' &&
-            get(x.r.result, 'state') === 'PendingSellerConfirmation')
+        ? x?.r.operation === 'createDirectOrder' &&
+          get(x.r.result, 'state') === 'PendingSellerConfirmation'
           ? 2
           : 1
         : o.state === 'Completed'
@@ -147,8 +150,8 @@ export async function checkOrder(tx: Tx, orderId: string) {
     )
       fail('Missing commitment receipt/audit/outbox');
   }
-  await checkOrderFunding(tx, o, c!, calculated!.buyerTotal);
-  await checkOrderPreparation(tx, o, c!);
+  await checkOrderFunding(tx, o, c!, calculated!.buyerTotal, buyNow);
+  await checkOrderPreparation(tx, o, c!, buyNow);
   tx.check(`listing:${i.listingId}`, () => checkListing(tx, i.listingId));
 }
 
@@ -157,6 +160,7 @@ async function checkOrderFunding(
   o: DirectOrderDoc,
   c: WorkflowContextDoc,
   buyerTotal: number,
+  buyNow: boolean,
 ) {
   const p = await tx.c.ledger_journals.findOne({
     orderId: o._id,
@@ -212,7 +216,7 @@ async function checkOrderFunding(
       (j.type === 'OrderPayment' &&
         (!['payOrder', 'createDirectOrder'].includes(x.r.operation) ||
           x.r.actorId !== o.buyerId ||
-          x.r.resultVersion !== 2)) ||
+          x.r.resultVersion !== (buyNow ? 3 : 2))) ||
       (j.type === 'OrderRefund' &&
         (x.r.operation !== 'refundOrder' ||
           x.r.systemActor !== 'OrderRefund' ||
@@ -263,6 +267,7 @@ async function checkOrderPreparation(
   tx: Tx,
   o: DirectOrderDoc,
   c: WorkflowContextDoc,
+  buyNow: boolean,
 ) {
   const p = await tx.c.order_preparations.findOne({ _id: o._id });
   const review = await tx.c.pickup_reviews.findOne({ orderId: o._id });
@@ -285,16 +290,17 @@ async function checkOrderPreparation(
     p.acceptedAt < o.paidAt! ||
     p.acceptedAt >= o.sellerConfirmationDeadline! ||
     accepted.r.contextId !== c._id ||
-    accepted.r.operation !== 'acceptOrder' ||
-    accepted.r.actorId !== o.sellerId ||
+    accepted.r.operation !== (buyNow ? 'payOrder' : 'acceptOrder') ||
+    accepted.r.actorId !== (buyNow ? o.buyerId : o.sellerId) ||
     accepted.r.systemActor !== null ||
     accepted.r.resultVersion !== 3 ||
     accepted.r.committedAt.getTime() !== p.acceptedAt.getTime() ||
     get(accepted.r.result, 'state') !== 'Preparing' ||
     accepted.a.contextId !== c._id ||
-    accepted.a.actorId !== o.sellerId ||
-    accepted.a.action !== 'acceptOrder' ||
-    accepted.o.type !== 'OrderAccepted'
+    accepted.a.actorId !== (buyNow ? o.buyerId : o.sellerId) ||
+    accepted.a.action !== (buyNow ? 'payOrder' : 'acceptOrder') ||
+    accepted.o.type !== (buyNow ? 'OrderBuyNowPaid' : 'OrderAccepted') ||
+    (buyNow && p.acceptedAt.getTime() !== o.paidAt!.getTime())
   )
     fail('Order acceptance receipt/deadline mismatch');
   const carrierReview = await tx.c.carrier_pickup_reviews.findOne({

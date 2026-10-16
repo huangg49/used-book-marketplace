@@ -47,6 +47,9 @@ RN là Member client ưu tiên, Expo web chia sẻ RN; React/Vite user-web và a
   sách; Buyer gửi địa chỉ/báo giá, Seller chốt giá và tạo Order unpaid để giữ listing.
   Buyer thanh toán sau; mở chat/gửi báo giá không được báo mua thành công. Hội thoại
   cũ có hold24h vẫn theo expiry lịch sử.
+- Mua ngay DirectDelivery theo [ADR0038](docs/adr/0038-direct-buy-now-orders.md):
+  Buyer tự đặt giá niêm yết không chat; payment vào Preparing, Seller không duyệt lại.
+  Web có trang đơn riêng; chưa mở gate completion hoặc UI Mua ngay native.
 - Exchange user-web còn mock, register/profile/admin dashboard còn scaffold;
   không lấy giao diện làm bằng chứng API đã triển khai.
 - Phân chia mục tiêu đã duyệt: mobile ưu tiên tìm/xem/lưu sách, chụp ảnh/đăng bài,

@@ -3,6 +3,9 @@
 Chấp nhận theo yêu cầu nghiệp vụ ngày 15/10/2026. Thay đổi luồng mua direct
 Sale/Both; không mở rộng gate Delivered/inspection/settlement.
 
+16/10/2026: [ADR0038](0038-direct-buy-now-orders.md) bổ sung Mua ngay độc lập;
+những quyết định dưới đây tiếp tục áp dụng cho đường thương lượng.
+
 ## Quyết định
 
 - Mở chat không phải là reservation. Nhiều Buyer có thể chat cùng Seller về một

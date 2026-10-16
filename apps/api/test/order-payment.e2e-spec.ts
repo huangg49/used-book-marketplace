@@ -296,6 +296,7 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
       await c.agreement_snapshots.deleteMany({ _id: { $in: contexts } });
       await c.workflow_items.deleteMany({ contextId: { $in: contexts } });
       await c.workflow_contexts.deleteMany({ _id: { $in: contexts } });
+      await c.order_preparations.deleteMany({ _id: { $in: orders } });
       await c.direct_orders.deleteMany({ _id: { $in: orders } });
       await c.sale_quotes.deleteMany({ buyerId: { $in: users } });
       const listings = (
@@ -343,6 +344,7 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
       await c.member_addresses.deleteMany({ ownerId: { $in: users } });
       await c.address_identities.deleteMany({ ownerId: { $in: users } });
       await c.address_books.deleteMany({ _id: { $in: users } });
+      await c.member_notifications.deleteMany({ userId: { $in: users } });
       await db.removeUsers(users);
       await db.close();
     }
@@ -535,12 +537,12 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
     const q = (await quote(f).expect(200)).body;
     return {
       f,
-      ...await prepareSellerOrder(app, f.buyer, {
+      ...(await prepareSellerOrder(app, f.buyer, {
         quoteId: q.entityId,
         expectedQuoteVersion: 1,
         expectedListingVersion: f.l.version,
         expectedListingRevisionId: f.l.revisionId,
-      }),
+      })),
     };
   }
   const create = (
@@ -1388,4 +1390,223 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
       expect((await wallet(f.f.buyer)).available).toBe(500000);
     },
   );
+  async function instant() {
+    const f = await setup();
+    const q = (await quote(f).expect(200)).body;
+    const body = {
+      quoteId: q.entityId,
+      expectedQuoteVersion: 1,
+      expectedListingVersion: f.l.version,
+      expectedListingRevisionId: f.l.revisionId,
+    };
+    return { f, body };
+  }
+  it('buy-now freezes listed price without chat; payment commits preparation and notifications once', async () => {
+    const p = await instant(),
+      key = randomUUID();
+    const created = await post(
+      '/orders/buy-now',
+      p.body,
+      p.f.buyer,
+      key,
+    ).expect(200);
+    validates('TransactionCommandReceipt', created.body);
+    const id = created.body.entityId;
+    expect(
+      await db.c.purchase_conversations.countDocuments({
+        listingId: p.f.l.entityId,
+      }),
+    ).toBe(0);
+    expect((await orderView(id, p.f.buyer)).amounts.bookPrice).toBe(200000);
+    expect(
+      (await post('/orders/buy-now', p.body, p.f.buyer, key).expect(200)).body,
+    ).toEqual(created.body);
+    await post(
+      '/orders/buy-now',
+      { ...p.body, expectedListingVersion: p.body.expectedListingVersion + 1 },
+      p.f.buyer,
+      key,
+    ).expect(409);
+    await post(`/orders/${id}/pay`, { expectedVersion: 1 }, p.f.buyer).expect(
+      409,
+    );
+    expect(await holdAccounts(id)).toBe(0);
+    await fund(p.f.buyer);
+    const payKey = randomUUID();
+    const paid = await post(
+      `/orders/${id}/pay`,
+      { expectedVersion: 1 },
+      p.f.buyer,
+      payKey,
+    ).expect(200);
+    expect(paid.body).toMatchObject({ state: 'Preparing', version: 3 });
+    const buyer = await orderView(id, p.f.buyer),
+      seller = await orderView(id, p.f.seller);
+    expect(buyer.purchaseMode).toBe('BuyNow');
+    expect(buyer.moneyHeld).toBe(230000);
+    expect(buyer.sellerConfirmationDeadline).toBeNull();
+    expect(seller.sellerAcceptanceEnabled).toBe(false);
+    expect(seller.shipmentRegistrationEnabled).toBe(false); // Ready packaging evidence is still required.
+    expect(seller.shippingAddress).toBeTruthy();
+    expect(
+      Date.parse(seller.preparation.pickupDeadline) - Date.parse(buyer.paidAt),
+    ).toBe(48 * 3600000);
+    expect(
+      (
+        await post(
+          `/orders/${id}/pay`,
+          { expectedVersion: 1 },
+          p.f.buyer,
+          payKey,
+        ).expect(200)
+      ).body,
+    ).toEqual(paid.body);
+    expect(await journals(id, 'OrderPayment')).toBe(1);
+    expect(
+      await db.c.member_notifications.countDocuments({
+        targetId: id,
+        kind: 'OrderBuyNowPaid',
+      }),
+    ).toBe(2);
+    await post(
+      `/orders/${id}/accept`,
+      { expectedVersion: 3 },
+      p.f.seller,
+    ).expect(409);
+    await post(
+      `/orders/${id}/reject`,
+      { expectedVersion: 3 },
+      p.f.seller,
+    ).expect(409);
+    await post(
+      `/orders/${id}/cancel-paid`,
+      { expectedVersion: 3 },
+      p.f.buyer,
+    ).expect(409);
+    await app.get(MongoService).tx((tx) => checkOrder(tx, id));
+    // Current authorization is checked before replaying an already paid command.
+    await setUser([p.f.buyer.id], { status: 'LOCKED' });
+    await post(
+      `/orders/${id}/pay`,
+      { expectedVersion: 1 },
+      p.f.buyer,
+      payKey,
+    ).expect(403);
+    await setUser([p.f.buyer.id], { status: 'ACTIVE' });
+  }, 60000);
+  it('buy-now rejects foreign quotes, stale addresses, altered prices and ineligible buyers without reservation', async () => {
+    const p = await instant();
+    await post('/orders/buy-now', p.body, p.f.seller).expect(404);
+    await post(
+      '/orders/buy-now',
+      { ...p.body, agreedBookPrice: 10000 },
+      p.f.buyer,
+    ).expect(422);
+    await setUser([p.f.buyer.id], { status: 'RESTRICTED' });
+    await post('/orders/buy-now', p.body, p.f.buyer).expect(403);
+    await setUser([p.f.buyer.id], { status: 'ACTIVE' });
+    await db.c.member_addresses.updateOne(
+      { _id: p.f.destination.id },
+      { $inc: { version: 1 }, $set: { detail: 'Updated QA-only destination' } },
+    );
+    await post('/orders/buy-now', p.body, p.f.buyer).expect(409);
+    expect((await stateCounts(p.f.l.entityId)).active).toBe(0);
+  }, 60000);
+  it('buy-now and negotiated checkout race for exactly one listing commitment', async () => {
+    const p = await instant();
+    const negotiated = await prepareSellerOrder(app, p.f.buyer, p.body, 180000);
+    const results = await Promise.all([
+      post('/orders/buy-now', p.body, p.f.buyer),
+      post('/orders', negotiated.body, p.f.seller),
+    ]);
+    expect(results.filter((r) => r.status === 200)).toHaveLength(1);
+    expect(results.filter((r) => [409, 422].includes(r.status))).toHaveLength(
+      1,
+    );
+    expect((await stateCounts(p.f.l.entityId)).orders).toBe(1);
+    expect((await stateCounts(p.f.l.entityId)).active).toBe(1);
+  }, 60000);
+  it('buy-now unpaid cancellation releases only its reservation and charges nothing', async () => {
+    const p = await instant();
+    const created = await post('/orders/buy-now', p.body, p.f.buyer).expect(
+      200,
+    );
+    const id = created.body.entityId;
+    await cancel(id, p.f.buyer).expect(200);
+    expect((await db.c.listings.findOne({ _id: p.f.l.entityId }))!.trade).toBe(
+      'Available',
+    );
+    expect(await journals(id)).toBe(0);
+    expect(
+      await db.c.member_notifications.countDocuments({ targetId: id }),
+    ).toBe(0);
+  }, 60000);
+  it('buy-now payment rollback preserves unpaid order and leaves no hold, preparation or notices', async () => {
+    const p = await instant();
+    const created = await post('/orders/buy-now', p.body, p.f.buyer).expect(
+      200,
+    );
+    const id = created.body.entityId;
+    await fund(p.f.buyer);
+    const service = app.get(OrdersService),
+      original = service.transition.bind(service);
+    const mock = vi
+      .spyOn(service, 'transition')
+      .mockImplementation(async (tx, order, set) => {
+        const result = await original(tx, order, set);
+        if (set.state === 'Preparing')
+          throw new Error('QA injected preparation failure');
+        return result;
+      });
+    const key = randomUUID();
+    try {
+      await post(
+        `/orders/${id}/pay`,
+        { expectedVersion: 1 },
+        p.f.buyer,
+        key,
+      ).expect(500);
+    } finally {
+      mock.mockRestore();
+    }
+    expect((await orderView(id, p.f.buyer)).state).toBe('AwaitingPayment');
+    expect(await holdAccounts(id)).toBe(0);
+    expect(await journals(id)).toBe(0);
+    expect(await db.c.order_preparations.countDocuments({ _id: id })).toBe(0);
+    expect(
+      await db.c.member_notifications.countDocuments({ targetId: id }),
+    ).toBe(0);
+    const result = await post(
+      `/orders/${id}/pay`,
+      { expectedVersion: 1 },
+      p.f.buyer,
+      key,
+    ).expect(200);
+    expect(result.body.state).toBe('Preparing');
+  }, 60000);
+  it('buy-now payment at the deadline fails and expiry releases the unpaid book once', async () => {
+    const p = await instant();
+    const created = await post('/orders/buy-now', p.body, p.f.buyer).expect(
+      200,
+    );
+    const id = created.body.entityId;
+    await fund(p.f.buyer);
+    const clock = vi
+      .spyOn(app.get(OrderClock), 'now')
+      .mockResolvedValue(new Date(created.body.paymentDeadline));
+    try {
+      await post(`/orders/${id}/pay`, { expectedVersion: 1 }, p.f.buyer).expect(
+        409,
+      );
+      await app.get(OrdersService).expire(id);
+      await app.get(OrdersService).expire(id);
+      expect((await orderView(id, p.f.buyer)).state).toBe('PaymentExpired');
+      expect(
+        (await db.c.listings.findOne({ _id: p.f.l.entityId }))!.trade,
+      ).toBe('Available');
+      expect(await journals(id)).toBe(0);
+    } finally {
+      clock.mockRestore();
+    }
+  }, 60000);
 });

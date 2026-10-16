@@ -1,3 +1,4 @@
+import { buyNowNotificationsMigration, withBuyNowNotifications } from './0029-buy-now-notifications.js';
 import {
   exchangeCollectionSpecs,
   exchangesMigration,
@@ -245,6 +246,7 @@ export const migrations: Migration[] = [
   exchangeMutualCompletionMigration,
   integratedWalletPointMigration,
   sellerSelectedOrdersMigration,
+  buyNowNotificationsMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -292,7 +294,7 @@ export const currentCollections = (): CollectionSpec[] => [
   ...settlementCollectionSpecs.map(withRulesChanges),
   ...rulesCollectionSpecs,
   ...sellerSelectedConversationSpecs,
-  ...notificationSpecs.map(withExchangeNotificationChanges),
+  ...notificationSpecs.map(withExchangeNotificationChanges).map(withBuyNowNotifications),
   ...accountRecoverySpecs,
   ...authOtpSpecs,
   ...exchangeCollectionSpecs

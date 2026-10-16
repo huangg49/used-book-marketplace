@@ -1252,6 +1252,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orders/buy-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE verified MEMBER buyer creates a 15-minute unpaid reservation at the current listed price from their own valid DirectDelivery quote, without a conversation. Atomically revalidates listing, addresses, policy and exclusive commitment. Same key/body replays the original receipt; no money held until pay. Successful payment automatically starts Preparing and its 48-hour pickup deadline; no seller approval. */
+        post: operations["createBuyNowOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/orders/{orderId}": {
         parameters: {
             query?: never;
@@ -1259,7 +1276,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Private participant Order, including payment/hold and refund progress; own contact only. LOCKED existing-obligation access. No seller acceptance/dispatch yet. */
+        /** @description Private participant Order, including payment/hold and refund progress; own contact only. LOCKED existing-obligation access. BuyNow includes automatic preparation after payment; Negotiated retains seller acceptance. */
         get: operations["getMyOrder"];
         put?: never;
         post?: never;
@@ -3203,11 +3220,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected";
+            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected";
             title: string;
             body: string;
             /** @enum {string} */
-            targetType: "Auction" | "Exchange";
+            targetType: "Auction" | "Exchange" | "Order";
             /**
              * Format: uuid
              * @description Opens with GET /auctions/{id} or GET /exchanges/{id}; the caller's own view comes from participation or point-order reads.
@@ -3748,6 +3765,11 @@ export interface components {
             mediaIds: string[];
         };
         DirectOrderAgreement: {
+            /**
+             * @description Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
+             * @enum {string}
+             */
+            purchaseMode?: "Negotiated" | "BuyNow";
             /** @constant */
             schemaVersion: 1;
             policyVersion: string;
@@ -3800,6 +3822,11 @@ export interface components {
         };
         /** @description Private DirectDelivery Order including funding, pre-confirmation refund, seller acceptance and overdue pickup review. Historical schema name retained. shippingAddress is the frozen buyer destination, disclosed only to the accepted Seller. Review is an unresolved task, never proof of custody, strike or refund. Shipment registration is available through its separate endpoint; independent pickup simulation can advance InTransit or open carrierReview/ResolutionPending. Review resolution handlers remain planned. */
         PrivateUnpaidOrder: {
+            /**
+             * @description Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
+             * @enum {string}
+             */
+            purchaseMode?: "Negotiated" | "BuyNow";
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -3999,6 +4026,15 @@ export interface components {
             occurredAt: string;
         };
         MyOrderSummary: {
+            /** @description Book title frozen in the Order item snapshot. */
+            title?: string;
+            /** Format: uuid */
+            listingId?: string;
+            /**
+             * @description Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
+             * @enum {string}
+             */
+            purchaseMode?: "Negotiated" | "BuyNow";
             /** Format: uuid */
             id: string;
             /** @enum {string} */
@@ -7526,6 +7562,43 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CreateSellerDirectOrder"];
+            };
+        };
+        responses: {
+            /** @description Successful operation. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    createBuyNowOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDirectOrder"];
             };
         };
         responses: {

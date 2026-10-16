@@ -431,6 +431,7 @@ export class MongoCommandService {
     operation:
       | 'createDirectOrder'
       | 'createDirectOrderFromConversation'
+      | 'createBuyNowOrder'
       | 'cancelUnpaidOrder'
       | 'payOrder'
       | 'acceptOrder'
