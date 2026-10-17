@@ -1,5 +1,22 @@
 # Điểm lưu hiện tại — 17/10/2026
 
+## Khu vực luân chuyển sách — 17/10/2026
+
+- Chủ dự án đổi dropdown thành TP.HCM, Bình Dương, Vũng Tàu như ba khu luân chuyển.
+  Nhánh `codex/book-circulation-regions`, base `a68f016`; subject
+  `feat(addresses): configure three book circulation regions`. [ADR0039](../adr/0039-book-circulation-regions.md).
+  OpenAPI0.43.1 mô tả directory; migration0030 mới đổi nhãn DEMO-A/B và thêm C,
+  giữ mã wire HCM-DEMO-v1/name TP.HCM và address/listing/order cũ.
+- Member web đổi nhãn/copy form gửi/nhận, dữ liệu lấy API thật. Không thêm điểm
+  ViaPoint, geocoding hay phí giao mới; READINESS giữ nguyên. Đã áp dụng đúng0030
+  vào DB local sau preflight chỉ có migration này; pending rỗng, API ready200.
+- PASS API lint/typecheck/build/150unit, contract/check/routes165/26; web
+  lint/typecheck/build/135unit; address HTTP17; Mongo48/4SKIP (import/failover).
+  Ba browser suite đăng bán/Mua ngay/thương lượng PASS, có Bình Dương→Vũng Tàu
+  quote và giữ dữ liệu/key/body. [Ảnh/checks](../../.impeccable/review/circulation-regions/README.md).
+  Warning cũ còn. Native/live provider/human/remote CI NOT RUN; không push/PR/
+  merge/deploy. Không thay migration đã áp dụng hoặc snapshot SRS cũ.
+
 ## Popup mua bán và Mua ngay — 17/10/2026
 
 - Follow-up ảnh người dùng: sửa liên kết lỗi `originAddress` ở `/sell` để mở

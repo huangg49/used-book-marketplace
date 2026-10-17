@@ -1,4 +1,5 @@
 import { buyNowNotificationsMigration, withBuyNowNotifications } from './0029-buy-now-notifications.js';
+import { bookCirculationRegionsMigration } from './0030-book-circulation-regions.js';
 import {
   exchangeCollectionSpecs,
   exchangesMigration,
@@ -247,6 +248,7 @@ export const migrations: Migration[] = [
   integratedWalletPointMigration,
   sellerSelectedOrdersMigration,
   buyNowNotificationsMigration,
+  bookCirculationRegionsMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>

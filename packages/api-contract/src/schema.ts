@@ -3580,6 +3580,7 @@ export interface components {
             width: number;
             height: number;
         };
+        /** @description Project-defined book circulation zones: TP.HCM (DEMO-A), Binh Duong (DEMO-B), and Vung Tau (DEMO-C). These are simulated operational zones, not official administrative boundaries or managed handover points. The legacy HCM-DEMO-v1 code and TP.HCM envelope name remain for wire compatibility. Clients display the locality labels from this directory. */
         ServiceAreaDirectory: {
             /** @constant */
             code: "HCM-DEMO-v1";

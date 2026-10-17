@@ -319,7 +319,7 @@ try {
     fullPage: false,
   });
   const originErrorLink = p.getByRole("alert").getByRole("button", {
-    name: "Chọn địa chỉ đã lưu hoặc nhập đủ nơi gửi sách thuộc TP.HCM.",
+    name: "Chọn địa chỉ đã lưu hoặc nhập đủ nơi gửi sách và khu vực luân chuyển.",
     exact: true,
   });
   await originErrorLink.click();
@@ -355,7 +355,16 @@ try {
   await p
     .getByLabel("Số điện thoại người gửi", { exact: true })
     .fill("0901234567");
-  await p.getByLabel("Khu vực phục vụ", { exact: true }).selectOption("DEMO-A");
+  const regionSelect = p.getByLabel("Khu vực luân chuyển sách", {
+    exact: true,
+  });
+  assert.deepEqual(await regionSelect.locator("option").allTextContents(), [
+    "Chọn khu vực",
+    "TP.HCM",
+    "Bình Dương",
+    "Vũng Tàu",
+  ]);
+  await regionSelect.selectOption("DEMO-C");
   await p.getByLabel("Địa chỉ chi tiết", { exact: true }).fill("123 Đường QA");
 
   await p.locator("dialog[open]").evaluate(async (node) => {

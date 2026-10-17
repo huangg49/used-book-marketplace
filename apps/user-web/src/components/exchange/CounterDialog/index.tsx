@@ -169,7 +169,7 @@ export function CounterDialog({
           return;
         }
         if (!newLocalityCode) {
-          setError('Vui lòng chọn Khu vực / Quận huyện phục vụ tại TP.HCM.');
+          setError('Vui lòng chọn khu vực luân chuyển sách trong danh sách.');
           return;
         }
         if (detailTrim.length < 5) {
@@ -296,7 +296,7 @@ export function CounterDialog({
 
             <div className={styles.formGroup}>
               <div className={styles.addressHeaderRow}>
-                <label className={styles.label}>Địa chỉ nhận sách của bạn (TP.HCM)</label>
+                <label className={styles.label}>Địa chỉ nhận sách của bạn</label>
                 {addresses.data?.items && addresses.data.items.length > 0 && (
                   <button
                     type="button"
@@ -354,14 +354,14 @@ export function CounterDialog({
                     </div>
                   </div>
                   <div>
-                    <label className={styles.fieldLabel}>Khu vực phục vụ (TP.HCM) *</label>
+                    <label className={styles.fieldLabel}>Khu vực luân chuyển sách *</label>
                     <select
                       required
                       value={newLocalityCode}
                       onChange={(e) => setNewLocalityCode(e.target.value)}
                       className={styles.select}
                     >
-                      <option value="">-- Chọn Quận / Huyện TP.HCM --</option>
+                      <option value="">-- Chọn TP.HCM, Bình Dương hoặc Vũng Tàu --</option>
                       {areas.data?.localities.map((loc) => (
                         <option key={loc.code} value={loc.code}>
                           {loc.label}

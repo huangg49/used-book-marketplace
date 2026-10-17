@@ -469,7 +469,7 @@ export function BookDetailPage() {
             <p>
               <MapPin size={16} aria-hidden="true" />
               {book.fulfillment
-                ? "Giao hàng mô phỏng trong TP.HCM."
+                ? "Giao hàng mô phỏng giữa TP.HCM, Bình Dương và Vũng Tàu."
                 : "Bài đăng chưa cấu hình giao nhận."}
             </p>
             <p className={styles.note}>

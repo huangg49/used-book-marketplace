@@ -168,7 +168,10 @@ after API build for read-only source/ledger reconciliation. Never refill by edit
 
 Member address book and authenticated HCM demo service-area directory are implemented
 in OpenAPI 0.9.0. Read ADR 0014 and `docs/features/ADDRESS_BOOK_REPORT.md`.
-DEMO-A/B are simulated locality codes, not official wards or handover points.
+Owner update17/10: [ADR0039](../adr/0039-book-circulation-regions.md) names the
+operational circulation zones TP.HCM/DEMO-A, Bình Dương/DEMO-B and Vũng Tàu/DEMO-C.
+These are not official wards or handover points. The HCM-DEMO-v1 envelope is kept
+for compatibility; migration0030 changes reference labels, not saved address keys.
 Listing DirectDelivery origin selection is implemented in OpenAPI 0.10.0; read
 ADR 0015 and `docs/features/LISTING_FULFILLMENT_REPORT.md`. Address content versions
 and identity-only history protect frozen revisions when a contact is edited/deleted.

@@ -35,7 +35,9 @@ ViaPoint đấu giá yêu cầu intake/inspection; không phải chỉ một cat
 
 ## Operating Context
 
-Đồ án, TP.HCM only, hai điểm HCM-DEMO-01/02; tiền và carrier mô phỏng.
+Đồ án; form địa chỉ/DirectDelivery dùng ba khu luân chuyển TP.HCM, Bình Dương,
+Vũng Tàu theo yêu cầu17/10 và [ADR0039](docs/adr/0039-book-circulation-regions.md).
+Hai điểm HCM-DEMO-01/02 vẫn tại TP.HCM; tiền và carrier mô phỏng.
 RN là Member client ưu tiên, Expo web chia sẻ RN; React/Vite user-web và admin
 đã có. Flutter scaffold. Cùng NestJS/Mongo API, contract và SessionClient.
 

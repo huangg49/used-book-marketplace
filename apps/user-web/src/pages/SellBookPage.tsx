@@ -291,7 +291,7 @@ export function SellBookPage() {
       formData.missingEssentialContent === null &&
         "câu trả lời về nội dung trọng yếu",
       !ownershipDeclared && "xác nhận quyền sở hữu sách",
-      needsOrigin && !originIsValid && "nơi gửi sách tại TP.HCM",
+      needsOrigin && !originIsValid && "nơi gửi sách trong khu vực luân chuyển",
     ].filter(Boolean);
     const sale = Number(formData.salePrice);
     const exchange = Number(formData.exchangeValue);
@@ -480,7 +480,7 @@ export function SellBookPage() {
       !hasValidOriginAddress()
     )
       message =
-        "Chọn hoặc nhập nơi gửi sách thuộc khu vực phục vụ TP.HCM trước khi tiếp tục.";
+        "Chọn khu vực luân chuyển và nhập đủ nơi gửi sách trước khi tiếp tục.";
     return message;
   }
   function continueStep() {
@@ -548,7 +548,7 @@ export function SellBookPage() {
         : undefined,
     originAddress:
       formData.mode !== "Exchange" && !hasValidOriginAddress()
-        ? "Chọn địa chỉ đã lưu hoặc nhập đủ nơi gửi sách thuộc TP.HCM."
+        ? "Chọn địa chỉ đã lưu hoặc nhập đủ nơi gửi sách và khu vực luân chuyển."
         : undefined,
     readable:
       formData.readable === null
@@ -1368,8 +1368,8 @@ export function SellBookPage() {
                                   <legend>Nơi gửi sách</legend>
                                   <p className={styles.help}>
                                     Người giao hàng sẽ lấy sách tại đây. Người
-                                    mua chỉ thấy khu vực TP.HCM, không thấy địa
-                                    chỉ chi tiết hoặc số điện thoại của bạn.
+                                    mua chỉ thấy khu vực luân chuyển, không thấy
+                                    địa chỉ chi tiết hoặc số điện thoại của bạn.
                                   </p>
                                   <div className={styles.field}>
                                     <label htmlFor="originAddress">
@@ -1447,7 +1447,7 @@ export function SellBookPage() {
                                       </div>
                                       <div className={styles.field}>
                                         <label htmlFor="originLocality">
-                                          Khu vực phục vụ
+                                          Khu vực luân chuyển sách
                                         </label>
                                         <select
                                           id="originLocality"
@@ -1714,7 +1714,7 @@ export function SellBookPage() {
                           {formData.mode !== "Exchange" && (
                             <p className={styles.help}>
                               Địa chỉ chi tiết và số điện thoại chỉ dùng cho
-                              giao nhận; người mua chỉ thấy khu vực TP.HCM.
+                              giao nhận; người mua chỉ thấy khu vực luân chuyển.
                             </p>
                           )}
                           <p className={styles.help}>

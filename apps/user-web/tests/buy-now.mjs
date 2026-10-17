@@ -103,7 +103,7 @@ try {
       recipientName: "QA seller",
       phone: "0900123456",
       serviceAreaCode: "HCM-DEMO-v1",
-      localityCode: "DEMO-A",
+      localityCode: "DEMO-B",
       detail: "QA origin, simulated only",
     },
   });
@@ -188,7 +188,7 @@ try {
   await buyerPage
     .getByLabel("Số điện thoại", { exact: true })
     .fill("0900654321");
-  await buyerPage.getByLabel(/Khu vực phục vụ/).selectOption("DEMO-A");
+  await buyerPage.getByLabel(/Khu vực luân chuyển sách/).selectOption("DEMO-C");
   await buyerPage
     .getByLabel("Địa chỉ chi tiết", { exact: true })
     .fill("QA destination, simulated only");

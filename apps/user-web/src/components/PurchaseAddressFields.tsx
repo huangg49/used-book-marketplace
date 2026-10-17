@@ -95,7 +95,7 @@ export function PurchaseAddressFields({
             </label>
           </div>
           <label>
-            Khu vực phục vụ
+            Khu vực luân chuyển sách
             <select
               required
               value={form.localityCode}
@@ -103,7 +103,7 @@ export function PurchaseAddressFields({
                 onChange({ ...form, localityCode: e.target.value })
               }
             >
-              <option value="">Chọn khu vực tại TP.HCM</option>
+              <option value="">Chọn TP.HCM, Bình Dương hoặc Vũng Tàu</option>
               {localities.map((area) => (
                 <option key={area.code} value={area.code}>
                   {area.label}
@@ -127,7 +127,7 @@ export function PurchaseAddressFields({
       )}
       <p className={styles.note}>
         <MapPin size={16} aria-hidden="true" /> Giao trực tiếp từ người bán,
-        trong phạm vi TP.HCM.
+        giữa TP.HCM, Bình Dương và Vũng Tàu.
       </p>
     </>
   );

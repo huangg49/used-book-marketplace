@@ -121,6 +121,78 @@ describe('migrations', () => {
     ).toBe(POSTGRES_MODEL_COUNT);
   });
 
+  it('upgrades circulation labels without rewriting address keys or applied checksums', async () => {
+    const db = root.db(
+      `circulation_upgrade_${randomUUID().replaceAll('-', '')}_test`,
+    );
+    const migration = migrations.find(
+      (item) => item.id === '0030-book-circulation-regions',
+    )!;
+    try {
+      await migrate(
+        root,
+        db,
+        migrations.filter((item) => item.id !== migration.id),
+      );
+      const existing = {
+        _id: randomUUID(),
+        ownerId: randomUUID(),
+        version: 1,
+        recipientName: 'QA legacy address',
+        phone: '0900000000',
+        serviceAreaCode: 'HCM-DEMO-v1',
+        localityCode: 'DEMO-B',
+        detail: 'QA-only address',
+        isDefault: true,
+        createdAt: new Date(),
+      };
+      await db.collection('member_addresses').insertOne(existing as never);
+      const ledger = db.collection<{ _id: string; checksum: string }>(
+        '_migrations',
+      );
+      const before = await ledger.find().toArray();
+      expect(await migrate(root, db)).toEqual([migration.id]);
+      expect(
+        await db
+          .collection('member_addresses')
+          .findOne({ _id: existing._id as never }),
+      ).toEqual(existing);
+      expect(
+        await db
+          .collection('service_localities')
+          .find({}, { sort: { code: 1 } })
+          .toArray(),
+      ).toEqual([
+        {
+          _id: 'HCM-DEMO-v1:DEMO-A',
+          areaCode: 'HCM-DEMO-v1',
+          code: 'DEMO-A',
+          label: 'TP.HCM',
+        },
+        {
+          _id: 'HCM-DEMO-v1:DEMO-B',
+          areaCode: 'HCM-DEMO-v1',
+          code: 'DEMO-B',
+          label: 'Bình Dương',
+        },
+        {
+          _id: 'HCM-DEMO-v1:DEMO-C',
+          areaCode: 'HCM-DEMO-v1',
+          code: 'DEMO-C',
+          label: 'Vũng Tàu',
+        },
+      ]);
+      for (const row of before)
+        expect(await ledger.findOne({ _id: row._id })).toEqual(row);
+      expect(await migrate(root, db)).toEqual([]);
+      await migration.up(db, root);
+      expect(await db.collection('service_localities').countDocuments()).toBe(
+        3,
+      );
+    } finally {
+      await db.dropDatabase();
+    }
+  });
   it('are idempotent and refuse an edited applied migration', async () => {
     expect(await migrate(migrator, migrator.db())).toEqual([]);
     const edited = migrations.map((m, i) =>
@@ -392,7 +464,7 @@ describe('migrations', () => {
         .findOne({ _id: 'ledger_journal_sequence' as never }),
     ).toMatchObject({ value: 1 });
     expect(await rootDb.collection('service_localities').countDocuments()).toBe(
-      2,
+      3,
     );
   });
 });

@@ -356,7 +356,7 @@ export function CheckoutPage() {
           <section className={styles.delivery}>
             <div className={styles.sectionHeading}>
               <MapPin size={21} aria-hidden="true" />
-              <h2>Địa chỉ nhận tại TP.HCM</h2>
+              <h2>Địa chỉ nhận sách</h2>
             </div>
             <p>
               {prepared?.destination ??
@@ -398,7 +398,7 @@ export function CheckoutPage() {
         description={
           prepared
             ? "Người bán dùng thông tin này để tạo đơn với giá hai bên đã thỏa thuận."
-            : "Điền nơi nhận sách tại TP.HCM để xem phí giao nhận."
+            : "Chọn khu vực luân chuyển và nơi nhận để xem phí giao nhận."
         }
       >
         {book.data && (

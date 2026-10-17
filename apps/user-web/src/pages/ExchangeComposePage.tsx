@@ -402,7 +402,7 @@ export default function ExchangeComposePage() {
                 </p>
               </div>
               <div className={styles.formGroupBox}>
-                <h3>Địa chỉ nhận sách của bạn (TP.HCM)</h3>
+                <h3>Địa chỉ nhận sách của bạn</h3>
                 {addresses.data?.items && addresses.data.items.length > 0 ? (
                   <select
                     className={styles.select}

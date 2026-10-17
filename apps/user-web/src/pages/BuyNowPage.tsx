@@ -390,7 +390,7 @@ export function BuyNowPage() {
         description={
           prepared
             ? "Kiểm tra thông tin trước khi chuyển sang thanh toán."
-            : "Chọn địa chỉ đã lưu hoặc thêm nơi nhận mới tại TP.HCM."
+            : "Chọn địa chỉ đã lưu hoặc thêm nơi nhận trong khu vực luân chuyển sách."
         }
       >
         <div className={styles.miniBook}>

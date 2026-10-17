@@ -132,7 +132,7 @@ export class AddressesService {
           if (!locality || a.serviceAreaCode !== 'HCM-DEMO-v1')
             invalidField(
               '/address/localityCode',
-              'Chọn một khu vực trong vùng phục vụ TP.HCM.',
+              'Chọn một khu vực luân chuyển sách trong danh sách.',
             );
           for (const field of ['recipientName', 'detail'] as const)
             if (
