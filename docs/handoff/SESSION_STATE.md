@@ -1,4 +1,22 @@
-# Điểm lưu hiện tại — 16/10/2026
+# Điểm lưu hiện tại — 17/10/2026
+
+## Redesign Sàn Đấu Giá & Ký Gửi Sách RN — 17/10/2026
+
+- Tái thiết kế màn hình Sàn Đấu Giá (`auctions-screen.tsx`) và Ký Gửi Sách Đấu Giá (`send-to-auction-screen.tsx`) trên React Native theo Stitch screens `DauGia-App` & `DauGiaDang-App`.
+- Màn hình Ký gửi:
+  - Phân tách module hóa thành 8 component chuyên biệt trong `apps/mobile-react-native/src/features/auctions/send-to-auction-components/`.
+  - Bổ sung dropdown thu gọn / mở rộng (accordion) có animation cho 4 mục: Điều khoản ký gửi, (1) Chọn sách, (2) Chọn điểm tiếp nhận, (3) Thiết lập giá đấu.
+  - Áp dụng bảng màu vàng vintage đồng bộ với banner đấu giá (`vintageGold: #F6E0A8` nền, `goldBorder: #D4A373` viền, bóng `wineDark`) và thẻ con nền trắng theo yêu cầu thiết kế.
+  - Sắp xếp bộ lọc và danh mục hiển thị ngay dưới tiêu đề "Sách Cũ Đang Đấu Giá"; gỡ nút trùng lặp.
+  - Tích hợp đầy đủ API thật: `/auction-intakes`, `/me/listings`, `/handover-points`, rút sách, nộp bằng chứng bổ sung.
+- Đồng bộ hệ thống theme token `stitchTokens` trong `theme.ts` và tuân thủ 100% ESLint rules (không dùng raw color literal trong features, thay thế TextInput/Modal bằng AppTextInput/AppModal từ `core/ui`).
+- Nhánh: `feat/rn-auction-consignment-flow`, base `cf4c3e4` (`origin/main`).
+- PASS:
+  - `pnpm --filter @used-books/mobile-react-native lint`: 0 error, 0 warning.
+  - `pnpm --filter @used-books/mobile-react-native typecheck`: 0 error.
+  - `pnpm --filter @used-books/mobile-react-native test`: 143/143 unit tests PASS (21 test files).
+  - `pnpm docs:check`: 389 Markdown files, 2596 relative file links PASS.
+  - `git diff --check`: PASS.
 
 ## Trạng thái listing theo thanh toán — 16/10/2026
 

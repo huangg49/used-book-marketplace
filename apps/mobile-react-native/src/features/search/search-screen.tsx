@@ -29,6 +29,7 @@ import {
   Screen,
   StatePanel,
   TopNavbar,
+  Toast,
   stitchTokens,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
@@ -43,6 +44,7 @@ import { PublicPhoto } from "../shelf/public-photo";
 import { FALLBACK_LISTINGS } from "../shelf/home-mock-data";
 import { HomeNotificationsModal } from "../shelf/home-components/home-notifications-modal";
 import { useNotifications } from "../notifications/notifications-model";
+import { useListingWishlist } from "../wishlist";
 
 const MODE_TABS = [
   { id: "", title: "Tất cả" },
@@ -76,7 +78,7 @@ export function SearchScreen() {
   const isAuthenticated = state.status === "authenticated";
   const active = useForeground();
   const scrollRef = useRef<ScrollView>(null);
-  const params = useLocalSearchParams<{ q?: string }>();
+  const params = useLocalSearchParams<{ q?: string; mode?: string }>();
 
   // Real backend notifications
   const notifQuery = useNotifications(client, isAuthenticated);
@@ -87,7 +89,22 @@ export function SearchScreen() {
 
   // Search & Filter State
   const [search, setSearch] = useState(params.q ?? "");
-  const [selectedMode, setSelectedMode] = useState<string>("");
+  const [selectedMode, setSelectedMode] = useState<string>(params.mode ?? "");
+
+  const [prevModeParam, setPrevModeParam] = useState(params.mode);
+  const [prevQParam, setPrevQParam] = useState(params.q);
+  if (params.mode !== prevModeParam) {
+    setPrevModeParam(params.mode);
+    if (params.mode !== undefined) {
+      setSelectedMode(params.mode);
+    }
+  }
+  if (params.q !== prevQParam) {
+    setPrevQParam(params.q);
+    if (params.q !== undefined) {
+      setSearch(params.q);
+    }
+  }
   const [selectedCondition, setSelectedCondition] = useState<string>("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>("");
@@ -240,6 +257,8 @@ export function SearchScreen() {
     selectedAttributes,
     selectedSeries,
   ]);
+
+  const { isSaved, toggle, toastMessage, clearToast } = useListingWishlist();
 
   const query = queryString(appliedFilters);
 
@@ -1539,6 +1558,8 @@ export function SearchScreen() {
                     ) : undefined
                   }
                   onOpen={() => handleOpenBook(item.id)}
+                  isSaved={isSaved(item.id)}
+                  onToggleSave={() => void toggle(item.id)}
                 />
               ))}
             </View>
@@ -1913,6 +1934,14 @@ export function SearchScreen() {
       <HomeNotificationsModal
         visible={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}
+      />
+
+      <Toast
+        visible={Boolean(toastMessage)}
+        message={toastMessage ?? ""}
+        onDismiss={clearToast}
+        actionTitle="Xem"
+        onAction={() => router.push("/wishlist")}
       />
 
     </Screen>

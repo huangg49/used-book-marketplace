@@ -127,3 +127,26 @@ describe("seller intake (POL-39, FR-AU01)", () => {
     expect(auctionEligible(listing({ visibility: "Hidden" }))).toBe(false);
   });
 });
+
+describe("DauGia-App Curated Auctions Data", () => {
+  it("ensures all curated auctions strictly satisfy the publicAuctionSummary Zod schema", async () => {
+    const { CURATED_SAIGON_AUCTIONS } = await import("./auctions-data");
+    const { publicAuctionSummary } = await import("./contracts");
+
+    expect(CURATED_SAIGON_AUCTIONS.length).toBeGreaterThanOrEqual(5);
+
+    for (const item of CURATED_SAIGON_AUCTIONS) {
+      const parsed = publicAuctionSummary.safeParse(item);
+      expect(parsed.success).toBe(true);
+      expect(item.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
+      expect(item.listingId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
+      expect(item.coverUrl).toBeTruthy();
+      expect(item.currentPrice).toBeGreaterThan(0);
+      expect(item.startPrice).toBeGreaterThan(0);
+    }
+  });
+});

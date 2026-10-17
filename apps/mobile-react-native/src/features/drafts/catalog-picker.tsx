@@ -58,17 +58,10 @@ const books = z.object({
   nextCursor: z.string().nullable(),
 });
 type OwnBook = z.infer<typeof ownBook>;
-export function BookIdentity({
-  id,
-  onEdit,
-  compact,
-}: {
-  id: string | null;
-  onEdit?: () => void;
-  compact?: boolean;
-}) {
+
+export function useCatalogBook(id: string | null) {
   const { client } = useSession();
-  const read = useQuery({
+  return useQuery({
     queryKey: ["listing-book", id],
     enabled: !!id,
     queryFn: async () => {
@@ -80,7 +73,20 @@ export function BookIdentity({
         return { id: own.id, ...own.currentRevision.metadata };
       }
     },
+    staleTime: 60_000,
   });
+}
+
+export function BookIdentity({
+  id,
+  onEdit,
+  compact,
+}: {
+  id: string | null;
+  onEdit?: () => void;
+  compact?: boolean;
+}) {
+  const read = useCatalogBook(id);
   if (!id) {
     if (compact) {
       return (
