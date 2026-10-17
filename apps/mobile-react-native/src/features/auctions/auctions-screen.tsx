@@ -256,27 +256,7 @@ export function AuctionsScreen() {
           onSendToAuctionPress={handleSendToAuction}
         />
 
-        {/* 4. Quick Category Tabs (Horizontal Pill Bar) */}
-        <AuctionCategoryTabs
-          selectedTab={selectedTab}
-          onSelectTab={setSelectedTab}
-          totalCount={allAuctions.length}
-          watchlistCount={bookmarkedIds.size}
-        />
-
-        {/* 5. Sort & Filter Chips */}
-        <AuctionSortChips
-          selectedSort={selectedSort}
-          onSelectSort={setSelectedSort}
-          filterVerifiedOnly={filterVerifiedOnly}
-          onToggleVerified={() => setFilterVerifiedOnly((v) => !v)}
-          filterHasBuyNow={filterHasBuyNow}
-          onToggleBuyNow={() => setFilterHasBuyNow((v) => !v)}
-          filterHcmOnly={filterHcmOnly}
-          onToggleHcmOnly={() => setFilterHcmOnly((v) => !v)}
-        />
-
-        {/* 6. PHÂN KHU 1: PHIÊN ĐẤU GIÁ VÀNG - SẮP GÕ BÚA (Flash Hero Card) */}
+        {/* 4. PHÂN KHU 1: PHIÊN ĐẤU GIÁ VÀNG - SẮP GÕ BÚA (Flash Hero Card) */}
         {heroAuction && (
           <AuctionHeroCard
             auction={heroAuction}
@@ -288,11 +268,11 @@ export function AuctionsScreen() {
           />
         )}
 
-        {/* 7. BẢO CHỨNG DI SẢN (Trust Banner) */}
+        {/* 5. BẢO CHỨNG DI SẢN (Trust Banner) */}
         <AuctionTrustBanner />
 
-        {/* 8. PHÂN KHU 2: LƯỚI THẺ SÁCH ĐẤU GIÁ 2 CỘT */}
-        <View style={styles.sectionContainer}>
+        {/* 6. PHÂN KHU 2: TIÊU ĐỀ SÁCH CŨ ĐANG ĐẤU GIÁ */}
+        <View style={styles.gridSectionHeaderContainer}>
           <View style={styles.gridSectionHeader}>
             <View style={{ flex: 1, marginRight: 8 }}>
               <View
@@ -323,8 +303,30 @@ export function AuctionsScreen() {
               </AppText>
             </Pressable>
           </View>
+        </View>
 
-          {/* 2-Column Grid */}
+        {/* 7. Quick Category Tabs (Horizontal Pill Bar) - Đang diễn ra, Gần kết thúc... */}
+        <AuctionCategoryTabs
+          selectedTab={selectedTab}
+          onSelectTab={setSelectedTab}
+          totalCount={allAuctions.length}
+          watchlistCount={bookmarkedIds.size}
+        />
+
+        {/* 8. Sort & Filter Chips - Mới nhất, Giá tăng/giảm... */}
+        <AuctionSortChips
+          selectedSort={selectedSort}
+          onSelectSort={setSelectedSort}
+          filterVerifiedOnly={filterVerifiedOnly}
+          onToggleVerified={() => setFilterVerifiedOnly((v) => !v)}
+          filterHasBuyNow={filterHasBuyNow}
+          onToggleBuyNow={() => setFilterHasBuyNow((v) => !v)}
+          filterHcmOnly={filterHcmOnly}
+          onToggleHcmOnly={() => setFilterHcmOnly((v) => !v)}
+        />
+
+        {/* 9. LƯỚI THẺ SÁCH ĐẤU GIÁ 2 CỘT */}
+        <View style={styles.sectionContainer}>
           <View style={styles.twoColumnGrid}>
             {displayedAuctions.map((item) => {
               const remainingMs = Date.parse(item.endAt) - now;
@@ -388,11 +390,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 16,
   },
+  gridSectionHeaderContainer: {
+    paddingHorizontal: 16,
+    marginTop: 6,
+    marginBottom: 2,
+  },
   gridSectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
   },
   gridSectionTitle: {
     fontSize: 16,
