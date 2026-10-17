@@ -239,15 +239,15 @@ export function SendToAuctionPricing({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: stitchTokens.roseWarmSurface, // #FFF8F6
+    backgroundColor: stitchTokens.goldLight, // #FFF8E7 - Vàng nhạt trang nhã
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorder, // #DEC0BB
+    borderColor: "#EAD7B0",
     padding: 16,
     gap: 14,
     shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: "rgba(139, 30, 30, 0.07)",
+    backgroundColor: "rgba(183, 129, 3, 0.1)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(222, 192, 187, 0.5)",
+    borderColor: "rgba(218, 175, 100, 0.4)",
   },
   collapsedPreviewText: {
     fontSize: 12,
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   durationPill: {
     backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: "rgba(222, 192, 187, 0.5)",
+    borderColor: "rgba(218, 175, 100, 0.4)",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: "rgba(222, 192, 187, 0.6)",
+    borderColor: "rgba(218, 175, 100, 0.5)",
   },
   stepButtonActive: {
     backgroundColor: stitchTokens.wineDark,
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: "rgba(222, 192, 187, 0.6)",
+    borderColor: "rgba(218, 175, 100, 0.5)",
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 44,
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   buyNowSection: {
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: "rgba(222, 192, 187, 0.4)",
+    borderTopColor: "rgba(218, 175, 100, 0.35)",
   },
   buyNowToggleRow: {
     flexDirection: "row",

@@ -181,15 +181,15 @@ export function SendToAuctionBookPicker({
 
 const styles = StyleSheet.create({
   sectionContainer: {
-    backgroundColor: stitchTokens.roseWarmSurface, // #FFF8F6
+    backgroundColor: stitchTokens.goldLight, // #FFF8E7 - Vàng nhạt trang nhã
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorder, // #DEC0BB
+    borderColor: "#EAD7B0",
     padding: 16,
     gap: 12,
     shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: "rgba(139, 30, 30, 0.07)",
+    backgroundColor: "rgba(183, 129, 3, 0.1)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(222, 192, 187, 0.5)",
+    borderColor: "rgba(218, 175, 100, 0.4)",
   },
   sectionTitle: {
     fontSize: 16,
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.whiteSurface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(222, 192, 187, 0.5)",
+    borderColor: "rgba(218, 175, 100, 0.4)",
     padding: 20,
     alignItems: "center",
     gap: 6,
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.whiteSurface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(222, 192, 187, 0.5)",
+    borderColor: "rgba(218, 175, 100, 0.4)",
     padding: 10,
     shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
@@ -284,8 +284,8 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   bookCardSelected: {
-    backgroundColor: stitchTokens.roseWarmTag, // #FFEBE8
-    borderColor: stitchTokens.wine,
+    backgroundColor: stitchTokens.goldVeryLight, // #FFF2D1
+    borderColor: stitchTokens.wineDark,
     borderWidth: 1.5,
   },
   coverWrapper: {
