@@ -16,6 +16,7 @@ import {
 
 export const AUCTIONS_QUERY_KEY = ["public-auctions"] as const;
 export const AUCTION_MAX_PRICE = 1_000_000;
+export const EVIDENCE_MIN_LENGTH = 20;
 
 export function usePublicAuctions(client: SessionClient, enabled = true) {
   return useQuery<PublicAuctionList, Error>({

@@ -56,6 +56,7 @@ export const draftPage = z.object({
   items: z.array(privateDraft),
   nextCursor: z.string().nullable(),
 });
+export type PrivateDraft = z.infer<typeof privateDraft>;
 export const receipt = z.object({
   id: uuid,
   entityId: uuid,
