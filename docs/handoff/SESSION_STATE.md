@@ -2,6 +2,15 @@
 
 ## Khu vực luân chuyển sách — 17/10/2026
 
+- Chủ dự án giao chia commit và push17/10: đã push nhánh tổng hợp
+  `origin/codex/fix-order-address-region-label` với bốn commit riêng
+  `f10a97e` (UI popup mua bán), `a68f016` (mở popup từ lỗi địa chỉ),
+  `e680b20` (ba khu vực luân chuyển) và `23dd453` (nhãn khu vực popup tạo đơn).
+  Commit bàn giao: `docs(handoff): record published purchase popup commits`.
+  Working tree sạch trước publish; không đưa `.tmp`/credentials vào Git.
+  Checks đã đạt ở các checkpoint dưới giữ nguyên; không đổi source sản phẩm
+  khi publish. Chưa tạo PR/merge/deploy hoặc xác nhận remote CI cho nhánh này.
+  Các dòng “không push” bên dưới là trạng thái trước lần chủ dự án giao này.
 - Follow-up ảnh người dùng: popup Seller tạo đơn trong chat tra localityCode của
   quote qua directory để hiện tên khu vực thay mã DEMO-A. Có loading/error/retry,
   giữ snapshot/giá/key/body. Nhánh `codex/fix-order-address-region-label`, base
