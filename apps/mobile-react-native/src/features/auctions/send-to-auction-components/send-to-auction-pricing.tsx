@@ -239,16 +239,16 @@ export function SendToAuctionPricing({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: stitchTokens.goldLight, // #FFF8E7 - Vàng nhạt trang nhã
+    backgroundColor: "#F6E0A8", // Màu vàng ấm chính xác từ banner Đấu giá
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#EAD7B0",
+    borderWidth: 1.5,
+    borderColor: "#D4A373",
     padding: 16,
     gap: 14,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 1.5, height: 1.5 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
     elevation: 2,
   },
   headerRow: {
@@ -267,10 +267,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chevronWrapper: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "rgba(183, 129, 3, 0.1)",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    borderWidth: 1,
+    borderColor: "#D4A373",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -278,12 +280,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: stitchTokens.whiteSurface,
+    backgroundColor: "rgba(255, 255, 255, 0.88)",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(218, 175, 100, 0.4)",
+    borderColor: "#D4A373",
   },
   collapsedPreviewText: {
     fontSize: 12,
@@ -295,24 +297,25 @@ const styles = StyleSheet.create({
     color: stitchTokens.wineDark,
   },
   durationPill: {
-    backgroundColor: stitchTokens.whiteSurface,
+    backgroundColor: "rgba(255, 255, 255, 0.88)",
     borderWidth: 1,
-    borderColor: "rgba(218, 175, 100, 0.4)",
+    borderColor: "#D4A373",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
   },
   durationPillText: {
     fontSize: 11,
-    color: stitchTokens.subtleGray,
-    fontWeight: "600",
+    color: stitchTokens.wineDark,
+    fontWeight: "700",
   },
   fieldGroup: {
     gap: 6,
   },
   fieldLabel: {
     fontSize: 13,
-    color: stitchTokens.deepCocoa,
+    color: stitchTokens.wineDark,
+    fontWeight: "700",
   },
   labelWithHintRow: {
     flexDirection: "row",
@@ -321,7 +324,8 @@ const styles = StyleSheet.create({
   },
   hintSub: {
     fontSize: 11,
-    color: stitchTokens.subtleGray,
+    color: stitchTokens.wineDark,
+    opacity: 0.8,
   },
   stepGrid: {
     flexDirection: "row",
@@ -335,9 +339,9 @@ const styles = StyleSheet.create({
     gap: 6,
     height: 42,
     borderRadius: 10,
-    backgroundColor: stitchTokens.whiteSurface,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderWidth: 1,
-    borderColor: "rgba(218, 175, 100, 0.5)",
+    borderColor: "#D4A373",
   },
   stepButtonActive: {
     backgroundColor: stitchTokens.wineDark,
@@ -345,7 +349,7 @@ const styles = StyleSheet.create({
   },
   stepButtonText: {
     fontSize: 13,
-    color: stitchTokens.deepCocoa,
+    color: stitchTokens.wineDark,
   },
   stepButtonTextActive: {
     color: "#FFFFFF",
@@ -353,9 +357,9 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: stitchTokens.whiteSurface,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderWidth: 1,
-    borderColor: "rgba(218, 175, 100, 0.5)",
+    borderColor: "#D4A373",
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 44,
@@ -373,12 +377,14 @@ const styles = StyleSheet.create({
   },
   currencySuffix: {
     fontSize: 12,
-    color: stitchTokens.subtleGray,
+    color: stitchTokens.wineDark,
+    opacity: 0.8,
     letterSpacing: 0.4,
   },
   helpText: {
     fontSize: 11,
-    color: stitchTokens.subtleGray,
+    color: stitchTokens.wineDark,
+    opacity: 0.8,
   },
   errorText: {
     fontSize: 11,
@@ -387,7 +393,7 @@ const styles = StyleSheet.create({
   buyNowSection: {
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: "rgba(218, 175, 100, 0.35)",
+    borderTopColor: "rgba(212, 163, 115, 0.5)",
   },
   buyNowToggleRow: {
     flexDirection: "row",

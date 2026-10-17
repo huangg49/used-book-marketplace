@@ -181,16 +181,16 @@ export function SendToAuctionBookPicker({
 
 const styles = StyleSheet.create({
   sectionContainer: {
-    backgroundColor: stitchTokens.goldLight, // #FFF8E7 - Vàng nhạt trang nhã
+    backgroundColor: "#F6E0A8", // Màu vàng ấm chính xác từ banner Đấu giá
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#EAD7B0",
+    borderWidth: 1.5,
+    borderColor: "#D4A373",
     padding: 16,
     gap: 12,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 1.5, height: 1.5 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
     elevation: 2,
   },
   sectionHeaderRow: {
@@ -209,10 +209,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chevronWrapper: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "rgba(183, 129, 3, 0.1)",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    borderWidth: 1,
+    borderColor: "#D4A373",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -220,12 +222,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: stitchTokens.whiteSurface,
+    backgroundColor: "rgba(255, 255, 255, 0.88)",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(218, 175, 100, 0.4)",
+    borderColor: "#D4A373",
   },
   sectionTitle: {
     fontSize: 16,
@@ -233,12 +235,13 @@ const styles = StyleSheet.create({
   },
   sectionCountBadge: {
     fontSize: 11,
-    color: stitchTokens.wine,
-    fontWeight: "600",
+    color: stitchTokens.wineDark,
+    fontWeight: "700",
   },
   sectionNote: {
     fontSize: 12,
-    color: stitchTokens.subtleGray,
+    color: stitchTokens.wineDark,
+    opacity: 0.82,
     lineHeight: 17,
   },
   centerLoading: {
@@ -246,10 +249,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyContainer: {
-    backgroundColor: stitchTokens.whiteSurface,
+    backgroundColor: "rgba(255, 255, 255, 0.88)",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(218, 175, 100, 0.4)",
+    borderColor: "#D4A373",
     padding: 20,
     alignItems: "center",
     gap: 6,
@@ -272,10 +275,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: stitchTokens.whiteSurface,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(218, 175, 100, 0.4)",
+    borderColor: "#D4A373",
     padding: 10,
     shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
@@ -284,9 +287,9 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   bookCardSelected: {
-    backgroundColor: stitchTokens.goldVeryLight, // #FFF2D1
+    backgroundColor: "#FFFFFF",
     borderColor: stitchTokens.wineDark,
-    borderWidth: 1.5,
+    borderWidth: 2,
   },
   coverWrapper: {
     width: 60,
