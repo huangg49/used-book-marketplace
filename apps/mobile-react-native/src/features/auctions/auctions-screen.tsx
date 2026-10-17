@@ -274,34 +274,17 @@ export function AuctionsScreen() {
         {/* 6. PHÂN KHU 2: TIÊU ĐỀ SÁCH CŨ ĐANG ĐẤU GIÁ */}
         <View style={styles.gridSectionHeaderContainer}>
           <View style={styles.gridSectionHeader}>
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-              >
-                <Icon name="gavel" size={18} color={stitchTokens.wine} />
-                <AppText kind="bold" style={styles.gridSectionTitle}>
-                  Sách Cũ Đang Đấu Giá
-                </AppText>
-              </View>
-              <AppText kind="small" style={styles.gridSectionCount}>
-                {displayedAuctions.length} bản thảo trực tuyến
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
+              <Icon name="gavel" size={18} color={stitchTokens.wine} />
+              <AppText kind="bold" style={styles.gridSectionTitle}>
+                Sách Cũ Đang Đấu Giá
               </AppText>
             </View>
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Đấu giá sách của bạn"
-              onPress={handleSendToAuction}
-              style={({ pressed }) => [
-                styles.webCreateButton,
-                pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-              ]}
-            >
-              <Icon name="gavel" size={13} color={stitchTokens.wineDark} />
-              <AppText kind="bold" style={styles.webCreateButtonText}>
-                Đấu giá sách của bạn
-              </AppText>
-            </Pressable>
+            <AppText kind="small" style={styles.gridSectionCount}>
+              {displayedAuctions.length} bản thảo trực tuyến
+            </AppText>
           </View>
         </View>
 
@@ -412,25 +395,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     marginHorizontal: -5,
-  },
-  webCreateButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#F6E0A8",
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: "#D4A373",
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 1.5, height: 1.5 },
-    shadowOpacity: 0.22,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  webCreateButtonText: {
-    fontSize: 12,
-    color: stitchTokens.wineDark,
   },
 });
