@@ -211,7 +211,7 @@ try {
     .getByRole("dialog")
     .getByRole("button", { name: "Hủy", exact: true })
     .click();
-  await page.getByRole("link", { name: "Sách để đổi", exact: true }).click();
+  await page.getByRole("link", { name: "Đổi sách", exact: true }).click();
   await page.locator(`a[href="/books/${draft.entityId}"]`).first().click();
   await page.getByRole("link", { name: "Gửi đề nghị đổi sách", exact: true }).waitFor();
   // Reopening must preserve the unresolved intent even if public reads fail.
