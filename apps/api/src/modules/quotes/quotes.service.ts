@@ -132,7 +132,7 @@ export class QuotesService {
         if (destination.serviceAreaCode !== 'HCM-DEMO-v1')
           invalidField(
             '/destinationAddressId',
-            'Chọn địa chỉ nhận trong vùng phục vụ TP.HCM.',
+            'Chọn địa chỉ nhận thuộc khu vực luân chuyển sách được hỗ trợ.',
           );
         const { l, book } = await this.lockListing(tx, before);
         if (

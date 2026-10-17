@@ -1,5 +1,67 @@
 # Điểm lưu hiện tại — 17/10/2026
 
+## Khu vực luân chuyển sách — 17/10/2026
+
+- Chủ dự án giao chia commit và push17/10: đã push nhánh tổng hợp
+  `origin/codex/fix-order-address-region-label` với bốn commit riêng
+  `f10a97e` (UI popup mua bán), `a68f016` (mở popup từ lỗi địa chỉ),
+  `e680b20` (ba khu vực luân chuyển) và `23dd453` (nhãn khu vực popup tạo đơn).
+  Commit bàn giao: `docs(handoff): record published purchase popup commits`.
+  Working tree sạch trước publish; không đưa `.tmp`/credentials vào Git.
+  Checks đã đạt ở các checkpoint dưới giữ nguyên; không đổi source sản phẩm
+  khi publish. Chưa tạo PR/merge/deploy hoặc xác nhận remote CI cho nhánh này.
+  Các dòng “không push” bên dưới là trạng thái trước lần chủ dự án giao này.
+- Follow-up ảnh người dùng: popup Seller tạo đơn trong chat tra localityCode của
+  quote qua directory để hiện tên khu vực thay mã DEMO-A. Có loading/error/retry,
+  giữ snapshot/giá/key/body. Nhánh `codex/fix-order-address-region-label`, base
+  `e680b20`; subject `fix(web): resolve seller order address region labels`.
+  PASS web lint/typecheck/build/135unit và seller-order browser1440/390 gồm
+  directory503→retry, draft/đóng-mở và create/pay lost-ACK. [Evidence](../../.impeccable/review/circulation-regions/README.md).
+  QA riêng đã dọn; warning/gate và giới hạn dưới đây giữ nguyên.
+- Chủ dự án đổi dropdown thành TP.HCM, Bình Dương, Vũng Tàu như ba khu luân chuyển.
+  Nhánh `codex/book-circulation-regions`, base `a68f016`; subject
+  `feat(addresses): configure three book circulation regions`. [ADR0039](../adr/0039-book-circulation-regions.md).
+  OpenAPI0.43.1 mô tả directory; migration0030 mới đổi nhãn DEMO-A/B và thêm C,
+  giữ mã wire HCM-DEMO-v1/name TP.HCM và address/listing/order cũ.
+- Member web đổi nhãn/copy form gửi/nhận, dữ liệu lấy API thật. Không thêm điểm
+  ViaPoint, geocoding hay phí giao mới; READINESS giữ nguyên. Đã áp dụng đúng0030
+  vào DB local sau preflight chỉ có migration này; pending rỗng, API ready200.
+- PASS API lint/typecheck/build/150unit, contract/check/routes165/26; web
+  lint/typecheck/build/135unit; address HTTP17; Mongo48/4SKIP (import/failover).
+  Ba browser suite đăng bán/Mua ngay/thương lượng PASS, có Bình Dương→Vũng Tàu
+  quote và giữ dữ liệu/key/body. [Ảnh/checks](../../.impeccable/review/circulation-regions/README.md).
+  Warning cũ còn. Native/live provider/human/remote CI NOT RUN; không push/PR/
+  merge/deploy. Không thay migration đã áp dụng hoặc snapshot SRS cũ.
+
+## Popup mua bán và Mua ngay — 17/10/2026
+
+- Follow-up ảnh người dùng: sửa liên kết lỗi `originAddress` ở `/sell` để mở
+  popup thay vì focus select đang ẩn; giữ focus ô thường. Browser regression
+  FAIL trước sửa, PASS sau sửa: chuột1440, Enter390, trả focus/giữ draft và
+  upload/submit replay. Web lint/typecheck/build/135unit PASS; warning cũ giữ.
+  Fresh AI review theo ảnh người dùng `ship` phạm vi recovery; QA đã dọn.
+  Subject `fix(web): open sender address popup from validation error`.
+- Nhánh `codex/purchase-popup-ui`, base `ed8734f`; subject dự kiến
+  `feat(web): unify purchase flows with popup forms`. Phạm vi Member web React/Vite:
+  popup địa chỉ/xác nhận Mua ngay, gửi quote từ chat, Seller nhập giá/tạo Order,
+  nơi gửi khi đăng bán. Trang Mua ngay có ảnh/tình trạng sách, tiến trình và bảng
+  tiền; giữ wine/cream/Be Vietnam Pro. Không đổi API/contract/Mongo/native.
+- Dùng chung `PurchaseDialog`/`PurchaseAddressFields`: native dialog qua portal,
+  focus/Tab/Escape/click ngoài/scroll cleanup, giữ draft khi đóng/mở, khóa đóng
+  khi busy; motion260ms giữ theo chính sách chủ dự án. Checkout chọn đúng địa chỉ
+  mới sau lưu, pin body/key/ID qua retry để không tạo trùng sau lỗi quote.
+- Local PASS: web lint/typecheck/build/135unit, buy-now/seller-order/browser trên
+  Mongo QA riêng/database disposable `*_test`, storage/ví/carrier fake. Các ca
+  lost-ACK address/create/pay, thiếu tiền, chọn địa chỉ mới khi có default, focus,
+  popup/draft và upload/submit/polling cũ được kiểm. Bốn lint warning exchange và
+  chunk warning cũ còn. API build chỉ để fixture, không nhận API suite PASS.
+- Independent AI review yêu cầu sửa cascade viền input và recovery địa chỉ mới;
+  verdict cuối `ship` chấm cả hai fix resolved. Regression save→quote422→retry
+  không tạo thêm địa chỉ; computed border đúng token. Documentation cập nhật
+  component/consumer, giữ DESIGN/sidecar. [Evidence](../../.impeccable/review/purchase-popup/README.md).
+  QA đã dọn database/users/roles và dừng đúng Mongo do phiên này bật.
+  Native/live Supabase/provider/human review/remote CI NOT RUN; READINESS giữ
+  nguyên. Không push/PR/merge/deploy; không suy quyền từ PR44 trước đó.
 ## Redesign Sàn Đấu Giá & Ký Gửi Sách RN — 17/10/2026
 
 - Tái thiết kế màn hình Sàn Đấu Giá (`auctions-screen.tsx`) và Ký Gửi Sách Đấu Giá (`send-to-auction-screen.tsx`) trên React Native theo Stitch screens `DauGia-App` & `DauGiaDang-App`.

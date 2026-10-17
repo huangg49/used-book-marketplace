@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.43.0
+  version: 0.43.1
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -11388,6 +11388,12 @@ components:
       description: Ordered Ready derivative descriptor. Fetch a short-lived URL through
         getPublicListingMedia on demand; no storage key or permanent URL.
     ServiceAreaDirectory:
+      description: >-
+        Project-defined book circulation zones: TP.HCM (DEMO-A), Binh Duong
+        (DEMO-B), and Vung Tau (DEMO-C). These are simulated operational zones,
+        not official administrative boundaries or managed handover points.
+        The legacy HCM-DEMO-v1 code and TP.HCM envelope name remain for wire
+        compatibility. Clients display the locality labels from this directory.
       type: object
       additionalProperties: false
       required:

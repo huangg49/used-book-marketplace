@@ -41,6 +41,8 @@ import {
   classificationErrors,
   facetsFor,
 } from "@used-books/api-contract/catalog-taxonomy";
+import { PurchaseDialog } from "../components/PurchaseDialog";
+import purchaseStyles from "./PurchaseFlow.module.css";
 import styles from "./SellBookPage.module.css";
 
 const addressBookSchema = z.object({
@@ -108,6 +110,8 @@ export function SellBookPage() {
     enabled: session.status === "authenticated",
   });
   const originAddressIntent = useRef<string | null>(null);
+  const [originDialogOpen, setOriginDialogOpen] = useState(false);
+  const [originDialogError, setOriginDialogError] = useState(false);
   const [originAddressId, setOriginAddressId] = useState("");
   const [originForm, setOriginForm] = useState({
     recipientName: "",
@@ -287,7 +291,7 @@ export function SellBookPage() {
       formData.missingEssentialContent === null &&
         "câu trả lời về nội dung trọng yếu",
       !ownershipDeclared && "xác nhận quyền sở hữu sách",
-      needsOrigin && !originIsValid && "nơi gửi sách tại TP.HCM",
+      needsOrigin && !originIsValid && "nơi gửi sách trong khu vực luân chuyển",
     ].filter(Boolean);
     const sale = Number(formData.salePrice);
     const exchange = Number(formData.exchangeValue);
@@ -476,7 +480,7 @@ export function SellBookPage() {
       !hasValidOriginAddress()
     )
       message =
-        "Chọn hoặc nhập nơi gửi sách thuộc khu vực phục vụ TP.HCM trước khi tiếp tục.";
+        "Chọn khu vực luân chuyển và nhập đủ nơi gửi sách trước khi tiếp tục.";
     return message;
   }
   function continueStep() {
@@ -544,7 +548,7 @@ export function SellBookPage() {
         : undefined,
     originAddress:
       formData.mode !== "Exchange" && !hasValidOriginAddress()
-        ? "Chọn địa chỉ đã lưu hoặc nhập đủ nơi gửi sách thuộc TP.HCM."
+        ? "Chọn địa chỉ đã lưu hoặc nhập đủ nơi gửi sách và khu vực luân chuyển."
         : undefined,
     readable:
       formData.readable === null
@@ -1322,132 +1326,202 @@ export function SellBookPage() {
                             đến 1.000.000đ.
                           </p>
                           {formData.mode !== "Exchange" && (
-                            <fieldset className={styles.mode}>
-                              <legend>Nơi gửi sách</legend>
-                              <p className={styles.help}>
-                                Người giao hàng sẽ lấy sách tại đây. Người mua
-                                chỉ thấy khu vực TP.HCM, không thấy địa chỉ chi
-                                tiết hoặc số điện thoại của bạn.
-                              </p>
-                              <div className={styles.field}>
-                                <label htmlFor="originAddress">
-                                  Địa chỉ đã lưu
-                                </label>
-                                <select
-                                  id="originAddress"
-                                  {...feedbackProps("originAddress")}
-                                  value={originAddressId}
-                                  disabled={addresses.isLoading}
-                                  onChange={(event) => {
-                                    originAddressIntent.current = null;
-                                    setOriginAddressId(event.target.value);
+                            <>
+                              <section
+                                className={styles.mode}
+                                aria-label="Nơi gửi sách"
+                              >
+                                <h3>Nơi gửi sách</h3>
+                                <p className={styles.help}>
+                                  {addresses.data?.items.find(
+                                    (item) => item.id === originAddressId,
+                                  )?.detail ??
+                                    (hasValidOriginAddress()
+                                      ? originForm.detail
+                                      : "Thêm nơi người giao hàng đến lấy sách của bạn.")}
+                                </p>
+                                <button
+                                  type="button"
+                                  className={purchaseStyles.textButton}
+                                  onClick={() => {
+                                    setOriginDialogError(false);
+                                    setOriginDialogOpen(true);
                                   }}
                                 >
-                                  <option value="">
-                                    {addresses.isLoading
-                                      ? "Đang tải địa chỉ…"
-                                      : "Nhập địa chỉ mới bên dưới"}
-                                  </option>
-                                  {addresses.data?.items.map((address) => (
-                                    <option key={address.id} value={address.id}>
-                                      {address.recipientName} · {address.detail}
-                                    </option>
-                                  ))}
-                                </select>
-                                {addresses.isError && (
-                                  <p role="alert" className={styles.fieldError}>
-                                    Chưa tải được địa chỉ đã lưu. Bạn vẫn có thể
-                                    nhập địa chỉ mới.
-                                  </p>
-                                )}
+                                  {hasValidOriginAddress()
+                                    ? "Đổi nơi gửi sách"
+                                    : "Thêm nơi gửi sách"}
+                                </button>
                                 {fieldFeedback("originAddress")}
-                              </div>
-                              {!originAddressId && (
-                                <div className={styles.conditionFields}>
+                              </section>
+                              <PurchaseDialog
+                                open={originDialogOpen}
+                                onClose={() => setOriginDialogOpen(false)}
+                                busy={submitting}
+                                title="Nơi gửi sách"
+                                description="Người giao hàng sẽ lấy sách tại địa chỉ này."
+                                className={purchaseStyles.flow}
+                              >
+                                <fieldset
+                                  className={`${styles.mode} ${purchaseStyles.form}`}
+                                >
+                                  <legend>Nơi gửi sách</legend>
+                                  <p className={styles.help}>
+                                    Người giao hàng sẽ lấy sách tại đây. Người
+                                    mua chỉ thấy khu vực luân chuyển, không thấy
+                                    địa chỉ chi tiết hoặc số điện thoại của bạn.
+                                  </p>
                                   <div className={styles.field}>
-                                    <label htmlFor="originRecipientName">
-                                      Họ tên người gửi
-                                    </label>
-                                    <input
-                                      id="originRecipientName"
-                                      minLength={2}
-                                      value={originForm.recipientName}
-                                      onChange={(event) =>
-                                        changeOriginForm(
-                                          "recipientName",
-                                          event.target.value,
-                                        )
-                                      }
-                                    />
-                                  </div>
-                                  <div className={styles.field}>
-                                    <label htmlFor="originPhone">
-                                      Số điện thoại người gửi
-                                    </label>
-                                    <input
-                                      id="originPhone"
-                                      inputMode="numeric"
-                                      pattern="0[0-9]{9}"
-                                      value={originForm.phone}
-                                      onChange={(event) =>
-                                        changeOriginForm(
-                                          "phone",
-                                          event.target.value,
-                                        )
-                                      }
-                                    />
-                                  </div>
-                                  <div className={styles.field}>
-                                    <label htmlFor="originLocality">
-                                      Khu vực phục vụ
+                                    <label htmlFor="originAddress">
+                                      Địa chỉ đã lưu
                                     </label>
                                     <select
-                                      id="originLocality"
-                                      value={originForm.localityCode}
-                                      disabled={serviceAreas.isLoading}
-                                      onChange={(event) =>
-                                        changeOriginForm(
-                                          "localityCode",
-                                          event.target.value,
-                                        )
-                                      }
+                                      id="originAddress"
+                                      {...feedbackProps("originAddress")}
+                                      value={originAddressId}
+                                      disabled={addresses.isLoading}
+                                      onChange={(event) => {
+                                        originAddressIntent.current = null;
+                                        setOriginAddressId(event.target.value);
+                                      }}
                                     >
                                       <option value="">
-                                        {serviceAreas.isLoading
-                                          ? "Đang tải khu vực…"
-                                          : "Chọn khu vực"}
+                                        {addresses.isLoading
+                                          ? "Đang tải địa chỉ…"
+                                          : "Nhập địa chỉ mới bên dưới"}
                                       </option>
-                                      {serviceAreas.data?.localities.map(
-                                        (locality) => (
-                                          <option
-                                            key={locality.code}
-                                            value={locality.code}
-                                          >
-                                            {locality.label}
-                                          </option>
-                                        ),
-                                      )}
+                                      {addresses.data?.items.map((address) => (
+                                        <option
+                                          key={address.id}
+                                          value={address.id}
+                                        >
+                                          {address.recipientName} ·{" "}
+                                          {address.detail}
+                                        </option>
+                                      ))}
                                     </select>
+                                    {addresses.isError && (
+                                      <p
+                                        role="alert"
+                                        className={styles.fieldError}
+                                      >
+                                        Chưa tải được địa chỉ đã lưu. Bạn vẫn có
+                                        thể nhập địa chỉ mới.
+                                      </p>
+                                    )}
                                   </div>
-                                  <div className={styles.field}>
-                                    <label htmlFor="originDetail">
-                                      Địa chỉ chi tiết
-                                    </label>
-                                    <textarea
-                                      id="originDetail"
-                                      minLength={5}
-                                      value={originForm.detail}
-                                      onChange={(event) =>
-                                        changeOriginForm(
-                                          "detail",
-                                          event.target.value,
-                                        )
-                                      }
-                                    />
-                                  </div>
+                                  {!originAddressId && (
+                                    <div className={styles.conditionFields}>
+                                      <div className={styles.field}>
+                                        <label htmlFor="originRecipientName">
+                                          Họ tên người gửi
+                                        </label>
+                                        <input
+                                          id="originRecipientName"
+                                          minLength={2}
+                                          value={originForm.recipientName}
+                                          onChange={(event) =>
+                                            changeOriginForm(
+                                              "recipientName",
+                                              event.target.value,
+                                            )
+                                          }
+                                        />
+                                      </div>
+                                      <div className={styles.field}>
+                                        <label htmlFor="originPhone">
+                                          Số điện thoại người gửi
+                                        </label>
+                                        <input
+                                          id="originPhone"
+                                          inputMode="numeric"
+                                          pattern="0[0-9]{9}"
+                                          value={originForm.phone}
+                                          onChange={(event) =>
+                                            changeOriginForm(
+                                              "phone",
+                                              event.target.value,
+                                            )
+                                          }
+                                        />
+                                      </div>
+                                      <div className={styles.field}>
+                                        <label htmlFor="originLocality">
+                                          Khu vực luân chuyển sách
+                                        </label>
+                                        <select
+                                          id="originLocality"
+                                          value={originForm.localityCode}
+                                          disabled={serviceAreas.isLoading}
+                                          onChange={(event) =>
+                                            changeOriginForm(
+                                              "localityCode",
+                                              event.target.value,
+                                            )
+                                          }
+                                        >
+                                          <option value="">
+                                            {serviceAreas.isLoading
+                                              ? "Đang tải khu vực…"
+                                              : "Chọn khu vực"}
+                                          </option>
+                                          {serviceAreas.data?.localities.map(
+                                            (locality) => (
+                                              <option
+                                                key={locality.code}
+                                                value={locality.code}
+                                              >
+                                                {locality.label}
+                                              </option>
+                                            ),
+                                          )}
+                                        </select>
+                                      </div>
+                                      <div className={styles.field}>
+                                        <label htmlFor="originDetail">
+                                          Địa chỉ chi tiết
+                                        </label>
+                                        <textarea
+                                          id="originDetail"
+                                          minLength={5}
+                                          value={originForm.detail}
+                                          onChange={(event) =>
+                                            changeOriginForm(
+                                              "detail",
+                                              event.target.value,
+                                            )
+                                          }
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+                                </fieldset>
+
+                                {originDialogError && (
+                                  <p
+                                    role="alert"
+                                    className={purchaseStyles.error}
+                                  >
+                                    Điền tên, số điện thoại 10 chữ số, khu vực
+                                    và địa chỉ chi tiết để tiếp tục.
+                                  </p>
+                                )}
+                                <div className={purchaseStyles.actions}>
+                                  <button
+                                    type="button"
+                                    className={purchaseStyles.primary}
+                                    onClick={() => {
+                                      if (hasValidOriginAddress()) {
+                                        setOriginDialogError(false);
+                                        setOriginDialogOpen(false);
+                                      } else setOriginDialogError(true);
+                                    }}
+                                  >
+                                    Dùng nơi gửi này
+                                  </button>
                                 </div>
-                              )}
-                            </fieldset>
+                              </PurchaseDialog>
+                            </>
                           )}
                           {(
                             [
@@ -1640,7 +1714,7 @@ export function SellBookPage() {
                           {formData.mode !== "Exchange" && (
                             <p className={styles.help}>
                               Địa chỉ chi tiết và số điện thoại chỉ dùng cho
-                              giao nhận; người mua chỉ thấy khu vực TP.HCM.
+                              giao nhận; người mua chỉ thấy khu vực luân chuyển.
                             </p>
                           )}
                           <p className={styles.help}>
@@ -1648,7 +1722,14 @@ export function SellBookPage() {
                             tin sách được gửi kiểm duyệt trước khi xuất hiện
                             trên kệ.
                           </p>
-                          {formData.mode !== 'Exchange' && <p className={styles.help}>Người mua có thể Mua ngay theo giá bạn niêm yết. Khi thanh toán thành công, đơn được chốt và bạn cam kết bàn giao sách trong 48 giờ, không có bước duyệt lại. Chat thương lượng vẫn là luồng riêng.</p>}
+                          {formData.mode !== "Exchange" && (
+                            <p className={styles.help}>
+                              Người mua có thể Mua ngay theo giá bạn niêm yết.
+                              Khi thanh toán thành công, đơn được chốt và bạn
+                              cam kết bàn giao sách trong 48 giờ, không có bước
+                              duyệt lại. Chat thương lượng vẫn là luồng riêng.
+                            </p>
+                          )}
                           <label className={styles.ownership}>
                             <input
                               id="ownership"
@@ -1686,7 +1767,17 @@ export function SellBookPage() {
                                   <button
                                     type="button"
                                     className={styles.textAction}
+                                    aria-haspopup={
+                                      key === "originAddress"
+                                        ? "dialog"
+                                        : undefined
+                                    }
                                     onClick={() => {
+                                      if (key === "originAddress") {
+                                        setOriginDialogError(false);
+                                        setOriginDialogOpen(true);
+                                        return;
+                                      }
                                       const target =
                                         document.getElementById(key) ||
                                         document.querySelector<HTMLInputElement>(

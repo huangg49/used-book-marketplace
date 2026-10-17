@@ -1,0 +1,466 @@
+.page,
+.flow {
+  color: var(--shop-ink);
+  font: 400 0.875rem/1.8 var(--shop-body);
+  overflow-wrap: anywhere;
+}
+.page {
+  max-width: 1120px;
+  min-height: 65vh;
+  margin: auto;
+  padding: 32px 32px 80px;
+}
+.page h1 {
+  color: var(--shop-wine);
+  font: 400 clamp(2rem, 4vw, 3rem)/1.2 var(--shop-display);
+  margin: 12px 0;
+}
+.page h2 {
+  font: 700 1.15rem/1.6 var(--shop-body);
+  margin: 0 0 12px;
+}
+.page p,
+.flow p {
+  margin: 0 0 12px;
+}
+.page a {
+  color: var(--shop-wine);
+  text-underline-offset: 4px;
+}
+.pageHeader {
+  margin-bottom: 28px;
+}
+.pageHeader p {
+  color: var(--shop-muted);
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.8125rem;
+}
+.steps {
+  list-style: none;
+  display: flex;
+  gap: 32px;
+  border-block: 1px solid var(--shop-line);
+  padding: 18px 0;
+  margin: 0 0 36px;
+  color: var(--shop-muted);
+}
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8125rem;
+}
+.steps span {
+  display: grid;
+  place-items: center;
+  height: 28px;
+  width: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--shop-line);
+  flex-shrink: 0;
+}
+.steps [aria-current] {
+  color: var(--shop-wine);
+  font-weight: 700;
+}
+.steps [aria-current] span {
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  border-color: var(--shop-wine);
+}
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 56px;
+  align-items: start;
+}
+.book {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 24px;
+  padding-bottom: 28px;
+}
+.book h2 {
+  font-size: 1.3rem;
+  line-height: 1.5;
+}
+.book p {
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+}
+.cover {
+  display: grid;
+  place-items: center;
+  align-self: start;
+  min-height: 176px;
+  background: #f4eddf;
+  padding: 12px;
+}
+.cover img,
+.miniCover img {
+  max-width: 100%;
+  max-height: 176px;
+  object-fit: contain;
+  box-shadow: 2px 5px 10px #28191424;
+}
+.cover > div {
+  min-width: 0;
+}
+.condition {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--shop-mint);
+  color: #254337;
+}
+.book .price {
+  color: var(--shop-wine);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 10px 0;
+  font-variant-numeric: tabular-nums;
+}
+.delivery {
+  padding-block: 24px;
+  border-block: 1px solid var(--shop-line);
+}
+.sectionHeading {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--shop-wine);
+  margin-bottom: 12px;
+}
+.sectionHeading h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+.delivery p {
+  max-width: 55ch;
+}
+.details {
+  margin-top: 16px;
+}
+.details summary {
+  cursor: pointer;
+  padding-block: 12px;
+  font-weight: 700;
+  min-height: 44px;
+}
+.details p {
+  color: var(--shop-muted);
+}
+.summary {
+  background: #f4eddf;
+  border-radius: 12px;
+  padding: 28px;
+}
+.summary h2 {
+  font-size: 1.25rem;
+}
+.summary dl,
+.receipt {
+  margin: 20px 0 24px;
+}
+.summary dl > div,
+.receipt > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding-block: 8px;
+}
+.summary dd,
+.receipt dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.total {
+  border-top: 1px solid var(--shop-line);
+  margin-top: 12px;
+  padding-top: 18px !important;
+  color: var(--shop-wine);
+  font-weight: 700;
+}
+.total dd {
+  font-size: 1.25rem;
+}
+.primary,
+.secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  width: 100%;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font: 700 0.875rem/1.7 var(--shop-body);
+  cursor: pointer;
+  text-align: center;
+}
+.primary {
+  background: var(--shop-wine);
+  border: 1px solid var(--shop-wine);
+  color: var(--shop-cream);
+}
+.primary:hover {
+  background: #7c2320;
+}
+.secondary {
+  background: transparent;
+  color: var(--shop-wine);
+  border: 1px solid var(--shop-control);
+}
+.secondary:hover {
+  background: var(--shop-cream);
+}
+.primary:disabled,
+.secondary:disabled,
+fieldset:disabled .primary {
+  opacity: 0.55;
+  cursor: default;
+}
+.primary svg {
+  flex-shrink: 0;
+}
+.textButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--shop-wine);
+  font: 700 0.8125rem/1.7 var(--shop-body);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.note {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  line-height: 1.8;
+  margin: 16px 0 !important;
+}
+.note svg {
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.error {
+  background: #f4eddf;
+  color: #912b0e;
+  padding: 14px 16px;
+  border-radius: 8px;
+  margin-block: 16px !important;
+}
+.flow fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.flow legend {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.flow .addresses {
+  margin-bottom: 20px;
+}
+.address {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.address:has(input:checked) {
+  border-color: var(--shop-wine);
+  background: #f4eddf;
+}
+.address input {
+  accent-color: var(--shop-wine);
+  width: 18px;
+  height: 18px;
+  margin: 4px 0 0;
+  flex-shrink: 0;
+}
+.address > span {
+  flex: 1;
+  min-width: 0;
+}
+.address span span {
+  display: block;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+}
+.address small {
+  display: inline-block;
+  margin-left: 8px;
+  color: var(--shop-wine);
+  font-size: 0.6875rem;
+}
+.address .addAddress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--shop-wine);
+}
+.form {
+  display: grid;
+  gap: 18px;
+}
+.fieldPair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.form label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+/* Outrank the legacy global input:not(...) recipe without changing other forms. */
+.flow .form input:not([type="radio"]):not([type="checkbox"]),
+.flow .form select,
+.flow .form textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  border: 1px solid var(--shop-control);
+  border-radius: 8px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  padding: 11px 12px;
+  font: 400 1rem/1.6 var(--shop-body);
+}
+.form textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+.form input:disabled,
+.form select:disabled,
+.form textarea:disabled {
+  opacity: 0.65;
+}
+.actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+.miniBook {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--shop-line);
+}
+.miniBook > div:last-child {
+  min-width: 0;
+}
+.miniBook strong {
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+.miniBook span {
+  display: block;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  margin-top: 6px;
+}
+.miniCover {
+  flex-shrink: 0;
+  width: 42px;
+  display: grid;
+  place-items: center;
+}
+.miniCover img {
+  max-height: 60px;
+}
+.miniCover > div {
+  min-height: 60px;
+  font-size: 0.625rem;
+}
+.miniCover svg {
+  display: none;
+}
+.destination {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+}
+.destination svg {
+  color: var(--shop-wine);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.destination h3 {
+  margin: 0 0 6px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.destination p {
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+}
+@media (max-width: 700px) {
+  .page {
+    padding: 20px 20px 48px;
+  }
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .steps {
+    gap: 16px;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .steps li {
+    flex-direction: column;
+    text-align: center;
+    gap: 6px;
+    font-size: 0.6875rem;
+  }
+  .book {
+    grid-template-columns: 90px minmax(0, 1fr);
+    gap: 18px;
+  }
+  .book h2 {
+    font-size: 1rem;
+  }
+  .cover {
+    min-height: 128px;
+    padding: 8px;
+  }
+  .cover img {
+    max-height: 128px;
+  }
+  .summary {
+    padding: 24px;
+  }
+  .fieldPair {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+}
