@@ -181,17 +181,17 @@ export function SendToAuctionBookPicker({
 
 const styles = StyleSheet.create({
   sectionContainer: {
-    backgroundColor: stitchTokens.whiteSurface,
+    backgroundColor: stitchTokens.roseWarmSurface, // #FFF8F6
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: stitchTokens.cardBorder,
+    borderColor: stitchTokens.peachBorder, // #DEC0BB
     padding: 16,
     gap: 12,
     shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   sectionHeaderRow: {
     flexDirection: "row",
@@ -220,12 +220,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: stitchTokens.creamBg,
+    backgroundColor: stitchTokens.whiteSurface,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: stitchTokens.cardBorder,
+    borderColor: "rgba(222, 192, 187, 0.5)",
   },
   sectionTitle: {
     fontSize: 16,
@@ -246,10 +246,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyContainer: {
-    backgroundColor: stitchTokens.creamBg,
+    backgroundColor: stitchTokens.whiteSurface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: stitchTokens.cardBorder,
+    borderColor: "rgba(222, 192, 187, 0.5)",
     padding: 20,
     alignItems: "center",
     gap: 6,
@@ -272,15 +272,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: stitchTokens.creamBg,
+    backgroundColor: stitchTokens.whiteSurface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: stitchTokens.cardBorder,
+    borderColor: "rgba(222, 192, 187, 0.5)",
     padding: 10,
+    shadowColor: stitchTokens.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
   bookCardSelected: {
-    backgroundColor: stitchTokens.roseWarmSurface,
-    borderColor: stitchTokens.peachBorder,
+    backgroundColor: stitchTokens.roseWarmTag, // #FFEBE8
+    borderColor: stitchTokens.wine,
     borderWidth: 1.5,
   },
   coverWrapper: {

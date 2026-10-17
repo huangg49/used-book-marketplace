@@ -239,17 +239,17 @@ export function SendToAuctionPricing({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 14,
+    backgroundColor: stitchTokens.roseWarmSurface, // #FFF8F6
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: stitchTokens.cardBorder,
-    padding: 14,
+    borderColor: stitchTokens.peachBorder, // #DEC0BB
+    padding: 16,
     gap: 14,
     shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   headerRow: {
     flexDirection: "row",
@@ -278,12 +278,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: stitchTokens.creamBg,
+    backgroundColor: stitchTokens.whiteSurface,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: stitchTokens.cardBorder,
+    borderColor: "rgba(222, 192, 187, 0.5)",
   },
   collapsedPreviewText: {
     fontSize: 12,
@@ -295,7 +295,9 @@ const styles = StyleSheet.create({
     color: stitchTokens.wineDark,
   },
   durationPill: {
-    backgroundColor: stitchTokens.creamBg,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: "rgba(222, 192, 187, 0.5)",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
@@ -333,9 +335,9 @@ const styles = StyleSheet.create({
     gap: 6,
     height: 42,
     borderRadius: 10,
-    backgroundColor: stitchTokens.creamBg,
+    backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: stitchTokens.cardBorder,
+    borderColor: "rgba(222, 192, 187, 0.6)",
   },
   stepButtonActive: {
     backgroundColor: stitchTokens.wineDark,
@@ -351,9 +353,9 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: stitchTokens.roseWarmSurface,
+    backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1,
-    borderColor: stitchTokens.peachBorder,
+    borderColor: "rgba(222, 192, 187, 0.6)",
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 44,
@@ -385,7 +387,7 @@ const styles = StyleSheet.create({
   buyNowSection: {
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: stitchTokens.cardBorder,
+    borderTopColor: "rgba(222, 192, 187, 0.4)",
   },
   buyNowToggleRow: {
     flexDirection: "row",
