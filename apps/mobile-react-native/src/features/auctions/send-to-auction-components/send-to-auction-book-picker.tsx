@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, LayoutAnimation, Platform, Pressable, StyleSheet, UIManager, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { Icon } from "../../../core/ui/icon";
 import { formatVnd } from "../../../core/ui/format";
@@ -7,12 +8,17 @@ import type { PrivateDraft } from "../../drafts/contracts";
 import { DraftCoverPhoto } from "../../drafts/draft-cover-photo";
 import { BookIdentity } from "../../drafts/catalog-picker";
 
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 export interface SendToAuctionBookPickerProps {
   readonly eligibleListings: PrivateDraft[];
   readonly selectedListingId: string | null;
   readonly onSelectListing: (id: string) => void;
   readonly disabled?: boolean;
   readonly isLoading?: boolean;
+  readonly defaultExpanded?: boolean;
 }
 
 export function SendToAuctionBookPicker({
@@ -21,28 +27,65 @@ export function SendToAuctionBookPicker({
   onSelectListing,
   disabled = false,
   isLoading = false,
+  defaultExpanded = true,
 }: SendToAuctionBookPickerProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  const handleToggle = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded((prev) => !prev);
+  };
+
+  const selectedListing = eligibleListings.find((l) => l.id === selectedListingId);
+
   return (
     <View style={styles.sectionContainer}>
-      <View style={styles.sectionHeaderRow}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={expanded ? "Thu gọn mục chọn sách" : "Mở rộng mục chọn sách"}
+        accessibilityState={{ expanded }}
+        onPress={handleToggle}
+        style={({ pressed }) => [styles.sectionHeaderRow, pressed && { opacity: 0.8 }]}
+      >
+        <View style={styles.headerLeft}>
           <Icon name="book" size={17} color={stitchTokens.wineDark} />
           <AppText kind="bold" style={styles.sectionTitle}>
             1. Chọn sách
           </AppText>
         </View>
-        <AppText kind="small" style={styles.sectionCountBadge}>
-          Đã duyệt sẵn sàng ({eligibleListings.length})
-        </AppText>
-      </View>
 
-      <AppText style={styles.sectionNote}>
-        Chỉ các bài đăng Bán đã được kiểm duyệt hồ sơ và đang sẵn sàng mới có thể đưa lên sàn đấu giá.
-      </AppText>
+        <View style={styles.headerRight}>
+          <AppText kind="small" style={styles.sectionCountBadge}>
+            Đã duyệt ({eligibleListings.length})
+          </AppText>
+          <View style={styles.chevronWrapper}>
+            <Icon
+              name={expanded ? "chevronDown" : "chevronRight"}
+              size={18}
+              color={stitchTokens.wineDark}
+            />
+          </View>
+        </View>
+      </Pressable>
 
-      {/* Loading state */}
-      {isLoading && (
-        <View style={styles.centerLoading}>
+      {!expanded && selectedListing && (
+        <View style={styles.collapsedPreview}>
+          <Icon name="check" size={13} color={stitchTokens.wineDark} />
+          <View style={{ flex: 1 }}>
+            <BookIdentity id={selectedListing.currentRevision.content.bookId} compact />
+          </View>
+        </View>
+      )}
+
+      {expanded && (
+        <>
+          <AppText style={styles.sectionNote}>
+            Chỉ các bài đăng Bán đã được kiểm duyệt hồ sơ và đang sẵn sàng mới có thể đưa lên sàn đấu giá.
+          </AppText>
+
+          {/* Loading state */}
+          {isLoading && (
+            <View style={styles.centerLoading}>
           <ActivityIndicator size="small" color={stitchTokens.wine} />
           <AppText kind="small" style={{ color: stitchTokens.subtleGray, marginTop: 6 }}>
             Đang tải sách đã duyệt...
@@ -130,6 +173,8 @@ export function SendToAuctionBookPicker({
           })}
         </View>
       )}
+        </>
+      )}
     </View>
   );
 }
@@ -152,6 +197,35 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  chevronWrapper: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "rgba(139, 30, 30, 0.07)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  collapsedPreview: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: stitchTokens.creamBg,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
   },
   sectionTitle: {
     fontSize: 16,

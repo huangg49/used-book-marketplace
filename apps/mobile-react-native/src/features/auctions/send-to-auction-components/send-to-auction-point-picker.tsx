@@ -1,8 +1,13 @@
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, LayoutAnimation, Platform, Pressable, StyleSheet, UIManager, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { Icon } from "../../../core/ui/icon";
 import { stitchTokens } from "../../../core/ui/theme";
 import type { HandoverPoint } from "../contracts";
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export interface SendToAuctionPointPickerProps {
   readonly points: HandoverPoint[];
@@ -10,6 +15,7 @@ export interface SendToAuctionPointPickerProps {
   readonly onSelectPoint: (id: string) => void;
   readonly disabled?: boolean;
   readonly isLoading?: boolean;
+  readonly defaultExpanded?: boolean;
 }
 
 export function SendToAuctionPointPicker({
@@ -18,27 +24,64 @@ export function SendToAuctionPointPicker({
   onSelectPoint,
   disabled = false,
   isLoading = false,
+  defaultExpanded = true,
 }: SendToAuctionPointPickerProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  const handleToggle = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded((prev) => !prev);
+  };
+
+  const selectedPoint = points.find((p) => p.id === selectedPointId);
+
   return (
     <View style={styles.sectionContainer}>
-      <View style={styles.sectionHeaderRow}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={expanded ? "Thu gọn mục chọn điểm gửi sách" : "Mở rộng mục chọn điểm gửi sách"}
+        accessibilityState={{ expanded }}
+        onPress={handleToggle}
+        style={({ pressed }) => [styles.sectionHeaderRow, pressed && { opacity: 0.8 }]}
+      >
+        <View style={styles.headerLeft}>
           <Icon name="pin" size={17} color={stitchTokens.wineDark} />
           <AppText kind="bold" style={styles.sectionTitle}>
             2. Chọn điểm gửi sách
           </AppText>
         </View>
-        <AppText kind="small" style={styles.locationSubtitle}>
-          TP. Hồ Chí Minh
-        </AppText>
-      </View>
 
-      <View style={styles.storefrontRow}>
-        <Icon name="clock" size={13} color={stitchTokens.subtleGray} />
-        <AppText kind="small" style={styles.storefrontText}>
-          Điểm giao nhận tại TP.HCM, mở cửa 09:00 – 18:00 hàng ngày
-        </AppText>
-      </View>
+        <View style={styles.headerRight}>
+          <AppText kind="small" style={styles.locationSubtitle}>
+            TP.HCM
+          </AppText>
+          <View style={styles.chevronWrapper}>
+            <Icon
+              name={expanded ? "chevronDown" : "chevronRight"}
+              size={18}
+              color={stitchTokens.wineDark}
+            />
+          </View>
+        </View>
+      </Pressable>
+
+      {!expanded && selectedPoint && (
+        <View style={styles.collapsedPreview}>
+          <Icon name="check" size={13} color={stitchTokens.wineDark} />
+          <AppText kind="small" numberOfLines={1} style={styles.collapsedPreviewText}>
+            Đã chọn: {selectedPoint.name}
+          </AppText>
+        </View>
+      )}
+
+      {expanded && (
+        <>
+          <View style={styles.storefrontRow}>
+            <Icon name="clock" size={13} color={stitchTokens.subtleGray} />
+            <AppText kind="small" style={styles.storefrontText}>
+              Điểm giao nhận tại TP.HCM, mở cửa 09:00 – 18:00 hàng ngày
+            </AppText>
+          </View>
 
       {/* Loading state */}
       {isLoading && (
@@ -146,6 +189,8 @@ export function SendToAuctionPointPicker({
           })}
         </View>
       )}
+        </>
+      )}
     </View>
   );
 }
@@ -168,6 +213,40 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  chevronWrapper: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "rgba(139, 30, 30, 0.07)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  collapsedPreview: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: stitchTokens.creamBg,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+  },
+  collapsedPreviewText: {
+    fontSize: 12,
+    color: stitchTokens.wineDark,
+    fontWeight: "500",
   },
   sectionTitle: {
     fontSize: 16,

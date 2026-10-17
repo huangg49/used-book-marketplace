@@ -1,9 +1,14 @@
-import { Pressable, StyleSheet, Switch, TextInput, View } from "react-native";
+import { useState } from "react";
+import { LayoutAnimation, Platform, Pressable, StyleSheet, Switch, TextInput, UIManager, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { Icon } from "../../../core/ui/icon";
 import { formatVnd } from "../../../core/ui/format";
 import { stitchTokens } from "../../../core/ui/theme";
 import { AUCTION_MAX_PRICE } from "../auctions-model";
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export interface SendToAuctionPricingProps {
   readonly step: 10000 | 50000;
@@ -17,6 +22,7 @@ export interface SendToAuctionPricingProps {
   readonly onChangeBuyNowPriceText: (text: string) => void;
   readonly buyNowPriceError?: string;
   readonly disabled?: boolean;
+  readonly defaultExpanded?: boolean;
 }
 
 export function SendToAuctionPricing({
@@ -31,23 +37,63 @@ export function SendToAuctionPricing({
   onChangeBuyNowPriceText,
   buyNowPriceError,
   disabled = false,
+  defaultExpanded = true,
 }: SendToAuctionPricingProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  const handleToggle = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded((prev) => !prev);
+  };
+
+  const parsedStart = Number(startPriceText) || 0;
+  const parsedBuyNow = Number(buyNowPriceText) || 0;
+
   return (
     <View style={styles.cardContainer}>
       {/* Title */}
-      <View style={styles.headerRow}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={expanded ? "Thu gọn mục giá phiên" : "Mở rộng mục giá phiên"}
+        accessibilityState={{ expanded }}
+        onPress={handleToggle}
+        style={({ pressed }) => [styles.headerRow, pressed && { opacity: 0.8 }]}
+      >
+        <View style={styles.headerLeft}>
           <Icon name="tag" size={17} color={stitchTokens.wineDark} />
           <AppText kind="bold" style={styles.headerTitle}>
             3. Giá phiên
           </AppText>
         </View>
-        <View style={styles.durationPill}>
-          <AppText kind="small" style={styles.durationPillText}>
-            Thời lượng: 24 giờ
+
+        <View style={styles.headerRight}>
+          <View style={styles.durationPill}>
+            <AppText kind="small" style={styles.durationPillText}>
+              24 giờ
+            </AppText>
+          </View>
+          <View style={styles.chevronWrapper}>
+            <Icon
+              name={expanded ? "chevronDown" : "chevronRight"}
+              size={18}
+              color={stitchTokens.wineDark}
+            />
+          </View>
+        </View>
+      </Pressable>
+
+      {!expanded && parsedStart > 0 && (
+        <View style={styles.collapsedPreview}>
+          <Icon name="check" size={13} color={stitchTokens.wineDark} />
+          <AppText kind="small" numberOfLines={1} style={styles.collapsedPreviewText}>
+            Khởi điểm: {formatVnd(parsedStart)} • Bước {formatVnd(step)}
+            {buyNowOn && parsedBuyNow > 0 ? ` • Mua ngay: ${formatVnd(parsedBuyNow)}` : ""}
           </AppText>
         </View>
-      </View>
+      )}
+
+      {expanded && (
+        <>
 
       {/* 1. Bid Increment (Bước giá) */}
       <View style={styles.fieldGroup}>
@@ -185,6 +231,8 @@ export function SendToAuctionPricing({
           </View>
         )}
       </View>
+        </>
+      )}
     </View>
   );
 }
@@ -207,6 +255,40 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  chevronWrapper: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "rgba(139, 30, 30, 0.07)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  collapsedPreview: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: stitchTokens.creamBg,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+  },
+  collapsedPreviewText: {
+    fontSize: 12,
+    color: stitchTokens.wineDark,
+    fontWeight: "500",
   },
   headerTitle: {
     fontSize: 16,
