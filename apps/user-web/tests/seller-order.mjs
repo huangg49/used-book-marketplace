@@ -319,6 +319,16 @@ try {
   await login(sellerPage, "member@operations.test");
   await sellerPage.locator('a[href="/chat"]').first().click();
   await sellerPage.locator(`a[href="/chat/${conversationId}"]`).first().click();
+  let releaseAreas;
+  const areasGate = new Promise((resolve) => { releaseAreas = resolve; });
+  let failAreas = true;
+  await sellerPage.route("**/api/v1/service-areas", async (route) => {
+    if (failAreas) {
+      await areasGate;
+      failAreas = false;
+      await route.fulfill({ status: 503, json: { message: "QA directory unavailable" } });
+    } else await route.continue();
+  });
   await sellerPage
     .getByRole("button", { name: "Tạo đơn hàng", exact: true })
     .click();
@@ -326,6 +336,14 @@ try {
     exact: true,
   });
   await price.fill("90000");
+  const sellerDialog = sellerPage.getByRole("dialog");
+  await sellerDialog.getByText("QA destination, simulated only, Đang tải khu vực…", { exact: true }).waitFor();
+  releaseAreas();
+  await sellerDialog.getByRole("alert").filter({ hasText: "Chưa tải được tên khu vực" }).waitFor();
+  assert.equal(await sellerDialog.getByText(/DEMO-[ABC]/).count(), 0);
+  await sellerDialog.getByRole("button", { name: "Thử lại", exact: true }).click();
+  await sellerDialog.getByText("QA destination, simulated only, TP.HCM", { exact: true }).waitFor();
+  assert.equal(await price.inputValue(), "90000");
   await sellerPage
     .getByRole("button", { name: "Đóng popup", exact: true })
     .click();
@@ -333,7 +351,12 @@ try {
     .getByRole("button", { name: "Tạo đơn hàng", exact: true })
     .click();
   assert.equal(await price.inputValue(), "90000");
+  await sellerDialog.getByText("QA destination, simulated only, TP.HCM", { exact: true }).waitFor();
+  assert.equal(await sellerDialog.getByText(/DEMO-[ABC]/).count(), 0);
   await captureDialog(sellerPage, "seller-create-desktop.png");
+  await sellerPage.setViewportSize({ width: 390, height: 844 });
+  await captureDialog(sellerPage, "seller-create-mobile.png");
+  await sellerPage.setViewportSize({ width: 1440, height: 900 });
   // Lose the committed response and retry the exact same key/body, with editing locked.
   const createAttempts = [];
   const beforeRooms = await fixture.api(

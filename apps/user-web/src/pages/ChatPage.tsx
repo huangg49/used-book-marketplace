@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
 import { ApiError } from "@used-books/session-client";
+import { z } from "zod";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, BookOpen, MessageCircle, Send } from "lucide-react";
 import { useSession } from "../hooks/useSession";
@@ -33,6 +34,9 @@ const statusLabels = {
   Cancelled: "Đã hủy",
   OrderCreated: "Đã tạo đơn",
 };
+const serviceAreasSchema = z.object({
+  localities: z.array(z.object({ code: z.string(), label: z.string() })),
+});
 function dateTime(value: string) {
   return new Intl.DateTimeFormat("vi-VN", {
     day: "2-digit",
@@ -77,6 +81,12 @@ function ChatRoom({
   const [sending, setSending] = useState(false);
   const [agreedPrice, setAgreedPrice] = useState<string | null>(null);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  const areas = useQuery({
+    queryKey: ["service-areas"],
+    queryFn: () => session.request("/service-areas", serviceAreasSchema),
+    enabled: orderDialogOpen && !!room.quotePreview,
+    retry: false,
+  });
   const [orderBusy, setOrderBusy] = useState(false);
   const [orderError, setOrderError] = useState<string>();
   const orderAttempt = useRef<
@@ -401,8 +411,27 @@ function ChatRoom({
                   </p>
                   <p>
                     {room.quotePreview.destination.detail},{" "}
-                    {room.quotePreview.destination.localityCode}
+                    {areas.data?.localities.find(
+                      (area) =>
+                        area.code === room.quotePreview?.destination.localityCode,
+                    )?.label ??
+                      (areas.isPending
+                        ? "Đang tải khu vực…"
+                        : "Chưa xác định khu vực")}
                   </p>
+                  {areas.isError && (
+                    <p role="alert">
+                      Chưa tải được tên khu vực.{" "}
+                      <button
+                        type="button"
+                        className={flow.textButton}
+                        disabled={areas.isFetching}
+                        onClick={() => void areas.refetch()}
+                      >
+                        Thử lại
+                      </button>
+                    </p>
+                  )}
                   <p>
                     Phí giao nhận: {formatVnd(room.quotePreview.shippingFee)} ·
                     Báo giá đến {dateTime(room.quotePreview.expiresAt)}

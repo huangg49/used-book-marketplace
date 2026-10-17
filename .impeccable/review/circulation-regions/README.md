@@ -44,3 +44,18 @@ pending migrations rỗng; API watcher được reload và readiness HTTP200.
 Native copy/acceptance, live Supabase/carrier, human review và remote CI NOT RUN.
 Không push/PR/merge/deploy. QA khác dữ liệu app local; cleanup chỉ nhắm database
 test và process Mongo QA do phiên này bật.
+
+## Follow-up: nhãn khu vực trong popup Seller tạo đơn
+
+Nhánh `codex/fix-order-address-region-label`, base `e680b20`; subject
+`fix(web): resolve seller order address region labels`. Ảnh người dùng phát hiện
+ChatPage in trực tiếp localityCode từ quote snapshot. Popup nay tra nhãn theo
+directory `/service-areas`, kể cả quote cũ; không đổi snapshot, mã wire hoặc lệnh
+tạo đơn. Có trạng thái tải/lỗi và nút thử lại, không in mã demo khi thiếu dữ liệu.
+
+PASS web lint/typecheck/build/135unit và seller-order browser trên Mongo QA riêng:
+quote DEMO-A hiện TP.HCM, directory503→retry giữ giá90000, đóng/mở vẫn đúng nhãn,
+lost-ACK create/pay giữ key/body và một Order/payment như cũ. Đã xem ảnh
+[desktop1440](seller-address-desktop.png) và [mobile390](seller-address-mobile.png).
+Danh tính/địa chỉ là QA fixture, storage/ví mô phỏng; không chụp lại PII người dùng.
+Warning cũ4/chunk còn; không đổi API/contract/DB app/native hoặc READINESS.

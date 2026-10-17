@@ -2,6 +2,13 @@
 
 ## Khu vực luân chuyển sách — 17/10/2026
 
+- Follow-up ảnh người dùng: popup Seller tạo đơn trong chat tra localityCode của
+  quote qua directory để hiện tên khu vực thay mã DEMO-A. Có loading/error/retry,
+  giữ snapshot/giá/key/body. Nhánh `codex/fix-order-address-region-label`, base
+  `e680b20`; subject `fix(web): resolve seller order address region labels`.
+  PASS web lint/typecheck/build/135unit và seller-order browser1440/390 gồm
+  directory503→retry, draft/đóng-mở và create/pay lost-ACK. [Evidence](../../.impeccable/review/circulation-regions/README.md).
+  QA riêng đã dọn; warning/gate và giới hạn dưới đây giữ nguyên.
 - Chủ dự án đổi dropdown thành TP.HCM, Bình Dương, Vũng Tàu như ba khu luân chuyển.
   Nhánh `codex/book-circulation-regions`, base `a68f016`; subject
   `feat(addresses): configure three book circulation regions`. [ADR0039](../adr/0039-book-circulation-regions.md).
