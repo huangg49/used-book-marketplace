@@ -1,8 +1,6 @@
-import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { Icon } from "../../../core/ui/icon";
-import { formatVnd } from "../../../core/ui/format";
-import { stitchTokens } from "../../../core/ui/theme";
+import { AppModal as Modal, Icon, formatVnd, stitchTokens } from "../../../core/ui";
 import type { HandoverPoint, MyIntake } from "../contracts";
 import type { PrivateDraft } from "../../drafts/contracts";
 import { BookIdentity } from "../../drafts/catalog-picker";
@@ -154,7 +152,7 @@ export function SendToAuctionModals({
                 onPress={onConfirmSubmit}
                 style={[styles.modalPrimaryBtn, isSubmitting && { opacity: 0.6 }]}
               >
-                <Icon name="check" size={16} color="#FFDF97" />
+                <Icon name="check" size={16} color={stitchTokens.gold} />
                 <AppText kind="bold" style={styles.modalPrimaryBtnText}>
                   {isSubmitting ? "Đang gửi..." : "Xác nhận gửi"}
                 </AppText>
@@ -192,7 +190,7 @@ export function SendToAuctionModals({
             </View>
 
             <AppText style={{ fontSize: 13, color: stitchTokens.deepCocoa, lineHeight: 19 }}>
-              Bạn có chắc muốn rút ấn bản <AppText kind="bold">"{withdrawTarget?.title}"</AppText> khỏi đợt đấu giá này? Sau khi rút, bài đăng sẽ quay trở lại trạng thái Bán thông thường.
+              Bạn có chắc muốn rút ấn bản <AppText kind="bold">&quot;{withdrawTarget?.title}&quot;</AppText> khỏi đợt đấu giá này? Sau khi rút, bài đăng sẽ quay trở lại trạng thái Bán thông thường.
             </AppText>
 
             <View style={styles.warningNoteBox}>
@@ -290,7 +288,7 @@ export function SendToAuctionModals({
 const styles = StyleSheet.create({
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(30, 20, 18, 0.65)",
+    backgroundColor: stitchTokens.modalScrimDark,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
@@ -359,10 +357,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
-    backgroundColor: "#FDF5E6",
+    backgroundColor: stitchTokens.warningNoteBg,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#F0E0C0",
+    borderColor: stitchTokens.warningNoteBorder,
     padding: 10,
   },
   warningNoteText: {
@@ -407,7 +405,7 @@ const styles = StyleSheet.create({
   },
   modalPrimaryBtnText: {
     fontSize: 13,
-    color: "#FFFFFF",
+    color: stitchTokens.white,
   },
   modalDangerBtn: {
     flex: 1,
@@ -419,6 +417,6 @@ const styles = StyleSheet.create({
   },
   modalDangerBtnText: {
     fontSize: 13,
-    color: "#FFFFFF",
+    color: stitchTokens.white,
   },
 });

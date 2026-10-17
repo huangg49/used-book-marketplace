@@ -97,7 +97,7 @@ export function AuctionSortChips({
             filterHasBuyNow && styles.sortChipTextActive,
           ]}
         >
-          Có "Mua Ngay"
+          {"Có \"Mua Ngay\""}
         </AppText>
       </Pressable>
 

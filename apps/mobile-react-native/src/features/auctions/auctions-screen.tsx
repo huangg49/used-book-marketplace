@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
@@ -53,7 +53,7 @@ export function AuctionsScreen() {
 
   // Real backend auctions query
   const result = usePublicAuctions(client, foreground);
-  const serverItems = result.data?.items ?? [];
+  const serverItems = result.data?.items;
 
   // Ticking countdown clock
   const [flashSeconds, setFlashSeconds] = useState(385); // 00:06:25
@@ -91,12 +91,12 @@ export function AuctionsScreen() {
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Outbid alert banner state (dismissible)
-  const [showOutbidAlert, setShowOutbidAlert] = useState(true);
+  // Outbid alert banner state
+  const showOutbidAlert = true;
 
   // Combine real backend items with rich fallback items
   const allAuctions: ExtendedAuctionItem[] = useMemo(() => {
-    if (serverItems.length > 0) {
+    if (serverItems && serverItems.length > 0) {
       return serverItems.map((item, idx) => {
         const curatedMatch =
           CURATED_SAIGON_AUCTIONS.find((c) => c.id === item.id) ??

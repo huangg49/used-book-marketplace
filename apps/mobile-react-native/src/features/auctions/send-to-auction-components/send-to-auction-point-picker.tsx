@@ -130,7 +130,7 @@ export function SendToAuctionPointPicker({
                     isFull && styles.radioCircleDisabled,
                   ]}
                 >
-                  {isSelected && <Icon name="check" size={12} color="#FFDF97" />}
+                  {isSelected && <Icon name="check" size={12} color={stitchTokens.gold} />}
                 </View>
 
                 {/* Content */}
@@ -197,10 +197,10 @@ export function SendToAuctionPointPicker({
 
 const styles = StyleSheet.create({
   sectionContainer: {
-    backgroundColor: "#F6E0A8", // Màu vàng ấm chính xác từ banner Đấu giá
+    backgroundColor: stitchTokens.vintageGold, // Màu vàng ấm chính xác từ banner Đấu giá
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
     padding: 16,
     gap: 12,
     shadowColor: stitchTokens.wineDark,
@@ -228,9 +228,9 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    backgroundColor: stitchTokens.whiteAlpha70,
     borderWidth: 1,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -238,12 +238,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    backgroundColor: stitchTokens.whiteAlpha88,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
   },
   collapsedPreviewText: {
     fontSize: 12,
@@ -281,10 +281,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: stitchTokens.whiteAlpha90,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
     padding: 12,
     shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
@@ -293,12 +293,12 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   stationCardSelected: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderColor: stitchTokens.wineDark,
     borderWidth: 2,
   },
   stationCardDisabled: {
-    backgroundColor: "rgba(230, 218, 195, 0.6)",
+    backgroundColor: stitchTokens.stationDisabledBg,
     opacity: 0.65,
   },
   radioCircle: {
@@ -317,8 +317,8 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.wineDark,
   },
   radioCircleDisabled: {
-    backgroundColor: "#E2DCD5",
-    borderColor: "#D0C8BF",
+    backgroundColor: stitchTokens.borderMuted,
+    borderColor: stitchTokens.radioDisabledBorder,
   },
   stationContent: {
     flex: 1,
@@ -341,10 +341,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   capacityBadgeOpen: {
-    backgroundColor: "#E8F5E9",
+    backgroundColor: stitchTokens.likeNewGreenBg,
   },
   capacityBadgeClosed: {
-    backgroundColor: "#EEEEEE",
+    backgroundColor: stitchTokens.grayLight,
   },
   capacityBadgeText: {
     fontSize: 10,

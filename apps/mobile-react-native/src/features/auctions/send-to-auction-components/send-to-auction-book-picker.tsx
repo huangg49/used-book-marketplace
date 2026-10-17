@@ -101,7 +101,7 @@ export function SendToAuctionBookPicker({
             Chưa có sách đủ điều kiện
           </AppText>
           <AppText kind="small" style={styles.emptyDesc}>
-            Hãy đăng sách mới ở chế độ "Bán" hoặc đợi sách được ban quản trị duyệt để gửi vào sàn đấu giá.
+            {"Hãy đăng sách mới ở chế độ \"Bán\" hoặc đợi sách được ban quản trị duyệt để gửi vào sàn đấu giá."}
           </AppText>
         </View>
       )}
@@ -166,7 +166,7 @@ export function SendToAuctionBookPicker({
 
                 {/* Radio selection check circle */}
                 <View style={[styles.checkCircle, isSelected && styles.checkCircleActive]}>
-                  {isSelected && <Icon name="check" size={14} color="#FFDF97" />}
+                  {isSelected && <Icon name="check" size={14} color={stitchTokens.gold} />}
                 </View>
               </Pressable>
             );
@@ -181,10 +181,10 @@ export function SendToAuctionBookPicker({
 
 const styles = StyleSheet.create({
   sectionContainer: {
-    backgroundColor: "#F6E0A8", // Màu vàng ấm chính xác từ banner Đấu giá
+    backgroundColor: stitchTokens.vintageGold, // Màu vàng ấm chính xác từ banner Đấu giá
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
     padding: 16,
     gap: 12,
     shadowColor: stitchTokens.wineDark,
@@ -212,9 +212,9 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    backgroundColor: stitchTokens.whiteAlpha70,
     borderWidth: 1,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -222,12 +222,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    backgroundColor: stitchTokens.whiteAlpha88,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
   },
   sectionTitle: {
     fontSize: 16,
@@ -249,10 +249,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    backgroundColor: stitchTokens.whiteAlpha88,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
     padding: 20,
     alignItems: "center",
     gap: 6,
@@ -275,10 +275,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: stitchTokens.whiteAlpha90,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
     padding: 10,
     shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   bookCardSelected: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderColor: stitchTokens.wineDark,
     borderWidth: 2,
   },
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   tagPill: {
-    backgroundColor: "#F6E0A8",
+    backgroundColor: stitchTokens.vintageGold,
     paddingHorizontal: 5,
     paddingVertical: 1.5,
     borderRadius: 4,

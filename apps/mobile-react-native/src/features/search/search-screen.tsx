@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Keyboard,
@@ -91,17 +91,20 @@ export function SearchScreen() {
   const [search, setSearch] = useState(params.q ?? "");
   const [selectedMode, setSelectedMode] = useState<string>(params.mode ?? "");
 
-  useEffect(() => {
+  const [prevModeParam, setPrevModeParam] = useState(params.mode);
+  const [prevQParam, setPrevQParam] = useState(params.q);
+  if (params.mode !== prevModeParam) {
+    setPrevModeParam(params.mode);
     if (params.mode !== undefined) {
       setSelectedMode(params.mode);
     }
-  }, [params.mode]);
-
-  useEffect(() => {
+  }
+  if (params.q !== prevQParam) {
+    setPrevQParam(params.q);
     if (params.q !== undefined) {
       setSearch(params.q);
     }
-  }, [params.q]);
+  }
   const [selectedCondition, setSelectedCondition] = useState<string>("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>("");

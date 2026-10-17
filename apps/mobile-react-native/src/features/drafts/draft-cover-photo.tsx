@@ -3,7 +3,7 @@ import { Image, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
-import { Icon } from "../../core/ui";
+import { Icon, colors } from "../../core/ui";
 import { mediaRead } from "./contracts";
 
 export function DraftCoverPhoto({
@@ -58,7 +58,7 @@ export function DraftCoverPhoto({
           justifyContent: "center",
         }}
       >
-        <Icon name="book" size={24} color="#9E928E" />
+        <Icon name="book" size={24} color={colors.muted} />
       </View>
     );
   }

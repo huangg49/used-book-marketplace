@@ -1,6 +1,6 @@
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { Icon, stitchTokens } from "../../../core/ui";
+import { AppTextInput as TextInput, Icon, stitchTokens } from "../../../core/ui";
 
 export interface AuctionSearchBarProps {
   readonly search: string;
@@ -166,9 +166,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#F6E0A8",
+    backgroundColor: stitchTokens.vintageGold,
     borderWidth: 1.5,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -189,9 +189,9 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    backgroundColor: stitchTokens.whiteAlpha70,
     borderWidth: 1,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   badgeHcmText: {
     fontSize: 9,
     fontWeight: "700",
-    color: "#F6E0A8",
+    color: stitchTokens.vintageGold,
     letterSpacing: 0.4,
   },
   sellerBannerSubtitle: {
@@ -221,12 +221,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: stitchTokens.whiteAlpha85,
     paddingHorizontal: 9,
     paddingVertical: 6,
     borderRadius: 7,
     borderWidth: 1,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
   },
   sellerBannerCtaText: {
     fontSize: 11,

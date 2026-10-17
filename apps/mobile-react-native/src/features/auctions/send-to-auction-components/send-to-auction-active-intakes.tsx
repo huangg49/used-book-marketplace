@@ -1,8 +1,6 @@
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { Icon } from "../../../core/ui/icon";
-import { formatVnd } from "../../../core/ui/format";
-import { stitchTokens } from "../../../core/ui/theme";
+import { AppTextInput as TextInput, Icon, formatVnd, stitchTokens } from "../../../core/ui";
 import type { MyIntake } from "../contracts";
 import { withdrawable, EVIDENCE_MIN_LENGTH } from "../auctions-model";
 
@@ -222,7 +220,7 @@ export function SendToAuctionActiveIntakes({
                         onPress={() => onSubmitEvidence(item, currentEvidenceText)}
                         style={[styles.submitEvidenceBtn, disabled && { opacity: 0.6 }]}
                       >
-                        <Icon name="check" size={14} color="#FFDF97" />
+                        <Icon name="check" size={14} color={stitchTokens.gold} />
                         <AppText kind="bold" style={styles.submitEvidenceBtnText}>
                           Gửi bằng chứng
                         </AppText>
@@ -350,13 +348,13 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.creamBg,
   },
   statusPillWarning: {
-    backgroundColor: "#FFF8E1",
+    backgroundColor: stitchTokens.tagExchangeBg,
   },
   statusPillError: {
     backgroundColor: stitchTokens.flashRedBg,
   },
   statusPillSuccess: {
-    backgroundColor: "#E8F5E9",
+    backgroundColor: stitchTokens.likeNewGreenBg,
   },
   statusPillNeutral: {
     backgroundColor: stitchTokens.creamBg,
@@ -431,7 +429,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   evidenceInput: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorder,
@@ -455,13 +453,13 @@ const styles = StyleSheet.create({
   },
   submitEvidenceBtnText: {
     fontSize: 12,
-    color: "#FFFFFF",
+    color: stitchTokens.white,
   },
   evidenceSubmittedNote: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#F4F7EE",
+    backgroundColor: stitchTokens.successLightBg,
     borderRadius: 8,
     padding: 8,
   },

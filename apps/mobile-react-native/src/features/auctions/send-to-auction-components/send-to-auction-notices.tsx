@@ -38,7 +38,7 @@ export function SendToAuctionNotices({
       {created && (
         <View style={styles.successCard}>
           <View style={styles.successIconCircle}>
-            <Icon name="check" size={16} color="#FFFFFF" />
+            <Icon name="check" size={16} color={stitchTokens.white} />
           </View>
 
           <View style={styles.successContent}>
@@ -54,7 +54,7 @@ export function SendToAuctionNotices({
             </View>
 
             <AppText style={styles.successBody}>
-              Ấn bản <AppText kind="bold">"{created.title}"</AppText>. Hạn chót mang sách tới trạm:{" "}
+              Ấn bản <AppText kind="bold">&quot;{created.title}&quot;</AppText>. Hạn chót mang sách tới trạm:{" "}
               <AppText kind="bold" style={{ color: stitchTokens.wineDark }}>
                 {formatDateTime(created.dropoffDeadline)}
               </AppText>
@@ -138,9 +138,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
-    backgroundColor: "#F4F7EE",
+    backgroundColor: stitchTokens.successLightBg,
     borderWidth: 1,
-    borderColor: "#C5D8B8",
+    borderColor: stitchTokens.successLightBorder,
     borderRadius: 12,
     padding: 12,
   },
@@ -167,12 +167,12 @@ const styles = StyleSheet.create({
     color: stitchTokens.wineDark,
   },
   codeBadge: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: stitchTokens.white,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#C5D8B8",
+    borderColor: stitchTokens.successLightBorder,
   },
   codeBadgeText: {
     fontSize: 10,
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: stitchTokens.flashRedBg,
     borderWidth: 1,
-    borderColor: "#F5C6CB",
+    borderColor: stitchTokens.errorLightBorder,
     borderRadius: 10,
     padding: 12,
     gap: 8,
@@ -224,9 +224,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FFF3E0",
+    backgroundColor: stitchTokens.amberBg,
     borderWidth: 1,
-    borderColor: "#FFE0B2",
+    borderColor: stitchTokens.amberBorder,
     borderRadius: 10,
     padding: 12,
     gap: 10,
@@ -239,6 +239,6 @@ const styles = StyleSheet.create({
   },
   retryBtnText: {
     fontSize: 12,
-    color: "#FFFFFF",
+    color: stitchTokens.white,
   },
 });

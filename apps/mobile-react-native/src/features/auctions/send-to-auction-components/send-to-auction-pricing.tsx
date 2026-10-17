@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { LayoutAnimation, Platform, Pressable, StyleSheet, Switch, TextInput, UIManager, View } from "react-native";
+import { LayoutAnimation, Platform, Pressable, StyleSheet, Switch, UIManager, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { Icon } from "../../../core/ui/icon";
-import { formatVnd } from "../../../core/ui/format";
-import { stitchTokens } from "../../../core/ui/theme";
+import { AppTextInput as TextInput, Icon, formatVnd, stitchTokens } from "../../../core/ui";
 import { AUCTION_MAX_PRICE } from "../auctions-model";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -119,7 +117,7 @@ export function SendToAuctionPricing({
                 <Icon
                   name={isSelected ? "check" : "radio_button_unchecked" as any}
                   size={14}
-                  color={isSelected ? "#FFDF97" : stitchTokens.subtleGray}
+                  color={isSelected ? stitchTokens.gold : stitchTokens.subtleGray}
                 />
                 <AppText
                   kind="bold"
@@ -185,8 +183,8 @@ export function SendToAuctionPricing({
             value={buyNowOn}
             onValueChange={onToggleBuyNow}
             disabled={disabled}
-            trackColor={{ false: "#E0E0E0", true: stitchTokens.wineDark }}
-            thumbColor={buyNowOn ? "#FFDF97" : "#FFFFFF"}
+            trackColor={{ false: stitchTokens.switchTrackFalse, true: stitchTokens.wineDark }}
+            thumbColor={buyNowOn ? stitchTokens.gold : stitchTokens.white}
           />
         </View>
 
@@ -239,10 +237,10 @@ export function SendToAuctionPricing({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: "#F6E0A8", // Màu vàng ấm chính xác từ banner Đấu giá
+    backgroundColor: stitchTokens.vintageGold, // Màu vàng ấm chính xác từ banner Đấu giá
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
     padding: 16,
     gap: 14,
     shadowColor: stitchTokens.wineDark,
@@ -270,9 +268,9 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    backgroundColor: stitchTokens.whiteAlpha70,
     borderWidth: 1,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -280,12 +278,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    backgroundColor: stitchTokens.whiteAlpha88,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
   },
   collapsedPreviewText: {
     fontSize: 12,
@@ -297,9 +295,9 @@ const styles = StyleSheet.create({
     color: stitchTokens.wineDark,
   },
   durationPill: {
-    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    backgroundColor: stitchTokens.whiteAlpha88,
     borderWidth: 1,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
@@ -339,9 +337,9 @@ const styles = StyleSheet.create({
     gap: 6,
     height: 42,
     borderRadius: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: stitchTokens.whiteAlpha90,
     borderWidth: 1,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
   },
   stepButtonActive: {
     backgroundColor: stitchTokens.wineDark,
@@ -352,14 +350,14 @@ const styles = StyleSheet.create({
     color: stitchTokens.wineDark,
   },
   stepButtonTextActive: {
-    color: "#FFFFFF",
+    color: stitchTokens.white,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: stitchTokens.whiteAlpha90,
     borderWidth: 1,
-    borderColor: "#D4A373",
+    borderColor: stitchTokens.goldBorder,
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 44,
@@ -393,7 +391,7 @@ const styles = StyleSheet.create({
   buyNowSection: {
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: "rgba(212, 163, 115, 0.5)",
+    borderTopColor: stitchTokens.goldBorderAlpha35,
   },
   buyNowToggleRow: {
     flexDirection: "row",

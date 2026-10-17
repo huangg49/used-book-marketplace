@@ -300,7 +300,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
               locked && { opacity: 0.6 },
             ]}
           >
-            <Icon name="gavel" size={18} color="#FFDF97" />
+            <Icon name="gavel" size={18} color={stitchTokens.gold} />
             <AppText kind="bold" style={styles.primarySubmitBtnText}>
               Xem lại và gửi sách đấu giá
             </AppText>
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: stitchTokens.flashRedBg,
     borderWidth: 1,
-    borderColor: "#F5C6CB",
+    borderColor: stitchTokens.errorLightBorder,
     borderRadius: 10,
     padding: 12,
   },
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   },
   primarySubmitBtnText: {
     fontSize: 15,
-    color: "#FFFFFF",
+    color: stitchTokens.white,
   },
   legalDisclaimerText: {
     fontSize: 11,

@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: "rgba(139, 30, 30, 0.07)",
+    backgroundColor: stitchTokens.wineDarkAlpha07,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingTop: 6,
     borderTopWidth: 1,
-    borderTopColor: "rgba(222, 192, 187, 0.4)",
+    borderTopColor: stitchTokens.peachBorderAlpha40,
   },
   featurePill: {
     flexDirection: "row",

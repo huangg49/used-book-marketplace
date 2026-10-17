@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   StyleSheet,
   View,
@@ -10,7 +9,7 @@ import * as Crypto from "expo-crypto";
 import { router } from "expo-router";
 import { useSession } from "../../core/session/session-provider";
 import { AppText } from "../../core/ui/text";
-import { Icon, formatVnd, stitchTokens } from "../../core/ui";
+import { AppModal as Modal, Icon, formatVnd, stitchTokens } from "../../core/ui";
 import {
   AUCTION_MAX_PRICE,
   createAuctionCommand,
@@ -43,14 +42,13 @@ export function AuctionQuickBidModal({
   const [bidAmount, setBidAmount] = useState<number>(defaultMinimum);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (auction) {
-      const nextMin = auction.minimumBid ?? (auction.currentPrice ?? auction.startPrice) + auction.step;
-      setBidAmount(nextMin);
-      setError(null);
-    }
-  }, [auction]);
+  const [prevAuctionId, setPrevAuctionId] = useState<string | null>(null);
+  if (auction && auction.id !== prevAuctionId) {
+    setPrevAuctionId(auction.id);
+    const nextMin = auction.minimumBid ?? (auction.currentPrice ?? auction.startPrice) + auction.step;
+    setBidAmount(nextMin);
+    setError(null);
+  }
 
   if (!visible || !auction) return null;
 

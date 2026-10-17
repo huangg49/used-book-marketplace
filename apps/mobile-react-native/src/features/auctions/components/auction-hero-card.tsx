@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(0,0,0,0.25)",
+    backgroundColor: stitchTokens.blackAlpha25,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,

@@ -21,12 +21,12 @@ export function SendToAuctionHeader({ onBack }: SendToAuctionHeaderProps) {
             onPress={onBack}
             style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.75 }]}
           >
-            <Icon name="back" size={20} color="#FFDF97" />
+            <Icon name="back" size={20} color={stitchTokens.gold} />
           </Pressable>
 
           <View style={styles.titleColumn}>
             <View style={styles.categoryBadgeRow}>
-              <Icon name="gavel" size={13} color="#FFDF97" />
+              <Icon name="gavel" size={13} color={stitchTokens.gold} />
               <AppText kind="small" style={styles.categoryBadgeText}>
                 ĐẤU GIÁ
               </AppText>
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: stitchTokens.whiteAlpha08,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -84,12 +84,12 @@ const styles = StyleSheet.create({
   categoryBadgeText: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#FFDF97",
+    color: stitchTokens.gold,
     letterSpacing: 0.8,
   },
   titleText: {
     fontSize: 18,
-    color: "#FFFFFF",
+    color: stitchTokens.white,
     lineHeight: 22,
   },
 });
