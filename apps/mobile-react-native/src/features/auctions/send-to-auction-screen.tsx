@@ -219,7 +219,6 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
       {/* 1. Header with back and title */}
       <SendToAuctionHeader
         onBack={() => router.replace("/auctions")}
-        onAvatarPress={() => router.push("/account")}
       />
 
       <ScrollView

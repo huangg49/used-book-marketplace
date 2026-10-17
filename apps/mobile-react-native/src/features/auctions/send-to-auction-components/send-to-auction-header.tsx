@@ -6,10 +6,9 @@ import { stitchTokens } from "../../../core/ui/theme";
 
 export interface SendToAuctionHeaderProps {
   readonly onBack: () => void;
-  readonly onAvatarPress?: () => void;
 }
 
-export function SendToAuctionHeader({ onBack, onAvatarPress }: SendToAuctionHeaderProps) {
+export function SendToAuctionHeader({ onBack }: SendToAuctionHeaderProps) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -37,15 +36,6 @@ export function SendToAuctionHeader({ onBack, onAvatarPress }: SendToAuctionHead
             </AppText>
           </View>
         </View>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Tài khoản cá nhân"
-          onPress={onAvatarPress}
-          style={({ pressed }) => [styles.avatarCircle, pressed && { opacity: 0.8 }]}
-        >
-          <Icon name="person" size={18} color="#FFFFFF" />
-        </Pressable>
       </View>
     </View>
   );
@@ -101,15 +91,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#FFFFFF",
     lineHeight: 22,
-  },
-  avatarCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 223, 151, 0.3)",
-    alignItems: "center",
-    justifyContent: "center",
   },
 });
