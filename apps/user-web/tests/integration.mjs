@@ -207,7 +207,7 @@ try {
     animations: "disabled",
   });
   await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
-  await button("Giữ sách và mở chat").waitFor();
+  await button("Chat với người bán").waitFor();
   assert.ok(
     await p.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -235,7 +235,7 @@ try {
   await p.setViewportSize({ width: 390, height: 844 });
   console.log("QA: public shelf/detail/states passed; sell journey");
   await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
-  await button("Giữ sách và mở chat").click();
+  await button("Chat với người bán").click();
   await p.waitForURL("**/login?returnUrl=*");
   const returnPath = new URL(p.url()).searchParams.get("returnUrl");
   assert.match(returnPath, /^\/books\//);
@@ -246,7 +246,7 @@ try {
   await p
     .getByRole("heading", { name: "Đây là bài đăng của bạn", exact: true })
     .waitFor();
-  assert.equal(await button("Giữ sách và mở chat").count(), 0);
+  assert.equal(await button("Chat với người bán").count(), 0);
   await p
     .getByRole("link", { name: "Trang chủ Lật lại", exact: true })
     .first()
@@ -415,7 +415,7 @@ try {
     .getAttribute("href");
   const selectedListing = selectedPath.split("/").at(-1);
   await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
-  await button("Giữ sách và mở chat").click();
+  await button("Chat với người bán").click();
   const dialog = p.getByRole("dialog");
   await dialog.waitFor();
   await p.screenshot({
@@ -440,11 +440,11 @@ try {
     },
   );
   await dialog
-    .getByRole("button", { name: "Giữ sách và mở chat", exact: true })
+    .getByRole("button", { name: "Mở chat", exact: true })
     .click();
   await dialog.getByRole("alert").waitFor();
   await dialog
-    .getByRole("button", { name: "Giữ sách và mở chat", exact: true })
+    .getByRole("button", { name: "Mở chat", exact: true })
     .click();
   await p.waitForURL("**/chat/*");
   assert.equal(reserveAttempts.length, 2);
@@ -461,7 +461,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    "PASS user-web: real shelf/filter/pagination/detail; empty/error/retry; login return and owner guard; five tabs/data retention; upload/submit replay; purchase lost-response replay with one conversation; 390px100/130%, Home/Detail/Search320px130%. Fake storage, no native acceptance.",
+    "PASS user-web: real shelf/filter/pagination/detail; empty/error/retry; login return and owner guard; five tabs/data retention; upload/submit replay; chat lost-response replay with one conversation; 390px100/130%, Home/Detail/Search320px130%. Fake storage, no native acceptance.",
   );
 } catch (error) {
   const pages = browser?.contexts().flatMap((context) => context.pages()) ?? [];

@@ -254,3 +254,12 @@
     font-size: 1.3rem;
   }
 }
+
+.secondary {
+  composes: primary;
+  margin-top: 10px;
+  background: transparent;
+  color: var(--shop-wine);
+  border: 1px solid var(--shop-control);
+}
+.secondary:hover:not(:disabled) { background: var(--shop-shelf, #f4eddf); }

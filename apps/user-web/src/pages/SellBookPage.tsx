@@ -1648,6 +1648,7 @@ export function SellBookPage() {
                             tin sách được gửi kiểm duyệt trước khi xuất hiện
                             trên kệ.
                           </p>
+                          {formData.mode !== 'Exchange' && <p className={styles.help}>Người mua có thể Mua ngay theo giá bạn niêm yết. Khi thanh toán thành công, đơn được chốt và bạn cam kết bàn giao sách trong 48 giờ, không có bước duyệt lại. Chat thương lượng vẫn là luồng riêng.</p>}
                           <label className={styles.ownership}>
                             <input
                               id="ownership"

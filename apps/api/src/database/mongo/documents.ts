@@ -114,8 +114,8 @@ export interface ListingDoc extends Lockable {
   createdAt: Date;
   updatedAt: Date;
 }
-// A short, no-money negotiation opened from the public shelf. It is deliberately
-// not an Order: it creates no quote, wallet hold, shipment, or custody claim.
+// A multi-buyer negotiation opened from the public shelf. It does not reserve
+// the listing; only a seller-created Order acquires the exclusive commitment.
 export interface PurchaseConversationDoc extends Lockable {
   _id: string;
   listingId: string;
@@ -123,8 +123,10 @@ export interface PurchaseConversationDoc extends Lockable {
   buyerId: string;
   sellerId: string;
   version: number;
-  status: 'Active' | 'Expired' | 'Cancelled';
-  expiresAt: Date;
+  status: 'Active' | 'Expired' | 'Cancelled' | 'OrderCreated';
+  expiresAt: Date | null;
+  quoteId: string | null;
+  orderId: string | null;
   closedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -1154,6 +1156,7 @@ export interface MemberNotificationDoc {
     | 'AuctionCancelled'
     | 'AuctionOnHold'
     | 'AuctionPaymentExpired'
+    | 'OrderBuyNowPaid'
     | 'AuctionPaid'
     | 'ExchangeProposed'
     | 'ExchangeAccepted'
@@ -1165,7 +1168,7 @@ export interface MemberNotificationDoc {
     | 'ExchangeRejected';
   title: string;
   body: string;
-  targetType: 'Auction' | 'Exchange';
+  targetType: 'Auction' | 'Exchange' | 'Order';
   targetId: string;
   dedupeKey: string;
   createdAt: Date;

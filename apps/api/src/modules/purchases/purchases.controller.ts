@@ -15,4 +15,8 @@ export class PurchasesController {
   }
   @Get('me/purchase-conversations') @Roles('MEMBER') list(@Req() req: AuthenticatedRequest) { return this.purchases.list(req.auth); }
   @Get('me/purchase-conversations/:conversationId/messages') @Roles('MEMBER') messages(@Param('conversationId') id: string, @Req() req: AuthenticatedRequest) { return this.purchases.messages(req.auth, this.input.uuid(id)); }
+  @Post('me/purchase-conversations/:conversationId/quote') @Roles('MEMBER') @HttpCode(200)
+  attachQuote(@Param('conversationId') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    return commandResponse(this.purchases.attachQuote(commandContext(this.input, req, res), this.input.uuid(id), this.input.body('AttachPurchaseConversationQuote', body)), res);
+  }
 }

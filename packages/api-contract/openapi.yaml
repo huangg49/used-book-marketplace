@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.40.0
+  version: 0.43.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -1210,7 +1210,7 @@ paths:
     post:
       operationId: createPurchaseConversation
       tags: [Purchase conversations]
-      summary: Start the 24-hour buyer-seller conversation for one sale listing
+      summary: Start a buyer-seller conversation without reserving the listing
       x-implementation-status: implemented
       security: [{ bearerAuth: [] }]
       parameters:
@@ -1229,7 +1229,7 @@ paths:
             schema: { $ref: "#/components/schemas/CreatePurchaseConversation" }
       responses:
         "200":
-          description: Conversation created or idempotently replayed.
+          description: Conversation created or idempotently replayed. The listing remains Available.
           headers:
             Cache-Control:
               schema: { type: string, const: no-store }
@@ -1351,6 +1351,42 @@ paths:
         "401": { $ref: "#/components/responses/ListingError" }
         "403": { $ref: "#/components/responses/ListingError" }
         "404": { $ref: "#/components/responses/ListingError" }
+  /me/purchase-conversations/{conversationId}/quote:
+    post:
+      operationId: attachPurchaseConversationQuote
+      tags: [Purchase conversations]
+      x-implementation-status: implemented
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AttachPurchaseConversationQuote" }
+      responses:
+        "200":
+          description: Buyer quote attached for the seller to create an Order; private address data stays hidden.
+          headers:
+            Cache-Control: { schema: { type: string, const: no-store } }
+            Idempotency-Replayed: { schema: { type: string, enum: ["true", "false"] } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseConversationReceipt" }
+        "400": { $ref: "#/components/responses/ListingError" }
+        "401": { $ref: "#/components/responses/ListingError" }
+        "403": { $ref: "#/components/responses/ListingError" }
+        "404": { $ref: "#/components/responses/ListingError" }
+        "409": { $ref: "#/components/responses/ListingError" }
+        "422": { $ref: "#/components/responses/ListingError" }
+        "503": { $ref: "#/components/responses/ListingError" }
   /me/listings:
     get:
       operationId: listMyListings
@@ -3495,11 +3531,69 @@ paths:
         read/replay.
   /orders:
     post:
-      operationId: createDirectOrder
+      operationId: createSellerDirectOrder
       tags:
         - Orders
       x-implementation-status: implemented
-      description: Default Wallet checkout atomically creates the Order and holds the server quote total P+S from the buyer wallet; insufficient funds leave no Order or reservation. Returns PendingSellerConfirmation version 2. Configured legacy Unpaid mode retains AwaitingPayment and the separate pay command. Same key/body returns the original receipt and never charges twice.
+      description: The current seller creates an unpaid Order from an Active purchase conversation with a buyer-attached quote and agreed book price. The Order and exclusive listing commitment are created atomically; no buyer wallet is charged until the buyer confirms payment through POST /orders/{orderId}/pay. Only the conversation seller may create it. Same key/body returns the original receipt.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSellerDirectOrder"
+      responses:
+        "200":
+          description: Successful operation.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /orders/buy-now:
+    post:
+      operationId: createBuyNowOrder
+      tags:
+        - Orders
+      x-implementation-status: implemented
+      description: ACTIVE verified MEMBER buyer creates a 15-minute unpaid reservation at the current listed price from their own valid DirectDelivery quote, without a conversation. Atomically revalidates listing, addresses, policy and exclusive commitment. Same key/body replays the original receipt; no money held until pay. Successful payment automatically starts Preparing and its 48-hour pickup deadline; no seller approval.
       security:
         - bearerAuth: []
       parameters:
@@ -3558,7 +3652,7 @@ paths:
         - Orders
       x-implementation-status: implemented
       description: Private participant Order, including payment/hold and refund progress; own contact
-        only. LOCKED existing-obligation access. No seller acceptance/dispatch yet.
+        only. LOCKED existing-obligation access. BuyNow includes automatic preparation after payment; Negotiated retains seller acceptance.
       security:
         - bearerAuth: []
       parameters:
@@ -10141,7 +10235,8 @@ components:
           properties:
             status:
               type: string
-              enum: [Available, InNegotiation]
+              enum: [Available, InNegotiation, AwaitingPayment, InTransaction]
+              description: Available accepts checkout; InNegotiation is a legacy conversation reservation; AwaitingPayment is an unpaid Order reservation; InTransaction requires a successfully funded active Order.
             expiresAt:
               anyOf:
                 - type: string
@@ -10178,8 +10273,10 @@ components:
               minimum: 10000
               maximum: 1000000
       description: Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE
-        owner has MEMBER role, Confirmed catalog and Ready media. A Reserved listing remains readable
-        only while it has an active 24-hour purchase conversation, but it cannot start another conversation.
+        owner has MEMBER role, Confirmed catalog and Ready media. Reserved direct-sale Orders remain visible
+        with AwaitingPayment until payment commits, then InTransaction. Unpaid reservations expose only
+        their payment deadline, never participant identities. InNegotiation is retained for legacy
+        conversation reservations. No new checkout or conversation can start until Available.
         Never serialize a private listing then filter on the client.
     CreatePurchaseConversation:
       type: object
@@ -10197,9 +10294,29 @@ components:
         entityId: { type: string, format: uuid }
         listingId: { type: string, format: uuid }
         version: { type: integer, minimum: 1, maximum: 2147483647 }
-        status: { type: string, enum: [Active, Expired, Cancelled] }
-        expiresAt: { type: string, format: date-time }
+        status: { type: string, enum: [Active, Expired, Cancelled, OrderCreated] }
+        expiresAt: { type: [string, "null"], format: date-time }
         serverTime: { type: string, format: date-time }
+    AttachPurchaseConversationQuote:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, quoteId, expectedQuoteVersion, expectedListingVersion, expectedListingRevisionId]
+      properties:
+        expectedVersion: { type: integer, minimum: 1, maximum: 2147483647 }
+        quoteId: { type: string, format: uuid }
+        expectedQuoteVersion: { type: integer, const: 1 }
+        expectedListingVersion: { type: integer, minimum: 1, maximum: 2147483647 }
+        expectedListingRevisionId: { type: string, format: uuid }
+    CreateOrderFromPurchaseConversation:
+      type: object
+      additionalProperties: false
+      required: [conversationId, expectedVersion, agreedBookPrice]
+      properties:
+        conversationId: { type: string, format: uuid }
+        expectedVersion: { type: integer, minimum: 1, maximum: 2147483647 }
+        agreedBookPrice: { type: integer, minimum: 10000, maximum: 1000000 }
+    CreateSellerDirectOrder:
+      $ref: "#/components/schemas/CreateOrderFromPurchaseConversation"
     PurchaseParticipant:
       type: object
       additionalProperties: false
@@ -10225,6 +10342,7 @@ components:
             - AuctionOnHold
             - AuctionPaymentExpired
             - AuctionPaid
+            - OrderBuyNowPaid
             - ExchangeProposed
             - ExchangeAccepted
             - ExchangeFunded
@@ -10235,7 +10353,7 @@ components:
             - ExchangeRejected
         title: { type: string, maxLength: 120 }
         body: { type: string, maxLength: 400 }
-        targetType: { type: string, enum: [Auction, Exchange] }
+        targetType: { type: string, enum: [Auction, Exchange, Order] }
         targetId:
           type: string
           format: uuid
@@ -10273,22 +10391,37 @@ components:
         unreadCount: { type: integer, minimum: 0 }
     PurchaseConversation:
       type: object
+      description: Participant-only conversation. quotePreview exposes the buyer-submitted destination only to the buyer and selected seller.
       additionalProperties: false
-      required: [id, listingId, buyer, seller, version, status, expiresAt, createdAt, closedAt]
+      required: [id, listingId, buyer, seller, version, status, expiresAt, hasQuote, quotePreview, orderId, createdAt, closedAt]
       properties:
         id: { type: string, format: uuid }
         listingId: { type: string, format: uuid }
         buyer: { $ref: "#/components/schemas/PurchaseParticipant" }
         seller: { $ref: "#/components/schemas/PurchaseParticipant" }
         version: { type: integer, minimum: 1, maximum: 2147483647 }
-        status: { type: string, enum: [Active, Expired, Cancelled] }
-        expiresAt: { type: string, format: date-time }
+        status: { type: string, enum: [Active, Expired, Cancelled, OrderCreated] }
+        expiresAt: { type: [string, "null"], format: date-time }
+        hasQuote: { type: boolean }
+        quotePreview:
+          oneOf:
+            - $ref: "#/components/schemas/PurchaseQuotePreview"
+            - type: "null"
+        orderId: { type: [string, "null"], format: uuid }
         createdAt: { type: string, format: date-time }
         closedAt:
           anyOf:
             - type: string
               format: date-time
             - type: "null"
+    PurchaseQuotePreview:
+      type: object
+      additionalProperties: false
+      required: [destination, shippingFee, expiresAt]
+      properties:
+        destination: { $ref: "#/components/schemas/OrderContact" }
+        shippingFee: { type: integer, minimum: 0 }
+        expiresAt: { type: string, format: date-time }
     PurchaseMessage:
       type: object
       additionalProperties: false
@@ -11805,6 +11938,10 @@ components:
         - createdAt
         - paymentDeadline
       properties:
+        purchaseMode:
+          type: string
+          enum: [Negotiated, BuyNow]
+          description: Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
         schemaVersion:
           type: integer
           const: 1
@@ -11981,6 +12118,10 @@ components:
         - completedAt
         - canConfirmReceipt
       properties:
+        purchaseMode:
+          type: string
+          enum: [Negotiated, BuyNow]
+          description: Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
         id:
           type: string
           format: uuid
@@ -12517,6 +12658,16 @@ components:
         - paymentDeadline
         - closedAt
       properties:
+        title:
+          type: string
+          description: Book title frozen in the Order item snapshot.
+        listingId:
+          type: string
+          format: uuid
+        purchaseMode:
+          type: string
+          enum: [Negotiated, BuyNow]
+          description: Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
         id:
           type: string
           format: uuid

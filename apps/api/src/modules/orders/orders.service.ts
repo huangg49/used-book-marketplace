@@ -1,6 +1,5 @@
 import { orderContext } from '../reservations/workflow-context.js';
 import { Injectable } from '@nestjs/common';
-import { TransactionPolicy } from '../wallet/transaction-policy.js';
 import { createHash, randomUUID } from 'node:crypto';
 import type { Collections } from '../../database/mongo/collections.js';
 import type {
@@ -33,6 +32,7 @@ import { MediaStorage } from '../media/media-storage.js';
 import { OrderClock } from './order-clock.js';
 import { LedgerService } from '../wallet/ledger.service.js';
 import { checkOrder } from './order-invariants.js';
+import { quoteAmounts } from '../quotes/quote-money.js';
 
 // Order with the parts every command/read needs (the Prisma include).
 export async function loadOrder(c: Collections, id: string) {
@@ -47,7 +47,30 @@ export async function loadOrder(c: Collections, id: string) {
   const agreement = context
     ? await c.agreement_snapshots.findOne({ _id: context._id })
     : null;
-  const quote = (await c.sale_quotes.findOne({ _id: o.quoteId }))!;
+  const sourceQuote = (await c.sale_quotes.findOne({ _id: o.quoteId }))!;
+  const agreedAmounts = (
+    agreement?.snapshot as {
+      amounts?: {
+        bookPrice: number;
+        shippingFee: number;
+        buyerTotal: number;
+        commissionBps: number;
+        commission: number;
+        sellerProceedsOnCompletion: number;
+      };
+    } | null
+  )?.amounts;
+  const quote = agreedAmounts
+    ? {
+        ...sourceQuote,
+        bookPrice: agreedAmounts.bookPrice,
+        shippingFee: agreedAmounts.shippingFee,
+        buyerTotal: agreedAmounts.buyerTotal,
+        commissionBps: agreedAmounts.commissionBps,
+        commission: agreedAmounts.commission,
+        sellerProceeds: agreedAmounts.sellerProceedsOnCompletion,
+      }
+    : sourceQuote;
   const preparation = await c.order_preparations.findOne({ _id: o._id });
   const pickupReview = preparation
     ? await c.pickup_reviews.findOne({ orderId: o._id })
@@ -72,16 +95,7 @@ export class OrdersService {
     private readonly input: ContractInput,
     private readonly storage: MediaStorage,
     private readonly ledger: LedgerService,
-    private readonly policy: TransactionPolicy,
   ) {}
-  private async quote(tx: Tx, id: string, buyerId: string) {
-    const q = await tx.c.sale_quotes.findOne({
-      _id: id.toLowerCase(),
-      buyerId,
-    });
-    if (!q) throw notFound();
-    return q;
-  }
   private async order(tx: Tx, id: string) {
     const o = await loadOrder(tx.c, id);
     if (!o) throw notFound();
@@ -130,76 +144,129 @@ export class OrdersService {
       { $set: { ownershipPhase: 'Closed' }, $inc: { version: 1 } },
     );
   }
-  create(context: CommandContext, body: Wire['CreateDirectOrder']) {
+  create(
+    context: CommandContext,
+    body: Wire['CreateOrderFromPurchaseConversation'],
+  ) {
+    return this.createPurchase(context, { mode: 'Negotiated', body });
+  }
+  buyNow(context: CommandContext, body: Wire['CreateDirectOrder']) {
+    return this.createPurchase(context, { mode: 'BuyNow', body });
+  }
+  private createPurchase(
+    context: CommandContext,
+    intent:
+      | {
+          mode: 'Negotiated';
+          body: Wire['CreateOrderFromPurchaseConversation'];
+        }
+      | { mode: 'BuyNow'; body: Wire['CreateDirectOrder'] },
+  ) {
+    const source = async (tx: Tx) => {
+      if (intent.mode === 'Negotiated') {
+        const conversation = await tx.c.purchase_conversations.findOne({
+          _id: intent.body.conversationId,
+        });
+        if (!conversation) throw notFound();
+        return {
+          buyerId: conversation.buyerId,
+          sellerId: conversation.sellerId,
+          conversation,
+        };
+      }
+      const quote = await tx.c.sale_quotes.findOne({
+        _id: intent.body.quoteId,
+        buyerId: context.auth.user.id,
+      });
+      if (!quote) throw notFound();
+      return {
+        buyerId: quote.buyerId,
+        sellerId: quote.sellerId,
+        conversation: null,
+      };
+    };
     return this.commands.runOrder(
       context,
-      'createDirectOrder',
-      body.quoteId,
-      body,
+      intent.mode === 'BuyNow'
+        ? 'createBuyNowOrder'
+        : 'createDirectOrderFromConversation',
+      intent.mode === 'BuyNow'
+        ? intent.body.quoteId
+        : intent.body.conversationId,
+      intent.body,
       {
-        discover: async (tx) => [
-          (await this.quote(tx, body.quoteId, context.auth.user.id)).sellerId,
-        ],
+        discover: async (tx) => {
+          const row = await source(tx);
+          return [row.buyerId, row.sellerId];
+        },
         authorize: async (tx, actor) => {
           member(actor);
-          return this.quote(tx, body.quoteId, actor._id);
-        },
-        mutate: async (tx, actor, quote, receiptId) => {
-          requireActive(actor);
-          const conversation = await tx.c.purchase_conversations.findOne({
-            listingId: quote.listingId,
-            buyerId: actor._id,
-            sellerId: quote.sellerId,
-            status: 'Active',
-          });
-          if (conversation)
-            await tx.lock('purchase_conversations', [conversation._id]);
-          const { q, l, book, origin, destination } =
-            await this.quotes.prepareOrder(tx, actor._id, body);
-          if (q.sellerId === actor._id) throw invalidState();
-          const orderId = randomUUID();
+          const row = await source(tx);
           if (
-            this.policy.atomicCheckout &&
-            !(await this.paymentSellerEligible(tx, q.sellerId))
+            (intent.mode === 'BuyNow' ? row.buyerId : row.sellerId) !==
+            actor._id
           )
-            throw new DomainError(
-              403,
-              'AccountIneligible',
-              'Người bán hiện không đủ điều kiện nhận thanh toán.',
-            );
-          const accounts = this.policy.atomicCheckout
-            ? await this.ledger.lockOrder(tx, actor._id, orderId, true)
-            : null;
+            throw notFound();
+          return row;
+        },
+        mutate: async (tx, actor, before, receiptId) => {
+          requireActive(actor);
+          const buyer = await tx.c.users.findOne({ _id: before.buyerId });
+          if (!buyer) throw invalidState();
+          member(buyer);
+          requireActive(buyer);
+          let conversation = before.conversation;
+          let orderBody: Wire['CreateDirectOrder'];
+          if (intent.mode === 'Negotiated') {
+            await tx.lock('purchase_conversations', [
+              intent.body.conversationId,
+            ]);
+            conversation = await tx.c.purchase_conversations.findOne({
+              _id: intent.body.conversationId,
+            });
+            if (
+              !conversation ||
+              conversation.version !== intent.body.expectedVersion ||
+              conversation.status !== 'Active' ||
+              conversation.sellerId !== actor._id ||
+              !conversation.quoteId ||
+              conversation.orderId
+            )
+              throw conflict();
+            const quote = await tx.c.sale_quotes.findOne({
+              _id: conversation.quoteId,
+              buyerId: before.buyerId,
+            });
+            if (!quote) throw invalidState();
+            orderBody = {
+              quoteId: quote._id,
+              expectedQuoteVersion: 1,
+              expectedListingVersion: quote.listingVersion,
+              expectedListingRevisionId: quote.listingRevisionId,
+            };
+          } else orderBody = intent.body;
+          const { q, l, book, origin, destination } =
+            await this.quotes.prepareOrder(tx, before.buyerId, orderBody);
+          const continuingLegacyHold =
+            intent.mode === 'Negotiated' &&
+            l.trade === 'Reserved' &&
+            conversation?.expiresAt !== null;
+          if (
+            q.sellerId !== before.sellerId ||
+            q.buyerId === q.sellerId ||
+            (l.trade !== 'Available' && !continuingLegacyHold)
+          )
+            throw invalidState();
+          const orderId = randomUUID();
           const now = await this.decision(tx, context.auth);
-          if (now >= q.expiresAt) throw conflict();
-          if (l.trade === 'Reserved') {
-            const currentConversation = conversation
-              ? await tx.c.purchase_conversations.findOne({
-                  _id: conversation._id,
-                  listingId: l._id,
-                  buyerId: actor._id,
-                  sellerId: q.sellerId,
-                  status: 'Active',
-                })
-              : null;
-            if (!currentConversation || now >= currentConversation.expiresAt)
-              throw invalidState();
-            const closed = await tx.c.purchase_conversations.updateOne(
-              {
-                _id: currentConversation._id,
-                version: currentConversation.version,
-                status: 'Active',
-              },
-              {
-                $set: { status: 'Cancelled', closedAt: now, updatedAt: now },
-                $inc: { version: 1 },
-              },
-            );
-            if (closed.matchedCount !== 1) throw conflict();
-          } else if (l.trade !== 'Available') throw invalidState();
+          if (
+            now >= q.expiresAt ||
+            (conversation?.expiresAt && now >= conversation.expiresAt)
+          )
+            throw conflict();
           if (
             (await tx.c.direct_orders.countDocuments({
-              buyerId: actor._id,
+              buyerId: before.buyerId,
               state: 'AwaitingPayment',
             })) >= 2
           )
@@ -211,20 +278,16 @@ export class OrdersService {
           const paymentDeadline = new Date(now.getTime() + 15 * 60 * 1000);
           const o: DirectOrderDoc = {
             _id: orderId,
-            buyerId: actor._id,
+            buyerId: before.buyerId,
             sellerId: q.sellerId,
             quoteId: q._id,
-            version: this.policy.atomicCheckout ? 2 : 1,
-            state: this.policy.atomicCheckout
-              ? 'PendingSellerConfirmation'
-              : 'AwaitingPayment',
+            version: 1,
+            state: 'AwaitingPayment',
             createdAt: now,
             paymentDeadline,
             closedAt: null,
-            paidAt: this.policy.atomicCheckout ? now : null,
-            sellerConfirmationDeadline: this.policy.atomicCheckout
-              ? new Date(now.getTime() + 48 * 3600000)
-              : null,
+            paidAt: null,
+            sellerConfirmationDeadline: null,
             cancellationRequestedAt: null,
             cancellationReason: null,
             deliveredAt: null,
@@ -280,8 +343,16 @@ export class OrdersService {
             localityCode: a!.localityCode,
             detail: a!.detail,
           });
+          const amounts = quoteAmounts(
+            intent.mode === 'BuyNow'
+              ? q.bookPrice
+              : intent.body.agreedBookPrice,
+            q.shippingFee,
+            q.commissionBps,
+          );
           const agreement: Wire['DirectOrderAgreement'] = {
             schemaVersion: 1,
+            purchaseMode: intent.mode,
             policyVersion: q.policyCode,
             method: 'DirectDelivery',
             demoOnly: true,
@@ -293,12 +364,12 @@ export class OrdersService {
             createdAt: now.toISOString(),
             paymentDeadline: paymentDeadline.toISOString(),
             amounts: {
-              bookPrice: q.bookPrice,
-              shippingFee: q.shippingFee,
-              buyerTotal: q.buyerTotal,
-              commissionBps: q.commissionBps,
-              commission: q.commission,
-              sellerProceedsOnCompletion: q.sellerProceeds,
+              bookPrice: amounts.bookPrice,
+              shippingFee: amounts.shippingFee,
+              buyerTotal: amounts.buyerTotal,
+              commissionBps: amounts.commissionBps,
+              commission: amounts.commission,
+              sellerProceedsOnCompletion: amounts.sellerProceeds,
             },
           };
           this.input.body('OrderItemSnapshot', item);
@@ -318,6 +389,27 @@ export class OrdersService {
             snapshot: agreement as unknown as Json,
           });
           await this.reservations.acquire(tx, c._id, l._id, now, receiptId);
+          if (conversation) {
+            const selected = await tx.c.purchase_conversations.updateOne(
+              {
+                _id: conversation._id,
+                version: conversation.version,
+                status: 'Active',
+                quoteId: q._id,
+                orderId: null,
+              },
+              {
+                $set: {
+                  status: 'OrderCreated',
+                  orderId: o._id,
+                  closedAt: now,
+                  updatedAt: now,
+                },
+                $inc: { version: 1 },
+              },
+            );
+            if (selected.matchedCount !== 1) throw conflict();
+          }
           const listing =
             l.trade === 'Available'
               ? await this.listings.project(
@@ -329,15 +421,6 @@ export class OrdersService {
                 )
               : l;
           tx.check(`order:${o._id}`, () => checkOrder(tx, o._id));
-          if (accounts)
-            await this.ledger.postOrder(
-              tx,
-              o._id,
-              receiptId,
-              accounts,
-              q.buyerTotal,
-              now,
-            );
           return {
             entityType: 'Order',
             entityId: o._id,
@@ -347,7 +430,10 @@ export class OrdersService {
             decidedAt: now,
             paymentDeadline,
             affectedListings: [{ id: l._id, version: listing.version }],
-            event: accounts ? 'OrderPaymentHeld' : 'ReservationCreated',
+            event:
+              intent.mode === 'BuyNow'
+                ? 'BuyNowOrderCreated'
+                : 'SellerOrderCreated',
           };
         },
       },
@@ -547,21 +633,56 @@ export class OrdersService {
           o.quote.buyerTotal,
           now,
         );
-        const next = await this.transition(tx, o, {
+        let next = await this.transition(tx, o, {
           state: 'PendingSellerConfirmation',
           paidAt: now,
           sellerConfirmationDeadline: new Date(now.getTime() + 48 * 3600000),
         });
+        const buyNow =
+          (o.context!.agreement!.snapshot as { purchaseMode?: string })
+            .purchaseMode === 'BuyNow';
+        if (buyNow) {
+          // The listing price is the seller's commitment. Both state steps and
+          // the hold commit together; no externally visible approval phase.
+          await tx.c.order_preparations.insertOne({
+            _id: o._id,
+            acceptedAt: now,
+            pickupDeadline: new Date(now.getTime() + 48 * 3600000),
+            policyCode: 'ORDER-PICKUP-v1',
+            receiptId,
+          });
+          next = await this.transition(tx, next, { state: 'Preparing' });
+          await tx.c.member_notifications.insertMany(
+            [o.buyerId, o.sellerId].map((userId) => ({
+              _id: randomUUID(),
+              userId,
+              kind: 'OrderBuyNowPaid' as const,
+              title:
+                userId === o.sellerId
+                  ? 'Sách đã có người mua — chuẩn bị gửi'
+                  : 'Đặt mua thành công',
+              body:
+                userId === o.sellerId
+                  ? 'Đơn Mua ngay đã thanh toán. Hãy mở đơn và bàn giao sách trong 48 giờ. Tiền đang được giữ cho đơn.'
+                  : 'Bạn đã thanh toán đơn Mua ngay. Tiền đang được giữ; người bán sẽ chuẩn bị gửi sách trong 48 giờ.',
+              targetType: 'Order' as const,
+              targetId: o._id,
+              dedupeKey: `buy-now-paid:${o._id}:${userId}`,
+              createdAt: now,
+              readAt: null,
+            })),
+          );
+        }
         return {
           entityType: 'Order',
           entityId: o._id,
           contextId: o.context!._id,
           version: next.version,
-          state: 'PendingSellerConfirmation',
+          state: next.state as OrderChange['state'],
           decidedAt: now,
           paymentDeadline: o.paymentDeadline,
           affectedListings: [],
-          event: 'OrderPaymentHeld',
+          event: buyNow ? 'OrderBuyNowPaid' : 'OrderPaymentHeld',
           before: { version: o.version, state: o.state },
         };
       },
@@ -1268,6 +1389,7 @@ export class OrdersService {
           demoOnly: true,
           currency: 'VND',
           policyVersion: agreement.policyVersion,
+          purchaseMode: agreement.purchaseMode ?? 'Negotiated',
           amounts: agreement.amounts,
           ownAddress:
             role === 'Buyer' ? agreement.destination : agreement.origin,
@@ -1290,7 +1412,9 @@ export class OrdersService {
           refundedAmount: funds.refunded,
           paidAt: o.paidAt?.toISOString() ?? null,
           sellerConfirmationDeadline:
-            o.sellerConfirmationDeadline?.toISOString() ?? null,
+            agreement.purchaseMode === 'BuyNow'
+              ? null
+              : (o.sellerConfirmationDeadline?.toISOString() ?? null),
           cancellationRequestedAt:
             o.cancellationRequestedAt?.toISOString() ?? null,
           cancellationReason:
@@ -1405,8 +1529,17 @@ export class OrdersService {
         .toArray();
       const more = rows.length > Number(query.limit);
       if (more) rows.pop();
-      return {
-        items: rows.map((o) => ({
+      const items: Wire['MyOrderSummary'][] = [];
+      for (const o of rows) {
+        const context = await tx.c.workflow_contexts.findOne({
+          orderId: o._id,
+        });
+        const item = context
+          ? await tx.c.workflow_items.findOne({ contextId: context._id })
+          : null;
+        const snapshot = item?.snapshot as
+          Wire['OrderItemSnapshot'] | undefined;
+        items.push({
           id: o._id,
           version: o.version,
           state: o.state as Wire['MyOrderSummary']['state'],
@@ -1414,7 +1547,13 @@ export class OrdersService {
           createdAt: o.createdAt.toISOString(),
           paymentDeadline: o.paymentDeadline.toISOString(),
           closedAt: o.closedAt?.toISOString() ?? null,
-        })),
+          ...(snapshot
+            ? { title: snapshot.metadata.title, listingId: snapshot.listingId }
+            : {}),
+        });
+      }
+      return {
+        items,
         nextCursor: more ? rows.at(-1)!._id : null,
         serverTime: (await this.decision(tx, auth)).toISOString(),
       };

@@ -188,10 +188,10 @@ try {
     carrier_pickup_reviews: 0,
     ledger_journals: 5,
     ledger_entries: 10,
-    mutation_receipts: 57,
+    mutation_receipts: 65,
   });
   const after = await readJournal();
-  assert.equal(Object.keys(after.steps).length, 57);
+  assert.equal(Object.keys(after.steps).length, 65);
   for (const [step, before] of Object.entries(interrupted)) {
     assert.equal(after.steps[step].state, "acknowledged");
     assert.equal(after.steps[step].key, before.key);
@@ -330,7 +330,7 @@ try {
     code: "ORDER_MISMATCH",
   });
   console.log(
-    "H01b transit QA PASS: 57 stable intents/receipts; packaging/label/pickup loss + API restart with memory sessions; actual concurrent identical pickup one Applied event; no ledger/commitment movement; wrong actor/key/payload denied; separate duplicate/conflict preserves canonical pickup and hold, conflicting scenario blocked. Storage FAKE; native/human/remote CI not certified.",
+    "H01b transit QA PASS: 65 stable intents/receipts; packaging/label/pickup loss + API restart with memory sessions; actual concurrent identical pickup one Applied event; no ledger/commitment movement; wrong actor/key/payload denied; separate duplicate/conflict preserves canonical pickup and hold, conflicting scenario blocked. Storage FAKE; native/human/remote CI not certified.",
   );
 } finally {
   await sandbox?.close();

@@ -25,6 +25,11 @@ export function orderReceipt(value) {
         valid = value.version === 1 && date(value.expiresAt);
         fields.push("expiresAt");
         break;
+      case "PurchaseConversation":
+        valid = uuid(value.listingId) && ["Active", "Expired", "Cancelled", "OrderCreated"].includes(value.status) &&
+          (value.expiresAt === null || date(value.expiresAt));
+        fields.push("listingId", "status", "expiresAt");
+        break;
       case "Order":
         valid =
           uuid(value.contextId) &&

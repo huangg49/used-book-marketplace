@@ -32,6 +32,20 @@ export class OrdersController {
   ) {
     const result = await this.orders.create(
       commandContext(this.input, req, res),
+      this.input.body('CreateOrderFromPurchaseConversation', body),
+    );
+    res.setHeader('Idempotency-Replayed', String(result.replayed));
+    return result.receipt;
+  }
+  @Post('orders/buy-now')
+  @HttpCode(200)
+  async buyNow(
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.orders.buyNow(
+      commandContext(this.input, req, res),
       this.input.body('CreateDirectOrder', body),
     );
     res.setHeader('Idempotency-Replayed', String(result.replayed));

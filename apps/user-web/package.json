@@ -17,6 +17,8 @@
     "test": "vitest run",
     "catalog:refresh": "node scripts/refresh-preview-catalog.mjs",
     "test:browser": "node tests/integration.mjs",
+    "test:buy-now:browser": "node tests/buy-now.mjs",
+    "test:seller-order:browser": "node tests/seller-order.mjs",
     "test:exchange:browser": "node tests/exchange-integration.mjs",
     "test:wallet:browser": "node tests/wallet-checkout.mjs",
     "test:account:browser": "node tests/account-overview.mjs",

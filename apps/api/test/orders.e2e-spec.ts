@@ -1,3 +1,4 @@
+import { prepareSellerOrder } from './helpers/seller-order.js';
 import { OrderClock } from '../src/modules/orders/order-clock.js';
 import { QuoteClock } from '../src/modules/quotes/quote-clock.js';
 import { spawn } from 'node:child_process';
@@ -22,7 +23,7 @@ import type {
 import { MongoService } from '../src/database/mongo/mongo.service.js';
 import {
   onTransactionRetry,
-  type Tx,
+  Tx,
 } from '../src/database/mongo/transaction.js';
 import { MediaStorage } from '../src/modules/media/media-storage.js';
 import { validates } from './helpers/contract.js';
@@ -506,18 +507,18 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
     const q = (await quote(f).expect(200)).body;
     return {
       f,
-      body: {
+      ...await prepareSellerOrder(app, f.buyer, {
         quoteId: q.entityId,
         expectedQuoteVersion: 1,
         expectedListingVersion: f.l.version,
         expectedListingRevisionId: f.l.revisionId,
-      },
+      }),
     };
   }
   const create = (
     p: Awaited<ReturnType<typeof prepared>>,
     key = randomUUID(),
-    actor = p.f.buyer,
+    actor = p.f.seller,
     body: object = p.body,
   ) => post('/orders', body, actor, key);
   const cancel = (id: string, actor: Reader, key = randomUUID(), version = 1) =>
@@ -565,7 +566,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       }),
     };
   }
-  it('creates a 15-minute immutable unpaid agreement, reserves stock, hides public reads and keeps contact private by role', async () => {
+  it('creates a 15-minute immutable unpaid agreement, reserves stock, marks the public listing awaiting payment and keeps contact private by role', async () => {
     const p = await prepared(),
       r = await create(p).expect(200);
     validates('TransactionCommandReceipt', r.body);
@@ -580,7 +581,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       Date.parse(buyer.paymentDeadline) - Date.parse(buyer.createdAt),
     ).toBe(900000);
     expect(buyer.amounts.buyerTotal).toBe(230000);
-    expect(buyer.item.listingRevisionId).toBe(p.body.expectedListingRevisionId);
+    expect(buyer.item.listingRevisionId).toBe(p.quoteBody.expectedListingRevisionId);
     expect(buyer.commitment.status).toBe('Active');
     expect(r.body.affectedListings).toEqual([
       { id: p.f.l.entityId, version: p.f.l.version + 1 },
@@ -608,14 +609,14 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
     expect((await orderView(buyer.id.toUpperCase(), p.f.buyer)).id).toBe(
       buyer.id,
     );
-    await get(`/listings/${p.f.l.entityId}`).expect(404);
-    expect(
-      (await get(`/listings?bookId=${p.f.l.book.entityId}`).expect(200)).body
-        .items,
-    ).toEqual([]);
+    const publicListing = (await get(`/listings/${p.f.l.entityId}`).expect(200)).body;
+    expect(publicListing.purchaseAvailability).toEqual({ status: 'AwaitingPayment', expiresAt: buyer.paymentDeadline });
+    expect(JSON.stringify(publicListing)).not.toContain(p.f.buyer.id);
+    expect((await get(`/listings?bookId=${p.f.l.book.entityId}`).expect(200)).body.items)
+      .toEqual(expect.arrayContaining([expect.objectContaining({ id: p.f.l.entityId })]));
     await get(
       `/listings/${p.f.l.entityId}/media/${p.f.l.image.id}/read`,
-    ).expect(404);
+    ).expect(200);
     for (const actor of [p.f.buyer, p.f.seller]) {
       const image = await get(
         `/me/orders/${buyer.id}/media/${p.f.l.image.id}/read`,
@@ -651,71 +652,52 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
     expect(view.amounts.bookPrice).toBe(210000);
     expect(view.moneyHeld).toBe(0);
   });
-  it('transfers the buyer\'s active purchase conversation into one unpaid Order', async () => {
-    const f = await setup();
-    const conversation = await post(
-      `/listings/${f.l.entityId}/purchase-conversations`,
-      { expectedVersion: f.l.version },
-      f.buyer,
-    ).expect(200);
-    const q = await quote(f, randomUUID(), {
-      ...f.body,
-      expectedListingVersion: f.l.version + 1,
-    }).expect(200);
-    const p = {
-      f,
-      body: {
-        quoteId: q.body.entityId,
-        expectedQuoteVersion: 1,
-        expectedListingVersion: f.l.version + 1,
-        expectedListingRevisionId: f.l.revisionId,
-      },
-    };
-    const created = await create(p).expect(200);
-    expect(created.body.state).toBe('AwaitingPayment');
-    expect(
-      (await db.c.purchase_conversations.findOne({
-        _id: conversation.body.entityId,
-      }))!.status,
-    ).toBe('Cancelled');
-    expect((await findOrder(created.body.entityId)).state).toBe(
-      'AwaitingPayment',
-    );
-    expect(
-      (await db.c.listings.findOne({ _id: f.l.entityId }))!.trade,
-    ).toBe('Reserved');
-  });
-  it('rejects forged amounts, principal, foreign quote, self purchase, stale versions and guest/operations roles', async () => {
+  it('keeps chats non-exclusive and shares only the submitted address version with participants', async () => {
     const p = await prepared();
-    await request(app.getHttpServer())
-      .post('/api/v1/orders')
-      .send(p.body)
-      .expect(401);
-    for (const actor of [staff, a2])
-      await create(p, randomUUID(), actor).expect(403);
-    await create(p, randomUUID(), p.f.seller).expect(404);
-    await create(p, randomUUID(), m2).expect(404);
-    for (const extra of [
-      { amount: 1 },
-      { systemActor: 'OrderExpiry' },
-      { state: 'Paid' },
-      { safeToRelease: true },
-    ])
-      await create(p, randomUUID(), p.f.buyer, { ...p.body, ...extra }).expect(
-        422,
-      );
-    await create(p, randomUUID(), p.f.buyer, {
-      ...p.body,
-      expectedListingVersion: 1,
-    }).expect(409);
-    await create(p, randomUUID(), p.f.buyer, {
-      ...p.body,
-      expectedListingRevisionId: randomUUID(),
-    }).expect(409);
-    await create(p, randomUUID(), p.f.buyer, {
-      ...p.body,
-      expectedQuoteVersion: 2,
-    }).expect(422);
+    const list = async (actor: Reader) => (await get('/me/purchase-conversations', actor).expect(200)).body;
+    const selected = (await list(p.f.seller)).find((row: any) => row.id === p.body.conversationId);
+    expect(selected.quotePreview.destination.detail).toContain(p.f.buyer.id);
+    expect((await list(m2)).some((row: any) => row.id === p.body.conversationId)).toBe(false);
+    await get(`/me/purchase-conversations/${p.body.conversationId}/messages`, m2).expect(404);
+    await post(`/me/purchase-conversations/${p.body.conversationId}/quote`, {
+      ...p.quoteBody, expectedVersion: p.body.expectedVersion,
+    }, p.f.seller).expect(404);
+    const other = await reader();
+    const conversation = (await post(`/listings/${p.f.l.entityId}/purchase-conversations`,
+      { expectedVersion: p.f.l.version }, other).expect(200)).body;
+    const reused = (await post(`/listings/${p.f.l.entityId}/purchase-conversations`,
+      { expectedVersion: p.f.l.version }, other).expect(200)).body;
+    expect(reused.entityId).toBe(conversation.entityId);
+    expect(conversation.entityId).not.toBe(p.body.conversationId);
+    expect(await db.c.listings.findOne({ _id: p.f.l.entityId })).toMatchObject({ trade: 'Available', version: p.f.l.version });
+    expect((await stateCounts(p.f.l.entityId)).active).toBe(0);
+    await mutateAddress(p.f.buyer, p.f.destination.id);
+    expect((await list(p.f.seller)).find((row: any) => row.id === p.body.conversationId).quotePreview).toBeNull();
+    await create(p).expect(409);
+  });
+  it('selects a conversation without a chat reservation and closes it as OrderCreated', async () => {
+    const p = await prepared();
+    expect((await db.c.listings.findOne({ _id: p.f.l.entityId }))!.trade).toBe('Available');
+    expect((await stateCounts(p.f.l.entityId)).active).toBe(0);
+    const created = await create(p).expect(200);
+    expect((await db.c.purchase_conversations.findOne({ _id: p.body.conversationId })))
+      .toMatchObject({ status: 'OrderCreated', orderId: created.body.entityId, expiresAt: null });
+    expect((await findOrder(created.body.entityId)).state).toBe('AwaitingPayment');
+    expect((await db.c.listings.findOne({ _id: p.f.l.entityId }))!.trade).toBe('Reserved');
+  });
+  it('rejects forged amounts, principals, foreign conversations, stale versions and guest/operations roles', async () => {
+    const p = await prepared();
+    await request(app.getHttpServer()).post('/api/v1/orders').send(p.body).expect(401);
+    for (const actor of [staff, a2]) await create(p, randomUUID(), actor).expect(403);
+    for (const actor of [p.f.buyer, m2]) await create(p, randomUUID(), actor).expect(404);
+    for (const extra of [{ amount: 1 }, { systemActor: 'OrderExpiry' }, { state: 'Paid' }, { safeToRelease: true }])
+      await create(p, randomUUID(), p.f.seller, { ...p.body, ...extra }).expect(422);
+    await create(p, randomUUID(), p.f.seller, { ...p.body, expectedVersion: 1 }).expect(409);
+    await create(p, randomUUID(), p.f.seller, { ...p.body, conversationId: randomUUID() }).expect(404);
+    for (const agreedBookPrice of [9999, 1000001, 50000.5])
+      await create(p, randomUUID(), p.f.seller, { ...p.body, agreedBookPrice }).expect(422);
+    // The removed buyer-created contract must stay rejected.
+    await post('/orders', p.quoteBody, p.f.buyer).expect(422);
     expect((await stateCounts(p.f.l.entityId)).orders).toBe(0);
   });
   it('keeps agreement and pinned media readable after address deletion; unrelated users cannot read or cancel', async () => {
@@ -763,10 +745,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
     expect((await cancel(r.entityId, p.f.buyer, ck).expect(200)).body).toEqual(
       cancelled,
     );
-    await create(p, key, p.f.buyer, {
-      ...p.body,
-      expectedListingVersion: 1,
-    }).expect(409);
+    await create(p, key, p.f.seller, { ...p.body, agreedBookPrice: p.body.agreedBookPrice + 1000 }).expect(409);
     expect(await stateCounts(p.f.l.entityId)).toEqual({
       orders: 1,
       items: 1,
@@ -777,9 +756,9 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       audits: 2,
       outbox: 2,
     });
-    await setUser(p.f.buyer.id, { roles: [] });
+    await setUser(p.f.seller.id, { roles: [] });
     await create(p, key).expect(403);
-    await db.addRole(p.f.buyer.id, 'MEMBER');
+    await db.addRole(p.f.seller.id, 'MEMBER');
     await setSession(p.f.buyer.sessionId, { revokedAt: new Date() });
     await cancel(r.entityId, p.f.buyer, ck).expect(401);
   });
@@ -822,7 +801,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
     'checks quote deadline at offset %i using decision clock',
     async (offset) => {
       const p = await prepared(),
-        q = (await db.c.sale_quotes.findOne({ _id: p.body.quoteId }))!;
+        q = (await db.c.sale_quotes.findOne({ _id: p.quoteBody.quoteId }))!;
       const clock = vi
         .spyOn(app.get(OrderClock), 'now')
         .mockResolvedValue(new Date(q.expiresAt.getTime() + offset));
@@ -1030,7 +1009,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
               inGate,
             );
         await gate.commit();
-        expect((await response).status).toBe(409);
+        expect((await response).status).toBe(kind === 'role' ? 403 : 409);
         expect((await stateCounts(p.f.l.entityId)).orders).toBe(0);
       } finally {
         await gate.close();
@@ -1093,7 +1072,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
           await gate.db
             .collection<{ _id: string }>('auth_sessions')
             .updateOne(
-              { _id: p.f.buyer.sessionId },
+              { _id: p.f.seller.sessionId },
               { $set: { revokedAt: new Date() }, $inc: { lockSeq: 1 } },
               inGate,
             );
@@ -1110,7 +1089,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
     const p = await prepared(),
       gate = await Gate.lock(db.client, 'listings', [p.f.l.entityId]),
       expiresAt = new Date(Date.now() + 60000);
-    await setSession(p.f.buyer.sessionId, { expiresAt });
+    await setSession(p.f.seller.sessionId, { expiresAt });
     const clock = vi
         .spyOn(app.get(OrderClock), 'now')
         .mockResolvedValue(expiresAt),
@@ -1344,6 +1323,9 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
   it('a fresh worker process expires persisted work and a second process does not duplicate effects', async () => {
     const f = await setup(),
       past = new Date(Date.now() - 20 * 60 * 1000);
+    // Chat/quote attachment also uses server time; freeze the entire setup at
+    // the same historical instant before launching a real worker at today's time.
+    const conversationClock = vi.spyOn(Tx.prototype, 'now').mockResolvedValue(past);
     const quoteClock = vi
       .spyOn(app.get(QuoteClock), 'now')
       .mockResolvedValue(past);
@@ -1355,6 +1337,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       const p = await prepared(f);
       orderId = (await create(p).expect(200)).body.entityId;
     } finally {
+      conversationClock.mockRestore();
       quoteClock.mockRestore();
       orderClock.mockRestore();
     }
@@ -1485,7 +1468,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
   });
   it('rejects orphan Orders, incomplete context cardinality and duplicate active commitments at the commit boundary', async () => {
     const p = await prepared(),
-      q = (await db.c.sale_quotes.findOne({ _id: p.body.quoteId }))!,
+      q = (await db.c.sale_quotes.findOne({ _id: p.quoteBody.quoteId }))!,
       now = new Date();
     const order = (): DirectOrderDoc => ({
       _id: randomUUID(),

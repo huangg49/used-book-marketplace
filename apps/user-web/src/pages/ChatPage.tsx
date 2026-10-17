@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
+import { ApiError } from "@used-books/session-client";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, BookOpen, MessageCircle, Send } from "lucide-react";
 import { useSession } from "../hooks/useSession";
@@ -13,6 +14,9 @@ import {
   type PurchaseConversation,
 } from "../services/purchase-conversations";
 import { getPublicListing } from "../services/public-listings";
+import { createSellerOrder } from "../services/purchase-conversations";
+import { getOrderForPayment, payOrder } from "../services/orders";
+import { formatVnd } from "../lib/routes";
 import { ListingPhoto } from "../components/BookCard";
 import styles from "./ChatPage.module.css";
 
@@ -22,9 +26,10 @@ const socketUrl = configuredBase.startsWith("/")
   ? window.location.origin
   : configuredBase.replace(/\/api\/v1\/?$/, "");
 const statusLabels = {
-  Active: "Đang giữ sách",
+  Active: "Đang thương lượng",
   Expired: "Đã hết hạn",
   Cancelled: "Đã hủy",
+  OrderCreated: "Đã tạo đơn",
 };
 function dateTime(value: string) {
   return new Intl.DateTimeFormat("vi-VN", {
@@ -39,11 +44,14 @@ function dateTime(value: string) {
 function ChatRoom({
   room,
   userId,
+  refreshRooms,
 }: {
   room: PurchaseConversation;
   userId: string;
+  refreshRooms: () => void;
 }) {
   const other = room.buyer.id === userId ? room.seller : room.buyer;
+  const cache = useQueryClient();
   const history = useQuery({
     queryKey: ["purchase-messages", room.id],
     queryFn: () => getPurchaseMessages(room.id),
@@ -52,6 +60,12 @@ function ChatRoom({
     queryKey: ["public-listing", room.listingId],
     queryFn: () => getPublicListing(room.listingId),
   });
+  const order = useQuery({
+    queryKey: ["purchase-order", room.orderId],
+    queryFn: () => getOrderForPayment(room.orderId!),
+    enabled: !!room.orderId && room.buyer.id === userId,
+    refetchInterval: 3000,
+  });
   const [live, setLive] = useState<PurchaseMessage[]>([]);
   const [body, setBody] = useState("");
   const [connection, setConnection] = useState<
@@ -59,6 +73,13 @@ function ChatRoom({
   >("connecting");
   const [error, setError] = useState<string>();
   const [sending, setSending] = useState(false);
+  const [agreedPrice, setAgreedPrice] = useState<string | null>(null);
+  const [orderBusy, setOrderBusy] = useState(false);
+  const [orderError, setOrderError] = useState<string>();
+  const orderAttempt = useRef<{ key: string; version: number; price: number } | undefined>(undefined);
+  const [payBusy, setPayBusy] = useState(false);
+  const [payError, setPayError] = useState<string>();
+  const payAttempt = useRef<{ key: string; version: number } | undefined>(undefined);
   const [attempt, setAttempt] = useState<{
     messageId: string;
     conversationId: string;
@@ -68,15 +89,16 @@ function ChatRoom({
   const attemptRef = useRef<typeof attempt>(undefined);
   const messagesEnd = useRef<HTMLDivElement>(null);
   const active =
-    room.status === "Active" && Date.now() < Date.parse(room.expiresAt);
+    room.status === "Active" &&
+    (!room.expiresAt || Date.now() < Date.parse(room.expiresAt));
   const [expired, setExpired] = useState(!active);
   useEffect(() => {
-    if (!active) return;
+    if (!active || !room.expiresAt) return;
     const timer = window.setTimeout(
       () => setExpired(true),
       Math.min(
         2147483647,
-        Math.max(0, Date.parse(room.expiresAt) - Date.now()),
+      Math.max(0, Date.parse(room.expiresAt!) - Date.now()),
       ),
     );
     return () => window.clearTimeout(timer);
@@ -208,8 +230,8 @@ function ChatRoom({
         </Link>
         <h2>{other.displayName}</h2>
         <p>
-          {statusLabels[room.status]} · Hạn giữ:{" "}
-          <time dateTime={room.expiresAt}>{dateTime(room.expiresAt)}</time>
+          {statusLabels[room.status]}
+          {room.expiresAt && <> · Hạn giữ: <time dateTime={room.expiresAt}>{dateTime(room.expiresAt)}</time></>}
         </p>
       </header>
       <div className={styles.context}>
@@ -238,8 +260,8 @@ function ChatRoom({
       </div>
       {active && room.buyer.id === userId && book.data?.fulfillment && (
         <aside className={styles.connection} aria-label="Bước tiếp theo">
-          <span>Đã chốt thông tin với người bán? Hãy nhập địa chỉ để tạo đơn. Nội dung chat không tự tạo giao dịch.</span>
-          <Link to={`/checkout/${room.listingId}`}>Tạo đơn hàng</Link>
+          <span>Gửi địa chỉ và phí giao nhận để người bán xem xét. Sách vẫn được rao bán cho đến khi người bán tạo đơn.</span>
+          <Link to={`/checkout/${room.listingId}?conversationId=${room.id}`}>Gửi địa chỉ và báo giá</Link>
         </aside>
       )}
       {active && room.buyer.id === userId && book.data && !book.data.fulfillment && (
@@ -247,8 +269,82 @@ function ChatRoom({
           Người bán chưa hoàn thiện nơi gửi cho bài đăng này nên chưa thể tạo đơn. Hãy nhắn người bán cập nhật thông tin giao hàng.
         </p>
       )}
-      {active && room.seller.id === userId && (
-        <p className={styles.connection}>Khi đã chốt thông tin, người mua sẽ tự nhập địa chỉ và tạo đơn hàng. Chat chỉ dùng để thỏa thuận.</p>
+      {active && room.seller.id === userId && !room.hasQuote && (
+        <p className={styles.connection}>Chờ người mua gửi địa chỉ và báo giá giao nhận. Việc chat chưa giữ sách.</p>
+      )}
+      {active && room.seller.id === userId && room.hasQuote && (
+        <form className={styles.connection} onSubmit={async (event) => {
+          event.preventDefault();
+          if (orderBusy) return;
+          const submittedPrice = new FormData(event.currentTarget).get("agreedBookPrice");
+          const price = orderAttempt.current?.price ?? (typeof submittedPrice === "string" ? Number(submittedPrice) : Number.NaN);
+          if (!Number.isInteger(price) || price < 10000 || price > 1000000) {
+            setOrderError("Giá sách phải từ 10.000 ₫ đến 1.000.000 ₫.");
+            return;
+          }
+          const intent = orderAttempt.current ?? { key: crypto.randomUUID(), version: room.version, price };
+          orderAttempt.current = intent;
+          setOrderBusy(true);
+          setOrderError(undefined);
+          try {
+            await createSellerOrder({ conversationId: room.id, expectedVersion: intent.version, agreedBookPrice: intent.price }, intent.key);
+            orderAttempt.current = undefined;
+            refreshRooms();
+          } catch (cause) {
+            let message = "Chưa xác nhận được đơn đã tạo. Thử lại để gửi cùng yêu cầu.";
+            if (cause instanceof ApiError && [400, 403, 404, 409, 422].includes(cause.status)) {
+              orderAttempt.current = undefined;
+              refreshRooms();
+              message = "Hội thoại hoặc báo giá vừa thay đổi. Hãy tải lại trước khi tạo đơn.";
+            }
+            setOrderError(message);
+          } finally { setOrderBusy(false); }
+        }}>
+          <label>Giá sách đã thỏa thuận (₫)
+            <input name="agreedBookPrice" type="number" min={10000} max={1000000} step={1000} required disabled={orderBusy || !!orderAttempt.current} value={agreedPrice ?? book.data?.salePrice ?? ""} onChange={(event) => { setOrderError(undefined); setAgreedPrice(event.target.value); }} />
+          </label>
+          {room.quotePreview ? <div>
+            <p>Địa chỉ nhận: {room.quotePreview.destination.recipientName} · {room.quotePreview.destination.phone}</p>
+            <p>{room.quotePreview.destination.detail}, {room.quotePreview.destination.localityCode}</p>
+            <p>Phí giao nhận: {formatVnd(room.quotePreview.shippingFee)} · Báo giá đến {dateTime(room.quotePreview.expiresAt)}</p>
+          </div> : <p>Địa chỉ/báo giá không còn khả dụng. Người mua cần gửi lại thông tin.</p>}
+          <p>Người mua đã gửi địa chỉ và báo giá giao nhận. Tạo đơn sẽ đánh dấu sách đang giao dịch.</p>
+          {orderError && <p role="alert">{orderError}</p>}
+          <button type="submit" disabled={orderBusy || !room.hasQuote || !room.quotePreview}>{orderBusy ? "Đang tạo đơn…" : "Tạo đơn cho người mua này"}</button>
+        </form>
+      )}
+      {room.orderId && room.buyer.id === userId && (
+        <aside className={styles.connection}>
+          {order.isLoading ? <p>Đang tải đơn hàng…</p> : order.data ? <>
+            <strong>Người bán đã tạo đơn</strong>
+            <p>Giá sách: {formatVnd(order.data.amounts.bookPrice)} · Phí giao nhận: {formatVnd(order.data.amounts.shippingFee)}</p>
+            <p><strong>Tổng thanh toán: {formatVnd(order.data.amounts.buyerTotal)}</strong></p>
+            {order.data.state === "AwaitingPayment" && order.data.paymentEnabled && <button type="button" disabled={payBusy} onClick={async () => {
+              const intent = payAttempt.current ?? { key: crypto.randomUUID(), version: order.data!.version };
+              payAttempt.current = intent;
+              setPayBusy(true); setPayError(undefined);
+              try {
+                await payOrder(order.data!.id, intent.version, intent.key);
+                payAttempt.current = undefined;
+                void order.refetch();
+                for (const key of ["public-listing", "home-shelves", "catalog-search", "exchange-public-listings"])
+                  void cache.invalidateQueries({ queryKey: [key] });
+              }
+              catch (cause) {
+                if (cause instanceof ApiError && [400, 403, 404, 409, 422].includes(cause.status)) {
+                  payAttempt.current = undefined;
+                  void order.refetch();
+                  setPayError(cause.code === "InvalidState"
+                    ? "Chưa thể thanh toán. Kiểm tra số dư ví và trạng thái đơn rồi thử lại."
+                    : "Đơn vừa thay đổi hoặc hết hạn. Đã tải lại trạng thái đơn.");
+                } else setPayError("Chưa xác nhận được thanh toán. Thử lại để gửi cùng yêu cầu.");
+              }
+              finally { setPayBusy(false); }
+            }}>{payBusy ? "Đang thanh toán…" : "Xác nhận và thanh toán"}</button>}
+            {order.data.state !== "AwaitingPayment" && <p>Trạng thái đơn: {order.data.state}</p>}
+            {payError && <p role="alert">{payError}</p>}
+          </> : <p role="alert">Chưa tải được đơn hàng. <button type="button" onClick={() => void order.refetch()}>Thử lại</button></p>}
+        </aside>
       )}
       {connection !== "online" && (
         <div className={styles.connection} role="status">
@@ -329,7 +425,7 @@ function ChatRoom({
         )}
         {expired ? (
           <p className={styles.closed}>
-            Cuộc trò chuyện đã đóng hoặc hết hạn giữ sách. Bạn vẫn có thể đọc
+            Cuộc trò chuyện đã đóng. Bạn vẫn có thể đọc
             tin nhắn cũ.
           </p>
         ) : (
@@ -373,6 +469,7 @@ export function ChatPage() {
       auth.status === "authenticated" ? auth.user.id : undefined,
     ],
     queryFn: getPurchaseConversations,
+    refetchInterval: 3000,
     enabled: auth.status === "authenticated",
   });
   if (auth.status !== "authenticated")
@@ -424,8 +521,8 @@ export function ChatPage() {
             <div className={styles.state}>
               <MessageCircle size={28} aria-hidden="true" />
               <p>
-                Chưa có hội thoại. Khi giữ một bản sách và mở chat, cuộc trò
-                chuyện sẽ xuất hiện ở đây.
+                Chưa có hội thoại. Khi nhắn người bán về một bản sách, cuộc trò
+                chuyện sẽ xuất hiện ở đây; listing vẫn mở cho đến khi người bán tạo đơn.
               </p>
               <Link to="/books">Tìm một cuốn sách</Link>
             </div>
@@ -449,7 +546,7 @@ export function ChatPage() {
           </nav>
         </aside>
         {room ? (
-          <ChatRoom key={room.id} room={room} userId={auth.user.id} />
+          <ChatRoom key={room.id} room={room} userId={auth.user.id} refreshRooms={() => void rooms.refetch()} />
         ) : (
           <section className={styles.selectRoom}>
             {roomId && (

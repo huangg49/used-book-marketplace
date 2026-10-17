@@ -643,6 +643,8 @@ describe('Simulated wallet: real MongoDB and HTTP', () => {
     ).rejects.toThrow('Journal must have two balanced entries');
     expect(await available(member)).toBe(body.amount);
   });
+  // This audits the shared database accumulated by preceding E2E suites three
+  // times, including corruption rollback; it is not a single-command latency test.
   it('reconciliation validates sources and detects corruption injected only in a rolled-back test transaction', async () => {
     const ledger = app.get(LedgerService),
       mongo = app.get(MongoService);
@@ -674,7 +676,7 @@ describe('Simulated wallet: real MongoDB and HTTP', () => {
         { $inc: { debit: -1 } },
       ),
     ).rejects.toMatchObject({ code: 13 });
-  });
+  }, 60000);
   it('simultaneous same HTTP key has one immutable receipt, and revoked role cannot replay it', async () => {
     const op = await reader(['TEST_OPERATOR']),
       member = await reader(),

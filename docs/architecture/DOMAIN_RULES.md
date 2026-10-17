@@ -65,6 +65,18 @@ refund failure. This funding increment adds no dispatch/strike/settlement-to-sel
 Order version differs from ownership/commitment version after funding. Reconciliation
 includes holds; history uses immutable posting sequence. Restart API and worker together.
 
+## Mua ngay DirectDelivery
+
+[ADR0038](../adr/0038-direct-buy-now-orders.md) bổ sung Buyer-created BuyNow cạnh
+Seller-selected Negotiated. Cùng quote/commitment/ledger; BuyNow chỉ nhận giá
+niêm yết, payment vào Preparing/version3 trong một transaction với hold,
+preparation và inbox. Không dùng reject/cancel-paid/refund trước acceptance cho
+BuyNow đã trả tiền. Pickup expiry vẫn mở review, giữ tiền và sách. Historical
+agreement không có purchaseMode là Negotiated; gate completion không đổi.
+Public listing chỉ hiển thị “Đang giao dịch”/InTransaction khi Order active có
+paidAt sau payment commit. Unpaid vẫn giữ commitment15phút nhưng là “Chờ thanh
+toán”/AwaitingPayment; không suy đã thanh toán từ Reserved hoặc OrderCreated.
+
 ## Seller acceptance và pickup review
 
 Seller acceptance and overdue pickup review are implemented in OpenAPI 0.16.0;
@@ -73,7 +85,10 @@ accept paid obligations, including LOCKED/RESTRICTED. Preparing has an immutable
 48h pickup deadline; worker opens a durable PickupReview/ResolutionPending once.
 That is an unresolved verification task, not proof of custody, a strike or refund.
 Keep hold/commitment and never use pre-confirmation refund after acceptance.
-Shipping destination is shared only with the accepted Seller. Later pickup/delivery-overdue increments are described below;
+The Order fulfillment destination is shared with the accepted Seller. ADR0037
+additionally permits the Buyer to share the quoted destination with their own
+conversation's Seller before Order creation; changed address versions are not
+shared automatically. Later pickup/delivery-overdue increments are described below;
 review resolution and post-acceptance cancellation remain planned.
 
 ## Shipment label

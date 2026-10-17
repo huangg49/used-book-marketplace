@@ -1,3 +1,4 @@
+import { buyNowNotificationsMigration } from '../../src/database/mongo/migrations/0029-buy-now-notifications.js';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, MongoServerError, type Db } from 'mongodb';
 import { COLLECTION_NAMES } from '../../src/database/mongo/collections.js';
@@ -24,6 +25,8 @@ import { resolutionCollectionSpecs } from '../../src/database/mongo/migrations/0
 import { settlementCollectionSpecs } from '../../src/database/mongo/migrations/0012-point-order-settlement.js';
 import { rulesCollectionSpecs } from '../../src/database/mongo/migrations/0013-auction-business-rules.js';
 import { purchaseConversationSpecs } from '../../src/database/mongo/migrations/0014-purchase-conversations.js';
+import { sellerSelectedOrdersMigration } from '../../src/database/mongo/migrations/0028-seller-selected-orders.js';
+import { applyCollectionSpecs } from '../../src/database/mongo/migrations/index.js';
 import { notificationSpecs } from '../../src/database/mongo/migrations/0015-member-notifications.js';
 import { accountRecoverySpecs } from '../../src/database/mongo/migrations/0017-account-recovery.js';
 import { authOtpSpecs } from '../../src/database/mongo/migrations/0018-auth-otp.js';
@@ -200,6 +203,8 @@ describe('migrations', () => {
       const before = migrations.filter(
         (m) =>
           m.id !== '0027-wallet-point-command-union' &&
+          // These historical branches predate BuyNow; upgrade it after their missing migrations.
+          m.id !== '0029-buy-now-notifications' &&
           !(lane === 'wallet' ? mainIds : walletIds).has(m.id),
       );
       try {
@@ -272,6 +277,8 @@ describe('migrations', () => {
       const before = migrations.filter(
         (m) =>
           m.id !== '0027-wallet-point-command-union' &&
+          // These historical branches predate BuyNow; upgrade it after their missing migrations.
+          m.id !== '0029-buy-now-notifications' &&
           !(lane === 'exchange-main' ? memberIds : exchangeIds).has(m.id),
       );
       try {
@@ -975,5 +982,58 @@ describe('least-privilege application user', () => {
     });
     expect(at).toBeInstanceOf(Date);
     expect(await serverNow({ db: appDb })).toBeInstanceOf(Date);
+  });
+});
+
+
+describe('seller-selected conversations upgrade', () => {
+  it('backfills populated 24-hour conversations and replaces only the active-listing uniqueness', async () => {
+    const db = root.db('latlai_seller_conversation_upgrade_test');
+    try {
+      await applyCollectionSpecs(db, purchaseConversationSpecs);
+      const now = new Date(), sellerId = randomUUID();
+      const rows = ['Active', 'Expired', 'Cancelled'].map((status) => ({
+        _id: randomUUID(), listingId: randomUUID(), listingVersion: 1,
+        buyerId: randomUUID(), sellerId, version: 1, status,
+        expiresAt: new Date(now.getTime() + 86400000),
+        closedAt: status === 'Active' ? null : now, createdAt: now, updatedAt: now, lockSeq: 0,
+      }));
+      await db.collection<{ _id: string }>('purchase_conversations').insertMany(rows);
+      await sellerSelectedOrdersMigration.up(db);
+      for (const row of rows) expect(await db.collection<{ _id: string }>('purchase_conversations').findOne({ _id: row._id }))
+        .toEqual({ ...row, quoteId: null, orderId: null });
+      const second = { ...rows[0], _id: randomUUID(), buyerId: randomUUID(), expiresAt: null, quoteId: null, orderId: null };
+      await db.collection<{ _id: string }>('purchase_conversations').insertOne(second);
+      await expect(db.collection<{ _id: string }>('purchase_conversations').insertOne({ ...second, _id: randomUUID() }))
+        .rejects.toMatchObject({ code: 11000 });
+      await sellerSelectedOrdersMigration.up(db);
+      expect(await db.collection<{ _id: string }>('purchase_conversations').countDocuments()).toBe(4);
+    } finally { await db.dropDatabase(); }
+  });
+});
+
+
+describe('buy-now notification migration', () => {
+  it('preserves populated inbox rows and indexes while admitting Order notifications with dedupe', async () => {
+    const db = root.db('latlai_buy_now_notification_upgrade_test');
+    const rows = db.collection<{ _id: string; [key: string]: unknown }>('member_notifications');
+    try {
+      const { exchangeNotificationSpecs } = await import('../../src/database/mongo/migrations/0024-exchange-notifications.js');
+      await applyCollectionSpecs(db, exchangeNotificationSpecs);
+      const old = { _id: randomUUID(), userId: randomUUID(), kind: 'ExchangeAccepted',
+        title: 'QA exchange', body: 'QA only', targetType: 'Exchange', targetId: randomUUID(),
+        dedupeKey: randomUUID(), createdAt: new Date(), readAt: null };
+      await rows.insertOne(old);
+      const indexes = await rows.indexes();
+      await buyNowNotificationsMigration.up(db);
+      expect(await rows.findOne({ _id: old._id })).toEqual(old);
+      expect(await rows.indexes()).toEqual(indexes);
+      const order = { ...old, _id: randomUUID(), kind: 'OrderBuyNowPaid', targetType: 'Order', dedupeKey: 'qa-buy-now-notice' };
+      await rows.insertOne(order);
+      await expect(rows.insertOne({ ...order, _id: randomUUID() })).rejects.toMatchObject({ code: 11000 });
+      await expect(rows.insertOne({ ...order, _id: randomUUID(), dedupeKey: 'qa-invalid-kind', kind: 'MadeUp' })).rejects.toMatchObject({ code: 121 });
+      await buyNowNotificationsMigration.up(db);
+      expect(await rows.countDocuments()).toBe(2);
+    } finally { await db.dropDatabase(); }
   });
 });

@@ -1,3 +1,5 @@
+import { BuyNowPage } from '../pages/BuyNowPage';
+import { DirectOrderPage, DirectOrderListPage } from '../pages/DirectOrderPage';
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import { DashboardLayout } from "../layouts/DashboardLayout";
@@ -48,6 +50,9 @@ export const router = createBrowserRouter([
           { path: "/chat", element: <ChatPage /> },
           { path: "/chat/:roomId", element: <ChatPage /> },
           { path: "/checkout/:listingId", element: <CheckoutPage /> },
+          { path: "/buy-now/:listingId", element: <BuyNowPage /> },
+          { path: "/orders", element: <DirectOrderListPage /> },
+          { path: "/orders/:orderId", element: <DirectOrderPage /> },
           { path: "/exchange", element: <ExchangePage /> },
           { path: "/exchange/new", element: <ExchangeComposePage /> },
           { path: "/exchange/mine", element: <ExchangeMinePage /> },

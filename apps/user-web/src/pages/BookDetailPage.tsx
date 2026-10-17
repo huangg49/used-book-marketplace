@@ -30,7 +30,7 @@ function purchaseError(error: unknown) {
   if (error.code === "CONFLICT")
     return "Thông tin sách vừa thay đổi. Hãy tải lại trang để xem trạng thái mới nhất.";
   if (error.code === "INVALID_STATE")
-    return "Sách này hiện chưa thể giữ để mua. Hãy tải lại trang.";
+    return "Sách này hiện chưa thể mở chat mua bán. Hãy tải lại trang.";
   if (error.status === 0)
     return "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.";
   return "Máy chủ chưa thể mở chat. Vui lòng thử lại sau.";
@@ -45,12 +45,14 @@ export function BookDetailPage() {
     queryKey: ["public-listing", id],
     queryFn: () => getPublicListing(id),
     enabled: valid,
+    refetchOnMount: "always",
     retry: false,
   });
   const conversations = useQuery({
     queryKey: ["purchase-conversations"],
     queryFn: getPurchaseConversations,
     enabled: state.status === "authenticated",
+    refetchOnMount: "always",
     retry: false,
   });
   const [confirming, setConfirming] = useState(false);
@@ -109,13 +111,39 @@ export function BookDetailPage() {
       </section>
     );
   const book = detail.data;
-  const held = book.purchaseAvailability.status === "InNegotiation";
+  const held = book.purchaseAvailability.status !== "Available";
+  const heldLabel = book.purchaseAvailability.status === "AwaitingPayment"
+    ? "Chờ thanh toán"
+    : book.purchaseAvailability.status === "InTransaction"
+      ? "Đang giao dịch"
+      : "Đang giữ sách";
+  const currentUserId =
+    state.status === "authenticated" ? state.user.id : undefined;
   const isOwner =
-    state.status === "authenticated" && state.user.id === book.seller.id;
+    currentUserId === book.seller.id;
+  const orderConversation = held
+    ? conversations.data?.find(
+        (conversation) =>
+          conversation.listingId === book.id &&
+          conversation.status === "OrderCreated" &&
+          (conversation.buyer.id === currentUserId ||
+            conversation.seller.id === currentUserId),
+      )
+    : undefined;
+  const buyerOrderConversation =
+    orderConversation?.buyer.id === currentUserId
+      ? orderConversation
+      : undefined;
+  const sellerOrderConversation =
+    orderConversation?.seller.id === currentUserId
+      ? orderConversation
+      : undefined;
   const activeConversation = conversations.data?.find(
     (conversation) =>
       conversation.listingId === book.id && conversation.status === "Active",
   );
+  const conversationToOpen =
+    buyerOrderConversation ?? sellerOrderConversation ?? activeConversation;
   function requestPurchase() {
     if (state.status !== "authenticated") {
       navigate(
@@ -180,7 +208,13 @@ export function BookDetailPage() {
                   ? "Trao đổi"
                   : "Bán hoặc đổi"}
             </span>
-            {held && <span>Đang giao dịch</span>}
+            {held && (
+              <span>
+                {buyerOrderConversation && book.purchaseAvailability.status === "InTransaction"
+                  ? "Đang giao dịch với bạn"
+                  : heldLabel}
+              </span>
+            )}
           </div>
           <div className={styles.prices}>
             {book.salePrice !== null && (
@@ -199,39 +233,52 @@ export function BookDetailPage() {
           {book.salePrice !== null && (
             <section className={styles.purchase}>
               <h2>
-                {isOwner
+                {buyerOrderConversation
+                  ? "Người bán đã tạo đơn cho bạn"
+                  : sellerOrderConversation
+                    ? "Bạn đã tạo đơn cho người mua"
+                    : isOwner
                   ? "Đây là bài đăng của bạn"
                   : held
-                    ? "Sách đang được giữ"
+                    ? heldLabel
                     : "Muốn đọc cuốn này?"}
               </h2>
               <p>
-                {isOwner
-                  ? "Bạn có thể theo dõi cuộc trò chuyện khi có người giữ sách."
+                {buyerOrderConversation
+                  ? "Đơn hàng này dành cho bạn. Mở đơn để xem giá đã thỏa thuận và xác nhận thanh toán."
+                  : sellerOrderConversation
+                    ? "Bạn đã tạo đơn cho người mua này. Mở hội thoại để xem thông tin đơn hàng."
+                    : isOwner
+                  ? "Người mua có thể mua ngay theo giá niêm yết hoặc nhắn bạn để thương lượng. Đơn Mua ngay đã thanh toán sẽ chuyển thẳng sang chuẩn bị gửi."
                   : held
-                    ? "Một cuộc trao đổi đang diễn ra" +
-                      (book.purchaseAvailability.expiresAt
-                        ? " đến " +
-                          new Date(
-                            book.purchaseAvailability.expiresAt,
-                          ).toLocaleString("vi-VN")
-                        : "") +
-                      "."
-                    : "Giữ sách trong 24 giờ để chat với người bán và thống nhất việc mua. Bước này chưa thanh toán."}
+                    ? "Bản sách này đã có đơn giữ chỗ. Bạn vẫn có thể xem bài đăng nhưng chưa thể đặt mua."
+                    : "Mua ngay theo giá niêm yết, không cần trao đổi. Bạn cũng có thể nhắn người bán nếu muốn thương lượng; chat chưa giữ sách."}
               </p>
-              {activeConversation ? (
+              {!isOwner && !held && (
+                <Link className={styles.primary} to={`/buy-now/${book.id}`}>Mua ngay <ArrowUpRight size={18} aria-hidden="true" /></Link>
+              )}
+              {held && !orderConversation && state.status === 'authenticated' && (
+                <Link className={styles.secondary} to="/orders">Xem đơn hàng của tôi</Link>
+              )}
+              {conversationToOpen ? (
                 <Link
-                  className={styles.primary}
-                  to={ROUTES.chat(activeConversation.id)}
+                  className={styles.secondary}
+                  to={ROUTES.chat(conversationToOpen.id)}
                 >
                   <MessageCircle size={18} aria-hidden="true" />
-                  {isOwner ? "Mở chat với người mua" : "Mở chat với người bán"}
+                  {buyerOrderConversation
+                    ? "Xem đơn hàng của bạn"
+                    : sellerOrderConversation
+                      ? "Mở hội thoại giao dịch"
+                      : isOwner
+                        ? "Mở chat với người mua"
+                        : "Mở chat với người bán"}
                 </Link>
               ) : (
                 !isOwner && (
                   <button
                     type="button"
-                    className={styles.primary}
+                    className={styles.secondary}
                     disabled={
                       held ||
                       detail.isFetching ||
@@ -240,7 +287,7 @@ export function BookDetailPage() {
                     }
                     onClick={requestPurchase}
                   >
-                    {held ? "Đang giao dịch" : "Giữ sách và mở chat"}
+                    {held ? heldLabel : "Chat với người bán"}
                     <ArrowUpRight size={18} aria-hidden="true" />
                   </button>
                 )
@@ -435,9 +482,9 @@ export function BookDetailPage() {
       <ConfirmDialog
         isOpen={confirming}
         onClose={() => !busy && setConfirming(false)}
-        title="Giữ sách và mở chat?"
-        description="Sách sẽ được giữ trong 24 giờ. Chỉ bạn và người bán tham gia chat này. Bước này chưa phát sinh thanh toán."
-        confirmText="Giữ sách và mở chat"
+        title="Mở chat với người bán?"
+        description="Mở chat không giữ sách. Bài đăng vẫn hiển thị và người mua khác cũng có thể nhắn cho đến khi người bán tạo đơn."
+        confirmText="Mở chat"
         onConfirm={() => void confirmPurchase()}
         isBusy={busy}
       >
