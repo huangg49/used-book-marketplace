@@ -2,6 +2,12 @@
 
 ## Popup mua bán và Mua ngay — 17/10/2026
 
+- Follow-up ảnh người dùng: sửa liên kết lỗi `originAddress` ở `/sell` để mở
+  popup thay vì focus select đang ẩn; giữ focus ô thường. Browser regression
+  FAIL trước sửa, PASS sau sửa: chuột1440, Enter390, trả focus/giữ draft và
+  upload/submit replay. Web lint/typecheck/build/135unit PASS; warning cũ giữ.
+  Fresh AI review theo ảnh người dùng `ship` phạm vi recovery; QA đã dọn.
+  Subject `fix(web): open sender address popup from validation error`.
 - Nhánh `codex/purchase-popup-ui`, base `ed8734f`; subject dự kiến
   `feat(web): unify purchase flows with popup forms`. Phạm vi Member web React/Vite:
   popup địa chỉ/xác nhận Mua ngay, gửi quote từ chat, Seller nhập giá/tạo Order,

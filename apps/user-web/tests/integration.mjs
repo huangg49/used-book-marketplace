@@ -311,15 +311,53 @@ try {
   assert.equal(await both.isChecked(), true);
   await p.getByLabel("Giá bán (VNĐ)").fill("35000");
   await p.getByLabel("Giá trị đổi (VNĐ)").fill("45000");
+  // Regression: validation's address link must open the portalled form.
+  await p.setViewportSize({ width: 1440, height: 900 });
+  await button("Tiếp tục").click();
+  await p.screenshot({
+    path: path.join(artifacts, "origin-validation-error-desktop.png"),
+    fullPage: false,
+  });
+  const originErrorLink = p.getByRole("alert").getByRole("button", {
+    name: "Chọn địa chỉ đã lưu hoặc nhập đủ nơi gửi sách thuộc TP.HCM.",
+    exact: true,
+  });
+  await originErrorLink.click();
   await p
-    .getByRole("button", { name: "Thêm nơi gửi sách", exact: true })
-    .click();
+    .getByRole("dialog", { name: "Nơi gửi sách", exact: true })
+    .waitFor({ timeout: 5000 });
+  await p.locator("dialog[open]").evaluate(async (node) => {
+    await document.fonts.ready;
+    await Promise.all(
+      node.getAnimations().map((animation) => animation.finished),
+    );
+  });
+  await p.screenshot({
+    path: path.join(artifacts, "origin-validation-popup-desktop.png"),
+    fullPage: false,
+  });
+  await p.getByRole("button", { name: "Đóng popup", exact: true }).click();
+  assert.equal(
+    await originErrorLink.evaluate((node) => node === document.activeElement),
+    true,
+  );
+  await p.setViewportSize({ width: 390, height: 844 });
+  await originErrorLink.focus();
+  await p.keyboard.press("Enter");
+  await p.getByRole("dialog", { name: "Nơi gửi sách", exact: true }).waitFor();
   await p.getByLabel("Họ tên người gửi", { exact: true }).fill("Người gửi QA");
+  await p.getByRole("button", { name: "Đóng popup", exact: true }).click();
+  await originErrorLink.click();
+  assert.equal(
+    await p.getByLabel("Họ tên người gửi", { exact: true }).inputValue(),
+    "Người gửi QA",
+  );
   await p
     .getByLabel("Số điện thoại người gửi", { exact: true })
     .fill("0901234567");
   await p.getByLabel("Khu vực phục vụ", { exact: true }).selectOption("DEMO-A");
   await p.getByLabel("Địa chỉ chi tiết", { exact: true }).fill("123 Đường QA");
+
   await p.locator("dialog[open]").evaluate(async (node) => {
     await document.fonts.ready;
     await Promise.all(

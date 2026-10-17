@@ -70,3 +70,21 @@ phải giữ địa chỉ đã lưu, không gửi thêm POST address. Không đ�
 Ca cuối PASS với hai địa chỉ tổng cộng (default cũ + địa chỉ mới), hai POST cho cùng
 một address key/body do mất ACK, không có POST thứ ba sau quote422. Bộ fixture đã
 dọn hết database/users/roles; chỉ dừng Mongo QA do phiên này khởi động.
+
+## Follow-up: mở popup từ thông báo lỗi nơi gửi
+
+Ảnh người dùng chỉ ra liên kết “Chọn địa chỉ đã lưu hoặc nhập đủ nơi gửi sách…”
+không làm gì. Handler chung vẫn gọi focus vào select nằm trong dialog đang đóng.
+Sửa riêng nhánh `originAddress` để mở popup và công bố `aria-haspopup="dialog"`.
+Các liên kết lỗi ô thường vẫn focus như cũ; không đổi API hoặc CSS.
+
+Browser regression trước sửa FAIL tại chờ dialog sau khi bấm liên kết lỗi.
+Ca kiểm lại bao gồm bấm chuột desktop, Enter mobile, focus trả về liên kết,
+giữ draft khi đóng/mở, hoàn thành form và upload/submit replay hiện có.
+PASS sau sửa: `test:browser`, web lint/typecheck/build/135unit. Ảnh QA
+[trước khi bấm liên kết](origin-validation-error-desktop.png) và
+[popup mở từ liên kết](origin-validation-popup-desktop.png),1440×900/font130%.
+Ảnh người dùng chỉ dùng đối chiếu local, không đưa vào Git. Không đổi API/CSS/
+gate hoặc chạy lại luồng mua/tiền không bị sửa.
+[Fresh review theo ảnh người dùng](ORIGIN_ERROR_REVIEW.md) trả `ship` trong phạm
+vi liên kết lỗi mở popup; không thay human acceptance.

@@ -1767,7 +1767,17 @@ export function SellBookPage() {
                                   <button
                                     type="button"
                                     className={styles.textAction}
+                                    aria-haspopup={
+                                      key === "originAddress"
+                                        ? "dialog"
+                                        : undefined
+                                    }
                                     onClick={() => {
+                                      if (key === "originAddress") {
+                                        setOriginDialogError(false);
+                                        setOriginDialogOpen(true);
+                                        return;
+                                      }
                                       const target =
                                         document.getElementById(key) ||
                                         document.querySelector<HTMLInputElement>(
