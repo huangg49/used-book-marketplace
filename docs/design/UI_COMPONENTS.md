@@ -382,3 +382,63 @@ owner task row, not the public animated BookCard.
 The [overview surface record](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-accountoverviewpage-tsx.md)
 links final source/capture comparison, isolated browser checks and limitations.
 Fake storage evidence does not establish real Supabase or native acceptance.
+
+## Member web — PurchaseDialog / PurchaseAddressFields
+
+17/10/2026, React/Vite `apps/user-web` only. Sources:
+[PurchaseDialog.tsx](../../apps/user-web/src/components/PurchaseDialog.tsx),
+[dialog styles](../../apps/user-web/src/components/PurchaseDialog.module.css),
+[PurchaseAddressFields.tsx](../../apps/user-web/src/components/PurchaseAddressFields.tsx)
+and [PurchaseFlow.module.css](../../apps/user-web/src/pages/PurchaseFlow.module.css).
+Real examples are `/buy-now/:listingId` (address and order confirmation),
+`/checkout/:listingId?conversationId=…` (negotiated buyer quote),
+`/chat/:roomId` (seller order creation) and `/sell` (origin address).
+There is no Member web `/ui` showcase; RN `/ui` is unchanged.
+
+`PurchaseDialog` takes `open`, `onClose`, `title`, `children`, optional
+`description`, `busy` (default false) and `className`. Its native DOM `dialog`
+is portalled to `document.body`: opening locks body scroll, focuses the title
+and contains Tab/Shift+Tab; closing/unmount restores scroll and the connected
+trigger's focus. Title changes focus the heading and reset dialog scroll.
+Escape, the labelled close button and a pointer outside the dialog bounds call
+`onClose` unless busy. The consumer controls visibility and must disable its
+form fields/actions while a command is pending; `busy` guards dismissal only.
+
+```tsx
+<PurchaseDialog open={open} onClose={close} title="Địa chỉ nhận sách"
+  busy={busy} className={flow.flow}>
+  <form onSubmit={submit}>
+    <fieldset disabled={busy}>
+      <PurchaseAddressFields addresses={addresses} selected={selected}
+        onSelect={setSelected} form={form} onChange={setForm}
+        localities={localities} />
+      <button type="submit" className={flow.primary}>Xem phí giao hàng</button>
+    </fieldset>
+  </form>
+</PurchaseDialog>
+```
+
+`PurchaseAddressForm` contains string `recipientName`, `phone`, `localityCode`
+and `detail`. Fields take `addresses: (PurchaseAddressForm & { id: string;
+isDefault: boolean })[]`, `selected: string`, `onSelect(id)`, `form`,
+`onChange(form)` and `localities: { code: string; label: string }[]`.
+A matching saved ID shows radio selection; any unmatched value (callers use
+`"new"`) shows editable fields. Native required/length/phone constraints and
+visible labels apply; API validation remains authoritative. Both components
+leave fetching, draft state, saving, quotes, versions and command replay to
+the consumer. Checkout selects a confirmed saved ID before requesting its quote,
+so a definite quote rejection can retry without saving the same address again.
+
+The recipe inherits wine/cream/paper, Be Vietnam Pro controls,8px control and
+12px panel corners; Anton remains on purchase-page headings. This popup's
+width is capped at600px, with bounded vertical scrolling and28px body insets;
+at600px and below it uses20px insets,24px viewport clearance and bottom safe-area
+padding. Form controls have48px minimum height and16px text; the two-field row
+stacks below700px. Scoped input specificity preserves the `shop-control` border
+over legacy global input CSS. The protected-focus entrance settles18px over260ms
+with cubic-bezier(.16,1,.3,1), retained under either OS motion preference per
+the owner's11/10 policy. This is a local recipe, not a replacement for other dialogs.
+
+[Documentation comparison](../../.impeccable/review/purchase-popup/DOCUMENTATION.md)
+records incumbent-system scope and drift. Browser evidence and AI review do not
+establish human, native or live-provider acceptance; READINESS is unchanged.

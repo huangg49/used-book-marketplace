@@ -311,10 +311,43 @@ try {
   assert.equal(await both.isChecked(), true);
   await p.getByLabel("Giá bán (VNĐ)").fill("35000");
   await p.getByLabel("Giá trị đổi (VNĐ)").fill("45000");
+  await p
+    .getByRole("button", { name: "Thêm nơi gửi sách", exact: true })
+    .click();
   await p.getByLabel("Họ tên người gửi", { exact: true }).fill("Người gửi QA");
-  await p.getByLabel("Số điện thoại người gửi", { exact: true }).fill("0901234567");
+  await p
+    .getByLabel("Số điện thoại người gửi", { exact: true })
+    .fill("0901234567");
   await p.getByLabel("Khu vực phục vụ", { exact: true }).selectOption("DEMO-A");
   await p.getByLabel("Địa chỉ chi tiết", { exact: true }).fill("123 Đường QA");
+  await p.locator("dialog[open]").evaluate(async (node) => {
+    await document.fonts.ready;
+    await Promise.all(
+      node.getAnimations().map((animation) => animation.finished),
+    );
+    node.querySelector("h2")?.focus();
+    node.scrollTo({ top: 0 });
+  });
+  const originBorders = await p
+    .locator("dialog[open] input")
+    .evaluateAll((nodes) =>
+      nodes.map((node) => getComputedStyle(node).borderTopColor),
+    );
+  for (const border of originBorders)
+    assert.equal(border, "rgb(142, 117, 100)");
+  await p.screenshot({
+    path: path.join(artifacts, "origin-popup-mobile.png"),
+    fullPage: false,
+  });
+  await p.setViewportSize({ width: 1440, height: 900 });
+  await p.screenshot({
+    path: path.join(artifacts, "origin-popup-desktop.png"),
+    fullPage: false,
+  });
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p
+    .getByRole("button", { name: "Dùng nơi gửi này", exact: true })
+    .click();
   await step(/Thông tin sách/).click();
   assert.match(
     await p.getByLabel("Tên sách", { exact: true }).inputValue(),
@@ -366,7 +399,9 @@ try {
     }
   }, 250);
   const before = await fixture.db.collection("listings").countDocuments();
-  const addressesBefore = await fixture.db.collection("member_addresses").countDocuments();
+  const addressesBefore = await fixture.db
+    .collection("member_addresses")
+    .countDocuments();
   await button("Gửi duyệt").click();
   await button("Thử gửi lại").waitFor({ timeout: 45000 });
   await p.getByRole("alert").waitFor();
@@ -401,7 +436,10 @@ try {
   assert.equal(posted.currentRevision.content.condition, "Worn");
   assert.equal(posted.currentRevision.content.exchangeValue, 45000);
   assert.equal(posted.currentRevision.fulfillmentStatus, "Current");
-  assert.equal(posted.currentRevision.content.fulfillment.method, "DirectDelivery");
+  assert.equal(
+    posted.currentRevision.content.fulfillment.method,
+    "DirectDelivery",
+  );
   // Another authenticated Member reserves a real fixture listing. The server
   // commits the first request but its response is lost; retry must replay it.
   await p.goto(origin + "/login");
@@ -439,13 +477,9 @@ try {
       } else await route.continue();
     },
   );
-  await dialog
-    .getByRole("button", { name: "Mở chat", exact: true })
-    .click();
+  await dialog.getByRole("button", { name: "Mở chat", exact: true }).click();
   await dialog.getByRole("alert").waitFor();
-  await dialog
-    .getByRole("button", { name: "Mở chat", exact: true })
-    .click();
+  await dialog.getByRole("button", { name: "Mở chat", exact: true }).click();
   await p.waitForURL("**/chat/*");
   assert.equal(reserveAttempts.length, 2);
   assert.equal(reserveAttempts[0].key, reserveAttempts[1].key);

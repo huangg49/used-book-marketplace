@@ -1,13 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { useRef, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { z } from "zod";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import { getPublicListing } from "../services/public-listings";
 import { formatVnd } from "../lib/routes";
-import { attachPurchaseQuote, getPurchaseConversations } from "../services/purchase-conversations";
+import { PurchaseDialog } from "../components/PurchaseDialog";
+import { PurchaseAddressFields } from "../components/PurchaseAddressFields";
+import { ListingPhoto } from "../components/BookCard";
+import { MapPin, ArrowRight } from "lucide-react";
+import styles from "./PurchaseFlow.module.css";
+import {
+  attachPurchaseQuote,
+  getPurchaseConversations,
+} from "../services/purchase-conversations";
 
 const addressBook = z.object({
   version: z.number().int(),
@@ -90,9 +103,12 @@ export function CheckoutPage() {
       expectedListingRevisionId: string;
     };
     shipping: number;
+    destination: string;
     key: string;
     attachVersion?: number;
   }>();
+  const [dialogOpen, setDialogOpen] = useState(true);
+  const [retryPending, setRetryPending] = useState(false);
   const [selected, setSelected] = useState("");
   const [form, setForm] = useState({
     recipientName: "",
@@ -103,7 +119,16 @@ export function CheckoutPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const intent = useRef<
-    { addressKey: string; quoteKey: string; attachKey: string } | undefined
+    | {
+        addressKey: string;
+        quoteKey: string;
+        attachKey: string;
+        addressBody?: string;
+        addressId?: string;
+        quoteBody?: string;
+        quoteId?: string;
+      }
+    | undefined
   >(undefined);
   if (auth.status !== "authenticated")
     return (
@@ -119,7 +144,7 @@ export function CheckoutPage() {
     );
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!book.data || busy) return;
+    if (!book.data || !addresses.data || !areas.data || busy) return;
     if (!book.data.fulfillment) {
       setError(
         "Người bán chưa hoàn thiện nơi gửi cho bài đăng này nên chưa thể báo giá. Hãy trao đổi để người bán cập nhật trước.",
@@ -131,15 +156,18 @@ export function CheckoutPage() {
     let phase: "address" | "quote" | "attach" = "address";
     try {
       let address =
-        addresses.data?.items.find((item) => item.id === selected) ??
-        addresses.data?.items.find((item) => item.isDefault);
-      const keys = intent.current ?? {
+        selected === "new"
+          ? undefined
+          : (addresses.data?.items.find((item) => item.id === selected) ??
+            addresses.data?.items.find((item) => item.isDefault) ??
+            addresses.data?.items[0]);
+      const keys: NonNullable<typeof intent.current> = intent.current ?? {
         addressKey: crypto.randomUUID(),
         quoteKey: crypto.randomUUID(),
         attachKey: crypto.randomUUID(),
       };
       intent.current = keys;
-      if (!address) {
+      if (!address || keys.addressBody) {
         if (
           !areas.data?.localities.some(
             (item) => item.code === form.localityCode,
@@ -148,49 +176,64 @@ export function CheckoutPage() {
           setError("Hãy chọn một khu vực phục vụ trong danh sách.");
           return;
         }
-        const saved = await session.request(
-          "/me/addresses",
-          z.object({ addressId: z.string().uuid(), version: z.number().int() }),
-          {
-            method: "POST",
-            headers: { "Idempotency-Key": keys.addressKey },
-            body: JSON.stringify({
-              expectedBookVersion: addresses.data?.version ?? 0,
-              address: { ...form, serviceAreaCode: "HCM-DEMO-v1" },
-              makeDefault: true,
+        keys.addressBody ??= JSON.stringify({
+          expectedBookVersion: addresses.data.version,
+          address: { ...form, serviceAreaCode: "HCM-DEMO-v1" },
+          makeDefault: true,
+        });
+        if (!keys.addressId) {
+          const saved = await session.request(
+            "/me/addresses",
+            z.object({
+              addressId: z.string().uuid(),
+              version: z.number().int(),
             }),
-          },
-        );
+            {
+              method: "POST",
+              headers: { "Idempotency-Key": keys.addressKey },
+              body: keys.addressBody,
+            },
+          );
+          keys.addressId = saved.addressId;
+        }
         const refreshed = await addresses.refetch();
         address = refreshed.data?.items.find(
-          (item) => item.id === saved.addressId,
+          (item) => item.id === keys.addressId,
         );
         if (!address)
           throw new Error(
             "Địa chỉ vừa lưu chưa thể xác nhận. Hãy tải lại trang trước khi tạo đơn.",
           );
       }
+      // A confirmed new address becomes the selection even if quoting fails.
+      setSelected(address.id);
       phase = "quote";
-      const quoted = await session.request(
-        `/listings/${listingId}/quotes`,
-        quoteReceipt,
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": keys.quoteKey },
-          body: JSON.stringify({
-            expectedListingVersion: book.data.version,
-            expectedListingRevisionId: book.data.revisionId,
-            destinationAddressId: address.id,
-            expectedDestinationAddressVersion: address.version,
-            method: "DirectDelivery",
-          }),
-        },
-      );
+      keys.quoteBody ??= JSON.stringify({
+        expectedListingVersion: book.data.version,
+        expectedListingRevisionId: book.data.revisionId,
+        destinationAddressId: address.id,
+        expectedDestinationAddressVersion: address.version,
+        method: "DirectDelivery",
+      });
+      if (!keys.quoteId) {
+        const quoted = await session.request(
+          `/listings/${listingId}/quotes`,
+          quoteReceipt,
+          {
+            method: "POST",
+            headers: { "Idempotency-Key": keys.quoteKey },
+            body: keys.quoteBody,
+          },
+        );
+        keys.quoteId = quoted.entityId;
+      }
       const current = await session.request(
-        `/me/quotes/${quoted.entityId}`,
+        `/me/quotes/${keys.quoteId}`,
         quote,
       );
+      setRetryPending(false);
       setPrepared({
+        destination: `${address.recipientName} · ${address.phone} · ${address.detail}`,
         body: {
           quoteId: current.id,
           expectedQuoteVersion: current.version,
@@ -204,8 +247,10 @@ export function CheckoutPage() {
       if (
         cause instanceof ApiError &&
         [400, 403, 404, 409, 422, 429].includes(cause.status)
-      )
+      ) {
         intent.current = undefined;
+        setRetryPending(false);
+      } else setRetryPending(true);
       setError(errorText(cause, phase));
     } finally {
       setBusy(false);
@@ -221,9 +266,13 @@ export function CheckoutPage() {
     setError(undefined);
     try {
       const conversations = await getPurchaseConversations();
-      const conversation = conversations.find((item) => item.id === conversationId);
+      const conversation = conversations.find(
+        (item) => item.id === conversationId,
+      );
       if (!conversation || conversation.status !== "Active") {
-        setError("Hội thoại đã đóng. Hãy kiểm tra trạng thái sách rồi thử lại.");
+        setError(
+          "Hội thoại đã đóng. Hãy kiểm tra trạng thái sách rồi thử lại.",
+        );
         return;
       }
       const expectedVersion = prepared.attachVersion ?? conversation.version;
@@ -251,140 +300,214 @@ export function CheckoutPage() {
     }
   }
   const existing = addresses.data?.items ?? [];
+  const selectedAddress =
+    selected === "new"
+      ? undefined
+      : (existing.find((item) => item.id === selected) ??
+        existing.find((item) => item.isDefault) ??
+        existing[0]);
+  const disabled =
+    busy ||
+    retryPending ||
+    !book.data?.fulfillment ||
+    !conversationId ||
+    addresses.isPending ||
+    addresses.isError ||
+    areas.isPending ||
+    areas.isError;
   return (
-    <main style={{ maxWidth: 720, margin: "2rem auto", padding: "0 1rem" }}>
-      <Link to={`/chat/${conversationId}`}>← Quay lại hội thoại</Link>
-      <h1>Gửi địa chỉ và báo giá</h1>
-      <p>
-        {book.data
-          ? `Bạn đang chuẩn bị thông tin giao nhận cho “${book.data.book.title}”.`
-          : "Đang kiểm tra thông tin sách…"}{" "}
-        Người bán sẽ xem địa chỉ và phí giao nhận trước khi tạo đơn với giá đã thỏa thuận.
-      </p>
-      {!conversationId && (
-        <p role="alert">Thiếu hội thoại. Hãy mở bước này từ cuộc trò chuyện với người bán.</p>
-      )}
-      {book.data && !book.data.fulfillment && (
-        <p role="alert">
-          Người bán chưa hoàn thiện nơi gửi cho bài đăng này. Bạn chưa thể tạo
-          đơn cho đến khi thông tin giao hàng được cập nhật.
+    <section className={styles.page}>
+      <Link className={styles.back} to={`/chat/${conversationId}`}>
+        ← Quay lại hội thoại
+      </Link>
+      <header className={styles.pageHeader}>
+        <h1>Thông tin giao nhận</h1>
+        <p>
+          Gửi địa chỉ và phí giao hàng để người bán tạo đơn với giá đã thỏa
+          thuận.
         </p>
-      )}
-      {error && <p role="alert">{error}</p>}
-      {prepared && (
-        <section aria-labelledby="checkout-total">
-          <h2 id="checkout-total">Thông tin gửi người bán</h2>
-          <p>Phí giao nhận dự kiến: {formatVnd(prepared.shipping)}</p>
-          <p>Người bán sẽ nhập giá sách đã thương lượng khi tạo đơn.</p>
-          <button
-            type="button"
-            disabled={busy || !conversationId}
-            onClick={() => void confirm()}
-          >
-            {busy ? "Đang gửi…" : "Gửi báo giá cho người bán"}
-          </button>
-        </section>
-      )}
-      <form onSubmit={submit}>
-        <fieldset
-          disabled={busy || !!prepared}
-          style={{ border: 0, padding: 0 }}
-        >
-          {existing.length > 0 && (
-            <fieldset>
-              <legend>Chọn địa chỉ đã lưu</legend>
-              {existing.map((item) => (
-                <label
-                  key={item.id}
-                  style={{ display: "block", margin: "0.5rem 0" }}
-                >
-                  <input
-                    type="radio"
-                    name="address"
-                    value={item.id}
-                    checked={selected === item.id}
-                    onChange={() => setSelected(item.id)}
-                  />{" "}
-                  {item.recipientName} · {item.phone} · {item.detail}
-                </label>
-              ))}
-            </fieldset>
+      </header>
+      <div className={styles.columns}>
+        <div>
+          {book.data && (
+            <section className={styles.book}>
+              <div className={styles.cover}>
+                <ListingPhoto book={book.data} />
+              </div>
+              <div>
+                <h2>{book.data.book.title}</h2>
+                <p>{book.data.book.authors.join(", ")}</p>
+                <p>Người bán: {book.data.seller.displayName}</p>
+              </div>
+            </section>
           )}
-          {!selected && (
-            <fieldset>
-              <legend>Thông tin nhận sách</legend>
-              <label>
-                Họ tên
-                <input
-                  required
-                  minLength={2}
-                  value={form.recipientName}
-                  onChange={(e) =>
-                    setForm({ ...form, recipientName: e.target.value })
-                  }
-                />
-              </label>
-              <label>
-                Số điện thoại
-                <input
-                  required
-                  pattern="0[0-9]{9}"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                />
-              </label>
-              <label>
-                Khu vực phục vụ
-                <select
-                  required
-                  value={form.localityCode}
-                  disabled={areas.isLoading || areas.isError}
-                  onChange={(e) => {
-                    intent.current = undefined;
-                    setForm({ ...form, localityCode: e.target.value });
-                  }}
-                >
-                  <option value="">
-                    {areas.isLoading ? "Đang tải khu vực…" : "Chọn khu vực"}
-                  </option>
-                  {areas.data?.localities.map((item) => (
-                    <option key={item.code} value={item.code}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {areas.isError && (
-                <p role="alert">
-                  Chưa tải được danh sách khu vực phục vụ. Hãy tải lại trang.
-                </p>
-              )}
-              <label>
-                Địa chỉ chi tiết
-                <textarea
-                  required
-                  minLength={5}
-                  value={form.detail}
-                  onChange={(e) => setForm({ ...form, detail: e.target.value })}
-                />
-              </label>
-            </fieldset>
+          {book.isPending && <p role="status">Đang tải thông tin sách…</p>}
+          {book.isError && (
+            <p role="alert" className={styles.error}>
+              Chưa tải được sách.{" "}
+              <button
+                className={styles.textButton}
+                onClick={() => void book.refetch()}
+              >
+                Thử lại
+              </button>
+            </p>
           )}
+          <section className={styles.delivery}>
+            <div className={styles.sectionHeading}>
+              <MapPin size={21} aria-hidden="true" />
+              <h2>Địa chỉ nhận tại TP.HCM</h2>
+            </div>
+            <p>
+              {prepared?.destination ??
+                "Chọn nơi nhận và kiểm tra phí trước khi gửi người bán."}
+            </p>
+            <button
+              className={styles.textButton}
+              onClick={() => setDialogOpen(true)}
+            >
+              Mở form giao nhận
+              <ArrowRight size={17} aria-hidden="true" />
+            </button>
+          </section>
+        </div>
+        <aside className={styles.summary}>
+          <h2>Bước tiếp theo</h2>
+          <p>
+            Người bán xem thông tin giao nhận, nhập giá sách đã thương lượng và
+            tạo đơn. Bạn thanh toán sau khi kiểm tra đơn.
+          </p>
           <button
-            type="submit"
-            disabled={
-              !book.data?.fulfillment ||
-              addresses.isLoading ||
-              areas.isLoading ||
-              areas.isError ||
-              busy ||
-              !!prepared
-            }
+            className={styles.primary}
+            onClick={() => setDialogOpen(true)}
           >
-            {busy ? "Đang tạo báo giá…" : "Xem phí giao nhận"}
+            {prepared ? "Xem báo giá giao nhận" : "Gửi địa chỉ và báo giá"}
           </button>
-        </fieldset>
-      </form>
-    </main>
+          <p className={styles.note}>
+            Gửi báo giá chưa giữ sách hoặc trừ tiền. Ví và giao nhận hiện là mô
+            phỏng.
+          </p>
+        </aside>
+      </div>
+      <PurchaseDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        busy={busy}
+        className={styles.flow}
+        title={prepared ? "Gửi báo giá cho người bán" : "Địa chỉ nhận sách"}
+        description={
+          prepared
+            ? "Người bán dùng thông tin này để tạo đơn với giá hai bên đã thỏa thuận."
+            : "Điền nơi nhận sách tại TP.HCM để xem phí giao nhận."
+        }
+      >
+        {book.data && (
+          <div className={styles.miniBook}>
+            <div className={styles.miniCover}>
+              <ListingPhoto book={book.data} />
+            </div>
+            <strong>{book.data.book.title}</strong>
+          </div>
+        )}
+        {!conversationId && (
+          <p role="alert" className={styles.error}>
+            Thiếu hội thoại. Hãy mở bước này từ cuộc trò chuyện với người bán.
+          </p>
+        )}
+        {book.data && !book.data.fulfillment && (
+          <p role="alert" className={styles.error}>
+            Người bán chưa hoàn thiện nơi gửi. Hãy trao đổi để người bán cập
+            nhật.
+          </p>
+        )}
+        {(addresses.isError || areas.isError) && (
+          <p role="alert" className={styles.error}>
+            Chưa tải được thông tin giao nhận.{" "}
+            <button
+              className={styles.textButton}
+              onClick={() => {
+                void addresses.refetch();
+                void areas.refetch();
+              }}
+            >
+              Thử lại
+            </button>
+          </p>
+        )}
+        {(addresses.isPending || areas.isPending) && (
+          <p role="status">Đang tải thông tin giao nhận…</p>
+        )}
+        {error && (
+          <p role="alert" className={styles.error}>
+            {error}
+          </p>
+        )}
+        {prepared ? (
+          <>
+            <div className={styles.destination}>
+              <MapPin size={20} aria-hidden="true" />
+              <div>
+                <h3>Giao đến</h3>
+                <p>{prepared.destination}</p>
+              </div>
+            </div>
+            <dl className={styles.receipt}>
+              <div className={styles.total}>
+                <dt>Phí giao nhận dự kiến</dt>
+                <dd>{formatVnd(prepared.shipping)}</dd>
+              </div>
+            </dl>
+            <p className={styles.note}>
+              Người bán nhập giá sách khi tạo đơn. Bước này chỉ gửi thông tin
+              giao nhận, chưa đặt mua.
+            </p>
+            <div className={styles.actions}>
+              <button
+                className={styles.primary}
+                disabled={busy || !conversationId}
+                onClick={() => void confirm()}
+              >
+                {busy ? "Đang gửi…" : "Gửi báo giá cho người bán"}
+                <ArrowRight size={18} aria-hidden="true" />
+              </button>
+            </div>
+          </>
+        ) : (
+          <form onSubmit={(event) => void submit(event)}>
+            <fieldset disabled={disabled}>
+              <PurchaseAddressFields
+                addresses={existing}
+                selected={selectedAddress?.id ?? "new"}
+                onSelect={setSelected}
+                form={form}
+                onChange={setForm}
+                localities={areas.data?.localities ?? []}
+              />
+              <p className={styles.note}>
+                Địa chỉ mới được lưu vào sổ địa chỉ của bạn.
+              </p>
+              <div className={styles.actions}>
+                <button className={styles.primary} type="submit">
+                  {busy ? "Đang tạo báo giá…" : "Xem phí giao nhận"}
+                  <ArrowRight size={18} aria-hidden="true" />
+                </button>
+              </div>
+            </fieldset>
+            {retryPending && (
+              <button
+                type="button"
+                className={styles.primary}
+                disabled={busy}
+                onClick={() =>
+                  void submit({ preventDefault() {} } as React.FormEvent)
+                }
+              >
+                Thử lại bước tính phí
+              </button>
+            )}
+          </form>
+        )}
+      </PurchaseDialog>
+    </section>
   );
 }

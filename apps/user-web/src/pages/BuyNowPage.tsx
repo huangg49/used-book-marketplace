@@ -10,7 +10,11 @@ import { formatVnd } from "../lib/routes";
 import { conditions } from "../lib/listing-labels";
 import { getPublicListing } from "../services/public-listings";
 import { createBuyNowOrder, type BuyNowInput } from "../services/orders";
-import styles from "./DirectOrders.module.css";
+import { ListingPhoto } from "../components/BookCard";
+import { MapPin, ArrowRight, Check, Truck } from "lucide-react";
+import { PurchaseDialog } from "../components/PurchaseDialog";
+import { PurchaseAddressFields } from "../components/PurchaseAddressFields";
+import styles from "./PurchaseFlow.module.css";
 
 const addressSchema = z.object({
   id: z.string().uuid(),
@@ -79,6 +83,7 @@ export function BuyNowPage() {
     enabled: auth.status === "authenticated",
     retry: false,
   });
+  const [dialogOpen, setDialogOpen] = useState(true);
   const [selected, setSelected] = useState("");
   const [form, setForm] = useState({
     recipientName: "",
@@ -237,22 +242,85 @@ export function BuyNowPage() {
     item.salePrice === null ||
     item.purchaseAvailability.status !== "Available" ||
     !item.fulfillment;
+  const resetQuote = () => {
+    setPrepared(undefined);
+    attempt.current = undefined;
+    setError(undefined);
+    setUncertain(false);
+  };
+  const addressText =
+    prepared?.destination ??
+    (selectedAddress
+      ? `${selectedAddress.recipientName} · ${selectedAddress.phone} · ${selectedAddress.detail}`
+      : "Thêm địa chỉ để tính phí giao hàng chính xác.");
+  const disabled =
+    busy ||
+    uncertain ||
+    unavailable ||
+    addresses.isPending ||
+    areas.isPending ||
+    addresses.isError ||
+    areas.isError;
   return (
     <section className={styles.page} aria-labelledby="buy-now-title">
       <Link className={styles.back} to={`/books/${listingId}`}>
         ← Xem lại bản sách
       </Link>
-      <h1 id="buy-now-title">Mua ngay</h1>
-      <p className={styles.intro}>
-        Mua theo giá niêm yết. Không cần chat hay chờ người bán duyệt đơn.
-      </p>
+      <header className={styles.pageHeader}>
+        <h1 id="buy-now-title">Mua ngay</h1>
+        <p>
+          Chọn địa chỉ, xem tổng thanh toán và xác nhận bản sách bạn muốn mua.
+        </p>
+      </header>
+      <ol className={styles.steps} aria-label="Các bước mua sách">
+        <li aria-current={!prepared ? "step" : undefined}>
+          <span>{prepared ? <Check size={16} aria-hidden="true" /> : "1"}</span>
+          Địa chỉ nhận
+        </li>
+        <li aria-current={prepared ? "step" : undefined}>
+          <span>2</span>Xác nhận đơn
+        </li>
+        <li>
+          <span>3</span>Thanh toán
+        </li>
+      </ol>
       <div className={styles.columns}>
         <div>
-          <section className={styles.section}>
-            <h2>{item.book.title}</h2>
-            <p>
-              {conditions[item.condition]} · {formatVnd(item.salePrice ?? 0)}
-            </p>
+          <section className={styles.book} aria-label="Bản sách bạn chọn">
+            <div className={styles.cover}>
+              <ListingPhoto book={item} />
+            </div>
+            <div>
+              <h2>{item.book.title}</h2>
+              <p>{item.book.authors.join(", ")}</p>
+              <span className={styles.condition}>
+                {conditions[item.condition]}
+              </span>
+              <p className={styles.price}>{formatVnd(item.salePrice ?? 0)}</p>
+              <p>Người bán: {item.seller.displayName}</p>
+            </div>
+          </section>
+          <section className={styles.delivery}>
+            <div className={styles.sectionHeading}>
+              <MapPin size={21} aria-hidden="true" />
+              <h2>Địa chỉ nhận sách</h2>
+            </div>
+            <p>{addressText}</p>
+            <button
+              type="button"
+              className={styles.textButton}
+              onClick={() => setDialogOpen(true)}
+            >
+              {prepared
+                ? "Xem thông tin giao nhận"
+                : selectedAddress
+                  ? "Chọn / đổi địa chỉ"
+                  : "Thêm địa chỉ nhận sách"}
+              <ArrowRight size={17} aria-hidden="true" />
+            </button>
+          </section>
+          <details className={styles.details}>
+            <summary>Xem lại tình trạng sách</summary>
             <p>{item.description}</p>
             <p>Bìa và gáy: {item.coverNote || "Chưa ghi rõ"}</p>
             <p>Ruột sách: {item.pages || "Chưa ghi rõ"}</p>
@@ -261,178 +329,137 @@ export function BuyNowPage() {
                 ? "Có trang thiếu theo mô tả người bán."
                 : "Không có trang thiếu theo người bán."}
             </p>
-          </section>
-          {unavailable && !prepared && (
-            <p role="alert" className={styles.error}>
-              Bản sách này hiện chưa thể mua ngay. Kiểm tra nơi gửi và trạng
-              thái trên bài đăng.
-            </p>
-          )}
-          {(addresses.isError || areas.isError) && (
-            <div role="alert" className={styles.error}>
-              Chưa tải được thông tin giao nhận.{" "}
-              <button
-                onClick={() => {
-                  void addresses.refetch();
-                  void areas.refetch();
-                }}
-              >
-                Thử lại
-              </button>
-            </div>
-          )}
-          {error && (
-            <p role="alert" className={styles.error}>
-              {error}
-            </p>
-          )}
-          <form onSubmit={(event) => void prepare(event)}>
-            <fieldset
-              disabled={
-                busy ||
-                !!prepared ||
-                uncertain ||
-                unavailable ||
-                addresses.isPending ||
-                areas.isPending ||
-                addresses.isError ||
-                areas.isError
-              }
-            >
-              <legend>Địa chỉ nhận tại TP.HCM</legend>
-              {existing.map((a) => (
-                <label key={a.id} className={styles.address}>
-                  <input
-                    type="radio"
-                    name="destination"
-                    checked={selectedAddress?.id === a.id}
-                    onChange={() => setSelected(a.id)}
-                  />
-                  <span>
-                    {a.recipientName} · {a.phone}
-                    <br />
-                    {a.detail}
-                  </span>
-                </label>
-              ))}
-              {existing.length > 0 && (
-                <label className={styles.address}>
-                  <input
-                    type="radio"
-                    name="destination"
-                    checked={selected === "new"}
-                    onChange={() => setSelected("new")}
-                  />
-                  Dùng địa chỉ mới
-                </label>
-              )}
-              {!selectedAddress && (
-                <div className={styles.form}>
-                  <label>
-                    Họ tên
-                    <input
-                      required
-                      minLength={1}
-                      maxLength={100}
-                      autoComplete="name"
-                      value={form.recipientName}
-                      onChange={(e) =>
-                        setForm({ ...form, recipientName: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label>
-                    Số điện thoại
-                    <input
-                      required
-                      type="tel"
-                      pattern="0[0-9]{9}"
-                      autoComplete="tel"
-                      value={form.phone}
-                      onChange={(e) =>
-                        setForm({ ...form, phone: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label>
-                    Khu vực phục vụ
-                    <select
-                      required
-                      value={form.localityCode}
-                      onChange={(e) =>
-                        setForm({ ...form, localityCode: e.target.value })
-                      }
-                    >
-                      <option value="">Chọn khu vực</option>
-                      {areas.data?.localities.map((a) => (
-                        <option key={a.code} value={a.code}>
-                          {a.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Địa chỉ chi tiết
-                    <textarea
-                      required
-                      minLength={5}
-                      maxLength={300}
-                      autoComplete="street-address"
-                      value={form.detail}
-                      onChange={(e) =>
-                        setForm({ ...form, detail: e.target.value })
-                      }
-                    />
-                  </label>
-                </div>
-              )}
-              <p>
-                Giao trực tiếp từ người bán. Phí giao nhận được tính trước khi
-                đặt đơn.
-              </p>
-              {!prepared && (
-                <button className={styles.primary} type="submit">
-                  {busy ? "Đang tính phí…" : "Xem tổng thanh toán"}
-                </button>
-              )}
-            </fieldset>
-          </form>
-          {uncertain && !prepared && (
-            <button
-              className={styles.primary}
-              disabled={busy}
-              onClick={() =>
-                void prepare({ preventDefault() {} } as React.FormEvent)
-              }
-            >
-              Thử lại bước tính phí
-            </button>
-          )}
+          </details>
         </div>
-        <aside className={styles.summary} aria-labelledby="total-title">
-          <h2 id="total-title">Xác nhận đơn mua</h2>
-          {prepared ? (
-            <>
-              <p>{prepared.destination}</p>
-              <dl>
-                <div>
-                  <dt>Tiền sách</dt>
-                  <dd>{formatVnd(prepared.amounts.bookPrice)}</dd>
-                </div>
-                <div>
-                  <dt>Phí giao hàng</dt>
-                  <dd>{formatVnd(prepared.amounts.shippingFee)}</dd>
-                </div>
-                <div className={styles.total}>
-                  <dt>Tổng thanh toán</dt>
-                  <dd>{formatVnd(prepared.amounts.buyerTotal)}</dd>
-                </div>
-              </dl>
-              <p>
-                Bấm đặt mua để giữ cuốn sách 15 phút và chuyển sang thanh toán
-                từ ví. Thanh toán thành công là chốt đơn; người bán phải chuẩn
-                bị gửi trong 48 giờ.
-              </p>
+        <aside className={styles.summary} aria-label="Tóm tắt đơn mua">
+          <h2>Đơn mua của bạn</h2>
+          <dl>
+            <div>
+              <dt>Tiền sách</dt>
+              <dd>
+                {formatVnd(prepared?.amounts.bookPrice ?? item.salePrice ?? 0)}
+              </dd>
+            </div>
+            <div>
+              <dt>Phí giao hàng</dt>
+              <dd>
+                {prepared
+                  ? formatVnd(prepared.amounts.shippingFee)
+                  : "Chờ địa chỉ"}
+              </dd>
+            </div>
+            <div className={styles.total}>
+              <dt>Tổng thanh toán</dt>
+              <dd>
+                {prepared
+                  ? formatVnd(prepared.amounts.buyerTotal)
+                  : "Chưa tính phí giao"}
+              </dd>
+            </div>
+          </dl>
+          <button
+            className={styles.primary}
+            disabled={unavailable && !prepared}
+            onClick={() => setDialogOpen(true)}
+          >
+            {prepared ? "Tiếp tục đặt mua" : "Chọn địa chỉ nhận sách"}
+            <ArrowRight size={18} aria-hidden="true" />
+          </button>
+          <p className={styles.note}>
+            Mua theo giá niêm yết, không cần chat hay chờ người bán duyệt lại.
+          </p>
+          <p className={styles.note}>
+            <Truck size={18} aria-hidden="true" />
+            Ví và vận chuyển hiện là mô phỏng của Lật lại.
+          </p>
+          <Link to="/orders">Đơn hàng của tôi</Link>
+        </aside>
+      </div>
+      {unavailable && !prepared && (
+        <p role="alert" className={styles.error}>
+          Bản sách này hiện chưa thể mua ngay. Kiểm tra nơi gửi và trạng thái
+          trên bài đăng.
+        </p>
+      )}
+      <PurchaseDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        busy={busy}
+        className={styles.flow}
+        title={prepared ? "Xác nhận đơn mua" : "Địa chỉ nhận sách"}
+        description={
+          prepared
+            ? "Kiểm tra thông tin trước khi chuyển sang thanh toán."
+            : "Chọn địa chỉ đã lưu hoặc thêm nơi nhận mới tại TP.HCM."
+        }
+      >
+        <div className={styles.miniBook}>
+          <div className={styles.miniCover}>
+            <ListingPhoto book={item} />
+          </div>
+          <div>
+            <strong>{item.book.title}</strong>
+            <span>
+              {formatVnd(item.salePrice ?? 0)} · {conditions[item.condition]}
+            </span>
+          </div>
+        </div>
+        {(addresses.isError || areas.isError) && (
+          <div role="alert" className={styles.error}>
+            Chưa tải được thông tin giao nhận.{" "}
+            <button
+              type="button"
+              className={styles.textButton}
+              onClick={() => {
+                void addresses.refetch();
+                void areas.refetch();
+              }}
+            >
+              Thử lại
+            </button>
+          </div>
+        )}
+        {(addresses.isPending || areas.isPending) && (
+          <p role="status">Đang tải thông tin giao nhận…</p>
+        )}
+        {unavailable && !prepared && (
+          <p className={styles.error}>
+            Bản sách này hiện chưa thể mua ngay. Hãy xem lại bài đăng.
+          </p>
+        )}
+        {error && (
+          <p role="alert" className={styles.error}>
+            {error}
+          </p>
+        )}
+        {prepared ? (
+          <>
+            <div className={styles.destination}>
+              <MapPin size={20} aria-hidden="true" />
+              <div>
+                <h3>Giao đến</h3>
+                <p>{prepared.destination}</p>
+              </div>
+            </div>
+            <dl className={styles.receipt}>
+              <div>
+                <dt>Tiền sách</dt>
+                <dd>{formatVnd(prepared.amounts.bookPrice)}</dd>
+              </div>
+              <div>
+                <dt>Phí giao hàng</dt>
+                <dd>{formatVnd(prepared.amounts.shippingFee)}</dd>
+              </div>
+              <div className={styles.total}>
+                <dt>Tổng thanh toán</dt>
+                <dd>{formatVnd(prepared.amounts.buyerTotal)}</dd>
+              </div>
+            </dl>
+            <p className={styles.note}>
+              Đặt mua sẽ giữ sách 15 phút để bạn thanh toán từ ví. Thanh toán
+              thành công là chốt đơn; người bán chuẩn bị gửi trong 48 giờ.
+            </p>
+            <div className={styles.actions}>
               <button
                 className={styles.primary}
                 disabled={busy}
@@ -443,35 +470,56 @@ export function BuyNowPage() {
                   : uncertain
                     ? "Thử lại cùng đơn mua"
                     : "Đặt mua và đến thanh toán"}
+                <ArrowRight size={18} aria-hidden="true" />
               </button>
               {!createPending && (
                 <button
                   className={styles.secondary}
                   disabled={busy}
-                  onClick={() => {
-                    setPrepared(undefined);
-                    attempt.current = undefined;
-                    setError(undefined);
-                    setUncertain(false);
-                  }}
+                  onClick={resetQuote}
                 >
                   Đổi địa chỉ / lấy báo giá mới
                 </button>
               )}
-            </>
-          ) : (
-            <p>
-              Chọn địa chỉ rồi xem tổng thanh toán. Bước xem phí chưa giữ sách
-              hoặc trừ tiền.
-            </p>
-          )}
-          <p className={styles.note}>
-            Ví và vận chuyển hiện là mô phỏng của Lật lại. Tiền thanh toán được
-            giữ cho đơn, chưa trả ngay cho người bán.
-          </p>
-          <Link to="/orders">Đơn hàng của tôi</Link>
-        </aside>
-      </div>
+            </div>
+          </>
+        ) : (
+          <form onSubmit={(event) => void prepare(event)}>
+            <fieldset disabled={disabled}>
+              <PurchaseAddressFields
+                addresses={existing}
+                selected={selectedAddress?.id ?? "new"}
+                onSelect={setSelected}
+                form={form}
+                onChange={setForm}
+                localities={areas.data?.localities ?? []}
+              />
+              <p className={styles.note}>
+                Xem phí chưa giữ sách hoặc trừ tiền. Địa chỉ mới được lưu vào sổ
+                địa chỉ.
+              </p>
+              <div className={styles.actions}>
+                <button className={styles.primary} type="submit">
+                  {busy ? "Đang tính phí…" : "Xem tổng thanh toán"}
+                  <ArrowRight size={18} aria-hidden="true" />
+                </button>
+              </div>
+            </fieldset>
+            {uncertain && (
+              <button
+                type="button"
+                className={styles.primary}
+                disabled={busy}
+                onClick={() =>
+                  void prepare({ preventDefault() {} } as React.FormEvent)
+                }
+              >
+                Thử lại bước tính phí
+              </button>
+            )}
+          </form>
+        )}
+      </PurchaseDialog>
     </section>
   );
 }

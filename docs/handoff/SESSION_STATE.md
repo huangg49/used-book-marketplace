@@ -1,4 +1,28 @@
-# Điểm lưu hiện tại — 16/10/2026
+# Điểm lưu hiện tại — 17/10/2026
+
+## Popup mua bán và Mua ngay — 17/10/2026
+
+- Nhánh `codex/purchase-popup-ui`, base `ed8734f`; subject dự kiến
+  `feat(web): unify purchase flows with popup forms`. Phạm vi Member web React/Vite:
+  popup địa chỉ/xác nhận Mua ngay, gửi quote từ chat, Seller nhập giá/tạo Order,
+  nơi gửi khi đăng bán. Trang Mua ngay có ảnh/tình trạng sách, tiến trình và bảng
+  tiền; giữ wine/cream/Be Vietnam Pro. Không đổi API/contract/Mongo/native.
+- Dùng chung `PurchaseDialog`/`PurchaseAddressFields`: native dialog qua portal,
+  focus/Tab/Escape/click ngoài/scroll cleanup, giữ draft khi đóng/mở, khóa đóng
+  khi busy; motion260ms giữ theo chính sách chủ dự án. Checkout chọn đúng địa chỉ
+  mới sau lưu, pin body/key/ID qua retry để không tạo trùng sau lỗi quote.
+- Local PASS: web lint/typecheck/build/135unit, buy-now/seller-order/browser trên
+  Mongo QA riêng/database disposable `*_test`, storage/ví/carrier fake. Các ca
+  lost-ACK address/create/pay, thiếu tiền, chọn địa chỉ mới khi có default, focus,
+  popup/draft và upload/submit/polling cũ được kiểm. Bốn lint warning exchange và
+  chunk warning cũ còn. API build chỉ để fixture, không nhận API suite PASS.
+- Independent AI review yêu cầu sửa cascade viền input và recovery địa chỉ mới;
+  verdict cuối `ship` chấm cả hai fix resolved. Regression save→quote422→retry
+  không tạo thêm địa chỉ; computed border đúng token. Documentation cập nhật
+  component/consumer, giữ DESIGN/sidecar. [Evidence](../../.impeccable/review/purchase-popup/README.md).
+  QA đã dọn database/users/roles và dừng đúng Mongo do phiên này bật.
+  Native/live Supabase/provider/human review/remote CI NOT RUN; READINESS giữ
+  nguyên. Không push/PR/merge/deploy; không suy quyền từ PR44 trước đó.
 
 ## Trạng thái listing theo thanh toán — 16/10/2026
 
