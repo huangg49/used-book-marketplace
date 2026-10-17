@@ -1,4 +1,4 @@
-import { View, TouchableOpacity } from "react-native";
+import { View, TouchableOpacity, Image } from "react-native";
 import { router } from "expo-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
@@ -16,8 +16,14 @@ import {
   Notice,
   presentError,
   Checkbox,
+  stitchTokens,
+  formatVnd,
 } from "../../core/ui";
-import { wishlistOptions, useSaveWishlist } from "./wishlist-model";
+import {
+  wishlistOptions,
+  useSaveWishlist,
+  useRemoveWishlist,
+} from "./wishlist-model";
 import type { WishlistItem } from "./contracts";
 import { PublicPhoto } from "../shelf/public-photo";
 
@@ -30,6 +36,7 @@ export function WishlistScreen() {
   });
 
   const saveMutation = useSaveWishlist(client);
+  const removeMutation = useRemoveWishlist(client);
 
   const entries = query.data?.pages.flatMap((page) => page.items) ?? [];
   const denied =
@@ -78,6 +85,12 @@ export function WishlistScreen() {
             <WishlistItemCard
               key={item.id}
               item={item}
+              onRemove={() => {
+                removeMutation.mutate({
+                  subjectType: item.subjectType,
+                  subjectId: item.subjectId,
+                });
+              }}
               onToggleExchange={(val) => {
                 saveMutation.mutate({
                   subjectType: item.subjectType,
@@ -120,10 +133,12 @@ export function WishlistScreen() {
 
 function WishlistItemCard({
   item,
+  onRemove,
   onToggleExchange,
   onToggleNotifications,
 }: {
   item: WishlistItem;
+  onRemove?: () => void;
   onToggleExchange: (val: boolean) => void;
   onToggleNotifications: (val: boolean) => void;
 }) {
@@ -132,6 +147,7 @@ function WishlistItemCard({
   const authors = isBook
     ? item.book?.authors?.join(", ")
     : item.listing?.book?.authors?.join(", ");
+  const price = item.listing?.price ?? item.listing?.salePrice;
 
   return (
     <View
@@ -140,6 +156,8 @@ function WishlistItemCard({
         padding: space.md,
         backgroundColor: colors.surface,
         borderRadius: radius.card,
+        borderWidth: 1,
+        borderColor: stitchTokens.cardBorder,
       }}
     >
       <TouchableOpacity
@@ -153,7 +171,13 @@ function WishlistItemCard({
         }}
         accessibilityRole="button"
       >
-        {isBook || !item.listing?.photos?.[0] ? (
+        {item.listing?.coverUrl ? (
+          <Image
+            source={{ uri: item.listing.coverUrl }}
+            style={{ width: 60, height: 80, borderRadius: radius.book }}
+            resizeMode="cover"
+          />
+        ) : isBook || !item.listing?.photos?.[0] ? (
           <BookCover
             label={title || ""}
             missing={true}
@@ -176,17 +200,41 @@ function WishlistItemCard({
             style={{
               flexDirection: "row",
               alignItems: "center",
-              gap: space.xs,
+              justifyContent: "space-between",
             }}
           >
-            <Icon
-              name={isBook ? "book" : "bookmark"}
-              size={16}
-              color={colors.rustText}
-            />
-            <AppText kind="annotation" color={colors.rustText}>
-              {isBook ? "Đầu sách chung" : "Bài đăng"}
-            </AppText>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: space.xs,
+              }}
+            >
+              <Icon
+                name={isBook ? "book" : "bookmark"}
+                size={16}
+                color={colors.rustText}
+              />
+              <AppText kind="annotation" color={colors.rustText}>
+                {isBook ? "Đầu sách chung" : "Bài đăng"}
+              </AppText>
+            </View>
+
+            {onRemove ? (
+              <TouchableOpacity
+                onPress={onRemove}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Bỏ lưu ${title || "sách"}`}
+              >
+                <Icon
+                  name="bookmark"
+                  size={18}
+                  color={stitchTokens.wine}
+                  filled
+                />
+              </TouchableOpacity>
+            ) : null}
           </View>
           <AppText kind="bold" numberOfLines={2}>
             {title}
@@ -196,6 +244,11 @@ function WishlistItemCard({
               {authors}
             </AppText>
           ) : null}
+          {price != null && (
+            <AppText kind="bold" color={stitchTokens.wine} style={{ marginTop: 2 }}>
+              {formatVnd(price)}
+            </AppText>
+          )}
         </View>
       </TouchableOpacity>
 

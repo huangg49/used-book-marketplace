@@ -28,6 +28,7 @@ import { draftPage, emptyContent, privateDraft, receipt } from "./contracts";
 import { DraftEditor } from "./draft-editor";
 import { photoError, useForeground } from "./draft-media";
 import { BookIdentity } from "./catalog-picker";
+import { DraftCoverPhoto } from "./draft-cover-photo";
 import { executeLifecycle, lifecycleIntent } from "./lifecycle-command";
 import { MemberNavigation } from "../navigation/member-navigation";
 
@@ -504,6 +505,15 @@ export function DraftsScreen() {
                     salePrice: d.currentRevision.content.salePrice,
                     mediaCount: d.currentRevision.content.mediaIds.length,
                   }}
+                  photoNode={
+                    d.currentRevision.content.mediaIds?.[0] ? (
+                      <DraftCoverPhoto
+                        listingId={d.id}
+                        mediaId={d.currentRevision.content.mediaIds[0]}
+                        label="Ảnh bìa"
+                      />
+                    ) : undefined
+                  }
                   titleNode={
                     <BookIdentity id={d.currentRevision.content.bookId} compact />
                   }

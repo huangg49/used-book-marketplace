@@ -27,6 +27,8 @@ import {
 import { MemberNavigation } from "../navigation/member-navigation";
 import { summaryOptions } from "../wallet/wallet-model";
 import { draftPage } from "../drafts/contracts";
+import { useCatalogBook } from "../drafts/catalog-picker";
+import { DraftCoverPhoto } from "../drafts/draft-cover-photo";
 import { HomeNotificationsModal } from "../shelf/home-components/home-notifications-modal";
 import { useNotifications } from "../notifications/notifications-model";
 
@@ -36,6 +38,100 @@ const roleLabels: Record<string, string> = {
   ADMIN: "Quản trị thư xã",
   TEST_OPERATOR: "Kiểm thử viên",
 };
+
+function RecentBookRow({ item }: { item: any }) {
+  const bookId = item.currentRevision?.content?.bookId;
+  const bookQuery = useCatalogBook(bookId);
+  const mediaId = item.currentRevision?.content?.mediaIds?.[0];
+
+  const bookTitle =
+    bookQuery.data?.title ||
+    (bookQuery.isPending && bookId
+      ? "Đang tải tên sách…"
+      : item.currentRevision?.content?.description?.slice(0, 30) ||
+        "Bản sách đã lưu");
+
+  const author = bookQuery.data?.authors?.join(" · ");
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Xem sách: ${bookTitle}`}
+      onPress={() => router.push("./drafts")}
+      style={styles.recentBookCard}
+    >
+      <View style={styles.recentCoverBox}>
+        {mediaId ? (
+          <DraftCoverPhoto
+            listingId={item.id}
+            mediaId={mediaId}
+            label={bookTitle}
+          />
+        ) : (
+          <Icon name="book" size={18} color={stitchTokens.wine} />
+        )}
+      </View>
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <AppText
+            kind="bold"
+            style={{ fontSize: 14, color: stitchTokens.wineDark }}
+            numberOfLines={1}
+          >
+            {bookTitle}
+          </AppText>
+          <View
+            style={[
+              styles.miniStatusBadge,
+              {
+                backgroundColor:
+                  item.state.moderation === "Approved"
+                    ? stitchTokens.likeNewGreenBg
+                    : stitchTokens.tagExchangeBg,
+              },
+            ]}
+          >
+            <AppText
+              kind="small"
+              style={{
+                fontSize: 9,
+                fontWeight: "700",
+                color:
+                  item.state.moderation === "Approved"
+                    ? stitchTokens.likeNewGreen
+                    : stitchTokens.tagExchangeText,
+              }}
+            >
+              {item.state.moderation === "Approved"
+                ? "ĐÃ DUYỆT"
+                : item.state.moderation === "PendingReview"
+                  ? "CHỜ DUYỆT"
+                  : "BẢN NHÁP"}
+            </AppText>
+          </View>
+        </View>
+        <AppText
+          kind="small"
+          color={stitchTokens.subtleGray}
+          style={{ fontSize: 11 }}
+          numberOfLines={1}
+        >
+          {author
+            ? `${author} · ${item.currentRevision.content.salePrice ? `Giá: ${formatVnd(item.currentRevision.content.salePrice)}` : "Trao đổi tự do"}`
+            : item.currentRevision.content.salePrice
+              ? `Giá: ${formatVnd(item.currentRevision.content.salePrice)}`
+              : "Trao đổi tự do"}
+        </AppText>
+      </View>
+    </Pressable>
+  );
+}
 
 export function AccountScreen() {
   const { client, state } = useSession();
@@ -549,72 +645,7 @@ export function AccountScreen() {
                 {recentBooks.length > 0 ? (
                   <View style={{ gap: 8 }}>
                     {recentBooks.map((item) => (
-                      <Pressable
-                        key={item.id}
-                        onPress={() => router.push("./drafts")}
-                        style={styles.recentBookCard}
-                      >
-                        <View style={styles.recentCoverBox}>
-                          <Icon name="book" size={18} color={stitchTokens.wine} />
-                        </View>
-                        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                            }}
-                          >
-                            <AppText
-                              kind="bold"
-                              style={{ fontSize: 14, color: stitchTokens.wineDark }}
-                              numberOfLines={1}
-                            >
-                              {item.currentRevision.content.description?.slice(0, 30) ||
-                                "Bản sách đã lưu"}
-                            </AppText>
-                            <View
-                              style={[
-                                styles.miniStatusBadge,
-                                {
-                                  backgroundColor:
-                                    item.state.moderation === "Approved"
-                                      ? stitchTokens.likeNewGreenBg
-                                      : stitchTokens.tagExchangeBg,
-                                },
-                              ]}
-                            >
-                              <AppText
-                                kind="small"
-                                style={{
-                                  fontSize: 9,
-                                  fontWeight: "700",
-                                  color:
-                                    item.state.moderation === "Approved"
-                                      ? stitchTokens.likeNewGreen
-                                      : stitchTokens.tagExchangeText,
-                                }}
-                              >
-                                {item.state.moderation === "Approved"
-                                  ? "ĐÃ DUYỆT"
-                                  : item.state.moderation === "PendingReview"
-                                    ? "CHỜ DUYỆT"
-                                    : "BẢN NHÁP"}
-                              </AppText>
-                            </View>
-                          </View>
-                          <AppText
-                            kind="small"
-                            color={stitchTokens.subtleGray}
-                            style={{ fontSize: 11 }}
-                            numberOfLines={1}
-                          >
-                            {item.currentRevision.content.salePrice
-                              ? `Giá: ${formatVnd(item.currentRevision.content.salePrice)}`
-                              : "Trao đổi tự do"}
-                          </AppText>
-                        </View>
-                      </Pressable>
+                      <RecentBookRow key={item.id} item={item} />
                     ))}
                   </View>
                 ) : (
@@ -1109,6 +1140,7 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.peachBorder,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   miniStatusBadge: {
     paddingHorizontal: 6,
