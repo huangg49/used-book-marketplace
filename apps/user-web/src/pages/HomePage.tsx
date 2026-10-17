@@ -10,6 +10,7 @@ import { ArrowUpRight, ArrowRight, Search, Repeat2, Plus } from "lucide-react";
 import { ROUTES } from "../lib/routes";
 import { CategoryDiscovery } from "../components/CategoryDiscovery";
 import { HomeBookCard } from "../components/HomeBookCard";
+import { AutumnLeavesCanvas } from "../components/autumn/AutumnLeavesCanvas";
 import {
   getHomeShelf,
   isCatalogPreview,
@@ -584,6 +585,7 @@ export function HomePage() {
         </p>
       </section>
       <div className={styles.marketplace}>
+        <AutumnLeavesCanvas />
         <AutumnOrnaments />
         <div
           className={styles.autumnCanopies}
