@@ -136,7 +136,17 @@ export function SendToAuctionBookPicker({
 
 const styles = StyleSheet.create({
   sectionContainer: {
-    gap: 8,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    padding: 16,
+    gap: 12,
+    shadowColor: stitchTokens.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   sectionHeaderRow: {
     flexDirection: "row",
@@ -162,7 +172,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyContainer: {
-    backgroundColor: stitchTokens.whiteSurface,
+    backgroundColor: stitchTokens.creamBg,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: stitchTokens.cardBorder,
@@ -188,16 +198,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 14,
+    backgroundColor: stitchTokens.creamBg,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: stitchTokens.cardBorder,
     padding: 10,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
   },
   bookCardSelected: {
     backgroundColor: stitchTokens.roseWarmSurface,

@@ -152,7 +152,17 @@ export function SendToAuctionPointPicker({
 
 const styles = StyleSheet.create({
   sectionContainer: {
-    gap: 8,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchTokens.cardBorder,
+    padding: 16,
+    gap: 12,
+    shadowColor: stitchTokens.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   sectionHeaderRow: {
     flexDirection: "row",
@@ -189,16 +199,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
-    backgroundColor: stitchTokens.whiteSurface,
-    borderRadius: 14,
+    backgroundColor: stitchTokens.creamBg,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: stitchTokens.cardBorder,
     padding: 12,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
   },
   stationCardSelected: {
     backgroundColor: stitchTokens.roseWarmSurface,
@@ -206,7 +211,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   stationCardDisabled: {
-    backgroundColor: "#F8F5F2",
+    backgroundColor: "#F4F0EB",
     opacity: 0.65,
   },
   radioCircle: {
