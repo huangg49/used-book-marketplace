@@ -18,6 +18,7 @@ export const exchangeSchema = z.object({
   initiatorId: z.string().uuid(),
   recipientId: z.string().uuid(),
   initiatorListingId: z.string().uuid(),
+  initiatorListingIds: z.array(z.string().uuid()).optional(),
   recipientListingId: z.string().uuid(),
   status: z.enum([
     "Proposed",
@@ -38,6 +39,7 @@ export const exchangeSchema = z.object({
   updatedAt: z.string(),
   fundingDeadline: date,
   proposalExpiresAt: date,
+  shippingDeadline: date,
   initiatorFundedAt: date,
   recipientFundedAt: date,
   initiatorShippedAt: date,
@@ -45,6 +47,9 @@ export const exchangeSchema = z.object({
   initiatorReceivedAt: date,
   recipientReceivedAt: date,
   inspectionDeadline: date,
+  disputedAt: date,
+  disputeReason: z.string().nullable().optional(),
+  disputedBy: z.string().nullable().optional(),
   completedAt: date,
   initiatorCompletedAt: date,
   recipientCompletedAt: date,
@@ -99,6 +104,7 @@ export const exchangeSchema = z.object({
       "FundingExpired",
       "ProposalExpired",
       "ListingUnavailable",
+      "ShippingExpired",
     ])
     .nullable()
     .optional(),
@@ -107,6 +113,7 @@ export const exchangeSchema = z.object({
     .nullable()
     .optional(),
   cancelledAt: date,
+  lastProposedById: z.string().uuid().nullable().optional(),
 });
 export const exchangePageSchema = z.object({
   items: z.array(exchangeSchema),
@@ -156,7 +163,8 @@ export function mapExchangeStatus(ex: Exchange, actor: string): ExchangeStatus {
         return "REJECTED";
       if (
         ex.cancelReason === "FundingExpired" ||
-        ex.cancelReason === "ProposalExpired"
+        ex.cancelReason === "ProposalExpired" ||
+        ex.cancelReason === "ShippingExpired"
       )
         return "EXPIRED";
       return "CANCELLED";
@@ -198,7 +206,11 @@ export async function exchangeListing(
     throw error;
   }
 }
-export async function exchangeBook(id: string, listing: PublicListing | null) {
+export async function exchangeBook(
+  id: string,
+  listing: PublicListing | null,
+  fallbackPrice?: number,
+) {
   let coverUrl: string | undefined;
   if (listing?.photos[0]) {
     try {
@@ -213,6 +225,7 @@ export async function exchangeBook(id: string, listing: PublicListing | null) {
     author: listing?.book.authors.join(", ") ?? "Chưa có thông tin",
     coverUrl,
     condition: listing?.condition ?? "Chưa có thông tin",
+    price: listing?.exchangeValue ?? listing?.salePrice ?? fallbackPrice ?? 0,
   };
 }
 export async function getExchangeTransactions(
@@ -227,18 +240,36 @@ export async function getExchangeTransactions(
   const data = await Promise.all(
     filtered.slice((page - 1) * 5, page * 5).map(async (ex) => {
       const initiator = ex.initiatorId === actor;
-      const [init, rec] = await Promise.all([
-        exchangeListing(ex.initiatorListingId),
-        exchangeListing(ex.recipientListingId),
+      const initiatorIds =
+        ex.initiatorListingIds && ex.initiatorListingIds.length > 0
+          ? ex.initiatorListingIds
+          : [ex.initiatorListingId];
+      const recipientIds = [ex.recipientListingId];
+
+      const [initListings, recListings] = await Promise.all([
+        Promise.all(initiatorIds.map(exchangeListing)),
+        Promise.all(recipientIds.map(exchangeListing)),
       ]);
       const [give, receive] = await Promise.all([
-        exchangeBook(
-          initiator ? ex.initiatorListingId : ex.recipientListingId,
-          initiator ? init : rec,
+        Promise.all(
+          (initiator ? initiatorIds : recipientIds).map((bookId, idx) =>
+            exchangeBook(
+              bookId,
+              initiator ? initListings[idx] : recListings[idx],
+              initiator && initiatorIds.length === 1 ? ex.recipientDeposit : undefined,
+            ),
+          ),
         ),
-        exchangeBook(
-          initiator ? ex.recipientListingId : ex.initiatorListingId,
-          initiator ? rec : init,
+        Promise.all(
+          (initiator ? recipientIds : initiatorIds).map((bookId, idx) =>
+            exchangeBook(
+              bookId,
+              initiator ? recListings[idx] : initListings[idx],
+              initiator
+                ? ex.initiatorDeposit
+                : (!initiator && initiatorIds.length === 1 ? ex.recipientDeposit : undefined),
+            ),
+          ),
         ),
       ]);
       return {
@@ -249,10 +280,11 @@ export async function getExchangeTransactions(
         partner: {
           id: initiator ? ex.recipientId : ex.initiatorId,
           username:
-            (initiator ? rec : init)?.seller.displayName ?? "Đối tác trao đổi",
+            (initiator ? recListings[0] : initListings[0])?.seller
+              .displayName ?? "Đối tác trao đổi",
         },
-        receiveBooks: [receive],
-        giveBooks: [give],
+        receiveBooks: receive,
+        giveBooks: give,
         moneyCompensationType: ex.diffAmount
           ? ex.diffPayerId === actor
             ? ("user_pays" as const)
@@ -277,7 +309,13 @@ export async function getExchangeCounts(): Promise<
 // Retain unresolved intent across dialog reopening/refresh, in memory only.
 const pending = new Map<string, { key: string; body: string; path: string }>();
 export function pendingProposal():
-  { initiatorListingId: string; recipientListingId: string } | undefined {
+  | {
+      initiatorListingId?: string;
+      initiatorListingIds?: string[];
+      recipientListingId: string;
+      deliveryAddressId?: string;
+    }
+  | undefined {
   const state = session.getSnapshot();
   if (state.status !== "authenticated") return undefined;
   const intent = pending.get(`${state.user.id}:/exchanges`);

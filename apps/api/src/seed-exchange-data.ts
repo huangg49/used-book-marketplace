@@ -19,7 +19,7 @@ const USERS = [
     address: {
       recipientName: 'Nguyen Dai',
       phone: '0901234567',
-      localityCode: 'Q1',
+      localityCode: 'DEMO-A',
       detail: '123 Nguyễn Huệ, P. Bến Nghé, Quận 1',
     },
     books: [

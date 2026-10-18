@@ -35,7 +35,7 @@ export function AuctionHero({ auctions, serverTime, pending, stale, failed }: Pr
   return <section className={styles.hero} aria-labelledby="auction-hero-title">
     <div className={styles.inner}>
       <div className={styles.copy} data-stage-reveal>
-        <h1 id="auction-hero-title">ĐẤU GIÁ SÁCH.<span>CHUYỆN HAY<br className={styles.desktopBreak} /> CÒN TIẾP.</span></h1>
+        <h1 id="auction-hero-title">ĐẤU GIÁ SÁCH.<span>CHUYỆN HAY CÒN TIẾP.</span></h1>
         <p>Sách được kiểm tra trước khi mở phiên.<br />Nhận sách tại điểm giao nhận ở TP.HCM.</p>
         <a className={styles.shelfLink} href="#auction-list-title" onClick={showShelf}>
           Xem các phiên đang mở <ArrowDown size={17} aria-hidden="true" />

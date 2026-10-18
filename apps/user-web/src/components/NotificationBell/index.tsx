@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Bell } from 'lucide-react'
+import { Bell, CheckCheck, ArrowRight } from 'lucide-react'
 import { ROUTES } from '../../lib/routes'
 import { timeAgo, useOpenNotification } from '../../hooks/useOpenNotification'
 import { listNotifications, markNotificationsRead } from '../../services/notifications'
@@ -47,32 +47,53 @@ export function NotificationBell() {
       {open && (
         <div id={panelId} className={styles.panel} role="region" aria-label="Thông báo gần đây">
           <div className={styles.head}>
-            <strong>Thông báo</strong>
-            {unread > 0 && <button type="button" className={styles.link} onClick={() => void readAll()}>Đánh dấu đã đọc hết</button>}
+            <div className={styles.headTitle}>
+              <strong>Thông báo</strong>
+              {unread > 0 && <span className={styles.unreadCountBadge}>{unread} mới</span>}
+            </div>
+            {unread > 0 && (
+              <button type="button" className={styles.readAllButton} onClick={() => void readAll()}>
+                <CheckCheck size={15} aria-hidden="true" />
+                <span>Đã đọc hết</span>
+              </button>
+            )}
           </div>
           {inbox.isPending ? (
-            <p className={styles.empty}>Đang tải…</p>
+            <div className={styles.empty}>
+              <p>Đang tải thông báo…</p>
+            </div>
           ) : inbox.isError ? (
-            <p className={styles.empty}>Chưa tải được thông báo. <button type="button" className={styles.link} onClick={() => void inbox.refetch()}>Thử lại</button></p>
+            <div className={styles.empty}>
+              <p>Chưa tải được thông báo.</p>
+              <button type="button" className={styles.retryButton} onClick={() => void inbox.refetch()}>Thử lại</button>
+            </div>
           ) : inbox.data.items.length === 0 ? (
-            <p className={styles.empty}>Chưa có thông báo nào.</p>
+            <div className={styles.empty}>
+              <Bell size={28} className={styles.emptyIcon} aria-hidden="true" />
+              <p>Chưa có thông báo nào.</p>
+            </div>
           ) : (
             <ul className={styles.list}>
               {inbox.data.items.map((n) => (
                 <li key={n.id}>
                   <button type="button" className={`${styles.item} ${n.readAt ? '' : styles.unread}`} onClick={() => { setOpen(false); openNotification(n) }}>
-                    <span className={styles.dot} aria-hidden="true" />
+                    <div className={styles.dotWrap}>
+                      <span className={styles.dot} aria-hidden="true" />
+                    </div>
                     <span className={styles.text}>
                       <strong>{n.title}</strong>
-                      <span>{n.body}</span>
-                      <small>{timeAgo(n.createdAt)}{n.readAt ? '' : ' · chưa đọc'}</small>
+                      <span className={styles.body}>{n.body}</span>
+                      <small className={styles.time}>{timeAgo(n.createdAt)}{n.readAt ? '' : ' · chưa đọc'}</small>
                     </span>
                   </button>
                 </li>
               ))}
             </ul>
           )}
-          <Link className={styles.all} to={ROUTES.notifications} onClick={() => setOpen(false)}>Xem tất cả thông báo</Link>
+          <Link className={styles.all} to={ROUTES.notifications} onClick={() => setOpen(false)}>
+            <span>Xem tất cả thông báo</span>
+            <ArrowRight size={15} aria-hidden="true" />
+          </Link>
         </div>
       )}
     </div>

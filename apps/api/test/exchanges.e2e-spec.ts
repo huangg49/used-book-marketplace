@@ -594,6 +594,106 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     expect(rec.balanced).toBe(true);
   });
 
+  it('supports multi-book exchange proposal: 2 books for 1 book with correct deposits and multi-listing reservations', async () => {
+    const l1a = await createApprovedListing(user1, 50000, 'Both');
+    const l1b = await createApprovedListing(user1, 60000, 'Both');
+    const l2 = await createApprovedListing(user2, 150000, 'Both');
+
+    // User1 proposes 2 books (50k + 60k = 110k) for User2's 150k book
+    const createRes = await post(
+      '/exchanges',
+      {
+        initiatorListingIds: [l1a.listingId, l1b.listingId],
+        recipientListingId: l2.listingId,
+      },
+      user1,
+    ).expect(201);
+
+    expect(createRes.body).toMatchObject({
+      initiatorId: user1.id,
+      recipientId: user2.id,
+      initiatorListingId: l1a.listingId,
+      initiatorListingIds: [l1a.listingId, l1b.listingId],
+      recipientListingId: l2.listingId,
+      status: 'Proposed',
+      revision: 1,
+      initiatorDeposit: 150000,
+      recipientDeposit: 110000,
+      diffAmount: 40000,
+      diffPayerId: user1.id,
+    });
+
+    const exchangeId = createRes.body.id;
+
+    // Accept -> all 3 listings must transition to Reserved
+    await post(
+      `/exchanges/${exchangeId}/accept`,
+      { revision: 1 },
+      user2,
+    ).expect(200);
+
+    const doc1a = await db.c.listings.findOne({ _id: l1a.listingId });
+    const doc1b = await db.c.listings.findOne({ _id: l1b.listingId });
+    const doc2 = await db.c.listings.findOne({ _id: l2.listingId });
+    expect(doc1a?.trade).toBe('Reserved');
+    expect(doc1b?.trade).toBe('Reserved');
+    expect(doc2?.trade).toBe('Reserved');
+
+    // Both fund
+    await post(`/exchanges/${exchangeId}/funding`, {}, user1).expect(200);
+    const fund2 = await post(`/exchanges/${exchangeId}/funding`, {}, user2).expect(200);
+    expect(fund2.body.status).toBe('Preparing');
+
+    // Ship both
+    const ship1 = await post(
+      `/exchanges/${exchangeId}/ship`,
+      { expectedVersion: fund2.body.revision, method: 'direct' },
+      user1,
+    ).expect(200);
+    const ship2 = await post(
+      `/exchanges/${exchangeId}/ship`,
+      { expectedVersion: ship1.body.revision, method: 'direct' },
+      user2,
+    ).expect(200);
+    expect(ship2.body.status).toBe('InTransit');
+
+    // Receive both
+    const rec1 = await post(
+      `/exchanges/${exchangeId}/receive`,
+      { expectedVersion: ship2.body.revision },
+      user1,
+    ).expect(200);
+    const rec2 = await post(
+      `/exchanges/${exchangeId}/receive`,
+      { expectedVersion: rec1.body.revision },
+      user2,
+    ).expect(200);
+    expect(rec2.body.status).toBe('Delivered');
+
+    // Complete both -> all 3 listings transition to Exchanged
+    const comp1 = await post(
+      `/exchanges/${exchangeId}/complete`,
+      { expectedVersion: rec2.body.revision },
+      user1,
+    ).expect(200);
+    const comp2 = await post(
+      `/exchanges/${exchangeId}/complete`,
+      { expectedVersion: comp1.body.revision },
+      user2,
+    ).expect(200);
+    expect(comp2.body.status).toBe('Completed');
+
+    const final1a = await db.c.listings.findOne({ _id: l1a.listingId });
+    const final1b = await db.c.listings.findOne({ _id: l1b.listingId });
+    const final2 = await db.c.listings.findOne({ _id: l2.listingId });
+    expect(final1a?.trade).toBe('Exchanged');
+    expect(final1b?.trade).toBe('Exchanged');
+    expect(final2?.trade).toBe('Exchanged');
+
+    const rec = await reconcile();
+    expect(rec.balanced).toBe(true);
+  });
+
   it('allows recipient to reject a proposal, setting status to Cancelled and saving reason', async () => {
     const l1 = await createApprovedListing(user1, 80000, 'Exchange');
     const l2 = await createApprovedListing(user2, 80000, 'Exchange');
@@ -971,8 +1071,9 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     await post(`/exchanges/${prep.id}/funding`, {}, user1).expect(200);
     await post(`/exchanges/${prep.id}/funding`, {}, user2).expect(200);
 
-    const farFuture = new Date(Date.now() + 100 * 24 * 3600_000);
-    await worker.tick(farFuture);
+    // Past funding deadline (24h) but before shipping deadline (72h) -> Preparing remains untouched
+    const pastFundingDeadline = new Date(Date.now() + 25 * 3600_000);
+    await worker.tick(pastFundingDeadline);
 
     const checkPrep = await db.c.exchanges.findOne({ _id: prep.id });
     expect(checkPrep?.status).toBe('Preparing');
@@ -1402,6 +1503,208 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
 
     const rec = await reconcile();
     expect(rec.balanced).toBe(true);
+  });
+
+  describe('Priority 0 & Priority 1: Security and Deadlock Resolutions', () => {
+    it('P0. accept() rejects partnerAddress; users cannot hijack partner address', async () => {
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const l2 = await createApprovedListing(user2, 100000, 'Both');
+      const created = (
+        await post(
+          '/exchanges',
+          { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+          user1,
+        ).expect(201)
+      ).body;
+
+      // User2 tries to accept with a spoofed partnerAddress (OpenAPI schema has additionalProperties: false)
+      const hijackRes = await post(
+        `/exchanges/${created.id}/accept`,
+        {
+          revision: 1,
+          partnerAddress: {
+            recipientName: 'Hacker',
+            phone: '0901112233',
+            detail: 'Hacker den',
+          },
+        },
+        user2,
+      );
+      expect(hijackRes.status).toBe(422);
+
+      // Normal accept works cleanly
+      const acceptRes = await post(
+        `/exchanges/${created.id}/accept`,
+        { revision: 1 },
+        user2,
+      ).expect(200);
+      expect(acceptRes.body.status).toBe('AcceptedAwaitingFunding');
+    });
+
+    it('P1. Sets shippingDeadline (72h) upon entering Preparing; auto-refunds & cancels if neither ships', async () => {
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const l2 = await createApprovedListing(user2, 100000, 'Both');
+      const created = (
+        await post(
+          '/exchanges',
+          { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+          user1,
+        ).expect(201)
+      ).body;
+
+      await post(`/exchanges/${created.id}/accept`, { revision: 1 }, user2).expect(200);
+      await post(`/exchanges/${created.id}/funding`, {}, user1).expect(200);
+      const fund2Res = await post(`/exchanges/${created.id}/funding`, {}, user2).expect(200);
+
+      expect(fund2Res.body.status).toBe('Preparing');
+      expect(fund2Res.body.shippingDeadline).toBeDefined();
+
+      const deadline = new Date(fund2Res.body.shippingDeadline);
+      expect(deadline.getTime()).toBeGreaterThan(Date.now());
+
+      // Worker tick BEFORE deadline -> remains Preparing
+      await worker.tick(new Date(deadline.getTime() - 1000));
+      const midDoc = await db.c.exchanges.findOne({ _id: created.id });
+      expect(midDoc?.status).toBe('Preparing');
+
+      // Worker tick AFTER shipping deadline -> Cancelled with ShippingExpired, holds refunded
+      const sweepRes = await worker.tick(new Date(deadline.getTime() + 1000));
+      expect(sweepRes.processed).toBeGreaterThanOrEqual(1);
+
+      const finalDoc = await db.c.exchanges.findOne({ _id: created.id });
+      expect(finalDoc?.status).toBe('Cancelled');
+      expect(finalDoc?.cancelReason).toBe('ShippingExpired');
+
+      // Both listings must be safely released back to Available
+      const l1Doc = await db.c.listings.findOne({ _id: l1.listingId });
+      const l2Doc = await db.c.listings.findOne({ _id: l2.listingId });
+      expect(l1Doc?.trade).toBe('Available');
+      expect(l2Doc?.trade).toBe('Available');
+
+      const rec = await reconcile();
+      expect(rec.balanced).toBe(true);
+    });
+
+    it('P1. Escalates to ResolutionPending when only 1 party ships and shippingDeadline expires', async () => {
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const l2 = await createApprovedListing(user2, 100000, 'Both');
+      const created = (
+        await post(
+          '/exchanges',
+          { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+          user1,
+        ).expect(201)
+      ).body;
+
+      await post(`/exchanges/${created.id}/accept`, { revision: 1 }, user2).expect(200);
+      await post(`/exchanges/${created.id}/funding`, {}, user1).expect(200);
+      const fund2Res = await post(`/exchanges/${created.id}/funding`, {}, user2).expect(200);
+
+      // Only User1 ships
+      const ship1Res = await post(
+        `/exchanges/${created.id}/ship`,
+        {
+          expectedVersion: fund2Res.body.revision,
+          method: 'carrier',
+          trackingCode: 'EXP_TEST_123',
+        },
+        user1,
+      ).expect(200);
+      expect(ship1Res.body.status).toBe('Preparing');
+
+      const deadline = new Date(ship1Res.body.shippingDeadline);
+
+      // Worker sweeps after shipping deadline: User2 did not ship!
+      const sweepRes = await worker.tick(new Date(deadline.getTime() + 1000));
+      expect(sweepRes.processed).toBeGreaterThanOrEqual(1);
+
+      const escalatedDoc = await db.c.exchanges.findOne({ _id: created.id });
+      expect(escalatedDoc?.status).toBe('ResolutionPending');
+      expect(escalatedDoc?.disputedBy).toBe('System');
+      expect(escalatedDoc?.disputeReason).toContain('72 giờ');
+
+      // The books must remain Reserved (not released, because User1 already shipped!)
+      const l1Doc = await db.c.listings.findOne({ _id: l1.listingId });
+      const l2Doc = await db.c.listings.findOne({ _id: l2.listingId });
+      expect(l1Doc?.trade).toBe('Reserved');
+      expect(l2Doc?.trade).toBe('Reserved');
+
+      const rec = await reconcile();
+      expect(rec.balanced).toBe(true);
+    });
+
+    it('P1. Member dispute freezes 48h auto-settlement, keeping exchange in ResolutionPending', async () => {
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const l2 = await createApprovedListing(user2, 100000, 'Both');
+      const created = (
+        await post(
+          '/exchanges',
+          { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+          user1,
+        ).expect(201)
+      ).body;
+
+      await post(`/exchanges/${created.id}/accept`, { revision: 1 }, user2).expect(200);
+      await post(`/exchanges/${created.id}/funding`, {}, user1).expect(200);
+      const fund2 = await post(`/exchanges/${created.id}/funding`, {}, user2).expect(200);
+
+      const ship1 = await post(
+        `/exchanges/${created.id}/ship`,
+        { expectedVersion: fund2.body.revision, method: 'direct' },
+        user1,
+      ).expect(200);
+      const ship2 = await post(
+        `/exchanges/${created.id}/ship`,
+        { expectedVersion: ship1.body.revision, method: 'direct' },
+        user2,
+      ).expect(200);
+
+      const rec1 = await post(
+        `/exchanges/${created.id}/receive`,
+        { expectedVersion: ship2.body.revision },
+        user1,
+      ).expect(200);
+      const rec2 = await post(
+        `/exchanges/${created.id}/receive`,
+        { expectedVersion: rec1.body.revision },
+        user2,
+      ).expect(200);
+
+      expect(rec2.body.status).toBe('Delivered');
+      expect(rec2.body.inspectionDeadline).toBeDefined();
+
+      // User1 inspects the book and finds major damage -> raises a dispute!
+      const disputeRes = await post(
+        `/exchanges/${created.id}/dispute`,
+        {
+          expectedVersion: rec2.body.revision,
+          reason: 'Sách bị rách 20 trang và bong bìa không thể đọc được.',
+        },
+        user1,
+      ).expect(200);
+
+      expect(disputeRes.body.status).toBe('ResolutionPending');
+      expect(disputeRes.body.disputedBy).toBe(user1.id);
+      expect(disputeRes.body.disputeReason).toBe('Sách bị rách 20 trang và bong bìa không thể đọc được.');
+
+      // Now simulate inspection deadline passing
+      const afterInspectionDeadline = new Date(new Date(rec2.body.inspectionDeadline).getTime() + 1000);
+      await worker.tick(afterInspectionDeadline);
+
+      // Verify the exchange did NOT auto-settle to Completed; it MUST remain in ResolutionPending!
+      const frozenDoc = await db.c.exchanges.findOne({ _id: created.id });
+      expect(frozenDoc?.status).toBe('ResolutionPending');
+      expect(frozenDoc?.completedAt).toBeNull();
+
+      // Listings remain Reserved
+      const l1Doc = await db.c.listings.findOne({ _id: l1.listingId });
+      const l2Doc = await db.c.listings.findOne({ _id: l2.listingId });
+      expect(l1Doc?.trade).toBe('Reserved');
+      expect(l2Doc?.trade).toBe('Reserved');
+
+      const rec = await reconcile();
+      expect(rec.balanced).toBe(true);
+    });
   });
 });
 

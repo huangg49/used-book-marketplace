@@ -14,7 +14,8 @@ import {
     confirmSent,
     confirmReceived,
     completeExchange,
-    counterExchange
+    counterExchange,
+    reportIssue
 } from '../services/exchangeDetail';
 import type { CounterOfferData } from '../components/exchange/CounterDialog';
 import { saveExchangeShipment, type ShipmentData } from '../services/exchangeShipment';
@@ -73,8 +74,8 @@ export function ExchangeDetailPage() {
         invalidate();
     };
 
-    const handleAccept = async (deliveryAddressId?: string) => {
-        await acceptExchange(id!, detail!.revision!, deliveryAddressId);
+    const handleAccept = async (deliveryAddressId?: string, revisionOverride?: number) => {
+        await acceptExchange(id!, revisionOverride ?? detail!.revision!, deliveryAddressId);
         invalidate();
     };
 
@@ -85,6 +86,11 @@ export function ExchangeDetailPage() {
 
     const handleCounter = async (data: CounterOfferData) => {
         await counterExchange(id!, detail!.revision!, data);
+        invalidate();
+    };
+
+    const handleDispute = async (reason: string) => {
+        await reportIssue(id!, detail!.revision!, reason);
         invalidate();
     };
 
@@ -198,6 +204,7 @@ export function ExchangeDetailPage() {
                         onConfirmSent={handleConfirmSent}
                         onConfirmReceived={handleConfirmReceived}
                         onComplete={handleComplete}
+                        onDispute={handleDispute}
                     />
                     <SafetyTipsCard />
                 </div>

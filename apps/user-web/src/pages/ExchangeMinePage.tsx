@@ -215,6 +215,7 @@ function ExchangeCard({ item }: { item: ExchangeItem }) {
         const count = books.length;
         const title = count > 1 ? `${mainBook.title} +${count - 1} cuốn` : mainBook.title;
         const author = count > 1 ? 'Nhiều tác giả' : mainBook.author;
+        const totalPrice = books.reduce((sum, b) => sum + (b.price || 0), 0);
         
         return (
             <div className={`${styles.bookSide} ${isGive ? styles.bookSideGive : styles.bookSideReceive}`}>
@@ -224,6 +225,9 @@ function ExchangeCard({ item }: { item: ExchangeItem }) {
                         <span className={styles.bookLabel}>{label}</span>
                         <h3 className={styles.bookTitle} title={title}>{title}</h3>
                         <p className={styles.bookAuthor}>{author}</p>
+                        {totalPrice > 0 && (
+                            <p className={styles.bookPrice}>{formatVnd(totalPrice)}</p>
+                        )}
                     </div>
                 )}
                 
@@ -245,6 +249,9 @@ function ExchangeCard({ item }: { item: ExchangeItem }) {
                         <span className={`${styles.bookLabel} ${styles.bookLabelGive}`}>{label}</span>
                         <h3 className={styles.bookTitle} title={title}>{title}</h3>
                         <p className={styles.bookAuthor}>{author}</p>
+                        {totalPrice > 0 && (
+                            <p className={styles.bookPrice}>{formatVnd(totalPrice)}</p>
+                        )}
                     </div>
                 )}
             </div>

@@ -13,7 +13,7 @@ import styles from "../layouts/MainLayout.module.css";
 
 const links = [
   { label: "Tìm sách", to: ROUTES.search },
-  { label: "Sách để đổi", to: searchUrl({ mode: "Exchange" }) },
+  { label: "Đổi sách", to: searchUrl({ mode: "Exchange" }) },
   { label: "Đấu giá", to: ROUTES.auctions },
 ];
 export function Logo() {
