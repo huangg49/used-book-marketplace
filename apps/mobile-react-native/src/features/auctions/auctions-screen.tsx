@@ -26,12 +26,10 @@ import {
 import {
   AuctionCard,
   AuctionCategoryTabs,
-  AuctionCommitments,
   AuctionHeroCard,
   AuctionOutbidAlert,
   AuctionSearchBar,
   AuctionSortChips,
-  AuctionTrustBanner,
   type CategoryTabId,
 } from "./components";
 import { AuctionQuickBidModal } from "./auction-quick-bid-modal";
@@ -268,9 +266,6 @@ export function AuctionsScreen() {
           />
         )}
 
-        {/* 5. BẢO CHỨNG DI SẢN (Trust Banner) */}
-        <AuctionTrustBanner />
-
         {/* 6. PHÂN KHU 2: TIÊU ĐỀ SÁCH CŨ ĐANG ĐẤU GIÁ */}
         <View style={styles.gridSectionHeaderContainer}>
           <View style={styles.gridSectionHeader}>
@@ -337,9 +332,6 @@ export function AuctionsScreen() {
             if (heroAuction) setBidModalTarget(heroAuction);
           }}
         />
-
-        {/* 10. Footer Commitments */}
-        <AuctionCommitments />
       </ScrollView>
 
       {/* Quick Bid Modal */}
