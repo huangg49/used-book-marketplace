@@ -26,6 +26,7 @@ import { ShippingTrackingCard } from '../components/exchange/ShippingTrackingCar
 import { BookInfoCard } from '../components/exchange/BookInfoCard';
 import { ActionCard } from '../components/exchange/ActionCard';
 import { ChatPanel } from '../components/exchange/ChatPanel';
+import { exchangeChatGuidance } from '../lib/exchange-chat-guidance';
 import { SafetyTipsCard } from '../components/exchange/SafetyTipsCard';
 import styles from './ExchangeDetailPage.module.css';
 
@@ -47,8 +48,8 @@ export function ExchangeDetailPage() {
         refetchIntervalInBackground: false
     });
 
-    const { data: messages = [] } = useQuery({
-        queryKey: ['exchangeMessages', id],
+    const messagesQuery = useQuery({
+        queryKey: ['exchangeMessages', auth.status === 'authenticated' ? auth.user.id : undefined, id],
         queryFn: () => getMessages(id!),
         enabled: !!id && auth.status === 'authenticated',
         refetchInterval: 3000,
@@ -61,7 +62,7 @@ export function ExchangeDetailPage() {
         queryClient.invalidateQueries({ queryKey: ['exchangeTransactions'] });
         queryClient.invalidateQueries({ queryKey: ['exchangeCounts'] });
         queryClient.invalidateQueries({ queryKey: ['wallet'] });
-        queryClient.invalidateQueries({ queryKey: ['exchangeMessages', id] });
+        queryClient.invalidateQueries({ queryKey: ['exchangeMessages', auth.status === 'authenticated' ? auth.user.id : undefined, id] });
     };
 
     const handleSendMessage = async (text: string) => {
@@ -152,12 +153,12 @@ export function ExchangeDetailPage() {
     else if (detail.status === 'WAITING_YOU_CONFIRM') {
         statusText = detail.viewerShipping.receivedAt ? 'Đang chờ đối tác nhận sách' : 'Chờ xác nhận nhận sách';
     }
-    else if (detail.status === 'INSPECTING') statusText = 'Đang kiểm tra sách (48h)';
+    else if (detail.status === 'INSPECTING') statusText = 'Đang kiểm tra sách';
     else if (detail.status === 'COMPLETED') statusText = 'Hoàn tất';
     else if (detail.status === 'REJECTED') {
         statusText = detail.closedBy === 'viewer' ? 'Bạn đã từ chối đề nghị này' : `@${detail.partner.username} đã từ chối đề nghị của bạn`;
     }
-    else if (detail.status === 'CANCELLED') statusText = 'Bạn đã hủy đề nghị';
+    else if (detail.status === 'CANCELLED') statusText = detail.closedBy === 'viewer' ? 'Bạn đã hủy đề nghị' : detail.closedBy === 'partner' ? 'Đối tác đã hủy đề nghị' : 'Đề nghị đã hủy';
     else if (detail.status === 'EXPIRED') statusText = 'Hết hạn';
 
     return (
@@ -189,10 +190,15 @@ export function ExchangeDetailPage() {
                 </>
             )}
 
+            <nav className={styles.sectionLinks} aria-label="Đi tới phần trao đổi">
+              <a href="#exchange-actions">Xem bước tiếp theo</a>
+              <a href="#exchange-chat">Nhắn với đối tác</a>
+            </nav>
             <div className={styles.gridContainer}>
                 <div className={styles.mainCol}>
                     <BookInfoCard detail={detail} />
                     <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
+                    <section id="exchange-actions" className={styles.actionSection} aria-label="Hành động của bạn" tabIndex={-1}>
                     <ActionCard
                         detail={detail}
                         onCancel={handleCancel}
@@ -206,12 +212,22 @@ export function ExchangeDetailPage() {
                         onComplete={handleComplete}
                         onDispute={handleDispute}
                     />
+                    </section>
                     <SafetyTipsCard />
                 </div>
 
                 <div className={styles.sideCol}>
                     <ChatPanel
-                        messages={messages}
+                        key={id}
+                        messages={messagesQuery.data ?? []}
+                        isLoading={messagesQuery.isPending}
+                        loadError={messagesQuery.isError}
+                        isRefreshing={messagesQuery.isFetching}
+                        onRetry={() => void messagesQuery.refetch()}
+                        giveBooks={detail.giveBooks.map((book) => book.title)}
+                        receiveBooks={detail.receiveBooks.map((book) => book.title)}
+                        statusText={statusText}
+                        guidance={exchangeChatGuidance(detail)}
                         partner={detail.partner}
                         onSendMessage={handleSendMessage}
                         isReadOnly={['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'].includes(detail.status)}

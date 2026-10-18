@@ -3,6 +3,29 @@
     margin: 0 auto;
     padding: 24px;
 }
+.sectionLinks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    margin-bottom: 24px;
+}
+.sectionLinks a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--shop-wine);
+    font: 600 0.875rem/1.7 var(--shop-body);
+    text-underline-offset: 4px;
+}
+.actionSection {
+    scroll-margin-top: 112px;
+    min-width: 0;
+}
+.sectionLinks a:focus-visible,
+.actionSection:focus-visible {
+    outline: 2px solid var(--shop-wine);
+    outline-offset: 4px;
+}
 @media (min-width: 768px) {
     .container {
         padding: 48px;

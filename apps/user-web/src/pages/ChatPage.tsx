@@ -16,7 +16,8 @@ import {
 } from "../services/purchase-conversations";
 import { getPublicListing } from "../services/public-listings";
 import { createSellerOrder } from "../services/purchase-conversations";
-import { getOrderForPayment, payOrder } from "../services/orders";
+import { getOrderForPayment, payOrder, orderStates } from "../services/orders";
+import { purchaseChatGuidance } from "../lib/purchase-chat-guidance";
 import { formatVnd } from "../lib/routes";
 import { ListingPhoto } from "../components/BookCard";
 import { PurchaseDialog } from "../components/PurchaseDialog";
@@ -105,21 +106,21 @@ function ChatRoom({
   const socketRef = useRef<Socket | null>(null);
   const attemptRef = useRef<typeof attempt>(undefined);
   const messagesEnd = useRef<HTMLDivElement>(null);
-  const active =
-    room.status === "Active" &&
-    (!room.expiresAt || Date.now() < Date.parse(room.expiresAt));
-  const [expired, setExpired] = useState(!active);
+  const [clock, setClock] = useState(Date.now);
+  const now = Math.max(clock, Date.now());
+  const active = room.status === "Active" && (!room.expiresAt || now < Date.parse(room.expiresAt));
+  const expired = !active;
+  const isBuyer = room.buyer.id === userId;
+  const guidance = purchaseChatGuidance(room, userId, book.data ? Boolean(book.data.fulfillment) : undefined, now);
   useEffect(() => {
-    if (!active || !room.expiresAt) return;
-    const timer = window.setTimeout(
-      () => setExpired(true),
-      Math.min(
-        2147483647,
-        Math.max(0, Date.parse(room.expiresAt!) - Date.now()),
-      ),
-    );
+    const upcoming = [room.expiresAt, room.quotePreview?.expiresAt]
+      .filter((value): value is string => Boolean(value))
+      .map(Date.parse)
+      .filter((value) => value > Date.now());
+    if (!upcoming.length) return;
+    const timer = window.setTimeout(() => setClock(Date.now()), Math.min(2147483647, Math.max(0, Math.min(...upcoming) - Date.now())));
     return () => window.clearTimeout(timer);
-  }, [active, room.expiresAt]);
+  }, [room.expiresAt, room.quotePreview?.expiresAt, clock]);
   useEffect(() => {
     const socket = io(`${socketUrl}/purchase-chat`, {
       auth: (callback) => callback({ token: session.getAccessToken() }),
@@ -245,13 +246,16 @@ function ChatRoom({
           <ArrowLeft size={18} aria-hidden="true" />
           Hội thoại
         </Link>
-        <h2>{other.displayName}</h2>
+        <div className={styles.person}>
+          <span className={styles.avatar} aria-hidden="true">{other.displayName.slice(0, 1).toUpperCase()}</span>
+          <div><h2>{other.displayName}</h2><p>{isBuyer ? "Người bán · Bạn đang hỏi mua" : "Người mua · Bạn đang bán sách"}</p></div>
+        </div>
         <p>
           {statusLabels[room.status]}
           {room.expiresAt && (
             <>
               {" "}
-              · Hạn giữ:{" "}
+              · Hạn hội thoại:{" "}
               <time dateTime={room.expiresAt}>{dateTime(room.expiresAt)}</time>
             </>
           )}
@@ -268,6 +272,7 @@ function ChatRoom({
                 {book.data.book.title}
               </Link>
               <p>{book.data.book.authors.join(", ")}</p>
+              {book.data.salePrice != null && <p>Giá niêm yết: <strong>{formatVnd(book.data.salePrice)}</strong></p>}
             </div>
           </>
         ) : (
@@ -281,43 +286,26 @@ function ChatRoom({
           </>
         )}
       </div>
-      {active && room.buyer.id === userId && book.data?.fulfillment && (
-        <aside className={styles.connection} aria-label="Bước tiếp theo">
-          <span>
-            Gửi địa chỉ và phí giao nhận để người bán xem xét. Sách vẫn được rao
-            bán cho đến khi người bán tạo đơn.
-          </span>
-          <Link to={`/checkout/${room.listingId}?conversationId=${room.id}`}>
-            Gửi địa chỉ và báo giá
-          </Link>
+      <ol className={styles.progress} aria-label="Tiến trình mua bán">
+        {["Trao đổi", "Thông tin nhận sách", "Đơn hàng"].map((label, index) => (
+          <li key={label} aria-current={guidance.phase === index ? "step" : undefined} data-complete={guidance.phase != null && guidance.phase > index || undefined}>
+            <span aria-hidden="true">{index + 1}</span>{label}
+          </li>
+        ))}
+      </ol>
+      {!(room.orderId && isBuyer) && (
+        <aside className={styles.nextStep} aria-label="Bước tiếp theo">
+          <div><h3>{guidance.title}</h3><p>{guidance.description}</p>
+            {!expired && <p className={styles.reservationNote}>Chat chưa giữ chỗ cho cuốn sách.</p>}
+          </div>
+          {guidance.action === "address" && <Link className={styles.nextAction} to={`/checkout/${room.listingId}?conversationId=${room.id}`}>{guidance.actionLabel}</Link>}
+          {guidance.action === "create-order" && <button className={styles.nextAction} type="button" onClick={() => setOrderDialogOpen(true)}>{guidance.actionLabel}</button>}
+          {active && !isBuyer && orderAttempt.current && guidance.action !== "create-order" && <button className={styles.nextAction} type="button" onClick={() => setOrderDialogOpen(true)}>Tiếp tục yêu cầu tạo đơn</button>}
+          {guidance.action === "order" && <Link className={styles.nextAction} to={`/orders/${room.orderId}`}>Xem đơn hàng</Link>}
         </aside>
       )}
-      {active &&
-        room.buyer.id === userId &&
-        book.data &&
-        !book.data.fulfillment && (
-          <p className={styles.connection} role="status">
-            Người bán chưa hoàn thiện nơi gửi cho bài đăng này nên chưa thể tạo
-            đơn. Hãy nhắn người bán cập nhật thông tin giao hàng.
-          </p>
-        )}
-      {active && room.seller.id === userId && !room.hasQuote && (
-        <p className={styles.connection}>
-          Chờ người mua gửi địa chỉ và báo giá giao nhận. Việc chat chưa giữ
-          sách.
-        </p>
-      )}
-      {active && room.seller.id === userId && room.hasQuote && (
+      {active && room.seller.id === userId && (room.hasQuote || orderAttempt.current) && (
         <>
-          <aside className={styles.connection}>
-            <span>
-              Người mua đã gửi thông tin giao nhận. Kiểm tra và tạo đơn với giá
-              đã thỏa thuận.
-            </span>
-            <button type="button" onClick={() => setOrderDialogOpen(true)}>
-              Tạo đơn hàng
-            </button>
-          </aside>
           <PurchaseDialog
             open={orderDialogOpen}
             onClose={() => setOrderDialogOpen(false)}
@@ -456,7 +444,7 @@ function ChatRoom({
               <button
                 className={flow.primary}
                 type="submit"
-                disabled={orderBusy || !room.hasQuote || !room.quotePreview}
+                disabled={orderBusy || (!orderAttempt.current && (!room.hasQuote || !room.quotePreview))}
               >
                 {orderBusy ? "Đang tạo đơn…" : "Tạo đơn cho người mua này"}
               </button>
@@ -465,12 +453,12 @@ function ChatRoom({
         </>
       )}
       {room.orderId && room.buyer.id === userId && (
-        <aside className={styles.connection}>
+        <aside className={styles.nextStep} aria-label="Bước tiếp theo">
           {order.isLoading ? (
             <p>Đang tải đơn hàng…</p>
           ) : order.data ? (
             <>
-              <strong>Người bán đã tạo đơn</strong>
+              <h3>{order.data.state === "AwaitingPayment" ? "Đơn đang chờ bạn thanh toán" : (orderStates[order.data.state] ?? "Đã cập nhật đơn hàng")}</h3>
               <p>
                 Giá sách: {formatVnd(order.data.amounts.bookPrice)} · Phí giao
                 nhận: {formatVnd(order.data.amounts.shippingFee)}
@@ -533,8 +521,9 @@ function ChatRoom({
                   </button>
                 )}
               {order.data.state !== "AwaitingPayment" && (
-                <p>Trạng thái đơn: {order.data.state}</p>
+                <p>Theo dõi bước giao nhận tiếp theo trong đơn hàng.</p>
               )}
+              <Link className={styles.orderLink} to={`/orders/${room.orderId}`}>Xem chi tiết đơn hàng</Link>
               {payError && <p role="alert">{payError}</p>}
             </>
           ) : (
@@ -547,7 +536,7 @@ function ChatRoom({
           )}
         </aside>
       )}
-      {connection !== "online" && (
+      {!expired && connection !== "online" && (
         <div className={styles.connection} role="status">
           <span>
             {connection === "connecting"
@@ -587,14 +576,14 @@ function ChatRoom({
             </button>
           </div>
         )}
-        {history.data && messages.length === 0 && (
+        {!history.isError && history.data && messages.length === 0 && (
           <div className={styles.emptyRoom}>
             <MessageCircle size={28} aria-hidden="true" />
-            <h3>Bắt đầu câu chuyện</h3>
+            <h3>{expired ? "Chưa có tin nhắn trong cuộc trao đổi này" : `Bắt đầu trao đổi với ${other.displayName}`}</h3>
             <p>
-              Hỏi về tình trạng sách hoặc cách nhận sách. Nội dung chat không
-              thay điều khoản đã chốt.
+              {expired ? "Lịch sử hội thoại được giữ lại tại đây." : "Bạn có thể hỏi về tình trạng sách hoặc giá trước khi gửi thông tin nhận sách."}
             </p>
+            {!expired && !body && <button className={styles.suggestion} type="button" disabled={!!attempt} onClick={() => { setBody(isBuyer ? "Chào bạn, sách còn không và tình trạng hiện tại thế nào?" : "Chào bạn, bạn muốn hỏi thêm điều gì về cuốn sách này?"); document.getElementById("chat-message")?.focus(); }}>Soạn lời chào</button>}
           </div>
         )}
         {messages.map((message) => (
@@ -618,7 +607,7 @@ function ChatRoom({
           send();
         }}
       >
-        <label htmlFor="chat-message">Tin nhắn</label>
+        {!expired && <label htmlFor="chat-message">Nhắn cho {other.displayName}</label>}
         {error && (
           <p className={styles.error} role="alert">
             {error}
@@ -626,7 +615,7 @@ function ChatRoom({
         )}
         {expired ? (
           <p className={styles.closed}>
-            Cuộc trò chuyện đã đóng. Bạn vẫn có thể đọc tin nhắn cũ.
+            {room.orderId ? "Cuộc trao đổi đã chuyển sang đơn hàng. Bạn vẫn có thể đọc tin nhắn cũ; các bước tiếp theo nằm trong đơn hàng." : "Cuộc trò chuyện đã đóng. Bạn vẫn có thể đọc tin nhắn cũ."}
           </p>
         ) : (
           <>
@@ -637,7 +626,7 @@ function ChatRoom({
               value={body}
               disabled={!!attempt}
               onChange={(event) => setBody(event.target.value)}
-              placeholder="Bạn muốn hỏi gì về cuốn sách này?"
+              placeholder={isBuyer ? "Hỏi về cuốn sách hoặc trao đổi giá…" : "Trả lời người mua về cuốn sách…"}
             />
             <div className={styles.sendRow}>
               <span>{body.length}/1.000 ký tự</span>
@@ -660,9 +649,20 @@ function ChatRoom({
   );
 }
 
+function ConversationLink({ room, userId, selected }: { room: PurchaseConversation; userId: string; selected: boolean }) {
+  const book = useQuery({ queryKey: ["public-listing", room.listingId], queryFn: () => getPublicListing(room.listingId), staleTime: 60_000, retry: false });
+  const buyer = room.buyer.id === userId;
+  return <Link to={`/chat/${room.id}`} aria-current={selected ? "page" : undefined}>
+    <strong>{buyer ? room.seller.displayName : room.buyer.displayName}</strong>
+    <span className={styles.inboxBook}>{book.data?.book.title ?? (book.isPending ? "Đang tải tên sách…" : "Bài đăng hiện không khả dụng")}</span>
+    <span>{buyer ? "Bạn hỏi mua" : "Bạn bán"} · {statusLabels[room.status]}</span>
+  </Link>;
+}
+
 export function ChatPage() {
   const { roomId } = useParams<{ roomId?: string }>();
   const auth = useSession();
+  const [visibleRooms, setVisibleRooms] = useState(10);
   const rooms = useQuery({
     queryKey: [
       "purchase-conversations",
@@ -675,7 +675,7 @@ export function ChatPage() {
   if (auth.status !== "authenticated")
     return (
       <section className={styles.guest}>
-        <h1>Nhắn tin</h1>
+        <h1>Tin nhắn mua bán</h1>
         <p>
           {auth.status === "loading"
             ? "Đang kiểm tra đăng nhập…"
@@ -691,15 +691,19 @@ export function ChatPage() {
       </section>
     );
   const room = rooms.data?.find((r) => r.id === roomId);
+  const shownRooms = rooms.data?.slice(0, visibleRooms) ?? [];
+  if (room && !shownRooms.some((item) => item.id === room.id)) shownRooms.push(room);
   return (
-    <div className={styles.root}>
+    <div className={styles.root} data-room-selected={!!roomId}>
       <header className={styles.pageHeading}>
-        <h1>Nhắn tin</h1>
-        <p>Trao đổi về bản sách bạn đang quan tâm.</p>
+        <h1>Tin nhắn mua bán</h1>
+        <p>Chọn hội thoại để xem cuốn sách, người trao đổi và bước tiếp theo.</p>
       </header>
       <div className={styles.workspace} data-selected={!!roomId}>
         <aside className={styles.inbox} aria-label="Danh sách hội thoại">
-          <h2>Hội thoại của bạn</h2>
+          <h2>Mua và bán sách</h2>
+          <p className={styles.inboxHelp}>Chat về một cuốn sách với người mua hoặc người bán.</p>
+          <Link className={styles.exchangeLink} to="/exchange/mine">Tìm tin nhắn Đổi sách</Link>
           {rooms.isLoading && (
             <p className={styles.state} role="status">
               Đang tải hội thoại…
@@ -721,30 +725,17 @@ export function ChatPage() {
             <div className={styles.state}>
               <MessageCircle size={28} aria-hidden="true" />
               <p>
-                Chưa có hội thoại. Khi nhắn người bán về một bản sách, cuộc trò
-                chuyện sẽ xuất hiện ở đây; listing vẫn mở cho đến khi người bán
-                tạo đơn.
+                Chưa có cuộc trò chuyện mua bán. Mở một cuốn sách và chọn “Chat với người bán” để bắt đầu.
               </p>
               <Link to="/books">Tìm một cuốn sách</Link>
             </div>
           )}
           <nav aria-label="Chọn hội thoại">
-            {rooms.data?.map((r) => (
-              <Link
-                to={`/chat/${r.id}`}
-                key={r.id}
-                aria-current={r.id === roomId ? "page" : undefined}
-              >
-                <strong>
-                  {r.buyer.id === auth.user.id
-                    ? r.seller.displayName
-                    : r.buyer.displayName}
-                </strong>
-                <span>{statusLabels[r.status]}</span>
-                <small>{dateTime(r.createdAt)}</small>
-              </Link>
+            {shownRooms.map((r) => (
+              <ConversationLink key={r.id} room={r} userId={auth.user.id} selected={r.id === roomId} />
             ))}
           </nav>
+          {rooms.data && visibleRooms < rooms.data.length && <button className={styles.moreRooms} type="button" onClick={() => setVisibleRooms((value) => value + 10)}>Xem thêm hội thoại</button>}
         </aside>
         {room ? (
           <ChatRoom

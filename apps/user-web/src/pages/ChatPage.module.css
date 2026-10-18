@@ -88,6 +88,152 @@
   margin: 0 0 8px;
   overflow-wrap: anywhere;
 }
+.person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.person > div {
+  min-width: 0;
+}
+.person h2 {
+  margin-bottom: 4px;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--shop-cream);
+  color: var(--shop-wine);
+  font-size: 1rem;
+  font-weight: 700;
+}
+.progress {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--shop-line);
+}
+.progress li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  line-height: 1.7;
+  color: var(--shop-muted);
+}
+.progress li > span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: 1px solid var(--shop-line);
+  border-radius: 50%;
+}
+.progress [aria-current="step"] {
+  color: var(--shop-wine);
+  font-weight: 700;
+}
+.progress [aria-current="step"] > span {
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  border-color: var(--shop-wine);
+}
+.nextStep {
+  padding: 20px 24px;
+  background: var(--shop-cream);
+  border-bottom: 1px solid var(--shop-line);
+}
+.nextStep h3 {
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0 0 8px;
+  color: var(--shop-ink);
+}
+.nextStep p {
+  margin: 0 0 12px;
+  max-width: 68ch;
+  font-size: 0.8125rem;
+  line-height: 1.8;
+}
+.nextStep .reservationNote {
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+}
+.nextAction,
+.nextStep button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  font: 700 0.8125rem/1.7 var(--shop-body);
+  text-decoration: none;
+  cursor: pointer;
+}
+.nextAction:hover,
+.nextStep button:hover {
+  background: var(--shop-wine-hover);
+}
+.orderLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 0;
+  color: var(--shop-wine);
+  font-size: 0.8125rem;
+  text-underline-offset: 4px;
+  margin-left: 12px;
+}
+.suggestion,
+.moreRooms {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--shop-control);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--shop-wine);
+  font: 600 0.8125rem/1.7 var(--shop-body);
+  cursor: pointer;
+}
+.suggestion {
+  margin-top: 16px;
+}
+.moreRooms {
+  margin: 16px;
+}
+.inbox .inboxHelp {
+  margin: -12px 20px 8px;
+  font-size: 0.75rem;
+  line-height: 1.8;
+  color: var(--shop-muted);
+}
+.inbox .exchangeLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin: 0 20px 12px;
+  color: var(--shop-wine);
+  font-size: 0.75rem;
+  text-underline-offset: 4px;
+}
+.inbox .inboxBook {
+  color: var(--shop-ink);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+}
 .roomHeader p {
   color: var(--shop-muted);
   font-size: 0.75rem;
@@ -373,6 +519,18 @@
   .workspace {
     grid-template-columns: 240px minmax(0, 1fr);
   }
+  .root[data-room-selected="true"] .pageHeading h1 {
+    font-size: 1.5rem;
+  }
+  .root[data-room-selected="true"] .pageHeading p {
+    display: none;
+  }
+  .root[data-room-selected="true"] .pageHeading {
+    margin-bottom: 16px;
+  }
+  .context p:first-of-type {
+    display: none;
+  }
 }
 @media (max-width: 760px) {
   .root,
@@ -398,8 +556,23 @@
   }
   .roomHeader,
   .context,
-  .composer {
+  .composer,
+  .nextStep,
+  .progress {
     padding: 16px;
+  }
+  .progress {
+    gap: 8px;
+  }
+  .progress li {
+    align-items: center;
+  }
+  .nextAction {
+    width: 100%;
+  }
+  .orderLink {
+    display: flex;
+    margin-left: 0;
   }
   .roomHeader .back {
     display: inline-flex;

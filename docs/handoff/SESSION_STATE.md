@@ -1,4 +1,28 @@
-# Điểm lưu hiện tại — 17/10/2026
+# Điểm lưu hiện tại — 18/10/2026
+
+## Member web: làm rõ cách dùng chat mua bán/Đổi sách —18/10/2026
+
+- Nhánh `codex/chat-guidance`, base `25efcb8`. Chủ dự án ưu tiên sửa cảm giác
+  khó hiểu khi mở chat. UI hiển thị người trao đổi/vai trò, sách và giá niêm yết,
+  tiến trình và một vùng hướng dẫn theo từng bên, quote còn hiệu lực và trạng thái.
+  Inbox có tên sách/role, xem thêm từng10 và đường tới tin nhắn Đổi sách. Giữ
+  create/pay và retry intent; OrderCreated chuyển chỉ đọc ngay khi room cập nhật.
+- Chat Đổi sách có sách gửi/nhận, trạng thái và anchor tới phần hành động; tách
+  loading/empty/error, giữ lịch sử/draft khi lỗi. Không nhận diện tin hệ thống
+  từ tiền tố nội dung do Member gõ. Nhãn tiến trình không báo đã chấp nhận khi
+  còn chờ; copy giao nhận hướng tới thao tác giao dịch thay vì xác nhận qua chat.
+- PASS web lint (6 warning cũ), build/typecheck,147 unit; detector một lần0 findings.
+  Browser fixture toàn HTTP được chặn + Socket.IO riêng:1440/390px,320px chữ130%,
+  buyer/seller và thông tin nhận, room đổi OrderCreated, message lost-ACK dedupe,
+  create/pay retry đúng key/body, error/retry lịch sử, giữ nội dung nhập và tác
+  giả tin. Thử lại create vẫn mở được khi quote snapshot biến mất sau lỗi503;
+  giữ giá/key/version/body ban đầu.
+  `pnpm --filter @used-books/user-web test:chat:browser` chạy độc lập DB,
+  dùng5193/5195. Evidence local `.tmp/chat-guidance-qa`.
+- Không thay API/contract/Mongo, phép tính tiền, inspection/settlement hoặc RN.
+  Full seller-order DB integration chưa chạy lại (đã cập nhật selectors theo nhãn
+  mới); API/storage thật/native/remote CI NOT RUN, READINESS giữ nguyên. Chưa
+  push/PR. Web local5174 nhận source để chủ dự án xem `/chat` và `/exchange/:id`.
 
 ## Trao đổi sách (Exchange): Hoàn tất Ưu tiên 0 & Ưu tiên 1 — 17/10/2026
 

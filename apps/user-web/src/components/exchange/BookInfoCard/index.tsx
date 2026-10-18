@@ -111,7 +111,7 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
                     <p className={styles.detailLabel}>Phương thức giao nhận</p>
                     <p className={styles.detailValueFlex}>
                         <Truck className={styles.iconGoldSmall} size={16} />
-                        <span>Chuyển phát bưu điện / Hẹn gặp trực tiếp (TP.HCM)</span>
+                        <span>Xem phương thức và tiến độ trong phần Giao nhận</span>
                     </p>
                 </div>
 

@@ -442,3 +442,23 @@ the owner's11/10 policy. This is a local recipe, not a replacement for other dia
 [Documentation comparison](../../.impeccable/review/purchase-popup/DOCUMENTATION.md)
 records incumbent-system scope and drift. Browser evidence and AI review do not
 establish human, native or live-provider acceptance; READINESS is unchanged.
+
+## Member web — conversation guidance and Exchange ChatPanel
+
+18/10/2026. Actual examples: `/chat/:roomId` and `/exchange/:id`.
+There is no Member web `/ui` showcase. The purchase room's local guidance uses
+the existing APIs; it does not grant transaction rights or infer payment from
+chat text. A greeting suggestion only populates the draft. Order creation and
+payment preserve their existing receipts and retry keys/bodies.
+
+[ChatPanel](../../apps/user-web/src/components/exchange/ChatPanel/index.tsx)
+takes actual `messages`, `partner`, `giveBooks`/`receiveBooks` title arrays,
+`statusText`, `guidance`, `onSendMessage`, `onRetry`, optional `isLoading`,
+`loadError`, `isRefreshing`, `isReadOnly` and `unavailable`.
+Its `#exchange-chat` anchor pairs with the parent `#exchange-actions` section;
+parent controls permissions, fetching, mutation and invalidation. Do not pass
+live-user text as an authoritative system event. History errors show retry
+without clearing cached messages, and send errors retain the input.
+Both contexts use wine/cream, Be Vietnam Pro and44px controls with visible focus.
+See the [chat surface record](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-chatpage-tsx.md)
+for scoped browser evidence and verification limits.
