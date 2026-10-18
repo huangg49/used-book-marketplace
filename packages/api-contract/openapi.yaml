@@ -8269,6 +8269,48 @@ paths:
           $ref: "#/components/responses/ListingError"
         "404":
           $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/dispute:
+    post:
+      operationId: disputeExchange
+      tags:
+        - Exchanges
+      description: Participant opens a dispute during delivery or inspection window, halting auto-settlement.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DisputeExchangeCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exchange"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
         "409":
           $ref: "#/components/responses/ListingError"
         "500":
@@ -8426,6 +8468,44 @@ paths:
         - in: query
           name: carrier
           required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /shipments/carrier/orders/active:
+    get:
+      operationId: getActiveShipmentOrder
+      tags:
+        - Shipments
+      description: Get active shipment order for driver portal.
+      parameters:
+        - in: query
+          name: trackingCode
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /shipments/carrier/order/{code}:
+    get:
+      operationId: getShipmentOrderByCode
+      tags:
+        - Shipments
+      description: Get shipment order details by code for driver portal.
+      parameters:
+        - in: path
+          name: code
+          required: true
           schema:
             type: string
       responses:
@@ -10351,6 +10431,7 @@ components:
             - ExchangeCompleted
             - ExchangeCancelled
             - ExchangeRejected
+            - ExchangeDisputed
         title: { type: string, maxLength: 120 }
         body: { type: string, maxLength: 400 }
         targetType: { type: string, enum: [Auction, Exchange, Order] }
@@ -15517,6 +15598,7 @@ components:
         - ProposalExpired
         - CancelledByUser
         - ListingUnavailable
+        - ShippingExpired
     ExchangeCancelledBy:
       type: string
       enum:
@@ -15553,6 +15635,11 @@ components:
         initiatorListingId:
           type: string
           format: uuid
+        initiatorListingIds:
+          type: array
+          items:
+            type: string
+            format: uuid
         recipientListingId:
           type: string
           format: uuid
@@ -15668,6 +15755,30 @@ components:
           anyOf:
             - $ref: "#/components/schemas/ExchangeShipmentInfo"
             - type: "null"
+        lastProposedById:
+          anyOf:
+            - type: string
+              format: uuid
+            - type: "null"
+        shippingDeadline:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        disputedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        disputeReason:
+          anyOf:
+            - type: string
+            - type: "null"
+        disputedBy:
+          anyOf:
+            - type: string
+              format: uuid
+            - type: "null"
         createdAt:
           type: string
           format: date-time
@@ -15751,12 +15862,16 @@ components:
       type: object
       additionalProperties: false
       required:
-        - initiatorListingId
         - recipientListingId
       properties:
         initiatorListingId:
           type: string
           format: uuid
+        initiatorListingIds:
+          type: array
+          items:
+            type: string
+            format: uuid
         recipientListingId:
           type: string
           format: uuid
@@ -15812,6 +15927,20 @@ components:
         reason:
           type: string
           minLength: 5
+    DisputeExchangeCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
     ExchangeMessage:
       type: object
       additionalProperties: false

@@ -13,6 +13,9 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
     const receiveBooks = detail.receiveBooks;
     const giveBooks = detail.giveBooks;
 
+    const totalReceivePrice = receiveBooks.reduce((sum, b) => sum + (b.price || 0), 0);
+    const totalGivePrice = giveBooks.reduce((sum, b) => sum + (b.price || 0), 0);
+
     const moneyAmount = detail.moneyAmount || 0;
     let moneyText = 'Trao đổi ngang giá (Không bù tiền)';
 
@@ -32,7 +35,9 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
 
             <div className={styles.booksArea}>
                 <div className={styles.receiveCol}>
-                    <span className={styles.pillReceive}>Sách bạn nhận</span>
+                    <span className={styles.pillReceive}>
+                        Sách bạn nhận{receiveBooks.length > 1 ? ` (${receiveBooks.length} cuốn · Tổng ${formatVnd(totalReceivePrice)})` : ''}
+                    </span>
                     <div className={styles.bookListFlex}>
                         {receiveBooks.map(book => (
                             <div key={book.id} className={styles.bookItemRow}>
@@ -43,6 +48,9 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
                                     <h3 className={styles.bookTitle}>{book.title}</h3>
                                     <p className={styles.bookAuthor}>{book.author}</p>
                                     <p className={styles.bookCondition}>Tình trạng: {book.condition || 'Chưa có thông tin'}</p>
+                                    <p className={styles.bookPrice}>
+                                        Giá trị: <strong>{book.price ? formatVnd(book.price) : '—'}</strong>
+                                    </p>
                                 </div>
                             </div>
                         ))}
@@ -56,13 +64,19 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
                 </div>
 
                 <div className={styles.giveCol}>
-                    <span className={styles.pillGive}>Sách bạn giao</span>
+                    <span className={styles.pillGive}>
+                        Sách bạn giao ({giveBooks.length} cuốn{giveBooks.length > 1 ? ` · Tổng ${formatVnd(totalGivePrice)}` : ''})
+                    </span>
                     <div className={styles.bookListFlex}>
-                        {giveBooks.slice(0, 3).map(book => (
+                        {giveBooks.map(book => (
                             <div key={book.id} className={styles.bookItemRowGive}>
                                 <div className={styles.bookInfoGive}>
                                     <h3 className={styles.bookTitle}>{book.title}</h3>
                                     <p className={styles.bookAuthor}>{book.author}</p>
+                                    <p className={styles.bookCondition}>Tình trạng: {book.condition || 'Chưa có thông tin'}</p>
+                                    <p className={styles.bookPrice}>
+                                        Giá trị: <strong>{book.price ? formatVnd(book.price) : '—'}</strong>
+                                    </p>
                                 </div>
                                 <div className={styles.coverSmall}>
                                     <BookCover title={book.title} coverUrl={book.coverUrl} index={0} />

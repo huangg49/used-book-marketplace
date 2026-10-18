@@ -311,7 +311,11 @@ export function BookDetailPage() {
                 !held && (
                   <Link
                     className={styles.primary}
-                    to={ROUTES.exchangeCompose(book.id)}
+                    to={
+                      state.status === "authenticated"
+                        ? ROUTES.exchangeCompose(book.id)
+                        : `${ROUTES.login}?returnUrl=${encodeURIComponent(ROUTES.exchangeCompose(book.id))}`
+                    }
                   >
                     Gửi đề nghị đổi sách{" "}
                     <ArrowUpRight size={18} aria-hidden="true" />

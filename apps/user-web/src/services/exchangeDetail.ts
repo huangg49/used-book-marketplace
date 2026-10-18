@@ -14,18 +14,36 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
   const actor = exchangeActor();
   const ex = await getExchange(id);
   const initiator = ex.initiatorId === actor.id;
-  const [init, rec] = await Promise.all([
-    exchangeListing(ex.initiatorListingId),
-    exchangeListing(ex.recipientListingId),
+  const initiatorIds =
+    ex.initiatorListingIds && ex.initiatorListingIds.length > 0
+      ? ex.initiatorListingIds
+      : [ex.initiatorListingId];
+  const recipientIds = [ex.recipientListingId];
+
+  const [initListings, recListings] = await Promise.all([
+    Promise.all(initiatorIds.map(exchangeListing)),
+    Promise.all(recipientIds.map(exchangeListing)),
   ]);
-  const [give, receive] = await Promise.all([
-    exchangeBook(
-      initiator ? ex.initiatorListingId : ex.recipientListingId,
-      initiator ? init : rec,
+  const [giveBooks, receiveBooks] = await Promise.all([
+    Promise.all(
+      (initiator ? initiatorIds : recipientIds).map((bookId, idx) =>
+        exchangeBook(
+          bookId,
+          initiator ? initListings[idx] : recListings[idx],
+          initiator && initiatorIds.length === 1 ? ex.recipientDeposit : undefined,
+        ),
+      ),
     ),
-    exchangeBook(
-      initiator ? ex.recipientListingId : ex.initiatorListingId,
-      initiator ? rec : init,
+    Promise.all(
+      (initiator ? recipientIds : initiatorIds).map((bookId, idx) =>
+        exchangeBook(
+          bookId,
+          initiator ? recListings[idx] : initListings[idx],
+          initiator
+            ? ex.initiatorDeposit
+            : (!initiator && initiatorIds.length === 1 ? ex.recipientDeposit : undefined),
+        ),
+      ),
     ),
   ]);
   return {
@@ -35,15 +53,20 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     createdAt: ex.createdAt,
     status: mapExchangeStatus(ex, actor.id),
     rawStatus: ex.status,
+    lastProposedById: ex.lastProposedById ?? ex.initiatorId,
+    canViewerAccept:
+      ex.status === "Proposed" &&
+      (ex.lastProposedById ?? ex.initiatorId) !== actor.id,
     viewerRole: initiator ? "proposer" : "recipient",
     viewer: { id: actor.id, username: actor.displayName },
     partner: {
       id: initiator ? ex.recipientId : ex.initiatorId,
       username:
-        (initiator ? rec : init)?.seller.displayName ?? "Đối tác trao đổi",
+        (initiator ? recListings[0] : initListings[0])?.seller.displayName ??
+        "Đối tác trao đổi",
     },
-    receiveBooks: [receive],
-    giveBooks: [give],
+    receiveBooks,
+    giveBooks,
     moneyCompensationType: ex.diffAmount
       ? ex.diffPayerId === actor.id
         ? "user_pays"
@@ -53,6 +76,10 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     rejectionReason: ex.rejectionReason ?? undefined,
     fundingDeadline: ex.fundingDeadline ?? undefined,
     proposalExpiresAt: ex.proposalExpiresAt ?? undefined,
+    shippingDeadline: ex.shippingDeadline ?? undefined,
+    disputedAt: ex.disputedAt ?? undefined,
+    disputeReason: ex.disputeReason ?? undefined,
+    disputedBy: ex.disputedBy ?? undefined,
     viewerFundedAt:
       (initiator ? ex.initiatorFundedAt : ex.recipientFundedAt) ?? undefined,
     viewerFundingAmount:
@@ -100,6 +127,14 @@ export function cancelExchange(id: string, revision: number) {
     expectedVersion: revision,
   });
 }
+export interface AddressSnapshotInput {
+  recipientName: string;
+  phone: string;
+  detail: string;
+  localityCode?: string | null;
+  serviceAreaCode?: string | null;
+}
+
 export function acceptExchange(
   id: string,
   revision: number,
@@ -196,13 +231,13 @@ export async function getMessages(id: string): Promise<ChatMessage[]> {
     );
     return res.items.map((m) => {
       let senderRole: "viewer" | "partner" | "system" = "partner";
-      if (m.senderId === actor.id) {
-        senderRole = "viewer";
-      } else if (
+      if (
         m.body.startsWith("[Đề xuất lại") ||
         m.body.startsWith("[Hệ thống")
       ) {
         senderRole = "system";
+      } else if (m.senderId === actor.id) {
+        senderRole = "viewer";
       }
       return {
         id: m.id,
@@ -228,10 +263,13 @@ export async function sendMessage(id: string, text: string): Promise<void> {
   );
 }
 
-export async function reportIssue(
-  _id: string,
-  _type: string,
-  _description: string,
-): Promise<void> {
-  throw new Error("Báo cáo trao đổi chưa khả dụng.");
+export function reportIssue(
+  id: string,
+  revision: number,
+  reason: string,
+) {
+  return exchangeCommand(`/exchanges/${id}/dispute`, {
+    expectedVersion: revision,
+    reason,
+  });
 }

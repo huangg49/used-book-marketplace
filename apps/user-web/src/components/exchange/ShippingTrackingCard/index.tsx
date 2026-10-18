@@ -290,7 +290,7 @@ export function ShippingTrackingCard({ detail, onRefresh }: ShippingTrackingCard
                         <div className={styles.emptyLegNotice}>
                             {isViewer ? (
                                 <p>
-                                    Bạn chưa gửi sách. Vui lòng đóng gói cẩn thận và bấm <strong>"Xác nhận đã gửi sách"</strong> bên dưới sau khi giao hàng cho bưu tá hoặc gửi tại bưu cục.
+                                    Bạn chưa gửi sách. Vui lòng đóng gói cẩn thận và bấm <strong>"Tạo đơn vận chuyển"</strong> bên dưới sau khi giao hàng cho bưu tá hoặc gửi tại bưu cục.
                                 </p>
                             ) : (
                                 <p>
@@ -362,7 +362,7 @@ export function ShippingTrackingCard({ detail, onRefresh }: ShippingTrackingCard
             <div className={styles.rulesCallout}>
                 <Info size={16} className={styles.infoCalloutIcon} />
                 <div className={styles.rulesCalloutText}>
-                    <strong>Quy tắc bảo chứng Lật Lại (POL-14):</strong> Toàn bộ số tiền đặt cọc ({detail.viewerFundingAmount ? `${detail.viewerFundingAmount.toLocaleString('vi-VN')} đ` : 'cọc bảo chứng'}) và tiền bù chênh lệch đang được giữ an toàn trên hệ thống. Sau khi cả 2 bên nhận sách, hệ thống sẽ mở khoảng đệm kiểm tra hàng 48 giờ. Bạn có thể bấm "Nghiệm thu hài lòng" để tất toán sớm, hoặc hệ thống sẽ tự động hoàn tất và trả cọc khi hết hạn kiểm tra.
+                    <strong>Quy tắc bảo chứng Lật Lại (POL-14):</strong> Toàn bộ số tiền đặt cọc ({detail.viewerFundingAmount ? `${detail.viewerFundingAmount.toLocaleString('vi-VN')} đ` : 'cọc bảo chứng'}) và tiền bù chênh lệch đang được giữ an toàn trên hệ thống. Sau khi cả 2 bên nhận sách, hệ thống sẽ mở khoảng đệm kiểm tra hàng 48 giờ. Bạn có thể bấm "Đã nhận hàng" để tất toán sớm, hoặc hệ thống sẽ tự động hoàn tất và trả cọc khi hết hạn kiểm tra.
                 </div>
             </div>
         </div>

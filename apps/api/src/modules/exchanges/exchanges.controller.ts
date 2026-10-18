@@ -174,4 +174,18 @@ export class ExchangesController {
       res,
     );
   }
+
+  @Post(':id/dispute')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  disputeExchange(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    return commandResponse(
+      this.exchanges.dispute(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('DisputeExchangeCommand', body),
+      ),
+      res,
+    );
+  }
 }

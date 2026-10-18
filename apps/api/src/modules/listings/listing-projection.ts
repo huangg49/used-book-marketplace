@@ -235,7 +235,11 @@ export async function checkListing(tx: Tx, listingId: string) {
     status: 'Active',
   });
   const exchange = await tx.c.exchanges.findOne({
-    $or: [{ initiatorListingId: listingId }, { recipientListingId: listingId }],
+    $or: [
+      { initiatorListingId: listingId },
+      { initiatorListingIds: listingId },
+      { recipientListingId: listingId },
+    ],
     status: {
       $in: [
         'AcceptedAwaitingFunding',

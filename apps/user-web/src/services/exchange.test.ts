@@ -182,4 +182,32 @@ describe("exchange integration", () => {
       "WAITING_YOU_CONFIRM",
     );
   });
+  it("populates multiple giveBooks when initiator offers multiple books", async () => {
+    const multiRow: Exchange = {
+      ...row,
+      initiatorListingIds: [
+        "44444444-4444-4444-8444-444444444444",
+        "66666666-6666-4666-8666-666666666666",
+      ],
+    };
+    mock.request.mockResolvedValue(multiRow);
+    mock.publicListing.mockImplementation((id: string) =>
+      Promise.resolve({
+        id,
+        book: { title: `Book ${id.slice(0, 4)}`, authors: ["Author"] },
+        photos: [],
+        condition: "Tốt",
+        exchangeValue: 50000,
+        seller: { id: "seller", displayName: "Partner" },
+      }),
+    );
+    const detail = await getExchangeDetail(multiRow.id);
+    expect(detail.giveBooks).toHaveLength(2);
+    expect(detail.receiveBooks).toHaveLength(1);
+    expect(detail.giveBooks[0].id).toBe("44444444-4444-4444-8444-444444444444");
+    expect(detail.giveBooks[0].price).toBe(50000);
+    expect(detail.giveBooks[1].id).toBe("66666666-6666-4666-8666-666666666666");
+    expect(detail.giveBooks[1].price).toBe(50000);
+    expect(detail.receiveBooks[0].price).toBe(50000);
+  });
 });
