@@ -1,5 +1,5 @@
-import React from "react";
-import { StyleSheet, View } from "react-native";
+import React, { useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import { AppText, Icon, space, stitchTokens } from "../../../core/ui";
 import { conditions, type Listing } from "../contracts";
 
@@ -34,6 +34,7 @@ function normalizeSellerText(
 }
 
 export function BookInspectionReport({ item }: BookInspectionReportProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
   const conditionLabel = conditions[item.condition] || "Rất tốt";
 
   const pagesText = normalizeSellerText(
@@ -131,58 +132,82 @@ export function BookInspectionReport({ item }: BookInspectionReportProps) {
 
       {/* Bento Card 1: Physical Condition */}
       <View style={styles.bentoCard}>
-        <View style={styles.bentoHeader}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={isExpanded ? "Thu gọn đánh giá thực tế" : "Mở rộng đánh giá thực tế"}
+          onPress={() => setIsExpanded((prev) => !prev)}
+          style={({ pressed }) => [
+            styles.bentoHeader,
+            !isExpanded && styles.bentoHeaderCollapsed,
+            pressed && styles.pressed,
+          ]}
+        >
           <View style={styles.conditionTitleRow}>
             <Icon name="verified" size={17} color={stitchTokens.wineDark} />
             <AppText style={styles.bentoTitle}>
               Đánh giá thực tế: {conditionLabel}
             </AppText>
           </View>
-          <View style={styles.approvedPill}>
-            <AppText style={styles.approvedText}>
-              {item.readable ? "Đọc rõ 100%" : "Nội dung mờ"}
-            </AppText>
-          </View>
-        </View>
 
-        <View style={styles.inspectionList}>
-          {inspectionRows.map((row) => (
-            <View key={row.label} style={styles.inspectionItem}>
-              <View
-                style={[
-                  styles.rowIcon,
-                  row.warning && styles.rowIconWarning,
-                ]}
-              >
-                <Icon
-                  name={row.icon}
-                  size={15}
-                  color={row.warning ? stitchTokens.crimson : stitchTokens.wineDark}
-                />
-              </View>
-              <View style={styles.rowContent}>
-                <AppText style={styles.rowLabel}>{row.label}:</AppText>
-                <AppText
-                  style={[
-                    styles.rowValue,
-                    row.warning && styles.rowValueWarning,
-                  ]}
-                >
-                  {row.value}
-                </AppText>
-              </View>
+          <View style={styles.headerRightGroup}>
+            <View style={styles.approvedPill}>
+              <AppText style={styles.approvedText}>
+                {item.readable ? "Đọc rõ 100%" : "Nội dung mờ"}
+              </AppText>
             </View>
-          ))}
-        </View>
-
-        {item.description ? (
-          <View style={styles.descriptionBox}>
-            <View style={styles.descTitleRow}>
-              <Icon name="pen" size={13} color={stitchTokens.wineDark} />
-              <AppText style={styles.descTitle}>Lời nhắn từ chủ sách:</AppText>
+            <View
+              style={[
+                styles.chevronCircle,
+                { transform: [{ rotate: isExpanded ? "180deg" : "0deg" }] },
+              ]}
+            >
+              <Icon name="chevronDown" size={15} color={stitchTokens.wineMid} />
             </View>
-            <AppText style={styles.descBody}>{item.description}</AppText>
           </View>
+        </Pressable>
+
+        {isExpanded ? (
+          <>
+            <View style={styles.inspectionList}>
+              {inspectionRows.map((row) => (
+                <View key={row.label} style={styles.inspectionItem}>
+                  <View
+                    style={[
+                      styles.rowIcon,
+                      row.warning && styles.rowIconWarning,
+                    ]}
+                  >
+                    <Icon
+                      name={row.icon}
+                      size={15}
+                      color={row.warning ? stitchTokens.crimson : stitchTokens.wineDark}
+                    />
+                  </View>
+                  <View style={styles.rowContent}>
+                    <AppText style={styles.rowLabel}>{row.label}:</AppText>
+                    <AppText
+                      style={[
+                        styles.rowValue,
+                        row.warning && styles.rowValueWarning,
+                      ]}
+                    >
+                      {row.value}
+                    </AppText>
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {item.description ? (
+              <View style={styles.descriptionBox}>
+                <View style={styles.descTitleRow}>
+                  <Icon name="pen" size={13} color={stitchTokens.wineDark} />
+                  <AppText style={styles.descTitle}>Lời nhắn từ chủ sách:</AppText>
+                </View>
+                <AppText style={styles.descBody}>{item.description}</AppText>
+              </View>
+            ) : null}
+          </>
         ) : null}
       </View>
 
@@ -276,6 +301,24 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: stitchTokens.peachBorder,
+    gap: 8,
+  },
+  bentoHeaderCollapsed: {
+    paddingBottom: 0,
+    borderBottomWidth: 0,
+  },
+  headerRightGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  chevronCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: stitchTokens.roseWarmTag,
+    alignItems: "center",
+    justifyContent: "center",
   },
   conditionTitleRow: {
     flexDirection: "row",
@@ -419,5 +462,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     color: stitchTokens.wineDark,
+  },
+  pressed: {
+    opacity: 0.8,
   },
 });

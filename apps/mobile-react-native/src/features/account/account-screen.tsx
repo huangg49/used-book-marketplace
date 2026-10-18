@@ -515,7 +515,7 @@ export function AccountScreen() {
                   <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
                     <Pressable
                       accessibilityRole="button"
-                      onPress={() => router.push("./drafts")}
+                      onPress={() => router.push("./exchanges")}
                       style={({ pressed }) => [
                         styles.btnRespondPrimary,
                         pressed && { opacity: 0.8 },
@@ -721,6 +721,30 @@ export function AccountScreen() {
                         style={{ fontSize: 14, color: stitchTokens.wineDark }}
                       >
                         Sách đã lưu
+                      </AppText>
+                    </View>
+                    <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
+                  </Pressable>
+
+                  {/* Row: Đề nghị trao đổi */}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Đề nghị trao đổi"
+                    onPress={() => router.push("./exchanges")}
+                    style={({ pressed }) => [
+                      styles.menuRow,
+                      pressed && styles.menuRowPressed,
+                    ]}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                      <View style={styles.menuIconBox}>
+                        <Icon name="swap" size={18} color={stitchTokens.wine} />
+                      </View>
+                      <AppText
+                        kind="bold"
+                        style={{ fontSize: 14, color: stitchTokens.wineDark }}
+                      >
+                        Đề nghị trao đổi
                       </AppText>
                     </View>
                     <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
