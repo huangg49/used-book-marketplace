@@ -870,3 +870,12 @@ Thirteen `story-*.png` captures record desktop,390px/320px, long-title actions a
 - **Don't** canonize legacy glyph-icon, display-font or animation recipes as part of this web world.
 
 Source inventory: web global CSS, Home/Search/Detail/Login/Sell/Profile module CSS, BookJourneyStates/module CSS, AuctionListPage's introduction/module CSS, Register/ForgotPassword (shared Auth CSS), DashboardLayout/module CSS and DashboardSidebar, owner-listing reads, BookCard, Header/MainLayout and ConfirmDialog; AuthLayout/module CSS and auth-paper.ts define the approved Auth replacement; Auction's remaining body retains legacy recipes. RN theme/brand tokens preserve the previous implementation. [Brand provenance](apps/user-web/public/brand/README.md), [illustration provenance](apps/user-web/public/illustrations/README.md) and [book-journey provenance](apps/user-web/public/illustrations/book-journey/README.md) record the assets. Legacy Material Symbols import/old animation classes remain outside the documented web slice; this documentation pass does not repair or endorse them.
+
+## Conversation workspace —19/10/2026
+
+Owner approved ADR0040's shared purchase/exchange workspace. Navbar Chat opens
+participant/book cards; selected room has a paper agreement at left and chat at
+right, with preserved panel switching on mobile. Seller mode proposals require
+counterpart confirmation, and structured accepted prices fill the order sheet.
+Use the current ChatPage surface brief; do not restore the earlier inbox sidebar
+or close active participant messaging merely because an Order was created.

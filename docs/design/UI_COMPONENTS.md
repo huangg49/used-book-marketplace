@@ -462,3 +462,14 @@ without clearing cached messages, and send errors retain the input.
 Both contexts use wine/cream, Be Vietnam Pro and44px controls with visible focus.
 See the [chat surface record](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-chatpage-tsx.md)
 for scoped browser evidence and verification limits.
+
+## Member web conversation workspace —19/10/2026
+
+`components/conversation/AgreementTerms` renders real mode/price proposals and
+retains uncertain command intents in memory. `ExchangeOffer` selects the current
+member's available exchangeable books and saved address. `ConversationInbox`
+combines purchase cards and unlinked Exchange history without fabricating unread
+counts. Shared `Conversation.module.css` defines agreement/chat columns, card inbox
+and mobile panel navigation. Exchange BookInfoCard/ProgressStepper accept compact
+presentation for the agreement column; their lifecycle meanings are unchanged.
+ADR0040 and the ChatPage surface brief define permission and replay behavior.

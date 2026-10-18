@@ -1,28 +1,42 @@
-# Điểm lưu hiện tại — 18/10/2026
+# Điểm lưu hiện tại — 19/10/2026
 
-## Member web: làm rõ cách dùng chat mua bán/Đổi sách —18/10/2026
+## Phiếu thỏa thuận và hội thoại mua/đổi chung —19/10/2026
 
-- Nhánh `codex/chat-guidance`, base `25efcb8`. Chủ dự án ưu tiên sửa cảm giác
-  khó hiểu khi mở chat. UI hiển thị người trao đổi/vai trò, sách và giá niêm yết,
-  tiến trình và một vùng hướng dẫn theo từng bên, quote còn hiệu lực và trạng thái.
-  Inbox có tên sách/role, xem thêm từng10 và đường tới tin nhắn Đổi sách. Giữ
-  create/pay và retry intent; OrderCreated chuyển chỉ đọc ngay khi room cập nhật.
-- Chat Đổi sách có sách gửi/nhận, trạng thái và anchor tới phần hành động; tách
-  loading/empty/error, giữ lịch sử/draft khi lỗi. Không nhận diện tin hệ thống
-  từ tiền tố nội dung do Member gõ. Nhãn tiến trình không báo đã chấp nhận khi
-  còn chờ; copy giao nhận hướng tới thao tác giao dịch thay vì xác nhận qua chat.
-- PASS web lint (6 warning cũ), build/typecheck,147 unit; detector một lần0 findings.
-  Browser fixture toàn HTTP được chặn + Socket.IO riêng:1440/390px,320px chữ130%,
-  buyer/seller và thông tin nhận, room đổi OrderCreated, message lost-ACK dedupe,
-  create/pay retry đúng key/body, error/retry lịch sử, giữ nội dung nhập và tác
-  giả tin. Thử lại create vẫn mở được khi quote snapshot biến mất sau lỗi503;
-  giữ giá/key/version/body ban đầu.
-  `pnpm --filter @used-books/user-web test:chat:browser` chạy độc lập DB,
-  dùng5193/5195. Evidence local `.tmp/chat-guidance-qa`.
-- Không thay API/contract/Mongo, phép tính tiền, inspection/settlement hoặc RN.
-  Full seller-order DB integration chưa chạy lại (đã cập nhật selectors theo nhãn
-  mới); API/storage thật/native/remote CI NOT RUN, READINESS giữ nguyên. Chưa
-  push/PR. Web local5174 nhận source để chủ dự án xem `/chat` và `/exchange/:id`.
+- Nhánh `codex/unified-trade-chat`, base `c385dd0` (`codex/chat-guidance`).
+  Subject `feat(chat): unify purchase and exchange agreement workspace`.
+  [ADR0040](../adr/0040-unified-conversation-workspace.md) ghi quyết định đã duyệt.
+  Navbar Chat mở card theo Buyer + Seller + listing; Detail Chat/Đổi sách mở cùng
+  phiếu trái/chat phải. Mobile chuyển vùng giữ nháp; Mua ngay giữ nguyên.
+- Seller đề xuất hình thức, đối tác xác nhận; Buyer được yêu cầu đổi sách.
+  Giá đề nghị/chấp nhận có cấu trúc, gắn revision; giá tự điền và chỉ đọc khi tạo
+  đơn. Mode/giá khóa khi có Exchange chưa hủy hoặc OrderCreated. Tin nhắn vẫn
+  mở cho participant ACTIVE sau tạo đơn; không cấp quyền mới cho LOCKED.
+  Giữ quote/key/body/version khi mất ACK, địa chỉ riêng, ledger/hold/commitment.
+- OpenAPI0.44.0 và generated types; migration0032 mới thêm terms/events/link.
+  Exchange mới liên kết nguyên tử vào hội thoại, lịch sử/tin cũ giữ nguyên.
+  Standalone Exchange cũ dùng cùng bố cục, không ép gộp dữ liệu. Inbox kế thừa
+  giới hạn100 hội thoại API hiện tại; đọc trực tiếp room không phụ thuộc giới hạn đó.
+- PASS API4 suite/109tests (agreements/orders/exchanges/wallet-checkout), có
+  quyền/replay/session thu hồi/revision cũ/giá sai/race và validator Mongo. Sau
+  bổ sung chặn intent trái Sale-only/Exchange-only, chạy lại agreements9/9 PASS.
+  API lint (11 warning cũ), typecheck/build, contract/check/routes172/26 PASS.
+- PASS web147unit, lint (6 warning cũ), typecheck/build. Browser fixture toàn HTTP
+  bị chặn + Socket.IO riêng5193/5195: chấp nhận giá/mode, linked Exchange, inbox,
+  mất ACK create/pay/message, giữ nháp, OrderCreated còn chat,1440/390 và320px
+  chữ130%. Evidence local `.tmp/unified-chat-qa`. Detector một lần có3 advisory,
+  đã sửa cỡ chữ ngoài token và hai màu cũ; không chạy detector lặp.
+- PASS seller-order browser qua HTTP/Mongo thật trên replica QA57017/database
+  ngẫu nhiên *_test và storage fake: hai phiên login, quote/address retry,
+  giá90.000 + phí30.000, mất ACK chỉ tạo1 đơn, thiếu tiền bị từ chối, thanh toán
+  giữ120.000 đúng1 lần. Desktop1440/mobile390; evidence local
+  `apps/user-web/test-results/seller-order`.
+- Local API3000/media worker và web5174 chạy source mới. Đã áp dụng pending
+  0030/0031/0032 vào DB app local;8 collection nghiệp vụ đối chiếu BSON không đổi,
+  giữ5 bài demo và mật khẩu. User `.env` giữ nguyên; script riêng `.tmp` dùng
+  kết nối local đã xác minh thay cấu hình cổng không còn hoạt động.
+- Không push/PR/merge/deploy trong gói này. Native/live Supabase/remote CI/human
+  review NOT RUN; READINESS và gate inspection/settlement giữ nguyên. Bước tiếp:
+  chủ dự án xem `/chat` và Detail bằng hai tài khoản demo trên local5174.
 
 ## Trao đổi sách (Exchange): Hoàn tất Ưu tiên 0 & Ưu tiên 1 — 17/10/2026
 

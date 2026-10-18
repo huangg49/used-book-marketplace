@@ -1,0 +1,493 @@
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.85fr) minmax(0, 1.15fr);
+  gap: 28px;
+  align-items: start;
+  padding-top: 24px;
+}
+.sheet {
+  min-width: 0;
+  background: var(--shop-paper);
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  padding-bottom: 12px;
+}
+.sheetHeading {
+  padding: 24px 24px 18px;
+  border-bottom: 1px solid var(--shop-line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sheetHeading h2 {
+  font-size: 1.25rem;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+.sheetHeading span,
+.help {
+  color: var(--shop-muted);
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+.terms,
+.exchangeOffer {
+  padding: 20px 24px;
+  border-top: 1px solid var(--shop-line);
+}
+.terms h3,
+.exchangeOffer h3,
+.chatHeading h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+.sectionTitle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: var(--shop-shelf);
+  border-radius: 8px;
+}
+.switch button {
+  min-height: 44px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--shop-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.switch button[aria-pressed="true"] {
+  background: var(--shop-wine);
+  color: var(--shop-paper);
+  font-weight: 700;
+}
+.mode {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--shop-wine);
+}
+.help {
+  margin: 10px 0;
+}
+.proposal {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--shop-shelf);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+.proposal p {
+  margin: 0 0 10px;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.actions button,
+.primary,
+.offerRow button,
+.retry {
+  background: var(--shop-wine);
+  color: var(--shop-paper);
+  border: 1px solid var(--shop-wine);
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.actions .secondary {
+  color: var(--shop-wine);
+  background: transparent;
+}
+.totals {
+  margin: 20px 0;
+}
+.totals > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--shop-line);
+  font-size: 0.875rem;
+}
+.totals dt {
+  color: var(--shop-muted);
+}
+.totals dd {
+  text-align: right;
+  margin: 0;
+  font-weight: 600;
+}
+.totals .agreed {
+  padding-top: 18px;
+}
+.agreed dd {
+  color: var(--shop-wine);
+  font-size: 1.125rem;
+}
+.offerForm label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.offerRow {
+  display: flex;
+  gap: 8px;
+}
+.offerRow input {
+  width: 0;
+  flex: 1;
+  min-width: 0;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  border: 1px solid var(--shop-control);
+  border-radius: 8px;
+  min-height: 46px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 0.9rem;
+}
+.textButton {
+  background: none;
+  padding: 8px 0;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--shop-wine);
+  cursor: pointer;
+}
+.error {
+  color: var(--shop-error);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  padding: 12px 0;
+}
+.terms button:disabled,
+.exchangeOffer button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.switch button[aria-pressed="true"]:disabled {
+  opacity: 1;
+}
+.chat {
+  min-width: 0;
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  background: var(--shop-paper);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 106px;
+  max-height: calc(100dvh - 126px);
+  min-height: min(560px, calc(100dvh - 126px));
+  overflow: hidden;
+}
+.chatHeading {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--shop-line);
+}
+.chatHeading p {
+  color: var(--shop-muted);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  margin: 8px 0 0;
+}
+.chat > [aria-label="Tin nhắn trong hội thoại"] {
+  flex: 1;
+  min-height: 160px;
+  max-height: none;
+}
+.eventHistory {
+  color: var(--shop-ink);
+  background: var(--shop-shelf);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+.eventHistory h3 { margin: 0 0 12px; font-size: 0.85rem; font-weight: 600; }
+.eventHistory p {
+  margin: 12px 0;
+}
+.eventHistory time {
+  display: block;
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+}
+.exchangeOffer fieldset {
+  border: 0;
+  padding: 0;
+  margin: 16px 0;
+  min-width: 0;
+}
+.exchangeOffer legend {
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+.inventory {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
+.inventoryItem {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--shop-line);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  cursor: pointer;
+}
+.inventoryItem input {
+  margin: 4px 0 0;
+  accent-color: var(--shop-wine);
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.inventoryItem small {
+  display: block;
+  color: var(--shop-muted);
+  margin-top: 4px;
+}
+.exchangeOffer .primary {
+  width: 100%;
+}
+.filters {
+  display: flex;
+  gap: 8px 24px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--shop-line);
+  margin-bottom: 28px;
+}
+.filters button {
+  background: transparent;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--shop-muted);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 14px 0;
+  cursor: pointer;
+}
+.filters button[aria-pressed="true"] {
+  color: var(--shop-wine);
+  border-bottom-color: var(--shop-wine);
+  font-weight: 700;
+}
+.inboxGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.inboxCard {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--shop-paper);
+}
+.cardCover {
+  min-width: 0;
+  min-height: 220px;
+  padding: 18px;
+  background: var(--shop-shelf);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cardCover img {
+  display: block;
+  max-width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+}
+.cardBody {
+  min-width: 0;
+  padding: 20px;
+}
+.cardBody h2,
+.legacyCard h2 {
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.cardBody h2 a,
+.legacyCard h2 a {
+  color: var(--shop-ink);
+  text-decoration: none;
+}
+.cardBody p,
+.legacyCard p {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+.cardState,
+.cardHint {
+  color: var(--shop-muted);
+}
+.cardLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--shop-wine);
+  text-decoration: none;
+}
+.legacyCard {
+  display: flex;
+  align-items: start;
+  gap: 16px;
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  padding: 20px;
+}
+.legacyCard > svg {
+  flex-shrink: 0;
+  margin-top: 4px;
+  color: var(--shop-wine);
+}
+.loadMore {
+  display: block;
+  margin: 24px auto 0;
+  padding: 12px 20px;
+  border: 1px solid var(--shop-control);
+  border-radius: 8px;
+  background: var(--shop-paper);
+  font: inherit;
+  cursor: pointer;
+}
+.empty {
+  text-align: center;
+  padding: 64px 24px;
+  line-height: 1.8;
+  color: var(--shop-muted);
+}
+.empty h2 {
+  color: var(--shop-ink);
+  font-size: 1.25rem;
+}
+.empty a {
+  color: var(--shop-wine);
+}
+.mobileTabs {
+  display: none;
+}
+.workspace button:focus-visible,
+.workspace input:focus-visible,
+.filters button:focus-visible,
+.inboxGrid a:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+@media (max-width: 1100px) {
+  .inboxGrid {
+    grid-template-columns: 1fr;
+  }
+  .workspace {
+    gap: 18px;
+    grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.1fr);
+  }
+}
+@media (max-width: 760px) {
+  .workspace {
+    display: block;
+    padding-top: 16px;
+  }
+  .mobileTabs {
+    display: flex;
+    border-bottom: 1px solid var(--shop-line);
+    margin-top: 12px;
+  }
+  .mobileTabs button {
+    flex: 1;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    padding: 14px 8px;
+    color: var(--shop-muted);
+    font: inherit;
+    font-size: 0.85rem;
+  }
+  .mobileTabs button[aria-pressed="true"] {
+    border-bottom-color: var(--shop-wine);
+    color: var(--shop-wine);
+    font-weight: 700;
+  }
+  .workspace[data-panel="sheet"] .chat,
+  .workspace[data-panel="chat"] .sheet {
+    display: none;
+  }
+  .chat {
+    position: static;
+    min-height: 480px;
+    height: max(400px, calc(100dvh - 340px));
+    min-height: 400px;
+    max-height: none;
+  }
+  .sheetHeading,
+  .terms,
+  .exchangeOffer,
+  .chatHeading {
+    padding: 18px;
+  }
+  .inboxCard {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+  .cardCover {
+    padding: 12px;
+  }
+  .cardBody {
+    padding: 16px;
+  }
+  .filters {
+    gap: 8px 16px;
+  }
+}
+
+.exchangeHistory {
+  padding: 16px 24px;
+  font-size: 0.85rem;
+  border-top: 1px solid var(--shop-line);
+}
+.exchangeHistory summary {
+  cursor: pointer;
+}
+.exchangeHistory button {
+  display: block;
+}

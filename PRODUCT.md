@@ -52,7 +52,7 @@ RN là Member client ưu tiên, Expo web chia sẻ RN; React/Vite user-web và a
 - Mua ngay DirectDelivery theo [ADR0038](docs/adr/0038-direct-buy-now-orders.md):
   Buyer tự đặt giá niêm yết không chat; payment vào Preparing, Seller không duyệt lại.
   Web có trang đơn riêng; chưa mở gate completion hoặc UI Mua ngay native.
-- Exchange user-web còn mock, register/profile/admin dashboard còn scaffold;
+- Exchange user-web dùng API thật; register/profile/admin dashboard còn scaffold;
   không lấy giao diện làm bằng chứng API đã triển khai.
 - Phân chia mục tiêu đã duyệt: mobile ưu tiên tìm/xem/lưu sách, chụp ảnh/đăng bài,
   chat/thông báo và tác vụ giao dịch thường xuyên; web thuận tiện cho mô tả dài,
@@ -90,3 +90,8 @@ trạng sách. AI critique không là nghiên cứu user hay human sign-off.
 
 Giữ chữ lớn, tên sách dài/dấu tiếng Việt, touch targets, safe area, Back/keyboard,
 focus và labels. Kiểm tương phản thực; native/TalkBack/iOS cần evidence riêng.
+
+19/10/2026: chủ dự án duyệt [ADR0040](docs/adr/0040-unified-conversation-workspace.md).
+Member web gom inbox card và phiếu/chat mua/đổi; đề nghị giá/mode cần xác nhận đúng
+phiên bản. Không suy giao diện chung là chung room cho mọi Buyer hoặc quyền đổi
+điều kiện của một giao dịch đã chốt. Native và các gate READINESS giữ phạm vi riêng.

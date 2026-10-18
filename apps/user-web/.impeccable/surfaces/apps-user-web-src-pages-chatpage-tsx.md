@@ -1,58 +1,37 @@
-# Chat và thông báo Member
+# Hội thoại và phiếu thỏa thuận Member —19/10/2026
 
-## Conversation guidance —18/10/2026
+Owner approved one workspace for purchase negotiation and exchange, with a card
+inbox at Navbar Chat. Operate; retain wine/cream, shared Header and memory-only
+session. Contract/ADR0040 determine permissions and money; visual layout grants
+none. Mua ngay remains independent. This supersedes the18/10 inbox-sidebar and
+read-only-after-OrderCreated presentation.
 
-Owner requested understandable chat usage across purchase/exchange flows.
-Operate; preserve wine/cream, API, receipts, money rules and status permissions.
-No new messaging backend, native screen or shared inbox.
+`/chat` lists participant-specific book/partner cards, never one public room per
+listing. `/chat/start/:listingId?intent=Negotiation|Exchange` preserves the entry
+intent through login and opens/reuses a private room. `/chat/:roomId` reads the
+selected room directly, including when not among the inbox's latest100 results.
 
-Purchase rooms name the partner and buyer/seller role, show the book/title/listed
-price, and distinguish conversation → delivery information → order. One guidance
-area selects the next action by role, state, fulfillment and quote freshness.
-Address submission and seller creation keep their existing routes/dialog; buyer
-payment retains its retry intent. Order states use existing Vietnamese labels
-and link to the order. OrderCreated becomes read-only in the mounted room,
-matching the existing API. Deadline timers refresh guidance with cleanup.
+Desktop: agreement sheet left, sticky message/composer area right. Mobile: two
+labelled panel buttons with preserved mounted drafts. Paper, title, real book,
+listed/agreed prices, pending proposal and next action carry the hierarchy. No
+marketing footer. Agreement events are typed server data, not detected prefixes.
 
-Inbox rows include book titles/role, initially ten rows plus a selected row;
-public listing reads share the existing cache. An explicit link directs Exchange
-users to their exchange list. Narrow rooms use a compact heading, back link and
-wrapped progress labels. A greeting suggestion fills a draft, never sends it.
+Seller proposes a permitted mode; the other party confirms. Buyer may request
+Exchange. Price proposals require counterpart acceptance; accepted price fills
+the seller's create-order dialog read-only. Uncertain operations retain exact
+key/body/version with explicit retry. Changed/missing quote cannot silently alter
+an existing create attempt. Public listing changes and other reservations lock
+new transaction actions while preserving messages/history.
 
-Exchange ChatPanel shows give/receive titles, partner, state and an anchor to the
-action area. Loading/empty/history failure are distinct; cached messages and
-failed-send drafts survive errors. Fetch/invalidation keys include the actor.
-Member text is not classified as a system notification from its prefix. Step
-labels no longer claim acceptance while pending; delivery copy points to actual
-transaction controls instead of informal chat confirmations.
+New exchanges are created from the buyer's owned approved exchangeable books and
+own saved address on the same sheet; existing Exchange controls remain embedded
+for acceptance/funding/shipping/status. Earlier proposals remain selectable.
+Linked exchange routes return to the conversation, and original exchange-message
+sources remain readable. Legacy independent exchanges appear in the same inbox
+and retain their real conversation/transaction history in a matching two-column
+sheet/chat layout. Do not infer they have been merged into another room.
 
-Verification:147 web unit tests, lint/build/typecheck; six pre-existing warnings
-elsewhere. One detector returned0 findings. Browser1440/390px and320px130% used
-intercepted HTTP plus isolated Socket.IO: buyer/seller guidance, quote submission,
-mounted OrderCreated transition, lost-ACK message dedupe, seller-order/payment
-same-key/body retry, exchange history recovery and retained drafts passed.
-Local captures: `.tmp/chat-guidance-qa`. Durable fixture runner:
-`pnpm --filter @used-books/user-web test:chat:browser` (ports5193/5195).
-No application DB/bucket, native, live-provider or remote-CI acceptance.
-Financial/inspection audit findings and READINESS remain unchanged.
-
-Mode: Operate. Code-led expansion of the incumbent wine/cream task surfaces,
-approved WEB_MEMBER_NEXT_PAGES_PLAN §5. Keep the shared Header. Chat omits the
-marketing footer so the composer has room. No new raster or decorative motion.
-
-Chat uses the existing GET /me/purchase-conversations list (up to100 server-side),
-messages and Socket.IO purchase-chat namespace; no invented inbox endpoint.
-Desktop list beside selected conversation, mobile list or room with a labelled
-back link. Actual participant name, book when public read available, exact hold
-expiry and closed state. Retain readable history during disconnect; sending and
-failure are explicit. An uncertain message retries its original messageId/body,
-not a new command. No optimistic server success, payment or new negotiation flow.
-
-Notifications: real inbox, title/body/date/read status and existing auction target.
-List rows and clear loaded/empty/error/retry/pending read state; no invented kind
-filter or fake unread count. Mark-all failure visible and does not claim success.
-Home/header bell and notification-opening hook outside this scoped UI remain.
-
-Acceptance: desktop/laptop/mobile/320, guest return, list/room/history/empty/error,
-real send/disconnect recovery where QA permits, read states. API gates, native,
-human review and live storage remain separate.
+Verification and source checkpoint: docs/handoff/SESSION_STATE.md. Runner:
+`pnpm --filter @used-books/user-web test:chat:browser`, isolated HTTP fixtures and
+Socket.IO5195 with Vite5193. Actual database tests use the separate QA replica set.
+Browser fixtures, storage fake, Supabase live, native and human review are distinct.

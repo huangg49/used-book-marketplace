@@ -19,4 +19,17 @@ export class PurchasesController {
   attachQuote(@Param('conversationId') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
     return commandResponse(this.purchases.attachQuote(commandContext(this.input, req, res), this.input.uuid(id), this.input.body('AttachPurchaseConversationQuote', body)), res);
   }
+  @Get('me/purchase-conversations/:conversationId') @Roles('MEMBER')
+  get(@Param('conversationId') id: string, @Req() req: AuthenticatedRequest) { return this.purchases.get(req.auth, this.input.uuid(id)); }
+  @Get('me/purchase-conversations/:conversationId/events') @Roles('MEMBER')
+  events(@Param('conversationId') id: string, @Req() req: AuthenticatedRequest) { return this.purchases.events(req.auth, this.input.uuid(id)); }
+  @Post('me/purchase-conversations/:conversationId/terms') @Roles('MEMBER') @HttpCode(200)
+  propose(@Param('conversationId') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    return commandResponse(this.purchases.terms(commandContext(this.input, req, res), this.input.uuid(id), this.input.body('ProposeConversationTerms', body), false), res);
+  }
+  @Post('me/purchase-conversations/:conversationId/terms/respond') @Roles('MEMBER') @HttpCode(200)
+  respond(@Param('conversationId') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    return commandResponse(this.purchases.terms(commandContext(this.input, req, res), this.input.uuid(id), this.input.body('RespondConversationTerms', body), true), res);
+  }
+
 }

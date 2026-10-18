@@ -148,3 +148,21 @@
 .loginBtn:hover, .backBtn:hover, .retryBtn:hover {
     background: var(--ink);
 }
+
+.embedded { min-width: 0; }
+.embeddedGrid { display: block; min-width: 0; }
+.embedded .stepperCard { padding: 12px 0; overflow-x: auto; }
+.embedded .mainCol { gap: 16px; }
+
+.container .pageTitle { font-family: var(--shop-body); color: var(--shop-ink); font-size: 1.75rem; letter-spacing: -0.02em; }
+.container .gridContainer { grid-template-columns: minmax(340px, 0.85fr) minmax(0, 1.15fr); }
+.embedded .mainCol > div, .embedded .actionSection > div, .legacySheet > div:not(:first-child), .legacySheet .actionSection > div { background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 16px 24px; }
+.embedded h2, .legacySheet h2 { font-family: var(--shop-body); color: var(--shop-ink); font-size: 1rem; }
+.embedded .mainCol, .legacySheet { gap: 8px; }
+.legacyChat > div { border: 0; border-radius: 0; height: 100%; min-height: 0; }
+.legacyChat { position: sticky; top: 106px; }
+@media (max-width: 760px) { .container .gridContainer { display: block; } .legacyChat { position: static; } }
+
+.safetyDetails { padding: 16px 24px; font-size: 0.85rem; border-top: 1px solid var(--shop-line); }
+.safetyDetails summary { cursor: pointer; line-height: 1.7; }
+.embedded .stepperCard { margin-bottom: 8px; background: transparent; border: 0; box-shadow: none; padding: 16px 24px; }

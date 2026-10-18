@@ -4,13 +4,14 @@ import styles from './ProgressStepper.module.css';
 
 export interface ProgressStepperProps {
     status: ExchangeStatus;
+    compact?: boolean;
     failedAtStep?: number;
     closedBy?: 'viewer' | 'partner';
     partnerUsername?: string;
     hasReceived?: boolean;
 }
 
-export function ProgressStepper({ status, failedAtStep, closedBy, partnerUsername: _partnerUsername, hasReceived }: ProgressStepperProps) {
+export function ProgressStepper({ status, compact = false, failedAtStep, closedBy, partnerUsername: _partnerUsername, hasReceived }: ProgressStepperProps) {
     const steps = [
         { id: 1, label: 'Gửi đề nghị' },
         { id: 2, label: 'Phản hồi và đặt cọc' },
@@ -35,7 +36,7 @@ export function ProgressStepper({ status, failedAtStep, closedBy, partnerUsernam
     }
 
     return (
-        <div className={styles.stepperContainer}>
+        <div className={compact ? `${styles.stepperContainer} ${styles.compact}` : styles.stepperContainer}>
             <div className={styles.lineBg} aria-hidden="true" />
             <div 
                 className={styles.lineProgress} 
