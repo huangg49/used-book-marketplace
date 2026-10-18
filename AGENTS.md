@@ -17,7 +17,9 @@
 ## Sources and scope
 
 - Nghiệp vụ: [SRS 1.1](docs/SRS_V1_1.md) và [phụ lục TP.HCM](docs/features/LOCAL_HANDOVER_AUCTION.md).
-  TP.HCM only, direct shipping retained, two simulated managed points; optional
+  DirectDelivery address zones are TP.HCM, Bình Dương and Vũng Tàu per owner
+  request17/10 ([ADR0039](docs/adr/0039-book-circulation-regions.md)); stable demo
+  keys remain compatible. Two simulated managed points remain at TP.HCM; optional
   ViaPoint for ordinary sales/exchanges, mandatory intake/inspection before auction.
   Yêu cầu được chấp nhận không có nghĩa workflow đã triển khai. Giữ snapshot v1.0.
 - ADR là quyết định kiến trúc; OpenAPI là contract; code/tests/evidence mô tả phần

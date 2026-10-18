@@ -11,6 +11,8 @@ import {
 } from '../src/database/mongo/migrations/0002-reference-data.js';
 import { checkIntegrity } from '../src/integrity/integrity.js';
 import { checkListing } from '../src/modules/listings/listing-projection.js';
+import { LISTING_FEE_CLEARING_ID } from '../src/database/mongo/migrations/0022-vnpay-wallet-listing-fees.js';
+import { balanceOf } from '../src/modules/wallet/ledger.service.js';
 import {
   orderUpgradeDatabase,
   populateFulfillment,
@@ -88,11 +90,24 @@ describe('order payment storage on populated wallet data (MongoDB)', () => {
         .sort({ purpose: 1 })
         .toArray(),
     ).toEqual([
-      // Migration 0012 adds the single platform commission account.
+      // 0012/0022 add zero-balance reference accounts, without new capital.
+      { purpose: 'ListingFeeClearing', orderId: null },
       { purpose: 'PlatformCommission', orderId: null },
       { purpose: 'SimulatorCapital', orderId: null },
       { purpose: 'SimulatorClearing', orderId: null },
     ]);
+    expect(
+      await db.c.wallet_accounts.findOne({ _id: LISTING_FEE_CLEARING_ID }),
+    ).toEqual({
+      _id: LISTING_FEE_CLEARING_ID,
+      ownerId: null,
+      orderId: null,
+      purpose: 'ListingFeeClearing',
+      currency: 'VND',
+    });
+    expect(await mongo.tx((tx) => balanceOf(tx, LISTING_FEE_CLEARING_ID))).toBe(
+      0,
+    );
     expect(
       await rootDb
         .collection('ledger_journals')
@@ -225,8 +240,8 @@ describe('order payment storage on populated wallet data (MongoDB)', () => {
         addressBookId: owner,
       } as never),
     ).rejects.toMatchObject({ code: 121 });
-    // Capital, clearing and (migration 0012) platform commission only.
-    expect(await rootDb.collection('wallet_accounts').countDocuments()).toBe(3);
+    // Capital, clearing, platform commission and listing fee clearing only.
+    expect(await rootDb.collection('wallet_accounts').countDocuments()).toBe(4);
     expect(await rootDb.collection('ledger_journals').countDocuments()).toBe(1);
   });
 });

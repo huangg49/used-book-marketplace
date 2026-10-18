@@ -45,7 +45,7 @@ export class CarrierSimulatorAdapter implements ICarrierAdapter {
 
   async createShipment(order: ShipmentOrderInput): Promise<{ trackingCode: string; fee: number }> {
     const fee = await this.calculateFee(order.sender, order.receiver);
-    
+
     // Tự sinh mã vận đơn giả lập theo định dạng chuẩn GHN
     const prefix = order.carrierCode === 'GHTK' ? 'GHTK' : 'GHN';
     const timestampSuffix = Date.now().toString().slice(-6);

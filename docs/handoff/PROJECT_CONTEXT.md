@@ -145,7 +145,7 @@ CORS phải khớp origin thật. Không ghi body/token/contact/ảnh vào log.
 | Địa chỉ/quote | Address book/default/revision, vùng HCM-DEMO-v1, listing delivery origin, DirectDelivery sale quote | Quote không giữ sách/tiền; địa bàn demo không là danh mục hành chính thật |
 | DirectDelivery Order | Tạo unpaid, giữ listing độc quyền, expiry/cancel; pay từ ví, seller accept/reject, packaging, shipment label, simulator pickup, InTransit, overdue/non-receipt review | Lane DirectDelivery vẫn dừng F2h; chưa có Delivered/inspection/settlement hoàn chỉnh và UI checkout/fulfillment đầu-cuối |
 | Wallet/simulator | Ledger immutable, nguồn mô phỏng hữu hạn, topup intents/events, balances/history/reconciliation | Chưa có withdrawal workflow; RN C01 chỉ đọc dưới cờ nội bộ, không là topup/checkout UI |
-| Purchase conversations | Sale/Both đủ điều kiện: create giữ sách Reserved 24h, participant chat, expiry trả Available | Không tạo Order, payment, hold, shipment hoặc settlement; UI “mua” hiện có bước mở chat, không phải mua hoàn tất |
+| Purchase conversations | Sale/Both đủ điều kiện: participant chat không giữ listing; buyer có thể gửi địa chỉ/báo giá, seller chọn một hội thoại và nhập giá đã thỏa thuận để tạo Order | Chỉ tạo Order unpaid mới chuyển listing Reserved; buyer thanh toán sau. Listing Reserved bởi Order vẫn hiển thị đang giao dịch. Migration 0028 giữ expiry 24h cho hội thoại cũ đã tồn tại trước thay đổi |
 | Auction/points | Hai điểm, slot, Staff assignment, Sale intake, receive/inspect/open, manual/Auto/BuyNow/close, winner ViaPoint Order/pay, report/code/handover | Chỉ self dropoff/self collect; ordinary ViaPoint sale/exchange, carrier legs, point admin CRUD và nhiều incident flows chưa hoàn chỉnh |
 | Completion ViaPoint | Source có inspection claim, Admin resolution/return, Staff receive-return, worker settlement, listing Sold | Code tồn tại nhưng mâu thuẫn gate/tài liệu cũ; chưa có evidence đóng release/human gate, xem mục 10 |
 | Auction live | Public read-only Socket.IO; cache update, reconnect ack, REST fallback | Auto ceiling/private participation không public; RN/Flutter chưa subscribe |
@@ -174,11 +174,14 @@ nhánh refund trước acceptance. Ảnh/label/report không tự chứng minh c
 cho phép trả tiền/restock. F2h review là intake điều tra, không là xử lý tranh chấp xong.
 
 **Purchase chat:** `POST /listings/{id}/purchase-conversations` với listing
-expectedVersion + key → conversation Active + Reserved, chỉ buyer/seller đọc
-messages/chat; expire sau 24h → Expired + Available. Source dùng collection
-purchase riêng và listing invariant mở rộng; không coi reservation chat là Order
-đã trả tiền. Lệnh gửi qua `/purchase-chat` dùng messageId để dedupe; cần kiểm tra
-gateway/service thay vì suy rằng HTTP global guards kiểm quyền socket.
+expectedVersion + key → conversation Active, không reserve listing; nhiều Buyer
+có thể chat cùng Seller/listing. Buyer gửi địa chỉ và báo giá giao nhận qua
+`POST /me/purchase-conversations/{id}/quote`; Seller chọn một chat và `POST /orders`
+nhập giá đã thương lượng để tạo unpaid Order, snapshot giá và reserve listing.
+Buyer xác nhận thanh toán sau. Order-reserved listing vẫn public với trạng thái
+InNegotiation; migration 0028 duy trì expiry chỉ cho chat cũ có 24h hold. Lệnh gửi
+qua `/purchase-chat` dùng messageId để dedupe; kiểm tra gateway/service thay vì
+suy rằng HTTP global guards kiểm quyền socket.
 
 **Auction:** Sale đã duyệt/Available → intake giữ commitment + slot → Staff nhận
 và Pass → Active 24h → bid/Auto hoặc BuyNow → ViaPoint Order giữ commitment được

@@ -503,7 +503,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Start the 24-hour buyer-seller conversation for one sale listing */
+        /** Start a buyer-seller conversation without reserving the listing */
         post: operations["createPurchaseConversation"];
         delete?: never;
         options?: never;
@@ -571,6 +571,22 @@ export interface paths {
         get: operations["listPurchaseMessages"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/purchase-conversations/{conversationId}/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["attachPurchaseConversationQuote"];
         delete?: never;
         options?: never;
         head?: never;
@@ -668,7 +684,7 @@ export interface paths {
         put?: never;
         /**
          * submitListing
-         * @description ACTIVE owner, Draft/Rejected; validate saved content as SubmittedContent, Ready media, declaration and accessible catalog; freeze revision, PendingReview. Resubmitting Rejected creates a new revision even when unchanged.
+         * @description ACTIVE owner, Draft/Rejected; validate saved content as SubmittedContent, Ready media, declaration and accessible catalog; freeze revision, PendingReview. Resubmitting Rejected creates a new revision even when unchanged. Default submission fee is 20000 VND held from the owner wallet in the same transaction; insufficient funds reject submission. Rejection refunds that revision fee; approval settles it. Historical submissions are not charged retroactively.
          */
         post: operations["submitListing"];
         delete?: never;
@@ -1228,8 +1244,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ACTIVE verified MEMBER buyer; revalidate owned quote and both participants under locks. Atomically reserve one Sale/Both listing, create immutable agreement and unpaid Order for 15 minutes. At most two AwaitingPayment Orders per buyer, including overdue Orders pending worker. No charge. Current MEMBER/session authorization precedes replay, even after closure. Conflict requires a fresh quote and explicit user confirmation. LOCKED is rejected with 403 before any receipt replay or mutation. */
-        post: operations["createDirectOrder"];
+        /** @description The current seller creates an unpaid Order from an Active purchase conversation with a buyer-attached quote and agreed book price. The Order and exclusive listing commitment are created atomically; no buyer wallet is charged until the buyer confirms payment through POST /orders/{orderId}/pay. Only the conversation seller may create it. Same key/body returns the original receipt. */
+        post: operations["createSellerDirectOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orders/buy-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE verified MEMBER buyer creates a 15-minute unpaid reservation at the current listed price from their own valid DirectDelivery quote, without a conversation. Atomically revalidates listing, addresses, policy and exclusive commitment. Same key/body replays the original receipt; no money held until pay. Successful payment automatically starts Preparing and its 48-hour pickup deadline; no seller approval. */
+        post: operations["createBuyNowOrder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1243,7 +1276,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Private participant Order, including payment/hold and refund progress; own contact only. LOCKED existing-obligation access. No seller acceptance/dispatch yet. */
+        /** @description Private participant Order, including payment/hold and refund progress; own contact only. LOCKED existing-obligation access. BuyNow includes automatic preparation after payment; Negotiated retains seller acceptance. */
         get: operations["getMyOrder"];
         put?: never;
         post?: never;
@@ -1296,6 +1329,66 @@ export interface paths {
         };
         /** @description Derived simulated available + transaction-held balance. LOCKED may read, but cannot pay. Withdrawal not implemented. A payment capability is not a checkout UI release gate. */
         get: operations["getMyWallet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/topups/vnpay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a VNPay sandbox wallet topup
+         * @description Verified Member; LOCKED denied. No credit until a signed IPN or server-verified QueryDR result is applied. Same key/body replays the original payment URL and deadline. Sandbox only; finite demo clearing source remains enforced.
+         */
+        post: operations["createVNPayTopup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/topups/{topupId}/vnpay-query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify an owned VNPay sandbox topup using QueryDR
+         * @description Existing obligation, including LOCKED Members. Owner and current session are checked before the outbound provider query and again before applying its result. No client payment evidence or amount is accepted. Only a signed successful payment of the original amount may credit the original wallet; a pending, unconfirmed or non-successful query leaves the intent unchanged. Repeated queries and concurrent IPN deliveries cannot credit twice. Provider outages or invalid evidence return 503 without changing the wallet. Does not create or fund an Order.
+         */
+        post: operations["queryMyVNPayTopup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/payments/vnpay/ipn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Receive a signed VNPay sandbox payment result
+         * @description Public server callback authenticated by HMAC-SHA512, merchant, amount and transaction reference. Return URL never credits a wallet. Duplicate callbacks do not credit twice; late valid payments may fund only their original wallet. Does not create or fund an Order.
+         */
+        get: operations["receiveVNPayIpn"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3045,7 +3138,7 @@ export interface components {
             width: number;
             height: number;
         };
-        /** @description Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE owner has MEMBER role, Confirmed catalog and Ready media. A Reserved listing remains readable only while it has an active 24-hour purchase conversation, but it cannot start another conversation. Never serialize a private listing then filter on the client. */
+        /** @description Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE owner has MEMBER role, Confirmed catalog and Ready media. Reserved direct-sale Orders remain visible with AwaitingPayment until payment commits, then InTransaction. Unpaid reservations expose only their payment deadline, never participant identities. InNegotiation is retained for legacy conversation reservations. No new checkout or conversation can start until Available. Never serialize a private listing then filter on the client. */
         PublicListing: {
             /** Format: uuid */
             id: string;
@@ -3078,8 +3171,11 @@ export interface components {
             /** @description Null when not configured or the origin was changed/deleted. The listing remains readable. */
             fulfillment: components["schemas"]["PublicFulfillment"] | null;
             purchaseAvailability: {
-                /** @enum {string} */
-                status: "Available" | "InNegotiation";
+                /**
+                 * @description Available accepts checkout; InNegotiation is a legacy conversation reservation; AwaitingPayment is an unpaid Order reservation; InTransaction requires a successfully funded active Order.
+                 * @enum {string}
+                 */
+                status: "Available" | "InNegotiation" | "AwaitingPayment" | "InTransaction";
                 expiresAt: string | null;
             };
         } & ({
@@ -3112,12 +3208,29 @@ export interface components {
             listingId: string;
             version: number;
             /** @enum {string} */
-            status: "Active" | "Expired" | "Cancelled";
+            status: "Active" | "Expired" | "Cancelled" | "OrderCreated";
             /** Format: date-time */
-            expiresAt: string;
+            expiresAt: string | null;
             /** Format: date-time */
             serverTime: string;
         };
+        AttachPurchaseConversationQuote: {
+            expectedVersion: number;
+            /** Format: uuid */
+            quoteId: string;
+            /** @constant */
+            expectedQuoteVersion: 1;
+            expectedListingVersion: number;
+            /** Format: uuid */
+            expectedListingRevisionId: string;
+        };
+        CreateOrderFromPurchaseConversation: {
+            /** Format: uuid */
+            conversationId: string;
+            expectedVersion: number;
+            agreedBookPrice: number;
+        };
+        CreateSellerDirectOrder: components["schemas"]["CreateOrderFromPurchaseConversation"];
         PurchaseParticipant: {
             /** Format: uuid */
             id: string;
@@ -3127,11 +3240,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed";
+            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed";
             title: string;
             body: string;
             /** @enum {string} */
-            targetType: "Auction" | "Exchange";
+            targetType: "Auction" | "Exchange" | "Order";
             /**
              * Format: uuid
              * @description Opens with GET /auctions/{id} or GET /exchanges/{id}; the caller's own view comes from participation or point-order reads.
@@ -3156,6 +3269,7 @@ export interface components {
         NotificationUnreadCount: {
             unreadCount: number;
         };
+        /** @description Participant-only conversation. quotePreview exposes the buyer-submitted destination only to the buyer and selected seller. */
         PurchaseConversation: {
             /** Format: uuid */
             id: string;
@@ -3165,12 +3279,22 @@ export interface components {
             seller: components["schemas"]["PurchaseParticipant"];
             version: number;
             /** @enum {string} */
-            status: "Active" | "Expired" | "Cancelled";
+            status: "Active" | "Expired" | "Cancelled" | "OrderCreated";
             /** Format: date-time */
-            expiresAt: string;
+            expiresAt: string | null;
+            hasQuote: boolean;
+            quotePreview: components["schemas"]["PurchaseQuotePreview"] | null;
+            /** Format: uuid */
+            orderId: string | null;
             /** Format: date-time */
             createdAt: string;
             closedAt: string | null;
+        };
+        PurchaseQuotePreview: {
+            destination: components["schemas"]["OrderContact"];
+            shippingFee: number;
+            /** Format: date-time */
+            expiresAt: string;
         };
         PurchaseMessage: {
             /** Format: uuid */
@@ -3473,6 +3597,7 @@ export interface components {
             width: number;
             height: number;
         };
+        /** @description Project-defined book circulation zones: TP.HCM (DEMO-A), Binh Duong (DEMO-B), and Vung Tau (DEMO-C). These are simulated operational zones, not official administrative boundaries or managed handover points. The legacy HCM-DEMO-v1 code and TP.HCM envelope name remain for wire compatibility. Clients display the locality labels from this directory. */
         ServiceAreaDirectory: {
             /** @constant */
             code: "HCM-DEMO-v1";
@@ -3661,6 +3786,11 @@ export interface components {
             mediaIds: string[];
         };
         DirectOrderAgreement: {
+            /**
+             * @description Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
+             * @enum {string}
+             */
+            purchaseMode?: "Negotiated" | "BuyNow";
             /** @constant */
             schemaVersion: 1;
             policyVersion: string;
@@ -3713,6 +3843,11 @@ export interface components {
         };
         /** @description Private DirectDelivery Order including funding, pre-confirmation refund, seller acceptance and overdue pickup review. Historical schema name retained. shippingAddress is the frozen buyer destination, disclosed only to the accepted Seller. Review is an unresolved task, never proof of custody, strike or refund. Shipment registration is available through its separate endpoint; independent pickup simulation can advance InTransit or open carrierReview/ResolutionPending. Review resolution handlers remain planned. */
         PrivateUnpaidOrder: {
+            /**
+             * @description Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
+             * @enum {string}
+             */
+            purchaseMode?: "Negotiated" | "BuyNow";
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -3787,6 +3922,9 @@ export interface components {
             /** @description Buyer, Applied pickup with pinned delivery deadline reached, full hold, InTransit/ResolutionPending and no existing Buyer report; advisory only. No Delivered event exists yet. */
             canReportNonReceipt: boolean;
         };
+        CreateVNPayTopup: {
+            amount: number;
+        };
         CreateTopupIntent: {
             amount: number;
         };
@@ -3812,6 +3950,10 @@ export interface components {
             currency: "VND";
         };
         WalletSummary: {
+            /** @description Current fee per new submission; default 20000 VND. Approved content edits are not charged again. */
+            listingSubmissionFee?: number;
+            atomicCheckout?: boolean;
+            vnpayEnabled?: boolean;
             /** @constant */
             demoOnly: true;
             /** @constant */
@@ -3831,6 +3973,13 @@ export interface components {
             withdrawalsEnabled: false;
         };
         WalletCommandReceipt: {
+            /**
+             * Format: uri
+             * @description Signed sandbox URL; present only on VNPay creation receipts.
+             */
+            paymentUrl?: string;
+            /** Format: date-time */
+            expiresAt?: string;
             /** Format: uuid */
             id: string;
             /** @constant */
@@ -3863,7 +4012,7 @@ export interface components {
             /** Format: uuid */
             topupId: string | null;
             /** @enum {string} */
-            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement";
+            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement";
             amount: number;
             balanceAfter: number;
             /** Format: date-time */
@@ -3898,6 +4047,15 @@ export interface components {
             occurredAt: string;
         };
         MyOrderSummary: {
+            /** @description Book title frozen in the Order item snapshot. */
+            title?: string;
+            /** Format: uuid */
+            listingId?: string;
+            /**
+             * @description Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
+             * @enum {string}
+             */
+            purchaseMode?: "Negotiated" | "BuyNow";
             /** Format: uuid */
             id: string;
             /** @enum {string} */
@@ -5938,7 +6096,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Conversation created or idempotently replayed. */
+            /** @description Conversation created or idempotently replayed. The listing remains Available. */
             200: {
                 headers: {
                     "Cache-Control"?: "no-store";
@@ -6065,6 +6223,43 @@ export interface operations {
             401: components["responses"]["ListingError"];
             403: components["responses"]["ListingError"];
             404: components["responses"]["ListingError"];
+        };
+    };
+    attachPurchaseConversationQuote: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttachPurchaseConversationQuote"];
+            };
+        };
+        responses: {
+            /** @description Buyer quote attached for the seller to create an Order; private address data stays hidden. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseConversationReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
         };
     };
     listMyListings: {
@@ -7387,7 +7582,44 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
-    createDirectOrder: {
+    createSellerDirectOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSellerDirectOrder"];
+            };
+        };
+        responses: {
+            /** @description Successful operation. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    createBuyNowOrder: {
         parameters: {
             query?: never;
             header: {
@@ -7558,6 +7790,104 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
+    createVNPayTopup: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVNPayTopup"];
+            };
+        };
+        responses: {
+            /** @description Pending topup and signed sandbox URL; not a payment receipt. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    queryMyVNPayTopup: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Must equal topupId. Rechecks the same intent; successful credit is independently deduplicated by verified provider evidence, including concurrent IPN. An unconfirmed query is not a cached payment receipt. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                topupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current owner-checked topup state after querying VNPay. Terminal intents are read without another provider query. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopupIntent"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    receiveVNPayIpn: {
+        parameters: {
+            query: {
+                vnp_TxnRef: string;
+                vnp_TmnCode: string;
+                vnp_Amount: string;
+                vnp_ResponseCode: string;
+                vnp_TransactionStatus: string;
+                vnp_TransactionNo: string;
+                vnp_PayDate?: string;
+                vnp_SecureHash: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description VNPay protocol acknowledgement; 00 accepted, 02 already processed, 01 unknown reference, 04 wrong amount, 97 unauthenticated callback, 99 retryable processing error. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        RspCode: "00" | "01" | "02" | "04" | "97" | "99";
+                        Message: string;
+                    };
+                };
+            };
+        };
+    };
     listMyTopups: {
         parameters: {
             query?: {
@@ -7670,7 +8000,7 @@ export interface operations {
                 cursor?: string;
                 from?: string;
                 to?: string;
-                type?: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement";
+                type?: "Topup" | "OrderPayment" | "OrderRefund" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "OrderSettlement";
                 topupId?: string;
                 orderId?: string;
             };

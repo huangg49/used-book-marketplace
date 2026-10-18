@@ -35,6 +35,7 @@ import {
 } from './listing-projection.js';
 import { priceAssistForRevision } from '../price-assist/price-assist.service.js';
 import { attachPhotos } from './listing-drafts.service.js';
+import { ListingFeeService } from '../wallet/listing-fee.service.js';
 
 @Injectable()
 export class ListingReviewService {
@@ -44,6 +45,7 @@ export class ListingReviewService {
     private readonly input: ContractInput,
     private readonly pages: MongoPageService,
     private readonly fulfillment: ListingFulfillmentService,
+    private readonly fees: ListingFeeService,
   ) {}
 
   private async listing(tx: Tx, id: string) {
@@ -97,7 +99,7 @@ export class ListingReviewService {
         if (l.ownerId !== actor._id) throw notFound();
         return l;
       },
-      mutate: async (tx, actor, before) => {
+      mutate: async (tx, actor, before, receiptId) => {
         requireActive(actor);
         const originReferenceForSubmission = originReference(
           before.currentRevision!,
@@ -158,6 +160,14 @@ export class ListingReviewService {
           { returnDocument: 'after' },
         );
         tx.check(`listing:${id}`, () => checkListing(tx, id));
+        await this.fees.charge(
+          tx,
+          id,
+          revisionId,
+          actor._id,
+          receiptId,
+          context.auth.sessionId,
+        );
         return {
           entityType: 'Listing',
           entityId: id,
@@ -192,7 +202,7 @@ export class ListingReviewService {
           );
         return l;
       },
-      mutate: async (tx, actor, before) => {
+      mutate: async (tx, actor, before, receiptId) => {
         if (body.decision === 'Approve')
           await this.fulfillment.prepare(
             tx,
@@ -255,6 +265,13 @@ export class ListingReviewService {
           { returnDocument: 'after' },
         );
         tx.check(`listing:${id}`, () => checkListing(tx, id));
+        await this.fees.decide(
+          tx,
+          body.revisionId,
+          body.decision === 'Approve',
+          receiptId,
+          context.auth.sessionId,
+        );
         return {
           entityType: 'Listing',
           entityId: id,
@@ -280,7 +297,11 @@ export class ListingReviewService {
       if (!l.currentRevision?.submittedAt) throw notFound();
       return {
         ...projection(l),
-        priceAssist: await priceAssistForRevision(tx, l._id, l.currentRevisionId!),
+        priceAssist: await priceAssistForRevision(
+          tx,
+          l._id,
+          l.currentRevisionId!,
+        ),
       };
     });
   }

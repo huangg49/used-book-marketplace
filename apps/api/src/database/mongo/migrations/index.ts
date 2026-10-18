@@ -1,3 +1,5 @@
+import { buyNowNotificationsMigration, withBuyNowNotifications } from './0029-buy-now-notifications.js';
+import { bookCirculationRegionsMigration } from './0030-book-circulation-regions.js';
 import {
   exchangeCollectionSpecs,
   exchangesMigration,
@@ -19,6 +21,25 @@ import {
   exchangeMessagesMigration,
 } from './0023-exchange-messages.js';
 import { createHash } from 'node:crypto';
+import {
+  paymentSpecs,
+  walletPaymentsMigration,
+  withPayments,
+} from './0022-vnpay-wallet-listing-fees.js';
+export { paymentSpecs };
+import {
+  integratedWalletPointMigration,
+  withIntegratedWalletPointCommands,
+} from './0027-wallet-point-command-union.js';
+import {
+  sellerSelectedOrdersMigration,
+  sellerSelectedConversationSpecs,
+} from './0028-seller-selected-orders.js';
+import {
+  directSettlementPrincipalMigration,
+  withDirectSettlementPrincipal,
+} from './0023-direct-order-settlement-principals.js';
+import { vnpayQueryMigration, withVNPayQuery } from './0024-vnpay-querydr.js';
 import {
   catalogVocabularyV2Migration,
   withCatalogVocabularyV2,
@@ -79,7 +100,6 @@ import {
   withRulesChanges,
 } from './0013-auction-business-rules.js';
 import {
-  purchaseConversationSpecs,
   purchaseConversationsMigration,
   withPurchaseConversationChanges,
 } from './0014-purchase-conversations.js';
@@ -128,7 +148,7 @@ import {
 import {
   exchangeMultiBookMigration,
   withExchangePhase6Changes,
-} from './0027-exchange-multi-book.js';
+} from './0031-exchange-multi-book.js';
 
 export interface Migration {
   id: string;
@@ -218,6 +238,9 @@ export const migrations: Migration[] = [
   exchangesPhase3Migration,
   directDeliveryCompletionMigration,
   directDeliveryCompletionLegacyShapeMigration,
+  walletPaymentsMigration,
+  directSettlementPrincipalMigration,
+  vnpayQueryMigration,
   pointAdministrationMigration,
   inspectionEvidenceMigration,
   pointIncidentsMigration,
@@ -226,6 +249,10 @@ export const migrations: Migration[] = [
   exchangeNotificationsMigration,
   exchangeReviewsMigration,
   exchangeMutualCompletionMigration,
+  integratedWalletPointMigration,
+  sellerSelectedOrdersMigration,
+  buyNowNotificationsMigration,
+  bookCirculationRegionsMigration,
   exchangeMultiBookMigration,
 ];
 
@@ -247,7 +274,11 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withNotificationChanges)
     .map(withCatalogClassification)
     .map(withCatalogVocabularyV2)
-    .map(withPointAdministrationChanges),
+    .map(withPointAdministrationChanges)
+    .map(withPayments)
+    .map(withDirectSettlementPrincipal)
+    .map(withVNPayQuery)
+    .map(withIntegratedWalletPointCommands),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),
@@ -269,9 +300,10 @@ export const currentCollections = (): CollectionSpec[] => [
   ...resolutionCollectionSpecs.map(withSettlementChanges).map(withRulesChanges),
   ...settlementCollectionSpecs.map(withRulesChanges),
   ...rulesCollectionSpecs,
-  ...purchaseConversationSpecs,
+  ...sellerSelectedConversationSpecs,
   ...notificationSpecs
     .map(withExchangeNotificationChanges)
+    .map(withBuyNowNotifications)
     .map(withExchangePhase6Changes),
   ...accountRecoverySpecs,
   ...authOtpSpecs,
@@ -282,6 +314,7 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withExchangePhase5Changes)
     .map(withExchangePhase6Changes),
   ...directDeliveryCompletionSpecs,
+  ...paymentSpecs,
   ...exchangeMessageSpecs,
   ...transactionReviewSpecs,
   ...inspectionEvidenceCollectionSpecs,

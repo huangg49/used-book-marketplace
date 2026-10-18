@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -5,6 +6,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   View,
 } from "react-native";
 import { AppText } from "./text";
@@ -240,3 +242,112 @@ export function ConfirmDialog({
     </Modal>
   );
 }
+
+export function Toast({
+  visible,
+  message,
+  icon = "bookmark",
+  actionTitle = "Xem",
+  onAction,
+  onDismiss,
+  duration = 2600,
+}: {
+  visible: boolean;
+  message: string;
+  icon?: IconName;
+  actionTitle?: string;
+  onAction?: () => void;
+  onDismiss?: () => void;
+  duration?: number;
+}) {
+  useEffect(() => {
+    if (!visible) return;
+    const timer = setTimeout(() => {
+      onDismiss?.();
+    }, duration);
+    return () => clearTimeout(timer);
+  }, [visible, duration, onDismiss]);
+
+  if (!visible) return null;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onDismiss}
+    >
+      <View style={toastStyles.overlay} pointerEvents="box-none">
+        <View style={toastStyles.pill}>
+          <Icon name={icon} size={16} color={stitchTokens.white} filled />
+          <AppText style={toastStyles.text}>
+            {message}
+          </AppText>
+          {onAction && actionTitle ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={actionTitle}
+              onPress={() => {
+                onDismiss?.();
+                onAction();
+              }}
+              hitSlop={8}
+              style={({ pressed }) => [
+                toastStyles.actionBtn,
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <AppText style={toastStyles.actionText}>
+                {actionTitle}
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const toastStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingBottom: 88,
+    backgroundColor: "transparent",
+  },
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: stitchTokens.charcoalBrown,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 24,
+    maxWidth: "90%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+  },
+  text: {
+    color: stitchTokens.white,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  actionBtn: {
+    marginLeft: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  actionText: {
+    color: stitchTokens.goldMedal,
+    fontSize: 13,
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
+});
+

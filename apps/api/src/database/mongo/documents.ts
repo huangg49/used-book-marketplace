@@ -17,6 +17,7 @@ export type TradeStatus =
   'Available' | 'Reserved' | 'Sold' | 'Exchanged' | 'ClosedUnavailable';
 export type MediaStatus = 'Pending' | 'Processing' | 'Ready' | 'Failed';
 export type SystemActor =
+  | 'VNPaySandbox'
   | 'OrderExpiry'
   | 'OrderConfirmationExpiry'
   | 'OrderRefund'
@@ -113,8 +114,8 @@ export interface ListingDoc extends Lockable {
   createdAt: Date;
   updatedAt: Date;
 }
-// A short, no-money negotiation opened from the public shelf. It is deliberately
-// not an Order: it creates no quote, wallet hold, shipment, or custody claim.
+// A multi-buyer negotiation opened from the public shelf. It does not reserve
+// the listing; only a seller-created Order acquires the exclusive commitment.
 export interface PurchaseConversationDoc extends Lockable {
   _id: string;
   listingId: string;
@@ -122,8 +123,10 @@ export interface PurchaseConversationDoc extends Lockable {
   buyerId: string;
   sellerId: string;
   version: number;
-  status: 'Active' | 'Expired' | 'Cancelled';
-  expiresAt: Date;
+  status: 'Active' | 'Expired' | 'Cancelled' | 'OrderCreated';
+  expiresAt: Date | null;
+  quoteId: string | null;
+  orderId: string | null;
   closedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -518,6 +521,7 @@ export interface WalletAccountDoc {
     | 'OrderHold'
     | 'SimulatorCapital'
     | 'SimulatorClearing'
+    | 'ListingFeeClearing'
     | 'PlatformCommission';
   currency: 'VND';
 }
@@ -553,7 +557,11 @@ export interface LedgerJournalDoc {
     | 'Topup'
     | 'OrderPayment'
     | 'OrderRefund'
-    | 'OrderSettlement';
+    | 'OrderSettlement'
+    | 'ListingFeeCharge'
+    | 'ListingFeeRefund'
+    | 'ListingFeeSettlement';
+  listingFeeId?: string | null;
   topupId: string | null;
   eventId: string | null;
   orderId: string | null;
@@ -561,6 +569,29 @@ export interface LedgerJournalDoc {
   postedAt: Date;
 }
 // _id = `${journalId}:${accountId}`
+export interface ListingFeeDoc {
+  _id: string; // immutable submitted revision id
+  listingId: string;
+  ownerId: string;
+  amount: number;
+  policyCode: 'LISTING-FEE-v1';
+  createdAt: Date;
+  receiptId: string;
+}
+export interface VNPayPaymentDoc {
+  _id: string; // topup intent id
+  tmnCode: string;
+  createdAt: Date;
+  expiresAt: Date;
+  paymentUrl: string;
+  receiptId: string;
+}
+export interface VNPayTransactionDoc {
+  _id: string; // provider transaction number, globally unique
+  intentId: string;
+  eventId: string;
+  payDate: Date;
+}
 export interface LedgerEntryDoc {
   _id: string;
   journalId: string;
@@ -1132,6 +1163,7 @@ export interface MemberNotificationDoc {
     | 'AuctionCancelled'
     | 'AuctionOnHold'
     | 'AuctionPaymentExpired'
+    | 'OrderBuyNowPaid'
     | 'AuctionPaid'
     | 'ExchangeProposed'
     | 'ExchangeAccepted'
@@ -1144,30 +1176,52 @@ export interface MemberNotificationDoc {
     | 'ExchangeDisputed';
   title: string;
   body: string;
-  targetType: 'Auction' | 'Exchange';
+  targetType: 'Auction' | 'Exchange' | 'Order';
   targetId: string;
   dedupeKey: string;
   createdAt: Date;
   readAt: Date | null;
 }
 export interface AuthActionTokenDoc {
-  _id: string; userId: string; purpose: 'VerifyEmail' | 'ResetPassword';
-  tokenHash: string; createdAt: Date; expiresAt: Date; consumedAt: Date | null;
+  _id: string;
+  userId: string;
+  purpose: 'VerifyEmail' | 'ResetPassword';
+  tokenHash: string;
+  createdAt: Date;
+  expiresAt: Date;
+  consumedAt: Date | null;
 }
 export interface AuthOtpChallengeDoc {
-  _id: string; userId: string | null; emailHash: string;
-  purpose: 'VerifyEmail' | 'ResetPassword'; codeHash: string;
-  attempts: number; lockSeq: number; createdAt: Date; expiresAt: Date;
+  _id: string;
+  userId: string | null;
+  emailHash: string;
+  purpose: 'VerifyEmail' | 'ResetPassword';
+  codeHash: string;
+  attempts: number;
+  lockSeq: number;
+  createdAt: Date;
+  expiresAt: Date;
   consumedAt: Date | null;
 }
 export interface AuthMailJobDoc {
-  _id: string; userId: string; tokenId: string | null; encryptedPayload: string;
-  status: 'Pending' | 'Sending' | 'Sent' | 'Failed' | 'Cancelled'; attempts: number;
-  nextAttemptAt: Date; leaseId: string | null; leaseUntil: Date | null;
-  expiresAt: Date; createdAt: Date; updatedAt: Date;
+  _id: string;
+  userId: string;
+  tokenId: string | null;
+  encryptedPayload: string;
+  status: 'Pending' | 'Sending' | 'Sent' | 'Failed' | 'Cancelled';
+  attempts: number;
+  nextAttemptAt: Date;
+  leaseId: string | null;
+  leaseUntil: Date | null;
+  expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 export interface AuthEventDoc {
-  _id: string; userId: string; action: 'Registered' | 'EmailVerified' | 'PasswordReset'; createdAt: Date;
+  _id: string;
+  userId: string;
+  action: 'Registered' | 'EmailVerified' | 'PasswordReset';
+  createdAt: Date;
 }
 
 export interface ExchangeMessageDoc {

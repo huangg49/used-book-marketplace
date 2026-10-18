@@ -84,7 +84,7 @@ export class CarrierService {
     nextStatus?: string;
   }> {
     this.logger.log(`[CarrierWebhook] Nhận sự kiện cho mã ${event.trackingCode}: ${event.status}`);
-    
+
     const statusCode: CarrierStatusCode =
       event.status === 'DELIVERED'
         ? 'DELIVERED'

@@ -23,7 +23,7 @@ export { TextField, SearchField, Checkbox, AppTextInput } from "./field";
 export type { TextFieldRef } from "./field";
 export { Sheet } from "./sheet";
 export { AppModal } from "./modal";
-export { Notice, ErrorNotice, StatePanel, ConfirmDialog } from "./feedback";
+export { Notice, ErrorNotice, StatePanel, ConfirmDialog, Toast } from "./feedback";
 export {
   BookCover,
   BookCondition,

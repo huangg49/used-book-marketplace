@@ -113,7 +113,7 @@ export function PublicPhoto({
     />
   );
   return (
-    <View style={{ gap: space.sm }}>
+    <View style={{ width: "100%", gap: space.sm }}>
       {onOpen ? (
         <Pressable
           accessibilityRole="button"
@@ -125,6 +125,7 @@ export function PublicPhoto({
           }}
           onBlur={() => setFocused(false)}
           style={({ pressed }) => [
+            { width: "100%" },
             focused && layout.focus,
             { opacity: pressed ? 0.8 : 1 },
           ]}

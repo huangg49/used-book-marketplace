@@ -49,7 +49,7 @@ const publicListingSchema = z.object({
     })
     .nullable(),
   purchaseAvailability: z.object({
-    status: z.enum(["Available", "InNegotiation"]),
+    status: z.enum(["Available", "InNegotiation", "AwaitingPayment", "InTransaction"]),
     expiresAt: z.string().nullable(),
   }),
 });

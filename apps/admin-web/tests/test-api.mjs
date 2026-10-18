@@ -40,6 +40,10 @@ export async function createTestApi({
     ),
     JWT_ACCESS_SECRET: "operations-browser-test-only-key-0000000000",
     NODE_ENV: "test",
+    // Historical browser suites retain the zero-fee/unpaid profile. The wallet
+    // checkout suite explicitly supplies 20000/Wallet before creating its API.
+    LISTING_SUBMISSION_FEE_VND: process.env.LISTING_SUBMISSION_FEE_VND ?? "0",
+    ORDER_CHECKOUT_MODE: process.env.ORDER_CHECKOUT_MODE ?? "Unpaid",
     CORS_ORIGINS: corsOrigin,
     SUPABASE_URL: "",
     SUPABASE_STORAGE_KEY: "",

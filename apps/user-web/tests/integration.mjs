@@ -207,7 +207,7 @@ try {
     animations: "disabled",
   });
   await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
-  await button("Giữ sách và mở chat").waitFor();
+  await button("Chat với người bán").waitFor();
   assert.ok(
     await p.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -235,7 +235,7 @@ try {
   await p.setViewportSize({ width: 390, height: 844 });
   console.log("QA: public shelf/detail/states passed; sell journey");
   await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
-  await button("Giữ sách và mở chat").click();
+  await button("Chat với người bán").click();
   await p.waitForURL("**/login?returnUrl=*");
   const returnPath = new URL(p.url()).searchParams.get("returnUrl");
   assert.match(returnPath, /^\/books\//);
@@ -246,7 +246,7 @@ try {
   await p
     .getByRole("heading", { name: "Đây là bài đăng của bạn", exact: true })
     .waitFor();
-  assert.equal(await button("Giữ sách và mở chat").count(), 0);
+  assert.equal(await button("Chat với người bán").count(), 0);
   await p
     .getByRole("link", { name: "Trang chủ Lật lại", exact: true })
     .first()
@@ -311,10 +311,90 @@ try {
   assert.equal(await both.isChecked(), true);
   await p.getByLabel("Giá bán (VNĐ)").fill("35000");
   await p.getByLabel("Giá trị đổi (VNĐ)").fill("45000");
+  // Regression: validation's address link must open the portalled form.
+  await p.setViewportSize({ width: 1440, height: 900 });
+  await button("Tiếp tục").click();
+  await p.screenshot({
+    path: path.join(artifacts, "origin-validation-error-desktop.png"),
+    fullPage: false,
+  });
+  const originErrorLink = p.getByRole("alert").getByRole("button", {
+    name: "Chọn địa chỉ đã lưu hoặc nhập đủ nơi gửi sách và khu vực luân chuyển.",
+    exact: true,
+  });
+  await originErrorLink.click();
+  await p
+    .getByRole("dialog", { name: "Nơi gửi sách", exact: true })
+    .waitFor({ timeout: 5000 });
+  await p.locator("dialog[open]").evaluate(async (node) => {
+    await document.fonts.ready;
+    await Promise.all(
+      node.getAnimations().map((animation) => animation.finished),
+    );
+  });
+  await p.screenshot({
+    path: path.join(artifacts, "origin-validation-popup-desktop.png"),
+    fullPage: false,
+  });
+  await p.getByRole("button", { name: "Đóng popup", exact: true }).click();
+  assert.equal(
+    await originErrorLink.evaluate((node) => node === document.activeElement),
+    true,
+  );
+  await p.setViewportSize({ width: 390, height: 844 });
+  await originErrorLink.focus();
+  await p.keyboard.press("Enter");
+  await p.getByRole("dialog", { name: "Nơi gửi sách", exact: true }).waitFor();
   await p.getByLabel("Họ tên người gửi", { exact: true }).fill("Người gửi QA");
-  await p.getByLabel("Số điện thoại người gửi", { exact: true }).fill("0901234567");
-  await p.getByLabel("Khu vực phục vụ", { exact: true }).selectOption("DEMO-A");
+  await p.getByRole("button", { name: "Đóng popup", exact: true }).click();
+  await originErrorLink.click();
+  assert.equal(
+    await p.getByLabel("Họ tên người gửi", { exact: true }).inputValue(),
+    "Người gửi QA",
+  );
+  await p
+    .getByLabel("Số điện thoại người gửi", { exact: true })
+    .fill("0901234567");
+  const regionSelect = p.getByLabel("Khu vực luân chuyển sách", {
+    exact: true,
+  });
+  assert.deepEqual(await regionSelect.locator("option").allTextContents(), [
+    "Chọn khu vực",
+    "TP.HCM",
+    "Bình Dương",
+    "Vũng Tàu",
+  ]);
+  await regionSelect.selectOption("DEMO-C");
   await p.getByLabel("Địa chỉ chi tiết", { exact: true }).fill("123 Đường QA");
+
+  await p.locator("dialog[open]").evaluate(async (node) => {
+    await document.fonts.ready;
+    await Promise.all(
+      node.getAnimations().map((animation) => animation.finished),
+    );
+    node.querySelector("h2")?.focus();
+    node.scrollTo({ top: 0 });
+  });
+  const originBorders = await p
+    .locator("dialog[open] input")
+    .evaluateAll((nodes) =>
+      nodes.map((node) => getComputedStyle(node).borderTopColor),
+    );
+  for (const border of originBorders)
+    assert.equal(border, "rgb(142, 117, 100)");
+  await p.screenshot({
+    path: path.join(artifacts, "origin-popup-mobile.png"),
+    fullPage: false,
+  });
+  await p.setViewportSize({ width: 1440, height: 900 });
+  await p.screenshot({
+    path: path.join(artifacts, "origin-popup-desktop.png"),
+    fullPage: false,
+  });
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p
+    .getByRole("button", { name: "Dùng nơi gửi này", exact: true })
+    .click();
   await step(/Thông tin sách/).click();
   assert.match(
     await p.getByLabel("Tên sách", { exact: true }).inputValue(),
@@ -366,7 +446,9 @@ try {
     }
   }, 250);
   const before = await fixture.db.collection("listings").countDocuments();
-  const addressesBefore = await fixture.db.collection("member_addresses").countDocuments();
+  const addressesBefore = await fixture.db
+    .collection("member_addresses")
+    .countDocuments();
   await button("Gửi duyệt").click();
   await button("Thử gửi lại").waitFor({ timeout: 45000 });
   await p.getByRole("alert").waitFor();
@@ -401,7 +483,10 @@ try {
   assert.equal(posted.currentRevision.content.condition, "Worn");
   assert.equal(posted.currentRevision.content.exchangeValue, 45000);
   assert.equal(posted.currentRevision.fulfillmentStatus, "Current");
-  assert.equal(posted.currentRevision.content.fulfillment.method, "DirectDelivery");
+  assert.equal(
+    posted.currentRevision.content.fulfillment.method,
+    "DirectDelivery",
+  );
   // Another authenticated Member reserves a real fixture listing. The server
   // commits the first request but its response is lost; retry must replay it.
   await p.goto(origin + "/login");
@@ -415,7 +500,7 @@ try {
     .getAttribute("href");
   const selectedListing = selectedPath.split("/").at(-1);
   await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
-  await button("Giữ sách và mở chat").click();
+  await button("Chat với người bán").click();
   const dialog = p.getByRole("dialog");
   await dialog.waitFor();
   await p.screenshot({
@@ -439,13 +524,9 @@ try {
       } else await route.continue();
     },
   );
-  await dialog
-    .getByRole("button", { name: "Giữ sách và mở chat", exact: true })
-    .click();
+  await dialog.getByRole("button", { name: "Mở chat", exact: true }).click();
   await dialog.getByRole("alert").waitFor();
-  await dialog
-    .getByRole("button", { name: "Giữ sách và mở chat", exact: true })
-    .click();
+  await dialog.getByRole("button", { name: "Mở chat", exact: true }).click();
   await p.waitForURL("**/chat/*");
   assert.equal(reserveAttempts.length, 2);
   assert.equal(reserveAttempts[0].key, reserveAttempts[1].key);
@@ -461,7 +542,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    "PASS user-web: real shelf/filter/pagination/detail; empty/error/retry; login return and owner guard; five tabs/data retention; upload/submit replay; purchase lost-response replay with one conversation; 390px100/130%, Home/Detail/Search320px130%. Fake storage, no native acceptance.",
+    "PASS user-web: real shelf/filter/pagination/detail; empty/error/retry; login return and owner guard; five tabs/data retention; upload/submit replay; chat lost-response replay with one conversation; 390px100/130%, Home/Detail/Search320px130%. Fake storage, no native acceptance.",
   );
 } catch (error) {
   const pages = browser?.contexts().flatMap((context) => context.pages()) ?? [];

@@ -51,7 +51,7 @@ const base = z.object({
     .max(8),
   publishedAt: time,
   purchaseAvailability: z.object({
-    status: z.enum(["Available", "InNegotiation"]),
+    status: z.enum(["Available", "InNegotiation", "AwaitingPayment", "InTransaction"]),
     expiresAt: time.nullable(),
   }),
 });

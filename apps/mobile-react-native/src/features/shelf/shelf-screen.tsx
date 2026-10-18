@@ -150,7 +150,9 @@ export function ShelfScreen() {
         <HomeShortcuts
           onAuctionPress={() => router.navigate("/auctions")}
           onNewestPress={() => apply({ ...applied, sort: "newest" })}
-          onExchangePress={() => apply({ ...applied, mode: "Exchange" })}
+          onExchangePress={() =>
+            router.push({ pathname: "/search", params: { mode: "Both" } })
+          }
           onRarePress={() => apply({ ...applied, condition: "LikeNew" })}
         />
 
@@ -332,4 +334,3 @@ export function ShelfScreen() {
     </Screen>
   );
 }
-

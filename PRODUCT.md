@@ -5,7 +5,8 @@
 Nguồn: [SRS1.1](docs/SRS_V1_1.md), [phụ lục](docs/features/LOCAL_HANDOVER_AUCTION.md),
 source main `da59199` và phản hồi/chấp thuận của chủ dự án09/10/2026.
 Đọc [SESSION_STATE](docs/handoff/SESSION_STATE.md) khi cần trạng thái triển khai;
-file này không thay contract hoặc tự đóng gate.
+file này không thay contract hoặc tự đóng gate. Luồng chat/Order cập nhật theo
+[ADR0037](docs/adr/0037-seller-selected-purchase-orders.md),16/10/2026.
 
 ## Platform
 
@@ -34,7 +35,9 @@ ViaPoint đấu giá yêu cầu intake/inspection; không phải chỉ một cat
 
 ## Operating Context
 
-Đồ án, TP.HCM only, hai điểm HCM-DEMO-01/02; tiền và carrier mô phỏng.
+Đồ án; form địa chỉ/DirectDelivery dùng ba khu luân chuyển TP.HCM, Bình Dương,
+Vũng Tàu theo yêu cầu17/10 và [ADR0039](docs/adr/0039-book-circulation-regions.md).
+Hai điểm HCM-DEMO-01/02 vẫn tại TP.HCM; tiền và carrier mô phỏng.
 RN là Member client ưu tiên, Expo web chia sẻ RN; React/Vite user-web và admin
 đã có. Flutter scaffold. Cùng NestJS/Mongo API, contract và SessionClient.
 
@@ -42,8 +45,13 @@ RN là Member client ưu tiên, Expo web chia sẻ RN; React/Vite user-web và a
 
 - DirectDelivery tới F2h. Auction ViaPoint có completion code nhưng review/release
   vẫn có gate. [READINESS](docs/handoff/READINESS.md) là nguồn gate.
-- Purchase chat giữ sách24h, không tạo Order/thanh toán/hold tiền. Nhãn nút phải
-  phản ánh đúng kết quả này; không báo mua thành công.
+- Theo [ADR0037](docs/adr/0037-seller-selected-purchase-orders.md), chat không giữ
+  sách; Buyer gửi địa chỉ/báo giá, Seller chốt giá và tạo Order unpaid để giữ listing.
+  Buyer thanh toán sau; mở chat/gửi báo giá không được báo mua thành công. Hội thoại
+  cũ có hold24h vẫn theo expiry lịch sử.
+- Mua ngay DirectDelivery theo [ADR0038](docs/adr/0038-direct-buy-now-orders.md):
+  Buyer tự đặt giá niêm yết không chat; payment vào Preparing, Seller không duyệt lại.
+  Web có trang đơn riêng; chưa mở gate completion hoặc UI Mua ngay native.
 - Exchange user-web còn mock, register/profile/admin dashboard còn scaffold;
   không lấy giao diện làm bằng chứng API đã triển khai.
 - Phân chia mục tiêu đã duyệt: mobile ưu tiên tìm/xem/lưu sách, chụp ảnh/đăng bài,

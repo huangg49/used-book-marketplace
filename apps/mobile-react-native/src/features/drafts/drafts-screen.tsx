@@ -7,11 +7,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
-import { router } from "expo-router";
 import { useSession } from "../../core/session/session-provider";
 import {
   AppText,
-  BackAction,
   BookCard,
   Button,
   Chip,
@@ -28,6 +26,7 @@ import { draftPage, emptyContent, privateDraft, receipt } from "./contracts";
 import { DraftEditor } from "./draft-editor";
 import { photoError, useForeground } from "./draft-media";
 import { BookIdentity } from "./catalog-picker";
+import { DraftCoverPhoto } from "./draft-cover-photo";
 import { executeLifecycle, lifecycleIntent } from "./lifecycle-command";
 import { MemberNavigation } from "../navigation/member-navigation";
 
@@ -146,10 +145,6 @@ export function DraftsScreen() {
       footer={<MemberNavigation current="/drafts" />}
       footerAppearance="navigation"
     >
-      <BackAction
-        title="Về tài khoản"
-        onPress={() => router.replace("./account")}
-      />
       {/* DangSachHome Header */}
       <View
         style={{
@@ -205,15 +200,6 @@ export function DraftsScreen() {
 
 
       </View>
-
-      <AppText
-        kind="heading"
-        color={stitchTokens.wineDark}
-        accessibilityRole="header"
-        style={{ fontSize: 20, fontWeight: "700", textAlign: "center" }}
-      >
-        Sách của tôi
-      </AppText>
 
       {/* Bento Stats & Quick Action Hero */}
       <View
@@ -504,6 +490,15 @@ export function DraftsScreen() {
                     salePrice: d.currentRevision.content.salePrice,
                     mediaCount: d.currentRevision.content.mediaIds.length,
                   }}
+                  photoNode={
+                    d.currentRevision.content.mediaIds?.[0] ? (
+                      <DraftCoverPhoto
+                        listingId={d.id}
+                        mediaId={d.currentRevision.content.mediaIds[0]}
+                        label="Ảnh bìa"
+                      />
+                    ) : undefined
+                  }
                   titleNode={
                     <BookIdentity id={d.currentRevision.content.bookId} compact />
                   }

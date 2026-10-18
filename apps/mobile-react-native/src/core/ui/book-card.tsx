@@ -34,6 +34,7 @@ export interface BookCardItem {
   mediaCount?: number;
   photos?: { id: string }[];
   revisionId?: string;
+  isSaved?: boolean;
 }
 
 export interface BookCardProps {
@@ -46,6 +47,9 @@ export interface BookCardProps {
   readonly onActionPress?: () => void;
   readonly onDelete?: () => void;
   readonly style?: StyleProp<ViewStyle>;
+  readonly isSaved?: boolean;
+  readonly onToggleSave?: () => void;
+  readonly showSaveButton?: boolean;
 }
 
 // Condition styles matching Home shelf
@@ -106,8 +110,25 @@ export function BookCard({
   onActionPress,
   onDelete,
   style,
+  isSaved,
+  onToggleSave,
+  showSaveButton,
 }: BookCardProps) {
   const [menuVisible, setMenuVisible] = useState(false);
+  const [internalSaved, setInternalSaved] = useState(
+    Boolean(item?.isSaved ?? false),
+  );
+  const saved = isSaved !== undefined ? isSaved : internalSaved;
+  const showSave = showSaveButton ?? variant !== "management";
+
+  const handleSavePress = (e: any) => {
+    e?.stopPropagation?.();
+    if (onToggleSave) {
+      onToggleSave();
+    } else {
+      setInternalSaved((prev) => !prev);
+    }
+  };
 
   const bookTitle = item.book?.title || "Chưa chọn đầu sách";
   const authorText =
@@ -279,32 +300,57 @@ export function BookCard({
 
       {/* Book Metadata Content */}
       <View style={styles.contentArea}>
-        <View style={styles.titleBlock}>
-          {titleNode ? (
-            titleNode
-          ) : (
-            <>
-              <AppText
-                kind="shelfTitle"
-                style={styles.bookTitle}
-                numberOfLines={2}
-                ellipsizeMode="tail"
-              >
-                {bookTitle}
-              </AppText>
-
-              {authorText ? (
+        <View style={styles.titleRow}>
+          <View style={styles.titleBlock}>
+            {titleNode ? (
+              titleNode
+            ) : (
+              <>
                 <AppText
-                  kind="annotation"
-                  color={colors.muted}
-                  numberOfLines={1}
-                  style={styles.authorText}
+                  kind="shelfTitle"
+                  style={styles.bookTitle}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
                 >
-                  {authorText}
+                  {bookTitle}
                 </AppText>
-              ) : null}
-            </>
-          )}
+
+                {authorText ? (
+                  <AppText
+                    kind="annotation"
+                    color={colors.muted}
+                    numberOfLines={1}
+                    style={styles.authorText}
+                  >
+                    {authorText}
+                  </AppText>
+                ) : null}
+              </>
+            )}
+          </View>
+
+          {showSave ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                saved ? `Bỏ lưu sách ${bookTitle}` : `Lưu sách ${bookTitle}`
+              }
+              onPress={handleSavePress}
+              hitSlop={6}
+              style={({ pressed }) => [
+                styles.bookmarkButton,
+                saved && styles.bookmarkButtonSaved,
+                pressed && styles.bookmarkButtonPressed,
+              ]}
+            >
+              <Icon
+                name="bookmark"
+                size={14}
+                color={stitchTokens.wine}
+                filled={saved}
+              />
+            </Pressable>
+          ) : null}
         </View>
 
         {/* Price & Footnote */}
@@ -521,7 +567,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     flex: 1,
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 6,
+  },
   titleBlock: {
+    flex: 1,
     gap: 2,
   },
   bookTitle: {
@@ -533,6 +586,26 @@ const styles = StyleSheet.create({
   authorText: {
     fontSize: 11,
     color: colors.muted,
+  },
+  bookmarkButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.paperBorder,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  bookmarkButtonSaved: {
+    backgroundColor: stitchTokens.roseWarmTag,
+    borderColor: stitchTokens.peachBorder,
+  },
+  bookmarkButtonPressed: {
+    opacity: 0.75,
+    backgroundColor: stitchTokens.cardBorder,
   },
   bottomBlock: {
     marginTop: 4,

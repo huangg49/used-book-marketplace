@@ -1,3 +1,4 @@
+import { buyNowNotificationsMigration } from '../../src/database/mongo/migrations/0029-buy-now-notifications.js';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, MongoServerError, type Db } from 'mongodb';
 import { COLLECTION_NAMES } from '../../src/database/mongo/collections.js';
@@ -24,6 +25,8 @@ import { resolutionCollectionSpecs } from '../../src/database/mongo/migrations/0
 import { settlementCollectionSpecs } from '../../src/database/mongo/migrations/0012-point-order-settlement.js';
 import { rulesCollectionSpecs } from '../../src/database/mongo/migrations/0013-auction-business-rules.js';
 import { purchaseConversationSpecs } from '../../src/database/mongo/migrations/0014-purchase-conversations.js';
+import { sellerSelectedOrdersMigration } from '../../src/database/mongo/migrations/0028-seller-selected-orders.js';
+import { applyCollectionSpecs } from '../../src/database/mongo/migrations/index.js';
 import { notificationSpecs } from '../../src/database/mongo/migrations/0015-member-notifications.js';
 import { accountRecoverySpecs } from '../../src/database/mongo/migrations/0017-account-recovery.js';
 import { authOtpSpecs } from '../../src/database/mongo/migrations/0018-auth-otp.js';
@@ -36,6 +39,7 @@ import { transactionReviewSpecs } from '../../src/database/mongo/migrations/0025
 import {
   currentCollections,
   migrations,
+  paymentSpecs,
 } from '../../src/database/mongo/migrations/index.js';
 import {
   runTransaction,
@@ -106,6 +110,7 @@ describe('migrations', () => {
         // Delivery events are Mongo-native immutable evidence, not a historical
         // PostgreSQL model.
         -directDeliveryCompletionSpecs.length -
+        paymentSpecs.length -
         // N4 point operations (ADR 0030 amendment 2026-10-14) are Mongo-native.
         inspectionEvidenceCollectionSpecs.length -
         pointIncidentCollectionSpecs.length -
@@ -116,6 +121,78 @@ describe('migrations', () => {
     ).toBe(POSTGRES_MODEL_COUNT);
   });
 
+  it('upgrades circulation labels without rewriting address keys or applied checksums', async () => {
+    const db = root.db(
+      `circulation_upgrade_${randomUUID().replaceAll('-', '')}_test`,
+    );
+    const migration = migrations.find(
+      (item) => item.id === '0030-book-circulation-regions',
+    )!;
+    try {
+      await migrate(
+        root,
+        db,
+        migrations.filter((item) => item.id !== migration.id),
+      );
+      const existing = {
+        _id: randomUUID(),
+        ownerId: randomUUID(),
+        version: 1,
+        recipientName: 'QA legacy address',
+        phone: '0900000000',
+        serviceAreaCode: 'HCM-DEMO-v1',
+        localityCode: 'DEMO-B',
+        detail: 'QA-only address',
+        isDefault: true,
+        createdAt: new Date(),
+      };
+      await db.collection('member_addresses').insertOne(existing as never);
+      const ledger = db.collection<{ _id: string; checksum: string }>(
+        '_migrations',
+      );
+      const before = await ledger.find().toArray();
+      expect(await migrate(root, db)).toEqual([migration.id]);
+      expect(
+        await db
+          .collection('member_addresses')
+          .findOne({ _id: existing._id as never }),
+      ).toEqual(existing);
+      expect(
+        await db
+          .collection('service_localities')
+          .find({}, { sort: { code: 1 } })
+          .toArray(),
+      ).toEqual([
+        {
+          _id: 'HCM-DEMO-v1:DEMO-A',
+          areaCode: 'HCM-DEMO-v1',
+          code: 'DEMO-A',
+          label: 'TP.HCM',
+        },
+        {
+          _id: 'HCM-DEMO-v1:DEMO-B',
+          areaCode: 'HCM-DEMO-v1',
+          code: 'DEMO-B',
+          label: 'Bình Dương',
+        },
+        {
+          _id: 'HCM-DEMO-v1:DEMO-C',
+          areaCode: 'HCM-DEMO-v1',
+          code: 'DEMO-C',
+          label: 'Vũng Tàu',
+        },
+      ]);
+      for (const row of before)
+        expect(await ledger.findOne({ _id: row._id })).toEqual(row);
+      expect(await migrate(root, db)).toEqual([]);
+      await migration.up(db, root);
+      expect(await db.collection('service_localities').countDocuments()).toBe(
+        3,
+      );
+    } finally {
+      await db.dropDatabase();
+    }
+  });
   it('are idempotent and refuse an edited applied migration', async () => {
     expect(await migrate(migrator, migrator.db())).toEqual([]);
     const edited = migrations.map((m, i) =>
@@ -127,6 +204,126 @@ describe('migrations', () => {
     // The lock is released after a failed run.
     expect(await migrate(migrator, migrator.db())).toEqual([]);
   });
+  it('upgrades applied wallet migration0022 without rewriting its checksum or data', async () => {
+    const db = root.db(
+      `wallet_upgrade_${randomUUID().replaceAll('-', '')}_test`,
+    );
+    try {
+      await migrate(
+        root,
+        db,
+        migrations.filter(
+          (m) =>
+            ![
+              '0023-direct-order-settlement-principals',
+              '0024-vnpay-querydr',
+              '0027-wallet-point-command-union',
+            ].includes(m.id),
+        ),
+      );
+      const before = await db
+        .collection<{ _id: string; checksum: string }>('_migrations')
+        .findOne({ _id: '0022-vnpay-wallet-listing-fees' });
+      expect(before?.checksum).toBe(
+        '68eaf37f04e73f0c6c87398a92c612237fb305f4e6ed82c68e7d6e78675dc0db',
+      );
+      const names = ['wallet_accounts', 'ledger_journals', 'ledger_entries'];
+      const counts = await Promise.all(
+        names.map((name) => db.collection(name).countDocuments()),
+      );
+      expect(await migrate(root, db)).toEqual([
+        '0023-direct-order-settlement-principals',
+        '0024-vnpay-querydr',
+        '0027-wallet-point-command-union',
+      ]);
+      expect(
+        await db
+          .collection<{ _id: string; checksum: string }>('_migrations')
+          .findOne({ _id: '0022-vnpay-wallet-listing-fees' }),
+      ).toEqual(before);
+      expect(
+        await Promise.all(
+          names.map((name) => db.collection(name).countDocuments()),
+        ),
+      ).toEqual(counts);
+      expect(await migrate(root, db)).toEqual([]);
+    } finally {
+      await db.dropDatabase();
+    }
+  });
+  it.each(['wallet', 'main'])(
+    'upgrades the applied %s branch without losing schemas or rewriting checksums',
+    async (lane) => {
+      const db = root.db(
+        `wallet_point_union_${randomUUID().replaceAll('-', '')}_test`,
+      );
+      const walletIds = new Set([
+        '0022-vnpay-wallet-listing-fees',
+        '0023-direct-order-settlement-principals',
+        '0024-vnpay-querydr',
+      ]);
+      const mainIds = new Set([
+        '0022-point-administration',
+        '0023-inspection-evidence',
+        '0024-point-incidents',
+        '0022-exchange-completion',
+        '0023-exchange-messages',
+        '0024-exchange-notifications',
+        '0025-exchange-reviews',
+        '0026-exchange-mutual-completion',
+      ]);
+      const before = migrations.filter(
+        (m) =>
+          m.id !== '0027-wallet-point-command-union' &&
+          // These historical branches predate BuyNow; upgrade it after their missing migrations.
+          m.id !== '0029-buy-now-notifications' &&
+          !(lane === 'wallet' ? mainIds : walletIds).has(m.id),
+      );
+      try {
+        await migrate(root, db, before);
+        const ledger = db.collection<{ _id: string; checksum: string }>(
+          '_migrations',
+        );
+        const checksums = new Map(
+          (await ledger.find().toArray()).map((row) => [row._id, row.checksum]),
+        );
+        const journalCount = await db
+          .collection('ledger_journals')
+          .countDocuments();
+        const entryCount = await db
+          .collection('ledger_entries')
+          .countDocuments();
+        expect(await migrate(root, db)).toEqual(
+          migrations.filter((m) => !checksums.has(m.id)).map((m) => m.id),
+        );
+        for (const row of await ledger.find().toArray())
+          if (checksums.has(row._id))
+            expect(row.checksum).toBe(checksums.get(row._id));
+        expect(await db.collection('ledger_journals').countDocuments()).toBe(
+          journalCount,
+        );
+        expect(await db.collection('ledger_entries').countDocuments()).toBe(
+          entryCount,
+        );
+        const actual = new Map(
+          (await db.listCollections().toArray()).map((c) => [
+            c.name,
+            'options' in c ? c.options?.validator : undefined,
+          ]),
+        );
+        for (const spec of currentCollections()) {
+          expect(actual.get(spec.name)?.$jsonSchema, spec.name).toEqual(
+            spec.schema,
+          );
+          if (spec.expr)
+            expect(actual.get(spec.name)?.$expr, spec.name).toEqual(spec.expr);
+        }
+        expect(await migrate(root, db)).toEqual([]);
+      } finally {
+        await db.dropDatabase();
+      }
+    },
+  );
   it.each(['exchange-main', 'member-catalog'])(
     'upgrades %s to the union without rewriting applied checksums',
     async (lane) => {
@@ -151,7 +348,11 @@ describe('migrations', () => {
         '0019-catalog-vocabulary-v2',
       ]);
       const before = migrations.filter(
-        (m) => !(lane === 'exchange-main' ? memberIds : exchangeIds).has(m.id),
+        (m) =>
+          m.id !== '0027-wallet-point-command-union' &&
+          // These historical branches predate BuyNow; upgrade it after their missing migrations.
+          m.id !== '0029-buy-now-notifications' &&
+          !(lane === 'exchange-main' ? memberIds : exchangeIds).has(m.id),
       );
       try {
         await migrate(root, db, before);
@@ -264,7 +465,7 @@ describe('migrations', () => {
         .findOne({ _id: 'ledger_journal_sequence' as never }),
     ).toMatchObject({ value: 1 });
     expect(await rootDb.collection('service_localities').countDocuments()).toBe(
-      2,
+      3,
     );
   });
 });
@@ -651,6 +852,52 @@ describe('validators replace CHECK constraints', () => {
     });
     const c = appDb.collection('mutation_receipts');
     await c.insertOne(receipt({}) as never);
+    const vnpay = {
+      principal: 'system:VNPaySandbox',
+      systemActor: 'VNPaySandbox',
+      operation: 'applyVNPayQuery',
+      contextId: null,
+      topupId: randomUUID(),
+      pointId: null,
+    };
+    await c.insertOne(receipt(vnpay) as never);
+    await rejectsValidation(
+      c.insertOne(receipt({ ...vnpay, pointId: randomUUID() }) as never),
+    );
+    await rejectsValidation(
+      c.insertOne(
+        receipt({ ...vnpay, operation: 'settleDirectOrder' }) as never,
+      ),
+    );
+    const pointActor = randomUUID();
+    await c.insertOne(
+      receipt({
+        principal: `user:${pointActor}`,
+        actorId: pointActor,
+        systemActor: null,
+        operation: 'createHandoverPoint',
+        contextId: null,
+        pointId: randomUUID(),
+      }) as never,
+    );
+    await c.insertOne(
+      receipt({
+        principal: 'system:OrderInspectionExpiry',
+        systemActor: 'OrderInspectionExpiry',
+        operation: 'settleDirectOrder',
+        pointId: null,
+      }) as never,
+    );
+    await rejectsValidation(
+      c.insertOne(
+        receipt({
+          principal: 'system:OrderInspectionExpiry',
+          systemActor: 'OrderInspectionExpiry',
+          operation: 'settleDirectOrder',
+          pointId: randomUUID(),
+        }) as never,
+      ),
+    );
     await rejectsValidation(
       c.insertOne(receipt({ operation: 'refundOrder' }) as never),
     );
@@ -808,5 +1055,58 @@ describe('least-privilege application user', () => {
     });
     expect(at).toBeInstanceOf(Date);
     expect(await serverNow({ db: appDb })).toBeInstanceOf(Date);
+  });
+});
+
+
+describe('seller-selected conversations upgrade', () => {
+  it('backfills populated 24-hour conversations and replaces only the active-listing uniqueness', async () => {
+    const db = root.db('latlai_seller_conversation_upgrade_test');
+    try {
+      await applyCollectionSpecs(db, purchaseConversationSpecs);
+      const now = new Date(), sellerId = randomUUID();
+      const rows = ['Active', 'Expired', 'Cancelled'].map((status) => ({
+        _id: randomUUID(), listingId: randomUUID(), listingVersion: 1,
+        buyerId: randomUUID(), sellerId, version: 1, status,
+        expiresAt: new Date(now.getTime() + 86400000),
+        closedAt: status === 'Active' ? null : now, createdAt: now, updatedAt: now, lockSeq: 0,
+      }));
+      await db.collection<{ _id: string }>('purchase_conversations').insertMany(rows);
+      await sellerSelectedOrdersMigration.up(db);
+      for (const row of rows) expect(await db.collection<{ _id: string }>('purchase_conversations').findOne({ _id: row._id }))
+        .toEqual({ ...row, quoteId: null, orderId: null });
+      const second = { ...rows[0], _id: randomUUID(), buyerId: randomUUID(), expiresAt: null, quoteId: null, orderId: null };
+      await db.collection<{ _id: string }>('purchase_conversations').insertOne(second);
+      await expect(db.collection<{ _id: string }>('purchase_conversations').insertOne({ ...second, _id: randomUUID() }))
+        .rejects.toMatchObject({ code: 11000 });
+      await sellerSelectedOrdersMigration.up(db);
+      expect(await db.collection<{ _id: string }>('purchase_conversations').countDocuments()).toBe(4);
+    } finally { await db.dropDatabase(); }
+  });
+});
+
+
+describe('buy-now notification migration', () => {
+  it('preserves populated inbox rows and indexes while admitting Order notifications with dedupe', async () => {
+    const db = root.db('latlai_buy_now_notification_upgrade_test');
+    const rows = db.collection<{ _id: string; [key: string]: unknown }>('member_notifications');
+    try {
+      const { exchangeNotificationSpecs } = await import('../../src/database/mongo/migrations/0024-exchange-notifications.js');
+      await applyCollectionSpecs(db, exchangeNotificationSpecs);
+      const old = { _id: randomUUID(), userId: randomUUID(), kind: 'ExchangeAccepted',
+        title: 'QA exchange', body: 'QA only', targetType: 'Exchange', targetId: randomUUID(),
+        dedupeKey: randomUUID(), createdAt: new Date(), readAt: null };
+      await rows.insertOne(old);
+      const indexes = await rows.indexes();
+      await buyNowNotificationsMigration.up(db);
+      expect(await rows.findOne({ _id: old._id })).toEqual(old);
+      expect(await rows.indexes()).toEqual(indexes);
+      const order = { ...old, _id: randomUUID(), kind: 'OrderBuyNowPaid', targetType: 'Order', dedupeKey: 'qa-buy-now-notice' };
+      await rows.insertOne(order);
+      await expect(rows.insertOne({ ...order, _id: randomUUID() })).rejects.toMatchObject({ code: 11000 });
+      await expect(rows.insertOne({ ...order, _id: randomUUID(), dedupeKey: 'qa-invalid-kind', kind: 'MadeUp' })).rejects.toMatchObject({ code: 121 });
+      await buyNowNotificationsMigration.up(db);
+      expect(await rows.countDocuments()).toBe(2);
+    } finally { await db.dropDatabase(); }
   });
 });

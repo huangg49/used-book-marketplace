@@ -12,9 +12,15 @@ if (!mongo)
   throw new Error('MONGO_TEST_URL is required (QA replica set root URL).');
 const root = e2eRootUrl(mongo);
 process.env.NODE_ENV = 'test';
+// Historical suites explicitly exercise the retained zero-fee/unpaid profile.
+// wallet-checkout.e2e-spec overrides policy with the default paid profile.
+process.env.LISTING_SUBMISSION_FEE_VND = '0';
+process.env.ORDER_CHECKOUT_MODE = 'Unpaid';
+process.env.VNPAY_SANDBOX_ENABLED = 'false';
 // Never send real email when AppModule reads the developer's private .env.
 process.env.AUTH_MAIL_PROVIDER = 'local';
-process.env.AUTH_MAIL_ENCRYPTION_KEY = 'qa-only-mail-encryption-key-not-production-00000';
+process.env.AUTH_MAIL_ENCRYPTION_KEY =
+  'qa-only-mail-encryption-key-not-production-00000';
 process.env.AUTH_WEB_ORIGIN = 'http://127.0.0.1:5186';
 // The API connects as the least-privilege app user; fixtures use the migrator.
 process.env.MONGODB_URL = withCredentials(

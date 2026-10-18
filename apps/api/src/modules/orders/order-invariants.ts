@@ -8,6 +8,7 @@ import type {
 } from '../../database/mongo/documents.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import { checkListing } from '../listings/listing-projection.js';
+import { quoteAmounts } from '../quotes/quote-money.js';
 
 // Commit-time replacements for the PostgreSQL deferred constraint triggers of
 // the Order aggregate (MIG02_MODEL_MAP, section C): latlai_check_order and its
@@ -61,6 +62,15 @@ export async function checkOrder(tx: Tx, orderId: string) {
   const a = await tx.c.agreement_snapshots.findOne({ _id: c!._id });
   const snapshot = a?.snapshot;
   const amounts = get(snapshot, 'amounts') as Json | undefined;
+  const bookPrice = get(amounts, 'bookPrice');
+  const shippingFee = get(amounts, 'shippingFee');
+  const commissionBps = get(amounts, 'commissionBps');
+  const calculated =
+    typeof bookPrice === 'number' &&
+    typeof shippingFee === 'number' &&
+    typeof commissionBps === 'number'
+      ? quoteAmounts(bookPrice, shippingFee, commissionBps)
+      : null;
   if (
     !a ||
     i.listingId !== q!.listingId ||
@@ -74,7 +84,12 @@ export async function checkOrder(tx: Tx, orderId: string) {
     time(get(snapshot, 'createdAt')) !== o.createdAt.getTime() ||
     time(get(snapshot, 'paymentDeadline')) !== o.paymentDeadline.getTime() ||
     get(snapshot, 'policyVersion') !== q!.policyCode ||
-    get(amounts, 'buyerTotal') !== q!.buyerTotal
+    !calculated ||
+    get(amounts, 'buyerTotal') !== calculated.buyerTotal ||
+    get(amounts, 'commission') !== calculated.commission ||
+    get(amounts, 'sellerProceedsOnCompletion') !== calculated.sellerProceeds ||
+    shippingFee !== q!.shippingFee ||
+    commissionBps !== q!.commissionBps
   )
     fail('Order snapshot mismatch');
   const commitments = await tx.c.exclusive_commitments
@@ -86,6 +101,16 @@ export async function checkOrder(tx: Tx, orderId: string) {
   const events = await tx.c.commitment_events
     .find({ commitmentId: e._id })
     .toArray();
+  const initial = events.find((event) => event.sequence === 1);
+  const initialChain = initial ? await chain(tx, initial.receiptId) : null;
+  const buyNow = get(snapshot, 'purchaseMode') === 'BuyNow';
+  if (buyNow !== (initialChain?.r.operation === 'createBuyNowOrder'))
+    fail('Order purchase mode/creation receipt mismatch');
+  if (
+    bookPrice !== q!.bookPrice &&
+    initialChain?.r.operation !== 'createDirectOrderFromConversation'
+  )
+    fail('Unapproved negotiated Order price');
   if (
     e.listingId !== i.listingId ||
     e.version !== c!.version ||
@@ -105,7 +130,16 @@ export async function checkOrder(tx: Tx, orderId: string) {
     // The release produced by settlement is the sixth and final Direct Order
     // version.  All other paid release paths still end at version four.
     const expected =
-      ev.sequence === 1 ? 1 : o.state === 'Completed' ? 6 : o.paidAt ? 4 : 2;
+      ev.sequence === 1
+        ? x?.r.operation === 'createDirectOrder' &&
+          get(x.r.result, 'state') === 'PendingSellerConfirmation'
+          ? 2
+          : 1
+        : o.state === 'Completed'
+          ? 6
+          : o.paidAt
+            ? 4
+            : 2;
     if (
       !x ||
       x.r.contextId !== c!._id ||
@@ -116,8 +150,8 @@ export async function checkOrder(tx: Tx, orderId: string) {
     )
       fail('Missing commitment receipt/audit/outbox');
   }
-  await checkOrderFunding(tx, o, c!, q!.buyerTotal);
-  await checkOrderPreparation(tx, o, c!);
+  await checkOrderFunding(tx, o, c!, calculated!.buyerTotal, buyNow);
+  await checkOrderPreparation(tx, o, c!, buyNow);
   tx.check(`listing:${i.listingId}`, () => checkListing(tx, i.listingId));
 }
 
@@ -126,6 +160,7 @@ async function checkOrderFunding(
   o: DirectOrderDoc,
   c: WorkflowContextDoc,
   buyerTotal: number,
+  buyNow: boolean,
 ) {
   const p = await tx.c.ledger_journals.findOne({
     orderId: o._id,
@@ -179,9 +214,9 @@ async function checkOrderFunding(
       x.a.contextId !== c._id ||
       x.r.committedAt.getTime() !== j.postedAt.getTime() ||
       (j.type === 'OrderPayment' &&
-        (x.r.operation !== 'payOrder' ||
+        (!['payOrder', 'createDirectOrder'].includes(x.r.operation) ||
           x.r.actorId !== o.buyerId ||
-          x.r.resultVersion !== 2)) ||
+          x.r.resultVersion !== (buyNow ? 3 : 2))) ||
       (j.type === 'OrderRefund' &&
         (x.r.operation !== 'refundOrder' ||
           x.r.systemActor !== 'OrderRefund' ||
@@ -232,10 +267,19 @@ async function checkOrderPreparation(
   tx: Tx,
   o: DirectOrderDoc,
   c: WorkflowContextDoc,
+  buyNow: boolean,
 ) {
   const p = await tx.c.order_preparations.findOne({ _id: o._id });
   const review = await tx.c.pickup_reviews.findOne({ orderId: o._id });
-  if (!['Preparing', 'InTransit', 'ResolutionPending', 'Inspection', 'Completed'].includes(o.state)) {
+  if (
+    ![
+      'Preparing',
+      'InTransit',
+      'ResolutionPending',
+      'Inspection',
+      'Completed',
+    ].includes(o.state)
+  ) {
     if (p || review) fail('Unexpected preparation history');
     return;
   }
@@ -246,16 +290,17 @@ async function checkOrderPreparation(
     p.acceptedAt < o.paidAt! ||
     p.acceptedAt >= o.sellerConfirmationDeadline! ||
     accepted.r.contextId !== c._id ||
-    accepted.r.operation !== 'acceptOrder' ||
-    accepted.r.actorId !== o.sellerId ||
+    accepted.r.operation !== (buyNow ? 'payOrder' : 'acceptOrder') ||
+    accepted.r.actorId !== (buyNow ? o.buyerId : o.sellerId) ||
     accepted.r.systemActor !== null ||
     accepted.r.resultVersion !== 3 ||
     accepted.r.committedAt.getTime() !== p.acceptedAt.getTime() ||
     get(accepted.r.result, 'state') !== 'Preparing' ||
     accepted.a.contextId !== c._id ||
-    accepted.a.actorId !== o.sellerId ||
-    accepted.a.action !== 'acceptOrder' ||
-    accepted.o.type !== 'OrderAccepted'
+    accepted.a.actorId !== (buyNow ? o.buyerId : o.sellerId) ||
+    accepted.a.action !== (buyNow ? 'payOrder' : 'acceptOrder') ||
+    accepted.o.type !== (buyNow ? 'OrderBuyNowPaid' : 'OrderAccepted') ||
+    (buyNow && p.acceptedAt.getTime() !== o.paidAt!.getTime())
   )
     fail('Order acceptance receipt/deadline mismatch');
   const carrierReview = await tx.c.carrier_pickup_reviews.findOne({
@@ -402,8 +447,12 @@ async function checkOrderPickup(
   }
   const pickupReview = await tx.c.pickup_reviews.findOne({ orderId: o._id });
   if (['Inspection', 'Completed'].includes(o.state)) {
-    const deliveryEvent = await tx.c.direct_delivery_events.findOne({ orderId: o._id });
-    const deliveryChain = deliveryEvent ? await chain(tx, deliveryEvent.receiptId) : null;
+    const deliveryEvent = await tx.c.direct_delivery_events.findOne({
+      orderId: o._id,
+    });
+    const deliveryChain = deliveryEvent
+      ? await chain(tx, deliveryEvent.receiptId)
+      : null;
     const completed = o.state === 'Completed';
     if (
       !hasApplied ||
@@ -414,16 +463,20 @@ async function checkOrderPickup(
       !o.deliveredAt ||
       !o.inspectionDeadline ||
       o.deliveredAt.getTime() !== deliveryEvent.occurredAt.getTime() ||
-      o.inspectionDeadline.getTime() !== o.deliveredAt.getTime() + 72 * 3600000 ||
+      o.inspectionDeadline.getTime() !==
+        o.deliveredAt.getTime() + 72 * 3600000 ||
       (completed
-        ? !o.completedAt || o.completedAt < o.inspectionDeadline || o.version !== 6
+        ? !o.completedAt ||
+          o.completedAt < o.inspectionDeadline ||
+          o.version !== 6
         : !!o.completedAt || o.version !== 5) ||
       pickupReview ||
       cr ||
       delivery ||
       !deliveryChain ||
       deliveryChain.r.contextId !== c._id ||
-      deliveryChain.r.committedAt.getTime() !== deliveryEvent.receivedAt.getTime() ||
+      deliveryChain.r.committedAt.getTime() !==
+        deliveryEvent.receivedAt.getTime() ||
       deliveryChain.r.resultVersion !== 5 ||
       get(deliveryChain.r.result, 'state') !== 'Inspection' ||
       get(deliveryChain.r.result, 'version') !== 5 ||
@@ -444,7 +497,9 @@ async function checkOrderPickup(
         orderId: o._id,
         type: 'OrderSettlement',
       });
-      const settled = settlement ? await chain(tx, settlement.receiptId!) : null;
+      const settled = settlement
+        ? await chain(tx, settlement.receiptId!)
+        : null;
       if (
         !settlement ||
         !settled ||

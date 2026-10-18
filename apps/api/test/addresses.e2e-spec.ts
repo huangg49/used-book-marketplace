@@ -95,12 +95,49 @@ describe('private member address book HTTP/MongoDB', () => {
     const r = await get('/service-areas', a).expect(200);
     validates('ServiceAreaDirectory', r.body);
     expect(r.body.demoOnly).toBe(true);
-    expect(r.body.localities.map((x: { code: string }) => x.code)).toEqual([
-      'DEMO-A',
-      'DEMO-B',
+    expect(r.body.localities).toEqual([
+      { code: 'DEMO-A', label: 'TP.HCM' },
+      { code: 'DEMO-B', label: 'Bình Dương' },
+      { code: 'DEMO-C', label: 'Vũng Tàu' },
     ]);
     expect(r.headers['cache-control']).toBe('no-store');
   });
+  it.each(['DEMO-A', 'DEMO-B', 'DEMO-C'])(
+    'saves and replays an address in circulation region %s',
+    async (localityCode) => {
+      const actor = await reader();
+      const key = randomUUID();
+      const body = {
+        expectedBookVersion: 0,
+        makeDefault: true,
+        address: { ...address, localityCode },
+      };
+      const first = await command(
+        actor,
+        body,
+        '/me/addresses',
+        'post',
+        key,
+      ).expect(200);
+      const replay = await command(
+        actor,
+        body,
+        '/me/addresses',
+        'post',
+        key,
+      ).expect(200);
+      expect(replay.body).toEqual(first.body);
+      expect(replay.headers['idempotency-replayed']).toBe('true');
+      const saved = await book(actor);
+      expect(saved.version).toBe(1);
+      expect(saved.items).toHaveLength(1);
+      expect(saved.items[0]).toMatchObject({
+        id: first.body.addressId,
+        localityCode,
+        serviceAreaCode: 'HCM-DEMO-v1',
+      });
+    },
+  );
   it('creates, edits, switches default, deletes/promotes deterministically and empties book', async () => {
     const a = await reader();
     expect(await book(a)).toEqual({ version: 0, items: [] });

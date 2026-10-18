@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Menu, Plus, X } from "lucide-react";
+import { Menu, MessageCircle, Plus, X } from "lucide-react";
 import { ROUTES, searchUrl } from "../lib/routes";
 import { observeHeaderScroll } from "../lib/header-scroll";
 import { useSession } from "../hooks/useSession";
@@ -13,7 +13,7 @@ import styles from "../layouts/MainLayout.module.css";
 
 const links = [
   { label: "Tìm sách", to: ROUTES.search },
-  { label: "Sách để đổi", to: searchUrl({ mode: "Exchange" }) },
+  { label: "Đổi sách", to: searchUrl({ mode: "Exchange" }) },
   { label: "Đấu giá", to: ROUTES.auctions },
 ];
 export function Logo() {
@@ -117,6 +117,16 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
             ))}
           </nav>
           <div className={styles.headerActions}>
+            {state.status === "authenticated" && (
+              <NavLink
+                to={ROUTES.chat()}
+                className={styles.chatAction}
+                aria-label="Chat, hội thoại của bạn"
+              >
+                <MessageCircle size={18} aria-hidden="true" />
+                <span>Chat</span>
+              </NavLink>
+            )}
             {state.status === "authenticated" && <NotificationBell />}
             {state.status === "authenticated" ? (
               <AccountMenu displayName={state.user.displayName} />
@@ -165,6 +175,10 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
             <Link to={ROUTES.sell}>Đăng sách</Link>
             {state.status === "authenticated" ? (
               <>
+                <NavLink to={ROUTES.chat()}>
+                  <MessageCircle size={18} aria-hidden="true" />
+                  Chat
+                </NavLink>
                 <Link to={ROUTES.notifications}>Thông báo</Link>
                 {accountNavigation.map(({ to, label }) => (
                   <NavLink key={to} to={to} end>

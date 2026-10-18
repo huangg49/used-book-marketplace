@@ -66,7 +66,16 @@ jobs:
       - run: pnpm --filter @used-books/user-web test:browser
         env:
           MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
+      - run: pnpm --filter @used-books/user-web test:seller-order:browser
+        env:
+          MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
+      - run: pnpm --filter @used-books/user-web test:buy-now:browser
+        env:
+          MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
       - run: pnpm --filter @used-books/user-web test:exchange:browser
+        env:
+          MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
+      - run: pnpm --filter @used-books/user-web test:wallet:browser
         env:
           MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
       - if: failure()
@@ -76,5 +85,6 @@ jobs:
           path: |
             apps/user-web/test-results/
             .impeccable/review/integration-main/
+            .tmp/wallet-checkout-browser/
       - if: always()
         run: pnpm infra:mongo:test:stop

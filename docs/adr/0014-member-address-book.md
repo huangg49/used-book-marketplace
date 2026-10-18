@@ -3,6 +3,10 @@
 2026-09-27. Status: implemented, OpenAPI0.9.0. F0 of the transaction plan;
 fulfillment, quotes, checkout and reservations remain planned.
 
+17/10/2026 follow-up: [ADR0039](0039-book-circulation-regions.md) replaces demo
+locality labels with the owner's three operational circulation zones while
+preserving existing wire/address keys. The original decision below is historical.
+
 Follow-up: [ADR0015](0015-listing-delivery-origin.md) implements DirectDelivery
 origin references, adds per-contact content versions and identity-only history.
 Quotes, checkout and reservations remain planned. The decision below records

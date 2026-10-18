@@ -11,26 +11,27 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 44px;
-  padding: 8px 10px;
-  color: inherit;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  color: var(--shop-cream);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
   font: inherit;
   font-size: 0.875rem;
+  font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
   transition:
-    color 150ms,
-    background-color 150ms,
-    border-color 150ms;
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
 }
 .trigger:hover,
 .trigger[aria-expanded="true"] {
   color: var(--shop-yellow);
-  background: var(--shop-wine-hover);
-  border-color: var(--shop-yellow);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(244, 203, 103, 0.4);
 }
 .chevron {
   transition: transform 160ms ease-out;

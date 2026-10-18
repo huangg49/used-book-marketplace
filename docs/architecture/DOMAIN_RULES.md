@@ -52,6 +52,11 @@ a real workflow. Checkout UI remains planned.
 
 ## Funding và refund trước acceptance
 
+14/10/2026: chủ dự án chốt phí gửi duyệt20.000đ/hoàn khi từ chối và Order tạo
+đồng thời với wallet hold; VNPay sandbox nạp ví. [Gói hiện hành](../features/WALLET_CHECKOUT.md)
+mô tả default và profile lịch sử, không mở gate release. Ledger phí riêng khỏi
+OrderHold; tiền mua sách quyết toán cho seller, không hoàn buyer khi Completed.
+
 Order wallet funding and pre-confirmation full refunds are implemented in OpenAPI
 0.15.0; read ADR 0020 and `docs/features/ORDER_PAYMENT_REPORT.md`. Payment holds the
 frozen P+S once, cancellation/rejection/48h expiry records SettlementPending, then
@@ -59,6 +64,18 @@ the internal refund worker posts and releases atomically. Keep money/book held o
 refund failure. This funding increment adds no dispatch/strike/settlement-to-seller; later shipment increments are described below.
 Order version differs from ownership/commitment version after funding. Reconciliation
 includes holds; history uses immutable posting sequence. Restart API and worker together.
+
+## Mua ngay DirectDelivery
+
+[ADR0038](../adr/0038-direct-buy-now-orders.md) bổ sung Buyer-created BuyNow cạnh
+Seller-selected Negotiated. Cùng quote/commitment/ledger; BuyNow chỉ nhận giá
+niêm yết, payment vào Preparing/version3 trong một transaction với hold,
+preparation và inbox. Không dùng reject/cancel-paid/refund trước acceptance cho
+BuyNow đã trả tiền. Pickup expiry vẫn mở review, giữ tiền và sách. Historical
+agreement không có purchaseMode là Negotiated; gate completion không đổi.
+Public listing chỉ hiển thị “Đang giao dịch”/InTransaction khi Order active có
+paidAt sau payment commit. Unpaid vẫn giữ commitment15phút nhưng là “Chờ thanh
+toán”/AwaitingPayment; không suy đã thanh toán từ Reserved hoặc OrderCreated.
 
 ## Seller acceptance và pickup review
 
@@ -68,7 +85,10 @@ accept paid obligations, including LOCKED/RESTRICTED. Preparing has an immutable
 48h pickup deadline; worker opens a durable PickupReview/ResolutionPending once.
 That is an unresolved verification task, not proof of custody, a strike or refund.
 Keep hold/commitment and never use pre-confirmation refund after acceptance.
-Shipping destination is shared only with the accepted Seller. Later pickup/delivery-overdue increments are described below;
+The Order fulfillment destination is shared with the accepted Seller. ADR0037
+additionally permits the Buyer to share the quoted destination with their own
+conversation's Seller before Order creation; changed address versions are not
+shared automatically. Later pickup/delivery-overdue increments are described below;
 review resolution and post-acceptance cancellation remain planned.
 
 ## Shipment label
@@ -148,7 +168,10 @@ after API build for read-only source/ledger reconciliation. Never refill by edit
 
 Member address book and authenticated HCM demo service-area directory are implemented
 in OpenAPI 0.9.0. Read ADR 0014 and `docs/features/ADDRESS_BOOK_REPORT.md`.
-DEMO-A/B are simulated locality codes, not official wards or handover points.
+Owner update17/10: [ADR0039](../adr/0039-book-circulation-regions.md) names the
+operational circulation zones TP.HCM/DEMO-A, Bình Dương/DEMO-B and Vũng Tàu/DEMO-C.
+These are not official wards or handover points. The HCM-DEMO-v1 envelope is kept
+for compatibility; migration0030 changes reference labels, not saved address keys.
 Listing DirectDelivery origin selection is implemented in OpenAPI 0.10.0; read
 ADR 0015 and `docs/features/LISTING_FULFILLMENT_REPORT.md`. Address content versions
 and identity-only history protect frozen revisions when a contact is edited/deleted.

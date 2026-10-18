@@ -6,8 +6,6 @@ import { MongoCommandService, member, requireActive, type Actor, type CommandCon
 import { conflict, invalidState, notFound, type Wire } from '../commands/domain-error.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
 
-export const PURCHASE_CONVERSATION_MS = 24 * 60 * 60 * 1000;
-
 @Injectable()
 export class PurchasesService {
   constructor(private readonly commands: MongoCommandService, private readonly listings: ListingCommitmentPolicy) {}
@@ -24,12 +22,32 @@ export class PurchasesService {
     const buyer = await tx.c.users.findOne({ _id: row.buyerId });
     const seller = await tx.c.users.findOne({ _id: row.sellerId });
     if (!buyer || !seller) throw notFound();
+    const quote = row.quoteId
+      ? await tx.c.sale_quotes.findOne({ _id: row.quoteId, buyerId: row.buyerId, sellerId: row.sellerId, listingId: row.listingId })
+      : null;
+    const destination = quote
+      ? await tx.c.member_addresses.findOne({ _id: quote.destinationAddressId, ownerId: row.buyerId })
+      : null;
     return {
       id: row._id, listingId: row.listingId,
       buyer: { id: buyer._id, displayName: buyer.displayName },
       seller: { id: seller._id, displayName: seller.displayName },
       version: row.version, status: row.status,
-      expiresAt: row.expiresAt.toISOString(), createdAt: row.createdAt.toISOString(),
+      expiresAt: row.expiresAt?.toISOString() ?? null,
+      hasQuote: row.quoteId !== null,
+      quotePreview: quote && destination?.version === quote.destinationAddressVersion ? {
+        destination: {
+          recipientName: destination.recipientName,
+          phone: destination.phone,
+          serviceAreaCode: 'HCM-DEMO-v1' as const,
+          localityCode: destination.localityCode,
+          detail: destination.detail,
+        },
+        shippingFee: quote.shippingFee,
+        expiresAt: quote.expiresAt.toISOString(),
+      } : null,
+      orderId: row.orderId,
+      createdAt: row.createdAt.toISOString(),
       closedAt: row.closedAt?.toISOString() ?? null,
     } satisfies Wire['PurchaseConversation'];
   }
@@ -53,16 +71,79 @@ export class PurchasesService {
         if (listing.moderation !== 'Approved' || listing.visibility !== 'Visible' || listing.trade !== 'Available') throw invalidState();
         const revision = await tx.c.listing_revisions.findOne({ _id: listing.currentRevisionId! });
         if (!revision || !['Sale', 'Both'].includes(revision.mode ?? '')) throw invalidState();
+        const existing = await tx.c.purchase_conversations.findOne({
+          listingId: listing._id,
+          buyerId: actor._id,
+          status: 'Active',
+        });
         const now = await tx.now();
+        if (existing)
+          return {
+            entityType: 'PurchaseConversation' as const,
+            entityId: existing._id,
+            listingId: existing.listingId,
+            version: existing.version,
+            state: existing.status,
+            expiresAt: existing.expiresAt,
+            decidedAt: now,
+            event: 'PurchaseConversationReused',
+          };
         const row: PurchaseConversationDoc = {
           _id: randomUUID(), listingId: listing._id, listingVersion: listing.version,
           buyerId: actor._id, sellerId: listing.ownerId, version: 1, status: 'Active',
-          expiresAt: new Date(now.getTime() + PURCHASE_CONVERSATION_MS), closedAt: null,
+          expiresAt: null, quoteId: null, orderId: null, closedAt: null,
           createdAt: now, updatedAt: now, lockSeq: 0,
         };
         await tx.c.purchase_conversations.insertOne(row);
-        await this.listings.project(tx, listing._id, listing.version, 'Available', 'Reserved');
         return { entityType: 'PurchaseConversation' as const, entityId: row._id, listingId: row.listingId, version: row.version, state: row.status, expiresAt: row.expiresAt, decidedAt: now, event: 'PurchaseConversationStarted' };
+      },
+    });
+  }
+  attachQuote(context: CommandContext, id: string, body: Wire['AttachPurchaseConversationQuote']) {
+    return this.commands.runPurchaseConversation(context, 'attachPurchaseConversationQuote', id, body, {
+      discover: async (tx) => {
+        const row = await this.conversation(tx, id);
+        return [row.buyerId, row.sellerId];
+      },
+      authorize: async (tx, actor) => {
+        member(actor);
+        const row = await this.conversation(tx, id);
+        if (row.buyerId !== actor._id) throw notFound();
+        return row;
+      },
+      mutate: async (tx, actor, before) => {
+        requireActive(actor);
+        await tx.lock('purchase_conversations', [before._id]);
+        const row = await this.conversation(tx, before._id);
+        if (
+          row.version !== body.expectedVersion ||
+          row.status !== 'Active' ||
+          row.orderId ||
+          (row.expiresAt && row.expiresAt <= (await tx.now()))
+        ) throw conflict();
+        const listing = await this.listings.lock(tx, row.listingId);
+        const quote = await tx.c.sale_quotes.findOne({ _id: body.quoteId.toLowerCase(), buyerId: actor._id });
+        const now = await tx.now();
+        if (
+          listing.trade !== 'Available' ||
+          !quote ||
+          listing.version !== quote.listingVersion ||
+          listing.currentRevisionId !== quote.listingRevisionId ||
+          listing.moderation !== 'Approved' || listing.visibility !== 'Visible' ||
+          quote.sellerId !== row.sellerId ||
+          quote.listingId !== row.listingId ||
+          quote.version !== body.expectedQuoteVersion ||
+          quote.listingVersion !== body.expectedListingVersion ||
+          quote.listingRevisionId !== body.expectedListingRevisionId ||
+          quote.expiresAt <= now
+        ) throw conflict();
+        const updated = await tx.c.purchase_conversations.findOneAndUpdate(
+          { _id: row._id, version: row.version, status: 'Active' },
+          { $set: { quoteId: quote._id, updatedAt: now }, $inc: { version: 1 } },
+          { returnDocument: 'after' },
+        );
+        if (!updated) throw conflict();
+        return { entityType: 'PurchaseConversation' as const, entityId: updated._id, listingId: updated.listingId, version: updated.version, state: updated.status, expiresAt: updated.expiresAt, decidedAt: now, event: 'PurchaseConversationQuoteAttached' };
       },
     });
   }
@@ -93,7 +174,7 @@ export class PurchasesService {
       await tx.lock('purchase_conversations', [input.conversationId]);
       const row = await this.conversation(tx, input.conversationId); this.participant(row, actor._id);
       const now = await tx.now();
-      if (row.status !== 'Active' || now >= row.expiresAt) throw invalidState();
+      if (row.status !== 'Active' || (row.expiresAt && now >= row.expiresAt)) throw invalidState();
       const existing = await tx.c.purchase_messages.findOne({ _id: input.messageId });
       if (existing) {
         if (existing.conversationId !== row._id || existing.senderId !== actor._id || existing.body !== body) throw conflict();
@@ -114,7 +195,7 @@ export class PurchasesService {
         const row = await this.conversation(tx, id);
         const listing = await this.listings.lock(tx, row.listingId);
         const now = await tx.now();
-        if (row.status !== 'Active' || now < row.expiresAt || listing.trade !== 'Reserved') throw conflict();
+        if (row.status !== 'Active' || !row.expiresAt || now < row.expiresAt || listing.trade !== 'Reserved') throw conflict();
         const next = await tx.c.purchase_conversations.findOneAndUpdate({ _id: row._id, version: row.version, status: 'Active' }, { $set: { status: 'Expired', closedAt: now, updatedAt: now }, $inc: { version: 1 } }, { returnDocument: 'after' });
         if (!next) throw conflict();
         await this.listings.project(tx, listing._id, listing.version, 'Reserved', 'Available');

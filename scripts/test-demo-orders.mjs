@@ -141,7 +141,7 @@ try {
     simulated_payment_events: 1,
     ledger_journals: 4,
     ledger_entries: 8,
-    mutation_receipts: 40,
+    mutation_receipts: 46,
   });
   const after = await readJournal();
   for (const [step, intent] of Object.entries(interrupted)) {
@@ -152,7 +152,7 @@ try {
   const again = await runOrders(config, directory, sandbox);
   assert.deepEqual(again.orders, manifest.orders);
   assert.deepEqual(await counts(), initial);
-  assert.equal(Object.keys((await readJournal()).steps).length, 40);
+  assert.equal(Object.keys((await readJournal()).steps).length, 46);
   const http = createHttp(sandbox.base, sandbox.tokens);
   // Existing participants cannot exercise one another's commands, even when a
   // genuine receipt and command payload exist. A reviewer is not a participant.
@@ -195,7 +195,7 @@ try {
       body: quoteIntent.body,
       headers: { "Idempotency-Key": randomUUID() },
     }),
-    { status: 409 },
+    { status: 404 },
   );
   // Replay authorization is current, not supplied by a saved receipt.
   await assert.rejects(
@@ -265,7 +265,7 @@ try {
     assert.ok(!text.includes("accessToken") && !text.includes("refreshToken"));
   }
   console.log(
-    "H01b Order QA PASS: lost quote/create/pay/accept ack after commit, API restart with memory sessions, stable 40 intents/receipts; 3 orders, 2 holds, one preparation, immutable deadlines, no duplicate/debit/contact leak; wrong actors and conflicting new create denied. Storage FAKE; no native/human gate closed.",
+    "H01b Order QA PASS: lost quote/create/pay/accept ack after commit, API restart with memory sessions, stable 46 intents/receipts; 3 orders, 2 holds, one preparation, immutable deadlines, no duplicate/debit/contact leak; wrong actors and conflicting new create denied. Storage FAKE; no native/human gate closed.",
   );
 } finally {
   await sandbox?.close();

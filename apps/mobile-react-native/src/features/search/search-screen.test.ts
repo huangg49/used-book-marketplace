@@ -53,6 +53,14 @@ describe("SearchScreen Stitch (TimKiem-App) Integration & Logic", () => {
       expect(["Exchange", "Both"]).toContain(item.mode);
       expect(item.exchangeValue).toBeDefined();
     }
+
+    const bothItems = FALLBACK_LISTINGS.filter((item) => item.mode === "Both");
+    expect(bothItems.length).toBeGreaterThan(0);
+    for (const item of bothItems) {
+      expect(item.mode).toBe("Both");
+      expect(item.salePrice).toBeDefined();
+      expect(item.exchangeValue).toBeDefined();
+    }
   });
 
   it("filters listings correctly by book condition", () => {

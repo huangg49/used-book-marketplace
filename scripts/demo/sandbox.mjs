@@ -447,6 +447,11 @@ export async function createSandbox(config, directory) {
       SUPABASE_MEDIA_BUCKET: config.bucket,
       MEDIA_STORAGE_BUDGET_BYTES: "50000000",
       PAYMENT_SIMULATOR_SECRET: config.fundingSecret ?? "",
+      // These isolated scenarios exercise the retained historical commands.
+      // Paid submissions/atomic checkout/VNPay have their own wallet suite.
+      LISTING_SUBMISSION_FEE_VND: "0",
+      ORDER_CHECKOUT_MODE: "Unpaid",
+      VNPAY_SANDBOX_ENABLED: "false",
     });
     const { AppModule } = await load("app.module.js"),
       { configureApp } = await load("configure-app.js"),

@@ -3,7 +3,7 @@ import { applyCollectionSpecs } from './index.js';
 import type { CollectionSpec } from '../schema-dsl.js';
 import { document, UUID_PATTERN } from '../schema-dsl.js';
 import { exchangePhase5ChangedSpecs } from './0026-exchange-mutual-completion.js';
-import { exchangeNotificationSpecs } from './0024-exchange-notifications.js';
+import { buyNowNotificationSpecs } from './0029-buy-now-notifications.js';
 
 const OPTIONAL_EXCHANGE_FIELDS = new Set([
   'inspectionDeadline',
@@ -50,7 +50,12 @@ export const withExchangePhase6Changes = (
           'ExchangeCancelled',
           'ExchangeRejected',
           'ExchangeDisputed',
+          'OrderBuyNowPaid',
         ],
+      },
+      targetType: {
+        bsonType: 'string',
+        enum: ['Auction', 'Exchange', 'Order'],
       },
     });
     return {
@@ -121,11 +126,11 @@ export const withExchangePhase6Changes = (
 
 export const exchangePhase6ChangedSpecs = [
   ...exchangePhase5ChangedSpecs.map(withExchangePhase6Changes),
-  ...exchangeNotificationSpecs.map(withExchangePhase6Changes),
+  ...buyNowNotificationSpecs.map(withExchangePhase6Changes),
 ];
 
 export const exchangeMultiBookMigration = {
-  id: '0027-exchange-multi-book',
+  id: '0031-exchange-multi-book',
   definition: { collections: exchangePhase6ChangedSpecs },
   async up(db: Db) {
     await applyCollectionSpecs(db, exchangePhase6ChangedSpecs);
