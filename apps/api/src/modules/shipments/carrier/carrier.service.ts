@@ -188,6 +188,10 @@ export class CarrierService {
                   exchangeUpdated = true;
                   nextStatus = updated.status;
                 }
+              } else {
+                this.logger.warn(
+                  `[CarrierWebhook] Từ chối tiếp nhận mã ${event.trackingCode}: Cần cả 2 bên hoàn tất tạo đơn vận chuyển mới bàn giao bên vận chuyển.`,
+                );
               }
             }
           }
@@ -204,6 +208,7 @@ export class CarrierService {
 
   /**
    * Lấy thông tin đơn hàng vận chuyển thật từ Database cho tài xế
+   * Quy tắc nghiệp vụ BA: Đơn vị vận chuyển chỉ tham gia/bàn giao khi CẢ 2 USER hoàn thành việc tạo đơn vận chuyển.
    */
   async getShipmentOrder(trackingCode?: string) {
     if (!this.mongo) return null;
@@ -216,16 +221,43 @@ export class CarrierService {
         ],
       };
     } else {
+      // Ưu tiên đơn đã sẵn sàng bàn giao cho vận chuyển (cả 2 bên đã tạo đơn)
       query = {
-        $or: [
-          { 'initiatorShipment.trackingCode': { $exists: true, $ne: null } },
-          { 'recipientShipment.trackingCode': { $exists: true, $ne: null } },
-        ],
+        status: { $in: ['InTransit', 'Delivered'] },
+        'initiatorShipment.trackingCode': { $exists: true, $ne: null },
+        'recipientShipment.trackingCode': { $exists: true, $ne: null },
       };
     }
 
-    const exchange = await this.mongo.c.exchanges.findOne(query, { sort: { updatedAt: -1 } });
+    let exchange = await this.mongo.c.exchanges.findOne(query, { sort: { updatedAt: -1 } });
+
+    // Nếu chưa có đơn InTransit/Delivered, kiểm tra xem có đơn nào đang chờ đối tác tạo đơn không
+    let isWaitingPartner = false;
+    if (!exchange && !trackingCode) {
+      exchange = await this.mongo.c.exchanges.findOne(
+        {
+          status: 'Preparing',
+          $or: [
+            { 'initiatorShipment.trackingCode': { $exists: true, $ne: null } },
+            { 'recipientShipment.trackingCode': { $exists: true, $ne: null } },
+          ],
+        },
+        { sort: { updatedAt: -1 } },
+      );
+      if (exchange) {
+        isWaitingPartner = true;
+      }
+    }
+
     if (!exchange) return null;
+
+    const isBothCreated =
+      Boolean(exchange.initiatorShipment?.trackingCode) &&
+      Boolean(exchange.recipientShipment?.trackingCode);
+
+    if (!isBothCreated) {
+      isWaitingPartner = true;
+    }
 
     const isInitiatorLeg =
       Boolean(exchange.initiatorShipment?.trackingCode) &&
@@ -261,7 +293,8 @@ export class CarrierService {
       trackingCode: shipment?.trackingCode || 'GHN120383736VN',
       carrierCode: shipment?.carrierCode || 'GHN',
       carrierName: shipment?.carrierName || 'Giao Hàng Nhanh (GHN Express)',
-      status: exchange.status,
+      status: isWaitingPartner ? 'WAITING_PARTNER_SHIPMENT' : exchange.status,
+      readyForPickup: !isWaitingPartner,
       sender: {
         name: sender?.recipientName || senderUser?.displayName || 'Nguyễn Đại',
         phone: sender?.phone || '0901234567',
