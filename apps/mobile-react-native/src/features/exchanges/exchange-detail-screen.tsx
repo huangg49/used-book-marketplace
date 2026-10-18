@@ -30,10 +30,13 @@ export function ExchangeDetailScreen() {
   const exchange = exchangeQuery.data;
 
   // 2. Fetch Initiator & Recipient Public Listings to get cover photos and metadata
+  const primaryInitiatorId =
+    exchange?.initiatorListingIds?.[0] ?? exchange?.initiatorListingId;
+
   const initiatorListingQuery = useQuery({
-    queryKey: ["public-listing", exchange?.initiatorListingId],
-    queryFn: () => client.request(`/listings/${exchange!.initiatorListingId}`, publicListing),
-    enabled: Boolean(exchange?.initiatorListingId) && foreground,
+    queryKey: ["public-listing", primaryInitiatorId],
+    queryFn: () => client.request(`/listings/${primaryInitiatorId}`, publicListing),
+    enabled: Boolean(primaryInitiatorId) && foreground,
   });
 
   const recipientListingQuery = useQuery({
@@ -118,11 +121,7 @@ export function ExchangeDetailScreen() {
         </View>
       }
     >
-      <ScrollView
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.scrollContent}>
         {/* PHẦN TRÊN: ĐƠN TRAO ĐỔI (Proposal & Books Matching) */}
         <ExchangeProposalCard
           exchange={exchange}
@@ -143,7 +142,7 @@ export function ExchangeDetailScreen() {
           partnerName={partnerName}
           isReadOnly={isReadOnly}
         />
-      </ScrollView>
+      </View>
     </Screen>
   );
 }

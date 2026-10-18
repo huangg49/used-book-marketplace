@@ -40,10 +40,16 @@ export function ExchangeComposeScreen() {
   const queryClient = useQueryClient();
   const currentUserId = state.status === "authenticated" ? state.user.id : null;
 
-  const [selectedMyListingId, setSelectedMyListingId] = useState<string | null>(null);
+  const [selectedMyListingIds, setSelectedMyListingIds] = useState<string[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [initialMessage, setInitialMessage] = useState("");
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
+
+  const toggleSelectBook = (id: string) => {
+    setSelectedMyListingIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
 
   // 1. Fetch Target Book (Sách đối tác muốn đổi)
   const targetQuery = useQuery({
@@ -82,33 +88,39 @@ export function ExchangeComposeScreen() {
   });
 
   const targetBook = targetQuery.data;
-  const chosenMyListing = myEligibleListings.find((l) => l.id === selectedMyListingId);
+  const chosenMyListings = myEligibleListings.filter((l) =>
+    selectedMyListingIds.includes(l.id),
+  );
 
-  // Financial difference calculation
+  // Financial difference calculation (Multi-book sum)
   const targetValue =
     (targetBook && "exchangeValue" in targetBook && targetBook.exchangeValue != null
       ? targetBook.exchangeValue
       : targetBook && "salePrice" in targetBook && targetBook.salePrice != null
         ? targetBook.salePrice
         : 0) ?? 0;
-  const myValue = chosenMyListing?.currentRevision.content.exchangeValue ?? 0;
-  const diff = targetValue - myValue;
+  const totalMyValue = chosenMyListings.reduce(
+    (sum, item) => sum + (item.currentRevision.content.exchangeValue ?? 0),
+    0,
+  );
+  const diff = targetValue - totalMyValue;
 
   // Submit Mutation
   const submitProposalMutation = useMutation({
     mutationFn: async () => {
-      if (!chosenMyListing || !targetBook) {
-        throw new Error("Vui lòng chọn cuốn sách trong kệ của bạn để trao đổi.");
+      if (chosenMyListings.length === 0 || !targetBook) {
+        throw new Error("Vui lòng chọn ít nhất một cuốn sách từ kệ của bạn để trao đổi.");
       }
 
-      // Step A: Create proposal
+      // Step A: Create proposal (supports multi-book)
       const res = await client.request(
         "/exchanges",
         exchangeReceiptSchema,
         {
           method: "POST",
           body: JSON.stringify({
-            initiatorListingId: chosenMyListing.id,
+            initiatorListingId: chosenMyListings[0].id,
+            initiatorListingIds: chosenMyListings.map((b) => b.id),
             recipientListingId: targetBook.id,
             ...(effectiveAddressId ? { deliveryAddressId: effectiveAddressId } : {}),
           }),
@@ -219,11 +231,7 @@ export function ExchangeComposeScreen() {
         </View>
       }
     >
-      <ScrollView
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.scrollContent}>
         {errorNotice ? <Notice tone="error">{errorNotice}</Notice> : null}
 
         {/* 1. Sách bạn muốn nhận (Target Book Banner) */}
@@ -278,7 +286,9 @@ export function ExchangeComposeScreen() {
             </View>
             <View style={styles.countBadge}>
               <AppText style={styles.countBadgeText}>
-                {myEligibleListings.length} cuốn khả dụng
+                {selectedMyListingIds.length > 0
+                  ? `Đã chọn ${selectedMyListingIds.length} cuốn`
+                  : `${myEligibleListings.length} cuốn khả dụng`}
               </AppText>
             </View>
           </View>
@@ -301,7 +311,7 @@ export function ExchangeComposeScreen() {
           ) : (
             <View style={styles.inventoryList}>
               {myEligibleListings.map((listing) => {
-                const isSelected = listing.id === selectedMyListingId;
+                const isSelected = selectedMyListingIds.includes(listing.id);
                 const coverMediaId = listing.currentRevision.content.mediaIds[0];
                 const listingValue = listing.currentRevision.content.exchangeValue ?? 0;
 
@@ -309,9 +319,9 @@ export function ExchangeComposeScreen() {
                   <Pressable
                     key={listing.id}
                     accessibilityRole="button"
-                    accessibilityLabel={isSelected ? "Đã chọn cuốn sách này" : "Chọn cuốn sách này"}
+                    accessibilityLabel={isSelected ? "Bỏ chọn cuốn sách này" : "Chọn cuốn sách này"}
                     onPress={() => {
-                      setSelectedMyListingId(listing.id);
+                      toggleSelectBook(listing.id);
                       setErrorNotice(null);
                     }}
                     style={({ pressed }) => [
@@ -365,7 +375,7 @@ export function ExchangeComposeScreen() {
         </View>
 
         {/* 3. So khớp giá trị & Chênh lệch (nếu đã chọn sách) */}
-        {chosenMyListing && (
+        {chosenMyListings.length > 0 && (
           <View style={styles.diffCard}>
             <View style={styles.diffHeader}>
               <Icon name="swap" size={16} color={stitchTokens.wineDark} />
@@ -374,8 +384,10 @@ export function ExchangeComposeScreen() {
 
             <View style={styles.diffGrid}>
               <View style={styles.diffItem}>
-                <AppText style={styles.diffItemLabel}>Sách bạn gửi</AppText>
-                <AppText style={styles.diffItemValue}>{formatVnd(myValue)}</AppText>
+                <AppText style={styles.diffItemLabel}>
+                  Sách bạn gửi ({chosenMyListings.length} cuốn)
+                </AppText>
+                <AppText style={styles.diffItemValue}>{formatVnd(totalMyValue)}</AppText>
               </View>
 
               <View style={styles.diffDivider}>
@@ -520,17 +532,17 @@ export function ExchangeComposeScreen() {
             title={
               submitProposalMutation.isPending
                 ? "Đang gửi đề nghị..."
-                : chosenMyListing
-                  ? `Gửi đề nghị trao đổi (${diff > 0 ? "Bù " + formatVnd(diff) : "Ngang giá"})`
-                  : "Vui lòng chọn 1 cuốn sách để đổi"
+                : chosenMyListings.length > 0
+                  ? `Gửi đề xuất đổi ${chosenMyListings.length} cuốn (${diff > 0 ? "Bù " + formatVnd(diff) : diff < 0 ? "Nhận bù " + formatVnd(-diff) : "Ngang giá"})`
+                  : "Vui lòng chọn ít nhất 1 cuốn sách để đổi"
             }
             wine
             busy={submitProposalMutation.isPending}
-            disabled={!chosenMyListing || submitProposalMutation.isPending}
+            disabled={chosenMyListings.length === 0 || submitProposalMutation.isPending}
             onPress={() => submitProposalMutation.mutate()}
           />
         </View>
-      </ScrollView>
+      </View>
     </Screen>
   );
 }

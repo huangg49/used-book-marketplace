@@ -80,7 +80,15 @@ export function ExchangeProposalCard({
         {/* Your Book */}
         <View style={styles.bookSideCard}>
           <View style={styles.sideHeader}>
-            <AppText style={styles.sideBadge}>SÁCH CỦA BẠN GỬI ĐI</AppText>
+            <AppText style={styles.sideBadge}>
+              {isInitiator
+                ? (exchange.initiatorListingIds && exchange.initiatorListingIds.length > 1
+                    ? `SÁCH BẠN GỬI ĐI (${exchange.initiatorListingIds.length} CUỐN)`
+                    : "SÁCH CỦA BẠN GỬI ĐI")
+                : (exchange.initiatorListingIds && exchange.initiatorListingIds.length > 1
+                    ? `SÁCH BẠN NHẬN VỀ (${exchange.initiatorListingIds.length} CUỐN)`
+                    : "SÁCH BẠN NHẬN VỀ")}
+            </AppText>
           </View>
           <View style={styles.bookInfoRow}>
             <View style={styles.photoBox}>

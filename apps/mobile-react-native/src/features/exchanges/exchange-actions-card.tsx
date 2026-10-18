@@ -21,6 +21,8 @@ export function ExchangeActionsCard({
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [confirmAcceptOpen, setConfirmAcceptOpen] = useState(false);
   const [confirmRejectOpen, setConfirmRejectOpen] = useState(false);
+  const [confirmDisputeOpen, setConfirmDisputeOpen] = useState(false);
+  const [disputeReason, setDisputeReason] = useState("");
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["exchange", exchange.id] });
@@ -88,13 +90,29 @@ export function ExchangeActionsCard({
     onSuccess: invalidate,
   });
 
+  const disputeMutation = useMutation({
+    mutationFn: (reason: string) =>
+      client.request(`/exchanges/${exchange.id}/dispute`, z.unknown(), {
+        method: "POST",
+        body: JSON.stringify({
+          expectedVersion: exchange.revision,
+          reason,
+        }),
+      }),
+    onSuccess: () => {
+      setDisputeReason("");
+      invalidate();
+    },
+  });
+
   const isBusy =
     cancelMutation.isPending ||
     acceptMutation.isPending ||
     rejectMutation.isPending ||
     fundMutation.isPending ||
     shipMutation.isPending ||
-    receiveMutation.isPending;
+    receiveMutation.isPending ||
+    disputeMutation.isPending;
 
   const isFundedByMe = isInitiator
     ? Boolean(exchange.initiatorFundedAt)
@@ -188,6 +206,15 @@ export function ExchangeActionsCard({
       {/* State: PREPARING (SHIP) */}
       {exchange.status === "Preparing" && (
         <View style={styles.actionsBox}>
+          {exchange.shippingDeadline && (
+            <View style={styles.deadlineContainer}>
+              <Icon name="clock" size={14} color={stitchTokens.wineDark} />
+              <AppText style={styles.deadlineText}>
+                Hạn chót gửi sách: {new Date(exchange.shippingDeadline).toLocaleString("vi-VN")} (72 giờ)
+              </AppText>
+            </View>
+          )}
+
           {isShippedByMe ? (
             <View style={styles.successNote}>
               <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
@@ -198,7 +225,7 @@ export function ExchangeActionsCard({
           ) : (
             <View style={styles.buttonGroup}>
               <AppText style={styles.hintText}>
-                Hãy đóng gói cẩn thận và gửi sách đến địa chỉ của đối tác theo thỏa thuận.
+                Hãy đóng gói cẩn thận và gửi sách đến địa chỉ của đối tác theo thỏa thuận. Quá 72h không gửi đơn sẽ bị hủy hoặc chuyển sang khiếu nại.
               </AppText>
               <Button
                 title="Xác nhận tôi đã gửi sách"
@@ -211,7 +238,7 @@ export function ExchangeActionsCard({
         </View>
       )}
 
-      {/* State: IN_TRANSIT (RECEIVE) */}
+      {/* State: IN_TRANSIT (RECEIVE OR DISPUTE) */}
       {exchange.status === "InTransit" && (
         <View style={styles.actionsBox}>
           {isReceivedByMe ? (
@@ -232,8 +259,49 @@ export function ExchangeActionsCard({
                 busy={isBusy}
                 onPress={() => receiveMutation.mutate()}
               />
+              <Button
+                title="Báo cáo khiếu nại sách"
+                secondary
+                wine
+                busy={isBusy}
+                onPress={() => setConfirmDisputeOpen(true)}
+              />
             </View>
           )}
+        </View>
+      )}
+
+      {/* State: DELIVERED (INSPECTING OR DISPUTE) */}
+      {exchange.status === "Delivered" && (
+        <View style={styles.actionsBox}>
+          <View style={styles.buttonGroup}>
+            <AppText style={styles.hintText}>
+              Sách đã được giao. Hai bên có 48 giờ để kiểm tra tình trạng sách trước khi hệ thống tự động tất toán hoàn cọc.
+            </AppText>
+            <Button
+              title="Báo cáo khiếu nại sách"
+              secondary
+              wine
+              busy={isBusy}
+              onPress={() => setConfirmDisputeOpen(true)}
+            />
+          </View>
+        </View>
+      )}
+
+      {/* State: RESOLUTION_PENDING */}
+      {exchange.status === "ResolutionPending" && (
+        <View style={styles.disputeBox}>
+          <Icon name="info" size={20} color={stitchTokens.crimson} />
+          <View style={{ flex: 1, gap: 4 }}>
+            <AppText style={styles.disputeTitle}>Đang giải quyết khiếu nại</AppText>
+            <AppText style={styles.disputeReason}>
+              Lý do: {exchange.disputeReason || "Phát sinh khiếu nại trong giao nhận hoặc đồng kiểm."}
+            </AppText>
+            <AppText style={styles.disputeHint}>
+              Quy trình tự động tất toán 48 giờ đã được tạm dừng và tiền cọc được đóng băng bảo vệ. Ban quản trị Lật Lại đang tiếp nhận hỗ trợ hai bên.
+            </AppText>
+          </View>
         </View>
       )}
 
@@ -296,6 +364,19 @@ export function ExchangeActionsCard({
           rejectMutation.mutate();
         }}
       />
+
+      <ConfirmDialog
+        visible={confirmDisputeOpen}
+        title="Báo cáo khiếu nại giao dịch?"
+        message="Quy trình tất toán 48h sẽ tạm dừng ngay lập tức và tiền cọc được giữ an toàn. Bạn có chắc muốn gửi khiếu nại cho đơn hàng này?"
+        confirmLabel="Gửi khiếu nại ngay"
+        destructive
+        onCancel={() => setConfirmDisputeOpen(false)}
+        onConfirm={() => {
+          setConfirmDisputeOpen(false);
+          disputeMutation.mutate(disputeReason.trim() || "Sách không đúng như mô tả khi nhận");
+        }}
+      />
     </View>
   );
 }
@@ -341,6 +422,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: stitchTokens.darkWood,
     lineHeight: 18,
+  },
+  deadlineContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.amberBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  deadlineText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+    flex: 1,
+  },
+  disputeBox: {
+    flexDirection: "row",
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.flashRedBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.flashRed,
+  },
+  disputeTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: stitchTokens.flashRed,
+  },
+  disputeReason: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+  },
+  disputeHint: {
+    fontSize: 11,
+    color: stitchTokens.darkWood,
+    lineHeight: 16,
   },
   successNote: {
     flexDirection: "row",
