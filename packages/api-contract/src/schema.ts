@@ -2549,6 +2549,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exchanges/{id}/dispute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Participant opens a dispute during delivery or inspection window, halting auto-settlement. */
+        post: operations["disputeExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/exchanges/{id}/messages": {
         parameters: {
             query?: never;
@@ -3110,7 +3127,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected";
+            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed";
             title: string;
             body: string;
             /** @enum {string} */
@@ -4867,7 +4884,7 @@ export interface components {
         /** @enum {string} */
         ExchangeStatus: "Proposed" | "AcceptedAwaitingFunding" | "Preparing" | "InTransit" | "Delivered" | "Completed" | "Cancelled" | "ResolutionPending";
         /** @enum {string} */
-        ExchangeCancelReason: "FundingExpired" | "ProposalExpired" | "CancelledByUser" | "ListingUnavailable";
+        ExchangeCancelReason: "FundingExpired" | "ProposalExpired" | "CancelledByUser" | "ListingUnavailable" | "ShippingExpired";
         /** @enum {string} */
         ExchangeCancelledBy: "System" | "Initiator" | "Recipient";
         Exchange: {
@@ -4879,6 +4896,7 @@ export interface components {
             recipientId: string;
             /** Format: uuid */
             initiatorListingId: string;
+            initiatorListingIds?: string[];
             /** Format: uuid */
             recipientListingId: string;
             status: components["schemas"]["ExchangeStatus"];
@@ -4907,6 +4925,11 @@ export interface components {
             recipientAddress?: components["schemas"]["ExchangeAddressSnapshot"] | null;
             initiatorShipment?: components["schemas"]["ExchangeShipmentInfo"] | null;
             recipientShipment?: components["schemas"]["ExchangeShipmentInfo"] | null;
+            lastProposedById?: string | null;
+            shippingDeadline?: string | null;
+            disputedAt?: string | null;
+            disputeReason?: string | null;
+            disputedBy?: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -4936,7 +4959,8 @@ export interface components {
         };
         CreateExchangeProposal: {
             /** Format: uuid */
-            initiatorListingId: string;
+            initiatorListingId?: string;
+            initiatorListingIds?: string[];
             /** Format: uuid */
             recipientListingId: string;
             /** Format: uuid */
@@ -4958,6 +4982,10 @@ export interface components {
             notes?: string;
         };
         RejectExchangeCommand: {
+            expectedVersion: number;
+            reason: string;
+        };
+        DisputeExchangeCommand: {
             expectedVersion: number;
             reason: string;
         };
@@ -10241,6 +10269,38 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["VersionCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+        };
+    };
+    disputeExchange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DisputeExchangeCommand"];
             };
         };
         responses: {

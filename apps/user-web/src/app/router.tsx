@@ -25,6 +25,7 @@ import { AuctionDetailPage } from '../pages/AuctionDetailPage';
 import { CreateAuctionPage } from '../pages/CreateAuctionPage';
 import { NotificationsPage } from '../pages/NotificationsPage';
 import { PaperStormLayout } from '../components/auth/PaperStormLayout';
+import { DriverPage } from '../pages/DriverPage';
 export const router = createBrowserRouter([{ element: <PaperStormLayout />, children: [
   {
     element: <MainLayout />,
@@ -77,6 +78,7 @@ export const router = createBrowserRouter([{ element: <PaperStormLayout />, chil
     element: <Outlet />,
     children: [
       { path: '/sell', element: <SellBookPage /> },
+      { path: '/driver', element: <DriverPage /> },
     ],
   },
   // Catch-all

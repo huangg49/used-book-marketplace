@@ -142,6 +142,7 @@ describe('migrations', () => {
         '0024-exchange-notifications',
         '0025-exchange-reviews',
         '0026-exchange-mutual-completion',
+        '0027-exchange-multi-book',
       ]);
       const memberIds = new Set([
         '0016-catalog-classification',

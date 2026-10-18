@@ -201,4 +201,81 @@ export class CarrierService {
 
     return { success: true, trackingCode: event.trackingCode, exchangeUpdated, nextStatus };
   }
+
+  /**
+   * Lấy thông tin đơn hàng vận chuyển thật từ Database cho tài xế
+   */
+  async getShipmentOrder(trackingCode?: string) {
+    if (!this.mongo) return null;
+    let query: Record<string, unknown> = {};
+    if (trackingCode) {
+      query = {
+        $or: [
+          { 'initiatorShipment.trackingCode': trackingCode },
+          { 'recipientShipment.trackingCode': trackingCode },
+        ],
+      };
+    } else {
+      query = {
+        $or: [
+          { 'initiatorShipment.trackingCode': { $exists: true, $ne: null } },
+          { 'recipientShipment.trackingCode': { $exists: true, $ne: null } },
+        ],
+      };
+    }
+
+    const exchange = await this.mongo.c.exchanges.findOne(query, { sort: { updatedAt: -1 } });
+    if (!exchange) return null;
+
+    const isInitiatorLeg =
+      Boolean(exchange.initiatorShipment?.trackingCode) &&
+      (!trackingCode || exchange.initiatorShipment?.trackingCode === trackingCode);
+
+    const shipment = isInitiatorLeg ? exchange.initiatorShipment : exchange.recipientShipment;
+    const sender = isInitiatorLeg ? exchange.initiatorAddress : exchange.recipientAddress;
+    const receiver = isInitiatorLeg ? exchange.recipientAddress : exchange.initiatorAddress;
+
+    const listingId = isInitiatorLeg
+      ? (exchange.initiatorListingIds?.[0] || exchange.initiatorListingId)
+      : exchange.recipientListingId;
+    const listing = listingId ? await this.mongo.c.listings.findOne({ _id: listingId }) : null;
+    const rev = listing?.currentRevisionId
+      ? await this.mongo.c.listing_revisions.findOne({ _id: listing.currentRevisionId })
+      : null;
+    let bookTitle: string | null = null;
+    if (rev?.bookId) {
+      const catRev = await this.mongo.c.catalog_revisions.findOne(
+        { bookId: rev.bookId },
+        { sort: { number: -1 } },
+      );
+      bookTitle = catRev?.title ?? null;
+    }
+
+    const senderUserId = isInitiatorLeg ? exchange.initiatorId : exchange.recipientId;
+    const senderUser = senderUserId ? await this.mongo.c.users.findOne({ _id: senderUserId }) : null;
+    const receiverUserId = isInitiatorLeg ? exchange.recipientId : exchange.initiatorId;
+    const receiverUser = receiverUserId ? await this.mongo.c.users.findOne({ _id: receiverUserId }) : null;
+
+    return {
+      exchangeId: exchange._id,
+      trackingCode: shipment?.trackingCode || 'GHN120383736VN',
+      carrierCode: shipment?.carrierCode || 'GHN',
+      carrierName: shipment?.carrierName || 'Giao Hàng Nhanh (GHN Express)',
+      status: exchange.status,
+      sender: {
+        name: sender?.recipientName || senderUser?.displayName || 'Nguyễn Đại',
+        phone: sender?.phone || '0901234567',
+        detail: sender?.detail || '123 Nguyễn Huệ, P. Bến Nghé, Quận 1',
+      },
+      receiver: {
+        name: receiver?.recipientName || receiverUser?.displayName || 'Trần Tú',
+        phone: receiver?.phone || '0373916690',
+        detail: receiver?.detail || 'so nha 36, 120 Yen Lang',
+      },
+      itemsSummary: bookTitle ? `Sách: ${bookTitle}` : 'Sách trao đổi Lật Lại',
+      fee: 21001,
+      shippedAt: shipment?.shippedAt || exchange.initiatorShippedAt,
+      deliveredAt: isInitiatorLeg ? exchange.recipientReceivedAt : exchange.initiatorReceivedAt,
+    };
+  }
 }

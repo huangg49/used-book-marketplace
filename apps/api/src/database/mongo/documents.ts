@@ -1052,7 +1052,8 @@ export type ExchangeCancelReason =
   | 'FundingExpired'
   | 'ProposalExpired'
   | 'CancelledByUser'
-  | 'ListingUnavailable';
+  | 'ListingUnavailable'
+  | 'ShippingExpired';
 
 export type ExchangeCancelledBy = 'System' | 'Initiator' | 'Recipient';
 
@@ -1079,6 +1080,7 @@ export interface ExchangeDoc extends Lockable {
   initiatorId: string;
   recipientId: string;
   initiatorListingId: string;
+  initiatorListingIds?: string[] | null;
   recipientListingId: string;
   status: ExchangeStatus;
   revision: number;
@@ -1096,6 +1098,7 @@ export interface ExchangeDoc extends Lockable {
   cancelReason?: ExchangeCancelReason | null;
   cancelledBy?: ExchangeCancelledBy | null;
   cancelledAt?: Date | null;
+  shippingDeadline?: Date | null;
   initiatorShippedAt: Date | null;
   recipientShippedAt: Date | null;
   initiatorReceivedAt: Date | null;
@@ -1104,10 +1107,14 @@ export interface ExchangeDoc extends Lockable {
   completedAt: Date | null;
   initiatorCompletedAt?: Date | null;
   recipientCompletedAt?: Date | null;
+  disputedAt?: Date | null;
+  disputeReason?: string | null;
+  disputedBy?: string | null;
   initiatorAddress?: ExchangeAddressSnapshot | null;
   recipientAddress?: ExchangeAddressSnapshot | null;
   initiatorShipment?: ExchangeShipmentSnapshot | null;
   recipientShipment?: ExchangeShipmentSnapshot | null;
+  lastProposedById?: string | null;
   createdAt: Date;
   updatedAt: Date;
   lockSeq: number;
@@ -1133,7 +1140,8 @@ export interface MemberNotificationDoc {
     | 'ExchangeReceived'
     | 'ExchangeCompleted'
     | 'ExchangeCancelled'
-    | 'ExchangeRejected';
+    | 'ExchangeRejected'
+    | 'ExchangeDisputed';
   title: string;
   body: string;
   targetType: 'Auction' | 'Exchange';

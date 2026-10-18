@@ -272,7 +272,8 @@
     justify-content: center;
 }
 
-.selectableCard input[type="radio"] {
+.selectableCard input[type="radio"],
+.selectableCard input[type="checkbox"] {
     accent-color: var(--gold-strong);
     width: 18px;
     height: 18px;

@@ -1,0 +1,722 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(42, 38, 34, 0.65);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+}
+
+.modal {
+    background: #fff;
+    width: 100%;
+    max-width: 680px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    box-shadow: 0 16px 40px rgba(42, 38, 34, 0.25);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+}
+
+.headerContent {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.headerIcon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(125, 31, 31, 0.1);
+    color: var(--burgundy, #7d1f1f);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.title {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0;
+}
+
+.subtitle {
+    font-size: 13px;
+    color: var(--ink-secondary);
+    margin: 4px 0 0;
+}
+
+.closeBtn {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    color: var(--ink-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+.closeBtn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--ink);
+}
+
+.body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sectionTitle {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.booksGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+@media (min-width: 600px) {
+    .booksGrid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.bookBox {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bookBoxHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(42, 38, 34, 0.08);
+    padding-bottom: 8px;
+}
+
+.boxPillReceive {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gold-strong);
+    text-transform: uppercase;
+}
+
+.boxPillGive {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--leather);
+    text-transform: uppercase;
+}
+
+.boxTotalValue {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.bookItemsList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bookItemRow {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.bookCoverThumb {
+    width: 44px;
+    height: 60px;
+    flex-shrink: 0;
+    border: 1px solid rgba(42, 38, 34, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    background: #eae5dc;
+}
+
+.bookItemText {
+    flex: 1;
+    min-width: 0;
+}
+
+.bookItemTitle {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bookItemAuthor {
+    font-size: 12px;
+    color: var(--ink-muted);
+    font-style: italic;
+    margin: 2px 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bookItemMeta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 11px;
+}
+
+.conditionBadge {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 2px 6px;
+    border-radius: 2px;
+    color: var(--ink-secondary);
+}
+
+.priceText {
+    color: var(--gold-strong);
+    font-weight: 700;
+}
+
+/* Financial Box */
+.financialBox {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.financialRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 14px;
+}
+
+.financialIcon {
+    color: var(--gold-strong);
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.financialContent {
+    flex: 1;
+}
+
+.financialLabel {
+    font-weight: 600;
+    color: var(--ink);
+    margin: 0 0 2px;
+}
+
+.financialDesc {
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin: 0;
+}
+
+.highlightAmount {
+    color: var(--burgundy, #7d1f1f);
+    font-weight: 700;
+}
+
+/* Address Box */
+.addressBox {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.partnerAddressText {
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--paper);
+    padding: 10px 12px;
+    border-radius: 4px;
+    border-left: 3px solid var(--gold-strong);
+}
+
+.addressOptionsList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.addressOptionCard {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1.5px solid var(--line);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #fff;
+}
+.addressOptionCard:hover {
+    border-color: var(--gold);
+    background: rgba(176, 141, 87, 0.03);
+}
+.addressOptionCard[data-selected="true"] {
+    border-color: var(--gold-strong);
+    background: rgba(176, 141, 87, 0.08);
+}
+
+.addressRadio {
+    accent-color: var(--gold-strong);
+    margin-top: 3px;
+}
+
+.addressOptionDetails {
+    flex: 1;
+    font-size: 13px;
+}
+.recipientNameText {
+    font-weight: 700;
+    color: var(--ink);
+}
+.phoneText {
+    color: var(--ink-muted);
+    margin-left: 6px;
+}
+.addressDetailText {
+    color: var(--ink-secondary);
+    margin-top: 2px;
+}
+.defaultBadge {
+    display: inline-block;
+    background: var(--gold-strong);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: 6px;
+    text-transform: uppercase;
+}
+
+.btnNewAddressToggle {
+    background: transparent;
+    border: 1px dashed var(--gold-strong);
+    color: var(--gold-strong);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+    width: fit-content;
+}
+.btnNewAddressToggle:hover {
+    background: rgba(176, 141, 87, 0.08);
+}
+
+/* Notice Box */
+.noticeBox {
+    background: rgba(176, 141, 87, 0.12);
+    border-left: 4px solid var(--gold-strong);
+    padding: 12px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.5;
+}
+
+.errorText {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #f87171;
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 13px;
+    margin: 0;
+}
+
+/* Footer Actions */
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 24px;
+    background: var(--paper);
+    border-top: 1px solid var(--line);
+}
+
+.footerLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.footerRight {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btnCounter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btnCounter:hover:not(:disabled) {
+    border-color: var(--gold-strong);
+    color: var(--gold-strong);
+}
+
+.btnCancel {
+    padding: 10px 14px;
+    border: none;
+    background: transparent;
+    color: var(--ink-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+.btnCancel:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--ink);
+}
+
+.btnConfirm {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 20px;
+    background: var(--burgundy, #7d1f1f);
+    color: #fff;
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(125, 31, 31, 0.2);
+    transition: all 0.2s;
+}
+.btnConfirm:hover:not(:disabled) {
+    background: #5c0202;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(125, 31, 31, 0.25);
+}
+.btnConfirm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Compensation Edit Box */
+.compHeaderRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.btnEditCompToggle {
+    background: transparent;
+    border: 1px dashed var(--gold-strong);
+    color: var(--gold-strong);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.2s;
+}
+.btnEditCompToggle:hover {
+    background: rgba(176, 141, 87, 0.08);
+}
+
+.compEditContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    margin-top: 8px;
+}
+
+.compRadioOption {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--ink);
+    cursor: pointer;
+}
+
+.compRadioInput {
+    accent-color: var(--gold-strong);
+    margin-top: 3px;
+}
+
+.compAmountInputWrapper {
+    margin-left: 24px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.compAmountInput {
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    font-size: 13px;
+    font-weight: 600;
+    width: 140px;
+    color: var(--ink);
+}
+
+.compAmountCurrency {
+    font-size: 13px;
+    color: var(--ink-muted);
+    font-weight: 600;
+}
+
+.compNoticeChanged {
+    font-size: 12px;
+    color: var(--gold-strong);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--line);
+}
+
+.btnEditPartnerAddressToggle {
+    background: transparent;
+    border: 1px dashed var(--gold-strong);
+    color: var(--gold-strong);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.2s;
+}
+.btnEditPartnerAddressToggle:hover {
+    background: rgba(176, 141, 87, 0.08);
+}
+
+.editPartnerBox {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--paper);
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+}
+
+.formInput {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    font-size: 13px;
+    background: #fff;
+    color: var(--ink);
+}
+.formInput:focus {
+    outline: none;
+    border-color: var(--gold-strong);
+}
+
+.formSelect {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    font-size: 13px;
+    background: #fff;
+    color: var(--ink);
+}
+.formSelect:focus {
+    outline: none;
+    border-color: var(--gold-strong);
+}
+
+/* Pre-flight Balance Warning */
+.balanceOkBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 5px 10px;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.25);
+    border-radius: 4px;
+    font-size: 12px;
+    color: #166534;
+}
+.balanceIconOk {
+    color: #16a34a;
+    flex-shrink: 0;
+}
+
+.balanceWarningBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 4px;
+    font-size: 12px;
+    color: #92400e;
+    line-height: 1.4;
+}
+.balanceIconWarn {
+    color: #d97706;
+    flex-shrink: 0;
+}
+
+/* Counter-Proposal Notice & Button (Method B) */
+.noticeBoxCounter {
+    background: rgba(30, 58, 138, 0.08);
+    border-left: 4px solid #1e3a8a;
+    padding: 12px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.5;
+}
+
+.btnConfirmCounter {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 20px;
+    background: #1e3a8a;
+    color: #fff;
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(30, 58, 138, 0.2);
+    transition: all 0.2s;
+}
+.btnConfirmCounter:hover:not(:disabled) {
+    background: #172554;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(30, 58, 138, 0.25);
+}
+.btnConfirmCounter:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.lockedBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(125, 31, 31, 0.08);
+    border: 1px solid rgba(125, 31, 31, 0.2);
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--burgundy, #7d1f1f);
+}
+
+.compNoticeLocked {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--ink-secondary);
+    font-style: italic;
+    line-height: 1.4;
+}

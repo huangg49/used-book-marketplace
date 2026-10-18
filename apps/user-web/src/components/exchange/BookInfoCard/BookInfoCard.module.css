@@ -150,7 +150,20 @@
 .bookCondition {
     font-size: 12px;
     color: var(--ink-muted);
-    margin: 8px 0 0;
+    margin: 6px 0 0;
+}
+
+.bookPrice {
+    font-size: 13px;
+    color: var(--leather);
+    margin: 4px 0 0;
+    line-height: 1.2;
+}
+
+.bookPrice strong {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gold-strong);
 }
 
 .bookInfoGive .bookTitle {
@@ -158,6 +171,22 @@
 }
 .bookInfoGive .bookAuthor {
     font-size: 12px;
+}
+.bookInfoGive .bookCondition {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin: 6px 0 0;
+}
+.bookInfoGive .bookPrice {
+    font-size: 13px;
+    color: var(--leather);
+    margin: 4px 0 0;
+    line-height: 1.2;
+}
+.bookInfoGive .bookPrice strong {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gold-strong);
 }
 
 .exchangeIconWrapper {

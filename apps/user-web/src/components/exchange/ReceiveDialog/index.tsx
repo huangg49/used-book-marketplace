@@ -53,7 +53,7 @@ export function ReceiveDialog({ isOpen, onClose, onConfirm, isBusy, bookTitle }:
                     <div className={styles.warningBox}>
                         <AlertTriangle size={20} className={styles.warningIcon} />
                         <div className={styles.warningText}>
-                            <strong>Quan trọng:</strong> Khi bạn và đối tác đều bấm xác nhận, giao dịch trao đổi sẽ lập tức <strong>HOÀN TẤT</strong>. Tiền đặt cọc bảo chứng sẽ được hoàn trả tự động vào ví mô phỏng của bạn. Thao tác này không thể hoàn tác.
+                            <strong>Lưu ý:</strong> Khi cả hai bên đều xác nhận đã nhận sách, giao dịch sẽ bước vào <strong>khoảng đệm kiểm tra 48 giờ</strong>. Bạn có 48 giờ để đọc thử và kiểm tra tình trạng thực tế của sách trước khi hệ thống hoàn tất và tất toán cọc.
                         </div>
                     </div>
 

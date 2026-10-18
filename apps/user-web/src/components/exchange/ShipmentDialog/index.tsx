@@ -108,7 +108,7 @@ export function ShipmentDialog(props: ShipmentDialogProps) {
                         <Truck size={24} />
                     </div>
                     <div>
-                        <h2 className={styles.title}>Xác nhận đã gửi sách</h2>
+                        <h2 className={styles.title}>Tạo đơn vận chuyển</h2>
                         <p className={styles.subtitle}>Cung cấp thông tin vận đơn hoặc lịch hẹn để đối tác theo dõi</p>
                     </div>
                 </div>
@@ -308,7 +308,7 @@ export function ShipmentDialog(props: ShipmentDialogProps) {
                             className={styles.btnPrimary}
                             disabled={isBusy}
                         >
-                            {isBusy ? 'Đang lưu...' : 'Xác nhận đã gửi'}
+                            {isBusy ? 'Đang tạo đơn...' : 'Tạo đơn vận chuyển'}
                         </button>
                     </div>
                 </form>

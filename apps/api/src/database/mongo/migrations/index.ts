@@ -125,6 +125,10 @@ import {
   exchangeMutualCompletionMigration,
   withExchangePhase5Changes,
 } from './0026-exchange-mutual-completion.js';
+import {
+  exchangeMultiBookMigration,
+  withExchangePhase6Changes,
+} from './0027-exchange-multi-book.js';
 
 export interface Migration {
   id: string;
@@ -222,6 +226,7 @@ export const migrations: Migration[] = [
   exchangeNotificationsMigration,
   exchangeReviewsMigration,
   exchangeMutualCompletionMigration,
+  exchangeMultiBookMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -265,14 +270,17 @@ export const currentCollections = (): CollectionSpec[] => [
   ...settlementCollectionSpecs.map(withRulesChanges),
   ...rulesCollectionSpecs,
   ...purchaseConversationSpecs,
-  ...notificationSpecs.map(withExchangeNotificationChanges),
+  ...notificationSpecs
+    .map(withExchangeNotificationChanges)
+    .map(withExchangePhase6Changes),
   ...accountRecoverySpecs,
   ...authOtpSpecs,
   ...exchangeCollectionSpecs
     .map(withExchangePhase2Changes)
     .map(withExchangePhase3Changes)
     .map(withExchangePhase4Changes)
-    .map(withExchangePhase5Changes),
+    .map(withExchangePhase5Changes)
+    .map(withExchangePhase6Changes),
   ...directDeliveryCompletionSpecs,
   ...exchangeMessageSpecs,
   ...transactionReviewSpecs,

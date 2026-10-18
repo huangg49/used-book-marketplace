@@ -21,6 +21,8 @@ export interface ExchangeDetail {
   deliveryMethod?: 'meetup' | 'shipping';
   revision?: number;
   rawStatus?: string;
+  lastProposedById?: string | null;
+  canViewerAccept?: boolean;
   viewerFundedAt?: string;
   viewerFundingAmount?: number;
   fundingDeadline?: string;
@@ -41,6 +43,10 @@ export interface ExchangeDetail {
   partnerShipment?: { method: 'carrier' | 'direct'; carrierCode?: string | null; carrierName?: string | null; trackingCode?: string | null; meetupLocation?: string | null; notes?: string | null; shippedAt?: string | null };
   hasViewerReviewed: boolean;
   closedBy?: 'viewer' | 'partner';
+  shippingDeadline?: string;
+  disputedAt?: string;
+  disputeReason?: string;
+  disputedBy?: string;
 }
 
 export interface ChatMessage {
@@ -53,12 +59,12 @@ export interface ChatMessage {
 const mockViewer: ExchangeUser = { id: 'u_viewer', username: 'you', rating: 4.5 };
 const mockPartner: ExchangeUser & { transactionCount: number } = { id: 'u_partner', username: 'partner', rating: 4.8, transactionCount: 15 };
 
-const mockReceiveBooks: (ExchangeBook & { condition?: string })[] = [
-  { id: 'b_1', title: 'The Bell Jar', author: 'Sylvia Plath', coverUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=200', condition: 'Tốt' }
+const mockReceiveBooks: (ExchangeBook & { condition?: string; price?: number })[] = [
+  { id: 'b_1', title: 'The Bell Jar', author: 'Sylvia Plath', coverUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=200', condition: 'Tốt', price: 95000 }
 ];
 
-const mockGiveBooks: (ExchangeBook & { condition?: string })[] = [
-  { id: 'b_2', title: 'Frankenstein', author: 'Mary Shelley', coverUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?q=80&w=200', condition: 'Khá' }
+const mockGiveBooks: (ExchangeBook & { condition?: string; price?: number })[] = [
+  { id: 'b_2', title: 'Frankenstein', author: 'Mary Shelley', coverUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?q=80&w=200', condition: 'Khá', price: 95000 }
 ];
 
 export const MOCK_EXCHANGE_DETAILS: ExchangeDetail[] = [

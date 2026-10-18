@@ -1,4 +1,34 @@
-# Điểm lưu hiện tại — 14/10/2026
+# Điểm lưu hiện tại — 17/10/2026
+
+## Trao đổi sách (Exchange): Hoàn tất Ưu tiên 0 & Ưu tiên 1 — 17/10/2026
+
+- **Mục tiêu**: Xử lý lỗ hổng bảo mật địa chỉ (P0) và 2 điểm nghẽn deadlock hàng hóa / tài chính (P1) trong luồng Trao đổi sách.
+- **Branch**: `feature/exchange-web-completion`.
+- **Ưu tiên 0 (Bảo mật địa chỉ đối tác - Address Hijacking)**:
+  - Loại bỏ hoàn toàn trường `partnerAddress` khỏi `AcceptExchangeCommand` và `CounterExchangeProposalCommand` trong OpenAPI contract (`packages/api-contract/openapi.yaml`). Mỗi bên tham gia chỉ có thể chọn địa chỉ thuộc sở hữu của mình (`deliveryAddressId` từ `member_addresses`).
+  - Cập nhật backend `apps/api/src/modules/exchanges/exchanges.service.ts`: loại bỏ việc ghi đè `recipientAddress`/`initiatorAddress` từ payload đối tác.
+  - Cập nhật client `apps/user-web`: loại bỏ các trường input nhập địa chỉ đối tác ở `AcceptExchangeDialog` và `CounterDialog`, chuyển thành thẻ hiển thị thông tin chỉ đọc (Read-only Card).
+- **Ưu tiên 1 (Deadlock thời hạn gửi sách 72h & Cơ chế đóng băng khiếu nại 48h)**:
+  - **72h Shipping Deadline & Auto-Sweep**:
+    - Khi trao đổi chuyển sang `Preparing` (cả 2 bên đã nạp tiền bảo chứng), hệ thống tự động gán `shippingDeadline = now + 72h`.
+    - Bổ sung nhánh quét `expireShipping` trong worker `ExchangeExpiryService`:
+      - **Case A** (cả 2 bên chưa gửi sách sau 72h): Tự động hoàn tiền bảo chứng / chênh lệch và chuyển sang `Cancelled` (`cancelReason: 'ShippingExpired'`), nhả cả 2 sách về `Available`.
+      - **Case B** (1 bên đã gửi sách, bên kia bỏ gửi): Tự động leo thang chuyển sang `ResolutionPending` với `disputedBy: 'System'`, đóng băng toàn bộ tiền và giữ sách `Reserved` để bảo hộ quyền lợi và tài sản của bên đã gửi hàng.
+  - **Đóng băng tất toán tự động 48 giờ khi có khiếu nại**:
+    - Thêm endpoint `POST /api/v1/exchanges/{id}/dispute` (`DisputeExchangeCommand`) cho phép thành viên gửi khiếu nại khi phát hiện sách lỗi/rách hoặc trục trặc vận chuyển trong giai đoạn `InTransit` / `Delivered`.
+    - Trạng thái chuyển sang `ResolutionPending`, ghi nhận `disputedAt`, `disputedBy`, `disputeReason`, gửi thông báo `ExchangeDisputed` cho cả 2 bên.
+    - Worker `expireInspection` được tự động đóng băng do điều kiện truy vấn chỉ xét trạng thái `Delivered`.
+  - **Frontend User-Web**:
+    - `ActionCard`: Hiển thị deadline gửi sách 72h trong trạng thái `WAITING_YOU_SEND`; bổ sung nút "Báo cáo khiếu nại" khi sách đang giao / đang nghiệm thu (`DELIVERING`, `INSPECTING`); hiển thị lý do khiếu nại và thông báo hỗ trợ khi ở trạng thái `RESOLUTION_PENDING`.
+- **Kiểm thử và xác minh chất lượng (Verification)**:
+  - `pnpm contract:check`: PASS (OpenAPI parsed cleanly, sync checked).
+  - `@used-books/api` typecheck: PASS (0 errors).
+  - `@used-books/user-web` typecheck: PASS (0 errors).
+  - `@used-books/api test:e2e test/exchanges.e2e-spec.ts`: 27/27 tests PASS (toàn bộ 4 test suites mới cho P0, Shipping Deadline 72h sweep, 1 bên gửi sweep leo thang, và Dispute đóng băng 48h nghiệm thu đều PASS).
+  - `@used-books/api test:mongo test/mongo/schema.mongo-spec.ts`: 19/19 tests PASS (Migration 0027 và schema validation cho `exchanges` và `member_notifications` đạt chuẩn).
+  - `@used-books/user-web test`: 21 test files, 136/136 tests PASS.
+
+# Điểm lưu cũ — 14/10/2026
 
 ## Member web: Login gió và sân khấu đấu giá — 14/10/2026
 

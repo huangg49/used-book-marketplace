@@ -171,7 +171,7 @@ try {
     "member@operations.test",
     `/exchange/new?book=${draft.entityId}`,
   );
-  await page.getByRole("radio").first().check();
+  await page.locator('input[name="exchange-book"]').first().check();
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await capture(page, "exchange-compose-desktop.png");
   await page.setViewportSize({ width: 390, height: 844 });

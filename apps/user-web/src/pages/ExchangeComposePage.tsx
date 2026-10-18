@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate, Link } from "react-router-dom";
+import { useSearchParams, useNavigate, Link, useLocation, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import {
@@ -88,11 +88,17 @@ async function inventory() {
 export default function ExchangeComposePage() {
   const auth = useSession();
   const navigate = useNavigate();
+  const location = useLocation();
   const [params] = useSearchParams();
   const id = pendingProposal()?.recipientListingId ?? params.get("book");
-  const [selected, setSelected] = useState(
-    () => pendingProposal()?.initiatorListingId ?? "",
-  );
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => {
+    const p = pendingProposal();
+    if (p?.initiatorListingIds && p.initiatorListingIds.length > 0) {
+      return p.initiatorListingIds;
+    }
+    if (p?.initiatorListingId) return [p.initiatorListingId];
+    return [];
+  });
   const [search, setSearch] = useState("");
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -138,31 +144,51 @@ export default function ExchangeComposePage() {
     }
   }, [addresses.data, deliveryAddressId]);
 
-  const chosen = mine.data?.find((book) => book.id === selected);
+  const chosenBooks = (mine.data ?? []).filter((book) =>
+    selectedIds.includes(book.id),
+  );
+  const hasChosen = chosenBooks.length > 0;
   const targetBook = target.data;
   const eligible =
     targetBook &&
     auth.status === "authenticated" &&
     targetBook.seller.id !== auth.user.id &&
     ["Exchange", "Both"].includes(targetBook.mode);
+
+  const totalOfferValue = chosenBooks.reduce(
+    (sum, book) => sum + (book.value ?? 0),
+    0,
+  );
   const diff =
-    chosen && targetBook ? (targetBook.exchangeValue ?? 0) - chosen.value : 0;
+    hasChosen && targetBook
+      ? (targetBook.exchangeValue ?? 0) - totalOfferValue
+      : 0;
   const moneyText =
     diff > 0
       ? `Bạn bù thêm ${formatVnd(diff)}`
       : diff < 0
         ? `Đối tác bù thêm ${formatVnd(-diff)}`
         : "Trao đổi ngang giá";
+
+  const toggleBook = (bookId: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(bookId)
+        ? prev.filter((item) => item !== bookId)
+        : [...prev, bookId],
+    );
+  };
+
   async function submit() {
     const retained = pendingProposal();
-    if (busy || (!retained && (!chosen || !eligible))) return;
+    if (busy || (!retained && (!hasChosen || !eligible))) return;
     setBusy(true);
     setError("");
     try {
       const result = await exchangeCommand(
         "/exchanges",
         retained ?? {
-          initiatorListingId: chosen!.id,
+          initiatorListingId: chosenBooks[0].id,
+          initiatorListingIds: chosenBooks.map((b) => b.id),
           recipientListingId: targetBook!.id,
           deliveryAddressId: deliveryAddressId || undefined,
         },
@@ -176,26 +202,18 @@ export default function ExchangeComposePage() {
       setBusy(false);
     }
   }
-  if (auth.status !== "authenticated")
+  if (auth.status === "anonymous") {
+    const returnUrl = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`/login?returnUrl=${returnUrl}`} replace />;
+  }
+  if (auth.status !== "authenticated") {
     return (
-      <div className={styles.container}>
-        <h1 className={styles.pageTitle}>Soạn đề nghị trao đổi</h1>
-        <p>
-          {auth.status === "loading"
-            ? "Đang kiểm tra đăng nhập…"
-            : "Đăng nhập để chọn sách trong kệ của bạn."}
-        </p>
-        {auth.status !== "loading" && (
-          <Link
-            className={styles.btnPrimary}
-            to={`/login?returnUrl=${encodeURIComponent(`/exchange/new?book=${id ?? ""}`)}`}
-          >
-            Đăng nhập
-          </Link>
-        )}
+      <div className={styles.container} role="status">
+        <p>Đang kiểm tra đăng nhập…</p>
       </div>
     );
-  if (unresolved && (!chosen || !eligible || target.isError || mine.isError))
+  }
+  if (unresolved && (!hasChosen || !eligible || target.isError || mine.isError))
     return (
       <div className={styles.container}>
         <h1 className={styles.pageTitle}>Xác nhận đề nghị trước</h1>
@@ -256,16 +274,16 @@ export default function ExchangeComposePage() {
       <div className={styles.header}>
         <h1 className={styles.pageTitle}>Soạn đề nghị trao đổi</h1>
         <p className={styles.pageSubtitle}>
-          Chọn một bản sách của bạn để đổi với người đọc tiếp theo.
+          Chọn một hoặc nhiều bản sách của bạn để đổi với người đọc tiếp theo.
         </p>
       </div>
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (chosen) {
+          if (hasChosen) {
             setError("");
             setPreview(true);
-          } else setError("Chọn một bản sách để gửi đề nghị.");
+          } else setError("Chọn ít nhất một bản sách của bạn để gửi đề nghị.");
         }}
       >
         <div className={styles.grid}>
@@ -325,7 +343,7 @@ export default function ExchangeComposePage() {
                 <Library className={styles.icon} />
                 <h2>Chọn sách của bạn để đổi</h2>
                 <span className={styles.selectionBadge}>
-                  Đã chọn {chosen ? 1 : 0}/1 cuốn
+                  Đã chọn {chosenBooks.length} cuốn
                 </span>
               </div>
               <label htmlFor="exchange-search" className={styles.label}>
@@ -348,36 +366,39 @@ export default function ExchangeComposePage() {
                       .toLocaleLowerCase("vi")
                       .includes(search.toLocaleLowerCase("vi")),
                   )
-                  .map((book) => (
-                    <label
-                      className={styles.selectableCard}
-                      data-selected={selected === book.id}
-                      key={book.id}
-                    >
-                      <div className={styles.checkboxWrapper}>
-                        <input
-                          type="radio"
-                          name="exchange-book"
-                          value={book.id}
-                          checked={selected === book.id}
-                          disabled={busy || unresolved}
-                          onChange={() => setSelected(book.id)}
-                        />
-                      </div>
-                      <div className={styles.selectBookCover}>
-                        <BookCover
-                          title={book.title}
-                          index={0}
-                          coverUrl={book.coverUrl}
-                        />
-                      </div>
-                      <div className={styles.selectBookInfo}>
-                        <p className={styles.selectBookTitle}>{book.title}</p>
-                        <p className={styles.selectBookAuthor}>{book.author}</p>
-                        <p>{formatVnd(book.value)}</p>
-                      </div>
-                    </label>
-                  ))}
+                  .map((book) => {
+                    const isChecked = selectedIds.includes(book.id);
+                    return (
+                      <label
+                        className={styles.selectableCard}
+                        data-selected={isChecked}
+                        key={book.id}
+                      >
+                        <div className={styles.checkboxWrapper}>
+                          <input
+                            type="checkbox"
+                            name="exchange-book"
+                            value={book.id}
+                            checked={isChecked}
+                            disabled={busy || unresolved}
+                            onChange={() => toggleBook(book.id)}
+                          />
+                        </div>
+                        <div className={styles.selectBookCover}>
+                          <BookCover
+                            title={book.title}
+                            index={0}
+                            coverUrl={book.coverUrl}
+                          />
+                        </div>
+                        <div className={styles.selectBookInfo}>
+                          <p className={styles.selectBookTitle}>{book.title}</p>
+                          <p className={styles.selectBookAuthor}>{book.author}</p>
+                          <p>{formatVnd(book.value)}</p>
+                        </div>
+                      </label>
+                    );
+                  })}
                 <Link className={styles.addBookCard} to={ROUTES.sell}>
                   <PlusCircle size={32} /> Đăng thêm sách
                 </Link>
@@ -395,10 +416,10 @@ export default function ExchangeComposePage() {
               <div className={styles.formGroupBox}>
                 <h3>Bù tiền</h3>
                 <p>
-                  {chosen ? moneyText : "Chọn sách để xem khoản chênh lệch."}
+                  {hasChosen ? moneyText : "Chọn sách để xem khoản chênh lệch."}
                 </p>
                 <p className={styles.helpTextDesc}>
-                  Máy chủ tính tiền bù từ giá trị đổi của hai bản sách.
+                  Máy chủ tính tiền bù từ tổng giá trị đổi của các bản sách hai bên.
                 </p>
               </div>
               <div className={styles.formGroupBox}>
@@ -435,7 +456,7 @@ export default function ExchangeComposePage() {
               <button
                 className={styles.btnPrimary}
                 type="submit"
-                disabled={!chosen || busy}
+                disabled={!hasChosen || busy}
               >
                 <Send size={18} />{" "}
                 {unresolved ? "Thử lại đề nghị trước" : "Xem lại đề nghị"}
@@ -453,10 +474,22 @@ export default function ExchangeComposePage() {
         onConfirm={() => void submit()}
       >
         <div className={styles.summarySection}>
-          <strong>Bạn nhận:</strong> {targetBook.book.title}
+          <strong>Bạn nhận:</strong> {targetBook.book.title} ({formatVnd(targetBook.exchangeValue ?? 0)})
         </div>
         <div className={styles.summarySection}>
-          <strong>Bạn giao:</strong> {chosen?.title}
+          <strong>Bạn giao ({chosenBooks.length} cuốn):</strong>
+          <ul style={{ margin: "6px 0 0 18px", padding: 0 }}>
+            {chosenBooks.map((b) => (
+              <li key={b.id} style={{ marginBottom: 4 }}>
+                {b.title} — {formatVnd(b.value)}
+              </li>
+            ))}
+          </ul>
+          {chosenBooks.length > 1 && (
+            <div style={{ marginTop: 6, fontWeight: 600 }}>
+              Tổng giá trị giao: {formatVnd(totalOfferValue)}
+            </div>
+          )}
         </div>
         <div className={styles.summarySection}>{moneyText}</div>
         {deliveryAddressId && addresses.data?.items && (

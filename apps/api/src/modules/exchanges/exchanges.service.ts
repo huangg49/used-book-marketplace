@@ -54,6 +54,25 @@ export class ExchangesService {
     };
   }
 
+  private getInitiatorListingIds(exchange: ExchangeDoc): string[] {
+    return exchange.initiatorListingIds && exchange.initiatorListingIds.length > 0
+      ? exchange.initiatorListingIds
+      : [exchange.initiatorListingId];
+  }
+
+  private async lockAllListingsOrdered(
+    tx: Tx,
+    ids: string[],
+  ): Promise<Map<string, ListingDoc>> {
+    const sortedUnique = Array.from(new Set(ids)).sort();
+    const map = new Map<string, ListingDoc>();
+    for (const id of sortedUnique) {
+      const doc = await this.listings.lock(tx, id);
+      map.set(id, doc);
+    }
+    return map;
+  }
+
   private async safeReleaseListing(
     tx: Tx,
     exchangeId: string,
@@ -91,19 +110,24 @@ export class ExchangesService {
   ): Promise<ExchangeDoc> {
     const { reason, cancelledBy, now } = options;
 
-    // Only refund and release listings when the exchange had progressed to funding stage.
+    // Only refund and release listings when the exchange had progressed to funding or preparing stage.
     // Proposed exchanges have no locked listings and no ledger entries.
-    if (exchange.status === 'AcceptedAwaitingFunding') {
+    if (
+      exchange.status === 'AcceptedAwaitingFunding' ||
+      exchange.status === 'Preparing'
+    ) {
       await this.ledger.refundExchange(tx, exchange, now);
 
-      const { initListing, recListing } = await this.lockListingsOrdered(
-        tx,
-        exchange.initiatorListingId,
-        exchange.recipientListingId,
-      );
+      const initIds = this.getInitiatorListingIds(exchange);
+      const allIds = [...initIds, exchange.recipientListingId];
+      const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
 
-      await this.safeReleaseListing(tx, exchange._id, initListing);
-      await this.safeReleaseListing(tx, exchange._id, recListing);
+      for (const id of allIds) {
+        const listing = lockedMap.get(id);
+        if (listing) {
+          await this.safeReleaseListing(tx, exchange._id, listing);
+        }
+      }
     }
 
     const next = await tx.c.exchanges.findOneAndUpdate(
@@ -141,6 +165,9 @@ export class ExchangesService {
       } else if (reason === 'ProposalExpired') {
         notifyRecipients = [next.initiatorId];
         reasonText = 'Hết thời hạn chờ phản hồi đề xuất';
+      } else if (reason === 'ShippingExpired') {
+        notifyRecipients = [next.initiatorId, next.recipientId];
+        reasonText = 'Hết thời hạn gửi sách (72 giờ) nhưng không bên nào gửi hàng';
       }
     }
 
@@ -176,6 +203,7 @@ export class ExchangesService {
       initiatorId: row.initiatorId,
       recipientId: row.recipientId,
       initiatorListingId: row.initiatorListingId,
+      initiatorListingIds: row.initiatorListingIds ?? [row.initiatorListingId],
       recipientListingId: row.recipientListingId,
       status: row.status as Wire['ExchangeStatus'],
       revision: row.revision,
@@ -243,6 +271,11 @@ export class ExchangesService {
               : null,
           }
         : null,
+      lastProposedById: row.lastProposedById ?? row.initiatorId,
+      shippingDeadline: row.shippingDeadline?.toISOString() ?? null,
+      disputedAt: row.disputedAt?.toISOString() ?? null,
+      disputeReason: row.disputeReason ?? null,
+      disputedBy: row.disputedBy ?? null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
@@ -253,6 +286,16 @@ export class ExchangesService {
       this.config.get('EXCHANGE_PROPOSAL_TTL_HOURS') ?? 72,
     );
 
+    const rawIds = body.initiatorListingIds?.length
+      ? body.initiatorListingIds
+      : body.initiatorListingId
+        ? [body.initiatorListingId]
+        : [];
+    const initiatorListingIds = Array.from(new Set(rawIds));
+    if (initiatorListingIds.length === 0) throw invalidState();
+    const primaryInitiatorListingId =
+      body.initiatorListingId ?? initiatorListingIds[0];
+
     return this.commands.runExchange(
       context,
       'createExchangeProposal',
@@ -260,65 +303,91 @@ export class ExchangesService {
       body,
       {
         discover: async (tx) => {
-          const initiatorListing = await tx.c.listings.findOne({
-            _id: body.initiatorListingId,
-          });
+          const initiatorListings = await tx.c.listings
+            .find({ _id: { $in: initiatorListingIds } })
+            .toArray();
           const recipientListing = await tx.c.listings.findOne({
             _id: body.recipientListingId,
           });
           return [
-            initiatorListing?.ownerId,
+            ...initiatorListings.map((l) => l.ownerId),
             recipientListing?.ownerId,
           ].filter(Boolean) as string[];
         },
         authorize: async (tx, actor) => {
           member(actor);
-          const initiatorListing = await tx.c.listings.findOne({
-            _id: body.initiatorListingId,
-          });
+          const initiatorListings = await tx.c.listings
+            .find({ _id: { $in: initiatorListingIds } })
+            .toArray();
           const recipientListing = await tx.c.listings.findOne({
             _id: body.recipientListingId,
           });
-          if (!initiatorListing || !recipientListing) throw notFound();
-          return { initiatorListing, recipientListing };
-        },
-        mutate: async (tx, actor, { initiatorListing, recipientListing }) => {
-          requireActive(actor);
           if (
-            initiatorListing.ownerId !== actor._id ||
-            recipientListing.ownerId === actor._id
+            initiatorListings.length !== initiatorListingIds.length ||
+            !recipientListing
           ) {
+            throw notFound();
+          }
+          return { initiatorListings, recipientListing };
+        },
+        mutate: async (tx, actor, { initiatorListings, recipientListing }) => {
+          requireActive(actor);
+          if (recipientListing.ownerId === actor._id) {
             throw invalidState();
           }
 
+          for (const initListing of initiatorListings) {
+            if (initListing.ownerId !== actor._id) {
+              throw invalidState();
+            }
+            if (
+              initListing.trade !== 'Available' ||
+              initListing.moderation !== 'Approved' ||
+              initListing.visibility !== 'Visible'
+            ) {
+              throw invalidState();
+            }
+          }
+
           if (
-            initiatorListing.trade !== 'Available' ||
             recipientListing.trade !== 'Available' ||
-            initiatorListing.moderation !== 'Approved' ||
             recipientListing.moderation !== 'Approved' ||
-            initiatorListing.visibility !== 'Visible' ||
             recipientListing.visibility !== 'Visible'
           ) {
             throw invalidState();
           }
 
-          const initiatorRev = await tx.c.listing_revisions.findOne({
-            _id: initiatorListing.currentRevisionId!,
-          });
+          const initiatorRevIds = initiatorListings.map(
+            (l) => l.currentRevisionId!,
+          );
+          const initiatorRevs = await tx.c.listing_revisions
+            .find({ _id: { $in: initiatorRevIds } })
+            .toArray();
           const recipientRev = await tx.c.listing_revisions.findOne({
             _id: recipientListing.currentRevisionId!,
           });
 
-          if (!initiatorRev || !recipientRev) throw invalidState();
-
           if (
-            !['Exchange', 'Both'].includes(initiatorRev.mode ?? '') ||
-            !['Exchange', 'Both'].includes(recipientRev.mode ?? '')
+            initiatorRevs.length !== initiatorListings.length ||
+            !recipientRev
           ) {
             throw invalidState();
           }
 
-          const initiatorValue = initiatorRev.exchangeValue ?? 0;
+          for (const initRev of initiatorRevs) {
+            if (!['Exchange', 'Both'].includes(initRev.mode ?? '')) {
+              throw invalidState();
+            }
+          }
+
+          if (!['Exchange', 'Both'].includes(recipientRev.mode ?? '')) {
+            throw invalidState();
+          }
+
+          const initiatorValue = initiatorRevs.reduce(
+            (sum, r) => sum + (r.exchangeValue ?? 0),
+            0,
+          );
           const recipientValue = recipientRev.exchangeValue ?? 0;
 
           const diffAmount = Math.abs(initiatorValue - recipientValue);
@@ -354,7 +423,8 @@ export class ExchangesService {
             _id: randomUUID(),
             initiatorId: actor._id,
             recipientId: recipientListing.ownerId,
-            initiatorListingId: initiatorListing._id,
+            initiatorListingId: primaryInitiatorListingId,
+            initiatorListingIds,
             recipientListingId: recipientListing._id,
             status: 'Proposed',
             revision: 1,
@@ -372,16 +442,21 @@ export class ExchangesService {
             cancelReason: null,
             cancelledBy: null,
             cancelledAt: null,
+            shippingDeadline: null,
             initiatorShippedAt: null,
             recipientShippedAt: null,
             initiatorReceivedAt: null,
             recipientReceivedAt: null,
             inspectionDeadline: null,
+            disputedAt: null,
+            disputeReason: null,
+            disputedBy: null,
             completedAt: null,
             initiatorAddress,
             recipientAddress: null,
             initiatorShipment: null,
             recipientShipment: null,
+            lastProposedById: actor._id,
             createdAt: now,
             updatedAt: now,
             lockSeq: 0,
@@ -451,7 +526,8 @@ export class ExchangesService {
         await tx.lock('exchanges', [initialExchange._id]);
         const exchange = await this.exchange(tx, initialExchange._id);
 
-        if (exchange.recipientId !== actor._id) {
+        const currentProposerId = exchange.lastProposedById ?? exchange.initiatorId;
+        if (currentProposerId === actor._id) {
           throw conflict();
         }
         if (exchange.status !== 'Proposed') {
@@ -468,42 +544,38 @@ export class ExchangesService {
           throw invalidState();
         }
 
-        const { initListing, recListing } = await this.lockListingsOrdered(
-          tx,
-          exchange.initiatorListingId,
-          exchange.recipientListingId,
-        );
-        if (
-          initListing.trade !== 'Available' ||
-          recListing.trade !== 'Available'
-        ) {
-          throw invalidState();
+        const initIds = this.getInitiatorListingIds(exchange);
+        const allIds = [...initIds, exchange.recipientListingId];
+        const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
+
+        for (const id of allIds) {
+          const listing = lockedMap.get(id);
+          if (!listing || listing.trade !== 'Available') {
+            throw invalidState();
+          }
         }
 
-        // Project both listings from Available to Reserved
-        await this.listings.project(
-          tx,
-          initListing._id,
-          initListing.version,
-          'Available',
-          'Reserved',
-        );
-        await this.listings.project(
-          tx,
-          recListing._id,
-          recListing.version,
-          'Available',
-          'Reserved',
-        );
+        // Project all listings from Available to Reserved
+        for (const id of allIds) {
+          const listing = lockedMap.get(id)!;
+          await this.listings.project(
+            tx,
+            listing._id,
+            listing.version,
+            'Available',
+            'Reserved',
+          );
+        }
 
-        // Cancel any competing proposals for either listing
+        // Cancel any competing proposals for any involved listing
         await tx.c.exchanges.updateMany(
           {
             _id: { $ne: exchange._id },
             status: 'Proposed',
             $or: [
-              { initiatorListingId: { $in: [initListing._id, recListing._id] } },
-              { recipientListingId: { $in: [initListing._id, recListing._id] } },
+              { initiatorListingId: { $in: allIds } },
+              { initiatorListingIds: { $in: allIds } },
+              { recipientListingId: { $in: allIds } },
             ],
           },
           {
@@ -522,14 +594,15 @@ export class ExchangesService {
         // 24-hour funding deadline per POL-05
         const fundingDeadline = new Date(now.getTime() + 24 * 3600_000);
 
-        let recipientAddress: ExchangeAddressSnapshot | null = null;
+        const isInitiator = actor._id === exchange.initiatorId;
+        let myAddress: ExchangeAddressSnapshot | null = null;
         if (body.deliveryAddressId) {
           const addr = await tx.c.member_addresses.findOne({
             _id: body.deliveryAddressId,
             ownerId: actor._id,
           });
           if (addr) {
-            recipientAddress = {
+            myAddress = {
               recipientName: addr.recipientName,
               phone: addr.phone,
               detail: addr.detail,
@@ -539,15 +612,23 @@ export class ExchangesService {
           }
         }
 
+        const setFields: Record<string, unknown> = {
+          status: 'AcceptedAwaitingFunding',
+          fundingDeadline,
+          updatedAt: now,
+        };
+        if (myAddress) {
+          if (isInitiator) {
+            setFields.initiatorAddress = myAddress;
+          } else {
+            setFields.recipientAddress = myAddress;
+          }
+        }
+
         const next = await tx.c.exchanges.findOneAndUpdate(
           { _id: exchange._id, revision: exchange.revision, status: 'Proposed' },
           {
-            $set: {
-              status: 'AcceptedAwaitingFunding',
-              fundingDeadline,
-              recipientAddress: recipientAddress ?? exchange.recipientAddress ?? null,
-              updatedAt: now,
-            },
+            $set: setFields,
             $inc: { revision: 1 },
           },
           { returnDocument: 'after' },
@@ -643,6 +724,7 @@ export class ExchangesService {
           const setFields: Record<string, unknown> = {
             diffAmount: body.diffAmount,
             diffPayerId,
+            lastProposedById: actor._id,
             updatedAt: now,
           };
           if (updatedAddress) {
@@ -831,6 +913,12 @@ export class ExchangesService {
         }
         if (bothFunded) {
           updateSet.status = 'Preparing';
+          const shippingHours = Number(
+            this.config.get('EXCHANGE_SHIPPING_HOURS') ?? 72,
+          );
+          updateSet.shippingDeadline = new Date(
+            now.getTime() + shippingHours * 3600_000,
+          );
         }
 
         const next = await tx.c.exchanges.findOneAndUpdate(
@@ -885,7 +973,8 @@ export class ExchangesService {
 
         if (
           exchange.status !== 'Proposed' &&
-          exchange.status !== 'AcceptedAwaitingFunding'
+          exchange.status !== 'AcceptedAwaitingFunding' &&
+          exchange.status !== 'Preparing'
         ) {
           throw invalidState();
         }
@@ -920,6 +1009,31 @@ export class ExchangesService {
         if (exchange.status === 'AcceptedAwaitingFunding') {
           const next = await this.cancelInternal(tx, exchange, {
             reason: 'CancelledByUser',
+            cancelledBy,
+            now,
+          });
+
+          return {
+            entityType: 'Exchange',
+            entityId: next._id,
+            initiatorListingId: next.initiatorListingId,
+            version: next.revision,
+            state: next.status as Wire['ExchangeStatus'],
+            decidedAt: now,
+            event: 'ExchangeCancelled',
+            exchange: this.view(next),
+          };
+        }
+
+        if (exchange.status === 'Preparing') {
+          if (exchange.initiatorShippedAt || exchange.recipientShippedAt) {
+            throw invalidState();
+          }
+          if (!exchange.shippingDeadline || now < exchange.shippingDeadline) {
+            throw invalidState();
+          }
+          const next = await this.cancelInternal(tx, exchange, {
+            reason: 'ShippingExpired',
             cancelledBy,
             now,
           });
@@ -1239,25 +1353,19 @@ export class ExchangesService {
           };
           await this.ledger.settleExchange(tx, updatedForSettlement, now);
 
-          const { initListing, recListing } = await this.lockListingsOrdered(
-            tx,
-            exchange.initiatorListingId,
-            exchange.recipientListingId,
-          );
-          await this.listings.project(
-            tx,
-            initListing._id,
-            initListing.version,
-            'Reserved',
-            'Exchanged',
-          );
-          await this.listings.project(
-            tx,
-            recListing._id,
-            recListing.version,
-            'Reserved',
-            'Exchanged',
-          );
+          const initIds = this.getInitiatorListingIds(exchange);
+          const allIds = [...initIds, exchange.recipientListingId];
+          const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
+          for (const id of allIds) {
+            const listing = lockedMap.get(id)!;
+            await this.listings.project(
+              tx,
+              listing._id,
+              listing.version,
+              'Reserved',
+              'Exchanged',
+            );
+          }
         }
 
         const next = await tx.c.exchanges.findOneAndUpdate(
@@ -1318,25 +1426,19 @@ export class ExchangesService {
       };
       await this.ledger.settleExchange(tx, updatedForSettlement, now);
 
-      const { initListing, recListing } = await this.lockListingsOrdered(
-        tx,
-        exchange.initiatorListingId,
-        exchange.recipientListingId,
-      );
-      await this.listings.project(
-        tx,
-        initListing._id,
-        initListing.version,
-        'Reserved',
-        'Exchanged',
-      );
-      await this.listings.project(
-        tx,
-        recListing._id,
-        recListing.version,
-        'Reserved',
-        'Exchanged',
-      );
+      const initIds = this.getInitiatorListingIds(exchange);
+      const allIds = [...initIds, exchange.recipientListingId];
+      const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
+      for (const id of allIds) {
+        const listing = lockedMap.get(id)!;
+        await this.listings.project(
+          tx,
+          listing._id,
+          listing.version,
+          'Reserved',
+          'Exchanged',
+        );
+      }
 
       const next = await tx.c.exchanges.findOneAndUpdate(
         { _id: exchange._id, revision: exchange.revision, status: 'Delivered' },
@@ -1433,6 +1535,183 @@ export class ExchangesService {
       );
 
       return { exchange: this.view(next) };
+    });
+  }
+
+  dispute(
+    context: CommandContext,
+    id: string,
+    body: Wire['DisputeExchangeCommand'],
+  ) {
+    return this.commands.runExchange<ExchangeDoc>(
+      context,
+      'disputeExchange',
+      id,
+      body,
+      {
+        discover: async (tx) => {
+          const exchange = await tx.c.exchanges.findOne({ _id: id });
+          return [exchange?.initiatorId, exchange?.recipientId].filter(
+            Boolean,
+          ) as string[];
+        },
+        authorize: async (tx, actor) => {
+          member(actor);
+          return this.exchange(tx, id);
+        },
+        mutate: async (tx, actor, initialExchange) => {
+          requireActive(actor);
+          this.participant(initialExchange, actor._id);
+
+          await tx.lock('exchanges', [initialExchange._id]);
+          const exchange = await this.exchange(tx, initialExchange._id);
+
+          if (!['InTransit', 'Delivered'].includes(exchange.status)) {
+            throw invalidState();
+          }
+          if (exchange.revision !== body.expectedVersion) {
+            throw conflict();
+          }
+
+          const now = await tx.now();
+          const next = await tx.c.exchanges.findOneAndUpdate(
+            { _id: exchange._id, revision: exchange.revision },
+            {
+              $set: {
+                status: 'ResolutionPending',
+                disputedAt: now,
+                disputeReason: body.reason.trim(),
+                disputedBy: actor._id,
+                updatedAt: now,
+              },
+              $inc: { revision: 1 },
+            },
+            { returnDocument: 'after' },
+          );
+          if (!next) throw conflict();
+
+          const otherUserId =
+            actor._id === exchange.initiatorId
+              ? exchange.recipientId
+              : exchange.initiatorId;
+
+          await notifyExchange(
+            tx,
+            next,
+            'ExchangeDisputed',
+            [otherUserId],
+            now,
+            { reason: body.reason.trim() },
+          );
+
+          await tx.c.exchange_messages.insertOne({
+            _id: randomUUID(),
+            exchangeId: exchange._id,
+            senderId: actor._id,
+            body: `[Khiếu nại / Báo sự cố]\nLý do: ${body.reason.trim()}\nGiao dịch đã được chuyển sang trạng thái chờ giải quyết tranh chấp. Tiền cọc được tạm khóa an toàn.`,
+            sentAt: now,
+          });
+
+          this.logger.log(
+            JSON.stringify({
+              event: 'exchangeDisputed',
+              exchangeId: exchange._id,
+              disputedBy: actor._id,
+              reason: body.reason.trim(),
+            }),
+          );
+
+          return {
+            entityType: 'Exchange',
+            entityId: next._id,
+            initiatorListingId: next.initiatorListingId,
+            version: next.revision,
+            state: next.status as Wire['ExchangeStatus'],
+            decidedAt: now,
+            event: 'ExchangeDisputed',
+            exchange: this.view(next),
+          };
+        },
+      },
+    );
+  }
+
+  async expireShipping(id: string, nowOverride?: Date) {
+    return this.mongo.tx(async (tx) => {
+      await tx.lock('exchanges', [id]);
+      const exchange = await tx.c.exchanges.findOne({ _id: id });
+      if (!exchange) return null;
+
+      const now = nowOverride ?? (await tx.now());
+      if (
+        exchange.status !== 'Preparing' ||
+        !exchange.shippingDeadline ||
+        exchange.shippingDeadline > now
+      ) {
+        return null;
+      }
+
+      const hasInitShipped = Boolean(exchange.initiatorShippedAt);
+      const hasRecipShipped = Boolean(exchange.recipientShippedAt);
+
+      // Case A: Neither party shipped -> Full refund and Cancel
+      if (!hasInitShipped && !hasRecipShipped) {
+        const next = await this.cancelInternal(tx, exchange, {
+          reason: 'ShippingExpired',
+          cancelledBy: 'System',
+          now,
+        });
+
+        this.logger.log(
+          JSON.stringify({
+            event: 'exchangeShippingExpiredBothUnsent',
+            exchangeId: exchange._id,
+            status: 'Cancelled',
+          }),
+        );
+
+        return { exchange: this.view(next), escalated: false };
+      }
+
+      // Case B: One party shipped, but the other did not -> Escalate to ResolutionPending
+      const delinquentParty = hasInitShipped ? 'Người nhận' : 'Người khởi tạo';
+      const disputeReason = `Hết thời hạn gửi sách (72 giờ): ${delinquentParty} không gửi hàng. Hệ thống tạm khóa để quản trị viên xử lý hoàn tiền / bảo hộ hàng hóa.`;
+
+      const next = await tx.c.exchanges.findOneAndUpdate(
+        { _id: exchange._id, revision: exchange.revision, status: 'Preparing' },
+        {
+          $set: {
+            status: 'ResolutionPending',
+            disputedAt: now,
+            disputeReason,
+            disputedBy: 'System',
+            updatedAt: now,
+          },
+          $inc: { revision: 1 },
+        },
+        { returnDocument: 'after' },
+      );
+      if (!next) return null;
+
+      await notifyExchange(
+        tx,
+        next,
+        'ExchangeDisputed',
+        [next.initiatorId, next.recipientId],
+        now,
+        { reason: disputeReason },
+      );
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'exchangeShippingExpiredOneSent',
+          exchangeId: exchange._id,
+          status: 'ResolutionPending',
+          disputeReason,
+        }),
+      );
+
+      return { exchange: this.view(next), escalated: true };
     });
   }
 }

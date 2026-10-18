@@ -302,6 +302,13 @@
     max-width: 150px;
 }
 
+.bookPrice {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gold-strong);
+    margin: 2px 0 0 0;
+}
+
 .bookCoverWrapper {
     width: 64px;
     height: 96px;

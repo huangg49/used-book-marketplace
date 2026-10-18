@@ -473,7 +473,8 @@ export class MongoCommandService {
       | 'rejectExchange'
       | 'shipExchange'
       | 'receiveExchange'
-      | 'completeExchange',
+      | 'completeExchange'
+      | 'disputeExchange',
     target: string | null,
     body: unknown,
     options: Options<C, ExchangeChange>,

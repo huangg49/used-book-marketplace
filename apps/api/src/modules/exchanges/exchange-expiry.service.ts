@@ -140,6 +140,49 @@ export class ExchangeExpiryWorker {
       }
     }
 
+    // ── Branch 4: Shipping deadline expired (Preparing) ─────────────────────
+    const shippingCandidates = await this.mongo.c.exchanges
+      .find(
+        {
+          status: 'Preparing',
+          shippingDeadline: { $lte: now },
+        },
+        {
+          sort: { shippingDeadline: 1, _id: 1 },
+          limit: batchSize,
+        },
+      )
+      .toArray();
+
+    let shippingProcessed = 0;
+    let shippingSkipped = 0;
+    let shippingFailed = 0;
+
+    for (const candidate of shippingCandidates) {
+      try {
+        const result = await this.exchanges.expireShipping(candidate._id, now);
+        if (result) {
+          shippingProcessed++;
+          this.logger.log(
+            JSON.stringify({
+              event: 'exchangeShippingExpired',
+              exchangeId: candidate._id,
+              escalated: result.escalated,
+              status: result.escalated ? 'ResolutionPending' : 'Cancelled',
+            }),
+          );
+        } else {
+          shippingSkipped++;
+        }
+      } catch (error) {
+        shippingFailed++;
+        this.logger.error(
+          `Failed to expire exchange shipping ${candidate._id}: ${error instanceof Error ? error.message : String(error)}`,
+          error instanceof Error ? error.stack : undefined,
+        );
+      }
+    }
+
     const remainingFunding = await this.mongo.c.exchanges.countDocuments({
       status: 'AcceptedAwaitingFunding',
       fundingDeadline: { $lte: now },
@@ -157,11 +200,23 @@ export class ExchangeExpiryWorker {
       inspectionDeadline: { $lte: now },
     });
 
+    const remainingShipping = await this.mongo.c.exchanges.countDocuments({
+      status: 'Preparing',
+      shippingDeadline: { $lte: now },
+    });
+
     return {
-      processed: processed + proposalProcessed + inspectionProcessed,
-      skipped: skipped + proposalSkipped + inspectionSkipped,
-      failed: failed + proposalFailed + inspectionFailed,
-      remaining: remainingFunding + remainingProposals + remainingInspections,
+      processed:
+        processed + proposalProcessed + inspectionProcessed + shippingProcessed,
+      skipped:
+        skipped + proposalSkipped + inspectionSkipped + shippingSkipped,
+      failed:
+        failed + proposalFailed + inspectionFailed + shippingFailed,
+      remaining:
+        remainingFunding +
+        remainingProposals +
+        remainingInspections +
+        remainingShipping,
     };
   }
 }

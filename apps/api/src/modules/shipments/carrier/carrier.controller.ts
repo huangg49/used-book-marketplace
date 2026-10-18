@@ -62,6 +62,21 @@ export class CarrierController {
   }
 
   /**
+   * Endpoint tra cứu đơn hàng vận chuyển thật cho App Tài Xế / Bưu tá
+   */
+  @Get('shipments/carrier/orders/active')
+  @Public()
+  async getActiveShipmentOrder(@Query('trackingCode') trackingCode?: string) {
+    return this.carrier.getShipmentOrder(trackingCode);
+  }
+
+  @Get('shipments/carrier/order/:code')
+  @Public()
+  async getShipmentOrderByCode(@Param('code') code: string) {
+    return this.carrier.getShipmentOrder(code);
+  }
+
+  /**
    * Endpoint nhận Webhook callback từ các đơn vị vận chuyển (GHN/GHTK)
    */
   @Post('webhooks/carrier')
@@ -69,13 +84,27 @@ export class CarrierController {
   @Public()
   async webhookCallback(
     @Body()
-    body: {
-      trackingCode: string;
-      status: string;
-      description?: string;
-    },
+    body: Record<string, unknown>,
   ) {
-    await this.carrier.processWebhook(body);
+    const trackingCode = String(body.OrderCode || body.trackingCode || body.order_code || '');
+    const rawStatus = String(body.Status || body.status || '').toUpperCase();
+    const status =
+      rawStatus === 'DELIVERED' || rawStatus === 'FINISH'
+        ? 'DELIVERED'
+        : rawStatus === 'PICKING' || rawStatus === 'PICKED'
+          ? 'PICKING'
+          : rawStatus === 'READY_TO_PICK'
+            ? 'READY_TO_PICK'
+            : 'IN_TRANSIT';
+    const description = String(body.Description || body.description || '');
+
+    if (trackingCode) {
+      await this.carrier.processWebhook({
+        trackingCode,
+        status,
+        description,
+      });
+    }
     return { received: true, timestamp: new Date().toISOString() };
   }
 }

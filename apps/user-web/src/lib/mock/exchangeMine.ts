@@ -17,6 +17,8 @@ export interface ExchangeBook {
     title: string;
     author: string;
     coverUrl?: string;
+    condition?: string;
+    price?: number;
 }
 
 export interface ExchangeItem {

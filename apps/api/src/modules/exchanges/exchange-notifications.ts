@@ -13,7 +13,8 @@ export type ExchangeNotificationKind =
   | 'ExchangeReceived'
   | 'ExchangeCompleted'
   | 'ExchangeCancelled'
-  | 'ExchangeRejected';
+  | 'ExchangeRejected'
+  | 'ExchangeDisputed';
 
 async function getListingTitle(tx: Tx, listingId: string): Promise<string> {
   const listing = await tx.c.listings.findOne({ _id: listingId });
@@ -37,7 +38,10 @@ async function exchangeContext(tx: Tx, ex: ExchangeDoc) {
     tx.c.users.findOne({ _id: ex.recipientId }),
   ]);
 
-  const initTitle = (initTitleRaw || 'Sách của đối tác').slice(0, 60);
+  const count = ex.initiatorListingIds?.length ?? 1;
+  const initTitleFormatted =
+    count > 1 ? `${initTitleRaw} (+${count - 1} cuốn)` : initTitleRaw;
+  const initTitle = (initTitleFormatted || 'Sách của đối tác').slice(0, 60);
   const recTitle = (recTitleRaw || 'Sách của bạn').slice(0, 60);
 
   return {
@@ -103,7 +107,7 @@ export async function notifyExchange(
 
       case 'ExchangeCompleted':
         title = 'Giao dịch trao đổi sách đã hoàn tất!';
-        body = `Cả 2 bên đã nhận sách và nghiệm thu hài lòng cuốn ${ctx.initTitle} và ${ctx.recTitle}. Toàn bộ tiền cọc bảo chứng đã được tất toán về ví của bạn.`;
+        body = `Cả 2 bên đã nhận sách và xác nhận đã nhận hàng cuốn ${ctx.initTitle} và ${ctx.recTitle}. Toàn bộ tiền cọc bảo chứng đã được tất toán về ví của bạn.`;
         break;
 
       case 'ExchangeRejected':
@@ -114,6 +118,11 @@ export async function notifyExchange(
       case 'ExchangeCancelled':
         title = 'Giao dịch trao đổi đã bị hủy';
         body = `Giao dịch trao đổi sách đã kết thúc.${extra?.reason ? ` Lý do: ${extra.reason}` : ''}`;
+        break;
+
+      case 'ExchangeDisputed':
+        title = 'Giao dịch trao đổi có khiếu nại';
+        body = `Giao dịch trao đổi sách đã được tạm dừng tất toán do có khiếu nại.${extra?.reason ? ` Nội dung: ${extra.reason}` : ''}`;
         break;
     }
 
