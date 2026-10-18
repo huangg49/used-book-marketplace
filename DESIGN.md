@@ -879,3 +879,10 @@ right, with preserved panel switching on mobile. Seller mode proposals require
 counterpart confirmation, and structured accepted prices fill the order sheet.
 Use the current ChatPage surface brief; do not restore the earlier inbox sidebar
 or close active participant messaging merely because an Order was created.
+
+The owner's layout refinement keeps that behavior: a compact participant header,
+joined agreement/chat workbench with independent desktop scrolling, persistent
+composer and ready purchase actions, plus preserved mobile panels. Book title,
+partner, current price and next action lead; secondary price editing and full
+event history open on request. The ChatPage surface record defines the scoped
+dimensions, tokens and browser evidence; global navigation/brand stay unchanged.

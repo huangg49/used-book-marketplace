@@ -1,3 +1,8 @@
+:where(.workspace, .inboxContent, .empty, .mobileTabs) {
+  --shop-shelf: #f4eddf;
+  --shop-error: #912b0e;
+  --shop-wine-hover: #7c2320;
+}
 .workspace {
   display: grid;
   grid-template-columns: minmax(340px, 0.85fr) minmax(0, 1.15fr);
@@ -13,11 +18,11 @@
   padding-bottom: 12px;
 }
 .sheetHeading {
-  padding: 24px 24px 18px;
+  padding: 20px 24px;
   border-bottom: 1px solid var(--shop-line);
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
@@ -34,7 +39,9 @@
 }
 .terms,
 .exchangeOffer {
-  padding: 20px 24px;
+  padding: 24px;
+}
+.exchangeOffer {
   border-top: 1px solid var(--shop-line);
 }
 .terms h3,
@@ -58,12 +65,12 @@
   border-radius: 8px;
 }
 .switch button {
-  min-height: 44px;
+  min-height: 48px;
   display: flex;
   gap: 6px;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  padding: 8px 12px;
   background: transparent;
   border: 0;
   border-radius: 6px;
@@ -73,9 +80,13 @@
   cursor: pointer;
 }
 .switch button[aria-pressed="true"] {
-  background: var(--shop-wine);
-  color: var(--shop-paper);
+  background: var(--shop-paper);
+  color: var(--shop-wine);
   font-weight: 700;
+}
+.switch button:not(:disabled):hover {
+  background: var(--shop-cream);
+  color: var(--shop-wine);
 }
 .mode {
   margin: 0;
@@ -83,13 +94,22 @@
   font-weight: 700;
   color: var(--shop-wine);
 }
+.mode::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: 50%;
+  margin: 0 8px 3px 0;
+}
 .help {
   margin: 10px 0;
 }
 .proposal {
   margin: 16px 0;
   padding: 16px;
-  background: var(--shop-shelf);
+  background: var(--shop-cream);
   border-radius: 8px;
   font-size: 0.875rem;
   line-height: 1.7;
@@ -122,13 +142,14 @@
   background: transparent;
 }
 .totals {
-  margin: 20px 0;
+  margin: 24px 0;
+  font-variant-numeric: tabular-nums;
 }
 .totals > div {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 20px;
+  gap: 16px;
   padding: 12px 0;
   border-bottom: 1px solid var(--shop-line);
   font-size: 0.875rem;
@@ -142,11 +163,18 @@
   font-weight: 600;
 }
 .totals .agreed {
-  padding-top: 18px;
+  padding-top: 16px;
 }
 .agreed dd {
+  color: var(--shop-muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+.agreed[data-agreed="true"] dd {
   color: var(--shop-wine);
-  font-size: 1.125rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 .offerForm label {
   display: block;
@@ -169,7 +197,17 @@
   min-height: 46px;
   padding: 10px 12px;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 1rem;
+}
+.actions button:hover,
+.primary:hover,
+.offerRow button:hover,
+.retry:hover {
+  background: var(--shop-wine-hover);
+}
+.actions .secondary:hover {
+  background: var(--shop-shelf);
+  color: var(--shop-wine);
 }
 .textButton {
   background: none;
@@ -211,14 +249,23 @@
   overflow: hidden;
 }
 .chatHeading {
+  display: flex;
+  align-items: start;
+  gap: 12px;
   padding: 20px 24px;
   border-bottom: 1px solid var(--shop-line);
+  background: var(--shop-paper);
+}
+.chatHeading > svg {
+  margin-top: 4px;
+  color: var(--shop-wine);
+  flex-shrink: 0;
 }
 .chatHeading p {
   color: var(--shop-muted);
   font-size: 0.8rem;
   line-height: 1.6;
-  margin: 8px 0 0;
+  margin: 4px 0 0;
 }
 .chat > [aria-label="Tin nhắn trong hội thoại"] {
   flex: 1;
@@ -227,15 +274,48 @@
 }
 .eventHistory {
   color: var(--shop-ink);
-  background: var(--shop-shelf);
-  border-radius: 8px;
-  padding: 12px 16px;
+  background: transparent;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--shop-line);
   font-size: 0.8rem;
   line-height: 1.7;
 }
-.eventHistory h3 { margin: 0 0 12px; font-size: 0.85rem; font-weight: 600; }
+.eventHistory h3 {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.historyHeading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+.historyHeading h3 {
+  margin: 0;
+}
+.historyHeading button {
+  min-height: 44px;
+  padding: 8px 0;
+  font: inherit;
+  color: var(--shop-wine);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.eventEntries {
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--shop-control) var(--shop-shelf);
+}
 .eventHistory p {
   margin: 12px 0;
+  padding-left: 16px;
+  border-left: 1px solid var(--shop-control);
 }
 .eventHistory time {
   display: block;
@@ -284,12 +364,13 @@
 }
 .filters {
   display: flex;
-  gap: 8px 24px;
+  gap: 8px 28px;
   flex-wrap: wrap;
   border-bottom: 1px solid var(--shop-line);
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 .filters button {
+  min-height: 48px;
   background: transparent;
   font: inherit;
   font-size: 0.875rem;
@@ -307,21 +388,27 @@
 .inboxGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: 24px;
 }
 .inboxCard {
   min-width: 0;
   display: grid;
-  grid-template-columns: 128px minmax(0, 1fr);
+  grid-template-columns: 132px minmax(0, 1fr);
   border: 1px solid var(--shop-line);
   border-radius: 12px;
   overflow: hidden;
   background: var(--shop-paper);
 }
+.inboxCard:hover,
+.inboxCard:focus-within,
+.legacyCard:hover,
+.legacyCard:focus-within {
+  border-color: var(--shop-control);
+}
 .cardCover {
   min-width: 0;
-  min-height: 220px;
-  padding: 18px;
+  min-height: 240px;
+  padding: 20px;
   background: var(--shop-shelf);
   display: flex;
   align-items: center;
@@ -332,16 +419,19 @@
   max-width: 100%;
   max-height: 180px;
   object-fit: contain;
+  filter: drop-shadow(0 6px 8px #28191420);
 }
 .cardBody {
   min-width: 0;
-  padding: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
 }
 .cardBody h2,
 .legacyCard h2 {
-  font-size: 1rem;
+  font-size: 1.125rem;
   line-height: 1.5;
-  margin: 8px 0;
+  margin: 0 0 8px;
   overflow-wrap: anywhere;
 }
 .cardBody h2 a,
@@ -359,15 +449,37 @@
 .cardHint {
   color: var(--shop-muted);
 }
+.cardState {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.cardState span {
+  background: var(--shop-shelf);
+  color: var(--shop-wine);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+.cardBody .cardHint {
+  margin: 8px 0 16px;
+}
 .cardLink {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: 12px;
+  min-height: 44px;
+  width: fit-content;
+  margin-top: auto;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--shop-wine);
   text-decoration: none;
+}
+.cardLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .legacyCard {
   display: flex;
@@ -375,7 +487,8 @@
   gap: 16px;
   border: 1px solid var(--shop-line);
   border-radius: 12px;
-  padding: 20px;
+  padding: 24px;
+  background: var(--shop-paper);
 }
 .legacyCard > svg {
   flex-shrink: 0;
@@ -410,10 +523,57 @@
 }
 .workspace button:focus-visible,
 .workspace input:focus-visible,
+.workspace :is(a, textarea, aside):focus-visible,
 .filters button:focus-visible,
 .inboxGrid a:focus-visible {
   outline: 2px solid var(--shop-wine);
   outline-offset: 3px;
+}
+.workbench {
+  grid-template-columns: minmax(340px, 0.82fr) minmax(0, 1.18fr);
+  gap: 0;
+  padding-top: 0;
+  height: clamp(580px, calc(100dvh - 208px), 900px);
+  border: 1px solid var(--shop-line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--shop-paper);
+}
+.workbench > .sheet {
+  border: 0;
+  border-right: 1px solid var(--shop-line);
+  border-radius: 0;
+  max-height: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  scrollbar-color: var(--shop-control) var(--shop-paper);
+  scroll-padding-block: 88px 24px;
+  padding-bottom: 0;
+}
+.workbench .sheetHeading {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--shop-paper);
+}
+.workbench > .chat {
+  position: static;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  background: var(--shop-shelf);
+}
+.workbench .chat > [aria-label="Tin nhắn trong hội thoại"] {
+  min-height: 0;
+}
+.workbench .sheet > .error {
+  margin: 0;
+  padding: 16px 24px;
 }
 @media (max-width: 1100px) {
   .inboxGrid {
@@ -423,6 +583,10 @@
     gap: 18px;
     grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.1fr);
   }
+  .workbench {
+    gap: 0;
+    grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  }
 }
 @media (max-width: 760px) {
   .workspace {
@@ -431,21 +595,25 @@
   }
   .mobileTabs {
     display: flex;
-    border-bottom: 1px solid var(--shop-line);
-    margin-top: 12px;
+    gap: 4px;
+    padding: 4px;
+    background: var(--shop-shelf);
+    border-radius: 8px;
+    margin-top: 0;
   }
   .mobileTabs button {
     flex: 1;
     border: 0;
-    border-bottom: 2px solid transparent;
+    border-radius: 6px;
     background: transparent;
-    padding: 14px 8px;
+    min-height: 44px;
+    padding: 10px 8px;
     color: var(--shop-muted);
     font: inherit;
     font-size: 0.85rem;
   }
   .mobileTabs button[aria-pressed="true"] {
-    border-bottom-color: var(--shop-wine);
+    background: var(--shop-paper);
     color: var(--shop-wine);
     font-weight: 700;
   }
@@ -455,7 +623,6 @@
   }
   .chat {
     position: static;
-    min-height: 480px;
     height: max(400px, calc(100dvh - 340px));
     min-height: 400px;
     max-height: none;
@@ -477,6 +644,64 @@
   }
   .filters {
     gap: 8px 16px;
+  }
+  .workbench {
+    height: auto;
+    margin-top: 16px;
+    padding-top: 0;
+    border-radius: 12px;
+  }
+  .workbench > .sheet {
+    border-right: 0;
+    overflow: visible;
+    max-height: none;
+    height: auto;
+    scrollbar-gutter: auto;
+  }
+  .workbench .sheetHeading {
+    position: static;
+  }
+  .workbench > .chat {
+    height: max(480px, calc(100dvh - 300px));
+  }
+  .workbench .chatHeading {
+    padding: 16px;
+  }
+  .workbench .sheetHeading h2 {
+    font-size: 1.125rem;
+  }
+  .workbench .sheetHeading {
+    align-items: start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .cardBody h2,
+  .legacyCard h2 {
+    font-size: 1rem;
+  }
+  .cardBody {
+    padding: 16px;
+  }
+  .cardCover {
+    min-height: 240px;
+  }
+  .filters {
+    column-gap: 20px;
+  }
+  .filters button {
+    font-size: 0.8125rem;
+  }
+  .offerRow {
+    flex-wrap: wrap;
+  }
+  .offerRow input {
+    flex-basis: 120px;
+  }
+  .offerRow button {
+    flex-grow: 1;
+  }
+  .agreed[data-agreed="true"] dd {
+    font-size: 1.25rem;
   }
 }
 

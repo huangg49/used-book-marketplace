@@ -1,13 +1,25 @@
 .root,
 .guest {
+  --shop-shelf: #f4eddf;
+  --shop-error: #912b0e;
+  --shop-wine-hover: #7c2320;
   font-family: var(--shop-body);
   color: var(--shop-ink);
-  max-width: 1360px;
-  padding: 28px 40px 40px;
+  max-width: 1440px;
+  padding: 24px 40px 32px;
   margin: 0 auto;
+  line-height: 1.7;
+}
+.root {
+  scrollbar-color: var(--shop-control) var(--shop-paper);
 }
 .pageHeading {
-  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 16px 0 32px;
 }
 .pageHeading h1,
 .guest h1 {
@@ -17,7 +29,7 @@
   text-transform: uppercase;
   font-size: 2.5rem;
   line-height: 1.2;
-  margin: 0 0 10px;
+  margin: 0 0 12px;
 }
 .pageHeading p,
 .guest p {
@@ -25,96 +37,83 @@
   color: var(--shop-muted);
   line-height: 1.8;
   margin: 0;
+  max-width: 65ch;
 }
-.workspace {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  border: 1px solid var(--shop-line);
-  border-radius: 12px;
-  overflow: hidden;
-  min-height: 520px;
-}
-.inbox {
-  background: #f5eddc;
-  min-width: 0;
-  border-right: 1px solid var(--shop-line);
-}
-.inbox h2 {
-  font-size: 1rem;
-  margin: 0;
-  padding: 24px 20px;
-}
-.inbox nav {
-  display: flex;
-  flex-direction: column;
-}
-.inbox nav a {
-  display: grid;
-  gap: 6px;
-  padding: 18px 20px;
-  min-height: 88px;
-  color: var(--shop-ink);
-  text-decoration: none;
-  border-top: 1px solid var(--shop-line);
-  overflow-wrap: anywhere;
-}
-.inbox nav a[aria-current="page"] {
-  background: #efe3cf;
+.browseLink,
+.back {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   color: var(--shop-wine);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid var(--shop-control);
+  border-radius: 8px;
+  padding: 8px 12px;
 }
-.inbox nav a:hover {
-  background: #efe3cf;
-}
-.inbox strong {
-  font-size: 0.875rem;
-}
-.inbox span,
-.inbox small {
-  font-size: 0.75rem;
-  color: var(--shop-muted);
+.browseLink:hover,
+.back:hover {
+  background: var(--shop-cream);
 }
 .room {
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--shop-paper);
 }
 .roomHeader {
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--shop-line);
-}
-.roomHeader h2 {
-  font-size: 1.125rem;
-  margin: 0 0 8px;
-  overflow-wrap: anywhere;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 0 0 20px;
 }
 .person {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 8px;
+  min-width: 0;
+  flex: 1;
 }
 .person > div {
   min-width: 0;
 }
-.person h2 {
-  margin-bottom: 4px;
+.person h1 {
+  font-size: 1.125rem;
+  line-height: 1.5;
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.person p {
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+  margin: 0;
 }
 .avatar {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: var(--shop-cream);
+  background: var(--shop-shelf);
   color: var(--shop-wine);
   font-size: 1rem;
   font-weight: 700;
 }
+.roomStatus {
+  margin: 0;
+  color: var(--shop-wine);
+  font-size: 0.75rem;
+  background: var(--shop-cream);
+  padding: 8px 12px;
+  border-radius: 6px;
+  max-width: 32ch;
+}
 .progress {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr 1.4fr 1fr;
   gap: 12px;
   list-style: none;
   margin: 0;
@@ -124,36 +123,38 @@
 .progress li {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.75rem;
-  line-height: 1.7;
+  gap: 6px;
+  font-size: 0.6875rem;
+  line-height: 1.6;
   color: var(--shop-muted);
 }
 .progress li > span {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
-  border: 1px solid var(--shop-line);
+  border: 1px solid var(--shop-control);
   border-radius: 50%;
 }
 .progress [aria-current="step"] {
   color: var(--shop-wine);
   font-weight: 700;
 }
-.progress [aria-current="step"] > span {
+.progress [aria-current="step"] > span,
+.progress [data-complete="true"] > span {
   background: var(--shop-wine);
   color: var(--shop-cream);
   border-color: var(--shop-wine);
 }
 .nextStep {
-  padding: 20px 24px;
+  margin: 0;
+  padding: 24px;
   background: var(--shop-cream);
-  border-bottom: 1px solid var(--shop-line);
+  border-top: 1px solid var(--shop-line);
 }
 .nextStep h3 {
-  font-size: 1rem;
+  font-size: 0.9375rem;
   line-height: 1.6;
   margin: 0 0 8px;
   color: var(--shop-ink);
@@ -168,13 +169,20 @@
   color: var(--shop-muted);
   font-size: 0.75rem;
 }
+@media (min-width: 761px) {
+  .nextStep[data-primary="true"] {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+  }
+}
 .nextAction,
 .nextStep button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  padding: 10px 16px;
+  padding: 12px 16px;
   border: 0;
   border-radius: 8px;
   background: var(--shop-wine);
@@ -183,118 +191,94 @@
   text-decoration: none;
   cursor: pointer;
 }
+.nextAction {
+  width: 100%;
+}
 .nextAction:hover,
 .nextStep button:hover {
   background: var(--shop-wine-hover);
 }
 .orderLink {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   min-height: 44px;
   padding: 8px 0;
   color: var(--shop-wine);
   font-size: 0.8125rem;
   text-underline-offset: 4px;
-  margin-left: 12px;
-}
-.suggestion,
-.moreRooms {
-  min-height: 44px;
-  padding: 8px 12px;
-  border: 1px solid var(--shop-control);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--shop-wine);
-  font: 600 0.8125rem/1.7 var(--shop-body);
-  cursor: pointer;
 }
 .suggestion {
-  margin-top: 16px;
-}
-.moreRooms {
-  margin: 16px;
-}
-.inbox .inboxHelp {
-  margin: -12px 20px 8px;
-  font-size: 0.75rem;
-  line-height: 1.8;
-  color: var(--shop-muted);
-}
-.inbox .exchangeLink {
-  display: inline-flex;
-  align-items: center;
   min-height: 44px;
-  margin: 0 20px 12px;
+  margin-top: 20px;
+  padding: 8px 16px;
+  border: 1px solid var(--shop-control);
+  border-radius: 8px;
+  background: var(--shop-paper);
   color: var(--shop-wine);
-  font-size: 0.75rem;
-  text-underline-offset: 4px;
+  font: 700 0.8125rem/1.7 var(--shop-body);
+  cursor: pointer;
 }
-.inbox .inboxBook {
-  color: var(--shop-ink);
-  font-size: 0.8125rem;
-  line-height: 1.7;
-}
-.roomHeader p {
-  color: var(--shop-muted);
-  font-size: 0.75rem;
-  line-height: 1.8;
-  margin: 0;
-}
-.back {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-  min-height: 44px;
-  color: var(--shop-wine);
-  font-size: 0.8125rem;
-  text-underline-offset: 4px;
-}
-.roomHeader .back {
-  display: none;
+.suggestion:hover {
+  background: var(--shop-cream);
 }
 .context {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 16px 24px;
-  background: #f5eddc;
-  font-size: 0.8125rem;
+  padding: 24px;
+  background: var(--shop-shelf);
   border-bottom: 1px solid var(--shop-line);
 }
 .context > div {
   min-width: 0;
 }
 .context a {
-  color: var(--shop-wine);
+  color: var(--shop-ink);
+  font-size: 0.9375rem;
   font-weight: 700;
+  line-height: 1.6;
   overflow-wrap: anywhere;
+  text-decoration: none;
+}
+.context a:hover {
+  text-decoration: underline;
   text-underline-offset: 4px;
 }
 .context p {
   color: var(--shop-muted);
   font-size: 0.75rem;
   line-height: 1.8;
-  margin: 4px 0 0;
+  margin: 8px 0 0;
 }
 .cover {
   flex-shrink: 0;
-  width: 48px;
-  height: 64px;
+  width: 72px;
+  min-height: 96px;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 .cover img {
+  display: block;
   max-width: 100%;
-  max-height: 100%;
+  max-height: 112px;
+  width: auto;
+  height: auto;
   object-fit: contain;
+  filter: drop-shadow(0 4px 6px #28191420);
 }
 .cover > div {
-  min-height: 64px;
-  font-size: 0.625rem;
+  min-height: 96px;
+  gap: 8px;
+  font-size: 0.6875rem;
 }
 .cover > div svg {
-  display: none;
+  width: 24px;
+  height: 24px;
+}
+.cover > div button {
+  padding: 4px;
+  font-size: 0.6875rem;
 }
 .connection {
   padding: 8px 24px;
@@ -306,6 +290,7 @@
   align-items: center;
   gap: 8px;
   border-bottom: 1px solid var(--shop-line);
+  background: var(--shop-paper);
 }
 .connection button {
   border: 0;
@@ -317,26 +302,29 @@
   cursor: pointer;
 }
 .messages {
-  min-height: 200px;
-  max-height: max(240px, calc(100dvh - 450px));
   overflow-y: auto;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  scroll-padding-block: 20px;
+  scroll-padding-block: 24px;
+  overscroll-behavior-y: contain;
+}
+.messages > * {
+  flex-shrink: 0;
 }
 .message {
   align-self: flex-start;
-  max-width: 85%;
+  max-width: min(85%, 58ch);
   padding: 12px 16px;
-  border-radius: 12px;
-  background: #efe3cf;
+  border-radius: 12px 12px 12px 4px;
+  background: var(--shop-paper);
 }
 .message.own {
   align-self: flex-end;
   background: var(--shop-wine);
   color: var(--shop-cream);
+  border-radius: 12px 12px 4px 12px;
 }
 .sender {
   font-size: 0.75rem;
@@ -360,24 +348,26 @@
   color: var(--shop-cream);
 }
 .composer {
+  flex-shrink: 0;
   margin-top: auto;
   padding: 20px 24px;
   border-top: 1px solid var(--shop-line);
+  background: var(--shop-paper);
 }
 .composer label {
   display: block;
-  font-size: 0.8125rem;
-  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--shop-muted);
   margin-bottom: 8px;
 }
 .root .composer textarea {
   width: 100%;
-  min-height: 80px;
-  max-height: 240px;
+  min-height: 72px;
+  max-height: 160px;
   border: 1px solid var(--shop-control);
   border-radius: 8px;
   padding: 12px;
-  font: 400 0.875rem/1.8 var(--shop-body);
+  font: 400 0.875rem/1.7 var(--shop-body);
   color: var(--shop-ink);
   background: var(--shop-paper);
   resize: vertical;
@@ -413,8 +403,7 @@
   border-radius: 8px;
   background: var(--shop-wine);
   color: var(--shop-cream);
-  font-size: 0.8125rem;
-  font-weight: 700;
+  font: 700 0.8125rem/1.7 var(--shop-body);
   cursor: pointer;
 }
 .sendRow button:hover {
@@ -425,7 +414,7 @@
   cursor: not-allowed;
 }
 .error {
-  color: var(--shop-wine);
+  color: var(--shop-error);
   font-size: 0.8125rem;
   line-height: 1.8;
   margin: 0 0 12px;
@@ -466,15 +455,19 @@
 }
 .emptyRoom {
   margin: auto;
-  padding: 20px 0;
-  max-width: 46ch;
+  padding: 32px 16px;
+  max-width: 42ch;
   color: var(--shop-muted);
   text-align: center;
 }
+.emptyRoom > svg {
+  color: var(--shop-wine);
+}
 .emptyRoom h3 {
   font-size: 1rem;
+  line-height: 1.6;
   color: var(--shop-ink);
-  margin: 12px 0 8px;
+  margin: 16px 0 8px;
 }
 .emptyRoom p {
   font-size: 0.8125rem;
@@ -482,120 +475,112 @@
   margin: 0;
 }
 .selectRoom {
-  padding: 40px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  padding: 64px 24px;
   color: var(--shop-muted);
   text-align: center;
 }
-.selectRoom h2 {
+.selectRoom h1 {
   color: var(--shop-ink);
-  font-size: 1.125rem;
-  line-height: 1.6;
-  margin: 16px 0 8px;
+  font-size: 1.25rem;
+  margin: 24px 0 12px;
 }
 .selectRoom p {
   font-size: 0.875rem;
   max-width: 45ch;
   line-height: 1.8;
-  margin: 0;
-}
-.selectRoom .back {
-  align-self: flex-start;
-  margin-bottom: 24px;
+  margin: 0 auto;
 }
 .root :is(button, a, textarea):focus-visible,
 .guest a:focus-visible {
   outline: 2px solid var(--shop-wine);
   outline-offset: 3px;
 }
-@media (max-width: 1000px) {
+@media (max-width: 1100px) {
   .root,
   .guest {
     padding-inline: 24px;
   }
-  .workspace {
-    grid-template-columns: 240px minmax(0, 1fr);
-  }
-  .root[data-room-selected="true"] .pageHeading h1 {
-    font-size: 1.5rem;
-  }
-  .root[data-room-selected="true"] .pageHeading p {
-    display: none;
-  }
-  .root[data-room-selected="true"] .pageHeading {
-    margin-bottom: 16px;
-  }
-  .context p:first-of-type {
-    display: none;
+  .roomHeader {
+    gap: 16px;
   }
 }
 @media (max-width: 760px) {
   .root,
   .guest {
-    padding: 24px 16px 32px;
+    padding: 16px 16px 24px;
+  }
+  .pageHeading {
+    padding: 12px 0 24px;
+    gap: 16px;
   }
   .pageHeading h1,
   .guest h1 {
     font-size: 2rem;
   }
-  .workspace {
-    display: block;
-    min-height: 400px;
+  .roomHeader {
+    flex-wrap: wrap;
+    gap: 16px 12px;
+    padding-bottom: 16px;
   }
-  .workspace[data-selected="true"] .inbox {
-    display: none;
+  .person {
+    flex-basis: 100%;
+    order: 1;
   }
-  .workspace[data-selected="false"] .selectRoom {
-    display: none;
+  .person h1 {
+    font-size: 1rem;
   }
-  .inbox {
-    border: 0;
+  .roomStatus {
+    margin-left: auto;
+    max-width: 22ch;
+    font-size: 0.6875rem;
   }
-  .roomHeader,
+  .back {
+    font-size: 0.75rem;
+    padding-inline: 8px;
+  }
   .context,
   .composer,
   .nextStep,
   .progress {
     padding: 16px;
   }
+  .context {
+    gap: 12px;
+  }
   .progress {
     gap: 8px;
   }
   .progress li {
-    align-items: center;
-  }
-  .nextAction {
-    width: 100%;
-  }
-  .orderLink {
-    display: flex;
-    margin-left: 0;
-  }
-  .roomHeader .back {
-    display: inline-flex;
-    margin: -8px 0 8px;
+    flex-direction: column;
+    text-align: center;
+    gap: 4px;
   }
   .messages {
     padding: 16px;
-    min-height: 220px;
-    max-height: 45dvh;
   }
   .message {
     max-width: 94%;
     padding: 10px 12px;
   }
-  .selectRoom {
-    padding: 24px 20px;
+  .emptyRoom {
+    padding-inline: 0;
   }
-  .context {
-    align-items: start;
+  .root .composer textarea {
+    font-size: 1rem;
   }
   .sendRow {
-    gap: 12px;
+    gap: 8px;
+  }
+  .sendRow button {
+    padding-inline: 12px;
   }
 }
-
-.roomHeader .back { display: inline-flex; align-items: center; gap: 8px; width: fit-content; min-height: 36px; margin-bottom: 12px; }
+@media (max-width: 360px) {
+  .roomStatus {
+    order: 2;
+    margin: -8px 0 0 56px;
+    padding: 0;
+    background: transparent;
+    max-width: none;
+  }
+}

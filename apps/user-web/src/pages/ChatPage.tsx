@@ -14,7 +14,13 @@ import { io, type Socket } from "socket.io-client";
 import { ApiError } from "@used-books/session-client";
 import { z } from "zod";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, BookOpen, MessageCircle, Send } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  BookOpen,
+  MessageCircle,
+  Send,
+} from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import {
@@ -217,6 +223,7 @@ function ChatRoom({
   ].sort(
     (a, b) => a.sentAt.localeCompare(b.sentAt) || a.id.localeCompare(b.id),
   );
+  const [expandedEvents, setExpandedEvents] = useState(false);
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({
       block: "nearest",
@@ -284,7 +291,7 @@ function ChatRoom({
             {other.displayName.slice(0, 1).toUpperCase()}
           </span>
           <div>
-            <h2>{other.displayName}</h2>
+            <h1>{other.displayName}</h1>
             <p>
               {isExchange
                 ? "Đối tác trao đổi sách"
@@ -294,7 +301,7 @@ function ChatRoom({
             </p>
           </div>
         </div>
-        <p>
+        <p className={styles.roomStatus}>
           {isExchange && room.status === "Active"
             ? "Đang trao đổi sách"
             : statusLabels[room.status]}
@@ -323,8 +330,15 @@ function ChatRoom({
           Hội thoại
         </button>
       </nav>
-      <div className={sheet.workspace} data-panel={panel}>
-        <aside className={sheet.sheet} aria-label="Phiếu thỏa thuận">
+      <div
+        className={`${sheet.workspace} ${sheet.workbench}`}
+        data-panel={panel}
+      >
+        <aside
+          className={sheet.sheet}
+          aria-label="Phiếu thỏa thuận"
+          tabIndex={0}
+        >
           <div className={sheet.sheetHeading}>
             <h2>Phiếu thỏa thuận</h2>
             <span>
@@ -335,6 +349,25 @@ function ChatRoom({
                   : "Chưa tạo giao dịch"}
             </span>
           </div>
+          {!isExchange && (
+            <ol className={styles.progress} aria-label="Tiến trình mua bán">
+              {["Trao đổi", "Thông tin nhận sách", "Đơn hàng"].map(
+                (label, index) => (
+                  <li
+                    key={label}
+                    aria-current={guidance.phase === index ? "step" : undefined}
+                    data-complete={
+                      (guidance.phase != null && guidance.phase > index) ||
+                      undefined
+                    }
+                  >
+                    <span aria-hidden="true">{index + 1}</span>
+                    {label}
+                  </li>
+                ),
+              )}
+            </ol>
+          )}
           <div className={styles.context}>
             {book.data ? (
               <>
@@ -429,27 +462,12 @@ function ChatRoom({
           )}
           {!isExchange && (
             <>
-              <ol className={styles.progress} aria-label="Tiến trình mua bán">
-                {["Trao đổi", "Thông tin nhận sách", "Đơn hàng"].map(
-                  (label, index) => (
-                    <li
-                      key={label}
-                      aria-current={
-                        guidance.phase === index ? "step" : undefined
-                      }
-                      data-complete={
-                        (guidance.phase != null && guidance.phase > index) ||
-                        undefined
-                      }
-                    >
-                      <span aria-hidden="true">{index + 1}</span>
-                      {label}
-                    </li>
-                  ),
-                )}
-              </ol>
               {!(room.orderId && isBuyer) && (
-                <aside className={styles.nextStep} aria-label="Bước tiếp theo">
+                <aside
+                  className={styles.nextStep}
+                  aria-label="Bước tiếp theo"
+                  data-primary={canCreate || !!room.orderId}
+                >
                   <div>
                     <h3>{guidance.title}</h3>
                     <p>{guidance.description}</p>
@@ -670,7 +688,11 @@ function ChatRoom({
                   </>
                 )}
               {room.orderId && room.buyer.id === userId && (
-                <aside className={styles.nextStep} aria-label="Bước tiếp theo">
+                <aside
+                  className={styles.nextStep}
+                  aria-label="Bước tiếp theo"
+                  data-primary="true"
+                >
                   {order.isLoading ? (
                     <p>Đang tải đơn hàng…</p>
                   ) : order.data ? (
@@ -779,8 +801,13 @@ function ChatRoom({
         </aside>
         <section className={sheet.chat} aria-label="Hội thoại">
           <div className={sheet.chatHeading}>
-            <h2>Hội thoại</h2>
-            <p>Tin nhắn chỉ hiển thị với hai người trong cuộc trao đổi này.</p>
+            <MessageCircle size={20} aria-hidden="true" />
+            <div>
+              <h2>Hội thoại</h2>
+              <p>
+                Tin nhắn chỉ hiển thị với hai người trong cuộc trao đổi này.
+              </p>
+            </div>
           </div>
           {!expired && connection !== "online" && (
             <div className={styles.connection} role="status">
@@ -863,19 +890,43 @@ function ChatRoom({
               </p>
             )}
             {events.data?.length ? (
-              <section className={sheet.eventHistory} aria-label="Lịch sử thỏa thuận">
-                <h3>Lịch sử thỏa thuận</h3>
-                {events.data.map((event) => (
-                  <p key={event.id}>
-                    <strong>
-                      {event.actorId === userId ? "Bạn" : other.displayName}
-                    </strong>{" "}
-                    {eventText(event)}
-                    <time dateTime={event.createdAt}>
-                      {dateTime(event.createdAt)}
-                    </time>
-                  </p>
-                ))}
+              <section
+                className={sheet.eventHistory}
+                aria-label="Lịch sử thỏa thuận"
+              >
+                <div className={sheet.historyHeading}>
+                  <h3>Lịch sử thỏa thuận</h3>
+                  {events.data.length > 1 && (
+                    <button
+                      type="button"
+                      aria-expanded={expandedEvents}
+                      aria-controls={`agreement-events-${room.id}`}
+                      onClick={() => setExpandedEvents((value) => !value)}
+                    >
+                      {expandedEvents
+                        ? "Thu gọn lịch sử"
+                        : "Xem tất cả thay đổi"}
+                    </button>
+                  )}
+                </div>
+                <div
+                  id={`agreement-events-${room.id}`}
+                  className={sheet.eventEntries}
+                >
+                  {(expandedEvents ? events.data : events.data.slice(-1)).map(
+                    (event) => (
+                      <p key={event.id}>
+                        <strong>
+                          {event.actorId === userId ? "Bạn" : other.displayName}
+                        </strong>{" "}
+                        {eventText(event)}
+                        <time dateTime={event.createdAt}>
+                          {dateTime(event.createdAt)}
+                        </time>
+                      </p>
+                    ),
+                  )}
+                </div>
               </section>
             ) : null}
             {messages.map((message) => (
@@ -1022,14 +1073,19 @@ export function ChatPage() {
       </section>
     );
   return (
-    <div className={styles.root}>
+    <div className={styles.root} data-room-selected={!!roomId}>
       {!roomId ? (
         <>
           <header className={styles.pageHeading}>
-            <h1>Hội thoại của bạn</h1>
-            <p>
-              Mỗi cuốn sách, mỗi người trao đổi — một phiếu thỏa thuận riêng.
-            </p>
+            <div>
+              <h1>Hội thoại của bạn</h1>
+              <p>
+                Mỗi cuốn sách, mỗi người trao đổi — một phiếu thỏa thuận riêng.
+              </p>
+            </div>
+            <Link className={styles.browseLink} to="/books?data=live">
+              Tìm sách <ArrowUpRight size={18} aria-hidden="true" />
+            </Link>
           </header>
           <ConversationInbox
             rooms={rooms.data ?? []}

@@ -41,10 +41,6 @@ function ConversationCard({
         )}
       </div>
       <div className={styles.cardBody}>
-        <p className={styles.cardState}>
-          {room.terms?.mode === "Exchange" ? "Đổi sách" : "Mua bán"} ·{" "}
-          {states[room.status]}
-        </p>
         <h2>
           <Link to={`/chat/${room.id}`}>
             {book.data?.book.title ??
@@ -56,6 +52,12 @@ function ConversationCard({
         <p>
           {buyer ? "Người bán" : "Người mua"}:{" "}
           <strong>{partner.displayName}</strong>
+        </p>
+        <p className={styles.cardState}>
+          <span>
+            {room.terms?.mode === "Exchange" ? "Đổi sách" : "Mua bán"}
+          </span>
+          {states[room.status]}
         </p>
         <p className={styles.cardHint}>
           {room.terms?.pendingProposal
@@ -86,13 +88,15 @@ function LegacyCard({ id }: { id: string }) {
     <article className={styles.legacyCard}>
       <BookOpen size={24} aria-hidden="true" />
       <div>
-        <p className={styles.cardState}>Đổi sách · Lịch sử hiện có</p>
         <h2>
           <Link to={`/exchange/${id}`}>
             {detail.data?.receiveBooks.map((b) => b.title).join(", ") ||
               "Cuộc trao đổi sách"}
           </Link>
         </h2>
+        <p className={styles.cardState}>
+          <span>Đổi sách</span>Lịch sử hiện có
+        </p>
         <p>
           {detail.data
             ? `Với ${detail.data.partner.username}`
@@ -144,7 +148,7 @@ export function ConversationInbox({
       (filter === "buyer" ? r.buyer.id === userId : r.seller.id === userId),
   );
   return (
-    <>
+    <section className={styles.inboxContent} aria-label="Danh sách hội thoại">
       <nav className={styles.filters} aria-label="Lọc hội thoại">
         {(
           [
@@ -216,6 +220,6 @@ export function ConversationInbox({
           Xem thêm cuộc trao đổi
         </button>
       )}
-    </>
+    </section>
   );
 }

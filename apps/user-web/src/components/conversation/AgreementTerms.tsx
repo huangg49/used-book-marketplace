@@ -32,6 +32,7 @@ export function AgreementTerms({
     key: string;
   } | null>(null);
   const [uncertain, setUncertain] = useState(false);
+  const [editingPrice, setEditingPrice] = useState(false);
   const seller = room.seller.id === userId,
     terms = room.terms,
     proposal = terms?.pendingProposal;
@@ -54,6 +55,7 @@ export function AgreementTerms({
       pending.current = null;
       setUncertain(false);
       setAmount("");
+      setEditingPrice(false);
       refresh();
     } catch (e) {
       const terminal =
@@ -216,7 +218,10 @@ export function AgreementTerms({
                   : "Đang tải…"}
               </dd>
             </div>
-            <div className={styles.agreed}>
+            <div
+              className={styles.agreed}
+              data-agreed={terms?.agreedPrice != null || undefined}
+            >
               <dt>Giá đã thống nhất</dt>
               <dd>
                 {terms?.agreedPrice != null
@@ -233,53 +238,79 @@ export function AgreementTerms({
                 mới trước khi tạo đơn.
               </p>
             )}
-          {!locked && !proposal && (
-            <form
-              className={styles.offerForm}
-              onSubmit={(e) => {
-                e.preventDefault();
-                const value = Number(amount);
-                if (
-                  !Number.isInteger(value) ||
-                  value < 10000 ||
-                  value > 1000000
-                ) {
-                  setError("Nhập giá từ 10.000đ đến 1.000.000đ.");
-                  return;
-                }
-                void command({
-                  expectedVersion: room.version,
-                  kind: "Price",
-                  amount: value,
-                });
-              }}
-            >
-              <label htmlFor={`offer-${room.id}`}>
-                {terms?.agreedPrice != null
-                  ? "Đề nghị giá khác (₫)"
-                  : "Đề nghị giá sách (₫)"}
-              </label>
-              <div className={styles.offerRow}>
-                <input
-                  id={`offer-${room.id}`}
-                  inputMode="numeric"
-                  type="text"
-                  pattern="[0-9]+"
-                  value={amount}
-                  disabled={disabled}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Ví dụ: 80000"
-                  required
-                />
-                <button type="submit" disabled={disabled || !amount}>
-                  {busy ? "Đang gửi…" : "Gửi đề nghị"}
-                </button>
-              </div>
-              <p className={styles.help}>
-                Chưa gồm phí giao nhận. Đối tác cần chấp nhận trước khi tạo đơn.
-              </p>
-            </form>
-          )}
+          {!locked &&
+            !proposal &&
+            terms?.agreedPrice != null &&
+            !editingPrice && (
+              <button
+                type="button"
+                className={styles.textButton}
+                disabled={disabled}
+                onClick={() => setEditingPrice(true)}
+              >
+                Đề nghị giá khác
+              </button>
+            )}
+          {!locked &&
+            !proposal &&
+            (terms?.agreedPrice == null || editingPrice) && (
+              <form
+                className={styles.offerForm}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const value = Number(amount);
+                  if (
+                    !Number.isInteger(value) ||
+                    value < 10000 ||
+                    value > 1000000
+                  ) {
+                    setError("Nhập giá từ 10.000đ đến 1.000.000đ.");
+                    return;
+                  }
+                  void command({
+                    expectedVersion: room.version,
+                    kind: "Price",
+                    amount: value,
+                  });
+                }}
+              >
+                <label htmlFor={`offer-${room.id}`}>
+                  {terms?.agreedPrice != null
+                    ? "Đề nghị giá khác (₫)"
+                    : "Đề nghị giá sách (₫)"}
+                </label>
+                <div className={styles.offerRow}>
+                  <input
+                    id={`offer-${room.id}`}
+                    inputMode="numeric"
+                    type="text"
+                    pattern="[0-9]+"
+                    value={amount}
+                    disabled={disabled}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Ví dụ: 80000"
+                    required
+                  />
+                  <button type="submit" disabled={disabled || !amount}>
+                    {busy ? "Đang gửi…" : "Gửi đề nghị"}
+                  </button>
+                </div>
+                <p className={styles.help}>
+                  Chưa gồm phí giao nhận. Đối tác cần chấp nhận trước khi tạo
+                  đơn.
+                </p>
+                {terms?.agreedPrice != null && (
+                  <button
+                    type="button"
+                    className={styles.textButton}
+                    disabled={disabled}
+                    onClick={() => setEditingPrice(false)}
+                  >
+                    Giữ giá đã thống nhất
+                  </button>
+                )}
+              </form>
+            )}
         </>
       )}
       {!seller &&

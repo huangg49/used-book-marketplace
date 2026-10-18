@@ -473,3 +473,9 @@ counts. Shared `Conversation.module.css` defines agreement/chat columns, card in
 and mobile panel navigation. Exchange BookInfoCard/ProgressStepper accept compact
 presentation for the agreement column; their lifecycle meanings are unchanged.
 ADR0040 and the ChatPage surface brief define permission and replay behavior.
+The refined ChatPage composes a joined workbench above760px with independently
+scrolling agreement/messages and a persistent composer. Ready purchase actions
+stick to the agreement bottom. Mobile uses natural sheet flow and preserved
+panel switching. Accepted-price edits and complete event history are explicit
+disclosures; closing either leaves transaction data intact. Shared styles still
+support the standalone legacy Exchange layout; its route/history are retained.

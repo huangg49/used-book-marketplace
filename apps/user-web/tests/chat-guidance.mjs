@@ -9,7 +9,7 @@ const root=fileURLToPath(new URL('../../../',import.meta.url)),req=createRequire
 const {chromium}=req('playwright');
 const {Server}=createRequire(apiReq.resolve('@nestjs/platform-socket.io'))('socket.io');
 const {createServer}=await import(pathToFileURL(webReq.resolve('vite')).href);
-const out=path.join(root,'.tmp/unified-chat-qa');await mkdir(out,{recursive:true});
+const out=path.join(root,process.env.CHAT_GUIDANCE_OUT||'.tmp/unified-chat-qa');await mkdir(out,{recursive:true});
 const origin='http://127.0.0.1:5193',api='http://127.0.0.1:5195';
 const id=n=>`10000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const future=()=>new Date(Date.now()+3600_000).toISOString();
@@ -100,12 +100,25 @@ try{
  const refresh=page=>page.evaluate(async()=>{const{queryClient}=await import('/src/lib/session.ts');await Promise.all(['purchase-conversations','purchase-conversation','conversation-events'].map(key=>queryClient.invalidateQueries({queryKey:[key]})));});
  const captures=async(page,label)=>{
   if(process.env.CHAT_GUIDANCE_SCREENSHOTS==='0')return;
-  for(const [width,scale]of[[1440,100],[390,100],[320,130]]){
-   await page.setViewportSize({width,height:1100});await page.evaluate(v=>document.documentElement.style.fontSize=v+'%',scale);await page.evaluate(()=>scrollTo(0,0));
+  for(const [width,scale]of[[1440,100],[900,100],[390,100],[320,130]]){
+   await page.setViewportSize({width,height:900});await page.evaluate(v=>document.documentElement.style.fontSize=v+'%',scale);await page.evaluate(()=>scrollTo(0,0));
+   await page.evaluate(()=>document.fonts.ready);const sheetPanel=page.getByRole('complementary',{name:'Phiếu thỏa thuận',exact:true});if(await sheetPanel.count())await sheetPanel.evaluate(node=>node.scrollTop=0);
    await page.waitForFunction(()=>document.getAnimations().filter(a=>a.animationName==='details-sweep').every(a=>a.playState==='finished'));
    await page.screenshot({path:path.join(out,`${label}-${width}-${scale}.png`),fullPage:true});
    if(width<760){const tab=page.getByRole('button',{name:'Hội thoại',exact:true});if(await tab.count()){await tab.click();await page.screenshot({path:path.join(out,`${label}-chat-${width}-${scale}.png`),fullPage:true});await page.getByRole('button',{name:'Phiếu thỏa thuận',exact:true}).click();}}
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'overflow '+label+' '+width);
+   const agreement=page.getByRole('complementary',{name:'Phiếu thỏa thuận',exact:true});
+   if(width>760&&await agreement.count()){
+    const left=await agreement.boundingBox(),right=await page.getByRole('region',{name:'Hội thoại',exact:true}).boundingBox();
+    assert.ok(Math.abs(left.y-right.y)<2&&Math.abs(left.height-right.height)<2,'aligned agreement/chat '+label+' '+width);
+    assert.ok(await agreement.evaluate(el=>getComputedStyle(el).overflowY==='auto'),'agreement scrolls independently');
+    const composer=await page.locator('#chat-message').boundingBox();
+    assert.ok(composer.y+composer.height<right.y+right.height,'composer remains inside chat');
+    const action=page.getByRole('complementary',{name:'Bước tiếp theo',exact:true}).filter({has:page.locator('button,a')});
+    if(await action.count()&&await action.getAttribute('data-primary')==='true'){
+      const box=await action.boundingBox();assert.ok(box.y>=left.y&&box.y+box.height<=left.y+left.height+1,'primary action visible without scrolling '+label);
+    }
+   }
   }
   await page.setViewportSize({width:1440,height:1100});await page.evaluate(()=>document.documentElement.style.fontSize='100%');
  };
@@ -120,9 +133,10 @@ try{
  const sellerPage=await makePage('seller');
  await p.getByLabel('Đề nghị giá sách (₫)',{exact:true}).fill('75000');await p.getByRole('button',{name:'Gửi đề nghị',exact:true}).click();await p.getByRole('button',{name:'Thử lại thao tác trước',exact:true}).waitFor();
  assert.equal(await p.getByLabel('Đề nghị giá sách (₫)',{exact:true}).inputValue(),'75000');await p.getByRole('button',{name:'Thử lại thao tác trước',exact:true}).click();await refresh(sellerPage);await sellerPage.getByRole('button',{name:'Chấp nhận giá',exact:true}).click();await refresh(p);assert.equal(room.terms.agreedPrice,75000);assert.deepEqual(termsCommands[0],termsCommands[1]);
+ await sellerPage.getByRole('button',{name:'Đề nghị giá khác',exact:true}).click();await sellerPage.getByLabel('Đề nghị giá khác (₫)',{exact:true}).fill('76000');await sellerPage.getByRole('button',{name:'Giữ giá đã thống nhất',exact:true}).click();assert.equal(await sellerPage.getByLabel('Đề nghị giá khác (₫)',{exact:true}).count(),0);assert.equal(room.terms.agreedPrice,75000,'closing edit does not alter agreed price');
  await sellerPage.getByRole('button',{name:'Đổi sách',exact:true}).click();await refresh(p);await p.getByRole('button',{name:'Chấp nhận hình thức',exact:true}).click();await refresh(sellerPage);await p.getByRole('heading',{name:'Sách bạn đem đổi',exact:true}).waitFor();
  assert.equal(await p.getByRole('group',{name:'Người bán chọn hình thức'}).count(),0,'buyer has no seller switch');
- await p.getByRole('checkbox').first().check();await p.getByRole('button',{name:'Gửi đề nghị đổi sách',exact:true}).click();await refresh(sellerPage);await sellerPage.getByRole('button',{name:'Chấp nhận đề nghị',exact:true}).waitFor();assert.equal(await sellerPage.getByRole('button',{name:'Thương lượng mua',exact:true}).isDisabled(),true);await sellerPage.getByRole('region',{name:'Lịch sử thỏa thuận',exact:true}).getByText('Bạn',{exact:true}).first().waitFor();
+ await p.getByRole('checkbox').first().check();await p.getByRole('button',{name:'Gửi đề nghị đổi sách',exact:true}).click();await refresh(sellerPage);await sellerPage.getByRole('button',{name:'Chấp nhận đề nghị',exact:true}).waitFor();assert.equal(await sellerPage.getByRole('button',{name:'Thương lượng mua',exact:true}).isDisabled(),true);await sellerPage.getByRole('button',{name:'Xem tất cả thay đổi',exact:true}).click();await sellerPage.getByRole('region',{name:'Lịch sử thỏa thuận',exact:true}).getByText('Bạn',{exact:true}).first().waitFor();await sellerPage.getByRole('button',{name:'Thu gọn lịch sử',exact:true}).click();
  await captures(sellerPage,'exchange-linked-sheet');
  await p.getByRole('button',{name:'Hủy đề nghị',exact:true}).first().click();await p.getByRole('alertdialog').getByRole('button',{name:'Hủy đề nghị',exact:true}).click();await refresh(sellerPage);await refresh(p);
  await sellerPage.getByRole('button',{name:'Thương lượng mua',exact:true}).click();await refresh(p);await p.getByRole('button',{name:'Chấp nhận hình thức',exact:true}).click();await refresh(sellerPage);
@@ -137,12 +151,12 @@ try{
  await dialog.getByRole('button',{name:'Tạo đơn cho người mua này',exact:true}).click();await dialog.waitFor({state:'hidden'});await sellerPage.getByRole('link',{name:'Xem đơn hàng',exact:true}).waitFor();assert.deepEqual(commands[0],commands[1]);
  await refresh(p);await p.getByRole('heading',{name:'Đơn đang chờ bạn thanh toán',exact:true}).waitFor();assert.equal(await p.locator('#chat-message').count(),1,'same mounted room retains chat after order creation');await captures(p,'buyer-order-created');
  await p.getByRole('button',{name:'Xác nhận và thanh toán',exact:true}).click();await p.getByText('Chưa xác nhận được thanh toán. Thử lại để gửi cùng yêu cầu.',{exact:true}).waitFor();await p.getByRole('button',{name:'Xác nhận và thanh toán',exact:true}).click();await p.getByRole('heading',{name:'Chờ người bán xác nhận',exact:true}).waitFor();assert.deepEqual(commands[2],commands[3]);assert.equal(await p.getByText('Trạng thái đơn: PendingSellerConfirmation').count(),0);
- await p.getByRole('link',{name:'Chat, hội thoại của bạn',exact:true}).click();await p.getByRole('heading',{name:'Hội thoại của bạn',exact:true}).waitFor();await p.getByRole('link',{name:'Mở cuộc trao đổi',exact:true}).click();await p.getByRole('heading',{name:'Phiếu thỏa thuận',exact:true}).waitFor();
+ await p.getByRole('link',{name:'Chat, hội thoại của bạn',exact:true}).click();await p.getByRole('heading',{name:'Hội thoại của bạn',exact:true}).waitFor();await captures(p,'inbox');await p.getByRole('link',{name:'Mở cuộc trao đổi',exact:true}).click();await p.getByRole('heading',{name:'Phiếu thỏa thuận',exact:true}).waitFor();
  await p.setViewportSize({width:390,height:844});await p.getByRole('button',{name:'Hội thoại',exact:true}).click();await p.locator('#chat-message').fill('Bản nháp giữ khi chuyển phiếu');await p.getByRole('button',{name:'Phiếu thỏa thuận',exact:true}).click();assert.equal(await p.locator('#chat-message').isVisible(),false);await p.getByRole('button',{name:'Hội thoại',exact:true}).click();assert.equal(await p.locator('#chat-message').inputValue(),'Bản nháp giữ khi chuyển phiếu');await p.setViewportSize({width:1440,height:1100});
  await p.evaluate(async exId=>{const{router}=await import('/src/app/router.tsx');await router.navigate('/exchange/'+exId);},ex.id);
  const chat=p.getByRole('region',{name:'Tin nhắn Đổi sách với '+seller.displayName});await chat.waitFor();await chat.getByText('Chưa tải được tin nhắn. Lịch sử đã tải vẫn được giữ lại.',{exact:true}).waitFor();assert.equal(await chat.getByText('Trao đổi về những cuốn sách này',{exact:true}).count(),0,'history failure is not empty');exchangeError=false;await chat.getByRole('button',{name:'Tải lại tin nhắn',exact:true}).click();await chat.getByText(exchangeMessages[0].body,{exact:true}).waitFor();assert.equal(await chat.locator('[class*="systemMsg"]').count(),0,'user cannot become system via text');await captures(p,'exchange-context');
  await p.getByRole('link',{name:'Nhắn với đối tác',exact:true}).click();await chat.getByLabel('Nhắn cho '+seller.displayName).fill('Bản nháp trao đổi cần được giữ lại.');exchangeSendError=true;await chat.getByRole('button',{name:'Gửi tin nhắn',exact:true}).click();await chat.getByRole('alert').waitFor();assert.equal(await chat.locator('textarea').inputValue(),'Bản nháp trao đổi cần được giữ lại.');exchangeSendError=false;
  exchangeError=true;await p.evaluate(async()=>{const{queryClient}=await import('/src/lib/session.ts');await queryClient.invalidateQueries({queryKey:['exchangeMessages']});});await chat.getByText('Chưa tải được tin nhắn. Lịch sử đã tải vẫn được giữ lại.',{exact:true}).waitFor();await chat.getByText(exchangeMessages[0].body,{exact:true}).waitFor();exchangeError=false;
- assert.deepEqual(issues,[]);await writeFile(path.join(out,'result.json'),JSON.stringify({result:'PASS',source:'codex/unified-trade-chat',api:'all intercepted fixtures',socket:'isolated Socket.IO on 5195',cases:['buyer/seller next steps','quote sent','same-room OrderCreated retains chat','price acceptance and immutable order price','seller mode switch requires buyer acceptance','linked exchange stays in workspace','mobile panels preserve draft','card inbox navigation','message lost ACK dedupe','order/payment pinned key/body retry including missing quote recovery','exchange book context','history error/recovery preserves messages','user text not system','exchange draft retained','1440/390/320px130%']},null,2));
+ assert.deepEqual(issues,[]);await writeFile(path.join(out,'result.json'),JSON.stringify({result:'PASS',source:'codex/chat-workspace-layout',api:'all intercepted fixtures',socket:'isolated Socket.IO on 5195',cases:['buyer/seller next steps','quote sent','same-room OrderCreated retains chat','price acceptance and immutable order price','seller mode switch requires buyer acceptance','linked exchange stays in workspace','mobile panels preserve draft','card inbox navigation','message lost ACK dedupe','order/payment pinned key/body retry including missing quote recovery','exchange book context','history error/recovery preserves messages','user text not system','exchange draft retained','1440/900/390/320px130%','aligned independently scrolling agreement and chat','primary actions visible','price edit disclosure and complete event history']},null,2));
  console.log('PASS: chat context and role-specific next action; purchase message/order/payment retry unchanged; exchange history/draft/error; desktop/mobile/large text. No application DB or storage used.');console.log(out);
 }finally{await browser?.close();await vite?.close();await io?.close();await new Promise(resolve=>http?.listening?http.close(resolve):resolve());}
