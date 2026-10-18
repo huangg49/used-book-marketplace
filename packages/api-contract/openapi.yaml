@@ -8477,6 +8477,44 @@ paths:
             application/json:
               schema:
                 type: object
+  /shipments/carrier/orders/active:
+    get:
+      operationId: getActiveShipmentOrder
+      tags:
+        - Shipments
+      description: Get active shipment order for driver portal.
+      parameters:
+        - in: query
+          name: trackingCode
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /shipments/carrier/order/{code}:
+    get:
+      operationId: getShipmentOrderByCode
+      tags:
+        - Shipments
+      description: Get shipment order details by code for driver portal.
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
   /webhooks/carrier:
     post:
       operationId: carrierWebhookCallback

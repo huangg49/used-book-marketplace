@@ -2728,6 +2728,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shipments/carrier/orders/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get active shipment order for driver portal. */
+        get: operations["getActiveShipmentOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/carrier/order/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get shipment order details by code for driver portal. */
+        get: operations["getShipmentOrderByCode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/webhooks/carrier": {
         parameters: {
             query?: never;
@@ -10772,6 +10806,50 @@ export interface operations {
             query?: {
                 carrier?: string;
             };
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    getActiveShipmentOrder: {
+        parameters: {
+            query?: {
+                trackingCode?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    getShipmentOrderByCode: {
+        parameters: {
+            query?: never;
             header?: never;
             path: {
                 code: string;
