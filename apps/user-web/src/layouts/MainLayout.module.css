@@ -129,11 +129,11 @@
 .headerInner {
   max-width: 1280px;
   margin: auto;
-  padding: 12px 40px;
-  display: flex;
+  padding: 12px 32px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 28px;
+  gap: 24px;
   min-height: 76px;
   transition:
     min-height var(--nav-morph-duration) cubic-bezier(0.16, 1, 0.3, 1),
@@ -198,85 +198,127 @@
 }
 .desktopNav {
   display: flex;
-  gap: 30px;
+  gap: 8px;
   align-items: center;
+  justify-content: center;
 }
 .headerBrand {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  gap: 18px;
+  gap: 14px;
 }
 .desktopNav a {
-  font-size: 0.875rem;
-  min-height: 44px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
-  padding: 10px 0;
+  padding: 8px 16px;
   text-decoration: none;
-  color: inherit;
+  color: var(--shop-cream);
+  opacity: 0.92;
+  border-radius: 999px;
   white-space: nowrap;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
 }
-.desktopNav a:hover,
-.desktopNav a[aria-current] {
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 8px;
+.desktopNav a:hover {
+  opacity: 1;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  text-decoration: none;
+}
+.desktopNav a[aria-current="page"] {
+  opacity: 1;
+  color: var(--shop-yellow);
+  font-weight: 600;
+  background: rgba(244, 203, 103, 0.15);
+  text-decoration: none;
 }
 .headerActions {
   display: flex;
   align-items: center;
-  gap: 22px;
+  justify-content: flex-end;
+  gap: 10px;
 }
 .chatAction {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid var(--shop-cream);
-  border-radius: 8px;
-  color: inherit;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  color: var(--shop-cream);
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
 }
-.chatAction:hover,
+.chatAction:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
 .chatAction[aria-current="page"] {
   background: var(--shop-cream);
+  border-color: var(--shop-cream);
   color: var(--shop-wine);
 }
 .account {
-  min-height: 44px;
+  min-height: 40px;
+  padding: 8px 14px;
   display: inline-flex;
   align-items: center;
   font-size: 0.875rem;
-  color: inherit;
+  font-weight: 600;
+  color: var(--shop-cream);
+  border-radius: 999px;
   text-decoration: none;
   white-space: nowrap;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
 }
 .account:hover {
-  text-decoration: underline;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  text-decoration: none;
 }
 .post {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 10px 18px;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 18px;
   background: var(--shop-cream);
   color: var(--shop-wine);
   font-size: 0.875rem;
   font-weight: 700;
-  border-radius: 8px;
+  border-radius: 999px;
   text-decoration: none;
   white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
 }
 .post:hover {
   background: var(--shop-yellow);
+  color: var(--shop-wine);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
 }
 .menuButton {
   display: none;

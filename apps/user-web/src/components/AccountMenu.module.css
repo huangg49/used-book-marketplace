@@ -6,21 +6,25 @@
 .trigger {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  min-height: 44px;
-  padding: 8px 0;
-  border: 0;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
   background: transparent;
   color: var(--shop-cream);
   font: inherit;
   font-size: 0.875rem;
+  font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
 }
 .trigger:hover,
 .trigger[aria-expanded="true"] {
-  text-decoration: underline;
-  text-underline-offset: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  text-decoration: none;
 }
 .trigger svg {
   transition: transform 180ms ease-out;
