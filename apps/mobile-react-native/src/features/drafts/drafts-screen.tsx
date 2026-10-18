@@ -7,11 +7,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
-import { router } from "expo-router";
 import { useSession } from "../../core/session/session-provider";
 import {
   AppText,
-  BackAction,
   BookCard,
   Button,
   Chip,
@@ -147,10 +145,6 @@ export function DraftsScreen() {
       footer={<MemberNavigation current="/drafts" />}
       footerAppearance="navigation"
     >
-      <BackAction
-        title="Về tài khoản"
-        onPress={() => router.replace("./account")}
-      />
       {/* DangSachHome Header */}
       <View
         style={{
@@ -206,15 +200,6 @@ export function DraftsScreen() {
 
 
       </View>
-
-      <AppText
-        kind="heading"
-        color={stitchTokens.wineDark}
-        accessibilityRole="header"
-        style={{ fontSize: 20, fontWeight: "700", textAlign: "center" }}
-      >
-        Sách của tôi
-      </AppText>
 
       {/* Bento Stats & Quick Action Hero */}
       <View
