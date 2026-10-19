@@ -45,11 +45,28 @@ const receiptSchema = z.object({
   auctionId: z.string().uuid().nullable(), orderId: z.string().uuid().nullable(), version: z.number().int(),
   state: z.string(), currentPrice: money.nullable(), minimumBid: money.nullable(), leading: z.boolean().nullable(), serverTime: z.string(),
 })
+const deliverySchema = z.object({
+  recipientName: z.string(), phone: z.string(), localityCode: z.string(), detail: z.string(),
+  outboundFee: z.number().int(), trackingCode: z.string().nullable(), dispatchedAt: z.string().nullable(),
+  deliveryDeadline: z.string().nullable(), deliveredAt: z.string().nullable(),
+})
+const deliveryQuoteSchema = z.object({
+  addressId: z.string().uuid(), addressVersion: z.number().int(), outboundFee: z.number().int(), buyerTotal: money,
+})
+const addressListSchema = z.object({
+  items: z.array(z.object({
+    id: z.string().uuid(), version: z.number().int(), recipientName: z.string(), detail: z.string(),
+    serviceAreaCode: z.string(), isDefault: z.boolean(),
+  }).passthrough()),
+}).passthrough()
 const pointOrderSchema = z.object({
   id: z.string().uuid(), auctionId: z.string().uuid().nullable(), title: z.string(), pointName: z.string(),
   role: z.enum(['Buyer', 'Seller']),
-  state: z.enum(['AwaitingPayment', 'Fulfilling', 'ReadyForCollection', 'Inspection', 'ResolutionPending', 'ReturnPending', 'Completed', 'Cancelled', 'PaymentExpired']),
-  version: z.number().int(), amounts: z.object({ bookPrice: money, buyerTotal: money }),
+  state: z.enum(['AwaitingPayment', 'Fulfilling', 'ReadyForCollection', 'InTransit', 'Inspection', 'ResolutionPending', 'ReturnPending', 'Completed', 'Cancelled', 'PaymentExpired']),
+  version: z.number().int(), amounts: z.object({ bookPrice: money, outboundFee: z.number().int().default(0), buyerTotal: money }),
+  // ADR 0044: older servers had pickup only; only the buyer receives the address.
+  fulfillmentMethod: z.enum(['SelfCollect', 'CarrierOutbound']).default('SelfCollect'),
+  delivery: deliverySchema.nullable().default(null),
   paymentDeadline: z.string().nullable(), paidAt: z.string().nullable(), serverTime: z.string(),
   // Condition check at the point (FR-T02): never an authenticity claim.
   report: z.object({ outcome: z.literal('Pass'), inspectedAt: z.string(), note: z.string().nullable(), scope: z.string() }),
@@ -57,7 +74,7 @@ const pointOrderSchema = z.object({
   collectionDeadline: z.string().nullable(), collectedAt: z.string().nullable(),
   inspectionDeadline: z.string().nullable(), returnDeadline: z.string().nullable(), refunded: z.boolean(),
   resolution: z.object({
-    reason: z.enum(['ReportRejected', 'RecipientDecisionOverdue', 'CollectionOverdue', 'InspectionClaim', 'ReturnOverdue']),
+    reason: z.enum(['ReportRejected', 'RecipientDecisionOverdue', 'CollectionOverdue', 'InspectionClaim', 'ReturnOverdue', 'DeliveryFailed']),
     openedAt: z.string(),
   }).nullable(),
 })
@@ -85,7 +102,20 @@ export function placeBid(id: string, amount: number, key: string) { return comma
 export function setAutoBid(id: string, maxAmount: number, key: string) { return command(`/auctions/${id}/auto-bid`, key, { maxAmount, fulfillmentMethod: 'SelfCollect' }, 'PUT') }
 export function disableAutoBid(id: string, key: string) { return command(`/auctions/${id}/auto-bid/disable`, key, {}) }
 export function buyNow(id: string, key: string) { return command(`/auctions/${id}/buy-now`, key, { fulfillmentMethod: 'SelfCollect' }) }
-export function payPointOrder(orderId: string, expectedVersion: number, key: string) { return command(`/point-orders/${orderId}/pay`, key, { expectedVersion }) }
+// ADR 0044: delivery carries the address version and the fee the buyer saw.
+export type DeliveryChoice = { addressId: string; addressVersion: number; fee: number }
+export function payPointOrder(orderId: string, expectedVersion: number, key: string, delivery?: DeliveryChoice) {
+  return command(`/point-orders/${orderId}/pay`, key, delivery
+    ? {
+        expectedVersion, fulfillmentMethod: 'CarrierOutbound', destinationAddressId: delivery.addressId,
+        expectedDestinationAddressVersion: delivery.addressVersion, expectedOutboundFee: delivery.fee,
+      }
+    : { expectedVersion })
+}
+export function getPointOrderDeliveryQuote(orderId: string, addressId: string) {
+  return session.request(`/me/point-orders/${orderId}/delivery-quote?addressId=${addressId}`, deliveryQuoteSchema)
+}
+export function getMyAddresses() { return session.request('/me/addresses', addressListSchema) }
 // Buyer steps after payment (FR-H09/H11, FR-T03). The server checks every deadline.
 export function acceptPointOrderReport(orderId: string, expectedVersion: number, key: string) {
   return command(`/point-orders/${orderId}/accept-report`, key, { expectedVersion })

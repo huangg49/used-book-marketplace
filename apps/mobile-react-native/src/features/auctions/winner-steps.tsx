@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import {
   AppText,
   Button,
+  Chip,
   ConfirmDialog,
   Notice,
   StatePanel,
@@ -27,15 +29,18 @@ import {
   pointOrderKey,
   pointOrderOptions,
   sendOrderCommand,
+  type DeliveryChoice,
   type OrderCommand,
   type OrderStep,
 } from "./auctions-model";
-import type { CodeIssued, PointOrder } from "./contracts";
+import { addressBook } from "../addresses/contracts";
+import { deliveryQuote, type CodeIssued, type PointOrder } from "./contracts";
 
 // The winner's steps for a point Order (FR-AU08, FR-H09/H11, FR-T03): pay from
-// the wallet, answer the point's report, request the collection code at the
-// desk, then report a problem within the inspection window. The server decides
-// every deadline; times here are a display only.
+// the wallet (pickup, or delivery from the point per ADR 0044), answer the
+// point's report, request the collection code at the desk or follow the
+// delivery, then report a problem within the inspection window. The server
+// decides every deadline and fee; times here are a display only.
 
 const time = (iso: string | null) =>
   iso
@@ -76,7 +81,14 @@ export function WinnerSteps({ orderId, boughtNow }: { orderId: string; boughtNow
   const [pending, setPending] = useState<OrderCommand | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<{ step: OrderStep; title: string; message: string; label: string; text?: string } | null>(null);
+  const [confirm, setConfirm] = useState<{
+    step: OrderStep;
+    title: string;
+    message: string;
+    label: string;
+    text?: string;
+    delivery?: DeliveryChoice;
+  } | null>(null);
   // Shown once, kept only in memory; leaving the screen needs a new code.
   const [issued, setIssued] = useState<{ code: string | null; expiresAt: string | null; serverTime: string } | null>(null);
   const headline = boughtNow ? "Bạn đã mua ngay cuốn sách này" : "Bạn đã thắng phiên đấu giá";
@@ -100,8 +112,8 @@ export function WinnerSteps({ orderId, boughtNow }: { orderId: string; boughtNow
       void queryClient.invalidateQueries({ queryKey: pointOrderKey(orderId) });
     }
   };
-  const ask = (step: OrderStep, title: string, message: string, label: string, text?: string) =>
-    setConfirm({ step, title, message, label, text });
+  const ask = (step: OrderStep, title: string, message: string, label: string, text?: string, delivery?: DeliveryChoice) =>
+    setConfirm({ step, title, message, label, text, delivery });
 
   if (order.isPending) return <StatePanel loading title="Đang tải đơn nhận sách" />;
   if (order.error)
@@ -132,10 +144,28 @@ export function WinnerSteps({ orderId, boughtNow }: { orderId: string; boughtNow
       ) : (
         <>
           {o.state === "AwaitingPayment" && (
-            <Payment order={o} locked={locked} onPay={() => ask("pay", `Thanh toán ${formatVnd(o.amounts.buyerTotal)} từ ví?`, `Số tiền được giữ cho đơn này đến khi bạn nhận sách tại ${o.pointName}. Ví cần đủ số dư khả dụng; không nhận thanh toán một phần.`, "Thanh toán")} />
+            <Payment
+              order={o}
+              locked={locked}
+              onPay={(delivery) =>
+                delivery
+                  ? ask(
+                      "pay",
+                      `Thanh toán ${formatVnd(o.amounts.bookPrice + delivery.fee)} từ ví?`,
+                      `Gồm ${formatVnd(o.amounts.bookPrice)} tiền sách và ${formatVnd(delivery.fee)} phí giao. Số tiền được giữ cho đơn này đến khi bạn nhận sách. Đã chọn giao tận nơi thì không đổi sang tự nhận; không nhận thanh toán một phần.`,
+                      "Thanh toán",
+                      undefined,
+                      delivery,
+                    )
+                  : ask("pay", `Thanh toán ${formatVnd(o.amounts.bookPrice)} từ ví?`, `Số tiền được giữ cho đơn này đến khi bạn nhận sách tại ${o.pointName}. Ví cần đủ số dư khả dụng; không nhận thanh toán một phần.`, "Thanh toán")
+              }
+            />
           )}
           {o.state === "Fulfilling" && <Report order={o} locked={locked} ask={ask} />}
-          {o.state === "ReadyForCollection" && (
+          {(o.state === "InTransit" || (o.state === "ReadyForCollection" && o.fulfillmentMethod === "CarrierOutbound")) && (
+            <DeliveryPanel order={o} />
+          )}
+          {o.state === "ReadyForCollection" && o.fulfillmentMethod === "SelfCollect" && (
             <Collection order={o} issued={issued} locked={locked} onRequest={() => ask("collection-code", "Lấy mã nhận sách?", `Mã có hiệu lực 10 phút và chỉ hiển thị một lần. Hãy lấy mã khi bạn đã ở ${o.pointName}.`, "Lấy mã")} />
           )}
           {o.state === "Inspection" && <Claim order={o} locked={locked} ask={ask} />}
@@ -150,7 +180,8 @@ export function WinnerSteps({ orderId, boughtNow }: { orderId: string; boughtNow
         busy={busy}
         onCancel={() => !busy && setConfirm(null)}
         onConfirm={() =>
-          confirm && void run(createOrderCommand(o.id, confirm.step, o.version, Crypto.randomUUID(), confirm.text))
+          confirm &&
+          void run(createOrderCommand(o.id, confirm.step, o.version, Crypto.randomUUID(), confirm.text, confirm.delivery))
         }
       />
     </View>
@@ -158,19 +189,28 @@ export function WinnerSteps({ orderId, boughtNow }: { orderId: string; boughtNow
 }
 
 function summary(o: PointOrder) {
+  const delivered = o.fulfillmentMethod === "CarrierOutbound";
   switch (o.state) {
     case "AwaitingPayment":
-      return `Thanh toán từ ví trước ${time(o.paymentDeadline)}, rồi nhận sách tại ${o.pointName}.`;
+      return `Thanh toán từ ví trước ${time(o.paymentDeadline)}. Bạn chọn tự nhận tại ${o.pointName} hoặc giao tận nơi.`;
     case "Fulfilling":
       return `Sách đã đạt kiểm tra tại ${o.pointName}. Hãy xem biên bản và trả lời trước ${time(o.acceptanceDeadline)}.`;
     case "ReadyForCollection":
-      return `Sách chờ bạn tại ${o.pointName} đến ${time(o.collectionDeadline)}, trong giờ ${POINT_HOURS}.`;
+      return delivered
+        ? `${o.pointName} sẽ giao sách cho hãng vận chuyển trước ${time(o.collectionDeadline)}.`
+        : `Sách chờ bạn tại ${o.pointName} đến ${time(o.collectionDeadline)}, trong giờ ${POINT_HOURS}.`;
+    case "InTransit":
+      return `Sách đang được giao tới địa chỉ của bạn, chậm nhất ${time(o.delivery?.deliveryDeadline ?? null)}.`;
     case "Inspection":
-      return `Bạn đã nhận sách. Nếu sách khác biên bản, hãy báo trước ${time(o.inspectionDeadline)}.`;
+      return delivered
+        ? `Sách đã giao tới bạn lúc ${time(o.delivery?.deliveredAt ?? null)}. Nếu sách khác biên bản, hãy báo trước ${time(o.inspectionDeadline)}.`
+        : `Bạn đã nhận sách. Nếu sách khác biên bản, hãy báo trước ${time(o.inspectionDeadline)}.`;
     case "ResolutionPending":
       return "Quản trị viên đang xem xét đơn này. Tiền vẫn được giữ cho đơn cho tới khi có quyết định.";
     case "ReturnPending":
-      return `Hãy mang sách trả về ${o.pointName} trước ${time(o.returnDeadline)}, trong giờ ${POINT_HOURS}. Tiền được hoàn sau khi nhân viên đối chiếu sách.`;
+      return delivered && !o.delivery?.deliveredAt
+        ? `Giao hàng không thành công. Hãng đang trả sách về ${o.pointName}; tiền sách và phí giao được hoàn sau khi nhân viên đối chiếu sách.`
+        : `Hãy mang sách trả về ${o.pointName} trước ${time(o.returnDeadline)}, trong giờ ${POINT_HOURS}. Tiền được hoàn sau khi nhân viên đối chiếu sách.`;
     case "Completed":
       return "Quy trình nhận sách đã hoàn tất. Cảm ơn bạn đã cho cuốn sách một chương mới.";
     case "PaymentExpired":
@@ -182,14 +222,114 @@ function summary(o: PointOrder) {
 
 type Ask = (step: OrderStep, title: string, message: string, label: string, text?: string) => void;
 
-function Payment({ order, locked, onPay }: { order: PointOrder; locked: boolean; onPay: () => void }) {
+function Payment({
+  order,
+  locked,
+  onPay,
+}: {
+  order: PointOrder;
+  locked: boolean;
+  onPay: (delivery?: DeliveryChoice) => void;
+}) {
+  const { client } = useSession();
+  const router = useRouter();
   const remaining = useRemaining(order.paymentDeadline, order.serverTime);
+  const [deliver, setDeliver] = useState(false);
+  const [addressId, setAddressId] = useState<string | null>(null);
+  const addresses = useQuery({
+    queryKey: ["addresses"],
+    queryFn: () => client.request("/me/addresses", addressBook),
+    enabled: deliver,
+  });
+  const items = (addresses.data?.items ?? []).filter((a) => a.serviceAreaCode === "HCM-DEMO-v1");
+  const chosen = addressId ?? items.find((a) => a.isDefault)?.id ?? items[0]?.id ?? null;
+  // ADR 0044: the server prices delivery; payment rechecks this fee.
+  const quote = useQuery({
+    queryKey: ["point-order-delivery-quote", order.id, chosen],
+    queryFn: () => client.request(`/me/point-orders/${order.id}/delivery-quote?addressId=${chosen}`, deliveryQuote),
+    enabled: deliver && !!chosen,
+    staleTime: 0,
+  });
+  const total = deliver ? quote.data?.buyerTotal : order.amounts.bookPrice;
   return (
     <View style={{ gap: space.sm }}>
+      <AppText kind="bold">Nhận sách bằng cách nào?</AppText>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+        <Chip title="Tự nhận tại điểm" selected={!deliver} disabled={locked} onPress={() => setDeliver(false)} />
+        <Chip title="Giao tận nơi" selected={deliver} disabled={locked} onPress={() => setDeliver(true)} />
+      </View>
+      {deliver &&
+        (addresses.isPending ? (
+          <StatePanel loading title="Đang tải địa chỉ" />
+        ) : addresses.error ? (
+          <Notice tone="error">{presentError(addresses.error).message}</Notice>
+        ) : items.length === 0 ? (
+          <View style={{ gap: space.sm }}>
+            <Notice tone="warning">Bạn chưa có địa chỉ nhận trong khu vực được hỗ trợ.</Notice>
+            <Button secondary title="Thêm địa chỉ" onPress={() => router.push("/addresses")} />
+          </View>
+        ) : (
+          <View style={{ gap: space.sm }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+              {items.map((a) => (
+                <Chip
+                  key={a.id}
+                  title={`${a.recipientName} · ${a.detail}`}
+                  selected={a.id === chosen}
+                  disabled={locked}
+                  onPress={() => setAddressId(a.id)}
+                />
+              ))}
+            </View>
+            {quote.error ? (
+              <Notice tone="error">{auctionErrorText(quote.error)}</Notice>
+            ) : (
+              <AppText kind="small" color={colors.ink}>
+                {quote.data
+                  ? `Phí giao ${formatVnd(quote.data.outboundFee)} (hãng vận chuyển mô phỏng). Sau khi bạn đồng ý biên bản, điểm giao sách cho hãng.`
+                  : "Đang tính phí giao…"}
+              </AppText>
+            )}
+          </View>
+        ))}
       <AppText kind="small" color={colors.muted}>
         Còn {formatRemaining(remaining)} để thanh toán. Không nhận thanh toán một phần.
       </AppText>
-      <Button wine title={`Thanh toán ${formatVnd(order.amounts.buyerTotal)}`} disabled={locked || remaining === 0} onPress={onPay} />
+      <Button
+        wine
+        title={total === undefined ? "Thanh toán" : `Thanh toán ${formatVnd(total)}`}
+        disabled={locked || remaining === 0 || (deliver && !quote.data)}
+        onPress={() =>
+          deliver && quote.data
+            ? onPay({ addressId: quote.data.addressId, addressVersion: quote.data.addressVersion, fee: quote.data.outboundFee })
+            : onPay()
+        }
+      />
+    </View>
+  );
+}
+
+// ADR 0044: the point hands the book to the simulated carrier, which delivers
+// to the buyer's address; inspection starts at delivery.
+function DeliveryPanel({ order }: { order: PointOrder }) {
+  const d = order.delivery;
+  return (
+    <View style={{ gap: space.xs, padding: space.lg, borderRadius: radius.card, borderWidth: 1, borderColor: colors.rule, backgroundColor: colors.surface }}>
+      <AppText kind="bold">Giao tận nơi</AppText>
+      {d && (
+        <AppText kind="small" color={colors.ink}>
+          {d.recipientName} · {d.phone} · {d.detail}
+        </AppText>
+      )}
+      {d?.trackingCode ? (
+        <AppText kind="small" color={colors.ink} selectable>
+          Mã vận đơn {d.trackingCode} · đã giao cho hãng lúc {time(d.dispatchedAt)}
+        </AppText>
+      ) : (
+        <AppText kind="small" color={colors.muted}>
+          Nhân viên {order.pointName} sẽ đóng gói và giao sách cho hãng vận chuyển.
+        </AppText>
+      )}
     </View>
   );
 }
@@ -213,7 +353,16 @@ function Report({ order, locked, ask }: { order: PointOrder; locked: boolean; as
         wine
         title="Đồng ý biên bản"
         disabled={locked || remaining === 0}
-        onPress={() => ask("accept-report", "Đồng ý biên bản kiểm tra?", `Sau khi đồng ý, bạn có 72 giờ để lấy mã và nhận sách tại ${order.pointName} trong giờ ${POINT_HOURS}. Đồng ý biên bản không làm mất quyền báo vấn đề sau khi nhận sách.`, "Đồng ý")}
+        onPress={() =>
+          ask(
+            "accept-report",
+            "Đồng ý biên bản kiểm tra?",
+            order.fulfillmentMethod === "CarrierOutbound"
+              ? `Sau khi đồng ý, ${order.pointName} giao sách cho hãng vận chuyển trong 72 giờ. Đồng ý biên bản không làm mất quyền báo vấn đề sau khi nhận sách.`
+              : `Sau khi đồng ý, bạn có 72 giờ để lấy mã và nhận sách tại ${order.pointName} trong giờ ${POINT_HOURS}. Đồng ý biên bản không làm mất quyền báo vấn đề sau khi nhận sách.`,
+            "Đồng ý",
+          )
+        }
       />
       {!rejecting ? (
         <Button secondary title="Từ chối biên bản" disabled={locked || remaining === 0} onPress={() => setRejecting(true)} />

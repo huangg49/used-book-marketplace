@@ -12,8 +12,8 @@ import { useAuctionLive } from '../hooks/useAuctionLive'
 import { useSession } from '../hooks/useSession'
 import { formatVnd, ROUTES } from '../lib/routes'
 import {
-  AUCTION_MAX_PRICE, bidOptions, buyNow, disableAutoBid, getAuction, getMyAuctionIntakes, getMyParticipation, getMyPointOrder,
-  payPointOrder, placeBid, setAutoBid, withdrawIntake, type MyIntake,
+  AUCTION_MAX_PRICE, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation,
+  getMyPointOrder, getPointOrderDeliveryQuote, payPointOrder, placeBid, setAutoBid, withdrawIntake, type DeliveryChoice, type MyIntake,
   type AuctionParticipation, type AuctionState, type AuctionSummary,
 } from '../services/auctions'
 import styles from './AuctionDetailPage.module.css'
@@ -746,20 +746,35 @@ function WinnerPanel({ me, auction, onChanged }: { me: AuctionParticipation; auc
   const [error, setError] = useState<string | null>(null)
   const [unknown, setUnknown] = useState(false)
   const headline = me.boughtNow ? 'Bạn đã mua ngay cuốn sách này' : 'Bạn đã thắng phiên đấu giá'
-  const pendingPayment = useRef<{ id: string; version: number; key: string } | null>(null)
+  const pendingPayment = useRef<{ id: string; version: number; key: string; delivery?: DeliveryChoice } | null>(null)
+  // ADR 0044: pickup at the point, or delivery priced by the server.
+  const [deliver, setDeliver] = useState(false)
+  const [addressId, setAddressId] = useState<string | null>(null)
+  const addresses = useQuery({ queryKey: ['addresses'], queryFn: getMyAddresses, enabled: deliver, retry: false })
+  const usable = (addresses.data?.items ?? []).filter((a) => a.serviceAreaCode === 'HCM-DEMO-v1')
+  const chosen = addressId ?? usable.find((a) => a.isDefault)?.id ?? usable[0]?.id ?? null
+  const quote = useQuery({
+    queryKey: ['point-order-delivery-quote', me.orderId, chosen],
+    queryFn: () => getPointOrderDeliveryQuote(me.orderId!, chosen!),
+    enabled: deliver && !!me.orderId && !!chosen, retry: false, staleTime: 0,
+  })
+  const delivery: DeliveryChoice | undefined = deliver && quote.data
+    ? { addressId: quote.data.addressId, addressVersion: quote.data.addressVersion, fee: quote.data.outboundFee }
+    : undefined
 
   const pay = async () => {
     if (!order.data) return
     const payment = pendingPayment.current ?? {
       id: order.data.id,
       version: order.data.version,
-      key: intent.keyFor(`pay:${order.data.id}:${order.data.version}`),
+      key: intent.keyFor(`pay:${order.data.id}:${order.data.version}:${delivery ? `${delivery.addressId}:${delivery.fee}` : 'self'}`),
+      delivery,
     }
     pendingPayment.current = payment
     let pending = false
     setBusy(true); setError(null)
     try {
-      await payPointOrder(payment.id, payment.version, payment.key)
+      await payPointOrder(payment.id, payment.version, payment.key, payment.delivery)
       intent.settle()
       pendingPayment.current = null
     } catch (caught) {
@@ -800,25 +815,62 @@ function WinnerPanel({ me, auction, onChanged }: { me: AuctionParticipation; auc
       />
     )
 
+  const total = deliver ? quote.data?.buyerTotal : o.amounts.bookPrice
+  const choiceLocked = busy || unknown
   return (
     <div className={styles.bidPanel}>
       <div className={`${styles.standing} ${styles.standingLead}`}>
         <strong>{headline}</strong>
         <span>
           Thanh toán từ ví trước {o.paymentDeadline ? when(o.paymentDeadline) : '—'}
-          {o.paymentDeadline && <> (còn <b className={remaining < HOUR ? styles.soon : undefined}>{formatRemaining(remaining)}</b>)</>}, rồi nhận sách tại {o.pointName}.
+          {o.paymentDeadline && <> (còn <b className={remaining < HOUR ? styles.soon : undefined}>{formatRemaining(remaining)}</b>)</>}. Bạn chọn tự nhận tại {o.pointName} hoặc giao tận nơi.
         </span>
       </div>
+      <p className={styles.quickLabel}>Nhận sách bằng cách nào?</p>
+      <div className={styles.quick} role="group" aria-label="Cách nhận sách">
+        <button type="button" aria-pressed={!deliver} disabled={choiceLocked} onClick={() => setDeliver(false)}>Tự nhận tại điểm</button>
+        <button type="button" aria-pressed={deliver} disabled={choiceLocked} onClick={() => setDeliver(true)}>Giao tận nơi</button>
+      </div>
+      {deliver && (addresses.isPending ? (
+        <p className={styles.fieldHint} role="status">Đang tải địa chỉ…</p>
+      ) : addresses.isError ? (
+        <p role="alert" className={styles.fieldError}>{commandError(addresses.error)}</p>
+      ) : usable.length === 0 ? (
+        <p className={styles.fieldHint}>Bạn chưa có địa chỉ nhận trong khu vực được hỗ trợ. Thêm địa chỉ trong Tài khoản rồi quay lại.</p>
+      ) : (
+        <div className={styles.field}>
+          <label htmlFor={`${o.id}-address`}>Giao tới</label>
+          <select
+            id={`${o.id}-address`} className={styles.select} value={chosen ?? ''} disabled={choiceLocked}
+            onChange={(event) => setAddressId(event.target.value)}
+          >
+            {usable.map((a) => <option key={a.id} value={a.id}>{a.recipientName} · {a.detail}</option>)}
+          </select>
+          <p className={quote.isError ? styles.fieldError : styles.fieldHint} role="status">
+            {quote.isError
+              ? commandError(quote.error)
+              : quote.data
+                ? `Phí giao ${formatVnd(quote.data.outboundFee)} (hãng vận chuyển mô phỏng). Sau khi bạn đồng ý biên bản, điểm giao sách cho hãng.`
+                : 'Đang tính phí giao…'}
+          </p>
+        </div>
+      ))}
       {error && <p role="alert" className={styles.fieldError}>{error}</p>}
-      <button type="button" className={styles.continue} disabled={busy || remaining === 0} onClick={() => (unknown ? void pay() : setConfirming(true))}>
-        {unknown ? 'Thử lại thanh toán' : `Thanh toán ${formatVnd(o.amounts.buyerTotal)}`} <ArrowRight size={16} aria-hidden="true" />
+      <button
+        type="button" className={styles.continue}
+        disabled={busy || remaining === 0 || (!unknown && deliver && !quote.data)}
+        onClick={() => (unknown ? void pay() : setConfirming(true))}
+      >
+        {unknown ? 'Thử lại thanh toán' : total === undefined ? 'Thanh toán' : `Thanh toán ${formatVnd(total)}`} <ArrowRight size={16} aria-hidden="true" />
       </button>
       <p className={styles.fieldHint}>Giá chốt {formatVnd(me.finalPrice ?? auction.currentPrice ?? o.amounts.bookPrice)}. Không nhận thanh toán một phần.</p>
       <ConfirmDialog
         isOpen={confirming}
         onClose={() => !busy && setConfirming(false)}
-        title={`Thanh toán ${formatVnd(o.amounts.buyerTotal)} từ ví?`}
-        description={`Số tiền được giữ cho đơn này đến khi bạn nhận sách tại ${o.pointName}. Ví cần đủ số dư khả dụng; không nhận thanh toán một phần.`}
+        title={`Thanh toán ${formatVnd(total ?? o.amounts.bookPrice)} từ ví?`}
+        description={delivery
+          ? `Gồm ${formatVnd(o.amounts.bookPrice)} tiền sách và ${formatVnd(delivery.fee)} phí giao. Số tiền được giữ cho đơn này đến khi bạn nhận sách. Đã chọn giao tận nơi thì không đổi sang tự nhận; không nhận thanh toán một phần.`
+          : `Số tiền được giữ cho đơn này đến khi bạn nhận sách tại ${o.pointName}. Ví cần đủ số dư khả dụng; không nhận thanh toán một phần.`}
         confirmText="Thanh toán"
         onConfirm={() => void pay()}
         isBusy={busy}

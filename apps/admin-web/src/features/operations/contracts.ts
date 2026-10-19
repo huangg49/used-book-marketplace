@@ -99,6 +99,7 @@ const pointOrderStates = [
   "AwaitingPayment",
   "Fulfilling",
   "ReadyForCollection",
+  "InTransit",
   "Inspection",
   "ResolutionPending",
   "ReturnPending",
@@ -106,12 +107,28 @@ const pointOrderStates = [
   "Cancelled",
   "PaymentExpired",
 ] as const;
+// ADR 0044: the label the point Staff hand to the simulated carrier.
+const pointOrderDelivery = z.object({
+  recipientName: z.string(),
+  phone: z.string(),
+  serviceAreaCode: z.string(),
+  localityCode: z.string(),
+  detail: z.string(),
+  outboundFee: price,
+  carrier: z.literal("LatLaiSimulator"),
+  trackingCode: z.string().nullable(),
+  dispatchedAt: time.nullable(),
+  deliveryDeadline: time.nullable(),
+  deliveredAt: time.nullable(),
+});
 export const collectionItem = z.object({
   id: uuid,
   version,
   title: z.string(),
   state: z.enum(pointOrderStates),
   recipientName: z.string(),
+  fulfillmentMethod: z.enum(["SelfCollect", "CarrierOutbound"]),
+  delivery: pointOrderDelivery.nullable(),
   shelfCode: z.string().nullable(),
   collectionDeadline: time.nullable(),
   returnDeadline: time.nullable(),
@@ -133,6 +150,7 @@ export const resolutionItem = z.object({
     "CollectionOverdue",
     "InspectionClaim",
     "ReturnOverdue",
+    "DeliveryFailed",
   ]),
   note: z.string().nullable(),
   openedAt: time,
@@ -159,6 +177,8 @@ const ALLOWED: Record<
   },
   InspectionClaim: { DismissClaim: [null], RequireReturn: [null] },
   ReturnOverdue: { DismissClaim: [null], RequireReturn: [null] },
+  // ADR 0044: the carrier brings an undelivered book back to the point.
+  DeliveryFailed: { RequireReturn: [null] },
 };
 export const decisionsFor = (reason: ResolutionItem["openReason"]) =>
   ALLOWED[reason];
@@ -206,6 +226,7 @@ export const commandReceipt = z.object({
     "AwaitingPayment",
     "Fulfilling",
     "ReadyForCollection",
+    "InTransit",
     "Inspection",
     "ResolutionPending",
     "ReturnPending",
@@ -252,6 +273,7 @@ export const collectionLabels: Record<CollectionItem["state"], string> = {
   AwaitingPayment: "Chờ thanh toán",
   Fulfilling: "Chờ người nhận xem biên bản",
   ReadyForCollection: "Chờ người nhận đến lấy",
+  InTransit: "Đang giao tận nơi",
   Inspection: "Đã giao, trong hạn kiểm tra",
   ResolutionPending: "Chờ quản trị viên xử lý",
   ReturnPending: "Chờ người nhận mang trả",
@@ -265,6 +287,7 @@ export const resolutionLabels: Record<ResolutionItem["openReason"], string> = {
   CollectionOverdue: "Quá hạn đến lấy sách",
   InspectionClaim: "Khiếu nại sau khi nhận",
   ReturnOverdue: "Quá hạn mang trả sách",
+  DeliveryFailed: "Giao tận nơi không thành công",
 };
 
 // N4-10/N4-11: points, assignments and their receipts (FR-H04).

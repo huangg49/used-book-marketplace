@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.47.0
+  version: 0.48.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Participant agreement workspaces with mutually confirmed mode/price proposals and linked Exchange history are implemented. Member private address book and versioned demo service-area directory are
@@ -7222,15 +7222,72 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /me/point-orders/{orderId}/delivery-quote:
+    get:
+      operationId: getPointOrderDeliveryQuote
+      tags:
+        - Auctions
+      description: "ADR 0044: buyer of an unpaid ViaPoint Order; others receive 404. Prices delivery from
+        the point to one of the buyer's saved addresses in the supported service area (422 otherwise)
+        with the selected DirectSale policy fee. Reserves nothing; payment rechecks the fee."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: addressId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointOrderDeliveryQuote"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /point-orders/{orderId}/pay:
     post:
       operationId: payPointOrder
       tags:
         - Auctions
-      description: Buyer ACTIVE/RESTRICTED; LOCKED denied. Before the payment deadline (endAt + 24h, or 15
-        minutes for Buy Now) moves the frozen buyerTotal from available to the Order hold atomically
+      description: Buyer ACTIVE/RESTRICTED; LOCKED denied. Before the payment deadline (endAt + 24h; legacy
+        Buy Now Orders 15 minutes) moves the frozen buyerTotal from available to the Order hold atomically
         and marks the auction Sold; the Order becomes Fulfilling without seller confirmation (FR-O05).
-        A racing deadline expiry has exactly one outcome. Partial payment is never accepted.
+        A racing deadline expiry has exactly one outcome. Partial payment is never accepted. With
+        fulfillmentMethod CarrierOutbound (ADR 0044) (default SelfCollect) delivers from the point to one of the
+        buyer's saved HCM-DEMO-v1 addresses; buyerTotal becomes bookPrice + outboundFee. A changed
+        address version or fee (expectedOutboundFee) returns 409; the choice is final once paid.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -7636,6 +7693,138 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/HandOverPointOrder"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/point-orders/{orderId}/dispatch:
+    post:
+      operationId: dispatchPointOrder
+      tags:
+        - Auctions
+      description: "ADR 0044: assigned STAFF independent of buyer and seller, during point hours, before the
+        window deadline of a CarrierOutbound Order in ReadyForCollection. Records the single custody
+        handover to the simulated carrier and a tracking code; the Order becomes InTransit with a
+        240-hour delivery deadline."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DispatchPointOrder"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/simulator/point-delivery-events:
+    post:
+      operationId: emitSimulatedPointDeliveryEvent
+      tags:
+        - Auctions
+      description: "ADR 0044: independent TEST_OPERATOR (not buyer or seller) records one signed simulated
+        carrier outcome for an InTransit auction Order; Idempotency-Key must equal eventId. Delivered
+        starts the 72-hour inspection window from occurredAt (FR-T03) and never settles; Failed opens
+        DeliveryFailed for an independent Admin."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulatedPointDeliveryEvent"
       responses:
         "200":
           description: Committed receipt (including replay).
@@ -13756,6 +13945,147 @@ components:
           anyOf:
             - type: string
             - type: "null"
+    PointOrderDelivery:
+      type: object
+      additionalProperties: false
+      required:
+        - recipientName
+        - phone
+        - serviceAreaCode
+        - localityCode
+        - detail
+        - outboundFee
+        - carrier
+        - trackingCode
+        - dispatchedAt
+        - deliveryDeadline
+        - deliveredAt
+      properties:
+        recipientName:
+          type: string
+        phone:
+          type: string
+        serviceAreaCode:
+          type: string
+        localityCode:
+          type: string
+        detail:
+          type: string
+        outboundFee:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        carrier:
+          type: string
+          const: LatLaiSimulator
+        trackingCode:
+          type:
+            - string
+            - "null"
+          pattern: ^LL-[A-Z0-9]{8,32}$
+        dispatchedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        deliveryDeadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+        deliveredAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+    PointOrderDeliveryQuote:
+      type: object
+      additionalProperties: false
+      required:
+        - orderId
+        - addressId
+        - addressVersion
+        - serviceAreaCode
+        - policyCode
+        - bookPrice
+        - outboundFee
+        - buyerTotal
+        - currency
+        - demoOnly
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        addressId:
+          type: string
+          format: uuid
+        addressVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        serviceAreaCode:
+          type: string
+        policyCode:
+          type: string
+        bookPrice:
+          type: integer
+          minimum: 10000
+          maximum: 1000000
+        outboundFee:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        buyerTotal:
+          type: integer
+          minimum: 10000
+          maximum: 10000000
+        currency:
+          type: string
+          const: VND
+        demoOnly:
+          type: boolean
+          const: true
+    DispatchPointOrder:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    SimulatedPointDeliveryEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - eventId
+        - orderId
+        - carrier
+        - trackingCode
+        - outcome
+        - occurredAt
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        carrier:
+          type: string
+          const: LatLaiSimulator
+        trackingCode:
+          type: string
+          pattern: ^LL-[A-Z0-9]{8,32}$
+        outcome:
+          type: string
+          enum:
+            - Delivered
+            - Failed
+        occurredAt:
+          type: string
+          format: date-time
     PayPointOrder:
       type: object
       additionalProperties: false
@@ -13766,6 +14096,25 @@ components:
           type: integer
           minimum: 1
           maximum: 2147483647
+        fulfillmentMethod:
+          type: string
+          enum:
+            - SelfCollect
+            - CarrierOutbound
+          default: SelfCollect
+          description: ADR 0044. CarrierOutbound requires the three fields below; SelfCollect forbids them.
+        destinationAddressId:
+          type: string
+          format: uuid
+        expectedDestinationAddressVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        expectedOutboundFee:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+          description: The fee the buyer saw in the delivery quote.
     AcceptPointOrderReport:
       type: object
       additionalProperties: false
@@ -13839,6 +14188,8 @@ components:
         - title
         - state
         - recipientName
+        - fulfillmentMethod
+        - delivery
         - shelfCode
         - collectionDeadline
         - returnDeadline
@@ -13858,6 +14209,7 @@ components:
             - AwaitingPayment
             - Fulfilling
             - ReadyForCollection
+            - InTransit
             - Inspection
             - ResolutionPending
             - ReturnPending
@@ -13866,6 +14218,16 @@ components:
             - PaymentExpired
         recipientName:
           type: string
+        fulfillmentMethod:
+          type: string
+          enum:
+            - SelfCollect
+            - CarrierOutbound
+        delivery:
+          oneOf:
+            - $ref: "#/components/schemas/PointOrderDelivery"
+            - type: "null"
+          description: CarrierOutbound only; the label the point Staff hand to the carrier.
         shelfCode:
           type:
             - string
@@ -13930,6 +14292,7 @@ components:
         - returnDeadline
         - returnedAt
         - resolution
+        - delivery
         - serverTime
       properties:
         id:
@@ -13963,12 +14326,15 @@ components:
           type: string
           enum:
             - SelfCollect
+            - CarrierOutbound
+          description: SelfCollect until a CarrierOutbound payment (ADR 0044).
         state:
           type: string
           enum:
             - AwaitingPayment
             - Fulfilling
             - ReadyForCollection
+            - InTransit
             - Inspection
             - ResolutionPending
             - ReturnPending
@@ -14117,9 +14483,15 @@ components:
                 - CollectionOverdue
                 - InspectionClaim
                 - ReturnOverdue
+                - DeliveryFailed
             openedAt:
               type: string
               format: date-time
+        delivery:
+          oneOf:
+            - $ref: "#/components/schemas/PointOrderDelivery"
+            - type: "null"
+          description: CarrierOutbound only. The seller never receives the address (null).
         serverTime:
           type: string
           format: date-time
@@ -14199,6 +14571,7 @@ components:
             - AwaitingPayment
             - Fulfilling
             - ReadyForCollection
+            - InTransit
             - Inspection
             - ResolutionPending
             - ReturnPending
@@ -15021,6 +15394,7 @@ components:
             - CollectionOverdue
             - InspectionClaim
             - ReturnOverdue
+            - DeliveryFailed
         note:
           type:
             - string

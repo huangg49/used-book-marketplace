@@ -2352,6 +2352,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/point-orders/{orderId}/delivery-quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ADR 0044: buyer of an unpaid ViaPoint Order; others receive 404. Prices delivery from the point to one of the buyer's saved addresses in the supported service area (422 otherwise) with the selected DirectSale policy fee. Reserves nothing; payment rechecks the fee. */
+        get: operations["getPointOrderDeliveryQuote"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/point-orders/{orderId}/pay": {
         parameters: {
             query?: never;
@@ -2361,7 +2378,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Buyer ACTIVE/RESTRICTED; LOCKED denied. Before the payment deadline (endAt + 24h, or 15 minutes for Buy Now) moves the frozen buyerTotal from available to the Order hold atomically and marks the auction Sold; the Order becomes Fulfilling without seller confirmation (FR-O05). A racing deadline expiry has exactly one outcome. Partial payment is never accepted. */
+        /** @description Buyer ACTIVE/RESTRICTED; LOCKED denied. Before the payment deadline (endAt + 24h; legacy Buy Now Orders 15 minutes) moves the frozen buyerTotal from available to the Order hold atomically and marks the auction Sold; the Order becomes Fulfilling without seller confirmation (FR-O05). A racing deadline expiry has exactly one outcome. Partial payment is never accepted. With fulfillmentMethod CarrierOutbound (ADR 0044) (default SelfCollect) delivers from the point to one of the buyer's saved HCM-DEMO-v1 addresses; buyerTotal becomes bookPrice + outboundFee. A changed address version or fee (expectedOutboundFee) returns 409; the choice is final once paid. */
         post: operations["payPointOrder"];
         delete?: never;
         options?: never;
@@ -2465,6 +2482,40 @@ export interface paths {
         put?: never;
         /** @description Assigned STAFF independent of buyer and seller, during point hours (09:00-18:00 Asia/Ho_Chi_Minh). A correct live code records one handover and starts the 72-hour inspection window. Wrong or expired codes are recorded and refused; the sixth wrong attempt within 15 minutes is rate limited (AC-H17). */
         post: operations["handOverPointOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/point-orders/{orderId}/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0044: assigned STAFF independent of buyer and seller, during point hours, before the window deadline of a CarrierOutbound Order in ReadyForCollection. Records the single custody handover to the simulated carrier and a tracking code; the Order becomes InTransit with a 240-hour delivery deadline. */
+        post: operations["dispatchPointOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/simulator/point-delivery-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0044: independent TEST_OPERATOR (not buyer or seller) records one signed simulated carrier outcome for an InTransit auction Order; Idempotency-Key must equal eventId. Delivered starts the 72-hour inspection window from occurredAt (FR-T03) and never settles; Failed opens DeliveryFailed for an independent Admin. */
+        post: operations["emitSimulatedPointDeliveryEvent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4556,8 +4607,68 @@ export interface components {
             items: components["schemas"]["WishlistItem"][];
             nextCursor: string | null;
         };
+        PointOrderDelivery: {
+            recipientName: string;
+            phone: string;
+            serviceAreaCode: string;
+            localityCode: string;
+            detail: string;
+            outboundFee: number;
+            /** @constant */
+            carrier: "LatLaiSimulator";
+            trackingCode: string | null;
+            /** Format: date-time */
+            dispatchedAt: string | null;
+            /** Format: date-time */
+            deliveryDeadline: string | null;
+            /** Format: date-time */
+            deliveredAt: string | null;
+        };
+        PointOrderDeliveryQuote: {
+            /** Format: uuid */
+            orderId: string;
+            /** Format: uuid */
+            addressId: string;
+            addressVersion: number;
+            serviceAreaCode: string;
+            policyCode: string;
+            bookPrice: number;
+            outboundFee: number;
+            buyerTotal: number;
+            /** @constant */
+            currency: "VND";
+            /** @constant */
+            demoOnly: true;
+        };
+        DispatchPointOrder: {
+            expectedVersion: number;
+        };
+        SimulatedPointDeliveryEvent: {
+            /** Format: uuid */
+            eventId: string;
+            /** Format: uuid */
+            orderId: string;
+            /** @constant */
+            carrier: "LatLaiSimulator";
+            trackingCode: string;
+            /** @enum {string} */
+            outcome: "Delivered" | "Failed";
+            /** Format: date-time */
+            occurredAt: string;
+        };
         PayPointOrder: {
             expectedVersion: number;
+            /**
+             * @description ADR 0044. CarrierOutbound requires the three fields below; SelfCollect forbids them.
+             * @default SelfCollect
+             * @enum {string}
+             */
+            fulfillmentMethod: "SelfCollect" | "CarrierOutbound";
+            /** Format: uuid */
+            destinationAddressId?: string;
+            expectedDestinationAddressVersion?: number;
+            /** @description The fee the buyer saw in the delivery quote. */
+            expectedOutboundFee?: number;
         };
         AcceptPointOrderReport: {
             expectedVersion: number;
@@ -4584,8 +4695,12 @@ export interface components {
             version: number;
             title: string;
             /** @enum {string} */
-            state: "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed" | "Cancelled" | "PaymentExpired";
+            state: "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "InTransit" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed" | "Cancelled" | "PaymentExpired";
             recipientName: string;
+            /** @enum {string} */
+            fulfillmentMethod: "SelfCollect" | "CarrierOutbound";
+            /** @description CarrierOutbound only; the label the point Staff hand to the carrier. */
+            delivery: components["schemas"]["PointOrderDelivery"] | null;
             shelfCode: string | null;
             /** Format: date-time */
             collectionDeadline: string | null;
@@ -4617,10 +4732,13 @@ export interface components {
             role: "Buyer" | "Seller";
             /** @constant */
             method: "ViaPoint";
+            /**
+             * @description SelfCollect until a CarrierOutbound payment (ADR 0044).
+             * @enum {string}
+             */
+            fulfillmentMethod: "SelfCollect" | "CarrierOutbound";
             /** @enum {string} */
-            fulfillmentMethod: "SelfCollect";
-            /** @enum {string} */
-            state: "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed" | "Cancelled" | "PaymentExpired";
+            state: "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "InTransit" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed" | "Cancelled" | "PaymentExpired";
             version: number;
             /** @constant */
             currency: "VND";
@@ -4674,10 +4792,12 @@ export interface components {
             inspectionDeadline: string | null;
             resolution: {
                 /** @enum {string} */
-                reason: "ReportRejected" | "RecipientDecisionOverdue" | "CollectionOverdue" | "InspectionClaim" | "ReturnOverdue";
+                reason: "ReportRejected" | "RecipientDecisionOverdue" | "CollectionOverdue" | "InspectionClaim" | "ReturnOverdue" | "DeliveryFailed";
                 /** Format: date-time */
                 openedAt: string;
             } | null;
+            /** @description CarrierOutbound only. The seller never receives the address (null). */
+            delivery: components["schemas"]["PointOrderDelivery"] | null;
             /** Format: date-time */
             serverTime: string;
         };
@@ -4701,7 +4821,7 @@ export interface components {
             contextId: string;
             version: number;
             /** @enum {string} */
-            state: "AwaitingDropoff" | "Received" | "Passed" | "NeedsEvidence" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "PaymentExpired" | "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed";
+            state: "AwaitingDropoff" | "Received" | "Passed" | "NeedsEvidence" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "PaymentExpired" | "AwaitingPayment" | "Fulfilling" | "ReadyForCollection" | "InTransit" | "Inspection" | "ResolutionPending" | "ReturnPending" | "Completed";
             currentPrice: number | null;
             minimumBid: number | null;
             leading: boolean | null;
@@ -4986,7 +5106,7 @@ export interface components {
             title: string;
             pointName: string;
             /** @enum {string} */
-            openReason: "ReportRejected" | "RecipientDecisionOverdue" | "CollectionOverdue" | "InspectionClaim" | "ReturnOverdue";
+            openReason: "ReportRejected" | "RecipientDecisionOverdue" | "CollectionOverdue" | "InspectionClaim" | "ReturnOverdue" | "DeliveryFailed";
             note: string | null;
             /** Format: date-time */
             openedAt: string;
@@ -10157,6 +10277,40 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
+    getPointOrderDeliveryQuote: {
+        parameters: {
+            query: {
+                addressId: string;
+            };
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PointOrderDeliveryQuote"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
     payPointOrder: {
         parameters: {
             query?: never;
@@ -10402,6 +10556,84 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["HandOverPointOrder"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    dispatchPointOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DispatchPointOrder"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    emitSimulatedPointDeliveryEvent: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulatedPointDeliveryEvent"];
             };
         };
         responses: {

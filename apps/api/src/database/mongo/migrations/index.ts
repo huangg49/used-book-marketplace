@@ -6,6 +6,11 @@ import {
   withListingChannel,
 } from './0032-auction-only-listings.js';
 import {
+  auctionDeliveryCollectionSpecs,
+  auctionDeliveryMigration,
+  withAuctionDelivery,
+} from './0034-auction-delivery.js';
+import {
   buyNowChallengeMigration,
   withBuyNowChallenge,
 } from './0033-buy-now-challenge.js';
@@ -268,6 +273,7 @@ export const migrations: Migration[] = [
   conversationAgreementsMigration,
   auctionOnlyListingsMigration,
   buyNowChallengeMigration,
+  auctionDeliveryMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -312,9 +318,13 @@ export const currentCollections = (): CollectionSpec[] => [
   ...pointOrderCollectionSpecs
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)
-    .map(withSettlementChanges),
-  ...pointCollectionSpecs,
-  ...resolutionCollectionSpecs.map(withSettlementChanges).map(withRulesChanges),
+    .map(withSettlementChanges)
+    .map(withAuctionDelivery),
+  ...pointCollectionSpecs.map(withAuctionDelivery),
+  ...resolutionCollectionSpecs
+    .map(withSettlementChanges)
+    .map(withRulesChanges)
+    .map(withAuctionDelivery),
   ...settlementCollectionSpecs.map(withRulesChanges),
   ...rulesCollectionSpecs,
   ...sellerSelectedConversationSpecs,
@@ -337,4 +347,5 @@ export const currentCollections = (): CollectionSpec[] => [
   ...transactionReviewSpecs,
   ...inspectionEvidenceCollectionSpecs,
   ...pointIncidentCollectionSpecs,
+  ...auctionDeliveryCollectionSpecs,
 ];

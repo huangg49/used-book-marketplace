@@ -111,6 +111,53 @@ export function CollectionHandover({ item, ...context }: Props) {
   );
 }
 
+// ADR 0044: the assigned Staff hand a delivery Order to the simulated
+// carrier; the server records the single custody handover and a tracking code.
+export function CollectionDispatch({ item, ...context }: Props) {
+  const d = item.delivery;
+  return (
+    <ActionPanel
+      {...context}
+      label="Giao sách cho hãng vận chuyển"
+      title="Giao sách cho hãng vận chuyển."
+      intro="Đóng gói sách theo biên bản, dán nhãn địa chỉ bên dưới rồi giao cho hãng vận chuyển mô phỏng. Không đưa sách cho người khác tại quầy."
+      fields={() =>
+        d && (
+          <p className="muted">
+            {d.recipientName} · {d.phone} · {d.detail}
+          </p>
+        )
+      }
+      submitLabel="Đã giao cho hãng"
+      confirmTitle="Xác nhận đã giao sách cho hãng?"
+      confirmBody={
+        <p>
+          “{item.title}”{item.shelfCode ? ` ở kệ ${item.shelfCode}` : ""} rời
+          điểm và được giao tới {d?.recipientName ?? item.recipientName}. Chỉ
+          xác nhận khi hãng đã nhận kiện.
+        </p>
+      }
+      build={() => ({
+        path: `${base(item)}/dispatch`,
+        body: { expectedVersion: item.version },
+      })}
+      interpret={(receipt) =>
+        receipt.state === "InTransit"
+          ? {
+              tone: "success",
+              text: `Đã ghi nhận giao cho hãng. Đơn đang được giao tới ${d?.recipientName ?? item.recipientName}.`,
+              close: true,
+            }
+          : {
+              tone: "info",
+              text: "Máy chủ chưa báo kết quả. Danh sách đã tải lại; kiểm tra trạng thái trước khi giao kiện.",
+              close: true,
+            }
+      }
+    />
+  );
+}
+
 export function CollectionReturn({ item, ...context }: Props) {
   const [check, setCheck] = useState<"MatchesReport" | "DoesNotMatch" | null>(
     null,

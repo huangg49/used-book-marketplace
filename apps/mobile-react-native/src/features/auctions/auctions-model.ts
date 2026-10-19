@@ -235,6 +235,8 @@ export type OrderCommand = {
   body: string;
   key: string;
 };
+// ADR 0044: delivery chosen at payment, with the fee the buyer saw.
+export type DeliveryChoice = { addressId: string; addressVersion: number; fee: number };
 // Frozen like auction commands: a retry after an unknown outcome resends this.
 export function createOrderCommand(
   orderId: string,
@@ -242,10 +244,17 @@ export function createOrderCommand(
   expectedVersion: number,
   key: string,
   text?: string,
+  delivery?: DeliveryChoice,
 ): OrderCommand {
   const body: Record<string, unknown> = { expectedVersion };
   if (step === "reject-report") body.reason = text;
   if (step === "claim") body.description = text;
+  if (step === "pay" && delivery) {
+    body.fulfillmentMethod = "CarrierOutbound";
+    body.destinationAddressId = delivery.addressId;
+    body.expectedDestinationAddressVersion = delivery.addressVersion;
+    body.expectedOutboundFee = delivery.fee;
+  }
   return {
     step,
     path: `/point-orders/${orderId}/${step}`,

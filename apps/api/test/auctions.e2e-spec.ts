@@ -3743,4 +3743,500 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         .expect(400);
     });
   });
+
+  describe('ADR 0044: delivery from the point by the simulated carrier', () => {
+    const FEE = 30_000;
+    const addressInput = {
+      recipientName: 'Người nhận kiểm thử',
+      phone: '0900123456',
+      serviceAreaCode: 'HCM-DEMO-v1',
+      localityCode: 'DEMO-A',
+      detail: 'Bàn demo riêng tư — không giao thật',
+    };
+    async function address(owner: Actor) {
+      const book = (await call('get', '/me/addresses', owner).expect(200)).body;
+      const saved = await cmd(
+        'post',
+        '/me/addresses',
+        {
+          expectedBookVersion: book.version,
+          address: { ...addressInput, detail: `Địa chỉ demo ${randomUUID()}` },
+          makeDefault: false,
+        },
+        owner,
+      ).expect(200);
+      return { id: saved.body.addressId as string, version: 1 };
+    }
+    const delivery = (a: { id: string; version: number }, fee = FEE) => ({
+      fulfillmentMethod: 'CarrierOutbound',
+      destinationAddressId: a.id,
+      expectedDestinationAddressVersion: a.version,
+      expectedOutboundFee: fee,
+    });
+    const dispatch = (orderId: string, s: Actor, version = 3, key?: string) =>
+      cmd(
+        'post',
+        `/operations/point-orders/${orderId}/dispatch`,
+        { expectedVersion: version },
+        s,
+        key,
+      );
+    const carrierEvent = (
+      orderId: string,
+      trackingCode: string,
+      outcome: 'Delivered' | 'Failed',
+      occurredAt: Date,
+      by: Actor = operator,
+      eventId = randomUUID(),
+      key = eventId,
+    ) =>
+      cmd(
+        'post',
+        '/operations/simulator/point-delivery-events',
+        {
+          eventId,
+          orderId,
+          carrier: 'LatLaiSimulator',
+          trackingCode,
+          outcome,
+          occurredAt: occurredAt.toISOString(),
+        },
+        by,
+        key,
+      );
+    // A won auction paid with delivery on a pinned timeline (clock restored).
+    async function deliveryOrder() {
+      const winner = await actor();
+      const won = await wonAuction(winner, 300_000);
+      await fund(winner, 300_000 + FEE);
+      const a = await address(winner);
+      pinClock(won.payAt);
+      await cmd(
+        'post',
+        `/point-orders/${won.orderId}/pay`,
+        { expectedVersion: 1, ...delivery(a) },
+        winner,
+      ).expect(200);
+      vi.restoreAllMocks();
+      await longSession(staff);
+      await longSession(won.seller);
+      return { ...won, winner, address: a };
+    }
+    // Accepted report and Staff hand-off to the carrier (InTransit).
+    async function inTransit() {
+      const o = await deliveryOrder();
+      const paid = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+      const acceptAt = new Date(paid.paidAt!.getTime() + 60_000);
+      await accepted(o, acceptAt);
+      const at = openAt(acceptAt);
+      pinClock(at);
+      await dispatch(o.orderId, staff).expect(200);
+      vi.restoreAllMocks();
+      await longSession(operator);
+      await longSession(admin);
+      return {
+        ...o,
+        doc: (await db.c.point_orders.findOne({ _id: o.orderId }))!,
+      };
+    }
+
+    it('quotes the fee and pays book price + fee once; bad choices are refused', async () => {
+      const winner = await actor();
+      const won = await wonAuction(winner, 300_000);
+      await fund(winner, 400_000);
+      const a = await address(winner);
+      pinClock(won.payAt);
+      const quote = await call(
+        'get',
+        `/me/point-orders/${won.orderId}/delivery-quote?addressId=${a.id}`,
+        winner,
+      ).expect(200);
+      validates('PointOrderDeliveryQuote', quote.body);
+      expect(quote.body).toMatchObject({
+        addressVersion: 1,
+        bookPrice: 300_000,
+        outboundFee: FEE,
+        buyerTotal: 300_000 + FEE,
+      });
+      // The seller cannot price the buyer's delivery.
+      await longSession(won.seller);
+      await call(
+        'get',
+        `/me/point-orders/${won.orderId}/delivery-quote?addressId=${a.id}`,
+        won.seller,
+      ).expect(404);
+      const pay = (body: object, key?: string) =>
+        cmd(
+          'post',
+          `/point-orders/${won.orderId}/pay`,
+          { expectedVersion: 1, ...body },
+          winner,
+          key,
+        );
+      await pay({ fulfillmentMethod: 'CarrierOutbound' }).expect(422);
+      await pay({ destinationAddressId: a.id }).expect(422);
+      await pay(delivery(a, FEE - 1)).expect(409);
+      await pay(delivery({ ...a, version: 2 })).expect(409);
+      const outside = await address(winner);
+      await db.c.member_addresses.updateOne(
+        { _id: outside.id },
+        { $set: { serviceAreaCode: 'OUTSIDE-v1' } },
+      );
+      await pay(delivery(outside)).expect(422);
+      const other = await address(won.seller);
+      await pay(delivery(other)).expect(404);
+      expect(
+        (await db.c.point_orders.findOne({ _id: won.orderId }))!.state,
+      ).toBe('AwaitingPayment');
+
+      const key = randomUUID();
+      const paid = await pay(delivery(a), key).expect(200);
+      validates('AuctionCommandReceipt', paid.body);
+      expect(paid.body).toMatchObject({ state: 'Fulfilling' });
+      const replay = await pay(delivery(a), key).expect(200);
+      expect(replay.headers['idempotency-replayed']).toBe('true');
+      vi.restoreAllMocks();
+      const o = (await db.c.point_orders.findOne({ _id: won.orderId }))!;
+      expect(o).toMatchObject({
+        fulfillmentMethod: 'CarrierOutbound',
+        outboundFee: FEE,
+        buyerTotal: 300_000 + FEE,
+      });
+      const w = await call('get', '/me/wallet', winner).expect(200);
+      expect(w.body).toMatchObject({
+        available: 400_000 - 300_000 - FEE,
+        transactionHeld: 300_000 + FEE,
+      });
+      const buyerView = await call(
+        'get',
+        `/me/point-orders/${won.orderId}`,
+        winner,
+      ).expect(200);
+      validates('PointOrder', buyerView.body);
+      expect(buyerView.body).toMatchObject({
+        fulfillmentMethod: 'CarrierOutbound',
+        amounts: { outboundFee: FEE, buyerTotal: 300_000 + FEE },
+        delivery: {
+          recipientName: addressInput.recipientName,
+          outboundFee: FEE,
+          trackingCode: null,
+        },
+      });
+      const sellerView = await call(
+        'get',
+        `/me/point-orders/${won.orderId}`,
+        won.seller,
+      ).expect(200);
+      expect(sellerView.body.delivery).toBeNull();
+      expect(JSON.stringify(sellerView.body)).not.toContain(addressInput.phone);
+      expect(await reconciled()).toBe(true);
+    });
+
+    it('Staff hand the book to the carrier; Delivered starts inspection and the Order settles', async () => {
+      const o = await deliveryOrder();
+      const paid = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+      const acceptAt = new Date(paid.paidAt!.getTime() + 60_000);
+      await accepted(o, acceptAt);
+      const at = openAt(acceptAt);
+      // No collection code and no counter handover for a delivery Order.
+      pinClock(new Date(at.getTime() - 60_000));
+      await orderPost(
+        o.orderId,
+        'collection-code',
+        { expectedVersion: 3 },
+        o.winner,
+      ).expect(409);
+      vi.restoreAllMocks();
+      pinClock(at);
+      await handover(o.orderId, '123456', staff).expect(409);
+      // The Staff queue shows the label; another point's Staff cannot dispatch.
+      const queue = await call('get', '/operations/point-orders', staff).expect(
+        200,
+      );
+      validates('PointCollectionQueue', queue.body);
+      expect(
+        queue.body.items.find((i: { id: string }) => i.id === o.orderId),
+      ).toMatchObject({
+        fulfillmentMethod: 'CarrierOutbound',
+        delivery: { phone: addressInput.phone, trackingCode: null },
+      });
+      await dispatch(o.orderId, otherStaff).expect(403);
+      const key = randomUUID();
+      const sent = await dispatch(o.orderId, staff, 3, key).expect(200);
+      validates('AuctionCommandReceipt', sent.body);
+      expect(sent.body).toMatchObject({ state: 'InTransit', version: 4 });
+      const again = await dispatch(o.orderId, staff, 3, key).expect(200);
+      expect(again.headers['idempotency-replayed']).toBe('true');
+      await dispatch(o.orderId, staff, 4).expect(409);
+      vi.restoreAllMocks();
+      const moving = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+      expect(moving).toMatchObject({ state: 'InTransit', dispatchedAt: at });
+      expect(moving.trackingCode).toMatch(/^LL-[A-Z0-9]{12}$/);
+      expect(moving.deliveryDeadline!.getTime() - at.getTime()).toBe(
+        240 * HOUR,
+      );
+      expect(
+        await db.c.point_handovers.findOne({ orderId: o.orderId }),
+      ).toMatchObject({ method: 'CarrierOutbound', codeId: null });
+
+      await longSession(operator);
+      const code = moving.trackingCode!;
+      const deliveredAt = new Date(at.getTime() + 20 * HOUR);
+      pinClock(new Date(deliveredAt.getTime() + 60_000));
+      // Only an independent TEST_OPERATOR, with the key equal to the event id.
+      await carrierEvent(
+        o.orderId,
+        code,
+        'Delivered',
+        deliveredAt,
+        staff,
+      ).expect(403);
+      await carrierEvent(
+        o.orderId,
+        code,
+        'Delivered',
+        deliveredAt,
+        operator,
+        randomUUID(),
+        randomUUID(),
+      ).expect(422);
+      await carrierEvent(
+        o.orderId,
+        'LL-NOTTHEORDER',
+        'Delivered',
+        deliveredAt,
+      ).expect(404);
+      await carrierEvent(
+        o.orderId,
+        code,
+        'Delivered',
+        new Date(at.getTime() - 1),
+      ).expect(422);
+      const eventId = randomUUID();
+      const done = await carrierEvent(
+        o.orderId,
+        code,
+        'Delivered',
+        deliveredAt,
+        operator,
+        eventId,
+      ).expect(200);
+      expect(done.body).toMatchObject({ state: 'Inspection' });
+      const replay = await carrierEvent(
+        o.orderId,
+        code,
+        'Delivered',
+        deliveredAt,
+        operator,
+        eventId,
+      ).expect(200);
+      expect(replay.headers['idempotency-replayed']).toBe('true');
+      await carrierEvent(o.orderId, code, 'Failed', deliveredAt).expect(409);
+      vi.restoreAllMocks();
+      const inspecting = (await db.c.point_orders.findOne({
+        _id: o.orderId,
+      }))!;
+      expect(inspecting).toMatchObject({
+        state: 'Inspection',
+        collectedAt: deliveredAt,
+      });
+      expect(inspecting.inspectionDeadline!.getTime()).toBe(
+        deliveredAt.getTime() + 72 * HOUR,
+      );
+      const view = await call(
+        'get',
+        `/me/point-orders/${o.orderId}`,
+        o.winner,
+      ).expect(200);
+      validates('PointOrder', view.body);
+      expect(view.body.delivery).toMatchObject({
+        trackingCode: code,
+        deliveredAt: deliveredAt.toISOString(),
+      });
+
+      // The unclaimed window settles once: seller P − C, platform C + fee.
+      const sellerBefore = (
+        await call('get', '/me/wallet', o.seller).expect(200)
+      ).body.available;
+      pinClock(inspecting.inspectionDeadline!);
+      await app.get(AuctionWorker).tick();
+      vi.restoreAllMocks();
+      expect((await db.c.point_orders.findOne({ _id: o.orderId }))!.state).toBe(
+        'Completed',
+      );
+      const settlement = (await db.c.ledger_journals.findOne({
+        orderId: o.orderId,
+        type: 'OrderSettlement',
+      }))!;
+      const entries = await db.c.ledger_entries
+        .find({ journalId: settlement._id })
+        .toArray();
+      expect(
+        entries.find((e) => e.accountId === PLATFORM_COMMISSION_ACCOUNT_ID),
+      ).toMatchObject({ debit: 15_000 + FEE });
+      expect(
+        (await call('get', '/me/wallet', o.seller).expect(200)).body.available -
+          sellerBefore,
+      ).toBe(285_000);
+      expect(
+        (await call('get', '/me/wallet', o.winner).expect(200)).body
+          .transactionHeld,
+      ).toBe(0);
+      expect(await reconciled()).toBe(true);
+    });
+
+    it('a failed delivery can only be returned to the point, which refunds price and fee', async () => {
+      const o = await inTransit();
+      const failedAt = new Date(o.doc.dispatchedAt!.getTime() + 5 * HOUR);
+      pinClock(new Date(failedAt.getTime() + 60_000));
+      await carrierEvent(
+        o.orderId,
+        o.doc.trackingCode!,
+        'Failed',
+        failedAt,
+      ).expect(200);
+      vi.restoreAllMocks();
+      expect(await db.c.point_orders.findOne({ _id: o.orderId })).toMatchObject(
+        {
+          state: 'ResolutionPending',
+          resolutionReason: 'DeliveryFailed',
+          collectedAt: null,
+        },
+      );
+      const queue = await call(
+        'get',
+        '/operations/point-order-resolutions',
+        admin,
+      ).expect(200);
+      validates('PointOrderResolutionQueue', queue.body);
+      expect(
+        queue.body.items.find((i: { id: string }) => i.id === o.orderId),
+      ).toMatchObject({ openReason: 'DeliveryFailed' });
+      // Decisions share the pinned timeline of the Order.
+      pinClock(new Date(failedAt.getTime() + 2 * 60_000));
+      await resolveAs(
+        admin,
+        o.orderId,
+        5,
+        'RefundBuyer',
+        undefined,
+        'NoFault',
+      ).expect(422);
+      await resolveAs(admin, o.orderId, 5, 'DismissClaim').expect(422);
+      const required = await resolveAs(
+        admin,
+        o.orderId,
+        5,
+        'RequireReturn',
+      ).expect(200);
+      expect(required.body).toMatchObject({
+        state: 'ReturnPending',
+        version: 6,
+      });
+      vi.restoreAllMocks();
+      const pending = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+      pinClock(openAt(pending.updatedAt));
+      const received = await cmd(
+        'post',
+        `/operations/point-orders/${o.orderId}/receive-return`,
+        { expectedVersion: 6, check: 'MatchesReport', note: null },
+        staff,
+      ).expect(200);
+      vi.restoreAllMocks();
+      expect(received.body).toMatchObject({
+        state: 'Cancelled',
+        returnOutcome: 'Accepted',
+      });
+      const w = (await call('get', '/me/wallet', o.winner).expect(200)).body;
+      expect(w).toMatchObject({
+        available: 300_000 + FEE,
+        transactionHeld: 0,
+      });
+      expect(
+        (await db.c.auction_intakes.findOne({ _id: o.intakeId }))!.state,
+      ).toBe('ReclaimRequired');
+      expect(await reconciled()).toBe(true);
+    });
+
+    it('race: Delivered and Failed sent together have exactly one outcome', async () => {
+      const o = await inTransit();
+      const at = new Date(o.doc.dispatchedAt!.getTime() + 3 * HOUR);
+      pinClock(new Date(at.getTime() + 60_000));
+      const results = await Promise.all([
+        carrierEvent(o.orderId, o.doc.trackingCode!, 'Delivered', at),
+        carrierEvent(o.orderId, o.doc.trackingCode!, 'Failed', at),
+      ]);
+      vi.restoreAllMocks();
+      expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+      const won = results.find((r) => r.status === 200)!.body.state;
+      expect(['Inspection', 'ResolutionPending']).toContain(won);
+      expect(
+        await db.c.point_carrier_events.countDocuments({ orderId: o.orderId }),
+      ).toBe(1);
+      expect((await db.c.point_orders.findOne({ _id: o.orderId }))!.state).toBe(
+        won,
+      );
+    });
+
+    it('no carrier outcome in time, or a missed hand-off, is never the buyer default', async () => {
+      const late = await inTransit();
+      pinClock(late.doc.deliveryDeadline!);
+      await app.get(AuctionWorker).tick();
+      vi.restoreAllMocks();
+      expect(
+        await db.c.point_orders.findOne({ _id: late.orderId }),
+      ).toMatchObject({
+        state: 'ResolutionPending',
+        resolutionReason: 'DeliveryFailed',
+      });
+
+      const missed = await deliveryOrder();
+      const paid = (await db.c.point_orders.findOne({
+        _id: missed.orderId,
+      }))!;
+      const ready = await accepted(
+        missed,
+        new Date(paid.paidAt!.getTime() + 60_000),
+      );
+      pinClock(ready.collectionDeadline!);
+      await dispatch(missed.orderId, staff).expect(409);
+      await app.get(AuctionWorker).tick();
+      vi.restoreAllMocks();
+      expect(
+        await db.c.point_orders.findOne({ _id: missed.orderId }),
+      ).toMatchObject({
+        state: 'ResolutionPending',
+        resolutionReason: 'CollectionOverdue',
+      });
+      await longSession(admin);
+      pinClock(new Date(ready.collectionDeadline!.getTime() + 60_000));
+      await resolveAs(
+        admin,
+        missed.orderId,
+        4,
+        'RefundBuyer',
+        undefined,
+        'BuyerDefault',
+      ).expect(422);
+      await resolveAs(
+        admin,
+        missed.orderId,
+        4,
+        'RefundBuyer',
+        undefined,
+        'NoFault',
+      ).expect(200);
+      vi.restoreAllMocks();
+      expect(
+        await db.c.member_violations.countDocuments({
+          userId: missed.winner.id,
+        }),
+      ).toBe(0);
+      expect(
+        (await call('get', '/me/wallet', missed.winner).expect(200)).body
+          .available,
+      ).toBe(300_000 + FEE);
+      expect(await reconciled()).toBe(true);
+    });
+  });
 });
