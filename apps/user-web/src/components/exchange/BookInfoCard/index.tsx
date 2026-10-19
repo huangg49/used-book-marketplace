@@ -1,3 +1,4 @@
+import { conditions } from '../../../lib/listing-labels';
 import { BookHeart, Repeat, Star, Truck, Banknote, ShieldCheck, MapPin } from 'lucide-react';
 import type { ExchangeDetail } from '../../../lib/mock/exchangeDetail';
 import { BookCover } from '../../BookCover';
@@ -6,9 +7,10 @@ import styles from './BookInfoCard.module.css';
 
 interface BookInfoCardProps {
     detail: ExchangeDetail;
+    compact?: boolean;
 }
 
-export function BookInfoCard({ detail }: BookInfoCardProps) {
+export function BookInfoCard({ detail, compact = false }: BookInfoCardProps) {
 
     const receiveBooks = detail.receiveBooks;
     const giveBooks = detail.giveBooks;
@@ -28,7 +30,7 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
     }
 
     return (
-        <div className={styles.card}>
+        <div className={compact ? `${styles.card} ${styles.compact}` : styles.card}>
             <h2 className={styles.cardTitle}>
                 <BookHeart className={styles.iconGold} /> Thông tin sách
             </h2>
@@ -47,7 +49,7 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
                                 <div className={styles.bookInfo}>
                                     <h3 className={styles.bookTitle}>{book.title}</h3>
                                     <p className={styles.bookAuthor}>{book.author}</p>
-                                    <p className={styles.bookCondition}>Tình trạng: {book.condition || 'Chưa có thông tin'}</p>
+                                    <p className={styles.bookCondition}>Tình trạng: {conditions[book.condition as keyof typeof conditions] ?? book.condition ?? 'Chưa có thông tin'}</p>
                                     <p className={styles.bookPrice}>
                                         Giá trị: <strong>{book.price ? formatVnd(book.price) : '—'}</strong>
                                     </p>
@@ -73,7 +75,7 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
                                 <div className={styles.bookInfoGive}>
                                     <h3 className={styles.bookTitle}>{book.title}</h3>
                                     <p className={styles.bookAuthor}>{book.author}</p>
-                                    <p className={styles.bookCondition}>Tình trạng: {book.condition || 'Chưa có thông tin'}</p>
+                                    <p className={styles.bookCondition}>Tình trạng: {conditions[book.condition as keyof typeof conditions] ?? book.condition ?? 'Chưa có thông tin'}</p>
                                     <p className={styles.bookPrice}>
                                         Giá trị: <strong>{book.price ? formatVnd(book.price) : '—'}</strong>
                                     </p>
@@ -95,7 +97,7 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
                         </div>
                         <div>
                             <p className={styles.partnerLabel}>Đối tác trao đổi</p>
-                            <p className={styles.partnerName}>@{detail.partner.username}</p>
+                            <p className={styles.partnerName}>{detail.partner.username}</p>
                         </div>
                     </div>
                     {(detail.partner.rating !== undefined || detail.partner.transactionCount !== undefined) && <div className={styles.partnerStats}>
@@ -111,7 +113,7 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
                     <p className={styles.detailLabel}>Phương thức giao nhận</p>
                     <p className={styles.detailValueFlex}>
                         <Truck className={styles.iconGoldSmall} size={16} />
-                        <span>Chuyển phát bưu điện / Hẹn gặp trực tiếp (TP.HCM)</span>
+                        <span>Xem phương thức và tiến độ trong phần Giao nhận</span>
                     </p>
                 </div>
 
@@ -146,7 +148,7 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
                                     <strong>{detail.viewerAddress.recipientName}</strong> · {detail.viewerAddress.phone} · {detail.viewerAddress.detail}
                                 </>
                             ) : (
-                                <span style={{ color: '#888' }}>Chưa thiết lập (chọn qua nút Đề xuất lại hoặc Chấp nhận)</span>
+                                <span style={{ color: 'var(--shop-muted)' }}>Chưa thiết lập (chọn qua nút Đề xuất lại hoặc Chấp nhận)</span>
                             )}
                         </span>
                     </p>
@@ -162,7 +164,7 @@ export function BookInfoCard({ detail }: BookInfoCardProps) {
                                     <strong>{detail.partnerAddress.recipientName}</strong> · {detail.partnerAddress.phone} · {detail.partnerAddress.detail}
                                 </>
                             ) : (
-                                <span style={{ color: '#888' }}>Chờ đối tác cập nhật</span>
+                                <span style={{ color: 'var(--shop-muted)' }}>Chờ đối tác cập nhật</span>
                             )}
                         </span>
                     </p>

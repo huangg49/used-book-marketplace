@@ -1,0 +1,11 @@
+{
+  "origin": "Built-in ImageGen, owner-approved Lật lại story illustrations, 2026-10-11",
+  "prompt": "Use case: illustration-story. Production transparent PNG asset for the Vietnamese used-book website Lật lại. Reference image is the established character identity/style ONLY: preserve its burgundy-red round penguin silhouette, small crest, cream face and belly, tiny golden yellow beak and feet, peach cheeks, dark burgundy clean varying-weight outlines and charming asymmetry. Hand-drawn children's book editorial illustration, crisp flat shapes with extremely subtle warm paper texture, limited palette wine #5c0202, cream #fcf8db, warm butter yellow #f4cb67, peach and muted walnut wood. One coherent little scene, entirely visible with generous transparent margin. No background rectangle, no lettering/text, no logo, no badges, no confetti, no gradients, no photorealism or 3D. Keep actual alpha transparent between all objects. Scene: The penguin carefully slides one closed cream-and-red book onto a low wooden waiting shelf with only TWO other books resting nearby; one small sandglass sits beside the shelf as a quiet indication of awaiting review. Calm pleased expression, not a victory celebration. Landscape composition with character on left, shelf to right, whole scene resting on a single short curved ink baseline. Gentle sense of a book beginning its next journey. Artwork composition approximately 4:3.",
+  "reference": "../penguins/post.png",
+  "sourceSha256": "54dc21b5165e1c25abf92bb55b0b5e7342d0ffb370df305bd3d96875d14883a2",
+  "deliverySha256": "e8ce7211fe894513b2141c432920034e5c7b31939bf3018cd51ac66cff68b722",
+  "width": 800,
+  "height": 600,
+  "hasAlpha": true,
+  "processing": "Delivery resize/encode only; complete composition preserved, no recoloring or compositing"
+}

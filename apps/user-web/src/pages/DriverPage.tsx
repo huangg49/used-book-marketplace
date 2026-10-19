@@ -20,6 +20,7 @@ interface ShipmentOrderData {
   };
   itemsSummary: string;
   fee: number;
+  readyForPickup?: boolean;
   shippedAt?: string | null;
   deliveredAt?: string | null;
 }
@@ -177,6 +178,33 @@ export function DriverPage() {
               )}
             </div>
 
+            {/* Waiting for partner banner */}
+            {order.readyForPickup === false && (
+              <div
+                style={{
+                  background: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  borderRadius: 12,
+                  padding: '12px 16px',
+                  marginBottom: 16,
+                  color: '#92400e',
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
+              >
+                <span style={{ fontSize: 24 }}>⏳</span>
+                <div>
+                  <strong>Quy tắc nghiệp vụ 2 chiều (BA Rule):</strong>
+                  <div>
+                    Đang chờ đối tác hoàn tất tạo đơn vận chuyển. Khi cả 2 bên cùng tạo đơn thành công, bưu tá mới được phép đến lấy sách để đảm bảo an toàn giao dịch.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Actions */}
             <p className={styles.sectionTitle}>THAO TÁC BƯU TÁ (ĐIỀU HÀNH THỰC TẾ)</p>
             <div className={styles.actionGrid}>
@@ -184,7 +212,7 @@ export function DriverPage() {
               <button
                 type="button"
                 className={`${styles.actionBtn} ${currentStep >= 1 ? styles.actionBtnActive : ''}`}
-                disabled={submitting}
+                disabled={submitting || order.readyForPickup === false}
                 onClick={() =>
                   void handleUpdateStatus(
                     1,
@@ -206,7 +234,7 @@ export function DriverPage() {
               <button
                 type="button"
                 className={`${styles.actionBtn} ${currentStep >= 2 ? styles.actionBtnActive : ''}`}
-                disabled={submitting}
+                disabled={submitting || order.readyForPickup === false}
                 onClick={() =>
                   void handleUpdateStatus(
                     2,
@@ -228,7 +256,7 @@ export function DriverPage() {
               <button
                 type="button"
                 className={`${styles.actionBtn} ${currentStep >= 3 ? styles.actionBtnActive : ''}`}
-                disabled={submitting}
+                disabled={submitting || order.readyForPickup === false}
                 onClick={() =>
                   void handleUpdateStatus(
                     3,
@@ -250,7 +278,7 @@ export function DriverPage() {
               <button
                 type="button"
                 className={`${styles.actionBtn} ${styles.actionBtnFinish}`}
-                disabled={submitting}
+                disabled={submitting || order.readyForPickup === false}
                 onClick={() =>
                   void handleUpdateStatus(
                     4,

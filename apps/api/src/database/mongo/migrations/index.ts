@@ -1,3 +1,4 @@
+import { conversationAgreementsMigration, conversationAgreementSpecs } from './0032-conversation-agreements.js';
 import { buyNowNotificationsMigration, withBuyNowNotifications } from './0029-buy-now-notifications.js';
 import { bookCirculationRegionsMigration } from './0030-book-circulation-regions.js';
 import {
@@ -256,6 +257,7 @@ export const migrations: Migration[] = [
   bookCirculationRegionsMigration,
   exchangeMultiBookMigration,
   vnpayTopupExpiryMigration,
+  conversationAgreementsMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -319,6 +321,7 @@ export const currentCollections = (): CollectionSpec[] => [
   ...directDeliveryCompletionSpecs,
   ...paymentSpecs.map(withVNPayExpiry),
   ...exchangeMessageSpecs,
+  ...conversationAgreementSpecs,
   ...transactionReviewSpecs,
   ...inspectionEvidenceCollectionSpecs,
   ...pointIncidentCollectionSpecs,

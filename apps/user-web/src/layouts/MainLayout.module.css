@@ -7,6 +7,21 @@
 .main {
   min-height: 60vh;
 }
+.main[data-chat="true"] {
+  position: relative;
+  isolation: isolate;
+  min-height: calc(100dvh - 76px);
+  display: flow-root;
+}
+.main[data-chat="true"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--sell-desk-ground, #f5eddc)
+    url("/illustrations/posting/autumn-book-desk.webp") center / cover no-repeat;
+}
 .main[data-exchange="true"] {
   /* Bridge the retained exchange components to the current member brand. */
   --ink: var(--shop-ink);

@@ -452,7 +452,9 @@ export class MongoCommandService {
     context: CommandContext,
     operation:
       | 'createPurchaseConversation'
-      | 'attachPurchaseConversationQuote',
+      | 'attachPurchaseConversationQuote'
+      | 'proposeConversationTerms'
+      | 'respondConversationTerms',
     target: string,
     body: unknown,
     options: Options<C, PurchaseConversationChange>,

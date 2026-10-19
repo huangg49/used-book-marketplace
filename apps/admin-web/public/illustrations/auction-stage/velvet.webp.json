@@ -1,0 +1,13 @@
+{
+  "prompt": "Use case: stylized-concept. Asset type: one production raster texture for an animated theatre curtain in a warm Vietnamese used-book marketplace. Primary request: a single CLOSED wine-red velvet curtain panel, fully front-facing, rectangular and filling the whole landscape canvas, approximately 1536 by 1024. Rich deep burgundy matching #5c0202, warmly lit plush velvet with 8 to 10 broad irregular vertical pleats, hand-painted polished storybook illustration rendering, soft dimensional shadows. A very narrow aged gold piping follows the straight bottom hem, otherwise only cloth. Full-bleed fabric texture edge to edge; folds run continuously from the top edge to the bottom edge. The panel must be opaque and cover the whole image with velvet. No opening, no visible stage, no scalloped valance, no side drapes, no ropes, no tassels, no spotlights, no objects, no text, no symbols, no watermark, no vignette, no transparency. This texture will be split into moving strips so keep vertical pleats reasonably even across the width, avoid any diagonal folds or central focal object.",
+  "createdAt": "2026-10-13T09:56:16.215Z",
+  "tool": "built-in image_gen",
+  "date": "2026-10-13",
+  "use": "Decorative velvet curtain texture; no product or custody claim",
+  "sourceSha256": "89cccb7adf1f31f1f8ee627059a69bfa1303224f060230dd29aa99d8fcb0faf0",
+  "deliverySha256": "1bc8166ef89aaa3beb766d186e0c7817a2bb42b2570a6d8825477a21a31e3e3d",
+  "width": 1024,
+  "height": 683,
+  "conversion": "Sharp resize to 1024px wide, WebP quality84; no compositing or repainting",
+  "bytes": 36848
+}

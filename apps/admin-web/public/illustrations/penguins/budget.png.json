@@ -1,0 +1,16 @@
+{
+  "source": "Original generated illustration, built-in image_gen",
+  "generatedAt": "2026-10-10T12:27:13.722Z",
+  "prompt": "Use case: illustration-story. Produce ONE transparent-background square UI mascot illustration, not a sheet or mockup. Reference is CHARACTER IDENTITY reference: reproduce same adorable round burgundy penguin, cream heart-shaped face patch/belly, yellow beak and feet, tiny peach cheeks, friendly eyes, short flippers and tiny soft tuft. Keep matching face/proportions across set. Simplify to clean confident thick wine outlines, soft flat fills, minimal detail legible at 64px. Palette #5c0202 wine, #fcf8db ivory, #f4cb67 yellow, tiny peach. Single whole penguin centered, fills about85% canvas with transparent padding, no clipping. Truly transparent alpha background; no floor/shadow backdrop, no badge/circle, no words, letters, numerals, watermark, stars or scenery. No 3D or photorealism. Action: penguin hugs a small golden coin purse/wallet against its belly, with ONE large simple golden coin visible above its opening. Rounded purse and big coin make affordable books concept readable. Coin plain without currency text or embossed numerals.",
+  "identityReference": "Owner-liked burgundy penguin hugging a book; original built-in sample",
+  "sourceSha256": "308bbac0347c30d4ebdab00d7274ecbcc03fcba3a470814660df1e58761f2f45",
+  "deliverySha256": "7690b7df46f91fce7d4df2121ef5fd2cf54b375cb81bbd673388c637ea38d6f6",
+  "delivery": {
+    "width": 256,
+    "height": 256,
+    "hasAlpha": true,
+    "bytes": 51231
+  },
+  "optimization": "Resize and PNG encode only; preserve content/colors/full composition/alpha",
+  "use": "Decorative Home shortcut illustration, not brand logo or listing photograph"
+}

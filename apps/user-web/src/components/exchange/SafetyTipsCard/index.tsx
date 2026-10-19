@@ -26,13 +26,13 @@ export function SafetyTipsCard() {
                 <div className={styles.tipRow}>
                     <Receipt className={styles.iconGold} size={18} />
                     <p className={styles.tipText}>
-                        <strong>Lưu giữ mã vận đơn:</strong> Giữ biên lai bưu điện và chia sẻ mã vận đơn vào khung chat để đối tác có thể theo dõi tiến trình.
+                        <strong>Lưu giữ mã vận đơn:</strong> Giữ biên lai và cập nhật mã vận đơn trong phần Giao nhận. Chat chỉ dùng để trao đổi thêm với đối tác.
                     </p>
                 </div>
                 <div className={styles.tipRow}>
                     <ShieldCheck className={styles.iconGold} size={18} />
                     <p className={styles.tipText}>
-                        <strong>Gặp trực tiếp:</strong> Hãy chọn nơi công cộng vào ban ngày. Báo cáo sự cố ngay nếu có vấn đề.
+                        <strong>Xác nhận trong giao dịch:</strong> Chỉ xác nhận đã nhận khi sách thực sự đến tay bạn. Dùng nút báo sự cố trong giao dịch khi có vấn đề.
                     </p>
                 </div>
             </div>

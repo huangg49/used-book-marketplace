@@ -1,0 +1,79 @@
+/* Snapshot only Chat content. Navigation and the autumn background stay live. */
+:root:has([data-chat-transition="true"]) {
+  view-transition-name: none;
+  --chat-morph-duration: 420ms;
+}
+:root:has([data-chat-direction="exit"]) {
+  --chat-morph-duration: 340ms;
+}
+[data-chat-morph-card="true"],
+[data-chat-morph-room="true"] {
+  view-transition-name: chat-panel;
+}
+[data-chat-morph-inbox="true"] {
+  view-transition-name: chat-inbox;
+}
+[data-chat-morph-card="true"] [data-conversation-cover],
+[data-chat-morph-room="true"] [data-conversation-cover] {
+  view-transition-name: chat-cover;
+}
+[data-chat-morph-card="true"] [data-conversation-title],
+[data-chat-morph-room="true"] [data-conversation-title] {
+  view-transition-name: chat-title;
+}
+::view-transition-group(chat-panel),
+::view-transition-group(chat-cover),
+::view-transition-group(chat-title) {
+  animation-duration: var(--chat-morph-duration, 420ms) !important;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+::view-transition-group(chat-panel) {
+  overflow: clip;
+  border-radius: 12px;
+  background: var(--shop-paper);
+  box-shadow: 0 16px 32px #2819141a;
+}
+::view-transition-old(chat-panel),
+::view-transition-new(chat-panel),
+::view-transition-old(chat-title),
+::view-transition-new(chat-title) {
+  width: 100%;
+  height: 100%;
+  object-fit: none;
+  object-position: top left;
+  mix-blend-mode: normal;
+}
+::view-transition-old(chat-panel),
+::view-transition-old(chat-title),
+::view-transition-old(chat-inbox) {
+  animation: chat-snapshot-out 100ms ease-out both;
+  animation-duration: 100ms !important;
+}
+::view-transition-new(chat-panel) {
+  animation: chat-snapshot-in 240ms ease-out 160ms both;
+  animation-duration: 240ms !important;
+}
+::view-transition-new(chat-title),
+::view-transition-new(chat-inbox) {
+  animation: chat-snapshot-in 180ms ease-out 100ms both;
+  animation-duration: 180ms !important;
+}
+::view-transition-old(chat-cover),
+::view-transition-new(chat-cover) {
+  height: 100%;
+  object-fit: contain;
+  animation-duration: 180ms !important;
+}
+@keyframes chat-snapshot-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes chat-snapshot-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

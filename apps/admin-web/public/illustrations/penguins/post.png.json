@@ -1,0 +1,16 @@
+{
+  "source": "Original generated illustration, built-in image_gen",
+  "generatedAt": "2026-10-10T12:27:13.795Z",
+  "prompt": "Use case: illustration-story. Produce ONE transparent-background square UI mascot illustration, not a sheet or mockup. Reference is CHARACTER IDENTITY reference: reproduce same adorable round burgundy penguin, cream heart-shaped face patch/belly, yellow beak and feet, tiny peach cheeks, friendly eyes, short flippers and tiny soft tuft. Keep matching face/proportions across set. Simplify to clean confident thick wine outlines, soft flat fills, minimal detail legible at 64px. Palette #5c0202 wine, #fcf8db ivory, #f4cb67 yellow, tiny peach. Single whole penguin centered, fills about85% canvas with transparent padding, no clipping. Truly transparent alpha background; no floor/shadow backdrop, no badge/circle, no words, letters, numerals, watermark, stars or scenery. No 3D or photorealism. Action: penguin proudly raises one small burgundy book in a flipper, book has a large clean cream geometric PLUS SIGN on its front cover indicating add/post a book. Other flipper rests by body. Plus sign bold simple and legible, no text.",
+  "identityReference": "Owner-liked burgundy penguin hugging a book; original built-in sample",
+  "sourceSha256": "374e7088e8e71cd4d4d90df055907e3a979cb8003cb0b16fce5a722e268ddb94",
+  "deliverySha256": "6d43dccd2bf000bdb6387afec1618fd97b60311a80243c2fcc2fe5a1836c9c10",
+  "delivery": {
+    "width": 256,
+    "height": 256,
+    "hasAlpha": true,
+    "bytes": 53156
+  },
+  "optimization": "Resize and PNG encode only; preserve content/colors/full composition/alpha",
+  "use": "Decorative Home shortcut illustration, not brand logo or listing photograph"
+}

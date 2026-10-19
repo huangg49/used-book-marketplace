@@ -3,6 +3,8 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
 import { ROUTES, searchUrl } from "../lib/routes";
 import { Header, Logo } from "../components/Header";
+import { ConversationNavigation } from "../components/conversation/ConversationNavigation";
+import { useConversationTransition } from "../components/conversation/conversation-navigation";
 export { Header };
 import styles from "./MainLayout.module.css";
 
@@ -10,25 +12,40 @@ export default function MainLayout() {
   const location = useLocation();
   const isChat =
     location.pathname === "/chat" || location.pathname.startsWith("/chat/");
+  const chatTransition = useConversationTransition("/chat");
   useEffect(() => {
+    if (isChat) return;
     window.scrollTo({ top: 0, behavior: "instant" });
-  }, [location.pathname]);
+  }, [location.pathname, isChat]);
   return (
-    <div className={styles.root}>
+    <div
+      className={styles.root}
+      data-chat-transition={chatTransition || undefined}
+      data-chat-direction={
+        chatTransition
+          ? location.pathname === "/chat"
+            ? "exit"
+            : "enter"
+          : undefined
+      }
+    >
       <a href="#main-content" className={styles.skipLink}>
         Bỏ qua điều hướng
       </a>
-      <Header />
+      <Header freezeScroll={chatTransition} />
       <main
         id="main-content"
         className={styles.main}
+        data-chat={isChat || undefined}
         data-exchange={
           location.pathname === "/exchange" ||
           location.pathname.startsWith("/exchange/") ||
           undefined
         }
       >
-        <Outlet />
+        <ConversationNavigation>
+          <Outlet />
+        </ConversationNavigation>
       </main>
       {!isChat && (
         <footer
