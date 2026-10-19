@@ -1,4 +1,9 @@
-import { useParams, Link } from 'react-router-dom';
+import { useState } from 'react';
+import conversation from '../components/conversation/Conversation.module.css';
+import { useParams, Link, Navigate, useLocation } from 'react-router-dom';
+import { useConversationTransition } from '../components/conversation/conversation-navigation';
+import { ConversationBackLink } from '../components/conversation/ConversationBackLink';
+import { getPurchaseConversations } from '../services/purchase-conversations';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ROUTES } from '../lib/routes';
 import { useSession } from '../hooks/useSession';
@@ -26,13 +31,20 @@ import { ShippingTrackingCard } from '../components/exchange/ShippingTrackingCar
 import { BookInfoCard } from '../components/exchange/BookInfoCard';
 import { ActionCard } from '../components/exchange/ActionCard';
 import { ChatPanel } from '../components/exchange/ChatPanel';
+import { exchangeChatGuidance } from '../lib/exchange-chat-guidance';
 import { SafetyTipsCard } from '../components/exchange/SafetyTipsCard';
 import styles from './ExchangeDetailPage.module.css';
 
-export function ExchangeDetailPage() {
-    const { id } = useParams<{ id: string }>();
+export function ExchangeDetailPage({ exchangeId, embedded = false }: { exchangeId?: string; embedded?: boolean } = {}) {
+    const chatTransition = useConversationTransition('/chat');
+    const location = useLocation();
+    const transitioning = !embedded && chatTransition;
+    const { id: routeId } = useParams<{ id: string }>();
+    const id = exchangeId ?? routeId;
     const queryClient = useQueryClient();
     const auth = useSession();
+    const [panel, setPanel] = useState<'sheet' | 'chat'>('sheet');
+    const conversations = useQuery({ queryKey: ['purchase-conversations', auth.status === 'authenticated' ? auth.user.id : undefined], queryFn: getPurchaseConversations, enabled: !embedded && auth.status === 'authenticated', retry: false });
 
     const {
         data: detail,
@@ -47,10 +59,10 @@ export function ExchangeDetailPage() {
         refetchIntervalInBackground: false
     });
 
-    const { data: messages = [] } = useQuery({
-        queryKey: ['exchangeMessages', id],
+    const messagesQuery = useQuery({
+        queryKey: ['exchangeMessages', auth.status === 'authenticated' ? auth.user.id : undefined, id],
         queryFn: () => getMessages(id!),
-        enabled: !!id && auth.status === 'authenticated',
+        enabled: !embedded && !!id && auth.status === 'authenticated',
         refetchInterval: 3000,
         refetchIntervalInBackground: false
     });
@@ -61,7 +73,7 @@ export function ExchangeDetailPage() {
         queryClient.invalidateQueries({ queryKey: ['exchangeTransactions'] });
         queryClient.invalidateQueries({ queryKey: ['exchangeCounts'] });
         queryClient.invalidateQueries({ queryKey: ['wallet'] });
-        queryClient.invalidateQueries({ queryKey: ['exchangeMessages', id] });
+        queryClient.invalidateQueries({ queryKey: ['exchangeMessages', auth.status === 'authenticated' ? auth.user.id : undefined, id] });
     };
 
     const handleSendMessage = async (text: string) => {
@@ -114,16 +126,18 @@ export function ExchangeDetailPage() {
     };
 
 
+    const linked = conversations.data?.find(room => room.terms?.exchangeIds.includes(id ?? ''));
+    if (!embedded && linked) return <Navigate replace to={`/chat/${linked.id}`} />;
     if (auth.status !== 'authenticated') {
         return <div className={styles.authContainer}><h2>{auth.status === 'loading' ? 'Đang kiểm tra đăng nhập…' : 'Đăng nhập để xem trao đổi'}</h2>{auth.status !== 'loading' && <Link className={styles.loginBtn} to={`/login?returnUrl=${encodeURIComponent(`/exchange/${id ?? ''}`)}`}>Đăng nhập</Link>}</div>;
     }
     if (isDetailLoading) {
-        return <div className={styles.loadingContainer}>Đang tải...</div>;
+        return <div className={styles.loadingContainer} data-chat-morph-room={transitioning || undefined}>Đang tải...</div>;
     }
 
     if (isDetailError) {
         return (
-            <div className={styles.errorContainer}>
+            <div className={styles.errorContainer} data-chat-morph-room={transitioning || undefined}>
                 <h2>Đã có lỗi xảy ra khi tải dữ liệu</h2>
                 <button className={styles.retryBtn} onClick={() => refetchDetail()}>Thử lại</button>
             </div>
@@ -152,28 +166,30 @@ export function ExchangeDetailPage() {
     else if (detail.status === 'WAITING_YOU_CONFIRM') {
         statusText = detail.viewerShipping.receivedAt ? 'Đang chờ đối tác nhận sách' : 'Chờ xác nhận nhận sách';
     }
-    else if (detail.status === 'INSPECTING') statusText = 'Đang kiểm tra sách (48h)';
+    else if (detail.status === 'INSPECTING') statusText = 'Đang kiểm tra sách';
     else if (detail.status === 'COMPLETED') statusText = 'Hoàn tất';
     else if (detail.status === 'REJECTED') {
         statusText = detail.closedBy === 'viewer' ? 'Bạn đã từ chối đề nghị này' : `@${detail.partner.username} đã từ chối đề nghị của bạn`;
     }
-    else if (detail.status === 'CANCELLED') statusText = 'Bạn đã hủy đề nghị';
+    else if (detail.status === 'CANCELLED') statusText = detail.closedBy === 'viewer' ? 'Bạn đã hủy đề nghị' : detail.closedBy === 'partner' ? 'Đối tác đã hủy đề nghị' : 'Đề nghị đã hủy';
     else if (detail.status === 'EXPIRED') statusText = 'Hết hạn';
 
     return (
-        <div className={styles.container}>
-            <div className={styles.pageHeader}>
+        <div className={embedded ? styles.embedded : styles.container} data-chat-morph-room={transitioning || undefined}>
+            {!embedded && location.state?.chatFromInbox && <ConversationBackLink />}
+            {!embedded && <div className={styles.pageHeader}>
                 <div>
                     <span className={styles.transactionCode}>Mã Giao Dịch: #{detail.transactionCode}</span>
-                    <h1 className={styles.pageTitle}>Chi Tiết Trao Đổi</h1>
+                    <h1 className={styles.pageTitle}>Cuộc trao đổi sách</h1>
                 </div>
                 <div className={styles.headerStatus}>
                     Trạng thái: <span className={styles.statusValue}>{statusText}</span>
                 </div>
-            </div>
+            </div>}
 
             <div className={styles.stepperCard}>
                 <ProgressStepper
+                    compact
                     status={detail.status}
                     failedAtStep={detail.failedAtStep}
                     closedBy={detail.closedBy}
@@ -189,10 +205,17 @@ export function ExchangeDetailPage() {
                 </>
             )}
 
-            <div className={styles.gridContainer}>
-                <div className={styles.mainCol}>
-                    <BookInfoCard detail={detail} />
+            {!embedded && <nav className={styles.sectionLinks} aria-label="Đi tới phần trao đổi">
+              <a href="#exchange-actions">Xem bước tiếp theo</a>
+              <a href="#exchange-chat" onClick={() => setPanel("chat")}>Nhắn với đối tác</a>
+            </nav>}
+            {!embedded && <nav className={conversation.mobileTabs} aria-label="Nội dung cuộc trao đổi"><button type="button" aria-pressed={panel === 'sheet'} onClick={() => setPanel('sheet')}>Phiếu thỏa thuận</button><button type="button" aria-pressed={panel === 'chat'} onClick={() => setPanel('chat')}>Hội thoại</button></nav>}
+            <div className={embedded ? styles.embeddedGrid : `${styles.gridContainer} ${conversation.workspace}`} data-panel={panel}>
+                <div className={embedded ? styles.mainCol : `${styles.mainCol} ${styles.legacySheet} ${conversation.sheet}`}>
+                    {!embedded && <div className={conversation.sheetHeading}><h2>Phiếu thỏa thuận</h2><span>Đổi sách · {statusText}</span></div>}
+                    <BookInfoCard detail={detail} compact />
                     <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
+                    <section id="exchange-actions" className={styles.actionSection} aria-label="Hành động của bạn" tabIndex={-1}>
                     <ActionCard
                         detail={detail}
                         onCancel={handleCancel}
@@ -206,18 +229,28 @@ export function ExchangeDetailPage() {
                         onComplete={handleComplete}
                         onDispute={handleDispute}
                     />
-                    <SafetyTipsCard />
+                    </section>
+                    <details className={styles.safetyDetails}><summary>Mẹo bảo quản và giao nhận an toàn</summary><SafetyTipsCard /></details>
                 </div>
 
-                <div className={styles.sideCol}>
+                {!embedded && <div className={`${styles.sideCol} ${conversation.chat} ${styles.legacyChat}`}>
                     <ChatPanel
-                        messages={messages}
+                        key={id}
+                        messages={messagesQuery.data ?? []}
+                        isLoading={messagesQuery.isPending}
+                        loadError={messagesQuery.isError}
+                        isRefreshing={messagesQuery.isFetching}
+                        onRetry={() => void messagesQuery.refetch()}
+                        giveBooks={detail.giveBooks.map((book) => book.title)}
+                        receiveBooks={detail.receiveBooks.map((book) => book.title)}
+                        statusText={statusText}
+                        guidance={exchangeChatGuidance(detail)}
                         partner={detail.partner}
                         onSendMessage={handleSendMessage}
                         isReadOnly={['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'].includes(detail.status)}
                         unavailable={false}
                     />
-                </div>
+                </div>}
             </div>
         </div>
     );

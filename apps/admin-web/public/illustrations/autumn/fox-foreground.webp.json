@@ -1,0 +1,19 @@
+{
+  "tool": "built-in image_gen",
+  "source": "C:/Users/ASUS/.codex/generated_images/01a12139-7b71-7ed0-a3c3-97f3eeeac0b7/exec-396e88ff-fc31-44e4-90c7-0cdcd68254fe.png",
+  "reference": "User-supplied Background demo.png",
+  "prompt": "Use case: background-extraction. Isolate ONLY the orange fox from the supplied autumn illustration, on genuine alpha transparency. Preserve its distinctive smiling closed eyes, tilted head with tall pointed ears, pale cream cheeks/chest/tail-tip, orange flat shapes, dark brown legs and seated pose with bushy tail curled along its left side. Do not include trees, hills, grass, leaves, sky, paper, lettering or shadows. Show the whole seated fox, naturally complete its lower paws/tail if needed because the original ends at the canvas edge. Flat matte colors and crisp clean silhouette, just like the reference. NO glow, haze, gradient, border, sticker outline or soft shadow. Center the fox tightly in a portrait 4:5 canvas with only a small transparent breathing margin. This is a foreground cutout overlapping a burgundy message card; accurate transparency is essential.",
+  "processing": "Whole generated output resized/encoded WebP quality92/alpha100; no manual editing or mask.",
+  "sourceDimensions": {
+    "width": 1122,
+    "height": 1402
+  },
+  "delivery": {
+    "width": 600,
+    "height": 750,
+    "alpha": true,
+    "bytes": 53050
+  },
+  "sourceSha256": "eadf64b8427e3babbea6ae38519d0913dbf435eb1cf05406a2c0c615beb2d18a",
+  "deliverySha256": "0040be9045e28b6a346085806f39bf90bceb5c613d544b2d11172a4cbe215c66"
+}

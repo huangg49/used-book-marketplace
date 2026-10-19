@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.46.0
+  version: 0.47.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
-    implemented. Member private address book and versioned demo service-area directory are
+    implemented. Participant agreement workspaces with mutually confirmed mode/price proposals and linked Exchange history are implemented. Member private address book and versioned demo service-area directory are
     implemented. Revision-bound delivery origins and private DirectDelivery sale estimates are
     implemented. Quotes do not reserve books. Unpaid DirectDelivery Order create/read/cancel and
     internal expiry with exclusive commitments are implemented. Simulated wallet ledger, private
@@ -1328,6 +1328,94 @@ paths:
         "401": { $ref: "#/components/responses/ListingError" }
         "403": { $ref: "#/components/responses/ListingError" }
         "422": { $ref: "#/components/responses/ListingError" }
+  /me/purchase-conversations/{conversationId}:
+    get:
+      operationId: getPurchaseConversation
+      tags: [Purchase conversations]
+      summary: Read a participant-only conversation and its current agreement sheet
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Participant-only agreement workspace.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseConversation" }
+        default: { $ref: "#/components/responses/Error" }
+  /me/purchase-conversations/{conversationId}/terms:
+    post:
+      operationId: proposeConversationTerms
+      tags: [Purchase conversations]
+      summary: Propose a structured price or a mutually confirmed trade mode without holding books
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProposeConversationTerms" }
+      responses:
+        "200":
+          description: Versioned proposal receipt, no reservation or wallet mutation.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseConversationReceipt" }
+        default: { $ref: "#/components/responses/Error" }
+  /me/purchase-conversations/{conversationId}/terms/respond:
+    post:
+      operationId: respondConversationTerms
+      tags: [Purchase conversations]
+      summary: The other participant accepts or declines the exact pending proposal
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RespondConversationTerms" }
+      responses:
+        "200":
+          description: Accepted terms remain a draft until an Order or Exchange is committed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseConversationReceipt" }
+        default: { $ref: "#/components/responses/Error" }
+  /me/purchase-conversations/{conversationId}/events:
+    get:
+      operationId: getConversationEvents
+      tags: [Purchase conversations]
+      summary: Read immutable structured agreement events, separate from member messages
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Participant-only agreement event history.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ConversationEvent" }
+        default: { $ref: "#/components/responses/Error" }
   /me/purchase-conversations/{conversationId}/messages:
     get:
       operationId: listPurchaseMessages
@@ -3883,7 +3971,7 @@ paths:
     post:
       operationId: createVNPayTopup
       tags: [Wallet]
-      summary: Create a VNPay sandbox wallet topup
+      summary: Create a VNPay sandbox wallet topup with a five-minute payment window
       description: Verified Member; LOCKED denied. No credit until a signed IPN or server-verified QueryDR result is applied. Same key/body replays the original payment URL and deadline. Sandbox only; finite demo clearing source remains enforced.
       x-implementation-status: implemented
       security: [{ bearerAuth: [] }]
@@ -3899,7 +3987,7 @@ paths:
             schema: { $ref: "#/components/schemas/CreateVNPayTopup" }
       responses:
         "200":
-          description: Pending topup and signed sandbox URL; not a payment receipt.
+          description: Pending topup and signed sandbox URL with an immutable five-minute deadline. Replaying the key retains the original deadline; not a payment receipt.
           headers:
             Cache-Control:
               schema: { type: string, const: no-store }
@@ -3934,7 +4022,7 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         "200":
-          description: Current owner-checked topup state after querying VNPay. Terminal intents are read without another provider query.
+          description: Current owner-checked topup state after querying VNPay. Cancelled intents may still be queried to reconcile a verified payment made before the deadline; other terminal intents are read without another provider query.
           headers:
             Cache-Control:
               schema: { type: string, const: no-store }
@@ -4081,6 +4169,7 @@ paths:
               - Processing
               - Succeeded
               - Failed
+              - Cancelled
               - ReviewRequired
       responses:
         "200":
@@ -5340,7 +5429,7 @@ paths:
       tags:
         - Auctions
       description: Seller ACTIVE verified MEMBER. Approved, Visible, Available listing of channel Auction
-        (ADR 0041) with current Sale revision; Marketplace listings return 409 InvalidState. In one
+        (ADR 0042) with current Sale revision; Marketplace listings return 409 InvalidState. In one
         transaction snapshots revision/start/step/buyNow,
         takes the exclusive commitment and one point slot (capacity checked under the point lock).
         Self drop-off within 72 hours; at most two unfinished intakes/auctions per seller (POL-41).
@@ -8972,7 +9061,7 @@ components:
       enum:
         - Marketplace
         - Auction
-      description: Immutable after draft creation (ADR 0041). Marketplace listings use the public
+      description: Immutable after draft creation (ADR 0042). Marketplace listings use the public
         shelf, quotes, purchases and exchanges. Auction listings are created by the auction flow,
         use mode Sale with salePrice as the declared (protective) value and no fulfillment origin,
         never appear on the marketplace and are the only listings accepted by CreateAuctionIntake.
@@ -10395,6 +10484,7 @@ components:
       additionalProperties: false
       required: [expectedVersion]
       properties:
+        intent: { type: string, enum: [Negotiation, Exchange], description: Opt into the unified agreement workspace; Exchange on a Both listing requests seller confirmation. Sale-only rejects Exchange intent; Exchange-only rejects Negotiation intent. }
         expectedVersion: { type: integer, minimum: 1, maximum: 2147483647 }
     PurchaseConversationReceipt:
       type: object
@@ -10508,6 +10598,10 @@ components:
       additionalProperties: false
       required: [id, listingId, buyer, seller, version, status, expiresAt, hasQuote, quotePreview, orderId, createdAt, closedAt]
       properties:
+        terms:
+          oneOf:
+            - $ref: "#/components/schemas/ConversationTerms"
+            - type: "null"
         id: { type: string, format: uuid }
         listingId: { type: string, format: uuid }
         buyer: { $ref: "#/components/schemas/PurchaseParticipant" }
@@ -10527,6 +10621,77 @@ components:
             - type: string
               format: date-time
             - type: "null"
+    ConversationProposal:
+      type: object
+      additionalProperties: false
+      required: [id, kind, proposedById, mode, amount, listingRevisionId, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [Mode, Price] }
+        proposedById: { type: string, format: uuid }
+        mode: { type: [string, "null"], enum: [Negotiation, Exchange, null] }
+        amount: { type: [integer, "null"], minimum: 10000, maximum: 1000000 }
+        listingRevisionId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+    ConversationTerms:
+      type: object
+      additionalProperties: false
+      required: [mode, pendingProposal, agreedPrice, agreedListingRevisionId, activeExchangeId, exchangeIds, locked]
+      properties:
+        mode: { type: string, enum: [Negotiation, Exchange] }
+        pendingProposal:
+          oneOf:
+            - $ref: "#/components/schemas/ConversationProposal"
+            - type: "null"
+        agreedPrice: { type: [integer, "null"], minimum: 10000, maximum: 1000000 }
+        agreedListingRevisionId: { type: [string, "null"], format: uuid }
+        activeExchangeId: { type: [string, "null"], format: uuid }
+        exchangeIds:
+          type: array
+          items: { type: string, format: uuid }
+        locked: { type: boolean }
+    ProposeConversationTerms:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, kind]
+      properties:
+        expectedVersion: { type: integer, minimum: 1, maximum: 2147483647 }
+        kind: { type: string, enum: [Mode, Price, RequestExchange] }
+        mode: { type: string, enum: [Negotiation, Exchange] }
+        amount: { type: integer, minimum: 10000, maximum: 1000000 }
+      oneOf:
+        - properties: { kind: { const: Mode } }
+          required: [mode]
+          not: { required: [amount] }
+        - properties: { kind: { const: Price } }
+          required: [amount]
+          not: { required: [mode] }
+        - properties: { kind: { const: RequestExchange } }
+          not:
+            anyOf:
+              - required: [mode]
+              - required: [amount]
+    RespondConversationTerms:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, proposalId, accept]
+      properties:
+        expectedVersion: { type: integer, minimum: 1, maximum: 2147483647 }
+        proposalId: { type: string, format: uuid }
+        accept: { type: boolean }
+    ConversationEvent:
+      type: object
+      additionalProperties: false
+      required: [id, conversationId, actorId, kind, mode, amount, exchangeId, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        conversationId: { type: string, format: uuid }
+        actorId: { type: string, format: uuid }
+        kind: { type: string, enum: [ModeProposed, ModeAccepted, PriceProposed, PriceAccepted, ProposalDeclined, ExchangeLinked] }
+        mode: { type: [string, "null"], enum: [Negotiation, Exchange, null] }
+        amount: { type: [integer, "null"], minimum: 10000, maximum: 1000000 }
+        exchangeId: { type: [string, "null"], format: uuid }
+        createdAt: { type: string, format: date-time }
     PurchaseQuotePreview:
       type: object
       additionalProperties: false
@@ -12474,6 +12639,8 @@ components:
         - journalId
         - createdAt
         - updatedAt
+        - expiresAt
+        - serverTime
         - demoOnly
         - label
         - currency
@@ -12495,6 +12662,7 @@ components:
             - Processing
             - Succeeded
             - Failed
+            - Cancelled
             - ReviewRequired
         credited:
           type: boolean
@@ -12507,6 +12675,13 @@ components:
           type: string
           format: date-time
         updatedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: [string, "null"]
+          format: date-time
+          description: Immutable VNPay payment deadline; null for simulator intents. Pending/Processing becomes Cancelled at expiry without a wallet journal or history entry. Verified late evidence of payment within the window is reconciled exactly once.
+        serverTime:
           type: string
           format: date-time
         demoOnly:
@@ -12617,6 +12792,7 @@ components:
             - Processing
             - Succeeded
             - Failed
+            - Cancelled
             - ReviewRequired
         credited:
           type: boolean
@@ -15908,6 +16084,8 @@ components:
       required:
         - recipientListingId
       properties:
+        conversationId: { type: string, format: uuid, description: Link a proposal to its buyer-seller workspace atomically; requires confirmed Exchange mode. }
+        expectedConversationVersion: { type: integer, minimum: 1, maximum: 2147483647 }
         initiatorListingId:
           type: string
           format: uuid
@@ -15922,6 +16100,9 @@ components:
         deliveryAddressId:
           type: string
           format: uuid
+      dependentRequired:
+        conversationId: [expectedConversationVersion]
+        expectedConversationVersion: [conversationId]
     AcceptExchange:
       type: object
       additionalProperties: false

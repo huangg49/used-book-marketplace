@@ -1,35 +1,115 @@
-@import "../../../packages/brand/v1.1/palette.css";
-@font-face {
-  font-family: Lora;
-  src: url("../../../packages/brand/fonts/Lora[wght].ttf") format("truetype");
-  font-weight: 400 700;
-  font-display: swap;
-}
+/* Lật lại - Operations Admin Web Design System
+   Aligned with Member user-web brand v1.1 & DESIGN.md specifications */
+
 @font-face {
   font-family: "Be Vietnam Pro";
-  src: url("../../../packages/brand/fonts/BeVietnamPro-Regular.ttf")
-    format("truetype");
+  src: url("/fonts/BeVietnamPro-Regular.ttf") format("truetype");
   font-weight: 400;
   font-display: swap;
 }
+
 @font-face {
   font-family: "Be Vietnam Pro";
-  src: url("../../../packages/brand/fonts/BeVietnamPro-Bold.ttf")
-    format("truetype");
+  src: url("/fonts/BeVietnamPro-Bold.ttf") format("truetype");
   font-weight: 700;
   font-display: swap;
 }
+
+@font-face {
+  font-family: "Anton";
+  src: url("/fonts/Anton-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Auth Melody";
+  src: url("/fonts/auth/MTD-Fancy-Melody.otf") format("opentype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Auth Bricolage";
+  src: url("/fonts/auth/BricolageGrotesque.ttf") format("truetype");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+:root {
+  /* Core brand tokens matching user-web */
+  --shop-wine: #5c0202;
+  --shop-wine-hover: #7c2320;
+  --shop-cream: #fcf8db;
+  --shop-paper: #fffcf5;
+  --shop-ink: #281914;
+  --shop-muted: #716157;
+  --shop-line: #d9cbbd;
+  --shop-control: #8e7564;
+  --shop-shelf: #f4eddf;
+  --shop-orange: #f68b51;
+  --shop-yellow: #f4cb67;
+  --shop-mint: #b6dac5;
+  --shop-error: #912b0e;
+  --desk-ground: #f5eddc;
+
+  /* Backward-compatible mappings with updated palette */
+  --forest: var(--shop-wine);
+  --paper: var(--shop-paper);
+  --surface: #ffffff;
+  --ink: var(--shop-ink);
+  --muted: var(--shop-muted);
+  --border: var(--shop-line);
+  --rule: #eae2d5;
+  --leaf: var(--shop-cream);
+  --terracotta: var(--shop-orange);
+  --rust-text: var(--shop-wine);
+
+  --error: #912b0e;
+  --error-surface: #fcedee;
+  --success: #255a43;
+  --success-surface: #e8efdf;
+  --warning: #74520c;
+  --warning-surface: #f9eecf;
+  --info: #34556b;
+  --info-surface: #eaf0f3;
+
+  /* Shadows matching user-web */
+  --shadow-sm: 0 1px 3px rgba(40, 25, 20, 0.06);
+  --shadow-md: 0 4px 16px rgba(40, 25, 20, 0.08);
+  --shadow-lg: 0 12px 32px rgba(40, 25, 20, 0.12);
+  --shadow-dialog: 0 18px 60px rgba(40, 25, 20, 0.28);
+  --shadow-hover: 0 16px 28px -6px rgba(40, 25, 20, 0.18), 0 4px 10px rgba(40, 25, 20, 0.06);
+
+  /* Animation timing & easing */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 * {
   box-sizing: border-box;
 }
-body {
-  margin: 0;
-  color: var(--ink);
-  background: var(--paper);
-  font:
-    1rem/1.7 "Be Vietnam Pro",
-    sans-serif;
+
+html {
+  background-color: #3b0202;
 }
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  color: var(--shop-ink);
+  background: var(--desk-ground);
+  font: 1rem/1.7 "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
 button,
 input,
 textarea,
@@ -37,6 +117,7 @@ select {
   font: inherit;
   color: inherit;
 }
+
 button,
 a,
 input,
@@ -44,209 +125,410 @@ textarea,
 summary {
   -webkit-tap-highlight-color: transparent;
 }
+
 a {
-  color: var(--forest);
+  color: var(--shop-wine);
   text-underline-offset: 0.25em;
+  transition: color 150ms ease;
 }
+
+a:hover {
+  color: var(--shop-wine-hover);
+}
+
 button {
   cursor: pointer;
 }
+
 button:disabled {
   cursor: default;
   opacity: 0.55;
 }
+
 img {
   max-width: 100%;
 }
+
 h1,
 h2,
-h3 {
-  font-family: Lora, serif;
-  color: var(--forest);
-  line-height: 1.3;
-  font-weight: 600;
+h3,
+h4 {
+  font-family: "Be Vietnam Pro", sans-serif;
+  color: var(--shop-ink);
+  line-height: 1.35;
+  font-weight: 700;
   overflow-wrap: anywhere;
-}
-h1 {
-  font-size: clamp(2rem, 3.3vw, 3.5rem);
-  letter-spacing: -0.035em;
-}
-h2 {
-  font-size: 1.6rem;
-}
-h3 {
-  font-size: 1.3rem;
-}
-p,
-h1,
-h2,
-h3 {
   margin: 0 0 1rem;
 }
+
+h1 {
+  font-size: clamp(1.85rem, 2.8vw, 2.5rem);
+  letter-spacing: -0.025em;
+  color: var(--shop-wine);
+}
+
+h2 {
+  font-size: 1.45rem;
+  letter-spacing: -0.015em;
+}
+
+h3 {
+  font-size: 1.2rem;
+}
+
+p {
+  margin: 0 0 1rem;
+}
+
 p:last-child {
   margin-bottom: 0;
 }
+
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
 summary:focus-visible {
-  outline: 3px solid var(--forest);
-  outline-offset: 4px;
+  outline: 3px solid var(--shop-wine);
+  outline-offset: 3px;
 }
+
 ::selection {
-  background: var(--leaf);
-  color: var(--forest);
+  background: var(--shop-yellow);
+  color: var(--shop-wine);
 }
+
+html {
+  scrollbar-color: var(--shop-control) var(--shop-paper);
+  scrollbar-gutter: stable;
+}
+
 fieldset {
   border: 0;
   padding: 0;
   margin: 1.5rem 0;
   min-width: 0;
 }
+
 legend {
   font-weight: 700;
   margin-bottom: 0.75rem;
+  color: var(--shop-ink);
 }
+
 figure {
   margin: 0;
 }
+
 small,
 .small {
   font-size: 0.8rem;
 }
+
 .muted {
-  color: var(--muted);
+  color: var(--shop-muted);
 }
+
 .prose {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
 .eyebrow {
-  color: var(--rust-text);
-  font-size: 0.75rem;
+  color: var(--shop-wine);
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+/* Form Fields */
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  font-weight: 700;
+  gap: 0.45rem;
+  font-weight: 600;
+  font-size: 0.875rem;
   margin: 1.25rem 0 0.5rem;
+  color: var(--shop-ink);
 }
-input:not([type="checkbox"]),
+
+input:not([type="checkbox"]):not([type="radio"]),
 textarea,
 select {
   width: 100%;
-  min-height: 52px;
+  min-height: 46px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.75rem;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
   font-weight: 400;
+  color: var(--shop-ink);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--shop-wine);
+  box-shadow: 0 0 0 1px var(--shop-wine);
+}
+
 textarea {
   resize: vertical;
 }
+
 input[aria-invalid="true"],
 textarea[aria-invalid="true"] {
   border-color: var(--error);
+  background: #fff8f8;
 }
+
 .field-error {
   color: var(--error);
+  font-size: 0.8rem;
+  font-weight: 500;
 }
+
+/* Button Primitives */
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 48px;
-  padding: 0.65rem 1.15rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: transparent;
-  font-weight: 700;
+  min-height: 44px;
+  padding: 0.6rem 1.2rem;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--shop-ink);
+  font-weight: 600;
   font-size: 0.875rem;
   line-height: 1.5;
   white-space: normal;
+  transition: all 160ms var(--ease-spring);
+  box-shadow: var(--shadow-sm);
 }
+
 .button:hover:not(:disabled) {
-  background: var(--surface);
+  background: var(--shop-shelf);
+  border-color: var(--shop-control);
+  color: var(--shop-wine);
+  transform: translateY(-1px);
 }
+
+.button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 .button.primary {
-  color: var(--paper);
-  background: var(--forest);
-  border-color: var(--forest);
+  color: var(--shop-cream);
+  background: var(--shop-wine);
+  border-color: var(--shop-wine);
+  box-shadow: 0 2px 6px rgba(92, 2, 2, 0.25);
 }
+
 .button.primary:hover:not(:disabled) {
-  background: var(--ink);
+  background: var(--shop-wine-hover);
+  border-color: var(--shop-wine-hover);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(92, 2, 2, 0.35);
 }
+
+.button.danger {
+  color: #ffffff;
+  background: var(--error);
+  border-color: var(--error);
+}
+
+.button.danger:hover:not(:disabled) {
+  background: #7a140c;
+  border-color: #7a140c;
+}
+
+/* Pagination */
 .cursor-pagination {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--rule);
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--shop-line);
 }
+
 .cursor-pagination p {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--shop-muted);
+  font-size: 0.85rem;
 }
+
 .actions {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
   margin-top: 1.25rem;
 }
+
+/* Notice / Feedback Panels */
 .notice {
-  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
   margin: 1rem 0;
-  border-left: 3px solid currentColor;
+  border-radius: 8px;
+  border-left: 4px solid currentColor;
   background: var(--info-surface);
   color: var(--info);
+  font-size: 0.875rem;
   overflow-wrap: anywhere;
+  box-shadow: var(--shadow-sm);
 }
+
+.notice p {
+  margin: 0;
+}
+
 .notice .button {
-  margin-top: 0.65rem;
+  align-self: flex-start;
+  margin-top: 0.5rem;
 }
+
 .notice.error {
   background: var(--error-surface);
   color: var(--error);
+  border-left-color: var(--error);
 }
+
 .notice.warning {
   background: var(--warning-surface);
   color: var(--warning);
+  border-left-color: var(--warning);
 }
+
 .notice.success {
   background: var(--success-surface);
   color: var(--success);
+  border-left-color: var(--success);
 }
+
+/* Dialog / Modal */
 dialog {
-  background: var(--surface);
-  color: var(--ink);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  border: none;
+  border-radius: 12px;
   max-width: min(580px, calc(100% - 32px));
   max-height: 90dvh;
   padding: 2rem;
   overflow: auto;
+  box-shadow: var(--shadow-dialog);
+  margin: auto;
 }
+
+dialog[open] {
+  animation: dialogOpen 260ms var(--ease-spring) both;
+}
+
 dialog::backdrop {
-  background: rgba(20, 36, 28, 0.6);
+  background: rgba(40, 25, 20, 0.55);
+  backdrop-filter: blur(2px);
 }
+
 summary {
   cursor: pointer;
-  padding: 1rem 0;
+  padding: 0.75rem 0;
   min-height: 44px;
+  font-weight: 600;
 }
+
 blockquote {
   margin: 1rem 0;
   padding-left: 1rem;
-  border-left: 3px solid var(--rule);
+  border-left: 3px solid var(--shop-line);
+  color: var(--shop-muted);
+}
+
+/* Status Pill / Badges */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+
+.status-pill.success {
+  background: var(--success-surface);
+  color: var(--success);
+  border: 1px solid rgba(37, 90, 67, 0.2);
+}
+
+.status-pill.warning {
+  background: var(--warning-surface);
+  color: var(--warning);
+  border: 1px solid rgba(116, 82, 12, 0.2);
+}
+
+.status-pill.error {
+  background: var(--error-surface);
+  color: var(--error);
+  border: 1px solid rgba(145, 43, 14, 0.2);
+}
+
+.status-pill.info {
+  background: var(--info-surface);
+  color: var(--info);
+  border: 1px solid rgba(52, 85, 107, 0.2);
+}
+
+.status-pill.neutral {
+  background: var(--shop-shelf);
+  color: var(--shop-muted);
+  border: 1px solid var(--shop-line);
+}
+
+/* Keyframe Animations */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: pageEnter 320ms var(--ease-smooth) both;
+}
+
+@keyframes dialogOpen {
+  from {
+    transform: translateY(16px) scale(0.98);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes panelPop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }

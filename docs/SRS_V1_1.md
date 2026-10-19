@@ -193,7 +193,7 @@ Mọi yêu cầu trong mục này là M trừ khi ghi E. Các tiêu chí AC ở 
 | FR-C02 | Member chọn catalog có sẵn hoặc gửi yêu cầu đầu sách mới; listing không thể duyệt nếu catalog liên quan chưa được xác nhận. |
 | FR-C03 | Admin xử lý trùng catalog bằng ánh xạ/gộp có log; không mất listing, wishlist và lịch sử snapshot. |
 | FR-C04 | Tìm theo tên/tác giả/ISBN; lọc giá bán, giá trị đổi, tình trạng và chế độ bán/đổi; có phân trang, sắp xếp mới nhất hoặc giá tăng/giảm. |
-| FR-C05 | Kệ mua/đổi thường chỉ gồm listing Approved, Visible, Available của chủ đủ quyền và không custody obligation. Kệ auction dùng predicate riêng Active + Pass + eligibility theo FR-AU; listing của auction có cam kết Reserved nên không dùng Available để lọc nó. Listing kênh Auction (ADR 0041) không bao giờ lên kệ mua/đổi, tìm kiếm hay chi tiết công khai của sàn. |
+| FR-C05 | Kệ mua/đổi thường chỉ gồm listing Approved, Visible, Available của chủ đủ quyền và không custody obligation. Kệ auction dùng predicate riêng Active + Pass + eligibility theo FR-AU; listing của auction có cam kết Reserved nên không dùng Available để lọc nó. Listing kênh Auction (ADR 0042) không bao giờ lên kệ mua/đổi, tìm kiếm hay chi tiết công khai của sàn. |
 | FR-C06 | Trang book gom các listing đủ điều kiện; trang listing có ảnh thật, mô tả, giá, tình trạng, người đăng, đánh giá và topic liên quan được công khai. |
 | FR-C07 | Admin quản lý banner, bộ sưu tập và thứ tự hiển thị; listing không đủ điều kiện trong bộ sưu tập tự ngừng được đề xuất mua/đổi. |
 
@@ -326,7 +326,7 @@ Mọi yêu cầu trong mục này là M trừ khi ghi E. Các tiêu chí AC ở 
 | Mã | Quy tắc |
 |---|---|
 | BR-01 | Một listing đại diện một hiện vật; không có quantity lớn hơn 1. Một người có hai bản giống nhau phải tạo hai listing riêng với ảnh phân biệt. Hệ thống không thể tự chứng minh hai listing không chụp cùng hiện vật; nghi trùng chuyển kiểm duyệt. |
-| BR-02 | Chỉ Approved + Visible + Available, không custody obligation và chủ đủ quyền mới mở chat/báo giá mua hoặc tạo checkout/Exchange/auction intake mới; chat/báo giá/checkout/Exchange chỉ nhận listing kênh Marketplace, auction intake chỉ nhận listing kênh Auction (ADR 0041). Seller tạo Order thương lượng từ hội thoại/báo giá còn hợp lệ; Buyer tạo Order Mua ngay từ quote còn hợp lệ theo ADR0038; Auction chuyển commitment sẵn có sang Order theo FR-AU06–07, không yêu cầu listing trở lại Available. Mọi bước chốt kiểm tra điều kiện hiện hành. |
+| BR-02 | Chỉ Approved + Visible + Available, không custody obligation và chủ đủ quyền mới mở chat/báo giá mua hoặc tạo checkout/Exchange/auction intake mới; chat/báo giá/checkout/Exchange chỉ nhận listing kênh Marketplace, auction intake chỉ nhận listing kênh Auction (ADR 0042). Seller tạo Order thương lượng từ hội thoại/báo giá còn hợp lệ; Buyer tạo Order Mua ngay từ quote còn hợp lệ theo ADR0038; Auction chuyển commitment sẵn có sang Order theo FR-AU06–07, không yêu cầu listing trở lại Available. Mọi bước chốt kiểm tra điều kiện hiện hành. |
 | BR-03 | Một listing tối đa một cam kết độc quyền Active xuyên Order, Exchange và AuctionIntake/Auction. Chuyển auction sang Order nguyên tử, không có khoảng trống release; database bảo vệ, không chỉ UI. |
 | BR-04 | Chỉ giao dịch sở hữu reservation được giải phóng nó. Từ chối một Proposed không được mở sách đang giữ cho người khác. |
 | BR-05 | Giữ hai listing Exchange là nguyên tử, dùng thứ tự khóa ổn định hoặc cơ chế tương đương để tránh giữ một nửa. |

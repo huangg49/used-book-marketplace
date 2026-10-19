@@ -1,4 +1,4 @@
-# ADR 0041: Auction books use their own auction-only listing
+# ADR 0042: Auction books use their own auction-only listing
 
 19/10/2026. Owner request: when a Member sends a book to auction, the auction
 flow creates and uses its own listing. It no longer picks an approved

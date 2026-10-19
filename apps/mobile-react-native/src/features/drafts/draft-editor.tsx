@@ -84,7 +84,7 @@ const stepHelp = [
   "Xem lại toàn bộ thông tin trước khi lưu hoặc gửi duyệt.",
 ] as const;
 
-// ADR 0041: an auction listing is a Sale whose price is a declared value and
+// ADR 0042: an auction listing is a Sale whose price is a declared value and
 // that goes to a handover point, so it has no delivery origin or shop price.
 const auctionStepLabels = [
   "Thông tin sách",
@@ -124,7 +124,7 @@ export function DraftEditor({
   const [base, setBase] = useState(initial),
     [form, setForm] = useState(() => {
       const f = fromContent(initial.currentRevision.content);
-      // Auction listings are always a Sale (ADR 0041); the selector is hidden.
+      // Auction listings are always a Sale (ADR 0042); the selector is hidden.
       return initial.channel === "Auction" && !f.mode
         ? { ...f, mode: "Sale" as const }
         : f;

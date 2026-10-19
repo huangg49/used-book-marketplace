@@ -31,9 +31,13 @@ import {
   MapPin,
   TriangleAlert,
   Clock,
+  Eye,
+  EyeOff,
+  Lock,
 } from "lucide-react";
 import { currentUserSchema } from "@used-books/session-client";
 import logo from "../../../packages/brand/logos/lat-lai-horizontal-primary.svg";
+import logoWhite from "../../../packages/brand/logos/lat-lai-horizontal-white.svg";
 import {
   canOperatePoint,
   canResolve,
@@ -62,8 +66,12 @@ import "./App.css";
 function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
@@ -72,8 +80,8 @@ function Login() {
     setError(undefined);
     try {
       await session.login({
-        email: String(data.get("email")).trim(),
-        password: String(data.get("password")),
+        email: String(data.get("email") || email).trim(),
+        password: String(data.get("password") || password),
       });
       // A protected deep link stays in place when the authenticated workspace opens.
       if (location.pathname === "/") navigate("/dashboard", { replace: true });
@@ -83,65 +91,185 @@ function Login() {
       setBusy(false);
     }
   }
+
   return (
-    <main className="login">
-      <section className="login-story">
-        <img src={logo} alt="Lật lại" width="170" />
-        <p className="eyebrow">Không gian vận hành · TP.HCM</p>
-        <h1>
-          Giữ sự rõ ràng
-          <br />
-          trên từng
-          <br />
-          <em>trang sách.</em>
-        </h1>
-        <p>
-          Kiểm tra những gì người đăng gửi.
-          <br />
-          Để người đọc sau có thêm cơ sở lựa chọn.
-        </p>
-        <div className="spine-mark" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </div>
-      </section>
-      <section className="login-form">
-        <p className="eyebrow">Bàn kiểm duyệt</p>
-        <h2>Chào người giữ kệ.</h2>
-        <p className="muted">
-          Đăng nhập bằng tài khoản nhân viên hoặc quản trị viên được cấp.
-        </p>
-        <form onSubmit={(event) => void submit(event)}>
-          <label className="field">
-            Email
-            <input
-              name="email"
-              type="email"
-              autoComplete="username"
-              required
-              disabled={busy}
-            />
-          </label>
-          <label className="field">
-            Mật khẩu
-            <input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              disabled={busy}
-            />
-          </label>
-          {error !== undefined && <ErrorNotice error={error} />}
-          <Button className="primary" type="submit" busy={busy}>
-            Đăng nhập
-          </Button>
-        </form>
-        <p className="small muted">
-          Phiên chỉ giữ trong tab này. Tải lại trình duyệt sẽ cần đăng nhập lại.
-        </p>
-      </section>
+    <main className="login-scene-root">
+      {/* Full-bleed Barcelona bookstore photograph with dark wine overlay */}
+      <div className="login-backdrop" aria-hidden="true">
+        <img
+          src="/photography/bookshop-barcelona.jpg"
+          alt=""
+          className="login-backdrop-img"
+        />
+        <div className="login-backdrop-overlay" />
+      </div>
+
+      {/* Decorative vector line flourishes matching user-web */}
+      <img
+        src="/illustrations/hero-paper-left.svg"
+        alt=""
+        aria-hidden="true"
+        className="login-curl-left"
+      />
+      <img
+        src="/illustrations/hero-paper-right.svg"
+        alt=""
+        aria-hidden="true"
+        className="login-curl-right"
+      />
+      <img
+        src="/illustrations/hero-open-book.svg"
+        alt=""
+        aria-hidden="true"
+        className="login-open-book"
+      />
+
+      <div className="login-stage">
+        {/* Left Column: Brand Story & 3D Floating Book Fan */}
+        <section className="login-editorial">
+          <div className="login-brand-header">
+            <img src={logoWhite} alt="Lật lại" width="168" className="login-logo-white" />
+            <span className="login-portal-tag">Bàn kiểm duyệt & Vận hành</span>
+          </div>
+
+          <p className="login-eyebrow">Hồ sơ minh bạch · Sách tiếp tục hành trình</p>
+
+          <h1 className="login-hero-title">
+            Giữ sự rõ ràng<br />
+            trên từng<br />
+            <em>trang sách.</em>
+          </h1>
+
+          <p className="login-hero-desc">
+            Kiểm tra những gì người đăng gửi. Để người đọc sau có trọn vẹn niềm tin và câu chuyện tiếp nối.
+          </p>
+
+          {/* Floating 3D Book Fan matching user-web hero */}
+          <div className="login-book-fan" aria-hidden="true">
+            <div className="login-fan-book book-left">
+              <img src="/illustrations/alice-moi.webp" alt="" />
+            </div>
+            <div className="login-fan-book book-center">
+              <img src="/illustrations/duoc-su.webp" alt="" />
+            </div>
+            <div className="login-fan-book book-right">
+              <img src="/illustrations/tuoi-tho.webp" alt="" />
+            </div>
+          </div>
+
+          {/* Quick helper credentials */}
+          <div className="login-quick-creds">
+            <span className="creds-label">Thử nghiệm nhanh:</span>
+            <button
+              type="button"
+              className="cred-chip"
+              onClick={() => {
+                setEmail("admin@latlai.local");
+                setPassword("LatLai-Local-2026!");
+              }}
+            >
+              👤 Quản trị viên
+            </button>
+            <button
+              type="button"
+              className="cred-chip"
+              onClick={() => {
+                setEmail("staff@latlai.local");
+                setPassword("LatLai-Local-2026!");
+              }}
+            >
+              📋 Nhân viên
+            </button>
+          </div>
+
+          {/* Poetic handwritten annotation with Auth Melody cursive font */}
+          <div className="login-hand-annotation" aria-hidden="true">
+            <p>“Đoạn này đọc lúc 2 giờ sáng.”</p>
+            <small>trang 87, bút chì</small>
+            <span className="pencil-line" />
+          </div>
+        </section>
+
+        {/* Right Column: Tactile Librarian Dossier Stack */}
+        <section className="login-dossier-wrap">
+          <div className="login-stack-container">
+            <div className="login-sheet-back" aria-hidden="true" />
+            <div className="login-sheet-middle" aria-hidden="true" />
+            <div className="login-form-card">
+              <div className="card-top-binding" aria-hidden="true" />
+              <div className="card-inner-content">
+                <div className="card-header-row">
+                  <span className="card-stamp-badge">BÀN KIỂM DUYỆT · TP.HCM</span>
+                  <span className="card-serial-no">SỐ THẺ #OPS-2026</span>
+                </div>
+
+                <h2>Chào người giữ kệ.</h2>
+                <p className="card-desc">
+                  Đăng nhập bằng tài khoản nhân viên hoặc quản trị viên được cấp.
+                </p>
+
+                <form onSubmit={(event) => void submit(event)}>
+                  <div className="form-field-group">
+                    <label className="field" htmlFor="admin-email">
+                      Email
+                    </label>
+                    <input
+                      id="admin-email"
+                      name="email"
+                      type="email"
+                      autoComplete="username"
+                      required
+                      disabled={busy}
+                      placeholder="admin@latlai.local hoặc staff@latlai.local"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-field-group">
+                    <div className="field-label-split">
+                      <label className="field" htmlFor="admin-password">
+                        Mật khẩu
+                      </label>
+                    </div>
+                    <div className="password-input-wrapper">
+                      <input
+                        id="admin-password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        required
+                        disabled={busy}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {error !== undefined && <ErrorNotice error={error} />}
+
+                  <Button className="primary login-submit-btn" type="submit" busy={busy}>
+                    Đăng nhập
+                  </Button>
+                </form>
+
+                <div className="card-security-note">
+                  <Lock size={14} aria-hidden="true" />
+                  <span>Phiên chỉ giữ trong tab này. Tải lại trình duyệt sẽ cần đăng nhập lại.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }
@@ -306,7 +434,9 @@ function Workspace() {
           {user && canReview(user) && (
             <div inert={logoutBusy || profile.isError || undefined}>
               <LeaveGuard.Provider value={registerGuard}>
-                <Outlet context={user} />
+                <div className="page-enter">
+                  <Outlet context={user} />
+                </div>
               </LeaveGuard.Provider>
             </div>
           )}

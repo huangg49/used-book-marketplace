@@ -1,0 +1,15 @@
+{
+  "source": "User-provided Background demo.png",
+  "sourceDimensions": {
+    "width": 1920,
+    "height": 1080
+  },
+  "processing": "Whole original encoded as WebP quality92. No generative editing, masking or resizing. Browser CSS frames its lower scene; desktop full width, mobile centered at minimum960px image width.",
+  "delivery": {
+    "width": 1920,
+    "height": 1080,
+    "bytes": 94602
+  },
+  "sourceSha256": "1ce084cf40470c96656daefb1ac72b48c6749aec07e6d017defe036d02d9dceb",
+  "deliverySha256": "9fa3618d30057e2f9c0ca5f2aae27303007cc02e2343b42071531d266ede5dcb"
+}

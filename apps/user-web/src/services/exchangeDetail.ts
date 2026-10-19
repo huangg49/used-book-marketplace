@@ -223,33 +223,14 @@ const exchangeMessagesSchema = z.object({
 });
 
 export async function getMessages(id: string): Promise<ChatMessage[]> {
-  try {
-    const actor = exchangeActor();
-    const res = await session.request(
-      `/exchanges/${id}/messages`,
-      exchangeMessagesSchema,
-    );
-    return res.items.map((m) => {
-      let senderRole: "viewer" | "partner" | "system" = "partner";
-      if (
-        m.body.startsWith("[Đề xuất lại") ||
-        m.body.startsWith("[Hệ thống")
-      ) {
-        senderRole = "system";
-      } else if (m.senderId === actor.id) {
-        senderRole = "viewer";
-      }
-      return {
-        id: m.id,
-        senderRole,
-        text: m.body,
-        sentAt: m.sentAt,
-      };
-    });
-  } catch (err) {
-    console.warn("Could not load exchange messages:", err);
-    return [];
-  }
+  const actor = exchangeActor();
+  const res = await session.request(`/exchanges/${id}/messages`, exchangeMessagesSchema);
+  return res.items.map((message) => ({
+    id: message.id,
+    senderRole: message.senderId === actor.id ? "viewer" : "partner",
+    text: message.body,
+    sentAt: message.sentAt,
+  }));
 }
 
 export async function sendMessage(id: string, text: string): Promise<void> {

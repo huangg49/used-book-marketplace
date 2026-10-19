@@ -3,7 +3,7 @@ import { applyCollectionSpecs } from './index.js';
 import { baselineCollections } from './0001-baseline-schema.js';
 import { document, index, t, type CollectionSpec } from '../schema-dsl.js';
 
-// ADR 0041: a listing belongs to one immutable channel. Existing listings are
+// ADR 0042: a listing belongs to one immutable channel. Existing listings are
 // marketplace listings; the auction flow creates Auction listings.
 export const LISTING_CHANNELS = ['Marketplace', 'Auction'] as const;
 

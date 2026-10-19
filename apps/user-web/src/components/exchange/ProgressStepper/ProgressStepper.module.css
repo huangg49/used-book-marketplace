@@ -147,3 +147,13 @@
         text-align: left;
     }
 }
+
+.compact .lineBg, .compact .lineProgress { display: none; }
+.compact .stepList { flex-direction: row; align-items: center; gap: 8px; }
+.compact .stepItem { flex-direction: row; width: auto; min-width: 0; gap: 6px; margin: 0; }
+.compact .stepItem[aria-current="step"] { flex: 1; }
+.compact .circle { width: 24px; height: 24px; min-width: 24px; box-shadow: none; border-width: 1px; }
+.compact .stepNum { font-family: var(--shop-body); font-size: 0.75rem; }
+.compact .stepLabel { display: none; }
+.compact .stepItem[aria-current="step"] .stepLabel { display: block; font-family: var(--shop-body); font-size: 0.75rem; text-transform: none; letter-spacing: 0; line-height: 1.6; text-align: left; }
+.compact .iconCheck, .compact .iconTruck, .compact .iconFailed { width: 14px; height: 14px; }

@@ -2,9 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "@used-books/session-client";
+import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { useSession } from "../hooks/useSession";
+import { useCountdown, formatRemaining } from "../hooks/useAuctionClock";
+import { PurchaseDialog } from "../components/PurchaseDialog";
 import {
   createVNPayTopup,
+  getTopup,
   queryVNPayTopup,
   getTopups,
   getWalletSummary,
@@ -19,8 +23,10 @@ const labels = {
   Processing: "Đang xử lý",
   Succeeded: "Đã nạp ví",
   Failed: "Thanh toán không thành công",
+  Cancelled: "Đã hủy",
   ReviewRequired: "Cần đối soát",
 };
+const amountError = "Nhập số tiền từ 5.000đ đến 10.000.000đ.";
 export function WalletPage() {
   const auth = useSession();
   const [params] = useSearchParams();
@@ -33,6 +39,9 @@ export function WalletPage() {
       : undefined;
   const ownerId = auth.status === "authenticated" ? auth.user.id : undefined;
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [checkoutId, setCheckoutId] = useState<string>();
+  const [dialog, setDialog] = useState<"topup" | "withdrawal" | null>(null);
+  const [withdrawalAmount, setWithdrawalAmount] = useState("50000");
   const paymentWindow = useRef<Window | null>(null);
   const alive = useRef(true);
   const summary = useQuery({
@@ -47,15 +56,44 @@ export function WalletPage() {
   });
   const result = useQuery({
     queryKey: ["topup", ownerId, id],
-    queryFn: () => queryVNPayTopup(id!),
-    enabled: !!ownerId && !!id && !paymentOpen,
+    queryFn: () => (paymentOpen ? getTopup(id!) : queryVNPayTopup(id!)),
+    enabled: !!ownerId && !!id,
     refetchInterval: (q) =>
       document.visibilityState === "visible" &&
       ["Pending", "Processing"].includes(q.state.data?.state ?? "")
         ? 3000
         : false,
   });
+  // Viewing an older request must not stop tracking the checkout we opened.
+  const checkout = useQuery({
+    queryKey: ["wallet-checkout", ownerId, checkoutId],
+    queryFn: () =>
+      paymentOpen ? getTopup(checkoutId!) : queryVNPayTopup(checkoutId!),
+    enabled: !!ownerId && !!checkoutId,
+    refetchInterval: (q) =>
+      document.visibilityState === "visible" &&
+      ["Pending", "Processing"].includes(q.state.data?.state ?? "")
+        ? 3000
+        : false,
+  });
+  const currentCheckout =
+    checkout.data?.id === checkoutId ? checkout.data : undefined;
+  const checkoutState = currentCheckout?.state;
+  const checkoutCredited = currentCheckout?.credited;
+  const checkoutExpiresAt = currentCheckout?.expiresAt;
+  const checkoutServerTime = currentCheckout?.serverTime;
+  const resultState = result.data?.state;
+  const credited = result.data?.credited;
+  const expiresAt = result.data?.expiresAt;
+  const serverTime = result.data?.serverTime;
+  const awaitingPayment =
+    !!resultState && ["Pending", "Processing"].includes(resultState);
+  const remaining = useCountdown(
+    awaitingPayment ? (expiresAt ?? undefined) : undefined,
+    serverTime,
+  );
   const [amount, setAmount] = useState("100000");
+  const amountInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [hasIntent, setHasIntent] = useState(false);
@@ -76,34 +114,115 @@ export function WalletPage() {
     };
   }, []);
   useEffect(() => {
-    if (!ownerId || !id || typeof BroadcastChannel === "undefined") return;
-    const channel = new BroadcastChannel(paymentChannel(id));
+    const trackedId = checkoutId ?? id;
+    if (!ownerId || !trackedId || typeof BroadcastChannel === "undefined")
+      return;
+    const channel = new BroadcastChannel(paymentChannel(trackedId));
     channel.onmessage = (event: MessageEvent) => {
-      if (event.data?.type !== "payment-returned" || event.data?.id !== id)
+      if (
+        event.data?.type !== "payment-returned" ||
+        event.data?.id !== trackedId
+      )
         return;
-      channel.postMessage({ type: "wallet-ready", id });
+      channel.postMessage({ type: "wallet-ready", id: trackedId });
       setPaymentOpen(false);
       window.focus();
-      void client.invalidateQueries({ queryKey: ["topup", ownerId, id] });
+      void client.invalidateQueries({
+        queryKey: ["topup", ownerId, trackedId],
+      });
+      void client.invalidateQueries({
+        queryKey: ["wallet-checkout", ownerId, trackedId],
+      });
     };
     return () => channel.close();
-  }, [ownerId, id, client]);
+  }, [ownerId, checkoutId, id, client]);
   useEffect(() => {
     // Provider query is display-only; fetch the owner-checked server state.
     if (params.has("vnp_TxnRef"))
       navigate(id ? `/wallet?topup=${id}` : "/wallet", { replace: true });
   }, [params, id, navigate]);
   useEffect(() => {
-    if (result.data?.credited) {
-      void client.invalidateQueries({ queryKey: ["wallet-summary", ownerId] });
+    if (resultState && !["Pending", "Processing"].includes(resultState)) {
       void client.invalidateQueries({ queryKey: ["topups", ownerId] });
-      void client.invalidateQueries({ queryKey: ["wallet-history", ownerId] });
-      if (intent.current?.id === id) {
-        intent.current = null;
-        setHasIntent(false);
-      }
     }
-  }, [result.data?.credited, client, ownerId, id]);
+    if (credited) {
+      void client.invalidateQueries({ queryKey: ["wallet-summary", ownerId] });
+      void client.invalidateQueries({ queryKey: ["wallet-history", ownerId] });
+    }
+  }, [resultState, credited, client, ownerId, id]);
+  useEffect(() => {
+    if (
+      !checkoutId ||
+      intent.current?.id !== checkoutId ||
+      !checkoutState ||
+      ["Pending", "Processing"].includes(checkoutState)
+    )
+      return;
+    // VNPay owns its separate tab. Release this confirmed checkout locally;
+    // an external tab with no opener cannot reliably be closed by its creator.
+    paymentWindow.current = null;
+    // oxlint-disable-next-line react/set-state-in-effect -- Sync the owned checkout after server confirmation.
+    setPaymentOpen(false);
+    intent.current = null;
+    setHasIntent(false);
+    setCheckoutId(undefined);
+    void client.invalidateQueries({ queryKey: ["topups", ownerId] });
+    if (checkoutCredited) {
+      void client.invalidateQueries({ queryKey: ["wallet-summary", ownerId] });
+      void client.invalidateQueries({ queryKey: ["wallet-history", ownerId] });
+    }
+  }, [checkoutId, checkoutState, checkoutCredited, client, ownerId]);
+  useEffect(() => {
+    if (
+      !checkoutId ||
+      !checkoutState ||
+      !["Pending", "Processing"].includes(checkoutState) ||
+      !checkoutExpiresAt ||
+      !checkoutServerTime
+    )
+      return;
+    const until =
+      Date.parse(checkoutExpiresAt) - Date.parse(checkoutServerTime);
+    const timeout = window.setTimeout(
+      () => {
+        void client.invalidateQueries({
+          queryKey: ["wallet-checkout", ownerId, checkoutId],
+        });
+      },
+      Math.max(0, until) + 100,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [
+    checkoutId,
+    checkoutState,
+    checkoutExpiresAt,
+    checkoutServerTime,
+    client,
+    ownerId,
+  ]);
+  useEffect(() => {
+    if (!awaitingPayment || !expiresAt || !serverTime) return;
+    // The server clock owns the deadline. Re-read at expiry even with VNPay
+    // still open; only the confirmed response may mark the request cancelled.
+    const until = Date.parse(expiresAt) - Date.parse(serverTime);
+    const timeout = window.setTimeout(
+      () => {
+        void client.invalidateQueries({ queryKey: ["topup", ownerId, id] });
+      },
+      Math.max(0, until) + 100,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [awaitingPayment, expiresAt, serverTime, client, ownerId, id]);
+  useEffect(() => {
+    if (ownerId && !paymentOpen) {
+      if (id)
+        void client.invalidateQueries({ queryKey: ["topup", ownerId, id] });
+      if (checkoutId)
+        void client.invalidateQueries({
+          queryKey: ["wallet-checkout", ownerId, checkoutId],
+        });
+    }
+  }, [paymentOpen, ownerId, id, checkoutId, client]);
   if (!ownerId)
     return (
       <section className={styles.page}>
@@ -121,7 +240,8 @@ export function WalletPage() {
     if (busy || paymentOpen) return;
     const value = Number(amount);
     if (!/^\d+$/.test(amount) || value < 5000 || value > 10000000) {
-      setError("Nhập số tiền từ 5.000đ đến 10.000.000đ.");
+      setError(amountError);
+      amountInput.current?.focus();
       return;
     }
     // Reserve the new tab during the click, before the asynchronous API call.
@@ -161,10 +281,33 @@ export function WalletPage() {
       )
         throw new Error("Invalid payment destination");
       intent.current = { ...pinned, id: response.entityId };
+      // A lost-response retry replays the original receipt and deadline.
+      // Check current state before reopening a checkout that may have expired.
+      const current = await getTopup(response.entityId);
+      if (!alive.current) {
+        checkoutWindow.close();
+        return;
+      }
+      client.setQueryData(["topup", ownerId, response.entityId], current);
+      client.setQueryData(
+        ["wallet-checkout", ownerId, response.entityId],
+        current,
+      );
+      setCheckoutId(response.entityId);
+      void client.invalidateQueries({ queryKey: ["topups", ownerId] });
       navigate(`/wallet?topup=${response.entityId}`);
-      if (!checkoutWindow.closed) checkoutWindow.location.replace(url.href);
+      if (!["Pending", "Processing"].includes(current.state)) {
+        checkoutWindow.close();
+        paymentWindow.current = null;
+        setPaymentOpen(false);
+        intent.current = null;
+        setHasIntent(false);
+        setCheckoutId(undefined);
+      } else if (!checkoutWindow.closed)
+        checkoutWindow.location.replace(url.href);
       else setPaymentOpen(false);
       setBusy(false);
+      setDialog(null);
     } catch (cause) {
       checkoutWindow.close();
       paymentWindow.current = null;
@@ -189,51 +332,30 @@ export function WalletPage() {
   }
   return (
     <section className={styles.page}>
-      <Link to="/account">← Về tài khoản</Link>
       <h1>Ví của tôi</h1>
-      <p>Ví mô phỏng đồ án · Thanh toán thử qua VNPay sandbox.</p>
-      <nav className={styles.sections} aria-label="Các mục trong ví">
-        <a href="#wallet-history">Lịch sử giao dịch</a>
-        <a href="#wallet-topup">Nạp ví</a>
-        <a href="#wallet-withdrawal">Rút tiền</a>
-      </nav>
-      {paymentOpen && (
+      <div className={styles.actions} role="group" aria-label="Thao tác ví">
+        <button
+          type="button"
+          className={styles.primary}
+          aria-haspopup="dialog"
+          onClick={() => setDialog("topup")}
+        >
+          <ArrowDownToLine size={20} aria-hidden="true" />
+          Nạp tiền
+        </button>
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          onClick={() => setDialog("withdrawal")}
+        >
+          <ArrowUpFromLine size={20} aria-hidden="true" />
+          Rút tiền
+        </button>
+      </div>
+      {paymentOpen && !awaitingPayment && (
         <p role="status">
           Hoàn tất thanh toán trong tab VNPay. Tab ví này sẽ cập nhật khi bạn
           quay lại.
-        </p>
-      )}
-      {summary.isPending ? (
-        <p role="status">Đang tải số dư…</p>
-      ) : summary.data ? (
-        <dl className={styles.balances}>
-          <div>
-            <dt>Số dư khả dụng</dt>
-            <dd>{formatVnd(summary.data.available)}</dd>
-          </div>
-          <div>
-            <dt>Đang giữ cho giao dịch</dt>
-            <dd>{formatVnd(summary.data.transactionHeld)}</dd>
-          </div>
-          <div>
-            <dt>Đang giữ để rút</dt>
-            <dd>{formatVnd(summary.data.withdrawalHeld)}</dd>
-          </div>
-          <div>
-            <dt>Tổng số dư</dt>
-            <dd>{formatVnd(summary.data.total)}</dd>
-          </div>
-        </dl>
-      ) : (
-        <p role="alert">
-          Chưa tải được số dư.{" "}
-          <button onClick={() => void summary.refetch()}>Thử lại</button>
-        </p>
-      )}
-      {summary.isError && summary.data && (
-        <p role="alert">
-          Số dư chưa cập nhật.{" "}
-          <button onClick={() => void summary.refetch()}>Tải lại</button>
         </p>
       )}
       {id && (
@@ -254,13 +376,40 @@ export function WalletPage() {
                 <p>
                   {labels[result.data.state]} · {formatVnd(result.data.amount)}
                 </p>
+                {awaitingPayment && result.data.expiresAt && (
+                  <>
+                    <p className={styles.countdown}>
+                      {remaining > 0 ? (
+                        <>
+                          Còn{" "}
+                          <span
+                            role="timer"
+                            aria-label="Thời gian thanh toán còn lại"
+                          >
+                            {formatRemaining(remaining)}
+                          </span>{" "}
+                          để thanh toán
+                        </>
+                      ) : (
+                        "Đang kiểm tra yêu cầu hết hạn…"
+                      )}
+                    </p>
+                    <p>Yêu cầu tự hủy sau 5 phút nếu chưa thanh toán.</p>
+                  </>
+                )}
                 {!result.data.credited &&
                   ["Pending", "Processing"].includes(result.data.state) && (
                     <p>
-                      Chưa có xác nhận nạp ví. Máy chủ sẽ kiểm tra lại kết quả
-                      với VNPay; bạn không cần tạo yêu cầu nạp mới.
+                      {paymentOpen
+                        ? "Hoàn tất thanh toán trong tab VNPay. Ví sẽ tự cập nhật kết quả."
+                        : "Chưa có xác nhận nạp ví. Ví sẽ kiểm tra lại kết quả thanh toán."}
                     </p>
                   )}
+                {result.data.state === "Cancelled" && (
+                  <p>
+                    Đã hết 5 phút thanh toán. Bạn có thể tạo yêu cầu nạp mới.
+                  </p>
+                )}
                 {result.data.state === "ReviewRequired" && (
                   <p>
                     Yêu cầu cần đối soát. Giữ mã yêu cầu {id} để được hỗ trợ.
@@ -272,84 +421,144 @@ export function WalletPage() {
         </div>
       )}
       <WalletHistory ownerId={ownerId} />
-      <section
-        id="wallet-withdrawal"
-        className={styles.withdrawal}
-        aria-labelledby="wallet-withdrawal-heading"
+      <PurchaseDialog
+        open={dialog === "topup"}
+        onClose={() => setDialog(null)}
+        title="Nạp tiền"
+        description="Nạp ví mô phỏng qua VNPay sandbox."
+        busy={busy}
+        className={styles.dialog}
       >
-        <h2 id="wallet-withdrawal-heading">Rút tiền</h2>
-        <p id="wallet-withdrawal-note">
-          Chức năng rút tiền mô phỏng sẽ được bổ sung sau. Hiện bạn chưa thể tạo
-          yêu cầu rút tiền.
-        </p>
-        <button
-          type="button"
-          disabled
-          aria-describedby="wallet-withdrawal-note"
+        <form onSubmit={submit} className={styles.form}>
+          <label htmlFor="topup-amount">Số tiền nạp (đồng)</label>
+          <input
+            id="topup-amount"
+            ref={amountInput}
+            type="text"
+            inputMode="numeric"
+            value={amount}
+            disabled={busy || hasIntent}
+            onChange={(e) => setAmount(e.target.value)}
+            aria-describedby={`topup-range${error ? " topup-error" : ""}`}
+            aria-invalid={error === amountError}
+          />
+          <p id="topup-range">
+            Từ <strong>5.000đ</strong> đến <strong>10.000.000đ</strong> mỗi lần
+            nạp.
+          </p>
+          <p>
+            VNPay mở trong tab mới. Tiền chỉ vào ví sau khi thanh toán được xác
+            nhận. Bạn có 5 phút để thanh toán; hết thời gian, yêu cầu tự hủy.
+          </p>
+          {summary.isPending && (
+            <p role="status">Đang kiểm tra khả năng nạp ví…</p>
+          )}
+          {summary.isError && (
+            <p role="alert">
+              Chưa cập nhật được thông tin ví.{" "}
+              <button
+                type="button"
+                disabled={summary.isFetching}
+                onClick={() => void summary.refetch()}
+              >
+                Thử lại
+              </button>
+            </p>
+          )}
+          {error && (
+            <p id="topup-error" role="alert">
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            className={styles.primary}
+            disabled={
+              busy ||
+              paymentOpen ||
+              !summary.data?.vnpayEnabled ||
+              summary.isError
+            }
+          >
+            {busy
+              ? "Đang mở VNPay…"
+              : paymentOpen
+                ? "Đang thanh toán ở tab VNPay…"
+                : error && hasIntent
+                  ? "Thử lại yêu cầu nạp"
+                  : hasIntent
+                    ? "Tiếp tục thanh toán"
+                    : "Tiếp tục thanh toán"}
+          </button>
+          {summary.data?.vnpayEnabled === false && (
+            <p>Nạp VNPay sandbox chưa khả dụng cho tài khoản này.</p>
+          )}
+        </form>
+        <section
+          className={styles.recent}
+          aria-labelledby="recent-topups-heading"
         >
-          Rút tiền
-        </button>
-      </section>
-      <form id="wallet-topup" onSubmit={submit} className={styles.form}>
-        <h2>Nạp ví qua VNPay sandbox</h2>
-        <label htmlFor="topup-amount">Số tiền nạp (đồng)</label>
-        <input
-          id="topup-amount"
-          type="text"
-          inputMode="numeric"
-          value={amount}
-          disabled={busy || hasIntent}
-          onChange={(e) => setAmount(e.target.value)}
-          aria-describedby="topup-range"
-        />
-        <p id="topup-range">
-          Từ 5.000đ đến 10.000.000đ. Tiền chỉ vào ví sau khi thanh toán được xác
-          nhận.
-        </p>
-        <p>
-          VNPay mở trong tab mới. Giữ tab ví này để xem số dư sau thanh toán.
-          Yêu cầu nạp được lưu trong lịch sử ví.
-        </p>
-        {error && <p role="alert">{error}</p>}
-        <button
-          type="submit"
-          disabled={busy || paymentOpen || !summary.data?.vnpayEnabled}
-        >
-          {busy
-            ? "Đang mở VNPay…"
-            : paymentOpen
-              ? "Đang thanh toán ở tab VNPay…"
-              : error && hasIntent
-                ? "Thử lại yêu cầu nạp"
-                : hasIntent
-                  ? "Tiếp tục thanh toán"
-                  : "Nạp qua VNPay sandbox"}
-        </button>
-        {summary.data?.vnpayEnabled === false && (
-          <p>Nạp VNPay sandbox chưa khả dụng cho tài khoản này.</p>
-        )}
-      </form>
-      <h2>Yêu cầu nạp gần đây</h2>
-      {history.isPending ? (
-        <p>Đang tải…</p>
-      ) : history.isError ? (
-        <p role="alert">
-          Chưa tải được lịch sử.{" "}
-          <button onClick={() => void history.refetch()}>Thử lại</button>
-        </p>
-      ) : !history.data?.items.length ? (
-        <p>Chưa có yêu cầu nạp ví.</p>
-      ) : (
-        <ul className={styles.history}>
-          {history.data.items.map((item) => (
-            <li key={item.id}>
-              <Link to={`/wallet?topup=${item.id}`}>
-                {formatVnd(item.amount)} · {labels[item.state]}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+          <h3 id="recent-topups-heading">Yêu cầu nạp gần đây</h3>
+          {history.isPending ? (
+            <p>Đang tải…</p>
+          ) : history.isError ? (
+            <p role="alert">
+              Chưa tải được lịch sử.{" "}
+              <button onClick={() => void history.refetch()}>Thử lại</button>
+            </p>
+          ) : !history.data?.items.length ? (
+            <p>Chưa có yêu cầu nạp ví.</p>
+          ) : (
+            <ul className={styles.history}>
+              {history.data.items.map((item) => (
+                <li key={item.id}>
+                  <Link
+                    to={`/wallet?topup=${item.id}`}
+                    onClick={() => setDialog(null)}
+                  >
+                    {formatVnd(item.amount)} · {labels[item.state]}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </PurchaseDialog>
+      <PurchaseDialog
+        open={dialog === "withdrawal"}
+        onClose={() => setDialog(null)}
+        title="Rút tiền"
+        description="Rút tiền từ số dư khả dụng trong ví mô phỏng."
+        className={styles.dialog}
+      >
+        <div className={styles.form}>
+          <label htmlFor="withdrawal-amount">Số tiền rút (đồng)</label>
+          <input
+            id="withdrawal-amount"
+            type="text"
+            inputMode="numeric"
+            value={withdrawalAmount}
+            onChange={(event) => setWithdrawalAmount(event.target.value)}
+            aria-describedby="withdrawal-range withdrawal-note"
+          />
+          <p id="withdrawal-range">
+            Tối thiểu <strong>50.000đ</strong> mỗi lần rút. Số tiền rút không
+            vượt số dư khả dụng.
+          </p>
+          <p id="withdrawal-note" className={styles.previewNote}>
+            Chức năng rút tiền sẽ được bổ sung sau. Hiện bạn chưa thể gửi yêu
+            cầu rút tiền.
+          </p>
+          <button
+            type="button"
+            className={styles.primary}
+            disabled
+            aria-describedby="withdrawal-note"
+          >
+            Gửi yêu cầu rút
+          </button>
+        </div>
+      </PurchaseDialog>
     </section>
   );
 }

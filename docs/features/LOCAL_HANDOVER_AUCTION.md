@@ -18,7 +18,7 @@ thời hạn và quy tắc biên dưới đây là baseline triển khai do nhó
 | DEC-04 | Một giao dịch ViaPoint dùng đúng một điểm chung. SelfDropoff/CarrierInbound và SelfCollect/CarrierOutbound là các lựa chọn độc lập của từng người. |
 | DEC-05 | Kiểm tra tình trạng/đối chiếu mô tả có biên bản; không chứng nhận chính hãng, quyền sở hữu hoặc tính hợp pháp của bản in bằng một lần duyệt ảnh. |
 | DEC-06 | Đấu giá là chức năng phụ có phạm vi bắt buộc tối thiểu ở bản 1.1: một cuốn/phiên, giá mua ngay trước bid đầu (mở 60 giây cho người khác trả cao hơn, ADR 0043), Auto có trần, hết phiên tạo một Order. |
-| DEC-07 | Đấu giá dùng listing riêng kênh Auction do luồng đấu giá tạo (mode Sale, salePrice là giá trị khai báo), không lấy listing của sàn mua/đổi; listing Auction không lên kệ, không mua/đổi/báo giá ([ADR 0041](../adr/0041-auction-only-listings.md), 19/10/2026). Sách phải được điểm nhận và đạt kiểm tra trước khi mở phiên. |
+| DEC-07 | Đấu giá dùng listing riêng kênh Auction do luồng đấu giá tạo (mode Sale, salePrice là giá trị khai báo), không lấy listing của sàn mua/đổi; listing Auction không lên kệ, không mua/đổi/báo giá ([ADR 0042](../adr/0042-auction-only-listings.md), 19/10/2026). Sách phải được điểm nhận và đạt kiểm tra trước khi mở phiên. |
 | DEC-08 | Giữ cọc Exchange 100% giá trị sách dự kiến nhận cho cả hai phương thức ở bản đầu. Điểm giữ sách không tự miễn cọc; thay đổi tỷ lệ là policy tương lai. |
 | DEC-09 | Không tiền thật/carrier thật. Có thể diễn tập tiếp nhận sách thật tại bàn được phép dùng; tọa độ/địa chỉ mô phỏng không được trình bày như cơ sở đã hoạt động. |
 
@@ -242,7 +242,7 @@ Quá hạn không đến lấy không đồng nghĩa bỏ quyền sở hữu; kh
 
 ## 6. Đấu giá và Auto
 
-FR-AU01: Seller tạo AuctionIntake trên listing kênh Auction của mình (ADR 0041) đã
+FR-AU01: Seller tạo AuctionIntake trên listing kênh Auction của mình (ADR 0042) đã
 Approved/Visible/Available; listing kênh Marketplace bị từ chối,
 snapshot revision/start/step/buyNow/point/policy; start và buyNow nằm POL-16, buyNow
 nếu có lớn hơn start. Trong cùng transaction, giữ độc quyền listing và slot. Không

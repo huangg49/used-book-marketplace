@@ -9,9 +9,9 @@
   bid sau không gia hạn. Hết giờ đóng phiên bình thường (người dẫn thắng, Order +
   24 giờ thanh toán). Phiên `BuyNowPending` cũ giữ Order 15 phút.
 - Migration `0033-buy-now-challenge` thêm `auctions.buyNowAt` (backfill null) và
-  đổi expr endAt cố định; OpenAPI 0.46.0 `PublicAuctionSummary.buyNowAt`. RN/web
+  đổi expr endAt cố định; OpenAPI 0.47.0 `PublicAuctionSummary.buyNowAt`. RN/web
   đổi lời hộp xác nhận/biên nhận và hiện thông báo đếm ngược khi có `buyNowAt`.
-- Nhánh `feature/buy-now-challenge` (base `feature/auction-only-listings` e774664).
+- Nhánh `feature/buy-now-challenge` (base `feature/auction-only-listings`, đã gộp `origin/main` 6d063ee).
   PASS: contract check, API tsc, E2E `auctions` + `auction-listings` 60 (cửa sổ,
   replay, vượt giá trong cửa sổ, bid trễ bị từ chối theo giờ server, gần hết giờ giữ
   end, race bid đầu/Mua ngay và Auto/Mua ngay, thông báo), RN tsc/lint/auctions 10,
@@ -26,10 +26,10 @@
   3,2 giây sau endAt (trước đây tới ~60 giây). Native/human/remote CI NOT RUN.
   READINESS không đổi. Chưa push/PR/merge.
 
-## Sách đấu giá là listing riêng (ADR 0041) — 19/10/2026
+## Sách đấu giá là listing riêng (ADR 0042) — 19/10/2026
 
 - Chủ dự án yêu cầu: tạo đấu giá không lấy listing của sàn mua/đổi mà dùng listing
-  riêng. ADR 0041 + sửa DEC-07/FR-AU01 (phụ lục) và FR-C05/BR-02 (SRS). Listing có
+  riêng. ADR 0042 + sửa DEC-07/FR-AU01 (phụ lục) và FR-C05/BR-02 (SRS). Listing có
   `channel` bất biến `Marketplace|Auction` (OpenAPI 0.45.0); migration
   `0032-auction-only-listings` backfill Marketplace, import PostgreSQL gán Marketplace.
 - API: draft/save/submit/revise Auction chỉ mode Sale (salePrice = giá trị khai báo
@@ -51,6 +51,226 @@
   còn thiếu từ main + 0032, rồi `db:bootstrap` (không reset/seed). Native/human/remote CI NOT RUN. READINESS không đổi.
 - Riêng: nhánh `fix/rn-auction-fake-data` (8111c17) bỏ dữ liệu bịa ở màn Đấu giá RN;
   màn Tài khoản RN còn dữ liệu mẫu (★4.9, đơn #DH-8821). Chưa push/PR/merge.
+
+## Hết hạn nạp VNPay sau 5 phút — 19/10/2026
+
+- Nhánh `codex/topup-five-minute-expiry`, đã push lên `origin`; ba commit
+  `a27cfdc6`, `4f316bd8`, `71aef464`.
+- API/Mongo thêm thời hạn 5 phút, worker xử lý hết hạn, migration và contract;
+  user-web hiển thị countdown; ADR và tài liệu checkout đã cập nhật.
+- PASS: `pnpm contract:check`, `pnpm contract:routes`, API lint/typecheck,
+  user-web lint/typecheck/145 unit tests/build, `pnpm docs:check`, `git diff --check`.
+  Có warning lint/chunk có sẵn; lệnh test đầu tiên dùng option Vitest không hợp lệ,
+  đã chạy lại đúng và PASS.
+- Chưa chạy QA Mongo riêng, native/live VNPay, human review hoặc remote CI.
+  READINESS giữ nguyên; PR chưa tạo.
+
+## Popup nạp và rút tiền — 19/10/2026
+
+- Member web `/wallet` theo yêu cầu chủ dự án: bỏ khối số dư, dòng giới thiệu,
+  link quay lại và thanh điều hướng cũ; giữ tiêu đề và danh sách lịch sử giao dịch.
+  Hai nút **Nạp tiền / Rút tiền** mở popup bằng `PurchaseDialog` hiện có.
+- Nạp giữ luồng VNPay sandbox đang hoạt động, hiện hạn mức5.000–10.000.000đ;
+  form và yêu cầu nạp gần đây nằm trong popup. Tự đóng khi chuẩn bị thanh toán
+  thành công; giữ số tiền/key/body ở màn cha qua đóng/mở popup và retry mất ACK.
+- Rút chỉ là UI, ghi tối thiểu50.000đ theo SRS POL-15; khóa **Gửi yêu cầu rút**,
+  không tạo command hoặc báo thành công. Không đổi API/contract/RN/session.
+- Nhánh `codex/wallet-action-popups`, base781c69e; subject
+  `feat(web): open wallet topup and withdrawal dialogs`.
+- PASS Node24.21.0/pnpm11.19.0: web lint/typecheck/141unit/build; Chromium
+  popup/Esc/Tab/focus/scroll lock, giữ số tiền khi đóng/mở, rút không tạo command,
+  nạp/Return giả/QueryDR lỗi và retry/mất ACK giữ key+body. Dialog320/390px ở130%
+  không overflow; giữ regression lịch sử/lọc/phân trang/retry và điều hướng ví.
+  API/Mongo QA riêng, storage fake/VNPay navigation và QueryDR mô phỏng.
+- 6 warning lint/chunk có sẵn; detector một lượt có advisory font1.2rem cũ.
+  Chưa kiểm native/live VNPay/human/remote CI. READINESS giữ nguyên;
+  chưa push/PR/merge/deploy. Ảnh QA local: `.tmp/wallet-checkout-browser/`.
+
+## Push và kiểm tra PR51 —19/10/2026
+
+- Theo yêu cầu chủ dự án, push `codex/chat-open-book` và tạo
+  [PR51](https://github.com/huangg49/used-book-marketplace/pull/51) vào `main`.
+  Main `8741a6f` là ancestor, không có conflict. Gói gồm hội thoại/phiếu thỏa
+  thuận API + web, migration0032, inbox/nền/hover/chuyển cảnh; không chỉ motion.
+- Sau head `20995f4`, subject sửa kiểm tra
+  `test(api): isolate exchange and migration upgrade fixtures`: mỗi ca exchange
+  tạo hai Member riêng để không tích bài chạm hạn mức5 hoặc dùng chung ví;
+  snapshot nhánh migration cũ dừng trước union0027 để migration mới được áp
+  sau lịch sử, không bị ghi đè validator. Trừ3 collection Chat Mongo-native
+  khỏi số45 model PostgreSQL. Không sửa migration đã áp dụng hoặc nới nghiệp vụ.
+- PASS local API150unit/21file;120 E2E của agreements/orders/exchanges/
+  wallet-checkout trên QA `_test` (93 ca qua lần đầu,27 exchange qua sau sửa);
+  Mongo48 ca schema/transaction/ledger/keyset (23 ca qua lần đầu,25 schema
+  qua sau sửa), lint/typecheck, contract172operation/26controller.
+  API/web build và web152unit/browser có evidence source ở các mục dưới;
+  sửa cuối chỉ test + điểm lưu. API11 warning lint cũ, web6 warning/chunk cũ.
+  Không chạy import PostgreSQL/failover/native/live provider trong lượt này.
+- Remote8 job bị GitHub từ chối khởi chạy do billing/spending limit; không phải
+  CI PASS. PR chưa có review độc lập. Theo TEAMWORK, CI/review còn chặn merge;
+  chưa merge vào main, chưa có ngoại lệ cho PR51. READINESS giữ nguyên.
+  DB app và `.env` không bị thay đổi; chỉ dùng Mongo QA port57017 để kiểm tra.
+
+## Mở thẻ thành giao diện Chat —19/10/2026
+
+- Nhánh `codex/chat-open-book`, base `3527034`, subject
+  `feat(web): expand conversation cards into chat workspaces`.
+  Dùng View Transitions của React Router7 đang có: khung420ms mở/340ms thu,
+  bìa/tên là snapshot riêng; chữ giữ kích thước thay vì kéo giãn theo khung.
+  Header tạm giữ hình dạng trong lúc chuyển cảnh; nền/navbar không nằm trong
+  root snapshot. Chỉ thẻ được chọn có tên chuyển cảnh; mobile chỉ có1 identity.
+- Inbox nhớ filter/số mục đã mở/scroll/selected trong bộ nhớ của layout theo owner;
+  đổi user tạo bộ nhớ mới, không dùng browser storage. Back link dùng history khi
+  vào từ inbox, đường trực tiếp vẫn về `/chat`; browser Back chạy chiều thu.
+  Quản lý scroll manual trong phạm vi Chat và trả setting cũ khi rời phạm vi.
+- Hover/focus chỉ prefetch GET room vào query key theo owner. Nếu chưa có kết quả
+  thật, mở cùng khung chờ có bìa/tên từ cache listing, chưa mount handler giao dịch.
+  Lỗi có retry; dữ liệu đã tải vẫn giữ. Exchange cũ dùng chuyển khung và cache
+  detail theo owner, không gộp lịch sử hoặc thay nghiệp vụ.
+- PASS web build/152unit/lint (6 warning cũ), browser fixture toàn luồng tại
+  `.tmp/chat-morph-verified-flow-qa`, thêm assertions snapshot thực vào suite.
+  QA `.tmp/chat-morph-qa` kiểm3 snapshot ghép đúng,420/340ms, filter/load more/
+  scroll/browser Back, mạng chậm không có composer,320px chữ130% + reduced-motion
+  giữ animation/không trùng snapshot, fallback khi API browser không có.
+  Đã xem midpoint/desktop/mobile,1 batch chỉnh và xác nhận navbar đứng yên.
+  Chunk warning cũ; API/native/Safari thiết bị thật/live storage/remote CI NOT RUN.
+  READINESS không đổi; local web5174, chưa push/PR.
+
+## Thu gọn và sắp lại thẻ danh sách Chat —19/10/2026
+
+- Nhánh `codex/chat-open-book`, base `4c49df3`, subject
+  `style(web): refine compact conversation cards`.
+  Cụm đầu thẻ có bìa64px/ảnh tối đa96px cạnh tên16px/người trao đổi/hình thức.
+  Bỏ dải màu chạy suốt bìa; footer có một đường phân tách, trạng thái trái/nút mở
+  phải, target44px. Dưới360px bìa48px để chữ chảy xuống dưới. Padding16px.
+  Grid auto-fill tối thiểu340px:3 cột ở1440,2 ở1100/900,1 ở390/320; một thẻ vẫn
+  giữ cùng bề rộng khi ít hội thoại. Rút khoảng cách tiêu đề/filter; không cắt tên,
+  bỏ hai câu hướng dẫn lặp (tiếp tục xem phiếu/xem đơn và nhắn tin), giữ pending
+  proposal và giá thống nhất khi có. Lọc/load more/API/đường vào room không đổi.
+- PASS scoped browser fixture14 room + Exchange cũ tại `.tmp/chat-inbox-card-redesign-qa`:
+  6 thẻ thường vừa viewport1440×900, link44px, filter/load more, ảnh thiếu/tên dài,
+  mobile320 chữ130% không tràn, mở đúng room. Đã xem desktop/mobile.
+  Build/lint/full Chat browser tại `.tmp/chat-inbox-card-redesign-flow-qa` PASS;
+  detector[];6 warning lint/chunk cũ giữ. Đã xác nhận mobile sau batch chỉnh.
+  Không chạy lại backend/native/live storage/remote CI;
+  READINESS giữ nguyên. Local web5174 HMR, chưa push/PR.
+  Follow-up từ `d098134`, subject `style(web): lift and tint conversation cards on hover`:
+  thẻ purchase/Exchange cũ nhấc4px, đổi kem ấm và bóng mềm trong200ms khi hover
+  bằng chuột hoặc focus-visible bàn phím. Touch không áp hover; duration override
+  giữ motion theo chính sách chủ dự án. Build và Chromium fixture normal/reduced
+  preference, mouse leave, sibling không xê dịch, keyboard/touch PASS tại
+  `.tmp/chat-card-hover-qa`; đã xem desktop/mobile. Chỉ CSS; không chạy lại gate API.
+
+## Nền mùa thu3D cho Chat —19/10/2026
+
+- Nhánh `codex/chat-open-book`, base `d684bd6`, subject
+  `style(web): reuse approved autumn posting background for chat`.
+  Theo chủ dự án, khôi phục nguyên ảnh `autumn-book-desk.webp` từ `6394dc4`
+  (18/10,77KB) cho inbox và room Chat. Không tạo lại ảnh/không đổi nền Sell.
+  MainLayout gắn nền fixed chỉ trên route Chat, tháo khi rời route; phiếu/chat/
+  inbox giữ bề mặt giấy đặc, mobile có khoảng nền12px hai bên.
+  Chủ dự án đã xem bản gen thay thế rồi chọn giữ nền đang chạy trên web;
+  ảnh thử không được đưa vào code.
+- PASS web build (chunk warning cũ), toàn bộ Chat browser fixture1440/1100/
+  900/390/320 chữ130% tại `.tmp/chat-autumn-bg-qa`; đã xem inbox desktop/mobile
+  và room desktop. Scope QA `.tmp/chat-background-scope-qa` kiểm đúng77026byte
+  ảnh gốc, cuộn vẫn fixed/cover, không tràn ngang và rời Home gỡ nền.
+  API/DB/session/handlers không đổi; không chạy lại gate backend/native/live
+  storage/remote CI. READINESS giữ nguyên, chưa push/PR; web5174 HMR để owner xem.
+
+## Đồng bộ GitHub về máy — 19/10/2026
+
+- Theo chủ dự án, fetch và merge `origin/main` tại `8741a6f` (PR50) vào
+  `codex/chat-open-book`, giữ16 commit Chat local từ `ff725a6`. Subject
+  `Merge origin/main into codex/chat-open-book`. Giữ cả hai phần SESSION_STATE
+  khi giải conflict; ADR Chat đổi0040→0041 để không trùng ADR phí/hạn mức trên main.
+- Main mới gồm lịch sử ví/điều hướng, đăng bài miễn phí với5 chỗ hiển thị/chờ duyệt,
+  picker bìa/phụ, gallery bản nháp/sticky và pin body khi retry địa chỉ.
+- PASS API/web build, web152unit, VNPay16unit, contract generated check,
+ 172route/26controller, docs399file/2645link và Chat browser fixture tại
+  `.tmp/chat-main-sync-qa`. Không chạy lại toàn bộ E2E Mongo/native/live provider/
+  remote CI; gate READINESS giữ nguyên. Warning chunk cũ còn.
+- API3000 khởi động lại từ source hợp nhất, web5174 HMR; readiness/API và web200.
+  Giữ `.env` và DB local hiện có, không seed/reset/migrate trong lượt này.
+  Workers chưa khởi động lại; không suy ảnh mới/đơn nền đã xử lý từ health API.
+  Merge chỉ ở local, chưa push/PR/merge GitHub.
+
+## Phiếu thỏa thuận và hội thoại mua/đổi chung —19/10/2026
+
+- Nhánh `codex/chat-open-book`, base `b98a650`; bản thử mới từ `e9c37ab`, subject
+  `refactor(web): give conversation a book dossier layout`. Chủ dự án duyệt làm
+  thử sau nghiên cứu: đầu phiếu đỏ rượu chứa bìa thật80px/tên sách20px/tác giả/
+  trạng thái, phiếu kem cạnh chat trắng; Back gọn thay tiêu đề sách riêng phía trên.
+  Dưới960px giữ đầu sách trên cả hai tab; cover64/48px, chữ20px;320px chữ lớn
+  được chảy xuống dưới ảnh. Follow-up từ `e5ff987`, subject
+  `fix(web): let long book titles flow around the cover`: bỏ căn hai đầu ảnh/chữ,
+  chữ sát bìa và chảy toàn chiều ngang dưới ảnh ở mọi breakpoint; đầu phiếu giãn
+  theo nội dung, không cắt tên. QA fixture tên ngắn/dài300 ký tự/chuỗi liền,
+  1440/1100/961/390/320px (320 chữ130%) PASS tại `.tmp/chat-title-wrap-qa`.
+  Build (chunk warning cũ), QA cuộn hướng dẫn/giữ nháp PASS. Phiếu cuộn trên footer,
+  hai nút cuối vẫn thẳng hàng. Không đổi handler/API hoặc dữ liệu thật.
+  Đang chờ chủ dự án xem bản local, chưa push/PR.
+  Follow-up từ `aac6aef`, subject `fix(web): dock transaction guide and follow its expansion`:
+  giữ scrollbar gutter desktop để form không lệch; “Cách giao dịch” nằm sát footer,
+  bỏ khoảng trống dưới khi đóng. Thao tác mở cuộn phiếu xuống cuối, đóng về đầu;
+  mobile cuộn trang tới vùng vừa mở/đầu phiếu theo flow tự nhiên. Chỉ thao tác chủ
+  động mới cuộn; cảnh báo tự mở không kéo viewport. QA fixture1440/1100 với scrollbar
+  cổ điển, mobile390/320, bàn phím, bật reduced-motion, bật/tắt nhanh, giữ cả nháp
+  PASS tại `.tmp/chat-guide-scroll-qa`; toàn bộ browser flow PASS tại
+  `.tmp/chat-guide-scroll-flow-qa`. Build (chunk warning cũ), lint (6 warning cũ)
+  PASS. Không đổi API/nghiệp vụ, không chạy lại gate backend/native/live storage.
+- Phiếu trái ưu tiên hình thức → giá → đề nghị giá. Yêu cầu đổi nằm cạnh hình
+  thức; giá niêm yết nổi trước chốt, giá thống nhất đỏ rượu nổi sau chốt. Phí vẫn
+  hiện; hướng dẫn/phase trail gom vào “Cách giao dịch”. Tự mở khi hết hạn, thiếu
+  nơi gửi hoặc quote đã gửi mất/hết hạn. Proposal, lỗi và revision cũ vẫn hiện
+  trực tiếp; không đổi handler/quyền/key/body/version hoặc nghiệp vụ.
+- Đầu sách đỏ rượu thay bookmark nhỏ; giữ vân giấy và mascot từ asset cũ cho chat
+  rỗng còn hoạt động (lược mascot dưới360px). Field chat/giá dùng một viền focus sát ô như Đăng sách,
+  forced colors có outline phía trong; bỏ ghi chú riêng tư dưới composer.
+- PASS:147unit, typecheck/build (chunk warning cũ), lint (6 warning cũ), detector[].
+  Browser fixture `.tmp/chat-dossier-qa` kiểm retry/chuyển hình thức/giá/
+  đơn/thanh toán/Exchange cũ, desktop/mobile/chữ lớn. Xác nhận sau batch spacing
+  tại `.tmp/chat-dossier-final-qa`: phần chính vừa khung1440/1100 cao900,
+  disclosure bàn phím giữ cả nháp giá/tin, mobile390/320 chữ130% không tràn,
+  quote hết hạn mở hướng dẫn, giá đã chốt, thiếu ảnh. Fix contrast fallback span
+  bị CSS heading chung đổi màu: kiểm computed cream-on-wine PASS sau sửa, không
+  thêm vòng chụp. QA bìa Alice chỉ trong fixture `[QA]`, không thay ảnh listing thật.
+  Một lượt xem, một batch sửa và một lượt xác nhận; không chạy lại backend/native/
+  live storage/remote CI, không đóng gate từ evidence UI. Chưa push/PR gói này.
+- Nhánh `codex/unified-trade-chat`, base `c385dd0` (`codex/chat-guidance`).
+  Subject `feat(chat): unify purchase and exchange agreement workspace`.
+  [ADR0041](../adr/0041-unified-conversation-workspace.md) ghi quyết định đã duyệt.
+  Navbar Chat mở card theo Buyer + Seller + listing; Detail Chat/Đổi sách mở cùng
+  phiếu trái/chat phải. Mobile chuyển vùng giữ nháp; Mua ngay giữ nguyên.
+- Seller đề xuất hình thức, đối tác xác nhận; Buyer được yêu cầu đổi sách.
+  Giá đề nghị/chấp nhận có cấu trúc, gắn revision; giá tự điền và chỉ đọc khi tạo
+  đơn. Mode/giá khóa khi có Exchange chưa hủy hoặc OrderCreated. Tin nhắn vẫn
+  mở cho participant ACTIVE sau tạo đơn; không cấp quyền mới cho LOCKED.
+  Giữ quote/key/body/version khi mất ACK, địa chỉ riêng, ledger/hold/commitment.
+- OpenAPI0.44.0 và generated types; migration0032 mới thêm terms/events/link.
+  Exchange mới liên kết nguyên tử vào hội thoại, lịch sử/tin cũ giữ nguyên.
+  Standalone Exchange cũ dùng cùng bố cục, không ép gộp dữ liệu. Inbox kế thừa
+  giới hạn100 hội thoại API hiện tại; đọc trực tiếp room không phụ thuộc giới hạn đó.
+- PASS API4 suite/109tests (agreements/orders/exchanges/wallet-checkout), có
+  quyền/replay/session thu hồi/revision cũ/giá sai/race và validator Mongo. Sau
+  bổ sung chặn intent trái Sale-only/Exchange-only, chạy lại agreements9/9 PASS.
+  API lint (11 warning cũ), typecheck/build, contract/check/routes172/26 PASS.
+- PASS web147unit, lint (6 warning cũ), typecheck/build. Browser fixture toàn HTTP
+  bị chặn + Socket.IO riêng5193/5195: chấp nhận giá/mode, linked Exchange, inbox,
+  mất ACK create/pay/message, giữ nháp, OrderCreated còn chat,1440/390 và320px
+  chữ130%. Evidence local `.tmp/unified-chat-qa`. Detector một lần có3 advisory,
+  đã sửa cỡ chữ ngoài token và hai màu cũ; không chạy detector lặp.
+- PASS seller-order browser qua HTTP/Mongo thật trên replica QA57017/database
+  ngẫu nhiên *_test và storage fake: hai phiên login, quote/address retry,
+  giá90.000 + phí30.000, mất ACK chỉ tạo1 đơn, thiếu tiền bị từ chối, thanh toán
+  giữ120.000 đúng1 lần. Desktop1440/mobile390; evidence local
+  `apps/user-web/test-results/seller-order`.
+- Local API3000/media worker và web5174 chạy source mới. Đã áp dụng pending
+  0030/0031/0032 vào DB app local;8 collection nghiệp vụ đối chiếu BSON không đổi,
+  giữ5 bài demo và mật khẩu. User `.env` giữ nguyên; script riêng `.tmp` dùng
+  kết nối local đã xác minh thay cấu hình cổng không còn hoạt động.
+- Không push/PR/merge/deploy trong gói này. Native/live Supabase/remote CI/human
+  review NOT RUN; READINESS và gate inspection/settlement giữ nguyên. Bước tiếp:
+  chủ dự án xem `/chat` và Detail bằng hai tài khoản demo trên local5174.
 
 ## Sửa thông tin trước gửi và thử lại nơi gửi — 19/10/2026
 

@@ -14,7 +14,7 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 
 export interface SendToAuctionBookPickerProps {
   readonly eligibleListings: PrivateDraft[];
-  // ADR 0041: the seller's own Auction listings still being written or reviewed.
+  // ADR 0042: the seller's own Auction listings still being written or reviewed.
   readonly unfinishedListings?: PrivateDraft[];
   readonly selectedListingId: string | null;
   readonly onSelectListing: (id: string) => void;

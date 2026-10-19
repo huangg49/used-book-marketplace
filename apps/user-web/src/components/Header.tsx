@@ -32,7 +32,13 @@ export function Logo() {
     </Link>
   );
 }
-export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
+export function Header({
+  freezeScroll = false,
+}: {
+  forceDark?: boolean;
+  forceSolid?: boolean;
+  freezeScroll?: boolean;
+}) {
   const location = useLocation();
   const categoryArrival = useRef(false);
   const [floating, setFloating] = useState(() => window.scrollY > 48);
@@ -55,10 +61,11 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
   useLayoutEffect(
     () =>
       observeHeaderScroll((next, animate) => {
+        if (freezeScroll) return;
         setFloating(next);
         setCollapsing(animate);
       }),
-    [location.pathname],
+    [location.pathname, freezeScroll],
   );
   useEffect(() => {
     const desktop = window.matchMedia("(min-width: 1001px)");

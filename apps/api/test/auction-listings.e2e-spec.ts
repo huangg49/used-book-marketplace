@@ -15,7 +15,7 @@ import { validates } from './helpers/contract.js';
 import { CHECKLIST, ListingFixtures } from './helpers/media-listings.js';
 import { MongoFixtures } from './helpers/mongo-fixtures.js';
 
-// ADR 0041 over real HTTP and MongoDB (QA replica set, *_test database):
+// ADR 0042 over real HTTP and MongoDB (QA replica set, *_test database):
 // Auction listings are created by the auction flow, keep their channel and
 // never reach marketplace reads or commands. Storage signing is faked.
 const storage = {
@@ -45,7 +45,7 @@ const emptyDraft = {
   mediaIds: [] as string[],
 };
 
-describe('Auction-only listings (ADR 0041)', () => {
+describe('Auction-only listings (ADR 0042)', () => {
   let app: INestApplication, db: MongoFixtures, fixtures: ListingFixtures;
   let reviewer: Actor;
 

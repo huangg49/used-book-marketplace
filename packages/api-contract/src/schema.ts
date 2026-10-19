@@ -561,6 +561,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/purchase-conversations/{conversationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a participant-only conversation and its current agreement sheet */
+        get: operations["getPurchaseConversation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/purchase-conversations/{conversationId}/terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Propose a structured price or a mutually confirmed trade mode without holding books */
+        post: operations["proposeConversationTerms"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/purchase-conversations/{conversationId}/terms/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** The other participant accepts or declines the exact pending proposal */
+        post: operations["respondConversationTerms"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/purchase-conversations/{conversationId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read immutable structured agreement events, separate from member messages */
+        get: operations["getConversationEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/purchase-conversations/{conversationId}/messages": {
         parameters: {
             query?: never;
@@ -1347,7 +1415,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Create a VNPay sandbox wallet topup
+         * Create a VNPay sandbox wallet topup with a five-minute payment window
          * @description Verified Member; LOCKED denied. No credit until a signed IPN or server-verified QueryDR result is applied. Same key/body replays the original payment URL and deadline. Sandbox only; finite demo clearing source remains enforced.
          */
         post: operations["createVNPayTopup"];
@@ -1764,7 +1832,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Seller ACTIVE verified MEMBER. Approved, Visible, Available listing of channel Auction (ADR 0041) with current Sale revision; Marketplace listings return 409 InvalidState. In one transaction snapshots revision/start/step/buyNow, takes the exclusive commitment and one point slot (capacity checked under the point lock). Self drop-off within 72 hours; at most two unfinished intakes/auctions per seller (POL-41). */
+        /** @description Seller ACTIVE verified MEMBER. Approved, Visible, Available listing of channel Auction (ADR 0042) with current Sale revision; Marketplace listings return 409 InvalidState. In one transaction snapshots revision/start/step/buyNow, takes the exclusive commitment and one point slot (capacity checked under the point lock). Self drop-off within 72 hours; at most two unfinished intakes/auctions per seller (POL-41). */
         post: operations["createAuctionIntake"];
         delete?: never;
         options?: never;
@@ -2920,7 +2988,7 @@ export interface components {
         /** @enum {string} */
         ListingMode: "Sale" | "Exchange" | "Both";
         /**
-         * @description Immutable after draft creation (ADR 0041). Marketplace listings use the public shelf, quotes, purchases and exchanges. Auction listings are created by the auction flow, use mode Sale with salePrice as the declared (protective) value and no fulfillment origin, never appear on the marketplace and are the only listings accepted by CreateAuctionIntake.
+         * @description Immutable after draft creation (ADR 0042). Marketplace listings use the public shelf, quotes, purchases and exchanges. Auction listings are created by the auction flow, use mode Sale with salePrice as the declared (protective) value and no fulfillment origin, never appear on the marketplace and are the only listings accepted by CreateAuctionIntake.
          * @enum {string}
          */
         ListingChannel: "Marketplace" | "Auction";
@@ -3235,6 +3303,11 @@ export interface components {
             exchangeValue?: number;
         });
         CreatePurchaseConversation: {
+            /**
+             * @description Opt into the unified agreement workspace; Exchange on a Both listing requests seller confirmation. Sale-only rejects Exchange intent; Exchange-only rejects Negotiation intent.
+             * @enum {string}
+             */
+            intent?: "Negotiation" | "Exchange";
             expectedVersion: number;
         };
         PurchaseConversationReceipt: {
@@ -3311,6 +3384,7 @@ export interface components {
         };
         /** @description Participant-only conversation. quotePreview exposes the buyer-submitted destination only to the buyer and selected seller. */
         PurchaseConversation: {
+            terms?: components["schemas"]["ConversationTerms"] | null;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -3329,6 +3403,73 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             closedAt: string | null;
+        };
+        ConversationProposal: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "Mode" | "Price";
+            /** Format: uuid */
+            proposedById: string;
+            /** @enum {string|null} */
+            mode: "Negotiation" | "Exchange" | null;
+            amount: number | null;
+            /** Format: uuid */
+            listingRevisionId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ConversationTerms: {
+            /** @enum {string} */
+            mode: "Negotiation" | "Exchange";
+            pendingProposal: components["schemas"]["ConversationProposal"] | null;
+            agreedPrice: number | null;
+            /** Format: uuid */
+            agreedListingRevisionId: string | null;
+            /** Format: uuid */
+            activeExchangeId: string | null;
+            exchangeIds: string[];
+            locked: boolean;
+        };
+        ProposeConversationTerms: {
+            expectedVersion: number;
+            /** @enum {string} */
+            kind: "Mode" | "Price" | "RequestExchange";
+            /** @enum {string} */
+            mode?: "Negotiation" | "Exchange";
+            amount?: number;
+        } & ({
+            /** @constant */
+            kind?: "Mode";
+        } | {
+            /** @constant */
+            kind?: "Price";
+        } | {
+            /** @constant */
+            kind?: "RequestExchange";
+        });
+        RespondConversationTerms: {
+            expectedVersion: number;
+            /** Format: uuid */
+            proposalId: string;
+            accept: boolean;
+        };
+        ConversationEvent: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            /** Format: uuid */
+            actorId: string;
+            /** @enum {string} */
+            kind: "ModeProposed" | "ModeAccepted" | "PriceProposed" | "PriceAccepted" | "ProposalDeclined" | "ExchangeLinked";
+            /** @enum {string|null} */
+            mode: "Negotiation" | "Exchange" | null;
+            amount: number | null;
+            /** Format: uuid */
+            exchangeId: string | null;
+            /** Format: date-time */
+            createdAt: string;
         };
         PurchaseQuotePreview: {
             destination: components["schemas"]["OrderContact"];
@@ -3976,7 +4117,7 @@ export interface components {
             version: number;
             amount: number;
             /** @enum {string} */
-            state: "Pending" | "Processing" | "Succeeded" | "Failed" | "ReviewRequired";
+            state: "Pending" | "Processing" | "Succeeded" | "Failed" | "Cancelled" | "ReviewRequired";
             credited: boolean;
             /** Format: uuid */
             journalId: string | null;
@@ -3984,6 +4125,13 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            /**
+             * Format: date-time
+             * @description Immutable VNPay payment deadline; null for simulator intents. Pending/Processing becomes Cancelled at expiry without a wallet journal or history entry. Verified late evidence of payment within the window is reconciled exactly once.
+             */
+            expiresAt: string | null;
+            /** Format: date-time */
+            serverTime: string;
             /** @constant */
             demoOnly: true;
             /** @constant */
@@ -4030,7 +4178,7 @@ export interface components {
             entityId: string;
             version: number;
             /** @enum {string} */
-            state: "Pending" | "Processing" | "Succeeded" | "Failed" | "ReviewRequired";
+            state: "Pending" | "Processing" | "Succeeded" | "Failed" | "Cancelled" | "ReviewRequired";
             credited: boolean;
             /** Format: uuid */
             journalId: string | null;
@@ -5163,6 +5311,12 @@ export interface components {
             shippedAt?: string | null;
         };
         CreateExchangeProposal: {
+            /**
+             * Format: uuid
+             * @description Link a proposal to its buyer-seller workspace atomically; requires confirmed Exchange mode.
+             */
+            conversationId?: string;
+            expectedConversationVersion?: number;
             /** Format: uuid */
             initiatorListingId?: string;
             initiatorListingIds?: string[];
@@ -6244,6 +6398,110 @@ export interface operations {
             401: components["responses"]["ListingError"];
             403: components["responses"]["ListingError"];
             422: components["responses"]["ListingError"];
+        };
+    };
+    getPurchaseConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Participant-only agreement workspace. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseConversation"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    proposeConversationTerms: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProposeConversationTerms"];
+            };
+        };
+        responses: {
+            /** @description Versioned proposal receipt, no reservation or wallet mutation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseConversationReceipt"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    respondConversationTerms: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RespondConversationTerms"];
+            };
+        };
+        responses: {
+            /** @description Accepted terms remain a draft until an Order or Exchange is committed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseConversationReceipt"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getConversationEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Participant-only agreement event history. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationEvent"][];
+                };
+            };
+            default: components["responses"]["Error"];
         };
     };
     listPurchaseMessages: {
@@ -7854,7 +8112,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Pending topup and signed sandbox URL; not a payment receipt. */
+            /** @description Pending topup and signed sandbox URL with an immutable five-minute deadline. Replaying the key retains the original deadline; not a payment receipt. */
             200: {
                 headers: {
                     "Cache-Control"?: "no-store";
@@ -7886,7 +8144,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Current owner-checked topup state after querying VNPay. Terminal intents are read without another provider query. */
+            /** @description Current owner-checked topup state after querying VNPay. Cancelled intents may still be queried to reconcile a verified payment made before the deadline; other terminal intents are read without another provider query. */
             200: {
                 headers: {
                     "Cache-Control"?: "no-store";
@@ -7944,7 +8202,7 @@ export interface operations {
                 cursor?: string;
                 from?: string;
                 to?: string;
-                state?: "Pending" | "Processing" | "Succeeded" | "Failed" | "ReviewRequired";
+                state?: "Pending" | "Processing" | "Succeeded" | "Failed" | "Cancelled" | "ReviewRequired";
             };
             header?: never;
             path?: never;

@@ -25,3 +25,9 @@ Render88px desktop/mobile, `alt=""`; chữ bên cạnh là accessible name.
 Những file này là bitmap illustration; icon tác vụ nhỏ của app vẫn dùng Lucide.
 
 Paper refinement reuses `/login-art/ivory-paper.webp` at20% multiply opacity inside geometric SVG clips. No new bitmap; provenance stays with that existing texture. Wine thread and shallow silhouette hover shadow are code geometry.
+
+Chat19/10 reuses `exchange.png` at64px for the active conversation's empty greeting.
+The books are decorative, not a selected transaction mode; empty alt/aria-hidden
+and no pointer interaction. Errors and expired rooms omit the mascot. Chat also
+reuses the existing ivory-paper texture under an85% paper-color overlay, plus a
+CSS geometric wine bookmark; no new bitmap or external illustration source.

@@ -270,15 +270,19 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
 
     worker = app.get(ExchangeExpiryWorker);
 
-    user1 = await reader(['MEMBER']);
-    user2 = await reader(['MEMBER']);
     admin = await reader(['MEMBER', 'ADMIN']);
     staff = await reader(['STAFF']);
     operator = await reader(['TEST_OPERATOR']);
+  }, 60000);
 
+  beforeEach(async () => {
+    // Active listings from another scenario must not consume this case's
+    // five-listing quota or couple its wallet funding to test execution order.
+    user1 = await reader(['MEMBER']);
+    user2 = await reader(['MEMBER']);
     await topupUser(user1, 1000000);
     await topupUser(user2, 1000000);
-  }, 60000);
+  });
 
   afterAll(async () => {
     if (db) {

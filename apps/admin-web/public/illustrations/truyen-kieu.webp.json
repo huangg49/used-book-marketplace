@@ -1,0 +1,11 @@
+{
+  "prompt": "Origin: supplied directly by the project owner on 2026-10-10 as Truyện kiều.webp (Truyện Kiều — Nguyễn Du). Requested to replace one duplicate Chúa nhẫn cover in the decorative Home hero. Whole-image delivery optimization only: fit within400x560, WebP encoding, preserve aspect ratio; no crop, illustration edit or generation. Does not assert public-domain status or listing availability.",
+  "createdAt": "2026-10-10T15:50:02.096Z",
+  "delivery": {
+    "width": 363,
+    "height": 560,
+    "bytes": 50146
+  },
+  "sourceSha256": "8b057427003ae2b0707f6b51ea324fb2aca4afab42e4ef671e31c1993e78a4e8",
+  "deliverySha256": "f8a851f144e2bfceba18c4aea10cf54ddba425782a61e0c29478b49dd9152a9b"
+}

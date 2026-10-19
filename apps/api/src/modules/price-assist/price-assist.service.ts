@@ -443,7 +443,7 @@ export class PriceAssistService {
       .find({
         _id: { $in: [...new Set(revisions.map((r) => r.listingId))] },
         ownerId: { $ne: ownerId },
-        // Auction declared values are not asking prices (ADR 0041).
+        // Auction declared values are not asking prices (ADR 0042).
         channel: { $ne: 'Auction' },
         moderation: 'Approved',
         visibility: 'Visible',
