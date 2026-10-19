@@ -34,6 +34,28 @@
   E2E ADR 0044 6 ca, admin tsc/oxlint/30. Browser fixture: operator đăng nhập, thấy
   danh sách rỗng; staff/bidder bị 403. Gửi sự kiện từ màn hình trên dữ liệu thật NOT RUN
   vì điểm đóng cửa (05:47) nên chưa giao được đơn cho hãng.
+## Hoàn thiện luồng Chat thương lượng, Hộp thư tin nhắn và Đơn hàng trên React Native — 20/10/2026
+
+- Nhánh `feat/rn-chat-inbox-and-order-flow`, base `c23cfd3`.
+- Theo yêu cầu chủ dự án, hoàn thiện toàn bộ luồng thương lượng mua bán & trò chuyện trên Mobile React Native đồng bộ với bản Web:
+  1. Hộp thư trò chuyện kiểu Shopee (`ChatInboxScreen` - route `/chat-inbox`):
+     - Danh sách các cuộc trò chuyện thương lượng với thumbnail bìa sách thật, tên sách, giá niêm yết, vai trò và timestamp.
+     - Thanh tab lọc nhanh chuẩn Shopee: `[Tất cả]`, `[Cần phản hồi]` (badge đếm số), `[Đang thương lượng]`, `[Đã tạo đơn]`.
+     - Tìm kiếm đối tác theo tên, đệm an toàn Safe Area cho notch/Dynamic Island, thanh điều hướng đáy `MemberNavigation` chuẩn nền trắng sáng `colorRoles.navigationBackground`.
+     - Icon tin nhắn trên Header trang chủ (`HomeHeader`), Tìm kiếm, Đấu giá, Tài khoản và `TopNavbar` tự động trỏ về `/chat-inbox` và hiển thị badge động.
+  2. Khung chat thương lượng chia 2 Panel (`ConversationScreen` - route `/conversation?id=...`):
+     - `AgreementSheetPanel` (Phiếu thỏa thuận): xem thông tin sách, chọn Mua hoặc Đổi, gửi/chấp nhận/từ chối đề xuất giá, nhập địa chỉ nhận báo giá vận chuyển GHN/Direct tức thì, người bán tạo đơn hàng, người mua thanh toán đơn hàng bằng Ví.
+     - `ChatMessagesPanel` (Hội thoại): timeline sự kiện thỏa thuận, bong bóng tin nhắn, realtime WebSocket `/purchase-chat` + Polling 3.5s.
+     - Đầy đủ Header `TopNavbar` đỏ rượu vang, Subheader nút Quay lại và Bottom Navbar `MemberNavigation` nền trắng.
+  3. Hoàn thiện luồng Đơn hàng & Ví:
+     - Khung trạng thái người bán đang chuẩn bị sách (`amberBg` / `amberBorder`) hiển thị trực quan cả ảnh bìa sách và tiến độ.
+     - Modal nạp tiền Ví (`topup-modal.tsx`) kết nối nạp tiền test và VNPay.
+     - Xóa bỏ các modal mock cũ (`HomeCartModal`).
+- Đồng bộ quyền MongoDB: Chạy `mongo:bootstrap` cập nhật quyền Least-Privilege cho role `latlai_app` trên các collection mới `conversation_terms`, `conversation_events`.
+- Kiểm tra xác thực:
+  - Mobile React Native: `tsc --noEmit` ➔ PASS (0 lỗi).
+  - Linter: `expo lint` ➔ PASS (0 lỗi).
+  - Vitest: 24 test suites / 157 tests ➔ PASS 100%.
 
 ## Mua ngay mở cửa sổ 60 giây (ADR 0043) — 19/10/2026
 

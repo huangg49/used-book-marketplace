@@ -9,6 +9,8 @@ interface BookBottomBarProps {
   onExchangePress: () => void;
   onBuyPress: () => void;
   isOwner: boolean;
+  hasActiveOrder?: boolean;
+  activeOrderState?: string;
 }
 
 function formatVnd(amount: number | null | undefined): string {
@@ -22,6 +24,8 @@ export function BookBottomBar({
   onExchangePress,
   onBuyPress,
   isOwner,
+  hasActiveOrder,
+  activeOrderState,
 }: BookBottomBarProps) {
   const isAvailable = item.purchaseAvailability?.status === "Available";
   const canBuy = item.salePrice != null && isAvailable && !isOwner;
@@ -29,12 +33,20 @@ export function BookBottomBar({
     (item.mode === "Exchange" || item.mode === "Both") && isAvailable && !isOwner;
 
   const displayPrice = item.salePrice ?? item.exchangeValue;
+  const priceLabel =
+    item.salePrice != null
+      ? "GIÁ BÁN"
+      : item.mode === "Exchange"
+        ? "GIÁ ĐỔI"
+        : "GIÁ SÁCH";
 
   return (
     <View style={styles.container}>
       <View style={styles.priceColumn}>
-        <AppText style={styles.priceLabel}>GIÁ CHUYỂN NHƯỢNG</AppText>
-        <AppText style={styles.priceValue}>
+        <AppText numberOfLines={1} style={styles.priceLabel}>
+          {priceLabel}
+        </AppText>
+        <AppText numberOfLines={1} style={styles.priceValue}>
           {formatVnd(displayPrice)}
         </AppText>
       </View>
@@ -47,7 +59,7 @@ export function BookBottomBar({
             style={({ pressed }) => [styles.chatBtn, pressed && styles.pressed]}
             onPress={onChatPress}
           >
-            <Icon name="message" size={19} color={stitchTokens.wineDark} />
+            <Icon name="message" size={18} color={stitchTokens.wineDark} />
           </Pressable>
         )}
 
@@ -58,14 +70,30 @@ export function BookBottomBar({
             style={({ pressed }) => [styles.exchangeBtn, pressed && styles.pressed]}
             onPress={onExchangePress}
           >
-            <AppText style={styles.exchangeBtnText}>Đổi sách</AppText>
+            <AppText numberOfLines={1} style={styles.exchangeBtnText}>
+              Đổi sách
+            </AppText>
           </Pressable>
         )}
 
         {isOwner ? (
           <View style={styles.ownerBadge}>
-            <AppText style={styles.ownerText}>Sách của bạn</AppText>
+            <AppText numberOfLines={1} style={styles.ownerText}>
+              Sách của bạn
+            </AppText>
           </View>
+        ) : hasActiveOrder && activeOrderState === "AwaitingPayment" ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Thanh toán ngay đơn hàng đang giữ sách"
+            style={({ pressed }) => [styles.payNowBtn, pressed && styles.pressed]}
+            onPress={onBuyPress}
+          >
+            <Icon name="tag" size={15} color={stitchTokens.white} />
+            <AppText numberOfLines={1} style={styles.buyBtnText}>
+              Thanh toán ngay
+            </AppText>
+          </Pressable>
         ) : canBuy ? (
           <Pressable
             accessibilityRole="button"
@@ -73,14 +101,16 @@ export function BookBottomBar({
             style={({ pressed }) => [styles.buyBtn, pressed && styles.pressed]}
             onPress={onBuyPress}
           >
-            <AppText style={styles.buyBtnText}>Mua ngay</AppText>
+            <AppText numberOfLines={1} style={styles.buyBtnText}>
+              Mua ngay
+            </AppText>
           </Pressable>
         ) : (
           <View style={styles.disabledBtn}>
-            <AppText style={styles.disabledText}>
+            <AppText numberOfLines={1} style={styles.disabledText}>
               {item.purchaseAvailability?.status === "InTransaction"
-                ? "Đang giao dịch"
-                : "Đang giữ sách"}
+                ? "Đang giữ sách"
+                : "Không sẵn sàng"}
             </AppText>
           </View>
         )}
@@ -89,13 +119,14 @@ export function BookBottomBar({
   );
 }
 
+
 const styles = StyleSheet.create({
   container: {
-    height: 74,
+    height: 72,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: space.lg,
+    paddingHorizontal: space.md,
     backgroundColor: stitchTokens.roseWarmSurface,
     borderTopWidth: 1.5,
     borderTopColor: stitchTokens.peachBorder,
@@ -107,9 +138,9 @@ const styles = StyleSheet.create({
   },
   priceColumn: {
     justifyContent: "center",
-    gap: 2,
-    flexShrink: 1,
-    paddingRight: 8,
+    gap: 1,
+    flexShrink: 0,
+    marginRight: 6,
   },
   priceLabel: {
     fontSize: 10,
@@ -118,34 +149,38 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   priceValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "800",
     color: stitchTokens.wineDark,
   },
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "flex-end",
+    flexShrink: 1,
+    gap: 6,
   },
   chatBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 11,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: stitchTokens.terracottaSoft,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorder,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   exchangeBtn: {
-    height: 44,
-    paddingHorizontal: 14,
-    borderRadius: 11,
+    height: 40,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     backgroundColor: stitchTokens.terracottaSoft,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorder,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   exchangeBtnText: {
     fontSize: 13,
@@ -153,12 +188,30 @@ const styles = StyleSheet.create({
     color: stitchTokens.wineDark,
   },
   buyBtn: {
-    height: 44,
-    paddingHorizontal: 20,
+    height: 40,
+    paddingHorizontal: 16,
     borderRadius: 10,
     backgroundColor: stitchTokens.wineDark,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  payNowBtn: {
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.wineMid,
+    flexDirection: "row",
+    alignItems: "center",
+
+    justifyContent: "center",
+    gap: 6,
+    flexShrink: 0,
     shadowColor: stitchTokens.wineDark,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -166,13 +219,14 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   buyBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: stitchTokens.white,
   },
+
   ownerBadge: {
-    height: 44,
-    paddingHorizontal: 16,
+    height: 40,
+    paddingHorizontal: 14,
     borderRadius: 10,
     backgroundColor: stitchTokens.parchment,
     alignItems: "center",
@@ -184,8 +238,8 @@ const styles = StyleSheet.create({
     color: stitchTokens.subtleGray,
   },
   disabledBtn: {
-    height: 44,
-    paddingHorizontal: 14,
+    height: 40,
+    paddingHorizontal: 12,
     borderRadius: 10,
     backgroundColor: stitchTokens.parchment,
     alignItems: "center",
