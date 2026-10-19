@@ -5,6 +5,10 @@ import {
   withListingChannel,
 } from './0032-auction-only-listings.js';
 import {
+  buyNowChallengeMigration,
+  withBuyNowChallenge,
+} from './0033-buy-now-challenge.js';
+import {
   exchangeCollectionSpecs,
   exchangesMigration,
 } from './0016-exchanges.js';
@@ -259,6 +263,7 @@ export const migrations: Migration[] = [
   bookCirculationRegionsMigration,
   exchangeMultiBookMigration,
   auctionOnlyListingsMigration,
+  buyNowChallengeMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -297,7 +302,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withSettlementChanges)
     .map(withRulesChanges)
     .map(withPointAdministrationChanges)
-    .map(withInspectionEvidenceChanges),
+    .map(withInspectionEvidenceChanges)
+    .map(withBuyNowChallenge),
   ...pointOrderCollectionSpecs
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)

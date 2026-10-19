@@ -771,6 +771,7 @@ export class AuctionIntakesService {
           startPrice: i.startPrice,
           step: i.step,
           buyNowPrice: i.buyNowPrice,
+          buyNowAt: null,
           startAt: now,
           endAt: new Date(now.getTime() + AUCTION_DURATION_MS),
           state: 'Active',

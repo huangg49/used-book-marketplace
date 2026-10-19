@@ -42,6 +42,8 @@ export const publicAuctionSummary = z.object({
   startAt: z.string(),
   endAt: z.string(),
   pointName: z.string(),
+  // ADR 0042: when Buy Now opened the 60-second window (endAt already shortened).
+  buyNowAt: z.string().nullable().optional(),
   // The detail read returns a richer book; only the summary fields are used here.
   book: z.unknown().optional(),
   demoOnly: z.boolean().optional(),

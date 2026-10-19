@@ -192,7 +192,7 @@ export function receiptMessage(
 ) {
   const price = receipt.currentPrice !== null ? formatVnd(receipt.currentPrice) : "";
   if (kind === "BuyNow")
-    return "Đã tạo đơn mua ngay. Hãy thanh toán trong 15 phút để tiếp tục.";
+    return "Bạn đang dẫn với giá mua ngay. Người khác còn 60 giây để trả cao hơn; nếu không ai vượt, bạn thắng phiên.";
   if (kind === "Disable") return "Đã tắt đặt giá tự động.";
   if (receipt.leading) return `Bạn đang dẫn giá ở ${price}.`;
   if (receipt.currentPrice === amount)

@@ -8,6 +8,7 @@ export const AUCTION_DURATION_MS = 24 * HOUR_MS;
 export const AUCTION_DROPOFF_MS = 72 * HOUR_MS;
 export const AUCTION_PAYMENT_MS = 24 * HOUR_MS;
 export const BUY_NOW_PAYMENT_MS = 15 * 60_000;
+export const BUY_NOW_CHALLENGE_MS = 60_000; // ADR 0042
 export const AUCTION_MIN_PRICE = 10_000;
 export const AUCTION_MAX_PRICE = 1_000_000;
 export const POINT_ORDER_COMMISSION_BPS = 500;

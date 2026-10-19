@@ -209,6 +209,11 @@ function AuctionBody({
             : `Phiên kết thúc lúc ${time(auction.endAt)}`}
         </AppText>
       </View>
+      {open && auction.buyNowAt ? (
+        <Notice tone="warning">
+          {`Đã có người chọn mua ngay. Còn ${formatRemaining(Date.parse(auction.endAt) - now)} để trả cao hơn; hết giờ, người dẫn đầu thắng phiên.`}
+        </Notice>
+      ) : null}
       {me?.won ? (
         me.orderId ? (
           <WinnerSteps orderId={me.orderId} boughtNow={me.boughtNow} />
@@ -398,7 +403,9 @@ function BidPanel({
       {!pending && auction.buyNowPrice !== null && (
         <View style={{ gap: space.sm, paddingTop: space.md, borderTopWidth: 1, borderColor: colors.rule }}>
           <AppText kind="bold">Mua ngay {formatVnd(auction.buyNowPrice)}</AppText>
-          <AppText kind="small" color={colors.muted}>Chỉ có trước lượt trả giá đầu tiên.</AppText>
+          <AppText kind="small" color={colors.muted}>
+            Chỉ có trước lượt trả giá đầu tiên. Sau khi bấm, người khác còn 60 giây để trả cao hơn.
+          </AppText>
           <Button
             secondary
             title="Mua ngay"
@@ -443,7 +450,7 @@ function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuc
     case "BuyNow":
       return {
         title: `Mua ngay với ${formatVnd(amount)}?`,
-        message: `Phiên kết thúc ngay cho bạn. Bạn có 15 phút để thanh toán từ ví, sau đó nhận sách tại ${auction.pointName}. Quá hạn, sách được trả lại người bán và bạn bị ghi nhận vi phạm.`,
+        message: `Bạn cam kết mua với giá này và dẫn đầu. Người khác còn 60 giây để trả cao hơn; nếu không ai vượt, bạn thắng và thanh toán từ ví trong 24 giờ sau khi phiên kết thúc, rồi tự nhận sách tại ${auction.pointName}. Lượt mua ngay không thể rút lại; không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`,
         confirm: "Mua ngay",
       };
   }

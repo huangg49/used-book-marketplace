@@ -1,5 +1,23 @@
 # Điểm lưu hiện tại — 19/10/2026
 
+## Mua ngay mở cửa sổ 60 giây (ADR 0042) — 19/10/2026
+
+- Chủ dự án yêu cầu: bấm Mua ngay không kết thúc phiên ngay mà rút thời gian còn 60
+  giây để người khác trả cao hơn. ADR 0042 + sửa DEC-06/FR-AU06/POL-40 (phụ lục).
+  Mua ngay = lượt trả giá Manual cam kết tại `buyNowPrice` (bid kind `BuyNow`), vẫn
+  chỉ trước lượt đầu tiên, cùng khóa phiên; `endAt = min(endAt, buyNowAt + 60 s)`,
+  bid sau không gia hạn. Hết giờ đóng phiên bình thường (người dẫn thắng, Order +
+  24 giờ thanh toán). Phiên `BuyNowPending` cũ giữ Order 15 phút.
+- Migration `0033-buy-now-challenge` thêm `auctions.buyNowAt` (backfill null) và
+  đổi expr endAt cố định; OpenAPI 0.46.0 `PublicAuctionSummary.buyNowAt`. RN/web
+  đổi lời hộp xác nhận/biên nhận và hiện thông báo đếm ngược khi có `buyNowAt`.
+- Nhánh `feature/buy-now-challenge` (base `feature/auction-only-listings` e774664).
+  PASS: contract check, API tsc, E2E `auctions` + `auction-listings` 60 (cửa sổ,
+  replay, vượt giá trong cửa sổ, bid trễ bị từ chối theo giờ server, gần hết giờ giữ
+  end, race bid đầu/Mua ngay và Auto/Mua ngay, thông báo), RN tsc/lint/auctions 10,
+  web tsc/141. Mongo suite: chỉ 4 ca nâng cấp lỗi sẵn trên main (ExchangeDisputed).
+  Browser/native/human/remote CI NOT RUN. READINESS không đổi. Chưa push/PR/merge.
+
 ## Sách đấu giá là listing riêng (ADR 0041) — 19/10/2026
 
 - Chủ dự án yêu cầu: tạo đấu giá không lấy listing của sàn mua/đổi mà dùng listing

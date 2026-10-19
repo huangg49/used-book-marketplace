@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.45.0
+  version: 0.46.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -7776,8 +7776,11 @@ paths:
       tags:
         - Auctions
       description: Only before the first valid bid; decided under the same auction lock as bids so exactly
-        one wins. Forms a ViaPoint Order at the Buy Now price with a 15-minute payment deadline and
-        moves the exclusive commitment to it without release.
+        one wins. ADR 0042 — the buyer commits to the Buy Now price and leads, Buy Now is no longer
+        offered and the auction ends at min(endAt, now + 60 s). Others may outbid from Buy Now price +
+        step in that window; the normal close then forms the winner's Order (24-hour payment). The
+        receipt reports state Active and no orderId. Auctions already BuyNowPending keep their
+        15-minute Order.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -14546,6 +14549,13 @@ components:
         id:
           type: string
           format: uuid
+        buyNowAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: ADR 0042. When Buy Now opened the 60-second window; endAt already holds the
+            shortened end. Null without Buy Now. Optional for older servers.
         listingId:
           type: string
           format: uuid

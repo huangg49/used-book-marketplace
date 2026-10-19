@@ -210,6 +210,14 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     );
   const payOrder = (orderId: string, a: Actor, key?: string) =>
     cmd('post', `/point-orders/${orderId}/pay`, { expectedVersion: 1 }, a, key);
+  // Runs the close worker at the auction's current endAt (clock restored after).
+  async function closeAt(auctionId: string) {
+    const doc = (await db.c.auctions.findOne({ _id: auctionId }))!;
+    pinClock(doc.endAt);
+    await app.get(AuctionWorker).tick();
+    vi.restoreAllMocks();
+    return (await db.c.auctions.findOne({ _id: auctionId }))!;
+  }
   // Opens an auction, lets `winner` lead with one bid and closes it.
   async function wonAuction(winner: Actor, amount = 300_000) {
     const opened = await openAuction();
@@ -1216,6 +1224,8 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       { fulfillmentMethod: 'SelfCollect' },
       bidder,
     ).expect(200);
+    // ADR 0042: payment is due only once the 60-second window has closed.
+    await closeAt(won.auctionId);
     const payable = await call(
       'get',
       '/me/auctions?view=payment',
@@ -1519,15 +1529,16 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       expect([r1.status, r2.status].filter((s) => s === 200)).toHaveLength(1);
       const a = (await db.c.auctions.findOne({ _id: auctionId }))!;
       if (r2.status === 200) {
+        // ADR 0042: Buy Now leads at its price; the 200k bid is now too low.
+        expect(r1.body.code).toBe('BidTooLow');
         expect(a).toMatchObject({
-          state: 'BuyNowPending',
-          winnerId: y.id,
-          finalPrice: 600_000,
-          bidderCount: 0,
+          state: 'Active',
+          leaderId: y.id,
+          currentPrice: 600_000,
+          bidderCount: 1,
+          winnerId: null,
         });
-        expect(a.paymentDeadline!.getTime() - a.closedAt!.getTime()).toBe(
-          15 * 60_000,
-        );
+        expect(a.endAt.getTime() - a.buyNowAt!.getTime()).toBe(60_000);
       } else
         expect(a).toMatchObject({
           state: 'Active',
@@ -1738,20 +1749,56 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     ).toBe(0);
   });
 
-  it('AC-AU06: Buy Now forms a 15-minute Order that can be paid', async () => {
+  it('AC-AU06/ADR 0042: Buy Now opens a 60-second window; the unbeaten buyer wins and pays', async () => {
     const { auctionId } = await openAuction();
     const buyer = await actor();
+    const key = randomUUID();
+    const body = { fulfillmentMethod: 'SelfCollect' };
     const r = await cmd(
       'post',
       `/auctions/${auctionId}/buy-now`,
-      { fulfillmentMethod: 'SelfCollect' },
+      body,
       buyer,
+      key,
     ).expect(200);
-    expect(r.body.orderId).toEqual(expect.any(String));
-    const order = (await db.c.point_orders.findOne({ _id: r.body.orderId }))!;
-    expect(order.paymentDeadline.getTime() - order.createdAt.getTime()).toBe(
-      15 * 60_000,
-    );
+    validates('AuctionCommandReceipt', r.body);
+    expect(r.body).toMatchObject({
+      state: 'Active',
+      orderId: null,
+      currentPrice: 600_000,
+      minimumBid: 650_000,
+      leading: true,
+    });
+    const replay = await cmd(
+      'post',
+      `/auctions/${auctionId}/buy-now`,
+      body,
+      buyer,
+      key,
+    ).expect(200);
+    expect(replay.headers['idempotency-replayed']).toBe('true');
+    expect(replay.body).toEqual(r.body);
+    const a = (await db.c.auctions.findOne({ _id: auctionId }))!;
+    expect(a).toMatchObject({
+      state: 'Active',
+      leaderId: buyer.id,
+      currentPrice: 600_000,
+      bidderCount: 1,
+      bidCount: 1,
+      orderId: null,
+    });
+    expect(a.endAt.getTime() - a.buyNowAt!.getTime()).toBe(60_000);
+    expect(
+      await db.c.auction_bids.countDocuments({ auctionId, kind: 'BuyNow' }),
+    ).toBe(1);
+    const pub = await call('get', `/auctions/${auctionId}`).expect(200);
+    validates('PublicAuction', pub.body);
+    expect(pub.body.auction).toMatchObject({
+      buyNowPrice: null,
+      buyNowAt: a.buyNowAt!.toISOString(),
+      endAt: a.endAt.toISOString(),
+      minimumBid: 650_000,
+    });
     const own = await call(
       'get',
       `/me/auctions/${auctionId}/participation`,
@@ -1759,14 +1806,84 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     ).expect(200);
     expect(own.body).toMatchObject({
       boughtNow: true,
-      won: true,
-      orderId: order._id,
+      leading: true,
+      won: false,
+      orderId: null,
     });
+
+    const closed = await closeAt(auctionId);
+    expect(closed).toMatchObject({
+      state: 'AwaitingWinnerPayment',
+      winnerId: buyer.id,
+      finalPrice: 600_000,
+    });
+    expect(closed.paymentDeadline!.getTime() - closed.endAt.getTime()).toBe(
+      24 * HOUR,
+    );
+    await longSession(buyer);
     await fund(buyer, 600_000);
-    await payOrder(order._id, buyer).expect(200);
+    pinClock(new Date(closed.closedAt!.getTime() + 60_000));
+    await payOrder(closed.orderId!, buyer).expect(200);
+    vi.restoreAllMocks();
     expect(await db.c.auctions.findOne({ _id: auctionId })).toMatchObject({
       state: 'Sold',
     });
+  });
+
+  it('ADR 0042: a rival outbids inside the window; bids after it are refused', async () => {
+    const { auctionId } = await openAuction();
+    const [buyer, rival] = [await actor(), await actor()];
+    await cmd(
+      'post',
+      `/auctions/${auctionId}/buy-now`,
+      { fulfillmentMethod: 'SelfCollect' },
+      buyer,
+    ).expect(200);
+    const window = (await db.c.auctions.findOne({ _id: auctionId }))!.endAt;
+    expect((await bid(auctionId, rival, 600_000).expect(409)).body.code).toBe(
+      'BidTooLow',
+    );
+    await bid(auctionId, rival, 650_000).expect(200);
+    const a = (await db.c.auctions.findOne({ _id: auctionId }))!;
+    // Later bids do not extend the window again.
+    expect(a).toMatchObject({ leaderId: rival.id, currentPrice: 650_000 });
+    expect(a.endAt).toEqual(window);
+    expect(
+      await db.c.member_notifications.countDocuments({
+        userId: buyer.id,
+        targetId: auctionId,
+        kind: 'AuctionOutbid',
+      }),
+    ).toBe(1);
+    // Server time decides the end even before the worker runs.
+    await longSession(buyer);
+    pinClock(window);
+    const late = await bid(auctionId, buyer, 700_000).expect(409);
+    expect(late.body.code).toBe('AuctionClosed');
+    vi.restoreAllMocks();
+    expect(await closeAt(auctionId)).toMatchObject({
+      state: 'AwaitingWinnerPayment',
+      winnerId: rival.id,
+      finalPrice: 650_000,
+    });
+  });
+
+  it('ADR 0042: Buy Now near the original end keeps that end', async () => {
+    const { auctionId } = await openAuction();
+    const buyer = await actor();
+    const original = (await db.c.auctions.findOne({ _id: auctionId }))!.endAt;
+    await longSession(buyer);
+    pinClock(new Date(original.getTime() - 30_000));
+    await cmd(
+      'post',
+      `/auctions/${auctionId}/buy-now`,
+      { fulfillmentMethod: 'SelfCollect' },
+      buyer,
+    ).expect(200);
+    vi.restoreAllMocks();
+    const a = (await db.c.auctions.findOne({ _id: auctionId }))!;
+    expect(a.endAt).toEqual(original);
+    expect(a.buyNowAt!.getTime()).toBe(original.getTime() - 30_000);
   });
 
   it('FR-H09/H11/T03: report acceptance, one-time code and Staff handover open the inspection window', async () => {
@@ -3155,8 +3272,11 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         expect([r1.status, r2.status].filter((s) => s === 200)).toHaveLength(1);
         const a = (await db.c.auctions.findOne({ _id: auctionId }))!;
         const orders = await db.c.point_orders.countDocuments({ auctionId });
-        if (a.state === 'BuyNowPending') expect(orders).toBe(1);
-        else {
+        // ADR 0042: Buy Now never forms an Order before the window closes.
+        if (a.buyNowAt) {
+          expect(a).toMatchObject({ state: 'Active', currentPrice: 600_000 });
+          expect(orders).toBe(0);
+        } else {
           expect(a).toMatchObject({
             state: 'Active',
             leaderId: y.id,
@@ -3544,18 +3664,20 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
           'AuctionCancelled',
         );
 
-      // Buy Now unpaid for 15 minutes: buyer and seller are told.
-      const deadline = (await db.c.auctions.findOne({ _id: bought.auctionId }))!
-        .paymentDeadline!;
+      // ADR 0042: the window closes with the buyer as winner; unpaid after
+      // 24 hours, buyer and seller are told.
+      const deadline = (await closeAt(bought.auctionId)).paymentDeadline!;
       pinClock(deadline);
       await app.get(AuctionWorker).tick();
       vi.restoreAllMocks();
       expect(await kinds(x, bought.auctionId)).toEqual([
         'AuctionPaymentExpired',
+        'AuctionWon',
       ]);
       expect(await kinds(bought.seller, bought.auctionId)).toEqual([
         'AuctionBoughtNow',
         'AuctionPaymentExpired',
+        'AuctionSold',
       ]);
     });
 

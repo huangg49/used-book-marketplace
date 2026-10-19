@@ -15,6 +15,8 @@ export const auctionSummarySchema = z.object({
   startPrice: money, step: z.union([z.literal(10000), z.literal(50000)]), buyNowPrice: money.nullable(),
   currentPrice: money.nullable(), minimumBid: money.nullable(), bidderCount: z.number().int(),
   startAt: z.string(), endAt: z.string(), pointName: z.string(), demoOnly: z.literal(true),
+  // ADR 0042: when Buy Now opened the 60-second window (endAt already shortened).
+  buyNowAt: z.string().nullish(),
   book: auctionBookSchema.nullish(),
 })
 const auctionListSchema = z.object({ items: z.array(auctionSummarySchema), serverTime: z.string() })
