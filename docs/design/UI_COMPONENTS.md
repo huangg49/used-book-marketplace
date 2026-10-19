@@ -483,7 +483,9 @@ complete event history are disclosures; closing either leaves transaction data
 intact. Shared styles still support standalone Exchange; route/history remain.
 ChatPage opts into faint existing ivory-paper texture through
 `--conversation-paper-texture`. The wine header replaces the small bookmark;
-real cover is100px wide (max144px tall), title24px. Below960px, shared book context
+real cover is80px wide (max120px tall), title20px/1.3. Cover float within a flow-root
+keeps text adjacent and lets long titles use the full width below the image,
+without truncating the title. Below960px, shared book context
 stays above both tabs, with64px/48px covers and20px title on phones. Shared
 ListingPhoto retains loading/missing/error/retry, cream-on-wine fallback copy and
 focus. White chat uses local `--conversation-chat-surface`. Active empty chat

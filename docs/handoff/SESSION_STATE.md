@@ -4,10 +4,16 @@
 
 - Nhánh `codex/chat-open-book`, base `b98a650`; bản thử mới từ `e9c37ab`, subject
   `refactor(web): give conversation a book dossier layout`. Chủ dự án duyệt làm
-  thử sau nghiên cứu: đầu phiếu đỏ rượu chứa bìa thật100px/tên sách24px/tác giả/
+  thử sau nghiên cứu: đầu phiếu đỏ rượu chứa bìa thật80px/tên sách20px/tác giả/
   trạng thái, phiếu kem cạnh chat trắng; Back gọn thay tiêu đề sách riêng phía trên.
   Dưới960px giữ đầu sách trên cả hai tab; cover64/48px, chữ20px;320px chữ lớn
-  được chảy xuống dưới ảnh. Phiếu cuộn trên footer, hai nút cuối vẫn thẳng hàng.
+  được chảy xuống dưới ảnh. Follow-up từ `e5ff987`, subject
+  `fix(web): let long book titles flow around the cover`: bỏ căn hai đầu ảnh/chữ,
+  chữ sát bìa và chảy toàn chiều ngang dưới ảnh ở mọi breakpoint; đầu phiếu giãn
+  theo nội dung, không cắt tên. QA fixture tên ngắn/dài300 ký tự/chuỗi liền,
+  1440/1100/961/390/320px (320 chữ130%) PASS tại `.tmp/chat-title-wrap-qa`.
+  Build (chunk warning cũ), QA cuộn hướng dẫn/giữ nháp PASS. Phiếu cuộn trên footer,
+  hai nút cuối vẫn thẳng hàng. Không đổi handler/API hoặc dữ liệu thật.
   Đang chờ chủ dự án xem bản local, chưa push/PR.
   Follow-up từ `aac6aef`, subject `fix(web): dock transaction guide and follow its expansion`:
   giữ scrollbar gutter desktop để form không lệch; “Cách giao dịch” nằm sát footer,

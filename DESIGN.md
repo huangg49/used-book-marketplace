@@ -882,15 +882,16 @@ Use the current ChatPage surface brief; do not restore the earlier inbox sidebar
 or close active participant messaging merely because an Order was created.
 
 The owner's latest local trial follows the book-dossier direction researched on
-19/10: a wine header inside the agreement holds the real100px cover (144px image
+19/10: a wine header inside the agreement holds the real80px cover (120px image
 height maximum), book title, author and actual room status. A compact Back link
 replaces the separate large book heading. The cream agreement and white chat
 share one spread on the warm shelf ground; partner belongs to the chat header.
 The agreement body scrolls above its action area; controls never overlay prices.
 At960px and below, a shared book header remains above mounted panel switching,
-preserving context and drafts. Narrow covers shrink to64px/48px; at320px text can
-flow below the cover. Scoped Be Vietnam Pro400/700 uses24px book title,20px narrow
-title,28px agreed price,16px body/section names and14px metadata/labels; inbox book
+preserving context and drafts. Narrow covers shrink to64px/48px. At every width,
+text begins beside the cover and flows across the width below it; full titles
+wrap without truncation. Scoped Be Vietnam Pro400/700 uses20px book title with1.3
+line height,28px agreed price,16px body/section names and14px metadata/labels; inbox book
 titles use18px. This trial awaits the owner's visual review; no remote integration.
 Secondary price edits/history open on request; message bubbles are quiet cream
 and shelf tones. Wine belongs to primary actions and accepted price. The surface
