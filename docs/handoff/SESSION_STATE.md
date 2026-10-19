@@ -1,5 +1,18 @@
 # Điểm lưu hiện tại — 19/10/2026
 
+## Hết hạn nạp VNPay sau 5 phút — 19/10/2026
+
+- Nhánh `codex/topup-five-minute-expiry`, đã push lên `origin`; ba commit
+  `a27cfdc6`, `4f316bd8`, `71aef464`.
+- API/Mongo thêm thời hạn 5 phút, worker xử lý hết hạn, migration và contract;
+  user-web hiển thị countdown; ADR và tài liệu checkout đã cập nhật.
+- PASS: `pnpm contract:check`, `pnpm contract:routes`, API lint/typecheck,
+  user-web lint/typecheck/145 unit tests/build, `pnpm docs:check`, `git diff --check`.
+  Có warning lint/chunk có sẵn; lệnh test đầu tiên dùng option Vitest không hợp lệ,
+  đã chạy lại đúng và PASS.
+- Chưa chạy QA Mongo riêng, native/live VNPay, human review hoặc remote CI.
+  READINESS giữ nguyên; PR chưa tạo.
+
 ## Popup nạp và rút tiền — 19/10/2026
 
 - Member web `/wallet` theo yêu cầu chủ dự án: bỏ khối số dư, dòng giới thiệu,
