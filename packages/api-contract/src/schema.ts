@@ -1415,7 +1415,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Create a VNPay sandbox wallet topup
+         * Create a VNPay sandbox wallet topup with a five-minute payment window
          * @description Verified Member; LOCKED denied. No credit until a signed IPN or server-verified QueryDR result is applied. Same key/body replays the original payment URL and deadline. Sandbox only; finite demo clearing source remains enforced.
          */
         post: operations["createVNPayTopup"];
@@ -4109,7 +4109,7 @@ export interface components {
             version: number;
             amount: number;
             /** @enum {string} */
-            state: "Pending" | "Processing" | "Succeeded" | "Failed" | "ReviewRequired";
+            state: "Pending" | "Processing" | "Succeeded" | "Failed" | "Cancelled" | "ReviewRequired";
             credited: boolean;
             /** Format: uuid */
             journalId: string | null;
@@ -4117,6 +4117,13 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            /**
+             * Format: date-time
+             * @description Immutable VNPay payment deadline; null for simulator intents. Pending/Processing becomes Cancelled at expiry without a wallet journal or history entry. Verified late evidence of payment within the window is reconciled exactly once.
+             */
+            expiresAt: string | null;
+            /** Format: date-time */
+            serverTime: string;
             /** @constant */
             demoOnly: true;
             /** @constant */
@@ -4163,7 +4170,7 @@ export interface components {
             entityId: string;
             version: number;
             /** @enum {string} */
-            state: "Pending" | "Processing" | "Succeeded" | "Failed" | "ReviewRequired";
+            state: "Pending" | "Processing" | "Succeeded" | "Failed" | "Cancelled" | "ReviewRequired";
             credited: boolean;
             /** Format: uuid */
             journalId: string | null;
@@ -8090,7 +8097,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Pending topup and signed sandbox URL; not a payment receipt. */
+            /** @description Pending topup and signed sandbox URL with an immutable five-minute deadline. Replaying the key retains the original deadline; not a payment receipt. */
             200: {
                 headers: {
                     "Cache-Control"?: "no-store";
@@ -8122,7 +8129,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Current owner-checked topup state after querying VNPay. Terminal intents are read without another provider query. */
+            /** @description Current owner-checked topup state after querying VNPay. Cancelled intents may still be queried to reconcile a verified payment made before the deadline; other terminal intents are read without another provider query. */
             200: {
                 headers: {
                     "Cache-Control"?: "no-store";
@@ -8180,7 +8187,7 @@ export interface operations {
                 cursor?: string;
                 from?: string;
                 to?: string;
-                state?: "Pending" | "Processing" | "Succeeded" | "Failed" | "ReviewRequired";
+                state?: "Pending" | "Processing" | "Succeeded" | "Failed" | "Cancelled" | "ReviewRequired";
             };
             header?: never;
             path?: never;
