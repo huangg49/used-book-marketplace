@@ -530,7 +530,13 @@ export interface TopupIntentDoc extends Lockable {
   ownerId: string;
   amount: number;
   currency: 'VND';
-  state: 'Pending' | 'Processing' | 'Succeeded' | 'Failed' | 'ReviewRequired';
+  state:
+    | 'Pending'
+    | 'Processing'
+    | 'Succeeded'
+    | 'Failed'
+    | 'Cancelled'
+    | 'ReviewRequired';
   version: number;
   createdAt: Date;
   updatedAt: Date;

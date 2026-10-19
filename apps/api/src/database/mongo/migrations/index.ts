@@ -149,6 +149,7 @@ import {
   exchangeMultiBookMigration,
   withExchangePhase6Changes,
 } from './0031-exchange-multi-book.js';
+import { vnpayTopupExpiryMigration, withVNPayExpiry } from './0032-vnpay-topup-expiry.js';
 
 export interface Migration {
   id: string;
@@ -254,6 +255,7 @@ export const migrations: Migration[] = [
   buyNowNotificationsMigration,
   bookCirculationRegionsMigration,
   exchangeMultiBookMigration,
+  vnpayTopupExpiryMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -278,7 +280,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withPayments)
     .map(withDirectSettlementPrincipal)
     .map(withVNPayQuery)
-    .map(withIntegratedWalletPointCommands),
+    .map(withIntegratedWalletPointCommands)
+    .map(withVNPayExpiry),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),
@@ -314,7 +317,7 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withExchangePhase5Changes)
     .map(withExchangePhase6Changes),
   ...directDeliveryCompletionSpecs,
-  ...paymentSpecs,
+  ...paymentSpecs.map(withVNPayExpiry),
   ...exchangeMessageSpecs,
   ...transactionReviewSpecs,
   ...inspectionEvidenceCollectionSpecs,
