@@ -288,6 +288,11 @@ try {
     .selectOption({ label: "Sách khác" });
   await step(/Ảnh bản sách/).click();
   const fileInput = p.locator("input[type=file]");
+  const pickerBox = await fileInput.boundingBox();
+  assert.ok(
+    pickerBox.width <= 1 && pickerBox.height <= 1,
+    "Native file control must not occupy a separate visible row",
+  );
   const photo = (name) => ({
     name,
     mimeType: "image/png",
@@ -304,6 +309,19 @@ try {
     photo("qa-pages.png"),
   ]);
   await thumbnails.nth(2).waitFor();
+  await fileInput.focus();
+  assert.equal(
+    await fileInput.evaluate(
+      (node) => getComputedStyle(node.closest("label")).outlineStyle,
+    ),
+    "solid",
+  );
+  const keyboardChooserPromise = p.waitForEvent("filechooser");
+  await p.keyboard.press("Enter");
+  const keyboardChooser = await keyboardChooserPromise;
+  assert.equal(keyboardChooser.isMultiple(), true);
+  await keyboardChooser.setFiles([]);
+  assert.equal(await thumbnails.count(), 3);
   const initialPreviews = await thumbnails.evaluateAll((nodes) =>
     nodes.map((node) => node.src),
   );

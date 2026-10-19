@@ -1128,19 +1128,19 @@ export function SellBookPage() {
                             <ImagePlus size={28} aria-hidden="true" />
                             <strong>Chọn ảnh bản sách</strong>
                             <span>JPEG, PNG, WebP · tối đa 10 MB/ảnh</span>
+                            <input
+                              id="images"
+                              className={styles.fileInput}
+                              type="file"
+                              multiple
+                              accept="image/jpeg,image/png,image/webp"
+                              onChange={handleImageUpload}
+                              disabled={
+                                imageFiles.length >= 8 || hasAttempt || submitting
+                              }
+                              {...feedbackProps("images", "image-help")}
+                            />
                           </label>
-                          <input
-                            id="images"
-                            className={styles.fileInput}
-                            type="file"
-                            multiple
-                            accept="image/jpeg,image/png,image/webp"
-                            onChange={handleImageUpload}
-                            disabled={
-                              imageFiles.length >= 8 || hasAttempt || submitting
-                            }
-                            {...feedbackProps("images", "image-help")}
-                          />
                           {fieldFeedback("images")}
                           <p id="image-help" className={styles.help}>
                             {imageFiles.length}/8 ảnh · Có thể chọn nhiều ảnh cùng

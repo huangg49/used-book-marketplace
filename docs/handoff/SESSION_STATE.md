@@ -2,6 +2,13 @@
 
 ## Chọn nhiều ảnh đăng sách — 19/10/2026
 
+- Follow-up theo ảnh chủ dự án: ẩn hàng native “Choose files / No file chosen”,
+  giữ vùng “Chọn ảnh bản sách”. Input nằm trong label, visually hidden, vẫn hỗ
+  trợ Tab/Enter và hiện focus trên vùng chọn. Nhánh `codex/hide-native-photo-input`,
+  base `a78344e`; subject `fix(web): hide duplicate native photo picker row`.
+  PASS web lint/typecheck/build/136unit; browser bổ sung kiểm row1px không chiếm
+  chỗ, click label, focus/Enter mở multi-picker, hủy chọn giữ ảnh cũ;
+  giữ toàn bộ ca multi-photo/quota/upload/replay trước. Không đổi API/native.
 - Theo ảnh chủ dự án ở Member web `/sell`: bật file picker `multiple`, xử lý
   toàn bộ nhóm chọn và nối vào ảnh cũ đúng thứ tự. Giữ tối đa8 ảnh,10MB/ảnh,
   JPEG/PNG/WebP; từ chối nguyên nhóm sai/vượt số chỗ, giữ ảnh cũ, reset input
