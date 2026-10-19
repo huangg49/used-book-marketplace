@@ -9,6 +9,12 @@
   Dưới960px giữ đầu sách trên cả hai tab; cover64/48px, chữ20px;320px chữ lớn
   được chảy xuống dưới ảnh. Phiếu cuộn trên footer, hai nút cuối vẫn thẳng hàng.
   Đang chờ chủ dự án xem bản local, chưa push/PR.
+  Follow-up `fix(web): keep agreement width stable when scrolling`: phiếu desktop
+  giữ sẵn scrollbar gutter; thanh cuộn chỉ hiện khi cần, fallback browser cũ dùng
+  overflow scroll. Mobile giữ flow tự nhiên/không gutter. Vite build (chunk warning
+  cũ), QA scrollbar cổ điển1440/1100 mở/đóng3 lần không đổi x/width của input,
+  giữ cả nháp và mobile390/320 PASS tại `.tmp/chat-gutter-qa`. Chỉ CSS, không chạy
+  lại gate nghiệp vụ/API.
 - Phiếu trái ưu tiên hình thức → giá → đề nghị giá. Yêu cầu đổi nằm cạnh hình
   thức; giá niêm yết nổi trước chốt, giá thống nhất đỏ rượu nổi sau chốt. Phí vẫn
   hiện; hướng dẫn/phase trail gom vào “Cách giao dịch”. Tự mở khi hết hạn, thiếu

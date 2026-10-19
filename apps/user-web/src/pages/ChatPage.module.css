@@ -672,6 +672,7 @@
 }
 .dossierSpread .dossierBody {
   padding: 0 24px 16px;
+  scrollbar-gutter: stable;
 }
 .dossierSpread .nextStep {
   padding: 20px 24px 24px;
@@ -708,10 +709,18 @@
   }
   .dossierSpread .dossierBody {
     padding-inline: 20px;
+    scrollbar-gutter: auto;
   }
   .dossierSpread .nextStep {
     padding-inline: 20px;
     padding-bottom: 20px;
+  }
+}
+@supports not (scrollbar-gutter: stable) {
+  @media (min-width: 961px) {
+    .dossierSpread .dossierBody {
+      overflow-y: scroll;
+    }
   }
 }
 @media (max-width: 600px) {
