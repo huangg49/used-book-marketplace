@@ -36,8 +36,19 @@ import {
   Lock,
 } from "lucide-react";
 import { currentUserSchema } from "@used-books/session-client";
-import logo from "../../../packages/brand/logos/lat-lai-horizontal-primary.svg";
-import logoWhite from "../../../packages/brand/logos/lat-lai-horizontal-white.svg";
+
+export function BrandOfficialLogo({ className = "" }: { className?: string }) {
+  return (
+    <div className={`brand-official-logo ${className}`} aria-label="Lật lại">
+      <span className="brand-owl-box" aria-hidden="true">
+        <img src="/brand/logo-original.png" alt="" />
+      </span>
+      <span className="brand-word-box" aria-hidden="true">
+        <img src="/brand/logo-original.png" alt="" />
+      </span>
+    </div>
+  );
+}
 import {
   canOperatePoint,
   canResolve,
@@ -128,7 +139,7 @@ function Login() {
         {/* Left Column: Brand Story & 3D Floating Book Fan */}
         <section className="login-editorial">
           <div className="login-brand-header">
-            <img src={logoWhite} alt="Lật lại" width="168" className="login-logo-white" />
+            <BrandOfficialLogo className="login-official-logo" />
             <span className="login-portal-tag">Bàn kiểm duyệt & Vận hành</span>
           </div>
 
@@ -308,7 +319,10 @@ function Workspace() {
         Đến nội dung chính
       </a>
       <header className="mobile-topbar">
-        <span>Bàn quản trị</span>
+        <div className="mobile-brand-wrap">
+          <BrandOfficialLogo className="mobile-official-logo" />
+          <span>Bàn quản trị</span>
+        </div>
         <Button busy={logoutBusy} onClick={() => void logout()}>
           Đăng xuất
         </Button>
@@ -319,8 +333,8 @@ function Workspace() {
           to="/dashboard"
           aria-label="Lật lại · Bàn kiểm duyệt"
         >
-          <img src={logo} alt="Lật lại" width="142" height="46" />
-          <span>Bàn quản trị</span>
+          <BrandOfficialLogo />
+          <span className="sidebar-brand-subtitle">Bàn quản trị</span>
         </Link>
         {user && canReview(user) && (
           <nav className="workspace-nav" aria-label="Khu vực quản trị">
