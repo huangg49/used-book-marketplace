@@ -26,7 +26,7 @@ import {
   type CollectionSpec,
 } from '../schema-dsl.js';
 
-// ADR 0042: Buy Now opens a 60-second window. The fixed 24-hour end becomes
+// ADR 0043: Buy Now opens a 60-second window. The fixed 24-hour end becomes
 // the upper bound: with buyNowAt set, endAt = min(startAt + 24 h, buyNowAt + 60 s).
 const fixedEnd = eq(f('endAt'), plusMs('startAt', AUCTION_DURATION_MS));
 const challengeEnd = or(

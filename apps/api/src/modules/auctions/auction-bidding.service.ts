@@ -255,7 +255,7 @@ export class AuctionBiddingService {
     );
   }
 
-  // Bids, Auto and Buy Now share one path under the auction lock (ADR 0042:
+  // Bids, Auto and Buy Now share one path under the auction lock (ADR 0043:
   // Buy Now is a committed manual bid at buyNowPrice that opens a 60-second
   // window), so a racing first bid and Buy Now have exactly one winner.
   private engineCommand(
@@ -421,7 +421,7 @@ export class AuctionBiddingService {
     });
   }
 
-  // FR-AU06/ADR 0042: only before the first valid bid. The buyer commits to
+  // FR-AU06/ADR 0043: only before the first valid bid. The buyer commits to
   // buyNowPrice and leads; others may outbid until min(endAt, now + 60 s),
   // then the normal close decides the winner.
   buyNow(context: CommandContext, id: string, body: Wire['BuyAuctionNow']) {
@@ -923,7 +923,7 @@ export class AuctionBiddingService {
       const own = await tx.c.auction_bidders.findOne({
         _id: `${id}:${actor._id}`,
       });
-      // Legacy BuyNowPending buyers have no bidder row; since ADR 0042 the
+      // Legacy BuyNowPending buyers have no bidder row; since ADR 0043 the
       // Buy Now buyer is a bidder whose first commitment was the BuyNow row.
       const boughtNow =
         a?.state !== undefined &&

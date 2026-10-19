@@ -80,7 +80,7 @@ try {
       if (process.argv.includes('--once')) process.exitCode = 1;
     }
     if (process.argv.includes('--once')) break;
-    // ADR 0042: between full sweeps, close ended auctions every few seconds
+    // ADR 0043: between full sweeps, close ended auctions every few seconds
     // so a 60-second Buy Now window ends on time, not up to a minute late.
     let lastClose = Date.now();
     while (!stopping && Date.now() - start < 60000) {

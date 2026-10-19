@@ -1,9 +1,9 @@
 # Điểm lưu hiện tại — 19/10/2026
 
-## Mua ngay mở cửa sổ 60 giây (ADR 0042) — 19/10/2026
+## Mua ngay mở cửa sổ 60 giây (ADR 0043) — 19/10/2026
 
 - Chủ dự án yêu cầu: bấm Mua ngay không kết thúc phiên ngay mà rút thời gian còn 60
-  giây để người khác trả cao hơn. ADR 0042 + sửa DEC-06/FR-AU06/POL-40 (phụ lục).
+  giây để người khác trả cao hơn. ADR 0043 + sửa DEC-06/FR-AU06/POL-40 (phụ lục).
   Mua ngay = lượt trả giá Manual cam kết tại `buyNowPrice` (bid kind `BuyNow`), vẫn
   chỉ trước lượt đầu tiên, cùng khóa phiên; `endAt = min(endAt, buyNowAt + 60 s)`,
   bid sau không gia hạn. Hết giờ đóng phiên bình thường (người dẫn thắng, Order +

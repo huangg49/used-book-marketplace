@@ -83,7 +83,7 @@ describe('AuctionWorker', () => {
   });
 });
 
-// ADR 0042: the close-only sweep the worker runs every few seconds.
+// ADR 0043: the close-only sweep the worker runs every few seconds.
 describe('AuctionWorker.closeDue', () => {
   const now = new Date('2026-10-19T16:41:00Z');
   function setup(close: (id: string) => Promise<unknown>) {

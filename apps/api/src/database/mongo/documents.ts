@@ -891,7 +891,7 @@ export interface AuctionDoc extends Lockable {
   startPrice: number;
   step: number;
   buyNowPrice: number | null;
-  // ADR 0042: set when Buy Now opened the 60-second challenge window.
+  // ADR 0043: set when Buy Now opened the 60-second challenge window.
   buyNowAt: Date | null;
   startAt: Date;
   endAt: Date;

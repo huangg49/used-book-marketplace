@@ -195,7 +195,7 @@ export class AuctionWorker {
     };
   }
 
-  // ADR 0042: a Buy Now window lasts 60 s, so the worker process runs this
+  // ADR 0043: a Buy Now window lasts 60 s, so the worker process runs this
   // close-only sweep every few seconds between full sweeps. It shares the
   // backoff with tick(); close stays idempotent and rechecks endAt under the
   // auction lock, so overlapping runs or several workers only skip (409).

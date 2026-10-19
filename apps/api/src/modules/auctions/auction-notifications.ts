@@ -67,7 +67,7 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
   },
   AuctionBoughtNow: {
     default: () => ({ title: '', body: '' }),
-    // ADR 0042: Buy Now opens a 60-second window; legacy rows had an Order.
+    // ADR 0043: Buy Now opens a 60-second window; legacy rows had an Order.
     seller: (c, a) =>
       a.buyNowAt
         ? {

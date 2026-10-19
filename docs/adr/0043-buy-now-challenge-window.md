@@ -1,4 +1,4 @@
-# ADR 0042: Buy Now opens a 60-second challenge window
+# ADR 0043: Buy Now opens a 60-second challenge window
 
 19/10/2026. Owner request: pressing Buy Now no longer closes the auction at
 once. Other bidders get 60 seconds to bid over the Buy Now price if they really

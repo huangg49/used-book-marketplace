@@ -2463,7 +2463,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Only before the first valid bid; decided under the same auction lock as bids so exactly one wins. ADR 0042 — the buyer commits to the Buy Now price and leads, Buy Now is no longer offered and the auction ends at min(endAt, now + 60 s). Others may outbid from Buy Now price + step in that window; the normal close then forms the winner's Order (24-hour payment). The receipt reports state Active and no orderId. Auctions already BuyNowPending keep their 15-minute Order. */
+        /** @description Only before the first valid bid; decided under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer offered and the auction ends at min(endAt, now + 60 s). Others may outbid from Buy Now price + step in that window; the normal close then forms the winner's Order (24-hour payment). The receipt reports state Active and no orderId. Auctions already BuyNowPending keep their 15-minute Order. */
         post: operations["buyAuctionNow"];
         delete?: never;
         options?: never;
@@ -4746,7 +4746,7 @@ export interface components {
             id: string;
             /**
              * Format: date-time
-             * @description ADR 0042. When Buy Now opened the 60-second window; endAt already holds the shortened end. Null without Buy Now. Optional for older servers.
+             * @description ADR 0043. When Buy Now opened the 60-second window; endAt already holds the shortened end. Null without Buy Now. Optional for older servers.
              */
             buyNowAt?: string | null;
             /** Format: uuid */

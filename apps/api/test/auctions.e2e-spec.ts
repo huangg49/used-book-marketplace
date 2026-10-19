@@ -1224,7 +1224,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       { fulfillmentMethod: 'SelfCollect' },
       bidder,
     ).expect(200);
-    // ADR 0042: payment is due only once the 60-second window has closed.
+    // ADR 0043: payment is due only once the 60-second window has closed.
     await closeAt(won.auctionId);
     const payable = await call(
       'get',
@@ -1529,7 +1529,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       expect([r1.status, r2.status].filter((s) => s === 200)).toHaveLength(1);
       const a = (await db.c.auctions.findOne({ _id: auctionId }))!;
       if (r2.status === 200) {
-        // ADR 0042: Buy Now leads at its price; the 200k bid is now too low.
+        // ADR 0043: Buy Now leads at its price; the 200k bid is now too low.
         expect(r1.body.code).toBe('BidTooLow');
         expect(a).toMatchObject({
           state: 'Active',
@@ -1749,7 +1749,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     ).toBe(0);
   });
 
-  it('AC-AU06/ADR 0042: Buy Now opens a 60-second window; the unbeaten buyer wins and pays', async () => {
+  it('AC-AU06/ADR 0043: Buy Now opens a 60-second window; the unbeaten buyer wins and pays', async () => {
     const { auctionId } = await openAuction();
     const buyer = await actor();
     const key = randomUUID();
@@ -1830,7 +1830,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     });
   });
 
-  it('ADR 0042: a rival outbids inside the window; bids after it are refused', async () => {
+  it('ADR 0043: a rival outbids inside the window; bids after it are refused', async () => {
     const { auctionId } = await openAuction();
     const [buyer, rival] = [await actor(), await actor()];
     await cmd(
@@ -1868,7 +1868,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     });
   });
 
-  it('ADR 0042: Buy Now near the original end keeps that end', async () => {
+  it('ADR 0043: Buy Now near the original end keeps that end', async () => {
     const { auctionId } = await openAuction();
     const buyer = await actor();
     const original = (await db.c.auctions.findOne({ _id: auctionId }))!.endAt;
@@ -3272,7 +3272,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         expect([r1.status, r2.status].filter((s) => s === 200)).toHaveLength(1);
         const a = (await db.c.auctions.findOne({ _id: auctionId }))!;
         const orders = await db.c.point_orders.countDocuments({ auctionId });
-        // ADR 0042: Buy Now never forms an Order before the window closes.
+        // ADR 0043: Buy Now never forms an Order before the window closes.
         if (a.buyNowAt) {
           expect(a).toMatchObject({ state: 'Active', currentPrice: 600_000 });
           expect(orders).toBe(0);
@@ -3664,7 +3664,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
           'AuctionCancelled',
         );
 
-      // ADR 0042: the window closes with the buyer as winner; unpaid after
+      // ADR 0043: the window closes with the buyer as winner; unpaid after
       // 24 hours, buyer and seller are told.
       const deadline = (await closeAt(bought.auctionId)).paymentDeadline!;
       pinClock(deadline);
