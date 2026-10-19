@@ -197,9 +197,9 @@ describe('VNPay 2.1.0 sandbox adapter', () => {
       ).onModuleInit(),
     ).toThrow();
   });
-  it('defaults to 20000 VND and atomic wallet checkout; legacy mode is explicit', () => {
+  it('always uses free listings, ignores obsolete fee config and keeps checkout separate', () => {
     expect(new TransactionPolicy(new ConfigService({}))).toMatchObject({
-      listingFee: 20000,
+      listingFee: 0,
       atomicCheckout: true,
     });
     expect(
@@ -210,11 +210,12 @@ describe('VNPay 2.1.0 sandbox adapter', () => {
         }),
       ),
     ).toMatchObject({ listingFee: 0, atomicCheckout: false });
-    expect(
-      () =>
+    for (const fee of ['20000', '-1', 'invalid']) {
+      expect(
         new TransactionPolicy(
-          new ConfigService({ LISTING_SUBMISSION_FEE_VND: '-1' }),
+          new ConfigService({ LISTING_SUBMISSION_FEE_VND: fee }),
         ),
-    ).toThrow();
+      ).toMatchObject({ listingFee: 0, atomicCheckout: true });
+    }
   });
 });

@@ -6,11 +6,12 @@ Không thêm API hoặc sửa nghiệp vụ. Seller, buyer, reviewer và operato
 fixture riêng; chỉ seller/reviewer tham gia H01a. Reviewer không có role Member.
 Ảnh do công cụ tự tạo, ghi rõ mô phỏng; không đại diện cho sách thật hoặc custody.
 
-Sandbox demo khai báo profile lịch sử `LISTING_SUBMISSION_FEE_VND=0` và
-`ORDER_CHECKOUT_MODE=Unpaid`, tắt VNPay; bước nạp mô phỏng chỉ bật khi opt-in funding.
-Cấu hình này chỉ thuộc API/database demo riêng. Ứng dụng mặc định vẫn dùng phí
-20.000đ và Wallet checkout; [suite ví riêng](../features/WALLET_CHECKOUT.md) kiểm
-profile mới, không lấy demo lịch sử làm bằng chứng cho VNPay hoặc thanh toán mới.
+Sandbox demo dùng `ORDER_CHECKOUT_MODE=Unpaid`, tắt VNPay; bước nạp mô phỏng chỉ
+bật khi opt-in funding. Cấu hình này chỉ thuộc API/database demo riêng. Theo
+[ADR0040](../adr/0040-free-listings-five-active-cap.md), đăng bài luôn miễn phí,
+tối đa5 bài hiển thị/chờ duyệt; biến phí cũ trong sandbox không còn hiệu lực.
+Ứng dụng mặc định vẫn dùng Wallet checkout; [suite ví riêng](../features/WALLET_CHECKOUT.md)
+kiểm profile này, không lấy demo lịch sử làm bằng chứng cho VNPay/thanh toán mới.
 
 ## Chạy trên máy nhóm
 

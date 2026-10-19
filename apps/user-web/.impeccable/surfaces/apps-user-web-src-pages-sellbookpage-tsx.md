@@ -7,6 +7,42 @@ related_targets: ["apps/user-web/src/pages/SellBookPage.module.css", "apps/user-
 
 # Đăng sách —11/10/2026
 
+## Draft photo preview —19/10/2026
+
+Operate; owner requests miniatures below the large cover in the sticky draft
+preview. Owner follow-up widens the desktop card from240 to280px and increases
+the cover frame from216 to240px; compact/mobile height overrides remain.
+Group cover and thumbnails as one media block before title/author.
+Local preview URLs follow cover/support upload order and reflect replacements
+and removals. Desktop thumbnails wrap into available44px-minimum columns;
+compact tablet uses two columns and <=600px stacks media/text with four columns.
+The cover remains the actual cover even after viewing supporting photos.
+
+Clicking a miniature or cover opens one native dialog outside both preview
+instances. Reuse ListingGallery viewer styles and lockPageScroll; show the chosen
+photo, cover/support label, count, previous/next, close and arrow-key navigation.
+Native dialog supplies focus containment/restoration and Escape. Close/unmount
+releases the scroll lock. No writes, uploads or submission changes from viewing.
+
+## Cover and supporting photos —19/10/2026
+
+Operate; owner reference specifies a dedicated cover slot on the left and a wider
+supporting-photo region on the right. Labels name both regions. Empty pickers use
+the existing paper/wine palette and dashed borders; loaded images stay contained
+in equal-height frames with44px X buttons. Supporting photos form a wrapping grid
+with an add tile, maximum7 plus1 required cover. Below760px the regions stack.
+Cover removal leaves supporting photos intact; replacement preserves their order.
+Clicking a loaded image opens a single-file replacement picker for that slot,
+including when all8 slots are occupied. Cancel/invalid files preserve the original.
+Visible native buttons trigger hidden inputs (cover single, supports multiple),
+with focus restored after replacement/removal and when the last add tile hides.
+Keep max8 total, format/size validation, URL cleanup, upload order and pinned
+submission retries. No new assets, tokens or motion.
+
+The earlier owner request makes the desktop book preview sticky from1200px,
+top112px under navigation, capped at viewport height minus136px with keyboard
+scrolling. Mobile retains the existing disclosure. No API/session/native changes.
+
 ## Catalog v2 metadata extension —12/10/2026
 
 Operate; ordinary extension on `codex/catalog-expansion`, preserving the paper

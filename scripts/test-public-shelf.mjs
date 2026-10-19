@@ -31,7 +31,7 @@ try {
     `/operations/catalog-requests/${fixture.catalogId}`,
     admin.accessToken,
   );
-  await fixture.api(
+  if (catalog.status !== "Confirmed") await fixture.api(
     `/operations/catalog-requests/${fixture.catalogId}/decision`,
     admin.accessToken,
     {
@@ -142,10 +142,8 @@ try {
     path: path.join(artifacts, "shelf-390.png"),
     fullPage: true,
   });
-  await p
-    .getByRole("button", { name: /^Xem sách:/ })
-    .first()
-    .click();
+  // Owner eligibility assertions target the main Member in a multi-owner shelf.
+  await p.goto(`${origin}/book?id=${fixture.listings[0]}`);
   await p
     .getByRole("heading", { name: "Tình trạng sách", exact: true })
     .waitFor();
@@ -226,7 +224,8 @@ try {
     0,
   );
   await click("Quay lại");
-  await p.getByText(/Không tìm thấy sách|Chưa có sách được đăng/).waitFor();
+  await p.getByRole("button", { name: /^Xem sách:/ }).first().waitFor();
+  assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 8);
   await fixture.setUserStatus(fixture.member.user.id, "ACTIVE");
   await click("Xem thêm các tác phẩm gợi ý");
   await p

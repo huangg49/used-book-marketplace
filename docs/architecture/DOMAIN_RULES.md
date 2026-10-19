@@ -52,10 +52,12 @@ a real workflow. Checkout UI remains planned.
 
 ## Funding và refund trước acceptance
 
-14/10/2026: chủ dự án chốt phí gửi duyệt20.000đ/hoàn khi từ chối và Order tạo
-đồng thời với wallet hold; VNPay sandbox nạp ví. [Gói hiện hành](../features/WALLET_CHECKOUT.md)
-mô tả default và profile lịch sử, không mở gate release. Ledger phí riêng khỏi
-OrderHold; tiền mua sách quyết toán cho seller, không hoàn buyer khi Completed.
+19/10/2026: [ADR0040](../adr/0040-free-listings-five-active-cap.md) thay phí gửi
+duyệt bằng đăng miễn phí và tối đa5 bài hiển thị/chờ duyệt mỗi Member. Approved
+đã ẩn không chiếm chỗ; mở lại/sửa bài ẩn cần còn chỗ, kiểm dưới owner lock trong
+transaction. Phí đã giữ lịch sử vẫn theo settlement/refund ban đầu; không chỉnh
+ledger cũ. [Nạp ví/checkout](../features/WALLET_CHECKOUT.md) giữ nguyên phạm vi;
+tiền mua sách quyết toán cho seller, không hoàn buyer khi Completed.
 
 Order wallet funding and pre-confirmation full refunds are implemented in OpenAPI
 0.15.0; read ADR 0020 and `docs/features/ORDER_PAYMENT_REPORT.md`. Payment holds the

@@ -1,15 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import type { Tx } from '../../database/mongo/transaction.js';
 import { LedgerService, checkListingFee } from './ledger.service.js';
-import { TransactionPolicy } from './transaction-policy.js';
 import { DomainError } from '../commands/domain-error.js';
 
 @Injectable()
 export class ListingFeeService {
-  constructor(
-    private readonly ledger: LedgerService,
-    private readonly policy: TransactionPolicy,
-  ) {}
+  constructor(private readonly ledger: LedgerService) {}
   private async authorizedTime(tx: Tx, ownerId: string, sessionId: string) {
     await this.ledger.lockListingFee(tx, ownerId);
     const now = await tx.now(),
@@ -22,37 +18,7 @@ export class ListingFeeService {
       );
     return now;
   }
-  async charge(
-    tx: Tx,
-    listingId: string,
-    revisionId: string,
-    ownerId: string,
-    receiptId: string,
-    sessionId: string,
-  ) {
-    if (!this.policy.listingFee) return;
-    const now = await this.authorizedTime(tx, ownerId, sessionId);
-    const fee = {
-      _id: revisionId,
-      listingId,
-      ownerId,
-      amount: this.policy.listingFee,
-      policyCode: 'LISTING-FEE-v1' as const,
-      createdAt: now,
-      receiptId,
-    };
-    await tx.c.listing_fees.insertOne(fee);
-    await this.ledger.postListingFee(
-      tx,
-      fee,
-      'ListingFeeCharge',
-      receiptId,
-      now,
-    );
-    tx.check(`listing-fee:${revisionId}`, () =>
-      checkListingFee(tx, revisionId),
-    );
-  }
+  // Only settles/refunds fees held before free publication was introduced.
   async decide(
     tx: Tx,
     revisionId: string,

@@ -1,4 +1,151 @@
-# Điểm lưu hiện tại — 17/10/2026
+# Điểm lưu hiện tại — 19/10/2026
+
+## Sửa thông tin trước gửi và thử lại nơi gửi — 19/10/2026
+
+- Chủ dự án báo POST `/me/addresses`502 sau quay lại sửa bước1 rồi gửi ở bước5.
+  Kiểm máy: web5174 trỏ API3000 nhưng không có API listener. Đã bật lại bằng
+  `pnpm dev:api` (Mongo local/API/media+order workers), giữ tiến trình chạy;
+  GET readiness trực tiếp3000 và qua proxy5174 đều200. Không reset/seed DB.
+- Member web pin cả key + serialized body của ý định tạo địa chỉ, kể cả
+  expectedBookVersion/makeDefault khi query refetch sau mất ACK. Cache receipt,
+  chọn id vừa lưu và retry bước đọc địa chỉ khi cần, không yêu cầu reload mất form.
+  Giữ key-only ref của bản nháp đang mở qua HMR. Không đổi API/contract/session.
+- Nhánh `codex/sell-review-address-retry`, base4cfd49d; subject
+  `fix(web): preserve address command across review retries`.
+- PASS web lint/typecheck/136unit/build/browser: từ review sửa tác giả rồi dùng
+  thanh bước quay lại; POST địa chỉ đã commit nhưng proxy trả502, refetch sổ địa
+  chỉ thật, sửa tác giả lần nữa và gửi lại giữ cùng key/body, chỉ1 địa chỉ và catalog
+  nhận tác giả mới. Giữ submit/quota/lost-ACK2ảnh/gallery/sticky/shelf/chat PASS.
+  QA API/Mongo riêng, storage fake/Sharp thật. Readiness local chỉ kiểm đọc, không
+  tự gửi listing trên DB chủ dự án; native/live provider/human/remote CI NOT RUN.
+- 6 warning lint/chunk cũ giữ; READINESS không đổi. Chưa push/PR/merge/deploy.
+
+## Ảnh thu nhỏ trong bản nháp — 19/10/2026
+
+- Follow-up: chủ dự án muốn thẻ lớn hơn một chút. Desktop rộng240→280px,
+  khung bìa216→240px; compact/mobile giữ override. Nhánh
+  `codex/widen-draft-preview`, basef4b1f51; subject `style(web): enlarge draft preview card`.
+  PASS build + browser regression (sticky1200/1440, gallery, mobile390, submit/
+  replay); đã xem ảnh desktop/mobile mới. Browser lần đầu chạy trước QA Mongo
+  healthy lỗi startup, retry sau healthy PASS. CSS-only, không chạy lại unit/API.
+- Member web `/sell`: ảnh thu nhỏ nằm dưới ảnh bìa trong thẻ “Cuốn sách của bạn”,
+  cập nhật theo thứ tự ảnh bìa/phụ khi thay/xóa. Bấm thumbnail hoặc bìa mở ảnh lớn
+  đúng ảnh, có trước/sau, phím mũi tên, Esc/nút đóng; xem ảnh không đổi ảnh bìa.
+  Dialog native dùng chung hai bản preview desktop/compact, tái sử dụng CSS
+  ListingGallery và lockPageScroll; giữ focus/scroll sau đóng, cleanup khi unmount.
+- Desktop giữ sticky/cap chiều cao; thumbnails wrap >=44px. Mobile <=600px mở
+  bản nháp theo chiều dọc để ảnh/thumbnail không bị ép. Không đổi API/RN/upload/
+  idempotency. Nhánh `codex/draft-photo-gallery`, baseb6d2b2e; subject
+  `feat(web): preview draft photos from thumbnail gallery`.
+- PASS web lint/typecheck/136unit/build; Chromium1440/390 ở130%: thumbnail đúng
+  URL/thứ tự sau thay/xóa, click mở đúng ảnh phụ/bìa, previous/ArrowRight, Tab nằm
+  trong dialog, Esc trả focus và scroll lock được trả; không đổi2 ảnh của form.
+  Regression sticky3 viewport/quota/upload2/replay/shelf/search/chat giữ PASS.
+  Đã xem `apps/user-web/test-results/sell-draft-thumbnails-*.png` và
+  `sell-draft-photo-detail-*.png`. API/Mongo QA riêng, storage fake/Sharp thật.
+- 6 warning lint và warning chunk có sẵn. Không kiểm native/live provider/human/
+  remote CI; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
+
+## Ảnh bìa và ảnh phụ riêng — 19/10/2026
+
+- Member web `/sell` theo mẫu chủ dự án: ảnh bìa bên trái, vùng ảnh phụ bên phải;
+  <=760px xếp dọc. Khung ảnh/picker cùng chiều cao, ảnh phụ chia grid khi thêm.
+  Mỗi ảnh có nút X44px; bấm trực tiếp ảnh để thay đúng vị trí bằng picker1 tệp.
+  Ảnh phụ mới vẫn chọn nhiều cùng lúc. Giữ1 bìa bắt buộc + tối đa7 ảnh phụ,
+  JPEG/PNG/WebP10MB/ảnh; thay được khi đủ8. Xóa bìa không tự lấy ảnh phụ làm bìa.
+- Giữ thứ tự preview/upload, từ chối nguyên batch lỗi/vượt chỗ, reset input và
+  cleanup URL. Hủy picker giữ ảnh cũ; focus quay về control nhìn thấy sau thay/
+  xóa và khi đủ ảnh. Raw native file row vẫn ẩn; mutation/retry giữ nguyên.
+- Nhánh `codex/listing-cover-support-photos`, base21b68ad; subject
+  `feat(web): separate cover and supporting photo pickers`.
+- PASS web lint/typecheck/build/136unit; Chromium QA390/1440: bìa single/phụ
+  multiple, cover removal/re-add/replacement giữ ảnh phụ, click thay ảnh phụ đúng
+  slot, keyboard Enter, thay khi đủ8 không thêm ảnh thứ9, invalid/oversize/quota,
+  upload2 ảnh + submit lost-ACK replay. Sticky regression1440×720/100%,
+  1440×900/130%,1200×600/130% và mobile disclosure giữ PASS; shelf/search/chat PASS.
+  Đã xem ảnh desktop/mobile `apps/user-web/test-results/sell-cover-support-*.png`
+  và `sell-multiple-images-*.png`. API/Mongo QA riêng, storage fake/Sharp thật.
+- Không đổi API/RN;6 warning lint/chunk có sẵn. Không kiểm native/live provider/
+  human/remote CI; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
+
+## Bản xem trước đi theo khi cuộn — 19/10/2026
+
+- Member web `/sell`: thẻ “Cuốn sách của bạn” luôn sticky trên desktop từ1200px,
+  bỏ điều kiện viewport900px và ResizeObserver/previewFits. Thẻ giới hạn chiều
+  cao theo viewport, cuộn nội dung bằng chuột/bàn phím, không che header/form;
+  mobile giữ bản nháp thu gọn. Nhánh `codex/sticky-listing-preview`, base640c50c;
+  subject `fix(web): keep listing preview alongside scrolling form`.
+- PASS web lint/typecheck/build/136unit và browser regression:1440×720/100%,
+  1440×900/130%,1200×600/130%, cuộn hai vị trí giữ top112px, End đọc hết thẻ dài,
+  390px không hiện sidebar; form/multi-photo/quota/replay/chat giữ PASS. Ảnh local
+  `apps/user-web/test-results/sell-sticky-preview-*.png`. Storage fake/Sharp thật.
+- Không đổi API/RN; warning web6/chunk cũ giữ. Không kiểm native/live provider/
+  human/remote CI; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
+
+## Chọn nhiều ảnh đăng sách — 19/10/2026
+
+- Follow-up theo ảnh chủ dự án: ẩn hàng native “Choose files / No file chosen”,
+  giữ vùng “Chọn ảnh bản sách”. Input nằm trong label, visually hidden, vẫn hỗ
+  trợ Tab/Enter và hiện focus trên vùng chọn. Nhánh `codex/hide-native-photo-input`,
+  base `a78344e`; subject `fix(web): hide duplicate native photo picker row`.
+  PASS web lint/typecheck/build/136unit; browser bổ sung kiểm row1px không chiếm
+  chỗ, click label, focus/Enter mở multi-picker, hủy chọn giữ ảnh cũ;
+  giữ toàn bộ ca multi-photo/quota/upload/replay trước. Không đổi API/native.
+- Theo ảnh chủ dự án ở Member web `/sell`: bật file picker `multiple`, xử lý
+  toàn bộ nhóm chọn và nối vào ảnh cũ đúng thứ tự. Giữ tối đa8 ảnh,10MB/ảnh,
+  JPEG/PNG/WebP; từ chối nguyên nhóm sai/vượt số chỗ, giữ ảnh cũ, reset input
+  để chọn lại. Preview/upload cùng thứ tự, xóa ảnh và cleanup URL giữ nguyên.
+- Nhánh `codex/listing-multi-image-picker`, base `1ea2ac9`; subject
+  `fix(web): allow selecting multiple listing photos at once`.
+- PASS web lint/typecheck/build/136unit; Chromium QA390/1440: chooser multiple,
+  chọn3/xóa giữa, nhóm có GIF/ảnh>10MB không đổi ảnh cũ, vượt8 bị từ chối,
+  thêm đủ8 khóa picker/xóa mở lại, upload2 ảnh và submit/retry giữ đúng key/body.
+  Suite kệ/tìm kiếm/chat và quota trước đó vẫn PASS. API/Mongo QA riêng,
+  storage fake/Sharp thật; ảnh local `apps/user-web/test-results/sell-multiple-images-*.png`.
+- Chỉ sửa web; không đổi API/contract/RN. Warning web6/chunk có sẵn giữ nguyên.
+  Không kiểm hộp chọn ảnh Windows bằng tay/native/live provider; không chạy lại
+  gate API/Mongo không đổi. READINESS giữ nguyên; chưa push/PR/merge/deploy.
+
+## Đăng miễn phí, tối đa 5 bài hiển thị/chờ duyệt — 19/10/2026
+
+- Chủ dự án chốt chỉ tính bài trên trang chủ và bài gửi admin duyệt. Nhánh
+  `codex/free-listings-five-limit`, base `25efcb8`; subject
+  `feat(listings): replace submission fees with five active listing cap`.
+  [ADR0040](../adr/0040-free-listings-five-active-cap.md), SRS FR-L09 và
+  OpenAPI0.44.0 mô tả chính sách. Draft/Rejected/Approved Hidden/terminal trade/
+  lưu trữ/gỡ không chiếm chỗ; Hidden PendingReview vẫn chiếm chỗ chờ duyệt.
+- API không tạo phí bài mới, ví0đ vẫn gửi được; env phí20000 cũ bị bỏ qua.
+  Hạn mức kiểm dưới owner lock trong transaction khi submit/resubmit, mở lại
+  hoặc sửa bài Approved Hidden. Sửa bài Visible giữ chỗ; từ chối/ẩn/lưu trữ
+  giải phóng theo trạng thái. Quá5 trả409 ListingLimitReached, giữ nội dung,
+  version, ảnh và intent; replay thành công vẫn dùng được ở hạn mức đầy.
+  Bài lịch sử vượt5 giữ nguyên; phí đã giữ cũ vẫn settle/refund đúng chuỗi.
+  Không migration, sửa env riêng, DB app hoặc sổ cái lịch sử.
+- Web bỏ lookup ví/nạp ví ở form; Web/RN hiện chính sách và giữ lỗi/retry.
+  Browser fixture nhiều sách phân bổ nhiều owner để tuân thủ hạn mức thật;
+  listing-review E2E tách owner từng test, giữ nguyên assertions nghiệp vụ.
+- PASS Node24.21.0/pnpm11.19.0: contract generate/check/routes168/26; API
+  lint/typecheck/build/150unit; Web lint/typecheck/build/136unit; RN
+  lint/typecheck/143unit. Warning có sẵn: API11/Web6, web chunk lớn.
+- PASS HTTP/Mongo QA riêng: wallet-checkout33/33 (gồm miễn phí, mixed quota,
+  auth/replay/rollback, ba race submit/reopen/hidden revision và phí lịch sử);
+  thêm2/2 scoped terminal/legacy-over-cap (33ca ngoài filter SKIP); listing-review
+  73/73. Web Chromium390/1440 PASS hạn mức→ẩn1bài→retry→lostACK→replay, chỉ1draft/
+  address, ví0/không phí; giữ regression kệ/tìm kiếm/chat. Storage fake, Sharp thật.
+  Ảnh local: `apps/user-web/test-results/listing-quota-390.png` và `listing-quota-1440.png`.
+- RN export:web PASS (cảnh báo Expo force-exit sau khi export thành công).
+  Focused Expo browser PASS login→tạo nháp→tab Kiểm tra, đúng copy miễn phí/5bài,
+  ví0/không phí và không overflow ở390/1440. Ảnh/script local tại
+  `.tmp/free-listings-rn/` và `.tmp/free-listings-rn-browser.mjs`. Full RN browser
+  FAIL trước khi tới editor do harness chờ heading cũ “Tình trạng sách”, source
+  hiện là “Khảo chứng tình trạng sách”; không nhận full harness/native PASS.
+- FAIL kiểm Mongo schema mở rộng:21/25 PASS,4 upgrade cases thiếu ExchangeDisputed
+  trong validator member_notifications, tại schema.mongo-spec.ts315/383. Source
+  Mongo và test/mongo giống nguyên base25efcb8 (`git diff` rỗng cho hai thư mục);
+  không sửa migration đã áp dụng hoặc mở rộng gói để che lỗi này.
+- Native-device/live-provider/human review/remote CI NOT RUN; READINESS giữ nguyên.
+  Chưa push/PR/merge/deploy. Bước tiếp: review độc lập, xử lý lỗi schema Exchange
+  ở gói riêng và tích hợp/restart API/worker theo quyền được giao.
 
 ## Trao đổi sách (Exchange): Hoàn tất Ưu tiên 0 & Ưu tiên 1 — 17/10/2026
 
