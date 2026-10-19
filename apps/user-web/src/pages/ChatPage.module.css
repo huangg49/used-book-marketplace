@@ -35,7 +35,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 24px;
-  padding: 8px 0 32px;
+  padding: 8px 0 20px;
 }
 .pageHeading h1,
 .guest h1 {

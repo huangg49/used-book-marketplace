@@ -892,7 +892,12 @@ preserving context and drafts. Narrow covers shrink to64px/48px. At every width,
 text begins beside the cover and flows across the width below it; full titles
 wrap without truncation. Scoped Be Vietnam Pro400/700 uses20px book title with1.3
 line height,28px agreed price,16px body/section names and14px metadata/labels; inbox book
-titles use18px. This trial awaits the owner's visual review; no remote integration.
+titles use16px. Inbox cards use an auto-fill340px minimum grid with16px gaps,
+64px covers/max96px images in the identity row,16px content padding and a ruled
+status/action footer. Below360px, a48px floated cover leaves full width for long
+text below. Titles wrap, entry links stay44px; routine continuation copy is omitted,
+pending proposals/agreed prices remain. This trial awaits the owner's visual review;
+no remote integration.
 Secondary price edits/history open on request; message bubbles are quiet cream
 and shelf tones. Wine belongs to primary actions and accepted price. The surface
 record defines geometry/evidence; global navigation, other-page type and APIs stay

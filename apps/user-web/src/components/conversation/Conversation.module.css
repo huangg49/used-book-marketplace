@@ -421,7 +421,7 @@
   gap: 8px 28px;
   flex-wrap: wrap;
   border-bottom: 1px solid var(--shop-line);
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 .filters button {
   min-height: 48px;
@@ -441,13 +441,16 @@
 }
 .inboxGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 16px;
 }
-.inboxCard {
+.inboxCard,
+.legacyCard {
   min-width: 0;
-  display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 16px 8px;
   border: 1px solid var(--shop-line);
   border-radius: 12px;
   overflow: hidden;
@@ -461,31 +464,42 @@
 }
 .cardCover {
   min-width: 0;
-  min-height: 240px;
-  padding: 20px;
-  background: var(--shop-shelf);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  color: var(--shop-wine);
+}
+.cardIdentity {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  flex: 1;
+}
+.cardCover > div {
+  height: auto;
+  min-height: 96px;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.cardCover > div button {
+  padding: 4px;
 }
 .cardCover img {
   display: block;
   max-width: 100%;
-  max-height: 180px;
+  max-height: 96px;
   object-fit: contain;
   filter: drop-shadow(0 6px 8px #28191420);
 }
 .cardBody {
   min-width: 0;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
 }
 .cardBody h2,
 .legacyCard h2 {
-  font-size: 1.125rem;
+  font-size: 1rem;
   line-height: 1.5;
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   overflow-wrap: anywhere;
 }
 .cardBody h2 a,
@@ -494,32 +508,40 @@
   text-decoration: none;
 }
 .cardBody p,
-.legacyCard p {
+.cardHint,
+.cardStatus {
   font-size: var(--conversation-meta, 0.875rem);
   line-height: 1.6;
-  margin: 8px 0;
+  margin: 4px 0;
+  overflow-wrap: anywhere;
 }
-.cardState,
-.cardHint {
+.cardHint,
+.cardPartner,
+.cardMode,
+.cardStatus {
   color: var(--shop-muted);
 }
-.cardState {
+.cardHint {
+  margin: 0;
+}
+.cardPartner span {
+  color: var(--shop-ink);
+}
+.cardFooter {
   display: flex;
   flex-wrap: wrap;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 4px 12px;
+  border-top: 1px solid var(--shop-line);
+  padding-top: 4px;
 }
-.cardState span {
-  color: var(--shop-muted);
-  padding: 0;
-  font-size: var(--conversation-meta, 0.875rem);
+.cardFooter .cardLink {
+  margin: 0 0 0 auto;
+  flex-shrink: 0;
 }
-.cardState span::after {
-  content: "·";
-  margin-left: 8px;
-}
-.cardBody .cardHint {
-  margin: 8px 0 16px;
+.cardStatus {
+  margin: 0;
 }
 .cardLink {
   display: inline-flex;
@@ -537,19 +559,18 @@
   text-decoration: underline;
   text-underline-offset: 4px;
 }
-.legacyCard {
-  display: flex;
-  align-items: start;
-  gap: 16px;
-  border: 1px solid var(--shop-line);
-  border-radius: 12px;
-  padding: 24px;
-  background: var(--shop-paper);
-}
-.legacyCard > svg {
-  flex-shrink: 0;
+.legacyCard .cardCover > svg {
   margin-top: 4px;
-  color: var(--shop-wine);
+}
+@media (max-width: 360px) {
+  .cardIdentity {
+    display: flow-root;
+  }
+  .cardIdentity .cardCover {
+    float: left;
+    width: 48px;
+    margin: 0 12px 8px 0;
+  }
 }
 .loadMore {
   display: block;
@@ -685,9 +706,6 @@
   background-size: auto, 256px 256px;
 }
 @media (max-width: 1100px) {
-  .inboxGrid {
-    grid-template-columns: 1fr;
-  }
   .workspace {
     gap: 18px;
     grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.1fr);
@@ -744,16 +762,6 @@
   .terms,
   .exchangeOffer,
   .chatHeading {
-    padding: 20px;
-  }
-  .inboxCard {
-    grid-template-columns: 96px minmax(0, 1fr);
-  }
-  .cardCover {
-    padding: 12px;
-    min-height: 240px;
-  }
-  .cardBody {
     padding: 20px;
   }
   .filters {

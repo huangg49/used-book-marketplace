@@ -11,6 +11,13 @@ listing. `/chat/start/:listingId?intent=Negotiation|Exchange` preserves the entr
 intent through login and opens/reuses a private room. `/chat/:roomId` reads the
 selected room directly, including when not among the inbox's latest100 results.
 
+Inbox density follow-up19/10: auto-fill340px cards/16px gaps yield3 desktop,
+2 intermediate and1 phone column. Identity row has64px covers/max96px images,
+title16px, partner and mode; padding16px, metadata14px. One ruled footer holds
+status and44px entry link. Below360px,48px covers float so full text can continue
+underneath. Routine continuation copy is omitted; pending proposals and agreed
+prices remain. Legacy cards share the structure. No filter/API/route changes.
+
 19/10 owner follow-up: reuse the approved18/10 soft3D autumn posting artwork
 `/illustrations/posting/autumn-book-desk.webp`, restored byte-for-byte from6394dc4.
 MainLayout's Chat-only data attribute owns a fixed viewport-cover background,

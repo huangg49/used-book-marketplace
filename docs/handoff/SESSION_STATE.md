@@ -1,5 +1,24 @@
 # Điểm lưu hiện tại — 19/10/2026
 
+## Thu gọn và sắp lại thẻ danh sách Chat —19/10/2026
+
+- Nhánh `codex/chat-open-book`, base `4c49df3`, subject
+  `style(web): refine compact conversation cards`.
+  Cụm đầu thẻ có bìa64px/ảnh tối đa96px cạnh tên16px/người trao đổi/hình thức.
+  Bỏ dải màu chạy suốt bìa; footer có một đường phân tách, trạng thái trái/nút mở
+  phải, target44px. Dưới360px bìa48px để chữ chảy xuống dưới. Padding16px.
+  Grid auto-fill tối thiểu340px:3 cột ở1440,2 ở1100/900,1 ở390/320; một thẻ vẫn
+  giữ cùng bề rộng khi ít hội thoại. Rút khoảng cách tiêu đề/filter; không cắt tên,
+  bỏ hai câu hướng dẫn lặp (tiếp tục xem phiếu/xem đơn và nhắn tin), giữ pending
+  proposal và giá thống nhất khi có. Lọc/load more/API/đường vào room không đổi.
+- PASS scoped browser fixture14 room + Exchange cũ tại `.tmp/chat-inbox-card-redesign-qa`:
+  6 thẻ thường vừa viewport1440×900, link44px, filter/load more, ảnh thiếu/tên dài,
+  mobile320 chữ130% không tràn, mở đúng room. Đã xem desktop/mobile.
+  Build/lint/full Chat browser tại `.tmp/chat-inbox-card-redesign-flow-qa` PASS;
+  detector[];6 warning lint/chunk cũ giữ. Đã xác nhận mobile sau batch chỉnh.
+  Không chạy lại backend/native/live storage/remote CI;
+  READINESS giữ nguyên. Local web5174 HMR, chưa push/PR.
+
 ## Nền mùa thu3D cho Chat —19/10/2026
 
 - Nhánh `codex/chat-open-book`, base `d684bd6`, subject

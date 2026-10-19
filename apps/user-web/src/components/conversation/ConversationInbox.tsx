@@ -31,45 +31,44 @@ function ConversationCard({
   });
   const buyer = room.buyer.id === userId,
     partner = buyer ? room.seller : room.buyer;
+  const hint = room.terms?.pendingProposal
+    ? room.terms.pendingProposal.proposedById === userId
+      ? "Chờ đối tác phản hồi đề nghị của bạn"
+      : "Có đề nghị đang chờ bạn phản hồi"
+    : room.terms?.agreedPrice != null
+      ? `Đã thống nhất ${formatVnd(room.terms.agreedPrice)}`
+      : null;
   return (
     <article className={styles.inboxCard}>
-      <div className={styles.cardCover}>
-        {book.data ? (
-          <ListingPhoto book={book.data} />
-        ) : (
-          <BookOpen size={28} aria-hidden="true" />
-        )}
-      </div>
-      <div className={styles.cardBody}>
-        <h2>
-          <Link to={`/chat/${room.id}`}>
-            {book.data?.book.title ??
-              (book.isPending
-                ? "Đang tải tên sách…"
-                : "Bài đăng không còn công khai")}
-          </Link>
-        </h2>
-        <p>
-          {buyer ? "Người bán" : "Người mua"}:{" "}
-          <span>{partner.displayName}</span>
-        </p>
-        <p className={styles.cardState}>
-          <span>
+      <div className={styles.cardIdentity}>
+        <div className={styles.cardCover}>
+          {book.data ? (
+            <ListingPhoto book={book.data} />
+          ) : (
+            <BookOpen size={28} aria-hidden="true" />
+          )}
+        </div>
+        <div className={styles.cardBody}>
+          <h2>
+            <Link to={`/chat/${room.id}`}>
+              {book.data?.book.title ??
+                (book.isPending
+                  ? "Đang tải tên sách…"
+                  : "Bài đăng không còn công khai")}
+            </Link>
+          </h2>
+          <p className={styles.cardPartner}>
+            {buyer ? "Người bán" : "Người mua"} ·{" "}
+            <span>{partner.displayName}</span>
+          </p>
+          <p className={styles.cardMode}>
             {room.terms?.mode === "Exchange" ? "Đổi sách" : "Mua bán"}
-          </span>
-          {states[room.status]}
-        </p>
-        <p className={styles.cardHint}>
-          {room.terms?.pendingProposal
-            ? room.terms.pendingProposal.proposedById === userId
-              ? "Chờ đối tác phản hồi đề nghị của bạn"
-              : "Có đề nghị đang chờ bạn phản hồi"
-            : room.orderId
-              ? "Xem đơn hàng và tiếp tục nhắn tin"
-              : room.terms?.agreedPrice != null
-                ? `Đã thống nhất ${formatVnd(room.terms.agreedPrice)}`
-                : "Tiếp tục xem phiếu và trò chuyện"}
-        </p>
+          </p>
+        </div>
+      </div>
+      {hint && <p className={styles.cardHint}>{hint}</p>}
+      <div className={styles.cardFooter}>
+        <p className={styles.cardStatus}>{states[room.status]}</p>
         <Link className={styles.cardLink} to={`/chat/${room.id}`}>
           Mở cuộc trao đổi <ArrowUpRight size={16} aria-hidden="true" />
         </Link>
@@ -86,24 +85,29 @@ function LegacyCard({ id }: { id: string }) {
   });
   return (
     <article className={styles.legacyCard}>
-      <BookOpen size={24} aria-hidden="true" />
-      <div>
-        <h2>
-          <Link to={`/exchange/${id}`}>
-            {detail.data?.receiveBooks.map((b) => b.title).join(", ") ||
-              "Cuộc trao đổi sách"}
-          </Link>
-        </h2>
-        <p className={styles.cardState}>
-          <span>Đổi sách</span>Lịch sử hiện có
-        </p>
-        <p>
-          {detail.data
-            ? `Với ${detail.data.partner.username}`
-            : detail.isError
-              ? "Chưa tải được tên đối tác; mở để thử lại."
-              : "Đang tải thông tin…"}
-        </p>
+      <div className={styles.cardIdentity}>
+        <div className={styles.cardCover}>
+          <BookOpen size={24} aria-hidden="true" />
+        </div>
+        <div className={styles.cardBody}>
+          <h2>
+            <Link to={`/exchange/${id}`}>
+              {detail.data?.receiveBooks.map((b) => b.title).join(", ") ||
+                "Cuộc trao đổi sách"}
+            </Link>
+          </h2>
+          <p className={styles.cardPartner}>
+            {detail.data
+              ? `Với ${detail.data.partner.username}`
+              : detail.isError
+                ? "Chưa tải được tên đối tác; mở để thử lại."
+                : "Đang tải thông tin…"}
+          </p>
+          <p className={styles.cardMode}>Đổi sách</p>
+        </div>
+      </div>
+      <div className={styles.cardFooter}>
+        <p className={styles.cardStatus}>Lịch sử hiện có</p>
         <Link className={styles.cardLink} to={`/exchange/${id}`}>
           Mở phiếu và hội thoại <ArrowUpRight size={16} aria-hidden="true" />
         </Link>

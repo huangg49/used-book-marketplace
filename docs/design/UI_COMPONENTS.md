@@ -473,6 +473,13 @@ counts. Shared `Conversation.module.css` defines agreement/chat columns, card in
 and mobile panel navigation. Exchange BookInfoCard/ProgressStepper accept compact
 presentation for the agreement column; their lifecycle meanings are unchanged.
 ADR0041 and the ChatPage surface brief define permission and replay behavior.
+ConversationInbox uses an auto-fill grid with340px minimum card width and16px
+gaps (3 columns at1440px,2 at1100/900px,1 on phones). A64px cover/max96px image
+shares the identity row with16px title, partner and mode;16px padding/14px metadata.
+One ruled footer separates status from the44px entry link. Routine continuation
+copy is omitted; pending proposals and agreed prices remain. Below360px a48px
+floated cover lets full text flow underneath. Legacy exchange cards share the
+layout. Filters, twelve-at-a-time reveal and routes stay intact.
 ChatPage's local book-dossier trial above960px puts real book identity in a wine
 agreement header; the adjacent white chat has a partner-led header. Both retain
 one spread and separate agreement-body/message scrolling.
