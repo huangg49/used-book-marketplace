@@ -43,7 +43,7 @@ const checklist = {
   pricingValid: true,
   contentAppropriate: true,
 };
-describe('VNPay sandbox / paid listing submissions / seller-selected wallet checkout (default policy)', () => {
+describe('VNPay sandbox / free capped listings / seller-selected wallet checkout', () => {
   let app: INestApplication, db: MongoFixtures, reviewer: Reader;
   const post = (url: string, body: object, actor: Reader, key = randomUUID()) =>
     request(app.getHttpServer())
@@ -125,6 +125,7 @@ describe('VNPay sandbox / paid listing submissions / seller-selected wallet chec
     ).expect(200);
     return { id: r.body.addressId, version: 1 };
   }
+  const origins = new Map<string, { id: string; version: number }>();
   async function listing(actor: Reader, price = 50000): Promise<Receipt> {
     const book = await post(
       '/catalog/requests',
@@ -151,7 +152,8 @@ describe('VNPay sandbox / paid listing submissions / seller-selected wallet chec
       },
       reviewer,
     ).expect(200);
-    const origin = await address(actor);
+    const origin = origins.get(actor.id) ?? (await address(actor));
+    origins.set(actor.id, origin);
     const content = {
       bookId: book.body.entityId,
       mode: 'Sale',
@@ -231,10 +233,38 @@ describe('VNPay sandbox / paid listing submissions / seller-selected wallet chec
       reviewer,
       key,
     );
+  const visibility = (
+    l: Receipt,
+    actor: Reader,
+    value: 'Visible' | 'Hidden',
+    key = randomUUID(),
+  ) =>
+    request(app.getHttpServer())
+      .put(`/api/v1/listings/${l.entityId}/visibility`)
+      .set('Authorization', `Bearer ${actor.token}`)
+      .set('Idempotency-Key', key)
+      .send({ expectedVersion: l.version, visibility: value });
+  const archive = (l: Receipt, actor: Reader) =>
+    post(
+      `/listings/${l.entityId}/archive`,
+      { expectedVersion: l.version },
+      actor,
+    );
+  async function pendingListings(actor: Reader, count: number) {
+    const result: Receipt[] = [];
+    for (let i = 0; i < count; i++)
+      result.push((await submit(await listing(actor), actor).expect(200)).body);
+    return result;
+  }
+  async function hiddenListing(actor: Reader) {
+    const [pending] = await pendingListings(actor, 1);
+    const approved = (await decide(pending!, true).expect(200)).body;
+    return (await visibility(approved, actor, 'Hidden').expect(200))
+      .body as Receipt;
+  }
   async function sale(buyer?: Reader) {
     const seller = await reader();
     buyer ??= await reader();
-    await fund(seller, 20000);
     const l = await listing(seller),
       sent = (await submit(l, seller).expect(200)).body;
     const approved = (await decide(sent, true).expect(200)).body;
@@ -254,12 +284,12 @@ describe('VNPay sandbox / paid listing submissions / seller-selected wallet chec
       seller,
       buyer,
       l: approved,
-      ...await prepareSellerOrder(app, buyer, {
+      ...(await prepareSellerOrder(app, buyer, {
         quoteId: q.body.entityId,
         expectedQuoteVersion: 1,
         expectedListingVersion: approved.version,
         expectedListingRevisionId: approved.revisionId,
-      }),
+      })),
     };
   }
   beforeAll(async () => {
@@ -637,19 +667,30 @@ describe('VNPay sandbox / paid listing submissions / seller-selected wallet chec
       credited: false,
     });
   });
-  it('does not submit or freeze a draft when the seller cannot pay 20000 VND', async () => {
+  it('submits with an empty wallet even with obsolete 20000 VND fee config, without ledger writes', async () => {
     const a = await reader(),
       l = await listing(a);
-    await submit(l, a).expect(409);
+    const key = randomUUID();
+    const sent = (await submit(l, a, key).expect(200)).body;
+    expect((await submit(l, a, key).expect(200)).body).toEqual(sent);
     expect(await db.c.listings.findOne({ _id: l.entityId })).toMatchObject({
-      moderation: 'Draft',
-      version: l.version,
+      moderation: 'PendingReview',
+      version: l.version + 1,
     });
     expect(
       await db.c.listing_revisions.findOne({ _id: l.revisionId }),
-    ).toMatchObject({ submittedAt: null });
+    ).toMatchObject({ submittedAt: expect.any(Date) });
     expect(
       await db.c.listing_fees.countDocuments({ listingId: l.entityId }),
+    ).toBe(0);
+    expect(await wallet(a)).toMatchObject({
+      available: 0,
+      transactionHeld: 0,
+      listingSubmissionFee: 0,
+    });
+    await decide(sent, true).expect(200);
+    expect(
+      await db.c.ledger_journals.countDocuments({ listingFeeId: l.revisionId }),
     ).toBe(0);
   });
   it('requires current auth before topup replay and rejects revoked sessions', async () => {
@@ -676,36 +717,35 @@ describe('VNPay sandbox / paid listing submissions / seller-selected wallet chec
     });
     expect((await wallet(a)).available).toBe(50000);
   });
-  it('charges once, refunds on rejection once, and charges a new rejected resubmission', async () => {
+  it('keeps submission and resubmission free through rejection and replay', async () => {
     const a = await reader();
-    await fund(a, 20000);
     const l = await listing(a),
       key = randomUUID();
     const sent = (await submit(l, a, key).expect(200)).body;
     await submit(l, a, key).expect(200);
     expect(await wallet(a)).toMatchObject({
       available: 0,
-      transactionHeld: 20000,
-      total: 20000,
+      transactionHeld: 0,
+      total: 0,
     });
     const rejectKey = randomUUID(),
       rejected = (await decide(sent, false, rejectKey).expect(200)).body;
     await decide(sent, false, rejectKey).expect(200);
     expect(await wallet(a)).toMatchObject({
-      available: 20000,
+      available: 0,
       transactionHeld: 0,
     });
     const again = (await submit(rejected, a).expect(200)).body;
     expect(again.revisionId).not.toBe(sent.revisionId);
     expect(await wallet(a)).toMatchObject({
       available: 0,
-      transactionHeld: 20000,
+      transactionHeld: 0,
     });
     await decide(again, false).expect(200);
+    expect(await db.c.listing_fees.countDocuments({ ownerId: a.id })).toBe(0);
   });
-  it('serializes competing approval and rejection with exactly one fee outcome', async () => {
+  it('serializes competing approval and rejection without charging a fee', async () => {
     const a = await reader();
-    await fund(a, 20000);
     const l = await listing(a),
       sent = (await submit(l, a).expect(200)).body;
     const gate = await Gate.lockUser(db.client, a.id),
@@ -723,9 +763,296 @@ describe('VNPay sandbox / paid listing submissions / seller-selected wallet chec
       await db.c.ledger_journals.countDocuments({
         listingFeeId: sent.revisionId,
       }),
-    ).toBe(2);
+    ).toBe(0);
     expect((await wallet(a)).transactionHeld).toBe(0);
   });
+  it('counts visible approved and pending listings together, preserves blocked drafts and replays at capacity', async () => {
+    const a = await reader(),
+      other = await reader();
+    const pending = await pendingListings(a, 5);
+    await decide(pending[0]!, true).expect(200);
+    await decide(pending[1]!, true).expect(200);
+    const sixth = await listing(a),
+      key = randomUUID();
+    const denied = await submit(sixth, a, key).expect(409);
+    expect(denied.body.code).toBe('ListingLimitReached');
+    expect(await db.c.listings.findOne({ _id: sixth.entityId })).toMatchObject({
+      moderation: 'Draft',
+      version: sixth.version,
+    });
+    expect(
+      await db.c.listing_revisions.findOne({ _id: sixth.revisionId }),
+    ).toMatchObject({ submittedAt: null, ownershipDeclaredAt: null });
+    expect(
+      await db.c.mutation_receipts.countDocuments({
+        listingId: sixth.entityId,
+        operation: 'submitListing',
+      }),
+    ).toBe(0);
+    expect(
+      await db.c.audit_events.countDocuments({
+        listingId: sixth.entityId,
+        action: 'submitListing',
+      }),
+    ).toBe(0);
+    await submit(sixth, other).expect(404);
+    await submit(await listing(other), other).expect(200);
+    // Replay must precede quota/version/state checks, but follow current auth.
+    const fresh = await reader(),
+      draft = await listing(fresh),
+      replayKey = randomUUID();
+    const sent = (await submit(draft, fresh, replayKey).expect(200)).body;
+    await pendingListings(fresh, 4);
+    expect((await submit(draft, fresh, replayKey).expect(200)).body).toEqual(
+      sent,
+    );
+    await post(
+      `/listings/${draft.entityId}/submit`,
+      { expectedVersion: draft.version + 1, ownershipDeclared: true },
+      fresh,
+      replayKey,
+    ).expect(409);
+    await db.c.auth_sessions.updateOne(
+      { _id: fresh.sessionId },
+      { $set: { revokedAt: new Date() }, $inc: { lockSeq: 1 } },
+    );
+    await submit(draft, fresh, replayKey).expect(401);
+  }, 60000);
+  it('hiding frees a slot and reopening or revising a hidden listing cannot exceed the cap', async () => {
+    const a = await reader(),
+      hidden = await hiddenListing(a);
+    const pending = await pendingListings(a, 5);
+    expect((await visibility(hidden, a, 'Visible').expect(409)).body.code).toBe(
+      'ListingLimitReached',
+    );
+    const content = (
+      await get(`/me/listings/${hidden.entityId}`, a).expect(200)
+    ).body.currentRevision.content;
+    const revisionBody = {
+      expectedVersion: hidden.version,
+      ownershipDeclared: true,
+      content,
+    };
+    expect(
+      (
+        await post(
+          `/listings/${hidden.entityId}/revision`,
+          revisionBody,
+          a,
+        ).expect(409)
+      ).body.code,
+    ).toBe('ListingLimitReached');
+    await archive(pending[0]!, a).expect(200);
+    const reopenKey = randomUUID();
+    const reopened = (
+      await visibility(hidden, a, 'Visible', reopenKey).expect(200)
+    ).body;
+    expect(
+      (await visibility(hidden, a, 'Visible', reopenKey).expect(200)).body,
+    ).toEqual(reopened);
+    // Editing a visible listing retains its existing slot at capacity.
+    const revised = (
+      await post(
+        `/listings/${hidden.entityId}/revision`,
+        { ...revisionBody, expectedVersion: reopened.version },
+        a,
+      ).expect(200)
+    ).body;
+    const approved = (await decide(revised, true).expect(200)).body;
+    await visibility(approved, a, 'Hidden').expect(200);
+    const revisedHidden = (
+      await post(
+        `/listings/${hidden.entityId}/revision`,
+        { ...revisionBody, expectedVersion: approved.version + 1 },
+        a,
+      ).expect(200)
+    ).body;
+    expect((await submit(await listing(a), a).expect(409)).body.code).toBe(
+      'ListingLimitReached',
+    );
+    // Approval keeps the hidden visibility and releases its review slot.
+    await decide(revisedHidden, true).expect(200);
+    await submit(await listing(a), a).expect(200);
+  }, 60000);
+  it('rejection frees a slot, and rejected resubmissions must acquire a slot again', async () => {
+    const a = await reader(),
+      pending = await pendingListings(a, 5);
+    const rejected = (await decide(pending[0]!, false).expect(200)).body;
+    await submit(await listing(a), a).expect(200);
+    expect((await submit(rejected, a).expect(409)).body.code).toBe(
+      'ListingLimitReached',
+    );
+    expect(
+      await db.c.listing_revisions.countDocuments({
+        listingId: rejected.entityId,
+      }),
+    ).toBe(1);
+    await archive(pending[1]!, a).expect(200);
+    await submit(rejected, a).expect(200);
+  }, 60000);
+  it('does not count sold, exchanged or closed listings toward new submissions', async () => {
+    const a = await reader(),
+      pending = await pendingListings(a, 5);
+    for (const [index, trade] of [
+      'Sold',
+      'Exchanged',
+      'ClosedUnavailable',
+    ].entries()) {
+      const approved = (await decide(pending[index]!, true).expect(200)).body;
+      // Historical terminal projection fixture; no storage or real delivery claim.
+      await db.c.listings.updateOne(
+        { _id: approved.entityId },
+        {
+          $set: {
+            trade: trade as 'Sold' | 'Exchanged' | 'ClosedUnavailable',
+            updatedAt: new Date(),
+          },
+          $inc: { version: 1, lockSeq: 1 },
+        },
+      );
+    }
+    await pendingListings(a, 3);
+    expect((await submit(await listing(a), a).expect(409)).body.code).toBe(
+      'ListingLimitReached',
+    );
+  }, 60000);
+  it('preserves pre-policy owners over five and blocks additional slots until below the cap', async () => {
+    const a = await reader(),
+      hidden = await hiddenListing(a);
+    const pending = await pendingListings(a, 5);
+    // Seed a valid pre-policy visible projection exceeding the new cap.
+    await db.c.listings.updateOne(
+      { _id: hidden.entityId },
+      {
+        $set: { visibility: 'Visible', updatedAt: new Date() },
+        $inc: { version: 1, lockSeq: 1 },
+      },
+    );
+    const draft = await listing(a),
+      key = randomUUID();
+    expect((await submit(draft, a, key).expect(409)).body.code).toBe(
+      'ListingLimitReached',
+    );
+    expect(
+      await db.c.listings.countDocuments({ ownerId: a.id, deletedAt: null }),
+    ).toBe(7);
+    await archive(pending[0]!, a).expect(200);
+    await submit(draft, a, key).expect(409);
+    await archive(pending[1]!, a).expect(200);
+    await submit(draft, a, key).expect(200);
+  }, 60000);
+  it('rolls back a failed fifth submission and retries the same key without losing a slot', async () => {
+    const a = await reader();
+    await pendingListings(a, 4);
+    const draft = await listing(a),
+      key = randomUUID();
+    await db.withRejectingValidator(
+      'outbox_events',
+      { type: 'ListingSubmitted' },
+      async () => {
+        await submit(draft, a, key).expect(500);
+      },
+    );
+    expect(await db.c.listings.findOne({ _id: draft.entityId })).toMatchObject({
+      moderation: 'Draft',
+      version: draft.version,
+    });
+    const sent = (await submit(draft, a, key).expect(200)).body;
+    expect((await submit(draft, a, key).expect(200)).body).toEqual(sent);
+    expect((await submit(await listing(a), a).expect(409)).body.code).toBe(
+      'ListingLimitReached',
+    );
+  }, 60000);
+  it.each(['submit', 'reopen', 'reviseHidden'] as const)(
+    'serializes a fifth submission competing with %s on the same owner',
+    async (operation) => {
+      const a = await reader();
+      const hidden = operation === 'submit' ? null : await hiddenListing(a);
+      await pendingListings(a, 4);
+      const firstDraft = await listing(a),
+        secondDraft = operation === 'submit' ? await listing(a) : null;
+      const content = hidden
+        ? (await get(`/me/listings/${hidden.entityId}`, a).expect(200)).body
+            .currentRevision.content
+        : null;
+      const gate = await Gate.lockUser(db.client, a.id);
+      const first = submit(firstDraft, a).then((r) => r);
+      const second = (
+        operation === 'submit'
+          ? submit(secondDraft!, a)
+          : operation === 'reopen'
+            ? visibility(hidden!, a, 'Visible')
+            : post(
+                `/listings/${hidden!.entityId}/revision`,
+                {
+                  expectedVersion: hidden!.version,
+                  ownershipDeclared: true,
+                  content,
+                },
+                a,
+              )
+      ).then((r) => r);
+      try {
+        await gate.contended(2);
+      } finally {
+        await gate.close();
+      }
+      const responses = await Promise.all([first, second]);
+      expect(responses.map((r) => r.status).sort()).toEqual([200, 409]);
+      expect(responses.find((r) => r.status === 409)!.body.code).toBe(
+        'ListingLimitReached',
+      );
+    },
+    60000,
+  );
+  it.each([true, false])(
+    'preserves historical held fee accounting on approval=%s, while all new submissions remain free',
+    async (approved) => {
+      const a = await reader();
+      await fund(a, 20000);
+      const sent = (await submit(await listing(a), a).expect(200)).body;
+      // Seed a pre-policy held fee with its immutable journal/receipt chain.
+      await app.get(MongoService).tx(async (tx) => {
+        await tx.lock('users', [a.id]);
+        const ledger = app.get(LedgerService);
+        await ledger.lockListingFee(tx, a.id);
+        const now = await tx.now();
+        const fee = {
+          _id: sent.revisionId,
+          listingId: sent.entityId,
+          ownerId: a.id,
+          amount: 20000,
+          policyCode: 'LISTING-FEE-v1' as const,
+          createdAt: now,
+          receiptId: sent.id,
+        };
+        await tx.c.listing_fees.insertOne(fee);
+        await ledger.postListingFee(tx, fee, 'ListingFeeCharge', sent.id, now);
+      });
+      const key = randomUUID();
+      const result = (await decide(sent, approved, key).expect(200)).body;
+      expect((await decide(sent, approved, key).expect(200)).body).toEqual(
+        result,
+      );
+      expect(await wallet(a)).toMatchObject({
+        available: approved ? 0 : 20000,
+        transactionHeld: 0,
+      });
+      expect(
+        await db.c.ledger_journals.countDocuments({
+          listingFeeId: sent.revisionId,
+        }),
+      ).toBe(2);
+      if (!approved) {
+        await submit(result, a).expect(200);
+        expect(await wallet(a)).toMatchObject({
+          available: 20000,
+          transactionHeld: 0,
+        });
+      }
+    },
+    60000,
+  );
   it('creates an unpaid Seller order and refuses underfunded Buyer payment without a hold', async () => {
     const f = await sale();
     await fund(f.buyer, 50000);

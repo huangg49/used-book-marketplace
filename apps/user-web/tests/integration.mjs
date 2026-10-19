@@ -33,15 +33,16 @@ try {
     `/operations/catalog-requests/${fixture.catalogId}`,
     admin.accessToken,
   );
-  await fixture.api(
-    `/operations/catalog-requests/${fixture.catalogId}/decision`,
-    admin.accessToken,
-    {
-      expectedVersion: catalog.version,
-      revisionId: catalog.currentRevision.id,
-      decision: "Confirm",
-    },
-  );
+  if (catalog.status !== "Confirmed")
+    await fixture.api(
+      `/operations/catalog-requests/${fixture.catalogId}/decision`,
+      admin.accessToken,
+      {
+        expectedVersion: catalog.version,
+        revisionId: catalog.currentRevision.id,
+        decision: "Confirm",
+      },
+    );
   for (const id of fixture.listings) {
     const listing = await fixture.api(
       `/operations/listings/${id}`,
@@ -234,7 +235,7 @@ try {
   });
   await p.setViewportSize({ width: 390, height: 844 });
   console.log("QA: public shelf/detail/states passed; sell journey");
-  await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
+  await p.locator(`a[href="/books/${fixture.listings[0]}"]`).first().click();
   await button("Chat với người bán").click();
   await p.waitForURL("**/login?returnUrl=*");
   const returnPath = new URL(p.url()).searchParams.get("returnUrl");
@@ -267,6 +268,12 @@ try {
     .click();
   await p.waitForURL(origin + "/sell");
   await step(/Kiểm tra/).click();
+  await p.getByText(/Đăng bài miễn phí/).waitFor();
+  assert.equal(await p.getByText(/Phí gửi duyệt:/).count(), 0);
+  assert.equal(
+    await p.getByRole("link", { name: "Nạp ví", exact: true }).count(),
+    0,
+  );
   await button("Gửi duyệt").click();
   await p.getByRole("alert").waitFor();
   await step(/Thông tin sách/).click();
@@ -429,11 +436,11 @@ try {
       headers: route.request().headers(),
       body: route.request().postData(),
     });
-    if (!lost) {
+    const response = await route.fetch();
+    if (!lost && response.status() === 200) {
       lost = true;
-      await route.fetch();
       await route.abort("failed");
-    } else await route.continue();
+    } else await route.fulfill({ response });
   });
   let processing = false;
   mediaTimer = setInterval(async () => {
@@ -452,16 +459,54 @@ try {
   await button("Gửi duyệt").click();
   await button("Thử gửi lại").waitFor({ timeout: 45000 });
   await p.getByRole("alert").waitFor();
+  await p
+    .getByText(/Bạn đã có tối đa 5 bài đang hiển thị hoặc chờ admin duyệt/)
+    .waitFor();
+  assert.equal(
+    await fixture.db.collection("listings").countDocuments(),
+    before + 1,
+  );
+  for (const width of [390, 1440]) {
+    await p.setViewportSize({ width, height: 900 });
+    await p.screenshot({
+      path: path.join(artifacts, `listing-quota-${width}.png`),
+      fullPage: true,
+    });
+    assert.ok(
+      await p.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    );
+  }
+  // Free one actual slot, then retry the pinned request through a lost ACK.
+  const toHide = await fixture.api(
+    `/me/listings/${fixture.listings[0]}`,
+    fixture.member.accessToken,
+  );
+  await fixture.api(
+    `/listings/${toHide.id}/visibility`,
+    fixture.member.accessToken,
+    { expectedVersion: toHide.version, visibility: "Hidden" },
+    "PUT",
+  );
+  await button("Thử gửi lại").click();
+  await p
+    .getByRole("alert")
+    .filter({ hasText: /Thông tin đang được giữ nguyên/ })
+    .waitFor();
+  await button("Thử gửi lại").waitFor();
   await button("Thử gửi lại").click();
   await p
     .getByRole("heading", { name: "Đã gửi duyệt", exact: true })
     .waitFor({ timeout: 45000 });
-  assert.equal(attempts.length, 2);
-  assert.equal(
-    attempts[0].headers["idempotency-key"],
-    attempts[1].headers["idempotency-key"],
-  );
-  assert.equal(attempts[0].body, attempts[1].body);
+  assert.equal(attempts.length, 3);
+  for (const attempt of attempts.slice(1)) {
+    assert.equal(
+      attempts[0].headers["idempotency-key"],
+      attempt.headers["idempotency-key"],
+    );
+    assert.equal(attempts[0].body, attempt.body);
+  }
   assert.equal(
     await fixture.db.collection("listings").countDocuments(),
     before + 1,
@@ -479,6 +524,11 @@ try {
     fixture.member.accessToken,
   );
   assert.equal(posted.state.moderation, "PendingReview");
+  assert.equal(await fixture.db.collection("listing_fees").countDocuments(), 0);
+  assert.equal(
+    (await fixture.api("/me/wallet", fixture.member.accessToken)).available,
+    0,
+  );
   assert.equal(posted.currentRevision.content.hasMissingPages, true);
   assert.equal(posted.currentRevision.content.condition, "Worn");
   assert.equal(posted.currentRevision.content.exchangeValue, 45000);

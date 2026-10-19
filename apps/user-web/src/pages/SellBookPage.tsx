@@ -6,7 +6,6 @@ import {
   useBeforeUnload,
   useBlocker,
   useLocation,
-  Link,
 } from "react-router-dom";
 import {
   ArrowLeft,
@@ -24,7 +23,6 @@ import { ListingSubmissionConfirmation } from "../components/BookJourneyStates";
 import { useSession } from "../hooks/useSession";
 import { session as apiSession } from "../lib/session";
 import { createListingSubmission } from "../services/listing-submission";
-import { getWalletSummary } from "../services/wallet";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
 import {
@@ -70,15 +68,6 @@ const addressReceiptSchema = z.object({
 });
 
 export function SellBookPage() {
-  const feeAuth = useSession();
-  const feeWallet = useQuery({
-    queryKey: [
-      "wallet-summary",
-      feeAuth.status === "authenticated" ? feeAuth.user.id : undefined,
-    ],
-    queryFn: getWalletSummary,
-    enabled: feeAuth.status === "authenticated",
-  });
   const submission = useRef<ReturnType<typeof createListingSubmission>>(null);
   const [classification, setClassification] = useState<ClassificationValue>({
     categoryId: "",
@@ -1800,28 +1789,12 @@ export function SellBookPage() {
                         )}
                       </div>
                     )}
-                    {feeWallet.data?.listingSubmissionFee !== undefined && (
-                      <p className={styles.help}>
-                        Phí gửi duyệt:{" "}
-                        <strong>
-                          {formatVnd(feeWallet.data.listingSubmissionFee)}
-                        </strong>
-                        , giữ từ ví khi gửi bài. Bị từ chối sẽ hoàn về ví. Số dư
-                        khả dụng: {formatVnd(feeWallet.data.available)}.{" "}
-                        <Link to="/wallet">Nạp ví</Link>
-                      </p>
-                    )}
-                    {feeWallet.isError && (
-                      <p role="alert">
-                        Chưa kiểm tra được phí và số dư.{" "}
-                        <button
-                          type="button"
-                          onClick={() => void feeWallet.refetch()}
-                        >
-                          Kiểm tra lại
-                        </button>
-                      </p>
-                    )}
+                    <p className={styles.help}>
+                      Đăng bài miễn phí. Mỗi tài khoản có tối đa 5 bài đang hiển
+                      thị trên trang chủ hoặc chờ admin duyệt. Bản nháp, bài bị
+                      từ chối, bài đã duyệt nhưng đang ẩn, bài đã bán/đổi hoặc đã
+                      lưu trữ không tính vào giới hạn.
+                    </p>
                     {hasAttempt && (
                       <p role="status" className={styles.help}>
                         Thông tin đã khóa cho lần gửi này để giữ đúng dữ liệu

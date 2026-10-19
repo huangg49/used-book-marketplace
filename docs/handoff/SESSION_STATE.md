@@ -1,4 +1,45 @@
-# Điểm lưu hiện tại — 17/10/2026
+# Điểm lưu hiện tại — 19/10/2026
+
+## Đăng miễn phí, tối đa 5 bài hiển thị/chờ duyệt — 19/10/2026
+
+- Chủ dự án chốt chỉ tính bài trên trang chủ và bài gửi admin duyệt. Nhánh
+  `codex/free-listings-five-limit`, base `25efcb8`; subject
+  `feat(listings): replace submission fees with five active listing cap`.
+  [ADR0040](../adr/0040-free-listings-five-active-cap.md), SRS FR-L09 và
+  OpenAPI0.44.0 mô tả chính sách. Draft/Rejected/Approved Hidden/terminal trade/
+  lưu trữ/gỡ không chiếm chỗ; Hidden PendingReview vẫn chiếm chỗ chờ duyệt.
+- API không tạo phí bài mới, ví0đ vẫn gửi được; env phí20000 cũ bị bỏ qua.
+  Hạn mức kiểm dưới owner lock trong transaction khi submit/resubmit, mở lại
+  hoặc sửa bài Approved Hidden. Sửa bài Visible giữ chỗ; từ chối/ẩn/lưu trữ
+  giải phóng theo trạng thái. Quá5 trả409 ListingLimitReached, giữ nội dung,
+  version, ảnh và intent; replay thành công vẫn dùng được ở hạn mức đầy.
+  Bài lịch sử vượt5 giữ nguyên; phí đã giữ cũ vẫn settle/refund đúng chuỗi.
+  Không migration, sửa env riêng, DB app hoặc sổ cái lịch sử.
+- Web bỏ lookup ví/nạp ví ở form; Web/RN hiện chính sách và giữ lỗi/retry.
+  Browser fixture nhiều sách phân bổ nhiều owner để tuân thủ hạn mức thật;
+  listing-review E2E tách owner từng test, giữ nguyên assertions nghiệp vụ.
+- PASS Node24.21.0/pnpm11.19.0: contract generate/check/routes168/26; API
+  lint/typecheck/build/150unit; Web lint/typecheck/build/136unit; RN
+  lint/typecheck/143unit. Warning có sẵn: API11/Web6, web chunk lớn.
+- PASS HTTP/Mongo QA riêng: wallet-checkout33/33 (gồm miễn phí, mixed quota,
+  auth/replay/rollback, ba race submit/reopen/hidden revision và phí lịch sử);
+  thêm2/2 scoped terminal/legacy-over-cap (33ca ngoài filter SKIP); listing-review
+  73/73. Web Chromium390/1440 PASS hạn mức→ẩn1bài→retry→lostACK→replay, chỉ1draft/
+  address, ví0/không phí; giữ regression kệ/tìm kiếm/chat. Storage fake, Sharp thật.
+  Ảnh local: `apps/user-web/test-results/listing-quota-390.png` và `listing-quota-1440.png`.
+- RN export:web PASS (cảnh báo Expo force-exit sau khi export thành công).
+  Focused Expo browser PASS login→tạo nháp→tab Kiểm tra, đúng copy miễn phí/5bài,
+  ví0/không phí và không overflow ở390/1440. Ảnh/script local tại
+  `.tmp/free-listings-rn/` và `.tmp/free-listings-rn-browser.mjs`. Full RN browser
+  FAIL trước khi tới editor do harness chờ heading cũ “Tình trạng sách”, source
+  hiện là “Khảo chứng tình trạng sách”; không nhận full harness/native PASS.
+- FAIL kiểm Mongo schema mở rộng:21/25 PASS,4 upgrade cases thiếu ExchangeDisputed
+  trong validator member_notifications, tại schema.mongo-spec.ts315/383. Source
+  Mongo và test/mongo giống nguyên base25efcb8 (`git diff` rỗng cho hai thư mục);
+  không sửa migration đã áp dụng hoặc mở rộng gói để che lỗi này.
+- Native-device/live-provider/human review/remote CI NOT RUN; READINESS giữ nguyên.
+  Chưa push/PR/merge/deploy. Bước tiếp: review độc lập, xử lý lỗi schema Exchange
+  ở gói riêng và tích hợp/restart API/worker theo quyền được giao.
 
 ## Trao đổi sách (Exchange): Hoàn tất Ưu tiên 0 & Ưu tiên 1 — 17/10/2026
 
