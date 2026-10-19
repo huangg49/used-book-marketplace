@@ -9,12 +9,15 @@
   Dưới960px giữ đầu sách trên cả hai tab; cover64/48px, chữ20px;320px chữ lớn
   được chảy xuống dưới ảnh. Phiếu cuộn trên footer, hai nút cuối vẫn thẳng hàng.
   Đang chờ chủ dự án xem bản local, chưa push/PR.
-  Follow-up `fix(web): keep agreement width stable when scrolling`: phiếu desktop
-  giữ sẵn scrollbar gutter; thanh cuộn chỉ hiện khi cần, fallback browser cũ dùng
-  overflow scroll. Mobile giữ flow tự nhiên/không gutter. Vite build (chunk warning
-  cũ), QA scrollbar cổ điển1440/1100 mở/đóng3 lần không đổi x/width của input,
-  giữ cả nháp và mobile390/320 PASS tại `.tmp/chat-gutter-qa`. Chỉ CSS, không chạy
-  lại gate nghiệp vụ/API.
+  Follow-up từ `aac6aef`, subject `fix(web): dock transaction guide and follow its expansion`:
+  giữ scrollbar gutter desktop để form không lệch; “Cách giao dịch” nằm sát footer,
+  bỏ khoảng trống dưới khi đóng. Thao tác mở cuộn phiếu xuống cuối, đóng về đầu;
+  mobile cuộn trang tới vùng vừa mở/đầu phiếu theo flow tự nhiên. Chỉ thao tác chủ
+  động mới cuộn; cảnh báo tự mở không kéo viewport. QA fixture1440/1100 với scrollbar
+  cổ điển, mobile390/320, bàn phím, bật reduced-motion, bật/tắt nhanh, giữ cả nháp
+  PASS tại `.tmp/chat-guide-scroll-qa`; toàn bộ browser flow PASS tại
+  `.tmp/chat-guide-scroll-flow-qa`. Build (chunk warning cũ), lint (6 warning cũ)
+  PASS. Không đổi API/nghiệp vụ, không chạy lại gate backend/native/live storage.
 - Phiếu trái ưu tiên hình thức → giá → đề nghị giá. Yêu cầu đổi nằm cạnh hình
   thức; giá niêm yết nổi trước chốt, giá thống nhất đỏ rượu nổi sau chốt. Phí vẫn
   hiện; hướng dẫn/phase trail gom vào “Cách giao dịch”. Tự mở khi hết hạn, thiếu

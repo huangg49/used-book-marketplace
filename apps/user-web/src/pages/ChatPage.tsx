@@ -75,6 +75,8 @@ function ChatRoom({
 }) {
   const other = room.buyer.id === userId ? room.seller : room.buyer;
   const [panel, setPanel] = useState<"sheet" | "chat">("sheet");
+  const sheetBodyRef = useRef<HTMLDivElement>(null);
+  const guidanceScrollIntent = useRef(false);
   const [historyExchange, setHistoryExchange] = useState<string | null>(null);
   const cache = useQueryClient();
   const history = useQuery({
@@ -367,6 +369,7 @@ function ChatRoom({
           <h2 className={styles.srOnly}>Phiếu thỏa thuận</h2>
           <div
             className={`${sheet.sheetBody} ${styles.dossierBody}`}
+            ref={sheetBodyRef}
             role="region"
             aria-label="Nội dung phiếu thỏa thuận"
             tabIndex={0}
@@ -442,6 +445,24 @@ function ChatRoom({
             {!isExchange && !(room.orderId && isBuyer) && (
               <details
                 className={styles.guidanceDetails}
+                onToggle={(event) => {
+                  if (!guidanceScrollIntent.current) return;
+                  guidanceScrollIntent.current = false;
+                  const body = sheetBodyRef.current;
+                  if (!body) return;
+                  const details = event.currentTarget;
+                  if (getComputedStyle(body).overflowY === "visible") {
+                    (details.open ? details : body).scrollIntoView({
+                      block: "start",
+                      behavior: "smooth",
+                    });
+                  } else {
+                    body.scrollTo({
+                      top: details.open ? body.scrollHeight : 0,
+                      behavior: "smooth",
+                    });
+                  }
+                }}
                 open={
                   expired ||
                   (book.data != null && !book.data.fulfillment) ||
@@ -450,7 +471,11 @@ function ChatRoom({
                       Date.parse(room.quotePreview.expiresAt) <= now))
                 }
               >
-                <summary>
+                <summary
+                  onClick={() => {
+                    guidanceScrollIntent.current = true;
+                  }}
+                >
                   Cách giao dịch
                   <ChevronDown size={16} aria-hidden="true" />
                 </summary>
