@@ -227,24 +227,34 @@ export function SellBookPage() {
   }, [submitError]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (imageFiles.length >= 8) return;
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (
-        !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-        file.size > 10_000_000
-      ) {
-        setValidationFailure(false);
-        setSubmitError("Ảnh cần là JPEG, PNG hoặc WebP và không quá 10 MB.");
-        return;
-      }
-      setSubmitError(undefined);
-      // Keep the local preview while retaining the original file for the API upload.
-      const fakeUrl = URL.createObjectURL(file);
-      setFormData((prev) => ({ ...prev, images: [...prev.images, fakeUrl] }));
-      setImageFiles((files) => [...files, file]);
-      e.target.value = "";
+    const selected = Array.from(e.target.files ?? []);
+    // Reset even after rejection so selecting the same batch fires change again.
+    e.target.value = "";
+    if (!selected.length || hasAttempt || submitting) return;
+    const remaining = 8 - imageFiles.length;
+    if (selected.length > remaining) {
+      setValidationFailure(false);
+      setSubmitError(
+        `Tối đa 8 ảnh. Bạn có thể chọn thêm ${remaining} ảnh; hãy chọn lại ít ảnh hơn.`,
+      );
+      return;
     }
+    if (
+      selected.some(
+        (file) =>
+          !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
+          file.size > 10_000_000,
+      )
+    ) {
+      setValidationFailure(false);
+      setSubmitError("Ảnh cần là JPEG, PNG hoặc WebP và không quá 10 MB.");
+      return;
+    }
+    setSubmitError(undefined);
+    // Validate the whole batch before allocating previews; retain upload order.
+    const previews = selected.map((file) => URL.createObjectURL(file));
+    setFormData((prev) => ({ ...prev, images: [...prev.images, ...previews] }));
+    setImageFiles((files) => [...files, ...selected]);
   };
 
   const handleSubmit = async () => {
@@ -1123,6 +1133,7 @@ export function SellBookPage() {
                             id="images"
                             className={styles.fileInput}
                             type="file"
+                            multiple
                             accept="image/jpeg,image/png,image/webp"
                             onChange={handleImageUpload}
                             disabled={
@@ -1132,8 +1143,8 @@ export function SellBookPage() {
                           />
                           {fieldFeedback("images")}
                           <p id="image-help" className={styles.help}>
-                            {imageFiles.length}/8 ảnh · Ảnh được tải lên khi gửi
-                            duyệt.
+                            {imageFiles.length}/8 ảnh · Có thể chọn nhiều ảnh cùng
+                            lúc. Ảnh được tải lên khi gửi duyệt.
                           </p>
                           <div className={styles.photos}>
                             {formData.images.map((url, index) => (

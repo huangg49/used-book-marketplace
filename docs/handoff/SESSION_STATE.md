@@ -1,5 +1,22 @@
 # Điểm lưu hiện tại — 19/10/2026
 
+## Chọn nhiều ảnh đăng sách — 19/10/2026
+
+- Theo ảnh chủ dự án ở Member web `/sell`: bật file picker `multiple`, xử lý
+  toàn bộ nhóm chọn và nối vào ảnh cũ đúng thứ tự. Giữ tối đa8 ảnh,10MB/ảnh,
+  JPEG/PNG/WebP; từ chối nguyên nhóm sai/vượt số chỗ, giữ ảnh cũ, reset input
+  để chọn lại. Preview/upload cùng thứ tự, xóa ảnh và cleanup URL giữ nguyên.
+- Nhánh `codex/listing-multi-image-picker`, base `1ea2ac9`; subject
+  `fix(web): allow selecting multiple listing photos at once`.
+- PASS web lint/typecheck/build/136unit; Chromium QA390/1440: chooser multiple,
+  chọn3/xóa giữa, nhóm có GIF/ảnh>10MB không đổi ảnh cũ, vượt8 bị từ chối,
+  thêm đủ8 khóa picker/xóa mở lại, upload2 ảnh và submit/retry giữ đúng key/body.
+  Suite kệ/tìm kiếm/chat và quota trước đó vẫn PASS. API/Mongo QA riêng,
+  storage fake/Sharp thật; ảnh local `apps/user-web/test-results/sell-multiple-images-*.png`.
+- Chỉ sửa web; không đổi API/contract/RN. Warning web6/chunk có sẵn giữ nguyên.
+  Không kiểm hộp chọn ảnh Windows bằng tay/native/live provider; không chạy lại
+  gate API/Mongo không đổi. READINESS giữ nguyên; chưa push/PR/merge/deploy.
+
 ## Đăng miễn phí, tối đa 5 bài hiển thị/chờ duyệt — 19/10/2026
 
 - Chủ dự án chốt chỉ tính bài trên trang chủ và bài gửi admin duyệt. Nhánh

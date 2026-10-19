@@ -287,11 +287,80 @@ try {
     .getByRole("combobox", { name: "Danh mục sách", exact: true })
     .selectOption({ label: "Sách khác" });
   await step(/Ảnh bản sách/).click();
-  await p.locator("input[type=file]").setInputFiles({
-    name: "qa-cover.png",
+  const fileInput = p.locator("input[type=file]");
+  const photo = (name) => ({
+    name,
     mimeType: "image/png",
     buffer: fixture.photo,
   });
+  const thumbnails = p.getByRole("img", { name: /^Ảnh bản sách \d+$/ });
+  const chooserPromise = p.waitForEvent("filechooser");
+  await p.getByText("Chọn ảnh bản sách", { exact: true }).click();
+  const chooser = await chooserPromise;
+  assert.equal(chooser.isMultiple(), true);
+  await chooser.setFiles([
+    photo("qa-cover.png"),
+    photo("qa-spine.png"),
+    photo("qa-pages.png"),
+  ]);
+  await thumbnails.nth(2).waitFor();
+  const initialPreviews = await thumbnails.evaluateAll((nodes) =>
+    nodes.map((node) => node.src),
+  );
+  await button("Xóa ảnh 2").click();
+  assert.deepEqual(
+    await thumbnails.evaluateAll((nodes) => nodes.map((node) => node.src)),
+    [initialPreviews[0], initialPreviews[2]],
+  );
+  // Invalid batches preserve both the selected files and their preview order.
+  for (const invalid of [
+    { name: "wrong.gif", mimeType: "image/gif", buffer: fixture.photo },
+    {
+      name: "oversized.png",
+      mimeType: "image/png",
+      buffer: Buffer.alloc(10_000_001),
+    },
+  ]) {
+    await fileInput.setInputFiles([photo("valid.png"), invalid]);
+    await p
+      .getByRole("alert")
+      .filter({ hasText: /JPEG, PNG hoặc WebP và không quá 10 MB/ })
+      .waitFor();
+    assert.equal(await thumbnails.count(), 2);
+    assert.equal(await fileInput.inputValue(), "");
+  }
+  await fileInput.setInputFiles(
+    Array.from({ length: 7 }, (_, i) => photo(`overflow-${i}.png`)),
+  );
+  await p
+    .getByRole("alert")
+    .filter({ hasText: /chọn thêm 6 ảnh/ })
+    .waitFor();
+  assert.equal(await thumbnails.count(), 2);
+  await fileInput.setInputFiles(
+    Array.from({ length: 6 }, (_, i) => photo(`extra-${i}.png`)),
+  );
+  await thumbnails.nth(7).waitFor();
+  assert.equal(await fileInput.isDisabled(), true);
+  for (const width of [390, 1440]) {
+    await p.setViewportSize({ width, height: 900 });
+    await p.screenshot({
+      path: path.join(artifacts, `sell-multiple-images-${width}.png`),
+      fullPage: true,
+    });
+    assert.ok(
+      await p.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    );
+  }
+  for (let index = 8; index >= 3; index--)
+    await button(`Xóa ảnh ${index}`).click();
+  assert.equal(await fileInput.isDisabled(), false);
+  assert.deepEqual(
+    await thumbnails.evaluateAll((nodes) => nodes.map((node) => node.src)),
+    [initialPreviews[0], initialPreviews[2]],
+  );
   await step(/Tình trạng/).click();
   await p.getByLabel("Mức độ đã qua sử dụng").selectOption("Worn");
   await p
@@ -524,6 +593,7 @@ try {
     fixture.member.accessToken,
   );
   assert.equal(posted.state.moderation, "PendingReview");
+  assert.equal(posted.currentRevision.content.mediaIds.length, 2);
   assert.equal(await fixture.db.collection("listing_fees").countDocuments(), 0);
   assert.equal(
     (await fixture.api("/me/wallet", fixture.member.accessToken)).available,
@@ -592,7 +662,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    "PASS user-web: real shelf/filter/pagination/detail; empty/error/retry; login return and owner guard; five tabs/data retention; upload/submit replay; chat lost-response replay with one conversation; 390px100/130%, Home/Detail/Search320px130%. Fake storage, no native acceptance.",
+    "PASS user-web: real shelf/filter/pagination/detail; empty/error/retry; login return and owner guard; five tabs/data retention; multi-file picker/add/remove/max8/validation, two-photo upload/submit replay; chat lost-response replay with one conversation; 390px100/130%, Home/Detail/Search320px130%. Fake storage, no native acceptance.",
   );
 } catch (error) {
   const pages = browser?.contexts().flatMap((context) => context.pages()) ?? [];
