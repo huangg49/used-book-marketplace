@@ -1,5 +1,26 @@
 # Điểm lưu hiện tại — 19/10/2026
 
+## Popup nạp và rút tiền — 19/10/2026
+
+- Member web `/wallet` theo yêu cầu chủ dự án: bỏ khối số dư, dòng giới thiệu,
+  link quay lại và thanh điều hướng cũ; giữ tiêu đề và danh sách lịch sử giao dịch.
+  Hai nút **Nạp tiền / Rút tiền** mở popup bằng `PurchaseDialog` hiện có.
+- Nạp giữ luồng VNPay sandbox đang hoạt động, hiện hạn mức5.000–10.000.000đ;
+  form và yêu cầu nạp gần đây nằm trong popup. Tự đóng khi chuẩn bị thanh toán
+  thành công; giữ số tiền/key/body ở màn cha qua đóng/mở popup và retry mất ACK.
+- Rút chỉ là UI, ghi tối thiểu50.000đ theo SRS POL-15; khóa **Gửi yêu cầu rút**,
+  không tạo command hoặc báo thành công. Không đổi API/contract/RN/session.
+- Nhánh `codex/wallet-action-popups`, base781c69e; subject
+  `feat(web): open wallet topup and withdrawal dialogs`.
+- PASS Node24.21.0/pnpm11.19.0: web lint/typecheck/141unit/build; Chromium
+  popup/Esc/Tab/focus/scroll lock, giữ số tiền khi đóng/mở, rút không tạo command,
+  nạp/Return giả/QueryDR lỗi và retry/mất ACK giữ key+body. Dialog320/390px ở130%
+  không overflow; giữ regression lịch sử/lọc/phân trang/retry và điều hướng ví.
+  API/Mongo QA riêng, storage fake/VNPay navigation và QueryDR mô phỏng.
+- 6 warning lint/chunk có sẵn; detector một lượt có advisory font1.2rem cũ.
+  Chưa kiểm native/live VNPay/human/remote CI. READINESS giữ nguyên;
+  chưa push/PR/merge/deploy. Ảnh QA local: `.tmp/wallet-checkout-browser/`.
+
 ## Sửa thông tin trước gửi và thử lại nơi gửi — 19/10/2026
 
 - Chủ dự án báo POST `/me/addresses`502 sau quay lại sửa bước1 rồi gửi ở bước5.

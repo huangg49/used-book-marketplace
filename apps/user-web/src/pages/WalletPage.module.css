@@ -1,5 +1,10 @@
-.page {
+.page,
+.dialog {
   --shop-wine-hover: #7c2320;
+  --shop-error: #912b0e;
+  color: var(--shop-ink);
+}
+.page {
   max-width: 56rem;
   margin: 0 auto;
   padding: 0 0 2rem;
@@ -13,43 +18,22 @@
   font-size: 1.2rem;
   margin: 1.5rem 0 0.75rem;
 }
-.balances {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.5rem;
-  padding: 1rem 0;
-  border-block: 1px solid var(--shop-line);
-}
-.balances dt {
-  font-size: 0.875rem;
-}
-.balances dd {
-  font-weight: 700;
-  margin: 0.5rem 0 0;
-  font-size: 1.5rem;
-  overflow-wrap: anywhere;
-  font-variant-numeric: tabular-nums;
-}
-.balances > div:first-child dd {
-  font-size: 2rem;
-  color: var(--shop-wine);
-}
-.sections {
+.actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 24px;
-  margin: 20px 0 24px;
+  gap: 12px;
+  margin-block: 24px 32px;
 }
-.sections a {
+.page .actions button {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
-  color: var(--shop-wine);
-  text-underline-offset: 4px;
+  justify-content: center;
+  gap: 10px;
+  min-width: 144px;
+  min-height: 48px;
+  font-weight: 700;
 }
-.transactions,
-.withdrawal,
-.form {
+.transactions {
   scroll-margin-top: 112px;
   padding-block: 8px 24px;
   border-bottom: 1px solid var(--shop-line);
@@ -121,17 +105,33 @@
 .transactionAmount strong[data-credit="true"] {
   color: var(--shop-wine);
 }
-.withdrawal p {
-  max-width: 65ch;
-  line-height: 1.8;
-  color: var(--shop-muted);
-}
 .form {
   display: grid;
   gap: 0.75rem;
-  margin: 1.5rem 0;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.8;
 }
-.page input {
+.form label {
+  font-weight: 700;
+}
+.form p {
+  margin: 0;
+  color: var(--shop-muted);
+  overflow-wrap: anywhere;
+}
+.form strong {
+  color: var(--shop-ink);
+  font-variant-numeric: tabular-nums;
+}
+.form p[role="alert"] {
+  color: var(--shop-error);
+}
+.form .previewNote {
+  padding-block: 12px;
+}
+/* Keep wallet amount fields above the global text-input rule. */
+.dialog .form input[type="text"][inputmode="numeric"] {
   width: 100%;
   min-height: 3rem;
   border: 1px solid var(--shop-control);
@@ -140,8 +140,15 @@
   background: var(--shop-paper);
   color: inherit;
   font: inherit;
+  font-size: 1rem;
+  caret-color: var(--shop-wine);
 }
-.page button {
+.dialog .form input[type="text"][aria-invalid="true"] {
+  border-color: var(--shop-error);
+}
+.page button,
+.form button,
+.recent button {
   min-height: 2.75rem;
   padding: 0.6rem 1rem;
   border-radius: 0.5rem;
@@ -151,22 +158,29 @@
   color: var(--shop-wine);
   background: var(--shop-paper);
 }
-.page button:hover:not(:disabled) {
+.page button:hover:not(:disabled),
+.form button:hover:not(:disabled),
+.recent button:hover:not(:disabled) {
   background: var(--shop-cream);
 }
-.form > button {
+.page .primary,
+.form .primary {
   background: var(--shop-wine);
   color: var(--shop-cream);
 }
-.form > button:hover:not(:disabled) {
+.page .primary:hover:not(:disabled),
+.form .primary:hover:not(:disabled) {
   background: var(--shop-wine-hover);
   color: var(--shop-cream);
 }
-.page button:disabled {
+.page button:disabled,
+.form button:disabled,
+.recent button:disabled {
   opacity: 0.55;
   cursor: default;
 }
-.page :focus-visible {
+.page :focus-visible,
+.dialog :focus-visible {
   outline: 3px solid var(--shop-wine);
   outline-offset: 3px;
 }
@@ -183,9 +197,29 @@
   margin-block: 0.75rem;
   overflow-wrap: anywhere;
 }
+.recent {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--shop-line);
+  font-size: 0.875rem;
+  line-height: 1.8;
+}
+.recent h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+.recent a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--shop-wine);
+  text-underline-offset: 4px;
+}
 @media (max-width: 480px) {
-  .balances {
-    grid-template-columns: minmax(0, 1fr);
+  .actions button {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 12px;
   }
   .historyFilter {
     width: 100%;

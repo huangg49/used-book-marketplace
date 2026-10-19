@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "@used-books/session-client";
+import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { useSession } from "../hooks/useSession";
+import { PurchaseDialog } from "../components/PurchaseDialog";
 import {
   createVNPayTopup,
   queryVNPayTopup,
@@ -21,6 +23,7 @@ const labels = {
   Failed: "Thanh toán không thành công",
   ReviewRequired: "Cần đối soát",
 };
+const amountError = "Nhập số tiền từ 5.000đ đến 10.000.000đ.";
 export function WalletPage() {
   const auth = useSession();
   const [params] = useSearchParams();
@@ -33,6 +36,8 @@ export function WalletPage() {
       : undefined;
   const ownerId = auth.status === "authenticated" ? auth.user.id : undefined;
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [dialog, setDialog] = useState<"topup" | "withdrawal" | null>(null);
+  const [withdrawalAmount, setWithdrawalAmount] = useState("50000");
   const paymentWindow = useRef<Window | null>(null);
   const alive = useRef(true);
   const summary = useQuery({
@@ -56,6 +61,7 @@ export function WalletPage() {
         : false,
   });
   const [amount, setAmount] = useState("100000");
+  const amountInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [hasIntent, setHasIntent] = useState(false);
@@ -121,7 +127,8 @@ export function WalletPage() {
     if (busy || paymentOpen) return;
     const value = Number(amount);
     if (!/^\d+$/.test(amount) || value < 5000 || value > 10000000) {
-      setError("Nhập số tiền từ 5.000đ đến 10.000.000đ.");
+      setError(amountError);
+      amountInput.current?.focus();
       return;
     }
     // Reserve the new tab during the click, before the asynchronous API call.
@@ -165,6 +172,7 @@ export function WalletPage() {
       if (!checkoutWindow.closed) checkoutWindow.location.replace(url.href);
       else setPaymentOpen(false);
       setBusy(false);
+      setDialog(null);
     } catch (cause) {
       checkoutWindow.close();
       paymentWindow.current = null;
@@ -189,51 +197,30 @@ export function WalletPage() {
   }
   return (
     <section className={styles.page}>
-      <Link to="/account">← Về tài khoản</Link>
       <h1>Ví của tôi</h1>
-      <p>Ví mô phỏng đồ án · Thanh toán thử qua VNPay sandbox.</p>
-      <nav className={styles.sections} aria-label="Các mục trong ví">
-        <a href="#wallet-history">Lịch sử giao dịch</a>
-        <a href="#wallet-topup">Nạp ví</a>
-        <a href="#wallet-withdrawal">Rút tiền</a>
-      </nav>
+      <div className={styles.actions} role="group" aria-label="Thao tác ví">
+        <button
+          type="button"
+          className={styles.primary}
+          aria-haspopup="dialog"
+          onClick={() => setDialog("topup")}
+        >
+          <ArrowDownToLine size={20} aria-hidden="true" />
+          Nạp tiền
+        </button>
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          onClick={() => setDialog("withdrawal")}
+        >
+          <ArrowUpFromLine size={20} aria-hidden="true" />
+          Rút tiền
+        </button>
+      </div>
       {paymentOpen && (
         <p role="status">
           Hoàn tất thanh toán trong tab VNPay. Tab ví này sẽ cập nhật khi bạn
           quay lại.
-        </p>
-      )}
-      {summary.isPending ? (
-        <p role="status">Đang tải số dư…</p>
-      ) : summary.data ? (
-        <dl className={styles.balances}>
-          <div>
-            <dt>Số dư khả dụng</dt>
-            <dd>{formatVnd(summary.data.available)}</dd>
-          </div>
-          <div>
-            <dt>Đang giữ cho giao dịch</dt>
-            <dd>{formatVnd(summary.data.transactionHeld)}</dd>
-          </div>
-          <div>
-            <dt>Đang giữ để rút</dt>
-            <dd>{formatVnd(summary.data.withdrawalHeld)}</dd>
-          </div>
-          <div>
-            <dt>Tổng số dư</dt>
-            <dd>{formatVnd(summary.data.total)}</dd>
-          </div>
-        </dl>
-      ) : (
-        <p role="alert">
-          Chưa tải được số dư.{" "}
-          <button onClick={() => void summary.refetch()}>Thử lại</button>
-        </p>
-      )}
-      {summary.isError && summary.data && (
-        <p role="alert">
-          Số dư chưa cập nhật.{" "}
-          <button onClick={() => void summary.refetch()}>Tải lại</button>
         </p>
       )}
       {id && (
@@ -272,84 +259,144 @@ export function WalletPage() {
         </div>
       )}
       <WalletHistory ownerId={ownerId} />
-      <section
-        id="wallet-withdrawal"
-        className={styles.withdrawal}
-        aria-labelledby="wallet-withdrawal-heading"
+      <PurchaseDialog
+        open={dialog === "topup"}
+        onClose={() => setDialog(null)}
+        title="Nạp tiền"
+        description="Nạp ví mô phỏng qua VNPay sandbox."
+        busy={busy}
+        className={styles.dialog}
       >
-        <h2 id="wallet-withdrawal-heading">Rút tiền</h2>
-        <p id="wallet-withdrawal-note">
-          Chức năng rút tiền mô phỏng sẽ được bổ sung sau. Hiện bạn chưa thể tạo
-          yêu cầu rút tiền.
-        </p>
-        <button
-          type="button"
-          disabled
-          aria-describedby="wallet-withdrawal-note"
+        <form onSubmit={submit} className={styles.form}>
+          <label htmlFor="topup-amount">Số tiền nạp (đồng)</label>
+          <input
+            id="topup-amount"
+            ref={amountInput}
+            type="text"
+            inputMode="numeric"
+            value={amount}
+            disabled={busy || hasIntent}
+            onChange={(e) => setAmount(e.target.value)}
+            aria-describedby={`topup-range${error ? " topup-error" : ""}`}
+            aria-invalid={error === amountError}
+          />
+          <p id="topup-range">
+            Từ <strong>5.000đ</strong> đến <strong>10.000.000đ</strong> mỗi lần
+            nạp.
+          </p>
+          <p>
+            VNPay mở trong tab mới. Tiền chỉ vào ví sau khi thanh toán được xác
+            nhận.
+          </p>
+          {summary.isPending && (
+            <p role="status">Đang kiểm tra khả năng nạp ví…</p>
+          )}
+          {summary.isError && (
+            <p role="alert">
+              Chưa cập nhật được thông tin ví.{" "}
+              <button
+                type="button"
+                disabled={summary.isFetching}
+                onClick={() => void summary.refetch()}
+              >
+                Thử lại
+              </button>
+            </p>
+          )}
+          {error && (
+            <p id="topup-error" role="alert">
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            className={styles.primary}
+            disabled={
+              busy ||
+              paymentOpen ||
+              !summary.data?.vnpayEnabled ||
+              summary.isError
+            }
+          >
+            {busy
+              ? "Đang mở VNPay…"
+              : paymentOpen
+                ? "Đang thanh toán ở tab VNPay…"
+                : error && hasIntent
+                  ? "Thử lại yêu cầu nạp"
+                  : hasIntent
+                    ? "Tiếp tục thanh toán"
+                    : "Nạp qua VNPay sandbox"}
+          </button>
+          {summary.data?.vnpayEnabled === false && (
+            <p>Nạp VNPay sandbox chưa khả dụng cho tài khoản này.</p>
+          )}
+        </form>
+        <section
+          className={styles.recent}
+          aria-labelledby="recent-topups-heading"
         >
-          Rút tiền
-        </button>
-      </section>
-      <form id="wallet-topup" onSubmit={submit} className={styles.form}>
-        <h2>Nạp ví qua VNPay sandbox</h2>
-        <label htmlFor="topup-amount">Số tiền nạp (đồng)</label>
-        <input
-          id="topup-amount"
-          type="text"
-          inputMode="numeric"
-          value={amount}
-          disabled={busy || hasIntent}
-          onChange={(e) => setAmount(e.target.value)}
-          aria-describedby="topup-range"
-        />
-        <p id="topup-range">
-          Từ 5.000đ đến 10.000.000đ. Tiền chỉ vào ví sau khi thanh toán được xác
-          nhận.
-        </p>
-        <p>
-          VNPay mở trong tab mới. Giữ tab ví này để xem số dư sau thanh toán.
-          Yêu cầu nạp được lưu trong lịch sử ví.
-        </p>
-        {error && <p role="alert">{error}</p>}
-        <button
-          type="submit"
-          disabled={busy || paymentOpen || !summary.data?.vnpayEnabled}
-        >
-          {busy
-            ? "Đang mở VNPay…"
-            : paymentOpen
-              ? "Đang thanh toán ở tab VNPay…"
-              : error && hasIntent
-                ? "Thử lại yêu cầu nạp"
-                : hasIntent
-                  ? "Tiếp tục thanh toán"
-                  : "Nạp qua VNPay sandbox"}
-        </button>
-        {summary.data?.vnpayEnabled === false && (
-          <p>Nạp VNPay sandbox chưa khả dụng cho tài khoản này.</p>
-        )}
-      </form>
-      <h2>Yêu cầu nạp gần đây</h2>
-      {history.isPending ? (
-        <p>Đang tải…</p>
-      ) : history.isError ? (
-        <p role="alert">
-          Chưa tải được lịch sử.{" "}
-          <button onClick={() => void history.refetch()}>Thử lại</button>
-        </p>
-      ) : !history.data?.items.length ? (
-        <p>Chưa có yêu cầu nạp ví.</p>
-      ) : (
-        <ul className={styles.history}>
-          {history.data.items.map((item) => (
-            <li key={item.id}>
-              <Link to={`/wallet?topup=${item.id}`}>
-                {formatVnd(item.amount)} · {labels[item.state]}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+          <h3 id="recent-topups-heading">Yêu cầu nạp gần đây</h3>
+          {history.isPending ? (
+            <p>Đang tải…</p>
+          ) : history.isError ? (
+            <p role="alert">
+              Chưa tải được lịch sử.{" "}
+              <button onClick={() => void history.refetch()}>Thử lại</button>
+            </p>
+          ) : !history.data?.items.length ? (
+            <p>Chưa có yêu cầu nạp ví.</p>
+          ) : (
+            <ul className={styles.history}>
+              {history.data.items.map((item) => (
+                <li key={item.id}>
+                  <Link
+                    to={`/wallet?topup=${item.id}`}
+                    onClick={() => setDialog(null)}
+                  >
+                    {formatVnd(item.amount)} · {labels[item.state]}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </PurchaseDialog>
+      <PurchaseDialog
+        open={dialog === "withdrawal"}
+        onClose={() => setDialog(null)}
+        title="Rút tiền"
+        description="Rút tiền từ số dư khả dụng trong ví mô phỏng."
+        className={styles.dialog}
+      >
+        <div className={styles.form}>
+          <label htmlFor="withdrawal-amount">Số tiền rút (đồng)</label>
+          <input
+            id="withdrawal-amount"
+            type="text"
+            inputMode="numeric"
+            value={withdrawalAmount}
+            onChange={(event) => setWithdrawalAmount(event.target.value)}
+            aria-describedby="withdrawal-range withdrawal-note"
+          />
+          <p id="withdrawal-range">
+            Tối thiểu <strong>50.000đ</strong> mỗi lần rút. Số tiền rút không
+            vượt số dư khả dụng.
+          </p>
+          <p id="withdrawal-note" className={styles.previewNote}>
+            Chức năng rút tiền sẽ được bổ sung sau. Hiện bạn chưa thể gửi yêu
+            cầu rút tiền.
+          </p>
+          <button
+            type="button"
+            className={styles.primary}
+            disabled
+            aria-describedby="withdrawal-note"
+          >
+            Gửi yêu cầu rút
+          </button>
+        </div>
+      </PurchaseDialog>
     </section>
   );
 }

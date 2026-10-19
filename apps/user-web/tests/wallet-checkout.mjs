@@ -131,7 +131,7 @@ try {
   await page
     .getByRole("heading", { name: "Ví của tôi", exact: true })
     .waitFor();
-  const header = page.locator("header");
+  const header = page.locator("header").first();
   const walletIcon = header.getByRole("link", {
     name: "Ví của tôi",
     exact: true,
@@ -160,19 +160,141 @@ try {
     exact: true,
   });
   await ledgerHistory.getByText(/Chưa có giao dịch ví/).waitFor();
-  const withdrawal = page.getByRole("region", {
+  const topupButton = page.getByRole("button", {
+    name: "Nạp tiền",
+    exact: true,
+  });
+  const withdrawalButton = page.getByRole("button", {
     name: "Rút tiền",
     exact: true,
   });
+  const topupDialog = page.getByRole("dialog", {
+    name: "Nạp tiền",
+    exact: true,
+  });
+  const withdrawalDialog = page.getByRole("dialog", {
+    name: "Rút tiền",
+    exact: true,
+  });
+  async function settleDialog(dialog) {
+    await dialog.evaluate(async (node) => {
+      await Promise.all(
+        node.getAnimations().map((animation) =>
+          animation.finished.catch(() => {}),
+        ),
+      );
+    });
+  }
+  async function openTopup() {
+    await topupButton.click();
+    await topupDialog.waitFor();
+    await settleDialog(topupDialog);
+  }
+  async function checkDialogKeyboard(dialog) {
+    const close = dialog.getByRole("button", { name: "Đóng popup" });
+    await close.focus();
+    await page.keyboard.press("Shift+Tab");
+    assert.equal(
+      await dialog.evaluate((node) => node.contains(document.activeElement)),
+      true,
+      "Reverse Tab must stay inside the modal",
+    );
+    assert.equal(
+      await close.evaluate((node) => node === document.activeElement),
+      false,
+    );
+    await page.keyboard.press("Tab");
+    assert.equal(
+      await close.evaluate((node) => node === document.activeElement),
+      true,
+    );
+    assert.equal(
+      await page.evaluate(() => document.body.style.overflow),
+      "hidden",
+    );
+  }
+  assert.equal(await topupButton.count(), 1);
+  assert.equal(await withdrawalButton.count(), 1);
   assert.equal(
-    await withdrawal
-      .getByRole("button", { name: "Rút tiền", exact: true })
+    await page.getByRole("link", { name: "Lịch sử giao dịch", exact: true }).count(),
+    0,
+  );
+  assert.equal(await page.getByText("Số dư khả dụng", { exact: true }).count(), 0);
+  assert.equal(
+    await page.getByText("Đang giữ cho giao dịch", { exact: true }).count(),
+    0,
+  );
+  assert.equal(await page.getByRole("dialog").count(), 0);
+  const previousOverflow = await page.evaluate(() => document.body.style.overflow);
+  const withdrawalWrites = [];
+  const trackWithdrawalWrite = (request) => {
+    if (request.method() === "POST" && request.url().includes("/api/v1/me/"))
+      withdrawalWrites.push(request.url());
+  };
+  page.on("request", trackWithdrawalWrite);
+  await withdrawalButton.click();
+  await withdrawalDialog.waitFor();
+  await settleDialog(withdrawalDialog);
+  await withdrawalDialog.getByText(/50\.000/).waitFor();
+  assert.equal(
+    await withdrawalDialog
+      .getByRole("button", { name: "Gửi yêu cầu rút", exact: true })
       .isDisabled(),
     true,
   );
-  await page
-    .getByRole("button", { name: "Nạp qua VNPay sandbox", exact: true })
-    .waitFor();
+  await page.screenshot({
+    path: path.join(evidence, "wallet-withdrawal-modal-desktop.png"),
+    fullPage: true,
+  });
+  await withdrawalDialog.getByLabel("Số tiền rút (đồng)").fill("50000");
+  await withdrawalDialog.getByLabel("Số tiền rút (đồng)").press("Enter");
+  await checkDialogKeyboard(withdrawalDialog);
+  await page.keyboard.press("Escape");
+  await withdrawalDialog.waitFor({ state: "hidden" });
+  assert.equal(
+    await withdrawalButton.evaluate((node) => node === document.activeElement),
+    true,
+  );
+  assert.equal(
+    await page.evaluate(() => document.body.style.overflow),
+    previousOverflow,
+  );
+  assert.deepEqual(
+    withdrawalWrites,
+    [],
+    "Withdrawal preview must not create a command",
+  );
+  page.off("request", trackWithdrawalWrite);
+  await openTopup();
+  await topupDialog.getByText(/5\.000.*10\.000\.000/).waitFor();
+  await page.screenshot({
+    path: path.join(evidence, "wallet-topup-modal-desktop.png"),
+    fullPage: true,
+  });
+  await topupDialog.getByLabel("Số tiền nạp (đồng)").fill("75000");
+  await checkDialogKeyboard(topupDialog);
+  await page.keyboard.press("Escape");
+  await topupDialog.waitFor({ state: "hidden" });
+  assert.equal(
+    await topupButton.evaluate((node) => node === document.activeElement),
+    true,
+  );
+  assert.equal(
+    await page.evaluate(() => document.body.style.overflow),
+    previousOverflow,
+  );
+  await openTopup();
+  assert.equal(
+    await topupDialog.getByLabel("Số tiền nạp (đồng)").inputValue(),
+    "75000",
+  );
+  await topupDialog.getByRole("button", { name: "Đóng popup" }).click();
+  await topupDialog.waitFor({ state: "hidden" });
+  assert.equal(
+    await topupButton.evaluate((node) => node === document.activeElement),
+    true,
+  );
+  await openTopup();
   await page.getByLabel("Số tiền nạp (đồng)").fill("4999");
   await page
     .getByRole("button", { name: "Nạp qua VNPay sandbox", exact: true })
@@ -270,13 +392,24 @@ try {
     0,
   );
   assert.equal(new URL(page.url()).searchParams.has("vnp_ResponseCode"), false);
+  await openTopup();
   await page
     .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
     .waitFor();
+  assert.equal(
+    await topupDialog.getByLabel("Số tiền nạp (đồng)").inputValue(),
+    "50000",
+  );
+  assert.equal(
+    await topupDialog.getByLabel("Số tiền nạp (đồng)").isDisabled(),
+    true,
+  );
   await page.screenshot({
     path: path.join(evidence, "desktop-pending.png"),
     fullPage: true,
   });
+  await topupDialog.getByRole("button", { name: "Đóng popup" }).click();
+  await topupDialog.waitFor({ state: "hidden" });
   queryMode = "unavailable";
   await page
     .getByText("Chưa xác minh được yêu cầu nạp này.", { exact: false })
@@ -294,6 +427,7 @@ try {
   );
   // A successful Return closes only the payment tab, preserves the wallet
   // session and automatically shows the confirmed credit without another login.
+  await openTopup();
   await page.getByLabel("Số tiền nạp (đồng)").fill("40000");
   const happyPopupCreated = page.context().waitForEvent("page");
   await page
@@ -458,6 +592,39 @@ try {
       path: path.join(evidence, `wallet-history-nav-${width}.png`),
       fullPage: true,
     });
+    if (width === 320 || width === 390) {
+      for (const [trigger, dialog, name] of [
+        [topupButton, topupDialog, "topup"],
+        [withdrawalButton, withdrawalDialog, "withdrawal"],
+      ]) {
+        await trigger.click();
+        await dialog.waitFor();
+        await settleDialog(dialog);
+        assert.equal(
+          await dialog.evaluate((node) => {
+            const bounds = node.getBoundingClientRect();
+            return (
+              bounds.left >= 0 && bounds.right <= innerWidth + 1 &&
+              bounds.top >= 0 && bounds.bottom <= innerHeight + 1 &&
+              node.scrollWidth <= node.clientWidth + 1
+            );
+          }),
+          true,
+          `${name} dialog overflows ${width}px at 130% type`,
+        );
+        await checkDialogKeyboard(dialog);
+        await page.screenshot({
+          path: path.join(evidence, `wallet-${name}-modal-${width}.png`),
+          fullPage: true,
+        });
+        await page.keyboard.press("Escape");
+        await dialog.waitFor({ state: "hidden" });
+        assert.equal(
+          await trigger.evaluate((node) => node === document.activeElement),
+          true,
+        );
+      }
+    }
   }
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "100%";
@@ -472,7 +639,12 @@ try {
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   );
-  await page.getByRole("link", { name: "← Về tài khoản", exact: true }).click();
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.getByRole("button", { name: "Tài khoản", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Tài khoản cá nhân", exact: true })
+    .getByRole("link", { name: "Tổng quan", exact: true })
+    .click();
   await page
     .getByRole("region", { name: "Ví mô phỏng", exact: true })
     .getByText(/90\.000/)
@@ -510,6 +682,7 @@ try {
   await page.getByLabel(/^Email/).fill(fixture.member.user.email);
   await page.getByLabel(/^Mật khẩu/).fill(password);
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
+  await page.getByRole("heading", { name: "Ví của tôi", exact: true }).waitFor();
   const requests = [];
   queryMode = "pending";
   let first = true;
@@ -525,11 +698,23 @@ try {
       await route.abort("failed");
     } else await route.continue();
   });
+  await openTopup();
   await page.getByLabel("Số tiền nạp (đồng)").fill("20000");
   await page
     .getByRole("button", { name: "Nạp qua VNPay sandbox", exact: true })
     .click();
   await page.getByText(/Chưa xác nhận được yêu cầu nạp/).waitFor();
+  await topupDialog.getByRole("button", { name: "Đóng popup" }).click();
+  await topupDialog.waitFor({ state: "hidden" });
+  await openTopup();
+  assert.equal(
+    await topupDialog.getByLabel("Số tiền nạp (đồng)").inputValue(),
+    "20000",
+  );
+  assert.equal(
+    await topupDialog.getByLabel("Số tiền nạp (đồng)").isDisabled(),
+    true,
+  );
   const retryPopupCreated = page.context().waitForEvent("page");
   await page.getByRole("button", { name: "Thử lại yêu cầu nạp" }).click();
   const retryPopup = await retryPopupCreated;
@@ -539,7 +724,7 @@ try {
   assert.deepEqual(requests[0], requests[1]);
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: icon wallet/chat navigation, account wallet entry, real history filters/pagination/retry and disabled withdrawal; desktop/mobile wallet, blocked popup creates no intent, provider has no opener, original tab stays signed in through Return, forged Return denied, QueryDR outage/retry/credit, lost-ACK same-key retry; real API/Mongo, fake provider navigation and signed QueryDR responses.",
+    "PASS: wallet action dialogs, withdrawal preview minimum with no command, keyboard focus/escape/close, preserved amounts, 320/390px dialogs at 130% type; icon wallet/chat navigation, account wallet entry, real history filters/pagination/retry; blocked provider tab creates no intent, provider has no opener, original tab stays signed in through Return, forged Return denied, QueryDR outage/retry/credit, lost-ACK modal-close same-key retry; real API/Mongo, fake provider navigation and signed QueryDR responses.",
   );
 } finally {
   globalThis.fetch = realFetch;
