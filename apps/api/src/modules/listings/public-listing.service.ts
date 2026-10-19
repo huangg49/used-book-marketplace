@@ -29,7 +29,7 @@ import {
 // publicEligible). These are current eligibility checks, not a historical
 // approval badge. Output documents carry r (revision), b (book), u (owner),
 // rm (photo links) and m (photos). Marketplace reads never see Auction
-// listings (ADR 0041); only auction intake asks for the Auction channel.
+// listings (ADR 0042); only auction intake asks for the Auction channel.
 export function publicEligibleStages(
   channel: ListingChannel = 'Marketplace',
 ): Document[] {

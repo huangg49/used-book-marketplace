@@ -151,7 +151,7 @@ export function CreateAuctionPage() {
   const queryClient = useQueryClient()
   const [params] = useSearchParams()
   const ownerId = auth.status === 'authenticated' ? auth.user.id : undefined
-  // ADR 0041: auctions use the seller's own Auction listings, never marketplace ones.
+  // ADR 0042: auctions use the seller's own Auction listings, never marketplace ones.
   const listings = useQuery({
     queryKey: ['my-listings', ownerId, 'auction'],
     queryFn: () => getMyListings(undefined, undefined, 50, 'Auction'),

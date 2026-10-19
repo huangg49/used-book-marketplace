@@ -24,11 +24,17 @@ dùng nạp ví, không có khoản cọc mua bán trả lại khi hoàn tất.
   commission5% và hoàn ứng ship; nền tảng nhận2.500đ. Bài đăng mới không thu phí.
   Hủy hợp lệ trước acceptance hoàn tổng giữ về ví; không gọi refund này sau acceptance.
   Giữ quy trình delivery/inspection72h/settlement hiện có và các gate READINESS.
-- VNPay 2.1.0: tạo URL sandbox có số tiền nguyên đồng nhân100, giờ GMT+7 và hạn15phút.
+- VNPay 2.1.0: tạo URL sandbox có số tiền nguyên đồng nhân100, giờ GMT+7 và hạn5phút
+  từ **Tiếp tục thanh toán** theo [ADR0036](../adr/0036-vnpay-local-querydr.md).
+  Hạn cũ giữ snapshot đã ký; retry cùng key/body không gia hạn. Hết hạn tự hủy
+  Pending/Processing thành Cancelled, không ghi dòng lịch sử giao dịch hoặc đổi
+  số dư. Giữ event/receipt/audit nội bộ để đối soát; worker vẫn chạy khi đóng tab.
   IPN kiểm HMAC-SHA512, merchant, mã intent, số tiền, thời gian và giao dịch provider.
   Xác minh lại trước replay; ghi event/credit/receipt/audit/outbox cùng transaction.
   TransactionNo không được dùng để nạp một ví khác. Hai callback đồng thời chỉ ghi
-  có một lần. Callback trễ hợp lệ chỉ nạp ví ban đầu, không tự tạo/thanh toán Order.
+  có một lần. Callback đến trễ nhưng chứng minh đã trả trước hạn vẫn nạp ví ban
+  đầu đúng một lần; trả từ hạn đã ký trở đi vào ReviewRequired, không credit.
+  Không tự tạo/thanh toán Order.
 - VNPay mở trong tab riêng, được tạo ngay khi bấm nạp, để tab ví giữ phiên
   memory-only. Tab thanh toán bỏ opener trước khi sang provider. Return gate
   trước Dashboard auth chỉ gửi thông báo intentId qua BroadcastChannel cùng
@@ -90,7 +96,8 @@ public tới API và từ chối callback không hợp lệ; không là giao d�
 Chạy `pnpm db:migrate`, build/restart API và Order worker cùng source. Migration
 0022 thêm validator/index/reference account;0024 mở đúng operation QueryDR cho
 system principal VNPay;0027 hợp nhất receipt/audit với point administration từ
-main sau khi áp dụng các migration của cả hai nhánh. Giữ pointId và đúng một
+main sau khi áp dụng các migration của cả hai nhánh;0032 thêm Cancelled/deadline
+event và index quét hạn VNPay. Giữ pointId và đúng một
 target, cặp principal/operation VNPay và DirectDelivery worker. Không sửa checksum
 migration cũ hoặc reset/seed database.
 Máy nhận bản hợp nhất từ nhánh ví cũ cần chạy `pnpm db:bootstrap` trước

@@ -71,7 +71,7 @@ const addressReceiptSchema = z.object({
 });
 
 export function SellBookPage() {
-  // ADR 0041: /sell?channel=Auction creates the seller's own auction listing:
+  // ADR 0042: /sell?channel=Auction creates the seller's own auction listing:
   // a Sale with a declared value, no delivery origin and never on the shelf.
   const [searchParams] = useSearchParams();
   const auction = searchParams.get("channel") === "Auction";

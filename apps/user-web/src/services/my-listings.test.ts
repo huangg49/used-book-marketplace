@@ -13,7 +13,7 @@ describe("owner shelf reads", () => {
   it("bounds the overview read without changing the default full shelf size", async () => {
     request.mockResolvedValue({ items: [], nextCursor: "more" });
     await getMyListings(undefined, undefined, 4);
-    // ADR 0041: shelf reads are marketplace-only unless the auction flow asks.
+    // ADR 0042: shelf reads are marketplace-only unless the auction flow asks.
     expect(request.mock.calls[0]![0]).toBe(
       "/me/listings?limit=4&channel=Marketplace",
     );

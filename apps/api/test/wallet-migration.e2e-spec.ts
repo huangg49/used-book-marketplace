@@ -110,7 +110,7 @@ it('upgrades from the baseline without changing existing address/listing/receipt
       originServiceAreaCode: 'HCM-DEMO-v1',
       lockSeq: 0,
     });
-    // Pre-0032 shape: the migration backfills `channel` (ADR 0041).
+    // Pre-0032 shape: the migration backfills `channel` (ADR 0042).
     await c.listings.insertOne({
       _id: listing,
       ownerId: owner,
@@ -186,7 +186,7 @@ it('upgrades from the baseline without changing existing address/listing/receipt
     );
     // Receipts/audits already carry `topupId: null` in the baseline, so unlike
     // the PostgreSQL column addition no field is expected to appear. 0032 only
-    // backfills the marketplace channel on existing listings (ADR 0041).
+    // backfills the marketplace channel on existing listings (ADR 0042).
     expect(await snapshot(rootDb)).toEqual({
       ...before,
       listings: (before.listings as Document[]).map((l) => ({

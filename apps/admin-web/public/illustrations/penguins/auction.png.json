@@ -1,0 +1,10 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-10-10",
+  "reference": "budget.png; preserve identity, replace purse with gavel",
+  "prompt": "Edit target: supplied transparent penguin icon. Preserve exactly its burgundy/cream/yellow/peach palette, rounded silhouette, line weight, flat colored illustration style, face, proportions, feet and warm expression. Change ONLY the held object: replace the coin purse and coin with a simple clearly recognizable small wooden auction gavel, warm yellow handle and burgundy/gold head, held diagonally in its flippers across its belly. Same full-body centered framing, generous transparent padding, clean edges. No paper, ribbon, text, symbols, sparkles, gradients, shadows, outlines outside character, extra objects or scene. True transparent background. This should belong to the existing four illustration assets, not a new mascot style.",
+  "delivery": "Resize/PNG encode only; true alpha; 256px",
+  "sourceSha256": "5302f59d7a1f765e54181b73f030c1c47a2e07ac27c7302f0e7e25fdbe1d19ae",
+  "deliverySha256": "2cf86a8ab8cd88a0ba9fa90d16c266bb0c4c5a0548e7da332797a43e92399408",
+  "bytes": 51004
+}

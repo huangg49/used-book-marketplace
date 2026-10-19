@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 140" fill="none">
+  <!-- Original Lật lại illustration, not a replacement for the supplied logo. -->
+  <g stroke="#fcf8db" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M89 105C66 88 38 84 12 90L19 42C46 35 70 43 93 62C119 46 145 43 167 52L157 102C133 92 112 96 89 105Z" fill="#fcf8db" fill-opacity=".05"/>
+    <path d="M12 90L13 97C42 92 65 96 88 112C113 102 134 100 157 110L157 102M93 62L89 105M20 50C43 46 65 52 81 65M19 63C39 59 56 64 72 73M17 76C35 73 52 76 67 84M106 66C124 57 145 57 156 62M103 77C121 69 138 69 153 73M101 88C117 81 134 80 149 84" stroke-opacity=".6"/>
+    <path d="M93 62C89 47 94 23 113 9C117 29 128 36 137 46C120 47 104 53 93 62Z" fill="#fcf8db" fill-opacity=".08"/>
+    <path d="M100 52C101 38 106 25 113 15M76 30L71 19M61 39L49 34M130 17L137 10" stroke-opacity=".65"/>
+    <path d="M45 124C70 128 109 129 139 122" stroke-opacity=".35"/>
+  </g>
+</svg>

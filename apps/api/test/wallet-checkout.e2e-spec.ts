@@ -10,6 +10,9 @@ import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
 import { MediaStorage } from '../src/modules/media/media-storage.js';
 import { TransactionPolicy } from '../src/modules/wallet/transaction-policy.js';
+import { WalletClock } from '../src/modules/wallet/wallet-clock.js';
+import { WalletService } from '../src/modules/wallet/wallet.service.js';
+import { WalletExpiryWorker } from '../src/modules/wallet/wallet-expiry.service.js';
 import {
   VNPaySandbox,
   vnDate,
@@ -75,6 +78,7 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
       entityId: string;
       paymentUrl: string;
       expiresAt: string;
+      serverTime: string;
     };
   }
   function callback(
@@ -520,6 +524,16 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
     const a = await reader(),
       key = randomUUID(),
       t = await topup(a, 50000, key);
+    expect(
+      new Date(t.expiresAt).getTime() - new Date(t.serverTime).getTime(),
+    ).toBeLessThanOrEqual(300000);
+    const persisted = await db.c.vnpay_payments.findOne({ _id: t.entityId });
+    expect(
+      persisted!.expiresAt.getTime() - persisted!.createdAt.getTime(),
+    ).toBe(300000);
+    expect(new URL(t.paymentUrl).searchParams.get('vnp_ExpireDate')).toBe(
+      vnDate(persisted!.expiresAt),
+    );
     const repeated = await post(
       '/me/topups/vnpay',
       { amount: 50000 },
@@ -534,6 +548,189 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
     const other = await reader();
     await get(`/me/topups/${t.entityId}`, other).expect(404);
   });
+  it('cancels exactly at the deadline through an owner read and retains the original receipt without financial history', async () => {
+    const owner = await reader(),
+      key = randomUUID(),
+      t = await topup(owner, 50000, key);
+    const clock = vi
+      .spyOn(app.get(WalletClock), 'now')
+      .mockResolvedValue(new Date(new Date(t.expiresAt).getTime() - 1));
+    expect(
+      (await get(`/me/topups/${t.entityId}`, owner).expect(200)).body.state,
+    ).toBe('Pending');
+    clock.mockResolvedValue(new Date(t.expiresAt));
+    const cancelled = await get(`/me/topups/${t.entityId}`, owner).expect(200);
+    validates('TopupIntent', cancelled.body);
+    expect(cancelled.body).toMatchObject({
+      state: 'Cancelled',
+      credited: false,
+      journalId: null,
+      version: 2,
+      expiresAt: t.expiresAt,
+      serverTime: t.expiresAt,
+    });
+    expect(
+      (await get('/me/topups?state=Cancelled', owner).expect(200)).body.items,
+    ).toHaveLength(1);
+    const repeated = await post(
+      '/me/topups/vnpay',
+      { amount: 50000 },
+      owner,
+      key,
+    ).expect(200);
+    expect(repeated.body.paymentUrl).toBe(t.paymentUrl);
+    expect(repeated.body.expiresAt).toBe(t.expiresAt);
+    expect(
+      (await get(`/me/topups/${t.entityId}`, owner).expect(200)).body.version,
+    ).toBe(2);
+    expect(
+      (await get('/me/wallet/history', owner).expect(200)).body.items,
+    ).toHaveLength(0);
+    expect((await wallet(owner)).available).toBe(0);
+    expect(
+      await db.c.ledger_journals.countDocuments({ topupId: t.entityId }),
+    ).toBe(0);
+    expect(
+      await db.c.simulated_payment_events.countDocuments({
+        intentId: t.entityId,
+        provider: 'VNPayExpiry-v1',
+      }),
+    ).toBe(1);
+  });
+  it('expires without an open browser and remains atomic when the expiry outbox write fails', async () => {
+    const owner = await reader(),
+      t = await topup(owner, 50000);
+    vi.spyOn(app.get(WalletClock), 'now').mockResolvedValue(
+      new Date(t.expiresAt),
+    );
+    await db.withRejectingValidator(
+      'outbox_events',
+      { type: 'wallet.topupChanged' },
+      async () => {
+        await expect(
+          app.get(WalletService).expireVNPay(t.entityId),
+        ).rejects.toThrow();
+      },
+    );
+    expect(await db.c.topup_intents.findOne({ _id: t.entityId })).toMatchObject(
+      { state: 'Pending', version: 1 },
+    );
+    expect(
+      await db.c.simulated_payment_events.countDocuments({
+        intentId: t.entityId,
+      }),
+    ).toBe(0);
+    expect((await app.get(WalletExpiryWorker).tick()).failed).toBe(0);
+    expect(await db.c.topup_intents.findOne({ _id: t.entityId })).toMatchObject(
+      { state: 'Cancelled', version: 2 },
+    );
+    expect(
+      await db.c.ledger_journals.countDocuments({ topupId: t.entityId }),
+    ).toBe(0);
+  });
+  it('deduplicates two genuinely competing deadline commands into one cancellation', async () => {
+    const owner = await reader(),
+      t = await topup(owner, 50000);
+    vi.spyOn(app.get(WalletClock), 'now').mockResolvedValue(
+      new Date(t.expiresAt),
+    );
+    const gate = await Gate.lockUser(db.client, owner.id);
+    const first = app.get(WalletService).expireVNPay(t.entityId);
+    const second = app.get(WalletService).expireVNPay(t.entityId);
+    try {
+      await gate.contended(2);
+    } finally {
+      await gate.close();
+    }
+    const results = await Promise.all([first, second]);
+    expect(results.filter((result) => result.replayed)).toHaveLength(1);
+    expect(results[0]!.receipt).toEqual(results[1]!.receipt);
+    expect(await db.c.topup_intents.findOne({ _id: t.entityId })).toMatchObject(
+      { state: 'Cancelled', version: 2 },
+    );
+    expect(
+      await db.c.simulated_payment_events.countDocuments({
+        intentId: t.entityId,
+      }),
+    ).toBe(1);
+    expect(
+      await db.c.ledger_journals.countDocuments({ topupId: t.entityId }),
+    ).toBe(0);
+  }, 60000);
+  it('keeps cancellation visible during QueryDR outages and later reconciles timely signed payment once', async () => {
+    const owner = await reader(),
+      t = await topup(owner, 50000),
+      paid = callback(t);
+    vi.spyOn(app.get(WalletClock), 'now').mockResolvedValue(
+      new Date(t.expiresAt),
+    );
+    const transport = vi
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(new Error('provider unavailable'));
+    expect((await query(t.entityId, owner).expect(200)).body.state).toBe(
+      'Cancelled',
+    );
+    transport.mockResolvedValueOnce(
+      new Response(JSON.stringify(queryReply(paid))),
+    );
+    expect((await query(t.entityId, owner).expect(200)).body).toMatchObject({
+      state: 'Succeeded',
+      credited: true,
+    });
+    await get('/payments/vnpay/ipn').query(paid).expect(200);
+    expect((await wallet(owner)).available).toBe(50000);
+    expect(
+      await db.c.ledger_journals.countDocuments({ topupId: t.entityId }),
+    ).toBe(1);
+  });
+  it('holds signed success at or after the provider deadline for review without credit', async () => {
+    const owner = await reader(),
+      t = await topup(owner, 50000);
+    vi.spyOn(app.get(WalletClock), 'now').mockResolvedValue(
+      new Date(t.expiresAt),
+    );
+    await app.get(WalletService).expireVNPay(t.entityId);
+    const result = await get('/payments/vnpay/ipn')
+      .query(callback(t, { vnp_PayDate: vnDate(new Date(t.expiresAt)) }))
+      .expect(200);
+    expect(result.body.RspCode).toBe('00');
+    expect(
+      (await get(`/me/topups/${t.entityId}`, owner).expect(200)).body,
+    ).toMatchObject({ state: 'ReviewRequired', credited: false });
+    expect((await wallet(owner)).available).toBe(0);
+  });
+  it('serializes competing expiry commands and a timely success callback without losing or duplicating credit', async () => {
+    const owner = await reader(),
+      t = await topup(owner, 50000),
+      paid = callback(t);
+    vi.spyOn(app.get(WalletClock), 'now').mockResolvedValue(
+      new Date(t.expiresAt),
+    );
+    const gate = await Gate.lockUser(db.client, owner.id);
+    const expiry = app
+      .get(WalletService)
+      .expireVNPay(t.entityId)
+      .catch((error: unknown) => error);
+    const ipn = get('/payments/vnpay/ipn')
+      .query(paid)
+      .then((r) => r);
+    try {
+      await gate.contended(2);
+    } finally {
+      await gate.close();
+    }
+    const [, response] = await Promise.all([expiry, ipn]);
+    expect(response.body.RspCode).toBe('00');
+    expect(
+      (await get(`/me/topups/${t.entityId}`, owner).expect(200)).body,
+    ).toMatchObject({ state: 'Succeeded', credited: true });
+    expect(
+      await db.c.ledger_journals.countDocuments({ topupId: t.entityId }),
+    ).toBe(1);
+    expect(
+      await db.c.vnpay_transactions.countDocuments({ intentId: t.entityId }),
+    ).toBe(1);
+  }, 60000);
   it('rejects forged signatures, wrong merchant, wrong amounts and unknown references without credit', async () => {
     const a = await reader(),
       t = await topup(a, 50000),

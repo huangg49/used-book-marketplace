@@ -154,7 +154,7 @@ export class ListingFixtures {
     return { id, revision };
   }
 
-  // An Auction listing (ADR 0041) is a Sale with a declared value.
+  // An Auction listing (ADR 0042) is a Sale with a declared value.
   async listing(
     ownerId: string,
     bookId: string,

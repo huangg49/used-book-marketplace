@@ -1119,7 +1119,8 @@ export async function checkTopupRecord(tx: Tx, topupId: string) {
   const created = creation ? await chain(creation._id) : null;
   let bad =
     (t.state === 'Succeeded' && !journal) ||
-    (['Pending', 'Processing', 'Failed'].includes(t.state) && !!journal) ||
+    (['Pending', 'Processing', 'Failed', 'Cancelled'].includes(t.state) &&
+      !!journal) ||
     t.version !== 1 + events.length ||
     !created?.o ||
     created.a?.topupId !== topupId;
@@ -1129,12 +1130,28 @@ export async function checkTopupRecord(tx: Tx, topupId: string) {
       r?.topupId !== topupId ||
       !(e.provider === 'VNPaySandbox-v1'
         ? ['applyVNPayIpn', 'applyVNPayQuery'].includes(r.operation)
-        : r.operation === 'emitSimulatedTopupEvent') ||
-      (e.provider === 'VNPaySandbox-v1' &&
+        : e.provider === 'VNPayExpiry-v1'
+          ? r.operation === 'expireVNPayTopup'
+          : r.operation === 'emitSimulatedTopupEvent') ||
+      (['VNPaySandbox-v1', 'VNPayExpiry-v1'].includes(e.provider) &&
         (!provider || r.systemActor !== 'VNPaySandbox')) ||
       (e.provider === 'LatLaiSimulator-v1' && !!provider) ||
       a?.topupId !== topupId ||
       !o
+    )
+      bad = true;
+    if (
+      e.provider === 'VNPayExpiry-v1' &&
+      (!provider ||
+        e.outcome !== 'Failed' ||
+        e.disposition !== 'Applied' ||
+        e.occurredAt.getTime() !== provider.expiresAt.getTime() ||
+        e.receivedAt < provider.expiresAt ||
+        (r?.result as Record<string, unknown> | undefined)?.state !==
+          'Cancelled' ||
+        (r?.result as Record<string, unknown> | undefined)?.credited !==
+          false ||
+        (r?.result as Record<string, unknown> | undefined)?.journalId !== null)
     )
       bad = true;
     if (
@@ -1155,6 +1172,12 @@ export async function checkTopupRecord(tx: Tx, topupId: string) {
     t.state !== 'ReviewRequired'
   )
     bad = true;
+  const expirations = events.filter((e) => e.provider === 'VNPayExpiry-v1');
+  if (
+    expirations.length > 1 ||
+    (t.state === 'Cancelled' && expirations.length !== 1)
+  )
+    bad = true;
   if (provider) {
     if (
       provider.receiptId !== creation?._id ||
@@ -1169,7 +1192,9 @@ export async function checkTopupRecord(tx: Tx, topupId: string) {
     );
     if (
       !!transaction !== !!applied ||
-      (applied && transaction?.eventId !== applied._id)
+      (applied &&
+        (transaction?.eventId !== applied._id ||
+          applied.occurredAt >= provider.expiresAt))
     )
       bad = true;
   }

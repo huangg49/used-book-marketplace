@@ -72,7 +72,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       .signAsync({ sub: user._id, sid: sessionId });
     return { id: user._id, token, sessionId };
   }
-  // ADR 0041: auctions use the seller's own Auction-channel listing.
+  // ADR 0042: auctions use the seller's own Auction-channel listing.
   async function saleListing(
     owner: Actor,
     mode: 'Sale' | 'Both' = 'Sale',
@@ -1233,7 +1233,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     const seller = await actor();
     const both = await saleListing(seller, 'Both');
     await cmd('post', '/auction-intakes', intakeBody(both), seller).expect(409);
-    // ADR 0041: an approved marketplace Sale listing is not an auction source.
+    // ADR 0042: an approved marketplace Sale listing is not an auction source.
     const marketplace = await saleListing(seller, 'Sale', 'Marketplace');
     const refused = await cmd(
       'post',
@@ -1246,7 +1246,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       trade: 'Available',
     });
     const l = await saleListing(seller);
-    // An approved auction listing is never on the marketplace (ADR 0041).
+    // An approved auction listing is never on the marketplace (ADR 0042).
     await call('get', `/listings/${l.id}`).expect(404);
     const stranger = await actor();
     await cmd('post', '/auction-intakes', intakeBody(l), stranger).expect(404);

@@ -293,7 +293,7 @@ export function intakePriceErrors(
   }
   return errors;
 }
-// FR-AU01/ADR 0041: only the seller's own approved, visible, still-available
+// FR-AU01/ADR 0042: only the seller's own approved, visible, still-available
 // Auction listings enter; the server rechecks under the listing lock.
 export function auctionEligible(listing: {
   channel: string;

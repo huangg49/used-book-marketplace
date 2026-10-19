@@ -123,7 +123,7 @@ describe("seller intake (POL-39, FR-AU01)", () => {
       currentRevision: { content: { mode: over.mode ?? "Sale" } },
     });
     expect(auctionEligible(listing({}))).toBe(true);
-    // ADR 0041: a marketplace listing is never an auction source.
+    // ADR 0042: a marketplace listing is never an auction source.
     expect(auctionEligible(listing({ channel: "Marketplace" }))).toBe(false);
     expect(auctionEligible(listing({ mode: "Both" }))).toBe(false);
     expect(auctionEligible(listing({ trade: "Reserved" }))).toBe(false);

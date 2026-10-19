@@ -120,7 +120,7 @@ export class WishlistService {
       const book = await this.db.c.catalog_books.findOne({ _id: subjectId, status: 'Confirmed' });
       if (!book) throw new DomainError(404, 'NOT_FOUND', 'Book not found.');
     } else {
-      // Auction listings are not marketplace subjects (ADR 0041).
+      // Auction listings are not marketplace subjects (ADR 0042).
       const listing = await this.db.c.listings.findOne({
         _id: subjectId,
         visibility: 'Visible',

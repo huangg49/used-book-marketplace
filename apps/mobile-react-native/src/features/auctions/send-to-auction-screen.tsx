@@ -57,7 +57,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const foreground = useForeground();
   const queryClient = useQueryClient();
 
-  // 1. Real Queries. ADR 0041: auctions use the seller's own Auction listings,
+  // 1. Real Queries. ADR 0042: auctions use the seller's own Auction listings,
   // never marketplace listings.
   const listings = useQuery({
     queryKey: ["my-listings", userId, "auction"],

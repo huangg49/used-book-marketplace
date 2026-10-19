@@ -482,7 +482,7 @@ export function PricingFields({
   disabled: boolean;
   errors: Errors;
   anchor?: Anchor;
-  // ADR 0041: fixed Sale; the price is the declared value, not a shop price.
+  // ADR 0042: fixed Sale; the price is the declared value, not a shop price.
   auction?: boolean;
 }) {
   const modes = [

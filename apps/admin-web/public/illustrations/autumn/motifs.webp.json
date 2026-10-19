@@ -1,0 +1,20 @@
+{
+  "generator": "Built-in image_gen",
+  "prompt": "Use case: illustration-story. Asset type: ONE production CSS sprite atlas for sparse autumn ornaments on a Vietnamese used-book website. Create one landscape 3:2 image on a genuinely transparent background, exactly THREE equal columns and TWO equal rows, six invisible square cells. Every subject is completely isolated, centered in its cell and fits within the central 60% of that cell with generous transparent padding; no crossings between cells. Top-left: a single rust-red five-lobed maple leaf with slim warm brown veins. Top-middle: a single mustard-gold oval leaf with slim brown veins. Top-right: a single muted olive oak leaf with rounded lobes. Bottom-left: a short twig holding two small amber leaves. Bottom-middle: one warm brown acorn with a simple textured cap. Bottom-right: a paired winged maple seed, delicate warm brown. Style: refined friendly flat editorial illustration, crisp clean silhouettes, like a simple autumn woodland picture book, flat solid colors, few thin vein lines; no gradients, photorealism, shading, shadows, paper or white background, no frames, labels, text, animals, trees, hills, flowers, extra decoration. The atlas will be rendered at tiny sizes and at low opacity over #FFEFCB; make all six silhouettes clear, visually balanced and the same optical size. This is one coordinated sprite sheet, not a collage.",
+  "sourceSha256": "bd9a1d61240d88c559b658ccb8dd8f6fed21012fb6488199dcdc31c035cbbe73",
+  "deliverySha256": "57a50243b2600fd71771e67670cd730d627ffdacf0a09790f7c85bb81153aa76",
+  "width": 768,
+  "height": 512,
+  "hasAlpha": true,
+  "bytes": 55946,
+  "delivery": "Whole atlas resized and encoded only. No cropping, recoloring or alpha alteration. CSS addresses 3 columns × 2 rows.",
+  "cells": [
+    "maple",
+    "oval",
+    "oak",
+    "twig",
+    "acorn",
+    "seed"
+  ],
+  "purpose": "Sparse static autumn ornament at Home canvas margins; no product information."
+}

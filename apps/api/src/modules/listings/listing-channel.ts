@@ -4,7 +4,7 @@ import type {
 } from '../../database/mongo/documents.js';
 import { invalidField, invalidState } from '../commands/domain-error.js';
 
-// ADR 0041: an Auction listing is a Sale whose salePrice is the declared
+// ADR 0042: an Auction listing is a Sale whose salePrice is the declared
 // (protective) value. It has no delivery origin: the book goes to a point.
 export function requireChannelContent(
   channel: ListingChannel,

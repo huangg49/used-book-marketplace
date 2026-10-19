@@ -13,7 +13,7 @@ export const myListingSchema = z
   .object({
     id: z.string().uuid(),
     version: z.number().int(),
-    // ADR 0041: older servers omit it; their listings are marketplace ones.
+    // ADR 0042: older servers omit it; their listings are marketplace ones.
     channel: z.enum(["Marketplace", "Auction"]).default("Marketplace"),
     catalogStatus: z
       .enum(["Pending", "Confirmed", "Rejected"])

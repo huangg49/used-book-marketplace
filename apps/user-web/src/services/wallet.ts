@@ -72,9 +72,12 @@ const topupSchema = z.object({
     "Processing",
     "Succeeded",
     "Failed",
+    "Cancelled",
     "ReviewRequired",
   ]),
   credited: z.boolean(),
+  expiresAt: z.iso.datetime({ offset: true }).nullable(),
+  serverTime: z.iso.datetime({ offset: true }),
   updatedAt: z.string(),
 });
 export function getTopup(id: string) {
@@ -105,7 +108,8 @@ export function createVNPayTopup(amount: number, key: string) {
     z.object({
       entityId: z.uuid(),
       paymentUrl: z.url(),
-      expiresAt: z.string(),
+      expiresAt: z.iso.datetime({ offset: true }),
+      serverTime: z.iso.datetime({ offset: true }),
     }),
     {
       method: "POST",
