@@ -1,3 +1,4 @@
+import { ConversationAgreementsService } from './conversation-agreements.service.js';
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { PurchaseConversationDoc } from '../../database/mongo/documents.js';
@@ -8,7 +9,7 @@ import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.s
 
 @Injectable()
 export class PurchasesService {
-  constructor(private readonly commands: MongoCommandService, private readonly listings: ListingCommitmentPolicy) {}
+  constructor(private readonly commands: MongoCommandService, private readonly listings: ListingCommitmentPolicy, private readonly agreements: ConversationAgreementsService) {}
 
   private async conversation(tx: Tx, id: string) {
     const row = await tx.c.purchase_conversations.findOne({ _id: id });
@@ -29,6 +30,7 @@ export class PurchasesService {
       ? await tx.c.member_addresses.findOne({ _id: quote.destinationAddressId, ownerId: row.buyerId })
       : null;
     return {
+      terms: await this.agreements.view(tx, row),
       id: row._id, listingId: row.listingId,
       buyer: { id: buyer._id, displayName: buyer.displayName },
       seller: { id: seller._id, displayName: seller.displayName },
@@ -70,7 +72,7 @@ export class PurchasesService {
         if (listing.ownerId === actor._id || listing.version !== body.expectedVersion) throw conflict();
         if (listing.moderation !== 'Approved' || listing.visibility !== 'Visible' || listing.trade !== 'Available') throw invalidState();
         const revision = await tx.c.listing_revisions.findOne({ _id: listing.currentRevisionId! });
-        if (!revision || !['Sale', 'Both'].includes(revision.mode ?? '')) throw invalidState();
+        if (!revision || !(body.intent ? ['Sale', 'Both', 'Exchange'] : ['Sale', 'Both']).includes(revision.mode ?? '') || body.intent === 'Negotiation' && revision.mode === 'Exchange' || body.intent === 'Exchange' && revision.mode === 'Sale') throw invalidState();
         const existing = await tx.c.purchase_conversations.findOne({
           listingId: listing._id,
           buyerId: actor._id,
@@ -95,6 +97,7 @@ export class PurchasesService {
           createdAt: now, updatedAt: now, lockSeq: 0,
         };
         await tx.c.purchase_conversations.insertOne(row);
+        if (body.intent) await this.agreements.initialize(tx, row, body.intent, revision.mode!);
         return { entityType: 'PurchaseConversation' as const, entityId: row._id, listingId: row.listingId, version: row.version, state: row.status, expiresAt: row.expiresAt, decidedAt: now, event: 'PurchaseConversationStarted' };
       },
     });
@@ -148,6 +151,28 @@ export class PurchasesService {
     });
   }
 
+  terms(context: CommandContext, id: string, body: Wire['ProposeConversationTerms'] | Wire['RespondConversationTerms'], respond: boolean) {
+    return this.commands.runPurchaseConversation(context, respond ? 'respondConversationTerms' : 'proposeConversationTerms', id, body, {
+      discover: async tx => { const row = await this.conversation(tx, id); return [row.buyerId, row.sellerId]; },
+      authorize: async (tx, actor) => { member(actor); const row = await this.conversation(tx, id); this.participant(row, actor._id); return row; },
+      mutate: async (tx, actor) => {
+        requireActive(actor); await tx.lock('purchase_conversations', [id]);
+        const row = await this.conversation(tx, id);
+        if (row.version !== body.expectedVersion) throw conflict();
+        const next = respond
+          ? await this.agreements.respond(tx, row, actor._id, body as Wire['RespondConversationTerms'])
+          : await this.agreements.propose(tx, row, actor._id, body as Wire['ProposeConversationTerms']);
+        return { entityType: 'PurchaseConversation' as const, entityId: id, listingId: row.listingId, version: next.version, state: next.status, expiresAt: next.expiresAt, decidedAt: await tx.now(), event: respond ? 'ConversationTermsResponded' : 'ConversationTermsProposed' };
+      },
+    });
+  }
+  events(auth: Actor, id: string) {
+    return this.commands.read(auth, async (tx, actor) => {
+      const row = await this.conversation(tx, id); this.participant(row, actor._id);
+      const events = await tx.c.conversation_events.find({ conversationId: id }, { sort: { createdAt: 1, _id: 1 }, limit: 500 }).toArray();
+      return events.map(({ _id, createdAt, ...event }) => ({ id: _id, ...event, createdAt: createdAt.toISOString() }));
+    });
+  }
   list(auth: Actor) {
     return this.commands.read(auth, async (tx, actor) => {
       const rows = await tx.c.purchase_conversations.find({ $or: [{ buyerId: actor._id }, { sellerId: actor._id }] }, { sort: { updatedAt: -1, _id: -1 }, limit: 100 }).toArray();
@@ -164,7 +189,9 @@ export class PurchasesService {
     return this.commands.read(auth, async (tx, actor) => {
       const row = await this.conversation(tx, id); this.participant(row, actor._id);
       const messages = await tx.c.purchase_messages.find({ conversationId: id }, { sort: { sentAt: 1, _id: 1 }, limit: 500 }).toArray();
-      return messages.map((m) => ({ id: m._id, conversationId: m.conversationId, senderId: m.senderId, body: m.body, sentAt: m.sentAt.toISOString() })) satisfies Wire['PurchaseMessage'][];
+      const links = await tx.c.conversation_exchange_links.find({ conversationId: id }).toArray();
+      const legacy = links.length ? await tx.c.exchange_messages.find({ exchangeId: { $in: links.map(l => l._id) } }, { sort: { sentAt: -1, _id: -1 }, limit: 500 }).toArray() : [];
+      return [...messages, ...legacy].sort((a, b) => a.sentAt.getTime() - b.sentAt.getTime() || a._id.localeCompare(b._id)).slice(-500).map(m => ({ id: m._id, conversationId: id, senderId: m.senderId, body: m.body, sentAt: m.sentAt.toISOString() })) satisfies Wire['PurchaseMessage'][];
     });
   }
   send(auth: Actor, input: { messageId: string; conversationId: string; body: string }) {
@@ -174,14 +201,15 @@ export class PurchasesService {
       await tx.lock('purchase_conversations', [input.conversationId]);
       const row = await this.conversation(tx, input.conversationId); this.participant(row, actor._id);
       const now = await tx.now();
-      if (row.status !== 'Active' || (row.expiresAt && now >= row.expiresAt)) throw invalidState();
+      requireActive(actor);
+      if (!['Active', 'OrderCreated'].includes(row.status) || (row.status === 'Active' && row.expiresAt && now >= row.expiresAt)) throw invalidState();
       const existing = await tx.c.purchase_messages.findOne({ _id: input.messageId });
       if (existing) {
         if (existing.conversationId !== row._id || existing.senderId !== actor._id || existing.body !== body) throw conflict();
         return { id: existing._id, conversationId: existing.conversationId, senderId: existing.senderId, body: existing.body, sentAt: existing.sentAt.toISOString() } satisfies Wire['PurchaseMessage'];
       }
       await tx.c.purchase_messages.insertOne({ _id: input.messageId, conversationId: row._id, senderId: actor._id, body, sentAt: now });
-      const updated = await tx.c.purchase_conversations.updateOne({ _id: row._id, version: row.version, status: 'Active' }, { $set: { updatedAt: now }, $inc: { version: 1 } });
+      const updated = await tx.c.purchase_conversations.updateOne({ _id: row._id, version: row.version, status: row.status }, { $set: { updatedAt: now }, $inc: { version: 1 } });
       if (updated.matchedCount !== 1) throw conflict();
       return { id: input.messageId, conversationId: row._id, senderId: actor._id, body, sentAt: now.toISOString() } satisfies Wire['PurchaseMessage'];
     });

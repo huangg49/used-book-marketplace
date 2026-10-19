@@ -1,0 +1,19 @@
+{
+  "tool": "built-in image_gen",
+  "source": "C:/Users/ASUS/.codex/generated_images/01a12139-7b71-7ed0-a3c3-97f3eeeac0b7/exec-bdc4e958-dd4d-4990-bcc7-4aefc8ecd84b.png",
+  "reference": "User-supplied Background demo.png",
+  "prompt": "Use case: precise-object-edit. Edit the supplied autumn background illustration. Remove ONLY the large orange fox sitting at the bottom center and reconstruct the rolling golden hills, fallen leaves and grass in that space, continuously matching the surrounding illustration. Preserve the two outer trees, small distant trees, hills, clouds, palette, flat vector-like illustration style and broad empty pale cream #FFEFCB upper background. Preserve the top leaf clusters as well. Landscape 16:9 composition. Absolutely no animal, no text, no UI, no gradients or glow. This will be the background layer behind a separate foreground fox on a bookstore website.",
+  "processing": "Whole generated output resized/encoded WebP quality92/alpha100; no manual editing or mask.",
+  "sourceDimensions": {
+    "width": 1672,
+    "height": 941
+  },
+  "delivery": {
+    "width": 1600,
+    "height": 900,
+    "alpha": false,
+    "bytes": 80992
+  },
+  "sourceSha256": "bfdda079328f36a227248d1e7839cdb2ef5649550becd759b745c649fb834066",
+  "deliverySha256": "cf2870b1536e2502caca1812153be4c3db42a4092943e550c1c6a2c5e1ddd31c"
+}

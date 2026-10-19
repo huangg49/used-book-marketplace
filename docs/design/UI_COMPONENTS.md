@@ -442,3 +442,79 @@ the owner's11/10 policy. This is a local recipe, not a replacement for other dia
 [Documentation comparison](../../.impeccable/review/purchase-popup/DOCUMENTATION.md)
 records incumbent-system scope and drift. Browser evidence and AI review do not
 establish human, native or live-provider acceptance; READINESS is unchanged.
+
+## Member web — conversation guidance and Exchange ChatPanel
+
+18/10/2026. Actual examples: `/chat/:roomId` and `/exchange/:id`.
+There is no Member web `/ui` showcase. The purchase room's local guidance uses
+the existing APIs; it does not grant transaction rights or infer payment from
+chat text. A greeting suggestion only populates the draft. Order creation and
+payment preserve their existing receipts and retry keys/bodies.
+
+[ChatPanel](../../apps/user-web/src/components/exchange/ChatPanel/index.tsx)
+takes actual `messages`, `partner`, `giveBooks`/`receiveBooks` title arrays,
+`statusText`, `guidance`, `onSendMessage`, `onRetry`, optional `isLoading`,
+`loadError`, `isRefreshing`, `isReadOnly` and `unavailable`.
+Its `#exchange-chat` anchor pairs with the parent `#exchange-actions` section;
+parent controls permissions, fetching, mutation and invalidation. Do not pass
+live-user text as an authoritative system event. History errors show retry
+without clearing cached messages, and send errors retain the input.
+Both contexts use wine/cream, Be Vietnam Pro and44px controls with visible focus.
+See the [chat surface record](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-chatpage-tsx.md)
+for scoped browser evidence and verification limits.
+
+## Member web conversation workspace —19/10/2026
+
+`components/conversation/AgreementTerms` renders real mode/price proposals and
+retains uncertain command intents in memory. `ExchangeOffer` selects the current
+member's available exchangeable books and saved address. `ConversationInbox`
+combines purchase cards and unlinked Exchange history without fabricating unread
+counts. Shared `Conversation.module.css` defines agreement/chat columns, card inbox
+and mobile panel navigation. Exchange BookInfoCard/ProgressStepper accept compact
+presentation for the agreement column; their lifecycle meanings are unchanged.
+ADR0041 and the ChatPage surface brief define permission and replay behavior.
+ConversationInbox uses an auto-fill grid with340px minimum card width and16px
+gaps (3 columns at1440px,2 at1100/900px,1 on phones). A64px cover/max96px image
+shares the identity row with16px title, partner and mode;16px padding/14px metadata.
+One ruled footer separates status from the44px entry link. Routine continuation
+copy is omitted; pending proposals and agreed prices remain. Below360px a48px
+floated cover lets full text flow underneath. Legacy exchange cards share the
+layout. Filters, twelve-at-a-time reveal and routes stay intact.
+On fine-pointer hover or keyboard focus-visible within a card, both purchase and
+legacy cards lift4px, tint cream, darken the boundary and gain a soft offset shadow.
+The200ms cubic-bezier(.16,1,.3,1) transition retains its duration under reduced
+motion per owner policy. Hover is gated off on touch; sibling layout stays fixed.
+ConversationNavigation scopes the inbox's filter/reveal/scroll memory to the
+current owner and layout, without browser storage. Card links opt into Router
+View Transitions:420ms expansion/340ms return, separate cover/title snapshots and
+unscaled text crossfades. Header scroll morph pauses during this transition;
+the background/navigation stay live. Pending room reads use the same paper frame
+with loading/retry before mounting transaction controls. Unsupported browsers
+keep ordinary link navigation. Embedded Exchange never claims the outer snapshot.
+ChatPage's local book-dossier trial above960px puts real book identity in a wine
+agreement header; the adjacent white chat has a partner-led header. Both retain
+one spread and separate agreement-body/message scrolling.
+MainLayout scopes the approved soft3D autumn book-desk background to Chat routes
+via `data-chat`; a fixed pointer-inert pseudo-element covers the viewport and
+unmounts on navigation away. Opaque inbox/guest sheets preserve text contrast;
+mobile retains12px outside clearance. Sell retains its archival desk background.
+The action area is outside the body rather than a sticky overlay. Narrow panels
+keep mounted drafts and natural sheet flow. Shared scoped typography uses
+400/700 weights and title/data/body/metadata roles. Accepted-price edits and
+complete event history are disclosures; closing either leaves transaction data
+intact. Shared styles still support standalone Exchange; route/history remain.
+ChatPage opts into faint existing ivory-paper texture through
+`--conversation-paper-texture`. The wine header replaces the small bookmark;
+real cover is80px wide (max120px tall), title20px/1.3. Cover float within a flow-root
+keeps text adjacent and lets long titles use the full width below the image,
+without truncating the title. Below960px, shared book context
+stays above both tabs, with64px/48px covers and20px title on phones. Shared
+ListingPhoto retains loading/missing/error/retry, cream-on-wine fallback copy and
+focus. White chat uses local `--conversation-chat-surface`. Active empty chat
+uses the existing64px penguin with empty alt text, hidden
+for history errors/expired rooms. Standalone Exchange keeps its existing surface.
+AgreementTerms groups mode/request-to-exchange before a compact price summary and
+price entry. Listing price leads until a price is accepted; fees stay visible.
+ChatPage's keyboard-accessible “Cách giao dịch” disclosure contains routine help
+and the phase trail, expanded for expired/missing-fulfillment/stale-quote guidance.
+Pending proposals, stale accepted revisions and errors remain outside disclosure.

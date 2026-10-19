@@ -31,6 +31,7 @@ export interface ShipmentOrderData {
   };
   itemsSummary: string;
   fee: number;
+  readyForPickup?: boolean;
   shippedAt?: string | null;
   deliveredAt?: string | null;
 }
@@ -237,6 +238,33 @@ export function DriverScreen() {
             ) : null}
           </View>
 
+          {/* Waiting for partner banner */}
+          {order.readyForPickup === false ? (
+            <View
+              style={{
+                backgroundColor: '#fffbeb',
+                borderColor: '#fde68a',
+                borderWidth: 1,
+                borderRadius: 12,
+                padding: 12,
+                marginBottom: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <Text style={{ fontSize: 22 }}>⏳</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: '700', color: '#92400e', fontSize: 13 }}>
+                  Quy tắc nghiệp vụ 2 chiều (BA Rule):
+                </Text>
+                <Text style={{ color: '#92400e', fontSize: 12, marginTop: 2 }}>
+                  Đang chờ đối tác hoàn tất tạo đơn vận chuyển. Khi cả 2 bên cùng tạo đơn thành công, bưu tá mới được phép đến lấy sách để đảm bảo an toàn.
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
           {/* Action Buttons */}
           <Text style={styles.sectionTitle}>THAO TÁC BƯU TÁ (ĐIỀU HÀNH THỰC TẾ)</Text>
 
@@ -247,7 +275,7 @@ export function DriverScreen() {
                 styles.actionBtn,
                 currentStep >= 1 ? styles.actionBtnActive : styles.actionBtnNormal,
               ]}
-              disabled={submitting}
+              disabled={submitting || order.readyForPickup === false}
               onPress={() =>
                 void handleUpdateStatus(
                   1,
@@ -271,7 +299,7 @@ export function DriverScreen() {
                 styles.actionBtn,
                 currentStep >= 2 ? styles.actionBtnActive : styles.actionBtnNormal,
               ]}
-              disabled={submitting}
+              disabled={submitting || order.readyForPickup === false}
               onPress={() =>
                 void handleUpdateStatus(
                   2,
@@ -295,7 +323,7 @@ export function DriverScreen() {
                 styles.actionBtn,
                 currentStep >= 3 ? styles.actionBtnActive : styles.actionBtnNormal,
               ]}
-              disabled={submitting}
+              disabled={submitting || order.readyForPickup === false}
               onPress={() =>
                 void handleUpdateStatus(
                   3,
@@ -316,7 +344,7 @@ export function DriverScreen() {
             {/* Step 4: Final Trigger */}
             <TouchableOpacity
               style={[styles.actionBtn, styles.actionBtnFinish]}
-              disabled={submitting}
+              disabled={submitting || order.readyForPickup === false}
               onPress={() =>
                 void handleUpdateStatus(
                   4,
