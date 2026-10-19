@@ -1,5 +1,27 @@
 # Điểm lưu hiện tại — 19/10/2026
 
+## Ảnh bìa và ảnh phụ riêng — 19/10/2026
+
+- Member web `/sell` theo mẫu chủ dự án: ảnh bìa bên trái, vùng ảnh phụ bên phải;
+  <=760px xếp dọc. Khung ảnh/picker cùng chiều cao, ảnh phụ chia grid khi thêm.
+  Mỗi ảnh có nút X44px; bấm trực tiếp ảnh để thay đúng vị trí bằng picker1 tệp.
+  Ảnh phụ mới vẫn chọn nhiều cùng lúc. Giữ1 bìa bắt buộc + tối đa7 ảnh phụ,
+  JPEG/PNG/WebP10MB/ảnh; thay được khi đủ8. Xóa bìa không tự lấy ảnh phụ làm bìa.
+- Giữ thứ tự preview/upload, từ chối nguyên batch lỗi/vượt chỗ, reset input và
+  cleanup URL. Hủy picker giữ ảnh cũ; focus quay về control nhìn thấy sau thay/
+  xóa và khi đủ ảnh. Raw native file row vẫn ẩn; mutation/retry giữ nguyên.
+- Nhánh `codex/listing-cover-support-photos`, base21b68ad; subject
+  `feat(web): separate cover and supporting photo pickers`.
+- PASS web lint/typecheck/build/136unit; Chromium QA390/1440: bìa single/phụ
+  multiple, cover removal/re-add/replacement giữ ảnh phụ, click thay ảnh phụ đúng
+  slot, keyboard Enter, thay khi đủ8 không thêm ảnh thứ9, invalid/oversize/quota,
+  upload2 ảnh + submit lost-ACK replay. Sticky regression1440×720/100%,
+  1440×900/130%,1200×600/130% và mobile disclosure giữ PASS; shelf/search/chat PASS.
+  Đã xem ảnh desktop/mobile `apps/user-web/test-results/sell-cover-support-*.png`
+  và `sell-multiple-images-*.png`. API/Mongo QA riêng, storage fake/Sharp thật.
+- Không đổi API/RN;6 warning lint/chunk có sẵn. Không kiểm native/live provider/
+  human/remote CI; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
+
 ## Bản xem trước đi theo khi cuộn — 19/10/2026
 
 - Member web `/sell`: thẻ “Cuốn sách của bạn” luôn sticky trên desktop từ1200px,

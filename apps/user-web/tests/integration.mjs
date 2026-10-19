@@ -287,37 +287,117 @@ try {
     .getByRole("combobox", { name: "Danh mục sách", exact: true })
     .selectOption({ label: "Sách khác" });
   await step(/Ảnh bản sách/).click();
-  const fileInput = p.locator("input[type=file]");
-  const pickerBox = await fileInput.boundingBox();
-  assert.ok(
-    pickerBox.width <= 1 && pickerBox.height <= 1,
-    "Native file control must not occupy a separate visible row",
-  );
+  const coverFileInput = p.locator("#cover-file");
+  const fileInput = p.locator("#support-images");
+  for (const input of [coverFileInput, fileInput]) {
+    const pickerBox = await input.boundingBox();
+    assert.ok(
+      pickerBox.width <= 1 && pickerBox.height <= 1,
+      "Native file controls must not occupy a separate visible row",
+    );
+  }
   const photo = (name) => ({
     name,
     mimeType: "image/png",
     buffer: fixture.photo,
   });
-  const thumbnails = p.getByRole("img", { name: /^Ảnh bản sách \d+$/ });
+  const thumbnails = p.getByRole("img", {
+    name: /^(Ảnh bìa bản sách|Ảnh phụ \d+)$/,
+  });
+  const selectedPhotos = p.getByRole("group", {
+    name: "Ảnh bản sách",
+    exact: true,
+  });
+  const coverGroup = p.getByRole("group", { name: "Ảnh bìa", exact: true });
+  const supportGroup = p.getByRole("group", { name: "Ảnh phụ", exact: true });
   const chooserPromise = p.waitForEvent("filechooser");
-  await p.getByText("Chọn ảnh bản sách", { exact: true }).click();
+  await button("Chọn ảnh bìa").click();
   const chooser = await chooserPromise;
-  assert.equal(chooser.isMultiple(), true);
-  await chooser.setFiles([
-    photo("qa-cover.png"),
-    photo("qa-spine.png"),
-    photo("qa-pages.png"),
-  ]);
+  assert.equal(chooser.isMultiple(), false);
+  await chooser.setFiles([photo("qa-cover.png")]);
+  await thumbnails.first().waitFor();
+  for (const width of [390, 1440]) {
+    await p.setViewportSize({ width, height: 900 });
+    const coverBox = await coverGroup.boundingBox();
+    const supportBox = await supportGroup.boundingBox();
+    if (width === 1440) {
+      assert.ok(coverBox.x + coverBox.width < supportBox.x);
+      assert.ok(Math.abs(coverBox.y - supportBox.y) < 1);
+    } else {
+      assert.ok(coverBox.y + coverBox.height <= supportBox.y);
+    }
+    await selectedPhotos.screenshot({
+      path: path.join(artifacts, `sell-cover-support-${width}.png`),
+    });
+  }
+  const multiChooserPromise = p.waitForEvent("filechooser");
+  await button("Thêm ảnh phụ").click();
+  const multiChooser = await multiChooserPromise;
+  assert.equal(multiChooser.isMultiple(), true);
+  await multiChooser.setFiles([photo("qa-spine.png"), photo("qa-pages.png")]);
   await thumbnails.nth(2).waitFor();
-  await fileInput.focus();
-  assert.equal(
-    await fileInput.evaluate(
-      (node) => getComputedStyle(node.closest("label")).outlineStyle,
-    ),
-    "solid",
+  const supportsBefore = await supportGroup
+    .locator("img")
+    .evaluateAll((nodes) => nodes.map((node) => node.src));
+  await button("Xóa ảnh bìa").click();
+  assert.deepEqual(
+    await supportGroup
+      .locator("img")
+      .evaluateAll((nodes) => nodes.map((node) => node.src)),
+    supportsBefore,
   );
+  await button("Tiếp tục").click();
+  await p
+    .getByRole("alert")
+    .filter({ hasText: "Thêm ảnh bìa bản sách" })
+    .first()
+    .waitFor();
+  await coverFileInput.setInputFiles(photo("qa-new-cover.png"));
+  await p.getByRole("img", { name: "Ảnh bìa bản sách", exact: true }).waitFor();
+  assert.deepEqual(
+    await supportGroup
+      .locator("img")
+      .evaluateAll((nodes) => nodes.map((node) => node.src)),
+    supportsBefore,
+  );
+  const oldCover = await p
+    .getByRole("img", { name: "Ảnh bìa bản sách", exact: true })
+    .getAttribute("src");
+  const coverReplacePromise = p.waitForEvent("filechooser");
+  await button("Thay ảnh bìa").click();
+  const coverReplace = await coverReplacePromise;
+  assert.equal(coverReplace.isMultiple(), false);
+  await coverReplace.setFiles(photo("qa-replaced-cover.png"));
+  assert.notEqual(
+    await p
+      .getByRole("img", { name: "Ảnh bìa bản sách", exact: true })
+      .getAttribute("src"),
+    oldCover,
+  );
+  assert.equal(await thumbnails.count(), 3);
+  const beforeReplace = await thumbnails.evaluateAll((nodes) =>
+    nodes.map((node) => node.src),
+  );
+  const supportReplacePromise = p.waitForEvent("filechooser");
+  await button("Thay ảnh phụ 2").click();
+  const supportReplace = await supportReplacePromise;
+  assert.equal(supportReplace.isMultiple(), false);
+  await supportReplace.setFiles(photo("qa-replaced-pages.png"));
+  const afterReplace = await thumbnails.evaluateAll((nodes) =>
+    nodes.map((node) => node.src),
+  );
+  assert.deepEqual(afterReplace.slice(0, 2), beforeReplace.slice(0, 2));
+  assert.notEqual(afterReplace[2], beforeReplace[2]);
+  assert.equal(
+    await button("Thay ảnh phụ 2").evaluate(
+      (node) => node === document.activeElement,
+    ),
+    true,
+  );
+  const addSupport = button("Thêm ảnh phụ");
+  await addSupport.focus();
   const keyboardChooserPromise = p.waitForEvent("filechooser");
-  await p.keyboard.press("Enter");
+  await addSupport.press("Enter");
   const keyboardChooser = await keyboardChooserPromise;
   assert.equal(keyboardChooser.isMultiple(), true);
   await keyboardChooser.setFiles([]);
@@ -325,7 +405,7 @@ try {
   const initialPreviews = await thumbnails.evaluateAll((nodes) =>
     nodes.map((node) => node.src),
   );
-  await button("Xóa ảnh 2").click();
+  await button("Xóa ảnh phụ 1").click();
   assert.deepEqual(
     await thumbnails.evaluateAll((nodes) => nodes.map((node) => node.src)),
     [initialPreviews[0], initialPreviews[2]],
@@ -360,6 +440,26 @@ try {
   );
   await thumbnails.nth(7).waitFor();
   assert.equal(await fileInput.isDisabled(), true);
+  assert.equal(
+    await button("Xóa ảnh phụ 7").evaluate(
+      (node) => node === document.activeElement,
+    ),
+    true,
+  );
+  // Replacement remains available at capacity and never appends a ninth photo.
+  const atCapacity = await thumbnails.evaluateAll((nodes) =>
+    nodes.map((node) => node.src),
+  );
+  const capacityReplacePromise = p.waitForEvent("filechooser");
+  await button("Thay ảnh phụ 7").press("Enter");
+  const capacityReplace = await capacityReplacePromise;
+  await capacityReplace.setFiles(photo("qa-capacity-replacement.png"));
+  const replacedCapacity = await thumbnails.evaluateAll((nodes) =>
+    nodes.map((node) => node.src),
+  );
+  assert.equal(replacedCapacity.length, 8);
+  assert.deepEqual(replacedCapacity.slice(0, 7), atCapacity.slice(0, 7));
+  assert.notEqual(replacedCapacity[7], atCapacity[7]);
   const desktopPreview = p.getByRole("complementary", {
     name: "Tóm tắt bản nháp",
   });
@@ -380,7 +480,16 @@ try {
     const startY = await desktopPreview.evaluate(
       (node) => node.getBoundingClientRect().top + window.scrollY,
     );
-    for (const offset of [120, 220]) {
+    const maxOffset = await desktopPreview.evaluate(
+      (node) =>
+        node.parentElement.getBoundingClientRect().height -
+        node.clientHeight -
+        112,
+    );
+    for (const offset of [
+      Math.min(120, maxOffset / 3),
+      Math.min(220, (maxOffset * 2) / 3),
+    ]) {
       await p.evaluate((y) => window.scrollTo(0, y), startY + offset);
       await p.waitForFunction(
         () =>
@@ -428,6 +537,13 @@ try {
   for (const width of [390, 1440]) {
     await p.setViewportSize({ width, height: 900 });
     if (width === 390) assert.equal(await desktopPreview.count(), 0);
+    assert.equal(await button("Thêm ảnh phụ").count(), 0);
+    assert.equal(
+      await selectedPhotos.evaluate(
+        (node) => getComputedStyle(node).gridTemplateColumns.split(" ").length,
+      ),
+      width === 390 ? 1 : 2,
+    );
     await p.screenshot({
       path: path.join(artifacts, `sell-multiple-images-${width}.png`),
       fullPage: true,
@@ -438,8 +554,8 @@ try {
       ),
     );
   }
-  for (let index = 8; index >= 3; index--)
-    await button(`Xóa ảnh ${index}`).click();
+  for (let index = 7; index >= 2; index--)
+    await button(`Xóa ảnh phụ ${index}`).click();
   assert.equal(await fileInput.isDisabled(), false);
   assert.deepEqual(
     await thumbnails.evaluateAll((nodes) => nodes.map((node) => node.src)),

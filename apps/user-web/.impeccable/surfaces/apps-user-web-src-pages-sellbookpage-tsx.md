@@ -7,6 +7,25 @@ related_targets: ["apps/user-web/src/pages/SellBookPage.module.css", "apps/user-
 
 # Đăng sách —11/10/2026
 
+## Cover and supporting photos —19/10/2026
+
+Operate; owner reference specifies a dedicated cover slot on the left and a wider
+supporting-photo region on the right. Labels name both regions. Empty pickers use
+the existing paper/wine palette and dashed borders; loaded images stay contained
+in equal-height frames with44px X buttons. Supporting photos form a wrapping grid
+with an add tile, maximum7 plus1 required cover. Below760px the regions stack.
+Cover removal leaves supporting photos intact; replacement preserves their order.
+Clicking a loaded image opens a single-file replacement picker for that slot,
+including when all8 slots are occupied. Cancel/invalid files preserve the original.
+Visible native buttons trigger hidden inputs (cover single, supports multiple),
+with focus restored after replacement/removal and when the last add tile hides.
+Keep max8 total, format/size validation, URL cleanup, upload order and pinned
+submission retries. No new assets, tokens or motion.
+
+The earlier owner request makes the desktop book preview sticky from1200px,
+top112px under navigation, capped at viewport height minus136px with keyboard
+scrolling. Mobile retains the existing disclosure. No API/session/native changes.
+
 ## Catalog v2 metadata extension —12/10/2026
 
 Operate; ordinary extension on `codex/catalog-expansion`, preserving the paper

@@ -29,7 +29,7 @@
   margin-bottom: 28px;
 }
 .intro h1 {
-  font: 400 clamp(2rem, 3vw, 2.75rem)/1.2 var(--shop-display);
+  font: 400 clamp(2rem, 3vw, 2.75rem) / 1.2 var(--shop-display);
   text-transform: uppercase;
   color: var(--shop-wine);
   margin: 0;
@@ -411,21 +411,52 @@
 .field > .help {
   margin: -2px 0 10px;
 }
+.photos {
+  --photo-height: max(180px, 11rem);
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(0, 3fr);
+  align-items: start;
+  gap: 16px;
+}
+.coverPhotos,
+.supportPhotos {
+  min-width: 0;
+}
+.photoLabel {
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--shop-ink);
+}
+.supportGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  gap: 12px;
+}
 .upload {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  min-height: 172px;
-  padding: 24px;
-  background: #efe3cf;
+  width: 100%;
+  min-width: 0;
+  gap: 8px;
+  height: var(--photo-height);
+  padding: 16px;
+  background: var(--shop-paper);
   border: 1px dashed var(--shop-control);
   border-radius: 12px;
   text-align: center;
   color: var(--shop-wine);
   cursor: pointer;
+}
+.upload[hidden] {
+  display: none;
+}
+.upload > strong {
+  font-size: 0.875rem;
+  line-height: 1.6;
 }
 .upload span {
   font-size: 0.75rem;
@@ -435,11 +466,13 @@
 .upload:hover {
   background: var(--shop-cream);
 }
-.upload:focus-within {
+.upload:focus-visible,
+.removePhoto:focus-visible,
+.photoAction:focus-visible {
   outline: 2px solid var(--shop-wine);
   outline-offset: 4px;
 }
-.root .formArea .fields .upload .fileInput {
+.root .formArea .fields .fileInput {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -452,32 +485,22 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
-.photos {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-.photos > div {
+.photoTile {
   position: relative;
   min-width: 0;
 }
-.photos img {
+.photoTile img {
+  display: block;
   width: 100%;
-  height: 140px;
+  height: var(--photo-height);
   object-fit: contain;
   background: #efe3cf;
-  border-radius: 8px;
+  border-radius: 12px;
 }
-.photos span {
-  display: block;
-  margin-top: 6px;
-  font-size: 0.75rem;
-  color: var(--shop-muted);
-}
-.photos button {
+.removePhoto {
   position: absolute;
-  right: 2px;
-  top: 2px;
+  right: 4px;
+  top: 4px;
   width: 44px;
   height: 44px;
   display: grid;
@@ -486,6 +509,20 @@
   border-radius: 8px;
   background: var(--shop-paper);
   color: var(--shop-wine);
+}
+.photoAction {
+  display: block;
+  width: 100%;
+  height: var(--photo-height);
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: #efe3cf;
+  cursor: pointer;
+}
+.photoAction:hover {
+  outline: 1px solid var(--shop-control);
+  outline-offset: 2px;
 }
 .questions {
   display: grid;
@@ -830,7 +867,7 @@
     font-size: 1.25rem;
   }
   .photos {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
   .previewPhoto {
     height: 230px;
