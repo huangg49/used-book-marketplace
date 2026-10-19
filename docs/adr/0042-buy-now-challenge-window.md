@@ -27,6 +27,11 @@ the rest of FR-AU03–10 is unchanged.
   window from `endAt` (POL-40). If nobody outbid, the Buy Now buyer wins at
   `buyNowPrice`. No `BuyNowPending` Order is formed by new commands.
 - Auctions already in `BuyNowPending` keep their 15-minute Order and expiry.
+- Bids are refused from `endAt` by server time; the close itself runs in the
+  order worker. Besides its full 60-second sweep, the worker runs a close-only
+  sweep (`AuctionWorker.closeDue`) every 5 seconds, so a window ends within
+  seconds instead of up to a minute late. Close stays idempotent under the
+  auction lock; overlapping runs or extra workers only skip (409).
 
 ## Persistence and contract
 

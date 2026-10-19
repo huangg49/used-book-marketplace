@@ -21,8 +21,9 @@
   tiền (vi phạm + ReclaimRequired), không có lượt (Unsold) — đều đúng. Browser QA
   fixture 3009: web và RN (Expo web) hiện đếm ngược cửa sổ, cập nhật trực tiếp khi bị
   vượt, màn thắng/thanh toán sau đóng; RN sau đóng ghi “Giá chốt” như web.
-  Lưu ý: order-worker quét mỗi 60 giây nên phiên có thể còn `Active` tới ~1 phút sau
-  endAt (bid đã bị từ chối theo giờ server). Native/human/remote CI NOT RUN.
+  Order-worker chạy thêm `AuctionWorker.closeDue` mỗi 5 giây giữa các lượt quét 60
+  giây; chạy thật `dist/order-worker.js` trên fixture `_test`: phiên Mua ngay đóng
+  3,2 giây sau endAt (trước đây tới ~60 giây). Native/human/remote CI NOT RUN.
   READINESS không đổi. Chưa push/PR/merge.
 
 ## Sách đấu giá là listing riêng (ADR 0041) — 19/10/2026
