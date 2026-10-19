@@ -13,12 +13,14 @@ const shortLabels = [
 
 export function StepNav({
   labels,
+  short = shortLabels,
   current,
   states,
   disabled,
   onSelect,
 }: {
   labels: readonly string[];
+  short?: readonly string[];
   current: number;
   states: readonly StepState[];
   disabled: boolean;
@@ -63,7 +65,7 @@ export function StepNav({
             ? "Đã điền đầy đủ"
             : "Chưa điền thành công";
 
-          const displayLabel = shortLabels[index] ?? label;
+          const displayLabel = short[index] ?? label;
 
           return (
             <View key={label} style={styles.stepColumn}>

@@ -1,6 +1,10 @@
 import { buyNowNotificationsMigration, withBuyNowNotifications } from './0029-buy-now-notifications.js';
 import { bookCirculationRegionsMigration } from './0030-book-circulation-regions.js';
 import {
+  auctionOnlyListingsMigration,
+  withListingChannel,
+} from './0032-auction-only-listings.js';
+import {
   exchangeCollectionSpecs,
   exchangesMigration,
 } from './0016-exchanges.js';
@@ -254,6 +258,7 @@ export const migrations: Migration[] = [
   buyNowNotificationsMigration,
   bookCirculationRegionsMigration,
   exchangeMultiBookMigration,
+  auctionOnlyListingsMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -278,7 +283,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withPayments)
     .map(withDirectSettlementPrincipal)
     .map(withVNPayQuery)
-    .map(withIntegratedWalletPointCommands),
+    .map(withIntegratedWalletPointCommands)
+    .map(withListingChannel),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),

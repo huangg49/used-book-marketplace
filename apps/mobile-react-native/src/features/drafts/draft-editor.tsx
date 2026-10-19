@@ -84,6 +84,30 @@ const stepHelp = [
   "Xem lại toàn bộ thông tin trước khi lưu hoặc gửi duyệt.",
 ] as const;
 
+// ADR 0041: an auction listing is a Sale whose price is a declared value and
+// that goes to a handover point, so it has no delivery origin or shop price.
+const auctionStepLabels = [
+  "Thông tin sách",
+  "Ảnh bản sách",
+  "Tình trạng",
+  "Giá trị khai báo",
+  "Kiểm tra",
+] as const;
+const auctionShortLabels = [
+  "1. Thông tin",
+  "2. Ảnh sách",
+  "3. Tình trạng",
+  "4. Giá trị",
+  "5. Kiểm tra",
+] as const;
+const auctionStepHelp = [
+  stepHelp[0],
+  stepHelp[1],
+  stepHelp[2],
+  "Giá trị khai báo là mức bồi thường tối đa nếu sách hư hỏng hoặc thất lạc tại điểm; không phải giá bán.",
+  "Xem lại thông tin trước khi gửi duyệt. Sách đấu giá không hiển thị trên kệ mua/đổi.",
+] as const;
+
 const checkMessage =
   "Có thông tin cần bổ sung. Kiểm tra các mục được ghi chú bên dưới.";
 
@@ -98,9 +122,13 @@ export function DraftEditor({
     cache = useQueryClient(),
     foreground = useForeground();
   const [base, setBase] = useState(initial),
-    [form, setForm] = useState(() =>
-      fromContent(initial.currentRevision.content),
-    );
+    [form, setForm] = useState(() => {
+      const f = fromContent(initial.currentRevision.content);
+      // Auction listings are always a Sale (ADR 0041); the selector is hidden.
+      return initial.channel === "Auction" && !f.mode
+        ? { ...f, mode: "Sale" as const }
+        : f;
+    });
   const [step, setStep] = useState(editableListing(initial) ? 0 : 4),
     [declared, setDeclared] = useState(false),
     [check, setCheck] = useState<{ errors: Errors; submit: boolean }>({
@@ -120,6 +148,9 @@ export function DraftEditor({
     [lifecyclePending, setLifecyclePending] = useState(false);
   const scroll = useRef<ScrollView>(null);
   const [catalogDirty, setCatalogDirty] = useState(false);
+  const auction = base.channel === "Auction";
+  const labels = auction ? auctionStepLabels : stepLabels;
+  const help = auction ? auctionStepHelp : stepHelp;
 
   // Price suggestion lives here so it survives step changes
   const [assist, setAssist] = useState<AssistState>({ status: "idle" });
@@ -602,9 +633,10 @@ export function DraftEditor({
 
         {/* 5-Step Stepper Tabs */}
         <StepNav
-          labels={stepLabels}
+          labels={labels}
+          short={auction ? auctionShortLabels : undefined}
           current={step}
-          states={stepLabels.map((_, i) => {
+          states={labels.map((_, i) => {
             if (i === 4) {
               if (base.state.moderation === "Approved") return "done";
               if (base.state.moderation === "PendingReview") return "review";
@@ -628,10 +660,10 @@ export function DraftEditor({
             accessibilityRole="header"
             style={{ fontSize: 20 }}
           >
-            {stepLabels[step]}
+            {labels[step]}
           </AppText>
           <AppText kind="small" color={stitchTokens.warmUmber} style={{ fontSize: 12 }}>
-            {stepHelp[step]}
+            {help[step]}
           </AppText>
         </View>
       </View>
@@ -974,9 +1006,10 @@ export function DraftEditor({
             errors={errors}
             disabled={locked}
             anchor={anchor}
+            auction={auction}
           />
 
-          {editable && (form.mode === "Sale" || form.mode === "Both") ? (
+          {editable && !auction && (form.mode === "Sale" || form.mode === "Both") ? (
             <PriceSuggestionPanel
               form={form}
               state={assist}
@@ -993,11 +1026,13 @@ export function DraftEditor({
             />
           ) : null}
 
-          <FulfillmentFields
-            value={form.fulfillment}
-            disabled={locked}
-            onChange={(fulfillment) => setForm((f) => ({ ...f, fulfillment }))}
-          />
+          {auction ? null : (
+            <FulfillmentFields
+              value={form.fulfillment}
+              disabled={locked}
+              onChange={(fulfillment) => setForm((f) => ({ ...f, fulfillment }))}
+            />
+          )}
         </View>
       ) : null}
 
@@ -1042,7 +1077,9 @@ export function DraftEditor({
                 {base.state.moderation === "PendingReview"
                   ? "Nội dung bài đăng đang được kiểm duyệt bởi đội ngũ Lật Lại."
                   : base.state.moderation === "Approved"
-                    ? "Ấn bản của bạn đã được kiểm duyệt và sẵn sàng công khai trên kệ sách Lật Lại."
+                    ? auction
+                      ? "Sách đấu giá đã được duyệt. Quay lại màn Gửi đấu giá để chọn điểm và giá khởi điểm."
+                      : "Ấn bản của bạn đã được kiểm duyệt và sẵn sàng công khai trên kệ sách Lật Lại."
                     : base.state.moderation === "Rejected"
                       ? `Bài đăng cần chỉnh sửa: ${base.latestDecision?.reason ?? "Chưa rõ lý do"}.`
                       : "Bài đăng đang ở chế độ bản nháp."}
@@ -1051,12 +1088,14 @@ export function DraftEditor({
           ) : null}
           <BookIdentity id={form.bookId} />
 
-          <FulfillmentFields
-            value={form.fulfillment}
-            disabled
-            summary
-            onChange={() => {}}
-          />
+          {auction ? null : (
+            <FulfillmentFields
+              value={form.fulfillment}
+              disabled
+              summary
+              onChange={() => {}}
+            />
+          )}
 
           {/* Photos Preview */}
           <View style={{ gap: space.sm }}>
@@ -1132,16 +1171,23 @@ export function DraftEditor({
               ],
               [
                 "Hình thức giao dịch",
-                form.mode === "Both"
-                  ? "Cả bán & đổi"
-                  : form.mode === "Sale"
-                    ? "Bán trực tiếp"
-                    : form.mode === "Exchange"
-                      ? "Đổi Lật-Xu"
-                      : "Chưa chọn",
+                auction
+                  ? "Đấu giá qua điểm giao nhận"
+                  : form.mode === "Both"
+                    ? "Cả bán & đổi"
+                    : form.mode === "Sale"
+                      ? "Bán trực tiếp"
+                      : form.mode === "Exchange"
+                        ? "Đổi Lật-Xu"
+                        : "Chưa chọn",
               ],
               ...(form.mode === "Sale" || form.mode === "Both"
-                ? [["Giá bán đề xuất", displayPrice(form.salePrice)]]
+                ? [
+                    [
+                      auction ? "Giá trị khai báo" : "Giá bán đề xuất",
+                      displayPrice(form.salePrice),
+                    ],
+                  ]
                 : []),
               ...(form.mode === "Exchange" || form.mode === "Both"
                 ? [["Giá trị đổi / đối chiếu", displayPrice(form.exchangeValue)]]

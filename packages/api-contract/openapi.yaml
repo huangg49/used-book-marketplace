@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.44.0
+  version: 0.45.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Member private address book and versioned demo service-area directory are
@@ -1426,6 +1426,12 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/VisibilityStatus"
+        - in: query
+          name: channel
+          required: false
+          schema:
+            $ref: "#/components/schemas/ListingChannel"
+          description: Omitted returns both channels for compatibility.
       responses:
         "200":
           description: Successful read.
@@ -5333,8 +5339,9 @@ paths:
       operationId: createAuctionIntake
       tags:
         - Auctions
-      description: Seller ACTIVE verified MEMBER. Approved, Visible, Available Sale listing with current
-        revision; Exchange/Both rejected. In one transaction snapshots revision/start/step/buyNow,
+      description: Seller ACTIVE verified MEMBER. Approved, Visible, Available listing of channel Auction
+        (ADR 0041) with current Sale revision; Marketplace listings return 409 InvalidState. In one
+        transaction snapshots revision/start/step/buyNow,
         takes the exclusive commitment and one point slot (capacity checked under the point lock).
         Self drop-off within 72 hours; at most two unfinished intakes/auctions per seller (POL-41).
       x-implementation-status: implemented
@@ -8957,6 +8964,15 @@ components:
         - Sale
         - Exchange
         - Both
+    ListingChannel:
+      type: string
+      enum:
+        - Marketplace
+        - Auction
+      description: Immutable after draft creation (ADR 0041). Marketplace listings use the public
+        shelf, quotes, purchases and exchanges. Auction listings are created by the auction flow,
+        use mode Sale with salePrice as the declared (protective) value and no fulfillment origin,
+        never appear on the marketplace and are the only listings accepted by CreateAuctionIntake.
     BookCondition:
       type: string
       enum:
@@ -10129,6 +10145,7 @@ components:
         - id
         - ownerId
         - version
+        - channel
         - state
         - currentRevision
         - latestDecision
@@ -10147,6 +10164,8 @@ components:
           type: integer
           minimum: 1
           maximum: 2147483647
+        channel:
+          $ref: "#/components/schemas/ListingChannel"
         state:
           $ref: "#/components/schemas/ListingState"
         currentRevision:
@@ -10636,6 +10655,10 @@ components:
       required:
         - content
       properties:
+        channel:
+          $ref: "#/components/schemas/ListingChannel"
+          description: Defaults to Marketplace. Auction requires content mode null or Sale,
+            exchangeValue null and no fulfillment.
         content:
           allOf:
             - $ref: "#/components/schemas/DraftContent"

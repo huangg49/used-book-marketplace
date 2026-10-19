@@ -1,5 +1,31 @@
 # Điểm lưu hiện tại — 19/10/2026
 
+## Sách đấu giá là listing riêng (ADR 0041) — 19/10/2026
+
+- Chủ dự án yêu cầu: tạo đấu giá không lấy listing của sàn mua/đổi mà dùng listing
+  riêng. ADR 0041 + sửa DEC-07/FR-AU01 (phụ lục) và FR-C05/BR-02 (SRS). Listing có
+  `channel` bất biến `Marketplace|Auction` (OpenAPI 0.45.0); migration
+  `0032-auction-only-listings` backfill Marketplace, import PostgreSQL gán Marketplace.
+- API: draft/save/submit/revise Auction chỉ mode Sale (salePrice = giá trị khai báo
+  = giá trị bảo vệ), không origin. `publicEligibleStages()` mặc định loại Auction
+  (kệ/tìm/chi tiết/ảnh/quote/Mua ngay/đơn chọn); purchase/exchange/wishlist/
+  price-assist kiểm lại channel; intake chỉ nhận Auction (Marketplace → 409).
+  Intake cũ trên listing sàn giữ nguyên. Giới hạn 5 bài ADR 0040 đếm chung kênh.
+- RN: send-to-auction chỉ liệt kê listing Auction, tạo/mở tiếp bản nháp trong
+  DraftEditor chế độ đấu giá; Tủ sách/Tài khoản lọc Marketplace. Web: `/sell?channel=Auction`,
+  `/auctions/new` chỉ dùng listing Auction; kệ/đổi/dashboard lọc Marketplace.
+  Admin review hiện nhãn “Sách đấu giá”. Flutter chưa đổi (scaffold).
+- Nhánh `feature/auction-only-listings` (base main 8741a6f). PASS: contract check,
+  API typecheck/unit150, E2E `auction-listings` 4 + `auctions` 54 (thêm ca từ chối
+  listing sàn; mutation check guard/predicate), RN tsc/lint/67, web tsc/141,
+  admin tsc/28. Mongo suite: 4 ca nâng cấp migration lỗi cả trên main sạch
+  (`member_notifications` ExchangeDisputed), không do 0032. Browser QA trên API
+  fixture 3009 + DB `_test`: web tạo/giữ chỗ đấu giá từ listing Auction; RN tạo/lưu
+  bản nháp Auction, Tủ sách không lẫn. DB local chủ dự án đã `db:migrate` 18 migration
+  còn thiếu từ main + 0032, rồi `db:bootstrap` (không reset/seed). Native/human/remote CI NOT RUN. READINESS không đổi.
+- Riêng: nhánh `fix/rn-auction-fake-data` (8111c17) bỏ dữ liệu bịa ở màn Đấu giá RN;
+  màn Tài khoản RN còn dữ liệu mẫu (★4.9, đơn #DH-8821). Chưa push/PR/merge.
+
 ## Sửa thông tin trước gửi và thử lại nơi gửi — 19/10/2026
 
 - Chủ dự án báo POST `/me/addresses`502 sau quay lại sửa bước1 rồi gửi ở bước5.

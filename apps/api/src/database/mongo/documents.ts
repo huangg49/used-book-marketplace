@@ -100,10 +100,13 @@ export interface CatalogDecisionDoc {
   decidedAt: Date;
 }
 
+export type ListingChannel = 'Marketplace' | 'Auction';
 export interface ListingDoc extends Lockable {
   _id: string;
   ownerId: string;
   version: number;
+  // ADR 0041: immutable; Auction listings never reach the marketplace.
+  channel: ListingChannel;
   moderation: ModerationStatus;
   visibility: VisibilityStatus;
   trade: TradeStatus;

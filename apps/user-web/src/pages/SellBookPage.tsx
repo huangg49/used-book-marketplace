@@ -6,6 +6,7 @@ import {
   useBeforeUnload,
   useBlocker,
   useLocation,
+  useSearchParams,
 } from "react-router-dom";
 import {
   ArrowLeft,
@@ -70,6 +71,10 @@ const addressReceiptSchema = z.object({
 });
 
 export function SellBookPage() {
+  // ADR 0041: /sell?channel=Auction creates the seller's own auction listing:
+  // a Sale with a declared value, no delivery origin and never on the shelf.
+  const [searchParams] = useSearchParams();
+  const auction = searchParams.get("channel") === "Auction";
   const submission = useRef<ReturnType<typeof createListingSubmission>>(null);
   const [classification, setClassification] = useState<ClassificationValue>({
     categoryId: "",
@@ -147,6 +152,7 @@ export function SellBookPage() {
     salePrice: "",
     exchangeValue: "",
   });
+  const needsOrigin = !auction && formData.mode !== "Exchange";
 
   const heading = useRef<HTMLHeadingElement>(null);
   const errorBox = useRef<HTMLDivElement>(null);
@@ -310,7 +316,6 @@ export function SellBookPage() {
 
   const handleSubmit = async () => {
     if (submitting) return;
-    const needsOrigin = formData.mode !== "Exchange";
     const selectedOrigin = addresses.data?.items.find(
       (item) => item.id === originAddressId,
     );
@@ -349,7 +354,11 @@ export function SellBookPage() {
       formData.mode !== "Exchange" &&
       (!Number.isInteger(sale) || sale < 10_000 || sale > 1_000_000)
     )
-      missing.push("giá bán từ 10.000đ đến 1.000.000đ");
+      missing.push(
+        auction
+          ? "giá trị khai báo từ 10.000đ đến 1.000.000đ"
+          : "giá bán từ 10.000đ đến 1.000.000đ",
+      );
     if (
       formData.mode !== "Sale" &&
       (!Number.isInteger(exchange) || exchange < 10_000 || exchange > 1_000_000)
@@ -414,6 +423,7 @@ export function SellBookPage() {
           );
       }
       submission.current ??= createListingSubmission({
+        ...(auction ? { channel: "Auction" as const } : {}),
         title: formData.title,
         author: formData.author,
         category:
@@ -431,7 +441,7 @@ export function SellBookPage() {
         notes: formData.notes,
         accessories: formData.accessories,
         description: formData.description,
-        mode: formData.mode as "Sale" | "Exchange" | "Both",
+        mode: auction ? "Sale" : (formData.mode as "Sale" | "Exchange" | "Both"),
         salePrice: formData.mode === "Exchange" ? null : sale,
         exchangeValue: formData.mode === "Sale" ? null : exchange,
         files: imageFiles,
@@ -463,7 +473,7 @@ export function SellBookPage() {
     "Thông tin sách",
     "Ảnh bản sách",
     "Tình trạng",
-    "Bán hoặc đổi",
+    auction ? "Giá trị khai báo" : "Bán hoặc đổi",
     "Kiểm tra",
   ];
   const textFields = [
@@ -533,11 +543,7 @@ export function SellBookPage() {
     )
       message =
         "Giá bán và giá trị đổi từ 10.000đ đến 1.000.000đ, không có phần lẻ.";
-    if (
-      forStep === 4 &&
-      formData.mode !== "Exchange" &&
-      !hasValidOriginAddress()
-    )
+    if (forStep === 4 && needsOrigin && !hasValidOriginAddress())
       message =
         "Chọn khu vực luân chuyển và nhập đủ nơi gửi sách trước khi tiếp tục.";
     return message;
@@ -615,7 +621,7 @@ export function SellBookPage() {
         ? "Nhập số nguyên từ 10.000 đến 1.000.000 VNĐ."
         : undefined,
     originAddress:
-      formData.mode !== "Exchange" && !hasValidOriginAddress()
+      needsOrigin && !hasValidOriginAddress()
         ? "Chọn địa chỉ đã lưu hoặc nhập đủ nơi gửi sách và khu vực luân chuyển."
         : undefined,
     readable:
@@ -672,7 +678,9 @@ export function SellBookPage() {
     "Chọn đầu sách đã có, hoặc bổ sung thông tin như trên bìa.",
     "Ảnh thật giúp người đọc nhìn rõ bản sách của bạn.",
     "Kể rõ những dấu vết đã có trên cuốn sách.",
-    "Chọn hình thức phù hợp và đặt giá cho bản sách.",
+    auction
+      ? "Khai báo giá trị cuốn sách; giá khởi điểm đặt khi gửi đấu giá."
+      : "Chọn hình thức phù hợp và đặt giá cho bản sách.",
     "Xem lại một lượt. Bạn có thể chỉnh sửa từng phần.",
   ];
   function reviewEdit(target: number) {
@@ -791,18 +799,20 @@ export function SellBookPage() {
       {(checkedSteps.includes(3) || formData.pages || formData.description) && (
         <span>
           {conditions[formData.condition as keyof typeof conditions]} ·{" "}
-          {formData.mode === "Sale"
-            ? "Bán"
-            : formData.mode === "Exchange"
-              ? "Đổi"
-              : "Bán hoặc đổi"}
+          {auction
+            ? "Đấu giá"
+            : formData.mode === "Sale"
+              ? "Bán"
+              : formData.mode === "Exchange"
+                ? "Đổi"
+                : "Bán hoặc đổi"}
         </span>
       )}
       {step >= 4 || formData.salePrice || formData.exchangeValue ? (
         <dl>
           {formData.mode !== "Exchange" && (
             <div>
-              <dt>Giá bán</dt>
+              <dt>{auction ? "Giá trị khai báo" : "Giá bán"}</dt>
               <dd
                 className={
                   !validPrice(formData.salePrice)
@@ -812,7 +822,9 @@ export function SellBookPage() {
               >
                 {validPrice(formData.salePrice)
                   ? formatVnd(Number(formData.salePrice))
-                  : "Chưa có giá bán"}
+                  : auction
+                    ? "Chưa có giá trị khai báo"
+                    : "Chưa có giá bán"}
               </dd>
             </div>
           )}
@@ -938,15 +950,17 @@ export function SellBookPage() {
       <Header />
       <main id="sell-content" className={styles.page}>
         <header className={styles.intro}>
-          <h1>Đăng sách</h1>
+          <h1>{auction ? "Tạo sách đấu giá" : "Đăng sách"}</h1>
           <p className={styles.tagline}>Để sách đi tiếp.</p>
           <p>
-            Thêm ảnh và kể rõ tình trạng bản sách. Kiểm tra một lượt trước khi
-            gửi duyệt.
+            {auction
+              ? "Sách đấu giá là bài đăng riêng, không hiển thị trên kệ mua/đổi. Sau khi được duyệt, bạn gửi sách tới điểm giao nhận để kiểm tra trước khi mở phiên."
+              : "Thêm ảnh và kể rõ tình trạng bản sách. Kiểm tra một lượt trước khi gửi duyệt."}
           </p>
         </header>
         {step === 6 ? (
           <ListingSubmissionConfirmation
+            auction={auction}
             title={formData.title}
             onPostAnother={() => {
               formData.images.forEach((url) => URL.revokeObjectURL(url));
@@ -1608,6 +1622,13 @@ export function SellBookPage() {
                       )}
                       {step === 4 && (
                         <>
+                          {auction ? (
+                            <p className={styles.help}>
+                              Giá trị khai báo là mức bồi thường tối đa nếu sách
+                              hư hỏng hoặc thất lạc tại điểm giao nhận. Đây không
+                              phải giá bán; giá khởi điểm đặt khi gửi đấu giá.
+                            </p>
+                          ) : (
                           <fieldset className={styles.mode}>
                             <legend>Bạn muốn bán hay đổi?</legend>
                             <div className={styles.modeOptions}>
@@ -1638,11 +1659,13 @@ export function SellBookPage() {
                               ))}
                             </div>
                           </fieldset>
+                          )}
                           <p className={styles.help}>
-                            Giá bán và giá trị đổi đều tính bằng VNĐ, từ 10.000đ
-                            đến 1.000.000đ.
+                            {auction
+                              ? "Giá trị khai báo tính bằng VNĐ, từ 10.000đ đến 1.000.000đ."
+                              : "Giá bán và giá trị đổi đều tính bằng VNĐ, từ 10.000đ đến 1.000.000đ."}
                           </p>
-                          {formData.mode !== "Exchange" && (
+                          {needsOrigin && (
                             <>
                               <section
                                 className={styles.mode}
@@ -1844,7 +1867,7 @@ export function SellBookPage() {
                             [
                               [
                                 "salePrice",
-                                "Giá bán",
+                                auction ? "Giá trị khai báo" : "Giá bán",
                                 formData.mode !== "Exchange",
                               ],
                               [
@@ -1981,14 +2004,16 @@ export function SellBookPage() {
                             ))}
                           </dl>
                           <div className={styles.reviewHeading}>
-                            <h3>Bán hoặc đổi</h3>
+                            <h3>{auction ? "Giá trị khai báo" : "Bán hoặc đổi"}</h3>
                             {reviewEdit(4)}
                           </div>
                           <dl className={styles.reviewFacts}>
                             <div>
                               <dt>Hình thức</dt>
                               <dd>
-                                {formData.mode === "Sale"
+                                {auction
+                                  ? "Đấu giá qua điểm giao nhận"
+                                  : formData.mode === "Sale"
                                   ? "Bán sách"
                                   : formData.mode === "Exchange"
                                     ? "Đổi sách"
@@ -1997,7 +2022,7 @@ export function SellBookPage() {
                             </div>
                             {formData.mode !== "Exchange" && (
                               <div>
-                                <dt>Giá bán</dt>
+                                <dt>{auction ? "Giá trị khai báo" : "Giá bán"}</dt>
                                 <dd>
                                   {validPrice(formData.salePrice)
                                     ? formatVnd(Number(formData.salePrice))
@@ -2015,7 +2040,7 @@ export function SellBookPage() {
                                 </dd>
                               </div>
                             )}
-                            {formData.mode !== "Exchange" && (
+                            {needsOrigin && (
                               <div>
                                 <dt>Nơi gửi sách</dt>
                                 <dd>
@@ -2028,18 +2053,18 @@ export function SellBookPage() {
                               </div>
                             )}
                           </dl>
-                          {formData.mode !== "Exchange" && (
+                          {needsOrigin && (
                             <p className={styles.help}>
                               Địa chỉ chi tiết và số điện thoại chỉ dùng cho
                               giao nhận; người mua chỉ thấy khu vực luân chuyển.
                             </p>
                           )}
                           <p className={styles.help}>
-                            {imageFiles.length} ảnh bản sách. Bài đăng và thông
-                            tin sách được gửi kiểm duyệt trước khi xuất hiện
-                            trên kệ.
+                            {auction
+                              ? `${imageFiles.length} ảnh bản sách. Sách đấu giá được gửi kiểm duyệt; sau khi duyệt sách không lên kệ mua/đổi mà chờ bạn gửi tới điểm.`
+                              : `${imageFiles.length} ảnh bản sách. Bài đăng và thông tin sách được gửi kiểm duyệt trước khi xuất hiện trên kệ.`}
                           </p>
-                          {formData.mode !== "Exchange" && (
+                          {!auction && formData.mode !== "Exchange" && (
                             <p className={styles.help}>
                               Người mua có thể Mua ngay theo giá bạn niêm yết.
                               Khi thanh toán thành công, đơn được chốt và bạn

@@ -779,6 +779,8 @@ export function toDocuments(snapshot: Snapshot): Record<string, Document[]> {
   );
   for (const book of out.catalog_books)
     book.titleKey = titleKey(revisions.get(book.currentRevisionId) ?? '');
+  // PostgreSQL had marketplace listings only (ADR 0041).
+  for (const listing of out.listings) listing.channel = 'Marketplace';
   for (const receipt of out.mutation_receipts)
     receipt.principal = receipt.actorId
       ? `user:${receipt.actorId}`

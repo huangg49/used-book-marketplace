@@ -47,7 +47,7 @@ export function SendToAuctionPolicy({ defaultExpanded = true }: SendToAuctionPol
       {expanded && (
         <>
           <AppText style={styles.descText}>
-            Mang sách tới điểm tiếp nhận trong <AppText kind="bold" style={styles.boldSpan}>72 giờ</AppText>. Nhân viên kiểm tra tình trạng thực tế theo bài đăng đã duyệt; đạt tiêu chuẩn thì mở phiên đấu giá 24 giờ. Không đạt hoặc không có người mua, bạn nhận lại sách tại điểm.
+            Mang sách tới điểm tiếp nhận trong <AppText kind="bold" style={styles.boldSpan}>72 giờ</AppText>. Nhân viên kiểm tra tình trạng thực tế theo sách đấu giá đã duyệt; đạt tiêu chuẩn thì mở phiên đấu giá 24 giờ. Không đạt hoặc không có người mua, bạn nhận lại sách tại điểm.
           </AppText>
 
           <View style={styles.footerRow}>

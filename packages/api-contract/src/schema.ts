@@ -1764,7 +1764,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Seller ACTIVE verified MEMBER. Approved, Visible, Available Sale listing with current revision; Exchange/Both rejected. In one transaction snapshots revision/start/step/buyNow, takes the exclusive commitment and one point slot (capacity checked under the point lock). Self drop-off within 72 hours; at most two unfinished intakes/auctions per seller (POL-41). */
+        /** @description Seller ACTIVE verified MEMBER. Approved, Visible, Available listing of channel Auction (ADR 0041) with current Sale revision; Marketplace listings return 409 InvalidState. In one transaction snapshots revision/start/step/buyNow, takes the exclusive commitment and one point slot (capacity checked under the point lock). Self drop-off within 72 hours; at most two unfinished intakes/auctions per seller (POL-41). */
         post: operations["createAuctionIntake"];
         delete?: never;
         options?: never;
@@ -2919,6 +2919,11 @@ export interface components {
         };
         /** @enum {string} */
         ListingMode: "Sale" | "Exchange" | "Both";
+        /**
+         * @description Immutable after draft creation (ADR 0041). Marketplace listings use the public shelf, quotes, purchases and exchanges. Auction listings are created by the auction flow, use mode Sale with salePrice as the declared (protective) value and no fulfillment origin, never appear on the marketplace and are the only listings accepted by CreateAuctionIntake.
+         * @enum {string}
+         */
+        ListingChannel: "Marketplace" | "Auction";
         /** @enum {string} */
         BookCondition: "LikeNew" | "Good" | "Fair" | "Worn";
         /** @enum {string} */
@@ -3149,6 +3154,7 @@ export interface components {
             /** Format: uuid */
             ownerId: string;
             version: number;
+            channel: components["schemas"]["ListingChannel"];
             state: components["schemas"]["ListingState"];
             currentRevision: components["schemas"]["ListingRevision"];
             latestDecision: components["schemas"]["ReviewDecision"] | null;
@@ -3374,6 +3380,8 @@ export interface components {
         };
         /** @description Create the server draft before requesting uploads. mediaIds must be empty at creation because assets are bound to an existing listing ID. SaveDraft attaches uploaded media later. */
         CreateDraft: {
+            /** @description Defaults to Marketplace. Auction requires content mode null or Sale, exchangeValue null and no fulfillment. */
+            channel?: components["schemas"]["ListingChannel"];
             content: components["schemas"]["DraftContent"] & {
                 mediaIds?: unknown[];
             };
@@ -6304,6 +6312,8 @@ export interface operations {
                 cursor?: string;
                 moderation?: components["schemas"]["ModerationStatus"];
                 visibility?: components["schemas"]["VisibilityStatus"];
+                /** @description Omitted returns both channels for compatibility. */
+                channel?: components["schemas"]["ListingChannel"];
             };
             header?: never;
             path?: never;

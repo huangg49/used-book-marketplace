@@ -14,17 +14,38 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 
 export interface SendToAuctionBookPickerProps {
   readonly eligibleListings: PrivateDraft[];
+  // ADR 0041: the seller's own Auction listings still being written or reviewed.
+  readonly unfinishedListings?: PrivateDraft[];
   readonly selectedListingId: string | null;
   readonly onSelectListing: (id: string) => void;
+  readonly onOpenListing?: (id: string) => void;
+  readonly onCreateListing?: () => void;
+  readonly creating?: boolean;
+  readonly createError?: string | null;
+  readonly loadError?: boolean;
+  readonly onRetryLoad?: () => void;
   readonly disabled?: boolean;
   readonly isLoading?: boolean;
   readonly defaultExpanded?: boolean;
 }
 
+const unfinishedStatus: Record<string, string> = {
+  Draft: "Bản nháp · cần hoàn thiện",
+  PendingReview: "Đang chờ duyệt",
+  Rejected: "Cần chỉnh sửa theo góp ý",
+};
+
 export function SendToAuctionBookPicker({
   eligibleListings,
+  unfinishedListings = [],
   selectedListingId,
   onSelectListing,
+  onOpenListing,
+  onCreateListing,
+  creating = false,
+  createError = null,
+  loadError = false,
+  onRetryLoad,
   disabled = false,
   isLoading = false,
   defaultExpanded = true,
@@ -50,7 +71,7 @@ export function SendToAuctionBookPicker({
         <View style={styles.headerLeft}>
           <Icon name="book" size={17} color={stitchTokens.wineDark} />
           <AppText kind="bold" style={styles.sectionTitle}>
-            1. Chọn sách
+            1. Sách đấu giá
           </AppText>
         </View>
 
@@ -80,28 +101,123 @@ export function SendToAuctionBookPicker({
       {expanded && (
         <>
           <AppText style={styles.sectionNote}>
-            Chỉ các bài đăng Bán đã được kiểm duyệt hồ sơ và đang sẵn sàng mới có thể đưa lên sàn đấu giá.
+            Sách đấu giá là bài đăng riêng, không hiển thị trên kệ mua/đổi. Tạo sách, chờ duyệt rồi chọn để gửi tới điểm.
           </AppText>
+
+          {onCreateListing ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Tạo sách đấu giá mới"
+              accessibilityState={{ disabled: disabled || creating, busy: creating }}
+              disabled={disabled || creating}
+              onPress={onCreateListing}
+              style={({ pressed }) => [
+                styles.createBtn,
+                (disabled || creating) && { opacity: 0.6 },
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              {creating ? (
+                <ActivityIndicator size="small" color={stitchTokens.wineDark} />
+              ) : (
+                <Icon name="plus" size={16} color={stitchTokens.wineDark} />
+              )}
+              <AppText kind="bold" style={styles.createBtnText}>
+                {creating ? "Đang tạo sách đấu giá…" : "Tạo sách đấu giá mới"}
+              </AppText>
+            </Pressable>
+          ) : null}
+          {createError ? (
+            <AppText kind="small" style={styles.errorText} accessibilityRole="alert">
+              {createError}
+            </AppText>
+          ) : null}
+
+          {/* Load error */}
+          {loadError && !isLoading ? (
+            <View style={styles.emptyContainer}>
+              <AppText kind="bold" style={styles.emptyTitle}>
+                Chưa tải được sách đấu giá
+              </AppText>
+              {onRetryLoad ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={onRetryLoad}
+                  style={styles.createBtn}
+                >
+                  <AppText kind="bold" style={styles.createBtnText}>
+                    Thử lại
+                  </AppText>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+
+          {/* Unfinished auction listings */}
+          {!isLoading && unfinishedListings.length > 0 && (
+            <View style={styles.listContainer}>
+              {unfinishedListings.map((item) => (
+                <Pressable
+                  key={item.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Mở sách đấu giá, ${unfinishedStatus[item.state.moderation] ?? item.state.moderation}`}
+                  disabled={disabled || !onOpenListing}
+                  onPress={() => onOpenListing?.(item.id)}
+                  style={({ pressed }) => [
+                    styles.bookCard,
+                    pressed && { opacity: 0.88 },
+                  ]}
+                >
+                  <View style={styles.coverWrapper}>
+                    <DraftCoverPhoto
+                      listingId={item.id}
+                      mediaId={item.currentRevision.content.mediaIds?.[0]}
+                      label="Ảnh bìa sách đấu giá"
+                    />
+                  </View>
+                  <View style={styles.bookDetails}>
+                    <View style={styles.tagRow}>
+                      <View style={styles.tagPill}>
+                        <AppText kind="small" style={styles.tagPillText}>
+                          {(unfinishedStatus[item.state.moderation] ?? item.state.moderation).toLocaleUpperCase("vi")}
+                        </AppText>
+                      </View>
+                    </View>
+                    {item.currentRevision.content.bookId ? (
+                      <BookIdentity id={item.currentRevision.content.bookId} compact />
+                    ) : (
+                      <AppText kind="small" style={styles.bookAuthor}>
+                        Chưa chọn đầu sách
+                      </AppText>
+                    )}
+                  </View>
+                  <Icon name="chevronRight" size={18} color={stitchTokens.wineDark} />
+                </Pressable>
+              ))}
+            </View>
+          )}
 
           {/* Loading state */}
           {isLoading && (
             <View style={styles.centerLoading}>
           <ActivityIndicator size="small" color={stitchTokens.wine} />
           <AppText kind="small" style={{ color: stitchTokens.subtleGray, marginTop: 6 }}>
-            Đang tải sách đã duyệt...
+            Đang tải sách đấu giá...
           </AppText>
         </View>
       )}
 
       {/* Empty state */}
-      {!isLoading && eligibleListings.length === 0 && (
+      {!isLoading && !loadError && eligibleListings.length === 0 && (
         <View style={styles.emptyContainer}>
           <Icon name="book" size={28} color={stitchTokens.subtleGray} />
           <AppText kind="bold" style={styles.emptyTitle}>
-            Chưa có sách đủ điều kiện
+            Chưa có sách đấu giá đã duyệt
           </AppText>
           <AppText kind="small" style={styles.emptyDesc}>
-            {"Hãy đăng sách mới ở chế độ \"Bán\" hoặc đợi sách được ban quản trị duyệt để gửi vào sàn đấu giá."}
+            {unfinishedListings.length > 0
+              ? "Sách ở trên sẽ chọn được tại đây sau khi được duyệt."
+              : "Tạo sách đấu giá mới; sau khi được duyệt bạn chọn sách để gửi tới điểm."}
           </AppText>
         </View>
       )}
@@ -153,12 +269,12 @@ export function SendToAuctionBookPicker({
 
                   <View style={styles.footerRow}>
                     <AppText kind="bold" style={styles.priceProtectText}>
-                      Giá bảo hộ: {salePrice != null ? formatVnd(salePrice) : "—"}
+                      Giá trị khai báo: {salePrice != null ? formatVnd(salePrice) : "—"}
                     </AppText>
                     <View style={styles.listedBadge}>
-                      <Icon name="shield" size={11} color={stitchTokens.subtleGray} />
+                      <Icon name="check" size={11} color={stitchTokens.subtleGray} />
                       <AppText kind="small" style={styles.listedBadgeText}>
-                        Đã niêm yết
+                        Đã duyệt
                       </AppText>
                     </View>
                   </View>
@@ -360,6 +476,27 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.cardBorder,
     alignItems: "center",
     justifyContent: "center",
+  },
+  createBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    minHeight: 44,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.wineDark,
+    backgroundColor: stitchTokens.whiteAlpha90,
+    paddingHorizontal: 14,
+  },
+  createBtnText: {
+    fontSize: 14,
+    color: stitchTokens.wineDark,
+  },
+  errorText: {
+    fontSize: 12,
+    color: stitchTokens.flashRed,
+    lineHeight: 16,
   },
   checkCircleActive: {
     backgroundColor: stitchTokens.wineDark,

@@ -293,13 +293,15 @@ export function intakePriceErrors(
   }
   return errors;
 }
-// FR-AU01: only approved, visible, still-available Sale listings enter; the
-// server rechecks under the listing lock.
+// FR-AU01/ADR 0041: only the seller's own approved, visible, still-available
+// Auction listings enter; the server rechecks under the listing lock.
 export function auctionEligible(listing: {
+  channel: string;
   state: { moderation: string; visibility: string; trade: string; deletedAt: string | null };
   currentRevision: { content: { mode: string | null } };
 }) {
   return (
+    listing.channel === "Auction" &&
     listing.state.moderation === "Approved" &&
     listing.state.visibility === "Visible" &&
     listing.state.trade === "Available" &&

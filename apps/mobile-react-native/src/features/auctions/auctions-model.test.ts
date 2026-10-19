@@ -116,12 +116,15 @@ describe("seller intake (POL-39, FR-AU01)", () => {
     expect(intakePriceErrors(200_000, 50_000, 320_000).buyNowPrice).toMatch(/350\.000/);
     expect(intakePriceErrors(200_000, 50_000, 600_000)).toEqual({});
   });
-  it("only lets an approved, visible, available Sale listing in", () => {
-    const listing = (over: Partial<{ moderation: string; visibility: string; trade: string; mode: string }>) => ({
+  it("only lets an approved, visible, available Auction listing in", () => {
+    const listing = (over: Partial<{ moderation: string; visibility: string; trade: string; mode: string; channel: string }>) => ({
+      channel: over.channel ?? "Auction",
       state: { moderation: "Approved", visibility: "Visible", trade: "Available", deletedAt: null, ...over },
       currentRevision: { content: { mode: over.mode ?? "Sale" } },
     });
     expect(auctionEligible(listing({}))).toBe(true);
+    // ADR 0041: a marketplace listing is never an auction source.
+    expect(auctionEligible(listing({ channel: "Marketplace" }))).toBe(false);
     expect(auctionEligible(listing({ mode: "Both" }))).toBe(false);
     expect(auctionEligible(listing({ trade: "Reserved" }))).toBe(false);
     expect(auctionEligible(listing({ visibility: "Hidden" }))).toBe(false);

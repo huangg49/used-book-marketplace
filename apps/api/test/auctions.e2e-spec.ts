@@ -72,9 +72,14 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       .signAsync({ sub: user._id, sid: sessionId });
     return { id: user._id, token, sessionId };
   }
-  async function saleListing(owner: Actor, mode: 'Sale' | 'Both' = 'Sale') {
+  // ADR 0041: auctions use the seller's own Auction-channel listing.
+  async function saleListing(
+    owner: Actor,
+    mode: 'Sale' | 'Both' = 'Sale',
+    channel: 'Auction' | 'Marketplace' = 'Auction',
+  ) {
     const book = await fixtures.book(owner.id, reviewer.id);
-    const l = await fixtures.listing(owner.id, book.id, true);
+    const l = await fixtures.listing(owner.id, book.id, true, channel);
     await fixtures.commit(
       (tx) =>
         tx.c.listing_revisions.updateOne(
@@ -83,7 +88,10 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
             $set:
               mode === 'Sale'
                 ? { mode: 'Sale', exchangeValue: null }
-                : { mode: listingContent.mode },
+                : {
+                    mode: listingContent.mode,
+                    exchangeValue: listingContent.exchangeValue,
+                  },
           },
         ),
       { listing: l.id },
@@ -1225,7 +1233,21 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     const seller = await actor();
     const both = await saleListing(seller, 'Both');
     await cmd('post', '/auction-intakes', intakeBody(both), seller).expect(409);
+    // ADR 0041: an approved marketplace Sale listing is not an auction source.
+    const marketplace = await saleListing(seller, 'Sale', 'Marketplace');
+    const refused = await cmd(
+      'post',
+      '/auction-intakes',
+      intakeBody(marketplace),
+      seller,
+    ).expect(409);
+    expect(refused.body.code).toBe('InvalidState');
+    expect(await db.c.listings.findOne({ _id: marketplace.id })).toMatchObject({
+      trade: 'Available',
+    });
     const l = await saleListing(seller);
+    // An approved auction listing is never on the marketplace (ADR 0041).
+    await call('get', `/listings/${l.id}`).expect(404);
     const stranger = await actor();
     await cmd('post', '/auction-intakes', intakeBody(l), stranger).expect(404);
     await cmd(

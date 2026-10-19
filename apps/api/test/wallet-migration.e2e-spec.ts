@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { MongoClient, type Db } from 'mongodb';
+import { MongoClient, type Db, type Document } from 'mongodb';
 import { bindCollections } from '../src/database/mongo/collections.js';
+import type { ListingDoc } from '../src/database/mongo/documents.js';
 import { migrate } from '../src/database/mongo/migrate.js';
 import { migrations } from '../src/database/mongo/migrations/index.js';
 import {
@@ -109,6 +110,7 @@ it('upgrades from the baseline without changing existing address/listing/receipt
       originServiceAreaCode: 'HCM-DEMO-v1',
       lockSeq: 0,
     });
+    // Pre-0032 shape: the migration backfills `channel` (ADR 0041).
     await c.listings.insertOne({
       _id: listing,
       ownerId: owner,
@@ -123,7 +125,7 @@ it('upgrades from the baseline without changing existing address/listing/receipt
       createdAt: now,
       updatedAt: now,
       lockSeq: 0,
-    });
+    } as ListingDoc);
     const targets = {
       listingId: listing,
       bookId: null,
@@ -183,8 +185,15 @@ it('upgrades from the baseline without changing existing address/listing/receipt
       migrations.slice(before0002.length).map((m) => m.id),
     );
     // Receipts/audits already carry `topupId: null` in the baseline, so unlike
-    // the PostgreSQL column addition no field is expected to appear.
-    expect(await snapshot(rootDb)).toEqual(before);
+    // the PostgreSQL column addition no field is expected to appear. 0032 only
+    // backfills the marketplace channel on existing listings (ADR 0041).
+    expect(await snapshot(rootDb)).toEqual({
+      ...before,
+      listings: (before.listings as Document[]).map((l) => ({
+        ...l,
+        channel: 'Marketplace',
+      })),
+    });
     expect(
       await rootDb
         .collection('wallet_accounts')

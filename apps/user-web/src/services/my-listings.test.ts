@@ -13,9 +13,18 @@ describe("owner shelf reads", () => {
   it("bounds the overview read without changing the default full shelf size", async () => {
     request.mockResolvedValue({ items: [], nextCursor: "more" });
     await getMyListings(undefined, undefined, 4);
-    expect(request.mock.calls[0]![0]).toBe("/me/listings?limit=4");
+    // ADR 0041: shelf reads are marketplace-only unless the auction flow asks.
+    expect(request.mock.calls[0]![0]).toBe(
+      "/me/listings?limit=4&channel=Marketplace",
+    );
     await getMyListings();
-    expect(request.mock.calls[1]![0]).toBe("/me/listings?limit=20");
+    expect(request.mock.calls[1]![0]).toBe(
+      "/me/listings?limit=20&channel=Marketplace",
+    );
+    await getMyListings(undefined, undefined, 50, "Auction");
+    expect(request.mock.calls[2]![0]).toBe(
+      "/me/listings?limit=50&channel=Auction",
+    );
   });
   it("encodes the opaque cursor without changing the moderation scope", async () => {
     request.mockResolvedValue({ items: [], nextCursor: null });
@@ -27,6 +36,7 @@ describe("owner shelf reads", () => {
     expect(url.pathname).toBe("/me/listings");
     expect(Object.fromEntries(url.searchParams)).toEqual({
       limit: "20",
+      channel: "Marketplace",
       moderation: "Rejected",
       cursor: "opaque+/=&",
     });

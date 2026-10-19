@@ -25,8 +25,10 @@ export function isPublicOwnerListing(item: MyListing) {
 
 // Only approved, visible, still-available Sale listings can enter an auction
 // (FR-AU01); the server rechecks under the listing lock.
+// ADR 0041: only the seller's own Auction listings go to auction.
 export function auctionEligible(item: MyListing) {
   return (
+    item.channel === "Auction" &&
     isPublicOwnerListing(item) &&
     item.state.trade === "Available" &&
     item.currentRevision.content.mode === "Sale"

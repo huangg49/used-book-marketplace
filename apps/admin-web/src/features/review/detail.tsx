@@ -123,6 +123,17 @@ function DetailContent({
             <div className="reading-column">
               {"state" in value ? (
                 <>
+                  {value.channel === "Auction" && (
+                    <Notice>
+                      <strong>Sách đấu giá</strong>
+                      <p className="prose">
+                        Bài này không lên kệ mua/đổi. Giá là giá trị khai báo
+                        (mức bồi thường tối đa), không phải giá bán. Sau khi
+                        duyệt, sách còn được kiểm tra tại điểm trước khi mở
+                        phiên.
+                      </p>
+                    </Notice>
+                  )}
                   <BookReference
                     id={value.currentRevision.content.bookId}
                     confirmed={value.catalogStatus === "Confirmed"}
