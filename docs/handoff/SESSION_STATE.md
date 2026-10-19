@@ -2,6 +2,12 @@
 
 ## Ảnh thu nhỏ trong bản nháp — 19/10/2026
 
+- Follow-up: chủ dự án muốn thẻ lớn hơn một chút. Desktop rộng240→280px,
+  khung bìa216→240px; compact/mobile giữ override. Nhánh
+  `codex/widen-draft-preview`, basef4b1f51; subject `style(web): enlarge draft preview card`.
+  PASS build + browser regression (sticky1200/1440, gallery, mobile390, submit/
+  replay); đã xem ảnh desktop/mobile mới. Browser lần đầu chạy trước QA Mongo
+  healthy lỗi startup, retry sau healthy PASS. CSS-only, không chạy lại unit/API.
 - Member web `/sell`: ảnh thu nhỏ nằm dưới ảnh bìa trong thẻ “Cuốn sách của bạn”,
   cập nhật theo thứ tự ảnh bìa/phụ khi thay/xóa. Bấm thumbnail hoặc bìa mở ảnh lớn
   đúng ảnh, có trước/sau, phím mũi tên, Esc/nút đóng; xem ảnh không đổi ảnh bìa.

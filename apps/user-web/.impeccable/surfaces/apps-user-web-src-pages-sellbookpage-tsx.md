@@ -10,7 +10,9 @@ related_targets: ["apps/user-web/src/pages/SellBookPage.module.css", "apps/user-
 ## Draft photo preview —19/10/2026
 
 Operate; owner requests miniatures below the large cover in the sticky draft
-preview. Group cover and thumbnails as one media block before title/author.
+preview. Owner follow-up widens the desktop card from240 to280px and increases
+the cover frame from216 to240px; compact/mobile height overrides remain.
+Group cover and thumbnails as one media block before title/author.
 Local preview URLs follow cover/support upload order and reflect replacements
 and removals. Desktop thumbnails wrap into available44px-minimum columns;
 compact tablet uses two columns and <=600px stacks media/text with four columns.
