@@ -367,6 +367,17 @@
   color: var(--shop-ink);
   background: var(--shop-paper);
   resize: vertical;
+  transition-property: border-color, box-shadow;
+  transition-duration: 170ms !important;
+  transition-timing-function: ease-out;
+}
+.root .composer textarea:focus {
+  outline: none;
+  border-color: var(--shop-wine);
+  box-shadow: none;
+}
+.root .composer textarea:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--shop-wine);
 }
 .composer textarea::placeholder {
   color: var(--shop-muted);
@@ -495,7 +506,7 @@
   max-width: 45ch;
   margin: 0 auto;
 }
-.root :is(button, a, textarea):focus-visible,
+.root :is(button, a):focus-visible,
 .guest a:focus-visible {
   outline: 2px solid var(--shop-wine);
   outline-offset: 3px;
@@ -617,5 +628,12 @@
 @media (max-width: 360px) {
   .emptyMascot {
     display: none;
+  }
+}
+@media (forced-colors: active) {
+  .root .composer textarea:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: -2px;
+    box-shadow: none;
   }
 }

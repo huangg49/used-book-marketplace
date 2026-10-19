@@ -18,6 +18,12 @@
   browser fixture PASS, xem desktop/mobile/chữ lớn tại `.tmp/chat-paper-details-qa`.
   Xác nhận hẹp320px/chữ130%: lược mascot dưới360px để ưu tiên lời chào/form;
   evidence sau sửa tại `.tmp/chat-paper-details-final-qa`.
+  Follow-up field chat: bỏ outline nằm ngoài textarea, dùng focus đổi viền đỏ
+  rượu và nhấn inset như Đăng sách; forced colors giữ outline phía trong.
+  Subject `fix(web): align chat composer focus with posting fields`.
+  Vite build PASS (chunk warning cũ); QA focus chuột/bàn phím desktop/mobile,
+  không đổi kích thước và forced colors PASS tại `.tmp/chat-field-focus-qa`.
+  Chỉ CSS; không chạy lại gate API/nghiệp vụ.
 - PASS UI:147unit, lint (6 warning cũ), typecheck/build (chunk warning cũ),
   docs/diff check. Browser fixture chạy luồng retry/chuyển hình thức/giá/đơn/
   thanh toán và Exchange cũ;1440/1100/900/390px,320px chữ130%. Kiểm tên sách
