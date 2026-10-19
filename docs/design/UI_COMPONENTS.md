@@ -480,3 +480,7 @@ keep mounted drafts and natural sheet flow. Shared scoped typography uses
 400/700 weights and title/data/body/metadata roles. Accepted-price edits and
 complete event history are disclosures; closing either leaves transaction data
 intact. Shared styles still support standalone Exchange; route/history remain.
+ChatPage opts into faint existing ivory-paper texture through
+`--conversation-paper-texture`; a noninteractive bookmark decorates the agreement
+edge. Active empty chat uses the existing64px penguin with empty alt text, hidden
+for history errors/expired rooms. Standalone Exchange keeps its existing surface.

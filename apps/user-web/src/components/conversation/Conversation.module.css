@@ -609,6 +609,14 @@
 .openBook .chat > [aria-label="Tin nhắn trong hội thoại"] {
   min-height: 0;
 }
+.openBook,
+.openBook > .sheet,
+.openBook .sheetHeading,
+.openBook .chatHeading,
+.openBook > .chat {
+  background-image: var(--conversation-paper-texture, none);
+  background-size: auto, 256px 256px;
+}
 @media (max-width: 1100px) {
   .inboxGrid {
     grid-template-columns: 1fr;

@@ -65,6 +65,32 @@
 .room {
   min-width: 0;
 }
+.paperSpread {
+  --conversation-paper-texture:
+    linear-gradient(#fffcf5d9, #fffcf5d9),
+    url("/login-art/ivory-paper.webp");
+  position: relative;
+}
+.bookmark {
+  position: absolute;
+  top: 0;
+  left: 28px;
+  width: 22px;
+  height: 36px;
+  background: var(--shop-wine);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+  pointer-events: none;
+}
+.bookmark::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 10px;
+  left: 4px;
+  width: 1px;
+  background: var(--shop-cream);
+  opacity: 0.3;
+}
 .roomHeader {
   display: flex;
   gap: 20px;
@@ -178,6 +204,8 @@
   margin: 0;
   padding: 20px 0 0;
   background: var(--shop-paper);
+  background-image: var(--conversation-paper-texture, none);
+  background-size: auto, 256px 256px;
 }
 .nextStep h3 {
   font-size: var(--conversation-body);
@@ -426,10 +454,19 @@
 }
 .emptyRoom {
   margin: auto;
-  padding: 32px 8px;
+  padding: 4px 8px;
   max-width: 36ch;
   color: var(--shop-muted);
   text-align: center;
+}
+.emptyMascot {
+  display: block;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 12px;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
 }
 .emptyRoom h3 {
   font-size: var(--conversation-body);
@@ -464,6 +501,9 @@
   outline-offset: 3px;
 }
 @media (max-width: 1100px) {
+  .bookmark {
+    left: 24px;
+  }
   .root,
   .guest {
     padding-inline: 24px;
@@ -478,6 +518,12 @@
   }
 }
 @media (max-width: 760px) {
+  .bookmark {
+    left: auto;
+    right: 20px;
+    height: 28px;
+    width: 18px;
+  }
   .root {
     --conversation-title: 1.5rem;
   }
@@ -561,5 +607,10 @@
   }
   .sendRow button {
     padding-inline: 12px;
+  }
+}
+@media (max-width: 960px) {
+  .paperSpread[data-panel="chat"] .bookmark {
+    display: none;
   }
 }

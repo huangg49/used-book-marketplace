@@ -891,3 +891,9 @@ Secondary price edits/history open on request; message bubbles are quiet cream
 and shelf tones. Wine belongs to primary actions and accepted price. The surface
 record defines geometry/evidence; global navigation, other-page type and APIs stay
 unchanged. Production book photographs always come from the listing media API.
+
+Owner-requested details preserve that composition: a small wine bookmark hangs
+from the agreement edge, and the existing ivory paper texture stays faint under
+the content. The existing book-carrying penguin appears only for an active empty
+conversation, centered with the greeting; never in a history error or expired room.
+These are decorative, noninteractive details, not transaction or presence signals.

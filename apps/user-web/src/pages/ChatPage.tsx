@@ -350,9 +350,10 @@ function ChatRoom({
         </button>
       </nav>
       <div
-        className={`${sheet.workspace} ${sheet.openBook}`}
+        className={`${sheet.workspace} ${sheet.openBook} ${styles.paperSpread}`}
         data-panel={panel}
       >
+        <span className={styles.bookmark} aria-hidden="true" />
         <aside className={sheet.sheet} aria-label="Phiếu thỏa thuận">
           <div className={sheet.sheetHeading}>
             <h2>Phiếu thỏa thuận</h2>
@@ -849,6 +850,17 @@ function ChatRoom({
             )}
             {!history.isError && history.data && messages.length === 0 && (
               <div className={styles.emptyRoom}>
+                {!expired && (
+                  <img
+                    className={styles.emptyMascot}
+                    src="/illustrations/penguins/exchange.png"
+                    alt=""
+                    aria-hidden="true"
+                    width={64}
+                    height={64}
+                    draggable={false}
+                  />
+                )}
                 <h3>
                   {expired
                     ? "Chưa có tin nhắn trong cuộc trao đổi này"
