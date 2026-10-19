@@ -147,8 +147,10 @@
   align-items: baseline;
   gap: 16px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--shop-line);
   font-size: var(--conversation-meta, 0.875rem);
+}
+.totals > div + div {
+  border-top: 1px solid var(--shop-line);
 }
 .totals dt {
   color: var(--shop-muted);
