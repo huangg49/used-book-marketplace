@@ -30,6 +30,7 @@ import {
 } from './listing-projection.js';
 import { attachPhotos, lowerIds } from './listing-drafts.service.js';
 import { PriceAssistService } from '../price-assist/price-assist.service.js';
+import { requireListingSlot } from './listing-quota.js';
 
 @Injectable()
 export class ListingLifecycleService {
@@ -133,6 +134,8 @@ export class ListingLifecycleService {
         );
         const l = await this.lock(tx, before, body.expectedVersion);
         if (l.moderation !== 'Approved') throw invalidState();
+        // A hidden approved listing starts consuming a slot when sent to review.
+        if (l.visibility === 'Hidden') await requireListingSlot(tx, actor._id);
         const { fulfillment: _fulfillment, ...rest } = body.content;
         const mediaIds = lowerIds(rest.mediaIds);
         await this.ready(tx, id, mediaIds);
@@ -202,12 +205,14 @@ export class ListingLifecycleService {
         const l = await this.lock(tx, before, body.expectedVersion);
         if (l.moderation !== 'Approved' || l.visibility === body.visibility)
           throw invalidState();
-        if (body.visibility === 'Visible')
+        if (body.visibility === 'Visible') {
+          await requireListingSlot(tx, actor._id);
           await this.ready(
             tx,
             id,
             l.currentRevision!.media.map((m) => m.mediaId),
           );
+        }
         const next = await this.update(tx, l, { visibility: body.visibility });
         return this.change(l, next);
       },

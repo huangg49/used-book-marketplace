@@ -91,7 +91,7 @@ trạng sách. AI critique không là nghiên cứu user hay human sign-off.
 Giữ chữ lớn, tên sách dài/dấu tiếng Việt, touch targets, safe area, Back/keyboard,
 focus và labels. Kiểm tương phản thực; native/TalkBack/iOS cần evidence riêng.
 
-19/10/2026: chủ dự án duyệt [ADR0040](docs/adr/0040-unified-conversation-workspace.md).
+19/10/2026: chủ dự án duyệt [ADR0041](docs/adr/0041-unified-conversation-workspace.md).
 Member web gom inbox card và phiếu/chat mua/đổi; đề nghị giá/mode cần xác nhận đúng
 phiên bản. Không suy giao diện chung là chung room cho mọi Buyer hoặc quyền đổi
 điều kiện của một giao dịch đã chốt. Native và các gate READINESS giữ phạm vi riêng.

@@ -1,4 +1,4 @@
-# ADR0040: Phiếu thỏa thuận và hội thoại mua/đổi chung
+# ADR0041: Phiếu thỏa thuận và hội thoại mua/đổi chung
 
 Chấp nhận theo yêu cầu và kế hoạch được chủ dự án duyệt ngày19/10/2026.
 Mở rộng [ADR0037](0037-seller-selected-purchase-orders.md); giữ Mua ngay của

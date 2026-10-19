@@ -29,7 +29,7 @@
   margin-bottom: 28px;
 }
 .intro h1 {
-  font: 400 clamp(2rem, 3vw, 2.75rem)/1.2 var(--shop-display);
+  font: 400 clamp(2rem, 3vw, 2.75rem) / 1.2 var(--shop-display);
   text-transform: uppercase;
   color: var(--shop-wine);
   margin: 0;
@@ -56,7 +56,7 @@
 }
 .workspace {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: 36px;
   align-items: start;
 }
@@ -411,20 +411,52 @@
 .field > .help {
   margin: -2px 0 10px;
 }
+.photos {
+  --photo-height: max(180px, 11rem);
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(0, 3fr);
+  align-items: start;
+  gap: 16px;
+}
+.coverPhotos,
+.supportPhotos {
+  min-width: 0;
+}
+.photoLabel {
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--shop-ink);
+}
+.supportGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  gap: 12px;
+}
 .upload {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  min-height: 172px;
-  padding: 24px;
-  background: #efe3cf;
+  width: 100%;
+  min-width: 0;
+  gap: 8px;
+  height: var(--photo-height);
+  padding: 16px;
+  background: var(--shop-paper);
   border: 1px dashed var(--shop-control);
   border-radius: 12px;
   text-align: center;
   color: var(--shop-wine);
   cursor: pointer;
+}
+.upload[hidden] {
+  display: none;
+}
+.upload > strong {
+  font-size: 0.875rem;
+  line-height: 1.6;
 }
 .upload span {
   font-size: 0.75rem;
@@ -434,50 +466,41 @@
 .upload:hover {
   background: var(--shop-cream);
 }
-.fileInput {
-  width: 100%;
+.upload:focus-visible,
+.removePhoto:focus-visible,
+.photoAction:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 4px;
+}
+.root .formArea .fields .fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   min-width: 0;
-  min-height: 44px;
-  font-size: 0.8125rem;
-  color: var(--shop-muted);
+  min-height: 0;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
-.fileInput::file-selector-button {
-  min-height: 44px;
-  margin-right: 12px;
-  border: 1px solid var(--shop-control);
-  border-radius: 8px;
-  background: var(--shop-paper);
-  color: var(--shop-wine);
-  font: inherit;
-  padding: 8px 12px;
-  cursor: pointer;
-}
-.photos {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-.photos > div {
+.photoTile {
   position: relative;
   min-width: 0;
 }
-.photos img {
+.photoTile img {
+  display: block;
   width: 100%;
-  height: 140px;
+  height: var(--photo-height);
   object-fit: contain;
   background: #efe3cf;
-  border-radius: 8px;
+  border-radius: 12px;
 }
-.photos span {
-  display: block;
-  margin-top: 6px;
-  font-size: 0.75rem;
-  color: var(--shop-muted);
-}
-.photos button {
+.removePhoto {
   position: absolute;
-  right: 2px;
-  top: 2px;
+  right: 4px;
+  top: 4px;
   width: 44px;
   height: 44px;
   display: grid;
@@ -486,6 +509,20 @@
   border-radius: 8px;
   background: var(--shop-paper);
   color: var(--shop-wine);
+}
+.photoAction {
+  display: block;
+  width: 100%;
+  height: var(--photo-height);
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: #efe3cf;
+  cursor: pointer;
+}
+.photoAction:hover {
+  outline: 1px solid var(--shop-control);
+  outline-offset: 2px;
 }
 .questions {
   display: grid;
@@ -599,7 +636,7 @@
   line-height: 1.7;
 }
 .previewPhoto {
-  height: 216px;
+  height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -609,6 +646,55 @@
   color: var(--shop-muted);
 }
 .previewPhoto img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.previewMedia {
+  min-width: 0;
+}
+.previewCoverButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+}
+.previewThumbnails {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.previewThumbnails button {
+  height: 60px;
+  min-width: 44px;
+  padding: 4px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: #efe3cf;
+  cursor: zoom-in;
+}
+.previewThumbnails img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.previewThumbnails button:hover {
+  border-color: var(--shop-wine);
+}
+.previewCoverButton:focus-visible,
+.previewThumbnails button:focus-visible,
+.photoViewer :focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+.previewDetailImage {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
@@ -654,7 +740,13 @@
   font-size: 0.75rem;
 }
 .desktopPreview {
-  position: static;
+  position: sticky;
+  top: 112px;
+  max-height: calc(100dvh - 136px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  border-radius: 12px;
 }
 .reviewFacts {
   margin: 0;
@@ -767,12 +859,6 @@
 .skip:focus {
   top: 8px;
 }
-@media (min-width: 1200px) and (min-height: 900px) {
-  .stickyPreview {
-    position: sticky;
-    top: 112px;
-  }
-}
 @media (max-width: 1199px) {
   .workspace {
     grid-template-columns: minmax(0, 1fr);
@@ -830,7 +916,7 @@
     font-size: 1.25rem;
   }
   .photos {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
   .previewPhoto {
     height: 230px;
@@ -944,10 +1030,15 @@
 .compactPreview .preview h2 {
   grid-column: 1 / -1;
 }
-.compactPreview .previewPhoto {
+.compactPreview .previewMedia {
   grid-column: 1;
   grid-row: 2 / 7;
+}
+.compactPreview .previewPhoto {
   height: 190px;
+}
+.compactPreview .previewThumbnails {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .compactPreview .preview h3 {
   margin-top: 0;
@@ -1023,6 +1114,15 @@
   line-height: 1.8;
 }
 @media (max-width: 600px) {
+  .compactPreview[open] .preview {
+    display: block;
+  }
+  .compactPreview .previewThumbnails {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .compactPreview .preview h3 {
+    margin-top: 16px;
+  }
   .questionRow {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
@@ -1201,6 +1301,5 @@
   }
   .compactPreview .previewPhoto {
     height: 180px;
-    margin-bottom: 16px;
   }
 }

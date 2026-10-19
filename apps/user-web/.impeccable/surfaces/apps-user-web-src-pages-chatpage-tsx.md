@@ -2,7 +2,7 @@
 
 Owner approved one workspace for purchase negotiation and exchange, with a card
 inbox at Navbar Chat. Operate; retain wine/cream, shared Header and memory-only
-session. Contract/ADR0040 determine permissions and money; visual layout grants
+session. Contract/ADR0041 determine permissions and money; visual layout grants
 none. Mua ngay remains independent. This supersedes the18/10 inbox-sidebar and
 read-only-after-OrderCreated presentation.
 

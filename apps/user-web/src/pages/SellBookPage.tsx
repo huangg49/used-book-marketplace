@@ -6,7 +6,6 @@ import {
   useBeforeUnload,
   useBlocker,
   useLocation,
-  Link,
 } from "react-router-dom";
 import {
   ArrowLeft,
@@ -21,10 +20,11 @@ import { Header } from "../layouts/MainLayout";
 import { Logo } from "../components/Header";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ListingSubmissionConfirmation } from "../components/BookJourneyStates";
+import { lockPageScroll } from "../lib/page-scroll";
+import galleryStyles from "../components/ListingGallery.module.css";
 import { useSession } from "../hooks/useSession";
 import { session as apiSession } from "../lib/session";
 import { createListingSubmission } from "../services/listing-submission";
-import { getWalletSummary } from "../services/wallet";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
 import {
@@ -70,15 +70,6 @@ const addressReceiptSchema = z.object({
 });
 
 export function SellBookPage() {
-  const feeAuth = useSession();
-  const feeWallet = useQuery({
-    queryKey: [
-      "wallet-summary",
-      feeAuth.status === "authenticated" ? feeAuth.user.id : undefined,
-    ],
-    queryFn: getWalletSummary,
-    enabled: feeAuth.status === "authenticated",
-  });
   const submission = useRef<ReturnType<typeof createListingSubmission>>(null);
   const [classification, setClassification] = useState<ClassificationValue>({
     categoryId: "",
@@ -97,6 +88,18 @@ export function SellBookPage() {
   const [hasAttempt, setHasAttempt] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [hasCoverPhoto, setHasCoverPhoto] = useState(false);
+  const coverInput = useRef<HTMLInputElement>(null);
+  const supportInput = useRef<HTMLInputElement>(null);
+  const replacementInput = useRef<HTMLInputElement>(null);
+  const replacementIndex = useRef<number | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const photoViewer = useRef<HTMLDialogElement>(null);
+  const photoViewerOpen = previewImage !== null;
+  useEffect(() => {
+    if (!photoViewerOpen) return;
+    return lockPageScroll();
+  }, [photoViewerOpen]);
   const location = useLocation();
   const session = useSession();
   const addresses = useQuery({
@@ -109,7 +112,11 @@ export function SellBookPage() {
     queryFn: () => apiSession.request("/service-areas", serviceAreasSchema),
     enabled: session.status === "authenticated",
   });
-  const originAddressIntent = useRef<string | null>(null);
+  const originAddressIntent = useRef<{
+    key: string;
+    body: string;
+    receipt?: z.infer<typeof addressReceiptSchema>;
+  } | null>(null);
   const [originDialogOpen, setOriginDialogOpen] = useState(false);
   const [originDialogError, setOriginDialogError] = useState(false);
   const [originAddressId, setOriginAddressId] = useState("");
@@ -144,26 +151,19 @@ export function SellBookPage() {
   const heading = useRef<HTMLHeadingElement>(null);
   const errorBox = useRef<HTMLDivElement>(null);
   const imageRefs = useRef<string[]>([]);
-  const previewElement = useRef<HTMLElement>(null);
-  const [previewFits, setPreviewFits] = useState(false);
-  const receiptVisible = step === 6;
+  const lastPhotoRemove = useRef<HTMLButtonElement>(null);
+  const focusLastPhoto = useRef(false);
+  const photoFocusTarget = useRef<string | null>(null);
   useEffect(() => {
-    const element = previewElement.current;
-    if (!element || !window.ResizeObserver) return;
-    const measure = () =>
-      setPreviewFits(
-        element.offsetHeight > 0 &&
-          element.offsetHeight + 136 < window.innerHeight,
-      );
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    window.addEventListener("resize", measure);
-    measure();
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, [session.status, receiptVisible]);
+    if (photoFocusTarget.current) {
+      document.getElementById(photoFocusTarget.current)?.focus();
+      photoFocusTarget.current = null;
+    }
+    if (focusLastPhoto.current) {
+      focusLastPhoto.current = false;
+      lastPhotoRemove.current?.focus();
+    }
+  }, [formData.images]);
   const focusFrame = useRef<number | undefined>(undefined);
   useEffect(
     () => () => {
@@ -174,7 +174,11 @@ export function SellBookPage() {
   );
   function focusAfterRender(
     target:
-      "heading" | "error" | "selected-book" | "catalog-search" | "manual-title",
+      | "heading"
+      | "error"
+      | "selected-book"
+      | "catalog-search"
+      | "manual-title",
   ) {
     if (focusFrame.current !== undefined)
       cancelAnimationFrame(focusFrame.current);
@@ -237,24 +241,70 @@ export function SellBookPage() {
     if (submitError) errorBox.current?.focus();
   }, [submitError]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (imageFiles.length >= 8) return;
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (
-        !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-        file.size > 10_000_000
-      ) {
-        setValidationFailure(false);
-        setSubmitError("Ảnh cần là JPEG, PNG hoặc WebP và không quá 10 MB.");
-        return;
-      }
-      setSubmitError(undefined);
-      // Keep the local preview while retaining the original file for the API upload.
-      const fakeUrl = URL.createObjectURL(file);
-      setFormData((prev) => ({ ...prev, images: [...prev.images, fakeUrl] }));
-      setImageFiles((files) => [...files, file]);
-      e.target.value = "";
+  const handleImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    kind: "cover" | "support",
+    replaceAt?: number,
+  ) => {
+    const selected = Array.from(e.target.files ?? []);
+    // Reset even after rejection so selecting the same batch fires change again.
+    e.target.value = "";
+    if (!selected.length || hasAttempt || submitting) return;
+    const remaining =
+      kind === "cover" || replaceAt !== undefined
+        ? 1
+        : 7 - (imageFiles.length - Number(hasCoverPhoto));
+    if (selected.length > remaining) {
+      setValidationFailure(false);
+      setSubmitError(
+        `Tối đa 8 ảnh. Bạn có thể chọn thêm ${remaining} ảnh; hãy chọn lại ít ảnh hơn.`,
+      );
+      return;
+    }
+    if (
+      selected.some(
+        (file) =>
+          !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
+          file.size > 10_000_000,
+      )
+    ) {
+      setValidationFailure(false);
+      setSubmitError("Ảnh cần là JPEG, PNG hoặc WebP và không quá 10 MB.");
+      return;
+    }
+    setSubmitError(undefined);
+    // Validate the whole batch before allocating previews; retain upload order.
+    const previews = selected.map((file) => URL.createObjectURL(file));
+    if (kind === "cover") {
+      photoFocusTarget.current = "images";
+      if (hasCoverPhoto) URL.revokeObjectURL(formData.images[0]!);
+      const offset = Number(hasCoverPhoto);
+      setFormData((prev) => ({
+        ...prev,
+        images: [...previews, ...prev.images.slice(offset)],
+      }));
+      setImageFiles((files) => [...selected, ...files.slice(offset)]);
+      setHasCoverPhoto(true);
+    } else if (replaceAt !== undefined) {
+      URL.revokeObjectURL(formData.images[replaceAt]!);
+      photoFocusTarget.current = `support-photo-${replaceAt - Number(hasCoverPhoto)}`;
+      setFormData((prev) => ({
+        ...prev,
+        images: prev.images.map((url, index) =>
+          index === replaceAt ? previews[0]! : url,
+        ),
+      }));
+      setImageFiles((files) =>
+        files.map((file, index) => (index === replaceAt ? selected[0]! : file)),
+      );
+    } else {
+      focusLastPhoto.current =
+        imageFiles.length - Number(hasCoverPhoto) + selected.length === 7;
+      setFormData((prev) => ({
+        ...prev,
+        images: [...prev.images, ...previews],
+      }));
+      setImageFiles((files) => [...files, ...selected]);
     }
   };
 
@@ -285,7 +335,7 @@ export function SellBookPage() {
       !formData.accessories.trim() && "phụ kiện",
       formData.description.trim().length < 30 &&
         "mô tả chung (ít nhất 30 ký tự)",
-      imageFiles.length === 0 && "ít nhất một ảnh",
+      !hasCoverPhoto && "ảnh bìa bản sách",
       formData.readable === null && "câu trả lời về độ đọc rõ",
       formData.hasMissingPages === null && "câu trả lời về trang thiếu",
       formData.missingEssentialContent === null &&
@@ -322,35 +372,45 @@ export function SellBookPage() {
       // An existing submission already pins its origin and command keys. Resume
       // it without repeating address creation with a refreshed book version.
       if (needsOrigin && !origin && !submission.current) {
-        const idempotencyKey =
-          originAddressIntent.current ?? crypto.randomUUID();
-        originAddressIntent.current = idempotencyKey;
-        const saved = await apiSession.request(
-          "/me/addresses",
-          addressReceiptSchema,
-          {
+        const previous = originAddressIntent.current;
+        // Freeze the body with its key: a background refetch can advance the
+        // address-book version after the server saved a response we never saw.
+        // Keep a key-only intent held by an open draft during hot reload too.
+        const intent =
+          previous && typeof previous === "object"
+            ? previous
+            : {
+                key:
+                  typeof previous === "string" ? previous : crypto.randomUUID(),
+                body: JSON.stringify({
+                  expectedBookVersion: addresses.data?.version ?? 0,
+                  address: {
+                    recipientName: originForm.recipientName.trim(),
+                    phone: originForm.phone.trim(),
+                    serviceAreaCode: "HCM-DEMO-v1",
+                    localityCode: originForm.localityCode,
+                    detail: originForm.detail.trim(),
+                  },
+                  makeDefault: (addresses.data?.items.length ?? 0) === 0,
+                }),
+              };
+        originAddressIntent.current = intent;
+        const saved =
+          intent.receipt ??
+          (await apiSession.request("/me/addresses", addressReceiptSchema, {
             method: "POST",
-            headers: { "Idempotency-Key": idempotencyKey },
-            body: JSON.stringify({
-              expectedBookVersion: addresses.data?.version ?? 0,
-              address: {
-                recipientName: originForm.recipientName.trim(),
-                phone: originForm.phone.trim(),
-                serviceAreaCode: "HCM-DEMO-v1",
-                localityCode: originForm.localityCode,
-                detail: originForm.detail.trim(),
-              },
-              makeDefault: (addresses.data?.items.length ?? 0) === 0,
-            }),
-          },
-        );
+            headers: { "Idempotency-Key": intent.key },
+            body: intent.body,
+          }));
+        intent.receipt = saved;
+        setOriginAddressId(saved.addressId);
         const refreshed = await addresses.refetch();
         origin = refreshed.data?.items.find(
           (address) => address.id === saved.addressId,
         );
         if (!origin)
           throw new Error(
-            "Địa chỉ vừa lưu chưa thể xác nhận. Hãy tải lại trang trước khi gửi bài.",
+            "Đã lưu nơi gửi sách nhưng chưa tải lại được địa chỉ. Thông tin được giữ nguyên; hãy thử gửi lại.",
           );
       }
       submission.current ??= createListingSubmission({
@@ -452,8 +512,7 @@ export function SellBookPage() {
       return "Chọn danh mục và kiểm tra thuộc tính của đầu sách.";
     if (forStep === 1 && (!formData.title.trim() || !formData.author.trim()))
       message = "Nhập tên sách và tác giả trước khi tiếp tục.";
-    if (forStep === 2 && !imageFiles.length)
-      message = "Thêm ít nhất một ảnh bản sách.";
+    if (forStep === 2 && !hasCoverPhoto) message = "Thêm ảnh bìa bản sách.";
     if (forStep === 3) {
       if (
         textFields.some(([key]) => !formData[key].trim()) ||
@@ -513,6 +572,15 @@ export function SellBookPage() {
     setOriginForm((previous) => ({ ...previous, [field]: value }));
   }
   function removePhoto(index: number) {
+    if (hasAttempt || submitting) return;
+    const supportCount = imageFiles.length - Number(hasCoverPhoto);
+    photoFocusTarget.current =
+      hasCoverPhoto && index === 0
+        ? "images"
+        : supportCount > 1
+          ? `support-remove-${Math.min(index - Number(hasCoverPhoto), supportCount - 2)}`
+          : "add-support-photo";
+    if (hasCoverPhoto && index === 0) setHasCoverPhoto(false);
     URL.revokeObjectURL(formData.images[index]!);
     setFormData((previous) => ({
       ...previous,
@@ -527,7 +595,7 @@ export function SellBookPage() {
     author: !formData.author.trim()
       ? "Nhập tên tác giả như trên bìa."
       : undefined,
-    images: !imageFiles.length ? "Thêm ít nhất một ảnh bản sách." : undefined,
+    images: !hasCoverPhoto ? "Thêm ảnh bìa bản sách." : undefined,
     "sell-category":
       !selectedBook &&
       stepError(1) &&
@@ -650,24 +718,69 @@ export function SellBookPage() {
   const visibleSubmitError = validationFailure
     ? stepError(step) || (step === 5 ? fieldErrors.ownership : undefined)
     : submitError;
+  const previewIndex =
+    previewImage === null ? -1 : formData.images.indexOf(previewImage);
+  function photoLabel(index: number) {
+    return hasCoverPhoto && index === 0
+      ? "Ảnh bìa"
+      : `Ảnh phụ ${index + 1 - Number(hasCoverPhoto)}`;
+  }
+  function openPhoto(index: number) {
+    setPreviewImage(formData.images[index]!);
+    photoViewer.current?.showModal();
+  }
+  function stepPhoto(amount: number) {
+    const index =
+      (previewIndex + amount + formData.images.length) % formData.images.length;
+    setPreviewImage(formData.images[index]!);
+  }
   const preview = (
     <section className={styles.preview} aria-label="Bản xem trước bài đăng">
       <div className={styles.previewHeading}>
         <h2>Cuốn sách của bạn</h2>
         <span>Bản nháp</span>
       </div>
-      <div
-        className={`${styles.previewPhoto} ${!formData.images.length ? styles.previewPhotoEmpty : ""}`}
-      >
-        {formData.images[0] ? (
-          <img
-            src={formData.images[0]}
-            alt={`Ảnh bìa ${formData.title || "bản sách"}`}
-          />
-        ) : (
-          <div className={styles.emptyPhoto}>
-            <BookOpen size={32} aria-hidden="true" />
-            <span>Thêm ảnh ở bước tiếp theo</span>
+      <div className={styles.previewMedia}>
+        <div
+          className={`${styles.previewPhoto} ${!hasCoverPhoto ? styles.previewPhotoEmpty : ""}`}
+        >
+          {hasCoverPhoto && formData.images[0] ? (
+            <button
+              type="button"
+              className={styles.previewCoverButton}
+              aria-label="Xem ảnh bìa chi tiết"
+              aria-haspopup="dialog"
+              onClick={() => openPhoto(0)}
+            >
+              <img
+                src={formData.images[0]}
+                alt={`Ảnh bìa ${formData.title || "bản sách"}`}
+              />
+            </button>
+          ) : (
+            <div className={styles.emptyPhoto}>
+              <BookOpen size={32} aria-hidden="true" />
+              <span>Thêm ảnh ở bước tiếp theo</span>
+            </div>
+          )}
+        </div>
+        {formData.images.length > 0 && (
+          <div
+            className={styles.previewThumbnails}
+            role="group"
+            aria-label="Ảnh thu nhỏ bản nháp"
+          >
+            {formData.images.map((url, index) => (
+              <button
+                key={url}
+                type="button"
+                aria-label={`Xem ${photoLabel(index).toLowerCase()} chi tiết`}
+                aria-haspopup="dialog"
+                onClick={() => openPhoto(index)}
+              >
+                <img src={url} alt="" />
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -745,6 +858,65 @@ export function SellBookPage() {
     );
   return (
     <div className={styles.root}>
+      <dialog
+        ref={photoViewer}
+        className={`${galleryStyles.viewer} ${styles.photoViewer}`}
+        aria-labelledby="draft-photo-viewer-title"
+        onClose={() => setPreviewImage(null)}
+        onKeyDown={(event) => {
+          if (formData.images.length < 2) return;
+          if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+            event.preventDefault();
+            stepPhoto(event.key === "ArrowLeft" ? -1 : 1);
+          }
+        }}
+      >
+        <div className={galleryStyles.viewerHead}>
+          <h2 id="draft-photo-viewer-title">Ảnh bản sách của bạn</h2>
+          <button
+            type="button"
+            autoFocus
+            aria-label="Đóng ảnh chi tiết"
+            onClick={() => photoViewer.current?.close()}
+          >
+            <X size={22} aria-hidden="true" />
+          </button>
+        </div>
+        {previewIndex >= 0 && (
+          <div className={galleryStyles.largePhoto}>
+            <img
+              className={styles.previewDetailImage}
+              src={previewImage!}
+              alt={`${photoLabel(previewIndex)} · ${formData.title || "Bản sách của bạn"}`}
+            />
+          </div>
+        )}
+        <div className={galleryStyles.viewerFoot}>
+          {formData.images.length > 1 && (
+            <button
+              type="button"
+              aria-label="Ảnh trước"
+              onClick={() => stepPhoto(-1)}
+            >
+              <ArrowLeft size={20} aria-hidden="true" />
+            </button>
+          )}
+          <p aria-live="polite">
+            {previewIndex >= 0
+              ? `${photoLabel(previewIndex)} · ${previewIndex + 1}/${formData.images.length}`
+              : ""}
+          </p>
+          {formData.images.length > 1 && (
+            <button
+              type="button"
+              aria-label="Ảnh sau"
+              onClick={() => stepPhoto(1)}
+            >
+              <ArrowRight size={20} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      </dialog>
       <svg
         width="0"
         height="0"
@@ -805,6 +977,7 @@ export function SellBookPage() {
                 exchangeValue: "",
               });
               setImageFiles([]);
+              setHasCoverPhoto(false);
               setOriginAddressId("");
               setOriginForm({
                 recipientName: "",
@@ -857,8 +1030,9 @@ export function SellBookPage() {
             </nav>
             <div className={styles.workspace}>
               <aside
-                ref={previewElement}
-                className={`${styles.desktopPreview} ${previewFits ? styles.stickyPreview : ""}`}
+                className={styles.desktopPreview}
+                tabIndex={0}
+                aria-label="Tóm tắt bản nháp"
               >
                 {preview}
               </aside>
@@ -1122,50 +1296,193 @@ export function SellBookPage() {
                       {step === 2 && (
                         <>
                           <p className={styles.help}>
-                            Chụp bìa, gáy, ruột sách và phần đã qua sử dụng. Ảnh
-                            đầu tiên là ảnh bìa.
+                            Chọn ảnh bìa ở bên trái. Thêm ảnh gáy, ruột sách và
+                            phần đã qua sử dụng ở bên phải.
                           </p>
-                          <label htmlFor="images" className={styles.upload}>
-                            <ImagePlus size={28} aria-hidden="true" />
-                            <strong>Chọn ảnh bản sách</strong>
-                            <span>JPEG, PNG, WebP · tối đa 10 MB/ảnh</span>
-                          </label>
-                          <input
-                            id="images"
-                            className={styles.fileInput}
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            onChange={handleImageUpload}
-                            disabled={
-                              imageFiles.length >= 8 || hasAttempt || submitting
-                            }
-                            {...feedbackProps("images", "image-help")}
-                          />
-                          {fieldFeedback("images")}
-                          <p id="image-help" className={styles.help}>
-                            {imageFiles.length}/8 ảnh · Ảnh được tải lên khi gửi
-                            duyệt.
-                          </p>
-                          <div className={styles.photos}>
-                            {formData.images.map((url, index) => (
-                              <div key={url}>
-                                <img
-                                  src={url}
-                                  alt={`Ảnh bản sách ${index + 1}`}
-                                />
-                                <span>
-                                  {index === 0 ? "Ảnh bìa" : `Ảnh ${index + 1}`}
-                                </span>
+                          <div
+                            className={styles.photos}
+                            role="group"
+                            aria-label="Ảnh bản sách"
+                          >
+                            <div
+                              className={styles.coverPhotos}
+                              role="group"
+                              aria-label="Ảnh bìa"
+                            >
+                              <h3 className={styles.photoLabel}>Ảnh bìa</h3>
+                              {hasCoverPhoto ? (
+                                <>
+                                  <div className={styles.photoTile}>
+                                    <button
+                                      id="images"
+                                      type="button"
+                                      className={styles.photoAction}
+                                      aria-label="Thay ảnh bìa"
+                                      disabled={hasAttempt || submitting}
+                                      onClick={() =>
+                                        coverInput.current?.click()
+                                      }
+                                    >
+                                      <img
+                                        src={formData.images[0]}
+                                        alt="Ảnh bìa bản sách"
+                                      />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={styles.removePhoto}
+                                      aria-label="Xóa ảnh bìa"
+                                      disabled={hasAttempt || submitting}
+                                      onClick={() => removePhoto(0)}
+                                    >
+                                      <X size={18} aria-hidden="true" />
+                                    </button>
+                                  </div>
+                                </>
+                              ) : (
                                 <button
+                                  id="images"
                                   type="button"
-                                  aria-label={`Xóa ảnh ${index + 1}`}
-                                  onClick={() => removePhoto(index)}
+                                  className={styles.upload}
+                                  disabled={hasAttempt || submitting}
+                                  onClick={() => coverInput.current?.click()}
+                                  {...feedbackProps("images", "image-help")}
                                 >
-                                  <X size={18} aria-hidden="true" />
+                                  <ImagePlus size={28} aria-hidden="true" />
+                                  <strong>Chọn ảnh bìa</strong>
+                                </button>
+                              )}
+                              <input
+                                ref={coverInput}
+                                id="cover-file"
+                                className={styles.fileInput}
+                                type="file"
+                                tabIndex={-1}
+                                aria-label="Tệp ảnh bìa"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={(event) =>
+                                  handleImageUpload(event, "cover")
+                                }
+                                disabled={hasAttempt || submitting}
+                              />
+                            </div>
+                            <div
+                              className={styles.supportPhotos}
+                              role="group"
+                              aria-label="Ảnh phụ"
+                            >
+                              <h3 className={styles.photoLabel}>Ảnh phụ</h3>
+                              <div className={styles.supportGrid}>
+                                {formData.images
+                                  .slice(Number(hasCoverPhoto))
+                                  .map((url, index) => (
+                                    <div key={url} className={styles.photoTile}>
+                                      <button
+                                        id={`support-photo-${index}`}
+                                        type="button"
+                                        className={styles.photoAction}
+                                        aria-label={`Thay ảnh phụ ${index + 1}`}
+                                        disabled={hasAttempt || submitting}
+                                        onClick={() => {
+                                          replacementIndex.current =
+                                            index + Number(hasCoverPhoto);
+                                          replacementInput.current?.click();
+                                        }}
+                                      >
+                                        <img
+                                          src={url}
+                                          alt={`Ảnh phụ ${index + 1}`}
+                                        />
+                                      </button>
+                                      <button
+                                        id={`support-remove-${index}`}
+                                        type="button"
+                                        className={styles.removePhoto}
+                                        ref={
+                                          index ===
+                                          imageFiles.length -
+                                            Number(hasCoverPhoto) -
+                                            1
+                                            ? lastPhotoRemove
+                                            : undefined
+                                        }
+                                        aria-label={`Xóa ảnh phụ ${index + 1}`}
+                                        disabled={hasAttempt || submitting}
+                                        onClick={() =>
+                                          removePhoto(
+                                            index + Number(hasCoverPhoto),
+                                          )
+                                        }
+                                      >
+                                        <X size={18} aria-hidden="true" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                <button
+                                  id="add-support-photo"
+                                  type="button"
+                                  className={styles.upload}
+                                  aria-label="Thêm ảnh phụ"
+                                  aria-describedby="image-help"
+                                  hidden={
+                                    imageFiles.length - Number(hasCoverPhoto) >=
+                                    7
+                                  }
+                                  disabled={
+                                    hasAttempt ||
+                                    submitting ||
+                                    imageFiles.length - Number(hasCoverPhoto) >=
+                                      7
+                                  }
+                                  onClick={() => supportInput.current?.click()}
+                                >
+                                  <ImagePlus size={28} aria-hidden="true" />
+                                  <strong>Thêm ảnh phụ</strong>
+                                  <span>Có thể chọn nhiều ảnh</span>
                                 </button>
                               </div>
-                            ))}
+                              <input
+                                ref={supportInput}
+                                id="support-images"
+                                className={styles.fileInput}
+                                type="file"
+                                multiple
+                                tabIndex={-1}
+                                aria-label="Tệp ảnh phụ"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={(event) =>
+                                  handleImageUpload(event, "support")
+                                }
+                                disabled={
+                                  hasAttempt ||
+                                  submitting ||
+                                  imageFiles.length - Number(hasCoverPhoto) >= 7
+                                }
+                              />
+                              <input
+                                ref={replacementInput}
+                                className={styles.fileInput}
+                                type="file"
+                                tabIndex={-1}
+                                aria-label="Tệp thay ảnh phụ"
+                                accept="image/jpeg,image/png,image/webp"
+                                disabled={hasAttempt || submitting}
+                                onChange={(event) => {
+                                  const index = replacementIndex.current;
+                                  replacementIndex.current = null;
+                                  if (index !== null)
+                                    handleImageUpload(event, "support", index);
+                                }}
+                              />
+                            </div>
                           </div>
+                          {fieldFeedback("images")}
+                          <p id="image-help" className={styles.help}>
+                            {imageFiles.length}/8 ảnh · Có thể chọn nhiều ảnh
+                            cùng lúc. JPEG, PNG, WebP · tối đa 10 MB/ảnh. Bấm
+                            vào ảnh để thay, hoặc nút × để xóa. Ảnh được tải lên
+                            khi gửi duyệt.
+                          </p>
                         </>
                       )}
                       {step === 3 && (
@@ -1622,7 +1939,7 @@ export function SellBookPage() {
                                 <img
                                   key={url}
                                   src={url}
-                                  alt={`Ảnh bản sách ${index + 1}${index === 0 ? ", ảnh bìa" : ""}`}
+                                  alt={`Ảnh bản sách ${index + 1}${index === 0 && hasCoverPhoto ? ", ảnh bìa" : ""}`}
                                 />
                               ))}
                             </div>
@@ -1800,28 +2117,12 @@ export function SellBookPage() {
                         )}
                       </div>
                     )}
-                    {feeWallet.data?.listingSubmissionFee !== undefined && (
-                      <p className={styles.help}>
-                        Phí gửi duyệt:{" "}
-                        <strong>
-                          {formatVnd(feeWallet.data.listingSubmissionFee)}
-                        </strong>
-                        , giữ từ ví khi gửi bài. Bị từ chối sẽ hoàn về ví. Số dư
-                        khả dụng: {formatVnd(feeWallet.data.available)}.{" "}
-                        <Link to="/wallet">Nạp ví</Link>
-                      </p>
-                    )}
-                    {feeWallet.isError && (
-                      <p role="alert">
-                        Chưa kiểm tra được phí và số dư.{" "}
-                        <button
-                          type="button"
-                          onClick={() => void feeWallet.refetch()}
-                        >
-                          Kiểm tra lại
-                        </button>
-                      </p>
-                    )}
+                    <p className={styles.help}>
+                      Đăng bài miễn phí. Mỗi tài khoản có tối đa 5 bài đang hiển
+                      thị trên trang chủ hoặc chờ admin duyệt. Bản nháp, bài bị
+                      từ chối, bài đã duyệt nhưng đang ẩn, bài đã bán/đổi hoặc
+                      đã lưu trữ không tính vào giới hạn.
+                    </p>
                     {hasAttempt && (
                       <p role="status" className={styles.help}>
                         Thông tin đã khóa cho lần gửi này để giữ đúng dữ liệu

@@ -752,7 +752,7 @@ export interface paths {
         put?: never;
         /**
          * submitListing
-         * @description ACTIVE owner, Draft/Rejected; validate saved content as SubmittedContent, Ready media, declaration and accessible catalog; freeze revision, PendingReview. Resubmitting Rejected creates a new revision even when unchanged. Default submission fee is 20000 VND held from the owner wallet in the same transaction; insufficient funds reject submission. Rejection refunds that revision fee; approval settles it. Historical submissions are not charged retroactively.
+         * @description ACTIVE owner, Draft/Rejected; validate saved content as SubmittedContent, Ready media, declaration and accessible catalog; freeze revision, PendingReview. Resubmitting Rejected creates a new revision even when unchanged. Submission is free and does not require wallet funding. Each owner may have at most 5 active listings, counting PendingReview listings and Visible Approved listings with trade Available/Reserved, excluding removed/archived listings. Draft, Rejected, Hidden Approved and terminal trade states do not consume slots. At capacity a new submission returns 409 ListingLimitReached without freezing the draft or creating a receipt. Concurrent submissions share the owner lock. Same-key/body replay returns the original receipt even at capacity. Existing listings above the cap remain intact but cannot add a submission until below the cap. Historical held fees keep their original review settlement/refund rules.
          */
         post: operations["submitListing"];
         delete?: never;
@@ -772,7 +772,7 @@ export interface paths {
         put?: never;
         /**
          * reviseApprovedListing
-         * @description ACTIVE owner; Approved and Available. Validate full replacement and declaration, create frozen revision + PendingReview atomically, preserve visibility. Old approved content stops public display.
+         * @description ACTIVE owner; Approved and Available. Validate full replacement and declaration, create frozen revision + PendingReview atomically, preserve visibility. Old approved content stops public display. Free of charge. Revising a Hidden listing consumes a review slot and returns 409 ListingLimitReached at the 5-listing cap; revising a Visible listing retains its slot.
          */
         post: operations["reviseApprovedListing"];
         delete?: never;
@@ -811,7 +811,7 @@ export interface paths {
         get?: never;
         /**
          * setListingVisibility
-         * @description Owner, Approved + Available, no reservation. Hide permits ACTIVE/RESTRICTED; reopen ACTIVE only and catalog/media eligible. Removed/deleted never restored.
+         * @description Owner, Approved + Available, no reservation. Hide permits ACTIVE/RESTRICTED; reopen ACTIVE only and catalog/media eligible. Reopen consumes a slot and returns 409 ListingLimitReached when 5 Visible Approved/PendingReview listings already exist. Removed/deleted never restored.
          */
         put: operations["setListingVisibility"];
         post?: never;
@@ -3755,7 +3755,7 @@ export interface components {
             serverTime: string;
         };
         /** @enum {string} */
-        ListingErrorCode: "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "UNAVAILABLE" | "INTERNAL_ERROR" | "AccountIneligible" | "SelfReviewForbidden" | "CatalogDuplicate" | "CatalogNotConfirmed" | "ListingInvalid" | "VersionConflict" | "InvalidState" | "IdempotencyConflict" | "MediaNotReady" | "MediaQuotaExceeded" | "UploadIncomplete" | "UploadExpired" | "PayloadTooLarge" | "UnsupportedMediaType" | "SESSION_EXPIRED" | "BidTooLow" | "AuctionClosed";
+        ListingErrorCode: "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "UNAVAILABLE" | "INTERNAL_ERROR" | "AccountIneligible" | "SelfReviewForbidden" | "CatalogDuplicate" | "CatalogNotConfirmed" | "ListingLimitReached" | "ListingInvalid" | "VersionConflict" | "InvalidState" | "IdempotencyConflict" | "MediaNotReady" | "MediaQuotaExceeded" | "UploadIncomplete" | "UploadExpired" | "PayloadTooLarge" | "UnsupportedMediaType" | "SESSION_EXPIRED" | "BidTooLow" | "AuctionClosed";
         ListingApiError: {
             statusCode: number;
             code: components["schemas"]["ListingErrorCode"];
@@ -4125,7 +4125,7 @@ export interface components {
             currency: "VND";
         };
         WalletSummary: {
-            /** @description Current fee per new submission; default 20000 VND. Approved content edits are not charged again. */
+            /** @description Always 0; new listing submissions and approved content edits are free. Retained for client compatibility. */
             listingSubmissionFee?: number;
             atomicCheckout?: boolean;
             vnpayEnabled?: boolean;
@@ -5397,7 +5397,7 @@ export interface components {
                 "application/json": components["schemas"]["ApiError"];
             };
         };
-        /** @description Stable listing error; no internal exception text. 400 malformed input/cursor; 401 UNAUTHORIZED; 403 FORBIDDEN/AccountIneligible/SelfReviewForbidden; 404 NOT_FOUND; 409 VersionConflict/InvalidState/IdempotencyConflict/CatalogDuplicate/CatalogNotConfirmed/UploadIncomplete/UploadExpired; 422 ListingInvalid/MediaNotReady/VALIDATION_ERROR with safe fieldErrors; 413 PayloadTooLarge; 415 UnsupportedMediaType; 429 RATE_LIMITED/MediaQuotaExceeded with retryAfterSeconds and Retry-After; 500 INTERNAL_ERROR; 503 UNAVAILABLE. */
+        /** @description Stable listing error; no internal exception text. 400 malformed input/cursor; 401 UNAUTHORIZED; 403 FORBIDDEN/AccountIneligible/SelfReviewForbidden; 404 NOT_FOUND; 409 VersionConflict/InvalidState/ListingLimitReached/IdempotencyConflict/CatalogDuplicate/CatalogNotConfirmed/UploadIncomplete/UploadExpired; 422 ListingInvalid/MediaNotReady/VALIDATION_ERROR with safe fieldErrors; 413 PayloadTooLarge; 415 UnsupportedMediaType; 429 RATE_LIMITED/MediaQuotaExceeded with retryAfterSeconds and Retry-After; 500 INTERNAL_ERROR; 503 UNAVAILABLE. */
         ListingError: {
             headers: {
                 /** @description Present on 429; seconds until another attempt may be made. */

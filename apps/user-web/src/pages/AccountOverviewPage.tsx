@@ -107,7 +107,7 @@ function WalletSummary({ ownerId }: { ownerId: string }) {
               <dd>{formatVnd(query.data.transactionHeld)}</dd>
             </div>
           </dl>
-          <Link to="/wallet">Nạp ví và xem kết quả</Link>
+          <Link to={ROUTES.wallet}>Mở ví của tôi</Link>
           {query.isError && (
             <ReadFailure
               subject="số dư mới"

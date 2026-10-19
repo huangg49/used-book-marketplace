@@ -874,7 +874,7 @@ Source inventory: web global CSS, Home/Search/Detail/Login/Sell/Profile module C
 
 ## Conversation workspace —19/10/2026
 
-Owner approved ADR0040's shared purchase/exchange workspace. Navbar Chat opens
+Owner approved ADR0041's shared purchase/exchange workspace. Navbar Chat opens
 participant/book cards; selected room has a paper agreement at left and chat at
 right, with preserved panel switching on mobile. Seller mode proposals require
 counterpart confirmation, and structured accepted prices fill the order sheet.

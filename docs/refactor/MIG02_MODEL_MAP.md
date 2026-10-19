@@ -198,7 +198,7 @@ toàn bộ C trên toàn DB (tương đương các lệnh `SELECT latlai_check_o
 `DirectSale`; tài khoản SimulatorCapital/Clearing với id cố định, journal mở đầu
 `…0003` sequence 1 cân 100.000.000; counter sequence = 1. Chỉ chèn khi thiếu.
 
-## Conversation agreements (ADR0040, migration0032)
+## Conversation agreements (ADR0041, migration0032)
 
 `conversation_terms` is mutable and keyed by the owning `purchase_conversations`
 id. The conversation document serializes all proposal/respond/order/link writers

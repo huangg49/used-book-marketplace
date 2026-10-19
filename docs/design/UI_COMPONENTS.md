@@ -472,7 +472,7 @@ combines purchase cards and unlinked Exchange history without fabricating unread
 counts. Shared `Conversation.module.css` defines agreement/chat columns, card inbox
 and mobile panel navigation. Exchange BookInfoCard/ProgressStepper accept compact
 presentation for the agreement column; their lifecycle meanings are unchanged.
-ADR0040 and the ChatPage surface brief define permission and replay behavior.
+ADR0041 and the ChatPage surface brief define permission and replay behavior.
 ChatPage's local book-dossier trial above960px puts real book identity in a wine
 agreement header; the adjacent white chat has a partner-led header. Both retain
 one spread and separate agreement-body/message scrolling.
