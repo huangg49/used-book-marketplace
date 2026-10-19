@@ -241,7 +241,7 @@ export function AuctionsScreen() {
           hasNotification={notificationCount > 0}
           notificationCount={notificationCount}
           onNotificationsPress={() => setNotificationsOpen(true)}
-          onMessagesPress={() => router.push("/account")}
+          onMessagesPress={() => router.push("/chat-inbox")}
         />
 
         {/* 2. Search & Shortcuts Sub-Header */}

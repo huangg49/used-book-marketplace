@@ -12,6 +12,20 @@ function formatVnd(amount: number | null | undefined): string {
   return new Intl.NumberFormat("vi-VN").format(amount) + " ₫";
 }
 
+function formatListingDate(iso: string | null | undefined): string {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch {
+    return "";
+  }
+}
+
 export function BookOverviewSection({ item }: BookOverviewSectionProps) {
   const { book, salePrice, exchangeValue, purchaseAvailability } = item;
 
@@ -63,14 +77,26 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
     .filter(Boolean)
     .join(" · ");
 
+  const publishedDateText = formatListingDate(item.publishedAt);
+  const areaText = item.fulfillment?.name || "TP.HCM";
+  const listingCode = `#TIN-${item.id.slice(0, 8).toUpperCase()}`;
+
   return (
     <View style={styles.card}>
-      <View style={styles.headerStack}>
+      {/* Top Meta Row: Category Badge & Listing Code */}
+      <View style={styles.topMetaRow}>
         <View style={styles.categoryBadge}>
           <Icon name="tag" size={12} color={stitchTokens.wineMid} />
           <AppText style={styles.categoryTag}>{categoryTag}</AppText>
         </View>
 
+        <View style={styles.listingCodeBadge}>
+          <AppText style={styles.listingCodeText}>{listingCode}</AppText>
+        </View>
+      </View>
+
+      {/* Book Title & Authors */}
+      <View style={styles.headerStack}>
         <AppText style={styles.bookTitle} accessibilityRole="header">
           {book.title}
         </AppText>
@@ -120,6 +146,15 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
             <AppText style={styles.publishedHint}>Đã kiểm duyệt catalog</AppText>
           </View>
         </View>
+
+        {/* Date & Location Footnote */}
+        <View style={styles.footnoteRow}>
+          <Icon name="pin" size={12} color={stitchTokens.roseBrown} />
+          <AppText style={styles.footnoteText}>
+            {publishedDateText ? `Đăng ngày ${publishedDateText}` : "Đang niêm yết"}
+            {` · Khu vực ${areaText}`}
+          </AppText>
+        </View>
       </View>
     </View>
   );
@@ -128,10 +163,10 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
 const styles = StyleSheet.create({
   card: {
     padding: space.md,
-    borderRadius: 18,
+    borderRadius: 20,
     backgroundColor: stitchTokens.whiteSurface,
     borderWidth: 1.5,
-    borderColor: stitchTokens.peachMuted,
+    borderColor: stitchTokens.peachBorder,
     gap: space.md,
     shadowColor: stitchTokens.wineDark,
     shadowOffset: { width: 0, height: 2 },
@@ -139,11 +174,14 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
-  headerStack: {
+  topMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 8,
   },
   categoryBadge: {
-    alignSelf: "flex-start",
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
@@ -158,7 +196,24 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
     color: stitchTokens.wineDark,
+    letterSpacing: 0.4,
+  },
+  listingCodeBadge: {
+    backgroundColor: stitchTokens.parchment,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorderAlpha40,
+  },
+  listingCodeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: stitchTokens.wineMid,
     letterSpacing: 0.5,
+  },
+  headerStack: {
+    gap: 6,
   },
   bookTitle: {
     fontSize: 23,
@@ -267,5 +322,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: stitchTokens.darkWood,
     fontWeight: "600",
+  },
+  footnoteRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.amberBorder,
+  },
+  footnoteText: {
+    fontSize: 11,
+    color: stitchTokens.roseBrown,
+    fontWeight: "500",
   },
 });

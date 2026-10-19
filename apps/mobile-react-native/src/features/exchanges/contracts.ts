@@ -1,0 +1,180 @@
+import { z } from "zod";
+import { stitchTokens } from "../../core/ui/theme";
+
+const uuid = z.string().uuid();
+const dateIso = z.string().nullable().optional();
+
+export const exchangeAddressSnapshot = z.object({
+  recipientName: z.string(),
+  phone: z.string(),
+  detail: z.string(),
+  localityCode: z.string().nullable().optional(),
+  serviceAreaCode: z.string().nullable().optional(),
+});
+
+export const exchangeShipmentInfo = z.object({
+  method: z.enum(["carrier", "direct"]),
+  carrierCode: z.string().nullable().optional(),
+  carrierName: z.string().nullable().optional(),
+  trackingCode: z.string().nullable().optional(),
+  meetupLocation: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  shippedAt: dateIso,
+});
+
+export const exchangeSchema = z.object({
+  id: uuid,
+  initiatorId: uuid,
+  recipientId: uuid,
+  initiatorListingId: uuid.nullable().optional(),
+  initiatorListingIds: z.array(uuid).optional(),
+  recipientListingId: uuid,
+  status: z.enum([
+    "Proposed",
+    "AcceptedAwaitingFunding",
+    "Preparing",
+    "InTransit",
+    "Delivered",
+    "Completed",
+    "Cancelled",
+    "ResolutionPending",
+  ]),
+  revision: z.number().int().min(1),
+  initiatorDeposit: z.number().int().min(0),
+  recipientDeposit: z.number().int().min(0),
+  diffAmount: z.number().int().min(0),
+  diffPayerId: uuid.nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  fundingDeadline: dateIso,
+  shippingDeadline: dateIso,
+  proposalExpiresAt: dateIso,
+  initiatorFundedAt: dateIso,
+  recipientFundedAt: dateIso,
+  initiatorShippedAt: dateIso,
+  recipientShippedAt: dateIso,
+  initiatorReceivedAt: dateIso,
+  recipientReceivedAt: dateIso,
+  inspectionDeadline: dateIso,
+  disputedAt: dateIso,
+  disputeReason: z.string().nullable().optional(),
+  disputedBy: uuid.nullable().optional(),
+  lastProposedById: uuid.nullable().optional(),
+  completedAt: dateIso,
+  initiatorCompletedAt: dateIso,
+  recipientCompletedAt: dateIso,
+  initiatorAddress: exchangeAddressSnapshot.nullable().optional(),
+  recipientAddress: exchangeAddressSnapshot.nullable().optional(),
+  initiatorShipment: exchangeShipmentInfo.nullable().optional(),
+  recipientShipment: exchangeShipmentInfo.nullable().optional(),
+  rejectionReason: z.string().nullable().optional(),
+  cancelReason: z.string().nullable().optional(),
+  cancelledBy: z.string().nullable().optional(),
+  cancelledAt: dateIso,
+});
+
+export type Exchange = z.infer<typeof exchangeSchema>;
+export type ExchangeStatus = Exchange["status"];
+
+export const exchangePageSchema = z.object({
+  items: z.array(exchangeSchema),
+  nextCursor: z.string().nullable().optional(),
+});
+
+export const exchangeMessageSchema = z.object({
+  id: z.string(),
+  exchangeId: z.string(),
+  senderId: z.string(),
+  body: z.string(),
+  sentAt: z.string(),
+});
+
+export type ExchangeMessage = z.infer<typeof exchangeMessageSchema>;
+
+export const exchangeMessagePageSchema = z.object({
+  items: z.array(exchangeMessageSchema),
+});
+
+export const exchangeReceiptSchema = z.object({
+  id: uuid,
+  entityType: z.string(),
+  entityId: uuid,
+  version: z.number().int(),
+  serverTime: z.string(),
+});
+
+export function mapExchangeStatusInfo(
+  status: ExchangeStatus,
+  isInitiator: boolean,
+): {
+  label: string;
+  badgeBg: string;
+  badgeColor: string;
+  stepIndex: number;
+} {
+  switch (status) {
+    case "Proposed":
+      return {
+        label: isInitiator ? "Chờ đối tác phản hồi" : "Đề nghị mới chờ bạn duyệt",
+        badgeBg: stitchTokens.tagExchangeBg,
+        badgeColor: stitchTokens.tagExchangeText,
+        stepIndex: 0,
+      };
+    case "AcceptedAwaitingFunding":
+      return {
+        label: "Đã đồng ý · Chờ đặt cọc bảo chứng",
+        badgeBg: stitchTokens.amberBg,
+        badgeColor: stitchTokens.goldBronze,
+        stepIndex: 1,
+      };
+    case "Preparing":
+      return {
+        label: "Đã cọc · Chuẩn bị gửi sách",
+        badgeBg: stitchTokens.likeNewGreenBg,
+        badgeColor: stitchTokens.likeNewGreen,
+        stepIndex: 2,
+      };
+    case "InTransit":
+      return {
+        label: "Đang giao vận chuyển",
+        badgeBg: stitchTokens.amberBg,
+        badgeColor: stitchTokens.orangeDeep,
+        stepIndex: 3,
+      };
+    case "Delivered":
+      return {
+        label: "Đã giao · Đang đồng kiểm",
+        badgeBg: stitchTokens.terracottaSoft,
+        badgeColor: stitchTokens.wineDark,
+        stepIndex: 4,
+      };
+    case "Completed":
+      return {
+        label: "Trao đổi hoàn tất",
+        badgeBg: stitchTokens.likeNewGreenBg,
+        badgeColor: stitchTokens.verifiedGreen,
+        stepIndex: 5,
+      };
+    case "Cancelled":
+      return {
+        label: "Giao dịch đã hủy",
+        badgeBg: stitchTokens.flashRedBg,
+        badgeColor: stitchTokens.flashRed,
+        stepIndex: -1,
+      };
+    case "ResolutionPending":
+      return {
+        label: "Đang xử lý khiếu nại",
+        badgeBg: stitchTokens.flashRedBg,
+        badgeColor: stitchTokens.crimson,
+        stepIndex: -1,
+      };
+    default:
+      return {
+        label: status,
+        badgeBg: stitchTokens.cardSurface,
+        badgeColor: stitchTokens.darkWood,
+        stepIndex: 0,
+      };
+  }
+}
