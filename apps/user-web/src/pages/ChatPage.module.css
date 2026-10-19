@@ -416,12 +416,6 @@
 .sendRow button:hover {
   background: var(--shop-wine-hover);
 }
-.privacy {
-  margin: 12px 0 0;
-  font-size: var(--conversation-meta);
-  color: var(--shop-muted);
-  line-height: 1.5;
-}
 .root button:disabled {
   opacity: 0.55;
   cursor: not-allowed;

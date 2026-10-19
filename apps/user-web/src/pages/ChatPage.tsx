@@ -1010,9 +1010,6 @@ function ChatRoom({
                         : "Gửi tin nhắn"}
                   </button>
                 </div>
-                <p className={styles.privacy}>
-                  Tin nhắn chỉ hiển thị với hai người trong cuộc trao đổi này.
-                </p>
               </>
             )}
           </form>

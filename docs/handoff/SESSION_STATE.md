@@ -27,7 +27,11 @@
   selector scoped thắng CSS input chung. Subject
   `fix(web): unify agreement price field focus`. QA chuột/bàn phím, kích thước,
   desktop/mobile và forced colors PASS tại `.tmp/chat-price-focus-qa`.
-  Chỉ CSS; không chạy lại gate API/nghiệp vụ.
+  Follow-up footer: bỏ ghi chú riêng tư dưới composer, hai nút gửi tin/nhận sách
+  thẳng hàng. Subject `fix(web): align conversation footer actions`.
+  Typecheck/build PASS (chunk warning cũ); QA desktop1440/1100 khi trống/có nháp,
+  mobile390/320 giữ nháp/panel/no overflow PASS tại `.tmp/chat-footer-qa`.
+  Chỉ trình bày; không chạy lại gate API/nghiệp vụ.
 - PASS UI:147unit, lint (6 warning cũ), typecheck/build (chunk warning cũ),
   docs/diff check. Browser fixture chạy luồng retry/chuyển hình thức/giá/đơn/
   thanh toán và Exchange cũ;1440/1100/900/390px,320px chữ130%. Kiểm tên sách
