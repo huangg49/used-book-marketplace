@@ -904,6 +904,12 @@ appears only for an active empty
 conversation, centered with the greeting; never in a history error or expired room.
 These are decorative, noninteractive details, not transaction or presence signals.
 
+On19/10 the owner retained the approved18/10 soft3D autumn book-desk illustration
+as the Chat inbox/room background after viewing an alternative image. It is a
+Chat-only fixed viewport-cover layer in MainLayout, with opaque paper/shelf
+content and12px mobile outside clearance. Navigating away removes it; Sell keeps
+its archival desk. Reuse the exact `autumn-book-desk.webp` from6394dc4.
+
 The agreement sheet now groups mode, price and price entry as its primary content.
 Before acceptance the listing price leads; after acceptance the agreed wine price
 leads. The exchange request sits beside the mode group. Fees remain visible;

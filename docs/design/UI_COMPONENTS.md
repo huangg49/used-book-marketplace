@@ -476,6 +476,10 @@ ADR0041 and the ChatPage surface brief define permission and replay behavior.
 ChatPage's local book-dossier trial above960px puts real book identity in a wine
 agreement header; the adjacent white chat has a partner-led header. Both retain
 one spread and separate agreement-body/message scrolling.
+MainLayout scopes the approved soft3D autumn book-desk background to Chat routes
+via `data-chat`; a fixed pointer-inert pseudo-element covers the viewport and
+unmounts on navigation away. Opaque inbox/guest sheets preserve text contrast;
+mobile retains12px outside clearance. Sell retains its archival desk background.
 The action area is outside the body rather than a sticky overlay. Narrow panels
 keep mounted drafts and natural sheet flow. Shared scoped typography uses
 400/700 weights and title/data/body/metadata roles. Accepted-price edits and

@@ -1,5 +1,22 @@
 # Điểm lưu hiện tại — 19/10/2026
 
+## Nền mùa thu3D cho Chat —19/10/2026
+
+- Nhánh `codex/chat-open-book`, base `d684bd6`, subject
+  `style(web): reuse approved autumn posting background for chat`.
+  Theo chủ dự án, khôi phục nguyên ảnh `autumn-book-desk.webp` từ `6394dc4`
+  (18/10,77KB) cho inbox và room Chat. Không tạo lại ảnh/không đổi nền Sell.
+  MainLayout gắn nền fixed chỉ trên route Chat, tháo khi rời route; phiếu/chat/
+  inbox giữ bề mặt giấy đặc, mobile có khoảng nền12px hai bên.
+  Chủ dự án đã xem bản gen thay thế rồi chọn giữ nền đang chạy trên web;
+  ảnh thử không được đưa vào code.
+- PASS web build (chunk warning cũ), toàn bộ Chat browser fixture1440/1100/
+  900/390/320 chữ130% tại `.tmp/chat-autumn-bg-qa`; đã xem inbox desktop/mobile
+  và room desktop. Scope QA `.tmp/chat-background-scope-qa` kiểm đúng77026byte
+  ảnh gốc, cuộn vẫn fixed/cover, không tràn ngang và rời Home gỡ nền.
+  API/DB/session/handlers không đổi; không chạy lại gate backend/native/live
+  storage/remote CI. READINESS giữ nguyên, chưa push/PR; web5174 HMR để owner xem.
+
 ## Đồng bộ GitHub về máy — 19/10/2026
 
 - Theo chủ dự án, fetch và merge `origin/main` tại `8741a6f` (PR50) vào

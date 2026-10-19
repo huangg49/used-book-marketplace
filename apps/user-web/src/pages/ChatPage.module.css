@@ -22,6 +22,13 @@
   border-radius: 12px;
   background: var(--shop-shelf);
 }
+.root[data-room-selected="false"],
+.guest {
+  width: calc(100% - 48px);
+  margin: 24px auto 32px;
+  border-radius: 12px;
+  background: var(--shop-paper);
+}
 .pageHeading {
   display: flex;
   align-items: center;
@@ -518,6 +525,11 @@
     padding: 24px;
     margin-top: 16px;
   }
+  .root[data-room-selected="false"],
+  .guest {
+    width: calc(100% - 32px);
+    margin-top: 16px;
+  }
   .roomHeader {
     gap: 16px;
   }
@@ -528,11 +540,12 @@
   }
   .root,
   .guest,
-  .root[data-room-selected="true"] {
-    width: auto;
-    margin: 0;
+  .root[data-room-selected="true"],
+  .root[data-room-selected="false"] {
+    width: calc(100% - 24px);
+    margin: 12px auto;
     padding: 20px 16px 24px;
-    border-radius: 0;
+    border-radius: 12px;
   }
   .pageHeading {
     padding: 4px 0 24px;

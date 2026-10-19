@@ -11,6 +11,13 @@ listing. `/chat/start/:listingId?intent=Negotiation|Exchange` preserves the entr
 intent through login and opens/reuses a private room. `/chat/:roomId` reads the
 selected room directly, including when not among the inbox's latest100 results.
 
+19/10 owner follow-up: reuse the approved18/10 soft3D autumn posting artwork
+`/illustrations/posting/autumn-book-desk.webp`, restored byte-for-byte from6394dc4.
+MainLayout's Chat-only data attribute owns a fixed viewport-cover background,
+removed on navigation away. Inbox/guest/room keep opaque paper/shelf surfaces;
+mobile has12px side clearance. The Sell archival background stays unchanged.
+The image is decorative and does not replace any real listing cover.
+
 Owner chose “two pages of an open book” after rejecting competing type emphasis.
 Book title is theh1 beside the real cover; authors/status support it. Partner name,
 role and initial avatar belong to the chat header. A warm shelf ground surrounds

@@ -22,6 +22,7 @@ export default function MainLayout() {
       <main
         id="main-content"
         className={styles.main}
+        data-chat={isChat || undefined}
         data-exchange={
           location.pathname === "/exchange" ||
           location.pathname.startsWith("/exchange/") ||
