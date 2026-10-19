@@ -377,8 +377,11 @@ export function BuyNowPage() {
       </div>
       {unavailable && !prepared && (
         <p role="alert" className={styles.error}>
-          Bản sách này hiện chưa thể mua ngay. Kiểm tra nơi gửi và trạng thái
-          trên bài đăng.
+          {item.seller.id === auth.user.id
+            ? "Bạn không thể tự mua bản sách của chính mình."
+            : !item.fulfillment
+              ? "Bản sách này chưa cấu hình nơi gửi nên chưa thể mua ngay. Hãy nhắn tin với người bán để trao đổi."
+              : "Bản sách này hiện chưa thể mua ngay. Kiểm tra nơi gửi và trạng thái trên bài đăng."}
         </p>
       )}
       <PurchaseDialog
@@ -423,9 +426,24 @@ export function BuyNowPage() {
           <p role="status">Đang tải thông tin giao nhận…</p>
         )}
         {unavailable && !prepared && (
-          <p className={styles.error}>
-            Bản sách này hiện chưa thể mua ngay. Hãy xem lại bài đăng.
-          </p>
+          <div className={styles.error}>
+            <p>
+              {item.seller.id === auth.user.id
+                ? "Bạn không thể tự mua bản sách của chính mình."
+                : !item.fulfillment
+                  ? "Bản sách này người bán chưa cấu hình nơi gửi nên chưa thể tính phí giao ngay."
+                  : "Bản sách này hiện chưa thể mua ngay. Hãy xem lại bài đăng."}
+            </p>
+            {item.seller.id !== auth.user.id && (
+              <Link
+                to={`/chat/start/${item.id}`}
+                className={styles.textButton}
+                style={{ marginTop: "8px", display: "inline-flex" }}
+              >
+                Nhắn tin với người bán →
+              </Link>
+            )}
+          </div>
         )}
         {error && (
           <p role="alert" className={styles.error}>

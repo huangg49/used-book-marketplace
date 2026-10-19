@@ -478,7 +478,18 @@ function ChatRoom({
                 >
                   <div>
                     <h3>{guidance.title}</h3>
+                    {guidance.description && (
+                      <p>{guidance.description}</p>
+                    )}
                   </div>
+                  {guidance.action === "edit-listing" && (
+                    <Link
+                      className={styles.nextAction}
+                      to={`/books/${room.listingId}`}
+                    >
+                      {guidance.actionLabel}
+                    </Link>
+                  )}
                   {guidance.action === "address" && !room.terms?.locked && (
                     <Link
                       className={styles.nextAction}
