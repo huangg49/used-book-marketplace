@@ -20,6 +20,8 @@ import { Header } from "../layouts/MainLayout";
 import { Logo } from "../components/Header";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ListingSubmissionConfirmation } from "../components/BookJourneyStates";
+import { lockPageScroll } from "../lib/page-scroll";
+import galleryStyles from "../components/ListingGallery.module.css";
 import { useSession } from "../hooks/useSession";
 import { session as apiSession } from "../lib/session";
 import { createListingSubmission } from "../services/listing-submission";
@@ -91,6 +93,13 @@ export function SellBookPage() {
   const supportInput = useRef<HTMLInputElement>(null);
   const replacementInput = useRef<HTMLInputElement>(null);
   const replacementIndex = useRef<number | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const photoViewer = useRef<HTMLDialogElement>(null);
+  const photoViewerOpen = previewImage !== null;
+  useEffect(() => {
+    if (!photoViewerOpen) return;
+    return lockPageScroll();
+  }, [photoViewerOpen]);
   const location = useLocation();
   const session = useSession();
   const addresses = useQuery({
@@ -695,24 +704,69 @@ export function SellBookPage() {
   const visibleSubmitError = validationFailure
     ? stepError(step) || (step === 5 ? fieldErrors.ownership : undefined)
     : submitError;
+  const previewIndex =
+    previewImage === null ? -1 : formData.images.indexOf(previewImage);
+  function photoLabel(index: number) {
+    return hasCoverPhoto && index === 0
+      ? "Ảnh bìa"
+      : `Ảnh phụ ${index + 1 - Number(hasCoverPhoto)}`;
+  }
+  function openPhoto(index: number) {
+    setPreviewImage(formData.images[index]!);
+    photoViewer.current?.showModal();
+  }
+  function stepPhoto(amount: number) {
+    const index =
+      (previewIndex + amount + formData.images.length) % formData.images.length;
+    setPreviewImage(formData.images[index]!);
+  }
   const preview = (
     <section className={styles.preview} aria-label="Bản xem trước bài đăng">
       <div className={styles.previewHeading}>
         <h2>Cuốn sách của bạn</h2>
         <span>Bản nháp</span>
       </div>
-      <div
-        className={`${styles.previewPhoto} ${!hasCoverPhoto ? styles.previewPhotoEmpty : ""}`}
-      >
-        {hasCoverPhoto && formData.images[0] ? (
-          <img
-            src={formData.images[0]}
-            alt={`Ảnh bìa ${formData.title || "bản sách"}`}
-          />
-        ) : (
-          <div className={styles.emptyPhoto}>
-            <BookOpen size={32} aria-hidden="true" />
-            <span>Thêm ảnh ở bước tiếp theo</span>
+      <div className={styles.previewMedia}>
+        <div
+          className={`${styles.previewPhoto} ${!hasCoverPhoto ? styles.previewPhotoEmpty : ""}`}
+        >
+          {hasCoverPhoto && formData.images[0] ? (
+            <button
+              type="button"
+              className={styles.previewCoverButton}
+              aria-label="Xem ảnh bìa chi tiết"
+              aria-haspopup="dialog"
+              onClick={() => openPhoto(0)}
+            >
+              <img
+                src={formData.images[0]}
+                alt={`Ảnh bìa ${formData.title || "bản sách"}`}
+              />
+            </button>
+          ) : (
+            <div className={styles.emptyPhoto}>
+              <BookOpen size={32} aria-hidden="true" />
+              <span>Thêm ảnh ở bước tiếp theo</span>
+            </div>
+          )}
+        </div>
+        {formData.images.length > 0 && (
+          <div
+            className={styles.previewThumbnails}
+            role="group"
+            aria-label="Ảnh thu nhỏ bản nháp"
+          >
+            {formData.images.map((url, index) => (
+              <button
+                key={url}
+                type="button"
+                aria-label={`Xem ${photoLabel(index).toLowerCase()} chi tiết`}
+                aria-haspopup="dialog"
+                onClick={() => openPhoto(index)}
+              >
+                <img src={url} alt="" />
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -790,6 +844,65 @@ export function SellBookPage() {
     );
   return (
     <div className={styles.root}>
+      <dialog
+        ref={photoViewer}
+        className={`${galleryStyles.viewer} ${styles.photoViewer}`}
+        aria-labelledby="draft-photo-viewer-title"
+        onClose={() => setPreviewImage(null)}
+        onKeyDown={(event) => {
+          if (formData.images.length < 2) return;
+          if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+            event.preventDefault();
+            stepPhoto(event.key === "ArrowLeft" ? -1 : 1);
+          }
+        }}
+      >
+        <div className={galleryStyles.viewerHead}>
+          <h2 id="draft-photo-viewer-title">Ảnh bản sách của bạn</h2>
+          <button
+            type="button"
+            autoFocus
+            aria-label="Đóng ảnh chi tiết"
+            onClick={() => photoViewer.current?.close()}
+          >
+            <X size={22} aria-hidden="true" />
+          </button>
+        </div>
+        {previewIndex >= 0 && (
+          <div className={galleryStyles.largePhoto}>
+            <img
+              className={styles.previewDetailImage}
+              src={previewImage!}
+              alt={`${photoLabel(previewIndex)} · ${formData.title || "Bản sách của bạn"}`}
+            />
+          </div>
+        )}
+        <div className={galleryStyles.viewerFoot}>
+          {formData.images.length > 1 && (
+            <button
+              type="button"
+              aria-label="Ảnh trước"
+              onClick={() => stepPhoto(-1)}
+            >
+              <ArrowLeft size={20} aria-hidden="true" />
+            </button>
+          )}
+          <p aria-live="polite">
+            {previewIndex >= 0
+              ? `${photoLabel(previewIndex)} · ${previewIndex + 1}/${formData.images.length}`
+              : ""}
+          </p>
+          {formData.images.length > 1 && (
+            <button
+              type="button"
+              aria-label="Ảnh sau"
+              onClick={() => stepPhoto(1)}
+            >
+              <ArrowRight size={20} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      </dialog>
       <svg
         width="0"
         height="0"

@@ -561,6 +561,114 @@ try {
     await thumbnails.evaluateAll((nodes) => nodes.map((node) => node.src)),
     [initialPreviews[0], initialPreviews[2]],
   );
+  // Draft thumbnails follow photo edits and open a read-only detail viewer.
+  const draftViewer = p.getByRole("dialog", {
+    name: "Ảnh bản sách của bạn",
+    exact: true,
+  });
+  for (const width of [1440, 390]) {
+    await p.setViewportSize({ width, height: 900 });
+    if (width === 390)
+      await p.locator("summary").filter({ hasText: "Xem bản nháp" }).click();
+    const draft = p.getByRole("region", {
+      name: "Bản xem trước bài đăng",
+      exact: true,
+    });
+    const miniatures = draft.getByRole("group", {
+      name: "Ảnh thu nhỏ bản nháp",
+      exact: true,
+    });
+    assert.deepEqual(
+      await miniatures
+        .locator("img")
+        .evaluateAll((nodes) => nodes.map((node) => node.src)),
+      [initialPreviews[0], initialPreviews[2]],
+    );
+    const miniButtons = miniatures.getByRole("button");
+    assert.equal(await miniButtons.count(), 2);
+    const thumbBounds = await miniButtons.first().boundingBox();
+    assert.ok(thumbBounds.width >= 44 && thumbBounds.height >= 44);
+    const coverBounds = await draft
+      .getByRole("button", { name: "Xem ảnh bìa chi tiết", exact: true })
+      .first()
+      .boundingBox();
+    assert.ok(thumbBounds.y >= coverBounds.y + coverBounds.height);
+    await draft.screenshot({
+      path: path.join(artifacts, `sell-draft-thumbnails-${width}.png`),
+    });
+    const secondThumb = miniatures.getByRole("button", {
+      name: "Xem ảnh phụ 1 chi tiết",
+      exact: true,
+    });
+    const oldOverflow = await p.evaluate(
+      () => document.documentElement.style.overflowY,
+    );
+    await secondThumb.click();
+    await draftViewer.waitFor();
+    assert.equal(
+      await draftViewer.locator("img").getAttribute("src"),
+      initialPreviews[2],
+    );
+    assert.equal(
+      await p.evaluate(() => document.documentElement.style.overflowY),
+      "hidden",
+    );
+    await draftViewer
+      .getByRole("button", { name: "Ảnh trước", exact: true })
+      .click();
+    assert.equal(
+      await draftViewer.locator("img").getAttribute("src"),
+      initialPreviews[0],
+    );
+    await p.keyboard.press("ArrowRight");
+    assert.equal(
+      await draftViewer.locator("img").getAttribute("src"),
+      initialPreviews[2],
+    );
+    await draftViewer.screenshot({
+      path: path.join(artifacts, `sell-draft-photo-detail-${width}.png`),
+    });
+    await p.keyboard.press("Tab");
+    assert.equal(
+      await draftViewer.evaluate((node) =>
+        node.contains(document.activeElement),
+      ),
+      true,
+    );
+    await p.keyboard.press("Escape");
+    await draftViewer.waitFor({ state: "hidden" });
+    assert.equal(
+      await secondThumb.evaluate((node) => node === document.activeElement),
+      true,
+    );
+    await p.waitForFunction(
+      (expected) => document.documentElement.style.overflowY === expected,
+      oldOverflow,
+    );
+    // The full cover opens the same viewer, without changing the actual cover.
+    await draft
+      .getByRole("button", { name: "Xem ảnh bìa chi tiết", exact: true })
+      .first()
+      .click();
+    await draftViewer.waitFor();
+    assert.equal(
+      await draftViewer.locator("img").getAttribute("src"),
+      initialPreviews[0],
+    );
+    await draftViewer
+      .getByRole("button", { name: "Đóng ảnh chi tiết", exact: true })
+      .click();
+    await draftViewer.waitFor({ state: "hidden" });
+    assert.equal(await thumbnails.count(), 2);
+    assert.ok(
+      await p.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    );
+    if (width === 390)
+      await p.locator("summary").filter({ hasText: "Xem bản nháp" }).click();
+  }
+  await p.setViewportSize({ width: 1440, height: 900 });
   await step(/Tình trạng/).click();
   await p.getByLabel("Mức độ đã qua sử dụng").selectOption("Worn");
   await p
@@ -862,7 +970,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    "PASS user-web: real shelf/filter/pagination/detail; empty/error/retry; login return and owner guard; five tabs/data retention; multi-file picker/add/remove/max8/validation, two-photo upload/submit replay; chat lost-response replay with one conversation; 390px100/130%, Home/Detail/Search320px130%. Fake storage, no native acceptance.",
+    "PASS user-web: real shelf/filter/pagination/detail; empty/error/retry; login return and owner guard; five tabs/data retention; multi-file picker/add/remove/max8/validation, draft thumbnail/detail viewer/keyboard/focus, two-photo upload/submit replay; chat lost-response replay with one conversation; 390px100/130%, Home/Detail/Search320px130%. Fake storage, no native acceptance.",
   );
 } catch (error) {
   const pages = browser?.contexts().flatMap((context) => context.pages()) ?? [];

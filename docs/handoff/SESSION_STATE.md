@@ -1,5 +1,25 @@
 # Điểm lưu hiện tại — 19/10/2026
 
+## Ảnh thu nhỏ trong bản nháp — 19/10/2026
+
+- Member web `/sell`: ảnh thu nhỏ nằm dưới ảnh bìa trong thẻ “Cuốn sách của bạn”,
+  cập nhật theo thứ tự ảnh bìa/phụ khi thay/xóa. Bấm thumbnail hoặc bìa mở ảnh lớn
+  đúng ảnh, có trước/sau, phím mũi tên, Esc/nút đóng; xem ảnh không đổi ảnh bìa.
+  Dialog native dùng chung hai bản preview desktop/compact, tái sử dụng CSS
+  ListingGallery và lockPageScroll; giữ focus/scroll sau đóng, cleanup khi unmount.
+- Desktop giữ sticky/cap chiều cao; thumbnails wrap >=44px. Mobile <=600px mở
+  bản nháp theo chiều dọc để ảnh/thumbnail không bị ép. Không đổi API/RN/upload/
+  idempotency. Nhánh `codex/draft-photo-gallery`, baseb6d2b2e; subject
+  `feat(web): preview draft photos from thumbnail gallery`.
+- PASS web lint/typecheck/136unit/build; Chromium1440/390 ở130%: thumbnail đúng
+  URL/thứ tự sau thay/xóa, click mở đúng ảnh phụ/bìa, previous/ArrowRight, Tab nằm
+  trong dialog, Esc trả focus và scroll lock được trả; không đổi2 ảnh của form.
+  Regression sticky3 viewport/quota/upload2/replay/shelf/search/chat giữ PASS.
+  Đã xem `apps/user-web/test-results/sell-draft-thumbnails-*.png` và
+  `sell-draft-photo-detail-*.png`. API/Mongo QA riêng, storage fake/Sharp thật.
+- 6 warning lint và warning chunk có sẵn. Không kiểm native/live provider/human/
+  remote CI; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
+
 ## Ảnh bìa và ảnh phụ riêng — 19/10/2026
 
 - Member web `/sell` theo mẫu chủ dự án: ảnh bìa bên trái, vùng ảnh phụ bên phải;

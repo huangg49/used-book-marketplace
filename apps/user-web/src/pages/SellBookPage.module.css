@@ -650,6 +650,55 @@
   max-height: 100%;
   object-fit: contain;
 }
+.previewMedia {
+  min-width: 0;
+}
+.previewCoverButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+}
+.previewThumbnails {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.previewThumbnails button {
+  height: 60px;
+  min-width: 44px;
+  padding: 4px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: #efe3cf;
+  cursor: zoom-in;
+}
+.previewThumbnails img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.previewThumbnails button:hover {
+  border-color: var(--shop-wine);
+}
+.previewCoverButton:focus-visible,
+.previewThumbnails button:focus-visible,
+.photoViewer :focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+.previewDetailImage {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
 .preview h3 {
   font-size: 1rem;
   line-height: 1.7;
@@ -981,10 +1030,15 @@
 .compactPreview .preview h2 {
   grid-column: 1 / -1;
 }
-.compactPreview .previewPhoto {
+.compactPreview .previewMedia {
   grid-column: 1;
   grid-row: 2 / 7;
+}
+.compactPreview .previewPhoto {
   height: 190px;
+}
+.compactPreview .previewThumbnails {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .compactPreview .preview h3 {
   margin-top: 0;
@@ -1060,6 +1114,15 @@
   line-height: 1.8;
 }
 @media (max-width: 600px) {
+  .compactPreview[open] .preview {
+    display: block;
+  }
+  .compactPreview .previewThumbnails {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .compactPreview .preview h3 {
+    margin-top: 16px;
+  }
   .questionRow {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
@@ -1238,6 +1301,5 @@
   }
   .compactPreview .previewPhoto {
     height: 180px;
-    margin-bottom: 16px;
   }
 }
