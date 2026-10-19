@@ -9,8 +9,10 @@
   Nội dung phiếu cuộn riêng, hành động cuối nằm ngoài vùng cuộn, không phủ giá.
   Ở960px trở xuống dùng panel giữ nháp; Exchange độc lập cũ giữ route/lịch sử.
   Follow-up ảnh chủ dự án: bảng giá chỉ kẻ giữa các dòng, bỏ viền dưới dòng cuối
-  để không tạo hai đường sát nhau với footer. CSS build/diff check PASS;
-  không chạy lại các gate nghiệp vụ cho sửa một đường phân cách này.
+  để không tạo hai đường sát nhau với footer. Bỏ icon bong bóng trong trạng thái
+  hội thoại rỗng và khoảng trống phía trên lời chào. Typecheck/build PASS (chunk
+  warning cũ); đã xem fixture desktop/mobile tại `.tmp/chat-empty-state-qa`.
+  Không đổi API/nghiệp vụ.
 - PASS UI:147unit, lint (6 warning cũ), typecheck/build (chunk warning cũ),
   docs/diff check. Browser fixture chạy luồng retry/chuyển hình thức/giá/đơn/
   thanh toán và Exchange cũ;1440/1100/900/390px,320px chữ130%. Kiểm tên sách

@@ -431,14 +431,11 @@
   color: var(--shop-muted);
   text-align: center;
 }
-.emptyRoom > svg {
-  color: var(--shop-control);
-}
 .emptyRoom h3 {
   font-size: var(--conversation-body);
   line-height: 1.5;
   color: var(--shop-ink);
-  margin: 16px 0 8px;
+  margin: 0 0 8px;
   font-weight: 700;
 }
 .emptyRoom p {

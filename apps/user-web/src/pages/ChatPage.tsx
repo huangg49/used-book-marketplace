@@ -18,7 +18,6 @@ import {
   ArrowLeft,
   ArrowUpRight,
   BookOpen,
-  MessageCircle,
   Send,
 } from "lucide-react";
 import { useSession } from "../hooks/useSession";
@@ -850,7 +849,6 @@ function ChatRoom({
             )}
             {!history.isError && history.data && messages.length === 0 && (
               <div className={styles.emptyRoom}>
-                <MessageCircle size={28} aria-hidden="true" />
                 <h3>
                   {expired
                     ? "Chưa có tin nhắn trong cuộc trao đổi này"
