@@ -30,6 +30,8 @@ import {
   type OrderListItem,
 } from "./contracts";
 import { BuyNowModal } from "./buy-now-modal";
+import { PublicPhoto } from "../shelf/public-photo";
+import { publicListing } from "../shelf/contracts";
 
 type TabKey = "all" | "awaiting_payment" | "processing" | "completed" | "cancelled";
 
@@ -48,6 +50,47 @@ function formatDate(isoString: string): string {
   } catch {
     return isoString;
   }
+}
+
+function OrderBookCover({
+  listingId,
+  title,
+}: {
+  listingId?: string;
+  title?: string;
+}) {
+  const { client } = useSession();
+  const listingQuery = useQuery({
+    queryKey: ["public-listing", listingId],
+    queryFn: () =>
+      client.publicRequest(`/listings/${listingId}`, publicListing),
+    enabled: !!listingId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const photo = listingQuery.data?.photos?.[0];
+  const revisionId = listingQuery.data?.revisionId;
+
+  if (listingId && photo && revisionId) {
+    return (
+      <View style={styles.bookCoverBox}>
+        <PublicPhoto
+          listingId={listingId}
+          revisionId={revisionId}
+          mediaId={photo.id}
+          label={title || "Ảnh bìa"}
+          active={true}
+          compact
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.bookIconBox}>
+      <Icon name="book" size={20} color={stitchTokens.wine} />
+    </View>
+  );
 }
 
 export function OrdersScreen() {
@@ -201,9 +244,7 @@ export function OrdersScreen() {
 
         {/* Card Body: Book title & date */}
         <View style={styles.cardBody}>
-          <View style={styles.bookIconBox}>
-            <Icon name="book" size={20} color={stitchTokens.wine} />
-          </View>
+          <OrderBookCover listingId={item.listingId} title={item.title} />
           <View style={styles.bookInfo}>
             <AppText
               kind="bold"
@@ -595,6 +636,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: space.sm,
     paddingVertical: 4,
+  },
+  bookCoverBox: {
+    width: 42,
+    height: 54,
+    borderRadius: 6,
+    overflow: "hidden",
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
   },
   bookIconBox: {
     width: 42,

@@ -25,6 +25,7 @@ import {
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
 import { summaryOptions } from "../wallet/wallet-model";
+import { TopupModal } from "../wallet/topup-modal";
 import { draftPage } from "../drafts/contracts";
 import { useCatalogBook } from "../drafts/catalog-picker";
 import { DraftCoverPhoto } from "../drafts/draft-cover-photo";
@@ -142,6 +143,7 @@ export function AccountScreen() {
   const { fontScale } = useWindowDimensions();
   const [presentationVersion, setPresentationVersion] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [topupModalVisible, setTopupModalVisible] = useState(false);
 
   const notifQuery = useNotifications(client, isAuthenticated);
   const notificationCount = isAuthenticated && notifQuery.data
@@ -228,7 +230,7 @@ export function AccountScreen() {
         notificationCount={notificationCount}
         hasNotification={notificationCount > 0}
         onNotificationsPress={() => setNotificationsOpen(true)}
-        onMessagesPress={() => router.push("./account")}
+        onMessagesPress={() => router.push("/chat-inbox")}
         style={{ marginBottom: 8 }}
       />
 
@@ -440,7 +442,7 @@ export function AccountScreen() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Nạp hoặc rút ví"
-                  onPress={() => router.push("./wallet")}
+                  onPress={() => setTopupModalVisible(true)}
                   style={({ pressed }) => [
                     styles.walletBtnPrimary,
                     pressed && { opacity: 0.8 },
@@ -927,6 +929,16 @@ export function AccountScreen() {
       <HomeNotificationsModal
         visible={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}
+      />
+
+      {/* Topup Modal for Wallet */}
+      <TopupModal
+        visible={topupModalVisible}
+        onClose={() => setTopupModalVisible(false)}
+        ownerId={ownerId}
+        onSuccess={() => {
+          void wallet.refetch();
+        }}
       />
     </Screen>
 

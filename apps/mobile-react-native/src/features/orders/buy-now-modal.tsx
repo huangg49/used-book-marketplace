@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
 import * as Crypto from "expo-crypto";
 import { useSession } from "../../core/session/session-provider";
 import {
@@ -22,8 +21,10 @@ import {
   stitchTokens,
 } from "../../core/ui";
 import type { Listing } from "../shelf/contracts";
+import { PublicPhoto } from "../shelf/public-photo";
 import { addressBook, addressReceipt } from "../addresses/contracts";
 import { walletSummary } from "../wallet/contracts";
+import { TopupModal } from "../wallet/topup-modal";
 import {
   buyNowError,
   orderDetailsSchema,
@@ -89,6 +90,7 @@ export function BuyNowModal({
   // Operation state
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>("");
+  const [showTopupModal, setShowTopupModal] = useState(false);
   const orderAttemptKey = useRef<string>(Crypto.randomUUID());
   const payAttemptKey = useRef<string>(Crypto.randomUUID());
 
@@ -147,6 +149,7 @@ export function BuyNowModal({
         if (!cancelled) {
           setOrderDetails(details);
           setCreatedOrderId(initialOrderId ?? null);
+          setError("");
           setStep("payment");
         }
 
@@ -169,7 +172,15 @@ export function BuyNowModal({
 
   // Request Quote automatically when selected address changes
   useEffect(() => {
-    if (!visible || !listing || !effectiveAddressId || addingAddress) return;
+    if (
+      !visible ||
+      !listing ||
+      !effectiveAddressId ||
+      addingAddress ||
+      step !== "address_quote" ||
+      Boolean(initialOrderId)
+    )
+      return;
     const address = items.find((a) => a.id === effectiveAddressId);
     if (!address) return;
 
@@ -219,7 +230,16 @@ export function BuyNowModal({
     return () => {
       cancelled = true;
     };
-  }, [visible, listing, effectiveAddressId, addingAddress, client, items]);
+  }, [
+    visible,
+    listing,
+    effectiveAddressId,
+    addingAddress,
+    step,
+    initialOrderId,
+    client,
+    items,
+  ]);
 
 
   // Handle saving new address inline
@@ -293,6 +313,7 @@ export function BuyNowModal({
         orderDetailsSchema,
       );
       setOrderDetails(details);
+      setError("");
       setStep("payment");
       void cache.invalidateQueries({ queryKey: ["public-listing", listing.id] });
       void walletQuery.refetch();
@@ -469,11 +490,25 @@ export function BuyNowModal({
                     height: 70,
                     borderRadius: 6,
                     backgroundColor: stitchTokens.parchment,
+                    overflow: "hidden",
+                    borderWidth: 1,
+                    borderColor: stitchTokens.peachBorder,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Icon name="book" size={24} color={stitchTokens.wine} />
+                  {listing?.photos?.[0] ? (
+                    <PublicPhoto
+                      listingId={listing.id}
+                      revisionId={listing.revisionId}
+                      mediaId={listing.photos[0].id}
+                      label={listing.book.title}
+                      active
+                      compact
+                    />
+                  ) : (
+                    <Icon name="book" size={24} color={stitchTokens.wine} />
+                  )}
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
                   <AppText
@@ -821,11 +856,8 @@ export function BuyNowModal({
                   ) : (
                     <Button
                       wine
-                      title="Nạp tiền vào Ví"
-                      onPress={() => {
-                        handleDismiss();
-                        router.push("/wallet");
-                      }}
+                      title={`Nạp tiền vào Ví (Thiếu ${formatVnd(orderDetails ? Math.max(0, orderDetails.amounts.buyerTotal - walletBalance) : 0)})`}
+                      onPress={() => setShowTopupModal(true)}
                     />
                   )}
 
@@ -877,6 +909,21 @@ export function BuyNowModal({
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Inline VNPay Topup Modal so user does not lose order progress */}
+      <TopupModal
+        visible={showTopupModal}
+        onClose={() => setShowTopupModal(false)}
+        initialAmount={
+          orderDetails
+            ? Math.max(10_000, Math.ceil((orderDetails.amounts.buyerTotal - walletBalance) / 10_000) * 10_000)
+            : 100_000
+        }
+        onSuccess={() => {
+          void walletQuery.refetch();
+          setShowTopupModal(false);
+        }}
+      />
     </AppModal>
   );
 }

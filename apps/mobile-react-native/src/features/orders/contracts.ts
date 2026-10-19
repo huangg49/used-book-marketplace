@@ -79,8 +79,8 @@ export const ORDER_STATE_CONFIG: Record<
   { label: string; tone: "warning" | "info" | "success" | "neutral" | "danger" }
 > = {
   AwaitingPayment: { label: "Chờ thanh toán", tone: "warning" },
-  PendingSellerConfirmation: { label: "Chờ người bán xác nhận", tone: "info" },
-  Preparing: { label: "Người bán chuẩn bị sách", tone: "info" },
+  PendingSellerConfirmation: { label: "Chờ người bán xác nhận", tone: "warning" },
+  Preparing: { label: "Người bán chuẩn bị sách", tone: "warning" },
   InTransit: { label: "Đang giao hàng", tone: "info" },
   Inspection: { label: "Đang kiểm định sách", tone: "info" },
   ResolutionPending: { label: "Đang xác minh", tone: "warning" },

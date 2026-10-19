@@ -30,6 +30,7 @@ import {
 } from "./book-detail-components";
 import { BuyNowModal } from "../orders/buy-now-modal";
 import { ordersPageSchema } from "../orders/contracts";
+import { startPurchaseConversation } from "../conversations/purchase-conversation-service";
 
 export function BookScreen({ id }: { id: string }) {
   const { client, state } = useSession();
@@ -40,7 +41,6 @@ export function BookScreen({ id }: { id: string }) {
   const [isScrolled, setIsScrolled] = useState(false);
 
   // Interactive dialog states
-  const [chatDialogVisible, setChatDialogVisible] = useState(false);
   const [buyDialogVisible, setBuyDialogVisible] = useState(false);
   const [exchangeDialogVisible, setExchangeDialogVisible] = useState(false);
 
@@ -93,7 +93,10 @@ export function BookScreen({ id }: { id: string }) {
   const isOwner =
     state.status === "authenticated" && item?.seller?.id === state.user?.id;
 
-  const handleOpenChat = () => {
+  const [chatOpening, setChatOpening] = useState(false);
+  const [chatError, setChatError] = useState<string>();
+
+  const handleOpenChat = async () => {
     if (state.status !== "authenticated") {
       router.push({
         pathname: "/account",
@@ -101,7 +104,29 @@ export function BookScreen({ id }: { id: string }) {
       });
       return;
     }
-    setChatDialogVisible(true);
+    if (!item || chatOpening) return;
+    setChatOpening(true);
+    setChatError(undefined);
+    try {
+      const intent = item.mode === "Exchange" ? "Exchange" : "Negotiation";
+      const receipt = await startPurchaseConversation(
+        client,
+        id,
+        item.version,
+        crypto.randomUUID(),
+        intent,
+      );
+      router.push({
+        pathname: "/conversation",
+        params: { id: receipt.entityId },
+      });
+    } catch (e: any) {
+      setChatError(
+        e?.message ?? "Chưa mở được cuộc trò chuyện. Vui lòng thử lại sau.",
+      );
+    } finally {
+      setChatOpening(false);
+    }
   };
 
   const handleOpenBuy = () => {
@@ -219,14 +244,14 @@ export function BookScreen({ id }: { id: string }) {
         </View>
       )}
 
-      {/* Dialog: Mở chat với người bán */}
+      {/* Dialog: Báo lỗi mở chat */}
       <ConfirmDialog
-        visible={chatDialogVisible}
-        title="Trò chuyện cùng người bán?"
-        message="Mở hội thoại để trao đổi tình trạng sách hoặc phương thức giao nhận. Chat không tự động giữ sách cho đến khi hai bên chốt đơn."
+        visible={Boolean(chatError)}
+        title="Không thể mở cuộc trò chuyện"
+        message={chatError ?? ""}
         confirmLabel="Đã hiểu"
-        onCancel={() => setChatDialogVisible(false)}
-        onConfirm={() => setChatDialogVisible(false)}
+        onCancel={() => setChatError(undefined)}
+        onConfirm={() => setChatError(undefined)}
       />
 
       {/* Modal: Mua ngay / Xem đơn thanh toán bản sách */}
