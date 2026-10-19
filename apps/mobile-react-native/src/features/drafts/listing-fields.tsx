@@ -491,9 +491,9 @@ export function PricingFields({
     },
     {
       value: "Exchange" as const,
-      title: "Đổi Lật-Xu",
+      title: "Trao đổi Sách",
       subtitle: "Đổi đọc tác phẩm",
-      desc: "Tích lũy xu để đổi sách khác",
+      desc: "Giao lưu đổi sách cùng bạn đọc",
     },
     {
       value: "Both" as const,
@@ -731,32 +731,6 @@ export function PricingFields({
               />
             </View>
           </View>
-
-          {/* Lật-Xu equivalent badge */}
-          {Number(form.exchangeValue) > 0 ? (
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                backgroundColor: stitchTokens.goldLight,
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: stitchTokens.goldDark,
-                gap: 6,
-              }}
-            >
-              <Icon name="bookmark" size={14} color={stitchTokens.goldDark} />
-              <AppText
-                kind="small"
-                color={stitchTokens.wineDark}
-                style={{ fontWeight: "600" }}
-              >
-                {`Tương đương quy đổi: ~${Math.round(Number(form.exchangeValue) / 1000).toLocaleString("vi-VN")} Lật-Xu vàng`}
-              </AppText>
-            </View>
-          ) : null}
         </View>
       ) : null}
     </View>

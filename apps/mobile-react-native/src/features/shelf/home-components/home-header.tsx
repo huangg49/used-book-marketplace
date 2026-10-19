@@ -1,7 +1,11 @@
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { Icon, stitchTokens } from "../../../core/ui";
 import { AppText } from "../../../core/ui/text";
+import { useSession } from "../../../core/session/session-provider";
+import { getPurchaseConversations } from "../../conversations/purchase-conversation-service";
 
 export interface HomeHeaderProps {
   readonly onSearchPress?: () => void;
@@ -10,23 +14,54 @@ export interface HomeHeaderProps {
   readonly onSubmitSearch?: () => void;
   readonly onCameraPress: () => void;
   readonly onOpenNotifications: () => void;
-  readonly onOpenCart: () => void;
+  readonly onMessagesPress?: () => void;
   readonly notificationCount?: number;
-  readonly cartCount?: number;
+  readonly messageCount?: number;
 }
 
 export function HomeHeader({
   onSearchPress,
   search = "",
-  onSearchChange,
-  onSubmitSearch,
   onCameraPress,
   onOpenNotifications,
-  onOpenCart,
-  notificationCount = 3,
-  cartCount = 0,
+  onMessagesPress,
+  notificationCount = 0,
+  messageCount,
 }: HomeHeaderProps) {
   const insets = useSafeAreaInsets();
+  const { client, state } = useSession();
+  const userId = state.status === "authenticated" ? state.user.id : undefined;
+
+  const conversationsQuery = useQuery({
+    queryKey: ["purchase-conversations-inbox-count"],
+    queryFn: () => getPurchaseConversations(client),
+    enabled: Boolean(userId) && messageCount === undefined,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+
+  const effectiveMessageCount =
+    messageCount !== undefined
+      ? messageCount
+      : conversationsQuery.data
+        ? conversationsQuery.data.filter((c) => {
+            if (c.status !== "Active") return false;
+            if (!userId) return false;
+            const proposal = c.terms?.pendingProposal;
+            if (proposal) {
+              return proposal.proposedById !== userId;
+            }
+            return false;
+          }).length
+        : undefined;
+
+  const handleMessagesPress = () => {
+    if (onMessagesPress) {
+      onMessagesPress();
+    } else {
+      router.push("/chat-inbox");
+    }
+  };
 
   return (
     <View style={[styles.headerRoot, { paddingTop: Math.max(insets.top, 12) }]}>
@@ -94,17 +129,17 @@ export function HomeHeader({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Tin nhắn"
-          onPress={onOpenCart}
+          onPress={handleMessagesPress}
           style={({ pressed }) => [
             styles.headerActionBtn,
             pressed && styles.btnPressed,
           ]}
         >
           <Icon name="message" size={20} color={stitchTokens.white} />
-          {cartCount >= 0 ? (
+          {effectiveMessageCount != null && effectiveMessageCount > 0 ? (
             <View style={styles.badgePill}>
               <AppText kind="small" style={styles.badgeText}>
-                {cartCount > 9 ? "9+" : cartCount}
+                {effectiveMessageCount > 9 ? "9+" : effectiveMessageCount}
               </AppText>
             </View>
           ) : null}

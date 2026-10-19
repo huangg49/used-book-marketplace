@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -25,11 +25,15 @@ import {
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
 import { summaryOptions } from "../wallet/wallet-model";
+import { TopupModal } from "../wallet/topup-modal";
 import { draftPage } from "../drafts/contracts";
 import { useCatalogBook } from "../drafts/catalog-picker";
 import { DraftCoverPhoto } from "../drafts/draft-cover-photo";
 import { HomeNotificationsModal } from "../shelf/home-components/home-notifications-modal";
 import { useNotifications } from "../notifications/notifications-model";
+import { ordersPageSchema } from "../orders/contracts";
+
+
 
 const roleLabels: Record<string, string> = {
   MEMBER: "Bạn đọc uy tín",
@@ -139,6 +143,7 @@ export function AccountScreen() {
   const { fontScale } = useWindowDimensions();
   const [presentationVersion, setPresentationVersion] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [topupModalVisible, setTopupModalVisible] = useState(false);
 
   const notifQuery = useNotifications(client, isAuthenticated);
   const notificationCount = isAuthenticated && notifQuery.data
@@ -172,8 +177,28 @@ export function AccountScreen() {
     enabled: foreground && !!ownerId,
   });
 
+  // Real Orders count
+
+  const ordersQuery = useQuery({
+    queryKey: ["my-orders"],
+    queryFn: () => client.request("/me/orders?limit=50", ordersPageSchema),
+    enabled: foreground && !!ownerId,
+    staleTime: 5_000,
+  });
+
+  const unpaidOrdersCount = useMemo(
+    () =>
+      ordersQuery.data?.items?.filter(
+        (o) => o.state === "AwaitingPayment" && o.role === "Buyer",
+      ).length ?? 0,
+    [ordersQuery.data?.items],
+  );
+
+  const totalOrdersCount = ordersQuery.data?.items?.length ?? 0;
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
 
   const logout = async () => {
     if (busy) return;
@@ -205,7 +230,7 @@ export function AccountScreen() {
         notificationCount={notificationCount}
         hasNotification={notificationCount > 0}
         onNotificationsPress={() => setNotificationsOpen(true)}
-        onMessagesPress={() => router.push("./account")}
+        onMessagesPress={() => router.push("/chat-inbox")}
         style={{ marginBottom: 8 }}
       />
 
@@ -417,7 +442,7 @@ export function AccountScreen() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Nạp hoặc rút ví"
-                  onPress={() => router.push("./wallet")}
+                  onPress={() => setTopupModalVisible(true)}
                   style={({ pressed }) => [
                     styles.walletBtnPrimary,
                     pressed && { opacity: 0.8 },
@@ -515,7 +540,7 @@ export function AccountScreen() {
                   <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
                     <Pressable
                       accessibilityRole="button"
-                      onPress={() => router.push("./drafts")}
+                      onPress={() => router.push("./exchanges")}
                       style={({ pressed }) => [
                         styles.btnRespondPrimary,
                         pressed && { opacity: 0.8 },
@@ -702,6 +727,70 @@ export function AccountScreen() {
                     </View>
                   </Pressable>
 
+                  {/* Row: Đơn hàng của tôi */}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Đơn hàng của tôi"
+                    onPress={() => router.push("./orders")}
+                    style={({ pressed }) => [
+                      styles.menuRow,
+                      pressed && styles.menuRowPressed,
+                    ]}
+                  >
+
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                      <View style={styles.menuIconBox}>
+                        <Icon name="bag" size={18} color={stitchTokens.wine} />
+                      </View>
+                      <AppText
+                        kind="bold"
+                        style={{ fontSize: 14, color: stitchTokens.wineDark }}
+                      >
+                        Đơn hàng của tôi
+                      </AppText>
+                    </View>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      {unpaidOrdersCount > 0 ? (
+                        <View
+                          style={{
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: 10,
+                            backgroundColor: stitchTokens.amberBg,
+                            borderWidth: 1,
+                            borderColor: stitchTokens.amberBorder,
+                          }}
+                        >
+                          <AppText
+                            kind="small"
+                            style={{
+                              fontSize: 11,
+                              color: stitchTokens.orangeDeep,
+                              fontWeight: "700",
+                            }}
+                          >
+                            {unpaidOrdersCount} chờ thanh toán
+                          </AppText>
+                        </View>
+                      ) : totalOrdersCount > 0 ? (
+                        <View style={styles.menuCountBadge}>
+                          <AppText
+                            kind="small"
+                            style={{
+                              fontSize: 11,
+                              color: stitchTokens.subtleGray,
+                              fontWeight: "600",
+                            }}
+                          >
+                            {totalOrdersCount} đơn
+                          </AppText>
+                        </View>
+                      ) : null}
+                      <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
+                    </View>
+                  </Pressable>
+
+
                   {/* Row 2: Sách đã lưu (Wishlist) */}
                   <Pressable
                     accessibilityRole="button"
@@ -721,6 +810,30 @@ export function AccountScreen() {
                         style={{ fontSize: 14, color: stitchTokens.wineDark }}
                       >
                         Sách đã lưu
+                      </AppText>
+                    </View>
+                    <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
+                  </Pressable>
+
+                  {/* Row: Đề nghị trao đổi */}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Đề nghị trao đổi"
+                    onPress={() => router.push("./exchanges")}
+                    style={({ pressed }) => [
+                      styles.menuRow,
+                      pressed && styles.menuRowPressed,
+                    ]}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                      <View style={styles.menuIconBox}>
+                        <Icon name="swap" size={18} color={stitchTokens.wine} />
+                      </View>
+                      <AppText
+                        kind="bold"
+                        style={{ fontSize: 14, color: stitchTokens.wineDark }}
+                      >
+                        Đề nghị trao đổi
                       </AppText>
                     </View>
                     <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
@@ -817,7 +930,19 @@ export function AccountScreen() {
         visible={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}
       />
+
+      {/* Topup Modal for Wallet */}
+      <TopupModal
+        visible={topupModalVisible}
+        onClose={() => setTopupModalVisible(false)}
+        ownerId={ownerId}
+        onSuccess={() => {
+          void wallet.refetch();
+        }}
+      />
     </Screen>
+
+
   );
 }
 
