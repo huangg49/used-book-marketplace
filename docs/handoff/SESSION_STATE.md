@@ -16,6 +16,8 @@
   không đổi API/nghiệp vụ. Subject `style(web): add bookish conversation details`.
   Typecheck/build PASS (chunk warning cũ), lint PASS (6 warning cũ), detector[];
   browser fixture PASS, xem desktop/mobile/chữ lớn tại `.tmp/chat-paper-details-qa`.
+  Xác nhận hẹp320px/chữ130%: lược mascot dưới360px để ưu tiên lời chào/form;
+  evidence sau sửa tại `.tmp/chat-paper-details-final-qa`.
 - PASS UI:147unit, lint (6 warning cũ), typecheck/build (chunk warning cũ),
   docs/diff check. Browser fixture chạy luồng retry/chuyển hình thức/giá/đơn/
   thanh toán và Exchange cũ;1440/1100/900/390px,320px chữ130%. Kiểm tên sách

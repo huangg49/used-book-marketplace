@@ -614,3 +614,8 @@
     display: none;
   }
 }
+@media (max-width: 360px) {
+  .emptyMascot {
+    display: none;
+  }
+}
