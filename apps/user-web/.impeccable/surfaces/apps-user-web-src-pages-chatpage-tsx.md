@@ -17,6 +17,9 @@ title16px, partner and mode; padding16px, metadata14px. One ruled footer holds
 status and44px entry link. Below360px,48px covers float so full text can continue
 underneath. Routine continuation copy is omitted; pending proposals and agreed
 prices remain. Legacy cards share the structure. No filter/API/route changes.
+Fine-pointer hover and keyboard focus-visible lift each card4px with a cream tint
+and soft offset shadow over200ms; no touch hover. Scoped duration preserves the
+owner's authored-motion policy even when reduced motion is requested.
 
 19/10 owner follow-up: reuse the approved18/10 soft3D autumn posting artwork
 `/illustrations/posting/autumn-book-desk.webp`, restored byte-for-byte from6394dc4.

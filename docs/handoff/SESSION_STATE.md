@@ -18,6 +18,12 @@
   detector[];6 warning lint/chunk cũ giữ. Đã xác nhận mobile sau batch chỉnh.
   Không chạy lại backend/native/live storage/remote CI;
   READINESS giữ nguyên. Local web5174 HMR, chưa push/PR.
+  Follow-up từ `d098134`, subject `style(web): lift and tint conversation cards on hover`:
+  thẻ purchase/Exchange cũ nhấc4px, đổi kem ấm và bóng mềm trong200ms khi hover
+  bằng chuột hoặc focus-visible bàn phím. Touch không áp hover; duration override
+  giữ motion theo chính sách chủ dự án. Build và Chromium fixture normal/reduced
+  preference, mouse leave, sibling không xê dịch, keyboard/touch PASS tại
+  `.tmp/chat-card-hover-qa`; đã xem desktop/mobile. Chỉ CSS; không chạy lại gate API.
 
 ## Nền mùa thu3D cho Chat —19/10/2026
 

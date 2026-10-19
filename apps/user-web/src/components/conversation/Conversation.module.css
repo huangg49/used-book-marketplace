@@ -455,12 +455,25 @@
   border-radius: 12px;
   overflow: hidden;
   background: var(--shop-paper);
+  transition-property: transform, background-color, border-color, box-shadow;
+  transition-duration: 200ms !important;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
-.inboxCard:hover,
-.inboxCard:focus-within,
-.legacyCard:hover,
-.legacyCard:focus-within {
+.inboxCard:has(:focus-visible),
+.legacyCard:has(:focus-visible) {
+  transform: translateY(-4px);
+  background: var(--shop-cream);
   border-color: var(--shop-control);
+  box-shadow: 0 10px 24px #2819141a;
+}
+@media (hover: hover) and (pointer: fine) {
+  .inboxCard:hover,
+  .legacyCard:hover {
+    transform: translateY(-4px);
+    background: var(--shop-cream);
+    border-color: var(--shop-control);
+    box-shadow: 0 10px 24px #2819141a;
+  }
 }
 .cardCover {
   min-width: 0;
