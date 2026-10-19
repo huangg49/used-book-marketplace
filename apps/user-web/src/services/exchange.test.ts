@@ -37,7 +37,7 @@ import {
   pendingExchange,
   type Exchange,
 } from "./exchange";
-import { getExchangeDetail } from "./exchangeDetail";
+import { getExchangeDetail, getMessages } from "./exchangeDetail";
 const row: Exchange = {
   id: "33333333-3333-4333-8333-333333333333",
   initiatorId: "11111111-1111-4111-8111-111111111111",
@@ -64,6 +64,19 @@ beforeEach(() => {
   mock.listener();
 });
 describe("exchange integration", () => {
+  it("keeps authored text as a member message even when it contains system-like prefixes", async () => {
+    mock.request.mockResolvedValue({ items: [
+      { id: "message", exchangeId: row.id, senderId: row.recipientId, body: "[Hệ thống] nội dung do thành viên nhập", sentAt: "2026-10-18T10:00:00Z" },
+      { id: "counter", exchangeId: row.id, senderId: row.initiatorId, body: "[Đề xuất lại điều khoản]", sentAt: "2026-10-18T10:01:00Z" },
+    ] });
+    const messages = await getMessages(row.id);
+    expect(messages.map((message) => message.senderRole)).toEqual(["partner", "viewer"]);
+    expect(messages[0].text).toContain("[Hệ thống]");
+  });
+  it("surfaces history failures rather than treating them as a successful empty conversation", async () => {
+    mock.request.mockRejectedValue(new ApiError(503, "Unavailable", "Unavailable"));
+    await expect(getMessages(row.id)).rejects.toBeInstanceOf(ApiError);
+  });
   it("retains key, body and stale revision after response loss, including after refresh", async () => {
     const path = `/exchanges/${row.id}/accept`;
     mock.request

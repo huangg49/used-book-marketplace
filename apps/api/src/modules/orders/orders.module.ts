@@ -1,3 +1,4 @@
+import { PurchasesModule } from '../purchases/purchases.module.js';
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module.js';
 import { CommandsModule } from '../commands/commands.module.js';
@@ -13,7 +14,7 @@ import { WalletModule } from '../wallet/wallet.module.js';
 import { PackagingEvidenceService } from './packaging-evidence.service.js';
 import { PackagingEvidenceController } from './packaging-evidence.controller.js';
 @Module({
-  imports: [
+  imports: [PurchasesModule,
     DatabaseModule,
     CommandsModule,
     QuotesModule,

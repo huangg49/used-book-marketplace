@@ -138,6 +138,22 @@ export interface PurchaseMessageDoc {
   body: string;
   sentAt: Date;
 }
+export type ConversationMode = 'Negotiation' | 'Exchange';
+export interface ConversationProposalDoc {
+  id: string; kind: 'Mode' | 'Price'; proposedById: string;
+  mode: ConversationMode | null; amount: number | null;
+  listingRevisionId: string; createdAt: Date;
+}
+export interface ConversationTermsDoc extends Lockable {
+  _id: string; mode: ConversationMode; pendingProposal: ConversationProposalDoc | null;
+  agreedPrice: number | null; agreedListingRevisionId: string | null; activeExchangeId: string | null;
+}
+export interface ConversationEventDoc {
+  _id: string; conversationId: string; actorId: string;
+  kind: 'ModeProposed' | 'ModeAccepted' | 'PriceProposed' | 'PriceAccepted' | 'ProposalDeclined' | 'ExchangeLinked';
+  mode: ConversationMode | null; amount: number | null; exchangeId: string | null; createdAt: Date;
+}
+export interface ConversationExchangeLinkDoc { _id: string; conversationId: string; createdAt: Date }
 export interface ListingRevisionDoc extends Lockable {
   _id: string;
   listingId: string;

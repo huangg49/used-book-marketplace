@@ -1,0 +1,15 @@
+{
+  "tool": "built-in image_gen",
+  "source": "C:/Users/ASUS/.codex/generated_images/01a12139-7b71-7ed0-a3c3-97f3eeeac0b7/exec-cbfabb4a-7452-4312-a18b-1be2d0fa26e3.png",
+  "reference": "User-provided Background demo.png; autumn corner leaves only",
+  "delivery": {
+    "width": 1200,
+    "height": 800,
+    "alpha": true,
+    "bytes": 76574
+  },
+  "sourceSha256": "14e63325bdc5d9d22f06a78df180d16903b6c91961f9d11abcfe9b04346ade47",
+  "deliverySha256": "7065264c49672ee356854567ed32862485addae479b23945bc63837fd1cd2864",
+  "prompt": "Use case: background-extraction. Input image is the user's autumn website background, a style and subject reference. Create a clean transparent-background asset containing ONLY the two autumn leaf canopy corner clusters seen at the top left and top right of the reference. No fox, no trees, no hills, no sky, no paper background, no text. Crisp flat illustration, solid burnt red-orange, golden yellow and muted olive leaves with thin dark brown veins, faithfully matching the reference's simple shapes. Layout a landscape 3:2 canvas: left cluster attaches to TOP LEFT corner and hangs down along the left edge, right cluster attaches to TOP RIGHT and hangs along right edge. Distinct asymmetric arrangements of maple, oak and oval leaves. Each cluster confined to outermost 28 percent of canvas width and upper 65 percent height, with a large fully transparent center (44 percent or more) and transparent bottom. Leaves should reach the top and outer side edges naturally for seamless clipping on a webpage. The left cluster spreads 28 percent across at the very top then tapers inward to a few golden leaves at the lower tip; right cluster slightly narrower and different. No shadows, no gradients, no photographic texture, no white outline. Actual alpha transparency is essential. This is decorative art for the boundary below a burgundy bookstore hero, over a pale cream #ffefcb page.\nCORRECTION of first generated asset: REMOVE ALL glowing light, orange/yellow haze, bloom, feathering and shadow around the leaves. Completely flat matte solid color fills, identical to a vector-exported PNG. The background outside the exact leaf shapes must have alpha=0, including gaps between leaves and entire center/bottom. Opaque leaf interiors, 1 pixel edge antialias only. No soft light whatsoever. Keep the two corner compositions and original reference leaf style.",
+  "processing": "Whole atlas resized to1200px wide and encoded WebP quality90/alpha100; no hand mask or recoloring. CSS selects left/right halves."
+}
