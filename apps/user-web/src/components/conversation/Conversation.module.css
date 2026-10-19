@@ -184,7 +184,7 @@
   display: flex;
   gap: 8px;
 }
-.offerRow input {
+.workspace .offerForm .offerRow input[type="text"] {
   width: 0;
   flex: 1;
   min-width: 0;
@@ -196,6 +196,17 @@
   padding: 10px 12px;
   font: inherit;
   font-size: 1rem;
+  transition-property: border-color, box-shadow;
+  transition-duration: 170ms !important;
+  transition-timing-function: ease-out;
+}
+.workspace .offerForm .offerRow input[type="text"]:focus {
+  outline: none;
+  border-color: var(--shop-wine);
+  box-shadow: none;
+}
+.workspace .offerForm .offerRow input[type="text"]:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--shop-wine);
 }
 .actions button:hover,
 .primary:hover,
@@ -528,6 +539,13 @@
   outline: 2px solid var(--shop-wine);
   outline-offset: 3px;
 }
+@media (forced-colors: active) {
+  .workspace .offerForm .offerRow input[type="text"]:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: -2px;
+    box-shadow: none;
+  }
+}
 .openBook {
   grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.18fr);
   gap: 32px;
@@ -718,7 +736,7 @@
   .offerRow {
     flex-wrap: wrap;
   }
-  .offerRow input {
+  .workspace .offerForm .offerRow input[type="text"] {
     flex-basis: 120px;
   }
   .offerRow button {

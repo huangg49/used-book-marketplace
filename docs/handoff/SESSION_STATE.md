@@ -23,6 +23,10 @@
   Subject `fix(web): align chat composer focus with posting fields`.
   Vite build PASS (chunk warning cũ); QA focus chuột/bàn phím desktop/mobile,
   không đổi kích thước và forced colors PASS tại `.tmp/chat-field-focus-qa`.
+  Ô đề nghị giá/đề nghị giá khác cũng dùng một viền focus sát ô như Đăng sách;
+  selector scoped thắng CSS input chung. Subject
+  `fix(web): unify agreement price field focus`. QA chuột/bàn phím, kích thước,
+  desktop/mobile và forced colors PASS tại `.tmp/chat-price-focus-qa`.
   Chỉ CSS; không chạy lại gate API/nghiệp vụ.
 - PASS UI:147unit, lint (6 warning cũ), typecheck/build (chunk warning cũ),
   docs/diff check. Browser fixture chạy luồng retry/chuyển hình thức/giá/đơn/
