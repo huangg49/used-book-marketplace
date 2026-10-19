@@ -1,28 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import {
   AppText,
+  Button,
   Icon,
+  Notice,
   Screen,
+  StatePanel,
   Toast,
   TopNavbar,
   formatVnd,
+  presentError,
   stitchTokens,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
 import {
   AUCTIONS_QUERY_KEY,
+  isOpen,
+  myAuctionsOptions,
   usePublicAuctions,
 } from "./auctions-model";
 import type { PublicAuctionSummary } from "./contracts";
-import {
-  CURATED_SAIGON_AUCTIONS,
-  type ExtendedAuctionItem,
-} from "./auctions-data";
 import {
   AuctionCard,
   AuctionCategoryTabs,
@@ -49,18 +51,22 @@ export function AuctionsScreen() {
   const notificationCount =
     isAuthenticated && notifQuery.data ? notifQuery.data.unreadCount : 0;
 
-  // Real backend auctions query
+  // Open auctions, soonest end first (server order).
   const result = usePublicAuctions(client, foreground);
-  const serverItems = result.data?.items;
+  const allAuctions = useMemo(() => result.data?.items ?? [], [result.data]);
+
+  // The member's own open activity, for the outbid alert and history badge.
+  const mine = useInfiniteQuery({
+    ...myAuctionsOptions(client, isMember ? state.user.id : "", "active"),
+    enabled: isMember && foreground,
+  });
 
   // Ticking countdown clock
-  const [flashSeconds, setFlashSeconds] = useState(385); // 00:06:25
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const clockTimer = setInterval(() => {
       setNow(Date.now());
-      setFlashSeconds((prev) => (prev > 0 ? prev - 1 : 480));
     }, 1000);
 
     return () => {
@@ -72,51 +78,30 @@ export function AuctionsScreen() {
   const [search, setSearch] = useState("");
   const [selectedTab, setSelectedTab] = useState<CategoryTabId>("all");
   const [selectedSort, setSelectedSort] = useState<string>("newest");
-  const [filterVerifiedOnly, setFilterVerifiedOnly] = useState(false);
   const [filterHasBuyNow, setFilterHasBuyNow] = useState(false);
-  const [filterHcmOnly, setFilterHcmOnly] = useState(false);
 
-  // Watchlist (bookmarked auction IDs)
+  // Watchlist (bookmarked auction IDs, kept on this screen only)
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(
-    () => new Set(["b3c4d5e6-f7a8-49bc-8d1e-3f4a5b6c7d8e"]),
+    () => new Set(),
   );
 
   // Quick Bid Modal State
-  const [bidModalTarget, setBidModalTarget] = useState<
-    ExtendedAuctionItem | PublicAuctionSummary | null
-  >(null);
+  const [bidModalTarget, setBidModalTarget] =
+    useState<PublicAuctionSummary | null>(null);
 
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Outbid alert banner state
-  const showOutbidAlert = true;
+  // Open auctions where the member bid and no longer leads.
+  const myItems = mine.data?.pages.flatMap((page) => page.items) ?? [];
+  const outbid = myItems.filter(
+    (i) => i.role === "Bidder" && !i.leading && isOpen(i.auction, now),
+  );
+  const attentionCount =
+    outbid.length + myItems.filter((i) => i.needsPayment).length;
 
-  // Combine real backend items with rich fallback items
-  const allAuctions: ExtendedAuctionItem[] = useMemo(() => {
-    if (serverItems && serverItems.length > 0) {
-      return serverItems.map((item, idx) => {
-        const curatedMatch =
-          CURATED_SAIGON_AUCTIONS.find((c) => c.id === item.id) ??
-          CURATED_SAIGON_AUCTIONS[idx % CURATED_SAIGON_AUCTIONS.length];
-        return {
-          ...item,
-          coverUrl: curatedMatch?.coverUrl,
-          author: curatedMatch?.author ?? "Tác giả cổ thư",
-          publisher: curatedMatch?.publisher ?? item.pointName,
-          conditionTag: curatedMatch?.conditionTag ?? "Đã thẩm định",
-          location: item.pointName,
-          depositAmount: curatedMatch?.depositAmount ?? 100000,
-          isHot: item.bidderCount > 10,
-          viewersCount: Math.max(12, item.bidderCount * 2 + 5),
-        };
-      });
-    }
-    return CURATED_SAIGON_AUCTIONS;
-  }, [serverItems]);
-
-  // Flash Auction Hero Item (First hot auction)
-  const heroAuction = allAuctions[0];
+  // Hero: the open auction that ends soonest.
+  const heroAuction = allAuctions.find((a) => isOpen(a, now));
 
   // Filtered auctions
   const displayedAuctions = useMemo(() => {
@@ -128,8 +113,7 @@ export function AuctionsScreen() {
       list = list.filter(
         (a) =>
           a.title.toLowerCase().includes(q) ||
-          (a.author && a.author.toLowerCase().includes(q)) ||
-          (a.publisher && a.publisher.toLowerCase().includes(q)),
+          a.book?.authors.some((name) => name.toLowerCase().includes(q)),
       );
     }
 
@@ -149,17 +133,11 @@ export function AuctionsScreen() {
     if (filterHasBuyNow) {
       list = list.filter((a) => a.buyNowPrice !== null);
     }
-    if (filterHcmOnly) {
-      list = list.filter(
-        (a) =>
-          a.pointName.includes("Q.1") ||
-          a.pointName.includes("Gia Trí") ||
-          a.pointName.includes("Hồ Chí Minh"),
-      );
-    }
 
     // Sorting
-    if (selectedSort === "price_asc") {
+    if (selectedSort === "newest") {
+      list.sort((a, b) => Date.parse(b.startAt) - Date.parse(a.startAt));
+    } else if (selectedSort === "price_asc") {
       list.sort(
         (a, b) =>
           (a.currentPrice ?? a.startPrice) - (b.currentPrice ?? b.startPrice),
@@ -180,7 +158,6 @@ export function AuctionsScreen() {
     selectedTab,
     selectedSort,
     filterHasBuyNow,
-    filterHcmOnly,
     now,
     bookmarkedIds,
   ]);
@@ -214,16 +191,9 @@ export function AuctionsScreen() {
 
   const handleBidSuccess = (amount: number) => {
     void queryClient.invalidateQueries({ queryKey: AUCTIONS_QUERY_KEY });
+    void queryClient.invalidateQueries({ queryKey: ["my-auctions"] });
     setToastMessage(`Đã đặt giá thành công mức ${formatVnd(amount)}!`);
   };
-
-  // Format flash countdown
-  const flashHours = String(Math.floor(flashSeconds / 3600)).padStart(2, "0");
-  const flashMinutes = String(Math.floor((flashSeconds % 3600) / 60)).padStart(
-    2,
-    "0",
-  );
-  const flashSecs = String(flashSeconds % 60).padStart(2, "0");
 
   return (
     <Screen
@@ -249,24 +219,30 @@ export function AuctionsScreen() {
           search={search}
           onSearchChange={setSearch}
           onHistoryPress={() => router.push("/my-auctions")}
-          historyCount={isMember ? 2 : 0}
+          historyCount={attentionCount}
           isMember={isMember}
           onSendToAuctionPress={handleSendToAuction}
         />
 
-        {/* 4. PHÂN KHU 1: PHIÊN ĐẤU GIÁ VÀNG - SẮP GÕ BÚA (Flash Hero Card) */}
+        {/* 3. Outbid alert from the member's own open bids */}
+        <AuctionOutbidAlert
+          auction={outbid[0]?.auction ?? null}
+          onReclaim={() => {
+            if (outbid[0]) setBidModalTarget(outbid[0].auction);
+          }}
+        />
+
+        {/* 4. The open auction that ends soonest */}
         {heroAuction && (
           <AuctionHeroCard
             auction={heroAuction}
-            flashHours={flashHours}
-            flashMinutes={flashMinutes}
-            flashSecs={flashSecs}
+            remainingMs={Date.parse(heroAuction.endAt) - now}
             onQuickBid={() => setBidModalTarget(heroAuction)}
             onOpenLive={() => handleOpenAuction(heroAuction.id)}
           />
         )}
 
-        {/* 6. PHÂN KHU 2: TIÊU ĐỀ SÁCH CŨ ĐANG ĐẤU GIÁ */}
+        {/* 5. PHÂN KHU 2: TIÊU ĐỀ SÁCH CŨ ĐANG ĐẤU GIÁ */}
         <View style={styles.gridSectionHeaderContainer}>
           <View style={styles.gridSectionHeader}>
             <View
@@ -278,12 +254,12 @@ export function AuctionsScreen() {
               </AppText>
             </View>
             <AppText kind="small" style={styles.gridSectionCount}>
-              {displayedAuctions.length} bản thảo trực tuyến
+              {displayedAuctions.length} phiên
             </AppText>
           </View>
         </View>
 
-        {/* 7. Quick Category Tabs (Horizontal Pill Bar) - Đang diễn ra, Gần kết thúc... */}
+        {/* 6. Quick Category Tabs */}
         <AuctionCategoryTabs
           selectedTab={selectedTab}
           onSelectTab={setSelectedTab}
@@ -291,17 +267,48 @@ export function AuctionsScreen() {
           watchlistCount={bookmarkedIds.size}
         />
 
-        {/* 8. Sort & Filter Chips - Mới nhất, Giá tăng/giảm... */}
+        {/* 7. Sort & Filter Chips */}
         <AuctionSortChips
           selectedSort={selectedSort}
           onSelectSort={setSelectedSort}
-          filterVerifiedOnly={filterVerifiedOnly}
-          onToggleVerified={() => setFilterVerifiedOnly((v) => !v)}
           filterHasBuyNow={filterHasBuyNow}
           onToggleBuyNow={() => setFilterHasBuyNow((v) => !v)}
-          filterHcmOnly={filterHcmOnly}
-          onToggleHcmOnly={() => setFilterHcmOnly((v) => !v)}
         />
+
+        {/* 8. Loading / error / empty */}
+        <View style={styles.sectionContainer}>
+          {result.isPending && (
+            <StatePanel loading title="Đang tải phiên đấu giá" />
+          )}
+          {result.error && (
+            <View style={{ gap: 8 }}>
+              <Notice tone="error">
+                {result.data ? "Danh sách dưới đây chưa được cập nhật. " : ""}
+                {presentError(result.error).message}
+              </Notice>
+              <Button
+                secondary
+                title="Thử tải lại"
+                busy={result.isFetching}
+                onPress={() => void result.refetch()}
+              />
+            </View>
+          )}
+          {result.isSuccess && allAuctions.length === 0 && (
+            <StatePanel
+              title="Chưa có phiên nào đang mở"
+              message="Phiên mới xuất hiện sau khi sách được kiểm tra tại điểm giao nhận."
+              icon="info"
+            />
+          )}
+          {allAuctions.length > 0 && displayedAuctions.length === 0 && (
+            <StatePanel
+              title="Không có phiên phù hợp"
+              message="Thử bỏ bộ lọc hoặc đổi từ khóa tìm kiếm."
+              icon="info"
+            />
+          )}
+        </View>
 
         {/* 9. LƯỚI THẺ SÁCH ĐẤU GIÁ 2 CỘT */}
         <View style={styles.sectionContainer}>
@@ -324,14 +331,6 @@ export function AuctionsScreen() {
             })}
           </View>
         </View>
-
-        {/* 9. FLOATING / INLINE OUTBID NOTIFICATION WIDGET */}
-        <AuctionOutbidAlert
-          visible={showOutbidAlert}
-          onReclaim={() => {
-            if (heroAuction) setBidModalTarget(heroAuction);
-          }}
-        />
       </ScrollView>
 
       {/* Quick Bid Modal */}

@@ -1,27 +1,28 @@
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { Icon, formatVnd, stitchTokens } from "../../../core/ui";
-import type { ExtendedAuctionItem } from "../auctions-data";
+import { conditions } from "../../shelf/contracts";
+import { formatRemaining, minimumBidOf } from "../auctions-model";
+import type { PublicAuctionSummary } from "../contracts";
+import { AuctionCover } from "./auction-cover";
 
 export interface AuctionHeroCardProps {
-  readonly auction: ExtendedAuctionItem;
-  readonly flashHours: string;
-  readonly flashMinutes: string;
-  readonly flashSecs: string;
+  readonly auction: PublicAuctionSummary;
+  readonly remainingMs: number;
   readonly onQuickBid: () => void;
   readonly onOpenLive: () => void;
 }
 
+// The open auction that ends soonest, with its real server end time.
 export function AuctionHeroCard({
   auction,
-  flashHours,
-  flashMinutes,
-  flashSecs,
+  remainingMs,
   onQuickBid,
   onOpenLive,
 }: AuctionHeroCardProps) {
   const currentPrice = auction.currentPrice ?? auction.startPrice;
-  const nextBid = currentPrice + auction.step;
+  const nextBid = minimumBidOf(auction);
+  const authors = auction.book?.authors.join(", ");
 
   return (
     <View style={styles.sectionContainer}>
@@ -31,13 +32,13 @@ export function AuctionHeroCard({
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <Icon name="gavel" size={17} color={stitchTokens.gold} />
             <AppText kind="bold" style={styles.heroTopBannerText}>
-              SẮP GÕ BÚA • PHIÊN VÀNG
+              SẮP KẾT THÚC
             </AppText>
           </View>
           <View style={styles.heroTimerBox}>
             <View style={styles.livePulseDot} />
             <AppText kind="bold" style={styles.heroTimerText}>
-              {flashHours}:{flashMinutes}:{flashSecs}
+              {formatRemaining(remainingMs)}
             </AppText>
           </View>
         </View>
@@ -53,22 +54,19 @@ export function AuctionHeroCard({
           >
             {/* Book Cover */}
             <View style={styles.heroCoverBox}>
-              {auction.coverUrl ? (
-                <Image
-                  source={{ uri: auction.coverUrl }}
-                  style={styles.heroCoverImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={styles.heroCoverPlaceholder}>
-                  <Icon name="book" size={32} color={stitchTokens.wine} />
+              <AuctionCover
+                auctionId={auction.id}
+                mediaId={auction.book?.photos[0]?.id}
+                label={auction.title}
+                iconSize={32}
+              />
+              {auction.book && (
+                <View style={styles.heroCoverTag}>
+                  <AppText kind="small" style={styles.heroCoverTagText}>
+                    {conditions[auction.book.condition]}
+                  </AppText>
                 </View>
               )}
-              <View style={styles.heroCoverTag}>
-                <AppText kind="small" style={styles.heroCoverTagText}>
-                  {auction.conditionTag ?? "Độc bản 1938"}
-                </AppText>
-              </View>
             </View>
 
             {/* Info Column */}
@@ -95,19 +93,21 @@ export function AuctionHeroCard({
                     style={styles.heroLocationText}
                     numberOfLines={1}
                   >
-                    {auction.location ?? auction.pointName}
+                    {auction.pointName}
                   </AppText>
                 </View>
                 <AppText kind="bold" style={styles.heroTitle} numberOfLines={2}>
                   {auction.title}
                 </AppText>
-                <AppText
-                  kind="small"
-                  style={styles.heroAuthor}
-                  numberOfLines={1}
-                >
-                  {auction.author}
-                </AppText>
+                {authors ? (
+                  <AppText
+                    kind="small"
+                    style={styles.heroAuthor}
+                    numberOfLines={1}
+                  >
+                    {authors}
+                  </AppText>
+                ) : null}
               </View>
 
               {/* Price and Bidding Stats Box */}
@@ -123,7 +123,7 @@ export function AuctionHeroCard({
                     kind="small"
                     style={{ fontSize: 11, color: stitchTokens.subtleGray }}
                   >
-                    Giá cao nhất:
+                    {auction.currentPrice === null ? "Khởi điểm:" : "Giá cao nhất:"}
                   </AppText>
                   <AppText kind="bold" style={styles.heroPriceText}>
                     {formatVnd(currentPrice)}
@@ -156,7 +156,7 @@ export function AuctionHeroCard({
                         fontWeight: "600",
                       }}
                     >
-                      {auction.bidderCount} lượt đấu
+                      {auction.bidderCount} người trả giá
                     </AppText>
                   </View>
                   <AppText
@@ -170,39 +170,14 @@ export function AuctionHeroCard({
             </View>
           </View>
 
-          {/* FOMO Thermometer Bar */}
-          <View style={styles.thermometerTrack}>
-            <View style={styles.thermometerFill} />
-          </View>
-
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <AppText
-              kind="small"
-              style={{
-                fontSize: 11,
-                color: stitchTokens.flashRed,
-                fontWeight: "600",
-              }}
-            >
-              🔥 Cạnh tranh cao ({auction.viewersCount ?? 3} người đang canh)
+          {auction.buyNowPrice !== null && (
+            <AppText kind="small" style={styles.heroBuyNowText}>
+              Mua ngay trước lượt trả đầu:{" "}
+              <AppText kind="bold" style={styles.heroBuyNowText}>
+                {formatVnd(auction.buyNowPrice)}
+              </AppText>
             </AppText>
-            <AppText
-              kind="small"
-              style={{
-                fontSize: 11,
-                color: stitchTokens.wine,
-                fontWeight: "500",
-              }}
-            >
-              Cọc an toàn: {formatVnd(auction.depositAmount ?? 200000)}
-            </AppText>
-          </View>
+          )}
 
           {/* Hero Action CTA Buttons */}
           <View style={styles.heroActionsRow}>
@@ -216,7 +191,7 @@ export function AuctionHeroCard({
             >
               <Icon name="plus" size={16} color={stitchTokens.wineDark} />
               <AppText kind="bold" style={styles.heroQuickBidBtnText}>
-                Nâng giá: {formatVnd(nextBid)}
+                Trả {formatVnd(nextBid)}
               </AppText>
             </Pressable>
 
@@ -302,16 +277,6 @@ const styles = StyleSheet.create({
     position: "relative",
     backgroundColor: stitchTokens.parchment,
   },
-  heroCoverImage: {
-    width: "100%",
-    height: "100%",
-  },
-  heroCoverPlaceholder: {
-    width: "100%",
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   heroCoverTag: {
     position: "absolute",
     top: 6,
@@ -353,18 +318,9 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: stitchTokens.wine,
   },
-  thermometerTrack: {
-    width: "100%",
-    height: 6,
-    backgroundColor: stitchTokens.cardBorder,
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  thermometerFill: {
-    width: "85%",
-    height: "100%",
-    backgroundColor: stitchTokens.flashRed,
-    borderRadius: 3,
+  heroBuyNowText: {
+    fontSize: 11,
+    color: stitchTokens.wine,
   },
   heroActionsRow: {
     flexDirection: "row",
