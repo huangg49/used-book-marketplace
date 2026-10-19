@@ -10,6 +10,7 @@ export const ROUTES = {
   login: '/login',
   register: '/register',
   account: '/account',
+  wallet: '/wallet',
   profile: '/profile',
   myBooks: '/my-books',
   exchange: '/exchange',
