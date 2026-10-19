@@ -702,7 +702,7 @@ export function SearchScreen() {
           notificationCount={notificationCount}
           hasNotification={notificationCount > 0}
           onNotificationsPress={() => setNotificationsOpen(true)}
-          onMessagesPress={() => router.navigate("/account")}
+          onMessagesPress={() => router.push("/chat-inbox")}
         />
       }
       footer={<MemberNavigation current="/search" />}

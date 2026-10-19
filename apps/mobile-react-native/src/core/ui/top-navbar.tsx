@@ -6,6 +6,10 @@ import { Icon } from "./icon";
 import { AppText } from "./text";
 import { stitchTokens } from "./theme";
 
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "../session/session-provider";
+import { getPurchaseConversations } from "../../features/conversations/purchase-conversation-service";
+
 export interface TopNavbarProps {
   readonly onNotificationsPress?: () => void;
   readonly onMessagesPress?: () => void;
@@ -33,6 +37,32 @@ export function TopNavbar({
   style,
 }: TopNavbarProps) {
   const insets = useSafeAreaInsets();
+  const { client, state } = useSession();
+  const userId = state.status === "authenticated" ? state.user.id : undefined;
+
+  // Tự động đếm số cuộc trò chuyện cần hành động hoặc đang hoạt động nếu không truyền messageCount
+  const conversationsQuery = useQuery({
+    queryKey: ["purchase-conversations-inbox-count"],
+    queryFn: () => getPurchaseConversations(client),
+    enabled: Boolean(userId) && messageCount === undefined,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+
+  const effectiveMessageCount =
+    messageCount !== undefined
+      ? messageCount
+      : conversationsQuery.data
+        ? conversationsQuery.data.filter((c) => {
+            if (c.status !== "Active") return false;
+            if (!userId) return false;
+            const proposal = c.terms?.pendingProposal;
+            if (proposal) {
+              return proposal.proposedById !== userId; // Đối phương gửi đề xuất cần mình phản hồi
+            }
+            return false;
+          }).length
+        : undefined;
 
   const handleLogoPress = () => {
     if (onLogoPress) {
@@ -54,7 +84,7 @@ export function TopNavbar({
     if (onMessagesPress) {
       onMessagesPress();
     } else {
-      router.navigate("/account");
+      router.push("/chat-inbox");
     }
   };
 
@@ -132,10 +162,10 @@ export function TopNavbar({
             ]}
           >
             <Icon name="message" size={18} color="#FFFFFF" />
-            {messageCount != null && messageCount > 0 ? (
+            {effectiveMessageCount != null && effectiveMessageCount > 0 ? (
               <View style={styles.messageBadge}>
                 <AppText kind="small" style={styles.badgeNumber}>
-                  {messageCount > 9 ? "9+" : messageCount}
+                  {effectiveMessageCount > 9 ? "9+" : effectiveMessageCount}
                 </AppText>
               </View>
             ) : null}
