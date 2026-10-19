@@ -9,6 +9,8 @@ interface BookBottomBarProps {
   onExchangePress: () => void;
   onBuyPress: () => void;
   isOwner: boolean;
+  hasActiveOrder?: boolean;
+  activeOrderState?: string;
 }
 
 function formatVnd(amount: number | null | undefined): string {
@@ -22,6 +24,8 @@ export function BookBottomBar({
   onExchangePress,
   onBuyPress,
   isOwner,
+  hasActiveOrder,
+  activeOrderState,
 }: BookBottomBarProps) {
   const isAvailable = item.purchaseAvailability?.status === "Available";
   const canBuy = item.salePrice != null && isAvailable && !isOwner;
@@ -78,6 +82,18 @@ export function BookBottomBar({
               Sách của bạn
             </AppText>
           </View>
+        ) : hasActiveOrder && activeOrderState === "AwaitingPayment" ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Thanh toán ngay đơn hàng đang giữ sách"
+            style={({ pressed }) => [styles.payNowBtn, pressed && styles.pressed]}
+            onPress={onBuyPress}
+          >
+            <Icon name="tag" size={15} color={stitchTokens.white} />
+            <AppText numberOfLines={1} style={styles.buyBtnText}>
+              Thanh toán ngay
+            </AppText>
+          </Pressable>
         ) : canBuy ? (
           <Pressable
             accessibilityRole="button"
@@ -93,8 +109,8 @@ export function BookBottomBar({
           <View style={styles.disabledBtn}>
             <AppText numberOfLines={1} style={styles.disabledText}>
               {item.purchaseAvailability?.status === "InTransaction"
-                ? "Đang giao dịch"
-                : "Đang giữ sách"}
+                ? "Đang giữ sách"
+                : "Không sẵn sàng"}
             </AppText>
           </View>
         )}
@@ -102,6 +118,7 @@ export function BookBottomBar({
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -184,11 +201,29 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
+  payNowBtn: {
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.wineMid,
+    flexDirection: "row",
+    alignItems: "center",
+
+    justifyContent: "center",
+    gap: 6,
+    flexShrink: 0,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 3,
+  },
   buyBtnText: {
     fontSize: 13,
     fontWeight: "700",
     color: stitchTokens.white,
   },
+
   ownerBadge: {
     height: 40,
     paddingHorizontal: 14,

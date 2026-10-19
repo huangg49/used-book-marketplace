@@ -28,6 +28,8 @@ import {
   BookInspectionReport,
   BookBottomBar,
 } from "./book-detail-components";
+import { BuyNowModal } from "../orders/buy-now-modal";
+import { ordersPageSchema } from "../orders/contracts";
 
 export function BookScreen({ id }: { id: string }) {
   const { client, state } = useSession();
@@ -61,11 +63,27 @@ export function BookScreen({ id }: { id: string }) {
     refetchInterval: active ? 30_000 : false,
   });
 
+  // Query my orders to check if user has an active unpaid order for this listing
+  const myOrdersQuery = useQuery({
+    queryKey: ["my-orders"],
+    queryFn: () => client.request("/me/orders?limit=20", ordersPageSchema),
+    enabled: active && state.status === "authenticated",
+    staleTime: 5_000,
+  });
+
+  const activeOrder = myOrdersQuery.data?.items?.find(
+    (order) =>
+      order.listingId === id &&
+      order.role === "Buyer" &&
+      order.state === "AwaitingPayment",
+  );
+
   // Reset selected photo when revision changes
   if (shownRevision !== listingQuery.data?.revisionId) {
     setShownRevision(listingQuery.data?.revisionId);
     setSelectedPhotoIndex(0);
   }
+
 
   const isNotFound =
     !isValidUuid ||
@@ -146,9 +164,12 @@ export function BookScreen({ id }: { id: string }) {
             onExchangePress={handleOpenExchange}
             onBuyPress={handleOpenBuy}
             isOwner={isOwner}
+            hasActiveOrder={Boolean(activeOrder)}
+            activeOrderState={activeOrder?.state}
           />
         ) : undefined
       }
+
     >
       {listingQuery.isPending && (
         <View style={{ paddingTop: 100 }}>
@@ -208,17 +229,22 @@ export function BookScreen({ id }: { id: string }) {
         onConfirm={() => setChatDialogVisible(false)}
       />
 
-      {/* Dialog: Xác nhận Mua ngay */}
-      <ConfirmDialog
+      {/* Modal: Mua ngay / Xem đơn thanh toán bản sách */}
+      <BuyNowModal
         visible={buyDialogVisible}
-        title="Đặt mua bản sách này?"
-        message={`Bạn đang chọn mua "${item?.book?.title}". Đơn hàng sẽ áp dụng thanh toán bảo chứng cọc Lật Lại (DirectDelivery TP.HCM / BD / VT).`}
-        confirmLabel="Tiếp tục mua"
-        onCancel={() => setBuyDialogVisible(false)}
-        onConfirm={() => {
+        listing={item}
+        initialOrderId={activeOrder?.id}
+        onClose={() => {
           setBuyDialogVisible(false);
+          void listingQuery.refetch();
+          void myOrdersQuery.refetch();
+        }}
+        onSuccess={() => {
+          void listingQuery.refetch();
+          void myOrdersQuery.refetch();
         }}
       />
+
 
       {/* Dialog: Đổi sách */}
       <ConfirmDialog

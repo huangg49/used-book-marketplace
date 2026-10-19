@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -30,6 +30,9 @@ import { useCatalogBook } from "../drafts/catalog-picker";
 import { DraftCoverPhoto } from "../drafts/draft-cover-photo";
 import { HomeNotificationsModal } from "../shelf/home-components/home-notifications-modal";
 import { useNotifications } from "../notifications/notifications-model";
+import { ordersPageSchema } from "../orders/contracts";
+
+
 
 const roleLabels: Record<string, string> = {
   MEMBER: "Bạn đọc uy tín",
@@ -172,8 +175,28 @@ export function AccountScreen() {
     enabled: foreground && !!ownerId,
   });
 
+  // Real Orders count
+
+  const ordersQuery = useQuery({
+    queryKey: ["my-orders"],
+    queryFn: () => client.request("/me/orders?limit=50", ordersPageSchema),
+    enabled: foreground && !!ownerId,
+    staleTime: 5_000,
+  });
+
+  const unpaidOrdersCount = useMemo(
+    () =>
+      ordersQuery.data?.items?.filter(
+        (o) => o.state === "AwaitingPayment" && o.role === "Buyer",
+      ).length ?? 0,
+    [ordersQuery.data?.items],
+  );
+
+  const totalOrdersCount = ordersQuery.data?.items?.length ?? 0;
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
 
   const logout = async () => {
     if (busy) return;
@@ -702,6 +725,70 @@ export function AccountScreen() {
                     </View>
                   </Pressable>
 
+                  {/* Row: Đơn hàng của tôi */}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Đơn hàng của tôi"
+                    onPress={() => router.push("./orders")}
+                    style={({ pressed }) => [
+                      styles.menuRow,
+                      pressed && styles.menuRowPressed,
+                    ]}
+                  >
+
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                      <View style={styles.menuIconBox}>
+                        <Icon name="bag" size={18} color={stitchTokens.wine} />
+                      </View>
+                      <AppText
+                        kind="bold"
+                        style={{ fontSize: 14, color: stitchTokens.wineDark }}
+                      >
+                        Đơn hàng của tôi
+                      </AppText>
+                    </View>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      {unpaidOrdersCount > 0 ? (
+                        <View
+                          style={{
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: 10,
+                            backgroundColor: stitchTokens.amberBg,
+                            borderWidth: 1,
+                            borderColor: stitchTokens.amberBorder,
+                          }}
+                        >
+                          <AppText
+                            kind="small"
+                            style={{
+                              fontSize: 11,
+                              color: stitchTokens.orangeDeep,
+                              fontWeight: "700",
+                            }}
+                          >
+                            {unpaidOrdersCount} chờ thanh toán
+                          </AppText>
+                        </View>
+                      ) : totalOrdersCount > 0 ? (
+                        <View style={styles.menuCountBadge}>
+                          <AppText
+                            kind="small"
+                            style={{
+                              fontSize: 11,
+                              color: stitchTokens.subtleGray,
+                              fontWeight: "600",
+                            }}
+                          >
+                            {totalOrdersCount} đơn
+                          </AppText>
+                        </View>
+                      ) : null}
+                      <Icon name="chevronRight" size={16} color={stitchTokens.roseBrown} />
+                    </View>
+                  </Pressable>
+
+
                   {/* Row 2: Sách đã lưu (Wishlist) */}
                   <Pressable
                     accessibilityRole="button"
@@ -842,6 +929,8 @@ export function AccountScreen() {
         onClose={() => setNotificationsOpen(false)}
       />
     </Screen>
+
+
   );
 }
 
