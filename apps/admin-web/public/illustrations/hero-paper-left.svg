@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 560" fill="none">
+  <!-- Original Lật lại illustration: a loose sheet curling around the shelf. -->
+  <g stroke="#fcf8db" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M110 34C44 58 19 113 28 175C34 220 76 255 68 302C60 350 17 374 33 414C52 463 148 472 224 454C263 445 286 428 304 402" stroke-opacity=".7"/>
+    <path d="M110 34C85 72 99 97 135 112C82 112 51 95 63 65" fill="#fcf8db" fill-opacity=".06" stroke-opacity=".8"/>
+    <path d="M97 44C62 69 45 105 44 139M49 167C55 198 83 226 86 255M43 395C57 430 126 442 174 436" stroke-opacity=".32"/>
+    <path d="M304 402C280 414 260 430 257 455C278 442 296 421 304 402Z" fill="#fcf8db" fill-opacity=".06" stroke-opacity=".8"/>
+    <path d="M93 497C149 518 214 509 247 482M116 510C147 518 179 519 203 515" stroke-opacity=".45"/>
+    <path d="M24 278L14 289M33 286L26 303" stroke-opacity=".65"/>
+    <path d="M157 56C163 52 169 52 175 54" stroke-opacity=".5"/>
+  </g>
+</svg>
