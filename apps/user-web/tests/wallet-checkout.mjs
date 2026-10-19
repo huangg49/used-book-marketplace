@@ -35,7 +35,9 @@ Object.assign(process.env, {
   VNPAY_HASH_SECRET: secret,
   VNPAY_RETURN_URL: origin + "/wallet",
 });
-let fixture, server, browser;
+let fixture, server, browser, page;
+const topupResponses = [];
+const browserMessages = [];
 const realFetch = globalThis.fetch;
 let queryMode = "pending";
 const checkoutAmounts = new Map();
@@ -116,14 +118,41 @@ try {
   const context = await browser.newContext({
     viewport: { width: 1366, height: 900 },
   });
-  const page = await context.newPage(),
-    errors = [];
+  page = await context.newPage();
+  page.setDefaultTimeout(15_000);
+  const errors = [];
   await page.addInitScript(() => {
     const open = window.open;
-    window.open = (...args) =>
-      window.__qaBlockPayment ? null : open.apply(window, args);
+    window.__qaPaymentWindows = [];
+    window.open = (...args) => {
+      const payment = window.__qaBlockPayment ? null : open.apply(window, args);
+      if (payment) window.__qaPaymentWindows.push(payment);
+      return payment;
+    };
   });
   page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", (message) => {
+    if (
+      message.type() === "warning" ||
+      message.type() === "error" ||
+      message.text().includes("[vite]")
+    ) {
+      browserMessages.push({ type: message.type(), message: message.text() });
+    }
+  });
+  page.on("response", async (response) => {
+    const pathname = new URL(response.url()).pathname;
+    if (!/\/me\/topups\/[a-f0-9-]+(?:\/vnpay-query)?$/.test(pathname)) return;
+    const body = await response.json().catch(() => ({}));
+    topupResponses.push({
+      path: pathname,
+      method: response.request().method(),
+      status: response.status(),
+      state: body.state,
+      expiresAt: body.expiresAt,
+      serverTime: body.serverTime,
+    });
+  });
   await page.goto(origin + "/login?returnUrl=%2Fwallet");
   await page.getByLabel(/^Email/).fill(fixture.member.user.email);
   await page.getByLabel(/^Mật khẩu/).fill(password);
@@ -179,9 +208,9 @@ try {
   async function settleDialog(dialog) {
     await dialog.evaluate(async (node) => {
       await Promise.all(
-        node.getAnimations().map((animation) =>
-          animation.finished.catch(() => {}),
-        ),
+        node
+          .getAnimations()
+          .map((animation) => animation.finished.catch(() => {})),
       );
     });
   }
@@ -216,16 +245,23 @@ try {
   assert.equal(await topupButton.count(), 1);
   assert.equal(await withdrawalButton.count(), 1);
   assert.equal(
-    await page.getByRole("link", { name: "Lịch sử giao dịch", exact: true }).count(),
+    await page
+      .getByRole("link", { name: "Lịch sử giao dịch", exact: true })
+      .count(),
     0,
   );
-  assert.equal(await page.getByText("Số dư khả dụng", { exact: true }).count(), 0);
+  assert.equal(
+    await page.getByText("Số dư khả dụng", { exact: true }).count(),
+    0,
+  );
   assert.equal(
     await page.getByText("Đang giữ cho giao dịch", { exact: true }).count(),
     0,
   );
   assert.equal(await page.getByRole("dialog").count(), 0);
-  const previousOverflow = await page.evaluate(() => document.body.style.overflow);
+  const previousOverflow = await page.evaluate(
+    () => document.body.style.overflow,
+  );
   const withdrawalWrites = [];
   const trackWithdrawalWrite = (request) => {
     if (request.method() === "POST" && request.url().includes("/api/v1/me/"))
@@ -297,7 +333,7 @@ try {
   await openTopup();
   await page.getByLabel("Số tiền nạp (đồng)").fill("4999");
   await page
-    .getByRole("button", { name: "Nạp qua VNPay sandbox", exact: true })
+    .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
     .click();
   await page
     .getByRole("alert")
@@ -308,7 +344,7 @@ try {
     window.__qaBlockPayment = true;
   });
   await page
-    .getByRole("button", { name: "Nạp qua VNPay sandbox", exact: true })
+    .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
     .click();
   await page
     .getByRole("alert")
@@ -340,7 +376,7 @@ try {
     });
   const popupCreated = page.context().waitForEvent("page");
   await page
-    .getByRole("button", { name: "Nạp qua VNPay sandbox", exact: true })
+    .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
     .click();
   const popup = await popupCreated;
   await popup.waitForURL("https://sandbox.vnpayment.vn/**");
@@ -431,7 +467,7 @@ try {
   await page.getByLabel("Số tiền nạp (đồng)").fill("40000");
   const happyPopupCreated = page.context().waitForEvent("page");
   await page
-    .getByRole("button", { name: "Nạp qua VNPay sandbox", exact: true })
+    .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
     .click();
   const happyPopup = await happyPopupCreated;
   await happyPopup.waitForURL("https://sandbox.vnpayment.vn/**");
@@ -604,8 +640,10 @@ try {
           await dialog.evaluate((node) => {
             const bounds = node.getBoundingClientRect();
             return (
-              bounds.left >= 0 && bounds.right <= innerWidth + 1 &&
-              bounds.top >= 0 && bounds.bottom <= innerHeight + 1 &&
+              bounds.left >= 0 &&
+              bounds.right <= innerWidth + 1 &&
+              bounds.top >= 0 &&
+              bounds.bottom <= innerHeight + 1 &&
               node.scrollWidth <= node.clientWidth + 1
             );
           }),
@@ -682,7 +720,9 @@ try {
   await page.getByLabel(/^Email/).fill(fixture.member.user.email);
   await page.getByLabel(/^Mật khẩu/).fill(password);
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
-  await page.getByRole("heading", { name: "Ví của tôi", exact: true }).waitFor();
+  await page
+    .getByRole("heading", { name: "Ví của tôi", exact: true })
+    .waitFor();
   const requests = [];
   queryMode = "pending";
   let first = true;
@@ -701,7 +741,7 @@ try {
   await openTopup();
   await page.getByLabel("Số tiền nạp (đồng)").fill("20000");
   await page
-    .getByRole("button", { name: "Nạp qua VNPay sandbox", exact: true })
+    .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
     .click();
   await page.getByText(/Chưa xác nhận được yêu cầu nạp/).waitFor();
   await topupDialog.getByRole("button", { name: "Đóng popup" }).click();
@@ -722,10 +762,290 @@ try {
   assert.equal(new URL(page.url()).pathname, "/wallet");
   assert.equal(requests.length, 2);
   assert.deepEqual(requests[0], requests[1]);
+  await page.unroute("**/api/v1/me/topups/vnpay");
+
+  // Keep Mongo's real server clock: accelerate only the disposable fixture's
+  // persisted deadline after proving checkout originally grants exactly 5 min.
+  // Browser timers remain real, so provider-window/reload behaviour uses the
+  // server deadline rather than a client-only countdown or optimistic cancel.
+  const timer = page.getByRole("timer", {
+    name: "Thời gian thanh toán còn lại",
+    exact: true,
+  });
+  const parseProviderDate = (value) => {
+    assert.match(value, /^\d{14}$/);
+    const parts = value.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/);
+    return Date.UTC(
+      Number(parts[1]),
+      Number(parts[2]) - 1,
+      Number(parts[3]),
+      Number(parts[4]) - 7,
+      Number(parts[5]),
+      Number(parts[6]),
+    );
+  };
+  async function checkFiveMinuteCheckout(payment) {
+    const query = new URL(payment.url()).searchParams;
+    const topupId = query.get("vnp_TxnRef");
+    assert.equal(
+      parseProviderDate(query.get("vnp_ExpireDate")) -
+        parseProviderDate(query.get("vnp_CreateDate")),
+      5 * 60_000,
+      "Signed provider checkout must expire exactly five minutes after creation",
+    );
+    const topup = await fixture.api(
+      `/me/topups/${topupId}`,
+      fixture.member.accessToken,
+    );
+    assert.equal(topup.state, "Pending");
+    assert.equal(topup.credited, false);
+    assert.equal(
+      Date.parse(topup.expiresAt) - Date.parse(topup.createdAt),
+      300_000,
+    );
+    assert.ok(Date.parse(topup.serverTime) < Date.parse(topup.expiresAt));
+    await timer.waitFor();
+    assert.match(await timer.textContent(), /^0[45]:\d{2}$/);
+    return topup;
+  }
+  async function shortenDisposableDeadline(topupId) {
+    // Uses the serverTime projection so local/browser clock skew is irrelevant.
+    const before = await fixture.api(
+      `/me/topups/${topupId}`,
+      fixture.member.accessToken,
+    );
+    const expiresAt = new Date(Date.parse(before.serverTime) + 15_000);
+    const changed = await fixture.db
+      .collection("vnpay_payments")
+      .updateOne({ _id: topupId }, { $set: { expiresAt } });
+    assert.equal(changed.modifiedCount, 1);
+    return expiresAt;
+  }
+  async function checkCancelledWithoutLedger(topupId) {
+    await page
+      .getByText("Đã hết 5 phút thanh toán. Bạn có thể tạo yêu cầu nạp mới.", {
+        exact: true,
+      })
+      .waitFor({ timeout: 20_000 });
+    await page.getByText(/Đã hủy ·/).waitFor();
+    assert.equal(await timer.count(), 0);
+    const topup = await fixture.api(
+      `/me/topups/${topupId}`,
+      fixture.member.accessToken,
+    );
+    assert.equal(topup.state, "Cancelled");
+    assert.equal(topup.credited, false);
+    assert.equal(topup.journalId, null);
+    assert.equal(
+      (await fixture.api("/me/wallet", fixture.member.accessToken)).available,
+      90_000,
+    );
+    const history = await fixture.api(
+      "/me/wallet/history?limit=20",
+      fixture.member.accessToken,
+    );
+    assert.equal(history.items.length, 2);
+    assert.equal(
+      history.items.some((item) => item.topupId === topupId),
+      false,
+    );
+    assert.equal(
+      await fixture.db
+        .collection("ledger_journals")
+        .countDocuments({ topupId }),
+      0,
+    );
+    await openTopup();
+    assert.equal(
+      await topupDialog.getByLabel("Số tiền nạp (đồng)").isDisabled(),
+      false,
+    );
+    await topupDialog
+      .locator(`a[href="/wallet?topup=${topupId}"]`)
+      .filter({ hasText: "Đã hủy" })
+      .waitFor();
+  }
+
+  const retryTopup = await checkFiveMinuteCheckout(retryPopup);
+  await openTopup();
+  assert.equal(
+    await topupDialog.getByLabel("Số tiền nạp (đồng)").isDisabled(),
+    true,
+  );
+  await topupDialog.getByRole("button", { name: "Đóng popup" }).click();
+  await shortenDisposableDeadline(retryTopup.id);
+  await page.getByText(/Còn 00:1\d để thanh toán/).waitFor();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "130%";
+  });
+  assert.equal(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+    true,
+    "Payment countdown must fit mobile at 130% type",
+  );
+  await page.screenshot({
+    path: path.join(evidence, "wallet-expiring-mobile.png"),
+    fullPage: true,
+  });
+  // Selecting a historical successful request must not abandon the active
+  // checkout, renew its deadline, or leave its form locked after expiry.
+  await openTopup();
+  await topupDialog.locator(`a[href="/wallet?topup=${happyId}"]`).click();
+  await topupDialog.waitFor({ state: "hidden" });
+  await page.getByText(/Đã nạp ví · 40/).waitFor();
+  assert.equal(retryPopup.isClosed(), false);
+  await openTopup();
+  const cancelledRecent = topupDialog
+    .locator(`a[href="/wallet?topup=${retryTopup.id}"]`)
+    .filter({ hasText: "Đã hủy" });
+  await cancelledRecent.waitFor({ timeout: 20_000 });
+  assert.equal(new URL(page.url()).searchParams.get("topup"), happyId);
+  assert.equal(
+    await topupDialog.getByLabel("Số tiền nạp (đồng)").isDisabled(),
+    false,
+  );
+  await cancelledRecent.click();
+  await topupDialog.waitFor({ state: "hidden" });
+  await checkCancelledWithoutLedger(retryTopup.id);
+  // Chromium may refuse parent close() after the provider is isolated with
+  // opener=null. Server cancellation still holds while its tab remains open.
+  if (!retryPopup.isClosed()) await retryPopup.close();
+  await page.screenshot({
+    path: path.join(evidence, "wallet-cancelled-mobile.png"),
+    fullPage: true,
+  });
+
+  // A fresh request after cancellation receives a new deadline. Reload keeps
+  // the same intent/deadline; signing back in cannot renew an expired checkout.
+  await topupDialog.getByLabel("Số tiền nạp (đồng)").fill("35000");
+  const resumedPopupCreated = page.context().waitForEvent("page");
+  await page
+    .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
+    .click();
+  const resumedPopup = await resumedPopupCreated;
+  await resumedPopup.waitForURL("https://sandbox.vnpayment.vn/**");
+  const resumedTopup = await checkFiveMinuteCheckout(resumedPopup);
+  assert.notEqual(resumedTopup.id, retryTopup.id);
+  const resumedUrl = page.url();
+  await resumedPopup.close();
+  await page.reload();
+  await page.getByLabel(/^Email/).fill(fixture.member.user.email);
+  await page.getByLabel(/^Mật khẩu/).fill(password);
+  await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
+  await page.getByText(/Chờ thanh toán · 35/).waitFor();
+  assert.equal(page.url(), resumedUrl);
+  assert.equal(
+    (
+      await fixture.api(
+        `/me/topups/${resumedTopup.id}`,
+        fixture.member.accessToken,
+      )
+    ).expiresAt,
+    resumedTopup.expiresAt,
+  );
+  await shortenDisposableDeadline(resumedTopup.id);
+  await checkCancelledWithoutLedger(resumedTopup.id);
+  await page.screenshot({
+    path: path.join(evidence, "wallet-cancelled-after-reload-mobile.png"),
+    fullPage: true,
+  });
+  await topupDialog.getByRole("button", { name: "Đóng popup" }).click();
+
+  // Expiring during a lost ACK must not let a same-key receipt replay reopen
+  // its stale provider URL or silently turn the retry into a new payment.
+  const expiredAckRequests = [];
+  let expiredAckId;
+  await page.route("**/api/v1/me/topups/vnpay", async (route) => {
+    expiredAckRequests.push({
+      key: route.request().headers()["idempotency-key"],
+      body: route.request().postData(),
+    });
+    if (expiredAckRequests.length === 1) {
+      const response = await route.fetch();
+      assert.equal(response.status(), 200);
+      expiredAckId = (await response.json()).entityId;
+      await route.abort("failed");
+    } else await route.continue();
+  });
+  const checkoutCountBeforeExpiredReplay = checkoutAmounts.size;
+  await openTopup();
+  await topupDialog.getByLabel("Số tiền nạp (đồng)").fill("45000");
+  await topupDialog
+    .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
+    .click();
+  await page.getByText(/Chưa xác nhận được yêu cầu nạp/).waitFor();
+  const committedButUnacknowledged = await fixture.api(
+    `/me/topups/${expiredAckId}`,
+    fixture.member.accessToken,
+  );
+  await fixture.db
+    .collection("vnpay_payments")
+    .updateOne(
+      { _id: expiredAckId },
+      { $set: { expiresAt: new Date(committedButUnacknowledged.serverTime) } },
+    );
+  const expiredAckPopupCreated = page.context().waitForEvent("page");
+  await topupDialog
+    .getByRole("button", { name: "Thử lại yêu cầu nạp", exact: true })
+    .click();
+  const expiredAckPopup = await expiredAckPopupCreated;
+  await checkCancelledWithoutLedger(expiredAckId);
+  assert.equal(expiredAckPopup.isClosed(), true);
+  assert.equal(checkoutAmounts.size, checkoutCountBeforeExpiredReplay);
+  assert.equal(expiredAckRequests.length, 2);
+  assert.deepEqual(expiredAckRequests[0], expiredAckRequests[1]);
+  await page.unroute("**/api/v1/me/topups/vnpay");
+  await topupDialog.getByRole("button", { name: "Đóng popup" }).click();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: wallet action dialogs, withdrawal preview minimum with no command, keyboard focus/escape/close, preserved amounts, 320/390px dialogs at 130% type; icon wallet/chat navigation, account wallet entry, real history filters/pagination/retry; blocked provider tab creates no intent, provider has no opener, original tab stays signed in through Return, forged Return denied, QueryDR outage/retry/credit, lost-ACK modal-close same-key retry; real API/Mongo, fake provider navigation and signed QueryDR responses.",
+    "PASS: wallet action dialogs, withdrawal preview minimum with no command, keyboard focus/escape/close, preserved amounts, 320/390px dialogs at 130% type; icon wallet/chat navigation, account wallet entry, real history filters/pagination/retry; blocked provider tab creates no intent, provider has no opener, original tab stays signed in through Return, forged Return denied, QueryDR outage/retry/credit, lost-ACK modal-close same-key retry; signed checkout deadline exactly five minutes, live mobile countdown, server cancellation while provider tab stays open and an older request is selected, reload preserves server deadline, expired lost-ACK receipt cannot reopen provider, cancelled requests unlock new topup and produce no ledger/history entry; real API/Mongo with accelerated disposable fixture deadlines, fake provider navigation and signed QueryDR responses.",
   );
+} catch (error) {
+  await page
+    ?.screenshot({
+      path: path.join(evidence, "wallet-failure.png"),
+      fullPage: true,
+    })
+    .catch(() => {});
+  if (page && !page.isClosed()) {
+    console.log("QA failure URL:", page.url());
+    console.log(
+      "QA payment WindowProxy state:",
+      await page.evaluate(() =>
+        window.__qaPaymentWindows?.map((payment) => {
+          try {
+            return { closed: payment.closed };
+          } catch (error) {
+            return { error: error.message };
+          }
+        }),
+      ),
+    );
+    console.log(
+      "QA failure visible wallet:",
+      await page.locator("main, #account-content").allTextContents(),
+    );
+  }
+  console.log("QA latest topup responses:", topupResponses.slice(-12));
+  console.log("QA browser warnings/errors/HMR:", browserMessages.slice(-16));
+  if (fixture) {
+    console.log(
+      "QA persisted topup states:",
+      await fixture.db
+        .collection("topup_intents")
+        .find(
+          {},
+          {
+            projection: { _id: 1, state: 1, version: 1, updatedAt: 1 },
+          },
+        )
+        .toArray(),
+    );
+  }
+  throw error;
 } finally {
   globalThis.fetch = realFetch;
   await browser?.close();

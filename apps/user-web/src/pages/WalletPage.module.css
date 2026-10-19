@@ -190,6 +190,11 @@
   border: 1px solid var(--shop-line);
   border-radius: 12px;
 }
+.countdown {
+  color: var(--shop-wine);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 .history {
   padding-left: 1.25rem;
 }
