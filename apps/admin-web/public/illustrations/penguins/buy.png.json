@@ -1,0 +1,16 @@
+{
+  "source": "Original generated illustration, built-in image_gen",
+  "generatedAt": "2026-10-10T12:27:13.599Z",
+  "prompt": "Use case: illustration-story. Produce ONE transparent-background square UI mascot illustration, not a sheet or mockup. Reference is CHARACTER IDENTITY reference: reproduce same adorable round burgundy penguin, cream heart-shaped face patch/belly, yellow beak and feet, tiny peach cheeks, friendly eyes, short flippers and tiny soft tuft. Keep matching face/proportions across set. Simplify to clean confident thick wine outlines, soft flat fills, minimal detail legible at 64px. Palette #5c0202 wine, #fcf8db ivory, #f4cb67 yellow, tiny peach. Single whole penguin centered, fills about85% canvas with transparent padding, no clipping. Truly transparent alpha background; no floor/shadow backdrop, no badge/circle, no words, letters, numerals, watermark, stars or scenery. No 3D or photorealism. Action: penguin happily carries a SMALL golden shopping bag with one burgundy book sticking out, holding bag by handle beside its cream belly. Bag+book very clearly readable. No symbols or text on bag.",
+  "identityReference": "Owner-liked burgundy penguin hugging a book; original built-in sample",
+  "sourceSha256": "da738e8575d3346b5e1570d213744876922fce1dfb7c84174c3e6566f9a4ba57",
+  "deliverySha256": "e4eb7c14439ef99aae70f44a3bbb3c50f4bf05d046e29b35f61a3237a0a713c5",
+  "delivery": {
+    "width": 256,
+    "height": 256,
+    "hasAlpha": true,
+    "bytes": 49116
+  },
+  "optimization": "Resize and PNG encode only; preserve content/colors/full composition/alpha",
+  "use": "Decorative Home shortcut illustration, not brand logo or listing photograph"
+}

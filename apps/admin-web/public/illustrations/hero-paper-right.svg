@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 560" fill="none">
+  <!-- Original Lật lại illustration: a turned page with a soft paper trail. -->
+  <g stroke="#fcf8db" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M255 43C301 65 337 108 332 158C328 209 296 235 311 281C324 321 362 350 345 396C328 442 250 469 186 450C147 439 120 418 102 390" stroke-opacity=".7"/>
+    <path d="M255 43C280 75 275 99 245 119C284 116 310 98 301 74C291 59 273 50 255 43Z" fill="#fcf8db" fill-opacity=".06" stroke-opacity=".8"/>
+    <path d="M293 89C314 110 321 135 317 157M318 181C310 206 293 225 296 249M329 362C337 400 282 436 238 440" stroke-opacity=".32"/>
+    <path d="M102 390C112 419 131 442 154 453C151 423 131 406 102 390Z" fill="#fcf8db" fill-opacity=".06" stroke-opacity=".8"/>
+    <path d="M88 486C126 510 168 521 214 510M93 501C118 518 149 525 173 525" stroke-opacity=".45"/>
+    <path d="M347 260L358 271M340 273L346 289" stroke-opacity=".65"/>
+    <path d="M220 66C212 62 204 63 198 67" stroke-opacity=".5"/>
+  </g>
+</svg>
