@@ -182,22 +182,23 @@ function QueueContent({ kind }: { kind: Kind }) {
   );
 }
 function ListingTitle({ value }: { value: Listing }) {
+  const isConfirmed = value.catalogStatus === "Confirmed";
+  const bookId = value.currentRevision.content.bookId;
   const result = useQuery({
-    queryKey: ["book-title", value.currentRevision.content.bookId],
-    enabled:
-      value.catalogStatus === "Confirmed" &&
-      !!value.currentRevision.content.bookId,
+    queryKey: ["book-title", isConfirmed, bookId],
+    enabled: !!bookId,
     queryFn: () =>
-      session.request(
-        `/catalog/books/${value.currentRevision.content.bookId}`,
-        book,
-      ),
+      isConfirmed
+        ? session.request(`/catalog/books/${bookId}`, book)
+        : session
+            .request(`/operations/catalog-requests/${bookId}`, catalog)
+            .then((req) => ({ title: req.currentRevision.metadata.title })),
     staleTime: Infinity,
   });
   return (
     <>
       {result.data?.title ||
-        (value.catalogStatus === "Confirmed"
+        (isConfirmed
           ? "Bài đăng sách"
           : "Sách chờ xác nhận đầu sách")}{" "}
       <span className="short-id">/ {value.id.slice(0, 8)}</span>
