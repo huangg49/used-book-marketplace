@@ -1,6 +1,12 @@
 import { AgreementTerms } from "../components/conversation/AgreementTerms";
 import { ExchangeOffer } from "../components/conversation/ExchangeOffer";
 import { ConversationInbox } from "../components/conversation/ConversationInbox";
+import { ConversationBookIdentity } from "../components/conversation/ConversationBookIdentity";
+import { ConversationBackLink } from "../components/conversation/ConversationBackLink";
+import {
+  useConversationTransition,
+  useInboxPosition,
+} from "../components/conversation/conversation-navigation";
 import { ExchangeDetailPage } from "./ExchangeDetailPage";
 import sheet from "../components/conversation/Conversation.module.css";
 import {
@@ -8,19 +14,13 @@ import {
   getConversationEvents,
   type ConversationEvent,
 } from "../services/purchase-conversations";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
 import { ApiError } from "@used-books/session-client";
 import { z } from "zod";
-import { Link, useParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  ArrowUpRight,
-  BookOpen,
-  ChevronDown,
-  Send,
-} from "lucide-react";
+import { Link, useLocation, useParams } from "react-router-dom";
+import { ArrowUpRight, ChevronDown, Send } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import {
@@ -35,7 +35,6 @@ import { createSellerOrder } from "../services/purchase-conversations";
 import { getOrderForPayment, payOrder, orderStates } from "../services/orders";
 import { purchaseChatGuidance } from "../lib/purchase-chat-guidance";
 import { formatVnd } from "../lib/routes";
-import { ListingPhoto } from "../components/BookCard";
 import { PurchaseDialog } from "../components/PurchaseDialog";
 import flow from "./PurchaseFlow.module.css";
 import styles from "./ChatPage.module.css";
@@ -279,34 +278,10 @@ function ChatRoom({
       });
   }
   const bookIdentity = (
-    <>
-      <div className={styles.cover}>
-        {book.data ? (
-          <ListingPhoto book={book.data} eager />
-        ) : (
-          <BookOpen size={32} aria-hidden="true" />
-        )}
-      </div>
-      <div className={styles.bookHeading}>
-        <h1>
-          <Link to={`/books/${room.listingId}`}>
-            {book.data?.book.title ??
-              (book.isLoading
-                ? "Đang tải cuốn sách…"
-                : "Cuộc trao đổi về sách")}
-          </Link>
-        </h1>
-        {book.data ? (
-          <p className={styles.bookAuthor}>
-            {book.data.book.authors.join(", ")}
-          </p>
-        ) : (
-          <p className={styles.bookAuthor}>
-            Thông tin bài đăng hiện không khả dụng. Bạn vẫn có thể đọc hội
-            thoại.
-          </p>
-        )}
-        <p className={styles.roomStatus}>
+    <ConversationBookIdentity
+      listingId={room.listingId}
+      status={
+        <>
           {isExchange && room.status === "Active"
             ? "Đang trao đổi sách"
             : statusLabels[room.status]}
@@ -314,14 +289,12 @@ function ChatRoom({
             <>
               {" "}
               · Hạn hội thoại:{" "}
-              <time dateTime={room.expiresAt}>
-                {dateTime(room.expiresAt)}
-              </time>
+              <time dateTime={room.expiresAt}>{dateTime(room.expiresAt)}</time>
             </>
           )}
-        </p>
-      </div>
-    </>
+        </>
+      }
+    />
   );
   return (
     <section
@@ -329,14 +302,7 @@ function ChatRoom({
       aria-label={`Cuộc trò chuyện với ${other.displayName}`}
     >
       <header className={styles.roomHeader}>
-        <Link
-          className={styles.back}
-          to="/chat"
-          aria-label="Về danh sách hội thoại"
-        >
-          <ArrowLeft size={18} aria-hidden="true" />
-          Hội thoại của bạn
-        </Link>
+        <ConversationBackLink className={styles.back} />
       </header>
       <div className={styles.mobileBookHeader}>{bookIdentity}</div>
       <nav
@@ -484,7 +450,9 @@ function ChatRoom({
                     (label, index) => (
                       <li
                         key={label}
-                        aria-current={guidance.phase === index ? "step" : undefined}
+                        aria-current={
+                          guidance.phase === index ? "step" : undefined
+                        }
                       >
                         {label}
                       </li>
@@ -1077,6 +1045,11 @@ function eventText(event: ConversationEvent) {
 }
 export function ChatPage() {
   const { roomId } = useParams<{ roomId?: string }>();
+  const location = useLocation();
+  const position = useInboxPosition();
+  const transitioning = useConversationTransition("/chat");
+  const scrollKey = useRef<string | undefined>(undefined);
+  const frameRef = useRef<HTMLDivElement>(null);
   const auth = useSession();
   const rooms = useQuery({
     queryKey: [
@@ -1098,6 +1071,37 @@ export function ChatPage() {
     refetchInterval: 3000,
   });
   const cache = useQueryClient();
+  useLayoutEffect(() => {
+    if (auth.status !== "authenticated" || (!roomId && rooms.isPending)) return;
+    if (scrollKey.current === location.key) return;
+    scrollKey.current = location.key;
+    window.scrollTo({
+      top: roomId ? 0 : position.read().scrollY,
+      behavior: "instant",
+    });
+  }, [roomId, rooms.isPending, location.key, position, auth.status]);
+  useEffect(() => {
+    if (transitioning || auth.status !== "authenticated") return;
+    if (roomId && location.state?.chatFromInbox) {
+      frameRef.current?.focus({ preventScroll: true });
+    } else if (!roomId && position.read().selectedId) {
+      const card = [
+        ...document.querySelectorAll<HTMLElement>("[data-room-id]"),
+      ].find(
+        (element) => element.dataset.roomId === position.read().selectedId,
+      );
+      card
+        ?.querySelector<HTMLAnchorElement>("a")
+        ?.focus({ preventScroll: true });
+    }
+  }, [
+    transitioning,
+    roomId,
+    location.key,
+    location.state,
+    position,
+    auth.status,
+  ]);
   const refresh = () => {
     void rooms.refetch();
     void room.refetch();
@@ -1128,7 +1132,11 @@ export function ChatPage() {
       </section>
     );
   return (
-    <div className={styles.root} data-room-selected={!!roomId}>
+    <div
+      className={styles.root}
+      data-room-selected={!!roomId}
+      data-chat-morph-inbox={(!roomId && transitioning) || undefined}
+    >
       {!roomId ? (
         <>
           <header className={styles.pageHeading}>
@@ -1151,8 +1159,14 @@ export function ChatPage() {
           />
         </>
       ) : (
-        <>
-          {room.isError && (
+        <div
+          ref={frameRef}
+          tabIndex={-1}
+          className={styles.room}
+          aria-label="Phiếu và hội thoại"
+          data-chat-morph-room={transitioning || undefined}
+        >
+          {room.isError && room.data && (
             <div role="alert" className={sheet.error}>
               Chưa cập nhật được hội thoại. Dữ liệu đã tải vẫn được giữ.{" "}
               <button type="button" onClick={() => void room.refetch()}>
@@ -1168,22 +1182,67 @@ export function ChatPage() {
               refreshRooms={refresh}
             />
           ) : (
-            <section className={styles.selectRoom}>
-              <Link to="/chat">Về danh sách hội thoại</Link>
-              <h1>
-                {room.isPending
-                  ? "Đang mở hội thoại…"
-                  : "Chưa mở được hội thoại"}
-              </h1>
-              <p>
-                {room.isPending
-                  ? "Đang tải phiếu thỏa thuận và tin nhắn."
-                  : "Hội thoại không tồn tại hoặc bạn không có quyền truy cập."}
-              </p>
-            </section>
+            <PendingChatRoom
+              preview={rooms.data?.find((item) => item.id === roomId)}
+              pending={room.isPending}
+              retry={() => void room.refetch()}
+            />
           )}
-        </>
+        </div>
       )}
     </div>
+  );
+}
+
+function PendingChatRoom({
+  preview,
+  pending,
+  retry,
+}: {
+  preview?: PurchaseConversation;
+  pending: boolean;
+  retry: () => void;
+}) {
+  const identity = (
+    <ConversationBookIdentity
+      listingId={preview?.listingId}
+      status={pending ? "Đang mở hội thoại…" : "Chưa mở được hội thoại"}
+    />
+  );
+  return (
+    <section className={styles.room} aria-label="Đang mở phiếu và hội thoại">
+      <header className={styles.roomHeader}>
+        <ConversationBackLink className={styles.back} />
+      </header>
+      <div className={styles.mobileBookHeader}>{identity}</div>
+      <div
+        className={`${sheet.workspace} ${sheet.openBook} ${styles.paperSpread} ${styles.dossierSpread}`}
+      >
+        <aside className={sheet.sheet} aria-label="Phiếu thỏa thuận đang tải">
+          <header className={`${sheet.sheetHeading} ${styles.dossierHeader}`}>
+            {identity}
+          </header>
+          <div
+            className={styles.pendingRoom}
+            role={pending ? "status" : "alert"}
+          >
+            <p>
+              {pending
+                ? "Đang tải phiếu thỏa thuận và tin nhắn…"
+                : "Hội thoại không tồn tại hoặc bạn không có quyền truy cập."}
+            </p>
+            {!pending && (
+              <button type="button" onClick={retry}>
+                Thử lại
+              </button>
+            )}
+          </div>
+        </aside>
+        <div
+          className={`${sheet.chat} ${styles.dossierChat}`}
+          aria-hidden="true"
+        />
+      </div>
+    </section>
   );
 }

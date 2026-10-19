@@ -1,8 +1,16 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useLayoutEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, BookOpen, MessageCircle } from "lucide-react";
-import type { PurchaseConversation } from "../../services/purchase-conversations";
+import {
+  getPurchaseConversation,
+  type PurchaseConversation,
+} from "../../services/purchase-conversations";
+import {
+  useConversationTransition,
+  useInboxPosition,
+  type InboxFilter,
+} from "./conversation-navigation";
 import { getPublicListing } from "../../services/public-listings";
 import { getExchanges } from "../../services/exchange";
 import { getExchangeDetail } from "../../services/exchangeDetail";
@@ -23,6 +31,20 @@ function ConversationCard({
   room: PurchaseConversation;
   userId: string;
 }) {
+  const href = `/chat/${room.id}`;
+  const transitioning = useConversationTransition(href);
+  const position = useInboxPosition();
+  const cache = useQueryClient();
+  const prepare = () => {
+    void cache.prefetchQuery({
+      queryKey: ["purchase-conversation", room.id, userId],
+      queryFn: () => getPurchaseConversation(room.id),
+      staleTime: 15000,
+    });
+  };
+  const remember = () => {
+    position.save({ scrollY: window.scrollY, selectedId: room.id });
+  };
   const book = useQuery({
     queryKey: ["public-listing", room.listingId],
     queryFn: () => getPublicListing(room.listingId),
@@ -39,9 +61,15 @@ function ConversationCard({
       ? `Đã thống nhất ${formatVnd(room.terms.agreedPrice)}`
       : null;
   return (
-    <article className={styles.inboxCard}>
+    <article
+      className={styles.inboxCard}
+      data-room-id={room.id}
+      data-chat-morph-card={transitioning || undefined}
+      onPointerEnter={prepare}
+      onFocus={prepare}
+    >
       <div className={styles.cardIdentity}>
-        <div className={styles.cardCover}>
+        <div className={styles.cardCover} data-conversation-cover>
           {book.data ? (
             <ListingPhoto book={book.data} />
           ) : (
@@ -49,8 +77,13 @@ function ConversationCard({
           )}
         </div>
         <div className={styles.cardBody}>
-          <h2>
-            <Link to={`/chat/${room.id}`}>
+          <h2 data-conversation-title>
+            <Link
+              to={href}
+              viewTransition
+              state={{ chatFromInbox: true }}
+              onClick={remember}
+            >
               {book.data?.book.title ??
                 (book.isPending
                   ? "Đang tải tên sách…"
@@ -69,29 +102,49 @@ function ConversationCard({
       {hint && <p className={styles.cardHint}>{hint}</p>}
       <div className={styles.cardFooter}>
         <p className={styles.cardStatus}>{states[room.status]}</p>
-        <Link className={styles.cardLink} to={`/chat/${room.id}`}>
+        <Link
+          className={styles.cardLink}
+          to={href}
+          viewTransition
+          state={{ chatFromInbox: true }}
+          onClick={remember}
+        >
           Mở cuộc trao đổi <ArrowUpRight size={16} aria-hidden="true" />
         </Link>
       </div>
     </article>
   );
 }
-function LegacyCard({ id }: { id: string }) {
+function LegacyCard({ id, userId }: { id: string; userId: string }) {
+  const transitioning = useConversationTransition(`/exchange/${id}`);
+  const position = useInboxPosition();
+  const remember = () => {
+    position.save({ scrollY: window.scrollY, selectedId: id });
+  };
   const detail = useQuery({
-    queryKey: ["exchangeDetail", id],
+    queryKey: ["exchangeDetail", userId, id],
     queryFn: () => getExchangeDetail(id),
     retry: false,
     staleTime: 30000,
   });
   return (
-    <article className={styles.legacyCard}>
+    <article
+      className={styles.legacyCard}
+      data-room-id={id}
+      data-chat-morph-card={transitioning || undefined}
+    >
       <div className={styles.cardIdentity}>
         <div className={styles.cardCover}>
           <BookOpen size={24} aria-hidden="true" />
         </div>
         <div className={styles.cardBody}>
           <h2>
-            <Link to={`/exchange/${id}`}>
+            <Link
+              to={`/exchange/${id}`}
+              viewTransition
+              state={{ chatFromInbox: true }}
+              onClick={remember}
+            >
               {detail.data?.receiveBooks.map((b) => b.title).join(", ") ||
                 "Cuộc trao đổi sách"}
             </Link>
@@ -108,7 +161,13 @@ function LegacyCard({ id }: { id: string }) {
       </div>
       <div className={styles.cardFooter}>
         <p className={styles.cardStatus}>Lịch sử hiện có</p>
-        <Link className={styles.cardLink} to={`/exchange/${id}`}>
+        <Link
+          className={styles.cardLink}
+          to={`/exchange/${id}`}
+          viewTransition
+          state={{ chatFromInbox: true }}
+          onClick={remember}
+        >
           Mở phiếu và hội thoại <ArrowUpRight size={16} aria-hidden="true" />
         </Link>
       </div>
@@ -128,14 +187,23 @@ export function ConversationInbox({
   retry: () => void;
   userId: string;
 }) {
+  const position = useInboxPosition();
   const exchanges = useQuery({
     queryKey: ["conversation-exchanges", userId],
     queryFn: getExchanges,
     retry: false,
     refetchInterval: 5000,
   });
-  const [filter, setFilter] = useState<"all" | "buyer" | "seller">("all"),
-    [visible, setVisible] = useState(12);
+  const [filter, setFilter] = useState<InboxFilter>(position.read().filter),
+    [visible, setVisible] = useState(position.read().visible);
+  useLayoutEffect(() => {
+    const rememberScroll = () => {
+      if (window.location.pathname === "/chat")
+        position.save({ scrollY: window.scrollY });
+    };
+    window.addEventListener("scroll", rememberScroll, { passive: true });
+    return () => window.removeEventListener("scroll", rememberScroll);
+  }, [position]);
   const linked = new Set(rooms.flatMap((r) => r.terms?.exchangeIds ?? []));
   const legacy =
     exchanges.data?.items.filter(
@@ -168,6 +236,7 @@ export function ConversationInbox({
             onClick={() => {
               setFilter(key);
               setVisible(12);
+              position.save({ filter: key, visible: 12 });
             }}
           >
             {label}
@@ -212,14 +281,18 @@ export function ConversationInbox({
           <ConversationCard key={room.id} room={room} userId={userId} />
         ))}
         {legacy.slice(0, Math.max(0, visible - filtered.length)).map((ex) => (
-          <LegacyCard key={ex.id} id={ex.id} />
+          <LegacyCard key={ex.id} id={ex.id} userId={userId} />
         ))}
       </div>
       {filtered.length + legacy.length > visible && (
         <button
           type="button"
           className={styles.loadMore}
-          onClick={() => setVisible((n) => n + 12)}
+          onClick={() => {
+            const next = visible + 12;
+            position.save({ visible: next });
+            setVisible(next);
+          }}
         >
           Xem thêm cuộc trao đổi
         </button>

@@ -21,6 +21,17 @@ Fine-pointer hover and keyboard focus-visible lift each card4px with a cream tin
 and soft offset shadow over200ms; no touch hover. Scoped duration preserves the
 owner's authored-motion policy even when reduced motion is requested.
 
+Owner approved card-to-workspace expansion:420ms open/340ms return using the
+existing Router View Transitions integration, not a new motion dependency.
+Only the selected card/frame, cover and title receive shared names; native-sized
+text crossfades, with panel clipping. Navbar scroll morph freezes for the move;
+root snapshots exclude navigation and the fixed autumn background. Browser API
+absence retains normal navigation. Loading room data preserves the frame/book
+context without mounting transaction controls until the authorized read arrives.
+Inbox filter/reveal/scroll/selection live only in owner-keyed layout memory;
+Back/pop restores these, and cleanup restores prior browser scroll restoration.
+Legacy Exchange uses a frame transition; embedded histories claim no shared name.
+
 19/10 owner follow-up: reuse the approved18/10 soft3D autumn posting artwork
 `/illustrations/posting/autumn-book-desk.webp`, restored byte-for-byte from6394dc4.
 MainLayout's Chat-only data attribute owns a fixed viewport-cover background,

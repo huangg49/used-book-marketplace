@@ -72,6 +72,10 @@
 .room {
   min-width: 0;
 }
+.pendingRoom {
+  padding: 24px;
+  color: var(--shop-muted);
+}
 .paperSpread {
   --conversation-paper-texture:
     linear-gradient(#fffcf5d9, #fffcf5d9),

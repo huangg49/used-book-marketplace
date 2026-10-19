@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import conversation from '../components/conversation/Conversation.module.css';
-import { useParams, Link, Navigate } from 'react-router-dom';
+import { useParams, Link, Navigate, useLocation } from 'react-router-dom';
+import { useConversationTransition } from '../components/conversation/conversation-navigation';
+import { ConversationBackLink } from '../components/conversation/ConversationBackLink';
 import { getPurchaseConversations } from '../services/purchase-conversations';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ROUTES } from '../lib/routes';
@@ -34,6 +36,9 @@ import { SafetyTipsCard } from '../components/exchange/SafetyTipsCard';
 import styles from './ExchangeDetailPage.module.css';
 
 export function ExchangeDetailPage({ exchangeId, embedded = false }: { exchangeId?: string; embedded?: boolean } = {}) {
+    const chatTransition = useConversationTransition('/chat');
+    const location = useLocation();
+    const transitioning = !embedded && chatTransition;
     const { id: routeId } = useParams<{ id: string }>();
     const id = exchangeId ?? routeId;
     const queryClient = useQueryClient();
@@ -127,12 +132,12 @@ export function ExchangeDetailPage({ exchangeId, embedded = false }: { exchangeI
         return <div className={styles.authContainer}><h2>{auth.status === 'loading' ? 'Đang kiểm tra đăng nhập…' : 'Đăng nhập để xem trao đổi'}</h2>{auth.status !== 'loading' && <Link className={styles.loginBtn} to={`/login?returnUrl=${encodeURIComponent(`/exchange/${id ?? ''}`)}`}>Đăng nhập</Link>}</div>;
     }
     if (isDetailLoading) {
-        return <div className={styles.loadingContainer}>Đang tải...</div>;
+        return <div className={styles.loadingContainer} data-chat-morph-room={transitioning || undefined}>Đang tải...</div>;
     }
 
     if (isDetailError) {
         return (
-            <div className={styles.errorContainer}>
+            <div className={styles.errorContainer} data-chat-morph-room={transitioning || undefined}>
                 <h2>Đã có lỗi xảy ra khi tải dữ liệu</h2>
                 <button className={styles.retryBtn} onClick={() => refetchDetail()}>Thử lại</button>
             </div>
@@ -170,7 +175,8 @@ export function ExchangeDetailPage({ exchangeId, embedded = false }: { exchangeI
     else if (detail.status === 'EXPIRED') statusText = 'Hết hạn';
 
     return (
-        <div className={embedded ? styles.embedded : styles.container}>
+        <div className={embedded ? styles.embedded : styles.container} data-chat-morph-room={transitioning || undefined}>
+            {!embedded && location.state?.chatFromInbox && <ConversationBackLink />}
             {!embedded && <div className={styles.pageHeader}>
                 <div>
                     <span className={styles.transactionCode}>Mã Giao Dịch: #{detail.transactionCode}</span>

@@ -484,6 +484,13 @@ On fine-pointer hover or keyboard focus-visible within a card, both purchase and
 legacy cards lift4px, tint cream, darken the boundary and gain a soft offset shadow.
 The200ms cubic-bezier(.16,1,.3,1) transition retains its duration under reduced
 motion per owner policy. Hover is gated off on touch; sibling layout stays fixed.
+ConversationNavigation scopes the inbox's filter/reveal/scroll memory to the
+current owner and layout, without browser storage. Card links opt into Router
+View Transitions:420ms expansion/340ms return, separate cover/title snapshots and
+unscaled text crossfades. Header scroll morph pauses during this transition;
+the background/navigation stay live. Pending room reads use the same paper frame
+with loading/retry before mounting transaction controls. Unsupported browsers
+keep ordinary link navigation. Embedded Exchange never claims the outer snapshot.
 ChatPage's local book-dossier trial above960px puts real book identity in a wine
 agreement header; the adjacent white chat has a partner-led header. Both retain
 one spread and separate agreement-body/message scrolling.

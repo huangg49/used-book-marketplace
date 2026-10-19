@@ -163,7 +163,29 @@ try{
  await dialog.getByRole('button',{name:'Tạo đơn cho người mua này',exact:true}).click();await dialog.waitFor({state:'hidden'});await sellerPage.getByRole('link',{name:'Xem đơn hàng',exact:true}).waitFor();assert.deepEqual(commands[0],commands[1]);
  await refresh(p);await p.getByRole('heading',{name:'Đơn đang chờ bạn thanh toán',exact:true}).waitFor();assert.equal(await p.locator('#chat-message').count(),1,'same mounted room retains chat after order creation');await captures(p,'buyer-order-created');
  await p.getByRole('button',{name:'Xác nhận và thanh toán',exact:true}).click();await p.getByText('Chưa xác nhận được thanh toán. Thử lại để gửi cùng yêu cầu.',{exact:true}).waitFor();await p.getByRole('button',{name:'Xác nhận và thanh toán',exact:true}).click();await p.getByRole('heading',{name:'Chờ người bán xác nhận',exact:true}).waitFor();assert.deepEqual(commands[2],commands[3]);assert.equal(await p.getByText('Trạng thái đơn: PendingSellerConfirmation').count(),0);
- await p.getByRole('link',{name:'Chat, hội thoại của bạn',exact:true}).click();await p.getByRole('heading',{name:'Hội thoại của bạn',exact:true}).waitFor();await captures(p,'inbox');await p.getByRole('link',{name:'Mở cuộc trao đổi',exact:true}).click();await p.getByRole('heading',{name:'Phiếu thỏa thuận',exact:true}).waitFor();
+ await p.getByRole('link',{name:'Chat, hội thoại của bạn',exact:true}).click();await p.getByRole('heading',{name:'Hội thoại của bạn',exact:true}).waitFor();await captures(p,'inbox');
+ // Exercise actual browser snapshots, not a mocked transition API.
+ await p.evaluate(()=>{
+  window.__chatTransitions=[];const start=document.startViewTransition.bind(document);
+  const names=()=>[...document.querySelectorAll('*')].filter(el=>el.getClientRects().length&&getComputedStyle(el).viewTransitionName!=='none').map(el=>getComputedStyle(el).viewTransitionName);
+  document.startViewTransition=(...args)=>{
+   const record={old:names()};window.__chatTransitions.push(record);const transition=start(...args);
+   transition.ready.then(()=>{record.next=names();record.durations=document.getAnimations().filter(a=>String(a.animationName).includes('chat-panel')).map(a=>a.effect.getTiming().duration);}).catch(error=>record.error=String(error));
+   transition.finished.then(()=>record.finished=true);return transition;
+  };
+ });
+ await p.getByRole('button',{name:'Bạn hỏi mua / đổi',exact:true}).click();
+ await p.getByRole('link',{name:'Mở cuộc trao đổi',exact:true}).click();
+ await p.waitForFunction(()=>window.__chatTransitions[0]?.finished);
+ let transitionEvidence=await p.evaluate(()=>window.__chatTransitions[0]);assert.equal(transitionEvidence.error,undefined);assert.ok(transitionEvidence.old.includes('chat-panel'));assert.ok(transitionEvidence.next.includes('chat-panel'));assert.ok(transitionEvidence.durations.includes(420));
+ await p.getByRole('link',{name:'Về danh sách hội thoại',exact:true}).click();
+ await p.waitForFunction(()=>window.__chatTransitions[1]?.finished);
+ assert.equal(await p.getByRole('button',{name:'Bạn hỏi mua / đổi',exact:true}).getAttribute('aria-pressed'),'true');
+ transitionEvidence=await p.evaluate(()=>window.__chatTransitions[1]);assert.equal(transitionEvidence.error,undefined);assert.ok(transitionEvidence.durations.includes(340));
+ await p.emulateMedia({reducedMotion:'reduce'});await p.setViewportSize({width:320,height:844});await p.evaluate(()=>document.documentElement.style.fontSize='130%');
+ await p.getByRole('link',{name:'Mở cuộc trao đổi',exact:true}).click();await p.waitForFunction(()=>window.__chatTransitions[2]?.finished);
+ transitionEvidence=await p.evaluate(()=>window.__chatTransitions[2]);assert.equal(transitionEvidence.error,undefined);assert.ok(transitionEvidence.durations.includes(420));assert.equal(transitionEvidence.next.filter(name=>name==='chat-cover').length,1,'one visible book identity');
+ await p.emulateMedia({reducedMotion:'no-preference'});await p.evaluate(()=>document.documentElement.style.fontSize='100%');await p.getByRole('heading',{name:'Phiếu thỏa thuận',exact:true}).waitFor();
  await p.setViewportSize({width:390,height:844});await p.getByRole('button',{name:'Hội thoại',exact:true}).click();await p.locator('#chat-message').fill('Bản nháp giữ khi chuyển phiếu');await p.getByRole('button',{name:'Phiếu thỏa thuận',exact:true}).click();assert.equal(await p.locator('#chat-message').isVisible(),false);await p.getByRole('button',{name:'Hội thoại',exact:true}).click();assert.equal(await p.locator('#chat-message').inputValue(),'Bản nháp giữ khi chuyển phiếu');await p.setViewportSize({width:1440,height:1100});
  await p.evaluate(async exId=>{const{router}=await import('/src/app/router.tsx');await router.navigate('/exchange/'+exId);},ex.id);
  const chat=p.getByRole('region',{name:'Tin nhắn Đổi sách với '+seller.displayName});await chat.waitFor();await chat.getByText('Chưa tải được tin nhắn. Lịch sử đã tải vẫn được giữ lại.',{exact:true}).waitFor();assert.equal(await chat.getByText('Trao đổi về những cuốn sách này',{exact:true}).count(),0,'history failure is not empty');exchangeError=false;await chat.getByRole('button',{name:'Tải lại tin nhắn',exact:true}).click();await chat.getByText(exchangeMessages[0].body,{exact:true}).waitFor();assert.equal(await chat.locator('[class*="systemMsg"]').count(),0,'user cannot become system via text');await captures(p,'exchange-context');

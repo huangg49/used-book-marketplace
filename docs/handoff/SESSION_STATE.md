@@ -1,5 +1,30 @@
 # Điểm lưu hiện tại — 19/10/2026
 
+## Mở thẻ thành giao diện Chat —19/10/2026
+
+- Nhánh `codex/chat-open-book`, base `3527034`, subject
+  `feat(web): expand conversation cards into chat workspaces`.
+  Dùng View Transitions của React Router7 đang có: khung420ms mở/340ms thu,
+  bìa/tên là snapshot riêng; chữ giữ kích thước thay vì kéo giãn theo khung.
+  Header tạm giữ hình dạng trong lúc chuyển cảnh; nền/navbar không nằm trong
+  root snapshot. Chỉ thẻ được chọn có tên chuyển cảnh; mobile chỉ có1 identity.
+- Inbox nhớ filter/số mục đã mở/scroll/selected trong bộ nhớ của layout theo owner;
+  đổi user tạo bộ nhớ mới, không dùng browser storage. Back link dùng history khi
+  vào từ inbox, đường trực tiếp vẫn về `/chat`; browser Back chạy chiều thu.
+  Quản lý scroll manual trong phạm vi Chat và trả setting cũ khi rời phạm vi.
+- Hover/focus chỉ prefetch GET room vào query key theo owner. Nếu chưa có kết quả
+  thật, mở cùng khung chờ có bìa/tên từ cache listing, chưa mount handler giao dịch.
+  Lỗi có retry; dữ liệu đã tải vẫn giữ. Exchange cũ dùng chuyển khung và cache
+  detail theo owner, không gộp lịch sử hoặc thay nghiệp vụ.
+- PASS web build/152unit/lint (6 warning cũ), browser fixture toàn luồng tại
+  `.tmp/chat-morph-verified-flow-qa`, thêm assertions snapshot thực vào suite.
+  QA `.tmp/chat-morph-qa` kiểm3 snapshot ghép đúng,420/340ms, filter/load more/
+  scroll/browser Back, mạng chậm không có composer,320px chữ130% + reduced-motion
+  giữ animation/không trùng snapshot, fallback khi API browser không có.
+  Đã xem midpoint/desktop/mobile,1 batch chỉnh và xác nhận navbar đứng yên.
+  Chunk warning cũ; API/native/Safari thiết bị thật/live storage/remote CI NOT RUN.
+  READINESS không đổi; local web5174, chưa push/PR.
+
 ## Thu gọn và sắp lại thẻ danh sách Chat —19/10/2026
 
 - Nhánh `codex/chat-open-book`, base `4c49df3`, subject

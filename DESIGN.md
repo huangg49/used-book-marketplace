@@ -898,6 +898,13 @@ status/action footer. Below360px, a48px floated cover leaves full width for long
 text below. Titles wrap, entry links stay44px; routine continuation copy is omitted,
 pending proposals/agreed prices remain. This trial awaits the owner's visual review;
 no remote integration.
+Card navigation expands into the Chat workspace over420ms and returns over340ms.
+Cover/title travel separately; content crossfades at native text dimensions.
+Only the selected card participates. Navbar scroll morph is paused during the
+move, with the autumn background retained. Owner-keyed layout memory restores
+inbox filter/reveal/scroll on Back. A pending authorized read opens the same
+paper frame with loading/retry; transaction controls await actual room data.
+Without browser View Transitions support, links keep ordinary navigation.
 Secondary price edits/history open on request; message bubbles are quiet cream
 and shelf tones. Wine belongs to primary actions and accepted price. The surface
 record defines geometry/evidence; global navigation, other-page type and APIs stay
