@@ -16,7 +16,14 @@
   replay, vượt giá trong cửa sổ, bid trễ bị từ chối theo giờ server, gần hết giờ giữ
   end, race bid đầu/Mua ngay và Auto/Mua ngay, thông báo), RN tsc/lint/auctions 10,
   web tsc/141. Mongo suite: chỉ 4 ca nâng cấp lỗi sẵn trên main (ExchangeDisputed).
-  Browser/native/human/remote CI NOT RUN. READINESS không đổi. Chưa push/PR/merge.
+  Hành trình tạm (không commit) trên `_test`: cửa sổ 60 giây thật, đối thủ vượt giá,
+  đóng phiên, thanh toán, nhận sách, quyết toán (người bán nhận P − 5%), không trả
+  tiền (vi phạm + ReclaimRequired), không có lượt (Unsold) — đều đúng. Browser QA
+  fixture 3009: web và RN (Expo web) hiện đếm ngược cửa sổ, cập nhật trực tiếp khi bị
+  vượt, màn thắng/thanh toán sau đóng; RN sau đóng ghi “Giá chốt” như web.
+  Lưu ý: order-worker quét mỗi 60 giây nên phiên có thể còn `Active` tới ~1 phút sau
+  endAt (bid đã bị từ chối theo giờ server). Native/human/remote CI NOT RUN.
+  READINESS không đổi. Chưa push/PR/merge.
 
 ## Sách đấu giá là listing riêng (ADR 0041) — 19/10/2026
 
