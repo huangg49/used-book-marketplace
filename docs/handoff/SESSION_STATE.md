@@ -1,5 +1,39 @@
 # Điểm lưu hiện tại — 19/10/2026
 
+## Hết hạn nạp VNPay sau 5 phút — 19/10/2026
+
+- Nhánh `codex/topup-five-minute-expiry`, đã push lên `origin`; ba commit
+  `a27cfdc6`, `4f316bd8`, `71aef464`.
+- API/Mongo thêm thời hạn 5 phút, worker xử lý hết hạn, migration và contract;
+  user-web hiển thị countdown; ADR và tài liệu checkout đã cập nhật.
+- PASS: `pnpm contract:check`, `pnpm contract:routes`, API lint/typecheck,
+  user-web lint/typecheck/145 unit tests/build, `pnpm docs:check`, `git diff --check`.
+  Có warning lint/chunk có sẵn; lệnh test đầu tiên dùng option Vitest không hợp lệ,
+  đã chạy lại đúng và PASS.
+- Chưa chạy QA Mongo riêng, native/live VNPay, human review hoặc remote CI.
+  READINESS giữ nguyên; PR chưa tạo.
+
+## Popup nạp và rút tiền — 19/10/2026
+
+- Member web `/wallet` theo yêu cầu chủ dự án: bỏ khối số dư, dòng giới thiệu,
+  link quay lại và thanh điều hướng cũ; giữ tiêu đề và danh sách lịch sử giao dịch.
+  Hai nút **Nạp tiền / Rút tiền** mở popup bằng `PurchaseDialog` hiện có.
+- Nạp giữ luồng VNPay sandbox đang hoạt động, hiện hạn mức5.000–10.000.000đ;
+  form và yêu cầu nạp gần đây nằm trong popup. Tự đóng khi chuẩn bị thanh toán
+  thành công; giữ số tiền/key/body ở màn cha qua đóng/mở popup và retry mất ACK.
+- Rút chỉ là UI, ghi tối thiểu50.000đ theo SRS POL-15; khóa **Gửi yêu cầu rút**,
+  không tạo command hoặc báo thành công. Không đổi API/contract/RN/session.
+- Nhánh `codex/wallet-action-popups`, base781c69e; subject
+  `feat(web): open wallet topup and withdrawal dialogs`.
+- PASS Node24.21.0/pnpm11.19.0: web lint/typecheck/141unit/build; Chromium
+  popup/Esc/Tab/focus/scroll lock, giữ số tiền khi đóng/mở, rút không tạo command,
+  nạp/Return giả/QueryDR lỗi và retry/mất ACK giữ key+body. Dialog320/390px ở130%
+  không overflow; giữ regression lịch sử/lọc/phân trang/retry và điều hướng ví.
+  API/Mongo QA riêng, storage fake/VNPay navigation và QueryDR mô phỏng.
+- 6 warning lint/chunk có sẵn; detector một lượt có advisory font1.2rem cũ.
+  Chưa kiểm native/live VNPay/human/remote CI. READINESS giữ nguyên;
+  chưa push/PR/merge/deploy. Ảnh QA local: `.tmp/wallet-checkout-browser/`.
+
 ## Push và kiểm tra PR51 —19/10/2026
 
 - Theo yêu cầu chủ dự án, push `codex/chat-open-book` và tạo

@@ -5,6 +5,7 @@ import { OrderExpiryWorker } from './modules/orders/order-expiry.service.js';
 import { AuctionWorker } from './modules/auctions/auction-worker.service.js';
 import { PurchaseExpiryWorker } from './modules/purchases/purchase-expiry.service.js';
 import { ExchangeExpiryWorker } from './modules/exchanges/exchange-expiry.service.js';
+import { WalletExpiryWorker } from './modules/wallet/wallet-expiry.service.js';
 
 const app = await NestFactory.createApplicationContext(AppModule, {
   logger: ['error', 'warn'],
@@ -13,6 +14,7 @@ const worker = app.get(OrderExpiryWorker);
 const auctions = app.get(AuctionWorker);
 const purchases = app.get(PurchaseExpiryWorker);
 const exchangeExpiry = app.get(ExchangeExpiryWorker);
+const walletExpiry = app.get(WalletExpiryWorker);
 let stopping = false;
 process.on('SIGINT', () => {
   stopping = true;
@@ -23,6 +25,18 @@ process.on('SIGTERM', () => {
 try {
   while (!stopping) {
     const start = Date.now();
+    try {
+      const result = await walletExpiry.tick();
+      if (process.argv.includes('--once') && result.failed)
+        process.exitCode = 1;
+      if (result.failed)
+        console.error(
+          'Wallet payment expiry sweep failed; retrying next cycle.',
+        );
+    } catch {
+      console.error('Wallet payment expiry sweep failed; retrying next cycle.');
+      if (process.argv.includes('--once')) process.exitCode = 1;
+    }
     try {
       const result = await worker.tick();
       if (process.argv.includes('--once') && result.failed)
