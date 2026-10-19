@@ -1,12 +1,11 @@
 import { Redirect, router } from "expo-router";
-import { internalMemberViewsEnabled } from "../core/config/internal-member-views";
 import { useSession } from "../core/session/session-provider";
 import { BackAction, Screen, StatePanel } from "../core/ui";
 import { WalletScreen } from "../features/wallet/wallet-screen";
 
 export default function WalletRoute() {
   const { client, state } = useSession();
-  if (!internalMemberViewsEnabled || state.status === "anonymous")
+  if (state.status === "anonymous")
     return <Redirect href="./account" />;
   if (state.status !== "authenticated")
     return (
