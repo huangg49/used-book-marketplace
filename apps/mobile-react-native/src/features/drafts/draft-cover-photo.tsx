@@ -10,10 +10,12 @@ export function DraftCoverPhoto({
   listingId,
   mediaId,
   label = "Ảnh bìa",
+  resizeMode = "cover",
 }: {
   listingId: string;
   mediaId?: string | null;
   label?: string;
+  resizeMode?: "cover" | "contain";
 }) {
   const { client } = useSession();
   const foreground = useForeground();
@@ -68,7 +70,7 @@ export function DraftCoverPhoto({
       source={{ uri: preview.data.url }}
       accessibilityLabel={label}
       style={{ width: "100%", height: "100%" }}
-      resizeMode="cover"
+      resizeMode={resizeMode}
     />
   );
 }
