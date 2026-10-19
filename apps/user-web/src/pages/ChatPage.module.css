@@ -181,7 +181,7 @@
   gap: 8px 12px;
   list-style: none;
   margin: 0;
-  padding: 20px 0 8px;
+  padding: 0 0 12px;
   font-size: var(--conversation-meta);
 }
 .progress li {
@@ -223,12 +223,35 @@
 .nextStep .reservationNote {
   color: var(--shop-muted);
 }
-.guidanceText {
-  padding-top: 24px;
+.guidanceDetails {
+  margin-top: 12px;
+  border-top: 1px solid var(--shop-line);
   color: var(--shop-muted);
   font-size: var(--conversation-meta);
 }
-.guidanceText p {
+.guidanceDetails summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+}
+.guidanceDetails summary::-webkit-details-marker {
+  display: none;
+}
+.guidanceDetails summary svg {
+  flex-shrink: 0;
+}
+.guidanceDetails[open] summary svg {
+  transform: rotate(180deg);
+}
+.guidanceDetails summary:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: -2px;
+}
+.guidanceDetails p {
   margin: 0 0 12px;
 }
 .nextAction,

@@ -78,61 +78,65 @@ export function AgreementTerms({
   const mode = terms?.mode ?? "Negotiation";
   return (
     <section className={styles.terms} aria-label="Hình thức và thỏa thuận">
-      <div className={styles.sectionTitle}>
+      <div className={styles.modeLine}>
         <h3>Hình thức giao dịch</h3>
-      </div>
-      {seller ? (
-        <>
-          <div
-            className={styles.switch}
-            role="group"
-            aria-label="Người bán chọn hình thức"
-          >
-            {(["Negotiation", "Exchange"] as const).map((value) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={mode === value}
-                disabled={
-                  disabled ||
-                  !!proposal ||
-                  mode === value ||
-                  (value === "Exchange" && book?.mode === "Sale") ||
-                  (value === "Negotiation" && book?.mode === "Exchange")
-                }
-                onClick={() =>
-                  void command({
-                    expectedVersion: room.version,
-                    kind: "Mode",
-                    mode: value,
-                  })
-                }
-              >
-                {mode === value && <Check size={15} aria-hidden="true" />}
-                {value === "Negotiation" ? "Thương lượng mua" : "Đổi sách"}
-              </button>
-            ))}
-          </div>
-          {!locked && (
-            <p className={styles.help}>
-              Chuyển hình thức cần người mua xác nhận. Không thay đổi bài đăng
-              công khai.
-            </p>
-          )}
-        </>
-      ) : (
-        <>
+        {!seller && (
           <p className={styles.mode}>
             {mode === "Exchange" ? "Đổi sách" : "Thương lượng mua"}
           </p>
-          {!locked && (
-            <p className={styles.help}>
-              Người bán đề xuất chuyển hình thức; bạn quyết định có đồng ý hay
-              không.
-            </p>
-          )}
-        </>
+        )}
+      </div>
+      {seller && (
+        <div
+          className={styles.switch}
+          role="group"
+          aria-label="Người bán chọn hình thức"
+        >
+          {(["Negotiation", "Exchange"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={mode === value}
+              disabled={
+                disabled ||
+                !!proposal ||
+                mode === value ||
+                (value === "Exchange" && book?.mode === "Sale") ||
+                (value === "Negotiation" && book?.mode === "Exchange")
+              }
+              onClick={() =>
+                void command({
+                  expectedVersion: room.version,
+                  kind: "Mode",
+                  mode: value,
+                })
+              }
+            >
+              {mode === value && <Check size={15} aria-hidden="true" />}
+              {value === "Negotiation" ? "Thương lượng mua" : "Đổi sách"}
+            </button>
+          ))}
+        </div>
       )}
+      {!seller &&
+        mode === "Negotiation" &&
+        book?.mode === "Both" &&
+        !proposal &&
+        !locked && (
+          <button
+            className={`${styles.textButton} ${styles.exchangeRequest}`}
+            type="button"
+            disabled={disabled}
+            onClick={() =>
+              void command({
+                expectedVersion: room.version,
+                kind: "RequestExchange",
+              })
+            }
+          >
+            Đề nghị đổi sách
+          </button>
+        )}
       {proposal && (
         <div className={styles.proposal}>
           <p>
@@ -210,8 +214,11 @@ export function AgreementTerms({
       )}
       {mode === "Negotiation" && (
         <>
-          <dl className={styles.totals}>
-            <div>
+          <dl className={`${styles.totals} ${styles.priceSummary}`}>
+            <div
+              className={styles.asking}
+              data-featured={terms?.agreedPrice == null}
+            >
               <dt>Giá niêm yết</dt>
               <dd>
                 {book?.salePrice != null
@@ -231,6 +238,7 @@ export function AgreementTerms({
               </dd>
             </div>
           </dl>
+          <p className={styles.priceNote}>Chưa gồm phí giao nhận.</p>
           {terms?.agreedPrice != null &&
             book &&
             terms.agreedListingRevisionId !== book.revisionId && (
@@ -296,10 +304,6 @@ export function AgreementTerms({
                     {busy ? "Đang gửi…" : "Gửi đề nghị"}
                   </button>
                 </div>
-                <p className={styles.help}>
-                  Chưa gồm phí giao nhận. Đối tác cần chấp nhận trước khi tạo
-                  đơn.
-                </p>
                 {terms?.agreedPrice != null && (
                   <button
                     type="button"
@@ -314,25 +318,6 @@ export function AgreementTerms({
             )}
         </>
       )}
-      {!seller &&
-        mode === "Negotiation" &&
-        book?.mode === "Both" &&
-        !proposal &&
-        !locked && (
-          <button
-            className={styles.textButton}
-            type="button"
-            disabled={disabled}
-            onClick={() =>
-              void command({
-                expectedVersion: room.version,
-                kind: "RequestExchange",
-              })
-            }
-          >
-            Tôi muốn đổi sách thay vì mua
-          </button>
-        )}
       {terms?.activeExchangeId && (
         <p className={styles.help}>
           Đã có đề nghị đổi sách. Hủy đề nghị trước nếu hai bên muốn chuyển hình

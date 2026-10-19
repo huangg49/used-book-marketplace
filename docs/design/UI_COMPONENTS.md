@@ -484,3 +484,8 @@ ChatPage opts into faint existing ivory-paper texture through
 `--conversation-paper-texture`; a noninteractive bookmark decorates the agreement
 edge. Active empty chat uses the existing64px penguin with empty alt text, hidden
 for history errors/expired rooms. Standalone Exchange keeps its existing surface.
+AgreementTerms groups mode/request-to-exchange before a compact price summary and
+price entry. Listing price leads until a price is accepted; fees stay visible.
+ChatPage's keyboard-accessible “Cách giao dịch” disclosure contains routine help
+and the phase trail, expanded for expired/missing-fulfillment/stale-quote guidance.
+Pending proposals, stale accepted revisions and errors remain outside disclosure.

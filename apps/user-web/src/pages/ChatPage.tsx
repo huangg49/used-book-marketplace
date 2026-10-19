@@ -18,6 +18,7 @@ import {
   ArrowLeft,
   ArrowUpRight,
   BookOpen,
+  ChevronDown,
   Send,
 } from "lucide-react";
 import { useSession } from "../hooks/useSession";
@@ -364,26 +365,6 @@ function ChatRoom({
             aria-label="Nội dung phiếu thỏa thuận"
             tabIndex={0}
           >
-            {!isExchange && (
-              <ol className={styles.progress} aria-label="Tiến trình mua bán">
-                {["Trao đổi", "Thông tin nhận sách", "Đơn hàng"].map(
-                  (label, index) => (
-                    <li
-                      key={label}
-                      aria-current={
-                        guidance.phase === index ? "step" : undefined
-                      }
-                      data-complete={
-                        (guidance.phase != null && guidance.phase > index) ||
-                        undefined
-                      }
-                    >
-                      {label}
-                    </li>
-                  ),
-                )}
-              </ol>
-            )}
             {room.terms?.locked &&
               !room.orderId &&
               !room.terms.activeExchangeId && (
@@ -453,10 +434,39 @@ function ChatRoom({
               ) : null)
             )}
             {!isExchange && !(room.orderId && isBuyer) && (
-              <div className={styles.guidanceText}>
+              <details
+                className={styles.guidanceDetails}
+                open={
+                  expired ||
+                  (book.data != null && !book.data.fulfillment) ||
+                  (room.hasQuote &&
+                    (!room.quotePreview ||
+                      Date.parse(room.quotePreview.expiresAt) <= now))
+                }
+              >
+                <summary>
+                  Cách giao dịch
+                  <ChevronDown size={16} aria-hidden="true" />
+                </summary>
+                <ol className={styles.progress} aria-label="Tiến trình mua bán">
+                  {["Trao đổi", "Thông tin nhận sách", "Đơn hàng"].map(
+                    (label, index) => (
+                      <li
+                        key={label}
+                        aria-current={guidance.phase === index ? "step" : undefined}
+                      >
+                        {label}
+                      </li>
+                    ),
+                  )}
+                </ol>
                 <p>{guidance.description}</p>
                 {!expired && <p>Chat chưa giữ chỗ cho cuốn sách.</p>}
-              </div>
+                <p>
+                  Người bán đề xuất hình thức, người mua xác nhận. Đề nghị giá
+                  cần đối tác chấp nhận trước khi dùng để tạo đơn.
+                </p>
+              </details>
             )}
           </div>
           {!isExchange && (

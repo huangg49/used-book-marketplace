@@ -2,45 +2,26 @@
 
 ## Phiếu thỏa thuận và hội thoại mua/đổi chung —19/10/2026
 
-- Chủ dự án chọn hướng “hai trang sách”: nhánh `codex/chat-open-book`, base
-  `b98a650`, subject `refactor(web): shape conversation as an open book`.
-  Tên/bìa sách dẫn đầu, đối tác nằm ở đầu chat; phiếu và chat có khoảng gáy,
-  một hệ chữ Be Vietnam Pro400/700 với vai trò rõ. Giá là điểm nhấn của phiếu.
-  Nội dung phiếu cuộn riêng, hành động cuối nằm ngoài vùng cuộn, không phủ giá.
-  Ở960px trở xuống dùng panel giữ nháp; Exchange độc lập cũ giữ route/lịch sử.
-  Follow-up ảnh chủ dự án: bảng giá chỉ kẻ giữa các dòng, bỏ viền dưới dòng cuối
-  để không tạo hai đường sát nhau với footer. Bỏ icon bong bóng trong trạng thái
-  hội thoại rỗng và khoảng trống phía trên lời chào. Chủ dự án tiếp tục duyệt thêm
-  chi tiết giữ bố cục: bookmark đỏ rượu ở mép phiếu, vân giấy cũ rất nhẹ, chim
-  cánh cụt cầm sách64px chỉ cho hội thoại rỗng còn hoạt động. Tái dùng asset đã có;
-  không đổi API/nghiệp vụ. Subject `style(web): add bookish conversation details`.
-  Typecheck/build PASS (chunk warning cũ), lint PASS (6 warning cũ), detector[];
-  browser fixture PASS, xem desktop/mobile/chữ lớn tại `.tmp/chat-paper-details-qa`.
-  Xác nhận hẹp320px/chữ130%: lược mascot dưới360px để ưu tiên lời chào/form;
-  evidence sau sửa tại `.tmp/chat-paper-details-final-qa`.
-  Follow-up field chat: bỏ outline nằm ngoài textarea, dùng focus đổi viền đỏ
-  rượu và nhấn inset như Đăng sách; forced colors giữ outline phía trong.
-  Subject `fix(web): align chat composer focus with posting fields`.
-  Vite build PASS (chunk warning cũ); QA focus chuột/bàn phím desktop/mobile,
-  không đổi kích thước và forced colors PASS tại `.tmp/chat-field-focus-qa`.
-  Ô đề nghị giá/đề nghị giá khác cũng dùng một viền focus sát ô như Đăng sách;
-  selector scoped thắng CSS input chung. Subject
-  `fix(web): unify agreement price field focus`. QA chuột/bàn phím, kích thước,
-  desktop/mobile và forced colors PASS tại `.tmp/chat-price-focus-qa`.
-  Follow-up footer: bỏ ghi chú riêng tư dưới composer, hai nút gửi tin/nhận sách
-  thẳng hàng. Subject `fix(web): align conversation footer actions`.
-  Typecheck/build PASS (chunk warning cũ); QA desktop1440/1100 khi trống/có nháp,
-  mobile390/320 giữ nháp/panel/no overflow PASS tại `.tmp/chat-footer-qa`.
-  Chỉ trình bày; không chạy lại gate API/nghiệp vụ.
-- PASS UI:147unit, lint (6 warning cũ), typecheck/build (chunk warning cũ),
-  docs/diff check. Browser fixture chạy luồng retry/chuyển hình thức/giá/đơn/
-  thanh toán và Exchange cũ;1440/1100/900/390px,320px chữ130%. Kiểm tên sách
-  làh1, hai cột thẳng hàng, giá đã chốt không bị footer che, giữ nháp và lịch sử.
-  `.tmp/chat-open-book-qa` kiểm thiếu ảnh; `.tmp/chat-open-book-final-qa` có
-  bìa Alice từ asset có sẵn, chỉ trong dữ liệu `[QA]`, không là ảnh listing thật.
-  Detector một lần có2 advisory radius, đã đưa về12px; một lượt xem, một batch
-  sửa và một lượt xác nhận. API/Mongo/tiền không đổi; không chạy lại backend,
-  native/live storage/remote CI hoặc đóng gate từ evidence UI này.
+- Nhánh `codex/chat-open-book`, base `b98a650`; follow-up từ `6c3bdf9`, subject
+  `refactor(web): simplify agreement sheet hierarchy`. Giữ “hai trang sách”:
+  bìa/tên sách dẫn đầu, đối tác ở đầu chat; Be Vietnam Pro400/700. Phiếu cuộn
+  riêng trên footer, hai nút gửi/nhận sách thẳng hàng; dưới960px đổi panel giữ nháp.
+- Phiếu trái ưu tiên hình thức → giá → đề nghị giá. Yêu cầu đổi nằm cạnh hình
+  thức; giá niêm yết nổi trước chốt, giá thống nhất đỏ rượu nổi sau chốt. Phí vẫn
+  hiện; hướng dẫn/phase trail gom vào “Cách giao dịch”. Tự mở khi hết hạn, thiếu
+  nơi gửi hoặc quote đã gửi mất/hết hạn. Proposal, lỗi và revision cũ vẫn hiện
+  trực tiếp; không đổi handler/quyền/key/body/version hoặc nghiệp vụ.
+- Giữ bookmark/vân giấy và mascot từ asset cũ cho chat rỗng còn hoạt động
+  (lược mascot dưới360px). Field chat/giá dùng một viền focus sát ô như Đăng sách,
+  forced colors có outline phía trong; bỏ ghi chú riêng tư dưới composer.
+- PASS:147unit, typecheck/build (chunk warning cũ), lint (6 warning cũ), detector[].
+  Browser fixture `.tmp/chat-quiet-agreement-qa` kiểm retry/chuyển hình thức/giá/
+  đơn/thanh toán/Exchange cũ, desktop/mobile/chữ lớn. Xác nhận sau batch spacing
+  tại `.tmp/chat-quiet-agreement-final-qa`: phần chính vừa khung1440/1100 cao900,
+  disclosure bàn phím giữ cả nháp giá/tin, mobile390/320 chữ130% không tràn,
+  quote hết hạn mở hướng dẫn. QA bìa Alice chỉ trong fixture `[QA]`.
+  Một lượt xem, một batch sửa và một lượt xác nhận; không chạy lại backend/native/
+  live storage/remote CI, không đóng gate từ evidence UI. Chưa push/PR gói này.
 - Nhánh `codex/unified-trade-chat`, base `c385dd0` (`codex/chat-guidance`).
   Subject `feat(chat): unify purchase and exchange agreement workspace`.
   [ADR0040](../adr/0040-unified-conversation-workspace.md) ghi quyết định đã duyệt.

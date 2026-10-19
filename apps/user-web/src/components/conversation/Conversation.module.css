@@ -61,6 +61,52 @@
   font-weight: 400;
   color: var(--shop-muted);
 }
+.modeLine {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+}
+.modeLine h3 {
+  color: var(--shop-muted);
+  font-size: var(--conversation-meta, 0.875rem);
+  font-weight: 400;
+}
+.modeLine .mode {
+  font-weight: 700;
+}
+.exchangeRequest {
+  min-height: 44px;
+}
+.totals.priceSummary {
+  margin: 8px 0 0;
+}
+.totals.priceSummary > div {
+  padding: 8px 0;
+}
+.totals.priceSummary > div + div {
+  border-top: 0;
+}
+.totals.priceSummary .agreed {
+  padding-top: 8px;
+}
+.asking[data-featured="true"] dd {
+  color: var(--shop-ink);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.priceNote {
+  margin: 0;
+  color: var(--shop-muted);
+  font-size: var(--conversation-meta, 0.875rem);
+  line-height: 1.7;
+}
+.offerForm {
+  margin-top: 16px;
+}
 .switch {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -605,6 +651,9 @@
 .openBook .terms,
 .openBook .exchangeOffer {
   padding: 24px 0 0;
+}
+.openBook .terms {
+  padding-top: 16px;
 }
 .openBook .exchangeHistory {
   padding: 20px 0;

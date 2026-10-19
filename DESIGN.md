@@ -897,3 +897,11 @@ from the agreement edge, and the existing ivory paper texture stays faint under
 the content. The existing book-carrying penguin appears only for an active empty
 conversation, centered with the greeting; never in a history error or expired room.
 These are decorative, noninteractive details, not transaction or presence signals.
+
+The agreement sheet now groups mode, price and price entry as its primary content.
+Before acceptance the listing price leads; after acceptance the agreed wine price
+leads. The exchange request sits beside the mode group. Fees remain visible;
+routine workflow, phase trail and consent explanations live in “Cách giao dịch”.
+That disclosure starts expanded for expired conversations, missing fulfillment or
+an expired/missing previously sent quote. Proposal, stale-price and mutation
+errors remain directly visible. The action footer stays aligned with chat Send.
