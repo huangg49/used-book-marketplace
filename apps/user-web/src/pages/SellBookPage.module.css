@@ -654,7 +654,13 @@
   font-size: 0.75rem;
 }
 .desktopPreview {
-  position: static;
+  position: sticky;
+  top: 112px;
+  max-height: calc(100dvh - 136px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  border-radius: 12px;
 }
 .reviewFacts {
   margin: 0;
@@ -766,12 +772,6 @@
 }
 .skip:focus {
   top: 8px;
-}
-@media (min-width: 1200px) and (min-height: 900px) {
-  .stickyPreview {
-    position: sticky;
-    top: 112px;
-  }
 }
 @media (max-width: 1199px) {
   .workspace {

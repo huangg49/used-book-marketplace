@@ -360,8 +360,74 @@ try {
   );
   await thumbnails.nth(7).waitFor();
   assert.equal(await fileInput.isDisabled(), true);
+  const desktopPreview = p.getByRole("complementary", {
+    name: "Tóm tắt bản nháp",
+  });
+  for (const [width, height, scale] of [
+    [1440, 720, 100],
+    [1440, 900, 130],
+    [1200, 600, 130],
+  ]) {
+    await p.setViewportSize({ width, height });
+    await p.evaluate((scale) => {
+      document.documentElement.style.fontSize = `${scale}%`;
+      window.scrollTo(0, 0);
+    }, scale);
+    assert.equal(
+      await desktopPreview.evaluate((node) => getComputedStyle(node).position),
+      "sticky",
+    );
+    const startY = await desktopPreview.evaluate(
+      (node) => node.getBoundingClientRect().top + window.scrollY,
+    );
+    for (const offset of [120, 220]) {
+      await p.evaluate((y) => window.scrollTo(0, y), startY + offset);
+      await p.waitForFunction(
+        () =>
+          Math.abs(
+            document
+              .querySelector('aside[aria-label="Tóm tắt bản nháp"]')
+              .getBoundingClientRect().top - 112,
+          ) < 1,
+      );
+    }
+    const metrics = await desktopPreview.evaluate((node) => ({
+      height: node.clientHeight,
+      scrollHeight: node.scrollHeight,
+    }));
+    assert.ok(metrics.height <= height - 136 + 1);
+    if (metrics.scrollHeight > metrics.height) {
+      await desktopPreview.focus();
+      await p.keyboard.press("End");
+      await p.waitForFunction(() => {
+        const node = document.querySelector(
+          'aside[aria-label="Tóm tắt bản nháp"]',
+        );
+        return node.scrollTop + node.clientHeight >= node.scrollHeight - 1;
+      });
+    }
+    await desktopPreview.evaluate((node) => {
+      node.scrollTop = 0;
+    });
+    await p.screenshot({
+      path: path.join(
+        artifacts,
+        `sell-sticky-preview-${width}-${height}-${scale}.png`,
+      ),
+      fullPage: false,
+    });
+    assert.ok(
+      await p.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    );
+  }
+  await p.evaluate(() => {
+    document.documentElement.style.fontSize = "130%";
+  });
   for (const width of [390, 1440]) {
     await p.setViewportSize({ width, height: 900 });
+    if (width === 390) assert.equal(await desktopPreview.count(), 0);
     await p.screenshot({
       path: path.join(artifacts, `sell-multiple-images-${width}.png`),
       fullPage: true,

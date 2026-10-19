@@ -133,26 +133,6 @@ export function SellBookPage() {
   const heading = useRef<HTMLHeadingElement>(null);
   const errorBox = useRef<HTMLDivElement>(null);
   const imageRefs = useRef<string[]>([]);
-  const previewElement = useRef<HTMLElement>(null);
-  const [previewFits, setPreviewFits] = useState(false);
-  const receiptVisible = step === 6;
-  useEffect(() => {
-    const element = previewElement.current;
-    if (!element || !window.ResizeObserver) return;
-    const measure = () =>
-      setPreviewFits(
-        element.offsetHeight > 0 &&
-          element.offsetHeight + 136 < window.innerHeight,
-      );
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    window.addEventListener("resize", measure);
-    measure();
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, [session.status, receiptVisible]);
   const focusFrame = useRef<number | undefined>(undefined);
   useEffect(
     () => () => {
@@ -856,8 +836,9 @@ export function SellBookPage() {
             </nav>
             <div className={styles.workspace}>
               <aside
-                ref={previewElement}
-                className={`${styles.desktopPreview} ${previewFits ? styles.stickyPreview : ""}`}
+                className={styles.desktopPreview}
+                tabIndex={0}
+                aria-label="Tóm tắt bản nháp"
               >
                 {preview}
               </aside>

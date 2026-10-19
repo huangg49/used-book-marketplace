@@ -1,5 +1,19 @@
 # Điểm lưu hiện tại — 19/10/2026
 
+## Bản xem trước đi theo khi cuộn — 19/10/2026
+
+- Member web `/sell`: thẻ “Cuốn sách của bạn” luôn sticky trên desktop từ1200px,
+  bỏ điều kiện viewport900px và ResizeObserver/previewFits. Thẻ giới hạn chiều
+  cao theo viewport, cuộn nội dung bằng chuột/bàn phím, không che header/form;
+  mobile giữ bản nháp thu gọn. Nhánh `codex/sticky-listing-preview`, base640c50c;
+  subject `fix(web): keep listing preview alongside scrolling form`.
+- PASS web lint/typecheck/build/136unit và browser regression:1440×720/100%,
+  1440×900/130%,1200×600/130%, cuộn hai vị trí giữ top112px, End đọc hết thẻ dài,
+  390px không hiện sidebar; form/multi-photo/quota/replay/chat giữ PASS. Ảnh local
+  `apps/user-web/test-results/sell-sticky-preview-*.png`. Storage fake/Sharp thật.
+- Không đổi API/RN; warning web6/chunk cũ giữ. Không kiểm native/live provider/
+  human/remote CI; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
+
 ## Chọn nhiều ảnh đăng sách — 19/10/2026
 
 - Follow-up theo ảnh chủ dự án: ẩn hàng native “Choose files / No file chosen”,
