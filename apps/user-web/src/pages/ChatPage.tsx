@@ -276,6 +276,51 @@ function ChatRoom({
         setError(undefined);
       });
   }
+  const bookIdentity = (
+    <>
+      <div className={styles.cover}>
+        {book.data ? (
+          <ListingPhoto book={book.data} eager />
+        ) : (
+          <BookOpen size={32} aria-hidden="true" />
+        )}
+      </div>
+      <div className={styles.bookHeading}>
+        <h1>
+          <Link to={`/books/${room.listingId}`}>
+            {book.data?.book.title ??
+              (book.isLoading
+                ? "Đang tải cuốn sách…"
+                : "Cuộc trao đổi về sách")}
+          </Link>
+        </h1>
+        {book.data ? (
+          <p className={styles.bookAuthor}>
+            {book.data.book.authors.join(", ")}
+          </p>
+        ) : (
+          <p className={styles.bookAuthor}>
+            Thông tin bài đăng hiện không khả dụng. Bạn vẫn có thể đọc hội
+            thoại.
+          </p>
+        )}
+        <p className={styles.roomStatus}>
+          {isExchange && room.status === "Active"
+            ? "Đang trao đổi sách"
+            : statusLabels[room.status]}
+          {room.expiresAt && (
+            <>
+              {" "}
+              · Hạn hội thoại:{" "}
+              <time dateTime={room.expiresAt}>
+                {dateTime(room.expiresAt)}
+              </time>
+            </>
+          )}
+        </p>
+      </div>
+    </>
+  );
   return (
     <section
       className={styles.room}
@@ -288,49 +333,10 @@ function ChatRoom({
           aria-label="Về danh sách hội thoại"
         >
           <ArrowLeft size={18} aria-hidden="true" />
+          Hội thoại của bạn
         </Link>
-        <div className={styles.cover}>
-          {book.data ? (
-            <ListingPhoto book={book.data} />
-          ) : (
-            <BookOpen size={32} aria-hidden="true" />
-          )}
-        </div>
-        <div className={styles.bookHeading}>
-          <h1>
-            <Link to={`/books/${room.listingId}`}>
-              {book.data?.book.title ??
-                (book.isLoading
-                  ? "Đang tải cuốn sách…"
-                  : "Cuộc trao đổi về sách")}
-            </Link>
-          </h1>
-          {book.data ? (
-            <p className={styles.bookAuthor}>
-              {book.data.book.authors.join(", ")}
-            </p>
-          ) : (
-            <p className={styles.bookAuthor}>
-              Thông tin bài đăng hiện không khả dụng. Bạn vẫn có thể đọc hội
-              thoại.
-            </p>
-          )}
-          <p className={styles.roomStatus}>
-            {isExchange && room.status === "Active"
-              ? "Đang trao đổi sách"
-              : statusLabels[room.status]}
-            {room.expiresAt && (
-              <>
-                {" "}
-                · Hạn hội thoại:{" "}
-                <time dateTime={room.expiresAt}>
-                  {dateTime(room.expiresAt)}
-                </time>
-              </>
-            )}
-          </p>
-        </div>
       </header>
+      <div className={styles.mobileBookHeader}>{bookIdentity}</div>
       <nav
         className={`${sheet.mobileTabs} ${sheet.bookTabs}`}
         aria-label="Nội dung cuộc trao đổi"
@@ -351,16 +357,16 @@ function ChatRoom({
         </button>
       </nav>
       <div
-        className={`${sheet.workspace} ${sheet.openBook} ${styles.paperSpread}`}
+        className={`${sheet.workspace} ${sheet.openBook} ${styles.paperSpread} ${styles.dossierSpread}`}
         data-panel={panel}
       >
-        <span className={styles.bookmark} aria-hidden="true" />
         <aside className={sheet.sheet} aria-label="Phiếu thỏa thuận">
-          <div className={sheet.sheetHeading}>
-            <h2>Phiếu thỏa thuận</h2>
-          </div>
+          <header className={`${sheet.sheetHeading} ${styles.dossierHeader}`}>
+            {bookIdentity}
+          </header>
+          <h2 className={styles.srOnly}>Phiếu thỏa thuận</h2>
           <div
-            className={sheet.sheetBody}
+            className={`${sheet.sheetBody} ${styles.dossierBody}`}
             role="region"
             aria-label="Nội dung phiếu thỏa thuận"
             tabIndex={0}
@@ -802,8 +808,11 @@ function ChatRoom({
             </>
           )}
         </aside>
-        <section className={sheet.chat} aria-label="Hội thoại">
-          <div className={sheet.chatHeading}>
+        <section
+          className={`${sheet.chat} ${styles.dossierChat}`}
+          aria-label="Hội thoại"
+        >
+          <div className={`${sheet.chatHeading} ${styles.dossierChatHeading}`}>
             <span className={styles.avatar} aria-hidden="true">
               {other.displayName.slice(0, 1).toUpperCase()}
             </span>

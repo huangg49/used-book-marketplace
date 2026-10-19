@@ -473,16 +473,21 @@ counts. Shared `Conversation.module.css` defines agreement/chat columns, card in
 and mobile panel navigation. Exchange BookInfoCard/ProgressStepper accept compact
 presentation for the agreement column; their lifecycle meanings are unchanged.
 ADR0040 and the ChatPage surface brief define permission and replay behavior.
-ChatPage's open-book composition above960px has a book-led heading, partner-led
-chat header, one paper spread and separate agreement-body/message scrolling.
+ChatPage's local book-dossier trial above960px puts real book identity in a wine
+agreement header; the adjacent white chat has a partner-led header. Both retain
+one spread and separate agreement-body/message scrolling.
 The action area is outside the body rather than a sticky overlay. Narrow panels
 keep mounted drafts and natural sheet flow. Shared scoped typography uses
 400/700 weights and title/data/body/metadata roles. Accepted-price edits and
 complete event history are disclosures; closing either leaves transaction data
 intact. Shared styles still support standalone Exchange; route/history remain.
 ChatPage opts into faint existing ivory-paper texture through
-`--conversation-paper-texture`; a noninteractive bookmark decorates the agreement
-edge. Active empty chat uses the existing64px penguin with empty alt text, hidden
+`--conversation-paper-texture`. The wine header replaces the small bookmark;
+real cover is100px wide (max144px tall), title24px. Below960px, shared book context
+stays above both tabs, with64px/48px covers and20px title on phones. Shared
+ListingPhoto retains loading/missing/error/retry, cream-on-wine fallback copy and
+focus. White chat uses local `--conversation-chat-surface`. Active empty chat
+uses the existing64px penguin with empty alt text, hidden
 for history errors/expired rooms. Standalone Exchange keeps its existing surface.
 AgreementTerms groups mode/request-to-exchange before a compact price summary and
 price entry. Listing price leads until a price is accepted; fees stay visible.

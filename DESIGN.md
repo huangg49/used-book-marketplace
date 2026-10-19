@@ -15,6 +15,7 @@ colors:
   shop-wine-hover: "#7c2320"
   shop-error: "#912b0e"
   shop-shelf: "#f4eddf"
+  conversation-chat-surface: "#ffffff"
   shop-exchange-ink: "#254337"
   auction-hero-shadow: "#28191466"
   cover-sand: "#f0e2ca"
@@ -880,21 +881,25 @@ counterpart confirmation, and structured accepted prices fill the order sheet.
 Use the current ChatPage surface brief; do not restore the earlier inbox sidebar
 or close active participant messaging merely because an Order was created.
 
-The owner selected “two pages of an open book” for this surface: book title/real
-cover lead the page; partner belongs to the chat header. One paper spread on a
-warm shelf ground has a clear spine/gutter, agreement left and conversation right.
+The owner's latest local trial follows the book-dossier direction researched on
+19/10: a wine header inside the agreement holds the real100px cover (144px image
+height maximum), book title, author and actual room status. A compact Back link
+replaces the separate large book heading. The cream agreement and white chat
+share one spread on the warm shelf ground; partner belongs to the chat header.
 The agreement body scrolls above its action area; controls never overlay prices.
-At960px and below, mounted panel switching preserves drafts and natural sheet flow.
-Scoped Be Vietnam Pro400/700 uses28px title/agreed price,24px narrow title,
-16px body/section names and14px metadata/labels; inbox book titles use18px.
+At960px and below, a shared book header remains above mounted panel switching,
+preserving context and drafts. Narrow covers shrink to64px/48px; at320px text can
+flow below the cover. Scoped Be Vietnam Pro400/700 uses24px book title,20px narrow
+title,28px agreed price,16px body/section names and14px metadata/labels; inbox book
+titles use18px. This trial awaits the owner's visual review; no remote integration.
 Secondary price edits/history open on request; message bubbles are quiet cream
 and shelf tones. Wine belongs to primary actions and accepted price. The surface
 record defines geometry/evidence; global navigation, other-page type and APIs stay
 unchanged. Production book photographs always come from the listing media API.
 
-Owner-requested details preserve that composition: a small wine bookmark hangs
-from the agreement edge, and the existing ivory paper texture stays faint under
-the content. The existing book-carrying penguin appears only for an active empty
+The wine book header replaces the small decorative bookmark; the existing ivory
+paper texture stays faint under the agreement content. The book-carrying penguin
+appears only for an active empty
 conversation, centered with the greeting; never in a history error or expired room.
 These are decorative, noninteractive details, not transaction or presence signals.
 
