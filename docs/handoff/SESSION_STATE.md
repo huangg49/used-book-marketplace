@@ -1,5 +1,25 @@
 # Điểm lưu hiện tại — 19/10/2026
 
+## Sửa thông tin trước gửi và thử lại nơi gửi — 19/10/2026
+
+- Chủ dự án báo POST `/me/addresses`502 sau quay lại sửa bước1 rồi gửi ở bước5.
+  Kiểm máy: web5174 trỏ API3000 nhưng không có API listener. Đã bật lại bằng
+  `pnpm dev:api` (Mongo local/API/media+order workers), giữ tiến trình chạy;
+  GET readiness trực tiếp3000 và qua proxy5174 đều200. Không reset/seed DB.
+- Member web pin cả key + serialized body của ý định tạo địa chỉ, kể cả
+  expectedBookVersion/makeDefault khi query refetch sau mất ACK. Cache receipt,
+  chọn id vừa lưu và retry bước đọc địa chỉ khi cần, không yêu cầu reload mất form.
+  Giữ key-only ref của bản nháp đang mở qua HMR. Không đổi API/contract/session.
+- Nhánh `codex/sell-review-address-retry`, base4cfd49d; subject
+  `fix(web): preserve address command across review retries`.
+- PASS web lint/typecheck/136unit/build/browser: từ review sửa tác giả rồi dùng
+  thanh bước quay lại; POST địa chỉ đã commit nhưng proxy trả502, refetch sổ địa
+  chỉ thật, sửa tác giả lần nữa và gửi lại giữ cùng key/body, chỉ1 địa chỉ và catalog
+  nhận tác giả mới. Giữ submit/quota/lost-ACK2ảnh/gallery/sticky/shelf/chat PASS.
+  QA API/Mongo riêng, storage fake/Sharp thật. Readiness local chỉ kiểm đọc, không
+  tự gửi listing trên DB chủ dự án; native/live provider/human/remote CI NOT RUN.
+- 6 warning lint/chunk cũ giữ; READINESS không đổi. Chưa push/PR/merge/deploy.
+
 ## Ảnh thu nhỏ trong bản nháp — 19/10/2026
 
 - Follow-up: chủ dự án muốn thẻ lớn hơn một chút. Desktop rộng240→280px,

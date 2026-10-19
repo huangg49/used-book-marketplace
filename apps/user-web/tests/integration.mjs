@@ -1,5 +1,6 @@
 // Real Nest/MongoDB HTTP integration on a disposable *_test DB; storage is fake.
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
@@ -779,12 +780,16 @@ try {
   await p
     .getByRole("button", { name: "Dùng nơi gửi này", exact: true })
     .click();
-  await step(/Thông tin sách/).click();
-  assert.match(
-    await p.getByLabel("Tên sách", { exact: true }).inputValue(),
-    /QA/,
-  );
   await step(/Kiểm tra/).click();
+  await button("Chỉnh sửa thông tin sách").click();
+  await p
+    .getByLabel("Tác giả", { exact: true })
+    .fill("Tác giả QA đã chỉnh sửa");
+  await step(/Kiểm tra/).click();
+  await p
+    .getByText("Tác giả QA đã chỉnh sửa", { exact: true })
+    .last()
+    .waitFor();
   await p
     .getByLabel("Tôi có quyền sở hữu và đăng bán hoặc trao đổi cuốn sách này.")
     .check();
@@ -833,6 +838,60 @@ try {
   const addressesBefore = await fixture.db
     .collection("member_addresses")
     .countDocuments();
+  const submittedAuthors = [];
+  p.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().endsWith("/catalog/requests")
+    )
+      submittedAuthors.push(request.postDataJSON().metadata.authors);
+  });
+  const addressAttempts = [];
+  let addressAckLost = false;
+  await p.route("**/api/v1/me/addresses", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    addressAttempts.push({
+      key: route.request().headers()["idempotency-key"],
+      bodyHash: createHash("sha256")
+        .update(route.request().postData() ?? "")
+        .digest("hex"),
+    });
+    const response = await route.fetch();
+    if (!addressAckLost && response.status() === 200) {
+      addressAckLost = true;
+      return route.fulfill({
+        status: 502,
+        contentType: "text/plain",
+        body: "Bad Gateway",
+      });
+    }
+    await route.fulfill({ response });
+  });
+  await button("Gửi duyệt").click();
+  await p
+    .getByRole("alert")
+    .filter({ hasText: /Yêu cầu chưa thực hiện được/ })
+    .waitFor();
+  assert.equal(
+    await fixture.db.collection("member_addresses").countDocuments(),
+    addressesBefore + 1,
+  );
+  // A focus refresh can see the committed address while the POST ACK is unknown.
+  const refreshAddress = p.waitForResponse(
+    (response) =>
+      response.url().endsWith("/me/addresses") &&
+      response.request().method() === "GET",
+  );
+  await p.evaluate(async () => {
+    const { queryClient } = await import("/src/lib/session.ts");
+    await queryClient.invalidateQueries({ queryKey: ["address-book"] });
+  });
+  await refreshAddress;
+  await step(/Thông tin sách/).click();
+  await p
+    .getByLabel("Tác giả", { exact: true })
+    .fill("Tác giả QA sau lỗi kết nối");
+  await step(/Kiểm tra/).click();
   await button("Gửi duyệt").click();
   await button("Thử gửi lại").waitFor({ timeout: 45000 });
   await p.getByRole("alert").waitFor();
@@ -876,6 +935,13 @@ try {
   await p
     .getByRole("heading", { name: "Đã gửi duyệt", exact: true })
     .waitFor({ timeout: 45000 });
+  assert.deepEqual(submittedAuthors, [["Tác giả QA sau lỗi kết nối"]]);
+  assert.equal(addressAttempts.length, 2);
+  assert.deepEqual(addressAttempts[0], addressAttempts[1]);
+  assert.equal(
+    await fixture.db.collection("member_addresses").countDocuments(),
+    addressesBefore + 1,
+  );
   assert.equal(attempts.length, 3);
   for (const attempt of attempts.slice(1)) {
     assert.equal(
@@ -970,7 +1036,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    "PASS user-web: real shelf/filter/pagination/detail; empty/error/retry; login return and owner guard; five tabs/data retention; multi-file picker/add/remove/max8/validation, draft thumbnail/detail viewer/keyboard/focus, two-photo upload/submit replay; chat lost-response replay with one conversation; 390px100/130%, Home/Detail/Search320px130%. Fake storage, no native acceptance.",
+    "PASS user-web: real shelf/filter/pagination/detail; empty/error/retry; login return and owner guard; five tabs/data retention; multi-file picker/add/remove/max8/validation, draft thumbnail/detail viewer/keyboard/focus, review-author edit/address502 replay, two-photo upload/submit replay; chat lost-response replay with one conversation; 390px100/130%, Home/Detail/Search320px130%. Fake storage, no native acceptance.",
   );
 } catch (error) {
   const pages = browser?.contexts().flatMap((context) => context.pages()) ?? [];

@@ -112,7 +112,11 @@ export function SellBookPage() {
     queryFn: () => apiSession.request("/service-areas", serviceAreasSchema),
     enabled: session.status === "authenticated",
   });
-  const originAddressIntent = useRef<string | null>(null);
+  const originAddressIntent = useRef<{
+    key: string;
+    body: string;
+    receipt?: z.infer<typeof addressReceiptSchema>;
+  } | null>(null);
   const [originDialogOpen, setOriginDialogOpen] = useState(false);
   const [originDialogError, setOriginDialogError] = useState(false);
   const [originAddressId, setOriginAddressId] = useState("");
@@ -368,35 +372,45 @@ export function SellBookPage() {
       // An existing submission already pins its origin and command keys. Resume
       // it without repeating address creation with a refreshed book version.
       if (needsOrigin && !origin && !submission.current) {
-        const idempotencyKey =
-          originAddressIntent.current ?? crypto.randomUUID();
-        originAddressIntent.current = idempotencyKey;
-        const saved = await apiSession.request(
-          "/me/addresses",
-          addressReceiptSchema,
-          {
+        const previous = originAddressIntent.current;
+        // Freeze the body with its key: a background refetch can advance the
+        // address-book version after the server saved a response we never saw.
+        // Keep a key-only intent held by an open draft during hot reload too.
+        const intent =
+          previous && typeof previous === "object"
+            ? previous
+            : {
+                key:
+                  typeof previous === "string" ? previous : crypto.randomUUID(),
+                body: JSON.stringify({
+                  expectedBookVersion: addresses.data?.version ?? 0,
+                  address: {
+                    recipientName: originForm.recipientName.trim(),
+                    phone: originForm.phone.trim(),
+                    serviceAreaCode: "HCM-DEMO-v1",
+                    localityCode: originForm.localityCode,
+                    detail: originForm.detail.trim(),
+                  },
+                  makeDefault: (addresses.data?.items.length ?? 0) === 0,
+                }),
+              };
+        originAddressIntent.current = intent;
+        const saved =
+          intent.receipt ??
+          (await apiSession.request("/me/addresses", addressReceiptSchema, {
             method: "POST",
-            headers: { "Idempotency-Key": idempotencyKey },
-            body: JSON.stringify({
-              expectedBookVersion: addresses.data?.version ?? 0,
-              address: {
-                recipientName: originForm.recipientName.trim(),
-                phone: originForm.phone.trim(),
-                serviceAreaCode: "HCM-DEMO-v1",
-                localityCode: originForm.localityCode,
-                detail: originForm.detail.trim(),
-              },
-              makeDefault: (addresses.data?.items.length ?? 0) === 0,
-            }),
-          },
-        );
+            headers: { "Idempotency-Key": intent.key },
+            body: intent.body,
+          }));
+        intent.receipt = saved;
+        setOriginAddressId(saved.addressId);
         const refreshed = await addresses.refetch();
         origin = refreshed.data?.items.find(
           (address) => address.id === saved.addressId,
         );
         if (!origin)
           throw new Error(
-            "Địa chỉ vừa lưu chưa thể xác nhận. Hãy tải lại trang trước khi gửi bài.",
+            "Đã lưu nơi gửi sách nhưng chưa tải lại được địa chỉ. Thông tin được giữ nguyên; hãy thử gửi lại.",
           );
       }
       submission.current ??= createListingSubmission({
