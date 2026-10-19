@@ -1,5 +1,29 @@
 # Điểm lưu hiện tại — 19/10/2026
 
+## Push và kiểm tra PR51 —19/10/2026
+
+- Theo yêu cầu chủ dự án, push `codex/chat-open-book` và tạo
+  [PR51](https://github.com/huangg49/used-book-marketplace/pull/51) vào `main`.
+  Main `8741a6f` là ancestor, không có conflict. Gói gồm hội thoại/phiếu thỏa
+  thuận API + web, migration0032, inbox/nền/hover/chuyển cảnh; không chỉ motion.
+- Sau head `20995f4`, subject sửa kiểm tra
+  `test(api): isolate exchange and migration upgrade fixtures`: mỗi ca exchange
+  tạo hai Member riêng để không tích bài chạm hạn mức5 hoặc dùng chung ví;
+  snapshot nhánh migration cũ dừng trước union0027 để migration mới được áp
+  sau lịch sử, không bị ghi đè validator. Trừ3 collection Chat Mongo-native
+  khỏi số45 model PostgreSQL. Không sửa migration đã áp dụng hoặc nới nghiệp vụ.
+- PASS local API150unit/21file;120 E2E của agreements/orders/exchanges/
+  wallet-checkout trên QA `_test` (93 ca qua lần đầu,27 exchange qua sau sửa);
+  Mongo48 ca schema/transaction/ledger/keyset (23 ca qua lần đầu,25 schema
+  qua sau sửa), lint/typecheck, contract172operation/26controller.
+  API/web build và web152unit/browser có evidence source ở các mục dưới;
+  sửa cuối chỉ test + điểm lưu. API11 warning lint cũ, web6 warning/chunk cũ.
+  Không chạy import PostgreSQL/failover/native/live provider trong lượt này.
+- Remote8 job bị GitHub từ chối khởi chạy do billing/spending limit; không phải
+  CI PASS. PR chưa có review độc lập. Theo TEAMWORK, CI/review còn chặn merge;
+  chưa merge vào main, chưa có ngoại lệ cho PR51. READINESS giữ nguyên.
+  DB app và `.env` không bị thay đổi; chỉ dùng Mongo QA port57017 để kiểm tra.
+
 ## Mở thẻ thành giao diện Chat —19/10/2026
 
 - Nhánh `codex/chat-open-book`, base `3527034`, subject

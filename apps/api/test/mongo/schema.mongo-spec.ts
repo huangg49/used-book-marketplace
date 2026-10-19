@@ -25,6 +25,7 @@ import { resolutionCollectionSpecs } from '../../src/database/mongo/migrations/0
 import { settlementCollectionSpecs } from '../../src/database/mongo/migrations/0012-point-order-settlement.js';
 import { rulesCollectionSpecs } from '../../src/database/mongo/migrations/0013-auction-business-rules.js';
 import { purchaseConversationSpecs } from '../../src/database/mongo/migrations/0014-purchase-conversations.js';
+import { conversationAgreementSpecs } from '../../src/database/mongo/migrations/0032-conversation-agreements.js';
 import { sellerSelectedOrdersMigration } from '../../src/database/mongo/migrations/0028-seller-selected-orders.js';
 import { applyCollectionSpecs } from '../../src/database/mongo/migrations/index.js';
 import { notificationSpecs } from '../../src/database/mongo/migrations/0015-member-notifications.js';
@@ -101,6 +102,7 @@ describe('migrations', () => {
         // Purchase conversations are Mongo-native; they do not correspond to a
         // PostgreSQL model in the baseline count.
         -purchaseConversationSpecs.length -
+        conversationAgreementSpecs.length -
         // The notification inbox (FR-N03, migration 0015) is MongoDB-native too.
         notificationSpecs.length -
         // FR-A01/02/04 auth collections have no historical PostgreSQL model.
@@ -272,13 +274,15 @@ describe('migrations', () => {
         '0025-exchange-reviews',
         '0026-exchange-mutual-completion',
       ]);
-      const before = migrations.filter(
-        (m) =>
-          m.id !== '0027-wallet-point-command-union' &&
-          // These historical branches predate BuyNow; upgrade it after their missing migrations.
-          m.id !== '0029-buy-now-notifications' &&
-          !(lane === 'wallet' ? mainIds : walletIds).has(m.id),
-      );
+      // These snapshots predate the union and all migrations after it. Applying
+      // newer schemas first would let missing historical migrations overwrite
+      // them, modelling an impossible historical branch instead of an upgrade.
+      const before = migrations
+        .slice(
+          0,
+          migrations.findIndex((m) => m.id === '0027-wallet-point-command-union'),
+        )
+        .filter((m) => !(lane === 'wallet' ? mainIds : walletIds).has(m.id));
       try {
         await migrate(root, db, before);
         const ledger = db.collection<{ _id: string; checksum: string }>(
@@ -347,13 +351,14 @@ describe('migrations', () => {
         '0018-auth-otp',
         '0019-catalog-vocabulary-v2',
       ]);
-      const before = migrations.filter(
-        (m) =>
-          m.id !== '0027-wallet-point-command-union' &&
-          // These historical branches predate BuyNow; upgrade it after their missing migrations.
-          m.id !== '0029-buy-now-notifications' &&
-          !(lane === 'exchange-main' ? memberIds : exchangeIds).has(m.id),
-      );
+      const before = migrations
+        .slice(
+          0,
+          migrations.findIndex((m) => m.id === '0027-wallet-point-command-union'),
+        )
+        .filter(
+          (m) => !(lane === 'exchange-main' ? memberIds : exchangeIds).has(m.id),
+        );
       try {
         await migrate(root, db, before);
         const ledger = db.collection<{ _id: string; checksum: string }>(
