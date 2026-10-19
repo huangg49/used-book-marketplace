@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { CurrentUser } from "@used-books/session-client";
 import {
+  canEnterWorkspace,
   canOperatePoint,
   canResolve,
   canReview,
   canReviewCatalog,
+  canSimulate,
 } from "./session";
 const base: CurrentUser = {
   id: crypto.randomUUID(),
@@ -32,6 +34,19 @@ describe("operations capability gates", () => {
     expect(canReviewCatalog({ ...user, status: "RESTRICTED" })).toBe(false);
     expect(canReview({ ...user, status: "LOCKED" })).toBe(false);
     expect(canReviewCatalog({ ...user, status: "LOCKED" })).toBe(false);
+  });
+});
+describe("simulator gate (ADR 0044)", () => {
+  it("admits only an active TEST_OPERATOR, never staff or admin by role alone", () => {
+    expect(canSimulate({ ...base, roles: ["TEST_OPERATOR"] })).toBe(true);
+    expect(canEnterWorkspace({ ...base, roles: ["TEST_OPERATOR"] })).toBe(true);
+    expect(canSimulate({ ...base, roles: ["STAFF", "ADMIN"] })).toBe(false);
+    expect(canSimulate({ ...base, roles: ["MEMBER"] })).toBe(false);
+    expect(canEnterWorkspace({ ...base, roles: ["MEMBER"] })).toBe(false);
+    for (const status of ["RESTRICTED", "LOCKED"] as const)
+      expect(
+        canSimulate({ ...base, status, roles: ["TEST_OPERATOR"] }),
+      ).toBe(false);
   });
 });
 describe("point operations gates", () => {

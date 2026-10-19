@@ -565,6 +565,47 @@ export class PointCollectionService {
     });
   }
 
+  // The operator's list of deliveries awaiting a carrier outcome. Orders the
+  // operator buys or sells are left out (the event command refuses them);
+  // no recipient address or contact leaves the server here.
+  simulatedDeliveries(
+    auth: Actor,
+  ): Promise<Wire['SimulatedPointDeliveryQueue']> {
+    return this.commands.read(auth, async (tx, actor) => {
+      requireActive(actor);
+      if (!actor.roles.some((r) => r.role === 'TEST_OPERATOR'))
+        throw new DomainError(403, 'FORBIDDEN', 'Cần quyền vận hành mô phỏng.');
+      const now = await tx.now();
+      const orders = await tx.c.point_orders
+        .find(
+          {
+            state: 'InTransit',
+            buyerId: { $ne: actor._id },
+            sellerId: { $ne: actor._id },
+          },
+          { sort: { deliveryDeadline: 1, _id: 1 }, limit: 50 },
+        )
+        .toArray();
+      const items: Wire['SimulatedPointDeliveryItem'][] = [];
+      for (const o of orders) {
+        const item = await tx.c.workflow_items.findOne({
+          _id: `${o.contextId}:${o.listingId}`,
+        });
+        const point = await tx.c.handover_points.findOne({ _id: o.pointId });
+        items.push({
+          orderId: o._id,
+          title: String((item?.snapshot as { title?: string })?.title ?? ''),
+          pointName: point?.name ?? '',
+          carrier: 'LatLaiSimulator',
+          trackingCode: o.trackingCode!,
+          dispatchedAt: o.dispatchedAt!.toISOString(),
+          deliveryDeadline: o.deliveryDeadline!.toISOString(),
+        });
+      }
+      return { items, serverTime: now.toISOString() };
+    });
+  }
+
   queue(auth: Actor): Promise<Wire['PointCollectionQueue']> {
     return this.commands.read(auth, async (tx, actor) => {
       requireActive(actor);

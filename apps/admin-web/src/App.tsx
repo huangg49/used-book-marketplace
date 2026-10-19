@@ -31,6 +31,7 @@ import {
   MapPin,
   TriangleAlert,
   Clock,
+  Truck,
   Eye,
   EyeOff,
   Lock,
@@ -39,8 +40,10 @@ import { currentUserSchema } from "@used-books/session-client";
 import logo from "../../../packages/brand/logos/lat-lai-horizontal-primary.svg";
 import logoWhite from "../../../packages/brand/logos/lat-lai-horizontal-white.svg";
 import {
+  canEnterWorkspace,
   canOperatePoint,
   canResolve,
+  canSimulate,
   canReview,
   canReviewCatalog,
   queryClient,
@@ -52,6 +55,7 @@ import { Detail } from "./features/review/detail";
 import { LeaveGuard } from "./core/leave-guard";
 import { UserDirectory } from "./features/users/directory";
 import { DashboardMock } from "./features/dashboard/mock";
+import { DeliverySimulator } from "./features/operations/simulator";
 import {
   AuctionQueue,
   CollectionQueue,
@@ -322,7 +326,7 @@ function Workspace() {
           <img src={logo} alt="Lật lại" width="142" height="46" />
           <span>Bàn quản trị</span>
         </Link>
-        {user && canReview(user) && (
+        {user && canEnterWorkspace(user) && (
           <nav className="workspace-nav" aria-label="Khu vực quản trị">
             <p className="sidebar-section-label">Điều hướng</p>
             <NavLink to="/dashboard">
@@ -330,22 +334,36 @@ function Workspace() {
               Dashboard
               <small className="mock-nav-label">Mock</small>
             </NavLink>
-            <div className="sidebar-group">
-              <p className="sidebar-group-title">
-                <ClipboardCheck aria-hidden="true" />
-                Duyệt bài đăng
-              </p>
-              <NavLink to="/review/listings">
-                <BookCheck aria-hidden="true" />
-                Bài đăng sách
-              </NavLink>
-              {canReviewCatalog(user) && (
-                <NavLink to="/review/catalog-requests">
-                  <BookPlus aria-hidden="true" />
-                  Đầu sách
+            {canReview(user) && (
+              <div className="sidebar-group">
+                <p className="sidebar-group-title">
+                  <ClipboardCheck aria-hidden="true" />
+                  Duyệt bài đăng
+                </p>
+                <NavLink to="/review/listings">
+                  <BookCheck aria-hidden="true" />
+                  Bài đăng sách
                 </NavLink>
-              )}
-            </div>
+                {canReviewCatalog(user) && (
+                  <NavLink to="/review/catalog-requests">
+                    <BookPlus aria-hidden="true" />
+                    Đầu sách
+                  </NavLink>
+                )}
+              </div>
+            )}
+            {canSimulate(user) && (
+              <div className="sidebar-group">
+                <p className="sidebar-group-title">
+                  <Truck aria-hidden="true" />
+                  Mô phỏng
+                </p>
+                <NavLink to="/simulator/deliveries">
+                  <Truck aria-hidden="true" />
+                  Hãng vận chuyển
+                </NavLink>
+              </div>
+            )}
             {(canOperatePoint(user) || canResolve(user)) && (
               <div className="sidebar-group">
                 <p className="sidebar-group-title">
@@ -425,13 +443,13 @@ function Workspace() {
               busy={profile.isFetching}
             />
           )}
-          {user && !canReview(user) && (
+          {user && !canEnterWorkspace(user) && (
             <Notice tone="warning">
               Tài khoản hiện không có quyền kiểm duyệt. Cần tài khoản đang hoạt
-              động với quyền Staff hoặc Admin.
+              động với quyền Staff, Admin hoặc vận hành thử.
             </Notice>
           )}
-          {user && canReview(user) && (
+          {user && canEnterWorkspace(user) && (
             <div inert={logoutBusy || profile.isError || undefined}>
               <LeaveGuard.Provider value={registerGuard}>
                 <div className="page-enter">
@@ -472,6 +490,7 @@ const router = createBrowserRouter([
       { path: "/operations/points", element: <PointsPage /> },
       { path: "/operations/incidents", element: <IncidentsPage /> },
       { path: "/operations/escalations", element: <EscalationsPage /> },
+      { path: "/simulator/deliveries", element: <DeliverySimulator /> },
       {
         path: "*",
         element: (

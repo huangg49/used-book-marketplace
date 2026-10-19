@@ -2505,6 +2505,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/simulator/point-deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ADR 0044: ACTIVE TEST_OPERATOR. Auction Orders handed to the simulated carrier (InTransit) that still await a carrier outcome, earliest delivery deadline first, at most 50. Orders where the operator is buyer or seller are left out, as the event command refuses them. No recipient address or contact is exposed. */
+        get: operations["listSimulatedPointDeliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/simulator/point-delivery-events": {
         parameters: {
             query?: never;
@@ -4642,6 +4659,24 @@ export interface components {
         };
         DispatchPointOrder: {
             expectedVersion: number;
+        };
+        SimulatedPointDeliveryQueue: {
+            items: components["schemas"]["SimulatedPointDeliveryItem"][];
+            /** Format: date-time */
+            serverTime: string;
+        };
+        SimulatedPointDeliveryItem: {
+            /** Format: uuid */
+            orderId: string;
+            title: string;
+            pointName: string;
+            /** @constant */
+            carrier: "LatLaiSimulator";
+            trackingCode: string;
+            /** Format: date-time */
+            dispatchedAt: string;
+            /** Format: date-time */
+            deliveryDeadline: string;
         };
         SimulatedPointDeliveryEvent: {
             /** Format: uuid */
@@ -10608,6 +10643,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listSimulatedPointDeliveries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimulatedPointDeliveryQueue"];
                 };
             };
             400: components["responses"]["ListingError"];

@@ -4158,6 +4158,52 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       expect(await reconciled()).toBe(true);
     });
 
+    it('the operator lists in-transit deliveries without the address; others are refused', async () => {
+      const o = await inTransit();
+      const list = await call(
+        'get',
+        '/operations/simulator/point-deliveries',
+        operator,
+      ).expect(200);
+      validates('SimulatedPointDeliveryQueue', list.body);
+      const row = list.body.items.find(
+        (i: { orderId: string }) => i.orderId === o.orderId,
+      );
+      expect(row).toMatchObject({
+        trackingCode: o.doc.trackingCode,
+        deliveryDeadline: o.doc.deliveryDeadline!.toISOString(),
+      });
+      expect(JSON.stringify(list.body)).not.toContain(addressInput.phone);
+      await call('get', '/operations/simulator/point-deliveries', staff).expect(
+        403,
+      );
+      await call(
+        'get',
+        '/operations/simulator/point-deliveries',
+        o.winner,
+      ).expect(403);
+      // Delivered leaves the list.
+      const at = new Date(o.doc.dispatchedAt!.getTime() + HOUR);
+      pinClock(new Date(at.getTime() + 60_000));
+      await carrierEvent(
+        o.orderId,
+        o.doc.trackingCode!,
+        'Delivered',
+        at,
+      ).expect(200);
+      vi.restoreAllMocks();
+      const after = await call(
+        'get',
+        '/operations/simulator/point-deliveries',
+        operator,
+      ).expect(200);
+      expect(
+        after.body.items.some(
+          (i: { orderId: string }) => i.orderId === o.orderId,
+        ),
+      ).toBe(false);
+    });
+
     it('race: Delivered and Failed sent together have exactly one outcome', async () => {
       const o = await inTransit();
       const at = new Date(o.doc.dispatchedAt!.getTime() + 3 * HOUR);

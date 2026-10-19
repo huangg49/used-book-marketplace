@@ -26,6 +26,14 @@
   lựa chọn giao, địa chỉ, phí 30.000đ, tổng 630.000đ. RN/native/human/remote CI NOT RUN.
   Chưa push/PR/merge. QA replica set phải bật lại sau khi Docker khởi động lại
   (`pnpm infra:mongo:test:up`).
+- Màn mô phỏng hãng vận chuyển (nhánh `feature/auction-delivery-simulator`, base
+  `feature/auction-delivery`): `GET /operations/simulator/point-deliveries` (TEST_OPERATOR,
+  đơn InTransit, không có địa chỉ/SĐT; OpenAPI 0.49.0) và admin-web `/simulator/deliveries`
+  báo Delivered/Failed, eventId = Idempotency-Key giữ nguyên khi thử lại. Admin-web cho
+  tài khoản chỉ có TEST_OPERATOR vào khu làm việc, chỉ thấy mục Mô phỏng. PASS: API tsc,
+  E2E ADR 0044 6 ca, admin tsc/oxlint/30. Browser fixture: operator đăng nhập, thấy
+  danh sách rỗng; staff/bidder bị 403. Gửi sự kiện từ màn hình trên dữ liệu thật NOT RUN
+  vì điểm đóng cửa (05:47) nên chưa giao được đơn cho hãng.
 
 ## Mua ngay mở cửa sổ 60 giây (ADR 0043) — 19/10/2026
 
