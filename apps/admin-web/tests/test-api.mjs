@@ -40,8 +40,8 @@ export async function createTestApi({
     ),
     JWT_ACCESS_SECRET: "operations-browser-test-only-key-0000000000",
     NODE_ENV: "test",
-    // Historical browser suites retain the zero-fee/unpaid profile. The wallet
-    // checkout suite explicitly supplies 20000/Wallet before creating its API.
+    // Listings are always free. Historical browser suites retain unpaid checkout;
+    // the wallet suite supplies an obsolete fee value to verify it is ignored.
     LISTING_SUBMISSION_FEE_VND: process.env.LISTING_SUBMISSION_FEE_VND ?? "0",
     ORDER_CHECKOUT_MODE: process.env.ORDER_CHECKOUT_MODE ?? "Unpaid",
     CORS_ORIGINS: corsOrigin,
@@ -220,10 +220,41 @@ export async function createTestApi({
       .png()
       .toBuffer();
     const listings = [];
+    if (listingCount > 5) {
+      // Multiple owners can only select a catalog already confirmed by review.
+      const reviewer = await api("/auth/login", null, {
+        email: "admin@operations.test",
+        password,
+      });
+      await api(
+        `/operations/catalog-requests/${catalog.entityId}/decision`,
+        reviewer.accessToken,
+        {
+          expectedVersion: catalog.version,
+          revisionId: catalog.revisionId,
+          decision: "Confirm",
+        },
+      );
+    }
+    let listingOwner = member;
     for (let index = 0; index < listingCount; index++) {
-      const draft = await api("/listings", member.accessToken, { content });
+      // A large public shelf needs multiple owners under the real API cap.
+      if (index > 0 && index % 5 === 0) {
+        const email = `shelf-owner-${index}@operations.test`;
+        const template = await db
+          .collection("users")
+          .findOne({ emailNormalized: "member@operations.test" });
+        await db.collection("users").insertOne({
+          ...template,
+          _id: randomUUID(),
+          emailNormalized: email,
+        });
+        listingOwner = await api("/auth/login", null, { email, password });
+      }
+      const ownerToken = listingOwner.accessToken;
+      const draft = await api("/listings", ownerToken, { content });
       const id = draft.entityId;
-      const media = await api(`/listings/${id}/media`, member.accessToken, {
+      const media = await api(`/listings/${id}/media`, ownerToken, {
         expectedVersion: draft.version,
         mimeType: "image/png",
         byteSize: photo.length,
@@ -231,30 +262,30 @@ export async function createTestApi({
       });
       const ticket = await api(
         `/listings/${id}/media/${media.entityId}/upload-ticket`,
-        member.accessToken,
+        ownerToken,
       );
-      await api(ticket.path, member.accessToken, photo, "PUT", ticket.headers);
+      await api(ticket.path, ownerToken, photo, "PUT", ticket.headers);
       const uploaded = await api(
         `/me/listings/${id}/media/${media.entityId}`,
-        member.accessToken,
+        ownerToken,
       );
       await api(
         `/listings/${id}/media/${media.entityId}/finalize`,
-        member.accessToken,
+        ownerToken,
         { expectedVersion: uploaded.version },
       );
       await app.get(MediaWorker).tick();
-      const fresh = await api(`/me/listings/${id}`, member.accessToken);
+      const fresh = await api(`/me/listings/${id}`, ownerToken);
       const saved = await api(
         `/listings/${id}/draft`,
-        member.accessToken,
+        ownerToken,
         {
           expectedVersion: fresh.version,
           content: { ...content, mediaIds: [media.entityId] },
         },
         "PUT",
       );
-      await api(`/listings/${id}/submit`, member.accessToken, {
+      await api(`/listings/${id}/submit`, ownerToken, {
         expectedVersion: saved.version,
         ownershipDeclared: true,
       });

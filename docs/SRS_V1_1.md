@@ -209,6 +209,7 @@ Mọi yêu cầu trong mục này là M trừ khi ghi E. Các tiêu chí AC ở 
 | FR-L06 | Cho ẩn/mở listing chưa giữ chỗ; mở lại phải qua kiểm tra trạng thái duyệt và quyền hiện hành. Xóa là soft delete, không xóa lịch sử. |
 | FR-L07 | Staff/Admin gỡ công khai với lý do; nếu đang giao dịch phải đồng thời tạo hồ sơ điều tra hoặc hủy trước giao theo tiến độ, không âm thầm giải phóng sách/tiền. |
 | FR-L08 | Lưu phiên bản được duyệt và ảnh tại giao kết; quyền truy cập bản chụp giới hạn theo giao dịch. Giao diện công khai vẫn hiển thị dữ liệu live phù hợp. |
+| FR-L09 | Theo chủ dự án19/10/2026, đăng/gửi lại/sửa bài miễn phí. Mỗi Member tối đa5 listing gồm bài Approved đang hiển thị trên trang chủ và bài PendingReview gửi admin duyệt; chỉ tính trade Available/Reserved, chưa lưu trữ/gỡ. Bản nháp, bị từ chối, Approved đã ẩn và bài đã bán/đổi/đóng không chiếm chỗ. Mở lại hoặc sửa bài ẩn để gửi duyệt phải còn chỗ; sửa bài đang hiển thị giữ chỗ. Backend kiểm nguyên tử, kể cả gửi đồng thời; quá hạn mức giữ nguyên dữ liệu. Xem [ADR0040](adr/0040-free-listings-five-active-cap.md). |
 
 ### 5.4 Giỏ hàng và mua bán
 

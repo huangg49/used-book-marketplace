@@ -129,8 +129,47 @@ try {
   await page.getByLabel(/^Mật khẩu/).fill(password);
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await page
-    .getByRole("heading", { name: "Ví của bạn", exact: true })
+    .getByRole("heading", { name: "Ví của tôi", exact: true })
     .waitFor();
+  const header = page.locator("header");
+  const walletIcon = header.getByRole("link", {
+    name: "Ví của tôi",
+    exact: true,
+  });
+  const chatIcon = header.getByRole("link", {
+    name: "Chat, hội thoại của bạn",
+    exact: true,
+  });
+  assert.equal((await walletIcon.textContent()).trim(), "");
+  assert.equal((await chatIcon.textContent()).trim(), "");
+  assert.equal(await walletIcon.getAttribute("href"), "/wallet");
+  const walletBounds = await walletIcon.boundingBox();
+  const chatBounds = await chatIcon.boundingBox();
+  assert.ok(walletBounds.width >= 44 && walletBounds.height >= 44);
+  assert.ok(walletBounds.x + walletBounds.width <= chatBounds.x);
+  await page.getByRole("button", { name: "Tài khoản", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Tài khoản cá nhân", exact: true })
+    .getByRole("link", { name: "Ví của tôi", exact: true })
+    .click();
+  await page
+    .getByRole("heading", { name: "Ví của tôi", exact: true })
+    .waitFor();
+  const ledgerHistory = page.getByRole("region", {
+    name: "Lịch sử giao dịch",
+    exact: true,
+  });
+  await ledgerHistory.getByText(/Chưa có giao dịch ví/).waitFor();
+  const withdrawal = page.getByRole("region", {
+    name: "Rút tiền",
+    exact: true,
+  });
+  assert.equal(
+    await withdrawal
+      .getByRole("button", { name: "Rút tiền", exact: true })
+      .isDisabled(),
+    true,
+  );
   await page
     .getByRole("button", { name: "Nạp qua VNPay sandbox", exact: true })
     .waitFor();
@@ -190,7 +229,7 @@ try {
   assert.equal(new URL(page.url()).searchParams.get("topup"), id);
   assert.equal(
     await page
-      .getByRole("heading", { name: "Ví của bạn", exact: true })
+      .getByRole("heading", { name: "Ví của tôi", exact: true })
       .isVisible(),
     true,
   );
@@ -207,7 +246,7 @@ try {
   await popupClosed;
   assert.equal(
     await page
-      .getByRole("heading", { name: "Ví của bạn", exact: true })
+      .getByRole("heading", { name: "Ví của tôi", exact: true })
       .isVisible(),
     true,
   );
@@ -280,6 +319,149 @@ try {
     (await fixture.api("/me/wallet", fixture.member.accessToken)).available,
     90000,
   );
+  // Small real API pages exercise pagination and retries without fabricated rows.
+  let failNextPage = true;
+  let failRefundRead = true;
+  await page.route("**/api/v1/me/wallet/history?*", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.has("cursor") && failNextPage) {
+      failNextPage = false;
+      return route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({
+          code: "UNAVAILABLE",
+          message: "QA history unavailable",
+        }),
+      });
+    }
+    if (url.searchParams.get("type") === "OrderRefund" && failRefundRead) {
+      failRefundRead = false;
+      return route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({
+          code: "UNAVAILABLE",
+          message: "QA history unavailable",
+        }),
+      });
+    }
+    url.searchParams.set("limit", "1");
+    const response = await route.fetch({ url: url.toString() });
+    await route.fulfill({ response });
+  });
+  await page
+    .getByLabel("Loại giao dịch", { exact: true })
+    .selectOption("Topup");
+  await ledgerHistory.locator("li").first().waitFor();
+  assert.equal(await ledgerHistory.locator("li").count(), 1);
+  await ledgerHistory
+    .getByRole("button", { name: "Xem thêm giao dịch", exact: true })
+    .click();
+  await ledgerHistory
+    .getByRole("alert")
+    .filter({ hasText: "Chưa tải được các giao dịch tiếp theo" })
+    .waitFor();
+  assert.equal(await ledgerHistory.locator("li").count(), 1);
+  await ledgerHistory
+    .getByRole("button", { name: "Thử tải thêm giao dịch", exact: true })
+    .click();
+  await ledgerHistory.locator("li").nth(1).waitFor();
+  assert.equal(await ledgerHistory.locator("li").count(), 2);
+  await page
+    .getByLabel("Loại giao dịch", { exact: true })
+    .selectOption("OrderPayment");
+  await ledgerHistory
+    .getByText("Chưa có giao dịch thuộc loại này.", { exact: true })
+    .waitFor();
+  await page
+    .getByLabel("Loại giao dịch", { exact: true })
+    .selectOption("OrderRefund");
+  await ledgerHistory
+    .getByRole("alert")
+    .filter({ hasText: "Chưa tải được lịch sử giao dịch" })
+    .waitFor();
+  await ledgerHistory
+    .getByRole("button", { name: "Thử lại lịch sử", exact: true })
+    .click();
+  await ledgerHistory
+    .getByText("Chưa có giao dịch thuộc loại này.", { exact: true })
+    .waitFor();
+  await page
+    .getByLabel("Loại giao dịch", { exact: true })
+    .selectOption("Topup");
+  await ledgerHistory.locator("li").nth(1).waitFor();
+  const realHistory = await fixture.api(
+    "/me/wallet/history?limit=20&type=Topup",
+    fixture.member.accessToken,
+  );
+  assert.equal(realHistory.items.length, 2);
+  for (const item of realHistory.items) {
+    await ledgerHistory
+      .getByText(new RegExp(item.balanceAfter.toLocaleString("vi-VN")))
+      .first()
+      .waitFor();
+  }
+  for (const width of [320, 390, 768, 1024, 1366]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "130%";
+      window.scrollTo(0, 0);
+    });
+    assert.equal(await walletIcon.isVisible(), true);
+    assert.equal(await chatIcon.isVisible(), true);
+    assert.ok(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+      `Wallet overflows ${width}px`,
+    );
+    for (const offset of [0, 500]) {
+      await page.evaluate((y) => window.scrollTo(0, y), offset);
+      await page.waitForFunction(
+        (expected) =>
+          document.querySelector("header").dataset.floating ===
+          String(expected),
+        offset > 48,
+      );
+      await header.evaluate(async (node) => {
+        await Promise.all(
+          node
+            .getAnimations({ subtree: true })
+            .map((animation) => animation.finished.catch(() => {})),
+        );
+      });
+      const headerBounds = await header.boundingBox();
+      for (const control of await header
+        .locator("a:visible, button:visible")
+        .all()) {
+        const bounds = await control.boundingBox();
+        assert.ok(
+          bounds.x >= headerBounds.x - 1 &&
+            bounds.x + bounds.width <= headerBounds.x + headerBounds.width + 1,
+          `Navbar control exceeds header at ${width}px, scroll ${offset}`,
+        );
+      }
+    }
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForFunction(
+      () => document.querySelector("header").dataset.floating === "false",
+    );
+    await header.evaluate(async (node) => {
+      await Promise.all(
+        node
+          .getAnimations({ subtree: true })
+          .map((animation) => animation.finished.catch(() => {})),
+      );
+    });
+    await page.screenshot({
+      path: path.join(evidence, `wallet-history-nav-${width}.png`),
+      fullPage: true,
+    });
+  }
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "100%";
+  });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({
     path: path.join(evidence, "mobile-credited.png"),
@@ -357,7 +539,7 @@ try {
   assert.deepEqual(requests[0], requests[1]);
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: desktop/mobile wallet, blocked popup creates no intent, provider has no opener, original tab stays signed in through Return, forged Return denied, QueryDR outage/retry/credit, lost-ACK same-key retry; real API/Mongo, fake provider navigation and signed QueryDR responses.",
+    "PASS: icon wallet/chat navigation, account wallet entry, real history filters/pagination/retry and disabled withdrawal; desktop/mobile wallet, blocked popup creates no intent, provider has no opener, original tab stays signed in through Return, forged Return denied, QueryDR outage/retry/credit, lost-ACK same-key retry; real API/Mongo, fake provider navigation and signed QueryDR responses.",
   );
 } finally {
   globalThis.fetch = realFetch;
