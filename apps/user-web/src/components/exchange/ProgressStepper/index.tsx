@@ -4,18 +4,19 @@ import styles from './ProgressStepper.module.css';
 
 export interface ProgressStepperProps {
     status: ExchangeStatus;
+    compact?: boolean;
     failedAtStep?: number;
     closedBy?: 'viewer' | 'partner';
     partnerUsername?: string;
     hasReceived?: boolean;
 }
 
-export function ProgressStepper({ status, failedAtStep, closedBy, partnerUsername: _partnerUsername, hasReceived }: ProgressStepperProps) {
+export function ProgressStepper({ status, compact = false, failedAtStep, closedBy, partnerUsername: _partnerUsername, hasReceived }: ProgressStepperProps) {
     const steps = [
-        { id: 1, label: 'Đã gửi đề nghị' },
-        { id: 2, label: 'Đã chấp nhận' },
-        { id: 3, label: 'Đang giao nhận' },
-        { id: 4, label: 'Đã nhận sách' },
+        { id: 1, label: 'Gửi đề nghị' },
+        { id: 2, label: 'Phản hồi và đặt cọc' },
+        { id: 3, label: 'Giao nhận' },
+        { id: 4, label: 'Kiểm tra sách' },
         { id: 5, label: 'Hoàn tất' }
     ];
 
@@ -23,7 +24,7 @@ export function ProgressStepper({ status, failedAtStep, closedBy, partnerUsernam
     if (status === 'PENDING') currentStepIndex = 2; // Waiting for accept
     else if (status === 'FUNDING') currentStepIndex = 2;
     else if (status === 'WAITING_YOU_SEND') currentStepIndex = 3;
-    else if (status === 'RESOLUTION_PENDING') currentStepIndex = 3;
+    else if (status === 'RESOLUTION_PENDING') currentStepIndex = 0;
     else if (status === 'DELIVERING') currentStepIndex = hasReceived ? 4 : 3;
     else if (status === 'WAITING_YOU_CONFIRM') currentStepIndex = hasReceived ? 4 : 3;
     else if (status === 'INSPECTING') currentStepIndex = 4;
@@ -35,7 +36,7 @@ export function ProgressStepper({ status, failedAtStep, closedBy, partnerUsernam
     }
 
     return (
-        <div className={styles.stepperContainer}>
+        <div className={compact ? `${styles.stepperContainer} ${styles.compact}` : styles.stepperContainer}>
             <div className={styles.lineBg} aria-hidden="true" />
             <div 
                 className={styles.lineProgress} 

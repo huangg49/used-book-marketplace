@@ -1,3 +1,4 @@
+import { StartConversationPage } from '../pages/StartConversationPage';
 import { BuyNowPage } from '../pages/BuyNowPage';
 import { DirectOrderPage, DirectOrderListPage } from '../pages/DirectOrderPage';
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
@@ -51,6 +52,7 @@ export const router = createBrowserRouter([
           { path: '/books/:id', element: <BookDetailPage /> },
           { path: '/chat', element: <ChatPage /> },
           { path: '/chat/:roomId', element: <ChatPage /> },
+          { path: '/chat/start/:listingId', element: <StartConversationPage /> },
           { path: '/checkout/:listingId', element: <CheckoutPage /> },
           { path: '/buy-now/:listingId', element: <BuyNowPage /> },
           { path: '/orders', element: <DirectOrderListPage /> },

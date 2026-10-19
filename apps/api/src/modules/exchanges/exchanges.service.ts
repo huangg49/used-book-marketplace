@@ -1,3 +1,4 @@
+import { ConversationAgreementsService } from '../purchases/conversation-agreements.service.js';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
@@ -33,6 +34,7 @@ export class ExchangesService {
   private readonly logger = new Logger(ExchangesService.name);
 
   constructor(
+    private readonly agreements: ConversationAgreementsService,
     private readonly commands: MongoCommandService,
     private readonly listings: ListingCommitmentPolicy,
     private readonly ledger: LedgerService,
@@ -332,6 +334,7 @@ export class ExchangesService {
         },
         mutate: async (tx, actor, { initiatorListings, recipientListing }) => {
           requireActive(actor);
+          const conversation = body.conversationId ? await this.agreements.prepareExchange(tx, body.conversationId, body.expectedConversationVersion!, actor._id, recipientListing._id, recipientListing.ownerId) : null;
           if (recipientListing.ownerId === actor._id) {
             throw invalidState();
           }
@@ -463,6 +466,7 @@ export class ExchangesService {
           };
 
           await tx.c.exchanges.insertOne(row);
+          if (conversation) await this.agreements.linkExchange(tx, conversation, row._id, actor._id);
 
           await notifyExchange(
             tx,

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Menu, MessageCircle, Plus, X } from "lucide-react";
+import { Menu, MessageCircle, Plus, Wallet, X } from "lucide-react";
 import { ROUTES, searchUrl } from "../lib/routes";
 import { observeHeaderScroll } from "../lib/header-scroll";
 import { useSession } from "../hooks/useSession";
@@ -32,7 +32,13 @@ export function Logo() {
     </Link>
   );
 }
-export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
+export function Header({
+  freezeScroll = false,
+}: {
+  forceDark?: boolean;
+  forceSolid?: boolean;
+  freezeScroll?: boolean;
+}) {
   const location = useLocation();
   const categoryArrival = useRef(false);
   const [floating, setFloating] = useState(() => window.scrollY > 48);
@@ -55,10 +61,11 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
   useLayoutEffect(
     () =>
       observeHeaderScroll((next, animate) => {
+        if (freezeScroll) return;
         setFloating(next);
         setCollapsing(animate);
       }),
-    [location.pathname],
+    [location.pathname, freezeScroll],
   );
   useEffect(() => {
     const desktop = window.matchMedia("(min-width: 1001px)");
@@ -87,6 +94,7 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
         data-floating={floating}
         data-menu-open={menuOpen}
         data-collapsing={collapsing}
+        data-authenticated={state.status === "authenticated"}
         onAnimationEnd={(event) => {
           if (event.target === event.currentTarget) setCollapsing(false);
         }}
@@ -118,14 +126,24 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
           </nav>
           <div className={styles.headerActions}>
             {state.status === "authenticated" && (
-              <NavLink
-                to={ROUTES.chat()}
-                className={styles.chatAction}
-                aria-label="Chat, hội thoại của bạn"
-              >
-                <MessageCircle size={18} aria-hidden="true" />
-                <span>Chat</span>
-              </NavLink>
+              <>
+                <NavLink
+                  to={ROUTES.wallet}
+                  className={styles.iconAction}
+                  aria-label="Ví của tôi"
+                  title="Ví của tôi"
+                >
+                  <Wallet size={20} aria-hidden="true" />
+                </NavLink>
+                <NavLink
+                  to={ROUTES.chat()}
+                  className={styles.iconAction}
+                  aria-label="Chat, hội thoại của bạn"
+                  title="Chat"
+                >
+                  <MessageCircle size={20} aria-hidden="true" />
+                </NavLink>
+              </>
             )}
             {state.status === "authenticated" && <NotificationBell />}
             {state.status === "authenticated" ? (
@@ -135,9 +153,14 @@ export function Header(_props: { forceDark?: boolean; forceSolid?: boolean }) {
                 Đăng nhập
               </Link>
             )}
-            <Link to={ROUTES.sell} className={styles.post}>
+            <Link
+              to={ROUTES.sell}
+              className={styles.post}
+              aria-label="Đăng sách"
+              title="Đăng sách"
+            >
               <Plus size={18} aria-hidden="true" />
-              Đăng sách
+              <span>Đăng sách</span>
             </Link>
             <button
               id="member-menu-toggle"

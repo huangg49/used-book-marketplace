@@ -12,6 +12,7 @@ import {
 import { formatVnd } from "../lib/routes";
 import styles from "./WalletPage.module.css";
 import { paymentChannel } from "../lib/payment-return";
+import { WalletHistory } from "./WalletHistory";
 
 const labels = {
   Pending: "Chờ thanh toán",
@@ -96,6 +97,7 @@ export function WalletPage() {
     if (result.data?.credited) {
       void client.invalidateQueries({ queryKey: ["wallet-summary", ownerId] });
       void client.invalidateQueries({ queryKey: ["topups", ownerId] });
+      void client.invalidateQueries({ queryKey: ["wallet-history", ownerId] });
       if (intent.current?.id === id) {
         intent.current = null;
         setHasIntent(false);
@@ -105,7 +107,7 @@ export function WalletPage() {
   if (!ownerId)
     return (
       <section className={styles.page}>
-        <h1>Ví của bạn</h1>
+        <h1>Ví của tôi</h1>
         <p>Đăng nhập để nạp và kiểm tra ví.</p>
         <Link
           to={`/login?returnUrl=${encodeURIComponent(id ? `/wallet?topup=${id}` : "/wallet")}`}
@@ -188,8 +190,13 @@ export function WalletPage() {
   return (
     <section className={styles.page}>
       <Link to="/account">← Về tài khoản</Link>
-      <h1>Ví của bạn</h1>
+      <h1>Ví của tôi</h1>
       <p>Ví mô phỏng đồ án · Thanh toán thử qua VNPay sandbox.</p>
+      <nav className={styles.sections} aria-label="Các mục trong ví">
+        <a href="#wallet-history">Lịch sử giao dịch</a>
+        <a href="#wallet-topup">Nạp ví</a>
+        <a href="#wallet-withdrawal">Rút tiền</a>
+      </nav>
       {paymentOpen && (
         <p role="status">
           Hoàn tất thanh toán trong tab VNPay. Tab ví này sẽ cập nhật khi bạn
@@ -205,8 +212,16 @@ export function WalletPage() {
             <dd>{formatVnd(summary.data.available)}</dd>
           </div>
           <div>
-            <dt>Đang giữ cho đơn và bài chờ duyệt</dt>
+            <dt>Đang giữ cho giao dịch</dt>
             <dd>{formatVnd(summary.data.transactionHeld)}</dd>
+          </div>
+          <div>
+            <dt>Đang giữ để rút</dt>
+            <dd>{formatVnd(summary.data.withdrawalHeld)}</dd>
+          </div>
+          <div>
+            <dt>Tổng số dư</dt>
+            <dd>{formatVnd(summary.data.total)}</dd>
           </div>
         </dl>
       ) : (
@@ -256,7 +271,26 @@ export function WalletPage() {
           )}
         </div>
       )}
-      <form onSubmit={submit} className={styles.form}>
+      <WalletHistory ownerId={ownerId} />
+      <section
+        id="wallet-withdrawal"
+        className={styles.withdrawal}
+        aria-labelledby="wallet-withdrawal-heading"
+      >
+        <h2 id="wallet-withdrawal-heading">Rút tiền</h2>
+        <p id="wallet-withdrawal-note">
+          Chức năng rút tiền mô phỏng sẽ được bổ sung sau. Hiện bạn chưa thể tạo
+          yêu cầu rút tiền.
+        </p>
+        <button
+          type="button"
+          disabled
+          aria-describedby="wallet-withdrawal-note"
+        >
+          Rút tiền
+        </button>
+      </section>
+      <form id="wallet-topup" onSubmit={submit} className={styles.form}>
         <h2>Nạp ví qua VNPay sandbox</h2>
         <label htmlFor="topup-amount">Số tiền nạp (đồng)</label>
         <input

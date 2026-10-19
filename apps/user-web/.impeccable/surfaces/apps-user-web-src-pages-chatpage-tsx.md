@@ -1,22 +1,93 @@
-# Chat và thông báo Member
+# Hội thoại và phiếu thỏa thuận Member —19/10/2026
 
-Mode: Operate. Code-led expansion of the incumbent wine/cream task surfaces,
-approved WEB_MEMBER_NEXT_PAGES_PLAN §5. Keep the shared Header. Chat omits the
-marketing footer so the composer has room. No new raster or decorative motion.
+Owner approved one workspace for purchase negotiation and exchange, with a card
+inbox at Navbar Chat. Operate; retain wine/cream, shared Header and memory-only
+session. Contract/ADR0041 determine permissions and money; visual layout grants
+none. Mua ngay remains independent. This supersedes the18/10 inbox-sidebar and
+read-only-after-OrderCreated presentation.
 
-Chat uses the existing GET /me/purchase-conversations list (up to100 server-side),
-messages and Socket.IO purchase-chat namespace; no invented inbox endpoint.
-Desktop list beside selected conversation, mobile list or room with a labelled
-back link. Actual participant name, book when public read available, exact hold
-expiry and closed state. Retain readable history during disconnect; sending and
-failure are explicit. An uncertain message retries its original messageId/body,
-not a new command. No optimistic server success, payment or new negotiation flow.
+`/chat` lists participant-specific book/partner cards, never one public room per
+listing. `/chat/start/:listingId?intent=Negotiation|Exchange` preserves the entry
+intent through login and opens/reuses a private room. `/chat/:roomId` reads the
+selected room directly, including when not among the inbox's latest100 results.
 
-Notifications: real inbox, title/body/date/read status and existing auction target.
-List rows and clear loaded/empty/error/retry/pending read state; no invented kind
-filter or fake unread count. Mark-all failure visible and does not claim success.
-Home/header bell and notification-opening hook outside this scoped UI remain.
+Inbox density follow-up19/10: auto-fill340px cards/16px gaps yield3 desktop,
+2 intermediate and1 phone column. Identity row has64px covers/max96px images,
+title16px, partner and mode; padding16px, metadata14px. One ruled footer holds
+status and44px entry link. Below360px,48px covers float so full text can continue
+underneath. Routine continuation copy is omitted; pending proposals and agreed
+prices remain. Legacy cards share the structure. No filter/API/route changes.
+Fine-pointer hover and keyboard focus-visible lift each card4px with a cream tint
+and soft offset shadow over200ms; no touch hover. Scoped duration preserves the
+owner's authored-motion policy even when reduced motion is requested.
 
-Acceptance: desktop/laptop/mobile/320, guest return, list/room/history/empty/error,
-real send/disconnect recovery where QA permits, read states. API gates, native,
-human review and live storage remain separate.
+Owner approved card-to-workspace expansion:420ms open/340ms return using the
+existing Router View Transitions integration, not a new motion dependency.
+Only the selected card/frame, cover and title receive shared names; native-sized
+text crossfades, with panel clipping. Navbar scroll morph freezes for the move;
+root snapshots exclude navigation and the fixed autumn background. Browser API
+absence retains normal navigation. Loading room data preserves the frame/book
+context without mounting transaction controls until the authorized read arrives.
+Inbox filter/reveal/scroll/selection live only in owner-keyed layout memory;
+Back/pop restores these, and cleanup restores prior browser scroll restoration.
+Legacy Exchange uses a frame transition; embedded histories claim no shared name.
+
+19/10 owner follow-up: reuse the approved18/10 soft3D autumn posting artwork
+`/illustrations/posting/autumn-book-desk.webp`, restored byte-for-byte from6394dc4.
+MainLayout's Chat-only data attribute owns a fixed viewport-cover background,
+removed on navigation away. Inbox/guest/room keep opaque paper/shelf surfaces;
+mobile has12px side clearance. The Sell archival background stays unchanged.
+The image is decorative and does not replace any real listing cover.
+
+Owner chose “two pages of an open book” after rejecting competing type emphasis.
+Book title is theh1 beside the real cover; authors/status support it. Partner name,
+role and initial avatar belong to the chat header. A warm shelf ground surrounds
+one borderless paper spread with a soft offset ink shadow and a32px gutter at
+wide sizes,24px below1100px. A single spine rule separates agreement/chat.
+
+Above960px, both pages share top/bottom edges. Only the agreement body scrolls;
+heading and next-action area remain in flex flow, never overlaid on price fields.
+Guidance explanations remain in the body. Messages scroll above the composer.
+The spread uses clamp(600px,100dvh -284px,860px). At960px and below, two labelled
+panel buttons preserve mounted drafts, the sheet returns to natural page flow
+and chat has a600px minimum. Long titles wrap; narrow title width is preserved
+by stacking Back/cover beside the title rather than across three columns.
+
+Scoped Be Vietnam Pro uses400/700 only. Book title and agreed price are28px,
+title24px below760px; body/section/partner are16px, metadata/labels14px. Inbox
+headings use the same family, with18px book titles. Forms/dialog behavior and
+global navigation/brand are unchanged. Flat phase labels replace numbered circles;
+the current phase remains explicit. Own messages use cream rather than a dominant
+wine block; primary actions and accepted price retain wine emphasis.
+
+Opening secondary price editing does not alter the accepted value. Typed events
+show the latest change, with an aria-expanded control for complete fetched history.
+User text is never a system event. No marketing footer. Inbox cards lead with
+title/partner, then actual mode/status and next step; links retain44px targets.
+Shelf/error/hover roles are scoped locally, not global.
+
+Seller proposes a permitted mode; the other party confirms. Buyer may request
+Exchange. Price proposals require counterpart acceptance; accepted price fills
+the seller's create-order dialog read-only. Uncertain operations retain exact
+key/body/version with explicit retry. Changed/missing quote cannot silently alter
+an existing create attempt. Public listing changes and other reservations lock
+new transaction actions while preserving messages/history.
+
+New exchanges are created from the buyer's owned approved exchangeable books and
+own saved address on the same sheet; existing Exchange controls remain embedded
+for acceptance/funding/shipping/status. Earlier proposals remain selectable.
+Linked exchange routes return to the conversation, and original exchange-message
+sources remain readable. Legacy independent exchanges appear in the same inbox
+and retain their real conversation/transaction history in a matching two-column
+sheet/chat layout. Do not infer they have been merged into another room.
+
+Verification and source checkpoint: docs/handoff/SESSION_STATE.md. Runner:
+`pnpm --filter @used-books/user-web test:chat:browser`, isolated HTTP fixtures and
+Socket.IO5195 with Vite5193. Actual database tests use the separate QA replica set.
+Browser fixtures, storage fake, Supabase live, native and human review are distinct.
+Open-book evidence: `.tmp/chat-open-book-final-qa`,1440/1100/900/390px and320px
+at130% text; `.tmp/chat-open-book-qa` includes missing cover. The optional runner
+flag CHAT_QA_COVER=1 uses bundled alice.jpg on an explicitly labelled `[QA]` book;
+it never supplies fallback artwork for production listing photos. Source/visual
+review was performed by the implementer;
+there is no independent dual-agent or human acceptance claim.

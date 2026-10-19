@@ -284,6 +284,7 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
     const prefix = `Taxonomy V2 ${randomUUID()}`,
       ids = new Set<string>();
     for (const root of categories) {
+      const owner = await reader();
       for (let index = 0; index < 2; index++) {
         const category =
           root.children[index === 0 ? 0 : root.children.length - 1] ?? root;
@@ -300,8 +301,8 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
           >,
           attributes,
         };
-        const l = await complete(m1, true, 'Ready', meta);
-        const submitted = await submit(l).expect(200);
+        const l = await complete(owner, true, 'Ready', meta);
+        const submitted = await submit(l, owner).expect(200);
         await decide(submitted.body).expect(200);
         ids.add(l.entityId);
         const detail = await get(`/listings/${l.entityId}`).expect(200);
@@ -461,6 +462,10 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
     configureApp(app, { docs: false, logRequests: false });
     await app.init();
     db = await MongoFixtures.connect();
+  }, 60000);
+  // Keep each test below the owner publication cap without coupling it to the
+  // listings or account mutations left by an earlier test.
+  beforeEach(async () => {
     m1 = await reader();
     m2 = await reader();
     a1 = await reader(['MEMBER', 'ADMIN']);
@@ -468,7 +473,7 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
     staff = await reader(['STAFF']);
     tester = await reader(['TEST_OPERATOR']);
     restricted = await reader(['MEMBER'], 'RESTRICTED');
-  }, 60000);
+  });
   afterAll(async () => {
     if (db) {
       const c = db.c;

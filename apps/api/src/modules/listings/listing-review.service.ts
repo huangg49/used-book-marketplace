@@ -36,6 +36,7 @@ import {
 import { priceAssistForRevision } from '../price-assist/price-assist.service.js';
 import { attachPhotos } from './listing-drafts.service.js';
 import { ListingFeeService } from '../wallet/listing-fee.service.js';
+import { requireListingSlot } from './listing-quota.js';
 
 @Injectable()
 export class ListingReviewService {
@@ -99,7 +100,7 @@ export class ListingReviewService {
         if (l.ownerId !== actor._id) throw notFound();
         return l;
       },
-      mutate: async (tx, actor, before, receiptId) => {
+      mutate: async (tx, actor, before) => {
         requireActive(actor);
         const originReferenceForSubmission = originReference(
           before.currentRevision!,
@@ -116,6 +117,7 @@ export class ListingReviewService {
         );
         const l = await this.lock(tx, before, body.expectedVersion);
         if (!['Draft', 'Rejected'].includes(l.moderation)) throw invalidState();
+        await requireListingSlot(tx, actor._id);
         const {
           mediaIds,
           fulfillment: _fulfillment,
@@ -160,14 +162,6 @@ export class ListingReviewService {
           { returnDocument: 'after' },
         );
         tx.check(`listing:${id}`, () => checkListing(tx, id));
-        await this.fees.charge(
-          tx,
-          id,
-          revisionId,
-          actor._id,
-          receiptId,
-          context.auth.sessionId,
-        );
         return {
           entityType: 'Listing',
           entityId: id,

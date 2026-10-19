@@ -1201,6 +1201,12 @@ export function DraftEditor({
             </Notice>
           ) : null}
 
+          <Notice tone="info">
+            Đăng bài miễn phí. Mỗi tài khoản có tối đa 5 bài đang hiển thị trên
+            trang chủ hoặc chờ admin duyệt. Bản nháp, bài bị từ chối, bài đã duyệt
+            nhưng đang ẩn, bài đã bán/đổi hoặc đã lưu trữ không tính vào giới hạn.
+          </Notice>
+
           {/* Stitch Section 5: Trust Commitment Checkbox */}
           {editable ? (
             <View

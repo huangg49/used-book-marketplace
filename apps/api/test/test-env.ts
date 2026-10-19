@@ -12,8 +12,8 @@ if (!mongo)
   throw new Error('MONGO_TEST_URL is required (QA replica set root URL).');
 const root = e2eRootUrl(mongo);
 process.env.NODE_ENV = 'test';
-// Historical suites explicitly exercise the retained zero-fee/unpaid profile.
-// wallet-checkout.e2e-spec overrides policy with the default paid profile.
+// Historical suites retain unpaid checkout. Listings are always free;
+// wallet-checkout verifies that obsolete fee config cannot re-enable charging.
 process.env.LISTING_SUBMISSION_FEE_VND = '0';
 process.env.ORDER_CHECKOUT_MODE = 'Unpaid';
 process.env.VNPAY_SANDBOX_ENABLED = 'false';

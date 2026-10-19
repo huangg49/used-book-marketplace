@@ -1,26 +1,27 @@
 # Nạp ví VNPay sandbox và thanh toán mua bán
 
 Ngày 14/10/2026 · nhánh `codex/vnpay-wallet-listing-fees`, base `7be68a4`.
-Thay đổi phạm vi do chủ dự án chốt trong phiên: phí đăng bài mặc định 20.000đ,
-hoàn nếu từ chối; người mua dùng ví trả tiền sách; hoàn tất chuyển tiền cho người
-bán. VNPay sandbox dùng nạp ví, không có khoản cọc mua bán trả lại khi hoàn tất.
+Phần phí đăng bài14/10 đã được thay bởi [ADR0040](../adr/0040-free-listings-five-active-cap.md)
+theo chủ dự án19/10: đăng miễn phí, tối đa5 bài hiển thị/chờ admin duyệt mỗi tài khoản.
+Người mua dùng ví trả tiền sách; hoàn tất chuyển tiền cho người bán. VNPay sandbox
+dùng nạp ví, không có khoản cọc mua bán trả lại khi hoàn tất.
 
 ## Hành vi
 
-- Gửi bài Draft/Rejected: giữ phí trong ledger và chuyển PendingReview cùng một
-  transaction. Thiếu phí thì giữ nguyên bản nháp, ảnh và nội dung. Từ chối trả
-  khoản phí của đúng revision về ví; duyệt chuyển phí sang tài khoản nền tảng.
-  Retry cùng key/body không thu hoặc hoàn hai lần. Gửi lại bài bị từ chối là lượt
-  gửi mới. Chỉnh sửa bài đã được duyệt không thu phí lần nữa; bài lịch sử không
-  bị truy thu. Không bỏ/gỡ bài có phí còn chờ duyệt; quyết định duyệt/từ chối phải
-  xử lý khoản giữ trước, để không làm mất đường hoàn phí.
+- Gửi bài Draft/Rejected và sửa bài Approved miễn phí, không cần nạp ví. Tối đa5
+  bài Approved Visible hoặc PendingReview, trade Available/Reserved, chưa gỡ/lưu
+  trữ. Approved Hidden không tính; mở lại/sửa bài ẩn phải còn chỗ. Lỗi409
+  `ListingLimitReached` giữ nguyên dữ liệu và key/body để thử lại sau khi có chỗ.
+  Phí đã giữ trước chính sách mới vẫn được quyết toán khi duyệt hoặc hoàn khi từ
+  chối, đúng một lần; không sửa/xóa bút toán lịch sử. Bài cũ có phí đang giữ vẫn
+  cần quyết định duyệt/từ chối trước khi bỏ/gỡ để giữ đường xử lý khoản tiền.
 - Tạo Order mặc định: ghi Order, snapshot, commitment, đóng reservation chat và
   chuyển tổng báo giá từ ví sang OrderHold nguyên tử. Thiếu tiền không tạo Order
   hoặc thay đổi sách/chat. Receipt đầu tiên là PendingSellerConfirmation/version2;
   commitment/context vẫn version1. Các đơn AwaitingPayment lịch sử vẫn có lệnh pay.
 - Tổng giữ DirectDelivery là P+S theo ADR0016, không chỉ P. Ví dụ sách50.000đ,
   ship30.000đ: cần80.000đ. Khi hoàn tất, seller nhận77.500đ gồm tiền sách trừ
-  commission5% và hoàn ứng ship; nền tảng nhận2.500đ. Phí đăng bài là khoản riêng.
+  commission5% và hoàn ứng ship; nền tảng nhận2.500đ. Bài đăng mới không thu phí.
   Hủy hợp lệ trước acceptance hoàn tổng giữ về ví; không gọi refund này sau acceptance.
   Giữ quy trình delivery/inspection72h/settlement hiện có và các gate READINESS.
 - VNPay 2.1.0: tạo URL sandbox có số tiền nguyên đồng nhân100, giờ GMT+7 và hạn15phút.
@@ -98,12 +99,11 @@ Giữ credential hiện có trong env; không seed lại hoặc đổi mật kh�
 Trong phiên15/10, theo yêu cầu chạy localhost, credential/Return env đã cấu hình và
 0024 đã áp dụng trên máy chủ dự án; owner restart terminal API để nhận env mới.
 
-`LISTING_SUBMISSION_FEE_VND` mặc định20000; integer0–1000000.
-`ORDER_CHECKOUT_MODE` mặc địnhWallet. Profile chuyển tiếp0/Unpaid có thể cấu hình
-ở server để giữ contract lịch sử; Member request không thể chọn profile đó.
-Các suite E2E và browser harness lịch sử khai báo profile0/Unpaid; suite
-`wallet-checkout` kiểm profile20000/Wallet riêng, không coi các suite lịch sử là
-bằng chứng của behavior mới. User Web CI chạy cả các browser suite lịch sử và
+`LISTING_SUBMISSION_FEE_VND` không còn hiệu lực; server luôn trả phí bài mới0.
+`ORDER_CHECKOUT_MODE` mặc địnhWallet; Unpaid giữ tương thích lịch sử ở server.
+Member request không thể chọn profile checkout. Suite `wallet-checkout` cố ý
+truyền giá trị phí cũ20000 để kiểm vẫn miễn phí, hạn mức và xử lý phí lịch sử.
+User Web CI chạy cả các browser suite lịch sử và
 `pnpm --filter @used-books/user-web test:wallet:browser` để kiểm nạp ví mặc định.
 
 ## Phạm vi sandbox và kiểm chứng

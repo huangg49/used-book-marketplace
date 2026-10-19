@@ -1,5 +1,6 @@
 // Real Nest/MongoDB HTTP integration on a disposable *_test DB; storage is fake.
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
@@ -33,15 +34,16 @@ try {
     `/operations/catalog-requests/${fixture.catalogId}`,
     admin.accessToken,
   );
-  await fixture.api(
-    `/operations/catalog-requests/${fixture.catalogId}/decision`,
-    admin.accessToken,
-    {
-      expectedVersion: catalog.version,
-      revisionId: catalog.currentRevision.id,
-      decision: "Confirm",
-    },
-  );
+  if (catalog.status !== "Confirmed")
+    await fixture.api(
+      `/operations/catalog-requests/${fixture.catalogId}/decision`,
+      admin.accessToken,
+      {
+        expectedVersion: catalog.version,
+        revisionId: catalog.currentRevision.id,
+        decision: "Confirm",
+      },
+    );
   for (const id of fixture.listings) {
     const listing = await fixture.api(
       `/operations/listings/${id}`,
@@ -234,7 +236,7 @@ try {
   });
   await p.setViewportSize({ width: 390, height: 844 });
   console.log("QA: public shelf/detail/states passed; sell journey");
-  await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
+  await p.locator(`a[href="/books/${fixture.listings[0]}"]`).first().click();
   await button("Chat với người bán").click();
   await p.waitForURL("**/login?returnUrl=*");
   const returnPath = new URL(p.url()).searchParams.get("returnUrl");
@@ -267,6 +269,12 @@ try {
     .click();
   await p.waitForURL(origin + "/sell");
   await step(/Kiểm tra/).click();
+  await p.getByText(/Đăng bài miễn phí/).waitFor();
+  assert.equal(await p.getByText(/Phí gửi duyệt:/).count(), 0);
+  assert.equal(
+    await p.getByRole("link", { name: "Nạp ví", exact: true }).count(),
+    0,
+  );
   await button("Gửi duyệt").click();
   await p.getByRole("alert").waitFor();
   await step(/Thông tin sách/).click();
@@ -280,11 +288,388 @@ try {
     .getByRole("combobox", { name: "Danh mục sách", exact: true })
     .selectOption({ label: "Sách khác" });
   await step(/Ảnh bản sách/).click();
-  await p.locator("input[type=file]").setInputFiles({
-    name: "qa-cover.png",
+  const coverFileInput = p.locator("#cover-file");
+  const fileInput = p.locator("#support-images");
+  for (const input of [coverFileInput, fileInput]) {
+    const pickerBox = await input.boundingBox();
+    assert.ok(
+      pickerBox.width <= 1 && pickerBox.height <= 1,
+      "Native file controls must not occupy a separate visible row",
+    );
+  }
+  const photo = (name) => ({
+    name,
     mimeType: "image/png",
     buffer: fixture.photo,
   });
+  const thumbnails = p.getByRole("img", {
+    name: /^(Ảnh bìa bản sách|Ảnh phụ \d+)$/,
+  });
+  const selectedPhotos = p.getByRole("group", {
+    name: "Ảnh bản sách",
+    exact: true,
+  });
+  const coverGroup = p.getByRole("group", { name: "Ảnh bìa", exact: true });
+  const supportGroup = p.getByRole("group", { name: "Ảnh phụ", exact: true });
+  const chooserPromise = p.waitForEvent("filechooser");
+  await button("Chọn ảnh bìa").click();
+  const chooser = await chooserPromise;
+  assert.equal(chooser.isMultiple(), false);
+  await chooser.setFiles([photo("qa-cover.png")]);
+  await thumbnails.first().waitFor();
+  for (const width of [390, 1440]) {
+    await p.setViewportSize({ width, height: 900 });
+    const coverBox = await coverGroup.boundingBox();
+    const supportBox = await supportGroup.boundingBox();
+    if (width === 1440) {
+      assert.ok(coverBox.x + coverBox.width < supportBox.x);
+      assert.ok(Math.abs(coverBox.y - supportBox.y) < 1);
+    } else {
+      assert.ok(coverBox.y + coverBox.height <= supportBox.y);
+    }
+    await selectedPhotos.screenshot({
+      path: path.join(artifacts, `sell-cover-support-${width}.png`),
+    });
+  }
+  const multiChooserPromise = p.waitForEvent("filechooser");
+  await button("Thêm ảnh phụ").click();
+  const multiChooser = await multiChooserPromise;
+  assert.equal(multiChooser.isMultiple(), true);
+  await multiChooser.setFiles([photo("qa-spine.png"), photo("qa-pages.png")]);
+  await thumbnails.nth(2).waitFor();
+  const supportsBefore = await supportGroup
+    .locator("img")
+    .evaluateAll((nodes) => nodes.map((node) => node.src));
+  await button("Xóa ảnh bìa").click();
+  assert.deepEqual(
+    await supportGroup
+      .locator("img")
+      .evaluateAll((nodes) => nodes.map((node) => node.src)),
+    supportsBefore,
+  );
+  await button("Tiếp tục").click();
+  await p
+    .getByRole("alert")
+    .filter({ hasText: "Thêm ảnh bìa bản sách" })
+    .first()
+    .waitFor();
+  await coverFileInput.setInputFiles(photo("qa-new-cover.png"));
+  await p.getByRole("img", { name: "Ảnh bìa bản sách", exact: true }).waitFor();
+  assert.deepEqual(
+    await supportGroup
+      .locator("img")
+      .evaluateAll((nodes) => nodes.map((node) => node.src)),
+    supportsBefore,
+  );
+  const oldCover = await p
+    .getByRole("img", { name: "Ảnh bìa bản sách", exact: true })
+    .getAttribute("src");
+  const coverReplacePromise = p.waitForEvent("filechooser");
+  await button("Thay ảnh bìa").click();
+  const coverReplace = await coverReplacePromise;
+  assert.equal(coverReplace.isMultiple(), false);
+  await coverReplace.setFiles(photo("qa-replaced-cover.png"));
+  assert.notEqual(
+    await p
+      .getByRole("img", { name: "Ảnh bìa bản sách", exact: true })
+      .getAttribute("src"),
+    oldCover,
+  );
+  assert.equal(await thumbnails.count(), 3);
+  const beforeReplace = await thumbnails.evaluateAll((nodes) =>
+    nodes.map((node) => node.src),
+  );
+  const supportReplacePromise = p.waitForEvent("filechooser");
+  await button("Thay ảnh phụ 2").click();
+  const supportReplace = await supportReplacePromise;
+  assert.equal(supportReplace.isMultiple(), false);
+  await supportReplace.setFiles(photo("qa-replaced-pages.png"));
+  const afterReplace = await thumbnails.evaluateAll((nodes) =>
+    nodes.map((node) => node.src),
+  );
+  assert.deepEqual(afterReplace.slice(0, 2), beforeReplace.slice(0, 2));
+  assert.notEqual(afterReplace[2], beforeReplace[2]);
+  assert.equal(
+    await button("Thay ảnh phụ 2").evaluate(
+      (node) => node === document.activeElement,
+    ),
+    true,
+  );
+  const addSupport = button("Thêm ảnh phụ");
+  await addSupport.focus();
+  const keyboardChooserPromise = p.waitForEvent("filechooser");
+  await addSupport.press("Enter");
+  const keyboardChooser = await keyboardChooserPromise;
+  assert.equal(keyboardChooser.isMultiple(), true);
+  await keyboardChooser.setFiles([]);
+  assert.equal(await thumbnails.count(), 3);
+  const initialPreviews = await thumbnails.evaluateAll((nodes) =>
+    nodes.map((node) => node.src),
+  );
+  await button("Xóa ảnh phụ 1").click();
+  assert.deepEqual(
+    await thumbnails.evaluateAll((nodes) => nodes.map((node) => node.src)),
+    [initialPreviews[0], initialPreviews[2]],
+  );
+  // Invalid batches preserve both the selected files and their preview order.
+  for (const invalid of [
+    { name: "wrong.gif", mimeType: "image/gif", buffer: fixture.photo },
+    {
+      name: "oversized.png",
+      mimeType: "image/png",
+      buffer: Buffer.alloc(10_000_001),
+    },
+  ]) {
+    await fileInput.setInputFiles([photo("valid.png"), invalid]);
+    await p
+      .getByRole("alert")
+      .filter({ hasText: /JPEG, PNG hoặc WebP và không quá 10 MB/ })
+      .waitFor();
+    assert.equal(await thumbnails.count(), 2);
+    assert.equal(await fileInput.inputValue(), "");
+  }
+  await fileInput.setInputFiles(
+    Array.from({ length: 7 }, (_, i) => photo(`overflow-${i}.png`)),
+  );
+  await p
+    .getByRole("alert")
+    .filter({ hasText: /chọn thêm 6 ảnh/ })
+    .waitFor();
+  assert.equal(await thumbnails.count(), 2);
+  await fileInput.setInputFiles(
+    Array.from({ length: 6 }, (_, i) => photo(`extra-${i}.png`)),
+  );
+  await thumbnails.nth(7).waitFor();
+  assert.equal(await fileInput.isDisabled(), true);
+  assert.equal(
+    await button("Xóa ảnh phụ 7").evaluate(
+      (node) => node === document.activeElement,
+    ),
+    true,
+  );
+  // Replacement remains available at capacity and never appends a ninth photo.
+  const atCapacity = await thumbnails.evaluateAll((nodes) =>
+    nodes.map((node) => node.src),
+  );
+  const capacityReplacePromise = p.waitForEvent("filechooser");
+  await button("Thay ảnh phụ 7").press("Enter");
+  const capacityReplace = await capacityReplacePromise;
+  await capacityReplace.setFiles(photo("qa-capacity-replacement.png"));
+  const replacedCapacity = await thumbnails.evaluateAll((nodes) =>
+    nodes.map((node) => node.src),
+  );
+  assert.equal(replacedCapacity.length, 8);
+  assert.deepEqual(replacedCapacity.slice(0, 7), atCapacity.slice(0, 7));
+  assert.notEqual(replacedCapacity[7], atCapacity[7]);
+  const desktopPreview = p.getByRole("complementary", {
+    name: "Tóm tắt bản nháp",
+  });
+  for (const [width, height, scale] of [
+    [1440, 720, 100],
+    [1440, 900, 130],
+    [1200, 600, 130],
+  ]) {
+    await p.setViewportSize({ width, height });
+    await p.evaluate((scale) => {
+      document.documentElement.style.fontSize = `${scale}%`;
+      window.scrollTo(0, 0);
+    }, scale);
+    assert.equal(
+      await desktopPreview.evaluate((node) => getComputedStyle(node).position),
+      "sticky",
+    );
+    const startY = await desktopPreview.evaluate(
+      (node) => node.getBoundingClientRect().top + window.scrollY,
+    );
+    const maxOffset = await desktopPreview.evaluate(
+      (node) =>
+        node.parentElement.getBoundingClientRect().height -
+        node.clientHeight -
+        112,
+    );
+    for (const offset of [
+      Math.min(120, maxOffset / 3),
+      Math.min(220, (maxOffset * 2) / 3),
+    ]) {
+      await p.evaluate((y) => window.scrollTo(0, y), startY + offset);
+      await p.waitForFunction(
+        () =>
+          Math.abs(
+            document
+              .querySelector('aside[aria-label="Tóm tắt bản nháp"]')
+              .getBoundingClientRect().top - 112,
+          ) < 1,
+      );
+    }
+    const metrics = await desktopPreview.evaluate((node) => ({
+      height: node.clientHeight,
+      scrollHeight: node.scrollHeight,
+    }));
+    assert.ok(metrics.height <= height - 136 + 1);
+    if (metrics.scrollHeight > metrics.height) {
+      await desktopPreview.focus();
+      await p.keyboard.press("End");
+      await p.waitForFunction(() => {
+        const node = document.querySelector(
+          'aside[aria-label="Tóm tắt bản nháp"]',
+        );
+        return node.scrollTop + node.clientHeight >= node.scrollHeight - 1;
+      });
+    }
+    await desktopPreview.evaluate((node) => {
+      node.scrollTop = 0;
+    });
+    await p.screenshot({
+      path: path.join(
+        artifacts,
+        `sell-sticky-preview-${width}-${height}-${scale}.png`,
+      ),
+      fullPage: false,
+    });
+    assert.ok(
+      await p.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    );
+  }
+  await p.evaluate(() => {
+    document.documentElement.style.fontSize = "130%";
+  });
+  for (const width of [390, 1440]) {
+    await p.setViewportSize({ width, height: 900 });
+    if (width === 390) assert.equal(await desktopPreview.count(), 0);
+    assert.equal(await button("Thêm ảnh phụ").count(), 0);
+    assert.equal(
+      await selectedPhotos.evaluate(
+        (node) => getComputedStyle(node).gridTemplateColumns.split(" ").length,
+      ),
+      width === 390 ? 1 : 2,
+    );
+    await p.screenshot({
+      path: path.join(artifacts, `sell-multiple-images-${width}.png`),
+      fullPage: true,
+    });
+    assert.ok(
+      await p.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    );
+  }
+  for (let index = 7; index >= 2; index--)
+    await button(`Xóa ảnh phụ ${index}`).click();
+  assert.equal(await fileInput.isDisabled(), false);
+  assert.deepEqual(
+    await thumbnails.evaluateAll((nodes) => nodes.map((node) => node.src)),
+    [initialPreviews[0], initialPreviews[2]],
+  );
+  // Draft thumbnails follow photo edits and open a read-only detail viewer.
+  const draftViewer = p.getByRole("dialog", {
+    name: "Ảnh bản sách của bạn",
+    exact: true,
+  });
+  for (const width of [1440, 390]) {
+    await p.setViewportSize({ width, height: 900 });
+    if (width === 390)
+      await p.locator("summary").filter({ hasText: "Xem bản nháp" }).click();
+    const draft = p.getByRole("region", {
+      name: "Bản xem trước bài đăng",
+      exact: true,
+    });
+    const miniatures = draft.getByRole("group", {
+      name: "Ảnh thu nhỏ bản nháp",
+      exact: true,
+    });
+    assert.deepEqual(
+      await miniatures
+        .locator("img")
+        .evaluateAll((nodes) => nodes.map((node) => node.src)),
+      [initialPreviews[0], initialPreviews[2]],
+    );
+    const miniButtons = miniatures.getByRole("button");
+    assert.equal(await miniButtons.count(), 2);
+    const thumbBounds = await miniButtons.first().boundingBox();
+    assert.ok(thumbBounds.width >= 44 && thumbBounds.height >= 44);
+    const coverBounds = await draft
+      .getByRole("button", { name: "Xem ảnh bìa chi tiết", exact: true })
+      .first()
+      .boundingBox();
+    assert.ok(thumbBounds.y >= coverBounds.y + coverBounds.height);
+    await draft.screenshot({
+      path: path.join(artifacts, `sell-draft-thumbnails-${width}.png`),
+    });
+    const secondThumb = miniatures.getByRole("button", {
+      name: "Xem ảnh phụ 1 chi tiết",
+      exact: true,
+    });
+    const oldOverflow = await p.evaluate(
+      () => document.documentElement.style.overflowY,
+    );
+    await secondThumb.click();
+    await draftViewer.waitFor();
+    assert.equal(
+      await draftViewer.locator("img").getAttribute("src"),
+      initialPreviews[2],
+    );
+    assert.equal(
+      await p.evaluate(() => document.documentElement.style.overflowY),
+      "hidden",
+    );
+    await draftViewer
+      .getByRole("button", { name: "Ảnh trước", exact: true })
+      .click();
+    assert.equal(
+      await draftViewer.locator("img").getAttribute("src"),
+      initialPreviews[0],
+    );
+    await p.keyboard.press("ArrowRight");
+    assert.equal(
+      await draftViewer.locator("img").getAttribute("src"),
+      initialPreviews[2],
+    );
+    await draftViewer.screenshot({
+      path: path.join(artifacts, `sell-draft-photo-detail-${width}.png`),
+    });
+    await p.keyboard.press("Tab");
+    assert.equal(
+      await draftViewer.evaluate((node) =>
+        node.contains(document.activeElement),
+      ),
+      true,
+    );
+    await p.keyboard.press("Escape");
+    await draftViewer.waitFor({ state: "hidden" });
+    assert.equal(
+      await secondThumb.evaluate((node) => node === document.activeElement),
+      true,
+    );
+    await p.waitForFunction(
+      (expected) => document.documentElement.style.overflowY === expected,
+      oldOverflow,
+    );
+    // The full cover opens the same viewer, without changing the actual cover.
+    await draft
+      .getByRole("button", { name: "Xem ảnh bìa chi tiết", exact: true })
+      .first()
+      .click();
+    await draftViewer.waitFor();
+    assert.equal(
+      await draftViewer.locator("img").getAttribute("src"),
+      initialPreviews[0],
+    );
+    await draftViewer
+      .getByRole("button", { name: "Đóng ảnh chi tiết", exact: true })
+      .click();
+    await draftViewer.waitFor({ state: "hidden" });
+    assert.equal(await thumbnails.count(), 2);
+    assert.ok(
+      await p.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    );
+    if (width === 390)
+      await p.locator("summary").filter({ hasText: "Xem bản nháp" }).click();
+  }
+  await p.setViewportSize({ width: 1440, height: 900 });
   await step(/Tình trạng/).click();
   await p.getByLabel("Mức độ đã qua sử dụng").selectOption("Worn");
   await p
@@ -395,12 +780,16 @@ try {
   await p
     .getByRole("button", { name: "Dùng nơi gửi này", exact: true })
     .click();
-  await step(/Thông tin sách/).click();
-  assert.match(
-    await p.getByLabel("Tên sách", { exact: true }).inputValue(),
-    /QA/,
-  );
   await step(/Kiểm tra/).click();
+  await button("Chỉnh sửa thông tin sách").click();
+  await p
+    .getByLabel("Tác giả", { exact: true })
+    .fill("Tác giả QA đã chỉnh sửa");
+  await step(/Kiểm tra/).click();
+  await p
+    .getByText("Tác giả QA đã chỉnh sửa", { exact: true })
+    .last()
+    .waitFor();
   await p
     .getByLabel("Tôi có quyền sở hữu và đăng bán hoặc trao đổi cuốn sách này.")
     .check();
@@ -429,11 +818,11 @@ try {
       headers: route.request().headers(),
       body: route.request().postData(),
     });
-    if (!lost) {
+    const response = await route.fetch();
+    if (!lost && response.status() === 200) {
       lost = true;
-      await route.fetch();
       await route.abort("failed");
-    } else await route.continue();
+    } else await route.fulfill({ response });
   });
   let processing = false;
   mediaTimer = setInterval(async () => {
@@ -449,19 +838,118 @@ try {
   const addressesBefore = await fixture.db
     .collection("member_addresses")
     .countDocuments();
+  const submittedAuthors = [];
+  p.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().endsWith("/catalog/requests")
+    )
+      submittedAuthors.push(request.postDataJSON().metadata.authors);
+  });
+  const addressAttempts = [];
+  let addressAckLost = false;
+  await p.route("**/api/v1/me/addresses", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    addressAttempts.push({
+      key: route.request().headers()["idempotency-key"],
+      bodyHash: createHash("sha256")
+        .update(route.request().postData() ?? "")
+        .digest("hex"),
+    });
+    const response = await route.fetch();
+    if (!addressAckLost && response.status() === 200) {
+      addressAckLost = true;
+      return route.fulfill({
+        status: 502,
+        contentType: "text/plain",
+        body: "Bad Gateway",
+      });
+    }
+    await route.fulfill({ response });
+  });
+  await button("Gửi duyệt").click();
+  await p
+    .getByRole("alert")
+    .filter({ hasText: /Yêu cầu chưa thực hiện được/ })
+    .waitFor();
+  assert.equal(
+    await fixture.db.collection("member_addresses").countDocuments(),
+    addressesBefore + 1,
+  );
+  // A focus refresh can see the committed address while the POST ACK is unknown.
+  const refreshAddress = p.waitForResponse(
+    (response) =>
+      response.url().endsWith("/me/addresses") &&
+      response.request().method() === "GET",
+  );
+  await p.evaluate(async () => {
+    const { queryClient } = await import("/src/lib/session.ts");
+    await queryClient.invalidateQueries({ queryKey: ["address-book"] });
+  });
+  await refreshAddress;
+  await step(/Thông tin sách/).click();
+  await p
+    .getByLabel("Tác giả", { exact: true })
+    .fill("Tác giả QA sau lỗi kết nối");
+  await step(/Kiểm tra/).click();
   await button("Gửi duyệt").click();
   await button("Thử gửi lại").waitFor({ timeout: 45000 });
   await p.getByRole("alert").waitFor();
+  await p
+    .getByText(/Bạn đã có tối đa 5 bài đang hiển thị hoặc chờ admin duyệt/)
+    .waitFor();
+  assert.equal(
+    await fixture.db.collection("listings").countDocuments(),
+    before + 1,
+  );
+  for (const width of [390, 1440]) {
+    await p.setViewportSize({ width, height: 900 });
+    await p.screenshot({
+      path: path.join(artifacts, `listing-quota-${width}.png`),
+      fullPage: true,
+    });
+    assert.ok(
+      await p.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    );
+  }
+  // Free one actual slot, then retry the pinned request through a lost ACK.
+  const toHide = await fixture.api(
+    `/me/listings/${fixture.listings[0]}`,
+    fixture.member.accessToken,
+  );
+  await fixture.api(
+    `/listings/${toHide.id}/visibility`,
+    fixture.member.accessToken,
+    { expectedVersion: toHide.version, visibility: "Hidden" },
+    "PUT",
+  );
+  await button("Thử gửi lại").click();
+  await p
+    .getByRole("alert")
+    .filter({ hasText: /Thông tin đang được giữ nguyên/ })
+    .waitFor();
+  await button("Thử gửi lại").waitFor();
   await button("Thử gửi lại").click();
   await p
     .getByRole("heading", { name: "Đã gửi duyệt", exact: true })
     .waitFor({ timeout: 45000 });
-  assert.equal(attempts.length, 2);
+  assert.deepEqual(submittedAuthors, [["Tác giả QA sau lỗi kết nối"]]);
+  assert.equal(addressAttempts.length, 2);
+  assert.deepEqual(addressAttempts[0], addressAttempts[1]);
   assert.equal(
-    attempts[0].headers["idempotency-key"],
-    attempts[1].headers["idempotency-key"],
+    await fixture.db.collection("member_addresses").countDocuments(),
+    addressesBefore + 1,
   );
-  assert.equal(attempts[0].body, attempts[1].body);
+  assert.equal(attempts.length, 3);
+  for (const attempt of attempts.slice(1)) {
+    assert.equal(
+      attempts[0].headers["idempotency-key"],
+      attempt.headers["idempotency-key"],
+    );
+    assert.equal(attempts[0].body, attempt.body);
+  }
   assert.equal(
     await fixture.db.collection("listings").countDocuments(),
     before + 1,
@@ -479,6 +967,12 @@ try {
     fixture.member.accessToken,
   );
   assert.equal(posted.state.moderation, "PendingReview");
+  assert.equal(posted.currentRevision.content.mediaIds.length, 2);
+  assert.equal(await fixture.db.collection("listing_fees").countDocuments(), 0);
+  assert.equal(
+    (await fixture.api("/me/wallet", fixture.member.accessToken)).available,
+    0,
+  );
   assert.equal(posted.currentRevision.content.hasMissingPages, true);
   assert.equal(posted.currentRevision.content.condition, "Worn");
   assert.equal(posted.currentRevision.content.exchangeValue, 45000);
@@ -542,7 +1036,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    "PASS user-web: real shelf/filter/pagination/detail; empty/error/retry; login return and owner guard; five tabs/data retention; upload/submit replay; chat lost-response replay with one conversation; 390px100/130%, Home/Detail/Search320px130%. Fake storage, no native acceptance.",
+    "PASS user-web: real shelf/filter/pagination/detail; empty/error/retry; login return and owner guard; five tabs/data retention; multi-file picker/add/remove/max8/validation, draft thumbnail/detail viewer/keyboard/focus, review-author edit/address502 replay, two-photo upload/submit replay; chat lost-response replay with one conversation; 390px100/130%, Home/Detail/Search320px130%. Fake storage, no native acceptance.",
   );
 } catch (error) {
   const pages = browser?.contexts().flatMap((context) => context.pages()) ?? [];

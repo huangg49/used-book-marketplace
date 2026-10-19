@@ -1,16 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
-import { useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle } from "lucide-react";
-import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ListingGallery } from "../components/ListingGallery";
 import { conditions } from "../lib/listing-labels";
 import { useSession } from "../hooks/useSession";
 import { formatVnd, ROUTES } from "../lib/routes";
 import {
   getPurchaseConversations,
-  startPurchaseConversation,
 } from "../services/purchase-conversations";
 import { getPublicListing } from "../services/public-listings";
 import styles from "./BookDetailPage.module.css";
@@ -22,19 +19,6 @@ import {
 } from "@used-books/api-contract/catalog-taxonomy";
 import { searchUrl } from "../lib/routes";
 
-function purchaseError(error: unknown) {
-  if (!(error instanceof ApiError))
-    return "Chưa thể mở chat. Vui lòng thử lại sau.";
-  if (error.status === 401)
-    return "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
-  if (error.code === "CONFLICT")
-    return "Thông tin sách vừa thay đổi. Hãy tải lại trang để xem trạng thái mới nhất.";
-  if (error.code === "INVALID_STATE")
-    return "Sách này hiện chưa thể mở chat mua bán. Hãy tải lại trang.";
-  if (error.status === 0)
-    return "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.";
-  return "Máy chủ chưa thể mở chat. Vui lòng thử lại sau.";
-}
 export function BookDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -49,20 +33,12 @@ export function BookDetailPage() {
     retry: false,
   });
   const conversations = useQuery({
-    queryKey: ["purchase-conversations"],
+    queryKey: ["purchase-conversations", state.status === "authenticated" ? state.user.id : undefined],
     queryFn: getPurchaseConversations,
     enabled: state.status === "authenticated",
     refetchOnMount: "always",
     retry: false,
   });
-  const [confirming, setConfirming] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const purchaseIntent = useRef<{
-    listingId: string;
-    version: number;
-    key: ReturnType<typeof crypto.randomUUID>;
-  } | null>(null);
   const catalogReturn = location.state?.catalogReturn;
   const returnTo =
     typeof catalogReturn === "string" &&
@@ -144,43 +120,7 @@ export function BookDetailPage() {
   );
   const conversationToOpen =
     buyerOrderConversation ?? sellerOrderConversation ?? activeConversation;
-  function requestPurchase() {
-    if (state.status !== "authenticated") {
-      navigate(
-        ROUTES.login +
-          "?returnUrl=" +
-          encodeURIComponent(ROUTES.bookDetail(book.id)),
-      );
-      return;
-    }
-    if (isOwner) return;
-    if (purchaseIntent.current?.listingId !== book.id) {
-      purchaseIntent.current = {
-        listingId: book.id,
-        version: book.version,
-        key: crypto.randomUUID(),
-      };
-    }
-    setError(null);
-    setConfirming(true);
-  }
-  async function confirmPurchase() {
-    setBusy(true);
-    setError(null);
-    try {
-      const intent = purchaseIntent.current!;
-      const receipt = await startPurchaseConversation(
-        intent.listingId,
-        intent.version,
-        intent.key,
-      );
-      navigate(ROUTES.chat(receipt.entityId));
-    } catch (caught) {
-      setError(purchaseError(caught));
-    } finally {
-      setBusy(false);
-    }
-  }
+  function requestPurchase() { navigate(`/chat/start/${book.id}?intent=Negotiation`); }
   return (
     <div className={styles.page}>
       {back}
@@ -313,8 +253,8 @@ export function BookDetailPage() {
                     className={styles.primary}
                     to={
                       state.status === "authenticated"
-                        ? ROUTES.exchangeCompose(book.id)
-                        : `${ROUTES.login}?returnUrl=${encodeURIComponent(ROUTES.exchangeCompose(book.id))}`
+                        ? `/chat/start/${book.id}?intent=Exchange`
+                        : `/chat/start/${book.id}?intent=Exchange`
                     }
                   >
                     Gửi đề nghị đổi sách{" "}
@@ -483,17 +423,7 @@ export function BookDetailPage() {
           </section>
         </div>
       </div>
-      <ConfirmDialog
-        isOpen={confirming}
-        onClose={() => !busy && setConfirming(false)}
-        title="Mở chat với người bán?"
-        description="Mở chat không giữ sách. Bài đăng vẫn hiển thị và người mua khác cũng có thể nhắn cho đến khi người bán tạo đơn."
-        confirmText="Mở chat"
-        onConfirm={() => void confirmPurchase()}
-        isBusy={busy}
-      >
-        {error && <p role="alert">{error}</p>}
-      </ConfirmDialog>
+
     </div>
   );
 }

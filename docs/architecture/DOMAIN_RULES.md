@@ -52,10 +52,12 @@ a real workflow. Checkout UI remains planned.
 
 ## Funding và refund trước acceptance
 
-14/10/2026: chủ dự án chốt phí gửi duyệt20.000đ/hoàn khi từ chối và Order tạo
-đồng thời với wallet hold; VNPay sandbox nạp ví. [Gói hiện hành](../features/WALLET_CHECKOUT.md)
-mô tả default và profile lịch sử, không mở gate release. Ledger phí riêng khỏi
-OrderHold; tiền mua sách quyết toán cho seller, không hoàn buyer khi Completed.
+19/10/2026: [ADR0040](../adr/0040-free-listings-five-active-cap.md) thay phí gửi
+duyệt bằng đăng miễn phí và tối đa5 bài hiển thị/chờ duyệt mỗi Member. Approved
+đã ẩn không chiếm chỗ; mở lại/sửa bài ẩn cần còn chỗ, kiểm dưới owner lock trong
+transaction. Phí đã giữ lịch sử vẫn theo settlement/refund ban đầu; không chỉnh
+ledger cũ. [Nạp ví/checkout](../features/WALLET_CHECKOUT.md) giữ nguyên phạm vi;
+tiền mua sách quyết toán cho seller, không hoàn buyer khi Completed.
 
 Order wallet funding and pre-confirmation full refunds are implemented in OpenAPI
 0.15.0; read ADR 0020 and `docs/features/ORDER_PAYMENT_REPORT.md`. Payment holds the
@@ -76,6 +78,18 @@ agreement không có purchaseMode là Negotiated; gate completion không đổi.
 Public listing chỉ hiển thị “Đang giao dịch”/InTransaction khi Order active có
 paidAt sau payment commit. Unpaid vẫn giữ commitment15phút nhưng là “Chờ thanh
 toán”/AwaitingPayment; không suy đã thanh toán từ Reserved hoặc OrderCreated.
+
+## Phiếu thỏa thuận mua/đổi chung
+
+[ADR0041](../adr/0041-unified-conversation-workspace.md) bổ sung workspace opt-in
+trên conversation Buyer/Seller/listing. Mode phải được hai bên xác nhận; giá có
+đề nghị rõ và chỉ đối tác được chấp nhận. Terms gắn revision, không sửa listing.
+Seller Order từ workspace phải đúng giá đã chấp nhận/quote còn hạn. Exchange
+proposal/link/version ghi nguyên tử; chỉ acceptance mới giữ sách. Khi có proposal
+Exchange còn mở, phải hủy đúng luồng trước khi chuyển hình thức; không dùng switch
+để đổi một Order đã tạo hoặc một Exchange đã nhận. Chat participant ACTIVE tiếp
+tục sau OrderCreated, không mở quyền mới cho LOCKED. Giữ lịch sử cũ và đọc chung
+các message source đã liên kết, không copy message hoặc tạo reservation từ chat.
 
 ## Seller acceptance và pickup review
 

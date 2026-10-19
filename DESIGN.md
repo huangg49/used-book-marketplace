@@ -15,6 +15,7 @@ colors:
   shop-wine-hover: "#7c2320"
   shop-error: "#912b0e"
   shop-shelf: "#f4eddf"
+  conversation-chat-surface: "#ffffff"
   shop-exchange-ink: "#254337"
   auction-hero-shadow: "#28191466"
   cover-sand: "#f0e2ca"
@@ -870,3 +871,61 @@ Thirteen `story-*.png` captures record desktop,390px/320px, long-title actions a
 - **Don't** canonize legacy glyph-icon, display-font or animation recipes as part of this web world.
 
 Source inventory: web global CSS, Home/Search/Detail/Login/Sell/Profile module CSS, BookJourneyStates/module CSS, AuctionListPage's introduction/module CSS, Register/ForgotPassword (shared Auth CSS), DashboardLayout/module CSS and DashboardSidebar, owner-listing reads, BookCard, Header/MainLayout and ConfirmDialog; AuthLayout/module CSS and auth-paper.ts define the approved Auth replacement; Auction's remaining body retains legacy recipes. RN theme/brand tokens preserve the previous implementation. [Brand provenance](apps/user-web/public/brand/README.md), [illustration provenance](apps/user-web/public/illustrations/README.md) and [book-journey provenance](apps/user-web/public/illustrations/book-journey/README.md) record the assets. Legacy Material Symbols import/old animation classes remain outside the documented web slice; this documentation pass does not repair or endorse them.
+
+## Conversation workspace —19/10/2026
+
+Owner approved ADR0041's shared purchase/exchange workspace. Navbar Chat opens
+participant/book cards; selected room has a paper agreement at left and chat at
+right, with preserved panel switching on mobile. Seller mode proposals require
+counterpart confirmation, and structured accepted prices fill the order sheet.
+Use the current ChatPage surface brief; do not restore the earlier inbox sidebar
+or close active participant messaging merely because an Order was created.
+
+The owner's latest local trial follows the book-dossier direction researched on
+19/10: a wine header inside the agreement holds the real80px cover (120px image
+height maximum), book title, author and actual room status. A compact Back link
+replaces the separate large book heading. The cream agreement and white chat
+share one spread on the warm shelf ground; partner belongs to the chat header.
+The agreement body scrolls above its action area; controls never overlay prices.
+At960px and below, a shared book header remains above mounted panel switching,
+preserving context and drafts. Narrow covers shrink to64px/48px. At every width,
+text begins beside the cover and flows across the width below it; full titles
+wrap without truncation. Scoped Be Vietnam Pro400/700 uses20px book title with1.3
+line height,28px agreed price,16px body/section names and14px metadata/labels; inbox book
+titles use16px. Inbox cards use an auto-fill340px minimum grid with16px gaps,
+64px covers/max96px images in the identity row,16px content padding and a ruled
+status/action footer. Below360px, a48px floated cover leaves full width for long
+text below. Titles wrap, entry links stay44px; routine continuation copy is omitted,
+pending proposals/agreed prices remain. This trial awaits the owner's visual review;
+no remote integration.
+Card navigation expands into the Chat workspace over420ms and returns over340ms.
+Cover/title travel separately; content crossfades at native text dimensions.
+Only the selected card participates. Navbar scroll morph is paused during the
+move, with the autumn background retained. Owner-keyed layout memory restores
+inbox filter/reveal/scroll on Back. A pending authorized read opens the same
+paper frame with loading/retry; transaction controls await actual room data.
+Without browser View Transitions support, links keep ordinary navigation.
+Secondary price edits/history open on request; message bubbles are quiet cream
+and shelf tones. Wine belongs to primary actions and accepted price. The surface
+record defines geometry/evidence; global navigation, other-page type and APIs stay
+unchanged. Production book photographs always come from the listing media API.
+
+The wine book header replaces the small decorative bookmark; the existing ivory
+paper texture stays faint under the agreement content. The book-carrying penguin
+appears only for an active empty
+conversation, centered with the greeting; never in a history error or expired room.
+These are decorative, noninteractive details, not transaction or presence signals.
+
+On19/10 the owner retained the approved18/10 soft3D autumn book-desk illustration
+as the Chat inbox/room background after viewing an alternative image. It is a
+Chat-only fixed viewport-cover layer in MainLayout, with opaque paper/shelf
+content and12px mobile outside clearance. Navigating away removes it; Sell keeps
+its archival desk. Reuse the exact `autumn-book-desk.webp` from6394dc4.
+
+The agreement sheet now groups mode, price and price entry as its primary content.
+Before acceptance the listing price leads; after acceptance the agreed wine price
+leads. The exchange request sits beside the mode group. Fees remain visible;
+routine workflow, phase trail and consent explanations live in “Cách giao dịch”.
+That disclosure starts expanded for expired conversations, missing fulfillment or
+an expired/missing previously sent quote. Proposal, stale-price and mutation
+errors remain directly visible. The action footer stays aligned with chat Send.

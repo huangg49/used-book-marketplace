@@ -1,4 +1,336 @@
-# Điểm lưu hiện tại — 17/10/2026
+# Điểm lưu hiện tại — 19/10/2026
+
+## Push và kiểm tra PR51 —19/10/2026
+
+- Theo yêu cầu chủ dự án, push `codex/chat-open-book` và tạo
+  [PR51](https://github.com/huangg49/used-book-marketplace/pull/51) vào `main`.
+  Main `8741a6f` là ancestor, không có conflict. Gói gồm hội thoại/phiếu thỏa
+  thuận API + web, migration0032, inbox/nền/hover/chuyển cảnh; không chỉ motion.
+- Sau head `20995f4`, subject sửa kiểm tra
+  `test(api): isolate exchange and migration upgrade fixtures`: mỗi ca exchange
+  tạo hai Member riêng để không tích bài chạm hạn mức5 hoặc dùng chung ví;
+  snapshot nhánh migration cũ dừng trước union0027 để migration mới được áp
+  sau lịch sử, không bị ghi đè validator. Trừ3 collection Chat Mongo-native
+  khỏi số45 model PostgreSQL. Không sửa migration đã áp dụng hoặc nới nghiệp vụ.
+- PASS local API150unit/21file;120 E2E của agreements/orders/exchanges/
+  wallet-checkout trên QA `_test` (93 ca qua lần đầu,27 exchange qua sau sửa);
+  Mongo48 ca schema/transaction/ledger/keyset (23 ca qua lần đầu,25 schema
+  qua sau sửa), lint/typecheck, contract172operation/26controller.
+  API/web build và web152unit/browser có evidence source ở các mục dưới;
+  sửa cuối chỉ test + điểm lưu. API11 warning lint cũ, web6 warning/chunk cũ.
+  Không chạy import PostgreSQL/failover/native/live provider trong lượt này.
+- Remote8 job bị GitHub từ chối khởi chạy do billing/spending limit; không phải
+  CI PASS. PR chưa có review độc lập. Theo TEAMWORK, CI/review còn chặn merge;
+  chưa merge vào main, chưa có ngoại lệ cho PR51. READINESS giữ nguyên.
+  DB app và `.env` không bị thay đổi; chỉ dùng Mongo QA port57017 để kiểm tra.
+
+## Mở thẻ thành giao diện Chat —19/10/2026
+
+- Nhánh `codex/chat-open-book`, base `3527034`, subject
+  `feat(web): expand conversation cards into chat workspaces`.
+  Dùng View Transitions của React Router7 đang có: khung420ms mở/340ms thu,
+  bìa/tên là snapshot riêng; chữ giữ kích thước thay vì kéo giãn theo khung.
+  Header tạm giữ hình dạng trong lúc chuyển cảnh; nền/navbar không nằm trong
+  root snapshot. Chỉ thẻ được chọn có tên chuyển cảnh; mobile chỉ có1 identity.
+- Inbox nhớ filter/số mục đã mở/scroll/selected trong bộ nhớ của layout theo owner;
+  đổi user tạo bộ nhớ mới, không dùng browser storage. Back link dùng history khi
+  vào từ inbox, đường trực tiếp vẫn về `/chat`; browser Back chạy chiều thu.
+  Quản lý scroll manual trong phạm vi Chat và trả setting cũ khi rời phạm vi.
+- Hover/focus chỉ prefetch GET room vào query key theo owner. Nếu chưa có kết quả
+  thật, mở cùng khung chờ có bìa/tên từ cache listing, chưa mount handler giao dịch.
+  Lỗi có retry; dữ liệu đã tải vẫn giữ. Exchange cũ dùng chuyển khung và cache
+  detail theo owner, không gộp lịch sử hoặc thay nghiệp vụ.
+- PASS web build/152unit/lint (6 warning cũ), browser fixture toàn luồng tại
+  `.tmp/chat-morph-verified-flow-qa`, thêm assertions snapshot thực vào suite.
+  QA `.tmp/chat-morph-qa` kiểm3 snapshot ghép đúng,420/340ms, filter/load more/
+  scroll/browser Back, mạng chậm không có composer,320px chữ130% + reduced-motion
+  giữ animation/không trùng snapshot, fallback khi API browser không có.
+  Đã xem midpoint/desktop/mobile,1 batch chỉnh và xác nhận navbar đứng yên.
+  Chunk warning cũ; API/native/Safari thiết bị thật/live storage/remote CI NOT RUN.
+  READINESS không đổi; local web5174, chưa push/PR.
+
+## Thu gọn và sắp lại thẻ danh sách Chat —19/10/2026
+
+- Nhánh `codex/chat-open-book`, base `4c49df3`, subject
+  `style(web): refine compact conversation cards`.
+  Cụm đầu thẻ có bìa64px/ảnh tối đa96px cạnh tên16px/người trao đổi/hình thức.
+  Bỏ dải màu chạy suốt bìa; footer có một đường phân tách, trạng thái trái/nút mở
+  phải, target44px. Dưới360px bìa48px để chữ chảy xuống dưới. Padding16px.
+  Grid auto-fill tối thiểu340px:3 cột ở1440,2 ở1100/900,1 ở390/320; một thẻ vẫn
+  giữ cùng bề rộng khi ít hội thoại. Rút khoảng cách tiêu đề/filter; không cắt tên,
+  bỏ hai câu hướng dẫn lặp (tiếp tục xem phiếu/xem đơn và nhắn tin), giữ pending
+  proposal và giá thống nhất khi có. Lọc/load more/API/đường vào room không đổi.
+- PASS scoped browser fixture14 room + Exchange cũ tại `.tmp/chat-inbox-card-redesign-qa`:
+  6 thẻ thường vừa viewport1440×900, link44px, filter/load more, ảnh thiếu/tên dài,
+  mobile320 chữ130% không tràn, mở đúng room. Đã xem desktop/mobile.
+  Build/lint/full Chat browser tại `.tmp/chat-inbox-card-redesign-flow-qa` PASS;
+  detector[];6 warning lint/chunk cũ giữ. Đã xác nhận mobile sau batch chỉnh.
+  Không chạy lại backend/native/live storage/remote CI;
+  READINESS giữ nguyên. Local web5174 HMR, chưa push/PR.
+  Follow-up từ `d098134`, subject `style(web): lift and tint conversation cards on hover`:
+  thẻ purchase/Exchange cũ nhấc4px, đổi kem ấm và bóng mềm trong200ms khi hover
+  bằng chuột hoặc focus-visible bàn phím. Touch không áp hover; duration override
+  giữ motion theo chính sách chủ dự án. Build và Chromium fixture normal/reduced
+  preference, mouse leave, sibling không xê dịch, keyboard/touch PASS tại
+  `.tmp/chat-card-hover-qa`; đã xem desktop/mobile. Chỉ CSS; không chạy lại gate API.
+
+## Nền mùa thu3D cho Chat —19/10/2026
+
+- Nhánh `codex/chat-open-book`, base `d684bd6`, subject
+  `style(web): reuse approved autumn posting background for chat`.
+  Theo chủ dự án, khôi phục nguyên ảnh `autumn-book-desk.webp` từ `6394dc4`
+  (18/10,77KB) cho inbox và room Chat. Không tạo lại ảnh/không đổi nền Sell.
+  MainLayout gắn nền fixed chỉ trên route Chat, tháo khi rời route; phiếu/chat/
+  inbox giữ bề mặt giấy đặc, mobile có khoảng nền12px hai bên.
+  Chủ dự án đã xem bản gen thay thế rồi chọn giữ nền đang chạy trên web;
+  ảnh thử không được đưa vào code.
+- PASS web build (chunk warning cũ), toàn bộ Chat browser fixture1440/1100/
+  900/390/320 chữ130% tại `.tmp/chat-autumn-bg-qa`; đã xem inbox desktop/mobile
+  và room desktop. Scope QA `.tmp/chat-background-scope-qa` kiểm đúng77026byte
+  ảnh gốc, cuộn vẫn fixed/cover, không tràn ngang và rời Home gỡ nền.
+  API/DB/session/handlers không đổi; không chạy lại gate backend/native/live
+  storage/remote CI. READINESS giữ nguyên, chưa push/PR; web5174 HMR để owner xem.
+
+## Đồng bộ GitHub về máy — 19/10/2026
+
+- Theo chủ dự án, fetch và merge `origin/main` tại `8741a6f` (PR50) vào
+  `codex/chat-open-book`, giữ16 commit Chat local từ `ff725a6`. Subject
+  `Merge origin/main into codex/chat-open-book`. Giữ cả hai phần SESSION_STATE
+  khi giải conflict; ADR Chat đổi0040→0041 để không trùng ADR phí/hạn mức trên main.
+- Main mới gồm lịch sử ví/điều hướng, đăng bài miễn phí với5 chỗ hiển thị/chờ duyệt,
+  picker bìa/phụ, gallery bản nháp/sticky và pin body khi retry địa chỉ.
+- PASS API/web build, web152unit, VNPay16unit, contract generated check,
+ 172route/26controller, docs399file/2645link và Chat browser fixture tại
+  `.tmp/chat-main-sync-qa`. Không chạy lại toàn bộ E2E Mongo/native/live provider/
+  remote CI; gate READINESS giữ nguyên. Warning chunk cũ còn.
+- API3000 khởi động lại từ source hợp nhất, web5174 HMR; readiness/API và web200.
+  Giữ `.env` và DB local hiện có, không seed/reset/migrate trong lượt này.
+  Workers chưa khởi động lại; không suy ảnh mới/đơn nền đã xử lý từ health API.
+  Merge chỉ ở local, chưa push/PR/merge GitHub.
+
+## Phiếu thỏa thuận và hội thoại mua/đổi chung —19/10/2026
+
+- Nhánh `codex/chat-open-book`, base `b98a650`; bản thử mới từ `e9c37ab`, subject
+  `refactor(web): give conversation a book dossier layout`. Chủ dự án duyệt làm
+  thử sau nghiên cứu: đầu phiếu đỏ rượu chứa bìa thật80px/tên sách20px/tác giả/
+  trạng thái, phiếu kem cạnh chat trắng; Back gọn thay tiêu đề sách riêng phía trên.
+  Dưới960px giữ đầu sách trên cả hai tab; cover64/48px, chữ20px;320px chữ lớn
+  được chảy xuống dưới ảnh. Follow-up từ `e5ff987`, subject
+  `fix(web): let long book titles flow around the cover`: bỏ căn hai đầu ảnh/chữ,
+  chữ sát bìa và chảy toàn chiều ngang dưới ảnh ở mọi breakpoint; đầu phiếu giãn
+  theo nội dung, không cắt tên. QA fixture tên ngắn/dài300 ký tự/chuỗi liền,
+  1440/1100/961/390/320px (320 chữ130%) PASS tại `.tmp/chat-title-wrap-qa`.
+  Build (chunk warning cũ), QA cuộn hướng dẫn/giữ nháp PASS. Phiếu cuộn trên footer,
+  hai nút cuối vẫn thẳng hàng. Không đổi handler/API hoặc dữ liệu thật.
+  Đang chờ chủ dự án xem bản local, chưa push/PR.
+  Follow-up từ `aac6aef`, subject `fix(web): dock transaction guide and follow its expansion`:
+  giữ scrollbar gutter desktop để form không lệch; “Cách giao dịch” nằm sát footer,
+  bỏ khoảng trống dưới khi đóng. Thao tác mở cuộn phiếu xuống cuối, đóng về đầu;
+  mobile cuộn trang tới vùng vừa mở/đầu phiếu theo flow tự nhiên. Chỉ thao tác chủ
+  động mới cuộn; cảnh báo tự mở không kéo viewport. QA fixture1440/1100 với scrollbar
+  cổ điển, mobile390/320, bàn phím, bật reduced-motion, bật/tắt nhanh, giữ cả nháp
+  PASS tại `.tmp/chat-guide-scroll-qa`; toàn bộ browser flow PASS tại
+  `.tmp/chat-guide-scroll-flow-qa`. Build (chunk warning cũ), lint (6 warning cũ)
+  PASS. Không đổi API/nghiệp vụ, không chạy lại gate backend/native/live storage.
+- Phiếu trái ưu tiên hình thức → giá → đề nghị giá. Yêu cầu đổi nằm cạnh hình
+  thức; giá niêm yết nổi trước chốt, giá thống nhất đỏ rượu nổi sau chốt. Phí vẫn
+  hiện; hướng dẫn/phase trail gom vào “Cách giao dịch”. Tự mở khi hết hạn, thiếu
+  nơi gửi hoặc quote đã gửi mất/hết hạn. Proposal, lỗi và revision cũ vẫn hiện
+  trực tiếp; không đổi handler/quyền/key/body/version hoặc nghiệp vụ.
+- Đầu sách đỏ rượu thay bookmark nhỏ; giữ vân giấy và mascot từ asset cũ cho chat
+  rỗng còn hoạt động (lược mascot dưới360px). Field chat/giá dùng một viền focus sát ô như Đăng sách,
+  forced colors có outline phía trong; bỏ ghi chú riêng tư dưới composer.
+- PASS:147unit, typecheck/build (chunk warning cũ), lint (6 warning cũ), detector[].
+  Browser fixture `.tmp/chat-dossier-qa` kiểm retry/chuyển hình thức/giá/
+  đơn/thanh toán/Exchange cũ, desktop/mobile/chữ lớn. Xác nhận sau batch spacing
+  tại `.tmp/chat-dossier-final-qa`: phần chính vừa khung1440/1100 cao900,
+  disclosure bàn phím giữ cả nháp giá/tin, mobile390/320 chữ130% không tràn,
+  quote hết hạn mở hướng dẫn, giá đã chốt, thiếu ảnh. Fix contrast fallback span
+  bị CSS heading chung đổi màu: kiểm computed cream-on-wine PASS sau sửa, không
+  thêm vòng chụp. QA bìa Alice chỉ trong fixture `[QA]`, không thay ảnh listing thật.
+  Một lượt xem, một batch sửa và một lượt xác nhận; không chạy lại backend/native/
+  live storage/remote CI, không đóng gate từ evidence UI. Chưa push/PR gói này.
+- Nhánh `codex/unified-trade-chat`, base `c385dd0` (`codex/chat-guidance`).
+  Subject `feat(chat): unify purchase and exchange agreement workspace`.
+  [ADR0041](../adr/0041-unified-conversation-workspace.md) ghi quyết định đã duyệt.
+  Navbar Chat mở card theo Buyer + Seller + listing; Detail Chat/Đổi sách mở cùng
+  phiếu trái/chat phải. Mobile chuyển vùng giữ nháp; Mua ngay giữ nguyên.
+- Seller đề xuất hình thức, đối tác xác nhận; Buyer được yêu cầu đổi sách.
+  Giá đề nghị/chấp nhận có cấu trúc, gắn revision; giá tự điền và chỉ đọc khi tạo
+  đơn. Mode/giá khóa khi có Exchange chưa hủy hoặc OrderCreated. Tin nhắn vẫn
+  mở cho participant ACTIVE sau tạo đơn; không cấp quyền mới cho LOCKED.
+  Giữ quote/key/body/version khi mất ACK, địa chỉ riêng, ledger/hold/commitment.
+- OpenAPI0.44.0 và generated types; migration0032 mới thêm terms/events/link.
+  Exchange mới liên kết nguyên tử vào hội thoại, lịch sử/tin cũ giữ nguyên.
+  Standalone Exchange cũ dùng cùng bố cục, không ép gộp dữ liệu. Inbox kế thừa
+  giới hạn100 hội thoại API hiện tại; đọc trực tiếp room không phụ thuộc giới hạn đó.
+- PASS API4 suite/109tests (agreements/orders/exchanges/wallet-checkout), có
+  quyền/replay/session thu hồi/revision cũ/giá sai/race và validator Mongo. Sau
+  bổ sung chặn intent trái Sale-only/Exchange-only, chạy lại agreements9/9 PASS.
+  API lint (11 warning cũ), typecheck/build, contract/check/routes172/26 PASS.
+- PASS web147unit, lint (6 warning cũ), typecheck/build. Browser fixture toàn HTTP
+  bị chặn + Socket.IO riêng5193/5195: chấp nhận giá/mode, linked Exchange, inbox,
+  mất ACK create/pay/message, giữ nháp, OrderCreated còn chat,1440/390 và320px
+  chữ130%. Evidence local `.tmp/unified-chat-qa`. Detector một lần có3 advisory,
+  đã sửa cỡ chữ ngoài token và hai màu cũ; không chạy detector lặp.
+- PASS seller-order browser qua HTTP/Mongo thật trên replica QA57017/database
+  ngẫu nhiên *_test và storage fake: hai phiên login, quote/address retry,
+  giá90.000 + phí30.000, mất ACK chỉ tạo1 đơn, thiếu tiền bị từ chối, thanh toán
+  giữ120.000 đúng1 lần. Desktop1440/mobile390; evidence local
+  `apps/user-web/test-results/seller-order`.
+- Local API3000/media worker và web5174 chạy source mới. Đã áp dụng pending
+  0030/0031/0032 vào DB app local;8 collection nghiệp vụ đối chiếu BSON không đổi,
+  giữ5 bài demo và mật khẩu. User `.env` giữ nguyên; script riêng `.tmp` dùng
+  kết nối local đã xác minh thay cấu hình cổng không còn hoạt động.
+- Không push/PR/merge/deploy trong gói này. Native/live Supabase/remote CI/human
+  review NOT RUN; READINESS và gate inspection/settlement giữ nguyên. Bước tiếp:
+  chủ dự án xem `/chat` và Detail bằng hai tài khoản demo trên local5174.
+## Sửa thông tin trước gửi và thử lại nơi gửi — 19/10/2026
+
+- Chủ dự án báo POST `/me/addresses`502 sau quay lại sửa bước1 rồi gửi ở bước5.
+  Kiểm máy: web5174 trỏ API3000 nhưng không có API listener. Đã bật lại bằng
+  `pnpm dev:api` (Mongo local/API/media+order workers), giữ tiến trình chạy;
+  GET readiness trực tiếp3000 và qua proxy5174 đều200. Không reset/seed DB.
+- Member web pin cả key + serialized body của ý định tạo địa chỉ, kể cả
+  expectedBookVersion/makeDefault khi query refetch sau mất ACK. Cache receipt,
+  chọn id vừa lưu và retry bước đọc địa chỉ khi cần, không yêu cầu reload mất form.
+  Giữ key-only ref của bản nháp đang mở qua HMR. Không đổi API/contract/session.
+- Nhánh `codex/sell-review-address-retry`, base4cfd49d; subject
+  `fix(web): preserve address command across review retries`.
+- PASS web lint/typecheck/136unit/build/browser: từ review sửa tác giả rồi dùng
+  thanh bước quay lại; POST địa chỉ đã commit nhưng proxy trả502, refetch sổ địa
+  chỉ thật, sửa tác giả lần nữa và gửi lại giữ cùng key/body, chỉ1 địa chỉ và catalog
+  nhận tác giả mới. Giữ submit/quota/lost-ACK2ảnh/gallery/sticky/shelf/chat PASS.
+  QA API/Mongo riêng, storage fake/Sharp thật. Readiness local chỉ kiểm đọc, không
+  tự gửi listing trên DB chủ dự án; native/live provider/human/remote CI NOT RUN.
+- 6 warning lint/chunk cũ giữ; READINESS không đổi. Chưa push/PR/merge/deploy.
+
+## Ảnh thu nhỏ trong bản nháp — 19/10/2026
+
+- Follow-up: chủ dự án muốn thẻ lớn hơn một chút. Desktop rộng240→280px,
+  khung bìa216→240px; compact/mobile giữ override. Nhánh
+  `codex/widen-draft-preview`, basef4b1f51; subject `style(web): enlarge draft preview card`.
+  PASS build + browser regression (sticky1200/1440, gallery, mobile390, submit/
+  replay); đã xem ảnh desktop/mobile mới. Browser lần đầu chạy trước QA Mongo
+  healthy lỗi startup, retry sau healthy PASS. CSS-only, không chạy lại unit/API.
+- Member web `/sell`: ảnh thu nhỏ nằm dưới ảnh bìa trong thẻ “Cuốn sách của bạn”,
+  cập nhật theo thứ tự ảnh bìa/phụ khi thay/xóa. Bấm thumbnail hoặc bìa mở ảnh lớn
+  đúng ảnh, có trước/sau, phím mũi tên, Esc/nút đóng; xem ảnh không đổi ảnh bìa.
+  Dialog native dùng chung hai bản preview desktop/compact, tái sử dụng CSS
+  ListingGallery và lockPageScroll; giữ focus/scroll sau đóng, cleanup khi unmount.
+- Desktop giữ sticky/cap chiều cao; thumbnails wrap >=44px. Mobile <=600px mở
+  bản nháp theo chiều dọc để ảnh/thumbnail không bị ép. Không đổi API/RN/upload/
+  idempotency. Nhánh `codex/draft-photo-gallery`, baseb6d2b2e; subject
+  `feat(web): preview draft photos from thumbnail gallery`.
+- PASS web lint/typecheck/136unit/build; Chromium1440/390 ở130%: thumbnail đúng
+  URL/thứ tự sau thay/xóa, click mở đúng ảnh phụ/bìa, previous/ArrowRight, Tab nằm
+  trong dialog, Esc trả focus và scroll lock được trả; không đổi2 ảnh của form.
+  Regression sticky3 viewport/quota/upload2/replay/shelf/search/chat giữ PASS.
+  Đã xem `apps/user-web/test-results/sell-draft-thumbnails-*.png` và
+  `sell-draft-photo-detail-*.png`. API/Mongo QA riêng, storage fake/Sharp thật.
+- 6 warning lint và warning chunk có sẵn. Không kiểm native/live provider/human/
+  remote CI; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
+
+## Ảnh bìa và ảnh phụ riêng — 19/10/2026
+
+- Member web `/sell` theo mẫu chủ dự án: ảnh bìa bên trái, vùng ảnh phụ bên phải;
+  <=760px xếp dọc. Khung ảnh/picker cùng chiều cao, ảnh phụ chia grid khi thêm.
+  Mỗi ảnh có nút X44px; bấm trực tiếp ảnh để thay đúng vị trí bằng picker1 tệp.
+  Ảnh phụ mới vẫn chọn nhiều cùng lúc. Giữ1 bìa bắt buộc + tối đa7 ảnh phụ,
+  JPEG/PNG/WebP10MB/ảnh; thay được khi đủ8. Xóa bìa không tự lấy ảnh phụ làm bìa.
+- Giữ thứ tự preview/upload, từ chối nguyên batch lỗi/vượt chỗ, reset input và
+  cleanup URL. Hủy picker giữ ảnh cũ; focus quay về control nhìn thấy sau thay/
+  xóa và khi đủ ảnh. Raw native file row vẫn ẩn; mutation/retry giữ nguyên.
+- Nhánh `codex/listing-cover-support-photos`, base21b68ad; subject
+  `feat(web): separate cover and supporting photo pickers`.
+- PASS web lint/typecheck/build/136unit; Chromium QA390/1440: bìa single/phụ
+  multiple, cover removal/re-add/replacement giữ ảnh phụ, click thay ảnh phụ đúng
+  slot, keyboard Enter, thay khi đủ8 không thêm ảnh thứ9, invalid/oversize/quota,
+  upload2 ảnh + submit lost-ACK replay. Sticky regression1440×720/100%,
+  1440×900/130%,1200×600/130% và mobile disclosure giữ PASS; shelf/search/chat PASS.
+  Đã xem ảnh desktop/mobile `apps/user-web/test-results/sell-cover-support-*.png`
+  và `sell-multiple-images-*.png`. API/Mongo QA riêng, storage fake/Sharp thật.
+- Không đổi API/RN;6 warning lint/chunk có sẵn. Không kiểm native/live provider/
+  human/remote CI; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
+
+## Bản xem trước đi theo khi cuộn — 19/10/2026
+
+- Member web `/sell`: thẻ “Cuốn sách của bạn” luôn sticky trên desktop từ1200px,
+  bỏ điều kiện viewport900px và ResizeObserver/previewFits. Thẻ giới hạn chiều
+  cao theo viewport, cuộn nội dung bằng chuột/bàn phím, không che header/form;
+  mobile giữ bản nháp thu gọn. Nhánh `codex/sticky-listing-preview`, base640c50c;
+  subject `fix(web): keep listing preview alongside scrolling form`.
+- PASS web lint/typecheck/build/136unit và browser regression:1440×720/100%,
+  1440×900/130%,1200×600/130%, cuộn hai vị trí giữ top112px, End đọc hết thẻ dài,
+  390px không hiện sidebar; form/multi-photo/quota/replay/chat giữ PASS. Ảnh local
+  `apps/user-web/test-results/sell-sticky-preview-*.png`. Storage fake/Sharp thật.
+- Không đổi API/RN; warning web6/chunk cũ giữ. Không kiểm native/live provider/
+  human/remote CI; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
+
+## Chọn nhiều ảnh đăng sách — 19/10/2026
+
+- Follow-up theo ảnh chủ dự án: ẩn hàng native “Choose files / No file chosen”,
+  giữ vùng “Chọn ảnh bản sách”. Input nằm trong label, visually hidden, vẫn hỗ
+  trợ Tab/Enter và hiện focus trên vùng chọn. Nhánh `codex/hide-native-photo-input`,
+  base `a78344e`; subject `fix(web): hide duplicate native photo picker row`.
+  PASS web lint/typecheck/build/136unit; browser bổ sung kiểm row1px không chiếm
+  chỗ, click label, focus/Enter mở multi-picker, hủy chọn giữ ảnh cũ;
+  giữ toàn bộ ca multi-photo/quota/upload/replay trước. Không đổi API/native.
+- Theo ảnh chủ dự án ở Member web `/sell`: bật file picker `multiple`, xử lý
+  toàn bộ nhóm chọn và nối vào ảnh cũ đúng thứ tự. Giữ tối đa8 ảnh,10MB/ảnh,
+  JPEG/PNG/WebP; từ chối nguyên nhóm sai/vượt số chỗ, giữ ảnh cũ, reset input
+  để chọn lại. Preview/upload cùng thứ tự, xóa ảnh và cleanup URL giữ nguyên.
+- Nhánh `codex/listing-multi-image-picker`, base `1ea2ac9`; subject
+  `fix(web): allow selecting multiple listing photos at once`.
+- PASS web lint/typecheck/build/136unit; Chromium QA390/1440: chooser multiple,
+  chọn3/xóa giữa, nhóm có GIF/ảnh>10MB không đổi ảnh cũ, vượt8 bị từ chối,
+  thêm đủ8 khóa picker/xóa mở lại, upload2 ảnh và submit/retry giữ đúng key/body.
+  Suite kệ/tìm kiếm/chat và quota trước đó vẫn PASS. API/Mongo QA riêng,
+  storage fake/Sharp thật; ảnh local `apps/user-web/test-results/sell-multiple-images-*.png`.
+- Chỉ sửa web; không đổi API/contract/RN. Warning web6/chunk có sẵn giữ nguyên.
+  Không kiểm hộp chọn ảnh Windows bằng tay/native/live provider; không chạy lại
+  gate API/Mongo không đổi. READINESS giữ nguyên; chưa push/PR/merge/deploy.
+
+## Đăng miễn phí, tối đa 5 bài hiển thị/chờ duyệt — 19/10/2026
+
+- Chủ dự án chốt chỉ tính bài trên trang chủ và bài gửi admin duyệt. Nhánh
+  `codex/free-listings-five-limit`, base `25efcb8`; subject
+  `feat(listings): replace submission fees with five active listing cap`.
+  [ADR0040](../adr/0040-free-listings-five-active-cap.md), SRS FR-L09 và
+  OpenAPI0.44.0 mô tả chính sách. Draft/Rejected/Approved Hidden/terminal trade/
+  lưu trữ/gỡ không chiếm chỗ; Hidden PendingReview vẫn chiếm chỗ chờ duyệt.
+- API không tạo phí bài mới, ví0đ vẫn gửi được; env phí20000 cũ bị bỏ qua.
+  Hạn mức kiểm dưới owner lock trong transaction khi submit/resubmit, mở lại
+  hoặc sửa bài Approved Hidden. Sửa bài Visible giữ chỗ; từ chối/ẩn/lưu trữ
+  giải phóng theo trạng thái. Quá5 trả409 ListingLimitReached, giữ nội dung,
+  version, ảnh và intent; replay thành công vẫn dùng được ở hạn mức đầy.
+  Bài lịch sử vượt5 giữ nguyên; phí đã giữ cũ vẫn settle/refund đúng chuỗi.
+  Không migration, sửa env riêng, DB app hoặc sổ cái lịch sử.
+- Web bỏ lookup ví/nạp ví ở form; Web/RN hiện chính sách và giữ lỗi/retry.
+  Browser fixture nhiều sách phân bổ nhiều owner để tuân thủ hạn mức thật;
+  listing-review E2E tách owner từng test, giữ nguyên assertions nghiệp vụ.
+- PASS Node24.21.0/pnpm11.19.0: contract generate/check/routes168/26; API
+  lint/typecheck/build/150unit; Web lint/typecheck/build/136unit; RN
+  lint/typecheck/143unit. Warning có sẵn: API11/Web6, web chunk lớn.
+- PASS HTTP/Mongo QA riêng: wallet-checkout33/33 (gồm miễn phí, mixed quota,
+  auth/replay/rollback, ba race submit/reopen/hidden revision và phí lịch sử);
+  thêm2/2 scoped terminal/legacy-over-cap (33ca ngoài filter SKIP); listing-review
+  73/73. Web Chromium390/1440 PASS hạn mức→ẩn1bài→retry→lostACK→replay, chỉ1draft/
+  address, ví0/không phí; giữ regression kệ/tìm kiếm/chat. Storage fake, Sharp thật.
+  Ảnh local: `apps/user-web/test-results/listing-quota-390.png` và `listing-quota-1440.png`.
+- RN export:web PASS (cảnh báo Expo force-exit sau khi export thành công).
+  Focused Expo browser PASS login→tạo nháp→tab Kiểm tra, đúng copy miễn phí/5bài,
+  ví0/không phí và không overflow ở390/1440. Ảnh/script local tại
+  `.tmp/free-listings-rn/` và `.tmp/free-listings-rn-browser.mjs`. Full RN browser
+  FAIL trước khi tới editor do harness chờ heading cũ “Tình trạng sách”, source
+  hiện là “Khảo chứng tình trạng sách”; không nhận full harness/native PASS.
+- FAIL kiểm Mongo schema mở rộng:21/25 PASS,4 upgrade cases thiếu ExchangeDisputed
+  trong validator member_notifications, tại schema.mongo-spec.ts315/383. Source
+  Mongo và test/mongo giống nguyên base25efcb8 (`git diff` rỗng cho hai thư mục);
+  không sửa migration đã áp dụng hoặc mở rộng gói để che lỗi này.
+- Native-device/live-provider/human review/remote CI NOT RUN; READINESS giữ nguyên.
+  Chưa push/PR/merge/deploy. Bước tiếp: review độc lập, xử lý lỗi schema Exchange
+  ở gói riêng và tích hợp/restart API/worker theo quyền được giao.
 
 ## Trao đổi sách (Exchange): Hoàn tất Ưu tiên 0 & Ưu tiên 1 — 17/10/2026
 

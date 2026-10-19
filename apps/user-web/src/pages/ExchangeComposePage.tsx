@@ -85,7 +85,7 @@ async function inventory() {
     }),
   );
 }
-export default function ExchangeComposePage() {
+function LegacyExchangeComposePage() {
   const auth = useSession();
   const navigate = useNavigate();
   const location = useLocation();
@@ -510,4 +510,11 @@ export default function ExchangeComposePage() {
       </ConfirmDialog>
     </div>
   );
+}
+
+export default function ExchangeComposePage() {
+  const [params] = useSearchParams();
+  const id = params.get('book');
+  if (id && !pendingProposal()) return <Navigate replace to={`/chat/start/${id}?intent=Exchange`} />;
+  return <LegacyExchangeComposePage />;
 }
