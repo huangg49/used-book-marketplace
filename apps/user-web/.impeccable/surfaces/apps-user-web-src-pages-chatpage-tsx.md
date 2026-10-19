@@ -11,22 +11,32 @@ listing. `/chat/start/:listingId?intent=Negotiation|Exchange` preserves the entr
 intent through login and opens/reuses a private room. `/chat/:roomId` reads the
 selected room directly, including when not among the inbox's latest100 results.
 
-Desktop: compact participant/back/status header over a joined paper workbench.
-Agreement left and chat right share top/bottom edges; the agreement scrolls
-independently with its heading retained, while messages scroll above the composer.
-Ready create-order/payment guidance stays at the agreement's bottom; scroll the
-sheet to inspect the remaining price/context/history. The workbench uses
-clamp(580px,100dvh -208px,900px) height above760px. Below that, the sheet returns
-to natural page flow and two labelled panel buttons preserve mounted drafts.
-The chat remains bounded with a480px minimum. Long names/titles wrap.
+Owner chose “two pages of an open book” after rejecting competing type emphasis.
+Book title is theh1 beside the real cover; authors/status support it. Partner name,
+role and initial avatar belong to the chat header. A warm shelf ground surrounds
+one borderless paper spread with a soft offset ink shadow and a32px gutter at
+wide sizes,24px below1100px. A single spine rule separates agreement/chat.
 
-Book title/author, mode, listed/agreed price and next action carry the hierarchy.
-An accepted price is1.5rem on desktop/1.25rem on mobile; opening the secondary
-price-edit form does not change it. No marketing footer. Typed agreement events
-show the most recent change by default; an aria-expanded control exposes the
-complete fetched history in a bounded region. User text is never a system event.
-Inbox cards lead with title/partner, then actual mode/status and next step; card
-links retain44px targets. Shelf/error/hover roles are scoped locally, not global.
+Above960px, both pages share top/bottom edges. Only the agreement body scrolls;
+heading and next-action area remain in flex flow, never overlaid on price fields.
+Guidance explanations remain in the body. Messages scroll above the composer.
+The spread uses clamp(600px,100dvh -284px,860px). At960px and below, two labelled
+panel buttons preserve mounted drafts, the sheet returns to natural page flow
+and chat has a600px minimum. Long titles wrap; narrow title width is preserved
+by stacking Back/cover beside the title rather than across three columns.
+
+Scoped Be Vietnam Pro uses400/700 only. Book title and agreed price are28px,
+title24px below760px; body/section/partner are16px, metadata/labels14px. Inbox
+headings use the same family, with18px book titles. Forms/dialog behavior and
+global navigation/brand are unchanged. Flat phase labels replace numbered circles;
+the current phase remains explicit. Own messages use cream rather than a dominant
+wine block; primary actions and accepted price retain wine emphasis.
+
+Opening secondary price editing does not alter the accepted value. Typed events
+show the latest change, with an aria-expanded control for complete fetched history.
+User text is never a system event. No marketing footer. Inbox cards lead with
+title/partner, then actual mode/status and next step; links retain44px targets.
+Shelf/error/hover roles are scoped locally, not global.
 
 Seller proposes a permitted mode; the other party confirms. Buyer may request
 Exchange. Price proposals require counterpart acceptance; accepted price fills
@@ -47,6 +57,9 @@ Verification and source checkpoint: docs/handoff/SESSION_STATE.md. Runner:
 `pnpm --filter @used-books/user-web test:chat:browser`, isolated HTTP fixtures and
 Socket.IO5195 with Vite5193. Actual database tests use the separate QA replica set.
 Browser fixtures, storage fake, Supabase live, native and human review are distinct.
-Layout follow-up evidence: `.tmp/chat-workspace-layout-final-qa`,1440/900/390px
-and320px at130% text. Source/visual review was performed by the implementer;
+Open-book evidence: `.tmp/chat-open-book-final-qa`,1440/1100/900/390px and320px
+at130% text; `.tmp/chat-open-book-qa` includes missing cover. The optional runner
+flag CHAT_QA_COVER=1 uses bundled alice.jpg on an explicitly labelled `[QA]` book;
+it never supplies fallback artwork for production listing photos. Source/visual
+review was performed by the implementer;
 there is no independent dual-agent or human acceptance claim.

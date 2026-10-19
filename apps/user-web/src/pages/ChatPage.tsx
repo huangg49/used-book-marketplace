@@ -282,39 +282,59 @@ function ChatRoom({
       aria-label={`Cuộc trò chuyện với ${other.displayName}`}
     >
       <header className={styles.roomHeader}>
-        <Link className={styles.back} to="/chat">
+        <Link
+          className={styles.back}
+          to="/chat"
+          aria-label="Về danh sách hội thoại"
+        >
           <ArrowLeft size={18} aria-hidden="true" />
-          Hội thoại
         </Link>
-        <div className={styles.person}>
-          <span className={styles.avatar} aria-hidden="true">
-            {other.displayName.slice(0, 1).toUpperCase()}
-          </span>
-          <div>
-            <h1>{other.displayName}</h1>
-            <p>
-              {isExchange
-                ? "Đối tác trao đổi sách"
-                : isBuyer
-                  ? "Người bán · Bạn đang hỏi mua"
-                  : "Người mua · Bạn đang bán sách"}
-            </p>
-          </div>
-        </div>
-        <p className={styles.roomStatus}>
-          {isExchange && room.status === "Active"
-            ? "Đang trao đổi sách"
-            : statusLabels[room.status]}
-          {room.expiresAt && (
-            <>
-              {" "}
-              · Hạn hội thoại:{" "}
-              <time dateTime={room.expiresAt}>{dateTime(room.expiresAt)}</time>
-            </>
+        <div className={styles.cover}>
+          {book.data ? (
+            <ListingPhoto book={book.data} />
+          ) : (
+            <BookOpen size={32} aria-hidden="true" />
           )}
-        </p>
+        </div>
+        <div className={styles.bookHeading}>
+          <h1>
+            <Link to={`/books/${room.listingId}`}>
+              {book.data?.book.title ??
+                (book.isLoading
+                  ? "Đang tải cuốn sách…"
+                  : "Cuộc trao đổi về sách")}
+            </Link>
+          </h1>
+          {book.data ? (
+            <p className={styles.bookAuthor}>
+              {book.data.book.authors.join(", ")}
+            </p>
+          ) : (
+            <p className={styles.bookAuthor}>
+              Thông tin bài đăng hiện không khả dụng. Bạn vẫn có thể đọc hội
+              thoại.
+            </p>
+          )}
+          <p className={styles.roomStatus}>
+            {isExchange && room.status === "Active"
+              ? "Đang trao đổi sách"
+              : statusLabels[room.status]}
+            {room.expiresAt && (
+              <>
+                {" "}
+                · Hạn hội thoại:{" "}
+                <time dateTime={room.expiresAt}>
+                  {dateTime(room.expiresAt)}
+                </time>
+              </>
+            )}
+          </p>
+        </div>
       </header>
-      <nav className={sheet.mobileTabs} aria-label="Nội dung cuộc trao đổi">
+      <nav
+        className={`${sheet.mobileTabs} ${sheet.bookTabs}`}
+        aria-label="Nội dung cuộc trao đổi"
+      >
         <button
           type="button"
           aria-pressed={panel === "sheet"}
@@ -331,135 +351,114 @@ function ChatRoom({
         </button>
       </nav>
       <div
-        className={`${sheet.workspace} ${sheet.workbench}`}
+        className={`${sheet.workspace} ${sheet.openBook}`}
         data-panel={panel}
       >
-        <aside
-          className={sheet.sheet}
-          aria-label="Phiếu thỏa thuận"
-          tabIndex={0}
-        >
+        <aside className={sheet.sheet} aria-label="Phiếu thỏa thuận">
           <div className={sheet.sheetHeading}>
             <h2>Phiếu thỏa thuận</h2>
-            <span>
-              {room.orderId
-                ? "Đã tạo đơn"
-                : room.terms?.activeExchangeId
-                  ? "Đề nghị đổi sách"
-                  : "Chưa tạo giao dịch"}
-            </span>
           </div>
-          {!isExchange && (
-            <ol className={styles.progress} aria-label="Tiến trình mua bán">
-              {["Trao đổi", "Thông tin nhận sách", "Đơn hàng"].map(
-                (label, index) => (
-                  <li
-                    key={label}
-                    aria-current={guidance.phase === index ? "step" : undefined}
-                    data-complete={
-                      (guidance.phase != null && guidance.phase > index) ||
-                      undefined
-                    }
-                  >
-                    <span aria-hidden="true">{index + 1}</span>
-                    {label}
-                  </li>
-                ),
+          <div
+            className={sheet.sheetBody}
+            role="region"
+            aria-label="Nội dung phiếu thỏa thuận"
+            tabIndex={0}
+          >
+            {!isExchange && (
+              <ol className={styles.progress} aria-label="Tiến trình mua bán">
+                {["Trao đổi", "Thông tin nhận sách", "Đơn hàng"].map(
+                  (label, index) => (
+                    <li
+                      key={label}
+                      aria-current={
+                        guidance.phase === index ? "step" : undefined
+                      }
+                      data-complete={
+                        (guidance.phase != null && guidance.phase > index) ||
+                        undefined
+                      }
+                    >
+                      {label}
+                    </li>
+                  ),
+                )}
+              </ol>
+            )}
+            {room.terms?.locked &&
+              !room.orderId &&
+              !room.terms.activeExchangeId && (
+                <p className={sheet.error}>
+                  Sách hiện chưa thể chốt giao dịch. Bạn vẫn có thể tiếp tục
+                  nhắn tin.
+                </p>
               )}
-            </ol>
-          )}
-          <div className={styles.context}>
-            {book.data ? (
+            <AgreementTerms
+              room={room}
+              userId={userId}
+              book={book.data}
+              refresh={refreshRooms}
+              frozen={!!orderAttempt.current || payBusy}
+            />
+            {!!room.terms?.exchangeIds.length && (
+              <details className={sheet.exchangeHistory}>
+                <summary>Các đề nghị đổi sách trong cuộc trao đổi</summary>
+                {room.terms.exchangeIds.map((id, i) => (
+                  <button
+                    type="button"
+                    key={id}
+                    className={sheet.textButton}
+                    onClick={() => setHistoryExchange(id)}
+                  >
+                    Xem đề nghị lần {i + 1}
+                    {id === room.terms?.activeExchangeId ? " — hiện tại" : ""}
+                  </button>
+                ))}
+              </details>
+            )}
+            {historyExchange ? (
               <>
-                <div className={styles.cover}>
-                  <ListingPhoto book={book.data} />
+                <div className={sheet.proposal}>
+                  <p>Đang xem đề nghị đổi sách trước.</p>
+                  <button
+                    type="button"
+                    className={sheet.textButton}
+                    onClick={() => setHistoryExchange(null)}
+                  >
+                    Về phiếu hiện tại
+                  </button>
                 </div>
-                <div>
-                  <Link to={`/books/${room.listingId}`}>
-                    {book.data.book.title}
-                  </Link>
-                  <p>{book.data.book.authors.join(", ")}</p>
-                </div>
+                <ExchangeDetailPage
+                  key={historyExchange}
+                  exchangeId={historyExchange}
+                  embedded
+                />
               </>
             ) : (
-              <>
-                <BookOpen size={24} aria-hidden="true" />
-                <p>
-                  {book.isLoading
-                    ? "Đang tải thông tin sách…"
-                    : "Thông tin bài đăng hiện không khả dụng. Bạn vẫn có thể đọc hội thoại."}
-                </p>
-              </>
+              isExchange &&
+              (room.terms?.activeExchangeId ? (
+                <ExchangeDetailPage
+                  key={room.terms.activeExchangeId}
+                  exchangeId={room.terms.activeExchangeId}
+                  embedded
+                />
+              ) : book.data &&
+                !room.terms?.pendingProposal &&
+                !room.terms?.locked ? (
+                <ExchangeOffer
+                  room={room}
+                  userId={userId}
+                  book={book.data}
+                  refresh={refreshRooms}
+                />
+              ) : null)
+            )}
+            {!isExchange && !(room.orderId && isBuyer) && (
+              <div className={styles.guidanceText}>
+                <p>{guidance.description}</p>
+                {!expired && <p>Chat chưa giữ chỗ cho cuốn sách.</p>}
+              </div>
             )}
           </div>
-          {room.terms?.locked &&
-            !room.orderId &&
-            !room.terms.activeExchangeId && (
-              <p className={sheet.error}>
-                Sách hiện chưa thể chốt giao dịch. Bạn vẫn có thể tiếp tục nhắn
-                tin.
-              </p>
-            )}
-          <AgreementTerms
-            room={room}
-            userId={userId}
-            book={book.data}
-            refresh={refreshRooms}
-            frozen={!!orderAttempt.current || payBusy}
-          />
-          {!!room.terms?.exchangeIds.length && (
-            <details className={sheet.exchangeHistory}>
-              <summary>Các đề nghị đổi sách trong cuộc trao đổi</summary>
-              {room.terms.exchangeIds.map((id, i) => (
-                <button
-                  type="button"
-                  key={id}
-                  className={sheet.textButton}
-                  onClick={() => setHistoryExchange(id)}
-                >
-                  Xem đề nghị lần {i + 1}
-                  {id === room.terms?.activeExchangeId ? " — hiện tại" : ""}
-                </button>
-              ))}
-            </details>
-          )}
-          {historyExchange ? (
-            <>
-              <div className={sheet.proposal}>
-                <p>Đang xem đề nghị đổi sách trước.</p>
-                <button
-                  type="button"
-                  className={sheet.textButton}
-                  onClick={() => setHistoryExchange(null)}
-                >
-                  Về phiếu hiện tại
-                </button>
-              </div>
-              <ExchangeDetailPage
-                key={historyExchange}
-                exchangeId={historyExchange}
-                embedded
-              />
-            </>
-          ) : (
-            isExchange &&
-            (room.terms?.activeExchangeId ? (
-              <ExchangeDetailPage
-                key={room.terms.activeExchangeId}
-                exchangeId={room.terms.activeExchangeId}
-                embedded
-              />
-            ) : book.data &&
-              !room.terms?.pendingProposal &&
-              !room.terms?.locked ? (
-              <ExchangeOffer
-                room={room}
-                userId={userId}
-                book={book.data}
-                refresh={refreshRooms}
-              />
-            ) : null)
-          )}
           {!isExchange && (
             <>
               {!(room.orderId && isBuyer) && (
@@ -470,12 +469,6 @@ function ChatRoom({
                 >
                   <div>
                     <h3>{guidance.title}</h3>
-                    <p>{guidance.description}</p>
-                    {!expired && (
-                      <p className={styles.reservationNote}>
-                        Chat chưa giữ chỗ cho cuốn sách.
-                      </p>
-                    )}
                   </div>
                   {guidance.action === "address" && !room.terms?.locked && (
                     <Link
@@ -801,11 +794,17 @@ function ChatRoom({
         </aside>
         <section className={sheet.chat} aria-label="Hội thoại">
           <div className={sheet.chatHeading}>
-            <MessageCircle size={20} aria-hidden="true" />
+            <span className={styles.avatar} aria-hidden="true">
+              {other.displayName.slice(0, 1).toUpperCase()}
+            </span>
             <div>
-              <h2>Hội thoại</h2>
+              <h2>{other.displayName}</h2>
               <p>
-                Tin nhắn chỉ hiển thị với hai người trong cuộc trao đổi này.
+                {isExchange
+                  ? "Đối tác trao đổi sách"
+                  : isBuyer
+                    ? "Người bán · Bạn đang hỏi mua"
+                    : "Người mua · Bạn đang bán sách"}
               </p>
             </div>
           </div>
@@ -855,7 +854,7 @@ function ChatRoom({
                 <h3>
                   {expired
                     ? "Chưa có tin nhắn trong cuộc trao đổi này"
-                    : `Bắt đầu trao đổi với ${other.displayName}`}
+                    : "Bắt đầu cuộc trò chuyện"}
                 </h3>
                 <p>
                   {expired
@@ -953,7 +952,9 @@ function ChatRoom({
             }}
           >
             {!expired && (
-              <label htmlFor="chat-message">Nhắn cho {other.displayName}</label>
+              <label className={styles.composerLabel} htmlFor="chat-message">
+                Nhắn cho {other.displayName}
+              </label>
             )}
             {error && (
               <p className={styles.error} role="alert">
@@ -999,6 +1000,9 @@ function ChatRoom({
                         : "Gửi tin nhắn"}
                   </button>
                 </div>
+                <p className={styles.privacy}>
+                  Tin nhắn chỉ hiển thị với hai người trong cuộc trao đổi này.
+                </p>
               </>
             )}
           </form>

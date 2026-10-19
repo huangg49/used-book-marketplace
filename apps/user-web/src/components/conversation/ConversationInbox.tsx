@@ -51,7 +51,7 @@ function ConversationCard({
         </h2>
         <p>
           {buyer ? "Người bán" : "Người mua"}:{" "}
-          <strong>{partner.displayName}</strong>
+          <span>{partner.displayName}</span>
         </p>
         <p className={styles.cardState}>
           <span>

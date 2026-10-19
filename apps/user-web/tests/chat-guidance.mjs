@@ -19,6 +19,11 @@ room.terms={mode:'Negotiation',pendingProposal:null,agreedPrice:null,agreedListi
 const agreementEvents=[],termsCommands=[];let termsFailure=true,proposalSequence=200,linkedExchange;
 const listing=(number,owner,title)=>({id:id(number),revisionId:id(number+100),version:1,book:{id:id(number+200),title,authors:['Tác giả minh họa'],publisher:null,publicationYear:null,language:'vi',edition:null,category:'Văn học',isbn:null},mode:'Both',condition:'Good',pages:'Đủ trang',coverNote:'Bìa có nếp gấp nhỏ',notes:'Không',accessories:'Không',readable:true,hasMissingPages:false,missingEssentialContent:false,description:'Dữ liệu minh họa kiểm tra chat',salePrice:80000,exchangeValue:80000,seller:owner,photos:[],publishedAt:new Date().toISOString(),fulfillment:{serviceAreaCode:'HCM-DEMO-v1',name:'TP.HCM',demoOnly:true,method:'DirectDelivery'},purchaseAvailability:{status:'Available',expiresAt:null}});
 const books=new Map([[id(4),listing(4,seller,'Doraemon — Cuốn sách qua những người đọc')],[id(5),listing(5,buyer,'Những ngày thơ ấu')]]);
+// Explicit QA-only cover fixture: a bundled illustration, never a real listing photo.
+if(process.env.CHAT_QA_COVER==='1'){
+ books.get(id(4)).book.title='[QA] Alice’s Adventures in Wonderland';books.get(id(4)).book.authors=['Lewis Carroll'];
+ books.get(id(4)).photos=[{id:id(510),width:256,height:400}];
+}
 const quote=()=>({destination:{recipientName:'Lan Anh',phone:'0900000000',serviceAreaCode:'HCM-DEMO-v1',localityCode:'DEMO-A',detail:'Địa chỉ minh họa QA'},shippingFee:20000,expiresAt:future()});
 const ex={id:id(6),initiatorId:buyer.id,recipientId:seller.id,initiatorListingId:id(5),recipientListingId:id(4),status:'Proposed',revision:1,initiatorDeposit:80000,recipientDeposit:80000,diffAmount:0,diffPayerId:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),lastProposedById:buyer.id};
 let historyError=false,exchangeError=true,exchangeSendError=false,dropMessage=true,createFailure=true,payFailure=true,orderState='AwaitingPayment';
@@ -73,6 +78,7 @@ try{
 
    if(s.endsWith('/messages')&&s.startsWith('/me/purchase-conversations/'))return historyError?send({code:'Unavailable',message:'Fixture outage'},503):send(messages);
    if(s==='/service-areas')return send({code:'HCM-DEMO-v1',localities:[{code:'DEMO-A',label:'TP.HCM'}]});
+   if(s===`/listings/${room.listingId}/media/${id(510)}/read`)return send({id:id(510),url:origin+'/illustrations/alice.jpg',expiresAt:future(),width:256,height:400});
    if(s.startsWith('/listings/')&&books.has(s.split('/')[2]))return send(books.get(s.split('/')[2]));
    if(s===`/me/orders/${id(7)}`)return send({id:id(7),role:role==='buyer'?'Buyer':'Seller',version:1,state:orderState,paymentDeadline:future(),paymentEnabled:role==='buyer'&&orderState==='AwaitingPayment',amounts:{bookPrice:75000,shippingFee:20000,buyerTotal:95000}});
    if(s==='/orders'&&method==='POST'){
@@ -100,23 +106,28 @@ try{
  const refresh=page=>page.evaluate(async()=>{const{queryClient}=await import('/src/lib/session.ts');await Promise.all(['purchase-conversations','purchase-conversation','conversation-events'].map(key=>queryClient.invalidateQueries({queryKey:[key]})));});
  const captures=async(page,label)=>{
   if(process.env.CHAT_GUIDANCE_SCREENSHOTS==='0')return;
-  for(const [width,scale]of[[1440,100],[900,100],[390,100],[320,130]]){
+  for(const [width,scale]of[[1440,100],[1100,100],[900,100],[390,100],[320,130]]){
    await page.setViewportSize({width,height:900});await page.evaluate(v=>document.documentElement.style.fontSize=v+'%',scale);await page.evaluate(()=>scrollTo(0,0));
-   await page.evaluate(()=>document.fonts.ready);const sheetPanel=page.getByRole('complementary',{name:'Phiếu thỏa thuận',exact:true});if(await sheetPanel.count())await sheetPanel.evaluate(node=>node.scrollTop=0);
+   await page.evaluate(()=>document.fonts.ready);const sheetPanel=page.getByRole('region',{name:'Nội dung phiếu thỏa thuận',exact:true});if(await sheetPanel.count())await sheetPanel.evaluate(node=>node.scrollTop=0);
+   const historyPanel=page.getByLabel('Tin nhắn trong hội thoại',{exact:true});if(await historyPanel.count())await historyPanel.evaluate(node=>node.scrollTop=node.scrollHeight);
    await page.waitForFunction(()=>document.getAnimations().filter(a=>a.animationName==='details-sweep').every(a=>a.playState==='finished'));
    await page.screenshot({path:path.join(out,`${label}-${width}-${scale}.png`),fullPage:true});
-   if(width<760){const tab=page.getByRole('button',{name:'Hội thoại',exact:true});if(await tab.count()){await tab.click();await page.screenshot({path:path.join(out,`${label}-chat-${width}-${scale}.png`),fullPage:true});await page.getByRole('button',{name:'Phiếu thỏa thuận',exact:true}).click();}}
+   if(width<=960){const tab=page.getByRole('button',{name:'Hội thoại',exact:true});if(await tab.count()){await tab.click();await page.screenshot({path:path.join(out,`${label}-chat-${width}-${scale}.png`),fullPage:true});await page.getByRole('button',{name:'Phiếu thỏa thuận',exact:true}).click();}}
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'overflow '+label+' '+width);
    const agreement=page.getByRole('complementary',{name:'Phiếu thỏa thuận',exact:true});
-   if(width>760&&await agreement.count()){
+   if(width>960&&await agreement.count()){
     const left=await agreement.boundingBox(),right=await page.getByRole('region',{name:'Hội thoại',exact:true}).boundingBox();
     assert.ok(Math.abs(left.y-right.y)<2&&Math.abs(left.height-right.height)<2,'aligned agreement/chat '+label+' '+width);
-    assert.ok(await agreement.evaluate(el=>getComputedStyle(el).overflowY==='auto'),'agreement scrolls independently');
+    assert.ok(await sheetPanel.evaluate(el=>getComputedStyle(el).overflowY==='auto'),'agreement body scrolls independently');
     const composer=await page.locator('#chat-message').boundingBox();
     assert.ok(composer.y+composer.height<right.y+right.height,'composer remains inside chat');
     const action=page.getByRole('complementary',{name:'Bước tiếp theo',exact:true}).filter({has:page.locator('button,a')});
     if(await action.count()&&await action.getAttribute('data-primary')==='true'){
       const box=await action.boundingBox();assert.ok(box.y>=left.y&&box.y+box.height<=left.y+left.height+1,'primary action visible without scrolling '+label);
+    }
+    if(label==='seller-ready'){
+      const value=page.getByRole('definition').filter({hasText:'75.000'}).first(),box=await value.boundingBox(),body=await sheetPanel.boundingBox();
+      assert.ok(box.y>=body.y&&box.y+box.height<=body.y+body.height,'accepted price remains readable above action footer');
     }
    }
   }
@@ -126,6 +137,7 @@ try{
  await p.evaluate(async listingId=>{const{router}=await import('/src/app/router.tsx');await router.navigate(`/chat/start/${listingId}?intent=Negotiation`);},room.listingId);await p.waitForURL('**/chat/'+room.id);
 
  await p.getByRole('heading',{name:'Trao đổi trước khi chốt mua',exact:true}).waitFor();
+ await p.getByRole('heading',{name:books.get(room.listingId).book.title,level:1,exact:true}).waitFor();assert.equal(await p.getByRole('heading',{name:seller.displayName,level:1,exact:true}).count(),0,'book leads page, partner belongs to chat');
  await p.getByRole('link',{name:'Gửi thông tin nhận sách',exact:true}).waitFor();await captures(p,'buyer-start');
  await p.getByRole('button',{name:'Soạn lời chào',exact:true}).click();assert.ok((await p.locator('#chat-message').inputValue()).includes('Chào bạn'));assert.equal(sent.length,0,'suggestion never sends');
  await p.locator('#chat-message').fill('Nội dung giữ nguyên khi mất xác nhận.');await p.getByRole('button',{name:'Gửi tin nhắn',exact:true}).click();await p.getByText('Chưa xác nhận được tin nhắn đã gửi. Thử lại sẽ gửi cùng tin này.',{exact:true}).waitFor({timeout:20000});
@@ -157,6 +169,6 @@ try{
  const chat=p.getByRole('region',{name:'Tin nhắn Đổi sách với '+seller.displayName});await chat.waitFor();await chat.getByText('Chưa tải được tin nhắn. Lịch sử đã tải vẫn được giữ lại.',{exact:true}).waitFor();assert.equal(await chat.getByText('Trao đổi về những cuốn sách này',{exact:true}).count(),0,'history failure is not empty');exchangeError=false;await chat.getByRole('button',{name:'Tải lại tin nhắn',exact:true}).click();await chat.getByText(exchangeMessages[0].body,{exact:true}).waitFor();assert.equal(await chat.locator('[class*="systemMsg"]').count(),0,'user cannot become system via text');await captures(p,'exchange-context');
  await p.getByRole('link',{name:'Nhắn với đối tác',exact:true}).click();await chat.getByLabel('Nhắn cho '+seller.displayName).fill('Bản nháp trao đổi cần được giữ lại.');exchangeSendError=true;await chat.getByRole('button',{name:'Gửi tin nhắn',exact:true}).click();await chat.getByRole('alert').waitFor();assert.equal(await chat.locator('textarea').inputValue(),'Bản nháp trao đổi cần được giữ lại.');exchangeSendError=false;
  exchangeError=true;await p.evaluate(async()=>{const{queryClient}=await import('/src/lib/session.ts');await queryClient.invalidateQueries({queryKey:['exchangeMessages']});});await chat.getByText('Chưa tải được tin nhắn. Lịch sử đã tải vẫn được giữ lại.',{exact:true}).waitFor();await chat.getByText(exchangeMessages[0].body,{exact:true}).waitFor();exchangeError=false;
- assert.deepEqual(issues,[]);await writeFile(path.join(out,'result.json'),JSON.stringify({result:'PASS',source:'codex/chat-workspace-layout',api:'all intercepted fixtures',socket:'isolated Socket.IO on 5195',cases:['buyer/seller next steps','quote sent','same-room OrderCreated retains chat','price acceptance and immutable order price','seller mode switch requires buyer acceptance','linked exchange stays in workspace','mobile panels preserve draft','card inbox navigation','message lost ACK dedupe','order/payment pinned key/body retry including missing quote recovery','exchange book context','history error/recovery preserves messages','user text not system','exchange draft retained','1440/900/390/320px130%','aligned independently scrolling agreement and chat','primary actions visible','price edit disclosure and complete event history']},null,2));
+ assert.deepEqual(issues,[]);await writeFile(path.join(out,'result.json'),JSON.stringify({result:'PASS',source:'codex/chat-open-book',api:'all intercepted fixtures',socket:'isolated Socket.IO on 5195',cases:['buyer/seller next steps','quote sent','same-room OrderCreated retains chat','price acceptance and immutable order price','seller mode switch requires buyer acceptance','linked exchange stays in workspace','mobile panels preserve draft','card inbox navigation','message lost ACK dedupe','order/payment pinned key/body retry including missing quote recovery','exchange book context','history error/recovery preserves messages','user text not system','exchange draft retained','1440/900/390/320px130%','aligned independently scrolling agreement and chat','primary actions visible','price edit disclosure and complete event history']},null,2));
  console.log('PASS: chat context and role-specific next action; purchase message/order/payment retry unchanged; exchange history/draft/error; desktop/mobile/large text. No application DB or storage used.');console.log(out);
 }finally{await browser?.close();await vite?.close();await io?.close();await new Promise(resolve=>http?.listening?http.close(resolve):resolve());}

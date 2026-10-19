@@ -880,9 +880,14 @@ counterpart confirmation, and structured accepted prices fill the order sheet.
 Use the current ChatPage surface brief; do not restore the earlier inbox sidebar
 or close active participant messaging merely because an Order was created.
 
-The owner's layout refinement keeps that behavior: a compact participant header,
-joined agreement/chat workbench with independent desktop scrolling, persistent
-composer and ready purchase actions, plus preserved mobile panels. Book title,
-partner, current price and next action lead; secondary price editing and full
-event history open on request. The ChatPage surface record defines the scoped
-dimensions, tokens and browser evidence; global navigation/brand stay unchanged.
+The owner selected “two pages of an open book” for this surface: book title/real
+cover lead the page; partner belongs to the chat header. One paper spread on a
+warm shelf ground has a clear spine/gutter, agreement left and conversation right.
+The agreement body scrolls above its action area; controls never overlay prices.
+At960px and below, mounted panel switching preserves drafts and natural sheet flow.
+Scoped Be Vietnam Pro400/700 uses28px title/agreed price,24px narrow title,
+16px body/section names and14px metadata/labels; inbox book titles use18px.
+Secondary price edits/history open on request; message bubbles are quiet cream
+and shelf tones. Wine belongs to primary actions and accepted price. The surface
+record defines geometry/evidence; global navigation, other-page type and APIs stay
+unchanged. Production book photographs always come from the listing media API.

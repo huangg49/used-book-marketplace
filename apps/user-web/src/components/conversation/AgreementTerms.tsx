@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { ApiError } from "@used-books/session-client";
-import { Check, ArrowRightLeft } from "lucide-react";
+import { Check } from "lucide-react";
 import {
   changeConversationTerms,
   type PurchaseConversation,
@@ -79,7 +79,6 @@ export function AgreementTerms({
   return (
     <section className={styles.terms} aria-label="Hình thức và thỏa thuận">
       <div className={styles.sectionTitle}>
-        <ArrowRightLeft size={17} aria-hidden="true" />
         <h3>Hình thức giao dịch</h3>
       </div>
       {seller ? (
@@ -126,10 +125,12 @@ export function AgreementTerms({
           <p className={styles.mode}>
             {mode === "Exchange" ? "Đổi sách" : "Thương lượng mua"}
           </p>
-          <p className={styles.help}>
-            Người bán đề xuất chuyển hình thức; bạn quyết định có đồng ý hay
-            không.
-          </p>
+          {!locked && (
+            <p className={styles.help}>
+              Người bán đề xuất chuyển hình thức; bạn quyết định có đồng ý hay
+              không.
+            </p>
+          )}
         </>
       )}
       {proposal && (

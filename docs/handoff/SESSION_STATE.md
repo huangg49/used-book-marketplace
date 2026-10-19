@@ -2,20 +2,21 @@
 
 ## Phiếu thỏa thuận và hội thoại mua/đổi chung —19/10/2026
 
-- Follow-up bố cục: nhánh `codex/chat-workspace-layout`, base `ead4ada`, subject
-  `refactor(web): refine conversation workspace layout`. Thu gọn header, gộp
-  hai cột vào khung giấy liền, desktop cuộn phiếu độc lập/chat giữ ô soạn; bước
-  tạo đơn/thanh toán khả dụng bám đáy phiếu. Mobile giữ panel/draft. Inbox ưu tiên
-  tên sách/đối tác; giá khác chỉ mở khi cần, lịch sử mặc định hiện thay đổi cuối
-  và có nút xem đầy đủ. Không đổi quyền, lệnh, API, Mongo hoặc tiền.
-- PASS follow-up: web147unit, lint (6 warning cũ), typecheck/build (chunk warning
-  cũ), docs/diff check. Browser fixture chạy đầy đủ luồng retry và exchange cũ,
-  thêm1440/900/390px và320px chữ130%, kiểm hai cột thẳng hàng/ô soạn trong khung,
-  hành động chốt sẵn có không bị khuất, mở/đóng giá khác không đổi giá đã chốt,
-  mở đầy đủ lịch sử. Evidence local `.tmp/chat-workspace-layout-final-qa`.
-  Một detector layout trước sửa `[]`; xem ảnh một lượt/sửa một batch/xác nhận
-  một lượt, không chạy vòng polish. Backend/native/live storage/remote CI không
-  chạy lại cho gói UI này; bằng chứng và gate của phần triển khai dưới giữ nguyên.
+- Chủ dự án chọn hướng “hai trang sách”: nhánh `codex/chat-open-book`, base
+  `b98a650`, subject `refactor(web): shape conversation as an open book`.
+  Tên/bìa sách dẫn đầu, đối tác nằm ở đầu chat; phiếu và chat có khoảng gáy,
+  một hệ chữ Be Vietnam Pro400/700 với vai trò rõ. Giá là điểm nhấn của phiếu.
+  Nội dung phiếu cuộn riêng, hành động cuối nằm ngoài vùng cuộn, không phủ giá.
+  Ở960px trở xuống dùng panel giữ nháp; Exchange độc lập cũ giữ route/lịch sử.
+- PASS UI:147unit, lint (6 warning cũ), typecheck/build (chunk warning cũ),
+  docs/diff check. Browser fixture chạy luồng retry/chuyển hình thức/giá/đơn/
+  thanh toán và Exchange cũ;1440/1100/900/390px,320px chữ130%. Kiểm tên sách
+  làh1, hai cột thẳng hàng, giá đã chốt không bị footer che, giữ nháp và lịch sử.
+  `.tmp/chat-open-book-qa` kiểm thiếu ảnh; `.tmp/chat-open-book-final-qa` có
+  bìa Alice từ asset có sẵn, chỉ trong dữ liệu `[QA]`, không là ảnh listing thật.
+  Detector một lần có2 advisory radius, đã đưa về12px; một lượt xem, một batch
+  sửa và một lượt xác nhận. API/Mongo/tiền không đổi; không chạy lại backend,
+  native/live storage/remote CI hoặc đóng gate từ evidence UI này.
 - Nhánh `codex/unified-trade-chat`, base `c385dd0` (`codex/chat-guidance`).
   Subject `feat(chat): unify purchase and exchange agreement workspace`.
   [ADR0040](../adr/0040-unified-conversation-workspace.md) ghi quyết định đã duyệt.
