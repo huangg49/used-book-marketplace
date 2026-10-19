@@ -23,7 +23,8 @@
     "test:wallet:browser": "node tests/wallet-checkout.mjs",
     "test:account:browser": "node tests/account-overview.mjs",
     "test:auction-stage:browser": "node tests/auction-stage.mjs",
-    "test:auth-motion:browser": "node tests/auth-auction-arrival.mjs"
+    "test:auth-motion:browser": "node tests/auth-auction-arrival.mjs",
+    "test:chat:browser": "node tests/chat-guidance.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

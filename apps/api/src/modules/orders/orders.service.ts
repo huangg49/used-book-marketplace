@@ -1,3 +1,4 @@
+import { ConversationAgreementsService } from '../purchases/conversation-agreements.service.js';
 import { orderContext } from '../reservations/workflow-context.js';
 import { Injectable } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
@@ -87,6 +88,7 @@ export type Order = NonNullable<Awaited<ReturnType<typeof loadOrder>>>;
 @Injectable()
 export class OrdersService {
   constructor(
+    private readonly agreements: ConversationAgreementsService,
     private readonly commands: MongoCommandService,
     private readonly quotes: QuotesService,
     private readonly listings: ListingCommitmentPolicy,
@@ -233,6 +235,7 @@ export class OrdersService {
               conversation.orderId
             )
               throw conflict();
+            await this.agreements.validateOrder(tx, conversation, intent.body.agreedBookPrice);
             const quote = await tx.c.sale_quotes.findOne({
               _id: conversation.quoteId,
               buyerId: before.buyerId,

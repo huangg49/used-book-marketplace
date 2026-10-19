@@ -341,3 +341,17 @@
     background: #fff;
     margin: 0;
 }
+
+.compact .booksArea { flex-direction: column; align-items: stretch; gap: 16px; }
+.compact { min-width: 0; }
+.compact h3, .compact p { overflow-wrap: anywhere; }
+
+.compact .bookInfo, .compact .bookInfoGive, .compact .receiveCol, .compact .giveCol { min-width: 0; width: auto; text-align: left; align-items: stretch; }
+.compact .bookItemRowGive { flex-direction: row-reverse; justify-content: flex-end; }
+.compact .bookItemRowGive .bookInfoGive { flex: 1; }
+.compact .bookTitle, .compact .bookInfoGive .bookTitle { font-family: var(--shop-body); font-size: 0.95rem; line-height: 1.55; }
+.compact .bookAuthor { font-style: normal; font-size: 0.8rem; line-height: 1.7; }
+.compact .coverLarge, .compact .coverSmall { width: 56px; height: 80px; }
+.compact .exchangeIconWrapper { margin: 0; }
+.compact .exchangeIconCircle { width: 32px; height: 32px; box-shadow: none; }
+.compact .detailsGrid { padding: 16px 0 0; gap: 20px; background: transparent; border: 0; }
