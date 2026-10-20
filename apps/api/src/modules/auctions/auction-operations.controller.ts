@@ -98,6 +98,12 @@ export class AuctionOperationsController {
       res,
     );
   }
+  // ADR 0044: deliveries awaiting a simulated carrier outcome.
+  @Get('simulator/point-deliveries')
+  @Roles('TEST_OPERATOR')
+  simulatedDeliveries(@Req() req: AuthenticatedRequest) {
+    return this.collection.simulatedDeliveries(req.auth);
+  }
   // ADR 0044: simulated carrier outcome of a delivered auction Order.
   @Post('simulator/point-delivery-events')
   @Roles('TEST_OPERATOR')

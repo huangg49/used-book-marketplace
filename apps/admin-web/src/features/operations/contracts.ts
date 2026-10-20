@@ -139,6 +139,22 @@ export const collectionQueue = z.object({
   serverTime: time,
 }) satisfies z.ZodType<Schema["PointCollectionQueue"]>;
 
+// ADR 0044: deliveries awaiting a simulated carrier outcome (no address).
+export const simulatedDelivery = z.object({
+  orderId: uuid,
+  title: z.string(),
+  pointName: z.string(),
+  carrier: z.literal("LatLaiSimulator"),
+  trackingCode: z.string(),
+  dispatchedAt: time,
+  deliveryDeadline: time,
+}) satisfies z.ZodType<Schema["SimulatedPointDeliveryItem"]>;
+export type SimulatedDelivery = z.infer<typeof simulatedDelivery>;
+export const simulatedDeliveryQueue = z.object({
+  items: z.array(simulatedDelivery),
+  serverTime: time,
+}) satisfies z.ZodType<Schema["SimulatedPointDeliveryQueue"]>;
+
 export const resolutionItem = z.object({
   id: uuid,
   version,

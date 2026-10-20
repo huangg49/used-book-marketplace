@@ -11,6 +11,22 @@ describe("operations command", () => {
     body.code = "000000";
     expect(JSON.parse(intent.body).code).toBe("123456");
   });
+  it("keeps a caller's key, so a carrier event retries under its own id", async () => {
+    const eventId = crypto.randomUUID();
+    const intent = createCommand("/x", { eventId }, eventId);
+    expect(intent.key).toBe(eventId);
+    const keys: string[] = [];
+    const request = async <T>(_p: string, s: z.ZodType<T>, init?: RequestInit) => {
+      const headers = (init?.headers ?? {}) as Record<string, string>;
+      keys.push(headers["Idempotency-Key"]);
+      if (keys.length === 1) throw new Error("network");
+      return s.parse({ outcome: "Recorded" });
+    };
+    await expect(runCommand(intent, schema, request, async () => {})).rejects.toThrow("network");
+    await runCommand(intent, schema, request, async () => {});
+    expect(keys).toEqual([eventId, eventId]);
+    expect(createCommand("/x", {}).key).not.toBe(eventId);
+  });
   it("returns the receipt, and keeps it when only the reload failed", async () => {
     const intent = createCommand("/x", { expectedVersion: 1 });
     let sent = 0;
