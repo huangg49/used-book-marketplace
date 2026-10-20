@@ -106,6 +106,19 @@ export class AuctionsController {
   readOrder(@Param('orderId') id: string, @Req() req: AuthenticatedRequest) {
     return this.orders.read(req.auth, this.input.uuid(id));
   }
+  @Get('me/point-orders/:orderId/delivery-quote')
+  @Roles('MEMBER')
+  deliveryQuote(
+    @Param('orderId') id: string,
+    @Query('addressId') addressId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.orders.deliveryQuote(
+      req.auth,
+      this.input.uuid(id),
+      this.input.uuid(addressId),
+    );
+  }
   @Post('point-orders/:orderId/pay')
   @Roles('MEMBER')
   @HttpCode(200)

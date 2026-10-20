@@ -46,8 +46,10 @@ export const publicAuctionSummary = z.object({
   startAt: z.string(),
   endAt: z.string(),
   pointName: z.string(),
-  // Null once the book is no longer eligible for public reads.
-  book: publicAuctionBook.nullable().optional(),
+  // ADR 0043: when Buy Now opened the 60-second window (endAt already shortened).
+  buyNowAt: z.string().nullable().optional(),
+  // The detail read returns a richer book; only the summary fields are used here.
+  book: z.unknown().optional(),
   demoOnly: z.boolean().optional(),
 });
 
@@ -128,6 +130,7 @@ export const pointOrderStates = [
   "AwaitingPayment",
   "Fulfilling",
   "ReadyForCollection",
+  "InTransit",
   "Inspection",
   "ResolutionPending",
   "ReturnPending",
@@ -135,6 +138,25 @@ export const pointOrderStates = [
   "Cancelled",
   "PaymentExpired",
 ] as const;
+// ADR 0044: delivery from the point; only the buyer receives the address.
+export const pointOrderDelivery = z.object({
+  recipientName: z.string(),
+  phone: z.string(),
+  localityCode: z.string(),
+  detail: z.string(),
+  outboundFee: z.number().int(),
+  trackingCode: z.string().nullable(),
+  dispatchedAt: z.string().nullable(),
+  deliveryDeadline: z.string().nullable(),
+  deliveredAt: z.string().nullable(),
+});
+export const deliveryQuote = z.object({
+  addressId: z.string().uuid(),
+  addressVersion: z.number().int(),
+  outboundFee: z.number().int(),
+  buyerTotal: z.number().int(),
+});
+export type DeliveryQuote = z.infer<typeof deliveryQuote>;
 export const pointOrder = z.object({
   id: z.string().uuid(),
   auctionId: z.string().uuid().nullable(),
@@ -143,7 +165,14 @@ export const pointOrder = z.object({
   role: z.enum(["Buyer", "Seller"]),
   state: z.enum(pointOrderStates),
   version: z.number().int(),
-  amounts: z.object({ bookPrice: z.number().int(), buyerTotal: z.number().int() }),
+  // Older servers had pickup only.
+  fulfillmentMethod: z.enum(["SelfCollect", "CarrierOutbound"]).default("SelfCollect"),
+  amounts: z.object({
+    bookPrice: z.number().int(),
+    outboundFee: z.number().int().default(0),
+    buyerTotal: z.number().int(),
+  }),
+  delivery: pointOrderDelivery.nullable().default(null),
   paymentDeadline: z.string().nullable(),
   paidAt: z.string().nullable(),
   // Condition check at the point (FR-T02): never an authenticity claim.

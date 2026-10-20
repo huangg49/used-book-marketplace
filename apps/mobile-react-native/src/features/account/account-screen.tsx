@@ -173,7 +173,7 @@ export function AccountScreen() {
   // Real Books on Shelf / Drafts count
   const myDrafts = useQuery({
     queryKey: ["drafts", "all-profile-count"],
-    queryFn: () => client.request("/me/listings?limit=5", draftPage),
+    queryFn: () => client.request("/me/listings?channel=Marketplace&limit=5", draftPage),
     enabled: foreground && !!ownerId,
   });
 

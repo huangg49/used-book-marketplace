@@ -67,10 +67,17 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
   },
   AuctionBoughtNow: {
     default: () => ({ title: '', body: '' }),
-    seller: (c, a) => ({
-      title: 'Sách của bạn đã được mua ngay',
-      body: `${c.title} với giá ${vnd(a.finalPrice)}. Đang chờ người mua thanh toán trước ${when(a.paymentDeadline)}.`,
-    }),
+    // ADR 0043: Buy Now opens a 60-second window; legacy rows had an Order.
+    seller: (c, a) =>
+      a.buyNowAt
+        ? {
+            title: 'Có người chọn mua ngay sách của bạn',
+            body: `${c.title} với giá ${vnd(a.currentPrice)}. Người khác còn đến ${when(a.endAt)} để trả cao hơn; sau đó người dẫn đầu thắng phiên.`,
+          }
+        : {
+            title: 'Sách của bạn đã được mua ngay',
+            body: `${c.title} với giá ${vnd(a.finalPrice)}. Đang chờ người mua thanh toán trước ${when(a.paymentDeadline)}.`,
+          },
   },
   AuctionUnsold: {
     default: () => ({ title: '', body: '' }),

@@ -25,9 +25,14 @@ export const draftContent = z.object({
   exchangeValue: z.number().int().nullable(),
   mediaIds: z.array(uuid).max(8),
 });
+// ADR 0042: Auction listings are created by the auction flow and never reach
+// the marketplace. Older servers omit the field; their listings are marketplace.
+export const listingChannel = z.enum(["Marketplace", "Auction"]);
+export type ListingChannel = z.infer<typeof listingChannel>;
 export const privateDraft = z.object({
   id: uuid,
   version: z.number().int(),
+  channel: listingChannel.default("Marketplace"),
   createdAt: z.string(),
   catalogStatus: z.enum(["Pending", "Confirmed", "Rejected"]).nullable(),
   latestDecision: z

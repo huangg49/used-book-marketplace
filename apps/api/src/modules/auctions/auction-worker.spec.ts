@@ -82,3 +82,70 @@ describe('AuctionWorker', () => {
     expect((await worker.tick()).backedOff).toBe(0);
   });
 });
+
+// ADR 0043: the close-only sweep the worker runs every few seconds.
+describe('AuctionWorker.closeDue', () => {
+  const now = new Date('2026-10-19T16:41:00Z');
+  function setup(close: (id: string) => Promise<unknown>) {
+    const filters: Record<string, unknown>[] = [];
+    const ended = [{ _id: 'broken' }, { _id: 'fine' }];
+    const auctions = {
+      find: (filter: Record<string, unknown>) => {
+        filters.push(filter);
+        const nin = (filter._id as { $nin: string[] }).$nin;
+        const rows =
+          filter.state === 'Active' &&
+          (filter.endAt as { $lte?: Date }).$lte === now
+            ? ended.filter((r) => !nin.includes(r._id))
+            : [];
+        return { toArray: async () => rows };
+      },
+    };
+    const c = { auctions };
+    const mongo = {
+      c,
+      tx: (fn: (tx: unknown) => unknown) => fn({ c }),
+    } as unknown as MongoService;
+    const bidding = {
+      close: vi.fn(close),
+    } as unknown as AuctionBiddingService;
+    const worker = new AuctionWorker(
+      mongo,
+      bidding,
+      {} as AuctionIntakesService,
+      {} as PointCollectionService,
+      {} as PointOrderCompletionService,
+      { now: async () => now } as unknown as AuctionClock,
+    );
+    return { worker, bidding, filters };
+  }
+
+  it('closes only Active auctions past endAt by server time', async () => {
+    const { worker, bidding, filters } = setup(async () => undefined);
+    expect(await worker.closeDue()).toMatchObject({
+      processed: 2,
+      failed: 0,
+      backedOff: 0,
+    });
+    expect(filters[0]).toMatchObject({
+      state: 'Active',
+      endAt: { $lte: now },
+    });
+    expect(vi.mocked(bidding.close).mock.calls).toEqual([['broken'], ['fine']]);
+  });
+
+  it('skips a stale 409 and backs off a failing close', async () => {
+    const { worker, bidding } = setup(async (id) => {
+      if (id === 'broken') throw new Error('Auction invariant: test');
+      throw new DomainError(409, 'InvalidState', 'already closed');
+    });
+    const first = await worker.closeDue();
+    expect(first).toMatchObject({ processed: 0, skipped: 1, failed: 1 });
+    expect(first.failures).toEqual([
+      { step: 'close', id: 'broken', error: 'Error: Auction invariant: test' },
+    ]);
+    const second = await worker.closeDue();
+    expect(second).toMatchObject({ skipped: 1, failed: 0, backedOff: 1 });
+    expect(vi.mocked(bidding.close).mock.calls.at(-1)).toEqual(['fine']);
+  });
+});
