@@ -1,5 +1,19 @@
 # Điểm lưu hiện tại — 20/10/2026
 
+## Bỏ giới hạn đăng nhập khi demo local — 20/10/2026
+
+- Nhánh `codex/local-demo-login-limit`, base `974a0a0`. Chủ dự án yêu cầu bỏ
+  login limit để đổi tài khoản demo. `LOGIN_RATE_LIMIT_DISABLED=true` chỉ bỏ
+  limiter scope login khi `NODE_ENV=development`; test/production và các scope
+  đăng ký/OTP/khôi phục vẫn giới hạn. Không đổi mật khẩu, quyền hay session contract.
+- Đã bật trong cấu hình riêng của máy và khởi động lại API demo, readiness 200.
+  8 yêu cầu sai mật khẩu trên runtime đều trả 401, không có 429. Không xóa counter
+  hay dữ liệu demo. Hướng dẫn bật/tắt ở ACCOUNT_AUTH; `.env.example` mặc định false.
+- PASS: 12 unit limiter, 9 auth E2E trên replica set QA riêng/database
+  `latlai_demo_login_limit_test` (gồm 8 login liên tiếp, sai mật khẩu, user disabled,
+  refresh race/replay); API typecheck/build/lint (11 cảnh báo có sẵn), contract check
+  và routes. Chưa push/PR/merge; gate READINESS giữ nguyên.
+
 ## Giao sách thắng đấu giá từ điểm (ADR 0044) — 20/10/2026
 
 - Chủ dự án mở riêng gate READINESS cho gói này (READINESS ghi ngoại lệ). Người thắng
