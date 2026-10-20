@@ -1,5 +1,39 @@
 # Điểm lưu hiện tại — 20/10/2026
 
+## Giao sách thắng đấu giá từ điểm (ADR 0044) — 20/10/2026
+
+- Chủ dự án mở riêng gate READINESS cho gói này (READINESS ghi ngoại lệ). Người thắng
+  chọn khi thanh toán: tự nhận hoặc `CarrierOutbound` tới địa chỉ đã lưu vùng
+  `HCM-DEMO-v1`; phí = phí DirectSale đang chọn (30.000đ), báo trước qua
+  `GET /me/point-orders/{id}/delivery-quote`, kiểm lại bằng `expectedOutboundFee`.
+  buyerTotal = giá + phí, giữ trong một lần thanh toán; chọn xong không đổi.
+- Sau khi chấp nhận biên bản: Staff được phân công `POST /operations/point-orders/{id}/dispatch`
+  trong giờ và trong hạn → `InTransit` (mã vận đơn, hạn giao 240 giờ, handover
+  `CarrierOutbound` không mã). TEST_OPERATOR độc lập gửi
+  `POST /operations/simulator/point-delivery-events` (key = eventId): Delivered mở 72 giờ
+  kiểm tra rồi quyết toán như cũ (người bán P − C, nền tảng C + phí); Failed/quá hạn
+  giao → `DeliveryFailed`, Admin chỉ được RequireReturn, Staff nhận lại → hoàn đủ giá +
+  phí. Quá hạn giao cho hãng = `CollectionOverdue`, hoàn tiền chỉ `NoFault`.
+- Migration `0034-auction-delivery` (point_orders/handovers/resolutions + collection
+  `point_order_deliveries`, `point_carrier_events`); OpenAPI 0.48.0. RN và web chọn
+  cách nhận + báo phí, hiện trạng thái giao/mã vận đơn; admin có nút “Giao cho hãng”
+  và lý do DeliveryFailed. Chưa có màn TEST_OPERATOR gửi sự kiện giao (dùng API).
+- Nhánh `feature/auction-delivery` (base `feature/buy-now-challenge`). PASS: contract,
+  API tsc/unit 151 (1 lỗi mạng sẵn có: test GHN gọi API thật), E2E `auctions` 61 (thêm 5
+  ca: báo phí/chọn sai, giao + quyết toán, giao lỗi trả về, quá hạn, race Delivered/Failed),
+  `wallet-migration` + `auction-listings` 5, Mongo schema 25 (cả nâng cấp), RN
+  tsc/lint/test, web tsc/oxlint/156, admin tsc/oxlint/28. Browser fixture 3009: web hiện
+  lựa chọn giao, địa chỉ, phí 30.000đ, tổng 630.000đ. RN/native/human/remote CI NOT RUN.
+  Chưa push/PR/merge. QA replica set phải bật lại sau khi Docker khởi động lại
+  (`pnpm infra:mongo:test:up`).
+- Màn mô phỏng hãng vận chuyển (nhánh `feature/auction-delivery-simulator`, base
+  `feature/auction-delivery`): `GET /operations/simulator/point-deliveries` (TEST_OPERATOR,
+  đơn InTransit, không có địa chỉ/SĐT; OpenAPI 0.49.0) và admin-web `/simulator/deliveries`
+  báo Delivered/Failed, eventId = Idempotency-Key giữ nguyên khi thử lại. Admin-web cho
+  tài khoản chỉ có TEST_OPERATOR vào khu làm việc, chỉ thấy mục Mô phỏng. PASS: API tsc,
+  E2E ADR 0044 6 ca, admin tsc/oxlint/30. Browser fixture: operator đăng nhập, thấy
+  danh sách rỗng; staff/bidder bị 403. Gửi sự kiện từ màn hình trên dữ liệu thật NOT RUN
+  vì điểm đóng cửa (05:47) nên chưa giao được đơn cho hãng.
 ## Hoàn thiện luồng Chat thương lượng, Hộp thư tin nhắn và Đơn hàng trên React Native — 20/10/2026
 
 - Nhánh `feat/rn-chat-inbox-and-order-flow`, base `c23cfd3`.
@@ -22,6 +56,32 @@
   - Mobile React Native: `tsc --noEmit` ➔ PASS (0 lỗi).
   - Linter: `expo lint` ➔ PASS (0 lỗi).
   - Vitest: 24 test suites / 157 tests ➔ PASS 100%.
+
+## Mua ngay mở cửa sổ 60 giây (ADR 0043) — 19/10/2026
+
+- Chủ dự án yêu cầu: bấm Mua ngay không kết thúc phiên ngay mà rút thời gian còn 60
+  giây để người khác trả cao hơn. ADR 0043 + sửa DEC-06/FR-AU06/POL-40 (phụ lục).
+  Mua ngay = lượt trả giá Manual cam kết tại `buyNowPrice` (bid kind `BuyNow`), vẫn
+  chỉ trước lượt đầu tiên, cùng khóa phiên; `endAt = min(endAt, buyNowAt + 60 s)`,
+  bid sau không gia hạn. Hết giờ đóng phiên bình thường (người dẫn thắng, Order +
+  24 giờ thanh toán). Phiên `BuyNowPending` cũ giữ Order 15 phút.
+- Migration `0033-buy-now-challenge` thêm `auctions.buyNowAt` (backfill null) và
+  đổi expr endAt cố định; OpenAPI 0.47.0 `PublicAuctionSummary.buyNowAt`. RN/web
+  đổi lời hộp xác nhận/biên nhận và hiện thông báo đếm ngược khi có `buyNowAt`.
+- Nhánh `feature/buy-now-challenge` (base `feature/auction-only-listings`, đã gộp `origin/main` 6d063ee).
+  PASS: contract check, API tsc, E2E `auctions` + `auction-listings` 60 (cửa sổ,
+  replay, vượt giá trong cửa sổ, bid trễ bị từ chối theo giờ server, gần hết giờ giữ
+  end, race bid đầu/Mua ngay và Auto/Mua ngay, thông báo), RN tsc/lint/auctions 10,
+  web tsc/141. Mongo suite: chỉ 4 ca nâng cấp lỗi sẵn trên main (ExchangeDisputed).
+  Hành trình tạm (không commit) trên `_test`: cửa sổ 60 giây thật, đối thủ vượt giá,
+  đóng phiên, thanh toán, nhận sách, quyết toán (người bán nhận P − 5%), không trả
+  tiền (vi phạm + ReclaimRequired), không có lượt (Unsold) — đều đúng. Browser QA
+  fixture 3009: web và RN (Expo web) hiện đếm ngược cửa sổ, cập nhật trực tiếp khi bị
+  vượt, màn thắng/thanh toán sau đóng; RN sau đóng ghi “Giá chốt” như web.
+  Order-worker chạy thêm `AuctionWorker.closeDue` mỗi 5 giây giữa các lượt quét 60
+  giây; chạy thật `dist/order-worker.js` trên fixture `_test`: phiên Mua ngay đóng
+  3,2 giây sau endAt (trước đây tới ~60 giây). Native/human/remote CI NOT RUN.
+  READINESS không đổi. Chưa push/PR/merge.
 
 ## Sách đấu giá là listing riêng (ADR 0042) — 19/10/2026
 

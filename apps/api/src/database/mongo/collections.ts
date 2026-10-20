@@ -105,6 +105,8 @@ export interface CollectionTypes {
   point_order_resolutions: D.PointOrderResolutionDoc;
   point_order_claims: D.PointOrderClaimDoc;
   point_returns: D.PointReturnDoc;
+  point_order_deliveries: D.PointOrderDeliveryDoc;
+  point_carrier_events: D.PointCarrierEventDoc;
   member_violations: D.MemberViolationDoc;
   price_references: D.PriceReferenceDoc;
   price_suggestions: D.PriceSuggestionDoc;
@@ -278,6 +280,8 @@ const NAMES: CollectionName[] = [
   'point_order_resolutions',
   'point_order_claims',
   'point_returns',
+  'point_order_deliveries',
+  'point_carrier_events',
   'member_violations',
   'exchanges',
   'exchange_messages',

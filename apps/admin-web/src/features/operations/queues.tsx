@@ -17,7 +17,11 @@ import {
   type CollectionItem,
   type Intake,
 } from "./contracts";
-import { CollectionHandover, CollectionReturn } from "./collection-actions";
+import {
+  CollectionDispatch,
+  CollectionHandover,
+  CollectionReturn,
+} from "./collection-actions";
 import {
   IntakeEvidenceDecision,
   IntakeInspect,
@@ -137,6 +141,14 @@ function IntakeQueueContent({ userId }: { userId: string }) {
 
 // N4-03: handover with the recipient's code, or a return check.
 function collectionAction(item: CollectionItem): Row["action"] {
+  if (
+    item.state === "ReadyForCollection" &&
+    item.fulfillmentMethod === "CarrierOutbound"
+  )
+    return {
+      label: "Giao cho hãng",
+      render: (context) => <CollectionDispatch item={item} {...context} />,
+    };
   if (item.state === "ReadyForCollection")
     return {
       label: "Giao sách",
@@ -176,11 +188,15 @@ function CollectionQueueContent() {
         meta: [
           item.state === "ReturnPending"
             ? `Hạn trả: ${dateText(item.returnDeadline)}`
-            : `Hạn đến lấy: ${dateText(item.collectionDeadline)}`,
+            : item.fulfillmentMethod === "CarrierOutbound"
+              ? `Hạn giao cho hãng: ${dateText(item.collectionDeadline)}`
+              : `Hạn đến lấy: ${dateText(item.collectionDeadline)}`,
           ...(item.shelfCode ? [`Kệ ${item.shelfCode}`] : []),
         ],
         title: item.title,
-        detail: `Người nhận: ${item.recipientName}`,
+        detail: item.delivery
+          ? `Giao tận nơi: ${item.delivery.recipientName} · ${item.delivery.phone} · ${item.delivery.detail}`
+          : `Người nhận: ${item.recipientName}`,
         action: collectionAction(item),
       }))}
       empty={{

@@ -54,6 +54,8 @@ const ALLOWED: Record<OpenReason, Partial<Record<Decision, Fault[]>>> = {
   },
   InspectionClaim: { DismissClaim: [null], RequireReturn: [null] },
   ReturnOverdue: { DismissClaim: [null], RequireReturn: [null] },
+  // ADR 0044: the carrier brings an undelivered book back to the point.
+  DeliveryFailed: { RequireReturn: [null] },
 };
 
 // Independent Admin decision on a ViaPoint Order in ResolutionPending. While
@@ -163,16 +165,26 @@ export class PointOrderResolutionService {
         if (o.version !== body.expectedVersion) throw conflict();
         if (o.state !== 'ResolutionPending') throw invalidState();
         const fault: Fault = body.fault ?? null;
-        const faults = ALLOWED[o.resolutionReason!][body.decision];
+        let faults = ALLOWED[o.resolutionReason!][body.decision];
         if (!faults)
           invalidField(
             'decision',
             o.collectedAt
               ? 'Sách đã giao cho người mua: chỉ có thể bác khiếu nại hoặc yêu cầu trả sách về điểm.'
-              : o.resolutionReason === 'RecipientDecisionOverdue'
-                ? 'Người mua không phản hồi biên bản: chỉ có thể hủy an toàn và hoàn tiền.'
-                : 'Sách còn ở điểm: chỉ có thể hoàn tiền hoặc mở lại thời hạn nhận.',
+              : o.resolutionReason === 'DeliveryFailed'
+                ? 'Giao hàng không thành công: chỉ có thể yêu cầu hãng trả sách về điểm.'
+                : o.resolutionReason === 'RecipientDecisionOverdue'
+                  ? 'Người mua không phản hồi biên bản: chỉ có thể hủy an toàn và hoàn tiền.'
+                  : 'Sách còn ở điểm: chỉ có thể hoàn tiền hoặc mở lại thời hạn nhận.',
           );
+        // ADR 0044: a delivery the point did not hand to the carrier in time
+        // is never the buyer's default.
+        if (
+          o.fulfillmentMethod === 'CarrierOutbound' &&
+          o.resolutionReason === 'CollectionOverdue' &&
+          body.decision === 'RefundBuyer'
+        )
+          faults = ['NoFault'];
         if (!faults!.includes(fault))
           invalidField(
             'fault',

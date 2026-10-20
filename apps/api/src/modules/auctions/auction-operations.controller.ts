@@ -80,6 +80,47 @@ export class AuctionOperationsController {
     );
   }
 
+  @Post('point-orders/:orderId/dispatch')
+  @Roles('STAFF')
+  @HttpCode(200)
+  dispatch(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.collection.dispatch(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('DispatchPointOrder', body),
+      ),
+      res,
+    );
+  }
+  // ADR 0044: deliveries awaiting a simulated carrier outcome.
+  @Get('simulator/point-deliveries')
+  @Roles('TEST_OPERATOR')
+  simulatedDeliveries(@Req() req: AuthenticatedRequest) {
+    return this.collection.simulatedDeliveries(req.auth);
+  }
+  // ADR 0044: simulated carrier outcome of a delivered auction Order.
+  @Post('simulator/point-delivery-events')
+  @Roles('TEST_OPERATOR')
+  @HttpCode(200)
+  pointDelivery(
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.collection.recordDelivery(
+        commandContext(this.input, req, res),
+        this.input.body('SimulatedPointDeliveryEvent', body),
+      ),
+      res,
+    );
+  }
   @Post('point-orders/:orderId/receive-return')
   @Roles('STAFF')
   @HttpCode(200)

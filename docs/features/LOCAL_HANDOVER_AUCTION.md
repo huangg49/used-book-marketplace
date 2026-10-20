@@ -17,7 +17,7 @@ thời hạn và quy tắc biên dưới đây là baseline triển khai do nhó
 | DEC-03 | Hai điểm HCM-DEMO-01 và HCM-DEMO-02 do Admin quản lý; Staff được phân công theo điểm. Không có đối tác, chia doanh thu hoặc chuyển sách giữa hai điểm. |
 | DEC-04 | Một giao dịch ViaPoint dùng đúng một điểm chung. SelfDropoff/CarrierInbound và SelfCollect/CarrierOutbound là các lựa chọn độc lập của từng người. |
 | DEC-05 | Kiểm tra tình trạng/đối chiếu mô tả có biên bản; không chứng nhận chính hãng, quyền sở hữu hoặc tính hợp pháp của bản in bằng một lần duyệt ảnh. |
-| DEC-06 | Đấu giá là chức năng phụ có phạm vi bắt buộc tối thiểu ở bản 1.1: một cuốn/phiên, giá mua ngay trước bid đầu, Auto có trần, hết phiên tạo một Order. |
+| DEC-06 | Đấu giá là chức năng phụ có phạm vi bắt buộc tối thiểu ở bản 1.1: một cuốn/phiên, giá mua ngay trước bid đầu (mở 60 giây cho người khác trả cao hơn, ADR 0043), Auto có trần, hết phiên tạo một Order. |
 | DEC-07 | Đấu giá dùng listing riêng kênh Auction do luồng đấu giá tạo (mode Sale, salePrice là giá trị khai báo), không lấy listing của sàn mua/đổi; listing Auction không lên kệ, không mua/đổi/báo giá ([ADR 0042](../adr/0042-auction-only-listings.md), 19/10/2026). Sách phải được điểm nhận và đạt kiểm tra trước khi mở phiên. |
 | DEC-08 | Giữ cọc Exchange 100% giá trị sách dự kiến nhận cho cả hai phương thức ở bản đầu. Điểm giữ sách không tự miễn cọc; thay đổi tỷ lệ là policy tương lai. |
 | DEC-09 | Không tiền thật/carrier thật. Có thể diễn tập tiếp nhận sách thật tại bàn được phép dùng; tọa độ/địa chỉ mô phỏng không được trình bày như cơ sở đã hoạt động. |
@@ -48,7 +48,7 @@ phương thức, payer và phí khi giao kết; cấu hình mới không đổi 
 | POL-37 | collection_code | Mã ngẫu nhiên 6 số, hiệu lực 10 phút, gắn người nhận + sách + điểm; 5 lần sai/15 phút/handover, không ghi raw mã vào log |
 | POL-38 | auction_duration | 24 giờ từ khi mở; không lên lịch tương lai, không gia hạn phút cuối, giờ server quyết định |
 | POL-39 | auction_prices | 10.000–1.000.000đ; bước giá 10.000đ hoặc 50.000đ do Seller chọn trước mở; start, bid, max và buy-now cùng lưới `start + n × step` |
-| POL-40 | winner_payment | 24 giờ; Order mua ngay trong auction giữ hạn checkout 15 phút POL-01; không tự chuyển người đứng thứ hai |
+| POL-40 | winner_payment | 24 giờ (cả khi thắng nhờ BuyNow sau cửa sổ 60 giây, ADR 0043); Order BuyNowPending cũ giữ hạn 15 phút POL-01; không tự chuyển người đứng thứ hai |
 | POL-41 | auction_limits | Tối đa 2 intake/auction chưa kết thúc của Seller; 5 phiên người dùng đang có cam kết bid chưa giải phóng; 30 lệnh bid/Auto mỗi phút/tài khoản |
 | POL-42 | platform_incident_fund | Số dư mở đầu demo 2.000.000đ, có journal nguồn vốn mô phỏng. Không tự nạp thêm khi hết; chỉ chi theo quyết định độc lập và nguồn còn lại. |
 
@@ -284,10 +284,12 @@ Hành động tắt không làm giảm giá, không hồi sinh bidder đã bị 
 thích tắt Auto không hủy nghĩa vụ đang dẫn. Retry cùng key không đổi thứ tự ưu tiên.
 
 FR-AU06: BuyNow chỉ trước bid hợp lệ đầu tiên. Request BuyNow và bid cùng đến được
-phân xử atomically; đúng một bên thắng. BuyNow → CheckoutPending, tắt mọi bid, tạo
-một Order giá buyNow và chuyển cam kết độc quyền sang Order. Hết 15 phút không trả
-→ PaymentExpired, trả sách về chủ qua điểm; không tự mở lại phiên cũ. Seller đã
-cam kết khi mở auction nên không cần bước Seller xác nhận lại Order này.
+phân xử atomically; đúng một bên thắng. Từ 19/10/2026 ([ADR 0043](../adr/0043-buy-now-challenge-window.md)):
+BuyNow là cam kết trả đúng giá buyNow, người bấm dẫn đầu, tắt BuyNow và phiên kết
+thúc tại min(endAt gốc, lúc BuyNow + 60 giây). Trong 60 giây người khác vẫn trả giá
+từ buyNow + bước (cả Auto); không gia hạn thêm. Hết giờ đóng phiên như FR-AU07:
+người dẫn thắng theo currentPrice, Order hạn 24 giờ. Phiên BuyNowPending cũ giữ Order
+15 phút. Seller đã cam kết khi mở auction nên không xác nhận lại Order.
 
 FR-AU07: khi serverNow>=endAt từ chối bid dù worker chưa chạy. Close idempotent:
 không bid → Unsold; có bidder hợp lệ → AwaitingWinnerPayment và một Order với P
@@ -313,6 +315,18 @@ phải kiểm tra phiên/version dưới khóa. Outbox/SSE chỉ là kênh thôn
 không dừng Auto server hoặc thay người thắng. Public thấy giá, thời điểm, số bidder
 ẩn danh; participant thấy cam kết của mình; chỉ bộ phận điều tra độc lập được đọc
 max bí mật theo quyền có audit. Tài khoản người bán không được xem trần của đối thủ.
+
+FR-AU11 ([ADR 0044](../adr/0044-auction-delivery-from-point.md), 20/10/2026): khi thanh
+toán, người thắng chọn SelfCollect hoặc CarrierOutbound tới một địa chỉ đã lưu trong
+vùng `HCM-DEMO-v1`. Phí giao = phí DirectSale đang chọn, được báo trước và kiểm lại
+khi trả (`expectedOutboundFee`); buyerTotal = giá sách + phí, chọn xong không đổi.
+Sau khi chấp nhận biên bản, Staff được phân công giao sách cho hãng vận chuyển mô
+phỏng trong giờ điểm và trong hạn POL-33 (`InTransit`, hạn giao 240 giờ). Sự kiện
+Delivered (TEST_OPERATOR độc lập, có chữ ký) mở POL-08 72 giờ; Failed hoặc quá hạn
+mở `DeliveryFailed`, Admin độc lập chỉ được yêu cầu trả sách về điểm; Staff nhận lại
+thì hoàn toàn bộ buyerTotal và sách vào reclaim. Quá hạn giao cho hãng là
+`CollectionOverdue` không lỗi người mua. Quyết toán giữ nguyên (người bán P − C, nền
+tảng C + phí giao).
 
 ## 7. Ngoại lệ và điều kiện kết thúc
 
