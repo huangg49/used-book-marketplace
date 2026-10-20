@@ -970,7 +970,8 @@ export interface PointOrderDoc extends Lockable {
   buyerId: string;
   sellerId: string;
   pointId: string;
-  fulfillmentMethod: 'SelfCollect';
+  // SelfCollect until a CarrierOutbound payment (ADR 0044).
+  fulfillmentMethod: 'SelfCollect' | 'CarrierOutbound';
   bookPrice: number;
   outboundFee: number;
   buyerTotal: number;
@@ -996,6 +997,7 @@ export interface PointOrderDoc extends Lockable {
     | 'CollectionOverdue'
     | 'InspectionClaim'
     | 'ReturnOverdue'
+    | 'DeliveryFailed'
     | null;
   resolutionNote: string | null;
   resolutionOpenedAt: Date | null;
@@ -1004,6 +1006,38 @@ export interface PointOrderDoc extends Lockable {
   // Return to the point after an accepted claim (migration 0012).
   returnDeadline: Date | null;
   returnedAt: Date | null;
+  // Hand-off to the simulated carrier and its deadline (migration 0034).
+  dispatchedAt: Date | null;
+  deliveryDeadline: Date | null;
+  trackingCode: string | null;
+}
+// ADR 0044: the delivery choice made at payment (append-only, _id = Order id).
+export interface PointOrderDeliveryDoc {
+  _id: string;
+  buyerId: string;
+  addressId: string;
+  addressVersion: number;
+  recipientName: string;
+  phone: string;
+  serviceAreaCode: string;
+  localityCode: string;
+  detail: string;
+  policyCode: string;
+  outboundFee: number;
+  chosenAt: Date;
+  receiptId: string;
+}
+// Signed simulated carrier outcome of a delivered auction Order.
+export interface PointCarrierEventDoc {
+  _id: string;
+  orderId: string;
+  trackingCode: string;
+  outcome: 'Delivered' | 'Failed';
+  occurredAt: Date;
+  receivedAt: Date;
+  payloadHash: string;
+  signature: string;
+  receiptId: string;
 }
 export interface PointOrderResolutionDoc {
   _id: string;
@@ -1023,6 +1057,7 @@ export type PointOrderState =
   | 'AwaitingPayment'
   | 'Fulfilling'
   | 'ReadyForCollection'
+  | 'InTransit'
   | 'Inspection'
   | 'ResolutionPending'
   | 'ReturnPending'
@@ -1090,8 +1125,9 @@ export interface PointHandoverDoc {
   pointId: string;
   recipientId: string;
   staffId: string;
-  codeId: string;
-  method: 'SelfCollect';
+  // Null for the hand-off to the carrier (ADR 0044).
+  codeId: string | null;
+  method: 'SelfCollect' | 'CarrierOutbound';
   handedOverAt: Date;
   receiptId: string;
 }

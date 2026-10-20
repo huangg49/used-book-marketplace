@@ -316,6 +316,18 @@ không dừng Auto server hoặc thay người thắng. Public thấy giá, th�
 ẩn danh; participant thấy cam kết của mình; chỉ bộ phận điều tra độc lập được đọc
 max bí mật theo quyền có audit. Tài khoản người bán không được xem trần của đối thủ.
 
+FR-AU11 ([ADR 0044](../adr/0044-auction-delivery-from-point.md), 20/10/2026): khi thanh
+toán, người thắng chọn SelfCollect hoặc CarrierOutbound tới một địa chỉ đã lưu trong
+vùng `HCM-DEMO-v1`. Phí giao = phí DirectSale đang chọn, được báo trước và kiểm lại
+khi trả (`expectedOutboundFee`); buyerTotal = giá sách + phí, chọn xong không đổi.
+Sau khi chấp nhận biên bản, Staff được phân công giao sách cho hãng vận chuyển mô
+phỏng trong giờ điểm và trong hạn POL-33 (`InTransit`, hạn giao 240 giờ). Sự kiện
+Delivered (TEST_OPERATOR độc lập, có chữ ký) mở POL-08 72 giờ; Failed hoặc quá hạn
+mở `DeliveryFailed`, Admin độc lập chỉ được yêu cầu trả sách về điểm; Staff nhận lại
+thì hoàn toàn bộ buyerTotal và sách vào reclaim. Quá hạn giao cho hãng là
+`CollectionOverdue` không lỗi người mua. Quyết toán giữ nguyên (người bán P − C, nền
+tảng C + phí giao).
+
 ## 7. Ngoại lệ và điều kiện kết thúc
 
 | Tình huống | Hành vi bắt buộc |

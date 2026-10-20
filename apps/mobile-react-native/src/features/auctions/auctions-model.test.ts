@@ -97,6 +97,18 @@ describe("auction commands", () => {
 describe("point order commands", () => {
   it("sends only the fields each step takes", () => {
     expect(JSON.parse(createOrderCommand("o1", "pay", 1, "k").body)).toEqual({ expectedVersion: 1 });
+    // ADR 0044: delivery carries the address version and the fee the buyer saw.
+    expect(
+      JSON.parse(
+        createOrderCommand("o1", "pay", 1, "k", undefined, { addressId: "a1", addressVersion: 2, fee: 30000 }).body,
+      ),
+    ).toEqual({
+      expectedVersion: 1,
+      fulfillmentMethod: "CarrierOutbound",
+      destinationAddressId: "a1",
+      expectedDestinationAddressVersion: 2,
+      expectedOutboundFee: 30000,
+    });
     expect(JSON.parse(createOrderCommand("o1", "reject-report", 2, "k", "Gáy nứt không nêu").body)).toEqual({
       expectedVersion: 2,
       reason: "Gáy nứt không nêu",

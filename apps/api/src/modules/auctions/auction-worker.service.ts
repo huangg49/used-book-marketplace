@@ -42,6 +42,7 @@ export class AuctionWorker {
       decisions,
       collections,
       returns,
+      deliveries,
       settlements,
       now,
     } = await this.mongo.tx(async (tx) => {
@@ -138,6 +139,17 @@ export class AuctionWorker {
             { limit: 100, sort: { returnDeadline: 1, _id: 1 } },
           )
           .toArray(),
+        // ADR 0044: delivery Orders the carrier never reported in time.
+        deliveries: await tx.c.point_orders
+          .find(
+            {
+              ...ready,
+              state: 'InTransit',
+              deliveryDeadline: { $lte: now },
+            },
+            { limit: 100, sort: { deliveryDeadline: 1, _id: 1 } },
+          )
+          .toArray(),
         // Collected Orders whose inspection window passed without a claim.
         settlements: await tx.c.point_orders
           .find(
@@ -164,7 +176,7 @@ export class AuctionWorker {
       await attempt('dropoffExpiry', i._id, () =>
         this.intakes.expireDropoff(i._id),
       );
-    for (const o of [...decisions, ...collections, ...returns])
+    for (const o of [...decisions, ...collections, ...returns, ...deliveries])
       await attempt('pointOrderDeadline', o._id, () =>
         this.collection.openResolution(o._id, o.version),
       );
@@ -177,6 +189,7 @@ export class AuctionWorker {
       ...decisions.map((o) => o.acceptanceDeadline!),
       ...collections.map((o) => o.collectionDeadline!),
       ...returns.map((o) => o.returnDeadline!),
+      ...deliveries.map((o) => o.deliveryDeadline!),
       ...settlements.map((o) => o.inspectionDeadline!),
     ].sort((x, y) => x.getTime() - y.getTime())[0];
     return {

@@ -79,7 +79,12 @@ export function PointOrderSteps({ order, onChanged }: { order: PointOrder; onCha
     <div className={styles.bidPanel}>
       {header}
       {order.state === 'Fulfilling' && <ReportDecision order={order} step={step} locked={locked} />}
-      {order.state === 'ReadyForCollection' && <CollectionCode order={order} step={step} locked={locked} />}
+      {(order.state === 'InTransit' || (order.state === 'ReadyForCollection' && order.fulfillmentMethod === 'CarrierOutbound')) && (
+        <DeliveryNote order={order} />
+      )}
+      {order.state === 'ReadyForCollection' && order.fulfillmentMethod === 'SelfCollect' && (
+        <CollectionCode order={order} step={step} locked={locked} />
+      )}
       {order.state === 'Inspection' && <InspectionClaim order={order} step={step} locked={locked} />}
       {recovery}
     </div>
@@ -87,17 +92,26 @@ export function PointOrderSteps({ order, onChanged }: { order: PointOrder; onCha
 }
 
 function summary(o: PointOrder) {
+  const delivered = o.fulfillmentMethod === 'CarrierOutbound'
   switch (o.state) {
     case 'Fulfilling':
       return `Sách đã đạt kiểm tra tại ${o.pointName}. Hãy xem biên bản và trả lời trước ${when(o.acceptanceDeadline)}.`
     case 'ReadyForCollection':
-      return `Sách chờ bạn tại ${o.pointName} đến ${when(o.collectionDeadline)}, trong giờ ${POINT_HOURS}.`
+      return delivered
+        ? `${o.pointName} sẽ giao sách cho hãng vận chuyển trước ${when(o.collectionDeadline)}.`
+        : `Sách chờ bạn tại ${o.pointName} đến ${when(o.collectionDeadline)}, trong giờ ${POINT_HOURS}.`
+    case 'InTransit':
+      return `Sách đang được giao tới địa chỉ của bạn, chậm nhất ${when(o.delivery?.deliveryDeadline ?? null)}.`
     case 'Inspection':
-      return `Bạn đã nhận sách. Nếu sách khác biên bản, hãy báo trước ${when(o.inspectionDeadline)}.`
+      return delivered
+        ? `Sách đã giao tới bạn lúc ${when(o.delivery?.deliveredAt ?? null)}. Nếu sách khác biên bản, hãy báo trước ${when(o.inspectionDeadline)}.`
+        : `Bạn đã nhận sách. Nếu sách khác biên bản, hãy báo trước ${when(o.inspectionDeadline)}.`
     case 'ResolutionPending':
       return 'Quản trị viên đang xem xét đơn này. Tiền vẫn được giữ cho đơn cho tới khi có quyết định; theo dõi thông báo.'
     case 'ReturnPending':
-      return `Hãy mang sách trả về ${o.pointName} trước ${when(o.returnDeadline)}, trong giờ ${POINT_HOURS}. Tiền được hoàn sau khi nhân viên đối chiếu sách.`
+      return delivered && !o.delivery?.deliveredAt
+        ? `Giao hàng không thành công. Hãng đang trả sách về ${o.pointName}; tiền sách và phí giao được hoàn sau khi nhân viên đối chiếu sách.`
+        : `Hãy mang sách trả về ${o.pointName} trước ${when(o.returnDeadline)}, trong giờ ${POINT_HOURS}. Tiền được hoàn sau khi nhân viên đối chiếu sách.`
     case 'Completed':
       return 'Quy trình nhận sách đã hoàn tất. Cảm ơn bạn đã cho cuốn sách một chương mới.'
     default:
@@ -163,7 +177,9 @@ function ReportDecision({ order, step, locked }: StepProps) {
       <ConfirmDialog
         isOpen={confirm === 'accept'} onClose={() => !step.busy && setConfirm(null)}
         title="Đồng ý biên bản kiểm tra?"
-        description={`Sau khi đồng ý, bạn có 72 giờ để lấy mã và nhận sách tại ${order.pointName} trong giờ ${POINT_HOURS}. Đồng ý biên bản không làm mất quyền báo vấn đề sau khi nhận sách.`}
+        description={order.fulfillmentMethod === 'CarrierOutbound'
+          ? `Sau khi đồng ý, ${order.pointName} giao sách cho hãng vận chuyển trong 72 giờ. Đồng ý biên bản không làm mất quyền báo vấn đề sau khi nhận sách.`
+          : `Sau khi đồng ý, bạn có 72 giờ để lấy mã và nhận sách tại ${order.pointName} trong giờ ${POINT_HOURS}. Đồng ý biên bản không làm mất quyền báo vấn đề sau khi nhận sách.`}
         confirmText="Đồng ý" onConfirm={() => void send('accept')} isBusy={step.busy}
       />
       <ConfirmDialog
@@ -175,6 +191,24 @@ function ReportDecision({ order, step, locked }: StepProps) {
         <p className={styles.fieldHint}>{reason.trim()}</p>
       </ConfirmDialog>
     </>
+  )
+}
+
+// ADR 0044: the point hands the book to the simulated carrier, which
+// delivers to the buyer's address; inspection starts at delivery.
+function DeliveryNote({ order }: { order: PointOrder }) {
+  const ids = useId()
+  const d = order.delivery
+  return (
+    <section className={styles.notice} aria-labelledby={`${ids}-delivery`}>
+      <strong id={`${ids}-delivery`}>Giao tận nơi</strong>
+      {d && <p>{d.recipientName} · {d.phone} · {d.detail}</p>}
+      <p>
+        {d?.trackingCode
+          ? `Mã vận đơn ${d.trackingCode} · đã giao cho hãng lúc ${when(d.dispatchedAt)}.`
+          : `Nhân viên ${order.pointName} sẽ đóng gói và giao sách cho hãng vận chuyển.`}
+      </p>
+    </section>
   )
 }
 

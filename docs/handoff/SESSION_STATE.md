@@ -1,5 +1,39 @@
 # Điểm lưu hiện tại — 20/10/2026
 
+## Giao sách thắng đấu giá từ điểm (ADR 0044) — 20/10/2026
+
+- Chủ dự án mở riêng gate READINESS cho gói này (READINESS ghi ngoại lệ). Người thắng
+  chọn khi thanh toán: tự nhận hoặc `CarrierOutbound` tới địa chỉ đã lưu vùng
+  `HCM-DEMO-v1`; phí = phí DirectSale đang chọn (30.000đ), báo trước qua
+  `GET /me/point-orders/{id}/delivery-quote`, kiểm lại bằng `expectedOutboundFee`.
+  buyerTotal = giá + phí, giữ trong một lần thanh toán; chọn xong không đổi.
+- Sau khi chấp nhận biên bản: Staff được phân công `POST /operations/point-orders/{id}/dispatch`
+  trong giờ và trong hạn → `InTransit` (mã vận đơn, hạn giao 240 giờ, handover
+  `CarrierOutbound` không mã). TEST_OPERATOR độc lập gửi
+  `POST /operations/simulator/point-delivery-events` (key = eventId): Delivered mở 72 giờ
+  kiểm tra rồi quyết toán như cũ (người bán P − C, nền tảng C + phí); Failed/quá hạn
+  giao → `DeliveryFailed`, Admin chỉ được RequireReturn, Staff nhận lại → hoàn đủ giá +
+  phí. Quá hạn giao cho hãng = `CollectionOverdue`, hoàn tiền chỉ `NoFault`.
+- Migration `0034-auction-delivery` (point_orders/handovers/resolutions + collection
+  `point_order_deliveries`, `point_carrier_events`); OpenAPI 0.48.0. RN và web chọn
+  cách nhận + báo phí, hiện trạng thái giao/mã vận đơn; admin có nút “Giao cho hãng”
+  và lý do DeliveryFailed. Chưa có màn TEST_OPERATOR gửi sự kiện giao (dùng API).
+- Nhánh `feature/auction-delivery` (base `feature/buy-now-challenge`). PASS: contract,
+  API tsc/unit 151 (1 lỗi mạng sẵn có: test GHN gọi API thật), E2E `auctions` 61 (thêm 5
+  ca: báo phí/chọn sai, giao + quyết toán, giao lỗi trả về, quá hạn, race Delivered/Failed),
+  `wallet-migration` + `auction-listings` 5, Mongo schema 25 (cả nâng cấp), RN
+  tsc/lint/test, web tsc/oxlint/156, admin tsc/oxlint/28. Browser fixture 3009: web hiện
+  lựa chọn giao, địa chỉ, phí 30.000đ, tổng 630.000đ. RN/native/human/remote CI NOT RUN.
+  Chưa push/PR/merge. QA replica set phải bật lại sau khi Docker khởi động lại
+  (`pnpm infra:mongo:test:up`).
+- Màn mô phỏng hãng vận chuyển (nhánh `feature/auction-delivery-simulator`, base
+  `feature/auction-delivery`): `GET /operations/simulator/point-deliveries` (TEST_OPERATOR,
+  đơn InTransit, không có địa chỉ/SĐT; OpenAPI 0.49.0) và admin-web `/simulator/deliveries`
+  báo Delivered/Failed, eventId = Idempotency-Key giữ nguyên khi thử lại. Admin-web cho
+  tài khoản chỉ có TEST_OPERATOR vào khu làm việc, chỉ thấy mục Mô phỏng. PASS: API tsc,
+  E2E ADR 0044 6 ca, admin tsc/oxlint/30. Browser fixture: operator đăng nhập, thấy
+  danh sách rỗng; staff/bidder bị 403. Gửi sự kiện từ màn hình trên dữ liệu thật NOT RUN
+  vì điểm đóng cửa (05:47) nên chưa giao được đơn cho hãng.
 ## Hoàn thiện luồng Chat thương lượng, Hộp thư tin nhắn và Đơn hàng trên React Native — 20/10/2026
 
 - Nhánh `feat/rn-chat-inbox-and-order-flow`, base `c23cfd3`.
