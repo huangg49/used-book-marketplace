@@ -3,16 +3,20 @@ import {
   ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
+  TextInput,
   View,
 } from "react-native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
 import {
   AppText,
   AppTextInput,
+  Button,
+  ConfirmDialog,
   Icon,
   Notice,
   colors,
@@ -23,6 +27,8 @@ import {
 import { useSession } from "../../../core/session/session-provider";
 import { apiBaseUrl } from "../../../core/api/api-base-url";
 import {
+  changeConversationTerms,
+  createSellerOrder,
   eventSummaryText,
   formatDateTimeVi,
   formatMessageTime,
@@ -34,17 +40,31 @@ import {
   type PurchaseConversation,
   type PurchaseMessage,
 } from "../contracts";
+import { orderReceiptSchema } from "../../orders/contracts";
+import type { Listing } from "../../shelf/contracts";
+
+function getListingPrice(l?: Listing | null): number {
+  if (!l) return 50000;
+  if ("salePrice" in l && typeof l.salePrice === "number") return l.salePrice;
+  if ("exchangeValue" in l && typeof l.exchangeValue === "number") return l.exchangeValue;
+  return 50000;
+}
 
 interface ChatMessagesPanelProps {
   room: PurchaseConversation;
+  listing?: Listing | null;
+  onRefresh?: () => void;
   onRefreshEvents?: () => void;
 }
 
 export function ChatMessagesPanel({
   room,
+  listing,
+  onRefresh,
   onRefreshEvents,
 }: ChatMessagesPanelProps) {
   const { client, state } = useSession();
+  const queryClient = useQueryClient();
   const currentUserId = state.status === "authenticated" ? state.user.id : "";
   const other = room.buyer.id === currentUserId ? room.seller : room.buyer;
   const isBuyer = room.buyer.id === currentUserId;
@@ -59,13 +79,129 @@ export function ChatMessagesPanel({
     "connecting" | "online" | "offline"
   >("connecting");
 
+  // State for Price proposals and Order actions
+  const [termsBusy, setTermsBusy] = useState(false);
+  const [termsActionError, setTermsActionError] = useState<string | null>(null);
+  const [proposeModalOpen, setProposeModalOpen] = useState(false);
+  const [proposePriceInput, setProposePriceInput] = useState<string>(
+    String(room.terms?.agreedPrice ?? getListingPrice(listing))
+  );
+  const [confirmOrderDialogOpen, setConfirmOrderDialogOpen] = useState(false);
+
   const socketRef = useRef<Socket | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const onRefreshEventsRef = useRef(onRefreshEvents);
+  const onRefreshRef = useRef(onRefresh);
 
   useEffect(() => {
     onRefreshEventsRef.current = onRefreshEvents;
-  }, [onRefreshEvents]);
+    onRefreshRef.current = onRefresh;
+  }, [onRefreshEvents, onRefresh]);
+
+  const sendAutoChatMessage = (text: string) => {
+    const socket = socketRef.current;
+    if (socket && connectionStatus === "online") {
+      const payload = {
+        messageId: crypto.randomUUID(),
+        conversationId: room.id,
+        body: text,
+      };
+      socket.emit("purchase:send", payload);
+    }
+  };
+
+  const handleRespondProposal = async (proposalId: string, accept: boolean) => {
+    if (termsBusy) return;
+    setTermsBusy(true);
+    setTermsActionError(null);
+    try {
+      await changeConversationTerms(client, room.id, {
+        expectedVersion: room.version,
+        proposalId,
+        accept,
+      });
+      sendAutoChatMessage(
+        accept
+          ? `Tôi đã đồng ý mức giá đề xuất ${room.terms?.pendingProposal?.amount?.toLocaleString("vi-VN")} ₫.`
+          : `Tôi chưa thể đồng ý với mức giá đề xuất này.`
+      );
+      if (onRefreshRef.current) onRefreshRef.current();
+      if (onRefreshEventsRef.current) onRefreshEventsRef.current();
+    } catch (err: any) {
+      setTermsActionError(err?.message ?? "Không thể phản hồi đề xuất giá lúc này.");
+    } finally {
+      setTermsBusy(false);
+    }
+  };
+
+  const handleProposePrice = async (amount: number) => {
+    if (termsBusy || amount <= 0) return;
+    setTermsBusy(true);
+    setTermsActionError(null);
+    try {
+      await changeConversationTerms(client, room.id, {
+        expectedVersion: room.version,
+        kind: "Price",
+        amount,
+      });
+      sendAutoChatMessage(
+        `[Đề xuất đổi giá] Mình mong muốn mua/bán sách với giá ${amount.toLocaleString("vi-VN")} ₫. Bạn xem giúp mình nhé!`
+      );
+      setProposeModalOpen(false);
+      if (onRefreshRef.current) onRefreshRef.current();
+      if (onRefreshEventsRef.current) onRefreshEventsRef.current();
+    } catch (err: any) {
+      setTermsActionError(err?.message ?? "Không thể gửi đề xuất đổi giá lúc này.");
+    } finally {
+      setTermsBusy(false);
+    }
+  };
+
+  const handleConfirmCreateOrder = async (agreedPrice: number) => {
+    if (termsBusy) return;
+    setTermsBusy(true);
+    setTermsActionError(null);
+    try {
+      await createSellerOrder(client, {
+        conversationId: room.id,
+        expectedVersion: room.version,
+        agreedBookPrice: agreedPrice,
+      });
+      sendAutoChatMessage(
+        `Đơn hàng đã được tạo theo giá chốt ${agreedPrice.toLocaleString("vi-VN")} ₫. Bạn có thể bấm thanh toán ngay!`
+      );
+      setConfirmOrderDialogOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ["orders"] });
+      if (onRefreshRef.current) onRefreshRef.current();
+      if (onRefreshEventsRef.current) onRefreshEventsRef.current();
+    } catch (err: any) {
+      setTermsActionError(err?.message ?? "Chưa tạo được đơn hàng lúc này.");
+    } finally {
+      setTermsBusy(false);
+    }
+  };
+
+  const handlePayOrder = async () => {
+    if (!room.orderId || termsBusy) return;
+    setTermsBusy(true);
+    setTermsActionError(null);
+    try {
+      await client.request(`/orders/${room.orderId}/pay`, orderReceiptSchema, {
+        method: "POST",
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify({ expectedVersion: 1 }),
+      });
+      sendAutoChatMessage("Tôi đã hoàn tất thanh toán đơn hàng qua Ví!");
+      void queryClient.invalidateQueries({ queryKey: ["orders"] });
+      void queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      if (onRefreshRef.current) onRefreshRef.current();
+      if (onRefreshEventsRef.current) onRefreshEventsRef.current();
+    } catch (err: any) {
+      setTermsActionError(err?.message ?? "Chưa thanh toán được đơn hàng. Kiểm tra số dư ví của bạn.");
+    } finally {
+      setTermsBusy(false);
+    }
+  };
 
   // 1. Fetch message history with polling fallback
   const historyQuery = useQuery({
@@ -246,6 +382,132 @@ export function ChatMessagesPanel({
         </View>
       </View>
 
+      {/* 1.1 Thông báo lỗi nếu có */}
+      {termsActionError && (
+        <View style={{ marginHorizontal: space.md, marginTop: space.xs }}>
+          <Notice tone="error">{termsActionError}</Notice>
+        </View>
+      )}
+
+      {/* 1.2 Banner Thỏa thuận giá ghim trực tiếp trên Chat */}
+      {room.terms?.pendingProposal && room.terms.pendingProposal.kind === "Price" ? (
+        <View style={styles.pinnedBanner}>
+          {room.terms.pendingProposal.proposedById !== currentUserId ? (
+            <View style={styles.pendingProposalBox}>
+              <View style={styles.proposalHeaderRow}>
+                <Icon name="tag" size={16} color={stitchTokens.wineDark} />
+                <AppText style={styles.proposalTitle}>
+                  {other.displayName} đề xuất đổi giá thành{" "}
+                  <AppText style={styles.priceHighlight}>
+                    {(room.terms.pendingProposal.amount ?? 0).toLocaleString("vi-VN")} ₫
+                  </AppText>
+                </AppText>
+              </View>
+              <AppText style={styles.proposalDesc}>
+                Bạn có đồng ý chốt mức giá này để tiến hành tạo đơn hàng và thanh toán không?
+              </AppText>
+              <View style={styles.proposalActionRow}>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title="Từ chối"
+                    secondary
+                    busy={termsBusy}
+                    onPress={() =>
+                      handleRespondProposal(room.terms!.pendingProposal!.id, false)
+                    }
+                  />
+                </View>
+                <View style={{ flex: 1.2 }}>
+                  <Button
+                    title="Đồng ý giá này"
+                    wine
+                    busy={termsBusy}
+                    onPress={() =>
+                      handleRespondProposal(room.terms!.pendingProposal!.id, true)
+                    }
+                  />
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.myPendingProposalBox}>
+              <Icon name="clock" size={16} color={stitchTokens.wineDark} />
+              <AppText style={styles.myPendingProposalText}>
+                Bạn đã đề xuất đổi giá thành{" "}
+                <AppText style={styles.priceHighlight}>
+                  {(room.terms.pendingProposal.amount ?? 0).toLocaleString("vi-VN")} ₫
+                </AppText>
+                . Đang chờ {other.displayName} xác nhận…
+              </AppText>
+            </View>
+          )}
+        </View>
+      ) : room.orderId ? (
+        <View style={styles.pinnedBanner}>
+          <View style={styles.orderReadyBox}>
+            <View style={styles.orderReadyRow}>
+              <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
+              <AppText style={styles.orderReadyTitle}>
+                Đơn hàng #{room.orderId.slice(0, 8)} đã được tạo
+                {room.terms?.agreedPrice ? ` (${room.terms.agreedPrice.toLocaleString("vi-VN")} ₫)` : ""}
+              </AppText>
+            </View>
+            {isBuyer ? (
+              <View style={{ marginTop: 6 }}>
+                <AppText style={styles.orderReadySub}>
+                  Hãy bấm thanh toán ngay bằng số dư ví để người bán bắt đầu giao sách.
+                </AppText>
+                <View style={{ marginTop: 8 }}>
+                  <Button
+                    title="Thanh toán đơn hàng ngay (Ví)"
+                    wine
+                    busy={termsBusy}
+                    onPress={handlePayOrder}
+                  />
+                </View>
+              </View>
+            ) : (
+              <AppText style={styles.orderReadySub}>
+                Đang chờ người mua thanh toán từ số dư ví để kích hoạt đóng gói và vận chuyển.
+              </AppText>
+            )}
+          </View>
+        </View>
+      ) : room.terms?.agreedPrice ? (
+        <View style={styles.pinnedBanner}>
+          <View style={styles.agreedPriceBox}>
+            <View style={styles.agreedHeaderRow}>
+              <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
+              <AppText style={styles.agreedTitle}>
+                Hai bên đã chốt giá:{" "}
+                <AppText style={styles.priceHighlight}>
+                  {room.terms.agreedPrice.toLocaleString("vi-VN")} ₫
+                </AppText>
+              </AppText>
+            </View>
+            {!isBuyer ? (
+              <View style={{ marginTop: 6 }}>
+                <AppText style={styles.agreedSub}>
+                  Người mua đã đồng ý mức giá này. Hãy bấm tạo đơn hàng giữ sách để người mua tiến hành thanh toán.
+                </AppText>
+                <View style={{ marginTop: 8 }}>
+                  <Button
+                    title="Tạo đơn hàng giữ sách ngay"
+                    wine
+                    busy={termsBusy}
+                    onPress={() => setConfirmOrderDialogOpen(true)}
+                  />
+                </View>
+              </View>
+            ) : (
+              <AppText style={styles.agreedSub}>
+                Đã chốt giá thành công! Đang chờ người bán tạo đơn hàng để bạn tiến hành thanh toán.
+              </AppText>
+            )}
+          </View>
+        </View>
+      ) : null}
+
       {/* 2. Lịch sử sự kiện thỏa thuận (Accordion / Summary) */}
       {events.length > 0 && (
         <View style={styles.eventsAccordion}>
@@ -376,6 +638,32 @@ export function ChatMessagesPanel({
           </Notice>
         )}
 
+        {/* Thanh công cụ Đề xuất đổi giá nhanh */}
+        {!isExpired && room.status === "Active" && (
+          <View style={styles.quickBar}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Mở hộp thoại đề xuất đổi giá"
+              style={styles.makeOfferBtn}
+              onPress={() => {
+                setProposePriceInput(
+                  String(room.terms?.agreedPrice ?? getListingPrice(listing))
+                );
+                setProposeModalOpen(true);
+              }}
+            >
+              <Icon name="tag" size={13} color={stitchTokens.wineDark} />
+              <AppText style={styles.makeOfferBtnText}>
+                {isBuyer ? "Yêu cầu đổi giá / Trả giá" : "Đề xuất giá mới"}
+              </AppText>
+            </Pressable>
+
+            <AppText style={styles.referencePriceText}>
+              Giá niêm yết: {getListingPrice(listing).toLocaleString("vi-VN")} ₫
+            </AppText>
+          </View>
+        )}
+
         {isExpired ? (
           <View style={styles.closedBar}>
             <Icon name="lock" size={14} color={colors.muted} />
@@ -419,6 +707,112 @@ export function ChatMessagesPanel({
           </View>
         )}
       </View>
+
+      {/* Modal Đề xuất giá mới */}
+      <Modal
+        visible={proposeModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setProposeModalOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Icon name="tag" size={18} color={stitchTokens.wineDark} />
+                <AppText style={styles.modalTitle}>
+                  {isBuyer ? "Đề xuất mức giá bạn muốn mua" : "Đổi giá bán cho người mua"}
+                </AppText>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đóng modal"
+                onPress={() => setProposeModalOpen(false)}
+              >
+                <Icon name="close" size={20} color={stitchTokens.darkWood} />
+              </Pressable>
+            </View>
+
+            <AppText style={styles.modalSub}>
+              Giá niêm yết hiện tại:{" "}
+              <AppText style={{ fontWeight: "800", color: stitchTokens.wineDark }}>
+                {getListingPrice(listing).toLocaleString("vi-VN")} ₫
+              </AppText>
+              . Đề xuất này sẽ gửi đến đối tác để họ xác nhận trước khi chốt đơn.
+            </AppText>
+
+            <View style={styles.inputSection}>
+              <AppText style={styles.inputLabel}>Mức giá đề xuất mới (VNĐ):</AppText>
+              <TextInput
+                style={styles.amountInput}
+                keyboardType="numeric"
+                value={proposePriceInput}
+                onChangeText={(val) => setProposePriceInput(val.replace(/\D/g, ""))}
+                placeholder="Ví dụ: 45000"
+                placeholderTextColor="#999"
+              />
+
+              {/* Nút gợi ý nhanh */}
+              <View style={styles.presetRow}>
+                {(() => {
+                  const basePrice = getListingPrice(listing);
+                  return [
+                    { label: "-5.000 ₫", val: Math.max(10000, basePrice - 5000) },
+                    { label: "-10.000 ₫", val: Math.max(10000, basePrice - 10000) },
+                    { label: "-10%", val: Math.max(10000, Math.round((basePrice * 0.9) / 1000) * 1000) },
+                    { label: "-20%", val: Math.max(10000, Math.round((basePrice * 0.8) / 1000) * 1000) },
+                  ].map((item) => (
+                    <Pressable
+                      key={item.label}
+                      style={styles.presetChip}
+                      onPress={() => setProposePriceInput(String(item.val))}
+                    >
+                      <AppText style={styles.presetChipText}>{item.label}</AppText>
+                    </Pressable>
+                  ));
+                })()}
+              </View>
+            </View>
+
+            <View style={styles.modalActionRow}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  title="Hủy"
+                  secondary
+                  onPress={() => setProposeModalOpen(false)}
+                />
+              </View>
+              <View style={{ flex: 1.5 }}>
+                <Button
+                  title="Gửi đề xuất giá"
+                  wine
+                  busy={termsBusy}
+                  onPress={() => {
+                    const amount = parseInt(proposePriceInput.replace(/\D/g, ""), 10);
+                    if (amount > 0) {
+                      void handleProposePrice(amount);
+                    }
+                  }}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Confirm Dialog: Seller Creates Order */}
+      <ConfirmDialog
+        visible={confirmOrderDialogOpen}
+        title="Tạo đơn hàng giữ sách?"
+        message={`Tạo đơn hàng với mức giá đã thỏa thuận ${room.terms?.agreedPrice?.toLocaleString("vi-VN")} ₫. Người mua sẽ nhận được thông báo để bấm thanh toán qua Ví.`}
+        confirmLabel="Tạo đơn hàng ngay"
+        onCancel={() => setConfirmOrderDialogOpen(false)}
+        onConfirm={() => {
+          if (room.terms?.agreedPrice) {
+            void handleConfirmCreateOrder(room.terms.agreedPrice);
+          }
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -690,5 +1084,223 @@ const styles = StyleSheet.create({
   closedBarText: {
     fontSize: 12,
     color: colors.muted,
+  },
+  /* Pinned Terms Banner */
+  pinnedBanner: {
+    paddingHorizontal: space.md,
+    paddingTop: space.xs,
+  },
+  pendingProposalBox: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.wineDark,
+    padding: space.sm,
+    gap: 8,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  proposalHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  proposalTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+    flex: 1,
+  },
+  priceHighlight: {
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+  },
+  proposalDesc: {
+    fontSize: 11,
+    color: stitchTokens.darkWood,
+    lineHeight: 16,
+  },
+  proposalActionRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 2,
+  },
+  myPendingProposalBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: stitchTokens.amberBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    padding: space.sm,
+  },
+  myPendingProposalText: {
+    fontSize: 12,
+    color: stitchTokens.wineDark,
+    flex: 1,
+    lineHeight: 16,
+  },
+  orderReadyBox: {
+    backgroundColor: stitchTokens.likeNewGreenBg,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.likeNewGreen,
+    padding: space.sm,
+    gap: 4,
+  },
+  orderReadyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  orderReadyTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: stitchTokens.likeNewGreen,
+    flex: 1,
+  },
+  orderReadySub: {
+    fontSize: 11,
+    color: stitchTokens.darkWood,
+    lineHeight: 16,
+  },
+  agreedPriceBox: {
+    backgroundColor: "#F4F9F4",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.likeNewGreen,
+    padding: space.sm,
+    gap: 4,
+  },
+  agreedHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  agreedTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: stitchTokens.likeNewGreen,
+    flex: 1,
+  },
+  agreedSub: {
+    fontSize: 11,
+    color: stitchTokens.darkWood,
+    lineHeight: 16,
+  },
+  /* Quick Offer Bar */
+  quickBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingBottom: 4,
+  },
+  makeOfferBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.creamBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  makeOfferBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  referencePriceText: {
+    fontSize: 11,
+    color: colors.muted,
+  },
+  /* Modal Styles */
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: space.md,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderRadius: 20,
+    padding: space.lg,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.peachBorder,
+    gap: 14,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: stitchTokens.peachBorder,
+    paddingBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+  },
+  modalSub: {
+    fontSize: 12,
+    color: stitchTokens.darkWood,
+    lineHeight: 16,
+  },
+  inputSection: {
+    gap: 6,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  amountInput: {
+    height: 44,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+    backgroundColor: "#fff",
+  },
+  presetRow: {
+    flexDirection: "row",
+    gap: 6,
+    flexWrap: "wrap",
+    marginTop: 4,
+  },
+  presetChip: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.creamBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  presetChipText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  modalActionRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 6,
   },
 });

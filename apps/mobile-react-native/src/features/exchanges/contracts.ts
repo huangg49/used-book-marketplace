@@ -95,13 +95,15 @@ export const exchangeMessagePageSchema = z.object({
   items: z.array(exchangeMessageSchema),
 });
 
-export const exchangeReceiptSchema = z.object({
-  id: uuid,
-  entityType: z.string(),
-  entityId: uuid,
-  version: z.number().int(),
-  serverTime: z.string(),
-});
+export const exchangeReceiptSchema = z
+  .object({
+    id: uuid,
+    entityType: z.string().optional(),
+    entityId: uuid.optional(),
+    version: z.number().int().optional(),
+    serverTime: z.string().optional(),
+  })
+  .passthrough();
 
 export function mapExchangeStatusInfo(
   status: ExchangeStatus,
