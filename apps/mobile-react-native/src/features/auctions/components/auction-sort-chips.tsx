@@ -5,12 +5,8 @@ import { Icon, stitchTokens } from "../../../core/ui";
 export interface AuctionSortChipsProps {
   readonly selectedSort: string;
   readonly onSelectSort: (sort: string) => void;
-  readonly filterVerifiedOnly: boolean;
-  readonly onToggleVerified: () => void;
   readonly filterHasBuyNow: boolean;
   readonly onToggleBuyNow: () => void;
-  readonly filterHcmOnly: boolean;
-  readonly onToggleHcmOnly: () => void;
 }
 
 const SORTS = [
@@ -23,12 +19,8 @@ const SORTS = [
 export function AuctionSortChips({
   selectedSort,
   onSelectSort,
-  filterVerifiedOnly,
-  onToggleVerified,
   filterHasBuyNow,
   onToggleBuyNow,
-  filterHcmOnly,
-  onToggleHcmOnly,
 }: AuctionSortChipsProps) {
   return (
     <ScrollView
@@ -65,28 +57,6 @@ export function AuctionSortChips({
       })}
 
       <Pressable
-        onPress={onToggleVerified}
-        style={[styles.sortChip, filterVerifiedOnly && styles.sortChipActive]}
-      >
-        <Icon
-          name="verified"
-          size={13}
-          color={
-            filterVerifiedOnly ? stitchTokens.white : stitchTokens.goldBronze
-          }
-        />
-        <AppText
-          kind="small"
-          style={[
-            styles.sortChipText,
-            filterVerifiedOnly && styles.sortChipTextActive,
-          ]}
-        >
-          Bảo chứng 100%
-        </AppText>
-      </Pressable>
-
-      <Pressable
         onPress={onToggleBuyNow}
         style={[styles.sortChip, filterHasBuyNow && styles.sortChipActive]}
       >
@@ -101,20 +71,6 @@ export function AuctionSortChips({
         </AppText>
       </Pressable>
 
-      <Pressable
-        onPress={onToggleHcmOnly}
-        style={[styles.sortChip, filterHcmOnly && styles.sortChipActive]}
-      >
-        <AppText
-          kind="small"
-          style={[
-            styles.sortChipText,
-            filterHcmOnly && styles.sortChipTextActive,
-          ]}
-        >
-          TP. Hồ Chí Minh
-        </AppText>
-      </Pressable>
     </ScrollView>
   );
 }

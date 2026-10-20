@@ -3,15 +3,19 @@ import { z } from "zod";
 // Auction reads and commands (OpenAPI 0.35.0, tag Auctions). Auto ceilings are
 // never public; the caller's own ceiling only comes from participation.
 
+// The inspected intake revision (PublicAuctionBook); only the fields the list
+// shows are kept. Photos are read through /auctions/{id}/photos/{mediaId}.
 export const publicAuctionBook = z.object({
-  id: z.string().uuid(),
-  title: z.string(),
+  revisionId: z.string().uuid(),
   authors: z.array(z.string()),
-  publisher: z.string(),
-  publicationYear: z.number().nullable().optional(),
-  language: z.string(),
   condition: z.enum(["LikeNew", "Good", "Fair", "Worn"]),
-  coverMediaId: z.string().uuid().nullable().optional(),
+  photos: z.array(
+    z.object({
+      id: z.string().uuid(),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+    }),
+  ),
 });
 
 export type PublicAuctionBook = z.infer<typeof publicAuctionBook>;
