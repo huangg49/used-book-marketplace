@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   createHash,
   randomBytes,
@@ -16,6 +17,7 @@ import {
   COLLECTION_MAX_WRONG_ATTEMPTS,
   COLLECTION_WINDOW_MS,
   INSPECTION_WINDOW_MS,
+  POINT_DELIVERY_MS,
 } from '../../database/mongo/migrations/auction-constants.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import {
@@ -28,6 +30,7 @@ import {
 } from '../commands/domain-error.js';
 import {
   MongoCommandService,
+  canonicalJson,
   member,
   requireActive,
   type Actor,
@@ -36,6 +39,11 @@ import {
 } from '../commands/mongo-command.service.js';
 import { AuctionClock } from './auction-clock.js';
 import { HandoverPointsService } from './handover-points.service.js';
+import {
+  deliveryView,
+  signPointDelivery,
+  verifyPointDelivery,
+} from './point-delivery.js';
 import { isPointOpen, pointDeadline } from './point-hours.js';
 import { checkPointOrder } from './point-order-invariants.js';
 import { PointOrdersService } from './point-orders.service.js';
@@ -52,6 +60,12 @@ const closedPoint = () =>
     'Điểm giao nhận đang đóng cửa (09:00–18:00). Hãy bàn giao trong giờ mở cửa.',
   );
 const late = (message: string) => new DomainError(409, 'InvalidState', message);
+const delivered = () =>
+  new DomainError(
+    409,
+    'InvalidState',
+    'Đơn này giao tận nơi: điểm giao sách cho hãng vận chuyển, không dùng mã nhận.',
+  );
 
 // Recipient decision, collection code and Staff handover for a paid ViaPoint
 // Order (FR-H09, FR-H11, FR-T03; POL-32/33/37). Lock order: users -> session
@@ -63,6 +77,7 @@ export class PointCollectionService {
     private readonly commands: MongoCommandService,
     private readonly points: HandoverPointsService,
     private readonly clock: AuctionClock,
+    private readonly config: ConfigService,
   ) {}
 
   private async order(tx: Tx, id: string) {
@@ -209,6 +224,7 @@ export class PointCollectionService {
         mutate: async (tx, _actor, _before, receiptId) => {
           const o = await this.locked(tx, id, body.expectedVersion);
           if (o.state !== 'ReadyForCollection') throw invalidState();
+          if (o.fulfillmentMethod === 'CarrierOutbound') throw delivered();
           const now = await this.clock.decision(tx, context.auth);
           if (now >= o.collectionDeadline!)
             throw late('Đã quá hạn nhận sách; yêu cầu đang được chuyển xử lý.');
@@ -291,6 +307,7 @@ export class PointCollectionService {
         const now = await this.clock.decision(tx, context.auth);
         await this.points.requireAssigned(tx, actor._id, o.pointId, now);
         if (o.state !== 'ReadyForCollection') throw invalidState();
+        if (o.fulfillmentMethod === 'CarrierOutbound') throw delivered();
         if (now >= o.collectionDeadline!)
           throw late('Đã quá hạn nhận sách; yêu cầu đang được chuyển xử lý.');
         if (!isPointOpen(now)) throw closedPoint();
@@ -392,6 +409,203 @@ export class PointCollectionService {
     });
   }
 
+  // ------------------------------------------------- delivery (ADR 0044)
+  // The assigned Staff hand the book to the simulated carrier within the
+  // window the report acceptance opened. Custody leaves the point once: this
+  // handover has no code, and the counter handover refuses delivery Orders.
+  dispatch(
+    context: CommandContext,
+    id: string,
+    body: Wire['DispatchPointOrder'],
+  ) {
+    return this.commands.runAuction(context, 'dispatchPointOrder', id, body, {
+      discover: async (tx) => [(await this.order(tx, id)).buyerId],
+      authorize: async (tx, actor) => {
+        const o = await this.order(tx, id);
+        await this.staffFor(tx, actor, o, await this.clock.now(tx));
+        return o;
+      },
+      mutate: async (tx, actor, _before, receiptId) => {
+        const o = await this.locked(tx, id, body.expectedVersion);
+        const now = await this.clock.decision(tx, context.auth);
+        await this.points.requireAssigned(tx, actor._id, o.pointId, now);
+        if (
+          o.state !== 'ReadyForCollection' ||
+          o.fulfillmentMethod !== 'CarrierOutbound'
+        )
+          throw invalidState();
+        if (now >= o.collectionDeadline!)
+          throw late(
+            'Đã quá hạn giao sách cho hãng; yêu cầu đang được chuyển xử lý.',
+          );
+        if (!isPointOpen(now)) throw closedPoint();
+        await tx.c.point_handovers.insertOne({
+          _id: randomUUID(),
+          orderId: o._id,
+          listingId: o.listingId,
+          pointId: o.pointId,
+          recipientId: o.buyerId,
+          staffId: actor._id,
+          codeId: null,
+          method: 'CarrierOutbound',
+          handedOverAt: now,
+          receiptId,
+        });
+        const next = await this.transition(
+          tx,
+          o,
+          {
+            state: 'InTransit',
+            dispatchedAt: now,
+            deliveryDeadline: new Date(now.getTime() + POINT_DELIVERY_MS),
+            trackingCode: `LL-${randomBytes(6).toString('hex').toUpperCase()}`,
+          },
+          now,
+        );
+        return PointOrdersService.change(next, now, 'PointOrderDispatched');
+      },
+    });
+  }
+
+  // An independent TEST_OPERATOR reports the simulated carrier outcome once.
+  // Delivered starts the inspection window from the delivery time (FR-T03)
+  // and never settles; Failed opens DeliveryFailed for an independent Admin.
+  recordDelivery(
+    context: CommandContext,
+    event: Wire['SimulatedPointDeliveryEvent'],
+  ) {
+    const signature = signPointDelivery(this.config, event);
+    verifyPointDelivery(this.config, event, signature);
+    if (context.key !== event.eventId)
+      throw new DomainError(
+        422,
+        'VALIDATION_ERROR',
+        'Mã yêu cầu phải trùng mã sự kiện.',
+      );
+    const id = event.orderId.toLowerCase();
+    return this.commands.runAuction(context, 'recordPointDelivery', id, event, {
+      discover: async (tx) => {
+        const o = await this.order(tx, id);
+        return [o.buyerId, o.sellerId];
+      },
+      authorize: async (tx, actor) => {
+        requireActive(actor);
+        if (!actor.roles.some((r) => r.role === 'TEST_OPERATOR'))
+          throw new DomainError(
+            403,
+            'FORBIDDEN',
+            'Cần quyền vận hành mô phỏng.',
+          );
+        const o = await this.order(tx, id);
+        if ([o.buyerId, o.sellerId].includes(actor._id))
+          throw new DomainError(
+            403,
+            'FORBIDDEN',
+            'Người vận hành phải độc lập với hai bên giao dịch.',
+          );
+        return o;
+      },
+      mutate: async (tx, _actor, before, receiptId) => {
+        const o = await this.locked(tx, id, before.version);
+        if (o.state !== 'InTransit') throw invalidState();
+        if (o.trackingCode !== event.trackingCode) throw notFound();
+        const now = await this.clock.decision(tx, context.auth);
+        const occurredAt = new Date(event.occurredAt);
+        if (
+          occurredAt < o.dispatchedAt! ||
+          occurredAt > now ||
+          occurredAt >= o.deliveryDeadline!
+        )
+          throw new DomainError(
+            422,
+            'VALIDATION_ERROR',
+            'Thời điểm giao phải từ lúc điểm giao cho hãng đến trước hạn giao.',
+          );
+        await tx.c.point_carrier_events.insertOne({
+          _id: event.eventId,
+          orderId: o._id,
+          trackingCode: event.trackingCode,
+          outcome: event.outcome,
+          occurredAt,
+          receivedAt: now,
+          payloadHash: createHash('sha256')
+            .update(canonicalJson(event))
+            .digest('hex'),
+          signature,
+          receiptId,
+        });
+        if (event.outcome === 'Delivered') {
+          const next = await this.transition(
+            tx,
+            o,
+            {
+              state: 'Inspection',
+              collectedAt: occurredAt,
+              inspectionDeadline: new Date(
+                occurredAt.getTime() + INSPECTION_WINDOW_MS,
+              ),
+            },
+            now,
+          );
+          return PointOrdersService.change(next, now, 'PointOrderDelivered');
+        }
+        const next = await this.transition(
+          tx,
+          o,
+          {
+            state: 'ResolutionPending',
+            resolutionReason: 'DeliveryFailed',
+            resolutionNote: 'Hãng vận chuyển báo giao không thành công.',
+            resolutionOpenedAt: now,
+          },
+          now,
+        );
+        return PointOrdersService.change(next, now, 'PointOrderDeliveryFailed');
+      },
+    });
+  }
+
+  // The operator's list of deliveries awaiting a carrier outcome. Orders the
+  // operator buys or sells are left out (the event command refuses them);
+  // no recipient address or contact leaves the server here.
+  simulatedDeliveries(
+    auth: Actor,
+  ): Promise<Wire['SimulatedPointDeliveryQueue']> {
+    return this.commands.read(auth, async (tx, actor) => {
+      requireActive(actor);
+      if (!actor.roles.some((r) => r.role === 'TEST_OPERATOR'))
+        throw new DomainError(403, 'FORBIDDEN', 'Cần quyền vận hành mô phỏng.');
+      const now = await tx.now();
+      const orders = await tx.c.point_orders
+        .find(
+          {
+            state: 'InTransit',
+            buyerId: { $ne: actor._id },
+            sellerId: { $ne: actor._id },
+          },
+          { sort: { deliveryDeadline: 1, _id: 1 }, limit: 50 },
+        )
+        .toArray();
+      const items: Wire['SimulatedPointDeliveryItem'][] = [];
+      for (const o of orders) {
+        const item = await tx.c.workflow_items.findOne({
+          _id: `${o.contextId}:${o.listingId}`,
+        });
+        const point = await tx.c.handover_points.findOne({ _id: o.pointId });
+        items.push({
+          orderId: o._id,
+          title: String((item?.snapshot as { title?: string })?.title ?? ''),
+          pointName: point?.name ?? '',
+          carrier: 'LatLaiSimulator',
+          trackingCode: o.trackingCode!,
+          dispatchedAt: o.dispatchedAt!.toISOString(),
+          deliveryDeadline: o.deliveryDeadline!.toISOString(),
+        });
+      }
+      return { items, serverTime: now.toISOString() };
+    });
+  }
+
   queue(auth: Actor): Promise<Wire['PointCollectionQueue']> {
     return this.commands.read(auth, async (tx, actor) => {
       requireActive(actor);
@@ -429,6 +643,15 @@ export class PointCollectionService {
           title: String((item?.snapshot as { title?: string })?.title ?? ''),
           state: o.state,
           recipientName: buyer?.displayName ?? '',
+          fulfillmentMethod: o.fulfillmentMethod,
+          // The label for the carrier; only for delivery Orders.
+          delivery:
+            o.fulfillmentMethod === 'CarrierOutbound'
+              ? deliveryView(
+                  o,
+                  (await tx.c.point_order_deliveries.findOne({ _id: o._id }))!,
+                )
+              : null,
           shelfCode: intake?.shelfCode ?? null,
           collectionDeadline: o.collectionDeadline?.toISOString() ?? null,
           returnDeadline:
@@ -493,13 +716,36 @@ export class PointCollectionService {
               'PointOrderCollectionOverdue',
             );
           }
-          if (o.state === 'ReturnPending' && now >= o.returnDeadline!) {
+          // ADR 0044: no carrier outcome by the delivery deadline.
+          if (o.state === 'InTransit' && now >= o.deliveryDeadline!) {
             const next = await this.transition(
               tx,
               o,
               {
                 state: 'ResolutionPending',
-                resolutionReason: 'ReturnOverdue',
+                resolutionReason: 'DeliveryFailed',
+                resolutionNote: 'Quá hạn giao hàng mà hãng chưa báo kết quả.',
+                resolutionOpenedAt: now,
+              },
+              now,
+            );
+            return PointOrdersService.change(
+              next,
+              now,
+              'PointOrderDeliveryOverdue',
+            );
+          }
+          if (o.state === 'ReturnPending' && now >= o.returnDeadline!) {
+            // An undelivered book the carrier has not brought back reopens
+            // the delivery failure; a delivered one is a missed return.
+            const next = await this.transition(
+              tx,
+              o,
+              {
+                state: 'ResolutionPending',
+                resolutionReason: o.collectedAt
+                  ? 'ReturnOverdue'
+                  : 'DeliveryFailed',
                 resolutionOpenedAt: now,
               },
               now,

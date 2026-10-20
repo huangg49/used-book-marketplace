@@ -296,7 +296,7 @@ export class AuctionIntakesService {
           const [eligible] = await tx.c.listings
             .aggregate([
               { $match: { _id: l._id } },
-              ...publicEligibleStages(),
+              ...publicEligibleStages('Auction'),
               { $match: { 'r.mode': 'Sale' } },
               { $project: { _id: 1 } },
             ])
@@ -305,7 +305,7 @@ export class AuctionIntakesService {
             throw new DomainError(
               409,
               'InvalidState',
-              'Chỉ sách đăng Bán đã duyệt, đang hiển thị và còn trống mới được gửi đấu giá.',
+              'Chỉ sách đấu giá của bạn đã được duyệt, đang hiển thị và còn trống mới được gửi tới điểm.',
             );
           const r = (await tx.c.listing_revisions.findOne({
             _id: l.currentRevisionId!,
@@ -771,6 +771,7 @@ export class AuctionIntakesService {
           startPrice: i.startPrice,
           step: i.step,
           buyNowPrice: i.buyNowPrice,
+          buyNowAt: null,
           startAt: now,
           endAt: new Date(now.getTime() + AUCTION_DURATION_MS),
           state: 'Active',

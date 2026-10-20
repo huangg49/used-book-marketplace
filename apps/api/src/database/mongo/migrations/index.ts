@@ -2,6 +2,19 @@ import { conversationAgreementsMigration, conversationAgreementSpecs } from './0
 import { buyNowNotificationsMigration, withBuyNowNotifications } from './0029-buy-now-notifications.js';
 import { bookCirculationRegionsMigration } from './0030-book-circulation-regions.js';
 import {
+  auctionOnlyListingsMigration,
+  withListingChannel,
+} from './0032-auction-only-listings.js';
+import {
+  auctionDeliveryCollectionSpecs,
+  auctionDeliveryMigration,
+  withAuctionDelivery,
+} from './0034-auction-delivery.js';
+import {
+  buyNowChallengeMigration,
+  withBuyNowChallenge,
+} from './0033-buy-now-challenge.js';
+import {
   exchangeCollectionSpecs,
   exchangesMigration,
 } from './0016-exchanges.js';
@@ -258,6 +271,9 @@ export const migrations: Migration[] = [
   exchangeMultiBookMigration,
   vnpayTopupExpiryMigration,
   conversationAgreementsMigration,
+  auctionOnlyListingsMigration,
+  buyNowChallengeMigration,
+  auctionDeliveryMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -283,7 +299,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withDirectSettlementPrincipal)
     .map(withVNPayQuery)
     .map(withIntegratedWalletPointCommands)
-    .map(withVNPayExpiry),
+    .map(withVNPayExpiry)
+    .map(withListingChannel),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),
@@ -296,13 +313,18 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withSettlementChanges)
     .map(withRulesChanges)
     .map(withPointAdministrationChanges)
-    .map(withInspectionEvidenceChanges),
+    .map(withInspectionEvidenceChanges)
+    .map(withBuyNowChallenge),
   ...pointOrderCollectionSpecs
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)
-    .map(withSettlementChanges),
-  ...pointCollectionSpecs,
-  ...resolutionCollectionSpecs.map(withSettlementChanges).map(withRulesChanges),
+    .map(withSettlementChanges)
+    .map(withAuctionDelivery),
+  ...pointCollectionSpecs.map(withAuctionDelivery),
+  ...resolutionCollectionSpecs
+    .map(withSettlementChanges)
+    .map(withRulesChanges)
+    .map(withAuctionDelivery),
   ...settlementCollectionSpecs.map(withRulesChanges),
   ...rulesCollectionSpecs,
   ...sellerSelectedConversationSpecs,
@@ -325,4 +347,5 @@ export const currentCollections = (): CollectionSpec[] => [
   ...transactionReviewSpecs,
   ...inspectionEvidenceCollectionSpecs,
   ...pointIncidentCollectionSpecs,
+  ...auctionDeliveryCollectionSpecs,
 ];

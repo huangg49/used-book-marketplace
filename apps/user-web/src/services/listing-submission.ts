@@ -42,6 +42,7 @@ function rememberCommands(): Remember {
 }
 
 export type ListingInput = {
+  channel?: "Auction";
   title: string;
   author: string;
   category: string;
@@ -177,9 +178,11 @@ export function createListingSubmission(value: ListingInput) {
         method: "POST",
         headers: { "Idempotency-Key": key },
         body: JSON.stringify({
+          // ADR 0042: the auction flow creates its own Auction listing.
+          ...(input.channel === "Auction" ? { channel: "Auction" } : {}),
           content: {
             bookId: null,
-            mode: null,
+            mode: input.channel === "Auction" ? "Sale" : null,
             condition: null,
             pages: "",
             coverNote: "",

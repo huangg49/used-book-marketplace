@@ -45,7 +45,9 @@ export function ActionPanel<R = CommandReceipt>({
   confirmTitle: string;
   confirmBody: ReactNode;
   validate?: () => boolean;
-  build: () => { path: string; body: unknown };
+  // `key` only where the API binds the Idempotency-Key to the payload
+  // (a simulated carrier event id); otherwise a fresh key per confirmation.
+  build: () => { path: string; body: unknown; key?: string };
   schema?: z.ZodType<R>;
   interpret: (receipt: R) => Outcome;
   reconcile: () => Promise<unknown>;
@@ -103,8 +105,8 @@ export function ActionPanel<R = CommandReceipt>({
     if (inFlight.current) return;
     let active = retry;
     if (!active) {
-      const { path, body } = build();
-      active = createCommand(path, body);
+      const { path, body, key } = build();
+      active = createCommand(path, body, key);
       setIntent(active);
     }
     inFlight.current = true;

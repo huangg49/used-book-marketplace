@@ -304,6 +304,7 @@ describe('listing/catalog persistence invariants on MongoDB', () => {
     const bare = {
       _id: id,
       ownerId: owner.id,
+      channel: 'Marketplace' as const,
       version: 1,
       moderation: 'Draft' as const,
       visibility: 'Visible' as const,
