@@ -106,6 +106,10 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
           <AppText style={styles.authorHighlight}>{authorsText}</AppText>
           {publicationText ? ` · ${publicationText}` : ""}
         </AppText>
+        <AppText style={styles.authorsRow}>
+          <AppText style={styles.authorLabel}>Người đăng: </AppText>
+          <AppText style={styles.authorHighlight}>{item.seller.displayName}</AppText>
+        </AppText>
       </View>
 
       {/* Pricing Module with Warm Amber Glow */}

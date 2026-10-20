@@ -1,5 +1,24 @@
 # Điểm lưu hiện tại — 20/10/2026
 
+## Nhận biết người đăng khi demo Detail — 20/10/2026
+
+- Nhánh `codex/listing-seller-identity`, base `6708ddd`. Web đưa tên người đăng
+  từ cuối Detail lên ngay dưới tác giả, hiện nhãn Bạn khi là chủ bài. RN thêm
+  người đăng trong phần tổng quan dưới tác giả; giữ thông tin seller card hiện có.
+  Chỉ dùng seller.displayName từ public listing; không công khai email đăng nhập.
+- Kiểm tra dữ liệu demo phát hiện 120/140 tên kệ bị lặp số giữa các batch import.
+  Đã sao lưu local và sửa displayName theo đúng số trong email với transaction và
+  kiểm tra lockSeq; giữ nguyên mật khẩu/quyền/listing/tiền. Xem
+  [bảng tài khoản demo](DEMO_ACCOUNTS.md); tra cứu đầy đủ 146 chủ sách trong
+  `.tmp/demo-account-guide-20261020.md` riêng máy.
+- PASS web: typecheck/lint (6 cảnh báo cũ)/build (chunk warning)/156 unit;
+  browser live 1440 và 390 px, tên thật + tên dài fixture không tràn ngang,
+  không pageerror; đã xem ảnh. Impeccable detector không có finding.
+- RN: lint (2 cảnh báo cũ), 156 unit PASS; typecheck FAIL tại các file auctions
+  và wallet contracts không sửa trong gói (authors/photos kiểu {}, topup thiếu
+  Cancelled/expiresAt/serverTime). Chưa kiểm native hoặc Expo web cho phần RN.
+  Chưa push/PR/merge; READINESS giữ nguyên.
+
 ## Bỏ giới hạn đăng nhập khi demo local — 20/10/2026
 
 - Nhánh `codex/local-demo-login-limit`, base `974a0a0`. Chủ dự án yêu cầu bỏ

@@ -139,6 +139,11 @@ export function BookDetailPage() {
           <p className={styles.author}>
             {book.book.authors.join(", ") || "Chưa rõ tác giả"}
           </p>
+          <p className={styles.sellerIdentity}>
+            <span>Người đăng</span>
+            <strong>{book.seller.displayName}</strong>
+            {isOwner && <span className={styles.ownerLabel}>Bạn</span>}
+          </p>
           <div className={styles.labels}>
             <span>{conditions[book.condition]}</span>
             <span>
@@ -409,7 +414,7 @@ export function BookDetailPage() {
             </dl>
           </section>
           <section className={styles.seller}>
-            <h2>Người đăng: {book.seller.displayName}</h2>
+            <h2>Giao nhận và lưu ý</h2>
             <p>
               <MapPin size={16} aria-hidden="true" />
               {book.fulfillment
