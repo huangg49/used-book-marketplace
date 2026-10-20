@@ -14,6 +14,11 @@ import {
   metrics,
 } from "../../core/ui";
 import { publicMedia } from "./contracts";
+import {
+  PUBLIC_MEDIA_GC_MS,
+  signedMediaRemainingMs,
+  signedMediaStaleTime,
+} from "@used-books/session-client";
 export function PublicPhoto({
   listingId,
   mediaId,
@@ -56,22 +61,32 @@ export function PublicPhoto({
         publicMedia,
       ),
     enabled: active,
-    staleTime: 60_000,
-    gcTime: 0,
-    refetchInterval: active ? 90_000 : false,
+    staleTime: (query) =>
+      signedMediaStaleTime(
+        query.state.data?.expiresAt,
+        query.state.dataUpdatedAt,
+      ),
+    gcTime: PUBLIC_MEDIA_GC_MS,
     retry: false,
   });
+  const expiry = photo.data?.expiresAt;
+  const refetch = photo.refetch;
   useEffect(() => {
-    if (!photo.data) return;
-    const expiry = photo.data.expiresAt;
-    const timer = setTimeout(
-      () => setExpired(expiry),
-      Math.max(0, Date.parse(expiry) - Date.now()) + 10,
-    );
+    if (!active || !expiry) return;
+    const remaining = signedMediaRemainingMs(expiry);
+    if (!remaining) return;
+    const timer = setTimeout(() => {
+      setExpired(expiry);
+      void refetch({ cancelRefetch: false });
+    }, remaining);
     return () => clearTimeout(timer);
-  }, [photo.data]);
+  }, [expiry, refetch, active]);
   const available =
-    active && !photo.error && photo.data && photo.data.expiresAt !== expired;
+    active &&
+    !photo.error &&
+    photo.data &&
+    photo.data.expiresAt !== expired &&
+    signedMediaRemainingMs(photo.data.expiresAt) > 0;
   const requestKey = `${photo.data?.url}/${attempt}`;
   const cover = (
     <BookCover
@@ -79,7 +94,7 @@ export function PublicPhoto({
       source={available ? { uri: photo.data.url } : undefined}
       label={label}
       missing={!available}
-      cachePolicy="none"
+      cachePolicy="memory"
       loading={active && photo.isPending}
       fadeIn
       onError={() => setFailed(requestKey)}

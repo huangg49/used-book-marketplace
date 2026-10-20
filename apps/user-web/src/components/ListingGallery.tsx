@@ -1,32 +1,36 @@
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Expand, ImageOff, X } from "lucide-react";
 import { ListingPhoto } from "./BookCard";
-import {
-  getPublicPhoto,
-  type PublicListing,
-} from "../services/public-listings";
+import { type PublicListing } from "../services/public-listings";
 import styles from "./ListingGallery.module.css";
 import { lockPageScroll } from "../lib/page-scroll";
+import { usePublicListingPhoto } from "../hooks/usePublicListingPhoto";
+import { useNearViewport } from "../hooks/useNearViewport";
 
 function Thumbnail({ book, index }: { book: PublicListing; index: number }) {
   const photoId = book.photos[index]!.id;
   const [failedUrl, setFailedUrl] = useState<string>();
-  const photo = useQuery({
-    queryKey: ["public-listing-photo", book.id, book.revisionId, photoId],
-    queryFn: () => getPublicPhoto(book.id, photoId),
-    retry: false,
-    staleTime: 0,
-  });
-  return photo.data && failedUrl !== photo.data.url ? (
-    <img
-      src={photo.data.url}
-      alt=""
-      loading="lazy"
-      onError={() => setFailedUrl(photo.data.url)}
-    />
-  ) : (
-    <ImageOff size={20} aria-hidden="true" />
+  const { ref, active } = useNearViewport();
+  const photo = usePublicListingPhoto(
+    book.id,
+    book.revisionId,
+    photoId,
+    active,
+  );
+  return (
+    <div ref={ref} style={{ width: "100%", height: "100%" }}>
+      {photo.url && failedUrl !== photo.url ? (
+        <img
+          src={photo.url}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailedUrl(photo.url)}
+        />
+      ) : (
+        <ImageOff size={20} aria-hidden="true" />
+      )}
+    </div>
   );
 }
 

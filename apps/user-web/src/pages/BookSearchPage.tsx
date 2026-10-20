@@ -373,7 +373,8 @@ export function BookSearchPage() {
     queryFn: () => getSearchShelf(query, preview),
     enabled: !priceInvalid,
     retry: false,
-    staleTime: 0,
+    staleTime: 30_000,
+    gcTime: 300_000,
   });
   const filterKey = JSON.stringify(initial);
   function update(key: string, value: string, replace = false) {

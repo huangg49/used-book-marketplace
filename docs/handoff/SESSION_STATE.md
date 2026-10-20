@@ -1,5 +1,20 @@
 # Điểm lưu hiện tại — 20/10/2026
 
+## Tối ưu tải listing, bước 1 — 20/10/2026
+
+- Nhánh `codex/listing-navigation-cache`, base `fe7d0d0`. Web dùng lại signed URL
+  theo hạn server (margin 5 giây), chung card/Detail/thumbnail; hoãn xin ảnh ngoài
+  vùng xem. Web Search/RN shelf fresh 30 giây; RN ảnh memory cache, query giữ 2
+  phút. Không đổi API/DB/bucket/quyền, Detail và giao dịch vẫn kiểm trạng thái mới.
+- Đo local một lượt: request ký ảnh mở kệ 20 → 10, quay Detail → kệ 18 → 0;
+  bìa khi quay lại 265 → 177 ms. Cold load ~8,1 giây chưa cải thiện; backend/
+  storage thuộc bước 2 chưa làm. [Báo cáo và cách kiểm](LISTING_LOAD_PERFORMANCE_2026_10_20.md).
+- PASS web typecheck/lint/build/157 unit, session-client 27 unit, browser fixture
+  desktop/mobile (expiry/pending/404/retry/fresh Detail), browser live đã xem ảnh.
+  RN lint/156 unit/Expo web export PASS; RN typecheck vẫn FAIL ở auctions/wallet
+  không sửa trong gói, native NOT RUN. Cảnh báo cũ ghi trong báo cáo. Chưa push/
+  PR/merge; READINESS giữ nguyên. Chờ chủ dự án review bước 1 trước bước 2.
+
 ## Nhận biết người đăng khi demo Detail — 20/10/2026
 
 - Nhánh `codex/listing-seller-identity`, base `6708ddd`. Web đưa tên người đăng
