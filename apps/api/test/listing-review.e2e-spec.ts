@@ -13,6 +13,7 @@ import type {
 import { MongoService } from '../src/database/mongo/mongo.service.js';
 import { onTransactionRetry } from '../src/database/mongo/transaction.js';
 import { MediaStorage } from '../src/modules/media/media-storage.js';
+import { SignedReadCache } from '../src/modules/media/signed-read-cache.js';
 import { MongoCommandService } from '../src/modules/commands/mongo-command.service.js';
 import { MongoPageService } from '../src/modules/commands/mongo-page.service.js';
 import { checkListing } from '../src/modules/listings/listing-projection.js';
@@ -25,15 +26,32 @@ import {
 } from '@used-books/api-contract/catalog-taxonomy';
 
 // Storage signing is deliberately faked. HTTP, authorization and MongoDB are real.
+const signBatch = vi.fn(
+  async (keys: string[]) =>
+    new Map(
+      keys.map((key) => [
+        key,
+        {
+          url: 'https://storage.test/' + key,
+          expiresAt: new Date(Date.now() + 120000).toISOString(),
+        },
+      ]),
+    ),
+);
+const signedCache = new SignedReadCache(
+  signBatch,
+  () => new Error('Synthetic storage unavailable'),
+);
 const storage = {
   beforeSign: undefined as (() => Promise<void>) | undefined,
   async check() {},
   async signedRead(key: string) {
+    const result = await signedCache.read(key);
     await this.beforeSign?.();
-    return {
-      url: 'https://storage.test/' + key,
-      expiresAt: new Date(Date.now() + 120000).toISOString(),
-    };
+    return result;
+  },
+  onModuleDestroy() {
+    signedCache.close();
   },
 };
 
@@ -1880,34 +1898,53 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
       }
       await get(`/listings/${l.entityId}`).expect(404);
     });
-    it('does not return a signed URL when owner eligibility is revoked during signing', async () => {
-      const owner = await reader(),
-        l = await published(owner);
-      let entered!: () => void, release!: () => void;
-      const signing = new Promise<void>((resolve) => {
-          entered = resolve;
-        }),
-        gate = new Promise<void>((resolve) => {
-          release = resolve;
-        });
-      storage.beforeSign = async () => {
-        entered();
-        await gate;
-      };
-      const response = get(
-        `/listings/${l.entityId}/media/${l.image.id}/read`,
-      ).then((r) => r);
-      try {
-        await signing;
-        await db.removeRole(owner.id, 'MEMBER');
-        release();
-        expect((await response).status).toBe(404);
-      } finally {
-        release();
-        storage.beforeSign = undefined;
-        await response;
-      }
+    it('reuses the storage grant without reusing eligibility after a listing is hidden', async () => {
+      const l = await published();
+      const path = `/listings/${l.entityId}/media/${l.image.id}/read`;
+      const first = await get(path).expect(200);
+      const signedCount = signBatch.mock.calls.length;
+      const second = await get(path).expect(200);
+      expect(second.body).toEqual(first.body);
+      expect(signBatch.mock.calls.length).toBe(signedCount);
+      await changeListing(l.entityId, { visibility: 'Hidden' });
+      await get(path).expect(404);
+      expect(signBatch.mock.calls.length).toBe(signedCount);
     });
+    it.each([false, true])(
+      'does not return a signed URL when owner eligibility is revoked during signing (cached: %s)',
+      async (cached) => {
+        const owner = await reader(),
+          l = await published(owner);
+        if (cached)
+          await get(`/listings/${l.entityId}/media/${l.image.id}/read`).expect(
+            200,
+          );
+        let entered!: () => void, release!: () => void;
+        const signing = new Promise<void>((resolve) => {
+            entered = resolve;
+          }),
+          gate = new Promise<void>((resolve) => {
+            release = resolve;
+          });
+        storage.beforeSign = async () => {
+          entered();
+          await gate;
+        };
+        const response = get(
+          `/listings/${l.entityId}/media/${l.image.id}/read`,
+        ).then((r) => r);
+        try {
+          await signing;
+          await db.removeRole(owner.id, 'MEMBER');
+          release();
+          expect((await response).status).toBe(404);
+        } finally {
+          release();
+          storage.beforeSign = undefined;
+          await response;
+        }
+      },
+    );
   });
   describe('revision-bound delivery origins', () => {
     const contact = {

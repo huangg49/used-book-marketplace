@@ -1,5 +1,23 @@
 # Điểm lưu hiện tại — 20/10/2026
 
+## Tối ưu tải listing, bước 2 backend — 20/10/2026
+
+- Nhánh `codex/listing-media-backend-performance`, base `8042f5b`. Gom ký URL
+  storage theo burst (10 ms, 50 key/lượt), bounded RAM cache URL giữ nguyên hạn
+  cấp; chỉ gộp check bucket đang chạy, không cache kết quả cấu hình bucket. Giữ
+  kiểm tra quyền/trạng thái trước và sau lấy URL. Không đổi API/schema/DB demo.
+- Public shelf gom metadata và version origin thành 2 query cùng snapshot, lọc
+  ID trước projection, giữ cursor order. [Báo cáo](LISTING_MEDIA_BACKEND_PERFORMANCE_2026_10_20.md).
+- Đo 20 bìa live Supabase: gọi provider cold 40 → 2, cấp đủ URL 1.406 → 985 ms;
+  warm 777 → 352 ms, chỉ 1 check không ký lại. Trang 20 listing trung vị 550 →
+  447 ms. Browser dev first cover 7.384 → 7.000 ms, chưa giải quyết hết cold load.
+- PASS API 176 unit/typecheck/build/lint (cảnh báo cũ), 179 E2E trên QA `_test`
+  (listing-review/media/packaging/auctions, gồm race thu hồi quyền trên cache-hit),
+  contract/routes. Build/runtime API + hai worker đã cập nhật; readiness 200,
+  browser live kệ → Detail → Back không xin lại URL còn hạn, không pageerror.
+  Không đổi client; native/remote CI NOT RUN. Chưa push/PR/merge, READINESS giữ
+  nguyên; chờ review bước 2 trước mở rộng sang bước 3.
+
 ## Tối ưu tải listing, bước 1 — 20/10/2026
 
 - Nhánh `codex/listing-navigation-cache`, base `fe7d0d0`. Web dùng lại signed URL
