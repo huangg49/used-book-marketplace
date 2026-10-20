@@ -29,6 +29,7 @@ import { PublicPhoto } from "../shelf/public-photo";
 import { DraftCoverPhoto } from "../drafts/draft-cover-photo";
 import { BookIdentity } from "../drafts/catalog-picker";
 import { exchangeReceiptSchema } from "./contracts";
+import * as Crypto from "expo-crypto";
 import { z } from "zod";
 
 export function ExchangeComposeScreen() {
@@ -112,12 +113,17 @@ export function ExchangeComposeScreen() {
         throw new Error("Vui lòng chọn ít nhất một cuốn sách từ kệ của bạn để trao đổi.");
       }
 
+      setErrorNotice(null);
+
       // Step A: Create proposal (supports multi-book)
       const res = await client.request(
         "/exchanges",
         exchangeReceiptSchema,
         {
           method: "POST",
+          headers: {
+            "Idempotency-Key": Crypto.randomUUID(),
+          },
           body: JSON.stringify({
             initiatorListingId: chosenMyListings[0].id,
             initiatorListingIds: chosenMyListings.map((b) => b.id),
@@ -127,11 +133,13 @@ export function ExchangeComposeScreen() {
         },
       );
 
+      const exchangeId = res.entityId ?? res.id;
+
       // Step B: Send opening message if typed
       if (initialMessage.trim()) {
         try {
           await client.request(
-            `/exchanges/${res.entityId}/messages`,
+            `/exchanges/${exchangeId}/messages`,
             z.object({ id: z.string() }),
             {
               method: "POST",
@@ -143,14 +151,14 @@ export function ExchangeComposeScreen() {
         }
       }
 
-      return res;
+      return { exchangeId };
     },
     onSuccess: (res) => {
       void queryClient.invalidateQueries({ queryKey: ["my-exchanges"] });
-      void queryClient.invalidateQueries({ queryKey: ["exchange", res.entityId] });
+      void queryClient.invalidateQueries({ queryKey: ["exchange", res.exchangeId] });
       router.replace({
         pathname: "/exchange",
-        params: { id: res.entityId },
+        params: { id: res.exchangeId },
       });
     },
     onError: (err) => {
@@ -252,7 +260,7 @@ export function ExchangeComposeScreen() {
                   revisionId={targetBook.revisionId}
                   mediaId={targetBook.photos[0].id}
                   label="Bìa sách muốn nhận"
-                  active={false}
+                  active={true}
                   compact
                 />
               ) : null}
@@ -528,6 +536,11 @@ export function ExchangeComposeScreen() {
 
         {/* Nút gửi đề nghị */}
         <View style={styles.submitContainer}>
+          {errorNotice ? (
+            <View style={{ marginBottom: space.sm }}>
+              <Notice tone="error">{errorNotice}</Notice>
+            </View>
+          ) : null}
           <Button
             title={
               submitProposalMutation.isPending

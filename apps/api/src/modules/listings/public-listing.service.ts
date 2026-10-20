@@ -110,6 +110,43 @@ export function publicEligibleStages(
       },
     },
     {
+      $lookup: {
+        from: 'exchanges',
+        let: { listingId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  {
+                    $or: [
+                      { $eq: ['$initiatorListingId', '$$listingId'] },
+                      { $in: ['$$listingId', { $ifNull: ['$initiatorListingIds', []] }] },
+                      { $eq: ['$recipientListingId', '$$listingId'] },
+                    ],
+                  },
+                  {
+                    $in: [
+                      '$status',
+                      [
+                        'AcceptedAwaitingFunding',
+                        'Preparing',
+                        'InTransit',
+                        'Delivered',
+                        'ResolutionPending',
+                      ],
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          { $limit: 1 },
+        ],
+        as: 'activeExchange',
+      },
+    },
+    {
       $match: {
         $expr: {
           $or: [
@@ -121,6 +158,7 @@ export function publicEligibleStages(
                   $or: [
                     { $gt: [{ $size: '$purchase' }, 0] },
                     { $gt: [{ $size: '$activeOrder' }, 0] },
+                    { $gt: [{ $size: '$activeExchange' }, 0] },
                   ],
                 },
               ],
@@ -217,6 +255,7 @@ type Eligible = ListingDoc & {
   m: ListingMediaDoc[];
   purchase: { expiresAt: Date }[];
   activeOrder: { paidAt: Date | null; paymentDeadline: Date }[];
+  activeExchange?: { status: string }[];
 };
 
 @Injectable()
@@ -299,6 +338,11 @@ export class PublicListingService {
                   ? null
                   : l.activeOrder[0].paymentDeadline.toISOString(),
               }
+            : l.activeExchange && l.activeExchange.length > 0
+              ? {
+                  status: 'InTransaction' as const,
+                  expiresAt: null,
+                }
             : {
               status: 'InNegotiation' as const,
               expiresAt: l.purchase[0]?.expiresAt?.toISOString() ?? null,
