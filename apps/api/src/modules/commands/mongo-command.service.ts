@@ -220,7 +220,9 @@ export type AuctionOperation =
   | 'handOverPointOrder'
   | 'resolvePointOrder'
   | 'claimPointOrder'
-  | 'receivePointOrderReturn';
+  | 'receivePointOrderReturn'
+  | 'dispatchPointOrder'
+  | 'recordPointDelivery';
 type CommandChange =
   | PointChange
   | AuctionChange
@@ -664,7 +666,10 @@ export class MongoCommandService {
       authorize: (tx: Tx) => Promise<C>;
       mutate: (tx: Tx, current: C, receiptId: string) => Promise<WalletChange>;
     },
-    operation: 'applyVNPayIpn' | 'applyVNPayQuery' = 'applyVNPayIpn',
+    operation:
+      | 'applyVNPayIpn'
+      | 'applyVNPayQuery'
+      | 'expireVNPayTopup' = 'applyVNPayIpn',
   ) {
     return this.executePrincipal(
       {

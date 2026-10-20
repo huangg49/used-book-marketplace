@@ -13,6 +13,7 @@ const AUCTION_STATE: Record<PointOrderState, readonly string[]> = {
   AwaitingPayment: ['BuyNowPending', 'AwaitingWinnerPayment'],
   Fulfilling: ['Sold'],
   ReadyForCollection: ['Sold'],
+  InTransit: ['Sold'],
   Inspection: ['Sold'],
   ResolutionPending: ['Sold'],
   ReturnPending: ['Sold'],
@@ -43,8 +44,35 @@ export async function checkPointOrder(tx: Tx, orderId: string) {
   });
   const amounts = (agreement?.snapshot as { amounts?: { buyerTotal?: number } })
     ?.amounts;
-  if (!item || amounts?.buyerTotal !== o.buyerTotal)
+  // The formation agreement stays frozen at the book price; a delivery chosen
+  // at payment adds its own snapshot and fee (ADR 0044).
+  if (!item || amounts?.buyerTotal !== o.bookPrice)
     fail('order snapshot mismatch');
+  const delivery = await tx.c.point_order_deliveries.findOne({ _id: o._id });
+  const carrier = o.fulfillmentMethod === 'CarrierOutbound';
+  if (
+    carrier
+      ? !delivery ||
+        delivery.buyerId !== o.buyerId ||
+        delivery.outboundFee !== o.outboundFee ||
+        !o.paidAt
+      : !!delivery || o.outboundFee !== 0
+  )
+    fail('order delivery mismatch');
+  const events = await tx.c.point_carrier_events
+    .find({ orderId: o._id })
+    .toArray();
+  if (
+    events.length > 1 ||
+    (events.length === 1 &&
+      (!carrier ||
+        events[0].trackingCode !== o.trackingCode ||
+        (events[0].outcome === 'Delivered'
+          ? o.collectedAt?.getTime() !== events[0].occurredAt.getTime()
+          : !!o.collectedAt))) ||
+    (carrier && !!o.collectedAt && events.length !== 1)
+  )
+    fail('order carrier event mismatch');
   const a = await tx.c.auctions.findOne({ _id: o.auctionId });
   if (
     !a ||
@@ -141,10 +169,13 @@ export async function checkPointOrder(tx: Tx, orderId: string) {
   const handovers = await tx.c.point_handovers
     .find({ orderId: o._id })
     .toArray();
+  // Delivery: the hand-off to the carrier at dispatchedAt (ADR 0044).
+  const leftAt = carrier ? o.dispatchedAt : o.collectedAt;
   if (
-    handovers.length !== (o.collectedAt ? 1 : 0) ||
+    handovers.length !== (leftAt ? 1 : 0) ||
     (handovers[0] &&
-      (handovers[0].handedOverAt.getTime() !== o.collectedAt!.getTime() ||
+      (handovers[0].handedOverAt.getTime() !== leftAt!.getTime() ||
+        handovers[0].method !== o.fulfillmentMethod ||
         handovers[0].recipientId !== o.buyerId ||
         handovers[0].pointId !== o.pointId))
   )

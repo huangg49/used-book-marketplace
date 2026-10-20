@@ -1,17 +1,19 @@
 import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { Icon, stitchTokens } from "../../../core/ui";
+import { Icon, formatVnd, stitchTokens } from "../../../core/ui";
+import type { PublicAuctionSummary } from "../contracts";
 
 export interface AuctionOutbidAlertProps {
-  readonly visible: boolean;
+  // An open auction from the caller's own activity where they no longer lead.
+  readonly auction: PublicAuctionSummary | null;
   readonly onReclaim: () => void;
 }
 
 export function AuctionOutbidAlert({
-  visible,
+  auction,
   onReclaim,
 }: AuctionOutbidAlertProps) {
-  if (!visible) return null;
+  if (!auction || auction.minimumBid === null) return null;
 
   return (
     <View style={styles.sectionContainer}>
@@ -24,26 +26,27 @@ export function AuctionOutbidAlert({
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <View style={styles.outbidBadge}>
                 <AppText kind="small" style={styles.outbidBadgeText}>
-                  BỊ VƯỢT MẶT!
+                  BỊ VƯỢT GIÁ
                 </AppText>
               </View>
               <AppText kind="bold" style={styles.outbidTitle} numberOfLines={1}>
-                Hán Việt Từ Điển (1932)
+                {auction.title}
               </AppText>
             </View>
             <AppText kind="small" style={styles.outbidDesc} numberOfLines={1}>
-              Khách #TanDinh90 vừa nâng giá lên 2.150.000₫
+              Giá hiện tại {formatVnd(auction.currentPrice ?? auction.startPrice)}
             </AppText>
           </View>
         </View>
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel={`Trả giá lại cho ${auction.title}`}
           onPress={onReclaim}
           style={styles.reclaimBidBtn}
         >
           <AppText kind="bold" style={styles.reclaimBidBtnText}>
-            Đòi Lại (+50k)
+            Trả {formatVnd(auction.minimumBid)}
           </AppText>
         </Pressable>
       </View>

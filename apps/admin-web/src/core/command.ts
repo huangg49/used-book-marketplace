@@ -11,10 +11,14 @@ export type Intent = {
   response?: unknown;
 };
 // The body is serialized now, so later edits to the form cannot change a retry.
-export function createCommand(path: string, body: unknown): Intent {
+export function createCommand(
+  path: string,
+  body: unknown,
+  key: string = crypto.randomUUID(),
+): Intent {
   return {
     path,
-    key: crypto.randomUUID(),
+    key,
     body: JSON.stringify(body),
     acknowledged: false,
     stopped: false,

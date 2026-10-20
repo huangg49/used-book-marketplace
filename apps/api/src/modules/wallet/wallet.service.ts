@@ -21,6 +21,8 @@ import {
   parseVNDate,
 } from './vnpay-sandbox.js';
 import { TransactionPolicy } from './transaction-policy.js';
+import { WalletClock } from './wallet-clock.js';
+import { expiredVNPayCandidates } from './wallet-expiry-candidates.js';
 
 const DEMO = {
   demoOnly: true,
@@ -36,6 +38,7 @@ export class WalletService {
     private readonly simulator: PaymentSimulator,
     private readonly vnpay: VNPaySandbox,
     private readonly policy: TransactionPolicy,
+    private readonly clock: WalletClock,
   ) {}
   private async session(tx: Tx, auth: Actor, now: Date) {
     const session = await tx.c.auth_sessions.findOne({ _id: auth.sessionId });
@@ -59,6 +62,7 @@ export class WalletService {
     intent: TopupIntentDoc,
   ): Promise<Wire['TopupIntent']> {
     const journal = await tx.c.ledger_journals.findOne({ topupId: intent._id });
+    const payment = await tx.c.vnpay_payments.findOne({ _id: intent._id });
     return {
       ...DEMO,
       id: intent._id,
@@ -69,6 +73,8 @@ export class WalletService {
       journalId: journal?._id ?? null,
       createdAt: intent.createdAt.toISOString(),
       updatedAt: intent.updatedAt.toISOString(),
+      expiresAt: payment?.expiresAt.toISOString() ?? null,
+      serverTime: (await this.clock.now(tx)).toISOString(),
     };
   }
   private async change(
@@ -114,12 +120,13 @@ export class WalletService {
       };
     });
   }
-  create(
+  async create(
     context: CommandContext,
     body: Wire['CreateTopupIntent'],
     provider: 'Simulator' | 'VNPay' = 'Simulator',
     ip = '127.0.0.1',
   ) {
+    await this.expireOwned(context.auth);
     const operation =
       provider === 'VNPay' ? 'createVNPayTopup' : 'createTopupIntent';
     return this.commands.runWallet(context, operation, null, body, {
@@ -169,7 +176,7 @@ export class WalletService {
               'VALIDATION_ERROR',
               'VNPay yêu cầu nạp ít nhất 5.000đ.',
             );
-          const expiresAt = new Date(now.getTime() + 15 * 60000);
+          const expiresAt = new Date(now.getTime() + 5 * 60000);
           const checkout = this.vnpay.checkout(
             intent._id,
             intent.amount,
@@ -209,6 +216,7 @@ export class WalletService {
   }
 
   async queryVNPay(auth: Actor, id: string) {
+    await this.expireOwned(auth, id);
     const snapshot = await this.commands.readObligation(
       auth,
       async (tx, actor) => {
@@ -219,13 +227,23 @@ export class WalletService {
         return { intent, payment };
       },
     );
-    if (['Pending', 'Processing'].includes(snapshot.intent.state)) {
-      const evidence = await this.vnpay.queryPayment({
-        id: snapshot.intent._id,
-        tmnCode: snapshot.payment.tmnCode,
-        amount: snapshot.intent.amount,
-        createdAt: snapshot.payment.createdAt,
-      });
+    if (
+      ['Pending', 'Processing', 'Cancelled'].includes(snapshot.intent.state)
+    ) {
+      let evidence: Record<string, string> | null;
+      try {
+        evidence = await this.vnpay.queryPayment({
+          id: snapshot.intent._id,
+          tmnCode: snapshot.payment.tmnCode,
+          amount: snapshot.intent.amount,
+          createdAt: snapshot.payment.createdAt,
+        });
+      } catch (error) {
+        // Cancellation is already durable. A reconciliation outage must not
+        // obscure it; later QueryDR/IPN can still apply timely verified payment.
+        if (snapshot.intent.state !== 'Cancelled') throw error;
+        return this.read(auth, id);
+      }
       if (evidence) await this.applyVerifiedVNPay(evidence, auth);
     }
     return this.read(auth, id);
@@ -329,17 +347,18 @@ export class WalletService {
             );
           const accountId =
             outcome === 'Succeeded' &&
-            ['Pending', 'Processing'].includes(intent.state)
+            ['Pending', 'Processing', 'Cancelled'].includes(intent.state)
               ? await this.ledger.lockFunding(tx, intent.ownerId)
               : null;
-          const now = await tx.now();
+          const now = await this.clock.now(tx);
           // A delayed IPN can fund its wallet, but success outside the pinned
           // checkout interval is held for review. Whole-second provider dates.
           const occurredAt = paidAt ?? payment.createdAt;
           const mismatch =
             occurredAt.getTime() <
               Math.floor(payment.createdAt.getTime() / 1000) * 1000 ||
-            occurredAt >= payment.expiresAt ||
+            occurredAt.getTime() >=
+              Math.floor(payment.expiresAt.getTime() / 1000) * 1000 ||
             occurredAt.getTime() > now.getTime() + 300000 ||
             (transaction &&
               transaction.payDate.getTime() !== occurredAt.getTime());
@@ -353,7 +372,10 @@ export class WalletService {
           if (mismatch || contradiction || intent.state === 'ReviewRequired') {
             next = 'ReviewRequired';
             disposition = 'ReviewRequired';
-          } else if (['Pending', 'Processing'].includes(intent.state)) {
+          } else if (
+            ['Pending', 'Processing'].includes(intent.state) ||
+            (intent.state === 'Cancelled' && outcome === 'Succeeded')
+          ) {
             next = outcome;
             disposition = 'Applied';
           }
@@ -397,7 +419,8 @@ export class WalletService {
       Message: result.replayed ? 'Already confirmed' : 'Confirm Success',
     };
   }
-  read(auth: Actor, id: string) {
+  async read(auth: Actor, id: string) {
+    await this.expireOwned(auth, id);
     return this.commands.readObligation(auth, async (tx, actor) => {
       member(actor);
       return this.project(tx, await this.owned(tx, id, actor._id));
@@ -415,7 +438,8 @@ export class WalletService {
       ...(q.to ? { $lte: new Date(String(q.to)) } : {}),
     };
   }
-  list(auth: Actor, q: Query): Promise<Wire['TopupPage']> {
+  async list(auth: Actor, q: Query): Promise<Wire['TopupPage']> {
+    await this.expireOwned(auth);
     return this.commands.readObligation(auth, async (tx, actor) => {
       member(actor);
       const range = this.range(q);
@@ -448,6 +472,93 @@ export class WalletService {
       for (const row of rows) items.push(await this.project(tx, row));
       return { items, nextCursor: more ? rows.at(-1)!._id : null };
     });
+  }
+  private async expireOwned(auth: Actor, id?: string) {
+    const candidates = await this.commands.readObligation(
+      auth,
+      async (tx, actor) => {
+        member(actor);
+        if (id) await this.owned(tx, id, actor._id);
+        return expiredVNPayCandidates(
+          tx,
+          await this.clock.now(tx),
+          actor._id,
+          id,
+        );
+      },
+    );
+    for (const candidate of candidates) {
+      try {
+        await this.expireVNPay(candidate._id);
+      } catch (error) {
+        // A verified payment may win after discovery and before the deadline command.
+        if (!(error instanceof DomainError && error.getStatus() === 409))
+          throw error;
+      }
+    }
+  }
+
+  // Internal deadline command, shared by the durable worker and owner read catch-up.
+  // No browser flag, financial journal, provider call or balance change is involved.
+  expireVNPay(id: string) {
+    return this.commands.runVNPay(
+      id,
+      id,
+      {},
+      {
+        discover: async (tx) => [(await this.owned(tx, id)).ownerId],
+        authorize: async (tx) => {
+          await tx.lock('topup_intents', [id]);
+          const intent = await this.owned(tx, id);
+          const payment = await tx.c.vnpay_payments.findOne({ _id: id });
+          if (!payment) throw notFound();
+          return { intent, payment };
+        },
+        mutate: async (tx, { intent, payment }, receiptId) => {
+          const now = await this.clock.now(tx);
+          if (
+            !['Pending', 'Processing'].includes(intent.state) ||
+            now < payment.expiresAt
+          )
+            throw new DomainError(
+              409,
+              'InvalidState',
+              'Yêu cầu nạp chưa đến hạn hủy hoặc đã hoàn tất.',
+            );
+          await tx.c.simulated_payment_events.insertOne({
+            _id: randomUUID(),
+            intentId: id,
+            provider: 'VNPayExpiry-v1',
+            payloadHash: createHash('sha256')
+              .update(
+                canonicalJson({
+                  id,
+                  expiresAt: payment.expiresAt.toISOString(),
+                }),
+              )
+              .digest('hex'),
+            recipientId: intent.ownerId,
+            amount: intent.amount,
+            currency: intent.currency,
+            outcome: 'Failed',
+            disposition: 'Applied',
+            occurredAt: payment.expiresAt,
+            receivedAt: now,
+            receiptId,
+          });
+          const updated = await tx.c.topup_intents.findOneAndUpdate(
+            { _id: id, version: intent.version, state: intent.state },
+            {
+              $set: { state: 'Cancelled', updatedAt: now },
+              $inc: { version: 1 },
+            },
+            { returnDocument: 'after' },
+          );
+          return this.change(tx, updated!, now);
+        },
+      },
+      'expireVNPayTopup',
+    );
   }
   history(auth: Actor, q: Query): Promise<Wire['WalletHistoryPage']> {
     return this.commands.readObligation(auth, async (tx, actor) => {

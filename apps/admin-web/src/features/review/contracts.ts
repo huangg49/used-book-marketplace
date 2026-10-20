@@ -150,6 +150,8 @@ export const listing = z.object({
   id: uuid,
   ownerId: uuid,
   version,
+  // ADR 0042: Auction listings never reach the marketplace shelf.
+  channel: z.enum(["Marketplace", "Auction"]),
   state: z.object({
     moderation: z.enum(["Draft", "PendingReview", "Approved", "Rejected"]),
     visibility: z.enum(["Visible", "Hidden", "Removed"]),

@@ -30,6 +30,12 @@ import { LedgerService } from '../wallet/ledger.service.js';
 import { AuctionClock } from './auction-clock.js';
 import { checkAuction } from './auction-invariants.js';
 import { notifyAuction } from './auction-notifications.js';
+import {
+  deliveryChoice,
+  deliveryPrice,
+  deliverySnapshot,
+  deliveryView,
+} from './point-delivery.js';
 import { checkPointOrder } from './point-order-invariants.js';
 
 // ViaPoint Order formed by an auction win or Buy Now (FR-AU06/07, FR-O05).
@@ -118,6 +124,9 @@ export class PointOrdersService {
       collectionOpenedAt: null,
       returnDeadline: null,
       returnedAt: null,
+      dispatchedAt: null,
+      deliveryDeadline: null,
+      trackingCode: null,
       lockSeq: 0,
     };
     const context: PointOrderContextDoc = {
@@ -227,6 +236,7 @@ export class PointOrdersService {
         return this.own(tx, id, actor._id, true);
       },
       mutate: async (tx, _actor, before, receiptId) => {
+        const method = deliveryChoice(body);
         await tx.lock('auctions', [before.auctionId]);
         await tx.lock('point_orders', [id]);
         const o = (await tx.c.point_orders.findOne({ _id: id }))!;
@@ -255,19 +265,29 @@ export class PointOrdersService {
             'InvalidState',
             'Đã quá hạn thanh toán cho phiên đấu giá này.',
           );
+        // ADR 0044: delivery adds the outbound fee to the one payment.
+        const delivery =
+          method === 'CarrierOutbound'
+            ? await deliverySnapshot(tx, o, body, now, receiptId)
+            : null;
+        const outboundFee = delivery?.outboundFee ?? 0;
         await this.ledger.postOrder(
           tx,
           o._id,
           receiptId,
           accounts,
-          o.buyerTotal,
+          o.bookPrice + outboundFee,
           now,
         );
+        if (delivery) await tx.c.point_order_deliveries.insertOne(delivery);
         const next = await tx.c.point_orders.findOneAndUpdate(
           { _id: o._id, version: o.version, state: 'AwaitingPayment' },
           {
             // Payment opens the 72 h recipient decision on the report (POL-32).
             $set: {
+              fulfillmentMethod: method,
+              outboundFee,
+              buyerTotal: o.bookPrice + outboundFee,
               state: 'Fulfilling',
               paidAt: now,
               acceptanceDeadline: new Date(
@@ -317,7 +337,7 @@ export class PointOrdersService {
         pointName: point?.name ?? '',
         role: o.buyerId === actor._id ? 'Buyer' : 'Seller',
         method: 'ViaPoint',
-        fulfillmentMethod: 'SelfCollect',
+        fulfillmentMethod: o.fulfillmentMethod,
         state: o.state,
         version: o.version,
         currency: 'VND',
@@ -356,7 +376,46 @@ export class PointOrdersService {
               openedAt: o.resolutionOpenedAt!.toISOString(),
             }
           : null,
+        // The seller never sees the buyer's address (ADR 0044).
+        delivery:
+          o.fulfillmentMethod === 'CarrierOutbound' && o.buyerId === actor._id
+            ? deliveryView(
+                o,
+                (await tx.c.point_order_deliveries.findOne({ _id: o._id }))!,
+              )
+            : null,
         serverTime: (await tx.now()).toISOString(),
+      };
+    });
+  }
+
+  // ADR 0044: prices delivery of an unpaid Order to one of the buyer's
+  // addresses. Reserves nothing; payment rechecks address version and fee.
+  deliveryQuote(
+    auth: Actor,
+    id: string,
+    addressId: string,
+  ): Promise<Wire['PointOrderDeliveryQuote']> {
+    return this.commands.read(auth, async (tx, actor) => {
+      member(actor);
+      const o = await this.own(tx, id, actor._id, true);
+      if (o.state !== 'AwaitingPayment') throw invalidState();
+      const { address, policyCode, fee } = await deliveryPrice(
+        tx,
+        o,
+        addressId,
+      );
+      return {
+        orderId: o._id,
+        addressId: address._id,
+        addressVersion: address.version,
+        serviceAreaCode: address.serviceAreaCode,
+        policyCode,
+        bookPrice: o.bookPrice,
+        outboundFee: fee,
+        buyerTotal: o.bookPrice + fee,
+        currency: 'VND',
+        demoOnly: true,
       };
     });
   }

@@ -5,7 +5,6 @@ import { Icon, stitchTokens } from "../../../core/ui";
 export type CategoryTabId =
   | "all"
   | "ending_soon"
-  | "upcoming"
   | "watchlist"
   | "zero_vnd";
 
@@ -32,7 +31,6 @@ export function AuctionCategoryTabs({
   const tabs: CategoryTab[] = [
     { id: "all", title: "Đang diễn ra", count: totalCount },
     { id: "ending_soon", title: "Gần kết thúc (<1h)", icon: "clock" },
-    { id: "upcoming", title: "Sắp mở phiên", count: 14 },
     {
       id: "watchlist",
       title: "Đang theo dõi",
