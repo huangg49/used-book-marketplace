@@ -49,7 +49,7 @@ export function DraftsScreen() {
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) =>
       client.request(
-        "/me/listings?limit=20" +
+        "/me/listings?channel=Marketplace&limit=20" +
           (filter ? "&moderation=" + filter : "") +
           (pageParam ? "&cursor=" + encodeURIComponent(pageParam) : ""),
         draftPage,
@@ -61,7 +61,7 @@ export function DraftsScreen() {
 
   const allDrafts = useQuery({
     queryKey: ["drafts-metrics"],
-    queryFn: () => client.request("/me/listings?limit=50", draftPage),
+    queryFn: () => client.request("/me/listings?channel=Marketplace&limit=50", draftPage),
     enabled: foreground,
     refetchInterval: foreground ? 15000 : false,
   });

@@ -5,6 +5,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText, Icon, Sheet, space, stitchTokens } from "../../../core/ui";
 import { conditions, type Listing } from "../contracts";
 import { PublicPhoto } from "../public-photo";
@@ -27,19 +28,6 @@ const photoLabels = [
   "Ảnh thêm",
 ];
 
-function formatListingDate(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return "";
-  }
-}
-
 export function BookGallerySection({
   item,
   selectedIndex,
@@ -57,21 +45,22 @@ export function BookGallerySection({
         ? "ĐĂNG BÁN"
         : "TRAO ĐỔI";
 
-  const isAvailable = item.purchaseAvailability?.status === "Available";
-  const listingStatusLabel = isAvailable ? "Đang mở bán" : "Đang giao dịch";
-  const listingCode = `#TIN-${item.id.slice(0, 8).toUpperCase()}`;
-  const publishedDateText = item.publishedAt
-    ? formatListingDate(item.publishedAt)
-    : "";
-  const areaText = item.fulfillment?.name || "TP.HCM";
+  const totalPhotos = item.photos.length;
+  const insets = useSafeAreaInsets();
+  const topInsetOffset = insets.top + 52 + 10;
 
   return (
     <View style={styles.container}>
-      {/* Main Book Photo Frame */}
+      {/* 1. Edge-to-Edge Hero Photo Display */}
       <View style={styles.mainPhotoWrapper}>
         <View style={styles.mainPhotoContainer}>
           {currentPhoto ? (
-            <View style={styles.photoContainer}>
+            <View
+              style={[
+                styles.photoContainer,
+                { paddingTop: insets.top + 20, height: 430 + insets.top },
+              ]}
+            >
               <PublicPhoto
                 key={`${item.revisionId}/${selectedIndex}`}
                 listingId={item.id}
@@ -86,7 +75,7 @@ export function BookGallerySection({
         </View>
 
         {/* Top Left Floating Badges */}
-        <View style={styles.topLeftBadges}>
+        <View style={[styles.topLeftBadges, { top: topInsetOffset }]}>
           <View style={styles.conditionPill}>
             <View style={styles.conditionDot} />
             <AppText style={styles.conditionText}>
@@ -99,32 +88,38 @@ export function BookGallerySection({
           </View>
         </View>
 
-        {/* Top Right Verification Seal */}
-        <View style={styles.verifiedSeal}>
-          <Icon name="verified" size={18} color={stitchTokens.wineDark} />
+        {/* Bottom Left Watermark Badge */}
+        <View style={styles.watermarkPill}>
+          <Icon name="camera" size={13} color={stitchTokens.white} />
+          <AppText style={styles.watermarkText}>
+            Ảnh chụp thật (4 góc + ruột)
+          </AppText>
         </View>
 
-        {/* Bottom Right Magnifier Pill */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Chạm để phóng to ảnh"
-          style={({ pressed }) => [styles.zoomPill, pressed && styles.pressed]}
-          onPress={() => setZoomVisible(true)}
-        >
-          <Icon name="search" size={15} color={stitchTokens.wineDark} />
-          <AppText style={styles.zoomText}>Chạm để phóng to</AppText>
-        </Pressable>
+        {/* Bottom Right Actions & Photo Counter */}
+        <View style={styles.bottomRightGroup}>
+          {totalPhotos > 1 && (
+            <View style={styles.counterPill}>
+              <AppText style={styles.counterText}>
+                {selectedIndex + 1}/{totalPhotos}
+              </AppText>
+            </View>
+          )}
 
-        {/* Bottom Edge Watermark */}
-        <View style={styles.watermarkBanner}>
-          <AppText style={styles.watermarkText}>
-            Ảnh chụp thật của người bán (4 góc + ruột sách)
-          </AppText>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Chạm để phóng to ảnh"
+            style={({ pressed }) => [styles.zoomPill, pressed && styles.pressed]}
+            onPress={() => setZoomVisible(true)}
+          >
+            <Icon name="search" size={14} color={stitchTokens.wineDark} />
+            <AppText style={styles.zoomText}>Phóng to</AppText>
+          </Pressable>
         </View>
       </View>
 
-      {/* Thumbnails Scrollbar */}
-      {item.photos.length > 1 && (
+      {/* 2. Edge-to-Edge Horizontal Thumbnails Strip */}
+      {totalPhotos > 1 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -163,31 +158,7 @@ export function BookGallerySection({
         </ScrollView>
       )}
 
-      {/* Official Listing Metadata Card */}
-      <View style={styles.certCard}>
-        <View style={styles.certInfo}>
-          <Icon name="tag" size={19} color={stitchTokens.wineDark} />
-          <View style={styles.certTextCol}>
-            <AppText style={styles.certTitle}>
-              Mã tin: <AppText style={styles.certCode}>{listingCode}</AppText>
-            </AppText>
-            <AppText style={styles.certSubtitle}>
-              {publishedDateText ? `Đăng ngày ${publishedDateText}` : "Đang niêm yết"}
-              {areaText ? ` · ${areaText}` : ""}
-            </AppText>
-          </View>
-        </View>
-        <View
-          style={[
-            styles.certActionBadge,
-            !isAvailable && styles.certActionBadgeBusy,
-          ]}
-        >
-          <AppText style={styles.certActionText}>{listingStatusLabel}</AppText>
-        </View>
-      </View>
-
-      {/* Fullscreen Photo Sheet */}
+      {/* Fullscreen Photo Modal Sheet */}
       <Sheet
         title={`${photoLabels[selectedIndex] || `Ảnh ${selectedIndex + 1}`} · ${item.book.title}`}
         visible={zoomVisible}
@@ -200,8 +171,8 @@ export function BookGallerySection({
               listingId={item.id}
               revisionId={item.revisionId}
               mediaId={currentPhoto.id}
-              label={`Ảnh lớn ${item.book.title}`}
-              active={active && zoomVisible}
+              label={`Ảnh phóng to của ${item.book.title}`}
+              active={active}
               expanded
             />
           )}
@@ -213,21 +184,16 @@ export function BookGallerySection({
 
 const styles = StyleSheet.create({
   container: {
-    gap: space.sm,
+    width: "100%",
+    backgroundColor: stitchTokens.parchment,
   },
   mainPhotoWrapper: {
     position: "relative",
     width: "100%",
-    borderRadius: 18,
     overflow: "hidden",
-    backgroundColor: stitchTokens.parchment,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.peachBorder,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: stitchTokens.warmCard,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchTokens.peachBorder,
   },
   mainPhotoContainer: {
     width: "100%",
@@ -243,8 +209,8 @@ const styles = StyleSheet.create({
   },
   topLeftBadges: {
     position: "absolute",
-    top: 12,
-    left: 12,
+    top: 14,
+    left: 16,
     gap: 6,
     zIndex: 10,
     alignItems: "flex-start",
@@ -254,11 +220,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 5,
     backgroundColor: stitchTokens.likeNewGreenBg,
-    paddingHorizontal: 9,
+    paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorder,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   conditionDot: {
     width: 6,
@@ -274,9 +245,14 @@ const styles = StyleSheet.create({
   },
   modeBadge: {
     backgroundColor: stitchTokens.wineDark,
-    paddingHorizontal: 8,
+    paddingHorizontal: 9,
     paddingVertical: 4,
-    borderRadius: 5,
+    borderRadius: 6,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
+    elevation: 2,
   },
   modeText: {
     fontSize: 9,
@@ -284,64 +260,67 @@ const styles = StyleSheet.create({
     color: stitchTokens.white,
     letterSpacing: 0.5,
   },
-  verifiedSeal: {
+  watermarkPill: {
     position: "absolute",
-    top: 12,
-    right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: stitchTokens.whiteSurface,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 10,
-    shadowColor: stitchTokens.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  zoomPill: {
-    position: "absolute",
-    bottom: 34,
-    right: 12,
+    bottom: 14,
+    left: 16,
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
+    backgroundColor: stitchTokens.scrimDark,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    zIndex: 10,
+  },
+  watermarkText: {
+    fontSize: 10,
+    color: stitchTokens.white,
+    fontWeight: "600",
+  },
+  bottomRightGroup: {
+    position: "absolute",
+    bottom: 14,
+    right: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    zIndex: 10,
+  },
+  counterPill: {
+    backgroundColor: stitchTokens.scrimDark,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 14,
+  },
+  counterText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.white,
+  },
+  zoomPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     backgroundColor: stitchTokens.whiteSurface,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    zIndex: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
     shadowColor: stitchTokens.black,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.15,
     shadowRadius: 2,
     elevation: 2,
   },
   zoomText: {
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "700",
     color: stitchTokens.wineDark,
   },
-  watermarkBanner: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    backgroundColor: stitchTokens.scrimDark,
-  },
-  watermarkText: {
-    fontSize: 10,
-    color: stitchTokens.white,
-    fontWeight: "500",
-    textAlign: "center",
-  },
   thumbnailScroll: {
-    gap: 8,
-    paddingVertical: 4,
+    gap: 10,
+    paddingHorizontal: space.lg,
+    paddingVertical: 10,
   },
   thumbnailItem: {
     width: 76,
@@ -354,7 +333,7 @@ const styles = StyleSheet.create({
     opacity: 0.72,
   },
   thumbnailSelected: {
-    borderColor: stitchTokens.wineLight,
+    borderColor: stitchTokens.wineDark,
     borderWidth: 2,
     opacity: 1,
   },
@@ -371,64 +350,6 @@ const styles = StyleSheet.create({
     color: stitchTokens.white,
     textAlign: "center",
     fontWeight: "600",
-  },
-  certCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: stitchTokens.amberBg,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.goldBorder,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  certInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-  },
-  certTextCol: {
-    flex: 1,
-  },
-  certTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
-  },
-  certSubtitle: {
-    fontSize: 11,
-    color: stitchTokens.darkWood,
-    marginTop: 2,
-  },
-  certCode: {
-    fontWeight: "800",
-    color: stitchTokens.wineDark,
-  },
-  certActionBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: stitchTokens.likeNewGreen,
-    shadowColor: stitchTokens.wineDark,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  certActionBadgeBusy: {
-    backgroundColor: stitchTokens.wineLight,
-  },
-  certActionText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: stitchTokens.white,
   },
   sheetPhotoWrapper: {
     width: "100%",

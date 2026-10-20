@@ -60,6 +60,23 @@ const STATE_LABEL: Record<AuctionState, string> = {
   Cancelled: "Đã hủy",
   PaymentExpired: "Người thắng không thanh toán đúng hạn",
 };
+// Same wording as user-web: only a won or bought auction has a final price.
+const CLOSED_PRICE: Partial<Record<AuctionState, string>> = {
+  BuyNowPending: "Giá mua ngay",
+  AwaitingWinnerPayment: "Giá chốt",
+  Sold: "Giá chốt",
+  PaymentExpired: "Giá thắng (chưa thanh toán)",
+  OnHold: "Giá khi tạm dừng",
+  Cancelled: "Giá khi hủy",
+};
+const TOP_BADGE: Partial<Record<AuctionState, string>> = {
+  Active: "đang dẫn",
+  AwaitingWinnerPayment: "giá chốt",
+  Sold: "giá chốt",
+  OnHold: "dẫn khi tạm dừng",
+  Cancelled: "dẫn khi hủy",
+  PaymentExpired: "giá thắng",
+};
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const time = (iso: string) =>
   new Date(iso).toLocaleString("vi-VN", {
@@ -195,7 +212,11 @@ function AuctionBody({
       </View>
       <View style={{ gap: space.xs, padding: space.lg, borderRadius: radius.card, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.rule }}>
         <AppText kind="small" color={colors.muted}>
-          {auction.currentPrice === null ? "Giá khởi điểm" : "Giá hiện tại"}
+          {auction.currentPrice === null
+            ? "Giá khởi điểm"
+            : open
+              ? "Giá hiện tại"
+              : CLOSED_PRICE[auction.state] ?? "Giá cuối"}
         </AppText>
         <AppText kind="bookPrice" color={colors.ink} selectable accessibilityLiveRegion="polite">
           {formatVnd(price)}
@@ -209,6 +230,11 @@ function AuctionBody({
             : `Phiên kết thúc lúc ${time(auction.endAt)}`}
         </AppText>
       </View>
+      {open && auction.buyNowAt ? (
+        <Notice tone="warning">
+          {`Đã có người chọn mua ngay. Còn ${formatRemaining(Date.parse(auction.endAt) - now)} để trả cao hơn; hết giờ, người dẫn đầu thắng phiên.`}
+        </Notice>
+      ) : null}
       {me?.won ? (
         me.orderId ? (
           <WinnerSteps orderId={me.orderId} boughtNow={me.boughtNow} />
@@ -232,7 +258,7 @@ function AuctionBody({
             : "Phiên không còn nhận trả giá."}
         </Notice>
       )}
-      <History history={history} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} startPrice={auction.startPrice} />
+      <History history={history} state={auction.state} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} startPrice={auction.startPrice} />
     </View>
   );
 }
@@ -398,7 +424,9 @@ function BidPanel({
       {!pending && auction.buyNowPrice !== null && (
         <View style={{ gap: space.sm, paddingTop: space.md, borderTopWidth: 1, borderColor: colors.rule }}>
           <AppText kind="bold">Mua ngay {formatVnd(auction.buyNowPrice)}</AppText>
-          <AppText kind="small" color={colors.muted}>Chỉ có trước lượt trả giá đầu tiên.</AppText>
+          <AppText kind="small" color={colors.muted}>
+            Chỉ có trước lượt trả giá đầu tiên. Sau khi bấm, người khác còn 60 giây để trả cao hơn.
+          </AppText>
           <Button
             secondary
             title="Mua ngay"
@@ -443,7 +471,7 @@ function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuc
     case "BuyNow":
       return {
         title: `Mua ngay với ${formatVnd(amount)}?`,
-        message: `Phiên kết thúc ngay cho bạn. Bạn có 15 phút để thanh toán từ ví, sau đó nhận sách tại ${auction.pointName}. Quá hạn, sách được trả lại người bán và bạn bị ghi nhận vi phạm.`,
+        message: `Bạn cam kết mua với giá này và dẫn đầu. Người khác còn 60 giây để trả cao hơn; nếu không ai vượt, bạn thắng và thanh toán từ ví trong 24 giờ sau khi phiên kết thúc, rồi tự nhận sách tại ${auction.pointName}. Lượt mua ngay không thể rút lại; không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`,
         confirm: "Mua ngay",
       };
   }
@@ -451,11 +479,13 @@ function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuc
 
 function History({
   history,
+  state,
   leaderAlias,
   myAlias,
   startPrice,
 }: {
   history: PublicAuction["history"];
+  state: AuctionState;
   leaderAlias: number | null;
   myAlias: number | null;
   startPrice: number;
@@ -472,7 +502,8 @@ function History({
       ) : (
         history.map((event, index) => {
           const who = event.bidderAlias === myAlias ? "Bạn" : `Người trả giá #${event.bidderAlias}`;
-          const top = index === 0 && event.bidderAlias === leaderAlias;
+          const badge = TOP_BADGE[state];
+          const top = index === 0 && event.bidderAlias === leaderAlias && badge !== undefined;
           return (
             <View
               key={`${event.at}-${index}`}
@@ -480,7 +511,7 @@ function History({
             >
               <AppText kind="small" color={top ? colors.forest : colors.ink} style={{ flexShrink: 1 }}>
                 {who}
-                {top ? " · đang dẫn" : ""} · {time(event.at)}
+                {top ? ` · ${badge}` : ""} · {time(event.at)}
               </AppText>
               <AppText kind="bold">{formatVnd(event.price)}</AppText>
             </View>

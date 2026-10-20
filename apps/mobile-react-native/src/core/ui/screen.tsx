@@ -1,4 +1,11 @@
-import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from "react-native";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -15,20 +22,25 @@ export function Screen({
   scrollRef,
   appearance = "paper",
   centerContent = false,
+  onScroll,
+  scrollEventThrottle = 16,
 }: React.PropsWithChildren<{
   header?: React.ReactNode;
   footer?: React.ReactNode;
   compactFooter?: boolean;
   footerAppearance?: "paper" | "navigation";
   scrollRef?: React.Ref<ScrollView>;
-  appearance?: "paper" | "shelf" | "browse" | "home";
+  appearance?: "paper" | "shelf" | "browse" | "home" | "detail";
   centerContent?: boolean;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  scrollEventThrottle?: number;
 }>) {
   const inset = useSafeAreaInsets();
   const shelf = appearance === "shelf";
   const browse = appearance === "browse";
   const home = appearance === "home";
-  const canvas = home
+  const detail = appearance === "detail";
+  const canvas = home || detail
     ? stitchTokens.creamBg
     : shelf || browse
       ? colorRoles.shelfCanvas
@@ -36,7 +48,7 @@ export function Screen({
   const navigationFooter = footerAppearance === "navigation";
   return (
     <SafeAreaView
-      edges={home ? ["bottom", "left", "right"] : undefined}
+      edges={home || detail ? ["bottom", "left", "right"] : undefined}
       style={{ flex: 1, backgroundColor: canvas }}
     >
       <StatusBar style={home || shelf ? "light" : "dark"} />
@@ -60,21 +72,23 @@ export function Screen({
         {header}
         <ScrollView
           ref={scrollRef}
+          onScroll={onScroll}
+          scrollEventThrottle={scrollEventThrottle}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             flexGrow: 1,
             justifyContent: centerContent ? "center" : undefined,
-            paddingHorizontal: home ? 0 : space.xl,
-            paddingVertical: home ? 0 : shelf ? space.lg : space.xl,
+            paddingHorizontal: home || detail ? 0 : space.xl,
+            paddingVertical: home || detail ? 0 : shelf ? space.lg : space.xl,
           }}
         >
           <View
             style={{
               width: "100%",
-              maxWidth: home ? undefined : metrics.content,
+              maxWidth: home || detail ? undefined : metrics.content,
               alignSelf: "center",
-              gap: home ? 0 : shelf ? space.sm : space.xl,
+              gap: home || detail ? 0 : shelf ? space.sm : space.xl,
             }}
           >
             {children}

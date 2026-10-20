@@ -3,6 +3,7 @@ import type { Document } from 'mongodb';
 import type {
   CatalogBookDoc,
   CatalogRevisionDoc,
+  ListingChannel,
   ListingDoc,
   ListingMediaDoc,
   ListingRevisionDoc,
@@ -27,8 +28,11 @@ import {
 // One predicate for shelf, detail and signed reads (the PostgreSQL publicFrom +
 // publicEligible). These are current eligibility checks, not a historical
 // approval badge. Output documents carry r (revision), b (book), u (owner),
-// rm (photo links) and m (photos).
-export function publicEligibleStages(): Document[] {
+// rm (photo links) and m (photos). Marketplace reads never see Auction
+// listings (ADR 0042); only auction intake asks for the Auction channel.
+export function publicEligibleStages(
+  channel: ListingChannel = 'Marketplace',
+): Document[] {
   const ready = {
     $and: [
       { $eq: ['$$this.status', 'Ready'] },
@@ -41,6 +45,7 @@ export function publicEligibleStages(): Document[] {
   return [
     {
       $match: {
+        channel: channel === 'Auction' ? 'Auction' : { $ne: 'Auction' },
         moderation: 'Approved',
         visibility: 'Visible',
         trade: { $in: ['Available', 'Reserved'] },

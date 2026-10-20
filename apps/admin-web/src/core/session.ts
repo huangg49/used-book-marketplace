@@ -45,3 +45,8 @@ export const canOperatePoint = (user: CurrentUser) =>
 // Independent decisions on point Orders and auctions belong to ADMIN.
 export const canResolve = (user: CurrentUser) =>
   user.status === "ACTIVE" && user.roles.includes("ADMIN");
+// ADR 0044: simulated carrier outcomes belong to TEST_OPERATOR only.
+export const canSimulate = (user: CurrentUser) =>
+  user.status === "ACTIVE" && user.roles.includes("TEST_OPERATOR");
+export const canEnterWorkspace = (user: CurrentUser) =>
+  canReview(user) || canSimulate(user);

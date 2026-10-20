@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -29,6 +30,16 @@ import {
   stitchTokens,
 } from "../../core/ui";
 import { receipt } from "./contracts";
+import {
+  categories,
+  categoryFor,
+  facetsFor,
+  compatibleAttributes,
+  supportsSeries,
+  languageOptions,
+  classificationErrors,
+  type Attributes,
+} from "@used-books/api-contract/catalog-taxonomy";
 import {
   catalogClassificationFields,
   classificationForResubmit,
@@ -283,6 +294,15 @@ export function CatalogPicker({
     [isFocused, setIsFocused] = useState(false);
   const [edit, setEdit] = useState<OwnBook | null>(null),
     [form, setForm] = useState(blank),
+    [classification, setClassification] = useState<{
+      categoryId: string;
+      attributes: Attributes;
+      series: string;
+    }>({
+      categoryId: "",
+      attributes: {},
+      series: "",
+    }),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const attempt = useRef<{ key: string; body: string; path: string } | null>(
@@ -312,11 +332,21 @@ export function CatalogPicker({
       if (
         !form.title.trim() ||
         !form.authors.trim() ||
-        !form.category.trim() ||
+        (!classification.categoryId && !form.category.trim()) ||
         !form.language.trim()
       ) {
-        setError("Điền tên sách, tác giả, thể loại và ngôn ngữ trước khi gửi.");
+        setError("Điền tên sách, tác giả, chọn danh mục và ngôn ngữ trước khi gửi.");
         return;
+      }
+      if (classification.categoryId) {
+        const classErrors = classificationErrors(
+          classification.categoryId,
+          classification.attributes,
+        );
+        if (classErrors.length > 0) {
+          setError("Chọn đầy đủ các thuộc tính bắt buộc của danh mục.");
+          return;
+        }
       }
       const year = form.publicationYear.trim()
         ? Number(form.publicationYear)
@@ -328,6 +358,7 @@ export function CatalogPicker({
         setError("Năm xuất bản cần là số nguyên từ 1 đến 9999, hoặc để trống.");
         return;
       }
+      const selectedCat = categoryFor(classification.categoryId);
       const data: components["schemas"]["CatalogMetadata"] = {
         title: form.title.trim(),
         authors: form.authors
@@ -336,10 +367,16 @@ export function CatalogPicker({
           .filter(Boolean),
         publisher: form.publisher.trim() || null,
         publicationYear: year,
-        language: form.language.trim(),
+        language: form.language.trim() || "vi",
         edition: form.edition.trim() || null,
-        category: form.category.trim(),
-        ...classificationForResubmit(edit?.currentRevision.metadata),
+        category: (selectedCat?.label ?? form.category.trim()) || "Khác",
+        ...(classification.categoryId
+          ? {
+              categoryId: classification.categoryId as components["schemas"]["CatalogMetadata"]["categoryId"],
+              attributes: classification.attributes,
+              series: classification.series?.trim() || null,
+            }
+          : classificationForResubmit(edit?.currentRevision.metadata)),
         isbn: form.isbn.trim() || null,
       };
       if (
@@ -645,27 +682,153 @@ export function CatalogPicker({
                 maxLength={500}
               />
 
-              <TextField
-                label="Thể loại / Danh mục *"
-                value={form.category}
-                placeholder="Ví dụ: Văn học, Kinh tế, Kỹ năng sống..."
-                onChangeText={(v) => {
-                  onDirtyChange(true);
-                  setForm((f) => ({ ...f, category: v }));
-                }}
-                maxLength={80}
-              />
+              {/* Category Picker */}
+              <View style={{ gap: space.xs }}>
+                <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 13 }}>
+                  Danh mục sách *
+                </AppText>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+                  {categories.map((cat) => {
+                    const isSelected = classification.categoryId === cat.id;
+                    return (
+                      <Pressable
+                        key={cat.id}
+                        onPress={() => {
+                          onDirtyChange(true);
+                          const newAttrs = compatibleAttributes(cat.id, classification.attributes, "metadata");
+                          setClassification((c) => ({
+                            ...c,
+                            categoryId: cat.id,
+                            attributes: newAttrs,
+                            series: supportsSeries(cat.id) ? c.series : "",
+                          }));
+                          setForm((f) => ({ ...f, category: cat.label }));
+                        }}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 7,
+                          borderRadius: 20,
+                          backgroundColor: isSelected ? stitchTokens.wine : stitchTokens.parchment,
+                          borderWidth: 1,
+                          borderColor: isSelected ? stitchTokens.wine : stitchTokens.peachBorder,
+                        }}
+                      >
+                        <AppText
+                          kind="bold"
+                          color={isSelected ? stitchTokens.white : stitchTokens.darkWood}
+                          style={{ fontSize: 12 }}
+                        >
+                          {cat.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
 
-              <TextField
-                label="Ngôn ngữ"
-                value={form.language}
-                placeholder="vi"
-                onChangeText={(v) => {
-                  onDirtyChange(true);
-                  setForm((f) => ({ ...f, language: v }));
-                }}
-                maxLength={35}
-              />
+              {/* Series field if supported */}
+              {supportsSeries(classification.categoryId) ? (
+                <TextField
+                  label="Bộ truyện / Series (nếu có)"
+                  value={classification.series}
+                  placeholder="Ví dụ: Harry Potter, Conan..."
+                  onChangeText={(v) => {
+                    onDirtyChange(true);
+                    setClassification((c) => ({ ...c, series: v }));
+                  }}
+                  maxLength={120}
+                />
+              ) : null}
+
+              {/* Dynamic Facets / Attributes for selected category */}
+              {classification.categoryId ? (
+                <View style={{ gap: space.sm }}>
+                  {facetsFor(classification.categoryId, classification.attributes, "metadata").map((facet) => {
+                    const selectedValues = classification.attributes[facet.id] ?? [];
+                    return (
+                      <View key={facet.id} style={{ gap: space.xs }}>
+                        <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 12 }}>
+                          {facet.label}
+                        </AppText>
+                        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                          {facet.options.map((opt) => {
+                            const isChosen = selectedValues.includes(opt.id);
+                            return (
+                              <Pressable
+                                key={opt.id}
+                                onPress={() => {
+                                  onDirtyChange(true);
+                                  const nextAttrs = {
+                                    ...classification.attributes,
+                                    [facet.id]: isChosen
+                                      ? selectedValues.filter((v) => v !== opt.id)
+                                      : [...selectedValues, opt.id],
+                                  };
+                                  const sanitized = compatibleAttributes(classification.categoryId, nextAttrs, "metadata");
+                                  setClassification((c) => ({ ...c, attributes: sanitized }));
+                                }}
+                                style={{
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 5,
+                                  borderRadius: 14,
+                                  backgroundColor: isChosen ? stitchTokens.roseWarmSurface : stitchTokens.warmIvory,
+                                  borderWidth: 1,
+                                  borderColor: isChosen ? stitchTokens.wine : stitchTokens.borderWarm,
+                                }}
+                              >
+                                <AppText
+                                  kind="small"
+                                  color={isChosen ? stitchTokens.wine : stitchTokens.subtleGray}
+                                  style={{ fontSize: 11, fontWeight: isChosen ? "700" : "500" }}
+                                >
+                                  {opt.label}
+                                </AppText>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : null}
+
+              {/* Language Picker */}
+              <View style={{ gap: space.xs }}>
+                <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 13 }}>
+                  Ngôn ngữ sách *
+                </AppText>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+                  {languageOptions.map((lang) => {
+                    const isSelected = form.language === lang.id;
+                    return (
+                      <Pressable
+                        key={lang.id}
+                        onPress={() => {
+                          onDirtyChange(true);
+                          setForm((f) => ({ ...f, language: lang.id }));
+                        }}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 16,
+                          backgroundColor: isSelected ? stitchTokens.wine : stitchTokens.parchment,
+                          borderWidth: 1,
+                          borderColor: isSelected ? stitchTokens.wine : stitchTokens.peachBorder,
+                        }}
+                      >
+                        <AppText
+                          kind="small"
+                          color={isSelected ? stitchTokens.white : stitchTokens.darkWood}
+                          style={{ fontSize: 11, fontWeight: isSelected ? "700" : "500" }}
+                        >
+                          {lang.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
 
               <TextField
                 label="Nhà xuất bản (nếu có)"

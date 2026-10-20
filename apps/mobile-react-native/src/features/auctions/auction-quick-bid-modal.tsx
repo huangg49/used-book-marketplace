@@ -16,12 +16,11 @@ import {
   sendAuctionCommand,
   auctionErrorText,
 } from "./auctions-model";
-import type { ExtendedAuctionItem } from "./auctions-data";
 import type { PublicAuctionSummary } from "./contracts";
 
 export interface AuctionQuickBidModalProps {
   readonly visible: boolean;
-  readonly auction: (ExtendedAuctionItem | PublicAuctionSummary) | null;
+  readonly auction: PublicAuctionSummary | null;
   readonly onClose: () => void;
   readonly onSuccess: (amount: number) => void;
 }
@@ -197,12 +196,12 @@ export function AuctionQuickBidModal({
             </View>
           </View>
 
-          {/* Trust and Escrow Notice */}
+          {/* Commitment notice (FR-AU03, FR-T02) */}
           <View style={styles.escrowNotice}>
             <Icon name="shield" size={16} color={stitchTokens.likeNewGreen} />
             <AppText kind="small" style={styles.escrowText}>
-              Bảo chứng sàn Lật Lại • Cam kết giữ sách tại trạm trung chuyển đã
-              được thẩm định 5 bước.
+              Sách đã được điểm giao nhận kiểm tra tình trạng. Mức trả giá là
+              cam kết, không rút lại được.
             </AppText>
           </View>
 

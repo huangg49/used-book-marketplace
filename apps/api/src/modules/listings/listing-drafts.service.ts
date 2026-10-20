@@ -31,6 +31,7 @@ import {
   revisionContent,
   state,
 } from './listing-projection.js';
+import { requireChannelContent } from './listing-channel.js';
 
 export const lowerIds = (ids: string[]) => ids.map((id) => id.toLowerCase());
 
@@ -80,6 +81,8 @@ export class ListingDraftsService {
       },
       mutate: async (tx, actor) => {
         requireActive(actor);
+        const channel = body.channel ?? 'Marketplace';
+        requireChannelContent(channel, body.content);
         const origin = await this.fulfillment.prepare(
           tx,
           actor._id,
@@ -113,6 +116,7 @@ export class ListingDraftsService {
           _id: listingId,
           ownerId: actor._id,
           version: 1,
+          channel,
           moderation: 'Draft' as const,
           visibility: 'Visible' as const,
           trade: 'Available' as const,
@@ -146,6 +150,7 @@ export class ListingDraftsService {
       },
       mutate: async (tx, actor, before) => {
         requireActive(actor);
+        requireChannelContent(before.channel, body.content);
         const origin = await this.fulfillment.prepare(
           tx,
           actor._id,
@@ -255,7 +260,8 @@ export class ListingDraftsService {
     return this.commands.read(auth, async (tx, actor) => {
       member(actor);
       const moderation = query.moderation ?? null,
-        visibility = query.visibility ?? null;
+        visibility = query.visibility ?? null,
+        channel = query.channel ?? null;
       const page = await this.pages.page(
         tx.c.listings,
         [
@@ -265,6 +271,7 @@ export class ListingDraftsService {
               deletedAt: null,
               ...(moderation ? { moderation } : {}),
               ...(visibility ? { visibility } : {}),
+              ...(channel ? { channel } : {}),
             },
           },
           { $project: { key: '$updatedAt' } },
@@ -277,6 +284,7 @@ export class ListingDraftsService {
             actor: actor._id,
             moderation,
             visibility,
+            channel,
           },
           limit: Number(query.limit),
           cursor: query.cursor as string | undefined,

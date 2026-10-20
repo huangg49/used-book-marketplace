@@ -220,7 +220,9 @@ export type AuctionOperation =
   | 'handOverPointOrder'
   | 'resolvePointOrder'
   | 'claimPointOrder'
-  | 'receivePointOrderReturn';
+  | 'receivePointOrderReturn'
+  | 'dispatchPointOrder'
+  | 'recordPointDelivery';
 type CommandChange =
   | PointChange
   | AuctionChange

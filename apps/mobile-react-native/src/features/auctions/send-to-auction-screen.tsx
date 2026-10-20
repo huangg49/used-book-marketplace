@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import * as Crypto from "expo-crypto";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import { AppText } from "../../core/ui/text";
@@ -10,7 +10,14 @@ import { Icon } from "../../core/ui/icon";
 import { Screen } from "../../core/ui/screen";
 import { stitchTokens } from "../../core/ui/theme";
 import { MemberNavigation } from "../navigation/member-navigation";
-import { draftPage } from "../drafts/contracts";
+import {
+  draftPage,
+  emptyContent,
+  privateDraft,
+  receipt,
+} from "../drafts/contracts";
+import { DraftEditor } from "../drafts/draft-editor";
+import { BackAction, Button, StatePanel } from "../../core/ui";
 import {
   auctionErrorText,
   auctionEligible,
@@ -50,12 +57,43 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const foreground = useForeground();
   const queryClient = useQueryClient();
 
-  // 1. Real Queries
+  // 1. Real Queries. ADR 0042: auctions use the seller's own Auction listings,
+  // never marketplace listings.
   const listings = useQuery({
-    queryKey: ["my-listings", userId, "auction-eligible"],
-    queryFn: () => client.request("/me/listings?moderation=Approved&limit=50", draftPage),
+    queryKey: ["my-listings", userId, "auction"],
+    queryFn: () =>
+      client.request("/me/listings?channel=Auction&limit=50", draftPage),
     enabled: foreground,
     staleTime: 0,
+  });
+
+  // Creating or continuing an auction listing happens in the shared editor.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const createKey = useRef<string | null>(null);
+  const editing = useQuery({
+    queryKey: ["draft", editingId],
+    queryFn: () => client.request(`/me/listings/${editingId}`, privateDraft),
+    enabled: !!editingId,
+    refetchOnWindowFocus: false,
+  });
+  const createListing = useMutation({
+    mutationFn: () => {
+      // One key per intent; a retry after an unknown outcome reuses it.
+      createKey.current ??= Crypto.randomUUID();
+      return client.request("/listings", receipt, {
+        method: "POST",
+        headers: { "Idempotency-Key": createKey.current },
+        body: JSON.stringify({
+          channel: "Auction",
+          content: { ...emptyContent, mode: "Sale" },
+        }),
+      });
+    },
+    onSuccess: (r) => {
+      createKey.current = null;
+      setEditingId(r.entityId);
+      void queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
+    },
   });
 
   const points = useQuery({
@@ -71,7 +109,14 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
     enabled: foreground,
   });
 
-  const eligibleListings = (listings.data?.items ?? []).filter(auctionEligible);
+  const auctionListings = listings.data?.items ?? [];
+  const eligibleListings = auctionListings.filter(auctionEligible);
+  const unfinishedListings = auctionListings.filter(
+    (l) =>
+      ["Draft", "PendingReview", "Rejected"].includes(l.state.moderation) &&
+      l.state.visibility !== "Removed" &&
+      !l.state.deletedAt,
+  );
   const openPoints = points.data?.items ?? [];
 
   // 2. Form states
@@ -104,7 +149,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const priceErrors = intakePriceErrors(startPrice, step, buyNowOn ? buyNowPrice ?? 0 : null);
 
   const formError = !selectedListing
-    ? "Vui lòng chọn một cuốn sách đã được duyệt."
+    ? "Vui lòng chọn một sách đấu giá đã được duyệt."
     : !selectedPoint || selectedPoint.availableSlots < 1 || selectedPoint.status !== "Active"
       ? "Vui lòng chọn trạm tiếp nhận còn chỗ tại TP.HCM."
       : priceErrors.startPrice ?? priceErrors.buyNowPrice ?? null;
@@ -210,6 +255,38 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
     });
   };
 
+  const closeEditor = () => {
+    setEditingId(null);
+    void queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
+    void queryClient.removeQueries({ queryKey: ["draft", editingId] });
+  };
+
+  if (editingId && editing.data)
+    return (
+      <DraftEditor key={editingId} initial={editing.data} onBack={closeEditor} />
+    );
+
+  if (editingId)
+    return (
+      <Screen>
+        <BackAction title="Về gửi đấu giá" onPress={closeEditor} />
+        <StatePanel
+          loading={editing.isPending}
+          title={
+            editing.error ? "Chưa mở được sách đấu giá" : "Đang mở sách đấu giá"
+          }
+          action={
+            editing.error
+              ? { label: "Thử lại", onPress: () => void editing.refetch() }
+              : undefined
+          }
+        />
+        {editing.error ? (
+          <Button title="Về gửi đấu giá" wine secondary onPress={closeEditor} />
+        ) : null}
+      </Screen>
+    );
+
   return (
     <Screen
       appearance="home"
@@ -241,11 +318,22 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         {/* 4. Section 1: Book Picker */}
         <SendToAuctionBookPicker
           eligibleListings={eligibleListings}
+          unfinishedListings={unfinishedListings}
           selectedListingId={listingId}
           onSelectListing={(id) => {
             setListingId(id);
             setTouched(false);
           }}
+          onOpenListing={setEditingId}
+          onCreateListing={() => createListing.mutate()}
+          creating={createListing.isPending}
+          createError={
+            createListing.error
+              ? "Chưa tạo được sách đấu giá. Thử lại; yêu cầu cũ sẽ không bị tạo trùng."
+              : null
+          }
+          loadError={listings.isError}
+          onRetryLoad={() => void listings.refetch()}
           disabled={locked}
           isLoading={listings.isPending}
         />

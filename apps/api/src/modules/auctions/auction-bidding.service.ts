@@ -7,7 +7,7 @@ import type {
 } from '../../database/mongo/documents.js';
 import {
   AUCTION_PAYMENT_MS,
-  BUY_NOW_PAYMENT_MS,
+  BUY_NOW_CHALLENGE_MS,
 } from '../../database/mongo/migrations/auction-constants.js';
 import { MongoService } from '../../database/mongo/mongo.service.js';
 import type { Tx } from '../../database/mongo/transaction.js';
@@ -255,15 +255,22 @@ export class AuctionBiddingService {
     );
   }
 
+  // Bids, Auto and Buy Now share one path under the auction lock (ADR 0043:
+  // Buy Now is a committed manual bid at buyNowPrice that opens a 60-second
+  // window), so a racing first bid and Buy Now have exactly one winner.
   private engineCommand(
     context: CommandContext,
     operation: Extract<
       AuctionOperation,
-      'placeAuctionBid' | 'setAuctionAutoBid' | 'disableAuctionAutoBid'
+      | 'placeAuctionBid'
+      | 'setAuctionAutoBid'
+      | 'disableAuctionAutoBid'
+      | 'buyAuctionNow'
     >,
     id: string,
     body: object,
-    action: (actorId: string) => EngineAction,
+    action: (actorId: string, a: AuctionDoc) => EngineAction,
+    buyNow = false,
   ) {
     return this.commands.runAuction(context, operation, id, body, {
       discover: async (tx) => [(await this.auction(tx, id)).sellerId],
@@ -273,14 +280,20 @@ export class AuctionBiddingService {
         return a;
       },
       mutate: async (tx, actor, _before, receiptId) => {
-        const act = action(actor._id);
         const { a, now, own } = await this.lockForBid(
           tx,
           context.auth,
           actor._id,
           id,
-          act.kind !== 'AutoDisable',
+          operation !== 'disableAuctionAutoBid',
         );
+        if (buyNow && (a.bidderCount > 0 || a.buyNowPrice === null))
+          throw new DomainError(
+            409,
+            'InvalidState',
+            'Mua ngay chỉ khả dụng trước lượt trả giá đầu tiên.',
+          );
+        const act = action(actor._id, a);
         const bidders = await tx.c.auction_bidders
           .find({ auctionId: a._id })
           .toArray();
@@ -353,7 +366,7 @@ export class AuctionBiddingService {
           _id: randomUUID(),
           auctionId: a._id,
           bidderId: actor._id,
-          kind: act.kind,
+          kind: buyNow ? 'BuyNow' : act.kind,
           amount:
             act.kind === 'Manual'
               ? act.amount
@@ -376,11 +389,26 @@ export class AuctionBiddingService {
             nextSequence: result.nextSequence,
             bidderCount: a.bidderCount + (own ? 0 : 1),
             bidCount: a.bidCount + 1,
+            ...(buyNow
+              ? {
+                  buyNowAt: now,
+                  endAt: new Date(
+                    Math.min(
+                      a.endAt.getTime(),
+                      now.getTime() + BUY_NOW_CHALLENGE_MS,
+                    ),
+                  ),
+                }
+              : {}),
           },
           now,
         );
         if (a.leaderId && next.leaderId !== a.leaderId)
           await notifyAuction(tx, next, 'AuctionOutbid', [a.leaderId], now);
+        if (buyNow) {
+          await notifyAuction(tx, next, 'AuctionBoughtNow', [a.sellerId], now);
+          return this.change(next, now, 'AuctionBoughtNow', actor._id);
+        }
         return this.change(
           next,
           now,
@@ -393,71 +421,22 @@ export class AuctionBiddingService {
     });
   }
 
-  // FR-AU06: only before the first valid bid, under the same auction lock as
-  // bids, so a racing bid and Buy Now have exactly one winner.
+  // FR-AU06/ADR 0043: only before the first valid bid. The buyer commits to
+  // buyNowPrice and leads; others may outbid until min(endAt, now + 60 s),
+  // then the normal close decides the winner.
   buyNow(context: CommandContext, id: string, body: Wire['BuyAuctionNow']) {
-    return this.commands.runAuction(context, 'buyAuctionNow', id, body, {
-      discover: async (tx) => [(await this.auction(tx, id)).sellerId],
-      authorize: async (tx, actor) => {
-        const a = await this.auction(tx, id);
-        await this.eligibleBidder(tx, actor, a);
-        return a;
-      },
-      mutate: async (tx, actor, _before, receiptId) => {
-        const { a, now } = await this.lockForBid(
-          tx,
-          context.auth,
-          actor._id,
-          id,
-          true,
-        );
-        if (a.bidderCount > 0 || a.buyNowPrice === null)
-          throw new DomainError(
-            409,
-            'InvalidState',
-            'Mua ngay chỉ khả dụng trước lượt trả giá đầu tiên.',
-          );
-        const paymentDeadline = new Date(now.getTime() + BUY_NOW_PAYMENT_MS);
-        const order = await this.orders.form(
-          tx,
-          a,
-          actor._id,
-          a.buyNowPrice,
-          paymentDeadline,
-          now,
-          receiptId,
-        );
-        await tx.c.auction_bids.insertOne({
-          _id: randomUUID(),
-          auctionId: a._id,
-          bidderId: actor._id,
-          kind: 'BuyNow',
-          amount: a.buyNowPrice,
-          levelSequence: null,
-          priceBefore: null,
-          priceAfter: null,
-          leaderAfter: null,
-          receiptId,
-          decidedAt: now,
-        });
-        const next = await this.update(
-          tx,
-          a,
-          {
-            state: 'BuyNowPending',
-            winnerId: actor._id,
-            finalPrice: a.buyNowPrice,
-            closedAt: now,
-            paymentDeadline,
-            orderId: order._id,
-            bidCount: a.bidCount + 1,
-          },
-          now,
-        );
-        await notifyAuction(tx, next, 'AuctionBoughtNow', [a.sellerId], now);
-        return this.change(next, now, 'AuctionBoughtNow', actor._id);
-      },
-    });
+    return this.engineCommand(
+      context,
+      'buyAuctionNow',
+      id,
+      body,
+      (actorId, a) => ({
+        kind: 'Manual',
+        bidderId: actorId,
+        amount: a.buyNowPrice!,
+      }),
+      true,
+    );
   }
 
   // ADMIN independent of the seller and every bidder; never picks a winner.
@@ -710,6 +689,7 @@ export class AuctionBiddingService {
       startPrice: a.startPrice,
       step: a.step as 10000 | 50000,
       buyNowPrice: open && a.bidderCount === 0 ? a.buyNowPrice : null,
+      buyNowAt: a.buyNowAt?.toISOString() ?? null,
       currentPrice: a.currentPrice,
       minimumBid: open ? nextMinimumBid(a) : null,
       bidderCount: a.bidderCount,
@@ -943,8 +923,18 @@ export class AuctionBiddingService {
       const own = await tx.c.auction_bidders.findOne({
         _id: `${id}:${actor._id}`,
       });
+      // Legacy BuyNowPending buyers have no bidder row; since ADR 0043 the
+      // Buy Now buyer is a bidder whose first commitment was the BuyNow row.
       const boughtNow =
-        a?.state !== undefined && !own && a.winnerId === actor._id;
+        a?.state !== undefined &&
+        ((!own && a.winnerId === actor._id) ||
+          (!!own &&
+            !!a.buyNowAt &&
+            !!(await tx.c.auction_bids.findOne({
+              auctionId: id,
+              bidderId: actor._id,
+              kind: 'BuyNow',
+            }))));
       if (!a || (!own && !boughtNow)) throw notFound();
       const now = await tx.now();
       const open = a.state === 'Active' && now < a.endAt;

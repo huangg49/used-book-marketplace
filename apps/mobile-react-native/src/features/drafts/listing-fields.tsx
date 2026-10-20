@@ -475,12 +475,15 @@ export function PricingFields({
   disabled,
   errors,
   anchor = noAnchor,
+  auction = false,
 }: {
   form: Form;
   onChange: (next: Form) => void;
   disabled: boolean;
   errors: Errors;
   anchor?: Anchor;
+  // ADR 0042: fixed Sale; the price is the declared value, not a shop price.
+  auction?: boolean;
 }) {
   const modes = [
     {
@@ -491,9 +494,9 @@ export function PricingFields({
     },
     {
       value: "Exchange" as const,
-      title: "Đổi Lật-Xu",
+      title: "Trao đổi Sách",
       subtitle: "Đổi đọc tác phẩm",
-      desc: "Tích lũy xu để đổi sách khác",
+      desc: "Giao lưu đổi sách cùng bạn đọc",
     },
     {
       value: "Both" as const,
@@ -506,7 +509,10 @@ export function PricingFields({
   return (
     <View style={{ gap: space.xl }}>
       {/* Mode selection 3 cards */}
-      <View ref={anchor("mode")} style={{ gap: space.sm }}>
+      <View
+        ref={anchor("mode")}
+        style={{ gap: space.sm, display: auction ? "none" : "flex" }}
+      >
         <AppText
           kind="label"
           color={stitchTokens.wine}
@@ -628,7 +634,7 @@ export function PricingFields({
               color={stitchTokens.wine}
               style={{ fontWeight: "700", letterSpacing: 0.5 }}
             >
-              GIÁ BÁN ĐỀ XUẤT (VND)
+              {auction ? "GIÁ TRỊ KHAI BÁO (VND)" : "GIÁ BÁN ĐỀ XUẤT (VND)"}
             </AppText>
             <AppText kind="small" color={stitchTokens.subtleGray}>
               10.000₫ – 1.000.000₫
@@ -651,8 +657,12 @@ export function PricingFields({
             </AppText>
             <View style={{ flex: 1 }}>
               <TextField
-                label="Giá bán (đồng)"
-                hint="Ví dụ: 125000"
+                label={auction ? "Giá trị khai báo (đồng)" : "Giá bán (đồng)"}
+                hint={
+                  auction
+                    ? "Mức bồi thường tối đa nếu sách gặp sự cố tại điểm, ví dụ 125000"
+                    : "Ví dụ: 125000"
+                }
                 keyboardType="number-pad"
                 value={form.salePrice}
                 editable={!disabled}
@@ -731,32 +741,6 @@ export function PricingFields({
               />
             </View>
           </View>
-
-          {/* Lật-Xu equivalent badge */}
-          {Number(form.exchangeValue) > 0 ? (
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                backgroundColor: stitchTokens.goldLight,
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: stitchTokens.goldDark,
-                gap: 6,
-              }}
-            >
-              <Icon name="bookmark" size={14} color={stitchTokens.goldDark} />
-              <AppText
-                kind="small"
-                color={stitchTokens.wineDark}
-                style={{ fontWeight: "600" }}
-              >
-                {`Tương đương quy đổi: ~${Math.round(Number(form.exchangeValue) / 1000).toLocaleString("vi-VN")} Lật-Xu vàng`}
-              </AppText>
-            </View>
-          ) : null}
         </View>
       ) : null}
     </View>

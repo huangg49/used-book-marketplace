@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, View, type ScrollView } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,6 +9,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useSession } from "../../core/session/session-provider";
 import {
   ActionBar,
+  AppModal,
   AppText,
   BackAction,
   Button,
@@ -23,7 +25,8 @@ import {
   WebBrandLogo,
 } from "../../core/ui";
 import { mediaPage, privateDraft, type Draft, type Media } from "./contracts";
-import { Photo, photoError, useForeground } from "./draft-media";
+import { photoError, useForeground } from "./draft-media";
+import { DraftCoverPhoto } from "./draft-cover-photo";
 import {
   fromContent,
   toContent,
@@ -84,6 +87,30 @@ const stepHelp = [
   "Xem lại toàn bộ thông tin trước khi lưu hoặc gửi duyệt.",
 ] as const;
 
+// ADR 0042: an auction listing is a Sale whose price is a declared value and
+// that goes to a handover point, so it has no delivery origin or shop price.
+const auctionStepLabels = [
+  "Thông tin sách",
+  "Ảnh bản sách",
+  "Tình trạng",
+  "Giá trị khai báo",
+  "Kiểm tra",
+] as const;
+const auctionShortLabels = [
+  "1. Thông tin",
+  "2. Ảnh sách",
+  "3. Tình trạng",
+  "4. Giá trị",
+  "5. Kiểm tra",
+] as const;
+const auctionStepHelp = [
+  stepHelp[0],
+  stepHelp[1],
+  stepHelp[2],
+  "Giá trị khai báo là mức bồi thường tối đa nếu sách hư hỏng hoặc thất lạc tại điểm; không phải giá bán.",
+  "Xem lại thông tin trước khi gửi duyệt. Sách đấu giá không hiển thị trên kệ mua/đổi.",
+] as const;
+
 const checkMessage =
   "Có thông tin cần bổ sung. Kiểm tra các mục được ghi chú bên dưới.";
 
@@ -98,9 +125,13 @@ export function DraftEditor({
     cache = useQueryClient(),
     foreground = useForeground();
   const [base, setBase] = useState(initial),
-    [form, setForm] = useState(() =>
-      fromContent(initial.currentRevision.content),
-    );
+    [form, setForm] = useState(() => {
+      const f = fromContent(initial.currentRevision.content);
+      // Auction listings are always a Sale (ADR 0042); the selector is hidden.
+      return initial.channel === "Auction" && !f.mode
+        ? { ...f, mode: "Sale" as const }
+        : f;
+    });
   const [step, setStep] = useState(editableListing(initial) ? 0 : 4),
     [declared, setDeclared] = useState(false),
     [check, setCheck] = useState<{ errors: Errors; submit: boolean }>({
@@ -120,10 +151,15 @@ export function DraftEditor({
     [lifecyclePending, setLifecyclePending] = useState(false);
   const scroll = useRef<ScrollView>(null);
   const [catalogDirty, setCatalogDirty] = useState(false);
+  const auction = base.channel === "Auction";
+  const labels = auction ? auctionStepLabels : stepLabels;
+  const help = auction ? auctionStepHelp : stepHelp;
+  const insets = useSafeAreaInsets();
 
   // Price suggestion lives here so it survives step changes
   const [assist, setAssist] = useState<AssistState>({ status: "idle" });
   const assistToken = useRef(0);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const go = (value: number) => {
     setStep(value);
@@ -356,7 +392,11 @@ export function DraftEditor({
     }
   };
 
-  const send = async (retry = false) => {
+  const send = async (
+    retry = false,
+    replaceIndex?: number,
+    asCover?: boolean,
+  ) => {
     if (busyRef.current || !editable || uncertain || lifecyclePending) return;
     busyRef.current = true;
     setBusy(true);
@@ -410,13 +450,34 @@ export function DraftEditor({
       }
       if (!attempt.current) return;
       const m = await uploadPhoto(client, attempt.current);
-      setForm((f) => ({
-        ...f,
-        mediaIds:
-          f.mediaIds.includes(m.id) || f.mediaIds.length >= 8
-            ? f.mediaIds
-            : [...f.mediaIds, m.id],
-      }));
+      setForm((f) => {
+        if (asCover) {
+          const rest = f.mediaIds.length > 0 ? f.mediaIds.slice(1) : [];
+          return {
+            ...f,
+            mediaIds: [m.id, ...rest.filter((id) => id !== m.id)].slice(0, 8),
+          };
+        }
+        if (
+          replaceIndex !== undefined &&
+          replaceIndex >= 0 &&
+          replaceIndex < f.mediaIds.length
+        ) {
+          return {
+            ...f,
+            mediaIds: f.mediaIds.map((id, idx) =>
+              idx === replaceIndex ? m.id : id,
+            ),
+          };
+        }
+        return {
+          ...f,
+          mediaIds:
+            f.mediaIds.includes(m.id) || f.mediaIds.length >= 8
+              ? f.mediaIds
+              : [...f.mediaIds, m.id],
+        };
+      });
       attempt.current = null;
       setMessage(
         approvedEdit
@@ -602,9 +663,10 @@ export function DraftEditor({
 
         {/* 5-Step Stepper Tabs */}
         <StepNav
-          labels={stepLabels}
+          labels={labels}
+          short={auction ? auctionShortLabels : undefined}
           current={step}
-          states={stepLabels.map((_, i) => {
+          states={labels.map((_, i) => {
             if (i === 4) {
               if (base.state.moderation === "Approved") return "done";
               if (base.state.moderation === "PendingReview") return "review";
@@ -628,10 +690,10 @@ export function DraftEditor({
             accessibilityRole="header"
             style={{ fontSize: 20 }}
           >
-            {stepLabels[step]}
+            {labels[step]}
           </AppText>
           <AppText kind="small" color={stitchTokens.warmUmber} style={{ fontSize: 12 }}>
-            {stepHelp[step]}
+            {help[step]}
           </AppText>
         </View>
       </View>
@@ -752,7 +814,7 @@ export function DraftEditor({
         <View style={styles.formWhiteCard}>
           {form.bookId ? <BookIdentity id={form.bookId} /> : null}
 
-          {/* Stitch Section 2: Photo Grid */}
+          {/* Stitch Section 2: Photo Manager (Separate Cover and Support Photos) */}
           <View style={{ gap: space.md, marginTop: space.xs }}>
             <View
               style={{
@@ -778,8 +840,7 @@ export function DraftEditor({
             </View>
 
             <AppText kind="small" color={stitchTokens.subtleGray}>
-              Chụp bìa, gáy và các góc thể hiện tình trạng thật. JPEG, PNG hoặc WebP ≤ 10 MB.
-              Ảnh đầu tiên được dùng làm ảnh bìa chính.
+              Ảnh bìa sẽ hiển thị đầu tiên trên kệ sách. Thêm các ảnh gáy, góc cạnh và ruột sách làm ảnh phụ. Tối đa 1 ảnh bìa + 7 ảnh phụ (tổng 8 ảnh). Định dạng JPEG, PNG, WebP ≤ 10 MB.
             </AppText>
 
             {photos.isPending ? (
@@ -798,129 +859,389 @@ export function DraftEditor({
               <Notice tone="error">{errors.mediaIds}</Notice>
             ) : null}
 
-            {/* 3-Column Photo Grid */}
-            <View
-              ref={anchor("mediaIds")}
-              style={{
-                flexDirection: "row",
-                flexWrap: "wrap",
-                gap: space.sm,
-              }}
-            >
-              {photos.data?.map((item) => {
-                const isSelected = ids.includes(item.id);
-                const isCover = ids[0] === item.id;
-
-                return (
+            {/* --- KHU VỰC 1: ẢNH BÌA BẢN SÁCH --- */}
+            <View ref={anchor("mediaIds")} style={{ gap: space.xs }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 13 }}>
+                  Ảnh bìa bản sách *
+                </AppText>
+                {ids.length > 0 ? (
                   <View
-                    key={item.id}
                     style={{
-                      width: "31.3%",
-                      backgroundColor: stitchTokens.warmIvory,
-                      borderRadius: 10,
-                      borderWidth: isCover ? 2 : 1,
-                      borderColor: isCover ? stitchTokens.wine : stitchTokens.borderWarm,
-                      padding: 6,
-                      gap: 6,
+                      backgroundColor: stitchTokens.wine,
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 4,
                     }}
                   >
-                    <Photo
-                      item={item}
-                      foreground={foreground}
-                      selected={isSelected}
-                      disabled={locked || (!isSelected && ids.length >= 8)}
-                      onToggle={() =>
-                        setForm((f) => ({
-                          ...f,
-                          mediaIds: f.mediaIds.includes(item.id)
-                            ? f.mediaIds.filter((id) => id !== item.id)
-                            : [...f.mediaIds, item.id],
-                        }))
-                      }
-                    />
+                    <AppText
+                      kind="small"
+                      color={stitchTokens.gold}
+                      style={{ fontSize: 9, fontWeight: "700" }}
+                    >
+                      BÌA CHÍNH (BẮT BUỘC)
+                    </AppText>
+                  </View>
+                ) : null}
+              </View>
 
-                    {isSelected ? (
-                      <View style={{ gap: 4 }}>
-                        {isCover ? (
-                          <View
-                            style={{
-                              backgroundColor: stitchTokens.wine,
-                              paddingVertical: 3,
-                              paddingHorizontal: 4,
-                              borderRadius: 4,
+              {ids.length > 0 ? (
+                <View
+                  style={{
+                    backgroundColor: stitchTokens.warmIvory,
+                    borderRadius: 14,
+                    borderWidth: 1.5,
+                    borderColor: stitchTokens.wine,
+                    padding: space.sm,
+                    gap: space.sm,
+                  }}
+                >
+                  <Pressable
+                    onPress={() => setViewerIndex(0)}
+                    accessibilityLabel="Xem ảnh bìa lớn"
+                    style={{
+                      width: "100%",
+                      height: 220,
+                      borderRadius: 10,
+                      overflow: "hidden",
+                      backgroundColor: stitchTokens.parchment,
+                    }}
+                  >
+                    <DraftCoverPhoto
+                      listingId={base.id}
+                      mediaId={ids[0]}
+                      label="Ảnh bìa bản sách"
+                    />
+                  </Pressable>
+
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      gap: space.xs,
+                      marginTop: space.xs,
+                    }}
+                  >
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Xem ảnh bìa lớn"
+                      onPress={() => setViewerIndex(0)}
+                      style={({ pressed }) => [
+                        {
+                          flex: 1,
+                          minHeight: 38,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                          paddingHorizontal: space.xs,
+                          paddingVertical: 8,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: stitchTokens.borderWarm,
+                          backgroundColor: stitchTokens.whiteSurface,
+                        },
+                        pressed && { opacity: 0.7 },
+                      ]}
+                    >
+                      <Icon name="eye" size={16} color={stitchTokens.wineDark} />
+                      <AppText
+                        kind="bold"
+                        color={stitchTokens.wineDark}
+                        style={{ fontSize: 12 }}
+                      >
+                        Xem lớn
+                      </AppText>
+                    </Pressable>
+
+                    {editable ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Thay ảnh bìa"
+                        disabled={locked || retryAvailable}
+                        onPress={() => void send(false, undefined, true)}
+                        style={({ pressed }) => [
+                          {
+                            flex: 1,
+                            minHeight: 38,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 6,
+                            paddingHorizontal: space.xs,
+                            paddingVertical: 8,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor: stitchTokens.peachBorder,
+                            backgroundColor: stitchTokens.roseWarmSurface,
+                            opacity: locked || retryAvailable ? 0.5 : 1,
+                          },
+                          pressed && { opacity: 0.7 },
+                        ]}
+                      >
+                        <Icon name="camera" size={16} color={stitchTokens.wine} />
+                        <AppText
+                          kind="bold"
+                          color={stitchTokens.wine}
+                          style={{ fontSize: 12 }}
+                        >
+                          Thay ảnh
+                        </AppText>
+                      </Pressable>
+                    ) : null}
+
+                    {editable ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Xóa ảnh bìa"
+                        disabled={locked}
+                        onPress={() =>
+                          setForm((f) => ({
+                            ...f,
+                            mediaIds: f.mediaIds.slice(1),
+                          }))
+                        }
+                        style={({ pressed }) => [
+                          {
+                            flex: 1,
+                            minHeight: 38,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 6,
+                            paddingHorizontal: space.xs,
+                            paddingVertical: 8,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor: stitchTokens.flashRedBg,
+                            backgroundColor: stitchTokens.flashRedBg,
+                            opacity: locked ? 0.5 : 1,
+                          },
+                          pressed && { opacity: 0.7 },
+                        ]}
+                      >
+                        <Icon name="trash" size={16} color={stitchTokens.darkRed} />
+                        <AppText
+                          kind="bold"
+                          color={stitchTokens.darkRed}
+                          style={{ fontSize: 12 }}
+                        >
+                          Xóa bìa
+                        </AppText>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                </View>
+              ) : (
+                <Pressable
+                  disabled={locked || retryAvailable || !editable}
+                  onPress={() => void send(false, undefined, true)}
+                  accessibilityLabel="Chọn ảnh bìa bản sách"
+                  style={({ pressed }) => [
+                    {
+                      width: "100%",
+                      height: 150,
+                      borderRadius: 14,
+                      borderWidth: 1.5,
+                      borderStyle: "dashed",
+                      borderColor: stitchTokens.wine,
+                      backgroundColor: stitchTokens.roseWarmSurface,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      padding: 12,
+                    },
+                    (pressed || locked) && { opacity: 0.7 },
+                  ]}
+                >
+                  <Icon name="camera" size={28} color={stitchTokens.wine} />
+                  <AppText
+                    kind="bold"
+                    color={stitchTokens.wine}
+                    style={{ fontSize: 13, textAlign: "center" }}
+                  >
+                    + Chọn ảnh bìa bản sách (Bắt buộc)
+                  </AppText>
+                  <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 11 }}>
+                    Bấm để chụp hoặc chọn ảnh từ thư viện
+                  </AppText>
+                </Pressable>
+              )}
+            </View>
+
+            {/* --- KHU VỰC 2: ẢNH PHỤ BẢN SÁCH --- */}
+            <View style={{ gap: space.xs, marginTop: space.sm }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 13 }}>
+                  Ảnh phụ bản sách
+                </AppText>
+                <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 11 }}>
+                  {`${Math.max(0, ids.length - 1)}/7 ảnh`}
+                </AppText>
+              </View>
+
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+                {ids.slice(1).map((mediaId, index) => {
+                  const actualIndex = index + 1;
+                  return (
+                    <View
+                      key={mediaId}
+                      style={{
+                        width: "48%",
+                        backgroundColor: stitchTokens.warmIvory,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: stitchTokens.borderWarm,
+                        padding: 8,
+                        gap: 6,
+                      }}
+                    >
+                      <Pressable
+                        onPress={() => setViewerIndex(actualIndex)}
+                        accessibilityLabel={`Xem lớn ảnh phụ ${index + 1}`}
+                        style={{
+                          width: "100%",
+                          height: 120,
+                          borderRadius: 8,
+                          overflow: "hidden",
+                          backgroundColor: stitchTokens.parchment,
+                        }}
+                      >
+                        <DraftCoverPhoto
+                          listingId={base.id}
+                          mediaId={mediaId}
+                          label={`Ảnh phụ ${index + 1}`}
+                        />
+                      </Pressable>
+
+                      <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 10, fontWeight: "600" }}>
+                        {`Ảnh phụ ${index + 1}`}
+                      </AppText>
+
+                      <View style={{ flexDirection: "row", gap: 4, marginTop: 2 }}>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Xem ảnh phụ ${index + 1}`}
+                          onPress={() => setViewerIndex(actualIndex)}
+                          style={({ pressed }) => [
+                            {
+                              flex: 1,
+                              minHeight: 32,
+                              flexDirection: "row",
                               alignItems: "center",
-                            }}
+                              justifyContent: "center",
+                              borderRadius: 6,
+                              borderWidth: 1,
+                              borderColor: stitchTokens.borderWarm,
+                              backgroundColor: stitchTokens.whiteSurface,
+                            },
+                            pressed && { opacity: 0.7 },
+                          ]}
+                        >
+                          <Icon name="eye" size={14} color={stitchTokens.wineDark} />
+                        </Pressable>
+
+                        {editable ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Thay ảnh phụ ${index + 1}`}
+                            disabled={locked || retryAvailable}
+                            onPress={() => void send(false, actualIndex)}
+                            style={({ pressed }) => [
+                              {
+                                flex: 1,
+                                minHeight: 32,
+                                flexDirection: "row",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                borderRadius: 6,
+                                borderWidth: 1,
+                                borderColor: stitchTokens.peachBorder,
+                                backgroundColor: stitchTokens.roseWarmSurface,
+                                opacity: locked || retryAvailable ? 0.5 : 1,
+                              },
+                              pressed && { opacity: 0.7 },
+                            ]}
                           >
-                            <AppText
-                              kind="small"
-                              color={stitchTokens.gold}
-                              style={{ fontSize: 9, fontWeight: "700" }}
-                            >
-                              BÌA CHÍNH
-                            </AppText>
-                          </View>
-                        ) : (
-                          <Button
-                            secondary
-                            title="Làm bìa"
+                            <Icon name="camera" size={14} color={stitchTokens.wine} />
+                          </Pressable>
+                        ) : null}
+
+                        {editable ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Xóa ảnh phụ ${index + 1}`}
                             disabled={locked}
                             onPress={() =>
                               setForm((f) => ({
                                 ...f,
-                                mediaIds: [
-                                  item.id,
-                                  ...f.mediaIds.filter((id) => id !== item.id),
-                                ],
+                                mediaIds: f.mediaIds.filter((_, i) => i !== actualIndex),
                               }))
                             }
-                          />
-                        )}
+                            style={({ pressed }) => [
+                              {
+                                flex: 1,
+                                minHeight: 32,
+                                flexDirection: "row",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                borderRadius: 6,
+                                borderWidth: 1,
+                                borderColor: stitchTokens.flashRedBg,
+                                backgroundColor: stitchTokens.flashRedBg,
+                                opacity: locked ? 0.5 : 1,
+                              },
+                              pressed && { opacity: 0.7 },
+                            ]}
+                          >
+                            <Icon name="trash" size={14} color={stitchTokens.darkRed} />
+                          </Pressable>
+                        ) : null}
                       </View>
-                    ) : null}
-                  </View>
-                );
-              })}
+                    </View>
+                  );
+                })}
 
-              {/* Upload Slot Card */}
-              {editable && ids.length < 8 ? (
-                <Pressable
-                  disabled={locked || retryAvailable}
-                  onPress={() => void send()}
-                  accessibilityLabel="Thêm ảnh khảo chứng"
-                  style={({ pressed }) => [
-                    {
-                      width: "31.3%",
-                      minHeight: 140,
-                      borderRadius: 10,
-                      borderWidth: 1.5,
-                      borderStyle: "dashed",
-                      borderColor: stitchTokens.peachBorder,
-                      backgroundColor: stitchTokens.roseWarmSurface,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 4,
-                      padding: 8,
-                    },
-                    (pressed || locked) && { opacity: 0.6 },
-                  ]}
-                >
-                  <Icon name="camera" size={24} color={stitchTokens.wine} />
-                  <AppText
-                    kind="small"
-                    color={stitchTokens.wine}
-                    style={{ fontWeight: "700", fontSize: 11, textAlign: "center" }}
+                {/* Upload Slot for Support Photo */}
+                {editable && ids.length < 8 ? (
+                  <Pressable
+                    disabled={locked || retryAvailable}
+                    onPress={() => void send(false)}
+                    accessibilityLabel="Thêm ảnh phụ"
+                    style={({ pressed }) => [
+                      {
+                        width: "48%",
+                        minHeight: 140,
+                        borderRadius: 12,
+                        borderWidth: 1.5,
+                        borderStyle: "dashed",
+                        borderColor: stitchTokens.peachBorder,
+                        backgroundColor: stitchTokens.roseWarmSurface,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 4,
+                        padding: 8,
+                      },
+                      (pressed || locked) && { opacity: 0.6 },
+                    ]}
                   >
-                    + Thêm ảnh
-                  </AppText>
-                  <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 9 }}>
-                    Tối đa 8 ảnh
-                  </AppText>
-                </Pressable>
-              ) : null}
+                    <Icon name="camera" size={24} color={stitchTokens.wine} />
+                    <AppText
+                      kind="small"
+                      color={stitchTokens.wine}
+                      style={{ fontWeight: "700", fontSize: 11, textAlign: "center" }}
+                    >
+                      + Thêm ảnh phụ
+                    </AppText>
+                    <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 9 }}>
+                      Tối đa 7 ảnh phụ
+                    </AppText>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
 
             {retryAvailable ? (
-              <View style={{ gap: space.sm }}>
+              <View style={{ gap: space.sm, marginTop: space.xs }}>
                 <Button
                   secondary
                   title="Thử lại ảnh vừa chọn"
@@ -974,9 +1295,10 @@ export function DraftEditor({
             errors={errors}
             disabled={locked}
             anchor={anchor}
+            auction={auction}
           />
 
-          {editable && (form.mode === "Sale" || form.mode === "Both") ? (
+          {editable && !auction && (form.mode === "Sale" || form.mode === "Both") ? (
             <PriceSuggestionPanel
               form={form}
               state={assist}
@@ -993,11 +1315,13 @@ export function DraftEditor({
             />
           ) : null}
 
-          <FulfillmentFields
-            value={form.fulfillment}
-            disabled={locked}
-            onChange={(fulfillment) => setForm((f) => ({ ...f, fulfillment }))}
-          />
+          {auction ? null : (
+            <FulfillmentFields
+              value={form.fulfillment}
+              disabled={locked}
+              onChange={(fulfillment) => setForm((f) => ({ ...f, fulfillment }))}
+            />
+          )}
         </View>
       ) : null}
 
@@ -1042,61 +1366,84 @@ export function DraftEditor({
                 {base.state.moderation === "PendingReview"
                   ? "Nội dung bài đăng đang được kiểm duyệt bởi đội ngũ Lật Lại."
                   : base.state.moderation === "Approved"
-                    ? "Ấn bản của bạn đã được kiểm duyệt và sẵn sàng công khai trên kệ sách Lật Lại."
+                    ? auction
+                      ? "Sách đấu giá đã được duyệt. Quay lại màn Gửi đấu giá để chọn điểm và giá khởi điểm."
+                      : "Ấn bản của bạn đã được kiểm duyệt và sẵn sàng công khai trên kệ sách Lật Lại."
                     : base.state.moderation === "Rejected"
                       ? `Bài đăng cần chỉnh sửa: ${base.latestDecision?.reason ?? "Chưa rõ lý do"}.`
                       : "Bài đăng đang ở chế độ bản nháp."}
               </AppText>
             </View>
           ) : null}
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <AppText kind="label" color={stitchTokens.wine} style={{ fontWeight: "700" }}>
+              1. THÔNG TIN ĐẦU SÁCH
+            </AppText>
+            {editable ? (
+              <Button secondary title="Chỉnh sửa" onPress={() => go(0)} />
+            ) : null}
+          </View>
           <BookIdentity id={form.bookId} />
-
-          <FulfillmentFields
-            value={form.fulfillment}
-            disabled
-            summary
-            onChange={() => {}}
-          />
 
           {/* Photos Preview */}
           <View style={{ gap: space.sm }}>
-            <AppText
-              kind="label"
-              color={stitchTokens.wine}
-              style={{ fontWeight: "700", letterSpacing: 0.5 }}
-            >
-              HÌNH ẢNH ĐÃ CHỌN ({ids.length})
-            </AppText>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <AppText
+                kind="label"
+                color={stitchTokens.wine}
+                style={{ fontWeight: "700", letterSpacing: 0.5 }}
+              >
+                2. ẢNH BẢN SÁCH ({ids.length}/8)
+              </AppText>
+              {editable ? (
+                <Button secondary title="Chỉnh sửa" onPress={() => go(1)} />
+              ) : null}
+            </View>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
-              {ids
-                .map((id) => photos.data?.find((m) => m.id === id))
-                .map((item) =>
-                  item ? (
-                    <View key={item.id} style={{ width: "31.3%" }}>
-                      <Photo
-                        item={item}
-                        foreground={foreground}
-                        selected
-                        disabled
-                        onToggle={() => {}}
-                      />
-                    </View>
-                  ) : null,
-                )}
+              {ids.map((id, index) => (
+                <Pressable
+                  key={id}
+                  onPress={() => setViewerIndex(index)}
+                  style={{
+                    width: "31.3%",
+                    height: 120,
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    borderWidth: index === 0 ? 2 : 1,
+                    borderColor: index === 0 ? stitchTokens.wine : stitchTokens.peachBorder,
+                    backgroundColor: stitchTokens.parchment,
+                  }}
+                >
+                  <DraftCoverPhoto
+                    listingId={base.id}
+                    mediaId={id}
+                    label={index === 0 ? "Ảnh bìa" : `Ảnh phụ ${index}`}
+                  />
+                </Pressable>
+              ))}
             </View>
           </View>
 
           {/* Overview Specs Table */}
-          <View
-            style={{
-              backgroundColor: stitchTokens.warmIvory,
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: stitchTokens.borderWarm,
-              padding: space.md,
-              gap: space.sm,
-            }}
-          >
+          <View style={{ gap: space.xs }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <AppText kind="label" color={stitchTokens.wine} style={{ fontWeight: "700" }}>
+                3. TÌNH TRẠNG BẢN SÁCH
+              </AppText>
+              {editable ? (
+                <Button secondary title="Chỉnh sửa" onPress={() => go(2)} />
+              ) : null}
+            </View>
+            <View
+              style={{
+                backgroundColor: stitchTokens.warmIvory,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: stitchTokens.borderWarm,
+                padding: space.md,
+                gap: space.sm,
+              }}
+            >
             {[
               [
                 "Tình trạng",
@@ -1130,22 +1477,6 @@ export function DraftEditor({
                     ? "Có thiếu"
                     : "Không thiếu",
               ],
-              [
-                "Hình thức giao dịch",
-                form.mode === "Both"
-                  ? "Cả bán & đổi"
-                  : form.mode === "Sale"
-                    ? "Bán trực tiếp"
-                    : form.mode === "Exchange"
-                      ? "Đổi Lật-Xu"
-                      : "Chưa chọn",
-              ],
-              ...(form.mode === "Sale" || form.mode === "Both"
-                ? [["Giá bán đề xuất", displayPrice(form.salePrice)]]
-                : []),
-              ...(form.mode === "Exchange" || form.mode === "Both"
-                ? [["Giá trị đổi / đối chiếu", displayPrice(form.exchangeValue)]]
-                : []),
             ].map(([lbl, val]) => (
               <View
                 key={lbl}
@@ -1169,6 +1500,7 @@ export function DraftEditor({
                 </AppText>
               </View>
             ))}
+            </View>
           </View>
 
           {/* Description */}
@@ -1193,6 +1525,86 @@ export function DraftEditor({
               {form.description || "Chưa có lời nhắn về cuốn sách."}
             </AppText>
           </View>
+
+          {/* Pricing & Fulfillment */}
+          <View style={{ gap: space.xs }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <AppText kind="label" color={stitchTokens.wine} style={{ fontWeight: "700" }}>
+                4. PHƯƠNG THỨC & GIAO NHẬN
+              </AppText>
+              {editable ? (
+                <Button secondary title="Chỉnh sửa" onPress={() => go(3)} />
+              ) : null}
+            </View>
+            <View
+              style={{
+                backgroundColor: stitchTokens.warmIvory,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: stitchTokens.borderWarm,
+                padding: space.md,
+                gap: space.sm,
+              }}
+            >
+              {[
+                [
+                  "Hình thức giao dịch",
+                  auction
+                    ? "Đấu giá qua điểm giao nhận"
+                    : form.mode === "Both"
+                      ? "Cả bán & đổi"
+                      : form.mode === "Sale"
+                        ? "Bán trực tiếp"
+                        : form.mode === "Exchange"
+                          ? "Trao đổi Sách"
+                          : "Chưa chọn",
+                ],
+                ...(form.mode === "Sale" || form.mode === "Both"
+                  ? [
+                      [
+                        auction ? "Giá trị khai báo" : "Giá bán đề xuất",
+                        displayPrice(form.salePrice),
+                      ],
+                    ]
+                  : []),
+                ...(form.mode === "Exchange" || form.mode === "Both"
+                  ? [["Giá trị đổi / đối chiếu", displayPrice(form.exchangeValue)]]
+                  : []),
+              ].map(([lbl, val]) => (
+                <View
+                  key={lbl}
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    paddingVertical: 4,
+                    borderBottomWidth: 1,
+                    borderColor: stitchTokens.parchment,
+                  }}
+                >
+                  <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontWeight: "600" }}>
+                    {lbl}
+                  </AppText>
+                  <AppText
+                    kind="small"
+                    color={stitchTokens.wineDark}
+                    style={{ fontWeight: "700", maxWidth: "60%", textAlign: "right" }}
+                  >
+                    {val || "Chưa điền"}
+                  </AppText>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* ADR 0042: auction books go through the point; no delivery origin. */}
+          {auction ? null : (
+            <FulfillmentFields
+              value={form.fulfillment}
+              disabled
+              summary
+              onChange={() => {}}
+            />
+          )}
 
           {base.catalogStatus === "Pending" ? (
             <Notice tone="info">
@@ -1223,7 +1635,7 @@ export function DraftEditor({
               }}
             >
               <Checkbox
-                title="Tôi xác nhận sở hữu ấn bản này và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại."
+                title="Tôi có quyền sở hữu và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại."
                 checked={declared}
                 disabled={locked}
                 onPress={() => setDeclared((v) => !v)}
@@ -1240,17 +1652,200 @@ export function DraftEditor({
               ) : null}
             </View>
           ) : null}
+
+          {/* Lifecycle Actions (Only in Review step) */}
+          <LifecycleActions
+            value={base}
+            disabled={dirty || busy || uncertain || catalogDirty || editingApproved}
+            reconcile={reconcile}
+            onBack={onBack}
+            onPending={setLifecyclePending}
+          />
         </View>
       ) : null}
 
-      {/* Extra Action Buttons & Lifecycle Actions */}
-      <LifecycleActions
-        value={base}
-        disabled={dirty || busy || uncertain || catalogDirty || editingApproved}
-        reconcile={reconcile}
-        onBack={onBack}
-        onPending={setLifecyclePending}
-      />
+      {/* Full-screen Photo Viewer Modal */}
+      <AppModal
+        visible={viewerIndex !== null}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setViewerIndex(null)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: stitchTokens.black,
+          }}
+        >
+          {/* Edge-to-Edge Image Container (Tap anywhere on photo or backdrop to close) */}
+          <Pressable
+            accessibilityRole="imagebutton"
+            accessibilityLabel="Đóng xem ảnh lớn"
+            onPress={() => setViewerIndex(null)}
+            style={{
+              flex: 1,
+              width: "100%",
+              height: "100%",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {viewerIndex !== null && ids[viewerIndex] ? (
+              <DraftCoverPhoto
+                listingId={base.id}
+                mediaId={ids[viewerIndex]}
+                label={`Ảnh ${viewerIndex + 1}`}
+                resizeMode="contain"
+              />
+            ) : null}
+          </Pressable>
+
+          {/* Floating Top Header Overlay */}
+          <View
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 100,
+              backgroundColor: stitchTokens.modalScrim,
+              paddingTop:
+                Math.max(insets.top, 24) +
+                (Platform.OS === "android" ? 14 : 8),
+              paddingBottom: space.md,
+              paddingHorizontal: space.lg,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <View>
+              <AppText
+                kind="bold"
+                color={stitchTokens.white}
+                style={{ fontSize: 16 }}
+              >
+                {viewerIndex === 0
+                  ? "Ảnh bìa bản sách"
+                  : `Ảnh phụ ${viewerIndex ?? 1}`}
+              </AppText>
+              <AppText
+                kind="small"
+                color={stitchTokens.sandstone}
+                style={{ fontSize: 12 }}
+              >
+                {viewerIndex !== null
+                  ? `${viewerIndex + 1} / ${ids.length} ảnh`
+                  : ""}
+              </AppText>
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đóng xem ảnh lớn"
+              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+              onPress={() => setViewerIndex(null)}
+              style={({ pressed }) => [
+                {
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: stitchTokens.whiteAlpha40,
+                  alignItems: "center",
+                  justifyContent: "center",
+                },
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Icon name="close" size={24} color={stitchTokens.white} />
+            </Pressable>
+          </View>
+
+          {/* Floating Navigation Controls Overlay (If multiple photos) */}
+          {ids.length > 1 && viewerIndex !== null ? (
+            <View
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                zIndex: 100,
+                backgroundColor: stitchTokens.modalScrim,
+                paddingTop: space.md,
+                paddingBottom: Math.max(insets.bottom, 16) + 12,
+                paddingHorizontal: space.lg,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Xem ảnh trước"
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                onPress={() =>
+                  setViewerIndex(
+                    viewerIndex > 0 ? viewerIndex - 1 : ids.length - 1,
+                  )
+                }
+                style={({ pressed }) => [
+                  {
+                    paddingHorizontal: 20,
+                    paddingVertical: 10,
+                    borderRadius: 20,
+                    backgroundColor: stitchTokens.whiteAlpha40,
+                  },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <AppText
+                  kind="bold"
+                  color={stitchTokens.white}
+                  style={{ fontSize: 14 }}
+                >
+                  ← Trước
+                </AppText>
+              </Pressable>
+
+              <AppText
+                kind="small"
+                color={stitchTokens.sandstone}
+                style={{ fontSize: 13, fontWeight: "600" }}
+              >
+                {`${viewerIndex + 1} / ${ids.length}`}
+              </AppText>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Xem ảnh sau"
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                onPress={() =>
+                  setViewerIndex(
+                    viewerIndex < ids.length - 1 ? viewerIndex + 1 : 0,
+                  )
+                }
+                style={({ pressed }) => [
+                  {
+                    paddingHorizontal: 20,
+                    paddingVertical: 10,
+                    borderRadius: 20,
+                    backgroundColor: stitchTokens.whiteAlpha40,
+                  },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <AppText
+                  kind="bold"
+                  color={stitchTokens.white}
+                  style={{ fontSize: 14 }}
+                >
+                  Sau →
+                </AppText>
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+      </AppModal>
 
       {/* Confirmation Dialogs */}
       <ConfirmDialog
