@@ -417,6 +417,7 @@ try {
 } catch (error) {
   const p = browser?.contexts()[0]?.pages()[0];
   if (p) {
+    console.error("QA stale-address notice before screenshot:", await p.getByText("Nơi gửi đã được sửa hoặc xóa.", { exact: false }).count());
     await p
       .screenshot({ path: path.join(artifacts, "failure.png"), fullPage: true })
       .catch(() => {});

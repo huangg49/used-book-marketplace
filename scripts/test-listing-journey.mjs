@@ -198,8 +198,16 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     },
     "PUT",
   );
-  await p.clock.fastForward(31_000);
-  const staleOrigin = p.getByText(/^Nơi gửi đã được sửa hoặc xóa\./);
+  const refreshedAddress = p.waitForResponse(async (response) => {
+    if (new URL(response.url()).pathname !== "/api/v1/me/addresses" || !response.ok()) return false;
+    const body = await response.json();
+    return body.items?.some((address) => address.id === sender.id && address.version === sender.version + 1);
+  });
+  await p.clock.runFor(31_000);
+  await refreshedAddress;
+  // Flush the React/RN Web layout scheduled after the asynchronous HTTP read.
+  await p.clock.runFor(100);
+  const staleOrigin = p.getByText("Nơi gửi đã được sửa hoặc xóa.", { exact: false });
   await staleOrigin.scrollIntoViewIfNeeded();
   await staleOrigin.waitFor();
   await fill("Giá bán (đồng)", "12000");

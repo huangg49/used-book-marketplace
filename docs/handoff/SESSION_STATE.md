@@ -57,7 +57,8 @@
 - Full User Web browser PASS: Home/Search/Detail responsive, login return/owner,
   đăng sách/chỉnh sửa, ảnh, stale address và replay; lost-response chat chỉ tạo
   một hội thoại. RN public/address/listing browser PASS: cuộn đến thông báo nằm
-  ngoài viewport trước khi kiểm visible; giữ toàn bộ ca dữ liệu lỗi/replay.
+  ngoài viewport trước khi kiểm visible; chờ HTTP trả đúng version địa chỉ và
+  flush layout sau khi tiến đồng hồ mô phỏng. Giữ toàn bộ ca dữ liệu lỗi/replay.
   Remote final-head và trạng thái tích hợp theo PR #61.
 - Seller-order và Buy-now browser PASS: hai bên, quote/address, thiếu tiền bị từ
   chối, lost ACK tạo/thanh toán cùng key/body, đúng một hold; ảnh đóng gói, gửi và
