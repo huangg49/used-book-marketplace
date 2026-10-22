@@ -53,6 +53,8 @@
   width: 100%;
   margin-inline: auto;
   z-index: 60;
+  /* Keep navbar rasterization stable when the WebGL curtain layer detaches. */
+  will-change: transform;
   background: var(--shop-wine);
   color: var(--shop-cream);
   font-family: var(--shop-body);

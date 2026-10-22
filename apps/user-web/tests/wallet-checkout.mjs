@@ -38,6 +38,7 @@ Object.assign(process.env, {
 let fixture, server, browser, page;
 const topupResponses = [];
 const browserMessages = [];
+const historyReads = [];
 const realFetch = globalThis.fetch;
 let queryMode = "pending";
 const checkoutAmounts = new Map();
@@ -489,6 +490,20 @@ try {
     (await fixture.api("/me/wallet", fixture.member.accessToken)).available,
     90000,
   );
+  // The settled payment has two query observers (result + owned checkout).
+  // Wait for checkout release and its actual invalidations, not the page's
+  // already-fired networkidle navigation event, before the pagination fixture.
+  await page.waitForFunction(async () => {
+    const { queryClient } = await import("/src/lib/session.ts");
+    const cache = queryClient.getQueryCache();
+    const owned = cache.findAll({ queryKey: ["wallet-checkout"] })
+      .filter((query) => query.queryKey[2]);
+    const reads = cache.getAll().filter((query) =>
+      ["wallet-summary", "wallet-history", "wallet-checkout", "topup", "topups"].includes(query.queryKey[0]),
+    );
+    return owned.every((query) => query.getObserversCount() === 0) &&
+      reads.every((query) => query.state.fetchStatus === "idle");
+  });
   // Small real API pages exercise pagination and retries without fabricated rows.
   let failNextPage = true;
   let failRefundRead = true;
@@ -518,6 +533,14 @@ try {
     }
     url.searchParams.set("limit", "1");
     const response = await route.fetch({ url: url.toString() });
+    const body = await response.json();
+    historyReads.push({
+      type: url.searchParams.get("type"),
+      cursor: url.searchParams.has("cursor"),
+      status: response.status(),
+      items: body.items?.length,
+      next: !!body.nextCursor,
+    });
     await route.fulfill({ response });
   });
   await page
@@ -1030,6 +1053,7 @@ try {
     );
   }
   console.log("QA latest topup responses:", topupResponses.slice(-12));
+  console.log("QA history page responses:", historyReads.slice(-16));
   console.log("QA browser warnings/errors/HMR:", browserMessages.slice(-16));
   if (fixture) {
     console.log(

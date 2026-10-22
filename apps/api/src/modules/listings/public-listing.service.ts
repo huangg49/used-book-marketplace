@@ -7,6 +7,7 @@ import type {
   ListingDoc,
   ListingMediaDoc,
   ListingRevisionDoc,
+  MemberAddressDoc,
   RevisionMediaDoc,
   UserDoc,
 } from '../../database/mongo/documents.js';
@@ -98,8 +99,13 @@ export function publicEligibleStages(
             $match: {
               state: {
                 $in: [
-                  'AwaitingPayment', 'PendingSellerConfirmation', 'SettlementPending',
-                  'Preparing', 'InTransit', 'ResolutionPending', 'Inspection',
+                  'AwaitingPayment',
+                  'PendingSellerConfirmation',
+                  'SettlementPending',
+                  'Preparing',
+                  'InTransit',
+                  'ResolutionPending',
+                  'Inspection',
                 ],
               },
             },
@@ -257,6 +263,10 @@ type Eligible = ListingDoc & {
   activeOrder: { paidAt: Date | null; paymentDeadline: Date }[];
   activeExchange?: { status: string }[];
 };
+type ProjectionSources = {
+  metadata: CatalogRevisionDoc;
+  origin: Pick<MemberAddressDoc, 'version'> | null;
+};
 
 @Injectable()
 export class PublicListingService {
@@ -269,15 +279,20 @@ export class PublicListingService {
   private async projection(
     tx: Tx,
     l: Eligible,
+    sources?: ProjectionSources,
   ): Promise<Wire['PublicListing']> {
     const r = l.r,
       b = l.b;
-    const metadata = (await tx.c.catalog_revisions.findOne({
-      _id: b.currentRevisionId!,
-    })) as CatalogRevisionDoc;
-    const origin = r.originAddressId
-      ? await tx.c.member_addresses.findOne({ _id: r.originAddressId })
-      : null;
+    const metadata = sources
+      ? sources.metadata
+      : ((await tx.c.catalog_revisions.findOne({
+          _id: b.currentRevisionId!,
+        })) as CatalogRevisionDoc);
+    const origin = sources
+      ? sources.origin
+      : r.originAddressId
+        ? await tx.c.member_addresses.findOne({ _id: r.originAddressId })
+        : null;
     const photos = [...l.rm]
       .sort((x, y) => x.position - y.position)
       .map((link) => l.m.find((m) => m._id === link.mediaId)!);
@@ -332,8 +347,8 @@ export class PublicListingService {
           ? l.activeOrder[0]
             ? {
                 status: l.activeOrder[0].paidAt
-                  ? 'InTransaction' as const
-                  : 'AwaitingPayment' as const,
+                  ? ('InTransaction' as const)
+                  : ('AwaitingPayment' as const),
                 expiresAt: l.activeOrder[0].paidAt
                   ? null
                   : l.activeOrder[0].paymentDeadline.toISOString(),
@@ -344,9 +359,9 @@ export class PublicListingService {
                   expiresAt: null,
                 }
             : {
-              status: 'InNegotiation' as const,
-              expiresAt: l.purchase[0]?.expiresAt?.toISOString() ?? null,
-            }
+                status: 'InNegotiation' as const,
+                expiresAt: l.purchase[0]?.expiresAt?.toISOString() ?? null,
+              }
           : { status: 'Available' as const, expiresAt: null },
     };
     // Submitted/approved invariants enforce the selected mode's price requirements.
@@ -454,16 +469,60 @@ export class PublicListingService {
           cursor: query.cursor as string | undefined,
         },
       );
+      if (!page.ids.length)
+        return {
+          items: [],
+          nextCursor: page.nextCursor,
+          serverTime: page.serverTime,
+        };
       const rows = await tx.c.listings
         .aggregate<Eligible>([
-          ...publicEligibleStages(),
           { $match: { _id: { $in: page.ids } } },
+          ...publicEligibleStages(),
         ])
         .toArray();
+      // Two bounded reads in this same snapshot instead of two per listing.
+      // Do not parallelize operations on the MongoDB transaction session.
+      const metadataRows = await tx.c.catalog_revisions
+        .find({
+          _id: {
+            $in: [...new Set(rows.map((row) => row.b.currentRevisionId!))],
+          },
+        })
+        .toArray();
+      const originRows = await tx.c.member_addresses
+        .find(
+          {
+            _id: {
+              $in: [
+                ...new Set(
+                  rows.flatMap((row) =>
+                    row.r.originAddressId ? [row.r.originAddressId] : [],
+                  ),
+                ),
+              ],
+            },
+          },
+          { projection: { _id: 1, version: 1 } },
+        )
+        .toArray();
+      const metadataById = new Map(metadataRows.map((row) => [row._id, row]));
+      const originsById = new Map(originRows.map((row) => [row._id, row]));
+      const byId = new Map(rows.map((row) => [row._id, row]));
       const items = [];
       for (const id of page.ids) {
-        const row = rows.find((l) => l._id === id);
-        if (row) items.push(await this.projection(tx, row));
+        const row = byId.get(id);
+        if (!row) continue;
+        const metadata = metadataById.get(row.b.currentRevisionId!);
+        if (!metadata) throw notFound();
+        items.push(
+          await this.projection(tx, row, {
+            metadata,
+            origin: row.r.originAddressId
+              ? (originsById.get(row.r.originAddressId) ?? null)
+              : null,
+          }),
+        );
       }
       return {
         items,

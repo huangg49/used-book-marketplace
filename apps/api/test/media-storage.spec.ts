@@ -67,19 +67,115 @@ describe('Supabase adapter boundary (HTTP mocked, not live)', () => {
     });
     mock.mockResolvedValueOnce(
       new Response(
-        JSON.stringify({
-          signedURL:
-            '/object/sign/latlai-media/media/id/render-1.webp?token=test',
-        }),
+        JSON.stringify([
+          {
+            path: 'media/id/render-1.webp',
+            error: null,
+            signedURL:
+              '/object/sign/latlai-media/media/id/render-1.webp?token=test',
+          },
+        ]),
         { status: 200 },
       ),
     );
     const signed = await s.signedRead('media/id/render-1.webp');
     expect(signed.url).toContain('render-1.webp');
     const [url, init] = mock.mock.calls[1];
-    expect(String(url)).toContain(
-      '/object/sign/latlai-media/media/id/render-1.webp',
+    expect(String(url)).toContain('/object/sign/latlai-media');
+    expect(JSON.parse(init.body)).toEqual({
+      expiresIn: 120,
+      paths: ['media/id/render-1.webp'],
+    });
+  });
+  it('coalesces concurrent bucket checks but rechecks later requests and rejects a newly public bucket', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let publicBucket = false;
+    const mock = vi.fn(async () => {
+      await gate;
+      return new Response(
+        JSON.stringify({
+          id: 'latlai-media',
+          public: publicBucket,
+          file_size_limit: 10000000,
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', mock);
+    const s = store();
+    const concurrent = Promise.all(Array.from({ length: 20 }, () => s.check()));
+    release();
+    await concurrent;
+    expect(mock).toHaveBeenCalledTimes(1);
+    publicBucket = true;
+    await expect(s.check()).rejects.toMatchObject({ status: 503 });
+    expect(mock).toHaveBeenCalledTimes(2);
+    s.onModuleDestroy();
+  });
+  it('binds bulk results by path, shares duplicate requests and reuses only the original signed expiry', async () => {
+    const mock = vi.fn(async (_url, init) => {
+      const { paths } = JSON.parse(init.body);
+      return new Response(
+        JSON.stringify(
+          [...paths]
+            .reverse()
+            .map((path) => ({
+              path,
+              error: null,
+              signedURL: '/object/sign/latlai-media/' + path + '?token=qa',
+            })),
+        ),
+      );
+    });
+    vi.stubGlobal('fetch', mock);
+    const s = store();
+    const keys = Array.from(
+      { length: 20 },
+      (_, i) => `media/${i}/render-1.webp`,
     );
-    expect(JSON.parse(init.body)).toEqual({ expiresIn: 120 });
+    const values = await Promise.all(
+      [...keys, keys[0]].map((key) => s.signedRead(key)),
+    );
+    expect(mock).toHaveBeenCalledTimes(1);
+    values.forEach((value, i) =>
+      expect(value.url).toContain((keys[i] ?? keys[0]) + '?token=qa'),
+    );
+    expect(values[20]).toEqual(values[0]);
+    expect(await s.signedRead(keys[0])).toEqual(values[0]);
+    expect(mock).toHaveBeenCalledTimes(1);
+    s.onModuleDestroy();
+  });
+  it('isolates per-path signing errors without returning another file URL', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify([
+              {
+                path: 'good',
+                error: null,
+                signedURL: '/object/sign/latlai-media/good?token=qa',
+              },
+              { path: 'bad', error: 'Object not found', signedURL: null },
+              {
+                path: 'unrequested',
+                error: null,
+                signedURL: '/object/sign/latlai-media/unrequested?token=qa',
+              },
+            ]),
+          ),
+      ),
+    );
+    const s = store();
+    const values = await Promise.allSettled(
+      ['good', 'bad', 'missing'].map((key) => s.signedRead(key)),
+    );
+    expect(values[0].status).toBe('fulfilled');
+    expect(values[1].status).toBe('rejected');
+    expect(values[2].status).toBe('rejected');
+    s.onModuleDestroy();
   });
 });

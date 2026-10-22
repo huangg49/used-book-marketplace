@@ -1,4 +1,79 @@
-# Điểm lưu hiện tại — 20/10/2026
+# Điểm lưu hiện tại — 22/10/2026
+
+## Tích hợp tối ưu listing và hỗ trợ demo — 22/10/2026
+
+- Chủ dự án yêu cầu push và merge 4 commit local; nhánh
+  `codex/listing-media-backend-performance`, đồng bộ `origin/main` tại `a67cb0b`.
+  [PR #61](https://github.com/huangg49/used-book-marketplace/pull/61).
+- Gói gồm: tùy chọn bỏ limiter login chỉ trong development (mặc định tắt), tên
+  người đăng cạnh tên sách trên web/RN, cache ảnh theo hạn gốc + lazy viewport
+  phía client, batch ký ảnh/bounded RAM cache + bulk metadata query phía API.
+  Giữ kiểm tra eligibility trước/sau URL, fresh Detail và snapshot/cursor.
+  Không đổi contract, schema/migration hoặc DB demo; không commit cấu hình riêng.
+- Bằng chứng đo trước/sau, phạm vi cache và giới hạn cold load ở
+  [bước 1](LISTING_LOAD_PERFORMANCE_2026_10_20.md),
+  [bước 2](LISTING_MEDIA_BACKEND_PERFORMANCE_2026_10_20.md).
+  Tra tài khoản theo [người đăng](DEMO_ACCOUNTS.md).
+- Sau đồng bộ main, sửa lint của chat/đổi sách RN bằng AppModal/AppTextInput và
+  token màu có sẵn; fixture VNPay bổ sung expiresAt/serverTime đúng contract.
+  Không thay endpoint/hành vi giao dịch của PR #60.
+- CI Mongo lỗi từ runner Ubuntu mới: MongoDB 8.0 từ chối kernel >=6.19
+  ([SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912)). Runner 24.04 mới
+  cũng gặp lỗi, nên ghim 4 job Mongo về ubuntu-22.04 (kernel 6.8); thêm log khi lỗi.
+  Không sửa image/DB local; cần nâng lại runner trước khi 22.04 hết hỗ trợ.
+  User Web CI chạy thêm browser regression cache ảnh.
+- Navbar có layer transform ổn định để viền không đổi rasterization khi WebGL
+  rèm bị ẩn/gỡ; giữ nguyên tiêu chí pixel <=1, thời lượng và cleanup motion.
+- Importer PG xử lý đúng cặp reference locality F2h → ADR0039, giữ DEMO-C native;
+  mọi drift khác vẫn từ chối, không ghi nguồn PG. PASS 5 ca import trên PG/Mongo
+  QA riêng, gồm ledger/ảnh/lịch sử và từ chối drift nguồn/đích.
+- Web/RN từ chối URL đã hết hạn ngay khi nhận để có retry thay vì loading mãi.
+  Browser fixture chờ đúng h1/URL Detail và phản hồi ảnh trước khi nhảy đồng hồ;
+  vẫn kiểm request bị 404 và không hiện lại ảnh cũ.
+- Đồng bộ browser journeys với detail/editor và chat thống nhất trên main: cuộn
+  đến ảnh lazy, picker ảnh bìa, nhãn khai báo/khu vực, điều hướng qua tab tài khoản.
+  Giữ kiểm replay/lost-response và kiểm eligibility. Login quay lại chat của chính
+  chủ bài trả về Detail, không gửi yêu cầu tự chat. Header RN giữ vùng bấm 48 px,
+  accordion tình trạng công bố trạng thái mở/đóng cho công cụ hỗ trợ.
+- CI full E2E phát hiện fixture đấu giá ngoài vùng chưa phục hồi; đã thêm finally.
+  Kiểm packaging chấp nhận lịch sử hợp lệ ở Inspection/Completed, vẫn kiểm đủ
+  receipt/audit/outbox và chặn intent mới. PASS local 30 carrier + 41 wallet E2E,
+  có kiểm ảnh lịch sử sau nhận sách/quyết toán và từ chối intent sau đó.
+- DraftCoverPhoto nhận trạng thái xử lý từ editor, chỉ ký khi Ready và đang xem;
+  trả lại trạng thái ảnh và nút retry khi lỗi read/tải ảnh/hết hạn. Không thay picker
+  hay upload contract; browser vẫn kiểm lỗi ảnh, retry và chọn ảnh bằng filechooser.
+  PASS thêm 62 auction E2E trên DB QA riêng; fixture ngoài vùng đã phục hồi.
+- PASS local trên Node 24.19.0/pnpm 11.19.0: API typecheck/lint/build/176 unit;
+  web typecheck/lint/build/160 unit; shared session 27 unit; RN typecheck/lint/
+  156 unit và Expo web export (CLI báo force-exit sau export thành công).
+  Contract/routes 176 operation/26 controller và docs check PASS.
+- PASS 188 E2E gồm auth/listing-review/media/packaging/auctions trên QA57017,
+  database riêng `latlai_integration_publish_test`, không đụng DB/bucket demo.
+  Các 500 fault-injection trong log là ca kiểm rollback, không phải suite fail.
+- Browser PASS: cache ảnh tại 1440/390 px (Detail/Back không ký lại, expiry/denial/
+  retry, Detail vẫn cập nhật trạng thái); auction stage giữ pixel/geometry navbar,
+  mobile/resize/Back/fallback/cleanup. Đã xem ảnh. Artifact mới giữ trong
+  `.tmp/integration-publish-20261022/`, không ghi đè evidence đã commit.
+- Full User Web browser PASS: Home/Search/Detail responsive, login return/owner,
+  đăng sách/chỉnh sửa, ảnh, stale address và replay; lost-response chat chỉ tạo
+  một hội thoại. RN public/address/listing browser PASS: cuộn đến thông báo nằm
+  ngoài viewport trước khi kiểm visible; chờ HTTP trả đúng version địa chỉ và
+  flush layout sau khi tiến đồng hồ mô phỏng. Giữ toàn bộ ca dữ liệu lỗi/replay.
+  Remote final-head và trạng thái tích hợp theo PR #61.
+- Seller-order và Buy-now browser PASS: hai bên, quote/address, thiếu tiền bị từ
+  chối, lost ACK tạo/thanh toán cùng key/body, đúng một hold; ảnh đóng gói, gửi và
+  pickup mô phỏng InTransit. Exchange browser đi qua chat thống nhất (seller duyệt
+  hình thức, buyer chọn sách/địa chỉ), lost ACK giữ key/body, inbox mở lại đúng một
+  phiếu, accept/cancel, từ chối funding và 403 ẩn phiếu; desktop/mobile PASS.
+- Wallet browser PASS: lịch sử thật/filter/pagination/retry, QueryDR lỗi/thử lại/
+  credit, lost ACK cùng key/body, hạn server đúng 5 phút, hủy và replay hết hạn
+  không thêm ledger/history. Chờ checkout release và các query/invalidation sau
+  credit xong trước fixture trang nhỏ (networkidle cũ không đủ); thêm chẩn đoán
+  số hàng/cursor khi lỗi. Provider và deadline QA mô phỏng,
+  không là chứng nhận thanh toán VNPay thật.
+- Đã push; kết quả CI và trạng thái tích hợp theo PR #61. Human review độc lập và
+  native Android/iOS acceptance NOT RUN; yêu cầu merge của chủ dự án không là
+  chứng nhận những gate này. READINESS giữ nguyên, không mở gói tối ưu bước 3.
 
 ## Hoàn thiện Trao đổi sách (Exchange): hiển thị sách khi cọc, ảnh bìa trực quan & hủy đơn hoàn cọc (FR-X11) — 20/10/2026
 

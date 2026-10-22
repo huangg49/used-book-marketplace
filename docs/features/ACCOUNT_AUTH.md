@@ -69,6 +69,13 @@ thực. Thành công xóa fragment; không thêm token store/session mới.
 
 ## Demo local
 
+Nếu cần đổi tài khoản liên tục để demo, đặt `LOGIN_RATE_LIMIT_DISABLED=true`
+trong `apps/api/.env` rồi khởi động lại API. Cờ chỉ có tác dụng khi
+`NODE_ENV=development` và chỉ bỏ giới hạn đăng nhập; không bỏ kiểm tra mật khẩu,
+trạng thái tài khoản, OTP, đăng ký hay khôi phục tài khoản. Mặc định vẫn giới hạn
+5 lần/15 phút; môi trường test/production luôn giữ giới hạn dù cờ được bật.
+Đặt lại `false` và khởi động lại API để bật giới hạn trở lại.
+
 Sau khi nhận source, giữ mật khẩu/cấu hình Mongo riêng; chạy `pnpm db:migrate`
 và `pnpm db:bootstrap` để thêm validator/index và quyền collection mới.
 Không reset hoặc seed lại DB đang dùng.

@@ -13,6 +13,14 @@ export class LoginLimiter {
   ) {}
 
   async consume(email: string, ip: string, scope = 'login') {
+    // Explicit local-demo opt-in; account recovery and production stay limited.
+    if (
+      scope === 'login' &&
+      this.config.get<string>('NODE_ENV') === 'development' &&
+      this.config.get<string>('LOGIN_RATE_LIMIT_DISABLED') === 'true'
+    )
+      return;
+
     const now = Date.now();
     const window = Math.floor(now / WINDOW_MS);
     const expiresAt = new Date((window + 1) * WINDOW_MS);
@@ -22,7 +30,11 @@ export class LoginLimiter {
           'sha256',
           this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
         )
-          .update(scope === 'login' ? `${window}:${identity}` : `${scope}:${window}:${identity}`)
+          .update(
+            scope === 'login'
+              ? `${window}:${identity}`
+              : `${scope}:${window}:${identity}`,
+          )
           .digest('hex'),
       )
       .sort();
@@ -49,7 +61,9 @@ export class LoginLimiter {
         {
           code: 'RATE_LIMITED',
           message:
-            scope === 'login' ? 'Bạn đã thử đăng nhập nhiều lần. Vui lòng thử lại sau 15 phút.' : 'Bạn đã gửi nhiều yêu cầu. Vui lòng thử lại sau 15 phút.',
+            scope === 'login'
+              ? 'Bạn đã thử đăng nhập nhiều lần. Vui lòng thử lại sau 15 phút.'
+              : 'Bạn đã gửi nhiều yêu cầu. Vui lòng thử lại sau 15 phút.',
         },
         429,
       );
