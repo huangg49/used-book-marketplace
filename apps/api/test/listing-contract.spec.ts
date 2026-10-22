@@ -242,6 +242,33 @@ describe('listing design contract (not HTTP implementation tests)', () => {
       purchaseAvailability: { status: 'Available', expiresAt: null },
     };
     expect(validator('PublicListing')(listing)).toBe(true);
+    const fulfillment = {
+      serviceAreaCode: 'HCM-DEMO-v1',
+      name: 'TP.HCM',
+      demoOnly: true,
+      method: 'DirectDelivery',
+      locality: { code: 'DEMO-B', label: 'Bình Dương' },
+    };
+    expect(validator('PublicListing')({ ...listing, fulfillment })).toBe(true);
+    const { locality: _locality, ...legacyFulfillment } = fulfillment;
+    expect(validator('PublicFulfillment')(legacyFulfillment)).toBe(true);
+    for (const field of [
+      'originAddressId',
+      'originAddressVersion',
+      'recipientName',
+      'phone',
+      'detail',
+    ]) {
+      expect(
+        validator('PublicFulfillment')({ ...fulfillment, [field]: 'private' }),
+      ).toBe(false);
+      expect(
+        validator('PublicFulfillment')({
+          ...fulfillment,
+          locality: { ...fulfillment.locality, [field]: 'private' },
+        }),
+      ).toBe(false);
+    }
     expect(
       validator('PublicListing')({
         ...listing,

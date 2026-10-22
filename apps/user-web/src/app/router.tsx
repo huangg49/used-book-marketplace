@@ -1,6 +1,7 @@
 import { StartConversationPage } from '../pages/StartConversationPage';
 import { BuyNowPage } from '../pages/BuyNowPage';
-import { DirectOrderPage, DirectOrderListPage } from '../pages/DirectOrderPage';
+import { DirectOrderListPage } from '../pages/DirectOrderPage';
+import { OrderConversationPage } from '../pages/OrderConversationPage';
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import { DashboardLayout } from '../layouts/DashboardLayout';
@@ -51,12 +52,13 @@ export const router = createBrowserRouter([
           { path: '/books', element: <BookSearchPage /> },
           { path: '/books/:id', element: <BookDetailPage /> },
           { path: '/chat', element: <ChatPage /> },
+          { path: '/chat/orders/:orderId', element: <OrderConversationPage /> },
           { path: '/chat/:roomId', element: <ChatPage /> },
           { path: '/chat/start/:listingId', element: <StartConversationPage /> },
           { path: '/checkout/:listingId', element: <CheckoutPage /> },
           { path: '/buy-now/:listingId', element: <BuyNowPage /> },
           { path: '/orders', element: <DirectOrderListPage /> },
-          { path: '/orders/:orderId', element: <DirectOrderPage /> },
+          { path: '/orders/:orderId', element: <OrderConversationPage /> },
           { path: '/exchange', element: <ExchangePage /> },
           { path: '/exchange/new', element: <ExchangeComposePage /> },
           { path: '/exchange/mine', element: <ExchangeMinePage /> },

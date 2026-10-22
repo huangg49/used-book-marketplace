@@ -9,6 +9,7 @@ import type {
   ListingRevisionDoc,
   MemberAddressDoc,
   RevisionMediaDoc,
+  ServiceLocalityDoc,
   UserDoc,
 } from '../../database/mongo/documents.js';
 import { MongoService } from '../../database/mongo/mongo.service.js';
@@ -127,7 +128,12 @@ export function publicEligibleStages(
                   {
                     $or: [
                       { $eq: ['$initiatorListingId', '$$listingId'] },
-                      { $in: ['$$listingId', { $ifNull: ['$initiatorListingIds', []] }] },
+                      {
+                        $in: [
+                          '$$listingId',
+                          { $ifNull: ['$initiatorListingIds', []] },
+                        ],
+                      },
                       { $eq: ['$recipientListingId', '$$listingId'] },
                     ],
                   },
@@ -265,7 +271,11 @@ type Eligible = ListingDoc & {
 };
 type ProjectionSources = {
   metadata: CatalogRevisionDoc;
-  origin: Pick<MemberAddressDoc, 'version'> | null;
+  origin: Pick<
+    MemberAddressDoc,
+    'version' | 'serviceAreaCode' | 'localityCode'
+  > | null;
+  locality: Pick<ServiceLocalityDoc, 'code' | 'label'> | null;
 };
 
 @Injectable()
@@ -291,24 +301,49 @@ export class PublicListingService {
     const origin = sources
       ? sources.origin
       : r.originAddressId
-        ? await tx.c.member_addresses.findOne({ _id: r.originAddressId })
+        ? await tx.c.member_addresses.findOne(
+            { _id: r.originAddressId },
+            {
+              projection: {
+                _id: 1,
+                version: 1,
+                serviceAreaCode: 1,
+                localityCode: 1,
+              },
+            },
+          )
+        : null;
+    const originIsCurrent =
+      originStatus({
+        ...r,
+        originCurrentVersion: origin?.version ?? null,
+      }) === 'Current';
+    // Only publish the directory's coarse zone for the selected address version.
+    // An edited/deleted origin must not move an already published book's location.
+    const locality =
+      originIsCurrent && origin
+        ? sources
+          ? sources.locality
+          : await tx.c.service_localities.findOne(
+              { _id: `${origin.serviceAreaCode}:${origin.localityCode}` },
+              { projection: { _id: 1, code: 1, label: 1 } },
+            )
         : null;
     const photos = [...l.rm]
       .sort((x, y) => x.position - y.position)
       .map((link) => l.m.find((m) => m._id === link.mediaId)!);
     const content = {
-      fulfillment:
-        originStatus({
-          ...r,
-          originCurrentVersion: origin?.version ?? null,
-        }) === 'Current'
-          ? {
-              serviceAreaCode: 'HCM-DEMO-v1' as const,
-              name: 'TP.HCM' as const,
-              demoOnly: true as const,
-              method: 'DirectDelivery' as const,
-            }
-          : null,
+      fulfillment: originIsCurrent
+        ? {
+            serviceAreaCode: 'HCM-DEMO-v1' as const,
+            name: 'TP.HCM' as const,
+            demoOnly: true as const,
+            method: 'DirectDelivery' as const,
+            ...(locality
+              ? { locality: { code: locality.code, label: locality.label } }
+              : {}),
+          }
+        : null,
       id: l._id,
       revisionId: r._id,
       version: l.version,
@@ -358,10 +393,10 @@ export class PublicListingService {
                   status: 'InTransaction' as const,
                   expiresAt: null,
                 }
-            : {
-                status: 'InNegotiation' as const,
-                expiresAt: l.purchase[0]?.expiresAt?.toISOString() ?? null,
-              }
+              : {
+                  status: 'InNegotiation' as const,
+                  expiresAt: l.purchase[0]?.expiresAt?.toISOString() ?? null,
+                }
           : { status: 'Available' as const, expiresAt: null },
     };
     // Submitted/approved invariants enforce the selected mode's price requirements.
@@ -481,7 +516,8 @@ export class PublicListingService {
           ...publicEligibleStages(),
         ])
         .toArray();
-      // Two bounded reads in this same snapshot instead of two per listing.
+      // Bounded metadata, origin and coarse-zone reads in this same snapshot,
+      // instead of three reads per listing. Never load private contact fields.
       // Do not parallelize operations on the MongoDB transaction session.
       const metadataRows = await tx.c.catalog_revisions
         .find({
@@ -503,11 +539,39 @@ export class PublicListingService {
               ],
             },
           },
-          { projection: { _id: 1, version: 1 } },
+          {
+            projection: {
+              _id: 1,
+              version: 1,
+              serviceAreaCode: 1,
+              localityCode: 1,
+            },
+          },
         )
         .toArray();
       const metadataById = new Map(metadataRows.map((row) => [row._id, row]));
       const originsById = new Map(originRows.map((row) => [row._id, row]));
+      const localityIds = [
+        ...new Set(
+          rows.flatMap((row) => {
+            const origin = row.r.originAddressId
+              ? originsById.get(row.r.originAddressId)
+              : null;
+            return origin && origin.version === row.r.originAddressVersion
+              ? [`${origin.serviceAreaCode}:${origin.localityCode}`]
+              : [];
+          }),
+        ),
+      ];
+      const localityRows = localityIds.length
+        ? await tx.c.service_localities
+            .find(
+              { _id: { $in: localityIds } },
+              { projection: { _id: 1, code: 1, label: 1 } },
+            )
+            .toArray()
+        : [];
+      const localitiesById = new Map(localityRows.map((row) => [row._id, row]));
       const byId = new Map(rows.map((row) => [row._id, row]));
       const items = [];
       for (const id of page.ids) {
@@ -515,11 +579,17 @@ export class PublicListingService {
         if (!row) continue;
         const metadata = metadataById.get(row.b.currentRevisionId!);
         if (!metadata) throw notFound();
+        const origin = row.r.originAddressId
+          ? (originsById.get(row.r.originAddressId) ?? null)
+          : null;
         items.push(
           await this.projection(tx, row, {
             metadata,
-            origin: row.r.originAddressId
-              ? (originsById.get(row.r.originAddressId) ?? null)
+            origin,
+            locality: origin
+              ? (localitiesById.get(
+                  `${origin.serviceAreaCode}:${origin.localityCode}`,
+                ) ?? null)
               : null,
           }),
         );

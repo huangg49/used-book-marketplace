@@ -8,6 +8,43 @@
   font-family: var(--shop-body);
   min-height: 60vh;
 }
+.details {
+  --shop-shelf: #f4eddf;
+  --shop-error: #912b0e;
+  min-width: 0;
+  color: var(--shop-ink);
+  font-family: var(--shop-body);
+  overflow-wrap: anywhere;
+}
+.details p {
+  line-height: 1.85;
+}
+.details :is(h2, h3) {
+  font: 700 1.15rem/1.6 var(--shop-body);
+  margin: 0 0 16px;
+  overflow-wrap: anywhere;
+}
+.details a {
+  color: var(--shop-wine);
+  text-underline-offset: 4px;
+}
+.detailsHeading {
+  padding-block: 20px 0;
+}
+.detailsHeading p {
+  margin: 8px 0;
+}
+.orderMeta {
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+}
+.orderMeta span {
+  overflow-wrap: anywhere;
+}
+.details :focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 4px;
+}
 .page h1 {
   font: 400 clamp(2rem, 4vw, 3rem)/1.2 var(--shop-display);
   margin: 20px 0 12px;
@@ -142,7 +179,7 @@
   text-decoration: none;
   box-sizing: border-box;
 }
-.page .primary {
+:is(.page, .details) .primary {
   background: var(--shop-wine);
   color: var(--shop-cream);
   border: 1px solid var(--shop-wine);
@@ -189,6 +226,38 @@
 .status {
   color: var(--shop-wine);
   font-weight: 700;
+}
+.embedded .columns {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 24px;
+}
+.embedded .columns > div {
+  min-width: 0;
+  width: 100%;
+}
+.embedded .section {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+}
+.embedded .summary {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 20px 0 24px;
+  background: transparent;
+  border-top: 1px solid var(--shop-line);
+  border-radius: 0;
+}
+.embedded :is(h2, h3) {
+  font-size: 1rem;
+}
+.embedded .summary dl > div {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.embedded .summary dd {
+  margin-left: auto;
 }
 @media (max-width: 700px) {
   .page {

@@ -36,6 +36,15 @@ the Member web request; the compatible directory is shared by clients.
 
 ## Rollout and verification
 
+22/10/2026 public-card follow-up: the owner requested the book's circulation zone
+on each card. PublicFulfillment now optionally exposes `locality: { code, label }`
+from the configured directory for the published revision's selected current origin.
+This supersedes only ADR0015's exclusion of locality for these coarse zones.
+Contact name/phone/street detail, address IDs and versions remain private. Edited
+or deleted origins keep the existing invalidation behavior; clients show an unknown
+zone when locality is absent and never infer it from the legacy `name: TP.HCM`.
+No address migration or permission change is needed for this additive read field.
+
 Apply migration0030 using the existing migrator, without reset/reseed. Existing
 processes need current source and migrations on restart. Test the upgrade from
 the prior schema with an existing address, unchanged historical checksums and a

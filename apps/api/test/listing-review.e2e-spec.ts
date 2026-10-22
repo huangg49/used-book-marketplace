@@ -1957,13 +1957,13 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
     async function addressBook(owner: Reader) {
       return (await get('/me/addresses', owner).expect(200)).body;
     }
-    async function origin(owner: Reader) {
+    async function origin(owner: Reader, localityCode = contact.localityCode) {
       const b = await addressBook(owner);
       const r = await post(
         '/me/addresses',
         {
           expectedBookVersion: b.version,
-          address: contact,
+          address: { ...contact, localityCode },
           makeDefault: false,
         },
         owner,
@@ -1997,9 +1997,12 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
         })
         .expect(200);
     }
-    async function configured(owner: Reader) {
+    async function configured(
+      owner: Reader,
+      localityCode = contact.localityCode,
+    ) {
       const l = await complete(owner),
-        fulfillment = await origin(owner);
+        fulfillment = await origin(owner, localityCode);
       const content = { ...l.content, fulfillment };
       const r = await put(
         l.entityId,
@@ -2069,6 +2072,7 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
         name: 'TP.HCM',
         demoOnly: true,
         method: 'DirectDelivery',
+        locality: { code: 'DEMO-A', label: 'TP.HCM' },
       });
       const views = [
         pub,
@@ -2102,6 +2106,69 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
           .fulfillment,
       ).toBeNull();
     });
+    it.each([
+      ['DEMO-A', 'TP.HCM'],
+      ['DEMO-B', 'Bình Dương'],
+      ['DEMO-C', 'Vũng Tàu'],
+    ])(
+      'publishes the actual origin zone %s in detail and shelf without contact data',
+      async (code, label) => {
+        const owner = await reader(),
+          l = await configured(owner, code),
+          sent = (await submit(l, owner).expect(200)).body;
+        await decide(sent).expect(200);
+        const detail = (await get(`/listings/${l.entityId}`).expect(200)).body;
+        const shelf = (
+          await get('/listings').query({ bookId: l.book.entityId }).expect(200)
+        ).body;
+        validates('PublicListing', detail);
+        validates('PublicListingPage', shelf);
+        const card = shelf.items.find((item: any) => item.id === l.entityId);
+        expect(card).toBeDefined();
+        for (const view of [detail, card]) {
+          expect(view.fulfillment).toEqual({
+            serviceAreaCode: 'HCM-DEMO-v1',
+            name: 'TP.HCM',
+            demoOnly: true,
+            method: 'DirectDelivery',
+            locality: { code, label },
+          });
+          for (const secret of [
+            contact.recipientName,
+            contact.phone,
+            contact.detail,
+            l.fulfillment.originAddressId,
+          ])
+            expect(JSON.stringify(view)).not.toContain(secret);
+        }
+
+        const book = await addressBook(owner);
+        await request(app.getHttpServer())
+          .put(`/api/v1/me/addresses/${l.fulfillment.originAddressId}`)
+          .set('Authorization', `Bearer ${owner.token}`)
+          .set('Idempotency-Key', randomUUID())
+          .send({
+            expectedBookVersion: book.version,
+            address: {
+              ...contact,
+              localityCode: code === 'DEMO-C' ? 'DEMO-A' : 'DEMO-C',
+            },
+            makeDefault: false,
+          })
+          .expect(200);
+        // The current address has moved; a frozen publication must not claim its new zone.
+        expect(
+          (await get(`/listings/${l.entityId}`).expect(200)).body.fulfillment,
+        ).toBeNull();
+        expect(
+          (
+            await get('/listings')
+              .query({ bookId: l.book.entityId })
+              .expect(200)
+          ).body.items.find((item: any) => item.id === l.entityId).fulfillment,
+        ).toBeNull();
+      },
+    );
     it('does not invalidate origins for default changes, unrelated addresses or no-op contact saves', async () => {
       const owner = await reader(),
         l = await configured(owner),

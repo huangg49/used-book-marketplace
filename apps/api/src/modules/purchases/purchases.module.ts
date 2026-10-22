@@ -18,6 +18,6 @@ import { PurchasesService } from './purchases.service.js';
     PurchaseExpiryWorker,
     PurchaseGateway,
   ],
-  exports: [PurchaseExpiryWorker, ConversationAgreementsService],
+  exports: [PurchaseExpiryWorker, ConversationAgreementsService, PurchasesService],
 })
 export class PurchasesModule {}

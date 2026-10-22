@@ -56,6 +56,22 @@ export class OrdersController {
   read(@Param('orderId') id: string, @Req() req: AuthenticatedRequest) {
     return this.orders.read(req.auth, this.input.uuid(id));
   }
+  @Post('orders/:orderId/conversation')
+  @HttpCode(200)
+  async openConversation(
+    @Param('orderId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.orders.openConversation(
+      commandContext(this.input, req, res),
+      this.input.uuid(id),
+      this.input.body('OpenOrderConversation', body),
+    );
+    res.setHeader('Idempotency-Replayed', String(result.replayed));
+    return result.receipt;
+  }
   @Post('orders/:orderId/pay')
   @HttpCode(200)
   async pay(

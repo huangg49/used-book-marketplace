@@ -21,6 +21,12 @@ No artwork was generated or repainted: Sharp resized to2200px wide without
 enlargement and encoded WebP at quality84. Original PNG remains unchanged.
 The derivative is decorative only, never a listing photograph or user content.
 
+22/10/2026: the shared Home/Search book card reuses this exact derivative as its
+warm paper cover-stage background to follow the owner's supplied reference.
+The real listing photograph stays separate and fully contained above it. No
+pixels were generated or repainted for this reuse; source and provenance remain
+the same.
+
 External artist/license attribution was not supplied with the legacy asset;
 the Git origin records provenance, not proof of a third-party commercial license.
 Confirm that permission before distributing outside the project demo.

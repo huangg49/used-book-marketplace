@@ -74,4 +74,3 @@ describe("orders contracts & helpers", () => {
     expect(parsed.items[0].state).toBe("AwaitingPayment");
   });
 });
-

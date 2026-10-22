@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.49.0
+  version: 0.50.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
-    implemented. Participant agreement workspaces with mutually confirmed mode/price proposals and linked Exchange history are implemented. Member private address book and versioned demo service-area directory are
+    implemented. Participant agreement workspaces with mutually confirmed mode/price proposals and linked Exchange history are implemented. Exact Order conversations can be opened by their ACTIVE Buyer or Seller, including BuyNow and historical Orders. Member private address book and versioned demo service-area directory are
     implemented. Revision-bound delivery origins and private DirectDelivery sale estimates are
     implemented. Quotes do not reserve books. Unpaid DirectDelivery Order create/read/cancel and
     internal expiry with exclusive commitments are implemented. Simulated wallet ledger, private
@@ -3797,6 +3797,51 @@ paths:
         "503":
           $ref: "#/components/responses/ListingError"
       x-locked-access: existing-obligations
+  /orders/{orderId}/conversation:
+    post:
+      operationId: openOrderConversation
+      tags: [Orders, Purchase conversations]
+      summary: Open the exact Order's participant conversation
+      x-implementation-status: implemented
+      description: ACTIVE MEMBER Buyer or Seller only. Reuses the conversation already linked to this
+        Order, preserving its messages and terms. If none exists, creates a separate OrderCreated
+        conversation from the Order's frozen participants and item. Does not change the Order,
+        listing, quote, prices, commitment or ledger. No financial expectedVersion is required;
+        opening a conversation is serialized by the Order lock. Same key and empty body replay
+        the receipt after current participant, role, account and session checks. No LOCKED access.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OpenOrderConversation" }
+      responses:
+        "200":
+          description: Existing or newly created Order participant conversation.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+            Idempotency-Replayed:
+              schema: { type: string, enum: ["true", "false"] }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseConversationReceipt" }
+        "400": { $ref: "#/components/responses/ListingError" }
+        "401": { $ref: "#/components/responses/ListingError" }
+        "403": { $ref: "#/components/responses/ListingError" }
+        "404": { $ref: "#/components/responses/ListingError" }
+        "409": { $ref: "#/components/responses/ListingError" }
+        "422": { $ref: "#/components/responses/ListingError" }
+        "503": { $ref: "#/components/responses/ListingError" }
   /orders/{orderId}/cancel:
     post:
       operationId: cancelUnpaidOrder
@@ -10710,6 +10755,10 @@ components:
         their payment deadline, never participant identities. InNegotiation is retained for legacy
         conversation reservations. No new checkout or conversation can start until Available.
         Never serialize a private listing then filter on the client.
+    OpenOrderConversation:
+      type: object
+      additionalProperties: false
+      description: No client-supplied participant, listing, price or version; all linkage comes from the frozen Order.
     CreatePurchaseConversation:
       type: object
       additionalProperties: false
@@ -12130,8 +12179,24 @@ components:
         method:
           type: string
           const: DirectDelivery
-      description: Safe delivery preference only, not a quote or enabled checkout. Never contains an
-        address ID, version, locality or contact details.
+        locality:
+          type: object
+          additionalProperties: false
+          required: [code, label]
+          properties:
+            code:
+              type: string
+              minLength: 1
+              maxLength: 40
+            label:
+              type: string
+              minLength: 1
+              maxLength: 120
+          description: Coarse book circulation zone from the configured directory, resolved only
+            while the published revision's selected origin address version is current.
+      description: Safe delivery preference and optional coarse book circulation zone only, not
+        a quote or enabled checkout. The name remains the legacy TP.HCM envelope; use locality.label
+        for the actual zone when present. Never contains an address ID, version or contact details.
     CreateSaleQuote:
       type: object
       additionalProperties: false
@@ -12600,6 +12665,7 @@ components:
       required:
         - id
         - contextId
+        - conversationId
         - version
         - state
         - role
@@ -12638,6 +12704,10 @@ components:
         - completedAt
         - canConfirmReceipt
       properties:
+        conversationId:
+          type: [string, "null"]
+          format: uuid
+          description: The conversation linked to this exact Order, or null before it is opened. Does not grant chat access to LOCKED accounts.
         purchaseMode:
           type: string
           enum: [Negotiated, BuyNow]

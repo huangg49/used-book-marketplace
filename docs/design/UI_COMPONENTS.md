@@ -518,3 +518,37 @@ price entry. Listing price leads until a price is accepted; fees stay visible.
 ChatPage's keyboard-accessible “Cách giao dịch” disclosure contains routine help
 and the phase trail, expanded for expired/missing-fulfillment/stale-quote guidance.
 Pending proposals, stale accepted revisions and errors remain outside disclosure.
+
+## Member web book cards —22/10/2026
+
+Actual examples are `/books?data=live` and `/?data=live`; Member web has no `/ui`
+showcase. `HomeBookCard` wraps the shared `BookCard` in `BookCardMotion`, or renders
+the explicitly labelled catalog preview with external source links. Pass the
+actual `HomeShelfBook` and shelf index: `<HomeBookCard book={book} index={index} />`.
+The reference recipe has a bordered paper frame, complete photograph on the
+existing decorative archival desk, condition/mode and availability overlays,
+full title, equal author/region columns, separate price panel and wine detail CTA.
+Main Home/Search retain four desktop columns and one phone column.
+The owner's compact-height follow-up uses464px desktop/tablet cards and504px phone
+cards. Cover, information, price and action have reserved slots. `CardFitText`
+measures its actual DOM content and shrinks on overflow, refitting after content,
+resize, root text-scale and font-load changes with observer/listener cleanup.
+It keeps rem-based readable floors and full DOM text/tooltips when extreme text
+needs line clamping. The price panel retains the same height for Sale/Exchange/
+Both; supported amounts fit completely. Image and wishlist states cannot change
+the frame height. These are Member web components, not RN text primitives.
+Current reserved slots are180/220px cover,52px information,76px price and44px CTA,
+with8px gaps. A single price retains its tag icon; Both uses compact inline
+label/amount rows without repeated icons so the same panel needs no empty space.
+Author and location now share one horizontal line with24px text slots and centered
+icons. Location has a screen-reader-only label; no visible “Khu vực” caption.
+Both values retain measured fitting, ellipsis and full tooltips when necessary.
+
+`WishlistButton` is an authenticated feature control using the existing Member
+wishlist endpoints, not a primitive or an optimistic success indicator. It uses
+the shared session/query client, an owner-keyed saved-ID query, exact intended
+PUT/DELETE retry after unknown results and a44px heart target. Query errors allow
+retry; mutation errors stay inline. Guests get the existing login route with a
+book return URL. Non-Members/inactive accounts cannot mutate, and catalog previews
+have no heart. `ListingPhoto` keeps its reusable loading/missing/error/retry states
+for detail, checkout and conversation consumers. RN `/ui` remains unchanged.

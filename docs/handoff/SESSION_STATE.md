@@ -1,4 +1,171 @@
-# Điểm lưu hiện tại — 22/10/2026
+# Điểm lưu hiện tại — 23/10/2026
+
+## Sửa User Web CI của PR62 — 23/10/2026
+
+- Owner yêu cầu sửa/push lại [PR62](https://github.com/huangg49/used-book-marketplace/pull/62),
+  nhánh `codex/inline-card-location`, base sửa `61c300e`. Log job119974383142
+  dừng ở seller-order vì tìm heading cũ sau khi chuyển đơn sang workspace chat.
+- Cập nhật seller-order/BuyNow theo region Chi tiết đơn hàng, heading/trạng thái/
+  thanh toán hiện hành. ID đơn lấy từ receipt; kiểm đúng room/participants, một
+  room OrderCreated không terms/quote cho BuyNow. Giữ ca mất ACK cùng key/body,
+  thiếu tiền, hold/ledger, thông báo và shipment; không đổi source nghiệp vụ.
+- Wallet kiểm banner với số dư API xác nhận0→50.000→90.000 và hai nút thao tác;
+  giữ callback không session không lộ dữ liệu. Thêm fixture Order Chat hiện có
+  vào CI và upload evidence khi lỗi; không bỏ check hay tăng timeout để né lỗi.
+- PASS Node24.21.0/pnpm11.19.0: browser seller-order/BuyNow/exchange/wallet với
+  Mongo QA riêng57217/database `_test`; Order Chat fixture không DB; web lint
+  (6warning cũ), syntax/diff/docs check. Log `.tmp/ci-fix-*.log`; provider/storage/
+  carrier mô phỏng, không phải giao dịch VNPay hay native thật. QA được dừng sau
+  kiểm tra; DB/env và FE5174/API3000 của app giữ nguyên.
+- Commit `fix(ci): align browser regressions with order chat and wallet`.
+  Local PASS không thay remote CI; kiểm check của head mới trực tiếp trên PR62
+  trước merge. READINESS/human review giữ nguyên; gói này chỉ sửa test/CI/handoff.
+
+## Hợp nhất main và gỡ xung đột — 23/10/2026
+
+- Theo owner, merge `origin/main` tại `60e1cf01` vào `codex/inline-card-location`
+  từ `3f5b6eae`, giữ lịch sử đã push. Bốn conflict: public listing projection,
+  user-web scripts, contract version và checkpoint; giữ cả hai phía.
+- Giữ card464/504px, metadata một hàng, wallet/Order Chat và wishlist; đồng thời
+  nhận lazy-photo/cache/expiry và tối ưu listing từ main. Projection đọc metadata,
+  origin/zone theo lô trong cùng snapshot; không đọc contact, không bỏ current
+  address-version check hoặc lọc Marketplace/Auction. Thêm7 unit regression.
+- Contract hợp nhất0.50.0, regenerate types;177operation/26controller khớp. Đổi
+  Order Chat ADR0042→[0045](../adr/0045-order-conversation-workspace.md), giữ0042
+  auction của main. Giữ cả checkpoint teammate và READINESS mới từ main.
+  Chuẩn hóa ba dòng trống EOF có sẵn ở source RN upstream, không đổi hành vi.
+- PASS API lint/typecheck/183unit/build; web lint/typecheck/172unit/build;
+  session-client27unit; RN typecheck/156unit, admin typecheck/30unit. RN chỉ tạo
+  lại cache route `.expo/types` bị ignore bằng helper Expo cài sẵn. Browser cache
+  ảnh, Order Chat và35ca card desktop/mobile130% đạt; fixture không ghi DB.
+- HTTP/Mongo QA riêng57217/database `_test`: ba suite Orders/listing-review/
+  auction-listings đạt136/137; một race100request chỉ có1/2lượt thành công kỳ vọng
+  dưới contention, chạy riêng lại đạt (1PASS/54filtered), không sửa code/test.
+  Hai suite listing/auction đạt trọn vẹn; log `.tmp/inline-merge-quota-rerun.log`.
+  Container QA riêng được dừng sau kiểm tra, không dùng DB app cho harness.
+- `pnpm db:migrate` áp dụng đúng ba migration main0032–0034 còn thiếu;45migration
+  current, không đổi checksum cũ, reset/seed/bootstrap hay cấu hình. Khởi động lại
+  launcher API/worker sau build; API readiness3000 và FE5174 trả200. Log local
+  `.tmp/merge-main-runtime/`. Docs/diff check đạt; human/native/provider/remote CI
+  chưa chạy. Không đổi gate ngoài READINESS đã có trên main; chưa merge vào main.
+  Merge commit: `merge: resolve main conflicts for wallet chat and book cards`.
+
+## Xuất bản gói ví, đơn hàng/chat và card — 23/10/2026
+
+- Owner đã duyệt kết quả và yêu cầu chia commit/push. Tám commit chức năng từ
+  `c52a7705` đến `a314f539` đã tách theo ví, Order/Chat, vùng/card và các bước
+  tinh chỉnh card; đã push lên `origin/codex/inline-card-location` và đặt upstream.
+  Base chung là `6d063ee5`; remote main đã tiến tới `60e1cf01` sau fetch, chưa
+  tích hợp vào nhánh này. Chưa tạo PR/merge/deploy; quyền push không đổi gate review.
+- Kiểm phạm vi file trước push: không có env/tmp/dump/khóa được track trong gói;
+  working tree sạch, diff --check đạt. Checks chức năng giữ evidence ở các mốc
+  bên dưới; không chạy lại source tests cho bước xuất bản không đổi code.
+  Commit bàn giao này: `docs(handoff): record published member web changes`;
+  docs:check/diff --check được chạy cho tài liệu. READINESS giữ nguyên.
+
+## Tác giả và vị trí trên một hàng card — 22/10/2026
+
+- Theo owner: bỏ nhãn “Khu vực” khỏi phần nhìn, giữ nhãn cho screen reader;
+  tác giả và pin/địa điểm cùng một hàng, icon/chữ căn giữa trong vùng24px.
+  Chữ dài tự co rồi ellipsis, có tooltip đầy đủ; preview vẫn ghi đúng là không
+  có vị trí vật lý. Giữ card464/504px,4cột desktop, khung giá76px và CTA44px.
+- Nhánh `codex/inline-card-location`, base `99f0020`; subject
+  `style(web): align book author and location on one row`.
+- PASS web lint/build (gồm TypeScript), browser fixture35ca: Search1440/1280/390/
+  320 chữ130%, Home live/preview desktop/mobile, nhãn không hiện, icon/giá trị cùng
+  tâm hàng, chữ một dòng, tooltip và chiều cao không đổi. Đã xem ảnh desktop/mobile;
+  evidence `.tmp/inline-card-metadata-qa/`. Detector layout một lượt[];
+  docs:check/diff --check đạt;6warning lint/chunk cũ. Chỉ markup/CSS/docs, không
+  chạy lại unit/API/DB/native/provider/human/remote CI; READINESS giữ nguyên.
+  FE5174/API3000 vẫn chạy. Chưa push/PR/merge/deploy.
+
+## Card theo ảnh tham chiếu, chạy BE/FE — 22/10/2026
+
+- Theo ảnh owner: card paper border1px/bo20px, ảnh thật đầy đủ trên nền archival
+  desk có sẵn, chip mint và trái tim44px; tiêu đề toàn chiều ngang, tác giả/khu
+  vực hai bên, ô giá riêng và nút wine48px. Giữ4cột desktop/1cột điện thoại,
+  giá bán/đổi, trạng thái, retry ảnh và motion240ms kể cả reduced-motion.
+- Trái tim dùng API wishlist Member có sẵn, guest đi login rồi về sách; preview
+  không giả vị trí/nút lưu. Query phân trang theo owner; không báo lưu trước ACK,
+  giữ PUT/DELETE khi mất ACK, hủy read cũ và kiểm owner trước cập nhật cache.
+  Không đổi API/contract/persistence.
+- Nhánh `codex/book-card-reference-style`, base `505e256`; subject
+  `feat(web): match book cards to the reference design`.
+- PASS web lint/typecheck/168unit/build, docs:check và diff --check; browser fixture46ca gồm desktop1440/1280,
+  mobile390/320 chữ130%, Home/Search/preview, ảnh lỗi, guest, wishlist read lỗi,
+  mất ACK save/remove, stale read và đổi owner/non-Member. Đã xem ảnh fixture và
+  card live; live7bài/4cột, mobile không tràn, motion240ms, readiness200.
+  Evidence `.tmp/book-card-reference-qa/`. Detector một lượt có3advisory14px
+  radius được dùng theo ảnh và đã ghi DESIGN;6warning lint/chunk cũ.
+- Chạy đủ lệnh owner: frozen install/setup/Mongo wait/bootstrap/migrate/seed,
+  tất cả exit0; giữ env, mật khẩu/tài khoản và dữ liệu cũ. BE `pnpm dev:api`
+  launcher9132 cùng API/media/order workers; FE `pnpm dev:user` launcher24608.
+  http://localhost:5174 và API `/api/v1/health/ready` cổng3000 trả200; CORS đúng.
+  Log/PID tại `.tmp/dev-card-startup/`. Không chạy API E2E/native/live provider/
+  human/remote CI; READINESS giữ nguyên; chưa push/PR/merge/deploy.
+
+## Card sách rõ thông tin và khu vực — 22/10/2026
+
+- Owner chọn bìa ở trên; dưới chia hai phần bằng nhau: tên/tác giả trái,
+  khu vực/giá phải. Card Home/Search có border riêng, tiêu đề xuống dòng đầy đủ,
+  giữ giá bán/giá trị đổi, trạng thái, retry ảnh và link. Grid tối thiểu280px,
+  một card mỗi hàng điện thoại; dùng chung `BookCard`/`HomeBookCard`.
+- Contract0.47.0 thêm optional `fulfillment.locality {code,label}` từ vùng của
+  origin hiện hành, giữ envelopeTP.HCM cũ. Không lộ contact/address references;
+  origin thiếu/stale/deleted không bị đoán khu vực. Cập nhật ADR0015/0039,
+  không migration/đổi dữ liệu. Preview ghi rõ vị trí không áp dụng.
+- Nhánh `codex/book-card-details`, base `2e746a5`; subject
+  `feat(catalog): show bordered book cards with real locations`.
+- PASS Node24.21.0/pnpm11.19.0: API/web lint/typecheck/build, API150/web156unit,
+  contract check/routes173;16 origin E2E trên Mongo QA `_test` (60 ca không liên
+  quan bỏ qua), gồm cả3vùng, redaction và origin đổi/xóa. Browser fixture51ca riêng
+  kiểm Home/Search, desktop và320/390px chữ130%, hai cột/border/tên dài/ảnh lỗi/
+  links/hover/focus. Ảnh có nhãn mô phỏng ở `.tmp/book-card-details-qa/`.
+- Detector một lượt có advisory màu/radius/background có sẵn ngoài phần đổi;
+  API11/web6 warning lint/chunk cũ. Native/live storage/human/remote CI NOT RUN.
+  QA57017 đã dừng, giữ app Mongo/cấu hình/dữ liệu; dev API nạp lại source mới.
+  Readiness200; public read hiện7bài:4TP.HCM,3chưa có origin hợp lệ nên không đoán vùng.
+  READINESS không đổi; chưa push/PR/merge/deploy.
+
+## Xem đơn trong Chat — 22/10/2026
+
+- Theo owner, **Đơn hàng của tôi → Xem đơn** mở workspace Chat: toàn bộ thông tin
+  và thao tác Order ở trái, nhắn tin đúng đối tác ở phải. Mobile chuyển Đơn hàng/
+  Hội thoại mà giữ nháp và ý định. `OrderDetails` dùng chung controller thanh toán,
+  hủy và giao nhận; giữ snapshot riêng, lịch sử thương lượng và retry key/body/version.
+- API/contract0.46.0 thêm `conversationId` trong Order read và lệnh mở hội thoại
+  đúng Order. Giữ phòng Negotiated; BuyNow/Order lịch sử chưa có link tạo phòng
+  OrderCreated riêng, không đổi tiền/sách/trạng thái. [ADR0045](../adr/0045-order-conversation-workspace.md),
+  không cần migration mới; quyền participant/ACTIVE/session được kiểm trước replay.
+- Nhánh `codex/order-chat-workspace`, base `c52a770`; subject
+  `feat(orders): open order details in the chat workspace`.
+- PASS Node24.21.0/pnpm11.19.0: API lint/typecheck/build/150unit;6 E2E mới trên
+  Mongo QA `_test` (49 ca không liên quan bỏ qua), gồm từ chối/replay/race barrier;
+  contract check/routes173operation; web lint/typecheck/build/156unit, browser
+  order-chat mới và regression Chat cũ. Xem desktop/320/390px chữ130%; kiểm mất ACK
+  mở phòng/pay/cancel, message dedupe, ảnh đóng gói/vận đơn, cache403 và nháp.
+- Browser dùng API/Socket.IO fixture riêng; API E2E dùng Mongo thật/storage fake.
+  Ảnh có nhãn mô phỏng tại `.tmp/order-chat-workspace-qa/`; detector một lượt[];
+  API11/web6 warning lint và cảnh báo chunk cũ. Review AI đã sửa nguy cơ mất intent
+  khi đổi trang; không thay human review/native/live provider/remote CI.
+- Dev API/worker đã khởi động lại từ launcher hiện có do watcher không còn listener;
+  readiness200, web5174 HMR. Giữ cấu hình/DB app; không migrate/reset/seed.
+  READINESS giữ nguyên; chưa push/PR/merge/deploy.
+
+## Khung số dư và thao tác ví — 22/10/2026
+
+- Member web `/wallet`: gom tiêu đề, số dư khả dụng từ API và hai nút Nạp/Rút
+  vào khung wine–cream bo12px, dùng lại minh họa của phần Tổng quan theo ảnh owner.
+  Giữ popup `PurchaseDialog`, lịch sử và logic VNPay; rút vẫn chỉ là preview.
+- Nhánh `codex/wallet-balance-banner`, base `6d063ee`; subject
+  `style(web): group wallet balance and actions in branded banner`.
+- PASS Node24.21.0/pnpm11.19.0: web lint/typecheck/156unit/build; Chromium fixture
+  1366/900/768/390/320px, chữ130%, số dư0/tối đa, loading/lỗi/retry/cache/403,
+  focus/Escape, hai popup và giữ số tiền. Đã xem desktop/mobile; ảnh và kết quả
+  local tại `.tmp/wallet-balance-banner-qa/`, có nhãn dữ liệu mô phỏng.
+- Sáu warning lint và cảnh báo chunk cũ; detector một lượt chỉ advisory font1.2rem có sẵn.
+  Browser mock toàn bộ API, không gửi command ví/đụng DB. Không chạy lại API/Mongo,
+  native/live VNPay/human/remote CI; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
 
 ## Tích hợp tối ưu listing và hỗ trợ demo — 22/10/2026
 

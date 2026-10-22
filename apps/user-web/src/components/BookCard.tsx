@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, ArrowUpRight } from "lucide-react";
+import { BookOpen, ChevronRight, MapPin, Tag, UserRound } from "lucide-react";
+import { WishlistButton } from "./WishlistButton";
+import { CardFitText } from "./CardFitText";
 import { ROUTES, formatVnd } from "../lib/routes";
 import { type PublicListing } from "../services/public-listings";
 import styles from "./BookCard.module.css";
@@ -75,7 +77,7 @@ export interface BookCardProps {
   index: number;
   compact?: boolean;
 }
-export function BookCard({ book, index, compact = false }: BookCardProps) {
+export function BookCard({ book, compact = false }: BookCardProps) {
   const location = useLocation();
   const returnState =
     location.pathname === ROUTES.search
@@ -83,7 +85,7 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
       : undefined;
   return (
     <article className={[styles.card, compact ? styles.compact : ""].join(" ")}>
-      <div className={[styles.cover, styles["ground" + (index % 4)]].join(" ")}>
+      <div className={styles.cover}>
         <ListingPhoto book={book} />
         <Link
           to={ROUTES.bookDetail(book.id)}
@@ -91,6 +93,16 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
           className={styles.coverLink}
           aria-label={"Xem chi tiết " + book.book.title}
         />
+        <WishlistButton listingId={book.id} title={book.book.title} />
+        <span className={styles.condition}>
+          <BookOpen size={15} aria-hidden="true" />
+          {conditions[book.condition]} ·{" "}
+          {book.mode === "Sale"
+            ? "Bán"
+            : book.mode === "Exchange"
+              ? "Đổi"
+              : "Bán hoặc đổi"}
+        </span>
         {book.purchaseAvailability.status !== "Available" && (
           <span className={styles.held}>
             {book.purchaseAvailability.status === "AwaitingPayment"
@@ -102,37 +114,54 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
         )}
       </div>
       <div className={styles.meta}>
-        <p className={styles.condition}>
-          {conditions[book.condition]} ·{" "}
-          {book.mode === "Sale"
-            ? "Bán"
-            : book.mode === "Exchange"
-              ? "Đổi"
-              : "Bán hoặc đổi"}
-        </p>
         <h3>
           <Link
             to={ROUTES.bookDetail(book.id)}
             state={returnState}
-            title={compact ? book.book.title : undefined}
+            title={book.book.title}
           >
-            {book.book.title}
+            <CardFitText>{book.book.title}</CardFitText>
           </Link>
         </h3>
-        <p className={styles.author}>
-          {book.book.authors.join(", ") || "Chưa rõ tác giả"}
-        </p>
+        <div className={styles.information}>
+          <p className={styles.author}>
+            <UserRound size={18} aria-hidden="true" />
+            <span className="sr-only">Tác giả: </span>
+            <CardFitText minimumRem={0.6875}>
+              {book.book.authors.join(", ") || "Chưa rõ tác giả"}
+            </CardFitText>
+          </p>
+          <p className={styles.location}>
+            <MapPin size={18} aria-hidden="true" />
+            <span className="sr-only">Khu vực: </span>
+            <strong className={styles.region}>
+              <CardFitText minimumRem={0.6875}>
+                {book.fulfillment?.locality?.label || "Chưa có khu vực"}
+              </CardFitText>
+            </strong>
+          </p>
+        </div>
         <div className={styles.prices}>
           {book.salePrice !== null && (
             <p>
-              <span>Giá bán</span>
-              <strong>{formatVnd(book.salePrice)}</strong>
+              <Tag size={24} aria-hidden="true" />
+              <span>
+                <span className={styles.fieldLabel}>Giá bán</span>
+                <strong className={styles.amount}>
+                  <CardFitText>{formatVnd(book.salePrice)}</CardFitText>
+                </strong>
+              </span>
             </p>
           )}
           {book.exchangeValue !== null && (
             <p>
-              <span>Giá trị đổi</span>
-              <strong>{formatVnd(book.exchangeValue)}</strong>
+              <Tag size={24} aria-hidden="true" />
+              <span>
+                <span className={styles.fieldLabel}>Giá trị đổi</span>
+                <strong className={styles.amount}>
+                  <CardFitText>{formatVnd(book.exchangeValue)}</CardFitText>
+                </strong>
+              </span>
             </p>
           )}
         </div>
@@ -141,7 +170,8 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
           to={ROUTES.bookDetail(book.id)}
           state={returnState}
         >
-          Xem sách <ArrowUpRight size={16} aria-hidden="true" />
+          <BookOpen size={18} aria-hidden="true" /> Xem sách{" "}
+          <ChevronRight size={19} aria-hidden="true" />
         </Link>
       </div>
     </article>

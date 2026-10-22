@@ -1354,6 +1354,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orders/{orderId}/conversation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open the exact Order's participant conversation
+         * @description ACTIVE MEMBER Buyer or Seller only. Reuses the conversation already linked to this Order, preserving its messages and terms. If none exists, creates a separate OrderCreated conversation from the Order's frozen participants and item. Does not change the Order, listing, quote, prices, commitment or ledger. No financial expectedVersion is required; opening a conversation is serialized by the Order lock. Same key and empty body replay the receipt after current participant, role, account and session checks. No LOCKED access.
+         */
+        post: operations["openOrderConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orders/{orderId}/cancel": {
         parameters: {
             query?: never;
@@ -3370,6 +3390,8 @@ export interface components {
             salePrice?: number;
             exchangeValue?: number;
         });
+        /** @description No client-supplied participant, listing, price or version; all linkage comes from the frozen Order. */
+        OpenOrderConversation: Record<string, never>;
         CreatePurchaseConversation: {
             /**
              * @description Opt into the unified agreement workspace; Exchange on a Both listing requests seller confirmation. Sale-only rejects Exchange intent; Exchange-only rejects Negotiation intent.
@@ -3913,7 +3935,7 @@ export interface components {
             /** @constant */
             method: "DirectDelivery";
         };
-        /** @description Safe delivery preference only, not a quote or enabled checkout. Never contains an address ID, version, locality or contact details. */
+        /** @description Safe delivery preference and optional coarse book circulation zone only, not a quote or enabled checkout. The name remains the legacy TP.HCM envelope; use locality.label for the actual zone when present. Never contains an address ID, version or contact details. */
         PublicFulfillment: {
             /** @constant */
             serviceAreaCode: "HCM-DEMO-v1";
@@ -3923,6 +3945,11 @@ export interface components {
             demoOnly: true;
             /** @constant */
             method: "DirectDelivery";
+            /** @description Coarse book circulation zone from the configured directory, resolved only while the published revision's selected origin address version is current. */
+            locality?: {
+                code: string;
+                label: string;
+            };
         };
         CreateSaleQuote: {
             expectedListingVersion: number;
@@ -4094,6 +4121,11 @@ export interface components {
         };
         /** @description Private DirectDelivery Order including funding, pre-confirmation refund, seller acceptance and overdue pickup review. Historical schema name retained. shippingAddress is the frozen buyer destination, disclosed only to the accepted Seller. Review is an unresolved task, never proof of custody, strike or refund. Shipment registration is available through its separate endpoint; independent pickup simulation can advance InTransit or open carrierReview/ResolutionPending. Review resolution handlers remain planned. */
         PrivateUnpaidOrder: {
+            /**
+             * Format: uuid
+             * @description The conversation linked to this exact Order, or null before it is opened. Does not grant chat access to LOCKED accounts.
+             */
+            conversationId: string | null;
             /**
              * @description Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
              * @enum {string}
@@ -8147,6 +8179,43 @@ export interface operations {
             422: components["responses"]["ListingError"];
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    openOrderConversation: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenOrderConversation"];
+            };
+        };
+        responses: {
+            /** @description Existing or newly created Order participant conversation. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseConversationReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
         };
     };

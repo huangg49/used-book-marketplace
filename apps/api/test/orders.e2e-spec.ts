@@ -29,6 +29,8 @@ import { MediaStorage } from '../src/modules/media/media-storage.js';
 import { validates } from './helpers/contract.js';
 import { Gate } from './helpers/mongo-gate.js';
 import { MongoFixtures } from './helpers/mongo-fixtures.js';
+import { AuthService } from '../src/modules/auth/auth.service.js';
+import { PurchasesService } from '../src/modules/purchases/purchases.service.js';
 
 // Storage signing is deliberately faked. HTTP, authorization and MongoDB are real.
 const storage = {
@@ -258,6 +260,14 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       const listings = (
         await c.listings.find({ ownerId: { $in: users } }).toArray()
       ).map((l) => l._id);
+      const conversations = (await c.purchase_conversations.find({
+        $or: [{ buyerId: { $in: users } }, { sellerId: { $in: users } }],
+      }).toArray()).map(row => row._id);
+      await c.purchase_messages.deleteMany({ conversationId: { $in: conversations } });
+      await c.conversation_events.deleteMany({ conversationId: { $in: conversations } });
+      await c.conversation_exchange_links.deleteMany({ conversationId: { $in: conversations } });
+      await c.conversation_terms.deleteMany({ _id: { $in: conversations } });
+      await c.purchase_conversations.deleteMany({ _id: { $in: conversations } });
       const revisions = (
         await c.listing_revisions
           .find({ listingId: { $in: listings } })
@@ -684,6 +694,113 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       .toMatchObject({ status: 'OrderCreated', orderId: created.body.entityId, expiresAt: null });
     expect((await findOrder(created.body.entityId)).state).toBe('AwaitingPayment');
     expect((await db.c.listings.findOne({ _id: p.f.l.entityId }))!.trade).toBe('Reserved');
+  });
+  const openOrderChat = (id: string, actor: Reader, key = randomUUID(), body: object = {}) =>
+    post(`/orders/${id}/conversation`, body, actor, key);
+  it('order conversation preserves the exact negotiated room, its version and message history', async () => {
+    const p = await prepared(), created = (await create(p).expect(200)).body;
+    const auth = await app.get(AuthService).authenticate(p.f.buyer.token);
+    const sent = await app.get(PurchasesService).send(auth, {
+      messageId: randomUUID(), conversationId: p.body.conversationId,
+      body: 'Mình đã xem thông tin đơn này.',
+    });
+    const before = (await db.c.purchase_conversations.findOne({ _id: p.body.conversationId }))!;
+    for (const actor of [p.f.buyer, p.f.seller]) {
+      const opened = await openOrderChat(created.entityId, actor).expect(200);
+      validates('PurchaseConversationReceipt', opened.body);
+      expect(opened.body.entityId).toBe(p.body.conversationId);
+      expect(opened.body.version).toBe(before.version);
+      expect((await orderView(created.entityId, actor)).conversationId).toBe(before._id);
+      expect((await get(`/me/purchase-conversations/${before._id}/messages`, actor).expect(200)).body).toEqual([sent]);
+    }
+    expect(await db.c.purchase_conversations.findOne({ _id: before._id }))
+      .toEqual({ ...before, lockSeq: expect.any(Number) });
+    expect(await db.c.purchase_conversations.countDocuments({ orderId: created.entityId })).toBe(1);
+  });
+  it('order conversation opens BuyNow without adopting another negotiation or changing money, stock or Order', async () => {
+    const p = await prepared();
+    const created = (await post('/orders/buy-now', p.quoteBody, p.f.buyer).expect(200)).body;
+    expect((await orderView(created.entityId, p.f.buyer)).conversationId).toBeNull();
+    const before = await findOrder(created.entityId);
+    const listing = await db.c.listings.findOne({ _id: p.f.l.entityId });
+    const counts = await stateCounts(p.f.l.entityId);
+    const opened = await openOrderChat(created.entityId.toUpperCase(), p.f.seller).expect(200);
+    validates('PurchaseConversationReceipt', opened.body);
+    expect(opened.body.entityId).not.toBe(p.body.conversationId);
+    expect(opened.body.status).toBe('OrderCreated');
+    const room = (await get(`/me/purchase-conversations/${opened.body.entityId}`, p.f.buyer).expect(200)).body;
+    expect(room).toMatchObject({ orderId: created.entityId, buyer: { id: p.f.buyer.id }, seller: { id: p.f.seller.id }, terms: null, quotePreview: null, hasQuote: false });
+    expect((await db.c.purchase_conversations.findOne({ _id: p.body.conversationId }))!.status).toBe('Active');
+    expect(await findOrder(created.entityId)).toEqual({ ...before, lockSeq: expect.any(Number) });
+    expect(await db.c.listings.findOne({ _id: p.f.l.entityId })).toEqual(listing);
+    expect(await stateCounts(p.f.l.entityId)).toEqual(counts);
+    expect(await db.c.ledger_journals.countDocuments({ orderId: created.entityId })).toBe(0);
+    const auth = await app.get(AuthService).authenticate(p.f.seller.token);
+    const sent = await app.get(PurchasesService).send(auth, { messageId: randomUUID(), conversationId: room.id, body: 'Mình sẽ đóng gói sách.' });
+    expect((await get(`/me/purchase-conversations/${room.id}/messages`, p.f.buyer).expect(200)).body).toEqual([sent]);
+    await get(`/me/purchase-conversations/${room.id}`, m2).expect(404);
+    await get(`/me/purchase-conversations/${room.id}/messages`, m2).expect(404);
+  });
+  it('order conversation can open a historical closed Order using its frozen item without reopening trade', async () => {
+    const p = await prepared(), created = (await create(p).expect(200)).body;
+    await cancel(created.entityId, p.f.buyer).expect(200);
+    // Migrator-only historical fixture: older Orders can have no chat link or purchaseMode.
+    await db.c.purchase_conversations.deleteOne({ _id: p.body.conversationId });
+    await db.c.agreement_snapshots.updateOne({ _id: created.contextId }, { $unset: { 'snapshot.purchaseMode': '' } });
+    const before = await stateCounts(p.f.l.entityId);
+    const opened = await openOrderChat(created.entityId, p.f.buyer).expect(200);
+    expect(opened.body.status).toBe('OrderCreated');
+    const view = await orderView(created.entityId, p.f.buyer);
+    expect(view).toMatchObject({ conversationId: opened.body.entityId, purchaseMode: 'Negotiated', state: 'Cancelled', moneyHeld: 0 });
+    expect(await stateCounts(p.f.l.entityId)).toEqual(before);
+    expect((await db.c.listings.findOne({ _id: p.f.l.entityId }))!.trade).toBe('Available');
+  });
+  it('order conversation rejects outsiders, forged linkage and current ineligibility before replay', async () => {
+    const p = await prepared(), created = (await create(p).expect(200)).body, key = randomUUID();
+    await request(app.getHttpServer()).post(`/api/v1/orders/${created.entityId}/conversation`).send({}).expect(401);
+    for (const actor of [m1, m2]) await openOrderChat(created.entityId, actor).expect(404);
+    for (const actor of [staff, a2]) await openOrderChat(created.entityId, actor).expect(403);
+    for (const extra of [{ expectedVersion: 1 }, { conversationId: p.body.conversationId }, { buyerId: m2.id }, { amount: 1 }])
+      await openOrderChat(created.entityId, p.f.buyer, randomUUID(), extra).expect(422);
+    const first = await openOrderChat(created.entityId, p.f.buyer, key).expect(200);
+    const replay = await openOrderChat(created.entityId, p.f.buyer, key).expect(200);
+    expect(replay.body).toEqual(first.body);
+    expect(replay.headers['idempotency-replayed']).toBe('true');
+    for (const status of ['RESTRICTED', 'LOCKED'] as const) {
+      await db.setStatus(p.f.buyer.id, status);
+      await openOrderChat(created.entityId, p.f.buyer, key).expect(403);
+      expect((await orderView(created.entityId, p.f.buyer)).id).toBe(created.entityId);
+    }
+    await db.setStatus(p.f.buyer.id, 'ACTIVE');
+    await db.removeRole(p.f.buyer.id, 'MEMBER');
+    await openOrderChat(created.entityId, p.f.buyer, key).expect(403);
+    await db.addRole(p.f.buyer.id, 'MEMBER');
+    await setSession(p.f.buyer.sessionId, { revokedAt: new Date() });
+    await openOrderChat(created.entityId, p.f.buyer, key).expect(401);
+  });
+  it('order conversation replays the same intent but refuses the same key for a different owned Order', async () => {
+    const p = await prepared(), created = (await create(p).expect(200)).body, key = randomUUID();
+    await openOrderChat(created.entityId, p.f.buyer, key).expect(200);
+    const other = await prepared(await setup(210000, 'Sale', p.f.buyer));
+    const second = (await create(other).expect(200)).body;
+    await openOrderChat(second.entityId, p.f.buyer, key).expect(409);
+    expect(await db.c.mutation_receipts.countDocuments({ actorId: p.f.buyer.id, operation: 'openOrderConversation', key })).toBe(1);
+  });
+  it('order conversation serializes concurrent Buyer and Seller opens into one room', async () => {
+    const f = await setup(), q = (await quote(f).expect(200)).body;
+    const created = (await post('/orders/buy-now', {
+      quoteId: q.entityId, expectedQuoteVersion: 1,
+      expectedListingVersion: f.l.version, expectedListingRevisionId: f.l.revisionId,
+    }, f.buyer).expect(200)).body;
+    const gate = await Gate.lockUser(db.client, f.buyer.id);
+    const pending = [f.buyer, f.seller].map(actor => openOrderChat(created.entityId, actor).then(result => result));
+    try { await gate.contended(2); } finally { await gate.commit(); }
+    const results = await Promise.all(pending);
+    expect(results.map(r => r.status)).toEqual([200, 200]);
+    expect(results[0].body.entityId).toBe(results[1].body.entityId);
+    expect(await db.c.purchase_conversations.countDocuments({ orderId: created.entityId })).toBe(1);
+    expect((await orderView(created.entityId, f.buyer)).conversationId).toBe(results[0].body.entityId);
+    expect(await db.c.outbox_events.countDocuments({ type: 'OrderConversationOpened', 'payload.entityId': results[0].body.entityId })).toBe(1);
   });
   it('rejects forged amounts, principals, foreign conversations, stale versions and guest/operations roles', async () => {
     const p = await prepared();

@@ -8,6 +8,7 @@ import {
   useInboxPosition,
 } from "../components/conversation/conversation-navigation";
 import { ExchangeDetailPage } from "./ExchangeDetailPage";
+import { OrderDetails } from "./OrderDetails";
 import sheet from "../components/conversation/Conversation.module.css";
 import {
   getPurchaseConversation,
@@ -32,7 +33,7 @@ import {
 } from "../services/purchase-conversations";
 import { getPublicListing } from "../services/public-listings";
 import { createSellerOrder } from "../services/purchase-conversations";
-import { getOrderForPayment, payOrder, orderStates } from "../services/orders";
+import { getOrder, orderStates } from "../services/orders";
 import { purchaseChatGuidance } from "../lib/purchase-chat-guidance";
 import { formatVnd } from "../lib/routes";
 import { PurchaseDialog } from "../components/PurchaseDialog";
@@ -77,7 +78,6 @@ function ChatRoom({
   const sheetBodyRef = useRef<HTMLDivElement>(null);
   const guidanceScrollIntent = useRef(false);
   const [historyExchange, setHistoryExchange] = useState<string | null>(null);
-  const cache = useQueryClient();
   const history = useQuery({
     queryKey: ["purchase-messages", room.id],
     queryFn: () => getPurchaseMessages(room.id),
@@ -88,10 +88,10 @@ function ChatRoom({
     queryFn: () => getPublicListing(room.listingId),
   });
   const order = useQuery({
-    queryKey: ["purchase-order", room.orderId],
-    queryFn: () => getOrderForPayment(room.orderId!),
-    enabled: !!room.orderId && room.buyer.id === userId,
-    refetchInterval: 3000,
+    queryKey: ["direct-order", userId, room.orderId],
+    queryFn: () => getOrder(room.orderId!),
+    enabled: !!room.orderId,
+    refetchInterval: 5000,
   });
   const [live, setLive] = useState<PurchaseMessage[]>([]);
   const [body, setBody] = useState("");
@@ -112,11 +112,6 @@ function ChatRoom({
   const orderAttempt = useRef<
     { key: string; version: number; price: number } | undefined
   >(undefined);
-  const [payBusy, setPayBusy] = useState(false);
-  const [payError, setPayError] = useState<string>();
-  const payAttempt = useRef<{ key: string; version: number } | undefined>(
-    undefined,
-  );
   const [attempt, setAttempt] = useState<{
     messageId: string;
     conversationId: string;
@@ -277,12 +272,18 @@ function ChatRoom({
         setError(undefined);
       });
   }
+  const orderAccessDenied =
+    order.error instanceof ApiError && [401, 403, 404].includes(order.error.status);
+  const readableOrder = orderAccessDenied ? undefined : order.data;
   const bookIdentity = (
     <ConversationBookIdentity
       listingId={room.listingId}
+      title={readableOrder?.item.metadata.title}
       status={
         <>
-          {isExchange && room.status === "Active"
+          {room.orderId
+            ? (readableOrder && orderStates[readableOrder.state]) || "Đơn hàng"
+            : isExchange && room.status === "Active"
             ? "Đang trao đổi sách"
             : statusLabels[room.status]}
           {room.expiresAt && (
@@ -314,7 +315,7 @@ function ChatRoom({
           aria-pressed={panel === "sheet"}
           onClick={() => setPanel("sheet")}
         >
-          Phiếu thỏa thuận
+          {room.orderId ? "Đơn hàng" : "Phiếu thỏa thuận"}
         </button>
         <button
           type="button"
@@ -328,18 +329,22 @@ function ChatRoom({
         className={`${sheet.workspace} ${sheet.openBook} ${styles.paperSpread} ${styles.dossierSpread}`}
         data-panel={panel}
       >
-        <aside className={sheet.sheet} aria-label="Phiếu thỏa thuận">
+        <aside className={sheet.sheet} aria-label={room.orderId ? "Thông tin đơn hàng" : "Phiếu thỏa thuận"}>
           <header className={`${sheet.sheetHeading} ${styles.dossierHeader}`}>
             {bookIdentity}
           </header>
-          <h2 className={styles.srOnly}>Phiếu thỏa thuận</h2>
+          <h2 className={styles.srOnly}>{room.orderId ? "Thông tin đơn hàng" : "Phiếu thỏa thuận"}</h2>
           <div
             className={`${sheet.sheetBody} ${styles.dossierBody}`}
             ref={sheetBodyRef}
             role="region"
-            aria-label="Nội dung phiếu thỏa thuận"
+            aria-label={room.orderId ? "Nội dung đơn hàng" : "Nội dung phiếu thỏa thuận"}
             tabIndex={0}
           >
+            {room.orderId ? (
+              <OrderDetails key={room.orderId} orderId={room.orderId} embedded />
+            ) : (
+              <>
             {room.terms?.locked &&
               !room.orderId &&
               !room.terms.activeExchangeId && (
@@ -353,7 +358,7 @@ function ChatRoom({
               userId={userId}
               book={book.data}
               refresh={refreshRooms}
-              frozen={!!orderAttempt.current || payBusy}
+              frozen={!!orderAttempt.current}
             />
             {!!room.terms?.exchangeIds.length && (
               <details className={sheet.exchangeHistory}>
@@ -467,8 +472,10 @@ function ChatRoom({
                 </p>
               </details>
             )}
+              </>
+            )}
           </div>
-          {!isExchange && (
+          {!room.orderId && !isExchange && (
             <>
               {!(room.orderId && isBuyer) && (
                 <aside
@@ -689,115 +696,6 @@ function ChatRoom({
                     </PurchaseDialog>
                   </>
                 )}
-              {room.orderId && room.buyer.id === userId && (
-                <aside
-                  className={styles.nextStep}
-                  aria-label="Bước tiếp theo"
-                  data-primary="true"
-                >
-                  {order.isLoading ? (
-                    <p>Đang tải đơn hàng…</p>
-                  ) : order.data ? (
-                    <>
-                      <h3>
-                        {order.data.state === "AwaitingPayment"
-                          ? "Đơn đang chờ bạn thanh toán"
-                          : (orderStates[order.data.state] ??
-                            "Đã cập nhật đơn hàng")}
-                      </h3>
-                      <p>
-                        Giá sách: {formatVnd(order.data.amounts.bookPrice)} ·
-                        Phí giao nhận:{" "}
-                        {formatVnd(order.data.amounts.shippingFee)}
-                      </p>
-                      <p>
-                        <strong>
-                          Tổng thanh toán:{" "}
-                          {formatVnd(order.data.amounts.buyerTotal)}
-                        </strong>
-                      </p>
-                      {order.data.state === "AwaitingPayment" &&
-                        order.data.paymentEnabled && (
-                          <button
-                            type="button"
-                            disabled={payBusy}
-                            onClick={async () => {
-                              const intent = payAttempt.current ?? {
-                                key: crypto.randomUUID(),
-                                version: order.data!.version,
-                              };
-                              payAttempt.current = intent;
-                              setPayBusy(true);
-                              setPayError(undefined);
-                              try {
-                                await payOrder(
-                                  order.data!.id,
-                                  intent.version,
-                                  intent.key,
-                                );
-                                payAttempt.current = undefined;
-                                void order.refetch();
-                                for (const key of [
-                                  "public-listing",
-                                  "home-shelves",
-                                  "catalog-search",
-                                  "exchange-public-listings",
-                                ])
-                                  void cache.invalidateQueries({
-                                    queryKey: [key],
-                                  });
-                              } catch (cause) {
-                                if (
-                                  cause instanceof ApiError &&
-                                  [400, 403, 404, 409, 422].includes(
-                                    cause.status,
-                                  )
-                                ) {
-                                  payAttempt.current = undefined;
-                                  void order.refetch();
-                                  setPayError(
-                                    cause.code === "InvalidState"
-                                      ? "Chưa thể thanh toán. Kiểm tra số dư ví và trạng thái đơn rồi thử lại."
-                                      : "Đơn vừa thay đổi hoặc hết hạn. Đã tải lại trạng thái đơn.",
-                                  );
-                                } else
-                                  setPayError(
-                                    "Chưa xác nhận được thanh toán. Thử lại để gửi cùng yêu cầu.",
-                                  );
-                              } finally {
-                                setPayBusy(false);
-                              }
-                            }}
-                          >
-                            {payBusy
-                              ? "Đang thanh toán…"
-                              : "Xác nhận và thanh toán"}
-                          </button>
-                        )}
-                      {order.data.state !== "AwaitingPayment" && (
-                        <p>Theo dõi bước giao nhận tiếp theo trong đơn hàng.</p>
-                      )}
-                      <Link
-                        className={styles.orderLink}
-                        to={`/orders/${room.orderId}`}
-                      >
-                        Xem chi tiết đơn hàng
-                      </Link>
-                      {payError && <p role="alert">{payError}</p>}
-                    </>
-                  ) : (
-                    <p role="alert">
-                      Chưa tải được đơn hàng.{" "}
-                      <button
-                        type="button"
-                        onClick={() => void order.refetch()}
-                      >
-                        Thử lại
-                      </button>
-                    </p>
-                  )}
-                </aside>
-              )}
             </>
           )}
         </aside>
@@ -814,6 +712,10 @@ function ChatRoom({
               <p>
                 {isExchange
                   ? "Đối tác trao đổi sách"
+                  : room.orderId
+                    ? isBuyer
+                      ? "Người bán · Đơn bạn mua"
+                      : "Người mua · Đơn bạn bán"
                   : isBuyer
                     ? "Người bán · Bạn đang hỏi mua"
                     : "Người mua · Bạn đang bán sách"}
@@ -881,7 +783,9 @@ function ChatRoom({
                 <p>
                   {expired
                     ? "Lịch sử hội thoại được giữ lại tại đây."
-                    : "Bạn có thể hỏi về tình trạng sách hoặc giá trước khi gửi thông tin nhận sách."}
+                    : room.orderId
+                      ? "Trao đổi với đối tác về việc chuẩn bị và giao nhận cuốn sách trong đơn này."
+                      : "Bạn có thể hỏi về tình trạng sách hoặc giá trước khi gửi thông tin nhận sách."}
                 </p>
                 {!expired && !body && (
                   <button
@@ -890,7 +794,9 @@ function ChatRoom({
                     disabled={!!attempt}
                     onClick={() => {
                       setBody(
-                        isBuyer
+                        room.orderId
+                          ? "Chào bạn, mình trao đổi thêm về việc giao nhận đơn sách này nhé."
+                          : isBuyer
                           ? "Chào bạn, sách còn không và tình trạng hiện tại thế nào?"
                           : "Chào bạn, bạn muốn hỏi thêm điều gì về cuốn sách này?",
                       );
@@ -999,7 +905,9 @@ function ChatRoom({
                   disabled={!!attempt}
                   onChange={(event) => setBody(event.target.value)}
                   placeholder={
-                    isExchange
+                    room.orderId
+                      ? "Trao đổi về đơn hàng và việc giao nhận…"
+                      : isExchange
                       ? "Trao đổi về sách, tiền bù hoặc giao nhận…"
                       : isBuyer
                         ? "Hỏi về cuốn sách hoặc trao đổi giá…"
