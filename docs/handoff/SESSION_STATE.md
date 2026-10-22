@@ -1,4 +1,19 @@
-# Điểm lưu hiện tại — 19/10/2026
+# Điểm lưu hiện tại — 22/10/2026
+
+## Khung số dư và thao tác ví — 22/10/2026
+
+- Member web `/wallet`: gom tiêu đề, số dư khả dụng từ API và hai nút Nạp/Rút
+  vào khung wine–cream bo12px, dùng lại minh họa của phần Tổng quan theo ảnh owner.
+  Giữ popup `PurchaseDialog`, lịch sử và logic VNPay; rút vẫn chỉ là preview.
+- Nhánh `codex/wallet-balance-banner`, base `6d063ee`; subject
+  `style(web): group wallet balance and actions in branded banner`.
+- PASS Node24.21.0/pnpm11.19.0: web lint/typecheck/156unit/build; Chromium fixture
+  1366/900/768/390/320px, chữ130%, số dư0/tối đa, loading/lỗi/retry/cache/403,
+  focus/Escape, hai popup và giữ số tiền. Đã xem desktop/mobile; ảnh và kết quả
+  local tại `.tmp/wallet-balance-banner-qa/`, có nhãn dữ liệu mô phỏng.
+- Sáu warning lint và cảnh báo chunk cũ; detector một lượt chỉ advisory font1.2rem có sẵn.
+  Browser mock toàn bộ API, không gửi command ví/đụng DB. Không chạy lại API/Mongo,
+  native/live VNPay/human/remote CI; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
 
 ## Hết hạn nạp VNPay sau 5 phút — 19/10/2026
 
