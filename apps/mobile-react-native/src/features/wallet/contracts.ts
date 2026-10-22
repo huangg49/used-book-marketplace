@@ -52,6 +52,7 @@ export const topupState = z.enum([
   "Processing",
   "Succeeded",
   "Failed",
+  "Cancelled",
   "ReviewRequired",
 ]);
 
@@ -65,6 +66,8 @@ export const topupIntent = z.object({
   journalId: z.uuid().nullable(),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
+  expiresAt: z.iso.datetime({ offset: true }).nullable(),
+  serverTime: z.iso.datetime({ offset: true }),
 }) satisfies z.ZodType<components["schemas"]["TopupIntent"]>;
 
 export const topupPage = z.object({

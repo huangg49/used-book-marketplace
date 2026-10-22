@@ -66,6 +66,28 @@
   refresh race/replay); API typecheck/build/lint (11 cảnh báo có sẵn), contract check
   và routes. Chưa push/PR/merge; gate READINESS giữ nguyên.
 
+## Hoàn thiện Trao đổi sách (Exchange): hiển thị sách khi cọc, ảnh bìa trực quan & hủy đơn hoàn cọc (FR-X11) — 20/10/2026
+
+- Nhánh `feat/rn-exchange-fix-and-deposit-cancellation`, base `feat/rn-chat-inbox-and-order-flow` (đã merge `origin/main` mới nhất).
+- Phạm vi hoàn thành:
+  1. Fix lỗi 404 & hiển thị `@Người đề nghị` khi sách chuyển sang trạng thái chờ cọc (`AcceptedAwaitingFunding`):
+     - Trong `public-listing.service.ts`: bổ sung lookup sang collection `exchanges` để cho phép các sách ở trạng thái `Reserved` thuộc tiến trình trao đổi vẫn được truy vấn công khai (tên sách, ảnh bìa, tác giả, giá trị cọc đối soát).
+  2. Sửa nhãn hiển thị tiêu đề và đối tác trong `ExchangeProposalCard`:
+     - Khung 1 luôn là `SÁCH CỦA BẠN GỬI ĐI`, khung 2 luôn là `SÁCH BẠN NHẬN VỀ (TỪ @<Tên đối tác>)`.
+     - Kích hoạt hiển thị ảnh bìa thực tế (`active={true}`) trong cả `ExchangeProposalCard` và `ExchangeComposeScreen`.
+  3. Bổ sung tính năng Hủy giao dịch trao đổi & hoàn cọc 100% (FR-X11 trong SRS 1.1):
+     - Thêm nút và popup xác nhận `Hủy giao dịch trao đổi` vào giai đoạn `AcceptedAwaitingFunding` trong `exchange-actions-card.tsx`.
+     - Cho phép người dùng chủ động rút lui trước khi gửi sách: hoàn trả 100% tiền cọc về ví ngay tức thì và mở lại trạng thái `Available` trên kệ sách cho cả 2 bên.
+  4. Đồng bộ nhánh chính `origin/main`:
+     - Tích hợp 4 migration MongoDB mới (`0032-vnpay-topup-expiry`, `0032-auction-only-listings`, `0033-buy-now-challenge`, `0034-auction-delivery`).
+     - Áp dụng migration vào replica set MongoDB local thành công.
+     - Cập nhật hợp đồng `TopupIntent` (thêm `Cancelled`, `expiresAt`, `serverTime`) và `PublicAuctionSummary` trong mobile app.
+- Kiểm tra xác thực:
+  - API Backend: `pnpm --filter @used-books/api typecheck` ➔ PASS (0 lỗi).
+  - Mobile React Native: `pnpm --filter @used-books/mobile-react-native typecheck` ➔ PASS (0 lỗi).
+  - Health check: `GET http://localhost:3000/api/v1/health` ➔ `{"status":"ok","service":"used-book-api"}`.
+- Git: Đã push nhánh lên remote `origin/feat/rn-exchange-fix-and-deposit-cancellation`.
+
 ## Giao sách thắng đấu giá từ điểm (ADR 0044) — 20/10/2026
 
 - Chủ dự án mở riêng gate READINESS cho gói này (READINESS ghi ngoại lệ). Người thắng

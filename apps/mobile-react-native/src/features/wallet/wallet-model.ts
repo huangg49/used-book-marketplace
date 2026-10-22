@@ -27,6 +27,7 @@ export const topupLabels = {
   Processing: "Đang xử lý",
   Succeeded: "Đã nạp vào ví",
   Failed: "Không thành công",
+  Cancelled: "Đã hủy/hết hạn",
   ReviewRequired: "Cần đối soát",
 } satisfies Record<TopupState, string>;
 
