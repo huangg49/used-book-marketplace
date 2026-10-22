@@ -41,7 +41,8 @@ on:
       ]
 jobs:
   demo:
-    runs-on: ubuntu-latest
+    # MongoDB 8.0 requires a runner kernel older than 6.19 (SERVER-121912).
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

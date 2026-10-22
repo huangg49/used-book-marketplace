@@ -9,7 +9,9 @@ on:
 
 jobs:
   api:
-    runs-on: ubuntu-latest
+    # MongoDB 8.0 cannot start on the 6.19+ kernel in Ubuntu 26 runners.
+    # https://jira.mongodb.org/browse/SERVER-121912
+    runs-on: ubuntu-24.04
     services:
       # Only the source of the one-time PostgreSQL -> MongoDB import test
       # (test/mongo/postgres-import.mongo-spec.ts). The API never connects to it.

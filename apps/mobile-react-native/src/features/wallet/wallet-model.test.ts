@@ -290,6 +290,8 @@ describe("private wallet queries", () => {
           journalId: journalA,
           createdAt: "2026-10-19T22:20:00.000Z",
           updatedAt: "2026-10-19T22:25:00.000Z",
+          expiresAt: "2026-10-19T22:30:00.000Z",
+          serverTime: "2026-10-19T22:25:00.000Z",
         });
       }
       return json({});
