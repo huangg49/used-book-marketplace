@@ -40,7 +40,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .waitFor();
   await click("Tiếp theo");
   const chooser = p.waitForEvent("filechooser");
-  await p.getByText("+ Thêm ảnh", { exact: true }).click();
+  await p.getByLabel("Chọn ảnh bìa bản sách", { exact: true }).click();
   await (await chooser).setFiles({
     name: "listing-fixture.png",
     mimeType: "image/png",
@@ -129,7 +129,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
     .getByRole("button", { name: /^Chọn nơi gửi:/ })
     .first()
     .click();
-  await click("Mở sổ địa chỉ");
+  await click("Quản lý sổ địa chỉ");
   await click("Quay lại");
   assert.equal(
     await p.getByLabel("Giá bán (đồng)", { exact: true }).inputValue(),
@@ -237,7 +237,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   const declaration = () =>
     p
       .getByRole("checkbox", {
-        name: "Tôi xác nhận sở hữu ấn bản này và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại.",
+        name: "Tôi có quyền sở hữu và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại.",
       })
       .click();
   await declaration();
@@ -312,7 +312,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   await p.goto(`${origin}/book?id=${id}`);
   await p.getByText(literal, { exact: true }).waitFor();
   await p
-    .getByRole("heading", { name: "Giao nhận", exact: true })
+    .getByText(`Khu vực ${publicBook.fulfillment.name}`, { exact: false })
     .scrollIntoViewIfNeeded();
   await p.screenshot({
     path: path.join(artifacts, "fulfillment-public-390.png"),

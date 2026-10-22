@@ -83,6 +83,10 @@ export function StartConversationPage() {
       (started.current && !request.current)
     )
       return;
+    if (book.data.seller.id === auth.user.id) {
+      navigate(`/books/${listingId}`, { replace: true });
+      return;
+    }
     started.current = true;
     let disposed = false;
     run()

@@ -911,6 +911,7 @@ export function DraftEditor({
                       listingId={base.id}
                       mediaId={ids[0]}
                       label="Ảnh bìa bản sách"
+                      mediaStatus={photoList.find((photo) => photo.id === ids[0])?.status}
                     />
                   </Pressable>
 
@@ -1110,6 +1111,7 @@ export function DraftEditor({
                           listingId={base.id}
                           mediaId={mediaId}
                           label={`Ảnh phụ ${index + 1}`}
+                          mediaStatus={photoList.find((photo) => photo.id === mediaId)?.status}
                         />
                       </Pressable>
 

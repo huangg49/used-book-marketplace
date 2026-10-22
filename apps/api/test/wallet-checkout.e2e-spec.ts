@@ -11,6 +11,7 @@ import { configureApp } from '../src/configure-app.js';
 import { MediaStorage } from '../src/modules/media/media-storage.js';
 import { TransactionPolicy } from '../src/modules/wallet/transaction-policy.js';
 import { WalletClock } from '../src/modules/wallet/wallet-clock.js';
+import { checkPackaging } from '../src/modules/orders/order-invariants.js';
 import { WalletService } from '../src/modules/wallet/wallet.service.js';
 import { WalletExpiryWorker } from '../src/modules/wallet/wallet-expiry.service.js';
 import {
@@ -1386,6 +1387,11 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
       { expectedVersion: 4 },
       f.buyer,
     ).expect(200);
+    await app.get(MongoService).tx((tx) => checkPackaging(tx, evidence.entityId));
+    await post(`/orders/${id}/packaging-evidence`, {
+      expectedVersion: 5, mimeType: 'image/png', byteSize: bytes.length,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+    }, f.seller).expect(409);
     expect(await wallet(f.buyer)).toMatchObject({
       available: 0,
       transactionHeld: 70000,
@@ -1419,6 +1425,11 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
     expect(await db.c.listings.findOne({ _id: f.l.entityId })).toMatchObject({
       trade: 'Sold',
     });
+    await app.get(MongoService).tx((tx) => checkPackaging(tx, evidence.entityId));
+    await post(`/orders/${id}/packaging-evidence`, {
+      expectedVersion: 6, mimeType: 'image/png', byteSize: bytes.length,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+    }, f.seller).expect(409);
   });
   it('reconciles all immutable journals, fees, callbacks and finite simulator capital', async () => {
     const result = await app

@@ -196,6 +196,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   backButton: {
+    minHeight: 48,
+    minWidth: 48,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -234,9 +236,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
   },

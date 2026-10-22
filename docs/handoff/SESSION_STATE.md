@@ -30,6 +30,19 @@
 - Web/RN từ chối URL đã hết hạn ngay khi nhận để có retry thay vì loading mãi.
   Browser fixture chờ đúng h1/URL Detail và phản hồi ảnh trước khi nhảy đồng hồ;
   vẫn kiểm request bị 404 và không hiện lại ảnh cũ.
+- Đồng bộ browser journeys với detail/editor và chat thống nhất trên main: cuộn
+  đến ảnh lazy, picker ảnh bìa, nhãn khai báo/khu vực, điều hướng qua tab tài khoản.
+  Giữ kiểm replay/lost-response và kiểm eligibility. Login quay lại chat của chính
+  chủ bài trả về Detail, không gửi yêu cầu tự chat. Header RN giữ vùng bấm 48 px,
+  accordion tình trạng công bố trạng thái mở/đóng cho công cụ hỗ trợ.
+- CI full E2E phát hiện fixture đấu giá ngoài vùng chưa phục hồi; đã thêm finally.
+  Kiểm packaging chấp nhận lịch sử hợp lệ ở Inspection/Completed, vẫn kiểm đủ
+  receipt/audit/outbox và chặn intent mới. PASS local 30 carrier + 41 wallet E2E,
+  có kiểm ảnh lịch sử sau nhận sách/quyết toán và từ chối intent sau đó.
+- DraftCoverPhoto nhận trạng thái xử lý từ editor, chỉ ký khi Ready và đang xem;
+  trả lại trạng thái ảnh và nút retry khi lỗi read/tải ảnh/hết hạn. Không thay picker
+  hay upload contract; browser vẫn kiểm lỗi ảnh, retry và chọn ảnh bằng filechooser.
+  PASS thêm 62 auction E2E trên DB QA riêng; fixture ngoài vùng đã phục hồi.
 - PASS local trên Node 24.19.0/pnpm 11.19.0: API typecheck/lint/build/176 unit;
   web typecheck/lint/build/160 unit; shared session 27 unit; RN typecheck/lint/
   156 unit và Expo web export (CLI báo force-exit sau export thành công).
@@ -41,6 +54,9 @@
   retry, Detail vẫn cập nhật trạng thái); auction stage giữ pixel/geometry navbar,
   mobile/resize/Back/fallback/cleanup. Đã xem ảnh. Artifact mới giữ trong
   `.tmp/integration-publish-20261022/`, không ghi đè evidence đã commit.
+- Full User Web browser PASS: Home/Search/Detail responsive, login return/owner,
+  đăng sách/chỉnh sửa, ảnh, stale address và replay; lost-response chat chỉ tạo
+  một hội thoại. RN public/address/listing browser và remote final-head theo PR.
 - Đã push; kết quả CI và trạng thái tích hợp theo PR #61. Human review độc lập và
   native Android/iOS acceptance NOT RUN; yêu cầu merge của chủ dự án không là
   chứng nhận những gate này. READINESS giữ nguyên, không mở gói tối ưu bước 3.

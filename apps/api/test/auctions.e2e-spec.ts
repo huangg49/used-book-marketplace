@@ -3882,7 +3882,15 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         { _id: outside.id },
         { $set: { serviceAreaCode: 'OUTSIDE-v1' } },
       );
-      await pay(delivery(outside)).expect(422);
+      try {
+        await pay(delivery(outside)).expect(422);
+      } finally {
+        // Restore the deliberately invalid fixture before whole-DB integrity checks.
+        await db.c.member_addresses.updateOne(
+          { _id: outside.id },
+          { $set: { serviceAreaCode: 'HCM-DEMO-v1' } },
+        );
+      }
       const other = await address(won.seller);
       await pay(delivery(other)).expect(404);
       expect(

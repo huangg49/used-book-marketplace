@@ -145,30 +145,35 @@ try {
   // Owner eligibility assertions target the main Member in a multi-owner shelf.
   await p.goto(`${origin}/book?id=${fixture.listings[0]}`);
   await p
-    .getByRole("heading", { name: "Tình trạng sách", exact: true })
+    .getByRole("heading", { name: "Khảo chứng tình trạng sách", exact: true })
     .waitFor();
-  const metadataToggle = p.getByRole("button", {
-    name: "Thông tin xuất bản",
+  const conditionToggle = p.getByRole("button", {
+    name: "Thu gọn đánh giá thực tế",
     exact: true,
   });
-  assert.equal(await metadataToggle.getAttribute("aria-expanded"), "false");
-  await metadataToggle.click();
+  assert.equal(await conditionToggle.getAttribute("aria-expanded"), "true");
+  await conditionToggle.click();
+  const expandCondition = p.getByRole("button", { name: "Mở rộng đánh giá thực tế", exact: true });
+  assert.equal(await expandCondition.getAttribute("aria-expanded"), "false");
   await p.getByText("Nhà xuất bản", { exact: true }).waitFor();
-  assert.equal(await metadataToggle.getAttribute("aria-expanded"), "true");
-  await metadataToggle.click();
+  await expandCondition.click();
+  assert.equal(await conditionToggle.getAttribute("aria-expanded"), "true");
   let imageOffline = true;
   await p.route("**/api/v1/listings/*/media/*/read", (route) =>
     imageOffline ? route.abort("failed") : route.continue(),
   );
-  await p.clock.fastForward(91_000);
+  await p.clock.fastForward(120_001);
   await p.getByRole("button", { name: "Tải lại ảnh", exact: true }).waitFor();
   imageOffline = false;
+  // Restore wall time before the real API signs the retry (its clock is not faked).
+  await p.clock.setSystemTime(new Date());
   await click("Tải lại ảnh");
+  await p.getByRole("img", { name: /^Ảnh 1 của / }).first().waitFor();
   await p
     .getByRole("button", { name: "Tải lại ảnh", exact: true })
     .waitFor({ state: "hidden" });
   await p.unroute("**/api/v1/listings/*/media/*/read");
-  await click("Xem ảnh lớn");
+  await click("Chạm để phóng to ảnh");
   // RN Web paints the content before its effect activates the modal stack and
   // keyboard handler. Wait for the accessible dialog, not just a painted button.
   const photoDialog = p.getByRole("dialog");
@@ -183,7 +188,7 @@ try {
   await p
     .getByRole("button", { name: "Đóng", exact: true })
     .waitFor({ state: "hidden" });
-  const back = p.getByRole("button", { name: "Quay lại", exact: true });
+  const back = p.getByRole("button", { name: "Về kệ sách", exact: true });
   await back.scrollIntoViewIfNeeded();
   const target = await back.boundingBox();
   assert.ok(
@@ -215,15 +220,15 @@ try {
   });
   // A real owner status change hides both the fetched detail and future photos.
   await fixture.setUserStatus(fixture.member.user.id, "RESTRICTED");
-  await click("Làm mới thông tin");
+  await p.clock.fastForward(30_001);
   await p.getByText("Không tìm thấy sách", { exact: true }).waitFor();
   assert.equal(
     await p
-      .getByRole("heading", { name: "Tình trạng sách", exact: true })
+      .getByRole("heading", { name: "Khảo chứng tình trạng sách", exact: true })
       .count(),
     0,
   );
-  await click("Quay lại");
+  await click("Về kệ sách");
   await p.getByRole("button", { name: /^Xem sách:/ }).first().waitFor();
   assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 8);
   await fixture.setUserStatus(fixture.member.user.id, "ACTIVE");
@@ -308,7 +313,7 @@ try {
   await click("Tiếp theo");
   await p
     .getByRole("checkbox", {
-      name: "Tôi xác nhận sở hữu ấn bản này và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại.",
+      name: "Tôi có quyền sở hữu và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại.",
     })
     .click();
   let lostRevision = true;
@@ -360,7 +365,7 @@ try {
     .getByRole("button", { name: "Xóa bài đăng", exact: true })
     .click();
   await click("Thử lại yêu cầu này");
-  await p.getByRole("heading", { name: "Sách của tôi", exact: true }).waitFor();
+  await p.getByText("TỦ SÁCH CỦA TÔI · QUẢN LÝ BÀI ĐĂNG", { exact: true }).waitFor();
   assert.equal(
     await fixture.db.collection("mutation_receipts").countDocuments({
       listingId: ownerId,
@@ -371,7 +376,7 @@ try {
   await addressJourney(p, fixture, artifacts);
   await listingJourney(p, fixture, admin, artifacts);
   // Account actions must still reflect server eligibility after the layout changes.
-  await click("Quay lại");
+  await click("Về kệ sách");
   await fixture.setUserStatus(fixture.member.user.id, "RESTRICTED");
   // listingJourney navigates to a guest URL; browser tokens are memory-only.
   await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
@@ -416,7 +421,7 @@ try {
     console.error((await p.locator("body").innerText()).slice(-2500));
   }
   console.error(
-    error instanceof Error ? error.message : "Public browser test failed",
+    error instanceof Error ? error.stack : "Public browser test failed",
   );
   process.exitCode = 1;
 } finally {

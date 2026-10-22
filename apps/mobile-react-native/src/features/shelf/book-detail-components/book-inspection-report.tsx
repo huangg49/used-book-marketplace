@@ -135,6 +135,7 @@ export function BookInspectionReport({ item }: BookInspectionReportProps) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={isExpanded ? "Thu gọn đánh giá thực tế" : "Mở rộng đánh giá thực tế"}
+          aria-expanded={isExpanded}
           onPress={() => setIsExpanded((prev) => !prev)}
           style={({ pressed }) => [
             styles.bentoHeader,
