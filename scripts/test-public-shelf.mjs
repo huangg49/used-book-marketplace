@@ -242,7 +242,9 @@ try {
     offline ? route.abort("failed") : route.continue(),
   );
   await click("Xem thêm các tác phẩm gợi ý");
-  await p.getByText(/Chưa cập nhật được danh sách/).waitFor();
+  const shelfError = p.getByText(/Chưa cập nhật được danh sách/);
+  await shelfError.scrollIntoViewIfNeeded();
+  await shelfError.waitFor();
   assert.equal(await p.getByRole("button", { name: /^Xem sách:/ }).count(), 12);
   offline = false;
   await click("Thử lại");

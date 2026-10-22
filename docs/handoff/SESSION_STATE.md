@@ -56,7 +56,9 @@
   `.tmp/integration-publish-20261022/`, không ghi đè evidence đã commit.
 - Full User Web browser PASS: Home/Search/Detail responsive, login return/owner,
   đăng sách/chỉnh sửa, ảnh, stale address và replay; lost-response chat chỉ tạo
-  một hội thoại. RN public/address/listing browser và remote final-head theo PR.
+  một hội thoại. RN public/address/listing browser PASS: cuộn đến thông báo nằm
+  ngoài viewport trước khi kiểm visible; giữ toàn bộ ca dữ liệu lỗi/replay.
+  Remote final-head và trạng thái tích hợp theo PR #61.
 - Seller-order và Buy-now browser PASS: hai bên, quote/address, thiếu tiền bị từ
   chối, lost ACK tạo/thanh toán cùng key/body, đúng một hold; ảnh đóng gói, gửi và
   pickup mô phỏng InTransit. Exchange browser đi qua chat thống nhất (seller duyệt
