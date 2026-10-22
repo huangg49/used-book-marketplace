@@ -145,7 +145,6 @@ try {
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  const button = (name) => page.getByRole("button", { name, exact: true });
   async function capture(page, name) {
     await page.evaluate(async () => {
       await document.fonts.ready;

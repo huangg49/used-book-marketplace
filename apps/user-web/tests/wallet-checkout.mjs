@@ -490,9 +490,20 @@ try {
     (await fixture.api("/me/wallet", fixture.member.accessToken)).available,
     90000,
   );
-  // Let the credited result's wallet/history invalidations finish before
-  // installing the small-page transport fixture and testing pagination.
-  await page.waitForLoadState("networkidle");
+  // The settled payment has two query observers (result + owned checkout).
+  // Wait for checkout release and its actual invalidations, not the page's
+  // already-fired networkidle navigation event, before the pagination fixture.
+  await page.waitForFunction(async () => {
+    const { queryClient } = await import("/src/lib/session.ts");
+    const cache = queryClient.getQueryCache();
+    const owned = cache.findAll({ queryKey: ["wallet-checkout"] })
+      .filter((query) => query.queryKey[2]);
+    const reads = cache.getAll().filter((query) =>
+      ["wallet-summary", "wallet-history", "wallet-checkout", "topup", "topups"].includes(query.queryKey[0]),
+    );
+    return owned.every((query) => query.getObserversCount() === 0) &&
+      reads.every((query) => query.state.fetchStatus === "idle");
+  });
   // Small real API pages exercise pagination and retries without fabricated rows.
   let failNextPage = true;
   let failRefundRead = true;

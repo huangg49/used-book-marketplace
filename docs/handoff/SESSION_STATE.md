@@ -67,8 +67,9 @@
   phiếu, accept/cancel, từ chối funding và 403 ẩn phiếu; desktop/mobile PASS.
 - Wallet browser PASS: lịch sử thật/filter/pagination/retry, QueryDR lỗi/thử lại/
   credit, lost ACK cùng key/body, hạn server đúng 5 phút, hủy và replay hết hạn
-  không thêm ledger/history. Chờ invalidation sau credit xong trước fixture trang
-  nhỏ; thêm chẩn đoán số hàng/cursor khi lỗi. Provider và deadline QA mô phỏng,
+  không thêm ledger/history. Chờ checkout release và các query/invalidation sau
+  credit xong trước fixture trang nhỏ (networkidle cũ không đủ); thêm chẩn đoán
+  số hàng/cursor khi lỗi. Provider và deadline QA mô phỏng,
   không là chứng nhận thanh toán VNPay thật.
 - Đã push; kết quả CI và trạng thái tích hợp theo PR #61. Human review độc lập và
   native Android/iOS acceptance NOT RUN; yêu cầu merge của chủ dự án không là
