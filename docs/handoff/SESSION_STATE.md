@@ -1,4 +1,17 @@
-# Điểm lưu hiện tại — 22/10/2026
+# Điểm lưu hiện tại — 23/10/2026
+
+## Xuất bản gói ví, đơn hàng/chat và card — 23/10/2026
+
+- Owner đã duyệt kết quả và yêu cầu chia commit/push. Tám commit chức năng từ
+  `c52a7705` đến `a314f539` đã tách theo ví, Order/Chat, vùng/card và các bước
+  tinh chỉnh card; đã push lên `origin/codex/inline-card-location` và đặt upstream.
+  Base chung là `6d063ee5`; remote main đã tiến tới `60e1cf01` sau fetch, chưa
+  tích hợp vào nhánh này. Chưa tạo PR/merge/deploy; quyền push không đổi gate review.
+- Kiểm phạm vi file trước push: không có env/tmp/dump/khóa được track trong gói;
+  working tree sạch, diff --check đạt. Checks chức năng giữ evidence ở các mốc
+  bên dưới; không chạy lại source tests cho bước xuất bản không đổi code.
+  Commit bàn giao này: `docs(handoff): record published member web changes`;
+  docs:check/diff --check được chạy cho tài liệu. READINESS giữ nguyên.
 
 ## Tác giả và vị trí trên một hàng card — 22/10/2026
 
