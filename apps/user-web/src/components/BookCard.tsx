@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, ArrowUpRight } from "lucide-react";
+import { BookOpen, ChevronRight, MapPin, Tag, UserRound } from "lucide-react";
+import { WishlistButton } from "./WishlistButton";
 import { ROUTES, formatVnd } from "../lib/routes";
 import {
   getPublicPhoto,
@@ -73,7 +74,7 @@ export interface BookCardProps {
   index: number;
   compact?: boolean;
 }
-export function BookCard({ book, index, compact = false }: BookCardProps) {
+export function BookCard({ book, compact = false }: BookCardProps) {
   const location = useLocation();
   const returnState =
     location.pathname === ROUTES.search
@@ -81,7 +82,7 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
       : undefined;
   return (
     <article className={[styles.card, compact ? styles.compact : ""].join(" ")}>
-      <div className={[styles.cover, styles["ground" + (index % 4)]].join(" ")}>
+      <div className={styles.cover}>
         <ListingPhoto book={book} />
         <Link
           to={ROUTES.bookDetail(book.id)}
@@ -89,6 +90,16 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
           className={styles.coverLink}
           aria-label={"Xem chi tiết " + book.book.title}
         />
+        <WishlistButton listingId={book.id} title={book.book.title} />
+        <span className={styles.condition}>
+          <BookOpen size={15} aria-hidden="true" />
+          {conditions[book.condition]} ·{" "}
+          {book.mode === "Sale"
+            ? "Bán"
+            : book.mode === "Exchange"
+              ? "Đổi"
+              : "Bán hoặc đổi"}
+        </span>
         {book.purchaseAvailability.status !== "Available" && (
           <span className={styles.held}>
             {book.purchaseAvailability.status === "AwaitingPayment"
@@ -100,59 +111,60 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
         )}
       </div>
       <div className={styles.meta}>
-        <p className={styles.condition}>
-          {conditions[book.condition]} ·{" "}
-          {book.mode === "Sale"
-            ? "Bán"
-            : book.mode === "Exchange"
-              ? "Đổi"
-              : "Bán hoặc đổi"}
-        </p>
+        <h3>
+          <Link
+            to={ROUTES.bookDetail(book.id)}
+            state={returnState}
+            title={compact ? book.book.title : undefined}
+          >
+            {book.book.title}
+          </Link>
+        </h3>
         <div className={styles.information}>
-          <div className={styles.identity}>
-            <h3>
-              <Link
-                to={ROUTES.bookDetail(book.id)}
-                state={returnState}
-                title={compact ? book.book.title : undefined}
-              >
-                {book.book.title}
-              </Link>
-            </h3>
-            <p className={styles.author}>
-              <span>Tác giả</span>
+          <p className={styles.author}>
+            <UserRound size={18} aria-hidden="true" />
+            <span>
+              <span className="sr-only">Tác giả: </span>
               {book.book.authors.join(", ") || "Chưa rõ tác giả"}
-            </p>
-          </div>
-          <div className={styles.facts}>
-            <p className={styles.location}>
-              <span>Khu vực</span>
+            </span>
+          </p>
+          <p className={styles.location}>
+            <MapPin size={18} aria-hidden="true" />
+            <span>
+              <span className={styles.fieldLabel}>Khu vực</span>
               <strong>
                 {book.fulfillment?.locality?.label || "Chưa có khu vực"}
               </strong>
+            </span>
+          </p>
+        </div>
+        <div className={styles.prices}>
+          {book.salePrice !== null && (
+            <p>
+              <Tag size={24} aria-hidden="true" />
+              <span>
+                <span className={styles.fieldLabel}>Giá bán</span>
+                <strong>{formatVnd(book.salePrice)}</strong>
+              </span>
             </p>
-            <div className={styles.prices}>
-              {book.salePrice !== null && (
-                <p>
-                  <span>Giá bán</span>
-                  <strong>{formatVnd(book.salePrice)}</strong>
-                </p>
-              )}
-              {book.exchangeValue !== null && (
-                <p>
-                  <span>Giá trị đổi</span>
-                  <strong>{formatVnd(book.exchangeValue)}</strong>
-                </p>
-              )}
-            </div>
-          </div>
+          )}
+          {book.exchangeValue !== null && (
+            <p>
+              <Tag size={24} aria-hidden="true" />
+              <span>
+                <span className={styles.fieldLabel}>Giá trị đổi</span>
+                <strong>{formatVnd(book.exchangeValue)}</strong>
+              </span>
+            </p>
+          )}
         </div>
         <Link
           className={styles.view}
           to={ROUTES.bookDetail(book.id)}
           state={returnState}
         >
-          Xem sách <ArrowUpRight size={16} aria-hidden="true" />
+          <BookOpen size={18} aria-hidden="true" /> Xem sách{" "}
+          <ChevronRight size={19} aria-hidden="true" />
         </Link>
       </div>
     </article>

@@ -940,16 +940,20 @@ conversation when needed. Existing negotiated history is preserved; opening the
 workspace does not send a message or change transaction state. See the current
 Chat surface brief for routing, retry and permissions.
 
-22/10/2026 card refinement: the owner requested a visible border around each Home/
-Search book card, with the complete cover above two equal information columns.
-Title and labelled author sit left; actual coarse circulation zone and separately
-labelled sale/exchange prices sit right. Full titles wrap without line clamping.
-Use the paper ground,12px corners and1px shop-line boundary; compact cards use10px
-padding,180px desktop cover stages and12px between their information columns.
-Preserve availability, image retry, links and current hover/focus motion. The
-owner's density follow-up requests four cards per desktop row in main Home/Search
-shelves; tablet columns adapt and phones retain one card per row. The secondary
-Exchange shelf keeps its280px auto-fill minimum inside its narrower content area.
-Missing location stays
-explicit; preview catalog cards do not receive invented locations. Public location
-follows ADR0039 and never uses the legacy service-area name as the actual zone.
+22/10/2026 card reference update supersedes the earlier title/price split. Home/
+Search use a paper card with20px corners and a1px shop-line boundary. A190px
+compact desktop cover stage reuses the archival-desk artwork as decoration behind
+the real, contained listing photograph;14px cover/chip corners follow the owner's
+reference. A mint condition/mode chip sits at bottom left, availability at top
+left and a44px wishlist heart at top right. Full wrapping title spans the width;
+author and actual coarse region share two equal columns below. A separate pale
+shelf price panel labels sale/exchange amounts; the full-width wine “Xem sách”
+action is at least48px high. Compact padding remains10px. Main Home/Search keep
+four desktop columns, adaptive tablet columns and one phone column; mobile
+cover stages are240px. The secondary Exchange shelf retains its280px minimum.
+Preserve image retry, detail/source links and240ms hover/focus motion even with
+the OS reduced-motion preference. Wishlist uses the existing authenticated Member
+API, confirms state after acknowledgment and retries the same intended action
+after an unknown result. Guests return through login; previews have no wishlist.
+Missing location stays explicit, and preview catalog cards have no physical zone.
+Public location follows ADR0039; the legacy service-area name is not a book zone.

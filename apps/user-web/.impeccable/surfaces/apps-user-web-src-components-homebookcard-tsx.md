@@ -1,17 +1,28 @@
 # Shared Home / Search book-card motion
 
-22/10/2026 owner refinement supersedes the earlier unboxed/two-line card recipe:
-whole cards have a1px shop-line border,12px corners and paper background. The
-owner's density follow-up uses10px compact padding,180px desktop cover stages and
-12px between the two equal information columns. The complete cover remains above full wrapping title
-and labelled author at left; actual coarse zone and sale/exchange prices at right.
-Condition/mode and availability remain visible; source/detail links retain44px.
+22/10/2026 reference refinement supersedes the earlier two-column title/price
+recipe: paper cards have a1px shop-line border,20px corners and10px compact
+padding. The190px desktop cover stage has14px corners and reuses archival-desk
+art behind the real contained cover; phones use240px. Mint condition/mode stays
+bottom-left, availability top-left and the44px wishlist heart top-right. Full
+wrapping title spans the card; author/actual region share two equal columns below.
+Sale/exchange prices have their own pale shelf panel with labels and tag icon;
+the full-width wine action stays48px. No fabricated backdrop is listing media.
 Main Home/Search shelves show four columns on desktop; smaller screens adapt and
 phones keep one card per row. The secondary Exchange shelf retains its280px
 auto-fill minimum inside its narrower content area. Keep current motion and image
 retry. `fulfillment.locality.label` is the only actual zone label; missing/legacy
 origins show “Chưa có khu vực”, and preview books explicitly have no physical zone.
 No fabricated prices, rating, region or location inferred from fulfillment.name.
+Wishlist reads all pages through the existing Member API, is owner-keyed, and
+updates only after server acknowledgment. Unknown results retry the same desired
+PUT/DELETE; cache cancellation protects against stale reads, and session checks
+protect owner changes. Guests go to login with the book return URL; non-Members
+cannot use the heart. Preview cards retain external source links and no heart.
+
+Current motion is the shared240ms vertical hover/focus elevation in
+`BookCardMotion`, including under reduced-motion preference per owner policy.
+The deeper tilt notes below are historical verification of earlier versions.
 
 Mode: Operate. Refinement of the existing compact book-card recipe; the owner
 approved Aceternity-inspired pointer tilt with both cover and text raised.

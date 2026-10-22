@@ -1,18 +1,29 @@
 # Điểm lưu hiện tại — 22/10/2026
 
-## Thu gọn card, bốn bài mỗi hàng — 22/10/2026
+## Card theo ảnh tham chiếu, chạy BE/FE — 22/10/2026
 
-- Theo owner: kệ chính Home/Search có4cột desktop; tablet giảm cột và mobile
-  vẫn1cột. Compact card padding10px, bìa180px, khoảng hai phần thông tin12px;
-  giữ border, toàn bộ chữ/giá/khu vực và motion. Home<=360px giảm lề trong kệ
-  để giá vẫn dễ đọc ở chữ130%. Kệ Exchange phụ giữ bố cục riêng.
-- Nhánh `codex/four-column-book-cards`, base `37067ab`; subject
-  `style(web): show four book cards per desktop row`.
-- PASS web lint/typecheck/156unit/build, browser fixture1920/1440/1366/1280
-  đủ4bài/hàng, tablet/mobile320/390 chữ130% và không tràn; đã xem ảnh desktop.
-  Evidence `.tmp/book-card-details-qa/`, bộ `four-cols-*` và report tương ứng.
-  Detector một lượt17advisory có sẵn;6warning lint/chunk cũ. Chỉ CSS/docs,
-  không chạy lại API/DB/native; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
+- Theo ảnh owner: card paper border1px/bo20px, ảnh thật đầy đủ trên nền archival
+  desk có sẵn, chip mint và trái tim44px; tiêu đề toàn chiều ngang, tác giả/khu
+  vực hai bên, ô giá riêng và nút wine48px. Giữ4cột desktop/1cột điện thoại,
+  giá bán/đổi, trạng thái, retry ảnh và motion240ms kể cả reduced-motion.
+- Trái tim dùng API wishlist Member có sẵn, guest đi login rồi về sách; preview
+  không giả vị trí/nút lưu. Query phân trang theo owner; không báo lưu trước ACK,
+  giữ PUT/DELETE khi mất ACK, hủy read cũ và kiểm owner trước cập nhật cache.
+  Không đổi API/contract/persistence.
+- Nhánh `codex/book-card-reference-style`, base `505e256`; subject
+  `feat(web): match book cards to the reference design`.
+- PASS web lint/typecheck/168unit/build, docs:check và diff --check; browser fixture46ca gồm desktop1440/1280,
+  mobile390/320 chữ130%, Home/Search/preview, ảnh lỗi, guest, wishlist read lỗi,
+  mất ACK save/remove, stale read và đổi owner/non-Member. Đã xem ảnh fixture và
+  card live; live7bài/4cột, mobile không tràn, motion240ms, readiness200.
+  Evidence `.tmp/book-card-reference-qa/`. Detector một lượt có3advisory14px
+  radius được dùng theo ảnh và đã ghi DESIGN;6warning lint/chunk cũ.
+- Chạy đủ lệnh owner: frozen install/setup/Mongo wait/bootstrap/migrate/seed,
+  tất cả exit0; giữ env, mật khẩu/tài khoản và dữ liệu cũ. BE `pnpm dev:api`
+  launcher9132 cùng API/media/order workers; FE `pnpm dev:user` launcher24608.
+  http://localhost:5174 và API `/api/v1/health/ready` cổng3000 trả200; CORS đúng.
+  Log/PID tại `.tmp/dev-card-startup/`. Không chạy API E2E/native/live provider/
+  human/remote CI; READINESS giữ nguyên; chưa push/PR/merge/deploy.
 
 ## Card sách rõ thông tin và khu vực — 22/10/2026
 

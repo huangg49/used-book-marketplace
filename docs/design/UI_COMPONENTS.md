@@ -518,3 +518,23 @@ price entry. Listing price leads until a price is accepted; fees stay visible.
 ChatPage's keyboard-accessible “Cách giao dịch” disclosure contains routine help
 and the phase trail, expanded for expired/missing-fulfillment/stale-quote guidance.
 Pending proposals, stale accepted revisions and errors remain outside disclosure.
+
+## Member web book cards —22/10/2026
+
+Actual examples are `/books?data=live` and `/?data=live`; Member web has no `/ui`
+showcase. `HomeBookCard` wraps the shared `BookCard` in `BookCardMotion`, or renders
+the explicitly labelled catalog preview with external source links. Pass the
+actual `HomeShelfBook` and shelf index: `<HomeBookCard book={book} index={index} />`.
+The reference recipe has a bordered paper frame, complete photograph on the
+existing decorative archival desk, condition/mode and availability overlays,
+full title, equal author/region columns, separate price panel and wine detail CTA.
+Main Home/Search retain four desktop columns and one phone column.
+
+`WishlistButton` is an authenticated feature control using the existing Member
+wishlist endpoints, not a primitive or an optimistic success indicator. It uses
+the shared session/query client, an owner-keyed saved-ID query, exact intended
+PUT/DELETE retry after unknown results and a44px heart target. Query errors allow
+retry; mutation errors stay inline. Guests get the existing login route with a
+book return URL. Non-Members/inactive accounts cannot mutate, and catalog previews
+have no heart. `ListingPhoto` keeps its reusable loading/missing/error/retry states
+for detail, checkout and conversation consumers. RN `/ui` remains unchanged.
