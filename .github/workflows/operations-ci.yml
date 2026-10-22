@@ -8,7 +8,7 @@ on:
 jobs:
   operations:
     # MongoDB 8.0 requires a runner kernel older than 6.19 (SERVER-121912).
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     env:
       # Each browser run creates and drops its own *_test database on the QA replica set.
       MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/admin?replicaSet=rs-test&authSource=admin

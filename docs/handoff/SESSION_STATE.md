@@ -18,8 +18,9 @@
   token màu có sẵn; fixture VNPay bổ sung expiresAt/serverTime đúng contract.
   Không thay endpoint/hành vi giao dịch của PR #60.
 - CI Mongo lỗi từ runner Ubuntu mới: MongoDB 8.0 từ chối kernel >=6.19
-  ([SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912)). Ghim 4 job dùng
-  Mongo về ubuntu-24.04 và thêm log chẩn đoán khi lỗi; không sửa image/DB local.
+  ([SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912)). Runner 24.04 mới
+  cũng gặp lỗi, nên ghim 4 job Mongo về ubuntu-22.04 (kernel 6.8); thêm log khi lỗi.
+  Không sửa image/DB local; cần nâng lại runner trước khi 22.04 hết hỗ trợ.
   User Web CI chạy thêm browser regression cache ảnh.
 - Navbar có layer transform ổn định để viền không đổi rasterization khi WebGL
   rèm bị ẩn/gỡ; giữ nguyên tiêu chí pixel <=1, thời lượng và cleanup motion.
