@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
 import { BookOpen, ChevronRight, MapPin, Tag, UserRound } from "lucide-react";
 import { WishlistButton } from "./WishlistButton";
+import { CardFitText } from "./CardFitText";
 import { ROUTES, formatVnd } from "../lib/routes";
 import {
   getPublicPhoto,
@@ -115,25 +116,27 @@ export function BookCard({ book, compact = false }: BookCardProps) {
           <Link
             to={ROUTES.bookDetail(book.id)}
             state={returnState}
-            title={compact ? book.book.title : undefined}
+            title={book.book.title}
           >
-            {book.book.title}
+            <CardFitText>{book.book.title}</CardFitText>
           </Link>
         </h3>
         <div className={styles.information}>
           <p className={styles.author}>
             <UserRound size={18} aria-hidden="true" />
-            <span>
-              <span className="sr-only">Tác giả: </span>
+            <span className="sr-only">Tác giả: </span>
+            <CardFitText minimumRem={0.6875}>
               {book.book.authors.join(", ") || "Chưa rõ tác giả"}
-            </span>
+            </CardFitText>
           </p>
           <p className={styles.location}>
             <MapPin size={18} aria-hidden="true" />
             <span>
               <span className={styles.fieldLabel}>Khu vực</span>
-              <strong>
-                {book.fulfillment?.locality?.label || "Chưa có khu vực"}
+              <strong className={styles.region}>
+                <CardFitText minimumRem={0.6875}>
+                  {book.fulfillment?.locality?.label || "Chưa có khu vực"}
+                </CardFitText>
               </strong>
             </span>
           </p>
@@ -144,7 +147,9 @@ export function BookCard({ book, compact = false }: BookCardProps) {
               <Tag size={24} aria-hidden="true" />
               <span>
                 <span className={styles.fieldLabel}>Giá bán</span>
-                <strong>{formatVnd(book.salePrice)}</strong>
+                <strong className={styles.amount}>
+                  <CardFitText>{formatVnd(book.salePrice)}</CardFitText>
+                </strong>
               </span>
             </p>
           )}
@@ -153,7 +158,9 @@ export function BookCard({ book, compact = false }: BookCardProps) {
               <Tag size={24} aria-hidden="true" />
               <span>
                 <span className={styles.fieldLabel}>Giá trị đổi</span>
-                <strong>{formatVnd(book.exchangeValue)}</strong>
+                <strong className={styles.amount}>
+                  <CardFitText>{formatVnd(book.exchangeValue)}</CardFitText>
+                </strong>
               </span>
             </p>
           )}

@@ -945,12 +945,21 @@ Search use a paper card with20px corners and a1px shop-line boundary. A190px
 compact desktop cover stage reuses the archival-desk artwork as decoration behind
 the real, contained listing photograph;14px cover/chip corners follow the owner's
 reference. A mint condition/mode chip sits at bottom left, availability at top
-left and a44px wishlist heart at top right. Full wrapping title spans the width;
+left and a44px wishlist heart at top right. The title spans the width;
 author and actual coarse region share two equal columns below. A separate pale
 shelf price panel labels sale/exchange amounts; the full-width wine “Xem sách”
 action is at least48px high. Compact padding remains10px. Main Home/Search keep
 four desktop columns, adaptive tablet columns and one phone column; mobile
 cover stages are240px. The secondary Exchange shelf retains its280px minimum.
+The owner's fixed-height follow-up sets each card to560px desktop/tablet and610px
+on phones, independent of title, authors, price mode or image state. The cover,
+60px information row,132px price panel and48px action reserve stable space;
+the title uses the remaining space. Text is measured after content/size/font
+changes and shrinks only when needed. Title/price use a12px-at-default-font floor,
+author/region11px, all scaled from rem. Exceptionally long text clamps after that
+floor, with full accessible text, native tooltip and the existing detail/source
+link; prices remain complete. This scoped owner instruction supersedes the prior
+unbounded wrapping recipe, without changing RN text rules or shelf columns.
 Preserve image retry, detail/source links and240ms hover/focus motion even with
 the OS reduced-motion preference. Wishlist uses the existing authenticated Member
 API, confirms state after acknowledgment and retries the same intended action

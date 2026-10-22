@@ -1,5 +1,9 @@
 .card {
   --card-condition-ink: #254337;
+  --card-height: 560px;
+  --card-cover-height: 190px;
+  box-sizing: border-box;
+  height: var(--card-height);
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -26,7 +30,7 @@
   flex-direction: column;
 }
 .motionFrame > .card {
-  flex: 1;
+  flex: none;
   transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 @media (min-width: 601px) and (hover: hover) and (pointer: fine) {
@@ -59,7 +63,8 @@
   align-items: center;
   justify-content: center;
   isolation: isolate;
-  aspect-ratio: 4/3;
+  flex-shrink: 0;
+  height: var(--card-cover-height);
   padding: 16px;
   border-radius: 14px;
   overflow: hidden;
@@ -67,12 +72,7 @@
     url("/illustrations/posting/archival-desk.webp") center / cover;
 }
 .compact .cover {
-  height: 190px;
-  aspect-ratio: auto;
   padding: 12px;
-}
-.compact .cover:has(.fallback) {
-  min-height: 190px;
 }
 .image {
   height: 100%;
@@ -171,17 +171,23 @@
 }
 .meta {
   min-width: 0;
-  display: flex;
-  flex-direction: column;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 60px 132px 48px;
+  gap: 10px;
   flex: 1;
   padding: 14px 4px 0;
 }
 .meta h3 {
+  min-height: 0;
   font: 700 1.125rem/1.45 var(--shop-body);
-  margin: 0 0 12px;
+  margin: 0;
   overflow-wrap: anywhere;
 }
 .meta h3 a {
+  display: block;
+  height: 100%;
+  min-height: 0;
   color: inherit;
   text-decoration: none;
 }
@@ -189,17 +195,18 @@
   text-decoration: underline;
 }
 .information {
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: end;
+  align-items: stretch;
   gap: 10px;
   padding-bottom: 12px;
-  margin-bottom: 12px;
   border-bottom: 1px solid var(--shop-line);
 }
 .author,
 .location {
   min-width: 0;
+  min-height: 0;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -209,7 +216,7 @@
   overflow-wrap: anywhere;
 }
 .author {
-  align-items: flex-start;
+  align-items: center;
   color: var(--shop-muted);
 }
 .author svg {
@@ -225,30 +232,41 @@
 }
 .location > span {
   min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
 }
 .location strong {
   display: block;
   color: var(--shop-ink);
   font-weight: 700;
 }
+.region {
+  min-height: 0;
+  line-height: 1.3;
+}
 .fieldLabel {
   display: block;
   color: var(--shop-muted);
   font-size: 0.75rem;
   font-weight: 400;
+  line-height: 1.3;
 }
 .prices {
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  grid-auto-rows: minmax(0, 1fr);
+  min-height: 0;
+  gap: 6px;
+  padding: 10px;
   border-radius: 12px;
   background: var(--shop-shelf, #f4eddf);
   color: var(--shop-wine);
   font-variant-numeric: tabular-nums;
-  margin-top: auto;
 }
 .prices p {
   min-width: 0;
+  min-height: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -256,13 +274,14 @@
 }
 .prices p + p {
   border-top: 1px solid var(--shop-line);
-  padding-top: 10px;
+  padding-top: 6px;
 }
 .prices svg {
   flex-shrink: 0;
 }
 .prices p > span {
   min-width: 0;
+  flex: 1;
 }
 .prices strong {
   display: block;
@@ -270,6 +289,12 @@
   line-height: 1.4;
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+.amount {
+  height: 28px;
+}
+.prices:has(p + p) .amount {
+  height: 25px;
 }
 .view {
   position: relative;
@@ -279,7 +304,7 @@
   gap: 8px;
   width: 100%;
   min-height: 48px;
-  margin-top: 12px;
+  margin-top: 0;
   padding: 10px 28px;
   border: 1px solid var(--shop-wine);
   border-radius: 12px;
@@ -304,10 +329,36 @@
   outline-offset: 4px;
 }
 .previewNote {
-  margin: 0 0 8px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
   color: var(--shop-muted);
   font-size: 0.75rem;
   line-height: 1.6;
+}
+.meta .previewHeading {
+  display: grid;
+  grid-template-rows: 20px minmax(0, 1fr);
+  gap: 4px;
+}
+.fitFrame {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.fitContent {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.fitFrame[data-clipped="true"] .fitContent {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--card-fit-lines);
+  overflow: hidden;
 }
 .fallback {
   display: flex;
@@ -332,12 +383,12 @@
   color: var(--shop-wine);
 }
 @media (max-width: 600px) {
-  .compact .cover {
-    height: 240px;
-    padding: 16px;
+  .card {
+    --card-height: 610px;
+    --card-cover-height: 240px;
   }
-  .compact .cover:has(.fallback) {
-    min-height: 240px;
+  .compact .cover {
+    padding: 16px;
   }
   .condition {
     font-size: 0.75rem;

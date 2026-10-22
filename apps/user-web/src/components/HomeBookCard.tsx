@@ -2,6 +2,7 @@ import { useState } from "react";
 import { BookOpen, ChevronRight, MapPin, Tag, UserRound } from "lucide-react";
 import { BookCard } from "./BookCard";
 import { BookCardMotion } from "./BookCardMotion";
+import { CardFitText } from "./CardFitText";
 import type { HomeShelfBook } from "../services/home-shelves";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
@@ -65,32 +66,39 @@ export function HomeBookCard({
           </span>
         </div>
         <div className={styles.meta}>
-          <p className={styles.previewNote}>
-            {book.book.category} · {languageLabel(book.book.language)}
-          </p>
-          <h3>
+          <h3 className={styles.previewHeading}>
+            <span
+              className={styles.previewNote}
+              title={`${book.book.category} · ${languageLabel(book.book.language)}`}
+            >
+              {book.book.category} · {languageLabel(book.book.language)}
+            </span>
             <a
               href={book.book.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
               title={book.book.title}
             >
-              {book.book.title}
+              <CardFitText>{book.book.title}</CardFitText>
             </a>
           </h3>
           <div className={styles.information}>
             <p className={styles.author}>
               <UserRound size={18} aria-hidden="true" />
-              <span>
-                <span className="sr-only">Tác giả: </span>
+              <span className="sr-only">Tác giả: </span>
+              <CardFitText minimumRem={0.6875}>
                 {book.book.authors.join(", ") || "Chưa rõ tác giả"}
-              </span>
+              </CardFitText>
             </p>
             <p className={styles.location}>
               <MapPin size={18} aria-hidden="true" />
               <span>
                 <span className={styles.fieldLabel}>Khu vực</span>
-                <strong>Không áp dụng cho sách mẫu</strong>
+                <strong className={styles.region}>
+                  <CardFitText minimumRem={0.6875}>
+                    Không áp dụng cho sách mẫu
+                  </CardFitText>
+                </strong>
               </span>
             </p>
           </div>
@@ -100,7 +108,9 @@ export function HomeBookCard({
                 <Tag size={24} aria-hidden="true" />
                 <span>
                   <span className={styles.fieldLabel}>Giá bán mẫu</span>
-                  <strong>{formatVnd(book.salePrice)}</strong>
+                  <strong className={styles.amount}>
+                    <CardFitText>{formatVnd(book.salePrice)}</CardFitText>
+                  </strong>
                 </span>
               </p>
             )}
@@ -109,7 +119,9 @@ export function HomeBookCard({
                 <Tag size={24} aria-hidden="true" />
                 <span>
                   <span className={styles.fieldLabel}>Giá trị đổi mẫu</span>
-                  <strong>{formatVnd(book.exchangeValue)}</strong>
+                  <strong className={styles.amount}>
+                    <CardFitText>{formatVnd(book.exchangeValue)}</CardFitText>
+                  </strong>
                 </span>
               </p>
             )}

@@ -5,9 +5,16 @@ recipe: paper cards have a1px shop-line border,20px corners and10px compact
 padding. The190px desktop cover stage has14px corners and reuses archival-desk
 art behind the real contained cover; phones use240px. Mint condition/mode stays
 bottom-left, availability top-left and the44px wishlist heart top-right. Full
-wrapping title spans the card; author/actual region share two equal columns below.
+title spans the card; author/actual region share two equal columns below.
 Sale/exchange prices have their own pale shelf panel with labels and tag icon;
 the full-width wine action stays48px. No fabricated backdrop is listing media.
+Owner follow-up fixes the complete card at560px desktop/tablet and610px phones,
+including Single/Both price modes and loading/error/preview states. A60px facts
+row and132px price panel reserve stable space. `CardFitText` measures its fixed
+slot, keeps the largest font that fits and refits on content/resize/font events.
+Title/amount floors are0.75rem; author/region0.6875rem. Extreme text clamps only
+at that floor; full text stays accessible and in native tooltips/detail links.
+No amount is ellipsized in supported price ranges. Row height never follows text.
 Main Home/Search shelves show four columns on desktop; smaller screens adapt and
 phones keep one card per row. The secondary Exchange shelf retains its280px
 auto-fill minimum inside its narrower content area. Keep current motion and image
