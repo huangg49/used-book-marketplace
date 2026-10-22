@@ -55,11 +55,15 @@ export function PublicPhoto({
   const [focused, setFocused] = useState(false);
   const photo = useQuery({
     queryKey: ["public-media", listingId, revisionId, mediaId],
-    queryFn: () =>
-      client.publicRequest(
+    queryFn: async () => {
+      const photo = await client.publicRequest(
         `/listings/${listingId}/media/${mediaId}/read`,
         publicMedia,
-      ),
+      );
+      if (!signedMediaRemainingMs(photo.expiresAt))
+        throw new Error("The image link expired before it arrived.");
+      return photo;
+    },
     enabled: active,
     staleTime: (query) =>
       signedMediaStaleTime(

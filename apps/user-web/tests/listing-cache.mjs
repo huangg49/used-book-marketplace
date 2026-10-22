@@ -100,6 +100,7 @@ async function fixtures(width) {
   let now = Date.now(),
     listReads = 0,
     detailReads = 0,
+    deniedReads = 0,
     hold = false,
     deny = false;
   const photoReads = [],
@@ -127,10 +128,12 @@ async function fixtures(width) {
     );
     if (media) {
       photoReads.push(media[1]);
-      const respond = () =>
-        deny
-          ? route.fulfill({ status: 404, json: { code: "NOT_FOUND" } })
-          : route.fulfill({
+      const respond = () => {
+        if (deny) {
+          deniedReads++;
+          return route.fulfill({ status: 404, json: { code: "NOT_FOUND" } });
+        }
+        return route.fulfill({
               json: {
                 id: media[2],
                 width: 200,
@@ -139,6 +142,7 @@ async function fixtures(width) {
                 expiresAt: new Date(now + 120000).toISOString(),
               },
             });
+      };
       if (hold) {
         held.push(respond);
         return;
@@ -170,8 +174,9 @@ async function fixtures(width) {
     );
     const beforeDetail = photoReads.length;
     await page.locator("article h3 a").first().click();
+    await page.waitForURL(`${origin}/books/${listings[0].id}`);
     await page
-      .getByRole("heading", { name: "Sách QA 1", exact: true })
+      .getByRole("heading", { level: 1, name: "Sách QA 1", exact: true })
       .waitFor();
     await loadedCover(page);
     assert.equal(detailReads, 1);
@@ -186,6 +191,7 @@ async function fixtures(width) {
       "Detail should reuse the card cover",
     );
     await page.getByRole("link", { name: "Về kệ sách" }).click();
+    await page.waitForURL(`${origin}/books`);
     await page.locator("article h3 a").first().waitFor();
     await loadedCover(page);
     assert.equal(listReads, 1, "Back should reuse the same filtered page");
@@ -213,7 +219,10 @@ async function fixtures(width) {
       );
       hold = false;
       await Promise.all(held.splice(0).map((respond) => respond()));
-      await loadedCover(page);
+      // Wait for this cover's response and React render, not another card's image.
+      // Advancing the clock with the first response still in flight races on CI.
+      await page.locator("article").first().locator("img").waitFor();
+      await page.waitForLoadState("networkidle");
       deny = true;
       now += 120001;
       await page.clock.fastForward(120001);
@@ -222,6 +231,7 @@ async function fixtures(width) {
         exact: true,
       });
       await retry.waitFor();
+      assert.ok(deniedReads > 0, "expired cover refresh reached the denial fixture");
       assert.equal(
         await page.locator("article").first().locator("img").count(),
         0,

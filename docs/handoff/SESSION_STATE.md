@@ -23,8 +23,14 @@
   User Web CI chạy thêm browser regression cache ảnh.
 - Navbar có layer transform ổn định để viền không đổi rasterization khi WebGL
   rèm bị ẩn/gỡ; giữ nguyên tiêu chí pixel <=1, thời lượng và cleanup motion.
+- Importer PG xử lý đúng cặp reference locality F2h → ADR0039, giữ DEMO-C native;
+  mọi drift khác vẫn từ chối, không ghi nguồn PG. PASS 5 ca import trên PG/Mongo
+  QA riêng, gồm ledger/ảnh/lịch sử và từ chối drift nguồn/đích.
+- Web/RN từ chối URL đã hết hạn ngay khi nhận để có retry thay vì loading mãi.
+  Browser fixture chờ đúng h1/URL Detail và phản hồi ảnh trước khi nhảy đồng hồ;
+  vẫn kiểm request bị 404 và không hiện lại ảnh cũ.
 - PASS local trên Node 24.19.0/pnpm 11.19.0: API typecheck/lint/build/176 unit;
-  web typecheck/lint/build/157 unit; shared session 27 unit; RN typecheck/lint/
+  web typecheck/lint/build/160 unit; shared session 27 unit; RN typecheck/lint/
   156 unit và Expo web export (CLI báo force-exit sau export thành công).
   Contract/routes 176 operation/26 controller và docs check PASS.
 - PASS 188 E2E gồm auth/listing-review/media/packaging/auctions trên QA57017,

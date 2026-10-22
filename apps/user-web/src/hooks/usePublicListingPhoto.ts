@@ -19,7 +19,14 @@ export function publicListingPhotoOptions(
 ) {
   return {
     queryKey: ["public-listing-photo", listingId, revisionId, photoId],
-    queryFn: () => getPublicPhoto(listingId, photoId),
+    queryFn: async () => {
+      const photo = await getPublicPhoto(listingId, photoId);
+      // A suspended tab or delayed response may receive an already expired URL.
+      // Surface retry instead of leaving an unusable successful query loading forever.
+      if (!signedMediaRemainingMs(photo.expiresAt))
+        throw new Error("The image link expired before it arrived.");
+      return photo;
+    },
     staleTime: (query: {
       state: { data?: { expiresAt: string }; dataUpdatedAt: number };
     }) =>
