@@ -1,5 +1,30 @@
 # Điểm lưu hiện tại — 22/10/2026
 
+## Xem đơn trong Chat — 22/10/2026
+
+- Theo owner, **Đơn hàng của tôi → Xem đơn** mở workspace Chat: toàn bộ thông tin
+  và thao tác Order ở trái, nhắn tin đúng đối tác ở phải. Mobile chuyển Đơn hàng/
+  Hội thoại mà giữ nháp và ý định. `OrderDetails` dùng chung controller thanh toán,
+  hủy và giao nhận; giữ snapshot riêng, lịch sử thương lượng và retry key/body/version.
+- API/contract0.46.0 thêm `conversationId` trong Order read và lệnh mở hội thoại
+  đúng Order. Giữ phòng Negotiated; BuyNow/Order lịch sử chưa có link tạo phòng
+  OrderCreated riêng, không đổi tiền/sách/trạng thái. [ADR0042](../adr/0042-order-conversation-workspace.md),
+  không cần migration mới; quyền participant/ACTIVE/session được kiểm trước replay.
+- Nhánh `codex/order-chat-workspace`, base `c52a770`; subject
+  `feat(orders): open order details in the chat workspace`.
+- PASS Node24.21.0/pnpm11.19.0: API lint/typecheck/build/150unit;6 E2E mới trên
+  Mongo QA `_test` (49 ca không liên quan bỏ qua), gồm từ chối/replay/race barrier;
+  contract check/routes173operation; web lint/typecheck/build/156unit, browser
+  order-chat mới và regression Chat cũ. Xem desktop/320/390px chữ130%; kiểm mất ACK
+  mở phòng/pay/cancel, message dedupe, ảnh đóng gói/vận đơn, cache403 và nháp.
+- Browser dùng API/Socket.IO fixture riêng; API E2E dùng Mongo thật/storage fake.
+  Ảnh có nhãn mô phỏng tại `.tmp/order-chat-workspace-qa/`; detector một lượt[];
+  API11/web6 warning lint và cảnh báo chunk cũ. Review AI đã sửa nguy cơ mất intent
+  khi đổi trang; không thay human review/native/live provider/remote CI.
+- Dev API/worker đã khởi động lại từ launcher hiện có do watcher không còn listener;
+  readiness200, web5174 HMR. Giữ cấu hình/DB app; không migrate/reset/seed.
+  READINESS giữ nguyên; chưa push/PR/merge/deploy.
+
 ## Khung số dư và thao tác ví — 22/10/2026
 
 - Member web `/wallet`: gom tiêu đề, số dư khả dụng từ API và hai nút Nạp/Rút

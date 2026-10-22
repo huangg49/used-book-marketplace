@@ -929,3 +929,13 @@ routine workflow, phase trail and consent explanations live in “Cách giao d�
 That disclosure starts expanded for expired conversations, missing fulfillment or
 an expired/missing previously sent quote. Proposal, stale-price and mutation
 errors remain directly visible. The action footer stays aligned with chat Send.
+
+22/10/2026: the owner joined **Xem đơn** to this workspace under
+[ADR0042](docs/adr/0042-order-conversation-workspace.md). A created Order replaces
+the left agreement with its private snapshot, payment and existing fulfillment
+controls for the actual participant; chat/history remain at right. Embedded
+payment precedes secondary detail, and mobile switches mounted “Đơn hàng” and
+“Hội thoại” panels. BuyNow keeps its checkout and receives a separate exact-order
+conversation when needed. Existing negotiated history is preserved; opening the
+workspace does not send a message or change transaction state. See the current
+Chat surface brief for routing, retry and permissions.

@@ -3,7 +3,8 @@
 Owner approved one workspace for purchase negotiation and exchange, with a card
 inbox at Navbar Chat. Operate; retain wine/cream, shared Header and memory-only
 session. Contract/ADR0041 determine permissions and money; visual layout grants
-none. Mua ngay remains independent. This supersedes the18/10 inbox-sidebar and
+none. Mua ngay retains its independent checkout; created Orders share this
+workspace under ADR0042. This supersedes the18/10 inbox-sidebar and
 read-only-after-OrderCreated presentation.
 
 `/chat` lists participant-specific book/partner cards, never one public room per
@@ -80,6 +81,27 @@ Linked exchange routes return to the conversation, and original exchange-message
 sources remain readable. Legacy independent exchanges appear in the same inbox
 and retain their real conversation/transaction history in a matching two-column
 sheet/chat layout. Do not infer they have been merged into another room.
+
+22/10 owner extension: **Xem đơn** opens `/chat/orders/:orderId`, resolves the
+exact Order's `conversationId`, then opens `/chat/:roomId`. Existing `/orders/:id`
+links follow the same entry. Existing negotiated messages/terms/events remain;
+BuyNow or historical Orders without a room use an idempotent participant command
+to create an OrderCreated room. Opening never sends a message or changes money,
+stock, price, reservation or order state.
+
+For a room with `orderId`, the left page replaces editable agreement controls
+with the full private Order snapshot for either role: status, ID/time, payment,
+book condition/description, permitted contacts, preparation, packaging/shipment
+and existing actions. Payment leads secondary detail in the embedded reading
+order. Use the shared OrderDetails controller; preserve unknown pay/cancel/upload/
+register intents across polling and mobile panel changes. The mobile tab reads
+“Đơn hàng”. The right page keeps participant messaging and agreement history,
+with delivery-oriented empty copy. Order snapshot title takes precedence over a
+changed or archived public listing. Order entry returns to “Đơn hàng của tôi”;
+inbox entry retains its previous Back behavior. Loading/error while resolving
+chat does not mount money/shipping controls that would lose their intent on the
+room redirect. Non-ACTIVE accounts retain the existing private Order view and
+obligation actions without gaining chat access. No native change.
 
 Verification and source checkpoint: docs/handoff/SESSION_STATE.md. Runner:
 `pnpm --filter @used-books/user-web test:chat:browser`, isolated HTTP fixtures and

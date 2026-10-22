@@ -11,6 +11,31 @@ import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.s
 export class PurchasesService {
   constructor(private readonly commands: MongoCommandService, private readonly listings: ListingCommitmentPolicy, private readonly agreements: ConversationAgreementsService) {}
 
+  // Called only by an Order command after its participant/user/session and
+  // Order locks. Opening chat never changes the financial aggregate or adopts
+  // a pre-existing negotiation merely because the book and Buyer match.
+  async forOrder(tx: Tx, source: {
+    orderId: string; listingId: string; listingVersion: number;
+    buyerId: string; sellerId: string; now: Date;
+  }) {
+    const existing = await tx.c.purchase_conversations.findOne({ orderId: source.orderId });
+    if (existing) {
+      if (existing.listingId !== source.listingId || existing.buyerId !== source.buyerId || existing.sellerId !== source.sellerId || existing.status !== 'OrderCreated') throw conflict();
+      await tx.lock('purchase_conversations', [existing._id]);
+      return { row: await this.conversation(tx, existing._id), created: false };
+    }
+    const row: PurchaseConversationDoc = {
+      _id: randomUUID(), listingId: source.listingId, listingVersion: source.listingVersion,
+      buyerId: source.buyerId, sellerId: source.sellerId, version: 1,
+      status: 'OrderCreated', expiresAt: null, quoteId: null, orderId: source.orderId,
+      closedAt: source.now, createdAt: source.now, updatedAt: source.now, lockSeq: 0,
+    };
+    // quoteId stays null: an Order chat does not share a live historical
+    // destination before the Seller has the existing fulfillment permission.
+    await tx.c.purchase_conversations.insertOne(row);
+    return { row, created: true };
+  }
+
   private async conversation(tx: Tx, id: string) {
     const row = await tx.c.purchase_conversations.findOne({ _id: id });
     if (!row) throw notFound();

@@ -67,6 +67,7 @@ const contact = z.object({
   detail: z.string(),
 });
 const orderDetails = paymentOrderSchema.extend({
+  conversationId: z.string().uuid().nullable(),
   purchaseMode: z.enum(["BuyNow", "Negotiated"]).optional(),
   serverTime: z.string(),
   createdAt: z.string(),
@@ -91,6 +92,17 @@ const orderDetails = paymentOrderSchema.extend({
 export type DirectOrder = z.infer<typeof orderDetails>;
 export function getOrder(orderId: string) {
   return session.request(`/me/orders/${orderId}`, orderDetails);
+}
+export function openOrderConversation(orderId: string, key: string) {
+  return session.request(
+    `/orders/${orderId}/conversation`,
+    z.object({ entityId: z.string().uuid() }),
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify({}),
+    },
+  );
 }
 export function cancelOrder(
   orderId: string,
