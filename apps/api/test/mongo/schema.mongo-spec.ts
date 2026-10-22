@@ -36,6 +36,7 @@ import { directDeliveryCompletionSpecs } from '../../src/database/mongo/migratio
 import { exchangeMessageSpecs } from '../../src/database/mongo/migrations/0023-exchange-messages.js';
 import { inspectionEvidenceCollectionSpecs } from '../../src/database/mongo/migrations/0023-inspection-evidence.js';
 import { pointIncidentCollectionSpecs } from '../../src/database/mongo/migrations/0024-point-incidents.js';
+import { auctionDeliveryCollectionSpecs } from '../../src/database/mongo/migrations/0034-auction-delivery.js';
 import { transactionReviewSpecs } from '../../src/database/mongo/migrations/0025-exchange-reviews.js';
 import {
   currentCollections,
@@ -116,6 +117,8 @@ describe('migrations', () => {
         // N4 point operations (ADR 0030 amendment 2026-10-14) are Mongo-native.
         inspectionEvidenceCollectionSpecs.length -
         pointIncidentCollectionSpecs.length -
+        // ADR 0044 delivery snapshot and carrier events are Mongo-native.
+        auctionDeliveryCollectionSpecs.length -
         // Exchange chat messages & reviews are Mongo-native.
         exchangeMessageSpecs.length -
         transactionReviewSpecs.length +

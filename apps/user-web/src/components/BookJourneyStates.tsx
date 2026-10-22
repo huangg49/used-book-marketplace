@@ -2,10 +2,27 @@ import { Link } from "react-router-dom";
 import { ArrowUpRight, BookOpen } from "lucide-react";
 import styles from "./BookJourneyStates.module.css";
 
-export function ListingSubmissionConfirmation({ title, onPostAnother }: {
+export function ListingSubmissionConfirmation({ title, onPostAnother, auction = false }: {
   title: string;
   onPostAnother: () => void;
+  auction?: boolean;
 }) {
+  if (auction)
+    return (
+      <section className={styles.submitted} aria-live="polite">
+        <img className={styles.pendingArt} src="/illustrations/book-journey/pending.webp"
+          width="800" height="600" alt="" aria-hidden="true" decoding="async" />
+        <div className={styles.message}>
+          <h2>Đã gửi duyệt</h2>
+          <p>Sách đấu giá <strong>{title}</strong> đã được gửi. Sau khi được duyệt, bạn chọn
+            sách ở trang gửi đấu giá để mang tới điểm giao nhận. Sách này không hiển thị trên kệ mua/đổi.</p>
+          <div className={styles.actions}>
+            <Link to="/auctions/new">Về gửi đấu giá <ArrowUpRight size={18} aria-hidden="true" /></Link>
+            <button type="button" onClick={onPostAnother}>Tạo sách đấu giá khác</button>
+          </div>
+        </div>
+      </section>
+    );
   return (
     <section className={styles.submitted} aria-live="polite">
       <img className={styles.pendingArt} src="/illustrations/book-journey/pending.webp"

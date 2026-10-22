@@ -37,6 +37,7 @@ import { priceAssistForRevision } from '../price-assist/price-assist.service.js'
 import { attachPhotos } from './listing-drafts.service.js';
 import { ListingFeeService } from '../wallet/listing-fee.service.js';
 import { requireListingSlot } from './listing-quota.js';
+import { requireChannelContent } from './listing-channel.js';
 
 @Injectable()
 export class ListingReviewService {
@@ -126,6 +127,10 @@ export class ListingReviewService {
           'SubmittedContent',
           revision(l.currentRevision!).content,
         );
+        requireChannelContent(l.channel, {
+          ...content,
+          fulfillment: origin.originAddressId,
+        });
         await this.ready(tx, l);
         let revisionId = l.currentRevisionId!;
         if (l.moderation === 'Rejected') {

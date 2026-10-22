@@ -8,6 +8,7 @@ export const AUCTION_DURATION_MS = 24 * HOUR_MS;
 export const AUCTION_DROPOFF_MS = 72 * HOUR_MS;
 export const AUCTION_PAYMENT_MS = 24 * HOUR_MS;
 export const BUY_NOW_PAYMENT_MS = 15 * 60_000;
+export const BUY_NOW_CHALLENGE_MS = 60_000; // ADR 0043
 export const AUCTION_MIN_PRICE = 10_000;
 export const AUCTION_MAX_PRICE = 1_000_000;
 export const POINT_ORDER_COMMISSION_BPS = 500;
@@ -19,6 +20,9 @@ export const COLLECTION_MAX_WRONG_ATTEMPTS = 5;
 export const INSPECTION_WINDOW_MS = 72 * HOUR_MS;
 // Completion and returns (migration 0012).
 export const RETURN_WINDOW_MS = 72 * HOUR_MS;
+// ADR 0044: the carrier delivers within 240 hours of the point hand-off,
+// the same bound as carrier pickups of ordinary deliveries.
+export const POINT_DELIVERY_MS = 240 * HOUR_MS;
 export const CLAIM_MIN_LENGTH = 30;
 export const PLATFORM_COMMISSION_ACCOUNT_ID =
   '00000000-0000-4000-8000-0000000000c1';

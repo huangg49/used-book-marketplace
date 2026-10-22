@@ -192,7 +192,7 @@ export function receiptMessage(
 ) {
   const price = receipt.currentPrice !== null ? formatVnd(receipt.currentPrice) : "";
   if (kind === "BuyNow")
-    return "Đã tạo đơn mua ngay. Hãy thanh toán trong 15 phút để tiếp tục.";
+    return "Bạn đang dẫn với giá mua ngay. Người khác còn 60 giây để trả cao hơn; nếu không ai vượt, bạn thắng phiên.";
   if (kind === "Disable") return "Đã tắt đặt giá tự động.";
   if (receipt.leading) return `Bạn đang dẫn giá ở ${price}.`;
   if (receipt.currentPrice === amount)
@@ -235,6 +235,8 @@ export type OrderCommand = {
   body: string;
   key: string;
 };
+// ADR 0044: delivery chosen at payment, with the fee the buyer saw.
+export type DeliveryChoice = { addressId: string; addressVersion: number; fee: number };
 // Frozen like auction commands: a retry after an unknown outcome resends this.
 export function createOrderCommand(
   orderId: string,
@@ -242,10 +244,17 @@ export function createOrderCommand(
   expectedVersion: number,
   key: string,
   text?: string,
+  delivery?: DeliveryChoice,
 ): OrderCommand {
   const body: Record<string, unknown> = { expectedVersion };
   if (step === "reject-report") body.reason = text;
   if (step === "claim") body.description = text;
+  if (step === "pay" && delivery) {
+    body.fulfillmentMethod = "CarrierOutbound";
+    body.destinationAddressId = delivery.addressId;
+    body.expectedDestinationAddressVersion = delivery.addressVersion;
+    body.expectedOutboundFee = delivery.fee;
+  }
   return {
     step,
     path: `/point-orders/${orderId}/${step}`,
@@ -293,13 +302,15 @@ export function intakePriceErrors(
   }
   return errors;
 }
-// FR-AU01: only approved, visible, still-available Sale listings enter; the
-// server rechecks under the listing lock.
+// FR-AU01/ADR 0042: only the seller's own approved, visible, still-available
+// Auction listings enter; the server rechecks under the listing lock.
 export function auctionEligible(listing: {
+  channel: string;
   state: { moderation: string; visibility: string; trade: string; deletedAt: string | null };
   currentRevision: { content: { mode: string | null } };
 }) {
   return (
+    listing.channel === "Auction" &&
     listing.state.moderation === "Approved" &&
     listing.state.visibility === "Visible" &&
     listing.state.trade === "Available" &&

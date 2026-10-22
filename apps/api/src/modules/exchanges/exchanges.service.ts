@@ -25,6 +25,7 @@ import {
   notFound,
   type Wire,
 } from '../commands/domain-error.js';
+import { requireMarketplace } from '../listings/listing-channel.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
 import { LedgerService } from '../wallet/ledger.service.js';
 import { notifyExchange } from './exchange-notifications.js';
@@ -343,6 +344,7 @@ export class ExchangesService {
             if (initListing.ownerId !== actor._id) {
               throw invalidState();
             }
+            requireMarketplace(initListing);
             if (
               initListing.trade !== 'Available' ||
               initListing.moderation !== 'Approved' ||
@@ -352,6 +354,7 @@ export class ExchangesService {
             }
           }
 
+          requireMarketplace(recipientListing);
           if (
             recipientListing.trade !== 'Available' ||
             recipientListing.moderation !== 'Approved' ||
@@ -557,6 +560,7 @@ export class ExchangesService {
           if (!listing || listing.trade !== 'Available') {
             throw invalidState();
           }
+          requireMarketplace(listing);
         }
 
         // Project all listings from Available to Reserved

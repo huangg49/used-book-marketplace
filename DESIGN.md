@@ -931,7 +931,7 @@ an expired/missing previously sent quote. Proposal, stale-price and mutation
 errors remain directly visible. The action footer stays aligned with chat Send.
 
 22/10/2026: the owner joined **Xem đơn** to this workspace under
-[ADR0042](docs/adr/0042-order-conversation-workspace.md). A created Order replaces
+[ADR0045](docs/adr/0045-order-conversation-workspace.md). A created Order replaces
 the left agreement with its private snapshot, payment and existing fulfillment
 controls for the actual participant; chat/history remain at right. Embedded
 payment precedes secondary detail, and mobile switches mounted “Đơn hàng” and

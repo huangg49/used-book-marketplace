@@ -148,6 +148,7 @@ export function projection(l: Listing): Wire['PrivateListing'] {
     id: l._id,
     ownerId: l.ownerId,
     version: l.version,
+    channel: l.channel,
     state: state(l),
     currentRevision: revision(l.currentRevision!),
     latestDecision: latest ? decision(latest) : null,

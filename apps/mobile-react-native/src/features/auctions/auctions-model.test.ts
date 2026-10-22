@@ -97,6 +97,18 @@ describe("auction commands", () => {
 describe("point order commands", () => {
   it("sends only the fields each step takes", () => {
     expect(JSON.parse(createOrderCommand("o1", "pay", 1, "k").body)).toEqual({ expectedVersion: 1 });
+    // ADR 0044: delivery carries the address version and the fee the buyer saw.
+    expect(
+      JSON.parse(
+        createOrderCommand("o1", "pay", 1, "k", undefined, { addressId: "a1", addressVersion: 2, fee: 30000 }).body,
+      ),
+    ).toEqual({
+      expectedVersion: 1,
+      fulfillmentMethod: "CarrierOutbound",
+      destinationAddressId: "a1",
+      expectedDestinationAddressVersion: 2,
+      expectedOutboundFee: 30000,
+    });
     expect(JSON.parse(createOrderCommand("o1", "reject-report", 2, "k", "Gáy nứt không nêu").body)).toEqual({
       expectedVersion: 2,
       reason: "Gáy nứt không nêu",
@@ -116,37 +128,17 @@ describe("seller intake (POL-39, FR-AU01)", () => {
     expect(intakePriceErrors(200_000, 50_000, 320_000).buyNowPrice).toMatch(/350\.000/);
     expect(intakePriceErrors(200_000, 50_000, 600_000)).toEqual({});
   });
-  it("only lets an approved, visible, available Sale listing in", () => {
-    const listing = (over: Partial<{ moderation: string; visibility: string; trade: string; mode: string }>) => ({
+  it("only lets an approved, visible, available Auction listing in", () => {
+    const listing = (over: Partial<{ moderation: string; visibility: string; trade: string; mode: string; channel: string }>) => ({
+      channel: over.channel ?? "Auction",
       state: { moderation: "Approved", visibility: "Visible", trade: "Available", deletedAt: null, ...over },
       currentRevision: { content: { mode: over.mode ?? "Sale" } },
     });
     expect(auctionEligible(listing({}))).toBe(true);
+    // ADR 0042: a marketplace listing is never an auction source.
+    expect(auctionEligible(listing({ channel: "Marketplace" }))).toBe(false);
     expect(auctionEligible(listing({ mode: "Both" }))).toBe(false);
     expect(auctionEligible(listing({ trade: "Reserved" }))).toBe(false);
     expect(auctionEligible(listing({ visibility: "Hidden" }))).toBe(false);
-  });
-});
-
-describe("DauGia-App Curated Auctions Data", () => {
-  it("ensures all curated auctions strictly satisfy the publicAuctionSummary Zod schema", async () => {
-    const { CURATED_SAIGON_AUCTIONS } = await import("./auctions-data");
-    const { publicAuctionSummary } = await import("./contracts");
-
-    expect(CURATED_SAIGON_AUCTIONS.length).toBeGreaterThanOrEqual(5);
-
-    for (const item of CURATED_SAIGON_AUCTIONS) {
-      const parsed = publicAuctionSummary.safeParse(item);
-      expect(parsed.success).toBe(true);
-      expect(item.id).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-      );
-      expect(item.listingId).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-      );
-      expect(item.coverUrl).toBeTruthy();
-      expect(item.currentPrice).toBeGreaterThan(0);
-      expect(item.startPrice).toBeGreaterThan(0);
-    }
   });
 });

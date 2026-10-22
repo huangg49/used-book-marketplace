@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { titleKey } from '../../src/database/mongo/migrations/0003-catalog-title-key.js';
+import type { ListingChannel } from '../../src/database/mongo/documents.js';
 import { runTransaction, Tx } from '../../src/database/mongo/transaction.js';
 import { isbn13 } from '../../src/modules/commands/contract-input.service.js';
 import { checkCatalog } from '../../src/modules/catalog/catalog.service.js';
@@ -153,10 +154,12 @@ export class ListingFixtures {
     return { id, revision };
   }
 
+  // An Auction listing (ADR 0042) is a Sale with a declared value.
   async listing(
     ownerId: string,
     bookId: string,
     pending = false,
+    channel: ListingChannel = 'Marketplace',
   ): Promise<ListingFixture> {
     const id = randomUUID(),
       revision = randomUUID(),
@@ -171,6 +174,9 @@ export class ListingFixtures {
           number: 1,
           bookId,
           ...listingContent,
+          ...(channel === 'Auction'
+            ? { mode: 'Sale' as const, exchangeValue: null }
+            : {}),
           submittedAt: pending ? now : null,
           ownershipDeclaredAt: pending ? now : null,
           createdAt: now,
@@ -211,6 +217,7 @@ export class ListingFixtures {
         await tx.c.listings.insertOne({
           _id: id,
           ownerId,
+          channel,
           version: pending ? 2 : 1,
           moderation: pending ? 'PendingReview' : 'Draft',
           visibility: 'Visible',

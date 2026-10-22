@@ -1,9 +1,12 @@
-# ADR0042: Xem đơn trong cùng workspace hội thoại
+# ADR0045: Xem đơn trong cùng workspace hội thoại
 
 Chấp nhận theo yêu cầu chủ dự án ngày22/10/2026. Bổ sung
 [ADR0041](0041-unified-conversation-workspace.md), giữ hành vi Mua ngay của
 [ADR0038](0038-direct-buy-now-orders.md) và các gate trong
 [READINESS](../handoff/READINESS.md).
+
+Đổi số0042→0045 khi tích hợp main ngày23/10/2026 để giữ số0042 đã công bố cho
+[listing đấu giá riêng](0042-auction-only-listings.md); nội dung quyết định không đổi.
 
 ## Quyết định
 

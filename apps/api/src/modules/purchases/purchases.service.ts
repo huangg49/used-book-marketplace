@@ -5,6 +5,7 @@ import type { PurchaseConversationDoc } from '../../database/mongo/documents.js'
 import type { Tx } from '../../database/mongo/transaction.js';
 import { MongoCommandService, member, requireActive, type Actor, type CommandContext } from '../commands/mongo-command.service.js';
 import { conflict, invalidState, notFound, type Wire } from '../commands/domain-error.js';
+import { requireMarketplace } from '../listings/listing-channel.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
 
 @Injectable()
@@ -96,6 +97,7 @@ export class PurchasesService {
         const listing = await this.listings.lock(tx, before._id);
         if (listing.ownerId === actor._id || listing.version !== body.expectedVersion) throw conflict();
         if (listing.moderation !== 'Approved' || listing.visibility !== 'Visible' || listing.trade !== 'Available') throw invalidState();
+        requireMarketplace(listing);
         const revision = await tx.c.listing_revisions.findOne({ _id: listing.currentRevisionId! });
         if (!revision || !(body.intent ? ['Sale', 'Both', 'Exchange'] : ['Sale', 'Both']).includes(revision.mode ?? '') || body.intent === 'Negotiation' && revision.mode === 'Exchange' || body.intent === 'Exchange' && revision.mode === 'Sale') throw invalidState();
         const existing = await tx.c.purchase_conversations.findOne({
@@ -158,6 +160,7 @@ export class PurchasesService {
           listing.version !== quote.listingVersion ||
           listing.currentRevisionId !== quote.listingRevisionId ||
           listing.moderation !== 'Approved' || listing.visibility !== 'Visible' ||
+          listing.channel === 'Auction' ||
           quote.sellerId !== row.sellerId ||
           quote.listingId !== row.listingId ||
           quote.version !== body.expectedQuoteVersion ||

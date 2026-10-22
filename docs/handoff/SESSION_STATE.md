@@ -1,5 +1,34 @@
 # Điểm lưu hiện tại — 23/10/2026
 
+## Hợp nhất main và gỡ xung đột — 23/10/2026
+
+- Theo owner, merge `origin/main` tại `60e1cf01` vào `codex/inline-card-location`
+  từ `3f5b6eae`, giữ lịch sử đã push. Bốn conflict: public listing projection,
+  user-web scripts, contract version và checkpoint; giữ cả hai phía.
+- Giữ card464/504px, metadata một hàng, wallet/Order Chat và wishlist; đồng thời
+  nhận lazy-photo/cache/expiry và tối ưu listing từ main. Projection đọc metadata,
+  origin/zone theo lô trong cùng snapshot; không đọc contact, không bỏ current
+  address-version check hoặc lọc Marketplace/Auction. Thêm7 unit regression.
+- Contract hợp nhất0.50.0, regenerate types;177operation/26controller khớp. Đổi
+  Order Chat ADR0042→[0045](../adr/0045-order-conversation-workspace.md), giữ0042
+  auction của main. Giữ cả checkpoint teammate và READINESS mới từ main.
+  Chuẩn hóa ba dòng trống EOF có sẵn ở source RN upstream, không đổi hành vi.
+- PASS API lint/typecheck/183unit/build; web lint/typecheck/172unit/build;
+  session-client27unit; RN typecheck/156unit, admin typecheck/30unit. RN chỉ tạo
+  lại cache route `.expo/types` bị ignore bằng helper Expo cài sẵn. Browser cache
+  ảnh, Order Chat và35ca card desktop/mobile130% đạt; fixture không ghi DB.
+- HTTP/Mongo QA riêng57217/database `_test`: ba suite Orders/listing-review/
+  auction-listings đạt136/137; một race100request chỉ có1/2lượt thành công kỳ vọng
+  dưới contention, chạy riêng lại đạt (1PASS/54filtered), không sửa code/test.
+  Hai suite listing/auction đạt trọn vẹn; log `.tmp/inline-merge-quota-rerun.log`.
+  Container QA riêng được dừng sau kiểm tra, không dùng DB app cho harness.
+- `pnpm db:migrate` áp dụng đúng ba migration main0032–0034 còn thiếu;45migration
+  current, không đổi checksum cũ, reset/seed/bootstrap hay cấu hình. Khởi động lại
+  launcher API/worker sau build; API readiness3000 và FE5174 trả200. Log local
+  `.tmp/merge-main-runtime/`. Docs/diff check đạt; human/native/provider/remote CI
+  chưa chạy. Không đổi gate ngoài READINESS đã có trên main; chưa merge vào main.
+  Merge commit: `merge: resolve main conflicts for wallet chat and book cards`.
+
 ## Xuất bản gói ví, đơn hàng/chat và card — 23/10/2026
 
 - Owner đã duyệt kết quả và yêu cầu chia commit/push. Tám commit chức năng từ
@@ -85,7 +114,7 @@
   hủy và giao nhận; giữ snapshot riêng, lịch sử thương lượng và retry key/body/version.
 - API/contract0.46.0 thêm `conversationId` trong Order read và lệnh mở hội thoại
   đúng Order. Giữ phòng Negotiated; BuyNow/Order lịch sử chưa có link tạo phòng
-  OrderCreated riêng, không đổi tiền/sách/trạng thái. [ADR0042](../adr/0042-order-conversation-workspace.md),
+  OrderCreated riêng, không đổi tiền/sách/trạng thái. [ADR0045](../adr/0045-order-conversation-workspace.md),
   không cần migration mới; quyền participant/ACTIVE/session được kiểm trước replay.
 - Nhánh `codex/order-chat-workspace`, base `c52a770`; subject
   `feat(orders): open order details in the chat workspace`.
@@ -116,6 +145,212 @@
 - Sáu warning lint và cảnh báo chunk cũ; detector một lượt chỉ advisory font1.2rem có sẵn.
   Browser mock toàn bộ API, không gửi command ví/đụng DB. Không chạy lại API/Mongo,
   native/live VNPay/human/remote CI; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
+
+## Tích hợp tối ưu listing và hỗ trợ demo — 22/10/2026
+
+- Chủ dự án yêu cầu push và merge 4 commit local; nhánh
+  `codex/listing-media-backend-performance`, đồng bộ `origin/main` tại `a67cb0b`.
+  [PR #61](https://github.com/huangg49/used-book-marketplace/pull/61).
+- Gói gồm: tùy chọn bỏ limiter login chỉ trong development (mặc định tắt), tên
+  người đăng cạnh tên sách trên web/RN, cache ảnh theo hạn gốc + lazy viewport
+  phía client, batch ký ảnh/bounded RAM cache + bulk metadata query phía API.
+  Giữ kiểm tra eligibility trước/sau URL, fresh Detail và snapshot/cursor.
+  Không đổi contract, schema/migration hoặc DB demo; không commit cấu hình riêng.
+- Bằng chứng đo trước/sau, phạm vi cache và giới hạn cold load ở
+  [bước 1](LISTING_LOAD_PERFORMANCE_2026_10_20.md),
+  [bước 2](LISTING_MEDIA_BACKEND_PERFORMANCE_2026_10_20.md).
+  Tra tài khoản theo [người đăng](DEMO_ACCOUNTS.md).
+- Sau đồng bộ main, sửa lint của chat/đổi sách RN bằng AppModal/AppTextInput và
+  token màu có sẵn; fixture VNPay bổ sung expiresAt/serverTime đúng contract.
+  Không thay endpoint/hành vi giao dịch của PR #60.
+- CI Mongo lỗi từ runner Ubuntu mới: MongoDB 8.0 từ chối kernel >=6.19
+  ([SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912)). Runner 24.04 mới
+  cũng gặp lỗi, nên ghim 4 job Mongo về ubuntu-22.04 (kernel 6.8); thêm log khi lỗi.
+  Không sửa image/DB local; cần nâng lại runner trước khi 22.04 hết hỗ trợ.
+  User Web CI chạy thêm browser regression cache ảnh.
+- Navbar có layer transform ổn định để viền không đổi rasterization khi WebGL
+  rèm bị ẩn/gỡ; giữ nguyên tiêu chí pixel <=1, thời lượng và cleanup motion.
+- Importer PG xử lý đúng cặp reference locality F2h → ADR0039, giữ DEMO-C native;
+  mọi drift khác vẫn từ chối, không ghi nguồn PG. PASS 5 ca import trên PG/Mongo
+  QA riêng, gồm ledger/ảnh/lịch sử và từ chối drift nguồn/đích.
+- Web/RN từ chối URL đã hết hạn ngay khi nhận để có retry thay vì loading mãi.
+  Browser fixture chờ đúng h1/URL Detail và phản hồi ảnh trước khi nhảy đồng hồ;
+  vẫn kiểm request bị 404 và không hiện lại ảnh cũ.
+- Đồng bộ browser journeys với detail/editor và chat thống nhất trên main: cuộn
+  đến ảnh lazy, picker ảnh bìa, nhãn khai báo/khu vực, điều hướng qua tab tài khoản.
+  Giữ kiểm replay/lost-response và kiểm eligibility. Login quay lại chat của chính
+  chủ bài trả về Detail, không gửi yêu cầu tự chat. Header RN giữ vùng bấm 48 px,
+  accordion tình trạng công bố trạng thái mở/đóng cho công cụ hỗ trợ.
+- CI full E2E phát hiện fixture đấu giá ngoài vùng chưa phục hồi; đã thêm finally.
+  Kiểm packaging chấp nhận lịch sử hợp lệ ở Inspection/Completed, vẫn kiểm đủ
+  receipt/audit/outbox và chặn intent mới. PASS local 30 carrier + 41 wallet E2E,
+  có kiểm ảnh lịch sử sau nhận sách/quyết toán và từ chối intent sau đó.
+- DraftCoverPhoto nhận trạng thái xử lý từ editor, chỉ ký khi Ready và đang xem;
+  trả lại trạng thái ảnh và nút retry khi lỗi read/tải ảnh/hết hạn. Không thay picker
+  hay upload contract; browser vẫn kiểm lỗi ảnh, retry và chọn ảnh bằng filechooser.
+  PASS thêm 62 auction E2E trên DB QA riêng; fixture ngoài vùng đã phục hồi.
+- PASS local trên Node 24.19.0/pnpm 11.19.0: API typecheck/lint/build/176 unit;
+  web typecheck/lint/build/160 unit; shared session 27 unit; RN typecheck/lint/
+  156 unit và Expo web export (CLI báo force-exit sau export thành công).
+  Contract/routes 176 operation/26 controller và docs check PASS.
+- PASS 188 E2E gồm auth/listing-review/media/packaging/auctions trên QA57017,
+  database riêng `latlai_integration_publish_test`, không đụng DB/bucket demo.
+  Các 500 fault-injection trong log là ca kiểm rollback, không phải suite fail.
+- Browser PASS: cache ảnh tại 1440/390 px (Detail/Back không ký lại, expiry/denial/
+  retry, Detail vẫn cập nhật trạng thái); auction stage giữ pixel/geometry navbar,
+  mobile/resize/Back/fallback/cleanup. Đã xem ảnh. Artifact mới giữ trong
+  `.tmp/integration-publish-20261022/`, không ghi đè evidence đã commit.
+- Full User Web browser PASS: Home/Search/Detail responsive, login return/owner,
+  đăng sách/chỉnh sửa, ảnh, stale address và replay; lost-response chat chỉ tạo
+  một hội thoại. RN public/address/listing browser PASS: cuộn đến thông báo nằm
+  ngoài viewport trước khi kiểm visible; chờ HTTP trả đúng version địa chỉ và
+  flush layout sau khi tiến đồng hồ mô phỏng. Giữ toàn bộ ca dữ liệu lỗi/replay.
+  Remote final-head và trạng thái tích hợp theo PR #61.
+- Seller-order và Buy-now browser PASS: hai bên, quote/address, thiếu tiền bị từ
+  chối, lost ACK tạo/thanh toán cùng key/body, đúng một hold; ảnh đóng gói, gửi và
+  pickup mô phỏng InTransit. Exchange browser đi qua chat thống nhất (seller duyệt
+  hình thức, buyer chọn sách/địa chỉ), lost ACK giữ key/body, inbox mở lại đúng một
+  phiếu, accept/cancel, từ chối funding và 403 ẩn phiếu; desktop/mobile PASS.
+- Wallet browser PASS: lịch sử thật/filter/pagination/retry, QueryDR lỗi/thử lại/
+  credit, lost ACK cùng key/body, hạn server đúng 5 phút, hủy và replay hết hạn
+  không thêm ledger/history. Chờ checkout release và các query/invalidation sau
+  credit xong trước fixture trang nhỏ (networkidle cũ không đủ); thêm chẩn đoán
+  số hàng/cursor khi lỗi. Provider và deadline QA mô phỏng,
+  không là chứng nhận thanh toán VNPay thật.
+- Đã push; kết quả CI và trạng thái tích hợp theo PR #61. Human review độc lập và
+  native Android/iOS acceptance NOT RUN; yêu cầu merge của chủ dự án không là
+  chứng nhận những gate này. READINESS giữ nguyên, không mở gói tối ưu bước 3.
+
+## Hoàn thiện Trao đổi sách (Exchange): hiển thị sách khi cọc, ảnh bìa trực quan & hủy đơn hoàn cọc (FR-X11) — 20/10/2026
+
+- Nhánh `feat/rn-exchange-fix-and-deposit-cancellation`, base `feat/rn-chat-inbox-and-order-flow` (đã merge `origin/main` mới nhất).
+- Phạm vi hoàn thành:
+  1. Fix lỗi 404 & hiển thị `@Người đề nghị` khi sách chuyển sang trạng thái chờ cọc (`AcceptedAwaitingFunding`):
+     - Trong `public-listing.service.ts`: bổ sung lookup sang collection `exchanges` để cho phép các sách ở trạng thái `Reserved` thuộc tiến trình trao đổi vẫn được truy vấn công khai (tên sách, ảnh bìa, tác giả, giá trị cọc đối soát).
+  2. Sửa nhãn hiển thị tiêu đề và đối tác trong `ExchangeProposalCard`:
+     - Khung 1 luôn là `SÁCH CỦA BẠN GỬI ĐI`, khung 2 luôn là `SÁCH BẠN NHẬN VỀ (TỪ @<Tên đối tác>)`.
+     - Kích hoạt hiển thị ảnh bìa thực tế (`active={true}`) trong cả `ExchangeProposalCard` và `ExchangeComposeScreen`.
+  3. Bổ sung tính năng Hủy giao dịch trao đổi & hoàn cọc 100% (FR-X11 trong SRS 1.1):
+     - Thêm nút và popup xác nhận `Hủy giao dịch trao đổi` vào giai đoạn `AcceptedAwaitingFunding` trong `exchange-actions-card.tsx`.
+     - Cho phép người dùng chủ động rút lui trước khi gửi sách: hoàn trả 100% tiền cọc về ví ngay tức thì và mở lại trạng thái `Available` trên kệ sách cho cả 2 bên.
+  4. Đồng bộ nhánh chính `origin/main`:
+     - Tích hợp 4 migration MongoDB mới (`0032-vnpay-topup-expiry`, `0032-auction-only-listings`, `0033-buy-now-challenge`, `0034-auction-delivery`).
+     - Áp dụng migration vào replica set MongoDB local thành công.
+     - Cập nhật hợp đồng `TopupIntent` (thêm `Cancelled`, `expiresAt`, `serverTime`) và `PublicAuctionSummary` trong mobile app.
+- Kiểm tra xác thực:
+  - API Backend: `pnpm --filter @used-books/api typecheck` ➔ PASS (0 lỗi).
+  - Mobile React Native: `pnpm --filter @used-books/mobile-react-native typecheck` ➔ PASS (0 lỗi).
+  - Health check: `GET http://localhost:3000/api/v1/health` ➔ `{"status":"ok","service":"used-book-api"}`.
+- Git: Đã push nhánh lên remote `origin/feat/rn-exchange-fix-and-deposit-cancellation`.
+
+## Giao sách thắng đấu giá từ điểm (ADR 0044) — 20/10/2026
+
+- Chủ dự án mở riêng gate READINESS cho gói này (READINESS ghi ngoại lệ). Người thắng
+  chọn khi thanh toán: tự nhận hoặc `CarrierOutbound` tới địa chỉ đã lưu vùng
+  `HCM-DEMO-v1`; phí = phí DirectSale đang chọn (30.000đ), báo trước qua
+  `GET /me/point-orders/{id}/delivery-quote`, kiểm lại bằng `expectedOutboundFee`.
+  buyerTotal = giá + phí, giữ trong một lần thanh toán; chọn xong không đổi.
+- Sau khi chấp nhận biên bản: Staff được phân công `POST /operations/point-orders/{id}/dispatch`
+  trong giờ và trong hạn → `InTransit` (mã vận đơn, hạn giao 240 giờ, handover
+  `CarrierOutbound` không mã). TEST_OPERATOR độc lập gửi
+  `POST /operations/simulator/point-delivery-events` (key = eventId): Delivered mở 72 giờ
+  kiểm tra rồi quyết toán như cũ (người bán P − C, nền tảng C + phí); Failed/quá hạn
+  giao → `DeliveryFailed`, Admin chỉ được RequireReturn, Staff nhận lại → hoàn đủ giá +
+  phí. Quá hạn giao cho hãng = `CollectionOverdue`, hoàn tiền chỉ `NoFault`.
+- Migration `0034-auction-delivery` (point_orders/handovers/resolutions + collection
+  `point_order_deliveries`, `point_carrier_events`); OpenAPI 0.48.0. RN và web chọn
+  cách nhận + báo phí, hiện trạng thái giao/mã vận đơn; admin có nút “Giao cho hãng”
+  và lý do DeliveryFailed. Chưa có màn TEST_OPERATOR gửi sự kiện giao (dùng API).
+- Nhánh `feature/auction-delivery` (base `feature/buy-now-challenge`). PASS: contract,
+  API tsc/unit 151 (1 lỗi mạng sẵn có: test GHN gọi API thật), E2E `auctions` 61 (thêm 5
+  ca: báo phí/chọn sai, giao + quyết toán, giao lỗi trả về, quá hạn, race Delivered/Failed),
+  `wallet-migration` + `auction-listings` 5, Mongo schema 25 (cả nâng cấp), RN
+  tsc/lint/test, web tsc/oxlint/156, admin tsc/oxlint/28. Browser fixture 3009: web hiện
+  lựa chọn giao, địa chỉ, phí 30.000đ, tổng 630.000đ. RN/native/human/remote CI NOT RUN.
+  Chưa push/PR/merge. QA replica set phải bật lại sau khi Docker khởi động lại
+  (`pnpm infra:mongo:test:up`).
+- Màn mô phỏng hãng vận chuyển (nhánh `feature/auction-delivery-simulator`, base
+  `feature/auction-delivery`): `GET /operations/simulator/point-deliveries` (TEST_OPERATOR,
+  đơn InTransit, không có địa chỉ/SĐT; OpenAPI 0.49.0) và admin-web `/simulator/deliveries`
+  báo Delivered/Failed, eventId = Idempotency-Key giữ nguyên khi thử lại. Admin-web cho
+  tài khoản chỉ có TEST_OPERATOR vào khu làm việc, chỉ thấy mục Mô phỏng. PASS: API tsc,
+  E2E ADR 0044 6 ca, admin tsc/oxlint/30. Browser fixture: operator đăng nhập, thấy
+  danh sách rỗng; staff/bidder bị 403. Gửi sự kiện từ màn hình trên dữ liệu thật NOT RUN
+  vì điểm đóng cửa (05:47) nên chưa giao được đơn cho hãng.
+## Hoàn thiện luồng Chat thương lượng, Hộp thư tin nhắn và Đơn hàng trên React Native — 20/10/2026
+
+- Nhánh `feat/rn-chat-inbox-and-order-flow`, base `c23cfd3`.
+- Theo yêu cầu chủ dự án, hoàn thiện toàn bộ luồng thương lượng mua bán & trò chuyện trên Mobile React Native đồng bộ với bản Web:
+  1. Hộp thư trò chuyện kiểu Shopee (`ChatInboxScreen` - route `/chat-inbox`):
+     - Danh sách các cuộc trò chuyện thương lượng với thumbnail bìa sách thật, tên sách, giá niêm yết, vai trò và timestamp.
+     - Thanh tab lọc nhanh chuẩn Shopee: `[Tất cả]`, `[Cần phản hồi]` (badge đếm số), `[Đang thương lượng]`, `[Đã tạo đơn]`.
+     - Tìm kiếm đối tác theo tên, đệm an toàn Safe Area cho notch/Dynamic Island, thanh điều hướng đáy `MemberNavigation` chuẩn nền trắng sáng `colorRoles.navigationBackground`.
+     - Icon tin nhắn trên Header trang chủ (`HomeHeader`), Tìm kiếm, Đấu giá, Tài khoản và `TopNavbar` tự động trỏ về `/chat-inbox` và hiển thị badge động.
+  2. Khung chat thương lượng chia 2 Panel (`ConversationScreen` - route `/conversation?id=...`):
+     - `AgreementSheetPanel` (Phiếu thỏa thuận): xem thông tin sách, chọn Mua hoặc Đổi, gửi/chấp nhận/từ chối đề xuất giá, nhập địa chỉ nhận báo giá vận chuyển GHN/Direct tức thì, người bán tạo đơn hàng, người mua thanh toán đơn hàng bằng Ví.
+     - `ChatMessagesPanel` (Hội thoại): timeline sự kiện thỏa thuận, bong bóng tin nhắn, realtime WebSocket `/purchase-chat` + Polling 3.5s.
+     - Đầy đủ Header `TopNavbar` đỏ rượu vang, Subheader nút Quay lại và Bottom Navbar `MemberNavigation` nền trắng.
+  3. Hoàn thiện luồng Đơn hàng & Ví:
+     - Khung trạng thái người bán đang chuẩn bị sách (`amberBg` / `amberBorder`) hiển thị trực quan cả ảnh bìa sách và tiến độ.
+     - Modal nạp tiền Ví (`topup-modal.tsx`) kết nối nạp tiền test và VNPay.
+     - Xóa bỏ các modal mock cũ (`HomeCartModal`).
+- Đồng bộ quyền MongoDB: Chạy `mongo:bootstrap` cập nhật quyền Least-Privilege cho role `latlai_app` trên các collection mới `conversation_terms`, `conversation_events`.
+- Kiểm tra xác thực:
+  - Mobile React Native: `tsc --noEmit` ➔ PASS (0 lỗi).
+  - Linter: `expo lint` ➔ PASS (0 lỗi).
+  - Vitest: 24 test suites / 157 tests ➔ PASS 100%.
+
+## Mua ngay mở cửa sổ 60 giây (ADR 0043) — 19/10/2026
+
+- Chủ dự án yêu cầu: bấm Mua ngay không kết thúc phiên ngay mà rút thời gian còn 60
+  giây để người khác trả cao hơn. ADR 0043 + sửa DEC-06/FR-AU06/POL-40 (phụ lục).
+  Mua ngay = lượt trả giá Manual cam kết tại `buyNowPrice` (bid kind `BuyNow`), vẫn
+  chỉ trước lượt đầu tiên, cùng khóa phiên; `endAt = min(endAt, buyNowAt + 60 s)`,
+  bid sau không gia hạn. Hết giờ đóng phiên bình thường (người dẫn thắng, Order +
+  24 giờ thanh toán). Phiên `BuyNowPending` cũ giữ Order 15 phút.
+- Migration `0033-buy-now-challenge` thêm `auctions.buyNowAt` (backfill null) và
+  đổi expr endAt cố định; OpenAPI 0.47.0 `PublicAuctionSummary.buyNowAt`. RN/web
+  đổi lời hộp xác nhận/biên nhận và hiện thông báo đếm ngược khi có `buyNowAt`.
+- Nhánh `feature/buy-now-challenge` (base `feature/auction-only-listings`, đã gộp `origin/main` 6d063ee).
+  PASS: contract check, API tsc, E2E `auctions` + `auction-listings` 60 (cửa sổ,
+  replay, vượt giá trong cửa sổ, bid trễ bị từ chối theo giờ server, gần hết giờ giữ
+  end, race bid đầu/Mua ngay và Auto/Mua ngay, thông báo), RN tsc/lint/auctions 10,
+  web tsc/141. Mongo suite: chỉ 4 ca nâng cấp lỗi sẵn trên main (ExchangeDisputed).
+  Hành trình tạm (không commit) trên `_test`: cửa sổ 60 giây thật, đối thủ vượt giá,
+  đóng phiên, thanh toán, nhận sách, quyết toán (người bán nhận P − 5%), không trả
+  tiền (vi phạm + ReclaimRequired), không có lượt (Unsold) — đều đúng. Browser QA
+  fixture 3009: web và RN (Expo web) hiện đếm ngược cửa sổ, cập nhật trực tiếp khi bị
+  vượt, màn thắng/thanh toán sau đóng; RN sau đóng ghi “Giá chốt” như web.
+  Order-worker chạy thêm `AuctionWorker.closeDue` mỗi 5 giây giữa các lượt quét 60
+  giây; chạy thật `dist/order-worker.js` trên fixture `_test`: phiên Mua ngay đóng
+  3,2 giây sau endAt (trước đây tới ~60 giây). Native/human/remote CI NOT RUN.
+  READINESS không đổi. Chưa push/PR/merge.
+
+## Sách đấu giá là listing riêng (ADR 0042) — 19/10/2026
+
+- Chủ dự án yêu cầu: tạo đấu giá không lấy listing của sàn mua/đổi mà dùng listing
+  riêng. ADR 0042 + sửa DEC-07/FR-AU01 (phụ lục) và FR-C05/BR-02 (SRS). Listing có
+  `channel` bất biến `Marketplace|Auction` (OpenAPI 0.45.0); migration
+  `0032-auction-only-listings` backfill Marketplace, import PostgreSQL gán Marketplace.
+- API: draft/save/submit/revise Auction chỉ mode Sale (salePrice = giá trị khai báo
+  = giá trị bảo vệ), không origin. `publicEligibleStages()` mặc định loại Auction
+  (kệ/tìm/chi tiết/ảnh/quote/Mua ngay/đơn chọn); purchase/exchange/wishlist/
+  price-assist kiểm lại channel; intake chỉ nhận Auction (Marketplace → 409).
+  Intake cũ trên listing sàn giữ nguyên. Giới hạn 5 bài ADR 0040 đếm chung kênh.
+- RN: send-to-auction chỉ liệt kê listing Auction, tạo/mở tiếp bản nháp trong
+  DraftEditor chế độ đấu giá; Tủ sách/Tài khoản lọc Marketplace. Web: `/sell?channel=Auction`,
+  `/auctions/new` chỉ dùng listing Auction; kệ/đổi/dashboard lọc Marketplace.
+  Admin review hiện nhãn “Sách đấu giá”. Flutter chưa đổi (scaffold).
+- Nhánh `feature/auction-only-listings` (base main 8741a6f). PASS: contract check,
+  API typecheck/unit150, E2E `auction-listings` 4 + `auctions` 54 (thêm ca từ chối
+  listing sàn; mutation check guard/predicate), RN tsc/lint/67, web tsc/141,
+  admin tsc/28. Mongo suite: 4 ca nâng cấp migration lỗi cả trên main sạch
+  (`member_notifications` ExchangeDisputed), không do 0032. Browser QA trên API
+  fixture 3009 + DB `_test`: web tạo/giữ chỗ đấu giá từ listing Auction; RN tạo/lưu
+  bản nháp Auction, Tủ sách không lẫn. DB local chủ dự án đã `db:migrate` 18 migration
+  còn thiếu từ main + 0032, rồi `db:bootstrap` (không reset/seed). Native/human/remote CI NOT RUN. READINESS không đổi.
+- Riêng: nhánh `fix/rn-auction-fake-data` (8111c17) bỏ dữ liệu bịa ở màn Đấu giá RN;
+  màn Tài khoản RN còn dữ liệu mẫu (★4.9, đơn #DH-8821). Chưa push/PR/merge.
 
 ## Hết hạn nạp VNPay sau 5 phút — 19/10/2026
 
@@ -336,6 +571,7 @@
 - Không push/PR/merge/deploy trong gói này. Native/live Supabase/remote CI/human
   review NOT RUN; READINESS và gate inspection/settlement giữ nguyên. Bước tiếp:
   chủ dự án xem `/chat` và Detail bằng hai tài khoản demo trên local5174.
+
 ## Sửa thông tin trước gửi và thử lại nơi gửi — 19/10/2026
 
 - Chủ dự án báo POST `/me/addresses`502 sau quay lại sửa bước1 rồi gửi ở bước5.

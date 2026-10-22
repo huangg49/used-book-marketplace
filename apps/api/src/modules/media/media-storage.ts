@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, type OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { StorageClient } from '@supabase/storage-js';
 import { createHash } from 'node:crypto';
 import { DomainError } from '../commands/domain-error.js';
+import { SignedReadCache, type SignedRead } from './signed-read-cache.js';
 
 export const MAX_IMAGE_BYTES = 10_000_000;
 export const MAX_DERIVATIVE_BYTES = 2_000_000;
@@ -16,11 +17,16 @@ export const unavailable = () =>
 
 // The interface is intentionally narrower than any vendor SDK. Tests inject an explicit fake.
 @Injectable()
-export class MediaStorage {
+export class MediaStorage implements OnModuleDestroy {
   private readonly client?: StorageClient;
   private readonly bucket: string;
   private readonly base: string;
   private readonly headers: Record<string, string>;
+  private bucketCheck?: Promise<void>;
+  private readonly signedReads = new SignedReadCache(
+    (keys) => this.signBatch(keys),
+    unavailable,
+  );
   constructor(config: ConfigService) {
     this.base = config.get<string>('SUPABASE_URL', '');
     this.bucket = config.get<string>('SUPABASE_MEDIA_BUCKET', 'latlai-media');
@@ -38,6 +44,15 @@ export class MediaStorage {
       );
   }
   async check() {
+    if (!this.client) throw unavailable();
+    // Share only the currently running check, not a cached configuration result.
+    // A later request still fails closed if the bucket changes or is unavailable.
+    this.bucketCheck ??= this.checkBucket().finally(() => {
+      this.bucketCheck = undefined;
+    });
+    return this.bucketCheck;
+  }
+  private async checkBucket() {
     if (!this.client) throw unavailable();
     const { data, error } = await this.client.getBucket(this.bucket);
     // Fail closed if someone accidentally publishes the bucket or removes the upload bound.
@@ -84,18 +99,39 @@ export class MediaStorage {
   }
   async signedRead(key: string) {
     if (!this.client) throw unavailable();
+    return this.signedReads.read(key);
+  }
+  private async signBatch(keys: string[]): Promise<Map<string, SignedRead>> {
+    if (!this.client) throw unavailable();
+    const issuedAt = Date.now();
     const { data, error } = await this.client
       .from(this.bucket)
-      .createSignedUrl(key, 120);
+      .createSignedUrls(keys, 120);
     if (error || !data) throw unavailable();
-    return {
-      url: data.signedUrl,
-      expiresAt: new Date(Date.now() + 120_000).toISOString(),
-    };
+    const result = new Map<string, SignedRead>();
+    for (const entry of data) {
+      if (
+        !entry.path ||
+        entry.error ||
+        !entry.signedUrl ||
+        !keys.includes(entry.path)
+      )
+        continue;
+      if (result.has(entry.path)) throw unavailable();
+      result.set(entry.path, {
+        url: entry.signedUrl,
+        expiresAt: new Date(issuedAt + 120_000).toISOString(),
+      });
+    }
+    return result;
   }
   async remove(keys: string[]) {
     if (!this.client) throw unavailable();
     const { error } = await this.client.from(this.bucket).remove(keys);
     if (error) throw unavailable();
+    this.signedReads.clear();
+  }
+  onModuleDestroy() {
+    this.signedReads.close();
   }
 }

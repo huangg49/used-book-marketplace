@@ -1,5 +1,10 @@
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import {
+  StyleSheet,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "../../core/api/session-client";
@@ -13,7 +18,6 @@ import {
   StatePanel,
   presentError,
   space,
-  stitchTokens,
 } from "../../core/ui";
 import { publicListing } from "./contracts";
 import {
@@ -24,6 +28,9 @@ import {
   BookInspectionReport,
   BookBottomBar,
 } from "./book-detail-components";
+import { BuyNowModal } from "../orders/buy-now-modal";
+import { ordersPageSchema } from "../orders/contracts";
+import { startPurchaseConversation } from "../conversations/purchase-conversation-service";
 
 export function BookScreen({ id }: { id: string }) {
   const { client, state } = useSession();
@@ -31,11 +38,16 @@ export function BookScreen({ id }: { id: string }) {
 
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [shownRevision, setShownRevision] = useState<string>();
+  const [isScrolled, setIsScrolled] = useState(false);
 
   // Interactive dialog states
-  const [chatDialogVisible, setChatDialogVisible] = useState(false);
   const [buyDialogVisible, setBuyDialogVisible] = useState(false);
   const [exchangeDialogVisible, setExchangeDialogVisible] = useState(false);
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = event.nativeEvent.contentOffset.y;
+    setIsScrolled(y > 60);
+  };
 
   const isValidUuid =
     /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id);
@@ -51,11 +63,27 @@ export function BookScreen({ id }: { id: string }) {
     refetchInterval: active ? 30_000 : false,
   });
 
+  // Query my orders to check if user has an active unpaid order for this listing
+  const myOrdersQuery = useQuery({
+    queryKey: ["my-orders"],
+    queryFn: () => client.request("/me/orders?limit=20", ordersPageSchema),
+    enabled: active && state.status === "authenticated",
+    staleTime: 5_000,
+  });
+
+  const activeOrder = myOrdersQuery.data?.items?.find(
+    (order) =>
+      order.listingId === id &&
+      order.role === "Buyer" &&
+      order.state === "AwaitingPayment",
+  );
+
   // Reset selected photo when revision changes
   if (shownRevision !== listingQuery.data?.revisionId) {
     setShownRevision(listingQuery.data?.revisionId);
     setSelectedPhotoIndex(0);
   }
+
 
   const isNotFound =
     !isValidUuid ||
@@ -65,7 +93,10 @@ export function BookScreen({ id }: { id: string }) {
   const isOwner =
     state.status === "authenticated" && item?.seller?.id === state.user?.id;
 
-  const handleOpenChat = () => {
+  const [chatOpening, setChatOpening] = useState(false);
+  const [chatError, setChatError] = useState<string>();
+
+  const handleOpenChat = async () => {
     if (state.status !== "authenticated") {
       router.push({
         pathname: "/account",
@@ -73,7 +104,29 @@ export function BookScreen({ id }: { id: string }) {
       });
       return;
     }
-    setChatDialogVisible(true);
+    if (!item || chatOpening) return;
+    setChatOpening(true);
+    setChatError(undefined);
+    try {
+      const intent = item.mode === "Exchange" ? "Exchange" : "Negotiation";
+      const receipt = await startPurchaseConversation(
+        client,
+        id,
+        item.version,
+        crypto.randomUUID(),
+        intent,
+      );
+      router.push({
+        pathname: "/conversation",
+        params: { id: receipt.entityId },
+      });
+    } catch (e: any) {
+      setChatError(
+        e?.message ?? "Chưa mở được cuộc trò chuyện. Vui lòng thử lại sau.",
+      );
+    } finally {
+      setChatOpening(false);
+    }
   };
 
   const handleOpenBuy = () => {
@@ -95,7 +148,10 @@ export function BookScreen({ id }: { id: string }) {
       });
       return;
     }
-    setExchangeDialogVisible(true);
+    router.push({
+      pathname: "/exchange-compose",
+      params: { book: id },
+    });
   };
 
   if (isNotFound) {
@@ -115,11 +171,14 @@ export function BookScreen({ id }: { id: string }) {
 
   return (
     <Screen
-      appearance="browse"
+      appearance="detail"
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
       header={
         <BookDetailHeader
           listingId={id}
           bookTitle={item?.book?.title ?? "Chi tiết sách"}
+          isScrolled={isScrolled}
         />
       }
       footer={
@@ -130,16 +189,21 @@ export function BookScreen({ id }: { id: string }) {
             onExchangePress={handleOpenExchange}
             onBuyPress={handleOpenBuy}
             isOwner={isOwner}
+            hasActiveOrder={Boolean(activeOrder)}
+            activeOrderState={activeOrder?.state}
           />
         ) : undefined
       }
+
     >
       {listingQuery.isPending && (
-        <StatePanel loading title="Đang mở thông tin ấn bản sách…" />
+        <View style={{ paddingTop: 100 }}>
+          <StatePanel loading title="Đang mở thông tin ấn bản sách…" />
+        </View>
       )}
 
       {listingQuery.error && (
-        <View style={styles.errorContainer}>
+        <View style={[styles.errorContainer, { paddingTop: 90 }]}>
           <Notice tone="error">
             {item ? "Thông tin dưới đây chưa được cập nhật mới nhất. " : ""}
             {presentError(listingQuery.error).message}
@@ -154,12 +218,8 @@ export function BookScreen({ id }: { id: string }) {
       )}
 
       {item && (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {/* 1. Interactive Book Gallery */}
+        <View style={{ width: "100%", paddingBottom: space.section }}>
+          {/* 1. Full-bleed Edge-to-Edge Book Hero Gallery */}
           <BookGallerySection
             item={item}
             selectedIndex={selectedPhotoIndex}
@@ -167,64 +227,73 @@ export function BookScreen({ id }: { id: string }) {
             active={!listingQuery.isError}
           />
 
-          {/* 2. Book Title, Authors & Pricing */}
-          <BookOverviewSection item={item} />
+          {/* 2. Framed Inset Cards Container */}
+          <View style={styles.framedContainer}>
+            {/* Book Title, Authors & Unified Pricing Module */}
+            <BookOverviewSection item={item} />
 
-          {/* 3. Verified Seller Card */}
-          <BookSellerCard
-            sellerName={item.seller.displayName}
-            sellerId={item.seller.id}
-          />
+            {/* Condition Bento & Catalog Metadata */}
+            <BookInspectionReport item={item} />
 
-          {/* 5. Condition Bento & Catalog Metadata */}
-          <BookInspectionReport item={item} />
-        </ScrollView>
+            {/* Verified Seller Card & TP.HCM Delivery */}
+            <BookSellerCard
+              sellerName={item.seller.displayName}
+              sellerId={item.seller.id}
+            />
+          </View>
+        </View>
       )}
 
-      {/* Dialog: Mở chat với người bán */}
+      {/* Dialog: Báo lỗi mở chat */}
       <ConfirmDialog
-        visible={chatDialogVisible}
-        title="Trò chuyện cùng người bán?"
-        message="Mở hội thoại để trao đổi tình trạng sách hoặc phương thức giao nhận. Chat không tự động giữ sách cho đến khi hai bên chốt đơn."
+        visible={Boolean(chatError)}
+        title="Không thể mở cuộc trò chuyện"
+        message={chatError ?? ""}
         confirmLabel="Đã hiểu"
-        onCancel={() => setChatDialogVisible(false)}
-        onConfirm={() => setChatDialogVisible(false)}
+        onCancel={() => setChatError(undefined)}
+        onConfirm={() => setChatError(undefined)}
       />
 
-      {/* Dialog: Xác nhận Mua ngay */}
-      <ConfirmDialog
+      {/* Modal: Mua ngay / Xem đơn thanh toán bản sách */}
+      <BuyNowModal
         visible={buyDialogVisible}
-        title="Đặt mua bản sách này?"
-        message={`Bạn đang chọn mua "${item?.book?.title}". Đơn hàng sẽ áp dụng thanh toán bảo chứng cọc Lật Lại (DirectDelivery TP.HCM / BD / VT).`}
-        confirmLabel="Tiếp tục mua"
-        onCancel={() => setBuyDialogVisible(false)}
-        onConfirm={() => {
+        listing={item}
+        initialOrderId={activeOrder?.id}
+        onClose={() => {
           setBuyDialogVisible(false);
+          void listingQuery.refetch();
+          void myOrdersQuery.refetch();
+        }}
+        onSuccess={() => {
+          void listingQuery.refetch();
+          void myOrdersQuery.refetch();
         }}
       />
+
 
       {/* Dialog: Đổi sách */}
       <ConfirmDialog
         visible={exchangeDialogVisible}
         title="Đề nghị đổi sách"
         message={`Gửi đề nghị trao đổi sách với ${item?.seller?.displayName}. Bạn có thể chọn bản sách từ kệ sách cá nhân của mình để so khớp giá trị.`}
-        confirmLabel="Xác nhận"
+        confirmLabel="Tiếp tục chọn sách"
         onCancel={() => setExchangeDialogVisible(false)}
-        onConfirm={() => setExchangeDialogVisible(false)}
+        onConfirm={() => {
+          setExchangeDialogVisible(false);
+          router.push({
+            pathname: "/exchange-compose",
+            params: { book: id },
+          });
+        }}
       />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flex: 1,
-    backgroundColor: stitchTokens.creamBg,
-  },
-  scrollContent: {
+  framedContainer: {
     paddingHorizontal: space.lg,
     paddingTop: space.sm,
-    paddingBottom: space.section,
     gap: space.md,
   },
   errorContainer: {

@@ -1,11 +1,13 @@
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { Icon, formatVnd, stitchTokens } from "../../../core/ui";
+import { conditions } from "../../shelf/contracts";
 import { formatRemaining } from "../auctions-model";
-import type { ExtendedAuctionItem } from "../auctions-data";
+import type { PublicAuctionSummary } from "../contracts";
+import { AuctionCover } from "./auction-cover";
 
 export interface AuctionCardProps {
-  readonly item: ExtendedAuctionItem;
+  readonly item: PublicAuctionSummary;
   readonly remainingMs: number;
   readonly isSaved: boolean;
   readonly onToggleSave: () => void;
@@ -22,6 +24,7 @@ export function AuctionCard({
   onQuickBid,
 }: AuctionCardProps) {
   const price = item.currentPrice ?? item.startPrice;
+  const authors = item.book?.authors.join(", ");
 
   return (
     <View style={styles.gridCell}>
@@ -33,17 +36,11 @@ export function AuctionCard({
       >
         {/* Cover Frame with Badges */}
         <View style={styles.cardCoverFrame}>
-          {item.coverUrl ? (
-            <Image
-              source={{ uri: item.coverUrl }}
-              style={styles.cardCoverImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.cardCoverPlaceholder}>
-              <Icon name="book" size={24} color={stitchTokens.wine} />
-            </View>
-          )}
+          <AuctionCover
+            auctionId={item.id}
+            mediaId={item.book?.photos[0]?.id}
+            label={item.title}
+          />
 
           {/* Live Timer Badge */}
           <View style={styles.cardTimerBadge}>
@@ -72,11 +69,13 @@ export function AuctionCard({
           </Pressable>
 
           {/* Condition Pill */}
-          <View style={styles.cardConditionTag}>
-            <AppText kind="small" style={styles.cardConditionText}>
-              {item.conditionTag ?? "Ấn bản quý"}
-            </AppText>
-          </View>
+          {item.book && (
+            <View style={styles.cardConditionTag}>
+              <AppText kind="small" style={styles.cardConditionText}>
+                {conditions[item.book.condition]}
+              </AppText>
+            </View>
+          )}
         </View>
 
         {/* Card Body */}
@@ -86,7 +85,7 @@ export function AuctionCard({
               {item.title}
             </AppText>
             <AppText kind="small" style={styles.cardAuthor} numberOfLines={1}>
-              {item.author ?? item.pointName}
+              {authors || item.pointName}
             </AppText>
           </View>
 
@@ -99,10 +98,10 @@ export function AuctionCard({
               }}
             >
               <AppText kind="small" style={styles.bidCountLabel}>
-                Đang trả:
+                Người trả giá:
               </AppText>
               <AppText kind="small" style={styles.bidCountValue}>
-                {item.bidderCount} lượt
+                {item.bidderCount}
               </AppText>
             </View>
 
@@ -123,7 +122,7 @@ export function AuctionCard({
                 </>
               ) : (
                 <>
-                  Giá sàn:{" "}
+                  Khởi điểm:{" "}
                   <AppText
                     kind="bold"
                     style={{ fontSize: 11, color: stitchTokens.subtleGray }}
@@ -181,16 +180,6 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.parchment,
     position: "relative",
     overflow: "hidden",
-  },
-  cardCoverImage: {
-    width: "100%",
-    height: "100%",
-  },
-  cardCoverPlaceholder: {
-    width: "100%",
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
   },
   cardTimerBadge: {
     position: "absolute",

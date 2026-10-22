@@ -91,7 +91,7 @@ Exchange còn mở, phải hủy đúng luồng trước khi chuyển hình th�
 tục sau OrderCreated, không mở quyền mới cho LOCKED. Giữ lịch sử cũ và đọc chung
 các message source đã liên kết, không copy message hoặc tạo reservation từ chat.
 
-[ADR0042](../adr/0042-order-conversation-workspace.md) đưa Xem đơn vào cùng
+[ADR0045](../adr/0045-order-conversation-workspace.md) đưa Xem đơn vào cùng
 workspace. Chỉ tái sử dụng hội thoại đã gắn đúng Order; Mua ngay/Order lịch sử
 chưa có link tạo phòng OrderCreated riêng dưới khóa Order và command executor.
 Không ghép theo listing/đối tác, không sao chép địa chỉ quote vào phòng mới,

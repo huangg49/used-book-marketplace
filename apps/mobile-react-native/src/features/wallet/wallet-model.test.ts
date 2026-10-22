@@ -10,9 +10,12 @@ import {
 } from "./contracts";
 import {
   accessDenied,
+  createVNPayTopup,
   historyOptions,
+  queryVNPayTopup,
   signedAmount,
   summaryOptions,
+  topupsOptions,
 } from "./wallet-model";
 
 const ownerA = "00000000-0000-4000-8000-000000000001";
@@ -260,5 +263,61 @@ describe("private wallet queries", () => {
       .catch((error: unknown) => error);
     expect(accessDenied(failure)).toBe(true);
     expect(accessDenied(new ApiError(0, "NETWORK", "Offline"))).toBe(false);
+  });
+  it("creates a vnpay topup intent and queries its status", async () => {
+    const topupId = "00000000-0000-4000-8000-000000000010";
+    const calls: { url: string; method: string }[] = [];
+    const client = session(async (url, init) => {
+      calls.push({
+        url,
+        method: init.method ?? "GET",
+      });
+      if (url.endsWith("/me/topups/vnpay")) {
+        return json({
+          entityId: topupId,
+          paymentUrl: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?test=1",
+          expiresAt: "2026-10-19T22:30:00.000Z",
+        });
+      }
+      if (url.endsWith(`/me/topups/${topupId}/vnpay-query`)) {
+        return json({
+          ...demo,
+          id: topupId,
+          version: 1,
+          amount: 100000,
+          state: "Succeeded",
+          credited: true,
+          journalId: journalA,
+          createdAt: "2026-10-19T22:20:00.000Z",
+          updatedAt: "2026-10-19T22:25:00.000Z",
+          expiresAt: "2026-10-19T22:30:00.000Z",
+          serverTime: "2026-10-19T22:25:00.000Z",
+        });
+      }
+      return json({});
+    });
+
+    const receipt = await createVNPayTopup(client, 100000, "idem-key-1");
+    expect(receipt.entityId).toBe(topupId);
+    expect(calls[0]?.url).toBe("http://wallet.test/api/v1/me/topups/vnpay");
+    expect(calls[0]?.method).toBe("POST");
+
+    const status = await queryVNPayTopup(client, topupId);
+    expect(status.state).toBe("Succeeded");
+    expect(status.credited).toBe(true);
+    expect(calls[1]?.url).toBe(
+      `http://wallet.test/api/v1/me/topups/${topupId}/vnpay-query`,
+    );
+  });
+  it("applies typeFilter to historyOptions when provided", () => {
+    const client = session(async () => json({ items: [], nextCursor: null }));
+    const optsAll = historyOptions(client, ownerA);
+    expect(optsAll.queryKey).toEqual(["wallet", ownerA, "history", "all"]);
+
+    const optsTopup = historyOptions(client, ownerA, "Topup");
+    expect(optsTopup.queryKey).toEqual(["wallet", ownerA, "history", "Topup"]);
+
+    const optsTopups = topupsOptions(client, ownerA);
+    expect(optsTopups.queryKey).toEqual(["wallet", ownerA, "topups"]);
   });
 });

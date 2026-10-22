@@ -33,12 +33,15 @@ import { HomeCategoryTabs } from "./home-components/home-category-tabs";
 import { HomeVouchersModal } from "./home-components/home-vouchers-modal";
 import { HomeInspectionModal } from "./home-components/home-inspection-modal";
 import { HomeNotificationsModal } from "./home-components/home-notifications-modal";
-import { HomeCartModal } from "./home-components/home-cart-modal";
 import { FALLBACK_AUCTIONS, type LiveAuctionItem } from "./home-mock-data";
 import { usePublicAuctions } from "../auctions/auctions-model";
+import { useNotifications } from "../notifications/notifications-model";
 
 export function ShelfScreen() {
-  const { client } = useSession();
+  const { client, state } = useSession();
+  const isAuthenticated = state.status === "authenticated";
+  const notifQuery = useNotifications(client, isAuthenticated);
+  const notificationCount = notifQuery.data?.unreadCount ?? 0;
   const active = useForeground();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -46,7 +49,6 @@ export function ShelfScreen() {
   const [vouchersOpen, setVouchersOpen] = useState(false);
   const [inspectionOpen, setInspectionOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
   const [error, setError] = useState<string>();
   const [cursors, setCursors] = useState<string[]>([""]);
   const scroll = useRef<ScrollView>(null);
@@ -84,8 +86,8 @@ export function ShelfScreen() {
         publicPage,
       ),
     enabled: active,
-    staleTime: 0,
-    gcTime: 120_000,
+    staleTime: 30_000,
+    gcTime: 300_000,
     refetchInterval: active ? 30_000 : false,
     retry: false,
   });
@@ -109,10 +111,6 @@ export function ShelfScreen() {
     Number(!!(applied.minExchangeValue || applied.maxExchangeValue));
   const hasCriteria = !!applied.q || filterCount > 0;
 
-  const handleOpenBook = (id: string) => {
-    router.push({ pathname: "./book", params: { id } });
-  };
-
   const handleOpenAuction = (id: string) => {
     router.push({ pathname: "./auction", params: { id } });
   };
@@ -129,9 +127,8 @@ export function ShelfScreen() {
           onSubmitSearch={() => apply({ ...applied, q: search })}
           onCameraPress={() => setInspectionOpen(true)}
           onOpenNotifications={() => setNotificationsOpen(true)}
-          onOpenCart={() => setCartOpen(true)}
-          notificationCount={3}
-          cartCount={0}
+          onMessagesPress={() => router.push("/chat-inbox")}
+          notificationCount={notificationCount}
         />
       }
       footer={<MemberNavigation current="/" />}
@@ -323,13 +320,6 @@ export function ShelfScreen() {
       <HomeNotificationsModal
         visible={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}
-      />
-
-      {/* Interactive Cart / Saved Books Modal */}
-      <HomeCartModal
-        visible={cartOpen}
-        onClose={() => setCartOpen(false)}
-        onOpenBook={handleOpenBook}
       />
     </Screen>
   );

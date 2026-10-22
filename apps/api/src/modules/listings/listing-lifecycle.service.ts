@@ -31,6 +31,7 @@ import {
 import { attachPhotos, lowerIds } from './listing-drafts.service.js';
 import { PriceAssistService } from '../price-assist/price-assist.service.js';
 import { requireListingSlot } from './listing-quota.js';
+import { requireChannelContent } from './listing-channel.js';
 
 @Injectable()
 export class ListingLifecycleService {
@@ -120,6 +121,7 @@ export class ListingLifecycleService {
       },
       mutate: async (tx, actor, before) => {
         requireActive(actor);
+        requireChannelContent(before.channel, body.content);
         const origin = await this.fulfillment.prepare(
           tx,
           actor._id,

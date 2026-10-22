@@ -1,16 +1,14 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
 import { BookOpen, ChevronRight, MapPin, Tag, UserRound } from "lucide-react";
 import { WishlistButton } from "./WishlistButton";
 import { CardFitText } from "./CardFitText";
 import { ROUTES, formatVnd } from "../lib/routes";
-import {
-  getPublicPhoto,
-  type PublicListing,
-} from "../services/public-listings";
+import { type PublicListing } from "../services/public-listings";
 import styles from "./BookCard.module.css";
 import { conditions } from "../lib/listing-labels";
+import { usePublicListingPhoto } from "../hooks/usePublicListingPhoto";
+import { useNearViewport } from "../hooks/useNearViewport";
 
 export function ListingPhoto({
   book,
@@ -25,47 +23,51 @@ export function ListingPhoto({
 }) {
   const photoId = book.photos[photoIndex]?.id;
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const photo = useQuery({
-    queryKey: ["public-listing-photo", book.id, book.revisionId, photoId],
-    queryFn: () => getPublicPhoto(book.id, photoId!),
-    enabled: !!photoId,
-    staleTime: 0,
-    retry: false,
-  });
-  const url = photo.data?.url;
+  const { ref, active } = useNearViewport(eager);
+  const photo = usePublicListingPhoto(
+    book.id,
+    book.revisionId,
+    photoId,
+    active,
+  );
+  const url = photo.url;
   const failed = photo.isError || (!!url && failedUrl === url);
-  if (url && !failed)
-    return (
-      <img
-        src={url}
-        alt={alt || "Bìa sách " + book.book.title}
-        loading={eager ? "eager" : "lazy"}
-        onError={() => setFailedUrl(url)}
-        className={styles.image}
-      />
-    );
   return (
-    <div className={styles.fallback}>
-      <BookOpen size={30} aria-hidden="true" />
-      <span>
-        {failed
-          ? "Chưa tải được ảnh"
-          : photoId
-            ? "Đang tải ảnh…"
-            : "Chưa có ảnh bìa"}
-      </span>
-      {failed && (
-        <button
-          type="button"
-          disabled={photo.isFetching}
-          onClick={() => {
-            setFailedUrl(null);
-            void photo.refetch();
-          }}
-          aria-label={"Tải lại ảnh " + book.book.title}
-        >
-          Tải lại ảnh
-        </button>
+    <div ref={ref} className={styles.photoFrame}>
+      {url && !failed ? (
+        <img
+          src={url}
+          alt={alt || "Bìa sách " + book.book.title}
+          loading={eager ? "eager" : "lazy"}
+          fetchPriority={eager ? "high" : "auto"}
+          decoding="async"
+          onError={() => setFailedUrl(url)}
+          className={styles.image}
+        />
+      ) : (
+        <div className={styles.fallback}>
+          <BookOpen size={30} aria-hidden="true" />
+          <span>
+            {failed
+              ? "Chưa tải được ảnh"
+              : photoId
+                ? "Đang tải ảnh…"
+                : "Chưa có ảnh bìa"}
+          </span>
+          {failed && (
+            <button
+              type="button"
+              disabled={photo.isFetching}
+              onClick={() => {
+                setFailedUrl(null);
+                void photo.refetch();
+              }}
+              aria-label={"Tải lại ảnh " + book.book.title}
+            >
+              Tải lại ảnh
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

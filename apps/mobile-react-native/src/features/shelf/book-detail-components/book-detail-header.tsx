@@ -1,6 +1,7 @@
 import React from "react";
 import { Share, View, Pressable, StyleSheet } from "react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../../core/session/session-provider";
 import { Icon, AppText, stitchTokens, space } from "../../../core/ui";
 import {
@@ -13,9 +14,15 @@ import { useQuery } from "@tanstack/react-query";
 interface BookDetailHeaderProps {
   listingId: string;
   bookTitle: string;
+  isScrolled?: boolean;
 }
 
-export function BookDetailHeader({ listingId, bookTitle }: BookDetailHeaderProps) {
+export function BookDetailHeader({
+  listingId,
+  bookTitle,
+  isScrolled = false,
+}: BookDetailHeaderProps) {
+  const insets = useSafeAreaInsets();
   const { client, state } = useSession();
   const isAuthenticated = state.status === "authenticated";
 
@@ -75,29 +82,81 @@ export function BookDetailHeader({ listingId, bookTitle }: BookDetailHeaderProps
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          paddingTop: insets.top,
+          height: 52 + insets.top,
+          backgroundColor: isScrolled ? stitchTokens.wineDark : "transparent",
+          borderBottomWidth: isScrolled ? 1 : 0,
+          borderBottomColor: stitchTokens.peachBorderAlpha40,
+        },
+      ]}
+    >
+      {/* Left: Back to Shelf */}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Về kệ sách"
-        style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.backButton,
+          !isScrolled && styles.backButtonFloating,
+          pressed && styles.pressed,
+        ]}
         onPress={handleBack}
       >
-        <Icon name="back" size={20} color={stitchTokens.wineDark} />
-        <AppText style={styles.backLabel}>Về kệ sách</AppText>
+        <Icon
+          name="back"
+          size={18}
+          color={isScrolled ? stitchTokens.white : stitchTokens.wineDark}
+        />
+        <AppText
+          style={[
+            styles.backLabel,
+            { color: isScrolled ? stitchTokens.white : stitchTokens.wineDark },
+          ]}
+        >
+          Về kệ sách
+        </AppText>
       </Pressable>
 
+      {/* Center: Book Title appears when scrolled down */}
+      {isScrolled ? (
+        <View style={styles.titleCenter}>
+          <AppText style={styles.navBookTitle} numberOfLines={1}>
+            {bookTitle}
+          </AppText>
+        </View>
+      ) : (
+        <View style={{ flex: 1 }} />
+      )}
+
+      {/* Right: Actions (Bookmark & Share) */}
       <View style={styles.actions}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={isSaved ? "Bỏ lưu sách" : "Lưu vào danh sách yêu thích"}
-          style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.iconButton,
+            !isScrolled && styles.iconButtonFloating,
+            isScrolled && styles.iconButtonScrolled,
+            pressed && styles.pressed,
+          ]}
           onPress={handleToggleWishlist}
           disabled={isBusy}
         >
           <Icon
             name="bookmark"
-            size={20}
-            color={isSaved ? stitchTokens.wineDark : stitchTokens.roseBrown}
+            size={18}
+            color={
+              isScrolled
+                ? isSaved
+                  ? stitchTokens.amberBg
+                  : stitchTokens.white
+                : isSaved
+                  ? stitchTokens.wineDark
+                  : stitchTokens.wineMid
+            }
             filled={isSaved}
           />
         </Pressable>
@@ -105,10 +164,19 @@ export function BookDetailHeader({ listingId, bookTitle }: BookDetailHeaderProps
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Chia sẻ cuốn sách này"
-          style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.iconButton,
+            !isScrolled && styles.iconButtonFloating,
+            isScrolled && styles.iconButtonScrolled,
+            pressed && styles.pressed,
+          ]}
           onPress={handleShare}
         >
-          <Icon name="explore" size={21} color={stitchTokens.roseBrown} />
+          <Icon
+            name="explore"
+            size={19}
+            color={isScrolled ? stitchTokens.white : stitchTokens.wineMid}
+          />
         </Pressable>
       </View>
     </View>
@@ -117,27 +185,50 @@ export function BookDetailHeader({ listingId, bookTitle }: BookDetailHeaderProps
 
 const styles = StyleSheet.create({
   container: {
-    height: 54,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
     paddingHorizontal: space.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: stitchTokens.roseWarmBlur,
-    borderBottomWidth: 1,
-    borderBottomColor: stitchTokens.cardBorder,
   },
   backButton: {
+    minHeight: 48,
+    minWidth: 48,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+  },
+  backButtonFloating: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorderAlpha40,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
   },
   backLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  titleCenter: {
+    flex: 1,
+    paddingHorizontal: 8,
+    alignItems: "center",
+  },
+  navBookTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: stitchTokens.wineDark,
+    color: stitchTokens.white,
+    textAlign: "center",
   },
   actions: {
     flexDirection: "row",
@@ -145,16 +236,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   iconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: stitchTokens.whiteSurface,
-    borderWidth: 1,
-    borderColor: stitchTokens.cardBorder,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
   },
+  iconButtonFloating: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorderAlpha40,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  iconButtonScrolled: {
+    backgroundColor: stitchTokens.whiteAlpha14,
+  },
   pressed: {
-    opacity: 0.7,
+    opacity: 0.75,
   },
 });

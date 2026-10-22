@@ -9,6 +9,7 @@ import {
 import { titleKey } from '../migrations/0003-catalog-title-key.js';
 import { PLATFORM_COMMISSION_ACCOUNT_ID } from '../migrations/auction-constants.js';
 import { LISTING_FEE_CLEARING_ID } from '../migrations/0022-vnpay-wallet-listing-fees.js';
+import { bookCirculationRegions } from '../migrations/0030-book-circulation-regions.js';
 import {
   LEDGER_SEQUENCE_COUNTER,
   OPENING_JOURNAL_ID,
@@ -779,6 +780,8 @@ export function toDocuments(snapshot: Snapshot): Record<string, Document[]> {
   );
   for (const book of out.catalog_books)
     book.titleKey = titleKey(revisions.get(book.currentRevisionId) ?? '');
+  // PostgreSQL had marketplace listings only (ADR 0042).
+  for (const listing of out.listings) listing.channel = 'Marketplace';
   for (const receipt of out.mutation_receipts)
     receipt.principal = receipt.actorId
       ? `user:${receipt.actorId}`
@@ -796,7 +799,8 @@ export async function importPostgres(
   log(`Read snapshot: ${snapshot.migrations} PostgreSQL migrations verified.`);
   const docs = toDocuments(snapshot);
   const mismatches: string[] = [];
-  // Target: migrated MongoDB with only migration 0002 reference data.
+  let importedLocalityIds: Set<string> | undefined;
+  // Target: freshly migrated MongoDB with only known reference/system data.
   for (const spec of TABLES) {
     const existing = await db.collection(spec.collection).countDocuments();
     if (
@@ -812,8 +816,20 @@ export async function importPostgres(
   }
   for (const name of REFERENCE) {
     const target = await db.collection(name).find().toArray();
-    if (contentHash(target) !== contentHash(docs[name]))
-      throw new Error(`Reference data ${name} differs between the databases.`);
+    if (contentHash(target) === contentHash(docs[name])) continue;
+    // ADR 0039 preserves locality keys but renames A/B and adds Mongo-native C.
+    // Accept only this exact known upgrade, never arbitrary source/target drift.
+    if (
+      name === 'service_localities' &&
+      contentHash(docs[name]) === contentHash(referenceData.service_localities) &&
+      contentHash(target) === contentHash(bookCirculationRegions)
+    ) {
+      const sourceIds = new Set(docs[name].map((row) => String(row._id)));
+      importedLocalityIds = sourceIds;
+      docs[name] = bookCirculationRegions.filter((row) => sourceIds.has(row._id));
+      continue;
+    }
+    throw new Error(`Reference data ${name} differs between the databases.`);
   }
   // Replace migration 0002's simulator ledger with the PostgreSQL original.
   await db
@@ -855,16 +871,18 @@ export async function importPostgres(
       );
   const collections: ImportReport['collections'] = {};
   for (const spec of TABLES) {
-    // These exact reference accounts are MongoDB-native (0012/0022), with no
-    // PostgreSQL row. Keep them while comparing every imported account/hash.
+    // Exact Mongo-native references (locality C from 0030 and accounts from
+    // 0012/0022) have no PostgreSQL row. Keep them outside source count/hash.
     const stored = (
       await db.collection(spec.collection).find().toArray()
     ).filter(
       (d) =>
-        spec.collection !== 'wallet_accounts' ||
+        (spec.collection !== 'service_localities' ||
+          !importedLocalityIds || importedLocalityIds.has(String(d._id))) &&
+        (spec.collection !== 'wallet_accounts' ||
         ![PLATFORM_COMMISSION_ACCOUNT_ID, LISTING_FEE_CLEARING_ID].includes(
           String(d._id),
-        ),
+        )),
     );
     const expected = contentHash(docs[spec.collection]);
     collections[spec.collection] = {

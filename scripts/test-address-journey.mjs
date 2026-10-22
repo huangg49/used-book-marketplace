@@ -4,7 +4,7 @@ export async function addressJourney(p, fixture, artifacts) {
   const click = (name) => p.getByRole("button", { name, exact: true }).click();
   const fill = (label, value) =>
     p.getByLabel(`${label} *`, { exact: true }).fill(value);
-  await click("Về tài khoản");
+  await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
   let readFailed = false;
   await p.route("**/api/v1/me/addresses", (route) => {
     if (route.request().method() === "GET" && !readFailed) {
@@ -31,7 +31,7 @@ export async function addressJourney(p, fixture, artifacts) {
     "Địa chỉ chi tiết",
     "Bàn tiếp nhận trong dữ liệu thử, không dùng để giao hàng thật",
   );
-  await click("Khu vực demo A — TP.HCM");
+  await click("TP.HCM");
   await p
     .getByText("Chọn khu vực phục vụ.", { exact: true })
     .waitFor({ state: "hidden" });
@@ -73,7 +73,7 @@ export async function addressJourney(p, fixture, artifacts) {
   await fill("Tên người nhận", "Bạn đọc thứ hai");
   await fill("Số điện thoại", "0900000001");
   await fill("Địa chỉ chi tiết", "Bàn thử nghiệm số hai");
-  await click("Khu vực demo B — TP.HCM");
+  await click("Bình Dương");
   await click("Lưu địa chỉ");
   await p.getByText("2/10 địa chỉ", { exact: true }).waitFor();
   await click("Đặt địa chỉ 2 làm mặc định");

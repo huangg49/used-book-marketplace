@@ -7,8 +7,8 @@
 
 - PostgreSQL chỉ được **đọc** (một snapshot `REPEATABLE READ READ ONLY`). Không reset,
   không sửa migration cũ, không đổi seed password, không xóa volume `postgres_data`.
-- Import vào một database MongoDB **mới đã migrate** (chỉ có dữ liệu tham chiếu của
-  migration 0002). Importer từ chối database đích có dữ liệu nghiệp vụ.
+- Import vào một database MongoDB **mới đã migrate**, chỉ có reference/tài khoản
+  hệ thống do migration tạo. Importer từ chối database đích có dữ liệu nghiệp vụ.
 - Không ghi kép. Trong cửa sổ cutover API dừng ghi (dừng API + worker), import, kiểm,
   rồi chỉ khởi động bản MongoDB.
 - Bằng chứng chỉ gồm số lượng, hash nội dung, kết quả kiểm toàn vẹn — không dữ liệu cá nhân.
@@ -49,6 +49,14 @@
   Vì vậy chỉ mở traffic ghi sau khi bước 5–7 đạt.
 
 ## Giới hạn đã biết
+
+- Tương thích địa danh ADR0039 (22/10/2026): nguồn F2h giữ nguyên hai locality
+  DEMO-A/B và nhãn cũ; đích đã migrate0030 giữ ba locality TP.HCM/Bình Dương/
+  Vũng Tàu. Importer chỉ chấp nhận đúng cặp reference snapshot đã biết, đối chiếu
+  A/B với nhãn đích và giữ DEMO-C là reference Mongo-native. Báo cáo count/hash
+  của bảng nguồn vẫn chỉ tính hai hàng tương ứng; nguồn PostgreSQL không bị ghi.
+  Mọi drift khác ở nguồn hoặc đích vẫn bị từ chối trước khi nhập dữ liệu nghiệp vụ.
+  Không sửa migration đã áp dụng hoặc bỏ kiểm tra reference để né lỗi.
 
 - Thời điểm micro giây bị cắt về mili giây; importer báo số lượng theo collection.
   Validator có thể từ chối một bản ghi nếu hai mốc chỉ khác nhau dưới 1 ms theo chiều

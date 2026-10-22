@@ -481,6 +481,7 @@ async function seed() {
       await c.listings.insertOne({
         _id: listingId,
         ownerId: userId,
+        channel: 'Marketplace',
         version: 1,
         moderation: 'Approved',
         visibility: 'Visible',

@@ -32,10 +32,7 @@ export class AuctionWorker {
     private readonly clock: AuctionClock,
   ) {}
   async tick() {
-    const wallNow = Date.now();
-    const blocked = [...this.backoff]
-      .filter(([, b]) => b.retryAt > wallNow)
-      .map(([id]) => id);
+    const blocked = this.blocked();
     const ready = { _id: { $nin: blocked } };
     const {
       holds,
@@ -45,6 +42,7 @@ export class AuctionWorker {
       decisions,
       collections,
       returns,
+      deliveries,
       settlements,
       now,
     } = await this.mongo.tx(async (tx) => {
@@ -141,6 +139,17 @@ export class AuctionWorker {
             { limit: 100, sort: { returnDeadline: 1, _id: 1 } },
           )
           .toArray(),
+        // ADR 0044: delivery Orders the carrier never reported in time.
+        deliveries: await tx.c.point_orders
+          .find(
+            {
+              ...ready,
+              state: 'InTransit',
+              deliveryDeadline: { $lte: now },
+            },
+            { limit: 100, sort: { deliveryDeadline: 1, _id: 1 } },
+          )
+          .toArray(),
         // Collected Orders whose inspection window passed without a claim.
         settlements: await tx.c.point_orders
           .find(
@@ -154,43 +163,7 @@ export class AuctionWorker {
           .toArray(),
       };
     });
-    let processed = 0,
-      skipped = 0,
-      failed = 0;
-    // Ids and error class/message only; never request bodies or user data.
-    const failures: { step: string; id: string; error: string }[] = [];
-    const attempt = async (
-      step: string,
-      id: string,
-      fn: () => Promise<unknown>,
-    ) => {
-      try {
-        await fn();
-        processed++;
-        this.backoff.delete(id);
-      } catch (e) {
-        if (e instanceof DomainError && e.getStatus() === 409) {
-          skipped++;
-          this.backoff.delete(id);
-          return;
-        }
-        failed++;
-        const delay = Math.min(
-          (this.backoff.get(id)?.delay ?? BACKOFF_BASE_MS / 2) * 2,
-          BACKOFF_MAX_MS,
-        );
-        this.backoff.set(id, { retryAt: Date.now() + delay, delay });
-        if (failures.length < MAX_REPORTED_FAILURES)
-          failures.push({
-            step,
-            id,
-            error:
-              e instanceof Error
-                ? `${e.name}: ${e.message}`.slice(0, 200)
-                : 'Unknown error',
-          });
-      }
-    };
+    const { attempt, result } = this.runner();
     for (const a of holds)
       await attempt('hold', a._id, () => this.bidding.hold(a._id));
     for (const a of endings)
@@ -203,7 +176,7 @@ export class AuctionWorker {
       await attempt('dropoffExpiry', i._id, () =>
         this.intakes.expireDropoff(i._id),
       );
-    for (const o of [...decisions, ...collections, ...returns])
+    for (const o of [...decisions, ...collections, ...returns, ...deliveries])
       await attempt('pointOrderDeadline', o._id, () =>
         this.collection.openResolution(o._id, o.version),
       );
@@ -216,13 +189,11 @@ export class AuctionWorker {
       ...decisions.map((o) => o.acceptanceDeadline!),
       ...collections.map((o) => o.collectionDeadline!),
       ...returns.map((o) => o.returnDeadline!),
+      ...deliveries.map((o) => o.deliveryDeadline!),
       ...settlements.map((o) => o.inspectionDeadline!),
     ].sort((x, y) => x.getTime() - y.getTime())[0];
     return {
-      processed,
-      skipped,
-      failed,
-      failures,
+      ...result,
       backedOff: blocked.length,
       onHold: await this.mongo.c.auctions.countDocuments({ state: 'OnHold' }),
       reclaimRequired: await this.mongo.c.auction_intakes.countDocuments({
@@ -235,5 +206,77 @@ export class AuctionWorker {
         ? Math.max(0, Math.round((now.getTime() - oldest.getTime()) / 1000))
         : 0,
     };
+  }
+
+  // ADR 0043: a Buy Now window lasts 60 s, so the worker process runs this
+  // close-only sweep every few seconds between full sweeps. It shares the
+  // backoff with tick(); close stays idempotent and rechecks endAt under the
+  // auction lock, so overlapping runs or several workers only skip (409).
+  async closeDue() {
+    const blocked = this.blocked();
+    const endings = await this.mongo.tx(async (tx) => {
+      const now = await this.clock.now(tx);
+      return tx.c.auctions
+        .find(
+          { _id: { $nin: blocked }, state: 'Active', endAt: { $lte: now } },
+          { limit: 100, sort: { endAt: 1, _id: 1 }, projection: { _id: 1 } },
+        )
+        .toArray();
+    });
+    const { attempt, result } = this.runner();
+    for (const a of endings)
+      await attempt('close', a._id, () => this.bidding.close(a._id));
+    return { ...result, backedOff: blocked.length };
+  }
+
+  private blocked() {
+    const wallNow = Date.now();
+    return [...this.backoff]
+      .filter(([, b]) => b.retryAt > wallNow)
+      .map(([id]) => id);
+  }
+  // A record that fails for another reason than a stale 409 is named in the
+  // result and retried with backoff.
+  private runner() {
+    const result = {
+      processed: 0,
+      skipped: 0,
+      failed: 0,
+      // Ids and error class/message only; never request bodies or user data.
+      failures: [] as { step: string; id: string; error: string }[],
+    };
+    const attempt = async (
+      step: string,
+      id: string,
+      fn: () => Promise<unknown>,
+    ) => {
+      try {
+        await fn();
+        result.processed++;
+        this.backoff.delete(id);
+      } catch (e) {
+        if (e instanceof DomainError && e.getStatus() === 409) {
+          result.skipped++;
+          this.backoff.delete(id);
+          return;
+        }
+        result.failed++;
+        const delay = Math.min(
+          (this.backoff.get(id)?.delay ?? BACKOFF_BASE_MS / 2) * 2,
+          BACKOFF_MAX_MS,
+        );
+        this.backoff.set(id, { retryAt: Date.now() + delay, delay });
+        if (result.failures.length < MAX_REPORTED_FAILURES)
+          result.failures.push({
+            step,
+            id,
+            error:
+              e instanceof Error
+                ? `${e.name}: ${e.message}`.slice(0, 200)
+                : 'Unknown error',
+          });
+      }
+    };
+    return { attempt, result };
   }
 }
