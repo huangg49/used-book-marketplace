@@ -1,70 +1,42 @@
-# Điểm lưu hiện tại — 20/10/2026
+# Điểm lưu hiện tại — 22/10/2026
 
-## Tối ưu tải listing, bước 2 backend — 20/10/2026
+## Tích hợp tối ưu listing và hỗ trợ demo — 22/10/2026
 
-- Nhánh `codex/listing-media-backend-performance`, base `8042f5b`. Gom ký URL
-  storage theo burst (10 ms, 50 key/lượt), bounded RAM cache URL giữ nguyên hạn
-  cấp; chỉ gộp check bucket đang chạy, không cache kết quả cấu hình bucket. Giữ
-  kiểm tra quyền/trạng thái trước và sau lấy URL. Không đổi API/schema/DB demo.
-- Public shelf gom metadata và version origin thành 2 query cùng snapshot, lọc
-  ID trước projection, giữ cursor order. [Báo cáo](LISTING_MEDIA_BACKEND_PERFORMANCE_2026_10_20.md).
-- Đo 20 bìa live Supabase: gọi provider cold 40 → 2, cấp đủ URL 1.406 → 985 ms;
-  warm 777 → 352 ms, chỉ 1 check không ký lại. Trang 20 listing trung vị 550 →
-  447 ms. Browser dev first cover 7.384 → 7.000 ms, chưa giải quyết hết cold load.
-- PASS API 176 unit/typecheck/build/lint (cảnh báo cũ), 179 E2E trên QA `_test`
-  (listing-review/media/packaging/auctions, gồm race thu hồi quyền trên cache-hit),
-  contract/routes. Build/runtime API + hai worker đã cập nhật; readiness 200,
-  browser live kệ → Detail → Back không xin lại URL còn hạn, không pageerror.
-  Không đổi client; native/remote CI NOT RUN. Chưa push/PR/merge, READINESS giữ
-  nguyên; chờ review bước 2 trước mở rộng sang bước 3.
-
-## Tối ưu tải listing, bước 1 — 20/10/2026
-
-- Nhánh `codex/listing-navigation-cache`, base `fe7d0d0`. Web dùng lại signed URL
-  theo hạn server (margin 5 giây), chung card/Detail/thumbnail; hoãn xin ảnh ngoài
-  vùng xem. Web Search/RN shelf fresh 30 giây; RN ảnh memory cache, query giữ 2
-  phút. Không đổi API/DB/bucket/quyền, Detail và giao dịch vẫn kiểm trạng thái mới.
-- Đo local một lượt: request ký ảnh mở kệ 20 → 10, quay Detail → kệ 18 → 0;
-  bìa khi quay lại 265 → 177 ms. Cold load ~8,1 giây chưa cải thiện; backend/
-  storage thuộc bước 2 chưa làm. [Báo cáo và cách kiểm](LISTING_LOAD_PERFORMANCE_2026_10_20.md).
-- PASS web typecheck/lint/build/157 unit, session-client 27 unit, browser fixture
-  desktop/mobile (expiry/pending/404/retry/fresh Detail), browser live đã xem ảnh.
-  RN lint/156 unit/Expo web export PASS; RN typecheck vẫn FAIL ở auctions/wallet
-  không sửa trong gói, native NOT RUN. Cảnh báo cũ ghi trong báo cáo. Chưa push/
-  PR/merge; READINESS giữ nguyên. Chờ chủ dự án review bước 1 trước bước 2.
-
-## Nhận biết người đăng khi demo Detail — 20/10/2026
-
-- Nhánh `codex/listing-seller-identity`, base `6708ddd`. Web đưa tên người đăng
-  từ cuối Detail lên ngay dưới tác giả, hiện nhãn Bạn khi là chủ bài. RN thêm
-  người đăng trong phần tổng quan dưới tác giả; giữ thông tin seller card hiện có.
-  Chỉ dùng seller.displayName từ public listing; không công khai email đăng nhập.
-- Kiểm tra dữ liệu demo phát hiện 120/140 tên kệ bị lặp số giữa các batch import.
-  Đã sao lưu local và sửa displayName theo đúng số trong email với transaction và
-  kiểm tra lockSeq; giữ nguyên mật khẩu/quyền/listing/tiền. Xem
-  [bảng tài khoản demo](DEMO_ACCOUNTS.md); tra cứu đầy đủ 146 chủ sách trong
-  `.tmp/demo-account-guide-20261020.md` riêng máy.
-- PASS web: typecheck/lint (6 cảnh báo cũ)/build (chunk warning)/156 unit;
-  browser live 1440 và 390 px, tên thật + tên dài fixture không tràn ngang,
-  không pageerror; đã xem ảnh. Impeccable detector không có finding.
-- RN: lint (2 cảnh báo cũ), 156 unit PASS; typecheck FAIL tại các file auctions
-  và wallet contracts không sửa trong gói (authors/photos kiểu {}, topup thiếu
-  Cancelled/expiresAt/serverTime). Chưa kiểm native hoặc Expo web cho phần RN.
-  Chưa push/PR/merge; READINESS giữ nguyên.
-
-## Bỏ giới hạn đăng nhập khi demo local — 20/10/2026
-
-- Nhánh `codex/local-demo-login-limit`, base `974a0a0`. Chủ dự án yêu cầu bỏ
-  login limit để đổi tài khoản demo. `LOGIN_RATE_LIMIT_DISABLED=true` chỉ bỏ
-  limiter scope login khi `NODE_ENV=development`; test/production và các scope
-  đăng ký/OTP/khôi phục vẫn giới hạn. Không đổi mật khẩu, quyền hay session contract.
-- Đã bật trong cấu hình riêng của máy và khởi động lại API demo, readiness 200.
-  8 yêu cầu sai mật khẩu trên runtime đều trả 401, không có 429. Không xóa counter
-  hay dữ liệu demo. Hướng dẫn bật/tắt ở ACCOUNT_AUTH; `.env.example` mặc định false.
-- PASS: 12 unit limiter, 9 auth E2E trên replica set QA riêng/database
-  `latlai_demo_login_limit_test` (gồm 8 login liên tiếp, sai mật khẩu, user disabled,
-  refresh race/replay); API typecheck/build/lint (11 cảnh báo có sẵn), contract check
-  và routes. Chưa push/PR/merge; gate READINESS giữ nguyên.
+- Chủ dự án yêu cầu push và merge 4 commit local; nhánh
+  `codex/listing-media-backend-performance`, đồng bộ `origin/main` tại `a67cb0b`.
+  [PR #61](https://github.com/huangg49/used-book-marketplace/pull/61).
+- Gói gồm: tùy chọn bỏ limiter login chỉ trong development (mặc định tắt), tên
+  người đăng cạnh tên sách trên web/RN, cache ảnh theo hạn gốc + lazy viewport
+  phía client, batch ký ảnh/bounded RAM cache + bulk metadata query phía API.
+  Giữ kiểm tra eligibility trước/sau URL, fresh Detail và snapshot/cursor.
+  Không đổi contract, schema/migration hoặc DB demo; không commit cấu hình riêng.
+- Bằng chứng đo trước/sau, phạm vi cache và giới hạn cold load ở
+  [bước 1](LISTING_LOAD_PERFORMANCE_2026_10_20.md),
+  [bước 2](LISTING_MEDIA_BACKEND_PERFORMANCE_2026_10_20.md).
+  Tra tài khoản theo [người đăng](DEMO_ACCOUNTS.md).
+- Sau đồng bộ main, sửa lint của chat/đổi sách RN bằng AppModal/AppTextInput và
+  token màu có sẵn; fixture VNPay bổ sung expiresAt/serverTime đúng contract.
+  Không thay endpoint/hành vi giao dịch của PR #60.
+- CI Mongo lỗi từ runner Ubuntu mới: MongoDB 8.0 từ chối kernel >=6.19
+  ([SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912)). Ghim 4 job dùng
+  Mongo về ubuntu-24.04 và thêm log chẩn đoán khi lỗi; không sửa image/DB local.
+  User Web CI chạy thêm browser regression cache ảnh.
+- Navbar có layer transform ổn định để viền không đổi rasterization khi WebGL
+  rèm bị ẩn/gỡ; giữ nguyên tiêu chí pixel <=1, thời lượng và cleanup motion.
+- PASS local trên Node 24.19.0/pnpm 11.19.0: API typecheck/lint/build/176 unit;
+  web typecheck/lint/build/157 unit; shared session 27 unit; RN typecheck/lint/
+  156 unit và Expo web export (CLI báo force-exit sau export thành công).
+  Contract/routes 176 operation/26 controller và docs check PASS.
+- PASS 188 E2E gồm auth/listing-review/media/packaging/auctions trên QA57017,
+  database riêng `latlai_integration_publish_test`, không đụng DB/bucket demo.
+  Các 500 fault-injection trong log là ca kiểm rollback, không phải suite fail.
+- Browser PASS: cache ảnh tại 1440/390 px (Detail/Back không ký lại, expiry/denial/
+  retry, Detail vẫn cập nhật trạng thái); auction stage giữ pixel/geometry navbar,
+  mobile/resize/Back/fallback/cleanup. Đã xem ảnh. Artifact mới giữ trong
+  `.tmp/integration-publish-20261022/`, không ghi đè evidence đã commit.
+- Đã push; kết quả CI và trạng thái tích hợp theo PR #61. Human review độc lập và
+  native Android/iOS acceptance NOT RUN; yêu cầu merge của chủ dự án không là
+  chứng nhận những gate này. READINESS giữ nguyên, không mở gói tối ưu bước 3.
 
 ## Hoàn thiện Trao đổi sách (Exchange): hiển thị sách khi cọc, ảnh bìa trực quan & hủy đơn hoàn cọc (FR-X11) — 20/10/2026
 
