@@ -946,7 +946,10 @@ compact desktop cover stage reuses the archival-desk artwork as decoration behin
 the real, contained listing photograph;14px cover/chip corners follow the owner's
 reference. A mint condition/mode chip sits at bottom left, availability at top
 left and a44px wishlist heart at top right. The title spans the width;
-author and actual coarse region share two equal columns below. A separate pale
+author and actual coarse region share two equal columns below. The location
+label is omitted visually: author and pin/location stay on one centered
+horizontal line, shrinking or ellipsizing within24px text slots with full tooltips.
+The location's accessible label remains. A separate pale
 shelf price panel labels sale/exchange amounts; the full-width wine “Xem sách”
 action is at least44px high. Compact padding remains10px. Main Home/Search keep
 four desktop columns, adaptive tablet columns and one phone column; mobile

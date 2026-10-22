@@ -92,14 +92,12 @@ export function HomeBookCard({
             </p>
             <p className={styles.location}>
               <MapPin size={18} aria-hidden="true" />
-              <span>
-                <span className={styles.fieldLabel}>Khu vực</span>
-                <strong className={styles.region}>
-                  <CardFitText minimumRem={0.6875}>
-                    Không áp dụng cho sách mẫu
-                  </CardFitText>
-                </strong>
-              </span>
+              <span className="sr-only">Khu vực: </span>
+              <strong className={styles.region}>
+                <CardFitText minimumRem={0.6875}>
+                  Không áp dụng cho sách mẫu
+                </CardFitText>
+              </strong>
             </p>
           </div>
           <div className={styles.prices}>

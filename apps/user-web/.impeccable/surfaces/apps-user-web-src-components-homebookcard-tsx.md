@@ -6,6 +6,10 @@ padding. The180px desktop cover stage has14px corners and reuses archival-desk
 art behind the real contained cover; phones use220px. Mint condition/mode stays
 bottom-left, availability top-left and the44px wishlist heart top-right. Full
 title spans the card; author/actual region share two equal columns below.
+Owner refinement removes the visible “Khu vực” caption and keeps both metadata
+values and their icons centered on a single horizontal line in24px slots.
+Only screen readers retain the location label; long values shrink/ellipsis with
+full text in their existing tooltip. Card height and shelf density stay fixed.
 Sale/exchange prices have their own pale shelf panel with labels and tag icon;
 the full-width wine action stays44px. No fabricated backdrop is listing media.
 Owner follow-up compacts the fixed card to464px desktop/tablet and504px phones,

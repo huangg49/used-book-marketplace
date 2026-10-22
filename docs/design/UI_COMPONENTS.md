@@ -540,6 +540,9 @@ the frame height. These are Member web components, not RN text primitives.
 Current reserved slots are180/220px cover,52px information,76px price and44px CTA,
 with8px gaps. A single price retains its tag icon; Both uses compact inline
 label/amount rows without repeated icons so the same panel needs no empty space.
+Author and location now share one horizontal line with24px text slots and centered
+icons. Location has a screen-reader-only label; no visible “Khu vực” caption.
+Both values retain measured fitting, ellipsis and full tooltips when necessary.
 
 `WishlistButton` is an authenticated feature control using the existing Member
 wishlist endpoints, not a primitive or an optimistic success indicator. It uses

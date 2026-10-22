@@ -1,20 +1,19 @@
 # Điểm lưu hiện tại — 22/10/2026
 
-## Card cố định nhưng gọn theo cỡ chữ — 22/10/2026
+## Tác giả và vị trí trên một hàng card — 22/10/2026
 
-- Theo ảnh/phản hồi mới của owner: giảm chiều cao desktop560→464px, phone610→504px;
-  bìa180/220px, thông tin52px, ô giá76px, CTA44px, gap8px/meta inset10px. Bỏ khoảng
-  trống thừa ở ô giá; Both dùng nhãn/giá thẳng hàng trong hai dòng, giữ nguyên số
-  tiền và không lặp icon. Một giá vẫn giữ icon và chữ giá lớn. Giữ4cột desktop,
-  chiều cao đồng nhất theo viewport và `CardFitText` co chữ/fallback đã có.
-- Nhánh `codex/compact-fixed-book-cards`, base `ba8bda9`; subject
-  `style(web): compact the fixed book card layout`.
-- PASS web lint/build (gồm TypeScript), browser fixture69ca: desktop1440/1280/1920,
-  mobile390/320 chữ130%, đủ3mode/giá tối đa, tên300ký tự/tác giả dài, đổi nội dung,
-  resize/font event, ảnh lỗi/retry và Home live/preview. Đã xem ảnh desktop/mobile;
-  evidence `.tmp/compact-fixed-card-qa/`. Detector layout một lượt[];
-  docs:check/diff --check đạt;6warning lint/chunk cũ. Chỉ CSS/docs, không chạy lại
-  unit168 đã đạt ở base, API/DB/native/provider/human/remote CI; READINESS giữ nguyên.
+- Theo owner: bỏ nhãn “Khu vực” khỏi phần nhìn, giữ nhãn cho screen reader;
+  tác giả và pin/địa điểm cùng một hàng, icon/chữ căn giữa trong vùng24px.
+  Chữ dài tự co rồi ellipsis, có tooltip đầy đủ; preview vẫn ghi đúng là không
+  có vị trí vật lý. Giữ card464/504px,4cột desktop, khung giá76px và CTA44px.
+- Nhánh `codex/inline-card-location`, base `99f0020`; subject
+  `style(web): align book author and location on one row`.
+- PASS web lint/build (gồm TypeScript), browser fixture35ca: Search1440/1280/390/
+  320 chữ130%, Home live/preview desktop/mobile, nhãn không hiện, icon/giá trị cùng
+  tâm hàng, chữ một dòng, tooltip và chiều cao không đổi. Đã xem ảnh desktop/mobile;
+  evidence `.tmp/inline-card-metadata-qa/`. Detector layout một lượt[];
+  docs:check/diff --check đạt;6warning lint/chunk cũ. Chỉ markup/CSS/docs, không
+  chạy lại unit/API/DB/native/provider/human/remote CI; READINESS giữ nguyên.
   FE5174/API3000 vẫn chạy. Chưa push/PR/merge/deploy.
 
 ## Card theo ảnh tham chiếu, chạy BE/FE — 22/10/2026
