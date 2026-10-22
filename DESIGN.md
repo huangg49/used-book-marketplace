@@ -941,21 +941,24 @@ workspace does not send a message or change transaction state. See the current
 Chat surface brief for routing, retry and permissions.
 
 22/10/2026 card reference update supersedes the earlier title/price split. Home/
-Search use a paper card with20px corners and a1px shop-line boundary. A190px
+Search use a paper card with20px corners and a1px shop-line boundary. A180px
 compact desktop cover stage reuses the archival-desk artwork as decoration behind
 the real, contained listing photograph;14px cover/chip corners follow the owner's
 reference. A mint condition/mode chip sits at bottom left, availability at top
 left and a44px wishlist heart at top right. The title spans the width;
 author and actual coarse region share two equal columns below. A separate pale
 shelf price panel labels sale/exchange amounts; the full-width wine “Xem sách”
-action is at least48px high. Compact padding remains10px. Main Home/Search keep
+action is at least44px high. Compact padding remains10px. Main Home/Search keep
 four desktop columns, adaptive tablet columns and one phone column; mobile
-cover stages are240px. The secondary Exchange shelf retains its280px minimum.
-The owner's fixed-height follow-up sets each card to560px desktop/tablet and610px
+cover stages are220px. The secondary Exchange shelf retains its280px minimum.
+The owner's compact-height follow-up sets each card to464px desktop/tablet and504px
 on phones, independent of title, authors, price mode or image state. The cover,
-60px information row,132px price panel and48px action reserve stable space;
+52px information row,76px price panel and44px action reserve stable space;
 the title uses the remaining space. Text is measured after content/size/font
-changes and shrinks only when needed. Title/price use a12px-at-default-font floor,
+changes and shrinks only when needed. The compact price panel uses labelled
+inline rows without repeated tag icons when both prices exist, keeping amounts
+complete while avoiding the earlier oversized single-price panel. Title/price
+use a12px-at-default-font floor,
 author/region11px, all scaled from rem. Exceptionally long text clamps after that
 floor, with full accessible text, native tooltip and the existing detail/source
 link; prices remain complete. This scoped owner instruction supersedes the prior

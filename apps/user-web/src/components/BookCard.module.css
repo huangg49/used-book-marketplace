@@ -1,7 +1,7 @@
 .card {
   --card-condition-ink: #254337;
-  --card-height: 560px;
-  --card-cover-height: 190px;
+  --card-height: 464px;
+  --card-cover-height: 180px;
   box-sizing: border-box;
   height: var(--card-height);
   min-width: 0;
@@ -173,10 +173,10 @@
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) 60px 132px 48px;
-  gap: 10px;
+  grid-template-rows: minmax(0, 1fr) 52px 76px 44px;
+  gap: 8px;
   flex: 1;
-  padding: 14px 4px 0;
+  padding: 10px 4px 0;
 }
 .meta h3 {
   min-height: 0;
@@ -200,7 +200,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
   gap: 10px;
-  padding-bottom: 12px;
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--shop-line);
 }
 .author,
@@ -257,8 +257,8 @@
   display: grid;
   grid-auto-rows: minmax(0, 1fr);
   min-height: 0;
-  gap: 6px;
-  padding: 10px;
+  gap: 4px;
+  padding: 8px;
   border-radius: 12px;
   background: var(--shop-shelf, #f4eddf);
   color: var(--shop-wine);
@@ -274,7 +274,7 @@
 }
 .prices p + p {
   border-top: 1px solid var(--shop-line);
-  padding-top: 6px;
+  padding-top: 4px;
 }
 .prices svg {
   flex-shrink: 0;
@@ -294,7 +294,24 @@
   height: 28px;
 }
 .prices:has(p + p) .amount {
-  height: 25px;
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  font-size: 1rem;
+  text-align: right;
+}
+.prices:has(p + p) svg {
+  display: none;
+}
+.prices:has(p + p) p > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.prices:has(p + p) .fieldLabel {
+  flex: none;
+  font-size: 0.6875rem;
+  white-space: nowrap;
 }
 .view {
   position: relative;
@@ -303,9 +320,9 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
-  min-height: 48px;
+  min-height: 44px;
   margin-top: 0;
-  padding: 10px 28px;
+  padding: 8px 28px;
   border: 1px solid var(--shop-wine);
   border-radius: 12px;
   background: var(--shop-wine);
@@ -384,8 +401,8 @@
 }
 @media (max-width: 600px) {
   .card {
-    --card-height: 610px;
-    --card-cover-height: 240px;
+    --card-height: 504px;
+    --card-cover-height: 220px;
   }
   .compact .cover {
     padding: 16px;

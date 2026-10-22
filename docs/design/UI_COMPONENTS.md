@@ -529,7 +529,7 @@ The reference recipe has a bordered paper frame, complete photograph on the
 existing decorative archival desk, condition/mode and availability overlays,
 full title, equal author/region columns, separate price panel and wine detail CTA.
 Main Home/Search retain four desktop columns and one phone column.
-The owner's fixed-height follow-up uses560px desktop/tablet cards and610px phone
+The owner's compact-height follow-up uses464px desktop/tablet cards and504px phone
 cards. Cover, information, price and action have reserved slots. `CardFitText`
 measures its actual DOM content and shrinks on overflow, refitting after content,
 resize, root text-scale and font-load changes with observer/listener cleanup.
@@ -537,6 +537,9 @@ It keeps rem-based readable floors and full DOM text/tooltips when extreme text
 needs line clamping. The price panel retains the same height for Sale/Exchange/
 Both; supported amounts fit completely. Image and wishlist states cannot change
 the frame height. These are Member web components, not RN text primitives.
+Current reserved slots are180/220px cover,52px information,76px price and44px CTA,
+with8px gaps. A single price retains its tag icon; Both uses compact inline
+label/amount rows without repeated icons so the same panel needs no empty space.
 
 `WishlistButton` is an authenticated feature control using the existing Member
 wishlist endpoints, not a primitive or an optimistic success indicator. It uses

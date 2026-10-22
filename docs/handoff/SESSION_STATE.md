@@ -1,24 +1,21 @@
 # Điểm lưu hiện tại — 22/10/2026
 
-## Card cố định chiều cao, co chữ theo nội dung — 22/10/2026
+## Card cố định nhưng gọn theo cỡ chữ — 22/10/2026
 
-- Theo owner, card Home/Search giữ560px desktop/tablet và610px phone; bìa,
-  thông tin, giá bán/đổi và CTA có vùng riêng, không giãn theo tên/tác giả/ảnh lỗi.
-  `CardFitText` đo vùng thật, chỉ giảm font khi cần; đo lại khi đổi nội dung,
-  resize, scale chữ và tải font. Giữ ngưỡng0.75rem (title/giá),0.6875rem
-  (tác giả/khu vực); tên quá dài tại ngưỡng này rút gọn với nguyên văn accessible,
-  tooltip và link sách/nguồn. Giá hiển thị đầy đủ, grid vẫn4cột desktop.
-- Nhánh `codex/fixed-height-book-cards`, base `4dc8a0e`; subject
-  `fix(web): keep book cards fixed while fitting text`.
-- PASS web lint/typecheck/168unit/build; detector layout một lượt[]; đã xem ảnh
-  desktop/mobile320 chữ130%. Fixture kiểm title300ký tự,10tác giả dài, ba mode,
-  giá1.000.000đ, resize nở lại font, cập nhật title/tác giả, font event và ảnh lỗi.
-  Bản xác nhận chính68/69ca đạt; assertion ảnh dùng equality tuyệt đối fail,
-  kiểm riêng với dung sai0.5px:20frame sau retry đều560px. Home live/preview
-  xác nhận17ca đạt bằng full navigation, tránh import Router khác instance sau HMR.
-  PASS docs:check/diff --check; FE5174/API readiness3000 vẫn200. Evidence tại
-  `.tmp/fixed-book-card-qa/`;6warning lint/chunk cũ. Không đổi API/DB/session,
-  không chạy lại API E2E/native/provider/human/remote CI; READINESS giữ nguyên.
+- Theo ảnh/phản hồi mới của owner: giảm chiều cao desktop560→464px, phone610→504px;
+  bìa180/220px, thông tin52px, ô giá76px, CTA44px, gap8px/meta inset10px. Bỏ khoảng
+  trống thừa ở ô giá; Both dùng nhãn/giá thẳng hàng trong hai dòng, giữ nguyên số
+  tiền và không lặp icon. Một giá vẫn giữ icon và chữ giá lớn. Giữ4cột desktop,
+  chiều cao đồng nhất theo viewport và `CardFitText` co chữ/fallback đã có.
+- Nhánh `codex/compact-fixed-book-cards`, base `ba8bda9`; subject
+  `style(web): compact the fixed book card layout`.
+- PASS web lint/build (gồm TypeScript), browser fixture69ca: desktop1440/1280/1920,
+  mobile390/320 chữ130%, đủ3mode/giá tối đa, tên300ký tự/tác giả dài, đổi nội dung,
+  resize/font event, ảnh lỗi/retry và Home live/preview. Đã xem ảnh desktop/mobile;
+  evidence `.tmp/compact-fixed-card-qa/`. Detector layout một lượt[];
+  docs:check/diff --check đạt;6warning lint/chunk cũ. Chỉ CSS/docs, không chạy lại
+  unit168 đã đạt ở base, API/DB/native/provider/human/remote CI; READINESS giữ nguyên.
+  FE5174/API3000 vẫn chạy. Chưa push/PR/merge/deploy.
 
 ## Card theo ảnh tham chiếu, chạy BE/FE — 22/10/2026
 

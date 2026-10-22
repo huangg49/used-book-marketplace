@@ -2,15 +2,17 @@
 
 22/10/2026 reference refinement supersedes the earlier two-column title/price
 recipe: paper cards have a1px shop-line border,20px corners and10px compact
-padding. The190px desktop cover stage has14px corners and reuses archival-desk
-art behind the real contained cover; phones use240px. Mint condition/mode stays
+padding. The180px desktop cover stage has14px corners and reuses archival-desk
+art behind the real contained cover; phones use220px. Mint condition/mode stays
 bottom-left, availability top-left and the44px wishlist heart top-right. Full
 title spans the card; author/actual region share two equal columns below.
 Sale/exchange prices have their own pale shelf panel with labels and tag icon;
-the full-width wine action stays48px. No fabricated backdrop is listing media.
-Owner follow-up fixes the complete card at560px desktop/tablet and610px phones,
-including Single/Both price modes and loading/error/preview states. A60px facts
-row and132px price panel reserve stable space. `CardFitText` measures its fixed
+the full-width wine action stays44px. No fabricated backdrop is listing media.
+Owner follow-up compacts the fixed card to464px desktop/tablet and504px phones,
+including Single/Both price modes and loading/error/preview states. A52px facts
+row and76px price panel reserve stable space, with8px gaps and10px meta inset.
+Both prices use inline label/amount rows without repeated icons; a single price
+keeps its tag icon and normal amount type. `CardFitText` measures its fixed
 slot, keeps the largest font that fits and refits on content/resize/font events.
 Title/amount floors are0.75rem; author/region0.6875rem. Extreme text clamps only
 at that floor; full text stays accessible and in native tooltips/detail links.
