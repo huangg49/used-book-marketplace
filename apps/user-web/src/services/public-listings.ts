@@ -46,6 +46,7 @@ const publicListingSchema = z.object({
       name: z.literal("TP.HCM"),
       demoOnly: z.literal(true),
       method: z.literal("DirectDelivery"),
+      locality: z.object({ code: z.string(), label: z.string() }).optional(),
     })
     .nullable(),
   purchaseAvailability: z.object({

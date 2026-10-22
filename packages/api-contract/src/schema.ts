@@ -3859,7 +3859,7 @@ export interface components {
             /** @constant */
             method: "DirectDelivery";
         };
-        /** @description Safe delivery preference only, not a quote or enabled checkout. Never contains an address ID, version, locality or contact details. */
+        /** @description Safe delivery preference and optional coarse book circulation zone only, not a quote or enabled checkout. The name remains the legacy TP.HCM envelope; use locality.label for the actual zone when present. Never contains an address ID, version or contact details. */
         PublicFulfillment: {
             /** @constant */
             serviceAreaCode: "HCM-DEMO-v1";
@@ -3869,6 +3869,11 @@ export interface components {
             demoOnly: true;
             /** @constant */
             method: "DirectDelivery";
+            /** @description Coarse book circulation zone from the configured directory, resolved only while the published revision's selected origin address version is current. */
+            locality?: {
+                code: string;
+                label: string;
+            };
         };
         CreateSaleQuote: {
             expectedListingVersion: number;

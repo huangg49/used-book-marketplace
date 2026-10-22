@@ -47,6 +47,12 @@ version, locality, phone, name or detail appear in that public object. The book
 remains visible after an address change; its delivery preference becomes unavailable.
 Ordinary bounded refresh still applies, not instant push invalidation.
 
+22/10/2026 follow-up: [ADR0039](0039-book-circulation-regions.md) now permits the
+configured coarse circulation zone `{ code, label }` on public cards when the
+selected origin version is current. This supersedes the locality exclusion above
+only for TP.HCM/Bình Dương/Vũng Tàu directory zones; contact data and address
+references remain private, with unchanged stale/deleted-origin invalidation.
+
 Changing an address never rewrites the accepted listing revision. There is no Order
 snapshot yet. Future quote/checkout must check this reference under the same locks,
 then copy the current private contact into the immutable agreement snapshot.

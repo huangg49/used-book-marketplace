@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.46.0
+  version: 0.47.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Participant agreement workspaces with mutually confirmed mode/price proposals and linked Exchange history are implemented. Exact Order conversations can be opened by their ACTIVE Buyer or Seller, including BuyNow and historical Orders. Member private address book and versioned demo service-area directory are
@@ -11922,8 +11922,24 @@ components:
         method:
           type: string
           const: DirectDelivery
-      description: Safe delivery preference only, not a quote or enabled checkout. Never contains an
-        address ID, version, locality or contact details.
+        locality:
+          type: object
+          additionalProperties: false
+          required: [code, label]
+          properties:
+            code:
+              type: string
+              minLength: 1
+              maxLength: 40
+            label:
+              type: string
+              minLength: 1
+              maxLength: 120
+          description: Coarse book circulation zone from the configured directory, resolved only
+            while the published revision's selected origin address version is current.
+      description: Safe delivery preference and optional coarse book circulation zone only, not
+        a quote or enabled checkout. The name remains the legacy TP.HCM envelope; use locality.label
+        for the actual zone when present. Never contains an address ID, version or contact details.
     CreateSaleQuote:
       type: object
       additionalProperties: false

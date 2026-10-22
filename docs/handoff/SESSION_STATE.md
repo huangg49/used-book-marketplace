@@ -1,5 +1,28 @@
 # Điểm lưu hiện tại — 22/10/2026
 
+## Card sách rõ thông tin và khu vực — 22/10/2026
+
+- Owner chọn bìa ở trên; dưới chia hai phần bằng nhau: tên/tác giả trái,
+  khu vực/giá phải. Card Home/Search có border riêng, tiêu đề xuống dòng đầy đủ,
+  giữ giá bán/giá trị đổi, trạng thái, retry ảnh và link. Grid tối thiểu280px,
+  một card mỗi hàng điện thoại; dùng chung `BookCard`/`HomeBookCard`.
+- Contract0.47.0 thêm optional `fulfillment.locality {code,label}` từ vùng của
+  origin hiện hành, giữ envelopeTP.HCM cũ. Không lộ contact/address references;
+  origin thiếu/stale/deleted không bị đoán khu vực. Cập nhật ADR0015/0039,
+  không migration/đổi dữ liệu. Preview ghi rõ vị trí không áp dụng.
+- Nhánh `codex/book-card-details`, base `2e746a5`; subject
+  `feat(catalog): show bordered book cards with real locations`.
+- PASS Node24.21.0/pnpm11.19.0: API/web lint/typecheck/build, API150/web156unit,
+  contract check/routes173;16 origin E2E trên Mongo QA `_test` (60 ca không liên
+  quan bỏ qua), gồm cả3vùng, redaction và origin đổi/xóa. Browser fixture51ca riêng
+  kiểm Home/Search, desktop và320/390px chữ130%, hai cột/border/tên dài/ảnh lỗi/
+  links/hover/focus. Ảnh có nhãn mô phỏng ở `.tmp/book-card-details-qa/`.
+- Detector một lượt có advisory màu/radius/background có sẵn ngoài phần đổi;
+  API11/web6 warning lint/chunk cũ. Native/live storage/human/remote CI NOT RUN.
+  QA57017 đã dừng, giữ app Mongo/cấu hình/dữ liệu; dev API nạp lại source mới.
+  Readiness200; public read hiện7bài:4TP.HCM,3chưa có origin hợp lệ nên không đoán vùng.
+  READINESS không đổi; chưa push/PR/merge/deploy.
+
 ## Xem đơn trong Chat — 22/10/2026
 
 - Theo owner, **Đơn hàng của tôi → Xem đơn** mở workspace Chat: toàn bộ thông tin

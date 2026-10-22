@@ -1,5 +1,16 @@
 # Shared Home / Search book-card motion
 
+22/10/2026 owner refinement supersedes the earlier unboxed/two-line card recipe:
+whole cards have a1px shop-line border,12px corners,paper background and12px
+padding. The complete cover remains above two equal columns: full wrapping title
+and labelled author at left; actual coarse zone and sale/exchange prices at right.
+Condition/mode and availability remain visible; source/detail links retain44px.
+Shared Home/Search/Exchange shelves use auto-fill with280px minimum cards capped
+by available width, so phones have one card per row. Keep current motion and image
+retry. `fulfillment.locality.label` is the only actual zone label; missing/legacy
+origins show “Chưa có khu vực”, and preview books explicitly have no physical zone.
+No fabricated prices, rating, region or location inferred from fulfillment.name.
+
 Mode: Operate. Refinement of the existing compact book-card recipe; the owner
 approved Aceternity-inspired pointer tilt with both cover and text raised.
 

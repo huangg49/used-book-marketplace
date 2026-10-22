@@ -8,37 +8,35 @@
   min-height: 200px;
 }
 .compact .meta {
-  padding-top: 8px;
+  padding-top: 12px;
 }
 .compact .meta h3 {
-  font-size: 0.9375rem;
-  min-block-size: 3em;
-}
-.compact .meta h3 a {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
+  font-size: 1rem;
 }
 .compact .author {
-  margin-bottom: 6px;
+  margin-bottom: 0;
 }
 .compact .condition {
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-bottom: 12px;
 }
 .compact .prices {
-  gap: 6px 12px;
-}
-.compact .view {
-  margin-top: 2px;
+  gap: 12px;
 }
 .card {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  padding: 12px;
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  background: var(--shop-paper);
+}
+.card:is(:hover, :focus-within) {
+  border-color: var(--shop-control);
+}
+.card :focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
 }
 .motionFrame {
   position: relative;
@@ -126,19 +124,51 @@
   border-radius: 6px;
 }
 .meta {
-  padding-top: 17px;
+  padding: 16px 4px 0;
   display: flex;
   flex-direction: column;
   flex: 1;
 }
 .condition {
-  font-size: 0.72rem;
+  font-size: 0.8125rem;
   color: var(--shop-muted);
   margin: 0 0 7px;
   line-height: 1.5;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+}
+.information {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+  flex: 1;
+}
+.identity,
+.facts {
+  min-width: 0;
+}
+.facts {
+  display: grid;
+  gap: 16px;
+  text-align: right;
+}
+.location {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.location span,
+.author span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--shop-muted);
+  font-weight: 400;
+}
+.location strong {
+  font-weight: 700;
 }
 .meta h3 {
   font: 700 1.05rem/1.5 var(--shop-body);
@@ -153,17 +183,15 @@
   text-decoration: underline;
 }
 .author {
-  font-size: 0.8rem;
-  color: var(--shop-muted);
-  margin: 0 0 14px;
+  font-size: 0.875rem;
+  color: var(--shop-ink);
+  margin: 12px 0 0;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
 .prices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 20px;
-  margin-top: auto;
+  display: grid;
+  gap: 12px;
   font-variant-numeric: tabular-nums;
 }
 .prices p {
@@ -172,23 +200,27 @@
   margin: 0;
 }
 .prices span {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--shop-muted);
 }
 .prices strong {
   font-size: 1rem;
   color: var(--shop-wine);
+  overflow-wrap: anywhere;
 }
 .view {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  align-self: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
   min-height: 44px;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   color: var(--shop-wine);
   font-weight: 700;
-  margin-top: 5px;
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--shop-line);
   text-decoration: none;
 }
 .view:hover {
@@ -226,22 +258,10 @@
     padding: 8px;
     height: 160px;
   }
-  .compact .meta h3 {
-    font-size: 0.92rem;
-  }
   .cover {
     padding: 16px;
   }
-  .meta h3 {
-    font-size: 0.92rem;
-  }
   .prices {
     gap: 8px;
-  }
-  .prices strong {
-    font-size: 0.9rem;
-  }
-  .condition {
-    font-size: 0.7rem;
   }
 }

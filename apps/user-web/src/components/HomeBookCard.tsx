@@ -59,38 +59,51 @@ export function HomeBookCard({
           <p className={styles.condition}>
             {book.book.category} · {languageLabel(book.book.language)}
           </p>
-          <h3>
-            <a
-              href={book.book.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={book.book.title}
-            >
-              {book.book.title}
-            </a>
-          </h3>
-          <p className={styles.author}>{book.book.authors.join(", ")}</p>
-          <p className={styles.condition}>
-            Mẫu: {conditions[book.condition]} ·{" "}
-            {book.mode === "Sale"
-              ? "Bán"
-              : book.mode === "Exchange"
-                ? "Đổi"
-                : "Bán hoặc đổi"}
-          </p>
-          <div className={styles.prices}>
-            {book.salePrice !== null && (
-              <p>
-                <span>Giá bán mẫu</span>
-                <strong>{formatVnd(book.salePrice)}</strong>
+          <div className={styles.information}>
+            <div className={styles.identity}>
+              <h3>
+                <a
+                  href={book.book.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={book.book.title}
+                >
+                  {book.book.title}
+                </a>
+              </h3>
+              <p className={styles.author}>
+                <span>Tác giả</span>
+                {book.book.authors.join(", ") || "Chưa rõ tác giả"}
               </p>
-            )}
-            {book.exchangeValue !== null && (
-              <p>
-                <span>Giá trị đổi mẫu</span>
-                <strong>{formatVnd(book.exchangeValue)}</strong>
+              <p className={styles.condition}>
+                Mẫu: {conditions[book.condition]} ·{" "}
+                {book.mode === "Sale"
+                  ? "Bán"
+                  : book.mode === "Exchange"
+                    ? "Đổi"
+                    : "Bán hoặc đổi"}
               </p>
-            )}
+            </div>
+            <div className={styles.facts}>
+              <p className={styles.location}>
+                <span>Khu vực</span>
+                <strong>Không áp dụng cho sách mẫu</strong>
+              </p>
+              <div className={styles.prices}>
+                {book.salePrice !== null && (
+                  <p>
+                    <span>Giá bán mẫu</span>
+                    <strong>{formatVnd(book.salePrice)}</strong>
+                  </p>
+                )}
+                {book.exchangeValue !== null && (
+                  <p>
+                    <span>Giá trị đổi mẫu</span>
+                    <strong>{formatVnd(book.exchangeValue)}</strong>
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
           <a
             className={styles.view}

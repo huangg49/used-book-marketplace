@@ -939,3 +939,14 @@ payment precedes secondary detail, and mobile switches mounted “Đơn hàng”
 conversation when needed. Existing negotiated history is preserved; opening the
 workspace does not send a message or change transaction state. See the current
 Chat surface brief for routing, retry and permissions.
+
+22/10/2026 card refinement: the owner requested a visible border around each Home/
+Search book card, with the complete cover above two equal information columns.
+Title and labelled author sit left; actual coarse circulation zone and separately
+labelled sale/exchange prices sit right. Full titles wrap without line clamping.
+Use the paper ground,12px corners,1px shop-line boundary and12px padding; preserve
+availability, image retry, links and current hover/focus motion. Shared shelves use
+auto-fill columns with280px minimum (capped by available width), yielding one card
+per phone row so both information halves remain readable. Missing location stays
+explicit; preview catalog cards do not receive invented locations. Public location
+follows ADR0039 and never uses the legacy service-area name as the actual zone.

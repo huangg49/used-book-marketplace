@@ -108,31 +108,44 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
               ? "Đổi"
               : "Bán hoặc đổi"}
         </p>
-        <h3>
-          <Link
-            to={ROUTES.bookDetail(book.id)}
-            state={returnState}
-            title={compact ? book.book.title : undefined}
-          >
-            {book.book.title}
-          </Link>
-        </h3>
-        <p className={styles.author}>
-          {book.book.authors.join(", ") || "Chưa rõ tác giả"}
-        </p>
-        <div className={styles.prices}>
-          {book.salePrice !== null && (
-            <p>
-              <span>Giá bán</span>
-              <strong>{formatVnd(book.salePrice)}</strong>
+        <div className={styles.information}>
+          <div className={styles.identity}>
+            <h3>
+              <Link
+                to={ROUTES.bookDetail(book.id)}
+                state={returnState}
+                title={compact ? book.book.title : undefined}
+              >
+                {book.book.title}
+              </Link>
+            </h3>
+            <p className={styles.author}>
+              <span>Tác giả</span>
+              {book.book.authors.join(", ") || "Chưa rõ tác giả"}
             </p>
-          )}
-          {book.exchangeValue !== null && (
-            <p>
-              <span>Giá trị đổi</span>
-              <strong>{formatVnd(book.exchangeValue)}</strong>
+          </div>
+          <div className={styles.facts}>
+            <p className={styles.location}>
+              <span>Khu vực</span>
+              <strong>
+                {book.fulfillment?.locality?.label || "Chưa có khu vực"}
+              </strong>
             </p>
-          )}
+            <div className={styles.prices}>
+              {book.salePrice !== null && (
+                <p>
+                  <span>Giá bán</span>
+                  <strong>{formatVnd(book.salePrice)}</strong>
+                </p>
+              )}
+              {book.exchangeValue !== null && (
+                <p>
+                  <span>Giá trị đổi</span>
+                  <strong>{formatVnd(book.exchangeValue)}</strong>
+                </p>
+              )}
+            </div>
+          </div>
         </div>
         <Link
           className={styles.view}

@@ -234,22 +234,34 @@ export class PublicListingService {
     const origin = r.originAddressId
       ? await tx.c.member_addresses.findOne({ _id: r.originAddressId })
       : null;
+    const originIsCurrent =
+      originStatus({
+        ...r,
+        originCurrentVersion: origin?.version ?? null,
+      }) === 'Current';
+    // Only publish the directory's coarse zone for the selected address version.
+    // An edited/deleted origin must not move an already published book's location.
+    const locality =
+      originIsCurrent && origin
+        ? await tx.c.service_localities.findOne({
+            _id: `${origin.serviceAreaCode}:${origin.localityCode}`,
+          })
+        : null;
     const photos = [...l.rm]
       .sort((x, y) => x.position - y.position)
       .map((link) => l.m.find((m) => m._id === link.mediaId)!);
     const content = {
-      fulfillment:
-        originStatus({
-          ...r,
-          originCurrentVersion: origin?.version ?? null,
-        }) === 'Current'
-          ? {
-              serviceAreaCode: 'HCM-DEMO-v1' as const,
-              name: 'TP.HCM' as const,
-              demoOnly: true as const,
-              method: 'DirectDelivery' as const,
-            }
-          : null,
+      fulfillment: originIsCurrent
+        ? {
+            serviceAreaCode: 'HCM-DEMO-v1' as const,
+            name: 'TP.HCM' as const,
+            demoOnly: true as const,
+            method: 'DirectDelivery' as const,
+            ...(locality
+              ? { locality: { code: locality.code, label: locality.label } }
+              : {}),
+          }
+        : null,
       id: l._id,
       revisionId: r._id,
       version: l.version,
