@@ -3,17 +3,16 @@ import {
   ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
 import {
   AppText,
+  AppModal,
   AppTextInput,
   Button,
   ConfirmDialog,
@@ -709,7 +708,7 @@ export function ChatMessagesPanel({
       </View>
 
       {/* Modal Đề xuất giá mới */}
-      <Modal
+      <AppModal
         visible={proposeModalOpen}
         transparent
         animationType="fade"
@@ -743,13 +742,14 @@ export function ChatMessagesPanel({
 
             <View style={styles.inputSection}>
               <AppText style={styles.inputLabel}>Mức giá đề xuất mới (VNĐ):</AppText>
-              <TextInput
+              <AppTextInput
+                accessibilityLabel="Giá sách đề nghị"
                 style={styles.amountInput}
                 keyboardType="numeric"
                 value={proposePriceInput}
                 onChangeText={(val) => setProposePriceInput(val.replace(/\D/g, ""))}
                 placeholder="Ví dụ: 45000"
-                placeholderTextColor="#999"
+                placeholderTextColor={stitchTokens.subtleGray}
               />
 
               {/* Nút gợi ý nhanh */}
@@ -798,7 +798,7 @@ export function ChatMessagesPanel({
             </View>
           </View>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* Confirm Dialog: Seller Creates Order */}
       <ConfirmDialog
@@ -1169,7 +1169,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   agreedPriceBox: {
-    backgroundColor: "#F4F9F4",
+    backgroundColor: stitchTokens.likeNewGreenBg,
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: stitchTokens.likeNewGreen,
@@ -1222,7 +1222,7 @@ const styles = StyleSheet.create({
   /* Modal Styles */
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: stitchTokens.modalScrim,
     justifyContent: "center",
     alignItems: "center",
     padding: space.md,
@@ -1277,7 +1277,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: stitchTokens.wineDark,
-    backgroundColor: "#fff",
+    backgroundColor: stitchTokens.whiteSurface,
   },
   presetRow: {
     flexDirection: "row",

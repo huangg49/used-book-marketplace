@@ -62,3 +62,8 @@ jobs:
       - run: pnpm test:demo:funding
       - run: pnpm test:demo:orders
       - run: pnpm test:demo:transit
+      - name: Mongo QA diagnostics on failure
+        if: failure()
+        run: |
+          docker compose -f infra/docker-compose.mongo-test.yml ps -a
+          docker compose -f infra/docker-compose.mongo-test.yml logs --no-color --tail=100

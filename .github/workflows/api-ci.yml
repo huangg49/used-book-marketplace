@@ -49,3 +49,8 @@ jobs:
       - run: pnpm test:api:mongo
       - run: pnpm test:api:e2e
       - run: pnpm --filter @used-books/api build
+      - name: Mongo QA diagnostics on failure
+        if: failure()
+        run: |
+          docker compose -f infra/docker-compose.mongo-test.yml --profile failover ps -a
+          docker compose -f infra/docker-compose.mongo-test.yml --profile failover logs --no-color --tail=100

@@ -36,6 +36,11 @@ jobs:
           EXPO_PUBLIC_API_BASE_URL: http://127.0.0.1:3009/api/v1
           EXPO_PUBLIC_DESIGN_PREVIEW: '1'
       - run: pnpm test:public:browser
+      - name: Mongo QA diagnostics on failure
+        if: failure()
+        run: |
+          docker compose -f infra/docker-compose.mongo-test.yml ps -a
+          docker compose -f infra/docker-compose.mongo-test.yml logs --no-color --tail=100
       - uses: actions/upload-artifact@v4
         if: always()
         with:

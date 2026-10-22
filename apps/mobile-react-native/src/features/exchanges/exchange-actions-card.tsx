@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { z } from "zod";
 import * as Crypto from "expo-crypto";
-import { AppText, Button, ConfirmDialog, Icon, Notice, presentError, space, stitchTokens } from "../../core/ui";
+import { AppModal, AppText, AppTextInput, Button, ConfirmDialog, Icon, Notice, presentError, space, stitchTokens } from "../../core/ui";
 import type { Exchange } from "./contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
@@ -509,7 +509,7 @@ export function ExchangeActionsCard({
       />
 
       {/* Modal Đề xuất lại mức bù tiền */}
-      <Modal
+      <AppModal
         visible={counterModalOpen}
         transparent
         animationType="fade"
@@ -602,13 +602,14 @@ export function ExchangeActionsCard({
             {counterSide !== "none" && (
               <View style={styles.inputSection}>
                 <AppText style={styles.inputLabel}>Số tiền bù chênh lệch (VNĐ):</AppText>
-                <TextInput
+                <AppTextInput
+                  accessibilityLabel="Số tiền bù chênh lệch"
                   style={styles.amountInput}
                   keyboardType="numeric"
                   value={counterAmountStr}
                   onChangeText={(val) => setCounterAmountStr(val.replace(/\D/g, ""))}
                   placeholder="Ví dụ: 10000"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={stitchTokens.subtleGray}
                 />
 
                 <View style={styles.presetRow}>
@@ -630,12 +631,13 @@ export function ExchangeActionsCard({
             {/* Lời nhắn kèm theo */}
             <View style={styles.inputSection}>
               <AppText style={styles.inputLabel}>Lời nhắn cho đối tác (tùy chọn):</AppText>
-              <TextInput
+              <AppTextInput
+                accessibilityLabel="Lời nhắn cho đối tác"
                 style={styles.noteInput}
                 value={counterNote}
                 onChangeText={setCounterNote}
                 placeholder="Ví dụ: Sách mình là bản bìa cứng mới 99% nhé..."
-                placeholderTextColor="#999"
+                placeholderTextColor={stitchTokens.subtleGray}
                 maxLength={300}
                 multiline
               />
@@ -661,7 +663,7 @@ export function ExchangeActionsCard({
             </View>
           </View>
         </View>
-      </Modal>
+      </AppModal>
     </View>
   );
 }
@@ -816,7 +818,7 @@ const styles = StyleSheet.create({
   /* Modal Styles */
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: stitchTokens.modalScrim,
     justifyContent: "center",
     alignItems: "center",
     padding: space.md,
@@ -869,14 +871,14 @@ const styles = StyleSheet.create({
   },
   sideOptionItemActive: {
     borderColor: stitchTokens.wineDark,
-    backgroundColor: "#FBF3ED",
+    backgroundColor: stitchTokens.roseParchment,
   },
   radioCircle: {
     width: 16,
     height: 16,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: "#bbb",
+    borderColor: stitchTokens.borderWarm,
   },
   radioCircleActive: {
     borderColor: stitchTokens.wineDark,
@@ -909,7 +911,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: stitchTokens.wineDark,
-    backgroundColor: "#fff",
+    backgroundColor: stitchTokens.whiteSurface,
   },
   noteInput: {
     minHeight: 60,
@@ -919,7 +921,7 @@ const styles = StyleSheet.create({
     padding: 10,
     fontSize: 12,
     color: stitchTokens.darkWood,
-    backgroundColor: "#fff",
+    backgroundColor: stitchTokens.whiteSurface,
     textAlignVertical: "top",
   },
   presetRow: {
