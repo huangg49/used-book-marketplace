@@ -166,19 +166,55 @@ try {
     await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
     await page.waitForURL(origin + returnPath);
   }
-  await login(
-    page,
-    "member@operations.test",
-    `/exchange/new?book=${draft.entityId}`,
-  );
-  await page.locator('input[name="exchange-book"]').first().check();
+  // The current entry is the shared conversation sheet. Both members need a
+  // real saved receiving address before choosing books, as required by the API.
+  for (const actor of [fixture.member, admin]) {
+    const book = await fixture.api("/me/addresses", actor.accessToken);
+    await fixture.api("/me/addresses", actor.accessToken, {
+      expectedBookVersion: book.version,
+      makeDefault: true,
+      address: {
+        recipientName: "QA exchange reader", phone: "0900123456",
+        serviceAreaCode: "HCM-DEMO-v1", localityCode: "DEMO-A",
+        detail: "QA exchange destination, simulated only",
+      },
+    });
+  }
+  await login(page, "member@operations.test", `/books/${draft.entityId}`);
+  await page.getByRole("link", { name: "Gửi đề nghị đổi sách", exact: true }).click();
+  await page.waitForURL(/\/chat\/[0-9a-f-]{36}$/);
+  const conversationId = new URL(page.url()).pathname.split("/").at(-1);
+  const chatPath = `/chat/${conversationId}`;
+  const recipientContext = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+  });
+  const recipient = await recipientContext.newPage();
+  await login(recipient, "admin@operations.test", chatPath);
+  await recipient.getByRole("button", { name: "Chấp nhận hình thức", exact: true }).click();
+  const offer = page.getByRole("region", { name: "Chọn sách đem đổi", exact: true });
+  await offer.getByRole("checkbox").first().check();
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await capture(page, "exchange-compose-desktop.png");
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await capture(page, "exchange-compose-mobile.png");
   await page.setViewportSize({ width: 1366, height: 900 });
-  await button("Xem lại đề nghị").click();
+
+  // Delay passive room refresh while checking an unresolved command's own retry.
+  // Mutations still use the real API, current auth/version checks and receipts.
+  const room = await fixture.api(`/me/purchase-conversations/${conversationId}`, fixture.member.accessToken);
+  const rooms = await fixture.api("/me/purchase-conversations", fixture.member.accessToken);
+  let holdRefresh = true;
+  await page.route("**/api/v1/me/purchase-conversations**", (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (holdRefresh && route.request().method() === "GET") {
+      if (pathname === `/api/v1/me/purchase-conversations/${conversationId}`)
+        return route.fulfill({ json: room });
+      if (pathname === "/api/v1/me/purchase-conversations")
+        return route.fulfill({ json: rooms });
+    }
+    return route.continue();
+  });
   const intents = [];
   let drop = true;
   await page.route("**/api/v1/exchanges", async (route) => {
@@ -191,71 +227,40 @@ try {
     assert.equal(response.status(), 201);
     if (drop) {
       drop = false;
-      await route.fulfill({
-        status: 503,
-        contentType: "application/json",
-        body: JSON.stringify({
-          code: "Unavailable",
-          message: "QA response loss",
-        }),
-      });
+      await route.fulfill({ status: 503, json: { code: "Unavailable", message: "QA response loss" } });
     } else await route.fulfill({ response });
   });
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Gửi đề nghị", exact: true })
-    .click();
-  await page.getByRole("dialog").getByRole("alert").waitFor();
-  assert.equal(await page.getByRole("dialog").isVisible(), true);
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Hủy", exact: true })
-    .click();
-  await page.getByRole("link", { name: "Đổi sách", exact: true }).click();
-  await page.locator(`a[href="/books/${draft.entityId}"]`).first().click();
-  await page.getByRole("link", { name: "Gửi đề nghị đổi sách", exact: true }).waitFor();
-  // Reopening must preserve the unresolved intent even if public reads fail.
-  await page.route(`**/api/v1/listings/${draft.entityId}`, (route) =>
-    route.fulfill({
-      status: 404,
-      contentType: "application/json",
-      body: JSON.stringify({
-        code: "NotFound",
-        message: "QA no longer public",
-      }),
-    }),
-  );
-  await page
-    .getByRole("link", { name: "Gửi đề nghị đổi sách", exact: true })
-    .click();
-  await page
-    .getByRole("heading", { name: "Xác nhận đề nghị trước", exact: true })
-    .waitFor();
-  await button("Thử lại đề nghị trước").click();
-  await page.unroute(`**/api/v1/listings/${draft.entityId}`);
-  await page.waitForURL(/\/exchange\/[\da-f-]{36}$/);
+  await offer.getByRole("button", { name: "Gửi đề nghị đổi sách", exact: true }).click();
+  await offer.getByRole("alert").waitFor();
+  assert.equal(await offer.getByRole("checkbox").first().isChecked(), true);
+  assert.equal(await offer.getByRole("checkbox").first().isDisabled(), true);
+  await offer.getByRole("button", { name: "Thử lại đề nghị trước", exact: true }).click();
+  holdRefresh = false;
+  await page.unroute("**/api/v1/me/purchase-conversations**");
+  await page.getByRole("button", { name: "Hủy đề nghị", exact: true }).waitFor();
   assert.equal(intents.length, 2);
   assert.deepEqual(intents[0], intents[1]);
-  const id = new URL(page.url()).pathname.split("/").pop();
-  assert.equal(
-    (await fixture.api("/exchanges", fixture.member.accessToken)).items.length,
-    1,
-  );
-  await page
-    .getByRole("heading", { name: "Chi Tiết Trao Đổi", exact: true })
-    .waitFor();
+  const exchanges = await fixture.api("/exchanges", fixture.member.accessToken);
+  assert.equal(exchanges.items.length, 1);
+  const id = exchanges.items[0].id;
+  const current = await fixture.api(`/me/purchase-conversations/${conversationId}`, fixture.member.accessToken);
+  assert.equal(current.terms.activeExchangeId, id);
+  // Re-enter through the inbox after the ambiguous result was resolved. The
+  // conversation must display the server's one existing proposal.
+  await page.getByRole("link", { name: "Về danh sách hội thoại", exact: true }).click();
+  await page.locator(`a[href="${chatPath}"]`).first().click();
+  await page.getByRole("button", { name: "Hủy đề nghị", exact: true }).waitFor();
   await capture(page, "exchange-proposal-desktop.png");
-  const recipientContext = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-  });
-  const recipient = await recipientContext.newPage();
-  await login(recipient, "admin@operations.test", `/exchange/${id}`);
+  await login(page, "member@operations.test", `/exchange/${id}`);
+  await page.waitForURL(origin + chatPath);
+  await page.getByRole("button", { name: "Hủy đề nghị", exact: true }).waitFor();
+  // Keep the recipient's existing session; polling reflects the real proposal.
   await recipient
     .getByRole("button", { name: "Chấp nhận đề nghị", exact: true })
     .click();
   await recipient
     .getByRole("dialog")
-    .getByRole("button", { name: "Chấp nhận đề nghị", exact: true })
+    .getByRole("button", { name: "Đồng ý & Khóa giao dịch", exact: true })
     .click();
   await recipient
     .getByRole("button", { name: "Đặt cọc mô phỏng", exact: true })
@@ -283,10 +288,17 @@ try {
   await recipient
     .getByRole("button", { name: "Hủy đề nghị", exact: true })
     .click();
+  const cancelled = recipient.waitForResponse((response) =>
+    new URL(response.url()).pathname === `/api/v1/exchanges/${id}/cancel` &&
+    response.request().method() === "POST" && response.ok(),
+  );
   await recipient
     .getByRole("alertdialog")
     .getByRole("button", { name: "Hủy đề nghị", exact: true })
     .click();
+  await cancelled;
+  await recipient.getByText("Các đề nghị đổi sách trong cuộc trao đổi", { exact: true }).click();
+  await recipient.getByRole("button", { name: /^Xem đề nghị lần 1/ }).click();
   await recipient.getByText("Đề nghị đã bị hủy.", { exact: true }).waitFor();
   const final = await fixture.api(
     `/exchanges/${id}`,
@@ -295,12 +307,11 @@ try {
   assert.equal(final.status, "Cancelled");
   assert.ok(final.revision > 1);
   await page
-    .getByRole("link", { name: "Trao đổi của tôi", exact: true })
+    .getByRole("link", { name: "Về danh sách hội thoại", exact: true })
     .click();
-  await page.getByRole("tab", { name: /Hoàn tất/ }).click();
   // Install the denial only after leaving the open detail. Its background
   // refresh must not remove the navigation link before this test clicks it.
-  await page.getByRole("link", { name: /Xem chi tiết/ }).first().waitFor();
+  await page.locator(`a[href="${chatPath}"]`).first().waitFor();
   await page.route(`**/api/v1/exchanges/${id}`, (route) =>
     route.fulfill({
       status: 403,
@@ -309,9 +320,11 @@ try {
     }),
   );
   await page
-    .getByRole("link", { name: /Xem chi tiết/ })
+    .locator(`a[href="${chatPath}"]`)
     .first()
     .click();
+  await page.getByText("Các đề nghị đổi sách trong cuộc trao đổi", { exact: true }).click();
+  await page.getByRole("button", { name: /^Xem đề nghị lần 1/ }).click();
   await page
     .getByRole("heading", {
       name: "Đã có lỗi xảy ra khi tải dữ liệu",
@@ -322,6 +335,7 @@ try {
     await page.getByText("Đối tác trao đổi", { exact: true }).count(),
     0,
   );
+  assert.equal(await page.getByRole("heading", { name: "Thông tin sách", exact: true }).count(), 0);
   assert.deepEqual(errors, []);
   console.log(
     "PASS exchange browser: real create/accept/cancel; lost ACK retains intent; funding rejection stays open; 403 hides data; desktop/mobile.",

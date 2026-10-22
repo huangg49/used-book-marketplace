@@ -200,8 +200,7 @@ export async function listingJourney(p, fixture, admin, artifacts) {
   );
   await p.clock.fastForward(31_000);
   await p
-    .locator('div:has-text("Nơi gửi đã được sửa hoặc xóa."):visible')
-    .last()
+    .getByText(/^Nơi gửi đã được sửa hoặc xóa\./)
     .waitFor();
   await fill("Giá bán (đồng)", "12000");
   await click("Lưu nháp");

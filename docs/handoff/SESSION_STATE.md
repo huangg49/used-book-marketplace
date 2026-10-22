@@ -57,6 +57,11 @@
 - Full User Web browser PASS: Home/Search/Detail responsive, login return/owner,
   đăng sách/chỉnh sửa, ảnh, stale address và replay; lost-response chat chỉ tạo
   một hội thoại. RN public/address/listing browser và remote final-head theo PR.
+- Seller-order và Buy-now browser PASS: hai bên, quote/address, thiếu tiền bị từ
+  chối, lost ACK tạo/thanh toán cùng key/body, đúng một hold; ảnh đóng gói, gửi và
+  pickup mô phỏng InTransit. Exchange browser đi qua chat thống nhất (seller duyệt
+  hình thức, buyer chọn sách/địa chỉ), lost ACK giữ key/body, inbox mở lại đúng một
+  phiếu, accept/cancel, từ chối funding và 403 ẩn phiếu; desktop/mobile PASS.
 - Đã push; kết quả CI và trạng thái tích hợp theo PR #61. Human review độc lập và
   native Android/iOS acceptance NOT RUN; yêu cầu merge của chủ dự án không là
   chứng nhận những gate này. READINESS giữ nguyên, không mở gói tối ưu bước 3.
