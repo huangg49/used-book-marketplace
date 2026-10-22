@@ -1,5 +1,19 @@
 # Điểm lưu hiện tại — 22/10/2026
 
+## Thu gọn card, bốn bài mỗi hàng — 22/10/2026
+
+- Theo owner: kệ chính Home/Search có4cột desktop; tablet giảm cột và mobile
+  vẫn1cột. Compact card padding10px, bìa180px, khoảng hai phần thông tin12px;
+  giữ border, toàn bộ chữ/giá/khu vực và motion. Home<=360px giảm lề trong kệ
+  để giá vẫn dễ đọc ở chữ130%. Kệ Exchange phụ giữ bố cục riêng.
+- Nhánh `codex/four-column-book-cards`, base `37067ab`; subject
+  `style(web): show four book cards per desktop row`.
+- PASS web lint/typecheck/156unit/build, browser fixture1920/1440/1366/1280
+  đủ4bài/hàng, tablet/mobile320/390 chữ130% và không tràn; đã xem ảnh desktop.
+  Evidence `.tmp/book-card-details-qa/`, bộ `four-cols-*` và report tương ứng.
+  Detector một lượt17advisory có sẵn;6warning lint/chunk cũ. Chỉ CSS/docs,
+  không chạy lại API/DB/native; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
+
 ## Card sách rõ thông tin và khu vực — 22/10/2026
 
 - Owner chọn bìa ở trên; dưới chia hai phần bằng nhau: tên/tác giả trái,

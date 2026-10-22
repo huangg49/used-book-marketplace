@@ -1,11 +1,14 @@
+.card.compact {
+  padding: 10px;
+}
 .compact .cover {
-  padding: 12px;
-  height: 200px;
+  padding: 10px;
+  height: 180px;
   aspect-ratio: auto;
 }
 .compact .cover:has(.fallback) {
   height: auto;
-  min-height: 200px;
+  min-height: 180px;
 }
 .compact .meta {
   padding-top: 12px;
@@ -20,6 +23,9 @@
   margin-bottom: 12px;
 }
 .compact .prices {
+  gap: 12px;
+}
+.compact .information {
   gap: 12px;
 }
 .card {

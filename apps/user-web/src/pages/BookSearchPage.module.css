@@ -407,7 +407,7 @@
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 28px 20px;
 }
 .state,
@@ -555,6 +555,9 @@
   outline-color: var(--shop-yellow);
 }
 @media (max-width: 1150px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
   .catalog {
     padding-inline: 24px;
     grid-template-columns: 264px minmax(0, 1fr);
@@ -670,6 +673,7 @@
     justify-content: space-between;
   }
   .grid {
+    grid-template-columns: minmax(0, 1fr);
     gap: 24px 14px;
   }
   .activeFilters button {

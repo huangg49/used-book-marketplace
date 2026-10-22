@@ -1011,7 +1011,7 @@
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 24px 16px;
 }
 .more {
@@ -1426,6 +1426,9 @@
   }
 }
 @media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
   .posting {
     width: calc(100% - 210px);
     flex-wrap: wrap;
@@ -1465,6 +1468,9 @@
   }
 }
 @media (max-width: 850px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .marketplace {
     padding: 0 24px 40px;
   }
@@ -1578,6 +1584,9 @@
   .grid,
   .exchangeGrid {
     gap: 24px 16px;
+  }
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
   }
   .budgetBanners {
     gap: 16px;
@@ -1756,6 +1765,12 @@
     width: 100%;
     justify-self: center;
     gap: 24px 20px;
+  }
+}
+@media (max-width: 360px) {
+  .shelf,
+  .exchangeSection {
+    padding-inline: 8px;
   }
 }
 @media (max-width: 600px) {

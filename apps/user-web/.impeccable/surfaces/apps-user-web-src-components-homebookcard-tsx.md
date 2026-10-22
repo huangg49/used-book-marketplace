@@ -1,12 +1,14 @@
 # Shared Home / Search book-card motion
 
 22/10/2026 owner refinement supersedes the earlier unboxed/two-line card recipe:
-whole cards have a1px shop-line border,12px corners,paper background and12px
-padding. The complete cover remains above two equal columns: full wrapping title
+whole cards have a1px shop-line border,12px corners and paper background. The
+owner's density follow-up uses10px compact padding,180px desktop cover stages and
+12px between the two equal information columns. The complete cover remains above full wrapping title
 and labelled author at left; actual coarse zone and sale/exchange prices at right.
 Condition/mode and availability remain visible; source/detail links retain44px.
-Shared Home/Search/Exchange shelves use auto-fill with280px minimum cards capped
-by available width, so phones have one card per row. Keep current motion and image
+Main Home/Search shelves show four columns on desktop; smaller screens adapt and
+phones keep one card per row. The secondary Exchange shelf retains its280px
+auto-fill minimum inside its narrower content area. Keep current motion and image
 retry. `fulfillment.locality.label` is the only actual zone label; missing/legacy
 origins show “Chưa có khu vực”, and preview books explicitly have no physical zone.
 No fabricated prices, rating, region or location inferred from fulfillment.name.
