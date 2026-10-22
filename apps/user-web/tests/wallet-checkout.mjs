@@ -251,9 +251,25 @@ try {
       .count(),
     0,
   );
+  const walletBanner = page.locator("header").filter({
+    has: page.getByRole("heading", { name: "Ví của tôi", exact: true }),
+  });
+  async function expectAvailableBalance(amount) {
+    await walletBanner.getByText("Số dư khả dụng", { exact: true }).waitFor();
+    await walletBanner.getByText(
+      new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+        maximumFractionDigits: 0,
+      }).format(amount),
+      { exact: true },
+    ).waitFor();
+  }
+  await expectAvailableBalance(0);
   assert.equal(
-    await page.getByText("Số dư khả dụng", { exact: true }).count(),
-    0,
+    await walletBanner.getByRole("group", { name: "Thao tác ví", exact: true })
+      .getByRole("button").count(),
+    2,
   );
   assert.equal(
     await page.getByText("Đang giữ cho giao dịch", { exact: true }).count(),
@@ -462,6 +478,7 @@ try {
     (await fixture.api("/me/wallet", fixture.member.accessToken)).available,
     50000,
   );
+  await expectAvailableBalance(50000);
   // A successful Return closes only the payment tab, preserves the wallet
   // session and automatically shows the confirmed credit without another login.
   await openTopup();
@@ -490,6 +507,7 @@ try {
     (await fixture.api("/me/wallet", fixture.member.accessToken)).available,
     90000,
   );
+  await expectAvailableBalance(90000);
   // The settled payment has two query observers (result + owned checkout).
   // Wait for checkout release and its actual invalidations, not the page's
   // already-fired networkidle navigation event, before the pagination fixture.
@@ -1024,7 +1042,7 @@ try {
   await topupDialog.getByRole("button", { name: "Đóng popup" }).click();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: wallet action dialogs, withdrawal preview minimum with no command, keyboard focus/escape/close, preserved amounts, 320/390px dialogs at 130% type; icon wallet/chat navigation, account wallet entry, real history filters/pagination/retry; blocked provider tab creates no intent, provider has no opener, original tab stays signed in through Return, forged Return denied, QueryDR outage/retry/credit, lost-ACK modal-close same-key retry; signed checkout deadline exactly five minutes, live mobile countdown, server cancellation while provider tab stays open and an older request is selected, reload preserves server deadline, expired lost-ACK receipt cannot reopen provider, cancelled requests unlock new topup and produce no ledger/history entry; real API/Mongo with accelerated disposable fixture deadlines, fake provider navigation and signed QueryDR responses.",
+    "PASS: wallet banner shows server-confirmed balance and both actions, wallet action dialogs, withdrawal preview minimum with no command, keyboard focus/escape/close, preserved amounts, 320/390px dialogs at 130% type; icon wallet/chat navigation, account wallet entry, real history filters/pagination/retry; blocked provider tab creates no intent, provider has no opener, original tab stays signed in through Return, forged Return denied, QueryDR outage/retry/credit, lost-ACK modal-close same-key retry; signed checkout deadline exactly five minutes, live mobile countdown, server cancellation while provider tab stays open and an older request is selected, reload preserves server deadline, expired lost-ACK receipt cannot reopen provider, cancelled requests unlock new topup and produce no ledger/history entry; real API/Mongo with accelerated disposable fixture deadlines, fake provider navigation and signed QueryDR responses.",
   );
 } catch (error) {
   await page

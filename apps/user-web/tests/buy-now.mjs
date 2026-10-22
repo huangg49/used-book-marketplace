@@ -328,14 +328,45 @@ try {
     .getByRole("alert")
     .filter({ hasText: "Chưa xác nhận được kết quả" })
     .waitFor();
+  const replayedCreate = buyerPage.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/v1/orders/buy-now" &&
+      response.request().method() === "POST" && response.ok(),
+  );
   await buyerPage
     .getByRole("button", { name: "Thử lại cùng đơn mua", exact: true })
     .click();
-  await buyerPage.waitForURL("**/orders/*");
+  const createReceipt = await (await replayedCreate).json();
+  assert.equal(createReceipt.entityType, "Order");
+  const orderId = createReceipt.entityId;
+  assert.match(orderId, /^[0-9a-f-]{36}$/);
+  await buyerPage.waitForURL(/\/chat\/[0-9a-f-]{36}$/);
   assert.equal(createAttempts.length, 2);
   assert.deepEqual(createAttempts[0], createAttempts[1]);
-  const orderId = new URL(buyerPage.url()).pathname.split("/").at(-1);
   const order = await fixture.api(`/me/orders/${orderId}`, buyer.accessToken);
+  assert.equal(order.id, orderId);
+  assert.equal(order.contextId, createReceipt.contextId);
+  assert.ok(order.conversationId);
+  const conversationId = order.conversationId;
+  assert.equal(new URL(buyerPage.url()).pathname, `/chat/${conversationId}`);
+  const buyerOrderDetails = buyerPage.getByRole("region", {
+    name: "Chi tiết đơn hàng",
+    exact: true,
+  });
+  await buyerOrderDetails.getByRole("heading", { name: "Đơn Mua ngay", exact: true }).waitFor();
+  await buyerPage.getByRole("heading", {
+    level: 1, name: order.item.metadata.title, exact: true,
+  }).waitFor();
+  await buyerOrderDetails.getByRole("status").filter({ hasText: /^Chờ thanh toán$/ }).waitFor();
+  const room = await fixture.api(`/me/purchase-conversations/${conversationId}`, buyer.accessToken);
+  assert.equal(room.orderId, orderId);
+  assert.equal(room.listingId, listingId);
+  assert.equal(room.buyer.id, buyer.user.id);
+  assert.equal(room.seller.id, seller.user.id);
+  assert.equal(room.status, "OrderCreated");
+  assert.equal(room.hasQuote, false);
+  assert.equal(room.quotePreview, null);
+  assert.equal(room.terms, null);
   assert.equal(order.purchaseMode, "BuyNow");
   assert.equal(order.amounts.bookPrice, 125000);
   assert.equal(order.amounts.buyerTotal, 155000);
@@ -378,8 +409,8 @@ try {
       .countDocuments({ buyerId: buyer.user.id }),
     1,
   );
-  await buyerPage.getByRole("button", { name: /Thanh toán 155/ }).click();
-  await buyerPage.getByRole("alert").filter({ hasText: "số dư ví" }).waitFor();
+  await buyerOrderDetails.getByRole("button", { name: /^Thanh toán 155\.000\s*₫$/ }).click();
+  await buyerOrderDetails.getByRole("alert").filter({ hasText: "số dư ví" }).waitFor();
   assert.equal(
     (await fixture.api("/me/wallet", buyer.accessToken)).transactionHeld,
     0,
@@ -399,15 +430,15 @@ try {
       await route.abort("failed");
     } else await route.continue();
   });
-  await buyerPage.getByRole("button", { name: /Thanh toán 155/ }).click();
-  await buyerPage
+  await buyerOrderDetails.getByRole("button", { name: /^Thanh toán 155\.000\s*₫$/ }).click();
+  await buyerOrderDetails
     .getByRole("button", { name: "Thử lại cùng thanh toán", exact: true })
     .waitFor();
-  await buyerPage
+  await buyerOrderDetails
     .getByRole("button", { name: "Thử lại cùng thanh toán", exact: true })
     .click();
-  await buyerPage
-    .getByText("Người bán đang chuẩn bị gửi", { exact: true })
+  await buyerOrderDetails
+    .getByRole("status").filter({ hasText: /^Người bán đang chuẩn bị gửi$/ })
     .waitFor();
   assert.equal(paymentAttempts.length, 2);
   assert.deepEqual(paymentAttempts[0], paymentAttempts[1]);
@@ -424,8 +455,9 @@ try {
     .getByText("Đang giao dịch", { exact: true })
     .waitFor();
   await buyerPage.goBack();
-  await buyerPage
-    .getByText("Người bán đang chuẩn bị gửi", { exact: true })
+  await buyerPage.waitForURL(`**/chat/${conversationId}`);
+  await buyerOrderDetails
+    .getByRole("status").filter({ hasText: /^Người bán đang chuẩn bị gửi$/ })
     .waitFor();
   assert.equal(
     (await fixture.api("/me/wallet", buyer.accessToken)).transactionHeld,
@@ -467,7 +499,13 @@ try {
       await route.fulfill({ response });
     }
   });
-  await sellerPage.locator(`a[href="/orders/${orderId}"]`).click();
+  await sellerPage.locator(`a[href="/chat/orders/${orderId}"]`).click();
+  await sellerPage.waitForURL(`**/chat/${conversationId}`);
+  const sellerOrderDetails = sellerPage.getByRole("region", {
+    name: "Chi tiết đơn hàng",
+    exact: true,
+  });
+  await sellerOrderDetails.getByRole("heading", { name: "Đơn Mua ngay", exact: true }).waitFor();
   await sellerPage
     .getByRole("heading", { name: "Chuẩn bị và bàn giao sách", exact: true })
     .waitFor();
@@ -595,7 +633,7 @@ try {
     "POST",
     { "Idempotency-Key": pickupEventId },
   );
-  await buyerPage.getByText("Đang giao", { exact: true }).waitFor();
+  await buyerOrderDetails.getByRole("status").filter({ hasText: /^Đang giao$/ }).waitFor();
   await buyerPage.evaluate(() =>
     window.scrollTo({ top: 0, behavior: "instant" }),
   );
@@ -612,11 +650,15 @@ try {
     await fixture.db
       .collection("purchase_conversations")
       .countDocuments({ listingId }),
-    0,
+    1,
+  );
+  assert.equal(
+    (await fixture.db.collection("purchase_conversations").findOne({ orderId }))._id,
+    conversationId,
   );
   assert.deepEqual(errors, []);
   console.log(
-    "PASS buy-now browser: listed price, no chat, quote does not reserve, create/pay lost ACK same-key/body replay, underfunded no hold, paid Preparing without seller approval, durable notifications, file chooser/input/focus/draft retained across shipment polling and transient 503, real image upload/registration, independent simulated pickup InTransit; 390/1440. API/Mongo real, QA storage/payment/carrier only.",
+    "PASS buy-now browser: listed price, quote does not reserve or open chat, create/pay lost ACK same-key/body replay, one OrderCreated room shared by buyer/seller with no negotiation/quote, underfunded no hold, paid Preparing without seller approval, durable notifications, file chooser/input/focus/draft retained across shipment polling and transient 503, real image upload/registration, independent simulated pickup InTransit; 390/1440. API/Mongo real, QA storage/payment/carrier only.",
   );
 } catch (error) {
   for (const [index, context] of (browser?.contexts() ?? []).entries())

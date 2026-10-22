@@ -1,5 +1,26 @@
 # Điểm lưu hiện tại — 23/10/2026
 
+## Sửa User Web CI của PR62 — 23/10/2026
+
+- Owner yêu cầu sửa/push lại [PR62](https://github.com/huangg49/used-book-marketplace/pull/62),
+  nhánh `codex/inline-card-location`, base sửa `61c300e`. Log job119974383142
+  dừng ở seller-order vì tìm heading cũ sau khi chuyển đơn sang workspace chat.
+- Cập nhật seller-order/BuyNow theo region Chi tiết đơn hàng, heading/trạng thái/
+  thanh toán hiện hành. ID đơn lấy từ receipt; kiểm đúng room/participants, một
+  room OrderCreated không terms/quote cho BuyNow. Giữ ca mất ACK cùng key/body,
+  thiếu tiền, hold/ledger, thông báo và shipment; không đổi source nghiệp vụ.
+- Wallet kiểm banner với số dư API xác nhận0→50.000→90.000 và hai nút thao tác;
+  giữ callback không session không lộ dữ liệu. Thêm fixture Order Chat hiện có
+  vào CI và upload evidence khi lỗi; không bỏ check hay tăng timeout để né lỗi.
+- PASS Node24.21.0/pnpm11.19.0: browser seller-order/BuyNow/exchange/wallet với
+  Mongo QA riêng57217/database `_test`; Order Chat fixture không DB; web lint
+  (6warning cũ), syntax/diff/docs check. Log `.tmp/ci-fix-*.log`; provider/storage/
+  carrier mô phỏng, không phải giao dịch VNPay hay native thật. QA được dừng sau
+  kiểm tra; DB/env và FE5174/API3000 của app giữ nguyên.
+- Commit `fix(ci): align browser regressions with order chat and wallet`.
+  Local PASS không thay remote CI; kiểm check của head mới trực tiếp trên PR62
+  trước merge. READINESS/human review giữ nguyên; gói này chỉ sửa test/CI/handoff.
+
 ## Hợp nhất main và gỡ xung đột — 23/10/2026
 
 - Theo owner, merge `origin/main` tại `60e1cf01` vào `codex/inline-card-location`

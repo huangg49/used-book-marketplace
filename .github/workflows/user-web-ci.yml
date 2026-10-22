@@ -58,6 +58,7 @@ jobs:
       - run: pnpm --filter @used-books/api build
       - run: pnpm --filter @used-books/admin-web exec playwright install --with-deps chromium
       - run: pnpm --filter @used-books/user-web test:listing-cache:browser
+      - run: pnpm --filter @used-books/user-web test:order-chat:browser
       - run: pnpm --filter @used-books/user-web test:auth-motion:browser
         env:
           AUTH_MOTION_EVIDENCE: apps/user-web/test-results/auth-motion
@@ -89,5 +90,6 @@ jobs:
             .impeccable/review/integration-main/
             .tmp/wallet-checkout-browser/
             .tmp/listing-cache-qa/
+            .tmp/order-chat-workspace-qa/
       - if: always()
         run: pnpm infra:mongo:test:stop
