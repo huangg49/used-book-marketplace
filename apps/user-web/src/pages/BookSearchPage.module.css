@@ -5,44 +5,24 @@
   background: var(--shop-paper);
   color: var(--shop-ink);
 }
-.searchHead {
-  background: var(--shop-wine);
-  color: var(--shop-cream);
-}
-.headInner {
-  max-width: 1360px;
-  margin: auto;
-  padding: 16px 40px 20px;
-  display: grid;
-  grid-template-columns: minmax(200px, 0.75fr) minmax(0, 1.25fr);
-  gap: 40px;
-  align-items: center;
-}
-.headingRow h1 {
-  font: 400 2.5rem/1.2 var(--shop-display);
-  margin: 0 0 8px;
-}
-.headingRow h1 span {
-  color: var(--shop-yellow);
-}
-.headingRow p {
-  margin: 0;
-  color: #f0d9b9;
-  font-size: 0.8125rem;
-  line-height: 1.7;
+.searchBar {
+  padding: 0 0 18px;
 }
 .search {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 6px 6px 6px 16px;
+  border: 1px solid var(--shop-line);
   border-radius: 10px;
-  background: var(--shop-paper);
+  background: #fffdf8;
+  box-shadow: 0 3px 12px rgb(67 17 14 / 7%);
   color: var(--shop-wine);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 .search:focus-within {
-  outline: 2px solid var(--shop-yellow);
-  outline-offset: 4px;
+  border-color: var(--shop-wine);
+  box-shadow: 0 0 0 3px rgb(94 7 5 / 10%);
 }
 .search input {
   min-width: 0;
@@ -229,6 +209,8 @@
 .priceFields input {
   width: 100%;
   min-width: 0;
+  color: #34211c;
+  -webkit-text-fill-color: #34211c;
   min-height: 44px !important;
   padding: 10px 12px 10px 0 !important;
   font-size: 0.875rem !important;
@@ -385,6 +367,8 @@
   gap: 8px;
   margin: 0 0 20px;
 }
+
+/* Persistent summary of applied filters, positioned below the fixed navbar. */
 .activeFilters button {
   display: inline-flex;
   align-items: center;
@@ -551,9 +535,6 @@
   outline: 2px solid var(--shop-wine);
   outline-offset: 4px;
 }
-.searchHead :focus-visible {
-  outline-color: var(--shop-yellow);
-}
 @media (max-width: 1150px) {
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -565,9 +546,6 @@
   }
   .sidebar {
     top: 92px;
-  }
-  .headInner {
-    padding-inline: 24px;
   }
 }
 @media (max-width: 900px) {
@@ -595,41 +573,13 @@
   .filterToggle span {
     font-variant-numeric: tabular-nums;
   }
-  .headInner {
-    grid-template-columns: 1fr;
-    gap: 18px;
-  }
-  .headingRow {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-  }
-  .headingRow h1 {
-    margin: 0;
-  }
-  .headingRow p {
-    max-width: 32ch;
-  }
   .sortGroup {
     flex-shrink: 1;
   }
 }
 @media (max-width: 600px) {
-  .headInner {
-    padding: 22px 16px 24px;
-    gap: 16px;
-  }
-  .headingRow {
-    display: block;
-  }
-  .headingRow h1 {
-    font-size: 2rem;
-    margin-bottom: 8px;
-  }
-  .headingRow p {
-    font-size: 0.75rem;
-    max-width: none;
+  .searchBar {
+    padding-bottom: 14px;
   }
   .search {
     gap: 8px;
@@ -724,13 +674,6 @@
     font-size: 0.75rem;
     font-weight: 700;
   }
-  .headInner {
-    padding-block: 8px;
-  }
-  .headingRow h1 {
-    font-size: 2rem;
-    margin-bottom: 4px;
-  }
   .catalog {
     padding-top: 16px;
   }
@@ -807,20 +750,247 @@
   }
 }
 
-/* Search-only treatment: the posting form keeps its own field styling. */
-.classification > div {
+/* Refined book-filter panel: warm paper, clear sections, and calmer controls. */
+.sidebar {
+  padding: 20px 18px 18px;
+  border: 1px solid #4a0808;
+  border-radius: 18px;
+  background: linear-gradient(165deg, #690b0b 0%, #3b0305 100%);
+  color: #fff8ee;
+  box-shadow: 0 12px 30px rgb(72 15 13 / 20%);
+}
+.sidebar h2,
+.sidebar .filterForm .filterGroup legend,
+.sidebar .extraBudget summary {
+  color: #fff5e8;
+}
+.sidebar h2 {
+  border-bottom-color: rgb(255 245 232 / 22%);
+}
+.sidebar h2 > svg {
+  background: rgb(255 245 232 / 15%);
+  color: #fff2df;
+}
+.sidebar .filterForm .filterGroup,
+.sidebar .classification,
+.sidebar .filterFooter {
+  border-color: rgb(255 245 232 / 20%);
+}
+.sidebar .filterGroup legend small,
+.sidebar .filterFooter > p,
+.sidebar .filterHint {
+  color: #f0d9cd;
+}
+.sidebar .conditionChoices label[data-selected] {
+  background: #fff0dc;
+  color: #6b1917;
+}
+.sidebar .extraBudget {
+  border-color: rgb(255 245 232 / 24%);
+  background: rgb(255 245 232 / 7%);
+}
+.sidebar .reset {
+  color: #fff5e8;
+}
+.sidebar .reset:hover {
+  background: rgb(255 245 232 / 12%);
+}
+.sidebar .groupClear {
+  color: #ffe7d5;
+}
+.sidebar .pricePresets button {
+  border-color: rgb(255 245 232 / 30%);
+  background: rgb(255 245 232 / 10%);
+  color: #fff5e8;
+}
+.sidebar .pricePresets button:hover,
+.sidebar .pricePresets button[aria-pressed="true"] {
+  border-color: #fff0dc;
+  background: #fff0dc;
+  color: #6b1917;
+}
+.sidebar .apply {
+  border-color: #f6d8a8;
+  background: #f6d8a8;
+  color: #571411;
+  box-shadow: 0 5px 12px rgb(35 5 4 / 18%);
+}
+.sidebar .apply:hover {
+  background: #ffe7bc;
+}
+.sidebar .priceFields label {
+  background: #fffaf2 !important;
+  color: #34211c;
+  border-color: #d9b8a8 !important;
+}
+.sidebar .priceFields label > span {
+  color: #62463d;
+}
+.sidebar .priceFields input,
+.filterDialog .priceFields input {
+  color: #34211c !important;
+  -webkit-text-fill-color: #34211c !important;
+}
+.sidebar .priceFields input::placeholder,
+.filterDialog .priceFields input::placeholder {
+  color: #6b5148 !important;
+  -webkit-text-fill-color: #6b5148 !important;
+  opacity: 1;
+}
+.sidebar .filterForm :is(select, input:not([type="checkbox"], [type="radio"])):focus {
+  border-color: #f6d8a8 !important;
+}
+.sidebar .filterForm :is(select, input:not([type="checkbox"], [type="radio"])):focus-visible {
+  box-shadow: none;
+}
+.sidebar .conditionChoices label:hover {
+  color: #fff0dc;
+}
+.sidebar .conditionChoices label[data-selected]:hover {
+  color: #6b1917;
+}
+.sidebar h2 {
   gap: 10px;
+  margin: 0 0 18px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid #eadfce;
+  font-size: 1.05rem;
+  letter-spacing: -0.015em;
 }
-.classification select,
-.classification input:not([type="checkbox"]) {
-  background: var(--shop-shelf);
-  border: 0;
-  border-bottom: 1px solid var(--shop-control);
-  border-radius: 6px 6px 0 0;
+.sidebar h2 > svg {
+  box-sizing: content-box;
+  flex: 0 0 auto;
+  padding: 9px;
+  border-radius: 11px;
+  background: #f2e4d2;
+  color: var(--shop-wine);
 }
-.classification details {
-  margin-top: 12px;
+.sidebar .filterBody {
+  gap: 20px;
 }
+.sidebar .filterForm .filterGroup,
+.sidebar .classification {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee3d5;
+}
+/* The language control already has its own border; don't add a second line directly below it. */
+.sidebar .filterForm .languageFilter,
+.filterDialog .filterForm .languageFilter {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.sidebar .classification {
+  padding-bottom: 18px;
+}
+.sidebar .priceFields label {
+  border-color: #e5d7c4;
+  border-radius: 10px;
+  background: #fffdf8;
+}
+.sidebar .pricePresets button {
+  border: 1px solid #eadcc9;
+  border-radius: 999px;
+  background: #f7eddf;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.sidebar .conditionChoices label {
+  padding: 0 10px;
+  border-radius: 9px;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.sidebar .conditionChoices label[data-selected] {
+  background: #f4e7d7;
+}
+.sidebar .extraBudget {
+  padding: 0 12px 10px;
+  border: 1px solid #eadcc9;
+  border-radius: 12px;
+  background: rgb(255 253 248 / 78%);
+}
+.sidebar .extraBudget summary {
+  color: var(--shop-wine);
+}
+
+/* Highlight price-filter text and quick price options. */
+.sidebar .priceFilter legend,
+.filterDialog .priceFilter legend,
+.sidebar .priceFilter > .presetLabel,
+.filterDialog .priceFilter > .presetLabel {
+  color: #8B0000 !important;
+}
+.sidebar .priceFields label > span,
+.filterDialog .priceFields label > span {
+  color: #8B0000 !important;
+}
+.sidebar .pricePresets button,
+.filterDialog .pricePresets button {
+  color: #8B0000 !important;
+}
+
+.sidebar .pricePresets button:hover,
+.sidebar .pricePresets button[aria-pressed="true"],
+.filterDialog .pricePresets button:hover,
+.filterDialog .pricePresets button[aria-pressed="true"] {
+  background: #8B0000 !important;
+  border-color: #8B0000 !important;
+  color: #ffffff !important;
+}
+
+.sidebar .filterHint,
+.filterDialog .filterHint {
+  color: #8B0000 !important;
+}
+.sidebar .filterFooter {
+  margin-top: 2px;
+  padding-top: 16px;
+  border-top: 1px solid #e8dccb;
+}
+.sidebar .filterActions {
+  gap: 8px;
+}
+.sidebar .apply {
+  min-height: 46px;
+  border-radius: 11px;
+  box-shadow: 0 5px 12px rgb(83 23 19 / 14%);
+}
+.sidebar .reset {
+  min-height: 40px;
+  border-radius: 9px;
+  text-decoration: none;
+}
+.sidebar .reset:hover {
+  background: #f4e8d9;
+}
+.filterDialog .filterBody {
+  gap: 20px;
+}
+.filterDialog .extraBudget {
+  padding: 0 12px 10px;
+  border: 1px solid #eadcc9;
+  border-radius: 12px;
+  background: #fffdf8;
+}
+.filterDialog .priceFields label,
+.filterDialog .categoryPicker > input {
+  border-radius: 10px;
+}
+
+/* Theme values inherited by the FilterSelect component inside the wine panel. */
+.sidebar,
+.filterDialog {
+  --filter-select-color: #34211c;
+  --filter-select-placeholder: #5c4038;
+  --filter-select-background: #fffaf2;
+  --filter-select-border: 1px solid #e5c9b8;
+  --filter-select-radius: 10px;
+  --filter-select-focus: #a85a38;
+  --filter-select-icon: #6b1917;
+}
+.sidebar .filterForm > .filterBody > fieldset[aria-labelledby$="-language-label"] legend {
+  color: #fff5e8;
+}
+
+/* Classification fields own their layout and controls in CatalogClassificationFields.module.css. */
 .filterForm .filterGroup {
   position: relative;
 }
@@ -880,9 +1050,6 @@
   color: var(--shop-wine);
   accent-color: var(--shop-wine);
 }
-.classification input[type="checkbox"] {
-  color: var(--shop-wine);
-}
 .groupClear:focus-visible,
 .conditionChoices input:focus-visible {
   outline: 2px solid var(--shop-wine);
@@ -892,23 +1059,23 @@
   color: var(--shop-wine);
 }
 
-/* One continuous focus boundary, shared by the desktop rail and mobile dialog. */
-.page .filterForm :is(select, input:not([type="checkbox"], [type="radio"])) {
+/* Focus treatment for page-owned filter controls; classification controls are component-scoped. */
+.page .filterForm :is(select, input:not([type="checkbox"], [type="radio"])):not(.classification *) {
   transition-property: border-color, box-shadow;
-  transition-duration: 170ms !important;
+  transition-duration: 170ms;
   transition-timing-function: ease-out;
 }
 .page
   .filterForm
-  :is(select, input:not([type="checkbox"], [type="radio"])):focus {
+  :is(select, input:not([type="checkbox"], [type="radio"])):not(.classification *):focus {
   outline: none;
   border-color: var(--shop-wine);
   box-shadow: none;
 }
 .page
   .filterForm
-  :is(select, input:not([type="checkbox"], [type="radio"])):focus-visible {
-  box-shadow: inset 0 -1px 0 var(--shop-wine);
+  :is(select, input:not([type="checkbox"], [type="radio"])):not(.classification *):focus-visible {
+  box-shadow: none;
 }
 .priceFields label {
   transition:
@@ -929,17 +1096,6 @@
 .priceFields label:focus-within > span {
   color: var(--filter-focus-color, var(--shop-wine));
 }
-.classification label {
-  transition: color 170ms ease-out;
-  transition-duration: 170ms !important;
-}
-.classification div:has(> :is(input, select):focus) label,
-.classification
-  div:has(> div > :is(input[role="combobox"], select):focus)
-  label,
-.classification label:has(> select:focus) {
-  color: var(--shop-wine);
-}
 @media (forced-colors: active) {
   .page
     .filterForm
@@ -957,3 +1113,54 @@
     box-shadow: none;
   }
 }
+
+/* Consistent high-contrast controls across every book-filter category. */
+.sidebar .categoryPicker > input,
+.filterDialog .categoryPicker > input {
+  min-height: 46px;
+  color: #34211c !important;
+  background: #fffaf2 !important;
+  border: 1px solid #e5c9b8 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 5px rgb(35 5 4 / 7%);
+}
+.sidebar .categoryPicker > input::placeholder,
+.filterDialog .categoryPicker > input::placeholder {
+  color: #6b5148 !important;
+  opacity: 1;
+}
+.sidebar .categoryPicker > svg,
+.filterDialog .categoryPicker > svg { color: #6b1917; }
+.sidebar .categoryOptions,
+.filterDialog .categoryOptions {
+  z-index: 20;
+  border: 1px solid #e5c9b8;
+  border-radius: 10px;
+  background: #fffaf2;
+  color: #34211c;
+  box-shadow: 0 10px 24px rgb(35 5 4 / 16%);
+}
+.sidebar .categoryOptions [role="option"],
+.filterDialog .categoryOptions [role="option"] {
+  color: #34211c;
+  border-radius: 7px;
+}
+.sidebar .categoryOptions [role="option"]:hover,
+.filterDialog .categoryOptions [role="option"]:hover,
+.sidebar .categoryOptions [role="option"][data-active="true"],
+.filterDialog .categoryOptions [role="option"][data-active="true"] {
+  background: #f2e3d3;
+  color: #571411;
+}
+.sidebar .categoryOptions [role="option"][aria-selected="true"],
+.filterDialog .categoryOptions [role="option"][aria-selected="true"] {
+  background: #6b1917;
+  color: #fffaf2;
+  font-weight: 700;
+}
+.sidebar .filterForm :is(select, input:not([type="checkbox"], [type="radio"])):not(.classification *):focus-visible {
+  outline: 2px solid #f6d8a8;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgb(246 216 168 / 22%);
+}
+.filterDialog .filterForm legend { color: #4d1714; }
