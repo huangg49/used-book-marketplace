@@ -6,7 +6,6 @@ import {
   SlidersHorizontal,
   X,
   ArrowRight,
-  RotateCcw,
 } from "lucide-react";
 import { HomeBookCard } from "../components/HomeBookCard";
 import { CatalogSort } from "../components/CatalogSort";
@@ -116,7 +115,6 @@ function FilterForm({
       >
         <legend>
           <span id={`${id}-${kind}-label`}>
-            {title} (₫)
             {(draft[minKey] || draft[maxKey]) && <small>Đã chọn khoảng</small>}
           </span>
           {(draft[minKey] || draft[maxKey]) && (
@@ -238,7 +236,12 @@ function FilterForm({
             )}
           </div>
         </fieldset>
-        {mode !== "Exchange" && range("SalePrice", "Giá bán")}
+        {mode !== "Exchange" && (
+          <details className={styles.extraBudget}>
+            <summary>Khoảng giá bán</summary>
+            {range("SalePrice", "Giá bán")}
+          </details>
+        )}
         {mode === "Exchange"
           ? range("ExchangeValue", "Giá trị đổi")
           : mode !== "Sale" && (
@@ -251,7 +254,7 @@ function FilterForm({
               </details>
             )}
         <fieldset
-          className={styles.filterGroup}
+          className={`${styles.filterGroup} ${styles.languageFilter}`}
           aria-labelledby={`${id}-language-label`}
         >
           <legend>
@@ -446,6 +449,7 @@ export function BookSearchPage() {
     };
   }, [filterOpen]);
   const chips = [
+    ...(params.get("mode") ? [{ key: "mode", label: modes.find(([value]) => value === params.get("mode"))?.[1] || params.get("mode")! }] : []),
     ...(initial.categoryId
       ? [
           {
@@ -514,41 +518,18 @@ export function BookSearchPage() {
       : []),
   ];
   const filtered = chips.length > 0 || params.has("mode") || params.has("sort");
+  function removeChip(chip: (typeof chips)[number]) {
+    if (chip.key === "facets" && "facet" in chip && "value" in chip) {
+      const attributes = { ...initial.attributes };
+      const key = String(chip.facet);
+      attributes[key] = (attributes[key] || []).filter((v) => v !== chip.value);
+      if (!attributes[key]?.length) delete attributes[key];
+      const compatible = compatibleAttributes(initial.categoryId, attributes, "search");
+      update("facets", Object.keys(compatible).length ? JSON.stringify(compatible) : "");
+    } else update(chip.key, "");
+  }
   return (
     <div className={styles.page}>
-      <section className={styles.searchHead} aria-labelledby="search-title">
-        <div className={styles.headInner}>
-          <div className={styles.headingRow}>
-            <h1 id="search-title" tabIndex={-1}>
-              TÌM SÁCH<span>.</span>
-            </h1>
-            <p>Một cuốn đã đọc. Một câu chuyện để đọc tiếp.</p>
-          </div>
-          <form
-            role="search"
-            className={styles.search}
-            onSubmit={(event) => {
-              event.preventDefault();
-              update("q", (params.get("q") || "").trim());
-            }}
-          >
-            <Search size={21} aria-hidden="true" />
-            <label htmlFor="catalog-search" className="sr-only">
-              Tìm sách
-            </label>
-            <input
-              id="catalog-search"
-              type="search"
-              placeholder="Tên sách, tác giả hoặc ISBN…"
-              value={params.get("q") || ""}
-              onChange={(event) => update("q", event.target.value, true)}
-            />
-            <button type="submit">
-              Tìm sách <ArrowRight size={17} aria-hidden="true" />
-            </button>
-          </form>
-        </div>
-      </section>
       <div className={styles.catalog}>
         <aside
           ref={sidebar}
@@ -568,6 +549,31 @@ export function BookSearchPage() {
           />
         </aside>
         <section className={styles.results} aria-labelledby="catalog-results">
+          <div className={styles.searchBar}>
+            <form
+              role="search"
+              className={styles.search}
+              onSubmit={(event) => {
+                event.preventDefault();
+                update("q", (params.get("q") || "").trim());
+              }}
+            >
+              <Search size={21} aria-hidden="true" />
+              <label htmlFor="catalog-search" className="sr-only">
+                Tìm sách
+              </label>
+              <input
+                id="catalog-search"
+                type="search"
+                placeholder="Tên sách, tác giả hoặc ISBN…"
+                value={params.get("q") || ""}
+                onChange={(event) => update("q", event.target.value, true)}
+              />
+              <button type="submit">
+                Tìm sách <ArrowRight size={17} aria-hidden="true" />
+              </button>
+            </form>
+          </div>
           <div
             className={styles.modeRow}
             role="group"
@@ -639,40 +645,13 @@ export function BookSearchPage() {
                       : chip.key
                   }
                   aria-label={`Bỏ lọc ${chip.label}`}
-                  onClick={() => {
-                    if (
-                      chip.key === "facets" &&
-                      "facet" in chip &&
-                      "value" in chip
-                    ) {
-                      const attributes = { ...initial.attributes };
-                      const key = String(chip.facet);
-                      attributes[key] = (attributes[key] || []).filter(
-                        (v) => v !== chip.value,
-                      );
-                      if (!attributes[key]?.length) delete attributes[key];
-                      const compatible = compatibleAttributes(
-                        initial.categoryId,
-                        attributes,
-                        "search",
-                      );
-                      update(
-                        "facets",
-                        Object.keys(compatible).length
-                          ? JSON.stringify(compatible)
-                          : "",
-                      );
-                    } else update(chip.key, "");
-                  }}
+                  onClick={() => removeChip(chip)}
                 >
                   {chip.label}
                   <X size={14} aria-hidden="true" />
                 </button>
               ))}
-              <button type="button" className={styles.clear} onClick={clear}>
-                <RotateCcw size={14} aria-hidden="true" />
-                Xóa bộ lọc
-              </button>
+
             </div>
           )}
           {priceInvalid ? (

@@ -7,15 +7,15 @@
   appearance: none !important;
 }
 .root :is(.control, .native) {
+  box-sizing: border-box;
   width: 100%;
-  min-height: 44px;
+  min-height: 46px;
   padding: 10px 32px 10px 10px !important;
-  font: 400 0.8125rem/1.5 var(--shop-body) !important;
-  color: var(--shop-ink);
-  background: var(--shop-shelf, #f4eddf) !important;
-  border: 0 !important;
-  border-bottom: 1px solid var(--shop-control) !important;
-  border-radius: 6px 6px 0 0 !important;
+  font: 400 0.875rem/1.5 var(--shop-body) !important;
+  color: var(--filter-select-color, var(--shop-ink)) !important;
+  background: var(--filter-select-background, var(--shop-shelf, #f4eddf)) !important;
+  border: var(--filter-select-border, 1px solid var(--shop-control)) !important;
+  border-radius: var(--filter-select-radius, 10px) !important;
   text-overflow: ellipsis;
   transition:
     border-color 170ms ease-out,
@@ -24,24 +24,28 @@
 }
 .root :is(.control, .native):focus {
   outline: none;
-  border-bottom-color: var(--shop-wine) !important;
+  border-color: var(--filter-select-focus, var(--shop-wine)) !important;
 }
 .root :is(.control, .native):focus-visible {
-  box-shadow: inset 0 -1px 0 var(--shop-wine) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--filter-select-focus, var(--shop-wine)) 30%, transparent) !important;
 }
 .control::placeholder {
-  color: var(--shop-ink);
+  color: var(--filter-select-placeholder, var(--shop-ink)) !important;
   opacity: 1;
 }
 .icon {
   position: absolute;
   right: 10px;
   top: 14px;
-  color: var(--shop-wine);
+  color: var(--filter-select-icon, var(--shop-wine));
   pointer-events: none;
 }
 .popup {
   --shop-shelf: #f4eddf;
+  --shop-paper: #fffaf2;
+  --shop-ink: #34211c;
+  --shop-wine: #6b1917;
+  --shop-control: #e5c9b8;
   position: fixed;
   z-index: 80;
   box-sizing: border-box;
@@ -59,6 +63,7 @@
   animation-duration: 140ms !important;
 }
 .option {
+  color: #34211c;
   display: flex;
   align-items: center;
   justify-content: space-between;

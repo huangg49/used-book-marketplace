@@ -4,6 +4,45 @@
   gap: 8px;
   min-width: 0;
 }
+.categoryDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #e7b8b5;
+  border-radius: 12px;
+  background: #fff1f0;
+  color: #592b2b;
+}
+.categoryDetails :is(label, summary, .label, .subcategory) {
+  color: #592b2b;
+}
+.categoryDetails :is(small, .context, p) {
+  color: #754848;
+}
+.categoryDetails :is(input:not([type="checkbox"]), select) {
+  color: #34211c;
+  background: #fffaf8;
+  border-color: #d9a5a2;
+}
+.categoryDetails input::placeholder {
+  color: #806e67;
+  opacity: 1;
+}
+.categoryDetails .subcategory > label {
+  color: #4b201e;
+  font-weight: 700;
+}
+.categoryDetails input:not([type="checkbox"]):focus-visible,
+.categoryDetails select:focus-visible {
+  outline: 2px solid #8f3434;
+  outline-offset: 2px;
+  border-color: #8f3434;
+}
+.categoryDetails input[type="checkbox"] {
+  accent-color: #8f3434;
+}
 .primaryFields {
   display: contents;
 }
@@ -106,6 +145,7 @@
 }
 .fields select,
 .fields input:not([type="checkbox"]) {
+  box-sizing: border-box;
   width: 100%;
   min-height: 44px;
   font: 400 0.875rem/1.5 var(--shop-body);
@@ -113,7 +153,7 @@
   color: var(--shop-ink);
   background: var(--shop-paper);
   border: 1px solid var(--shop-control);
-  border-radius: 6px;
+  border-radius: 10px;
 }
 .context {
   font-size: 0.8125rem;
@@ -166,6 +206,19 @@
 }
 .choices label:hover {
   color: var(--shop-wine);
+}
+
+.fields .categoryDetails .choices > label,
+.fields .categoryDetails .choices > label > span {
+  color: #34211c;
+}
+.fields .categoryDetails .choices > label:hover,
+.fields .categoryDetails .choices > label:hover > span {
+  color: #6b1917;
+}
+.fields .categoryDetails .choices > label:has(input:disabled),
+.fields .categoryDetails .choices > label:has(input:disabled) > span {
+  color: #806e67;
 }
 .choices .optionSearch {
   min-height: 0;
