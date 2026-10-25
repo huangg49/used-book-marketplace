@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -27,6 +27,7 @@ import {
   type Attributes,
 } from "@used-books/api-contract/catalog-taxonomy";
 import { catalogQueryKeys, readAttributes } from "../lib/catalog-filters";
+import { observeHeaderScroll } from "../lib/header-scroll";
 import styles from "./BookSearchPage.module.css";
 
 const modes = [
@@ -84,14 +85,22 @@ function FilterForm({
 }: {
   initial: FilterValues;
   id: string;
-  onApply: (values: FilterValues) => void;
+  onApply: (values: FilterValues, shouldScroll?: boolean) => void;
   mode: string;
 }) {
   const [draft, setDraft] = useState(initial);
   const invalid = invalidFilters(draft);
+
+  function updateDraft(next: FilterValues, autoApply = false) {
+    setDraft(next);
+    if (autoApply && !invalidFilters(next)) {
+      onApply(next, false);
+    }
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (!invalid) onApply(draft);
+    if (!invalid) onApply(draft, true);
   }
   function clearGroup(
     event: React.MouseEvent<HTMLButtonElement>,
@@ -102,7 +111,7 @@ function FilterForm({
       .closest("fieldset")
       ?.querySelector<HTMLElement>("input, select")
       ?.focus();
-    setDraft(next);
+    updateDraft(next, true);
   }
   function range(kind: "SalePrice" | "ExchangeValue", title: string) {
     const minKey = kind === "SalePrice" ? "minSalePrice" : "minExchangeValue";
@@ -139,6 +148,17 @@ function FilterForm({
               placeholder="10.000"
               value={draft[minKey]}
               onChange={(e) => setDraft({ ...draft, [minKey]: e.target.value })}
+              onBlur={() => {
+                if (!error && (draft[minKey] !== initial[minKey] || draft[maxKey] !== initial[maxKey])) {
+                  updateDraft(draft, true);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (!error) updateDraft(draft, true);
+                }
+              }}
               aria-invalid={error}
               aria-describedby={error ? id + "-" + kind + "-error" : undefined}
             />
@@ -151,6 +171,17 @@ function FilterForm({
               placeholder="1.000.000"
               value={draft[maxKey]}
               onChange={(e) => setDraft({ ...draft, [maxKey]: e.target.value })}
+              onBlur={() => {
+                if (!error && (draft[minKey] !== initial[minKey] || draft[maxKey] !== initial[maxKey])) {
+                  updateDraft(draft, true);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (!error) updateDraft(draft, true);
+                }
+              }}
               aria-invalid={error}
               aria-describedby={error ? id + "-" + kind + "-error" : undefined}
             />
@@ -164,7 +195,7 @@ function FilterForm({
               aria-pressed={!draft[minKey] && draft[maxKey] === String(price)}
               aria-label={`${title} tối đa ${formatVnd(price)}`}
               onClick={() =>
-                setDraft({ ...draft, [minKey]: "", [maxKey]: String(price) })
+                updateDraft({ ...draft, [minKey]: "", [maxKey]: String(price) }, true)
               }
             >
               ≤ {price / 1000}k
@@ -192,7 +223,7 @@ function FilterForm({
             clearable
             renderSelect={(props) => <FilterSelect {...props} />}
             value={draft}
-            onChange={(value) => setDraft({ ...draft, ...value })}
+            onChange={(value) => updateDraft({ ...draft, ...value }, true)}
           />
         </div>
         <fieldset
@@ -228,7 +259,7 @@ function FilterForm({
                     name={`${id}-condition`}
                     value={value}
                     checked={draft.condition === value}
-                    onChange={() => setDraft({ ...draft, condition: value })}
+                    onChange={() => updateDraft({ ...draft, condition: value }, true)}
                   />
                   <span>{label}</span>
                 </label>
@@ -278,7 +309,7 @@ function FilterForm({
             id={`${id}-language`}
             label="Ngôn ngữ của sách"
             value={draft.language}
-            onChange={(language) => setDraft({ ...draft, language })}
+            onChange={(language) => updateDraft({ ...draft, language }, true)}
             options={[
               { value: "", label: "Tất cả ngôn ngữ" },
               ...languageOptions.map((option) => ({
@@ -343,6 +374,14 @@ export function BookSearchPage() {
   }, []);
   const dialog = useRef<HTMLDialogElement>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [floating, setFloating] = useState(() => typeof window !== "undefined" && window.scrollY > 48);
+  useLayoutEffect(
+    () =>
+      observeHeaderScroll((next) => {
+        setFloating(next);
+      }),
+    [],
+  );
   const query = new URLSearchParams();
   for (const key of queryKeys) {
     const value = params.get(key);
@@ -405,6 +444,7 @@ export function BookSearchPage() {
   function clear() {
     const next = new URLSearchParams();
     if (params.get("q")) next.set("q", params.get("q")!);
+    if (params.get("mode")) next.set("mode", params.get("mode")!);
     if (params.has("data")) next.set("data", params.get("data")!);
     setParams(next);
   }
@@ -412,7 +452,7 @@ export function BookSearchPage() {
     dialog.current?.close();
     setFilterOpen(false);
   }
-  function apply(values: FilterValues) {
+  function apply(values: FilterValues, shouldScroll = false) {
     const next = new URLSearchParams(params);
     next.delete("cursor");
     next.delete("category");
@@ -426,11 +466,13 @@ export function BookSearchPage() {
     });
     setParams(next);
     closeFilters();
-    requestAnimationFrame(() => {
-      const heading = document.getElementById("catalog-results");
-      heading?.focus({ preventScroll: true });
-      heading?.scrollIntoView({ block: "start" });
-    });
+    if (shouldScroll) {
+      requestAnimationFrame(() => {
+        const heading = document.getElementById("catalog-results");
+        heading?.focus({ preventScroll: true });
+        heading?.scrollIntoView({ block: "start" });
+      });
+    }
   }
   useEffect(() => {
     if (!filterOpen) return;
@@ -449,7 +491,6 @@ export function BookSearchPage() {
     };
   }, [filterOpen]);
   const chips = [
-    ...(params.get("mode") ? [{ key: "mode", label: modes.find(([value]) => value === params.get("mode"))?.[1] || params.get("mode")! }] : []),
     ...(initial.categoryId
       ? [
           {
@@ -530,6 +571,49 @@ export function BookSearchPage() {
   }
   return (
     <div className={styles.page}>
+      {chips.length > 0 && (
+        <>
+          <div
+            className={styles.stickyFilterBar}
+            data-floating={floating}
+            role="region"
+            aria-label="Bộ lọc đang áp dụng"
+          >
+            <div className={styles.stickyFilterInner}>
+              <div className={styles.stickyFilterLead}>
+                <SlidersHorizontal size={14} aria-hidden="true" />
+                <span>Đang lọc:</span>
+              </div>
+              <div className={styles.stickyChipsScroll}>
+                {chips.map((chip) => (
+                  <button
+                    type="button"
+                    key={
+                      chip.key === "facets" && "facet" in chip && "value" in chip
+                        ? `${chip.facet}-${chip.value}`
+                        : chip.key
+                    }
+                    className={styles.stickyChip}
+                    aria-label={`Bỏ lọc ${chip.label}`}
+                    onClick={() => removeChip(chip)}
+                  >
+                    <span>{chip.label}</span>
+                    <X size={13} aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className={styles.stickyClearAll}
+                onClick={clear}
+              >
+                Xóa tất cả
+              </button>
+            </div>
+          </div>
+          <div className={styles.stickyFilterSpacer} aria-hidden="true" />
+        </>
+      )}
       <div className={styles.catalog}>
         <aside
           ref={sidebar}
@@ -631,29 +715,7 @@ export function BookSearchPage() {
               />
             </div>
           </div>
-          {filtered && (
-            <div
-              className={styles.activeFilters}
-              aria-label="Bộ lọc đang áp dụng"
-            >
-              {chips.map((chip) => (
-                <button
-                  type="button"
-                  key={
-                    chip.key === "facets" && "facet" in chip && "value" in chip
-                      ? `${chip.facet}-${chip.value}`
-                      : chip.key
-                  }
-                  aria-label={`Bỏ lọc ${chip.label}`}
-                  onClick={() => removeChip(chip)}
-                >
-                  {chip.label}
-                  <X size={14} aria-hidden="true" />
-                </button>
-              ))}
 
-            </div>
-          )}
           {priceInvalid ? (
             <div className={styles.state} role="alert">
               <h3>Bộ lọc chưa hợp lệ</h3>

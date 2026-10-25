@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { DashboardSidebar } from "../pages/profile/components/DashboardSidebar";
 import { Header } from "../components/Header";
 import { useSession } from "../hooks/useSession";
@@ -8,6 +9,24 @@ import styles from "./DashboardLayout.module.css";
 export function DashboardLayout() {
   const auth = useSession();
   const location = useLocation();
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("latlai_sidebar_collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleCollapse = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("latlai_sidebar_collapsed", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
   useEffect(() => {
     if (auth.status === "authenticated") {
       const heading = document.querySelector<HTMLElement>(
@@ -40,11 +59,20 @@ export function DashboardLayout() {
         Bỏ qua điều hướng
       </a>
       <Header />
-      <div className={styles.workspace}>
-        <DashboardSidebar />
-        <main className={styles.main} id="account-content" tabIndex={-1}>
+      <div className={styles.workspace} data-collapsed={collapsed}>
+        <DashboardSidebar
+          collapsed={collapsed}
+          onToggleCollapse={handleToggleCollapse}
+        />
+        <motion.main
+          layout="position"
+          transition={{ type: "spring", stiffness: 350, damping: 30 }}
+          className={styles.main}
+          id="account-content"
+          tabIndex={-1}
+        >
           <Outlet />
-        </main>
+        </motion.main>
       </div>
     </div>
   );

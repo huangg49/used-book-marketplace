@@ -1,4 +1,13 @@
-# Điểm lưu hiện tại — 23/10/2026
+# Điểm lưu hiện tại — 25/10/2026
+
+## Hoàn thiện giao diện Tổng quan tài khoản và Kệ sách — 25/10/2026
+
+- Nhánh `feat/web-profile-overview-redesign`, base từ `origin/main` (`901c7bb6`).
+- **Sidebar cá nhân**: Tạo khung độc lập không viền thô, nút thu gọn 3 gạch (hamburger) chuyển đổi chiều rộng 68px/240px mượt mà với spring physics của `framer-motion`, tuân thủ chính sách chuyển động (giữ animation).
+- **Thống kê tổng quan (DashboardStats)**: Xen kẽ nền Đỏ rượu `#5c0202` và Trắng ngà `#ffffff` thẩm mỹ, số dư khả dụng và giá trị kệ sách làm thẻ điểm nhấn (hero cards). Khắc phục query limit từ 100 thành 50 theo OpenAPI contract `/me/listings`, lọc đúng 4 cuốn sách đã duyệt (`Approved`) và hiển thị huy hiệu vàng ánh kim nổi bật.
+- **Khối Đấu giá của bạn (DashboardAuctionFocus)**: Thay thế khối bản nháp bằng tính năng theo dõi phiên và xem lịch sử đấu giá, kết nối API `listMyAuctions`, lọc 3 trạng thái Đang diễn ra / Cần thanh toán / Tất cả phiên; di chuyển vị trí xuống dưới khung Dòng tiền và trên Kệ sách.
+- **Kệ sách của tôi (MyBooksPage)**: Bổ sung bộ chuyển đổi Grid/List, thiết kế lại khung giá bán và giá trao đổi thành 2 thẻ tách biệt làm nổi bật giá trị, hiển thị ảnh bìa full khung 100%.
+- **Kiểm tra**: `pnpm --filter @used-books/user-web typecheck` PASS; 24 test files / 172 tests PASS.
 
 ## Sửa User Web CI của PR62 — 23/10/2026
 

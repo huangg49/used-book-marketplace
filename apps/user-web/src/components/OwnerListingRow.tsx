@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { BookOpen, ArrowUpRight, Gavel } from "lucide-react";
+import { BookOpen, ArrowUpRight, Gavel, Edit } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import {
   getMyPhoto,
@@ -19,7 +19,15 @@ import {
 } from "../lib/owner-listing-labels";
 import styles from "../pages/MyBooksPage.module.css";
 
-function OwnerPhoto({ item, title }: { item: MyListing; title: string }) {
+function OwnerPhoto({
+  item,
+  title,
+  fill = false,
+}: {
+  item: MyListing;
+  title: string;
+  fill?: boolean;
+}) {
   const auth = useSession();
   const ownerId = auth.status === "authenticated" ? auth.user.id : undefined;
   const mediaId = item.currentRevision.content.mediaIds?.[0];
@@ -32,7 +40,7 @@ function OwnerPhoto({ item, title }: { item: MyListing; title: string }) {
   const url = query.data?.url;
   const failed = query.isError || (!!url && url === failedUrl);
   return (
-    <div className={styles.cover}>
+    <div className={fill ? styles.fillCover : styles.cover}>
       {url && !failed ? (
         <img
           src={url}
@@ -71,9 +79,11 @@ function OwnerPhoto({ item, title }: { item: MyListing; title: string }) {
 export function OwnerListingRow({
   item,
   compact = false,
+  layout = "list",
 }: {
   item: MyListing;
   compact?: boolean;
+  layout?: "list" | "grid";
 }) {
   const auth = useSession();
   const ownerId = auth.status === "authenticated" ? auth.user.id : undefined;
@@ -98,19 +108,115 @@ export function OwnerListingRow({
           year: "numeric",
         }).format(new Date(item.updatedAt))
       : undefined;
+
+  // Grid layout rendering
+  if (layout === "grid") {
+    return (
+      <li className={styles.gridCard}>
+        <div className={styles.gridCoverWrap}>
+          <OwnerPhoto item={item} title={title} fill />
+          <span className={styles.gridModBadge}>
+            {moderationLabels[item.state.moderation]}
+          </span>
+          {content.condition && (
+            <span className={styles.gridConditionBadge}>
+              {conditions[content.condition] || content.condition}
+            </span>
+          )}
+        </div>
+
+        <div className={styles.gridBody}>
+          <div>
+            {author && <p className={styles.gridAuthor}>{author}</p>}
+            <h3 className={styles.gridTitle}>
+              {publicVisible ? (
+                <Link to={`/books/${item.id}`}>{title}</Link>
+              ) : (
+                title
+              )}
+            </h3>
+          </div>
+
+          <div className={styles.gridPricesContainer}>
+            {content.salePrice != null ? (
+              <div className={styles.gridSaleCard}>
+                <span className={styles.gridPriceLabel}>Giá bán</span>
+                <strong className={styles.gridSaleVal}>
+                  {formatVnd(content.salePrice)}
+                </strong>
+              </div>
+            ) : content.mode === "Sale" || content.mode === "Both" ? (
+              <div className={styles.gridSaleCard}>
+                <span className={styles.gridPriceLabel}>Giá bán</span>
+                <strong className={styles.gridSaleVal}>Thỏa thuận</strong>
+              </div>
+            ) : null}
+
+            {content.exchangeValue != null ? (
+              <div className={styles.gridExchangeCard}>
+                <span className={styles.gridExchangeLabel}>Giá trị đổi</span>
+                <strong className={styles.gridExchangeVal}>
+                  {formatVnd(content.exchangeValue)}
+                </strong>
+              </div>
+            ) : content.mode === "Exchange" ? (
+              <div className={styles.gridExchangeCard}>
+                <span className={styles.gridExchangeLabel}>Giá trị đổi</span>
+                <strong className={styles.gridExchangeVal}>Giao lưu</strong>
+              </div>
+            ) : null}
+          </div>
+
+          <div className={styles.gridActions}>
+            {publicVisible ? (
+              <Link
+                className={styles.detail}
+                to={`/books/${item.id}`}
+                aria-label={`Xem bài đăng ${title}`}
+              >
+                Xem bài đăng <ArrowUpRight size={15} aria-hidden="true" />
+              </Link>
+            ) : (
+              <Link
+                className={styles.gridEditBtn}
+                to={`${ROUTES.myBooks}?edit=${item.id}`}
+              >
+                <Edit size={13} style={{ marginRight: 4 }} /> Chỉnh sửa
+              </Link>
+            )}
+            {auctionEligible(item) && (
+              <Link
+                className={styles.auction}
+                to={ROUTES.auctionCreate(item.id)}
+                aria-label={`Đưa ${title} lên đấu giá`}
+              >
+                <Gavel size={14} aria-hidden="true" /> Đưa lên đấu giá
+              </Link>
+            )}
+          </div>
+        </div>
+      </li>
+    );
+  }
+
+  // Redesigned horizontal list row layout
   return (
     <li className={`${styles.row} ${compact ? styles.compact : ""}`}>
       <OwnerPhoto item={item} title={title} />
       <div className={styles.bookInfo}>
         <p className={styles.status}>
-          <strong>{moderationLabels[item.state.moderation]}</strong>
-          <span>
+          <strong className={styles.modBadge}>
+            {moderationLabels[item.state.moderation]}
+          </strong>
+          <span className={styles.visBadge}>
             {item.state.visibility === "Visible" &&
             item.state.moderation !== "Approved"
               ? "Chưa công khai"
               : visibilityLabels[item.state.visibility]}
           </span>
-          <span>{tradeLabels[item.state.trade]}</span>
+          <span className={styles.tradeBadge}>
+            {tradeLabels[item.state.trade]}
+          </span>
         </p>
         <h3>
           {publicVisible ? (
@@ -165,18 +271,21 @@ export function OwnerListingRow({
           <p className={styles.updated}>Cập nhật {updated}</p>
         )}
       </div>
+
       <div className={styles.prices}>
         {content.salePrice != null && (
-          <p>
-            <span>Giá bán</span>
-            <strong>{formatVnd(content.salePrice)}</strong>
-          </p>
+          <div className={styles.priceSaleBlock}>
+            <span className={styles.priceLabel}>Giá bán</span>
+            <strong className={styles.priceMain}>
+              {formatVnd(content.salePrice)}
+            </strong>
+          </div>
         )}
         {content.exchangeValue != null && (
-          <p>
-            <span>Giá trị đổi</span>
+          <div className={styles.exchangeVal}>
+            <span>Đổi:</span>
             <strong>{formatVnd(content.exchangeValue)}</strong>
-          </p>
+          </div>
         )}
         {publicVisible && (
           <Link
@@ -184,7 +293,7 @@ export function OwnerListingRow({
             to={`/books/${item.id}`}
             aria-label={`Xem bài đăng ${title}`}
           >
-            Xem bài đăng <ArrowUpRight size={16} aria-hidden="true" />
+            Xem bài đăng <ArrowUpRight size={15} aria-hidden="true" />
           </Link>
         )}
         {!compact && auctionEligible(item) && (
@@ -193,7 +302,7 @@ export function OwnerListingRow({
             to={ROUTES.auctionCreate(item.id)}
             aria-label={`Đưa ${title} lên đấu giá`}
           >
-            <Gavel size={15} aria-hidden="true" /> Đưa lên đấu giá
+            <Gavel size={14} aria-hidden="true" /> Đưa lên đấu giá
           </Link>
         )}
       </div>

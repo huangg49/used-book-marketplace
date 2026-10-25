@@ -33,6 +33,9 @@ export function AccountMenu({ displayName }: { displayName: string }) {
       window.removeEventListener("resize", narrow);
     };
   }, [open]);
+  const initial =
+    Array.from(displayName.trim())[0]?.toLocaleUpperCase("vi-VN") || "L";
+
   return (
     <div
       className={styles.root}
@@ -53,6 +56,7 @@ export function AccountMenu({ displayName }: { displayName: string }) {
         ref={trigger}
         className={styles.trigger}
         type="button"
+        aria-label={`Tài khoản của ${displayName}`}
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpenPath(open ? null : location.key)}
@@ -68,7 +72,11 @@ export function AccountMenu({ displayName }: { displayName: string }) {
           }
         }}
       >
-        Tài khoản <ChevronDown size={16} aria-hidden="true" />
+        <span className={styles.navAvatar} aria-hidden="true">
+          {initial}
+        </span>
+        <span className={styles.userName}>{displayName}</span>
+        <ChevronDown size={16} aria-hidden="true" />
       </button>
       <div id={id} className={styles.popover} hidden={!open}>
         <div className={styles.identity}>

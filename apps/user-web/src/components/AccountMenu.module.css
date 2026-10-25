@@ -6,28 +6,50 @@
 .trigger {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-height: 40px;
-  padding: 8px 12px;
-  border: 1px solid transparent;
+  padding: 4px 12px 4px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 999px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.06);
   color: var(--shop-cream);
   font: inherit;
   font-size: 0.875rem;
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color 160ms ease, color 160ms ease;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
 }
 .trigger:hover,
 .trigger[aria-expanded="true"] {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.28);
   color: #fff;
   text-decoration: none;
 }
+.navAvatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--shop-cream, #fcf8db);
+  color: var(--shop-wine, #5c0202);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.userName {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
 .trigger svg {
   transition: transform 180ms ease-out;
+  flex-shrink: 0;
 }
 .trigger[aria-expanded="true"] svg {
   transform: rotate(180deg);
