@@ -352,14 +352,14 @@ export function AutumnAerialMapBackground() {
           </div>
         </div>
 
-        {/* Layer 4: Interactive Golden Harvest Falling Leaves (Physics & 3D Flips) */}
+        {/* Layer 4: Soft Parchment Wash & Golden Hour Light Glow (Softens the terrain) */}
+        <div className={styles.parchmentWash} />
+        <div className={styles.sunlightGlow} />
+
+        {/* Layer 5: Interactive Golden Harvest Falling Leaves (Physics & 3D Flips, 100% crisp) */}
         <div className={styles.leavesCanvasLayer}>
           <AutumnLeavesCanvas />
         </div>
-
-        {/* Layer 5: Parchment Wash & Golden Hour Light Glow */}
-        <div className={styles.parchmentWash} />
-        <div className={styles.sunlightGlow} />
       </div>
     </div>
   );

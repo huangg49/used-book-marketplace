@@ -11,6 +11,7 @@
     - **Dòng suối nước chảy dập dềnh**: Hiệu ứng sóng nước lướt liên tục dọc theo lòng suối với chu kỳ 1.6 giây (`streamFlow`).
     - **Cây cối mùa thu đung đưa rõ nét**: Tán cây ngân hạnh, phong đỏ và sồi già nghiêng ngả tự nhiên theo gió thu với xoay góc 4 độ và co giãn sinh động (`treeGentleSway`).
     - **Tích hợp bão lá vàng rơi 3D**: Nhúng trực tiếp `<AutumnLeavesCanvas />` với 42 lá bạch dương, sồi và phong đỏ lượn vòng 3D, có bóng đổ và đáp ứng theo gió.
+    - **Làm mờ dịu cảnh nền, giữ nguyên độ nét lá cây (Soft Terrain Background with Sharp Leaves)**: Làm mờ nhẹ tranh minh họa ruộng bậc thang (`filter: blur(1.5px) saturate(1.18) contrast(1.04)`) và nâng màng phủ lên mức ấm mờ dịu (`0.22 - 0.48`), đồng thời chuyển tầng lá rơi `<AutumnLeavesCanvas />` lên trên cùng (`z-index: 10`) để 42 lá cây mùa thu luôn giữ độ sắc nét 100%, bóng đổ rõ rệt và chuyển động rực rỡ nổi bật trên nền thung lũng mờ ảo.
     - **Khắc phục hiển thị Chân trang (Footer Fix)**: Thêm `position: relative; z-index: 10;` vào `.footer` trong `MainLayout.module.css` và `padding-bottom: 72px;` vào `.page` trong `BookSearchPage.module.css`, đảm bảo footer màu đỏ rượu `#5c0202` kinh điển của Lật Lại luôn hiển thị rõ ràng, không bị nền đè khuất hay cản trở khi cuộn xuống cuối trang.
   - Tuân thủ chính sách motion của dự án (11/10/2026): giữ trọn vẹn animation mượt mà.
 - **Kiểm tra**:

@@ -20,14 +20,14 @@
   background-color: #eedcc6;
 }
 
-/* SVG map scaling and coverage with vibrant autumn saturation */
+/* SVG map scaling and coverage with vibrant autumn saturation, softened dreamily */
 .mapSvg {
   position: absolute;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 1;
-  filter: saturate(1.22) contrast(1.08) brightness(0.98);
+  opacity: 0.92;
+  filter: blur(1.5px) saturate(1.18) contrast(1.04);
 }
 
 /* Texture pattern grid layer */
@@ -159,27 +159,19 @@
   }
 }
 
-/* Falling Leaves Canvas Layer */
-.leavesCanvasLayer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 5;
-}
-
-/* Soft Parchment Tint that preserves saturated autumn tones while keeping cards crisp */
+/* Soft Parchment Tint that softens the background terrain while keeping leaves on top */
 .parchmentWash {
   position: absolute;
   inset: 0;
   background: radial-gradient(
     circle at 50% 32%,
-    rgba(255, 252, 246, 0.12) 0%,
-    rgba(255, 250, 242, 0.22) 55%,
-    rgba(247, 237, 224, 0.35) 100%
+    rgba(255, 252, 246, 0.22) 0%,
+    rgba(255, 250, 242, 0.35) 55%,
+    rgba(247, 237, 224, 0.48) 100%
   );
+  backdrop-filter: blur(1px);
   pointer-events: none;
-  z-index: 3;
+  z-index: 4;
 }
 
 /* Subtle Golden Hour Light Glow */
@@ -188,11 +180,20 @@
   inset: 0;
   background: linear-gradient(
     135deg,
-    rgba(251, 191, 36, 0.14) 0%,
-    rgba(234, 88, 12, 0.08) 50%,
+    rgba(251, 191, 36, 0.12) 0%,
+    rgba(234, 88, 12, 0.06) 50%,
     transparent 100%
   );
   pointer-events: none;
   mix-blend-mode: multiply;
-  z-index: 3;
+  z-index: 4;
+}
+
+/* Falling Leaves Canvas Layer - sits on top of all washes, 100% crisp & vivid */
+.leavesCanvasLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 10;
 }
