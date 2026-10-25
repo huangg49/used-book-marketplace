@@ -548,6 +548,67 @@
 .gridEditBtn:hover {
   background: #e6d3bf;
 }
+.listEditBtn {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #f1e4d3;
+  color: var(--shop-wine, #5c0202);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s ease-in-out;
+  margin-top: 4px;
+}
+.listEditBtn:hover {
+  background: #e6d3bf;
+}
+.blockReasonNote {
+  font-size: 0.75rem;
+  color: #8c6d58;
+  margin-top: 4px;
+  line-height: 1.4;
+  text-align: center;
+  padding: 4px 6px;
+  background: #f7f3ee;
+  border-radius: 6px;
+  border: 1px dashed #e6d5c3;
+}
+.revisedBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background-color: #fbf5ee;
+  border: 1px solid #ebd9c8;
+  border-left: 4px solid var(--shop-wine, #5c0202);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  color: #2b1e16;
+  font-size: 0.875rem;
+  animation: fadeIn 0.2s ease-out;
+}
+.revisedBanner strong {
+  color: var(--shop-wine, #5c0202);
+}
+.revisedBanner button {
+  background: none;
+  border: none;
+  color: #8c6d58;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+}
+.revisedBanner button:hover {
+  color: var(--shop-wine, #5c0202);
+}
+
 /* Error and State handlers */
 .identityError {
   color: var(--shop-wine);

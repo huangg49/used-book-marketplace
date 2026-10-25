@@ -75,6 +75,11 @@ export function getMyListings(
   return session.request(`/me/listings?${query}`, myListingPageSchema);
 }
 
+export function getMyListing(id: string) {
+  return session.request(`/me/listings/${id}`, myListingSchema);
+}
+
+
 const bookIdentitySchema = z.object({
   title: z.string(),
   authors: z.array(z.string()),

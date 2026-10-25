@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 vi.mock("./api", () => ({ session: { request: vi.fn() } }));
 import { session } from "./api";
-import { getMyBookIdentity, getMyListings } from "./my-listings";
+import { getMyBookIdentity, getMyListings, getMyListing } from "./my-listings";
 
 const request = vi.mocked(session.request);
 beforeEach(() => {
@@ -67,5 +67,10 @@ describe("owner shelf reads", () => {
       authors: ["Tác giả"],
     });
     expect(request.mock.calls[0]![0]).toBe("/catalog/books/confirmed-id");
+  });
+  it("requests a single listing by id with the owner listing schema", async () => {
+    request.mockResolvedValue({ id: "list-1", version: 1 });
+    await getMyListing("list-1");
+    expect(request.mock.calls[0]![0]).toBe("/me/listings/list-1");
   });
 });

@@ -1,0 +1,365 @@
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #73503a;
+  text-decoration: none;
+  font-size: 14px;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+.back:hover {
+  color: #5c0202;
+  text-decoration: underline;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #2b1e16;
+  margin-bottom: 20px;
+}
+
+.locked {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  background-color: #f7f3ee;
+  border: 1px solid #e6d5c3;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  color: #5c4333;
+}
+
+.locked svg {
+  color: #8c6d58;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.locked strong {
+  display: block;
+  font-size: 16px;
+  color: #2b1e16;
+  margin-bottom: 2px;
+}
+
+.locked span {
+  font-size: 13px;
+  color: #73503a;
+}
+
+.locked p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #8c6d58;
+}
+
+.warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background-color: #fff9ea;
+  border: 1px solid #f4dfa7;
+  border-radius: 8px;
+  color: #875a00;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.warning svg {
+  flex-shrink: 0;
+  color: #c78600;
+}
+
+.error {
+  padding: 12px 16px;
+  background-color: #fdf2f2;
+  border: 1px solid #f8b4b4;
+  border-radius: 8px;
+  color: #9b1c1c;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.error button {
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  color: #9b1c1c;
+  font-weight: 600;
+  padding: 0;
+  margin-left: 6px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #ebd9c8;
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.card h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2b1e16;
+  margin: 0 0 4px;
+  border-bottom: 1px solid #f5eddc;
+  padding-bottom: 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: #3f2a1d;
+  font-weight: 500;
+}
+
+.field input,
+.field select,
+.field textarea {
+  border: 1px solid #d4c0ae;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #2b1e16;
+  background-color: #faf8f5;
+  outline: none;
+  transition: border-color 0.15s, background-color 0.15s;
+  font-family: inherit;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: #5c0202;
+  background-color: #ffffff;
+}
+
+.field input[data-invalid="true"],
+.field select[data-invalid="true"],
+.field textarea[data-invalid="true"] {
+  border-color: #e02424;
+  background-color: #fdf2f2;
+}
+
+.fieldError {
+  color: #c81e1e;
+  font-size: 12px;
+  font-style: normal;
+  margin-top: 2px;
+}
+
+.flag {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.flag legend {
+  font-size: 14px;
+  font-weight: 500;
+  color: #3f2a1d;
+  margin-bottom: 8px;
+  float: left;
+  width: 100%;
+}
+
+.flag label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #2b1e16;
+  cursor: pointer;
+}
+
+.photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.photo {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border: 1px solid #ebd9c8;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: #f7f3ee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photoPlaceholder {
+  font-size: 12px;
+  color: #8c6d58;
+}
+
+.coverTag {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(92, 2, 2, 0.85);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+.photoActions {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.photo:hover .photoActions,
+.photo:focus-within .photoActions {
+  opacity: 1;
+}
+
+.photoActions button {
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #2b1e16;
+  display: inline-flex;
+  align-items: center;
+}
+
+.photoActions button:hover {
+  background: #ffffff;
+  color: #5c0202;
+}
+
+.addPhoto {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border: 2px dashed #d4c0ae;
+  border-radius: 6px;
+  background: #faf8f5;
+  color: #73503a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.addPhoto:hover {
+  border-color: #5c0202;
+  color: #5c0202;
+  background: #fffdfa;
+}
+
+.ownership {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: #2b1e16;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.ownership input {
+  margin-top: 3px;
+  cursor: pointer;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.primary {
+  background-color: #5c0202;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, opacity 0.15s;
+}
+
+.primary:hover:not(:disabled) {
+  background-color: #7a0303;
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.secondary {
+  color: #5c4333;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid #ebd9c8;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.secondary:hover {
+  background-color: #f7f3ee;
+}

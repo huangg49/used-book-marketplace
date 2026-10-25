@@ -17,14 +17,14 @@ const ticket = z.object({
 });
 const wait = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
-type Remember = <T>(
+export type Remember = <T>(
   stage: string,
   run: (idempotencyKey: string) => Promise<T>,
 ) => Promise<T>;
 
 // One in-memory attempt keeps acknowledged stages and the key of a lost response.
 // A retry resumes this attempt instead of creating another catalog request/draft.
-function rememberCommands(): Remember {
+export function rememberCommands(): Remember {
   const stages = new Map<string, { key: string; result?: Promise<unknown> }>();
   return <T>(stage: string, run: (idempotencyKey: string) => Promise<T>) => {
     let entry = stages.get(stage);
@@ -72,7 +72,7 @@ export type ListingInput = {
   } | null;
 };
 
-async function upload(
+export async function upload(
   listingId: string,
   expectedVersion: number,
   file: File,

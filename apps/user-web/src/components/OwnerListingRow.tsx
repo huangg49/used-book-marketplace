@@ -17,6 +17,11 @@ import {
   isPublicOwnerListing,
   auctionEligible,
 } from "../lib/owner-listing-labels";
+import {
+  canEditApproved,
+  shouldExplainEditBlock,
+  editApprovedBlock,
+} from "../lib/owner-listing-edit";
 import styles from "../pages/MyBooksPage.module.css";
 
 function OwnerPhoto({
@@ -168,7 +173,7 @@ export function OwnerListingRow({
           </div>
 
           <div className={styles.gridActions}>
-            {publicVisible ? (
+            {publicVisible && (
               <Link
                 className={styles.detail}
                 to={`/books/${item.id}`}
@@ -176,13 +181,20 @@ export function OwnerListingRow({
               >
                 Xem bài đăng <ArrowUpRight size={15} aria-hidden="true" />
               </Link>
-            ) : (
+            )}
+            {canEditApproved(item) && (
               <Link
                 className={styles.gridEditBtn}
-                to={`${ROUTES.myBooks}?edit=${item.id}`}
+                to={ROUTES.myBookEdit(item.id)}
+                aria-label={`Sửa bài đăng ${title}`}
               >
-                <Edit size={13} style={{ marginRight: 4 }} /> Chỉnh sửa
+                <Edit size={13} style={{ marginRight: 4 }} /> Sửa bài
               </Link>
+            )}
+            {shouldExplainEditBlock(item) && (
+              <span className={styles.blockReasonNote} role="status">
+                {editApprovedBlock(item)}
+              </span>
             )}
             {auctionEligible(item) && (
               <Link
@@ -295,6 +307,20 @@ export function OwnerListingRow({
           >
             Xem bài đăng <ArrowUpRight size={15} aria-hidden="true" />
           </Link>
+        )}
+        {canEditApproved(item) && (
+          <Link
+            className={styles.listEditBtn}
+            to={ROUTES.myBookEdit(item.id)}
+            aria-label={`Sửa bài đăng ${title}`}
+          >
+            <Edit size={13} style={{ marginRight: 4 }} /> Sửa bài
+          </Link>
+        )}
+        {shouldExplainEditBlock(item) && (
+          <span className={styles.blockReasonNote} role="status">
+            {editApprovedBlock(item)}
+          </span>
         )}
         {!compact && auctionEligible(item) && (
           <Link
