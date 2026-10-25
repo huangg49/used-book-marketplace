@@ -940,6 +940,28 @@
 .filterDialog .filterHint {
   color: #8B0000 !important;
 }
+
+.sidebar .priceFilter legend small,
+.filterDialog .priceFilter legend small,
+.sidebar .extraBudget legend small,
+.filterDialog .extraBudget legend small {
+  color: #8B0000 !important;
+  font-weight: 600;
+}
+
+.sidebar .priceFilter .groupClear,
+.filterDialog .priceFilter .groupClear,
+.sidebar .extraBudget .groupClear,
+.filterDialog .extraBudget .groupClear {
+  color: #8B0000 !important;
+}
+
+.sidebar .priceFilter .groupClear:hover,
+.filterDialog .priceFilter .groupClear:hover,
+.sidebar .extraBudget .groupClear:hover,
+.filterDialog .extraBudget .groupClear:hover {
+  color: #a81c19 !important;
+}
 .sidebar .filterFooter {
   margin-top: 2px;
   padding-top: 16px;
