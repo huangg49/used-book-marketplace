@@ -600,6 +600,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
+  font-variant-numeric: tabular-nums;
 }
 .toggleVisBtn:hover:not(:disabled) {
   background: #f0e6d6;
@@ -607,7 +608,7 @@
   border-color: #d9c4b0;
 }
 .toggleVisBtn:disabled {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 .archiveBtn {

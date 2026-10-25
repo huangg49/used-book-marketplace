@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { BookOpen, ArrowUpRight, Gavel, Edit, Eye, EyeOff, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { useSession } from "../hooks/useSession";
+import { useActionCooldown } from "../hooks/useActionCooldown";
 import {
   getMyPhoto,
   getMyBookIdentity,
@@ -125,16 +126,24 @@ export function OwnerListingRow({
   const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
   const [confirmHideOpen, setConfirmHideOpen] = useState(false);
 
+  const {
+    cooldown: hideCooldown,
+    isCoolingDown: isHideCoolingDown,
+    startCooldown: startHideCooldown,
+  } = useActionCooldown(4);
+
   const canToggle = canToggleVisibility(item);
   const canArchive = canArchiveListing(item);
   const isHidden = item.state.visibility === "Hidden";
 
   async function handleToggleVisibility(to: "Visible" | "Hidden") {
+    if (isBusy || isHideCoolingDown) return;
     setIsBusy(true);
     setActionError(undefined);
     try {
       await setListingVisibility(item.id, item.version, to);
       setConfirmHideOpen(false);
+      startHideCooldown();
       void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
       void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
       void queryClient.invalidateQueries({ queryKey: ["listings"] });
@@ -286,15 +295,25 @@ export function OwnerListingRow({
                   <button
                     type="button"
                     className={styles.toggleVisBtn}
-                    disabled={isBusy}
+                    disabled={isBusy || isHideCoolingDown}
                     onClick={() => {
+                      if (isBusy || isHideCoolingDown) return;
                       if (isHidden) void handleToggleVisibility("Visible");
                       else setConfirmHideOpen(true);
                     }}
-                    title={isHidden ? "Hiện lại trên kệ công khai" : "Tạm ẩn sách khỏi kệ công khai"}
+                    title={
+                      isHideCoolingDown
+                        ? `Vui lòng chờ ${hideCooldown}s trước khi thao tác tiếp`
+                        : isHidden
+                          ? "Hiện lại trên kệ công khai"
+                          : "Tạm ẩn sách khỏi kệ công khai"
+                    }
                   >
                     {isHidden ? <Eye size={13} /> : <EyeOff size={13} />}
-                    <span>{isHidden ? "Hiện lại" : "Tạm ẩn"}</span>
+                    <span>
+                      {isHidden ? "Hiện lại" : "Tạm ẩn"}
+                      {isHideCoolingDown ? ` (${hideCooldown}s)` : ""}
+                    </span>
                   </button>
                 )}
                 {canArchive && (
@@ -445,15 +464,25 @@ export function OwnerListingRow({
               <button
                 type="button"
                 className={styles.toggleVisBtn}
-                disabled={isBusy}
+                disabled={isBusy || isHideCoolingDown}
                 onClick={() => {
+                  if (isBusy || isHideCoolingDown) return;
                   if (isHidden) void handleToggleVisibility("Visible");
                   else setConfirmHideOpen(true);
                 }}
-                title={isHidden ? "Hiện lại trên kệ công khai" : "Tạm ẩn sách khỏi kệ công khai"}
+                title={
+                  isHideCoolingDown
+                    ? `Vui lòng chờ ${hideCooldown}s trước khi thao tác tiếp`
+                    : isHidden
+                      ? "Hiện lại trên kệ công khai"
+                      : "Tạm ẩn sách khỏi kệ công khai"
+                }
               >
                 {isHidden ? <Eye size={13} /> : <EyeOff size={13} />}
-                <span>{isHidden ? "Hiện lại" : "Tạm ẩn"}</span>
+                <span>
+                  {isHidden ? "Hiện lại" : "Tạm ẩn"}
+                  {isHideCoolingDown ? ` (${hideCooldown}s)` : ""}
+                </span>
               </button>
             )}
             {canArchive && (

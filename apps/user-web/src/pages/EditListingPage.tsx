@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { useSession } from "../hooks/useSession";
+import { useActionCooldown } from "../hooks/useActionCooldown";
 import { session as apiSession } from "../lib/session";
 import { conditions } from "../lib/listing-labels";
 import { ROUTES } from "../lib/routes";
@@ -133,16 +134,23 @@ export function EditListingPage() {
   const [confirmHideOpen, setConfirmHideOpen] = useState(false);
   const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
 
+  const {
+    cooldown: hideCooldown,
+    isCoolingDown: isHideCoolingDown,
+    startCooldown: startHideCooldown,
+  } = useActionCooldown(4);
+
   const canToggle = item ? canToggleVisibility(item) : false;
   const canArchive = item ? canArchiveListing(item) : false;
 
   async function handleToggleVisibility(to: "Visible" | "Hidden") {
-    if (!item) return;
+    if (!item || busy || isHideCoolingDown) return;
     setBusy(true);
     setSubmitError(undefined);
     try {
       await setListingVisibility(item.id, item.version, to);
       setConfirmHideOpen(false);
+      startHideCooldown();
       void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
       void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
       void queryClient.invalidateQueries({ queryKey: ["listings"] });
@@ -1003,14 +1011,23 @@ export function EditListingPage() {
                     <button
                       type="button"
                       className={styles.manageBtn}
-                      disabled={busy}
+                      disabled={busy || isHideCoolingDown}
                       onClick={() => {
+                        if (busy || isHideCoolingDown) return;
                         if (item?.state.visibility === "Hidden") void handleToggleVisibility("Visible");
                         else setConfirmHideOpen(true);
                       }}
+                      title={
+                        isHideCoolingDown
+                          ? `Vui lòng chờ ${hideCooldown}s trước khi thao tác tiếp`
+                          : undefined
+                      }
                     >
                       {item?.state.visibility === "Visible" ? <EyeOff size={16} /> : <Eye size={16} />}
-                      <span>{item?.state.visibility === "Visible" ? "Tạm ẩn sách" : "Hiện lại trên kệ"}</span>
+                      <span>
+                        {item?.state.visibility === "Visible" ? "Tạm ẩn sách" : "Hiện lại trên kệ"}
+                        {isHideCoolingDown ? ` (${hideCooldown}s)` : ""}
+                      </span>
                     </button>
                   </div>
                 )}

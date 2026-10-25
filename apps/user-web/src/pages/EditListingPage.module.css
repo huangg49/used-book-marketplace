@@ -898,11 +898,17 @@
   white-space: nowrap;
   flex-shrink: 0;
   transition: all 0.15s ease-in-out;
+  font-variant-numeric: tabular-nums;
 }
 
 .manageBtn:hover:not(:disabled) {
   background: #f0e6d6;
   border-color: #8c7365;
+}
+
+.manageBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .manageDangerBtn {
