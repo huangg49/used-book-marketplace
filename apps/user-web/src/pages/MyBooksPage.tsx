@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useState } from "react";
-import { Plus, LayoutGrid, Rows3 } from "lucide-react";
+import { Plus, LayoutGrid, Rows3, X } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { moderationLabels } from "../lib/owner-listing-labels";
 import { myListingsQuery } from "../lib/owner-listing-queries";
@@ -19,7 +19,12 @@ const filters = [
 
 export function MyBooksPage() {
   const auth = useSession();
+  const location = useLocation();
   const [params, setParams] = useSearchParams();
+  const [dismissedBanner, setDismissedBanner] = useState(false);
+  const showRevisedBanner =
+    Boolean((location.state as { revised?: boolean } | null)?.revised) &&
+    !dismissedBanner;
   const rawFilter = params.get("moderation") || "";
   const filter = filters.some((f) => f.value === rawFilter) ? rawFilter : "";
   const cursor = params.get("cursor") || undefined;
@@ -77,6 +82,21 @@ export function MyBooksPage() {
           Đăng sách
         </Link>
       </header>
+      {showRevisedBanner && (
+        <div className={styles.revisedBanner} role="status">
+          <div>
+            <strong>Đã gửi bản sửa để duyệt lại!</strong> Bản sách tạm chuyển sang trạng thái <em>Chờ duyệt</em> và sẽ hiển thị lại trên kệ sau khi được quản trị viên duyệt.
+          </div>
+          <button
+            type="button"
+            aria-label="Đóng thông báo"
+            onClick={() => setDismissedBanner(true)}
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
 
       <section className={styles.shelf} aria-label="Bài đăng của tôi">
         <div

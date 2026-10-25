@@ -1,11 +1,15 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { BookOpen, ArrowUpRight, Gavel, Edit } from "lucide-react";
+import { BookOpen, ArrowUpRight, Gavel, Edit, Eye, EyeOff, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { useSession } from "../hooks/useSession";
+import { useActionCooldown } from "../hooks/useActionCooldown";
 import {
   getMyPhoto,
   getMyBookIdentity,
+  setListingVisibility,
+  archiveListing,
   type MyListing,
 } from "../services/my-listings";
 import { conditions } from "../lib/listing-labels";
@@ -17,6 +21,13 @@ import {
   isPublicOwnerListing,
   auctionEligible,
 } from "../lib/owner-listing-labels";
+import {
+  canEditApproved,
+  shouldExplainEditBlock,
+  editApprovedBlock,
+  canToggleVisibility,
+  canArchiveListing,
+} from "../lib/owner-listing-edit";
 import styles from "../pages/MyBooksPage.module.css";
 
 function OwnerPhoto({
@@ -109,10 +120,102 @@ export function OwnerListingRow({
         }).format(new Date(item.updatedAt))
       : undefined;
 
+  const queryClient = useQueryClient();
+  const [isBusy, setIsBusy] = useState(false);
+  const [actionError, setActionError] = useState<string>();
+  const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
+  const [confirmHideOpen, setConfirmHideOpen] = useState(false);
+
+  const {
+    cooldown: hideCooldown,
+    isCoolingDown: isHideCoolingDown,
+    startCooldown: startHideCooldown,
+  } = useActionCooldown(4);
+
+  const canToggle = canToggleVisibility(item);
+  const canArchive = canArchiveListing(item);
+  const isHidden = item.state.visibility === "Hidden";
+
+  async function handleToggleVisibility(to: "Visible" | "Hidden") {
+    if (isBusy || isHideCoolingDown) return;
+    setIsBusy(true);
+    setActionError(undefined);
+    try {
+      await setListingVisibility(item.id, item.version, to);
+      setConfirmHideOpen(false);
+      startHideCooldown();
+      void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
+      void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
+      void queryClient.invalidateQueries({ queryKey: ["listings"] });
+    } catch (error) {
+      const status = (error as { status?: number }).status;
+      setActionError(
+        status === 409
+          ? "Bài đăng vừa thay đổi trạng thái. Đang làm mới dữ liệu..."
+          : error instanceof Error
+            ? error.message
+            : "Chưa cập nhật được trạng thái.",
+      );
+      void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleArchive() {
+    setIsBusy(true);
+    setActionError(undefined);
+    try {
+      await archiveListing(item.id, item.version);
+      setConfirmArchiveOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
+      void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
+      void queryClient.invalidateQueries({ queryKey: ["listings"] });
+    } catch (error) {
+      const status = (error as { status?: number }).status;
+      setActionError(
+        status === 409
+          ? "Bài đăng vừa thay đổi hoặc đang có giao dịch phát sinh."
+          : error instanceof Error
+            ? error.message
+            : "Chưa xóa được bài đăng.",
+      );
+      void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  const dialogs = (
+    <>
+      <ConfirmDialog
+        isOpen={confirmHideOpen}
+        onClose={() => !isBusy && setConfirmHideOpen(false)}
+        title="Tạm ẩn bài đăng?"
+        description={`Bạn có muốn tạm ẩn cuốn "${title}" khỏi kệ sách công khai? Bạn có thể bấm "Hiện lại" bất cứ lúc nào mà không cần duyệt lại.`}
+        confirmText={isBusy ? "Đang xử lý…" : "Tạm ẩn bài"}
+        cancelText="Hủy"
+        isBusy={isBusy}
+        onConfirm={() => void handleToggleVisibility("Hidden")}
+      />
+      <ConfirmDialog
+        isOpen={confirmArchiveOpen}
+        onClose={() => !isBusy && setConfirmArchiveOpen(false)}
+        title="Gỡ bài đăng khỏi kệ sách?"
+        description={`Cuốn "${title}" sẽ bị gỡ vĩnh viễn khỏi kệ sách của bạn và không thể khôi phục. Các báo giá hoặc cuộc trò chuyện đang mở sẽ hết hiệu lực.`}
+        confirmText={isBusy ? "Đang xóa…" : "Xóa vĩnh viễn"}
+        cancelText="Giữ lại"
+        isDanger
+        isBusy={isBusy}
+        onConfirm={() => void handleArchive()}
+      />
+    </>
+  );
+
   // Grid layout rendering
   if (layout === "grid") {
     return (
-      <li className={styles.gridCard}>
+      <li className={`${styles.gridCard} ${isHidden ? styles.gridCardHidden : ""}`}>
         <div className={styles.gridCoverWrap}>
           <OwnerPhoto item={item} title={title} fill />
           <span className={styles.gridModBadge}>
@@ -122,6 +225,14 @@ export function OwnerListingRow({
             <span className={styles.gridConditionBadge}>
               {conditions[content.condition] || content.condition}
             </span>
+          )}
+          {isHidden && (
+            <div className={styles.hiddenCoverOverlay} aria-hidden="true">
+              <div className={styles.hiddenBadgeCenter}>
+                <EyeOff size={26} />
+                <span>Đang ẩn</span>
+              </div>
+            </div>
           )}
         </div>
 
@@ -168,7 +279,7 @@ export function OwnerListingRow({
           </div>
 
           <div className={styles.gridActions}>
-            {publicVisible ? (
+            {publicVisible && (
               <Link
                 className={styles.detail}
                 to={`/books/${item.id}`}
@@ -176,13 +287,62 @@ export function OwnerListingRow({
               >
                 Xem bài đăng <ArrowUpRight size={15} aria-hidden="true" />
               </Link>
-            ) : (
+            )}
+            {canEditApproved(item) && (
               <Link
                 className={styles.gridEditBtn}
-                to={`${ROUTES.myBooks}?edit=${item.id}`}
+                to={ROUTES.myBookEdit(item.id)}
+                aria-label={`Sửa bài đăng ${title}`}
               >
-                <Edit size={13} style={{ marginRight: 4 }} /> Chỉnh sửa
+                <Edit size={13} style={{ marginRight: 4 }} /> Sửa bài
               </Link>
+            )}
+            {(canToggle || canArchive) && (
+              <div className={styles.actionRowGroup}>
+                {canToggle && (
+                  <button
+                    type="button"
+                    className={`${styles.toggleVisBtn} ${isHidden ? styles.unhideBtn : ""}`}
+                    disabled={isBusy || isHideCoolingDown}
+                    onClick={() => {
+                      if (isBusy || isHideCoolingDown) return;
+                      if (isHidden) void handleToggleVisibility("Visible");
+                      else setConfirmHideOpen(true);
+                    }}
+                    title={
+                      isHideCoolingDown
+                        ? `Vui lòng chờ ${hideCooldown}s trước khi thao tác tiếp`
+                        : isHidden
+                          ? "Hiện lại trên kệ công khai"
+                          : "Tạm ẩn sách khỏi kệ công khai"
+                    }
+                  >
+                    {isHidden ? <Eye size={13} /> : <EyeOff size={13} />}
+                    <span>
+                      {isHidden ? "Hiện lại" : "Tạm ẩn"}
+                      {isHideCoolingDown ? ` (${hideCooldown}s)` : ""}
+                    </span>
+                  </button>
+                )}
+                {canArchive && (
+                  <button
+                    type="button"
+                    className={styles.archiveBtn}
+                    disabled={isBusy}
+                    onClick={() => setConfirmArchiveOpen(true)}
+                    title="Gỡ vĩnh viễn bài đăng này khỏi kệ sách"
+                  >
+                    <Trash2 size={13} />
+                    <span>Xóa</span>
+                  </button>
+                )}
+              </div>
+            )}
+            {actionError && <p className={styles.rowActionError}>{actionError}</p>}
+            {shouldExplainEditBlock(item) && (
+              <span className={styles.blockReasonNote} role="status">
+                {editApprovedBlock(item)}
+              </span>
             )}
             {auctionEligible(item) && (
               <Link
@@ -195,14 +355,25 @@ export function OwnerListingRow({
             )}
           </div>
         </div>
+        {dialogs}
       </li>
     );
   }
 
   // Redesigned horizontal list row layout
   return (
-    <li className={`${styles.row} ${compact ? styles.compact : ""}`}>
-      <OwnerPhoto item={item} title={title} />
+    <li className={`${styles.row} ${compact ? styles.compact : ""} ${isHidden ? styles.rowHidden : ""}`}>
+      <div className={styles.listCoverWrap}>
+        <OwnerPhoto item={item} title={title} />
+        {isHidden && (
+          <div className={styles.hiddenCoverOverlay} aria-hidden="true">
+            <div className={styles.hiddenBadgeCenterSmall}>
+              <EyeOff size={18} />
+              <span>Đang ẩn</span>
+            </div>
+          </div>
+        )}
+      </div>
       <div className={styles.bookInfo}>
         <p className={styles.status}>
           <strong className={styles.modBadge}>
@@ -296,6 +467,62 @@ export function OwnerListingRow({
             Xem bài đăng <ArrowUpRight size={15} aria-hidden="true" />
           </Link>
         )}
+        {canEditApproved(item) && (
+          <Link
+            className={styles.listEditBtn}
+            to={ROUTES.myBookEdit(item.id)}
+            aria-label={`Sửa bài đăng ${title}`}
+          >
+            <Edit size={13} style={{ marginRight: 4 }} /> Sửa bài
+          </Link>
+        )}
+        {(canToggle || canArchive) && (
+          <div className={styles.actionRowGroup}>
+            {canToggle && (
+              <button
+                type="button"
+                className={`${styles.toggleVisBtn} ${isHidden ? styles.unhideBtn : ""}`}
+                disabled={isBusy || isHideCoolingDown}
+                onClick={() => {
+                  if (isBusy || isHideCoolingDown) return;
+                  if (isHidden) void handleToggleVisibility("Visible");
+                  else setConfirmHideOpen(true);
+                }}
+                title={
+                  isHideCoolingDown
+                    ? `Vui lòng chờ ${hideCooldown}s trước khi thao tác tiếp`
+                    : isHidden
+                      ? "Hiện lại trên kệ công khai"
+                      : "Tạm ẩn sách khỏi kệ công khai"
+                }
+              >
+                {isHidden ? <Eye size={13} /> : <EyeOff size={13} />}
+                <span>
+                  {isHidden ? "Hiện lại" : "Tạm ẩn"}
+                  {isHideCoolingDown ? ` (${hideCooldown}s)` : ""}
+                </span>
+              </button>
+            )}
+            {canArchive && (
+              <button
+                type="button"
+                className={styles.archiveBtn}
+                disabled={isBusy}
+                onClick={() => setConfirmArchiveOpen(true)}
+                title="Gỡ vĩnh viễn bài đăng này khỏi kệ sách"
+              >
+                <Trash2 size={13} />
+                <span>Xóa</span>
+              </button>
+            )}
+          </div>
+        )}
+        {actionError && <p className={styles.rowActionError}>{actionError}</p>}
+        {shouldExplainEditBlock(item) && (
+          <span className={styles.blockReasonNote} role="status">
+            {editApprovedBlock(item)}
+          </span>
+        )}
         {!compact && auctionEligible(item) && (
           <Link
             className={styles.auction}
@@ -306,6 +533,7 @@ export function OwnerListingRow({
           </Link>
         )}
       </div>
+      {dialogs}
     </li>
   );
 }

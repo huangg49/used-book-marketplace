@@ -75,6 +75,41 @@ export function getMyListings(
   return session.request(`/me/listings?${query}`, myListingPageSchema);
 }
 
+export function getMyListing(id: string) {
+  return session.request(`/me/listings/${id}`, myListingSchema);
+}
+
+const mutationReceiptSchema = z.object({
+  entityId: z.string().uuid(),
+  version: z.number().int(),
+});
+
+export function setListingVisibility(
+  listingId: string,
+  expectedVersion: number,
+  visibility: "Visible" | "Hidden",
+  idempotencyKey: string = crypto.randomUUID(),
+) {
+  return session.request(`/listings/${listingId}/visibility`, mutationReceiptSchema, {
+    method: "PUT",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({ expectedVersion, visibility }),
+  });
+}
+
+export function archiveListing(
+  listingId: string,
+  expectedVersion: number,
+  idempotencyKey: string = crypto.randomUUID(),
+) {
+  return session.request(`/listings/${listingId}/archive`, mutationReceiptSchema, {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({ expectedVersion }),
+  });
+}
+
+
 const bookIdentitySchema = z.object({
   title: z.string(),
   authors: z.array(z.string()),

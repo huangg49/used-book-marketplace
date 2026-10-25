@@ -15,6 +15,7 @@ import { WalletPage } from '../pages/WalletPage';
 import { VNPayReturnGate } from '../pages/VNPayReturnGate';
 import { ProfilePage } from '../pages/ProfilePage';
 import { MyBooksPage } from '../pages/MyBooksPage';
+import { EditListingPage } from '../pages/EditListingPage';
 import { AccountOverviewPage } from '../pages/AccountOverviewPage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
@@ -80,6 +81,7 @@ export const router = createBrowserRouter([
               { path: '/wallet', element: <WalletPage /> },
               { path: '/profile', element: <ProfilePage /> },
               { path: '/my-books', element: <MyBooksPage /> },
+              { path: '/my-books/:listingId/edit', element: <EditListingPage /> },
               { path: '/my-auctions', element: <MyAuctionsPage /> },
             ],
           },
