@@ -9,13 +9,9 @@
   margin: 0 auto;
   padding: 36px 40px 72px;
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 20px;
   align-items: start;
-  transition: grid-template-columns 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.workspace[data-collapsed="true"] {
-  grid-template-columns: 68px minmax(0, 1fr);
 }
 .main {
   min-width: 0;
@@ -26,14 +22,20 @@
 .sidebar {
   position: sticky;
   top: 112px;
+  width: 240px;
   min-width: 0;
+  transition: width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.sidebar[data-collapsed="true"] {
+  width: 68px;
 }
 .menuContents {
   background: #ffffff;
   border-radius: 16px;
   padding: 16px 12px;
   box-shadow: 0 1px 3px rgba(40, 25, 20, 0.04), 0 4px 16px -2px rgba(40, 25, 20, 0.04);
-  transition: padding 0.2s ease;
+  overflow: hidden;
+  transition: padding 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .sidebar[data-collapsed="true"] .menuContents {
   padding: 14px 6px;
@@ -42,6 +44,8 @@
   padding: 2px 4px 14px;
   border-bottom: 1px solid var(--shop-line, #d9cbbd);
   margin-bottom: 12px;
+  overflow: hidden;
+  transition: padding 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .sidebar[data-collapsed="true"] .identity {
   padding: 2px 0 12px;
@@ -51,10 +55,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .sidebar[data-collapsed="true"] .identityRow {
-  flex-direction: column;
-  gap: 10px;
+  flex-direction: column-reverse;
+  gap: 12px;
   align-items: center;
   justify-content: center;
 }
@@ -63,6 +68,12 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
+  overflow: hidden;
+  transition: gap 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.sidebar[data-collapsed="true"] .identityInfo {
+  gap: 0;
+  justify-content: center;
 }
 .avatarBadge {
   width: 36px;
@@ -77,13 +88,28 @@
   font-size: 0.875rem;
   border: 1px solid rgba(92, 2, 2, 0.2);
   flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.avatarBadge:hover {
+  transform: scale(1.06);
 }
 .identityMeta {
   min-width: 0;
+  max-width: 150px;
+  opacity: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
+}
+.sidebar[data-collapsed="true"] .identityMeta {
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 .identityMeta strong {
   display: block;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--shop-ink);
@@ -93,7 +119,8 @@
   font-size: 0.75rem;
   color: var(--shop-muted);
   margin: 2px 0 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .collapseBtn {
   display: inline-flex;
@@ -106,12 +133,15 @@
   color: #6d5b53;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), background 0.18s ease, color 0.18s ease;
   flex-shrink: 0;
 }
 .collapseBtn:hover {
   background: #f8f3e9;
   color: var(--shop-wine, #5c0202);
+}
+.sidebar[data-collapsed="true"] .collapseBtn {
+  transform: rotate(90deg);
 }
 .navigation {
   display: flex;
@@ -130,7 +160,8 @@
   font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
-  transition: all 0.15s ease-in-out;
+  overflow: hidden;
+  transition: padding 0.3s cubic-bezier(0.25, 1, 0.5, 1), gap 0.3s cubic-bezier(0.25, 1, 0.5, 1), background 0.18s ease, color 0.18s ease, transform 0.15s ease;
 }
 .sidebar[data-collapsed="true"] .navigation a,
 .sidebar[data-collapsed="true"] .logout {
@@ -138,11 +169,28 @@
   justify-content: center;
   gap: 0;
 }
-.sidebar[data-collapsed="true"] .navLabel {
-  display: none;
-}
 .navIcon {
   flex-shrink: 0;
+  transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.navigation a:hover .navIcon,
+.logout:hover .navIcon {
+  transform: scale(1.12);
+}
+.navLabel {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+  opacity: 1;
+  transition: max-width 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, transform 0.25s ease;
+}
+.sidebar[data-collapsed="true"] .navLabel {
+  max-width: 0;
+  opacity: 0;
+  transform: translateX(-6px);
+  pointer-events: none;
 }
 .navigation a[aria-current="page"] {
   background: #f4e7d7;
@@ -196,14 +244,23 @@
 }
 @media (max-width: 1050px) {
   .workspace {
-    grid-template-columns: 210px minmax(0, 1fr);
     gap: 16px;
     padding-inline: 20px;
+  }
+  .sidebar {
+    width: 210px;
+  }
+  .sidebar[data-collapsed="true"] {
+    width: 68px;
   }
 }
 @media (max-width: 760px) {
   .collapseBtn {
     display: none;
+  }
+  .sidebar,
+  .sidebar[data-collapsed="true"] {
+    width: auto;
   }
   .accountMenu {
     display: flex;

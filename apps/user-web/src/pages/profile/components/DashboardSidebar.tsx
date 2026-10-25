@@ -45,19 +45,7 @@ export function DashboardSidebar({
       >
         <div className={styles.identity}>
           <div className={styles.identityRow}>
-            {!collapsed ? (
-              <div className={styles.identityInfo}>
-                <span className={styles.avatarBadge} aria-hidden="true">
-                  {userInitial}
-                </span>
-                <div className={styles.identityMeta}>
-                  <strong className="truncate">
-                    {auth.status === "authenticated" ? auth.user.displayName : ""}
-                  </strong>
-                  <p>Tài khoản Lật lại</p>
-                </div>
-              </div>
-            ) : (
+            <div className={styles.identityInfo}>
               <span
                 className={styles.avatarBadge}
                 title={
@@ -69,7 +57,13 @@ export function DashboardSidebar({
               >
                 {userInitial}
               </span>
-            )}
+              <div className={styles.identityMeta}>
+                <strong className="truncate">
+                  {auth.status === "authenticated" ? auth.user.displayName : ""}
+                </strong>
+                <p>Tài khoản Lật lại</p>
+              </div>
+            </div>
             {onToggleCollapse && (
               <button
                 type="button"
