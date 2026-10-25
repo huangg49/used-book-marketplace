@@ -14,6 +14,8 @@ import {
   BookOpen,
   Check,
   Coins,
+  Eye,
+  EyeOff,
   ImagePlus,
   Info,
   Lock,
@@ -34,6 +36,8 @@ import {
   buildRevisionContent,
   editApprovedBlock,
   formFromListing,
+  canToggleVisibility,
+  canArchiveListing,
   type Condition,
   type RevisionFormValue,
   validateRevision,
@@ -43,9 +47,11 @@ import {
   type RevisionPhoto,
 } from "../services/listing-revision";
 import {
+  archiveListing,
   getMyBookIdentity,
   getMyListing,
   getMyPhoto,
+  setListingVisibility,
 } from "../services/my-listings";
 import styles from "./EditListingPage.module.css";
 
@@ -124,6 +130,67 @@ export function EditListingPage() {
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
   const [done, setDone] = useState(false);
+  const [confirmHideOpen, setConfirmHideOpen] = useState(false);
+  const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
+
+  const canToggle = item ? canToggleVisibility(item) : false;
+  const canArchive = item ? canArchiveListing(item) : false;
+
+  async function handleToggleVisibility(to: "Visible" | "Hidden") {
+    if (!item) return;
+    setBusy(true);
+    setSubmitError(undefined);
+    try {
+      await setListingVisibility(item.id, item.version, to);
+      setConfirmHideOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
+      void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
+      void queryClient.invalidateQueries({ queryKey: ["listings"] });
+      void listing.refetch();
+    } catch (error) {
+      setConfirmHideOpen(false);
+      const status = (error as { status?: number }).status;
+      setSubmitError(
+        status === 409
+          ? "Bài đăng vừa thay đổi trạng thái ở nơi khác. Đang làm mới dữ liệu..."
+          : error instanceof Error
+            ? error.message
+            : "Chưa cập nhật được trạng thái hiển thị.",
+      );
+      void listing.refetch();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleArchive() {
+    if (!item) return;
+    setBusy(true);
+    setSubmitError(undefined);
+    try {
+      await archiveListing(item.id, item.version);
+      setDone(true);
+      setConfirmArchiveOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
+      void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
+      void queryClient.invalidateQueries({ queryKey: ["listings"] });
+      navigate(ROUTES.myBooks);
+    } catch (error) {
+      setConfirmArchiveOpen(false);
+      const status = (error as { status?: number }).status;
+      setSubmitError(
+        status === 409
+          ? "Bài đăng vừa thay đổi trạng thái hoặc đang có giao dịch phát sinh."
+          : error instanceof Error
+            ? error.message
+            : "Chưa xóa được bài đăng.",
+      );
+      void listing.refetch();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const fileInput = useRef<HTMLInputElement>(null);
   const intent = useRef<{
     signature: string;
@@ -905,6 +972,72 @@ export function EditListingPage() {
           </div>
         </section>
 
+        {/* CARD 4: Trạng thái & Quản lý ấn phẩm */}
+        {(canToggle || canArchive) && (
+          <section className={styles.card}>
+            <div className={styles.cardHeader}>
+              <div className={styles.cardIconWrap} style={{ background: "#716157" }}>
+                <Eye size={18} aria-hidden="true" />
+              </div>
+              <div>
+                <h2 className={styles.cardTitle}>Trạng thái & Quản lý ấn phẩm</h2>
+                <p className={styles.cardDesc}>
+                  Tạm ngưng hiển thị hoặc gỡ bỏ cuốn sách khỏi kệ sách của bạn.
+                </p>
+              </div>
+            </div>
+            <div className={styles.cardBody}>
+              <div className={styles.managementRow}>
+                {canToggle && (
+                  <div className={styles.manageItem}>
+                    <div>
+                      <strong>
+                        {item?.state.visibility === "Visible" ? "Tạm ẩn bài đăng" : "Mở hiển thị lại"}
+                      </strong>
+                      <p>
+                        {item?.state.visibility === "Visible"
+                          ? "Tạm thời ẩn sách khỏi kệ công khai. Bạn có thể mở lại bất cứ lúc nào mà không cần duyệt lại."
+                          : "Đưa cuốn sách này xuất hiện trở lại trên kệ sách công khai."}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.manageBtn}
+                      disabled={busy}
+                      onClick={() => {
+                        if (item?.state.visibility === "Hidden") void handleToggleVisibility("Visible");
+                        else setConfirmHideOpen(true);
+                      }}
+                    >
+                      {item?.state.visibility === "Visible" ? <EyeOff size={16} /> : <Eye size={16} />}
+                      <span>{item?.state.visibility === "Visible" ? "Tạm ẩn sách" : "Hiện lại trên kệ"}</span>
+                    </button>
+                  </div>
+                )}
+                {canArchive && (
+                  <div className={styles.manageItem}>
+                    <div>
+                      <strong style={{ color: "#9b1c1c" }}>Gỡ bài đăng vĩnh viễn</strong>
+                      <p>
+                        Đóng hoàn toàn bài đăng này. Ấn phẩm sẽ bị gỡ khỏi kệ và không thể khôi phục lại.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.manageDangerBtn}
+                      disabled={busy}
+                      onClick={() => setConfirmArchiveOpen(true)}
+                    >
+                      <Trash2 size={16} />
+                      <span>Xóa bài đăng</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Ownership declaration card */}
         <label className={styles.ownershipCard}>
           <input
@@ -957,6 +1090,29 @@ export function EditListingPage() {
         cancelText="Kiểm tra lại"
         isBusy={busy}
         onConfirm={() => void submit()}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmHideOpen}
+        onClose={() => !busy && setConfirmHideOpen(false)}
+        title="Tạm ẩn bài đăng?"
+        description={`Bạn có muốn tạm ẩn cuốn "${identity.data?.title || "sách"}" khỏi kệ sách công khai? Bạn có thể bấm "Hiện lại" bất cứ lúc nào mà không cần duyệt lại.`}
+        confirmText={busy ? "Đang xử lý…" : "Tạm ẩn bài"}
+        cancelText="Hủy"
+        isBusy={busy}
+        onConfirm={() => void handleToggleVisibility("Hidden")}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmArchiveOpen}
+        onClose={() => !busy && setConfirmArchiveOpen(false)}
+        title="Gỡ bài đăng khỏi kệ sách?"
+        description={`Cuốn "${identity.data?.title || "sách"}" sẽ bị gỡ vĩnh viễn khỏi kệ sách của bạn và không thể khôi phục. Các báo giá hoặc cuộc trò chuyện đang mở sẽ hết hiệu lực.`}
+        confirmText={busy ? "Đang xóa…" : "Xóa vĩnh viễn"}
+        cancelText="Giữ lại"
+        isDanger
+        isBusy={busy}
+        onConfirm={() => void handleArchive()}
       />
 
       <ConfirmDialog

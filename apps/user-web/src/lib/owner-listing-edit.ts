@@ -42,6 +42,35 @@ export const shouldExplainEditBlock = (item: EditableListing) =>
   (item.state.moderation === "Approved" ||
     item.state.moderation === "PendingReview");
 
+export function canToggleVisibility(item: EditableListing): boolean {
+  return (
+    item.channel !== "Auction" &&
+    item.state.moderation === "Approved" &&
+    item.state.trade === "Available" &&
+    item.state.visibility !== "Removed"
+  );
+}
+
+export function canArchiveListing(item: EditableListing): boolean {
+  return (
+    item.channel !== "Auction" &&
+    item.state.trade === "Available" &&
+    item.state.visibility !== "Removed"
+  );
+}
+
+export function archiveListingBlock(item: EditableListing): string | null {
+  if (item.channel === "Auction")
+    return "Bài đấu giá được quản lý ở mục Đấu giá.";
+  if (item.state.visibility === "Removed")
+    return "Bài đã bị gỡ nên không thể xóa.";
+  if (item.state.trade === "Reserved")
+    return "Sách đang có giao dịch, chưa thể xóa lúc này.";
+  if (item.state.trade !== "Available")
+    return "Sách đã hoàn tất giao dịch nên không thể xóa.";
+  return null;
+}
+
 export type Condition = "LikeNew" | "Good" | "Fair" | "Worn";
 export type Mode = "Sale" | "Exchange" | "Both";
 

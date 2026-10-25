@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  archiveListingBlock,
   buildRevisionContent,
+  canArchiveListing,
   canEditApproved,
+  canToggleVisibility,
   codePoints,
   editApprovedBlock,
   formFromListing,
@@ -210,3 +213,32 @@ describe("buildRevisionContent", () => {
     expect(exchange.fulfillment).toBeNull();
   });
 });
+
+describe("canToggleVisibility", () => {
+  it("allows toggling visibility only on approved, available, non-removed marketplace listings", () => {
+    expect(canToggleVisibility(item())).toBe(true);
+    expect(canToggleVisibility(item({ visibility: "Hidden" }))).toBe(true);
+    expect(canToggleVisibility(item({ moderation: "PendingReview" }))).toBe(false);
+    expect(canToggleVisibility(item({ trade: "Reserved" }))).toBe(false);
+    expect(canToggleVisibility(item({ visibility: "Removed" }))).toBe(false);
+    expect(canToggleVisibility(item({}, "Auction"))).toBe(false);
+  });
+});
+
+describe("canArchiveListing & archiveListingBlock", () => {
+  it("allows archiving available, non-removed marketplace listings", () => {
+    expect(canArchiveListing(item())).toBe(true);
+    expect(archiveListingBlock(item())).toBeNull();
+  });
+  it("blocks archiving reserved, sold, removed and auction listings", () => {
+    expect(canArchiveListing(item({ trade: "Reserved" }))).toBe(false);
+    expect(archiveListingBlock(item({ trade: "Reserved" }))).toMatch(/giao dịch/);
+    expect(canArchiveListing(item({ trade: "Sold" }))).toBe(false);
+    expect(archiveListingBlock(item({ trade: "Sold" }))).toMatch(/hoàn tất/);
+    expect(canArchiveListing(item({ visibility: "Removed" }))).toBe(false);
+    expect(archiveListingBlock(item({ visibility: "Removed" }))).toMatch(/bị gỡ/);
+    expect(canArchiveListing(item({}, "Auction"))).toBe(false);
+    expect(archiveListingBlock(item({}, "Auction"))).toMatch(/đấu giá/);
+  });
+});
+

@@ -851,6 +851,82 @@
   line-height: 1.5;
 }
 
+/* Management Card */
+.managementRow {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.manageItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  background: #faf8f5;
+  border: 1.5px solid #ebd9c8;
+  border-radius: 10px;
+}
+
+.manageItem strong {
+  display: block;
+  font-size: 0.9375rem;
+  color: #2b1e16;
+  margin-bottom: 3px;
+}
+
+.manageItem p {
+  font-size: 0.8125rem;
+  color: #716157;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.manageBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1.5px solid #d4c0ae;
+  color: #2b1e16;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease-in-out;
+}
+
+.manageBtn:hover:not(:disabled) {
+  background: #f0e6d6;
+  border-color: #8c7365;
+}
+
+.manageDangerBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: #fdf2f2;
+  border: 1.5px solid #f8b4b4;
+  color: #9b1c1c;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease-in-out;
+}
+
+.manageDangerBtn:hover:not(:disabled) {
+  background: #fde8e8;
+  border-color: #e02424;
+}
+
 /* Sticky Action Bar */
 .actionBar {
   display: flex;

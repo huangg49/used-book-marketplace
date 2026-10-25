@@ -578,6 +578,71 @@
   border-radius: 6px;
   border: 1px dashed #e6d5c3;
 }
+.actionRowGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+}
+.toggleVisBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #f7f2ea;
+  border: 1px solid #ebd9c8;
+  color: #716157;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+.toggleVisBtn:hover:not(:disabled) {
+  background: #f0e6d6;
+  color: #2b1e16;
+  border-color: #d9c4b0;
+}
+.toggleVisBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.archiveBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #fdf2f2;
+  border: 1px solid #f8b4b4;
+  color: #9b1c1c;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+.archiveBtn:hover:not(:disabled) {
+  background: #fde8e8;
+  color: #771d1d;
+  border-color: #f05252;
+}
+.archiveBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.rowActionError {
+  font-size: 0.75rem;
+  color: #c81e1e;
+  margin-top: 4px;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .revisedBanner {
   display: flex;
   align-items: center;
