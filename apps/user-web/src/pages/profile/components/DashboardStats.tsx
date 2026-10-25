@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Wallet, ShieldCheck, Library, Truck, TrendingUp, RefreshCw, AlertCircle } from "lucide-react";
+import { Wallet, ShieldCheck, Library, Truck, TrendingUp, RefreshCw, AlertCircle, BookOpen } from "lucide-react";
 import { getWalletSummary } from "../../../services/wallet";
 import { myListingsQuery } from "../../../lib/owner-listing-queries";
 import { ROUTES, formatVnd } from "../../../lib/routes";
@@ -127,12 +127,15 @@ export function DashboardStats({ ownerId }: DashboardStatsProps) {
             </div>
           </div>
           <div className="pt-space-md mt-space-md flex items-center justify-between border-t border-white/15 gap-1.5">
-            <span className="text-[11px] text-[#f5eddc]/85 whitespace-nowrap">
-              {totalBooks} ấn phẩm
-            </span>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-300/35 text-amber-200 shadow-xs whitespace-nowrap">
+              <BookOpen size={12} className="text-amber-300 flex-shrink-0" />
+              <span className="text-xs font-bold tracking-wide">
+                <strong className="font-extrabold text-amber-100">{totalBooks}</strong> ấn phẩm
+              </span>
+            </div>
             <Link
               to={ROUTES.myBooks}
-              className="inline-flex items-center gap-1 text-[11px] text-white hover:text-[#fffcf5] bg-white/15 hover:bg-white/25 border border-white/20 px-2 py-1 rounded font-medium transition-colors shadow-sm whitespace-nowrap flex-shrink-0"
+              className="inline-flex items-center gap-1 text-[11px] text-white hover:text-[#fffcf5] bg-white/15 hover:bg-white/25 border border-white/20 px-2.5 py-1 rounded font-medium transition-colors shadow-sm whitespace-nowrap flex-shrink-0"
             >
               Kệ sách
             </Link>
