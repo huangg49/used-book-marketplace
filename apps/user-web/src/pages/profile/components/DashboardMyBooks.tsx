@@ -50,7 +50,7 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
   const [filter, setFilter] = useState<string>("Approved");
 
   const { data, isPending, isError, refetch } = useQuery(
-    myListingsQuery(ownerId, filter === "All" ? "" : filter, undefined, 6)
+    myListingsQuery(ownerId, filter === "All" ? "" : filter, undefined, 8)
   );
 
   const items = data?.items || [];
@@ -155,7 +155,7 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-space-md">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {items.map((item) => {
             const content = item.currentRevision.content;
             const book = (item.currentRevision as any).book;
@@ -174,9 +174,9 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
             return (
               <div
                 key={item.id}
-                className="bg-surface-container-low rounded-xl p-space-md flex flex-col justify-between group hover:shadow-md transition-all border border-outline-variant/30"
+                className="bg-surface-container-low rounded-xl p-3 sm:p-3.5 flex flex-col justify-between group hover:shadow-md transition-all border border-outline-variant/30"
               >
-                <div className="flex flex-col gap-space-md">
+                <div className="flex flex-col gap-3">
                   <div className="w-full aspect-[3/4] rounded-lg bg-surface-container-high overflow-hidden relative shadow-sm">
                     {firstMediaId ? (
                       <MyListingPhoto listingId={item.id} mediaId={firstMediaId} />
@@ -185,10 +185,10 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
                         <BookOpen size={36} />
                       </div>
                     )}
-                    <span className={`absolute top-2 left-2 font-label-sm text-[11px] px-2 py-0.5 rounded shadow-sm ${modeColor}`}>
+                    <span className={`absolute top-2 left-2 font-label-sm text-[10px] sm:text-[11px] px-2 py-0.5 rounded shadow-sm ${modeColor}`}>
                       {modeText}
                     </span>
-                    <span className="absolute top-2 right-2 bg-surface-container-lowest/90 backdrop-blur text-primary font-label-sm text-[11px] px-2 py-0.5 rounded font-medium shadow-sm">
+                    <span className="absolute top-2 right-2 bg-surface-container-lowest/90 backdrop-blur text-primary font-label-sm text-[10px] sm:text-[11px] px-2 py-0.5 rounded font-medium shadow-sm">
                       {content?.condition || "Đã qua sử dụng"}
                     </span>
                   </div>
@@ -204,14 +204,14 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
                     </div>
 
                     <h3
-                      className="font-title-md text-title-md text-primary font-semibold line-clamp-2 h-[2.6em] leading-snug"
+                      className="font-title-md text-sm sm:text-base text-primary font-bold line-clamp-2 h-[2.6em] leading-snug"
                       title={book?.title || content?.title || "Bản thảo"}
                     >
                       {book?.title || content?.title || "Bản thảo chưa hoàn tất"}
                     </h3>
 
                     <div className="flex items-center justify-between mt-1">
-                      <span className="font-currency-display text-currency-display text-primary font-bold">
+                      <span className="font-currency-display text-sm sm:text-base text-primary font-bold">
                         {content?.salePrice ? formatVnd(content.salePrice) : "Thỏa thuận"}
                       </span>
                       <span className="text-xs text-on-surface-variant flex items-center gap-1">
@@ -222,7 +222,7 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
                   </div>
                 </div>
 
-                <div className="pt-space-md mt-space-md flex items-center justify-between gap-space-xs border-t border-outline-variant/30">
+                <div className="pt-3 mt-3 flex items-center justify-between gap-1 border-t border-outline-variant/30">
                   <span className="inline-flex items-center gap-1 text-[11px] font-label-sm text-primary uppercase font-semibold">
                     <span
                       className={`w-1.5 h-1.5 rounded-full inline-block ${
