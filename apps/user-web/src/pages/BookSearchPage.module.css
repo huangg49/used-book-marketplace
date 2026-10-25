@@ -907,8 +907,15 @@
   border-radius: 12px;
   background: rgb(255 253 248 / 78%);
 }
-.sidebar .extraBudget summary {
+.sidebar .extraBudget summary,
+.filterDialog .extraBudget summary {
   color: var(--shop-wine);
+}
+.sidebar .extraBudget[open] summary,
+.filterDialog .extraBudget[open] summary {
+  border-bottom: 1px solid #eadcc9;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 /* Highlight price-filter text and quick price options. */
@@ -1000,13 +1007,25 @@
 /* Theme values inherited by the FilterSelect component inside the wine panel. */
 .sidebar,
 .filterDialog {
-  --filter-select-color: #34211c;
-  --filter-select-placeholder: #5c4038;
-  --filter-select-background: #fffaf2;
-  --filter-select-border: 1px solid #e5c9b8;
+  --filter-select-color: #6b1917;
+  --filter-select-placeholder: #6b1917;
+  --filter-select-background: #f4e7d7;
+  --filter-select-border: 1px solid #eadcc9;
   --filter-select-radius: 10px;
   --filter-select-focus: #a85a38;
   --filter-select-icon: #6b1917;
+}
+.sidebar :is(.classification, .languageFilter) :is(input[role="combobox"], select),
+.filterDialog :is(.classification, .languageFilter) :is(input[role="combobox"], select) {
+  font-family: var(--shop-body) !important;
+  font-weight: 600 !important;
+  color: #6b1917 !important;
+}
+.sidebar :is(.classification, .languageFilter) input[role="combobox"]::placeholder,
+.filterDialog :is(.classification, .languageFilter) input[role="combobox"]::placeholder {
+  font-family: var(--shop-body) !important;
+  color: #6b1917 !important;
+  opacity: 1;
 }
 .sidebar .filterForm > .filterBody > fieldset[aria-labelledby$="-language-label"] legend {
   color: #fff5e8;
