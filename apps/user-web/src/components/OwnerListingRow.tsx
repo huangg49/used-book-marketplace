@@ -19,7 +19,15 @@ import {
 } from "../lib/owner-listing-labels";
 import styles from "../pages/MyBooksPage.module.css";
 
-function OwnerPhoto({ item, title }: { item: MyListing; title: string }) {
+function OwnerPhoto({
+  item,
+  title,
+  fill = false,
+}: {
+  item: MyListing;
+  title: string;
+  fill?: boolean;
+}) {
   const auth = useSession();
   const ownerId = auth.status === "authenticated" ? auth.user.id : undefined;
   const mediaId = item.currentRevision.content.mediaIds?.[0];
@@ -32,7 +40,7 @@ function OwnerPhoto({ item, title }: { item: MyListing; title: string }) {
   const url = query.data?.url;
   const failed = query.isError || (!!url && url === failedUrl);
   return (
-    <div className={styles.cover}>
+    <div className={fill ? styles.fillCover : styles.cover}>
       {url && !failed ? (
         <img
           src={url}
@@ -106,7 +114,7 @@ export function OwnerListingRow({
     return (
       <li className={styles.gridCard}>
         <div className={styles.gridCoverWrap}>
-          <OwnerPhoto item={item} title={title} />
+          <OwnerPhoto item={item} title={title} fill />
           <span className={styles.gridModBadge}>
             {moderationLabels[item.state.moderation]}
           </span>

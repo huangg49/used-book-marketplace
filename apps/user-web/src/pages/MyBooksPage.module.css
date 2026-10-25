@@ -389,15 +389,25 @@
   align-items: center;
   justify-content: center;
 }
-.gridCoverWrap :global(.cover),
-.gridCoverWrap img {
+.fillCover {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.fillCover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.25s ease;
+  display: block;
+  transition: transform 0.3s ease;
 }
-.gridCard:hover .gridCoverWrap img {
-  transform: scale(1.05);
+.gridCard:hover .fillCover img {
+  transform: scale(1.06);
 }
 .gridModBadge {
   position: absolute;
