@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -27,6 +27,7 @@ import {
   type Attributes,
 } from "@used-books/api-contract/catalog-taxonomy";
 import { catalogQueryKeys, readAttributes } from "../lib/catalog-filters";
+import { observeHeaderScroll } from "../lib/header-scroll";
 import styles from "./BookSearchPage.module.css";
 
 const modes = [
@@ -343,6 +344,14 @@ export function BookSearchPage() {
   }, []);
   const dialog = useRef<HTMLDialogElement>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [floating, setFloating] = useState(() => typeof window !== "undefined" && window.scrollY > 48);
+  useLayoutEffect(
+    () =>
+      observeHeaderScroll((next) => {
+        setFloating(next);
+      }),
+    [],
+  );
   const query = new URLSearchParams();
   for (const key of queryKeys) {
     const value = params.get(key);
@@ -530,6 +539,49 @@ export function BookSearchPage() {
   }
   return (
     <div className={styles.page}>
+      {chips.length > 0 && (
+        <>
+          <div
+            className={styles.stickyFilterBar}
+            data-floating={floating}
+            role="region"
+            aria-label="Bộ lọc đang áp dụng"
+          >
+            <div className={styles.stickyFilterInner}>
+              <div className={styles.stickyFilterLead}>
+                <SlidersHorizontal size={14} aria-hidden="true" />
+                <span>Đang lọc:</span>
+              </div>
+              <div className={styles.stickyChipsScroll}>
+                {chips.map((chip) => (
+                  <button
+                    type="button"
+                    key={
+                      chip.key === "facets" && "facet" in chip && "value" in chip
+                        ? `${chip.facet}-${chip.value}`
+                        : chip.key
+                    }
+                    className={styles.stickyChip}
+                    aria-label={`Bỏ lọc ${chip.label}`}
+                    onClick={() => removeChip(chip)}
+                  >
+                    <span>{chip.label}</span>
+                    <X size={13} aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className={styles.stickyClearAll}
+                onClick={clear}
+              >
+                Xóa tất cả
+              </button>
+            </div>
+          </div>
+          <div className={styles.stickyFilterSpacer} aria-hidden="true" />
+        </>
+      )}
       <div className={styles.catalog}>
         <aside
           ref={sidebar}
@@ -631,29 +683,7 @@ export function BookSearchPage() {
               />
             </div>
           </div>
-          {filtered && (
-            <div
-              className={styles.activeFilters}
-              aria-label="Bộ lọc đang áp dụng"
-            >
-              {chips.map((chip) => (
-                <button
-                  type="button"
-                  key={
-                    chip.key === "facets" && "facet" in chip && "value" in chip
-                      ? `${chip.facet}-${chip.value}`
-                      : chip.key
-                  }
-                  aria-label={`Bỏ lọc ${chip.label}`}
-                  onClick={() => removeChip(chip)}
-                >
-                  {chip.label}
-                  <X size={14} aria-hidden="true" />
-                </button>
-              ))}
 
-            </div>
-          )}
           {priceInvalid ? (
             <div className={styles.state} role="alert">
               <h3>Bộ lọc chưa hợp lệ</h3>

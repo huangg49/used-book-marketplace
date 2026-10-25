@@ -361,33 +361,183 @@
 .filterToggle {
   display: none;
 }
-.activeFilters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 20px;
+/* Sticky horizontal active filter bar, synchronized with navbar morph */
+.stickyFilterSpacer {
+  height: 52px;
 }
 
-/* Persistent summary of applied filters, positioned below the fixed navbar. */
-.activeFilters button {
-  display: inline-flex;
+.stickyFilterBar {
+  position: fixed;
+  top: 76px;
+  left: 0;
+  right: 0;
+  width: 100%;
+  margin-inline: auto;
+  z-index: 55;
+  background: rgba(255, 250, 242, 0.94);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(107, 25, 23, 0.12);
+  box-shadow: 0 4px 16px rgba(40, 25, 20, 0.05);
+  transition:
+    top var(--nav-morph-duration, 280ms) cubic-bezier(0.16, 1, 0.3, 1),
+    width var(--nav-morph-duration, 280ms) cubic-bezier(0.16, 1, 0.3, 1),
+    border-radius var(--nav-morph-duration, 280ms) cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow var(--nav-morph-duration, 280ms) ease-out,
+    border-color var(--nav-morph-duration, 280ms) ease-out;
+  animation: stickyBarSlideIn 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes stickyBarSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stickyFilterBar[data-floating="true"] {
+  top: 92px;
+  width: min(1248px, calc(100% - 64px));
+  border-radius: 999px;
+  border: 1px solid rgba(107, 25, 23, 0.16);
+  background: rgba(255, 250, 242, 0.96);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 10px 28px rgba(40, 25, 20, 0.12);
+}
+
+.stickyFilterInner {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 6px 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  transition: padding var(--nav-morph-duration, 280ms) cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stickyFilterBar[data-floating="true"] .stickyFilterInner {
+  padding: 5px 18px 5px 20px;
+  min-height: 42px;
+}
+
+.stickyFilterLead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--shop-wine, #6b1917);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: -0.01em;
+}
+
+.stickyFilterLead svg {
+  color: var(--shop-wine, #6b1917);
+  opacity: 0.85;
+}
+
+.stickyChipsScroll {
+  display: flex;
   align-items: center;
   gap: 8px;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  text-align: left;
-  min-height: 44px;
-  padding: 8px 12px;
-  border: 0;
-  background: #f0e2ca;
-  color: var(--shop-wine);
-  border-radius: 6px;
-  font-size: 0.75rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
 }
-.activeFilters .clear {
+
+.stickyChipsScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.stickyChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 12px;
+  border-radius: 999px;
+  background: #fffdf8;
+  border: 1px solid #e5c9b8;
+  color: #6b1917;
+  font: 600 0.8125rem/1.4 var(--shop-body);
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(35, 5, 4, 0.05);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.stickyChip:hover {
+  background: #fff0dc;
+  border-color: #d8a798;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(35, 5, 4, 0.08);
+}
+
+.stickyChip svg {
+  color: #8b2522;
+  transition: transform 150ms ease, color 150ms ease;
+}
+
+.stickyChip:hover svg {
+  color: #5e0705;
+  transform: scale(1.15);
+}
+
+.stickyClearAll {
+  flex-shrink: 0;
+  border: 0;
   background: transparent;
+  color: #8b2522;
+  font: 600 0.8125rem/1.4 var(--shop-body);
   text-decoration: underline;
   text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.stickyClearAll:hover {
+  color: #5e0705;
+  background: rgba(107, 25, 23, 0.06);
+}
+
+@media (max-width: 1000px) {
+  .stickyFilterBar {
+    top: 76px;
+  }
+  .stickyFilterBar[data-floating="true"] {
+    top: 74px;
+    width: calc(100% - 24px);
+    border-radius: 20px;
+  }
+  .stickyFilterInner {
+    padding-inline: 16px;
+  }
+  .stickyFilterBar[data-floating="true"] .stickyFilterInner {
+    padding-inline: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stickyFilterBar {
+    transition-duration: var(--nav-morph-duration) !important;
+  }
 }
 .grid {
   display: grid;
