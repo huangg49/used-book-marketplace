@@ -8,7 +8,22 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, ImagePlus, Lock, X } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  BookOpen,
+  Check,
+  Coins,
+  ImagePlus,
+  Info,
+  Lock,
+  MapPin,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Tag,
+  Trash2,
+} from "lucide-react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { useSession } from "../hooks/useSession";
 import { session as apiSession } from "../lib/session";
@@ -19,6 +34,7 @@ import {
   buildRevisionContent,
   editApprovedBlock,
   formFromListing,
+  type Condition,
   type RevisionFormValue,
   validateRevision,
 } from "../lib/owner-listing-edit";
@@ -61,7 +77,7 @@ function ExistingPhoto({ listingId, id }: { listingId: string; id: string }) {
     queryFn: () => getMyPhoto(listingId, id),
   });
   return query.data ? (
-    <img src={query.data.url} alt="Ảnh hiện tại của sách" />
+    <img src={query.data.url} alt="Ảnh của sách" />
   ) : (
     <span className={styles.photoPlaceholder}>
       {query.isError ? "Lỗi ảnh" : "Đang tải…"}
@@ -114,7 +130,7 @@ export function EditListingPage() {
     run: ReturnType<typeof createListingRevision>;
   } | null>(null);
 
-  // Seed the form once per loaded server version; edits are never overwritten.
+  // Seed form once
   useEffect(() => {
     if (!item || form) return;
     const next = formFromListing(item);
@@ -136,10 +152,12 @@ export function EditListingPage() {
         : `${p.file.name}:${p.file.size}:${p.file.lastModified}`,
     )
     .join("|");
+
   const current = useMemo(
     () => (form ? { ...form, photoCount: photos.length } : null),
     [form, photos.length],
   );
+
   const dirty =
     !!current &&
     !done &&
@@ -153,16 +171,19 @@ export function EditListingPage() {
             ids: JSON.parse(initial).ids,
           })
         : "");
+
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       dirty && currentLocation.pathname !== nextLocation.pathname,
   );
+
   useBeforeUnload((event) => {
     if (dirty) {
       event.preventDefault();
       event.returnValue = "";
     }
   });
+
   useEffect(
     () => () =>
       photos.forEach((p) => p.kind === "new" && URL.revokeObjectURL(p.preview)),
@@ -248,7 +269,6 @@ export function EditListingPage() {
     );
     const { mediaIds: _unused, ...rest } = content;
     void _unused;
-    // Same payload keeps the same runner (and Idempotency-Key) after a lost reply.
     const signature = JSON.stringify({ v: item.version, rest, photoSignature });
     if (intent.current?.signature !== signature)
       intent.current = {
@@ -289,25 +309,34 @@ export function EditListingPage() {
 
   if (listing.isLoading || !ownerId)
     return (
-      <main className={styles.page} role="status">
-        Đang tải bài đăng…
+      <main className={styles.pageState} role="status">
+        <div className={styles.spinner} />
+        <p>Đang tải thông tin bài đăng…</p>
       </main>
     );
+
   if (listing.isError || !item)
     return (
-      <main className={styles.page}>
-        <h1 className={styles.title}>Không mở được bài đăng</h1>
-        <p className={styles.error} role="alert">
-          Bài đăng không tồn tại hoặc không thuộc về bạn.
+      <main className={styles.pageState}>
+        <div className={styles.errorIconWrap}>
+          <AlertTriangle size={32} />
+        </div>
+        <h1 className={styles.stateTitle}>Không mở được bài đăng</h1>
+        <p className={styles.stateDescription}>
+          Bài đăng không tồn tại hoặc bạn không có quyền chỉnh sửa ấn phẩm này.
         </p>
-        <button
-          type="button"
-          className={styles.secondary}
-          onClick={() => void listing.refetch()}
-        >
-          Thử lại
-        </button>{" "}
-        <Link to={ROUTES.myBooks}>Về sách của tôi</Link>
+        <div className={styles.stateActions}>
+          <button
+            type="button"
+            className={styles.primaryBtn}
+            onClick={() => void listing.refetch()}
+          >
+            Thử lại
+          </button>
+          <Link to={ROUTES.myBooks} className={styles.secondaryBtn}>
+            Về sách của tôi
+          </Link>
+        </div>
       </main>
     );
 
@@ -315,88 +344,98 @@ export function EditListingPage() {
   if (block)
     return (
       <main className={styles.page}>
-        <Link className={styles.back} to={ROUTES.myBooks}>
-          <ArrowLeft size={16} aria-hidden="true" /> Sách của tôi
+        <Link className={styles.backLink} to={ROUTES.myBooks}>
+          <ArrowLeft size={16} aria-hidden="true" /> Về kệ sách của tôi
         </Link>
-        <h1 className={styles.title}>Chưa sửa được bài này</h1>
-        <p className={styles.warning} role="status">
-          <AlertTriangle size={18} aria-hidden="true" /> {block}
-        </p>
+        <div className={styles.blockedCard}>
+          <div className={styles.blockedIcon}>
+            <AlertTriangle size={24} aria-hidden="true" />
+          </div>
+          <div>
+            <h2>Chưa thể sửa bài đăng này</h2>
+            <p>{block}</p>
+          </div>
+        </div>
       </main>
     );
+
   if (!form || !current) return null;
-
-  const textField = (
-    key: "pages" | "coverNote" | "notes" | "accessories",
-    label: string,
-  ) => (
-    <label className={styles.field}>
-      <span>{label}</span>
-      <textarea
-        rows={2}
-        value={form[key]}
-        data-invalid={!!showError(key)}
-        aria-invalid={!!showError(key)}
-        onChange={(e) => patch({ [key]: e.target.value })}
-      />
-      {showError(key) && <em className={styles.fieldError}>{showError(key)}</em>}
-    </label>
-  );
-
-  const flagField = (
-    key: "readable" | "hasMissingPages" | "missingEssentialContent",
-    label: string,
-  ) => (
-    <fieldset className={styles.flag}>
-      <legend>{label}</legend>
-      {[true, false].map((v) => (
-        <label key={String(v)}>
-          <input
-            type="radio"
-            name={key}
-            checked={form[key] === v}
-            onChange={() => patch({ [key]: v })}
-          />{" "}
-          {v ? "Có" : "Không"}
-        </label>
-      ))}
-      {showError(key) && <em className={styles.fieldError}>{showError(key)}</em>}
-    </fieldset>
-  );
 
   return (
     <main className={styles.page}>
-      <Link className={styles.back} to={ROUTES.myBooks}>
-        <ArrowLeft size={16} aria-hidden="true" /> Sách của tôi
-      </Link>
-      <h1 className={styles.title}>Sửa bài đăng</h1>
+      {/* Top Navigation */}
+      <nav className={styles.headerNav}>
+        <Link className={styles.backLink} to={ROUTES.myBooks}>
+          <ArrowLeft size={16} aria-hidden="true" />
+          <span>Về kệ sách của tôi</span>
+        </Link>
+        <span className={styles.revisionPill}>Chỉnh sửa phiên bản</span>
+      </nav>
 
-      <section className={styles.locked} aria-label="Sách không đổi được">
-        <Lock size={18} aria-hidden="true" />
-        <div>
-          <strong>{identity.data?.title ?? "Đang tải tên sách…"}</strong>
-          {identity.data && <span> · {identity.data.authors.join(", ")}</span>}
-          <p>
-            Tên sách và tác giả không đổi được. Nếu là cuốn khác, hãy đăng bài mới.
+      {/* Page Title & Subtitle */}
+      <div className={styles.titleSection}>
+        <h1 className={styles.pageTitle}>Chỉnh sửa bài đăng</h1>
+        <p className={styles.pageSubtitle}>
+          Cập nhật thông tin chi tiết, giá bán, tình trạng thực tế và ảnh chụp mới của ấn phẩm.
+        </p>
+      </div>
+
+      {/* Book Hero Card (Passport style) */}
+      <section className={styles.bookHero} aria-label="Đầu sách đang chỉnh sửa">
+        <div className={styles.bookHeroCover}>
+          {photos[0]?.kind === "existing" ? (
+            <ExistingPhoto listingId={item.id} id={photos[0].id} />
+          ) : (
+            <div className={styles.bookHeroCoverFallback}>
+              <BookOpen size={30} aria-hidden="true" />
+            </div>
+          )}
+        </div>
+        <div className={styles.bookHeroContent}>
+          <div className={styles.bookHeroBadge}>
+            <Lock size={12} aria-hidden="true" />
+            <span>Đầu sách cố định</span>
+          </div>
+          <h2 className={styles.bookHeroTitle}>
+            {identity.data?.title ?? "Đang tải tên sách…"}
+          </h2>
+          <p className={styles.bookHeroAuthor}>
+            Tác giả: <strong>{identity.data?.authors.join(", ") || "Chưa rõ"}</strong>
+          </p>
+          <p className={styles.bookHeroNote}>
+            Tên sách và tác giả được giữ nguyên theo hồ sơ đã kiểm duyệt. Nếu đây là một đầu sách khác, vui lòng đăng bài mới.
           </p>
         </div>
       </section>
 
-      <p className={styles.warning} role="note">
-        <AlertTriangle size={18} aria-hidden="true" /> Mọi thay đổi cần được
-        duyệt lại. Từ lúc gửi, sách tạm ngừng hiển thị trên kệ cho tới khi được
-        duyệt.
-      </p>
+      {/* Notice Banner */}
+      <div className={styles.noticeBanner} role="note">
+        <div className={styles.noticeIcon}>
+          <Info size={18} aria-hidden="true" />
+        </div>
+        <div className={styles.noticeText}>
+          <strong>Quy trình kiểm duyệt lại:</strong> Mọi thay đổi nội dung sẽ được gửi đến ban quản trị xét duyệt. Trong thời gian chờ duyệt, bài đăng tạm thời ẩn khỏi kệ sách công khai.
+        </div>
+      </div>
 
+      {/* Error Callout */}
       {submitError && (
-        <p className={styles.error} role="alert">
-          {submitError}{" "}
-          <button type="button" onClick={() => void listing.refetch().then(() => setForm(null))}>
-            Tải lại bài
-          </button>
-        </p>
+        <div className={styles.errorAlert} role="alert">
+          <AlertTriangle size={18} aria-hidden="true" />
+          <div className={styles.errorAlertContent}>
+            <span>{submitError}</span>
+            <button
+              type="button"
+              className={styles.reloadBtn}
+              onClick={() => void listing.refetch().then(() => setForm(null))}
+            >
+              Tải lại bài
+            </button>
+          </div>
+        </div>
       )}
 
+      {/* Edit Form */}
       <form
         className={styles.form}
         noValidate
@@ -405,233 +444,528 @@ export function EditListingPage() {
           review();
         }}
       >
+        {/* CARD 1: Giá và hình thức */}
         <section className={styles.card}>
-          <h2>Giá và hình thức</h2>
-          <fieldset className={styles.flag}>
-            <legend>Hình thức</legend>
-            {(
-              [
-                ["Sale", "Bán"],
-                ["Exchange", "Đổi"],
-                ["Both", "Bán hoặc đổi"],
-              ] as const
-            ).map(([v, label]) => (
-              <label key={v}>
-                <input
-                  type="radio"
-                  name="mode"
-                  checked={form.mode === v}
-                  onChange={() => patch({ mode: v })}
-                />{" "}
-                {label}
-              </label>
-            ))}
-          </fieldset>
-          {form.mode !== "Exchange" && (
-            <label className={styles.field}>
-              <span>Giá bán (đ)</span>
-              <input
-                inputMode="numeric"
-                value={form.salePrice}
-                data-invalid={!!showError("salePrice")}
-                aria-invalid={!!showError("salePrice")}
-                onChange={(e) => patch({ salePrice: e.target.value })}
-              />
-              {showError("salePrice") && (
-                <em className={styles.fieldError}>{showError("salePrice")}</em>
-              )}
-            </label>
-          )}
-          {form.mode !== "Sale" && (
-            <label className={styles.field}>
-              <span>Giá trị trao đổi (đ)</span>
-              <input
-                inputMode="numeric"
-                value={form.exchangeValue}
-                data-invalid={!!showError("exchangeValue")}
-                aria-invalid={!!showError("exchangeValue")}
-                onChange={(e) => patch({ exchangeValue: e.target.value })}
-              />
-              {showError("exchangeValue") && (
-                <em className={styles.fieldError}>
-                  {showError("exchangeValue")}
-                </em>
-              )}
-            </label>
-          )}
-          {form.mode !== "Exchange" && (
-            <label className={styles.field}>
-              <span>Nơi gửi sách</span>
-              <select
-                value={form.originAddressId}
-                data-invalid={!!showError("originAddressId")}
-                aria-invalid={!!showError("originAddressId")}
-                onChange={(e) => patch({ originAddressId: e.target.value })}
-              >
-                <option value="">Chọn địa chỉ</option>
-                {origins.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.recipientName} · {a.detail}
-                  </option>
-                ))}
-              </select>
-              {addresses.isError && (
-                <em className={styles.fieldError}>
-                  Chưa tải được sổ địa chỉ.{" "}
-                  <button type="button" onClick={() => void addresses.refetch()}>
-                    Thử lại
-                  </button>
-                </em>
-              )}
-              {showError("originAddressId") && (
-                <em className={styles.fieldError}>
-                  {showError("originAddressId")}
-                </em>
-              )}
-            </label>
-          )}
-        </section>
+          <div className={styles.cardHeader}>
+            <div className={styles.cardIconWrap}>
+              <Tag size={18} aria-hidden="true" />
+            </div>
+            <div>
+              <h2 className={styles.cardTitle}>Giá và hình thức giao lưu</h2>
+              <p className={styles.cardDesc}>
+                Lựa chọn phương thức bạn muốn chia sẻ cuốn sách này.
+              </p>
+            </div>
+          </div>
 
-        <section className={styles.card}>
-          <h2>Tình trạng sách</h2>
-          <label className={styles.field}>
-            <span>Tình trạng</span>
-            <select
-              value={form.condition}
-              data-invalid={!!showError("condition")}
-              onChange={(e) =>
-                patch({ condition: e.target.value as RevisionFormValue["condition"] })
-              }
-            >
-              <option value="">Chọn tình trạng</option>
-              {Object.entries(conditions).map(([v, label]) => (
-                <option key={v} value={v}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            {showError("condition") && (
-              <em className={styles.fieldError}>{showError("condition")}</em>
-            )}
-          </label>
-          {textField("pages", "Tình trạng các trang")}
-          {textField("coverNote", "Tình trạng bìa và gáy")}
-          {textField("notes", "Ghi chú thêm")}
-          {textField("accessories", "Phụ kiện đi kèm")}
-          <label className={styles.field}>
-            <span>Mô tả chung</span>
-            <textarea
-              rows={4}
-              value={form.description}
-              data-invalid={!!showError("description")}
-              aria-invalid={!!showError("description")}
-              onChange={(e) => patch({ description: e.target.value })}
-            />
-            {showError("description") && (
-              <em className={styles.fieldError}>{showError("description")}</em>
-            )}
-          </label>
-          {flagField("readable", "Sách đọc được bình thường?")}
-          {flagField("hasMissingPages", "Sách có thiếu trang?")}
-          {flagField("missingEssentialContent", "Thiếu nội dung trọng yếu?")}
-        </section>
-
-        <section className={styles.card}>
-          <h2>
-            Ảnh thật ({photos.length}/{MAX_PHOTOS})
-          </h2>
-          <ul className={styles.photos}>
-            {photos.map((p, index) => (
-              <li key={p.key} className={styles.photo}>
-                {p.kind === "existing" ? (
-                  <ExistingPhoto listingId={item.id} id={p.id} />
-                ) : (
-                  <img src={p.preview} alt={`Ảnh mới ${p.file.name}`} />
-                )}
-                {index === 0 && <span className={styles.coverTag}>Ảnh bìa</span>}
-                <div className={styles.photoActions}>
-                  {index > 0 && (
-                    <button type="button" onClick={() => makeCover(p.key)}>
-                      Đặt làm bìa
+          <div className={styles.cardBody}>
+            {/* Mode selection tabs */}
+            <div className={styles.formGroup}>
+              <label className={styles.groupLabel}>Hình thức trao đổi</label>
+              <div className={styles.modeTabs}>
+                {(
+                  [
+                    { value: "Sale", label: "Chỉ bán", icon: Tag, desc: "Bán lấy tiền" },
+                    { value: "Exchange", label: "Chỉ đổi", icon: Coins, desc: "Đổi sách khác" },
+                    { value: "Both", label: "Bán hoặc đổi", icon: Sparkles, desc: "Linh hoạt cả hai" },
+                  ] as const
+                ).map((tab) => {
+                  const Icon = tab.icon;
+                  const isSelected = form.mode === tab.value;
+                  return (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      className={`${styles.modeTab} ${isSelected ? styles.modeTabActive : ""}`}
+                      onClick={() => patch({ mode: tab.value })}
+                    >
+                      <div className={styles.modeTabHeader}>
+                        <Icon size={16} aria-hidden="true" />
+                        <span className={styles.modeTabTitle}>{tab.label}</span>
+                      </div>
+                      <span className={styles.modeTabDesc}>{tab.desc}</span>
+                      {isSelected && (
+                        <span className={styles.modeTabCheck}>
+                          <Check size={12} aria-hidden="true" />
+                        </span>
+                      )}
                     </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Price Inputs Grid */}
+            <div className={styles.inputsGrid}>
+              {form.mode !== "Exchange" && (
+                <div className={styles.formGroup}>
+                  <label className={styles.groupLabel} htmlFor="field-sale-price">
+                    Giá bán <span className={styles.required}>*</span>
+                  </label>
+                  <div className={styles.inputWithSuffix}>
+                    <input
+                      id="field-sale-price"
+                      inputMode="numeric"
+                      placeholder="VD: 50000"
+                      value={form.salePrice}
+                      data-invalid={!!showError("salePrice")}
+                      aria-invalid={!!showError("salePrice")}
+                      onChange={(e) => patch({ salePrice: e.target.value })}
+                    />
+                    <span className={styles.inputSuffix}>VNĐ</span>
+                  </div>
+                  <span className={styles.inputHint}>Từ 10.000đ đến 1.000.000đ</span>
+                  {showError("salePrice") && (
+                    <em className={styles.fieldError}>{showError("salePrice")}</em>
                   )}
+                </div>
+              )}
+
+              {form.mode !== "Sale" && (
+                <div className={styles.formGroup}>
+                  <label className={styles.groupLabel} htmlFor="field-exchange-val">
+                    Giá trị trao đổi <span className={styles.required}>*</span>
+                  </label>
+                  <div className={styles.inputWithSuffix}>
+                    <input
+                      id="field-exchange-val"
+                      inputMode="numeric"
+                      placeholder="VD: 50000"
+                      value={form.exchangeValue}
+                      data-invalid={!!showError("exchangeValue")}
+                      aria-invalid={!!showError("exchangeValue")}
+                      onChange={(e) => patch({ exchangeValue: e.target.value })}
+                    />
+                    <span className={styles.inputSuffix}>VNĐ</span>
+                  </div>
+                  <span className={styles.inputHint}>Ước lượng giá trị tương đương</span>
+                  {showError("exchangeValue") && (
+                    <em className={styles.fieldError}>
+                      {showError("exchangeValue")}
+                    </em>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Origin address */}
+            {form.mode !== "Exchange" && (
+              <div className={styles.formGroup}>
+                <label className={styles.groupLabel} htmlFor="field-origin-addr">
+                  Địa điểm gửi sách (Nơi shipper lấy hàng) <span className={styles.required}>*</span>
+                </label>
+                <div className={styles.selectWithIcon}>
+                  <MapPin size={18} className={styles.selectIcon} aria-hidden="true" />
+                  <select
+                    id="field-origin-addr"
+                    value={form.originAddressId}
+                    data-invalid={!!showError("originAddressId")}
+                    aria-invalid={!!showError("originAddressId")}
+                    onChange={(e) => patch({ originAddressId: e.target.value })}
+                  >
+                    <option value="">-- Chọn địa chỉ gửi sách từ sổ địa chỉ --</option>
+                    {origins.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.recipientName} ({a.phone}) · {a.detail}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {addresses.isError && (
+                  <em className={styles.fieldError}>
+                    Chưa tải được sổ địa chỉ.{" "}
+                    <button type="button" onClick={() => void addresses.refetch()}>
+                      Thử lại
+                    </button>
+                  </em>
+                )}
+                {showError("originAddressId") && (
+                  <em className={styles.fieldError}>
+                    {showError("originAddressId")}
+                  </em>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* CARD 2: Tình trạng sách */}
+        <section className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div className={styles.cardIconWrap}>
+              <Sparkles size={18} aria-hidden="true" />
+            </div>
+            <div>
+              <h2 className={styles.cardTitle}>Tình trạng ấn phẩm</h2>
+              <p className={styles.cardDesc}>
+                Mô tả chi tiết và trung thực giúp người mua hoàn toàn yên tâm.
+              </p>
+            </div>
+          </div>
+
+          <div className={styles.cardBody}>
+            {/* Condition Grid Selection */}
+            <div className={styles.formGroup}>
+              <label className={styles.groupLabel}>
+                Mức độ tình trạng tổng thể <span className={styles.required}>*</span>
+              </label>
+              <div className={styles.conditionGrid}>
+                {Object.entries(conditions).map(([val, label]) => {
+                  const isSelected = form.condition === val;
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      className={`${styles.conditionCard} ${isSelected ? styles.conditionCardActive : ""}`}
+                      onClick={() => patch({ condition: val as Condition })}
+                      data-invalid={!!showError("condition") && !form.condition}
+                    >
+                      <span className={styles.conditionRadio}>
+                        {isSelected && <span className={styles.conditionRadioDot} />}
+                      </span>
+                      <span className={styles.conditionLabel}>{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {showError("condition") && (
+                <em className={styles.fieldError}>{showError("condition")}</em>
+              )}
+            </div>
+
+            {/* 4 Detail fields in 2x2 grid */}
+            <div className={styles.detailGrid}>
+              <div className={styles.formGroup}>
+                <label className={styles.groupLabel} htmlFor="field-pages">
+                  Tình trạng các trang ruột <span className={styles.required}>*</span>
+                </label>
+                <input
+                  id="field-pages"
+                  type="text"
+                  placeholder="VD: Giấy sạch, không ố vàng hay viết vẽ"
+                  value={form.pages}
+                  data-invalid={!!showError("pages")}
+                  aria-invalid={!!showError("pages")}
+                  onChange={(e) => patch({ pages: e.target.value })}
+                />
+                {showError("pages") && (
+                  <em className={styles.fieldError}>{showError("pages")}</em>
+                )}
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.groupLabel} htmlFor="field-cover">
+                  Tình trạng bìa và gáy <span className={styles.required}>*</span>
+                </label>
+                <input
+                  id="field-cover"
+                  type="text"
+                  placeholder="VD: Bìa cứng tốt, gáy vuông vắn"
+                  value={form.coverNote}
+                  data-invalid={!!showError("coverNote")}
+                  aria-invalid={!!showError("coverNote")}
+                  onChange={(e) => patch({ coverNote: e.target.value })}
+                />
+                {showError("coverNote") && (
+                  <em className={styles.fieldError}>{showError("coverNote")}</em>
+                )}
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.groupLabel} htmlFor="field-notes">
+                  Ghi chú thêm <span className={styles.required}>*</span>
+                </label>
+                <input
+                  id="field-notes"
+                  type="text"
+                  placeholder="VD: Không có hoặc có chữ ký tác giả..."
+                  value={form.notes}
+                  data-invalid={!!showError("notes")}
+                  aria-invalid={!!showError("notes")}
+                  onChange={(e) => patch({ notes: e.target.value })}
+                />
+                {showError("notes") && (
+                  <em className={styles.fieldError}>{showError("notes")}</em>
+                )}
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.groupLabel} htmlFor="field-accessories">
+                  Phụ kiện đi kèm <span className={styles.required}>*</span>
+                </label>
+                <input
+                  id="field-accessories"
+                  type="text"
+                  placeholder="VD: Kèm bookmark gốc / Không có"
+                  value={form.accessories}
+                  data-invalid={!!showError("accessories")}
+                  aria-invalid={!!showError("accessories")}
+                  onChange={(e) => patch({ accessories: e.target.value })}
+                />
+                {showError("accessories") && (
+                  <em className={styles.fieldError}>{showError("accessories")}</em>
+                )}
+              </div>
+            </div>
+
+            {/* General Description */}
+            <div className={styles.formGroup}>
+              <div className={styles.labelWithCounter}>
+                <label className={styles.groupLabel} htmlFor="field-description">
+                  Mô tả cảm nhận & chia sẻ <span className={styles.required}>*</span>
+                </label>
+                <span className={styles.charCounter}>
+                  {form.description.trim().length}/5000 ký tự (tối thiểu 30)
+                </span>
+              </div>
+              <textarea
+                id="field-description"
+                rows={4}
+                placeholder="Chia sẻ lý do bạn thích cuốn sách này hoặc tình trạng cụ thể để người mua sau cảm thấy hứng thú..."
+                value={form.description}
+                data-invalid={!!showError("description")}
+                aria-invalid={!!showError("description")}
+                onChange={(e) => patch({ description: e.target.value })}
+              />
+              {showError("description") && (
+                <em className={styles.fieldError}>{showError("description")}</em>
+              )}
+            </div>
+
+            {/* 3 Questions (Segmented Toggles) */}
+            <div className={styles.questionsContainer}>
+              <span className={styles.questionsTitle}>Xác thực điều kiện lưu hành</span>
+              
+              <div className={styles.questionRow}>
+                <div>
+                  <span className={styles.questionText}>Sách đọc được rõ ràng và bình thường?</span>
+                  <span className={styles.questionSub}>Bắt buộc phải đọc được để đủ điều kiện niêm yết</span>
+                </div>
+                <div className={styles.segmentedToggle}>
                   <button
                     type="button"
-                    aria-label="Bỏ ảnh này"
-                    onClick={() => removePhoto(p.key)}
+                    className={`${styles.toggleBtn} ${form.readable === true ? styles.togglePositive : ""}`}
+                    onClick={() => patch({ readable: true })}
                   >
-                    <X size={14} aria-hidden="true" />
+                    Có
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.toggleBtn} ${form.readable === false ? styles.toggleNegative : ""}`}
+                    onClick={() => patch({ readable: false })}
+                  >
+                    Không
                   </button>
                 </div>
-              </li>
-            ))}
-            {photos.length < MAX_PHOTOS && (
-              <li>
-                <button
-                  type="button"
-                  className={styles.addPhoto}
-                  onClick={() => fileInput.current?.click()}
-                >
-                  <ImagePlus size={20} aria-hidden="true" /> Thêm ảnh
-                </button>
-              </li>
-            )}
-          </ul>
-          <input
-            ref={fileInput}
-            type="file"
-            accept={ACCEPTED.join(",")}
-            multiple
-            hidden
-            onChange={(e) => addFiles(e.target.files)}
-          />
-          {showError("photoCount") && (
-            <em className={styles.fieldError}>{showError("photoCount")}</em>
-          )}
+              </div>
+              {showError("readable") && (
+                <em className={styles.fieldError}>{showError("readable")}</em>
+              )}
+
+              <div className={styles.questionRow}>
+                <div>
+                  <span className={styles.questionText}>Sách có bị thiếu trang nào không?</span>
+                  <span className={styles.questionSub}>Trang trắng hoặc trang phụ bản</span>
+                </div>
+                <div className={styles.segmentedToggle}>
+                  <button
+                    type="button"
+                    className={`${styles.toggleBtn} ${form.hasMissingPages === true ? styles.toggleNegative : ""}`}
+                    onClick={() => patch({ hasMissingPages: true })}
+                  >
+                    Có
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.toggleBtn} ${form.hasMissingPages === false ? styles.togglePositive : ""}`}
+                    onClick={() => patch({ hasMissingPages: false })}
+                  >
+                    Không
+                  </button>
+                </div>
+              </div>
+              {showError("hasMissingPages") && (
+                <em className={styles.fieldError}>{showError("hasMissingPages")}</em>
+              )}
+
+              <div className={styles.questionRow}>
+                <div>
+                  <span className={styles.questionText}>Có bị thiếu phần nội dung trọng yếu không?</span>
+                  <span className={styles.questionSub}>Như chương chính, kết thúc tác phẩm</span>
+                </div>
+                <div className={styles.segmentedToggle}>
+                  <button
+                    type="button"
+                    className={`${styles.toggleBtn} ${form.missingEssentialContent === true ? styles.toggleNegative : ""}`}
+                    onClick={() => patch({ missingEssentialContent: true })}
+                  >
+                    Có
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.toggleBtn} ${form.missingEssentialContent === false ? styles.togglePositive : ""}`}
+                    onClick={() => patch({ missingEssentialContent: false })}
+                  >
+                    Không
+                  </button>
+                </div>
+              </div>
+              {showError("missingEssentialContent") && (
+                <em className={styles.fieldError}>{showError("missingEssentialContent")}</em>
+              )}
+            </div>
+          </div>
         </section>
 
-        <label className={styles.ownership}>
+        {/* CARD 3: Ảnh thật của sách */}
+        <section className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div className={styles.cardIconWrap}>
+              <ImagePlus size={18} aria-hidden="true" />
+            </div>
+            <div>
+              <h2 className={styles.cardTitle}>
+                Ảnh chụp thực tế ({photos.length}/{MAX_PHOTOS})
+              </h2>
+              <p className={styles.cardDesc}>
+                Ảnh đầu tiên sẽ là ảnh bìa đại diện. Nhấp vào ảnh để thay đổi hoặc chọn ảnh bìa.
+              </p>
+            </div>
+          </div>
+
+          <div className={styles.cardBody}>
+            <ul className={styles.photosGrid}>
+              {photos.map((p, index) => (
+                <li key={p.key} className={styles.photoItem}>
+                  <div className={styles.photoThumb}>
+                    {p.kind === "existing" ? (
+                      <ExistingPhoto listingId={item.id} id={p.id} />
+                    ) : (
+                      <img src={p.preview} alt={`Ảnh mới ${p.file.name}`} />
+                    )}
+                    {index === 0 && (
+                      <span className={styles.coverBadge}>
+                        <Star size={11} fill="currentColor" /> Ảnh bìa
+                      </span>
+                    )}
+                    <div className={styles.photoOverlay}>
+                      {index > 0 && (
+                        <button
+                          type="button"
+                          className={styles.setCoverBtn}
+                          title="Đặt làm ảnh bìa"
+                          onClick={() => makeCover(p.key)}
+                        >
+                          Làm bìa
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className={styles.deletePhotoBtn}
+                        aria-label="Xóa ảnh này"
+                        title="Xóa ảnh"
+                        onClick={() => removePhoto(p.key)}
+                      >
+                        <Trash2 size={14} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+
+              {photos.length < MAX_PHOTOS && (
+                <li>
+                  <button
+                    type="button"
+                    className={styles.uploadTrigger}
+                    onClick={() => fileInput.current?.click()}
+                  >
+                    <div className={styles.uploadIconWrap}>
+                      <ImagePlus size={22} aria-hidden="true" />
+                    </div>
+                    <span className={styles.uploadTitle}>Thêm ảnh</span>
+                    <span className={styles.uploadDesc}>JPEG, PNG, WebP &le;10MB</span>
+                  </button>
+                </li>
+              )}
+            </ul>
+
+            <input
+              ref={fileInput}
+              type="file"
+              accept={ACCEPTED.join(",")}
+              multiple
+              hidden
+              onChange={(e) => addFiles(e.target.files)}
+            />
+
+            {showError("photoCount") && (
+              <em className={styles.fieldError}>{showError("photoCount")}</em>
+            )}
+          </div>
+        </section>
+
+        {/* Ownership declaration card */}
+        <label className={styles.ownershipCard}>
           <input
             type="checkbox"
+            className={styles.ownershipCheckbox}
             checked={form.ownershipDeclared}
             data-invalid={!!showError("ownershipDeclared")}
             onChange={(e) => patch({ ownershipDeclared: e.target.checked })}
-          />{" "}
-          Tôi xác nhận có quyền đăng bán cuốn sách này.
-          {showError("ownershipDeclared") && (
-            <em className={styles.fieldError}>
-              {showError("ownershipDeclared")}
-            </em>
-          )}
+          />
+          <div className={styles.ownershipText}>
+            <div className={styles.ownershipHeader}>
+              <ShieldCheck size={18} className={styles.ownershipIcon} aria-hidden="true" />
+              <strong>Cam kết quyền sở hữu và tính xác thực</strong>
+            </div>
+            <p>
+              Tôi cam kết mình là chủ sở hữu hợp pháp của ấn phẩm này và các thông tin, hình ảnh cung cấp phản ánh đúng tình trạng thực tế của cuốn sách.
+            </p>
+          </div>
         </label>
+        {showError("ownershipDeclared") && (
+          <em className={styles.fieldError} style={{ marginTop: -12, marginLeft: 16 }}>
+            {showError("ownershipDeclared")}
+          </em>
+        )}
 
-        <div className={styles.actions}>
-          <button type="submit" className={styles.primary} disabled={busy}>
-            Gửi bản sửa để duyệt lại
+        {/* Sticky Actions Bar */}
+        <div className={styles.actionBar}>
+          <button type="submit" className={styles.submitBtn} disabled={busy}>
+            {busy ? (
+              <>
+                <span className={styles.btnSpinner} /> Đang gửi bản sửa…
+              </>
+            ) : (
+              "Gửi bản sửa để duyệt lại"
+            )}
           </button>
-          <Link className={styles.secondary} to={ROUTES.myBooks}>
-            Hủy
+          <Link className={styles.cancelBtn} to={ROUTES.myBooks}>
+            Hủy thay đổi
           </Link>
         </div>
       </form>
 
+      {/* Confirm & Blocker Dialogs */}
       <ConfirmDialog
         isOpen={confirming}
         onClose={() => !busy && setConfirming(false)}
         title="Gửi bản sửa để duyệt lại?"
-        description="Sách sẽ tạm ngừng hiển thị trên kệ cho tới khi được duyệt. Các báo giá hoặc thỏa thuận đang mở với bản cũ có thể phải làm lại."
-        confirmText={busy ? "Đang gửi…" : "Gửi duyệt lại"}
-        cancelText="Xem lại"
+        description="Ấn phẩm sẽ tạm thời chuyển sang trạng thái Chờ duyệt và không hiển thị trên kệ công khai cho tới khi quản trị viên phê duyệt. Các cuộc trò chuyện hoặc thỏa thuận đang mở có thể cần được cập nhật."
+        confirmText={busy ? "Đang gửi…" : "Xác nhận gửi duyệt"}
+        cancelText="Kiểm tra lại"
         isBusy={busy}
         onConfirm={() => void submit()}
       />
+
       <ConfirmDialog
         isOpen={blocker.state === "blocked"}
         onClose={() => blocker.reset?.()}
-        title="Rời trang khi chưa gửi?"
-        description="Các chỉnh sửa chưa gửi sẽ mất."
+        title="Rời trang khi chưa lưu?"
+        description="Các thông tin bạn vừa chỉnh sửa sẽ không được lưu nếu rời khỏi trang lúc này."
         confirmText="Rời trang"
-        cancelText="Ở lại"
+        cancelText="Ở lại tiếp tục"
         isDanger
         onConfirm={() => blocker.proceed?.()}
       />
