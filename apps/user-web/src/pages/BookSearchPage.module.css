@@ -2,8 +2,10 @@
   --shop-wine-hover: #7c2320;
   --shop-shelf: #f4eddf;
   --shop-error: #912b0e;
-  background: var(--shop-paper);
+  position: relative;
+  background: transparent;
   color: var(--shop-ink);
+  min-height: 100vh;
 }
 .searchBar {
   padding: 0 0 18px;
@@ -55,6 +57,8 @@
   background: var(--shop-yellow);
 }
 .catalog {
+  position: relative;
+  z-index: 1;
   max-width: 1360px;
   margin: auto;
   padding: 24px 40px 0;

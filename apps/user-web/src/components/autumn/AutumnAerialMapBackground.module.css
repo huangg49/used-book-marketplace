@@ -1,0 +1,214 @@
+.container {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Background canvas artboard */
+.artboard {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f7ede0;
+}
+
+/* SVG map scaling and coverage */
+.mapSvg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+}
+
+/* Texture pattern grid layer */
+.textureGrid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.18;
+  background-image: radial-gradient(#b09575 1.5px, transparent 1.5px);
+  background-size: 28px 28px;
+  pointer-events: none;
+}
+
+/* Water stream ripple animation */
+.animateStream {
+  stroke-dasharray: 8, 6;
+  animation: streamFlow 2.4s linear infinite;
+}
+
+@keyframes streamFlow {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -40;
+  }
+}
+
+/* Monoplane gliding across the valley */
+.planeLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.animatePlane {
+  position: absolute;
+  animation: planeGlide 20s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes planeGlide {
+  0% {
+    transform: translate(-60px, 900px) rotate(-15deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.95;
+  }
+  90% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(110vw, -120px) rotate(-15deg);
+    opacity: 0;
+  }
+}
+
+/* Floating Clouds */
+.cloudsLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.cloud1 {
+  position: absolute;
+  top: 12%;
+  opacity: 0.72;
+  animation: cloudDrift1 45s linear infinite;
+}
+
+.cloud2 {
+  position: absolute;
+  top: 55%;
+  opacity: 0.65;
+  animation: cloudDrift2 60s linear infinite;
+  animation-delay: -22s;
+}
+
+@keyframes cloudDrift1 {
+  0% {
+    transform: translateX(-200px);
+  }
+  100% {
+    transform: translateX(110vw);
+  }
+}
+
+@keyframes cloudDrift2 {
+  0% {
+    transform: translateX(-240px);
+  }
+  100% {
+    transform: translateX(110vw);
+  }
+}
+
+/* Swaying Autumn Trees */
+.treeNode {
+  transform-origin: center;
+  animation: treeGentleSway 4.2s ease-in-out infinite;
+}
+
+.treeNode:nth-child(2n) {
+  animation-delay: -1.6s;
+  animation-duration: 4.8s;
+}
+
+.treeNode:nth-child(3n) {
+  animation-delay: -3s;
+  animation-duration: 5.4s;
+}
+
+@keyframes treeGentleSway {
+  0%, 100% {
+    transform: scale(1) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.08) translate(1px, -2px);
+  }
+}
+
+/* Falling Autumn Leaves Particles */
+.leavesLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.leafParticle {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50% 0 50% 0;
+  animation: leafFloat linear infinite;
+}
+
+@keyframes leafFloat {
+  0% {
+    transform: translateY(-30px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(105vh) translateX(140px) rotate(480deg);
+    opacity: 0;
+  }
+}
+
+/* Soft Parchment Overlay for High Content Legibility */
+.parchmentWash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 35%,
+    rgba(254, 249, 239, 0.72) 0%,
+    rgba(254, 249, 239, 0.82) 70%,
+    rgba(247, 237, 224, 0.88) 100%
+  );
+  backdrop-filter: blur(0.5px);
+  pointer-events: none;
+  z-index: 15;
+}
+
+/* Subtle Golden Hour Light Glow */
+.sunlightGlow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(251, 191, 36, 0.12) 0%,
+    rgba(234, 88, 12, 0.06) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  z-index: 16;
+}

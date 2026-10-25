@@ -1,5 +1,25 @@
 # Điểm lưu hiện tại — 25/10/2026
 
+## Tích hợp Khung Hoạt Họa "Bản Đồ Mùa Thu Vàng - Illustrated Aerial Autumn" (User Web) — 25/10/2026
+
+- Nhánh `feat/web-edit-approved-listing`.
+- **Nguồn thiết kế**: Màn hình `c03e2b669b5945b7ab7a21b528ec082c` ("Bản Đồ Mùa Thu Vàng - Illustrated Aerial Autumn") và `724b5f1890b349f8ad505e3f26366076` ("Bản Đồ Mùa Thu Vàng (Standalone Motion)") trên Stitch trong dự án `Used-Book` (`projects/14793339924780557260`).
+- **Hiện thực & Tích hợp**:
+  - `AutumnAerialMapBackground.tsx` & `.module.css`: Khung hoạt họa bản đồ mùa thu vẽ tay sống động từ góc nhìn trên cao (lấy cảm hứng từ ruộng bậc thang Tú Lệ, Mù Cang Chải):
+    - Dòng suối uốn lượn với gợn sóng nước chuyển động liên tục (`streamFlow`).
+    - Máy bay cánh đơn màu trắng lượn vòng qua thung lũng (`planeGlide`).
+    - Các dải mây vector bồng bềnh trôi ngang (`cloudDrift1`, `cloudDrift2`).
+    - Rừng cây mùa thu (ngân hạnh, sồi, phong đỏ) đung đưa nhẹ theo gió (`treeGentleSway`).
+    - 22 hạt lá vàng thu rơi tự do (`leafFloat`) chuyển động ngẫu nhiên về góc và tốc độ.
+    - Ruộng bậc thang lúa chín vàng với các họa tiết đan chéo (hatch patterns) sống động.
+    - Lớp phủ màng giấy ấm dịu (`parchmentWash` & `sunlightGlow`) bảo đảm độ tương phản tối ưu, giữ cho thanh tìm kiếm, bộ lọc, chip và các thẻ sách trên `BookSearchPage` hiển thị sắc nét, 100% dễ đọc, không cản trở tương tác chuột (`pointer-events: none`).
+  - Tích hợp vào `apps/user-web/src/pages/BookSearchPage.tsx` và tinh chỉnh `BookSearchPage.module.css` (`.page` trong suốt với min-height 100vh, `.catalog` z-index 1).
+  - Tuân thủ chính sách motion của dự án (11/10/2026): giữ trọn vẹn animation mượt mà.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web test`: 27 test files / 201 tests PASS.
+  - `pnpm --filter @used-books/user-web lint`: PASS (0 errors).
+
 ## Chức năng Chỉnh sửa bài đăng đã duyệt (User Web) — 25/10/2026
 
 - Nhánh `feat/web-edit-approved-listing`, base từ nhánh `feat/web-profile-overview-redesign`.
