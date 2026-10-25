@@ -31,7 +31,7 @@ export function AccountOverviewPage() {
       <DashboardLiveAuctions ownerId={user.id} />
 
       {/* 5. Income / Expense & Cashflow (6-Month Archival Chart & Finance Summary) */}
-      <DashboardCashflow />
+      <DashboardCashflow ownerId={user.id} />
 
       {/* 6. My Books (Kệ sách của tôi - Filter tabs & Equal-Height Archival Cards) */}
       <DashboardMyBooks ownerId={user.id} />
