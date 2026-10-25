@@ -855,15 +855,19 @@
 .actionBar {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 16px;
-  padding: 16px 24px;
+  padding: 12px 24px;
   background: #ffffff;
   border: 1.5px solid #ebd9c8;
-  border-radius: 14px;
-  box-shadow: 0 4px 16px rgba(43, 30, 22, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px -4px rgba(43, 30, 22, 0.12), 0 2px 8px -2px rgba(43, 30, 22, 0.06);
   position: sticky;
-  bottom: 20px;
-  z-index: 10;
+  bottom: 24px;
+  z-index: 20;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  margin: 24px auto 0;
 }
 
 .submitBtn {
@@ -1049,6 +1053,7 @@
   .actionBar {
     flex-direction: column;
     align-items: stretch;
+    width: calc(100% - 32px);
   }
   .submitBtn,
   .cancelBtn {
