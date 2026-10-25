@@ -55,32 +55,32 @@ export function DashboardCashflow() {
               <text fill="#717974" fontFamily="Inter" fontSize="11" textAnchor="end" x="32" y="184">0</text>
 
               {/* Month 5 (Th.5) */}
-              <rect fill="#00261a" height="92" rx="2" width="24" x="85" y="88" />
+              <rect fill="#5c0202" height="92" rx="2" width="24" x="85" y="88" />
               <rect fill="#994530" height="52" rx="2" width="24" x="113" y="128" />
               <text fill="#414844" fontFamily="Inter" fontSize="12" fontWeight="500" textAnchor="middle" x="111" y="202">Th.5</text>
 
               {/* Month 6 (Th.6) */}
-              <rect fill="#00261a" height="75" rx="2" width="24" x="185" y="105" />
+              <rect fill="#5c0202" height="75" rx="2" width="24" x="185" y="105" />
               <rect fill="#994530" height="62" rx="2" width="24" x="213" y="118" />
               <text fill="#414844" fontFamily="Inter" fontSize="12" fontWeight="500" textAnchor="middle" x="211" y="202">Th.6</text>
 
               {/* Month 7 (Th.7) */}
-              <rect fill="#00261a" height="115" rx="2" width="24" x="285" y="65" />
+              <rect fill="#5c0202" height="115" rx="2" width="24" x="285" y="65" />
               <rect fill="#994530" height="38" rx="2" width="24" x="313" y="142" />
               <text fill="#414844" fontFamily="Inter" fontSize="12" fontWeight="500" textAnchor="middle" x="311" y="202">Th.7</text>
 
               {/* Month 8 (Th.8) */}
-              <rect fill="#00261a" height="80" rx="2" width="24" x="385" y="100" />
+              <rect fill="#5c0202" height="80" rx="2" width="24" x="385" y="100" />
               <rect fill="#994530" height="87" rx="2" width="24" x="413" y="93" />
               <text fill="#414844" fontFamily="Inter" fontSize="12" fontWeight="500" textAnchor="middle" x="411" y="202">Th.8</text>
 
               {/* Month 9 (Th.9) */}
-              <rect fill="#00261a" height="108" rx="2" width="24" x="485" y="72" />
+              <rect fill="#5c0202" height="108" rx="2" width="24" x="485" y="72" />
               <rect fill="#994530" height="58" rx="2" width="24" x="513" y="122" />
               <text fill="#414844" fontFamily="Inter" fontSize="12" fontWeight="500" textAnchor="middle" x="511" y="202">Th.9</text>
 
               {/* Month 10 (Th.10 - Current) */}
-              <rect fill="#00261a" height="138" rx="2" width="24" x="585" y="42" />
+              <rect fill="#5c0202" height="138" rx="2" width="24" x="585" y="42" />
               <rect fill="#994530" height="66" rx="2" width="24" x="613" y="114" />
               <text fill="#414844" fontFamily="Inter" fontSize="12" fontWeight="600" textAnchor="middle" x="611" y="202">Th.10</text>
             </svg>
