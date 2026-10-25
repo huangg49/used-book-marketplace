@@ -444,6 +444,7 @@ export function BookSearchPage() {
   function clear() {
     const next = new URLSearchParams();
     if (params.get("q")) next.set("q", params.get("q")!);
+    if (params.get("mode")) next.set("mode", params.get("mode")!);
     if (params.has("data")) next.set("data", params.get("data")!);
     setParams(next);
   }
@@ -490,7 +491,6 @@ export function BookSearchPage() {
     };
   }, [filterOpen]);
   const chips = [
-    ...(params.get("mode") ? [{ key: "mode", label: modes.find(([value]) => value === params.get("mode"))?.[1] || params.get("mode")! }] : []),
     ...(initial.categoryId
       ? [
           {
