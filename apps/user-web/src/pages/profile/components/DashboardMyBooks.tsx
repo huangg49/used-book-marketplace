@@ -63,7 +63,7 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
     >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md border-b border-surface-container-high/40 pb-space-sm">
         <div>
-          <h2 id="overview-books" className="font-headline-md text-headline-md text-primary font-semibold">
+          <h2 id="overview-books" className="text-xl md:text-2xl text-primary font-bold tracking-normal">
             Kệ cập nhật gần đây
           </h2>
           <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">

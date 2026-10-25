@@ -50,7 +50,7 @@ export function DashboardGreeting({ user }: DashboardGreetingProps) {
             )}
           </div>
 
-          <h1 tabIndex={-1} className="font-headline-xl text-headline-xl text-primary tracking-tight mt-1 outline-none">
+          <h1 tabIndex={-1} className="font-bold text-2xl md:text-3xl text-primary tracking-normal mt-1 outline-none">
             Tổng quan của bạn
           </h1>
           <p className="font-title-md text-title-md text-primary font-semibold">

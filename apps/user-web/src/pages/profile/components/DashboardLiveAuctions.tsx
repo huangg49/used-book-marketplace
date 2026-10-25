@@ -48,7 +48,7 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
             <Gavel size={20} />
           </div>
           <div>
-            <h2 id="overview-activity-title" className="font-headline-md text-headline-md text-primary tracking-tight font-semibold">
+            <h2 id="overview-activity-title" className="text-lg md:text-xl text-primary font-bold tracking-normal">
               Hoạt động gần đây
             </h2>
             <p className="font-body-sm text-body-sm text-on-surface-variant">

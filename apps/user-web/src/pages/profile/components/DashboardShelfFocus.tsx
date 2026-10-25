@@ -53,7 +53,7 @@ export function DashboardShelfFocus({ ownerId }: { ownerId: string }) {
         aria-busy={signals.includes("loading")}
       >
         <div className="flex flex-col gap-1.5 max-w-2xl">
-          <h2 id="overview-focus" className="font-headline-md text-headline-md text-primary tracking-tight font-semibold">
+          <h2 id="overview-focus" className="text-xl md:text-2xl text-primary font-bold tracking-normal">
             {focus.title}
           </h2>
           <p

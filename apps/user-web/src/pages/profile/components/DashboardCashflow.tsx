@@ -124,7 +124,7 @@ export function DashboardCashflow({ ownerId }: DashboardCashflowProps) {
             <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
               <BarChart3 size={18} />
             </div>
-            <h2 className="font-headline-md text-headline-md text-primary font-semibold">
+            <h2 className="text-xl md:text-2xl text-primary font-bold tracking-normal">
               Dòng tiền &amp; Thống kê lưu khố (6 tháng)
             </h2>
           </div>

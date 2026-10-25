@@ -58,7 +58,7 @@ export function DashboardStats({ ownerId }: DashboardStatsProps) {
                   </button>
                 </div>
               ) : (
-                <span className="font-currency-display text-headline-md text-primary font-headline-md tracking-tight font-bold truncate">
+                <span className="font-currency-display text-xl md:text-2xl text-primary tracking-normal font-bold truncate">
                   {formatVnd(availableVnd)}
                 </span>
               )}
@@ -94,7 +94,7 @@ export function DashboardStats({ ownerId }: DashboardStatsProps) {
               {walletQuery.isPending ? (
                 <div className="h-8 w-28 bg-surface-container-high rounded animate-pulse my-1" />
               ) : (
-                <span className="font-currency-display text-headline-md text-primary font-headline-md tracking-tight font-bold truncate">
+                <span className="font-currency-display text-xl md:text-2xl text-primary tracking-normal font-bold truncate">
                   {formatVnd(heldVnd)}
                 </span>
               )}
@@ -119,7 +119,7 @@ export function DashboardStats({ ownerId }: DashboardStatsProps) {
               {listingsQuery.isPending ? (
                 <div className="h-8 w-32 bg-surface-container-high rounded animate-pulse my-1" />
               ) : (
-                <span className="font-currency-display text-headline-md text-primary font-headline-md tracking-tight font-bold truncate">
+                <span className="font-currency-display text-xl md:text-2xl text-primary tracking-normal font-bold truncate">
                   {totalValue > 0 ? formatVnd(totalValue) : `${totalBooks} cuốn`}
                 </span>
               )}
@@ -148,7 +148,7 @@ export function DashboardStats({ ownerId }: DashboardStatsProps) {
               <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
                 Đơn đang xử lý
               </span>
-              <span className="font-currency-display text-headline-md text-secondary font-headline-md tracking-tight font-bold truncate">
+              <span className="font-currency-display text-xl md:text-2xl text-secondary tracking-normal font-bold truncate">
                 Luân chuyển
               </span>
             </div>

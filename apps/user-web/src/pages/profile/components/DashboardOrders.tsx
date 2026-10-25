@@ -13,7 +13,7 @@ export function DashboardOrders() {
             <Truck size={18} />
           </div>
           <div>
-            <h2 className="font-headline-md text-headline-md text-primary font-semibold">
+            <h2 className="text-xl md:text-2xl text-primary font-bold tracking-normal">
               Theo dõi đơn hàng lưu trữ
             </h2>
             <p className="font-body-sm text-body-sm text-on-surface-variant">
