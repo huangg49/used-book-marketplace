@@ -15,7 +15,7 @@ export function DashboardStats({ ownerId }: DashboardStatsProps) {
     queryFn: getWalletSummary,
   });
 
-  const listingsQuery = useQuery(myListingsQuery(ownerId, "", undefined, 100));
+  const listingsQuery = useQuery(myListingsQuery(ownerId, "Approved", undefined, 50));
 
   const totalBooks = listingsQuery.data?.items.length ?? 0;
   const totalValue = listingsQuery.data?.items.reduce(
