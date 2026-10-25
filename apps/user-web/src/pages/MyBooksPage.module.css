@@ -459,33 +459,62 @@
 .gridTitle a:hover {
   color: var(--shop-wine);
 }
-.gridPriceBox {
+.gridPricesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  width: 100%;
+}
+.gridSaleCard {
   background: #fbf5ee;
   border: 1px solid #ebd9c8;
   border-radius: 10px;
   padding: 8px 12px;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 4px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  box-shadow: 0 1px 2px rgba(40, 25, 20, 0.02);
 }
 .gridPriceLabel {
   font-size: 0.6875rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.4px;
   color: #7c685b;
 }
-.gridPriceVal {
-  font-size: 1.25rem;
+.gridSaleVal {
+  font-size: 1.2rem;
   font-weight: 800;
   color: var(--shop-wine, #5c0202);
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
-.gridExchangeBadge {
-  font-size: 0.72rem;
-  color: #7a5035;
-  font-weight: 600;
+.gridExchangeCard {
+  background: #f5ede2;
+  border: 1px solid #dfcdbc;
+  border-radius: 10px;
+  padding: 7px 12px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  box-shadow: 0 1px 2px rgba(40, 25, 20, 0.02);
+}
+.gridExchangeLabel {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #8c6a53;
+}
+.gridExchangeVal {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #633219;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 .gridActions {
   margin-top: 6px;

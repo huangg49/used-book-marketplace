@@ -129,22 +129,34 @@ export function OwnerListingRow({
             </h3>
           </div>
 
-          <div className={styles.gridPriceBox}>
+          <div className={styles.gridPricesContainer}>
             {content.salePrice != null ? (
-              <div>
+              <div className={styles.gridSaleCard}>
                 <span className={styles.gridPriceLabel}>Giá bán</span>
-                <strong className={styles.gridPriceVal}>
+                <strong className={styles.gridSaleVal}>
                   {formatVnd(content.salePrice)}
                 </strong>
               </div>
-            ) : (
-              <span className={styles.gridPriceVal}>Thỏa thuận</span>
-            )}
-            {content.exchangeValue != null && (
-              <span className={styles.gridExchangeBadge}>
-                Đổi: {formatVnd(content.exchangeValue)}
-              </span>
-            )}
+            ) : content.mode === "Sale" || content.mode === "Both" ? (
+              <div className={styles.gridSaleCard}>
+                <span className={styles.gridPriceLabel}>Giá bán</span>
+                <strong className={styles.gridSaleVal}>Thỏa thuận</strong>
+              </div>
+            ) : null}
+
+            {content.exchangeValue != null ? (
+              <div className={styles.gridExchangeCard}>
+                <span className={styles.gridExchangeLabel}>Giá trị đổi</span>
+                <strong className={styles.gridExchangeVal}>
+                  {formatVnd(content.exchangeValue)}
+                </strong>
+              </div>
+            ) : content.mode === "Exchange" ? (
+              <div className={styles.gridExchangeCard}>
+                <span className={styles.gridExchangeLabel}>Giá trị đổi</span>
+                <strong className={styles.gridExchangeVal}>Giao lưu</strong>
+              </div>
+            ) : null}
           </div>
 
           <div className={styles.gridActions}>
