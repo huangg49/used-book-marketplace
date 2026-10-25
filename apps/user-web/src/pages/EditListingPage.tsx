@@ -457,12 +457,22 @@ export function EditListingPage() {
 
       {/* Book Hero Card (Passport style) */}
       <section className={styles.bookHero} aria-label="Đầu sách đang chỉnh sửa">
-        <div className={styles.bookHeroCover}>
+        <div
+          className={`${styles.bookHeroCover} ${item.state.visibility === "Hidden" ? styles.bookHeroCoverHidden : ""}`}
+        >
           {photos[0]?.kind === "existing" ? (
             <ExistingPhoto listingId={item.id} id={photos[0].id} />
           ) : (
             <div className={styles.bookHeroCoverFallback}>
               <BookOpen size={30} aria-hidden="true" />
+            </div>
+          )}
+          {item.state.visibility === "Hidden" && (
+            <div className={styles.hiddenCoverOverlay} aria-hidden="true">
+              <div className={styles.hiddenBadgeCenterSmall}>
+                <EyeOff size={18} />
+                <span>Đang ẩn</span>
+              </div>
             </div>
           )}
         </div>

@@ -80,6 +80,7 @@
 }
 
 .bookHeroCover {
+  position: relative;
   width: 72px;
   height: 98px;
   flex-shrink: 0;
@@ -91,6 +92,48 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.bookHeroCoverHidden img {
+  filter: grayscale(0.85) brightness(0.9);
+}
+
+.hiddenCoverOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(22, 16, 13, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.hiddenBadgeCenterSmall {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 5px 8px;
+  background: rgba(18, 12, 10, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 8px;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.hiddenBadgeCenterSmall svg {
+  color: #f7efe6;
+}
+
+.hiddenBadgeCenterSmall span {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #ffffff;
+  text-transform: uppercase;
 }
 
 .bookHeroCover img {

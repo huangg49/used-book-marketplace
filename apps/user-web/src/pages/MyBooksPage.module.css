@@ -153,6 +153,19 @@
   box-shadow: 0 4px 14px -2px rgba(40, 25, 20, 0.07);
   border-color: #dfcdbb;
 }
+.rowHidden {
+  background: #faf8f5;
+  border-color: #ded5cc;
+}
+.listCoverWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
 .cover {
   width: 112px;
   height: 150px;
@@ -377,6 +390,31 @@
   transform: translateY(-2px);
   box-shadow: 0 6px 18px -2px rgba(40, 25, 20, 0.08);
   border-color: #dfcdbb;
+}
+.gridCardHidden {
+  background: #faf8f5;
+  border-color: #ded5cc;
+  box-shadow: 0 1px 2px rgba(40, 25, 20, 0.02);
+}
+.gridCardHidden:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px -2px rgba(40, 25, 20, 0.06);
+  border-color: #d4c7b8;
+}
+.gridCardHidden .fillCover img,
+.rowHidden .cover img {
+  filter: grayscale(0.85) brightness(0.9);
+}
+.gridCardHidden .gridSaleCard,
+.gridCardHidden .gridExchangeCard {
+  background: #f4ede3;
+  border-color: #e3d5c5;
+}
+.gridCardHidden .gridSaleVal {
+  color: #8c5339;
+}
+.gridCardHidden .gridExchangeVal {
+  color: #8c6a53;
 }
 .gridCoverWrap {
   width: 100%;
@@ -610,6 +648,73 @@
 .toggleVisBtn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+.toggleVisBtn.unhideBtn {
+  background: #fdf5e8;
+  border-color: #ebd2ba;
+  color: #8c3b1e;
+}
+.toggleVisBtn.unhideBtn:hover:not(:disabled) {
+  background: #faecd7;
+  color: #5c0202;
+  border-color: #d6b899;
+}
+.hiddenCoverOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(22, 16, 13, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 3;
+  pointer-events: none;
+}
+.hiddenBadgeCenter {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 18px;
+  background: rgba(18, 12, 10, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 14px;
+  color: #ffffff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+.hiddenBadgeCenter svg {
+  color: #f7efe6;
+}
+.hiddenBadgeCenter span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+.hiddenBadgeCenterSmall {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: rgba(18, 12, 10, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 10px;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.hiddenBadgeCenterSmall svg {
+  color: #f7efe6;
+}
+.hiddenBadgeCenterSmall span {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #ffffff;
+  text-transform: uppercase;
 }
 .archiveBtn {
   display: inline-flex;

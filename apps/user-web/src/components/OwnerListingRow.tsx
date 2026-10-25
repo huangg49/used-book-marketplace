@@ -215,7 +215,7 @@ export function OwnerListingRow({
   // Grid layout rendering
   if (layout === "grid") {
     return (
-      <li className={styles.gridCard}>
+      <li className={`${styles.gridCard} ${isHidden ? styles.gridCardHidden : ""}`}>
         <div className={styles.gridCoverWrap}>
           <OwnerPhoto item={item} title={title} fill />
           <span className={styles.gridModBadge}>
@@ -225,6 +225,14 @@ export function OwnerListingRow({
             <span className={styles.gridConditionBadge}>
               {conditions[content.condition] || content.condition}
             </span>
+          )}
+          {isHidden && (
+            <div className={styles.hiddenCoverOverlay} aria-hidden="true">
+              <div className={styles.hiddenBadgeCenter}>
+                <EyeOff size={26} />
+                <span>Đang ẩn</span>
+              </div>
+            </div>
           )}
         </div>
 
@@ -294,7 +302,7 @@ export function OwnerListingRow({
                 {canToggle && (
                   <button
                     type="button"
-                    className={styles.toggleVisBtn}
+                    className={`${styles.toggleVisBtn} ${isHidden ? styles.unhideBtn : ""}`}
                     disabled={isBusy || isHideCoolingDown}
                     onClick={() => {
                       if (isBusy || isHideCoolingDown) return;
@@ -354,8 +362,18 @@ export function OwnerListingRow({
 
   // Redesigned horizontal list row layout
   return (
-    <li className={`${styles.row} ${compact ? styles.compact : ""}`}>
-      <OwnerPhoto item={item} title={title} />
+    <li className={`${styles.row} ${compact ? styles.compact : ""} ${isHidden ? styles.rowHidden : ""}`}>
+      <div className={styles.listCoverWrap}>
+        <OwnerPhoto item={item} title={title} />
+        {isHidden && (
+          <div className={styles.hiddenCoverOverlay} aria-hidden="true">
+            <div className={styles.hiddenBadgeCenterSmall}>
+              <EyeOff size={18} />
+              <span>Đang ẩn</span>
+            </div>
+          </div>
+        )}
+      </div>
       <div className={styles.bookInfo}>
         <p className={styles.status}>
           <strong className={styles.modBadge}>
@@ -463,7 +481,7 @@ export function OwnerListingRow({
             {canToggle && (
               <button
                 type="button"
-                className={styles.toggleVisBtn}
+                className={`${styles.toggleVisBtn} ${isHidden ? styles.unhideBtn : ""}`}
                 disabled={isBusy || isHideCoolingDown}
                 onClick={() => {
                   if (isBusy || isHideCoolingDown) return;
