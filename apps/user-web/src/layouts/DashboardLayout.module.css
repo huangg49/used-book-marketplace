@@ -9,8 +9,8 @@
   margin: 0 auto;
   padding: 36px 40px 72px;
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
-  gap: 40px;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 36px;
   align-items: start;
 }
 .main {
@@ -24,55 +24,69 @@
   top: 112px;
   min-width: 0;
 }
+.menuContents {
+  background: #ffffff;
+  border: 1px solid var(--shop-line, #d9cbbd);
+  border-radius: 16px;
+  padding: 18px 14px;
+  box-shadow: 0 1px 3px rgba(40, 25, 20, 0.04), 0 4px 16px -2px rgba(40, 25, 20, 0.04);
+}
 .identity {
-  padding: 0 12px 24px;
-  border-bottom: 1px solid var(--shop-line);
-  margin-bottom: 16px;
+  padding: 2px 8px 16px;
+  border-bottom: 1px solid var(--shop-line, #d9cbbd);
+  margin-bottom: 12px;
 }
 .identity strong {
   display: block;
   overflow-wrap: anywhere;
-  font-size: 1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--shop-ink);
 }
 .identity p {
   font-size: 0.75rem;
   color: var(--shop-muted);
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   overflow-wrap: anywhere;
 }
 .navigation {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 .navigation a,
 .logout {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 48px;
-  padding: 10px 12px;
+  min-height: 44px;
+  padding: 9px 12px;
   border-radius: 8px;
   color: var(--shop-ink);
   font-size: 0.875rem;
+  font-weight: 500;
   text-decoration: none;
+  transition: all 0.15s ease-in-out;
 }
 .navigation a[aria-current="page"] {
-  background: #efe3cf;
+  background: #f4e7d7;
   color: var(--shop-wine);
   font-weight: 700;
 }
 .navigation a:hover,
 .logout:hover {
-  background: #efe3cf;
+  background: #f8f3e9;
+  color: var(--shop-wine);
 }
 .logout {
   width: 100%;
   border: 0;
+  border-top: 1px solid var(--shop-line, #d9cbbd);
   background: transparent;
   text-align: left;
   color: var(--shop-wine);
-  margin-top: 24px;
+  margin-top: 14px;
+  padding-top: 12px;
   cursor: pointer;
 }
 .logout:disabled {
@@ -83,6 +97,7 @@
   color: var(--shop-wine);
   font-size: 0.8125rem;
   line-height: 1.7;
+  padding: 4px 8px 0;
 }
 .loading {
   padding: 48px 24px;
@@ -103,9 +118,9 @@
   outline: 2px solid var(--shop-wine);
   outline-offset: 3px;
 }
-@media (max-width: 1000px) {
+@media (max-width: 1050px) {
   .workspace {
-    grid-template-columns: 172px minmax(0, 1fr);
+    grid-template-columns: 210px minmax(0, 1fr);
     gap: 24px;
     padding-inline: 24px;
   }
@@ -130,7 +145,13 @@
     display: none;
   }
   .menuContents[data-open="true"] {
-    padding-top: 16px;
+    display: block;
+    margin-top: 12px;
+    padding: 16px;
+    background: #ffffff;
+    border: 1px solid var(--shop-line, #d9cbbd);
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(40, 25, 20, 0.08);
   }
   .workspace {
     display: block;
@@ -158,5 +179,6 @@
     width: auto;
     min-height: 44px;
     padding: 8px 10px;
+    border-top: 0;
   }
 }

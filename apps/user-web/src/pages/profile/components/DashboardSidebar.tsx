@@ -30,10 +30,19 @@ export function DashboardSidebar() {
         data-open={menuOpen}
       >
         <div className={styles.identity}>
-          <strong>
-            {auth.status === "authenticated" ? auth.user.displayName : ""}
-          </strong>
-          <p>Tài khoản Lật lại</p>
+          <div className="flex items-center gap-2.5">
+            <span className="w-9 h-9 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-sm border border-primary/20 flex-shrink-0">
+              {auth.status === "authenticated"
+                ? Array.from(auth.user.displayName.trim())[0]?.toLocaleUpperCase("vi-VN") || "L"
+                : "L"}
+            </span>
+            <div className="min-w-0">
+              <strong className="truncate">
+                {auth.status === "authenticated" ? auth.user.displayName : ""}
+              </strong>
+              <p>Tài khoản Lật lại</p>
+            </div>
+          </div>
         </div>
         <nav className={styles.navigation} aria-label="Không gian cá nhân">
           {accountNavigation.map(({ to, label, icon: Icon }) => (
