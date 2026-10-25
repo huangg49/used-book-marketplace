@@ -85,14 +85,22 @@ function FilterForm({
 }: {
   initial: FilterValues;
   id: string;
-  onApply: (values: FilterValues) => void;
+  onApply: (values: FilterValues, shouldScroll?: boolean) => void;
   mode: string;
 }) {
   const [draft, setDraft] = useState(initial);
   const invalid = invalidFilters(draft);
+
+  function updateDraft(next: FilterValues, autoApply = false) {
+    setDraft(next);
+    if (autoApply && !invalidFilters(next)) {
+      onApply(next, false);
+    }
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (!invalid) onApply(draft);
+    if (!invalid) onApply(draft, true);
   }
   function clearGroup(
     event: React.MouseEvent<HTMLButtonElement>,
@@ -103,7 +111,7 @@ function FilterForm({
       .closest("fieldset")
       ?.querySelector<HTMLElement>("input, select")
       ?.focus();
-    setDraft(next);
+    updateDraft(next, true);
   }
   function range(kind: "SalePrice" | "ExchangeValue", title: string) {
     const minKey = kind === "SalePrice" ? "minSalePrice" : "minExchangeValue";
@@ -140,6 +148,17 @@ function FilterForm({
               placeholder="10.000"
               value={draft[minKey]}
               onChange={(e) => setDraft({ ...draft, [minKey]: e.target.value })}
+              onBlur={() => {
+                if (!error && (draft[minKey] !== initial[minKey] || draft[maxKey] !== initial[maxKey])) {
+                  updateDraft(draft, true);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (!error) updateDraft(draft, true);
+                }
+              }}
               aria-invalid={error}
               aria-describedby={error ? id + "-" + kind + "-error" : undefined}
             />
@@ -152,6 +171,17 @@ function FilterForm({
               placeholder="1.000.000"
               value={draft[maxKey]}
               onChange={(e) => setDraft({ ...draft, [maxKey]: e.target.value })}
+              onBlur={() => {
+                if (!error && (draft[minKey] !== initial[minKey] || draft[maxKey] !== initial[maxKey])) {
+                  updateDraft(draft, true);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (!error) updateDraft(draft, true);
+                }
+              }}
               aria-invalid={error}
               aria-describedby={error ? id + "-" + kind + "-error" : undefined}
             />
@@ -165,7 +195,7 @@ function FilterForm({
               aria-pressed={!draft[minKey] && draft[maxKey] === String(price)}
               aria-label={`${title} tối đa ${formatVnd(price)}`}
               onClick={() =>
-                setDraft({ ...draft, [minKey]: "", [maxKey]: String(price) })
+                updateDraft({ ...draft, [minKey]: "", [maxKey]: String(price) }, true)
               }
             >
               ≤ {price / 1000}k
@@ -193,7 +223,7 @@ function FilterForm({
             clearable
             renderSelect={(props) => <FilterSelect {...props} />}
             value={draft}
-            onChange={(value) => setDraft({ ...draft, ...value })}
+            onChange={(value) => updateDraft({ ...draft, ...value }, true)}
           />
         </div>
         <fieldset
@@ -229,7 +259,7 @@ function FilterForm({
                     name={`${id}-condition`}
                     value={value}
                     checked={draft.condition === value}
-                    onChange={() => setDraft({ ...draft, condition: value })}
+                    onChange={() => updateDraft({ ...draft, condition: value }, true)}
                   />
                   <span>{label}</span>
                 </label>
@@ -279,7 +309,7 @@ function FilterForm({
             id={`${id}-language`}
             label="Ngôn ngữ của sách"
             value={draft.language}
-            onChange={(language) => setDraft({ ...draft, language })}
+            onChange={(language) => updateDraft({ ...draft, language }, true)}
             options={[
               { value: "", label: "Tất cả ngôn ngữ" },
               ...languageOptions.map((option) => ({
@@ -421,7 +451,7 @@ export function BookSearchPage() {
     dialog.current?.close();
     setFilterOpen(false);
   }
-  function apply(values: FilterValues) {
+  function apply(values: FilterValues, shouldScroll = false) {
     const next = new URLSearchParams(params);
     next.delete("cursor");
     next.delete("category");
@@ -435,11 +465,13 @@ export function BookSearchPage() {
     });
     setParams(next);
     closeFilters();
-    requestAnimationFrame(() => {
-      const heading = document.getElementById("catalog-results");
-      heading?.focus({ preventScroll: true });
-      heading?.scrollIntoView({ block: "start" });
-    });
+    if (shouldScroll) {
+      requestAnimationFrame(() => {
+        const heading = document.getElementById("catalog-results");
+        heading?.focus({ preventScroll: true });
+        heading?.scrollIntoView({ block: "start" });
+      });
+    }
   }
   useEffect(() => {
     if (!filterOpen) return;
