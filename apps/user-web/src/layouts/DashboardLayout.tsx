@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { DashboardSidebar } from "../pages/profile/components/DashboardSidebar";
 import { Header } from "../components/Header";
 import { useSession } from "../hooks/useSession";
@@ -63,9 +64,15 @@ export function DashboardLayout() {
           collapsed={collapsed}
           onToggleCollapse={handleToggleCollapse}
         />
-        <main className={styles.main} id="account-content" tabIndex={-1}>
+        <motion.main
+          layout="position"
+          transition={{ type: "spring", stiffness: 350, damping: 30 }}
+          className={styles.main}
+          id="account-content"
+          tabIndex={-1}
+        >
           <Outlet />
-        </main>
+        </motion.main>
       </div>
     </div>
   );

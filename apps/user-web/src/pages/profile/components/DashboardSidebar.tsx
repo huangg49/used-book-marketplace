@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { Bell, LogOut, ChevronDown, Menu } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { accountNavigation } from "../../../lib/account-navigation";
 import { ROUTES } from "../../../lib/routes";
 import { useAccountLogout } from "../../../hooks/useAccountLogout";
@@ -28,7 +29,13 @@ export function DashboardSidebar({
       : "L";
 
   return (
-    <aside className={styles.sidebar} data-collapsed={collapsed}>
+    <motion.aside
+      className={styles.sidebar}
+      data-collapsed={collapsed}
+      initial={false}
+      animate={{ width: collapsed ? 68 : 240 }}
+      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+    >
       <button
         className={styles.accountMenu}
         type="button"
@@ -46,8 +53,10 @@ export function DashboardSidebar({
         <div className={styles.identity}>
           <div className={styles.identityRow}>
             <div className={styles.identityInfo}>
-              <span
+              <motion.span
                 className={styles.avatarBadge}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
                 title={
                   auth.status === "authenticated"
                     ? auth.user.displayName
@@ -56,19 +65,34 @@ export function DashboardSidebar({
                 aria-hidden="true"
               >
                 {userInitial}
-              </span>
-              <div className={styles.identityMeta}>
-                <strong className="truncate">
-                  {auth.status === "authenticated" ? auth.user.displayName : ""}
-                </strong>
-                <p>Tài khoản Lật lại</p>
-              </div>
+              </motion.span>
+              <AnimatePresence initial={false}>
+                {!collapsed && (
+                  <motion.div
+                    key="identityMeta"
+                    initial={{ opacity: 0, width: 0, x: -10 }}
+                    animate={{ opacity: 1, width: "auto", x: 0 }}
+                    exit={{ opacity: 0, width: 0, x: -10 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className={styles.identityMeta}
+                  >
+                    <strong className="truncate">
+                      {auth.status === "authenticated" ? auth.user.displayName : ""}
+                    </strong>
+                    <p>Tài khoản Lật lại</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             {onToggleCollapse && (
-              <button
+              <motion.button
                 type="button"
                 className={styles.collapseBtn}
                 onClick={onToggleCollapse}
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.88 }}
+                animate={{ rotate: collapsed ? 90 : 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 aria-label={
                   collapsed
                     ? "Mở rộng thanh điều hướng"
@@ -81,7 +105,7 @@ export function DashboardSidebar({
                 }
               >
                 <Menu size={18} aria-hidden="true" />
-              </button>
+              </motion.button>
             )}
           </div>
         </div>
@@ -93,8 +117,28 @@ export function DashboardSidebar({
               end
               title={collapsed ? label : undefined}
             >
-              <Icon size={18} aria-hidden="true" className={styles.navIcon} />
-              <span className={styles.navLabel}>{label}</span>
+              <motion.div
+                className={styles.navLinkContent}
+                whileHover={{ x: collapsed ? 0 : 4 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ type: "spring", stiffness: 450, damping: 25 }}
+              >
+                <Icon size={18} aria-hidden="true" className={styles.navIcon} />
+                <AnimatePresence initial={false}>
+                  {!collapsed && (
+                    <motion.span
+                      key={to}
+                      initial={{ opacity: 0, width: 0, x: -8 }}
+                      animate={{ opacity: 1, width: "auto", x: 0 }}
+                      exit={{ opacity: 0, width: 0, x: -8 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className={styles.navLabel}
+                    >
+                      {label}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             </NavLink>
           ))}
           <NavLink
@@ -102,8 +146,28 @@ export function DashboardSidebar({
             end
             title={collapsed ? "Thông báo" : undefined}
           >
-            <Bell size={18} aria-hidden="true" className={styles.navIcon} />
-            <span className={styles.navLabel}>Thông báo</span>
+            <motion.div
+              className={styles.navLinkContent}
+              whileHover={{ x: collapsed ? 0 : 4 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 450, damping: 25 }}
+            >
+              <Bell size={18} aria-hidden="true" className={styles.navIcon} />
+              <AnimatePresence initial={false}>
+                {!collapsed && (
+                  <motion.span
+                    key="notifications"
+                    initial={{ opacity: 0, width: 0, x: -8 }}
+                    animate={{ opacity: 1, width: "auto", x: 0 }}
+                    exit={{ opacity: 0, width: 0, x: -8 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className={styles.navLabel}
+                  >
+                    Thông báo
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.div>
           </NavLink>
         </nav>
         <button
@@ -113,10 +177,28 @@ export function DashboardSidebar({
           type="button"
           title={collapsed ? "Đăng xuất" : undefined}
         >
-          <LogOut size={18} aria-hidden="true" className={styles.navIcon} />
-          <span className={styles.navLabel}>
-            {busy ? "Đang đăng xuất…" : "Đăng xuất"}
-          </span>
+          <motion.div
+            className={styles.navLinkContent}
+            whileHover={{ x: collapsed ? 0 : 4 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 450, damping: 25 }}
+          >
+            <LogOut size={18} aria-hidden="true" className={styles.navIcon} />
+            <AnimatePresence initial={false}>
+              {!collapsed && (
+                <motion.span
+                  key="logout"
+                  initial={{ opacity: 0, width: 0, x: -8 }}
+                  animate={{ opacity: 1, width: "auto", x: 0 }}
+                  exit={{ opacity: 0, width: 0, x: -8 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className={styles.navLabel}
+                >
+                  {busy ? "Đang đăng xuất…" : "Đăng xuất"}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.div>
         </button>
         {error && (
           <p className={styles.error} role="alert">
@@ -124,6 +206,6 @@ export function DashboardSidebar({
           </p>
         )}
       </div>
-    </aside>
+    </motion.aside>
   );
 }
