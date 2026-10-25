@@ -5,7 +5,8 @@
   position: relative;
   background: transparent;
   color: var(--shop-ink);
-  min-height: 100vh;
+  min-height: calc(100vh - 76px);
+  padding-bottom: 72px;
 }
 .searchBar {
   padding: 0 0 18px;

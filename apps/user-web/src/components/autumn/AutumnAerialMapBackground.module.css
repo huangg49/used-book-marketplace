@@ -17,32 +17,34 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f7ede0;
+  background-color: #eedcc6;
 }
 
-/* SVG map scaling and coverage */
+/* SVG map scaling and coverage with vibrant autumn saturation */
 .mapSvg {
   position: absolute;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.85;
+  opacity: 1;
+  filter: saturate(1.22) contrast(1.08) brightness(0.98);
 }
 
 /* Texture pattern grid layer */
 .textureGrid {
   position: absolute;
   inset: 0;
-  opacity: 0.18;
-  background-image: radial-gradient(#b09575 1.5px, transparent 1.5px);
-  background-size: 28px 28px;
+  opacity: 0.22;
+  background-image: radial-gradient(#9a744e 1.5px, transparent 1.5px);
+  background-size: 26px 26px;
   pointer-events: none;
+  z-index: 1;
 }
 
-/* Water stream ripple animation */
+/* Water stream ripple animation - active and clearly flowing */
 .animateStream {
-  stroke-dasharray: 8, 6;
-  animation: streamFlow 2.4s linear infinite;
+  stroke-dasharray: 12, 8;
+  animation: streamFlow 1.6s linear infinite;
 }
 
 @keyframes streamFlow {
@@ -60,26 +62,27 @@
   inset: 0;
   pointer-events: none;
   overflow: hidden;
+  z-index: 6;
 }
 
 .animatePlane {
   position: absolute;
-  animation: planeGlide 20s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: planeGlide 18s cubic-bezier(0.35, 0, 0.25, 1) infinite;
 }
 
 @keyframes planeGlide {
   0% {
-    transform: translate(-60px, 900px) rotate(-15deg);
+    transform: translate(-80px, 92vh) rotate(-18deg) scale(0.9);
     opacity: 0;
   }
-  10% {
-    opacity: 0.95;
+  6% {
+    opacity: 1;
   }
-  90% {
-    opacity: 0.95;
+  92% {
+    opacity: 1;
   }
   100% {
-    transform: translate(110vw, -120px) rotate(-15deg);
+    transform: translate(106vw, -80px) rotate(-18deg) scale(1.1);
     opacity: 0;
   }
 }
@@ -90,33 +93,27 @@
   inset: 0;
   pointer-events: none;
   overflow: hidden;
+  z-index: 4;
 }
 
 .cloud1 {
   position: absolute;
-  top: 12%;
-  opacity: 0.72;
-  animation: cloudDrift1 45s linear infinite;
+  top: 14%;
+  opacity: 0.88;
+  filter: drop-shadow(0 14px 22px rgba(120, 70, 30, 0.24));
+  animation: cloudDrift1 36s linear infinite;
 }
 
 .cloud2 {
   position: absolute;
-  top: 55%;
-  opacity: 0.65;
-  animation: cloudDrift2 60s linear infinite;
-  animation-delay: -22s;
+  top: 56%;
+  opacity: 0.82;
+  filter: drop-shadow(0 16px 24px rgba(120, 70, 30, 0.22));
+  animation: cloudDrift2 48s linear infinite;
+  animation-delay: -18s;
 }
 
 @keyframes cloudDrift1 {
-  0% {
-    transform: translateX(-200px);
-  }
-  100% {
-    transform: translateX(110vw);
-  }
-}
-
-@keyframes cloudDrift2 {
   0% {
     transform: translateX(-240px);
   }
@@ -125,77 +122,64 @@
   }
 }
 
-/* Swaying Autumn Trees */
+@keyframes cloudDrift2 {
+  0% {
+    transform: translateX(-280px);
+  }
+  100% {
+    transform: translateX(110vw);
+  }
+}
+
+/* Swaying Autumn Trees with visible organic motion */
 .treeNode {
   transform-origin: center;
-  animation: treeGentleSway 4.2s ease-in-out infinite;
+  animation: treeGentleSway 3.2s ease-in-out infinite;
 }
 
 .treeNode:nth-child(2n) {
-  animation-delay: -1.6s;
-  animation-duration: 4.8s;
+  animation-delay: -1.2s;
+  animation-duration: 3.8s;
 }
 
 .treeNode:nth-child(3n) {
-  animation-delay: -3s;
-  animation-duration: 5.4s;
+  animation-delay: -2.2s;
+  animation-duration: 4.2s;
 }
 
 @keyframes treeGentleSway {
   0%, 100% {
-    transform: scale(1) translate(0, 0);
+    transform: scale(1) rotate(0deg);
   }
-  50% {
-    transform: scale(1.08) translate(1px, -2px);
+  30% {
+    transform: scale(1.14) rotate(4deg) translate(2px, -3px);
+  }
+  70% {
+    transform: scale(1.08) rotate(-3deg) translate(-1px, -2px);
   }
 }
 
-/* Falling Autumn Leaves Particles */
-.leavesLayer {
+/* Falling Leaves Canvas Layer */
+.leavesCanvasLayer {
   position: absolute;
   inset: 0;
   pointer-events: none;
   overflow: hidden;
-  z-index: 10;
+  z-index: 5;
 }
 
-.leafParticle {
-  position: absolute;
-  pointer-events: none;
-  border-radius: 50% 0 50% 0;
-  animation: leafFloat linear infinite;
-}
-
-@keyframes leafFloat {
-  0% {
-    transform: translateY(-30px) translateX(0) rotate(0deg);
-    opacity: 0;
-  }
-  15% {
-    opacity: 0.85;
-  }
-  85% {
-    opacity: 0.85;
-  }
-  100% {
-    transform: translateY(105vh) translateX(140px) rotate(480deg);
-    opacity: 0;
-  }
-}
-
-/* Soft Parchment Overlay for High Content Legibility */
+/* Soft Parchment Tint that preserves saturated autumn tones while keeping cards crisp */
 .parchmentWash {
   position: absolute;
   inset: 0;
   background: radial-gradient(
-    circle at 50% 35%,
-    rgba(254, 249, 239, 0.72) 0%,
-    rgba(254, 249, 239, 0.82) 70%,
-    rgba(247, 237, 224, 0.88) 100%
+    circle at 50% 32%,
+    rgba(255, 252, 246, 0.12) 0%,
+    rgba(255, 250, 242, 0.22) 55%,
+    rgba(247, 237, 224, 0.35) 100%
   );
-  backdrop-filter: blur(0.5px);
   pointer-events: none;
-  z-index: 15;
+  z-index: 3;
 }
 
 /* Subtle Golden Hour Light Glow */
@@ -204,11 +188,11 @@
   inset: 0;
   background: linear-gradient(
     135deg,
-    rgba(251, 191, 36, 0.12) 0%,
-    rgba(234, 88, 12, 0.06) 50%,
+    rgba(251, 191, 36, 0.14) 0%,
+    rgba(234, 88, 12, 0.08) 50%,
     transparent 100%
   );
   pointer-events: none;
   mix-blend-mode: multiply;
-  z-index: 16;
+  z-index: 3;
 }

@@ -1,35 +1,7 @@
-import { useState } from "react";
+import { AutumnLeavesCanvas } from "./AutumnLeavesCanvas";
 import styles from "./AutumnAerialMapBackground.module.css";
 
-interface LeafConfig {
-  id: number;
-  left: number;
-  size: number;
-  duration: number;
-  delay: number;
-  color: string;
-}
-
-const LEAF_COLORS = ["#f59e0b", "#d97706", "#ea580c", "#c2410c", "#eab308"];
-
-function createInitialLeaves(): LeafConfig[] {
-  const items: LeafConfig[] = [];
-  const count = 22;
-  for (let i = 0; i < count; i++) {
-    items.push({
-      id: i,
-      left: Math.random() * 95, // % across viewport
-      size: Math.floor(Math.random() * 8) + 8, // 8px - 16px
-      duration: Math.random() * 8 + 12, // 12s - 20s smooth float
-      delay: -Math.random() * 18,
-      color: LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)],
-    });
-  }
-  return items;
-}
-
 export function AutumnAerialMapBackground() {
-  const [leaves] = useState<LeafConfig[]>(createInitialLeaves);
 
   return (
     <div className={styles.container} aria-hidden="true">
@@ -362,37 +334,30 @@ export function AutumnAerialMapBackground() {
         {/* Layer 3: Miniature Gliding Monoplane */}
         <div className={styles.planeLayer}>
           <div className={styles.animatePlane}>
-            <svg width="42" height="42" viewBox="0 0 24 24" fill="none">
+            <svg
+              width="52"
+              height="52"
+              viewBox="0 0 24 24"
+              fill="none"
+              style={{ filter: "drop-shadow(2px 14px 10px rgba(55,25,10,0.38))" }}
+            >
               <path
                 d="M21 16V14L13 9V3.5C13 2.67 12.33 2 11.5 2C10.67 2 10 2.67 10 3.5V9L2 14V16L10 13.5V19L8 20.5V22L11.5 21L15 22V20.5L13 19V13.5L21 16Z"
                 fill="#ffffff"
-                stroke="#d1d5db"
-                strokeWidth="0.75"
+                stroke="#c2410c"
+                strokeWidth="0.8"
               />
+              <circle cx="11.5" cy="5.5" r="1.2" fill="#ea580c" />
             </svg>
           </div>
         </div>
 
-        {/* Layer 4: Golden Autumn Falling Leaves */}
-        <div className={styles.leavesLayer}>
-          {leaves.map((leaf) => (
-            <div
-              key={leaf.id}
-              className={styles.leafParticle}
-              style={{
-                left: `${leaf.left}%`,
-                top: "-20px",
-                width: `${leaf.size}px`,
-                height: `${leaf.size * 0.75}px`,
-                backgroundColor: leaf.color,
-                animationDuration: `${leaf.duration}s`,
-                animationDelay: `${leaf.delay}s`,
-              }}
-            />
-          ))}
+        {/* Layer 4: Interactive Golden Harvest Falling Leaves (Physics & 3D Flips) */}
+        <div className={styles.leavesCanvasLayer}>
+          <AutumnLeavesCanvas />
         </div>
 
-        {/* Layer 5: Parchment Wash & Golden Hour Light Glow for Perfect Content Contrast */}
+        {/* Layer 5: Parchment Wash & Golden Hour Light Glow */}
         <div className={styles.parchmentWash} />
         <div className={styles.sunlightGlow} />
       </div>

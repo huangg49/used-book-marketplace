@@ -4,16 +4,14 @@
 
 - Nhánh `feat/web-edit-approved-listing`.
 - **Nguồn thiết kế**: Màn hình `c03e2b669b5945b7ab7a21b528ec082c` ("Bản Đồ Mùa Thu Vàng - Illustrated Aerial Autumn") và `724b5f1890b349f8ad505e3f26366076` ("Bản Đồ Mùa Thu Vàng (Standalone Motion)") trên Stitch trong dự án `Used-Book` (`projects/14793339924780557260`).
-- **Hiện thực & Tích hợp**:
+- **Hiện thực & Tinh chỉnh chuyên sâu**:
   - `AutumnAerialMapBackground.tsx` & `.module.css`: Khung hoạt họa bản đồ mùa thu vẽ tay sống động từ góc nhìn trên cao (lấy cảm hứng từ ruộng bậc thang Tú Lệ, Mù Cang Chải):
-    - Dòng suối uốn lượn với gợn sóng nước chuyển động liên tục (`streamFlow`).
-    - Máy bay cánh đơn màu trắng lượn vòng qua thung lũng (`planeGlide`).
-    - Các dải mây vector bồng bềnh trôi ngang (`cloudDrift1`, `cloudDrift2`).
-    - Rừng cây mùa thu (ngân hạnh, sồi, phong đỏ) đung đưa nhẹ theo gió (`treeGentleSway`).
-    - 22 hạt lá vàng thu rơi tự do (`leafFloat`) chuyển động ngẫu nhiên về góc và tốc độ.
-    - Ruộng bậc thang lúa chín vàng với các họa tiết đan chéo (hatch patterns) sống động.
-    - Lớp phủ màng giấy ấm dịu (`parchmentWash` & `sunlightGlow`) bảo đảm độ tương phản tối ưu, giữ cho thanh tìm kiếm, bộ lọc, chip và các thẻ sách trên `BookSearchPage` hiển thị sắc nét, 100% dễ đọc, không cản trở tương tác chuột (`pointer-events: none`).
-  - Tích hợp vào `apps/user-web/src/pages/BookSearchPage.tsx` và tinh chỉnh `BookSearchPage.module.css` (`.page` trong suốt với min-height 100vh, `.catalog` z-index 1).
+    - **Màu sắc đậm đà, sống động**: Tăng cường độ bão hòa và tương phản (`filter: saturate(1.22) contrast(1.08)`), hạ lớp màng phủ mờ xuống mức nhẹ nhàng (`0.12 - 0.35`) để phô diễn trọn vẹn sắc vàng óng của ruộng lúa nương (`#fbbf24`, `#f59e0b`), sắc cam cháy phong thu (`#ea580c`, `#c2410c`), sắc nâu đất phù sa (`#9a3412`, `#78350f`) và dòng suối xanh ngọc (`#0284c7`, `#0ea5e9`).
+    - **Máy bay lượn vòng xuyên màn hình**: Máy bay cánh đơn thu nhỏ chuyển động mượt mà từ góc dưới trái (`-80px, 92vh`) bay xéo qua toàn bộ màn hình lên góc trên phải (`106vw, -80px`) với bóng đổ nổi khối (`drop-shadow(2px 14px 10px rgba(55,25,10,0.38))`).
+    - **Dòng suối nước chảy dập dềnh**: Hiệu ứng sóng nước lướt liên tục dọc theo lòng suối với chu kỳ 1.6 giây (`streamFlow`).
+    - **Cây cối mùa thu đung đưa rõ nét**: Tán cây ngân hạnh, phong đỏ và sồi già nghiêng ngả tự nhiên theo gió thu với xoay góc 4 độ và co giãn sinh động (`treeGentleSway`).
+    - **Tích hợp bão lá vàng rơi 3D**: Nhúng trực tiếp `<AutumnLeavesCanvas />` với 42 lá bạch dương, sồi và phong đỏ lượn vòng 3D, có bóng đổ và đáp ứng theo gió.
+    - **Khắc phục hiển thị Chân trang (Footer Fix)**: Thêm `position: relative; z-index: 10;` vào `.footer` trong `MainLayout.module.css` và `padding-bottom: 72px;` vào `.page` trong `BookSearchPage.module.css`, đảm bảo footer màu đỏ rượu `#5c0202` kinh điển của Lật Lại luôn hiển thị rõ ràng, không bị nền đè khuất hay cản trở khi cuộn xuống cuối trang.
   - Tuân thủ chính sách motion của dự án (11/10/2026): giữ trọn vẹn animation mượt mà.
 - **Kiểm tra**:
   - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
