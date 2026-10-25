@@ -8,17 +8,19 @@
   - Khi gửi bản sửa, hệ thống gọi `POST /listings/{id}/revision` (`reviseApprovedListing`), tạo một revision mới ở trạng thái `PendingReview` và tạm ngừng hiển thị trên kệ công khai cho đến khi quản trị viên phê duyệt lại.
   - **Khóa danh tính sách (Book Identity Lock)**: Khóa cố định trường `bookId` (tên sách, tác giả) trên giao diện theo bài gốc; người bán muốn đổi sách khác phải đăng bài mới (giới hạn bảo vệ phía UI theo Plan A; API server-side lock sẽ được bổ sung sau nếu có chỉ thị cập nhật contract/ADR).
   - Cho phép sửa: tình trạng sách, mô tả chi tiết, hình thức (Bán/Đổi/Cả hai), giá bán (10.000đ – 1.000.000đ theo LS-D06), giá trị đổi, địa chỉ gửi sách (`HCM-DEMO-v1`), quản lý 1–8 ảnh thật (giữ ảnh cũ, upload ảnh mới qua `upload`, chọn ảnh bìa) và cam kết quyền sở hữu.
+  - **Chức năng Tạm ẩn / Mở lại (`setListingVisibility`)**: Người bán có thể tạm ẩn bài đăng (`visibility: 'Hidden'`) để tạm ngưng hiển thị trên kệ công khai và mở lại (`Visible`) bất cứ lúc nào mà không cần quản trị viên duyệt lại (tuân thủ ADR 0012).
+  - **Chức năng Xóa bài đăng (`archiveListing`)**: Cho phép người bán gỡ vĩnh viễn bài đăng (`POST /listings/{id}/archive`, soft-delete `deletedAt`), kiểm tra điều kiện `trade === 'Available'`, không cho xóa khi sách đang có giao dịch (`Reserved`) hoặc đã hoàn tất (`Sold`/`Exchanged`).
   - **Idempotency & Retry**: Tái sử dụng cùng `Idempotency-Key` và runner nếu gặp lỗi mạng rớt phản hồi, không tạo revision thứ hai; giữ nguyên version mong đợi khi có lỗi xung đột.
 - **Giao diện & Thành phần đã xây dựng**:
-  - `apps/user-web/src/lib/owner-listing-edit.ts`: Kiểm tra điều kiện sửa `editApprovedBlock`, `canEditApproved`, validation độ dài code-points, giá, cờ tình trạng sách, build revision content.
-  - `apps/user-web/src/services/listing-revision.ts`: Service upload ảnh mới và gửi lệnh sửa revision với `Idempotency-Key`.
-  - `apps/user-web/src/pages/EditListingPage.tsx` & `.module.css`: Trang chỉnh sửa với banner cảnh báo tạm rời kệ, khung khóa tên sách, quản lý ảnh, leave guard (`useBlocker`/`useBeforeUnload`), `ConfirmDialog` xác nhận trước khi gửi.
+  - `apps/user-web/src/lib/owner-listing-edit.ts`: Kiểm tra điều kiện sửa `editApprovedBlock`, `canEditApproved`, quyền ẩn `canToggleVisibility`, quyền xóa `canArchiveListing`, validation độ dài code-points, giá, cờ tình trạng sách, build revision content.
+  - `apps/user-web/src/services/listing-revision.ts` & `my-listings.ts`: Service upload ảnh mới, gửi revision, thay đổi `setListingVisibility`, và lưu trữ/xóa bài `archiveListing` với `Idempotency-Key`.
+  - `apps/user-web/src/pages/EditListingPage.tsx` & `.module.css`: Thiết kế lại giao diện theo phong cách sang trọng Lật lại (thẻ hồ sơ ấn phẩm 3D, thẻ chọn hình thức dạng viên thuốc, lưới chọn tình trạng 4 mức độ, bộ câu hỏi chuyển đổi Có/Không, khung quản lý trạng thái Tạm ẩn/Xóa bài, thanh nút hành động dính chân trang thu hẹp căn giữa).
   - Tuyến đường `/my-books/:listingId/edit` đăng ký dưới `DashboardLayout` trong `router.tsx` và helper `ROUTES.myBookEdit`.
-  - Cập nhật `OwnerListingRow.tsx`: Thay thế liên kết lỗi `?edit=` cũ bằng nút "Sửa bài" (chỉ hiển thị khi `canEditApproved`), hiển thị ghi chú lý do khi bị chặn (`shouldExplainEditBlock`) trên cả hai chế độ xem Grid và List.
+  - Cập nhật `OwnerListingRow.tsx`: Thêm nút "Tạm ẩn" / "Hiện lại" và nút "Xóa bài" kèm modal xác nhận an toàn `ConfirmDialog` trên cả hai chế độ xem Grid và List.
   - `MyBooksPage.tsx`: Bổ sung banner thông báo thành công sau khi gửi bản sửa và tự động điều hướng về bộ lọc `Chờ duyệt` (`PendingReview`).
 - **Kiểm tra**:
   - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
-  - `pnpm --filter @used-books/user-web test`: 26 test files / 193 tests PASS (bao gồm 17 tests quy tắc validation U1–U8, 3 tests idempotency/revision U9–U11, và 1 test getMyListing).
+  - `pnpm --filter @used-books/user-web test`: 26 test files / 198 tests PASS (trong đó 20 tests validation U1–U8, 3 tests idempotency/revision U9–U11, 2 tests visibility/archive API calls, và 2 tests quy tắc canToggleVisibility/canArchiveListing).
   - `pnpm --filter @used-books/user-web lint`: 0 errors (6 cảnh báo hook cũ không liên quan).
   - E2E E1–E12: Chưa chạy (NOT RUN - yêu cầu Mongo replica set riêng với `*_test` database theo quy định AGENTS.md, không chạy harness ghi đè DB chính).
 
