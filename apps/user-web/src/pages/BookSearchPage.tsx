@@ -278,14 +278,14 @@ function FilterForm({
         {mode === "Exchange"
           ? range("ExchangeValue", "Giá trị đổi")
           : mode !== "Sale" && (
-              <details className={styles.extraBudget}>
-                <summary>Khoảng giá trị đổi</summary>
-                {range("ExchangeValue", "Giá trị đổi")}
-                <p className={styles.filterHint}>
-                  Nếu chọn cả hai khoảng tiền, sách cần đáp ứng cả hai.
-                </p>
-              </details>
-            )}
+            <details className={styles.extraBudget}>
+              <summary>Khoảng giá trị đổi</summary>
+              {range("ExchangeValue", "Giá trị đổi")}
+              <p className={styles.filterHint}>
+                Nếu chọn cả hai khoảng tiền, sách cần đáp ứng cả hai.
+              </p>
+            </details>
+          )}
         <fieldset
           className={`${styles.filterGroup} ${styles.languageFilter}`}
           aria-labelledby={`${id}-language-label`}
@@ -387,7 +387,7 @@ export function BookSearchPage() {
       const next = !prev;
       try {
         localStorage.setItem("latlai_catalog_filter_collapsed", String(next));
-      } catch {}
+      } catch { }
       return next;
     });
   };
@@ -513,21 +513,21 @@ export function BookSearchPage() {
   const chips = [
     ...(initial.categoryId
       ? [
-          {
-            key: "categoryId",
-            label: categoryFor(initial.categoryId)?.label || initial.categoryId,
-          },
-        ]
+        {
+          key: "categoryId",
+          label: categoryFor(initial.categoryId)?.label || initial.categoryId,
+        },
+      ]
       : []),
     ...(initial.language
       ? [
-          {
-            key: "language",
-            label:
-              languageOptions.find((o) => o.id === initial.language)?.label ||
-              initial.language,
-          },
-        ]
+        {
+          key: "language",
+          label:
+            languageOptions.find((o) => o.id === initial.language)?.label ||
+            initial.language,
+        },
+      ]
       : []),
     ...(initial.series ? [{ key: "series", label: initial.series }] : []),
     ...facetsFor(initial.categoryId, initial.attributes, "search").flatMap(
@@ -542,40 +542,40 @@ export function BookSearchPage() {
     ...(["minExchangeValue", "maxExchangeValue"] as const).flatMap((key) =>
       initial[key]
         ? [
-            {
-              key,
-              label:
-                (key.startsWith("min") ? "Đổi từ " : "Đổi đến ") +
-                formatVnd(Number(initial[key])),
-            },
-          ]
+          {
+            key,
+            label:
+              (key.startsWith("min") ? "Đổi từ " : "Đổi đến ") +
+              formatVnd(Number(initial[key])),
+          },
+        ]
         : [],
     ),
     ...(params.get("condition")
       ? [
-          {
-            key: "condition",
-            label:
-              conditions[params.get("condition") as keyof typeof conditions] ||
-              params.get("condition")!,
-          },
-        ]
+        {
+          key: "condition",
+          label:
+            conditions[params.get("condition") as keyof typeof conditions] ||
+            params.get("condition")!,
+        },
+      ]
       : []),
     ...(params.get("minSalePrice")
       ? [
-          {
-            key: "minSalePrice",
-            label: `Từ ${priceInvalid ? initial.minSalePrice : formatVnd(Number(initial.minSalePrice))}`,
-          },
-        ]
+        {
+          key: "minSalePrice",
+          label: `Từ ${priceInvalid ? initial.minSalePrice : formatVnd(Number(initial.minSalePrice))}`,
+        },
+      ]
       : []),
     ...(params.get("maxSalePrice")
       ? [
-          {
-            key: "maxSalePrice",
-            label: `Đến ${priceInvalid ? initial.maxSalePrice : formatVnd(Number(initial.maxSalePrice))}`,
-          },
-        ]
+        {
+          key: "maxSalePrice",
+          label: `Đến ${priceInvalid ? initial.maxSalePrice : formatVnd(Number(initial.maxSalePrice))}`,
+        },
+      ]
       : []),
   ];
   const filtered = chips.length > 0 || params.has("mode") || params.has("sort");
