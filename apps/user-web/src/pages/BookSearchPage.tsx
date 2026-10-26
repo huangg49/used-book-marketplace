@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
   Search,
-  SlidersHorizontal,
+  Filter,
   X,
   ArrowRight,
   Menu,
@@ -604,7 +604,7 @@ export function BookSearchPage() {
           >
             <div className={styles.stickyFilterInner}>
               <div className={styles.stickyFilterLead}>
-                <SlidersHorizontal size={14} aria-hidden="true" />
+                <Filter size={14} fill="currentColor" aria-hidden="true" />
                 <span>Đang lọc:</span>
               </div>
               <div className={styles.stickyChipsScroll}>
@@ -652,7 +652,7 @@ export function BookSearchPage() {
           >
             <div className={styles.sidebarHeader}>
               <h2>
-                <SlidersHorizontal size={18} aria-hidden="true" />
+                <Filter size={18} fill="currentColor" aria-hidden="true" />
                 Bộ lọc sách
               </h2>
               <button
@@ -684,7 +684,7 @@ export function BookSearchPage() {
                 aria-label={`Mở bộ lọc sách${chips.length > 0 ? ` (${chips.length} đang chọn)` : ""}`}
                 title="Mở bộ lọc sách"
               >
-                <SlidersHorizontal size={20} aria-hidden="true" />
+                <Filter size={18} fill="currentColor" aria-hidden="true" />
                 {chips.length > 0 && (
                   <span className={styles.expandFilterBadge}>{chips.length}</span>
                 )}
@@ -761,7 +761,7 @@ export function BookSearchPage() {
                   setFilterOpen(true);
                 }}
               >
-                <SlidersHorizontal size={17} aria-hidden="true" />
+                <Filter size={17} fill="currentColor" aria-hidden="true" />
                 Bộ lọc{chips.length > 0 && <span>{chips.length}</span>}
               </button>
               <CatalogSort

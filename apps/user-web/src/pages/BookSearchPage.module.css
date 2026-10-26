@@ -176,17 +176,6 @@
     visibility 0s linear 380ms;
 }
 
-.sidebar h2 {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font: 700 1.125rem/1.5 var(--shop-body);
-  color: var(--shop-wine);
-  margin: 0 0 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--shop-line);
-}
-
 .filterForm,
 .filterBody {
   display: flex;
@@ -1166,35 +1155,39 @@
   gap: 12px;
   margin: 0 0 18px;
   padding: 0 0 16px;
-  border-bottom: none;
+  border-bottom: 1px solid rgb(255 245 232 / 20%);
+  user-select: none;
 }
 
 .sidebarHeader h2 {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin: 0;
-  padding: 0;
-  border-bottom: none;
-  font-size: 1.05rem;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  font: 700 1.0625rem/1.2 var(--shop-body) !important;
   letter-spacing: -0.015em;
-  color: #fff5e8;
+  color: #fff5e8 !important;
+  white-space: nowrap !important;
+  user-select: none;
 }
 
 .sidebarHeader h2>svg {
+  display: block;
   box-sizing: content-box;
   flex: 0 0 auto;
-  padding: 9px;
-  border-radius: 11px;
-  background: rgb(255 245 232 / 15%);
-  color: #fff2df;
+  padding: 8px;
+  border-radius: 10px;
+  background: #f4e7d7;
+  color: #6b1917;
 }
 
 .collapseSidebarBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  flex: 0 0 36px;
   width: 36px;
   height: 36px;
   padding: 0;
@@ -1203,6 +1196,7 @@
   background: rgb(255 245 232 / 10%);
   color: #fff5e8;
   cursor: pointer;
+  user-select: none;
   transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
 }
 
@@ -1217,19 +1211,9 @@
   outline-offset: 2px;
 }
 
-.sidebar h2,
 .sidebar .filterForm .filterGroup legend,
 .sidebar .extraBudget summary {
   color: #fff5e8;
-}
-
-.sidebar h2 {
-  border-bottom-color: rgb(255 245 232 / 22%);
-}
-
-.sidebar h2>svg {
-  background: rgb(255 245 232 / 15%);
-  color: #fff2df;
 }
 
 .sidebar .filterForm .filterGroup,
@@ -1327,24 +1311,6 @@
 
 .sidebar .conditionChoices label[data-selected]:hover {
   color: #6b1917;
-}
-
-.sidebar h2 {
-  gap: 10px;
-  margin: 0 0 18px;
-  padding: 0 0 16px;
-  border-bottom: 1px solid #eadfce;
-  font-size: 1.05rem;
-  letter-spacing: -0.015em;
-}
-
-.sidebar h2>svg {
-  box-sizing: content-box;
-  flex: 0 0 auto;
-  padding: 9px;
-  border-radius: 11px;
-  background: #f2e4d2;
-  color: var(--shop-wine);
 }
 
 .sidebar .filterBody {
