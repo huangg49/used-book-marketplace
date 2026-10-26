@@ -7,7 +7,7 @@
   - Áp dụng sắc màu vàng lá thu Hà Nội (`#fcf5df` đến `#ead098` với vầng sáng nắng ấm `radial-gradient`), gợi nhớ nắng thu mật ong và thảm lá vàng sấu già trên phố Phan Đình Phùng.
   - Tích hợp trực tiếp `<AutumnLeavesCanvas />` vào khung nhìn cố định `.leavesWrapper` (`position: fixed; inset: 0; pointer-events: none; z-index: 0;`).
   - 42 lá cây mùa thu (lá phong đỏ, sồi già, bạch dương) bay chao liệng 3D mượt mà trên nền trang tìm kiếm, không che khuất hay gây rối mắt đối với các bộ lọc, thanh tìm kiếm và thẻ sách.
-  - Chân trang `.footer` giữ nguyên `position: relative; z-index: 10;` và khoảng đệm `padding-bottom: 72px;` trên trang tìm kiếm.
+  - Triệt tiêu hoàn toàn dải hở trắng trên footer: Bổ sung `ROUTES.search` vào điều kiện `homeFooter` trong [MainLayout.tsx](apps/user-web/src/layouts/MainLayout.tsx) để loại bỏ khoảng cách `margin-top: 72px` của footer, giúp nền vàng lá thu Hà Nội tiếp giáp liền mạch, mượt mà vào chân trang đỏ rượu `#5c0202`.
 - **Kiểm tra**:
   - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
   - `pnpm --filter @used-books/user-web test`: 27 test files / 201 tests PASS.
