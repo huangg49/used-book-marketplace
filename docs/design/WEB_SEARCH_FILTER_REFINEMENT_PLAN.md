@@ -16,7 +16,8 @@ Người đọc tìm một bản sách, hiểu điều kiện đang lọc và xe
 Operate, cải tiến trong brand đã duyệt: đỏ rượu vang, giấy kem, Anton cho đầu trang,
 Be Vietnam Pro cho control. Bìa và thông tin sách là trọng tâm. Hero Home giữ nguyên.
 
-Áp dụng Impeccable shape/layout/adapt và latlai-ui. Taste Skill chưa được cài
+Ở mốc lập kế hoạch, áp dụng Impeccable shape/layout/adapt và skill UI cũ.
+Taste Skill chưa được cài
 local; đã đọc [nguồn chính chủ](https://github.com/Leonxlnx/taste-skill/blob/main/skills/taste-skill/SKILL.md),
 phần brief/audit/redesign-preserve. Chỉ dùng các nguyên tắc phù hợp với trang tìm
 sách, không áp mẫu landing hoặc motion mạnh vào control tác vụ. Định hướng:

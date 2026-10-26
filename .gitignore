@@ -53,6 +53,7 @@ apps/admin-web/src/assets/hero.png
 .impeccable/screenshots/
 .impeccable/logs/
 .agents/skills/impeccable/scripts/bin/
+/.taste-skill/
 
 # Keep the additional team ignore rule, normalized to UTF-8.
 taste-skill-main

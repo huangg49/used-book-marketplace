@@ -45,7 +45,9 @@ dev:rn (A/W), dev:admin hoặc dev:user. Không tự migrate/seed/reset chỉ đ
 QA replica set/database *_test và bucket riêng; không dùng DB/bucket local chính.
 Không đọc/in/commit token, password, DB dump, body/PII hoặc cấu hình .env thật.
 
-Chọn skill repo theo nhiệm vụ: latlai-ui, latlai-api-mongo, latlai-verify-handoff.
+Chọn skill repo theo nhiệm vụ: ui-ux-pro-max cho UX/stack, design-taste-frontend
+cho thiết kế web, impeccable cho playbook; latlai-api-mongo, latlai-verify-handoff.
+Thứ tự ưu tiên và helper xem docs/design/UI_SKILLS.md; không còn latlai-ui.
 UI theo DESIGN.md ở root (brief hiện hành)/UI_CODING_RULES/UI_COMPONENTS,
 brand1.1 giữ asset; Impeccable theo docs/design/IMPECCABLE_WORKFLOW.md. Dữ liệu API thật,
 giữ lỗi/form/Back/keyboard/safe area/chữ lớn; không tạo rating/số dư/claim badge giả.

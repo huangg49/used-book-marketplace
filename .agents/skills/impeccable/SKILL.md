@@ -1,11 +1,11 @@
 ---
 name: impeccable
-description: "Design, critique, clarify, typeset, adapt and audit Lật lại UI using the pinned Impeccable playbooks together with latlai-ui and project context; excludes backend-only tasks."
+description: "Design, critique, clarify, typeset, adapt and audit Lật lại UI using the pinned Impeccable playbooks and approved project context; excludes backend-only tasks."
 ---
 
-> Lật lại integration: read [latlai-ui](../latlai-ui/SKILL.md) and the approved
-> [project workflow](../../../docs/design/IMPECCABLE_WORKFLOW.md) first. Project
-> business/permission rules and explicit user scope outrank aesthetic defaults.
+> Lật lại integration: read the [UI skill workflow](../../../docs/design/UI_SKILLS.md)
+> and approved [Impeccable workflow](../../../docs/design/IMPECCABLE_WORKFLOW.md) first.
+> Project business/permission rules and explicit user scope outrank aesthetic defaults.
 > Use `pnpm ui:design <verb>` from repo root for the pinned engine; skip an
 > automatic context call when this session already loaded that same target.
 

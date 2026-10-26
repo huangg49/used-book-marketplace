@@ -15,8 +15,8 @@ quy tắc; test và review kiểm chứng kết quả, không bảo đảm tuy�
 
 | Công cụ | Cửa vào và cách kiểm tra |
 | --- | --- |
-| Codex | `AGENTS.md`; bốn skill ở `.agents/skills/`. Dùng `$latlai-ui`, `$latlai-api-mongo`, `$latlai-verify-handoff` hoặc `$impeccable` khi cần gọi rõ tên. Kiểm tra danh sách skill của phiên; mở lại phiên nếu chưa nhận thay đổi. |
-| Claude Code | `CLAUDE.md` import `AGENTS.md`; `.claude/skills/` chứa bốn adapter cùng tên. Kiểm tra `/context` và danh sách `/`; gọi `/latlai-ui` khi sửa UI, `/impeccable` khi critique/polish trong phạm vi đã giao. |
+| Codex | `AGENTS.md`; năm skill ở `.agents/skills/`. Dùng `$ui-ux-pro-max`, `$design-taste-frontend`, `$impeccable`, `$latlai-api-mongo` hoặc `$latlai-verify-handoff` khi cần gọi rõ tên. Kiểm tra danh sách skill của phiên; mở lại phiên nếu chưa nhận thay đổi. |
+| Claude Code | `CLAUDE.md` import `AGENTS.md`; `.claude/skills/` chứa năm adapter cùng tên. Kiểm tra `/context` và danh sách `/`; gọi `/ui-ux-pro-max` cho UX/stack, `/design-taste-frontend` cho thiết kế web, `/impeccable` khi critique/polish trong phạm vi đã giao. |
 | Công cụ khác | Yêu cầu đọc `AGENTS.md`, rồi mở trực tiếp `SKILL.md` liên quan. Không mặc định nó tự nhận tên file hoặc cú pháp của Codex/Claude. |
 
 Chỉ file được commit và có trên nhánh người nhận mới đi theo clone/pull. Skill cá
@@ -31,7 +31,8 @@ giữ name/description và link đến nguồn; đổi tên/mô tả thì cập 
 Impeccable là vendor được khóa phiên bản: không sửa trực tiếp body upstream hoặc
 tự tải `latest`. Dùng [workflow](design/IMPECCABLE_WORKFLOW.md) và lệnh
 `pnpm ui:design`; [brief hiện hành](../DESIGN.md) và skill Lật lại ràng buộc mọi
-đề xuất thiết kế. Taste là tài liệu tham khảo, chưa cài vào dự án.
+đề xuất thiết kế. [UI skills workflow](design/UI_SKILLS.md) ghi cách chọn UI/UX Pro Max,
+Taste và Impeccable, phiên bản đã khóa và ưu tiên brand/motion của dự án.
 
 Cơ chế nạp: [Codex AGENTS](https://learn.chatgpt.com/docs/agent-configuration/agents-md),
 [Codex skills](https://learn.chatgpt.com/docs/build-skills),
@@ -66,7 +67,7 @@ trên thành yêu cầu người dùng trả lời lại những điều đã r�
 | Phần | Điểm vào / quy tắc |
 | --- | --- |
 | API | [Code map](handoff/START_HERE.md#3-tìm-đúng-nơi-để-sửa), [quy tắc theo miền](architecture/DOMAIN_RULES.md), OpenAPI; dùng skill API/Mongo. |
-| React Native | `apps/mobile-react-native/src/features/`, `src/core/ui/`; UI rules/component/brand là nguồn chung. Dùng skill UI. |
+| React Native | `apps/mobile-react-native/src/features/`, `src/core/ui/`; UI rules/component/brand là nguồn chung. Chọn UI/UX Pro Max theo stack và workflow UI; Taste không là hướng dẫn native. |
 | Member web | Expo web trong app RN và `apps/user-web` React/Vite đều đã có. Sửa app của nhiệm vụ; kiểm responsive/keyboard/session/API thật. Không tự tạo thêm app/framework. |
 | Admin/operations | [README của app](../apps/admin-web/README.md), feature review và core hiện có. Tái sử dụng component/CSS thực tế trong app; không import component RN vào DOM. |
 | Flutter | [README](../apps/mobile-flutter/README.md), [kiến trúc đề xuất](../apps/mobile-flutter/ARCHITECTURE.md). Hiện là scaffold, cần xây từng lát cắt API thật; dùng cùng contract/brand, không coi tài liệu kiến trúc là code đã có. |
