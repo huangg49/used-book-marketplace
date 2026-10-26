@@ -1,41 +1,33 @@
 # Điểm lưu hiện tại — 26/10/2026
 
-## Đã push nhánh và mở PR67 bộ sách — 26/10/2026
+## Đã tích hợp bộ sách vào main — 26/10/2026
 
-- Owner đã giao push và merge an toàn. Tiếp tục `codex/whole-book-bundles`, base
-  `9d0af9c`; GitHub đã đăng nhập và Git author được cấu hình riêng repo theo tài
-  khoản hiện tại. Commit skill `8a96f4a` tách khỏi commit API/web `05bef98`.
-  Đã push upstream và mở [PR67](https://github.com/huangg49/used-book-marketplace/pull/67),
-  GitHub xác nhận có thể merge và không conflict tại lúc mở PR.
-- Kiểm lại trước publish: API typecheck/lint/build và192unit, admin build/lint
-  và30unit, session-client27unit, contract/generated/routes và docs/diff PASS.
-  User-web231unit/build/typecheck/lint và browser của hai lượt đồng bộ bên dưới
-  vẫn là evidence hiện hành; không sửa source sau các check đó. Lint/chunk còn
-  warning cũ. Không đưa env/token/DB/dump hoặc evidence chứa PII vào Git.
-- Leader cho phép riêng PR67 merge không cần thành viên khác review trong phiên
-  26/10. Đây là ngoại lệ được owner duyệt cho gói này, không là human review PASS
-  hoặc thay quy định chung TEAMWORK/ADR0046.8nhóm CI remote đang chạy; chỉ squash
-  merge khi CI của đúng head đạt. Không đổi branch protection hoặc gate release.
-  READINESS/DB chính/mobile giữ nguyên. Chi tiết local của lượt publish ở
-  `.tmp/publish/`. Không có migration hoặc deploy lên DB chính trong lượt publish.
-- CI head `11784e3`:6nhóm đã đạt, API còn chạy và user-web phát hiện hai tiêu đề
-  cấp1 cùng sách trong bước BuyNow→Chat. Chat hiện chỉ mount một book identity
-  theo breakpoint960px, đồng bộ khi resize và cleanup listener; giữ test strict
-  nguyên trạng. Sau sửa231unit/build/typecheck/lint web PASS, detector một lượt
-  trả[]; CI phải chạy lại trên commit có bản sửa trước merge.
-- CI head `c91222c` đã qua lỗi tiêu đề; BuyNow dừng ở selector nút tài khoản cũ.
-  Cập nhật selector BuyNow/wallet/account browser tests sang accessible name
-  `Tài khoản của …` đang có trên main; giữ assertion mua/tiền, không tăng timeout
-  hoặc bỏ bước kiểm. Tiếp tục đợi CI đúng head trước squash merge.
-  Wallet browser kiểm lối vào ví trong account/mobile menu thay icon ví đã bị
-  main bỏ; vẫn kiểm href, kích thước chạm, các viewport và toàn bộ invariant tiền.
-- CI head `9e17eca`: BuyNow/Exchange đã đạt; wallet đi qua các invariant nạp/tiền
-  rồi bắt được nút navbar tràn ở1024px/chữ130% khi floating. Thu hẹp phần tên tài
-  khoản ở desktop hẹp1001–1279px, vẫn giữ avatar, accessible name đầy đủ và menu.
-  Giữ assertion containment navbar; không cắt overflow để giấu nút.
-  CI xác nhận1024px đã qua, rồi bắt cùng lỗi tại1366px: floating header luôn bị
-  giới hạn1248px dù viewport rộng hơn. Áp dụng tên gọn theo chính trạng thái
-  floating ở mọi desktop, không chỉ theo viewport; giữ test chữ130% nguyên trạng.
+- [PR67](https://github.com/huangg49/used-book-marketplace/pull/67) đã squash merge
+  vào main tại `9a07475` sau8/8nhóm CI PASS trên đúng head `a1e3036`. Local main
+  đã fast-forward và đối chiếu tree trùng với nhánh feature trước khi ghi checkpoint.
+  Phần skill pin và toàn bộ công việc bundle/tối ưu web đã được giữ trong Git.
+- Leader cho phép gói tích hợp này không cần thành viên khác review trong phiên
+  26/10. Đây là ngoại lệ theo chỉ thị owner; không là human review PASS, không sửa
+  quy định chung TEAMWORK/ADR0046 hoặc các gate release trong READINESS.
+- CI remote PASS: docs, admin-web, user-web, operations/public shelf, demo,
+  React Native, Flutter và API. API có192unit +54Mongo +723HTTP/end-to-end tests;
+  user-web231unit/31file cùng các browser workflow; admin30unit, session27unit.
+  Web/RN export và Flutter CI không thay nghiệm thu thiết bị Android/iOS.
+- CI đã phát hiện và sửa: hai tiêu đề sách ở BuyNow→Chat (chỉ mount một identity
+  theo breakpoint960px); selector menu tài khoản/ví cũ sau main redesign; tên tài
+  khoản làm tràn floating navbar ở1024/1366px/chữ130%. Giữ các assertion về tiền,
+  retry, kích thước chạm và containment. CI browser sau sửa đã đạt, kể cả ví.
+  Chromium install chậm được retry riêng workflow trên cùng head; không đổi source
+  hoặc hạ điều kiện kiểm tra để đạt CI. Kết quả chi tiết nằm trong PR67/check links.
+- QA local đã dừng; không deploy hoặc áp migration lên DB chính, không đổi env
+  hay client mobile. Browser local của Work đang tắt nên lượt navbar cuối xác nhận
+  bằng CI browser, không nhận là CUA local PASS. Native device/live Supabase/VNPay
+  và nghiệm thu người thật vẫn là các phạm vi riêng chưa đóng.
+- Tiếp theo: nhóm nhận main, kiểm env và chạy migration mới theo quy trình setup
+  trước khi chạy API; không reset dữ liệu chính. Tài liệu nghiệp vụ/giới hạn và
+  checklist vật lý ở [ADR0046](../adr/0046-whole-book-bundles.md). Evidence local
+  và backup trước commit còn trong `.tmp/publish/` và `.tmp/main-sync/`.
+
 
 ## Đồng bộ main và giữ phần bán nguyên bộ — 26/10/2026
 
