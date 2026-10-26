@@ -162,26 +162,30 @@ try {
     .getByRole("heading", { name: "Ví của tôi", exact: true })
     .waitFor();
   const header = page.locator("header").first();
-  const walletIcon = header.getByRole("link", {
-    name: "Ví của tôi",
-    exact: true,
-  });
   const chatIcon = header.getByRole("link", {
     name: "Chat, hội thoại của bạn",
     exact: true,
   });
-  assert.equal((await walletIcon.textContent()).trim(), "");
   assert.equal((await chatIcon.textContent()).trim(), "");
-  assert.equal(await walletIcon.getAttribute("href"), "/wallet");
-  const walletBounds = await walletIcon.boundingBox();
   const chatBounds = await chatIcon.boundingBox();
-  assert.ok(walletBounds.width >= 44 && walletBounds.height >= 44);
-  assert.ok(walletBounds.x + walletBounds.width <= chatBounds.x);
-  await page.getByRole("button", { name: /^Tài khoản của .+$/, exact: true }).click();
-  await page
-    .getByRole("navigation", { name: "Tài khoản cá nhân", exact: true })
-    .getByRole("link", { name: "Ví của tôi", exact: true })
-    .click();
+  assert.ok(chatBounds.width >= 44 && chatBounds.height >= 44);
+  // Main's account redesign moved the wallet entry into the account/mobile menu.
+  async function openWalletNavigation() {
+    const account = header.getByRole("button", { name: /^Tài khoản của .+$/, exact: true });
+    const desktop = await account.isVisible();
+    await (desktop ? account : header.getByRole("button", { name: "Mở menu", exact: true })).click();
+    const navigation = page.getByRole("navigation", {
+      name: desktop ? "Tài khoản cá nhân" : "Điều hướng trên điện thoại", exact: true,
+    });
+    const entry = navigation.getByRole("link", { name: "Ví của tôi", exact: true });
+    await entry.waitFor();
+    assert.equal(await entry.getAttribute("href"), "/wallet");
+    const bounds = await entry.boundingBox();
+    assert.ok(bounds.width >= 44 && bounds.height >= 44);
+    return { entry, close: () => desktop ? account.click() : header.getByRole("button", { name: "Đóng menu", exact: true }).click() };
+  }
+  const walletNavigation = await openWalletNavigation();
+  await walletNavigation.entry.click();
   await page
     .getByRole("heading", { name: "Ví của tôi", exact: true })
     .waitFor();
@@ -619,7 +623,9 @@ try {
       document.documentElement.style.fontSize = "130%";
       window.scrollTo(0, 0);
     });
-    assert.equal(await walletIcon.isVisible(), true);
+    const walletNavigation = await openWalletNavigation();
+    assert.equal(await walletNavigation.entry.isVisible(), true);
+    await walletNavigation.close();
     assert.equal(await chatIcon.isVisible(), true);
     assert.ok(
       await page.evaluate(
@@ -1042,7 +1048,7 @@ try {
   await topupDialog.getByRole("button", { name: "Đóng popup" }).click();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: wallet banner shows server-confirmed balance and both actions, wallet action dialogs, withdrawal preview minimum with no command, keyboard focus/escape/close, preserved amounts, 320/390px dialogs at 130% type; icon wallet/chat navigation, account wallet entry, real history filters/pagination/retry; blocked provider tab creates no intent, provider has no opener, original tab stays signed in through Return, forged Return denied, QueryDR outage/retry/credit, lost-ACK modal-close same-key retry; signed checkout deadline exactly five minutes, live mobile countdown, server cancellation while provider tab stays open and an older request is selected, reload preserves server deadline, expired lost-ACK receipt cannot reopen provider, cancelled requests unlock new topup and produce no ledger/history entry; real API/Mongo with accelerated disposable fixture deadlines, fake provider navigation and signed QueryDR responses.",
+    "PASS: wallet banner shows server-confirmed balance and both actions, wallet action dialogs, withdrawal preview minimum with no command, keyboard focus/escape/close, preserved amounts, 320/390px dialogs at 130% type; icon chat navigation, account/mobile wallet entry, real history filters/pagination/retry; blocked provider tab creates no intent, provider has no opener, original tab stays signed in through Return, forged Return denied, QueryDR outage/retry/credit, lost-ACK modal-close same-key retry; signed checkout deadline exactly five minutes, live mobile countdown, server cancellation while provider tab stays open and an older request is selected, reload preserves server deadline, expired lost-ACK receipt cannot reopen provider, cancelled requests unlock new topup and produce no ledger/history entry; real API/Mongo with accelerated disposable fixture deadlines, fake provider navigation and signed QueryDR responses.",
   );
 } catch (error) {
   await page

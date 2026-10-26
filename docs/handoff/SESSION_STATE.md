@@ -27,6 +27,8 @@
   Cập nhật selector BuyNow/wallet/account browser tests sang accessible name
   `Tài khoản của …` đang có trên main; giữ assertion mua/tiền, không tăng timeout
   hoặc bỏ bước kiểm. Tiếp tục đợi CI đúng head trước squash merge.
+  Wallet browser kiểm lối vào ví trong account/mobile menu thay icon ví đã bị
+  main bỏ; vẫn kiểm href, kích thước chạm, các viewport và toàn bộ invariant tiền.
 
 ## Đồng bộ main và giữ phần bán nguyên bộ — 26/10/2026
 
