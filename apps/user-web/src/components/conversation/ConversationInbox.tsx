@@ -84,7 +84,7 @@ function ConversationCard({
               state={{ chatFromInbox: true }}
               onClick={remember}
             >
-              {book.data?.book.title ??
+              {book.data?.bundle?.title ?? book.data?.book.title ??
                 (book.isPending
                   ? "Đang tải tên sách…"
                   : "Bài đăng không còn công khai")}

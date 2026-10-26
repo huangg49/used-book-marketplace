@@ -8,6 +8,8 @@ import type {
 } from '../../database/mongo/documents.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import type { Wire } from '../commands/domain-error.js';
+import { normalizeBundle, validateBundle } from './book-bundle.js';
+import { normalizeSearch } from '../commands/contract-input.service.js';
 import {
   originReference,
   originStatus,
@@ -117,6 +119,7 @@ export function revision(r: Revision): Wire['ListingRevision'] {
     decision: decision(r),
     fulfillmentStatus: originStatus(r),
     content: {
+      ...(r.bundle ? { bundle: r.bundle } : {}),
       ...(r.originAddressId ? { fulfillment: originReference(r) } : {}),
       bookId: r.bookId,
       mode: r.mode,
@@ -165,6 +168,8 @@ export function revisionContent(
 ) {
   return {
     bookId: content.bookId?.toLowerCase() ?? null,
+    bundle: normalizeBundle(content.bundle),
+    bundleSearchText: content.bundle ? normalizeSearch([content.bundle.title, ...content.bundle.items.map(item => item.label)].join(' ')) : '',
     mode: content.mode ?? null,
     condition: content.condition ?? null,
     pages: content.pages ?? '',
@@ -192,6 +197,9 @@ export async function checkListing(tx: Tx, listingId: string) {
       })
     : null;
   if (!r) throw new Error('Listing requires its own current revision');
+  validateBundle(r);
+  if (r.bundle && l.channel === 'Auction')
+    throw new Error('Auction listing cannot contain a bundle');
   // Ownership part of latlai_revision_origin_check. Address identities are
   // append-only, so this holds for stale/deleted origins too (version currency
   // is checked under lock by ListingFulfillmentService.prepare).
@@ -203,6 +211,8 @@ export async function checkListing(tx: Tx, listingId: string) {
     throw new Error('Origin is not an address of the listing owner');
   const decision = await tx.c.listing_decisions.findOne({ revisionId: r._id });
   const d = decision?.decision;
+  if (r.bundle && d === 'Approve' && decision?.checklist?.bundleContentsVerified !== true)
+    throw new Error('Approval requires verified whole bundle contents');
   // latlai_guard_decision: nobody reviews their own listing.
   if (decision && decision.reviewerId === l.ownerId)
     throw new Error('Stale revision or self-review');

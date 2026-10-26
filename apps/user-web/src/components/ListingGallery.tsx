@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { listingTitle } from "../lib/book-bundle";
 import { ArrowLeft, ArrowRight, Expand, ImageOff, X } from "lucide-react";
 import { ListingPhoto } from "./BookCard";
 import { type PublicListing } from "../services/public-listings";
@@ -58,7 +59,7 @@ export function ListingGallery({ book }: { book: PublicListing }) {
           book={book}
           photoIndex={current}
           eager
-          alt={`Ảnh ${current + 1} của ${book.book.title}`}
+          alt={`Ảnh ${current + 1} của ${listingTitle(book)}`}
         />
         {book.photos.length > 0 && (
           <button
@@ -133,7 +134,7 @@ export function ListingGallery({ book }: { book: PublicListing }) {
               book={book}
               photoIndex={current}
               eager
-              alt={`Ảnh ${current + 1} của ${book.book.title}`}
+              alt={`Ảnh ${current + 1} của ${listingTitle(book)}`}
             />
           </div>
         )}

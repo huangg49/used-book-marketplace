@@ -49,6 +49,34 @@ beforeEach(() => {
 });
 describe("resumable listing submission", () => {
   it.each([
+    "/catalog/requests", "/listings", `/listings/${draft}/media`, "/upload-bytes",
+    `/listings/${draft}/media/${media}/finalize`, `/listings/${draft}/draft`, `/listings/${draft}/submit`,
+  ])("pins every bundle component across edits and a lost response at %s", async (lostPath) => {
+    const value: ListingInput = {
+      ...input(), mode: "Sale", exchangeValue: null,
+      bundle: { title: "Bộ tập 1 và 3", wholeOnly: true, exclusiveOwnershipDeclared: true,
+        items: [{ label: "Tập 1", condition: "Good", notes: "" },
+          { label: "Tập 3", condition: "Worn", notes: "Bìa sờn; thiếu tập 2." }] },
+    };
+    const original = structuredClone(value.bundle);
+    let lost = false;
+    request.mockImplementation(async (path: string) => {
+      if (path === lostPath && !lost) { lost = true; throw new Error("Lost response"); }
+      return respond(path);
+    });
+    const run = createListingSubmission(value);
+    value.bundle!.title = "Đã chỉnh tên";
+    value.bundle!.items[1].notes = "Đã chỉnh ghi chú";
+    await expect(run()).rejects.toThrow("Lost response");
+    value.bundle!.items.pop();
+    await expect(run()).resolves.toBe(draft);
+    const saved = request.mock.calls.filter(([path]) => path.endsWith("/draft"));
+    const replayed = request.mock.calls.filter(([path]) => path === lostPath);
+    expect(replayed).toHaveLength(2);
+    expect(replayed[0][2]).toEqual(replayed[1][2]);
+    expect(JSON.parse(saved.at(-1)![2].body).content.bundle).toEqual(original);
+  });
+  it.each([
     "/catalog/requests",
     "/listings",
     `/listings/${draft}/media`,

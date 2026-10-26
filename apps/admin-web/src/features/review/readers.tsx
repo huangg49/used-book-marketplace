@@ -249,6 +249,14 @@ export function ContentView({
   const c = value.content;
   return (
     <>
+      {value.content.bundle && <section className="section" aria-label="Danh sách bộ sách">
+        <h3>{value.content.bundle.title} · Bộ {value.content.bundle.items.length} cuốn</h3>
+        <p>Bán, giao và trả nguyên bộ. Đối chiếu ảnh toàn bộ bộ sách với từng cuốn/tập bên dưới.</p>
+        <ol>{value.content.bundle.items.map((item, index) => <li key={index}>
+          <strong>{item.label}</strong> · {labels[item.condition]}{item.notes && <p>{item.notes}</p>}
+        </li>)}</ol>
+      </section>}
+
       <section className="section">
         <h3>Lựa chọn giao nhận</h3>
         {value.fulfillmentStatus === "Current" ? (

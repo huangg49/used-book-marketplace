@@ -158,6 +158,8 @@ export interface ConversationEventDoc {
 }
 export interface ConversationExchangeLinkDoc { _id: string; conversationId: string; createdAt: Date }
 export interface ListingRevisionDoc extends Lockable {
+  bundleSearchText?: string;
+  bundle?: import('@used-books/api-contract').components['schemas']['BookBundle'] | null;
   _id: string;
   listingId: string;
   number: number;

@@ -6,6 +6,10 @@ import { getOrder, openOrderConversation } from "../services/orders";
 import { OrderDetails } from "./OrderDetails";
 import styles from "./ChatPage.module.css";
 
+// Navigate's effect depends on state identity. Keep it stable while the lazy
+// chat route loads, or pending-navigation renders schedule the redirect again.
+const orderRoomNavigationState = { chatFromOrders: true };
+
 export function OrderConversationPage() {
   const { orderId = "" } = useParams<{ orderId: string }>();
   const auth = useSession();
@@ -53,7 +57,7 @@ function OpenOrderRoom({ orderId, ownerId, active }: { orderId: string; ownerId:
   }, [shouldOpen, open]);
   const roomId = order.data?.conversationId ?? opening.data?.entityId;
   if (active && roomId && !order.isError)
-    return <Navigate replace to={`/chat/${roomId}`} state={{ chatFromOrders: true }} />;
+    return <Navigate replace to={`/chat/${roomId}`} state={orderRoomNavigationState} />;
   return (
     <section className={styles.root} data-room-selected="true">
       <Link className={styles.back} to="/orders">Đơn hàng của tôi</Link>

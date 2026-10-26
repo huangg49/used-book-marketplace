@@ -39,6 +39,7 @@ import {
 
 // The revision content being saved, as stored (see revisionContent).
 interface SavedContent {
+  bundle?: unknown;
   bookId: string | null;
   condition: string | null;
   readable: boolean | null;
@@ -165,6 +166,8 @@ export class PriceAssistService {
         listing.visibility !== 'Removed' &&
         listing.trade === 'Available';
       if (!draftEditable && !approvedEditable) throw invalidState();
+      const currentRevision = listing.currentRevisionId ? await tx.c.listing_revisions.findOne({ _id: listing.currentRevisionId }) : null;
+      if (currentRevision?.bundle) throw invalidState();
       const book = await this.book(tx, input.bookId, actor._id);
       const raw = await this.sources(tx, book, actor._id);
       const now = await tx.now();
@@ -435,7 +438,7 @@ export class PriceAssistService {
       });
     // Other members' public asking prices for the same book: asking, not sold.
     const revisions = await tx.c.listing_revisions
-      .find({ bookId: book.id, salePrice: { $ne: null } })
+      .find({ bookId: book.id, salePrice: { $ne: null }, bundle: null })
       .sort({ createdAt: -1 })
       .limit(200)
       .toArray();
@@ -480,6 +483,7 @@ export class PriceAssistService {
     saved: SavedContent,
   ) {
     const id = decision.suggestionId.toLowerCase();
+    if (saved.bundle) throw invalidState();
     await tx.lock('price_suggestions', [id]);
     const s = await tx.c.price_suggestions.findOne({ _id: id });
     const now = await tx.now();

@@ -44,7 +44,7 @@ Các quy tắc của SRS này thay thế cách diễn đạt mâu thuẫn trong 
 | Thuật ngữ | Định nghĩa |
 |---|---|
 | Book | Bản ghi đầu sách và ấn bản; không phải hiện vật đang bán |
-| Listing | Một bản sách vật lý do một người dùng sở hữu và đăng bán/đổi |
+| Listing | Một bản sách vật lý do một người dùng sở hữu và đăng bán/đổi; ngoại lệ owner25/10/2026 cho bộ bán nguyên lô theo [ADR0046](adr/0046-whole-book-bundles.md) |
 | Buyer và Seller | Vai theo từng đơn mua; một tài khoản có thể giữ cả hai vai ở các đơn khác nhau |
 | Initiator và Recipient | Người tạo và người nhận đề xuất đổi; không mặc định ai phải bù tiền |
 | Reservation | Cam kết độc quyền một listing cho một giao dịch có định danh |
@@ -68,7 +68,7 @@ Hệ thống phục vụ người dùng giao dịch trong TP.HCM, tìm/mua/đổ
 
 Phiên bản nghiệm thu gồm tài khoản bằng email, hồ sơ và địa chỉ; catalog và listing có kiểm duyệt; tìm kiếm; giỏ hàng; mua một listing mỗi Order; đổi một listing lấy một listing có hoặc không bù tiền; ví mô phỏng có sổ cái; nạp và rút mô phỏng; vận chuyển giả lập có đủ trạng thái; khiếu nại, trả hàng và giải quyết tiền; đánh giá hai chiều; chat, forum cơ bản, wishlist; thông báo; quản trị và nhật ký. Bản 1.1 bổ sung hai điểm giao nhận mô phỏng, assignment Staff, custody/inspection/handover, bảng phí từng chặng và đấu giá tối thiểu theo phụ lục. Giao trực tiếp qua ship vẫn được giữ.
 
-Giỏ hàng có thể chứa listing của nhiều người bán, nhưng mỗi checkout trong phiên bản này chỉ chọn **một listing**. Người dùng muốn mua nhiều cuốn tạo các Order độc lập. Đây là giới hạn có chủ ý để tránh phân bổ tiền, giao hàng và hoàn một phần giữa nhiều hiện vật trong cùng đơn.
+Giỏ hàng có thể chứa listing của nhiều người bán, nhưng mỗi checkout trong phiên bản này chỉ chọn **một listing**. Người dùng muốn mua nhiều listing tạo các Order độc lập. Ngoại lệ owner25/10/2026: một listing có thể là bộ2–50cuốn được mua/giao/trả nguyên lô theo [ADR0046](adr/0046-whole-book-bundles.md); không có mua tách từng cuốn hoặc hoàn một phần. Giới hạn một listing mỗi Order vẫn giữ nguyên.
 
 ### 2.3 Ngoài phạm vi bắt buộc
 

@@ -27,6 +27,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { BundleEditor } from "../components/BookBundle";
+import { bundleCondition } from "../lib/book-bundle";
 import { useSession } from "../hooks/useSession";
 import { useActionCooldown } from "../hooks/useActionCooldown";
 import { session as apiSession } from "../lib/session";
@@ -129,8 +131,10 @@ export function EditListingPage() {
   const [attempted, setAttempted] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
   const [done, setDone] = useState(false);
+  const completed = useRef(false);
   const [confirmHideOpen, setConfirmHideOpen] = useState(false);
   const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
 
@@ -177,6 +181,7 @@ export function EditListingPage() {
     setSubmitError(undefined);
     try {
       await archiveListing(item.id, item.version);
+      completed.current = true;
       setDone(true);
       setConfirmArchiveOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
@@ -249,11 +254,11 @@ export function EditListingPage() {
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      dirty && currentLocation.pathname !== nextLocation.pathname,
+      !completed.current && dirty && currentLocation.pathname !== nextLocation.pathname,
   );
 
   useBeforeUnload((event) => {
-    if (dirty) {
+    if (!completed.current && dirty) {
       event.preventDefault();
       event.returnValue = "";
     }
@@ -316,7 +321,7 @@ export function EditListingPage() {
     setAttempted(true);
     setSubmitError(undefined);
     if (Object.keys(errors).length) {
-      const first = document.querySelector<HTMLElement>("[data-invalid='true']");
+      const first = document.querySelector<HTMLElement>("[data-invalid='true'], #bundle[aria-invalid='true']");
       first?.focus();
       return;
     }
@@ -324,41 +329,48 @@ export function EditListingPage() {
   }
 
   async function submit() {
-    if (!item || !current || !bookId) return;
-    const origin = origins.find((a) => a.id === current.originAddressId);
-    if (current.mode !== "Exchange" && !origin) {
-      setConfirming(false);
-      setSubmitError("Địa chỉ gửi sách không còn hợp lệ. Hãy chọn lại.");
-      return;
+    if (busy) return;
+    if (!pending) {
+      if (!item || !current || !bookId) return;
+      const origin = origins.find((a) => a.id === current.originAddressId);
+      if (current.mode !== "Exchange" && !origin) {
+        setConfirming(false);
+        setSubmitError("Địa chỉ gửi sách không còn hợp lệ. Hãy chọn lại.");
+        return;
+      }
+      const input: RevisionPhoto[] = photos.map((p) =>
+        p.kind === "existing"
+          ? { kind: "existing", id: p.id }
+          : { kind: "new", file: p.file },
+      );
+      const content = buildRevisionContent(
+        current,
+        bookId,
+        [],
+        origin ? { id: origin.id, version: origin.version } : null,
+      );
+      const { mediaIds: _unused, ...rest } = content;
+      void _unused;
+      const signature = JSON.stringify({ v: item.version, rest, photoSignature });
+      if (intent.current?.signature !== signature)
+        intent.current = {
+          signature,
+          run: createListingRevision({
+            listingId: item.id,
+            version: item.version,
+            photos: input,
+            content: rest,
+          }),
+        };
     }
-    const input: RevisionPhoto[] = photos.map((p) =>
-      p.kind === "existing"
-        ? { kind: "existing", id: p.id }
-        : { kind: "new", file: p.file },
-    );
-    const content = buildRevisionContent(
-      current,
-      bookId,
-      [],
-      origin ? { id: origin.id, version: origin.version } : null,
-    );
-    const { mediaIds: _unused, ...rest } = content;
-    void _unused;
-    const signature = JSON.stringify({ v: item.version, rest, photoSignature });
-    if (intent.current?.signature !== signature)
-      intent.current = {
-        signature,
-        run: createListingRevision({
-          listingId: item.id,
-          version: item.version,
-          photos: input,
-          content: rest,
-        }),
-      };
+    if (!intent.current) return;
     setBusy(true);
     setSubmitError(undefined);
     try {
       await intent.current.run();
+      // The router evaluates its blocker before React commits setDone below.
+      completed.current = true;
+      setPending(false);
       setDone(true);
       void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
       void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
@@ -370,8 +382,12 @@ export function EditListingPage() {
     } catch (error) {
       setConfirming(false);
       const status = (error as { status?: number }).status;
+      const failed = status !== undefined && [400, 401, 403, 404, 409, 422, 429].includes(status);
+      setPending(!failed);
+      if (failed) intent.current = null;
       setSubmitError(
-        status === 409
+        !failed ? "Chưa xác nhận được kết quả gửi. Thử lại cùng bản sửa để kiểm tra; nội dung đã khóa cho lần gửi này."
+        : status === 409
           ? "Bài đã thay đổi ở nơi khác hoặc không còn sửa được. Tải lại trang để xem bản mới nhất; nội dung bạn nhập vẫn còn."
           : error instanceof Error
             ? error.message
@@ -416,7 +432,7 @@ export function EditListingPage() {
     );
 
   const block = editApprovedBlock(item);
-  if (block)
+  if (block && !pending)
     return (
       <main className={styles.page}>
         <Link className={styles.backLink} to={ROUTES.myBooks}>
@@ -482,13 +498,13 @@ export function EditListingPage() {
             <span>Đầu sách cố định</span>
           </div>
           <h2 className={styles.bookHeroTitle}>
-            {identity.data?.title ?? "Đang tải tên sách…"}
+            {form?.bundle?.title || identity.data?.title || "Đang tải tên sách…"}
           </h2>
           <p className={styles.bookHeroAuthor}>
             Tác giả: <strong>{identity.data?.authors.join(", ") || "Chưa rõ"}</strong>
           </p>
           <p className={styles.bookHeroNote}>
-            Tên sách và tác giả được giữ nguyên theo hồ sơ đã kiểm duyệt. Nếu đây là một đầu sách khác, vui lòng đăng bài mới.
+            {form?.bundle ? "Đầu sách đại diện được giữ nguyên. Danh sách từng cuốn trong bộ ở bên dưới xác định chính xác sách giao cho người mua." : "Tên sách và tác giả được giữ nguyên theo hồ sơ đã kiểm duyệt. Nếu đây là một đầu sách khác, vui lòng đăng bài mới."}
           </p>
         </div>
       </section>
@@ -512,6 +528,7 @@ export function EditListingPage() {
             <button
               type="button"
               className={styles.reloadBtn}
+              disabled={busy || pending}
               onClick={() => void listing.refetch().then(() => setForm(null))}
             >
               Tải lại bài
@@ -529,6 +546,8 @@ export function EditListingPage() {
           review();
         }}
       >
+        <fieldset className={styles.editFields} disabled={busy || pending} aria-label="Nội dung bản sửa">
+        {form.bundle && <BundleEditor value={form.bundle} error={showError("bundle")} onChange={bundle => patch({ bundle, condition: bundleCondition(bundle), mode: "Sale", exchangeValue: "" })} />}
         {/* CARD 1: Giá và hình thức */}
         <section className={styles.card}>
           <div className={styles.cardHeader}>
@@ -547,7 +566,7 @@ export function EditListingPage() {
             {/* Mode selection tabs */}
             <div className={styles.formGroup}>
               <label className={styles.groupLabel}>Hình thức trao đổi</label>
-              <div className={styles.modeTabs}>
+              {form.bundle ? <p>Bán nguyên bộ {form.bundle.items.length} cuốn. Giá và giao nhận áp dụng cho cả bộ.</p> : <div className={styles.modeTabs}>
                 {(
                   [
                     { value: "Sale", label: "Chỉ bán", icon: Tag, desc: "Bán lấy tiền" },
@@ -577,7 +596,7 @@ export function EditListingPage() {
                     </button>
                   );
                 })}
-              </div>
+              </div>}
             </div>
 
             {/* Price Inputs Grid */}
@@ -585,7 +604,7 @@ export function EditListingPage() {
               {form.mode !== "Exchange" && (
                 <div className={styles.formGroup}>
                   <label className={styles.groupLabel} htmlFor="field-sale-price">
-                    Giá bán <span className={styles.required}>*</span>
+                    {form.bundle ? "Giá cả bộ" : "Giá bán"} <span className={styles.required}>*</span>
                   </label>
                   <div className={styles.inputWithSuffix}>
                     <input
@@ -701,6 +720,7 @@ export function EditListingPage() {
                     <button
                       key={val}
                       type="button"
+                      disabled={!!form.bundle}
                       className={`${styles.conditionCard} ${isSelected ? styles.conditionCardActive : ""}`}
                       onClick={() => patch({ condition: val as Condition })}
                       data-invalid={!!showError("condition") && !form.condition}
@@ -713,6 +733,7 @@ export function EditListingPage() {
                   );
                 })}
               </div>
+              {form.bundle && <p>Tình trạng chung theo cuốn thấp nhất. Chỉnh từng cuốn trong danh sách bộ sách ở trên.</p>}
               {showError("condition") && (
                 <em className={styles.fieldError}>{showError("condition")}</em>
               )}
@@ -1080,7 +1101,7 @@ export function EditListingPage() {
               <strong>Cam kết quyền sở hữu và tính xác thực</strong>
             </div>
             <p>
-              Tôi cam kết mình là chủ sở hữu hợp pháp của ấn phẩm này và các thông tin, hình ảnh cung cấp phản ánh đúng tình trạng thực tế của cuốn sách.
+              {form.bundle ? "Tôi sở hữu toàn bộ các cuốn trong bộ, không đăng chúng đồng thời ở tin khác và đã mô tả đúng tình trạng từng cuốn." : "Tôi cam kết mình là chủ sở hữu hợp pháp của ấn phẩm này và các thông tin, hình ảnh cung cấp phản ánh đúng tình trạng thực tế của cuốn sách."}
             </p>
           </div>
         </label>
@@ -1105,7 +1126,9 @@ export function EditListingPage() {
             Hủy thay đổi
           </Link>
         </div>
+        </fieldset>
       </form>
+      {pending && <button type="button" className={styles.primaryBtn} disabled={busy} onClick={() => void submit()}>Thử lại cùng bản sửa</button>}
 
       {/* Confirm & Blocker Dialogs */}
       <ConfirmDialog
@@ -1146,7 +1169,7 @@ export function EditListingPage() {
         isOpen={blocker.state === "blocked"}
         onClose={() => blocker.reset?.()}
         title="Rời trang khi chưa lưu?"
-        description="Các thông tin bạn vừa chỉnh sửa sẽ không được lưu nếu rời khỏi trang lúc này."
+        description={pending ? "Yêu cầu gửi bản sửa chưa có kết quả xác nhận. Nếu rời trang, hãy kiểm tra kệ sách trước khi gửi yêu cầu mới." : "Các thông tin bạn vừa chỉnh sửa sẽ không được lưu nếu rời khỏi trang lúc này."}
         confirmText="Rời trang"
         cancelText="Ở lại tiếp tục"
         isDanger

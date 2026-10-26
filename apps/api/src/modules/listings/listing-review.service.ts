@@ -20,6 +20,7 @@ import {
   DomainError,
   invalidState,
   notFound,
+  invalidField,
   type Wire,
 } from '../commands/domain-error.js';
 import { MongoPageService } from '../commands/mongo-page.service.js';
@@ -216,6 +217,8 @@ export class ListingReviewService {
         if (l.currentRevisionId !== body.revisionId) throw conflict();
         if (l.moderation !== 'PendingReview') throw invalidState();
         if (body.decision === 'Approve') {
+          if (l.currentRevision?.bundle && body.checklist.bundleContentsVerified !== true)
+            invalidField('/checklist/bundleContentsVerified', 'Xác nhận danh sách và ảnh của toàn bộ bộ sách trước khi duyệt.');
           if (book?.status !== 'Confirmed')
             throw new DomainError(
               409,

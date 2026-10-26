@@ -18,8 +18,9 @@ export class PublicListingController {
   @Get(':listingId')
   @Public()
   @Header('Cache-Control', 'no-store')
-  detail(@Param('listingId') id: string) {
-    return this.listings.detail(this.input.uuid(id));
+  detail(@Param('listingId') id: string, @Query() query: unknown) {
+    const options = this.input.query('getPublicListing', query);
+    return this.listings.detail(this.input.uuid(id), options.bundleSupport === 'whole-v1');
   }
   @Get(':listingId/media/:mediaId/read')
   @Public()

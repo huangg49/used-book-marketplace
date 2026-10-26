@@ -477,7 +477,7 @@ try {
   );
   await login(sellerPage, "member@operations.test");
   await sellerPage
-    .getByRole("button", { name: "Tài khoản", exact: true })
+    .getByRole("button", { name: /^Tài khoản của .+$/, exact: true })
     .click();
   await sellerPage
     .getByRole("link", { name: "Đơn hàng của tôi", exact: true })

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { session } from "../lib/session";
+import { bundleSchema } from '../lib/book-bundle';
 
 const paymentOrderSchema = z.object({
   id: z.string().uuid(),
@@ -81,6 +82,7 @@ const orderDetails = paymentOrderSchema.extend({
   ownAddress: contact,
   shippingAddress: contact.nullable(),
   item: z.object({
+    bundle: bundleSchema.nullable().optional(),
     listingId: z.string().uuid(),
     metadata: z.object({ title: z.string() }),
     condition: z.string(),

@@ -345,6 +345,7 @@ export class PublicListingService {
           }
         : null,
       id: l._id,
+      ...(r.bundle ? { bundle: r.bundle } : {}),
       revisionId: r._id,
       version: l.version,
       book: {
@@ -445,6 +446,7 @@ export class PublicListingService {
     const classification = catalogFilters(query);
     const scope = {
       operation: 'listPublicListings',
+      bundleSupport: query.bundleSupport ?? null,
       q,
       isbn,
       bookId: String(query.bookId ?? '').toLowerCase(),
@@ -458,11 +460,13 @@ export class PublicListingService {
       ...classification,
     };
     const match: Record<string, unknown> = {};
+    if (query.bundleSupport !== 'whole-v1') match['r.bundle'] = null;
     const and: Record<string, unknown>[] = [];
     if (q)
       and.push({
         $or: [
           { 'b.searchText': { $regex: regexLiteral(q) } },
+          { 'r.bundleSearchText': { $regex: regexLiteral(q) } },
           ...(isbn ? [{ 'b.confirmedIsbn': isbn }] : []),
         ],
       });
@@ -601,12 +605,13 @@ export class PublicListingService {
       };
     });
   }
-  detail(id: string): Promise<Wire['PublicListing']> {
+  detail(id: string, bundleSupport = false): Promise<Wire['PublicListing']> {
     return this.mongo.tx(async (tx) => {
       const [row] = await tx.c.listings
         .aggregate<Eligible>([
           { $match: { _id: id } },
           ...publicEligibleStages(),
+          ...(!bundleSupport ? [{ $match: { 'r.bundle': null } }] : []),
         ])
         .toArray();
       if (!row) throw notFound();

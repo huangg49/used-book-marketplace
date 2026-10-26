@@ -23,6 +23,7 @@ export function DecisionForm({
   reconcile,
   onPending,
   removal = false,
+  bundle = false,
 }: {
   kind: Kind;
   id: string;
@@ -34,6 +35,7 @@ export function DecisionForm({
   reconcile: () => Promise<void>;
   onPending: (value: boolean) => void;
   removal?: boolean;
+  bundle?: boolean;
 }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [reason, setReason] = useState("");
@@ -90,7 +92,7 @@ export function DecisionForm({
   const locked = disabled || busy || !!intent || done;
   const ready =
     canApprove &&
-    (kind === "catalog-requests" || (checked.size === 6 && photosReady));
+    (kind === "catalog-requests" || (checked.size === (bundle ? 7 : 6) && photosReady));
   const select = (decision: typeof choice) => {
     if (
       (decision === "Reject" || decision === "Remove") &&
@@ -128,6 +130,7 @@ export function DecisionForm({
                   ...base,
                   decision: choice,
                   checklist: {
+                    ...(bundle ? { bundleContentsVerified: true as const } : {}),
                     catalogMatches: true,
                     photosClear: true,
                     conditionDisclosed: true,
@@ -172,7 +175,7 @@ export function DecisionForm({
       {kind === "listings" && !removal && (
         <fieldset disabled={locked}>
           <legend>Kiểm tra trước khi duyệt</legend>
-          {Object.entries(checks).map(([key, label]) => (
+          {Object.entries(checks).filter(([key]) => bundle || key !== 'bundleContentsVerified').map(([key, label]) => (
             <label className="check" key={key}>
               <input
                 type="checkbox"

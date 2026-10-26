@@ -141,6 +141,8 @@ export class QuotesService {
         )
           throw conflict();
         if (!(await this.available(tx, l._id, actor._id))) throw invalidState();
+        if (l.currentRevision?.bundle && body.acknowledgeWholeBundle !== true)
+          invalidField('/acknowledgeWholeBundle', 'Xác nhận mua toàn bộ các cuốn trong bộ sách.');
         if (!r.originAddressId)
           invalidField(
             '/listingId',

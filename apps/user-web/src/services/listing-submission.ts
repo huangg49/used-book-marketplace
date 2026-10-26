@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { session } from "./api";
 import type { Attributes } from "@used-books/api-contract/catalog-taxonomy";
+import type { BookBundle } from '../lib/book-bundle';
 
 const receipt = z.object({
   entityId: z.string().uuid(),
@@ -42,6 +43,7 @@ export function rememberCommands(): Remember {
 }
 
 export type ListingInput = {
+  bundle?: BookBundle | null;
   channel?: "Auction";
   title: string;
   author: string;
@@ -141,6 +143,7 @@ export function createListingSubmission(value: ListingInput) {
   const input = {
     ...value,
     attributes: structuredClone(value.attributes ?? {}),
+    bundle: value.bundle ? structuredClone(value.bundle) : null,
     files: [...value.files],
   };
   const remember = rememberCommands();
@@ -218,6 +221,7 @@ export function createListingSubmission(value: ListingInput) {
           expectedVersion: draft.version,
           content: {
             bookId: catalog.entityId,
+            ...(input.bundle ? { bundle: input.bundle } : {}),
             mode: input.mode,
             condition: input.condition,
             pages: input.pages,

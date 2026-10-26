@@ -310,6 +310,18 @@ describe('price suggestions through HTTP with MongoDB', () => {
     expect(fake.calls).toBe(0);
   });
 
+  it('refuses single-book price assistance for a whole bundle before calling the provider', async () => {
+    const created = await post('/listings', { content: {
+      ...draft(bookId, 150000),
+      bundle: { title: 'Bộ hai tập', wholeOnly: true, exclusiveOwnershipDeclared: true,
+        items: [{ label: 'Tập 1', condition: 'Good', notes: '' }, { label: 'Tập 2', condition: 'Good', notes: '' }] },
+    } }, m1).expect(200);
+    const before = fake.calls;
+    await ask(created.body.entityId, m1).expect(409);
+    expect(fake.calls).toBe(before);
+    expect(await db.c.price_suggestions.countDocuments({ listingId: created.body.entityId })).toBe(0);
+  });
+
   it('suggests a bounded, sourced range once, then serves the cache; new input invalidates it', async () => {
     const l = await listing();
     const first = await ask(l.entityId, m1, {

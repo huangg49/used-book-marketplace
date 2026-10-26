@@ -1,3 +1,4 @@
+import { listingTitle } from "../lib/book-bundle";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { BookOpen, ChevronRight, MapPin, Tag, UserRound } from "lucide-react";
@@ -37,7 +38,7 @@ export function ListingPhoto({
       {url && !failed ? (
         <img
           src={url}
-          alt={alt || "Bìa sách " + book.book.title}
+          alt={alt || "Bìa sách " + listingTitle(book)}
           loading={eager ? "eager" : "lazy"}
           fetchPriority={eager ? "high" : "auto"}
           decoding="async"
@@ -62,7 +63,7 @@ export function ListingPhoto({
                 setFailedUrl(null);
                 void photo.refetch();
               }}
-              aria-label={"Tải lại ảnh " + book.book.title}
+              aria-label={"Tải lại ảnh " + listingTitle(book)}
             >
               Tải lại ảnh
             </button>
@@ -91,14 +92,14 @@ export function BookCard({ book, compact = false }: BookCardProps) {
           to={ROUTES.bookDetail(book.id)}
           state={returnState}
           className={styles.coverLink}
-          aria-label={"Xem chi tiết " + book.book.title}
+          aria-label={"Xem chi tiết " + listingTitle(book)}
         />
-        <WishlistButton listingId={book.id} title={book.book.title} />
+        <WishlistButton listingId={book.id} title={listingTitle(book)} />
         <span className={styles.condition}>
           <BookOpen size={15} aria-hidden="true" />
-          {conditions[book.condition]} ·{" "}
+          {book.bundle ? `Bộ ${book.bundle.items.length} cuốn` : conditions[book.condition]} ·{" "}
           {book.mode === "Sale"
-            ? "Bán"
+            ? book.bundle ? "Bán nguyên bộ" : "Bán"
             : book.mode === "Exchange"
               ? "Đổi"
               : "Bán hoặc đổi"}
@@ -118,9 +119,9 @@ export function BookCard({ book, compact = false }: BookCardProps) {
           <Link
             to={ROUTES.bookDetail(book.id)}
             state={returnState}
-            title={book.book.title}
+            title={listingTitle(book)}
           >
-            <CardFitText>{book.book.title}</CardFitText>
+            <CardFitText>{listingTitle(book)}</CardFitText>
           </Link>
         </h3>
         <div className={styles.information}>
@@ -146,7 +147,7 @@ export function BookCard({ book, compact = false }: BookCardProps) {
             <p>
               <Tag size={24} aria-hidden="true" />
               <span>
-                <span className={styles.fieldLabel}>Giá bán</span>
+                <span className={styles.fieldLabel}>{book.bundle ? "Giá cả bộ" : "Giá bán"}</span>
                 <strong className={styles.amount}>
                   <CardFitText>{formatVnd(book.salePrice)}</CardFitText>
                 </strong>

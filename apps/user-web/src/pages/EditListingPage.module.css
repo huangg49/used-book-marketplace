@@ -1186,3 +1186,6 @@
     justify-content: center;
   }
 }
+.editFields {
+  display: contents;
+}

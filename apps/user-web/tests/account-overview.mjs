@@ -107,7 +107,7 @@ try {
           requestAnimationFrame(() => requestAnimationFrame(resolve)),
         ),
     );
-    await page.getByRole("button", { name: "Tài khoản", exact: true }).click();
+    await page.getByRole("button", { name: /^Tài khoản của .+$/, exact: true }).click();
     await page
       .getByRole("navigation", { name: "Tài khoản cá nhân", exact: true })
       .getByRole("link", { name: "Tổng quan", exact: true })
@@ -278,7 +278,7 @@ try {
     "H1",
   );
   const accountButton = page.getByRole("button", {
-    name: "Tài khoản",
+    name: /^Tài khoản của .+$/,
     exact: true,
   });
   await accountButton.focus();

@@ -3202,8 +3202,23 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        /** @description Whole-only physical lot; exact component labels must be nonblank and unique after normalization. All items are sold, reserved, shipped and returned together. No separate component sale, Auction or Exchange. Catalog series does not imply a bundle. */
+        BookBundle: {
+            title: string;
+            /** @constant */
+            wholeOnly: true;
+            /** @constant */
+            exclusiveOwnershipDeclared: true;
+            items: {
+                label: string;
+                condition: components["schemas"]["BookCondition"];
+                notes: string;
+            }[];
+        };
         /** @description Full replacement, not a patch. Incomplete text is allowed. Selected values must be valid; inactive mode prices must be null (both null if mode is null). mediaIds are ordered and must belong to this listing. Uploads may be Processing in a draft, but must be Ready at submission. */
-        DraftContent: {
+        DraftContent: ({
+            /** @description Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return. */
+            bundle?: components["schemas"]["BookBundle"] | null;
             bookId: string | null;
             mode: components["schemas"]["ListingMode"] | null;
             condition: components["schemas"]["BookCondition"] | null;
@@ -3220,7 +3235,7 @@ export interface components {
             mediaIds: string[];
             /** @description Optional while a draft is incomplete; required before submitting a Sale or Both listing. Omitted preserves the existing choice on replacement; null explicitly clears it. Configured origins must be current at save, submission and approval. No checkout is enabled. */
             fulfillment?: components["schemas"]["ListingFulfillment"] | null;
-        } & ({
+        } & unknown) & ({
             /** @constant */
             mode?: "Sale";
             exchangeValue?: null;
@@ -3237,7 +3252,9 @@ export interface components {
             exchangeValue?: null;
         });
         /** @description All text trimmed before validation. At submit the server validates the saved draft against this schema, ownership declaration, Ready media and accessible catalog. A Pending catalog may wait in the queue; approval requires Confirmed. */
-        SubmittedContent: {
+        SubmittedContent: ({
+            /** @description Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return. */
+            bundle?: components["schemas"]["BookBundle"] | null;
             /** Format: uuid */
             bookId: string;
             mode: components["schemas"]["ListingMode"];
@@ -3257,7 +3274,7 @@ export interface components {
             mediaIds: string[];
             /** @description Optional for legacy compatibility. Omitted preserves the existing choice on replacement; null explicitly clears it. Configured origins must be current at save, submission and approval. No checkout is enabled. */
             fulfillment?: components["schemas"]["ListingFulfillment"] | null;
-        } & ({
+        } & unknown) & ({
             /** @constant */
             mode?: "Sale";
             salePrice?: number;
@@ -3336,6 +3353,8 @@ export interface components {
         };
         /** @description Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE owner has MEMBER role, Confirmed catalog and Ready media. Reserved direct-sale Orders remain visible with AwaitingPayment until payment commits, then InTransaction. Unpaid reservations expose only their payment deadline, never participant identities. InNegotiation is retained for legacy conversation reservations. No new checkout or conversation can start until Available. Never serialize a private listing then filter on the client. */
         PublicListing: {
+            /** @description Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return. */
+            bundle?: components["schemas"]["BookBundle"] | null;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -3738,6 +3757,11 @@ export interface components {
             reason: string;
         };
         ReviewChecklist: {
+            /**
+             * @description Required true to approve a bundle after inspecting its manifest and whole-lot photos.
+             * @constant
+             */
+            bundleContentsVerified?: true;
             /** @constant */
             catalogMatches: true;
             /** @constant */
@@ -3952,6 +3976,11 @@ export interface components {
             };
         };
         CreateSaleQuote: {
+            /**
+             * @description Required true when quoting a whole bundle; expected listing/revision pins the complete manifest.
+             * @constant
+             */
+            acknowledgeWholeBundle?: true;
             expectedListingVersion: number;
             /** Format: uuid */
             expectedListingRevisionId: string;
@@ -4044,6 +4073,8 @@ export interface components {
             detail: string;
         };
         OrderItemSnapshot: {
+            /** @description Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return. */
+            bundle?: components["schemas"]["BookBundle"] | null;
             /** Format: uuid */
             listingId: string;
             /** Format: uuid */
@@ -6349,6 +6380,8 @@ export interface operations {
     listPublicListings: {
         parameters: {
             query?: {
+                /** @description Opt in to whole-bundle listings; absent clients receive single books only. */
+                bundleSupport?: "whole-v1";
                 /** @description Includes descendants. Legacy known category labels resolve read-only; unknown legacy categories remain unclassified. */
                 categoryId?: components["schemas"]["CatalogCategoryId"];
                 /** @description Primary language of the edition, not the language being learned. */
@@ -6439,7 +6472,10 @@ export interface operations {
     };
     getPublicListing: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Opt in to whole-bundle listings; absent clients receive single books only. */
+                bundleSupport?: "whole-v1";
+            };
             header?: never;
             path: {
                 listingId: string;

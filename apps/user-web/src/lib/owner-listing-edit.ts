@@ -1,4 +1,5 @@
 import type { MyListing } from "../services/my-listings";
+import { bundleCondition, bundleError, bundleSchema, type BookBundle } from "./book-bundle";
 
 // Owner-side rules for "Sửa bài đã duyệt" (SRS §7.2, LISTING_SLICE LS-D05,
 // ADR 0012). The server rechecks every rule under the listing lock; this module
@@ -75,6 +76,7 @@ export type Condition = "LikeNew" | "Good" | "Fair" | "Worn";
 export type Mode = "Sale" | "Exchange" | "Both";
 
 export type RevisionFormValue = {
+  bundle?: BookBundle | null;
   condition: Condition | "";
   pages: string;
   coverNote: string;
@@ -112,8 +114,10 @@ export function formFromListing(
   const c = item.currentRevision.content as Record<string, unknown>;
   const fulfillment = c.fulfillment as { originAddressId?: unknown } | undefined;
   const mode = c.mode;
+  const bundle = c.bundle ? bundleSchema.parse(c.bundle) : null;
   return {
-    condition: isCondition(c.condition) ? c.condition : "",
+    bundle: bundle ? structuredClone(bundle) : null,
+    condition: bundle ? bundleCondition(bundle) : isCondition(c.condition) ? c.condition : "",
     pages: text(c.pages),
     coverNote: text(c.coverNote),
     notes: text(c.notes),
@@ -122,7 +126,7 @@ export function formFromListing(
     readable: flag(c.readable),
     hasMissingPages: flag(c.hasMissingPages),
     missingEssentialContent: flag(c.missingEssentialContent),
-    mode: mode === "Exchange" || mode === "Both" ? mode : "Sale",
+    mode: bundle ? "Sale" : mode === "Exchange" || mode === "Both" ? mode : "Sale",
     salePrice: money(c.salePrice),
     exchangeValue: money(c.exchangeValue),
     originAddressId: text(fulfillment?.originAddressId),
@@ -162,6 +166,12 @@ const DETAIL_FIELDS = [
 
 export function validateRevision(value: RevisionFormValue): RevisionErrors {
   const errors: RevisionErrors = {};
+  if (value.bundle) {
+    const issue = bundleError(value.bundle);
+    if (issue) errors.bundle = issue;
+    if (value.mode !== "Sale") errors.mode = "Bộ sách chỉ bán nguyên bộ.";
+    if (value.condition !== bundleCondition(value.bundle)) errors.condition = "Tình trạng chung phải theo cuốn có tình trạng thấp nhất.";
+  }
   if (!value.condition) errors.condition = "Chọn tình trạng sách.";
   for (const [field, label] of DETAIL_FIELDS) {
     const length = codePoints(value[field]);
@@ -200,6 +210,7 @@ export function validateRevision(value: RevisionFormValue): RevisionErrors {
 }
 
 export type RevisionContent = {
+  bundle?: BookBundle | null;
   bookId: string;
   mode: Mode;
   condition: Condition;
@@ -232,6 +243,7 @@ export function buildRevisionContent(
   const sale = parsePrice(value.salePrice).value;
   const exchange = parsePrice(value.exchangeValue).value;
   return {
+    ...(value.bundle ? { bundle: structuredClone(value.bundle) } : {}),
     bookId,
     mode: value.mode,
     condition: value.condition as Condition,

@@ -1,3 +1,4 @@
+import { BundleManifest } from "../components/BookBundle";
 import { ApiError } from "@used-books/session-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -243,7 +244,8 @@ function AuthenticatedOrderDetails({
         {embedded && paymentSummary}
         <div>
           <section className={styles.section}>
-            <h3>{o.item.metadata.title}</h3>
+            <h3>{o.item.bundle?.title || o.item.metadata.title}</h3>
+            <BundleManifest bundle={o.item.bundle} />
             {condition && <p>Tình trạng: {condition}</p>}
             <p>{o.item.coverNote}</p>
             <p>{o.item.pages}</p>
@@ -260,10 +262,10 @@ function AuthenticatedOrderDetails({
           </section>
           {o.state === "AwaitingPayment" && (
             <section className={styles.section}>
-              <h3>Cuốn sách đang được giữ cho đơn</h3>
+              <h3>{o.item.bundle ? "Bộ sách đang được giữ cho đơn" : "Cuốn sách đang được giữ cho đơn"}</h3>
               <p>
                 Thanh toán trước <strong>{orderTime(o.paymentDeadline)}</strong>.
-                Hết hạn, đơn chưa thanh toán sẽ được hủy và cuốn sách được mở bán lại.
+                Hết hạn, đơn chưa thanh toán sẽ được hủy và {o.item.bundle ? "cả bộ sách" : "cuốn sách"} được mở bán lại.
               </p>
               <p>Đồng hồ và trạng thái được kiểm tra tại máy chủ khi bạn thanh toán.</p>
             </section>
