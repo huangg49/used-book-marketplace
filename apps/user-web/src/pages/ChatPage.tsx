@@ -15,7 +15,7 @@ import {
   getConversationEvents,
   type ConversationEvent,
 } from "../services/purchase-conversations";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
 import { ApiError } from "@used-books/session-client";
@@ -64,6 +64,20 @@ function dateTime(value: string) {
   }).format(new Date(value));
 }
 
+const compactHeaderQuery = "(max-width: 960px)";
+function subscribeHeaderLayout(notify: () => void) {
+  const media = window.matchMedia(compactHeaderQuery);
+  media.addEventListener("change", notify);
+  return () => media.removeEventListener("change", notify);
+}
+function useCompactHeader() {
+  return useSyncExternalStore(
+    subscribeHeaderLayout,
+    () => window.matchMedia(compactHeaderQuery).matches,
+    () => false,
+  );
+}
+
 function ChatRoom({
   room,
   userId,
@@ -74,6 +88,7 @@ function ChatRoom({
   refreshRooms: () => void;
 }) {
   const other = room.buyer.id === userId ? room.seller : room.buyer;
+  const compactHeader = useCompactHeader();
   const [panel, setPanel] = useState<"sheet" | "chat">("sheet");
   const sheetBodyRef = useRef<HTMLDivElement>(null);
   const guidanceScrollIntent = useRef(false);
@@ -305,7 +320,7 @@ function ChatRoom({
       <header className={styles.roomHeader}>
         <ConversationBackLink className={styles.back} />
       </header>
-      <div className={styles.mobileBookHeader}>{bookIdentity}</div>
+      {compactHeader && <div className={styles.mobileBookHeader}>{bookIdentity}</div>}
       <nav
         className={`${sheet.mobileTabs} ${sheet.bookTabs}`}
         aria-label="Nội dung cuộc trao đổi"
@@ -330,9 +345,9 @@ function ChatRoom({
         data-panel={panel}
       >
         <aside className={sheet.sheet} aria-label={room.orderId ? "Thông tin đơn hàng" : "Phiếu thỏa thuận"}>
-          <header className={`${sheet.sheetHeading} ${styles.dossierHeader}`}>
+          {!compactHeader && <header className={`${sheet.sheetHeading} ${styles.dossierHeader}`}>
             {bookIdentity}
-          </header>
+          </header>}
           <h2 className={styles.srOnly}>{room.orderId ? "Thông tin đơn hàng" : "Phiếu thỏa thuận"}</h2>
           <div
             className={`${sheet.sheetBody} ${styles.dossierBody}`}
@@ -1111,6 +1126,7 @@ function PendingChatRoom({
   pending: boolean;
   retry: () => void;
 }) {
+  const compactHeader = useCompactHeader();
   const identity = (
     <ConversationBookIdentity
       listingId={preview?.listingId}
@@ -1122,14 +1138,14 @@ function PendingChatRoom({
       <header className={styles.roomHeader}>
         <ConversationBackLink className={styles.back} />
       </header>
-      <div className={styles.mobileBookHeader}>{identity}</div>
+      {compactHeader && <div className={styles.mobileBookHeader}>{identity}</div>}
       <div
         className={`${sheet.workspace} ${sheet.openBook} ${styles.paperSpread} ${styles.dossierSpread}`}
       >
         <aside className={sheet.sheet} aria-label="Phiếu thỏa thuận đang tải">
-          <header className={`${sheet.sheetHeading} ${styles.dossierHeader}`}>
+          {!compactHeader && <header className={`${sheet.sheetHeading} ${styles.dossierHeader}`}>
             {identity}
-          </header>
+          </header>}
           <div
             className={styles.pendingRoom}
             role={pending ? "status" : "alert"}

@@ -18,6 +18,11 @@
   merge khi CI của đúng head đạt. Không đổi branch protection hoặc gate release.
   READINESS/DB chính/mobile giữ nguyên. Chi tiết local của lượt publish ở
   `.tmp/publish/`. Không có migration hoặc deploy lên DB chính trong lượt publish.
+- CI head `11784e3`:6nhóm đã đạt, API còn chạy và user-web phát hiện hai tiêu đề
+  cấp1 cùng sách trong bước BuyNow→Chat. Chat hiện chỉ mount một book identity
+  theo breakpoint960px, đồng bộ khi resize và cleanup listener; giữ test strict
+  nguyên trạng. Sau sửa231unit/build/typecheck/lint web PASS, detector một lượt
+  trả[]; CI phải chạy lại trên commit có bản sửa trước merge.
 
 ## Đồng bộ main và giữ phần bán nguyên bộ — 26/10/2026
 
