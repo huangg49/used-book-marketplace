@@ -28,7 +28,7 @@ import {
 } from "@used-books/api-contract/catalog-taxonomy";
 import { catalogQueryKeys, readAttributes } from "../lib/catalog-filters";
 import { observeHeaderScroll } from "../lib/header-scroll";
-import { AutumnAerialMapBackground } from "../components/autumn/AutumnAerialMapBackground";
+import { AutumnLeavesCanvas } from "../components/autumn/AutumnLeavesCanvas";
 import styles from "./BookSearchPage.module.css";
 
 const modes = [
@@ -572,7 +572,9 @@ export function BookSearchPage() {
   }
   return (
     <div className={styles.page}>
-      <AutumnAerialMapBackground />
+      <div className={styles.leavesWrapper} aria-hidden="true">
+        <AutumnLeavesCanvas />
+      </div>
       {chips.length > 0 && (
         <>
           <div

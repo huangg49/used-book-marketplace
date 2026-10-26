@@ -3,10 +3,17 @@
   --shop-shelf: #f4eddf;
   --shop-error: #912b0e;
   position: relative;
-  background: transparent;
+  background: var(--shop-paper);
   color: var(--shop-ink);
   min-height: calc(100vh - 76px);
   padding-bottom: 72px;
+}
+.leavesWrapper {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
 }
 .searchBar {
   padding: 0 0 18px;
