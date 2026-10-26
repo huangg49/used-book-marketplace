@@ -25,6 +25,7 @@
   padding: 0 0 18px;
 }
 .expandSidebarBtn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -47,6 +48,23 @@
 .expandSidebarBtn:focus-visible {
   outline: 2px solid #690b0b;
   outline-offset: 2px;
+}
+.expandFilterBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--shop-orange, #e06c3a);
+  color: #341509;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 @media (max-width: 900px) {
   .expandSidebarBtn {

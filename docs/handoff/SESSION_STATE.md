@@ -13,7 +13,7 @@
   - **Nút thu gọn bộ lọc 3 dấu gạch (Collapsible Filter Sidebar)**:
     - Bổ sung nút 3 dấu gạch (`Menu` icon) ở góc phải tiêu đề "Bộ lọc sách" (`.collapseSidebarBtn`) trong panel bên trái để người dùng thu gọn hoàn toàn sidebar khi muốn tập trung xem sách.
     - Khi thu gọn: sidebar ẩn đi, layout `.catalog` chuyển sang `grid-template-columns: minmax(0, 1fr)`, thanh tìm kiếm (`.search`) và lưới thẻ sách mở rộng dàn đều toàn bộ chiều rộng màn hình (`dàn full màn hình`).
-    - Nút nhỏ 3 dấu gạch (`.expandSidebarBtn`) xuất hiện bên trái thanh tìm kiếm, cho phép mở lại bộ lọc nhanh chóng bất kỳ lúc nào; trạng thái thu gọn được lưu vào `localStorage` (`latlai_catalog_filter_collapsed`) để duy trì xuyên suốt phiên duyệt sách.
+    - Nút nhỏ icon bộ lọc (`.expandSidebarBtn` dùng `SlidersHorizontal` kèm badge đếm số lượng bộ lọc đang chọn) xuất hiện bên trái thanh tìm kiếm, cho phép mở lại bộ lọc nhanh chóng bất kỳ lúc nào; trạng thái thu gọn được lưu vào `localStorage` (`latlai_catalog_filter_collapsed`) để duy trì xuyên suốt phiên duyệt sách.
 - **Kiểm tra**:
   - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
   - `pnpm --filter @used-books/user-web test`: 27 test files / 201 tests PASS.

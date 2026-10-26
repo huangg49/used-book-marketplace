@@ -676,10 +676,13 @@ export function BookSearchPage() {
                 type="button"
                 className={styles.expandSidebarBtn}
                 onClick={toggleSidebar}
-                aria-label="Mở bộ lọc sách"
+                aria-label={`Mở bộ lọc sách${chips.length > 0 ? ` (${chips.length} đang chọn)` : ""}`}
                 title="Mở bộ lọc sách"
               >
-                <Menu size={20} aria-hidden="true" />
+                <SlidersHorizontal size={20} aria-hidden="true" />
+                {chips.length > 0 && (
+                  <span className={styles.expandFilterBadge}>{chips.length}</span>
+                )}
               </button>
             )}
             <form
