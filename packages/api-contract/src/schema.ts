@@ -1911,6 +1911,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auction-intakes/{intakeId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0047. Owner MEMBER publishes a Passed (inspected) intake while ACTIVE and unrestricted and while the listing revision is unchanged. startAt null starts now; otherwise startAt is 5 minutes to 7 days ahead. durationHours is 1-168. The auction is stored Active; before startAt its phase is Scheduled and bids/Auto/Buy Now return 409 AuctionNotStarted. */
+        post: operations["publishAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0047. Seller edits the time of an Active auction before the first bid and before any Buy Now, at most 5 times. Scheduled: startAt (null = now) and durationHours. Live: only durationHours (end = startAt + duration, at least 1 hour from now); startAt must be null. expectedVersion is the auction version. */
+        post: operations["rescheduleAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/auction-intakes": {
         parameters: {
             query?: never;
@@ -1971,7 +2005,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Assigned independent STAFF opens a Passed intake while the seller is still ACTIVE: startAt is server time, endAt is 24 hours later, no scheduling or extension. */
+        /**
+         * @deprecated
+         * @description Superseded by publishAuction (ADR 0047), kept for operations tooling. Assigned independent STAFF opens a Passed intake while the seller is still ACTIVE: startAt is server time and the auction runs 24 hours.
+         */
         post: operations["openAuction"];
         delete?: never;
         options?: never;
@@ -2071,7 +2108,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Public. Active auctions ending soonest first (max 50). Shows price and anonymous bidder count; ceilings are never exposed. */
+        /** @description Public. phase=live (default) lists started Active auctions ending soonest first; phase=upcoming lists scheduled ones starting soonest first (ADR 0047). Max 50. Shows price and anonymous bidder count; ceilings are never exposed. */
         get: operations["listAuctions"];
         put?: never;
         post?: never;
@@ -2619,7 +2656,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Only before the first valid bid; decided under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer offered and the auction ends at min(endAt, now + 60 s). Others may outbid from Buy Now price + step in that window; the normal close then forms the winner's Order (24-hour payment). The receipt reports state Active and no orderId. Auctions already BuyNowPending keep their 15-minute Order. */
+        /** @description ADR 0047 — offered while the auction is live, Buy Now has not been used and the current price is below the Buy Now price, also after bids; the current leader cannot use it. Decided under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer offered and the auction ends at min(endAt, now + 60 s). Others may outbid from Buy Now price + step in that window; the normal close then forms the winner's Order (24-hour payment). The receipt reports state Active and no orderId. Auctions already BuyNowPending keep their 15-minute Order. */
         post: operations["buyAuctionNow"];
         delete?: never;
         options?: never;
@@ -3877,7 +3914,7 @@ export interface components {
             serverTime: string;
         };
         /** @enum {string} */
-        ListingErrorCode: "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "UNAVAILABLE" | "INTERNAL_ERROR" | "AccountIneligible" | "SelfReviewForbidden" | "CatalogDuplicate" | "CatalogNotConfirmed" | "ListingLimitReached" | "ListingInvalid" | "VersionConflict" | "InvalidState" | "IdempotencyConflict" | "MediaNotReady" | "MediaQuotaExceeded" | "UploadIncomplete" | "UploadExpired" | "PayloadTooLarge" | "UnsupportedMediaType" | "SESSION_EXPIRED" | "BidTooLow" | "AuctionClosed";
+        ListingErrorCode: "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "UNAVAILABLE" | "INTERNAL_ERROR" | "AccountIneligible" | "SelfReviewForbidden" | "CatalogDuplicate" | "CatalogNotConfirmed" | "ListingLimitReached" | "ListingInvalid" | "VersionConflict" | "InvalidState" | "IdempotencyConflict" | "MediaNotReady" | "MediaQuotaExceeded" | "UploadIncomplete" | "UploadExpired" | "PayloadTooLarge" | "UnsupportedMediaType" | "SESSION_EXPIRED" | "BidTooLow" | "AuctionClosed" | "AuctionNotStarted";
         ListingApiError: {
             statusCode: number;
             code: components["schemas"]["ListingErrorCode"];
@@ -4957,6 +4994,26 @@ export interface components {
         AuctionVersionCommand: {
             expectedVersion: number;
         };
+        PublishAuction: {
+            /** @description Intake version. */
+            expectedVersion: number;
+            /**
+             * Format: date-time
+             * @description Null starts now; otherwise 5 minutes to 7 days ahead.
+             */
+            startAt: string | null;
+            durationHours: number;
+        };
+        RescheduleAuction: {
+            /** @description Auction version. */
+            expectedVersion: number;
+            /**
+             * Format: date-time
+             * @description Scheduled only; null starts now. Must be null once live.
+             */
+            startAt: string | null;
+            durationHours: number;
+        };
         ReceiveAuctionIntake: {
             expectedVersion: number;
             shelfCode: string;
@@ -5111,6 +5168,15 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
+             * @description ADR 0047. Derived from server time; Scheduled before startAt. Optional for older servers.
+             * @enum {string}
+             */
+            phase?: "Scheduled" | "Live" | "Ended";
+            /** @description Auction version for the seller's rescheduleAuction. Optional for older servers. */
+            version?: number;
+            /** @description Number of seller time edits. Optional for older servers. */
+            scheduleRevision?: number;
+            /**
              * Format: date-time
              * @description ADR 0043. When Buy Now opened the 60-second window; endAt already holds the shortened end. Null without Buy Now. Optional for older servers.
              */
@@ -5123,7 +5189,7 @@ export interface components {
             startPrice: number;
             /** @enum {integer} */
             step: 10000 | 50000;
-            /** @description Null once the first valid bid exists or the auction is not Active. */
+            /** @description ADR 0047. Shown while Buy Now is offered (scheduled, or live with the price below it and Buy Now unused); null otherwise. */
             buyNowPrice: number | null;
             currentPrice: number | null;
             /** @description Null when bidding is closed. */
@@ -5214,6 +5280,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             version: number;
+            /**
+             * @description ADR 0047. Optional for older servers.
+             * @enum {string}
+             */
+            phase?: "Scheduled" | "Live" | "Ended";
             title: string;
             /** @enum {string} */
             state: "Active" | "OnHold";
@@ -9389,6 +9460,86 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
+    publishAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                intakeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishAuction"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    rescheduleAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RescheduleAuction"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
     listPointAuctionIntakes: {
         parameters: {
             query?: never;
@@ -9731,7 +9882,9 @@ export interface operations {
     };
     listAuctions: {
         parameters: {
-            query?: never;
+            query?: {
+                phase?: "live" | "upcoming";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -10151,7 +10304,7 @@ export interface operations {
             query?: {
                 limit?: number;
                 cursor?: string;
-                view?: "all" | "active" | "payment" | "selling";
+                view?: "all" | "active" | "upcoming" | "payment" | "selling";
             };
             header?: never;
             path?: never;

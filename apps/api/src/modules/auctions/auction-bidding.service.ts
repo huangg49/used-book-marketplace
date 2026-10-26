@@ -45,6 +45,12 @@ import { recordViolation, requireUnrestricted } from './member-violations.js';
 import { PointOrdersService } from './point-orders.service.js';
 import { AuctionBookService } from './auction-book.service.js';
 import { MongoPageService } from '../commands/mongo-page.service.js';
+import {
+  buyNowOffered,
+  notStarted,
+  phaseOf,
+  reschedule,
+} from './auction-schedule.js';
 
 const RATE_LIMIT_PER_MINUTE = 30;
 const MAX_OPEN_PARTICIPATIONS = 5;
@@ -90,7 +96,7 @@ export class AuctionBiddingService {
     actorId: string | null,
     reason?: string,
   ): AuctionChange {
-    const open = a.state === 'Active' && decidedAt < a.endAt;
+    const open = phaseOf(a, decidedAt) !== 'Ended';
     return {
       entityType: 'Auction',
       entityId: a._id,
@@ -165,6 +171,7 @@ export class AuctionBiddingService {
     const a = await this.auction(tx, id);
     const now = await this.clock.decision(tx, auth);
     if (a.state !== 'Active' || now >= a.endAt) throw closed();
+    if (now < a.startAt) throw notStarted();
     const seller = await tx.c.users.findOne({ _id: a.sellerId });
     if (seller?.status !== 'ACTIVE') throw invalidState();
     if (
@@ -287,11 +294,17 @@ export class AuctionBiddingService {
           id,
           operation !== 'disableAuctionAutoBid',
         );
-        if (buyNow && (a.bidderCount > 0 || a.buyNowPrice === null))
+        if (buyNow && !buyNowOffered(a, now))
           throw new DomainError(
             409,
             'InvalidState',
-            'Mua ngay chỉ khả dụng trước lượt trả giá đầu tiên.',
+            'Mua ngay không còn khả dụng: giá hiện tại đã chạm giá mua ngay hoặc đã có người mua ngay.',
+          );
+        if (buyNow && a.leaderId === actor._id)
+          throw new DomainError(
+            409,
+            'InvalidState',
+            'Bạn đang dẫn giá nên không thể dùng Mua ngay.',
           );
         const act = action(actor._id, a);
         const bidders = await tx.c.auction_bidders
@@ -421,9 +434,10 @@ export class AuctionBiddingService {
     });
   }
 
-  // FR-AU06/ADR 0043: only before the first valid bid. The buyer commits to
-  // buyNowPrice and leads; others may outbid until min(endAt, now + 60 s),
-  // then the normal close decides the winner.
+  // FR-AU06/ADR 0043, widened by ADR 0047: while live, unused and above the
+  // current price, also after bids. The buyer commits to buyNowPrice (an
+  // earlier equal Auto ceiling keeps the lead by sequence); others may outbid
+  // until min(endAt, now + 60 s), then the normal close decides the winner.
   buyNow(context: CommandContext, id: string, body: Wire['BuyAuctionNow']) {
     return this.engineCommand(
       context,
@@ -437,6 +451,45 @@ export class AuctionBiddingService {
       }),
       true,
     );
+  }
+
+  // ADR 0047: the seller moves the start/length before the first bid. Locks
+  // only the auction, like bids, Buy Now and close, so an edit and a racing
+  // first bid or close have exactly one order.
+  reschedule(
+    context: CommandContext,
+    id: string,
+    body: Wire['RescheduleAuction'],
+  ) {
+    return this.commands.runAuction(context, 'rescheduleAuction', id, body, {
+      authorize: async (tx, actor) => {
+        member(actor);
+        const a = await this.auction(tx, id);
+        if (a.sellerId !== actor._id) throw notFound();
+        return a;
+      },
+      mutate: async (tx, actor) => {
+        requireActive(actor);
+        await tx.lock('auctions', [id]);
+        const a = await this.auction(tx, id);
+        if (a.version !== body.expectedVersion) throw conflict();
+        const now = await this.clock.decision(tx, context.auth);
+        await requireUnrestricted(tx, actor._id, now);
+        const { startAt, plannedEndAt } = reschedule(a, body, now);
+        const next = await this.update(
+          tx,
+          a,
+          {
+            startAt,
+            plannedEndAt,
+            endAt: plannedEndAt,
+            scheduleRevision: a.scheduleRevision + 1,
+          },
+          now,
+        );
+        return this.change(next, now, 'AuctionRescheduled', actor._id);
+      },
+    });
   }
 
   // ADMIN independent of the seller and every bidder; never picks a winner.
@@ -680,18 +733,22 @@ export class AuctionBiddingService {
       _id: `${a.contextId}:${a.listingId}`,
     });
     const point = await c.handover_points.findOne({ _id: a.pointId });
-    const open = a.state === 'Active' && now < a.endAt;
+    const phase = phaseOf(a, now);
     return {
       id: a._id,
+      phase,
+      version: a.version,
+      scheduleRevision: a.scheduleRevision,
       listingId: a.listingId,
       title: String((item?.snapshot as { title?: string })?.title ?? ''),
       state: a.state,
       startPrice: a.startPrice,
       step: a.step as 10000 | 50000,
-      buyNowPrice: open && a.bidderCount === 0 ? a.buyNowPrice : null,
+      buyNowPrice:
+        phase === 'Scheduled' || buyNowOffered(a, now) ? a.buyNowPrice : null,
       buyNowAt: a.buyNowAt?.toISOString() ?? null,
       currentPrice: a.currentPrice,
-      minimumBid: open ? nextMinimumBid(a) : null,
+      minimumBid: phase !== 'Ended' ? nextMinimumBid(a) : null,
       bidderCount: a.bidderCount,
       startAt: a.startAt.toISOString(),
       endAt: a.endAt.toISOString(),
@@ -700,13 +757,19 @@ export class AuctionBiddingService {
       demoOnly: true,
     };
   }
-  async listPublic(): Promise<Wire['PublicAuctionList']> {
+  // ADR 0047: live (started, ending soonest) or upcoming (starting soonest).
+  async listPublic(
+    query: Record<string, string | number> = {},
+  ): Promise<Wire['PublicAuctionList']> {
     const now = await this.mongo.now();
+    const upcoming = query.phase === 'upcoming';
     const rows = await this.mongo.c.auctions
       .find(
-        { state: 'Active', endAt: { $gt: now } },
+        upcoming
+          ? { state: 'Active', startAt: { $gt: now } }
+          : { state: 'Active', startAt: { $lte: now }, endAt: { $gt: now } },
         {
-          sort: { endAt: 1 },
+          sort: upcoming ? { startAt: 1 } : { endAt: 1 },
           limit: 50,
         },
       )
@@ -758,6 +821,7 @@ export class AuctionBiddingService {
         items.push({
           id: a._id,
           version: a.version,
+          phase: phaseOf(a, now),
           title: String((item?.snapshot as { title?: string })?.title ?? ''),
           state: a.state as 'Active' | 'OnHold',
           startPrice: a.startPrice,
@@ -819,7 +883,18 @@ export class AuctionBiddingService {
             },
           },
           ...(view === 'active'
-            ? [{ $match: { state: 'Active', endAt: { $gt: now } } }]
+            ? [
+                {
+                  $match: {
+                    state: 'Active',
+                    startAt: { $lte: now },
+                    endAt: { $gt: now },
+                  },
+                },
+              ]
+            : []),
+          ...(view === 'upcoming'
+            ? [{ $match: { state: 'Active', startAt: { $gt: now } } }]
             : []),
           ...(view === 'payment'
             ? [
@@ -937,7 +1012,7 @@ export class AuctionBiddingService {
             }))));
       if (!a || (!own && !boughtNow)) throw notFound();
       const now = await tx.now();
-      const open = a.state === 'Active' && now < a.endAt;
+      const open = phaseOf(a, now) === 'Live';
       const won = a.winnerId === actor._id;
       return {
         auctionId: a._id,

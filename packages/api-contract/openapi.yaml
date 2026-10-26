@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.51.0
+  version: 0.52.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Participant agreement workspaces with mutually confirmed mode/price proposals and linked Exchange history are implemented. Exact Order conversations can be opened by their ACTIVE Buyer or Seller, including BuyNow and historical Orders. Member private address book and versioned demo service-area directory are
@@ -5701,6 +5701,144 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /auction-intakes/{intakeId}/publish:
+    post:
+      operationId: publishAuction
+      tags:
+        - Auctions
+      description: "ADR 0047. Owner MEMBER publishes a Passed (inspected) intake while ACTIVE and
+        unrestricted and while the listing revision is unchanged. startAt null starts now; otherwise
+        startAt is 5 minutes to 7 days ahead. durationHours is 1-168. The auction is stored Active;
+        before startAt its phase is Scheduled and bids/Auto/Buy Now return 409 AuctionNotStarted."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: intakeId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishAuction"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/schedule:
+    post:
+      operationId: rescheduleAuction
+      tags:
+        - Auctions
+      description: "ADR 0047. Seller edits the time of an Active auction before the first bid and
+        before any Buy Now, at most 5 times. Scheduled: startAt (null = now) and durationHours. Live:
+        only durationHours (end = startAt + duration, at least 1 hour from now); startAt must be null.
+        expectedVersion is the auction version."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RescheduleAuction"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /operations/auction-intakes:
     get:
       operationId: listPointAuctionIntakes
@@ -5880,8 +6018,10 @@ paths:
       operationId: openAuction
       tags:
         - Auctions
-      description: "Assigned independent STAFF opens a Passed intake while the seller is still ACTIVE:
-        startAt is server time, endAt is 24 hours later, no scheduling or extension."
+      deprecated: true
+      description: "Superseded by publishAuction (ADR 0047), kept for operations tooling. Assigned
+        independent STAFF opens a Passed intake while the seller is still ACTIVE: startAt is server
+        time and the auction runs 24 hours."
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -6254,10 +6394,15 @@ paths:
       operationId: listAuctions
       tags:
         - Auctions
-      description: Public. Active auctions ending soonest first (max 50). Shows price and anonymous bidder
-        count; ceilings are never exposed.
+      description: Public. phase=live (default) lists started Active auctions ending soonest first;
+        phase=upcoming lists scheduled ones starting soonest first (ADR 0047). Max 50. Shows price and
+        anonymous bidder count; ceilings are never exposed.
       x-implementation-status: implemented
       security: []
+      parameters:
+        - in: query
+          name: phase
+          schema: { type: string, enum: [live, upcoming], default: live }
       responses:
         "200":
           description: Successful read.
@@ -6888,7 +7033,7 @@ paths:
           schema: { type: string, maxLength: 2048 }
         - in: query
           name: view
-          schema: { type: string, enum: [all, active, payment, selling], default: all }
+          schema: { type: string, enum: [all, active, upcoming, payment, selling], default: all }
       responses:
         "200":
           description: Caller-owned auction activity.
@@ -8154,8 +8299,9 @@ paths:
       operationId: buyAuctionNow
       tags:
         - Auctions
-      description: Only before the first valid bid; decided under the same auction lock as bids so exactly
-        one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer
+      description: ADR 0047 — offered while the auction is live, Buy Now has not been used and the current
+        price is below the Buy Now price, also after bids; the current leader cannot use it. Decided
+        under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer
         offered and the auction ends at min(endAt, now + 60 s). Others may outbid from Buy Now price +
         step in that window; the normal close then forms the winner's Order (24-hour payment). The
         receipt reports state Active and no orderId. Auctions already BuyNowPending keep their
@@ -11994,6 +12140,7 @@ components:
         - SESSION_EXPIRED
         - BidTooLow
         - AuctionClosed
+        - AuctionNotStarted
     ListingApiError:
       type: object
       additionalProperties: false
@@ -14933,6 +15080,52 @@ components:
           type: integer
           minimum: 1
           maximum: 2147483647
+    PublishAuction:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - startAt
+        - durationHours
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+          description: Intake version.
+        startAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Null starts now; otherwise 5 minutes to 7 days ahead.
+        durationHours:
+          type: integer
+          minimum: 1
+          maximum: 168
+    RescheduleAuction:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - startAt
+        - durationHours
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+          description: Auction version.
+        startAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Scheduled only; null starts now. Must be null once live.
+        durationHours:
+          type: integer
+          minimum: 1
+          maximum: 168
     ReceiveAuctionIntake:
       type: object
       additionalProperties: false
@@ -15357,6 +15550,24 @@ components:
         id:
           type: string
           format: uuid
+        phase:
+          type: string
+          enum:
+            - Scheduled
+            - Live
+            - Ended
+          description: ADR 0047. Derived from server time; Scheduled before startAt. Optional for older
+            servers.
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+          description: Auction version for the seller's rescheduleAuction. Optional for older servers.
+        scheduleRevision:
+          type: integer
+          minimum: 0
+          maximum: 5
+          description: Number of seller time edits. Optional for older servers.
         buyNowAt:
           type:
             - string
@@ -15395,7 +15606,8 @@ components:
             - "null"
           minimum: 10000
           maximum: 1000000
-          description: Null once the first valid bid exists or the auction is not Active.
+          description: ADR 0047. Shown while Buy Now is offered (scheduled, or live with the price below
+            it and Buy Now unused); null otherwise.
         currentPrice:
           type:
             - integer
@@ -15688,6 +15900,13 @@ components:
           type: integer
           minimum: 1
           maximum: 2147483647
+        phase:
+          type: string
+          enum:
+            - Scheduled
+            - Live
+            - Ended
+          description: ADR 0047. Optional for older servers.
         title:
           type: string
         state:
