@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
   Search,
-  SlidersHorizontal,
+  Filter,
   X,
   ArrowRight,
+  Menu,
 } from "lucide-react";
 import { HomeBookCard } from "../components/HomeBookCard";
 import { CatalogSort } from "../components/CatalogSort";
@@ -28,6 +29,7 @@ import {
 } from "@used-books/api-contract/catalog-taxonomy";
 import { catalogQueryKeys, readAttributes } from "../lib/catalog-filters";
 import { observeHeaderScroll } from "../lib/header-scroll";
+import { AutumnLeavesCanvas } from "../components/autumn/AutumnLeavesCanvas";
 import styles from "./BookSearchPage.module.css";
 
 const modes = [
@@ -276,14 +278,14 @@ function FilterForm({
         {mode === "Exchange"
           ? range("ExchangeValue", "Giá trị đổi")
           : mode !== "Sale" && (
-              <details className={styles.extraBudget}>
-                <summary>Khoảng giá trị đổi</summary>
-                {range("ExchangeValue", "Giá trị đổi")}
-                <p className={styles.filterHint}>
-                  Nếu chọn cả hai khoảng tiền, sách cần đáp ứng cả hai.
-                </p>
-              </details>
-            )}
+            <details className={styles.extraBudget}>
+              <summary>Khoảng giá trị đổi</summary>
+              {range("ExchangeValue", "Giá trị đổi")}
+              <p className={styles.filterHint}>
+                Nếu chọn cả hai khoảng tiền, sách cần đáp ứng cả hai.
+              </p>
+            </details>
+          )}
         <fieldset
           className={`${styles.filterGroup} ${styles.languageFilter}`}
           aria-labelledby={`${id}-language-label`}
@@ -372,6 +374,24 @@ export function BookSearchPage() {
       window.removeEventListener("resize", check);
     };
   }, []);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("latlai_catalog_filter_collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("latlai_catalog_filter_collapsed", String(next));
+      } catch { }
+      return next;
+    });
+  };
+
   const dialog = useRef<HTMLDialogElement>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [floating, setFloating] = useState(() => typeof window !== "undefined" && window.scrollY > 48);
@@ -493,21 +513,21 @@ export function BookSearchPage() {
   const chips = [
     ...(initial.categoryId
       ? [
-          {
-            key: "categoryId",
-            label: categoryFor(initial.categoryId)?.label || initial.categoryId,
-          },
-        ]
+        {
+          key: "categoryId",
+          label: categoryFor(initial.categoryId)?.label || initial.categoryId,
+        },
+      ]
       : []),
     ...(initial.language
       ? [
-          {
-            key: "language",
-            label:
-              languageOptions.find((o) => o.id === initial.language)?.label ||
-              initial.language,
-          },
-        ]
+        {
+          key: "language",
+          label:
+            languageOptions.find((o) => o.id === initial.language)?.label ||
+            initial.language,
+        },
+      ]
       : []),
     ...(initial.series ? [{ key: "series", label: initial.series }] : []),
     ...facetsFor(initial.categoryId, initial.attributes, "search").flatMap(
@@ -522,40 +542,40 @@ export function BookSearchPage() {
     ...(["minExchangeValue", "maxExchangeValue"] as const).flatMap((key) =>
       initial[key]
         ? [
-            {
-              key,
-              label:
-                (key.startsWith("min") ? "Đổi từ " : "Đổi đến ") +
-                formatVnd(Number(initial[key])),
-            },
-          ]
+          {
+            key,
+            label:
+              (key.startsWith("min") ? "Đổi từ " : "Đổi đến ") +
+              formatVnd(Number(initial[key])),
+          },
+        ]
         : [],
     ),
     ...(params.get("condition")
       ? [
-          {
-            key: "condition",
-            label:
-              conditions[params.get("condition") as keyof typeof conditions] ||
-              params.get("condition")!,
-          },
-        ]
+        {
+          key: "condition",
+          label:
+            conditions[params.get("condition") as keyof typeof conditions] ||
+            params.get("condition")!,
+        },
+      ]
       : []),
     ...(params.get("minSalePrice")
       ? [
-          {
-            key: "minSalePrice",
-            label: `Từ ${priceInvalid ? initial.minSalePrice : formatVnd(Number(initial.minSalePrice))}`,
-          },
-        ]
+        {
+          key: "minSalePrice",
+          label: `Từ ${priceInvalid ? initial.minSalePrice : formatVnd(Number(initial.minSalePrice))}`,
+        },
+      ]
       : []),
     ...(params.get("maxSalePrice")
       ? [
-          {
-            key: "maxSalePrice",
-            label: `Đến ${priceInvalid ? initial.maxSalePrice : formatVnd(Number(initial.maxSalePrice))}`,
-          },
-        ]
+        {
+          key: "maxSalePrice",
+          label: `Đến ${priceInvalid ? initial.maxSalePrice : formatVnd(Number(initial.maxSalePrice))}`,
+        },
+      ]
       : []),
   ];
   const filtered = chips.length > 0 || params.has("mode") || params.has("sort");
@@ -571,6 +591,9 @@ export function BookSearchPage() {
   }
   return (
     <div className={styles.page}>
+      <div className={styles.leavesWrapper} aria-hidden="true">
+        <AutumnLeavesCanvas />
+      </div>
       {chips.length > 0 && (
         <>
           <div
@@ -581,7 +604,7 @@ export function BookSearchPage() {
           >
             <div className={styles.stickyFilterInner}>
               <div className={styles.stickyFilterLead}>
-                <SlidersHorizontal size={14} aria-hidden="true" />
+                <Filter size={14} fill="currentColor" aria-hidden="true" />
                 <span>Đang lọc:</span>
               </div>
               <div className={styles.stickyChipsScroll}>
@@ -614,26 +637,59 @@ export function BookSearchPage() {
           <div className={styles.stickyFilterSpacer} aria-hidden="true" />
         </>
       )}
-      <div className={styles.catalog}>
-        <aside
-          ref={sidebar}
-          className={styles.sidebar}
-          aria-label="Bộ lọc sách"
+      <div
+        className={styles.catalog}
+        data-sidebar-collapsed={isSidebarCollapsed}
+      >
+        <div
+          className={styles.sidebarWrapper}
+          aria-hidden={isSidebarCollapsed}
         >
-          <h2>
-            <SlidersHorizontal size={18} aria-hidden="true" />
-            Bộ lọc sách
-          </h2>
-          <FilterForm
-            key={filterKey}
-            initial={initial}
-            id="desktop"
-            onApply={apply}
-            mode={params.get("mode") || ""}
-          />
-        </aside>
+          <aside
+            ref={sidebar}
+            className={styles.sidebar}
+            aria-label="Bộ lọc sách"
+          >
+            <div className={styles.sidebarHeader}>
+              <h2>
+                <Filter size={18} fill="currentColor" aria-hidden="true" />
+                Bộ lọc sách
+              </h2>
+              <button
+                type="button"
+                className={styles.collapseSidebarBtn}
+                onClick={toggleSidebar}
+                aria-label="Thu gọn bộ lọc sách"
+                title="Thu gọn bộ lọc"
+              >
+                <Menu size={18} aria-hidden="true" />
+              </button>
+            </div>
+            <FilterForm
+              key={filterKey}
+              initial={initial}
+              id="desktop"
+              onApply={apply}
+              mode={params.get("mode") || ""}
+            />
+          </aside>
+        </div>
         <section className={styles.results} aria-labelledby="catalog-results">
           <div className={styles.searchBar}>
+            {isSidebarCollapsed && (
+              <button
+                type="button"
+                className={styles.expandSidebarBtn}
+                onClick={toggleSidebar}
+                aria-label={`Mở bộ lọc sách${chips.length > 0 ? ` (${chips.length} đang chọn)` : ""}`}
+                title="Mở bộ lọc sách"
+              >
+                <Filter size={18} fill="currentColor" aria-hidden="true" />
+                {chips.length > 0 && (
+                  <span className={styles.expandFilterBadge}>{chips.length}</span>
+                )}
+              </button>
+            )}
             <form
               role="search"
               className={styles.search}
@@ -705,7 +761,7 @@ export function BookSearchPage() {
                   setFilterOpen(true);
                 }}
               >
-                <SlidersHorizontal size={17} aria-hidden="true" />
+                <Filter size={17} fill="currentColor" aria-hidden="true" />
                 Bộ lọc{chips.length > 0 && <span>{chips.length}</span>}
               </button>
               <CatalogSort

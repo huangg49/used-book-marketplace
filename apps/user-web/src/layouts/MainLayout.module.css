@@ -389,6 +389,8 @@
   background: var(--shop-wine-hover);
 }
 .footer {
+  position: relative;
+  z-index: 10;
   background: var(--shop-wine);
   color: var(--shop-cream);
   margin-top: 72px;

@@ -1,5 +1,25 @@
 # Điểm lưu hiện tại — 25/10/2026
 
+## Hiệu ứng Lá Vàng Mùa Thu Rơi (User Web - Trang Tìm Sách) — 26/10/2026
+
+- Nhánh `feat/web-edit-approved-listing`.
+- Theo yêu cầu mới nhất của người dùng: Gỡ bỏ bản đồ minh họa thung lũng (ruộng bậc thang, máy bay, mây, suối), chỉ giữ lại duy nhất hiệu ứng hoạt họa lá thu rơi tự nhiên trên trang tìm sách `/books` ([BookSearchPage.tsx](apps/user-web/src/pages/BookSearchPage.tsx)):
+  - Áp dụng sắc màu vàng lá thu Hà Nội (`#fcf5df` đến `#ead098` với vầng sáng nắng ấm `radial-gradient`), gợi nhớ nắng thu mật ong và thảm lá vàng sấu già trên phố Phan Đình Phùng.
+  - Tích hợp trực tiếp `<AutumnLeavesCanvas />` vào khung nhìn cố định `.leavesWrapper` (`position: fixed; inset: 0; pointer-events: none; z-index: 0;`).
+  - 42 lá cây mùa thu (lá phong đỏ, sồi già, bạch dương) bay chao liệng 3D mượt mà trên nền trang tìm kiếm, không che khuất hay gây rối mắt đối với các bộ lọc, thanh tìm kiếm và thẻ sách.
+  - Triệt tiêu hoàn toàn dải hở trắng trên footer: Bổ sung `ROUTES.search` vào điều kiện `homeFooter` trong [MainLayout.tsx](apps/user-web/src/layouts/MainLayout.tsx) để loại bỏ khoảng cách `margin-top: 72px` của footer, giúp nền vàng lá thu Hà Nội tiếp giáp liền mạch, mượt mà vào chân trang đỏ rượu `#5c0202`.
+  - Chuẩn hóa khung ảnh bìa sách dạng dọc tỷ lệ 3:4 tràn viền (Full Cover Edge-to-Edge) trong [BookCard.module.css](apps/user-web/src/components/BookCard.module.css): Thay thế khung ngang 180px cũ bằng `aspect-ratio: 3 / 4; width: 100%; height: auto; padding: 0;`, ảnh bìa chuyển sang `object-fit: cover; width: 100%; height: 100%;` lấp đầy 100% khung dọc, loại bỏ hoàn toàn viền trống hai bên.
+  - Điều chỉnh ràng buộc hiển thị 5 thẻ bài đăng/hàng trên desktop trong [BookSearchPage.module.css](apps/user-web/src/pages/BookSearchPage.module.css): Mở rộng container `.catalog` `max-width: 1600px; padding: 24px 32px 0;`, cấu hình lưới `.grid` thành `grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px 16px;`, điều chỉnh đệm nút `.view` trong `BookCard.module.css` để giữ độ thoáng và cân xứng thẩm mỹ, bổ sung breakpoint tablet 2 cột linh hoạt.
+  - **Nút thu gọn bộ lọc 3 dấu gạch & Animation gom vô gom ra (Collapsible Animated Filter Sidebar)**:
+    - Bổ sung nút 3 dấu gạch (`Menu` icon) ở góc phải tiêu đề "Bộ lọc sách" (`.collapseSidebarBtn`) trong panel bên trái để người dùng thu gọn sidebar khi muốn tập trung xem sách.
+    - Căn chỉnh thẳng hàng thanh tiêu đề bộ lọc: xóa bỏ các rule CSS `.sidebar h2` bị lặp, dùng `align-items: center; user-select: none;` để icon badge bên trái, tiêu đề "Bộ lọc sách" và nút 3 gạch bên phải nằm trên đúng 1 trục ngang, loại bỏ hoàn toàn hiện tượng lệch hàng và vệt bôi đen lật màu chữ.
+    - Đổi icon bộ lọc thành icon chiếc phễu đặc (`Filter` từ `lucide-react` với `fill="currentColor"`): đồng bộ icon phễu trên header bộ lọc, nút vuông mở lại bên cạnh thanh tìm kiếm, thanh lọc nổi (sticky filter) và nút bộ lọc mobile.
+    - Sửa lỗi tràn ảnh bìa trong danh sách hội thoại: giới hạn `position: absolute; inset: 0;` cho `.cover > .photoFrame` trong [BookCard.module.css](apps/user-web/src/components/BookCard.module.css), đặt kích thước khung và `overflow: hidden` cho `.cardCover` trong [Conversation.module.css](apps/user-web/src/components/conversation/Conversation.module.css) để ảnh bìa sách trong các thẻ trao đổi/hội thoại không bị văng đè lên giữa thẻ.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web test`: 27 test files / 201 tests PASS.
+  - `pnpm --filter @used-books/user-web lint`: PASS (0 errors).
+
 ## Chức năng Chỉnh sửa bài đăng đã duyệt (User Web) — 25/10/2026
 
 - Nhánh `feat/web-edit-approved-listing`, base từ nhánh `feat/web-profile-overview-redesign`.
