@@ -6,6 +6,9 @@ want the book. This supersedes the "BuyNow → CheckoutPending, tắt mọi bid"
 part of FR-AU06 in [LOCAL-AUCTION-01](../features/LOCAL_HANDOVER_AUCTION.md);
 the rest of FR-AU03–10 is unchanged.
 
+> 27/10/2026: [ADR 0047](0047-seller-scheduled-auctions.md) keeps Buy Now offered
+> after bids while the price is below it; the window rule below is unchanged.
+
 ## Decision
 
 - Buy Now is still offered only before the first valid bid and is decided

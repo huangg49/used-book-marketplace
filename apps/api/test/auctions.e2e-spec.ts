@@ -127,6 +127,55 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     buyNowPrice: 600_000,
     ...over,
   });
+  // Seller intake -> assigned Staff receive -> inspect Pass (intake v3).
+  async function passedIntake(over: Parameters<typeof intakeBody>[1] = {}) {
+    const seller = await actor();
+    const l = await saleListing(seller);
+    const created = await cmd(
+      'post',
+      '/auction-intakes',
+      intakeBody(l, over),
+      seller,
+    ).expect(200);
+    const intakeId = created.body.intakeId as string;
+    const pointStaff = over.pointId === HANDOVER_POINT_B ? otherStaff : staff;
+    await cmd(
+      'post',
+      `/operations/auction-intakes/${intakeId}/receive`,
+      { expectedVersion: 1, shelfCode: 'A-01' },
+      pointStaff,
+    ).expect(200);
+    await cmd(
+      'post',
+      `/operations/auction-intakes/${intakeId}/inspect`,
+      { expectedVersion: 2, outcome: 'Pass', note: null },
+      pointStaff,
+    ).expect(200);
+    return { seller, listing: l, intakeId };
+  }
+  // ADR 0047: the seller publishes now (startAt null) or later.
+  const publish = (
+    intakeId: string,
+    seller: Actor,
+    body: Partial<{
+      expectedVersion: number;
+      startAt: string | null;
+      durationHours: number;
+    }> = {},
+    key?: string,
+  ) =>
+    cmd(
+      'post',
+      `/auction-intakes/${intakeId}/publish`,
+      { expectedVersion: 3, startAt: null, durationHours: 24, ...body },
+      seller,
+      key,
+    );
+  const reschedule = (
+    auctionId: string,
+    seller: Actor,
+    body: { expectedVersion: number; startAt: string | null; durationHours: number },
+  ) => cmd('post', `/auctions/${auctionId}/schedule`, body, seller);
   // Seller intake -> assigned Staff receive -> inspect Pass -> open.
   async function openAuction(over: Parameters<typeof intakeBody>[1] = {}) {
     const seller = await actor();
@@ -1423,7 +1472,9 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     expect(pub.body.auction).toMatchObject({
       currentPrice: 450_000,
       minimumBid: 500_000,
-      buyNowPrice: null,
+      // ADR 0047: still below the Buy Now price, so it stays offered.
+      buyNowPrice: 600_000,
+      phase: 'Live',
       bidderCount: 2,
     });
     expect(pub.body.history.map((h: { price: number }) => h.price)).toEqual([
@@ -1513,7 +1564,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     ).expect(403);
   });
 
-  it('AC-AU07: a racing first bid and Buy Now have exactly one winner', async () => {
+  it('AC-AU07/ADR 0047: a racing first bid and Buy Now serialize; Buy Now still wins after the bid', async () => {
     for (let round = 0; round < 3; round++) {
       const { auctionId } = await openAuction();
       const [x, y] = [await actor(), await actor()];
@@ -1526,25 +1577,19 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
           y,
         ),
       ]);
-      expect([r1.status, r2.status].filter((s) => s === 200)).toHaveLength(1);
+      // Buy Now is offered before and after the 200k bid.
+      expect(r2.status).toBe(200);
       const a = (await db.c.auctions.findOne({ _id: auctionId }))!;
-      if (r2.status === 200) {
-        // ADR 0043: Buy Now leads at its price; the 200k bid is now too low.
-        expect(r1.body.code).toBe('BidTooLow');
-        expect(a).toMatchObject({
-          state: 'Active',
-          leaderId: y.id,
-          currentPrice: 600_000,
-          bidderCount: 1,
-          winnerId: null,
-        });
-        expect(a.endAt.getTime() - a.buyNowAt!.getTime()).toBe(60_000);
-      } else
-        expect(a).toMatchObject({
-          state: 'Active',
-          leaderId: x.id,
-          bidderCount: 1,
-        });
+      // ADR 0043: Buy Now leads at its price; a later 200k bid is too low.
+      if (r1.status !== 200) expect(r1.body.code).toBe('BidTooLow');
+      expect(a).toMatchObject({
+        state: 'Active',
+        leaderId: y.id,
+        currentPrice: 600_000,
+        bidderCount: r1.status === 200 ? 2 : 1,
+        winnerId: null,
+      });
+      expect(a.endAt.getTime() - a.buyNowAt!.getTime()).toBe(60_000);
     }
   });
 
@@ -1884,6 +1929,263 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     const a = (await db.c.auctions.findOne({ _id: auctionId }))!;
     expect(a.endAt).toEqual(original);
     expect(a.buyNowAt!.getTime()).toBe(original.getTime() - 30_000);
+  });
+
+  describe('ADR 0047: seller-published and scheduled auctions', () => {
+    const later = (ms: number) => new Date(Date.now() + ms).toISOString();
+    const buyNowCmd = (auctionId: string, a: Actor) =>
+      cmd(
+        'post',
+        `/auctions/${auctionId}/buy-now`,
+        { fulfillmentMethod: 'SelfCollect' },
+        a,
+      );
+    const publicIds = async (query = '') =>
+      (await call('get', `/auctions${query}`).expect(200)).body.items.map(
+        (i: { id: string }) => i.id,
+      );
+
+    it('only the owner publishes a Passed intake; limits, stale versions and replay', async () => {
+      const { seller, intakeId } = await passedIntake();
+      const stranger = await actor();
+      await publish(intakeId, stranger).expect(404);
+      await publish(intakeId, staff).expect(403);
+      await publish(intakeId, seller, { durationHours: 0 }).expect(422);
+      await publish(intakeId, seller, { durationHours: 169 }).expect(422);
+      for (const startAt of [later(-60_000), later(60_000), later(8 * 24 * HOUR)])
+        expect(
+          (await publish(intakeId, seller, { startAt }).expect(422)).body
+            .fieldErrors[0].path,
+        ).toBe('startAt');
+      await publish(intakeId, seller, { expectedVersion: 2 }).expect(409);
+
+      const startAt = later(2 * HOUR);
+      const key = randomUUID();
+      const r = await publish(
+        intakeId,
+        seller,
+        { startAt, durationHours: 6 },
+        key,
+      ).expect(200);
+      validates('AuctionCommandReceipt', r.body);
+      expect(r.body).toMatchObject({ state: 'Auctioning', entityType: 'AuctionIntake' });
+      const replay = await publish(
+        intakeId,
+        seller,
+        { startAt, durationHours: 6 },
+        key,
+      ).expect(200);
+      expect(replay.headers['idempotency-replayed']).toBe('true');
+      expect(replay.body).toEqual(r.body);
+      await publish(intakeId, seller, { startAt, durationHours: 7 }, key).expect(409);
+      expect(
+        (await publish(intakeId, seller, { expectedVersion: 4 }).expect(409)).body
+          .code,
+      ).toBe('InvalidState');
+      const docs = await db.c.auctions.find({ intakeId }).toArray();
+      expect(docs).toHaveLength(1);
+      expect(docs[0]).toMatchObject({
+        publishedBy: 'Seller',
+        scheduleRevision: 0,
+        state: 'Active',
+      });
+      expect(docs[0].startAt.toISOString()).toBe(startAt);
+      expect(docs[0].endAt.getTime() - docs[0].startAt.getTime()).toBe(6 * HOUR);
+      expect(docs[0].plannedEndAt).toEqual(docs[0].endAt);
+    });
+
+    it('publish before inspection passes is refused', async () => {
+      const seller = await actor();
+      const l = await saleListing(seller);
+      const created = await cmd(
+        'post',
+        '/auction-intakes',
+        intakeBody(l),
+        seller,
+      ).expect(200);
+      const r = await publish(created.body.intakeId, seller, {
+        expectedVersion: 1,
+      }).expect(409);
+      expect(r.body.code).toBe('InvalidState');
+    });
+
+    it('two publishes with different keys create exactly one auction', async () => {
+      const { seller, intakeId } = await passedIntake();
+      const replies = await Promise.all([
+        publish(intakeId, seller),
+        publish(intakeId, seller, { startAt: later(HOUR) }),
+      ]);
+      expect(replies.map((r) => r.status).sort()).toEqual([200, 409]);
+      expect(await db.c.auctions.countDocuments({ intakeId })).toBe(1);
+    });
+
+    it('a scheduled auction is listed as upcoming and refuses bids and Buy Now until its start', async () => {
+      const { seller, intakeId } = await passedIntake();
+      await publish(intakeId, seller, {
+        startAt: later(2 * HOUR),
+        durationHours: 3,
+      }).expect(200);
+      const a = (await db.c.auctions.findOne({ intakeId }))!;
+      expect(await publicIds()).not.toContain(a._id);
+      expect(await publicIds('?phase=upcoming')).toContain(a._id);
+      await call('get', '/auctions?phase=soon').expect(400);
+      const pub = await call('get', `/auctions/${a._id}`).expect(200);
+      validates('PublicAuction', pub.body);
+      expect(pub.body.auction).toMatchObject({
+        phase: 'Scheduled',
+        buyNowPrice: 600_000,
+        version: 1,
+      });
+      const mine = await call('get', '/me/auctions?view=upcoming', seller).expect(200);
+      expect(mine.body.items.map((i: { auction: { id: string } }) => i.auction.id)).toEqual([a._id]);
+
+      const [x, y] = [await actor(), await actor()];
+      for (const b of [x, y]) await longSession(b);
+      pinClock(new Date(a.startAt.getTime() - 1));
+      expect((await bid(a._id, x, 200_000).expect(409)).body.code).toBe(
+        'AuctionNotStarted',
+      );
+      expect((await auto(a._id, x, 300_000).expect(409)).body.code).toBe(
+        'AuctionNotStarted',
+      );
+      expect((await buyNowCmd(a._id, y).expect(409)).body.code).toBe(
+        'AuctionNotStarted',
+      );
+      vi.restoreAllMocks();
+      pinClock(a.startAt);
+      await bid(a._id, x, 200_000).expect(200);
+      // ADR 0047: Buy Now stays offered after the first bid.
+      const bought = await buyNowCmd(a._id, y).expect(200);
+      expect(bought.body).toMatchObject({ currentPrice: 600_000, leading: true });
+      vi.restoreAllMocks();
+      const after = (await db.c.auctions.findOne({ _id: a._id }))!;
+      expect(after.endAt.getTime()).toBe(a.startAt.getTime() + 60_000);
+    });
+
+    it('the seller edits the time before the first bid only; live edits move the end', async () => {
+      const { seller, intakeId } = await passedIntake();
+      await publish(intakeId, seller, { startAt: later(3 * HOUR) }).expect(200);
+      const a = (await db.c.auctions.findOne({ intakeId }))!;
+      const stranger = await actor();
+      await reschedule(a._id, stranger, {
+        expectedVersion: 1,
+        startAt: null,
+        durationHours: 24,
+      }).expect(404);
+      await reschedule(a._id, seller, {
+        expectedVersion: 2,
+        startAt: null,
+        durationHours: 24,
+      }).expect(409);
+      // Scheduled: move the start later, then start it now for 2 hours.
+      const moved = later(5 * HOUR);
+      await reschedule(a._id, seller, {
+        expectedVersion: 1,
+        startAt: moved,
+        durationHours: 12,
+      }).expect(200);
+      expect((await db.c.auctions.findOne({ _id: a._id }))!.startAt.toISOString()).toBe(moved);
+      const live = await reschedule(a._id, seller, {
+        expectedVersion: 2,
+        startAt: null,
+        durationHours: 2,
+      }).expect(200);
+      validates('AuctionCommandReceipt', live.body);
+      const started = (await db.c.auctions.findOne({ _id: a._id }))!;
+      expect(started.scheduleRevision).toBe(2);
+      expect(await publicIds()).toContain(a._id);
+      // Live: the start is fixed and at least one hour must remain.
+      await reschedule(a._id, seller, {
+        expectedVersion: 3,
+        startAt: later(HOUR),
+        durationHours: 24,
+      }).expect(422);
+      await reschedule(a._id, seller, {
+        expectedVersion: 3,
+        startAt: null,
+        durationHours: 1,
+      }).expect(422);
+      await reschedule(a._id, seller, {
+        expectedVersion: 3,
+        startAt: null,
+        durationHours: 48,
+      }).expect(200);
+      const extended = (await db.c.auctions.findOne({ _id: a._id }))!;
+      expect(extended.endAt.getTime() - extended.startAt.getTime()).toBe(48 * HOUR);
+      // After the first bid the time is final (FR-AU02).
+      await bid(a._id, await actor(), 200_000).expect(200);
+      const locked = await reschedule(a._id, seller, {
+        expectedVersion: 5,
+        startAt: null,
+        durationHours: 24,
+      }).expect(409);
+      expect(locked.body.code).toBe('InvalidState');
+    });
+
+    it('race: an edit and the first bid serialize under the auction lock', async () => {
+      for (let round = 0; round < 3; round++) {
+        const { seller, intakeId } = await passedIntake();
+        await publish(intakeId, seller).expect(200);
+        const a = (await db.c.auctions.findOne({ intakeId }))!;
+        const [edit, first] = await Promise.all([
+          reschedule(a._id, seller, {
+            expectedVersion: 1,
+            startAt: null,
+            durationHours: 36,
+          }),
+          bid(a._id, await actor(), 200_000),
+        ]);
+        expect(first.status).toBe(200);
+        const after = (await db.c.auctions.findOne({ _id: a._id }))!;
+        if (edit.status === 200)
+          expect(after.endAt.getTime() - after.startAt.getTime()).toBe(36 * HOUR);
+        else {
+          expect(edit.body.code).toMatch(/InvalidState|VersionConflict/);
+          expect(after.endAt).toEqual(a.endAt);
+        }
+        expect(after.bidderCount).toBe(1);
+      }
+    });
+
+    it('Buy Now is refused to the leader and once the price reaches it', async () => {
+      const { seller, intakeId } = await passedIntake();
+      await publish(intakeId, seller).expect(200);
+      const a = (await db.c.auctions.findOne({ intakeId }))!;
+      const [x, y] = [await actor(), await actor()];
+      await bid(a._id, x, 300_000).expect(200);
+      expect((await buyNowCmd(a._id, x).expect(409)).body.code).toBe('InvalidState');
+      await bid(a._id, y, 600_000).expect(200);
+      const pub = await call('get', `/auctions/${a._id}`).expect(200);
+      expect(pub.body.auction.buyNowPrice).toBeNull();
+      expect((await buyNowCmd(a._id, x).expect(409)).body.code).toBe('InvalidState');
+      expect(
+        (await db.c.auctions.findOne({ _id: a._id }))!.buyNowAt,
+      ).toBeNull();
+    });
+
+    it('an auction without a Buy Now price can still be published and never offers it', async () => {
+      const { seller, intakeId } = await passedIntake({ buyNowPrice: null });
+      await publish(intakeId, seller).expect(200);
+      const a = (await db.c.auctions.findOne({ intakeId }))!;
+      const pub = await call('get', `/auctions/${a._id}`).expect(200);
+      expect(pub.body.auction).toMatchObject({ buyNowPrice: null, phase: 'Live' });
+      await buyNowCmd(a._id, await actor()).expect(409);
+    });
+
+    it('the seller withdraws a scheduled auction and the book goes to reclaim', async () => {
+      const { seller, intakeId } = await passedIntake();
+      await publish(intakeId, seller, { startAt: later(HOUR) }).expect(200);
+      await cmd(
+        'post',
+        `/auction-intakes/${intakeId}/cancel`,
+        { expectedVersion: 4 },
+        seller,
+      ).expect(200);
+      expect(await db.c.auction_intakes.findOne({ _id: intakeId })).toMatchObject({
+        state: 'ReclaimRequired',
+        reclaimReason: 'SellerCancelled',
+      });
+    });
   });
 
   it('FR-H09/H11/T03: report acceptance, one-time code and Staff handover open the inspection window', async () => {
@@ -3128,7 +3430,8 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
 
     it('race: two people turn on Auto together; the order never changes the outcome', async () => {
       for (let round = 0; round < 3; round++) {
-        const { auctionId } = await openAuction();
+        // No Buy Now price: 600000 below must be a leaked ceiling, not the price.
+        const { auctionId } = await openAuction({ buyNowPrice: null });
         const [x, y] = [await actor(), await actor()];
         const [rx, ry] = await Promise.all([
           auto(auctionId, x, 400_000),
@@ -3259,7 +3562,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       });
     });
 
-    it('race: two Buy Now at once, or Buy Now against an Auto, has one winner', async () => {
+    it('race: two Buy Now at once have one winner; Buy Now beats an Auto below its price', async () => {
       for (const rival of ['buy-now', 'auto'] as const) {
         const { auctionId } = await openAuction();
         const [x, y] = [await actor(), await actor()];
@@ -3269,20 +3572,22 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
             ? auto(auctionId, y, 400_000)
             : buyNowCmd(auctionId, y),
         ]);
-        expect([r1.status, r2.status].filter((s) => s === 200)).toHaveLength(1);
         const a = (await db.c.auctions.findOne({ _id: auctionId }))!;
         const orders = await db.c.point_orders.countDocuments({ auctionId });
         // ADR 0043: Buy Now never forms an Order before the window closes.
-        if (a.buyNowAt) {
-          expect(a).toMatchObject({ state: 'Active', currentPrice: 600_000 });
-          expect(orders).toBe(0);
+        expect(orders).toBe(0);
+        expect(a).toMatchObject({ state: 'Active', currentPrice: 600_000 });
+        expect(a.buyNowAt).not.toBeNull();
+        if (rival === 'buy-now') {
+          // One Buy Now per auction; the one that committed leads.
+          expect([r1.status, r2.status].sort()).toEqual([200, 409]);
+          expect(a.leaderId).toBe(r1.status === 200 ? x.id : y.id);
         } else {
-          expect(a).toMatchObject({
-            state: 'Active',
-            leaderId: y.id,
-            bidderCount: 1,
-          });
-          expect(orders).toBe(0);
+          // ADR 0047: an Auto that committed first does not withdraw Buy Now;
+          // one that comes after it is below the new minimum.
+          expect(r1.status).toBe(200);
+          expect(a.leaderId).toBe(x.id);
+          expect(a.bidderCount).toBe(r2.status === 200 ? 2 : 1);
         }
       }
     });
@@ -3483,13 +3788,16 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       }
     });
 
-    it('Buy Now disappears once an Auto counts as the first bid', async () => {
+    it('ADR 0047: Buy Now stays after an Auto first bid and beats a lower ceiling', async () => {
       const { auctionId } = await openAuction();
       const [x, y] = [await actor(), await actor()];
       await auto(auctionId, x, 300_000).expect(200);
       const pub = await call('get', `/auctions/${auctionId}`).expect(200);
-      expect(pub.body.auction.buyNowPrice).toBeNull();
-      await buyNowCmd(auctionId, y).expect(409);
+      expect(pub.body.auction.buyNowPrice).toBe(600_000);
+      await buyNowCmd(auctionId, y).expect(200);
+      const { a } = await expectConsistent(auctionId);
+      expect(a).toMatchObject({ leaderId: y.id, currentPrice: 600_000 });
+      expect(a.endAt.getTime() - a.buyNowAt!.getTime()).toBe(60_000);
     });
   });
   describe('FR-AU09 holds and FR-N03 notifications', () => {

@@ -172,7 +172,7 @@ export function AuctionHeroCard({
 
           {auction.buyNowPrice !== null && (
             <AppText kind="small" style={styles.heroBuyNowText}>
-              Mua ngay trước lượt trả đầu:{" "}
+              Mua ngay:{" "}
               <AppText kind="bold" style={styles.heroBuyNowText}>
                 {formatVnd(auction.buyNowPrice)}
               </AppText>

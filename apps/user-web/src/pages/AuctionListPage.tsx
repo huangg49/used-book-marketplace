@@ -21,7 +21,7 @@ const SORTS: Record<string, { label: string; compare: (a: AuctionSummary, b: Auc
   priceDesc: { label: 'Giá cao đến thấp', compare: (a, b) => price(b) - price(a) },
 }
 const STEPS = [
-  ['Sách được kiểm tra trước', 'Người bán gửi sách tới điểm giao nhận. Nhân viên kiểm tra rồi mới mở phiên 24 giờ.'],
+  ['Sách được kiểm tra trước', 'Người bán gửi sách tới điểm giao nhận. Sách đạt kiểm tra thì người bán tự đăng phiên ngay hoặc hẹn giờ mở.'],
   ['Bạn chọn mức trả', 'Trả trực tiếp hoặc đặt mức tự động tối đa. Mức tự động chỉ bạn thấy; lượt trả giá không giữ tiền trong ví.'],
   ['Thắng phiên, thanh toán rồi nhận sách', 'Người thắng thanh toán từ ví mô phỏng trong 24 giờ sau khi phiên kết thúc. Mua ngay có hạn 15 phút. Bạn tự nhận sách tại điểm ở TP.HCM.'],
 ]
@@ -30,7 +30,9 @@ export function AuctionListPage() {
   const auth = useSession()
   const [params, setParams] = useSearchParams()
   const live = useAuctionListLive()
-  const result = useQuery({ queryKey: ['auctions'], queryFn: listAuctions, retry: false, staleTime: 0, refetchInterval: live ? false : 30_000 })
+  const result = useQuery({ queryKey: ['auctions'], queryFn: () => listAuctions(), retry: false, staleTime: 0, refetchInterval: live ? false : 30_000 })
+  // ADR 0047: scheduled auctions are shown apart and cannot be bid on yet.
+  const upcoming = useQuery({ queryKey: ['auctions', 'upcoming'], queryFn: () => listAuctions('upcoming'), retry: false, refetchInterval: 60_000 })
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params)
     if (value) next.set(key, value); else next.delete(key)
@@ -74,6 +76,11 @@ export function AuctionListPage() {
       {result.data && showData && items.length > 0 && <AuctionGrid className={styles.grid} orderKey={layoutKey}>{items.map((auction) => <AuctionCard key={auction.id} auction={auction} serverTime={result.data.serverTime} />)}</AuctionGrid>}
       {all.length >= 50 && <p className={styles.limit}>Đang hiển thị tối đa 50 phiên sắp kết thúc. Bộ lọc và sắp xếp áp dụng trong danh sách này.</p>}
     </section>
+    {!!upcoming.data?.items.length && <section aria-labelledby="auction-upcoming-title">
+      <div className={styles.sectionHeading}><h2 id="auction-upcoming-title">Sắp mở</h2></div>
+      <p className={styles.filterScope}>Người bán đã hẹn giờ mở các phiên này. Bạn có thể xem trước; trả giá và mua ngay mở khi phiên bắt đầu.</p>
+      <AuctionGrid className={styles.grid} orderKey={upcoming.data.items.map((a) => a.id).join(':')}>{upcoming.data.items.map((auction) => <AuctionCard key={auction.id} auction={auction} serverTime={upcoming.data.serverTime} />)}</AuctionGrid>
+    </section>}
     <p className={styles.demo}>Điểm giao nhận và tiền trong ví được mô phỏng cho đồ án.</p>
     </div>
   </div>

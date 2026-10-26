@@ -4,7 +4,7 @@ import { AuctionPrice } from '../AuctionPrice'
 import { AuctionPhoto } from '../AuctionGallery'
 import { formatRemaining, useCountdown } from '../../hooks/useAuctionClock'
 import { formatVnd, ROUTES } from '../../lib/routes'
-import type { AuctionSummary } from '../../services/auctions'
+import { auctionPhase, type AuctionSummary } from '../../services/auctions'
 import styles from './AuctionCard.module.css'
 
 const HOUR = 3_600_000
@@ -12,7 +12,9 @@ const endsAt = (iso: string) =>
   new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
 
 export function AuctionCard({ auction, serverTime }: { auction: AuctionSummary; serverTime: string }) {
-  const remaining = useCountdown(auction.endAt, serverTime)
+  // ADR 0047: a scheduled card counts down to the start, not the end.
+  const scheduled = auctionPhase(auction, serverTime) === 'Scheduled'
+  const remaining = useCountdown(scheduled ? auction.startAt : auction.endAt, serverTime)
   const hasBids = auction.bidderCount > 0
   const price = auction.currentPrice ?? auction.startPrice
   const to = ROUTES.auctionDetail(auction.id)
@@ -20,9 +22,9 @@ export function AuctionCard({ auction, serverTime }: { auction: AuctionSummary; 
     <article className={styles.card} data-auction-id={auction.id}>
       <Link to={to} className={styles.cover} aria-label={`Xem phiên đấu giá ${auction.title}`}>
         <AuctionPhoto auction={auction} interactive={false} />
-          <span className={`${styles.timer} ${remaining < HOUR ? styles.timerSoon : ''}`}>
+          <span className={`${styles.timer} ${!scheduled && remaining < HOUR ? styles.timerSoon : ''}`}>
             <Timer size={13} aria-hidden="true" />
-            {formatRemaining(remaining, true)}
+            {scheduled ? `Mở sau ${formatRemaining(remaining, true)}` : formatRemaining(remaining, true)}
           </span>
       </Link>
       <div className={styles.meta}>
@@ -39,7 +41,7 @@ export function AuctionCard({ auction, serverTime }: { auction: AuctionSummary; 
             {hasBids ? `${auction.bidderCount} người trả giá` : 'Chưa có lượt trả giá'}
           </span>
         </div>
-        <p className={styles.ends}>Kết thúc {endsAt(auction.endAt)}</p>
+        <p className={styles.ends}>{scheduled ? `Mở lúc ${endsAt(auction.startAt)} · kết thúc ${endsAt(auction.endAt)}` : `Kết thúc ${endsAt(auction.endAt)}`}</p>
         <p className={styles.point}>{auction.pointName}</p>
         {auction.buyNowPrice !== null && (
           <p className={styles.buyNow}>Mua ngay <strong>{formatVnd(auction.buyNowPrice)}</strong></p>

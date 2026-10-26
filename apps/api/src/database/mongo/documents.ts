@@ -919,6 +919,11 @@ export interface AuctionDoc extends Lockable {
   buyNowAt: Date | null;
   startAt: Date;
   endAt: Date;
+  // ADR 0047: the seller-chosen end; endAt = min(plannedEndAt, buyNowAt + 60 s).
+  plannedEndAt: Date;
+  publishedAt: Date;
+  publishedBy: 'Staff' | 'Seller';
+  scheduleRevision: number;
   state: AuctionState;
   currentPrice: number | null;
   leaderId: string | null;
