@@ -1,4 +1,26 @@
-# Điểm lưu hiện tại — 26/10/2026
+# Điểm lưu hiện tại — 27/10/2026
+
+## Seller tự đăng/hẹn phiên, mua ngay sau bid — 27/10/2026
+
+- Nhánh `feature/seller-scheduled-auctions` từ main `d3b19e5`; chưa push/PR.
+  Owner cho ngoại lệ gate riêng gói này ([ADR0047](../adr/0047-seller-scheduled-auctions.md)).
+- API: `publishAuction` (seller, intake Passed, mở ngay hoặc hẹn 5 phút–7 ngày,
+  1–168 giờ), `rescheduleAuction` (trước bid đầu/mua ngay, tối đa 5 lần; đang mở
+  chỉ đổi thời lượng, còn ≥1 giờ). Phase Scheduled/Live/Ended suy từ giờ server,
+  không worker mở phiên; bid/Auto/mua ngay trước startAt → 409 `AuctionNotStarted`.
+  Mua ngay vẫn tùy chọn khi tạo; còn dùng sau bid khi giá < giá mua ngay, chưa ai
+  dùng và người gọi không đang dẫn. Staff `openAuction` giữ lại nhưng deprecated.
+- Migration mới `0037-seller-scheduled-auctions` (plannedEndAt/publishedAt/
+  publishedBy/scheduleRevision, backfill startAt+24h, index state+startAt). Nhóm
+  cần chạy migrate trước khi chạy API; chưa áp lên DB chính. Contract 0.52.0.
+- Client: user-web (đăng/đổi giờ, mục Sắp mở, chi tiết phiên hẹn giờ), RN (sheet
+  đăng/đổi giờ, Sắp mở), admin-web (bỏ nút Staff mở phiên, hiện giờ hẹn).
+- Kiểm tra local: API unit, Mongo suite 48 PASS, auction HTTP 70/71 (test giao
+  hàng ADR0044 timeout 15s khi chạy cả file, PASS khi chạy riêng), contract/routes
+  PASS; user-web 231, admin 30, RN auction 14 PASS; browser Chromium với API fixture
+  `_test` và route mock cho màn seller. NOT RUN: CI remote, thiết bị native,
+  test validator raw cho 0037, human review.
+
 
 ## Đã tích hợp bộ sách vào main — 26/10/2026
 
