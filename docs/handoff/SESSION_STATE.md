@@ -12,10 +12,10 @@
   User-web231unit/build/typecheck/lint và browser của hai lượt đồng bộ bên dưới
   vẫn là evidence hiện hành; không sửa source sau các check đó. Lint/chunk còn
   warning cũ. Không đưa env/token/DB/dump hoặc evidence chứa PII vào Git.
-- Chưa có review người thật theo TEAMWORK/ADR0046;8nhóm CI remote đang chạy trên
-  PR. Trạng thái CI hiện hành phải đọc trực tiếp từ head PR, không suy từ log cũ.
-  Chỉ squash
-  merge khi các điều kiện này đạt; không đổi branch protection hoặc bỏ gate.
+- Leader cho phép riêng PR67 merge không cần thành viên khác review trong phiên
+  26/10. Đây là ngoại lệ được owner duyệt cho gói này, không là human review PASS
+  hoặc thay quy định chung TEAMWORK/ADR0046.8nhóm CI remote đang chạy; chỉ squash
+  merge khi CI của đúng head đạt. Không đổi branch protection hoặc gate release.
   READINESS/DB chính/mobile giữ nguyên. Chi tiết local của lượt publish ở
   `.tmp/publish/`. Không có migration hoặc deploy lên DB chính trong lượt publish.
 
