@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useSession } from "../../../core/session/session-provider";
@@ -37,7 +37,13 @@ export function ScheduleAuctionSheet({
   onDone: () => void;
 }) {
   const { client } = useSession();
-  const [now] = useState(() => Date.now());
+  // Ticking clock kept in state: render stays pure and the limits stay current.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!visible) return;
+    const timer = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, [visible]);
   const live = target?.kind === "reschedule" && target.live;
   const currentHours =
     target?.kind === "reschedule"
@@ -53,7 +59,7 @@ export function ScheduleAuctionSheet({
   if (!target) return null;
 
   const startAt = live ? Date.parse(target.startAt) : (choices[start]?.at ?? now);
-  const allowed = !live || durationAllowed(hours, startAt, Date.now());
+  const allowed = !live || durationAllowed(hours, startAt, now);
   const durations = [...new Set([...DURATION_CHOICES, currentHours])].sort((a, b) => a - b);
 
   const submit = async () => {
@@ -130,7 +136,7 @@ export function ScheduleAuctionSheet({
                 wine
                 title={h < 24 || h % 24 ? `${h} giờ` : `${h / 24} ngày`}
                 selected={hours === h}
-                disabled={busy || !!pending || (live && !durationAllowed(h, startAt, Date.now()))}
+                disabled={busy || !!pending || (live && !durationAllowed(h, startAt, now))}
                 onPress={() => setHours(h)}
               />
             ))}

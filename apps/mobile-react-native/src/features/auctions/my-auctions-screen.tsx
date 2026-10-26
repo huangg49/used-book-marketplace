@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 import { router } from "expo-router";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
@@ -42,6 +42,12 @@ export function MyAuctionsScreen({ userId }: { userId: string }) {
   const items = result.data?.pages.flatMap((page) => page.items) ?? [];
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<MyAuctionItem | null>(null);
+  // Scheduled/editable states follow the clock without reading it in render.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
   const edited = editing?.auction;
   return (
     <Screen footer={<MemberNavigation current="/auctions" />} footerAppearance="navigation">
@@ -71,7 +77,7 @@ export function MyAuctionsScreen({ userId }: { userId: string }) {
       )}
       <View style={{ gap: space.md }}>
         {items.map((item) => (
-          <Row key={item.auction.id} item={item} onEdit={() => setEditing(item)} />
+          <Row key={item.auction.id} item={item} now={now} onEdit={() => setEditing(item)} />
         ))}
       </View>
       <ScheduleAuctionSheet
@@ -84,7 +90,7 @@ export function MyAuctionsScreen({ userId }: { userId: string }) {
                 kind: "reschedule",
                 auctionId: edited.id,
                 version: edited.version!,
-                live: !isScheduled(edited, Date.now()),
+                live: !isScheduled(edited, now),
                 startAt: edited.startAt,
                 endAt: edited.endAt,
               }
@@ -100,9 +106,8 @@ export function MyAuctionsScreen({ userId }: { userId: string }) {
   );
 }
 
-function Row({ item, onEdit }: { item: MyAuctionItem; onEdit: () => void }) {
+function Row({ item, now, onEdit }: { item: MyAuctionItem; now: number; onEdit: () => void }) {
   const { auction } = item;
-  const now = Date.now();
   const status = item.needsPayment
     ? `Cần thanh toán trước ${item.paymentDeadline ? time(item.paymentDeadline) : "hạn"}`
     : isScheduled(auction, now)
