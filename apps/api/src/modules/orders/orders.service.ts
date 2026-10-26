@@ -346,6 +346,7 @@ export class OrdersService {
             .find({ revisionId: r._id }, { sort: { position: 1 } })
             .toArray();
           const item: Wire['OrderItemSnapshot'] = {
+            ...(r.bundle ? { bundle: r.bundle } : {}),
             listingId: l._id,
             listingRevisionId: r._id,
             catalogRevisionId: b._id,

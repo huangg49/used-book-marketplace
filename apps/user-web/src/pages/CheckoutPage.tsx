@@ -1,3 +1,5 @@
+import { BundleManifest, BundleAcknowledgment } from "../components/BookBundle";
+import { listingTitle } from "../lib/book-bundle";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { useRef, useState } from "react";
@@ -10,7 +12,8 @@ import {
 import { z } from "zod";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
-import { getPublicListing } from "../services/public-listings";
+import { getPublicListing, type PublicListing } from "../services/public-listings";
+import { capturePurchaseListing, purchaseListingKey } from "../lib/purchase-listing";
 import { formatVnd } from "../lib/routes";
 import { PurchaseDialog } from "../components/PurchaseDialog";
 import { PurchaseAddressFields } from "../components/PurchaseAddressFields";
@@ -56,6 +59,7 @@ const quote = z.object({
     sellerProceedsOnCompletion: z.number().int(),
   }),
 });
+const uncertainResult = "Chưa xác nhận được kết quả. Hãy thử lại cùng thao tác; thông tin đã nhập được giữ nguyên.";
 function errorText(error: unknown, phase: "address" | "quote" | "attach") {
   if (!(error instanceof ApiError))
     return "Chưa kết nối được máy chủ. Kiểm tra mạng rồi thử lại.";
@@ -76,6 +80,14 @@ function errorText(error: unknown, phase: "address" | "quote" | "attach") {
 }
 export function CheckoutPage() {
   const { listingId = "" } = useParams<{ listingId: string }>();
+  const [params] = useSearchParams();
+  const auth = useSession();
+  return <CheckoutListing key={`${auth.status === 'authenticated' ? auth.user.id : 'guest'}:${listingId}:${params.get('conversationId') ?? ''}`} />;
+}
+
+function CheckoutListing() {
+  const [acknowledgedRevision, setAcknowledgedRevision] = useState<string>();
+  const { listingId = "" } = useParams<{ listingId: string }>();
   const [searchParams] = useSearchParams();
   const conversationId = searchParams.get("conversationId") ?? "";
   const auth = useSession();
@@ -90,12 +102,14 @@ export function CheckoutPage() {
     queryFn: () => session.request("/me/addresses", addressBook),
     enabled: auth.status === "authenticated",
   });
+  const bundleAcknowledged = !!book.data && acknowledgedRevision === purchaseListingKey(book.data);
   const areas = useQuery({
     queryKey: ["service-areas"],
     queryFn: () => session.request("/service-areas", serviceAreas),
     enabled: auth.status === "authenticated",
   });
   const [prepared, setPrepared] = useState<{
+    listing: PublicListing;
     body: {
       quoteId: string;
       expectedQuoteVersion: number;
@@ -108,7 +122,9 @@ export function CheckoutPage() {
     attachVersion?: number;
   }>();
   const [dialogOpen, setDialogOpen] = useState(true);
+  const [pendingListing, setPendingListing] = useState<PublicListing>();
   const [retryPending, setRetryPending] = useState(false);
+  const [attachPending, setAttachPending] = useState(false);
   const [selected, setSelected] = useState("");
   const [form, setForm] = useState({
     recipientName: "",
@@ -120,6 +136,7 @@ export function CheckoutPage() {
   const [error, setError] = useState<string>();
   const intent = useRef<
     | {
+        listing: PublicListing;
         addressKey: string;
         quoteKey: string;
         attachKey: string;
@@ -145,10 +162,14 @@ export function CheckoutPage() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!book.data || !addresses.data || !areas.data || busy) return;
-    if (!book.data.fulfillment) {
+    if (!(intent.current?.listing ?? book.data).fulfillment) {
       setError(
         "Người bán chưa hoàn thiện nơi gửi cho bài đăng này nên chưa thể báo giá. Hãy trao đổi để người bán cập nhật trước.",
       );
+      return;
+    }
+    if (!intent.current && book.data.bundle && !bundleAcknowledged) {
+      setError('Xem danh sách và xác nhận mua toàn bộ các cuốn trong bộ.');
       return;
     }
     setBusy(true);
@@ -162,11 +183,13 @@ export function CheckoutPage() {
             addresses.data?.items.find((item) => item.isDefault) ??
             addresses.data?.items[0]);
       const keys: NonNullable<typeof intent.current> = intent.current ?? {
+        listing: capturePurchaseListing(book.data, acknowledgedRevision),
         addressKey: crypto.randomUUID(),
         quoteKey: crypto.randomUUID(),
         attachKey: crypto.randomUUID(),
       };
       intent.current = keys;
+      setPendingListing(keys.listing);
       if (!address || keys.addressBody) {
         if (
           !areas.data?.localities.some(
@@ -174,6 +197,10 @@ export function CheckoutPage() {
           )
         ) {
           setError("Hãy chọn một khu vực phục vụ trong danh sách.");
+          if (!keys.addressBody && !keys.quoteBody) {
+            intent.current = undefined;
+            setPendingListing(undefined);
+          }
           return;
         }
         keys.addressBody ??= JSON.stringify({
@@ -209,8 +236,9 @@ export function CheckoutPage() {
       setSelected(address.id);
       phase = "quote";
       keys.quoteBody ??= JSON.stringify({
-        expectedListingVersion: book.data.version,
-        expectedListingRevisionId: book.data.revisionId,
+        expectedListingVersion: keys.listing.version,
+        expectedListingRevisionId: keys.listing.revisionId,
+        ...(keys.listing.bundle ? { acknowledgeWholeBundle: true } : {}),
         destinationAddressId: address.id,
         expectedDestinationAddressVersion: address.version,
         method: "DirectDelivery",
@@ -233,6 +261,7 @@ export function CheckoutPage() {
       );
       setRetryPending(false);
       setPrepared({
+        listing: keys.listing,
         destination: `${address.recipientName} · ${address.phone} · ${address.detail}`,
         body: {
           quoteId: current.id,
@@ -244,14 +273,15 @@ export function CheckoutPage() {
         key: keys.attachKey,
       });
     } catch (cause) {
-      if (
+      const definitelyFailed =
         cause instanceof ApiError &&
-        [400, 403, 404, 409, 422, 429].includes(cause.status)
-      ) {
+        [400, 403, 404, 409, 422, 429].includes(cause.status);
+      if (definitelyFailed) {
         intent.current = undefined;
+        setPendingListing(undefined);
         setRetryPending(false);
       } else setRetryPending(true);
-      setError(errorText(cause, phase));
+      setError(definitelyFailed ? errorText(cause, phase) : uncertainResult);
     } finally {
       setBusy(false);
     }
@@ -277,6 +307,7 @@ export function CheckoutPage() {
       }
       const expectedVersion = prepared.attachVersion ?? conversation.version;
       setPrepared({ ...prepared, attachVersion: expectedVersion });
+      setAttachPending(true);
       await attachPurchaseQuote(
         conversationId,
         {
@@ -290,16 +321,29 @@ export function CheckoutPage() {
       );
       navigate(`/chat/${conversationId}`, { replace: true });
     } catch (cause) {
+      const definitelyFailed = cause instanceof ApiError && [400, 403, 404, 409, 422, 429].includes(cause.status);
+      if (definitelyFailed) setAttachPending(false);
       if (cause instanceof ApiError && cause.status === 409) {
         setError("Hội thoại hoặc báo giá vừa thay đổi. Hãy tạo lại báo giá.");
         intent.current = undefined;
         setPrepared(undefined);
-      } else setError(errorText(cause, "attach"));
+        setPendingListing(undefined);
+      } else setError(definitelyFailed ? errorText(cause, "attach") : uncertainResult);
     } finally {
       setBusy(false);
     }
   }
   const existing = addresses.data?.items ?? [];
+  const displayedListing = prepared?.listing ?? pendingListing ?? book.data;
+  function reloadListing() {
+    if (busy || retryPending || attachPending) return;
+    intent.current = undefined;
+    setPrepared(undefined);
+    setPendingListing(undefined);
+    setAcknowledgedRevision(undefined);
+    setError(undefined);
+    void book.refetch();
+  }
   const selectedAddress =
     selected === "new"
       ? undefined
@@ -308,6 +352,7 @@ export function CheckoutPage() {
         existing[0]);
   const disabled =
     busy ||
+    book.isFetching ||
     retryPending ||
     !book.data?.fulfillment ||
     !conversationId ||
@@ -329,15 +374,15 @@ export function CheckoutPage() {
       </header>
       <div className={styles.columns}>
         <div>
-          {book.data && (
+          {displayedListing && (
             <section className={styles.book}>
               <div className={styles.cover}>
-                <ListingPhoto book={book.data} />
+                <ListingPhoto book={displayedListing} />
               </div>
               <div>
-                <h2>{book.data.book.title}</h2>
-                <p>{book.data.book.authors.join(", ")}</p>
-                <p>Người bán: {book.data.seller.displayName}</p>
+                <h2>{listingTitle(displayedListing)}</h2>
+                <p>{displayedListing.book.authors.join(", ")}</p>
+                <p>Người bán: {displayedListing.seller.displayName}</p>
               </div>
             </section>
           )}
@@ -401,12 +446,12 @@ export function CheckoutPage() {
             : "Chọn khu vực luân chuyển và nơi nhận để xem phí giao nhận."
         }
       >
-        {book.data && (
+        {displayedListing && (
           <div className={styles.miniBook}>
             <div className={styles.miniCover}>
-              <ListingPhoto book={book.data} />
+              <ListingPhoto book={displayedListing} />
             </div>
-            <strong>{book.data.book.title}</strong>
+            <strong>{listingTitle(displayedListing)}</strong>
           </div>
         )}
         {!conversationId && (
@@ -420,6 +465,8 @@ export function CheckoutPage() {
             nhật.
           </p>
         )}
+        <BundleManifest bundle={displayedListing?.bundle} />
+        {displayedListing?.bundle && <BundleAcknowledgment bundle={displayedListing.bundle} checked={!!prepared || !!pendingListing || bundleAcknowledged} onChange={checked => setAcknowledgedRevision(checked ? purchaseListingKey(displayedListing) : undefined)} disabled={busy || retryPending || !!prepared} />}
         {(addresses.isError || areas.isError) && (
           <p role="alert" className={styles.error}>
             Chưa tải được thông tin giao nhận.{" "}
@@ -440,6 +487,7 @@ export function CheckoutPage() {
         {error && (
           <p role="alert" className={styles.error}>
             {error}
+            {!busy && !retryPending && !attachPending && <button type="button" className={styles.textButton} onClick={reloadListing}>Tải lại nội dung bài đăng</button>}
           </p>
         )}
         {prepared ? (

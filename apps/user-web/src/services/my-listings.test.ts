@@ -3,6 +3,7 @@ import { z } from "zod";
 vi.mock("./api", () => ({ session: { request: vi.fn() } }));
 import { session } from "./api";
 import {
+  myListingSchema,
   getMyBookIdentity,
   getMyListings,
   getMyListing,
@@ -16,6 +17,15 @@ beforeEach(() => {
 });
 
 describe("owner shelf reads", () => {
+  it("keeps the exact bundle manifest when parsing an owner shelf row", () => {
+    const bundle = { title: "Bộ tập 1 và 3", wholeOnly: true, exclusiveOwnershipDeclared: true,
+      items: [{ label: "Tập 1", condition: "Good", notes: "" }, { label: "Tập 3", condition: "Fair", notes: "Thiếu tập 2 giữa bộ." }] };
+    expect(myListingSchema.parse({
+      id: "10000000-0000-4000-8000-000000000001", version: 1,
+      state: { moderation: "Approved", visibility: "Visible", trade: "Available" },
+      currentRevision: { id: "10000000-0000-4000-8000-000000000002", content: { bundle } },
+    }).currentRevision.content.bundle).toEqual(bundle);
+  });
   it("bounds the overview read without changing the default full shelf size", async () => {
     request.mockResolvedValue({ items: [], nextCursor: "more" });
     await getMyListings(undefined, undefined, 4);

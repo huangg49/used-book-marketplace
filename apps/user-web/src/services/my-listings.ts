@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { session } from "./api";
+import { bundleSchema } from "../lib/book-bundle";
 
 const mediaReadSchema = z.object({
   id: z.string().uuid(),
@@ -36,6 +37,7 @@ export const myListingSchema = z
         bookId: z.string().nullable().optional(),
         content: z
           .object({
+            bundle: bundleSchema.nullable().optional(),
             bookId: z.string().nullable().optional(),
             title: z.string().nullable().optional(), // In case it's in content
             author: z.string().nullable().optional(),

@@ -214,6 +214,34 @@ describe("buildRevisionContent", () => {
   });
 });
 
+describe("approved whole-bundle edits", () => {
+  const manifest = () => ({ title: "Bộ tập 1 và 3", wholeOnly: true as const, exclusiveOwnershipDeclared: true as const,
+    items: [{ label: "Tập 1", condition: "Good" as const, notes: "" }, { label: "Tập 3", condition: "Fair" as const, notes: "Bìa sờn; không có tập 2." }] });
+  it("keeps the exact manifest in the editable form without sharing mutable server data", () => {
+    const bundle = manifest();
+    const form = formFromListing({ currentRevision: { content: { bundle, mode: "Sale", condition: "Fair", mediaIds: [] } } } as never);
+    expect(form.bundle).toEqual(bundle);
+    expect(form.condition).toBe("Fair");
+    form.bundle!.items[1].notes = "Đã chỉnh";
+    expect(bundle.items[1].notes).toBe("Bìa sờn; không có tập 2.");
+  });
+  it("rejects Exchange/Both and misleading aggregate condition", () => {
+    const bundle = manifest();
+    expect(validateRevision(valid({ bundle, condition: "Fair" }))).toEqual({});
+    expect(validateRevision(valid({ bundle, mode: "Both", exchangeValue: "50000", condition: "Fair" })).mode).toBeTruthy();
+    expect(validateRevision(valid({ bundle, condition: "LikeNew" })).condition).toBeTruthy();
+    bundle.items[1].label = " TẬP 1 ";
+    expect(validateRevision(valid({ bundle, condition: "Fair" })).bundle).toBeTruthy();
+  });
+  it("sends a complete copied manifest while keeping the representative book locked", () => {
+    const bundle = manifest();
+    const result = buildRevisionContent(valid({ bundle, condition: "Fair" }), "book-original", ["media-original"], { id: "addr-1", version: 3 });
+    expect(result).toMatchObject({ bookId: "book-original", bundle, mode: "Sale", condition: "Fair", exchangeValue: null });
+    bundle.items.pop();
+    expect(result.bundle!.items).toHaveLength(2);
+  });
+});
+
 describe("canToggleVisibility", () => {
   it("allows toggling visibility only on approved, available, non-removed marketplace listings", () => {
     expect(canToggleVisibility(item())).toBe(true);

@@ -106,6 +106,7 @@ export function OwnerListingRow({
     enabled: !!ownerId && !!bookId,
   });
   const title =
+    content.bundle?.title ||
     identity.data?.title ||
     content.title ||
     (identity.isLoading ? "Đang tải tên sách…" : "Chưa có thông tin tên sách");
@@ -246,19 +247,20 @@ export function OwnerListingRow({
                 title
               )}
             </h3>
+            {content.bundle && <p>Bộ {content.bundle.items.length} cuốn · Bán nguyên bộ</p>}
           </div>
 
           <div className={styles.gridPricesContainer}>
             {content.salePrice != null ? (
               <div className={styles.gridSaleCard}>
-                <span className={styles.gridPriceLabel}>Giá bán</span>
+                <span className={styles.gridPriceLabel}>{content.bundle ? "Giá cả bộ" : "Giá bán"}</span>
                 <strong className={styles.gridSaleVal}>
                   {formatVnd(content.salePrice)}
                 </strong>
               </div>
             ) : content.mode === "Sale" || content.mode === "Both" ? (
               <div className={styles.gridSaleCard}>
-                <span className={styles.gridPriceLabel}>Giá bán</span>
+                <span className={styles.gridPriceLabel}>{content.bundle ? "Giá cả bộ" : "Giá bán"}</span>
                 <strong className={styles.gridSaleVal}>Thỏa thuận</strong>
               </div>
             ) : null}
@@ -397,6 +399,7 @@ export function OwnerListingRow({
           )}
         </h3>
         {author && <p className={styles.author}>{author}</p>}
+        {content.bundle && <p>Bộ {content.bundle.items.length} cuốn · Bán nguyên bộ</p>}
         {identity.isError && (
           <p className={styles.identityError}>
             Chưa tải được thông tin sách.{" "}
@@ -446,7 +449,7 @@ export function OwnerListingRow({
       <div className={styles.prices}>
         {content.salePrice != null && (
           <div className={styles.priceSaleBlock}>
-            <span className={styles.priceLabel}>Giá bán</span>
+            <span className={styles.priceLabel}>{content.bundle ? "Giá cả bộ" : "Giá bán"}</span>
             <strong className={styles.priceMain}>
               {formatVnd(content.salePrice)}
             </strong>

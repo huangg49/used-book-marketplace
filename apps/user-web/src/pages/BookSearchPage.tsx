@@ -355,6 +355,15 @@ function FilterForm({
 
 export function BookSearchPage() {
   const [params, setParams] = useSearchParams();
+  const searchTerm = params.get("q") || "";
+  const [settledSearch, setSettledSearch] = useState(searchTerm);
+  const [composing, setComposing] = useState(false);
+  const searchPending = searchTerm !== settledSearch || composing;
+  useEffect(() => {
+    if (searchTerm === settledSearch) return;
+    const timer = window.setTimeout(() => setSettledSearch(searchTerm), 300);
+    return () => window.clearTimeout(timer);
+  }, [searchTerm, settledSearch]);
   const preview = isCatalogPreview(`?${params}`);
   const sidebar = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -433,7 +442,7 @@ export function BookSearchPage() {
   const result = useQuery({
     queryKey: ["catalog-search", taxonomyVersion, preview, query.toString()],
     queryFn: () => getSearchShelf(query, preview),
-    enabled: !priceInvalid,
+    enabled: !priceInvalid && !searchPending,
     retry: false,
     staleTime: 30_000,
     gcTime: 300_000,
@@ -695,7 +704,10 @@ export function BookSearchPage() {
               className={styles.search}
               onSubmit={(event) => {
                 event.preventDefault();
-                update("q", (params.get("q") || "").trim());
+                if (composing) return;
+                const value = searchTerm.trim();
+                setSettledSearch(value);
+                update("q", value);
               }}
             >
               <Search size={21} aria-hidden="true" />
@@ -706,8 +718,10 @@ export function BookSearchPage() {
                 id="catalog-search"
                 type="search"
                 placeholder="Tên sách, tác giả hoặc ISBN…"
-                value={params.get("q") || ""}
+                value={searchTerm}
                 onChange={(event) => update("q", event.target.value, true)}
+                onCompositionStart={() => setComposing(true)}
+                onCompositionEnd={() => setComposing(false)}
               />
               <button type="submit">
                 Tìm sách <ArrowRight size={17} aria-hidden="true" />
@@ -740,10 +754,10 @@ export function BookSearchPage() {
               <p>
                 {priceInvalid
                   ? "Kiểm tra lại bộ lọc đã chọn."
-                  : result.isFetching
+                  : result.isFetching || searchPending
                     ? "Đang tìm sách…"
                     : result.data
-                      ? `${result.data.items.length} ${preview ? "sách xem trước" : "cuốn"} trên trang này`
+                      ? `${result.data.items.length} ${preview ? "sách xem trước" : "tin đăng"} trên trang này`
                       : "Ảnh, tình trạng và giá của từng bản sách."}
               </p>
               {preview && (
@@ -784,14 +798,14 @@ export function BookSearchPage() {
               </button>
             </div>
           ) : (
-            <div aria-busy={result.isFetching}>
-              {result.isPending && (
+            <div aria-busy={result.isFetching || searchPending}>
+              {(result.isPending || searchPending) && (
                 <div className={styles.loading} role="status">
                   <span />
                   Đang tải kệ sách…
                 </div>
               )}
-              {result.isError && (
+              {!searchPending && result.isError && (
                 <div className={styles.state} role="alert">
                   <h3>Chưa tải được kệ sách</h3>
                   <p>
@@ -809,7 +823,7 @@ export function BookSearchPage() {
                   </button>
                 </div>
               )}
-              {!result.isError && result.data?.items.length === 0 && (
+              {!searchPending && !result.isError && result.data?.items.length === 0 && (
                 <div className={styles.empty}>
                   <img
                     src="/illustrations/penguins/buy.png"
@@ -828,11 +842,11 @@ export function BookSearchPage() {
                 </div>
               )}
               <div className={styles.grid}>
-                {result.data?.items.map((book, index) => (
+                {!searchPending && result.data?.items.map((book, index) => (
                   <HomeBookCard key={book.id} book={book} index={index} />
                 ))}
               </div>
-              {(params.has("cursor") || result.data?.nextCursor) && (
+              {!searchPending && (params.has("cursor") || result.data?.nextCursor) && (
                 <nav className={styles.pagination} aria-label="Phân trang sách">
                   {params.has("cursor") && (
                     <button

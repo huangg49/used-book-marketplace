@@ -1,3 +1,5 @@
+import { BundleManifest, BundleAcknowledgment } from "../components/BookBundle";
+import { listingTitle } from "../lib/book-bundle";
 import { buyNowError } from "../lib/buy-now-error";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
@@ -8,7 +10,8 @@ import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import { formatVnd } from "../lib/routes";
 import { conditions } from "../lib/listing-labels";
-import { getPublicListing } from "../services/public-listings";
+import { getPublicListing, type PublicListing } from "../services/public-listings";
+import { capturePurchaseListing, purchaseListingKey } from "../lib/purchase-listing";
 import { createBuyNowOrder, type BuyNowInput } from "../services/orders";
 import { ListingPhoto } from "../components/BookCard";
 import { MapPin, ArrowRight, Check, Truck } from "lucide-react";
@@ -45,12 +48,14 @@ const quoteSchema = z.object({
   }),
 });
 type Attempt = {
+  listing: PublicListing;
   address?: { key: string; body: object; id?: string };
   quoteKey: string;
   quoteBody?: object;
   quoteId?: string;
 };
 type Prepared = {
+  listing: PublicListing;
   body: BuyNowInput;
   amounts: z.infer<typeof quoteSchema>["amounts"];
   expiresAt: string;
@@ -65,6 +70,13 @@ const definite = (error: unknown) =>
 export function BuyNowPage() {
   const { listingId = "" } = useParams<{ listingId: string }>();
   const auth = useSession();
+  return <BuyNowListing key={`${auth.status === 'authenticated' ? auth.user.id : 'guest'}:${listingId}`} />;
+}
+
+function BuyNowListing() {
+  const [acknowledgedRevision, setAcknowledgedRevision] = useState<string>();
+  const { listingId = "" } = useParams<{ listingId: string }>();
+  const auth = useSession();
   const navigate = useNavigate();
   const book = useQuery({
     queryKey: ["public-listing", listingId],
@@ -77,6 +89,7 @@ export function BuyNowPage() {
     enabled: auth.status === "authenticated",
     retry: false,
   });
+  const bundleAcknowledged = !!book.data && acknowledgedRevision === purchaseListingKey(book.data);
   const areas = useQuery({
     queryKey: ["service-areas"],
     queryFn: () => session.request("/service-areas", areasSchema),
@@ -92,6 +105,7 @@ export function BuyNowPage() {
     detail: "",
   });
   const [prepared, setPrepared] = useState<Prepared>();
+  const [pendingListing, setPendingListing] = useState<PublicListing>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [uncertain, setUncertain] = useState(false);
@@ -107,10 +121,18 @@ export function BuyNowPage() {
   async function prepare(event: React.FormEvent) {
     event.preventDefault();
     if (busy || !book.data || !addresses.data || !areas.data) return;
+    if (!attempt.current && book.data.bundle && !bundleAcknowledged) {
+      setError('Xem danh sách và xác nhận mua toàn bộ các cuốn trong bộ.');
+      return;
+    }
     setBusy(true);
     setError(undefined);
-    const intent = attempt.current ?? { quoteKey: crypto.randomUUID() };
+    const intent = attempt.current ?? {
+      listing: capturePurchaseListing(book.data, acknowledgedRevision),
+      quoteKey: crypto.randomUUID(),
+    };
     attempt.current = intent;
+    setPendingListing(intent.listing);
     try {
       let address = selectedAddress;
       if (!address || intent.address) {
@@ -142,8 +164,9 @@ export function BuyNowPage() {
         setSelected(address.id);
       }
       intent.quoteBody ??= {
-        expectedListingVersion: book.data.version,
-        expectedListingRevisionId: book.data.revisionId,
+        expectedListingVersion: intent.listing.version,
+        expectedListingRevisionId: intent.listing.revisionId,
+        ...(intent.listing.bundle ? { acknowledgeWholeBundle: true } : {}),
         destinationAddressId: address.id,
         expectedDestinationAddressVersion: address.version,
         method: "DirectDelivery",
@@ -165,6 +188,7 @@ export function BuyNowPage() {
         quoteSchema,
       );
       setPrepared({
+        listing: intent.listing,
         body: {
           quoteId: quote.id,
           expectedQuoteVersion: quote.version,
@@ -180,6 +204,7 @@ export function BuyNowPage() {
     } catch (cause) {
       if (definite(cause)) {
         attempt.current = undefined;
+        setPendingListing(undefined);
         setUncertain(false);
       } else setUncertain(true);
       setError(buyNowError(cause));
@@ -236,7 +261,7 @@ export function BuyNowPage() {
         <Link to="/books">Về kệ sách</Link>
       </section>
     );
-  const item = book.data;
+  const item = prepared?.listing ?? pendingListing ?? book.data;
   const unavailable =
     item.seller.id === auth.user.id ||
     item.salePrice === null ||
@@ -244,9 +269,12 @@ export function BuyNowPage() {
     !item.fulfillment;
   const resetQuote = () => {
     setPrepared(undefined);
+    setPendingListing(undefined);
     attempt.current = undefined;
     setError(undefined);
     setUncertain(false);
+    setAcknowledgedRevision(undefined);
+    void book.refetch();
   };
   const addressText =
     prepared?.destination ??
@@ -255,6 +283,7 @@ export function BuyNowPage() {
       : "Thêm địa chỉ để tính phí giao hàng chính xác.");
   const disabled =
     busy ||
+    book.isFetching ||
     uncertain ||
     unavailable ||
     addresses.isPending ||
@@ -291,7 +320,7 @@ export function BuyNowPage() {
               <ListingPhoto book={item} />
             </div>
             <div>
-              <h2>{item.book.title}</h2>
+              <h2>{listingTitle(item)}</h2>
               <p>{item.book.authors.join(", ")}</p>
               <span className={styles.condition}>
                 {conditions[item.condition]}
@@ -398,12 +427,14 @@ export function BuyNowPage() {
             <ListingPhoto book={item} />
           </div>
           <div>
-            <strong>{item.book.title}</strong>
+            <strong>{listingTitle(item)}</strong>
             <span>
               {formatVnd(item.salePrice ?? 0)} · {conditions[item.condition]}
             </span>
           </div>
         </div>
+        <BundleManifest bundle={item.bundle} />
+        {item.bundle && <BundleAcknowledgment bundle={item.bundle} checked={!!prepared || !!pendingListing || bundleAcknowledged} onChange={checked => setAcknowledgedRevision(checked ? purchaseListingKey(item) : undefined)} disabled={busy || uncertain || !!prepared} />}
         {(addresses.isError || areas.isError) && (
           <div role="alert" className={styles.error}>
             Chưa tải được thông tin giao nhận.{" "}
@@ -430,6 +461,7 @@ export function BuyNowPage() {
         {error && (
           <p role="alert" className={styles.error}>
             {error}
+            {!busy && !uncertain && !createPending && <button type="button" className={styles.textButton} onClick={resetQuote}>Tải lại nội dung bài đăng</button>}
           </p>
         )}
         {prepared ? (

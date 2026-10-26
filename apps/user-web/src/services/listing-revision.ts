@@ -25,7 +25,7 @@ export type ListingRevisionInput = {
 // Uploads and revise both use the listing's current version; a stale version
 // is answered by the server with a conflict and is never rebased here.
 export function createListingRevision(value: ListingRevisionInput) {
-  const input = { ...value, photos: [...value.photos] };
+  const input = { ...value, content: structuredClone(value.content), photos: value.photos.map(photo => ({ ...photo })) };
   const remember = rememberCommands();
   return async () => {
     if (!input.photos.length) throw new Error("Cần ít nhất một ảnh sách.");

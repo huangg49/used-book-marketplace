@@ -1,3 +1,5 @@
+import { BundleManifest } from "../components/BookBundle";
+import { listingTitle } from "../lib/book-bundle";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -135,7 +137,8 @@ export function BookDetailPage() {
       <div className={styles.grid}>
         <ListingGallery key={book.id + book.revisionId} book={book} />
         <article className={styles.content}>
-          <h1>{book.book.title}</h1>
+          <h1>{listingTitle(book)}</h1>
+          <BundleManifest bundle={book.bundle} />
           <p className={styles.author}>
             Tác giả: {book.book.authors.join(", ") || "Chưa rõ tác giả"}
           </p>
@@ -160,7 +163,7 @@ export function BookDetailPage() {
           <div className={styles.prices}>
             {book.salePrice !== null && (
               <div className={styles.priceCard}>
-                <span className={styles.priceLabel}>GIÁ BÁN</span>
+                <span className={styles.priceLabel}>{book.bundle ? "GIÁ CẢ BỘ" : "GIÁ BÁN"}</span>
                 <strong>{formatVnd(book.salePrice)}</strong>
                 <span className={styles.priceHint}>Thanh toán bằng tiền</span>
               </div>
@@ -184,7 +187,7 @@ export function BookDetailPage() {
                   ? "Đây là bài đăng của bạn"
                   : held
                     ? heldLabel
-                    : "Muốn đọc cuốn này?"}
+                    : book.bundle ? "Muốn đọc bộ này?" : "Muốn đọc cuốn này?"}
               </h2>
               <p>
                 {buyerOrderConversation
@@ -199,7 +202,7 @@ export function BookDetailPage() {
               </p>
               <div className={styles.actionRow}>
                 {!isOwner && !held && (
-                  <Link className={styles.primary} to={`/buy-now/${book.id}`}>Mua ngay <ArrowUpRight size={18} aria-hidden="true" /></Link>
+                  <Link className={styles.primary} to={`/buy-now/${book.id}`}>{book.bundle ? "Mua cả bộ" : "Mua ngay"} <ArrowUpRight size={18} aria-hidden="true" /></Link>
                 )}
                 {["Exchange", "Both"].includes(book.mode) && !isOwner && !held && (
                   <Link className={styles.primary} to={`/chat/start/${book.id}?intent=Exchange`}>
@@ -324,8 +327,8 @@ export function BookDetailPage() {
             <div className={styles.detailsHeading}>
               <span className={styles.detailsIcon}><BookOpen size={19} aria-hidden="true" /></span>
               <div>
-                <h2>Thông tin sách</h2>
-                <p>Thông tin xuất bản và phân loại</p>
+                <h2>{book.bundle ? "Đầu sách đại diện" : "Thông tin sách"}</h2>
+                <p>{book.bundle ? "Phân loại theo đầu sách đại diện. Các cuốn thực tế được ghi trong danh sách bộ sách ở trên." : "Thông tin xuất bản và phân loại"}</p>
               </div>
             </div>
             <dl>

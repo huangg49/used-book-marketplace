@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.50.0
+  version: 0.51.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Participant agreement workspaces with mutually confirmed mode/price proposals and linked Exchange history are implemented. Exact Order conversations can be opened by their ACTIVE Buyer or Seller, including BuyNow and historical Orders. Member private address book and versioned demo service-area directory are
@@ -958,6 +958,13 @@ paths:
       security: []
       parameters:
         - in: query
+          name: bundleSupport
+          required: false
+          description: Opt in to whole-bundle listings; absent clients receive single books only.
+          schema:
+            type: string
+            enum: [whole-v1]
+        - in: query
           name: categoryId
           required: false
           schema:
@@ -1174,6 +1181,13 @@ paths:
       x-implementation-status: implemented
       security: []
       parameters:
+        - in: query
+          name: bundleSupport
+          required: false
+          description: Opt in to whole-bundle listings; absent clients receive single books only.
+          schema:
+            type: string
+            enum: [whole-v1]
         - in: path
           name: listingId
           required: true
@@ -10182,9 +10196,56 @@ components:
         updatedAt:
           type: string
           format: date-time
+    BookBundle:
+      type: object
+      additionalProperties: false
+      required: [title, wholeOnly, exclusiveOwnershipDeclared, items]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        wholeOnly:
+          type: boolean
+          const: true
+        exclusiveOwnershipDeclared:
+          type: boolean
+          const: true
+        items:
+          type: array
+          minItems: 2
+          maxItems: 50
+          uniqueItems: true
+          items:
+            type: object
+            additionalProperties: false
+            required: [label, condition, notes]
+            properties:
+              label:
+                type: string
+                minLength: 1
+                maxLength: 200
+              condition:
+                $ref: "#/components/schemas/BookCondition"
+              notes:
+                type: string
+                maxLength: 500
+      description: Whole-only physical lot; exact component labels must be nonblank and unique after normalization. All items are sold, reserved, shipped and returned together. No separate component sale, Auction or Exchange. Catalog series does not imply a bundle.
     DraftContent:
       type: object
       additionalProperties: false
+      allOf:
+        - if:
+            required: [bundle]
+            properties:
+              bundle:
+                type: object
+          then:
+            properties:
+              mode:
+                const: Sale
+              exchangeValue:
+                type: "null"
       required:
         - bookId
         - mode
@@ -10201,6 +10262,11 @@ components:
         - exchangeValue
         - mediaIds
       properties:
+        bundle:
+          anyOf:
+            - $ref: "#/components/schemas/BookBundle"
+            - type: "null"
+          description: Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return.
         bookId:
           anyOf:
             - type: string
@@ -10302,6 +10368,18 @@ components:
     SubmittedContent:
       type: object
       additionalProperties: false
+      allOf:
+        - if:
+            required: [bundle]
+            properties:
+              bundle:
+                type: object
+          then:
+            properties:
+              mode:
+                const: Sale
+              exchangeValue:
+                type: "null"
       required:
         - bookId
         - mode
@@ -10318,6 +10396,11 @@ components:
         - exchangeValue
         - mediaIds
       properties:
+        bundle:
+          anyOf:
+            - $ref: "#/components/schemas/BookBundle"
+            - type: "null"
+          description: Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return.
         bookId:
           type: string
           format: uuid
@@ -10621,6 +10704,11 @@ components:
         - fulfillment
         - purchaseAvailability
       properties:
+        bundle:
+          anyOf:
+            - $ref: "#/components/schemas/BookBundle"
+            - type: "null"
+          description: Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return.
         id:
           type: string
           format: uuid
@@ -11527,6 +11615,10 @@ components:
         - pricingValid
         - contentAppropriate
       properties:
+        bundleContentsVerified:
+          type: boolean
+          const: true
+          description: Required true to approve a bundle after inspecting its manifest and whole-lot photos.
         catalogMatches:
           type: boolean
           const: true
@@ -12207,6 +12299,10 @@ components:
         - expectedDestinationAddressVersion
         - method
       properties:
+        acknowledgeWholeBundle:
+          type: boolean
+          const: true
+          description: Required true when quoting a whole bundle; expected listing/revision pins the complete manifest.
         expectedListingVersion:
           type: integer
           minimum: 1
@@ -12464,6 +12560,11 @@ components:
         - description
         - mediaIds
       properties:
+        bundle:
+          anyOf:
+            - $ref: "#/components/schemas/BookBundle"
+            - type: "null"
+          description: Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return.
         listingId:
           type: string
           format: uuid

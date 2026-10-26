@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { validateBundle } from './book-bundle.js';
 import { randomUUID } from 'node:crypto';
 import type { Json, ListingDoc } from '../../database/mongo/documents.js';
 import type { Tx } from '../../database/mongo/transaction.js';
@@ -122,6 +123,7 @@ export class ListingLifecycleService {
       mutate: async (tx, actor, before) => {
         requireActive(actor);
         requireChannelContent(before.channel, body.content);
+        validateBundle(body.content, before.currentRevision!);
         const origin = await this.fulfillment.prepare(
           tx,
           actor._id,

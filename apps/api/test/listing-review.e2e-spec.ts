@@ -673,6 +673,49 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
       events: (await outbox(id, ['decideListing'])).length,
     };
   }
+  it('preserves a whole bundle through save/replay/review and gates legacy public reads', async () => {
+    const original = await complete();
+    const bundle = {title:'Naruto — tập 1 và 3',wholeOnly:true,exclusiveOwnershipDeclared:true,
+      items:[{label:'Tập 1',condition:'Good',notes:''},{label:'Tập 3',condition:'Good',notes:'Thiếu tập 2 giữa bộ; chỉ bán hai cuốn được liệt kê.'}]};
+    const body = {expectedVersion:original.version,content:{...original.content,bundle}};
+    const key=randomUUID();
+    const saved=(await put(original.entityId,body,m1,key).expect(200)).body;
+    expect((await put(original.entityId,body,m1,key).expect(200)).body).toEqual(saved);
+    await put(original.entityId,{...body,expectedVersion:saved.version},m2).expect(404);
+    await put(original.entityId,{expectedVersion:saved.version,content:original.content},m1).expect(422);
+    await put(original.entityId,{...body,expectedVersion:original.version},m1).expect(409);
+    // Vietnamese case folding and NFC equivalence are enforced by the service;
+    // Mongo's $toLower only guarantees ASCII case folding.
+    await put(original.entityId,{...body,expectedVersion:saved.version,content:{...body.content,
+      bundle:{...bundle,items:[bundle.items[0],{...bundle.items[1],label:' TẬP 1 '}]},
+    }},m1).expect(422);
+    const sent=(await submit(saved).expect(200)).body;
+    await decide(sent).expect(422);
+    const approved=(await post(`/operations/listings/${original.entityId}/decision`,{
+      expectedVersion:sent.version,revisionId:sent.revisionId,decision:'Approve',
+      checklist:{...checklist,bundleContentsVerified:true},
+    },staff).expect(200)).body;
+    expect(approved.state.moderation).toBe('Approved');
+    await get(`/listings/${original.entityId}`).expect(404);
+    const detail=(await get(`/listings/${original.entityId}?bundleSupport=whole-v1`).expect(200)).body;
+    validates('PublicListing',detail);
+    expect(detail.bundle).toEqual(bundle);
+    // Mongo validators remain a backstop even outside the HTTP input parser.
+    for (const invalid of [
+      { mode: 'Both', exchangeValue: 150000 },
+      { 'bundle.wholeOnly': false },
+      { 'bundle.items.1.label': ' tập 1 ' },
+      { 'bundle.items.1.condition': 'Worn' },
+    ]) await expect(db.c.listing_revisions.updateOne(
+      { _id: detail.revisionId }, { $set: invalid } as any,
+    ), JSON.stringify(invalid)).rejects.toMatchObject({ code: 121 });
+    expect((await db.c.listing_revisions.findOne({ _id: detail.revisionId }))!.bundle).toEqual(bundle);
+    const legacy=(await get(`/listings?bookId=${original.content.bookId}`).expect(200)).body;
+    expect(legacy.items.some((row: any)=>row.id===original.entityId)).toBe(false);
+    const capable=(await get(`/listings?bundleSupport=whole-v1&q=Naruto`).expect(200)).body;
+    expect(capable.items.some((row: any)=>row.id===original.entityId)).toBe(true);
+  });
+
   it('freezes saved content, exposes the submitted queue, approves once with audit/outbox and replay', async () => {
     const l = await complete();
     await get(`/operations/listings/${l.entityId}`, staff).expect(404);

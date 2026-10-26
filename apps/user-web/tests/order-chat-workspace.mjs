@@ -118,6 +118,10 @@ try {
     const page = await context.newPage();
     page.setDefaultTimeout(12000);
     page.on("pageerror", (error) => issues.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error" && message.text().includes("Maximum update depth exceeded"))
+        issues.push(message.text());
+    });
     await page.route("**/api/v1/**", async (route) => {
       const request = route.request(), method = request.method();
       const url = new URL(request.url()), routePath = url.pathname.replace("/api/v1", "");

@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { session } from "./api";
+import { bundleSchema } from '../lib/book-bundle';
 
 const publicListingSchema = z.object({
+  bundle: bundleSchema.nullable().optional(),
   id: z.string().uuid(),
   revisionId: z.string().uuid(),
   version: z.number().int(),
@@ -70,14 +72,16 @@ const mediaReadSchema = z.object({
 });
 
 export function getPublicListings(query: URLSearchParams) {
-  const suffix = query.toString();
+  const supported = new URLSearchParams(query);
+  supported.set('bundleSupport', 'whole-v1');
+  const suffix = supported.toString();
   return session.publicRequest(
     `/listings${suffix ? `?${suffix}` : ""}`,
     publicListingPageSchema,
   );
 }
 export function getPublicListing(id: string) {
-  return session.publicRequest(`/listings/${id}`, publicListingSchema);
+  return session.publicRequest(`/listings/${id}?bundleSupport=whole-v1`, publicListingSchema);
 }
 export function getPublicPhoto(listingId: string, mediaId: string) {
   return session.publicRequest(

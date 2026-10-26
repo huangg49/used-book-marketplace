@@ -93,4 +93,20 @@ describe("createListingRevision", () => {
     await expect(run()).rejects.toThrow(/ảnh/);
     expect(request).not.toHaveBeenCalled();
   });
+  it("freezes bundle contents and existing photos across edits and a lost revision response", async () => {
+    const bundle = { title: "Bộ hai tập", wholeOnly: true as const, exclusiveOwnershipDeclared: true as const,
+      items: [{ label: "Tập 1", condition: "Good" as const, notes: "" }, { label: "Tập 3", condition: "Good" as const, notes: "Không bao gồm tập 2." }] };
+    const input = { listingId: id, version: 4, photos: [{ kind: "existing" as const, id: media(1) }], content: { ...content, bundle } };
+    const original = structuredClone(bundle);
+    request.mockRejectedValueOnce(new Error("network")).mockResolvedValueOnce({ entityId: id, version: 5 });
+    const run = createListingRevision(input);
+    input.content.bundle.items[1].notes = "Đã thay đổi ở form";
+    input.photos[0].id = media(2);
+    await expect(run()).rejects.toThrow("network");
+    input.content.bundle.items.pop();
+    await run();
+    const calls = revisionCalls();
+    expect(calls[1][2]).toEqual(calls[0][2]);
+    expect(JSON.parse(String(calls[1][2]?.body)).content).toMatchObject({ bundle: original, mediaIds: [media(1)] });
+  });
 });

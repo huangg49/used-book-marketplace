@@ -17,7 +17,7 @@ export function DashboardStats({ ownerId }: DashboardStatsProps) {
 
   const listingsQuery = useQuery(myListingsQuery(ownerId, "Approved", undefined, 50));
 
-  const totalBooks = listingsQuery.data?.items.length ?? 0;
+  const totalBooks = listingsQuery.data?.items.reduce((sum, listing) => sum + (listing.currentRevision.content.bundle?.items.length ?? 1), 0) ?? 0;
   const totalValue = listingsQuery.data?.items.reduce(
     (sum, item) => sum + (item.currentRevision.content?.salePrice || 0),
     0

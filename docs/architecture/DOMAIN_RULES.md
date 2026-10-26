@@ -8,6 +8,12 @@ và [READINESS](../handoff/READINESS.md) để đối chiếu implementation/evi
 cơ chế persistence PostgreSQL trong báo cáo cũ; vẫn giữ invariant nghiệp vụ.
 Đọc các phần liên quan nhiệm vụ và ADR/feature được dẫn, không tải cả lịch sử.
 
+Bộ sách Marketplace theo [ADR0046](../adr/0046-whole-book-bundles.md) là một lô
+Sale gồm2–50cuốn, một giá/commitment/Order item cho cả bộ. Manifest trên revision
+và snapshot là danh sách hiện vật; catalog chỉ là đầu sách đại diện. Buyer phải
+xác nhận nguyên bộ, reviewer đối chiếu đủ cuốn/tập; không mua/trả từng phần hoặc
+dùng bộ cho Exchange/Auction. Không thay đổi gate giao nhận/settlement bên dưới.
+
 Trước mở rộng giao dịch, đọc [ADR 0007](../adr/0007-hcm-handover-auction-scope.md),
 [local transaction design](../features/LOCAL_TRANSACTION_DESIGN.md) và
 [acceptance](../features/LOCAL_TRANSACTION_ACCEPTANCE.md). Auction intake/bidding/close, Order ViaPoint/pay/report/code/handover và source

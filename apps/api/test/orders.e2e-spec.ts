@@ -1,3 +1,4 @@
+import type { Wire } from "../src/modules/commands/domain-error.js";
 import { prepareSellerOrder } from './helpers/seller-order.js';
 import { OrderClock } from '../src/modules/orders/order-clock.js';
 import { QuoteClock } from '../src/modules/quotes/quote-clock.js';
@@ -440,6 +441,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
     price = 200000,
     mode: 'Sale' | 'Both' = 'Sale',
     existingBuyer?: Reader,
+    bundle?: Wire["BookBundle"],
   ) {
     const seller = await reader(),
       buyer = existingBuyer ?? (await reader()),
@@ -453,6 +455,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
           expectedVersion: l.version,
           content: {
             ...l.content,
+            ...(bundle ? {bundle} : {}),
             salePrice: price,
             mode,
             exchangeValue: mode === 'Both' ? price : null,
@@ -467,7 +470,10 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       ).expect(200)
     ).body;
     const sent = (await submit(saved, seller).expect(200)).body;
-    const approved = (await decide(sent).expect(200)).body;
+    const approved = bundle ? (await post(`/operations/listings/${l.entityId}/decision`,{
+      expectedVersion:sent.version,revisionId:sent.revisionId,decision:'Approve',
+      checklist:{...checklist,bundleContentsVerified:true},
+    },staff).expect(200)).body : (await decide(sent).expect(200)).body;
     return {
       seller,
       buyer,
@@ -475,6 +481,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       destination,
       l: { ...l, ...approved },
       body: {
+        ...(bundle ? {acknowledgeWholeBundle:true} : {}),
         expectedListingVersion: approved.version,
         expectedListingRevisionId: approved.revisionId,
         destinationAddressId: destination.id,
@@ -576,6 +583,101 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       }),
     };
   }
+  it('requires whole-bundle acknowledgment and reserves one immutable lot under competing Buyers', async () => {
+    const bundle: Wire['BookBundle']={title:'Hai tập mua nguyên bộ',wholeOnly:true,exclusiveOwnershipDeclared:true,
+      items:[{label:'Tập 1',condition:'Good',notes:''},{label:'Tập 2',condition:'Good',notes:'Bìa sờn nhẹ'}]};
+    const f=await setup(300000,'Sale',undefined,bundle);
+    const {acknowledgeWholeBundle:_ack,...legacy}=f.body;
+    await quote(f,randomUUID(),legacy).expect(422);
+    const second=await reader(); const destination=await address(second);
+    const quotes=await Promise.all([
+      quote(f).expect(200),
+      post(`/listings/${f.l.entityId}/quotes`,{...f.body,destinationAddressId:destination.id},second).expect(200),
+    ]);
+    const bodies=quotes.map(row=>({quoteId:row.body.entityId,expectedQuoteVersion:1,
+      expectedListingVersion:f.l.version,expectedListingRevisionId:f.l.revisionId}));
+    const keys=[randomUUID(),randomUUID()];
+    const gate=await Gate.lockUser(db.client,f.seller.id);
+    const calls=[f.buyer,second].map((actor,index)=>post('/orders/buy-now',bodies[index],actor,keys[index]).then(row=>row));
+    try { await gate.contended(2); } finally { await gate.commit(); }
+    const results=await Promise.all(calls);
+    expect(results.map(row=>row.status).sort()).toEqual([200,409]);
+    const winner=results.findIndex(row=>row.status===200);
+    const buyer=[f.buyer,second][winner];
+    const order=await orderView(results[winner].body.entityId,buyer);
+    expect(order.item.bundle).toEqual(bundle);
+    expect(order.amounts.bookPrice).toBe(300000);
+    expect(await db.c.exclusive_commitments.countDocuments({listingId:f.l.entityId,status:'Active'})).toBe(1);
+    expect(await db.c.workflow_items.countDocuments({listingId:f.l.entityId})).toBe(1);
+    const replay=await post('/orders/buy-now',bodies[winner],buyer,keys[winner]).expect(200);
+    expect(replay.body).toEqual(results[winner].body);
+    await post('/orders/buy-now',{...bodies[winner],items:['Tập 1']},buyer).expect(422);
+    expect((await orderView(results[winner].body.entityId,buyer)).item.bundle).toEqual(bundle);
+  });
+
+  it.each(['cancel', 'expiry'] as const)('releases the entire unpaid bundle on %s, preserving its immutable manifest', async (action) => {
+    const bundle: Wire['BookBundle'] = { title: 'Bộ đủ hai tập', wholeOnly: true, exclusiveOwnershipDeclared: true,
+      items: [{ label: 'Tập 1', condition: 'Good', notes: '' }, { label: 'Tập 2', condition: 'Good', notes: 'Gáy sờn nhẹ.' }] };
+    const f = await setup(180000, 'Sale', undefined, bundle), q = (await quote(f).expect(200)).body;
+    const body = { quoteId: q.entityId, expectedQuoteVersion: 1, expectedListingVersion: f.l.version, expectedListingRevisionId: f.l.revisionId };
+    const created = (await post('/orders/buy-now', body, f.buyer).expect(200)).body;
+    if (action === 'cancel') {
+      const key = randomUUID(), first = (await cancel(created.entityId, f.buyer, key).expect(200)).body;
+      expect((await cancel(created.entityId, f.buyer, key).expect(200)).body).toEqual(first);
+    } else {
+      const clock = vi.spyOn(app.get(OrderClock), 'now').mockResolvedValue(new Date(Date.parse(created.paymentDeadline)));
+      try { await app.get(OrdersService).expire(created.entityId); } finally { clock.mockRestore(); }
+    }
+    const view = await orderView(created.entityId, f.buyer);
+    expect(view.state).toBe(action === 'cancel' ? 'Cancelled' : 'PaymentExpired');
+    expect(view.item.bundle).toEqual(bundle);
+    expect(view.moneyHeld).toBe(0);
+    expect((await stateCounts(f.l.entityId)).active).toBe(0);
+    expect(await db.c.ledger_journals.countDocuments({ orderId: created.entityId })).toBe(0);
+    const reopened = (await get(`/listings/${f.l.entityId}?bundleSupport=whole-v1`).expect(200)).body;
+    expect(reopened.bundle).toEqual(bundle);
+    expect(reopened.purchaseAvailability.status).toBe('Available');
+  });
+
+  it('invalidates the old bundle quote when Seller replaces its manifest and requires fresh quote acknowledgment', async () => {
+    const bundle: Wire['BookBundle'] = { title: 'Bộ tập 1 và 2', wholeOnly: true, exclusiveOwnershipDeclared: true,
+      items: [{ label: 'Tập 1', condition: 'Good', notes: '' }, { label: 'Tập 2', condition: 'Good', notes: '' }] };
+    const f = await setup(180000, 'Sale', undefined, bundle), key = randomUUID();
+    const oldQuote = (await quote(f, key).expect(200)).body;
+    const source = (await get(`/me/listings/${f.l.entityId}`, f.seller).expect(200)).body.currentRevision.content;
+    const replacement = { ...bundle, title: 'Bộ tập 1 và 3', items: [bundle.items[0], { ...bundle.items[1], label: 'Tập 3' }] };
+    const revised = (await post(`/listings/${f.l.entityId}/revision`, {
+      expectedVersion: f.l.version, ownershipDeclared: true, content: { ...source, bundle: replacement },
+    }, f.seller).expect(200)).body;
+    const approved = (await post(`/operations/listings/${f.l.entityId}/decision`, {
+      expectedVersion: revised.version, revisionId: revised.revisionId, decision: 'Approve',
+      checklist: { ...checklist, bundleContentsVerified: true },
+    }, staff).expect(200)).body;
+    expect((await quote(f, key).expect(200)).body).toEqual(oldQuote);
+    await post('/orders/buy-now', { quoteId: oldQuote.entityId, expectedQuoteVersion: 1,
+      expectedListingVersion: f.l.version, expectedListingRevisionId: f.l.revisionId }, f.buyer).expect(409);
+    expect(await stateCounts(f.l.entityId)).toMatchObject({ orders: 0, active: 0 });
+    const { acknowledgeWholeBundle: _oldAck, ...oldBody } = f.body;
+    const currentBody = { ...oldBody, expectedListingVersion: approved.version, expectedListingRevisionId: approved.revisionId };
+    await post(`/listings/${f.l.entityId}/quotes`, currentBody, f.buyer).expect(422);
+    await post(`/listings/${f.l.entityId}/quotes`, { ...currentBody, acknowledgeWholeBundle: true }, f.buyer).expect(200);
+    expect((await get(`/listings/${f.l.entityId}?bundleSupport=whole-v1`).expect(200)).body.bundle).toEqual(replacement);
+  });
+
+  it('rejects an expired bundle quote without reserving any component or writing money', async () => {
+    const bundle: Wire['BookBundle'] = { title: 'Bộ hai tập hết báo giá', wholeOnly: true, exclusiveOwnershipDeclared: true,
+      items: [{ label: 'Tập 1', condition: 'Good', notes: '' }, { label: 'Tập 2', condition: 'Good', notes: '' }] };
+    const f = await setup(180000, 'Sale', undefined, bundle), receipt = (await quote(f).expect(200)).body;
+    const q = (await db.c.sale_quotes.findOne({ _id: receipt.entityId }))!;
+    const clock = vi.spyOn(app.get(OrderClock), 'now').mockResolvedValue(q.expiresAt);
+    try {
+      await post('/orders/buy-now', { quoteId: q._id, expectedQuoteVersion: 1,
+        expectedListingVersion: f.l.version, expectedListingRevisionId: f.l.revisionId }, f.buyer).expect(409);
+    } finally { clock.mockRestore(); }
+    expect(await stateCounts(f.l.entityId)).toMatchObject({ orders: 0, active: 0, items: 0 });
+    expect((await get(`/listings/${f.l.entityId}?bundleSupport=whole-v1`).expect(200)).body.bundle).toEqual(bundle);
+  });
+
   it('creates a 15-minute immutable unpaid agreement, reserves stock, marks the public listing awaiting payment and keeps contact private by role', async () => {
     const p = await prepared(),
       r = await create(p).expect(200);

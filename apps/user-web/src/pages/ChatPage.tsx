@@ -278,7 +278,7 @@ function ChatRoom({
   const bookIdentity = (
     <ConversationBookIdentity
       listingId={room.listingId}
-      title={readableOrder?.item.metadata.title}
+      title={readableOrder?.item.bundle?.title || readableOrder?.item.metadata.title}
       status={
         <>
           {room.orderId

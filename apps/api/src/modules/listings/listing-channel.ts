@@ -12,9 +12,12 @@ export function requireChannelContent(
     mode?: string | null;
     exchangeValue?: number | null;
     fulfillment?: unknown;
+    bundle?: unknown;
   },
 ) {
   if (channel !== 'Auction') return;
+  if (content.bundle)
+    invalidField('/content/bundle', 'Bộ sách chưa hỗ trợ đấu giá.');
   if (content.mode != null && content.mode !== 'Sale')
     invalidField(
       '/content/mode',

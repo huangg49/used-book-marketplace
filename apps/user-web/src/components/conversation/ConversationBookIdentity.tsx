@@ -33,7 +33,7 @@ export function ConversationBookIdentity({
         <h1 data-conversation-title>
           {listingId ? (
             <Link to={`/books/${listingId}`}>
-              {title ?? book.data?.book.title ??
+              {title ?? book.data?.bundle?.title ?? book.data?.book.title ??
                 (book.isLoading
                   ? "Đang tải cuốn sách…"
                   : "Cuộc trao đổi về sách")}

@@ -205,10 +205,11 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
 
                     <h3
                       className="font-title-md text-sm sm:text-base text-primary font-bold line-clamp-2 h-[2.6em] leading-snug"
-                      title={book?.title || content?.title || "Bản thảo"}
+                      title={content?.bundle?.title || book?.title || content?.title || "Bản thảo"}
                     >
-                      {book?.title || content?.title || "Bản thảo chưa hoàn tất"}
+                      {content?.bundle?.title || book?.title || content?.title || "Bản thảo chưa hoàn tất"}
                     </h3>
+                    {content?.bundle && <p className="text-xs text-primary">Bộ {content.bundle.items.length} cuốn · Bán nguyên bộ</p>}
 
                     <div className="flex items-center justify-between mt-1">
                       <span className="font-currency-display text-sm sm:text-base text-primary font-bold">

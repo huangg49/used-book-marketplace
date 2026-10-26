@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
+import { observeCardText } from "../lib/card-text-observer";
 import styles from "./BookCard.module.css";
 
 /** Fit actual text to its reserved card slot without changing the card geometry. */
@@ -18,8 +19,6 @@ export function CardFitText({
     const frame = frameRef.current;
     const content = contentRef.current;
     if (!frame || !content) return;
-    let disposed = false;
-    let animationFrame = 0;
 
     function fit() {
       if (!frame || !content || !frame.clientWidth || !frame.clientHeight)
@@ -56,35 +55,8 @@ export function CardFitText({
       }
     }
 
-    function schedule() {
-      cancelAnimationFrame(animationFrame);
-      animationFrame = requestAnimationFrame(() => {
-        if (!disposed) fit();
-      });
-    }
-
     fit();
-    const observer = new ResizeObserver(schedule);
-    observer.observe(frame);
-    // Text scaling can change without altering this fixed slot's dimensions.
-    const rootObserver = new MutationObserver(schedule);
-    rootObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["style", "class"],
-    });
-    window.addEventListener("resize", schedule);
-    void document.fonts.ready.then(() => {
-      if (!disposed) schedule();
-    });
-    document.fonts.addEventListener("loadingdone", schedule);
-    return () => {
-      disposed = true;
-      cancelAnimationFrame(animationFrame);
-      observer.disconnect();
-      rootObserver.disconnect();
-      window.removeEventListener("resize", schedule);
-      document.fonts.removeEventListener("loadingdone", schedule);
-    };
+    return observeCardText(frame, fit);
   }, [children, minimumRem]);
 
   return (
