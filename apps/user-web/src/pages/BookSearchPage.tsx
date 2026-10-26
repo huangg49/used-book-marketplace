@@ -641,34 +641,39 @@ export function BookSearchPage() {
         className={styles.catalog}
         data-sidebar-collapsed={isSidebarCollapsed}
       >
-        <aside
-          ref={sidebar}
-          className={styles.sidebar}
-          aria-label="Bộ lọc sách"
+        <div
+          className={styles.sidebarWrapper}
+          aria-hidden={isSidebarCollapsed}
         >
-          <div className={styles.sidebarHeader}>
-            <h2>
-              <SlidersHorizontal size={18} aria-hidden="true" />
-              Bộ lọc sách
-            </h2>
-            <button
-              type="button"
-              className={styles.collapseSidebarBtn}
-              onClick={toggleSidebar}
-              aria-label="Thu gọn bộ lọc sách"
-              title="Thu gọn bộ lọc"
-            >
-              <Menu size={18} aria-hidden="true" />
-            </button>
-          </div>
-          <FilterForm
-            key={filterKey}
-            initial={initial}
-            id="desktop"
-            onApply={apply}
-            mode={params.get("mode") || ""}
-          />
-        </aside>
+          <aside
+            ref={sidebar}
+            className={styles.sidebar}
+            aria-label="Bộ lọc sách"
+          >
+            <div className={styles.sidebarHeader}>
+              <h2>
+                <SlidersHorizontal size={18} aria-hidden="true" />
+                Bộ lọc sách
+              </h2>
+              <button
+                type="button"
+                className={styles.collapseSidebarBtn}
+                onClick={toggleSidebar}
+                aria-label="Thu gọn bộ lọc sách"
+                title="Thu gọn bộ lọc"
+              >
+                <Menu size={18} aria-hidden="true" />
+              </button>
+            </div>
+            <FilterForm
+              key={filterKey}
+              initial={initial}
+              id="desktop"
+              onApply={apply}
+              mode={params.get("mode") || ""}
+            />
+          </aside>
+        </div>
         <section className={styles.results} aria-labelledby="catalog-results">
           <div className={styles.searchBar}>
             {isSidebarCollapsed && (
