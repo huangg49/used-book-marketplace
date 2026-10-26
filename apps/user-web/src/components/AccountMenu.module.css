@@ -52,6 +52,10 @@
     max-width: 80px;
   }
 }
+/* Floating navigation caps its width even on a wide desktop viewport. */
+:global(header[data-floating="true"]) .userName {
+  max-width: 80px;
+}
 .trigger svg {
   transition: transform 180ms ease-out;
   flex-shrink: 0;

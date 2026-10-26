@@ -33,6 +33,9 @@
   rồi bắt được nút navbar tràn ở1024px/chữ130% khi floating. Thu hẹp phần tên tài
   khoản ở desktop hẹp1001–1279px, vẫn giữ avatar, accessible name đầy đủ và menu.
   Giữ assertion containment navbar; không cắt overflow để giấu nút.
+  CI xác nhận1024px đã qua, rồi bắt cùng lỗi tại1366px: floating header luôn bị
+  giới hạn1248px dù viewport rộng hơn. Áp dụng tên gọn theo chính trạng thái
+  floating ở mọi desktop, không chỉ theo viewport; giữ test chữ130% nguyên trạng.
 
 ## Đồng bộ main và giữ phần bán nguyên bộ — 26/10/2026
 
