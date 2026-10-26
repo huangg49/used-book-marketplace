@@ -5,11 +5,12 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowRight, Gavel, MapPin, Plus, RefreshCw } from 'lucide-react'
 import { AuctionPhoto } from '../components/AuctionGallery'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
 import { useSession } from '../hooks/useSession'
 import { formatRemaining, outcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import {
-  EVIDENCE_MIN_LENGTH, getMyAuctionIntakes, listHandoverPoints, listMyAuctions, submitIntakeEvidence, withdrawIntake,
-  type MyAuctionItem, type MyIntake,
+  AUCTION_MAX_SCHEDULE_EDITS, EVIDENCE_MIN_LENGTH, auctionPhase, getMyAuctionIntakes, listHandoverPoints, listMyAuctions,
+  submitIntakeEvidence, withdrawIntake, type MyAuctionItem, type MyIntake,
 } from '../services/auctions'
 import { ROUTES, formatVnd } from '../lib/routes'
 import styles from './MyAuctionsPage.module.css'
@@ -17,6 +18,7 @@ import styles from './MyAuctionsPage.module.css'
 const views = [
   { value: 'all', label: 'Tất cả' },
   { value: 'active', label: 'Đang diễn ra' },
+  { value: 'upcoming', label: 'Sắp mở' },
   { value: 'payment', label: 'Cần thanh toán' },
   { value: 'selling', label: 'Phiên của tôi' },
 ]
@@ -32,18 +34,28 @@ const states: Record<string, string> = {
 function AuctionRow({
   item,
   serverTime,
+  onChanged,
 }: {
   item: MyAuctionItem
   serverTime: string
+  onChanged: () => Promise<unknown>
 }) {
   const { auction: a } = item
+  const [editing, setEditing] = useState(false)
   const remaining = useCountdown(a.endAt, serverTime)
+  const untilStart = useCountdown(a.startAt, serverTime)
   const deadline = useCountdown(item.paymentDeadline ?? undefined, serverTime)
-  const open = a.state === 'Active' && remaining > 0
+  // ADR 0047: a scheduled auction is Active but takes no bids before its start.
+  const scheduled = auctionPhase(a, serverTime) === 'Scheduled' && untilStart > 0
+  const open = a.state === 'Active' && remaining > 0 && !scheduled
   const payable = item.needsPayment && deadline > 0
+  // The seller edits the time only before the first bid (the server rechecks).
+  const editable = item.role === 'Seller' && (open || scheduled) && a.bidderCount === 0 && !a.buyNowAt
+    && a.version != null && (a.scheduleRevision ?? 0) < AUCTION_MAX_SCHEDULE_EDITS
   const status = payable
     ? 'Cần thanh toán'
     : item.needsPayment ? 'Đã hết thời gian thanh toán, đang cập nhật'
+    : scheduled ? `Hẹn mở lúc ${intakeTime(a.startAt)}`
     : item.role === 'Seller'
       ? open
         ? 'Phiên của bạn đang mở'
@@ -80,6 +92,7 @@ function AuctionRow({
           </p>
         )}
         {open && <p>Còn {formatRemaining(remaining)}</p>}
+        {scheduled && <p>Mở sau {formatRemaining(untilStart)} · kéo dài {Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 3_600_000)} giờ</p>}
       </div>
       <div className={styles.action}>
         <span>
@@ -96,7 +109,20 @@ function AuctionRow({
               : 'Xem phiên'}{' '}
           <ArrowRight size={16} aria-hidden="true" />
         </Link>
+        {editable && (
+          <button type="button" className={styles.secondaryAction} onClick={() => setEditing(true)}>Đổi thời gian</button>
+        )}
       </div>
+      {editable && (
+        <ScheduleAuctionDialog
+          isOpen={editing}
+          onClose={() => setEditing(false)}
+          onDone={onChanged}
+          title={a.title}
+          serverTime={serverTime}
+          target={{ kind: 'reschedule', auctionId: a.id, version: a.version!, live: !scheduled, startAt: a.startAt, endAt: a.endAt }}
+        />
+      )}
     </article>
   )
 }
@@ -106,7 +132,7 @@ const INTAKE_STATES: Partial<Record<MyIntake['state'], string>> = {
   AwaitingDropoff: 'Chờ bạn mang sách tới điểm',
   Received: 'Điểm đã nhận sách, chờ kiểm tra',
   NeedsEvidence: 'Điểm cần bạn bổ sung bằng chứng',
-  Passed: 'Đã qua kiểm tra, chờ mở phiên',
+  Passed: 'Đã qua kiểm tra, bạn có thể đăng phiên',
   ReclaimRequired: 'Mời bạn tới điểm nhận lại sách',
 }
 const RECLAIM: Record<string, string> = {
@@ -179,6 +205,7 @@ function EvidenceForm({ intake, onChanged }: { intake: MyIntake; onChanged: () =
 
 function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointName?: string; onChanged: () => Promise<unknown> }) {
   const intent = useIntentKey()
+  const [publishing, setPublishing] = useState(false)
   // An unknown outcome keeps the same version and key so a retry replays the same intent.
   const pending = useRef<{ version: number; key: string } | null>(null)
   const [confirming, setConfirming] = useState(false)
@@ -224,6 +251,11 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
         <span>Khởi điểm</span>
         <strong>{formatVnd(intake.startPrice)}</strong>
         <span>Bước {formatVnd(intake.step)}{intake.buyNowPrice !== null ? ` · mua ngay ${formatVnd(intake.buyNowPrice)}` : ''}</span>
+        {intake.state === 'Passed' && (
+          <button type="button" className={styles.publish} disabled={busy} onClick={() => setPublishing(true)}>
+            Đăng phiên
+          </button>
+        )}
         {cancellable && (
           <button type="button" disabled={busy} onClick={() => (unknown ? void withdraw() : setConfirming(true))}>
             {unknown ? 'Thử lại rút sách' : 'Rút khỏi đấu giá'}
@@ -242,6 +274,15 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
         isBusy={busy}
         onConfirm={() => void withdraw()}
       />
+      {intake.state === 'Passed' && (
+        <ScheduleAuctionDialog
+          isOpen={publishing}
+          onClose={() => setPublishing(false)}
+          onDone={onChanged}
+          title={intake.title}
+          target={{ kind: 'publish', intakeId: intake.id, version: intake.version }}
+        />
+      )}
     </li>
   )
 }
@@ -267,7 +308,7 @@ function SellerIntakes({ enabled }: { enabled: boolean }) {
   return (
     <section className={styles.intakes} aria-labelledby="intakes-title">
       <div className={styles.intakesHead}>
-        <h2 id="intakes-title">Sách chờ mở phiên</h2>
+        <h2 id="intakes-title">Sách chờ đăng phiên</h2>
         <Link to={ROUTES.auctionCreate()}><Plus size={15} aria-hidden="true" /> Đưa sách lên đấu giá</Link>
       </div>
       {waiting.length ? (
@@ -285,6 +326,7 @@ function SellerIntakes({ enabled }: { enabled: boolean }) {
 
 export function MyAuctionsPage() {
   const auth = useSession()
+  const queryClient = useQueryClient()
   const userId = auth.status === 'authenticated' ? auth.user.id : undefined
   const [params, setParams] = useSearchParams()
   const view = views.some((v) => v.value === params.get('view'))
@@ -356,7 +398,8 @@ export function MyAuctionsPage() {
             </h2>
             <p>
               {view === 'selling'
-                ? 'Các phiên của bạn sẽ xuất hiện sau khi sách qua kiểm tra và phiên được mở.'
+                ? 'Các phiên của bạn xuất hiện sau khi sách qua kiểm tra và bạn đăng phiên.'
+                : view === 'upcoming' ? 'Chưa có phiên nào đang hẹn giờ mở.'
                 : 'Ghé kệ đấu giá để tìm một cuốn sách bạn muốn đọc tiếp.'}
             </p>
             <Link to={ROUTES.auctions}>
@@ -371,6 +414,10 @@ export function MyAuctionsPage() {
               key={item.auction.id}
               item={item}
               serverTime={query.data.serverTime}
+              onChanged={() => Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['my-auctions'] }),
+                queryClient.invalidateQueries({ queryKey: ['auctions'] }),
+              ])}
             />
           ))}
       </div>
