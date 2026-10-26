@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { router } from "expo-router";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import {
@@ -19,12 +19,14 @@ import {
   space,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
-import { myAuctionsOptions, type MyAuctionView } from "./auctions-model";
+import { canReschedule, isScheduled, myAuctionsOptions, type MyAuctionView } from "./auctions-model";
+import { ScheduleAuctionSheet } from "./components";
 import type { MyAuctionItem } from "./contracts";
 
 const VIEWS: { value: MyAuctionView; label: string }[] = [
   { value: "all", label: "Tất cả" },
   { value: "active", label: "Đang diễn ra" },
+  { value: "upcoming", label: "Sắp mở" },
   { value: "payment", label: "Cần thanh toán" },
   { value: "selling", label: "Sách tôi bán" },
 ];
@@ -38,6 +40,9 @@ export function MyAuctionsScreen({ userId }: { userId: string }) {
   const [view, setView] = useState<MyAuctionView>("all");
   const result = useInfiniteQuery({ ...myAuctionsOptions(client, userId, view), enabled: foreground });
   const items = result.data?.pages.flatMap((page) => page.items) ?? [];
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState<MyAuctionItem | null>(null);
+  const edited = editing?.auction;
   return (
     <Screen footer={<MemberNavigation current="/auctions" />} footerAppearance="navigation">
       <BackAction title="Về phiên đang mở" onPress={() => router.replace("/auctions")} />
@@ -66,9 +71,28 @@ export function MyAuctionsScreen({ userId }: { userId: string }) {
       )}
       <View style={{ gap: space.md }}>
         {items.map((item) => (
-          <Row key={item.auction.id} item={item} />
+          <Row key={item.auction.id} item={item} onEdit={() => setEditing(item)} />
         ))}
       </View>
+      <ScheduleAuctionSheet
+        key={edited ? `${edited.id}:${edited.version}` : "none"}
+        visible={!!edited}
+        title={edited?.title ?? ""}
+        target={
+          edited
+            ? {
+                kind: "reschedule",
+                auctionId: edited.id,
+                version: edited.version!,
+                live: !isScheduled(edited, Date.now()),
+                startAt: edited.startAt,
+                endAt: edited.endAt,
+              }
+            : null
+        }
+        onClose={() => setEditing(null)}
+        onDone={() => void queryClient.invalidateQueries({ queryKey: ["my-auctions", userId] })}
+      />
       {result.hasNextPage && (
         <Button secondary title="Xem thêm" busy={result.isFetchingNextPage} onPress={() => void result.fetchNextPage()} />
       )}
@@ -76,10 +100,13 @@ export function MyAuctionsScreen({ userId }: { userId: string }) {
   );
 }
 
-function Row({ item }: { item: MyAuctionItem }) {
+function Row({ item, onEdit }: { item: MyAuctionItem; onEdit: () => void }) {
   const { auction } = item;
+  const now = Date.now();
   const status = item.needsPayment
     ? `Cần thanh toán trước ${item.paymentDeadline ? time(item.paymentDeadline) : "hạn"}`
+    : isScheduled(auction, now)
+      ? `Hẹn mở lúc ${time(auction.startAt)}`
     : item.won
       ? "Bạn đã thắng"
       : item.role === "Seller"
@@ -118,6 +145,9 @@ function Row({ item }: { item: MyAuctionItem }) {
             : `Khởi điểm ${formatVnd(auction.startPrice)}`}{" "}
         · {auction.pointName}
       </AppText>
+      {item.role === "Seller" && canReschedule(auction, now) && (
+        <Button secondary title="Đổi thời gian phiên" onPress={onEdit} />
+      )}
     </Pressable>
   );
 }

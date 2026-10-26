@@ -32,6 +32,7 @@ import {
   createAuctionCommand,
   formatRemaining,
   isOpen,
+  isScheduled,
   minimumBidOf,
   outcomeUnknown,
   participationKey,
@@ -196,6 +197,7 @@ function AuctionBody({
 }) {
   const { auction, history, leaderAlias } = data;
   const open = isOpen(auction, now);
+  const scheduled = isScheduled(auction, now);
   const price = auction.currentPrice ?? auction.startPrice;
   return (
     <View style={{ gap: space.xl }}>
@@ -225,7 +227,9 @@ function AuctionBody({
           {auction.bidderCount} người trả giá · bước giá {formatVnd(auction.step)}
         </AppText>
         <AppText kind="small" color={colors.muted}>
-          {open
+          {scheduled
+            ? `Mở lúc ${time(auction.startAt)} · còn ${formatRemaining(Date.parse(auction.startAt) - now)} · kết thúc ${time(auction.endAt)}`
+            : open
             ? `Còn ${formatRemaining(Date.parse(auction.endAt) - now)} · kết thúc ${time(auction.endAt)}`
             : `Phiên kết thúc lúc ${time(auction.endAt)}`}
         </AppText>
@@ -251,6 +255,10 @@ function AuctionBody({
         ) : (
           <Button title="Đăng nhập để trả giá" onPress={() => router.push("/account")} />
         )
+      ) : scheduled ? (
+        <Notice>
+          {`Phiên chưa mở. Người bán hẹn mở lúc ${time(auction.startAt)}; khi đó bạn có thể trả giá${auction.buyNowPrice !== null ? ` hoặc mua ngay với ${formatVnd(auction.buyNowPrice)}` : ""}.`}
+        </Notice>
       ) : (
         <Notice>
           {auction.state === "OnHold"
@@ -421,11 +429,11 @@ function BidPanel({
           )}
         </View>
       )}
-      {!pending && auction.buyNowPrice !== null && (
+      {!pending && auction.buyNowPrice !== null && !me?.leading && (
         <View style={{ gap: space.sm, paddingTop: space.md, borderTopWidth: 1, borderColor: colors.rule }}>
           <AppText kind="bold">Mua ngay {formatVnd(auction.buyNowPrice)}</AppText>
           <AppText kind="small" color={colors.muted}>
-            Chỉ có trước lượt trả giá đầu tiên. Sau khi bấm, người khác còn 60 giây để trả cao hơn.
+            Còn dùng được khi giá hiện tại thấp hơn giá mua ngay. Sau khi bấm, người khác còn 60 giây để trả cao hơn.
           </AppText>
           <Button
             secondary

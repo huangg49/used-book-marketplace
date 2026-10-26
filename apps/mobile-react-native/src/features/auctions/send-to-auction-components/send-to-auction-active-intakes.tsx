@@ -8,6 +8,8 @@ export interface SendToAuctionActiveIntakesProps {
   readonly intakes: MyIntake[];
   readonly isLoading?: boolean;
   readonly onWithdraw: (intake: MyIntake) => void;
+  // ADR 0047: the seller publishes a Passed book now or at a later time.
+  readonly onPublish: (intake: MyIntake) => void;
   readonly onSubmitEvidence: (intake: MyIntake, note: string) => void;
   readonly evidenceTextMap: Record<string, string>;
   readonly onChangeEvidenceText: (id: string, text: string) => void;
@@ -27,6 +29,7 @@ export function SendToAuctionActiveIntakes({
   intakes,
   isLoading = false,
   onWithdraw,
+  onPublish,
   onSubmitEvidence,
   evidenceTextMap,
   onChangeEvidenceText,
@@ -131,7 +134,7 @@ export function SendToAuctionActiveIntakes({
                           : item.state === "NeedsEvidence"
                             ? "Cần bổ sung bằng chứng"
                             : item.state === "Passed"
-                              ? "Đạt kiểm tra, chờ mở phiên"
+                              ? "Đạt kiểm tra, sẵn sàng đăng phiên"
                               : item.state === "Auctioning"
                                 ? "Đang đấu giá"
                                 : "Mời bạn tới nhận lại sách"}
@@ -239,9 +242,26 @@ export function SendToAuctionActiveIntakes({
                   </View>
                 )}
 
-                {/* 5. Withdraw Button (Rút sách) */}
+                {/* 5. Publish (Passed) and Withdraw (Rút sách) */}
                 {isWithdrawable && (
                   <View style={styles.cardActionsRow}>
+                    {item.state === "Passed" && (
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={disabled}
+                        onPress={() => onPublish(item)}
+                        style={({ pressed }) => [
+                          styles.submitEvidenceBtn,
+                          pressed && { opacity: 0.8 },
+                          disabled && { opacity: 0.5 },
+                        ]}
+                      >
+                        <Icon name="gavel" size={14} color={stitchTokens.gold} />
+                        <AppText kind="bold" style={styles.submitEvidenceBtnText}>
+                          Đăng phiên
+                        </AppText>
+                      </Pressable>
+                    )}
                     <Pressable
                       accessibilityRole="button"
                       disabled={disabled}

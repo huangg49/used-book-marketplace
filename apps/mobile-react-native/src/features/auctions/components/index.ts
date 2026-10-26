@@ -11,3 +11,4 @@ export { AuctionCard, type AuctionCardProps } from "./auction-card";
 export { AuctionTrustBanner } from "./auction-trust-banner";
 export { AuctionOutbidAlert, type AuctionOutbidAlertProps } from "./auction-outbid-alert";
 export { AuctionCommitments } from "./auction-commitments";
+export { ScheduleAuctionSheet, type ScheduleTarget } from "./schedule-auction-sheet";
