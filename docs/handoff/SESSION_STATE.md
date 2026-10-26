@@ -4,7 +4,7 @@
 
 - Nhánh `feat/web-edit-approved-listing`.
 - Theo yêu cầu mới nhất của người dùng: Gỡ bỏ bản đồ minh họa thung lũng (ruộng bậc thang, máy bay, mây, suối), chỉ giữ lại duy nhất hiệu ứng hoạt họa lá thu rơi tự nhiên trên trang tìm sách `/books` ([BookSearchPage.tsx](apps/user-web/src/pages/BookSearchPage.tsx)):
-  - Khôi phục màu nền giấy ấm chuẩn mực của Lật Lại `background: var(--shop-paper)`.
+  - Áp dụng sắc màu vàng lá thu Hà Nội (`#fcf5df` đến `#ead098` với vầng sáng nắng ấm `radial-gradient`), gợi nhớ nắng thu mật ong và thảm lá vàng sấu già trên phố Phan Đình Phùng.
   - Tích hợp trực tiếp `<AutumnLeavesCanvas />` vào khung nhìn cố định `.leavesWrapper` (`position: fixed; inset: 0; pointer-events: none; z-index: 0;`).
   - 42 lá cây mùa thu (lá phong đỏ, sồi già, bạch dương) bay chao liệng 3D mượt mà trên nền trang tìm kiếm, không che khuất hay gây rối mắt đối với các bộ lọc, thanh tìm kiếm và thẻ sách.
   - Chân trang `.footer` giữ nguyên `position: relative; z-index: 10;` và khoảng đệm `padding-bottom: 72px;` trên trang tìm kiếm.

@@ -3,7 +3,10 @@
   --shop-shelf: #f4eddf;
   --shop-error: #912b0e;
   position: relative;
-  background: var(--shop-paper);
+  /* Sắc vàng lá thu Hà Nội: vàng nắng mật ong nhẹ ấm và thảm lá vàng sấu già */
+  background:
+    radial-gradient(ellipse 90% 50% at 50% 0%, rgba(255, 248, 225, 0.9) 0%, transparent 80%),
+    linear-gradient(180deg, #fcf5df 0%, #f7e7c1 35%, #f2dcab 70%, #ead098 100%);
   color: var(--shop-ink);
   min-height: calc(100vh - 76px);
   padding-bottom: 72px;
