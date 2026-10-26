@@ -6,6 +6,7 @@ import {
   SlidersHorizontal,
   X,
   ArrowRight,
+  Menu,
 } from "lucide-react";
 import { HomeBookCard } from "../components/HomeBookCard";
 import { CatalogSort } from "../components/CatalogSort";
@@ -373,6 +374,24 @@ export function BookSearchPage() {
       window.removeEventListener("resize", check);
     };
   }, []);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("latlai_catalog_filter_collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("latlai_catalog_filter_collapsed", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
   const dialog = useRef<HTMLDialogElement>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [floating, setFloating] = useState(() => typeof window !== "undefined" && window.scrollY > 48);
@@ -618,16 +637,30 @@ export function BookSearchPage() {
           <div className={styles.stickyFilterSpacer} aria-hidden="true" />
         </>
       )}
-      <div className={styles.catalog}>
+      <div
+        className={styles.catalog}
+        data-sidebar-collapsed={isSidebarCollapsed}
+      >
         <aside
           ref={sidebar}
           className={styles.sidebar}
           aria-label="Bộ lọc sách"
         >
-          <h2>
-            <SlidersHorizontal size={18} aria-hidden="true" />
-            Bộ lọc sách
-          </h2>
+          <div className={styles.sidebarHeader}>
+            <h2>
+              <SlidersHorizontal size={18} aria-hidden="true" />
+              Bộ lọc sách
+            </h2>
+            <button
+              type="button"
+              className={styles.collapseSidebarBtn}
+              onClick={toggleSidebar}
+              aria-label="Thu gọn bộ lọc sách"
+              title="Thu gọn bộ lọc"
+            >
+              <Menu size={18} aria-hidden="true" />
+            </button>
+          </div>
           <FilterForm
             key={filterKey}
             initial={initial}
@@ -638,6 +671,17 @@ export function BookSearchPage() {
         </aside>
         <section className={styles.results} aria-labelledby="catalog-results">
           <div className={styles.searchBar}>
+            {isSidebarCollapsed && (
+              <button
+                type="button"
+                className={styles.expandSidebarBtn}
+                onClick={toggleSidebar}
+                aria-label="Mở bộ lọc sách"
+                title="Mở bộ lọc sách"
+              >
+                <Menu size={20} aria-hidden="true" />
+              </button>
+            )}
             <form
               role="search"
               className={styles.search}

@@ -10,6 +10,10 @@
   - Triệt tiêu hoàn toàn dải hở trắng trên footer: Bổ sung `ROUTES.search` vào điều kiện `homeFooter` trong [MainLayout.tsx](apps/user-web/src/layouts/MainLayout.tsx) để loại bỏ khoảng cách `margin-top: 72px` của footer, giúp nền vàng lá thu Hà Nội tiếp giáp liền mạch, mượt mà vào chân trang đỏ rượu `#5c0202`.
   - Chuẩn hóa khung ảnh bìa sách dạng dọc tỷ lệ 3:4 tràn viền (Full Cover Edge-to-Edge) trong [BookCard.module.css](apps/user-web/src/components/BookCard.module.css): Thay thế khung ngang 180px cũ bằng `aspect-ratio: 3 / 4; width: 100%; height: auto; padding: 0;`, ảnh bìa chuyển sang `object-fit: cover; width: 100%; height: 100%;` lấp đầy 100% khung dọc, loại bỏ hoàn toàn viền trống hai bên.
   - Điều chỉnh ràng buộc hiển thị 5 thẻ bài đăng/hàng trên desktop trong [BookSearchPage.module.css](apps/user-web/src/pages/BookSearchPage.module.css): Mở rộng container `.catalog` `max-width: 1600px; padding: 24px 32px 0;`, cấu hình lưới `.grid` thành `grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px 16px;`, điều chỉnh đệm nút `.view` trong `BookCard.module.css` để giữ độ thoáng và cân xứng thẩm mỹ, bổ sung breakpoint tablet 2 cột linh hoạt.
+  - **Nút thu gọn bộ lọc 3 dấu gạch (Collapsible Filter Sidebar)**:
+    - Bổ sung nút 3 dấu gạch (`Menu` icon) ở góc phải tiêu đề "Bộ lọc sách" (`.collapseSidebarBtn`) trong panel bên trái để người dùng thu gọn hoàn toàn sidebar khi muốn tập trung xem sách.
+    - Khi thu gọn: sidebar ẩn đi, layout `.catalog` chuyển sang `grid-template-columns: minmax(0, 1fr)`, thanh tìm kiếm (`.search`) và lưới thẻ sách mở rộng dàn đều toàn bộ chiều rộng màn hình (`dàn full màn hình`).
+    - Nút nhỏ 3 dấu gạch (`.expandSidebarBtn`) xuất hiện bên trái thanh tìm kiếm, cho phép mở lại bộ lọc nhanh chóng bất kỳ lúc nào; trạng thái thu gọn được lưu vào `localStorage` (`latlai_catalog_filter_collapsed`) để duy trì xuyên suốt phiên duyệt sách.
 - **Kiểm tra**:
   - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
   - `pnpm --filter @used-books/user-web test`: 27 test files / 201 tests PASS.
