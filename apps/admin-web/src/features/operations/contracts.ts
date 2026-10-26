@@ -215,6 +215,8 @@ export const operationsAuction = z.object({
   startAt: time,
   endAt: time,
   pointName: z.string(),
+  // ADR 0047: Scheduled before startAt; optional for older servers.
+  phase: z.enum(["Scheduled", "Live", "Ended"]).optional(),
 }) satisfies z.ZodType<Schema["OperationsAuctionItem"]>;
 export type OperationsAuction = z.infer<typeof operationsAuction>;
 export const operationsAuctionList = z.object({
@@ -277,7 +279,7 @@ export const reclaimLabels: Record<
 export const intakeLabels: Record<Intake["state"], string> = {
   AwaitingDropoff: "Chờ người bán mang sách tới",
   Received: "Đã nhận, chờ kiểm tra",
-  Passed: "Đạt kiểm tra, chờ mở phiên",
+  Passed: "Đạt kiểm tra, chờ người bán đăng phiên",
   NeedsEvidence: "Chờ bằng chứng của người bán",
   Auctioning: "Đang đấu giá",
   ReclaimRequired: "Chờ người bán nhận lại",
