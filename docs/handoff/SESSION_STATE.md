@@ -29,6 +29,10 @@
   hoặc bỏ bước kiểm. Tiếp tục đợi CI đúng head trước squash merge.
   Wallet browser kiểm lối vào ví trong account/mobile menu thay icon ví đã bị
   main bỏ; vẫn kiểm href, kích thước chạm, các viewport và toàn bộ invariant tiền.
+- CI head `9e17eca`: BuyNow/Exchange đã đạt; wallet đi qua các invariant nạp/tiền
+  rồi bắt được nút navbar tràn ở1024px/chữ130% khi floating. Thu hẹp phần tên tài
+  khoản ở desktop hẹp1001–1279px, vẫn giữ avatar, accessible name đầy đủ và menu.
+  Giữ assertion containment navbar; không cắt overflow để giấu nút.
 
 ## Đồng bộ main và giữ phần bán nguyên bộ — 26/10/2026
 

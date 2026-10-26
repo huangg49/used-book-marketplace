@@ -47,6 +47,11 @@
   white-space: nowrap;
   font-weight: 600;
 }
+@media (min-width: 1001px) and (max-width: 1279px) {
+  .userName {
+    max-width: 80px;
+  }
+}
 .trigger svg {
   transition: transform 180ms ease-out;
   flex-shrink: 0;
