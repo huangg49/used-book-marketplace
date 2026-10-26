@@ -1,19 +1,23 @@
 # Điểm lưu hiện tại — 26/10/2026
 
-## Chuẩn bị push nhánh và PR bộ sách — 26/10/2026
+## Đã push nhánh và mở PR67 bộ sách — 26/10/2026
 
 - Owner đã giao push và merge an toàn. Tiếp tục `codex/whole-book-bundles`, base
   `9d0af9c`; GitHub đã đăng nhập và Git author được cấu hình riêng repo theo tài
-  khoản hiện tại. Commit skill `8a96f4a` tách khỏi phần API/web bộ sách.
+  khoản hiện tại. Commit skill `8a96f4a` tách khỏi commit API/web `05bef98`.
+  Đã push upstream và mở [PR67](https://github.com/huangg49/used-book-marketplace/pull/67),
+  GitHub xác nhận có thể merge và không conflict tại lúc mở PR.
 - Kiểm lại trước publish: API typecheck/lint/build và192unit, admin build/lint
   và30unit, session-client27unit, contract/generated/routes và docs/diff PASS.
   User-web231unit/build/typecheck/lint và browser của hai lượt đồng bộ bên dưới
   vẫn là evidence hiện hành; không sửa source sau các check đó. Lint/chunk còn
   warning cũ. Không đưa env/token/DB/dump hoặc evidence chứa PII vào Git.
-- Chưa có review người thật theo TEAMWORK/ADR0046; CI remote chờ PR. Chỉ squash
+- Chưa có review người thật theo TEAMWORK/ADR0046;8nhóm CI remote đang chạy trên
+  PR. Trạng thái CI hiện hành phải đọc trực tiếp từ head PR, không suy từ log cũ.
+  Chỉ squash
   merge khi các điều kiện này đạt; không đổi branch protection hoặc bỏ gate.
   READINESS/DB chính/mobile giữ nguyên. Chi tiết local của lượt publish ở
-  `.tmp/publish/`; checkpoint này sẽ cập nhật URL/trạng thái PR sau khi push.
+  `.tmp/publish/`. Không có migration hoặc deploy lên DB chính trong lượt publish.
 
 ## Đồng bộ main và giữ phần bán nguyên bộ — 26/10/2026
 
