@@ -731,7 +731,7 @@ try {
     .getByRole("link", { name: "Tổng quan", exact: true })
     .click();
   await page
-    .getByRole("region", { name: "Ví mô phỏng", exact: true })
+    .getByRole("region", { name: "Số dư khả dụng", exact: true })
     .getByText(/90\.000/)
     .waitFor();
   assert.equal(await page.getByLabel(/^Email/).count(), 0);
