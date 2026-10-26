@@ -23,6 +23,10 @@
   theo breakpoint960px, đồng bộ khi resize và cleanup listener; giữ test strict
   nguyên trạng. Sau sửa231unit/build/typecheck/lint web PASS, detector một lượt
   trả[]; CI phải chạy lại trên commit có bản sửa trước merge.
+- CI head `c91222c` đã qua lỗi tiêu đề; BuyNow dừng ở selector nút tài khoản cũ.
+  Cập nhật selector BuyNow/wallet/account browser tests sang accessible name
+  `Tài khoản của …` đang có trên main; giữ assertion mua/tiền, không tăng timeout
+  hoặc bỏ bước kiểm. Tiếp tục đợi CI đúng head trước squash merge.
 
 ## Đồng bộ main và giữ phần bán nguyên bộ — 26/10/2026
 

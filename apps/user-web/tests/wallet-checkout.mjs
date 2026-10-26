@@ -177,7 +177,7 @@ try {
   const chatBounds = await chatIcon.boundingBox();
   assert.ok(walletBounds.width >= 44 && walletBounds.height >= 44);
   assert.ok(walletBounds.x + walletBounds.width <= chatBounds.x);
-  await page.getByRole("button", { name: "Tài khoản", exact: true }).click();
+  await page.getByRole("button", { name: /^Tài khoản của .+$/, exact: true }).click();
   await page
     .getByRole("navigation", { name: "Tài khoản cá nhân", exact: true })
     .getByRole("link", { name: "Ví của tôi", exact: true })
@@ -719,7 +719,7 @@ try {
     ),
   );
   await page.setViewportSize({ width: 1366, height: 900 });
-  await page.getByRole("button", { name: "Tài khoản", exact: true }).click();
+  await page.getByRole("button", { name: /^Tài khoản của .+$/, exact: true }).click();
   await page
     .getByRole("navigation", { name: "Tài khoản cá nhân", exact: true })
     .getByRole("link", { name: "Tổng quan", exact: true })
