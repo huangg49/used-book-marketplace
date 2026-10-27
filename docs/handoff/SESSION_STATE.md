@@ -2,7 +2,7 @@
 
 ## Hiệu ứng chuyển trang, cuộn quán tính Lenis & Morphing phóng ảnh bìa (Tao Tajima) — 27/10/2026
 
-- Nhánh `feat/web-search-transition-animations` từ `origin/main` (`a463041`).
+- Nhánh `feat/web-search-transition-animations` từ `origin/main` (`6541705`).
 - Thực hiện chuỗi cải tiến chuyển động và trải nghiệm thị giác theo yêu cầu người dùng:
   - **Trang tìm sách (`/books`)**:
     - Tích hợp `AnimatePresence mode="wait"` với hiệu ứng chuyển trang `pageVariants` (trượt đa hướng mượt mà kết hợp làm mờ và độ sâu 3D scale nhẹ) khi lật trang hoặc đổi bộ lọc.
@@ -14,15 +14,17 @@
     - Cài đặt thư viện `lenis` (`^1.3.27`), xây dựng hook [useSmoothScroll.ts](../../apps/user-web/src/hooks/useSmoothScroll.ts).
     - Áp dụng toàn cục qua [AppRouteLayout.tsx](../../apps/user-web/src/app/AppRouteLayout.tsx) cho trang chủ (`/`), tìm kiếm (`/books`), tài khoản cá nhân (`/account`, `/profile`) và các trang thuộc ứng dụng; điều tiết vuốt chuột 60fps/120fps có độ trễ quán tính mượt mà.
     - Tự động dừng (`lenis.stop()`) khi mở dialog/modal hoặc khi vào không gian hội thoại chat (`/chat`), tự động cuộn mượt về đầu trang kết quả (`#catalog-results`) khi bấm chuyển trang.
-  - **Hiệu ứng phóng to ảnh bìa morphing kiểu Tao Tajima (Shared Element Transition)**:
-    - Áp dụng trên [BookCard.tsx](../../apps/user-web/src/components/BookCard.tsx) và [BookDetailPage.tsx](../../apps/user-web/src/pages/BookDetailPage.tsx).
-    - Sử dụng `motion.img` với `layoutId="book-cover-{id}"` cùng bộ thông số lò xo vật lý (`stiffness: 340, damping: 32, mass: 0.85`).
-    - Truyền `location.state.listing` qua navigation và nạp làm `initialData` cho `useQuery` để ảnh bìa hiển thị ngay frame đầu tiên, kích hoạt hoạt ảnh phóng to mượt mà không bị giật hay đợi fetch API; khi bấm quay lại trang tìm kiếm ("Về kệ sách"), ảnh bìa tự động co về đúng vị trí thẻ ban đầu.
+  - **Hiệu ứng phóng to ảnh bìa chuyển cảnh chuẩn Chat (View Transition API & Tao Tajima)**:
+    - Xây dựng [BookTransition.css](../../apps/user-web/src/components/BookTransition.css) đồng bộ với kiến trúc chuyển cảnh của phòng Chat (`ConversationTransition.css`).
+    - Gắn `viewTransition` trực tiếp lên liên kết `<Link to={detailUrl} viewTransition>` tại [BookCard.tsx](../../apps/user-web/src/components/BookCard.tsx) và nút quay lại `Về kệ sách` tại [BookDetailPage.tsx](../../apps/user-web/src/pages/BookDetailPage.tsx).
+    - Sử dụng `useViewTransitionState` từ `react-router-dom` kích hoạt `data-book-morph-card="true"` đúng thẻ được bấm, gán `view-transition-name: book-cover` trên cả thẻ danh sách và [ListingGallery.tsx](../../apps/user-web/src/components/ListingGallery.tsx).
+    - Trình duyệt tự động phóng to (zoom/morph) mượt mà có gia tốc GPU `cubic-bezier(0.16, 1, 0.3, 1)` trong 440ms, nền và thanh điều hướng giữ cố định; khi bấm quay lại trang tìm kiếm, bìa sách thu nhỏ mượt mà đáp về đúng thẻ ban đầu.
+    - Chuẩn hóa khung ảnh trang chi tiết trong [ListingGallery.module.css](../../apps/user-web/src/components/ListingGallery.module.css) và [BookDetailPage.module.css](../../apps/user-web/src/pages/BookDetailPage.module.css) thành khung dọc tỷ lệ chuẩn sách 3:4, loại bỏ hoàn toàn đệm hộp cũ giúp ảnh hiển thị tràn viền full khung (Edge-to-Edge) sắc nét.
 - **Kiểm tra**:
   - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
   - `pnpm --filter @used-books/user-web test`: 31 files / 231 tests PASS.
   - `pnpm --filter @used-books/user-web build`: PASS.
-  - Kiểm thử trực tiếp trên trình duyệt Chromium: Cuộn mượt Lenis, phân trang slide & blur, click thẻ sách bung mở ảnh bìa vào trang chi tiết và thu lại hoàn toàn mượt mà.
+  - Trình duyệt Chromium ghi nhận hoạt ảnh View Transition phóng to và thu nhỏ 100% mượt mà, console 0 lỗi.
 
 ## Sửa ảnh bản sách bị cắt trên Member web — 27/10/2026
 
