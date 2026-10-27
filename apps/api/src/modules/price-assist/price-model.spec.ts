@@ -4,6 +4,7 @@ import {
   PriceModelError,
   priceModelFromConfig,
   AnthropicPriceModel,
+  NvidiaPriceModel,
 } from './price-model.js';
 
 // Adapter-only tests with a stubbed fetch: no network, no real key.
@@ -134,5 +135,68 @@ describe('Gemini adapter', () => {
     expect(
       priceModelFromConfig(cfg({ PRICE_ASSIST_API_KEY: 'k', PRICE_ASSIST_PROVIDER: 'gemini' }), false),
     ).toBeInstanceOf(GeminiPriceModel);
+  });
+});
+
+describe('NVIDIA adapter', () => {
+  const nvModel = (fetcher: typeof fetch, timeoutMs = 1000) =>
+    new NvidiaPriceModel({ apiKey: 'nvapi-test', model: 'nvidia/test', timeoutMs, fetcher });
+  const answer = (content: string, finish = 'stop') => ({
+    model: 'nvidia/test',
+    choices: [{ finish_reason: finish, message: { content } }],
+    usage: { prompt_tokens: 700, completion_tokens: 90 },
+  });
+
+  it('sends a bearer key, guided JSON and no_think, and strips reasoning text', async () => {
+    let seen: { url: string; init: RequestInit } | null = null;
+    const fetcher = (async (url: string, init: RequestInit) => {
+      seen = { url, init };
+      return new Response(
+        JSON.stringify(
+          answer('<think>cân nhắc</think>\n{"low":30000,"high":42000,"factors":[],"missing":[]}'),
+        ),
+        { status: 200 },
+      );
+    }) as unknown as typeof fetch;
+    const draft = await nvModel(fetcher).draft('system', 'user');
+    expect(draft).toMatchObject({
+      output: { low: 30000, high: 42000 },
+      model: 'nvidia/test',
+      inputTokens: 700,
+      outputTokens: 90,
+    });
+    expect(seen!.url).toBe('https://integrate.api.nvidia.com/v1/chat/completions');
+    expect(seen!.url).not.toContain('nvapi-test');
+    expect((seen!.init.headers as Record<string, string>).Authorization).toBe('Bearer nvapi-test');
+    const body = JSON.parse(String(seen!.init.body));
+    expect(body.nvext.guided_json.required).toContain('low');
+    expect(body.messages[0].content).toMatch(/\/no_think$/);
+  });
+
+  it.each([
+    ['HTTP error', reply({ error: { message: 'quota' } }, 429), 'ProviderError'],
+    ['content filter', reply(answer('', 'content_filter')), 'Refusal'],
+    ['truncated', reply(answer('{"low":', 'length')), 'InvalidOutput'],
+    ['not JSON', reply(answer('khoảng 50k')), 'InvalidOutput'],
+  ])('maps %s to %s', async (_name, fetcher, kind) => {
+    await expect(nvModel(fetcher).draft('s', 'u')).rejects.toMatchObject({ kind });
+  });
+
+  it('times out instead of waiting on a slow provider', async () => {
+    const slow = ((_url: string, init: RequestInit) =>
+      new Promise((_resolve, reject) =>
+        init.signal!.addEventListener('abort', () => reject(new Error('aborted'))),
+      )) as unknown as typeof fetch;
+    const error = await nvModel(slow, 30).draft('s', 'u').catch((e) => e);
+    expect(error).toBeInstanceOf(PriceModelError);
+    expect(error.kind).toBe('Timeout');
+  });
+
+  it('is selected by configuration with the Nemotron default', () => {
+    const built = priceModelFromConfig((key) =>
+      ({ PRICE_ASSIST_API_KEY: 'k', PRICE_ASSIST_PROVIDER: 'nvidia', PRICE_ASSIST_ENABLED: 'true' })[key],
+    );
+    expect(built).toBeInstanceOf(NvidiaPriceModel);
+    expect(built!.model).toBe('nvidia/llama-3.3-nemotron-super-49b-v1.5');
   });
 });

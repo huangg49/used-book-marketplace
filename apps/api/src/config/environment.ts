@@ -163,14 +163,21 @@ export function validatePriceAssist(env: Record<string, unknown>) {
   if (apiKey && apiKey.startsWith('replace-'))
     throw new Error('PRICE_ASSIST_API_KEY still holds the example value.');
   const provider = String(env.PRICE_ASSIST_PROVIDER || 'anthropic');
-  if (!['anthropic', 'gemini'].includes(provider))
-    throw new Error('PRICE_ASSIST_PROVIDER must be anthropic or gemini.');
+  if (!['anthropic', 'gemini', 'nvidia'].includes(provider))
+    throw new Error('PRICE_ASSIST_PROVIDER must be anthropic, gemini or nvidia.');
   const model = String(
-    env.PRICE_ASSIST_MODEL ||
-      (provider === 'gemini' ? 'gemini-3.8-flash' : 'claude-opus-5-5'),
+    env.PRICE_ASSIST_MODEL || DEFAULT_PRICE_MODELS[provider],
   );
-  if (!/^[a-z0-9][a-z0-9.-]{2,79}$/.test(model))
+  // NVIDIA ids carry a publisher prefix (nvidia/..., meta/...).
+  const modelPattern =
+    provider === 'nvidia'
+      ? /^[a-z0-9][a-z0-9_.-]{1,39}\/[a-z0-9][a-z0-9_.-]{1,79}$/
+      : /^[a-z0-9][a-z0-9.-]{2,79}$/;
+  if (!modelPattern.test(model))
     throw new Error('PRICE_ASSIST_MODEL is invalid.');
+  const nvidiaBase = String(env.NVIDIA_BASE_URL ?? '');
+  if (nvidiaBase && !/^https:\/\/[^\s/]+(\/[^\s]*)?$/.test(nvidiaBase))
+    throw new Error('NVIDIA_BASE_URL must be an https URL.');
   const effort = String(env.PRICE_ASSIST_EFFORT || 'low');
   if (!['low', 'medium', 'high', 'none'].includes(effort))
     throw new Error('PRICE_ASSIST_EFFORT must be low, medium, high or none.');
@@ -196,6 +203,7 @@ export function validatePriceAssist(env: Record<string, unknown>) {
     PRICE_ASSIST_PROVIDER: provider,
     PRICE_ASSIST_MODEL: model,
     PRICE_ASSIST_EFFORT: effort,
+    NVIDIA_BASE_URL: nvidiaBase.replace(/\/+$/, ''),
     PRICE_ASSIST_TIMEOUT_MS: intIn(env.PRICE_ASSIST_TIMEOUT_MS, 20_000, 2_000, 60_000, 'PRICE_ASSIST_TIMEOUT_MS'),
     PRICE_ASSIST_USER_DAILY_LIMIT: intIn(env.PRICE_ASSIST_USER_DAILY_LIMIT, 20, 1, 500, 'PRICE_ASSIST_USER_DAILY_LIMIT'),
     PRICE_ASSIST_DAILY_BUDGET_USD: budget,
@@ -208,6 +216,12 @@ export function validatePriceAssist(env: Record<string, unknown>) {
     PRICE_LOOKUP_SEARCH_USD: searchUsd,
   };
 }
+
+const DEFAULT_PRICE_MODELS: Record<string, string> = {
+  anthropic: 'claude-opus-5-5',
+  gemini: 'gemini-3.8-flash',
+  nvidia: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+};
 
 // Proposal for the owner to confirm: shops that sell new books in Vietnam.
 export const DEFAULT_LOOKUP_SHOPS =

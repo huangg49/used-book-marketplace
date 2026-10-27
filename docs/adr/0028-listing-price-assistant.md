@@ -125,3 +125,20 @@ Nhánh `codex/bao-price-assist-gemini`, OpenAPI 0.23.0, migration `0006`, `0007`
   cứ, tình trạng người bán khai lúc xin gợi ý, đã dùng hay không, giá chọn, nguồn.
 - Gemini thử lại một lần khi 503/429 nếu còn ≥ 8 s; lỗi provider ghi log WARN kèm lý do
   ngắn của Google.
+
+## 9. Cập nhật provider NVIDIA (27/10/2026)
+
+Nhánh `feature/ai-listing-assist`. Không đổi contract, migration hay luật bằng chứng.
+
+- `PRICE_ASSIST_PROVIDER=nvidia` gọi NVIDIA NIM qua API chat tương thích OpenAI
+  (`integrate.api.nvidia.com/v1`, hoặc `NVIDIA_BASE_URL` https cho NIM tự host). Key
+  `nvapi-…` chỉ ở header `Authorization`; không retry, timeout bằng AbortController.
+- Model mặc định `nvidia/llama-3.3-nemotron-super-49b-v1.5`, tắt suy luận bằng `/no_think`;
+  output ràng buộc bằng `nvext.guided_json` và vẫn qua `output-check.ts`. Thẻ `<think>`
+  hoặc code fence bị bỏ trước khi parse.
+- Đơn giá NVIDIA trong `KNOWN_RATES` là ước lượng cao để ngân sách không đếm thiếu
+  (bản dùng thử build.nvidia.com tính theo credit); gói trả phí đặt
+  `PRICE_ASSIST_INPUT/OUTPUT_USD_PER_MTOK`.
+- Tra giá trực tuyến (ADR 0029) vẫn chỉ chạy với Gemini; với `nvidia` thì
+  `PriceFinder` là null như với `anthropic`.
+- Chưa có lần chạy live với key NVIDIA: adapter chỉ được kiểm bằng fetch giả.
