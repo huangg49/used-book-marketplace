@@ -35,6 +35,7 @@
     "mongo:seed": "tsx src/mongo-seed.ts",
     "price-refs:import": "tsx src/price-refs-import.ts",
     "eval:price": "tsx eval/price-assist/run.ts",
+    "eval:autofill": "tsx eval/autofill-assist/run.ts",
     "mongo:check": "node dist/mongo-check.js",
     "mongo:import-postgres": "tsx src/mongo-import-postgres.ts"
   },

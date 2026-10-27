@@ -84,4 +84,19 @@ theo điều khoản công bố — cần chủ dự án kiểm lại khi lên p
   Trình duyệt: `/sell` với API + Mongo local + Supabase thật → tạo nháp, tải 2 ảnh, đọc,
   “Dùng tất cả” điền form; bản ghi `Suggested`, chi phí ước tính 2.316 micro-USD tính vào
   ngân sách chung. Provider trả id `private/nvidia/...`, được lưu như provider báo.
-  Chưa đo trên ảnh chụp thật (ngưỡng §5) và chưa gửi trọn bài đăng sau khi điền.
+- Bộ chấm `pnpm --filter @used-books/api eval:autofill --dir <thư mục ảnh>` (`--init` tạo
+  `cases.json`): ảnh đi qua cùng bước derivative + thu nhỏ như khi tải lên, chấm tên đúng
+  (có dấu / bỏ dấu), tác giả, ISBN đúng/sai, p50/p95, chi phí; chỉ `source: real-camera`
+  với ≥ 20 cuốn mới được tính là bằng chứng §5. Ảnh không vào Git; kết quả ghi ở
+  `apps/api/eval/autofill-assist/results/`. Chạy thử trên 3 ca tổng hợp 27/10: 3/3 tên,
+  tác giả, ISBN 1/1, 0 ISBN sai, p95 2,0 s — **không là bằng chứng** (ảnh tổng hợp).
+- Trình duyệt 27/10, gửi trọn bài sau khi điền: lần gửi dùng lại bản nháp của lần đọc
+  ảnh (không tạo nháp thứ hai), chỉ tải ảnh bìa mới; yêu cầu danh mục mang đủ NXB, năm,
+  lần xuất bản, ISBN đã “Dùng”; bài đăng `PendingReview` với đúng 1 ảnh. Ảnh chỉ dùng
+  để đọc không gắn vào revision và bị worker xóa sau ~24 giờ như ảnh nháp khác. Sửa
+  hai lỗi tìm thấy: bước Kiểm tra chưa hiện các trường này (nay hiện trước khi gửi), và
+  “Đăng cuốn khác” giữ bản nháp cũ — lần gửi sau sẽ phát lại kết quả cũ thay vì tạo
+  bài mới; nay tạo bản nháp mới và xóa trường đã dùng (đã kiểm hai lần gửi liên tiếp
+  tạo hai nháp khác nhau).
+- **NOT RUN**: ảnh chụp thật (ngưỡng §5) — không có ảnh thật trong repo hay kho ảnh
+  local (ảnh nháp cũ đều là bìa demo dựng hình).

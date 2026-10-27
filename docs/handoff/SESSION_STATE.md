@@ -2,7 +2,7 @@
 
 ## Trợ lý AI NVIDIA: provider gợi ý giá & điền thông tin sách từ ảnh — 27/10/2026
 
-- Nhánh `feature/ai-listing-assist` (từ `main` b39747a), 3 commit, chưa push/PR.
+- Nhánh `feature/ai-listing-assist` (từ `main` b39747a), chưa push/PR.
 - **Gợi ý giá**: thêm `PRICE_ASSIST_PROVIDER=nvidia` (NIM, mặc định
   `nvidia/nemotron-3.5-lightning-30b-a3b`, `NVIDIA_BASE_URL` tùy chọn). Không đổi
   contract/luật bằng chứng; ADR 0028 §9.
@@ -23,8 +23,16 @@
   đúng, 1–2,5 s. Trình duyệt `/sell` (Mongo local + Supabase thật): đọc 2 ảnh, “Dùng tất
   cả” điền form, desktop + 375 px; sửa token màu hover thiếu của panel. DB local đã
   migrate tới 0038 + bootstrap.
-- **NOT RUN**: ảnh chụp thật (ngưỡng ADR 0048 §5), bộ eval giá §7, gửi trọn bài đăng
-  sau khi điền (đường dùng lại nháp/ảnh chỉ có unit test). RN chưa có UI điền từ ảnh.
+- **Eval giá live 34 ca** (ADR 0028 §9): 33/34 status đúng, 0 output sai tới client,
+  p95 9,2 s (trên ngưỡng 8 s); ca chưa review nên độ đúng giá NOT SCORED.
+- **Gửi trọn bài sau khi điền** (trình duyệt): dùng lại nháp, catalog nhận đủ trường đã
+  dùng, `PendingReview`. Sửa: bước Kiểm tra hiện NXB/năm/lần xuất bản/ISBN; “Đăng cuốn
+  khác” tạo nháp mới (trước đó lần gửi thứ hai phát lại bài cũ). Tài khoản member local
+  nay có thêm bài thử “QA Reset Book A” (chờ duyệt), nháp “QA Reset Book B” (bị chặn
+  giới hạn 5 bài) và địa chỉ gửi thử “QA Người gửi”.
+- **NOT RUN**: ảnh chụp thật (ngưỡng ADR 0048 §5) — chụp 20–30 cuốn rồi chạy
+  `pnpm --filter @used-books/api eval:autofill --dir <thư mục> --init`, điền `cases.json`,
+  chạy lại không `--init`. RN chưa có UI điền từ ảnh.
 
 ## Khắc phục cuộn chuột trang hội thoại & Cố định khung chat trong viewport — 27/10/2026
 
