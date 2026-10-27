@@ -8,8 +8,10 @@ Trả về DUY NHẤT một đối tượng JSON, không giải thích, đúng c
 - title: tên sách đúng chính tả và dấu như in; không kèm khẩu hiệu quảng cáo.
 - authors: tên tác giả, không kèm "Tác giả:", không gồm người dịch/minh họa.
 - publisher: nhà xuất bản như in (ví dụ "NXB Trẻ"); không phải công ty phát hành nếu có cả hai.
-- language: mã ngôn ngữ của nội dung sách, ví dụ "vi", "en".
-- edition: lần tái bản/ấn bản như in, ví dụ "Tái bản lần thứ 5".
+- language: mã ngôn ngữ của chữ in trên sách, ví dụ "vi" tiếng Việt, "en" tiếng Anh, "ja" tiếng Nhật,
+  "zh" tiếng Trung, "ko" tiếng Hàn; không mặc định "vi" khi tên sách in bằng chữ khác.
+- edition: lần tái bản/in/ấn bản như in, kể cả dòng chữ nhỏ hoặc in nghiêng cạnh tên tác giả,
+  người dịch, ví dụ "Tái bản lần thứ 5", "In lần thứ 12".
 - isbn: chỉ khi đọc rõ toàn bộ dãy số ISBN in trên sách; nếu mờ hay thiếu số thì null.
 - missing: tối đa 3 gợi ý ngắn bằng tiếng Việt về ảnh cần chụp thêm, ví dụ "Chụp rõ trang bản quyền để đọc ISBN".
 Trường nào không chắc chắn thì để null hoặc mảng rỗng.`;

@@ -98,5 +98,13 @@ theo điều khoản công bố — cần chủ dự án kiểm lại khi lên p
   “Đăng cuốn khác” giữ bản nháp cũ — lần gửi sau sẽ phát lại kết quả cũ thay vì tạo
   bài mới; nay tạo bản nháp mới và xóa trường đã dùng (đã kiểm hai lần gửi liên tiếp
   tạo hai nháp khác nhau).
-- **NOT RUN**: ảnh chụp thật (ngưỡng §5) — không có ảnh thật trong repo hay kho ảnh
-  local (ảnh nháp cũ đều là bìa demo dựng hình).
+- **Bìa thật dạng scan** (27/10, `source: cover-scan`, người giao việc cung cấp 4 bìa:
+  Doraemon tập 1 bản Nhật, Harry Potter tập 6 và tập 1 NXB Trẻ, Alice ở xứ sở thần tiên):
+  4/4 tên đúng cả dấu, 3/3 tác giả in trên bìa, không lấy người dịch (Lý Lan, Hương Lan,
+  Xuân Uyên) hay “Catmint Books” làm tác giả, 0 ISBN bịa. Lần đầu Doraemon trả
+  `language: vi` và HP6 bỏ sót dòng nghiêng “Tái bản lần thứ 23”; đã sửa lời dặn (ngôn
+  ngữ theo chữ in, không mặc định `vi`; đọc cả dòng nhỏ/in nghiêng). Sau sửa: Doraemon
+  `ja`, HP6 đọc đúng lần tái bản 3/3 lần, 2,0–3,3 s; một lần HP6 timeout 25 s do provider
+  chậm (lần khác 1,6–4,4 s). NXB có khi trả nguyên chữ hoa như in (“NHÀ XUẤT BẢN TRẺ”).
+  Bìa scan phẳng, sạch hơn ảnh chụp điện thoại: **không là bằng chứng §5**.
+- **NOT RUN**: ảnh chụp điện thoại thật (ngưỡng §5, ≥ 20 cuốn).

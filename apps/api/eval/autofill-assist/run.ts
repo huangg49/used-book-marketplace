@@ -31,7 +31,8 @@ if (!dir || !existsSync(dir)) throw new Error('Pass --dir <folder with photos>.'
 
 type Expected = { title: string; authors?: string[]; isbn?: string | null };
 type Case = { id: string; photos: string[]; expected: Expected };
-type CaseFile = { source: 'real-camera' | 'synthetic' | 'unknown'; cases: Case[] };
+// cover-scan: real published covers, but flat scans rather than phone photos.
+type CaseFile = { source: 'real-camera' | 'cover-scan' | 'synthetic' | 'unknown'; cases: Case[] };
 const casesPath = join(dir, 'cases.json');
 
 if (args.includes('--init')) {
