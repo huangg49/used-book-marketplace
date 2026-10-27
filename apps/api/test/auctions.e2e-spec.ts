@@ -117,6 +117,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       step: number;
       buyNowPrice: number | null;
       pointId: string;
+      declaredValue: number | null;
     }> = {},
   ) => ({
     listingId: l.id,
@@ -1288,22 +1289,60 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     await call('get', '/me/auctions?view=invalid', bidder).expect(400);
   });
 
-  it('AC-AU01/02: only Approved Sale listings enter; intake holds commitment and slot', async () => {
-    const seller = await actor();
-    const both = await saleListing(seller, 'Both');
-    await cmd('post', '/auction-intakes', intakeBody(both), seller).expect(409);
-    // ADR 0042: an approved marketplace Sale listing is not an auction source.
-    const marketplace = await saleListing(seller, 'Sale', 'Marketplace');
-    const refused = await cmd(
+  it('AC-AU01/02: approved shelf listings enter; intake holds commitment and slot', async () => {
+    // ADR 0042 §Update 27/10: an approved shelf book (either channel, any
+    // mode) may go to auction. The intake hides it from the marketplace
+    // until the intake closes, and cancelling puts it back on the shelf.
+    const shelfSeller = await actor();
+    const marketplace = await saleListing(shelfSeller, 'Sale', 'Marketplace');
+    await call('get', `/listings/${marketplace.id}`).expect(200);
+    const fromShelf = await cmd(
       'post',
       '/auction-intakes',
-      intakeBody(marketplace),
-      seller,
-    ).expect(409);
-    expect(refused.body.code).toBe('InvalidState');
+      intakeBody(marketplace, { declaredValue: 90_000 }),
+      shelfSeller,
+    ).expect(200);
+    expect(await db.c.listings.findOne({ _id: marketplace.id })).toMatchObject({
+      trade: 'Reserved',
+    });
+    expect(
+      await db.c.auction_intakes.findOne({ _id: fromShelf.body.intakeId }),
+    ).toMatchObject({ protectiveValue: 90_000 });
+    await call('get', `/listings/${marketplace.id}`).expect(404);
+    const shelf = await call('get', '/listings').expect(200);
+    expect(
+      shelf.body.items.map((i: { id: string }) => i.id),
+    ).not.toContain(marketplace.id);
+    await cmd(
+      'post',
+      `/auction-intakes/${fromShelf.body.intakeId}/cancel`,
+      { expectedVersion: 1 },
+      shelfSeller,
+    ).expect(200);
     expect(await db.c.listings.findOne({ _id: marketplace.id })).toMatchObject({
       trade: 'Available',
     });
+    await call('get', `/listings/${marketplace.id}`).expect(200);
+    // Without a declared value the shelf price is the protective value.
+    const bothSeller = await actor();
+    const both = await saleListing(bothSeller, 'Both', 'Marketplace');
+    const fromBoth = await cmd(
+      'post',
+      '/auction-intakes',
+      intakeBody(both),
+      bothSeller,
+    ).expect(200);
+    expect(
+      await db.c.auction_intakes.findOne({ _id: fromBoth.body.intakeId }),
+    ).toMatchObject({ protectiveValue: listingContent.salePrice });
+    await cmd(
+      'post',
+      '/auction-intakes',
+      intakeBody(both, { declaredValue: 5_000 }),
+      bothSeller,
+    ).expect(422);
+
+    const seller = await actor();
     const l = await saleListing(seller);
     // An approved auction listing is never on the marketplace (ADR 0042).
     await call('get', `/listings/${l.id}`).expect(404);
