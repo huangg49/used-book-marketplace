@@ -111,6 +111,7 @@ export interface CollectionTypes {
   price_references: D.PriceReferenceDoc;
   price_suggestions: D.PriceSuggestionDoc;
   price_assist_usage: D.PriceAssistUsageDoc;
+  autofill_suggestions: D.AutofillSuggestionDoc;
   price_lookups: D.PriceLookupDoc;
   online_price_offers: D.OnlinePriceOfferDoc;
   exchanges: D.ExchangeDoc;
@@ -261,6 +262,7 @@ const NAMES: CollectionName[] = [
   'price_references',
   'price_suggestions',
   'price_assist_usage',
+  'autofill_suggestions',
   'price_lookups',
   'online_price_offers',
   'handover_points',

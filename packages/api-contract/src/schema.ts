@@ -801,6 +801,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/listings/{listingId}/autofill-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * requestAutofillSuggestion
+         * @description ACTIVE owner; Draft/Rejected, or Approved and Available (approved edit); not a bundle. ADR 0048. Reads 1-3 of the listing's own Ready photos and proposes catalog text fields (title, authors, publisher, year, language, edition, ISBN) plus matching Confirmed catalog books or the caller's own Pending request. Advisory only: nothing is written to the listing or catalog and every field needs the seller's confirmation. Only the downscaled photos are sent to the provider; no account, listing, address, session or token data. ISBNs failing the checksum are dropped. Same listing + photos + model within 24 h returns the stored suggestion (cached=true) without a new model call. Idempotency-Key is one per ask: same key and body replays that outcome (or its stored failure as 503); same key with another listing/body is 409 IdempotencyConflict. 429 per-user/per-listing limits or a request still running; 503 when disabled, over the shared daily AI budget, timed out or invalid output. Clients keep manual entry in every failure.
+         */
+        post: operations["requestAutofillSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/listings/{listingId}/visibility": {
         parameters: {
             query?: never;
@@ -3719,6 +3739,49 @@ export interface components {
             /** Format: date-time */
             decidedAt: string;
             sources: components["schemas"]["PriceSource"][];
+        };
+        AutofillSuggestionRequest: {
+            /** @description Ready photos of this listing, best first (cover, spine, copyright page). */
+            mediaIds: string[];
+        };
+        /** @enum {string} */
+        AutofillSuggestionStatus: "Suggested" | "NeedsMoreData";
+        /** @description Text read from the photos, normalized and checked by the server. null means not read or not trusted. Never a verified catalog fact. */
+        AutofillFields: {
+            title: string | null;
+            authors: string[];
+            publisher: string | null;
+            publicationYear: number | null;
+            /** @description Canonical BCP-47 tag. */
+            language: string | null;
+            edition: string | null;
+            /** @description ISBN-13 with a valid checksum (ISBN-10 converted); does not prove the title. */
+            isbn: string | null;
+        };
+        AutofillMatch: {
+            book: components["schemas"]["PublicBook"];
+            /** @enum {string} */
+            matchedBy: "Isbn" | "TitleAuthor";
+            /** @description true for the caller's own Pending catalog request. */
+            pending: boolean;
+        };
+        AutofillSuggestion: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            listingId: string;
+            mediaIds: string[];
+            status: components["schemas"]["AutofillSuggestionStatus"];
+            fields: components["schemas"]["AutofillFields"];
+            matches: components["schemas"]["AutofillMatch"][];
+            /** @description Short Vietnamese hints such as which page to photograph. */
+            missing: string[];
+            model: string;
+            /** Format: date-time */
+            generatedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            cached: boolean;
         };
         PriceSuggestionRequest: {
             /** Format: uuid */
@@ -7117,6 +7180,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PriceSuggestion"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    requestAutofillSuggestion: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per autofill request; scoped by actor. Same key and body replays the stored outcome; a different listing or body with the same key is 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                listingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutofillSuggestionRequest"];
+            };
+        };
+        responses: {
+            /** @description Suggested fields with catalog matches, or a missing-data answer. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutofillSuggestion"];
                 };
             };
             400: components["responses"]["ListingError"];

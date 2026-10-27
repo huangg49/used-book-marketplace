@@ -41,10 +41,12 @@ export function validateEnvironment(env: Record<string, unknown>) {
   if (simulatorSecret && nodeEnv === 'production')
     throw new Error('Payment simulator must be disabled in production.');
   const priceAssist = validatePriceAssist(env);
+  const autofill = validateAutofill(env);
   const accountMail = validateAccountMail(env, nodeEnv, secret);
   return {
     ...env,
     ...priceAssist,
+    ...autofill,
     ...accountMail,
     MONGODB_URL: mongoUrl,
     JWT_ACCESS_SECRET: secret,
@@ -222,6 +224,33 @@ const DEFAULT_PRICE_MODELS: Record<string, string> = {
   gemini: 'gemini-3.8-flash',
   nvidia: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
 };
+
+const NVIDIA_MODEL = /^[a-z0-9][a-z0-9_.-]{1,39}\/[a-z0-9][a-z0-9_.-]{1,79}$/;
+
+// Photo autofill (ADR 0048): NVIDIA NIM vision model, off unless enabled. The
+// key is read only by the API process; cost counts toward the shared daily
+// price-assist budget.
+export function validateAutofill(env: Record<string, unknown>) {
+  const enabled = String(env.AUTOFILL_ENABLED ?? 'false');
+  if (!['true', 'false'].includes(enabled))
+    throw new Error('AUTOFILL_ENABLED must be true or false.');
+  const apiKey = String(env.AUTOFILL_API_KEY ?? '');
+  if (apiKey.startsWith('replace-'))
+    throw new Error('AUTOFILL_API_KEY still holds the example value.');
+  const model = String(env.AUTOFILL_MODEL || 'nvidia/llama-3.1-nemotron-nano-vl-8b-v1');
+  if (!NVIDIA_MODEL.test(model)) throw new Error('AUTOFILL_MODEL is invalid.');
+  const fallback = String(env.AUTOFILL_FALLBACK_MODEL ?? '');
+  if (fallback && (!NVIDIA_MODEL.test(fallback) || fallback === model))
+    throw new Error('AUTOFILL_FALLBACK_MODEL is invalid.');
+  return {
+    AUTOFILL_ENABLED: enabled,
+    AUTOFILL_API_KEY: apiKey,
+    AUTOFILL_MODEL: model,
+    AUTOFILL_FALLBACK_MODEL: fallback,
+    AUTOFILL_TIMEOUT_MS: intIn(env.AUTOFILL_TIMEOUT_MS, 25_000, 2_000, 60_000, 'AUTOFILL_TIMEOUT_MS'),
+    AUTOFILL_USER_DAILY_LIMIT: intIn(env.AUTOFILL_USER_DAILY_LIMIT, 10, 1, 200, 'AUTOFILL_USER_DAILY_LIMIT'),
+  };
+}
 
 // Proposal for the owner to confirm: shops that sell new books in Vietnam.
 export const DEFAULT_LOOKUP_SHOPS =

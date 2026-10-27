@@ -77,7 +77,8 @@ export async function nvidiaChat(
   options: NvidiaChatOptions,
   system: string,
   user: NvidiaContent,
-  schema: Record<string, unknown>,
+  // null when the model has no guided decoding (some hosted VLMs).
+  schema: Record<string, unknown> | null,
   maxTokens = 4000,
 ): Promise<NvidiaChatResult> {
   const controller = new AbortController();
@@ -104,7 +105,7 @@ export async function nvidiaChat(
           max_tokens: maxTokens,
           stream: false,
           // NIM guided decoding; the strict check still runs on our side.
-          nvext: { guided_json: schema },
+          ...(schema ? { nvext: { guided_json: schema } } : {}),
         }),
       },
     );
