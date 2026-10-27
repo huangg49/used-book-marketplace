@@ -1,5 +1,24 @@
 # Điểm lưu hiện tại — 27/10/2026
 
+## Cache/polling Dashboard — 27/10/2026
+
+- `codex/dashboard-query-performance`, base `26db9fc`; commit subject
+  `perf(admin): reuse fresh dashboard queries and reconcile all metrics`.
+  Chung cache nguồn+7/30, tách theo user/status/roles; reuse30s, poll theo lần
+  tải thành công, profile gate giữ riêng. Review/ActionPanel đánh dấu stale khi
+  reconcile sau ACK, không thêm GET vào command hoặc đổi key/body/replay.
+- CUA production QA cùng fixture Admin+Staff:3lượt Dashboard→Users→Dashboard
+  dưới30s giảm18→0GET nguồn Dashboard; không phải tổng mọi request. Manual
+  refresh đúng7GET (6nguồn+overview). Từ chối QA cập nhật processed3→4/pending6→5
+  ở cả7/30; sửa điểm trả sức chứa22rồi23; offline giữ4/5/23 và hiện cảnh báo.
+- PASS Admin217tests/lint/typecheck/build,7HTTP/Mongo QA tests; detector3target
+  không finding. Bundle startup431763/500000bytes,10pages+workspace vẫn deferred.
+  Deadline poll sát30s kiểm bằng test cache/model, chưa benchmark timer browser/
+  hidden-tab/INP/scale. [Evidence và giới hạn](../features/OPERATIONS_REVIEW_REPORT.md#cachepolling-dashboard--27102026).
+- QA dọn DB/users/roles và dừng API/preview/Mongo riêng. Không đổi API/contract/
+  migration/env/client khác, không push/PR/merge; READINESS giữ nguyên. Bước tiếp:
+  đo query plan/latency với dữ liệu QA lớn trước tối ưu truy vấn backend.
+
 ## Tối ưu tải đầu Admin — 27/10/2026
 
 - `codex/admin-startup-performance`, base `17aac90`; commit subject

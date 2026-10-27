@@ -3,6 +3,67 @@
 Ngày: 27/09/2026. Phạm vi: web Staff/Admin sử dụng API thật theo OpenAPI 0.6.0.
 Quyết định kiến trúc: [ADR 0010](../adr/0010-operations-review-client.md).
 
+## Cache/polling Dashboard — 27/10/2026
+
+Source: `codex/dashboard-query-performance`, base `26db9fc`; commit subject
+`perf(admin): reuse fresh dashboard queries and reconcile all metrics`.
+
+- Nguồn Dashboard và overview7/30 chuyển sang cùng prefix cache, scope gồm user,
+  status và roles đã chuẩn hóa thứ tự. Dùng lại snapshot còn mới30s khi remount/
+  đổi period, dùng cơ chế dedup GET đang chạy của TanStack. Polling bám thời điểm
+  tải thành công để remount sát hạn không kéo thêm30s; read lỗi quay về cadence30s,
+  không retry nhanh. Giữ background polling disabled, profile/auth policy riêng,
+  gcTime/session memory-only và tất cả capability checks/API schemas hiện có.
+- `Detail.reconcile` và callback reconciliation chung trong `ActionPanel` đánh
+  dấu toàn bộ nguồn+period stale trước GET đối chiếu, không refetch Dashboard ở
+  đó. ACK nhưng GET lỗi vẫn giữ receipt và chỉ đọc lại; lost ACK không tự đánh
+  dấu thành công, retry giữ nguyên serialized body/key/version. Không đợi API
+  Dashboard để hoàn thành command. Refusal recovery chỉ làm stale snapshot.
+- Manual refresh làm stale cả period chưa chọn và chỉ refetch active queries,
+  dùng lại GET đang chạy. Giữ last-success data/warning/retry khi lỗi. Không thay
+  đổi ảnh/animation/layout hoặc tự thêm server cache/Redis/index/migration.
+
+Đếm response HTTP thật bằng callback tùy chọn của fixture QA; callback chỉ nhận
+method/path/status, không headers/tokens/body/response data. Production build
+trên IAB, API/storage local fake, replica set/database riêng `_test`. Baseline
+production từ gói26db9fc và bản mới dùng cùng fixture, cùng tài khoản Admin+Staff:
+
+| Ca browser | Baseline | Bản mới |
+| --- | ---: | ---: |
+| GET bổ sung của6nguồn Dashboard qua3lượt nhanh Dashboard→Users→Dashboard, dưới30s | 18 | 0 |
+| Overview GET bổ sung trong cùng3lượt | 0 | 0 |
+| Manual Cập nhật ở Dashboard | Không đo lại | 7: mỗi6nguồn và overview hiện tại đúng1lần |
+
+Đây là request tiết kiệm trong kịch bản đã đo, không là phần trăm giảm mọi mạng
+hoặc latency/CPU benchmark. Request của directory/profile/media không nằm trong
+số18→0; Admin đơn vai trò có tập nguồn khác.
+
+- Sau làm nóng cả7/30, từ chối1bài QA: processed3→4, pending6→5 ở cả hai period
+  khi trở về Dashboard. Sửa sức chứa điểm QA20→22, rồi xác nhận lại23 qua callback
+  ActionPanel chung: Dashboard nhận23 ngay. Manual refresh không bị freshness
+  chặn. Dừng QA API rồi refresh: vẫn hiển thị processed4/pending5/capacity23,
+  hiện lỗi và thông báo dữ liệu cũ, nút retry/update còn dùng được.
+- PASS Admin217unit/component/model tests (thêm8ca: remount TTL/deadline, dedup,
+  period/manual refresh, error retention/recovery, account/role scope, stale
+  marker không GET thừa, lost ACK+GET lỗi giữ intent); lint/typecheck/build.
+  PASS7HTTP/Mongo integration tests hiện có cho quyền/replay/reconciliation;
+  không thay chúng bằng browser observation. Detector một lượt3target JSX trả0.
+  Startup JS431763/500000bytes, largest218840/300000; workspace+10pages deferred.
+- Browser production kiểm các đường ở trên; thay đổi cuối về deadline polling
+  sát30s kiểm bằng cache/model test, chưa đo timer thực trong browser. Hidden-tab/
+  focus timer/large-volume query plans/INP/FPS/full browser automation/chunk fault/
+  screen reader/native/CI remote/human review NOT RUN. Không đóng gate READINESS.
+  Ảnh `.tmp/dashboard-cache/verified.png`, `offline.png` và response counters nằm
+  trong Git ignore; không commit thông tin phiên hay database.
+
+Fixture tự dọn DB/users/roles, dừng API/preview/Mongo QA; giữ main API/Admin để
+tiếp tục. Hai thư mục build QA trong `.tmp/dashboard-cache-qa-dist` và
+`.tmp/admin-startup-qa-dist` còn giữ: bước xóa bị automatic approval policy chặn
+(`blocked by policy`, không có lý do chi tiết); không thử vòng qua chặn này.
+Không đổi backend/schema/contract/env/dependency/client teammate;
+chưa push/PR/merge. Bước tiếp là đo query plan và latency với fixture lớn trước
+khi cân nhắc tối ưu truy vấn hoặc thêm index mới.
+
 ## Tối ưu tải đầu Admin — 27/10/2026
 
 Source: `codex/admin-startup-performance`, base `17aac90`; commit subject

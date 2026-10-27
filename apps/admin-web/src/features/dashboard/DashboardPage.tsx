@@ -1,7 +1,16 @@
 import { useState } from "react";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { refreshDashboard } from "../../core/dashboard-cache";
 import { Link, useOutletContext } from "react-router-dom";
-import { ArrowRight, RefreshCw, Clock3, Handshake, PackageCheck, Scale, Truck } from "lucide-react";
+import {
+  ArrowRight,
+  RefreshCw,
+  Clock3,
+  Handshake,
+  PackageCheck,
+  Scale,
+  Truck,
+} from "lucide-react";
 import type { CurrentUser } from "@used-books/session-client";
 import { Button, ErrorNotice } from "../../core/ui";
 import { canReview, canReviewCatalog, session } from "../../core/session";
@@ -9,14 +18,21 @@ import { dateText } from "../../core/format";
 import { dashboardSources } from "./sources";
 import styles from "./DashboardPage.module.css";
 import { PendingShelf } from "./PendingShelf";
-import { moderationOverview, overviewSeries } from "./overview";
+import { overviewSeries } from "./overview";
+import { dashboardSourceQuery, dashboardOverviewQuery } from "./queries";
 import { ModerationChart } from "./ModerationChart";
 import { PointCapacity } from "./PointCapacity";
 import { AquariumMetric } from "./AquariumMetric";
 import { ForestMetric } from "./ForestMetric";
 import { SkyMetric } from "./SkyMetric";
 
-const taskIcons = { intakes: PackageCheck, collections: Handshake, resolutions: Scale, escalations: Clock3, deliveries: Truck };
+const taskIcons = {
+  intakes: PackageCheck,
+  collections: Handshake,
+  resolutions: Scale,
+  escalations: Clock3,
+  deliveries: Truck,
+};
 
 const desks = new Set([
   "listings",
@@ -28,35 +44,27 @@ const desks = new Set([
   "deliveries",
 ]);
 export function DashboardPage() {
+  const queryClient = useQueryClient();
   const user = useOutletContext<CurrentUser>();
   const [days, setDays] = useState<7 | 30>(7);
   const sources = dashboardSources(user).filter((source) =>
     desks.has(source.id),
   );
   const results = useQueries({
-    queries: sources.map((source) => ({
-      queryKey: ["dashboard", user.id, source.id],
-      queryFn: () => source.load(session.request.bind(session)),
-      staleTime: 0,
-      refetchInterval: 30_000,
-    })),
+    queries: sources.map((source) =>
+      dashboardSourceQuery(user, source, session.request.bind(session)),
+    ),
   });
-  const overview = useQuery({
-    queryKey: ["moderation-overview", user.id, user.roles.join(","), days],
-    queryFn: () =>
-      session.request(
-        "/operations/moderation-overview?days=" + days,
-        moderationOverview,
-      ),
-    enabled: canReview(user),
-    refetchInterval: 30_000,
-  });
+  const overview = useQuery(
+    dashboardOverviewQuery(user, days, session.request.bind(session)),
+  );
   const find = (id: string) =>
     results[sources.findIndex((source) => source.id === id)];
   const shelf = find("listings"),
     points = find("points");
   const data = overview.data;
-  const emptyQueue = data && data.pending.listings === 0 && (data.pending.catalog ?? 0) === 0;
+  const emptyQueue =
+    data && data.pending.listings === 0 && (data.pending.catalog ?? 0) === 0;
   const totals = data
     ? overviewSeries(data, "all").reduce(
         (sum, row) => ({
@@ -112,15 +120,12 @@ export function DashboardPage() {
           <Button
             className={styles.refreshButton}
             busy={fetching}
-            onClick={() =>
-              void Promise.allSettled([
-                ...results.map((result) => result.refetch()),
-                ...(canReview(user) ? [overview.refetch()] : []),
-              ])
-            }
+            onClick={() => void refreshDashboard(queryClient)}
             aria-label="Cập nhật tổng quan"
           >
-            {!fetching && <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />}
+            {!fetching && (
+              <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
+            )}
             <span>Cập nhật</span>
           </Button>
         </div>
@@ -143,7 +148,11 @@ export function DashboardPage() {
             <SkyMetric value={totals?.submitted ?? null} days={days} />
             <ForestMetric value={totals?.processed ?? null} days={days} />
             <AquariumMetric
-              value={data ? data.pending.listings + (data.pending.catalog ?? 0) : null}
+              value={
+                data
+                  ? data.pending.listings + (data.pending.catalog ?? 0)
+                  : null
+              }
               catalog={canReviewCatalog(user)}
             />
           </dl>
@@ -167,10 +176,22 @@ export function DashboardPage() {
               className={styles.workboard}
               aria-labelledby="workboard-title"
             >
-              <svg className={`${styles.workOrnament} ${styles.workCornerTop}`} viewBox="0 0 96 96" fill="none" aria-hidden="true" focusable="false">
+              <svg
+                className={`${styles.workOrnament} ${styles.workCornerTop}`}
+                viewBox="0 0 96 96"
+                fill="none"
+                aria-hidden="true"
+                focusable="false"
+              >
                 <path d="M8 10h54c14 0 24 10 24 24v52M28 18h34c10 0 16 6 16 16v32M48 26h14c6 0 8 2 8 8v12" />
               </svg>
-              <svg className={`${styles.workOrnament} ${styles.workCornerBottom}`} viewBox="0 0 88 88" fill="none" aria-hidden="true" focusable="false">
+              <svg
+                className={`${styles.workOrnament} ${styles.workCornerBottom}`}
+                viewBox="0 0 88 88"
+                fill="none"
+                aria-hidden="true"
+                focusable="false"
+              >
                 <path d="M10 76c36 0 66-30 66-66M30 76c25 0 46-21 46-46M50 76c14 0 26-12 26-26" />
               </svg>
               <header>
@@ -180,9 +201,23 @@ export function DashboardPage() {
                   aria-hidden="true"
                 />
                 <h2 id="workboard-title">
-                  {emptyQueue ? <>Hàng chờ{" "}<br />đã trống.</> : <>Đến lượt{" "}<br />xử lý.</>}
+                  {emptyQueue ? (
+                    <>
+                      Hàng chờ <br />
+                      đã trống.
+                    </>
+                  ) : (
+                    <>
+                      Đến lượt <br />
+                      xử lý.
+                    </>
+                  )}
                 </h2>
-                <p>{emptyQueue ? "Hiện chưa có hồ sơ chờ kiểm duyệt." : "Mở một hàng chờ để tiếp tục công việc."}</p>
+                <p>
+                  {emptyQueue
+                    ? "Hiện chưa có hồ sơ chờ kiểm duyệt."
+                    : "Mở một hàng chờ để tiếp tục công việc."}
+                </p>
               </header>
               <div className={styles.workLinks}>
                 <Link to="/review/listings?status=PendingReview">
@@ -239,20 +274,33 @@ export function DashboardPage() {
           </header>
           {attention.map((source) => {
             const result = find(source.id);
-            const TaskIcon = taskIcons[source.id as keyof typeof taskIcons] ?? PackageCheck;
+            const TaskIcon =
+              taskIcons[source.id as keyof typeof taskIcons] ?? PackageCheck;
             return (
-              <div className={styles.task} key={source.id} data-empty={result.data?.value === 0 && !result.isError}>
+              <div
+                className={styles.task}
+                key={source.id}
+                data-empty={result.data?.value === 0 && !result.isError}
+              >
                 <Link to={source.to}>
                   <span className={styles.actionFace}>
-                  <TaskIcon className={styles.taskIcon} size={20} strokeWidth={1.5} aria-hidden="true" />
-                  <span className={styles.taskLabel}>{source.title}<small>{source.note}</small></span>
-                  <strong>
-                    {result.data
-                      ? String(result.data.value) +
-                        (result.data.more ? "+" : "")
-                      : "—"}
-                  </strong>
-                  <ArrowRight size={16} aria-hidden="true" />
+                    <TaskIcon
+                      className={styles.taskIcon}
+                      size={20}
+                      strokeWidth={1.5}
+                      aria-hidden="true"
+                    />
+                    <span className={styles.taskLabel}>
+                      {source.title}
+                      <small>{source.note}</small>
+                    </span>
+                    <strong>
+                      {result.data
+                        ? String(result.data.value) +
+                          (result.data.more ? "+" : "")
+                        : "—"}
+                    </strong>
+                    <ArrowRight size={16} aria-hidden="true" />
                   </span>
                 </Link>
                 {result.isPending && <p role="status">Đang tải…</p>}
@@ -302,7 +350,9 @@ export function DashboardPage() {
                 {points.data && <p>Dữ liệu lần trước; chưa cập nhật được.</p>}
               </>
             )}
-            {points.data?.points?.map(point => <PointCapacity key={point.id} point={point} />)}
+            {points.data?.points?.map((point) => (
+              <PointCapacity key={point.id} point={point} />
+            ))}
             {points.data?.points?.length === 0 && (
               <p>Chưa có điểm giao nhận.</p>
             )}

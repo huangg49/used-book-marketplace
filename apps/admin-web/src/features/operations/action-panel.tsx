@@ -5,6 +5,8 @@ import { createCommand, runCommand, type Intent } from "../../core/command";
 import { operationErrorText } from "../../core/errors";
 import { LeaveGuard } from "../../core/leave-guard";
 import { session } from "../../core/session";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateDashboard } from "../../core/dashboard-cache";
 import { Button, ErrorNotice, Notice } from "../../core/ui";
 import { commandReceipt, type CommandReceipt } from "./contracts";
 
@@ -60,6 +62,7 @@ export function ActionPanel<R = CommandReceipt>({
   refusalRecoveryText?: string;
   refusalRecoveryLabel?: string;
 }) {
+  const queryClient = useQueryClient();
   const [intent, setIntent] = useState<Intent>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
@@ -125,6 +128,7 @@ export function ActionPanel<R = CommandReceipt>({
         schema,
         session.request.bind(session),
         async () => {
+          await invalidateDashboard(queryClient);
           await reconcile();
         },
       );
@@ -170,7 +174,11 @@ export function ActionPanel<R = CommandReceipt>({
             busy={busy}
             onClick={() => void send(intent)}
           >
-            {intent.stopped ? refusalRecoveryLabel : intent.acknowledged ? "Tải kết quả mới nhất" : "Thử lại thao tác vừa gửi"}
+            {intent.stopped
+              ? refusalRecoveryLabel
+              : intent.acknowledged
+                ? "Tải kết quả mới nhất"
+                : "Thử lại thao tác vừa gửi"}
           </Button>
         </Notice>
       ) : (

@@ -54,6 +54,16 @@ error boundary keeps navigation outside the pending or failed page. Reload is an
 explicit action and requires sign-in again; no automatic reload, token persistence,
 service worker, command replay or permission change was added.
 
+Dashboard sources and both 7/30-day periods share a cache namespace scoped by
+account, status and normalized roles. Fresh snapshots are reused for30seconds;
+the next poll stays anchored to the last successful response, including after
+a fresh remount. Background polling stays disabled. Profile/permission polling
+keeps its independent policy. After command acknowledgement, reconciliation
+marks all Dashboard snapshots stale without starting extra reads or altering
+the command's recovery flow. Manual **Cập nhật** refreshes active queries once
+and expires cached inactive periods; failed reads retain the last data and its
+existing warning/retry UI.
+
 For the HTTP/MongoDB browser suite, start the QA replica set and set
 `MONGO_TEST_URL` as described in [START_HERE](../../docs/handoff/START_HERE.md).
 Run from the repository root:

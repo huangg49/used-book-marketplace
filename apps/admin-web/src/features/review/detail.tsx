@@ -1,4 +1,5 @@
 import { dateText } from "../../core/format";
+import { invalidateDashboard } from "../../core/dashboard-cache";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDownToLine } from "lucide-react";
@@ -98,11 +99,11 @@ function DetailContent({
     heading.current?.focus({ preventScroll: true });
   }, [loadedId]);
   async function reconcile() {
+    await invalidateDashboard(queryClient);
     const fresh = await result.refetch();
     if (fresh.error) throw fresh.error;
     await queryClient.invalidateQueries({ queryKey: ["queue"] });
     await queryClient.invalidateQueries({ queryKey: ["revisions", id] });
-    await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   }
   const isListing = value && "state" in value;
   const status = value
