@@ -17,4 +17,3 @@ export function BrandMark({ wordmark = false, className, tone = "wine" }: { word
     </svg>}
   </svg>;
 }
-

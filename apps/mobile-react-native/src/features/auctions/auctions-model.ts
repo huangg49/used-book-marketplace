@@ -104,8 +104,26 @@ export function standingOf(
   return me.ownLevel === auction.currentPrice ? "tied" : "outbid";
 }
 
+// ADR 0047: a scheduled auction is Active but takes no bids before startAt.
+export function isScheduled(auction: PublicAuctionSummary, now: number) {
+  return auction.state === "Active" && now < Date.parse(auction.startAt);
+}
 export function isOpen(auction: PublicAuctionSummary, now: number) {
-  return auction.state === "Active" && now < Date.parse(auction.endAt);
+  return (
+    auction.state === "Active" &&
+    now >= Date.parse(auction.startAt) &&
+    now < Date.parse(auction.endAt)
+  );
+}
+// The seller edits the time only before the first bid and any Buy Now.
+export function canReschedule(auction: PublicAuctionSummary, now: number) {
+  return (
+    (isScheduled(auction, now) || isOpen(auction, now)) &&
+    auction.bidderCount === 0 &&
+    !auction.buyNowAt &&
+    auction.version != null &&
+    (auction.scheduleRevision ?? 0) < AUCTION_MAX_SCHEDULE_EDITS
+  );
 }
 export function formatRemaining(ms: number) {
   if (ms <= 0) return "Đã hết giờ";
@@ -201,7 +219,7 @@ export function receiptMessage(
 }
 
 // Caller-owned auction activity, newest first, keyset pages bound to the view.
-export type MyAuctionView = "all" | "active" | "payment" | "selling";
+export type MyAuctionView = "all" | "active" | "upcoming" | "payment" | "selling";
 export const myAuctionsOptions = (
   client: SessionClient,
   userId: string,
@@ -322,3 +340,51 @@ export function auctionEligible(listing: {
 // allows it while no bid exists).
 export const withdrawable = (state: string) =>
   state === "AwaitingDropoff" || state === "Received" || state === "Passed";
+
+// ADR 0047 limits, mirrored for the sheet; the server stays authoritative.
+const HOUR_MS = 3_600_000;
+export const AUCTION_MAX_SCHEDULE_EDITS = 5;
+export const AUCTION_MIN_LEAD_MS = 5 * 60_000;
+export const AUCTION_SCHEDULE_HORIZON_MS = 7 * 24 * HOUR_MS;
+export const AUCTION_MIN_REMAINING_MS = HOUR_MS;
+export const DURATION_CHOICES = [1, 3, 6, 12, 24, 48, 72, 168] as const;
+
+/**
+ * Start choices for the schedule sheet: now, a few hours ahead, or 09:00 on the
+ * next days. Every choice sits inside the 5-minute lead and 7-day horizon.
+ */
+export function startChoices(now: number) {
+  const choices: { label: string; at: number | null }[] = [{ label: "Mở ngay", at: null }];
+  for (const h of [1, 3, 6]) choices.push({ label: `Sau ${h} giờ`, at: now + h * HOUR_MS });
+  for (const days of [1, 2, 3]) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    d.setHours(9, 0, 0, 0);
+    const label = days === 1 ? "9:00 ngày mai" : `9:00 ${d.toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" })}`;
+    choices.push({ label, at: d.getTime() });
+  }
+  return choices.filter(
+    (c) => c.at === null || (c.at >= now + AUCTION_MIN_LEAD_MS && c.at <= now + AUCTION_SCHEDULE_HORIZON_MS),
+  );
+}
+/** A live auction keeps its start; the new end must leave at least one hour. */
+export function durationAllowed(hours: number, startAt: number, now: number) {
+  return startAt + hours * HOUR_MS >= now + AUCTION_MIN_REMAINING_MS;
+}
+export type ScheduleCommand = { path: string; body: string; key: string };
+// Frozen on confirm like auction commands: a retry after an unknown outcome
+// resends this exact request with the same Idempotency-Key.
+export function createScheduleCommand(
+  target: { kind: "publish"; intakeId: string } | { kind: "reschedule"; auctionId: string },
+  body: { expectedVersion: number; startAt: string | null; durationHours: number },
+  key: string,
+): ScheduleCommand {
+  return {
+    path:
+      target.kind === "publish"
+        ? `/auction-intakes/${target.intakeId}/publish`
+        : `/auctions/${target.auctionId}/schedule`,
+    body: JSON.stringify(body),
+    key,
+  };
+}

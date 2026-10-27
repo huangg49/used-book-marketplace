@@ -228,10 +228,51 @@ export class AuctionsController {
     );
   }
 
+  @Post('auction-intakes/:intakeId/publish')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  publish(
+    @Param('intakeId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.intakes.publish(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('PublishAuction', body),
+        ),
+        res,
+      ),
+    );
+  }
+  @Post('auctions/:auctionId/schedule')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  reschedule(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.reschedule(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('RescheduleAuction', body),
+        ),
+        res,
+      ),
+    );
+  }
+
   @Get('auctions')
   @Public()
-  list() {
-    return this.bidding.listPublic();
+  list(@Query() query: unknown) {
+    return this.bidding.listPublic(this.input.query('listAuctions', query));
   }
   @Get('auctions/:auctionId')
   @Public()

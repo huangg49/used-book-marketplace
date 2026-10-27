@@ -1,5 +1,8 @@
 # ADR 0030: Bounded auction backend
 
+> 27/10/2026: thời lượng 24 giờ cố định và Staff mở phiên đã được thay bởi
+> [ADR 0047](0047-seller-scheduled-auctions.md).
+>
 > Phạm vi quyết định ban đầu ngày 08/10: migration0008–0011. Main đã nhập
 > backend qua PR23 và bổ sung completion0012/0013, live/inbox0015. Các giới hạn
 > increment trong ADR này là lịch sử; xem [kiến trúc hiện hành](../architecture/README.md)

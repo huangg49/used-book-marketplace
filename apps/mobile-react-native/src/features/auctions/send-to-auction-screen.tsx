@@ -42,6 +42,7 @@ import {
   SendToAuctionActiveIntakes,
   SendToAuctionModals,
 } from "./send-to-auction-components";
+import { ScheduleAuctionSheet } from "./components";
 
 type PendingCommand = {
   kind: "create" | "withdraw" | "evidence";
@@ -131,6 +132,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   // 3. Modal & Action states
   const [confirming, setConfirming] = useState(false);
   const [withdrawTarget, setWithdrawTarget] = useState<MyIntake | null>(null);
+  const [publishTarget, setPublishTarget] = useState<MyIntake | null>(null);
   const [pending, setPending] = useState<PendingCommand | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -404,6 +406,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
           intakes={intakes.data?.items ?? []}
           isLoading={intakes.isPending}
           onWithdraw={(item) => setWithdrawTarget(item)}
+          onPublish={(item) => setPublishTarget(item)}
           onSubmitEvidence={handleRequestSubmitEvidence}
           evidenceTextMap={evidenceMap}
           onChangeEvidenceText={(id, text) =>
@@ -414,6 +417,18 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         />
       </ScrollView>
 
+      <ScheduleAuctionSheet
+        key={publishTarget ? `${publishTarget.id}:${publishTarget.version}` : "none"}
+        visible={!!publishTarget}
+        title={publishTarget?.title ?? ""}
+        target={publishTarget ? { kind: "publish", intakeId: publishTarget.id, version: publishTarget.version } : null}
+        onClose={() => setPublishTarget(null)}
+        onDone={() => {
+          void queryClient.invalidateQueries({ queryKey: ["my-auction-intakes", userId] });
+          void queryClient.invalidateQueries({ queryKey: ["my-auctions", userId] });
+          void queryClient.invalidateQueries({ queryKey: ["public-auctions"] });
+        }}
+      />
       {/* Confirmation & Cancel Modals */}
       <SendToAuctionModals
         confirmSubmitVisible={confirming}

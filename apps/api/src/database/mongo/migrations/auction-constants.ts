@@ -9,6 +9,13 @@ export const AUCTION_DROPOFF_MS = 72 * HOUR_MS;
 export const AUCTION_PAYMENT_MS = 24 * HOUR_MS;
 export const BUY_NOW_PAYMENT_MS = 15 * 60_000;
 export const BUY_NOW_CHALLENGE_MS = 60_000; // ADR 0043
+// ADR 0047: the seller publishes a Passed intake now or schedules it.
+export const AUCTION_MIN_DURATION_MS = HOUR_MS;
+export const AUCTION_MAX_DURATION_MS = 168 * HOUR_MS;
+export const AUCTION_MIN_LEAD_MS = 5 * 60_000;
+export const AUCTION_SCHEDULE_HORIZON_MS = 7 * 24 * HOUR_MS;
+export const AUCTION_MIN_REMAINING_MS = HOUR_MS;
+export const AUCTION_MAX_SCHEDULE_EDITS = 5;
 export const AUCTION_MIN_PRICE = 10_000;
 export const AUCTION_MAX_PRICE = 1_000_000;
 export const POINT_ORDER_COMMISSION_BPS = 500;

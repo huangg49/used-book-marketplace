@@ -67,6 +67,11 @@ function ListingPhoto({ item, title }: { item: MyListing; title: string }) {
 function BookOption({ item, checked, disabled, onSelect }: { item: MyListing; checked: boolean; disabled: boolean; onSelect: () => void }) {
   const { title, author } = useListingIdentity(item)
   const c = item.currentRevision.content
+  const priceDisplay = c.salePrice != null
+    ? formatVnd(c.salePrice)
+    : c.exchangeValue != null
+    ? `${formatVnd(c.exchangeValue)} (trao đổi)`
+    : 'Chưa đặt giá'
   return (
     <label className={`${styles.bookOption} ${checked ? styles.selected : ''}`}>
       <input type="radio" name="auction-book" checked={checked} disabled={disabled} onChange={onSelect} />
@@ -77,8 +82,8 @@ function BookOption({ item, checked, disabled, onSelect }: { item: MyListing; ch
         <span>{c.condition ? conditions[c.condition] : 'Chưa khai báo tình trạng'}</span>
       </span>
       <span className={styles.bookPrice}>
-        <span>Giá trị khai báo</span>
-        <strong>{c.salePrice != null ? formatVnd(c.salePrice) : '—'}</strong>
+        <span>Giá trên kệ</span>
+        <strong>{priceDisplay}</strong>
       </span>
       <Check className={styles.tick} size={18} aria-hidden="true" />
     </label>
@@ -119,7 +124,7 @@ function Receipt({ intake, point }: { intake: MyIntake; point?: HandoverPoint })
       <div>
         <p className={styles.kicker}><Gavel size={15} aria-hidden="true" /> Đã giữ chỗ đấu giá</p>
         <h1 id="intake-done">Mang “{intake.title}” tới điểm nhận sách</h1>
-        <p>Sách đấu giá này chuyển sang Đang giữ cho phiên. Phiên chỉ mở sau khi nhân viên nhận và kiểm tra sách.</p>
+        <p>Sách đã chuyển sang trạng thái Đang giữ cho phiên đấu giá và tạm ngừng hiển thị trên kệ công khai. Phiên chỉ mở sau khi nhân viên nhận và kiểm tra sách.</p>
         <dl className={styles.receiptFacts}>
           <div><dt>Điểm gửi sách</dt><dd>{point ? <>{point.name}<span>{point.displayAddress}</span></> : 'Điểm đã chọn'}</dd></div>
           <div><dt>Hạn gửi sách</dt><dd>{when(intake.dropoffDeadline)}</dd></div>
@@ -135,15 +140,6 @@ function Receipt({ intake, point }: { intake: MyIntake; point?: HandoverPoint })
   )
 }
 
-const unfinishedStatus: Record<string, string> = {
-  Draft: 'bản nháp',
-  PendingReview: 'đang chờ duyệt',
-  Rejected: 'cần chỉnh sửa theo góp ý',
-}
-function UnfinishedAuctionBook({ item }: { item: MyListing }) {
-  const { title } = useListingIdentity(item)
-  return <li>{title || 'Sách đấu giá chưa có tên'}: {unfinishedStatus[item.state.moderation] ?? item.state.moderation}</li>
-}
 
 export function CreateAuctionPage() {
   const auth = useSession()
@@ -151,21 +147,23 @@ export function CreateAuctionPage() {
   const queryClient = useQueryClient()
   const [params] = useSearchParams()
   const ownerId = auth.status === 'authenticated' ? auth.user.id : undefined
-  // ADR 0042: auctions use the seller's own Auction listings, never marketplace ones.
+
+  // Sách được chọn trực tiếp từ kệ của người bán (đã duyệt, chưa bị khoá/bán).
   const listings = useQuery({
-    queryKey: ['my-listings', ownerId, 'auction'],
-    queryFn: () => getMyListings(undefined, undefined, 50, 'Auction'),
+    queryKey: ['my-listings', ownerId, 'shelf-for-auction'],
+    queryFn: () => getMyListings(undefined, undefined, 50),
     enabled: !!ownerId, retry: false, staleTime: 0,
   })
   const points = useQuery({ queryKey: ['handover-points'], queryFn: listHandoverPoints, enabled: !!ownerId, retry: false, staleTime: 0 })
 
   const eligible = useMemo(() => (listings.data?.items ?? []).filter(auctionEligible), [listings.data])
-  const unfinished = useMemo(() => (listings.data?.items ?? []).filter((l) =>
-    l.state.moderation !== 'Approved' && l.state.visibility !== 'Removed'), [listings.data])
   const [listingId, setListingId] = useState(params.get('listing') ?? '')
   const [pointChoice, setPointId] = useState('')
   const [step, setStep] = useState<Step>(10000)
-  // undefined = not edited yet, so the suggestion below applies.
+
+  // Giá trị khai báo / bảo vệ do người bán nhập trực tiếp hoặc kế thừa từ giá sách trên kệ.
+  const [declaredDraft, setDeclaredDraft] = useState<number | null | undefined>(undefined)
+  // undefined = not edited yet, so the suggestion applies.
   const [startDraft, setStartPrice] = useState<number | null | undefined>(undefined)
   const [buyNowOn, setBuyNowOn] = useState(false)
   const [buyNowPrice, setBuyNowPrice] = useState<number | null>(null)
@@ -181,23 +179,30 @@ export function CreateAuctionPage() {
 
   const listing = eligible.find((l) => l.id === listingId)
   const preselectedMissing = !!params.get('listing') && listings.isSuccess && !listing && listingId === params.get('listing')
-  const salePrice = listing?.currentRevision.content.salePrice ?? null
+
+  const defaultDeclared = listing
+    ? listing.currentRevision.content.salePrice ?? listing.currentRevision.content.exchangeValue ?? 50000
+    : null
+  const declaredValue = declaredDraft === undefined ? defaultDeclared : declaredDraft
+
   const identity = useListingIdentity(listing)
   const openPoints = (points.data?.items ?? []).filter((p) => p.status === 'Active')
   const single = openPoints.length === 1 && openPoints[0]!.availableSlots > 0 ? openPoints[0]!.id : ''
   const pointId = pointChoice || single
   const point = points.data?.items.find((p) => p.id === pointId)
   const doneIntakePoint = done ? points.data?.items.find((p) => p.id === done.pointId) : undefined
-  // Suggest a start price below the declared value; the seller can change it.
-  const suggested = salePrice === null ? null
-    : Math.min(AUCTION_MAX_PRICE, Math.max(AUCTION_MIN_PRICE, Math.floor((salePrice * 0.6) / 10000) * 10000))
+
+  // Gợi ý giá khởi điểm theo giá trị khai báo
+  const suggested = declaredValue === null ? null
+    : Math.min(AUCTION_MAX_PRICE, Math.max(AUCTION_MIN_PRICE, Math.floor((declaredValue * 0.6) / step) * step))
   const startPrice = startDraft === undefined ? suggested : startDraft
 
-  const priceErrors = intakePriceErrors(startPrice, step, buyNowOn ? buyNowPrice : null)
+  const priceErrors = intakePriceErrors(startPrice, step, buyNowOn ? buyNowPrice : null, declaredValue)
   const missingBuyNow = buyNowOn && buyNowPrice === null
   const formErrors = {
-    listing: !listing ? 'Chọn một cuốn sách để đưa lên đấu giá.' : undefined,
+    listing: !listing ? 'Chọn một cuốn sách trên kệ để đưa lên đấu giá.' : undefined,
     point: !point ? 'Chọn điểm gửi sách.' : point.status !== 'Active' || point.availableSlots < 1 ? 'Điểm này đang hết chỗ, hãy chọn điểm khác.' : undefined,
+    declaredValue: priceErrors.declaredValue,
     startPrice: priceErrors.startPrice,
     buyNowPrice: missingBuyNow ? 'Nhập giá mua ngay hoặc bỏ chọn mua ngay.' : priceErrors.buyNowPrice,
   }
@@ -214,8 +219,13 @@ export function CreateAuctionPage() {
 
   const submit = async () => {
     const body: CreateIntakeBody = pending.current?.body ?? {
-      listingId: listing!.id, expectedListingVersion: listing!.version, pointId: point!.id,
-      startPrice: startPrice!, step, buyNowPrice: buyNowOn ? buyNowPrice : null,
+      listingId: listing!.id,
+      expectedListingVersion: listing!.version,
+      pointId: point!.id,
+      startPrice: startPrice!,
+      step,
+      buyNowPrice: buyNowOn ? buyNowPrice : null,
+      declaredValue: declaredValue ?? undefined,
     }
     const key = pending.current?.key ?? intent.keyFor(JSON.stringify(body))
     pending.current = { body, key }
@@ -248,26 +258,26 @@ export function CreateAuctionPage() {
       </nav>
       <header className={styles.intro}>
         <div>
-          <h1>Đưa một cuốn sách lên sàn đấu giá</h1>
-          <p>Tạo sách đấu giá riêng, chờ duyệt rồi đặt giá khởi điểm và mang sách tới điểm nhận. Sách đấu giá không hiển thị trên kệ mua/đổi. Người đọc trả giá trong 24 giờ, giá cao nhất sẽ thắng.</p>
+          <h1>Đưa một cuốn sách trên kệ lên sàn đấu giá</h1>
+          <p>Chọn sách trực tiếp từ kệ của bạn, đặt giá trị khai báo và giá khởi điểm rồi mang sách tới điểm nhận. Khi gửi yêu cầu, sách sẽ tạm ngừng hiển thị trên kệ mua bán công khai để chuẩn bị mở phiên.</p>
         </div>
         <img className={styles.art} src="/illustrations/book-journey/auction.webp" width="900" height="600" alt="" aria-hidden="true" decoding="async" />
       </header>
 
       <section className={styles.compare} aria-label="Khác nhau giữa bài đăng bán và phiên đấu giá">
         <div className={styles.compareListing}>
-          <p className={styles.compareTag}><Tag size={15} aria-hidden="true" /> Bài đăng bán</p>
+          <p className={styles.compareTag}><Tag size={15} aria-hidden="true" /> Bài đăng trên kệ</p>
           <ul>
-            <li>Một giá cố định do bạn đặt</li>
+            <li>Giá niêm yết hoặc trao đổi cố định</li>
             <li>Người mua nhắn tin, hai bên tự hẹn giao sách</li>
-            <li>Hiển thị đến khi có người mua</li>
+            <li>Hiển thị công khai đến khi có người mua hoặc gửi đấu giá</li>
           </ul>
         </div>
         <ArrowRight className={styles.compareArrow} size={20} aria-hidden="true" />
         <div className={styles.compareAuction}>
           <p className={styles.compareTag}><Gavel size={15} aria-hidden="true" /> Phiên đấu giá</p>
           <ul>
-            <li>Giá khởi điểm, người đọc trả giá theo bước</li>
+            <li>Sách tạm ẩn khỏi chợ công khai để giữ chỗ</li>
             <li>Sách được nhân viên kiểm tra tại điểm trước khi mở phiên</li>
             <li>Phiên 24 giờ, người thắng nhận sách tại điểm</li>
           </ul>
@@ -277,17 +287,15 @@ export function CreateAuctionPage() {
       <div className={styles.layout}>
         <form className={styles.form} noValidate onSubmit={(e) => { e.preventDefault(); setTouched(true); if (valid && !locked) setConfirming(true) }}>
           <fieldset className={styles.step} disabled={locked}>
-            <legend><span className={styles.num}>1</span> Chọn sách đấu giá của bạn</legend>
-            <p className={styles.stepHint}>Sách đấu giá là bài đăng riêng, không lấy từ kệ mua/đổi. Chỉ sách đấu giá đã duyệt, đang hiển thị và chưa có người giữ mới gửi tới điểm được.</p>
-            <div className={styles.inlineActions}><Link to={`${ROUTES.sell}?channel=Auction`}>Tạo sách đấu giá mới</Link></div>
+            <legend><span className={styles.num}>1</span> Chọn sách từ kệ của bạn</legend>
+            <p className={styles.stepHint}>Chọn một cuốn sách đã được duyệt từ kệ của bạn. Sau khi gửi yêu cầu, sách sẽ tạm ngừng hiển thị trên kệ mua bán công khai và chuyển sang trạng thái chờ tiếp nhận tại điểm.</p>
+            <div className={styles.inlineActions}><Link to={ROUTES.sell}>Đăng sách mới lên kệ</Link></div>
             {loadingBooks && <div className={styles.skeletonList} aria-busy="true" aria-label="Đang tải sách của bạn">{[0, 1].map((i) => <div key={i} />)}</div>}
-            {listings.isError && <div className={styles.inlineState} role="alert"><p>Chưa tải được sách đấu giá của bạn.</p><button type="button" onClick={() => void listings.refetch()}>Thử lại</button></div>}
+            {listings.isError && <div className={styles.inlineState} role="alert"><p>Chưa tải được sách trên kệ của bạn.</p><button type="button" onClick={() => void listings.refetch()}>Thử lại</button></div>}
             {listings.isSuccess && eligible.length === 0 && (
               <div className={styles.inlineState}>
                 <BookOpen size={28} aria-hidden="true" />
-                <p><strong>Chưa có sách đấu giá đã duyệt.</strong> {unfinished.length > 0
-                  ? 'Sách bên dưới sẽ chọn được tại đây sau khi được duyệt.'
-                  : 'Tạo sách đấu giá mới và chờ duyệt, rồi quay lại đây.'}</p>
+                <p><strong>Chưa có sách trên kệ đủ điều kiện đấu giá.</strong> Hãy đăng sách mới lên kệ và chờ duyệt, rồi quay lại đây.</p>
               </div>
             )}
             {preselectedMissing && <p className={styles.error} role="alert">Cuốn sách bạn chọn hiện không đưa lên đấu giá được. Hãy chọn một cuốn khác bên dưới.</p>}
@@ -295,16 +303,18 @@ export function CreateAuctionPage() {
               <div className={styles.bookList} role="radiogroup" aria-label="Sách đủ điều kiện đấu giá">
                 {eligible.map((item) => (
                   <BookOption key={item.id} item={item} checked={item.id === listingId} disabled={locked}
-                    onSelect={() => { setListingId(item.id); if (item.id !== listingId) { setStartPrice(undefined); setBuyNowPrice(null) } }} />
+                    onSelect={() => {
+                      setListingId(item.id)
+                      if (item.id !== listingId) {
+                        setDeclaredDraft(undefined)
+                        setStartPrice(undefined)
+                        setBuyNowPrice(null)
+                      }
+                    }} />
                 ))}
               </div>
             )}
-            {unfinished.length > 0 && (
-              <ul className={styles.stepHint} aria-label="Sách đấu giá chưa được duyệt">
-                {unfinished.map((item) => <UnfinishedAuctionBook key={item.id} item={item} />)}
-              </ul>
-            )}
-            {listings.data?.nextCursor && <p className={styles.stepHint}>Đang hiển thị 50 sách đấu giá mới nhất.</p>}
+            {listings.data?.nextCursor && <p className={styles.stepHint}>Đang hiển thị 50 sách mới nhất trên kệ.</p>}
             {touched && formErrors.listing && eligible.length > 0 && <p className={styles.error} role="alert">{formErrors.listing}</p>}
           </fieldset>
 
@@ -333,8 +343,21 @@ export function CreateAuctionPage() {
           </fieldset>
 
           <fieldset className={styles.step} disabled={locked}>
-            <legend><span className={styles.num}>3</span> Đặt giá cho phiên</legend>
-            <p className={styles.stepHint}>Mọi mức giá đi theo lưới <em>giá khởi điểm + n × bước giá</em>, từ 10.000đ đến 1.000.000đ. Bạn không sửa được lưới giá sau khi giữ chỗ.</p>
+            <legend><span className={styles.num}>3</span> Đặt giá và giá trị bảo vệ</legend>
+            <p className={styles.stepHint}>Nhập giá trị khai báo để bảo vệ sách khi gửi tại điểm. Giá khởi điểm và mua ngay đi theo lưới <em>giá khởi điểm + n × bước giá</em>, từ 10.000đ đến 1.000.000đ.</p>
+
+            <PriceInput
+              id="auction-declared-value"
+              label="Giá trị khai báo (Giá trị bảo vệ)"
+              value={declaredValue}
+              step={10000}
+              min={AUCTION_MIN_PRICE}
+              disabled={locked}
+              onChange={setDeclaredDraft}
+              error={touched || declaredValue !== null ? formErrors.declaredValue : undefined}
+              hint="Dùng để bảo vệ và bồi thường sách nếu xảy ra sự cố trong quá trình bàn giao tại điểm."
+            />
+
             <div className={styles.field}>
               <span className={styles.label} id="step-label">Bước giá</span>
               <div className={styles.segment} role="radiogroup" aria-labelledby="step-label">
@@ -348,7 +371,7 @@ export function CreateAuctionPage() {
             </div>
             <PriceInput id="auction-start" label="Giá khởi điểm" value={startPrice} step={step} min={AUCTION_MIN_PRICE} disabled={locked}
               onChange={setStartPrice} error={touched || startPrice !== null ? formErrors.startPrice : undefined}
-              hint={salePrice !== null ? `Giá trị khai báo ${formatVnd(salePrice)}. Giá khởi điểm thấp hơn thường thu hút nhiều người trả giá hơn.` : 'Lượt trả giá đầu tiên bằng đúng giá khởi điểm.'} />
+              hint={declaredValue !== null ? `Gợi ý theo giá trị khai báo ${formatVnd(declaredValue)}. Giá khởi điểm hợp lý thu hút nhiều người trả giá hơn.` : 'Lượt trả giá đầu tiên bằng đúng giá khởi điểm.'} />
             <label className={styles.toggle}>
               <input type="checkbox" checked={buyNowOn} disabled={locked} onChange={() => { setBuyNowOn(!buyNowOn); if (!buyNowOn && buyNowPrice === null && buyNowChips[1]) setBuyNowPrice(buyNowChips[1]) }} />
               <span><strong>Cho phép mua ngay</strong><span>Người đọc có thể chốt sách ngay bằng giá này trước lượt trả giá đầu tiên.</span></span>
@@ -389,9 +412,9 @@ export function CreateAuctionPage() {
               <div className={styles.ticketMain}><dt>Giá khởi điểm</dt><dd>{startPrice && !priceErrors.startPrice ? formatVnd(startPrice) : '—'}</dd></div>
               <div><dt>Bước giá</dt><dd>+{formatVnd(step)}</dd></div>
               <div><dt>Mua ngay</dt><dd>{buyNowOn && buyNowPrice && !formErrors.buyNowPrice ? formatVnd(buyNowPrice) : 'Không đặt'}</dd></div>
-              <div><dt>Giá trị bảo vệ</dt><dd>{salePrice !== null ? formatVnd(salePrice) : '—'}</dd></div>
+              <div><dt>Giá trị bảo vệ</dt><dd>{declaredValue !== null && !priceErrors.declaredValue ? formatVnd(declaredValue) : '—'}</dd></div>
             </dl>
-            <p className={styles.protect}>Giá trị bảo vệ bằng giá trị khai báo đã duyệt của sách đấu giá, dùng khi sách mất hoặc hỏng lúc điểm đang giữ. Đây không phải giá bán.</p>
+            <p className={styles.protect}>Giá trị bảo vệ bồi thường khi sách mất hoặc hỏng lúc điểm đang giữ. Khi giữ chỗ, sách sẽ ngừng hiển thị trên kệ mua bán công khai.</p>
             <ol className={styles.timeline}>
               <li className={styles.timelineNow}><Store size={15} aria-hidden="true" /><span><strong>Gửi sách trong {DROPOFF_HOURS} giờ</strong>{point ? point.name : 'Tại điểm bạn chọn'}</span></li>
               <li><Check size={15} aria-hidden="true" /><span><strong>Nhân viên kiểm tra</strong>Sách khớp mô tả mới được mở phiên</span></li>
@@ -413,7 +436,8 @@ export function CreateAuctionPage() {
       >
         <ul className={styles.confirmList}>
           <li><strong>{identity.title}</strong> · khởi điểm {startPrice ? formatVnd(startPrice) : '—'}, bước {formatVnd(step)}{buyNowOn && buyNowPrice ? `, mua ngay ${formatVnd(buyNowPrice)}` : ''}.</li>
-          <li>Sách đấu giá chuyển sang Đang giữ cho phiên này.</li>
+          <li>Giá trị bảo vệ khai báo: <strong>{declaredValue ? formatVnd(declaredValue) : '—'}</strong>.</li>
+          <li>Sách trên kệ sẽ tạm ngừng hiển thị trên thị trường công khai và chuyển sang giữ chỗ cho phiên này.</li>
           <li>Mang sách tới {point?.name ?? 'điểm đã chọn'} trong {DROPOFF_HOURS} giờ. Phiên chỉ mở sau khi sách qua kiểm tra.</li>
         </ul>
       </ConfirmDialog>

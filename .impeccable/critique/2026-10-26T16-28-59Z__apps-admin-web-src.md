@@ -2,7 +2,7 @@
 target: Admin visual refinement
 total_score: 26
 max_score: 40
-na_heuristics: 
+na_heuristics:
 p0_count: 0
 p1_count: 1
 target_identity: "file:C:\\Users\\DESKTOP\\Documents\\WDP391\\used-book-marketplace\\apps\\admin-web\\src"

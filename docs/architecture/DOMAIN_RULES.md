@@ -31,7 +31,7 @@ before drop-off, drop-off expiry or Staff reclaim. Staff steps need STAFF + curr
 point assignment and independence; ADMIN alone cannot receive/inspect/open/reclaim.
 Proxy rules live in the pure `auction-engine.ts`; keep ceilings out of public reads,
 receipts, audit and outbox. Every auction command locks the auction document and
-decides with server time after locks; `endAt` is final (no extension). A win or Buy
+decides with server time after locks; `endAt` is final once bid on (no extension). ADR 0047: the seller publishes a Passed intake now or scheduled (phase derived from `startAt`, no worker opens auctions) and may edit the time only before the first bid; Buy Now stays offered after bids while below the price. A win or Buy
 Now forms a ViaPoint Order (`point_orders`, migration 0009) and transfers the
 commitment without releasing it; payment locks auction → Order → ledger and moves
 buyerTotal into the Order hold. Collection (migration 0010): report decision 72 h,

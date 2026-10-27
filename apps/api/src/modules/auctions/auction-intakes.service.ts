@@ -48,6 +48,7 @@ import {
 import { checkAuction, checkIntake } from './auction-invariants.js';
 import { HandoverPointsService } from './handover-points.service.js';
 import { requireUnrestricted } from './member-violations.js';
+import { publishSchedule } from './auction-schedule.js';
 
 // POL-41 counts intakes whose auction has not ended: before opening, or
 // opened and still Active/OnHold. A closed auction (sold, unsold, expired)
@@ -296,8 +297,26 @@ export class AuctionIntakesService {
           const [eligible] = await tx.c.listings
             .aggregate([
               { $match: { _id: l._id } },
-              ...publicEligibleStages('Auction'),
-              { $match: { 'r.mode': 'Sale' } },
+              {
+                $match: {
+                  moderation: 'Approved',
+                  visibility: 'Visible',
+                  trade: 'Available',
+                  deletedAt: null,
+                  publishedAt: { $ne: null },
+                  bundle: { $exists: false },
+                },
+              },
+              {
+                $lookup: {
+                  from: 'listing_revisions',
+                  localField: 'currentRevisionId',
+                  foreignField: '_id',
+                  as: 'r',
+                },
+              },
+              { $unwind: '$r' },
+              { $match: { 'r.submittedAt': { $ne: null } } },
               { $project: { _id: 1 } },
             ])
             .toArray();
@@ -305,7 +324,7 @@ export class AuctionIntakesService {
             throw new DomainError(
               409,
               'InvalidState',
-              'Chỉ sách đấu giá của bạn đã được duyệt, đang hiển thị và còn trống mới được gửi tới điểm.',
+              'Chỉ sách của bạn đã được duyệt, đang hiển thị và còn trống mới được đưa lên đấu giá.',
             );
           const r = (await tx.c.listing_revisions.findOne({
             _id: l.currentRevisionId!,
@@ -367,7 +386,8 @@ export class AuctionIntakesService {
             startPrice: body.startPrice,
             step: body.step,
             buyNowPrice: body.buyNowPrice,
-            protectiveValue: r.salePrice!,
+            protectiveValue:
+              body.declaredValue ?? r.salePrice ?? r.exchangeValue ?? body.startPrice,
             policyCode: 'HCM-AUCTION-v1',
             state: 'AwaitingDropoff',
             version: 1,
@@ -436,6 +456,16 @@ export class AuctionIntakesService {
       body.startPrice > AUCTION_MAX_PRICE
     )
       invalidField('startPrice', 'Giá khởi điểm từ 10.000đ đến 1.000.000đ.');
+    if (body.declaredValue !== undefined && body.declaredValue !== null) {
+      if (
+        body.declaredValue < AUCTION_MIN_PRICE ||
+        body.declaredValue > AUCTION_MAX_PRICE
+      )
+        invalidField(
+          'declaredValue',
+          'Giá trị khai báo từ 10.000đ đến 1.000.000đ.',
+        );
+    }
     if (body.buyNowPrice !== null) {
       if (
         body.buyNowPrice <= body.startPrice ||
@@ -749,6 +779,7 @@ export class AuctionIntakesService {
     });
   }
 
+  // Superseded by `publish` (ADR 0047); Staff open starts now for 24 hours.
   open(
     context: CommandContext,
     id: string,
@@ -757,50 +788,108 @@ export class AuctionIntakesService {
     return this.staffCommand(context, 'openAuction', id, body, {
       from: 'Passed',
       sellerMustBeActive: true,
-      apply: async (tx, i, _actor, now) => {
-        const listing = await tx.c.listings.findOne({ _id: i.listingId });
-        if (listing?.currentRevisionId !== i.listingRevisionId)
-          throw invalidState();
-        const a: AuctionDoc = {
-          _id: randomUUID(),
-          intakeId: i._id,
-          contextId: i.contextId,
-          listingId: i.listingId,
-          sellerId: i.sellerId,
-          pointId: i.pointId,
-          startPrice: i.startPrice,
-          step: i.step,
-          buyNowPrice: i.buyNowPrice,
-          buyNowAt: null,
-          startAt: now,
-          endAt: new Date(now.getTime() + AUCTION_DURATION_MS),
-          state: 'Active',
-          currentPrice: null,
-          leaderId: null,
-          bidderCount: 0,
-          bidCount: 0,
-          nextSequence: 1,
-          winnerId: null,
-          finalPrice: null,
-          closedAt: null,
-          paymentDeadline: null,
-          cancelReason: null,
-          orderId: null,
-          version: 1,
-          updatedAt: now,
-          lockSeq: 0,
-        };
-        await tx.c.auctions.insertOne(a);
-        tx.check(`auction:${a._id}`, () => checkAuction(tx, a._id));
-        return this.transition(
+      apply: (tx, i, _actor, now) =>
+        this.startAuction(
           tx,
           i,
-          { state: 'Auctioning', auctionId: a._id },
           now,
-        );
-      },
+          { startAt: now, plannedEndAt: plus(now, AUCTION_DURATION_MS) },
+          'Staff',
+        ),
       event: 'AuctionOpened',
     });
+  }
+
+  // ADR 0047: the seller publishes a Passed intake now or at a future start.
+  // Same locks as Staff open (point -> context -> intake, then the new
+  // auction); the unique intakeId index is a second guard against doubles.
+  publish(
+    context: CommandContext,
+    id: string,
+    body: Wire['PublishAuction'],
+  ) {
+    return this.commands.runAuction(context, 'publishAuction', id, body, {
+      authorize: async (tx, actor) => {
+        member(actor);
+        const i = await this.intake(tx, id);
+        if (i.sellerId !== actor._id) throw notFound();
+        return i;
+      },
+      mutate: async (tx, actor, before) => {
+        requireActive(actor);
+        await this.points.lockPoint(tx, before.pointId);
+        const i = await this.lockIntake(tx, before);
+        if (i.version !== body.expectedVersion) throw conflict();
+        const now = await this.clock.decision(tx, context.auth);
+        if (i.state !== 'Passed')
+          throw new DomainError(
+            409,
+            'InvalidState',
+            'Chỉ đăng phiên được sách đã kiểm định đạt và chưa lên phiên.',
+          );
+        await requireUnrestricted(tx, actor._id, now);
+        const schedule = publishSchedule(body, now);
+        const next = await this.startAuction(tx, i, now, schedule, 'Seller');
+        return AuctionIntakesService.change(
+          next,
+          now,
+          schedule.startAt > now ? 'AuctionScheduled' : 'AuctionOpened',
+        );
+      },
+    });
+  }
+
+  private async startAuction(
+    tx: Tx,
+    i: AuctionIntakeDoc,
+    now: Date,
+    schedule: { startAt: Date; plannedEndAt: Date },
+    publishedBy: AuctionDoc['publishedBy'],
+  ) {
+    const listing = await tx.c.listings.findOne({ _id: i.listingId });
+    if (listing?.currentRevisionId !== i.listingRevisionId)
+      throw invalidState();
+    const a: AuctionDoc = {
+      _id: randomUUID(),
+      intakeId: i._id,
+      contextId: i.contextId,
+      listingId: i.listingId,
+      sellerId: i.sellerId,
+      pointId: i.pointId,
+      startPrice: i.startPrice,
+      step: i.step,
+      buyNowPrice: i.buyNowPrice,
+      buyNowAt: null,
+      startAt: schedule.startAt,
+      endAt: schedule.plannedEndAt,
+      plannedEndAt: schedule.plannedEndAt,
+      publishedAt: now,
+      publishedBy,
+      scheduleRevision: 0,
+      state: 'Active',
+      currentPrice: null,
+      leaderId: null,
+      bidderCount: 0,
+      bidCount: 0,
+      nextSequence: 1,
+      winnerId: null,
+      finalPrice: null,
+      closedAt: null,
+      paymentDeadline: null,
+      cancelReason: null,
+      orderId: null,
+      version: 1,
+      updatedAt: now,
+      lockSeq: 0,
+    };
+    await tx.c.auctions.insertOne(a);
+    tx.check(`auction:${a._id}`, () => checkAuction(tx, a._id));
+    return this.transition(
+      tx,
+      i,
+      { state: 'Auctioning', auctionId: a._id },
+      now,
+    );
   }
 
   reclaim(

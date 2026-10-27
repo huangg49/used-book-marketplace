@@ -93,7 +93,7 @@ không bật thêm; main health/login/queues/overview trả200. Chưa commit/pus
 
 ## Contract và dữ liệu
 
-OpenAPI0.52.0: GET `/operations/moderation-overview?days=7|30`, schema
+OpenAPI0.53.0 sau ghép main: GET `/operations/moderation-overview?days=7|30`, schema
 `ModerationOverview`. Controller STAFF/ADMIN; service `MongoCommandService.read`
 kiểm tài khoản/quyền hiện tại trong transaction, trả một snapshot có serverTime.
 Staff thiếu ADMIN: catalog=null, không query collection catalog. Không trả PII,

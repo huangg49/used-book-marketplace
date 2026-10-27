@@ -18,6 +18,10 @@ import {
   withBuyNowChallenge,
 } from './0033-buy-now-challenge.js';
 import {
+  sellerScheduledAuctionsMigration,
+  withSellerScheduledAuctions,
+} from './0037-seller-scheduled-auctions.js';
+import {
   exchangeCollectionSpecs,
   exchangesMigration,
 } from './0016-exchanges.js';
@@ -279,6 +283,7 @@ export const migrations: Migration[] = [
   auctionDeliveryMigration,
   wholeBookBundlesMigration,
   bundleReviewSearchMigration,
+  sellerScheduledAuctionsMigration,
   moderationOverviewIndexesMigration,
 ];
 
@@ -323,7 +328,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withRulesChanges)
     .map(withPointAdministrationChanges)
     .map(withInspectionEvidenceChanges)
-    .map(withBuyNowChallenge),
+    .map(withBuyNowChallenge)
+    .map(withSellerScheduledAuctions),
   ...pointOrderCollectionSpecs
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)

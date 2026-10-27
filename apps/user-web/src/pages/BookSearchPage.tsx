@@ -6,8 +6,12 @@ import {
   Filter,
   X,
   ArrowRight,
+  ArrowLeft,
+  BookOpen,
   Menu,
 } from "lucide-react";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { getLenis } from "../hooks/useSmoothScroll";
 import { HomeBookCard } from "../components/HomeBookCard";
 import { CatalogSort } from "../components/CatalogSort";
 import { FilterSelect } from "../components/FilterSelect";
@@ -353,12 +357,42 @@ function FilterForm({
   );
 }
 
+const pageVariants: Variants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 36 : direction < 0 ? -36 : 0,
+    y: direction === 0 ? 18 : 0,
+    opacity: 0,
+    filter: "blur(3px)",
+  }),
+  center: {
+    x: 0,
+    y: 0,
+    opacity: 1,
+    filter: "blur(0px)",
+    transition: {
+      duration: 0.38,
+      ease: [0.16, 1, 0.3, 1] as const,
+    },
+  },
+  exit: (direction: number) => ({
+    x: direction > 0 ? -36 : direction < 0 ? 36 : 0,
+    y: direction === 0 ? -18 : 0,
+    opacity: 0,
+    filter: "blur(3px)",
+    transition: {
+      duration: 0.22,
+      ease: [0.16, 1, 0.3, 1] as const,
+    },
+  }),
+};
+
 export function BookSearchPage() {
   const [params, setParams] = useSearchParams();
   const searchTerm = params.get("q") || "";
   const [settledSearch, setSettledSearch] = useState(searchTerm);
   const [composing, setComposing] = useState(false);
   const searchPending = searchTerm !== settledSearch || composing;
+
   useEffect(() => {
     if (searchTerm === settledSearch) return;
     const timer = window.setTimeout(() => setSettledSearch(searchTerm), 300);
@@ -448,7 +482,74 @@ export function BookSearchPage() {
     gcTime: 300_000,
   });
   const filterKey = JSON.stringify(initial);
+
+  const [pageHistory, setPageHistory] = useState<string[]>([]);
+  const [transitionDirection, setTransitionDirection] = useState<number>(1);
+
+  useEffect(() => {
+    if (!params.get("cursor") && pageHistory.length > 0) {
+      setPageHistory([]);
+    }
+  }, [params.get("cursor")]);
+
+  const pageNumber = pageHistory.length + 1;
+
+  function scrollToCatalogHeading() {
+    const lenis = getLenis();
+    if (lenis) {
+      lenis.scrollTo("#catalog-results", {
+        offset: -20,
+        duration: 1.0,
+      });
+    } else {
+      const heading = document.getElementById("catalog-results");
+      heading?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    const heading = document.getElementById("catalog-results");
+    heading?.focus({ preventScroll: true });
+  }
+
+  function handleNextPage() {
+    if (!result.data?.nextCursor) return;
+    const currentCursor = params.get("cursor") || "";
+    setPageHistory((prev) => [...prev, currentCursor]);
+    setTransitionDirection(1);
+    const next = new URLSearchParams(params);
+    next.set("cursor", result.data.nextCursor);
+    setParams(next);
+    requestAnimationFrame(() => scrollToCatalogHeading());
+  }
+
+  function handlePrevPage() {
+    if (pageHistory.length === 0) {
+      handleFirstPage();
+      return;
+    }
+    const prevCursor = pageHistory[pageHistory.length - 1] ?? "";
+    setPageHistory((prev) => prev.slice(0, -1));
+    setTransitionDirection(-1);
+    const next = new URLSearchParams(params);
+    if (prevCursor) {
+      next.set("cursor", prevCursor);
+    } else {
+      next.delete("cursor");
+    }
+    setParams(next);
+    requestAnimationFrame(() => scrollToCatalogHeading());
+  }
+
+  function handleFirstPage() {
+    setPageHistory([]);
+    setTransitionDirection(-1);
+    const next = new URLSearchParams(params);
+    next.delete("cursor");
+    setParams(next);
+    requestAnimationFrame(() => scrollToCatalogHeading());
+  }
+
   function update(key: string, value: string, replace = false) {
+    setPageHistory([]);
+    setTransitionDirection(0);
     const next = new URLSearchParams(params);
     next.delete("cursor");
     if (key === "categoryId") {
@@ -471,6 +572,8 @@ export function BookSearchPage() {
     setParams(next, { replace });
   }
   function clear() {
+    setPageHistory([]);
+    setTransitionDirection(0);
     const next = new URLSearchParams();
     if (params.get("q")) next.set("q", params.get("q")!);
     if (params.get("mode")) next.set("mode", params.get("mode")!);
@@ -482,6 +585,8 @@ export function BookSearchPage() {
     setFilterOpen(false);
   }
   function apply(values: FilterValues, shouldScroll = false) {
+    setPageHistory([]);
+    setTransitionDirection(0);
     const next = new URLSearchParams(params);
     next.delete("cursor");
     next.delete("category");
@@ -496,15 +601,16 @@ export function BookSearchPage() {
     setParams(next);
     closeFilters();
     if (shouldScroll) {
-      requestAnimationFrame(() => {
-        const heading = document.getElementById("catalog-results");
-        heading?.focus({ preventScroll: true });
-        heading?.scrollIntoView({ block: "start" });
-      });
+      requestAnimationFrame(() => scrollToCatalogHeading());
     }
   }
   useEffect(() => {
-    if (!filterOpen) return;
+    const lenis = getLenis();
+    if (!filterOpen) {
+      lenis?.start();
+      return;
+    }
+    lenis?.stop();
     const unlockScroll = lockPageScroll();
     const media = window.matchMedia("(min-width: 901px)");
     const closeOnDesktop = () => {
@@ -516,6 +622,7 @@ export function BookSearchPage() {
     media.addEventListener("change", closeOnDesktop);
     return () => {
       unlockScroll();
+      lenis?.start();
       media.removeEventListener("change", closeOnDesktop);
     };
   }, [filterOpen]);
@@ -599,7 +706,12 @@ export function BookSearchPage() {
     } else update(chip.key, "");
   }
   return (
-    <div className={styles.page}>
+    <motion.div
+      className={styles.page}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+    >
       <div className={styles.leavesWrapper} aria-hidden="true">
         <AutumnLeavesCanvas />
       </div>
@@ -617,22 +729,30 @@ export function BookSearchPage() {
                 <span>Đang lọc:</span>
               </div>
               <div className={styles.stickyChipsScroll}>
-                {chips.map((chip) => (
-                  <button
-                    type="button"
-                    key={
-                      chip.key === "facets" && "facet" in chip && "value" in chip
-                        ? `${chip.facet}-${chip.value}`
-                        : chip.key
-                    }
-                    className={styles.stickyChip}
-                    aria-label={`Bỏ lọc ${chip.label}`}
-                    onClick={() => removeChip(chip)}
-                  >
-                    <span>{chip.label}</span>
-                    <X size={13} aria-hidden="true" />
-                  </button>
-                ))}
+                <AnimatePresence>
+                  {chips.map((chip) => (
+                    <motion.button
+                      type="button"
+                      key={
+                        chip.key === "facets" && "facet" in chip && "value" in chip
+                          ? `${chip.facet}-${chip.value}`
+                          : chip.key
+                      }
+                      layout
+                      initial={{ opacity: 0, scale: 0.8, y: -4 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.75, transition: { duration: 0.16 } }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className={styles.stickyChip}
+                      aria-label={`Bỏ lọc ${chip.label}`}
+                      onClick={() => removeChip(chip)}
+                    >
+                      <span>{chip.label}</span>
+                      <X size={13} aria-hidden="true" />
+                    </motion.button>
+                  ))}
+                </AnimatePresence>
               </div>
               <button
                 type="button"
@@ -733,16 +853,26 @@ export function BookSearchPage() {
             role="group"
             aria-label="Hình thức giao dịch"
           >
-            {modes.map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={(params.get("mode") || "") === value}
-                onClick={() => update("mode", value)}
-              >
-                {label}
-              </button>
-            ))}
+            {modes.map(([value, label]) => {
+              const isActive = (params.get("mode") || "") === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={isActive}
+                  onClick={() => update("mode", value)}
+                >
+                  <span>{label}</span>
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeModeIndicator"
+                      className={styles.modeActiveIndicator}
+                      transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                    />
+                  )}
+                </button>
+              );
+            })}
           </div>
           <div className={styles.toolbar}>
             <div aria-live="polite">
@@ -800,10 +930,22 @@ export function BookSearchPage() {
           ) : (
             <div aria-busy={result.isFetching || searchPending}>
               {(result.isPending || searchPending) && (
-                <div className={styles.loading} role="status">
-                  <span />
-                  Đang tải kệ sách…
-                </div>
+                <>
+                  <div className={styles.loading} role="status">
+                    <span />
+                    Đang tìm kiếm và tải kệ sách…
+                  </div>
+                  <div className={styles.skeletonGrid} aria-hidden="true">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className={styles.skeletonCard}>
+                        <div className={styles.skeletonCover} />
+                        <div className={styles.skeletonTextLine} style={{ width: "85%" }} />
+                        <div className={styles.skeletonTextLine} style={{ width: "60%" }} />
+                        <div className={styles.skeletonPrice} />
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
               {!searchPending && result.isError && (
                 <div className={styles.state} role="alert">
@@ -841,39 +983,69 @@ export function BookSearchPage() {
                   )}
                 </div>
               )}
-              <div className={styles.grid}>
-                {!searchPending && result.data?.items.map((book, index) => (
-                  <HomeBookCard key={book.id} book={book} index={index} />
-                ))}
-              </div>
+              <AnimatePresence mode="wait" custom={transitionDirection} initial={false}>
+                {!searchPending && result.data && result.data.items.length > 0 && (
+                  <motion.div
+                    key={`${params.get("cursor") || "first"}-${params.get("q") || ""}-${params.get("mode") || ""}-${params.get("sort") || ""}-${initial.categoryId}-${params.get("condition") || ""}`}
+                    custom={transitionDirection}
+                    variants={pageVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    className={styles.gridContainer}
+                  >
+                    <div className={styles.grid}>
+                      {result.data.items.map((book, index) => (
+                        <HomeBookCard key={book.id} book={book} index={index} />
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               {!searchPending && (params.has("cursor") || result.data?.nextCursor) && (
                 <nav className={styles.pagination} aria-label="Phân trang sách">
                   {params.has("cursor") && (
-                    <button
-                      type="button"
-                      disabled={result.isFetching}
-                      onClick={() => {
-                        update("cursor", "");
-                        document.getElementById("catalog-results")?.focus();
-                      }}
-                    >
-                      Về trang đầu
-                    </button>
+                    <>
+                      <motion.button
+                        type="button"
+                        disabled={result.isFetching}
+                        onClick={handleFirstPage}
+                        whileHover={{ scale: 1.04, y: -2 }}
+                        whileTap={{ scale: 0.96 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                      >
+                        Về trang đầu
+                      </motion.button>
+                      <motion.button
+                        type="button"
+                        disabled={result.isFetching}
+                        onClick={handlePrevPage}
+                        whileHover={{ scale: 1.04, y: -2 }}
+                        whileTap={{ scale: 0.96 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                      >
+                        <ArrowLeft size={16} aria-hidden="true" />
+                        Trang trước
+                      </motion.button>
+                    </>
                   )}
+                  <div className={styles.pageIndicatorBadge}>
+                    <BookOpen size={15} aria-hidden="true" />
+                    <span>Trang {pageNumber}</span>
+                  </div>
                   {result.data?.nextCursor && (
-                    <button
+                    <motion.button
                       type="button"
+                      className={styles.paginationNextBtn}
                       disabled={result.isFetching}
-                      onClick={() => {
-                        const next = new URLSearchParams(params);
-                        next.set("cursor", result.data!.nextCursor!);
-                        setParams(next);
-                        document.getElementById("catalog-results")?.focus();
-                      }}
+                      onClick={handleNextPage}
+                      whileHover={{ scale: 1.04, y: -2 }}
+                      whileTap={{ scale: 0.96 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     >
                       Trang tiếp theo{" "}
-                      <ArrowRight size={17} aria-hidden="true" />
-                    </button>
+                      <ArrowRight size={16} aria-hidden="true" />
+                    </motion.button>
                   )}
                 </nav>
               )}
@@ -883,6 +1055,7 @@ export function BookSearchPage() {
       </div>
       <dialog
         ref={dialog}
+        data-lenis-prevent
         className={styles.filterDialog}
         aria-labelledby="filter-dialog-title"
         onClose={() => setFilterOpen(false)}
@@ -901,6 +1074,6 @@ export function BookSearchPage() {
           mode={params.get("mode") || ""}
         />
       </dialog>
-    </div>
+    </motion.div>
   );
 }

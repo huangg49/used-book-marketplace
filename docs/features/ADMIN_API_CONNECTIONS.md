@@ -1,7 +1,7 @@
 # API đã nối vào Admin —27/10/2026
 
 Scope: API vận hành tại base `d3b19e5` và local work trên `codex/admin-ui-refactor`.
-Owner duyệt27/10 bổ sung thống kê Dashboard: OpenAPI0.52.0, một GET và migration
+Owner duyệt27/10 bổ sung thống kê Dashboard: OpenAPI0.53.0 sau ghép main, một GET và migration
 0037 thêm index, không đổi quyền xử lý hoặc ledger/transaction. Gate release trong
 [READINESS](../handoff/READINESS.md) giữ nguyên.
 

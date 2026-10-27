@@ -17,6 +17,10 @@ export const auctionSummarySchema = z.object({
   startAt: z.string(), endAt: z.string(), pointName: z.string(), demoOnly: z.literal(true),
   // ADR 0043: when Buy Now opened the 60-second window (endAt already shortened).
   buyNowAt: z.string().nullish(),
+  // ADR 0047: Scheduled before startAt; version lets the seller edit the time.
+  phase: z.enum(['Scheduled', 'Live', 'Ended']).nullish(),
+  version: z.number().int().nullish(),
+  scheduleRevision: z.number().int().nullish(),
   book: auctionBookSchema.nullish(),
 })
 const auctionListSchema = z.object({ items: z.array(auctionSummarySchema), serverTime: z.string() })
@@ -87,7 +91,34 @@ export type PointOrder = z.infer<typeof pointOrderSchema>
 
 export const AUCTION_MAX_PRICE = 1_000_000
 
-export function listAuctions() { return session.publicRequest('/auctions', auctionListSchema) }
+export function listAuctions(phase: 'live' | 'upcoming' = 'live') {
+  return session.publicRequest(phase === 'live' ? '/auctions' : `/auctions?phase=${phase}`, auctionListSchema)
+}
+
+export type AuctionPhase = 'Scheduled' | 'Live' | 'Ended'
+/** ADR 0047 phase; older servers send none, so derive it from the server time. */
+export function auctionPhase(a: Pick<AuctionSummary, 'phase' | 'state' | 'startAt' | 'endAt'>, serverTime?: string): AuctionPhase {
+  if (a.phase) return a.phase
+  const now = serverTime ? Date.parse(serverTime) : Date.now()
+  if (a.state !== 'Active' || now >= Date.parse(a.endAt)) return 'Ended'
+  return now < Date.parse(a.startAt) ? 'Scheduled' : 'Live'
+}
+
+// ADR 0047 limits, mirrored for the form; the server stays authoritative.
+export const AUCTION_MIN_HOURS = 1
+export const AUCTION_MAX_HOURS = 168
+export const AUCTION_MIN_LEAD_MS = 5 * 60_000
+export const AUCTION_SCHEDULE_HORIZON_MS = 7 * 24 * 3_600_000
+export const AUCTION_MAX_SCHEDULE_EDITS = 5
+export type ScheduleBody = { expectedVersion: number; startAt: string | null; durationHours: number }
+/** The seller publishes a Passed intake now (startAt null) or at a later time. */
+export function publishAuction(intakeId: string, body: ScheduleBody, key: string) {
+  return command(`/auction-intakes/${intakeId}/publish`, key, body)
+}
+/** Before the first bid: move the start (scheduled) or the length (live). */
+export function rescheduleAuction(auctionId: string, body: ScheduleBody, key: string) {
+  return command(`/auctions/${auctionId}/schedule`, key, body)
+}
 export function getAuction(id: string) { return session.publicRequest(`/auctions/${id}`, auctionSchema) }
 export function getAuctionPhoto(id: string, mediaId: string) {
   return session.publicRequest(`/auctions/${id}/photos/${mediaId}`, z.object({ id: z.string().uuid(), url: z.string().url(), expiresAt: z.string(), width: z.number(), height: z.number() }))
@@ -194,6 +225,7 @@ export function listHandoverPoints() {
 export type CreateIntakeBody = {
   listingId: string; expectedListingVersion: number; pointId: string
   startPrice: number; step: 10000 | 50000; buyNowPrice: number | null
+  declaredValue?: number | null
 }
 export function createAuctionIntake(body: CreateIntakeBody, key: string) {
   return command('/auction-intakes', key, body)
@@ -201,13 +233,22 @@ export function createAuctionIntake(body: CreateIntakeBody, key: string) {
 export const AUCTION_MIN_PRICE = 10_000
 
 /** Client mirror of the server's POL-39 checks; the server stays authoritative. */
-export function intakePriceErrors(startPrice: number | null, step: number, buyNowPrice: number | null) {
-  const errors: { startPrice?: string; buyNowPrice?: string } = {}
+export function intakePriceErrors(
+  startPrice: number | null,
+  step: number,
+  buyNowPrice: number | null,
+  declaredValue?: number | null,
+) {
+  const errors: { startPrice?: string; buyNowPrice?: string; declaredValue?: string } = {}
   if (!startPrice) errors.startPrice = 'Nhập giá khởi điểm.'
   else if (startPrice < AUCTION_MIN_PRICE || startPrice > AUCTION_MAX_PRICE) errors.startPrice = 'Giá khởi điểm từ 10.000đ đến 1.000.000đ.'
-  else if (buyNowPrice !== null) {
-    if (buyNowPrice <= startPrice || buyNowPrice > AUCTION_MAX_PRICE) errors.buyNowPrice = 'Giá mua ngay phải lớn hơn giá khởi điểm và không quá 1.000.000đ.'
-    else if ((buyNowPrice - startPrice) % step !== 0) {
+  if (declaredValue !== undefined) {
+    if (!declaredValue) errors.declaredValue = 'Nhập giá trị khai báo của sách.'
+    else if (declaredValue < AUCTION_MIN_PRICE || declaredValue > AUCTION_MAX_PRICE) errors.declaredValue = 'Giá trị khai báo từ 10.000đ đến 1.000.000đ.'
+  }
+  if (buyNowPrice !== null) {
+    if (buyNowPrice <= (startPrice ?? 0) || buyNowPrice > AUCTION_MAX_PRICE) errors.buyNowPrice = 'Giá mua ngay phải lớn hơn giá khởi điểm và không quá 1.000.000đ.'
+    else if (startPrice && (buyNowPrice - startPrice) % step !== 0) {
       const up = Math.min(startPrice + Math.ceil((buyNowPrice - startPrice) / step) * step, AUCTION_MAX_PRICE)
       errors.buyNowPrice = `Giá mua ngay phải bằng giá khởi điểm cộng một số bước giá. Thử ${up.toLocaleString('vi-VN')}đ.`
     }

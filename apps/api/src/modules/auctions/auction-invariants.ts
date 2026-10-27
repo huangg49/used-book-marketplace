@@ -116,5 +116,13 @@ export async function checkAuction(tx: Tx, auctionId: string) {
     )
   )
     fail('auction ranking mismatch');
+  // ADR 0047: a scheduled auction takes no bid before its start.
+  if (
+    await tx.c.auction_bids.findOne({
+      auctionId: a._id,
+      decidedAt: { $lt: a.startAt },
+    })
+  )
+    fail('auction bid before start');
   tx.check(`auction-intake:${a.intakeId}`, () => checkIntake(tx, a.intakeId));
 }
