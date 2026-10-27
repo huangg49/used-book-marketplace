@@ -637,9 +637,12 @@
 }
 .openBook {
   grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.18fr);
-  gap: 32px;
-  padding: 28px;
-  height: clamp(600px, calc(100dvh - 284px), 860px);
+  gap: 24px;
+  padding: 20px 24px;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
   border: 0;
   border-radius: 12px;
   overflow: hidden;
