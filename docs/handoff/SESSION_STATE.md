@@ -1,5 +1,26 @@
 # Điểm lưu hiện tại — 27/10/2026
 
+## Trợ lý AI NVIDIA: provider gợi ý giá & điền thông tin sách từ ảnh — 27/10/2026
+
+- Nhánh `feature/ai-listing-assist` (từ `main` b39747a), 3 commit, chưa push/PR.
+- **Gợi ý giá**: thêm `PRICE_ASSIST_PROVIDER=nvidia` (NIM, mặc định
+  `nvidia/llama-3.3-nemotron-super-49b-v1.5`, `NVIDIA_BASE_URL` tùy chọn). Không đổi
+  contract/luật bằng chứng; ADR 0028 §9.
+- **Điền từ ảnh** ([ADR 0048](../adr/0048-listing-photo-autofill.md), sửa §5 ADR 0028):
+  OpenAPI 0.53.0 `POST /listings/{id}/autofill-suggestions`, migration
+  `0038-listing-autofill`, module `autofill-assist`, cờ `AUTOFILL_*` tắt mặc định, dùng
+  chung ngân sách ngày với gợi ý giá. Web: panel “Điền nhanh từ ảnh” ở bước 1 trang
+  đăng bán (sách lẻ), dùng chung bản nháp với lần gửi; chỉ áp dụng trường người bán bấm “Dùng”.
+- **Sau khi kéo nhánh**: `pnpm db:migrate` rồi **`pnpm db:bootstrap`** (cấp quyền
+  `latlai_app` trên `autofill_suggestions`).
+- **Kiểm tra**: API unit 216 + price/autofill PASS; e2e `autofill` (7) + `price-assist`
+  + `media` PASS trên replica set QA; `schema.mongo-spec` PASS; contract check/routes
+  PASS; typecheck API/admin/user-web PASS; user-web 35 files / 243 tests PASS, build PASS.
+  RN typecheck FAIL 32 lỗi typed-route có sẵn trước nhánh (không đụng RN).
+- **NOT RUN**: gọi NVIDIA thật (chưa có key), đo chất lượng đọc tiếng Việt trên ảnh thật
+  (ngưỡng đề xuất trong ADR 0048 §5), kiểm trình duyệt luồng đăng bán (cần đăng nhập,
+  Supabase thật và key). RN chưa có UI điền từ ảnh.
+
 ## Khắc phục cuộn chuột trang hội thoại & Cố định khung chat trong viewport — 27/10/2026
 
 - Nhánh `feat/web-auction-select-from-shelf`.
