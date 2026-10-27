@@ -44,8 +44,8 @@ export function purchaseChatGuidance(
       description: buyer
         ? "Người bán cần bổ sung thông tin giao hàng trước khi tạo đơn. Bạn vẫn có thể hỏi thêm về cuốn sách."
         : "Bổ sung nơi gửi trong bài đăng để người mua có thể gửi thông tin nhận sách. Bạn vẫn có thể trò chuyện ở đây.",
-      action: undefined,
-      actionLabel: undefined,
+      action: !buyer ? "edit-listing" : undefined,
+      actionLabel: !buyer ? "Cập nhật nơi gửi sách" : undefined,
     } as const;
   }
   return {

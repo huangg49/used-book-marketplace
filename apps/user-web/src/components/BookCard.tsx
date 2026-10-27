@@ -17,11 +17,13 @@ export function ListingPhoto({
   eager = false,
   photoIndex = 0,
   alt,
+  fit,
 }: {
   book: PublicListing;
   eager?: boolean;
   photoIndex?: number;
   alt?: string;
+  fit?: "cover" | "contain";
 }) {
   const photoId = book.photos[photoIndex]?.id;
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
@@ -34,6 +36,7 @@ export function ListingPhoto({
   );
   const url = photo.url;
   const failed = photo.isError || (!!url && failedUrl === url);
+  const isContain = fit === "contain" || (fit === undefined && photoIndex > 0);
   return (
     <div ref={ref} className={styles.photoFrame}>
       {url && !failed ? (
@@ -44,7 +47,7 @@ export function ListingPhoto({
           fetchPriority={eager ? "high" : "auto"}
           decoding="async"
           onError={() => setFailedUrl(url)}
-          className={styles.image}
+          className={`${styles.image} ${isContain ? styles.containImage : ""}`}
         />
       ) : (
         <div className={styles.fallback}>

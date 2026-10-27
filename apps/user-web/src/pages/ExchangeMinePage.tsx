@@ -5,6 +5,7 @@ import { ArrowLeftRight, X, Star, ChevronLeft, ChevronRight } from 'lucide-react
 import { ROUTES, formatVnd } from '../lib/routes'
 import { getExchangeTransactions, getExchangeCounts } from '../services/exchange'
 import type { ExchangeItem, ExchangeTab, ExchangeBook } from '../lib/mock/exchangeMine'
+import { BookCover } from '../components/BookCover'
 import styles from './ExchangeMinePage.module.css'
 
 const TAB_MAPPINGS: Record<ExchangeTab, string> = {
@@ -234,11 +235,12 @@ function ExchangeCard({ item }: { item: ExchangeItem }) {
                 <div className={styles.bookCoverWrapper}>
                     {count > 1 && <div className={styles.multipleBooksBg1} />}
                     {count > 1 && <div className={styles.multipleBooksBg2} />}
-                    {mainBook.coverUrl ? (
-                        <img src={mainBook.coverUrl} alt={`Bìa sách ${mainBook.title}`} className={styles.bookCoverImage} />
-                    ) : (
-                        <div className={styles.bookCoverImage} />
-                    )}
+                    <BookCover
+                        title={mainBook.title}
+                        coverUrl={mainBook.coverUrl}
+                        index={0}
+                        className={styles.bookCoverImage}
+                    />
                     {count > 1 && (
                         <div className={styles.multipleBooksBadge}>{count}</div>
                     )}

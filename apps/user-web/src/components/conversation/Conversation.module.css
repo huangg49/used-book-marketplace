@@ -329,16 +329,20 @@
 }
 .eventHistory {
   color: var(--shop-ink);
-  background: transparent;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--shop-line);
+  background: var(--shop-paper, #fdfbf7);
+  border: 1px solid var(--shop-line, #e2d7cb);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 8px 0 16px;
   font-size: var(--conversation-meta, 0.875rem);
-  line-height: 1.7;
+  line-height: 1.6;
+  box-shadow: 0 1px 3px rgba(40, 25, 20, 0.03);
 }
 .eventHistory h3 {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
   font-size: var(--conversation-meta, 0.875rem);
-  font-weight: 400;
+  font-weight: 600;
+  color: var(--shop-ink);
 }
 .historyHeading {
   display: flex;
