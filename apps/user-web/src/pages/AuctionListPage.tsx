@@ -3,8 +3,6 @@ import { AuctionGrid } from '../components/AuctionGrid'
 import { useSearchParams, Link } from 'react-router-dom'
 import { ArrowRight, BookOpen, ChevronDown, Gavel, HelpCircle, ShieldCheck, Store } from 'lucide-react'
 import { AuctionCard } from '../components/AuctionCard'
-import { AuctionHero } from '../components/AuctionHero'
-import { AuctionEntrance } from '../components/AuctionEntrance'
 import { FilterSelect } from '../components/FilterSelect'
 import { useAuctionListLive } from '../hooks/useAuctionLive'
 import { listAuctions, type AuctionSummary } from '../services/auctions'
@@ -46,14 +44,27 @@ export function AuctionListPage() {
   const auth = useSession()
   const [params, setParams] = useSearchParams()
   const live = useAuctionListLive()
-  const result = useQuery({ queryKey: ['auctions'], queryFn: () => listAuctions(), retry: false, staleTime: 0, refetchInterval: live ? false : 30_000 })
+  const result = useQuery({
+    queryKey: ['auctions'],
+    queryFn: () => listAuctions(),
+    retry: false,
+    staleTime: 0,
+    refetchInterval: live ? false : 30_000,
+  })
   // ADR 0047: scheduled auctions are shown apart and cannot be bid on yet.
-  const upcoming = useQuery({ queryKey: ['auctions', 'upcoming'], queryFn: () => listAuctions('upcoming'), retry: false, refetchInterval: 60_000 })
+  const upcoming = useQuery({
+    queryKey: ['auctions', 'upcoming'],
+    queryFn: () => listAuctions('upcoming'),
+    retry: false,
+    refetchInterval: 60_000,
+  })
+
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params)
     if (value) next.set(key, value); else next.delete(key)
     setParams(next, { replace: true })
   }
+
   const point = params.get('point') ?? ''
   const buyNowOnly = params.get('buyNow') === '1'
   const sort = SORTS[params.get('sort') ?? ''] ? params.get('sort')! : 'endingSoon'
@@ -67,16 +78,41 @@ export function AuctionListPage() {
 
   return (
     <div className={styles.page}>
-      <AuctionEntrance />
-      <AuctionHero auctions={showData ? all : []} serverTime={result.data?.serverTime} pending={result.isPending} stale={stale} failed={result.isError && !stale} />
-
       <div className={styles.content}>
-        {/* Modern Interactive Process Guide */}
+        {/* Compact, Elegant Page Header */}
+        <header className={styles.pageHeader}>
+          <div className={styles.headerText}>
+            <div className={styles.kicker}>
+              <Gavel size={14} className={styles.kickerIcon} aria-hidden="true" />
+              <span>Sàn đấu giá sách Lật Lại</span>
+              <span className={styles.livePulseDot} aria-hidden="true" />
+            </div>
+            <h1 className={styles.pageTitle}>Đấu giá sách cũ</h1>
+            <p className={styles.pageSubtitle}>
+              Mỗi bản sách đều được kiểm định tình trạng tại điểm trước khi mở phiên. Người đọc tự do trả giá trong 24 giờ, nhận sách trực tiếp tại điểm giao nhận TP.HCM.
+            </p>
+          </div>
+
+          <div className={styles.headerActions}>
+            {auth.status === 'authenticated' && (
+              <Link to={ROUTES.myAuctions} className={styles.myAuctionsBtn}>
+                <span>Đấu giá của tôi</span>
+                <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            )}
+            <Link className={styles.createBtnMain} to={ROUTES.auctionCreate()}>
+              <Gavel size={16} aria-hidden="true" />
+              <span>Đấu giá sách của bạn</span>
+            </Link>
+          </div>
+        </header>
+
+        {/* Collapsible 3-Step Process Guide */}
         <section className={styles.guideSection} aria-label="Hướng dẫn tham gia đấu giá">
           <details className={styles.guide}>
             <summary>
               <div className={styles.summaryLeft}>
-                <HelpCircle size={17} aria-hidden="true" />
+                <HelpCircle size={16} aria-hidden="true" />
                 <span>3 bước tham gia sàn đấu giá Lật Lại</span>
               </div>
               <ChevronDown size={16} className={styles.summaryChevron} aria-hidden="true" />
@@ -110,21 +146,11 @@ export function AuctionListPage() {
               )}
             </div>
 
-            <div className={styles.sectionActions}>
+            <div className={styles.headingActions}>
               <span className={styles.connection}>
                 <i className={live && !result.isError ? styles.livePulse : ''} aria-hidden="true" />
                 {result.isError ? 'Chưa cập nhật được giá' : live ? 'Giá cập nhật trực tiếp' : 'Cập nhật mỗi 30s'}
               </span>
-              {auth.status === 'authenticated' && (
-                <Link to={ROUTES.myAuctions} className={styles.myAuctionsLink}>
-                  <span>Đấu giá của tôi</span>
-                  <ArrowRight size={14} aria-hidden="true" />
-                </Link>
-              )}
-              <Link className={styles.createBtnHeader} to={ROUTES.auctionCreate()}>
-                <Gavel size={15} aria-hidden="true" />
-                <span>Đấu giá sách của bạn</span>
-              </Link>
             </div>
           </div>
 

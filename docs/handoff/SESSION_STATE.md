@@ -1,5 +1,18 @@
 # Điểm lưu hiện tại — 27/10/2026
 
+## Tối giản giao diện trang Đấu giá (`/auctions`) — Xóa bỏ hoàn toàn Hero Banner — 27/10/2026
+
+- Nhánh `feat/web-auction-select-from-shelf`.
+- **Cải tiến giao diện**:
+  - Gỡ bỏ hoàn toàn component `AuctionHero` và `AuctionEntrance` khỏi trang đấu giá theo yêu cầu người dùng, loại bỏ triệt để mọi khối banner choán diện tích ở đầu trang.
+  - Xây dựng Page Header mỏng nhẹ, tinh tế (chỉ cao ~100px): tiêu đề "Đấu giá sách cũ", phụ đề ngắn gọn, nút CTA vàng "Đấu giá sách của bạn" và liên kết "Đấu giá của tôi" được căn lề phải gọn gàng.
+  - Người dùng khi vào trang `/auctions` có thể ngay lập tức nhìn thấy hướng dẫn 3 bước, bộ lọc và danh sách phiên đang mở mà không cần cuộn trang.
+  - Đảm bảo tính nhất quán thẩm mỹ với các trang `/books` và `/exchange`.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web test`: 31 files / 231 tests PASS.
+  - Trình duyệt đã kiểm chứng thực tế và chụp ảnh xác nhận.
+
 ## Tái thiết kế giao diện sàn đấu giá (`/auctions`) — Phong cách Warm Paper Editorial — 27/10/2026
 
 - Nhánh `feat/web-auction-select-from-shelf`.
