@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bundlePlan, checkBundleBudget } from './admin-bundle.mjs';
+import { bundlePlan, checkBundleBudget, deferredModules, deferredWorkspace } from './admin-bundle.mjs';
 
 const fixture = () => ({
   'index.html': { file: 'entry.js', isEntry: true, imports: ['shared'], dynamicImports: ['page'], css: ['common.css'] },
@@ -13,6 +13,15 @@ test('counts shared startup imports once, handles cycles, and excludes lazy page
   assert.deepEqual(plan.initial, ['entry.js', 'common.css', 'shared.js']);
   assert.deepEqual(plan.routes[0].files, ['page.js', 'page.css', 'helper.js']);
   assert.equal(plan.javascript.length, 4);
+});
+
+test('protects the authenticated workspace boundary as well as every page', () => {
+  const manifest=fixture();
+  for(const key of deferredModules)manifest[key]={file:key+'.js',isDynamicEntry:true,imports:['shared']};
+  assert.equal(bundlePlan(manifest).routes.length,11);
+  assert.ok(bundlePlan(manifest).routes.some(route=>route.source===deferredWorkspace));
+  manifest.shared.imports.push(deferredWorkspace);
+  assert.throws(()=>bundlePlan(manifest),/no longer deferred/);
 });
 test('fails when a deferred page becomes an eager dependency', () => {
   const manifest = fixture();

@@ -3,6 +3,58 @@
 Ngày: 27/09/2026. Phạm vi: web Staff/Admin sử dụng API thật theo OpenAPI 0.6.0.
 Quyết định kiến trúc: [ADR 0010](../adr/0010-operations-review-client.md).
 
+## Tối ưu tải đầu Admin — 27/10/2026
+
+Source: `codex/admin-startup-performance`, base `17aac90`; commit subject
+`perf(admin): defer authenticated workspace until login`. Đây là bước đầu gói
+hiệu năng/ổn định owner duyệt; chưa phải hoàn tất tối ưu API hoặc runtime dev.
+
+| Production manifest, cùng Node24.22.1/pnpm11.19.0 | Trước | Sau |
+| --- | ---: | ---: |
+| JavaScript khởi động, toàn graph static/modulepreload | 497519bytes | 431696bytes (-13,2%) |
+| Gzip ước tính của graph khởi động | 153762bytes | 133169bytes (-13,4%) |
+| CSS khởi động | 55102bytes | 33550bytes (-39,1%) |
+| Chunk JS lớn nhất | 263511bytes | 218840bytes |
+| Tổng JS mọi chunk | 740174bytes | 743261bytes (+0,4%) |
+
+- Shell, command palette, sidebar preferences và TanStack Query tải cùng
+  `AuthenticatedWorkspace` sau login. `/auth/me` và capability gate vẫn đứng
+  trước Outlet;10module trang vẫn lazy, không remount form theo profile refresh.
+  Tách QueryClient khỏi module session, không tạo token store/client thứ hai.
+  Đăng ký cache bắt đầu từ identity lúc import; giữ data qua refresh cùng người,
+  xóa queries/mutations khi logout/đổi/mất identity, hủy reads đang chạy để phản
+  hồi muộn của A không nạp lại cache của B. HMR dispose hủy subscription/cache.
+- React/ReactDOM/Scheduler có chunk riêng theo API `rolldownOptions` của Vite8;
+  regex hỗ trợ cả Windows/Unix. Checker vẫn cộng runtime này vào startup, giữ
+  giới hạn500kB startup/300kB mỗi file và bắt lỗi nếu workspace thành eager.
+  Không nới budget, đổi dependency/lockfile/schema/API/env hoặc client teammate.
+- PASS Admin209unit/component/model tests (thêm7ca cache identity/unsubscribe/
+  cancel late response);7test checker gồm default boundary+eager regression;
+  lint/typecheck/build;27session-client tests;7HTTP/Mongo QA tests bao gồm quyền/replay/reconciliation.
+  Detector một lượt2target JSX trả0finding. Fixture dùng DB riêng `_test`,
+  storage local fake/Sharp thật; không dùng kết quả này làm evidence live bucket.
+- CUA IAB Windows chạy **production build**, API base3009 chỉ trong thư mục build
+  QA `.tmp/`, preview5175. Inventory trước login chỉ có entry/rolldown-runtime/
+  react-runtime; sau login mới có AuthenticatedWorkspace/query/queue modules.
+  Deep link vào hàng chờ giữ đúng URL. Đọc hồ sơ3ảnh, zoom150% (transition180ms),
+  đổi ảnh đúng nhãn/reset100%, Escape trả focus và bỏ scroll lock. Sang directory
+  lọc Staff được2hàng; logout/login pure Staff giữ URL nhưng chỉ hiện cảnh báo
+  quyền,0hàng directory và không menu Admin; logout/reload chỉ còn login.
+- Responsive: desktop1440×1000 và mobile390×844; phiếu Staff rộng314px/padding12px,
+  không tràn ngang. Mở/đóng nhanh, đổi lại Admin rồi chuyển3tab quản lý điểm:
+  chỉ1form sống, không input của tab trước; console không warning/error trong
+  lượt này. Xác nhận các sửa gallery/mobile/ResizeObserver từ gói motion trước;
+  chưa xác nhận hidden-tab playback hay đo frame/CPU/INP/LCP. Ảnh minh họa QA ở
+  `.tmp/admin-startup/desktop.png`, `mobile.png` (Git ignore).
+
+Giảm mã trước login bằng cách dời công việc sau auth; tổng JS tăng nhẹ do các
+boundary/chunk. Chưa đo Core Web Vitals hoặc kết luận app nhanh hơn một tỷ lệ
+thời gian cụ thể. Full browser automation/chunk network fault/throttled network/
+screen reader/Safari/Firefox/native/CI remote/human review NOT RUN. QA tự dọn
+database/users/roles; dừng API/preview/Mongo riêng, bật lại main API/worker/Admin.
+READINESS không đổi, chưa push/PR/merge. Bước tiếp: baseline request/latency/query
+plan Dashboard; chưa tự thêm cache dữ liệu quyền hoặc sửa nghiệp vụ để giảm tải.
+
 ## Chuyển động tác vụ — 27/10/2026
 
 Source: `codex/admin-ui-refactor`, base `b544117`; commit subject

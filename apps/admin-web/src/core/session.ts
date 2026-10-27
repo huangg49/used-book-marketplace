@@ -1,12 +1,5 @@
-import { QueryClient } from "@tanstack/react-query";
 import { SessionClient, type CurrentUser } from "@used-books/session-client";
 
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: false, staleTime: 15_000, gcTime: 120_000 },
-    mutations: { retry: false },
-  },
-});
 // Memory only, including refresh tokens. Reloading the browser requires sign-in.
 let refreshToken: string | null = null;
 export const session = new SessionClient(
@@ -24,15 +17,6 @@ export const session = new SessionClient(
     },
   },
 );
-let identity: string | undefined;
-session.subscribe(() => {
-  const state = session.getSnapshot();
-  const next = state.status === "authenticated" ? state.user.id : undefined;
-  if (next !== identity) {
-    queryClient.clear();
-    identity = next;
-  }
-});
 export const canReview = (user: CurrentUser) =>
   user.status === "ACTIVE" &&
   user.roles.some((role) => role === "STAFF" || role === "ADMIN");

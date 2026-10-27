@@ -8,10 +8,12 @@ export const deferredPages = [
   'operations/queues', 'operations/points', 'operations/incidents',
   'operations/escalations', 'operations/simulator', 'operations/simulator-events',
 ].map(name => `src/features/${name}.tsx`);
+export const deferredWorkspace = 'src/features/navigation/AuthenticatedWorkspace.tsx';
+export const deferredModules = [deferredWorkspace, ...deferredPages];
 
 // Count the whole static dependency graph, including modulepreloads. Measuring
 // just index.js would disguise moving the same startup cost into another file.
-export function bundlePlan(manifest, pages = deferredPages) {
+export function bundlePlan(manifest, pages = deferredModules) {
   const entries = Object.keys(manifest).filter(key => manifest[key].isEntry);
   if (entries.length !== 1 || entries[0] !== 'index.html') {
     throw new Error('Expected exactly one Admin HTML entry.');

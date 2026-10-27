@@ -1,5 +1,28 @@
 # Điểm lưu hiện tại — 27/10/2026
 
+## Tối ưu tải đầu Admin — 27/10/2026
+
+- `codex/admin-startup-performance`, base `17aac90`; commit subject
+  `perf(admin): defer authenticated workspace until login`. Tách shell/query
+  provider khỏi login, giữ profile gate/deep link/guard và một session memory-only.
+  Cache bind theo identity hiện tại, xóa query/mutation và hủy read đang chạy khi
+  đổi/mất tài khoản; HMR có cleanup. Không đổi API/DB/env/dependency/client khác.
+- Startup JS497519→431696bytes (-13,2%), gzip153762→133169; CSS55102→33550;
+  chunk lớn nhất263511→218840. Tổng JS740174→743261 (+0,4%) do boundary/chunk;
+  đây là giảm mã tải trước login, chưa chứng minh tốc độ/LCP/INP. Giữ budget500k/
+  300k; checker bảo vệ cả workspace và10page modules deferred.
+- PASS Admin209tests/lint/typecheck/build,27session-client tests,7bundle checker
+  và7HTTP/Mongo QA tests.
+  CUA production IAB: login deep link, assets trước/sau auth, gallery/zoom/Escape,
+  đổi trang/filter, Admin→Staff không lộ bảng/menu Admin, logout/reload; mobile
+  390×844 phiếu rộng314px/padding12px không tràn ngang; đổi tab điểm chỉ1form,
+  console không warning/error. Xác nhận thêm các sửa motion gallery/mobile/resize
+  còn thiếu của lượt trước; hidden-tab/FPS/INP/full browser suite/human review
+  vẫn NOT RUN. [Chi tiết](../features/OPERATIONS_REVIEW_REPORT.md#tối-ưu-tải-đầu-admin--27102026).
+- QA tự dọn database/users/roles và dừng API/preview/Mongo riêng; main API/worker/
+  Admin được bật lại để tiếp tục. Chưa push/PR/merge; READINESS giữ nguyên. Bước
+  tiếp của gói tối ưu hệ thống: đo request/latency/query plan Dashboard trước sửa.
+
 ## Chuyển động tác vụ Admin/Staff — 27/10/2026
 
 - `codex/admin-ui-refactor`, base `b544117`; commit subject
