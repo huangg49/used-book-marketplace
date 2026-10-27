@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { MapPin, Plus } from "lucide-react";
+import { addressDetailLabel } from "../lib/address-detail-label";
 import styles from "../pages/PurchaseFlow.module.css";
 
 export type PurchaseAddressForm = {
@@ -43,7 +44,7 @@ export function PurchaseAddressFields({
                 {address.isDefault && <small>Mặc định</small>}
                 <span>{address.phone}</span>
                 <span>
-                  {address.detail} ·{" "}
+                  {addressDetailLabel(address.detail)} ·{" "}
                   {localities.find((item) => item.code === address.localityCode)
                     ?.label ?? address.localityCode}
                 </span>
