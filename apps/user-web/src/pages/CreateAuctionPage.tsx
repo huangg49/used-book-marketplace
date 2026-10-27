@@ -140,15 +140,6 @@ function Receipt({ intake, point }: { intake: MyIntake; point?: HandoverPoint })
   )
 }
 
-const unfinishedStatus: Record<string, string> = {
-  Draft: 'bản nháp',
-  PendingReview: 'đang chờ duyệt',
-  Rejected: 'cần chỉnh sửa theo góp ý',
-}
-function UnfinishedAuctionBook({ item }: { item: MyListing }) {
-  const { title } = useListingIdentity(item)
-  return <li>{title || 'Sách chưa có tên'}: {unfinishedStatus[item.state.moderation] ?? item.state.moderation}</li>
-}
 
 export function CreateAuctionPage() {
   const auth = useSession()
@@ -166,8 +157,6 @@ export function CreateAuctionPage() {
   const points = useQuery({ queryKey: ['handover-points'], queryFn: listHandoverPoints, enabled: !!ownerId, retry: false, staleTime: 0 })
 
   const eligible = useMemo(() => (listings.data?.items ?? []).filter(auctionEligible), [listings.data])
-  const unfinished = useMemo(() => (listings.data?.items ?? []).filter((l) =>
-    l.state.moderation !== 'Approved' && l.state.visibility !== 'Removed'), [listings.data])
   const [listingId, setListingId] = useState(params.get('listing') ?? '')
   const [pointChoice, setPointId] = useState('')
   const [step, setStep] = useState<Step>(10000)
@@ -306,9 +295,7 @@ export function CreateAuctionPage() {
             {listings.isSuccess && eligible.length === 0 && (
               <div className={styles.inlineState}>
                 <BookOpen size={28} aria-hidden="true" />
-                <p><strong>Chưa có sách trên kệ đủ điều kiện đấu giá.</strong> {unfinished.length > 0
-                  ? 'Sách bên dưới sẽ chọn được tại đây sau khi được duyệt.'
-                  : 'Hãy đăng sách mới lên kệ và chờ duyệt, rồi quay lại đây.'}</p>
+                <p><strong>Chưa có sách trên kệ đủ điều kiện đấu giá.</strong> Hãy đăng sách mới lên kệ và chờ duyệt, rồi quay lại đây.</p>
               </div>
             )}
             {preselectedMissing && <p className={styles.error} role="alert">Cuốn sách bạn chọn hiện không đưa lên đấu giá được. Hãy chọn một cuốn khác bên dưới.</p>}
@@ -326,11 +313,6 @@ export function CreateAuctionPage() {
                     }} />
                 ))}
               </div>
-            )}
-            {unfinished.length > 0 && (
-              <ul className={styles.stepHint} aria-label="Sách trên kệ chưa được duyệt">
-                {unfinished.map((item) => <UnfinishedAuctionBook key={item.id} item={item} />)}
-              </ul>
             )}
             {listings.data?.nextCursor && <p className={styles.stepHint}>Đang hiển thị 50 sách mới nhất trên kệ.</p>}
             {touched && formErrors.listing && eligible.length > 0 && <p className={styles.error} role="alert">{formErrors.listing}</p>}
