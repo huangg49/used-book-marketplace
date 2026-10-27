@@ -368,16 +368,18 @@ function ChatRoom({
                   nhắn tin.
                 </p>
               )}
-            <AgreementTerms
-              room={room}
-              userId={userId}
-              book={book.data}
-              refresh={refreshRooms}
-              frozen={!!orderAttempt.current}
-            />
-            {!!room.terms?.exchangeIds.length && (
+            {!(isExchange && (room.terms?.activeExchangeId || historyExchange)) && (
+              <AgreementTerms
+                room={room}
+                userId={userId}
+                book={book.data}
+                refresh={refreshRooms}
+                frozen={!!orderAttempt.current}
+              />
+            )}
+            {!!room.terms?.exchangeIds.length && room.terms.exchangeIds.length > 1 && (
               <details className={sheet.exchangeHistory}>
-                <summary>Các đề nghị đổi sách trong cuộc trao đổi</summary>
+                <summary>Lịch sử các đề nghị đổi sách ({room.terms.exchangeIds.length} lần)</summary>
                 {room.terms.exchangeIds.map((id, i) => (
                   <button
                     type="button"

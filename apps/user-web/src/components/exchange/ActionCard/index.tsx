@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
+import { Sparkles, Clock, AlertCircle } from "lucide-react";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
 import { session } from "../../../lib/session";
 import { ConfirmDialog } from "../../ConfirmDialog";
@@ -280,42 +281,68 @@ export function ActionCard(props: Props) {
 
   return (
     <div className={styles.card}>
-      <h2 className={styles.cardTitle}>Hành động của bạn</h2>
-      <p className={styles.instructions}>{instructions}</p>
+      <div className={styles.headerRow}>
+        <h2 className={styles.cardTitle}>
+          <Sparkles className={styles.iconGold} size={18} />
+          <span>Hành động tiếp theo</span>
+        </h2>
+        <span className={styles.roleBadge}>
+          {detail.status === "PENDING"
+            ? (detail.viewerRole === "proposer" ? "Đã gửi đề nghị" : "Chờ bạn phản hồi")
+            : detail.status === "FUNDING"
+            ? "Đặt cọc bảo chứng"
+            : detail.status === "WAITING_YOU_SEND"
+            ? "Chuẩn bị gửi sách"
+            : "Đang tiến hành"}
+        </span>
+      </div>
+      <div className={styles.calloutBox}>
+        <p className={styles.instructions}>{instructions}</p>
+      </div>
       {detail.status === "FUNDING" && detail.fundingDeadline && (
-        <p>
-          Hạn đặt cọc:{" "}
-          <time dateTime={detail.fundingDeadline}>
-            {new Date(detail.fundingDeadline).toLocaleString("vi-VN")}
-          </time>
-          {expired ? " · Đã hết hạn" : ""}
+        <p className={styles.deadlineRow}>
+          <Clock size={14} className={styles.iconGold} />
+          <span>
+            Hạn đặt cọc:{" "}
+            <time dateTime={detail.fundingDeadline}>
+              {new Date(detail.fundingDeadline).toLocaleString("vi-VN")}
+            </time>
+            {expired ? " · Đã hết hạn" : ""}
+          </span>
         </p>
       )}
       {detail.status === "WAITING_YOU_SEND" && detail.shippingDeadline && (
-        <p>
-          Hạn gửi sách (72h):{" "}
-          <time dateTime={detail.shippingDeadline}>
-            {new Date(detail.shippingDeadline).toLocaleString("vi-VN")}
-          </time>
-          {Date.parse(detail.shippingDeadline) <= now
-            ? " · Đã hết hạn (hệ thống sẽ tự động quét hoàn tiền hoặc chuyển giải quyết)"
-            : ""}
+        <p className={styles.deadlineRow}>
+          <Clock size={14} className={styles.iconGold} />
+          <span>
+            Hạn gửi sách (72h):{" "}
+            <time dateTime={detail.shippingDeadline}>
+              {new Date(detail.shippingDeadline).toLocaleString("vi-VN")}
+            </time>
+            {Date.parse(detail.shippingDeadline) <= now
+              ? " · Đã hết hạn (hệ thống sẽ tự động quét hoàn tiền hoặc chuyển giải quyết)"
+              : ""}
+          </span>
         </p>
       )}
       {detail.status === "INSPECTING" && detail.inspectionDeadline && (
-        <p>
-          Hạn kiểm tra sách (48h):{" "}
-          <time dateTime={detail.inspectionDeadline}>
-            {new Date(detail.inspectionDeadline).toLocaleString("vi-VN")}
-          </time>
-          {Date.parse(detail.inspectionDeadline) <= now
-            ? " · Đã hết hạn (hệ thống sẽ tự động tất toán)"
-            : ""}
+        <p className={styles.deadlineRow}>
+          <Clock size={14} className={styles.iconGold} />
+          <span>
+            Hạn kiểm tra sách (48h):{" "}
+            <time dateTime={detail.inspectionDeadline}>
+              {new Date(detail.inspectionDeadline).toLocaleString("vi-VN")}
+            </time>
+            {Date.parse(detail.inspectionDeadline) <= now
+              ? " · Đã hết hạn (hệ thống sẽ tự động tất toán)"
+              : ""}
+          </span>
         </p>
       )}
       {pending && (
-        <p role="status">
-          Có thao tác chưa rõ kết quả. Thử lại trước khi thực hiện việc khác.
+        <p role="status" className={styles.pendingRow}>
+          <AlertCircle size={15} />
+          <span>Có thao tác chưa rõ kết quả. Thử lại trước khi thực hiện việc khác.</span>
         </p>
       )}
       <div className={styles.btnGrid}>
