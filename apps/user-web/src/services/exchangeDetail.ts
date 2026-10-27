@@ -114,6 +114,12 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     viewerShipment: (initiator ? ex.initiatorShipment : ex.recipientShipment) ?? undefined,
     partnerShipment: (initiator ? ex.recipientShipment : ex.initiatorShipment) ?? undefined,
     hasViewerReviewed: false,
+    failedAtStep:
+      ex.status === "Cancelled"
+        ? ex.cancelReason === "ShippingExpired"
+          ? 3
+          : 2
+        : undefined,
     closedBy:
       ex.cancelledBy === "System" || !ex.cancelledBy
         ? undefined

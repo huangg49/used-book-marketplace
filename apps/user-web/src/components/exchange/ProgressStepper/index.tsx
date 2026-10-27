@@ -24,7 +24,7 @@ export function ProgressStepper({ status, compact = false, failedAtStep, closedB
     if (status === 'PENDING') currentStepIndex = 2; // Waiting for accept
     else if (status === 'FUNDING') currentStepIndex = 2;
     else if (status === 'WAITING_YOU_SEND') currentStepIndex = 3;
-    else if (status === 'RESOLUTION_PENDING') currentStepIndex = 0;
+    else if (status === 'RESOLUTION_PENDING') currentStepIndex = hasReceived ? 4 : 3;
     else if (status === 'DELIVERING') currentStepIndex = hasReceived ? 4 : 3;
     else if (status === 'WAITING_YOU_CONFIRM') currentStepIndex = hasReceived ? 4 : 3;
     else if (status === 'INSPECTING') currentStepIndex = 4;
