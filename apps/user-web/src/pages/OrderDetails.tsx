@@ -7,6 +7,7 @@ import { useSession } from "../hooks/useSession";
 import { buyNowError } from "../lib/buy-now-error";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
+import { addressDetailLabel } from "../lib/address-detail-label";
 import {
   cancelOrder,
   getOrder,
@@ -257,7 +258,7 @@ function AuthenticatedOrderDetails({
             <p>
               {o.ownAddress.recipientName} · {o.ownAddress.phone}
               <br />
-              {o.ownAddress.detail}
+              {addressDetailLabel(o.ownAddress.detail)}
             </p>
           </section>
           {o.state === "AwaitingPayment" && (
@@ -285,7 +286,7 @@ function AuthenticatedOrderDetails({
                 <p>
                   Gửi đến: {o.shippingAddress.recipientName} · {o.shippingAddress.phone}
                   <br />
-                  {o.shippingAddress.detail}
+                  {addressDetailLabel(o.shippingAddress.detail)}
                 </p>
               )}
               <OrderShipping key={o.id} order={o} onChange={() => void order.refetch()} />

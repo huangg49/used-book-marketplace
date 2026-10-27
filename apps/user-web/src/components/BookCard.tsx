@@ -131,25 +131,30 @@ export function BookCard({ book, compact = false }: BookCardProps) {
             viewTransition
             state={returnState}
             title={listingTitle(book)}
+            className={styles.ellipsis}
           >
-            <CardFitText>{listingTitle(book)}</CardFitText>
+            {listingTitle(book)}
           </Link>
         </h3>
         <div className={styles.information}>
           <p className={styles.author}>
             <UserRound size={18} aria-hidden="true" />
             <span className="sr-only">Tác giả: </span>
-            <CardFitText minimumRem={0.6875}>
+            <span
+              className={styles.ellipsis}
+              title={book.book.authors.join(", ") || "Chưa rõ tác giả"}
+            >
               {book.book.authors.join(", ") || "Chưa rõ tác giả"}
-            </CardFitText>
+            </span>
           </p>
           <p className={styles.location}>
             <MapPin size={18} aria-hidden="true" />
             <span className="sr-only">Khu vực: </span>
-            <strong className={styles.region}>
-              <CardFitText minimumRem={0.6875}>
-                {book.fulfillment?.locality?.label || "Chưa có khu vực"}
-              </CardFitText>
+            <strong
+              className={`${styles.region} ${styles.ellipsis}`}
+              title={book.fulfillment?.locality?.label || "Chưa có khu vực"}
+            >
+              {book.fulfillment?.locality?.label || "Chưa có khu vực"}
             </strong>
           </p>
         </div>

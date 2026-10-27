@@ -78,25 +78,30 @@ export function HomeBookCard({
               target="_blank"
               rel="noopener noreferrer"
               title={book.book.title}
+              className={styles.ellipsis}
             >
-              <CardFitText>{book.book.title}</CardFitText>
+              {book.book.title}
             </a>
           </h3>
           <div className={styles.information}>
             <p className={styles.author}>
               <UserRound size={18} aria-hidden="true" />
               <span className="sr-only">Tác giả: </span>
-              <CardFitText minimumRem={0.6875}>
+              <span
+                className={styles.ellipsis}
+                title={book.book.authors.join(", ") || "Chưa rõ tác giả"}
+              >
                 {book.book.authors.join(", ") || "Chưa rõ tác giả"}
-              </CardFitText>
+              </span>
             </p>
             <p className={styles.location}>
               <MapPin size={18} aria-hidden="true" />
               <span className="sr-only">Khu vực: </span>
-              <strong className={styles.region}>
-                <CardFitText minimumRem={0.6875}>
-                  Không áp dụng cho sách mẫu
-                </CardFitText>
+              <strong
+                className={`${styles.region} ${styles.ellipsis}`}
+                title="Không áp dụng cho sách mẫu"
+              >
+                Không áp dụng cho sách mẫu
               </strong>
             </p>
           </div>
