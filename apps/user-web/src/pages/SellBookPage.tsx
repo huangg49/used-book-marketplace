@@ -30,6 +30,10 @@ import {
   createListingSubmission,
 } from "../services/listing-submission";
 import {
+  autofillFactRows,
+  type AutofillFacts,
+} from "../services/listing-autofill";
+import {
   PhotoAutofill,
   type AutofillField,
   type AutofillFields,
@@ -93,14 +97,9 @@ export function SellBookPage() {
   const auction = searchParams.get("channel") === "Auction";
   const submission = useRef<ReturnType<typeof createListingSubmission>>(null);
   // One server draft shared by photo autofill and submission (ADR 0048).
-  const [draftAttempt] = useState(createDraftAttempt);
+  const [draftAttempt, setDraftAttempt] = useState(createDraftAttempt);
   // Catalog-request facts the seller accepted from photo autofill.
-  const [autofillFacts, setAutofillFacts] = useState<{
-    publisher?: string | null;
-    publicationYear?: number | null;
-    edition?: string | null;
-    isbn?: string | null;
-  }>({});
+  const [autofillFacts, setAutofillFacts] = useState<AutofillFacts>({});
   const [classification, setClassification] = useState<ClassificationValue>({
     categoryId: "",
     attributes: {},
@@ -1180,6 +1179,9 @@ export function SellBookPage() {
             onPostAnother={() => {
               formData.images.forEach((url) => URL.revokeObjectURL(url));
               submission.current = null;
+              // A fresh draft: the old stage keys would replay the sent listing.
+              setDraftAttempt(createDraftAttempt());
+              setAutofillFacts({});
               setBundle(null);
               setClassification({
                 categoryId: "",
@@ -2413,6 +2415,7 @@ export function SellBookPage() {
                               ...(classification.series
                                 ? [["Bộ truyện", classification.series]]
                                 : []),
+                              ...(selectedBook ? [] : autofillFactRows(autofillFacts)),
                               ...facetsFor(
                                 classification.categoryId,
                                 classification.attributes,

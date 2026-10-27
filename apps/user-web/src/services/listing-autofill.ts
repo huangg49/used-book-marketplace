@@ -42,6 +42,28 @@ const suggestion = z.object({
 export type AutofillSuggestion = z.infer<typeof suggestion>;
 export type AutofillMatch = AutofillSuggestion["matches"][number];
 
+// Catalog-request facts the seller accepted from photo autofill.
+export type AutofillFacts = {
+  publisher?: string | null;
+  publicationYear?: number | null;
+  edition?: string | null;
+  isbn?: string | null;
+};
+// Review rows for those facts: they go into the catalog request, so the
+// seller sees them before sending.
+export function autofillFactRows(facts: AutofillFacts): [string, string][] {
+  return (
+    [
+      ["Nhà xuất bản", facts.publisher],
+      ["Năm xuất bản", facts.publicationYear],
+      ["Lần xuất bản", facts.edition],
+      ["ISBN", facts.isbn],
+    ] as const
+  )
+    .filter(([, value]) => value != null)
+    .map(([label, value]) => [label, String(value)]);
+}
+
 // ADR 0048: uploads 1-3 photos to the shared draft, then asks the server to
 // read them. A lost response retries with the same key; an answered error
 // (e.g. a stored timeout) needs a new key, or the server would replay it.

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@used-books/session-client";
-import { createAutofillRequest } from "./listing-autofill";
+import { autofillFactRows, createAutofillRequest } from "./listing-autofill";
 import {
   createDraftAttempt,
   createListingSubmission,
@@ -120,5 +120,23 @@ describe("photo autofill request", () => {
     });
     const saved = JSON.parse(String((calls("/draft")[0]![2] as RequestInit).body));
     expect(saved.content.mediaIds).toEqual([media]);
+
+    // "Đăng cuốn khác": the same attempt would replay the sent listing, so
+    // the page starts a fresh one, which creates a new draft.
+    await createListingSubmission(input, attempt)();
+    expect(calls("/listings")).toHaveLength(1);
+    await createListingSubmission(input, createDraftAttempt())();
+    expect(calls("/listings")).toHaveLength(2);
+  });
+
+  it("lists only the accepted catalog facts for review", () => {
+    expect(autofillFactRows({})).toEqual([]);
+    expect(
+      autofillFactRows({ publisher: "NXB Trẻ", publicationYear: 2019, edition: null, isbn: "9786041234567" }),
+    ).toEqual([
+      ["Nhà xuất bản", "NXB Trẻ"],
+      ["Năm xuất bản", "2019"],
+      ["ISBN", "9786041234567"],
+    ]);
   });
 });
