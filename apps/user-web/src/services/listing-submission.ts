@@ -42,6 +42,66 @@ export function rememberCommands(): Remember {
   };
 }
 
+// One draft shared by photo autofill (ADR 0048) and the final submission:
+// the same stage keys resume the same draft, and a file already uploaded to
+// it is reused instead of creating a second media reservation.
+export type DraftAttempt = {
+  remember: Remember;
+  uploaded: Map<File, string>;
+  index: WeakMap<File, number>;
+  next: number;
+};
+export function createDraftAttempt(): DraftAttempt {
+  return { remember: rememberCommands(), uploaded: new Map(), index: new WeakMap(), next: 0 };
+}
+
+export function ensureDraft(attempt: DraftAttempt, channel?: "Auction") {
+  return attempt.remember("draft", (key) =>
+    session.request("/listings", receipt, {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify({
+        // ADR 0042: the auction flow creates its own Auction listing.
+        ...(channel === "Auction" ? { channel: "Auction" } : {}),
+        content: {
+          bookId: null,
+          mode: channel === "Auction" ? "Sale" : null,
+          condition: null,
+          pages: "",
+          coverNote: "",
+          notes: "",
+          accessories: "",
+          description: "",
+          readable: null,
+          hasMissingPages: null,
+          missingEssentialContent: null,
+          salePrice: null,
+          exchangeValue: null,
+          mediaIds: [],
+        },
+      }),
+    }),
+  );
+}
+
+// Stable per-file stage index, so a retry resumes the same upload keys.
+export async function uploadOnce(
+  attempt: DraftAttempt,
+  draft: { entityId: string; version: number },
+  file: File,
+) {
+  const done = attempt.uploaded.get(file);
+  if (done) return done;
+  let index = attempt.index.get(file);
+  if (index === undefined) {
+    index = attempt.next++;
+    attempt.index.set(file, index);
+  }
+  const id = await upload(draft.entityId, draft.version, file, attempt.remember, index);
+  attempt.uploaded.set(file, id);
+  return id;
+}
+
 export type ListingInput = {
   bundle?: BookBundle | null;
   channel?: "Auction";
@@ -53,6 +113,11 @@ export type ListingInput = {
   attributes?: Attributes;
   language?: string;
   series?: string;
+  // Accepted photo-autofill values for a new catalog request (ADR 0048).
+  publisher?: string | null;
+  publicationYear?: number | null;
+  edition?: string | null;
+  isbn?: string | null;
   condition: "LikeNew" | "Good" | "Fair" | "Worn";
   pages: string;
   coverNote: string;
@@ -139,14 +204,17 @@ export async function upload(
   throw new Error("Ảnh đang xử lý, hãy thử gửi lại sau ít phút.");
 }
 
-export function createListingSubmission(value: ListingInput) {
+export function createListingSubmission(
+  value: ListingInput,
+  attempt: DraftAttempt = createDraftAttempt(),
+) {
   const input = {
     ...value,
     attributes: structuredClone(value.attributes ?? {}),
     bundle: value.bundle ? structuredClone(value.bundle) : null,
     files: [...value.files],
   };
-  const remember = rememberCommands();
+  const { remember } = attempt;
   return async () => {
     if (!input.files.length) throw new Error("Cần ít nhất một ảnh sách.");
     const catalog = input.bookId
@@ -159,10 +227,10 @@ export function createListingSubmission(value: ListingInput) {
               metadata: {
                 title: input.title.trim(),
                 authors: [input.author.trim()],
-                publisher: null,
-                publicationYear: null,
+                publisher: input.publisher ?? null,
+                publicationYear: input.publicationYear ?? null,
                 language: input.language || "vi",
-                edition: null,
+                edition: input.edition ?? null,
                 category: input.category.trim() || "Khác",
                 ...(input.categoryId
                   ? {
@@ -171,48 +239,15 @@ export function createListingSubmission(value: ListingInput) {
                       series: input.series?.trim() || null,
                     }
                   : {}),
-                isbn: null,
+                isbn: input.isbn ?? null,
               },
             }),
           }),
         );
-    const draft = await remember("draft", (key) =>
-      session.request("/listings", receipt, {
-        method: "POST",
-        headers: { "Idempotency-Key": key },
-        body: JSON.stringify({
-          // ADR 0042: the auction flow creates its own Auction listing.
-          ...(input.channel === "Auction" ? { channel: "Auction" } : {}),
-          content: {
-            bookId: null,
-            mode: input.channel === "Auction" ? "Sale" : null,
-            condition: null,
-            pages: "",
-            coverNote: "",
-            notes: "",
-            accessories: "",
-            description: "",
-            readable: null,
-            hasMissingPages: null,
-            missingEssentialContent: null,
-            salePrice: null,
-            exchangeValue: null,
-            mediaIds: [],
-          },
-        }),
-      }),
-    );
+    const draft = await ensureDraft(attempt, input.channel);
     const mediaIds: string[] = [];
     for (const file of input.files.slice(0, 8))
-      mediaIds.push(
-        await upload(
-          draft.entityId,
-          draft.version,
-          file,
-          remember,
-          mediaIds.length,
-        ),
-      );
+      mediaIds.push(await uploadOnce(attempt, draft, file));
     const saved = await remember("save", (key) =>
       session.request(`/listings/${draft.entityId}/draft`, receipt, {
         method: "PUT",
