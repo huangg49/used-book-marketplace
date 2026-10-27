@@ -50,11 +50,12 @@ async function errorDetail(response: Response): Promise<string> {
     const body = (await response.json()) as {
       error?: { message?: string } | string;
       detail?: string;
+      message?: string;
     };
     const raw =
       typeof body.error === 'string'
         ? body.error
-        : (body.error?.message ?? body.detail ?? '');
+        : (body.error?.message ?? body.detail ?? body.message ?? '');
     return raw ? `: ${String(raw).slice(0, 300)}` : '';
   } catch {
     return '';
@@ -104,8 +105,19 @@ export async function nvidiaChat(
           temperature: 0.2,
           max_tokens: maxTokens,
           stream: false,
-          // NIM guided decoding; the strict check still runs on our side.
-          ...(schema ? { nvext: { guided_json: schema } } : {}),
+          // Nemotron 3.x reasons by default into reasoning_content, which
+          // spends the token budget and leaves content empty.
+          chat_template_kwargs: { enable_thinking: false },
+          // Structured output (the hosted API rejects the older
+          // nvext.guided_json); the strict check still runs on our side.
+          ...(schema
+            ? {
+                response_format: {
+                  type: 'json_schema',
+                  json_schema: { name: 'answer', schema, strict: true },
+                },
+              }
+            : {}),
         }),
       },
     );

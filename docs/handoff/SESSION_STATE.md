@@ -4,7 +4,7 @@
 
 - Nhánh `feature/ai-listing-assist` (từ `main` b39747a), 3 commit, chưa push/PR.
 - **Gợi ý giá**: thêm `PRICE_ASSIST_PROVIDER=nvidia` (NIM, mặc định
-  `nvidia/llama-3.3-nemotron-super-49b-v1.5`, `NVIDIA_BASE_URL` tùy chọn). Không đổi
+  `nvidia/nemotron-3.5-lightning-30b-a3b`, `NVIDIA_BASE_URL` tùy chọn). Không đổi
   contract/luật bằng chứng; ADR 0028 §9.
 - **Điền từ ảnh** ([ADR 0048](../adr/0048-listing-photo-autofill.md), sửa §5 ADR 0028):
   OpenAPI 0.53.0 `POST /listings/{id}/autofill-suggestions`, migration
@@ -17,9 +17,14 @@
   + `media` PASS trên replica set QA; `schema.mongo-spec` PASS; contract check/routes
   PASS; typecheck API/admin/user-web PASS; user-web 35 files / 243 tests PASS, build PASS.
   RN typecheck FAIL 32 lỗi typed-route có sẵn trước nhánh (không đụng RN).
-- **NOT RUN**: gọi NVIDIA thật (chưa có key), đo chất lượng đọc tiếng Việt trên ảnh thật
-  (ngưỡng đề xuất trong ADR 0048 §5), kiểm trình duyệt luồng đăng bán (cần đăng nhập,
-  Supabase thật và key). RN chưa có UI điền từ ảnh.
+- **Live NVIDIA (27/10)**: model ban đầu đã hết hạn (410) → đổi mặc định sang Nemotron
+  3.5 (`lightning-30b` giá, `super-vl-120b` ảnh); adapter dùng `response_format` và
+  `enable_thinking=false`. Giá: 1 ca qua output-check ~2,5 s. Ảnh tổng hợp: đủ 7 trường
+  đúng, 1–2,5 s. Trình duyệt `/sell` (Mongo local + Supabase thật): đọc 2 ảnh, “Dùng tất
+  cả” điền form, desktop + 375 px; sửa token màu hover thiếu của panel. DB local đã
+  migrate tới 0038 + bootstrap.
+- **NOT RUN**: ảnh chụp thật (ngưỡng ADR 0048 §5), bộ eval giá §7, gửi trọn bài đăng
+  sau khi điền (đường dùng lại nháp/ảnh chỉ có unit test). RN chưa có UI điền từ ảnh.
 
 ## Khắc phục cuộn chuột trang hội thoại & Cố định khung chat trong viewport — 27/10/2026
 

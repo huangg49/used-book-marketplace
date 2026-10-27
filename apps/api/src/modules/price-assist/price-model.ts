@@ -274,9 +274,9 @@ export interface NvidiaOptions {
   fetcher?: typeof fetch;
 }
 
-export const NVIDIA_DEFAULT_MODEL = 'nvidia/llama-3.3-nemotron-super-49b-v1.5';
+export const NVIDIA_DEFAULT_MODEL = 'nvidia/nemotron-3.5-lightning-30b-a3b';
 
-// NVIDIA NIM (Nemotron). "/no_think" turns off Nemotron reasoning so the
+// NVIDIA NIM (Nemotron). Reasoning is switched off in nvidia-chat.ts so the
 // bounded token budget goes to the JSON answer.
 export class NvidiaPriceModel extends PriceModel {
   readonly model: string;
@@ -288,7 +288,7 @@ export class NvidiaPriceModel extends PriceModel {
     try {
       return await nvidiaChat(
         this.options,
-        `${system}\n/no_think`,
+        system,
         user,
         MODEL_OUTPUT_SCHEMA as unknown as Record<string, unknown>,
       );
@@ -349,8 +349,8 @@ const KNOWN_RATES: Record<string, [number, number]> = {
   'gemini-2.5-flash': [0.3, 2.5],
   'gemini-2.5-flash-lite': [0.1, 0.4],
   'gemini-2.5-pro': [1.25, 10],
-  [NVIDIA_DEFAULT_MODEL]: [1, 4],
-  'nvidia/nvidia-nemotron-nano-9b-v2': [0.5, 2],
+  [NVIDIA_DEFAULT_MODEL]: [0.5, 2],
+  'nvidia/nemotron-3.5-super-vl-120b-a12b': [1, 4],
 };
 export function rateFor(
   model: string,

@@ -19,7 +19,7 @@ export abstract class AutofillModel {
   ): Promise<ModelDraft>;
 }
 
-export const AUTOFILL_DEFAULT_MODEL = 'nvidia/llama-3.1-nemotron-nano-vl-8b-v1';
+export const AUTOFILL_DEFAULT_MODEL = 'nvidia/nemotron-3.5-super-vl-120b-a12b';
 
 export class NvidiaAutofillModel extends AutofillModel {
   readonly model: string;

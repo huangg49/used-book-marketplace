@@ -133,12 +133,18 @@ Nhánh `feature/ai-listing-assist`. Không đổi contract, migration hay luật
 - `PRICE_ASSIST_PROVIDER=nvidia` gọi NVIDIA NIM qua API chat tương thích OpenAI
   (`integrate.api.nvidia.com/v1`, hoặc `NVIDIA_BASE_URL` https cho NIM tự host). Key
   `nvapi-…` chỉ ở header `Authorization`; không retry, timeout bằng AbortController.
-- Model mặc định `nvidia/llama-3.3-nemotron-super-49b-v1.5`, tắt suy luận bằng `/no_think`;
-  output ràng buộc bằng `nvext.guided_json` và vẫn qua `output-check.ts`. Thẻ `<think>`
-  hoặc code fence bị bỏ trước khi parse.
+- Model mặc định `nvidia/nemotron-3.5-lightning-30b-a3b`. Tắt suy luận bằng
+  `chat_template_kwargs.enable_thinking=false` (Nemotron 3.x mặc định suy luận vào
+  `reasoning_content`, hết token và để `content` rỗng); output ràng buộc bằng
+  `response_format: json_schema` (API hosted từ chối `nvext.guided_json` với 400) và vẫn
+  qua `output-check.ts`. Thẻ `<think>` hoặc code fence bị bỏ trước khi parse.
 - Đơn giá NVIDIA trong `KNOWN_RATES` là ước lượng cao để ngân sách không đếm thiếu
   (bản dùng thử build.nvidia.com tính theo credit); gói trả phí đặt
   `PRICE_ASSIST_INPUT/OUTPUT_USD_PER_MTOK`.
 - Tra giá trực tuyến (ADR 0029) vẫn chỉ chạy với Gemini; với `nvidia` thì
   `PriceFinder` là null như với `anthropic`.
-- Chưa có lần chạy live với key NVIDIA: adapter chỉ được kiểm bằng fetch giả.
+- Live 27/10/2026: hai model Nemotron 1.x/VL v1 ban đầu đã hết hạn 26/08/2026 (410),
+  nhiều model trong `/v1/models` trả 404 “not found for account”. Với model mới, một
+  ca Mắt biếc (Good, giá bìa 110.000 đ, biên tập 55.000 đ, biên 44–66k) cho khoảng
+  48–58k và 48–60k, qua `output-check`, ~2,3–2,8 s, ~725/160 token. Một ca không là eval
+  §7; chưa chạy bộ eval đầy đủ.

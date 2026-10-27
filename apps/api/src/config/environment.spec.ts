@@ -100,7 +100,7 @@ describe('environment validation', () => {
 describe('price assistant provider config', () => {
   it('accepts nvidia with a publisher-prefixed default model', () => {
     const out = validatePriceAssist({ PRICE_ASSIST_PROVIDER: 'nvidia' });
-    expect(out.PRICE_ASSIST_MODEL).toBe('nvidia/llama-3.3-nemotron-super-49b-v1.5');
+    expect(out.PRICE_ASSIST_MODEL).toBe('nvidia/nemotron-3.5-lightning-30b-a3b');
     expect(
       validatePriceAssist({
         PRICE_ASSIST_PROVIDER: 'nvidia',

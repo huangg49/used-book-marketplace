@@ -222,7 +222,7 @@ export function validatePriceAssist(env: Record<string, unknown>) {
 const DEFAULT_PRICE_MODELS: Record<string, string> = {
   anthropic: 'claude-opus-5-5',
   gemini: 'gemini-3.8-flash',
-  nvidia: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+  nvidia: 'nvidia/nemotron-3.5-lightning-30b-a3b',
 };
 
 const NVIDIA_MODEL = /^[a-z0-9][a-z0-9_.-]{1,39}\/[a-z0-9][a-z0-9_.-]{1,79}$/;
@@ -237,7 +237,7 @@ export function validateAutofill(env: Record<string, unknown>) {
   const apiKey = String(env.AUTOFILL_API_KEY ?? '');
   if (apiKey.startsWith('replace-'))
     throw new Error('AUTOFILL_API_KEY still holds the example value.');
-  const model = String(env.AUTOFILL_MODEL || 'nvidia/llama-3.1-nemotron-nano-vl-8b-v1');
+  const model = String(env.AUTOFILL_MODEL || 'nvidia/nemotron-3.5-super-vl-120b-a12b');
   if (!NVIDIA_MODEL.test(model)) throw new Error('AUTOFILL_MODEL is invalid.');
   const fallback = String(env.AUTOFILL_FALLBACK_MODEL ?? '');
   if (fallback && (!NVIDIA_MODEL.test(fallback) || fallback === model))

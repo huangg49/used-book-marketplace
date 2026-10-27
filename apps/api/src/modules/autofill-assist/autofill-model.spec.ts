@@ -30,7 +30,8 @@ describe('NVIDIA autofill adapter', () => {
     });
     const draft = await model.read('sys', 'user', ['data:image/jpeg;base64,AAAA']);
     expect(draft).toMatchObject({ output: { title: 'Mắt biếc' }, inputTokens: 1500 });
-    expect(body.nvext).toBeUndefined();
+    expect(body.response_format).toBeUndefined();
+    expect(body.chat_template_kwargs).toEqual({ enable_thinking: false });
     const messages = body.messages as { content: unknown }[];
     expect(messages[1].content).toEqual([
       { type: 'text', text: 'user' },
@@ -71,7 +72,7 @@ describe('NVIDIA autofill adapter', () => {
     expect(autofillModelFromConfig(cfg({ AUTOFILL_API_KEY: 'k' }))).toBeNull();
     expect(autofillModelFromConfig(cfg({ AUTOFILL_ENABLED: 'true' }))).toBeNull();
     const on = autofillModelFromConfig(cfg({ AUTOFILL_ENABLED: 'true', AUTOFILL_API_KEY: 'k' }));
-    expect(on?.model).toBe('nvidia/llama-3.1-nemotron-nano-vl-8b-v1');
+    expect(on?.model).toBe('nvidia/nemotron-3.5-super-vl-120b-a12b');
     expect(on?.fallback).toBeNull();
   });
 });

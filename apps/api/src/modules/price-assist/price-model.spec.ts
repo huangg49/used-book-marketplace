@@ -147,7 +147,7 @@ describe('NVIDIA adapter', () => {
     usage: { prompt_tokens: 700, completion_tokens: 90 },
   });
 
-  it('sends a bearer key, guided JSON and no_think, and strips reasoning text', async () => {
+  it('sends a bearer key, a JSON schema with reasoning off, and strips reasoning text', async () => {
     let seen: { url: string; init: RequestInit } | null = null;
     const fetcher = (async (url: string, init: RequestInit) => {
       seen = { url, init };
@@ -169,8 +169,11 @@ describe('NVIDIA adapter', () => {
     expect(seen!.url).not.toContain('nvapi-test');
     expect((seen!.init.headers as Record<string, string>).Authorization).toBe('Bearer nvapi-test');
     const body = JSON.parse(String(seen!.init.body));
-    expect(body.nvext.guided_json.required).toContain('low');
-    expect(body.messages[0].content).toMatch(/\/no_think$/);
+    expect(body.nvext).toBeUndefined();
+    expect(body.response_format.type).toBe('json_schema');
+    expect(body.response_format.json_schema.schema.required).toContain('low');
+    expect(body.chat_template_kwargs).toEqual({ enable_thinking: false });
+    expect(body.messages[0].content).toBe('system');
   });
 
   it.each([
@@ -197,6 +200,6 @@ describe('NVIDIA adapter', () => {
       ({ PRICE_ASSIST_API_KEY: 'k', PRICE_ASSIST_PROVIDER: 'nvidia', PRICE_ASSIST_ENABLED: 'true' })[key],
     );
     expect(built).toBeInstanceOf(NvidiaPriceModel);
-    expect(built!.model).toBe('nvidia/llama-3.3-nemotron-super-49b-v1.5');
+    expect(built!.model).toBe('nvidia/nemotron-3.5-lightning-30b-a3b');
   });
 });

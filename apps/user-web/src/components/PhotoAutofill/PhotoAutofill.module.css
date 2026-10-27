@@ -1,4 +1,8 @@
 .panel {
+  /* Not global on the sell page; values from DESIGN.md. */
+  --shop-shelf: #f4eddf;
+  --shop-wine-hover: #7c2320;
+  --sell-action-hover: #7a140c;
   display: grid;
   gap: 12px;
   padding: 18px 20px;

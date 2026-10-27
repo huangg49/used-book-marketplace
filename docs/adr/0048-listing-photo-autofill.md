@@ -24,10 +24,11 @@ xác nhận từng trường. Không gì được lưu vào bài đăng hay danh
 2. Gửi provider **chỉ ảnh sách** (bản derivative đã bỏ EXIF/GPS, thu nhỏ ≤ 1024 px JPEG)
    và lời dặn cố định. Không gửi id người dùng/bài đăng, email, địa chỉ, ghi chú tình
    trạng, session hay token.
-3. Provider **NVIDIA NIM**, model mặc định `nvidia/llama-3.1-nemotron-nano-vl-8b-v1`
-   (VLM đọc tài liệu). Một model dự phòng tùy chọn chỉ được gọi **một lần** khi lần đầu
+3. Provider **NVIDIA NIM**, model mặc định `nvidia/nemotron-3.5-super-vl-120b-a12b`
+   (model VL v1 dự kiến ban đầu đã hết hạn 26/08/2026). Một model dự phòng tùy chọn chỉ được gọi **một lần** khi lần đầu
    không đọc được tên sách và còn hạn mức; cả hai tính vào ngân sách.
-4. Output ràng buộc bằng JSON schema (`guided_json`) và kiểm lại phía server: độ dài như
+4. Prompt yêu cầu JSON (không bắt buộc structured output vì không phải VLM nào cũng hỗ
+   trợ), suy luận tắt, và kiểm lại phía server: độ dài như
    `CatalogMetadata`, năm 1400..năm hiện tại, ngôn ngữ chuẩn hóa BCP-47, ISBN chuẩn hóa
    và kiểm checksum (sai checksum thì bỏ, không sửa). Trường không chắc để `null`.
    Model không đề xuất tình trạng, giá, thể loại hay tính xác thực của sách.
@@ -76,4 +77,11 @@ theo điều khoản công bố — cần chủ dự án kiểm lại khi lên p
 - Kiểm: unit (chuẩn hóa output, adapter, thu ảnh), e2e với provider/ảnh giả trên replica
   set QA (quyền, ảnh không hợp lệ, replay/xung đột key, cache, lỗi lưu lại, model dự
   phòng, giới hạn/phút, một yêu cầu đang chạy khi gửi song song, ngân sách chung).
-  **Chưa chạy live** với key NVIDIA và ảnh thật: chất lượng đọc chưa được đo.
+  **Live 27/10/2026** (key NVIDIA của người giao việc, ảnh **tổng hợp** vẽ chữ tiếng Việt,
+  không phải ảnh chụp thật): bìa sạch, bìa + trang bản quyền, bìa xoay/mờ/tối — đúng tên,
+  tác giả, NXB; kèm trang bản quyền thì đúng năm, lần tái bản, ISBN; bỏ qua tem giá và lời
+  đề tặng viết tay; 1–2,5 s, ~1.150–1.900 token vào. ISBN sai checksum bị server bỏ đúng.
+  Trình duyệt: `/sell` với API + Mongo local + Supabase thật → tạo nháp, tải 2 ảnh, đọc,
+  “Dùng tất cả” điền form; bản ghi `Suggested`, chi phí ước tính 2.316 micro-USD tính vào
+  ngân sách chung. Provider trả id `private/nvidia/...`, được lưu như provider báo.
+  Chưa đo trên ảnh chụp thật (ngưỡng §5) và chưa gửi trọn bài đăng sau khi điền.
