@@ -47,6 +47,12 @@ import purchaseStyles from "./PurchaseFlow.module.css";
 import styles from "./SellBookPage.module.css";
 import { BundleEditor, BundleManifest } from '../components/BookBundle';
 import { bundleCondition, bundleError, type BookBundle } from '../lib/book-bundle';
+import {
+  cropImageToCover,
+  calculateCoverCrop,
+  type CoverCropResult,
+  type CoverPosition,
+} from "../lib/image-crop";
 
 const addressBookSchema = z.object({
   version: z.number().int().nonnegative(),
@@ -97,6 +103,8 @@ export function SellBookPage() {
   const [submitting, setSubmitting] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [hasCoverPhoto, setHasCoverPhoto] = useState(false);
+  const [coverCropMeta, setCoverCropMeta] = useState<CoverCropResult | null>(null);
+  const coverCropMetaRef = useRef<CoverCropResult | null>(null);
   const coverInput = useRef<HTMLInputElement>(null);
   const supportInput = useRef<HTMLInputElement>(null);
   const replacementInput = useRef<HTMLInputElement>(null);
@@ -243,12 +251,131 @@ export function SellBookPage() {
     imageRefs.current = formData.images;
   }, [formData.images]);
   useEffect(
-    () => () => imageRefs.current.forEach((url) => URL.revokeObjectURL(url)),
+    () => () => {
+      imageRefs.current.forEach((url) => URL.revokeObjectURL(url));
+      if (coverCropMetaRef.current?.rawUrl) {
+        URL.revokeObjectURL(coverCropMetaRef.current.rawUrl);
+      }
+    },
     [],
   );
   useEffect(() => {
     if (submitError) errorBox.current?.focus();
   }, [submitError]);
+
+  const coverCropStageRef = useRef<HTMLDivElement>(null);
+  const isDraggingCover = useRef(false);
+  const dragStartPos = useRef({ x: 0, y: 0, offset: 50 });
+
+  const handleCoverPositionChange = async (position: CoverPosition) => {
+    if (!coverCropMeta || hasAttempt || submitting) return;
+    try {
+      const result = await cropImageToCover(
+        coverCropMeta.rawFile,
+        position,
+        coverCropMeta.rawUrl,
+      );
+      if (formData.images[0]) {
+        URL.revokeObjectURL(formData.images[0]);
+      }
+      setCoverCropMeta(result);
+      coverCropMetaRef.current = result;
+      setFormData((prev) => ({
+        ...prev,
+        images: [result.croppedUrl, ...prev.images.slice(1)],
+      }));
+      setImageFiles((files) => [result.croppedFile, ...files.slice(1)]);
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Chưa cập nhật được vị trí cắt ảnh bìa.",
+      );
+    }
+  };
+
+  const handleStagePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!coverCropMeta || hasAttempt || submitting) return;
+    if ((e.target as HTMLElement).closest(`.${styles.floatingRemoveBtn}`)) return;
+    isDraggingCover.current = true;
+    dragStartPos.current = {
+      x: e.clientX,
+      y: e.clientY,
+      offset: coverCropMeta.offsetPercent,
+    };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handleStagePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingCover.current || !coverCropMeta) return;
+    const stage = coverCropStageRef.current;
+    if (!stage) return;
+    const rect = stage.getBoundingClientRect();
+    const isLandscape = coverCropMeta.aspectRatio > 0.755;
+    const isPortrait = coverCropMeta.aspectRatio < 0.745;
+    if (!isLandscape && !isPortrait) return;
+
+    if (isLandscape) {
+      const deltaX = e.clientX - dragStartPos.current.x;
+      const maxShift = 100 - coverCropMeta.cropRectPercent.width;
+      if (maxShift <= 0) return;
+      const shiftPx = (rect.width * maxShift) / 100;
+      const deltaPercent = (deltaX / shiftPx) * 100;
+      const newOffset = Math.max(
+        0,
+        Math.min(100, dragStartPos.current.offset + deltaPercent),
+      );
+      const newCropRect = calculateCoverCrop(
+        coverCropMeta.naturalWidth,
+        coverCropMeta.naturalHeight,
+        newOffset,
+      );
+      setCoverCropMeta((prev) =>
+        prev
+          ? {
+              ...prev,
+              offsetPercent: newOffset,
+              align: newCropRect.align,
+              cropRectPercent: newCropRect,
+            }
+          : null,
+      );
+    } else {
+      const deltaY = e.clientY - dragStartPos.current.y;
+      const maxShift = 100 - coverCropMeta.cropRectPercent.height;
+      if (maxShift <= 0) return;
+      const shiftPx = (rect.height * maxShift) / 100;
+      const deltaPercent = (deltaY / shiftPx) * 100;
+      const newOffset = Math.max(
+        0,
+        Math.min(100, dragStartPos.current.offset + deltaPercent),
+      );
+      const newCropRect = calculateCoverCrop(
+        coverCropMeta.naturalWidth,
+        coverCropMeta.naturalHeight,
+        newOffset,
+      );
+      setCoverCropMeta((prev) =>
+        prev
+          ? {
+              ...prev,
+              offsetPercent: newOffset,
+              align: newCropRect.align,
+              cropRectPercent: newCropRect,
+            }
+          : null,
+      );
+    }
+  };
+
+  const handleStagePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingCover.current || !coverCropMeta) return;
+    isDraggingCover.current = false;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {}
+    handleCoverPositionChange(coverCropMeta.offsetPercent);
+  };
 
   const handleImageUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -282,19 +409,40 @@ export function SellBookPage() {
       return;
     }
     setSubmitError(undefined);
-    // Validate the whole batch before allocating previews; retain upload order.
-    const previews = selected.map((file) => URL.createObjectURL(file));
+
     if (kind === "cover") {
       photoFocusTarget.current = "images";
-      if (hasCoverPhoto) URL.revokeObjectURL(formData.images[0]!);
-      const offset = Number(hasCoverPhoto);
-      setFormData((prev) => ({
-        ...prev,
-        images: [...previews, ...prev.images.slice(offset)],
-      }));
-      setImageFiles((files) => [...selected, ...files.slice(offset)]);
-      setHasCoverPhoto(true);
-    } else if (replaceAt !== undefined) {
+      const file = selected[0]!;
+      cropImageToCover(file, "center")
+        .then((result) => {
+          if (hasCoverPhoto) {
+            URL.revokeObjectURL(formData.images[0]!);
+            if (coverCropMetaRef.current?.rawUrl) {
+              URL.revokeObjectURL(coverCropMetaRef.current.rawUrl);
+            }
+          }
+          const offset = Number(hasCoverPhoto);
+          setCoverCropMeta(result);
+          coverCropMetaRef.current = result;
+          setFormData((prev) => ({
+            ...prev,
+            images: [result.croppedUrl, ...prev.images.slice(offset)],
+          }));
+          setImageFiles((files) => [result.croppedFile, ...files.slice(offset)]);
+          setHasCoverPhoto(true);
+        })
+        .catch((err) => {
+          setValidationFailure(false);
+          setSubmitError(
+            err instanceof Error ? err.message : "Chưa xử lý được ảnh bìa.",
+          );
+        });
+      return;
+    }
+
+    // Validate the whole batch before allocating previews; retain upload order.
+    const previews = selected.map((file) => URL.createObjectURL(file));
+    if (replaceAt !== undefined) {
       URL.revokeObjectURL(formData.images[replaceAt]!);
       photoFocusTarget.current = `support-photo-${replaceAt - Number(hasCoverPhoto)}`;
       setFormData((prev) => ({
@@ -592,7 +740,14 @@ export function SellBookPage() {
         : supportCount > 1
           ? `support-remove-${Math.min(index - Number(hasCoverPhoto), supportCount - 2)}`
           : "add-support-photo";
-    if (hasCoverPhoto && index === 0) setHasCoverPhoto(false);
+    if (hasCoverPhoto && index === 0) {
+      setHasCoverPhoto(false);
+      if (coverCropMetaRef.current?.rawUrl) {
+        URL.revokeObjectURL(coverCropMetaRef.current.rawUrl);
+      }
+      setCoverCropMeta(null);
+      coverCropMetaRef.current = null;
+    }
     URL.revokeObjectURL(formData.images[index]!);
     setFormData((previous) => ({
       ...previous,
@@ -1347,35 +1502,299 @@ export function SellBookPage() {
                               aria-label="Ảnh bìa"
                             >
                               <h3 className={styles.photoLabel}>Ảnh bìa</h3>
-                              {hasCoverPhoto ? (
-                                <>
-                                  <div className={styles.photoTile}>
+                              {hasCoverPhoto && coverCropMeta ? (
+                                <div className={styles.coverCropContainer}>
+                                  <div
+                                    ref={coverCropStageRef}
+                                    className={styles.coverCropStage}
+                                    style={{
+                                      aspectRatio: `${coverCropMeta.naturalWidth} / ${coverCropMeta.naturalHeight}`,
+                                    }}
+                                    onPointerDown={handleStagePointerDown}
+                                    onPointerMove={handleStagePointerMove}
+                                    onPointerUp={handleStagePointerUp}
+                                    onPointerCancel={handleStagePointerUp}
+                                    title="Kéo để điều chỉnh vị trí khung bìa"
+                                  >
+                                    <img
+                                      src={coverCropMeta.rawUrl}
+                                      alt="Ảnh bìa gốc đã chọn"
+                                      className={styles.coverRawImage}
+                                      draggable={false}
+                                    />
+                                    {/* Mờ đen các phần dư */}
+                                    {coverCropMeta.cropRectPercent.top > 0.05 && (
+                                      <div
+                                        className={styles.cropMask}
+                                        style={{
+                                          top: 0,
+                                          height: `${coverCropMeta.cropRectPercent.top}%`,
+                                          left: 0,
+                                          right: 0,
+                                        }}
+                                        aria-hidden="true"
+                                      />
+                                    )}
+                                    {coverCropMeta.cropRectPercent.left > 0.05 && (
+                                      <div
+                                        className={styles.cropMask}
+                                        style={{
+                                          top: 0,
+                                          bottom: 0,
+                                          left: 0,
+                                          width: `${coverCropMeta.cropRectPercent.left}%`,
+                                        }}
+                                        aria-hidden="true"
+                                      />
+                                    )}
+                                    {coverCropMeta.cropRectPercent.left +
+                                      coverCropMeta.cropRectPercent.width <
+                                      99.9 && (
+                                      <div
+                                        className={styles.cropMask}
+                                        style={{
+                                          top: 0,
+                                          bottom: 0,
+                                          left: `${
+                                            coverCropMeta.cropRectPercent.left +
+                                            coverCropMeta.cropRectPercent.width
+                                          }%`,
+                                          right: 0,
+                                        }}
+                                        aria-hidden="true"
+                                      />
+                                    )}
+                                    {coverCropMeta.cropRectPercent.top +
+                                      coverCropMeta.cropRectPercent.height <
+                                      99.9 && (
+                                      <div
+                                        className={styles.cropMask}
+                                        style={{
+                                          bottom: 0,
+                                          height: `${
+                                            100 -
+                                            (coverCropMeta.cropRectPercent.top +
+                                              coverCropMeta.cropRectPercent
+                                                .height)
+                                          }%`,
+                                          left: 0,
+                                          right: 0,
+                                        }}
+                                        aria-hidden="true"
+                                      />
+                                    )}
+                                    {/* Khung dọc nét đứt (3:4) */}
+                                    <div
+                                      className={styles.cropDashedBox}
+                                      style={{
+                                        top: `${coverCropMeta.cropRectPercent.top}%`,
+                                        left: `${coverCropMeta.cropRectPercent.left}%`,
+                                        width: `${coverCropMeta.cropRectPercent.width}%`,
+                                        height: `${coverCropMeta.cropRectPercent.height}%`,
+                                      }}
+                                      aria-hidden="true"
+                                    >
+                                      <span className={styles.cropBadge}>
+                                        Bìa bài viết (3:4)
+                                      </span>
+                                    </div>
+
+                                    {/* Nút xóa ảnh nổi góc trên bên phải */}
+                                    <button
+                                      type="button"
+                                      className={styles.floatingRemoveBtn}
+                                      aria-label="Xóa ảnh bìa"
+                                      disabled={hasAttempt || submitting}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        removePhoto(0);
+                                      }}
+                                      title="Xóa ảnh bìa"
+                                    >
+                                      <X size={15} aria-hidden="true" />
+                                    </button>
+                                  </div>
+
+                                  <div className={styles.coverControls}>
+                                    {(coverCropMeta.aspectRatio > 0.755 ||
+                                      coverCropMeta.aspectRatio < 0.745) && (
+                                      <div className={styles.cropAdjustSection}>
+                                        <div
+                                          className={styles.cropAdjustHeader}
+                                        >
+                                          <span
+                                            className={styles.cropAdjustLabel}
+                                          >
+                                            Vị trí khung cắt:
+                                          </span>
+                                          <div
+                                            className={styles.alignButtons}
+                                            role="group"
+                                            aria-label="Căn chỉnh nhanh vị trí"
+                                          >
+                                            <button
+                                              type="button"
+                                              className={`${styles.alignBtn} ${
+                                                coverCropMeta.align === "left"
+                                                  ? styles.alignBtnActive
+                                                  : ""
+                                              }`}
+                                              disabled={
+                                                hasAttempt || submitting
+                                              }
+                                              onClick={() =>
+                                                handleCoverPositionChange(
+                                                  "left",
+                                                )
+                                              }
+                                            >
+                                              Trái
+                                            </button>
+                                            <button
+                                              type="button"
+                                              className={`${styles.alignBtn} ${
+                                                coverCropMeta.align === "center"
+                                                  ? styles.alignBtnActive
+                                                  : ""
+                                              }`}
+                                              disabled={
+                                                hasAttempt || submitting
+                                              }
+                                              onClick={() =>
+                                                handleCoverPositionChange(
+                                                  "center",
+                                                )
+                                              }
+                                            >
+                                              Giữa
+                                            </button>
+                                            <button
+                                              type="button"
+                                              className={`${styles.alignBtn} ${
+                                                coverCropMeta.align === "right"
+                                                  ? styles.alignBtnActive
+                                                  : ""
+                                              }`}
+                                              disabled={
+                                                hasAttempt || submitting
+                                              }
+                                              onClick={() =>
+                                                handleCoverPositionChange(
+                                                  "right",
+                                                )
+                                              }
+                                            >
+                                              Phải
+                                            </button>
+                                          </div>
+                                        </div>
+                                        <div className={styles.cropSliderRow}>
+                                          <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            value={Math.round(
+                                              coverCropMeta.offsetPercent,
+                                            )}
+                                            className={styles.cropSlider}
+                                            aria-label="Kéo tùy chỉnh vị trí cắt"
+                                            disabled={hasAttempt || submitting}
+                                            onChange={(e) => {
+                                              const val = Number(
+                                                e.target.value,
+                                              );
+                                              const newCropRect =
+                                                calculateCoverCrop(
+                                                  coverCropMeta.naturalWidth,
+                                                  coverCropMeta.naturalHeight,
+                                                  val,
+                                                );
+                                              setCoverCropMeta((prev) =>
+                                                prev
+                                                  ? {
+                                                      ...prev,
+                                                      offsetPercent: val,
+                                                      align: newCropRect.align,
+                                                      cropRectPercent:
+                                                        newCropRect,
+                                                    }
+                                                  : null,
+                                              );
+                                            }}
+                                            onMouseUp={(e) =>
+                                              handleCoverPositionChange(
+                                                Number(
+                                                  (
+                                                    e.target as HTMLInputElement
+                                                  ).value,
+                                                ),
+                                              )
+                                            }
+                                            onTouchEnd={(e) =>
+                                              handleCoverPositionChange(
+                                                Number(
+                                                  (
+                                                    e.target as HTMLInputElement
+                                                  ).value,
+                                                ),
+                                              )
+                                            }
+                                            onKeyUp={(e) =>
+                                              handleCoverPositionChange(
+                                                Number(
+                                                  (
+                                                    e.target as HTMLInputElement
+                                                  ).value,
+                                                ),
+                                              )
+                                            }
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+
                                     <button
                                       id="images"
                                       type="button"
-                                      className={styles.photoAction}
-                                      aria-label="Thay ảnh bìa"
+                                      className={styles.changeCoverBtn}
                                       disabled={hasAttempt || submitting}
                                       onClick={() =>
                                         coverInput.current?.click()
                                       }
                                     >
-                                      <img
-                                        src={formData.images[0]}
-                                        alt="Ảnh bìa bản sách"
-                                      />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className={styles.removePhoto}
-                                      aria-label="Xóa ảnh bìa"
-                                      disabled={hasAttempt || submitting}
-                                      onClick={() => removePhoto(0)}
-                                    >
-                                      <X size={18} aria-hidden="true" />
+                                      <ImagePlus size={16} aria-hidden="true" />
+                                      <span>Thay ảnh bìa</span>
                                     </button>
                                   </div>
-                                </>
+                                  <p className={styles.cropHelpText}>
+                                    Kéo khung trên ảnh hoặc thanh trượt để chọn phần bìa hiển thị.
+                                  </p>
+                                </div>
+                              ) : hasCoverPhoto ? (
+                                <div className={styles.photoTile}>
+                                  <button
+                                    id="images"
+                                    type="button"
+                                    className={styles.photoAction}
+                                    aria-label="Thay ảnh bìa"
+                                    disabled={hasAttempt || submitting}
+                                    onClick={() => coverInput.current?.click()}
+                                  >
+                                    <img
+                                      src={formData.images[0]}
+                                      alt="Ảnh bìa bản sách"
+                                    />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={styles.removePhoto}
+                                    aria-label="Xóa ảnh bìa"
+                                    disabled={hasAttempt || submitting}
+                                    onClick={() => removePhoto(0)}
+                                  >
+                                    <X size={18} aria-hidden="true" />
+                                  </button>
+                                </div>
                               ) : (
                                 <button
                                   id="images"
