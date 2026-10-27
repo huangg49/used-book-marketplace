@@ -1,5 +1,20 @@
 # Điểm lưu hiện tại — 27/10/2026
 
+## Khắc phục cuộn chuột trang hội thoại & Cố định khung chat trong viewport — 27/10/2026
+
+- Nhánh `feat/web-auction-select-from-shelf`.
+- **Khắc phục hiện tượng đơ/chặn cuộn chuột**:
+  - Gỡ bỏ hoàn toàn `lenis.stop()` khi vào các trang chat/hội thoại đơn hàng trong `useSmoothScroll.ts`. Thay vào đó, tự động giải phóng/hủy instance Lenis (`lenis.destroy()`) trên các tuyến `/chat/*` và `/orders/*` để trình duyệt giữ 100% cơ chế cuộn chuột tự nhiên (native 60fps/120fps), ngăn ngừa `<html>` bị gắn class `.lenis-stopped` gây `overflow: clip`.
+  - Bổ sung `data-lenis-prevent="true"` trên container hội thoại, cột phiếu đơn hàng `dossierBody` và danh sách tin nhắn `messages`.
+- **Cố định khung làm việc hội thoại trong màn hình (Viewport-fitted Workspace)**:
+  - `.root[data-room-selected="true"]`: thiết lập `height: calc(100dvh - 84px)`, vừa vặn hoàn hảo bên dưới navbar mà không gây cuộn trang ngoài.
+  - Khung sách mở `openBook`/`dossierSpread` chiếm trọn vẹn chiều cao 100% của container.
+  - Cột trái: Tinh gọn banner sách `.dossierHeader` (ảnh bìa ~54x74px, tiêu đề, tác giả, trạng thái gọn gàng); phần thân `.dossierBody` cuộn độc lập mượt mà.
+  - Cột phải: Header đối tác chat cố định ở đầu cột; danh sách tin nhắn `.messages` cuộn tự nhiên; khung soạn tin nhắn `.composer` cùng nút gửi tin nhắn được ghim cố định ở đáy khung hình, không bị đẩy khuất khỏi màn hình.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web test`: 32 files / 233 tests PASS.
+
 ## Tái thiết kế giao diện Đơn hàng của tôi (`/orders`) & Tích hợp vào không gian Hồ sơ tài khoản (`DashboardLayout`) — 27/10/2026
 
 - Nhánh `feat/web-auction-select-from-shelf`.
