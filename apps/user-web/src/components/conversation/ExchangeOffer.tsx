@@ -27,14 +27,30 @@ import { formatVnd, ROUTES } from "../../lib/routes";
 import styles from "./ExchangeOffer.module.css";
 
 const addressSchema = z.object({
+  version: z.number().int().optional().default(0),
   items: z.array(
     z.object({
       id: z.string().uuid(),
       recipientName: z.string(),
+      phone: z.string().optional(),
+      localityCode: z.string().optional(),
+      serviceAreaCode: z.string().optional(),
       detail: z.string(),
       isDefault: z.boolean(),
     }),
   ),
+});
+
+const serviceAreasSchema = z.object({
+  code: z.string(),
+  name: z.string().optional(),
+  demoOnly: z.boolean().optional(),
+  localities: z.array(z.object({ code: z.string(), label: z.string() })),
+});
+
+const addressReceiptSchema = z.object({
+  addressId: z.string().uuid(),
+  version: z.number().int(),
 });
 
 const CONDITION_LABELS: Record<string, string> = {
@@ -121,6 +137,12 @@ export function ExchangeOffer({
     enabled: buyer,
     retry: false,
   });
+  const serviceAreas = useQuery({
+    queryKey: ["service-areas"],
+    queryFn: () => session.request("/service-areas", serviceAreasSchema),
+    enabled: buyer,
+    staleTime: 60_000,
+  });
 
   const [chosen, setChosen] = useState<string[]>([]);
   const [search, setSearch] = useState("");
@@ -129,6 +151,74 @@ export function ExchangeOffer({
   const [error, setError] = useState("");
   const [uncertain, setUncertain] = useState(false);
   const attempt = useRef<{ body: object; key: string } | null>(null);
+
+  // Form thêm địa chỉ mới trực tiếp tại chỗ
+  const [showAddAddress, setShowAddAddress] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newLocality, setNewLocality] = useState("");
+  const [newDetail, setNewDetail] = useState("");
+  const [addressSaving, setAddressSaving] = useState(false);
+  const [addressError, setAddressError] = useState("");
+
+  const handleSaveNewAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const nameTrim = newName.trim();
+    const phoneTrim = newPhone.trim();
+    const detailTrim = newDetail.trim();
+
+    if (nameTrim.length < 2) {
+      setAddressError("Vui lòng nhập họ và tên người nhận (ít nhất 2 ký tự).");
+      return;
+    }
+    if (!/^0\d{9}$/.test(phoneTrim)) {
+      setAddressError("Số điện thoại nhận hàng phải gồm đúng 10 chữ số (bắt đầu bằng 0).");
+      return;
+    }
+    if (!newLocality) {
+      setAddressError("Vui lòng chọn Khu vực / Quận huyện.");
+      return;
+    }
+    if (detailTrim.length < 5) {
+      setAddressError("Địa chỉ chi tiết phải có ít nhất 5 ký tự (số nhà, tên đường...).");
+      return;
+    }
+
+    setAddressSaving(true);
+    setAddressError("");
+    try {
+      const saved = await session.request("/me/addresses", addressReceiptSchema, {
+        method: "POST",
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify({
+          expectedBookVersion: addresses.data?.version ?? 0,
+          address: {
+            recipientName: nameTrim,
+            phone: phoneTrim,
+            localityCode: newLocality,
+            detail: detailTrim,
+            serviceAreaCode: serviceAreas.data?.code ?? "HCM-DEMO-v1",
+          },
+          makeDefault: false,
+        }),
+      });
+      await addresses.refetch();
+      setAddress(saved.addressId);
+      setShowAddAddress(false);
+      setNewName("");
+      setNewPhone("");
+      setNewLocality("");
+      setNewDetail("");
+    } catch (err) {
+      setAddressError(
+        err instanceof ApiError && err.message
+          ? err.message
+          : "Không thể lưu địa chỉ mới. Vui lòng thử lại.",
+      );
+    } finally {
+      setAddressSaving(false);
+    }
+  };
 
   const filteredBooks = useMemo(() => {
     if (!mine.data) return [];
@@ -395,10 +485,110 @@ export function ExchangeOffer({
           )}
 
           <div className={styles.addressSection}>
-            <span className={styles.addressLabel}>
-              <MapPin size={15} /> Địa chỉ nhận sách của bạn
-            </span>
-            {addresses.data?.items.length ? (
+            <div className={styles.addressHeader}>
+              <span className={styles.addressLabel}>
+                <MapPin size={15} /> Địa chỉ nhận sách của bạn
+              </span>
+              <button
+                type="button"
+                className={styles.addAddressToggle}
+                onClick={() => {
+                  setShowAddAddress(!showAddAddress);
+                  setAddressError("");
+                }}
+              >
+                {showAddAddress ? "Đóng form" : "+ Thêm địa chỉ mới"}
+              </button>
+            </div>
+
+            {showAddAddress ? (
+              <form
+                className={styles.addAddressCard}
+                onSubmit={handleSaveNewAddress}
+              >
+                <h4>Thêm địa chỉ giao nhận mới</h4>
+                <div className={styles.formGrid}>
+                  <div className={styles.formField}>
+                    <label htmlFor="new-addr-name">Họ và tên người nhận</label>
+                    <input
+                      id="new-addr-name"
+                      type="text"
+                      placeholder="Ví dụ: Nguyễn Văn A"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      disabled={addressSaving}
+                    />
+                  </div>
+                  <div className={styles.formField}>
+                    <label htmlFor="new-addr-phone">Số điện thoại</label>
+                    <input
+                      id="new-addr-phone"
+                      type="tel"
+                      placeholder="0912345678"
+                      value={newPhone}
+                      onChange={(e) => setNewPhone(e.target.value)}
+                      disabled={addressSaving}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.formField}>
+                  <label htmlFor="new-addr-locality">Quận / Huyện (TP.HCM)</label>
+                  <select
+                    id="new-addr-locality"
+                    value={newLocality}
+                    onChange={(e) => setNewLocality(e.target.value)}
+                    disabled={addressSaving}
+                  >
+                    <option value="">-- Chọn Quận / Huyện --</option>
+                    {serviceAreas.data?.localities.map((loc) => (
+                      <option key={loc.code} value={loc.code}>
+                        {loc.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={styles.formField}>
+                  <label htmlFor="new-addr-detail">Địa chỉ chi tiết</label>
+                  <input
+                    id="new-addr-detail"
+                    type="text"
+                    placeholder="Số nhà, tên đường, phường..."
+                    value={newDetail}
+                    onChange={(e) => setNewDetail(e.target.value)}
+                    disabled={addressSaving}
+                  />
+                </div>
+
+                {addressError && (
+                  <p role="alert" className={styles.addressError}>
+                    {addressError}
+                  </p>
+                )}
+
+                <div className={styles.addAddressActions}>
+                  <button
+                    type="submit"
+                    className={styles.saveAddressBtn}
+                    disabled={addressSaving}
+                  >
+                    {addressSaving ? "Đang lưu..." : "Lưu & chọn địa chỉ này"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.cancelAddressBtn}
+                    disabled={addressSaving}
+                    onClick={() => {
+                      setShowAddAddress(false);
+                      setAddressError("");
+                    }}
+                  >
+                    Hủy
+                  </button>
+                </div>
+              </form>
+            ) : addresses.data?.items.length ? (
               <FilterSelect
                 id={`exchange-address-${room.id}`}
                 label=""
@@ -411,8 +601,7 @@ export function ExchangeOffer({
               />
             ) : (
               <p>
-                Thêm địa chỉ nhận tại <Link to="/profile">Tài khoản</Link> trước
-                khi gửi đề nghị.
+                Chưa có địa chỉ nào. Bấm <strong>+ Thêm địa chỉ mới</strong> ở trên để tạo địa chỉ nhận sách.
               </p>
             )}
           </div>

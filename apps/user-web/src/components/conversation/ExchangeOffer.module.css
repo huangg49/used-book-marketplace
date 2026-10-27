@@ -360,6 +360,13 @@
   margin-bottom: 18px;
 }
 
+.addressHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
 .addressLabel {
   display: flex;
   align-items: center;
@@ -367,7 +374,138 @@
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--shop-ink);
-  margin-bottom: 6px;
+  margin: 0;
+}
+
+.addAddressToggle {
+  background: none;
+  border: none;
+  color: var(--shop-wine);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.addAddressToggle:hover {
+  background: rgba(92, 2, 2, 0.05);
+  color: var(--shop-wine-hover);
+}
+
+.addAddressCard {
+  background: #fdfbf7;
+  border: 1.5px solid #ebd9c8;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.addAddressCard h4 {
+  margin: 0 0 2px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--shop-ink);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.formField label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--shop-muted);
+}
+
+.addAddressCard input,
+.addAddressCard select {
+  width: 100%;
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 6px 10px !important;
+  border-radius: 6px;
+  border: 1px solid var(--shop-line);
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 0.825rem;
+  color: var(--shop-ink);
+  box-sizing: border-box;
+}
+
+.addAddressCard input:focus,
+.addAddressCard select:focus {
+  outline: none;
+  border-color: var(--shop-wine);
+  box-shadow: 0 0 0 2px rgba(92, 2, 2, 0.12);
+}
+
+.addAddressActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.saveAddressBtn {
+  min-height: 36px;
+  padding: 0 14px;
+  background: var(--shop-wine);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.825rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+
+.saveAddressBtn:hover:not(:disabled) {
+  background: var(--shop-wine-hover);
+}
+
+.saveAddressBtn:disabled {
+  background: #d9cec1;
+  color: #8e7f72;
+  cursor: not-allowed;
+}
+
+.cancelAddressBtn {
+  background: none;
+  border: 1px solid var(--shop-line);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.825rem;
+  color: var(--shop-muted);
+  cursor: pointer;
+}
+
+.cancelAddressBtn:hover {
+  background: #f0e9df;
+  color: var(--shop-ink);
+}
+
+.addressError {
+  color: var(--shop-error);
+  font-size: 0.775rem;
+  margin: 0;
 }
 
 .helpText {
